@@ -300,10 +300,10 @@ export function passaStatiCoda(o, filtro, isChiuso = () => false, sottoChiusi = 
 export function ordiniInCoda(
   orders,
   {
-    // Uno stato solo, l'elenco di quelli accesi o 'tutti': ci pensa
-    // `statiDaFiltro`. La coda passa l'elenco (i filtri si combinano), le
-    // altre chiamate un id secco.
-    filtro = STATI_DEFAULT,
+    // Uno stato — i tre filtri sono esclusivi — oppure 'tutti', che è la
+    // lista intera e serve a smistare le corsie in una passata sola: a
+    // normalizzare è `statiDaFiltro`.
+    filtro = STATO_DEFAULT,
     sottoChiusi = 'tutti',
     isChiuso = () => false,
     cassa = null,
@@ -370,15 +370,61 @@ export const SCHEDE_VUOTE = { tutti: [], attivi: [], chiusi: [], annullati: [] }
 // tutte le sue comande sono uscite (allServed). E le comande ANNULLATE non
 // contano — quella roba non si fa e non si serve — se no un conto con
 // dentro un drink annullato non risulterebbe servito mai più.
-// DUE CHIP E UN NEUTRO CHE NON SI DISEGNA. C'era anche ['tutti', 'Tutti']:
-// acceso quasi sempre, diceva «nessun filtro» sembrando un filtro. Adesso
-// il neutro è nessuno dei due acceso, che è come si legge una fila di chip
-// — acceso vuol dire «sto guardando quello» — e i due sono esclusivi fra
-// loro: serviti E da servire insieme sono tutti i chiusi, cioè il neutro.
-export const SOTTOFILTRI_CHIUSI = [
-  ['serviti', '✅ Serviti'],
-  ['non-serviti', '⏳ Da servire'],
-]
+// ── COME SI CHIAMANO LE DUE META' DEL SERVIZIO ───────────────────────
+//
+// «Diventano Da Servire/Ritirare e Serviti/Ritirati. Anche la label sopra
+// la lane, non deve essere Pronto ma Da servire/Ritirare. [...] se il
+// ritiro non è attivo diventano solo Da servire e Serviti (sia filtri che
+// label lane)» (l'utente, 20/08/2026).
+//
+// «PRONTO» NON DICEVA COSA C'È DA FARE. Un drink pronto è pronto per
+// qualcuno: o lo si porta a un tavolo o lo si consegna a chi viene a
+// prenderselo. La colonna si chiamava con lo STATO del drink, mentre chi
+// la guarda cerca il PROPRIO lavoro — e la parola giusta è quella del
+// gesto. Stessa storia per «Ritirato/Servito», che è il participio dello
+// stesso equivoco.
+//
+// I DUE NOMI STANNO IN UNA FUNZIONE SOLA, e li usano tutti e tre i posti
+// che ne hanno bisogno: le porzioni del tasto dei chiusi in griglia, i
+// chip delle colonne al banco e i titoli delle corsie. Scritti a mano tre
+// volte divergerebbero al primo ritocco — è già successo con «Pronto», che
+// sul tasto della card si chiamava in un modo e sulla colonna in un altro.
+//
+// SENZA RITIRO LA META' DI DESTRA NON ESISTE: dove il locale serve e
+// basta, «/Ritirare» nomina una cosa che nel bar non succede e fa cercare
+// una colonna che non c'è.
+export function nomiDelServizio(ritiroEsiste = true) {
+  return ritiroEsiste
+    ? { daServire: 'Da servire/Ritirare', serviti: 'Serviti/Ritirati' }
+    : { daServire: 'Da servire', serviti: 'Serviti' }
+}
+
+// LE DUE PORZIONI DEL TASTO DEI CHIUSI, e un neutro che non si disegna.
+// C'era anche ['tutti', 'Tutti']: acceso quasi sempre, diceva «nessun
+// filtro» sembrando un filtro. Il neutro è NESSUNA DELLE DUE accesa —
+// «Chiusi: sia da servire che serviti» (l'utente, 20/08/2026) — e le due
+// restano esclusive fra loro: accese insieme sarebbero tutti i chiusi,
+// cioè il neutro.
+//
+// PRIMA «DA SERVIRE», POI «SERVITI»: è l'ordine del lavoro, e in un tasto
+// segmentato si legge da sinistra. Quella da guardare di corsa è la prima
+// — sono i drink che qualcuno aspetta ancora.
+export function sottofiltriChiusi(ritiroEsiste = true) {
+  const nomi = nomiDelServizio(ritiroEsiste)
+  return [
+    ['non-serviti', nomi.daServire],
+    ['serviti', nomi.serviti],
+  ]
+}
+
+// Come si chiama la porzione accesa, per il title del tastino «▾ Filtri»
+// quando la fila è chiusa. Niente per il neutro: non c'è niente da dire.
+export function nomeSottofiltro(sotto, ritiroEsiste = true) {
+  const nomi = nomiDelServizio(ritiroEsiste)
+  if (sotto === 'serviti') return nomi.serviti
+  if (sotto === 'non-serviti') return nomi.daServire
+  return null
+}
 
 // Toccare quello acceso lo spegne e torna al neutro; toccare l'altro
 // cambia domanda. Vale la stessa regola dei filtri di stato: quello che si
@@ -396,22 +442,28 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   return sotto === 'serviti' ? tutto : !tutto
 }
 
-// ── I FILTRI DI STATO DELLA CODA: TRE, E SI COMBINANO ────────────────
+// ── I FILTRI DI STATO DELLA CODA: TRE, E UNO SOLO ALLA VOLTA ─────────
 //
-// ERANO QUATTRO SCHEDE che si escludevano a vicenda — In corso, Chiusi,
-// Annullati, Tutti — e non erano filtri: erano quattro code diverse, e per
-// vedere gli aperti insieme ai chiusi bisognava chiedere «Tutti», cioè
-// anche gli annullati.
+// ERANO QUATTRO SCHEDE — In corso, Chiusi, Annullati, Tutti — e non erano
+// filtri: erano quattro code diverse, e per vedere gli aperti insieme ai
+// chiusi bisognava chiedere «Tutti», cioè anche gli annullati. Il
+// 20/08/2026 sono diventati tre interruttori COMBINABILI, con la coda che
+// mostrava l'unione degli accesi.
 //
-// «Il conteggio dei filtri accesi è inutile sulla schermata degli ordini.
-// Non esistono veri e propri filtri. A meno che non diventino davvero dei
-// filtri, così togliamo TUTTI. Se diventano dei filtri io posso vedere
-// quelli aperti, chiusi se seleziono chiuso e annullati se seleziono
-// annullati. Posso anche disabilitare In Corso che deve diventare Aperti,
-// non In corso» (l'utente, 20/08/2026).
+// E IL GIORNO STESSO, PROVATI, SONO TORNATI ESCLUSIVI. «No allora
+// riportiamo aperti, chiusi e annullati come mutuamente esclusivi»
+// (l'utente, 20/08/2026, guardando la coda vera).
 //
-// Adesso sono tre interruttori indipendenti e la coda mostra l'UNIONE di
-// quelli accesi. «Tutti» non serve più: è tutti e tre accesi, e si vede.
+// Quello che si è imparato dal giro in mezzo: la combinazione non serviva
+// alla domanda che si fa davvero. Sopra la coda si chiede UNA cosa per
+// volta — «cosa c'è da fare», «quanto ho incassato», «cosa ho annullato» —
+// e una coda mista costringe a rileggere ogni card per capire in quale dei
+// tre mondi sta. Quello che mancava alle vecchie schede era altro: il modo
+// di stringere DENTRO i chiusi, ed è lì che è andata a finire la fatica
+// (vedi il tasto a tre porzioni, `sottofiltriChiusi`).
+//
+// «TUTTI» NON TORNA: non l'ha chiesto nessuno, e resta quello che era —
+// una scheda che mescolava gli incassi con gli annullati.
 //
 // «APERTI» E NON «IN CORSO»: è la parola con cui la riga dei conteggi
 // sopra la coda li chiama già («12 aperti · 40 chiusi»), ed è la parola
@@ -430,67 +482,44 @@ export const FILTRI_STATO = [
 export const ID_FILTRI_STATO = FILTRI_STATO.map(([id]) => id)
 
 // Come si apre la coda: quello che c'è da fare, e basta.
-export const STATI_DEFAULT = ['attivi']
+export const STATO_DEFAULT = 'attivi'
 
 // Come si chiamano nel `title` del tastino quando la fila è chiusa: corti
 // e senza emoji, che lì si legge di corsa.
 export const NOME_FILTRO_STATO = { attivi: 'Aperti', chiusi: 'Chiusi', annullati: 'Annullati' }
-export const NOME_SOTTOFILTRO = { serviti: 'Serviti', 'non-serviti': 'Da servire' }
 
-// QUALI STATI SONO ACCESI, comunque me li passino. La coda li tiene in un
-// array, ma `ordiniInCoda` e `contiPerScheda` sono chiamate anche con la
-// vecchia forma a stringa singola ('chiusi', 'tutti'): normalizzare qui
-// vuol dire non avere due modi di leggere la stessa domanda.
+// QUALI STATI SONO IN CODA. Uno solo — i tre filtri sono esclusivi — ma
+// `ordiniInCoda` e `contiPerScheda` chiamano anche con 'tutti', che è la
+// lista intera e serve a smistare le corsie in una passata sola. Torna
+// sempre un elenco: chi filtra fa `.some` e non deve sapere quale dei due
+// casi gli è capitato.
 //
-// SENZA NESSUNO SI RIPIEGA SUL DEFAULT. Non dovrebbe succedere —
-// `cambiaFiltroStato` non lascia mai il vuoto — ma una coda che non mostra
-// NIENTE è indistinguibile da un'app rotta, e vale la riga di prudenza.
+// UNO SCONOSCIUTO RIPIEGA SUL DEFAULT. Non dovrebbe succedere — a
+// scegliere è `cambiaFiltroStato` — ma una coda che non mostra NIENTE è
+// indistinguibile da un'app rotta, e vale la riga di prudenza.
 export function statiDaFiltro(filtro) {
   if (filtro === 'tutti' || filtro == null) return [...ID_FILTRI_STATO]
-  const dati = Array.isArray(filtro) ? filtro : [filtro]
-  const dentro = ID_FILTRI_STATO.filter((id) => dati.includes(id))
-  return dentro.length > 0 ? dentro : [...STATI_DEFAULT]
+  return ID_FILTRI_STATO.includes(filtro) ? [filtro] : [STATO_DEFAULT]
 }
 
-// ACCENDI E SPEGNI UN FILTRO DI STATO — e la regola del MAI ZERO.
-//
-// «Il filtro Aperti lo posso deselezionare solo se chiusi, annullati o
-// tutti e due sono attivi. Se disattivo il filtro su chiusi e annullati,
-// si riattiva il filtro aperti» (l'utente, 20/08/2026).
-//
-// Le due frasi sono la STESSA regola guardata da due lati: la coda non
-// resta mai senza stati, e quando si svuoterebbe torna «Aperti» — che è
-// il lavoro da fare, la risposta giusta quando non se n'è chiesta
-// nessun'altra. Da lì scendono tutti e due i comportamenti:
-//   · spegnere «Aperti» quando è l'unico acceso non fa niente (l'insieme
-//     si svuoterebbe e «Aperti» torna dentro): un RIFIUTO SILENZIOSO, che
-//     il tocco non lascia traccia e il chip resta acceso dov'era. Niente
-//     avviso: al banco un messaggio per un tasto che non doveva partire è
-//     rumore, e la coda sotto non è cambiata di una riga;
-//   · spegnere l'ultimo fra «Chiusi» e «Annullati» con «Aperti» spento
-//     riaccende «Aperti» da solo.
-//
-// Torna sempre in ordine canonico (aperti, chiusi, annullati): l'insieme è
-// un insieme, e due liste con lo stesso contenuto in ordine diverso
-// farebbero ridisegnare la coda per niente.
-export function cambiaFiltroStato(attivi = [], tocco) {
-  const dentro = new Set(statiDaFiltro(attivi))
-  if (!ID_FILTRI_STATO.includes(tocco)) return [...dentro].sort(perOrdineDiStato)
-  if (dentro.has(tocco)) dentro.delete(tocco)
-  else dentro.add(tocco)
-  if (dentro.size === 0) dentro.add('attivi')
-  return ID_FILTRI_STATO.filter((id) => dentro.has(id))
+// TOCCARNE UNO SPEGNE GLI ALTRI, e uno resta acceso sempre. Toccare quello
+// già acceso non fa niente — non c'è nessuno stato «nessun filtro», e una
+// coda vuota per forza sembrerebbe un'app rotta. È il RIFIUTO SILENZIOSO
+// che c'era già ai tempi degli interruttori: al banco un avviso per un
+// tocco che non doveva cambiare niente è rumore.
+export function cambiaFiltroStato(stato = STATO_DEFAULT, tocco) {
+  if (!ID_FILTRI_STATO.includes(tocco)) {
+    return ID_FILTRI_STATO.includes(stato) ? stato : STATO_DEFAULT
+  }
+  return tocco
 }
-
-const perOrdineDiStato = (a, b) => ID_FILTRI_STATO.indexOf(a) - ID_FILTRI_STATO.indexOf(b)
 
 // La coda è come si apre? Serve al badge del tastino, che conta le
-// DEVIAZIONI dal default: con solo «Aperti» acceso non c'è niente da
-// contare, e un tastino che segna sempre almeno un filtro non distingue
-// più la coda filtrata da quella intera.
-export function statiAlDefault(attivi = []) {
-  const dentro = statiDaFiltro(attivi)
-  return dentro.length === STATI_DEFAULT.length && STATI_DEFAULT.every((id) => dentro.includes(id))
+// DEVIAZIONI dal default: sugli «Aperti» non c'è niente da contare, e un
+// tastino che segna sempre almeno un filtro non distingue più la coda
+// filtrata da quella intera.
+export function statoAlDefault(stato = STATO_DEFAULT) {
+  return (ID_FILTRI_STATO.includes(stato) ? stato : STATO_DEFAULT) === STATO_DEFAULT
 }
 
 // ── IL TASTO CHE APRE E CHIUDE LA FILA DEI FILTRI ────────────────────
@@ -731,12 +760,16 @@ export function schedeCoda(workflowOn) {
 // che punto è, ed è quello che si cerca quando si guarda la colonna e
 // quando si legge la storia del conto. Gli id restano quelli di prima: se
 // li cambiassimo, chi ha nascosto una colonna se la ritroverebbe accesa.
-const CORSIE_LAVORO = [
+// I QUATTRO PASSI DEL LAVORO. La terza colonna PORTA IL NOME DEL GESTO —
+// «Da servire/Ritirare», o solo «Da servire» dove il ritiro non c'è
+// (nomiDelServizio) — e non più «Pronto»: «anche la label sopra la lane,
+// non deve essere Pronto ma Da servire/Ritirare» (l'utente, 20/08/2026).
+// Gli id restano quelli di sempre: cambiandoli, chi ha spento una colonna
+// se la ritroverebbe accesa.
+const corsieDelLavoro = (nomi) => [
   { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
   { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
-  // La stessa parola del tasto e dell'etichetta di stato: vedi statoAlBanco.
-  { id: 'al-ritiro', titolo: 'Pronto', stato: ORDER_STATUSES.PRONTO },
-  { id: 'da-incassare', titolo: 'Da incassare', stato: ORDER_STATUSES.RITIRATO },
+  { id: 'al-ritiro', titolo: nomi.daServire, stato: ORDER_STATUSES.PRONTO },
 ]
 
 // Il conto è già saldato? (il pagamento sta sul CONTO, non sulla comanda:
@@ -826,8 +859,9 @@ export function destinazioneConto(o) {
 // CORSIE_SPENTE_ALL_INIZIO). DENTRO CI SONO COMANDE, in tutte:
 //
 //   Da fare · In preparazione ·       i passi del lavoro, una card per
-//   Ritiro/Servizio ·                 comanda
-//   Ritirato/Servito
+//   Da servire/Ritirare ·             comanda (i due nomi seguono il
+//   Serviti/Ritirati                  mondo della consegna: senza ritiro
+//                                     sono «Da servire» e «Serviti»)
 //   Chiuse                            le comande SERVITE di conti PAGATI:
 //                                     non c'è più niente da fare né da
 //                                     chiedere. Serve a guardare indietro.
@@ -844,15 +878,15 @@ export function destinazioneConto(o) {
 // tre comande servite dello stesso tavolo diventassero tre tasti che
 // chiedono tre volte gli stessi soldi. Ma con la regola «servita ⇒ o da
 // incassare o chiusa» quella colonna conteneva esattamente gli stessi drink
-// di «Ritirato/Servito», solo raggruppati per conto invece che per ticket:
+// dei serviti, solo raggruppati per conto invece che per ticket:
 // due colonne per la stessa cosa. Adesso la card resta la comanda e non
 // chiede soldi — dice che quei drink sono usciti — e chi deve ancora
 // prenderli lo legge dal bollo, che c'è già e dice se il conto è pagato, in
 // parte o per niente.
 //
 // QUANDO UNA COMANDA È CHIUSA: dopo essere stata SERVITA, non prima. Da lì,
-// se il conto è pagato va fra le chiuse; se no resta in «Ritirato/Servito»,
-// che il lavoro è finito ma i soldi no.
+// se il conto è pagato va fra le chiuse; se no resta fra i serviti, che il
+// lavoro è finito ma i soldi no.
 // PAGATA MA NON ANCORA SERVITA NON È CHIUSA: il drink va fatto lo stesso,
 // e quella comanda resta nella corsia del suo passo — col bollo «Pagato»,
 // perché è il caso strano (i soldi presi, il drink ancora da fare) ed è
@@ -861,12 +895,21 @@ export function destinazioneConto(o) {
 //
 // I nomi delle ultime due sono al femminile — chiuse, annullate — perché
 // qui dentro non ci sono conti: ci sono comande.
-const CORSIE_COMANDE = [
-  ...CORSIE_LAVORO.filter((c) => c.id !== 'da-incassare'),
-  { id: 'ritirati', titolo: 'Ritirato/Servito', stato: ORDER_STATUSES.RITIRATO },
-  { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
-  { id: 'annullati', titolo: '✖️ Annullate', stato: null },
-]
+//
+// «RITIRATO/SERVITO» SI CHIAMA «SERVITI/RITIRATI» (o «Serviti» senza
+// ritiro): è la stessa parola delle due porzioni del tasto dei chiusi in
+// griglia, e sono la stessa domanda fatta in due viste — chi guarda la
+// colonna e chi filtra la coda devono leggere lo stesso nome, o si
+// convincono di star guardando due cose diverse.
+const corsieDelBanco = (ritiroEsiste) => {
+  const nomi = nomiDelServizio(ritiroEsiste)
+  return [
+    ...corsieDelLavoro(nomi),
+    { id: 'ritirati', titolo: nomi.serviti, stato: ORDER_STATUSES.RITIRATO },
+    { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
+    { id: 'annullati', titolo: '✖️ Annullate', stato: null },
+  ]
+}
 
 // ── IL PRONTO, UNITO O DIVISO ───────────────────────────────
 //
@@ -924,16 +967,20 @@ export function corsieDiverseDalNormale(sceglibili, nascoste = [], normale = COR
   return (sceglibili || []).filter((c) => via.has(c.id) !== base.has(c.id))
 }
 
-export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = null } = {}) {
+export function corsieComande(
+  ordini,
+  { isChiuso = () => false, prontoDiviso = null, ritiroEsiste = true } = {}
+) {
   // La colonna del pronto può diventare due: al suo posto, nello stesso
   // punto della fila, così le altre non si spostano sotto gli occhi.
+  const base = corsieDelBanco(ritiroEsiste)
   const corsie = prontoDiviso
-    ? CORSIE_COMANDE.flatMap((c) =>
+    ? base.flatMap((c) =>
         c.id === 'al-ritiro'
           ? prontoDiviso.map((d) => ({ ...d, stato: ORDER_STATUSES.PRONTO }))
           : [c]
       )
-    : CORSIE_COMANDE
+    : base
   const secchi = Object.fromEntries(corsie.map((c) => [c.id, []]))
   // Dove va una comanda, per il passo in cui sta. Col pronto diviso il
   // passo da solo non basta: serve anche come si consegna quel conto, e a
@@ -996,7 +1043,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
         // SERVITA. Col conto pagato non resta più niente da fare né da
         // chiedere: chiusa. Se no il lavoro è finito ma i soldi no, e
         // restano due cose diverse da guardare — la comanda in
-        // «Ritirato/Servito», che dice che è uscita, e il CONTO fra quelli
+        // fra i serviti, che dice che è uscita, e il CONTO fra quelli
         // da incassare, che è quello che si porta al tavolo.
         secchi[saldato ? 'chiusi' : 'ritirati'].push(scheda(c))
         continue
@@ -1039,7 +1086,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
 // Dividendo la colonna del pronto nascono due corsie con id nuovi
 // (`al-ritiro-banco`), che in quella mappa non c'erano: niente voce,
 // niente tasto — e nella colonna «Da ritirare» la card restava senza il
-// tasto che porta la comanda a «Ritirato/Servito» (BUG-026). Una funzione
+// tasto che porta la comanda ai serviti (BUG-026). Una funzione
 // che spariva a seconda di come uno guarda la coda. Legandola allo stato
 // non si ripresenta al prossimo modo di dividere le colonne.
 //
@@ -1211,9 +1258,10 @@ export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
 // La data arriva già scritta da chi chiama (businessDayLabel): qui c'è la
 // regola di cosa dire, non come si formatta un giorno.
 //
-// CON PIÙ FILTRI ACCESI si dice solo la data. Da quando gli stati si
-// combinano, «Aperti + Chiusi» mette sotto la stessa riga conti di due
-// nature: qualunque etichetta si scegliesse sarebbe giusta per metà.
+// CON 'TUTTI' si dice solo la data: lì sotto la stessa riga finiscono
+// conti di tre nature, e qualunque etichetta sarebbe giusta per un terzo.
+// In coda non capita — i tre stati sono esclusivi — ma la funzione è
+// chiamata anche dalle viste che smistano tutto in una passata sola.
 export function intestazioneGiornata(filtro, data) {
   const stati = statiDaFiltro(filtro)
   if (stati.length > 1) return `📅 ${data}`
@@ -1224,10 +1272,10 @@ export function intestazioneGiornata(filtro, data) {
 
 // ── LA CODA VUOTA, DETTA COME È FILTRATA ─────────────────────────────
 //
-// «Nessun ordine in corso» era esatto finché la coda era una scheda sola.
-// Con gli stati combinati la frase deve reggere anche «Aperti + Chiusi»,
-// dove nessun aggettivo è vero per tutti: lì si dice solo che non c'è
-// niente, ed è la verità intera.
+// «Nessun ordine in corso» era esatto finché la coda era una scheda sola,
+// e lo è di nuovo adesso che i tre stati si escludono. Con 'tutti' nessun
+// aggettivo è vero per tutti: lì si dice solo che non c'è niente, ed è la
+// verità intera.
 const AGGETTIVO_STATO = { attivi: 'aperto', chiusi: 'chiuso', annullati: 'annullato' }
 
 export function frasePerCodaVuota(filtro, soloOggi = false) {
@@ -1248,8 +1296,9 @@ export function frasePerCodaVuota(filtro, soloOggi = false) {
 // esistono solo dove il ritiro c'è, ma spegnerne una e poi riunire il
 // pronto è una scelta che va ricordata, non buttata.
 const ID_CORSIE = new Set([
-  ...CORSIE_LAVORO.map((c) => c.id),
-  ...CORSIE_COMANDE.map((c) => c.id),
+  // I titoli seguono il mondo della consegna, gli id no: qui servono
+  // soltanto quelli, e uno dei due assetti li nomina tutti.
+  ...corsieDelBanco(true).map((c) => c.id),
   ...CORSIE_PRONTO_DIVISO.map((c) => c.id),
   ...schedeCoda(false).map(([id]) => id),
 ])
@@ -1291,11 +1340,11 @@ export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
 // parlava: l'unico modo di capirlo era premerlo e guardare cosa succedeva
 // a mezzo schermo di distanza.
 //
-// DOVE AGISCE. Adesso il tastino sta ATTACCATO al chip del pronto, dentro
-// lo stesso gruppo, e il suo effetto si vede lì: da unito c'è «Pronto ✂️»,
-// premuto diventa «Da servire | Da ritirare 🔗». L'interruttore è nel
-// posto della cosa che cambia — niente frase da leggere, niente chip
-// orfano in fondo alla fila.
+// DOVE AGISCE. Adesso il tastino sta ATTACCATO al chip della colonna che
+// divide, dentro lo stesso gruppo, e il suo effetto si vede lì: da unito
+// c'è «Da servire/Ritirare ✂️», premuto diventa «Da servire | Da ritirare
+// 🔗». L'interruttore è nel posto della cosa che cambia — niente frase da
+// leggere, niente chip orfano in fondo alla fila.
 //
 // SOLO COL RITIRO ATTIVO: «ovviamente vale solo se è attivo il ritiro al
 // banco» (l'utente, 20/08/2026). Col solo servizio non c'è niente da

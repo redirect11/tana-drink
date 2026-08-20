@@ -14,6 +14,16 @@
 // drink, che è un'altra domanda e ha già le sue due colonne quando il pronto
 // si divide («Da servire» / «Da ritirare»).
 //
+// ── E LA COLONNA HA CAMBIATO IDEA, IL 20/08/2026 ────────────────────
+// «Anche la label sopra la lane, non deve essere Pronto ma Da
+// servire/Ritirare» (l'utente). La regola di REQ-UI-021 non cade: resta
+// una parola sola per passo NEI POSTI CHE PARLANO DELLO STATO — la
+// pastiglia, il tasto, la tabella del conto dicono tutti «Pronto». La
+// COLONNA no: quella non dice a che punto è il drink, dice CHE LAVORO C'È
+// LÌ DENTRO, e il lavoro è portarlo o consegnarlo. Il nome segue il mondo
+// della consegna (nomiDelServizio): «Da servire/Ritirare» dove si ritira
+// anche al banco, «Da servire» dove si serve e basta.
+//
 // AL CLIENTE resta «Pronto al servizio»: a lui «Pronto» da solo non dice se
 // deve alzarsi o aspettare. Le parole del banco e quelle del cliente sono due
 // insiemi diversi, ed è voluto — è la regola che sta scritta in orderStatus.js.
@@ -26,22 +36,31 @@ import {
   ritiratoLabel,
 } from '../../src/lib/orderStatus.js'
 import { SERVIZIO_ETICHETTA } from '../../src/lib/comande.js'
-import { corsieComande, azioneComanda } from '../../src/lib/coda.js'
+import { corsieComande, azioneComanda, nomiDelServizio } from '../../src/lib/coda.js'
 
 describe('al banco il passo «pronto» si chiama Pronto, e basta', () => {
   it('l’etichetta di stato', () => {
     expect(statoAlBanco(ORDER_STATUSES.PRONTO)).toBe('Pronto')
   })
 
-  it('la testata della colonna', () => {
-    const colonna = corsieComande([]).find((c) => c.stato === ORDER_STATUSES.PRONTO)
-    expect(colonna.titolo).toBe(statoAlBanco(ORDER_STATUSES.PRONTO))
+  it('la testata della colonna dice il LAVORO, non lo stato', () => {
+    // L'unica deroga, e voluta: la colonna nomina il gesto da fare, e
+    // quel nome sta in un posto solo per tutti e tre i suoi usi
+    // (colonna, chip del filtro, porzione del tasto dei chiusi).
+    const colonna = (ritiro) =>
+      corsieComande([], { ritiroEsiste: ritiro }).find(
+        (c) => c.stato === ORDER_STATUSES.PRONTO
+      ).titolo
+    expect(colonna(true)).toBe(nomiDelServizio(true).daServire)
+    expect(colonna(true)).toBe('Da servire/Ritirare')
+    expect(colonna(false)).toBe('Da servire')
   })
 
   it('il tasto che ci porta', () => {
-    // La parola sul tasto è quella dello stato in cui il drink finisce, ed è
-    // la stessa che intitola la colonna in cui finirà: si vede dove va a
-    // finire prima di premere.
+    // La parola sul tasto è quella dello STATO in cui il drink finisce:
+    // dice cosa succede premendo. Che la colonna dove atterra si chiami
+    // col nome del lavoro è l'altra faccia della stessa cosa — il tasto
+    // parla del drink, la colonna di chi ci deve mettere le mani.
     const azione = azioneComanda(
       { id: 'c1', status: ORDER_STATUSES.IN_PREPARAZIONE },
       { service_mode: 'tavolo' }

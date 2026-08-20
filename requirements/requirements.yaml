@@ -692,9 +692,34 @@ requirements:
       resta una colonna sola col badge sulla card («Servizio» /
       «Ritiro»); si divide in «Da servire» e «Da ritirare», ed è una
       scelta del TERMINALE — il tablet della sala e quello del banco non
-      guardano lo stesso lavoro. «Ritirato/Servito» NON si divide: lì il
-      drink è già uscito e come sia uscito non cambia più niente da fare —
-      è il traguardo, non una destinazione.
+      guardano lo stesso lavoro. La colonna dei serviti NON si divide: lì
+      il drink è già uscito e come sia uscito non cambia più niente da
+      fare — è il traguardo, non una destinazione.
+
+      COME SI CHIAMANO QUELLE DUE COLONNE — DECISO IL 20/08/2026. Parole
+      dell'utente: «Anche la label sopra la lane, non deve essere Pronto
+      ma Da servire/Ritirare. [...] se il ritiro non è attivo diventano
+      solo Da servire e Serviti (sia filtri che label lane)».
+      QUELLO CHE C'ERA PRIMA È SUPERATO: la colonna si chiamava «Pronto»
+      (e quella dopo «Ritirato / Servito»), com'è ancora l'etichetta di
+      stato al banco. Ma una colonna non dice a che punto è il drink: dice
+      CHE LAVORO C'È LÌ DENTRO, e il lavoro è portarlo o consegnarlo.
+      «Pronto» è pronto per qualcuno — e chi guarda la lavagna cerca il
+      PROPRIO lavoro, non lo stato altrui.
+      COL RITIRO ATTIVO sono «Da servire/Ritirare» e «Serviti/Ritirati»;
+      col mondo «Solo servizio» diventano «Da servire» e «Serviti», che
+      «/Ritirare» nominerebbe una cosa che in quel bar non succede.
+      REQ-UI-021 NON CADE: una parola sola per passo resta vera nei posti
+      che parlano dello STATO — la pastiglia sulla card, il tasto che fa
+      avanzare, la tabella del servizio dentro il conto dicono tutti
+      «Pronto». La colonna è l'unica deroga, ed è motivata.
+      UN POSTO SOLO PER I DUE NOMI: `nomiDelServizio(ritiroEsiste)` in
+      lib/coda.js. Da lì li prendono i titoli delle corsie, i chip delle
+      colonne nella fila dei filtri e le due porzioni del tasto dei chiusi
+      in griglia (REQ-CODA-009) — sono la stessa domanda in due viste, e
+      due nomi diversi convincerebbero chi guarda di star guardando due
+      cose diverse. Anche il gruppo col ✂️ segue: da unito il chip dice
+      «Da servire/Ritirare ✂️», diviso «Da servire | Da ritirare 🔗».
 
       DOVE STA IL COMANDO CHE DIVIDE — RIVISTO IL 20/08/2026. Parole
       dell'utente: «Dividi il pronto dobbiamo integrarlo meglio con gli
@@ -711,10 +736,10 @@ requirements:
       guardare cosa succedeva a mezzo schermo di distanza. La frase intera
       sul chip era la conseguenza, non la causa: serviva a spiegare un
       tasto che stava nel posto sbagliato.
-      ADESSO STA DOVE AGISCE. Il comando è un TASTINO APPESO AL CHIP DEL
-      PRONTO, dentro lo stesso gruppo (`.chip-gruppo`, DESIGN.md): da unito
-      si legge «Pronto ✂️», e premendolo — NELLO STESSO POSTO — al
-      posto di «Pronto» compaiono i due chip «Da servire» e «Da ritirare»,
+      ADESSO STA DOVE AGISCE. Il comando è un TASTINO APPESO AL CHIP DELLA
+      COLONNA, dentro lo stesso gruppo (`.chip-gruppo`, DESIGN.md): da
+      unito si legge «Da servire/Ritirare ✂️», e premendolo — NELLO
+      STESSO POSTO — al suo posto compaiono i due chip «Da servire» e «Da ritirare»,
       attaccati fra loro e col loro tastino per riunirli. L'interruttore
       sta dove sta la cosa che cambia, e l'effetto si vede lì: niente frase
       da leggere, niente chip orfano in fondo alla fila.
@@ -726,13 +751,14 @@ requirements:
       È UN BOTTONE SUO, non un'icona cliccabile dentro il chip della
       colonna: accendere una colonna e dividerla sono due cose diverse, e
       da tastiera o con lo screen reader si devono poter distinguere. Ha il
-      suo `aria-label` per esteso («Dividi «Pronto» in «Da servire» e «Da
-      ritirare»» / «Riunisci …»); il gruppo unisce gli occhi, non i
-      mestieri.
+      suo `aria-label` per esteso («Dividi «Da servire/Ritirare» in «Da
+      servire» e «Da ritirare»» / «Riunisci …»); il gruppo unisce gli
+      occhi, non i mestieri.
       SOLO COL RITIRO ATTIVO, ed è una decisione esplicita dell'utente e
       non una deduzione: «ovviamente vale solo se è attivo il ritiro al
       banco» (20/08/2026). Col mondo «Solo servizio» il tastino non c'è
-      affatto — né ✂️ né 🔗 — e il chip «Pronto» resta da solo,
+      affatto — né ✂️ né 🔗 — e il chip della colonna (lì «Da servire»)
+      resta da solo,
       senza gruppo attorno: non c'è niente da separare, e un tasto che non
       fa niente è peggio di un tasto che non c'è (`ritiroEsiste`).
       COME SI RAGGRUPPANO i chip lo dice una funzione pura, `gruppiColonne`
@@ -6900,7 +6926,7 @@ requirements:
 
   - id: REQ-CODA-009
     title: "I filtri della coda sono combinabili, e gli autori stanno in una tendina"
-    area: "src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css"
+    area: "src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, statoAlDefault, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi, sottofiltriChiusi, nomiDelServizio, nomeSottofiltro), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css"
     description: >
       Chiesto dall'utente il 20/08/2026, guardando la coda in emulatore.
       Parole sue: «il conteggio dei filtri accesi e' inutile sulla schermata
@@ -7127,6 +7153,70 @@ requirements:
       REQ-ORD-020, che è il requisito del pronto diviso: qui basta il conto
       dei chip in fila — uno in meno, e nessuno che faccia un mestiere
       diverso dai suoi vicini.
+      ---
+      SESTA CORREZIONE, 20/08/2026 — GLI STATI TORNANO ESCLUSIVI, E I
+      CHIUSI DIVENTANO UN TASTO A TRE PORZIONI. Parole dell'utente, dopo
+      aver provato tutto: «No allora riportiamo aperti, chiusi e annullati
+      come mutuamente esclusivi. In più la cosa di servire e serviti
+      unisci i tasti con chiusi quindi tasto grande con tre selezioni. Se
+      seleziono chiusi, vedo le altre due porzioni del tasto e posso
+      filtrare Chiusi: sia da servire che serviti, serviti solo quelli
+      serviti, da servire quelli da servire. Diventano Da Servire/Ritirare
+      e Serviti/Ritirati. [...] Sono attivi solo quando sono attivi gli
+      stati di servizio e se il ritiro non è attivo diventano solo Da
+      servire e Serviti (sia filtri che label lane)».
+      QUELLO CHE SOPRA NON VALE PIÙ: tutto il capitolo «I TRE STATI,
+      COMBINABILI» e la regola del MAI ZERO STATI. Non sono più tre
+      interruttori: sono tre filtri che si escludono, toccarne uno spegne
+      gli altri, e ce n'è sempre esattamente uno acceso. Il default resta
+      «Aperti». Il MODELLO A INSIEME È SPARITO dal codice — non è restato
+      in giro «per sicurezza»: `STATI_DEFAULT` è diventato `STATO_DEFAULT`
+      (una stringa), `statiAlDefault` è `statoAlDefault`,
+      `cambiaFiltroStato(stato, tocco)` torna l'id toccato, e
+      `statiDaFiltro` normalizza un id o 'tutti' invece di un array. I
+      test dell'unione sono stati tolti insieme alla regola: un test che
+      descrive un'app che non esiste più è peggio di nessun test.
+      COSA ABBIAMO IMPARATO dal giro in mezzo, che vale la pena scrivere:
+      la combinazione non serviva alla domanda che si fa davvero. Sopra la
+      coda si chiede una cosa per volta — cosa c'è da fare, quanto ho
+      incassato, cosa ho annullato — e una coda mista costringe a
+      rileggere ogni card per capire in quale dei tre mondi sta. Quello
+      che mancava alle vecchie schede era un'altra cosa: il modo di
+      stringere DENTRO i chiusi. Ed è lì che è andata a finire la fatica.
+      «TUTTI» NON È TORNATO: nessuno l'ha chiesto, e resta quello che era
+      — una scheda che mescola gli incassi con gli annullati.
+      IL TASTO DEI CHIUSI, TRE PORZIONI IN UN BOTTONE SOLO. «💶 Chiusi»
+      e i due sottofiltri non sono più tre chip fratelli in fila: sono un
+      gruppo (`.chip-gruppo`, il pattern di DESIGN.md nato per il taglio
+      del pronto) con bordo condiviso e angoli tondi solo agli estremi. Da
+      spento si vede la sola porzione «💶 Chiusi»; accendendolo, DENTRO
+      LO STESSO TASTO, compaiono le altre due. Il perché: in quella fila i
+      tre chip si leggevano come tre filtri dello stesso rango, mentre gli
+      ultimi due sono una domanda DENTRO il primo — e comparivano dal
+      nulla a metà riga, spostando tutto quello che avevano dopo.
+      LA SEMANTICA DELLE DUE PORZIONI NON CAMBIA, cambia il vestito e il
+      nome: NEUTRO = nessuna delle due accesa = tutti i chiusi, da servire
+      E serviti («Chiusi: sia da servire che serviti», parole sue);
+      accesa una, si vede solo quella; sono esclusive fra loro e
+      ritoccando quella accesa si torna al neutro (`cambiaSottoChiusi`,
+      invariata).
+      ESISTONO SOLO COGLI STATI DEL SERVIZIO ACCESI («sono attivi solo
+      quando sono attivi gli stati di servizio»): senza la preparazione
+      tutto quello che è stato pagato è uscito per definizione, e la
+      domanda non c'è. Nelle CORSIE DEI CONTI, dove la colonna «Chiusi»
+      c'è sempre e non c'è nessun filtro da accendere, le due porzioni
+      restano un gruppo da due, con lo stesso vestito.
+      I NOMI SEGUONO IL RITIRO, e valgono per porzioni, chip delle colonne
+      e titoli delle corsie: col ritiro al banco «Da servire/Ritirare» e
+      «Serviti/Ritirati», col solo servizio «Da servire» e «Serviti». Una
+      funzione pura, `nomiDelServizio(ritiroEsiste)` in lib/coda.js, usata
+      da tutti e tre: scritti a mano tre volte divergerebbero al primo
+      ritocco. Il resto (i titoli delle corsie del banco) sta in
+      REQ-ORD-020.
+      IL BADGE DEL TASTINO non cambia mestiere: conta sempre le DEVIAZIONI
+      dal default — stato diverso da «Aperti», staff filtrato, colonne
+      spente, porzione dei chiusi accesa. Con un solo stato acceso alla
+      volta il conto si semplifica: uno stato vale uno, non tre.
     status: implemented
     generate_issue: true
     labels: [coda, ui]

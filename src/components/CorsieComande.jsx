@@ -280,7 +280,7 @@ export default function CorsieComande({
                         ) : s.pagatoDaServire ? (
                           <span className="pill pagato small">Pagato</span>
                         ) : (
-                          <span className="muted small">
+                          <span className="muted small corsia-quando">
                             {daQuanto(s.comanda?.created_at || o.created_at, adesso)}
                           </span>
                         )}

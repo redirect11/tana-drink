@@ -375,3 +375,69 @@ ${nome} {`)
     )
   })
 })
+
+
+// ── I TASTI DI UNA CARD STRETTA SI IMPILANO (BUG-063) ────────────────
+//
+// «Quando sono attive tutte le lane il layout delle card si sballa. Nel
+// caso siano troppo strette per i tasti, li impiliamo verticalmente» — e,
+// col secondo screenshot: «anche con 4 corsie succede. Ovviamente dobbiamo
+// farlo in modo che sia dinamico» (l'utente, 20/08/2026).
+//
+// I tasti sono TRE: «🧾 Conto», «⋯ Azioni» e quello che porta avanti il
+// lavoro. In fila vogliono quasi 280px; in una colonna su sette ce ne sono
+// 120, e si schiacciavano fino a tagliare le parole.
+//
+// jsdom non fa layout: la regola si sorveglia sul foglio, che è l'unico
+// posto dove esiste.
+describe('i tasti di una card di corsia si impilano quando manca la larghezza', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('a misurare è la CARD, non la finestra e non il numero di colonne', () => {
+    // La stessa card è stretta con sette corsie e larga con tre, sullo
+    // stesso schermo: contare le colonne sarebbe l'errore di BUG-021, e
+    // una media query sulla finestra mente di 250px col menu agganciato.
+    expect(regola('.corsia-card')).toMatch(/container:\s*card-corsia \/ inline-size/)
+    const impila = css.slice(css.indexOf('@container card-corsia (max-width: 300px)'))
+    expect(impila.length).toBeGreaterThan(0)
+    // e non c'è nessuna @media sulla finestra a decidere il piede
+    expect(css).not.toMatch(/@media[^{]*\{[\s\S]{0,200}\.corsia-piede/)
+  })
+
+  it('il piede può andare a capo: è la premessa di tutto il resto', () => {
+    expect(regola('.corsia-piede')).toMatch(/flex-wrap:\s*wrap/)
+  })
+
+  it('primo passo: il tasto grande scende sotto, a tutta larghezza', () => {
+    // È il gesto più frequente della serata — si preme di corsa e al buio
+    // — e quando lo spazio manca CRESCE invece di stringersi.
+    const blocco = css.slice(
+      css.indexOf('@container card-corsia (max-width: 300px)'),
+      css.indexOf('@container card-corsia (max-width: 200px)')
+    )
+    expect(blocco).toMatch(/\.corsia-azione\s*\{[^}]*flex:\s*1 0 100%/)
+    // e i due piccoli si spartiscono la riga di sopra invece di restare
+    // affiancati e mezzi vuoti
+    expect(blocco).toMatch(/\.corsia-azioni\s*\{[^}]*flex:\s*1 1 0/)
+  })
+
+  it('secondo passo: sotto i 200px vanno in colonna tutti e tre', () => {
+    const i = css.indexOf('@container card-corsia (max-width: 200px)')
+    const blocco = css.slice(i, i + 400)
+    expect(blocco).toMatch(/\.corsia-piede\s*\{[^}]*flex-direction:\s*column/)
+    expect(blocco).toMatch(/width:\s*100%/)
+  })
+
+  it('e il tempo non va a capo una lettera per riga', () => {
+    // «5 min» si spezzava in verticale accanto al numero del conto: è
+    // testo corto e va tenuto intero, a cedere è il nome del tavolo.
+    expect(regola('.corsia-quando')).toMatch(/white-space:\s*nowrap/)
+    expect(regola('.corsia-card > .row.between')).toMatch(/flex-wrap:\s*wrap/)
+  })
+})

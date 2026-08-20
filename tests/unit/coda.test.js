@@ -22,11 +22,14 @@ import {
   passaStatiCoda,
   cambiaFiltroStato,
   statiDaFiltro,
-  statiAlDefault,
+  statoAlDefault,
   frasePerCodaVuota,
   cambiaSottoChiusi,
+  nomiDelServizio,
+  sottofiltriChiusi,
+  nomeSottofiltro,
   FILTRI_STATO,
-  STATI_DEFAULT,
+  STATO_DEFAULT,
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
@@ -200,15 +203,21 @@ describe('chi ha aperto il conto: la tendina «Staff»', () => {
 // è FATTA. Adesso il tastino sta nel gruppo del chip del pronto, e questa
 // funzione dice solo chi sta con chi.
 describe('i gruppi dei chip delle colonne', () => {
-  const sceglibili = (diviso) =>
+  const sceglibili = (diviso, ritiroEsiste = true) =>
     corsieSceglibili(
-      corsieComande([], { prontoDiviso: corsieDelPronto({ divise: diviso, ritiroEsiste: true }) })
+      corsieComande([], {
+        ritiroEsiste,
+        prontoDiviso: corsieDelPronto({ divise: diviso, ritiroEsiste }),
+      })
     )
 
-  it('col pronto unito il gruppo è il chip «Pronto» più il suo tastino', () => {
+  it('unito, il gruppo è il chip della colonna più il suo tastino', () => {
     const gruppi = gruppiColonne(sceglibili(false), { taglioPossibile: true })
     const pronto = gruppi.find((g) => g.taglio)
-    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Pronto'])
+    // Il chip porta il NOME DELLA COLONNA, e la colonna si chiama col
+    // lavoro che ci sta dentro: «anche la label sopra la lane, non deve
+    // essere Pronto ma Da servire/Ritirare» (l'utente, 20/08/2026).
+    expect(pronto.corsie.map((c) => c.titolo)).toEqual(['Da servire/Ritirare'])
     expect(pronto.diviso).toBe(false)
     // e nessun altro chip si porta dietro un tastino: gli altri accendono
     // e spengono la loro colonna, e basta.
@@ -239,9 +248,14 @@ describe('i gruppi dei chip delle colonne', () => {
     // «Ovviamente vale solo se è attivo il ritiro al banco» (l'utente,
     // 20/08/2026): col solo servizio non c'è niente da separare, e un
     // tasto che non fa niente è peggio di un tasto che non c'è.
-    const gruppi = gruppiColonne(sceglibili(false), { taglioPossibile: false })
+    const gruppi = gruppiColonne(sceglibili(false, false), { taglioPossibile: false })
     expect(gruppi.some((g) => g.taglio)).toBe(false)
-    expect(gruppi.find((g) => g.id === 'pronto').corsie.map((c) => c.titolo)).toEqual(['Pronto'])
+    // E senza ritiro il nome perde la metà che non esiste: «se il ritiro
+    // non è attivo diventano solo Da servire e Serviti (sia filtri che
+    // label lane)» (l'utente, 20/08/2026).
+    expect(gruppi.find((g) => g.id === 'pronto').corsie.map((c) => c.titolo)).toEqual([
+      'Da servire',
+    ])
   })
 
   it('elenco vuoto o assente: nessun gruppo, niente errori', () => {
@@ -250,14 +264,24 @@ describe('i gruppi dei chip delle colonne', () => {
   })
 })
 
-// ── I TRE FILTRI DI STATO, COMBINABILI ───────────────────────────────
+// ── I TRE FILTRI DI STATO, ESCLUSIVI ─────────────────────────────────
 //
-// «Se diventano dei filtri io posso vedere quelli aperti, chiusi se
-// seleziono chiuso e annullati se seleziono annullati. Posso anche
-// disabilitare In Corso che deve diventare Aperti, non In corso. Il filtro
-// Aperti lo posso deselezionare solo se chiusi, annullati o tutti e due
-// sono attivi. Se disattivo il filtro su chiusi e annullati, si riattiva
-// il filtro aperti» (l'utente, 20/08/2026).
+// PER MEZZA GIORNATA SI SONO COMBINATI. «Se diventano dei filtri io posso
+// vedere quelli aperti, chiusi se seleziono chiuso e annullati se
+// seleziono annullati» (l'utente, 20/08/2026): erano diventati tre
+// interruttori, la coda mostrava l'unione degli accesi, e c'erano la
+// regola del «mai zero» e il ritorno automatico ad «Aperti».
+//
+// PROVATI AL BANCO, SONO TORNATI ESCLUSIVI: «no allora riportiamo aperti,
+// chiusi e annullati come mutuamente esclusivi» (l'utente, stesso giorno).
+// I test dell'unione sono spariti con la regola che descrivevano — sarebbe
+// stata una specifica che racconta un'app che non c'è più. Quello che
+// resta della lezione: sopra la coda si chiede UNA cosa per volta, e la
+// domanda che mancava davvero era come stringere DENTRO i chiusi (il tasto
+// a tre porzioni, più sotto).
+//
+// «TUTTI» NON È TORNATO: nessuno l'ha chiesto, e mescolava gli incassi con
+// gli annullati.
 describe('i filtri di stato della coda', () => {
   // Come in pagina: `contoChiuso` conta chiuso anche l'annullato — non
   // c'è più niente da fare su quel conto — e a tenerlo fuori dai chiusi
@@ -268,8 +292,6 @@ describe('i filtri di stato della coda', () => {
   const annullato = { id: 'x', status: 'annullato' }
 
   it('sono tre e la scheda «Tutti» non esiste più', () => {
-    // Era una quarta scheda: da quando i filtri si combinano, «tutti» è
-    // tutti e tre accesi — e si vede, invece di doverlo chiedere.
     expect(FILTRI_STATO.map(([k]) => k)).toEqual(['attivi', 'chiusi', 'annullati'])
     expect(FILTRI_STATO.map(([, l]) => l)).not.toContain('Tutti')
   })
@@ -279,49 +301,50 @@ describe('i filtri di stato della coda', () => {
   })
 
   it('la coda si apre con i soli aperti', () => {
-    expect(STATI_DEFAULT).toEqual(['attivi'])
-    expect(statiAlDefault(STATI_DEFAULT)).toBe(true)
-    expect(statiAlDefault(['attivi', 'chiusi'])).toBe(false)
+    expect(STATO_DEFAULT).toBe('attivi')
+    expect(statoAlDefault(STATO_DEFAULT)).toBe(true)
+    expect(statoAlDefault('chiusi')).toBe(false)
+    expect(statoAlDefault('annullati')).toBe(false)
   })
 
-  it('accende e spegne, e tiene l\'ordine canonico', () => {
-    expect(cambiaFiltroStato(['attivi'], 'chiusi')).toEqual(['attivi', 'chiusi'])
-    expect(cambiaFiltroStato(['annullati'], 'attivi')).toEqual(['attivi', 'annullati'])
-    expect(cambiaFiltroStato(['attivi', 'chiusi'], 'chiusi')).toEqual(['attivi'])
+  it('UNO E UNO SOLO: toccarne uno spegne gli altri', () => {
+    // «No allora riportiamo aperti, chiusi e annullati come mutuamente
+    // esclusivi» (l'utente, 20/08/2026).
+    expect(cambiaFiltroStato('attivi', 'chiusi')).toBe('chiusi')
+    expect(cambiaFiltroStato('chiusi', 'annullati')).toBe('annullati')
+    expect(cambiaFiltroStato('annullati', 'attivi')).toBe('attivi')
   })
 
-  it('«Aperti» si spegne solo se c\'è dell\'altro acceso', () => {
-    expect(cambiaFiltroStato(['attivi', 'chiusi'], 'attivi')).toEqual(['chiusi'])
-    expect(cambiaFiltroStato(['attivi', 'annullati'], 'attivi')).toEqual(['annullati'])
-    // Ultimo acceso: il tocco non fa niente, e non dice niente — la coda
-    // sotto non è cambiata di una riga, un avviso sarebbe solo rumore.
-    expect(cambiaFiltroStato(['attivi'], 'attivi')).toEqual(['attivi'])
+  it('ritoccare quello acceso non lo spegne: senza filtro la coda sarebbe vuota', () => {
+    // Rifiuto silenzioso, come ai tempi degli interruttori: la coda non
+    // cambia di una riga, e un avviso per un tocco che non doveva fare
+    // niente al banco è rumore.
+    for (const id of ['attivi', 'chiusi', 'annullati']) {
+      expect(cambiaFiltroStato(id, id)).toBe(id)
+    }
   })
 
-  it('spegnendo l\'ultimo fra chiusi e annullati, «Aperti» si riaccende', () => {
-    expect(cambiaFiltroStato(['chiusi'], 'chiusi')).toEqual(['attivi'])
-    expect(cambiaFiltroStato(['annullati'], 'annullati')).toEqual(['attivi'])
-    expect(cambiaFiltroStato(['chiusi', 'annullati'], 'chiusi')).toEqual(['annullati'])
-    expect(cambiaFiltroStato(['annullati'], 'annullati')).toEqual(['attivi'])
+  it('un id sconosciuto non cambia niente, e da uno sconosciuto si ripiega su Aperti', () => {
+    expect(cambiaFiltroStato('chiusi', 'tutti')).toBe('chiusi')
+    expect(cambiaFiltroStato('chiusi', undefined)).toBe('chiusi')
+    expect(cambiaFiltroStato('boh', undefined)).toBe('attivi')
+    expect(cambiaFiltroStato(undefined, undefined)).toBe('attivi')
   })
 
-  it('un id sconosciuto non cambia niente', () => {
-    expect(cambiaFiltroStato(['attivi'], 'tutti')).toEqual(['attivi'])
-    expect(cambiaFiltroStato(['attivi'], undefined)).toEqual(['attivi'])
-  })
-
-  it('la coda mostra l\'UNIONE degli stati accesi', () => {
+  it('la coda mostra lo stato scelto, e nient\'altro', () => {
     const tutti = [aperto, pagato, annullato]
-    const dentro = (stati) => tutti.filter((o) => passaStatiCoda(o, stati, chiuso)).map((o) => o.id)
-    expect(dentro(['attivi'])).toEqual(['a'])
-    expect(dentro(['attivi', 'chiusi'])).toEqual(['a', 'p'])
-    expect(dentro(['chiusi', 'annullati'])).toEqual(['p', 'x'])
-    expect(dentro(['attivi', 'chiusi', 'annullati'])).toEqual(['a', 'p', 'x'])
+    const dentro = (stato) => tutti.filter((o) => passaStatiCoda(o, stato, chiuso)).map((o) => o.id)
+    expect(dentro('attivi')).toEqual(['a'])
+    expect(dentro('chiusi')).toEqual(['p'])
+    expect(dentro('annullati')).toEqual(['x'])
+    // 'tutti' non è un filtro della coda: è come le viste che smistano
+    // l'intera lista in una passata sola (contiPerScheda, le corsie).
+    expect(dentro('tutti')).toEqual(['a', 'p', 'x'])
   })
 
-  it('il sottofiltro dei chiusi stringe SOLO i chiusi', () => {
-    // Con «Aperti» e «Chiusi» accesi e «Da servire» scelto, gli aperti
-    // devono restare tutti: serviti o no, sono comunque da chiudere.
+  it('le porzioni dei chiusi stringono SOLO i chiusi', () => {
+    // Anche smistando tutto in una passata sola, un conto aperto non è
+    // né servito né da servire: la domanda vale dentro i chiusi.
     const servito = { id: 's', status: 'pagato', payment_status: 'pagato', comande: [{ id: 'c', status: 'ritirato' }] }
     const daServire = {
       id: 'n',
@@ -330,28 +353,81 @@ describe('i filtri di stato della coda', () => {
       comande: [{ id: 'c', status: 'in_preparazione' }],
     }
     const lista = [aperto, servito, daServire]
-    const dentro = (stati, sotto) =>
-      lista.filter((o) => passaStatiCoda(o, stati, chiuso, sotto)).map((o) => o.id)
-    expect(dentro(['attivi', 'chiusi'], 'non-serviti')).toEqual(['a', 'n'])
-    expect(dentro(['chiusi'], 'serviti')).toEqual(['s'])
+    const dentro = (stato, sotto) =>
+      lista.filter((o) => passaStatiCoda(o, stato, chiuso, sotto)).map((o) => o.id)
+    expect(dentro('tutti', 'non-serviti')).toEqual(['a', 'n'])
+    expect(dentro('chiusi', 'serviti')).toEqual(['s'])
+    expect(dentro('chiusi', 'non-serviti')).toEqual(['n'])
+    // NEUTRO = TUTTI I CHIUSI, da servire E serviti: «Chiusi: sia da
+    // servire che serviti» (l'utente, 20/08/2026).
+    expect(dentro('chiusi', 'tutti')).toEqual(['s', 'n'])
   })
 
-  it('la vecchia forma a stringa continua a rispondere', () => {
-    // `contiPerScheda` e le corsie chiamano ancora con un id secco o con
-    // 'tutti': due modi di leggere la stessa domanda sono un modo di
-    // farli divergere, e infatti passano tutti da `statiDaFiltro`.
+  it('a normalizzare il filtro è un posto solo', () => {
+    // `contiPerScheda` e le corsie chiamano con 'tutti', la coda con un
+    // id secco: due modi di leggere la stessa domanda sarebbero un modo
+    // di farli divergere, e passano tutti da `statiDaFiltro`.
     expect(statiDaFiltro('chiusi')).toEqual(['chiusi'])
     expect(statiDaFiltro('tutti')).toEqual(['attivi', 'chiusi', 'annullati'])
-    expect(statiDaFiltro([])).toEqual(['attivi'])
+    expect(statiDaFiltro('boh')).toEqual(['attivi'])
     expect(statiDaFiltro(null)).toEqual(['attivi', 'chiusi', 'annullati'])
   })
 
-  it('la coda vuota dice com\'è filtrata, e con più stati non inventa', () => {
-    expect(frasePerCodaVuota(['attivi'])).toBe('Nessun ordine aperto.')
-    expect(frasePerCodaVuota(['chiusi'], true)).toBe('Nessun ordine chiuso oggi.')
-    expect(frasePerCodaVuota(['annullati'])).toBe('Nessun ordine annullato.')
-    // Due stati accesi: nessun aggettivo è vero per tutti e due.
-    expect(frasePerCodaVuota(['attivi', 'chiusi'])).toBe('Nessun ordine.')
+  it('la coda vuota dice com\'è filtrata', () => {
+    expect(frasePerCodaVuota('attivi')).toBe('Nessun ordine aperto.')
+    expect(frasePerCodaVuota('chiusi', true)).toBe('Nessun ordine chiuso oggi.')
+    expect(frasePerCodaVuota('annullati')).toBe('Nessun ordine annullato.')
+    // Con tutto mescolato nessun aggettivo è vero per tutti.
+    expect(frasePerCodaVuota('tutti')).toBe('Nessun ordine.')
+  })
+})
+
+// ── I NOMI DELLE DUE META' DEL SERVIZIO ──────────────────────────────
+//
+// «Diventano Da Servire/Ritirare e Serviti/Ritirati. Anche la label sopra
+// la lane, non deve essere Pronto ma Da servire/Ritirare. [...] se il
+// ritiro non è attivo diventano solo Da servire e Serviti (sia filtri che
+// label lane)» (l'utente, 20/08/2026).
+//
+// Un posto solo per tre usi — le porzioni del tasto dei chiusi, i chip
+// delle colonne al banco, i titoli delle corsie — o al primo ritocco la
+// colonna e il filtro che parlano della STESSA cosa si chiamano in due
+// modi diversi.
+describe('come si chiamano le due metà del servizio', () => {
+  it('col ritiro al banco portano tutti e due i nomi', () => {
+    expect(nomiDelServizio(true)).toEqual({
+      daServire: 'Da servire/Ritirare',
+      serviti: 'Serviti/Ritirati',
+    })
+  })
+
+  it('senza ritiro resta solo il servizio', () => {
+    // «/Ritirare» nominerebbe una cosa che in quel bar non succede, e
+    // manderebbe a cercare una colonna che non c'è.
+    expect(nomiDelServizio(false)).toEqual({ daServire: 'Da servire', serviti: 'Serviti' })
+  })
+
+  it('le due porzioni del tasto dei chiusi portano quegli stessi nomi', () => {
+    expect(sottofiltriChiusi(true)).toEqual([
+      ['non-serviti', 'Da servire/Ritirare'],
+      ['serviti', 'Serviti/Ritirati'],
+    ])
+    expect(sottofiltriChiusi(false)).toEqual([
+      ['non-serviti', 'Da servire'],
+      ['serviti', 'Serviti'],
+    ])
+  })
+
+  it('prima quella da fare, poi quella fatta: è l\'ordine del lavoro', () => {
+    // In un tasto segmentato si legge da sinistra, e quella da guardare
+    // di corsa è la prima: sono drink che qualcuno aspetta ancora.
+    expect(sottofiltriChiusi(true)[0][0]).toBe('non-serviti')
+  })
+
+  it('il title del tastino nomina la porzione accesa, e tace sul neutro', () => {
+    expect(nomeSottofiltro('serviti', true)).toBe('Serviti/Ritirati')
+    expect(nomeSottofiltro('non-serviti', false)).toBe('Da servire')
+    expect(nomeSottofiltro('tutti', true)).toBe(null)
   })
 })
 
@@ -880,7 +956,7 @@ describe('da quanto è lì', () => {
 // conti restavano in mezzo a quelli in corso, con un tasto «nascondi
 // pagati» per toglierseli dagli occhi. Adesso stanno fra i chiusi, e
 // «quali hanno ancora roba da portare» si chiede qui dentro.
-import { passaSottofiltroChiusi, SOTTOFILTRI_CHIUSI } from '../../src/lib/coda.js'
+import { passaSottofiltroChiusi } from '../../src/lib/coda.js'
 
 describe('dentro i conti chiusi: serviti e da servire', () => {
   const con = (comande, patch = {}) => ({ status: 'pagato', payment_status: 'pagato', comande, ...patch })
@@ -891,16 +967,12 @@ describe('dentro i conti chiusi: serviti e da servire', () => {
   ])
 
   // ERANO TRE, E LA TERZA ERA IL NEUTRO. «Tutti» stava acceso quasi
-  // sempre e diceva «nessun filtro» sembrando un filtro; da quando questi
-  // chip stanno in riga con gli altri («i filtri serviti/da servire deve
-  // stare insieme agli altri», l'utente 20/08/2026) sarebbe stata anche la
-  // stessa parola della scheda appena tolta. Il neutro adesso è nessuno
-  // dei due acceso.
-  it('le due voci sono quelle, e il neutro non si disegna', () => {
-    expect(SOTTOFILTRI_CHIUSI.map(([k]) => k)).toEqual(['serviti', 'non-serviti'])
-  })
+  // sempre e diceva «nessun filtro» sembrando un filtro. Il neutro adesso
+  // è nessuna delle due porzioni accesa — e da quando le due si sono fuse
+  // col chip «Chiusi» in un tasto solo (sottofiltriChiusi, provata più
+  // sopra) quel neutro è proprio il tasto chiuso su sé stesso.
 
-  it('toccare quello acceso lo spegne, toccare l\'altro cambia domanda', () => {
+  it('toccare la porzione accesa la spegne, toccare l\'altra cambia domanda', () => {
     expect(cambiaSottoChiusi('tutti', 'serviti')).toBe('serviti')
     expect(cambiaSottoChiusi('serviti', 'serviti')).toBe('tutti')
     expect(cambiaSottoChiusi('serviti', 'non-serviti')).toBe('non-serviti')
@@ -1009,19 +1081,31 @@ describe('le corsie delle comande', () => {
     // Le quattro del lavoro, più le due dello sguardo all'indietro: gli
     // stati del servizio sono SOTTOSTATI dell'ordine, e chiusi e annullati
     // sono stati dell'ordine — le comande ci finiscono dentro anche qui.
+    // I NOMI DELLE DUE COLONNE DEL SERVIZIO SEGUONO IL RITIRO: «anche la
+    // label sopra la lane, non deve essere Pronto ma Da servire/Ritirare
+    // [...] se il ritiro non è attivo diventano solo Da servire e
+    // Serviti» (l'utente, 20/08/2026). Sono le stesse parole delle due
+    // porzioni del tasto dei chiusi in griglia — una colonna e un filtro
+    // che parlano della stessa cosa devono chiamarsi allo stesso modo.
     expect(corsie.map((c) => [c.id, c.titolo])).toEqual([
       ['da-fare', 'Da fare'],
       ['al-banco', 'In preparazione'],
-      ['al-ritiro', 'Pronto'],
+      ['al-ritiro', 'Da servire/Ritirare'],
       // Il lavoro finito ha una colonna sua, che nella vista dei conti non
       // c'è: lì un conto servito è solo roba da incassare. E qui NON c'è
       // una colonna «Da incassare»: conteneva gli stessi drink di questa,
       // solo raggruppati per conto invece che per ticket.
-      ['ritirati', 'Ritirato/Servito'],
+      ['ritirati', 'Serviti/Ritirati'],
       // Al femminile: qui dentro non ci sono conti, ci sono comande.
       ['chiusi', '💶 Chiuse'],
       ['annullati', '✖️ Annullate'],
     ])
+    // Col solo servizio la metà che non esiste sparisce dai titoli.
+    expect(
+      corsieComande(coda, { isChiuso: chiusoConStati, ritiroEsiste: false })
+        .filter((c) => ['al-ritiro', 'ritirati'].includes(c.id))
+        .map((c) => c.titolo)
+    ).toEqual(['Da servire', 'Serviti'])
     const dove = Object.fromEntries(corsie.map((c) => [c.id, c.schede.map((s) => s.id)]))
     expect(dove['da-fare']).toEqual(['o41:c2'])
     expect(dove['al-banco']).toEqual(['o42:c1'])
