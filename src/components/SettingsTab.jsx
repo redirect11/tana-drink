@@ -416,6 +416,12 @@ export default function SettingsTab({ role = null }) {
                   onChange={(v) => save({ riscuoti_e_servi: v })}
                 />
               )}
+              <ToggleRow
+                label="Un tasto per incassare senza stampare"
+                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                checked={settings.riscuoti_senza_stampa === true}
+                onChange={(v) => save({ riscuoti_senza_stampa: v })}
+              />
               {/* Vale per TUTTE le comande allo stesso modo — la prima di un
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo

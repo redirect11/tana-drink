@@ -1784,3 +1784,30 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/logoScontrino.test.js]
+  - id: BUG-054
+    title: "La chiusura rapida Contanti/Carta dalla card non stampava lo scontrino"
+    area: "src/pages/BartenderPage.jsx (tasti rapidi della card)"
+    description: >
+      Segnalato dall'utente il 20/08: «la chiusura veloce da CONTANTI o
+      CARTA dalla card dell'ordine (azioni nascoste) deve mandare in stampa
+      lo scontrino di chiusura proprio come il pannello dei pagamenti col
+      tab RISCUOTERE».
+      LA CAUSA: i due tasti chiamavano solo markOrderPaid e si affidavano
+      allo snapshot della coda per la stampa. Ma quel percorso usa la
+      pretesa NORMALE (claim), che su un conto gia' stampato una volta
+      tace: riscosso, riaperto, richiuso dal tasto rapido — niente carta.
+      Il pannello dei pagamenti invece stampa AL GESTO con la pretesa
+      forzata (reclaim: un incasso vero e' una chiusura nuova).
+      LA CURA: stessa regola sui tasti rapidi. Al tocco, se l'auto-stampa
+      e' accesa: pretesa forzata e scontrino subito, col METODO appena
+      scelto scritto sopra (contanti o carta — era il motivo per cui i
+      tasti sono due) e il residuo incassato adesso. Local-first: la
+      stampa non aspetta la scrittura, il gesto e' gia' fatto. Stampa
+      fallita: pretesa restituita, avviso a schermo.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti]
+    severity: media
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]

@@ -111,7 +111,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
-import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -1601,31 +1601,53 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           // più a portata di mano della board, e chi incassava con la carta lo
           // premeva lo stesso — il conto finiva nei contanti e a fine serata
           // la cassa non tornava. Il metodo ora si sceglie qui.
+          //
+          // E LO SCONTRINO ESCE AL GESTO, come dal pannello dei pagamenti
+          // (BUG-054): questa è una riscossione a tutti gli effetti, quindi
+          // stessa regola — pretesa FORZATA (reclaim: un incasso vero è una
+          // chiusura nuova) e il metodo scritto sullo scontrino. Prima ci si
+          // affidava allo snapshot della coda, che con la pretesa normale
+          // taceva sui conti già stampati una volta.
           <div className="grid-2" style={{ marginTop: 8 }}>
-            <button
-              className="btn"
-              disabled={readerPending || !canCollect}
-              title={canCollect ? undefined : 'Conto già chiuso'}
-              onClick={() =>
-                markOrderPaid(o.id, 'banco', { autoServe: !workflowOn }).catch((e) =>
-                  setError(e.message)
-                )
-              }
-            >
-              💶 Contanti
-            </button>
-            <button
-              className="btn"
-              disabled={readerPending || !canCollect}
-              title={canCollect ? undefined : 'Conto già chiuso'}
-              onClick={() =>
-                markOrderPaid(o.id, 'carta', { autoServe: !workflowOn }).catch((e) =>
-                  setError(e.message)
-                )
-              }
-            >
-              💳 Carta
-            </button>
+            {[
+              ['banco', '💶 Contanti'],
+              ['carta', '💳 Carta'],
+            ].map(([metodo, etichetta]) => (
+              <button
+                key={metodo}
+                className="btn"
+                disabled={readerPending || !canCollect}
+                title={canCollect ? undefined : 'Conto già chiuso'}
+                onClick={() => {
+                  markOrderPaid(o.id, metodo, { autoServe: !workflowOn }).catch((e) =>
+                    setError(e.message)
+                  )
+                  // La stampa non aspetta la scrittura: local-first, il
+                  // gesto è già fatto. Lo scontrino porta il residuo
+                  // incassato adesso e il metodo appena scelto.
+                  try {
+                    if (loadPrinterSettings().autoPrintScontrino && reclaimReceiptPrint(o.id)) {
+                      const residuo = Math.max(0, orderTotal(o) - paidAmount(o))
+                      printScontrino({
+                        ...o,
+                        payments: [
+                          ...(o.payments || []),
+                          { amount: residuo, method: metodo, at: new Date().toISOString() },
+                        ],
+                        payment_method: metodo,
+                      }).catch((e) => {
+                        setError(`Scontrino non stampato: ${e.message}`)
+                        releaseReceiptPrint(o.id)
+                      })
+                    }
+                  } catch {
+                    /* stampante non configurata: si continua */
+                  }
+                }}
+              >
+                {etichetta}
+              </button>
+            ))}
           </div>
         )}
         <div className="grid-2" style={{ marginTop: 8 }}>

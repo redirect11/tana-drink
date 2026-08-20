@@ -167,7 +167,8 @@ vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>camp
 
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
 import { nascondiOrdine, mostraOrdine } from '../../src/lib/ordiniNascosti.js'
-import { updateOrderStatus, advanceComanda, setOrderColore } from '../../src/lib/api.js'
+import { updateOrderStatus, advanceComanda, setOrderColore, markOrderPaid } from '../../src/lib/api.js'
+import { loadPrinterSettings, printScontrino, reclaimReceiptPrint } from '../../src/lib/printer.js'
 
 const ORA = '2026-08-16T21:00:00.000Z'
 
@@ -1307,5 +1308,54 @@ describe('chi è collegato, nella legenda', () => {
     await screen.findByText('In corso')
 
     expect(legenda()).not.toContain('Sara')
+  })
+})
+
+// ── LA CHIUSURA RAPIDA STAMPA COME IL PANNELLO (BUG-054) ─────────────
+//
+// «💶 Contanti» e «💳 Carta» nelle azioni nascoste della card sono una
+// riscossione a tutti gli effetti: lo scontrino deve uscire AL GESTO, con
+// la pretesa forzata, come dal tab Riscuotere. Prima ci si affidava allo
+// snapshot della coda, che con la pretesa normale taceva sui conti già
+// stampati una volta — riscosso, riaperto, richiuso dal tasto rapido:
+// niente carta.
+describe('la chiusura rapida dalla card stampa lo scontrino', () => {
+  it('Contanti stampa al gesto, col metodo sullo scontrino', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'admin'
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    loadPrinterSettings.mockReturnValue({ autoPrintScontrino: true })
+    // Il mock del file risponde false (nelle altre prove la stampa non
+    // c'entra): qui la pretesa deve passare, e' il gesto dell'incasso.
+    reclaimReceiptPrint.mockReturnValue(true)
+    printScontrino.mockClear()
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.grid-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))
+    await utente.click(screen.getByRole('button', { name: /Contanti/ }))
+
+    expect(markOrderPaid).toHaveBeenCalled()
+    expect(printScontrino).toHaveBeenCalledTimes(1)
+    // Lo scontrino dice COME si è pagato: era il motivo dei due tasti.
+    expect(printScontrino.mock.calls[0][0].payment_method).toBe('banco')
+  })
+
+  it('e con l’auto-stampa spenta la stampante resta muta', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'admin'
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    loadPrinterSettings.mockReturnValue({})
+    printScontrino.mockClear()
+    montaCoda()
+    await screen.findByText('In corso')
+
+    const card = document.querySelector('.grid-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))
+    await utente.click(screen.getByRole('button', { name: /Carta/ }))
+
+    expect(markOrderPaid).toHaveBeenCalled()
+    expect(printScontrino).not.toHaveBeenCalled()
   })
 })
