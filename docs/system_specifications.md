@@ -1890,6 +1890,16 @@ IL FOGLIO PERO' E' UNA LISTA DELLA SPESA, non un registro: si chiama «da compra
 
 IL RIEPILOGO, quarta voce del menu: mette insieme i tre elenchi in un totale per mese — merce (dalle fatture), altre spese, e quanto resta aperto (ordini senza fattura, fatture non pagate). E' il numero che poi Bilancio -> Mesi usa per il netto, e la ragione per cui sta QUI e non li': i soldi che escono si guardano dove si registrano.
 
+DECISIONI DEL 20/08 (l'utente, a voce sua), che AGGIORNANO il modello scritto sopra — dove si contraddicono, vince quanto segue: 1) L'ORDINE PUO' CONTENERE ITEM DI PIU' FORNITORI: «un ordine puo' contenere item da piu' fornitori, per questo deve essere possibile FILTRARE l'ordine per fornitori». Il giro e l'ordine collassano in una cosa sola: quello che sopra si chiamava «giro» E' l'ordine, e il livello per-fornitore diventa una VISTA (il filtro), non un documento. Le fatture restano piu' d'una — di norma una per fornitore coinvolto.
+
+2) LE FATTURE SI ALLEGANO ALL'ORDINE: «deve essere possibile anche allegare le fatture all'ordine». Allegare = il documento (foto/PDF) attaccato, non solo un numero. Serve lo Storage; da decidere in implementazione il limite di peso e i formati. 3) «ARRIVATO»
+
+LO DECIDE L'ADMIN: e' il suo gesto a segnare l'ordine arrivato, ed e' quel gesto che APRE la possibilita' di caricare l'inventario.
+
+4) IL CARICO NON E' AUTOMATICO: «e' il bartender che decide, quando l'ordine e' arrivato, SE e QUALI prodotti caricare in inventario». Riga per riga, piu' un tasto «CARICA TUTTI» quando l'ordine e' arrivato. Il receivePurchaseOrder di oggi (carica tutto in un colpo al ricevimento) va quindi spezzato in due: l'arrivo (admin) e il carico (bartender, selettivo o tutto).
+
+5) ASSORTIMENTO PRE-IMPOSTATO, opzionale: prima che l'ordine arrivi si puo' segnare, per ogni prodotto dell'ordine, il passaggio a «in assortimento» — e il cambio si applica quando l'ordine e' arrivato e il carico di quel prodotto e' stato fatto davvero. Serve a preparare il listino mentre la merce viaggia, senza che il cambio scatti prima che la merce esista.
+
 **Dove**: `src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx`
 
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
@@ -1937,6 +1947,8 @@ SENZA QUEL NUMERO non si sa quanto ordinare: e' l'unica cosa che l'admin deve sc
 ATTENZIONE, UN FATTO DA GUARDARE PRIMA DI SCRIVERE (misurato su tana-drink-test il 19/08): dei 388 articoli solo 78 sono classificati linea (36) o premium (42). Duecentouno sono in 'assortimento' e centonove 'out'. Siccome 'assortimento' e' il DEFAULT di chi non ha mai dichiarato niente, la regola cosi' com'e' lascerebbe fuori dal prepopolato duecento prodotti — e non si sa se quei duecento sono «tenuti senza niente di speciale» per scelta o solo mai classificati. Se sono la seconda cosa, l'ordine prepopolato salterebbe in silenzio merce che serve, ed e' il tipo di buco di cui ci si accorge quando manca la bottiglia.
 
 DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quella detta: linea e premium.
+
+NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
 
