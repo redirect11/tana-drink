@@ -23,8 +23,6 @@ import {
   extrasBreakdown,
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
-import MacroMonthlyTab from './MacroMonthlyTab.jsx'
-import { Sottosezioni } from '../lib/sottosezioni.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -53,26 +51,16 @@ const etichettaSerata = (s) => {
   return `${giorno} · ${da}→${a}${Number.isFinite(inc) && inc > 0 ? ` · ${Math.round(inc)} €` : ''}`
 }
 
-// Le Statistiche hanno due viste: il giornaliero (finestra a giornate) e il
-// mensile per macro-categoria (Dashboard A).
-// Le due viste sono SOTTOSEZIONI della pagina, come in Magazzino e
-// Impostazioni: stanno nel menu (che su queste pagine resta aperto a
-// lato) invece che in una riga di chip sopra il contenuto. Erano l'unica
-// pagina con le sue sezioni in pagina, e una riga costa altezza a una
-// schermata che è già fatta di tabelle.
-const SEZIONI_STATS = [
-  { id: 'giornaliero', icona: '📊', label: 'Giornaliero' },
-  { id: 'mensile', icona: '🗂', label: 'Mensile per macro' },
-]
-
+// LE STATISTICHE SONO RIMASTE UNA SOLA VISTA. Il «Mensile per macro» ha
+// traslocato in Bilancio → Venduto × Incassato: quanto ha reso ogni gruppo
+// del menù è una domanda da conti di fine mese, e questi sono i numeri di
+// chi lavora — com'è andata ieri sera.
+//
+// E l'ELENCO DELLE SOTTOSEZIONI SE N'È ANDATO CON LEI: una pagina con una
+// sezione sola non ha niente da far scegliere, e lasciarne una spuntata da
+// sé nel menu è una scelta che non è una scelta.
 export default function StatsTab() {
-  const [sub, setSub] = useState('giornaliero') // 'giornaliero' | 'mensile'
-  return (
-    <div>
-      <Sottosezioni voci={SEZIONI_STATS} attiva={sub} scegli={setSub} />
-      {sub === 'giornaliero' ? <DailyStats /> : <MacroMonthlyTab />}
-    </div>
-  )
+  return <DailyStats />
 }
 
 function DailyStats() {

@@ -50,6 +50,21 @@ export const STATUS_LABELS = {
 // passa di qui, chi scrive per il cliente usa STATUS_LABELS.
 export function statoAlBanco(stato, serviceMode) {
   if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  // UNA PAROLA SOLA PER IL PRONTO. Lo stesso passo si chiamava in tre modi a
+  // seconda di dove lo si leggeva: «Pronto» nella tabella del servizio,
+  // «Pronto al servizio» sull'etichetta di stato, «Ritiro/Servizio» in testa
+  // alla colonna. Chi lavora vedeva tre parole per una cosa sola, ed è lo
+  // stesso guaio — più piccolo — della pastiglia che diceva «Ordine
+  // ricevuto» accanto alla colonna «Da fare».
+  //
+  // Al banco vince la più corta: una testata di colonna si legge da lontano
+  // mentre si versa, e «Ritiro/Servizio» diceva DOVE VA il drink — che è
+  // un'altra domanda, e ha già le sue due colonne quando il pronto si divide
+  // («Da servire» / «Da ritirare»).
+  //
+  // Al CLIENTE resta «Pronto al servizio» (STATUS_LABELS): a lui «Pronto»
+  // da solo non dice se deve alzarsi o aspettare.
+  if (stato === ORDER_STATUSES.PRONTO) return 'Pronto'
   if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
   return STATUS_LABELS[stato]
 }

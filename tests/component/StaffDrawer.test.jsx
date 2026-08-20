@@ -105,6 +105,23 @@ describe('menu laterale', () => {
     expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
 
+  // ── IL BILANCIO È DELL'ADMIN ───────────────────────────────────────
+  // I conti del locale li guarda chi il locale lo paga. Prima il menu si
+  // filtrava tutto con `isGestore`, che tiene dentro anche il bartender:
+  // questa è la prima voce che vuole un filtro più stretto.
+  it('«Bilancio» lo vede l’admin', () => {
+    apri('admin')
+    expect(screen.getByText('Bilancio')).toBeInTheDocument()
+  })
+
+  it('al bartender la voce «Bilancio» non compare', () => {
+    apri('bartender')
+    expect(screen.queryByText('Bilancio')).toBeNull()
+    // Il resto del gestionale resta suo.
+    expect(screen.getByText('Cassa')).toBeInTheDocument()
+    expect(screen.getByText('Magazzino')).toBeInTheDocument()
+  })
+
   it('per il gestore «Nuovo ordine» apre il POS', async () => {
     apri('admin')
     await userEvent.click(screen.getByText('Nuovo ordine'))

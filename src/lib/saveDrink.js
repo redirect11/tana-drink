@@ -29,6 +29,16 @@ export function buildRecipeItems(rows, inventory) {
     })
 }
 
+// L'IVA di vendita scritta a mano → numero, oppure null («usa quella del
+// locale»). Una scritta che non è un numero vale come vuoto: meglio
+// ripiegare sull'aliquota del locale che salvare un NaN, che poi scorpora
+// male e non lo dice a nessuno.
+export function aliquotaVendita(valore) {
+  if (valore === '' || valore == null) return null
+  const n = Number(valore)
+  return Number.isFinite(n) ? n : null
+}
+
 // `existing`: il prodotto in modifica (null per crearne uno nuovo).
 export async function saveDrinkFromForm({ form, existing = null, inventory = [], categories = [] }) {
   let imageUrl = form.image_url ?? null
@@ -46,6 +56,10 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     recipe: (form.recipe || '').trim() || null,
     recipe_items: buildRecipeItems(form.recipe_rows, inventory),
     price: Number(form.price || 0),
+    // VUOTO = QUELLA DEL LOCALE. Le eccezioni si scrivono dove sono, una
+    // per una, e chi non ne ha non compila niente. Uno zero invece è
+    // un'aliquota vera (esente): va salvato, non scambiato per «vuoto».
+    sale_vat: aliquotaVendita(form.sale_vat),
     available: !!form.available,
     image_url: imageUrl,
   }

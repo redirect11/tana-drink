@@ -112,9 +112,12 @@ Regole di sopravvivenza del modello:
   le versioni: gli ordini vecchi si normalizzano al volo (REQ-ORD-002),
   le migrazioni sono additive e idempotenti, mai un'app che presuppone la
   migrazione già fatta.
-- **Il magazzino si scala con lo snapshot** della ricetta al momento
-  della preparazione (la ricetta cambia, il drink già fatto no); le
-  modifiche riallineano per differenza, l'annullo reintegra.
+- **Il magazzino si scala con lo snapshot** della ricetta al momento in cui
+  la comanda è **pronta** (la ricetta cambia, il drink già fatto no); le
+  modifiche riallineano per differenza, l'annullo reintegra. Il momento è
+  uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
+  segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
+  magazzino non scrive.
 - **La giornata è commerciale, non solare** (`businessDay.js`): taglio
   alle 5 del mattino (configurabile), fuso `Europe/Rome` cablato.
 
@@ -138,8 +141,9 @@ Regole di sopravvivenza del modello:
 
 bozza (locale) → conferma = **comanda** con progressivo → stati di
 lavorazione (`ricevuto → in preparazione → pronto → ritirato/servito`,
-con `pagato` e `annullato` a parte) → magazzino scalato alla
-preparazione → pagamento (contanti/carta a mano, SumUp via Functions,
+con `pagato` e `annullato` a parte) → magazzino scalato a **«pronto»**,
+dove il drink è fatto (senza stati di servizio, alla riscossione) →
+pagamento (contanti/carta a mano, SumUp via Functions,
 acconti, gruppi anche alla romana) → chiusura, e il conto sparisce
 subito dalla coda. Aumenti su un conto in corso confluiscono nella
 comanda giusta senza riaprire quelle servite.

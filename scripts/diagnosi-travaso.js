@@ -17,7 +17,7 @@
 //  limoni non ha niente di strano, giusto o sbagliato che sia — e l'unico
 //  controllo che se ne accorge è il confronto prima/dopo.
 // =====================================================================
-import { accessToken, arg, idDi } from './lib-firestore.js'
+import { accessToken, client, clientEmulatore, arg, idDi } from './lib-firestore.js'
 import { trovaEmulatore } from './lib-emulatore.js'
 import {
   articoloNormalizzato,
@@ -32,6 +32,8 @@ import {
 
 const PROGETTO = arg('project', null)
 
+// Emulatore o progetto vero: cambia solo a chi si chiede. Le chiamate le fa
+// il client di lib-firestore.js, che sa gia' paginare.
 async function leggiArticoli() {
   if (!PROGETTO) {
     const dove = await trovaEmulatore()
@@ -39,39 +41,11 @@ async function leggiArticoli() {
       console.error('[diagnosi] Nessun emulatore in ascolto: avvialo con "npm run emulators".')
       process.exit(1)
     }
-    const progetto = 'demo-tana-drink'
-    return {
-      dove: `emulatore ${dove}`,
-      docs: await scarica(
-        `http://${dove}/v1/projects/${progetto}/databases/(default)/documents`,
-        { Authorization: 'Bearer owner' }
-      ),
-    }
+    const docs = await clientEmulatore(dove).documenti('inventory_items')
+    return { dove: `emulatore ${dove}`, docs }
   }
   const token = await accessToken()
-  return {
-    dove: PROGETTO,
-    docs: await scarica(
-      `https://firestore.googleapis.com/v1/projects/${PROGETTO}/databases/(default)/documents`,
-      { Authorization: `Bearer ${token}` }
-    ),
-  }
-}
-
-async function scarica(base, auth) {
-  const out = []
-  let pageToken = ''
-  do {
-    const res = await fetch(
-      `${base}/inventory_items?pageSize=300${pageToken ? `&pageToken=${pageToken}` : ''}`,
-      { headers: { ...auth, 'Content-Type': 'application/json' } }
-    )
-    const json = await res.json()
-    if (json.error) throw new Error(`${json.error.status}: ${json.error.message}`)
-    out.push(...(json.documents || []))
-    pageToken = json.nextPageToken || ''
-  } while (pageToken)
-  return out
+  return { dove: PROGETTO, docs: await client(PROGETTO, token).documenti('inventory_items') }
 }
 
 const valore = (f) => {

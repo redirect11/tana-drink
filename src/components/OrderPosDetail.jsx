@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   advanceComanda,
   addComanda,
+  chiudiCreazione,
   bartenderUpdateComanda,
   updateOrderInfo,
   setOrderGroup,
@@ -47,6 +48,7 @@ import {
   orderIsClosed,
   comandaEditable,
   comandaPerLeAggiunte,
+  ultimaComandaViva,
   comandaDivisibile,
   statiDopoLaDivisione,
   statiPrimaComanda,
@@ -60,7 +62,7 @@ import {
   ORDER_OPEN,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi } from '../lib/pagamento.js'
-import { isPersonale } from '../lib/ruoli.js'
+import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
 import {
   makeLineId,
   mergeLines,
@@ -70,7 +72,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printComande, printComandaUnita, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -248,6 +250,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // vecchia aveva ancora `order` nullo e la scrittura cadeva nel vuoto.
   const orderIdRef = useRef(null)
   if (order?.id) orderIdRef.current = order.id
+  // SESSIONE DI CREAZIONE APERTA: solo per il conto nato in questa
+  // schermata (`selfOrder`) e finché il documento lo dice. Un conto aperto
+  // dalla coda (`orderProp`) è già «creato»: lì vale la regola della presa
+  // in carico.
+  const inCreazione = !orderProp && !!selfOrder && selfOrder.in_creazione === true
   // Ordine appena creato in place e ancora senza nome: all'uscita lo si chiede
   // una volta (poi non più).
   const createdInPlace = !orderProp && !!selfOrder
@@ -460,25 +467,54 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     return () => cancelAnimationFrame(t)
   }, [panelCollapsed])
 
-  // Staff loggato (per l'attribuzione dell'ordine creato dal POS).
+  // Staff loggato: serve per l'attribuzione dell'ordine creato dal POS e —
+  // sempre, anche in modifica — per sapere CHI sta guardando. La sala serve
+  // e non prepara (REQ-STAFF-014): senza il ruolo qui, questa schermata le
+  // offrirebbe i passi del banco.
   const [staff, setStaff] = useState(null)
+  const [ruolo, setRuolo] = useState(null)
   useEffect(() => {
-    if (!isNew) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaff(null)
+      if (!u) {
+        setRuolo(null)
+        return setStaff(null)
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
+        setRuolo(isPersonale(role) ? role : null)
         if (isPersonale(role)) {
           const io = { email: u.email, name: u.displayName || u.email, role }
           staffRef.current = io
           setStaff(io)
         }
       } catch {
+        setRuolo(null)
         setStaff(null)
       }
     })
-  }, [isNew])
+  }, [])
+
+  // LA SALA SERVE, NON PREPARA. Vede il conto e ci lavora sopra — aggiunge
+  // righe, corregge quello che ha appena battuto — ma le comande già mandate
+  // al banco non le riscrive, e i passi della preparazione non li segna.
+  const comandaIlLavoro = puoGestireComande(ruolo)
+  // Le aggiunte della sala non entrano in una comanda che qualcuno sta già
+  // preparando: nasce un ticket nuovo. Il ruolo passa da un ref perché
+  // queste funzioni vivono fuori dal ciclo di render (vedi flushAdditions).
+  const ruoloRef = useRef(null)
+  ruoloRef.current = ruolo
+  // LA SESSIONE DI CREAZIONE. Finché chi ha battuto il conto non è uscito,
+  // quella è UNA comanda sola: «se non sono ancora uscito dalla creazione
+  // ordine quella è sempre una sola comanda (anche se da creazione ordine
+  // vado in pagamento)» (l'utente, 20/08). Vale per il conto nato QUI —
+  // `selfOrder` — non per un conto riaperto dalla coda.
+  const inCreazioneRef = useRef(false)
+  inCreazioneRef.current = inCreazione
+  const bersaglioAggiunte = () =>
+    aggiunteInComandaNuova(ruoloRef.current)
+      ? null
+      : comandaPerLeAggiunte(effComandeRef.current, { inCreazione: inCreazioneRef.current })
 
   // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
   // pagamenti…) senza rimontare la pagina. Si aggiorna lo stato SOLO se cambia
@@ -547,7 +583,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     flushAllRef.current?.()
     if (orderProp) return
     ricordaContoInCorso(null)
-    if (draftRef.current.length > 0) createFromDraftRef.current()
+    // LA SESSIONE DI CREAZIONE FINISCE QUI, e solo qui: andare in pagamento
+    // e tornare è ancora la stessa battuta. Da adesso le comande di questo
+    // conto possono uscire dalla stampante — il ticket esce COMPLETO, non a
+    // metà composizione — e le righe che arrivano dopo seguono la regola
+    // della presa in carico.
+    const nato = draftRef.current.length > 0 ? createFromDraftRef.current() : null
+    Promise.resolve(nato)
+      .then((o) => chiudiCreazione(o?.id || orderIdRef.current))
+      .catch(() => {})
     saveDraft('new', [])
   }
   useEffect(
@@ -850,6 +894,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         .map((c) => (pendingEdits[c.id] ? { ...c, items: pendingEdits[c.id] } : c)),
     [comandeLocali, contoPerLocali, pendingEdits]
   )
+  // Quelle che si possono ancora ristampare: le annullate no, è lavoro
+  // buttato e rimetterlo al banco sarebbe un ticket da non preparare.
+  // Si guardano quelle a schermo — comprese le appena battute, che qui ci
+  // sono già e sul server magari no.
+  const stampabili = useMemo(
+    () => comandeStampabili({ comande: effComande }),
+    [effComande]
+  )
   // Riferimenti sempre aggiornati per l'auto-conferma e la conferma all'uscita.
   const effComandeRef = useRef(effComande)
   effComandeRef.current = effComande
@@ -877,6 +929,26 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   }, [draft, effComande])
   const bozzaVivaRef = useRef(bozzaViva)
   bozzaVivaRef.current = bozzaViva
+
+  // ── DOVE VANNO LE RIGHE NUOVE, QUANDO NON PUÒ DIRLO L'APP ────────────
+  //
+  // Col servizio acceso lo dice la regola: nella comanda finché nessuno
+  // l'ha presa in mano, in una nuova da lì in poi. Col servizio SPENTO
+  // quella regola non ha nessun appiglio — non esistono passi, non esiste
+  // «preso in carico» — e a saperlo è solo chi sta al banco: «se non ci
+  // sono gli stati di servizio, il bartender/admin SCEGLIE, solo in
+  // modifica» (l'utente, 20/08). Quindi si chiede, con due tasti, e solo
+  // qui: non in creazione (lì è una comanda sola per definizione) e non
+  // alla sala, che manda sempre un ticket nuovo.
+  const sceltaAggiunte =
+    !isNew &&
+    !inCreazione &&
+    !workflowOn &&
+    !closed &&
+    comandaIlLavoro &&
+    !aggiunteInComandaNuova(ruolo) &&
+    bozzaViva.length > 0 &&
+    !!ultimaComandaViva(effComande)
 
   // ── LISTA UNICA: item confermati (per-riga, dalle comande) + bozza ──
   // Le quantità già pagate (acconti/split registrati) vengono scorporate in
@@ -930,7 +1002,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             ...base,
             key: chiave,
             qty: unpaidQty,
-            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
+            // Alla sala le comande già mandate al banco restano da leggere:
+            // toccarle vuol dire cambiare il lavoro sotto le mani di chi versa.
+            removable:
+              comandaIlLavoro && !comandaAnnullata && (comandaEditable(c) || riaperto),
             annullata: comandaAnnullata,
           })
         if (paidHere > 0)
@@ -938,7 +1013,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto, contoAnnullato])
+  }, [effComande, order?.payments, riaperto, contoAnnullato, comandaIlLavoro])
 
   const draftLines = useMemo(
     () => bozzaViva.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
@@ -1134,13 +1209,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // MODIFICA: l'item entra DIRETTAMENTE nella comanda che accoglie il lavoro
   // nuovo (modifica ottimistica, chiave riga stabile) e si sincronizza in
   // background — così NON si vede la riga "ricaricarsi" (niente swap
-  // bozza→comanda). Se in quel passo non c'è ancora una comanda, ne nasce
+  // bozza→comanda). Se nessuna comanda del conto è più «da fare», ne nasce
   // una: dove finiscono le righe nuove lo dice comandaPerLeAggiunte, in un
   // posto solo.
   const addToEditableComanda = (item) => {
-    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
+    const target = bersaglioAggiunte()
     if (!target) {
-      // NIENTE COMANDA IN QUEL PASSO: le righe passano dalla BOZZA, che le
+      // NESSUNA COMANDA DA FARE: le righe passano dalla BOZZA, che le
       // raccoglie e le manda tutte insieme (flushAdditions, poco dopo
       // l'ultimo tocco). Prima ogni tocco chiamava addComanda per conto
       // suo: tre tocchi di fila facevano tre ticket per lo stesso giro, e
@@ -1225,6 +1300,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     if (closed || l.paid) return
     if (l.source === 'draft') {
       setDraftLineQty(l.line_id, l.qty + 1)
+      return
+    }
+    // LA SALA NON RISCRIVE UNA COMANDA GIÀ MANDATA: il suo «+» è un drink in
+    // più sul conto, e va al banco come un ticket nuovo — la stessa strada
+    // di un tocco sulla griglia.
+    if (aggiunteInComandaNuova(ruoloRef.current)) {
+      addToEditableComanda({
+        drink_id: l.drink_id,
+        name: l.name,
+        unit_price: l.unit_price,
+        qty: 1,
+        ...(l.custom ? { custom: true, recipe_items: l.recipe_items ?? [] } : {}),
+      })
       return
     }
     const c = effComandeRef.current.find((x) => x.id === l.comandaId)
@@ -1374,10 +1462,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const modoConsegna = modoAllaNascita(settings)
 
   // MODIFICA: manda al server le aggiunte in sospeso (senza navigare). Gli
-  // item confluiscono nella comanda in preparazione; una NUOVA comanda si crea
-  // solo se l'ordine è già pronto/servito. Usata dall'AUTO-CONFERMA (ogni
-  // aggiunta è confermata subito) e all'uscita per non perdere nulla.
-  const flushAdditions = useCallback(() => {
+  // item confluiscono nella comanda ancora «da fare», se c'è; da «in
+  // preparazione» in poi ne nasce una NUOVA (comandaPerLeAggiunte). Usata
+  // dall'AUTO-CONFERMA (ogni aggiunta è confermata subito) e all'uscita per
+  // non perdere nulla.
+  // `scelta` la passa una persona, e solo col servizio spento (vedi
+  // `sceltaAggiunte` più sotto): 'comanda' = le righe entrano nell'ultima
+  // comanda del conto, 'nuova' = ne nasce una. Senza scelta decide la
+  // regola (comandaPerLeAggiunte), che è quello che succede sempre col
+  // servizio acceso e durante la creazione.
+  const flushAdditions = useCallback((scelta = null) => {
     if (isNew || !order?.id) return
     // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
     // rimasto sporco (crash, corse alla nascita del conto) non deve battere
@@ -1387,7 +1481,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       if (draftRef.current.length > 0) clearDraft()
       return
     }
-    const target = comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
+    const target =
+      scelta === 'nuova'
+        ? null
+        : scelta === 'comanda'
+          ? ultimaComandaViva(effComandeRef.current)
+          : bersaglioAggiunte()
     const oid = order.id
     if (target) {
       // OTTIMISTICO: gli item entrano SUBITO nella comanda (stesso render in cui
@@ -1397,7 +1496,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       clearDraft()
       segnaModifica(target.id, merged, 250)
     } else {
-      // NESSUNA COMANDA IN QUEL PASSO → NE NASCE UNA. E resta a schermo
+      // NESSUNA COMANDA DA FARE → NE NASCE UNA. E resta a schermo
       // mentre vola al server: prima si svuotava la bozza e si aspettava la
       // risposta, quindi per un attimo — o per tutto il tempo che la rete si
       // prendeva — quelle righe non esistevano da nessuna parte. Chi in
@@ -1448,13 +1547,16 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // (da lì le aggiunte successive si confermano al volo). Il timer si resetta a
   // ogni aggiunta, così parte solo quando la bozza è "ferma" (batch completo).
   useEffect(() => {
-    if (draft.length === 0) return
+    // Con la scelta a schermo l'auto-conferma non parte: le righe aspettano
+    // che qualcuno dica dove vanno (vedi `sceltaAggiunte`). All'uscita
+    // partono lo stesso, nella comanda — è la strada che non fa carta in più.
+    if (draft.length === 0 || sceltaAggiunte) return
     const t = setTimeout(() => {
       if (isNew) createFromDraftRef.current()
       else flushAdditionsRef.current()
     }, 300)
     return () => clearTimeout(t)
-  }, [draft, isNew])
+  }, [draft, isNew, sceltaAggiunte])
 
   // CREAZIONE: appena si aggiunge il primo item l'ordine viene CREATO IN PLACE
   // (setSelfOrder), SENZA navigare: la schermata resta montata e da lì si
@@ -1511,6 +1613,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           customer_name: info.customer_name.trim() || null,
           items,
           client_temp_id: chiaveBattuta(),
+          // Il conto nasce mentre lo si sta ancora battendo: la sessione di
+          // creazione resta aperta finché non si esce da questa schermata.
+          in_creazione: true,
           placed_by: placedBy(),
           status: statoIniziale,
           service_mode: modoConsegna,
@@ -1616,7 +1721,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // I tasti «annulla» sono due (il pannello e la barra azioni) e avevano due
   // regole diverse — quello della barra era spento per tutta la creazione,
   // anche a righe battute. Da qui in poi la regola è una sola.
-  const annullaSpento = isNew ? false : closed
+  // ANNULLARE UN CONTO GIÀ APERTO butta il lavoro del banco: è di chi versa.
+  // In creazione invece si annulla sempre — lì non c'è niente di nessuno,
+  // solo la bozza che si sta battendo.
+  const annullaSpento = isNew ? false : closed || !comandaIlLavoro
   const annullaOrdine = () => {
     // Senza righe non c'è niente da buttare né da annullare: si torna in
     // coda e basta, senza far confermare una cosa che non succede.
@@ -2543,6 +2651,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {/* Niente tasto Conferma: gli item si confermano da soli (si torna
                 con "← Ordini"). I tasti azione sono SEMPRE presenti: quelli non
                 applicabili sono disabilitati, non spariscono. */}
+            {/* DOVE VANNO LE RIGHE NUOVE - solo col servizio spento, dove
+                l'app non ha modo di saperlo (vedi `sceltaAggiunte`). Due
+                tasti e una domanda in parole normali: finche' non si
+                risponde, le righe restano dove sono e si vedono. */}
+            {sceltaAggiunte && (
+              <div className="posd-scelta-aggiunte">
+                <span className="muted small">Le righe nuove dove vanno?</span>
+                <div className="grid-2" style={{ marginTop: 6 }}>
+                  <button className="btn small" onClick={() => flushAdditions('comanda')}>
+                    &#10133; Nella comanda
+                  </button>
+                  <button className="btn ghost small" onClick={() => flushAdditions('nuova')}>
+                    <IconPrinter /> Comanda nuova
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="posd-foot-azioni">
             <div className="grid-2">
               <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
@@ -2672,6 +2798,19 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             hint: 'Nome, tavolo, note',
             onClick: () => setShowInfo(true),
           },
+          // LA SCHERMATA DA GIRARE AL CLIENTE. Il QR con cui segue l'ordine
+          // dal suo telefono stava sulla pagina di stato, che chi lavora non
+          // apre più: senza questa voce non ci si arriverebbe da nessuna
+          // parte. Senza gli stati del servizio non c'è niente da seguire,
+          // e allora non compare.
+          workflowOn && {
+            id: 'cliente',
+            icon: '📲',
+            label: 'Mostra al cliente',
+            hint: "Il QR per seguire l'ordine dal suo telefono",
+            disabled: isNew,
+            onClick: () => navigate(`/ordine/${order.id}?cliente=1`),
+          },
           {
             id: 'storia',
             icon: '🕘',
@@ -2732,6 +2871,40 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <h3 style={{ margin: 0 }}><IconReceipt /> Comande</h3>
               <button className="btn ghost small" onClick={() => setShowComande(false)}><IconClose /> Chiudi</button>
             </div>
+            {/* PIÙ DI UNA COMANDA: due modi di ristamparle, e servono
+                tutti e due. «Anche di stampare UNA SOLA comanda con tutti i
+                prodotti di più comande ma sempre dello stesso ordine. Va
+                bene stampare tutte le comande insieme su più ricevute ma
+                serve anche stampare tutto su una sola ricevuta» (l'utente,
+                20/08).
+                Le etichette dicono cosa ESCE dalla stampante — quanti pezzi
+                di carta — perché è quello che chi stampa deve sapere prima
+                di toccare, non come si chiama la funzione dentro.
+                Compaiono solo quando le comande sono davvero più d'una. */}
+            {stampabili.length > 1 && (
+              <div className="grid-2" style={{ marginTop: 10, gap: 6 }}>
+                <button
+                  className="btn ghost small"
+                  onClick={() =>
+                    printComande(order, stampabili)
+                      .then((n) => toastSuccess(`${n} comande in stampa`))
+                      .catch((e) => setError(`Stampa: ${e.message}`))
+                  }
+                >
+                  <IconPrinter /> Una per comanda ({stampabili.length})
+                </button>
+                <button
+                  className="btn ghost small"
+                  onClick={() =>
+                    printComandaUnita(order)
+                      .then(() => toastSuccess('Comanda unita in stampa'))
+                      .catch((e) => setError(`Stampa: ${e.message}`))
+                  }
+                >
+                  <IconPrinter /> Tutto su una
+                </button>
+              </div>
+            )}
             {effComande.map((c) => {
               const ns = nextComandaStatus(c.status)
               return (
@@ -2747,16 +2920,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         leggere «Annullato» farebbe pensare a un drink
                         saltato, mentre quei drink sono nelle due comande
                         sotto. */}
-                    <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
-                      {annullataPerDivisione(c) ? (
-                        '✂️ Divisa'
-                      ) : (
-                        <>
-                          {STATUS_EMOJI[c.status]}{' '}
-                          {statoAlBanco(c.status, order.service_mode)}
-                        </>
-                      )}
-                    </span>
+                    {/* IL PASSO DEL SERVIZIO SI MOSTRA SOLO SE ESISTE. In un
+                        locale che non segue la preparazione le comande uno
+                        stato ce l'hanno lo stesso — è il dato — ma dirlo a
+                        schermo vuol dire parlare di una cosa che lì non si
+                        fa. Resta «✂️ Divisa», che non è un passo del
+                        servizio: è cosa ne è stato di quel ticket. */}
+                    {(workflowOn || annullataPerDivisione(c)) && (
+                      <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
+                        {annullataPerDivisione(c) ? (
+                          '✂️ Divisa'
+                        ) : (
+                          <>
+                            {STATUS_EMOJI[c.status]}{' '}
+                            {statoAlBanco(c.status, order.service_mode)}
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                   {(c.items || []).map((i, idx) => (
                     <div className="row between" key={idx} style={{ marginTop: 4 }}>
@@ -2774,7 +2955,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     >
                       <IconPrinter /> Stampa
                     </button>
-                    {ns && workflowOn && !closed ? (
+                    {ns && workflowOn && !closed && puoSegnare(ruolo, ns) ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{statoAlBanco(ns, order.service_mode)}”
                       </button>
@@ -2793,7 +2974,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       Finché il drink non è uscito dal banco: a «da fare» e
                       a «in preparazione». Da «pronto» in poi è roba sul
                       vassoio. */}
-                  {workflowOn && !closed && comandaDivisibile(c) && (
+                  {comandaIlLavoro && workflowOn && !closed && comandaDivisibile(c) && (
                     parziale === c.id ? (
                       <PreparazioneParziale
                         comanda={c}
@@ -2815,7 +2996,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       vassoio è ancora al banco: senza questo restava solo
                       annullare il conto e ribatterlo. Gli stati già passati
                       sono lì, in fila: si sceglie quello giusto. */}
-                  {workflowOn &&
+                  {comandaIlLavoro &&
+                    workflowOn &&
                     !closed &&
                     statiPrimaComanda(c.status, statoIniziale).length > 0 && (
                       <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>

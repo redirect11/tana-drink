@@ -6,7 +6,18 @@ import PriceSuggestion from './PriceSuggestion.jsx'
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
 // anche il POS (modalità Organizza → menu del prodotto), così si modifica un
 // prodotto senza passare dal backoffice.
-export default function DrinkForm({ initial, categories, inventory, onCreateCategory, onCancel, onSave }) {
+export default function DrinkForm({
+  initial,
+  categories,
+  inventory,
+  onCreateCategory,
+  onCancel,
+  onSave,
+  // L'IVA di vendita del locale: serve solo a scrivere nel suggerimento
+  // quale aliquota si userà lasciando il campo vuoto. Dove non si sa (il
+  // POS non legge le impostazioni) si dice «quella del locale» e basta.
+  saleVatLocale = null,
+}) {
   const itemsById = useMemo(
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
     [inventory]
@@ -144,15 +155,44 @@ export default function DrinkForm({ initial, categories, inventory, onCreateCate
         </select>
       )}
 
-      <label htmlFor="price">Prezzo (€)</label>
-      <input
-        id="price"
-        type="number"
-        step="any"
-        min="0"
-        value={form.price}
-        onChange={set('price')}
-      />
+      <div className="row" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <label htmlFor="price">Prezzo (€)</label>
+          <input
+            id="price"
+            type="number"
+            step="any"
+            min="0"
+            value={form.price}
+            onChange={set('price')}
+          />
+        </div>
+        {/* L'IVA DI VENDITA, SOLO DOVE FA ECCEZIONE. Il locale ne ha una
+            generale (Impostazioni → IVA di vendita predefinita); qui si
+            scrive l'eccezione, dove c'è. Serve perché nel menù esiste una
+            categoria BOTTIGLIE, e una bottiglia intera non si rivende come
+            un drink servito al banco: mettere tutto al 10% gonfia il netto,
+            e dal netto scendono margine, incidenze e conto di fine mese. */}
+        <div style={{ width: 130 }}>
+          <label htmlFor="salevat">IVA vendita %</label>
+          <input
+            id="salevat"
+            type="number"
+            step="any"
+            min="0"
+            max="22"
+            value={form.sale_vat ?? ''}
+            onChange={set('sale_vat')}
+            placeholder={saleVatLocale != null ? String(saleVatLocale) : 'del locale'}
+          />
+        </div>
+      </div>
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Lasciala vuota e vale quella del locale
+        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Si compila solo
+        dove fa eccezione — una bottiglia intera non si rivende come un drink
+        al banco.
+      </p>
 
       {/* Costo reale della ricetta, prezzo consigliato e guadagno: si
           aggiorna man mano che si compongono gli ingredienti qui sotto. */}

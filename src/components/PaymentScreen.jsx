@@ -8,13 +8,14 @@ import {
   markInvoiceSent,
   subscribeVouchers,
   applyVoucherDiscount,
+  segnaScontrinoStampato,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint } from '../lib/printer.js'
+import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -60,7 +61,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // la registrazione va in background, quindi in questo istante l'ordine non
   // sa ancora com'è stato pagato — e lo scontrino usciva "Contante" anche per
   // una carta di credito. Qui glielo si dice.
-  const closePaid = (incasso = null) => {
+  const closePaid = (incasso = null, { senzaStampa = false } = {}) => {
     const perStampa = incasso
       ? {
           ...order,
@@ -75,27 +76,64 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // partiva solo quando l'ordine passava a "pronto", quindi con la gestione
     // preparazione spenta non usciva mai.
     try {
-      // Solo su un ordine REALE: nel pagamento diretto dal POS la schermata si
-      // apre su un ordine locale senza id né numero, e ne uscirebbe uno
-      // scontrino con "#-". In quel caso stampa la coda quando l'ordine vero
-      // risulta pagato (claimReceiptPrint garantisce una copia sola).
+      // LO SCONTRINO ESCE DAL GESTO, SEMPRE E SOLO DA QUI (BUG-055). Non è
+      // più la coda a stamparlo quando vede un conto pagato: quello faceva
+      // uscire la carta di tutta la serata al primo sguardo di un browser
+      // nuovo. Qui c'è il gesto, quindi qui esce.
       // Con un INCASSO in mano la pretesa si FORZA (reclaim): questo è un
       // pagamento che sta succedendo adesso, e se il conto era stato chiuso
       // e riaperto la copia vecchia non conta più. Senza incasso (chiusure
       // d'ufficio) vale la pretesa normale: una copia e basta.
       if (
-        order.id &&
         order.daily_number != null &&
+        // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
+        // carta non serve — cliente che rifiuta lo scontrino di cortesia,
+        // conto interno. Non si prende nemmeno la pretesa: se il conto
+        // verrà riaperto e riscosso normale, la stampa esce come sempre.
+        !senzaStampa &&
         loadPrinterSettings().autoPrintScontrino &&
-        (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id))
+        // Il segno sta SUL DATO: un altro terminale l'ha già stampato e qui
+        // non esce la seconda copia.
+        !scontrinoGiaUscito(order)
       ) {
-        printScontrino(perStampa).catch((e) => {
-          console.warn('[printer] scontrino:', e.message)
-          // La carta non è uscita: la prenotazione torna libera, così la
-          // prossima chiusura (o la coda) ci riprova. Vedi BUG-047.
-          releaseReceiptPrint(order.id)
-          onError?.(`Scontrino non stampato: ${e.message}`)
-        })
+        if (order.id) {
+          if (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id)) {
+            printScontrino(perStampa)
+              // Il segno sul conto va scritto A CARTA USCITA: prima vorrebbe
+              // dire che una stampa fallita zittisce tutti i terminali.
+              .then(() => segnaScontrinoStampato(order.id))
+              .catch((e) => {
+                console.warn('[printer] scontrino:', e.message)
+                // La carta non è uscita: la prenotazione torna libera, così la
+                // prossima chiusura ci riprova. Vedi BUG-047.
+                releaseReceiptPrint(order.id)
+                onError?.(`Scontrino non stampato: ${e.message}`)
+              })
+          }
+        } else {
+          // PAGAMENTO DIRETTO DAL POS: la schermata si è aperta su un guscio
+          // locale (id nullo) mentre il conto nasce in sottofondo. La carta
+          // non aspetta che nasca — esce adesso, col numero che la testata
+          // mostra già — e la pretesa e il segno la raggiungono appena c'è
+          // un id da segnare. Prima toccava alla coda stampare questo caso:
+          // era l'unico legittimo, e per tenerlo si stampava tutto il resto.
+          printScontrino(perStampa)
+            .then(() =>
+              Promise.resolve(orderId())
+                .then((id) => {
+                  if (!id) return
+                  claimReceiptPrint(id) // la copia di questo conto è uscita da qui
+                  segnaScontrinoStampato(id)
+                })
+                .catch(() => {
+                  /* il conto non è nato: lo dice già il toast della creazione */
+                })
+            )
+            .catch((e) => {
+              console.warn('[printer] scontrino:', e.message)
+              onError?.(`Scontrino non stampato: ${e.message}`)
+            })
+        }
       }
     } catch {
       /* stampante non configurata: si continua */
@@ -140,7 +178,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
-  const [separati, setSeparati] = useState(false)
+  //
+  // SI PARTE SEPARATI. Al banco si paga quasi sempre a pezzi — uno paga il
+  // suo, un altro offre due birre — e partire da «3× Birra» voleva dire un
+  // tocco in più ogni volta, con la fila alla cassa. Chi ha un conto lungo
+  // e illeggibile fa il contrario con «Unisci uguali», e chi incassa tutto
+  // non tocca niente: la selezione parte piena in ogni caso.
+  const [separati, setSeparati] = useState(true)
   const [method, setMethod] = useState('banco')
   // Tastierino: null = importo automatico (dalla selezione); altrimenti
   // la stringa di cifre digitata. `acc`/`op` per la calcolatrice.
@@ -188,6 +232,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // aprendo il pagamento con quindici righe si vedevano le prime — quelle di
   // mezz'ora prima — e per controllare l'ultimo giro bisognava scorrere.
   const listaRef = useRef(null)
+  // Di chi è questo conto: il tavolo se c'è, se no il nome. È la stessa
+  // riga che la coda mette sulle card (destinazioneConto), e qui serve in
+  // testata perché è così che si chiama un conto quando lo si incassa.
+  const dove = [order.table_label ? `Tavolo ${order.table_label}` : '', order.customer_name]
+    .filter(Boolean)
+    .join(' · ')
   useEffect(() => {
     const el = listaRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -199,6 +249,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Il tasto in più lo decide il locale (Impostazioni → Gestione
   // preparazione): serve dove si consegna e si incassa nello stesso gesto.
   const riscuotiEServi = settings?.riscuoti_e_servi === true
+  // «Riscuoti (senza stampa)»: acceso dalle impostazioni del locale. Serve
+  // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
+  // un tasto in più qui vale solo se quel caso è la normalità del locale.
+  const riscuotiSenzaStampa = settings?.riscuoti_senza_stampa === true
   const due = orderDue(order)
   // Sconto più grande del conto: capita solo con la strategia "avvisa"
   // (Impostazioni → Sconto e righe del conto), quando si sconta e poi si
@@ -311,7 +365,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
   // le comande risultano servite — e quindi se il conto si chiude adesso.
-  const riscuoti = ({ servi = false } = {}) => {
+  const riscuoti = ({ servi = false, senzaStampa = false } = {}) => {
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
@@ -374,7 +428,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         onError?.(`Pagamento non registrato: ${e.message}`)
       }
     })()
-    if (willClose) closePaid({ amount: toPay, method })
+    if (willClose) closePaid({ amount: toPay, method }, { senzaStampa })
   }
 
   // ── Sconto dal tastierino della modale ──
@@ -502,7 +556,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           flexShrink: 0,
         }}
       >
-        <h3 style={{ margin: 0 }}>💳 Pagamento · #{order.daily_number ?? '—'}</h3>
+        {/* CHI PAGA STA IN TESTATA, accanto al numero: quando si incassa
+            si chiama il tavolo per nome («Lele», «tavolo 4»), e quel nome
+            era in mezzo alle righe dei drink, dove sembrava una voce del
+            conto. Qui sta dove si guarda per sapere di chi è il conto. */}
+        <h3 style={{ margin: 0 }}>
+          💳 Pagamento · #{order.daily_number ?? '—'}
+          {dove && <span className="muted"> · {dove}</span>}
+        </h3>
         <button className="btn ghost small" onClick={onClose}>✕ Chiudi</button>
       </div>
 
@@ -512,9 +573,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         {/* ── SINISTRA: articoli del conto (split) + riepilogo ── */}
         <div className="payscreen-items">
           <div ref={listaRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
-            {order.customer_name && (
-              <p style={{ margin: '10px 0 2px', fontWeight: 600 }}>{order.customer_name}</p>
-            )}
             {/* Niente istruzioni sopra le righe: chi incassa le tocca e vede
                 il totale muoversi. A dire da dove viene il numero ci pensa
                 l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
@@ -763,6 +821,18 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
+            </button>
+          )}
+          {/* Lo stesso incasso, ma la stampante tace: per il cliente che
+              lo scontrino di cortesia non lo vuole. Solo dove il locale
+              l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
+          {!closed && riscuotiSenzaStampa && due > 0 && (
+            <button
+              className="btn block ghost payscreen-collect-muto"
+              disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+              onClick={() => riscuoti({ senzaStampa: true })}
+            >
+              Riscuoti (senza stampa) · {formatPrice(toPay)}
             </button>
           )}
           {/* Consegnato e incassato nello stesso gesto: un tasto solo invece

@@ -229,9 +229,27 @@ describe('destinatariPush', () => {
     expect(chi.some((t) => t.device === 'telefono-di-flavio')).toBe(false)
   })
 
-  it('i drink da servire restano roba di sala', () => {
-    const chi = destinatariPush(dispositivi, { roles: ['staff'] })
-    expect(chi.map((t) => t.token)).toEqual(['t-sala'])
+  // QUESTA PROVA DICEVA IL CONTRARIO: «i drink da servire restano roba di
+  // sala», cioè il «pronto» solo alle righe con role 'staff'. La regola
+  // sembrava giusta e in produzione ha fatto un danno: quel campo non era
+  // il ruolo della persona, era il nome della schermata che aveva
+  // registrato il dispositivo, e siccome si finisce tutti sulla coda ci
+  // finiva scritto sempre 'bartender'. Nessuna riga era mai 'staff':
+  // destinatari vuoti, e al banco drink pronti senza un avviso (BUG-036).
+  // Chi porta i drink non è un ruolo, è chi è in piedi in quel momento.
+  it('il pronto arriva a TUTTI i terminali, comunque siano intestati', () => {
+    const chi = destinatariPush(dispositivi, {})
+    expect(chi.map((t) => t.token)).toEqual(['t-ipad', 't-telefono', 't-sala'])
+  })
+
+  it('e arriva anche se nessun terminale si e’ mai detto «di sala»', () => {
+    // È lo stato in cui era il locale: quattro righe, tutte 'bartender'.
+    const tuttiBanco = [
+      { token: 't-ipad', role: 'bartender', device: 'ipad-del-banco' },
+      { token: 't-telefono', role: 'bartender', device: 'telefono-di-flavio' },
+    ]
+    const chi = destinatariPush(tuttiBanco, { dispositivoOrigine: 'ipad-del-banco' })
+    expect(chi.map((t) => t.token)).toEqual(['t-telefono'])
   })
 
   it('chi si è registrato prima che il dispositivo si segnasse viene avvisato lo stesso', () => {

@@ -8,6 +8,8 @@ import {
   nextComandaStatus,
   statoComandaNuova,
   comandaPerLeAggiunte,
+  presaInCarico,
+  ultimaComandaViva,
   statiPrimaComanda,
   statiDopoLaDivisione,
   activeComanda,
@@ -77,40 +79,101 @@ describe('fin dove si torna indietro', () => {
 
 // ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
 //
-// Nel passo in cui NASCE il lavoro nuovo, non in quello della comanda che
-// sta lì accanto. Lo decideva `comandaEditable`, che vuol dire «si può
-// ancora toccare» ed è vera sia per «da fare» sia per «in preparazione»:
-// le righe aggiunte a un conto con una comanda già al banco ci finivano
-// dentro, e al banco risultavano prese in carico da qualcuno (BUG-024).
+// SOLO IN UNA COMANDA ANCORA «DA FARE».
+//
+// «Se una comanda passa da "da fare" a "in preparazione", i prodotti
+// successivi che aggiungo all'ordine dovranno creare una NUOVA comanda. Al
+// momento succede solo se da in preparazione passano a da servire. Se sono
+// in preparazione significa che la vecchia comanda è stata già presa in
+// carico» (l'utente, 20/08).
+//
+// I due test qui sotto dicevano il contrario, e non per sbaglio: la regola
+// di prima era «nel passo dove NASCE il lavoro», e col locale che fa
+// nascere le comande già in preparazione quel passo era «in preparazione»
+// — cioè le aggiunte finivano dentro una comanda presa in carico. Prima
+// ancora era `comandaEditable`, che vuol dire «si può ancora toccare» e
+// includeva anche lei «in preparazione» (BUG-024). La domanda giusta non è
+// dove nasce il lavoro: è se quel ticket l'ha già preso in mano qualcuno.
 describe('dove finiscono le righe aggiunte', () => {
-  const c = (id, status) => ({ id, status, items: [] })
+  const c = (id, status, over = {}) => ({ id, status, items: [], ...over })
 
-  it('nella comanda che sta già in quel passo', () => {
+  it('nella comanda ancora «da fare», non in quella al banco', () => {
     const comande = [c('c1', 'in_preparazione'), c('c2', 'ricevuto')]
     // è lo stesso giro da fare, non due ticket per la stessa cosa
-    expect(comandaPerLeAggiunte(comande, 'ricevuto').id).toBe('c2')
-    expect(comandaPerLeAggiunte(comande, 'in_preparazione').id).toBe('c1')
+    expect(comandaPerLeAggiunte(comande).id).toBe('c2')
   })
 
-  it('SE IN QUEL PASSO NON C’È NIENTE, non ci si accontenta di quella accanto', () => {
-    // È il difetto: con una sola comanda in preparazione, le righe nuove
-    // finivano lì e sparivano dalla colonna «Da fare».
-    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione')], 'ricevuto')).toBe(null)
-    expect(comandaPerLeAggiunte([c('c1', 'ricevuto')], 'in_preparazione')).toBe(null)
+  it('una comanda PRESA IN CARICO non accoglie più niente', () => {
+    // Chi sta già shakerando non deve vedersi allungare il ticket sotto le
+    // mani: ne nasce una nuova (qui: nessun bersaglio).
+    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione', { presa_in_carico: true })])).toBe(null)
   })
 
-  it('una comanda PRONTA o SERVITA non accoglie mai niente', () => {
-    // Non è nel passo di nascita, quindi viene da sé: nessuna seconda
-    // strada che decide per conto suo.
+  // LA CORREZIONE DEL 20/08, DOPO AVER VISTO IL DANNO. «Devi aggiungere
+  // prodotti a una NUOVA comanda solo se lo stato viene PASSATO in
+  // preparazione (comanda presa in carico)»: una comanda NATA in
+  // preparazione perché il locale ha acceso quell'impostazione non l'ha
+  // presa in mano nessuno, e le aggiunte ci vanno dentro. Il test di prima
+  // diceva il contrario, e faceva nascere un ticket per ogni riga.
+  it('ma una NATA in preparazione (impostazione del locale) sì', () => {
+    const nata = c('c1', 'in_preparazione', { presa_in_carico: false })
+    expect(comandaPerLeAggiunte([nata]).id).toBe('c1')
+    expect(presaInCarico(nata)).toBe(false)
+  })
+
+  it('i documenti vecchi, senza il segno, si danno per presi in carico', () => {
+    // Nessun campo `presa_in_carico`: non si sa, e la risposta prudente è
+    // quella che non allunga un ticket che forse è già al banco.
+    expect(presaInCarico(c('c1', 'in_preparazione'))).toBe(true)
+    expect(comandaPerLeAggiunte([c('c1', 'in_preparazione')])).toBe(null)
+  })
+
+  // LA SESSIONE DI CREAZIONE. «Se non sono ancora uscito dalla creazione
+  // ordine quella è sempre una sola comanda (anche se da creazione ordine
+  // vado in pagamento)» (l'utente, 20/08). Qualunque stato, qualunque
+  // impostazione del locale, stampata o no.
+  it('finché il conto si sta creando è UNA comanda sola', () => {
+    const comande = [c('c1', 'in_preparazione', { presa_in_carico: true })]
+    expect(comandaPerLeAggiunte(comande, { inCreazione: true }).id).toBe('c1')
+    expect(
+      comandaPerLeAggiunte([c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' })], {
+        inCreazione: true,
+      }).id
+    ).toBe('c1')
+    // Una comanda annullata non è un bersaglio nemmeno in creazione.
+    expect(comandaPerLeAggiunte([c('c1', 'annullato')], { inCreazione: true })).toBe(null)
+  })
+
+  it('una comanda PRONTA, SERVITA o ANNULLATA non accoglie mai niente', () => {
     for (const stato of ['pronto', 'ritirato', 'annullato']) {
-      expect(comandaPerLeAggiunte([c('c1', stato)], 'ricevuto')).toBe(null)
-      expect(comandaPerLeAggiunte([c('c1', stato)], 'in_preparazione')).toBe(null)
+      expect(comandaPerLeAggiunte([c('c1', stato)])).toBe(null)
     }
   })
 
+  // IERI QUESTA ERA UN'ESCLUSIONE, OGGI NO. «Già uscita dalla stampante»
+  // non c'entra con «l'ha presa in mano qualcuno», e tenerla contraddiceva
+  // la regola nuova: un conto battuto in fretta faceva un ticket per riga.
+  // La ragione per cui era nata resta vera — se una comanda già stampata si
+  // gonfia, la carta al banco è vecchia — e la cura è un'altra: le aggiunte
+  // ci entrano e il ticket si RISTAMPA completo (api.js azzera
+  // `auto_print_at`). Il banco butta il foglio vecchio e ha quello giusto.
+  it('una «da fare» GIÀ STAMPATA accoglie lo stesso: il ticket si rifà', () => {
+    expect(
+      comandaPerLeAggiunte([c('c1', 'ricevuto', { auto_print_at: '2026-08-20T21:00:00Z' })]).id
+    ).toBe('c1')
+  })
+
+  it('l’ultima comanda viva è quella che «Nella comanda» allunga', () => {
+    // Col servizio spento la scelta è di chi sta al banco, e «la comanda» è
+    // quella che ha davanti: l'ultima battuta, non la prima.
+    expect(ultimaComandaViva([c('c1', 'ricevuto'), c('c2', 'ricevuto')]).id).toBe('c2')
+    expect(ultimaComandaViva([c('c1', 'ricevuto'), c('c2', 'annullato')]).id).toBe('c1')
+    expect(ultimaComandaViva([])).toBe(null)
+  })
+
   it('conto vuoto: non c’è niente da accogliere', () => {
-    expect(comandaPerLeAggiunte([], 'ricevuto')).toBe(null)
-    expect(comandaPerLeAggiunte(undefined, 'ricevuto')).toBe(null)
+    expect(comandaPerLeAggiunte([])).toBe(null)
+    expect(comandaPerLeAggiunte(undefined)).toBe(null)
   })
 })
 
@@ -324,22 +387,48 @@ describe('vista aggregata: aumenti/diminuzioni gestite internamente', () => {
   })
 })
 
-// IL MAGAZZINO SI SCALA QUANDO LA COMANDA È SERVITA. Prima si scaricava
-// alla presa in carico: un drink iniziato e poi non fatto — riga tolta,
-// cliente che cambia idea, comanda annullata — aveva già portato via gli
-// ingredienti. Fino al servito sono impegnati, non consumati.
+// IL MAGAZZINO SI SCALA A «PRONTO». È il momento in cui il fatto succede:
+// lì il drink è fatto — il gin è già nel bicchiere — e a segnarlo è chi
+// l'ha fatto, il banco. «Servito» è il drink arrivato al tavolo, e fra i
+// due passi in magazzino non si muove più niente.
+// Prima si scaricava al servito, e lì il tasto ormai lo preme la SALA, che
+// sul magazzino non scrive: lo scarico falliva in silenzio (BUG-040). E non
+// si scala prima, alla presa in carico: un drink iniziato e poi non fatto
+// avrebbe già portato via gli ingredienti.
 describe('quando si scala il magazzino', () => {
-  it('quando la comanda risulta servita', () => {
-    expect(comandaDaScaricare({ inventory_applied: false }, 'ritirato')).toBe(true)
+  it('quando la comanda è pronta: lì il drink è fatto', () => {
+    expect(comandaDaScaricare({ inventory_applied: false }, 'pronto')).toBe(true)
   })
 
   it('non quando la si prende in carico', () => {
     expect(comandaDaScaricare({ inventory_applied: false }, 'in_preparazione')).toBe(false)
-    expect(comandaDaScaricare({ inventory_applied: false }, 'pronto')).toBe(false)
+  })
+
+  it('e non di nuovo quando esce dal banco: è già stato fatto', () => {
+    expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
+    // Anche la comanda vecchia, di prima che lo scarico si spostasse, non
+    // si scala al servito: a raccoglierla è la rete della riscossione
+    // (unappliedEntries in api.js), che guarda proprio quelle.
+    expect(comandaDaScaricare({ inventory_applied: false }, 'ritirato')).toBe(false)
   })
 
   it('una volta sola', () => {
-    expect(comandaDaScaricare({ inventory_applied: true }, 'ritirato')).toBe(false)
+    expect(comandaDaScaricare({ inventory_applied: true }, 'pronto')).toBe(false)
+  })
+
+  // AVANTI E INDIETRO NON SCALA DUE VOLTE. Si segna «pronto» il ticket
+  // sbagliato e lo si rimette «in preparazione»: quando ripassa a pronto lo
+  // scarico è già stato applicato, e non si ripete. È la guardia su cui sta
+  // in piedi tutto il resto — un magazzino che si scala due volte se ne
+  // accorge qualcuno tre giorni dopo, guardando una giacenza che non torna.
+  it('pronto → indietro → pronto: lo stesso drink si scala una volta sola', () => {
+    const c = { inventory_applied: false }
+    expect(comandaDaScaricare(c, 'pronto')).toBe(true)
+    // Lo scarico è andato: da qui in poi la comanda se lo porta scritto.
+    c.inventory_applied = true
+    expect(comandaDaScaricare(c, 'in_preparazione')).toBe(false)
+    expect(comandaDaScaricare(c, 'pronto')).toBe(false)
+    expect(comandaDaScaricare(c, 'ritirato')).toBe(false)
   })
 })
 

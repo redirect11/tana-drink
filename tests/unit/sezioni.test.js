@@ -5,7 +5,12 @@
 // al banco quella riga si vede.
 
 import { describe, it, expect } from 'vitest'
-import { titoloPagina, NAV_GESTIONALE } from '../../src/lib/sezioni.js'
+import {
+  titoloPagina,
+  NAV_GESTIONALE,
+  vociPerRuolo,
+  sezioneConsentita,
+} from '../../src/lib/sezioni.js'
 
 describe('titoloPagina', () => {
   it('nel gestionale porta il nome della sezione, con la sua icona', () => {
@@ -64,5 +69,57 @@ describe('la voce Cassa', () => {
   it('il vecchio indirizzo porta alla cassa, non nel vuoto', () => {
     // `?tab=storico` sta nei collegamenti salvati e nei messaggi.
     expect(titoloPagina('/bar', '?tab=storico').titolo).toBe('Cassa')
+  })
+})
+
+// ── IL BILANCIO È DELL'ADMIN ─────────────────────────────────────────
+// I conti del locale — incassi, stipendi, spese, netto del mese — sono di
+// chi il locale lo paga. È la prima voce del gestionale che non basta
+// essere gestori per vedere: prima il menu si filtrava con `isGestore`,
+// che tiene dentro anche il bartender.
+describe('chi vede quali sezioni', () => {
+  it('«Bilancio» sta nel menu dell’admin', () => {
+    expect(vociPerRuolo('admin').some(([id]) => id === 'bilancio')).toBe(true)
+  })
+
+  // SI TOGLIE, non si nasconde dentro la pagina: una pagina che si apre e
+  // poi dice «non puoi» si è già fatta vedere.
+  it('al bartender la voce non compare proprio', () => {
+    expect(vociPerRuolo('bartender').some(([id]) => id === 'bilancio')).toBe(false)
+    // E il resto del gestionale gli resta tutto: la cassa, il magazzino,
+    // le impostazioni.
+    const suoi = vociPerRuolo('bartender').map(([id]) => id)
+    for (const id of ['coda', 'pagamenti', 'inventario', 'menu', 'impostazioni']) {
+      expect(suoi, `${id} è del bartender`).toContain(id)
+    }
+  })
+
+  it('chi non è gestore resta col menu della sala', () => {
+    for (const r of ['staff', 'cliente', null, undefined]) {
+      const ids = vociPerRuolo(r).map(([id]) => id)
+      expect(ids).not.toContain('bilancio')
+      expect(ids).not.toContain('impostazioni')
+    }
+  })
+
+  // Togliere la voce dal menu non basta: `?tab=bilancio` si batte a mano, e
+  // un collegamento salvato quando si era admin resta nella cronologia.
+  it('l’indirizzo battuto a mano non apre una sezione che non è tua', () => {
+    expect(sezioneConsentita('bilancio', 'admin')).toBe(true)
+    expect(sezioneConsentita('bilancio', 'bartender')).toBe(false)
+  })
+
+  it('le sezioni di tutti restano di tutti', () => {
+    for (const id of ['coda', 'pagamenti', 'stats', 'inventario']) {
+      expect(sezioneConsentita(id, 'bartender')).toBe(true)
+    }
+    // Una sezione che non è nell'elenco (i vecchi indirizzi, `?tab=vip`)
+    // non si blocca: non è riservata, è solo fuori dal menu.
+    expect(sezioneConsentita('vip', 'bartender')).toBe(true)
+    expect(sezioneConsentita(null, 'bartender')).toBe(true)
+  })
+
+  it('e nella barra in alto la pagina ha il suo nome', () => {
+    expect(titoloPagina('/bar', '?tab=bilancio').titolo).toBe('Bilancio')
   })
 })

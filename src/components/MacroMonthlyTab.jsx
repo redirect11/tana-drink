@@ -3,23 +3,37 @@ import {
   fetchOrdersBetween,
   fetchDrinks,
   fetchInventoryItems,
-  fetchInventoryCategories,
+  fetchCategories,
   fetchMacroCategories,
-  fetchPurchaseOrders,
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { categoryToMacro } from '../lib/macros.js'
 import { macroMonthlyReport } from '../lib/macroStats.js'
+import Didascalia from './Didascalia.jsx'
 
-// DASHBOARD A — andamento MENSILE per MACRO-CATEGORIA: acquisti (ordini
-// fornitore ricevuti nel mese), fatturato (incasso ripartito sugli ingredienti
-// venduti), utile e rapporto Fat/Acq. Replica il cruscotto Excel per macro.
+// BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
+// del menù, quanto è costata la merce che ha venduto, che margine ne resta.
+//
+// Stava nelle STATISTICHE e ha traslocato qui: quanto ha reso ogni macro è
+// una domanda da conti di fine mese, non da serata. Chi apre le Statistiche
+// vuole sapere com'è andata ieri, chi apre il Bilancio com'è andato il mese
+// — due mestieri diversi, anche se i numeri escono dalla stessa cassa. Il
+// contenuto non è cambiato: sono cambiate la casa e due righe in più.
+//
+// La vendita di una voce va INTERA alla macro di quella voce, incasso e
+// costo insieme (vedi lib/macroStats.js): la Schweppes versata in un Gin
+// Tonic conta sui distillati, perché lì è stata venduta. Da qui non si
+// legge «quanto ho speso in bibite» — quella è la domanda degli ACQUISTI e
+// vive con le fatture, non in una tabella che parla del venduto.
 
 const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
 const monthsOfYear = (year) => MESI.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
 const eur0 = (v) =>
   `${Math.round(Number(v) || 0).toLocaleString('it-IT', { useGrouping: 'always' })} €`
+// Un'incidenza che non si può calcolare (mese in perdita, anno vuoto) resta
+// un trattino: un numero inventato lì si legge come vero.
+const perc = (v) => (v == null ? '—' : `${String(v).replace('.', ',')}%`)
 
 export default function MacroMonthlyTab() {
   const [year, setYear] = useState(() => new Date().getFullYear())
@@ -27,7 +41,7 @@ export default function MacroMonthlyTab() {
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const cutoff = settings.business_day_cutoff_hour
 
-  const [data, setData] = useState(null) // { orders, drinks, items, cats, macros, pos }
+  const [data, setData] = useState(null) // { orders, drinks, items, cats, macros }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -37,14 +51,15 @@ export default function MacroMonthlyTab() {
     Promise.all([
       fetchOrdersBetween(`${year}-01-01`, `${year}-12-31`, cutoff).catch(() => []),
       fetchDrinks({}).catch(() => []),
+      // I prodotti servono ancora, ma solo per il COSTO di quello che è
+      // uscito: le categorie e le macro qui sono quelle del MENÙ.
       fetchInventoryItems().catch(() => []),
-      fetchInventoryCategories().catch(() => []),
-      fetchMacroCategories().catch(() => []),
-      fetchPurchaseOrders({ limit: 500 }).catch(() => []),
+      fetchCategories().catch(() => []),
+      fetchMacroCategories('menu').catch(() => []),
     ])
-      .then(([orders, drinks, items, cats, macros, pos]) => {
+      .then(([orders, drinks, items, cats, macros]) => {
         if (!active) return
-        setData({ orders, drinks, items, cats, macros, pos })
+        setData({ orders, drinks, items, cats, macros })
         setLoading(false)
       })
       .catch((e) => active && (setError(e.message), setLoading(false)))
@@ -57,10 +72,9 @@ export default function MacroMonthlyTab() {
     if (!data) return null
     return macroMonthlyReport({
       orders: data.orders,
-      purchaseOrders: data.pos,
       drinksById: Object.fromEntries(data.drinks.map((d) => [d.id, d])),
       itemsById: Object.fromEntries(data.items.map((i) => [i.id, i])),
-      catToMacro: categoryToMacro(data.cats),
+      menuCatToMacro: categoryToMacro(data.cats),
       macros: data.macros,
       months: monthsOfYear(year),
       cutoffHour: cutoff,
@@ -79,15 +93,17 @@ export default function MacroMonthlyTab() {
       </div>
 
       <p className="muted small" style={{ margin: '0 0 10px' }}>
-        Valori al <strong>netto IVA</strong>: il fatturato è scorporato con
-        l’IVA di rivendita (predefinita {settings.sale_vat}%, modificabile per
-        prodotto in Magazzino). Acquisti = ordini fornitore segnati “ricevuto”.
+        Ogni voce del menù conta <strong>intera</strong> sulla sua
+        macro-categoria: incasso e costo dei suoi ingredienti insieme. Valori
+        al <strong>netto IVA</strong> — l’incasso scorporato al{' '}
+        {settings.sale_vat}% di rivendita (o all’aliquota della voce, dove ne
+        ha una sua), il costo al netto dell’IVA d’acquisto.
       </p>
-      {report && report.rows.some((r) => r.id === 'none' && r.tot.fatturato > 0) && (
+      {report && report.rows.some((r) => r.id === 'none' && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
           ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso dei drink
-          senza ricetta collegata all’inventario (cocktail, food, ecc.):
-          aggiungendo le ricette si sposta sulle macro giuste.
+          la cui categoria di menù non sta in nessuna macro: assegnala in{' '}
+          <strong>Menù → Macro-categorie</strong> e si sposta al posto suo.
         </p>
       )}
 
@@ -95,8 +111,9 @@ export default function MacroMonthlyTab() {
 
       {!loading && data && data.macros.length === 0 && (
         <div className="empty">
-          Nessuna macro-categoria: creale in <strong>Magazzino → 🗂 Macro-categorie</strong> e
-          collega le categorie, poi qui vedrai acquisti e fatturato per macro.
+          Nessuna macro-categoria di menù: creale in{' '}
+          <strong>Menù → Macro-categorie</strong> e collega le categorie dei
+          drink, poi qui vedrai incasso e costo per macro.
         </div>
       )}
 
@@ -106,8 +123,42 @@ export default function MacroMonthlyTab() {
             <MacroBlock key={r.id} row={r} months={report.months} />
           ))}
           <TotalBlock report={report} />
+          <SpiegazioneTabella saleVat={settings.sale_vat} />
         </>
       )}
+    </div>
+  )
+}
+
+// COSA VUOL DIRE OGNI RIGA, in parole da banco. Sono quattro parole da
+// contabile — margine, inc/costo, le due incidenze — e senza una frase che
+// le spieghi la tabella la sa leggere solo chi l'ha scritta.
+//
+// E LA DIFFERENZA COL FOGLIO VA DETTA QUI, perché è la prima cosa che si
+// chiede chi mette i due numeri accanto: non torneranno mai identici, e non
+// perché uno dei due sbaglia.
+function SpiegazioneTabella({ saleVat }) {
+  return (
+    <div className="card">
+      <Didascalia>
+        <strong>Margine</strong>: quello che resta dell’incasso dopo aver
+        pagato la merce che è uscita per farlo.{' '}
+        <strong>Inc/Costo</strong>: quante volte rientra quello che hai speso
+        — ×4 vuol dire che ogni euro di merce ne ha incassati quattro.{' '}
+        <strong>Incidenza</strong>: quanto pesa questo gruppo sul margine di
+        tutto il mese — se i quattro gruppi fanno 100, questo quanto ne
+        prende. <strong>Incidenza sull’anno</strong> (in fondo, sui totali):
+        quanto pesa questo mese sull’incassato dell’anno.
+      </Didascalia>
+      <Didascalia>
+        <strong>Se lo confronti col foglio non torna, ed è giusto così.</strong>{' '}
+        Qui l’incassato si confronta con il costo della merce{' '}
+        <strong>venduta</strong>, tutti e due al netto dell’IVA (l’incasso
+        scorporato al {saleVat}%, o all’aliquota della singola voce dove ne ha
+        una sua). Il foglio confronta il fatturato con la
+        merce <strong>entrata dalla porta</strong>, al lordo. Le percentuali
+        si somigliano, gli importi no.
+      </Didascalia>
     </div>
   )
 }
@@ -117,12 +168,18 @@ function MacroBlock({ row, months }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong>🗂 {row.name}</strong>
+        <strong>🗂️ {row.name}</strong>
         <span className="muted small">
-          Fat/Acq anno: <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
+          Inc/Costo anno:{' '}
+          <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
         </span>
       </div>
-      <MonthTable months={months} byMonth={row.byMonth} tot={row.tot} />
+      <MonthTable
+        months={months}
+        byMonth={row.byMonth}
+        tot={row.tot}
+        ultima={RIGA_INCIDENZA}
+      />
     </div>
   )
 }
@@ -133,15 +190,32 @@ function TotalBlock({ report }) {
     <div className="card macro-total" style={{ marginBottom: 12 }}>
       <strong>Σ Totale ({report.rows.length} macro)</strong>
       <div style={{ marginTop: 6 }}>
-        <MonthTable months={report.months} byMonth={report.totByMonth} tot={report.grand} />
+        <MonthTable
+          months={report.months}
+          byMonth={report.totByMonth}
+          tot={report.grand}
+          ultima={RIGA_INCIDENZA_ANNO}
+        />
       </div>
     </div>
   )
 }
 
-// Tabella mesi × metriche (acquisti/fatturato/utile/rapporto) con colonna TOT.
-function MonthTable({ months, byMonth, tot }) {
-  const cell = (m) => byMonth.get(m) || { acquisti: 0, fatturato: 0, utile: 0, rapporto: null }
+// LE DUE INCIDENZE non stanno sulle stesse righe: quella sul margine ha
+// senso per una macro (quanto pesa fra le altre), quella sull'anno solo per
+// i totali (quanto pesa un mese sull'anno). Una riga sola che cambia
+// significato a seconda del blocco sarebbe la stessa parola per due
+// domande diverse.
+const RIGA_INCIDENZA = { label: 'Incidenza', valore: (c) => perc(c.incidenza) }
+const RIGA_INCIDENZA_ANNO = {
+  label: 'Incidenza sull’anno',
+  valore: (c) => perc(c.incidenzaAnno),
+}
+
+// Tabella mesi × metriche (incasso/costo del venduto/margine/rapporto) con
+// colonna TOT, più la riga di incidenza che il blocco le passa.
+function MonthTable({ months, byMonth, tot, ultima = null }) {
+  const cell = (m) => byMonth.get(m) || { incasso: 0, costo: 0, margine: 0, rapporto: null }
   return (
     <div className="table-scroll">
       <table className="macro-tab">
@@ -155,30 +229,39 @@ function MonthTable({ months, byMonth, tot }) {
           </tr>
         </thead>
         <tbody>
-          <tr className="r-acq">
-            <th className="rowhead">Acquisti</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).acquisti)}</td>)}
-            <td className="tot">{eur0(tot.acquisti)}</td>
+          <tr className="r-inc">
+            <th className="rowhead">Incassato</th>
+            {months.map((m) => <td key={m}>{eur0(cell(m).incasso)}</td>)}
+            <td className="tot">{eur0(tot.incasso)}</td>
           </tr>
-          <tr className="r-fat">
-            <th className="rowhead">Fatturato</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).fatturato)}</td>)}
-            <td className="tot">{eur0(tot.fatturato)}</td>
+          <tr className="r-cos">
+            <th className="rowhead">Costo del venduto</th>
+            {months.map((m) => <td key={m}>{eur0(cell(m).costo)}</td>)}
+            <td className="tot">{eur0(tot.costo)}</td>
           </tr>
-          <tr className="r-uti">
-            <th className="rowhead">Utile</th>
+          <tr className="r-mar">
+            <th className="rowhead">Margine</th>
             {months.map((m) => (
-              <td key={m} className={cell(m).utile < 0 ? 'neg' : ''}>{eur0(cell(m).utile)}</td>
+              <td key={m} className={cell(m).margine < 0 ? 'neg' : ''}>{eur0(cell(m).margine)}</td>
             ))}
-            <td className={`tot ${tot.utile < 0 ? 'neg' : ''}`}>{eur0(tot.utile)}</td>
+            <td className={`tot ${tot.margine < 0 ? 'neg' : ''}`}>{eur0(tot.margine)}</td>
           </tr>
           <tr className="r-rap">
-            <th className="rowhead">Fat/Acq</th>
+            <th className="rowhead">Inc/Costo</th>
             {months.map((m) => (
               <td key={m}>{cell(m).rapporto != null ? `×${cell(m).rapporto}` : '—'}</td>
             ))}
             <td className="tot">{tot.rapporto != null ? `×${tot.rapporto}` : '—'}</td>
           </tr>
+          {ultima && (
+            <tr className="r-inci">
+              <th className="rowhead">{ultima.label}</th>
+              {months.map((m) => (
+                <td key={m}>{ultima.valore(cell(m))}</td>
+              ))}
+              <td className="tot">{ultima.valore(tot)}</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
