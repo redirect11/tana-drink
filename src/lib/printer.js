@@ -141,26 +141,39 @@ export function claimComandaPrint(orderId, comandaId) {
   }
 }
 
+// La stampa non è riuscita: la pretesa locale torna libera, così il
+// prossimo snapshot ci riprova — carta finita, stampante spenta, si
+// sistema e la comanda esce da sola.
+export function releaseComandaPrint(orderId, comandaId) {
+  if (!orderId || !comandaId) return
+  const chiave = `${orderId}:${comandaId}`
+  try {
+    const list = JSON.parse(localStorage.getItem(COMANDE_KEY) || '[]')
+    localStorage.setItem(COMANDE_KEY, JSON.stringify(list.filter((k) => k !== chiave)))
+  } catch {
+    /* niente memoria: la pretesa non c'era comunque */
+  }
+}
+
 // QUALI COMANDE DI UN CONTO VANNO STAMPATE ADESSO. Pura, così si prova
 // senza rete e senza schermata.
 //
-// LA FINESTRA DEI DIECI MINUTI, che è la scelta da capire: senza, il primo
-// terminale che apre la coda con la memoria vuota (browser nuovo, dati
-// cancellati) stamperebbe in raffica tutte le comande vive della serata.
-// Una comanda più vecchia di così o è già stata stampata da un altro
-// terminale, o è di un turno in cui l'auto-stampa non c'era: in entrambi i
-// casi ristamparla fa danno. Il banco con la stampante tiene la coda
-// aperta tutta la sera: la finestra non gli toglie niente.
-export const FINESTRA_STAMPA_COMANDA_MS = 10 * 60 * 1000
-export function comandeDaStampare(order, adesso = Date.now()) {
+// IL SEGNO «STAMPATA» STA SUL DATO (`auto_print_at` sulla comanda), non
+// solo nella memoria del terminale: così un browser nuovo non ristampa la
+// serata (vede i segni), e due tablet con l'interruttore acceso non fanno
+// due copie — il secondo vede il segno del primo. C'era una finestra di
+// dieci minuti al posto del segno, ed era un ripiego: «semplicemente non
+// puoi segnare le comande stampate già?» (l'utente, 20/08). Sì.
+// La pretesa locale (claimComandaPrint) resta come primo filtro: para i
+// propri snapshot che arrivano prima che la scrittura del segno torni.
+export function comandeDaStampare(order) {
   if (!order || order.status === 'annullato') return []
   return (order.comande || []).filter((c) => {
     if (!c || c.status === 'annullato') return false
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
     // dire che qualcuno l'ha lavorata senza carta, e stamparla ora è tardi.
     if (c.status !== 'ricevuto' && c.status !== 'in_preparazione') return false
-    const nata = Date.parse(c.created_at || '')
-    return Number.isFinite(nata) && adesso - nata <= FINESTRA_STAMPA_COMANDA_MS
+    return !c.auto_print_at
   })
 }
 
