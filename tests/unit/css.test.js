@@ -121,7 +121,12 @@ describe('le corsie della coda si impilano quando lo spazio manca', () => {
   })
 
   it('la lavagna è il contenitore su cui si misura', () => {
-    expect(foglio()).toMatch(/\.queue-board\.corsie-board \{[\s\S]{0,120}container:\s*corsie \/ inline-size/)
+    // TUTTE E DUE le lavagne, non solo le corsie: anche la griglia ha i
+    // filtri sulla riga dei conteggi, e con la sola `.corsie-board` quella
+    // @container non trovava nessun contenitore — la regola non si
+    // applicava mai e sul telefono i filtri restavano schiacciati a destra.
+    expect(foglio()).toMatch(/\.queue-board \{[\s\S]{0,120}container:\s*corsie \/ inline-size/)
+    expect(foglio()).not.toMatch(/\.queue-board\.corsie-board \{[\s\S]{0,120}container:\s*corsie/)
   })
 
   it('le soglie sono @container, non @media sulla finestra', () => {

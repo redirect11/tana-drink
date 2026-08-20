@@ -466,6 +466,48 @@ describe('le corsie di chi guarda la serata (admin)', () => {
     expect(within(riga).getByRole('button', { name: /Miei/ })).toBeInTheDocument()
   })
 
+  // ── ANCHE I FILTRI DELLA GRIGLIA STANNO SUI CONTEGGI (BUG-061) ────
+  //
+  // «Rispetto alla vista corsie li vorrei nello stesso punto» (l'utente,
+  // 20/08). Sono due modi di guardare la STESSA coda: chi passa dall'una
+  // all'altra deve ritrovare i filtri dov'erano, e la riga a sé costava un
+  // livello fra la testata e la prima card.
+  it('anche a griglia i filtri stanno sulla riga dei conteggi', async () => {
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    const riga = screen.getByRole('button', { name: 'In corso' }).closest('.chips-row')
+    const conteggi = riga.closest('.board-sotto')
+    expect(conteggi).toBeTruthy()
+    expect(within(conteggi).getByText(/apert/)).toBeInTheDocument()
+    // tutte e sette sulla stessa riga, il cambio vista compreso
+    for (const nome of ['In corso', /Chiusi/, /Annullati/, 'Tutti', /Miei/, /Comande/]) {
+      expect(within(riga).getByRole('button', { name: nome })).toBeInTheDocument()
+    }
+    // e fuori dalla testata non resta nessuna riga di pastiglie
+    const testata = document.querySelector('.board-head')
+    expect(
+      [...document.querySelectorAll('.chips-row')].filter((r) => !testata.contains(r))
+    ).toHaveLength(0)
+  })
+
+  it('e da lì fanno esattamente quello che facevano prima', async () => {
+    const utente = userEvent.setup()
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    expect(screen.getByText('#41')).toBeInTheDocument()
+
+    await utente.click(screen.getByRole('button', { name: /Chiusi/ }))
+    expect(screen.getByRole('button', { name: /Chiusi/ })).toHaveClass('active')
+    // #41 è aperto: fra i chiusi non c'è
+    await waitFor(() => expect(screen.queryByText('#41')).not.toBeInTheDocument())
+
+    await utente.click(screen.getByRole('button', { name: 'In corso' }))
+    await waitFor(() => expect(screen.getByText('#41')).toBeInTheDocument())
+  })
+
   it('niente tasto «Colonne»: tre corsie ci stanno tutte, non c’è niente da spegnere', async () => {
     montaCoda()
     await screen.findByText('In corso')

@@ -1744,6 +1744,10 @@ body.fullbleed .bar-content {
 }
 
 /* ── I FILTRI DELLA LAVAGNA, SULLA RIGA DEI CONTEGGI ──────────────────
+   Vale per tutte e due le lavagne: le corsie (BUG-042) e la GRIGLIA, dove
+   le pastiglie sono sette e la riga scorre in orizzontale invece di
+   andare a capo — «rispetto alla vista corsie li vorrei nello stesso
+   punto» (l'utente, 20/08).
    Nelle corsie erano una riga a sé fra i conteggi e le testate delle
    colonne: 64px (8 di stacco + 40 di pastiglia + 4 + 12) per due
    pastiglie corte, e tre livelli prima di vedere una comanda. Quella
@@ -6821,8 +6825,13 @@ body.pagina-piena .inv-scheda {
 /* La lavagna è il CONTENITORE su cui si misurano quelle soglie: lei sa
    quanto spazio le è rimasto, la finestra no. Ha un nome perché dentro le
    card ce n'è un altro (.corsia-righe-box) e le soglie non si devono
-   confondere. */
-.queue-board.corsie-board {
+   confondere.
+   VALE PER TUTTE E DUE LE LAVAGNE — le corsie e la griglia — perché i
+   filtri sulla riga dei conteggi ci stanno in tutte e due e la soglia da
+   cui tornano sotto è la stessa. Con la sola .corsie-board, in griglia
+   quella @container non trovava nessun contenitore e la regola non si
+   applicava mai: sul telefono i filtri restavano schiacciati a destra. */
+.queue-board {
   container: corsie / inline-size;
 }
 

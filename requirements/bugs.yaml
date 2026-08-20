@@ -1344,9 +1344,11 @@ bugs:
       comportamento, stessa regola di docs/navigazione.md — a sinistra
       quello che restringe la lista, a destra quello che cambia vista,
       staccati da un margine automatico. È cambiato solo dove stanno.
-      LA GRIGLIA NON SI TOCCA: lì le pastiglie sono sette (In corso,
-      Chiusi, Annullati, Tutti, Miei, Solo oggi, Comande) e una riga se la
-      merita — sulla riga dei conteggi non ci starebbero.
+      LA GRIGLIA NON ERA STATA TOCCATA: lì le pastiglie sono sette (In
+      corso, Chiusi, Annullati, Tutti, Miei, Solo oggi, Comande) e sembrava
+      che una riga se la meritasse. L'utente ha corretto il giorno dopo —
+      «rispetto alla vista corsie li vorrei nello stesso punto» — e la
+      griglia è andata dietro alle corsie: vedi BUG-061.
     in_produzione: false
     status: fixed
     generate_issue: true
@@ -2169,3 +2171,53 @@ bugs:
     test_cases:
       - tests/unit/coda.test.js
       - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-061
+    title: "Nella vista ordini i filtri stanno in un punto, nelle corsie in un altro"
+    area: "src/pages/BartenderPage.jsx (filtriOrdini), src/index.css"
+    description: >
+      Segnalato dall'utente il 20/08, subito dopo BUG-042: «rispetto alla
+      vista corsie li vorrei nello stesso punto». Nelle corsie i filtri
+      erano appena passati sulla riga dei conteggi; nella vista a griglia
+      degli ordini restavano una riga a sé fra la testata e la prima card.
+      PERCHÉ È UN DIFETTO E NON UN GUSTO. Sono due modi di guardare la
+      STESSA coda, e nella stessa serata si passa dall'una all'altra
+      (pastiglia «🍸 Comande» / «🧾 Ordini»). Trovare i filtri in due posti
+      diversi vuol dire cercarli ogni volta — e in griglia quella riga
+      costava un livello di altezza fra la testata e i conti, sulla
+      lavagna che si guarda da lontano.
+      LA CURA: `filtriOrdini`, gemello di `filtriCorsie`, appeso alla
+      stessa riga dei conteggi (`.board-sotto`). Il meccanismo è quello di
+      BUG-042, non un secondo inventato apposta: stessa classe
+      (`chips-row chips-lavagna`), stesso margine automatico che stacca il
+      cambio vista, stessa regola di docs/navigazione.md.
+      SONO SETTE, NON DUE, e questo è il punto delicato. Sui 1000-1300px
+      del banco non ci stanno tutte accanto ai conteggi. NON vanno a capo
+      (una seconda riga di pastiglie sarebbe esattamente quello che si
+      stava togliendo) e non si schiacciano: la riga SCORRE in orizzontale,
+      che è quello che `.chips-row` fa già e che le corsie facevano già sul
+      telefono. E la pastiglia più lunga si accorcia: «📅 Solo oggi (3)»
+      invece di «📅 Solo oggi (3 da chiudere)» — un'ottantina di pixel in
+      meno, e cosa siano quei tre lo dice il titolo, che è dove si va a
+      chiederlo.
+      UN BUG DENTRO IL BUG, trovato spostandoli: la soglia «sul telefono i
+      filtri tornano sotto» è una container query sulla LAVAGNA
+      (`@container corsie`), ma il contenitore era dichiarato solo su
+      `.queue-board.corsie-board`. In griglia quel contenitore non esiste,
+      quindi la regola non si sarebbe applicata MAI e sul telefono i filtri
+      sarebbero rimasti schiacciati a destra. Il contenitore è passato su
+      `.queue-board`: la lavagna è una, che sia a corsie o a griglia.
+      COSA NON È CAMBIATO: quello che i filtri fanno. Stessi tasti, stesso
+      comportamento, stesso ordine.
+      PASSI PER RIPRODURLO (prima della cura): coda a griglia, guardare
+      dove stanno i filtri; passare alle comande con «🍸 Comande» e
+      guardare di nuovo. Sono in due punti diversi.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx

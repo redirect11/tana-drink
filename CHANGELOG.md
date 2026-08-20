@@ -4,6 +4,13 @@
 
 ### Per chi gestisce
 
+- **I filtri della coda stanno nello stesso punto in tutte e due le viste.**
+  Nella vista a griglia degli ordini occupavano una riga tutta loro, nelle
+  corsie no: passando dall'una all'altra bisognava ricercarli. Adesso stanno
+  **sulla riga dei conteggi** anche in griglia — dove non ci stanno tutti la
+  riga **scorre di lato**, non va a capo — e si è guadagnata una riga di
+  altezza per i conti.
+
 - **Niente più «Invalid Date» sopra un gruppo di conti.** Un conto di cui
   non si riusciva a leggere la data finiva sotto un'intestazione che diceva
   proprio così. Adesso la data si cerca in **tutte** le date che il conto si
