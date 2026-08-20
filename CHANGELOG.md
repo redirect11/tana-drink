@@ -83,6 +83,16 @@
 
 ### Al banco
 
+- **Una comanda presa in carico non si allunga più sotto le mani.** Quando
+  una comanda passa da **«da fare»** a **«in preparazione»**, i prodotti
+  aggiunti dopo al conto fanno una **comanda nuova** — prima ci finivano
+  dentro, e chi stava già versando si vedeva comparire righe su un ticket
+  che aveva in mano da un pezzo (succedeva nei locali che hanno acceso «le
+  comande nascono già in preparazione»). Stessa cosa per una comanda già
+  **uscita dalla stampante**: la carta è al banco, e una riga aggiunta dopo
+  lì non ci sarebbe mai comparsa. La comanda nuova **stampa da sola**, come
+  le altre.
+
 - **Il tasto «Comanda» stampa UNA comanda, non il conto intero.** Su un
   conto con più comande, quando non ce n'era più nessuna in lavorazione —
   tutto servito, oppure il conto già incassato — quel tasto faceva uscire

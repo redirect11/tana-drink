@@ -954,21 +954,29 @@ describe('dove finiscono le righe aggiunte a un conto', () => {
     expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
   })
 
-  it('con l’interruttore acceso confluiscono nella comanda in preparazione', async () => {
+  // QUESTO TEST DICEVA IL CONTRARIO, e la decisione è dell'utente (20/08):
+  // «Se sono in preparazione significa che la vecchia comanda è stata già
+  // presa in carico». Con l'interruttore acceso il passo di nascita è «in
+  // preparazione», e la vecchia regola («confluisce nella comanda che sta
+  // nel passo di nascita») faceva finire le aggiunte dentro un ticket che
+  // il banco aveva già in mano. Il passo di nascita dice in che stato NASCE
+  // una comanda; non dice più dove finiscono le righe che arrivano dopo.
+  it('nemmeno con l’interruttore acceso: la comanda al banco non si allunga', async () => {
     const user = userEvent.setup()
     mockSettings.comande_in_preparazione = true
     try {
       mount(conUnaComandaAlBanco())
       await user.click(screen.getAllByText('Gin Tonic')[0])
-      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
-      const [, comandaId, payload] = bartenderUpdateComanda.mock.calls.at(-1)
-      expect(comandaId).toBe('c1')
-      expect(payload.items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
-      expect(addComanda).not.toHaveBeenCalled()
+      await waitFor(() => expect(addComanda).toHaveBeenCalled(), { timeout: 3000 })
+      expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+      const [id, items] = addComanda.mock.calls.at(-1)
+      expect(id).toBe('ord1')
+      expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
     } finally {
       mockSettings.comande_in_preparazione = false
     }
   })
+
 })
 
 describe('il passo in cui nasce una comanda lo dice il locale', () => {

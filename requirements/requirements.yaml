@@ -360,11 +360,30 @@ requirements:
       della comanda) e si comportavano già in modo diverso.
       DOVE FINISCONO LE RIGHE AGGIUNTE a un conto aperto lo dice
       `comandaPerLeAggiunte` (comande.js), un punto solo per tutte le
-      strade: nella comanda che sta già nel passo di nascita, o in una
-      nuova. Non nella prima «toccabile», che vuol dire un'altra cosa
-      (BUG-024). Una comanda
-      provvisoria nasce col passo e il numero che avrà DAVVERO, o si
-      vedrebbe cambiare da sé un istante dopo.
+      strade: SOLO in una comanda ancora «da fare». Da «in preparazione» in
+      poi ne nasce una NUOVA. Deciso dall'utente il 20/08: «se una comanda
+      passa da "da fare" a "in preparazione", i prodotti successivi che
+      aggiungo all'ordine dovranno creare una NUOVA comanda. Al momento
+      succede solo se da in preparazione passano a da servire. Se sono in
+      preparazione significa che la vecchia comanda è stata già presa in
+      carico». Il perché sta in quell'ultima riga: chi sta già shakerando
+      non deve vedersi allungare il ticket sotto le mani.
+      Prima la domanda era «c'è una comanda nel passo dove NASCE il
+      lavoro?»: rispondeva bene col passo di nascita «da fare», ma nel
+      locale che fa nascere le comande già in preparazione rispondeva «sì»
+      per una comanda presa in carico. Prima ancora chiedeva
+      `comandaEditable`, che vuol dire «si può ancora toccare» e includeva
+      anche lei «in preparazione» (BUG-024). Il passo di nascita continua a
+      dire in che stato NASCE una comanda; non dice più dove finiscono le
+      righe che arrivano dopo.
+      E NON ACCOGLIE PIÙ NIENTE NEMMENO UNA COMANDA GIÀ USCITA DALLA
+      STAMPANTE (`auto_print_at`, BUG-050): la carta è al banco, e una riga
+      aggiunta dopo su quel ticket non c'è e non ci comparirà mai. È la
+      stessa idea di «presa in carico» vista dall'altro lato. La comanda
+      nuova che nasce dall'aggiunta esce da sola: `comandeDaStampare` la
+      vede perché è al banco e non porta il segno.
+      Una comanda provvisoria nasce col passo e il numero che avrà DAVVERO,
+      o si vedrebbe cambiare da sé un istante dopo.
       IN CHE PASSO NASCE UNA COMANDA lo decide il locale
       («Le comande nascono già in preparazione», Impostazioni → Gestione
       preparazione; di suo SPENTA, quindi «da fare») e lo si chiede a
@@ -448,6 +467,8 @@ requirements:
       - tests/unit/scritturaComande.test.js
       - tests/component/UnaMemoriaLocale.test.jsx
       - tests/component/ComandaSenzaAttesa.test.jsx
+      - tests/unit/comande.test.js
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: REQ-PAG-010
     title: "Si vede che cosa è stato pagato, e cosa copre"

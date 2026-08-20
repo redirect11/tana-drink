@@ -500,7 +500,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const bersaglioAggiunte = () =>
     aggiunteInComandaNuova(ruoloRef.current)
       ? null
-      : comandaPerLeAggiunte(effComandeRef.current, statoNuovaRef.current)
+      : comandaPerLeAggiunte(effComandeRef.current)
 
   // Ordine auto-creato in place: lo si tiene aggiornato dal server (comande,
   // pagamenti…) senza rimontare la pagina. Si aggiorna lo stato SOLO se cambia
@@ -1159,13 +1159,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // MODIFICA: l'item entra DIRETTAMENTE nella comanda che accoglie il lavoro
   // nuovo (modifica ottimistica, chiave riga stabile) e si sincronizza in
   // background — così NON si vede la riga "ricaricarsi" (niente swap
-  // bozza→comanda). Se in quel passo non c'è ancora una comanda, ne nasce
+  // bozza→comanda). Se nessuna comanda del conto è più «da fare», ne nasce
   // una: dove finiscono le righe nuove lo dice comandaPerLeAggiunte, in un
   // posto solo.
   const addToEditableComanda = (item) => {
     const target = bersaglioAggiunte()
     if (!target) {
-      // NIENTE COMANDA IN QUEL PASSO: le righe passano dalla BOZZA, che le
+      // NESSUNA COMANDA DA FARE: le righe passano dalla BOZZA, che le
       // raccoglie e le manda tutte insieme (flushAdditions, poco dopo
       // l'ultimo tocco). Prima ogni tocco chiamava addComanda per conto
       // suo: tre tocchi di fila facevano tre ticket per lo stesso giro, e
@@ -1412,9 +1412,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const modoConsegna = modoAllaNascita(settings)
 
   // MODIFICA: manda al server le aggiunte in sospeso (senza navigare). Gli
-  // item confluiscono nella comanda in preparazione; una NUOVA comanda si crea
-  // solo se l'ordine è già pronto/servito. Usata dall'AUTO-CONFERMA (ogni
-  // aggiunta è confermata subito) e all'uscita per non perdere nulla.
+  // item confluiscono nella comanda ancora «da fare», se c'è; da «in
+  // preparazione» in poi ne nasce una NUOVA (comandaPerLeAggiunte). Usata
+  // dall'AUTO-CONFERMA (ogni aggiunta è confermata subito) e all'uscita per
+  // non perdere nulla.
   const flushAdditions = useCallback(() => {
     if (isNew || !order?.id) return
     // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
@@ -1435,7 +1436,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       clearDraft()
       segnaModifica(target.id, merged, 250)
     } else {
-      // NESSUNA COMANDA IN QUEL PASSO → NE NASCE UNA. E resta a schermo
+      // NESSUNA COMANDA DA FARE → NE NASCE UNA. E resta a schermo
       // mentre vola al server: prima si svuotava la bozza e si aspettava la
       // risposta, quindi per un attimo — o per tutto il tempo che la rete si
       // prendeva — quelle righe non esistevano da nessuna parte. Chi in

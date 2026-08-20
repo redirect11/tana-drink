@@ -14,6 +14,7 @@
 // poco, una volta sola per terminale. Chiunque l'abbia battuto.
 
 import { describe, it, expect, beforeEach } from 'vitest'
+import { comandaPerLeAggiunte, statoComandaNuova } from '../../src/lib/comande.js'
 import {
   comandeDaStampare,
   comandaDelTicket,
@@ -126,4 +127,37 @@ describe('quale comanda finisce sul ticket', () => {
     expect(comandaDelTicket(conto([]), null)).toBe(null)
     expect(comandaDelTicket(undefined, null)).toBe(null)
   })
+})
+
+// ── L'INCASTRO CON LA REGOLA DELLE AGGIUNTE (REQ-ORD-016 + BUG-050) ──
+//
+// Da «in preparazione» in poi un'aggiunta non entra più nella comanda
+// vecchia: ne nasce una. E quella nuova deve uscire dalla stampante DA
+// SOLA, o il banco si ritrova righe sul conto e niente sulla carta. Le due
+// regole vivono in due file diversi (comande.js e printer.js) e nessuno
+// garantisce che combacino: questo test le mette in fila.
+describe('la comanda nata da un’aggiunta esce da sola', () => {
+  const nataAdesso = (id, status) => ({
+    id,
+    status,
+    items: [],
+    created_at: nataDa(1_000),
+  })
+
+  for (const impostazione of [false, true]) {
+    it(`col passo di nascita ${statoComandaNuova({ comande_in_preparazione: impostazione })}`, () => {
+      // Il conto ha una comanda presa in carico e già stampata: niente da
+      // accogliere, quindi le righe nuove fanno una comanda a parte.
+      const alBanco = {
+        ...nataAdesso('c1', 'in_preparazione'),
+        auto_print_at: nataDa(30_000),
+      }
+      expect(comandaPerLeAggiunte([alBanco])).toBe(null)
+
+      const nuova = nataAdesso('c2', statoComandaNuova({ comande_in_preparazione: impostazione }))
+      const o = conto([alBanco, nuova])
+      // Solo la nuova: la vecchia porta già il segno.
+      expect(comandeDaStampare(o).map((c) => c.id)).toEqual(['c2'])
+    })
+  }
 })

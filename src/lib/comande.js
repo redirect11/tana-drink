@@ -263,19 +263,33 @@ export function comandaEditable(c) {
 
 // ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
 //
-// Nel passo in cui NASCE il lavoro nuovo (statoComandaNuova), non nel passo
-// in cui si trova la comanda che sta lì accanto. Chiedeva `comandaEditable`,
-// che dice «si può ancora toccare» ed è vera sia per «da fare» sia per «in
-// preparazione»: le righe aggiunte a un conto con una comanda già al banco
-// ci finivano dentro e risultavano prese in carico da qualcuno. Al banco
-// sparivano dalla colonna «Da fare» e non le cominciava nessuno — lo
-// stesso danno del ticket che non compare, ma più subdolo, perché la card
-// c'è: sta nella colonna sbagliata.
+// SOLO IN UNA COMANDA ANCORA «DA FARE», e in nessun'altra.
 //
-// Se una comanda in quel passo c'è già, ci confluiscono: è lo stesso giro
-// da fare, non due ticket per la stessa cosa. Se non c'è, ne nasce una —
-// anche con una comanda in preparazione accanto. Una comanda PRONTA o
-// SERVITA non risponde mai: non è nel passo di nascita, e viene da sé.
+// «Se una comanda passa da "da fare" a "in preparazione", i prodotti
+// successivi che aggiungo all'ordine dovranno creare una NUOVA comanda. Al
+// momento succede solo se da in preparazione passano a da servire. Se sono
+// in preparazione significa che la vecchia comanda è stata già presa in
+// carico» (l'utente, 20/08). È la regola, e il perché sta in quell'ultima
+// riga: chi sta già shakerando non deve vedersi allungare il ticket sotto
+// le mani — quello che ha in mano non è più quello che deve fare.
+//
+// Prima la domanda era «c'è una comanda nel passo dove NASCE il lavoro?»
+// (statoComandaNuova). Rispondeva bene col passo di nascita «da fare», ma
+// nel locale che fa nascere le comande già in preparazione rispondeva «sì»
+// per una comanda presa in carico: le aggiunte ci confluivano, ed è
+// esattamente quello che non deve succedere. Il passo di nascita continua
+// a dire in che stato NASCE una comanda; non dice più dove finiscono le
+// righe che arrivano dopo.
+//
+// E NON ACCOGLIE PIÙ NIENTE NEMMENO UNA COMANDA GIÀ USCITA DALLA
+// STAMPANTE (`auto_print_at`, BUG-050): la carta è al banco, e una riga
+// aggiunta dopo su quel ticket non c'è e non ci comparirà mai. È la stessa
+// idea di «presa in carico», vista dall'altro lato: il ticket stampato è
+// preso in carico quanto un barista che ha cominciato.
+//
+// Una comanda PRONTA, SERVITA o ANNULLATA non rispondeva già prima, e
+// continua a non rispondere. Quando non risponde nessuno, ne nasce una
+// nuova — che è il caso normale da qui in poi.
 // ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
 //
 // I passi già passati, meno quelli PRIMA di dove nasce il lavoro. Col
@@ -294,8 +308,10 @@ export function statiPrimaComanda(status, passo) {
   return COMANDA_FLOW.slice(daDove, arrivata)
 }
 
-export function comandaPerLeAggiunte(comande, passo) {
-  return (comande || []).find((c) => c.status === passo) || null
+export function comandaPerLeAggiunte(comande) {
+  return (
+    (comande || []).find((c) => c.status === ORDER_STATUSES.RICEVUTO && !c.auto_print_at) || null
+  )
 }
 
 // Quantità per item bloccate (comande pronte/servite): sotto questa soglia
