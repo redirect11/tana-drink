@@ -16,6 +16,7 @@ import {
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
+  corsieDiverseDalNormale,
 } from '../../src/lib/coda.js'
 
 const orders = [
@@ -1398,5 +1399,39 @@ describe('dove finisce una comanda lasciata in un\'altra colonna', () => {
     expect(statoDelRilascio(scheda('ricevuto'), AL_BANCO, { ruolo: 'bartender' })).toBe(
       'in_preparazione'
     )
+  })
+})
+
+// ── IL TASTO «COLONNE» SI ACCENDE SOLO SE TI DISCOSTI DAL NORMALE ────
+//
+// Due corsie nascono spente di serie: contare le spente teneva il tasto
+// arancione su ogni terminale nuovo, per sempre — «continua ad essere
+// sempre attivo» (l'utente, 20/08, dopo il primo giro di BUG-058). Si
+// conta la differenza dal normale, nei due versi.
+describe('corsieDiverseDalNormale', () => {
+  const sceglibili = [
+    { id: 'da-fare', titolo: 'Da fare' },
+    { id: 'al-banco', titolo: 'Al banco' },
+    { id: 'chiusi', titolo: 'Chiusi' },
+    { id: 'annullati', titolo: 'Annullati' },
+  ]
+
+  it('terminale mai toccato: nessuna differenza, tasto spento', () => {
+    expect(corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati'])).toHaveLength(0)
+  })
+
+  it('nascondo una corsia di serie accesa: una differenza', () => {
+    const d = corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati', 'da-fare'])
+    expect(d.map((c) => c.id)).toEqual(['da-fare'])
+  })
+
+  it('riaccendo una corsia di serie spenta: anche quella è una differenza', () => {
+    const d = corsieDiverseDalNormale(sceglibili, ['annullati'])
+    expect(d.map((c) => c.id)).toEqual(['chiusi'])
+  })
+
+  it('una memoria su una corsia che oggi non è in elenco non accende niente', () => {
+    const senzaChiusi = sceglibili.filter((c) => c.id !== 'da-fare')
+    expect(corsieDiverseDalNormale(senzaChiusi, ['chiusi', 'annullati', 'da-fare'])).toHaveLength(0)
   })
 })

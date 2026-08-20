@@ -176,6 +176,12 @@
 
 ### Al banco
 
+- **Il tasto «Colonne» si accende solo se hai cambiato qualcosa**: prima
+  era sempre arancione, perché due colonne nascono nascoste di serie. Le
+  ombre delle card hanno il loro spazio pieno (non più tagliate sul
+  fianco), e l'interruttore «incassare senza stampare» ora sta dove uno lo
+  cerca: **Impostazioni → Pagamenti**.
+
 - **Contanti e Carta dalla card stampano lo scontrino come il pannello dei
   pagamenti**: al tocco, col metodo scelto scritto sopra. E per chi lo
   scontrino non lo vuole c'è il nuovo **«Riscuoti (senza stampa)»** nella

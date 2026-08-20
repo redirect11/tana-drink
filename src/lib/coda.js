@@ -595,6 +595,23 @@ export function corsieDelPronto({ divise = false, ritiroEsiste = true } = {}) {
 // poi è una scelta di questo terminale.
 export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
+// ── QUANDO IL TASTO «COLONNE» SI ACCENDE ─────────────────────────────
+//
+// L'acceso deve dire «questo terminale ha cambiato qualcosa rispetto al
+// normale», non «esiste uno stato normale». Il primo giro (BUG-058)
+// contava le corsie spente: ma due nascono spente DI SERIE, quindi il
+// tasto partiva arancione su ogni terminale nuovo e non si spegneva mai
+// — «continua ad essere sempre attivo» (l'utente, 20/08, seconda volta).
+// Si conta la DIFFERENZA dal normale, nei due versi: nascosta una corsia
+// che di serie è accesa, o riaccesa una che di serie è spenta. Contano
+// solo le corsie oggi sceglibili: una memoria su una corsia che non è in
+// elenco non deve accendere niente.
+export function corsieDiverseDalNormale(sceglibili, nascoste = [], normale = CORSIE_SPENTE_ALL_INIZIO) {
+  const via = new Set(nascoste || [])
+  const base = new Set(normale || [])
+  return (sceglibili || []).filter((c) => via.has(c.id) !== base.has(c.id))
+}
+
 export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = null } = {}) {
   // La colonna del pronto può diventare due: al suo posto, nello stesso
   // punto della fila, così le altre non si spostano sotto gli occhi.

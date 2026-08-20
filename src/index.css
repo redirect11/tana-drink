@@ -6940,10 +6940,13 @@ body.pagina-piena .inv-scheda {
    che scorre taglia tutto quello che esce dai suoi bordi — l'ombra
    compresa. Senza margine le card risultavano mozzate a destra e in basso,
    e nelle colonne strette sembravano piatte, come se l'ombra non ci fosse.
-   Le misure vengono dall'ombra stessa (--ombra-card: 0 4px 18px): 16px
-   sotto perché ci stia lo scostamento più la sfocatura, 6 ai lati come
-   compromesso — di più stringerebbe la card, che in una corsia stretta è
-   già poca roba. In cima ne bastano 2: lì l'ombra non arriva.
+   Le misure vengono dall'ombra stessa (--ombra-card: 0 4px 18px): la
+   sfocatura sborda di ~18px per lato e di 22 in basso (18 più i 4 di
+   scostamento). Il primo giro aveva provato 6px ai lati «per non
+   stringere la card»: l'ombra usciva tagliata di netto sul fianco, e
+   tagliata si vede più di una card leggermente più stretta — al secondo
+   giro l'utente l'ha rivista subito. Quindi: quanto serve, non un
+   compromesso. In cima bastano 2px: lì l'ombra non arriva.
    `overflow-x: clip` invece del taglio implicito: `auto` su un asse rende
    l'altro `auto` a sua volta, e comparivano barre orizzontali per i pochi
    pixel dell'ombra. `clip` taglia e basta, senza far scorrere niente. */
@@ -6952,7 +6955,7 @@ body.pagina-piena .inv-scheda {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
-  padding: 2px 6px 16px;
+  padding: 2px 16px 24px;
   overflow-x: clip;
 }
 

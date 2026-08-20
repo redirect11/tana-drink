@@ -55,6 +55,7 @@ import {
   corsieDaMostrare,
   corsieSceglibili,
   corsieSpente,
+  corsieDiverseDalNormale,
   soloCorsieVive,
   intestazioneGiornata,
   giornataDelConto,
@@ -1330,6 +1331,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // sguardo all'indietro partono spente di suo.
   const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
   const spente = corsieSpente(sceglibili, nascoste)
+  // Il tasto «Colonne» si accende solo se QUESTO terminale si discosta dal
+  // normale (due corsie nascono spente di serie): il perché sta in coda.js.
+  const diverse = corsieDiverseDalNormale(sceglibili, nascoste)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1436,7 +1440,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           riguarda. È una scelta di QUESTO terminale e si ricorda. */}
       {corsieBanco && (
         <button
-          className={`chip ${spente.length > 0 ? 'active' : ''}`}
+          className={`chip ${diverse.length > 0 ? 'active' : ''}`}
           onClick={() => setScegliCorsie((v) => !v)}
           aria-expanded={scegliCorsie}
           title={
@@ -1447,7 +1451,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               : 'Scegli quali colonne tenere a schermo'
           }
         >
-          ▦ Colonne{spente.length > 0 ? ` (${spente.length})` : ''}
+          ▦ Colonne{diverse.length > 0 ? ` (${diverse.length})` : ''}
         </button>
       )}
       {pastigliaComande}

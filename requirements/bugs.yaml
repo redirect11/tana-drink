@@ -2050,6 +2050,20 @@ bugs:
       PASSI PER RIPRODURLO (prima della cura): aprire la coda del banco su
       un browser nuovo, senza toccare niente. Il chip «▦ Colonne» è
       arancione.
+      SECONDA CURA (20/08, stesso giorno — l'utente l'ha rivisto acceso):
+      il conteggio spiegava l'arancione ma non lo spegneva, perche' due
+      corsie («chiusi» e «annullati») nascono spente DI SERIE: il tasto
+      partiva acceso su ogni terminale nuovo. L'acceso deve dire «questo
+      terminale si e' discostato dal normale», nei due versi — nascosta
+      una corsia di serie accesa, O riaccesa una di serie spenta. La
+      regola sta in `corsieDiverseDalNormale` (coda.js), pura e provata:
+      terminale mai toccato = tasto grigio senza numero.
+      E LE OMBRE, DI NUOVO (stesso giro): il respiro dato in BUG-044 era
+      6px ai lati — un compromesso «per non stringere la card» — ma
+      l'ombra sfuma per 18px e usciva tagliata di netto sul fianco;
+      l'utente l'ha rivista subito. Ora il padding e' la misura che serve
+      (16 ai lati, 24 sotto), e il test non si accontenta piu' che un
+      padding esista: pretende le misure dell'ombra.
     in_produzione: false
     status: fixed
     generate_issue: true

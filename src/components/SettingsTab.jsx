@@ -291,6 +291,16 @@ export default function SettingsTab({ role = null }) {
       nodo: (
             <div className="card settings-section">
               <h3>Pagamenti</h3>
+              {/* STA QUI E NON IN «GESTIONE PREPARAZIONE»: parla di come si
+                  incassa, e chi lo cerca apre Pagamenti — c'era finito
+                  accanto a «Riscuoti e servi» per parentela di forma, e
+                  l'utente non lo trovava. */}
+              <ToggleRow
+                label="Un tasto per incassare senza stampare"
+                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                checked={settings.riscuoti_senza_stampa === true}
+                onChange={(v) => save({ riscuoti_senza_stampa: v })}
+              />
               <ToggleRow
                 label="Pagamento online (SumUp)"
                 desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
@@ -416,12 +426,6 @@ export default function SettingsTab({ role = null }) {
                   onChange={(v) => save({ riscuoti_e_servi: v })}
                 />
               )}
-              <ToggleRow
-                label="Un tasto per incassare senza stampare"
-                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
-                checked={settings.riscuoti_senza_stampa === true}
-                onChange={(v) => save({ riscuoti_senza_stampa: v })}
-              />
               {/* Vale per TUTTE le comande allo stesso modo — la prima di un
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
