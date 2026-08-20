@@ -73,3 +73,34 @@ describe('il logo che c’è', () => {
     expect(prove.tentativi).toBe(1)
   })
 })
+
+// ── IL LOGO CHE NON ARRIVA MAI NON FERMA LA CODA (BUG-053) ───────────
+//
+// Da quando la stampa è una coda (BUG-052), un lavoro che non finisce
+// blocca tutti quelli dopo. `logoPerStampa` aspettava il caricamento
+// dell'immagine SENZA tempo massimo: un logo che non arriva mai — rete
+// che pende, service worker in stallo — teneva ferma la stampante tutta
+// la sera. Tre secondi e si stampa senza logo, una volta sola: il
+// fallimento finisce in cache come «provato e non c'è».
+describe('il logo ha un tempo massimo', () => {
+  it('un caricamento che pende per sempre si arrende da solo', async () => {
+    // Un'immagine che non chiama mai né onload né onerror: il caso che
+    // prima bloccava la coda per sempre.
+    globalThis.Image = class {
+      set src(_v) {
+        /* nessun evento, mai */
+      }
+    }
+    vi.useFakeTimers()
+    try {
+      const logoPerStampa = await carica()
+      const p = logoPerStampa()
+      await vi.advanceTimersByTimeAsync(3100)
+      expect(await p).toBeNull() // niente logo, ma la promessa SI CHIUDE
+      // E non si riprova alla stampa dopo: «provato e non c'è» è ricordato.
+      expect(await logoPerStampa()).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

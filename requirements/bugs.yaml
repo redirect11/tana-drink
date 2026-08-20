@@ -1756,3 +1756,31 @@ bugs:
     severity: alta
     priority: P1
     test_cases: [tests/unit/stampaSerializzata.test.js]
+  - id: BUG-053
+    title: "Un logo che non arriva mai fermava tutta la coda di stampa"
+    area: "src/lib/printer.js (logoPerStampa)"
+    description: >
+      Notato dall'agente chiudendo BUG-052, registrato il 20/08 — mai visto
+      accadere al banco, ma il meccanismo e' certo. `logoPerStampa` aspetta
+      il caricamento dell'immagine SENZA tempo massimo: se il caricamento
+      non finisce mai — rete che pende, service worker in stallo — la
+      promessa resta aperta per sempre.
+      PRIMA di BUG-052 questo sporcava: lo scontrino in attesa del logo
+      teneva il builder condiviso aperto e ci si mescolava la comanda dopo.
+      DOPO BUG-052 la stampa e' una coda seriale, quindi non si mescola
+      piu' niente — ma un lavoro che non finisce BLOCCA tutti quelli dopo:
+      la stampante muta per la serata intera, senza un errore da nessuna
+      parte.
+      LA CURA: tre secondi di tempo massimo sul caricamento. Scaduti, si
+      stampa senza logo e il fallimento finisce nella cache dei tre stati
+      di BUG-032 («provato e non c'e'»): non si riprova a ogni scontrino.
+      Tre secondi perche' il logo sta nella cache del service worker e in
+      condizioni sane arriva in millisecondi: se non e' arrivato in tre
+      secondi, stasera non arriva.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/logoScontrino.test.js]

@@ -83,6 +83,9 @@
 
 ### Al banco
 
+- **Un logo che non si carica non tiene più ferma la stampante**: dopo tre
+  secondi lo scontrino esce senza logo, e non si riprova a ogni stampa.
+
 - **Una comanda presa in carico non si allunga più sotto le mani.** Quando
   una comanda passa da **«da fare»** a **«in preparazione»**, i prodotti
   aggiunti dopo al conto fanno una **comanda nuova** — prima ci finivano
