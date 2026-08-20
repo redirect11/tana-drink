@@ -6405,3 +6405,36 @@ requirements:
     generate_issue: true
     labels: [dev, stampa]
     test_cases: [tests/unit/stampanteFinta.test.js]
+
+  - id: REQ-CODA-006
+    title: "I conti dei giorni scorsi restano in coda, sotto la loro data"
+    area: "src/lib/coda.js (giornataDelConto, raggruppaPerGiornata, intestazioneGiornata), src/pages/BartenderPage.jsx"
+    description: >
+      Il servizio è perpetuo e i conti si chiudono a mano: un tavolo che se
+      ne va senza pagare, un conto aperto per sbaglio, restano lì anche il
+      giorno dopo. Non si mescolano ai conti di stasera — i numeri della
+      giornata sembrerebbero doppi — ma non si nascondono nemmeno: scendono
+      in fondo, ognuno sotto una riga con la sua data.
+      DI CHE GIORNATA È UN CONTO lo dice `giornataDelConto`: la giornata
+      COMMERCIALE (REQ-CASSA-001), scritta dal client alla nascita in
+      `order_date` — non aspetta il server e vale anche offline. Se il
+      documento è monco si ripiega, in quest'ordine, su `created_at`,
+      sull'apertura scritta dal client e sulla nascita della prima comanda:
+      sono tutte date che quel conto ha davvero, e servono a farlo finire
+      sotto IL SUO giorno invece che in un limbo. Se proprio non ce n'è
+      nessuna il conto va sotto OGGI, dove chi lavora lo vede: nessun
+      segnaposto e nessuna etichetta inventata (BUG-060).
+      LA RIGA DICE COSA SONO QUEI CONTI, e dipende dalla scheda aperta
+      (`intestazioneGiornata`): «⏳ Da chiudere» fra quelli in corso, dove
+      è il motivo per cui stanno ancora lì; «💶 Chiusi» e «✖️ Annullati»
+      nelle loro schede, dove «da chiudere» sarebbe falso; nella scheda
+      «Tutti», dove i conti sono mescolati, la sola data (BUG-059).
+      SI POSSONO TOGLIERE DAGLI OCCHI col filtro «📅 Solo oggi», che dice
+      anche quanti sono. Non è il default: un conto dimenticato che non si
+      vede più non si chiude mai.
+    status: implemented
+    generate_issue: false
+    labels: [coda, ordini]
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaGiornate.test.jsx

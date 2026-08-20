@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 161 | fatto e coperto dai test |
+| ✅ | 162 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**197 voci** in tutto. **175** descrivono il sistema com'è oggi e
+**198 voci** in tutto. **176** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
-| [La coda del banco](#la-coda-del-banco) | 5 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
+| [La coda del banco](#la-coda-del-banco) | 6 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
@@ -459,6 +459,18 @@ DETTAGLI CHE FANNO LA DIFFERENZA: - UNA RIGA PER PERSONA, non per dispositivo: l
 IL LUCCHETTO STA ANCHE LATO SERVER (`firestore.rules`): legge solo `isBartender()` (che li' vuol dire admin+bartender), scrive solo se stesso chi e' del personale. Un permesso che esiste solo nell'interfaccia non e' un permesso.
 
 **Dove**: `src/lib/presenza.js, src/lib/api.js, src/pages/BartenderPage.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/presenza.test.js`, `tests/component/CodaCorsie.test.jsx`
+
+#### REQ-CODA-006 — I conti dei giorni scorsi restano in coda, sotto la loro data
+
+Il servizio è perpetuo e i conti si chiudono a mano: un tavolo che se ne va senza pagare, un conto aperto per sbaglio, restano lì anche il giorno dopo. Non si mescolano ai conti di stasera — i numeri della giornata sembrerebbero doppi — ma non si nascondono nemmeno: scendono in fondo, ognuno sotto una riga con la sua data.
+
+DI CHE GIORNATA È UN CONTO lo dice `giornataDelConto`: la giornata COMMERCIALE (REQ-CASSA-001), scritta dal client alla nascita in `order_date` — non aspetta il server e vale anche offline. Se il documento è monco si ripiega, in quest'ordine, su `created_at`, sull'apertura scritta dal client e sulla nascita della prima comanda: sono tutte date che quel conto ha davvero, e servono a farlo finire sotto IL SUO giorno invece che in un limbo. Se proprio non ce n'è nessuna il conto va sotto OGGI, dove chi lavora lo vede: nessun segnaposto e nessuna etichetta inventata (BUG-060).
+
+LA RIGA DICE COSA SONO QUEI CONTI, e dipende dalla scheda aperta (`intestazioneGiornata`): «⏳ Da chiudere» fra quelli in corso, dove è il motivo per cui stanno ancora lì; «💶 Chiusi» e «✖️ Annullati» nelle loro schede, dove «da chiudere» sarebbe falso; nella scheda «Tutti», dove i conti sono mescolati, la sola data (BUG-059).
+
+SI POSSONO TOGLIERE DAGLI OCCHI col filtro «📅 Solo oggi», che dice anche quanti sono. Non è il default: un conto dimenticato che non si vede più non si chiude mai.
+
+**Dove**: `src/lib/coda.js (giornataDelConto, raggruppaPerGiornata, intestazioneGiornata), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/CodaGiornate.test.jsx`
 
 ### Gruppi di conti
 
