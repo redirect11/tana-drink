@@ -6073,10 +6073,17 @@ requirements:
       livello per-fornitore diventa una VISTA (il filtro), non un
       documento. Le fatture restano piu' d'una — di norma una per
       fornitore coinvolto.
-      2) LE FATTURE SI ALLEGANO ALL'ORDINE: «deve essere possibile anche
-      allegare le fatture all'ordine». Allegare = il documento (foto/PDF)
-      attaccato, non solo un numero. Serve lo Storage; da decidere in
-      implementazione il limite di peso e i formati.
+      2) LE FATTURE SI ALLEGANO ALL'ORDINE **PER FORNITORE** (precisato
+      dall'utente subito dopo): «la vista degli ordini contiene piu'
+      fornitori, ma la fattura e' collegata all'ordine PER IL FORNITORE,
+      perche' e' il fornitore che rilascia la fattura». Quindi il legame
+      della fattura non e' con l'ordine intero ma con LA FETTA di quel
+      fornitore dentro l'ordine — la stessa fetta che il filtro mostra:
+      filtro su Nova = le sue righe E la sua fattura. Un ordine con tre
+      fornitori ha fino a tre fatture, ognuna agganciata alla sua fetta, e
+      si vede a colpo d'occhio quale fetta e' ancora senza documento.
+      Allegare = il documento vero (foto/PDF), non solo un numero. Serve
+      lo Storage; da decidere in implementazione limite di peso e formati.
       3) «ARRIVATO» LO DECIDE L'ADMIN: e' il suo gesto a segnare l'ordine
       arrivato, ed e' quel gesto che APRE la possibilita' di caricare
       l'inventario.
