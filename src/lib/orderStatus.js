@@ -82,6 +82,29 @@ export const CANCEL_PHRASES = {
   staff: 'Lo staff sarà subito da te.',
 }
 
+// ── LE PAROLE DEGLI AVVISI ───────────────────────────────────────────
+//
+// Un avviso non annuncia uno STATO, annuncia un FATTO: «è arrivato un
+// ordine», «un conto è tornato in coda». Per questo non passa da
+// `statoAlBanco`, che dà il nome del PASSO — e «🧾 Da fare — Ordine #5»,
+// in una notifica, non dice a nessuno cosa è successo.
+//
+// Stanno qui perché lo stesso annuncio lo scrivono in tre posti: la coda
+// (BartenderPage), la push del server (functions/lib/push-core.js) e il
+// service worker che la disegna (public/sw.js). Erano tre copie battute a
+// mano, e al banco lo stesso conto è arrivato una volta come «Nuovo
+// ordine» e una come «Ordine ricevuto» (BUG-073). Un test le tiene
+// allineate: tests/unit/paroleDegliAvvisi.test.js.
+export const AVVISO_NUOVO_ORDINE = {
+  titolo: '🆕 Nuovo ordine',
+  corpo: (numero) => `Ordine #${numero ?? '—'} ricevuto.`,
+}
+
+// UN CONTO CHE TORNA IN CODA NON È UN ORDINE NUOVO. È un conto che il banco
+// aveva già visto, annullato, e che qualcuno ha rimesso in piedi: chiamarlo
+// «nuovo» manda a cercare un ordine che non è mai arrivato.
+export const AVVISO_RIPRISTINO = { titolo: '↩️ Conto ripristinato' }
+
 export const STATUS_EMOJI = {
   [ORDER_STATUSES.APERTO]: '🟢',
   [ORDER_STATUSES.RICEVUTO]: '🧾',

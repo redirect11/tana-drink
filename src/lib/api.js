@@ -250,6 +250,9 @@ function mapOrder(snap) {
     cancelled_by: o.cancelled_by ?? null,
     cancelled_persona: o.cancelled_persona ?? null,
     cancelled_device: o.cancelled_device ?? null,
+    // DA QUALE TERMINALE è stato rimesso in piedi: serve a non ripetere
+    // l'avviso a chi ha appena premuto «Ripristina» (vedi BartenderPage).
+    ripristinato_device: o.ripristinato_device ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
@@ -3629,6 +3632,10 @@ export const restoreOrder = perConto(async function restoreOrder(id, { motivo = 
     // scontrino deve poter uscire di nuovo (BUG-047): il segno sul dato si
     // azzera qui, insieme alla pretesa locale che libera chi riapre.
     receipt_print_at: null,
+    // DA QUALE TERMINALE. Il conto rientra in coda e va annunciato a tutti
+    // gli altri, non a chi ha appena premuto: stesso metro di
+    // `cancelled_device` (vedi lib/dispositivo.js).
+    ripristinato_device: idDispositivo(),
   }
   bgWrite(() => updateDoc(orderRef, patchRiapertura), 'ripristino conto')
   // Riaperto: si compone, non si rilegge. Riaprire un conto e vederlo

@@ -4,6 +4,16 @@
 
 ### Per chi gestisce
 
+- **Un conto annullato e poi rimesso in piedi avvisa una volta sola, e dice
+  che è tornato.** Prima ne arrivavano due, una dietro l'altra e con parole
+  diverse: «🆕 Nuovo ordine — Ordine #5 ricevuto.» e «Ordine ricevuto —
+  Ordine #5». Chi legge si chiede se siano due cose, e va a cercare un
+  ordine che non è mai arrivato. Adesso l'avviso è uno e dice **«↩️ Conto
+  ripristinato»** — quello che è successo davvero. Un conto che il banco ha
+  già visto non torna a essere «nuovo» nemmeno se nel frattempo era sparito
+  dalla coda, e **chi preme «Ripristina» non se lo sente ripetere**, come
+  già succede per chi annulla.
+
 - **Annullando un conto appena battuto, la comanda non esce più.** Si
   batteva un ordine alla cassa, si cambiava idea, si annullava — e il
   ticket usciva lo stesso: carta buttata, e al banco si cominciava a
