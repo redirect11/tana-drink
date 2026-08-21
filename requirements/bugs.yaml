@@ -2828,3 +2828,119 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/cassaDellaSerata.test.js
+
+  - id: BUG-075
+    title: "Zoom al 120% nel pagamento: l'ultima riga del tastierino finisce dietro «Riscuotere»"
+    area: "src/index.css (.paypad, .paypad-key)"
+    description: >
+      «Lo zoom al 120% nel pagamento fa si' che i tasti del tastierino
+      finiscano dietro al tasto Riscuotere» (l'utente, 21/08/2026, con la
+      schermata di pagamento su desktop e il controllo «- 120% +» in basso a
+      sinistra: lo zoom dell'APP, non quello del browser). Si vedono 7 8 9,
+      4 5 6, 1 2 3; l'ultima riga — 00, 0, =, il tasto per cancellare una
+      cifra — sta sotto al tasto blu «Riscuotere», che ha il fondo pieno e la
+      copre del tutto. Su una schermata che maneggia soldi un tasto che non
+      si vede e' peggio di un tasto scomodo: chi batte un importo a mano non
+      trova piu' ne' lo zero ne' il modo di correggere una cifra sbagliata.
+      LA CAUSA. Lo zoom scala '#root', quindi dentro la pagina l'altezza a
+      disposizione in pixel CSS SCENDE di un quinto a 120%. La colonna
+      centrale e' un flex verticale: display, avvisi, tastierino (che si puo'
+      stringere, 'flex: 1; min-height: 0') e sotto i tasti che incassano
+      ('flex-shrink: 0'). Ma i TASTI del tastierino non si stringono:
+      'min-height: 44px' secchi. Cinque righe da 44 piu' i vuoti fanno un
+      pavimento di 244px che non scende. Quando l'altezza disponibile va
+      sotto quel pavimento la griglia sborda dalla sua scatola, e siccome
+      niente ha 'overflow' l'ultima riga finisce sotto i tasti che vengono
+      dopo nel DOM.
+      COME E' STATO SISTEMATO, due reti. (1) Il minimo dei tasti segue lo
+      zoom: 'calc(44px / var(--zoom, 1))'. La soglia dei 44px (DESIGN.md) e'
+      una misura FISICA — quanto e' grande il tasto sotto il dito — e dentro
+      un contenitore scalato 44px CSS a zoom 1,2 sono gia' 52,8px veri: la
+      garanzia era superata di suo, e intanto il tastierino non ci stava piu'.
+      Diviso per lo zoom il tasto resta grande quanto a zoom 1, in centimetri
+      veri, e la griglia rientra. E' lo stesso idioma delle altezze che
+      dividono 100dvh, gia' in uso nel foglio. (2) Se anche cosi' non ci sta
+      (finestre molto basse tenute a zoom alto) il tastierino SCORRE
+      ('overflow-y: auto') invece di sbordare, e i tasti che incassano
+      restano appiccicati in fondo: «Riscuotere» e' quello che si preme
+      sempre, e non deve mai andare cercato.
+      MISURATO IN CHROME VERO, non a occhio: 63 combinazioni di finestra
+      (1440 x 500..1080) e zoom (100%..160%), leggendo per ogni tasto chi gli
+      finisce sopra con 'elementFromPoint'. Prima: 15 combinazioni con tasti
+      coperti, a partire da 1440x600 al 120% — il caso segnalato. Dopo: zero,
+      e in 8 combinazioni in piu' il tastierino ci sta per intero senza
+      nemmeno dover scorrere. Il tastierino dello sconto (tre colonne, dentro
+      la finestrella) non aveva questo guaio — la' la griglia e' alta quanto
+      il contenuto — e ci guadagna lo stesso: i suoi tasti restano 44px veri.
+      RIMETTENDO UNA QUALUNQUE DELLE DUE RIGHE, tests/unit/css.test.js torna
+      rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-076
+    title: "Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto"
+    area: "src/index.css (.confirm-overlay, .confirm-box)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco: la registro perche'
+      e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo
+      zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE
+      le finestrelle di conferma dell'app, non solo lo sconto.
+      COSA SUCCEDE. '.confirm-overlay' centra la finestrella
+      ('align-items: center') dentro un velo fisso che non scorre. Quando la
+      finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla
+      dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non
+      c'e' modo di raggiungerli, perche' non scorre niente.
+      MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e
+      zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in
+      giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano
+      11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi,
+      ma non li chiude.
+      COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella
+      fermarsi all'altezza dello schermo con dentro il suo scorrimento —
+      'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare
+      non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni
+      '.confirm-box' dell'app, quindi va provato dove le finestrelle sono
+      piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+    labels: [bug, interfaccia]
+    severity: lieve
+    priority: P3
+    status: todo
+    generate_issue: true
+    in_produzione: true
+
+  - id: BUG-077
+    title: "Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre"
+    area: "src/components/OrderPosDetail.jsx (.posd-root, il piede del conto)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco. Stessa causa di
+      fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse
+      no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
+      COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo
+      ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha
+      una pila di tasti che non si stringe. Quando la somma delle fasce fisse
+      supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e
+      niente scorre per andarli a prendere: sono irraggiungibili, non solo
+      scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non
+      aiuta.
+      MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom):
+      16 combinazioni con almeno un tasto fuori. Il primo a sparire e'
+      «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e
+      «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra
+      alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai
+      fino al 160%.
+      DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a
+      capo, o se le fasce fisse debbano seguire lo zoom come il tastierino
+      del pagamento. La regola che non si tratta e' quella: nessun tasto
+      finisce sotto o fuori senza un modo di arrivarci.
+    labels: [bug, interfaccia, pos]
+    severity: media
+    priority: P2
+    status: todo
+    generate_issue: true
+    in_produzione: true
+

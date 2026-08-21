@@ -36,6 +36,12 @@ se lo mette da sé, il tasto flottante si spegne (`StaffDrawer`, proprietà
 Non si rimpiccioliscono i tasti: al banco si tocca con le dita bagnate, e
 sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
+> I 44px si contano **sotto il dito**, non nel foglio: dove lo spazio è
+> contato e lo zoom dell'app è in mezzo, il minimo si scrive
+> `calc(44px / var(--zoom, 1))` — a zoom 1 è identico, ingrandendo il tasto
+> resta grande **quanto prima davvero** invece di far sbordare i vicini
+> (DESIGN.md, punto 2).
+
 1. **il nome del locale** (sotto i 700px resta il logo): chi lavora sa in che
    app è — è a tutto schermo;
 2. **l'«indietro»**: sul telefono il ☰ fa quello che fa lui **e in più** —

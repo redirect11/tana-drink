@@ -954,3 +954,45 @@ ${nome} {`)
     expect(Number(alto[1])).toBeGreaterThanOrEqual(44)
   })
 })
+
+describe('il tastierino del pagamento non finisce sotto «Riscuotere»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // «Lo zoom al 120% nel pagamento fa sì che i tasti del tastierino
+  // finiscano dietro al tasto Riscuotere» (l'utente, 21/08/2026).
+  //
+  // Perché succedeva: `#root` è scalato dallo zoom dell'app, quindi
+  // l’altezza a disposizione in pixel CSS SCENDE quando si ingrandisce,
+  // mentre il minimo dei tasti restava 44px secchi. Cinque righe da 44 più
+  // i vuoti fanno un pavimento che non scende: la griglia sbordava dalla
+  // sua scatola e l’ultima riga (00 0 = ←) finiva sotto «Riscuotere», che
+  // ha il fondo pieno e la copriva.
+  //
+  // Qui si guarda il foglio, non il layout: jsdom non impagina. Misurato
+  // in Chrome vero (1440×600 a zoom 1,2 e 1440×768 a zoom 1,5) il difetto
+  // torna esatto rimettendo una delle due righe.
+  it('i tasti valgono 44px VERI: il minimo segue lo zoom', () => {
+    const r = regola('.paypad-key')
+    // Non `min-height: 44px` secchi: dentro un contenitore scalato sarebbero
+    // 52,8px veri a zoom 1,2 — garanzia già superata, e intanto la griglia
+    // non ci sta più.
+    expect(r, 'il minimo dei tasti non segue più lo zoom: il tastierino sborda').toMatch(
+      /min-height:\s*calc\(\s*44px\s*\/\s*var\(--zoom,\s*1\)\s*\)/
+    )
+  })
+
+  it('e se anche così non ci sta, il tastierino scorre invece di sbordare', () => {
+    // La seconda rete, per le finestre molto basse tenute a zoom alto:
+    // scorre il tastierino, non i tasti che incassano — quelli restano dove
+    // sono. Su una schermata che maneggia soldi un tasto che non si vede è
+    // peggio di un tasto scomodo.
+    expect(regola('.paypad')).toMatch(/overflow-y:\s*auto/)
+    expect(regola('.payscreen-collect')).toMatch(/flex-shrink:\s*0/)
+  })
+})
