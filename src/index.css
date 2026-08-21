@@ -4827,6 +4827,17 @@ body.fullbleed,
   gap: 6px;
   margin-top: 10px;
   min-height: 0;
+  /* LA RETE SOTTO AL TASTIERINO. La scatola si stringe, i tasti no: hanno
+     un minimo da dito, e cinque righe di quel minimo sono un pavimento che
+     non scende. Quando la finestra è più bassa di così la griglia sborda, e
+     senza questo `overflow` l'ultima riga (00 0 = ←) finisce SOTTO
+     «Riscuotere», che ha il fondo pieno e la nasconde del tutto (BUG-075).
+     Qui invece scorre, e i tasti che incassano restano dove sono: su una
+     schermata che maneggia soldi un tasto che non si vede è peggio di un
+     tasto scomodo, e «Riscuotere» è quello che si preme sempre.
+     Con la riga qui sotto — il minimo che segue lo zoom — succede solo su
+     finestre molto basse tenute a zoom alto. */
+  overflow-y: auto;
 }
 /* Il tastierino del solo sconto: tre colonne, perché ci sono le cifre e basta.
    Con le quattro colonne del pagamento le cifre si spezzavano a metà riga. */
@@ -4840,7 +4851,16 @@ body.fullbleed,
   color: var(--text);
   font-size: 1.25rem;
   cursor: pointer;
-  min-height: 44px;
+  /* 44px VERI, non 44px CSS. La soglia dei bersagli (DESIGN.md) è una
+     misura FISICA: quanto è grande il tasto sotto il dito. Dentro `#root`,
+     che lo zoom dell'app scala, 44px CSS a zoom 1.2 sono già 52,8px veri —
+     la garanzia è superata di suo, e intanto il tastierino non ci sta più
+     in altezza e sborda addosso a «Riscuotere» (BUG-075). Diviso per lo
+     zoom il tasto resta grande quanto a zoom 1, in centimetri veri, e la
+     griglia rientra. È lo stesso idioma delle altezze che dividono 100dvh.
+     Non rimettere `44px` secchi: la regola non si ammorbidisce, si misura
+     dove va misurata. */
+  min-height: calc(44px / var(--zoom, 1));
 }
 .paypad-key.accent {
   color: #3f7ce0;

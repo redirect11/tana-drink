@@ -394,6 +394,18 @@ superfici delle sezioni.
    fila si tocca **quando si decide cosa guardare**, non con l'ordine in
    mano. Tutto il resto (tasti del conto, della card, della testata) resta
    ≥ 44px.
+
+   **I 44px sono una misura fisica, non un numero nel foglio.** Contano
+   quanto è grande il tasto *sotto il dito*. Lo zoom dell'app scala
+   `#root`, quindi dove lo spazio è contato ci va
+   `calc(44px / var(--zoom, 1))`: a zoom 1 non cambia niente, e ingrandendo
+   il tasto resta grande **quanto prima in centimetri veri** invece di
+   gonfiarsi — 44px CSS al 120% sarebbero 52,8px veri, cioè una garanzia già
+   superata che intanto fa sbordare quello che ha attorno. È il caso del
+   tastierino del pagamento (`.paypad-key`, BUG-075), dove il minimo secco
+   spingeva l'ultima riga di tasti sotto «Riscuotere». Chi trova quel
+   `calc` non lo «corregga» in `44px`: la regola non è ammorbidita, è
+   misurata dove va misurata.
 3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
    gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner

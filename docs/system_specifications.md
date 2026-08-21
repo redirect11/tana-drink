@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **207 voci** in tutto. **185** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **6** difetti noti sono ancora aperti.
+cosa che l'app fa; **8** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -2346,6 +2346,8 @@ della correzione è il test citato nel requisito della sua area.
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 | 🔴 | [BUG-043](#bug-043--due-nomi-con-la-stessa-iniziale-e-in-legenda-ne-resta-uno-solo) — Due nomi con la stessa iniziale, e in legenda ne resta uno solo | lieve | P3 |
+| 🔴 | [BUG-076](#bug-076--con-lo-zoom-alto-la-finestrella-dello-sconto-esce-dallo-schermo-sopra-e-sotto) — Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto | lieve | P3 |
+| 🔴 | [BUG-077](#bug-077--con-lo-zoom-alto-nel-conto-i-tasti-in-fondo-escono-dallo-schermo-e-non-si-scorre) — Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -2402,6 +2404,30 @@ NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava facendo, e per
 TRE STRADE, da pesare quando si lavora: due lettere quando la prima collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle card, oppure un colore per persona come si e' fatto per i conti. La prima e' la piu' piccola e la piu' vicina a come si legge oggi.
 
 **Dove**: `src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)`
+
+#### BUG-076 — Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto
+
+Trovato misurando BUG-075, non segnalato al banco: la registro perche' e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE le finestrelle di conferma dell'app, non solo lo sconto.
+
+COSA SUCCEDE. '.confirm-overlay' centra la finestrella ('align-items: center') dentro un velo fisso che non scorre. Quando la finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non c'e' modo di raggiungerli, perche' non scorre niente.
+
+MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano 11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi, ma non li chiude.
+
+COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella fermarsi all'altezza dello schermo con dentro il suo scorrimento — 'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni '.confirm-box' dell'app, quindi va provato dove le finestrelle sono piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+
+**Dove**: `src/index.css (.confirm-overlay, .confirm-box)`
+
+#### BUG-077 — Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre
+
+Trovato misurando BUG-075, non segnalato al banco. Stessa causa di fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
+
+COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha una pila di tasti che non si stringe. Quando la somma delle fasce fisse supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e niente scorre per andarli a prendere: sono irraggiungibili, non solo scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non aiuta.
+
+MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom): 16 combinazioni con almeno un tasto fuori. Il primo a sparire e' «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai fino al 160%.
+
+DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a capo, o se le fasce fisse debbano seguire lo zoom come il tastierino del pagamento. La regola che non si tratta e' quella: nessun tasto finisce sotto o fuori senza un modo di arrivarci.
+
+**Dove**: `src/components/OrderPosDetail.jsx (.posd-root, il piede del conto)`
 
 ## Non più valido
 

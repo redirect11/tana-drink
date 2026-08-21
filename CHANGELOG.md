@@ -4,6 +4,16 @@
 
 ### Per chi gestisce
 
+- **Con lo zoom su, il tastierino del pagamento non finisce più dietro
+  «Riscuotere».** Ingrandendo l'app al 120% l'ultima riga di tasti — lo
+  **0**, il **00**, l'**=** e il tasto per **cancellare una cifra** —
+  spariva sotto il tasto blu dell'incasso: chi batteva un importo a mano
+  non trovava più né lo zero né il modo di correggersi. Adesso i tasti
+  restano grandi **quanto prima davvero sotto il dito** e il tastierino ci
+  sta per intero; su una finestra molto bassa tenuta a zoom alto scorre da
+  sé, e i tasti che incassano restano dove sono. Provato a ogni livello di
+  zoom, dal 100% al 160%.
+
 - **Non nascono più due conti con lo stesso numero dopo un ricaricamento.**
   Ricaricando la pagina l'app per un attimo non sapeva ancora quale cassa
   fosse aperta, e un conto battuto proprio in quell'istante prendeva il
