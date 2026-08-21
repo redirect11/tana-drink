@@ -116,9 +116,9 @@ La coda smista i conti per stato, conta e somma solo i non annullati e sa dire q
 
 #### REQ-ORD-014 — Riscuoti, oppure riscuoti e servi in un colpo solo
 
-Con gli stati del servizio, incassare non chiude il conto: si paga anche in anticipo e restano drink da fare, e marcare tutto «servito» farebbe sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre, si chiude solo quando è servito. Al banco però capita spessissimo il contrario — si consegna e si incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il locale può accendere «Un tasto per incassare e servire insieme» (Impostazioni → Gestione preparazione). Acceso, nella schermata di pagamento compare anche «Riscuoti e servi», che chiude il conto in un colpo. Spento di default: chi segue il servizio di solito lo segue apposta. Il tasto non compare dove non serve — servizio spento, conto già servito o già chiuso.
+Con gli stati del servizio, incassare non chiude il conto: si paga anche in anticipo e restano drink da fare, e marcare tutto «servito» farebbe sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre, si chiude solo quando è servito. Al banco però capita spessissimo il contrario — si consegna e si incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il locale può accendere «Un tasto per incassare e servire insieme» (Impostazioni → Pagamenti). Acceso, nella schermata di pagamento compare anche «Riscuoti e servi», che chiude il conto in un colpo. Spento di default: chi segue il servizio di solito lo segue apposta. Il tasto non compare dove non serve — servizio spento, conto già servito o già chiuso.
 
-**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamentoNonServe.test.js`
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/css.test.js`, `tests/unit/pagamentoNonServe.test.js`
 
 #### REQ-ORD-019 — Chi ha preso l'ordine lo modifica davvero: anche aggiungendo
 
@@ -414,9 +414,11 @@ DESELEZIONA TUTTI / SELEZIONA TUTTI (chiesto da Flavio il 21/08/2026, con una re
 
 Chiesto dall'utente il 20/08: «aggiungi anche (attivabile dalle impostazioni) il tasto Riscuoti (senza stampa) con la funzione di riscuotere ma senza stampare lo scontrino di chiusura, nella schermata di pagamento». COM'E' FATTO: un tasto gemello di «Riscuotere», sotto di lui, che incassa e chiude identico — stesso importo, stesso metodo, stesso `chiude` — ma la stampante tace. Compare solo se il locale accende `riscuoti_senza_stampa` nelle impostazioni (spento di default) e solo se c'e' davvero qualcosa da incassare.
 
-IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto.
+IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto. DAL 21/08/2026 NON E' PIU' «SOTTO»
 
-**Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+IL TASTO GRANDE: sta AFFIANCATO a «Riscuoti e servi», su una riga sola (vedi REQ-ORD-014). I due sono le due eccezioni allo stesso gesto e in riga si leggono per quello; il tasto grande resta da solo a tutta larghezza. Compaiono a condizioni indipendenti: se in riga ce n'e' una sola, si allarga e prende tutto. L'INTERRUTTORE STA IN «PAGAMENTI» dal 20/08, spostato li' per lo stesso motivo per cui il 21/08 lo ha seguito il gemello (BUG-070): chi cerca un tasto della schermata di pagamento apre Pagamenti.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-PAG-013 — Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano
 

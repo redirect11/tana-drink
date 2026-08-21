@@ -4,6 +4,22 @@
 
 ### Per chi gestisce
 
+- **I due tasti in più del pagamento stanno affiancati, e si accendono
+  tutti e due da «Pagamenti».** Sotto il tastierino c'erano tre tasti uno
+  sopra l'altro: il grande «Riscuotere» e, in fila sotto di lui, «Riscuoti
+  (senza stampa)» e «Riscuoti e servi». Adesso **«Riscuotere» resta da
+  solo, largo quanto la schermata** — è il gesto di sempre — e le altre due
+  vie stanno **una accanto all'altra su una riga sola**, metà e metà. Se ne
+  hai accesa una sola, quella si allarga e prende tutta la riga. Sul
+  telefono, dove due tasti così sarebbero troppo stretti, tornano uno sotto
+  l'altro invece di stringersi.
+  E l'interruttore di **«Un tasto per incassare e servire insieme»** si è
+  spostato in **Impostazioni → Pagamenti**, accanto a quello di «incassare
+  senza stampare»: era in «Gestione preparazione» e non lo trovava
+  nessuno. Fa esattamente quello che faceva prima, ma adesso sta dove uno
+  lo cerca. Come prima, si vede solo se segui la preparazione degli
+  ordini: senza quei passi «servire» non esiste.
+
 - **I tasti per incassare non si toccano più.** «Riscuoti e servi» stava
   appiccicato a «Riscuotere» e sembrava la sua seconda riga: due gesti
   diversi — uno incassa, l'altro incassa e dà per servito tutto — a un
