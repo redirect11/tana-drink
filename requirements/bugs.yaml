@@ -2468,3 +2468,29 @@ bugs:
     priority: P2
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-066
+    title: "Un test della coda diventava rosso di notte, nelle ore in cui il locale lavora"
+    area: "tests/component/CodaGiornate.test.jsx"
+    description: >
+      Trovato il 21/08/2026 verificando un altro lavoro, alle 3:47 del
+      mattino: il test «ma se una data locale c'e', il conto finisce sotto
+      IL SUO giorno» falliva. Non per il codice dell'app, che era ed e'
+      giusto: per il suo apparecchio di prova.
+      COSA SUCCEDEVA. Il conto finto di «ieri sera» nasceva come «adesso
+      meno venti ore». Di giorno funziona; ma la giornata commerciale
+      comincia alle 6 del mattino, quindi fra mezzanotte e le sei quel
+      timestamp cade DENTRO la giornata corrente — il separatore «ieri»
+      non ha piu' motivo di esserci e il test cade. Cioe' il test era
+      rosso proprio nelle ore in cui il bar e' aperto e in cui qualcuno
+      guarda la pipeline.
+      COME E' STATO SISTEMATO. L'istante si conta DA IERI e non da adesso:
+      le 21 del giorno prima stanno sempre nella giornata di ieri, a
+      qualunque ora si provi. Nessuna riga di codice dell'app toccata.
+    labels: [bug, test, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/component/CodaGiornate.test.jsx
