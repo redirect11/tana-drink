@@ -145,9 +145,10 @@ requirements:
       La coda smista i conti per stato, conta e somma solo i non annullati e sa
       dire quanti conti sono ancora aperti. Con la gestione della preparazione
       attiva un conto pagato ma non servito resta da fare; senza, il pagamento
-      chiude e basta — e nella schermata di pagamento non compare l'avviso
-      «comande non ancora servite», che senza preparazione non vuol dire niente
-      e uscirebbe a ogni incasso.
+      chiude e basta. (Dell'avviso «comande non ancora servite» che compariva
+      nella schermata di pagamento non resta niente a schermo dal 21/08/2026:
+      occupava una riga fissa nella colonna del tastierino. Quello che diceva
+      sta nel `title` di «Riscuotere» — vedi REQ-ORD-014.)
       E la coda è il lavoro di ADESSO: un conto incassato o annullato prima
       dell'ultima chiusura di cassa non compare, in nessuna tab — chiusi,
       annullati o tutti — perché quei conti sono già stati contati e
@@ -220,6 +221,23 @@ requirements:
       si allarga e prende tutto. Su un telefono stretto vanno a capo invece
       di stringersi — le scritte sono lunghe e il bersaglio resta da
       pollice.
+
+      L'AVVISO A SCHERMO NON C'È PIÙ, dal 21/08/2026. Sotto il display del
+      tastierino c'era una riga fissa — «⚠️ Comande non ancora servite: il
+      conto resta aperto anche dopo l'incasso, a meno di «Riscuoti e
+      servi»» — e l'utente l'ha fatta togliere: «questo messaggio toglilo,
+      che occupa spazio quando zoomo». Ha ragione due volte: quella riga si
+      legge una volta sola in una vita, e nella colonna centrale ogni riga
+      fissa è altezza tolta al tastierino — che a zoom alto proprio lì
+      finiva sotto «Riscuotere» (BUG-075).
+      L'informazione non è sparita, sta dove non costa altezza. La dice a
+      voce alta il tasto stesso: «Riscuoti e servi · chiude il conto» —
+      quel «chiude il conto» dice per differenza che l'altro non chiude. E
+      quando il locale tiene spento quel tasto, e quindi non c'è, resta il
+      `title` di «Riscuotere», che porta la stessa frase di prima e non
+      occupa niente. Nessun terzo posto e nessun altro banner: è la stessa
+      regola con cui il motivo di un metodo di pagamento spento non sta
+      scritto sotto al tasto (REQ-PAG-004).
 
       E È L'UNICA STRADA CHE SERVE LE COMANDE. Il pagamento non può portare
       avanti nel flusso una comanda che sta a «da fare», «in preparazione» o

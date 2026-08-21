@@ -4,6 +4,13 @@
 
 ### Per chi gestisce
 
+- **Via l'avviso «Comande non ancora servite» dalla schermata di
+  pagamento.** Era una riga fissa sotto l'importo, e quando si ingrandisce
+  l'app quella riga è spazio tolto al **tastierino**. Quello che diceva non
+  si perde: lo dice il tasto **«Riscuoti e servi · chiude il conto»** — se
+  quello chiude, l'altro no — e chi passa col mouse su **«Riscuotere»** se
+  lo trova scritto per esteso. Non cambia niente di come si incassa.
+
 - **Con lo zoom su, il tastierino del pagamento non finisce più dietro
   «Riscuotere».** Ingrandendo l'app al 120% l'ultima riga di tasti — lo
   **0**, il **00**, l'**=** e il tasto per **cancellare una cifra** —
