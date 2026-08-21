@@ -214,7 +214,11 @@ Chi manda un ordine — o lo annulla — non ha bisogno di un avviso che gli dic
 
 OGNI AVVISO SI PUÒ SPEGNERE, uno per uno: nuovo ordine, ciascuno stato della preparazione separatamente, le scorte (in esaurimento ed esaurita, solo per chi tiene il gestionale) e la nuova versione dell'app. La scelta è PER DISPOSITIVO E PER PERSONA e resta in memoria locale, perché non è una regola del bar: al banco «nuovo ordine» è la cosa più importante della serata, in sala serve «pronto», e sul portatile nel retro non serve niente. Un interruttore unico si spegnerebbe dove dà fastidio lasciando senza chi ne aveva bisogno; e due persone che si passano lo stesso tablet nei cambi turno non si sovrascrivono a vicenda. Di partenza sono tutti accesi: nessuno deve scoprire di essersi perso un ordine perché «era spento di default».
 
-**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`
+UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta: «è arrivato» quando non l'ha mai visto, «è cambiato» quando cambia passo, «è tornato in coda» quando qualcuno lo ripristina dopo un annullo. Il conto già visto non torna mai a essere nuovo — nemmeno se nel frattempo era sparito dalla vista — e chi ha premuto «Ripristina» non se lo sente ripetere, come già per chi annulla (`ripristinato_device`, stesso metro di `cancelled_device`).
+
+LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js): un avviso annuncia un FATTO e non porta il nome della colonna in cui il conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che non possono importarsi a vicenda — la coda, la push del server e il service worker — e il titolo dev'essere IDENTICO nei tre, perché la notifica dell'app e quella del server portano lo stesso `tag` e il sistema le fonde in una.
+
+**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
 
 #### REQ-ORD-022 — Lo staff che tocca un conto entra nel conto, non nella pagina del cliente
 
