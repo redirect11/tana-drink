@@ -60,17 +60,78 @@ requirements:
 
   - id: REQ-ORD-001
     title: "Un conto aperto contiene più comande, ciascuna col suo stato"
-    area: "src/lib/comande.js, src/lib/api.js"
+    area: "src/lib/comande.js, src/lib/api.js, src/components/OrderPosDetail.jsx, src/index.css"
     description: >
       Un ordine è un CONTO che resta aperto (aperto/pagato/annullato) e contiene
       una o più comande. La lavorazione (ricevuto, in preparazione, pronto,
       ritirato) vive sulla singola comanda: un tavolo può avere un giro già
       servito e uno ancora al banco. La comanda attiva è quella al passo più
       indietro; a parità di passo vince la più vecchia.
+
+      DOVE SI LEGGE, NEL CONTO — DECISO IL 21/08/2026. Parole dell'utente,
+      con lo screenshot del conto su schermo largo e una freccia rossa sullo
+      spazio vuoto a destra della barra in alto: «Sposta lo stato di servizio
+      nella barra in alto come indicato dalla freccia rossa».
+      QUELLO CHE C'ERA PRIMA È SUPERATO: la pastiglia del passo («🍹 In
+      preparazione») stava nella TESTATA DELLA COLONNA DEL CONTO, accanto al
+      numero ripetuto e in mezzo ai tasti che agiscono sulle righe (↕, ▲, ⋯).
+      Rispondeva alla domanda giusta nel posto sbagliato: quella riga è dei
+      comandi, mentre la barra in alto è già la riga del «com'è messo questo
+      conto» — numero, ora di apertura, stato del conto, chi l'ha aperto, id
+      interno — e a destra aveva lo spazio vuoto.
+      ADESSO STA IN FONDO A DESTRA DELLA BARRA IN ALTO, spinta là dal foglio
+      di stile (`margin-left: auto` su `.posd-stato`, non uno `style` inline)
+      e non da un ordine di comparsa fortunato. La riga si legge in due
+      metà: a sinistra il CONTO e i SOLDI, a destra il LAVORO. Sul telefono
+      lo `ZoomControl inline` resta comunque l'ultimo — è un comando, e i
+      comandi stanno agli estremi (l'uscita a sinistra, lo zoom a destra).
+      QUANDO COMPARE NON CAMBIA: solo su un conto già nato, in un locale che
+      segue il servizio, e finché il conto è in corso. E dice sempre il passo
+      della comanda ATTIVA — il più indietro fra quelle aperte — perché chi
+      apre un conto vuole sapere quanto MANCA, non quanto è già uscito: è la
+      stessa regola con cui la coda decide lo stato di un conto, e le due
+      schermate non possono discordare.
+      DUE PASTIGLIE VICINE NON DEVONO SEMBRARE LA STESSA COSA. In barra ce
+      n'era già una, quella del CONTO («🟢 Conto aperto», «💳 Pagato»,
+      «Acconto …»), e con «🔔 Pronto» condivide pure il verde. Ognuna porta
+      quindi un `title` che dice di cosa parla — «Stato del conto: …» e
+      «Stato della lavorazione: …» — e l'ordine in cui compaiono è il
+      significato: i soldi accanto al numero, il lavoro in fondo.
+      SUL TELEFONO NON CI STANNO TUTTE E DUE PER ESTESO, ed è misurato in
+      Chrome vero e non a occhio: la barra al completo chiede 505px e un
+      telefono ne ha 360-430. Con lo stato del lavoro a bordo cedono, in
+      quest'ordine, l'ORA di apertura (si rilegge nella storia del conto,
+      dal ⋯) e la PAROLA dello stato del conto, che resta il suo segno col
+      nome per esteso nel `title`: quel conto è aperto davanti a chi guarda,
+      e quanto resta da incassare lo dice comunque il tasto in fondo. Resta
+      per esteso quello che è appena arrivato lassù, che è l'unica cosa in
+      barra a dire a che punto è il lavoro. Così la riga chiede 357px invece
+      di 505 — meno dei 366 che chiedeva PRIMA di questo giro — e sotto i
+      360px a cedere sono i puntini della pastiglia, non lo zoom che
+      spariva in silenzio oltre il bordo.
+      E NON SOLO SUL TELEFONO: A MISURARE È LA BARRA, NON LA FINESTRA. Lo
+      zoom dell'app scala `#root` (proprietà `zoom`, ZoomControl) e una
+      media query non se ne accorge: al 120% il tablet del banco da 768px
+      di barra ne ha 640 veri, al 160% ne ha 480 — e con una pastiglia in
+      più la riga andava a capo, che è la cosa che docs/navigazione.md non
+      permette. Le soglie stanno quindi in `@container barra-conto` (lo
+      stesso motivo per cui la lavagna della coda si misura da sé) e
+      valgono solo quando la pastiglia c'è (`.posd-topbar.con-lavoro`):
+      sotto i 620px cade l'id interno, sotto i 560 chi ha aperto il conto,
+      sotto i 500 l'ora. Verificato in Chrome vero da 320px a 1280 e da
+      zoom 1,0 a 1,6: la riga non va MAI a capo e i tasti dello zoom non
+      finiscono mai oltre il bordo.
+      DI CONTORNO: com'è messa la barra è passata da uno `style` inline alla
+      classe `.posd-topbar`. Da inline vinceva sempre, e il `gap: 8px` che il
+      blocco del telefono le dava non ha mai avuto effetto.
     status: implemented
     generate_issue: false
     labels: [ordini, comande]
-    test_cases: [tests/unit/comande.test.js, tests/unit/orderStatus.test.js, tests/unit/orderLines.test.js]
+    test_cases:
+      - tests/unit/comande.test.js
+      - tests/unit/orderStatus.test.js
+      - tests/unit/orderLines.test.js
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: REQ-ORD-002
     title: "Gli ordini vecchi continuano a funzionare"

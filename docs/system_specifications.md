@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 21 agosto 2026.
+> Generato il 22 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -76,7 +76,7 @@ Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al b
 
 Un ordine è un CONTO che resta aperto (aperto/pagato/annullato) e contiene una o più comande. La lavorazione (ricevuto, in preparazione, pronto, ritirato) vive sulla singola comanda: un tavolo può avere un giro già servito e uno ancora al banco. La comanda attiva è quella al passo più indietro; a parità di passo vince la più vecchia.
 
-**Dove**: `src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`
+**Dove**: `src/lib/comande.js, src/lib/api.js, src/components/OrderPosDetail.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-002 — Gli ordini vecchi continuano a funzionare
 

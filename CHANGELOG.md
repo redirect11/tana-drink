@@ -4,6 +4,28 @@
 
 ### Per chi gestisce
 
+- **Lo stato del servizio è passato nella barra in alto del conto**, in
+  fondo a destra: «🍹 In preparazione», «🔔 Pronto», «🧾 Da fare». Stava
+  nella testata della colonna del conto, schiacciato fra il numero e i
+  tastini delle righe; adesso la riga in cima si legge in due metà — a
+  sinistra il conto e i soldi (numero, ora, «🟢 Conto aperto» o «💳
+  Pagato», chi l'ha aperto), a destra **a che punto è il lavoro**. Le due
+  pastiglie non si confondono: fermandocisi sopra ognuna dice di cosa
+  parla. **Quando compare e cosa dice non cambiano**: si vede solo sui
+  conti in corso, dove il locale segue il servizio, e porta sempre il
+  passo **più indietro** fra le comande ancora aperte — quello che manca,
+  non quello che è già uscito.
+  **Sul telefono**, dove quella riga è stretta, per far posto cedono
+  l'**ora di apertura** (si rilegge nella storia del conto, dal ⋯) e la
+  **parola** dello stato del conto, che resta il suo segno (🟢 / 💳 / 🟡)
+  col nome per esteso tenendoci premuto sopra. In cambio i tasti dello
+  **zoom** non finiscono più fuori dallo schermo.
+  **Con l'app ingrandita** vale la stessa regola: la riga si guarda per
+  quanto è larga davvero, non per quanto è larga la finestra, e man mano
+  che lo spazio manca lascia andare prima l'**id interno**, poi **chi ha
+  aperto il conto**, poi l'**ora**. Su una riga sola, sempre — provato dal
+  telefono al monitor e da 100% a 160%.
+
 - **Le tre colonne della schermata di pagamento si allargano e si
   stringono**, come già quelle del dettaglio ordine: si prende il bordo fra
   una colonna e l'altra e lo si trascina (col dito, tenendo premuto un
