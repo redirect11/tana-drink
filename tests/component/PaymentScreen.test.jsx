@@ -6,7 +6,7 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, within, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -1607,5 +1607,73 @@ describe('la schermata con niente selezionato', () => {
         })
       )
     )
+  })
+})
+
+
+// «RENDI RIDIMENSIONABILI LE TRE COLONNE DELLA SCHERMATA PAGAMENTO come lo
+// sono quelle nel dettaglio dell'ordine» (l'utente, 21/08/2026). Stesso
+// attrezzo del POS (useResizable), quindi qui non si riprova come si arma
+// una maniglia col dito — c'è tests/unit/useResizable.test.js: si prova che
+// le maniglie CI SIANO, che muovano la colonna giusta nel verso giusto, che
+// i limiti tengano e che la misura resti scritta per questo terminale.
+describe('le tre colonne del pagamento si trascinano', () => {
+  const corpo = () => document.querySelector('.payscreen-body')
+  const larghezza = (nome) => corpo().style.getPropertyValue(nome)
+  // Col mouse la maniglia prende subito: niente pressione lunga da simulare.
+  const trascina = (maniglia, da, a) => {
+    fireEvent.pointerDown(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: da })
+    fireEvent.pointerMove(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: a })
+    fireEvent.pointerUp(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: a })
+  }
+
+  beforeEach(() => localStorage.clear())
+
+  it('fra una colonna e l’altra c’è una maniglia, e sono due', () => {
+    mount(baseOrder())
+    const m = screen.getAllByRole('separator')
+    expect(m).toHaveLength(2)
+    for (const h of m) expect(h).toHaveAttribute('aria-orientation', 'vertical')
+    // Sul telefono le colonne sono impilate e le maniglie spariscono: lo fa
+    // il foglio (sotto gli 800px), e la prova sta in tests/unit/css.test.js —
+    // qui non c'è impaginazione da guardare.
+  })
+
+  it('trascinare la maniglia di sinistra allarga le voci, quella di destra i metodi', () => {
+    mount(baseOrder())
+    const [voci, metodi] = screen.getAllByRole('separator')
+    expect(larghezza('--pay-items-w')).toBe('340px')
+    expect(larghezza('--pay-methods-w')).toBe('230px')
+    trascina(voci, 500, 560) // verso destra: la colonna di sinistra cresce
+    expect(larghezza('--pay-items-w')).toBe('400px')
+    trascina(metodi, 900, 840) // verso sinistra: la colonna di destra cresce
+    expect(larghezza('--pay-methods-w')).toBe('290px')
+  })
+
+  // I METODI NON DEVONO POTER SPARIRE: lì ci sono i tasti con cui si sceglie
+  // come si incassa, e una colonna trascinata a zero è un pezzo di cassa che
+  // non si trova più. Le voci hanno il loro pavimento per un altro motivo:
+  // sotto i 200px il prezzo va a capo sotto il nome e la lista smette di
+  // leggersi in colonna.
+  it('nessuna delle due si può stringere fino a sparire', () => {
+    mount(baseOrder())
+    const [voci, metodi] = screen.getAllByRole('separator')
+    trascina(metodi, 900, 9000) // tutta a destra: i metodi si stringono
+    expect(Number.parseInt(larghezza('--pay-methods-w'), 10)).toBeGreaterThanOrEqual(170)
+    trascina(voci, 500, -9000) // tutta a sinistra: le voci si stringono
+    expect(Number.parseInt(larghezza('--pay-items-w'), 10)).toBeGreaterThanOrEqual(200)
+  })
+
+  // PER TERMINALE, non per conto e non per utente: il tablet del banco e
+  // quello della sala hanno schermi e mestieri diversi — al banco si guarda
+  // il tastierino, in sala la lista delle voci. Chi ha sistemato le colonne
+  // una volta le ritrova così alla riapertura, non ogni sera da capo.
+  it('la misura scelta si ritrova riaprendo la schermata', () => {
+    mount(baseOrder())
+    trascina(screen.getAllByRole('separator')[0], 500, 560)
+    expect(larghezza('--pay-items-w')).toBe('400px')
+    cleanup()
+    mount(baseOrder())
+    expect(larghezza('--pay-items-w')).toBe('400px')
   })
 })

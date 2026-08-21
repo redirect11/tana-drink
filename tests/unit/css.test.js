@@ -996,3 +996,61 @@ ${nome} {`)
     expect(regola('.payscreen-collect')).toMatch(/flex-shrink:\s*0/)
   })
 })
+
+describe('le tre colonne del pagamento si trascinano, ma non fino a coprire il tastierino', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // «Rendi ridimensionabili le tre colonne della schermata pagamento come lo
+  // sono quelle nel dettaglio dell'ordine» (l'utente, 21/08/2026). La
+  // larghezza trascinata arriva dal JS come variabile CSS, esattamente come
+  // --pos-comanda-w nel POS.
+  it('la larghezza trascinata arriva dal JS, per tutte e due le colonne laterali', () => {
+    expect(regola('.payscreen-items')).toMatch(/width:\s*min\(\s*var\(--pay-items-w/)
+    expect(regola('.payscreen-methods')).toMatch(/width:\s*min\(\s*var\(--pay-methods-w/)
+  })
+
+  // IL TETTO IN PERCENTUALE È LA RETE DI BUG-075. La misura trascinata è in
+  // pixel e resta scritta per quel terminale, ma i pixel CSS disponibili
+  // dipendono dallo zoom dell'app: a zoom 1,6 una finestra da 1440 ne ha
+  // 900. Senza tetto, una colonna larga trascinata a zoom 1 schiaccia il
+  // centro a zoom alto — e lì sotto ci sono i tasti del tastierino.
+  // Con 34% + 30% al centro resta sempre almeno il 36%.
+  it('nessuna colonna laterale può mangiarsi il centro: tetto in percentuale', () => {
+    const voci = regola('.payscreen-items').match(/width:\s*min\([^)]*\)\s*,\s*(\d+)%\s*\)/)
+    const metodi = regola('.payscreen-methods').match(/width:\s*min\([^)]*\)\s*,\s*(\d+)%\s*\)/)
+    expect(voci, 'il tetto in percentuale della colonna voci non c’è più').not.toBeNull()
+    expect(metodi, 'il tetto in percentuale della colonna metodi non c’è più').not.toBeNull()
+    const restaAlCentro = 100 - Number(voci[1]) - Number(metodi[1])
+    expect(restaAlCentro, 'al tastierino resta meno di un terzo della larghezza').toBeGreaterThanOrEqual(33)
+  })
+
+  // Le maniglie del pagamento hanno lo stile di quelle del POS — stesso
+  // gesto, stessa presa — ma sono una classe a parte apposta: il POS impila
+  // le colonne sotto i 900px, il pagamento sotto gli 800. Con un nome solo,
+  // fra 800 e 899px le maniglie del pagamento sarebbero sparite mentre le
+  // sue colonne sono ancora affiancate.
+  it('la maniglia del pagamento è larga e afferrabile come quella del POS', () => {
+    expect(regola('.payscreen-resize-handle')).toMatch(/cursor:\s*col-resize/)
+    const largo = regola('.payscreen-resize-handle').match(/width:\s*(\d+)px/)
+    expect(largo, 'la maniglia non ha più una larghezza da dito').not.toBeNull()
+    expect(Number(largo[1])).toBeGreaterThanOrEqual(14)
+    // `touch-action: none` o il dito che trascina fa scorrere la pagina.
+    expect(regola('.payscreen-resize-handle')).toMatch(/touch-action:\s*none/)
+  })
+
+  it('sul telefono, con le colonne impilate, le maniglie spariscono', () => {
+    // Sotto gli 800px .payscreen-body va in colonna: trascinare una
+    // larghezza quando la colonna è larga quanto lo schermo non vuol dire
+    // niente, e la maniglia sarebbe solo una barra da sfiorare per sbaglio.
+    const i = css.indexOf('@media (max-width: 799px)')
+    expect(i, 'la fascia telefono del pagamento non c’è più').toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('\n}', i))
+    expect(blocco).toMatch(/\.payscreen-resize-handle\s*\{\s*display:\s*none/)
+  })
+})

@@ -4374,10 +4374,18 @@ body.fullbleed,
   background: var(--accent-2, #f5b94a);
 }
 
-/* Maniglia di ridimensionamento fra le colonne del POS: area ampia e
-   comoda da afferrare col dito, con un indicatore a pallini centrale che
-   segnala che si può trascinare. */
-.posd-resize-handle {
+/* Maniglia di ridimensionamento fra le colonne del POS — e da 21/08/2026
+   fra le tre della schermata di pagamento, che si trascinano allo stesso
+   modo: stesso gesto, stessa presa, stessa larghezza sotto il dito. Area
+   ampia e comoda da afferrare, con un indicatore a pallini centrale che
+   segnala che si può trascinare.
+   LE DUE CLASSI RESTANO DISTINTE anche se lo stile è lo stesso, perché il
+   punto in cui SPARISCONO non è lo stesso: il POS impila le colonne sotto
+   i 900px, il pagamento sotto gli 800. Un nome solo avrebbe fatto sparire
+   le maniglie del pagamento in una fascia di larghezze in cui le sue
+   colonne sono ancora affiancate. */
+.posd-resize-handle,
+.payscreen-resize-handle {
   flex-shrink: 0;
   width: 18px;
   cursor: col-resize;
@@ -4391,7 +4399,8 @@ body.fullbleed,
   justify-content: center;
 }
 /* Traccia verticale */
-.posd-resize-handle::before {
+.posd-resize-handle::before,
+.payscreen-resize-handle::before {
   content: '';
   position: absolute;
   top: 0;
@@ -4403,7 +4412,8 @@ body.fullbleed,
   transition: opacity 0.15s, background 0.15s;
 }
 /* Presa a pallini al centro (⣿ verticale) */
-.posd-resize-handle::after {
+.posd-resize-handle::after,
+.payscreen-resize-handle::after {
   content: '';
   position: relative;
   width: 4px;
@@ -4414,12 +4424,16 @@ body.fullbleed,
   opacity: 0.8;
 }
 .posd-resize-handle:hover::before,
-.posd-resize-handle:active::before {
+.posd-resize-handle:active::before,
+.payscreen-resize-handle:hover::before,
+.payscreen-resize-handle:active::before {
   opacity: 1;
   background: var(--accent-2, #f5b94a);
 }
 .posd-resize-handle:hover::after,
-.posd-resize-handle:active::after {
+.posd-resize-handle:active::after,
+.payscreen-resize-handle:hover::after,
+.payscreen-resize-handle:active::after {
   opacity: 1;
 }
 @media (max-width: 899px) {
@@ -4755,7 +4769,18 @@ body.fullbleed,
 .payscreen-items {
   display: flex;
   flex-direction: column;
-  width: min(340px, 34%);
+  /* LARGHEZZA TRASCINABILE (--pay-items-w, da useResizable), COL TETTO IN
+     PERCENTUALE. Il tetto non è un ripensamento sul minimo/massimo che
+     stanno nel JS: è la rete che protegge il TASTIERINO. La misura
+     trascinata è in pixel e resta scritta per quel terminale, ma i pixel
+     CSS a disposizione dipendono dallo zoom dell'app — a zoom 1,6 una
+     finestra da 1440 ne ha 900 — e una colonna da 460px lì dentro
+     schiaccerebbe il centro fino a coprire i tasti, che è esattamente
+     BUG-075. In percentuale il conto si rifà da solo a ogni zoom e a ogni
+     finestra: sinistra al massimo il 34%, destra al massimo il 30%, quindi
+     al centro resta SEMPRE almeno il 36% meno le due maniglie. Senza
+     variabile la regola è identica a quella di prima. */
+  width: min(var(--pay-items-w, 340px), 34%);
   flex-shrink: 0;
   padding: 4px 14px 12px;
   min-width: 0;
@@ -4927,7 +4952,12 @@ body.fullbleed,
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 230px;
+  /* Trascinabile come la colonna delle voci, col suo tetto in percentuale
+     (vedi .payscreen-items). Il 30% non morde mai al banco — 230px su un
+     tablet sono il 22% — ma tiene quando la finestra è piccola o lo zoom
+     alto. Il minimo lo tiene il JS (170px): questa colonna non deve poter
+     sparire, ci sono i tasti con cui si sceglie come si incassa. */
+  width: min(var(--pay-methods-w, 230px), 30%);
   flex-shrink: 0;
   padding: 12px;
   background: var(--bg-2);
@@ -4982,6 +5012,10 @@ body.fullbleed,
   }
   .payscreen-methods .payscreen-method {
     flex: 1 1 40%;
+  }
+  /* Colonne impilate: una larghezza da trascinare non esiste più. */
+  .payscreen-resize-handle {
+    display: none;
   }
 }
 
