@@ -4714,6 +4714,39 @@ body.fullbleed,
 /* Riga di una singola unità nella vista "Separa" del pagamento. */
 /* (Le caselline della vista separata non ci sono più: le unità sono righe
    come le altre, col contatore −/+ — vedi PaymentScreen.jsx.) */
+
+/* L'ETICHETTA DI UNA VOCE È UN TASTO: si punta il prodotto, non il piccolo
+   «+» accanto. Bersaglio da pollice, testo a sinistra, niente cornice —
+   deve restare una riga di conto, non diventare un bottone in mezzo agli
+   altri. */
+.payscreen-voce {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 44px;
+  min-width: 0;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+.payscreen-voce:active {
+  background: var(--tile-bg);
+}
+/* FUORI DALLA RISCOSSIONE: smorta, ma leggibile e toccabile — è toccandola
+   che ci si rientra, quindi non può essere un grigio da tasto spento. Il
+   colore non è l'unico segno: accanto resta scritto «0/2», e il tasto ha il
+   suo `aria-pressed`. */
+.payscreen-voce.spenta {
+  color: var(--muted);
+  opacity: 0.75;
+}
 .payscreen-pad {
   flex: 1;
   min-width: 0;

@@ -4,6 +4,20 @@
 
 ### Per chi gestisce
 
+- **Nel pagamento, il primo tocco sceglie: «di tutto il conto, mi paghi
+  questo».** La schermata si apre con tutto acceso, come sempre. Ma
+  adesso, **appena tocchi una voce — il nome del prodotto, o il suo «+» —
+  tutte le altre si spengono** e resta in riscossione solo quella. Da lì
+  in poi ogni tocco **aggiunge**: tocchi un'altra voce e si accende
+  anche lei. Le voci fuori restano lì, **smorte** ma leggibili: si
+  rimettono dentro toccandole. Prima, per incassare una birra su un conto
+  da dieci righe, dovevi spegnerne nove a una a una. Il **«−»** funziona
+  come ha sempre funzionato, e con **«Rimetti tutto in pagamento»**
+  torni ad avere tutto acceso. Su un prodotto con più pezzi: toccare il
+  nome prende **tutta la riga**, il «+» e il «−» muovono **un pezzo per
+  volta** — e visto che il conto si apre già a pezzi separati, di solito
+  è un tocco solo.
+
 - **Lo sconto si fa sui prodotti che stai riscuotendo, e se ne può fare
   più d'uno.** Prima lo sconto era uno solo e stava sul conto intero:
   se poi si toglievano prodotti dalla schermata di pagamento, chi pagava

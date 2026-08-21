@@ -197,6 +197,15 @@ Regole:
   una striscia invisibile è una card senza stato, proprio quando se ne
   stanno scorrendo trenta uguali. Più sobria degli stati vivi (quelli sono
   il lavoro di adesso e restano i più forti), ma **presente**.
+- **La voce di un conto da riscuotere è un tasto** (`.payscreen-voce`, nel
+  pagamento): niente cornice — resta una riga di conto — ma `min-height:
+  44px`, testo a sinistra e `aria-pressed` che dice se è dentro la
+  riscossione. Al banco si punta il prodotto, non il piccolo «+» accanto.
+  Fuori dalla riscossione va **smorta** (`.spenta`: `--muted` più un filo
+  di opacità), mai un grigio da tasto spento: quella riga si tocca ancora,
+  ed è così che ci si rientra. Il colore non è l'unico segno — accanto
+  resta scritto «0/2», perché una cosa che conta non si affida al colore
+  (guardrail 1).
 - **Quando il contenuto va su due colonne lo decide il contenitore**, non
   la finestra: `container-type: inline-size` sul blocco e soglia in
   `@container`. Con sei corsie accese la finestra è larga e la card è una
