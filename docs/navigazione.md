@@ -16,6 +16,21 @@ una riga, e il nome del locale ridotto a «La …».
 L'ordine non cambia mai. Chi cerca il menu guarda a sinistra anche in una
 schermata che non ha mai visto.
 
+### Dove la barra non c'è
+
+Le schermate a tutto schermo — la lavagna della coda, il conto — la barra
+in alto la nascondono, e si richiama dalla linguetta in cima. Il ☰ però
+resta dov'è sempre stato: **in alto a sinistra, e dentro la testata della
+pagina**, non appeso sopra di lei. Un tasto fisso sull'angolo dello schermo
+sembra gratis finché la pagina non scorre: da lì in poi ci passa sotto
+quello che scorre, e si legge «…erti · 6 chiusi» dove c'era scritto «4
+aperti · 6 chiusi» (l'utente, 21/08/2026). Nel flusso il posto non si
+tiene: si occupa.
+
+Vale anche al contrario: **una schermata sola, un ☰ solo**. Dove la testata
+se lo mette da sé, il tasto flottante si spegne (`StaffDrawer`, proprietà
+`flottante`).
+
 ## Cosa si sacrifica per primo, quando lo spazio manca
 
 Non si rimpiccioliscono i tasti: al banco si tocca con le dita bagnate, e

@@ -24,12 +24,17 @@ import {
   scontoEccessivo,
   selectionAmount,
   discountAmount,
+  discountAfterChange,
+  lordoSelezione,
+  scontoInPreparazione,
+  scontiDelConto,
   paymentCloses,
   round2,
   dettaglioIncassi,
   unitaDaConteggio,
-  conteggioDaUnita,
-  toccaUnita,
+  selezioneVergine,
+  selezioneDopoTocco,
+  selezioneTotale,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -43,8 +48,42 @@ import {
 // in pagamento; si deseleziona solo per lo split del tavolo.
 // La selezione è per RIGA (`key`), non per prodotto: lo stesso prodotto può
 // stare su più righe, e muoverne una non deve muovere l'altra.
-const fullSelection = (order) =>
-  Object.fromEntries(remainingItems(order).map((r) => [r.key, r.qty]))
+const fullSelection = (order) => selezioneTotale(remainingItems(order), true).sel
+
+// SI RIENTRA SULLE RIGHE DELLO SCONTO. Lo sconto in preparazione è stato
+// deciso su certe righe (`discount_items`): riaprendo la schermata con tutto
+// selezionato, il primo sguardo lo ricalcolerebbe su tutto il conto e chi
+// l'aveva preparato non lo riconoscerebbe più. Senza sconto in ballo — che è
+// quasi sempre — si parte da tutto il conto, come si è sempre fatto.
+const selezioneIniziale = (order) => {
+  const righe = order?.discount_items
+  if (!Array.isArray(righe) || righe.length === 0) return fullSelection(order)
+  const sel = {}
+  for (const r of remainingItems(order)) {
+    const s = righe.find((x) => (x.key && r.key ? x.key === r.key : x.drink_id === r.drink_id))
+    sel[r.key] = s ? Math.min(Number(s.qty) || 0, r.qty) : 0
+  }
+  return Object.values(sel).some((q) => q > 0) ? sel : fullSelection(order)
+}
+
+// Le righe come vanno scritte sul conto o dentro un pagamento: il minimo che
+// serve a dire su che cosa cadeva lo sconto.
+const righeSconto = (selection) =>
+  selection.map((r) => ({
+    key: r.key,
+    drink_id: r.drink_id ?? null,
+    name: r.name,
+    qty: r.qty,
+    unit_price: r.unit_price,
+  }))
+
+// Due selezioni sono la stessa? Serve a non riscrivere lo sconto a ogni
+// respiro del componente.
+const firmaRighe = (righe) =>
+  (righe || [])
+    .map((r) => `${r.key ?? r.drink_id}:${r.qty}`)
+    .sort()
+    .join('|')
 
 // Il display del tastierino lavora in CENTESIMI digitati ("350" → 3,50 €).
 const toDigits = (euro) => String(Math.max(0, Math.round(euro * 100)))
@@ -143,24 +182,37 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   }
   const [error, setError] = useState(null)
   // Sconto OTTIMISTICO: applicato subito a schermo, server in background.
-  const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount }
+  const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount, items }
   const order = useMemo(
     () =>
       optimisticDisc == null
         ? orderProp
-        : { ...orderProp, discount: optimisticDisc.disc, discount_amount: optimisticDisc.amount },
+        : {
+            ...orderProp,
+            discount: optimisticDisc.disc,
+            discount_amount: optimisticDisc.amount,
+            discount_items: optimisticDisc.items ?? null,
+          },
     [orderProp, optimisticDisc]
   )
   // Quando il server ha recepito lo sconto, l'override locale si ritira.
+  // ANCHE LE RIGHE DEVONO COMBACIARE, non solo l'importo: uno sconto dello
+  // stesso valore su righe diverse è un altro sconto, e ritirandosi troppo
+  // presto la schermata tornava a quelle di prima — poi il ricalcolo le
+  // rimetteva a posto, e via così a ogni giro (schermata bloccata).
   useEffect(() => {
-    if (optimisticDisc != null && (orderProp.discount_amount || 0) === optimisticDisc.amount) {
+    if (
+      optimisticDisc != null &&
+      (orderProp.discount_amount || 0) === optimisticDisc.amount &&
+      firmaRighe(orderProp.discount_items) === firmaRighe(optimisticDisc.items)
+    ) {
       setOptimisticDisc(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderProp.discount_amount])
+  }, [orderProp.discount_amount, orderProp.discount_items])
   const orderId = async () => (resolveOrderId ? await resolveOrderId() : order.id)
   const [saving, setSaving] = useState(false)
-  const [sel, setSel] = useState(() => fullSelection(order)) // riga -> quante unità pagare ora
+  const [sel, setSel] = useState(() => selezioneIniziale(order)) // riga -> quante unità pagare ora
   // QUALI unità, quando le righe uguali sono separate. Il conteggio dice
   // «due di questi tre»; separandole ognuna è una voce a sé e deve avere la
   // sua quantità — spegnendo la prima si spegne la prima, non le ultime
@@ -170,11 +222,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const [selUnita, setSelUnita] = useState({})
   const unitaDi = (r) =>
     selUnita[r.key]?.length === r.qty ? selUnita[r.key] : unitaDaConteggio(r.qty, sel[r.key] ?? 0)
-  const toccaLaUnita = (r, i, acceso) => {
-    const nuove = toccaUnita(selUnita[r.key], r.qty, i, acceso)
-    setSelUnita((st) => ({ ...st, [r.key]: nuove }))
-    setSel((st) => ({ ...st, [r.key]: conteggioDaUnita(nuove) }))
-  }
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
@@ -216,10 +263,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const vipList = useMemo(() => activeVouchers(vouchers), [vouchers])
   const chosenVoucher = vipList.find((v) => v.id === voucherId) || null
 
-  // Dopo ogni incasso registrato si riparte da "tutto il residuo".
+  // Dopo ogni incasso registrato si riparte da "tutto il residuo" — o dalle
+  // righe dello sconto ancora in preparazione, se ce n'è uno: è quello che
+  // decide su che cosa cade, e ricalcolarlo su tutto il conto vorrebbe dire
+  // cambiarlo alle spalle di chi l'aveva deciso.
   const paymentsCount = (order.payments || []).length
   useEffect(() => {
-    setSel(fullSelection(order))
+    setSel(selezioneIniziale(order))
     setSelUnita({})
     setDisplay(null)
     setAcc(null)
@@ -265,8 +315,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const selection = remaining
     .filter((r) => (sel[r.key] || 0) > 0)
     .map((r) => ({ ...r, qty: Math.min(sel[r.key], r.qty) }))
-  const allSelected =
-    remaining.length > 0 && remaining.every((r) => (sel[r.key] || 0) >= r.qty)
+  // TUTTO IN RISCOSSIONE è anche la selezione «vergine»: finché è così, il
+  // primo tocco su una voce restringe l'incasso a quella sola (vedi
+  // `selezioneDopoTocco`). Una definizione sola per due cose che sono la
+  // stessa cosa.
+  const allSelected = selezioneVergine(remaining, sel)
   const splitting = !allSelected && selection.length > 0
   // Importo automatico: la selezione (o il residuo intero).
   const autoAmount =
@@ -276,6 +329,82 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Non si incassa mai oltre il dovuto: l'eccedenza digitata è il RESTO.
   const toPay = Math.min(round2(amount), due)
   const change = Math.max(0, round2(amount - due))
+
+  // ── LO SCONTO SEGUE LE RIGHE CHE SI STANNO RISCUOTENDO ──────────────
+  //
+  // «Se tolgo prodotti dalla schermata pagamento, lo sconto va applicato solo
+  // sui prodotti che sto riscuotendo» (l'utente, 20/08). Quindi togliendo una
+  // riga l'importo si rifà sulle righe rimaste: in percentuale è la sua
+  // definizione, in euro decide la strategia del locale (tetto / proporzione /
+  // avviso) — la stessa che governa un conto a cui si tolgono righe, e non se
+  // ne scrive una seconda.
+  //
+  // Si riscrive anche sul conto, non solo a schermo: la selezione vive solo
+  // qui dentro, mentre l'importo lo leggono la coda, l'altro tablet e il
+  // webhook del lettore. Senza le righe accanto, quell'importo sarebbe un
+  // numero di cui nessuno sa più il perché.
+  const righeSelezionate = splitting ? righeSconto(selection) : null
+  // NIENTE SELEZIONATO NON VUOL DIRE «TUTTO IL CONTO». `righeSelezionate` è
+  // null in due casi opposti — tutto dentro e niente dentro — e per lo sconto
+  // quei due non sono la stessa cosa. Prima questo stato si raggiungeva solo
+  // spegnendo una riga per volta; con «Deseleziona tutti» è il punto di
+  // partenza normale di ogni conto diviso, e va detto.
+  const selezioneVuota = remaining.length > 0 && selection.length === 0
+  const firmaSelezione = splitting ? firmaRighe(righeSelezionate) : ''
+  // Il lordo su cui cade lo sconto: le righe scelte adesso, o tutto quello che
+  // resta se non se n'è tolta nessuna.
+  const baseSconto = lordoSelezione(order, righeSelezionate)
+  const scontoPreparato = order.discount
+  const scontoOra = scontoInPreparazione(order)
+  useEffect(() => {
+    // LO SCONTO PREPARATO RESTA SOSPESO, NON SI AZZERA E NON SI ALLARGA.
+    // Con zero righe scelte non c'è niente su cui farlo cadere: ricalcolarlo
+    // qui vorrebbe dire stenderlo su tutto il residuo (`righe` = null) alle
+    // spalle di chi l'aveva deciso su tre voci — e con la strategia
+    // «proporzione» farlo pure crescere. Buttarlo via sarebbe altrettanto
+    // sbagliato: «Deseleziona tutti» è il gesto con cui si COMINCIA a
+    // dividere un conto, non quello con cui si rinuncia allo sconto. Resta
+    // dov'è, e appena si tocca la prima voce torna a seguire la selezione.
+    if (closed || !scontoPreparato || !(scontoOra > 0) || selezioneVuota) return
+    const righe = righeSelezionate
+    if (firmaRighe(righe) === firmaRighe(order.discount_items)) return
+    const buono = scontoPreparato.type === 'buono'
+    // IL BUONO SI ACCORCIA E BASTA, con qualsiasi strategia: il credito è già
+    // stato scalato al beneficiario, quindi se la selezione scende sotto il
+    // valore del buono la differenza gli va RESTITUITA — e a farlo è
+    // `applyVoucherDiscount`, che sa rimettere a posto il saldo. Lasciandolo
+    // più grande di quello che paga, quel credito sarebbe bruciato per niente.
+    const nuovo = buono
+      ? Math.min(scontoOra, baseSconto)
+      : discountAfterChange(
+          {
+            discount: scontoPreparato,
+            prevAmount: scontoOra,
+            prevTotal: lordoSelezione(order, order.discount_items || null),
+            newTotal: baseSconto,
+          },
+          settings?.discount_policy
+        )
+    // Sotto zero non c'è più uno sconto: si toglie, e il buono torna intero
+    // al beneficiario invece di restare appeso a un importo che non esiste.
+    const aggiorna = async () => {
+      const id = await orderId()
+      if (buono && nuovo > 0) {
+        return applyVoucherDiscount(id, scontoPreparato.voucher_id, nuovo, { items: righe })
+      }
+      return setOrderDiscount(id, nuovo > 0 ? scontoPreparato : null, { items: righe, amount: nuovo })
+    }
+    setOptimisticDisc({
+      disc: nuovo > 0 ? (buono ? { ...scontoPreparato, value: nuovo } : scontoPreparato) : null,
+      amount: nuovo,
+      items: nuovo > 0 ? righe : null,
+    })
+    aggiorna().catch((e) => {
+      setOptimisticDisc(null)
+      toastError(`Sconto non aggiornato: ${e.message}`)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firmaSelezione, splitting, selezioneVuota, scontoPreparato, scontoOra, closed])
 
   // Metodi come nella foto del POS: Contante, Carta di Credito (POS
   // esterno, si registra e basta) e SumUp (il lettore Solo, transazione
@@ -309,8 +438,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const voucherBalance = chosenVoucher ? round2(chosenVoucher.balance) : 0
   const voucherDefault = round2(Math.min(due, voucherBalance))
   const voucherReq = discDigits ? digitsToEuro(discDigits) : voucherDefault
+  // Il buono non copre più delle righe che sta pagando: scalarne di più
+  // brucerebbe credito del beneficiario per niente.
   const voucherRedeem = chosenVoucher
-    ? round2(Math.min(voucherReq, voucherBalance, Number(order.total) || 0))
+    ? round2(Math.min(voucherReq, voucherBalance, baseSconto))
     : 0
 
   async function run(fn) {
@@ -325,12 +456,23 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     }
   }
 
-  const bump = (r, delta) => {
-    const next = Math.max(0, Math.min((sel[r.key] || 0) + delta, r.qty))
-    setSel((s) => ({ ...s, [r.key]: next }))
-    // Le unità seguono il conteggio: dalla vista unita si torna a «le prime
-    // N accese», che è l'unica lettura sensata di un numero.
-    setSelUnita((st) => ({ ...st, [r.key]: unitaDaConteggio(r.qty, next) }))
+  // Ogni tocco sulle righe passa da qui: etichetta, «+» e «−», vista unita e
+  // vista separata. La regola («il primo tocco restringe, i successivi
+  // aggiungono») sta tutta in `selezioneDopoTocco`, che è logica pura e si
+  // prova a unità — qui si legge lo stato e si riscrive, e basta.
+  const tocca = (r, gesto, indice = null) => {
+    const st = selezioneDopoTocco({ sel, selUnita }, remaining, { riga: r, gesto, indice })
+    setSel(st.sel)
+    setSelUnita(st.selUnita)
+  }
+
+  // Tutte dentro o tutte fuori in un gesto solo. Non è una seconda regola di
+  // selezione: riscrive lo stato ai due estremi e basta: il tocco riga per
+  // riga resta quello di sempre.
+  const portaTutte = (accesa) => {
+    const st = selezioneTotale(remaining, accesa)
+    setSel(st.sel)
+    setSelUnita(st.selUnita)
   }
 
   // ── Tastierino ──
@@ -368,6 +510,27 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const riscuoti = ({ servi = false, senzaStampa = false } = {}) => {
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
+    // ── LO SCONTO SI CONSUMA QUI ──────────────────────────────────────
+    // Se ne va dentro questo incasso, con le righe su cui cadeva, e sul conto
+    // non resta niente di preparato: il prossimo che paga la sua parte parte
+    // pulito e può farsi scontare le SUE righe. Due riscossioni scontate sono
+    // due sconti, ognuno con le sue righe — è quello che chiedeva il locale.
+    //
+    // Con un importo battuto a mano NO: quello è un acconto, non salda le
+    // righe scelte, e portarsi via tutto lo sconto vorrebbe dire regalarlo a
+    // chi ha messo venti euro sul tavolo. Resta preparato per il saldo.
+    const sconto =
+      !manual && scontoOra > 0 && order.discount
+        ? {
+            type: order.discount.type,
+            value: order.discount.value,
+            amount: scontoOra,
+            items: order.discount_items || null,
+            ...(order.discount.voucher_id
+              ? { voucher_id: order.discount.voucher_id, voucher_name: order.discount.voucher_name ?? null }
+              : {}),
+          }
+        : null
     // Conto già coperto (sconto totale, buono o acconti): non c'è nulla da
     // incassare ma il conto va CHIUSO lo stesso, altrimenti resta aperto per
     // sempre e blocca anche la chiusura di cassa.
@@ -391,7 +554,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             await onBeforePay?.()
             const oid = await orderId()
             setTimeout(() => {
-              registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe }).catch((e) =>
+              registerPayment(oid, { amount: toPay, method: 'lettore', items, autoServe, sconto }).catch((e) =>
                 onError?.(`Lettore simulato: ${e.message}`)
               )
             }, 2500)
@@ -404,7 +567,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // Il lettore VERO avvia una transazione: qui si aspetta l'esito.
       return run(async () => {
         await onBeforePay?.()
-        const res = await readerCheckout(await orderId(), { amount: toPay, items })
+        const res = await readerCheckout(await orderId(), { amount: toPay, items, sconto })
         if (res?.unavailable) {
           setError('Lettore non disponibile in ambiente di sviluppo: simula dai DevTools.')
           return
@@ -422,7 +585,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         // `chiude`: quello che questa schermata ha davanti adesso. Senza,
         // l'api rilegge il conto per decidere e prende la versione di prima —
         // quella senza lo sconto appena applicato (BUG-046).
-        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose })
+        await registerPayment(await orderId(), { amount: toPay, method, items, autoServe, chiude: willClose, sconto })
       } catch (e) {
         setError(e.message)
         onError?.(`Pagamento non registrato: ${e.message}`)
@@ -438,22 +601,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     discType === 'percent'
       ? Math.min(parseInt(discDigits || '0', 10) || 0, 100)
       : digitsToEuro(discDigits)
-  const discPreview = discountAmount(order.total, { type: discType, value: discValue })
+  // L'ANTEPRIMA È SULLE RIGHE SELEZIONATE, non sul conto: è il numero che chi
+  // incassa confronta con quello che ha davanti sul tavolo.
+  const discPreview = discountAmount(baseSconto, { type: discType, value: discValue })
 
   // Applica SUBITO a schermo (override locale), server in background.
+  // Lo sconto nasce già legato alle righe che si stanno riscuotendo: `items`
+  // null vuol dire «tutto quello che resta», che è il caso di sempre.
   const applyDiscount = () => {
     // BUONO come sconto: attinge al saldo del beneficiario (anche parziale).
     if (discType === 'buono') {
       if (!chosenVoucher || !(voucherRedeem > 0)) return
       const disc = { type: 'buono', value: voucherRedeem, voucher_id: chosenVoucher.id, voucher_name: chosenVoucher.holder_name }
-      setOptimisticDisc({ disc, amount: voucherRedeem })
+      setOptimisticDisc({ disc, amount: voucherRedeem, items: righeSelezionate })
       setShowDiscount(false)
       setDiscDigits('')
       const vid = chosenVoucher.id
       setVoucherId('')
       ;(async () => {
         try {
-          await applyVoucherDiscount(await orderId(), vid, voucherReq)
+          await applyVoucherDiscount(await orderId(), vid, voucherReq, { items: righeSelezionate })
         } catch (e) {
           setOptimisticDisc(null)
           toastError(`Buono non applicato: ${e.message}`)
@@ -462,12 +629,22 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       return
     }
     const disc = discValue > 0 ? { type: discType, value: discValue } : null
-    setOptimisticDisc({ disc, amount: discountAmount(orderProp.total, disc) })
+    setOptimisticDisc({
+      disc,
+      amount: discountAmount(baseSconto, disc),
+      items: disc ? righeSelezionate : null,
+    })
     setShowDiscount(false)
     setDiscDigits('')
     ;(async () => {
       try {
-        await setOrderDiscount(await orderId(), disc)
+        // L'importo lo detta la schermata, che ha davanti le righe scelte:
+        // rifarlo di là vorrebbe dire calcolarlo su un conto vecchio di un
+        // istante, che è la strada da cui è nato BUG-046.
+        await setOrderDiscount(await orderId(), disc, {
+          items: righeSelezionate,
+          amount: discountAmount(baseSconto, disc),
+        })
       } catch (e) {
         setOptimisticDisc(null)
         toastError(`Sconto non applicato: ${e.message}`)
@@ -577,14 +754,33 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 il totale muoversi. A dire da dove viene il numero ci pensa
                 l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
                 MANO» — che si legge nel momento in cui serve. */}
-            {remaining.some((r) => r.qty > 1) && (
-              <button
-                className="btn ghost small"
-                style={{ marginTop: 4 }}
-                onClick={() => setSeparati((v) => !v)}
-              >
-                {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
-              </button>
+            {/* I COMANDI DELLA LISTA STANNO IN UNA RIGA SOLA, in cima: come
+                si sceglie di vedere le righe (separate o unite) e come si
+                porta la selezione ai due estremi. «Così come c'è unisci
+                uguali e separa uguali, si crea quest'altro tasto che
+                deseleziona tutti e seleziona tutti» (Flavio, 21/08/2026). */}
+            {remaining.length > 0 && !closed && (
+              <div className="payscreen-comandi">
+                {remaining.some((r) => r.qty > 1) && (
+                  <button className="btn ghost small" onClick={() => setSeparati((v) => !v)}>
+                    {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
+                  </button>
+                )}
+                {/* UN TASTO SOLO CHE CAMBIA SCRITTA, come i suoi vicini. Dice
+                    che cosa FARÀ, non in che stato sei: con qualcosa dentro
+                    «Deseleziona tutti», con la lista già a zero «Seleziona
+                    tutti». A conto solo in parte selezionato dice ancora
+                    «Deseleziona tutti», perché è quello il gesto che serve —
+                    si riparte da zero e si rimettono dentro le voci giuste,
+                    che è il motivo per cui questo tasto esiste.
+                    Niente icona davanti, a differenza dei vicini: su un
+                    telefono da 360px le due scritte devono stare sulla stessa
+                    riga, e «Deseleziona tutti» è già la più lunga della
+                    schermata. */}
+                <button className="btn ghost small" onClick={() => portaTutte(selezioneVuota)}>
+                  {selezioneVuota ? 'Seleziona tutti' : 'Deseleziona tutti'}
+                </button>
+              </div>
             )}
             {remaining.map((r) => {
               const s = Math.min(sel[r.key] || 0, r.qty)
@@ -605,10 +801,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                           key={`${r.key}#${i}`}
                           style={{ alignItems: 'center', marginTop: 8 }}
                         >
-                          <span className="grow" style={{ fontSize: '0.92rem' }}>
+                          <button
+                            type="button"
+                            className={`payscreen-voce grow${on ? '' : ' spenta'}`}
+                            aria-pressed={on}
+                            onClick={() => tocca(r, 'etichetta', i)}
+                            disabled={closed}
+                          >
                             {r.custom ? '✨ ' : ''}{r.name}
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
-                          </span>
+                          </button>
                           <span className="qty">
                             {/* UNO ALLA VOLTA. Il «−» scriveva la nuova
                                 quantità come «tutte quelle prima di questa»:
@@ -620,16 +822,20 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                                 unità per volta. */}
                             <button
                               aria-label={`Togli ${r.name} dal pagamento`}
-                              onClick={() => toccaLaUnita(r, i, false)}
+                              onClick={() => tocca(r, 'meno', i)}
                               disabled={closed || !on}
                             >
                               −
                             </button>
                             <strong>{on ? 1 : 0}/1</strong>
+                            {/* Col conto ancora tutto in riscossione il «+»
+                                resta VIVO anche su una unità già accesa: è
+                                il gesto che l'utente ha chiesto per dire
+                                «solo questa» — spento non lo sarebbe mai. */}
                             <button
                               aria-label={`Paga ${r.name}`}
-                              onClick={() => toccaLaUnita(r, i, true)}
-                              disabled={closed || on}
+                              onClick={() => tocca(r, 'piu', i)}
+                              disabled={closed || (on && !allSelected)}
                             >
                               +
                             </button>
@@ -642,14 +848,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               }
               return (
                 <div className="row between" key={r.key} style={{ alignItems: 'center', marginTop: 8 }}>
-                  <span className="grow" style={{ fontSize: '0.92rem' }}>
+                  {/* L'ETICHETTA È UN TASTO. Al banco si punta il prodotto,
+                      non il piccolo «+» accanto: toccando il nome la riga
+                      entra intera in riscossione («questo lo paga lui»), e
+                      chi ne vuole una parte scende col «−». `aria-pressed`
+                      dice se la riga è dentro, che è l'unica cosa che serve
+                      sapere anche senza vedere il colore. */}
+                  <button
+                    type="button"
+                    className={`payscreen-voce grow${s > 0 ? '' : ' spenta'}`}
+                    aria-pressed={s > 0}
+                    onClick={() => tocca(r, 'etichetta')}
+                    disabled={closed}
+                  >
                     {r.custom ? '✨ ' : ''}{r.name}
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
-                  </span>
+                  </button>
                   <span className="qty">
-                    <button aria-label={`Togli ${r.name} dal pagamento`} onClick={() => bump(r, -1)} disabled={closed || s === 0}>−</button>
+                    <button aria-label={`Togli ${r.name} dal pagamento`} onClick={() => tocca(r, 'meno')} disabled={closed || s === 0}>−</button>
                     <strong>{s}/{r.qty}</strong>
-                    <button aria-label={`Paga ${r.name}`} onClick={() => bump(r, 1)} disabled={closed || s >= r.qty}>+</button>
+                    <button aria-label={`Paga ${r.name}`} onClick={() => tocca(r, 'piu')} disabled={closed || (s >= r.qty && !allSelected)}>+</button>
                   </span>
                 </div>
               )
@@ -657,19 +875,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {remaining.length === 0 && !closed && (
               <p className="muted small">Nessun articolo da pagare{due > 0 ? ': resta il residuo (coperto/servizio).' : '.'}</p>
             )}
-            {remaining.length > 0 && !allSelected && !closed && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 10 }}
-                onClick={() => {
-                  setSel(fullSelection(order))
-                  setSelUnita({})
-                }}
-              >
-                Rimetti tutto in pagamento
-              </button>
-            )}
-
             {(order.payments || []).length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <span className="muted small" style={{ letterSpacing: 0.5 }}>GIÀ PAGATO</span>
@@ -693,6 +898,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                         {p.cosa.join(' · ')}
                       </div>
                     )}
+                    {/* Lo sconto che quel giro si è portato via, sotto al suo
+                        incasso: è lì che si va a cercare perché quattro birre
+                        hanno fatto quattordici euro invece di sedici. */}
+                    {p.sconto && (
+                      <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
+                        🎁 {p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -701,12 +914,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
           {/* Riepilogo come nel POS: Pagato (verde) / Dovuto (rosso) / Totale */}
           <div style={{ flexShrink: 0, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
-            {(order.discount_amount || 0) > 0 && (
-              <div className="row between muted small">
-                <span>Sconto</span>
-                <span>−{formatPrice(order.discount_amount)}</span>
+            {/* GLI SCONTI SONO UNA LISTA. Uno per ogni riscossione che se l'è
+                portato via, più quello preparato adesso: sommarli in una riga
+                sola vorrebbe dire tornare alla cifra di cui nessuno sa il
+                perché. Con un solo sconto su tutto il conto la riga è quella
+                di sempre. */}
+            {scontiDelConto(order).map((sc, idx) => (
+              <div className="row between muted small" key={idx}>
+                <span>{sc.etichetta}</span>
+                <span>−{formatPrice(sc.importo)}</span>
               </div>
-            )}
+            ))}
             <div className="row between small">
               <span style={{ color: '#2ecc71' }}>Pagato</span>
               <span style={{ color: '#2ecc71' }}>{formatPrice(paid)}</span>
@@ -739,9 +957,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     a conto chiuso. */}
                 {manual
                   ? 'IMPORTO A MANO'
-                  : splitting
-                    ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
-                    : 'PAGAMENTO'}
+                  : selezioneVuota
+                    ? 'NESSUNA RIGA SCELTA'
+                    : splitting
+                      ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
+                      : 'PAGAMENTO'}
                 {op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
               </span>
               <br />
@@ -757,6 +977,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           {manual && amount > 0 && amount < due && (
             <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
               Acconto: resta sul conto, non copre righe precise.
+            </p>
+          )}
+          {/* Zero righe scelte: lo zero grande in cima potrebbe sembrare un
+              conto già chiuso. Qui c'è scritto perché è zero e come si esce —
+              toccando le voci, o battendo un importo sul tastierino, che
+              resta una strada buona anche da qui. */}
+          {!manual && selezioneVuota && !closed && due > 0 && (
+            <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
+              Nessuna riga scelta: tocca le voci da incassare, o batti un importo.
             </p>
           )}
           {change > 0 && method === 'banco' && (
@@ -809,8 +1038,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
           {scontoFuoriMisura && (
             <div className="banner" style={{ marginTop: 10 }}>
-              Lo sconto ({formatPrice(order.discount_amount)}) supera il totale del conto (
-              {formatPrice(order.total)}): correggilo qui sotto prima di incassare.
+              Lo sconto ({formatPrice(order.discount_amount)}) supera quello che stai
+              riscuotendo ({formatPrice(baseSconto)}): correggilo qui sotto prima di incassare.
             </div>
           )}
 
@@ -985,7 +1214,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   ? chosenVoucher
                     ? `Dal buono: −${formatPrice(voucherRedeem)}${voucherRedeem < voucherReq ? ' (saldo/totale insufficiente)' : ''}`
                     : 'Scegli un beneficiario'
-                  : `Sconto sul conto: −${formatPrice(discPreview)}`}
+                  : `Sconto su quello che stai riscuotendo: −${formatPrice(discPreview)}`}
               </p>
             </div>
 
@@ -1025,7 +1254,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 style={{ marginTop: 6 }}
                 disabled={saving}
                 onClick={() => {
-                  setOptimisticDisc({ disc: null, amount: 0 })
+                  setOptimisticDisc({ disc: null, amount: 0, items: null })
                   setShowDiscount(false)
                   setDiscDigits('')
                   ;(async () => {

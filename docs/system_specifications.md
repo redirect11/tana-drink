@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 20 agosto 2026.
+> Generato il 21 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 169 | fatto e coperto dai test |
+| ✅ | 170 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**205 voci** in tutto. **183** descrivono il sistema com'è oggi e
+**206 voci** in tutto. **184** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -42,7 +42,7 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 11 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 12 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
@@ -362,7 +362,7 @@ Sul tasto è scritta la cifra da incassare al netto di sconti e acconti già pre
 
 #### REQ-PAG-003 — Sconto sul conto, con tre strategie a scelta
 
-Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046).
+Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046). DAL 20/08/2026 lo sconto non cade più sul totale del conto ma sulle righe che si stanno riscuotendo, e se ne può fare più d'uno: la regola completa sta in REQ-PAG-013, che questo requisito presuppone. Le tre strategie restano quelle, applicate al lordo della selezione invece che al totale.
 
 **Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
 
@@ -402,7 +402,13 @@ La schermata di incasso mostra gli item UNO PER RIGA fin da subito, senza dover 
 
 FATTO (1.5.x). La schermata di incasso nasce con le righe uguali già separate: «2× Mojito» sono due righe da «1/1». Il tasto che c'era resta ed e' lo stesso — cambia solo faccia: adesso all'apertura offre «🔗 Unisci uguali», e unendo ripropone «≣ Separa uguali». Dove non c'e' niente da unire ne' da separare (righe tutte da uno) non compare affatto, come prima. La selezione parte PIENA come sempre: chi incassa tutto preme «Riscuotere» senza toccare niente, e l'incasso pieno continua a partire senza dettaglio articoli.
 
-**Dove**: `src/components/PaymentScreen.jsx, src/lib/pagamento.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+IL PRIMO TOCCO RESTRINGE, I SUCCESSIVI AGGIUNGONO (chiesto dall'utente il 20/08/2026): «Quando apro la schermata del pagamento, quando clicco su una voce, anche solo sulla label, si devono azzerare le altre voci; e se voglio aggiungere alla riscossione le devo premere, la label, o premo il +. Quindi quando apro sono tutte selezionate, ma se premo o la label o il più le altre voci passano a 0, E DIVENTANO GRIGE O DI UN COLORE PIÙ SMORTO, e quando le premo le aggiungo al conto che voglio riscuotere». Il gesto vero al banco è «di tutto questo conto, adesso mi paghi QUESTI»: per arrivarci si spegneva una riga per volta tutto quello che NON serviva — su un conto da dieci righe, nove tocchi per incassarne una. · L'ETICHETTA È UN TASTO (con `aria-pressed`, bersaglio da pollice): al banco si punta il prodotto, non il piccolo «+» accanto. · Con TUTTO in riscossione, toccare una voce (etichetta o «+») vuol dire «solo questa» e spegne tutte le altre; da lì in poi toccare vuol dire «anche questa». Il «−» toglie come ha sempre fatto, anche al primo tocco: è il vecchio modo di dividere il conto, e chi lo usa da mesi non deve accorgersi di niente. · Le voci fuori dalla riscossione si vedono SMORTE (gettoni del tema: `--muted` e opacità, mai un grigio cablato), ma restano leggibili e toccabili — è toccandole che si rientra — e accanto resta scritto «0/2», che il colore da solo non basta. · RIGHE CON PIÙ UNITÀ: l'etichetta prende la riga INTERA («questo prodotto lo paga lui»), il «+» e il «−» muovono una unità per volta, com'è sempre stato. In «separa uguali» — che è come la schermata si apre — ogni unità è una voce a sé e vale la stessa regola: il primo tocco su una unità spegne tutte le altre unità di tutte le righe. Un meccanismo solo (`selezioneDopoTocco`), non due. · SI TORNA A TUTTE col tasto «Seleziona tutti» in cima alla lista (vedi qui sotto): prima era «Rimetti tutto in pagamento», in fondo alle righe, e compariva solo quando qualcosa era uscito. · «VERGINE»
+
+NON È UN FLAG: è lo stato che si vede a schermo — tutte le righe dentro per intero (`selezioneVergine`). Così non c'è niente da rimettere a posto quando il conto cambia sotto, quando si rientra o quando si è appena incassata una parte, e «Rimetti tutto» riporta al primo tocco senza saperlo. Due conseguenze volute: si RIENTRA sulle righe di uno sconto già preparato (`discount_items`, REQ-PAG-013) e quella non è una selezione piena, quindi un tocco aggiunge invece di buttare via le righe su cui lo sconto era stato deciso; e una riga che arriva mentre la schermata è aperta non entra da sola in un importo che il cassiere ha già detto ad alta voce.
+
+DESELEZIONA TUTTI / SELEZIONA TUTTI (chiesto da Flavio il 21/08/2026, con una registrazione vocale): «Nella sezione dei pagamenti degli ordini, dove in alto appare unisci uguali e separa uguali, mi dovrebbe apparire a fianco un altro bottone dove in automatico appare deseleziona tutti e poi dopo seleziona tutti. [...] Se devo fare un pagamento parziale e il cliente mi inizia a dire cosa ha preso di quel conto, io premendo deseleziona tutti me li porta tutti a zero e io man mano mi metto il più uno, più due, oppure un altro più uno su un'altra cosa. Immagina un conto con venti prodotti sopra: ne deve pagare uno solo, io devo togliere la spunta a venti voci. Invece così premo un solo tasto, si deselezionano tutti, e seleziono poi io». · UN TASTO SOLO, IN CIMA, nella stessa riga di «separa/unisci uguali» e con lo stesso vestito — «così come c'è unisci uguali e separa uguali». Il vecchio «Rimetti tutto in pagamento» in fondo alla lista non c'è più: faceva la metà del lavoro, e la faceva dove nessuno guardava. · CAMBIA SCRITTA e dice cosa FARÀ, non in che stato sei: «Deseleziona tutti» quando c'è qualcosa dentro, «Seleziona tutti» quando la lista è tutta a zero. Senza icona davanti, a differenza dei vicini: su un telefono da 360px le scritte devono stare sulla stessa riga, e «Deseleziona tutti» è già la più lunga della schermata. Con una selezione PARZIALE dice ancora «Deseleziona tutti»: è quello il gesto che serve — si riparte da zero e si rimettono dentro le voci giuste — ed è il motivo per cui questo tasto esiste. Per rimettere tutto dentro da una selezione parziale si passa quindi da zero, due tocchi. · UN MECCANISMO SOLO, anche in «separa uguali»: `selezioneTotale` scrive il conteggio E le unità, così una riga portata a zero non lascia accese le sue caselle. La regola del primo tocco non cambia di una virgola: a zero la selezione non è più piena, quindi il tocco successivo AGGIUNGE — che è esattamente il «man mano mi metto il più uno, più due». · CON ZERO RIGHE SCELTE — stato che prima si raggiungeva solo spegnendo una riga per volta, e adesso è il punto di partenza normale di ogni conto diviso: l'importo proposto è 0,00 €, sopra c'è scritto «NESSUNA RIGA SCELTA» invece di «PAGAMENTO», e sotto come si esce («tocca le voci da incassare, o batti un importo»). «Riscuotere» è spento finché non c'è niente da incassare, così da qui non parte un incasso a caso; il TASTIERINO resta vivo, perché battere una cifra a mano è un acconto legittimo e continua a riaccendere il tasto. · LO SCONTO IN PREPARAZIONE (REQ-PAG-013) RESTA SOSPESO, non si azzera e non si allarga. Con zero righe non c'è niente su cui farlo cadere: ricalcolarlo lo stenderebbe su tutto il residuo alle spalle di chi l'aveva deciso su tre voci (e con la strategia «proporzione» lo farebbe pure crescere). Buttarlo via sarebbe altrettanto sbagliato: «Deseleziona tutti» è il gesto con cui si COMINCIA a dividere un conto, non quello con cui si rinuncia allo sconto. Resta dov'è, e al primo tocco su una voce torna a seguire la selezione.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/pagamento.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamento.test.js`
 
 #### REQ-PAG-012 — «Riscuoti (senza stampa)»: incassare senza far uscire lo scontrino
 
@@ -411,6 +417,24 @@ Chiesto dall'utente il 20/08: «aggiungi anche (attivabile dalle impostazioni) i
 IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+
+#### REQ-PAG-013 — Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano
+
+Chiesto dall'utente il 20/08/2026: «Lo sconto va applicato solo sui prodotti selezionati. Nel senso che se tolgo prodotti dalla schermata pagamento, lo sconto va applicato solo sui prodotti che sto riscuotendo. Quindi gli sconti poi si accumulano nello scontrino. Se ho applicato uno sconto a 2 prodotti prima e a tre prodotti dopo, sono due sconti applicati».
+
+PRIMA lo sconto era uno solo per conto, calcolato sul totale e poi ripartito in proporzione su chi pagava la sua parte: chi offriva due birre a un amico si vedeva scontare una fetta di tutto il tavolo, e la cifra non tornava con niente di quello che aveva davanti.
+
+IL MODELLO. Lo sconto appartiene alla RISCOSSIONE, non al conto. · si calcola sul lordo delle righe selezionate in quel momento; se la selezione è tutto il conto il risultato è quello di prima, e il caso normale non cambia di un centesimo; · se la selezione cambia, l'importo si rifà sulle righe rimaste — in percentuale è la sua definizione, in euro decide la strategia del locale (tetto / proporzione / avviso, REQ-PAG-003), la stessa che governa un conto a cui si tolgono righe; · all'incasso viene CONSUMATO dentro quel pagamento (`payments[].sconto`) e sul conto non resta niente di preparato: da lì in poi è storia e non si ricalcola più, come il prezzo di un drink già bevuto; · due riscossioni scontate sono DUE sconti, ognuno con le sue righe, e il residuo è totale − sconti consumati − sconto in preparazione − pagato.
+
+DOVE VIVE LO SCONTO IN PREPARAZIONE: sul documento, come prima (`discount`/`discount_amount`), più il campo nuovo `discount_items` che dice a quali righe si riferisce. Senza quelle righe un altro terminale leggerebbe un importo e non saprebbe di che cosa; e visto che la selezione vive solo dentro la schermata, senza scriverle non sopravviverebbe all'uscita.
+
+LO SCONTRINO li elenca uno per uno, dicendo su che cosa cadevano («Sconto 10% su 3 prodotti −6,00 €»). Con UNO SOLO su tutto il conto resta la riga di sempre, «Sconto»: è il caso normale, ed è anche come si stampa un conto vecchio. Lo sconto resta un campo che si può spegnere fra quelli dello scontrino (REQ-STAMPA-014): spegnendolo spariscono tutte le righe insieme, ma il totale resta quello vero.
+
+IL BUONO è uno sconto come gli altri: cade sulle righe che si stanno riscuotendo (mai più del loro lordo, se no si brucia credito del beneficiario per niente) e se ne va dentro il pagamento col suo `voucher_id` — che serve a ridare il credito se il conto viene riaperto o annullato (REQ-PAG-006). I CONTI VECCHI NON SI MIGRANO. Nessuno sconto dentro i pagamenti e nessun `discount_items` vogliono dire «uno solo, su tutto il conto»: un conto aperto ieri sera si legge, si chiude e si stampa come prima.
+
+CHI SOMMAVA UN NUMERO ADESSO NE SOMMA UNA LISTA: cassa, statistiche, rendiconto, scontrino, fattura, badge della coda e dello storico passano tutti per `scontoTotale()`, che è consumati + in preparazione. E BUG-046 SI RISOLVE ALLA RADICE: lo sconto viaggia insieme all'importo dentro `registerPayment` (e dentro `readerCheckout` per il lettore SumUp), quindi un gesto è una scrittura sola e il residuo si calcola giusto anche su un documento vecchio di un istante. Il parametro `chiude` resta: quanto è dovuto lo sa comunque la schermata, non la rilettura.
+
+**Dove**: `src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js` · **Lo dimostrano**: `tests/unit/scontiAccumulati.test.js`, `tests/unit/contoScontatoSiChiude.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/campiDiStampa.test.js`
 
 ### La coda del banco
 

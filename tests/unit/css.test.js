@@ -742,3 +742,134 @@ describe('la tavolozza del conto ha bersagli pieni', () => {
     expect(css()).not.toMatch(/pointer: coarse\)[\s\S]{0,120}\.colore-conto/)
   })
 })
+
+// ── IL ☰ DELLA LAVAGNA, E LE TRE FASCE DELLA TESTATA SUL TELEFONO ────
+//
+// Due segnalazioni dello stesso giorno, e una cura sola.
+//
+// «Il tasto menu va a finire sulla label» (l'utente, 21/08/2026): il ☰ era
+// un tasto FISSO nell'angolo, fuori dal flusso, e la testata gli teneva il
+// posto a mano — 54px di rientro sul titolo, 62 sull'avviso della cassa, un
+// `top` calcolato per centrarlo sulla riga 1. A pagina in cima tornava; ma
+// la coda SCORRE, e scorrendo la testata gli passava sotto: il conteggio
+// dei conti e il nome del terminale mangiati per i primi 36px. Un tasto
+// fisso sopra una pagina che scorre finisce, prima o poi, su quello che
+// c'è scritto sotto. Nel flusso il posto non si tiene: si occupa.
+//
+// «Il layout sopra le card non è il massimo su mobile» (l'utente, stesso
+// giorno): quattro fasce prima della prima card, e la terza erano i due
+// tastini soli, spinti a destra. Adesso sono tre.
+//
+// Queste sono le misure che tengono in piedi le due cose: un riordino
+// futuro le può cambiare, ma non in silenzio.
+describe('la testata della lavagna: il ☰ nel flusso, tre fasce sul telefono', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  // Il blocco di una media query, dall'apertura alla sua chiusura. SENZA
+  // COMMENTI: qui dentro si controlla anche che certe regole NON ci siano
+  // più, e i commenti le nominano apposta per dire perché sono sparite —
+  // cercarle nel testo le ritroverebbe tutte.
+  // E LA SOGLIA NON BASTA A IDENTIFICARE IL BLOCCO: di `@media (max-width:
+  // 700px)` il foglio ne ha più d'uno, e parlano di cose diverse. Si dice
+  // anche di quale si sta parlando, con una classe che sta solo lì.
+  const pulito = nudo(css)
+  const dentro = (query, marcatore) => {
+    let da = 0
+    for (;;) {
+      const i = pulito.indexOf(query, da)
+      expect(i, `${query} con ${marcatore} non c'è più`).toBeGreaterThan(-1)
+      let livello = 0
+      for (let k = pulito.indexOf('{', i); k < pulito.length; k++) {
+        if (pulito[k] === '{') livello++
+        else if (pulito[k] === '}') {
+          livello--
+          if (livello === 0) {
+            const blocco = pulito.slice(i, k)
+            if (blocco.includes(marcatore)) return blocco
+            da = k
+            break
+          }
+        }
+      }
+    }
+  }
+  const TELEFONO = '@media (max-width: 700px)'
+  const TABLET = '@media (min-width: 701px)'
+  const STRETTO = '@media (max-width: 640px)'
+
+  it('il ☰ della coda non è fisso: sta nel flusso della testata', () => {
+    const r = regola('.board-burger')
+    expect(r).not.toMatch(/position:\s*fixed/)
+    expect(r).not.toMatch(/position:\s*absolute/)
+    // Quadrato, e il lato lo legge dalla fascia: una misura sola.
+    expect(r).toMatch(/width:\s*var\(--coda-riga\)/)
+    expect(r).toMatch(/height:\s*var\(--coda-riga\)/)
+  })
+
+  it('la fascia dichiara la sua altezza, e sul telefono è un bersaglio pieno', () => {
+    // 44px è il minimo di docs/navigazione.md: sul telefono il ☰ si preme
+    // col pollice, di corsa. Da tablet in su la riga era già stata
+    // allineata a 42, e quella misura non si tocca.
+    expect(regola('.board-head')).toMatch(/--coda-riga:\s*44px/)
+    expect(dentro(TABLET, '--coda-riga')).toMatch(/--coda-riga:\s*42px/)
+  })
+
+  it('e nessuno tiene più il posto a un tasto che nel flusso non c’era', () => {
+    // Il rientro del titolo (54px sul telefono, un calc da tablet in su) e
+    // quello dell'avviso «Cassa chiusa» (62px) esistevano solo per non
+    // finire sotto al ☰ flottante.
+    expect(css).not.toMatch(/\.queue-board > \.banner \{[^}]*padding-left/)
+    expect(dentro(TELEFONO, '.board-title')).not.toMatch(/\.board-title \{[^}]*padding-left/)
+    expect(dentro(TABLET, '.board-title')).not.toMatch(/padding-left:\s*calc\(12px \+ 42px/)
+  })
+
+  it('il guscio della ricerca sparisce da tablet in su', () => {
+    // `display: contents` e il campo torna figlio della testata, in riga 1
+    // dov'è sempre stato: il guscio serve solo al telefono, per tenere
+    // insieme ricerca e tastini su una fascia sola.
+    expect(regola('.board-cerca')).toMatch(/display:\s*contents/)
+  })
+
+  it('sul telefono le fasce sono tre, e in quest’ordine', () => {
+    const tel = dentro(TELEFONO, '.board-cerca')
+    // 1. titolo e azioni  2. ricerca e tastini  3. conteggi e legenda
+    expect(tel).toMatch(/\.board-title \{[^}]*order:\s*1/)
+    expect(tel).toMatch(/\.board-actions \{[^}]*order:\s*2/)
+    expect(tel).toMatch(/\.board-cerca \{[^}]*order:\s*3/)
+    expect(tel).toMatch(/\.board-sotto \{[^}]*order:\s*4/)
+    // le due fasce larghe vanno a capo da sé
+    expect(tel).toMatch(/\.board-cerca \{[^}]*flex-basis:\s*100%/)
+    // e i chip dei filtri escono SOTTO il tastino che li apre: stanno
+    // dentro `.board-sotto`, che è la fascia dopo.
+  })
+
+  it('e il titolo si accorcia coi puntini invece di andare a capo', () => {
+    // «In servizio» spezzato in due alzava la fascia di una riga intera per
+    // due parole, e sotto ci sono le card.
+    const tel = dentro(TELEFONO, '.board-title')
+    const titolo = tel.slice(tel.indexOf('.board-title {'))
+    expect(titolo.slice(0, titolo.indexOf('}'))).toMatch(/white-space:\s*nowrap/)
+    expect(titolo.slice(0, titolo.indexOf('}'))).toMatch(/text-overflow:\s*ellipsis/)
+  })
+
+  it('la testata del telefono è dichiarata in un posto solo', () => {
+    // Era in due blocchi (700px e 640px) con ordini diversi: valevano
+    // tutt'e due e vinceva l'ultima scritta, cioè si leggeva il foglio e
+    // non si capiva cosa succedesse su un telefono da 380px.
+    expect(dentro(STRETTO, '.board-search')).not.toMatch(/order:/)
+  })
+
+  it('e il ➕ resta grande anche sul telefono', () => {
+    // C'era un `.board-add` da 46px nel blocco dei 640px che non ha mai
+    // colorato un pixel: la regola di base che lo fa da 60 sta più in basso
+    // nel foglio, stesso peso, e a parità vince l'ultima scritta. È il
+    // tasto che si prende di corsa e con le mani occupate.
+    expect(regola('.board-add')).toMatch(/width:\s*60px/)
+    expect(dentro(STRETTO, '.grid-card-main')).not.toMatch(/\.board-add/)
+  })
+})

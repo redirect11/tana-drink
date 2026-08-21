@@ -145,8 +145,12 @@ const IERI = (() => {
   d.setUTCDate(d.getUTCDate() - 1)
   return d.toISOString().slice(0, 10)
 })()
-// Un istante di ieri sera, dopo l'apertura della cassa.
-const IERI_SERA = new Date(Date.now() - 20 * 3600000).toISOString()
+// Un istante di ieri sera, dopo l'apertura della cassa. Si conta DA IERI,
+// non da adesso meno venti ore: quel conto cadeva dentro la giornata di
+// oggi ogni volta che i test giravano fra mezzanotte e le sei — cioe'
+// proprio nelle ore in cui il locale lavora e in cui si guardano i rossi.
+// Le 21 di IERI stanno sempre in quella giornata, a qualunque ora si provi.
+const IERI_SERA = new Date(`${IERI}T21:00:00`).toISOString()
 
 const conto = (patch) => ({
   status: 'aperto',

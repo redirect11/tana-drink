@@ -127,7 +127,7 @@ import {
 } from '../lib/comande.js'
 import { useComandeLocali } from '../lib/comandeLocali.js'
 import { ricordaRuolo } from '../lib/ruoloLocale.js'
-import { paidAmount, orderTotal } from '../lib/pagamento.js'
+import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
@@ -337,7 +337,11 @@ export default function BartenderPage() {
     // pagina deve stare tutta nella finestra, ogni contenitore passa al
     // figlio quello che gli resta. Un div senza nome la spezzava.
     <div className="bar-page">
-      <StaffDrawer role={role} active={tabEffettivo} onSelect={goTab} />
+      {/* NIENTE ☰ FLOTTANTE: la lavagna della coda ne ha uno suo, dentro la
+          testata (`.board-burger`), e nelle altre sezioni la topbar c'è e il
+          ☰ sta lì. Un tasto fisso nell'angolo sopra una pagina che scorre
+          finisce addosso a quello che scorre. */}
+      <StaffDrawer role={role} active={tabEffettivo} onSelect={goTab} flottante={false} />
 
       {/* Toccando un gruppo (menu laterale) si ENTRA nella sua vista: la
           lista dei suoi ordini col conto. La coda resta com'è — lì ci
@@ -2377,8 +2381,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <span className="grid-card-meta">
               {count} prodott{count === 1 ? 'o' : 'i'} · {apertoLabel(o)}
               {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
-              {(o.discount_amount || 0) > 0 && (
-                <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
+              {scontoTotale(o) > 0 && (
+                <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
               )}
             </span>
             {/* Un conto ANNULLATO non ha incassato niente: il totale si mostra
@@ -2613,16 +2617,44 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         // ordine (apre il POS cassa). È una sola per tutte e due le viste:
         // cambiare vista non deve cambiare i comandi.
         <div className="board-head">
+          {/* IL ☰ STA NEL FLUSSO DELLA TESTATA, non fisso nell'angolo.
+              A tutto schermo la topbar è nascosta e il menu si apriva da un
+              tasto FISSO sopra la pagina: il posto glielo teneva la testata
+              a mano — un rientro sul titolo, un altro sull'avviso della
+              cassa — e quel posto era vero solo a pagina in cima. La coda
+              scorre, e scorrendo la testata gli passava sotto: «il tasto
+              menu va a finire sulla label» (l'utente, 21/08/2026).
+              Nel flusso il posto non si tiene: si occupa. */}
+          <button
+            type="button"
+            className="board-burger"
+            aria-label="Menu"
+            title="Menu"
+            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+          >
+            ☰
+          </button>
           <div className="board-title">
             <strong>In servizio</strong>
           </div>
-          <input
-            type="search"
-            className="menu-search board-search"
-            placeholder="🔍 Cerca numero, cliente, tavolo, drink…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          {/* LA RICERCA, E SUL TELEFONO I DUE TASTINI CON LEI. Da tablet in
+              su questo guscio non esiste (`display: contents`) e il campo
+              sta in riga 1 com'è sempre stato. Sul telefono invece i due
+              tastini finivano a capo su una fascia tutta loro — «il layout
+              sopra le card non è il massimo su mobile» (l'utente,
+              21/08/2026) — spinti a destra, da soli: una fascia di testata
+              è una card in meno. Accanto alla ricerca ci stanno, ed è dove
+              chi passa da lista e schede li ha appena lasciati. */}
+          <div className="board-cerca">
+            <input
+              type="search"
+              className="menu-search board-search"
+              placeholder="🔍 Cerca numero, cliente, tavolo, drink…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {telefono && tastini}
+          </div>
           <div className="board-actions">
             {/* SI STAMPERÀ? La domanda viene in mente mentre si prende
                 l'ordine, non nelle impostazioni — e in sala le
@@ -2773,10 +2805,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* I DUE TASTINI IN FONDO A DESTRA, sulla riga dei conteggi —
                 che c'è comunque. Da filtri chiusi la lavagna non paga
                 niente per averli: nessuna riga in più, nessun margine.
-                Vale per tutte e due le lavagne, corsie e griglia, e anche
-                sul telefono: sono due modi di guardare la STESSA coda, e
-                chi passa dall'una all'altra deve ritrovarli dov'erano. */}
-            {tastini}
+                Vale per tutte e due le lavagne, corsie e griglia.
+                SUL TELEFONO NO: lì stanno in riga con la ricerca, perché
+                qui la riga è già piena di conteggi e legenda e loro
+                andavano a capo su una fascia tutta loro. */}
+            {!telefono && tastini}
             {/* I CHIP ESCONO SOTTO, in una riga che esiste solo da aperti
                 («i filtri devono uscire sotto», l'utente 20/08/2026). */}
             {corsieView ? filtriCorsie : filtriOrdini}
