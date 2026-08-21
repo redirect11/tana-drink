@@ -4433,7 +4433,15 @@ body.fullbleed,
 
 .posd-foot-handle {
   height: 16px;
-  margin: 0 -12px 2px;
+  /* L'AREA DA AFFERRARE RESTA 16px, LO STACCO SOTTO NO. La maniglia e' il
+     primo figlio di una colonna con `gap`, quindi si prendeva anche quello:
+     sedici pixel di area piu' il gap piu' il margine facevano un vuoto piu'
+     alto della riga del Totale, e con lo zoom cresceva insieme a tutto il
+     resto («diminuire lo spazio tra la maniglia e il contenuto», l'utente,
+     21/08/2026). Il margine negativo riassorbe il gap: la presa sotto il
+     dito non cambia di un pixel, il vuoto si dimezza. Segue `--foot-scale`
+     perche' lo segue il gap che sta annullando. */
+  margin: 0 -12px calc(2px - 8px * var(--foot-scale, 1));
   cursor: row-resize;
   touch-action: none;
   display: flex;

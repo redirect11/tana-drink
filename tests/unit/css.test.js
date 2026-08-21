@@ -1054,3 +1054,37 @@ ${nome} {`)
     expect(blocco).toMatch(/\.payscreen-resize-handle\s*\{\s*display:\s*none/)
   })
 })
+
+// ── LA MANIGLIA DEL PIEDE NON SI PRENDE ANCHE IL GAP ─────────────────
+//
+// «Diminuire lo spazio tra la maniglia e il contenuto nel dettaglio
+// ordine» (l'utente, 21/08/2026). La maniglia è il primo figlio di una
+// colonna flex con `gap`, quindi fra lei e la riga del Totale finivano
+// insieme: i sedici pixel della sua area, il gap della colonna e il suo
+// margine — un vuoto più alto della riga che stava separando, e che con lo
+// zoom del piede cresceva insieme a tutto il resto.
+//
+// L'area da afferrare NON si tocca: sedici pixel sotto il dito restano
+// sedici. A rientrare è solo lo spazio sotto, con un margine negativo che
+// segue `--foot-scale` perché lo segue il gap che sta annullando.
+describe('la maniglia del piede del conto', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('tiene la sua area da afferrare', () => {
+    expect(regola('.posd-foot-handle')).toMatch(/height:\s*16px/)
+  })
+
+  it('ma riassorbe il gap della colonna, in scala col piede', () => {
+    const r = regola('.posd-foot-handle')
+    const m = r.match(/margin:\s*0\s+-12px\s+calc\(([^)]*)\)/)
+    expect(m, 'il margine sotto non riassorbe più niente').toBeTruthy()
+    expect(m[1], 'lo stacco deve seguire --foot-scale, come il gap').toMatch(/--foot-scale/)
+    expect(m[1], 'e deve essere negativo, o non riassorbe').toMatch(/-\s*\d/)
+  })
+})

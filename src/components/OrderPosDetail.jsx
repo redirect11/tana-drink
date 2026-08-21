@@ -72,7 +72,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printComande, printComandaUnita, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printComande, printComandaUnita, comandeStampabili, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -3101,20 +3101,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             })}
             {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
 
-            {/* Scontrino NON FISCALE del conto intero (il riepilogo per il
-                cliente): sta qui con le altre stampe, mentre "Invia comanda"
-                nel footer manda il ticket al banco. */}
-            <button
-              className="btn ghost small block"
-              style={{ marginTop: 12 }}
-              onClick={() =>
-                printScontrino(order)
-                  .then(() => toastSuccess('Scontrino stampato'))
-                  .catch((e) => setError(`Stampa: ${e.message}`))
-              }
-            >
-              <IconReceipt /> Scontrino (non fiscale)
-            </button>
+            {/* QUI NON SI STAMPA PIU' LO SCONTRINO. C'era un tasto
+                «Scontrino (non fiscale)» in fondo a questo pannello: «non
+                serve» (l'utente, 21/08/2026). E non serviva davvero — lo
+                scontrino appartiene al gesto della riscossione (REQ-STAMPA-001),
+                e il conto che il cliente vuole vedere prima di pagare ha gia'
+                il suo tasto, «Preconto», nella schermata dei pagamenti. Qui
+                dentro ci sono le COMANDE: la stampa che ha senso e' quella
+                del ticket al banco, ed e' il tasto «Stampa» di ogni comanda. */}
           </div>
         </div>
       )}
