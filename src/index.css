@@ -4234,9 +4234,87 @@ body.fullbleed,
      di "saltare": niente sensazione di ricaricamento del layout. */
   transition: width 0.14s ease;
 }
-/* Barra in alto del POS: scostata dalla barra di sistema del tablet. */
+/* Barra in alto del POS: scostata dalla barra di sistema del tablet.
+   Com'è messa la riga sta QUI e non su uno `style` inline del componente:
+   da inline vinceva sempre, e il `gap: 8px` che il blocco del telefono le
+   dava più sotto non ha mai avuto effetto. */
 .posd-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   padding: calc(8px + var(--safe-top)) 10px 8px;
+  border-bottom: 1px solid var(--line);
+  /* Su UNA riga, sempre: una seconda riga sotto la barra costa altezza a
+     ogni conto per un'informazione che si legge una volta
+     (docs/navigazione.md). Quello che non ci sta si toglie — vedi le soglie
+     qui sotto — e quello che avanza si taglia. */
+  flex-wrap: nowrap;
+  overflow: hidden;
+  /* LA BARRA MISURA SE STESSA. Le soglie qui sotto guardano quanto è larga
+     LEI, non la finestra: lo zoom dell'app scala `#root` (proprietà `zoom`,
+     vedi ZoomControl) e una media query non se ne accorge — al 120% un
+     tablet da 768px di barra ne ha 640 veri, al 160% ne ha 480. È la stessa
+     ragione per cui la lavagna della coda si misura da sé (@container
+     corsie). */
+  container: barra-conto / inline-size;
+}
+
+/* COSA CEDE QUANDO LA BARRA SI STRINGE, e in quest'ordine — l'id interno,
+   chi ha aperto il conto, l'ora — cioè l'ordine di docs/navigazione.md:
+   prima quello che si rilegge altrove (Comande, Dati conto, la storia nel
+   ⋯), mai quello che dice dove sei e cosa sta succedendo.
+   VALE SOLO CON LO STATO DEL LAVORO A BORDO (`.con-lavoro`): senza quella
+   pastiglia la barra è quella di sempre e ci sta come ci stava. */
+@container barra-conto (max-width: 620px) {
+  .posd-topbar.con-lavoro .posd-serial {
+    display: none;
+  }
+}
+@container barra-conto (max-width: 560px) {
+  .posd-topbar.con-lavoro .posd-autore {
+    display: none;
+  }
+}
+@container barra-conto (max-width: 500px) {
+  .posd-topbar.con-lavoro .posd-aperto {
+    display: none;
+  }
+}
+
+/* SE PROPRIO NON CI STA, A CEDERE È LA PAROLA DEL LAVORO — NON LO ZOOM.
+   La barra taglia quello che avanza, e senza questo a finire fuori era
+   l'ULTIMO della fila, cioè i tasti dello zoom: un comando che sparisce
+   senza dirlo. Così invece si accorciano i puntini della pastiglia, che è
+   testo e si legge lo stesso. */
+.posd-topbar .posd-stato {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* I puntini non funzionano dentro un flex: qui la pastiglia torna un
+     blocco di testo, che è quello che è (segno + parola). */
+  display: block;
+}
+
+/* LO STATO DELLA LAVORAZIONE STA IN FONDO A DESTRA. Nella barra gli
+   elementi stanno in fila da sinistra, e lo spazio che avanza restava tutto
+   in coda: la spinta (`margin-left: auto`) apre il gruppo di destra e la
+   pastiglia va dove punta l'occhio di chi cerca «a che punto è».
+   LA SPINTA STA QUI, non su uno `style` inline: la barra ha già una sua
+   grammatica in questo foglio (le taglie, cosa cede sul telefono) e un
+   inline la scavalcherebbe senza comparire dov'è scritta. */
+.posd-topbar .posd-stato {
+  margin-left: auto;
+}
+
+/* LO ZOOM RESTA L'ULTIMO, ATTACCATO ALLA PASTIGLIA. Anche lui ha la sua
+   spinta a destra (.zoom-control.zoom-inline), e due spinte nella stessa
+   riga si dividono lo spazio a metà: la pastiglia finiva a mezz'aria e lo
+   zoom staccato in fondo. Con la pastiglia davanti la spinta è già stata
+   data, e allo zoom serve solo stare al suo fianco. */
+.posd-topbar .posd-stato ~ .zoom-control.zoom-inline {
+  margin-left: 0;
 }
 
 /* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
@@ -4517,15 +4595,15 @@ body.fullbleed,
    00197" andava a capo due volte e mangiava mezzo schermo. Restano le
    cose che servono mentre si lavora: da dove si torna, che conto è, com'è
    messo. Chi l'ha aperto e il progressivo interno si leggono in Comande e
-   nei Dati conto — lì c'è spazio. */
+   nei Dati conto — lì c'è spazio.
+   DA QUANDO C'È ANCHE LO STATO DEL LAVORO la riga è più affollata, e chi
+   cede lo decide il componente (`barraStretta`): via l'ora, e lo stato del
+   conto ridotto al suo segno. Qui resta la rete di sicurezza per i telefoni
+   più stretti — sotto i 375px anche così avanzano pochi pixel. */
 @media (max-width: 700px) {
   .posd-topbar {
     gap: 8px;
     padding: calc(6px + var(--safe-top)) 8px 6px;
-    /* Niente sovrapposizioni: chi ha testo lungo si tronca, gli altri
-       restano interi. Prima "#5" e l'ora finivano uno sull'altro. */
-    flex-wrap: nowrap;
-    overflow: hidden;
   }
   .posd-topbar > * {
     flex-shrink: 0;

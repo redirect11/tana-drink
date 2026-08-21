@@ -2324,3 +2324,165 @@ describe('la sala e il conto', () => {
     expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeEnabled()
   })
 })
+
+// ── LO STATO DELLA LAVORAZIONE STA NELLA BARRA IN ALTO ──────────────────
+// «Sposta lo stato di servizio nella barra in alto come indicato dalla
+// freccia rossa» (l'utente, 21/08/2026, con la freccia sullo spazio vuoto a
+// destra della barra). Prima la pastiglia stava nella testata della colonna
+// del conto, accanto al numero e in mezzo ai tasti delle righe.
+// QUI SI CONTROLLA SOLO DOVE STA: quando compare e cosa dice non sono
+// cambiati, e i test che lo dicono stanno qui sotto insieme agli altri —
+// serve a non «sistemare» il posto rompendo la regola.
+describe('lo stato della lavorazione sta nella barra in alto', () => {
+  const barra = () => document.querySelector('.posd-topbar')
+  const pastiglia = () => document.querySelector('.posd-topbar .posd-stato')
+  // La testata della colonna del conto: la riga col nome e i tasti ↕ ▲ ⋯.
+  const testataColonna = () => document.querySelector('.posd-title')?.parentElement
+
+  // SCHERMO LARGO, salvo dove è scritto il contrario: un blocco più su lascia
+  // `matchMedia` incantato sul telefono, e senza questo i test di qui
+  // leggerebbero una barra diversa da quella che stanno descrivendo.
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+
+  it('sta nella barra in alto, e non più nella testata della colonna', () => {
+    mount(baseOrder())
+    expect(pastiglia()).toBeTruthy()
+    expect(pastiglia().textContent).toMatch(/Da fare/)
+    // Una sola in tutta la schermata: se restasse anche di là sarebbero due
+    // posti per la stessa risposta, e uno dei due invecchierebbe.
+    expect(document.querySelectorAll('.posd-stato')).toHaveLength(1)
+    expect(testataColonna()).toBeTruthy()
+    expect(testataColonna().querySelector('.posd-stato')).toBeNull()
+  })
+
+  // I SOLDI DA UNA PARTE, IL LAVORO DALL'ALTRA. Nella barra si legge da
+  // sinistra: numero, ora e stato del CONTO stanno insieme, lo stato del
+  // LAVORO va in fondo — dove punta la freccia dell'utente.
+  it('è l’ultima della barra, dopo lo stato del conto', () => {
+    mount(baseOrder())
+    const figli = [...barra().children]
+    const conto = barra().querySelector('.posd-conto-stato')
+    expect(figli.indexOf(conto)).toBeGreaterThan(-1)
+    expect(figli.indexOf(conto)).toBeLessThan(figli.indexOf(pastiglia()))
+    expect(figli.at(-1)).toBe(pastiglia())
+  })
+
+  // DUE PASTIGLIE VICINE NON DEVONO SEMBRARE LA STESSA COSA: «🟢 Conto
+  // aperto» e «🔔 Pronto» sono pure dello stesso verde. Ognuna dice di cosa
+  // parla a chi ci si ferma sopra.
+  it('si distingue da quella del conto: ognuna dice di cosa parla', () => {
+    mount(baseOrder())
+    expect(barra().querySelector('.posd-conto-stato').getAttribute('title')).toMatch(
+      /^Stato del conto/
+    )
+    expect(pastiglia().getAttribute('title')).toMatch(/^Stato della lavorazione/)
+  })
+
+  // IL PASSO PIÙ INDIETRO, non il più avanti: chi apre un conto vuole sapere
+  // quanto MANCA. È la stessa regola con cui la coda decide lo stato di un
+  // conto, e le due schermate non possono discordare.
+  it('con più comande dice il passo PIÙ INDIETRO', () => {
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'pronto', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(pastiglia().textContent).toMatch(/In preparazione/)
+  })
+
+  // LA BARRA SA DI ESSERE PIÙ PIENA. Con la pastiglia a bordo si marca
+  // `con-lavoro`, e da lì il foglio di stile decide cosa togliere quando lo
+  // spazio manca — misurando la barra e non la finestra, che con lo zoom
+  // dell'app mente (`zoom` su #root: al 120% un tablet da 768px di barra ne
+  // ha 640 veri).
+  it('la barra si marca «con-lavoro» solo quando la pastiglia c’è', () => {
+    mount(baseOrder())
+    expect(barra().classList.contains('con-lavoro')).toBe(true)
+    mockSettings.workflow_enabled = false
+    try {
+      mount(baseOrder())
+      expect([...document.querySelectorAll('.posd-topbar')].at(-1).classList.contains('con-lavoro')).toBe(
+        false
+      )
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  it('col servizio spento non c’è: quel passo lì non esiste per nessuno', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(baseOrder())
+      expect(document.querySelector('.posd-stato')).toBeNull()
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  it('a conto chiuso non c’è: non è più una cosa da fare', () => {
+    mount(baseOrder({ status: 'pagato', payment_status: 'pagato' }))
+    expect(document.querySelector('.posd-stato')).toBeNull()
+  })
+
+  it('in creazione non c’è: non c’è ancora nessuna comanda', () => {
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    expect(document.querySelector('.posd-stato')).toBeNull()
+  })
+
+  // SUL TELEFONO LA BARRA È STRETTA. Misurata in Chrome vero: al completo
+  // chiede 505px, e un telefono ne ha 360-430. Con lo stato del lavoro a
+  // bordo cedono l'ora (si rilegge nella storia del conto) e la PAROLA
+  // dello stato del conto, che resta il suo segno — il nome per esteso non
+  // si perde, sta nel title. Quello che NON cede è la pastiglia appena
+  // arrivata: è l'unica cosa lassù che dice a che punto è il lavoro.
+  describe('sul telefono', () => {
+    beforeEach(() => {
+      window.matchMedia = (query) => ({
+        matches: query.includes('700px'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })
+    })
+
+    it('la pastiglia del lavoro resta per esteso, e cedono ora e parola del conto', () => {
+      mount(baseOrder({ created_at: '2026-08-21T21:00:00.000Z' }))
+      expect(pastiglia().textContent).toMatch(/Da fare/)
+      expect(document.querySelector('.posd-aperto')).toBeNull()
+      const conto = barra().querySelector('.posd-conto-stato')
+      expect(conto.textContent.trim()).toBe('🟢')
+      expect(conto.getAttribute('title')).toBe('Stato del conto: Conto aperto')
+    })
+
+    it('senza lo stato del lavoro la barra resta quella di prima', () => {
+      mockSettings.workflow_enabled = false
+      try {
+        mount(baseOrder({ created_at: '2026-08-21T21:00:00.000Z' }))
+        expect(document.querySelector('.posd-aperto')).toBeTruthy()
+        expect(barra().querySelector('.posd-conto-stato').textContent).toMatch(/Conto aperto/)
+      } finally {
+        delete mockSettings.workflow_enabled
+      }
+    })
+  })
+})
