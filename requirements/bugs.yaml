@@ -2575,3 +2575,31 @@ bugs:
     test_cases:
       - tests/unit/css.test.js
       - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-069
+    title: "«Riscuoti e servi» stava appiccicato a «Riscuotere»"
+    area: "src/index.css (.payscreen-collect-muto, .payscreen-collect-servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026 con lo screenshot: «serve mettere
+      un po' di spazio tra i due bottoni».
+      COSA SI VEDEVA. Sotto il tastierino, «Riscuotere · 23,00 €» e
+      «Riscuoti e servi · chiude il conto» si toccavano: sembravano un
+      tasto e la sua seconda riga. Non lo sono — uno incassa, l'altro
+      incassa E da' per servito tutto quanto — e con le mani di corsa si
+      prende quello sbagliato. Lo stesso valeva per «Riscuoti (senza
+      stampa)», dove il locale l'ha acceso.
+      PERCHE'. Il difetto stava nel non-detto: le due varianti non avevano
+      NESSUNA regola nel foglio, quindi ereditavano margine zero da
+      `.btn.block`, mentre il tasto grande si prendeva i suoi 10px da
+      quello che ha sopra.
+      COME E' STATO SISTEMATO. Una regola per tutte e due, 8px di stacco —
+      la stessa aria che gia' separa i metodi di pagamento nella colonna a
+      fianco. Sorvegliata da `tests/unit/css.test.js`, che jsdom non fa
+      layout: rimettendo il difetto il test diventa rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js

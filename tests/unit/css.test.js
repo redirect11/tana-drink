@@ -873,3 +873,39 @@ ${nome} {`)
     expect(dentro(STRETTO, '.grid-card-main')).not.toMatch(/\.board-add/)
   })
 })
+
+// ── LE VIE ALTERNATIVE PER INCASSARE NON TOCCANO IL TASTO GRANDE ─────
+//
+// «Serve mettere un po' di spazio tra i due bottoni» (l'utente,
+// 21/08/2026, con lo screenshot): «Riscuoti e servi · chiude il conto»
+// stava appiccicato a «Riscuotere», e i due non erano nemmeno la stessa
+// cosa — uno incassa, l'altro incassa E dà per servito tutto quanto.
+// Attaccati sembravano un tasto e la sua seconda riga, e con le mani di
+// corsa si prende quello sbagliato.
+//
+// Il difetto stava nel non-detto: le due varianti non avevano NESSUNA
+// regola, quindi ereditavano margine zero da `.btn.block` mentre il tasto
+// grande si prendeva i suoi 10px. Il foglio è l'unico posto dove si può
+// sorvegliare: jsdom non fa layout.
+describe('i tasti per incassare stanno staccati', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const stacco = (nome) => {
+    const i = css.indexOf(`
+${nome},`) >= 0 ? css.indexOf(`
+${nome},`) : css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('}', i))
+    const m = blocco.match(/margin-top:\s*(\d+)px/)
+    return m ? Number(m[1]) : 0
+  }
+
+  it('«senza stampa» e «riscuoti e servi» non si appoggiano a «Riscuotere»', () => {
+    expect(stacco('.payscreen-collect-muto')).toBeGreaterThanOrEqual(6)
+    expect(stacco('.payscreen-collect-servi')).toBeGreaterThanOrEqual(6)
+  })
+
+  it('e il tasto grande tiene il suo stacco da quello che ha sopra', () => {
+    expect(stacco('.payscreen-collect')).toBeGreaterThanOrEqual(8)
+  })
+})
