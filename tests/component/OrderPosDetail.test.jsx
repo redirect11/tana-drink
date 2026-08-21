@@ -390,6 +390,32 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
 })
 
 describe('modale comande: consultazione, avanzamento e stampa', () => {
+  // «Il tasto per stampare lo scontrino dal box delle comande non serve»
+  // (l'utente, 21/08/2026). In fondo a questo pannello c'era «Scontrino (non
+  // fiscale)», che stampava il conto INTERO da dentro la finestra delle
+  // comande: due documenti diversi dietro lo stesso vetro, e quello sbagliato
+  // era il piu' grande. Lo scontrino appartiene al gesto della riscossione
+  // (REQ-STAMPA-001) e il riepilogo prima di pagare ha il suo «Preconto»
+  // nella schermata dei pagamenti. Qui dentro si stampano le comande.
+  it('non si stampa lo scontrino da qui: questo pannello e delle comande', async () => {
+    const user = userEvent.setup()
+    const order = baseOrder({
+      comande: [
+        {
+          id: 'c1', seq: 1, status: 'ricevuto', status_times: {},
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+        },
+      ],
+    })
+    mount(order)
+    await user.click(screen.getByRole('button', { name: /Comande \(1\)/ }))
+    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
+    // La stampa della comanda resta: e' la carta che serve al banco.
+    expect(screen.getByRole('button', { name: /Stampa/ })).toBeInTheDocument()
+    // Quella del conto no.
+    expect(screen.queryByRole('button', { name: /Scontrino/ })).not.toBeInTheDocument()
+  })
+
   it('le comande si aprono a parte e ognuna si stampa singolarmente', async () => {
     const user = userEvent.setup()
     const order = baseOrder({

@@ -4,6 +4,18 @@
 
 ### Per chi gestisce
 
+- **Nel conto, la maniglia del piede sta più vicina al totale.** Fra la
+  maniglia e la riga del Totale c'era più vuoto della riga stessa, e tirando
+  su la maniglia per ingrandire i tasti quel vuoto cresceva insieme a loro.
+  La presa sotto il dito è rimasta identica: si è stretto solo lo spazio.
+
+- **Dal pannello delle comande non si stampa più lo scontrino del conto.**
+  C'era un tasto che, da dentro la finestra delle comande, mandava in stampa
+  il riepilogo del cliente: due carte diverse dietro lo stesso vetro, e
+  quella sbagliata era la più lunga. Lì si stampano le comande; lo scontrino
+  esce riscuotendo, e il riepilogo da mostrare prima di pagare è il
+  «Preconto».
+
 - **Lo stato del servizio è passato nella barra in alto del conto**, in
   fondo a destra: «🍹 In preparazione», «🔔 Pronto», «🧾 Da fare». Stava
   nella testata della colonna del conto, schiacciato fra il numero e i
