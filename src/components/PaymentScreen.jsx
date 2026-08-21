@@ -34,6 +34,7 @@ import {
   unitaDaConteggio,
   selezioneVergine,
   selezioneDopoTocco,
+  selezioneTotale,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -47,8 +48,7 @@ import {
 // in pagamento; si deseleziona solo per lo split del tavolo.
 // La selezione è per RIGA (`key`), non per prodotto: lo stesso prodotto può
 // stare su più righe, e muoverne una non deve muovere l'altra.
-const fullSelection = (order) =>
-  Object.fromEntries(remainingItems(order).map((r) => [r.key, r.qty]))
+const fullSelection = (order) => selezioneTotale(remainingItems(order), true).sel
 
 // SI RIENTRA SULLE RIGHE DELLO SCONTO. Lo sconto in preparazione è stato
 // deciso su certe righe (`discount_items`): riaprendo la schermata con tutto
@@ -344,6 +344,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // webhook del lettore. Senza le righe accanto, quell'importo sarebbe un
   // numero di cui nessuno sa più il perché.
   const righeSelezionate = splitting ? righeSconto(selection) : null
+  // NIENTE SELEZIONATO NON VUOL DIRE «TUTTO IL CONTO». `righeSelezionate` è
+  // null in due casi opposti — tutto dentro e niente dentro — e per lo sconto
+  // quei due non sono la stessa cosa. Prima questo stato si raggiungeva solo
+  // spegnendo una riga per volta; con «Deseleziona tutti» è il punto di
+  // partenza normale di ogni conto diviso, e va detto.
+  const selezioneVuota = remaining.length > 0 && selection.length === 0
   const firmaSelezione = splitting ? firmaRighe(righeSelezionate) : ''
   // Il lordo su cui cade lo sconto: le righe scelte adesso, o tutto quello che
   // resta se non se n'è tolta nessuna.
@@ -351,7 +357,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const scontoPreparato = order.discount
   const scontoOra = scontoInPreparazione(order)
   useEffect(() => {
-    if (closed || !scontoPreparato || !(scontoOra > 0)) return
+    // LO SCONTO PREPARATO RESTA SOSPESO, NON SI AZZERA E NON SI ALLARGA.
+    // Con zero righe scelte non c'è niente su cui farlo cadere: ricalcolarlo
+    // qui vorrebbe dire stenderlo su tutto il residuo (`righe` = null) alle
+    // spalle di chi l'aveva deciso su tre voci — e con la strategia
+    // «proporzione» farlo pure crescere. Buttarlo via sarebbe altrettanto
+    // sbagliato: «Deseleziona tutti» è il gesto con cui si COMINCIA a
+    // dividere un conto, non quello con cui si rinuncia allo sconto. Resta
+    // dov'è, e appena si tocca la prima voce torna a seguire la selezione.
+    if (closed || !scontoPreparato || !(scontoOra > 0) || selezioneVuota) return
     const righe = righeSelezionate
     if (firmaRighe(righe) === firmaRighe(order.discount_items)) return
     const buono = scontoPreparato.type === 'buono'
@@ -390,7 +404,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       toastError(`Sconto non aggiornato: ${e.message}`)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firmaSelezione, splitting, scontoPreparato, scontoOra, closed])
+  }, [firmaSelezione, splitting, selezioneVuota, scontoPreparato, scontoOra, closed])
 
   // Metodi come nella foto del POS: Contante, Carta di Credito (POS
   // esterno, si registra e basta) e SumUp (il lettore Solo, transazione
@@ -448,6 +462,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // prova a unità — qui si legge lo stato e si riscrive, e basta.
   const tocca = (r, gesto, indice = null) => {
     const st = selezioneDopoTocco({ sel, selUnita }, remaining, { riga: r, gesto, indice })
+    setSel(st.sel)
+    setSelUnita(st.selUnita)
+  }
+
+  // Tutte dentro o tutte fuori in un gesto solo. Non è una seconda regola di
+  // selezione: riscrive lo stato ai due estremi e basta: il tocco riga per
+  // riga resta quello di sempre.
+  const portaTutte = (accesa) => {
+    const st = selezioneTotale(remaining, accesa)
     setSel(st.sel)
     setSelUnita(st.selUnita)
   }
@@ -731,14 +754,33 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 il totale muoversi. A dire da dove viene il numero ci pensa
                 l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A
                 MANO» — che si legge nel momento in cui serve. */}
-            {remaining.some((r) => r.qty > 1) && (
-              <button
-                className="btn ghost small"
-                style={{ marginTop: 4 }}
-                onClick={() => setSeparati((v) => !v)}
-              >
-                {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
-              </button>
+            {/* I COMANDI DELLA LISTA STANNO IN UNA RIGA SOLA, in cima: come
+                si sceglie di vedere le righe (separate o unite) e come si
+                porta la selezione ai due estremi. «Così come c'è unisci
+                uguali e separa uguali, si crea quest'altro tasto che
+                deseleziona tutti e seleziona tutti» (Flavio, 21/08/2026). */}
+            {remaining.length > 0 && !closed && (
+              <div className="payscreen-comandi">
+                {remaining.some((r) => r.qty > 1) && (
+                  <button className="btn ghost small" onClick={() => setSeparati((v) => !v)}>
+                    {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
+                  </button>
+                )}
+                {/* UN TASTO SOLO CHE CAMBIA SCRITTA, come i suoi vicini. Dice
+                    che cosa FARÀ, non in che stato sei: con qualcosa dentro
+                    «Deseleziona tutti», con la lista già a zero «Seleziona
+                    tutti». A conto solo in parte selezionato dice ancora
+                    «Deseleziona tutti», perché è quello il gesto che serve —
+                    si riparte da zero e si rimettono dentro le voci giuste,
+                    che è il motivo per cui questo tasto esiste.
+                    Niente icona davanti, a differenza dei vicini: su un
+                    telefono da 360px le due scritte devono stare sulla stessa
+                    riga, e «Deseleziona tutti» è già la più lunga della
+                    schermata. */}
+                <button className="btn ghost small" onClick={() => portaTutte(selezioneVuota)}>
+                  {selezioneVuota ? 'Seleziona tutti' : 'Deseleziona tutti'}
+                </button>
+              </div>
             )}
             {remaining.map((r) => {
               const s = Math.min(sel[r.key] || 0, r.qty)
@@ -833,19 +875,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             {remaining.length === 0 && !closed && (
               <p className="muted small">Nessun articolo da pagare{due > 0 ? ': resta il residuo (coperto/servizio).' : '.'}</p>
             )}
-            {remaining.length > 0 && !allSelected && !closed && (
-              <button
-                className="btn ghost small block"
-                style={{ marginTop: 10 }}
-                onClick={() => {
-                  setSel(fullSelection(order))
-                  setSelUnita({})
-                }}
-              >
-                Rimetti tutto in pagamento
-              </button>
-            )}
-
             {(order.payments || []).length > 0 && (
               <div style={{ marginTop: 14 }}>
                 <span className="muted small" style={{ letterSpacing: 0.5 }}>GIÀ PAGATO</span>
@@ -928,9 +957,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     a conto chiuso. */}
                 {manual
                   ? 'IMPORTO A MANO'
-                  : splitting
-                    ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
-                    : 'PAGAMENTO'}
+                  : selezioneVuota
+                    ? 'NESSUNA RIGA SCELTA'
+                    : splitting
+                      ? `RIGHE SCELTE (${selection.reduce((n, r) => n + (Number(r.qty) || 0), 0)})`
+                      : 'PAGAMENTO'}
                 {op ? ` (${acc != null ? formatPrice(acc) : ''} ${op === 'x' ? '×' : op})` : ''}
               </span>
               <br />
@@ -946,6 +977,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           {manual && amount > 0 && amount < due && (
             <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
               Acconto: resta sul conto, non copre righe precise.
+            </p>
+          )}
+          {/* Zero righe scelte: lo zero grande in cima potrebbe sembrare un
+              conto già chiuso. Qui c'è scritto perché è zero e come si esce —
+              toccando le voci, o battendo un importo sul tastierino, che
+              resta una strada buona anche da qui. */}
+          {!manual && selezioneVuota && !closed && due > 0 && (
+            <p className="muted small" style={{ margin: '2px 0 0', textAlign: 'right' }}>
+              Nessuna riga scelta: tocca le voci da incassare, o batti un importo.
             </p>
           )}
           {change > 0 && method === 'banco' && (

@@ -1042,11 +1042,19 @@ describe('la selezione riparte da zero al primo tocco', () => {
     expect(payAmount()).toHaveTextContent('15,00')
   })
 
-  it('«Rimetti tutto in pagamento» riporta a tutte, e il tocco dopo restringe di nuovo', async () => {
+  // Il tasto che riporta tutto dentro non sta più in fondo alla lista e non
+  // si chiama più «Rimetti tutto in pagamento»: è salito in cima, accanto a
+  // «separa/unisci uguali», e dice «Seleziona tutti» (Flavio, 21/08/2026).
+  // Quello che fa alla regola del primo tocco non è cambiato di una virgola,
+  // ed è quello che questo test continua a guardare.
+  it('«Seleziona tutti» riporta a tutte, e il tocco dopo restringe di nuovo', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(etichette('Gin Tonic')[0])
-    await user.click(screen.getByRole('button', { name: /Rimetti tutto in pagamento/ }))
+    // Con una parte fuori il tasto offre ancora «Deseleziona tutti»: per
+    // rimettere tutto dentro si passa da lì.
+    await user.click(screen.getByRole('button', { name: /Deseleziona tutti/ }))
+    await user.click(screen.getByRole('button', { name: /Seleziona tutti/ }))
     expect(payAmount()).toHaveTextContent('22,00')
     // Tornati a «tutte selezionate», la regola riparte da sé: non c'è nessun
     // interruttore da rimettere a posto.
@@ -1143,6 +1151,168 @@ describe('la selezione riparte da zero al primo tocco', () => {
         'ord1',
         { type: 'percent', value: 10 },
         expect.objectContaining({ amount: 0.8 })
+      )
+    )
+  })
+})
+
+// ── «DESELEZIONA TUTTI» / «SELEZIONA TUTTI» ──────────────────────────
+//
+// «Immagina un conto con venti prodotti sopra: ne deve pagare uno solo, io
+// devo togliere la spunta a venti voci. Invece così premo un solo tasto, si
+// deselezionano tutti, e seleziono poi io. Quindi così come c'è unisci uguali
+// e separa uguali, si crea quest'altro tasto che deseleziona tutti e
+// seleziona tutti» (Flavio, 21/08/2026, registrazione vocale).
+describe('il tasto che porta la selezione tutta dentro o tutta fuori', () => {
+  const etichette = (nome) => screen.getAllByRole('button', { name: new RegExp(`^${nome} ·`) })
+  const comando = () => screen.getByRole('button', { name: /eleziona tutti/ })
+
+  it('sta in cima, nella stessa riga di «separa/unisci uguali»', () => {
+    mount(baseOrder())
+    // La riga dei comandi è una sola: chi incassa li trova insieme, sopra le
+    // voci, invece di cercarne uno in fondo alla lista.
+    const riga = comando().closest('.payscreen-comandi')
+    expect(riga).not.toBeNull()
+    expect(within(riga).getByRole('button', { name: /Unisci uguali/ })).toBeInTheDocument()
+  })
+
+  it('a conto pieno dice «Deseleziona tutti» e porta tutto a zero', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    expect(comando()).toHaveTextContent('Deseleziona tutti')
+    await user.click(comando())
+    expect(payAmount()).toHaveTextContent('0,00')
+    // Tutte le voci fuori: smorte, ma toccabili — è toccandole che rientrano.
+    for (const e of [...etichette('Mojito'), ...etichette('Gin Tonic')]) {
+      expect(e).toHaveAttribute('aria-pressed', 'false')
+      expect(e).not.toBeDisabled()
+    }
+  })
+
+  it('a zero cambia scritta in «Seleziona tutti» e rimette tutto dentro', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(comando())
+    expect(comando()).toHaveTextContent('Seleziona tutti')
+    await user.click(comando())
+    expect(payAmount()).toHaveTextContent('22,00')
+    expect(comando()).toHaveTextContent('Deseleziona tutti')
+  })
+
+  it('con una parte fuori dice ancora «Deseleziona tutti»', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(etichette('Gin Tonic')[0]) // resta solo il Gin Tonic
+    expect(payAmount()).toHaveTextContent('8,00')
+    // È il gesto che serve: si riparte da zero e si rimette dentro quello che
+    // il cliente sta pagando — il motivo per cui questo tasto esiste.
+    expect(comando()).toHaveTextContent('Deseleziona tutti')
+  })
+
+  // L'INCASTRO CON LA REGOLA DEL PRIMO TOCCO (REQ-PAG-009), che non è
+  // cambiata: dopo l'azzeramento la selezione non è più piena, quindi il
+  // tocco AGGIUNGE — «man mano mi metto il più uno, più due».
+  it('dopo l’azzeramento il tocco su una voce AGGIUNGE, non azzera le altre', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(comando())
+    await user.click(etichette('Gin Tonic')[0])
+    expect(payAmount()).toHaveTextContent('8,00')
+    await user.click(etichette('Mojito')[0])
+    expect(payAmount()).toHaveTextContent('15,00') // 8 + 7, non 7
+    await user.click(etichette('Mojito')[1])
+    expect(payAmount()).toHaveTextContent('22,00')
+  })
+
+  it('vale anche in «separa uguali», dove le righe sono unità singole', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder()) // si nasce separati: i due Mojito sono due unità
+    await user.click(comando())
+    // Anche le UNITÀ si spengono: il conteggio a zero senza le unità lasciava
+    // le caselle accese, e il «−» di una unità spenta sarebbe restato vivo.
+    // Tre voci a zero: le due unità di Mojito e il Gin Tonic.
+    expect(screen.getAllByText('0/1')).toHaveLength(3)
+    await user.click(etichette('Mojito')[1])
+    expect(payAmount()).toHaveTextContent('7,00')
+    expect(etichette('Mojito')[0]).toHaveAttribute('aria-pressed', 'false')
+    expect(etichette('Mojito')[1]).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('e nella vista unita porta la riga intera dentro o fuori', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Unisci uguali/ }))
+    await user.click(comando())
+    expect(screen.getByText('0/2')).toBeInTheDocument()
+    await user.click(comando())
+    expect(screen.getByText('2/2')).toBeInTheDocument()
+  })
+})
+
+// ── CON ZERO RIGHE SCELTE ────────────────────────────────────────────
+//
+// Prima ci si arrivava solo spegnendo una riga per volta; adesso è il punto
+// di partenza normale di ogni conto diviso, quindi va retto bene.
+describe('la schermata con niente selezionato', () => {
+  const etichette = (nome) => screen.getAllByRole('button', { name: new RegExp(`^${nome} ·`) })
+  const comando = () => screen.getByRole('button', { name: /eleziona tutti/ })
+
+  it('propone zero, lo dice, e non lascia incassare', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(comando())
+    expect(payAmount()).toHaveTextContent('0,00')
+    expect(screen.getByText('NESSUNA RIGA SCELTA')).toBeInTheDocument()
+    expect(screen.getByText(/Nessuna riga scelta: tocca le voci/)).toBeInTheDocument()
+    // Un incasso «a caso» da qui non deve poter partire.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeDisabled()
+  })
+
+  it('ma il tastierino resta una strada buona per un importo a mano', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(comando())
+    // 10,00 € battuti a mano: è un acconto, e si incassa.
+    await user.click(screen.getByRole('button', { name: '1' }))
+    await user.click(screen.getByRole('button', { name: '0' }))
+    await user.click(screen.getByRole('button', { name: '00' }))
+    expect(payAmount()).toHaveTextContent('10,00')
+    const riscuoti = screen.getByRole('button', { name: /Riscuotere/ })
+    expect(riscuoti).not.toBeDisabled()
+    await user.click(riscuoti)
+    expect(registerPayment).toHaveBeenCalledWith(
+      'ord1',
+      expect.objectContaining({ amount: 10, items: null })
+    )
+  })
+
+  // LO SCONTO PREPARATO RESTA SOSPESO. Azzerandolo si perderebbe un gesto già
+  // fatto; allargandolo a tutto il conto si scontrerebbe con chi l'aveva
+  // deciso su tre voci. Resta dov'è finché non si sceglie su cosa cade.
+  it('lascia lo sconto già preparato dov’è, senza allargarlo a tutto il conto', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        discount: { type: 'euro', value: 2 },
+        discount_amount: 2,
+        discount_items: [{ key: 'gin#1', drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+      })
+    )
+    await user.click(comando())
+    expect(payAmount()).toHaveTextContent('0,00')
+    // Nessuna riscrittura sul conto: lo sconto non è stato toccato.
+    expect(setOrderDiscount).not.toHaveBeenCalled()
+    expect(screen.getByText('Sconto su 1 prodotto')).toBeInTheDocument()
+    // E appena si sceglie una voce, torna a seguire la selezione (REQ-PAG-013).
+    await user.click(etichette('Mojito')[0])
+    await waitFor(() =>
+      expect(setOrderDiscount).toHaveBeenCalledWith(
+        'ord1',
+        { type: 'euro', value: 2 },
+        expect.objectContaining({
+          amount: 2,
+          items: [expect.objectContaining({ drink_id: 'mojito', qty: 1 })],
+        })
       )
     )
   })

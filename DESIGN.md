@@ -206,6 +206,15 @@ Regole:
   ed è così che ci si rientra. Il colore non è l'unico segno — accanto
   resta scritto «0/2», perché una cosa che conta non si affida al colore
   (guardrail 1).
+- **I comandi di una lista stanno sopra la lista, in una riga sola**
+  (`.payscreen-comandi`, nel pagamento): come si guardano le righe
+  («Separa/Unisci uguali») e come si porta la selezione ai due estremi
+  («Deseleziona tutti» / «Seleziona tutti»). Stessa famiglia (`btn ghost
+  small`), `flex` con `gap`, `white-space: nowrap` e `flex: 0 0 auto`: non
+  si stringono a vicenda, e su uno schermo davvero stretto vanno a capo
+  invece di diventare illeggibili. La misura da rispettare è **360px**, e
+  ci si sta togliendo le icone alle scritte lunghe, non accorciando le
+  parole: «Deseleziona tutti» è la parola che si usa al banco.
 - **Quando il contenuto va su due colonne lo decide il contenitore**, non
   la finestra: `container-type: inline-size` sul blocco e soglia in
   `@container`. Con sei corsie accese la finestra è larga e la card è una
