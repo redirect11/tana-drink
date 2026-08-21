@@ -2575,3 +2575,256 @@ bugs:
     test_cases:
       - tests/unit/css.test.js
       - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-069
+    title: "«Riscuoti e servi» stava appiccicato a «Riscuotere»"
+    area: "src/index.css (.payscreen-collect-muto, .payscreen-collect-servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026 con lo screenshot: «serve mettere
+      un po' di spazio tra i due bottoni».
+      COSA SI VEDEVA. Sotto il tastierino, «Riscuotere · 23,00 €» e
+      «Riscuoti e servi · chiude il conto» si toccavano: sembravano un
+      tasto e la sua seconda riga. Non lo sono — uno incassa, l'altro
+      incassa E da' per servito tutto quanto — e con le mani di corsa si
+      prende quello sbagliato. Lo stesso valeva per «Riscuoti (senza
+      stampa)», dove il locale l'ha acceso.
+      PERCHE'. Il difetto stava nel non-detto: le due varianti non avevano
+      NESSUNA regola nel foglio, quindi ereditavano margine zero da
+      `.btn.block`, mentre il tasto grande si prendeva i suoi 10px da
+      quello che ha sopra.
+      COME E' STATO SISTEMATO. Una regola per tutte e due, 8px di stacco —
+      la stessa aria che gia' separa i metodi di pagamento nella colonna a
+      fianco. Sorvegliata da `tests/unit/css.test.js`, che jsdom non fa
+      layout: rimettendo il difetto il test diventa rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-070
+    title: "L'interruttore di «Riscuoti e servi» era introvabile: stava in «Gestione preparazione»"
+    area: "src/components/SettingsTab.jsx (riscuoti_e_servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026: «metti che anche il tasto
+      "riscuoti e servi" e' opzionale nelle impostazioni».
+      COSA C'ERA GIA'. L'impostazione esisteva da tempo —
+      `riscuoti_e_servi`, spenta di default — e il suo interruttore c'era
+      eccome. Il difetto non e' una funzione mancante: e' che l'utente non
+      l'ha trovata, e ha chiesto di aggiungere una cosa che aveva gia'.
+      Un'impostazione che non si trova, per chi la cerca, non esiste.
+      DOV'ERA E PERCHE' NON SI TROVAVA. In «Gestione preparazione»,
+      annidata sotto «Segui la preparazione degli ordini». Ci era finita
+      per parentela tecnica — il tasto marca «servito», e «servito» e'
+      uno stato del servizio — mentre chi cerca un tasto della SCHERMATA
+      DI PAGAMENTO apre «Pagamenti».
+      LO STESSO IDENTICO INCIAMPO, LA SECONDA VOLTA. Il 20/08 era successo
+      con «Riscuoti (senza stampa)»: stessa sezione sbagliata, stessa
+      parentela di forma, e fu spostato in «Pagamenti» proprio perche'
+      non si trovava. Il gemello rimasto indietro ha ripetuto il difetto
+      un giorno dopo — spostarne uno solo dei due non aveva risolto la
+      causa, che e' la sezione, non il singolo interruttore.
+      COME E' STATO SISTEMATO. L'interruttore trasloca in «Pagamenti»,
+      accanto al gemello: due tasti che compaiono nella stessa schermata,
+      uno accanto all'altro, si accendono nello stesso posto. La
+      CONDIZIONE SE L'E' PORTATA DIETRO — si vede solo col servizio acceso
+      (`workflow_enabled !== false`) — perche' «servire» esiste solo se si
+      seguono i passi: col servizio spento il tasto non comparirebbe
+      comunque, e un interruttore che non fa niente e' peggio di uno
+      assente.
+    labels: [bug, interfaccia, impostazioni, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/component/SettingsTab.test.jsx
+
+  - id: BUG-071
+    title: "Annullando un conto appena battuto, la comanda usciva lo stesso"
+    area: "src/lib/printer.js, src/lib/api.js (cancelOrder), src/components/OrderPosDetail.jsx"
+    description: >
+      «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+      uscire se e' abilitata la stampa automatica» (l'utente, 21/08/2026).
+      Al banco: si batte un conto al POS, si cambia idea, lo si annulla — e
+      il ticket esce lo stesso. Carta buttata, e peggio: al banco si comincia
+      a preparare un lavoro che nessuno deve fare.
+      LE GUARDIE C'ERANO GIA' E NON BASTAVANO. `comandeDaStampare` scarta i
+      conti annullati e le comande annullate, e `cancelOrder` scrive
+      `status: annullato` e annulla tutte le comande non ritirate. Sulla
+      carta il caso sembrava coperto. Il buco era in due posti diversi.
+      UNO: IL CANCELLO SI APRIVA PRIMA CHE L'ANNULLO ARRIVASSE. Il segno
+      `in_creazione` e' quello che tiene ferma la stampa finche' il conto si
+      sta componendo (REQ-STAMPA-013); a toglierlo era l'USCITA dalla
+      schermata, che annullando parte per prima — mentre l'annullo deve
+      ancora leggersi il documento. In quel pezzo di secondo la coda vede un
+      conto composto, aperto e da stampare, e la stampa automatica non
+      aspetta nessuno. Ed e' il caso NORMALE, non un caso di margine:
+      battuta la prima riga il conto e' gia' nato — la schermata passa a
+      modifica, `isNew` diventa falso — ma resta `in_creazione`, quindi chi
+      annulla li' passa dal ramo dell'annullo di sempre.
+      DUE: IL TASTO «COMANDA» A MANO su un conto annullato stampava ancora, e
+      stampava il peggio. `comandaDelTicket` scarta le annullate, su un conto
+      annullato non ne trova nessuna, e `printComanda` ripiegava
+      sull'AGGREGATO del conto (BUG-051): un ticket con TUTTE le righe di un
+      lavoro che non si deve fare.
+      COME E' STATO SISTEMATO, senza ritardi e senza riletture.
+      · L'annullo chiude anche la composizione: `in_creazione: false` viaggia
+        nello STESSO patch di `status: annullato`. Non esiste piu' un istante
+        in cui il conto risulta composto e non ancora annullato.
+      · L'uscita non tocca niente quando si sta annullando: il segno si mette
+        in cima al gesto (memoria locale immediata, come `ordiniNascosti` per
+        la coda), prima ancora di distinguere il conto nuovo da quello nato.
+      · La domanda «questo lavoro e' annullato?» sta in una funzione pura
+        sola (`lavoroAnnullato` in printer.js) e la fanno tutti e due i
+        posti che stampano: chi sceglie (`comandeDaStampare`) e chi mette
+        l'inchiostro (`printComanda`, dove il cancello vale anche per i
+        chiamanti di domani, come per la coda delle stampe di BUG-052).
+        Guarda `status` E `workflow_status`: annullato e' annullato da
+        qualunque vista lo si guardi.
+      NON ERA IN PRODUZIONE: ne' `in_creazione` ne' `comandaDelTicket`
+      esistono su main — sono tutti e due della 1.5.x.
+    labels: [bug, stampa, pos]
+    severity: media
+    priority: P1
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAnnullata.test.js
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-072
+    title: "Due avvisi per lo stesso conto: «Nuovo ordine» e il cambio di stato, sullo stesso #5"
+    area: "src/pages/BartenderPage.jsx (coda: gestore di snapshot)"
+    description: >
+      Segnalato dall'utente il 21/08/2026, con due schermate — il centro
+      notifiche del sistema e la lista della campanella dentro l'app —
+      sull'ordine #5 delle 21:20: «perche' arrivano due notifiche diverse di
+      ordine ricevuto?». Nella sequenza, uno dietro l'altro: «Annullato»,
+      «Nuovo ordine · Ordine #5 ricevuto.», «Ordine ricevuto · Ordine #5»,
+      «Annullato». E poi: «vedi che tra l'altro le notifiche sono diverse».
+      COSA NON ERA. Non e' la stessa notifica consegnata due volte: quella la
+      fonderebbe il `tag`, che l'app e la push del server portano uguale
+      apposta. Sono DUE avvisi, con due titoli e due corpi.
+      LA CAUSA. Nello stesso gestore di snapshot della coda vivevano due
+      strade che potevano parlare dello stesso conto: «ordine nuovo», che
+      chiedeva solo «l'ho gia' visto?» a una memoria (`knownIds`) rifatta da
+      capo a ogni snapshot, e «cambio di stato», che guarda lo stato di
+      prima. Bastava che il conto uscisse dalla finestra della coda e
+      rientrasse — cioe' un annullo seguito da un ripristino — perche' la
+      prima lo credesse nuovo mentre la seconda raccontava il ritorno.
+      E SUCCEDEVA ANCHE SENZA CHE IL CONTO SPARISSE MAI, col pagamento
+      obbligatorio: un conto nuovo che aspetta di essere pagato entrava
+      nell'insieme `awaiting`, e da li' non usciva piu' nemmeno annullandolo
+      — il ripristino lo faceva scattare come «nuovo ordine» mesi dopo essere
+      arrivato. E' il giro che riproduce la sequenza vista al banco, riga per
+      riga.
+      COME E' STATO SISTEMATO. Una memoria sola, che si aggiunge e non si
+      azzera: «mai visto» e' l'unica cosa che rende nuovo un conto, e i conti
+      spariti dalla vista ci restano dentro. L'attesa del pagamento si pulisce
+      quando il conto viene annullato — annullato vuol dire uscito, non «in
+      arrivo». Un conto che rientra in coda si annuncia per quello che e',
+      «Conto ripristinato», e chi l'ha ripristinato da quel terminale non se
+      lo sente ripetere (`ripristinato_device`, stesso metro di
+      `cancelled_device`). Rimettendo il difetto,
+      tests/component/AvvisiRipristino.test.jsx torna rosso.
+    labels: [bug, notifiche, coda]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/component/AvvisiRipristino.test.jsx
+
+  - id: BUG-073
+    title: "Lo stesso fatto annunciato con due vocabolari: «Nuovo ordine» e «Ordine ricevuto»"
+    area: "src/lib/orderStatus.js, src/pages/BartenderPage.jsx, public/sw.js, functions/lib/push-core.js"
+    description: >
+      Dalla stessa segnalazione del 21/08/2026: «vedi che tra l'altro le
+      notifiche sono diverse». Che gli avvisi fossero due era BUG-072; che
+      dicessero due cose diverse e' questo, e sarebbe rimasto anche
+      togliendone uno.
+      COSA SI LEGGEVA. Lo stesso conto tornato in coda arrivava come «Nuovo
+      ordine — Ordine #5 ricevuto.» da una strada e come «Ordine ricevuto —
+      Ordine #5» dall'altra. Il primo titolo era battuto a mano dentro la
+      coda; il secondo veniva dalle etichette di stato, cioe' dalle parole
+      che si dicono AL CLIENTE («Ordine ricevuto»), finite in un avviso per
+      il banco — dove lo stesso passo si chiama «Da fare».
+      PERCHE' E' UN DIFETTO A SE'. Il progetto ha gia' la regola che le
+      parole del banco stanno in un posto solo (`statoAlBanco`, sorvegliata
+      da tests/unit/paroleDelBanco.test.js), ma l'avviso di ordine nuovo la
+      aggirava: le sue parole erano scritte a mano in TRE posti che non
+      possono importarsi a vicenda — la coda nel browser, la push del server
+      (functions/, altro pacchetto) e il service worker che la disegna
+      (public/sw.js, fuori dal bundle). Tre copie a mano divergono, ed erano
+      gia' divergenti.
+      E IL TITOLO DEVE ESSERE IDENTICO, non «simile»: la notifica dell'app e
+      quella del server portano lo stesso `tag` e il sistema le fonde in una.
+      Due titoli diversi sotto lo stesso tag sono una notifica che cambia
+      parole sotto gli occhi di chi la legge.
+      COME E' STATO SISTEMATO. Le parole degli avvisi hanno un posto solo,
+      src/lib/orderStatus.js (`AVVISO_NUOVO_ORDINE`, `AVVISO_RIPRISTINO`), e
+      un test le tiene allineate alle due copie che non possono importarle:
+      tests/unit/paroleDegliAvvisi.test.js confronta il titolo con quello
+      della push del server e col ripiego scritto nel service worker.
+      Un avviso annuncia un FATTO, e non porta il nome della colonna dove il
+      conto atterra: un conto ripristinato non e' «Da fare», e' «Conto
+      ripristinato».
+    labels: [bug, notifiche, interfaccia]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/paroleDegliAvvisi.test.js
+
+  - id: BUG-074
+    title: "Due ordini #5 nella stessa sera: il conto battuto prima che si sapesse la cassa si numera sul giorno"
+    area: "src/lib/progressivi.js, src/lib/api.js (creaOrdine)"
+    description: >
+      Segnalato dall'utente il 21/08/2026, con la schermata della coda: «e
+      poi vedi che ci sono due ordini #5». Il numero del conto e' quello che
+      il cliente si sente dire ad alta voce: due conti con lo stesso numero,
+      la stessa sera, sono due comande che si scambiano di posto al banco.
+      LA CAUSA. Il numero lo da' il contatore che il dispositivo ha gia' in
+      memoria, e quale contatore sia lo decide una domanda sola: c'e' una
+      cassa aperta? Se si' si conta dentro la SERATA (`cash-<sessione>`), se
+      no dentro la GIORNATA. Sono due contatori indipendenti: nella stessa
+      sera danno benissimo lo stesso #5. Il difetto stava nella terza
+      risposta possibile, che non veniva considerata: «non lo so ancora».
+      L'ascolto su `counters/_active_cash` riparte da capo a ogni
+      ricaricamento della pagina, e finche' non ha risposto `cassaCorrente()`
+      tornava `null` — che il codice prendeva per «cassa chiusa».
+      COSA NE VENIVA, provato: il conto battuto in quella finestra nasce con
+      `daily_number` preso dal contatore del giorno — cioe' un numero gia'
+      usato quella sera — E con `cash_session_id: null`. Non e' «numerato
+      male ma nella serata giusta»: e' proprio SENZA SERATA, quindi non
+      compare nella chiusura di cassa. Due danni, uno visibile e uno no.
+      E LA RETE DI SICUREZZA DEL SERVER NON LO PRENDE. `risolviNumeroDuplicato`
+      (functions/index.js) cerca i fratelli dentro `cash_session_id` se c'e',
+      dentro `order_date` altrimenti: il conto orfano si confronta con la
+      giornata e vede il gemello, ma il conto REGOLARE che arriva dopo si
+      confronta con la sola serata, dove l'orfano non c'e'. Nato per primo
+      l'orfano, il doppione sopravvive. Resta cosi': allargare il confronto
+      alla giornata romperebbe il caso legittimo di due casse nella stessa
+      giornata commerciale, dove la numerazione riparte apposta.
+      COME E' STATO SISTEMATO, restando local-first: non si aspetta nessuno,
+      ci si RICORDA. L'ultima cassa che si sapeva aperta resta in memoria
+      locale (`tana:cassa-aperta`), come gia' i numeri assegnati, e vale per
+      la giornata commerciale in cui e' stata scritta — quella di ieri non e'
+      una risposta, e' un'altra serata. Un ricaricamento non fa piu'
+      dimenticare in che serata si sta; il server corregge appena risponde, e
+      quando dice che nessuna cassa e' aperta la memoria si cancella.
+      SCARTATE: aspettare il server prima di battere (un'attesa di rete a
+      ogni conto, il contrario di tutto il progetto) e impedire di battere
+      finche' non si sa (blocca il banco). Rimettendo il difetto,
+      tests/unit/cassaDellaSerata.test.js torna rosso.
+    labels: [bug, ordini, cassa, offline]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/cassaDellaSerata.test.js

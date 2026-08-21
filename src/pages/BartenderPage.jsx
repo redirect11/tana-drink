@@ -31,6 +31,8 @@ import {
   formatPrice,
   nextStatus,
   statoAlBanco,
+  AVVISO_NUOVO_ORDINE,
+  AVVISO_RIPRISTINO,
   placedByName,
   placedByLetter,
 } from '../lib/orderStatus.js'
@@ -93,7 +95,7 @@ import {
 } from '../lib/ruoli.js'
 import { sezioneConsentita } from '../lib/sezioni.js'
 import { senzaNascosti, subscribeNascosti, mostraOrdine } from '../lib/ordiniNascosti.js'
-import { battutoDaQui, annullatoDaQui, idDispositivo } from '../lib/dispositivo.js'
+import { battutoDaQui, annullatoDaQui, ripristinatoDaQui, idDispositivo } from '../lib/dispositivo.js'
 import {
   corsieNascoste,
   ricordaCorsieNascoste,
@@ -696,6 +698,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   // Gli avanzamenti fatti DA QUI non si annunciano: l'ho appena premuto io.
   const avanzatiDaMe = useRef(new Set())
+  // LA CODA NON DIMENTICA I CONTI CHE HA GIÀ VISTO. Qui c'erano DUE memorie
+  // rifatte da capo a ogni snapshot — questa e un `knownIds` gemello — e
+  // bastava che un conto uscisse dalla finestra della coda (annullato,
+  // chiuso, di ieri) e rientrasse perché tornasse a risultare NUOVO: il
+  // banco riceveva due avvisi per lo stesso fatto, «🆕 Nuovo ordine» e il
+  // cambio di stato, con parole diverse (BUG-072). Una memoria sola, che si
+  // aggiunge e non si azzera: «mai visto» è l'unica cosa che rende nuovo un
+  // conto. Cresce di una riga per conto e muore col ricarico della pagina.
   const statoPrec = useRef(new Map())
   const [storiaTarget, setStoriaTarget] = useState(null)
   const [ripristinoTarget, setRipristinoTarget] = useState(null)
@@ -729,7 +739,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const [openCards, setOpenCards] = useState(() => new Set()) // card-griglia coi tasti aperti
   const [pend, setPend] = useState({ pending: [], banners: [] }) // ordini POS in invio
   const [settings, setSettings] = useState(settingsIniziali)
-  const knownIds = useRef(new Set())
   const knownComande = useRef(new Map()) // id ordine -> n. comande (per il toast aggiunte)
   const navigate = useNavigate()
 
@@ -830,7 +839,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         if (primed) {
           const printerSettings = loadPrinterSettings()
           for (const o of data) {
-            const isNew = !knownIds.current.has(o.id)
+            const isNew = !statoPrec.current.has(o.id)
+            // USCITO DALLA CODA, USCITO DALL'ATTESA. Un conto annullato
+            // mentre aspettava il pagamento obbligatorio restava in questo
+            // insieme per sempre: ripristinandolo veniva annunciato come
+            // «nuovo ordine» — ed era il secondo avviso, quello di troppo,
+            // che il banco ha visto sull'ordine #5 (BUG-072).
+            if (o.workflow_status === ORDER_STATUSES.ANNULLATO) awaiting.delete(o.id)
             // C'È QUALCOSA DA FARE? Un ordine battuto alla cassa nasce già
             // «in preparazione» — chi lo batte sta facendo il drink —
             // mentre quelli dal menù nascono «ricevuto». Guardando i soli
@@ -858,7 +873,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 // STESSO NOME della notifica che manda il server (sw.js):
                 // così il sistema le fonde in una invece di mostrarne due —
                 // l'app suona subito, la push arriva un istante dopo.
-                notify('🆕 Nuovo ordine', `Ordine #${o.daily_number} ricevuto.`, {
+                notify(AVVISO_NUOVO_ORDINE.titolo, AVVISO_NUOVO_ORDINE.corpo(o.daily_number), {
                   tag: `new-order-${o.id}`,
                   renotify: true,
                 })
@@ -932,19 +947,29 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             // io» (avanzatiDaMe) non basta: quella schermata è un'altra.
             // Il metro è il terminale, come per gli ordini nuovi.
             if (ora === ORDER_STATUSES.ANNULLATO && annullatoDaQui(o)) continue
+            // UN CONTO CHE RIENTRA IN CODA è una notizia — c'è di nuovo da
+            // fare — ma non è un passo del servizio: annunciarlo col nome
+            // della colonna dove atterra («Da fare») racconta dov'è finito,
+            // non cosa è successo. E chi l'ha rimesso in piedi lo sa già,
+            // come per l'annullo.
+            const tornatoInCoda =
+              prima === ORDER_STATUSES.ANNULLATO && ora !== ORDER_STATUSES.ANNULLATO
+            if (tornatoInCoda && ripristinatoDaQui(o)) continue
             if (!avvisoAttivo(avvisi.current, idAvvisoStato(ora))) continue
-            // Le parole del banco stanno in un posto solo: statoAlBanco.
+            // Le parole stanno in un posto solo: statoAlBanco per i passi
+            // del servizio, orderStatus.js per i fatti che passo non sono.
             const nome = statoAlBanco(ora, o.service_mode)
-            if (!nome) continue
+            if (!tornatoInCoda && !nome) continue
             notify(
-              `${STATUS_EMOJI[ora] || '•'} ${nome}`,
+              tornatoInCoda ? AVVISO_RIPRISTINO.titolo : `${STATUS_EMOJI[ora] || '•'} ${nome}`,
               `Ordine #${o.daily_number ?? '—'}${o.customer_name ? ` · ${o.customer_name}` : ''}`
             )
           }
         }
-        knownIds.current = new Set(data.map((o) => o.id))
         knownComande.current = new Map(data.map((o) => [o.id, (o.comande || []).length]))
-        statoPrec.current = new Map(data.map((o) => [o.id, o.workflow_status]))
+        // Si AGGIUNGE: i conti spariti dalla finestra restano nella memoria,
+        // altrimenti al loro ritorno sarebbero di nuovo «nuovi» (BUG-072).
+        for (const o of data) statoPrec.current.set(o.id, o.workflow_status)
         setOrders(data)
         setOrdersReady(true)
         primed = true

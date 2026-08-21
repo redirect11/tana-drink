@@ -873,3 +873,84 @@ ${nome} {`)
     expect(dentro(STRETTO, '.grid-card-main')).not.toMatch(/\.board-add/)
   })
 })
+
+// ── LE VIE ALTERNATIVE PER INCASSARE NON TOCCANO IL TASTO GRANDE ─────
+//
+// «Serve mettere un po' di spazio tra i due bottoni» (l'utente,
+// 21/08/2026, con lo screenshot): «Riscuoti e servi · chiude il conto»
+// stava appiccicato a «Riscuotere», e i due non erano nemmeno la stessa
+// cosa — uno incassa, l'altro incassa E dà per servito tutto quanto.
+// Attaccati sembravano un tasto e la sua seconda riga, e con le mani di
+// corsa si prende quello sbagliato.
+//
+// Il difetto stava nel non-detto: le due varianti non avevano NESSUNA
+// regola, quindi ereditavano margine zero da `.btn.block` mentre il tasto
+// grande si prendeva i suoi 10px. Il foglio è l'unico posto dove si può
+// sorvegliare: jsdom non fa layout.
+//
+// Dal 21/08 quelle due stanno anche AFFIANCATE, in una riga sola: qui si
+// sorveglia pure quello — metà e metà quando ci stanno, a capo quando la
+// schermata è stretta, tutta la larghezza quando ce n'è una sola.
+describe('i tasti per incassare: staccati dal grande, e in riga fra loro', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const stacco = (nome) => {
+    const i = css.indexOf(`
+${nome},`) >= 0 ? css.indexOf(`
+${nome},`) : css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('}', i))
+    const m = blocco.match(/margin-top:\s*(\d+)px/)
+    return m ? Number(m[1]) : 0
+  }
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('«senza stampa» e «riscuoti e servi» non si appoggiano a «Riscuotere»', () => {
+    // Lo stacco si è spostato di un gradino: adesso le due varianti stanno
+    // dentro una riga sola, ed è la riga a tenersi lontana dal tasto
+    // grande. Il difetto sorvegliato è sempre quello — zero margine.
+    expect(stacco('.payscreen-collect-alt')).toBeGreaterThanOrEqual(6)
+  })
+
+  it('e il tasto grande tiene il suo stacco da quello che ha sopra', () => {
+    expect(stacco('.payscreen-collect')).toBeGreaterThanOrEqual(8)
+  })
+
+  // «I tasti "riscuoti senza stampa" e "riscuoti e servi" mettili
+  // affiancati, non uno sopra l'altro» (l'utente, 21/08/2026).
+  it('e le due varianti stanno in riga, metà e metà', () => {
+    const r = regola('.payscreen-collect-alt')
+    expect(r).toMatch(/display:\s*flex/)
+    // Nessun `flex-direction: column` di ritorno: sarebbe l'impilata di
+    // prima con un contenitore attorno.
+    expect(r).not.toMatch(/flex-direction:\s*column/)
+    expect(r).toMatch(/gap:\s*\d+px/)
+  })
+
+  it('quando ce n’è una sola prende tutta la larghezza', () => {
+    // Le due condizioni sono indipendenti: capita che in riga ce ne sia
+    // una sola, e metà tasto con un buco accanto non si guarda. Il
+    // `flex-grow` a 1 la fa arrivare da sola fino in fondo.
+    expect(regola('.payscreen-collect-alt > .btn')).toMatch(/flex:\s*1\s/)
+  })
+
+  it('su un telefono stretto vanno a capo invece di stringersi', () => {
+    // Le scritte sono lunghe e una porta pure l'importo: a 360px due
+    // colonne le spezzerebbero in parole mozze. Il `flex-wrap` con una
+    // base larga le rimette una sotto l'altra, e il bersaglio resta da
+    // pollice.
+    expect(regola('.payscreen-collect-alt')).toMatch(/flex-wrap:\s*wrap/)
+    const tasto = regola('.payscreen-collect-alt > .btn')
+    const base = tasto.match(/flex:\s*1\s+1\s+(\d+)px/)
+    expect(base, 'la base del flex non c’è più').not.toBeNull()
+    expect(Number(base[1])).toBeGreaterThanOrEqual(180)
+    const alto = tasto.match(/min-height:\s*(\d+)px/)
+    expect(alto, 'il bersaglio da pollice non è più garantito').not.toBeNull()
+    expect(Number(alto[1])).toBeGreaterThanOrEqual(44)
+  })
+})

@@ -1,5 +1,85 @@
 # Cosa è cambiato
 
+## 1.5.4-beta
+
+### Per chi gestisce
+
+- **Non nascono più due conti con lo stesso numero dopo un ricaricamento.**
+  Ricaricando la pagina l'app per un attimo non sapeva ancora quale cassa
+  fosse aperta, e un conto battuto proprio in quell'istante prendeva il
+  numero da un'altra serie: usciva un **secondo #5** nella stessa sera — e
+  quel conto per giunta non finiva nella chiusura di cassa. Adesso l'app
+  **si ricorda la cassa della serata** e non se la dimentica al ricarico.
+  Come sempre, non aspetta niente e nessuno: il conto compare nell'istante
+  in cui lo confermi.
+
+- **Un conto annullato e poi rimesso in piedi avvisa una volta sola, e dice
+  che è tornato.** Prima ne arrivavano due, una dietro l'altra e con parole
+  diverse: «🆕 Nuovo ordine — Ordine #5 ricevuto.» e «Ordine ricevuto —
+  Ordine #5». Chi legge si chiede se siano due cose, e va a cercare un
+  ordine che non è mai arrivato. Adesso l'avviso è uno e dice **«↩️ Conto
+  ripristinato»** — quello che è successo davvero. Un conto che il banco ha
+  già visto non torna a essere «nuovo» nemmeno se nel frattempo era sparito
+  dalla coda, e **chi preme «Ripristina» non se lo sente ripetere**, come
+  già succede per chi annulla.
+
+- **Annullando un conto appena battuto, la comanda non esce più.** Si
+  batteva un ordine alla cassa, si cambiava idea, si annullava — e il
+  ticket usciva lo stesso: carta buttata, e al banco si cominciava a
+  preparare roba che nessuno doveva fare. Adesso l'annullo ferma anche la
+  stampa. E il tasto **«Comanda»** su un conto annullato non stampa più
+  niente: prima faceva uscire un ticket con dentro *tutte* le righe del
+  conto.
+
+- **Chi versa un acconto adesso può portarsi via la sua ricevuta.** Se
+  riscuotevi solo una parte del conto non usciva niente: la stampa era
+  attaccata alla chiusura, e un acconto non chiude. Adesso c'è un
+  **documento suo** — in cima c'è scritto **ACCONTO** in nero, e in fondo
+  che **il conto resta aperto**, così non si può scambiare per lo
+  scontrino finale — con **cosa ha pagato** (le righe di quella
+  riscossione, quando ce ne sono), **quanto**, **con che metodo** e
+  **quanto resta da incassare**.
+  Si accende da **Impostazioni → Pagamenti**, e ci sono due modi:
+  **«Un tasto per l'acconto con lo scontrino»** aggiunge il tasto
+  *«Acconto con scontrino»* accanto agli altri due, da premere quando
+  serve; **«Lo scontrino d'acconto a ogni riscossione»** lo fa uscire da
+  solo ogni volta che incassi una parte, senza premere niente. Acceso il
+  secondo, il primo si spegne da sé (dice anche perché): la carta esce
+  già, e il tasto non servirebbe più. Se l'incasso salda tutto il tasto
+  resta lì spento — lì quello che esce è lo scontrino, non un acconto — e
+  toccandolo te lo dice.
+  Cosa c'è scritto sulla carta lo scegli tu in **Impostazioni →
+  Stampante → Campi dell'acconto**, come per lo scontrino e la comanda.
+  Di suo non cambia niente per nessuno: nasce spento.
+
+- **Il preconto adesso dice anche quanto manca.** Su un conto con degli
+  acconti già presi elencava gli incassi ma non il resto: il totale
+  sopra, i versamenti sotto, e la sottrazione la facevi a mente col
+  cliente davanti. Adesso c'è la riga **«Resta da pagare»**. Su uno
+  scontrino di conto chiuso non compare: lì non resta niente.
+
+- **I due tasti in più del pagamento stanno affiancati, e si accendono
+  tutti e due da «Pagamenti».** Sotto il tastierino c'erano tre tasti uno
+  sopra l'altro: il grande «Riscuotere» e, in fila sotto di lui, «Riscuoti
+  (senza stampa)» e «Riscuoti e servi». Adesso **«Riscuotere» resta da
+  solo, largo quanto la schermata** — è il gesto di sempre — e le altre due
+  vie stanno **una accanto all'altra su una riga sola**, metà e metà. Se ne
+  hai accesa una sola, quella si allarga e prende tutta la riga. Sul
+  telefono, dove due tasti così sarebbero troppo stretti, tornano uno sotto
+  l'altro invece di stringersi.
+  E l'interruttore di **«Un tasto per incassare e servire insieme»** si è
+  spostato in **Impostazioni → Pagamenti**, accanto a quello di «incassare
+  senza stampare»: era in «Gestione preparazione» e non lo trovava
+  nessuno. Fa esattamente quello che faceva prima, ma adesso sta dove uno
+  lo cerca. Come prima, si vede solo se segui la preparazione degli
+  ordini: senza quei passi «servire» non esiste.
+
+- **I tasti per incassare non si toccano più.** «Riscuoti e servi» stava
+  appiccicato a «Riscuotere» e sembrava la sua seconda riga: due gesti
+  diversi — uno incassa, l'altro incassa e dà per servito tutto — a un
+  millimetro l'uno dall'altro. Ora sono staccati, e lo stesso vale per
+  «Riscuoti (senza stampa)».
+
 ## 1.5.3-beta
 
 ### Per chi gestisce

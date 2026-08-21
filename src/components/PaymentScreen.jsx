@@ -15,8 +15,9 @@ import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
-import { toastError } from '../lib/toast.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
+import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
+import { showToast, toastError } from '../lib/toast.js'
 import {
   remainingItems,
   paidAmount,
@@ -311,6 +312,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const scontoFuoriMisura = scontoEccessivo(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
+  // LE DUE VIE ALTERNATIVE SI DECIDONO QUI, non nel JSX: la riga che le
+  // ospita esiste solo se ce n'è almeno una, altrimenti sotto il tasto
+  // grande resterebbe un contenitore vuoto con la sua aria.
+  // Le condizioni restano INDIPENDENTI — sono due impostazioni diverse.
+  const mostraSenzaStampa = !closed && riscuotiSenzaStampa && due > 0
+  const mostraEServi = !closed && riscuotiEServi && !autoServeBase && !served
+  // «Acconto con scontrino»: il terzo tasto. Acceso dal locale, e SOLO se
+  // l'acconto automatico è spento — con quello acceso la carta esce da sé
+  // e il tasto sarebbe una seconda strada per lo stesso foglio
+  // (lib/scontrinoAcconto.js).
+  const mostraAcconto = !closed && tastoAcconto(settings) && due > 0
 
   const selection = remaining
     .filter((r) => (sel[r.key] || 0) > 0)
@@ -329,6 +341,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Non si incassa mai oltre il dovuto: l'eccedenza digitata è il RESTO.
   const toPay = Math.min(round2(amount), due)
   const change = Math.max(0, round2(amount - due))
+  // Questo incasso salda il conto? È la stessa domanda che `riscuoti` si fa
+  // un istante dopo (`willClose`), e la fa la stessa funzione: il tasto
+  // dell'acconto e la carta che esce non possono rispondere in modo diverso.
+  const chiudeOra = paymentCloses(order, toPay)
 
   // ── LO SCONTO SEGUE LE RIGHE CHE SI STANNO RISCUOTENDO ──────────────
   //
@@ -507,7 +523,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
   // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
   // le comande risultano servite — e quindi se il conto si chiude adesso.
-  const riscuoti = ({ servi = false, senzaStampa = false } = {}) => {
+  const riscuoti = ({ servi = false, senzaStampa = false, conAcconto = false } = {}) => {
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // ── LO SCONTO SI CONSUMA QUI ──────────────────────────────────────
@@ -592,6 +608,31 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       }
     })()
     if (willClose) closePaid({ amount: toPay, method }, { senzaStampa })
+    // ── LA CARTA DI CHI VERSA UNA PARTE E SE NE VA (REQ-STAMPA-015) ──
+    //
+    // L'incasso non chiude il conto: lo scontrino finale non c'entra —
+    // uscirà al saldo — ma chi ha appena pagato la sua parte se ne va con
+    // le mani vuote, e finora era così. Esce adesso, dal gesto, come tutto
+    // il resto: la registrazione sta viaggiando in sottofondo e questa
+    // schermata è l'unica che sa cosa è appena successo.
+    //
+    // NIENTE `await` PRIMA: la stampa parte e la schermata resta viva. Se
+    // la carta non esce lo si dice, e basta — l'incasso è registrato lo
+    // stesso, e ristampare un acconto è un gesto, non un guaio.
+    else if (
+      accontoDaStampare({
+        settings,
+        chiude: willClose,
+        senzaStampa,
+        colTasto: conAcconto,
+        autoStampa: loadPrinterSettings().autoPrintScontrino,
+      })
+    ) {
+      printScontrinoAcconto(order, { amount: toPay, method, items, sconto }).catch((e) => {
+        console.warn('[printer] acconto:', e.message)
+        onError?.(`Ricevuta d'acconto non stampata: ${e.message}`)
+      })
+    }
   }
 
   // ── Sconto dal tastierino della modale ──
@@ -1052,29 +1093,67 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
             </button>
           )}
-          {/* Lo stesso incasso, ma la stampante tace: per il cliente che
-              lo scontrino di cortesia non lo vuole. Solo dove il locale
-              l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
-          {!closed && riscuotiSenzaStampa && due > 0 && (
-            <button
-              className="btn block ghost payscreen-collect-muto"
-              disabled={saving || scontoFuoriMisura || !(toPay > 0)}
-              onClick={() => riscuoti({ senzaStampa: true })}
-            >
-              Riscuoti (senza stampa) · {formatPrice(toPay)}
-            </button>
-          )}
-          {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
-              di incassare qui e poi servire dalla coda. Solo dove il locale
-              lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
-          {!closed && riscuotiEServi && !autoServeBase && !served && (
-            <button
-              className="btn block ghost payscreen-collect-servi"
-              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
-              onClick={() => riscuoti({ servi: true })}
-            >
-              Riscuoti e servi · chiude il conto
-            </button>
+          {/* LE DUE VIE ALTERNATIVE, AFFIANCATE SU UNA RIGA SOLA (chiesto
+              dall'utente il 21/08/2026). Il tasto grande resta da solo a
+              tutta larghezza — è il gesto normale; queste due sono le
+              eccezioni, e stando in riga si vedono per quello che sono.
+              Compaiono a condizioni INDIPENDENTI, quindi la riga può
+              contenerne una sola: in quel caso si allarga e prende tutto
+              (ci pensa il `flex-grow` in `.payscreen-collect-alt`), niente
+              mezzo tasto con un buco accanto. */}
+          {(mostraSenzaStampa || mostraEServi || mostraAcconto) && (
+            <div className="payscreen-collect-alt">
+              {/* Lo stesso incasso, ma la stampante tace: per il cliente che
+                  lo scontrino di cortesia non lo vuole. Solo dove il locale
+                  l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
+              {mostraSenzaStampa && (
+                <button
+                  className="btn ghost payscreen-collect-muto"
+                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  onClick={() => riscuoti({ senzaStampa: true })}
+                >
+                  Riscuoti (senza stampa) · {formatPrice(toPay)}
+                </button>
+              )}
+              {/* ── IL TERZO TASTO ────────────────────────────────────
+                  Incassa una parte e stampa la ricevuta di chi se ne va.
+                  QUANDO L'INCASSO CHIUDE IL CONTO NON SPARISCE, si SPEGNE
+                  e al tocco dice perché: la selezione si apre piena — cioè
+                  chiudendo — e ogni riga tolta o rimessa la farebbe
+                  comparire e sparire sotto il dito mentre si divide il
+                  conto, con gli altri due tasti che ballano di conseguenza.
+                  Spento resta al suo posto, e chi lo cerca lo trova. La
+                  ragione è quella dei metodi di pagamento non disponibili,
+                  poche righe più in là: `disabled` non spiegherebbe niente. */}
+              {mostraAcconto && (
+                <button
+                  className={`btn ghost payscreen-collect-acconto${chiudeOra ? ' spento' : ''}`}
+                  aria-disabled={chiudeOra || undefined}
+                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  onClick={() =>
+                    chiudeOra
+                      ? showToast(
+                          'Questo incasso salda il conto: la carta che esce è lo scontrino, non un acconto. Togli qualche riga per riscuoterne solo una parte.'
+                        )
+                      : riscuoti({ conAcconto: true })
+                  }
+                >
+                  Acconto con scontrino · {formatPrice(toPay)}
+                </button>
+              )}
+              {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
+                  di incassare qui e poi servire dalla coda. Solo dove il locale
+                  lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
+              {mostraEServi && (
+                <button
+                  className="btn ghost payscreen-collect-servi"
+                  disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+                  onClick={() => riscuoti({ servi: true })}
+                >
+                  Riscuoti e servi · chiude il conto
+                </button>
+              )}
+            </div>
           )}
 
           {/* Come nel POS: Codice Lotteria · Preconto · Invia fattura */}

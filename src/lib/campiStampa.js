@@ -150,12 +150,99 @@ export const CAMPI_COMANDA = [
   },
 ]
 
-export const CAMPI = { scontrino: CAMPI_SCONTRINO, comanda: CAMPI_COMANDA }
+// ── I CAMPI DELLO SCONTRINO D'ACCONTO ────────────────────────────────
+//
+// «Lo scontrino esce ad ogni riscossione ma è configurabile» (l'utente,
+// 21/08/2026). Questo NON è lo scontrino del conto: è la carta di chi
+// versa una parte e se ne va, e deve rispondere a quattro domande in
+// mezzo secondo — cosa ho pagato, quanto, come, quanto resta.
+//
+// TRE COSE NON STANNO QUI, e non è una dimenticanza:
+//   · la scritta ACCONTO in cima e la riga che dice che il conto resta
+//     aperto: sono quello che impedisce di scambiare questa carta per lo
+//     scontrino finale, e spegnerle vorrebbe dire stampare un documento
+//     che mente;
+//   · la lista delle righe riscosse, quando ce n'è una: è il «cosa ho
+//     pagato», la stessa ragione per cui i prodotti non si tolgono dallo
+//     scontrino;
+//   · l'importo versato: un acconto senza l'importo non è niente, come un
+//     conto senza totale.
+export const CAMPI_ACCONTO = [
+  {
+    id: 'nome_locale',
+    label: 'Nome del locale',
+    desc: 'In cima, grande. Le parole si cambiano in «Dati del locale».',
+    acceso: true,
+  },
+  { id: 'indirizzo', label: 'Indirizzo', acceso: true },
+  { id: 'citta', label: 'CAP e città', acceso: true },
+  {
+    id: 'numero',
+    label: 'Numero del conto e data',
+    desc: 'La riga «ACCONTO - 12» con giorno e ora.',
+    acceso: true,
+  },
+  { id: 'operatore', label: 'Chi ha incassato', acceso: true },
+  {
+    id: 'riga_vendita',
+    label: 'Tavolo o numero di comanda',
+    desc: 'Di che conto è questo acconto.',
+    acceso: true,
+  },
+  {
+    id: 'intestazione_colonne',
+    label: 'Intestazione delle colonne',
+    desc: 'La riga «QTA Prodotto — PU Prezzo» sopra alle righe riscosse.',
+    acceso: true,
+  },
+  {
+    id: 'sconto',
+    label: 'Sconto di questa riscossione',
+    desc: 'Solo quando chi versa si è fatto scontare le sue righe.',
+    acceso: true,
+  },
+  {
+    id: 'metodo',
+    label: 'Come è stato pagato',
+    desc: 'Contante, carta, lettore: sotto all’importo versato.',
+    acceso: true,
+  },
+  {
+    id: 'riepilogo_conto',
+    label: 'Come sta il conto',
+    desc: 'Totale, quanto è stato versato in tutto e quanto resta da pagare. È la domanda che fa chi resta al tavolo.',
+    acceso: true,
+  },
+  {
+    id: 'codice_conto',
+    label: 'Codice del conto',
+    desc: 'La riga lunga in fondo: serve a noi per ritrovarlo.',
+    acceso: true,
+  },
+  {
+    id: 'ragione_sociale',
+    label: 'Ragione sociale in fondo',
+    acceso: true,
+  },
+  {
+    id: 'riga_cortesia',
+    label: 'Riga di saluto',
+    desc: 'Una riga tua, in fondo.',
+    acceso: false,
+    testo: { valore: '', label: 'Cosa c’è scritto', placeholder: 'A dopo!' },
+  },
+]
+
+export const CAMPI = { scontrino: CAMPI_SCONTRINO, comanda: CAMPI_COMANDA, acconto: CAMPI_ACCONTO }
 
 // Dove il locale scrive le sue scelte, dentro settings/bar. Sono
 // impostazioni DEL LOCALE e non del terminale: lo scontrino è l'identità
 // del bar, non una preferenza del tablet che l'ha stampato.
-export const CHIAVE_IMPOSTAZIONE = { scontrino: 'stampa_scontrino', comanda: 'stampa_comanda' }
+export const CHIAVE_IMPOSTAZIONE = {
+  scontrino: 'stampa_scontrino',
+  comanda: 'stampa_comanda',
+  acconto: 'stampa_acconto',
+}
 
 // ── CHIEDERE «QUESTO BLOCCO LO SCRIVO?» ──────────────────────────────
 //
@@ -202,12 +289,20 @@ export function configStampa(settings, quale) {
 // resta in mano al cliente è il segno del locale. I valori di partenza
 // sono quelli di oggi: il logo esce sullo scontrino e sul preconto (che
 // sono la stessa stampa), non sulla comanda né sulla chiusura di cassa.
+// Lo scontrino d'acconto nasce con il logo acceso per la stessa ragione
+// del preconto: è carta che se ne va in mano al cliente.
 export const TIPI_LOGO = [
   { id: 'scontrino', label: 'Scontrino', desc: 'Quello che si dà a conto pagato.', acceso: true },
   {
     id: 'preconto',
     label: 'Preconto',
     desc: 'Il conto portato al tavolo, prima di pagare.',
+    acceso: true,
+  },
+  {
+    id: 'acconto',
+    label: 'Scontrino d’acconto',
+    desc: 'La carta di chi versa una parte e se ne va: resta in mano al cliente come il preconto.',
     acceso: true,
   },
   {
