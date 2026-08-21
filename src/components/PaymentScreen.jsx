@@ -32,8 +32,8 @@ import {
   round2,
   dettaglioIncassi,
   unitaDaConteggio,
-  conteggioDaUnita,
-  toccaUnita,
+  selezioneVergine,
+  selezioneDopoTocco,
 } from '../lib/pagamento.js'
 
 // ── Schermata Pagamento in stile POS SumUp (vedi foto di riferimento) ──
@@ -222,11 +222,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const [selUnita, setSelUnita] = useState({})
   const unitaDi = (r) =>
     selUnita[r.key]?.length === r.qty ? selUnita[r.key] : unitaDaConteggio(r.qty, sel[r.key] ?? 0)
-  const toccaLaUnita = (r, i, acceso) => {
-    const nuove = toccaUnita(selUnita[r.key], r.qty, i, acceso)
-    setSelUnita((st) => ({ ...st, [r.key]: nuove }))
-    setSel((st) => ({ ...st, [r.key]: conteggioDaUnita(nuove) }))
-  }
   // Vista SEPARATA delle righe uguali (al volo, come nel riepilogo ordine):
   // ogni unità è mostrata a sé e si sceglie fin dove pagare. Solo visuale: la
   // selezione resta per riga (sel[key] = quante unità di quella riga).
@@ -320,8 +315,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const selection = remaining
     .filter((r) => (sel[r.key] || 0) > 0)
     .map((r) => ({ ...r, qty: Math.min(sel[r.key], r.qty) }))
-  const allSelected =
-    remaining.length > 0 && remaining.every((r) => (sel[r.key] || 0) >= r.qty)
+  // TUTTO IN RISCOSSIONE è anche la selezione «vergine»: finché è così, il
+  // primo tocco su una voce restringe l'incasso a quella sola (vedi
+  // `selezioneDopoTocco`). Una definizione sola per due cose che sono la
+  // stessa cosa.
+  const allSelected = selezioneVergine(remaining, sel)
   const splitting = !allSelected && selection.length > 0
   // Importo automatico: la selezione (o il residuo intero).
   const autoAmount =
@@ -444,12 +442,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     }
   }
 
-  const bump = (r, delta) => {
-    const next = Math.max(0, Math.min((sel[r.key] || 0) + delta, r.qty))
-    setSel((s) => ({ ...s, [r.key]: next }))
-    // Le unità seguono il conteggio: dalla vista unita si torna a «le prime
-    // N accese», che è l'unica lettura sensata di un numero.
-    setSelUnita((st) => ({ ...st, [r.key]: unitaDaConteggio(r.qty, next) }))
+  // Ogni tocco sulle righe passa da qui: etichetta, «+» e «−», vista unita e
+  // vista separata. La regola («il primo tocco restringe, i successivi
+  // aggiungono») sta tutta in `selezioneDopoTocco`, che è logica pura e si
+  // prova a unità — qui si legge lo stato e si riscrive, e basta.
+  const tocca = (r, gesto, indice = null) => {
+    const st = selezioneDopoTocco({ sel, selUnita }, remaining, { riga: r, gesto, indice })
+    setSel(st.sel)
+    setSelUnita(st.selUnita)
   }
 
   // ── Tastierino ──
@@ -759,10 +759,16 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                           key={`${r.key}#${i}`}
                           style={{ alignItems: 'center', marginTop: 8 }}
                         >
-                          <span className="grow" style={{ fontSize: '0.92rem' }}>
+                          <button
+                            type="button"
+                            className={`payscreen-voce grow${on ? '' : ' spenta'}`}
+                            aria-pressed={on}
+                            onClick={() => tocca(r, 'etichetta', i)}
+                            disabled={closed}
+                          >
                             {r.custom ? '✨ ' : ''}{r.name}
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
-                          </span>
+                          </button>
                           <span className="qty">
                             {/* UNO ALLA VOLTA. Il «−» scriveva la nuova
                                 quantità come «tutte quelle prima di questa»:
@@ -774,16 +780,20 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                                 unità per volta. */}
                             <button
                               aria-label={`Togli ${r.name} dal pagamento`}
-                              onClick={() => toccaLaUnita(r, i, false)}
+                              onClick={() => tocca(r, 'meno', i)}
                               disabled={closed || !on}
                             >
                               −
                             </button>
                             <strong>{on ? 1 : 0}/1</strong>
+                            {/* Col conto ancora tutto in riscossione il «+»
+                                resta VIVO anche su una unità già accesa: è
+                                il gesto che l'utente ha chiesto per dire
+                                «solo questa» — spento non lo sarebbe mai. */}
                             <button
                               aria-label={`Paga ${r.name}`}
-                              onClick={() => toccaLaUnita(r, i, true)}
-                              disabled={closed || on}
+                              onClick={() => tocca(r, 'piu', i)}
+                              disabled={closed || (on && !allSelected)}
                             >
                               +
                             </button>
@@ -796,14 +806,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               }
               return (
                 <div className="row between" key={r.key} style={{ alignItems: 'center', marginTop: 8 }}>
-                  <span className="grow" style={{ fontSize: '0.92rem' }}>
+                  {/* L'ETICHETTA È UN TASTO. Al banco si punta il prodotto,
+                      non il piccolo «+» accanto: toccando il nome la riga
+                      entra intera in riscossione («questo lo paga lui»), e
+                      chi ne vuole una parte scende col «−». `aria-pressed`
+                      dice se la riga è dentro, che è l'unica cosa che serve
+                      sapere anche senza vedere il colore. */}
+                  <button
+                    type="button"
+                    className={`payscreen-voce grow${s > 0 ? '' : ' spenta'}`}
+                    aria-pressed={s > 0}
+                    onClick={() => tocca(r, 'etichetta')}
+                    disabled={closed}
+                  >
                     {r.custom ? '✨ ' : ''}{r.name}
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
-                  </span>
+                  </button>
                   <span className="qty">
-                    <button aria-label={`Togli ${r.name} dal pagamento`} onClick={() => bump(r, -1)} disabled={closed || s === 0}>−</button>
+                    <button aria-label={`Togli ${r.name} dal pagamento`} onClick={() => tocca(r, 'meno')} disabled={closed || s === 0}>−</button>
                     <strong>{s}/{r.qty}</strong>
-                    <button aria-label={`Paga ${r.name}`} onClick={() => bump(r, 1)} disabled={closed || s >= r.qty}>+</button>
+                    <button aria-label={`Paga ${r.name}`} onClick={() => tocca(r, 'piu')} disabled={closed || (s >= r.qty && !allSelected)}>+</button>
                   </span>
                 </div>
               )

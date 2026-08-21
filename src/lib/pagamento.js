@@ -383,3 +383,117 @@ export function toccaUnita(unita, qty, indice, acceso) {
   base[indice] = !!acceso
   return base
 }
+
+// ── IL PRIMO TOCCO RESTRINGE, I SUCCESSIVI AGGIUNGONO ────────────────
+//
+// «Quando apro la schermata del pagamento, quando clicco su una voce, anche
+// solo sulla label, si devono azzerare le altre voci; e se voglio aggiungere
+// alla riscossione le devo premere, la label, o premo il +. Quindi quando
+// apro sono tutte selezionate, ma se premo o la label o il più le altre voci
+// passano a 0, E DIVENTANO GRIGE O DI UN COLORE PIÙ SMORTO, e quando le premo
+// le aggiungo al conto che voglio riscuotere» (l'utente, 20/08/2026).
+//
+// Il gesto vero al banco è «di tutto questo conto, adesso mi paghi QUESTI».
+// Prima per arrivarci si spegneva una riga per volta tutto quello che NON
+// serviva: su un conto da dieci righe, nove tocchi per incassarne una.
+//
+// LA REGOLA, in una riga: quando è selezionato TUTTO, toccare una voce vuol
+// dire «solo questa»; da lì in poi toccare vuol dire «anche questa».
+//
+// «Vergine» non è un flag da tenere in vita: è lo STATO che si vede a
+// schermo — tutte le righe dentro per intero. Così non c'è niente da
+// azzerare quando il conto cambia sotto, quando si rientra o quando si è
+// appena incassata una parte: la regola risponde sempre a quello che il
+// cassiere ha davanti. E «Rimetti tutto in pagamento» riporta da sé al
+// primo tocco, senza saperlo.
+//
+// Due conseguenze volute:
+// · si RIENTRA sulle righe di uno sconto già preparato (`discount_items`):
+//   quella non è una selezione piena, quindi NON è vergine e un tocco
+//   aggiunge invece di buttare via le righe su cui lo sconto era stato
+//   deciso (REQ-PAG-013);
+// · se arriva una riga nuova mentre la schermata è aperta, la selezione non
+//   è più piena e quindi non è più vergine. Giusto così: la schermata non
+//   sta più dicendo «pago tutto», e quella riga non deve entrare da sola in
+//   un importo che il cassiere ha già detto ad alta voce.
+export function selezioneVergine(righe, sel) {
+  const rs = righe || []
+  return rs.length > 0 && rs.every((r) => (Number(sel?.[r.key]) || 0) >= r.qty)
+}
+
+// Applica UN tocco alla selezione e restituisce lo stato nuovo
+// (`{ sel, selUnita }`, le due forme che vivono insieme nella schermata).
+//
+// `tocco`:
+//   riga    la riga toccata (serve `key` e `qty`)
+//   gesto   'etichetta' | 'piu' | 'meno'
+//   indice  in «separa uguali», QUALE unità della riga; null nella vista
+//           unita, dove il gesto vale per la riga intera
+//
+// Tre gesti per due viste, un meccanismo solo:
+// · 'etichetta' ACCENDE quello che è spento e SPEGNE quello che è già dentro
+//   per intero — è il tasto che rimette in riscossione una riga smorta;
+// · 'piu' e 'meno' restano quelli di sempre, una unità per volta, per chi di
+//   tre birre ne paga due;
+// · sulla selezione VERGINE qualunque gesto che accende azzera tutte le
+//   altre righe (e in «separa uguali» anche le altre unità della stessa
+//   riga). Il «meno» no: quello ha sempre voluto dire «questa non me la
+//   paga», ed è il vecchio modo di dividere il conto, che continua a
+//   funzionare.
+//
+// Sul VERGINE l'etichetta non spegne mai: con tutto acceso un tocco che
+// spegne lascerebbe la schermata a zero — e chi voleva incassare solo quella
+// riga si ritroverebbe senza niente selezionato.
+// Sempre sul vergine, il «+» di una riga già intera la lascia intera: «di
+// tutto il conto, questo prodotto lo paga lui». Chi ne vuole una parte scende
+// col «−», o le separa (che è come la schermata si apre).
+export function selezioneDopoTocco(stato, righe, tocco) {
+  const rs = righe || []
+  const sel = { ...(stato?.sel || {}) }
+  const selUnita = { ...(stato?.selUnita || {}) }
+  const { riga, gesto, indice = null } = tocco || {}
+  if (!riga) return { sel, selUnita }
+
+  const qty = Number(riga.qty) || 0
+  // Le due forme restano allineate: si scrivono le unità, e il conteggio è
+  // quante ne sono accese. Mai una senza l'altra.
+  const scrivi = (key, unita) => {
+    selUnita[key] = unita
+    sel[key] = conteggioDaUnita(unita)
+  }
+
+  const memoria = selUnita[riga.key]
+  const unita =
+    Array.isArray(memoria) && memoria.length === qty
+      ? memoria
+      : unitaDaConteggio(qty, sel[riga.key] ?? 0)
+  const dentro = indice == null ? (Number(sel[riga.key]) || 0) >= qty : !!unita[indice]
+  const vergine = selezioneVergine(rs, sel)
+  const spegne = gesto === 'meno' || (gesto === 'etichetta' && dentro && !vergine)
+
+  if (vergine && !spegne) {
+    for (const r of rs) scrivi(r.key, unitaDaConteggio(Number(r.qty) || 0, 0))
+    scrivi(
+      riga.key,
+      indice == null
+        ? unitaDaConteggio(qty, qty)
+        : unitaDaConteggio(qty, 0).map((_, i) => i === indice)
+    )
+    return { sel, selUnita }
+  }
+
+  if (indice == null) {
+    const ora = Math.min(Number(sel[riga.key]) || 0, qty)
+    const next =
+      gesto === 'etichetta'
+        ? spegne
+          ? 0
+          : qty
+        : Math.max(0, Math.min(ora + (gesto === 'piu' ? 1 : -1), qty))
+    scrivi(riga.key, unitaDaConteggio(qty, next))
+    return { sel, selUnita }
+  }
+
+  scrivi(riga.key, toccaUnita(unita, qty, indice, gesto === 'etichetta' ? !dentro : !spegne))
+  return { sel, selUnita }
+}
