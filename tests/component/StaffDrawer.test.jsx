@@ -237,3 +237,32 @@ describe('il menu agganciato alla pagina', () => {
     expect(document.body.classList.contains('drawer-agganciato')).toBe(false)
   })
 })
+
+// ── IL ☰ FLOTTANTE SI PUÒ SPEGNERE ───────────────────────────────────
+//
+// Serve alle schermate a tutto schermo che una testata loro non ce l'hanno.
+// Dove la testata c'è — la lavagna della coda — il ☰ sta lì dentro, nel
+// flusso, e questo va spento: due ☰ sulla stessa schermata sono uno di
+// troppo, e uno fisso sopra una pagina che scorre finisce addosso a quello
+// che scorre («il tasto menu va a finire sulla label», l'utente 21/08/2026).
+describe('il ☰ flottante del menu laterale', () => {
+  it('di suo c’è: le schermate senza testata si aprono il menu da lì', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" />
+      </MemoryRouter>
+    )
+    expect(document.querySelector('.bar-burger')).toBeTruthy()
+  })
+
+  it('e si spegne per chi il ☰ ce l’ha già in testata', () => {
+    render(
+      <MemoryRouter initialEntries={['/bar']}>
+        <StaffDrawer role="admin" active="coda" flottante={false} />
+      </MemoryRouter>
+    )
+    expect(document.querySelector('.bar-burger')).toBeNull()
+    // il menu resta apribile dall'evento: è lo stesso tasto, altrove
+    expect(document.querySelector('.bar-sidebar')).toBeTruthy()
+  })
+})
