@@ -384,6 +384,34 @@ export function toccaUnita(unita, qty, indice, acceso) {
   return base
 }
 
+// ── DENTRO TUTTE, O FUORI TUTTE ──────────────────────────────────────
+//
+// «Immagina un conto con venti prodotti sopra: ne deve pagare uno solo, io
+// devo togliere la spunta a venti voci all'interno dell'ordine. Invece
+// facendo così premo un solo tasto, si deselezionano tutti, e seleziono poi
+// io» (Flavio, 21/08/2026, registrazione vocale).
+//
+// Porta la selezione a uno dei due estremi in un gesto solo. Da lì in poi
+// non cambia niente: il tocco riga per riga resta quello di sempre
+// (`selezioneDopoTocco`) — con tutto dentro il primo tocco restringe, con
+// tutto fuori ogni tocco aggiunge, che è esattamente il «man mano mi metto
+// il più uno, più due» che serve al banco.
+//
+// Si scrivono TUTTE E DUE le forme, conteggio e unità: la vista «separa
+// uguali» legge le unità, e lasciandole indietro le caselle di una riga
+// portata a zero restavano accese.
+export function selezioneTotale(righe, accesa) {
+  const sel = {}
+  const selUnita = {}
+  for (const r of righe || []) {
+    const qty = Number(r.qty) || 0
+    const unita = unitaDaConteggio(qty, accesa ? qty : 0)
+    selUnita[r.key] = unita
+    sel[r.key] = conteggioDaUnita(unita)
+  }
+  return { sel, selUnita }
+}
+
 // ── IL PRIMO TOCCO RESTRINGE, I SUCCESSIVI AGGIUNGONO ────────────────
 //
 // «Quando apro la schermata del pagamento, quando clicco su una voce, anche

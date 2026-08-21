@@ -29,6 +29,7 @@ import {
   toccaUnita,
   selezioneVergine,
   selezioneDopoTocco,
+  selezioneTotale,
 } from '../../src/lib/pagamento.js'
 
 const order = (over = {}) => ({
@@ -458,5 +459,63 @@ describe('il primo tocco su una unità separata', () => {
     const dopo = selezioneDopoTocco(piena, righe, { riga: righe[0], gesto: 'meno', indice: 0 })
     expect(dopo.selUnita.a).toEqual([false, true])
     expect(dopo.sel.a).toBe(1)
+  })
+})
+
+// ── DENTRO TUTTE, O FUORI TUTTE ──────────────────────────────────────
+//
+// «Immagina un conto con venti prodotti sopra: ne deve pagare uno solo, io
+// devo togliere la spunta a venti voci all'interno dell'ordine. Invece
+// facendo così premo un solo tasto, si deselezionano tutti, e seleziono poi
+// io» (Flavio, 21/08/2026, registrazione vocale).
+describe('la selezione portata ai due estremi', () => {
+  const righe = [
+    { key: 'a', qty: 1 },
+    { key: 'b', qty: 3 },
+    { key: 'c', qty: 1 },
+  ]
+
+  it('accesa: tutte le righe dentro per intero — che è la selezione «vergine»', () => {
+    const { sel, selUnita } = selezioneTotale(righe, true)
+    expect(sel).toEqual({ a: 1, b: 3, c: 1 })
+    expect(selUnita.b).toEqual([true, true, true])
+    // È esattamente lo stato con cui la schermata si apre: da lì la regola
+    // del primo tocco riparte da sé, senza flag da rimettere a posto.
+    expect(selezioneVergine(righe, sel)).toBe(true)
+  })
+
+  it('spenta: tutte a zero, unità comprese', () => {
+    const { sel, selUnita } = selezioneTotale(righe, false)
+    expect(sel).toEqual({ a: 0, b: 0, c: 0 })
+    // Le UNITÀ vanno scritte insieme al conteggio: la vista «separa uguali»
+    // legge quelle, e lasciandole indietro le caselle di una riga portata a
+    // zero restavano accese.
+    expect(selUnita.b).toEqual([false, false, false])
+    expect(selezioneVergine(righe, sel)).toBe(false)
+  })
+
+  // L'INCASTRO CON LA REGOLA DEL PRIMO TOCCO (REQ-PAG-009), che non cambia:
+  // a zero la selezione non è più piena, quindi ogni tocco AGGIUNGE — «man
+  // mano mi metto il più uno, più due».
+  it('da zero, il tocco successivo AGGIUNGE invece di azzerare le altre', () => {
+    const vuota = selezioneTotale(righe, false)
+    const uno = selezioneDopoTocco(vuota, righe, { riga: righe[0], gesto: 'etichetta' })
+    expect(uno.sel).toEqual({ a: 1, b: 0, c: 0 })
+    const due = selezioneDopoTocco(uno, righe, { riga: righe[2], gesto: 'etichetta' })
+    expect(due.sel).toEqual({ a: 1, b: 0, c: 1 })
+    const tre = selezioneDopoTocco(due, righe, { riga: righe[1], gesto: 'piu' })
+    expect(tre.sel).toEqual({ a: 1, b: 1, c: 1 })
+  })
+
+  it('e in «separa uguali» il tocco accende la SUA unità, non le altre', () => {
+    const vuota = selezioneTotale(righe, false)
+    const dopo = selezioneDopoTocco(vuota, righe, { riga: righe[1], gesto: 'etichetta', indice: 2 })
+    expect(dopo.selUnita.b).toEqual([false, false, true])
+    expect(dopo.sel).toEqual({ a: 0, b: 1, c: 0 })
+  })
+
+  it('senza righe non inventa niente', () => {
+    expect(selezioneTotale([], true)).toEqual({ sel: {}, selUnita: {} })
+    expect(selezioneTotale(null, false)).toEqual({ sel: {}, selUnita: {} })
   })
 })

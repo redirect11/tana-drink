@@ -4761,6 +4761,22 @@ body.fullbleed,
   min-width: 0;
   border-right: 1px solid var(--line);
 }
+/* I COMANDI DELLA LISTA, in cima e in una riga sola: «separa/unisci uguali»
+   e il tasto che porta la selezione tutta dentro o tutta fuori. Restano
+   bersagli da pollice — non si stringono a vicenda — e su un telefono
+   davvero stretto vanno a capo invece di diventare illeggibili. */
+.payscreen-comandi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.payscreen-comandi .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 /* Riga di una singola unità nella vista "Separa" del pagamento. */
 /* (Le caselline della vista separata non ci sono più: le unità sono righe
    come le altre, col contatore −/+ — vedi PaymentScreen.jsx.) */

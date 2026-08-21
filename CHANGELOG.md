@@ -4,6 +4,23 @@
 
 ### Per chi gestisce
 
+- **Nel pagamento c'è «Deseleziona tutti»: un tasto e il conto va a
+  zero.** Sta **in cima alla lista delle voci**, accanto a «Separa
+  uguali»/«Unisci uguali». Quando il cliente comincia a dirti cosa ha
+  preso, lo premi una volta: **tutte le voci si spengono insieme** e da lì
+  aggiungi solo quelle che ti sta pagando, una per una. Su un conto da
+  venti prodotti dove ne paga uno, prima toccava togliere la spunta a
+  diciannove voci; adesso è un tasto e un tocco. Quando la lista è tutta
+  spenta lo stesso tasto diventa **«Seleziona tutti»** e rimette dentro
+  tutto. Il vecchio **«Rimetti tutto in pagamento»**, che stava in fondo
+  alla lista, non c'è più: fa lo stesso lavoro questo, dove lo vedi.
+  Con **niente selezionato** l'importo è 0,00 € e sopra c'è scritto
+  «nessuna riga scelta»: «Riscuotere» resta spento finché non scegli una
+  voce — così non parte un incasso vuoto — ma il **tastierino** funziona
+  come sempre, se vuoi battere una cifra a mano. E uno **sconto già
+  preparato non si perde**: resta lì, e appena tocchi la prima voce torna
+  a seguire quello che stai riscuotendo.
+
 - **Il tasto del menu non copre più i conteggi della coda, e sopra le card
   c'è una riga in meno.** A tutto schermo, con la barra in alto nascosta,
   il ☰ era appeso sull'angolo dello schermo: appena scorrevi la coda ci
@@ -29,7 +46,7 @@
   anche lei. Le voci fuori restano lì, **smorte** ma leggibili: si
   rimettono dentro toccandole. Prima, per incassare una birra su un conto
   da dieci righe, dovevi spegnerne nove a una a una. Il **«−»** funziona
-  come ha sempre funzionato, e con **«Rimetti tutto in pagamento»**
+  come ha sempre funzionato, e con **«Seleziona tutti»** in cima
   torni ad avere tutto acceso. Su un prodotto con più pezzi: toccare il
   nome prende **tutta la riga**, il «+» e il «−» muovono **un pezzo per
   volta** — e visto che il conto si apre già a pezzi separati, di solito
