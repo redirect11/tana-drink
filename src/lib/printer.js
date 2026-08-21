@@ -270,8 +270,36 @@ export function stampaQuestoTerminale(order, { daQui = battutoDaQui, impostazion
 //
 // E LA STAMPA UN TERMINALE SOLO: QUELLO CHE HA BATTUTO L'ORDINE
 // (stampaQuestoTerminale, qui sopra).
+// ── LAVORO ANNULLATO: NON SI STAMPA MAI (BUG-071) ────────────────────
+//
+// «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+// uscire se è abilitata la stampa automatica» (l'utente, 21/08/2026).
+//
+// La domanda sta in una funzione sola perché la fanno in due posti — chi
+// sceglie cosa stampare (`comandeDaStampare`, l'auto-stampa) e chi mette
+// l'inchiostro sulla carta (`printComanda`, che ci arriva anche dal tasto
+// «Comanda» della coda) — e finora la faceva solo il primo. Il tasto a
+// mano su un conto annullato stampava ANCORA: `comandaDelTicket` scarta
+// le annullate, non ne trova nessuna, e `printComanda` ripiegava
+// sull'aggregato del conto. Cioè il ticket peggiore possibile — tutte le
+// righe di un conto che non si deve fare — proprio dove non doveva
+// uscirne nessuno.
+//
+// SI GUARDANO TUTTI E DUE I CAMPI. `status` è quello scritto sul
+// documento; `workflow_status` è lo stato di lavorazione che la coda
+// calcola e che alcune viste passano al posto dell'altro. Un conto
+// annullato è annullato da qualunque parte lo si guardi, e questa
+// funzione non deve dipendere da quale delle due strade l'ha chiamata.
+export function lavoroAnnullato(order, comanda = null) {
+  return (
+    order?.status === 'annullato' ||
+    order?.workflow_status === 'annullato' ||
+    comanda?.status === 'annullato'
+  )
+}
+
 export function comandeDaStampare(order, opzioni = {}) {
-  if (!order || order.status === 'annullato') return []
+  if (!order || lavoroAnnullato(order)) return []
   if (!stampaQuestoTerminale(order, opzioni)) return []
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
   // LIMONCELLO da solo visto al banco — stampato a metà battuta, mentre chi
@@ -279,7 +307,7 @@ export function comandeDaStampare(order, opzioni = {}) {
   // chi lo sta battendo esce dalla creazione (`in_creazione` si azzera lì).
   if (order.in_creazione) return []
   return (order.comande || []).filter((c) => {
-    if (!c || c.status === 'annullato') return false
+    if (!c || lavoroAnnullato(order, c)) return false
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
     // dire che qualcuno l'ha lavorata senza carta, e stamparla ora è tardi.
     if (c.status !== 'ricevuto' && c.status !== 'in_preparazione') return false
@@ -616,6 +644,11 @@ export function strisciaComanda(cfg, hhmm) {
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
 // conto aperto). Senza, la sceglie comandaDelTicket — e mai due insieme.
 export function printComanda(order, comanda = null) {
+  // IL CANCELLO STA QUI, all'ultimo passo, e non nei cinque chiamanti: è
+  // la stessa ragione per cui la coda delle stampe vive in `lavoroDiStampa`
+  // (BUG-052). Un conto annullato non ha carta da far uscire, nemmeno dal
+  // tasto a mano, nemmeno da un chiamante scritto domani.
+  if (lavoroAnnullato(order, comandaDelTicket(order, comanda))) return Promise.resolve()
   return lavoroDiStampa(async (prn) => {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()

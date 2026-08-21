@@ -1266,6 +1266,59 @@ describe('in creazione il conto resta UNA comanda', () => {
     // uscire dalla stampante, completa.
     await waitFor(() => expect(chiudiCreazione).toHaveBeenCalledWith('ord-nuovo'))
   })
+
+  // ── MA NON SE SI STA ANNULLANDO (BUG-071) ────────────────────────
+  //
+  // «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+  // uscire se è abilitata la stampa automatica» (l'utente, 21/08/2026).
+  //
+  // `in_creazione` è il cancello della stampa: finché c'è, la comanda non
+  // esce. Annullando, l'uscita lo toglieva SUBITO mentre l'annullo doveva
+  // ancora leggersi il conto — e in quel buco la coda vedeva un conto
+  // composto, aperto e da stampare. Adesso l'uscita non tocca niente: a
+  // chiudere la composizione ci pensa l'annullo, insieme allo stato, in
+  // una scrittura sola (cancelOrder in api.js).
+  //
+  // LA PROVA BATTE UNA RIGA PRIMA DI ANNULLARE, e non è un dettaglio: da
+  // lì il conto è già NATO (la schermata passa a modifica) ma resta «in
+  // creazione». È il caso vero al banco — si batte, si cambia idea, si
+  // annulla — ed è quello che sfuggiva, perché passa dal ramo dell'annullo
+  // normale e non da quello del conto ancora nuovo.
+  it('annullando in creazione, l’uscita NON apre il cancello della stampa', async () => {
+    const user = userEvent.setup()
+    // La prova qui sopra ha chiuso una creazione, e la spia se lo ricorda.
+    chiudiCreazione.mockClear()
+    createOrder.mockImplementationOnce(async () => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      in_creazione: true,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        },
+      ],
+      order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      payments: [],
+    }))
+    const { unmount } = render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    await user.click(screen.getAllByRole('button', { name: /Annulla ordine/ })[0])
+    const conferme = screen.getAllByRole('button', { name: /^Annulla ordine$/ })
+    await user.click(conferme[conferme.length - 1])
+    // Tornando alla coda la schermata si smonta: è lì che l'uscita partiva.
+    unmount()
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalled())
+    expect(chiudiCreazione).not.toHaveBeenCalled()
+  })
 })
 
 // ── Dopo l'annullo si torna agli ordini ───────────────────────────────

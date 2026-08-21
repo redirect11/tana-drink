@@ -4,6 +4,14 @@
 
 ### Per chi gestisce
 
+- **Annullando un conto appena battuto, la comanda non esce più.** Si
+  batteva un ordine alla cassa, si cambiava idea, si annullava — e il
+  ticket usciva lo stesso: carta buttata, e al banco si cominciava a
+  preparare roba che nessuno doveva fare. Adesso l'annullo ferma anche la
+  stampa. E il tasto **«Comanda»** su un conto annullato non stampa più
+  niente: prima faceva uscire un ticket con dentro *tutte* le righe del
+  conto.
+
 - **Chi versa un acconto adesso può portarsi via la sua ricevuta.** Se
   riscuotevi solo una parte del conto non usciva niente: la stampa era
   attaccata alla chiusura, e un acconto non chiude. Adesso c'è un

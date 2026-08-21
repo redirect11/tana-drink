@@ -3452,6 +3452,19 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
   const patchAnnullo = {
     status: ORDER_STATUSES.ANNULLATO,
     ...timbro,
+    // ── L'ANNULLO CHIUDE ANCHE LA COMPOSIZIONE (BUG-071) ────────────
+    //
+    // «Se alla creazione di un ordine lo annullo anche, la comanda non
+    // deve uscire se è abilitata la stampa automatica» (l'utente,
+    // 21/08/2026). Il segno `in_creazione` è il cancello della stampa:
+    // finché c'è, la comanda non esce (comandeDaStampare); toglierlo la
+    // fa uscire. Annullando dalla creazione i due gesti partivano
+    // separati — l'uscita dalla schermata toglieva il segno subito,
+    // l'annullo arrivava dopo la sua lettura — e in quel buco la coda
+    // vedeva un conto composto, aperto e da stampare: la carta usciva.
+    // Qui il cancello si chiude INSIEME allo stato, in una scrittura
+    // sola: non esiste più un istante in cui il conto è stampabile.
+    in_creazione: false,
     comande,
     comande_statuses: comandeStatuses(comande),
     ...(buoniIncasso.length
