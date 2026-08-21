@@ -263,6 +263,49 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
     expect(screen.queryByText('Un tasto per incassare e servire insieme')).toBeNull()
   })
 
+  // ── LE DUE DELLO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ───────────
+  // Stessa famiglia, stesso posto: è la lezione di BUG-070.
+  it('anche le due dell’acconto stanno in Pagamenti', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    expect(sezioneDi('Lo scontrino d’acconto a ogni riscossione')).toBe('Pagamenti')
+    expect(sezioneDi('Un tasto per l’acconto con lo scontrino')).toBe('Pagamenti')
+  })
+
+  // «Quando la riscossione dello scontrino di acconto è attiva, disabilita
+  // l'opzione del terzo bottone» (l'utente, 21/08/2026). Disabilitata, NON
+  // sparita: sparire sembrerebbe un guasto — «l'avevo acceso, dov'è
+  // finito?» — e chi torna qui non capirebbe cosa ha perso.
+  it('con l’acconto automatico acceso, il terzo tasto è spento e dice perché', async () => {
+    impostazioni.scontrino_acconto_sempre = true
+    impostazioni.scontrino_acconto_tasto = true
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    const riga = screen.getByText('Un tasto per l’acconto con lo scontrino').closest('.toggle-row')
+    const interruttore = riga.querySelector('input[type="checkbox"]')
+    expect(interruttore).toBeDisabled()
+    // Spento anche a vedersi, benché la scelta di prima sia ancora scritta
+    // nelle impostazioni: quel tasto in cassa non compare.
+    expect(interruttore).not.toBeChecked()
+    expect(riga).toHaveTextContent(/esce già da sola a ogni riscossione/)
+  })
+
+  it('spento l’automatico, il terzo tasto torna toccabile com’era', async () => {
+    impostazioni.scontrino_acconto_sempre = false
+    impostazioni.scontrino_acconto_tasto = true
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    const interruttore = screen
+      .getByText('Un tasto per l’acconto con lo scontrino')
+      .closest('.toggle-row')
+      .querySelector('input[type="checkbox"]')
+    expect(interruttore).toBeEnabled()
+    expect(interruttore).toBeChecked()
+  })
+
   it('col servizio spento l’interruttore non c’è: «servire» non esiste', async () => {
     // La condizione se l'è portata dietro dal trasloco. Senza i passi del
     // servizio quel tasto non comparirebbe comunque in cassa, e un

@@ -4158,6 +4158,18 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
+  // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
+  // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi
+  // non tocca niente non vede cambiare niente:
+  //   `scontrino_acconto_tasto`  fa comparire il terzo tasto «Acconto con
+  //                              scontrino», da premere quando serve;
+  //   `scontrino_acconto_sempre` la carta esce da sé a ogni riscossione che
+  //                              non chiude, e allora il terzo tasto non ha
+  //                              più niente da fare: la sua opzione si
+  //                              disabilita (lib/scontrinoAcconto.js).
+  scontrino_acconto_tasto: false,
+  scontrino_acconto_sempre: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal

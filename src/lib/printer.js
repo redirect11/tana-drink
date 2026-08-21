@@ -21,7 +21,16 @@ import {
   tipoScontrino,
   LARGHEZZA_LOGO,
 } from './campiStampa.js'
-import { scontiDelConto, scontoTotale } from './pagamento.js'
+import {
+  contoDopoIncasso,
+  etichettaSconto,
+  orderDue,
+  orderTotal,
+  paidAmount,
+  round2,
+  scontiDelConto,
+  scontoTotale,
+} from './pagamento.js'
 
 // ── COSA C'È SULLA CARTA LO DECIDE IL LOCALE ─────────────────────────
 //
@@ -503,6 +512,12 @@ function line(char = '-', width = COL) {
   return char.repeat(width) + '\n'
 }
 
+// Come si chiama un metodo di pagamento sulla carta. Metodo sconosciuto o
+// assente: si scrive che non è indicato. Prima si ripiegava su "Contante", e
+// uno scontrino pagato con la carta usciva con scritto contante — una
+// dichiarazione falsa, non un default.
+const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
+
 function italianDateTime(iso) {
   const d = new Date(iso || Date.now())
   const date = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' })
@@ -969,7 +984,6 @@ export function printScontrino(order, opts = {}) {
       // Metodo sconosciuto o assente: si scrive che non è indicato. Prima si
       // ripiegava su "Contante", e uno scontrino pagato con la carta usciva
       // con scritto contante — una dichiarazione falsa, non un default.
-      const nomeMetodo = (m) => PAYMENT_METHOD_PRINT[m] || 'Non indicato'
       // Se ci sono incassi registrati si elencano uno per uno (conti divisi o
       // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
       // carta. Altrimenti si usa il metodo di chiusura del conto.
@@ -980,6 +994,19 @@ export function printScontrino(order, opts = {}) {
         }
       } else {
         prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
+      }
+      // ── E QUANTO RESTA ────────────────────────────────────────────
+      // Sul PRECONTO di un conto su cui sono già stati presi degli acconti
+      // qui finiva l'elenco: «Totale con IVA 46,00» sopra e «Contante
+      // 13,00» sotto, e la sottrazione la faceva a mente chi teneva il
+      // foglio davanti al cliente. Su uno scontrino di chiusura il residuo
+      // è zero e la riga non compare — è solo il conto ancora aperto che
+      // ha qualcosa da dire.
+      const residuo = orderDue(order)
+      if (incassi.length > 0 && residuo > 0) {
+        prn.addTextStyle(false, false, true, prn.COLOR_1)
+        prn.addText(row('Resta da pagare', `${residuo.toFixed(2)}€`))
+        prn.addTextStyle(false, false, false, prn.COLOR_1)
       }
       prn.addText(line())
     }
@@ -996,6 +1023,165 @@ export function printScontrino(order, opts = {}) {
       const shortId = (order.id || '').substring(0, 36)
       prn.addText(`${shortId}\n`)
     }
+    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    const saluto = cfg.parole('riga_cortesia')
+    if (saluto) prn.addText(`${saluto}\n`)
+
+    prn.addFeedLine(4)
+    prn.addCut(prn.CUT_FEED)
+  })
+}
+
+// ── SCONTRINO D'ACCONTO ──────────────────────────────────────────────────────
+//
+// «Lo scontrino esce ad ogni riscossione ma è configurabile» (l'utente,
+// 21/08/2026). Questa NON è la carta del conto: è la carta di chi versa
+// una parte e se ne va, e per lui il conto non è finito. Quattro domande,
+// in mezzo secondo: cosa ho pagato, quanto, come, quanto resta.
+//
+// CHE NON SIA SCAMBIABILE PER LO SCONTRINO FINALE è il vincolo che tiene
+// insieme il disegno: la fascia nera ACCONTO in cima e la riga in fondo
+// che dice che il conto resta aperto NON sono campi, non si spengono, e
+// non c'è impostazione che possa arrivarci. Una carta che sembra dire
+// «pagato» su un conto ancora aperto è un cliente che discute al banco.
+//
+// L'ORDINE CHE ARRIVA QUI È QUELLO DI PRIMA. La riscossione parte in
+// sottofondo — niente aspetta la rete — quindi l'incasso appena battuto
+// non c'è ancora sul documento e lo sconto è ancora «in preparazione»:
+// `contoDopoIncasso` (pagamento.js) fa i conti sul DOPO, che è quello che
+// il cliente si porta via.
+//
+// NIENTE PRETESA E NIENTE SEGNO SUL DATO, al contrario dello scontrino di
+// chiusura. `receipt_print_at` e `claimReceiptPrint` dicono «la carta di
+// QUESTO CONTO è già uscita»: è uno stato del conto, e ce n'è uno solo.
+// Un acconto è un EVENTO — su un conto ce ne stanno tre — e legarlo a
+// quel segno vorrebbe dire che il secondo acconto non stampa più, o
+// peggio che stampandolo si brucia la pretesa dello scontrino finale
+// (BUG-047). La carta esce dal gesto, su chi ha fatto il gesto, una
+// volta: non c'è nessun altro terminale che possa stamparla per sbaglio,
+// perché nessuno guarda i pagamenti altrui per decidere di stampare.
+//
+// `incasso`: { amount, method, items|null, sconto|null } — la riscossione
+// che sta succedendo adesso, così com'è stata mandata a `registerPayment`.
+export function printScontrinoAcconto(order, incasso = {}) {
+  return lavoroDiStampa(async (prn) => {
+    const s = loadPrinterSettings()
+    const cfg = configStampa(impostazioniDelLocale(), 'acconto')
+    const dopo = contoDopoIncasso(order, incasso)
+    const { date, time } = italianDateTime(incasso?.at || new Date().toISOString())
+    const versato = round2(incasso?.amount)
+    // Le righe di QUESTA riscossione. Su un acconto battuto a mano non ce
+    // n'è nessuna — «venti euro sul tavolo» non salda niente in
+    // particolare — e allora la lista non si stampa affatto: meglio niente
+    // che un elenco che non è quello che si è pagato.
+    const righe = (incasso?.items || []).filter((i) => (Number(i.qty) || 0) > 0)
+    const scontoOra =
+      incasso?.sconto && (Number(incasso.sconto.amount) || 0) > 0 ? incasso.sconto : null
+
+    prn.addTextLang('it')
+    prn.addTextSmooth(true)
+
+    // ── Intestazione ──
+    await stampaLogo(prn, 'acconto')
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    const nome = cfg.mostra('nome_locale')
+    const via = cfg.mostra('indirizzo')
+    const citta = cfg.mostra('citta')
+    if (nome) {
+      prn.addTextSize(2, 2)
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText(`${s.businessName}\n`)
+      prn.addTextSize(1, 1)
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+    }
+    if (via) prn.addText(`${s.businessAddress}\n`)
+    if (citta) prn.addText(`${s.businessCity}\n`)
+    if (nome || via || citta) prn.addText('\n')
+
+    // ── La fascia: si legge da lontano, e non si spegne ──
+    prn.addTextStyle(true, false, true, prn.COLOR_1) // reverse: bianco su nero
+    prn.addTextSize(2, 2)
+    prn.addText('  ACCONTO  \n')
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    prn.addText('\n')
+
+    // ── Di che conto è ──
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    if (cfg.mostra('numero')) {
+      prn.addText(row(`ACCONTO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
+    }
+    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
+    if (cfg.mostra('riga_vendita')) {
+      prn.addText(
+        order.table_label
+          ? `Vendita - Tavolo ${order.table_label}\n`
+          : `Vendita - Comanda #${order.daily_number}\n`
+      )
+    }
+    prn.addText(line())
+
+    // ── Cosa ha pagato ──
+    // Non sta fra i campi: è la risposta alla prima domanda che fa chi ha
+    // appena messo dei soldi sul tavolo con altri sei intorno.
+    if (righe.length > 0) {
+      if (cfg.mostra('intestazione_colonne')) {
+        prn.addTextStyle(false, false, true, prn.COLOR_1)
+        prn.addText(row('QTA  Prodotto', 'PU       Prezzo'))
+        prn.addTextStyle(false, false, false, prn.COLOR_1)
+        prn.addText(line())
+      }
+      for (const i of righe) {
+        const pu = `${(Number(i.unit_price) || 0).toFixed(2)}€`
+        const tot = `${((Number(i.qty) || 0) * (Number(i.unit_price) || 0)).toFixed(2)}€`
+        prn.addText(row(`${i.qty}x  ${i.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+      }
+      prn.addText(line())
+    }
+
+    // Lo sconto che questa riscossione si è portato via: dice su che cosa
+    // cadeva, perché su un conto diviso ce ne può essere uno per ognuno
+    // che paga la sua parte (REQ-PAG-013).
+    if (scontoOra && cfg.mostra('sconto')) {
+      prn.addText(row(etichettaSconto(scontoOra), `-${round2(scontoOra.amount).toFixed(2)}€`))
+      prn.addText(line())
+    }
+
+    // ── Quanto, in grande ──
+    // L'importo non è un campo, come non lo è il totale dello scontrino:
+    // un acconto senza l'importo versato non è un documento.
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addTextSize(1, 2)
+    prn.addTextStyle(false, false, true, prn.COLOR_1)
+    prn.addText('Versato\n')
+    prn.addTextSize(3, 3)
+    prn.addText(`${versato.toFixed(2)}€\n`)
+    prn.addTextSize(1, 1)
+    prn.addTextStyle(false, false, false, prn.COLOR_1)
+    if (cfg.mostra('metodo')) prn.addText(`${nomeMetodo(incasso?.method)}\n`)
+    prn.addText('\n')
+    prn.addTextAlign(prn.ALIGN_LEFT)
+    prn.addText(line())
+
+    // ── Come sta il conto ──
+    if (cfg.mostra('riepilogo_conto')) {
+      prn.addText(row('Totale del conto', `${orderTotal(dopo).toFixed(2)}€`))
+      prn.addText(row('Versato in tutto', `${paidAmount(dopo).toFixed(2)}€`))
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText(row('Resta da pagare', `${orderDue(dopo).toFixed(2)}€`))
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      prn.addText(line())
+    }
+
+    // ── E che il conto è ancora aperto ──
+    // Fissa, come la fascia in cima. È la riga che al banco evita la
+    // discussione: «ma io lo scontrino ce l'avevo già».
+    prn.addTextAlign(prn.ALIGN_CENTER)
+    prn.addText('Ricevuta di acconto, non fiscale.\n')
+    prn.addText('Il conto resta aperto.\n')
+    prn.addText('\n')
+
+    if (cfg.mostra('codice_conto')) prn.addText(`${(order.id || '').substring(0, 36)}\n`)
     if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
@@ -1250,9 +1436,23 @@ const CONTO_DI_PROVA = {
 }
 
 export function printAnteprima(quale) {
-  return quale === 'comanda'
-    ? printComanda(CONTO_DI_PROVA)
-    : printScontrino(CONTO_DI_PROVA)
+  if (quale === 'comanda') return printComanda(CONTO_DI_PROVA)
+  // L'acconto ha bisogno di una RISCOSSIONE, non solo di un conto: senza,
+  // non c'è niente da mostrare. Se ne inventa una parziale e scontata —
+  // il caso per cui questa carta esiste.
+  if (quale === 'acconto') {
+    return printScontrinoAcconto(
+      { ...CONTO_DI_PROVA, status: 'aperto', discount_amount: 0 },
+      {
+        amount: 13,
+        method: 'contanti',
+        items: [{ qty: 2, name: 'Negroni', unit_price: 8 }],
+        sconto: { type: 'euro', value: 3, amount: 3, items: [{ qty: 2, name: 'Negroni' }] },
+        at: '2026-08-21T21:30:00.000Z',
+      }
+    )
+  }
+  return printScontrino(CONTO_DI_PROVA)
 }
 
 export function printTest() {

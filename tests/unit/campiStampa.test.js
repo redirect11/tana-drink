@@ -156,7 +156,17 @@ describe('su quali stampe esce il logo', () => {
 
   it('una stampa che non è nell’elenco non prende il logo', () => {
     expect(logoAcceso({ stampa_logo: { fattura: true } }, 'fattura')).toBe(false)
-    expect(TIPI_LOGO.map((t) => t.id)).toEqual(['scontrino', 'preconto', 'comanda', 'chiusura'])
+    // Lo scontrino d'acconto è entrato nell'elenco (REQ-STAMPA-015): è
+    // carta che resta in mano al cliente come il preconto, quindi nasce
+    // col logo acceso.
+    expect(TIPI_LOGO.map((t) => t.id)).toEqual([
+      'scontrino',
+      'preconto',
+      'acconto',
+      'comanda',
+      'chiusura',
+    ])
+    expect(logoAcceso({}, 'acconto')).toBe(true)
   })
 })
 

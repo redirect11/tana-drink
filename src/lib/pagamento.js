@@ -250,6 +250,38 @@ export function paymentCloses(order, amount) {
   return orderDue(order) - (Number(amount) || 0) <= EPS
 }
 
+// ── IL CONTO COM'È RIMASTO, UN ISTANTE PRIMA CHE IL SERVER LO SAPPIA ──
+//
+// La riscossione parte in sottofondo (niente aspetta la rete), quindi nel
+// momento in cui si stampa una carta l'ordine che si ha in mano è ancora
+// quello di PRIMA: senza l'incasso appena battuto, e con lo sconto ancora
+// «in preparazione» sul documento. Chi stampa ha bisogno del dopo.
+//
+// DUE COSE INSIEME, e la seconda è quella che si sbaglia: il pagamento si
+// aggiunge in coda, e lo sconto che quel pagamento si è portato via VIENE
+// TOLTO dal documento. Lasciandolo in tutti e due i posti `scontoTotale`
+// lo conterebbe due volte, e il residuo stampato sarebbe più basso del
+// vero — cioè un cliente che al saldo paga meno di quello che deve.
+// È la stessa cosa che fa `registerPayment` sul server: qui si anticipa,
+// non si inventa.
+export function contoDopoIncasso(order, incasso) {
+  const sconto = incasso?.sconto && (Number(incasso.sconto.amount) || 0) > 0 ? incasso.sconto : null
+  return {
+    ...order,
+    payments: [
+      ...(order?.payments || []),
+      {
+        amount: round2(incasso?.amount),
+        method: incasso?.method ?? null,
+        items: incasso?.items ?? null,
+        at: incasso?.at || new Date().toISOString(),
+        ...(sconto ? { sconto } : {}),
+      },
+    ],
+    ...(sconto ? { discount: null, discount_amount: 0, discount_items: null } : {}),
+  }
+}
+
 // Metodo "riassuntivo" del conto dopo l'ultimo pagamento: se i metodi
 // usati sono diversi il conto risulta pagato "misto".
 export function summaryMethod(payments) {
