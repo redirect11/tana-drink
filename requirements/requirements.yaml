@@ -343,6 +343,18 @@ requirements:
       Resta scoperto un solo caso: due DISPOSITIVI che battono nello stesso
       istante. Escluderlo vorrebbe dire una transazione, cioè aspettare il
       server a ogni ordine — il contrario di quello che serve al banco.
+      IN QUALE SERATA SI STA, ci si RICORDA. Il contatore da usare dipende da
+      una domanda sola — c'è una cassa aperta? — e finché l'ascolto su
+      `counters/_active_cash` non ha risposto quella domanda ha una terza
+      risposta possibile, «non lo so ancora», che non è «no». Presa per un
+      no, il conto si numerava sul contatore della GIORNATA — che è un altro
+      contatore, e nella stessa sera dà lo stesso numero — e nasceva perfino
+      senza serata (`cash_session_id: null`), quindi fuori dalla chiusura di
+      cassa. L'ultima cassa che si sapeva aperta resta scritta in memoria
+      locale, come i numeri già assegnati, e vale per la giornata commerciale
+      in cui è stata scritta: un ricaricamento non fa più dimenticare la
+      serata, e non si aspetta nessuno. Quando il server dice che nessuna
+      cassa è aperta — che è una risposta — la memoria si cancella.
       UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte
       (l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco):
       la chiave della battuta fa restituire il conto che sta già nascendo
@@ -547,6 +559,7 @@ requirements:
     labels: [ordini, offline, difetto-risolto]
     test_cases:
       - tests/unit/progressivi.test.js
+      - tests/unit/cassaDellaSerata.test.js
       - tests/bdd/numerazione.test.js
       - tests/component/PosPage.test.jsx
       - tests/unit/sync.test.js

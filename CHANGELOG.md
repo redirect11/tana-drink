@@ -4,6 +4,15 @@
 
 ### Per chi gestisce
 
+- **Non nascono più due conti con lo stesso numero dopo un ricaricamento.**
+  Ricaricando la pagina l'app per un attimo non sapeva ancora quale cassa
+  fosse aperta, e un conto battuto proprio in quell'istante prendeva il
+  numero da un'altra serie: usciva un **secondo #5** nella stessa sera — e
+  quel conto per giunta non finiva nella chiusura di cassa. Adesso l'app
+  **si ricorda la cassa della serata** e non se la dimentica al ricarico.
+  Come sempre, non aspetta niente e nessuno: il conto compare nell'istante
+  in cui lo confermi.
+
 - **Un conto annullato e poi rimesso in piedi avvisa una volta sola, e dice
   che è tornato.** Prima ne arrivavano due, una dietro l'altra e con parole
   diverse: «🆕 Nuovo ordine — Ordine #5 ricevuto.» e «Ordine ricevuto —

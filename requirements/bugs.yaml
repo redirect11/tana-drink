@@ -2779,3 +2779,52 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/paroleDegliAvvisi.test.js
+
+  - id: BUG-074
+    title: "Due ordini #5 nella stessa sera: il conto battuto prima che si sapesse la cassa si numera sul giorno"
+    area: "src/lib/progressivi.js, src/lib/api.js (creaOrdine)"
+    description: >
+      Segnalato dall'utente il 21/08/2026, con la schermata della coda: «e
+      poi vedi che ci sono due ordini #5». Il numero del conto e' quello che
+      il cliente si sente dire ad alta voce: due conti con lo stesso numero,
+      la stessa sera, sono due comande che si scambiano di posto al banco.
+      LA CAUSA. Il numero lo da' il contatore che il dispositivo ha gia' in
+      memoria, e quale contatore sia lo decide una domanda sola: c'e' una
+      cassa aperta? Se si' si conta dentro la SERATA (`cash-<sessione>`), se
+      no dentro la GIORNATA. Sono due contatori indipendenti: nella stessa
+      sera danno benissimo lo stesso #5. Il difetto stava nella terza
+      risposta possibile, che non veniva considerata: «non lo so ancora».
+      L'ascolto su `counters/_active_cash` riparte da capo a ogni
+      ricaricamento della pagina, e finche' non ha risposto `cassaCorrente()`
+      tornava `null` — che il codice prendeva per «cassa chiusa».
+      COSA NE VENIVA, provato: il conto battuto in quella finestra nasce con
+      `daily_number` preso dal contatore del giorno — cioe' un numero gia'
+      usato quella sera — E con `cash_session_id: null`. Non e' «numerato
+      male ma nella serata giusta»: e' proprio SENZA SERATA, quindi non
+      compare nella chiusura di cassa. Due danni, uno visibile e uno no.
+      E LA RETE DI SICUREZZA DEL SERVER NON LO PRENDE. `risolviNumeroDuplicato`
+      (functions/index.js) cerca i fratelli dentro `cash_session_id` se c'e',
+      dentro `order_date` altrimenti: il conto orfano si confronta con la
+      giornata e vede il gemello, ma il conto REGOLARE che arriva dopo si
+      confronta con la sola serata, dove l'orfano non c'e'. Nato per primo
+      l'orfano, il doppione sopravvive. Resta cosi': allargare il confronto
+      alla giornata romperebbe il caso legittimo di due casse nella stessa
+      giornata commerciale, dove la numerazione riparte apposta.
+      COME E' STATO SISTEMATO, restando local-first: non si aspetta nessuno,
+      ci si RICORDA. L'ultima cassa che si sapeva aperta resta in memoria
+      locale (`tana:cassa-aperta`), come gia' i numeri assegnati, e vale per
+      la giornata commerciale in cui e' stata scritta — quella di ieri non e'
+      una risposta, e' un'altra serata. Un ricaricamento non fa piu'
+      dimenticare in che serata si sta; il server corregge appena risponde, e
+      quando dice che nessuna cassa e' aperta la memoria si cancella.
+      SCARTATE: aspettare il server prima di battere (un'attesa di rete a
+      ogni conto, il contrario di tutto il progetto) e impedire di battere
+      finche' non si sa (blocca il banco). Rimettendo il difetto,
+      tests/unit/cassaDellaSerata.test.js torna rosso.
+    labels: [bug, ordini, cassa, offline]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/cassaDellaSerata.test.js
