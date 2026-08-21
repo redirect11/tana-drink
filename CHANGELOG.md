@@ -4,6 +4,17 @@
 
 ### Per chi gestisce
 
+- **Le tre colonne della schermata di pagamento si allargano e si
+  stringono**, come già quelle del dettaglio ordine: si prende il bordo fra
+  una colonna e l'altra e lo si trascina (col dito, tenendo premuto un
+  istante). Chi batte gli importi a mano si fa il **tastierino grande**;
+  chi divide un conto lungo si allarga la **lista delle voci**. La misura
+  **resta su quel tablet** — il banco e la sala possono tenerla diversa — e
+  non si può stringere niente fino a farlo sparire: i tasti con cui si
+  sceglie come incassare restano sempre lì, e al tastierino resta sempre
+  almeno un terzo dello schermo, a qualunque zoom. Sul telefono, dove le
+  colonne sono già una sotto l'altra, non cambia nulla.
+
 - **Via l'avviso «Comande non ancora servite» dalla schermata di
   pagamento.** Era una riga fissa sotto l'importo, e quando si ingrandisce
   l'app quella riga è spazio tolto al **tastierino**. Quello che diceva non

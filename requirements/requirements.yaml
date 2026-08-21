@@ -7740,3 +7740,61 @@ requirements:
       - tests/unit/contoScontatoSiChiude.test.js
       - tests/component/PaymentScreen.test.jsx
       - tests/unit/campiDiStampa.test.js
+
+  - id: REQ-PAG-014
+    title: "Le tre colonne del pagamento si trascinano, e la misura resta su quel terminale"
+    area: "src/components/PaymentScreen.jsx, src/lib/useResizable.js, src/index.css"
+    description: >
+      Chiesto dall'utente il 21/08/2026, subito dopo il lavoro sullo zoom
+      (BUG-075): «rendi ridimensionabili le tre colonne della schermata
+      pagamento come lo sono quelle nel dettaglio dell'ordine». Al banco chi
+      batte importi a mano vuole il tastierino grande; chi divide un conto
+      lungo vuole la lista delle voci. Sono due mestieri diversi sullo
+      stesso schermo, e finora la misura la decideva il foglio di stile.
+      COM'E' FATTO: le stesse maniglie del POS, lo stesso attrezzo
+      ('useResizable', quindi anche la presa col dito solo tenendo premuto —
+      REQ-POS-008). Due bordi trascinabili, fra le voci e il tastierino e
+      fra il tastierino e i metodi; il centro prende quello che resta, come
+      nel POS. La larghezza si ricorda PER TERMINALE (localStorage): il
+      tablet del banco e quello della sala non hanno lo stesso schermo ne'
+      lo stesso mestiere.
+      I LIMITI, e perche' sono quelli. A sinistra da 200 a 460px: sotto i
+      200 il prezzo di una voce va a capo sotto il nome e la lista smette di
+      leggersi in colonna. A destra da 170 a 380px: i metodi devono restare
+      leggibili su una riga sola («Carta di Credito» e' il piu' lungo) e
+      quella colonna NON DEVE POTER SPARIRE — li' ci sono i tasti con cui si
+      sceglie come si incassa.
+      IL PAVIMENTO DEL CENTRO PERO' NON STA NEL JAVASCRIPT, sta nel foglio:
+      ogni colonna laterale e' limitata anche in PERCENTUALE (34% e 30%),
+      quindi al tastierino resta sempre almeno un terzo della larghezza. Il
+      motivo e' BUG-075: la misura trascinata e' in pixel e resta scritta,
+      ma i pixel CSS disponibili dipendono dallo zoom dell'app — a zoom 1,6
+      una finestra da 1440 ne ha 900 — e una colonna larga trascinata a zoom
+      1 schiaccerebbe il centro fino a coprire i tasti. In percentuale il
+      conto si rifa' da solo a ogni zoom e a ogni finestra.
+      SUL TELEFONO NON C'E': sotto gli 800px le colonne sono impilate a
+      tutta larghezza e una larghezza da trascinare non esiste — le maniglie
+      spariscono.
+      I TESTI NON SCALANO con la colonna, e qui e' una scelta contraria a
+      quella del POS (dove '--comanda-scale' segue la larghezza). Nel POS
+      quel pannello e' la superficie di lavoro e la sua larghezza varia
+      moltissimo; qui la leggibilita' ha gia' il suo comando, ed e' lo ZOOM
+      dell'app, che vale per tutta la schermata. Due manopole per la stessa
+      cosa vorrebbero dire una voce leggibile a una larghezza e non a
+      un'altra, e chi allarga la colonna lo fa per vedere PIU' RIGHE, non
+      righe piu' grandi.
+      MISURATO IN CHROME VERO, non a occhio: 96 combinazioni (colonne
+      strette al minimo, a riposo e larghe al massimo x sei finestre x
+      quattro livelli di zoom), leggendo per ogni tasto chi gli finisce
+      sopra con 'elementFromPoint'. Ai due estremi del trascinamento non
+      nasce nessun caso nuovo di tasto coperto — anzi, uno di quelli che
+      c'erano prima sparisce, perche' il tetto in percentuale tiene il
+      tastierino piu' largo di quanto lo tenesse la misura fissa.
+    status: implemented
+    generate_issue: true
+    labels: [pagamenti, interfaccia, ux]
+    priority: P2
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/css.test.js
+      - tests/unit/useResizable.test.js
