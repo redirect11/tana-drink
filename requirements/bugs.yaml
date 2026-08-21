@@ -2494,3 +2494,84 @@ bugs:
     in_produzione: false
     test_cases:
       - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-067
+    title: "Il ☰ finiva sopra i conteggi della coda: il menu flottante copriva la testata"
+    area: "src/index.css, src/pages/BartenderPage.jsx"
+    description: >
+      «Il tasto menu va a finire sulla label» (l'utente, 21/08/2026), con
+      uno screenshot dal telefono sul sito di test: coda a corsie, barra in
+      alto nascosta, il ☰ sopra le prime due righe della testata. «4 aperti
+      · 6 chiusi · 222,00 €» si leggeva «…erti · 6 chiusi» e «Banco Bar ·
+      sei tu» si leggeva «…o Bar · sei tu»: sotto il ☰ finivano il
+      conteggio dei conti aperti e il nome del terminale, due cose che si
+      guardano di continuo.
+      DA DOVE VENIVA. A tutto schermo la barra in alto non c'e' e il menu
+      si apriva da un tasto FISSO nell'angolo (position: fixed), fuori dal
+      flusso: non spingeva niente, e il posto glielo teneva la testata a
+      mano — 54px di rientro sul titolo, 62 sull'avviso «Cassa chiusa», un
+      «top» calcolato per centrarlo sulla riga 1. Misurando: A PAGINA IN
+      CIMA quel posto tornava, i conteggi partivano 20px sotto il ☰. Il
+      guaio era lo SCORRIMENTO: la coda scorre tutta, testata compresa, e
+      un tasto fisso sopra una pagina che scorre finisce prima o poi su
+      quello che c'e' scritto sotto — bastavano 60px di scorrimento perche'
+      il ☰ si mangiasse i primi 36px delle due righe.
+      COME E' STATO SISTEMATO. Il ☰ della lavagna e' diventato un figlio
+      della testata (.board-burger), primo pezzo della prima fascia: scorre
+      con lei invece di starle sopra, e non c'e' piu' niente che possa
+      finirci sotto — ne' in cima ne' scorrendo. Il menu resta a un tocco
+      dov'e' sempre stato (a sinistra, in alto, docs/navigazione.md) e
+      quando la testata e' scorsa via si riapre dalla linguetta della barra
+      come tutto il resto. Sono spariti insieme a lui i tre posti che gli
+      tenevano il posto a mano: il rientro del titolo, quello dell'avviso e
+      il «top» calcolato. StaffDrawer riceve «flottante={false}» dal
+      gestionale: un ☰ solo per schermata.
+    labels: [bug, ui, coda, telefono]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/StaffDrawer.test.jsx
+
+  - id: BUG-068
+    title: "Quattro fasce di testata prima della prima card, sul telefono"
+    area: "src/index.css, src/pages/BartenderPage.jsx"
+    description: >
+      «Il layout sopra le card non è il massimo su mobile» (l'utente,
+      21/08/2026), guardando la coda a griglia dal telefono con la barra in
+      alto nascosta. Prima della prima card c'erano quattro fasce:
+      1) il titolo — con «In servizio» spezzato su due righe perche'
+      schiacciato — piu' stampante, ⋯, cambio vista e ➕;
+      2) i conteggi e la legenda di chi e' in servizio;
+      3) «▾ Filtri» e «↓» DA SOLI, spinti a destra, su una fascia tutta
+      loro: lo spreco piu' evidente;
+      4) la ricerca, a tutta larghezza.
+      Su una lavagna ogni fascia di testata e' una card in meno a schermo, e
+      il giro di lavoro di questi giorni va tutto nella direzione opposta.
+      COME E' STATO SISTEMATO. Tre fasce invece di quattro, senza perdere
+      niente: 1) ☰, titolo, stampante, ⋯, cambio vista, ➕; 2) ricerca coi
+      due tastini in fondo — dove la lista e le schede li tengono gia', per
+      cui chi cambia vista li ritrova; 3) conteggi e legenda, e sotto, da
+      aperti, i chip dei filtri. Il titolo non va piu' a capo: si accorcia
+      coi puntini, che una riga in piu' costa piu' di due lettere. Il
+      respiro fra i tasti passa da 8 a 6px sul telefono (i bersagli restano
+      44px: si avvicinano, non si rimpiccioliscono) e sono i 10px che fanno
+      stare «In servizio» scritto per intero da 390px in su. Misurato: la
+      testata passa da 161 a 141px su un telefono da 360.
+      RIPULITO PER STRADA: la testata del telefono era dichiarata in due
+      blocchi (700px e 640px) con ordini diversi — valevano tutt'e due e
+      vinceva l'ultima scritta — e nel secondo c'era un ➕ da 46px che non
+      ha mai colorato un pixel, perche' la regola di base che lo fa da 60
+      sta piu' in basso nel foglio. Il ➕ e' sempre stato grande anche sul
+      telefono, ed e' giusto cosi'.
+    labels: [bug, ui, coda, telefono]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx

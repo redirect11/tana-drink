@@ -4,6 +4,23 @@
 
 ### Per chi gestisce
 
+- **Il tasto del menu non copre più i conteggi della coda, e sopra le card
+  c'è una riga in meno.** A tutto schermo, con la barra in alto nascosta,
+  il ☰ era appeso sull'angolo dello schermo: appena scorrevi la coda ci
+  finiva sotto l'inizio delle scritte — «4 aperti · 16 chiusi · 583,00 €»
+  si leggeva «…erti · 16 chiusi», e il nome del terminale «…o Bar · sei
+  tu». Adesso il ☰ **sta dentro la testata**, primo tasto in alto a
+  sinistra, e scorre insieme a lei: non copre più niente, né in cima né
+  scorrendo. Quando la testata è scorsa via il menu si riapre dalla
+  linguetta, come tutto il resto.
+  E la testata sul **telefono** è passata da **quattro righe a tre**: «▾
+  Filtri» e «↓» non hanno più una riga tutta loro — stanno in fondo alla
+  riga della ricerca, che è dove la lista e le schede li tengono già — e
+  «In servizio» non si spezza più in due. Non si è perso niente:
+  conteggi, incasso, chi sei e su che terminale, ricerca, filtri,
+  ordinamento, cambio vista, stampante e il ＋ sono tutti dove erano. Sulla
+  lavagna sono una ventina di pixel restituiti alle card.
+
 - **Nel pagamento, il primo tocco sceglie: «di tutto il conto, mi paghi
   questo».** La schermata si apre con tutto acceso, come sempre. Ma
   adesso, **appena tocchi una voce — il nome del prodotto, o il suo «+» —

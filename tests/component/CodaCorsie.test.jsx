@@ -962,6 +962,14 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
   // dalla testata («mettila sotto dove stavano i vecchi bottoni», l'utente
   // 20/08) e dal ⋯ l'ordinamento è uscito — in due posti sarebbero due
   // stati da tenere allineati a mano.
+  //
+  // GIÙ DOVE, PERÒ, È CAMBIATO. Stavano in fondo alla riga dei conteggi —
+  // e sul telefono quella riga è già piena di conteggi e legenda, quindi
+  // andavano a capo su una fascia tutta loro, due tastini soli spinti a
+  // destra: «il layout sopra le card non è il massimo su mobile»
+  // (l'utente, 21/08/2026). Adesso stanno in riga con la ricerca, che è
+  // esattamente dove la lista e le schede li tengono già. Una fascia di
+  // testata in meno è una card in più sulla lavagna.
   describe('sul telefono', () => {
     const vero = window.matchMedia
     beforeEach(() => {
@@ -986,11 +994,14 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
       const azioni = altro.closest('.board-actions')
       expect(within(azioni).getByRole('button', { name: 'Comande' })).toBeInTheDocument()
 
-      // i due tastini no: stanno giù, sulla riga dei conteggi, come sugli
-      // schermi larghi — e anche qui senza costare una riga.
+      // i due tastini no: stanno giù, in riga con la ricerca — e lì non
+      // costano una fascia, perché la ricerca ce l'ha comunque.
       expect(within(azioni).queryByRole('button', { name: 'Filtri' })).not.toBeInTheDocument()
       const tastini = screen.getByRole('button', { name: 'Filtri' }).closest('.coda-tastini')
-      expect(tastini.closest('.board-sotto')).toBeTruthy()
+      expect(tastini.closest('.board-cerca')).toBeTruthy()
+      expect(tastini.closest('.board-sotto')).toBeNull()
+      // e la ricerca è lì con loro: è quella la fascia
+      expect(tastini.closest('.board-cerca').querySelector('.board-search')).toBeTruthy()
       expect(within(tastini).getByRole('button', { name: /Prima i più/ })).toBeInTheDocument()
 
       // e nemmeno dentro il ⋯: niente doppioni, o sarebbero due stati da
@@ -2695,5 +2706,52 @@ describe('le comande si spostano anche col dito', () => {
     await screen.findByText('Da fare')
     act(() => lascia('o41:c-o41', 'da-fare'))
     expect(advanceComanda).not.toHaveBeenCalled()
+  })
+})
+
+// ── IL ☰ DELLA LAVAGNA STA NELLA TESTATA ─────────────────────────────
+//
+// «Il tasto menu va a finire sulla label» (l'utente, 21/08/2026), con uno
+// screenshot dal telefono: a tutto schermo la topbar è nascosta e il menu
+// si apriva da un tasto FISSO nell'angolo, fuori dal flusso. Il posto glielo
+// teneva la testata a mano — un rientro sul titolo, un altro sull'avviso
+// della cassa — e quel posto era vero solo a PAGINA IN CIMA. La coda scorre:
+// scorrendo, la testata gli passava sotto e il conteggio dei conti aperti e
+// il nome del terminale si leggevano mozzati («…erti · 6 chiusi»).
+//
+// Adesso il ☰ è un figlio della testata come gli altri: scorre con lei,
+// non le sta sopra, e non c'è più niente che possa finirci sotto.
+describe('il ☰ della coda', () => {
+  beforeEach(() => {
+    impostazioni = { queue_view: 'corsie', workflow_enabled: true }
+    ruolo = 'admin'
+    ordini = [conto({ id: 'o1', daily_number: 1 })]
+  })
+
+  it('sta dentro la testata, non flottante sopra la pagina', async () => {
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    const menu = screen.getByRole('button', { name: 'Menu' })
+    expect(menu).toHaveClass('board-burger')
+    // dentro la testata: è lei a fargli posto, scorrendo insieme a lui
+    expect(menu.closest('.board-head')).toBeTruthy()
+    // ed è il PRIMO pezzo della fascia: chi cerca il menu guarda a
+    // sinistra, in alto (docs/navigazione.md)
+    expect(menu.closest('.board-head').firstElementChild).toBe(menu)
+  })
+
+  it('apre il menu laterale, come il ☰ della barra', async () => {
+    const utente = userEvent.setup()
+    const aperture = []
+    const spia = () => aperture.push(1)
+    window.addEventListener('tana:toggle-drawer', spia)
+    try {
+      montaCoda()
+      await screen.findByText(/In servizio/)
+      await utente.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(aperture).toHaveLength(1)
+    } finally {
+      window.removeEventListener('tana:toggle-drawer', spia)
+    }
   })
 })

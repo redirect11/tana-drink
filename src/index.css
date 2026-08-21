@@ -1473,10 +1473,17 @@ a.order-mini {
    nulla, con un buco a sinistra. */
 
 /* UN SOLO ☰ per schermata. Chi lo mostra:
-     coda a griglia / POS (topbar nascosta) → questo, flottante
+     lavagna della coda (topbar nascosta)   → .board-burger, NEL FLUSSO
+                                              della testata (StaffDrawer
+                                              lo riceve con flottante=false)
      tutto il resto (topbar visibile)       → .topbar-burger
      topbar APERTA a tutto schermo          → .topbar-burger (questo sparisce)
      POS e dettaglio ordine                 → nessuno: si esce con "← Ordini"
+   Questo qui — flottante, fisso nell'angolo — resta per le schermate a
+   tutto schermo che una testata loro non ce l'hanno. Dove la testata c'è
+   NON si usa: un tasto fisso sopra una pagina che scorre finisce addosso a
+   quello che scorre, ed è esattamente il guaio che ha portato il ☰ della
+   coda dentro la testata (vedi `.board-burger`).
    Le regole qui sotto e in App.jsx (menuQui) tengono fede a questa tabella. */
 .bar-burger {
   display: none; /* solo in fullbleed: altrove il ☰ sta nella topbar */
@@ -1730,14 +1737,9 @@ body.fullbleed .bar-burger {
 body.fullbleed.topbar-open .bar-burger {
   display: none;
 }
-/* Avvisi in cima alla board (es. "Cassa chiusa"): lasciano il posto al ☰
-   flottante, che è fisso nell'angolo e ci finiva sopra. */
-body.fullbleed .queue-board > .banner {
-  padding-left: 62px;
-}
-body.fullbleed.topbar-open .queue-board > .banner {
-  padding-left: 12px; /* col ☰ nascosto lo spazio non serve più */
-}
+/* L'avviso «Cassa chiusa» in cima alla lavagna teneva 62px liberi a
+   sinistra per il ☰ flottante. Non serve più: il ☰ della coda sta nel
+   flusso della testata, sotto l'avviso, e non ci finisce sopra. */
 
 /* Overlay per chiudere il menu cliccando fuori: di norma è nascosto sopra i
    900px (la sidebar è sempre aperta), ma in fullbleed la sidebar è a
@@ -1772,13 +1774,53 @@ body.fullbleed .bar-content {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 10px;
+  /* L'ALTEZZA DELLA FASCIA 1, e con lei il lato del ☰ e degli altri
+     quadrati che ci stanno dentro. Sul telefono è il bersaglio pieno di
+     docs/navigazione.md — si tocca col pollice, di corsa; da tablet in su
+     scende a 42 (vedi il blocco «da tablet in su»), che è la misura su cui
+     quella riga è stata allineata. Una misura sola: i quadrati la leggono
+     da qui invece di ripetersela. */
+  --coda-riga: 44px;
+}
+
+/* IL ☰ DELLA LAVAGNA. A tutto schermo la topbar è nascosta e il menu si
+   apre da qui: prima era un tasto FISSO nell'angolo, fuori dal flusso, e
+   la testata gli teneva il posto a mano (un rientro sul titolo, un altro
+   sull'avviso della cassa, un `top` calcolato per centrarlo sulla riga 1).
+   Quel posto però era vero solo a PAGINA IN CIMA: la coda scorre, e
+   scorrendo la testata gli passava sotto — «il tasto menu va a finire
+   sulla label» (l'utente, 21/08/2026), col conteggio dei conti aperti e il
+   nome del terminale mangiati per i primi 36px. Nel flusso il posto non si
+   tiene: si occupa, e non c'è più niente che possa finirci sotto, né in
+   cima né scorrendo. */
+.board-burger {
+  flex-shrink: 0;
+  width: var(--coda-riga);
+  height: var(--coda-riga);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-2);
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .board-title {
-  /* lascia spazio al ☰ fisso in alto a sinistra */
-  padding-left: 52px;
   font-family: var(--serif);
   white-space: nowrap;
+}
+
+/* IL GUSCIO DELLA RICERCA NON ESISTE, da tablet in su: `display: contents`
+   e il campo torna a essere un figlio della testata, in riga 1 dov'è
+   sempre stato. Serve solo sul telefono, per tenere insieme la ricerca e i
+   due tastini su una fascia sola (vedi il blocco del telefono). */
+.board-cerca {
+  display: contents;
 }
 
 .board-search {
@@ -2029,42 +2071,84 @@ body.fullbleed .bar-content {
 
 
 
-/* ── Testata della coda sul TELEFONO ──────────────────────────────────
-   Il ☰ è fisso nell'angolo: a scostarsi dev'essere solo il TITOLO, non
-   tutta la testata — scostando tutto, la ricerca partiva da metà schermo
-   e sprecava mezza riga. (Queste regole stanno DOPO quelle di base
-   apposta: a parità di specificità vince l'ultima, e una media query non
-   aggiunge peso.) */
+/* ── TESTATA DELLA CODA SUL TELEFONO: TRE FASCE, NON QUATTRO ────────
+   «Il layout sopra le card non è il massimo su mobile» (l'utente,
+   21/08/2026). Ne aveva quattro:
+     1. ☰ (fisso, fuori dal flusso) · titolo · stampante · ⋯ · vista · ➕
+     2. conteggi e legenda
+     3. «▾ Filtri» e «↓» DA SOLI, a capo, spinti a destra
+     4. la ricerca, a tutta larghezza
+   La terza era spreco puro: due tastini larghi un terzo di riga su una
+   fascia intera. Vanno in riga con la ricerca — dove la lista e le schede
+   li tengono già (`.coda-cerca-riga`), quindi chi cambia vista non li
+   cerca. E il titolo non va più a capo: nel flusso il ☰ costa 6px meno
+   del rientro che gli si teneva, e quello che manca lo dà il titolo con i
+   puntini invece di prendersi una seconda riga.
+   Restano:
+     1. ☰ · titolo · stampante · ⋯ · vista · ➕
+     2. ricerca · ▾ Filtri · ↓
+     3. conteggi e legenda (e sotto, da aperti, i chip dei filtri)
+   Su una lavagna che vive di altezza è una card in più a schermo.
+   (Queste regole stanno DOPO quelle di base apposta: a parità di
+   specificità vince l'ultima, e una media query non aggiunge peso.) */
 @media (max-width: 700px) {
+  /* IL RESPIRO SI STRINGE DI 2px, e sono 10px di parole in più: la fascia 1
+     ha cinque spazi dentro (☰|titolo, titolo|azioni e i tre fra i tasti), e
+     su 336px utili di un telefono da 360 quei 10px sono la differenza fra
+     «In servizio» scritto e «In servi…». I bersagli non si toccano — 44px
+     restano 44px, si avvicinano e basta. */
   .board-head {
+    gap: 6px;
     row-gap: 4px;
   }
+  /* Il margine a destra del ➕ lo dà già il respiro della lavagna. */
+  .board-add {
+    margin-right: 0;
+  }
+  /* L'ORDINE DELLE FASCE È DICHIARATO, non lasciato al markup: il markup
+     tiene la ricerca accanto al titolo perché è lì che sta da tablet in
+     su. Le due fasce larghe (`flex-basis: 100%`) vanno a capo da sé. */
   .board-title {
-    padding-left: 54px;
-    white-space: normal;
+    order: 1;
+    /* Prende quel che avanza in fascia 1 e, se non basta, si accorcia coi
+       puntini: A CAPO NO. «In servizio» spezzato in due alzava la fascia
+       di una riga intera per due parole. */
+    flex: 1;
     min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     text-align: left;
-    /* IN LINEA COL ☰, non due pixel più giù. Il ☰ è fisso: parte a
-       12px + safe-top ed è alto 42, quindi il suo centro sta a 33px +
-       safe-top. La testata parte a 10px + safe-top (il respiro della
-       lavagna), quindi perché i due centri coincidano il titolo dev'essere
-       alto 2 × (33 − 10) = 46. Senza, la scritta si appoggiava all'altezza
-       della riga — che sul telefono la fanno i tasti — e scivolava sotto
-       la linea del ☰. */
+  }
+  .board-actions {
+    order: 2;
+    gap: 6px;
+  }
+  /* FASCIA 2: la ricerca con i due tastini in fondo. */
+  .board-cerca {
+    order: 3;
     display: flex;
     align-items: center;
-    min-height: 46px;
+    gap: 8px;
+    flex-basis: 100%;
+    min-width: 0;
   }
   .board-search {
-    width: 100%;
+    flex: 1;
+    width: auto;
     min-width: 0;
     margin-left: 0;
   }
-  /* Conteggi e legenda partono dal bordo, allineati alla BARRA DI RICERCA
-     che sta sotto — non rientrati come il titolo, che li lasciava sospesi
-     in mezzo alla testata senza allinearsi a niente. Sotto il ☰ non ci
-     finiscono: il ☰ sta tutto nella riga 1, che è alta quanto il ➕. */
+  /* I tastini in riga con la ricerca sono alti quanto lei o meno: qui non
+     c'è niente da compensare, e il margine negativo della riga dei
+     conteggi — che è l'altra casa di questi due — li scentrerebbe. */
+  .board-cerca .coda-tastini {
+    margin-block: 0;
+  }
+  /* FASCIA 3: conteggi e legenda, dal bordo. Rientrati come il titolo
+     restavano appesi in mezzo, allineati a niente. */
   .board-sotto {
+    order: 4;
     padding-left: 0;
   }
 }
@@ -2096,49 +2180,22 @@ body.fullbleed .bar-content {
 }
 
 
-/* Testata COMPATTA su smartphone: riga 1 = titolo + azioni (Pannelli e «+»
-   ridimensionati), riga 2 = ricerca a tutta larghezza. Niente più tasti
-   sparsi a metà schermo. */
+/* Schermi STRETTI. Della testata non c'è più niente qui dentro: la
+   dispone tutta il blocco dei 700px. */
 @media (max-width: 640px) {
-  .board-head {
-    gap: 8px;
-    row-gap: 6px;
-  }
-  .board-title {
-    order: 1;
-    flex: 1;
-    min-width: 0;
-    white-space: normal;
-  }
-  .board-actions {
-    order: 2;
-    margin-left: auto;
-  }
+  /* LA TESTATA LA DISPONE IL BLOCCO DEI 700px, una volta sola: le fasce
+     erano dichiarate due volte, con ordini diversi, e a leggere il foglio
+     non si capiva quale delle due valesse su un telefono da 380px
+     (valevano tutt'e due, vinceva l'ultima). Qui resta solo quello che è
+     davvero questione di schermo STRETTO.
+     E IL ➕ NON SI RIMPICCIOLIVA: c'era qui un `.board-add` da 46px che non
+     ha mai colorato un pixel — la regola di base che lo fa da 60 sta più in
+     basso nel foglio, stesso peso, e a parità vince l'ultima scritta. Il ➕
+     è sempre stato 60 anche sul telefono, ed è giusto così: è il tasto che
+     si prende di corsa e con le mani occupate. Via la regola morta, che
+     faceva cercare il valore sbagliato. */
   .board-search {
-    order: 3;
-    flex-basis: 100%;
     font-size: 0.92rem;
-  }
-  /* Conteggi e legenda stanno fra il titolo e la ricerca (ordine 2 come le
-     azioni: a parità vince chi viene prima nel markup, e le azioni stanno
-     prima), e partono dal BORDO: sono allineati alla barra di ricerca che
-     hanno sotto. Rientrati di 54px come il titolo restavano appesi in
-     mezzo, allineati a niente. */
-  .board-sotto {
-    order: 2;
-    padding-left: 0;
-  }
-  .board-add {
-    width: 46px;
-    height: 46px;
-  }
-  .board-add::before {
-    width: 20px;
-    height: 3px;
-  }
-  .board-add::after {
-    width: 3px;
-    height: 20px;
   }
   /* Card più compatte: meno vuoto fra numero e riga finale. */
   .grid-card-main {
@@ -2196,16 +2253,12 @@ body.fullbleed .bar-content {
   .queue-board {
     padding-top: calc(12px + var(--safe-top));
   }
-  /* Il ☰ flottante non sta nel flusso: al centro della riga 1 ci si porta a
-     mano. La riga è alta quanto il ➕ (60px, il pezzo più alto: vedi sotto),
-     non quanto il titolo, quindi il suo centro cade a 12 + 30 = 42px dal
-     bordo; il ☰ è alto 42px e per centrarcisi parte da 42 − 21 = 21px.
-     Prima partiva da 12px come la lavagna, e restava un dito più in alto
-     di «In servizio». */
-  body.fullbleed .bar-burger {
-    top: calc(21px + var(--safe-top));
-  }
-  /* La misura sta qui e non su .queue-board: la lavagna c'è solo nella
+  /* IL ☰ NON HA PIÙ BISOGNO DI ESSERE CENTRATO A MANO. Era fisso, fuori dal
+     flusso, e per stare sulla linea di «In servizio» gli si calcolava un
+     `top` a partire dall'altezza della riga; adesso è un figlio della
+     testata come gli altri e ad allinearlo ci pensa il `align-items:
+     center` della fascia. Un conto in meno da rifare a ogni ritocco.
+     La misura sta qui e non su .queue-board: la lavagna c'è solo nella
      vista a griglia, la testata anche in quella a elenco. */
   .board-head {
     --coda-riga: 42px;
@@ -2219,17 +2272,14 @@ body.fullbleed .bar-content {
   .board-pannelli {
     height: var(--coda-riga);
   }
+  /* NIENTE RIENTRO PER IL ☰: è nel flusso, primo pezzo della fascia, e lo
+     spazio se lo prende. Il rientro c'era finché era fisso — 12 (dal bordo)
+     + 42 (largo) + 10 (aria) − 12 (respiro della lavagna) — ed è il genere
+     di conto che va rifatto ogni volta che una delle quattro misure cambia.
+     Qui resta solo la centratura verticale della scritta nella riga. */
   .board-title {
     display: flex;
     align-items: center;
-    /* IL RIENTRO SI CALCOLA, non si sceglie a occhio. Il ☰ flottante sta a
-       left: 12px ed è largo 42px, quindi finisce a 54px dal bordo della
-       finestra; la lavagna ha già 12px di suo. Il rientro è quel che
-       serve ad arrivare a 54 più un dito d'aria:
-         12 (☰) + 42 (largh.) + 10 (aria) − 12 (rientro della lavagna).
-       Con 70px scritti a mano la scritta finiva 18px più in là del
-       dovuto, e fra il ☰ e «In servizio» restava un buco. */
-    padding-left: calc(12px + 42px + 10px - 12px);
   }
   /* La ricerca è anche una `.menu-search`, e quella regola — più in basso
      nel file, stesso peso — le rimetteva i 10px di margine sotto che
