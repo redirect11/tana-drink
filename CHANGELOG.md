@@ -4,6 +4,12 @@
 
 ### Per chi gestisce
 
+- **I tasti per incassare non si toccano più.** «Riscuoti e servi» stava
+  appiccicato a «Riscuotere» e sembrava la sua seconda riga: due gesti
+  diversi — uno incassa, l'altro incassa e dà per servito tutto — a un
+  millimetro l'uno dall'altro. Ora sono staccati, e lo stesso vale per
+  «Riscuoti (senza stampa)».
+
 - **Nel pagamento c'è «Deseleziona tutti»: un tasto e il conto va a
   zero.** Sta **in cima alla lista delle voci**, accanto a «Separa
   uguali»/«Unisci uguali». Quando il cliente comincia a dirti cosa ha

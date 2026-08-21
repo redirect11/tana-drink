@@ -4859,6 +4859,16 @@ body.fullbleed,
   background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
   color: #fff;
 }
+/* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — non
+   toccano il tasto grande. Attaccate sembravano la sua seconda riga, e non
+   lo sono: chiudono il conto in modi diversi, e una si preme per sbaglio
+   quando si mira all'altra. Stessa aria che il tasto grande prende da
+   sopra. */
+.payscreen-collect-muto,
+.payscreen-collect-servi {
+  margin-top: 8px;
+}
+
 .payscreen-methods {
   display: flex;
   flex-direction: column;
