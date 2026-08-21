@@ -5669,10 +5669,20 @@ requirements:
       il conto la stampante tace (`in_creazione`); si esce, la coda vede la
       comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non
       sul tablet accanto» e' provato per intero.
+      E CHI ANNULLA NON STAMPA MAI (BUG-071): «se alla creazione di un
+      ordine lo annullo anche, la comanda non deve uscire se e' abilitata la
+      stampa automatica» (l'utente, 21/08/2026). L'annullo chiude anche la
+      sessione di creazione, nello STESSO patch dello stato: senza, l'uscita
+      dalla schermata toglieva il segno prima che l'annullo arrivasse, e in
+      quel buco la coda vedeva un conto composto, aperto e da stampare. La
+      domanda «questo lavoro e' annullato?» sta in una funzione pura sola
+      (`lavoroAnnullato`) e la fanno tutti e due i posti che stampano: chi
+      sceglie e chi mette l'inchiostro — il tasto «Comanda» a mano su un
+      conto annullato faceva uscire l'aggregato di tutto il conto.
     status: implemented
     generate_issue: false
     labels: [stampa, banco]
-    test_cases: [tests/unit/stampaComande.test.js]
+    test_cases: [tests/unit/stampaComande.test.js, tests/unit/comandaAnnullata.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,

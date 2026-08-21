@@ -2641,3 +2641,56 @@ bugs:
     in_produzione: false
     test_cases:
       - tests/component/SettingsTab.test.jsx
+
+  - id: BUG-071
+    title: "Annullando un conto appena battuto, la comanda usciva lo stesso"
+    area: "src/lib/printer.js, src/lib/api.js (cancelOrder), src/components/OrderPosDetail.jsx"
+    description: >
+      «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+      uscire se e' abilitata la stampa automatica» (l'utente, 21/08/2026).
+      Al banco: si batte un conto al POS, si cambia idea, lo si annulla — e
+      il ticket esce lo stesso. Carta buttata, e peggio: al banco si comincia
+      a preparare un lavoro che nessuno deve fare.
+      LE GUARDIE C'ERANO GIA' E NON BASTAVANO. `comandeDaStampare` scarta i
+      conti annullati e le comande annullate, e `cancelOrder` scrive
+      `status: annullato` e annulla tutte le comande non ritirate. Sulla
+      carta il caso sembrava coperto. Il buco era in due posti diversi.
+      UNO: IL CANCELLO SI APRIVA PRIMA CHE L'ANNULLO ARRIVASSE. Il segno
+      `in_creazione` e' quello che tiene ferma la stampa finche' il conto si
+      sta componendo (REQ-STAMPA-013); a toglierlo era l'USCITA dalla
+      schermata, che annullando parte per prima — mentre l'annullo deve
+      ancora leggersi il documento. In quel pezzo di secondo la coda vede un
+      conto composto, aperto e da stampare, e la stampa automatica non
+      aspetta nessuno. Ed e' il caso NORMALE, non un caso di margine:
+      battuta la prima riga il conto e' gia' nato — la schermata passa a
+      modifica, `isNew` diventa falso — ma resta `in_creazione`, quindi chi
+      annulla li' passa dal ramo dell'annullo di sempre.
+      DUE: IL TASTO «COMANDA» A MANO su un conto annullato stampava ancora, e
+      stampava il peggio. `comandaDelTicket` scarta le annullate, su un conto
+      annullato non ne trova nessuna, e `printComanda` ripiegava
+      sull'AGGREGATO del conto (BUG-051): un ticket con TUTTE le righe di un
+      lavoro che non si deve fare.
+      COME E' STATO SISTEMATO, senza ritardi e senza riletture.
+      · L'annullo chiude anche la composizione: `in_creazione: false` viaggia
+        nello STESSO patch di `status: annullato`. Non esiste piu' un istante
+        in cui il conto risulta composto e non ancora annullato.
+      · L'uscita non tocca niente quando si sta annullando: il segno si mette
+        in cima al gesto (memoria locale immediata, come `ordiniNascosti` per
+        la coda), prima ancora di distinguere il conto nuovo da quello nato.
+      · La domanda «questo lavoro e' annullato?» sta in una funzione pura
+        sola (`lavoroAnnullato` in printer.js) e la fanno tutti e due i
+        posti che stampano: chi sceglie (`comandeDaStampare`) e chi mette
+        l'inchiostro (`printComanda`, dove il cancello vale anche per i
+        chiamanti di domani, come per la coda delle stampe di BUG-052).
+        Guarda `status` E `workflow_status`: annullato e' annullato da
+        qualunque vista lo si guardi.
+      NON ERA IN PRODUZIONE: ne' `in_creazione` ne' `comandaDelTicket`
+      esistono su main — sono tutti e due della 1.5.x.
+    labels: [bug, stampa, pos]
+    severity: media
+    priority: P1
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAnnullata.test.js
+      - tests/component/OrderPosDetail.test.jsx
