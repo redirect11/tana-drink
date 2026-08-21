@@ -572,7 +572,31 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // continua a valere: non si perde perché diventa un conto, non perché
   // resta in un cassetto.
   const uscitaRef = useRef(null)
+  // ── SI STA ANNULLANDO: L'USCITA NON DEVE CHIUDERE LA COMPOSIZIONE ──
+  //
+  // «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+  // uscire se è abilitata la stampa automatica» (l'utente, 21/08/2026).
+  //
+  // Annullare in creazione fa due cose nello stesso battito: si torna alla
+  // coda (e l'uscita toglie `in_creazione`, che è il cancello della
+  // stampa) e parte l'annullo, che deve prima leggersi il conto. L'uscita
+  // arrivava per prima, e per quel pezzo di secondo la coda vedeva un
+  // conto composto, aperto e da stampare: la carta usciva, e l'annullo la
+  // raggiungeva quando era già sul banco.
+  //
+  // E CAPITA COL CONTO GIÀ NATO, che è il caso vero: battuta la prima
+  // riga il conto esiste (`isNew` diventa falso) ma resta `in_creazione`
+  // finché non si esce. Chi annulla lì passa dal ramo dell'annullo
+  // normale, non da quello del conto ancora nuovo: per questo il segno si
+  // mette in cima al gesto, prima di distinguere i due casi.
+  //
+  // La cura non è aspettare: è non aprire quel cancello. A chiuderlo ci
+  // pensa l'annullo stesso, insieme allo stato, in una scrittura sola
+  // (`cancelOrder` in api.js). Qui basta ricordarsi che si sta annullando
+  // — memoria locale immediata, come `ordiniNascosti` per la coda.
+  const staAnnullando = useRef(false)
   uscitaRef.current = () => {
+    if (staAnnullando.current) return
     // QUELLO CHE È STATO BATTUTO PARTE ADESSO. La bozza diventa comanda e le
     // comande in sospeso vanno al server senza aspettare il mezzo secondo
     // dell'auto-conferma: fra un istante questa schermata non esiste più e i
@@ -3351,6 +3375,13 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           onCancel={() => setConfirmCancel(false)}
           onConfirm={() => {
             setConfirmCancel(false)
+            // DA QUI IN POI L'USCITA NON TOCCA PIÙ NIENTE (BUG-071): il
+            // conto lo chiude l'annullo, cancello della stampa compreso.
+            // Vale in tutti e due i casi qui sotto, e il secondo è quello
+            // che si vede al banco: battuta la prima riga il conto NASCE
+            // (`isNew` diventa falso) ma resta `in_creazione` — annullando
+            // lì, l'uscita toglieva il segno e la comanda usciva.
+            staAnnullando.current = true
             // Conto «nuovo»: la bozza si butta e si torna indietro. MA se
             // nel frattempo l'ordine è nato — l'auto-creazione scatta poco
             // dopo l'ultima riga, e battere quattro cose ci mette di più —

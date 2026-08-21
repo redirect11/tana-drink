@@ -4859,6 +4859,50 @@ body.fullbleed,
   background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
   color: #fff;
 }
+/* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — in
+   RIGA, sotto il tasto grande e staccate da lui. Due cose insieme:
+   — non lo toccano (BUG-069): attaccate sembravano la sua seconda riga, e
+     non lo sono — chiudono il conto in modi diversi, e una si preme per
+     sbaglio quando si mira all'altra. Stessa aria che il tasto grande
+     prende da sopra;
+   — stanno affiancate e non impilate (chiesto il 21/08/2026): sono le due
+     eccezioni, e in riga si leggono come alternative l'una dell'altra
+     invece che come una scala di tre tasti sotto al principale.
+   Compaiono a condizioni indipendenti, quindi la riga può averne una sola:
+   il `flex-grow` la fa arrivare da sola a tutta larghezza. */
+.payscreen-collect-alt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+/* METÀ E METÀ FINCHÉ CI STANNO, POI A CAPO. Le scritte sono lunghe e una
+   porta pure l'importo: su un telefono da 360px due colonne le
+   spezzerebbero in tre righe di parole mozze. Sotto i 200px di larghezza
+   utile ciascuna, quindi, il `flex-wrap` le rimette una sotto l'altra a
+   tutta larghezza — come stavano prima — invece di stringere il bersaglio
+   o rimpicciolire il testo. Al banco (tablet) ci stanno sempre in riga.
+
+   DA TRE IN SU LA REGOLA NON CAMBIA, ed è il motivo per cui è scritta
+   così invece che «due colonne»: col terzo tasto («Acconto con
+   scontrino», REQ-STAMPA-015) a 360px se ne impila una per riga — tutte
+   e tre a tutta larghezza, leggibili — e via via che c'è spazio se ne
+   affiancano due, poi tre. Nessun tasto scende mai sotto i 200px, che è
+   la misura in cui queste scritte restano una riga sola. Per questo il
+   terzo si chiama «Acconto con scontrino» e non «Riscuoti acconto con
+   scontrino»: lungo com'era, in colonna da 200px si spezzava in tre. */
+.payscreen-collect-alt > .btn {
+  flex: 1 1 200px;
+  min-height: 44px;
+}
+/* L'acconto quando l'incasso salderebbe il conto: spento a vedersi ma
+   toccabile, come i metodi di pagamento non disponibili — al tocco dice
+   perché. Un tasto `disabled` non lo direbbe mai. */
+.payscreen-collect-acconto.spento {
+  opacity: 0.5;
+}
+
 .payscreen-methods {
   display: flex;
   flex-direction: column;

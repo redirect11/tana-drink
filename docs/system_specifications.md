@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 170 | fatto e coperto dai test |
+| ✅ | 171 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**206 voci** in tutto. **184** descrivono il sistema com'è oggi e
+**207 voci** in tutto. **185** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 13 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -116,9 +116,9 @@ La coda smista i conti per stato, conta e somma solo i non annullati e sa dire q
 
 #### REQ-ORD-014 — Riscuoti, oppure riscuoti e servi in un colpo solo
 
-Con gli stati del servizio, incassare non chiude il conto: si paga anche in anticipo e restano drink da fare, e marcare tutto «servito» farebbe sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre, si chiude solo quando è servito. Al banco però capita spessissimo il contrario — si consegna e si incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il locale può accendere «Un tasto per incassare e servire insieme» (Impostazioni → Gestione preparazione). Acceso, nella schermata di pagamento compare anche «Riscuoti e servi», che chiude il conto in un colpo. Spento di default: chi segue il servizio di solito lo segue apposta. Il tasto non compare dove non serve — servizio spento, conto già servito o già chiuso.
+Con gli stati del servizio, incassare non chiude il conto: si paga anche in anticipo e restano drink da fare, e marcare tutto «servito» farebbe sparire dalla coda lavoro ancora da fare. Il conto si riscuote sempre, si chiude solo quando è servito. Al banco però capita spessissimo il contrario — si consegna e si incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il locale può accendere «Un tasto per incassare e servire insieme» (Impostazioni → Pagamenti). Acceso, nella schermata di pagamento compare anche «Riscuoti e servi», che chiude il conto in un colpo. Spento di default: chi segue il servizio di solito lo segue apposta. Il tasto non compare dove non serve — servizio spento, conto già servito o già chiuso.
 
-**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamentoNonServe.test.js`
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/css.test.js`, `tests/unit/pagamentoNonServe.test.js`
 
 #### REQ-ORD-019 — Chi ha preso l'ordine lo modifica davvero: anche aggiungendo
 
@@ -147,6 +147,8 @@ La lista mostrava gli ultimi conti e basta: per ritrovare una serata di due sett
 #### REQ-ORD-016 — Battere un conto non aspetta la rete, e non ne nascono due
 
 Prima di scrivere un ordine si facevano TRE letture al server — quale cassa è aperta, il progressivo della serata, quello assoluto — e solo dopo il conto compariva: era il mezzo secondo fra «Conferma» e il conto a schermo. Adesso quei numeri stanno in memoria, tenuti aggiornati da ascolti che partono all'avvio dell'app: alla creazione non si chiede niente a nessuno. E DUE CONTI NON PRENDONO PIÙ LO STESSO NUMERO. Il numero è il più grande fra quello del server e l'ultimo dato da questo dispositivo, più uno: due creazioni ravvicinate non possono più leggere lo stesso valore solo perché la scrittura del contatore è ancora per strada — è così che sono nati due conti #15 nella stessa serata. Quello che si è assegnato resta scritto anche dopo un ricaricamento, e il contatore si scrive con un incremento, che non torna mai indietro. Resta scoperto un solo caso: due DISPOSITIVI che battono nello stesso istante. Escluderlo vorrebbe dire una transazione, cioè aspettare il server a ogni ordine — il contrario di quello che serve al banco.
+
+IN QUALE SERATA SI STA, ci si RICORDA. Il contatore da usare dipende da una domanda sola — c'è una cassa aperta? — e finché l'ascolto su `counters/_active_cash` non ha risposto quella domanda ha una terza risposta possibile, «non lo so ancora», che non è «no». Presa per un no, il conto si numerava sul contatore della GIORNATA — che è un altro contatore, e nella stessa sera dà lo stesso numero — e nasceva perfino senza serata (`cash_session_id: null`), quindi fuori dalla chiusura di cassa. L'ultima cassa che si sapeva aperta resta scritta in memoria locale, come i numeri già assegnati, e vale per la giornata commerciale in cui è stata scritta: un ricaricamento non fa più dimenticare la serata, e non si aspetta nessuno. Quando il server dice che nessuna cassa è aperta — che è una risposta — la memoria si cancella.
 
 UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte (l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco): la chiave della battuta fa restituire il conto che sta già nascendo invece di farne un altro. E il «+» apre sempre un conto NUOVO: la memoria del conto in corso serve a riprenderlo dopo un ricaricamento della pagina, non a rimetterci dentro chi esce e rientra.
 
@@ -180,7 +182,7 @@ DUE GESTI RAVVICINATI SULLO STESSO CONTO NON SI CANCELLANO PIÙ (BUG-056, lib/mu
 
 LA FILA DA SOLA NON BASTA, ed è il pezzo meno ovvio: il turno finisce quando la scrittura è PARTITA — local-first, non si aspetta niente — non quando la cache l'ha applicata, e fra le due cose passa un giro. Quindi ogni mutazione RICORDA il conto come l'ha appena composto, e la mutazione dopo legge quello finché la cache non ha recuperato. Come si capisce che ha recuperato: si guarda se i campi scritti sono tornati indietro uguali — nessun timer che indovina. Un tempo massimo c'è, ma è solo la rete di sicurezza per la scrittura che in cache non arriverà mai. Il limite, dichiarato: finché il ricordo è vivo, una modifica di un ALTRO terminale sugli stessi campi si perde — è la finestra fra la scrittura e la cache, millisecondi, ed è lo stesso «l'ultimo che scrive vince» che c'era già, ristretto invece che allargato.
 
-**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/ComandaSenzaAttesa.test.jsx`, `tests/unit/comande.test.js`, `tests/unit/mutazioniInFila.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/unit/cassaDellaSerata.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/ComandaSenzaAttesa.test.jsx`, `tests/unit/comande.test.js`, `tests/unit/mutazioniInFila.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-008 — Un conto chiuso o annullato si può rimettere in corso
 
@@ -214,7 +216,11 @@ Chi manda un ordine — o lo annulla — non ha bisogno di un avviso che gli dic
 
 OGNI AVVISO SI PUÒ SPEGNERE, uno per uno: nuovo ordine, ciascuno stato della preparazione separatamente, le scorte (in esaurimento ed esaurita, solo per chi tiene il gestionale) e la nuova versione dell'app. La scelta è PER DISPOSITIVO E PER PERSONA e resta in memoria locale, perché non è una regola del bar: al banco «nuovo ordine» è la cosa più importante della serata, in sala serve «pronto», e sul portatile nel retro non serve niente. Un interruttore unico si spegnerebbe dove dà fastidio lasciando senza chi ne aveva bisogno; e due persone che si passano lo stesso tablet nei cambi turno non si sovrascrivono a vicenda. Di partenza sono tutti accesi: nessuno deve scoprire di essersi perso un ordine perché «era spento di default».
 
-**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`
+UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta: «è arrivato» quando non l'ha mai visto, «è cambiato» quando cambia passo, «è tornato in coda» quando qualcuno lo ripristina dopo un annullo. Il conto già visto non torna mai a essere nuovo — nemmeno se nel frattempo era sparito dalla vista — e chi ha premuto «Ripristina» non se lo sente ripetere, come già per chi annulla (`ripristinato_device`, stesso metro di `cancelled_device`).
+
+LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js): un avviso annuncia un FATTO e non porta il nome della colonna in cui il conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che non possono importarsi a vicenda — la coda, la push del server e il service worker — e il titolo dev'essere IDENTICO nei tre, perché la notifica dell'app e quella del server portano lo stesso `tag` e il sistema le fonde in una.
+
+**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
 
 #### REQ-ORD-022 — Lo staff che tocca un conto entra nel conto, non nella pagina del cliente
 
@@ -414,9 +420,11 @@ DESELEZIONA TUTTI / SELEZIONA TUTTI (chiesto da Flavio il 21/08/2026, con una re
 
 Chiesto dall'utente il 20/08: «aggiungi anche (attivabile dalle impostazioni) il tasto Riscuoti (senza stampa) con la funzione di riscuotere ma senza stampare lo scontrino di chiusura, nella schermata di pagamento». COM'E' FATTO: un tasto gemello di «Riscuotere», sotto di lui, che incassa e chiude identico — stesso importo, stesso metodo, stesso `chiude` — ma la stampante tace. Compare solo se il locale accende `riscuoti_senza_stampa` nelle impostazioni (spento di default) e solo se c'e' davvero qualcosa da incassare.
 
-IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto.
+IL DETTAGLIO CHE CONTA: non prende nemmeno la PRETESA di stampa. Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo scontrino esce come sempre — il «senza stampa» vale per QUEL gesto, non e' un marchio sul conto. DAL 21/08/2026 NON E' PIU' «SOTTO»
 
-**Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`
+IL TASTO GRANDE: sta AFFIANCATO a «Riscuoti e servi», su una riga sola (vedi REQ-ORD-014). I due sono le due eccezioni allo stesso gesto e in riga si leggono per quello; il tasto grande resta da solo a tutta larghezza. Compaiono a condizioni indipendenti: se in riga ce n'e' una sola, si allarga e prende tutto. L'INTERRUTTORE STA IN «PAGAMENTI» dal 20/08, spostato li' per lo stesso motivo per cui il 21/08 lo ha seguito il gemello (BUG-070): chi cerca un tasto della schermata di pagamento apre Pagamenti.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-PAG-013 — Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano
 
@@ -1140,7 +1148,9 @@ IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno
 
 QUANDO ESCE LO SCONTRINO: al GESTO della riscossione, sempre e solo lì — il pannello dei pagamenti, i tasti rapidi Contanti/Carta della card. Mai da uno sguardo sulla coda: la coda stampa comande. «Deve avvenire solo quando esco dall'ordine e deve stampare la COMANDA, non lo scontrino» (l'utente, 20/08, dopo aver visto uscire la carta di tutta la serata rientrando in coda — BUG-055). E IL SEGNO «GIÀ STAMPATO»
 
-STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita, come `auto_print_at` sulla comanda. La pretesa in localStorage resta come primo filtro per i doppioni di questo terminale; il segno sul conto lo sanno tutti, e un browser con la memoria vuota non ristampa la serata. Riaprendo un conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo (BUG-047).
+STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita, come `auto_print_at` sulla comanda. La pretesa in localStorage resta come primo filtro per i doppioni di questo terminale; il segno sul conto lo sanno tutti, e un browser con la memoria vuota non ristampa la serata. Riaprendo un conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo (BUG-047). DAL 21/08/2026 «SEMPRE E SOLO LÌ»
+
+VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai fatto uscire niente — la stampa è appesa a `closePaid` — ed era una scelta presa quando l'acconto era un caso di margine. Adesso quella riscossione ha la SUA carta, che è un documento diverso: lo scontrino d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto non prende né l'una né l'altro, perché è un evento e non lo stato del conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire uno solo.
 
 **Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`
 
@@ -1232,6 +1242,26 @@ DOVE: Impostazioni → Stampante, sotto la connessione: «Cosa c'è sullo scontr
 
 **Dove**: `src/lib/campiStampa.js, src/lib/printer.js (printScontrino, printComanda), src/components/CampiStampa.jsx` · **Lo dimostrano**: `tests/unit/campiStampa.test.js`, `tests/unit/campiDiStampa.test.js`, `tests/component/CampiStampa.test.jsx`
 
+#### REQ-STAMPA-015 — Lo scontrino d'acconto: la carta di chi versa una parte e se ne va
+
+«È normale che se riscuoto solo un acconto non mi stampa lo scontrino?» (l'utente, 21/08/2026). Sì, ed era di proposito: la stampa era appesa alla CHIUSURA del conto (REQ-STAMPA-001) e un acconto non chiude. Era una scelta presa quando l'acconto era un caso di margine — da quando si sconta sulla selezione (REQ-PAG-013) e si parte da «Deseleziona tutti» (REQ-PAG-009), riscuotere una parte è il modo normale di dividere un conto.
+
+LA DECISIONE, parole sue (21/08/2026): «Lo scontrino esce ad ogni riscossione ma è configurabile. Va fatto così: una impostazione che attiva un terzo bottone, "riscuoti acconto con scontrino", e una ulteriore opzione che invece ad ogni riscossione stampa lo scontrino d'acconto. Il tasto preconto continua a stampare lo scontrino totale con tutti gli acconti specificati, così come lo scontrino finale (stampato quando si riscuotono gli ultimi articoli dell'ordine). Quando la riscossione dello scontrino di acconto è attiva, disabilita l'opzione del terzo bottone».
+
+IL DOCUMENTO È NUOVO, non lo scontrino con un'altra intestazione: risponde alle quattro domande di chi ha appena messo dei soldi sul tavolo con altri sei intorno — cosa ho pagato (le righe di QUELLA riscossione, quando ce ne sono: un acconto battuto a mano non salda righe in particolare e la lista non si stampa affatto), quanto, con che metodo, e quanto resta da incassare sul conto. E NON SI PUÒ SCAMBIARE PER LO SCONTRINO FINALE: la fascia nera ACCONTO in cima e la riga in fondo che dice che il conto resta aperto NON sono campi e non si spengono, come non si spengono la lista delle righe e l'importo versato (stessa regola per cui il totale dello scontrino è fisso, REQ-STAMPA-014). Tutto il resto — intestazione, numero e data, operatore, tavolo, sconto della riscossione, metodo, riepilogo del conto, codice, ragione sociale, riga di saluto — sta nel vocabolario chiuso di lib/campiStampa.js (`stampa_acconto`) e si accende dalle impostazioni. Il logo segue le regole di REQ-STAMPA-011 con un tipo suo, acceso di suo: è carta che resta in mano al cliente, come il preconto.
+
+DUE INTERRUTTORI, in «💳 Pagamenti» accanto a «senza stampa» e «riscuoti e servi» (la lezione di BUG-070), tutti e due spenti di suo — chi non tocca niente non vede cambiare niente: `scontrino_acconto_tasto` fa comparire il terzo tasto «Acconto con scontrino» nella riga dei tasti alternativi; `scontrino_acconto_sempre` fa uscire la carta da sé a ogni riscossione che non chiude il conto. Quando il secondo è acceso il primo è SPENTO E NON TOCCABILE, con scritto perché: sparire sembrerebbe un guasto. La regola sta in un posto solo (lib/scontrinoAcconto.js), così il pannello e la cassa non possono pensarla diverso.
+
+QUANDO L'INCASSO CHIUDE IL CONTO il terzo tasto non sparisce, si SPEGNE e al tocco dice perché — lì la carta che esce è lo scontrino finale. Sparendo, comparirebbe e sparirebbe sotto il dito a ogni riga tolta o rimessa mentre si divide il conto, facendo ballare tutta la riga dei tasti.
+
+IL TERZO TASTO STAMPA SEMPRE, la stampa automatica del terminale non c'entra: è un gesto esplicito, come «Preconto». L'opzione automatica invece la rispetta (`autoPrintScontrino`), perché è carta che esce da sola: il telefono della sala che gli scontrini non li stampa non deve cominciare a stampare acconti.
+
+NIENTE PRETESA E NIENTE SEGNO SUL DATO: `claimReceiptPrint` e `receipt_print_at` dicono «la carta di QUESTO CONTO è già uscita», che è uno stato del conto. Un acconto è un evento — su un conto ce ne stanno tre — e legarlo a quel segno vorrebbe dire che il secondo non stampa più, o bruciare la pretesa dello scontrino finale (BUG-047). Il lettore SumUp resta fuori: lì l'incasso si registra quando risponde il lettore, non al gesto, e la carta segue il gesto.
+
+IL PRECONTO ELENCAVA GIÀ GLI ACCONTI ma non diceva quanto restava: «Totale con IVA» sopra e gli incassi sotto, e la sottrazione la faceva a mente chi teneva il foglio davanti al cliente. Adesso su un conto ancora aperto con degli incassi presi c'è anche «Resta da pagare»; su uno scontrino di chiusura il residuo è zero e la riga non compare.
+
+**Dove**: `src/lib/printer.js (printScontrinoAcconto), src/lib/scontrinoAcconto.js, src/lib/campiStampa.js, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/scontrinoAcconto.test.js`, `tests/unit/cartaAcconto.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
 #### REQ-STAMPA-012 — Più comande dello stesso conto si stampano insieme
 
 Chiesto dall'utente il 20/08: «se ho più di una comanda (dello stesso ordine!) devo poterle stampare insieme». Un conto battuto in tre riprese ha tre ticket, e rifarli uno per uno col conto in mano è tempo perso al banco. E SERVONO DUE MODI, non uno. Parole sue, sempre del 20/08: «avere la possibilità di stampare comande separate se ci sono più comande è giusto, e anche di stampare UNA SOLA comanda con tutti i prodotti di più comande ma sempre dello stesso ordine. Va bene stampare tutte le comande insieme su più ricevute ma serve anche stampare tutto su una sola ricevuta». DOVE: nel dettaglio del conto, dentro «Comande» — dove ogni comanda ha già il suo tasto di stampa. Sopra l'elenco compaiono due tasti, e solo quando le comande sono davvero più d'una (con una sola non c'è niente da mettere insieme). Le etichette dicono cosa ESCE dalla stampante, quanti pezzi di carta, perché è quello che chi stampa deve sapere prima di toccare: «Una per comanda (n)» e «Tutto su una». «UNA PER COMANDA»: insieme come GESTO, non come ticket. Escono SEPARATE, identiche a come uscirebbero da sole — stesso formato, stesso taglio in fondo. Al banco un ticket è un giro di lavoro, e due giri su una striscia sola sarebbero BUG-051 rifatto apposta. «TUTTO SU UNA»: un ticket solo con tutti i prodotti del conto, le quantità dello stesso drink sommate (aggregateItems; i personalizzati restano righe loro). Il formato è quello di sempre: cambia solo cosa ci finisce dentro, non c'è un secondo disegno da mantenere. È la stessa forma che in BUG-051 era il ripiego ACCIDENTALE di `printComanda` senza comanda: la differenza è tutta qui — prima capitava, adesso la sceglie chi stampa.
@@ -1250,9 +1280,9 @@ LA REGOLA: se l'ordine porta il terminale che l'ha inserito (`placed_by.device`)
 
 NON E' BUG-050 AL CONTRARIO PER SBAGLIO, e va detto perche' la somiglianza inganna: li' il proprio terminale era l'unico che NON stampava (la stampa viveva dentro i filtri dell'avviso «nuovo ordine»), qui e' l'unico che stampa. Stessa riga, verso opposto, e per questo la regola sta in una funzione sola e provata nei due versi.
 
-ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il 20/08): gli ordini dei CLIENTI dal telefono non hanno un terminale che li ha inseriti (`placed_by` vuoto), e qualcuno la carta la deve far uscire. Quelli restano come oggi: li stampa qualunque terminale con l'interruttore acceso — il banco, di fatto — col segno sul dato a evitare i doppioni. Se l'assunzione cade, cade con una riga sola (stampaQuestoTerminale). L'INCASTRO COL RIMBALZO (REQ-STAMPA-008), che la regola avrebbe spento: li' il locale ha scelto che le comande della sala escono AL BANCO, e il telefono che prende l'ordine non stampa affatto (MenuPage). Col rimbalzo acceso questa regola quindi NON si applica: stampa chi ha l'interruttore, come prima. Se no non stamperebbe nessuno. L'INCASTRO CON LA SESSIONE DI CREAZIONE (BUG-057): mentre si compone il conto la stampante tace (`in_creazione`); si esce, la coda vede la comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non sul tablet accanto» e' provato per intero.
+ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il 20/08): gli ordini dei CLIENTI dal telefono non hanno un terminale che li ha inseriti (`placed_by` vuoto), e qualcuno la carta la deve far uscire. Quelli restano come oggi: li stampa qualunque terminale con l'interruttore acceso — il banco, di fatto — col segno sul dato a evitare i doppioni. Se l'assunzione cade, cade con una riga sola (stampaQuestoTerminale). L'INCASTRO COL RIMBALZO (REQ-STAMPA-008), che la regola avrebbe spento: li' il locale ha scelto che le comande della sala escono AL BANCO, e il telefono che prende l'ordine non stampa affatto (MenuPage). Col rimbalzo acceso questa regola quindi NON si applica: stampa chi ha l'interruttore, come prima. Se no non stamperebbe nessuno. L'INCASTRO CON LA SESSIONE DI CREAZIONE (BUG-057): mentre si compone il conto la stampante tace (`in_creazione`); si esce, la coda vede la comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non sul tablet accanto» e' provato per intero. E CHI ANNULLA NON STAMPA MAI (BUG-071): «se alla creazione di un ordine lo annullo anche, la comanda non deve uscire se e' abilitata la stampa automatica» (l'utente, 21/08/2026). L'annullo chiude anche la sessione di creazione, nello STESSO patch dello stato: senza, l'uscita dalla schermata toglieva il segno prima che l'annullo arrivasse, e in quel buco la coda vedeva un conto composto, aperto e da stampare. La domanda «questo lavoro e' annullato?» sta in una funzione pura sola (`lavoroAnnullato`) e la fanno tutti e due i posti che stampano: chi sceglie e chi mette l'inchiostro — il tasto «Comanda» a mano su un conto annullato faceva uscire l'aggregato di tutto il conto.
 
-**Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`
+**Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/comandaAnnullata.test.js`
 
 ### Vista cliente
 

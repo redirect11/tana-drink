@@ -19,6 +19,12 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
+import {
+  CHIAVE_ACCONTO_SEMPRE,
+  CHIAVE_TASTO_ACCONTO,
+  accontoSempre,
+  tastoAcconto,
+} from '../lib/scontrinoAcconto.js'
 
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
@@ -302,6 +308,52 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.riscuoti_senza_stampa === true}
                 onChange={(v) => save({ riscuoti_senza_stampa: v })}
               />
+              {/* E ADESSO ANCHE IL SUO GEMELLO, PER LO STESSO IDENTICO
+                  MOTIVO. Stava in «Gestione preparazione» e l'utente non
+                  l'ha trovato (21/08/2026) — già successo il 20/08 con
+                  quello qui sopra. I due tasti compaiono nella stessa
+                  schermata, uno accanto all'altro: si accendono nello
+                  stesso posto.
+                  LA CONDIZIONE SE L'È PORTATA DIETRO: «servire» esiste solo
+                  se si seguono i passi del servizio. Col servizio spento
+                  il tasto non comparirebbe comunque, e un interruttore che
+                  non fa niente è peggio di uno assente. */}
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Un tasto per incassare e servire insieme"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  checked={settings.riscuoti_e_servi === true}
+                  onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
+              {/* ── LO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ──────────────
+                  Stessa famiglia dei due qui sopra — quali tasti compaiono
+                  quando si incassa — quindi stesso posto: è la lezione di
+                  BUG-070, dove un interruttore di questa famiglia stava
+                  altrove e l'utente non lo trovava. */}
+              <ToggleRow
+                label="Lo scontrino d’acconto a ogni riscossione"
+                desc="Chi versa una parte e se ne va si porta via la sua ricevuta, senza premere niente: esce da sola a ogni incasso che non chiude il conto. Segue la stampa automatica dello scontrino di questo terminale (Impostazioni → Stampante)."
+                checked={accontoSempre(settings)}
+                onChange={(v) => save({ [CHIAVE_ACCONTO_SEMPRE]: v })}
+              />
+              {/* L'INTERRUTTORE DISABILITATO RESTA IN PAGINA, spento e col
+                  suo perché. «Quando la riscossione dello scontrino di
+                  acconto è attiva, disabilita l'opzione del terzo bottone»
+                  (l'utente, 21/08/2026): farlo SPARIRE sembrerebbe un
+                  guasto — «l'avevo acceso, dov'è finito?» — e chi torna qui
+                  per spegnere l'automatico non capirebbe cosa ha perso. */}
+              <ToggleRow
+                label="Un tasto per l’acconto con lo scontrino"
+                desc={
+                  accontoSempre(settings)
+                    ? 'Non serve: la ricevuta d’acconto esce già da sola a ogni riscossione, qui sopra. Spegni quella e il tasto torna disponibile.'
+                    : 'Nella schermata di pagamento compare anche «Acconto con scontrino»: incassa una parte e stampa la ricevuta di chi se ne va, quando serve.'
+                }
+                checked={tastoAcconto(settings)}
+                disabled={accontoSempre(settings)}
+                onChange={(v) => save({ [CHIAVE_TASTO_ACCONTO]: v })}
+              />
               <ToggleRow
                 label="Pagamento online (SumUp)"
                 desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
@@ -419,14 +471,6 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
-              {settings.workflow_enabled !== false && (
-                <ToggleRow
-                  label="Un tasto per incassare e servire insieme"
-                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
-                  checked={settings.riscuoti_e_servi === true}
-                  onChange={(v) => save({ riscuoti_e_servi: v })}
-                />
-              )}
               {/* Vale per TUTTE le comande allo stesso modo — la prima di un
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
@@ -994,6 +1038,12 @@ export default function SettingsTab({ role = null }) {
       nodo: <CampiStampa quale="comanda" settings={settings} onSave={save} />,
     },
     {
+      id: 'campi-acconto',
+      icona: '🧾',
+      label: 'Campi dell’acconto',
+      nodo: <CampiStampa quale="acconto" settings={settings} onSave={save} />,
+    },
+    {
       id: 'logo-stampe',
       icona: '🖼',
       label: 'Logo sulle stampe',
@@ -1087,6 +1137,7 @@ export default function SettingsTab({ role = null }) {
     stampante: 'stampante',
     'campi-scontrino': 'stampante',
     'campi-comanda': 'stampante',
+    'campi-acconto': 'stampante',
     'logo-stampe': 'stampante',
     backup: 'sistema',
     informazioni: 'sistema',

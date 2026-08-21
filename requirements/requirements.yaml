@@ -197,11 +197,29 @@ requirements:
       Al banco però capita spessissimo il contrario — si consegna e si
       incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il
       locale può accendere «Un tasto per incassare e servire insieme»
-      (Impostazioni → Gestione preparazione). Acceso, nella schermata di
+      (Impostazioni → Pagamenti). Acceso, nella schermata di
       pagamento compare anche «Riscuoti e servi», che chiude il conto in un
       colpo. Spento di default: chi segue il servizio di solito lo segue
       apposta. Il tasto non compare dove non serve — servizio spento, conto
       già servito o già chiuso.
+
+      DOVE SI ACCENDE, dal 21/08/2026: in «Pagamenti», accanto al gemello
+      «incassare senza stampare». Stava in «Gestione preparazione» e
+      l'utente non lo trovava (BUG-070) — chi cerca un tasto della
+      schermata di pagamento apre Pagamenti. La condizione se l'è portata
+      dietro: l'interruttore si vede solo col servizio acceso, perché
+      «servire» esiste solo se si seguono i passi, e un interruttore che
+      non fa niente è peggio di uno assente.
+
+      COME STA IN SCHERMATA, dal 21/08/2026: «Riscuoti e servi» e
+      «Riscuoti (senza stampa)» stanno AFFIANCATI su una riga sola sotto al
+      tasto grande — «mettili affiancati, non uno sopra l'altro» (l'utente,
+      21/08/2026). «Riscuotere» resta da solo a tutta larghezza: è il
+      gesto normale, le altre due sono le eccezioni. Le due condizioni sono
+      indipendenti, quindi in riga può finirci un tasto solo: in quel caso
+      si allarga e prende tutto. Su un telefono stretto vanno a capo invece
+      di stringersi — le scritte sono lunghe e il bersaglio resta da
+      pollice.
 
       E È L'UNICA STRADA CHE SERVE LE COMANDE. Il pagamento non può portare
       avanti nel flusso una comanda che sta a «da fare», «in preparazione» o
@@ -218,6 +236,8 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases:
       - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/css.test.js
       - tests/unit/pagamentoNonServe.test.js
 
   - id: REQ-ORD-019
@@ -323,6 +343,18 @@ requirements:
       Resta scoperto un solo caso: due DISPOSITIVI che battono nello stesso
       istante. Escluderlo vorrebbe dire una transazione, cioè aspettare il
       server a ogni ordine — il contrario di quello che serve al banco.
+      IN QUALE SERATA SI STA, ci si RICORDA. Il contatore da usare dipende da
+      una domanda sola — c'è una cassa aperta? — e finché l'ascolto su
+      `counters/_active_cash` non ha risposto quella domanda ha una terza
+      risposta possibile, «non lo so ancora», che non è «no». Presa per un
+      no, il conto si numerava sul contatore della GIORNATA — che è un altro
+      contatore, e nella stessa sera dà lo stesso numero — e nasceva perfino
+      senza serata (`cash_session_id: null`), quindi fuori dalla chiusura di
+      cassa. L'ultima cassa che si sapeva aperta resta scritta in memoria
+      locale, come i numeri già assegnati, e vale per la giornata commerciale
+      in cui è stata scritta: un ricaricamento non fa più dimenticare la
+      serata, e non si aspetta nessuno. Quando il server dice che nessuna
+      cassa è aperta — che è una risposta — la memoria si cancella.
       UNA BATTUTA, UN CONTO. La schermata può chiedere la creazione due volte
       (l'auto-creazione che scatta mentre si preme «Paga», un doppio tocco):
       la chiave della battuta fa restituire il conto che sta già nascendo
@@ -527,6 +559,7 @@ requirements:
     labels: [ordini, offline, difetto-risolto]
     test_cases:
       - tests/unit/progressivi.test.js
+      - tests/unit/cassaDellaSerata.test.js
       - tests/bdd/numerazione.test.js
       - tests/component/PosPage.test.jsx
       - tests/unit/sync.test.js
@@ -816,10 +849,24 @@ requirements:
       nei cambi turno non si sovrascrivono a vicenda. Di partenza sono tutti
       accesi: nessuno deve scoprire di essersi perso un ordine perché «era
       spento di default».
+      UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta:
+      «è arrivato» quando non l'ha mai visto, «è cambiato» quando cambia
+      passo, «è tornato in coda» quando qualcuno lo ripristina dopo un
+      annullo. Il conto già visto non torna mai a essere nuovo — nemmeno se
+      nel frattempo era sparito dalla vista — e chi ha premuto «Ripristina»
+      non se lo sente ripetere, come già per chi annulla
+      (`ripristinato_device`, stesso metro di `cancelled_device`).
+      LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js):
+      un avviso annuncia un FATTO e non porta il nome della colonna in cui il
+      conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che
+      non possono importarsi a vicenda — la coda, la push del server e il
+      service worker — e il titolo dev'essere IDENTICO nei tre, perché la
+      notifica dell'app e quella del server portano lo stesso `tag` e il
+      sistema le fonde in una.
     status: implemented
     generate_issue: false
     labels: [ordini, notifiche]
-    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js]
+    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js, tests/component/AvvisiRipristino.test.jsx, tests/unit/paroleDegliAvvisi.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
@@ -3141,6 +3188,16 @@ requirements:
       un browser con la memoria vuota non ristampa la serata. Riaprendo un
       conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo
       (BUG-047).
+      DAL 21/08/2026 «SEMPRE E SOLO LÌ» VUOL DIRE: al gesto della
+      riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai
+      fatto uscire niente — la stampa è appesa a `closePaid` — ed era una
+      scelta presa quando l'acconto era un caso di margine. Adesso quella
+      riscossione ha la SUA carta, che è un documento diverso: lo scontrino
+      d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello
+      descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto
+      non prende né l'una né l'altro, perché è un evento e non lo stato del
+      conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire
+      uno solo.
     status: implemented
     generate_issue: false
     labels: [stampa]
@@ -5470,6 +5527,85 @@ requirements:
       - tests/unit/campiDiStampa.test.js
       - tests/component/CampiStampa.test.jsx
 
+  - id: REQ-STAMPA-015
+    title: "Lo scontrino d'acconto: la carta di chi versa una parte e se ne va"
+    area: "src/lib/printer.js (printScontrinoAcconto), src/lib/scontrinoAcconto.js, src/lib/campiStampa.js, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx"
+    description: >
+      «È normale che se riscuoto solo un acconto non mi stampa lo
+      scontrino?» (l'utente, 21/08/2026). Sì, ed era di proposito: la stampa
+      era appesa alla CHIUSURA del conto (REQ-STAMPA-001) e un acconto non
+      chiude. Era una scelta presa quando l'acconto era un caso di margine —
+      da quando si sconta sulla selezione (REQ-PAG-013) e si parte da
+      «Deseleziona tutti» (REQ-PAG-009), riscuotere una parte è il modo
+      normale di dividere un conto.
+      LA DECISIONE, parole sue (21/08/2026): «Lo scontrino esce ad ogni
+      riscossione ma è configurabile. Va fatto così: una impostazione che
+      attiva un terzo bottone, "riscuoti acconto con scontrino", e una
+      ulteriore opzione che invece ad ogni riscossione stampa lo scontrino
+      d'acconto. Il tasto preconto continua a stampare lo scontrino totale
+      con tutti gli acconti specificati, così come lo scontrino finale
+      (stampato quando si riscuotono gli ultimi articoli dell'ordine).
+      Quando la riscossione dello scontrino di acconto è attiva, disabilita
+      l'opzione del terzo bottone».
+      IL DOCUMENTO È NUOVO, non lo scontrino con un'altra intestazione:
+      risponde alle quattro domande di chi ha appena messo dei soldi sul
+      tavolo con altri sei intorno — cosa ho pagato (le righe di QUELLA
+      riscossione, quando ce ne sono: un acconto battuto a mano non salda
+      righe in particolare e la lista non si stampa affatto), quanto, con
+      che metodo, e quanto resta da incassare sul conto.
+      E NON SI PUÒ SCAMBIARE PER LO SCONTRINO FINALE: la fascia nera
+      ACCONTO in cima e la riga in fondo che dice che il conto resta aperto
+      NON sono campi e non si spengono, come non si spengono la lista delle
+      righe e l'importo versato (stessa regola per cui il totale dello
+      scontrino è fisso, REQ-STAMPA-014). Tutto il resto — intestazione,
+      numero e data, operatore, tavolo, sconto della riscossione, metodo,
+      riepilogo del conto, codice, ragione sociale, riga di saluto — sta nel
+      vocabolario chiuso di lib/campiStampa.js (`stampa_acconto`) e si
+      accende dalle impostazioni. Il logo segue le regole di REQ-STAMPA-011
+      con un tipo suo, acceso di suo: è carta che resta in mano al cliente,
+      come il preconto.
+      DUE INTERRUTTORI, in «💳 Pagamenti» accanto a «senza stampa» e
+      «riscuoti e servi» (la lezione di BUG-070), tutti e due spenti di
+      suo — chi non tocca niente non vede cambiare niente:
+      `scontrino_acconto_tasto` fa comparire il terzo tasto «Acconto con
+      scontrino» nella riga dei tasti alternativi;
+      `scontrino_acconto_sempre` fa uscire la carta da sé a ogni riscossione
+      che non chiude il conto. Quando il secondo è acceso il primo è SPENTO
+      E NON TOCCABILE, con scritto perché: sparire sembrerebbe un guasto.
+      La regola sta in un posto solo (lib/scontrinoAcconto.js), così il
+      pannello e la cassa non possono pensarla diverso.
+      QUANDO L'INCASSO CHIUDE IL CONTO il terzo tasto non sparisce, si
+      SPEGNE e al tocco dice perché — lì la carta che esce è lo scontrino
+      finale. Sparendo, comparirebbe e sparirebbe sotto il dito a ogni riga
+      tolta o rimessa mentre si divide il conto, facendo ballare tutta la
+      riga dei tasti.
+      IL TERZO TASTO STAMPA SEMPRE, la stampa automatica del terminale non
+      c'entra: è un gesto esplicito, come «Preconto». L'opzione automatica
+      invece la rispetta (`autoPrintScontrino`), perché è carta che esce da
+      sola: il telefono della sala che gli scontrini non li stampa non deve
+      cominciare a stampare acconti.
+      NIENTE PRETESA E NIENTE SEGNO SUL DATO: `claimReceiptPrint` e
+      `receipt_print_at` dicono «la carta di QUESTO CONTO è già uscita», che
+      è uno stato del conto. Un acconto è un evento — su un conto ce ne
+      stanno tre — e legarlo a quel segno vorrebbe dire che il secondo non
+      stampa più, o bruciare la pretesa dello scontrino finale (BUG-047).
+      Il lettore SumUp resta fuori: lì l'incasso si registra quando risponde
+      il lettore, non al gesto, e la carta segue il gesto.
+      IL PRECONTO ELENCAVA GIÀ GLI ACCONTI ma non diceva quanto restava:
+      «Totale con IVA» sopra e gli incassi sotto, e la sottrazione la faceva
+      a mente chi teneva il foglio davanti al cliente. Adesso su un conto
+      ancora aperto con degli incassi presi c'è anche «Resta da pagare»; su
+      uno scontrino di chiusura il residuo è zero e la riga non compare.
+    status: implemented
+    generate_issue: true
+    labels: [stampa, pagamenti]
+    priority: P1
+    test_cases:
+      - tests/unit/scontrinoAcconto.test.js
+      - tests/unit/cartaAcconto.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
+
   - id: REQ-STAMPA-012
     title: "Più comande dello stesso conto si stampano insieme"
     area: "src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx"
@@ -5560,10 +5696,20 @@ requirements:
       il conto la stampante tace (`in_creazione`); si esce, la coda vede la
       comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non
       sul tablet accanto» e' provato per intero.
+      E CHI ANNULLA NON STAMPA MAI (BUG-071): «se alla creazione di un
+      ordine lo annullo anche, la comanda non deve uscire se e' abilitata la
+      stampa automatica» (l'utente, 21/08/2026). L'annullo chiude anche la
+      sessione di creazione, nello STESSO patch dello stato: senza, l'uscita
+      dalla schermata toglieva il segno prima che l'annullo arrivasse, e in
+      quel buco la coda vedeva un conto composto, aperto e da stampare. La
+      domanda «questo lavoro e' annullato?» sta in una funzione pura sola
+      (`lavoroAnnullato`) e la fanno tutti e due i posti che stampano: chi
+      sceglie e chi mette l'inchiostro — il tasto «Comanda» a mano su un
+      conto annullato faceva uscire l'aggregato di tutto il conto.
     status: implemented
     generate_issue: false
     labels: [stampa, banco]
-    test_cases: [tests/unit/stampaComande.test.js]
+    test_cases: [tests/unit/stampaComande.test.js, tests/unit/comandaAnnullata.test.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  DAI FOGLI DI FLAVIO — letti il 19/08 (ANALISI DATI.xlsx, RAPP ORE.xlsx,
@@ -6828,10 +6974,22 @@ requirements:
       Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo
       scontrino esce come sempre — il «senza stampa» vale per QUEL gesto,
       non e' un marchio sul conto.
+      DAL 21/08/2026 NON E' PIU' «SOTTO» IL TASTO GRANDE: sta AFFIANCATO a
+      «Riscuoti e servi», su una riga sola (vedi REQ-ORD-014). I due sono
+      le due eccezioni allo stesso gesto e in riga si leggono per quello;
+      il tasto grande resta da solo a tutta larghezza. Compaiono a
+      condizioni indipendenti: se in riga ce n'e' una sola, si allarga e
+      prende tutto.
+      L'INTERRUTTORE STA IN «PAGAMENTI» dal 20/08, spostato li' per lo
+      stesso motivo per cui il 21/08 lo ha seguito il gemello (BUG-070):
+      chi cerca un tasto della schermata di pagamento apre Pagamenti.
     status: implemented
     generate_issue: true
     labels: [pagamenti, stampa, impostazioni]
-    test_cases: [tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/css.test.js
   - id: REQ-DEV-014
     title: "La stampa simulata si accende anche sul sito di test, dalla sezione Dev"
     area: "src/lib/stampanteFinta.js, src/components/DevTools.jsx"

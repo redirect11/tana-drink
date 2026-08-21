@@ -250,6 +250,9 @@ function mapOrder(snap) {
     cancelled_by: o.cancelled_by ?? null,
     cancelled_persona: o.cancelled_persona ?? null,
     cancelled_device: o.cancelled_device ?? null,
+    // DA QUALE TERMINALE è stato rimesso in piedi: serve a non ripetere
+    // l'avviso a chi ha appena premuto «Ripristina» (vedi BartenderPage).
+    ripristinato_device: o.ripristinato_device ?? null,
     cancel_kind: o.cancel_kind ?? null,
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
@@ -3452,6 +3455,19 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
   const patchAnnullo = {
     status: ORDER_STATUSES.ANNULLATO,
     ...timbro,
+    // ── L'ANNULLO CHIUDE ANCHE LA COMPOSIZIONE (BUG-071) ────────────
+    //
+    // «Se alla creazione di un ordine lo annullo anche, la comanda non
+    // deve uscire se è abilitata la stampa automatica» (l'utente,
+    // 21/08/2026). Il segno `in_creazione` è il cancello della stampa:
+    // finché c'è, la comanda non esce (comandeDaStampare); toglierlo la
+    // fa uscire. Annullando dalla creazione i due gesti partivano
+    // separati — l'uscita dalla schermata toglieva il segno subito,
+    // l'annullo arrivava dopo la sua lettura — e in quel buco la coda
+    // vedeva un conto composto, aperto e da stampare: la carta usciva.
+    // Qui il cancello si chiude INSIEME allo stato, in una scrittura
+    // sola: non esiste più un istante in cui il conto è stampabile.
+    in_creazione: false,
     comande,
     comande_statuses: comandeStatuses(comande),
     ...(buoniIncasso.length
@@ -3616,6 +3632,10 @@ export const restoreOrder = perConto(async function restoreOrder(id, { motivo = 
     // scontrino deve poter uscire di nuovo (BUG-047): il segno sul dato si
     // azzera qui, insieme alla pretesa locale che libera chi riapre.
     receipt_print_at: null,
+    // DA QUALE TERMINALE. Il conto rientra in coda e va annunciato a tutti
+    // gli altri, non a chi ha appena premuto: stesso metro di
+    // `cancelled_device` (vedi lib/dispositivo.js).
+    ripristinato_device: idDispositivo(),
   }
   bgWrite(() => updateDoc(orderRef, patchRiapertura), 'ripristino conto')
   // Riaperto: si compone, non si rilegge. Riaprire un conto e vederlo
@@ -4158,6 +4178,18 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
+  // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
+  // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi
+  // non tocca niente non vede cambiare niente:
+  //   `scontrino_acconto_tasto`  fa comparire il terzo tasto «Acconto con
+  //                              scontrino», da premere quando serve;
+  //   `scontrino_acconto_sempre` la carta esce da sé a ogni riscossione che
+  //                              non chiude, e allora il terzo tasto non ha
+  //                              più niente da fare: la sua opzione si
+  //                              disabilita (lib/scontrinoAcconto.js).
+  scontrino_acconto_tasto: false,
+  scontrino_acconto_sempre: false,
   price_markup: DEFAULT_MARKUP,
   price_round_step: DEFAULT_ROUND_STEP,
   // IVA di vendita (somministrazione bar = 10%): serve a scorporare l'IVA dal
