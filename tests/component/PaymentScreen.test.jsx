@@ -271,22 +271,40 @@ describe('metodi di pagamento', () => {
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  // Il motivo stava scritto sotto al tasto e occupava una riga a una
-  // schermata che ne ha poche. Ora il tasto è spento e basta: il perché lo
-  // dice se lo si tocca.
-  // La gestione preparazione si può spegnere (Impostazioni): senza, non
-  // esistono comande "da servire" e l'avviso era un allarme che non voleva
-  // dire niente, a ogni singolo incasso.
-  it('gestione preparazione SPENTA: niente avviso sulle comande da servire', () => {
-    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+  // «QUESTO MESSAGGIO TOGLILO, CHE OCCUPA SPAZIO QUANDO ZOOMO» (l'utente,
+  // 21/08/2026). L'avviso «Comande non ancora servite: il conto resta aperto
+  // anche dopo l'incasso» era una riga FISSA nella colonna centrale: a zoom
+  // alto quella riga è spazio tolto al tastierino, che proprio lì finiva
+  // sotto «Riscuotere» (BUG-075). E la si legge una volta sola in una vita.
+  // È lo stesso ragionamento con cui il motivo di un metodo spento non sta
+  // più scritto sotto al tasto (REQ-PAG-004).
+  it('l’avviso sulle comande da servire non occupa più una riga', () => {
+    mount(conComandaDaServire())
     expect(screen.queryByText(/Comande non ancora servite/)).toBeNull()
   })
 
-  it('gestione preparazione ACCESA: l’avviso c’è, il conto si chiude servendo tutto', () => {
-    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [
-      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
-    ] }] }))
-    expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  // L'informazione non è sparita: sta dove non costa altezza. Col servizio
+  // seguito e comande ancora da servire, «Riscuotere» se la porta nel
+  // `title` — e quando «Riscuoti e servi» è ACCESO la nomina, perché quella
+  // è l'unica strada che chiude subito.
+  it('il perché resta nel title di «Riscuotere», senza rubare una riga', () => {
+    mount(conComandaDaServire())
+    const tasto = screen.getByRole('button', { name: /Riscuotere/ })
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('resta aperto'))
+    expect(tasto.getAttribute('title')).not.toMatch(/Riscuoti e servi/)
+    cleanup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    expect(screen.getByRole('button', { name: /Riscuotere/ }).getAttribute('title')).toMatch(
+      /Riscuoti e servi/
+    )
+  })
+
+  // Senza gestione della preparazione non esistono comande «da servire» —
+  // sono servite per definizione — e l'incasso chiude e basta: niente da
+  // spiegare, nemmeno nel title.
+  it('gestione preparazione SPENTA: «Riscuotere» non ha niente da spiegare', () => {
+    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).not.toHaveAttribute('title')
   })
 
   // IL CONTO SI RISCUOTE SEMPRE, SI CHIUDE SOLO SE SERVITO. Ma al banco si

@@ -1034,19 +1034,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
             </p>
           )}
-          {/* L'avviso ha senso solo se si sta seguendo la preparazione: con la
-              gestione spenta non esistono comande "da servire" — sono servite
-              per definizione — e leggerlo a ogni incasso era un allarme che non
-              voleva dire niente. */}
-          {/* Col servizio seguito, incassare NON chiude: il conto resta
-              aperto finché le comande non sono servite. Prima qui c'era
-              scritto il contrario. */}
-          {!autoServeBase && !served && !closed && (
-            <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              ⚠️ Comande non ancora servite: il conto resta aperto anche dopo
-              l'incasso{riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.
-            </p>
-          )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
               📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
@@ -1084,9 +1071,30 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             </div>
           )}
 
+          {/* PERCHÉ QUESTO INCASSO POTREBBE NON CHIUDERE IL CONTO, e perché
+              sta scritto QUI dentro invece che su una riga sua. Col servizio
+              seguito, riscuotere non chiude: il conto resta aperto finché le
+              comande non sono servite. Era un avviso a schermo — «Comande non
+              ancora servite: il conto resta aperto anche dopo l'incasso» —
+              tolto il 21/08/2026 su richiesta dell'utente: «questo messaggio
+              toglilo, che occupa spazio quando zoomo». Una riga fissa nella
+              colonna centrale, a zoom alto, è spazio tolto al tastierino
+              (BUG-075), e la si legge una volta sola in una vita.
+              L'informazione non sparisce, cambia posto e non costa altezza:
+              nel `title` del tasto che la riguarda, e detta a voce alta dal
+              gemello «Riscuoti e servi · chiude il conto» quando c'è — quel
+              «chiude il conto» dice per differenza che l'altro non chiude.
+              Quando quel tasto è spento nelle impostazioni resta solo questo
+              `title`: è l'unico posto dov'era, e serviva un posto che non
+              rubasse una riga. */}
           {!closed && (
             <button
               className="btn block payscreen-collect"
+              title={
+                !autoServeBase && !served
+                  ? `Comande non ancora servite: il conto resta aperto anche dopo l'incasso${riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.`
+                  : undefined
+              }
               disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={() => riscuoti()}
             >

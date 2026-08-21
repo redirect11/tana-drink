@@ -531,10 +531,13 @@ describe('schermata Pagamento', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    // schermata: articoli a sinistra, importo al centro, avviso (c1 in prep.)
+    // schermata: articoli a sinistra, importo al centro. L'avviso «comande
+    // non ancora servite» NON c'è più a schermo dal 21/08/2026 — occupava
+    // una riga fissa nella colonna del tastierino; quello che diceva sta nel
+    // `title` di «Riscuotere» (le prove sono in PaymentScreen.test.jsx).
     expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
     expect(screen.getByTestId('pay-amount')).toHaveTextContent('14,00')
-    expect(screen.getByText(/[Cc]omande non ancora servite/)).toBeInTheDocument()
+    expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
     expect(registerPayment).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
@@ -547,7 +550,7 @@ describe('schermata Pagamento', () => {
     })
   })
 
-  it('con tutto servito la schermata non mostra avvisi', async () => {
+  it('con tutto servito la schermata non mostra avvisi né spiegazioni', async () => {
     const user = userEvent.setup()
     mount(
       baseOrder({
@@ -565,6 +568,9 @@ describe('schermata Pagamento', () => {
     )
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
+    // Non c'è nemmeno il `title`: con tutto servito l'incasso chiude, e non
+    // c'è nessuna differenza da spiegare.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).not.toHaveAttribute('title')
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 14,
