@@ -4859,14 +4859,33 @@ body.fullbleed,
   background: linear-gradient(135deg, #2f6bd8, #3f7ce0);
   color: #fff;
 }
-/* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — non
-   toccano il tasto grande. Attaccate sembravano la sua seconda riga, e non
-   lo sono: chiudono il conto in modi diversi, e una si preme per sbaglio
-   quando si mira all'altra. Stessa aria che il tasto grande prende da
-   sopra. */
-.payscreen-collect-muto,
-.payscreen-collect-servi {
+/* LE ALTRE VIE PER INCASSARE — «senza stampa» e «riscuoti e servi» — in
+   RIGA, sotto il tasto grande e staccate da lui. Due cose insieme:
+   — non lo toccano (BUG-069): attaccate sembravano la sua seconda riga, e
+     non lo sono — chiudono il conto in modi diversi, e una si preme per
+     sbaglio quando si mira all'altra. Stessa aria che il tasto grande
+     prende da sopra;
+   — stanno affiancate e non impilate (chiesto il 21/08/2026): sono le due
+     eccezioni, e in riga si leggono come alternative l'una dell'altra
+     invece che come una scala di tre tasti sotto al principale.
+   Compaiono a condizioni indipendenti, quindi la riga può averne una sola:
+   il `flex-grow` la fa arrivare da sola a tutta larghezza. */
+.payscreen-collect-alt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 8px;
+  flex-shrink: 0;
+}
+/* METÀ E METÀ FINCHÉ CI STANNO, POI A CAPO. Le scritte sono lunghe e una
+   porta pure l'importo: su un telefono da 360px due colonne le
+   spezzerebbero in tre righe di parole mozze. Sotto i 200px di larghezza
+   utile ciascuna, quindi, il `flex-wrap` le rimette una sotto l'altra a
+   tutta larghezza — come stavano prima — invece di stringere il bersaglio
+   o rimpicciolire il testo. Al banco (tablet) ci stanno sempre in riga. */
+.payscreen-collect-alt > .btn {
+  flex: 1 1 200px;
+  min-height: 44px;
 }
 
 .payscreen-methods {

@@ -311,6 +311,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const scontoFuoriMisura = scontoEccessivo(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
+  // LE DUE VIE ALTERNATIVE SI DECIDONO QUI, non nel JSX: la riga che le
+  // ospita esiste solo se ce n'è almeno una, altrimenti sotto il tasto
+  // grande resterebbe un contenitore vuoto con la sua aria.
+  // Le condizioni restano INDIPENDENTI — sono due impostazioni diverse.
+  const mostraSenzaStampa = !closed && riscuotiSenzaStampa && due > 0
+  const mostraEServi = !closed && riscuotiEServi && !autoServeBase && !served
 
   const selection = remaining
     .filter((r) => (sel[r.key] || 0) > 0)
@@ -1052,29 +1058,41 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
             </button>
           )}
-          {/* Lo stesso incasso, ma la stampante tace: per il cliente che
-              lo scontrino di cortesia non lo vuole. Solo dove il locale
-              l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
-          {!closed && riscuotiSenzaStampa && due > 0 && (
-            <button
-              className="btn block ghost payscreen-collect-muto"
-              disabled={saving || scontoFuoriMisura || !(toPay > 0)}
-              onClick={() => riscuoti({ senzaStampa: true })}
-            >
-              Riscuoti (senza stampa) · {formatPrice(toPay)}
-            </button>
-          )}
-          {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
-              di incassare qui e poi servire dalla coda. Solo dove il locale
-              lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
-          {!closed && riscuotiEServi && !autoServeBase && !served && (
-            <button
-              className="btn block ghost payscreen-collect-servi"
-              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
-              onClick={() => riscuoti({ servi: true })}
-            >
-              Riscuoti e servi · chiude il conto
-            </button>
+          {/* LE DUE VIE ALTERNATIVE, AFFIANCATE SU UNA RIGA SOLA (chiesto
+              dall'utente il 21/08/2026). Il tasto grande resta da solo a
+              tutta larghezza — è il gesto normale; queste due sono le
+              eccezioni, e stando in riga si vedono per quello che sono.
+              Compaiono a condizioni INDIPENDENTI, quindi la riga può
+              contenerne una sola: in quel caso si allarga e prende tutto
+              (ci pensa il `flex-grow` in `.payscreen-collect-alt`), niente
+              mezzo tasto con un buco accanto. */}
+          {(mostraSenzaStampa || mostraEServi) && (
+            <div className="payscreen-collect-alt">
+              {/* Lo stesso incasso, ma la stampante tace: per il cliente che
+                  lo scontrino di cortesia non lo vuole. Solo dove il locale
+                  l'ha acceso, e solo se c'è davvero qualcosa da incassare. */}
+              {mostraSenzaStampa && (
+                <button
+                  className="btn ghost payscreen-collect-muto"
+                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  onClick={() => riscuoti({ senzaStampa: true })}
+                >
+                  Riscuoti (senza stampa) · {formatPrice(toPay)}
+                </button>
+              )}
+              {/* Consegnato e incassato nello stesso gesto: un tasto solo invece
+                  di incassare qui e poi servire dalla coda. Solo dove il locale
+                  lo ha chiesto, e solo se c'è ancora qualcosa da servire. */}
+              {mostraEServi && (
+                <button
+                  className="btn ghost payscreen-collect-servi"
+                  disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+                  onClick={() => riscuoti({ servi: true })}
+                >
+                  Riscuoti e servi · chiude il conto
+                </button>
+              )}
+            </div>
           )}
 
           {/* Come nel POS: Codice Lotteria · Preconto · Invia fattura */}

@@ -197,11 +197,29 @@ requirements:
       Al banco però capita spessissimo il contrario — si consegna e si
       incassa nello stesso gesto — e lì due passaggi sono uno di troppo: il
       locale può accendere «Un tasto per incassare e servire insieme»
-      (Impostazioni → Gestione preparazione). Acceso, nella schermata di
+      (Impostazioni → Pagamenti). Acceso, nella schermata di
       pagamento compare anche «Riscuoti e servi», che chiude il conto in un
       colpo. Spento di default: chi segue il servizio di solito lo segue
       apposta. Il tasto non compare dove non serve — servizio spento, conto
       già servito o già chiuso.
+
+      DOVE SI ACCENDE, dal 21/08/2026: in «Pagamenti», accanto al gemello
+      «incassare senza stampare». Stava in «Gestione preparazione» e
+      l'utente non lo trovava (BUG-070) — chi cerca un tasto della
+      schermata di pagamento apre Pagamenti. La condizione se l'è portata
+      dietro: l'interruttore si vede solo col servizio acceso, perché
+      «servire» esiste solo se si seguono i passi, e un interruttore che
+      non fa niente è peggio di uno assente.
+
+      COME STA IN SCHERMATA, dal 21/08/2026: «Riscuoti e servi» e
+      «Riscuoti (senza stampa)» stanno AFFIANCATI su una riga sola sotto al
+      tasto grande — «mettili affiancati, non uno sopra l'altro» (l'utente,
+      21/08/2026). «Riscuotere» resta da solo a tutta larghezza: è il
+      gesto normale, le altre due sono le eccezioni. Le due condizioni sono
+      indipendenti, quindi in riga può finirci un tasto solo: in quel caso
+      si allarga e prende tutto. Su un telefono stretto vanno a capo invece
+      di stringersi — le scritte sono lunghe e il bersaglio resta da
+      pollice.
 
       E È L'UNICA STRADA CHE SERVE LE COMANDE. Il pagamento non può portare
       avanti nel flusso una comanda che sta a «da fare», «in preparazione» o
@@ -218,6 +236,8 @@ requirements:
     labels: [ordini, pagamenti, impostazioni]
     test_cases:
       - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/css.test.js
       - tests/unit/pagamentoNonServe.test.js
 
   - id: REQ-ORD-019
@@ -6828,10 +6848,22 @@ requirements:
       Cosi' se quel conto verra' riaperto e riscosso in modo normale, lo
       scontrino esce come sempre — il «senza stampa» vale per QUEL gesto,
       non e' un marchio sul conto.
+      DAL 21/08/2026 NON E' PIU' «SOTTO» IL TASTO GRANDE: sta AFFIANCATO a
+      «Riscuoti e servi», su una riga sola (vedi REQ-ORD-014). I due sono
+      le due eccezioni allo stesso gesto e in riga si leggono per quello;
+      il tasto grande resta da solo a tutta larghezza. Compaiono a
+      condizioni indipendenti: se in riga ce n'e' una sola, si allarga e
+      prende tutto.
+      L'INTERRUTTORE STA IN «PAGAMENTI» dal 20/08, spostato li' per lo
+      stesso motivo per cui il 21/08 lo ha seguito il gemello (BUG-070):
+      chi cerca un tasto della schermata di pagamento apre Pagamenti.
     status: implemented
     generate_issue: true
     labels: [pagamenti, stampa, impostazioni]
-    test_cases: [tests/component/PaymentScreen.test.jsx]
+    test_cases:
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/css.test.js
   - id: REQ-DEV-014
     title: "La stampa simulata si accende anche sul sito di test, dalla sezione Dev"
     area: "src/lib/stampanteFinta.js, src/components/DevTools.jsx"

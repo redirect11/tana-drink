@@ -91,6 +91,21 @@ const baseOrder = (over = {}) => ({
   ...over,
 })
 
+// Un conto con una comanda ancora da servire: è la condizione in cui
+// «Riscuoti e servi» ha senso di esistere. Sta qui e non dentro un
+// describe perché serve a due gruppi di prove diversi.
+const conComandaDaServire = () =>
+  baseOrder({
+    comande: [
+      {
+        id: 'c1',
+        seq: 1,
+        status: 'in_preparazione',
+        items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+      },
+    ],
+  })
+
 const noReader = { payments_reader_enabled: false, sumup_reader_id: null }
 const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 
@@ -275,18 +290,6 @@ describe('metodi di pagamento', () => {
   // IL CONTO SI RISCUOTE SEMPRE, SI CHIUDE SOLO SE SERVITO. Ma al banco si
   // consegna e si incassa spesso nello stesso gesto: il locale può
   // accendere il tasto che fa le due cose insieme.
-  const conComandaDaServire = () =>
-    baseOrder({
-      comande: [
-        {
-          id: 'c1',
-          seq: 1,
-          status: 'in_preparazione',
-          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
-        },
-      ],
-    })
-
   it('«Riscuoti e servi» c’è solo se il locale lo ha chiesto', () => {
     mount(conComandaDaServire())
     expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
@@ -820,6 +823,71 @@ describe('riscuoti senza stampa', () => {
     // …ma niente carta, e nessuna pretesa presa: la prossima riscossione
     // normale stamperà come sempre.
     expect(printScontrino).not.toHaveBeenCalled()
+  })
+})
+
+// ── LE DUE VIE ALTERNATIVE STANNO IN RIGA, NON IMPILATE ────────────
+//
+// «I tasti "riscuoti senza stampa" e "riscuoti e servi" mettili
+// affiancati, non uno sopra l'altro» (l'utente, 21/08/2026, con lo
+// screenshot). Sotto il tastierino c'erano tre tasti in colonna: il
+// grande e le due eccezioni, che a colpo d'occhio sembravano una scala.
+//
+// Il tasto grande resta da solo a tutta larghezza — è il gesto normale.
+// Le due eccezioni finiscono dentro `.payscreen-collect-alt`, che le mette
+// in riga. QUI si prova la STRUTTURA (chi sta dentro cosa): che siano
+// larghe metà e metà, o a capo su un telefono, lo dice il foglio di stile
+// — jsdom non fa layout, e quel pezzo lo sorveglia tests/unit/css.test.js.
+describe('«senza stampa» e «riscuoti e servi» stanno affiancati', () => {
+  const riga = () => document.querySelector('.payscreen-collect-alt')
+
+  it('accese tutte e due: stessa riga, e il tasto grande resta fuori', () => {
+    mount(conComandaDaServire(), {
+      ...noReader,
+      riscuoti_senza_stampa: true,
+      riscuoti_e_servi: true,
+    })
+    const r = riga()
+    expect(r).not.toBeNull()
+    expect(within(r).getByRole('button', { name: /senza stampa/ })).toBeInTheDocument()
+    expect(within(r).getByRole('button', { name: /Riscuoti e servi/ })).toBeInTheDocument()
+    // Il gesto principale NON è finito in riga con le eccezioni: sta sopra,
+    // da solo, a tutta larghezza.
+    expect(within(r).queryByRole('button', { name: /^Riscuotere/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /^Riscuotere/ })).toBeInTheDocument()
+  })
+
+  it('accesa una sola: nella riga c’è quel tasto e basta', () => {
+    // Le due condizioni sono indipendenti: capita spesso di averne una
+    // sola. La riga non deve restare mezza vuota — ci pensa il flex-grow.
+    mount(conComandaDaServire(), { ...noReader, riscuoti_senza_stampa: true })
+    expect(riga().children).toHaveLength(1)
+    expect(within(riga()).getByRole('button', { name: /senza stampa/ })).toBeInTheDocument()
+    cleanup()
+
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    expect(riga().children).toHaveLength(1)
+    expect(within(riga()).getByRole('button', { name: /Riscuoti e servi/ })).toBeInTheDocument()
+  })
+
+  it('spente tutte e due: la riga non esiste proprio', () => {
+    // Un contenitore vuoto avrebbe lasciato la sua aria sotto al tasto
+    // grande: uno spazio che non spiega niente.
+    mount(conComandaDaServire())
+    expect(riga()).toBeNull()
+  })
+
+  it('col servizio spento resta solo «senza stampa», e prende tutta la riga', () => {
+    // Senza i passi del servizio «servire» non esiste: incassare serve già
+    // tutto, e il tasto in più direbbe la stessa cosa del grande.
+    mount(conComandaDaServire(), {
+      ...noReader,
+      workflow_enabled: false,
+      riscuoti_senza_stampa: true,
+      riscuoti_e_servi: true,
+    })
+    expect(riga().children).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
   })
 })
 

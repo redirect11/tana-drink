@@ -2603,3 +2603,41 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-070
+    title: "L'interruttore di «Riscuoti e servi» era introvabile: stava in «Gestione preparazione»"
+    area: "src/components/SettingsTab.jsx (riscuoti_e_servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026: «metti che anche il tasto
+      "riscuoti e servi" e' opzionale nelle impostazioni».
+      COSA C'ERA GIA'. L'impostazione esisteva da tempo —
+      `riscuoti_e_servi`, spenta di default — e il suo interruttore c'era
+      eccome. Il difetto non e' una funzione mancante: e' che l'utente non
+      l'ha trovata, e ha chiesto di aggiungere una cosa che aveva gia'.
+      Un'impostazione che non si trova, per chi la cerca, non esiste.
+      DOV'ERA E PERCHE' NON SI TROVAVA. In «Gestione preparazione»,
+      annidata sotto «Segui la preparazione degli ordini». Ci era finita
+      per parentela tecnica — il tasto marca «servito», e «servito» e'
+      uno stato del servizio — mentre chi cerca un tasto della SCHERMATA
+      DI PAGAMENTO apre «Pagamenti».
+      LO STESSO IDENTICO INCIAMPO, LA SECONDA VOLTA. Il 20/08 era successo
+      con «Riscuoti (senza stampa)»: stessa sezione sbagliata, stessa
+      parentela di forma, e fu spostato in «Pagamenti» proprio perche'
+      non si trovava. Il gemello rimasto indietro ha ripetuto il difetto
+      un giorno dopo — spostarne uno solo dei due non aveva risolto la
+      causa, che e' la sezione, non il singolo interruttore.
+      COME E' STATO SISTEMATO. L'interruttore trasloca in «Pagamenti»,
+      accanto al gemello: due tasti che compaiono nella stessa schermata,
+      uno accanto all'altro, si accendono nello stesso posto. La
+      CONDIZIONE SE L'E' PORTATA DIETRO — si vede solo col servizio acceso
+      (`workflow_enabled !== false`) — perche' «servire» esiste solo se si
+      seguono i passi: col servizio spento il tasto non comparirebbe
+      comunque, e un interruttore che non fa niente e' peggio di uno
+      assente.
+    labels: [bug, interfaccia, impostazioni, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/component/SettingsTab.test.jsx

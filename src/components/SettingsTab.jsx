@@ -302,6 +302,24 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.riscuoti_senza_stampa === true}
                 onChange={(v) => save({ riscuoti_senza_stampa: v })}
               />
+              {/* E ADESSO ANCHE IL SUO GEMELLO, PER LO STESSO IDENTICO
+                  MOTIVO. Stava in «Gestione preparazione» e l'utente non
+                  l'ha trovato (21/08/2026) — già successo il 20/08 con
+                  quello qui sopra. I due tasti compaiono nella stessa
+                  schermata, uno accanto all'altro: si accendono nello
+                  stesso posto.
+                  LA CONDIZIONE SE L'È PORTATA DIETRO: «servire» esiste solo
+                  se si seguono i passi del servizio. Col servizio spento
+                  il tasto non comparirebbe comunque, e un interruttore che
+                  non fa niente è peggio di uno assente. */}
+              {settings.workflow_enabled !== false && (
+                <ToggleRow
+                  label="Un tasto per incassare e servire insieme"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
+                  checked={settings.riscuoti_e_servi === true}
+                  onChange={(v) => save({ riscuoti_e_servi: v })}
+                />
+              )}
               <ToggleRow
                 label="Pagamento online (SumUp)"
                 desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
@@ -419,14 +437,6 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.workflow_enabled !== false}
                 onChange={(v) => (v ? save({ workflow_enabled: true }) : setConfermaSpegni(true))}
               />
-              {settings.workflow_enabled !== false && (
-                <ToggleRow
-                  label="Un tasto per incassare e servire insieme"
-                  desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
-                  checked={settings.riscuoti_e_servi === true}
-                  onChange={(v) => save({ riscuoti_e_servi: v })}
-                />
-              )}
               {/* Vale per TUTTE le comande allo stesso modo — la prima di un
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
