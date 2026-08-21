@@ -21,6 +21,7 @@ import {
   tipoScontrino,
   LARGHEZZA_LOGO,
 } from './campiStampa.js'
+import { scontiDelConto, scontoTotale } from './pagamento.js'
 
 // ── COSA C'È SULLA CARTA LO DECIDE IL LOCALE ─────────────────────────
 //
@@ -849,7 +850,11 @@ export function printScontrino(order, opts = {}) {
     const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
     const { date, time } = italianDateTime(order.created_at)
     const lordo = Number(order.total ?? 0)
-    const sconto = Number(order.discount_amount ?? 0)
+    // GLI SCONTI, AL PLURALE. Uno per ogni riscossione che se n'è portato via
+    // uno: due amici che pagano il loro e ognuno si fa scontare le sue birre
+    // sono due righe, non una somma che non si sa da dove esce.
+    const sconti = scontiDelConto(order)
+    const sconto = scontoTotale(order)
     // Il totale dello scontrino è quello REALMENTE pagato: prima si stampava il
     // lordo e lo sconto applicato non compariva da nessuna parte.
     const total = Math.max(0, Math.round((lordo - sconto) * 100) / 100)
@@ -922,10 +927,15 @@ export function printScontrino(order, opts = {}) {
       prn.addText(row(`${order.coperto_persons}x  Coperto`, `${cop.padStart(7)} ${cop.padStart(7)}`))
     }
 
-    // ── Sconto applicato ──
+    // ── Sconti applicati ──
+    // Con UNO SOLO su tutto il conto la riga resta quella di sempre
+    // («Sconto»), che è come esce lo scontrino di un conto vecchio. Da due in
+    // su ognuno dice su che cosa cadeva, se no sono cifre senza una ragione.
     if (sconto > 0 && cfg.mostra('sconto')) {
       prn.addText(row('Subtotale', `${lordo.toFixed(2)}€`))
-      prn.addText(row('Sconto', `-${sconto.toFixed(2)}€`))
+      for (const s of sconti) {
+        prn.addText(row(s.etichetta, `-${s.importo.toFixed(2)}€`))
+      }
     }
 
     prn.addText(line())

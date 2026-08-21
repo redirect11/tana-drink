@@ -81,11 +81,27 @@ function serveComande(comande, now) {
   )
 }
 
-// Residuo del conto: totale − sconto − pagamenti parziali già registrati
-// (stessa aritmetica di src/lib/pagamento.js lato client).
+// GLI SCONTI DI UN CONTO SONO PIÙ D'UNO. Ognuno viaggia dentro la riscossione
+// che se l'è portato via (`payments[].sconto`); sul conto resta solo quello
+// preparato per il prossimo incasso (`discount_amount`). Su un conto vecchio
+// non c'è nessuno sconto dentro i pagamenti e il conto torna quello di prima.
+// Stessa aritmetica di src/lib/pagamento.js lato client.
+function scontoConsumato(order) {
+  const somma = (order?.payments || []).reduce(
+    (s, p) => s + (Number(p?.sconto?.amount) || 0),
+    0
+  )
+  return Math.round(somma * 100) / 100
+}
+
+function scontoTotale(order) {
+  return Math.round((scontoConsumato(order) + (Number(order?.discount_amount) || 0)) * 100) / 100
+}
+
+// Residuo del conto: totale − sconti − pagamenti parziali già registrati.
 function orderDue(order) {
   const paid = (order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0)
-  const due = (Number(order?.total) || 0) - (Number(order?.discount_amount) || 0) - paid
+  const due = (Number(order?.total) || 0) - scontoTotale(order) - paid
   return Math.max(0, Math.round(due * 100) / 100)
 }
 
@@ -101,12 +117,19 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
       payment_status: (order?.payments || []).length ? 'parziale' : 'fallito',
       sumup_pending_amount: null,
       sumup_pending_items: null,
+      sumup_pending_sconto: null,
     }
   }
   if (status !== 'pagato') return null
 
   const pending = Number(order?.sumup_pending_amount)
   if (pending > 0) {
+    // LO SCONTO SI CONSUMA QUI, come per il contante. La schermata l'aveva
+    // preparato sulle righe che sta riscuotendo e l'ha messo in volo insieme
+    // all'importo: adesso entra nel pagamento e sul conto non resta niente di
+    // preparato, se no il prossimo incasso se lo ritroverebbe addosso.
+    const sconto = order?.sumup_pending_sconto || null
+    const consumato = sconto && Number(sconto.amount) > 0 ? sconto : null
     const payments = [
       ...(order?.payments || []),
       {
@@ -115,26 +138,34 @@ function decidePaymentPatch(order, { status, transactionId = null, now }) {
         method: 'lettore',
         items: order?.sumup_pending_items || null,
         at: now,
+        ...(consumato ? { sconto: consumato } : {}),
         ...(transactionId ? { transaction_id: transactionId } : {}),
       },
     ]
-    const residuo = orderDue({ ...order, payments })
+    const scontoConsumatoOra = consumato
+      ? { discount: null, discount_amount: 0, discount_items: null }
+      : {}
+    const residuo = orderDue({ ...order, ...scontoConsumatoOra, payments })
     if (residuo > 0.005) {
       return {
         payments,
+        ...scontoConsumatoOra,
         payment_status: 'parziale',
         sumup_pending_amount: null,
         sumup_pending_items: null,
+        sumup_pending_sconto: null,
         sumup_client_transaction_id: null,
       }
     }
     const patch = {
       payments,
+      ...scontoConsumatoOra,
       payment_status: 'pagato',
       payment_method: payments.every((p) => p.method === 'lettore') ? 'lettore' : 'misto',
       paid_at: now,
       sumup_pending_amount: null,
       sumup_pending_items: null,
+      sumup_pending_sconto: null,
     }
     if (transactionId) patch.sumup_transaction_id = transactionId
     if (order?.status === 'annullato') {

@@ -6,7 +6,7 @@ import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
 import { isPersonale } from '../lib/ruoli.js'
 import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
-import { paidAmount, orderTotal } from '../lib/pagamento.js'
+import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 
@@ -235,8 +235,8 @@ export default function OrdersHistory() {
               </span>
               <span className="ordhist-tot">
                 {formatPrice(orderTotal(o))}
-                {(o.discount_amount || 0) > 0 && (
-                  <span className="sconto-badge"> 🎁 −{formatPrice(o.discount_amount)}</span>
+                {scontoTotale(o) > 0 && (
+                  <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
                 )}
               </span>
             </button>

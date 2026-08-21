@@ -3,6 +3,7 @@
 // Riusa aggregateProducts/ordersFinance da eta.js.
 import { ORDER_STATUSES } from './orderStatus.js'
 import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './eta.js'
+import { scontoTotale } from './pagamento.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
@@ -117,7 +118,7 @@ export function sessionReport(orders, session, drinksById) {
     return !!t && t >= from && (!to || t <= to)
   })
   const totale = dentro.reduce(
-    (s2, o) => s2 + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    (s2, o) => s2 + (Number(o.total) || 0) - scontoTotale(o),
     0
   )
   return {
@@ -147,7 +148,7 @@ export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
 export function hourRangeReport(orders, range, drinksById) {
   const ord = ordersInHourRange(orders, range)
   const totale = ord.reduce(
-    (s, o) => s + (Number(o.total) || 0) - (Number(o.discount_amount) || 0),
+    (s, o) => s + (Number(o.total) || 0) - scontoTotale(o),
     0
   )
   return {

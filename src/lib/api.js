@@ -62,6 +62,7 @@ import {
   discountAmount,
   discountAfterChange,
   DEFAULT_DISCOUNT_POLICY,
+  lordoSelezione,
   orderDue,
   paymentCloses,
   summaryMethod,
@@ -262,6 +263,10 @@ function mapOrder(snap) {
     // Sconto sul conto e pagamenti parziali (split alla cassa).
     discount: o.discount ?? null,
     discount_amount: o.discount_amount ?? 0,
+    // Le righe su cui cade lo sconto in preparazione. `null` = tutto quello
+    // che resta da riscuotere, ed è anche come si leggono i conti vecchi: lì
+    // lo sconto era per forza uno solo, su tutto il conto.
+    discount_items: o.discount_items ?? null,
     payments: (o.payments || []).map((p) => ({ ...p, at: toIso(p.at) })),
     // Lotteria degli scontrini e fattura di cortesia emessa.
     lottery_code: o.lottery_code ?? null,
@@ -2332,10 +2337,11 @@ async function refundVoucher(voucherId, amount, orderId, atIso) {
 }
 
 // BUONO come SCONTO: il buono non è un metodo di pagamento ma uno sconto che
-// attinge al saldo del beneficiario. Si applica al totale (come uno sconto in
-// euro) e si detrae dal buono, anche PARZIALMENTE (il cliente sceglie quanto
-// usare, fino al saldo). Rimuoverlo/annullare l'ordine ristorna il saldo.
-export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) {
+// attinge al saldo del beneficiario. Si applica come uno sconto in euro — dal
+// 20/08/2026 sulle RIGHE che si stanno riscuotendo, non sul totale — e si
+// detrae dal buono, anche PARZIALMENTE (il cliente sceglie quanto usare, fino
+// al saldo). Rimuoverlo/annullare l'ordine ristorna il saldo.
+export async function applyVoucherDiscount(orderId, voucherId, requestedAmount, { items = null } = {}) {
   const orderRef = doc(db, 'orders', orderId)
   const voucherRef = doc(vouchersCol, voucherId)
   const nowIso = new Date().toISOString()
@@ -2355,12 +2361,16 @@ export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) 
   }
   const sameBack = prev && prev.voucher_id === voucherId ? r2(prev.value) : 0
   const balance = Math.max(0, r2((Number(v.balance) || 0) + sameBack))
-  const total = Number(o.total) || 0
-  const redeemed = r2(Math.min(Math.max(0, Number(requestedAmount) || 0), balance, total))
+  // IL BUONO NON PUÒ VALERE PIÙ DELLE RIGHE CHE STA PAGANDO. Come ogni altro
+  // sconto cade sulla selezione: scalare dal buono più di quanto si sta
+  // riscuotendo vorrebbe dire bruciare credito del beneficiario per niente.
+  const righe = Array.isArray(items) && items.length ? items : null
+  const base = lordoSelezione(o, righe)
+  const redeemed = r2(Math.min(Math.max(0, Number(requestedAmount) || 0), balance, base))
   if (!(redeemed > 0)) throw new Error('Saldo del buono insufficiente')
 
   const disc = { type: 'buono', value: redeemed, voucher_id: voucherId, voucher_name: v.holder_name }
-  await updateDoc(orderRef, { discount: disc, discount_amount: redeemed })
+  await updateDoc(orderRef, { discount: disc, discount_amount: redeemed, discount_items: righe })
   // Netto sul buono: rimetti l'eventuale vecchio valore (stesso buono) e togli
   // il nuovo. movements registra la variazione netta di questo passaggio.
   const net = r2(sameBack - redeemed)
@@ -2371,11 +2381,23 @@ export async function applyVoucherDiscount(orderId, voucherId, requestedAmount) 
   return { redeemed }
 }
 
-// Imposta (o rimuove, con null) lo sconto sul conto: percentuale o euro.
-// L'importo in euro viene calcolato e persistito, così residuo e webhook
-// dei pagamenti ragionano sempre sullo stesso numero. Se c'era un buono-sconto
-// lo si ristorna prima (il buono torna al beneficiario).
-export const setOrderDiscount = perConto(async function setOrderDiscount(id, discount) {
+// Imposta (o rimuove, con null) lo sconto IN PREPARAZIONE: percentuale o euro.
+// L'importo in euro viene calcolato e persistito, così residuo e webhook dei
+// pagamenti ragionano sempre sullo stesso numero. Se c'era un buono-sconto lo
+// si ristorna prima (il buono torna al beneficiario).
+//
+// `items` sono le righe che si sta riscuotendo: lo sconto cade su quelle, e
+// restano scritte perché altrimenti un altro terminale legge un importo senza
+// sapere a che cosa si riferisce. `null` = tutto quello che resta.
+//
+// `amount` lo può dettare la schermata: quando la selezione cambia sotto uno
+// sconto in euro, l'importo nuovo lo decide la strategia del locale
+// (discountAfterChange), che qui non si conosce.
+export const setOrderDiscount = perConto(async function setOrderDiscount(
+  id,
+  discount,
+  { items = null, amount = null } = {}
+) {
   const ref = doc(db, 'orders', id)
   const snap = await leggiOrdine(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
@@ -2389,10 +2411,18 @@ export const setOrderDiscount = perConto(async function setOrderDiscount(id, dis
     discount && Number(discount.value) > 0
       ? { type: discount.type === 'percent' ? 'percent' : 'euro', value: Number(discount.value) }
       : null
+  const righe = clean && Array.isArray(items) && items.length ? items : null
+  const base = lordoSelezione(o, righe)
   scriviOrdine(
     ref,
     o,
-    { discount: clean, discount_amount: discountAmount(o.total ?? 0, clean) },
+    {
+      discount: clean,
+      discount_amount: clean
+        ? Math.min(amount != null ? r2(amount) : discountAmount(base, clean), base)
+        : 0,
+      discount_items: righe,
+    },
     'sconto ordine'
   )
 })
@@ -2410,16 +2440,23 @@ function chiIncassa() {
   return { uid: u.uid, email: u.email || null, name: u.displayName || null }
 }
 
-// QUANTO RESTA DA INCASSARE LO SA LA SCHERMATA, NON LA RILETTURA (BUG-046).
-// `chiude` è quello che ha davanti chi incassa nell'istante del gesto: «con
-// questo incasso il conto è saldato». Serve perché lo sconto si applica un
-// attimo prima di riscuotere e la sua scrittura parte in sottofondo: qui si
-// rileggeva il conto per decidere, e la rilettura prende la versione di prima
-// — quella SENZA sconto. Il residuo risultava più alto dell'incasso, il conto
-// veniva scritto «parziale» invece che «pagato» e restava aperto mentre a
-// schermo era chiuso; e lo scontrino automatico, che guarda proprio
-// `payment_status`, non usciva mai.
-export const registerPayment = perConto(async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false, chiude = null } = {}) {
+// ── LO SCONTO VIAGGIA COL PAGAMENTO ──────────────────────────────────
+//
+// `sconto` è lo sconto che questa riscossione si porta via: viene scritto
+// DENTRO il pagamento e quello in preparazione sul conto si azzera. Un gesto,
+// una scrittura — e da lì in poi quello sconto è storia.
+//
+// È anche la cura definitiva di BUG-046. `chiude` era nato perché lo sconto
+// si applicava un attimo prima di riscuotere, la sua scrittura partiva in
+// sottofondo e qui si rileggeva il conto per decidere se l'incasso lo saldava:
+// la rilettura prendeva la versione di PRIMA, quella senza sconto, il residuo
+// risultava più alto dell'incasso e il conto restava «parziale» mentre a
+// schermo era chiuso (con lo scontrino automatico che non usciva mai).
+// Adesso lo sconto arriva qui insieme all'importo, quindi il residuo si
+// calcola giusto anche su un documento vecchio di un istante. `chiude` resta,
+// perché resta vero che quanto è dovuto lo sa la schermata e non la rilettura:
+// è la cintura, questa è la bretella.
+export const registerPayment = perConto(async function registerPayment(id, { amount, method = 'banco', items = null, autoServe = false, chiude = null, sconto = null } = {}) {
   const ref = doc(db, 'orders', id)
   const nowIso = new Date().toISOString()
   const snap = await leggiOrdine(ref)
@@ -2427,7 +2464,13 @@ export const registerPayment = perConto(async function registerPayment(id, { amo
   const o = snap.data()
   if (o.status === ORDER_STATUSES.ANNULLATO) throw new Error('Ordine annullato')
   if (o.payment_status === 'pagato') throw new Error('Ordine già pagato')
-  const due = orderDue(o)
+  // Lo sconto dichiarato dal gesto SOSTITUISCE quello sul documento: è lo
+  // stesso, solo più fresco di quanto la cache sappia dire.
+  const consumato = sconto && r2(sconto.amount) > 0 ? { ...sconto, amount: r2(sconto.amount) } : null
+  const oConSconto = consumato
+    ? { ...o, discount: null, discount_amount: consumato.amount, discount_items: null }
+    : o
+  const due = orderDue(oConSconto)
   // Il tetto sul residuo riletto resta per chi non dice niente: non si
   // registra mai più di quanto risulta dovuto. Chi invece dichiara di star
   // saldando il conto incassa la cifra che ha battuto.
@@ -2445,9 +2488,10 @@ export const registerPayment = perConto(async function registerPayment(id, { amo
       items: items?.length ? items : null,
       at: nowIso,
       by: chiIncassa(),
+      ...(consumato ? { sconto: consumato } : {}),
     },
   ]
-  const closed = chiude === true || paymentCloses(o, paid)
+  const closed = chiude === true || paymentCloses(oConSconto, paid)
   const chiusura = closed ? conTimbro(chiusuraPagamento(o, nowIso, { autoServe }), nowIso) : null
   // PRIMA L'INCASSO, POI IL MAGAZZINO. Lo scarico legge ricette e articoli:
   // aspettarlo voleva dire che il conto risultava pagato solo dopo quelle
@@ -2457,6 +2501,9 @@ export const registerPayment = perConto(async function registerPayment(id, { amo
     o,
     {
       payments,
+      // Lo sconto in preparazione è finito dentro il pagamento: sul conto non
+      // c'è più niente di preparato, e il prossimo giro parte pulito.
+      ...(consumato ? { discount: null, discount_amount: 0, discount_items: null } : {}),
       ...(closed
         ? { ...chiusura, payment_method: summaryMethod(payments) }
         : { payment_status: 'parziale' }),
@@ -2962,7 +3009,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
   // Lo sconto segue il conto secondo la strategia scelta (vedi
   // discountAfterChange): un importo fisso su un conto cambiato non ha più
   // il significato che aveva quando è stato deciso.
-  const sconto = scontoRicalcolato(cur, total)
+  const sconto = scontoRicalcolato(cur, total, items)
   bgWrite(
     () =>
       updateDoc(ref, {
@@ -4282,17 +4329,27 @@ function impostazioni() {
   return { ...DEFAULT_SETTINGS, ...(settingsCache || {}) }
 }
 
-// Sconto da riscrivere quando il totale del conto cambia. Ritorna null se
-// sull'ordine non c'è nessuno sconto: in quel caso non si tocca il campo.
-function scontoRicalcolato(cur, nuovoTotale) {
+// Sconto da riscrivere quando cambiano le righe del conto. Ritorna null se
+// sull'ordine non c'è nessuno sconto in preparazione: in quel caso non si
+// tocca il campo.
+//
+// LA BASE NON È PIÙ IL TOTALE, sono le righe su cui lo sconto cade
+// (`discount_items`; null = tutto il residuo, che è il caso di sempre). Se una
+// di quelle righe sparisce dal conto, la sua base cala e lo sconto la segue
+// secondo la strategia scelta — senza `discount_items` si scontavano righe che
+// dal conto erano già state tolte.
+function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
   const discount = cur?.discount || null
   if (!discount) return null
+  const righe = cur.discount_items || null
+  const prima = { ...cur }
+  const dopo = { ...cur, total: nuovoTotale, ...(nuoviItems ? { order_items: nuoviItems, comande: null } : {}) }
   return discountAfterChange(
     {
       discount,
       prevAmount: cur.discount_amount,
-      prevTotal: cur.total,
-      newTotal: nuovoTotale,
+      prevTotal: lordoSelezione(prima, righe),
+      newTotal: lordoSelezione(dopo, righe),
     },
     impostazioni().discount_policy
   )

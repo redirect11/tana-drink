@@ -100,6 +100,7 @@ describe('decidePaymentPatch', () => {
       payment_status: 'fallito',
       sumup_pending_amount: null,
       sumup_pending_items: null,
+      sumup_pending_sconto: null,
     })
   })
 
@@ -135,6 +136,54 @@ describe('decidePaymentPatch: incassi PARZIALI sul lettore (split)', () => {
     })
     expect(patch.sumup_pending_amount).toBeNull()
     expect(patch.sumup_client_transaction_id).toBeNull()
+  })
+
+  // ── LO SCONTO VIAGGIA COL PAGAMENTO, ANCHE SUL LETTORE ────────────
+  // La schermata l'ha preparato sulle righe che sta riscuotendo e l'ha messo
+  // in volo insieme all'importo: qui entra dentro l'incasso e sul conto non
+  // resta niente di preparato, se no il prossimo se lo ritroverebbe addosso.
+  // Gli sconti dei pagamenti precedenti pesano sul residuo come il pagato.
+  it('lo sconto in volo finisce dentro il pagamento e sparisce dal conto', () => {
+    const order = {
+      ...base,
+      sumup_pending_amount: 6,
+      sumup_pending_items: [{ drink_id: 'gin', qty: 1 }],
+      sumup_pending_sconto: {
+        type: 'euro',
+        value: 2,
+        amount: 2,
+        items: [{ drink_id: 'gin', qty: 1 }],
+      },
+      discount: { type: 'euro', value: 2 },
+      discount_amount: 2,
+    }
+    const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })
+    expect(patch.payments[0].sconto).toMatchObject({ amount: 2 })
+    expect(patch.discount_amount).toBe(0)
+    expect(patch.discount).toBeNull()
+    expect(patch.sumup_pending_sconto).toBeNull()
+    // 22 − 2 di sconto − 6 incassati = 14 ancora da prendere: conto aperto.
+    expect(patch.payment_status).toBe('parziale')
+  })
+
+  it('un secondo incasso sul lettore salda quello che resta dopo il primo sconto', () => {
+    const order = {
+      ...base,
+      payments: [
+        {
+          id: 'p1',
+          amount: 6,
+          method: 'lettore',
+          sconto: { type: 'euro', value: 2, amount: 2, items: [{ drink_id: 'gin', qty: 1 }] },
+        },
+      ],
+      sumup_pending_amount: 12.6,
+      sumup_pending_sconto: { type: 'percent', value: 10, amount: 1.4, items: [{ qty: 2 }] },
+    }
+    const patch = decidePaymentPatch(order, { status: 'pagato', now: NOW })
+    // 22 − 2 − 1,40 − 6 − 12,60 = 0: due sconti, due incassi, conto chiuso.
+    expect(patch.payment_status).toBe('pagato')
+    expect(patch.payments.map((p) => p.sconto.amount)).toEqual([2, 1.4])
   })
 
   it('importo in volo a saldo del residuo: chiude il conto (servito)', () => {

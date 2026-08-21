@@ -1,8 +1,73 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.5.2
+## 1.5.3-beta
 
 ### Per chi gestisce
+
+- **Nel pagamento c'è «Deseleziona tutti»: un tasto e il conto va a
+  zero.** Sta **in cima alla lista delle voci**, accanto a «Separa
+  uguali»/«Unisci uguali». Quando il cliente comincia a dirti cosa ha
+  preso, lo premi una volta: **tutte le voci si spengono insieme** e da lì
+  aggiungi solo quelle che ti sta pagando, una per una. Su un conto da
+  venti prodotti dove ne paga uno, prima toccava togliere la spunta a
+  diciannove voci; adesso è un tasto e un tocco. Quando la lista è tutta
+  spenta lo stesso tasto diventa **«Seleziona tutti»** e rimette dentro
+  tutto. Il vecchio **«Rimetti tutto in pagamento»**, che stava in fondo
+  alla lista, non c'è più: fa lo stesso lavoro questo, dove lo vedi.
+  Con **niente selezionato** l'importo è 0,00 € e sopra c'è scritto
+  «nessuna riga scelta»: «Riscuotere» resta spento finché non scegli una
+  voce — così non parte un incasso vuoto — ma il **tastierino** funziona
+  come sempre, se vuoi battere una cifra a mano. E uno **sconto già
+  preparato non si perde**: resta lì, e appena tocchi la prima voce torna
+  a seguire quello che stai riscuotendo.
+
+- **Il tasto del menu non copre più i conteggi della coda, e sopra le card
+  c'è una riga in meno.** A tutto schermo, con la barra in alto nascosta,
+  il ☰ era appeso sull'angolo dello schermo: appena scorrevi la coda ci
+  finiva sotto l'inizio delle scritte — «4 aperti · 16 chiusi · 583,00 €»
+  si leggeva «…erti · 16 chiusi», e il nome del terminale «…o Bar · sei
+  tu». Adesso il ☰ **sta dentro la testata**, primo tasto in alto a
+  sinistra, e scorre insieme a lei: non copre più niente, né in cima né
+  scorrendo. Quando la testata è scorsa via il menu si riapre dalla
+  linguetta, come tutto il resto.
+  E la testata sul **telefono** è passata da **quattro righe a tre**: «▾
+  Filtri» e «↓» non hanno più una riga tutta loro — stanno in fondo alla
+  riga della ricerca, che è dove la lista e le schede li tengono già — e
+  «In servizio» non si spezza più in due. Non si è perso niente:
+  conteggi, incasso, chi sei e su che terminale, ricerca, filtri,
+  ordinamento, cambio vista, stampante e il ＋ sono tutti dove erano. Sulla
+  lavagna sono una ventina di pixel restituiti alle card.
+
+- **Nel pagamento, il primo tocco sceglie: «di tutto il conto, mi paghi
+  questo».** La schermata si apre con tutto acceso, come sempre. Ma
+  adesso, **appena tocchi una voce — il nome del prodotto, o il suo «+» —
+  tutte le altre si spengono** e resta in riscossione solo quella. Da lì
+  in poi ogni tocco **aggiunge**: tocchi un'altra voce e si accende
+  anche lei. Le voci fuori restano lì, **smorte** ma leggibili: si
+  rimettono dentro toccandole. Prima, per incassare una birra su un conto
+  da dieci righe, dovevi spegnerne nove a una a una. Il **«−»** funziona
+  come ha sempre funzionato, e con **«Seleziona tutti»** in cima
+  torni ad avere tutto acceso. Su un prodotto con più pezzi: toccare il
+  nome prende **tutta la riga**, il «+» e il «−» muovono **un pezzo per
+  volta** — e visto che il conto si apre già a pezzi separati, di solito
+  è un tocco solo.
+
+- **Lo sconto si fa sui prodotti che stai riscuotendo, e se ne può fare
+  più d'uno.** Prima lo sconto era uno solo e stava sul conto intero:
+  se poi si toglievano prodotti dalla schermata di pagamento, chi pagava
+  la sua parte si portava via *una fetta* di quello sconto, e il conto
+  non tornava con niente di quello che aveva sul tavolo. Adesso lo sconto
+  cade **sulle righe che sono accese in quel momento**: togline una e
+  l'importo si rifà su quelle rimaste. Quando riscuoti, quello sconto se
+  ne va **dentro quell'incasso** e il conto riparte pulito — così chi
+  resta al tavolo può farsi scontare le sue, e **sono due sconti**, non
+  uno diviso in due. Sullo scontrino li trovi elencati uno per uno, con
+  scritto su cosa cadevano («Sconto 10% su 3 prodotti −6,00 €»). Se fai
+  **un solo sconto su tutto il conto** — che è quello che si fa quasi
+  sempre — non cambia niente: la riga è «Sconto», come è sempre stata.
+  Vale anche per il **buono**: copre le righe che stai riscuotendo, e mai
+  più di quanto valgono. I conti già aperti stasera restano com'erano e
+  si chiudono come prima.
 
 - **Il colore del conto si sceglie da una finestrella.** Nel «⋯ Azioni»
   di una card — del conto come della comanda — c'era la fila dei dodici

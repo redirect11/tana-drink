@@ -26,7 +26,12 @@ import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
 // e nella vista menu per l'ordinazione manuale (naviga a /bar?tab=…).
-export default function StaffDrawer({ role, active = null, onSelect = null }) {
+//
+// `flottante`: il ☰ nell'angolo, per le schermate a tutto schermo dove la
+// topbar non c'è. Chi ha una testata sua — la lavagna della coda — lo mette
+// dentro quella (`.board-burger`) e qui lo spegne: un tasto fisso sopra una
+// pagina che scorre finisce prima o poi su quello che c'è scritto sotto.
+export default function StaffDrawer({ role, active = null, onSelect = null, flottante = true }) {
   const [open, setOpen] = useState(false)
   // I gruppi restano chiusi finché non li si apre, e la scelta si ricorda:
   // chi lavora a gruppi non deve riaprirli a ogni giro.
@@ -225,9 +230,11 @@ export default function StaffDrawer({ role, active = null, onSelect = null }) {
 
   return (
     <>
-      <button className="bar-burger" aria-label="Menu" onClick={() => setOpen(true)}>
-        ☰
-      </button>
+      {flottante && (
+        <button className="bar-burger" aria-label="Menu" onClick={() => setOpen(true)}>
+          ☰
+        </button>
+      )}
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
       <nav
         className={`bar-sidebar${open ? ' open' : ''}${dock ? ' agganciata' : ''}${
