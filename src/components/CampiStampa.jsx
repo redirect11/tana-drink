@@ -24,6 +24,7 @@ import { isAdmin } from '../lib/ruoli.js'
 const TITOLI = {
   scontrino: 'Cosa c’è sullo scontrino',
   comanda: 'Cosa c’è sulla comanda',
+  acconto: 'Cosa c’è sullo scontrino d’acconto',
 }
 
 const SPIEGAZIONI = {
@@ -31,6 +32,8 @@ const SPIEGAZIONI = {
     'La lista dei prodotti e il totale ci sono sempre: sono lo scontrino, e per questo non stanno qui. Tutto il resto lo scegli tu.',
   comanda:
     'La lista dei prodotti c’è sempre: è la comanda. Il resto è quello che aiuta il banco a leggerla in mezzo secondo — o carta sprecata, se non serve.',
+  acconto:
+    'La scritta ACCONTO, quello che è stato pagato, l’importo versato e la riga che dice che il conto resta aperto ci sono sempre: sono quello che impedisce di scambiarlo per lo scontrino finale. Tutto il resto lo scegli tu.',
 }
 
 export default function CampiStampa({ quale, settings, onSave }) {

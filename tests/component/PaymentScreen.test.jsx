@@ -37,6 +37,7 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
 }))
 vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
+  printScontrinoAcconto: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
@@ -45,10 +46,10 @@ vi.mock('../../src/lib/printer.js', () => ({
   releaseReceiptPrint: vi.fn(),
   scontrinoGiaUscito: vi.fn(() => false),
 }))
-vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
+vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn(), toastError: vi.fn() }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
-import { toastError } from '../../src/lib/toast.js'
+import { showToast, toastError } from '../../src/lib/toast.js'
 import {
   registerPayment,
   setOrderDiscount,
@@ -60,6 +61,7 @@ import { readerCheckout } from '../../src/lib/paymentsApi.js'
 import { applyVoucherDiscount } from '../../src/lib/api.js'
 import {
   printScontrino,
+  printScontrinoAcconto,
   printFattura,
   loadPrinterSettings,
   releaseReceiptPrint,
@@ -826,6 +828,184 @@ describe('riscuoti senza stampa', () => {
   })
 })
 
+// ── LO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ──────────────────────────
+//
+// «È normale che se riscuoto solo un acconto non mi stampa lo scontrino?»
+// Sì, ed era di proposito: la stampa era appesa alla CHIUSURA del conto, e
+// un acconto non chiude. «Lo scontrino esce ad ogni riscossione ma è
+// configurabile. Va fatto così: una impostazione che attiva un terzo
+// bottone, "riscuoti acconto con scontrino", e una ulteriore opzione che
+// invece ad ogni riscossione stampa lo scontrino d'acconto. […] Quando la
+// riscossione dello scontrino di acconto è attiva, disabilita l'opzione
+// del terzo bottone» (l'utente, 21/08/2026).
+//
+// La regola pura sta in lib/scontrinoAcconto.js e si prova a unità; qui si
+// prova la SCHERMATA: quando il tasto c'è, quando è spento e perché, e
+// quale carta esce a ogni gesto.
+describe('lo scontrino d’acconto', () => {
+  const etichette = (nome) => screen.getAllByRole('button', { name: new RegExp(`^${nome} ·`) })
+  // Solo una riga di 8 € su un conto da 22: l'incasso non chiude niente,
+  // che è l'unica condizione in cui un acconto esiste.
+  const riscuotiUnaRigaSola = async (user) => {
+    await user.click(etichette('Gin Tonic')[0])
+    expect(payAmount()).toHaveTextContent('8,00')
+  }
+
+  const conTasto = { ...noReader, scontrino_acconto_tasto: true }
+  const sempre = { ...noReader, scontrino_acconto_sempre: true }
+
+  beforeEach(() => {
+    // L'acconto automatico segue la stampa automatica DI QUESTO
+    // TERMINALE: è carta che esce da sola, e il telefono della sala che
+    // gli scontrini non li stampa non deve cominciare a stampare acconti.
+    loadPrinterSettings.mockReturnValue({
+      ivaRate: 10,
+      businessName: 'La Tana',
+      autoPrintScontrino: true,
+    })
+  })
+
+  it('spente tutte e due: nessun tasto, e una riscossione parziale non stampa', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    expect(screen.queryByRole('button', { name: /Acconto con scontrino/ })).toBeNull()
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+    expect(printScontrino).not.toHaveBeenCalled()
+  })
+
+  it('col terzo tasto acceso, «Riscuotere» da solo continua a non stampare', async () => {
+    // La differenza fra le due impostazioni è tutta qui: il tasto aggiunge
+    // una strada, non cambia quella normale.
+    const user = userEvent.setup()
+    mount(baseOrder(), conTasto)
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+  })
+
+  it('il terzo tasto incassa e stampa la carta di chi se ne va', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conTasto)
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /Acconto con scontrino/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(registerPayment.mock.calls[0][1]).toMatchObject({ amount: 8, chiude: false })
+    // La carta porta l'incasso appena battuto: importo, metodo e le righe
+    // pagate. Senza le righe, chi resta al tavolo non sa cosa è già stato
+    // pagato.
+    const [conto, incasso] = printScontrinoAcconto.mock.calls.at(-1)
+    expect(conto.id).toBe('ord1')
+    expect(incasso).toMatchObject({ amount: 8, method: 'banco' })
+    expect(incasso.items.map((i) => i.name)).toEqual(['Gin Tonic'])
+    // E lo scontrino di chiusura NON esce: il conto è ancora aperto.
+    expect(printScontrino).not.toHaveBeenCalled()
+  })
+
+  // QUANDO L'INCASSO CHIUDE IL CONTO IL TASTO NON SPARISCE, si spegne e
+  // dice perché. La schermata si apre con tutto selezionato — cioè
+  // chiudendo — e farlo comparire e sparire a ogni riga toccata farebbe
+  // ballare tutta la riga dei tasti mentre si divide il conto.
+  it('se l’incasso salda tutto, il tasto è spento e spiega perché', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conTasto)
+    const tasto = screen.getByRole('button', { name: /Acconto con scontrino/ })
+    expect(tasto).toHaveClass('spento')
+    expect(tasto).toHaveAttribute('aria-disabled', 'true')
+    await user.click(tasto)
+    expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/salda il conto/))
+    // Non ha incassato niente: un tasto spento non muove i soldi.
+    expect(registerPayment).not.toHaveBeenCalled()
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+  })
+
+  it('e si riaccende appena si toglie una riga dalla riscossione', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conTasto)
+    await riscuotiUnaRigaSola(user)
+    const tasto = screen.getByRole('button', { name: /Acconto con scontrino/ })
+    expect(tasto).not.toHaveClass('spento')
+    expect(tasto).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('l’automatico stampa senza premere niente di speciale', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), sempre)
+    // …e il terzo tasto non c'è: con l'automatico acceso sarebbe una
+    // seconda strada per lo stesso foglio (mutua esclusione).
+    expect(screen.queryByRole('button', { name: /Acconto con scontrino/ })).toBeNull()
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
+    await waitFor(() => expect(printScontrinoAcconto).toHaveBeenCalled())
+    expect(printScontrinoAcconto.mock.calls.at(-1)[1]).toMatchObject({ amount: 8 })
+  })
+
+  it('l’automatico tace quando l’incasso chiude: lì esce lo scontrino', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), sempre)
+    await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
+    await waitFor(() => expect(printScontrino).toHaveBeenCalled())
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+  })
+
+  it('«Riscuoti (senza stampa)» tace anche sull’acconto', async () => {
+    // Il gesto dice che carta non se ne vuole: vale per qualunque carta.
+    const user = userEvent.setup()
+    mount(baseOrder(), { ...sempre, riscuoti_senza_stampa: true })
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /senza stampa/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+  })
+
+  it('col terminale che non stampa da sé, l’automatico tace e il tasto no', async () => {
+    // L'automatico è carta che esce DA SOLA e segue l'interruttore del
+    // terminale; il terzo tasto è un gesto esplicito e stampa comunque,
+    // come fa «Preconto».
+    const user = userEvent.setup()
+    loadPrinterSettings.mockReturnValue({ ivaRate: 10, autoPrintScontrino: false })
+    mount(baseOrder(), sempre)
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
+    await waitFor(() => expect(registerPayment).toHaveBeenCalled())
+    expect(printScontrinoAcconto).not.toHaveBeenCalled()
+    cleanup()
+    vi.clearAllMocks()
+
+    mount(baseOrder(), conTasto)
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /Acconto con scontrino/ }))
+    await waitFor(() => expect(printScontrinoAcconto).toHaveBeenCalled())
+  })
+
+  // Se la carta non esce lo si dice e basta: l'incasso è registrato lo
+  // stesso, e ristampare un acconto è un gesto — non c'è nessuna pretesa
+  // da restituire, perché l'acconto non ne prende nessuna (REQ-STAMPA-001
+  // e BUG-047 restano solo dello scontrino di chiusura).
+  it('stampa fallita: l’incasso resta, e si dice che la carta non è uscita', async () => {
+    const user = userEvent.setup()
+    const onError = vi.fn()
+    printScontrinoAcconto.mockRejectedValueOnce(new Error('stampante spenta'))
+    render(
+      <PaymentScreen
+        order={baseOrder()}
+        settings={conTasto}
+        onClose={vi.fn()}
+        onBeforePay={vi.fn()}
+        onError={onError}
+      />
+    )
+    await riscuotiUnaRigaSola(user)
+    await user.click(screen.getByRole('button', { name: /Acconto con scontrino/ }))
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(expect.stringMatching(/acconto/i)))
+    expect(registerPayment).toHaveBeenCalled()
+    expect(releaseReceiptPrint).not.toHaveBeenCalled()
+  })
+})
+
 // ── LE DUE VIE ALTERNATIVE STANNO IN RIGA, NON IMPILATE ────────────
 //
 // «I tasti "riscuoti senza stampa" e "riscuoti e servi" mettili
@@ -875,6 +1055,32 @@ describe('«senza stampa» e «riscuoti e servi» stanno affiancati', () => {
     // grande: uno spazio che non spiega niente.
     mount(conComandaDaServire())
     expect(riga()).toBeNull()
+  })
+
+  // ── E DA TRE IN SU ──────────────────────────────────────────────
+  // Col terzo tasto («Acconto con scontrino») la riga può ospitarne tre.
+  // La regola del foglio di stile non cambia — ogni tasto non scende sotto
+  // i 200px e a capo ci va da sé — quindi qui si guarda solo che stiano
+  // tutti e tre DENTRO la riga, e che il tasto grande resti fuori.
+  it('accesi tutti e tre: stessa riga, e il tasto grande resta fuori', () => {
+    mount(conComandaDaServire(), {
+      ...noReader,
+      riscuoti_senza_stampa: true,
+      riscuoti_e_servi: true,
+      scontrino_acconto_tasto: true,
+    })
+    const r = riga()
+    expect(r.children).toHaveLength(3)
+    expect(within(r).getByRole('button', { name: /senza stampa/ })).toBeInTheDocument()
+    expect(within(r).getByRole('button', { name: /Acconto con scontrino/ })).toBeInTheDocument()
+    expect(within(r).getByRole('button', { name: /Riscuoti e servi/ })).toBeInTheDocument()
+    expect(within(r).queryByRole('button', { name: /^Riscuotere/ })).toBeNull()
+  })
+
+  it('col solo acconto acceso la riga esiste e ha quel tasto e basta', () => {
+    mount(conComandaDaServire(), { ...noReader, scontrino_acconto_tasto: true })
+    expect(riga().children).toHaveLength(1)
+    expect(within(riga()).getByRole('button', { name: /Acconto con scontrino/ })).toBeInTheDocument()
   })
 
   it('col servizio spento resta solo «senza stampa», e prende tutta la riga', () => {

@@ -4,6 +4,33 @@
 
 ### Per chi gestisce
 
+- **Chi versa un acconto adesso può portarsi via la sua ricevuta.** Se
+  riscuotevi solo una parte del conto non usciva niente: la stampa era
+  attaccata alla chiusura, e un acconto non chiude. Adesso c'è un
+  **documento suo** — in cima c'è scritto **ACCONTO** in nero, e in fondo
+  che **il conto resta aperto**, così non si può scambiare per lo
+  scontrino finale — con **cosa ha pagato** (le righe di quella
+  riscossione, quando ce ne sono), **quanto**, **con che metodo** e
+  **quanto resta da incassare**.
+  Si accende da **Impostazioni → Pagamenti**, e ci sono due modi:
+  **«Un tasto per l'acconto con lo scontrino»** aggiunge il tasto
+  *«Acconto con scontrino»* accanto agli altri due, da premere quando
+  serve; **«Lo scontrino d'acconto a ogni riscossione»** lo fa uscire da
+  solo ogni volta che incassi una parte, senza premere niente. Acceso il
+  secondo, il primo si spegne da sé (dice anche perché): la carta esce
+  già, e il tasto non servirebbe più. Se l'incasso salda tutto il tasto
+  resta lì spento — lì quello che esce è lo scontrino, non un acconto — e
+  toccandolo te lo dice.
+  Cosa c'è scritto sulla carta lo scegli tu in **Impostazioni →
+  Stampante → Campi dell'acconto**, come per lo scontrino e la comanda.
+  Di suo non cambia niente per nessuno: nasce spento.
+
+- **Il preconto adesso dice anche quanto manca.** Su un conto con degli
+  acconti già presi elencava gli incassi ma non il resto: il totale
+  sopra, i versamenti sotto, e la sottrazione la facevi a mente col
+  cliente davanti. Adesso c'è la riga **«Resta da pagare»**. Su uno
+  scontrino di conto chiuso non compare: lì non resta niente.
+
 - **I due tasti in più del pagamento stanno affiancati, e si accendono
   tutti e due da «Pagamenti».** Sotto il tastierino c'erano tre tasti uno
   sopra l'altro: il grande «Riscuotere» e, in fila sotto di lui, «Riscuoti

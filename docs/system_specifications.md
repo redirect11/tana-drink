@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 170 | fatto e coperto dai test |
+| ✅ | 171 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**206 voci** in tutto. **184** descrivono il sistema com'è oggi e
+**207 voci** in tutto. **185** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 13 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -1142,7 +1142,9 @@ IL LOGO IN CIMA è un di più: se non si carica, la carta esce lo stesso — uno
 
 QUANDO ESCE LO SCONTRINO: al GESTO della riscossione, sempre e solo lì — il pannello dei pagamenti, i tasti rapidi Contanti/Carta della card. Mai da uno sguardo sulla coda: la coda stampa comande. «Deve avvenire solo quando esco dall'ordine e deve stampare la COMANDA, non lo scontrino» (l'utente, 20/08, dopo aver visto uscire la carta di tutta la serata rientrando in coda — BUG-055). E IL SEGNO «GIÀ STAMPATO»
 
-STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita, come `auto_print_at` sulla comanda. La pretesa in localStorage resta come primo filtro per i doppioni di questo terminale; il segno sul conto lo sanno tutti, e un browser con la memoria vuota non ristampa la serata. Riaprendo un conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo (BUG-047).
+STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita, come `auto_print_at` sulla comanda. La pretesa in localStorage resta come primo filtro per i doppioni di questo terminale; il segno sul conto lo sanno tutti, e un browser con la memoria vuota non ristampa la serata. Riaprendo un conto il segno si azzera: riscuotendo di nuovo la carta esce di nuovo (BUG-047). DAL 21/08/2026 «SEMPRE E SOLO LÌ»
+
+VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai fatto uscire niente — la stampa è appesa a `closePaid` — ed era una scelta presa quando l'acconto era un caso di margine. Adesso quella riscossione ha la SUA carta, che è un documento diverso: lo scontrino d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto non prende né l'una né l'altro, perché è un evento e non lo stato del conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire uno solo.
 
 **Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`
 
@@ -1233,6 +1235,26 @@ UN CAMPO CHE IL VOCABOLARIO NON CONOSCE SI STAMPA: se domani printer.js scrive u
 DOVE: Impostazioni → Stampante, sotto la connessione: «Cosa c'è sullo scontrino», «Cosa c'è sulla comanda» e «Logo sulle stampe» (REQ-STAMPA-011). Ogni riquadro ha una PROVA DI STAMPA che stampa un conto finto passando dalle stesse funzioni della serata — in locale apre il facsimile, al banco esce la carta: scegliere i campi senza vedere il risultato è scegliere alla cieca.
 
 **Dove**: `src/lib/campiStampa.js, src/lib/printer.js (printScontrino, printComanda), src/components/CampiStampa.jsx` · **Lo dimostrano**: `tests/unit/campiStampa.test.js`, `tests/unit/campiDiStampa.test.js`, `tests/component/CampiStampa.test.jsx`
+
+#### REQ-STAMPA-015 — Lo scontrino d'acconto: la carta di chi versa una parte e se ne va
+
+«È normale che se riscuoto solo un acconto non mi stampa lo scontrino?» (l'utente, 21/08/2026). Sì, ed era di proposito: la stampa era appesa alla CHIUSURA del conto (REQ-STAMPA-001) e un acconto non chiude. Era una scelta presa quando l'acconto era un caso di margine — da quando si sconta sulla selezione (REQ-PAG-013) e si parte da «Deseleziona tutti» (REQ-PAG-009), riscuotere una parte è il modo normale di dividere un conto.
+
+LA DECISIONE, parole sue (21/08/2026): «Lo scontrino esce ad ogni riscossione ma è configurabile. Va fatto così: una impostazione che attiva un terzo bottone, "riscuoti acconto con scontrino", e una ulteriore opzione che invece ad ogni riscossione stampa lo scontrino d'acconto. Il tasto preconto continua a stampare lo scontrino totale con tutti gli acconti specificati, così come lo scontrino finale (stampato quando si riscuotono gli ultimi articoli dell'ordine). Quando la riscossione dello scontrino di acconto è attiva, disabilita l'opzione del terzo bottone».
+
+IL DOCUMENTO È NUOVO, non lo scontrino con un'altra intestazione: risponde alle quattro domande di chi ha appena messo dei soldi sul tavolo con altri sei intorno — cosa ho pagato (le righe di QUELLA riscossione, quando ce ne sono: un acconto battuto a mano non salda righe in particolare e la lista non si stampa affatto), quanto, con che metodo, e quanto resta da incassare sul conto. E NON SI PUÒ SCAMBIARE PER LO SCONTRINO FINALE: la fascia nera ACCONTO in cima e la riga in fondo che dice che il conto resta aperto NON sono campi e non si spengono, come non si spengono la lista delle righe e l'importo versato (stessa regola per cui il totale dello scontrino è fisso, REQ-STAMPA-014). Tutto il resto — intestazione, numero e data, operatore, tavolo, sconto della riscossione, metodo, riepilogo del conto, codice, ragione sociale, riga di saluto — sta nel vocabolario chiuso di lib/campiStampa.js (`stampa_acconto`) e si accende dalle impostazioni. Il logo segue le regole di REQ-STAMPA-011 con un tipo suo, acceso di suo: è carta che resta in mano al cliente, come il preconto.
+
+DUE INTERRUTTORI, in «💳 Pagamenti» accanto a «senza stampa» e «riscuoti e servi» (la lezione di BUG-070), tutti e due spenti di suo — chi non tocca niente non vede cambiare niente: `scontrino_acconto_tasto` fa comparire il terzo tasto «Acconto con scontrino» nella riga dei tasti alternativi; `scontrino_acconto_sempre` fa uscire la carta da sé a ogni riscossione che non chiude il conto. Quando il secondo è acceso il primo è SPENTO E NON TOCCABILE, con scritto perché: sparire sembrerebbe un guasto. La regola sta in un posto solo (lib/scontrinoAcconto.js), così il pannello e la cassa non possono pensarla diverso.
+
+QUANDO L'INCASSO CHIUDE IL CONTO il terzo tasto non sparisce, si SPEGNE e al tocco dice perché — lì la carta che esce è lo scontrino finale. Sparendo, comparirebbe e sparirebbe sotto il dito a ogni riga tolta o rimessa mentre si divide il conto, facendo ballare tutta la riga dei tasti.
+
+IL TERZO TASTO STAMPA SEMPRE, la stampa automatica del terminale non c'entra: è un gesto esplicito, come «Preconto». L'opzione automatica invece la rispetta (`autoPrintScontrino`), perché è carta che esce da sola: il telefono della sala che gli scontrini non li stampa non deve cominciare a stampare acconti.
+
+NIENTE PRETESA E NIENTE SEGNO SUL DATO: `claimReceiptPrint` e `receipt_print_at` dicono «la carta di QUESTO CONTO è già uscita», che è uno stato del conto. Un acconto è un evento — su un conto ce ne stanno tre — e legarlo a quel segno vorrebbe dire che il secondo non stampa più, o bruciare la pretesa dello scontrino finale (BUG-047). Il lettore SumUp resta fuori: lì l'incasso si registra quando risponde il lettore, non al gesto, e la carta segue il gesto.
+
+IL PRECONTO ELENCAVA GIÀ GLI ACCONTI ma non diceva quanto restava: «Totale con IVA» sopra e gli incassi sotto, e la sottrazione la faceva a mente chi teneva il foglio davanti al cliente. Adesso su un conto ancora aperto con degli incassi presi c'è anche «Resta da pagare»; su uno scontrino di chiusura il residuo è zero e la riga non compare.
+
+**Dove**: `src/lib/printer.js (printScontrinoAcconto), src/lib/scontrinoAcconto.js, src/lib/campiStampa.js, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/scontrinoAcconto.test.js`, `tests/unit/cartaAcconto.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
 #### REQ-STAMPA-012 — Più comande dello stesso conto si stampano insieme
 
