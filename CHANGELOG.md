@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.5.3-beta
+## 1.5.4-beta
 
 ### Per chi gestisce
 
@@ -79,6 +79,10 @@
   diversi — uno incassa, l'altro incassa e dà per servito tutto — a un
   millimetro l'uno dall'altro. Ora sono staccati, e lo stesso vale per
   «Riscuoti (senza stampa)».
+
+## 1.5.3-beta
+
+### Per chi gestisce
 
 - **Nel pagamento c'è «Deseleziona tutti»: un tasto e il conto va a
   zero.** Sta **in cima alla lista delle voci**, accanto a «Separa
