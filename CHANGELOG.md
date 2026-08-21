@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## Non ancora rilasciata — 1.5.2
+## 1.5.3-beta
 
 ### Per chi gestisce
 
