@@ -4,6 +4,20 @@
 
 ### Per chi gestisce
 
+- **L'aliquota IVA è una sola, quella del locale.** Ce n'erano due senza
+  che nessuno lo sapesse: una nelle impostazioni della stampante, salvata
+  **nel browser di ogni tablet**, che finiva sullo scontrino; e una nelle
+  impostazioni del bar, condivisa, usata da margini e statistiche. Due
+  tablet potevano quindi stampare scontrini con aliquote diverse, e l'IVA
+  sulla carta poteva non tornare con quella dei conti. Adesso la stampa
+  legge **l'aliquota del locale** — quella in *Impostazioni → Prezzi e
+  supplementi*, la stessa dei margini — e anche la fattura di cortesia. Il
+  campo nel pannello della stampante è sparito, con scritto dove si
+  imposta. Se su un tablet era rimasto un valore diverso, **viene
+  ignorato**: quel numero non lo legge più nessuno e da lì esce la stessa
+  carta di tutti gli altri. Con le due aliquote uguali, lo scontrino è
+  identico a prima.
+
 - **Le impostazioni di stampa automatica sono passate in «Cassa e
   giornata».** Stavano sparse: due nel pannello della stampante, una fra i
   pagamenti — «le impostazioni di stampa automatica riguardano la cassa»

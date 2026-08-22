@@ -16,7 +16,7 @@ import { useOnline } from '../lib/useOnline.js'
 import { useResizable } from '../lib/useResizable.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { showToast, toastError } from '../lib/toast.js'
 import {
@@ -730,7 +730,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       const inv = await createInvoice({
         order: { ...order, id: await orderId() },
         customer: billing,
-        ivaRate: loadPrinterSettings().ivaRate ?? 10,
+        // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): la fattura
+        // di cortesia deve dire la stessa cosa dello scontrino.
+        ivaRate: aliquotaScontrino(settings),
       })
       setInvoice(inv)
     })

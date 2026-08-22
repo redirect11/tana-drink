@@ -88,7 +88,6 @@ export const DEFAULT_PRINTER_SETTINGS = {
   ip: '',
   port: 8043,       // 8043 = HTTPS (WSS), 8008 = HTTP (WS)
   https: true,      // false → HTTP, solo se l'app è servita in HTTP
-  ivaRate: 10,      // aliquota IVA applicata sullo scontrino
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
   autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
   // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
@@ -319,6 +318,33 @@ export function comandeDaStampare(order, opzioni = {}) {
 // schermata che prende l'ordine e il pallino che dice se si stamperà.
 export function salaStampaDaSe(s = loadPrinterSettings()) {
   return s.stampaSala !== 'rimbalzo'
+}
+
+// ── L'ALIQUOTA IVA È UNA SOLA, QUELLA DEL LOCALE (BUG-084) ───────────
+//
+// Ce n'erano DUE, e non lo sapeva nessuno: `ivaRate` qui fra le
+// impostazioni della stampante — nel browser, per terminale — che finiva
+// sulla riga IVA dello scontrino, e `sale_vat` su settings/bar — condivisa
+// — che usano margini, prezzo consigliato e statistiche. Due tablet
+// potevano stampare scontrini con aliquote diverse, e l'IVA sulla carta
+// poteva non tornare con quella dei conti.
+//
+// Un'aliquota è del LOCALE: è un fatto fiscale, non una preferenza del
+// tablet che ha stampato. Vince `sale_vat`, e il campo nelle impostazioni
+// della stampante è sparito.
+//
+// Si legge dalla copia locale delle impostazioni del bar, come tutto il
+// resto della stampa: la carta non aspetta la rete.
+export const ALIQUOTA_DEFAULT = 10
+export function aliquotaScontrino(impostazioni = impostazioniDelLocale()) {
+  const scelta = impostazioni?.sale_vat
+  // Uno ZERO è un'aliquota vera (non si scorpora niente): solo un valore
+  // assente o storto torna al 10 della somministrazione. Il vuoto va
+  // guardato PRIMA di `Number`, che di `null` e di `''` fa uno zero — e un
+  // campo lasciato vuoto stamperebbe uno scontrino senza IVA.
+  if (scelta === null || scelta === undefined || scelta === '') return ALIQUOTA_DEFAULT
+  const aliquota = Number(scelta)
+  return Number.isFinite(aliquota) ? aliquota : ALIQUOTA_DEFAULT
 }
 
 export function loadPrinterSettings() {
@@ -908,8 +934,9 @@ async function stampaLogo(prn, tipo) {
 export function printScontrino(order, opts = {}) {
   return lavoroDiStampa(async (prn) => {
     const s = loadPrinterSettings()
-    const cfg = configStampa(impostazioniDelLocale(), 'scontrino')
-    const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
+    const impostazioni = impostazioniDelLocale()
+    const cfg = configStampa(impostazioni, 'scontrino')
+    const ivaRate = Number(opts.ivaRate ?? aliquotaScontrino(impostazioni)) / 100
     const { date, time } = italianDateTime(order.created_at)
     const lordo = Number(order.total ?? 0)
     // GLI SCONTI, AL PLURALE. Uno per ogni riscossione che se n'è portato via
