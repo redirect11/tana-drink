@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 173 | fatto e coperto dai test |
+| ✅ | 174 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**209 voci** in tutto. **187** descrivono il sistema com'è oggi e
+**210 voci** in tutto. **188** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **8** difetti noti sono ancora aperti.
@@ -1183,7 +1183,7 @@ VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parzi
 
 SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
@@ -1225,7 +1225,7 @@ Nella coda ordini, per chiunque la guardi — banco e sala — un pallino dice s
 
 #### REQ-STAMPA-010 — Le impostazioni della stampante sono del dispositivo e di chi ci lavora
 
-Indirizzo della stampante, stampa automatica di comande e scontrini, dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo dipende da dove sei, il tablet del banco la raggiunge e il telefono della sala forse no — e sono di chi è collegato, perché sullo stesso tablet si alternano persone diverse e la stampa automatica la vuole accesa chi sta al banco, non chi passa a battere due conti. Chi entra per la prima volta su un dispositivo eredita le impostazioni che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza stampante a servizio iniziato. Da lì in poi la scheda è sua. Conseguenza da sapere: su un ambiente diverso (test, produzione) la memoria è un'altra, e la stampante va impostata una volta anche lì.
+Indirizzo della stampante, stampa automatica di comande e scontrini, dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo dipende da dove sei, il tablet del banco la raggiunge e il telefono della sala forse no — e sono di chi è collegato, perché sullo stesso tablet si alternano persone diverse e la stampa automatica la vuole accesa chi sta al banco, non chi passa a battere due conti. Chi entra per la prima volta su un dispositivo eredita le impostazioni che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza stampante a servizio iniziato. Da lì in poi la scheda è sua. Conseguenza da sapere: su un ambiente diverso (test, produzione) la memoria è un'altra, e la stampante va impostata una volta anche lì. L'ALIQUOTA IVA NON È UNA DI QUESTE (BUG-084, 22/08/2026): stava qui, e quindi due tablet potevano stampare scontrini con aliquote diverse. È un fatto del locale, non una preferenza del tablet che ha stampato: la stampa legge `sale_vat` dalle impostazioni del bar, come i margini e le statistiche.
 
 DOVE SI TOCCANO NON È DOVE VIVONO (REQ-UI-025, 22/08/2026): dal 22/08 gli interruttori della stampa automatica — e la scelta di chi stampa le comande della sala — si accendono in «Cassa e giornata», non nel pannello Stampante. Restano queste, del dispositivo e di chi ci lavora, e la scheda lo dice a schermo sotto «Su questo terminale».
 

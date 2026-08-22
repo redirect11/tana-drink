@@ -3384,6 +3384,7 @@ requirements:
       - tests/unit/logoScontrino.test.js
       - tests/unit/scontrinoSegnato.test.js
       - tests/unit/comandaAccorpata.test.js
+      - tests/unit/aliquotaIva.test.js
 
   - id: REQ-STAMPA-002
     title: "La stampante non deve smettere di funzionare a metà serata"
@@ -3558,6 +3559,11 @@ requirements:
       stampante a servizio iniziato. Da lì in poi la scheda è sua.
       Conseguenza da sapere: su un ambiente diverso (test, produzione) la
       memoria è un'altra, e la stampante va impostata una volta anche lì.
+      L'ALIQUOTA IVA NON È UNA DI QUESTE (BUG-084, 22/08/2026): stava qui,
+      e quindi due tablet potevano stampare scontrini con aliquote diverse.
+      È un fatto del locale, non una preferenza del tablet che ha stampato:
+      la stampa legge `sale_vat` dalle impostazioni del bar, come i margini
+      e le statistiche.
       DOVE SI TOCCANO NON È DOVE VIVONO (REQ-UI-025, 22/08/2026): dal
       22/08 gli interruttori della stampa automatica — e la scelta di chi
       stampa le comande della sala — si accendono in «Cassa e giornata»,

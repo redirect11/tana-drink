@@ -39,7 +39,10 @@ vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
   printScontrinoAcconto: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
+  loadPrinterSettings: vi.fn(() => ({ businessName: 'La Tana' })),
+  // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): non sta più fra le
+  // impostazioni della stampante. Qui il finto legge `sale_vat` come il vero.
+  aliquotaScontrino: (impostazioni) => Number(impostazioni?.sale_vat ?? 10),
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
   reclaimReceiptPrint: vi.fn(() => true),
@@ -108,7 +111,7 @@ const conComandaDaServire = () =>
     ],
   })
 
-const noReader = { payments_reader_enabled: false, sumup_reader_id: null }
+const noReader = { payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
 const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 
 function mount(order, settings = noReader) {
@@ -481,6 +484,9 @@ describe('codice lotteria e fattura', () => {
         denominazione: 'ACME srl',
         email: 'amministrazione@acme.it',
       }),
+      // L'aliquota della FATTURA è quella del locale, la stessa dello
+      // scontrino: prima veniva dalle impostazioni della stampante di
+      // questo terminale e le due potevano non tornare (BUG-084).
       ivaRate: 10,
     })
     // emessa: numero visibile + stampa
@@ -516,7 +522,6 @@ describe('scontrino: il metodo di pagamento', () => {
   // Lo scontrino a fine incasso esce solo con l'auto-stampa accesa.
   beforeEach(() => {
     loadPrinterSettings.mockReturnValue({
-      ivaRate: 10,
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
@@ -877,7 +882,6 @@ describe('lo scontrino d’acconto', () => {
     // TERMINALE: è carta che esce da sola, e il telefono della sala che
     // gli scontrini non li stampa non deve cominciare a stampare acconti.
     loadPrinterSettings.mockReturnValue({
-      ivaRate: 10,
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
@@ -984,7 +988,7 @@ describe('lo scontrino d’acconto', () => {
     // terminale; il terzo tasto è un gesto esplicito e stampa comunque,
     // come fa «Preconto».
     const user = userEvent.setup()
-    loadPrinterSettings.mockReturnValue({ ivaRate: 10, autoPrintScontrino: false })
+    loadPrinterSettings.mockReturnValue({ autoPrintScontrino: false })
     mount(baseOrder(), sempre)
     await riscuotiUnaRigaSola(user)
     await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))

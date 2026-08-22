@@ -3212,3 +3212,47 @@ bugs:
     in_produzione: false
     test_cases:
       - tests/unit/comandaAccorpata.test.js
+
+  - id: BUG-084
+    title: "Due aliquote IVA per la stessa cosa: una per terminale sullo scontrino, una del locale nei margini"
+    area: "src/lib/printer.js (aliquotaScontrino, printScontrino), src/components/PrinterSetup.jsx, src/components/PaymentScreen.jsx"
+    description: >
+      Trovato il 22/08/2026 rispondendo a una domanda dell'utente: «perché il
+      setting dell'aliquota è nelle impostazioni della stampante?». La
+      risposta è che ce n'erano DUE, e non lo sapeva nessuno.
+      · `ivaRate`, fra le impostazioni della stampante: vive NEL BROWSER, per
+        terminale (e per chi ci è collegato), ed era quella che finiva sulla
+        riga IVA dello scontrino.
+      · `sale_vat`, su settings/bar: vive SU FIRESTORE, condivisa da tutto il
+        locale, e la usano margini, prezzo consigliato e statistiche.
+      CONSEGUENZE VERE, non teoriche: due tablet potevano stampare scontrini
+      con aliquote diverse per lo stesso conto — basta che qualcuno avesse
+      toccato il campo su uno solo — e l'IVA scritta sulla carta poteva non
+      tornare con quella su cui il locale calcola i suoi margini. Nessuna
+      delle due cose lascia traccia: si scopre guardando due scontrini
+      affiancati, o non si scopre affatto.
+      LA CURA. Un'aliquota è un fatto del LOCALE, non una preferenza del
+      tablet che ha stampato: vince `sale_vat`. La stampa la legge dalla
+      copia locale delle impostazioni del bar (come già fa per i campi dello
+      scontrino: la carta non aspetta la rete), il campo nelle impostazioni
+      della stampante è sparito, e al suo posto c'è scritto dove si imposta.
+      Anche la fattura di cortesia prende la stessa: prima leggeva `ivaRate`,
+      e poteva dire una cosa diversa dallo scontrino dello stesso conto.
+      CHI AVEVA UN VALORE DIVERSO NEL BROWSER: si ignora, e basta. Quel
+      numero resta scritto nella memoria del terminale — non c'è migrazione
+      da far girare, nessuno lo legge più — e da quel tablet esce la stessa
+      carta di tutti gli altri. Non si travasa in `sale_vat`: sarebbe un
+      terminale a caso che decide l'aliquota di tutto il locale. C'è un test
+      che, con le due aliquote coincidenti, confronta la riga IVA prima e
+      dopo la cura: identica. Nessun locale si sveglia con la carta cambiata.
+      UN CASO LIMITE CHE IL TEST HA TROVATO: `Number(null)` e `Number('')`
+      fanno ZERO, e uno zero è un'aliquota vera (non si scorpora niente). Un
+      campo lasciato vuoto avrebbe stampato uno scontrino senza IVA: il vuoto
+      si guarda prima della conversione e torna al 10 della somministrazione.
+    labels: [bug, stampa, impostazioni, iva]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/aliquotaIva.test.js

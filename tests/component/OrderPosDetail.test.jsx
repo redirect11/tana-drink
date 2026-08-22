@@ -94,7 +94,7 @@ vi.mock('../../src/lib/printer.js', async (originale) => ({
   printComandaUnita: vi.fn(() => Promise.resolve()),
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
+  loadPrinterSettings: vi.fn(() => ({})),
   releaseReceiptPrint: vi.fn(),
   scontrinoGiaUscito: vi.fn(() => false),
 }))

@@ -20,7 +20,6 @@ const CAMPI = [
   'ip',
   'port',
   'https',
-  'ivaRate',
   'businessName',
   'businessAddress',
   'businessCity',
@@ -175,22 +174,18 @@ export default function PrinterSetup() {
       <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
         <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>Dati del locale</legend>
 
-        <div className="grid-2">
-          <div>
-            <label htmlFor="prn-iva">Aliquota IVA (%)</label>
-            <input
-              id="prn-iva"
-              type="number"
-              min={0}
-              max={100}
-              step={0.5}
-              value={form.ivaRate}
-              onChange={set('ivaRate')}
-            />
-          </div>
-        </div>
+        {/* L'ALIQUOTA IVA NON È PIÙ QUI (BUG-084). Ce n'erano due — una in
+            questa scheda, nel browser di ogni terminale, e una sulle
+            impostazioni del bar — e due tablet potevano stampare scontrini
+            con aliquote diverse. Un'aliquota è un fatto del LOCALE: si
+            imposta una volta, in Impostazioni → Prezzi e supplementi. */}
+        <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 10px' }}>
+          L’<strong>aliquota IVA</strong> dello scontrino è quella del locale:
+          si imposta in <strong>Impostazioni → Prezzi e supplementi</strong>,
+          ed è la stessa che usano margini e statistiche.
+        </p>
 
-        <label htmlFor="prn-biz" style={{ marginTop: 10 }}>Nome locale</label>
+        <label htmlFor="prn-biz">Nome locale</label>
         <input id="prn-biz" value={form.businessName} onChange={set('businessName')} />
 
         <label htmlFor="prn-addr" style={{ marginTop: 10 }}>Indirizzo</label>
