@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 22 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 1 | — |  |
 
@@ -1227,13 +1227,15 @@ Nella coda ordini, per chiunque la guardi — banco e sala — un pallino dice s
 
 Indirizzo della stampante, stampa automatica di comande e scontrini, dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo dipende da dove sei, il tablet del banco la raggiunge e il telefono della sala forse no — e sono di chi è collegato, perché sullo stesso tablet si alternano persone diverse e la stampa automatica la vuole accesa chi sta al banco, non chi passa a battere due conti. Chi entra per la prima volta su un dispositivo eredita le impostazioni che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza stampante a servizio iniziato. Da lì in poi la scheda è sua. Conseguenza da sapere: su un ambiente diverso (test, produzione) la memoria è un'altra, e la stampante va impostata una volta anche lì.
 
+DOVE SI TOCCANO NON È DOVE VIVONO (REQ-UI-025, 22/08/2026): dal 22/08 gli interruttori della stampa automatica — e la scelta di chi stampa le comande della sala — si accendono in «Cassa e giornata», non nel pannello Stampante. Restano queste, del dispositivo e di chi ci lavora, e la scheda lo dice a schermo sotto «Su questo terminale».
+
 **Dove**: `src/lib/printer.js, src/App.jsx` · **Lo dimostrano**: `tests/unit/impostazioniStampante.test.js`
 
 #### REQ-STAMPA-008 — Il locale sceglie chi stampa le comande della sala
 
-In Impostazioni → Stampante si sceglie, sul terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora: REQ-STAMPA-010): «la stampa il telefono», cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di partenza stampa il telefono, anche per le configurazioni salvate prima che la scelta esistesse. Scegliendo il banco con la stampa automatica spenta non stamperebbe nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a servizio iniziato. E col rimbalzo il pallino della sala non finge di sapere: dice che a stampare è il banco.
+In Impostazioni → Cassa e giornata → Stampa automatica si sceglie, sul terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora: REQ-STAMPA-010): «la stampa il telefono», cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di partenza stampa il telefono, anche per le configurazioni salvate prima che la scelta esistesse. Scegliendo il banco con la stampa automatica spenta non stamperebbe nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a servizio iniziato. E col rimbalzo il pallino della sala non finge di sapere: dice che a stampare è il banco.
 
-**Dove**: `src/components/PrinterSetup.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
+**Dove**: `src/components/StampaAutomatica.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
 
 #### REQ-STAMPA-011 — Il logo sugli scontrini si sceglie: quale, e su quali stampe
 
@@ -1829,6 +1831,24 @@ RESTA PICCOLO: con la testata cresciuta, scritto della stessa misura sembrerebbe
 
 **Dove**: `src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/RigheCorsia.jsx, src/index.css` · **Lo dimostrano**: `tests/component/CodaCorsie.test.jsx`
 
+#### REQ-UI-025 — Le impostazioni si raggruppano per momento d'uso: la stampa automatica sta in Cassa
+
+Regola data dall'utente il 22/08/2026, con parole sue: «Questo setting è in cassa e giornata mentre le altre impostazioni di stampa automatica sono in stampante. Perché hai scelto di metterla lì? Le impostazioni di stampa automatica riguardano la cassa, quindi anche le impostazioni di stampa automatiche spostale in cassa».
+
+LA REGOLA GENERALE, che è la cosa da tenere: un'impostazione sta dove sta il MOMENTO in cui la si vive, non dove sta il pezzo tecnico che la esegue. È il gemello di REQ-UI-024 («tutto ciò che riguarda l'aspetto sta sotto Aspetto») su un'altra famiglia, e i due insieme dicono come si dispone questo pannello: per «quando lo cerco», non per «da cosa è fatto». «Stampante» è la MACCHINA — indirizzo, porta, prova di stampa, i dati e i campi che finiscono sulla carta;
+
+QUANDO la carta esce da sé è una faccenda dell'incasso, e chi la cerca apre la cassa.
+
+COSA È TRASLOCATO in «💳 Cassa e giornata», riquadro «🖨️ Stampa automatica», subito sotto «Pagamenti»: · `autoPrintComanda` e `autoPrintScontrino` — erano nel pannello Stampante, riquadro «Stampa automatica». · `stampaSala` («Comande prese in sala», REQ-STAMPA-008) — decide se il telefono della sala stampa da sé o se la comanda esce al banco: è la stessa domanda, e l'avviso «così non le stampa nessuno» guarda proprio l'interruttore della comanda. Separarli lasciava un avviso che parla di un tasto che non è in pagina. · `scontrino_acconto_sempre` e `scontrino_acconto_tasto` (REQ-STAMPA-015) — erano in «Pagamenti». «Esce da sola a ogni riscossione» è stampa automatica; il gemello col tasto la segue perché uno SPEGNE l'altro, e due interruttori legati così si guardano insieme. La lezione di BUG-070 regge lo stesso: restano nella stessa SEZIONE dei tasti dell'incasso, a uno scorrimento.
+
+LE DUE FAMIGLIE SI DICONO A SCHERMO, sotto due intestazioni: «Su questo terminale» (vivono con le impostazioni della stampante, per dispositivo e per chi ci lavora — REQ-STAMPA-010: la comanda la vuole stampare il banco, non il telefono che passa a battere due conti) e «Per tutto il locale» (stanno su settings/bar e valgono ovunque). Senza dirlo, si accende una cosa al banco e ci si stupisce che in sala non sia cambiato niente.
+
+NEL PANNELLO STAMPANTE resta un rimando scritto a dove sono andate, e la scheda salva SOLO I SUOI CAMPI: prima mandava il `form` intero, che è una fotografia scattata all'apertura, e correggere l'indirizzo IP avrebbe rimesso la stampa automatica al valore di mezz'ora prima — spegnendola sotto le mani di chi l'aveva appena accesa.
+
+LE CHIAVI NON SI RINOMINANO: sono già scritte sui documenti dei locali e nella memoria dei terminali. Si sposta solo dove si toccano.
+
+**Dove**: `src/components/StampaAutomatica.jsx, src/components/SettingsTab.jsx, src/components/PrinterSetup.jsx` · **Lo dimostrano**: `tests/component/StampaAutomatica.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -2364,6 +2384,8 @@ COSA CI STA GIÀ. La scelta di cosa dice la striscia delle card della coda (`bor
 COSA RESTA DA TRASLOCARE — trovato guardando SettingsTab.jsx, e sta qui perché chi farà il lavoro parta da un elenco e non da una caccia: · `conti_colorati` — «Coda ordini» ▸ «Il colore del conto»: ogni conto nuovo nasce col suo colore. Va accanto a `bordo_colore_conto`, nella stessa sotto-sezione: sono la stessa domanda in due tempi. · `category_display` — «Vista ordine»: pallino, icona o solo icona per le categorie nella griglia del POS. · `pos_testo_min` — «Vista ordine»: quanto è grande, come minimo, il testo delle righe del conto. · `stripe_pos` e `stripe_ok_verde` — «Vista ordine»: cosa dice, e di che colore, la striscia a sinistra delle schede della griglia prodotti (vedi lib/strisce.js). · `stripe_menu` e `stripe_menu_ok_verde` — «Menù clienti»: la stessa striscia sulle schede del menù dei clienti. · `theme_client` — «Menù clienti» ▸ «Colori del menù»: il tema della vista cliente.
 
 ATTENZIONE, questo è il caso da discutere prima di muoverlo: sta lì per una scelta scritta (ThemeSettings.jsx) — messo sotto quello del gestionale sembravano due varianti della stessa cosa e non si capiva quale si stesse toccando. Se trasloca, deve traslocare con un'etichetta che lo distingua a colpo d'occhio. · `queue_view` e `bartender_view` — «Coda ordini»: come si dispone la coda (griglia, corsie, schede, lista). Sono il confine della regola: cambiano la FORMA della schermata, non il colore di un elemento. Va deciso, e scritto qui, se la regola li prende o li lascia dove sono.
+
+HA UN GEMELLO, dal 22/08/2026: REQ-UI-025 dice la stessa cosa per il MOMENTO D'USO — la stampa automatica sta dove si incassa, non dove sta la stampante. I due insieme sono la regola di come si dispone questo pannello: per «quando lo cerco», non per «da cosa è fatto».
 
 COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impostazioni dentro un lavoro che parla d'altro rende i due cambiamenti impossibili da rileggere separatamente. Le chiavi non si rinominano (sono già scritte sui documenti dei locali): si sposta solo dove si toccano.
 
