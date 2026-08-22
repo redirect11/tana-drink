@@ -17,7 +17,7 @@
 // riga della lista che sta ancora cambiando.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -34,6 +34,15 @@ const sessioni = [
     opened_at: '2026-08-21T17:00:00.000Z',
     closed_at: '2026-08-22T00:30:00.000Z',
     snapshot: { incassato: 1240.5, nPagati: 31, byMethod: { contanti: 1240.5 } },
+  },
+  // Una serata più indietro: fra questa e quella del 21 resta scoperto il
+  // 20, ed è il giorno su cui si prova la ricerca a vuoto.
+  {
+    id: 'vecchia',
+    status: 'closed',
+    opened_at: '2026-08-19T17:00:00.000Z',
+    closed_at: '2026-08-19T23:00:00.000Z',
+    snapshot: { incassato: 420, nPagati: 12, byMethod: { contanti: 420 } },
   },
 ]
 
@@ -56,7 +65,7 @@ describe('la lista delle chiusure di cassa', () => {
     // Il riquadro unico con le righe dentro, non una card per serata.
     expect(container.querySelector('.inv-list'), 'la lista non usa più la famiglia condivisa').not.toBe(null)
     const righe = container.querySelectorAll('.inv-list > .inv-row')
-    expect(righe.length).toBe(2)
+    expect(righe.length).toBe(sessioni.length)
     // La riga è il bottone della famiglia: da lì scende `--riga-lista`.
     for (const riga of righe) {
       const bottone = riga.querySelector('button.inv-row-main')
@@ -108,5 +117,83 @@ describe('la lista delle chiusure di cassa', () => {
     // La riga aperta si distingue, come in magazzino.
     expect(riga.className).toMatch(/\bopen\b/)
     expect(container.querySelectorAll('.inv-row-dettaglio').length).toBe(1)
+  })
+})
+
+// ── NIENTE RIQUADRO, E UN SELETTORE DI DATA ──────────────────────────
+//
+// «Togli il box, lascia solo la lista, e aggiungi un selettore di data per
+// cercare una chiusura cassa» (l'utente, 22/08/2026).
+//
+// Il riquadro non separava questa lista da nient'altro — è l'unica cosa
+// della sottosezione — e il titolo dentro ripeteva quello della barra in
+// alto. Il selettore risponde a «com'è andata il 15 agosto?» senza far
+// scorrere due mesi di righe: PORTA alla serata invece di filtrare la
+// lista, perché la lista serve anche a confrontare le serate fra loro e
+// filtrandola ne resterebbe una sola.
+describe('le chiusure di cassa senza riquadro, con la ricerca per data', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('non è dentro un riquadro, e non ripete il titolo della barra', async () => {
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    expect(container.querySelector('.card'), 'la lista è tornata dentro una card').toBe(null)
+    // Il titolo della pagina sta nella barra in alto (src/lib/sezioni.js):
+    // qui sarebbe la stessa parola due volte, dieci pixel più sotto.
+    expect(screen.queryByText(/Chiusure di cassa/)).toBe(null)
+    // E la didascalia diceva quello che la riga ha già scritto sopra.
+    expect(screen.queryByText(/Una riga per serata/)).toBe(null)
+  })
+
+  it('il campo data non lascia cercare nel futuro né prima della prima chiusura', async () => {
+    render(<CashSessionsList />)
+    const campo = await screen.findByLabelText('Cerca per data')
+    expect(campo).toHaveAttribute('type', 'date')
+    // I bordi sono la prima e l'ultima serata in elenco, e vengono dalle
+    // sessioni già caricate: nessuna lettura in più per saperli.
+    expect(campo).toHaveAttribute('min', '2026-08-19')
+    expect(campo).toHaveAttribute('max', '2026-08-22')
+  })
+
+  it('cercando una data porta alla serata: la riga si accende, la lista resta intera', async () => {
+    const { container } = render(<CashSessionsList />)
+    const campo = await screen.findByLabelText('Cerca per data')
+    fireEvent.change(campo, { target: { value: '2026-08-21' } })
+
+    const accesa = container.querySelector('.inv-row.trovata')
+    expect(accesa, 'la serata cercata non viene evidenziata').not.toBe(null)
+    expect(accesa.textContent).toMatch(/1\.240,50/)
+    // Non si è filtrato niente: le altre serate sono ancora lì da
+    // confrontare, ed è per questo che non serve un modo per «togliere il
+    // filtro».
+    expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(sessioni.length)
+    // E l'esito si legge, non si deduce dal colore della riga.
+    expect(screen.getByRole('status').textContent).toMatch(/evidenziata nell’elenco/)
+  })
+
+  it('la serata è quella della nottata: chi cerca il 22 non trova la serata del 21', async () => {
+    // La serata del 21 chiude alle 02:30 del 22 (giornata commerciale del
+    // 21). Il 22 c'è la sua serata, quella ancora aperta: se il taglio
+    // fosse sbagliato uscirebbe l'incasso della sera prima.
+    const { container } = render(<CashSessionsList />)
+    const campo = await screen.findByLabelText('Cerca per data')
+    fireEvent.change(campo, { target: { value: '2026-08-22' } })
+    const accesa = container.querySelector('.inv-row.trovata')
+    expect(accesa.textContent).toMatch(/in corso/)
+    expect(accesa.textContent).not.toMatch(/1\.240,50/)
+  })
+
+  it('un giorno senza chiusura lo dice, e non lascia la lista muta', async () => {
+    // Il locale è chiuso il lunedì: capiterà spesso, e la lista non si
+    // svuota — chi ha cercato vede ancora tutte le serate.
+    const { container } = render(<CashSessionsList />)
+    const campo = await screen.findByLabelText('Cerca per data')
+    fireEvent.change(campo, { target: { value: '2026-08-20' } })
+
+    expect(screen.getByRole('status').textContent).toMatch(
+      /Nessuna chiusura di cassa registrata/
+    )
+    expect(container.querySelector('.inv-row.trovata')).toBe(null)
+    expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(sessioni.length)
   })
 })

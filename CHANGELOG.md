@@ -61,6 +61,23 @@
   soldi si legge come «stasera non è entrato niente». Finché il dato non
   c'è, c'è un trattino.
 
+- **Le chiusure di cassa si cercano per data, e il riquadro è sparito.**
+  «Togli il box, lascia solo la lista, e aggiungi un selettore di data per
+  cercare una chiusura cassa» (22/08/2026). L'elenco non sta più dentro un
+  riquadro: occupa tutta la larghezza, come quello delle statistiche. Il
+  titolo «Chiusure di cassa» e la riga di spiegazione sotto non ci sono
+  più — il titolo è già nella barra in alto e la spiegazione ripeteva
+  quello che ogni riga dice da sé.
+  Sopra l'elenco c'è un **campo data**: scegliendo un giorno, la pagina
+  scorre fino a quella serata e la riga si accende. **L'elenco non si
+  filtra**, quindi le altre serate restano lì da confrontare e non serve
+  annullare niente per tornare a vederle tutte. Vale la serata, non il
+  giorno sul calendario: una serata aperta il 15 e chiusa all'una e otto si
+  cerca al **15**. Nel campo non si possono scegliere date future né
+  precedenti alla prima chiusura registrata, e se in quel giorno la cassa
+  non ha aperto lo dice: «Nessuna chiusura di cassa registrata per lunedì
+  18 agosto».
+
 - **Le righe del magazzino si toccano col dito.** Erano alte quanto la
   scritta che ci sta dentro, e in piedi al banco — con 388 articoli in
   elenco — si finiva per aprire la riga di fianco: «aumenta l'altezza

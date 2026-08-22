@@ -6,7 +6,14 @@
 // ordine, etichette e numeri sono la specifica, non un dettaglio.
 
 import { describe, it, expect } from 'vitest'
-import { elencoSerate, etichettaSerata, durataSerata } from '../../src/lib/serate.js'
+import {
+  elencoSerate,
+  etichettaSerata,
+  durataSerata,
+  giornoDellaSerata,
+  serataDelGiorno,
+  limitiRicercaSerate,
+} from '../../src/lib/serate.js'
 
 const conto = (id, at, total, extra = {}) => ({
   id,
@@ -132,5 +139,65 @@ describe('etichettaSerata e durataSerata', () => {
     expect(durataSerata('2026-08-08T17:00:00.000Z', '2026-08-08T17:45:00.000Z')).toBe('45m')
     // Date storte: meglio niente che «NaN».
     expect(durataSerata('boh', '2026-08-08T17:45:00.000Z')).toBe('')
+  })
+})
+
+// ── CERCARE UNA SERATA PER DATA ──────────────────────────────────────
+// «aggiungi un selettore di data per cercare una chiusura cassa»
+// (l'utente, 22/08/2026). Il punto delicato è UNO SOLO: il giorno di una
+// serata è la sua GIORNATA COMMERCIALE, non la data solare degli orari.
+// Una serata aperta il 9 alle 02:20 (quindi la nottata dell'8) o chiusa il
+// 9 alle 02:30 è la serata dell'8: chi cerca il 9 non deve trovarla, o
+// leggerebbe l'incasso della sera sbagliata.
+describe('cercare una serata per data', () => {
+  // Apre dopo la mezzanotte: solare il 10, commerciale ancora il 9.
+  const dopoMezzanotte = {
+    id: 'notturna',
+    status: 'closed',
+    opened_at: '2026-08-10T00:20:00.000Z', // 02:20 in Italia
+    closed_at: '2026-08-10T02:00:00.000Z',
+    snapshot: { incassato: 80, nPagati: 1 },
+  }
+
+  it('trova la serata del giorno cercato', () => {
+    expect(serataDelGiorno([s7, s8, aperta], '2026-08-08')).toBe(s8)
+    expect(serataDelGiorno([s7, s8, aperta], '2026-08-07')).toBe(s7)
+  })
+
+  it('un giorno senza chiusura non ne inventa una: torna null', () => {
+    // Il lunedì di riposo, o una serata saltata: capita spesso, e la
+    // risposta giusta è «niente», non la serata più vicina.
+    expect(serataDelGiorno([s7, s8, aperta], '2026-08-06')).toBe(null)
+  })
+
+  it('la serata è quella della GIORNATA COMMERCIALE, non del giorno solare', () => {
+    // s8 chiude alle 02:30 del 9: resta la serata dell'8.
+    expect(giornoDellaSerata(s8)).toBe('2026-08-08')
+    expect(serataDelGiorno([s8], '2026-08-09')).toBe(null)
+    // E una cassa aperta alle 02:20 del 10 è ancora la nottata del 9.
+    expect(giornoDellaSerata(dopoMezzanotte)).toBe('2026-08-09')
+    expect(serataDelGiorno([dopoMezzanotte], '2026-08-10')).toBe(null)
+    expect(serataDelGiorno([dopoMezzanotte], '2026-08-09')).toBe(dopoMezzanotte)
+  })
+
+  it('una data futura non trova niente, e i limiti non la lasciano scegliere', () => {
+    expect(serataDelGiorno([s7, s8, aperta], '2027-01-01')).toBe(null)
+    // I bordi del campo data sono la prima e l'ultima serata in mano: oltre
+    // l'ultima non c'è futuro da cercare, prima della prima non c'è storia.
+    expect(limitiRicercaSerate([s8, s7, aperta])).toEqual({
+      dal: '2026-08-07',
+      al: '2026-08-09',
+    })
+  })
+
+  it('senza data e senza sessioni non cerca e non esplode', () => {
+    expect(serataDelGiorno([s7, s8], '')).toBe(null)
+    expect(serataDelGiorno([s7, s8], null)).toBe(null)
+    expect(serataDelGiorno([], '2026-08-08')).toBe(null)
+    expect(serataDelGiorno(undefined, '2026-08-08')).toBe(null)
+    expect(limitiRicercaSerate([])).toEqual({ dal: null, al: null })
+    expect(limitiRicercaSerate()).toEqual({ dal: null, al: null })
+    // Una sessione senza apertura non è una serata e non ha un giorno.
+    expect(giornoDellaSerata({ id: 'rotta' })).toBe(null)
   })
 })
