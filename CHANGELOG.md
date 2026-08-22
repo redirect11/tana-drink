@@ -47,6 +47,17 @@
   tre schermate non prendono strade diverse. Con lo zoom dell'app alzato
   le righe non si gonfiano: restano grandi sotto il dito quanto a zoom
   normale, e se ne vedono altrettante.
+- **Sulla comanda le voci sono sempre unite.** Se sul conto le righe erano
+  separate — perché si stava dividendo chi paga cosa — al banco uscivano
+  quattro righe «1 JEFFERSON» una sotto l'altra invece di una
+  «4 JEFFERSON»: «devono essere sempre unite sulla comanda»
+  (22/08/2026). Adesso la comanda si conta a colpo d'occhio, e il conto
+  resta come lo si è lasciato: separare le righe serve a dividere il conto,
+  e su scontrino e schermata di pagamento non cambia niente. **Le note
+  restano righe a sé**: «poco ghiaccio» su due dei quattro è lavoro
+  diverso, e non si mescola con gli altri due. Il numero dei pezzi in cima
+  al ticket è sempre quello giusto. Ne guadagna anche la **ricevuta unica**
+  di più comande, che prima poteva perdere per strada una delle due note.
 
 - **Il numero sul tasto «Filtri» conta quello che si vede.** Con due
   colonne riaccese sulla lavagna del banco diceva «1»: tutte le colonne

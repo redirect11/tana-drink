@@ -11,7 +11,7 @@
 
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
-import { aggregateItems } from './comande.js'
+import { pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import {
@@ -653,8 +653,13 @@ export function printComanda(order, comanda = null) {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()
     const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-    const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
-    const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
+    // ACCORPATE SEMPRE, qui e non nei chiamanti: la regola vale per la
+    // CARTA — comanda singola, ristampa, ticket unito — e passa tutta da
+    // questo punto (BUG-083). La regola è pura e sta in lib/comande.js.
+    const ticketItems = righeDellaComanda(
+      comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
+    )
+    const totalQty = pezziDellaComanda(ticketItems)
 
     prn.addTextLang('it')
     prn.addTextSmooth(true)
@@ -782,8 +787,9 @@ export async function printComande(order, comande) {
 //
 // Il ticket è quello di sempre — stesso formato, non c'è un secondo
 // disegno da mantenere: cambia solo cosa ci finisce dentro, cioè le righe
-// di tutte le comande del conto messe insieme (aggregateItems somma le
-// quantità dello stesso drink, gli item personalizzati restano righe loro).
+// di tutte le comande del conto messe insieme (accorpate come su ogni
+// comanda, vedi `righeDellaComanda`: stesso drink allo stesso prezzo e con
+// la stessa nota fa una riga sola, il resto resta riga a sé).
 //
 // È LA STESSA FORMA che in BUG-051 era il ripiego accidentale di
 // `printComanda` senza comanda. La differenza è tutta qui: prima capitava,
@@ -791,7 +797,15 @@ export async function printComande(order, comande) {
 // questa funzione prende un ordine, non una lista, e non c'è modo di
 // passarle roba di conti diversi.
 export function printComandaUnita(order) {
-  return printComanda(order, { id: 'unita', items: aggregateItems(comandeStampabili(order)) })
+  // LE RIGHE GREZZE DI TUTTE LE COMANDE, e ad accorparle ci pensa
+  // `printComanda` come per ogni altro ticket. Prima qui c'era
+  // `aggregateItems`, che è l'aggregato PER I SOLDI: fonde per `drink_id` e
+  // basta, quindi due Spritz con note diverse diventavano una riga sola e
+  // una delle due note spariva dalla carta.
+  return printComanda(order, {
+    id: 'unita',
+    items: comandeStampabili(order).flatMap((c) => c.items || []),
+  })
 }
 
 // ── SCONTRINO NON FISCALE ─────────────────────────────────────────────────────

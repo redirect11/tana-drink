@@ -3163,3 +3163,52 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-083
+    title: "Sulla comanda le voci uscivano separate se erano separate sul conto"
+    area: "src/lib/comande.js (righeDellaComanda, pezziDellaComanda), src/lib/printer.js (printComanda, printComande, printComandaUnita)"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Per la comanda, le voci devono
+      essere sempre accorpate. Al momento, se sono separate escono separate,
+      se sono unite escono unite. Devono essere sempre unite sulla comanda».
+      COSA SUCCEDEVA. `printComanda` stampava le righe COSÌ COME STANNO sul
+      conto. Al POS c'è «Unisci / Separa uguali» e ogni tocco sul prodotto
+      nasce come riga a sé: chi aveva separato le righe per dividere il
+      conto mandava al banco quattro righe «1 JEFFERSON» una sotto l'altra
+      invece di una «4 JEFFERSON». Chi prepara conta PEZZI, e quattro righe
+      uguali si contano peggio di un numero.
+      PERCHÉ NON È UNA PREFERENZA. Separare serve ai SOLDI — dividere il
+      conto fra chi paga cosa — e sui soldi non cambia niente: scontrino e
+      schermata di pagamento restano come sono. La comanda risponde a
+      un'altra domanda, «quanti pezzi devo fare», e a quella la risposta è
+      sempre la stessa.
+      LA CURA. Una funzione pura in lib/comande.js, `righeDellaComanda`,
+      che tutte le stampe del banco attraversano — comanda singola,
+      ristampa, ticket unito — perché il punto in cui si accorpa è UNO
+      SOLO, dentro `printComanda`, e non nei cinque chiamanti.
+      LA CHIAVE È QUELLA DEL POS (`lineSignature`, lib/orderLines.js), non
+      una nuova: se «uguali» volesse dire una cosa a schermo e un'altra
+      sulla carta, il banco riceverebbe un ticket che non corrisponde al
+      conto. Distingue drink, nome, PREZZO, ricetta e NOTA. Le due che
+      contano qui: la NOTA è lavoro diverso — «poco ghiaccio» vale per due
+      dei quattro Jefferson, e accorparli farebbe sparire la nota o la
+      stamperebbe su tutti e quattro — e il PREZZO tiene separati due
+      prodotti liberi battuti con lo stesso nome a cifre diverse, dove
+      sommare direbbe una bugia su cosa è stato battuto.
+      IL «CL: N» IN CIMA RESTA GIUSTO: si conta sulle righe già accorpate
+      (`pezziDellaComanda`), e la somma non cambia — accorpare sposta le
+      quantità, non ne crea e non ne perde. C'è un test che lo dice.
+      UN DIFETTO IN PIÙ, TROVATO STRADA FACENDO. Il ticket unito
+      (`printComandaUnita`, più comande dello stesso conto su una ricevuta
+      sola) passava per `aggregateItems`, che è l'aggregato PER I SOLDI:
+      fonde per `drink_id` e basta, senza guardare la nota. Due Spritz con
+      note diverse diventavano una riga sola e una delle due note spariva
+      dalla carta. Adesso passa le righe grezze e le accorpa `printComanda`
+      con la chiave giusta.
+    labels: [bug, stampa, comanda, banco]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAccorpata.test.js

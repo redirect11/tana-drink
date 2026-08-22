@@ -1181,7 +1181,9 @@ STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita
 
 VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai fatto uscire niente — la stampa è appesa a `closePaid` — ed era una scelta presa quando l'acconto era un caso di margine. Adesso quella riscossione ha la SUA carta, che è un documento diverso: lo scontrino d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto non prende né l'una né l'altro, perché è un evento e non lo stato del conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire uno solo.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`
+SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono.
+
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
