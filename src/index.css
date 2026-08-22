@@ -27,6 +27,22 @@
      bassa dei 44px di chi si preme di corsa: «e i tasti dei filtri, tutti,
      devono essere leggermente più piccoli» (l'utente, 20/08/2026). */
   --tastino-alto: 34px;
+  /* L'ALTEZZA MINIMA DI UNA RIGA DI LISTA CHE SI TOCCA. Una misura sola
+     per tutte le liste della stessa famiglia — il magazzino, le chiusure
+     di cassa, le statistiche — perché sono la stessa lista vista in tre
+     pagine: se ognuna si tenesse il suo numero, fra sei mesi sarebbero
+     tre numeri diversi e nessuno saprebbe quale è quello giusto.
+     Il valore è la soglia di DESIGN.md e docs/navigazione.md: 44px, il
+     bersaglio di chi tocca in piedi, col vassoio in mano e le dita
+     bagnate. Prima queste righe erano alte quanto il loro testo (8px di
+     aria sopra e sotto, ~36px in tutto) e si apriva la riga sbagliata.
+     SCRITTA COME MISURA FISICA, non come numero nel foglio: lo zoom
+     dell'app scala `#root`, quindi 44px CSS al 120% sono 52,8px veri —
+     una garanzia già superata che intanto ruba altezza a una schermata
+     fatta di righe. Divisa per lo zoom la riga resta grande sotto il dito
+     quanto a zoom 1. È l'idioma di BUG-075, e come là: chi lo trova non
+     lo «corregga» in 44px secchi (DESIGN.md, guardrail 2). */
+  --riga-lista: calc(44px / var(--zoom, 1));
   /* LO SPAZIO FRA I TASTI DI UNA CARD DELLA CODA: il piede («⋯ Azioni» e
      il tasto grande, affiancati o impilati quando la card è stretta) e il
      menu che si apre sotto. Una misura sola, o gli stessi tasti avrebbero
@@ -2892,11 +2908,15 @@ body.bar-wide .app {
 .inv-row.ass-linea { border-left-color: #3498db; }
 .inv-row.ass-premium { border-left-color: #f0b429; }
 .inv-row.ass-out { border-left-color: #e74c3c; }
+/* La riga si tocca: alta almeno `--riga-lista` (vedi il gettone in cima
+   al foglio). Il minimo, non l'altezza fissa — una riga che va a capo
+   cresce, non si taglia. */
 .inv-row-main {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: var(--riga-lista);
   padding: 8px 12px;
   background: none;
   border: none;

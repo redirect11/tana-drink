@@ -1296,3 +1296,71 @@ describe('i chip accesi dell’inventario', () => {
     expect(blocco, '#fff sul dorato dei tasti fa 1,7:1').not.toMatch(/color:\s*#/)
   })
 })
+
+// ── LE RIGHE DELLE LISTE SI TOCCANO, E LA MISURA È UNA SOLA ─────────
+//
+// «Anche qui nei rendiconti delle chiusure di cassa serve una lista fatta
+// meglio, stile quella del magazzino ma con righe più alte. […] E altra
+// cosa, aumenta l'altezza anche delle righe della tabella dell'inventario
+// per un touch migliore» (l'utente, 22/08/2026, BUG-082).
+//
+// Le righe erano alte quanto il loro testo — 8px di aria sopra e sotto,
+// una trentina di pixel in tutto — e il magazzino al banco si tocca in
+// piedi: sotto i 44px di docs/navigazione.md si apre la riga di fianco.
+// La misura sta in UN gettone perché le liste della famiglia sono tre
+// (magazzino, chiusure di cassa, statistiche) e devono somigliarsi senza
+// che nessuno debba ricordarsi tre numeri.
+describe('le righe delle liste sono un bersaglio da dito', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const nudoCss = () => nudo(css())
+
+  const regola = (nome) => {
+    const testo = nudoCss()
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('il gettone vale 44px e SEGUE LO ZOOM', () => {
+    // Non `44px` secchi: `#root` è scalato dallo zoom dell'app, quindi a
+    // zoom 1,2 sarebbero 52,8px veri — garanzia già superata, e intanto
+    // una schermata fatta di righe ne perde un quinto. Stesso idioma del
+    // tastierino del pagamento (BUG-075).
+    const radice = nudoCss()
+    const i = radice.indexOf('--riga-lista:')
+    expect(i, 'il gettone --riga-lista non c’è più').toBeGreaterThan(-1)
+    const valore = radice.slice(i, radice.indexOf(';', i))
+    expect(valore, 'la misura del bersaglio non segue più lo zoom').toMatch(
+      /calc\(\s*44px\s*\/\s*var\(--zoom,\s*1\)\s*\)/
+    )
+  })
+
+  it('è dichiarato UNA volta sola', () => {
+    // Due dichiarazioni sono due misure che prima o poi divergono.
+    const quante = (nudoCss().match(/--riga-lista:/g) || []).length
+    expect(quante, 'il gettone è dichiarato più di una volta').toBe(1)
+  })
+
+  it('la riga della lista lo usa come minimo, non come altezza fissa', () => {
+    // Minimo: una riga che va a capo cresce invece di tagliare il testo.
+    const r = regola('.inv-row-main')
+    expect(r, 'le righe sono tornate alte quanto il loro testo').toMatch(
+      /min-height:\s*var\(--riga-lista\)/
+    )
+    expect(r, 'un’altezza fissa taglia la riga che va a capo').not.toMatch(/\n\s*height:/)
+  })
+
+  it('e nessuna lista si scrive un’altezza sua', () => {
+    // Il gettone serve a questo: se una lista della famiglia dichiara un
+    // suo min-height in pixel, le tre schermate ricominciano a divergere.
+    const testo = nudoCss()
+    for (const nome of ['.inv-row', '.inv-row-main', '.cash-sess-head']) {
+      const i = testo.indexOf(A_CAPO + nome + ' {')
+      if (i < 0) continue
+      const blocco = testo.slice(i, testo.indexOf('}', i))
+      expect(blocco, nome + ' si è scritto un’altezza sua invece del gettone').not.toMatch(
+        /min-height:\s*\d+px/
+      )
+    }
+  })
+})

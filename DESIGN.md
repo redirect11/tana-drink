@@ -241,6 +241,18 @@ Regole:
   c'è la stella dei preferiti — un tasto, che non si copre.
   In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
   scelto a mano.
+- **Le liste lunghe hanno tutte lo stesso vestito** — magazzino, chiusure
+  di cassa, statistiche. È una sola famiglia di classi (`.inv-list`,
+  `.inv-row`, `.inv-row-main` e parenti): riquadro unico con gli angoli
+  stondati, righe separate da una linea, **striscia a sinistra** di 4px
+  quando c'è qualcosa da dire sulla riga, il **numero che si cerca** in
+  fondo a destra, e il dettaglio che si apre **sotto** la riga invece che
+  altrove. Tre schermate, un modo solo di leggere un elenco.
+  **L'altezza è una sola e sta in un gettone**, `--riga-lista`: sono la
+  stessa lista vista in tre pagine, e tre numeri scritti a mano in tre
+  punti del foglio diventano tre numeri diversi. Vale il guardrail 2 —
+  queste righe si toccano in piedi, col vassoio in mano.
+
 - **La tavolozza del conto sta in una modale, non nel menu.** Dal «⋯
   Azioni» di una card — del conto e della comanda — il colore si dà da un
   **tasto solo**, che porta accanto al testo il **pallino del colore di
@@ -463,6 +475,9 @@ Otto temi per riga, si tiene il peggiore.
    spingeva l'ultima riga di tasti sotto «Riscuotere». Chi trova quel
    `calc` non lo «corregga» in `44px`: la regola non è ammorbidita, è
    misurata dove va misurata.
+   Ed è il caso delle **righe delle liste** (`--riga-lista`, BUG-082): il
+   magazzino si tocca in piedi, e una lista è fatta solo di bersagli — se
+   lo zoom li gonfia, la schermata ne mostra un quinto in meno per niente.
 3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
    gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner
