@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 172 | fatto e coperto dai test |
+| ✅ | 173 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**208 voci** in tutto. **186** descrivono il sistema com'è oggi e
+**209 voci** in tutto. **187** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **8** difetti noti sono ancora aperti.
@@ -61,6 +61,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 22 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [STAT](#stat) | 1 | — |  |
 
 ## Cosa fa il sistema
 
@@ -1090,9 +1091,9 @@ Il rendiconto mostra gli ordini (in lista o in tabella, apribili nel dettaglio) 
 
 Statistiche per serata: incassi, prodotti più venduti, tempi di preparazione e consegna misurati, preparazione più lunga. I tempi misurati raffinano progressivamente la stima mostrata al cliente.
 
-SI APRONO SULL'ULTIMA CHIUSURA di cassa, e quel periodo sta PRIMA degli altri nella riga: la domanda del mattino dopo è «com'è andata ieri sera», non «com'è andata la settimana». Prima partivano da sette giorni — un'altra domanda — e la serata era in fondo alla riga. Chi sceglie un altro periodo se lo tiene: la preselezione vale solo alla prima apertura. Le due viste (giornaliero e mensile per macro) sono SOTTOSEZIONI della pagina, come in Magazzino e Impostazioni: stanno nel menu invece che in una riga di chip sopra il contenuto, che costava altezza a una schermata già fatta di tabelle.
+QUESTI SONO I CONTI; come si sceglie la serata da guardare lo dice REQ-STAT-001, che ci si è stratificato sopra il 22/08/2026: la serata non è più una pastiglia con una tendina ma una sottosezione con la lista delle chiusure. La matematica non è cambiata di una riga — è la stessa (kpi, byHour, top, byCategory, ingredients, prep, split, extras), riusata dalle due sottosezioni.
 
-**Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`, `tests/component/StatsTab.test.jsx`
+**Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`
 
 #### REQ-CASSA-009 — Bilancio → Venduto × Incassato: la tabella trasloca, con le due incidenze
 
@@ -1941,6 +1942,22 @@ ADESSO c'e' l'interruttore DEL TERMINALE, nella sezione Dev («Stampante simulat
 IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la accende — il tablet del banco che prova la stampante vera non deve trovarsi facsimili a sorpresa.
 
 **Dove**: `src/lib/stampanteFinta.js, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/stampanteFinta.test.js`
+
+### STAT
+
+#### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
+
+«Nelle statistiche dovremmo rendere più sofisticata la selezione della serata. È la cosa principale che si vuole vedere, il resto dei filtri sono secondari. Io metterei una lista con dettaglio: di default la lista si apre sulle chiusure di cassa, e se ci clicco apre il dettaglio delle statistiche di quella chiusura di cassa. Facciamo due sottosezioni: una per le statistiche così come te le ho descritte, per le chiusure di cassa; una è quella che c'è adesso, che mostra le statistiche in base al filtro e al tempo» (l'utente, 22/08/2026).
+
+DUE SOTTOSEZIONI nel menu laterale — «Per serata» e «Per periodo» — con lo stesso meccanismo di Cassa e Magazzino (docs/navigazione.md): niente riga di pastiglie in pagina, che su una schermata di grafici costa altezza tutto il giorno. A) PER SERATA, ed è quella che si apre di suo. La LISTA delle chiusure di cassa, la più recente in cima, una riga per serata: quando (giorno, apertura→chiusura, durata) e TRE NUMERI incolonnati — incasso, conti, scontrino medio. Il primo è la domanda, gli altri due sono il perché: incasso = conti × scontrino medio, quindi una serata migliore dell'altra lo è perché è entrata più gente o perché ognuno ha speso di più, e sono due cose che si affrontano in modo diverso. Il resto (ora di punta, attese, top prodotti) sta un tocco più in là: in riga sarebbero numeri da leggere uno per uno, e la lista si guarda in una scorsa. La forma è quella della lista del magazzino (`inv-list` / `inv-row`), una famiglia sola di righe per tutto il gestionale.
+
+TOCCANDO UNA RIGA si apre il DETTAGLIO: le statistiche di quella serata, cioè lo stesso corpo di grafici della sottosezione del periodo (`CorpoStatistiche`), sugli ordini della finestra della cassa — mezzanotte compresa.
+
+SI TORNA CON «← Chiusure», in cima al dettaglio: una sola via d'uscita, e dice dove riporta invece di dire «indietro». Uscendo dalla sottosezione il dettaglio si dimentica: rientrando si riparte dalla lista, perché era stato chiuso apposta e ritrovarcisi dentro vuol dire non sapere più cosa fa la freccia in cima.
+
+LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in corso» e i numeri di adesso: mentre si lavora è la serata che interessa di più, e senza di lei la prima sera del locale la lista sarebbe vuota. B) PER PERIODO: le pastiglie di sempre (7/10/20/30/60 e Personalizzato) MENO «🧾 Ultima chiusura» e la tendina delle serate, che ora vivono nella sottosezione A — lo stesso posto raggiunto in due modi prima o poi si contraddice. LOCAL-FIRST: la lista si costruisce da quello che la pagina ha già in mano (sessioni e ordini), senza una lettura in più e senza attese fra il tocco e la riga. Le serate più vecchie della finestra di ordini scaricata non si possono ricalcolare: per quelle si usano i numeri congelati nello `snapshot` della chiusura, che stanno già sulla sessione — una riga a zero si leggerebbe come «quella sera non ha incassato», che è un'altra cosa.
+
+**Dove**: `src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/StatsTab.test.jsx`
 
 ## Lavori previsti
 

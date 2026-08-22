@@ -74,6 +74,20 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
   Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
   si conoscono senza esserci passati.
+- **Dentro una sottosezione, lista e dettaglio non sono un terzo livello di
+  menu.** Una sottosezione può essere fatta di una lista che si apre su un
+  dettaglio — le chiusure di cassa in Statistiche → Per serata: si tocca una
+  serata e si vedono i suoi numeri. Quel dettaglio **non entra nel menu**:
+  nel menu ci sono i posti dove si va, e qui il posto è la lista; il
+  dettaglio è una cosa che si guarda e si richiude, e la sottosezione resta
+  accesa mentre lo si guarda.
+  **La via d'uscita è una sola e sta in cima al dettaglio, a sinistra**, e
+  **dice dove riporta** — «← Chiusure», non «← Indietro»: il nome del posto
+  si legge senza doversi ricordare da dove si è arrivati.
+  **E uscendo si dimentica.** Tornando alla sottosezione si riparte dalla
+  lista: il dettaglio era stato chiuso apposta, e ritrovarcisi dentro vuol
+  dire non sapere più cosa fa la freccia in cima — se chiude quello che si è
+  appena aperto o riporta indietro di due passi.
 - **Dove la pagina ha sezioni sue, il menu resta agganciato**: da 768px in
   su non copre il contenuto, è una colonna della pagina e il contenuto si
   stringe per fargli posto. Lì dentro si salta da una sezione all'altra
