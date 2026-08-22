@@ -4,6 +4,22 @@
 
 ### Per chi gestisce
 
+- **Le statistiche si aprono sull'elenco delle serate.** «Statistiche»
+  adesso ha due voci nel menu: **Per serata** — quella che si apre di suo —
+  e **Per periodo**, quella di prima. La prima è la lista delle chiusure di
+  cassa, la più recente in cima, con per ogni serata **giorno, orari e
+  durata** e tre numeri incolonnati: **incasso, conti, scontrino medio**.
+  Così due sabati si confrontano guardandoli, senza aprire niente — e
+  toccando una riga si aprono tutte le statistiche di quella serata,
+  identiche a prima, con «← Chiusure» in alto per tornare all'elenco. **La
+  cassa ancora aperta è la prima riga**, con l'orario che dice «in corso» e
+  i numeri di adesso. Prima la serata era una pastiglia con una tendina:
+  per confrontare due sere bisognava aprirla, sceglierne una, leggere,
+  riaprirla e ricominciare. In «Per periodo» restano le giornate
+  (7/10/20/30/60 e Personalizzato); la pastiglia «Ultima chiusura» e la
+  tendina delle serate non ci sono più, perché quella è diventata una
+  sezione sua.
+
 - **Il numero sul tasto «Filtri» conta quello che si vede.** Con due
   colonne riaccese sulla lavagna del banco diceva «1»: tutte le colonne
   diverse dal solito valevano un filtro solo — «non mi è chiaro come conta
