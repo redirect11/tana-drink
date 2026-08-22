@@ -20,6 +20,19 @@
   tendina delle serate non ci sono più, perché quella è diventata una
   sezione sua.
 
+- **Le righe del magazzino si toccano col dito.** Erano alte quanto la
+  scritta che ci sta dentro, e in piedi al banco — con 388 articoli in
+  elenco — si finiva per aprire la riga di fianco: «aumenta l'altezza
+  anche delle righe della tabella dell'inventario per un touch migliore»
+  (22/08/2026). Adesso sono alte quanto un bersaglio pieno, la misura di
+  tutti i tasti che si premono di corsa. La riga è più alta, non diversa:
+  striscia dell'assortimento, pallino delle scorte, legenda e dettaglio
+  che si apre sotto restano dov'erano. **Ed è una misura sola** per tutte
+  le liste dell'app — magazzino, chiusure di cassa, statistiche — così le
+  tre schermate non prendono strade diverse. Con lo zoom dell'app alzato
+  le righe non si gonfiano: restano grandi sotto il dito quanto a zoom
+  normale, e se ne vedono altrettante.
+
 - **Il numero sul tasto «Filtri» conta quello che si vede.** Con due
   colonne riaccese sulla lavagna del banco diceva «1»: tutte le colonne
   diverse dal solito valevano un filtro solo — «non mi è chiaro come conta

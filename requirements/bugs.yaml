@@ -3122,3 +3122,44 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/css.test.js
+
+  - id: BUG-082
+    title: "Le righe delle liste sono troppo basse per un dito: magazzino e chiusure di cassa"
+    area: "src/index.css (gettone --riga-lista, .inv-row-main)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, insieme alla richiesta sulla
+      lista delle chiusure di cassa: «E altra cosa, aumenta l'altezza anche
+      delle righe della tabella dell'inventario per un touch migliore».
+      LA MISURA CHE C'ERA. Le righe della lista del magazzino
+      (`.inv-row-main`) erano alte quanto il loro testo: 8px di aria sopra
+      e sotto una riga da 0,9rem, una trentina di pixel in tutto. Il
+      magazzino al banco si guarda in piedi, col telefono in una mano, e
+      sotto i 44px di docs/navigazione.md — la soglia dichiarata per chi
+      lavora col dito — si apre la riga di fianco a quella che si voleva.
+      Con 388 articoli in elenco succede spesso, e aprire la riga
+      sbagliata durante il servizio vuol dire cercare due volte.
+      LA CURA. Un gettone solo, `--riga-lista`, e le righe lo prendono come
+      MINIMO — non come altezza fissa, o una riga che va a capo verrebbe
+      tagliata. Il gettone e' una misura FISICA:
+      `calc(44px / var(--zoom, 1))`, lo stesso idioma di BUG-075. Lo zoom
+      dell'app scala `#root`: 44px secchi al 120% sono 52,8px veri, cioe'
+      una garanzia gia' superata che intanto fa vedere un quinto di righe
+      in meno su una schermata fatta solo di righe. Diviso per lo zoom il
+      bersaglio resta grande sotto il dito quanto a zoom 1.
+      PERCHE' UN GETTONE E NON UN NUMERO. Le liste di questa famiglia sono
+      tre — magazzino, chiusure di cassa (REQ-CASSA-006), statistiche — e
+      tre numeri scritti a mano in tre punti del foglio, fra sei mesi,
+      sono tre numeri diversi. La regola sta in DESIGN.md.
+      QUELLO CHE NON CAMBIA: la striscia dell'assortimento, il pallino
+      delle scorte, la legenda, la riga aperta e il dettaglio sotto, le
+      colonne che spariscono sotto i 900px. La riga e' piu' alta, non
+      diversa.
+      RIMETTENDO IL DIFETTO — il gettone a 44px secchi, o il minimo tolto
+      dalla riga — tests/unit/css.test.js torna rosso.
+    labels: [bug, interfaccia, magazzino, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
