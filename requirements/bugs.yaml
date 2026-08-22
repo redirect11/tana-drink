@@ -2957,12 +2957,20 @@ bugs:
       suo margine. Un vuoto piu' alto della riga che stava separando — e
       siccome il gap scala con `--foot-scale`, tirando su la maniglia per
       ingrandire il piede quel vuoto cresceva con tutto il resto.
-      COME E' STATO SISTEMATO. L'area da afferrare NON si tocca: sedici
-      pixel sotto il dito restano sedici, ed e' quello che conta al banco.
-      A rientrare e' solo lo spazio sotto, con un margine negativo che
-      segue `--foot-scale` perche' lo segue il gap che sta annullando.
-      Sorvegliato da tests/unit/css.test.js: rimettendo il margine di
-      prima il test diventa rosso.
+      COME E' STATO SISTEMATO, IN DUE GIRI. Il primo ha stretto solo
+      sotto: «vedo ancora che la maniglia occupa troppo spazio sopra e
+      sotto» (l'utente, 22/08/2026, col secondo screenshot) — perche'
+      sopra restava il cuscino del piede, che non c'entrava col gap.
+      Adesso la maniglia RIENTRA nei vicini invece di aggiungersi: sopra
+      si mangia il cuscino (il piede scende a 4px di padding, che a
+      separarlo da quello che ha sopra basta il bordo), sotto riassorbe il
+      gap con un margine negativo che segue `--foot-scale`, perche' lo
+      segue il gap che sta annullando.
+      L'AREA DA AFFERRARE RESTA: quattordici pixel a tutta larghezza. Una
+      presa che non si prende non serve a niente, e quello che dava
+      fastidio non era la presa ma il VUOTO. Sorvegliato da
+      tests/unit/css.test.js su tutti e due i lati: rimettendo il cuscino
+      sopra, o togliendo il rientro, il test diventa rosso (provato).
     labels: [bug, interfaccia, pos]
     severity: lieve
     priority: P3

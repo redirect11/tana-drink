@@ -1077,14 +1077,26 @@ ${nome} {`)
   }
 
   it('tiene la sua area da afferrare', () => {
-    expect(regola('.posd-foot-handle')).toMatch(/height:\s*16px/)
+    const h = regola('.posd-foot-handle').match(/height:\s*(\d+)px/)
+    expect(h, 'la maniglia ha perso l' + String.fromCharCode(39) + 'altezza').toBeTruthy()
+    // Sotto i dodici non e' piu' una presa: e' una riga da centrare col dito.
+    expect(Number(h[1])).toBeGreaterThanOrEqual(12)
   })
 
-  it('ma riassorbe il gap della colonna, in scala col piede', () => {
+  it('ma rientra nei vicini invece di aggiungersi, sopra e sotto', () => {
     const r = regola('.posd-foot-handle')
-    const m = r.match(/margin:\s*0\s+-12px\s+calc\(([^)]*)\)/)
-    expect(m, 'il margine sotto non riassorbe più niente').toBeTruthy()
-    expect(m[1], 'lo stacco deve seguire --foot-scale, come il gap').toMatch(/--foot-scale/)
-    expect(m[1], 'e deve essere negativo, o non riassorbe').toMatch(/-\s*\d/)
+    const m = r.match(/margin:\s*(-?\d+)px\s+-12px\s+calc\(([^)]*)\)/)
+    expect(m, 'il margine non rientra piu da nessuna parte').toBeTruthy()
+    // Sopra: si mangia il cuscino del piede.
+    expect(Number(m[1]), 'sopra deve rientrare, non aggiungere').toBeLessThan(0)
+    // Sotto: riassorbe il gap, e lo segue quando il piede si ingrandisce.
+    expect(m[2], 'lo stacco deve seguire --foot-scale, come il gap').toMatch(/--foot-scale/)
+    expect(m[2], 'e deve essere negativo, o non riassorbe').toMatch(/-\s*\d/)
+  })
+
+  it('e il piede non mette un cuscino sopra la maniglia', () => {
+    const pad = regola('.posd-comanda-foot').match(/padding:\s*(\d+)px/)
+    expect(pad, 'il piede ha perso il padding').toBeTruthy()
+    expect(Number(pad[1]), 'sopra la maniglia bastano pochi pixel').toBeLessThanOrEqual(4)
   })
 })
