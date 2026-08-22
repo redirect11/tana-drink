@@ -2097,34 +2097,15 @@ body.fullbleed .bar-content {
   color: var(--accent-2);
   border-color: var(--accent-2);
 }
-/* Acceso = c'è un filtro che sta lavorando e la fila è chiusa. Adesso che
-   il riquadro c'è, si accende anche quello: il colore del solo testo, su
-   un bottone bordato, si perdeva. */
-.coda-tastino.active {
-  color: var(--accent-2);
-  border-color: var(--accent-2);
-  font-weight: 600;
-}
-
-/* QUANTI FILTRI DEVIANO DAL DEFAULT, accanto al nome e SOLO a fila chiusa.
-   Senza, chiusa la fila non resterebbe a schermo niente a dire che la coda
-   è filtrata — dodici conti dove ce ne sono quaranta. Aperta non serve: i
-   chip accesi si vedono da sé, e ridirlo con un numero è rumore. */
-.coda-tastino-conta {
-  display: inline-block;
-  min-width: 16px;
-  margin-left: 4px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--accent-2);
-  /* L'inchiostro sopra un fondo d'accento ha già il suo gettone, e segue
-     il tema: scritto a mano sarebbe nero su nero sul primo tema scuro. */
-  color: var(--btn-ink);
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-}
+/* NIENTE BADGE E NIENTE «ACCESO» SUL TASTO DEI FILTRI. Il numero dei
+   filtri accesi (`.coda-tastino-conta`) e la classe `.active` che lo
+   accompagnava sono stati tolti il 22/08/2026: «sì ma infatti togliamo
+   quel numero. Non serve» (l'utente). Il conteggio era stato provato con
+   quattro criteri diversi e nessuno diceva a chi guarda quello che si
+   aspettava — la storia sta in `spiegaFiltri`, src/lib/coda.js. Se
+   tornasse la tentazione di riaccendere il tasto «quando c'è un filtro»,
+   quel colore ha bisogno di un conteggio sotto, ed è esattamente la parte
+   che è stata rimossa. */
 
 
 
@@ -7895,10 +7876,10 @@ body.pagina-piena .inv-scheda {
   white-space: nowrap;
 }
 
-/* IL BADGE DEL CONTEGGIO NON STA PIÙ QUI. Era nell'angolo del tastino
-   quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è un
-   bottone basso e scritto, e il numero gli sta accanto — vedi
-   `.coda-tastino-conta`. */
+/* IL BADGE DEL CONTEGGIO NON ESISTE PIÙ. Stava nell'angolo del tastino
+   quadrato ⚗️ (`.board-icona-conta`), poi accanto al «▾ Filtri» scritto
+   (`.coda-tastino-conta`); dal 22/08/2026 il tasto dei filtri non porta
+   nessun numero — vedi `.coda-tastino`. */
 
 .board-icona.active {
   border-color: var(--accent-2);

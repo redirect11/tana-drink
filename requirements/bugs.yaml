@@ -3013,7 +3013,7 @@ bugs:
 
   - id: BUG-080
     title: "Il badge dei filtri conta i generi, non le deviazioni: tre colonne diverse e un «1»"
-    area: "src/lib/coda.js (contaFiltri, spiegaFiltri), src/pages/BartenderPage.jsx (filtriAccesi, quantiFiltri, chipSoloOggi)"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx (chipSoloOggi)"
     description: >
       Segnalato dall'utente il 22/08/2026, parole sue: «non mi e' chiaro
       come conta i filtri. Secondo me non funziona». Con due fotografie
@@ -3068,6 +3068,24 @@ bugs:
       tastino dice «1» con due colonne in meno a schermo. (Il passo
       originale erano due colonne RIACCESE: da BUG-085 quelle non fanno
       piu' numero, ed e' giusto cosi'.)
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      «Si' ma infatti togliamo quel numero. Non serve» (l'utente, lo stesso
+      giorno). Questo bug resta `fixed` — il conteggio per generi era
+      sbagliato e la cura c'e' stata — ma la cosa che curava non esiste
+      piu': il tastino «▾ Filtri» non porta nessun badge.
+      IL GIRO PER INTERO, che e' la parte da ricordare. Il numero e' stato
+      calcolato in quattro modi: i GENERI di filtro (questo bug), una
+      restrizione per COLONNA contando anche le riaccese (BUG-085), solo
+      cio' che RESTRINGE guardando la lavagna («non mi sembra che il
+      conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+      zero»), e i chip ACCESI e basta — mai arrivato a schermo. Ogni
+      criterio era una risposta diversa a «quanti filtri ci sono?», e chi
+      guarda ne aveva in mente una sola: i chip che vede. Un numero che va
+      spiegato non avvisa di niente.
+      COSA NON RIAPRIRE. `contaFiltri`, `corsieRistrette`, la lista
+      `filtriAccesi` e il badge `.coda-tastino-conta` sono stati rimossi
+      insieme, e con loro i test del conteggio. Il dettaglio sta in
+      REQ-CODA-008, settimo giro.
     labels: [bug, interfaccia, coda]
     severity: lieve
     priority: P2
@@ -3272,7 +3290,7 @@ bugs:
 
   - id: BUG-085
     title: "Il badge dei filtri conta al contrario: mostrare più colonne fa salire il numero"
-    area: "src/lib/coda.js (corsieRistrette, contaFiltri, spiegaFiltri), src/pages/BartenderPage.jsx (filtriAccesi)"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx"
     description: >
       Segnalato dall'utente il 22/08/2026, parole sue: «credo che
       l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
@@ -3324,6 +3342,26 @@ bugs:
       lavagna mostra tutte e sei le colonne e il tastino dice «3». Oppure,
       più corto: accendere «💶 Chiuse» e «✖️ Annullate» e richiudere — sei
       colonne a schermo e il tastino dice «2».
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      La cura di questo bug non ha retto alla prova successiva. Col
+      criterio «solo ciò che restringe» l'utente ha riguardato la stessa
+      coda e ha scritto: «non mi sembra che il conteggio dei filtri
+      funzioni ancora. Deve contare le colonne visualizzate. Ne ho tre e
+      lui dice zero. Se ne seleziono 1 dice 2. Comunque non funziona» —
+      con lo screenshot di cinque chip in fila, i primi tre accesi, e
+      nessun badge. E subito dopo, chiudendo il discorso: «sì ma infatti
+      togliamo quel numero. Non serve».
+      QUINDI IL BADGE NON C'È PIÙ. Il bug resta `fixed` (il criterio a
+      rovescio era davvero sbagliato), ma quello che curava è stato
+      ritirato: il tastino dice «▾ Filtri» e basta, e il title dice solo
+      il gesto. `corsieRistrette` — nata qui — è stata eliminata insieme a
+      `contaFiltri`: senza badge non aveva più chiamanti.
+      LA MORALE, per chi ci ripassa. Quattro criteri in due giorni
+      (generi, deviazioni, restrizioni, chip accesi) e nessuno che
+      corrispondesse a quello che chi guarda si aspetta: «quanti filtri ci
+      sono?» non ha una risposta sola. Il segnale si legge aprendo la
+      fila, dove i chip accesi si vedono da sé. Il racconto per esteso sta
+      in REQ-CODA-008, settimo giro.
     labels: [bug, interfaccia, coda]
     severity: lieve
     priority: P2
