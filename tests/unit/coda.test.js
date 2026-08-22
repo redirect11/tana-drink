@@ -36,6 +36,7 @@ import {
   gruppiColonne,
   corsieDelPronto,
   spiegaFiltri,
+  contaFiltri,
   spiegaOrdine,
 } from '../../src/lib/coda.js'
 
@@ -1799,12 +1800,43 @@ describe('corsieDiverseDalNormale', () => {
 // aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino in
 // testata, e lì ci sta una cifra — quali siano lo dice il title.
 //
-// LA CIFRA NON HA PIÙ UNA FUNZIONE SUA. C'era una `contaFiltri` che
-// ripuliva l'elenco dai buchi e lo contava, e i suoi tre casi stavano qui:
-// ma chi la chiamava l'elenco pulito ce l'aveva già in mano — lo compone
-// con dei `&&` e lo passa a `spiegaFiltri` — e contarlo è `.length`. Che il
-// badge segni il numero giusto, e resti spento con la coda com'è di suo, lo
-// prova il component test della coda (tests/component/CodaCorsie.test.jsx).
+// LA CIFRA HA UNA FUNZIONE SUA, ED È `contaFiltri` (BUG-080). Per un giro
+// è stata `.length` sull'elenco già pulito, e reggeva finché ogni voce
+// valeva uno: da quando le colonne del banco sono un GRUPPO — tre colonne
+// diverse dal normale, una voce sola — il badge diceva «1» con tre colonne
+// in più a schermo. «Non mi è chiaro come conta i filtri. Secondo me non
+// funziona» (l'utente, 22/08/2026): il numero deve essere quello che chi
+// guarda conta a occhio.
+describe('contaFiltri', () => {
+  // Coda com'è di suo: niente da segnalare. È la ragione per cui si
+  // contano le DEVIAZIONI e non i filtri accesi — uno acceso c'è sempre.
+  it('senza deviazioni non c’è niente da contare', () => {
+    expect(contaFiltri([])).toBe(0)
+    expect(contaFiltri()).toBe(0)
+  })
+
+  // Le colonne del banco: `corsieDiverseDalNormale` ne conta una tanto se
+  // è spenta una che di serie sta accesa quanto se è riaccesa una che di
+  // serie sta spenta. Al badge arriva come gruppo, e vale quante ne sono.
+  it('una colonna diversa dal normale vale uno, nei due versi', () => {
+    expect(contaFiltri([{ nome: 'Colonne', quante: 1 }])).toBe(1)
+  })
+
+  // TRE COLONNE FANNO TRE, non uno: era il difetto.
+  it('tre colonne più lo staff filtrato fanno QUATTRO', () => {
+    expect(contaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'])).toBe(4)
+  })
+
+  it('un nome secco vale uno', () => {
+    expect(contaFiltri(['Chiusi', 'Solo oggi'])).toBe(2)
+  })
+
+  // A FILA APERTA IL NUMERO SPARISCE: i chip accesi si vedono da sé, e
+  // ripeterli con una cifra è rumore. La regola sta qui, non nella pagina.
+  it('a fila aperta non conta niente', () => {
+    expect(contaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'], true)).toBe(0)
+  })
+})
 
 // IL NOME È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene, deve
 // essere "mostra filtri"» (l'utente, 20/08): il tasto apre e chiude un
@@ -1830,6 +1862,16 @@ describe('spiegaFiltri', () => {
     const t = spiegaFiltri(['Chiusi', 'Miei'], false)
     expect(t.startsWith('Mostra filtri')).toBe(true)
     expect(t).toContain('Chiusi, Miei')
+  })
+
+  // LE COLONNE RESTANO RAGGRUPPATE QUI, anche se nel badge contano una per
+  // una: i loro nomi sono le testate della lavagna, già sotto gli occhi, e
+  // sei titoli in fila annegherebbero i filtri che a schermo un nome non
+  // ce l'hanno. Il numero è quello che somma il badge: stessa lista.
+  it('un gruppo si legge col suo numero, non riga per riga', () => {
+    expect(spiegaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'], false)).toContain(
+      'Colonne (3), Miei'
+    )
   })
 })
 

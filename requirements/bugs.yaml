@@ -3005,3 +3005,63 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-080
+    title: "Il badge dei filtri conta i generi, non le deviazioni: tre colonne diverse e un «1»"
+    area: "src/lib/coda.js (contaFiltri, spiegaFiltri), src/pages/BartenderPage.jsx (filtriAccesi, quantiFiltri, chipSoloOggi)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «non mi e' chiaro
+      come conta i filtri. Secondo me non funziona». Con due fotografie
+      della coda a corsie del banco: in una sei colonne a schermo e il
+      tastino «▾ Filtri ①», nell'altra tre colonne e nessun numero.
+      COSA C'ERA. Il badge era `filtriAccesi.length`, e `filtriAccesi` era
+      una lista di GENERI di filtro: tutte le colonne diverse dal normale
+      collassavano in una voce sola, `Colonne (n)`. Due colonne riaccese a
+      mano facevano quindi «1». Chi guarda conta a occhio quello che vede
+      — due colonne in piu' del solito, lo staff filtrato — e trova un
+      numero che non torna: da li' in poi il numero non lo guarda piu'.
+      LA SECONDA FOTOGRAFIA NON ERA UN DIFETTO, e la prova sta in un test
+      che riproduce quella lavagna (tests/component/CodaCorsie.test.jsx,
+      «col locale che parte in preparazione»). Tre colonne senza badge
+      succede col locale che fa nascere le comande gia' IN PREPARAZIONE:
+      «Da fare» non e' spenta da nessuno, non esiste come colonna
+      sceglibile finche' e' vuota (`corsieSceglibili`), e le due dello
+      sguardo all'indietro nascono spente di serie
+      (CORSIE_SPENTE_ALL_INIZIO). Niente di diverso dal normale, niente
+      numero: il badge diceva la verita'.
+      LA CURA. Il conteggio e' una funzione pura, `contaFiltri` in
+      lib/coda.js, e conta le DEVIAZIONI dal normale una per una: tre
+      colonne diverse fanno 3, con lo staff filtrato fanno 4. Resta
+      l'idea di «diverso dal normale» e non «acceso» — al primo avvio,
+      con tutto di serie, il badge e' spento: e' la ragione per cui esiste
+      `corsieDiverseDalNormale` (BUG-058). Resta anche che a fila APERTA
+      il numero sparisce, e la regola sta nella funzione (secondo
+      argomento) invece che in un ternario nella pagina.
+      UNA LISTA SOLA PER BADGE E TITLE, che e' il modo di non avere due
+      verita': una voce e' un nome secco («Chiusi», «Solo oggi») e vale
+      uno, oppure un gruppo che porta quante deviazioni tiene dentro
+      (`{ nome: 'Colonne', quante: 3 }`). Il title continua a elencare per
+      esteso e le colonne le RAGGRUPPA — «Colonne (3)» — perche' i loro
+      nomi sono le testate della lavagna, gia' sotto gli occhi: sei titoli
+      in fila annegherebbero i filtri che a schermo un nome non ce l'hanno.
+      TROVATO STRADA FACENDO: «Solo oggi» non veniva contato fuori dalla
+      griglia. Taglia `ordersInVista`, cioe' la lista da cui scendono
+      TUTTE le viste, ma il chip nasceva solo in griglia: chi lo accendeva
+      li' e poi passava alle comande — stessa pagina, un tocco — si
+      portava dietro il taglio senza numero sul tastino e senza un chip
+      per rimetterlo a posto. Adesso dove e' acceso si conta, e il chip
+      per spegnerlo compare in tutte le viste (da spento resta solo in
+      griglia, che e' la vista che raggruppa per data).
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie,
+      aprire «▾ Filtri», accendere «💶 Chiuse» e «✖️ Annullate», richiudere.
+      Il tastino dice «1» con due colonne in piu' a schermo.
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/CodaGiornate.test.jsx

@@ -7191,7 +7191,7 @@ requirements:
       - tests/component/CodaCorsie.test.jsx
   - id: REQ-CODA-008
     title: "I filtri della coda stanno dietro un tasto solo, che dice cos'e' acceso"
-    area: "src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri), src/lib/coda.js (etichettaFiltri, spiegaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css"
+    area: "src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri, chipSoloOggi), src/lib/coda.js (etichettaFiltri, spiegaFiltri, contaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css"
     description: >
       Chiesto dall'utente il 20/08, con lo screenshot della coda: «i filtri
       e tutti i bottoni li voglio a scomparsa, con un tasto che non occupi
@@ -7345,6 +7345,33 @@ requirements:
       che la apriva. Al banco le colonne SONO chip della fila, uno per
       colonna: «▾ Filtri» e' l'unico livello di nascondimento
       (REQ-CODA-009).
+      ── QUINTO GIRO, 22/08/2026: IL BADGE CONTA QUELLO CHE SI VEDE ──
+      «Non mi e' chiaro come conta i filtri. Secondo me non funziona»
+      (l'utente, con lo screenshot di una lavagna a sei colonne e un «▾
+      Filtri ①»). Il numero era `filtriAccesi.length`, cioe' quanti
+      GENERI di filtro stringevano: e le colonne del banco, per quante
+      fossero, erano un genere solo. Adesso conta le DEVIAZIONI una per
+      una — tre colonne diverse dal normale fanno 3, con lo staff filtrato
+      4 — e chi guarda puo' contare a occhio e ritrovare lo stesso numero
+      (BUG-080).
+      NON CAMBIA COSA SI CONTA: sempre le deviazioni dal NORMALE, non i
+      filtri accesi. Al primo avvio, tutto di serie, il badge e' spento —
+      e' la ragione per cui `corsieDiverseDalNormale` esiste (BUG-058). E
+      a fila APERTA resta zero: i chip si vedono da se'. Quella regola sta
+      adesso in `contaFiltri(accesi, aperti)`, non in un ternario della
+      pagina, ed e' provata a unita' come il suo gemello `spiegaFiltri`.
+      UNA LISTA SOLA PER IL BADGE E PER IL TITLE. Una voce e' un nome
+      secco («Chiusi», «Solo oggi») e vale uno, oppure un gruppo che porta
+      quante deviazioni tiene dentro (`{ nome: 'Colonne', quante: 3 }`):
+      il badge somma, il title raggruppa. Due liste, o un numero calcolato
+      per conto suo, sarebbero due verita' sulla stessa cosa.
+      «SOLO OGGI» VALE IN TUTTE LE VISTE, e prima veniva contato solo in
+      griglia. Taglia `ordersInVista`, la lista da cui scendono tutte e
+      quattro le viste: chi lo accendeva in griglia e poi passava alle
+      comande si portava dietro il taglio senza niente a schermo che lo
+      dicesse. Adesso il chip e' uno solo (`chipSoloOggi`), sta in tutte
+      le file — fuori dalla griglia solo se e' ACCESO, che li' e' l'unico
+      modo per spegnerlo — e il badge lo conta ovunque.
     status: implemented
     generate_issue: true
     labels: [coda, ui]
@@ -7647,6 +7674,17 @@ requirements:
       dal default — stato diverso da «Aperti», staff filtrato, colonne
       spente, porzione dei chiusi accesa. Con un solo stato acceso alla
       volta il conto si semplifica: uno stato vale uno, non tre.
+      ---
+      22/08/2026 — QUANTE DEVIAZIONI, NON QUANTI GENERI. Quello che sopra
+      si legge «le colonne diverse dal normale contano come UNA deviazione
+      dal default» non vale piu': ne contano una per COLONNA. Il badge
+      diceva «1» con due colonne riaccese — «non mi e' chiaro come conta i
+      filtri» (l'utente, BUG-080) — e un numero che non torna con quello
+      che si vede e' un numero che si smette di guardare. Il title invece
+      le raggruppa ancora in «Colonne (2)»: i loro nomi sono le testate
+      della lavagna, gia' a schermo. Badge e title leggono la STESSA lista
+      (`contaFiltri` e `spiegaFiltri`, lib/coda.js), dove una voce vale
+      uno o porta quante ne tiene dentro.
     status: implemented
     generate_issue: true
     labels: [coda, ui]
