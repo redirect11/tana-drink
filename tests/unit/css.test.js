@@ -1354,7 +1354,7 @@ describe('le righe delle liste sono un bersaglio da dito', () => {
     // Il gettone serve a questo: se una lista della famiglia dichiara un
     // suo min-height in pixel, le tre schermate ricominciano a divergere.
     const testo = nudoCss()
-    for (const nome of ['.inv-row', '.inv-row-main', '.cash-sess-head']) {
+    for (const nome of ['.inv-row', '.inv-row-main', '.inv-row-dettaglio']) {
       const i = testo.indexOf(A_CAPO + nome + ' {')
       if (i < 0) continue
       const blocco = testo.slice(i, testo.indexOf('}', i))

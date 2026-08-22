@@ -20,6 +20,21 @@
   tendina delle serate non ci sono più, perché quella è diventata una
   sezione sua.
 
+- **Le chiusure di cassa sono una lista, la stessa del magazzino.** «Anche
+  qui nei rendiconti delle chiusure di cassa serve una lista fatta meglio,
+  stile quella del magazzino ma con righe più alte» (22/08/2026). Prima
+  ogni serata era un riquadro a sé; adesso è un elenco solo, con le righe
+  alte come quelle del magazzino e il dettaglio che si apre sotto la riga
+  toccata. La riga dice le stesse cose — data, apertura → chiusura, durata,
+  incasso — ma **l'incasso si legge da lontano**: è il numero che si cerca
+  quando ci si chiede com'è andata ieri sera.
+  **La serata in corso si riconosce a colpo d'occhio**, con due segni e non
+  uno: la pastiglia verde «in corso» al posto dell'ora di chiusura e la
+  striscia accesa a sinistra. E non dichiara più **0,00 €**: l'incasso di
+  una serata aperta si sa solo aprendo la riga, e uno zero in una lista di
+  soldi si legge come «stasera non è entrato niente». Finché il dato non
+  c'è, c'è un trattino.
+
 - **Le righe del magazzino si toccano col dito.** Erano alte quanto la
   scritta che ci sta dentro, e in piedi al banco — con 388 articoli in
   elenco — si finiva per aprire la riga di fianco: «aumenta l'altezza

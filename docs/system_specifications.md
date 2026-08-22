@@ -819,6 +819,8 @@ CI STANNO DENTRO: sono in magazzino, solo pochi. «In esaurimento» è una lente
 
 QUELLO CHE NON È UNA SCORTA non sta né di qua né di là: il «Tempo di Lavorazione» non ha giacenza, e non è né disponibile né esaurito (vedi REQ-MAG-012). Metterlo fra i disponibili vorrebbe dire dire che c'è sullo scaffale una cosa che sullo scaffale non ci va; fra gli esauriti, mandare a comprare il tempo. Tutto sta nella finestra: filtri, ricerca e categorie restano fermi, a scorrere è solo l'elenco dei prodotti — prima, per tornare alla ricerca dopo aver guardato in fondo, si risaliva da capo. Anche i MOVIMENTI sono una sezione: stavano in fondo alla lista dei prodotti dietro un tasto largo quanto lo schermo, fuori contesto e in mezzo ai piedi.
 
+LA VISTA A LISTA E' LA CAPOSTIPITE di una famiglia che adesso vale per tre schermate — magazzino, chiusure di cassa (REQ-CASSA-006), statistiche: riquadro unico, righe separate da una linea, striscia a sinistra quando c'e' qualcosa da dire sulla riga, il numero che si cerca in fondo a destra, il dettaglio che si apre SOTTO. L'altezza della riga e' una sola per tutte e tre e sta in un gettone (`--riga-lista`, BUG-082): «aumenta l'altezza anche delle righe della tabella dell'inventario per un touch migliore» (l'utente, 22/08/2026) — con 388 articoli, in piedi al banco, una riga alta quanto il suo testo fa aprire quella di fianco.
+
 **Dove**: `src/components/InventoryManager.jsx, src/components/CategoryRail.jsx` · **Lo dimostrano**: `tests/component/InventoryManager.test.jsx`
 
 #### REQ-MAG-012 — Unità generiche: la manodopera entra nel costo del drink
@@ -1085,7 +1087,13 @@ Il rendiconto mostra gli ordini (in lista o in tabella, apribili nel dettaglio) 
 
 «Cassa» (prima «Flusso cassa») ha tre sottosezioni nel menu laterale: il FLUSSO della serata in corso, la LISTA ORDINI e le CHIUSURE. Erano tre posti per la stessa domanda — quanto ho incassato — e due si raggiungevano da tasti in fondo alla pagina del flusso, che si trovano solo scorrendo fino in fondo; la lista ordini aveva perfino una voce sua nel menu, accanto alla cassa, come se fosse un altro mestiere. Le TIMBRATURE stanno in Staff, in cima alle ore, non in cassa: erano in fondo alla pagina del flusso — dove ci si va per i soldi — e per battere l'ingresso di chi arriva bisognava passare di lì. Il vecchio indirizzo `?tab=storico` continua a funzionare: porta alla cassa, aperta sulla lista ordini. Sta nei collegamenti salvati e nei messaggi, e non deve finire in una pagina senza nome.
 
-**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`
+LE CHIUSURE SONO UNA LISTA, LA STESSA DEL MAGAZZINO (22/08/2026): «Anche qui nei rendiconti delle chiusure di cassa serve una lista fatta meglio, stile quella del magazzino ma con righe piu' alte». Prima ogni serata era una card a se' — riquadro, margine, ombra — con dentro una riga alta quanto il suo testo: tre pagine dell'app mostrano lo stesso oggetto (righe uguali che si aprono su un dettaglio) e lo mostravano in tre modi. Adesso la lista usa la famiglia condivisa (`.inv-list`, `.inv-row`, `.inv-row-main`, `.inv-row-dettaglio`, DESIGN.md): riquadro unico, righe separate da una linea, altezza `--riga-lista` — il bersaglio pieno di BUG-082 — e il dettaglio che si apre SOTTO la riga, dov'era.
+
+QUELLO CHE LA RIGA DICE NON CAMBIA: data, apertura → chiusura, durata, incasso. Cambia quanto pesa: l'INCASSO e' il numero che si cerca — «com'e' andata ieri sera» si risponde con quello, non con l'orario — e sta un gradino sopra i prezzi normali, in coda alla riga.
+
+LA SERATA IN CORSO SI RICONOSCE SENZA LEGGERE, e con due segni non uno: la pastiglia verde «in corso» al posto dell'ora di chiusura, e la striscia accesa a sinistra della riga. E NON DICHIARA UN INCASSO CHE NON CONOSCE: lo snapshot nasce alla chiusura, quindi finche' la serata e' aperta al suo posto c'era «0,00 €» — in una lista di soldi si legge come «stasera non e' entrato niente», ed e' una bugia. Adesso c'e' un trattino finche' il dato non c'e'; aprendo la riga il riepilogo viene ricalcolato dagli ordini e la cifra vera compare.
+
+**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`, `tests/component/CashSessionsList.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 

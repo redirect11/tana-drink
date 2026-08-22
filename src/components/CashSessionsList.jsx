@@ -145,114 +145,135 @@ export default function CashSessionsList() {
         <p className="muted small">Nessuna sessione di cassa registrata.</p>
       )}
 
-      {sessions.map((s) => {
-        const salvato = s.snapshot || {}
-        const aperta = s.status === 'open'
-        const isOpen = openId === s.id
-        // Ricalcolato quando la riga è aperta; finché carica, quello salvato.
-        const snap = (isOpen && report?.id === s.id && report.recap) || salvato
-        return (
-          <div className="card" key={s.id} style={{ margin: '8px 0 0', padding: 10 }}>
-            <button
-              type="button"
-              className="cash-sess-head"
-              onClick={() => apri(s)}
-              aria-expanded={isOpen}
-            >
-              <span className="grow">
-                <strong>{fmtData(s.opened_at)}</strong>{' '}
-                <span className="muted small">
-                  {fmtOra(s.opened_at)} → {aperta ? 'in corso' : fmtOra(s.closed_at)}
-                  {!aperta && ` · ${durata(s.opened_at, s.closed_at)}`}
-                </span>
-              </span>
-              <strong className="price">{formatPrice(snap.incassato ?? 0)}</strong>
-            </button>
+      {/* UNA SOLA FAMIGLIA DI LISTE in tutta l'app (`.inv-list` e parenti,
+          vedi DESIGN.md): stesso riquadro, stessa riga toccabile alta
+          `--riga-lista`, stesso dettaglio che si apre sotto la riga. Prima
+          ogni serata era una card a sé con dentro una riga bassa, e lo
+          stesso elenco si leggeva in tre modi diversi in tre pagine. */}
+      {sessions.length > 0 && (
+        <div className="inv-list">
+          {sessions.map((s) => {
+            const salvato = s.snapshot || {}
+            const aperta = s.status === 'open'
+            const isOpen = openId === s.id
+            // Ricalcolato quando la riga è aperta; finché carica, quello salvato.
+            const snap = (isOpen && report?.id === s.id && report.recap) || salvato
+            // L'INCASSO DI UNA SERATA ANCORA APERTA non si sa finché non si
+            // apre la riga: lo snapshot nasce alla chiusura. Prima al suo
+            // posto usciva «0,00 €», che in una lista di soldi si legge come
+            // «stasera non è entrato niente» — ed è una bugia.
+            const incasso =
+              snap.incassato != null ? formatPrice(snap.incassato) : aperta ? '—' : formatPrice(0)
+            return (
+              <div
+                className={`inv-row${aperta ? ' in-corso' : ''}${isOpen ? ' open' : ''}`}
+                key={s.id}
+              >
+                <button
+                  type="button"
+                  className="inv-row-main"
+                  onClick={() => apri(s)}
+                  aria-expanded={isOpen}
+                >
+                  <span className="inv-row-name">{fmtData(s.opened_at)}</span>
+                  <span className="muted small inv-row-cat">
+                    {fmtOra(s.opened_at)} → {aperta ? '…' : fmtOra(s.closed_at)}
+                    {!aperta && ` · ${durata(s.opened_at, s.closed_at)}`}
+                  </span>
+                  {/* LA SERATA IN CORSO si riconosce senza leggere: la
+                      pastiglia verde al posto dell'ora di chiusura, e la
+                      striscia accesa a sinistra della riga. Sono due segni,
+                      non uno: il colore da solo non basta (DESIGN.md). */}
+                  {aperta && <span className="pill live small">in corso</span>}
+                  <span className="inv-cell-num price cash-sess-incasso">{incasso}</span>
+                </button>
 
-            {isOpen && (
-              <div style={{ marginTop: 8 }}>
-                {/* Incassi per metodo, ricalcolati dagli ordini della serata.
-                    Le righe vengono dai metodi davvero battuti: se domani si
-                    incassa con un metodo nuovo, compare da solo. */}
-                {cashMethodKeys(snap.byMethod).map((k) => (
-                  <div className="row between muted small" key={k}>
-                    <span>{paymentMethodLabel(k)}</span>
-                    <span>{formatPrice(snap.byMethod?.[k] ?? 0)}</span>
-                  </div>
-                ))}
-                {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
-                    tavolo stasera" è una domanda che si fa ogni sera. */}
-                <div className="row between muted small">
-                  <span>🎁 Sconti concessi</span>
-                  <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
-                </div>
-                <div className="row between muted small">
-                  <span>Conti chiusi</span>
-                  <span>{snap.nPagati ?? 0}</span>
-                </div>
-                {s.counted_cash != null && (
-                  <div className="row between muted small">
-                    <span>Contante contato</span>
-                    <span>
-                      {formatPrice(s.counted_cash)}
-                      {s.difference != null && s.difference !== 0 && (
-                        <> ({s.difference > 0 ? '+' : ''}{formatPrice(s.difference)})</>
-                      )}
-                    </span>
-                  </div>
-                )}
-
-                {/* Il dettaglio (prodotti, conti, guadagno) sta nel
-                    rendiconto: qui resta il colpo d'occhio sulla cassa. */}
-                {caricando && <p className="muted small" style={{ marginTop: 8 }}>Carico la serata…</p>}
-                {report?.id === s.id && report.dati && (
-                  <div style={{ marginTop: 10 }}>
-                    <div className="row between">
-                      <span className="muted small">
-                        Venduto della serata · {report.dati.nOrdini} cont
-                        {report.dati.nOrdini === 1 ? 'o' : 'i'}
-                      </span>
-                      <strong>{formatPrice(report.dati.totale)}</strong>
+                {isOpen && (
+                  <div className="inv-row-dettaglio">
+                    {/* Incassi per metodo, ricalcolati dagli ordini della serata.
+                        Le righe vengono dai metodi davvero battuti: se domani si
+                        incassa con un metodo nuovo, compare da solo. */}
+                    {cashMethodKeys(snap.byMethod).map((k) => (
+                      <div className="row between muted small" key={k}>
+                        <span>{paymentMethodLabel(k)}</span>
+                        <span>{formatPrice(snap.byMethod?.[k] ?? 0)}</span>
+                      </div>
+                    ))}
+                    {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
+                        tavolo stasera" è una domanda che si fa ogni sera. */}
+                    <div className="row between muted small">
+                      <span>🎁 Sconti concessi</span>
+                      <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
                     </div>
-                    <button
-                      className="btn block"
-                      style={{ marginTop: 10 }}
-                      onClick={() =>
-                        setRendiconto({
-                          session: s,
-                          conti: report.conti,
-                          drinksById: report.drinksById,
-                          itemsById: report.itemsById,
-                          recap: report.recap,
-                        })
-                      }
-                    >
-                      📊 Apri il rendiconto — conti, prodotti e guadagno
-                    </button>
-                  </div>
-                )}
+                    <div className="row between muted small">
+                      <span>Conti chiusi</span>
+                      <span>{snap.nPagati ?? 0}</span>
+                    </div>
+                    {s.counted_cash != null && (
+                      <div className="row between muted small">
+                        <span>Contante contato</span>
+                        <span>
+                          {formatPrice(s.counted_cash)}
+                          {s.difference != null && s.difference !== 0 && (
+                            <> ({s.difference > 0 ? '+' : ''}{formatPrice(s.difference)})</>
+                          )}
+                        </span>
+                      </div>
+                    )}
 
-                {!aperta && (
-                  <button
-                    className="btn ghost small block"
-                    style={{ marginTop: 10 }}
-                    onClick={() =>
-                      printChiusuraCassa(snap, s, {
-                        by: s.closed_by?.email,
-                        countedCash: s.counted_cash,
-                      })
-                        .then(() => toastSuccess('Chiusura ristampata'))
-                        .catch((e) => toastError(`Stampa: ${e.message}`))
-                    }
-                  >
-                    🖨 Ristampa chiusura
-                  </button>
+                    {/* Il dettaglio (prodotti, conti, guadagno) sta nel
+                        rendiconto: qui resta il colpo d'occhio sulla cassa. */}
+                    {caricando && <p className="muted small" style={{ marginTop: 8 }}>Carico la serata…</p>}
+                    {report?.id === s.id && report.dati && (
+                      <div style={{ marginTop: 10 }}>
+                        <div className="row between">
+                          <span className="muted small">
+                            Venduto della serata · {report.dati.nOrdini} cont
+                            {report.dati.nOrdini === 1 ? 'o' : 'i'}
+                          </span>
+                          <strong>{formatPrice(report.dati.totale)}</strong>
+                        </div>
+                        <button
+                          className="btn block"
+                          style={{ marginTop: 10 }}
+                          onClick={() =>
+                            setRendiconto({
+                              session: s,
+                              conti: report.conti,
+                              drinksById: report.drinksById,
+                              itemsById: report.itemsById,
+                              recap: report.recap,
+                            })
+                          }
+                        >
+                          📊 Apri il rendiconto — conti, prodotti e guadagno
+                        </button>
+                      </div>
+                    )}
+
+                    {!aperta && (
+                      <button
+                        className="btn ghost small block"
+                        style={{ marginTop: 10 }}
+                        onClick={() =>
+                          printChiusuraCassa(snap, s, {
+                            by: s.closed_by?.email,
+                            countedCash: s.counted_cash,
+                          })
+                            .then(() => toastSuccess('Chiusura ristampata'))
+                            .catch((e) => toastError(`Stampa: ${e.message}`))
+                        }
+                      >
+                        🖨 Ristampa chiusura
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
