@@ -7520,19 +7520,16 @@ requirements:
       (l'utente, con lo screenshot di una lavagna a sei colonne e un «▾
       Filtri ①»). Il numero era `filtriAccesi.length`, cioe' quanti
       GENERI di filtro stringevano: e le colonne del banco, per quante
-      fossero, erano un genere solo. Adesso conta le DEVIAZIONI una per
-      una — tre colonne diverse dal normale fanno 3, con lo staff filtrato
-      4 — e chi guarda puo' contare a occhio e ritrovare lo stesso numero
-      (BUG-080).
-      NON CAMBIA COSA SI CONTA: sempre le deviazioni dal NORMALE, non i
-      filtri accesi. Al primo avvio, tutto di serie, il badge e' spento —
-      e' la ragione per cui `corsieDiverseDalNormale` esiste (BUG-058). E
-      a fila APERTA resta zero: i chip si vedono da se'. Quella regola sta
+      fossero, erano un genere solo. Adesso conta UNA PER UNA — tre
+      colonne fanno 3, con lo staff filtrato 4 — e chi guarda puo' contare
+      a occhio e ritrovare lo stesso numero (BUG-080).
+      Al primo avvio, tutto di serie, il badge e' spento (BUG-058); a fila
+      APERTA resta zero, che i chip si vedono da se'. Quella regola sta
       adesso in `contaFiltri(accesi, aperti)`, non in un ternario della
       pagina, ed e' provata a unita' come il suo gemello `spiegaFiltri`.
       UNA LISTA SOLA PER IL BADGE E PER IL TITLE. Una voce e' un nome
       secco («Chiusi», «Solo oggi») e vale uno, oppure un gruppo che porta
-      quante deviazioni tiene dentro (`{ nome: 'Colonne', quante: 3 }`):
+      quante restrizioni tiene dentro (`{ nome: 'Colonne', quante: 3 }`):
       il badge somma, il title raggruppa. Due liste, o un numero calcolato
       per conto suo, sarebbero due verita' sulla stessa cosa.
       «SOLO OGGI» VALE IN TUTTE LE VISTE, e prima veniva contato solo in
@@ -7542,6 +7539,29 @@ requirements:
       dicesse. Adesso il chip e' uno solo (`chipSoloOggi`), sta in tutte
       le file — fuori dalla griglia solo se e' ACCESO, che li' e' l'unico
       modo per spegnerlo — e il badge lo conta ovunque.
+      ── SESTO GIRO, 22/08/2026: IL BADGE CONTA SOLO CIO' CHE RESTRINGE ──
+      «Credo che l'indicatore del numero di filtri attivi funzioni al
+      contrario. Li ho disattivati tutti ma lui indica tre filtri attivi»
+      (l'utente, BUG-085). QUELLO CHE IL QUINTO GIRO DICE SUL CRITERIO NON
+      VALE PIU': il numero non conta le DEVIAZIONI dal normale.
+      Un filtro e' qualcosa che RESTRINGE. Il badge esiste per avvisare
+      che la coda non sta facendo vedere tutto, quindi si accende su
+      quello che e' NASCOSTO: una corsia normalmente visibile che manca
+      dalla lavagna, lo staff ridotto a una parte, «Solo oggi», uno stato
+      diverso dal default in griglia, la porzione dei chiusi. NON conta
+      una corsia MOSTRATA che di suo sarebbe spenta: accendere «Chiuse» o
+      «Annullate» fa vedere di piu', e col «diverso dal normale» il numero
+      saliva proprio mentre la lavagna si apriva.
+      E SI GUARDA LA LAVAGNA, NON LA MEMORIA DELLE SPENTE: spegnendo tutte
+      le colonne la coda le rimette a schermo tutte (`corsieVisibili`, che
+      una lavagna senza colonne non si puo' mostrare) e la memoria resta
+      piena di id che non nascondono niente. La regola sta in
+      `corsieRistrette(sceglibili, mostrate)`, pura, al posto di
+      `corsieDiverseDalNormale`.
+      RESTA TUTTO IL RESTO: cosa fanno i filtri non cambia — cambia solo
+      cosa il numero conta — e restano BUG-058 (terminale nuovo, badge
+      spento: quelle due non le ha nascoste nessuno) e BUG-080 (si somma
+      una per una, e badge e title leggono la stessa lista).
     status: implemented
     generate_issue: true
     labels: [coda, ui]
@@ -7741,11 +7761,15 @@ requirements:
       senza il tasto non ha piu' niente da chiudere. Muore anche
       `corsieSpente` in coda.js: contava le spente per il TITLE di quel
       chip, e da aperta la fila lo dicono i chip stessi.
-      IL BADGE NON CAMBIA. Le colonne diverse dal normale
-      (`corsieDiverseDalNormale`) contano come UNA deviazione dal default,
-      esattamente come prima: a fila chiusa il tastino «▾ Filtri» resta
-      acceso col suo numero e il title dice «Colonne (2)». E' l'unico posto
-      dove quel segnale serve ancora — a fila aperta i chip si vedono.
+      IL BADGE NON CAMBIA con la morte del chip: a fila chiusa il tastino
+      «▾ Filtri» resta acceso col suo numero e il title dice «Colonne (2)»,
+      ed e' l'unico posto dove quel segnale serve ancora — a fila aperta i
+      chip si vedono. QUANTO VALGONO, invece, e' cambiato due volte il
+      22/08: le colonne non sono piu' UNA voce sola ma valgono quante ne
+      sono (BUG-080), e non sono piu' quelle «diverse dal normale» ma
+      quelle NASCOSTE (`corsieRistrette`, BUG-085) — riaccenderne una fa
+      vedere di piu', che e' l'opposto di filtrare. Il dettaglio sta in
+      REQ-CODA-008, sesto giro.
       RESTA IL PATTERN DEI SOTTOFILTRI DEI CHIUSI, che e' un'altra cosa:
       «Serviti / Da servire» compaiono quando «Chiusi» e' acceso perche'
       fuori di li' non vogliono dire niente. Non e' un chip che apre chip,

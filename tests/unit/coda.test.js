@@ -32,7 +32,7 @@ import {
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
-  corsieDiverseDalNormale,
+  corsieRistrette,
   gruppiColonne,
   corsieDelPronto,
   spiegaFiltri,
@@ -1752,37 +1752,68 @@ describe('dove finisce una comanda lasciata in un\'altra colonna', () => {
   })
 })
 
-// ── IL TASTO «COLONNE» SI ACCENDE SOLO SE TI DISCOSTI DAL NORMALE ────
+// ── IL BADGE DELLE COLONNE CONTA SOLO QUELLO CHE MANCA ───────────────
 //
-// Due corsie nascono spente di serie: contare le spente teneva il tasto
-// arancione su ogni terminale nuovo, per sempre — «continua ad essere
-// sempre attivo» (l'utente, 20/08, dopo il primo giro di BUG-058). Si
-// conta la differenza dal normale, nei due versi.
-describe('corsieDiverseDalNormale', () => {
+// Due giri, e il secondo ha corretto il primo.
+//
+// PRIMO GIRO (BUG-058): contare le corsie spente teneva il segnale acceso
+// su ogni terminale nuovo, per sempre — due nascono spente di serie e
+// «continua ad essere sempre attivo» (l'utente, 20/08). Si passò a
+// contare la differenza dal normale, nei DUE versi.
+//
+// SECONDO GIRO (BUG-085): il secondo verso era sbagliato. «Credo che
+// l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
+// disattivati tutti ma lui indica tre filtri attivi» (l'utente,
+// 22/08/2026). Un filtro RESTRINGE: riaccendere una colonna fa vedere di
+// più, e non è un filtro. Si conta una cosa sola — le corsie normalmente
+// visibili che a schermo non ci sono — e la si conta guardando la
+// LAVAGNA, non la memoria delle spente: le due divergono, e la fotografia
+// della segnalazione era proprio il caso in cui divergono.
+describe('corsieRistrette', () => {
   const sceglibili = [
     { id: 'da-fare', titolo: 'Da fare' },
     { id: 'al-banco', titolo: 'Al banco' },
     { id: 'chiusi', titolo: 'Chiusi' },
     { id: 'annullati', titolo: 'Annullati' },
   ]
+  const solo = (...ids) => sceglibili.filter((c) => ids.includes(c.id))
 
-  it('terminale mai toccato: nessuna differenza, tasto spento', () => {
-    expect(corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati'])).toHaveLength(0)
+  // BUG-058 REGGE ANCORA: le due dello sguardo all'indietro non le ha
+  // nascoste nessuno, sono il normale. Terminale nuovo, badge spento.
+  it('terminale mai toccato: le due spente di serie non contano', () => {
+    expect(corsieRistrette(sceglibili, solo('da-fare', 'al-banco'))).toHaveLength(0)
   })
 
-  it('nascondo una corsia di serie accesa: una differenza', () => {
-    const d = corsieDiverseDalNormale(sceglibili, ['chiusi', 'annullati', 'da-fare'])
-    expect(d.map((c) => c.id)).toEqual(['da-fare'])
+  // LA FOTOGRAFIA DELLA SEGNALAZIONE: tutta la lavagna a schermo, e il
+  // tastino diceva tre. Non c'è niente di nascosto: zero — e ci si arriva
+  // anche spegnendo TUTTE le colonne, perché allora la coda le rimette a
+  // schermo tutte (`corsieVisibili`). È il motivo per cui si guarda quello
+  // che è disegnato e non la memoria delle spente: le due divergono
+  // proprio lì, ed è il caso che faceva uscire il tre.
+  it('tutte le corsie a schermo: nessuna restrizione', () => {
+    expect(corsieRistrette(sceglibili, sceglibili)).toHaveLength(0)
   })
 
-  it('riaccendo una corsia di serie spenta: anche quella è una differenza', () => {
-    const d = corsieDiverseDalNormale(sceglibili, ['annullati'])
-    expect(d.map((c) => c.id)).toEqual(['chiusi'])
+  it('una corsia normalmente visibile che manca vale uno', () => {
+    const r = corsieRistrette(sceglibili, solo('al-banco', 'chiusi', 'annullati'))
+    expect(r.map((c) => c.id)).toEqual(['da-fare'])
   })
 
-  it('una memoria su una corsia che oggi non è in elenco non accende niente', () => {
-    const senzaChiusi = sceglibili.filter((c) => c.id !== 'da-fare')
-    expect(corsieDiverseDalNormale(senzaChiusi, ['chiusi', 'annullati', 'da-fare'])).toHaveLength(0)
+  it('due corsie nascoste fanno due', () => {
+    expect(corsieRistrette(sceglibili, solo('chiusi', 'annullati'))).toHaveLength(2)
+  })
+
+  // IL VERSO CHE NON SI CONTA PIÙ: accendere «Chiuse» e «Annullate» mostra
+  // di più, ed è l'opposto di filtrare. Prima faceva salire il badge a due.
+  it('Chiuse riaccesa e Annullate no: sempre nessun filtro', () => {
+    expect(corsieRistrette(sceglibili, solo('da-fare', 'al-banco', 'chiusi'))).toHaveLength(0)
+  })
+
+  // Una corsia che l'assetto di oggi non disegna proprio non l'ha tolta
+  // chi guarda: è un residuo, e non deve accendere niente.
+  it('una corsia che oggi non è sceglibile non conta', () => {
+    const senzaDaFare = sceglibili.filter((c) => c.id !== 'da-fare')
+    expect(corsieRistrette(senzaDaFare, solo('al-banco'))).toHaveLength(0)
   })
 })
 
@@ -1803,28 +1834,35 @@ describe('corsieDiverseDalNormale', () => {
 // LA CIFRA HA UNA FUNZIONE SUA, ED È `contaFiltri` (BUG-080). Per un giro
 // è stata `.length` sull'elenco già pulito, e reggeva finché ogni voce
 // valeva uno: da quando le colonne del banco sono un GRUPPO — tre colonne
-// diverse dal normale, una voce sola — il badge diceva «1» con tre colonne
-// in più a schermo. «Non mi è chiaro come conta i filtri. Secondo me non
-// funziona» (l'utente, 22/08/2026): il numero deve essere quello che chi
-// guarda conta a occhio.
+// toccate, una voce sola — il badge diceva «1» con tre colonne di
+// differenza a schermo. «Non mi è chiaro come conta i filtri. Secondo me
+// non funziona» (l'utente, 22/08/2026): il numero deve essere quello che
+// chi guarda conta a occhio.
+// COSA gli arriva lo decide chi chiama, e dal 22/08 è soltanto quello che
+// RESTRINGE (BUG-085): questa funzione somma e basta.
 describe('contaFiltri', () => {
   // Coda com'è di suo: niente da segnalare. È la ragione per cui si
-  // contano le DEVIAZIONI e non i filtri accesi — uno acceso c'è sempre.
-  it('senza deviazioni non c’è niente da contare', () => {
+  // contano le RESTRIZIONI e non i filtri accesi — uno acceso c'è sempre.
+  it('senza restrizioni non c’è niente da contare', () => {
     expect(contaFiltri([])).toBe(0)
     expect(contaFiltri()).toBe(0)
   })
 
-  // Le colonne del banco: `corsieDiverseDalNormale` ne conta una tanto se
-  // è spenta una che di serie sta accesa quanto se è riaccesa una che di
-  // serie sta spenta. Al badge arriva come gruppo, e vale quante ne sono.
-  it('una colonna diversa dal normale vale uno, nei due versi', () => {
+  // Le colonne del banco arrivano come gruppo, e valgono quante ne sono
+  // nascoste (`corsieRistrette`).
+  it('una colonna nascosta vale uno', () => {
     expect(contaFiltri([{ nome: 'Colonne', quante: 1 }])).toBe(1)
   })
 
   // TRE COLONNE FANNO TRE, non uno: era il difetto.
   it('tre colonne più lo staff filtrato fanno QUATTRO', () => {
     expect(contaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'])).toBe(4)
+  })
+
+  // Il caso che chi guarda conta a occhio: due colonne che mancano e lo
+  // staff ridotto a una parte sono tre cose che stringono, e fanno tre.
+  it('due colonne nascoste più lo staff filtrato fanno TRE', () => {
+    expect(contaFiltri([{ nome: 'Colonne', quante: 2 }, '2 di 5'])).toBe(3)
   })
 
   it('un nome secco vale uno', () => {

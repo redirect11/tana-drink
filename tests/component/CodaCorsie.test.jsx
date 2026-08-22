@@ -892,6 +892,110 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(within(riga).getByRole('button', { name: 'Serviti/Ritirati' })).toBeInTheDocument()
   })
 
+  // ── IL BADGE CONTA SOLO QUELLO CHE STRINGE (BUG-085) ─────────────
+  //
+  // «Credo che l'indicatore del numero di filtri attivi funzioni al
+  // contrario. Li ho disattivati tutti ma lui indica tre filtri attivi»
+  // (l'utente, 22/08/2026). Un filtro è qualcosa che RESTRINGE: se la
+  // lavagna mostra tutto, non c'è niente da segnalare — comunque ci si sia
+  // arrivati.
+  const badge = () => document.querySelector('.coda-tastino-conta')
+
+  // I chip delle colonne, quelli accesi: sono le corsie a schermo.
+  const chipAccesi = () =>
+    [...document.querySelector('.chips-filtri').querySelectorAll('.chip')].filter((c) =>
+      c.classList.contains('active')
+    )
+
+  // LA FOTOGRAFIA DELLA SEGNALAZIONE, rifatta com'era: locale che fa
+  // nascere le comande già IN PREPARAZIONE (quindi «Da fare» non è una
+  // colonna sceglibile), tutti i chip delle colonne spenti — e la lavagna
+  // che le rimette a schermo tutte e sei, perché una lavagna senza colonne
+  // non si può mostrare (`corsieVisibili`). Il tastino diceva «3»: contava
+  // la MEMORIA delle spente invece delle colonne che mancano davvero.
+  it('spengo tutte le colonne, la lavagna le mostra tutte: nessun numero', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    // Nessuna comanda in «ricevuto»: «Da fare» resta vuota, ed è il caso
+    // in cui la coda la nasconde da sé (non l'ha spenta nessuno).
+    ordini = CODA.filter((o) => o.workflow_status !== 'ricevuto')
+    impostazioni = { ...impostazioni, queue_view: 'corsie', comande_in_preparazione: true }
+    montaCoda()
+    await screen.findByText('In preparazione')
+
+    await apriFiltri(utente)
+    for (const c of chipAccesi()) await utente.click(c)
+    await apriFiltri(utente)
+
+    // Tutte e sei a schermo: è quello che si vede nella fotografia.
+    expect(document.querySelectorAll('.corsia')).toHaveLength(6)
+    // E quindi niente è nascosto, e niente da contare.
+    expect(badge()).toBe(null)
+    expect(screen.getByRole('button', { name: 'Filtri' })).not.toHaveClass('active')
+  })
+
+  // RIACCENDERE UNA COLONNA NON È FILTRARE: si vede DI PIÙ. Prima ognuna
+  // delle due valeva una «deviazione dal normale», e con la lavagna intera
+  // sotto gli occhi il tastino segnava due.
+  it('«Chiuse» e «Annullate» riaccese non sono filtri', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: '💶 Chiuse' }))
+    await utente.click(screen.getByRole('button', { name: '✖️ Annullate' }))
+    await apriFiltri(utente)
+
+    expect(document.querySelectorAll('.corsia')).toHaveLength(6)
+    expect(badge()).toBe(null)
+    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
+      'title',
+      'Mostra filtri'
+    )
+  })
+
+  // DUE COLONNE NASCOSTE PIÙ LO STAFF RISTRETTO FANNO TRE: il badge somma
+  // una per una (BUG-080) e somma solo quello che stringe (BUG-085), così
+  // chi guarda conta a occhio e ritrova lo stesso numero.
+  it('due colonne nascoste e lo staff ristretto fanno tre', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'bartender'
+    impostazioni = { ...impostazioni, queue_view: 'corsie' }
+    // Due persone in turno: con un autore solo la tendina non può
+    // stringere niente — deselezionare l'unico rimasto li riaccende tutti.
+    ordini = [
+      ...CODA,
+      conto({
+        id: 'o44',
+        daily_number: 44,
+        workflow_status: 'ricevuto',
+        total: 12,
+        order_items: [{ id: 'i9', name: 'Mojito', qty: 1, unit_price: 12 }],
+        placed_by: { email: 'ciro@bar.it', name: 'Ciro', role: 'bartender' },
+      }),
+    ]
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await apriFiltri(utente)
+    const chip = (nome) =>
+      within(document.querySelector('.chips-filtri')).getByRole('button', { name: nome })
+    await utente.click(chip('In preparazione'))
+    await utente.click(chip('Serviti/Ritirati'))
+    // La tendina dello staff: si toglie una delle due persone, e la coda
+    // si stringe davvero.
+    await utente.click(chip(/Staff/))
+    await utente.click(screen.getByRole('button', { name: /Ciro/ }))
+    await apriFiltri(utente)
+
+    const tasto = screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto).toHaveTextContent('3')
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
+  })
+
   // ── UN LIVELLO SOLO DI NASCONDIMENTO ─────────────────────────────
   //
   // Le colonne hanno fatto due giri. Prima uscivano in una SECONDA riga
@@ -1935,10 +2039,14 @@ describe('le corsie del banco: una card per comanda', () => {
   // sembra sbagliata e niente a schermo che lo dica.
   //
   // QUANTE SONO, PERÒ, ADESSO LE CONTA IL BADGE (BUG-080). Contavano come
-  // UN filtro solo, col numero relegato nel title: due colonne diverse e
+  // UN filtro solo, col numero relegato nel title: due colonne toccate e
   // un «1» sul tastino — «non mi è chiaro come conta i filtri» (l'utente,
-  // 22/08/2026). Il badge conta le DEVIAZIONI, una per una.
-  it('le colonne spente accendono il badge dei filtri solo discostandosi dal normale', async () => {
+  // 22/08/2026). Il badge le conta una per una.
+  //
+  // E CONTA SOLO QUELLE NASCOSTE (BUG-085). Per un giro ha contato le
+  // differenze dal normale nei DUE versi, e il secondo verso era sbagliato:
+  // riaccendere «Chiuse» fa vedere di più, che è l'opposto di filtrare.
+  it('il badge conta le colonne nascoste, non quelle riaccese', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
@@ -1948,7 +2056,7 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(tasto()).not.toHaveClass('active')
     expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
 
-    // Spengo una corsia di serie accesa: UNA differenza dal normale.
+    // Spengo una corsia normalmente a schermo: quella roba non si vede più.
     await apriFiltri(utente)
     await utente.click(
       screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: true })
@@ -1960,22 +2068,22 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(tasto()).toHaveTextContent('1')
     expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
 
-    // Riaccendo una di serie spenta: è una seconda differenza, e il badge
-    // dice DUE — quello che si vede a schermo e quello che dice il numero
-    // devono tornare a occhio (BUG-080).
+    // Riaccendo una di serie spenta: NON è un filtro — a schermo c'è una
+    // colonna in più, non una in meno — e il numero resta quello.
     await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
     await apriFiltri(utente)
-    expect(tasto()).toHaveTextContent('2')
-    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
+    expect(tasto()).toHaveTextContent('1')
+    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
 
-    // Torno al normale: tastino grigio, senza badge e senza elenco.
+    // Rimetto a schermo quella nascosta: tastino grigio, senza badge e
+    // senza elenco — anche con «Chiuse» rimasta accesa.
     await apriFiltri(utente)
     await utente.click(
       screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: false })
     )
-    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: true }))
     await apriFiltri(utente)
+    expect(corsia('chiusi')).toBeTruthy()
     expect(tasto()).not.toHaveClass('active')
     expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
   })
@@ -2013,23 +2121,28 @@ describe('le corsie del banco: una card per comanda', () => {
   // (l'utente, 22/08/2026), con due fotografie della stessa lavagna: sei
   // colonne a schermo e «▾ Filtri ①», tre colonne e nessun numero.
   //
-  // I DUE CASI SONO DUE COSE DIVERSE. Quello a sei colonne era il difetto:
-  // le colonne diverse dal normale collassavano in UNA voce, quindi due
-  // colonne riaccese facevano «1». Adesso il badge conta le deviazioni
-  // una per una — chi guarda conta a occhio e ritrova lo stesso numero.
-  it('due colonne riaccese fanno DUE, non una', async () => {
+  // IL DIFETTO ERA IL COLLASSO: tutte le colonne toccate stavano in UNA
+  // voce, e il badge contava le voci. Adesso le conta una per una, e chi
+  // guarda ritrova a occhio lo stesso numero.
+  //
+  // L'ESEMPIO NON È PIÙ «DUE RIACCESE»: quelle non sono un filtro
+  // (BUG-085), fanno vedere di più. Due colonne NASCOSTE sì, ed è lo
+  // stesso conto — due, non uno.
+  it('due colonne nascoste fanno DUE, non una', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
 
     await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
-    await utente.click(screen.getByRole('button', { name: '✖️ Annullate', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: 'Da fare', pressed: true }))
+    await utente.click(
+      screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: true })
+    )
     await apriFiltri(utente)
 
-    // le sei colonne della fotografia
-    for (const id of ['da-fare', 'al-banco', 'al-ritiro', 'ritirati', 'chiusi', 'annullati'])
-      expect(corsia(id)).toBeTruthy()
+    // le due colonne del lavoro sono sparite dalla lavagna
+    expect(corsia('da-fare')).toBeFalsy()
+    expect(corsia('al-ritiro')).toBeFalsy()
 
     const tasto = screen.getByRole('button', { name: 'Filtri' })
     expect(tasto).toHaveTextContent('2')

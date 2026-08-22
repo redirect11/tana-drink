@@ -2012,7 +2012,7 @@ bugs:
 
   - id: BUG-058
     title: "Il tasto «▦ Colonne» è acceso sempre, e non dice perché"
-    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieDiverseDalNormale, soloCorsieVive)"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieRistrette, soloCorsieVive)"
     description: >
       Segnalato dall'utente il 20/08 con lo screenshot della lavagna: il
       chip «▦ Colonne» è arancione — cioè «ci sono colonne spente» —
@@ -2056,8 +2056,13 @@ bugs:
       partiva acceso su ogni terminale nuovo. L'acceso deve dire «questo
       terminale si e' discostato dal normale», nei due versi — nascosta
       una corsia di serie accesa, O riaccesa una di serie spenta. La
-      regola sta in `corsieDiverseDalNormale` (coda.js), pura e provata:
-      terminale mai toccato = tasto grigio senza numero.
+      regola stava in `corsieDiverseDalNormale` (coda.js), pura e provata:
+      terminale mai toccato = tasto grigio senza numero. IL VERSO DI
+      RITORNO E' STATO TOLTO IL 22/08 (BUG-085): riaccendere una corsia di
+      serie spenta faceva salire il numero, ed e' l'opposto di filtrare. Si
+      conta solo cio' che NASCONDE, e la parte che qui conta — terminale
+      mai toccato, tasto grigio — vale identica: le due dello sguardo
+      all'indietro non le ha nascoste nessuno.
       E LE OMBRE, DI NUOVO (stesso giro): il respiro dato in BUG-044 era
       6px ai lati — un compromesso «per non stringere la card» — ma
       l'ombra sfuma per 18px e usciva tagliata di netto sul fianco;
@@ -2070,9 +2075,9 @@ bugs:
       quello che sopra e' scritto sul TASTO — il numero «▦ Colonne (2)», il
       title che elenca quali, l'arancione — va letto sul BADGE del tastino
       «▾ Filtri», e solo a fila CHIUSA: a fila aperta i chip delle colonne
-      si vedono da se', spenti o accesi. La cura vera resta identica e
-      resta dov'era: si conta la differenza dal normale
-      (`corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
+      si vedono da se', spenti o accesi. La cura vera resta dov'era: si
+      conta con una funzione pura (dal 22/08 `corsieRistrette`, BUG-085 —
+      prima `corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
       (`soloCorsieVive`). E' sparito `corsieSpente`, che serviva solo al
       title di quel chip.
     in_produzione: false
@@ -3030,16 +3035,22 @@ bugs:
       (CORSIE_SPENTE_ALL_INIZIO). Niente di diverso dal normale, niente
       numero: il badge diceva la verita'.
       LA CURA. Il conteggio e' una funzione pura, `contaFiltri` in
-      lib/coda.js, e conta le DEVIAZIONI dal normale una per una: tre
-      colonne diverse fanno 3, con lo staff filtrato fanno 4. Resta
-      l'idea di «diverso dal normale» e non «acceso» — al primo avvio,
-      con tutto di serie, il badge e' spento: e' la ragione per cui esiste
-      `corsieDiverseDalNormale` (BUG-058). Resta anche che a fila APERTA
+      lib/coda.js, e conta le voci una per una: tre colonne fanno 3, con
+      lo staff filtrato fanno 4. Resta che al primo avvio, con tutto di
+      serie, il badge e' spento (BUG-058). Resta anche che a fila APERTA
       il numero sparisce, e la regola sta nella funzione (secondo
       argomento) invece che in un ternario nella pagina.
+      IL CRITERIO E' CAMBIATO IL GIORNO DOPO (BUG-085). Qui si contavano
+      le DEVIAZIONI dal normale nei due versi, e sopra si legge «due
+      colonne riaccese a mano» come esempio di cosa il badge deve contare:
+      non e' piu' vero. Riaccendere una colonna fa vedere di piu', che e'
+      l'opposto di filtrare, e il badge ora conta solo cio' che RESTRINGE
+      (`corsieRistrette`). Quello che regge di questa voce e' l'altra
+      meta': il badge conta UNA PER UNA e non per generi, e badge e title
+      leggono la stessa lista.
       UNA LISTA SOLA PER BADGE E TITLE, che e' il modo di non avere due
       verita': una voce e' un nome secco («Chiusi», «Solo oggi») e vale
-      uno, oppure un gruppo che porta quante deviazioni tiene dentro
+      uno, oppure un gruppo che porta quante restrizioni tiene dentro
       (`{ nome: 'Colonne', quante: 3 }`). Il title continua a elencare per
       esteso e le colonne le RAGGRUPPA — «Colonne (3)» — perche' i loro
       nomi sono le testate della lavagna, gia' sotto gli occhi: sei titoli
@@ -3053,8 +3064,10 @@ bugs:
       per spegnerlo compare in tutte le viste (da spento resta solo in
       griglia, che e' la vista che raggruppa per data).
       PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie,
-      aprire «▾ Filtri», accendere «💶 Chiuse» e «✖️ Annullate», richiudere.
-      Il tastino dice «1» con due colonne in piu' a schermo.
+      aprire «▾ Filtri», nascondere due colonne del lavoro, richiudere. Il
+      tastino dice «1» con due colonne in meno a schermo. (Il passo
+      originale erano due colonne RIACCESE: da BUG-085 quelle non fanno
+      piu' numero, ed e' giusto cosi'.)
     labels: [bug, interfaccia, coda]
     severity: lieve
     priority: P2
@@ -3256,3 +3269,67 @@ bugs:
     in_produzione: false
     test_cases:
       - tests/unit/aliquotaIva.test.js
+
+  - id: BUG-085
+    title: "Il badge dei filtri conta al contrario: mostrare più colonne fa salire il numero"
+    area: "src/lib/coda.js (corsieRistrette, contaFiltri, spiegaFiltri), src/pages/BartenderPage.jsx (filtriAccesi)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «credo che
+      l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
+      disattivati tutti ma lui indica tre filtri attivi». Con la fotografia
+      della coda a corsie del banco: tutte e sei le colonne a schermo — Da
+      fare, In preparazione, Da servire/Ritirare, Serviti/Ritirati, Chiuse,
+      Annullate — nessun filtro di staff, nessun «Solo oggi», e il tastino
+      che dice «▾ Filtri ③».
+      COSA CONTAVA. `corsieDiverseDalNormale` contava le DEVIAZIONI dal
+      normale nei due versi: nascosta una corsia che di serie è accesa, MA
+      ANCHE riaccesa una che di serie è spenta (le due dello sguardo
+      all'indietro, CORSIE_SPENTE_ALL_INIZIO). Il secondo verso è il
+      rovescio di un filtro: accendendo «Chiuse» e «Annullate» si vede DI
+      PIÙ, non di meno, e il badge saliva mostrando la lavagna intera.
+      PERCHÉ ERA IL CRITERIO SBAGLIATO. Il badge esiste per avvisare che la
+      coda non sta facendo vedere tutto — un filtro acceso e invisibile è
+      una lavagna che sembra sbagliata. Quel segnale ha senso solo su
+      quello che è NASCOSTO. «Deviazione dal normale» rispondeva a
+      un'altra domanda («questo terminale è stato configurato?»), che a chi
+      lavora non serve e che sul tastino dei filtri si legge al contrario.
+      E PERCHÉ TRE E NON DUE. Due colonne riaccese avrebbero fatto due: il
+      terzo veniva dal fatto che il conto leggeva la MEMORIA delle spente
+      (`nascoste`) invece della lavagna. Spegnendo TUTTE le colonne
+      `corsieVisibili` le rimette a schermo tutte quante — una lavagna
+      senza colonne è indistinguibile da un'app rotta — e la memoria resta
+      piena di id che a schermo non nascondono niente. Nel locale le
+      comande nascono già IN PREPARAZIONE, quindi «Da fare» non è una
+      colonna sceglibile: i chip erano cinque, spenti tutti e cinque, e di
+      quei cinque tre erano corsie normalmente visibili. Tre. Le due dello
+      sguardo all'indietro, spente e spente di serie, non contavano — è la
+      combinazione che fa tornare il numero della fotografia.
+      LA CURA. Una funzione pura nuova, `corsieRistrette(sceglibili,
+      mostrate)`: conta le corsie normalmente visibili che a schermo NON
+      ci sono, confrontandosi con le corsie DISEGNATE e non con la memoria.
+      Non conta una corsia mostrata che di suo sarebbe spenta, non conta
+      una corsia che l'assetto di oggi non disegna proprio, e non conta
+      niente quando la lavagna mostra tutto — comunque ci si sia arrivati.
+      `corsieDiverseDalNormale` sparisce con la sua idea.
+      COSA NON CAMBIA. Cosa fanno i filtri: solo cosa il numero conta.
+      Restano contati lo staff ristretto a una parte, «Solo oggi», lo stato
+      diverso dal default in griglia e la porzione dei chiusi — sono tutte
+      cose che restringono. Resta BUG-058: al primo avvio, con le due
+      corsie spente di serie, il badge è spento. Resta BUG-080: il badge
+      somma una per una e il title raggruppa, leggendo la STESSA lista.
+      Resta che a fila aperta il numero sparisce.
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie in
+      un locale che fa nascere le comande in preparazione, aprire
+      «▾ Filtri», spegnere tutti i chip delle colonne, richiudere. La
+      lavagna mostra tutte e sei le colonne e il tastino dice «3». Oppure,
+      più corto: accendere «💶 Chiuse» e «✖️ Annullate» e richiudere — sei
+      colonne a schermo e il tastino dice «2».
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx

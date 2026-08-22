@@ -55,7 +55,7 @@ import {
   attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
-  corsieDiverseDalNormale,
+  corsieRistrette,
   gruppiColonne,
   soloCorsieVive,
   intestazioneGiornata,
@@ -1452,11 +1452,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Le colonne che si possono accendere e spegnere a mano: da qui escono i
   // chip, uno per colonna, dentro la fila dei filtri.
   const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
-  // Quante di quelle stanno diversamente dal normale (due corsie nascono
-  // spente di serie): è il numero che finisce nel badge del tastino «Filtri»
-  // quando la fila è chiusa — il perché di «diverse» e non «spente» sta in
-  // coda.js. Contarle e basta terrebbe il badge acceso dal primo avvio.
-  const diverse = corsieDiverseDalNormale(sceglibili, nascoste)
+  // Quante di quelle STRINGONO davvero la lavagna: corsie normalmente
+  // visibili che adesso non ci sono. È il numero che finisce nel badge del
+  // tastino «Filtri» a fila chiusa — il perché si confronti con le corsie
+  // A SCHERMO e non con la memoria delle spente sta in coda.js (BUG-085).
+  const ristrette = corsieRistrette(sceglibili, corsieMostrate)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1657,12 +1657,16 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // schede solo lo staff.
   const sottoAcceso = workflowOn ? nomeSottofiltro(sottoChiusi, ritiroEsiste) : null
   const nomeStaff = staffFiltra ? riassuntoStaff : null
-  // LE COLONNE SONO UN GRUPPO, NON UNA VOCE. Portano quante ne sono
-  // diverse dal normale: il badge le somma una per una — tre colonne
-  // diverse fanno tre — e il title le raggruppa in «Colonne (3)». Prima
-  // erano una voce sola in tutti e due i posti, e con due colonne
-  // riaccese il tastino diceva «1»: «non mi è chiaro come conta i filtri»
-  // (l'utente, 22/08/2026, BUG-080).
+  // LE COLONNE SONO UN GRUPPO, NON UNA VOCE. Portano quante ne stringono
+  // la lavagna: il badge le somma una per una — tre colonne nascoste fanno
+  // tre — e il title le raggruppa in «Colonne (3)». Prima erano una voce
+  // sola in tutti e due i posti, e con due colonne toccate il tastino
+  // diceva «1»: «non mi è chiaro come conta i filtri» (l'utente,
+  // 22/08/2026, BUG-080).
+  //
+  // E SI CONTANO SOLO LE NASCOSTE (BUG-085): riaccendere «Chiuse» e
+  // «Annullate» fa vedere di più, che è il contrario di filtrare, e il
+  // badge deve restare spento. La regola sta in `corsieRistrette`.
   //
   // «SOLO OGGI» VALE OVUNQUE, non solo in griglia: taglia `ordersInVista`,
   // che è la lista da cui scendono TUTTE le viste. Il chip però nasceva
@@ -1674,7 +1678,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     corsieView
       ? [
           nomeStaff,
-          corsieBanco && diverse.length > 0 && { nome: 'Colonne', quante: diverse.length },
+          corsieBanco && ristrette.length > 0 && { nome: 'Colonne', quante: ristrette.length },
           !corsieBanco && sottoAcceso,
           soloOggi && 'Solo oggi',
         ]
