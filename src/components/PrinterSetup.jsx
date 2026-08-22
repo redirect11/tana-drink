@@ -10,9 +10,26 @@ import { savePrinterConfig } from '../lib/api.js'
 
 // Salva le impostazioni stampante sia in locale (uso immediato/offline) sia
 // su server (così l'IP non si perde quando iPad/Safari svuota il localStorage).
+//
+// SOLO I CAMPI DI QUESTA SCHEDA. Prima si mandava il `form` intero, che è
+// una fotografia scattata all'apertura del pannello: da quando la stampa
+// automatica si accende altrove (REQ-UI-025), salvare qui avrebbe rimesso
+// al loro posto i valori di mezz'ora fa — l'interruttore acceso al banco si
+// sarebbe spento da solo perché qualcuno ha corretto l'indirizzo IP.
+const CAMPI = [
+  'ip',
+  'port',
+  'https',
+  'ivaRate',
+  'businessName',
+  'businessAddress',
+  'businessCity',
+  'businessFooter',
+]
 function persistPrinter(form) {
-  savePrinterSettings(form)
-  savePrinterConfig(form)
+  const patch = Object.fromEntries(CAMPI.map((k) => [k, form[k]]))
+  savePrinterSettings(patch)
+  savePrinterConfig(patch)
 }
 
 export default function PrinterSetup() {
@@ -137,75 +154,17 @@ export default function PrinterSetup() {
           )}
       </fieldset>
 
-      {/* ── Stampa automatica ── */}
-      <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-        <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>Stampa automatica</legend>
-
-        <label className="row" style={{ gap: 10, cursor: 'pointer', marginBottom: 8 }}>
-          <input
-            type="checkbox"
-            style={{ width: 'auto' }}
-            checked={form.autoPrintComanda}
-            onChange={set('autoPrintComanda')}
-          />
-          <span>Stampa comanda automaticamente all'arrivo dell'ordine</span>
-        </label>
-
-        <label className="row" style={{ gap: 10, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            style={{ width: 'auto' }}
-            checked={form.autoPrintScontrino}
-            onChange={set('autoPrintScontrino')}
-          />
-          {/* Diceva «quando l'ordine è pronto», ma la stampa da tempo parte
-              alla CHIUSURA: l'etichetta descriveva il comportamento di due
-              versioni fa. */}
-          <span>Stampa scontrino automaticamente alla riscossione del conto</span>
-        </label>
-      </fieldset>
-
-      {/* ── Chi stampa le comande della sala ── */}
-      <fieldset style={{ border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-        <legend className="muted" style={{ fontSize: '0.85rem', padding: '0 6px' }}>
-          Comande prese in sala
-        </legend>
-
-        {/* La sala l'IP ce l'ha (la configurazione qui sotto arriva a tutti i
-            dispositivi dal server): quello che il locale decide qui è se i
-            telefoni parlino con la stampante o se la comanda esca al banco. */}
-        <div className="mode-choice">
-          <button
-            type="button"
-            className={`mode-option${form.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
-            onClick={() => { setForm((f) => ({ ...f, stampaSala: 'ip' })); setSaved(false) }}
-          >
-            📱 La stampa il telefono
-          </button>
-          <button
-            type="button"
-            className={`mode-option${form.stampaSala === 'rimbalzo' ? ' active' : ''}`}
-            onClick={() => { setForm((f) => ({ ...f, stampaSala: 'rimbalzo' })); setSaved(false) }}
-          >
-            🖨️ La stampa il banco
-          </button>
-        </div>
-
-        <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
-          {form.stampaSala === 'rimbalzo'
-            ? 'La comanda esce al banco appena arriva l’ordine. Serve che al banco un terminale tenga aperta la coda ordini con la stampa automatica accesa.'
-            : 'Chi prende l’ordine al tavolo stampa la comanda dal suo telefono. La prima volta, su ogni telefono, va accettato l’avviso di sicurezza della stampante: il pallino nella coda ordini dice se funziona.'}
-        </p>
-
-        {/* Scegliere "la stampa il banco" e lasciare spenta la stampa
-            automatica vuol dire: non stampa nessuno. È successo. */}
-        {form.stampaSala === 'rimbalzo' && !form.autoPrintComanda && (
-          <div className="banner" style={{ marginTop: 8 }}>
-            ⚠️ La stampa automatica della comanda è <strong>spenta</strong>: così
-            le comande della sala non le stampa nessuno. Accendila qui sopra.
-          </div>
-        )}
-      </fieldset>
+      {/* LA STAMPA AUTOMATICA NON È PIÙ QUI (REQ-UI-025). «Le impostazioni
+          di stampa automatica riguardano la cassa» (l'utente, 22/08/2026):
+          qui c'è la MACCHINA — indirizzo, prova di stampa, i dati che
+          finiscono sulla carta — mentre QUANDO la carta esce da sé è una
+          faccenda dell'incasso, e sta con la cassa insieme a tutte le
+          altre della sua famiglia. */}
+      <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 12px' }}>
+        Quando la comanda e lo scontrino escono <strong>da soli</strong> — e chi
+        stampa le comande prese in sala — si decide in{' '}
+        <strong>Impostazioni → Cassa e giornata → Stampa automatica</strong>.
+      </p>
 
       {/* ── I dati del locale che finiscono sulla carta ── */}
       {/* Si chiamava «Scontrino», ma queste righe escono anche sulla

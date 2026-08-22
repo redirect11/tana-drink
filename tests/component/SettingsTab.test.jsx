@@ -36,6 +36,7 @@ vi.mock('../../src/lib/api.js', () => {
     updateSettings: vi.fn(() => Promise.resolve()),
     resetOpenOrdersToReceived: vi.fn(() => Promise.resolve(0)),
     replaceCatalog: vi.fn(() => Promise.resolve()),
+    savePrinterConfig: vi.fn(),
     DEFAULT_SETTINGS: impostazioni,
     settingsIniziali: () => (impostazioni),
   }
@@ -164,7 +165,7 @@ describe('impostazioni a schede', () => {
       ['Catalogo prodotti', [/Catalogo/]],
       ['Banco: coda e ordine', [/Coda ordini/, /Vista ordine/]],
       [/Servizio$/, [/Consegna/, /preparazione/, /Tempi di servizio/, /Annullamenti/]],
-      ['Cassa e giornata', [/Pagamenti/, /Giornata/]],
+      ['Cassa e giornata', [/Pagamenti/, /^Stampa automatica$/, /Giornata/]],
       ['Prezzi e supplementi', [/Prezzo consigliato/, /Sconto/, /^Coperto$/, /Servizio e mancia/]],
       ['Clienti', [/Account clienti/, /Posizione/, /Notifiche/]],
     ]
@@ -264,13 +265,21 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
   })
 
   // ── LE DUE DELLO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ───────────
-  // Stessa famiglia, stesso posto: è la lezione di BUG-070.
-  it('anche le due dell’acconto stanno in Pagamenti', async () => {
+  // QUESTA PROVA DICEVA «Pagamenti», ed è cambiata la DECISIONE, non il
+  // codice sotto: «le impostazioni di stampa automatica riguardano la
+  // cassa, quindi anche le impostazioni di stampa automatiche spostale in
+  // cassa» (l'utente, 22/08/2026 — REQ-UI-025). «Esce da sola a ogni
+  // riscossione» è stampa automatica, e adesso sta con le sue. La lezione
+  // di BUG-070 regge lo stesso: restano nella SEZIONE dove si incassa, a
+  // uno scorrimento dai tasti dell'incasso, non in un'altra pagina.
+  it('le due dell’acconto stanno in «Stampa automatica», nella stessa sezione', async () => {
     const user = userEvent.setup()
     mostra()
     await apriPagamenti(user)
-    expect(sezioneDi('Lo scontrino d’acconto a ogni riscossione')).toBe('Pagamenti')
-    expect(sezioneDi('Un tasto per l’acconto con lo scontrino')).toBe('Pagamenti')
+    expect(sezioneDi('Lo scontrino d’acconto a ogni riscossione')).toBe('Stampa automatica')
+    expect(sezioneDi('Un tasto per l’acconto con lo scontrino')).toBe('Stampa automatica')
+    // …e i tasti dell'incasso sono lì accanto, nella stessa schermata.
+    expect(sezioneDi('Un tasto per incassare senza stampare')).toBe('Pagamenti')
   })
 
   // «Quando la riscossione dello scontrino di acconto è attiva, disabilita

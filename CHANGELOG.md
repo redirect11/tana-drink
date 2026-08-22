@@ -4,6 +4,18 @@
 
 ### Per chi gestisce
 
+- **Le impostazioni di stampa automatica sono passate in «Cassa e
+  giornata».** Stavano sparse: due nel pannello della stampante, una fra i
+  pagamenti — «le impostazioni di stampa automatica riguardano la cassa»
+  (22/08/2026). Adesso stanno tutte in un riquadro solo, **🖨️ Stampa
+  automatica**, subito sotto Pagamenti: quando esce la comanda, quando esce
+  lo scontrino, chi stampa le comande prese in sala e la ricevuta d'acconto
+  automatica. Il riquadro dice anche **quali valgono solo per il tablet che
+  si ha in mano** e quali per tutto il locale. Nella sezione «Stampante»
+  restano le cose della macchina — indirizzo, prova di stampa, i dati che
+  finiscono sulla carta — con scritto dove sono andate le altre. Niente si
+  è spento: gli interruttori sono quelli di prima, cambiati di posto.
+
 - **Le statistiche si aprono sull'elenco delle serate.** «Statistiche»
   adesso ha due voci nel menu: **Per serata** — quella che si apre di suo —
   e **Per periodo**, quella di prima. La prima è la lista delle chiusure di

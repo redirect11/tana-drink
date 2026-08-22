@@ -3558,6 +3558,11 @@ requirements:
       stampante a servizio iniziato. Da lì in poi la scheda è sua.
       Conseguenza da sapere: su un ambiente diverso (test, produzione) la
       memoria è un'altra, e la stampante va impostata una volta anche lì.
+      DOVE SI TOCCANO NON È DOVE VIVONO (REQ-UI-025, 22/08/2026): dal
+      22/08 gli interruttori della stampa automatica — e la scelta di chi
+      stampa le comande della sala — si accendono in «Cassa e giornata»,
+      non nel pannello Stampante. Restano queste, del dispositivo e di chi
+      ci lavora, e la scheda lo dice a schermo sotto «Su questo terminale».
     status: implemented
     generate_issue: false
     labels: [stampa, impostazioni]
@@ -3565,10 +3570,10 @@ requirements:
 
   - id: REQ-STAMPA-008
     title: "Il locale sceglie chi stampa le comande della sala"
-    area: "src/components/PrinterSetup.jsx, src/lib/printer.js"
+    area: "src/components/StampaAutomatica.jsx, src/lib/printer.js"
     description: >
-      In Impostazioni → Stampante si sceglie, sul terminale del banco, fra
-      due modi (le impostazioni sono del dispositivo e di chi ci lavora:
+      In Impostazioni → Cassa e giornata → Stampa automatica si sceglie, sul
+      terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora:
       REQ-STAMPA-010): «la stampa il telefono»,
       cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il
       banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di
@@ -7865,6 +7870,10 @@ requirements:
         coda (griglia, corsie, schede, lista). Sono il confine della regola:
         cambiano la FORMA della schermata, non il colore di un elemento. Va
         deciso, e scritto qui, se la regola li prende o li lascia dove sono.
+      HA UN GEMELLO, dal 22/08/2026: REQ-UI-025 dice la stessa cosa per il
+      MOMENTO D'USO — la stampa automatica sta dove si incassa, non dove sta
+      la stampante. I due insieme sono la regola di come si dispone questo
+      pannello: per «quando lo cerco», non per «da cosa è fatto».
       COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo
       pannello impostazioni dentro un lavoro che parla d'altro rende i due
       cambiamenti impossibili da rileggere separatamente. Le chiavi non si
@@ -7874,6 +7883,60 @@ requirements:
     generate_issue: true
     labels: [ui, impostazioni]
     priority: P3
+
+  - id: REQ-UI-025
+    title: "Le impostazioni si raggruppano per momento d'uso: la stampa automatica sta in Cassa"
+    area: "src/components/StampaAutomatica.jsx, src/components/SettingsTab.jsx, src/components/PrinterSetup.jsx"
+    description: >
+      Regola data dall'utente il 22/08/2026, con parole sue: «Questo setting
+      è in cassa e giornata mentre le altre impostazioni di stampa
+      automatica sono in stampante. Perché hai scelto di metterla lì? Le
+      impostazioni di stampa automatica riguardano la cassa, quindi anche le
+      impostazioni di stampa automatiche spostale in cassa».
+      LA REGOLA GENERALE, che è la cosa da tenere: un'impostazione sta dove
+      sta il MOMENTO in cui la si vive, non dove sta il pezzo tecnico che la
+      esegue. È il gemello di REQ-UI-024 («tutto ciò che riguarda l'aspetto
+      sta sotto Aspetto») su un'altra famiglia, e i due insieme dicono come
+      si dispone questo pannello: per «quando lo cerco», non per «da cosa è
+      fatto». «Stampante» è la MACCHINA — indirizzo, porta, prova di stampa,
+      i dati e i campi che finiscono sulla carta; QUANDO la carta esce da sé
+      è una faccenda dell'incasso, e chi la cerca apre la cassa.
+      COSA È TRASLOCATO in «💳 Cassa e giornata», riquadro «🖨️ Stampa
+      automatica», subito sotto «Pagamenti»:
+      · `autoPrintComanda` e `autoPrintScontrino` — erano nel pannello
+        Stampante, riquadro «Stampa automatica».
+      · `stampaSala` («Comande prese in sala», REQ-STAMPA-008) — decide se
+        il telefono della sala stampa da sé o se la comanda esce al banco:
+        è la stessa domanda, e l'avviso «così non le stampa nessuno» guarda
+        proprio l'interruttore della comanda. Separarli lasciava un avviso
+        che parla di un tasto che non è in pagina.
+      · `scontrino_acconto_sempre` e `scontrino_acconto_tasto`
+        (REQ-STAMPA-015) — erano in «Pagamenti». «Esce da sola a ogni
+        riscossione» è stampa automatica; il gemello col tasto la segue
+        perché uno SPEGNE l'altro, e due interruttori legati così si
+        guardano insieme. La lezione di BUG-070 regge lo stesso: restano
+        nella stessa SEZIONE dei tasti dell'incasso, a uno scorrimento.
+      LE DUE FAMIGLIE SI DICONO A SCHERMO, sotto due intestazioni: «Su
+      questo terminale» (vivono con le impostazioni della stampante, per
+      dispositivo e per chi ci lavora — REQ-STAMPA-010: la comanda la vuole
+      stampare il banco, non il telefono che passa a battere due conti) e
+      «Per tutto il locale» (stanno su settings/bar e valgono ovunque).
+      Senza dirlo, si accende una cosa al banco e ci si stupisce che in sala
+      non sia cambiato niente.
+      NEL PANNELLO STAMPANTE resta un rimando scritto a dove sono andate, e
+      la scheda salva SOLO I SUOI CAMPI: prima mandava il `form` intero, che
+      è una fotografia scattata all'apertura, e correggere l'indirizzo IP
+      avrebbe rimesso la stampa automatica al valore di mezz'ora prima —
+      spegnendola sotto le mani di chi l'aveva appena accesa.
+      LE CHIAVI NON SI RINOMINANO: sono già scritte sui documenti dei locali
+      e nella memoria dei terminali. Si sposta solo dove si toccano.
+    status: implemented
+    generate_issue: true
+    labels: [ui, impostazioni, stampa]
+    priority: P3
+    test_cases:
+      - tests/component/StampaAutomatica.test.jsx
+      - tests/component/SettingsTab.test.jsx
 
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
