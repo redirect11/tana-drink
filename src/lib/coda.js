@@ -553,18 +553,24 @@ export function statiDaFiltro(filtro) {
 // schermo che lo dica). QUALI siano lo dice il title (`spiegaFiltri`), che
 // larghezza non ne costa: in 44px non ci sta un nome, ci sta una cifra.
 //
-// IL NUMERO CONTA LE DEVIAZIONI, NON I GENERI (BUG-080). «Non mi è chiaro
+// IL NUMERO CONTA UNA PER UNA, NON PER GENERI (BUG-080). «Non mi è chiaro
 // come conta i filtri. Secondo me non funziona» (l'utente, 22/08/2026),
-// con la fotografia di una lavagna a sei colonne e un «▾ Filtri ①»: due
-// colonne riaccese a mano, e un uno. Tutte le colonne diverse dal normale
-// collassavano in UNA voce, e il badge contava le voci. Chi guarda conta a
-// occhio quello che vede — due colonne in più, lo staff filtrato — e deve
-// ritrovare lo stesso numero, o smette di fidarsi del numero.
+// con la fotografia di una lavagna a sei colonne e un «▾ Filtri ①».
+// Tutte le colonne toccate collassavano in UNA voce, e il badge contava
+// le voci. Chi guarda conta a occhio quello che vede — due colonne in
+// meno, lo staff filtrato — e deve ritrovare lo stesso numero, o smette
+// di fidarsi del numero.
+//
+// E CONTA SOLO CIÒ CHE RESTRINGE (BUG-085): una colonna nascosta, lo
+// staff ridotto a una parte, «Solo oggi», uno stato diverso dal default,
+// la porzione dei chiusi. Una colonna MOSTRATA non è un filtro — chi la
+// accende vede di più — e il posto dove quella distinzione si fa è
+// `corsieRistrette`, non qui: questa funzione somma quello che le danno.
 //
 // UNA LISTA SOLA PER IL BADGE E PER IL TITLE, o sono due verità sulla
 // stessa cosa e prima o poi divergono — il numero da una parte, i nomi
 // dall'altra. Una voce è un nome secco («Chiusi», «Solo oggi») e vale UNO,
-// oppure un gruppo che porta quante deviazioni tiene dentro
+// oppure un gruppo che porta quante restrizioni tiene dentro
 // (`{ nome: 'Colonne', quante: 3 }`): il badge somma, il title raggruppa.
 //
 // A FILA APERTA NON SI CONTA NIENTE, e la regola sta qui e non nella
@@ -991,22 +997,39 @@ export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
 // ── QUANDO LE COLONNE CONTANO COME FILTRO ACCESO ─────────────────────
 //
-// Il numero deve dire «questo terminale ha cambiato qualcosa rispetto al
-// normale», non «esiste uno stato normale». Il primo giro (BUG-058)
-// contava le corsie spente: ma due nascono spente DI SERIE, quindi si
-// partiva col segnale acceso su ogni terminale nuovo e non si spegneva mai
-// — «continua ad essere sempre attivo» (l'utente, 20/08, seconda volta).
-// Nasceva per il chip «▦ Colonne», che poi è sparito (le colonne stanno in
-// fila coi filtri): il conto è rimasto identico, e adesso finisce nel badge
-// del tastino «▾ Filtri» quando la fila è chiusa.
-// Si conta la DIFFERENZA dal normale, nei due versi: nascosta una corsia
-// che di serie è accesa, o riaccesa una che di serie è spenta. Contano
-// solo le corsie oggi sceglibili: una memoria su una corsia che non è in
-// elenco non deve accendere niente.
-export function corsieDiverseDalNormale(sceglibili, nascoste = [], normale = CORSIE_SPENTE_ALL_INIZIO) {
-  const via = new Set(nascoste || [])
-  const base = new Set(normale || [])
-  return (sceglibili || []).filter((c) => via.has(c.id) !== base.has(c.id))
+// UN FILTRO È QUALCOSA CHE RESTRINGE, e il badge deve contare solo quello.
+// «Credo che l'indicatore del numero di filtri attivi funzioni al
+// contrario. Li ho disattivati tutti ma lui indica tre filtri attivi»
+// (l'utente, 22/08/2026, BUG-085).
+//
+// PRIMA SI CONTAVANO LE DEVIAZIONI DAL NORMALE, nei due versi: nascosta
+// una corsia che di serie è accesa, MA ANCHE riaccesa una che di serie è
+// spenta. Il secondo verso è il rovescio di un filtro — accendendo
+// «💶 Chiuse» e «✖️ Annullate» si vede DI PIÙ, non di meno — e con la
+// lavagna intera a schermo il badge segnava due. Il badge serve ad
+// avvisare che la coda non sta facendo vedere tutto: si accende su quello
+// che è NASCOSTO, mai su quello che è stato aggiunto.
+//
+// SI GUARDA LA LAVAGNA, NON LA MEMORIA DELLE SPENTE. Sono due cose
+// diverse: spegnendo TUTTE le colonne `corsieVisibili` le rimette a
+// schermo tutte quante — una lavagna senza colonne è indistinguibile da
+// un'app rotta — e la memoria resta piena di id spenti che a schermo non
+// nascondono niente. Contando la memoria uscivano tre filtri su una
+// lavagna che mostrava tutto: è la fotografia che l'utente ha mandato.
+// Contando quello che manca all'appello escono zero, che è la verità.
+//
+// BUG-058 RESTA IN PIEDI: al primo avvio le due corsie dello sguardo
+// all'indietro sono spente e il badge è spento, perché quelle non le ha
+// nascoste nessuno — sono il normale. Il conteggio è «le corsie
+// normalmente visibili che adesso non sono a schermo».
+//
+// SOLO LE CORSIE SCEGLIBILI: una corsia che l'assetto di oggi non disegna
+// («Da fare» col salto acceso, «Da ritirare» col pronto riunito) non l'ha
+// tolta chi guarda, e non deve accendere niente.
+export function corsieRistrette(sceglibili, mostrate = [], normale = CORSIE_SPENTE_ALL_INIZIO) {
+  const aSchermo = new Set((mostrate || []).map((c) => c.id))
+  const spenteDiSerie = new Set(normale || [])
+  return (sceglibili || []).filter((c) => !spenteDiSerie.has(c.id) && !aSchermo.has(c.id))
 }
 
 export function corsieComande(
