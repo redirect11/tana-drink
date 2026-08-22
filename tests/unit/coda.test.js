@@ -25,18 +25,15 @@ import {
   cambiaSottoChiusi,
   nomiDelServizio,
   sottofiltriChiusi,
-  nomeSottofiltro,
   FILTRI_STATO,
   ID_FILTRI_STATO,
   STATO_DEFAULT,
   restaInCoda,
   gruppiInCoda,
   schedeCoda,
-  corsieRistrette,
   gruppiColonne,
   corsieDelPronto,
   spiegaFiltri,
-  contaFiltri,
   spiegaOrdine,
 } from '../../src/lib/coda.js'
 
@@ -420,12 +417,6 @@ describe('come si chiamano le due metà del servizio', () => {
     // In un tasto segmentato si legge da sinistra, e quella da guardare
     // di corsa è la prima: sono drink che qualcuno aspetta ancora.
     expect(sottofiltriChiusi(true)[0][0]).toBe('non-serviti')
-  })
-
-  it('il title del tastino nomina la porzione accesa, e tace sul neutro', () => {
-    expect(nomeSottofiltro('serviti', true)).toBe('Serviti/Ritirati')
-    expect(nomeSottofiltro('non-serviti', false)).toBe('Da servire')
-    expect(nomeSottofiltro('tutti', true)).toBe(null)
   })
 })
 
@@ -1752,164 +1743,67 @@ describe('dove finisce una comanda lasciata in un\'altra colonna', () => {
   })
 })
 
-// ── IL BADGE DELLE COLONNE CONTA SOLO QUELLO CHE MANCA ───────────────
+// ── IL NUMERO SUL TASTO DEI FILTRI NON C'È PIÙ (22/08/2026) ──────────
 //
-// Due giri, e il secondo ha corretto il primo.
+// «Sì ma infatti togliamo quel numero. Non serve» (l'utente).
 //
-// PRIMO GIRO (BUG-058): contare le corsie spente teneva il segnale acceso
-// su ogni terminale nuovo, per sempre — due nascono spente di serie e
-// «continua ad essere sempre attivo» (l'utente, 20/08). Si passò a
-// contare la differenza dal normale, nei DUE versi.
+// QUI C'ERANO DUE BATTERIE DI TEST — `corsieRistrette` (quali colonne
+// stringono davvero la lavagna) e `contaFiltri` (la somma che finiva nel
+// badge) — e non sono state adattate: le funzioni non esistono più.
+// Adattarle avrebbe voluto dire tenere in vita la macchina del conteggio
+// per provare un numero che a schermo nessuno vede.
 //
-// SECONDO GIRO (BUG-085): il secondo verso era sbagliato. «Credo che
-// l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
-// disattivati tutti ma lui indica tre filtri attivi» (l'utente,
-// 22/08/2026). Un filtro RESTRINGE: riaccendere una colonna fa vedere di
-// più, e non è un filtro. Si conta una cosa sola — le corsie normalmente
-// visibili che a schermo non ci sono — e la si conta guardando la
-// LAVAGNA, non la memoria delle spente: le due divergono, e la fotografia
-// della segnalazione era proprio il caso in cui divergono.
-describe('corsieRistrette', () => {
-  const sceglibili = [
-    { id: 'da-fare', titolo: 'Da fare' },
-    { id: 'al-banco', titolo: 'Al banco' },
-    { id: 'chiusi', titolo: 'Chiusi' },
-    { id: 'annullati', titolo: 'Annullati' },
-  ]
-  const solo = (...ids) => sceglibili.filter((c) => ids.includes(c.id))
-
-  // BUG-058 REGGE ANCORA: le due dello sguardo all'indietro non le ha
-  // nascoste nessuno, sono il normale. Terminale nuovo, badge spento.
-  it('terminale mai toccato: le due spente di serie non contano', () => {
-    expect(corsieRistrette(sceglibili, solo('da-fare', 'al-banco'))).toHaveLength(0)
-  })
-
-  // LA FOTOGRAFIA DELLA SEGNALAZIONE: tutta la lavagna a schermo, e il
-  // tastino diceva tre. Non c'è niente di nascosto: zero — e ci si arriva
-  // anche spegnendo TUTTE le colonne, perché allora la coda le rimette a
-  // schermo tutte (`corsieVisibili`). È il motivo per cui si guarda quello
-  // che è disegnato e non la memoria delle spente: le due divergono
-  // proprio lì, ed è il caso che faceva uscire il tre.
-  it('tutte le corsie a schermo: nessuna restrizione', () => {
-    expect(corsieRistrette(sceglibili, sceglibili)).toHaveLength(0)
-  })
-
-  it('una corsia normalmente visibile che manca vale uno', () => {
-    const r = corsieRistrette(sceglibili, solo('al-banco', 'chiusi', 'annullati'))
-    expect(r.map((c) => c.id)).toEqual(['da-fare'])
-  })
-
-  it('due corsie nascoste fanno due', () => {
-    expect(corsieRistrette(sceglibili, solo('chiusi', 'annullati'))).toHaveLength(2)
-  })
-
-  // IL VERSO CHE NON SI CONTA PIÙ: accendere «Chiuse» e «Annullate» mostra
-  // di più, ed è l'opposto di filtrare. Prima faceva salire il badge a due.
-  it('Chiuse riaccesa e Annullate no: sempre nessun filtro', () => {
-    expect(corsieRistrette(sceglibili, solo('da-fare', 'al-banco', 'chiusi'))).toHaveLength(0)
-  })
-
-  // Una corsia che l'assetto di oggi non disegna proprio non l'ha tolta
-  // chi guarda: è un residuo, e non deve accendere niente.
-  it('una corsia che oggi non è sceglibile non conta', () => {
-    const senzaDaFare = sceglibili.filter((c) => c.id !== 'da-fare')
-    expect(corsieRistrette(senzaDaFare, solo('al-banco'))).toHaveLength(0)
-  })
-})
-
-// ── IL TASTO DEI FILTRI, CHIUSO, DEVE DIRE COS'È ACCESO (REQ-CODA-008) ─
+// PERCHÉ È FINITA COSÌ, che è la parte da non perdere. Il badge è stato
+// provato con quattro criteri, uno dopo l'altro, e chi guarda li ha
+// bocciati tutti:
+//   1. i GENERI di filtro accesi — sei colonne spente facevano «1». «Non
+//      mi è chiaro come conta i filtri. Secondo me non funziona»
+//      (22/08, BUG-080);
+//   2. una per COLONNA, ma contando anche quelle riaccese — «credo che
+//      l'indicatore [...] funzioni al contrario. Li ho disattivati tutti
+//      ma lui indica tre filtri attivi» (22/08, BUG-085);
+//   3. solo ciò che RESTRINGE (`corsieRistrette`) — «non mi sembra che il
+//      conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+//      zero» (22/08);
+//   4. i chip ACCESI e basta: mai arrivato a schermo, perché nel frattempo
+//      la richiesta è diventata togliere il numero.
 //
-// I filtri sono andati a scomparsa perché sette pastiglie si mangiavano la
-// riga («li voglio a scomparsa, con un tasto che non occupi troppo
-// spazio», l'utente 20/08). Ma un filtro acceso e INVISIBILE è una coda
-// che sembra sbagliata: si guardano dodici conti dove ce ne sono quaranta
-// e non c'è niente a schermo che lo dica. Quindi il tasto se lo porta
-// scritto.
-// QUANTI FILTRI SONO ACCESI. Prima il tasto ne SCRIVEVA uno («⚗️ Chiusi»)
-// ed era una pastiglia larga in una riga che, chiusa, esisteva solo per
-// lei: «quando dicevo di nascondere i tasti intendevo tutti e non
-// aggiungere un nuovo tasto» (l'utente, 20/08). Adesso è un tastino in
-// testata, e lì ci sta una cifra — quali siano lo dice il title.
+// La morale, per chi fra sei mesi volesse rimetterlo: «quanti filtri ci
+// sono?» non ha una risposta sola — chi guarda conta i chip, il codice
+// conta le restrizioni — e un numero che va spiegato non avvisa di
+// niente. Il segnale si legge aprendo la fila.
 //
-// LA CIFRA HA UNA FUNZIONE SUA, ED È `contaFiltri` (BUG-080). Per un giro
-// è stata `.length` sull'elenco già pulito, e reggeva finché ogni voce
-// valeva uno: da quando le colonne del banco sono un GRUPPO — tre colonne
-// toccate, una voce sola — il badge diceva «1» con tre colonne di
-// differenza a schermo. «Non mi è chiaro come conta i filtri. Secondo me
-// non funziona» (l'utente, 22/08/2026): il numero deve essere quello che
-// chi guarda conta a occhio.
-// COSA gli arriva lo decide chi chiama, e dal 22/08 è soltanto quello che
-// RESTRINGE (BUG-085): questa funzione somma e basta.
-describe('contaFiltri', () => {
-  // Coda com'è di suo: niente da segnalare. È la ragione per cui si
-  // contano le RESTRIZIONI e non i filtri accesi — uno acceso c'è sempre.
-  it('senza restrizioni non c’è niente da contare', () => {
-    expect(contaFiltri([])).toBe(0)
-    expect(contaFiltri()).toBe(0)
-  })
-
-  // Le colonne del banco arrivano come gruppo, e valgono quante ne sono
-  // nascoste (`corsieRistrette`).
-  it('una colonna nascosta vale uno', () => {
-    expect(contaFiltri([{ nome: 'Colonne', quante: 1 }])).toBe(1)
-  })
-
-  // TRE COLONNE FANNO TRE, non uno: era il difetto.
-  it('tre colonne più lo staff filtrato fanno QUATTRO', () => {
-    expect(contaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'])).toBe(4)
-  })
-
-  // Il caso che chi guarda conta a occhio: due colonne che mancano e lo
-  // staff ridotto a una parte sono tre cose che stringono, e fanno tre.
-  it('due colonne nascoste più lo staff filtrato fanno TRE', () => {
-    expect(contaFiltri([{ nome: 'Colonne', quante: 2 }, '2 di 5'])).toBe(3)
-  })
-
-  it('un nome secco vale uno', () => {
-    expect(contaFiltri(['Chiusi', 'Solo oggi'])).toBe(2)
-  })
-
-  // A FILA APERTA IL NUMERO SPARISCE: i chip accesi si vedono da sé, e
-  // ripeterli con una cifra è rumore. La regola sta qui, non nella pagina.
-  it('a fila aperta non conta niente', () => {
-    expect(contaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'], true)).toBe(0)
-  })
-})
+// QUELLO CHE RESTA PROVATO È CHE IL TASTO NON PORTA NUMERI: lo dicono i
+// component test della coda (tests/component/CodaCorsie.test.jsx), che
+// guardano il tastino vero.
 
 // IL NOME È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene, deve
 // essere "mostra filtri"» (l'utente, 20/08): il tasto apre e chiude un
 // pannello, non filtra — a filtrare sono i chip che compaiono, uno per uno.
+//
+// E DICE SOLO QUELLO. Fino al 22/08/2026 accodava l'elenco dei filtri
+// accesi — «Mostra filtri — accesi: Colonne (3), Miei» — che era la stessa
+// lista da cui il badge tirava fuori il suo numero, letta in un altro
+// modo. Tolto il badge, quella lista non aveva più nessun altro cliente:
+// tenerla in piedi per un tooltip avrebbe voluto dire tenere in piedi
+// anche `corsieRistrette` e `NOME_FILTRO_STATO`, cioè la macchina intera,
+// pronta a farsi ricollegare a un numero alla prima occasione.
 describe('spiegaFiltri', () => {
   it('aperta, dice come si richiude', () => {
-    expect(spiegaFiltri(['Chiusi'], true)).toBe('Nascondi filtri')
+    expect(spiegaFiltri(true)).toBe('Nascondi filtri')
   })
 
-  it('chiusa e pulita, dice il gesto che fa: mostrare i filtri', () => {
-    expect(spiegaFiltri([], false)).toBe('Mostra filtri')
+  it('chiusa, dice il gesto che fa: mostrare i filtri', () => {
+    expect(spiegaFiltri(false)).toBe('Mostra filtri')
     expect(spiegaFiltri()).toBe('Mostra filtri')
   })
 
-  // ARRIVA GIÀ PULITO: l'elenco lo compone il chiamante con dei `&&` e lo
-  // ripulisce una volta. Rifiltrarlo qui dentro era la seconda passata
-  // sulla stessa lista, e faceva credere che i due posti potessero non
-  // essere d'accordo su cosa sia «acceso».
-
-  // PER ESTESO STANNO QUI, che il title larghezza non ne costa — ma DOPO il
-  // nome del tasto, che resta la prima cosa che si legge.
-  it('chiusa con roba accesa, li elenca tutti dopo il nome', () => {
-    const t = spiegaFiltri(['Chiusi', 'Miei'], false)
-    expect(t.startsWith('Mostra filtri')).toBe(true)
-    expect(t).toContain('Chiusi, Miei')
-  })
-
-  // LE COLONNE RESTANO RAGGRUPPATE QUI, anche se nel badge contano una per
-  // una: i loro nomi sono le testate della lavagna, già sotto gli occhi, e
-  // sei titoli in fila annegherebbero i filtri che a schermo un nome non
-  // ce l'hanno. Il numero è quello che somma il badge: stessa lista.
-  it('un gruppo si legge col suo numero, non riga per riga', () => {
-    expect(spiegaFiltri([{ nome: 'Colonne', quante: 3 }, 'Miei'], false)).toContain(
-      'Colonne (3), Miei'
-    )
+  // NIENTE ELENCO, MAI PIÙ, e questo test è la guardia: se qualcuno
+  // rimettesse i nomi dei filtri nel title, il numero sul tastino
+  // tornerebbe subito dopo — è già successo, quattro volte.
+  it('non elenca niente: due frasi in tutto', () => {
+    expect(spiegaFiltri(false)).not.toContain('accesi')
+    expect(spiegaFiltri(true)).not.toContain('accesi')
   })
 })
 

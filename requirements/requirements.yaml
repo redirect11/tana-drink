@@ -7451,7 +7451,7 @@ requirements:
       - tests/component/CodaCorsie.test.jsx
   - id: REQ-CODA-008
     title: "I filtri della coda stanno dietro un tasto solo, che dice cos'e' acceso"
-    area: "src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri, chipSoloOggi), src/lib/coda.js (etichettaFiltri, spiegaFiltri, contaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css"
+    area: "src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri, chipSoloOggi), src/lib/coda.js (etichettaFiltri, spiegaFiltri), src/lib/impostazioniLocali.js (filtriAperti), src/index.css"
     description: >
       Chiesto dall'utente il 20/08, con lo screenshot della coda: «i filtri
       e tutti i bottoni li voglio a scomparsa, con un tasto che non occupi
@@ -7652,6 +7652,45 @@ requirements:
       cosa il numero conta — e restano BUG-058 (terminale nuovo, badge
       spento: quelle due non le ha nascoste nessuno) e BUG-080 (si somma
       una per una, e badge e title leggono la stessa lista).
+      ── SETTIMO GIRO, 22/08/2026: IL NUMERO SI RITIRA ──
+      «Si' ma infatti togliamo quel numero. Non serve» (l'utente). TUTTO
+      QUELLO CHE SOPRA SI LEGGE SUL BADGE NON VALE PIU': il tastino non
+      porta nessun numero, e non deve tornare a portarlo. Resta «▾ Filtri»
+      e basta.
+      NON E' UN DIFETTO, E' UNA FUNZIONE CHE SI RITIRA, ed e' la fine di
+      quattro giri sullo stesso numero. Il badge e' stato calcolato in
+      quattro modi diversi, e chi guardava li ha bocciati tutti: i GENERI
+      di filtro accesi (sei colonne spente facevano «1» — BUG-080), una
+      restrizione per COLONNA ma contando anche le riaccese («funziona al
+      contrario» — BUG-085), solo cio' che RESTRINGE davvero guardando la
+      lavagna e non la memoria («ne ho tre e lui dice zero»), e infine i
+      chip ACCESI contati e basta — quest'ultimo mai arrivato a schermo,
+      perche' nel frattempo la richiesta e' diventata toglierlo.
+      PERCHE' NESSUN CRITERIO POTEVA REGGERE. «Quanti filtri ci sono?» non
+      ha una risposta sola: chi guarda conta i chip accesi, il codice
+      conta le restrizioni, e i due numeri non coincidono quasi mai. Un
+      numero che va spiegato non avvisa di niente — chiede di essere
+      interpretato, mentre si versa. Il segnale, se serve, si legge
+      aprendo la fila: i chip accesi si vedono da se'.
+      COSA SE N'E' ANDATO CON LUI: `contaFiltri` e `corsieRistrette` in
+      coda.js, con loro `NOME_FILTRO_STATO` e `nomeSottofiltro` (nomi che
+      esistevano solo per il title del badge), la lista `filtriAccesi`
+      della pagina, il badge `.coda-tastino-conta` e la classe
+      `.coda-tastino.active` — che si accendeva sul conteggio e senza non
+      ha piu' niente da leggere. Sono spariti anche i test del conteggio:
+      non si adattano a un numero che non c'e'.
+      IL TITLE RESTA, MA DICE SOLO IL GESTO: «Mostra filtri» /
+      «Nascondi filtri». Accodava l'elenco dei filtri accesi, che era la
+      STESSA lista da cui il badge tirava il numero letta in un altro
+      modo: tenerla in piedi per un tooltip voleva dire tenere in piedi la
+      macchina intera, pronta a farsi ricollegare a una cifra alla prima
+      occasione. C'e' un test che controlla che il title non elenchi piu'
+      niente, ed e' li' per quello.
+      PER CHI LEGGE FRA SEI MESI: se venisse l'idea di «aggiungere un
+      utile contatore accanto a Filtri», c'e' gia' stato, quattro volte, e
+      la decisione finale e' stata toglierlo. Resta vero tutto il resto —
+      i filtri a scomparsa, un meccanismo solo per le quattro viste, la
+      fila che da chiusa non si disegna.
     status: implemented
     generate_issue: true
     labels: [coda, ui]
@@ -7663,7 +7702,7 @@ requirements:
 
   - id: REQ-CODA-009
     title: "I filtri della coda sono combinabili, e gli autori stanno in una tendina"
-    area: "src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, statoAlDefault, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi, sottofiltriChiusi, nomiDelServizio, nomeSottofiltro), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css"
+    area: "src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, statoAlDefault, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi, sottofiltriChiusi, nomiDelServizio), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css"
     description: >
       Chiesto dall'utente il 20/08/2026, guardando la coda in emulatore.
       Parole sue: «il conteggio dei filtri accesi e' inutile sulla schermata
@@ -7860,6 +7899,14 @@ requirements:
       quelle NASCOSTE (`corsieRistrette`, BUG-085) — riaccenderne una fa
       vedere di piu', che e' l'opposto di filtrare. Il dettaglio sta in
       REQ-CODA-008, sesto giro.
+      E DAL 22/08 NON VALGONO PIU' NIENTE, perche' il badge non c'e' piu':
+      «si' ma infatti togliamo quel numero. Non serve» (l'utente). A fila
+      chiusa il tastino dice «▾ Filtri» e basta, e il suo title dice solo
+      il gesto — niente «Colonne (2)», niente elenco. Sono spariti con lui
+      `corsieRistrette`, `contaFiltri` e `nomeSottofiltro`, che nominava
+      la porzione dei chiusi PER QUEL TITLE e non aveva altri clienti (le
+      porzioni sul tasto se le nomina `sottofiltriChiusi`, che resta). La
+      storia dei quattro criteri sta in REQ-CODA-008, settimo giro.
       RESTA IL PATTERN DEI SOTTOFILTRI DEI CHIUSI, che e' un'altra cosa:
       «Serviti / Da servire» compaiono quando «Chiusi» e' acceso perche'
       fuori di li' non vogliono dire niente. Non e' un chip che apre chip,

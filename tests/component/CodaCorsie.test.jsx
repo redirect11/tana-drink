@@ -732,9 +732,12 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     const ordine = within(tastini).getByRole('button', { name: /Prima i più/ })
     expect(ordine).toHaveClass('coda-tastino')
     expect(ordine).toHaveClass('solo-icona')
-    // Col terminale al suo posto non c'è nessun conteggio da portare.
-    expect(tasto).not.toHaveClass('active')
+    // E NON PORTA NESSUN NUMERO. C'era un badge col conteggio dei filtri
+    // accesi: tolto il 22/08/2026 — «sì ma infatti togliamo quel numero.
+    // Non serve» (l'utente). Il tasto dice «▾ Filtri» e basta.
+    expect(tasto.textContent.trim()).toBe('▾ Filtri')
     expect(document.querySelector('.coda-tastino-conta')).toBe(null)
+    expect(tasto).not.toHaveClass('active')
   })
 
   // IL NOME DEL TASTO È IL GESTO CHE FA. «"filtra la coda" non va bene, deve
@@ -787,70 +790,56 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(screen.getByRole('button', { name: 'Filtri' })).toBeInTheDocument()
   })
 
-  // Chiusa la fila, il filtro acceso deve restare leggibile: il tastino si
-  // accende e porta il numero, e i nomi stanno nel title.
-  it('da chiuso il tastino si accende e conta i filtri', async () => {
+  // ── IL NUMERO SUL TASTINO NON C'È, E NON DEVE TORNARE ────────────
+  //
+  // «Sì ma infatti togliamo quel numero. Non serve» (l'utente,
+  // 22/08/2026). Qui c'erano due test che provavano il badge: uno che si
+  // accendeva col primo filtro, uno che lo faceva crescere col secondo.
+  //
+  // IL BADGE È STATO PROVATO QUATTRO VOLTE, con quattro criteri diversi —
+  // i generi di filtro (BUG-080), una restrizione per colonna (BUG-080),
+  // solo ciò che restringe (BUG-085), i chip accesi — e chi guarda li ha
+  // bocciati tutti: «non mi è chiaro come conta i filtri», «funziona al
+  // contrario», «ne ho tre e lui dice zero». Poi la richiesta è cambiata
+  // in toglierlo. Questo test è la guardia perché non ricompaia per la
+  // quinta volta, magari con un criterio nuovo.
+  it('coi filtri accesi il tastino resta senza numero', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText(/In servizio/)
 
+    const tasto = () => screen.getByRole('button', { name: 'Filtri' })
     await apriFiltri(utente)
-    // Un solo stato acceso alla volta: guardare i chiusi è già una
-    // deviazione dal default, e non serve spegnere altro.
-    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
-
-    // A FILA APERTA IL BADGE NON C'È: i chip accesi si vedono da sé, e
-    // ripeterli con un numero è rumore.
-    expect(document.querySelector('.coda-tastino-conta')).toBe(null)
-
-    await apriFiltri(utente) // richiudo
-    const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto).toHaveTextContent('1')
-    expect(tasto).toHaveClass('active')
-    expect(tasto).toHaveAttribute('title', expect.stringContaining('Chiusi'))
-  })
-
-  // IL DEFAULT NON SI CONTA. C'è sempre uno stato acceso — sono
-  // esclusivi, uno resta — quindi contarli darebbe un badge perenne, che
-  // è proprio quello che l'utente ha bocciato: «il conteggio dei filtri
-  // accesi è inutile sulla schermata degli ordini» (20/08/2026).
-  it('con la coda come si apre il tastino resta spento', async () => {
-    const utente = userEvent.setup()
-    montaCoda()
-    await screen.findByText(/In servizio/)
-
-    await apriFiltri(utente)
-    expect(screen.getByRole('button', { name: 'Aperti' })).toHaveClass('active')
-    await apriFiltri(utente)
-
-    const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto).not.toHaveClass('active')
-    expect(tasto).toHaveAttribute('title', 'Mostra filtri')
-  })
-
-  // PIÙ DI UNO: il numero cresce, e i nomi restano nel title. Scriverli sul
-  // tastino non si può — è largo 44px — e sarebbe la pastiglia larga che il
-  // primo giro aveva messo e l'utente ha rimandato indietro.
-  it('con più filtri accesi il conteggio cresce, e i nomi stanno nel title', async () => {
-    const utente = userEvent.setup()
-    montaCoda()
-    await screen.findByText(/In servizio/)
-
-    await apriFiltri(utente)
-    // Gli stati sono esclusivi e ne conta uno solo: il secondo filtro è
-    // la porzione dei chiusi, che è una domanda DENTRO di loro e vale
-    // come deviazione a sé.
+    // Due filtri accesi insieme: lo stato dei chiusi e, dentro di lui, la
+    // porzione da servire. Nel giro precedente facevano «2».
     await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
     await utente.click(screen.getByRole('button', { name: 'Da servire/Ritirare' }))
-    await apriFiltri(utente)
+    await apriFiltri(utente) // richiudo: è lì che il badge compariva
 
-    const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(within(tasto).getByText('2')).toBeInTheDocument()
-    // e per esteso stanno nel title, che larghezza non ne costa
-    expect(tasto).toHaveAttribute(
-      'title',
-      expect.stringContaining('Chiusi, Da servire/Ritirare')
-    )
+    expect(tasto().textContent.trim()).toBe('▾ Filtri')
+    expect(tasto().textContent).not.toMatch(/\d/)
+    expect(document.querySelector('.coda-tastino-conta')).toBe(null)
+    // E NEMMENO SI COLORA: la classe `active` leggeva il conteggio, e senza
+    // non ha più niente da leggere. Rimetterla vorrebbe dire ricostruire
+    // il conteggio sotto un altro nome.
+    expect(tasto()).not.toHaveClass('active')
+  })
+
+  // IL TITLE DICE SOLO IL GESTO. Accodava l'elenco dei filtri accesi —
+  // «Mostra filtri — accesi: Chiusi, Miei» — e quella lista era la stessa
+  // da cui il badge tirava il numero: tenerla in piedi per un tooltip
+  // avrebbe voluto dire tenere in piedi la macchina intera.
+  it('il title non elenca i filtri, né da aperta né da chiusa', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText(/In servizio/)
+
+    const tasto = () => screen.getByRole('button', { name: 'Filtri' })
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: '💶 Chiusi' }))
+    expect(tasto()).toHaveAttribute('title', 'Nascondi filtri')
+    await apriFiltri(utente)
+    expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
   })
 
   // È UNA SCELTA DI QUESTO TERMINALE, come le colonne spente: al banco la
@@ -892,14 +881,15 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     expect(within(riga).getByRole('button', { name: 'Serviti/Ritirati' })).toBeInTheDocument()
   })
 
-  // ── IL BADGE CONTA SOLO QUELLO CHE STRINGE (BUG-085) ─────────────
+  // ── SPEGNERE LE COLONNE NON ROMPE LA LAVAGNA (BUG-085) ───────────
   //
-  // «Credo che l'indicatore del numero di filtri attivi funzioni al
-  // contrario. Li ho disattivati tutti ma lui indica tre filtri attivi»
-  // (l'utente, 22/08/2026). Un filtro è qualcosa che RESTRINGE: se la
-  // lavagna mostra tutto, non c'è niente da segnalare — comunque ci si sia
-  // arrivati.
-  const badge = () => document.querySelector('.coda-tastino-conta')
+  // Questo blocco nasce da «credo che l'indicatore del numero di filtri
+  // attivi funzioni al contrario. Li ho disattivati tutti ma lui indica
+  // tre filtri attivi» (l'utente, 22/08/2026). L'indicatore non c'è più —
+  // vedi la guardia più su — ma il COMPORTAMENTO che la segnalazione
+  // aveva scoperto resta e va provato: spegnendo tutte le colonne la
+  // lavagna le rimette a schermo tutte, perché una lavagna senza colonne
+  // è indistinguibile da un'app rotta.
 
   // I chip delle colonne, quelli accesi: sono le corsie a schermo.
   const chipAccesi = () =>
@@ -910,10 +900,8 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
   // LA FOTOGRAFIA DELLA SEGNALAZIONE, rifatta com'era: locale che fa
   // nascere le comande già IN PREPARAZIONE (quindi «Da fare» non è una
   // colonna sceglibile), tutti i chip delle colonne spenti — e la lavagna
-  // che le rimette a schermo tutte e sei, perché una lavagna senza colonne
-  // non si può mostrare (`corsieVisibili`). Il tastino diceva «3»: contava
-  // la MEMORIA delle spente invece delle colonne che mancano davvero.
-  it('spengo tutte le colonne, la lavagna le mostra tutte: nessun numero', async () => {
+  // che le rimette a schermo tutte e sei (`corsieVisibili`).
+  it('spengo tutte le colonne, la lavagna le mostra tutte', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     // Nessuna comanda in «ricevuto»: «Da fare» resta vuota, ed è il caso
@@ -929,15 +917,14 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
 
     // Tutte e sei a schermo: è quello che si vede nella fotografia.
     expect(document.querySelectorAll('.corsia')).toHaveLength(6)
-    // E quindi niente è nascosto, e niente da contare.
-    expect(badge()).toBe(null)
-    expect(screen.getByRole('button', { name: 'Filtri' })).not.toHaveClass('active')
+    // E il tastino, in quella fotografia, diceva «3»: adesso non dice
+    // niente, e non deve tornare a dirlo (22/08/2026).
+    expect(screen.getByRole('button', { name: 'Filtri' }).textContent).not.toMatch(/\d/)
   })
 
-  // RIACCENDERE UNA COLONNA NON È FILTRARE: si vede DI PIÙ. Prima ognuna
-  // delle due valeva una «deviazione dal normale», e con la lavagna intera
-  // sotto gli occhi il tastino segnava due.
-  it('«Chiuse» e «Annullate» riaccese non sono filtri', async () => {
+  // RIACCENDERE UNA COLONNA FA VEDERE DI PIÙ, ed è il contrario di
+  // filtrare: la lavagna torna intera.
+  it('«Chiuse» e «Annullate» riaccese rimettono la lavagna intera', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     impostazioni = { ...impostazioni, queue_view: 'corsie' }
@@ -950,50 +937,58 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await apriFiltri(utente)
 
     expect(document.querySelectorAll('.corsia')).toHaveLength(6)
-    expect(badge()).toBe(null)
     expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
       'title',
       'Mostra filtri'
     )
   })
 
-  // DUE COLONNE NASCOSTE PIÙ LO STAFF RISTRETTO FANNO TRE: il badge somma
-  // una per una (BUG-080) e somma solo quello che stringe (BUG-085), così
-  // chi guarda conta a occhio e ritrova lo stesso numero.
-  it('due colonne nascoste e lo staff ristretto fanno tre', async () => {
+  // ── LA FOTOGRAFIA DELL'ULTIMA SEGNALAZIONE ───────────────────────
+  //
+  // «Non mi sembra che il conteggio dei filtri funzioni ancora. Deve
+  // contare le colonne visualizzate. Ne ho tre e lui dice zero. Se ne
+  // seleziono 1 dice 2» (l'utente, 22/08/2026), con lo screenshot della
+  // coda a corsie: cinque chip in fila, i primi tre accesi, tre corsie a
+  // schermo. Poco dopo: «sì ma infatti togliamo quel numero. Non serve».
+  //
+  // QUINDI QUI NON SI CONTA NIENTE, e il test lo dice per tutti e due i
+  // casi dello screenshot — tre colonne accese e una sola — perché sono
+  // esattamente i due su cui il conteggio era stato bocciato.
+  it('tre colonne accese o una sola: nessun numero, in nessuno dei due casi', async () => {
     const utente = userEvent.setup()
     ruolo = 'bartender'
     impostazioni = { ...impostazioni, queue_view: 'corsie' }
-    // Due persone in turno: con un autore solo la tendina non può
-    // stringere niente — deselezionare l'unico rimasto li riaccende tutti.
-    ordini = [
-      ...CODA,
-      conto({
-        id: 'o44',
-        daily_number: 44,
-        workflow_status: 'ricevuto',
-        total: 12,
-        order_items: [{ id: 'i9', name: 'Mojito', qty: 1, unit_price: 12 }],
-        placed_by: { email: 'ciro@bar.it', name: 'Ciro', role: 'bartender' },
-      }),
-    ]
     montaCoda()
     await screen.findByText('Da fare')
 
-    await apriFiltri(utente)
-    const chip = (nome) =>
-      within(document.querySelector('.chips-filtri')).getByRole('button', { name: nome })
-    await utente.click(chip('In preparazione'))
-    await utente.click(chip('Serviti/Ritirati'))
-    // La tendina dello staff: si toglie una delle due persone, e la coda
-    // si stringe davvero.
-    await utente.click(chip(/Staff/))
-    await utente.click(screen.getByRole('button', { name: /Ciro/ }))
-    await apriFiltri(utente)
+    const tasto = () => screen.getByRole('button', { name: 'Filtri' })
+    const senzaNumero = () => {
+      expect(tasto().textContent.trim()).toBe('▾ Filtri')
+      expect(document.querySelector('.coda-tastino-conta')).toBe(null)
+      expect(tasto()).not.toHaveClass('active')
+    }
 
-    const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto).toHaveTextContent('3')
-    expect(tasto).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
+    // Si spengono le colonne fino a lasciarne tre accese, come nella foto.
+    await apriFiltri(utente)
+    let accesi = chipAccesi()
+    while (accesi.length > 3) {
+      await utente.click(accesi[accesi.length - 1])
+      accesi = chipAccesi()
+    }
+    expect(chipAccesi()).toHaveLength(3)
+    await apriFiltri(utente)
+    senzaNumero()
+
+    // E con una sola accesa — il caso in cui il tastino diceva «2».
+    await apriFiltri(utente)
+    accesi = chipAccesi()
+    while (accesi.length > 1) {
+      await utente.click(accesi[accesi.length - 1])
+      accesi = chipAccesi()
+    }
+    expect(chipAccesi()).toHaveLength(1)
+    await apriFiltri(utente)
+    senzaNumero()
   })
 
   // ── UN LIVELLO SOLO DI NASCONDIMENTO ─────────────────────────────
@@ -2022,79 +2017,75 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(corsia('al-ritiro')).toBeTruthy()
   })
 
-  // ── LE COLONNE SPENTE CONTANO SOLO SE SI DISCOSTANO (BUG-058/061) ──
+  // ── LE COLONNE SPENTE, E IL SEGNALE CHE NON C'È PIÙ ──────────────
   //
-  // Il segnale era acceso sempre, dal primo avvio: guardava «ce n'è almeno
-  // una spenta», e le due dello sguardo all'indietro (Chiuse, Annullate)
-  // partono spente di suo. Un arancione che c'è comunque non dice niente —
-  // e chi lo vede va ad aprire l'elenco per scoprire che non aveva toccato
-  // nulla. «Continua ad essere sempre attivo» (l'utente, alla seconda
-  // occhiata): ora conta la DIFFERENZA dal normale, nei due versi.
+  // C'È STATO UN SEGNALE, ed è una storia da tenere. Prima era un
+  // arancione sul chip «▦ Colonne» acceso «se ce n'è almeno una spenta» —
+  // ma due nascono spente di serie, quindi era acceso su ogni terminale
+  // nuovo, per sempre: «continua ad essere sempre attivo» (l'utente,
+  // BUG-058). Poi il chip è sparito (20/08) e il segnale è diventato un
+  // NUMERO sul tastino «▾ Filtri», che è l'unico posto dove da fila chiusa
+  // si poteva ancora dire qualcosa.
   //
-  // DOV'È FINITO IL SEGNALE. Stava sul chip «▦ Colonne», che non esiste
-  // più (20/08/2026): le colonne sono chip in fila coi filtri, e a fila
-  // aperta si vede da sé quali sono spente. Il conto è rimasto identico e
-  // vive nel BADGE del tastino «▾ Filtri» — che è l'unico posto dove
-  // serve, cioè da fila CHIUSA: lì una colonna spenta è una lavagna che
-  // sembra sbagliata e niente a schermo che lo dica.
+  // E IL NUMERO HA FATTO TRE GIRI IN UN GIORNO — quanti generi di filtro
+  // (BUG-080), quante deviazioni dal normale, quante restrizioni
+  // (BUG-085) — bocciato ogni volta da chi lo guardava, finché la
+  // richiesta non è diventata: «sì ma infatti togliamo quel numero. Non
+  // serve» (l'utente, 22/08/2026).
   //
-  // QUANTE SONO, PERÒ, ADESSO LE CONTA IL BADGE (BUG-080). Contavano come
-  // UN filtro solo, col numero relegato nel title: due colonne toccate e
-  // un «1» sul tastino — «non mi è chiaro come conta i filtri» (l'utente,
-  // 22/08/2026). Il badge le conta una per una.
-  //
-  // E CONTA SOLO QUELLE NASCOSTE (BUG-085). Per un giro ha contato le
-  // differenze dal normale nei DUE versi, e il secondo verso era sbagliato:
-  // riaccendere «Chiuse» fa vedere di più, che è l'opposto di filtrare.
-  it('il badge conta le colonne nascoste, non quelle riaccese', async () => {
+  // QUELLO CHE RESTA DA PROVARE QUI È LA LAVAGNA: quali colonne stanno a
+  // schermo dopo aver toccato i chip, e che la memoria del terminale non
+  // si riempia di fantasmi. Il tastino non deve dire niente, mai.
+  it('spengo e riaccendo le colonne: cambia la lavagna, non il tastino', async () => {
     const utente = userEvent.setup()
     montaCoda()
     await screen.findByText('Da fare')
 
-    // Terminale mai toccato: le due spente di serie NON accendono niente.
     const tasto = () => screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto()).not.toHaveClass('active')
-    expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
+    const mutoEDiGrigio = () => {
+      expect(tasto().textContent.trim()).toBe('▾ Filtri')
+      expect(tasto()).not.toHaveClass('active')
+      expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
+    }
+
+    // Terminale mai toccato: le due spente di serie non sono a schermo.
+    expect(corsia('chiusi')).toBeFalsy()
+    mutoEDiGrigio()
 
     // Spengo una corsia normalmente a schermo: quella roba non si vede più.
     await apriFiltri(utente)
     await utente.click(
       screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: true })
     )
-    // A FILA APERTA nessun badge: il chip spento si vede da sé.
-    expect(document.querySelector('.coda-tastino-conta')).toBe(null)
     await apriFiltri(utente) // richiudo
-    expect(tasto()).toHaveClass('active')
-    expect(tasto()).toHaveTextContent('1')
-    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
+    expect(corsia('al-ritiro')).toBeFalsy()
+    mutoEDiGrigio()
 
-    // Riaccendo una di serie spenta: NON è un filtro — a schermo c'è una
-    // colonna in più, non una in meno — e il numero resta quello.
+    // Riaccendo una di serie spenta: a schermo c'è una colonna in più.
     await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
     await apriFiltri(utente)
-    expect(tasto()).toHaveTextContent('1')
-    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
+    expect(corsia('chiusi')).toBeTruthy()
+    mutoEDiGrigio()
 
-    // Rimetto a schermo quella nascosta: tastino grigio, senza badge e
-    // senza elenco — anche con «Chiuse» rimasta accesa.
+    // Rimetto a schermo quella nascosta: la lavagna è di nuovo intera.
     await apriFiltri(utente)
     await utente.click(
       screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: false })
     )
     await apriFiltri(utente)
-    expect(corsia('chiusi')).toBeTruthy()
-    expect(tasto()).not.toHaveClass('active')
-    expect(tasto()).toHaveAttribute('title', 'Mostra filtri')
+    expect(corsia('al-ritiro')).toBeTruthy()
+    mutoEDiGrigio()
   })
 
-  // UNA COLONNA CHE NON ESISTE PIÙ non deve tenere acceso niente. Gli id
-  // delle corsie sono cambiati coi rimaneggiamenti, e quelli vecchi
-  // restavano nella memoria del terminale: il badge acceso per sempre, e
-  // nell'elenco nessuna colonna da riaccendere per spegnerlo.
+  // UNA COLONNA CHE NON ESISTE PIÙ non deve restare nella memoria del
+  // terminale. Gli id delle corsie sono cambiati coi rimaneggiamenti, e
+  // quelli vecchi ci restavano dentro: nell'elenco non c'era nessuna
+  // colonna da riaccendere per toglierli, e finché il tastino portava un
+  // badge lo tenevano acceso per sempre.
   it('gli id di colonne che non esistono più si buttano all’apertura', async () => {
     // La memoria tiene anche le due spente di serie: il terminale aveva
-    // nascosto al-ritiro e basta. Il fantasma non deve contare niente.
+    // nascosto al-ritiro e basta. Il fantasma va buttato.
     localStorage.setItem(
       'tana:corsie:nascoste',
       JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
@@ -2102,12 +2093,9 @@ describe('le corsie del banco: una card per comanda', () => {
     montaCoda()
     await screen.findByText('Da fare')
 
-    // resta la sola spenta vera — «al-ritiro», che di serie è accesa,
-    // quindi UNA differenza dal normale — e la memoria è ripulita sul disco
-    expect(screen.getByRole('button', { name: 'Filtri' })).toHaveAttribute(
-      'title',
-      expect.stringContaining('Colonne (1)')
-    )
+    // resta la sola spenta vera — «al-ritiro» — e la memoria è ripulita
+    // sul disco
+    expect(corsia('al-ritiro')).toBeFalsy()
     expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual([
       'al-ritiro',
       'chiusi',
@@ -2115,48 +2103,12 @@ describe('le corsie del banco: una card per comanda', () => {
     ])
   })
 
-  // ── IL BADGE CONTA QUELLO CHE SI VEDE (BUG-080) ──────────────────
-  //
-  // «Non mi è chiaro come conta i filtri. Secondo me non funziona»
-  // (l'utente, 22/08/2026), con due fotografie della stessa lavagna: sei
-  // colonne a schermo e «▾ Filtri ①», tre colonne e nessun numero.
-  //
-  // IL DIFETTO ERA IL COLLASSO: tutte le colonne toccate stavano in UNA
-  // voce, e il badge contava le voci. Adesso le conta una per una, e chi
-  // guarda ritrova a occhio lo stesso numero.
-  //
-  // L'ESEMPIO NON È PIÙ «DUE RIACCESE»: quelle non sono un filtro
-  // (BUG-085), fanno vedere di più. Due colonne NASCOSTE sì, ed è lo
-  // stesso conto — due, non uno.
-  it('due colonne nascoste fanno DUE, non una', async () => {
-    const utente = userEvent.setup()
-    montaCoda()
-    await screen.findByText('Da fare')
-
-    await apriFiltri(utente)
-    await utente.click(screen.getByRole('button', { name: 'Da fare', pressed: true }))
-    await utente.click(
-      screen.getByRole('button', { name: 'Da servire/Ritirare', pressed: true })
-    )
-    await apriFiltri(utente)
-
-    // le due colonne del lavoro sono sparite dalla lavagna
-    expect(corsia('da-fare')).toBeFalsy()
-    expect(corsia('al-ritiro')).toBeFalsy()
-
-    const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto).toHaveTextContent('2')
-    // il title invece le RAGGRUPPA: i nomi delle colonne sono già le
-    // testate della lavagna, elencarli qui sarebbe leggerli due volte.
-    expect(tasto).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
-  })
-
-  // L'ALTRA FOTOGRAFIA, invece, il badge ce l'aveva giusto: tre colonne
-  // perché il locale fa nascere le comande già in preparazione — «Da fare»
-  // non la spegne il terminale, non esiste proprio finché è vuota
-  // (`corsieSceglibili`) — e le due dello sguardo all'indietro nascono
-  // spente di serie. Niente di diverso dal normale, niente numero.
-  it('col locale che parte «in preparazione» le tre colonne non sono un filtro', async () => {
+  // LE TRE COLONNE DELLA FOTOGRAFIA. Il locale fa nascere le comande già
+  // in preparazione — «Da fare» non la spegne il terminale, non esiste
+  // proprio finché è vuota (`corsieSceglibili`) — e le due dello sguardo
+  // all'indietro nascono spente di serie. Restano tre corsie, ed è la
+  // lavagna dello screenshot su cui il conteggio è stato bocciato.
+  it('col locale che parte «in preparazione» restano tre colonne, e nessun numero', async () => {
     impostazioni = { ...impostazioni, comande_in_preparazione: true }
     ordini = CODA.filter((o) => o.workflow_status !== 'ricevuto')
     montaCoda()
@@ -2167,7 +2119,7 @@ describe('le corsie del banco: una card per comanda', () => {
     for (const id of ['da-fare', 'chiusi', 'annullati']) expect(corsia(id)).toBeFalsy()
 
     const tasto = screen.getByRole('button', { name: 'Filtri' })
-    expect(tasto).not.toHaveClass('active')
+    expect(tasto.textContent.trim()).toBe('▾ Filtri')
     expect(tasto).toHaveAttribute('title', 'Mostra filtri')
   })
 

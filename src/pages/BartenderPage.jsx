@@ -55,7 +55,6 @@ import {
   attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
-  corsieRistrette,
   gruppiColonne,
   soloCorsieVive,
   intestazioneGiornata,
@@ -68,8 +67,6 @@ import {
   nomiDelServizio,
   FILTRI_STATO,
   STATO_DEFAULT,
-  NOME_FILTRO_STATO,
-  nomeSottofiltro,
   frasePerCodaVuota,
   autoriDeiConti,
   autoriAttivi,
@@ -79,7 +76,6 @@ import {
   cambiaSottoChiusi,
   AUTORE_CLIENTE,
   spiegaFiltri,
-  contaFiltri,
   spiegaOrdine,
 } from '../lib/coda.js'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from '../components/StoriaOrdine.jsx'
@@ -1452,11 +1448,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Le colonne che si possono accendere e spegnere a mano: da qui escono i
   // chip, uno per colonna, dentro la fila dei filtri.
   const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
-  // Quante di quelle STRINGONO davvero la lavagna: corsie normalmente
-  // visibili che adesso non ci sono. È il numero che finisce nel badge del
-  // tastino «Filtri» a fila chiusa — il perché si confronti con le corsie
-  // A SCHERMO e non con la memoria delle spente sta in coda.js (BUG-085).
-  const ristrette = corsieRistrette(sceglibili, corsieMostrate)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1637,63 +1628,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       </Tendina>
     ) : null
 
-  // ── COSA È ACCESO ADESSO, IN PAROLE ────────────────────────
-  //
-  // Serve al tastino quando la fila è chiusa: un filtro acceso e invisibile
-  // è una coda che sembra sbagliata — si guardano dodici conti dove ce ne
-  // sono quaranta, e non c'è niente a schermo che lo dica. Sul tastino ci
-  // sta il NUMERO; questi nomi corti, senza emoji, vivono nel title, che
-  // larghezza non ne costa.
-  //
-  // SI CONTANO LE DEVIAZIONI DAL DEFAULT, non i filtri accesi. Da quando
-  // gli stati sono tre interruttori ce n'è sempre almeno uno acceso:
-  // contarli vorrebbe dire un badge perenne, che è esattamente la cosa che
-  // l'utente ha bocciato — «il conteggio dei filtri accesi è inutile sulla
-  // schermata degli ordini» (20/08/2026). Con la coda com'è di suo — solo
-  // «Aperti», tutto lo staff — non c'è niente da segnalare.
-  //
-  // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha gli
-  // stati e i giorni scorsi, il banco le colonne spente, la lista e le
-  // schede solo lo staff.
-  const sottoAcceso = workflowOn ? nomeSottofiltro(sottoChiusi, ritiroEsiste) : null
-  const nomeStaff = staffFiltra ? riassuntoStaff : null
-  // LE COLONNE SONO UN GRUPPO, NON UNA VOCE. Portano quante ne stringono
-  // la lavagna: il badge le somma una per una — tre colonne nascoste fanno
-  // tre — e il title le raggruppa in «Colonne (3)». Prima erano una voce
-  // sola in tutti e due i posti, e con due colonne toccate il tastino
-  // diceva «1»: «non mi è chiaro come conta i filtri» (l'utente,
-  // 22/08/2026, BUG-080).
-  //
-  // E SI CONTANO SOLO LE NASCOSTE (BUG-085): riaccendere «Chiuse» e
-  // «Annullate» fa vedere di più, che è il contrario di filtrare, e il
-  // badge deve restare spento. La regola sta in `corsieRistrette`.
-  //
-  // «SOLO OGGI» VALE OVUNQUE, non solo in griglia: taglia `ordersInVista`,
-  // che è la lista da cui scendono TUTTE le viste. Il chip però nasceva
-  // solo lì, e chi lo accendeva e poi passava alle comande (il tasto
-  // «Comande», stessa pagina e stesso stato) si ritrovava la coda tagliata
-  // senza niente a schermo che lo dicesse. Adesso dove è acceso si conta e
-  // si vede (`chipSoloOggi`).
-  const filtriAccesi = (
-    corsieView
-      ? [
-          nomeStaff,
-          corsieBanco && ristrette.length > 0 && { nome: 'Colonne', quante: ristrette.length },
-          !corsieBanco && sottoAcceso,
-          soloOggi && 'Solo oggi',
-        ]
-      : gridView
-        ? [
-            // Gli stati si nominano solo quando NON sono il default: al
-            // default il badge deve restare spento.
-            stato !== STATO_DEFAULT && NOME_FILTRO_STATO[stato],
-            stato === 'chiusi' && sottoAcceso,
-            nomeStaff,
-            soloOggi && 'Solo oggi',
-          ]
-        : [nomeStaff, soloOggi && 'Solo oggi']
-  ).filter(Boolean)
-
   const cambiaFiltri = () => {
     const aperti = !filtriVisibili
     setFiltriVisibili(aperti)
@@ -1723,28 +1657,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // filtri» (20/08/2026). Stanno in fondo alla riga dei conteggi, che c'è
   // comunque: da chiusi costano ZERO altezza.
   //
-  // LO STATO RESTA VISIBILE DA CHIUSO, ed è l'unica ragione del badge: un
-  // filtro acceso e invisibile è una coda che sembra sbagliata — dodici
-  // conti dove ce ne sono quaranta, e niente a schermo che lo dica. Aperta
-  // la fila il badge sparisce: i chip accesi si vedono da sé, e ripetere
-  // col numero quello che è già a schermo è rumore.
-  // QUANTE DEVIAZIONI, non quante voci: le colonne ne portano dentro più
-  // di una. La somma sta in coda.js con l'elenco che la spiega, così
-  // badge e title non possono raccontare due storie (BUG-080).
-  const quantiFiltri = contaFiltri(filtriAccesi, filtriVisibili)
+  // NON PORTA NESSUN NUMERO, ed è una decisione presa dopo averlo provato
+  // quattro volte. «Sì ma infatti togliamo quel numero. Non serve»
+  // (l'utente, 22/08/2026). La storia per esteso — i quattro criteri e
+  // perché nessuno reggeva — sta accanto a `spiegaFiltri` in coda.js:
+  // qui basta sapere che non è una dimenticanza.
   const tastoFiltri = (
     <button
-      className={`coda-tastino${quantiFiltri > 0 ? ' active' : ''}`}
+      className="coda-tastino"
       onClick={cambiaFiltri}
       aria-expanded={filtriVisibili}
-      // IL NOME NON CAMBIA MAI. Chi lo cerca lo cerca come «Filtri»: il
-      // conteggio è STATO, e uno stato non è il nome di un tasto. Sta nel
-      // title insieme all'elenco per esteso.
+      // IL NOME NON CAMBIA MAI: chi lo cerca lo cerca come «Filtri». Quello
+      // che cambia è il title, che dice il gesto — aprire o chiudere.
       aria-label="Filtri"
-      title={spiegaFiltri(filtriAccesi, filtriVisibili)}
+      title={spiegaFiltri(filtriVisibili)}
     >
       {filtriVisibili ? '▴' : '▾'} Filtri
-      {quantiFiltri > 0 && <span className="coda-tastino-conta">{quantiFiltri}</span>}
     </button>
   )
 

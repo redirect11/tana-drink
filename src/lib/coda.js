@@ -407,16 +407,6 @@ export function sottofiltriChiusi(ritiroEsiste = true) {
   ]
 }
 
-// Come si chiama la porzione accesa, per il title del tastino «▾ Filtri»
-// quando la fila è chiusa. Niente per il neutro: non c'è niente da dire.
-//
-// I NOMI VENGONO DALLE PORZIONI STESSE: rielencarli qui voleva dire due
-// posti da tenere d'accordo, e il title avrebbe potuto dire una parola
-// diversa da quella scritta sul tasto acceso.
-export function nomeSottofiltro(sotto, ritiroEsiste = true) {
-  return Object.fromEntries(sottofiltriChiusi(ritiroEsiste))[sotto] ?? null
-}
-
 // Toccare quello acceso lo spegne e torna al neutro; toccare l'altro
 // cambia domanda. Vale la stessa regola dei filtri di stato: quello che si
 // vede acceso è quello che si sta guardando.
@@ -506,10 +496,6 @@ export const ID_FILTRI_STATO = STATI_CODA.map((s) => s.id)
 // Come si apre la coda: quello che c'è da fare, e basta.
 export const STATO_DEFAULT = 'attivi'
 
-// Come si chiamano nel `title` del tastino quando la fila è chiusa: corti
-// e senza emoji, che lì si legge di corsa.
-export const NOME_FILTRO_STATO = Object.fromEntries(STATI_CODA.map((s) => [s.id, s.nome]))
-
 // QUALI STATI SONO IN CODA. Uno solo — i tre filtri sono esclusivi — ma
 // `ordiniInCoda` e `contiPerScheda` chiamano anche con 'tutti', che è la
 // lista intera e serve a smistare le corsie in una passata sola. Torna
@@ -547,72 +533,60 @@ export function statiDaFiltro(filtro) {
 // (l'utente, 20/08). Adesso è un tastino solo icona nella testata, con gli
 // altri, e la riga dei chip da chiusa non c'è proprio.
 //
-// LO STATO NON SPARISCE LO STESSO: sul tastino ci sta un numero — quanti
-// filtri sono accesi — perché un filtro acceso e invisibile è una coda che
-// sembra sbagliata (dodici conti dove ce ne sono quaranta, e niente a
-// schermo che lo dica). QUALI siano lo dice il title (`spiegaFiltri`), che
-// larghezza non ne costa: in 44px non ci sta un nome, ci sta una cifra.
+// IL NOME DEL TASTO È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va
+// bene, deve essere "mostra filtri"» (l'utente, 20/08). Il tasto non
+// filtra: apre e chiude la fila dei filtri, e si chiama con quel gesto —
+// a filtrare sono le pastiglie che compaiono, una per una.
 //
-// IL NUMERO CONTA UNA PER UNA, NON PER GENERI (BUG-080). «Non mi è chiaro
-// come conta i filtri. Secondo me non funziona» (l'utente, 22/08/2026),
-// con la fotografia di una lavagna a sei colonne e un «▾ Filtri ①».
-// Tutte le colonne toccate collassavano in UNA voce, e il badge contava
-// le voci. Chi guarda conta a occhio quello che vede — due colonne in
-// meno, lo staff filtrato — e deve ritrovare lo stesso numero, o smette
-// di fidarsi del numero.
+// ── IL NUMERO SUL TASTINO NON C'È PIÙ, E NON VA RIMESSO ──────────────
 //
-// E CONTA SOLO CIÒ CHE RESTRINGE (BUG-085): una colonna nascosta, lo
-// staff ridotto a una parte, «Solo oggi», uno stato diverso dal default,
-// la porzione dei chiusi. Una colonna MOSTRATA non è un filtro — chi la
-// accende vede di più — e il posto dove quella distinzione si fa è
-// `corsieRistrette`, non qui: questa funzione somma quello che le danno.
+// «Sì ma infatti togliamo quel numero. Non serve» (l'utente, 22/08/2026).
+// Questa riga vale più di tutte quelle che seguono: se fra sei mesi
+// sembrasse una buona idea «aggiungere un utile contatore accanto a
+// Filtri», c'è già stato, per quattro giri, e la decisione finale è stata
+// toglierlo.
 //
-// UNA LISTA SOLA PER IL BADGE E PER IL TITLE, o sono due verità sulla
-// stessa cosa e prima o poi divergono — il numero da una parte, i nomi
-// dall'altra. Una voce è un nome secco («Chiusi», «Solo oggi») e vale UNO,
-// oppure un gruppo che porta quante restrizioni tiene dentro
-// (`{ nome: 'Colonne', quante: 3 }`): il badge somma, il title raggruppa.
+// COS'ERA. A fila chiusa il tastino portava un badge con quanti filtri
+// erano accesi. La ragione sembrava solida: un filtro acceso e invisibile
+// è una coda che sembra sbagliata — dodici conti dove ce ne sono quaranta,
+// e niente a schermo che lo dica.
 //
-// A FILA APERTA NON SI CONTA NIENTE, e la regola sta qui e non nella
-// pagina: i chip accesi si vedono da sé, e ripetere col numero quello che
-// è già a schermo è rumore. Il gemello `spiegaFiltri` prende lo stesso
-// «aperti» per la stessa ragione.
-export function contaFiltri(accesi = [], aperti = false) {
-  if (aperti) return 0
-  return (accesi || []).reduce(
-    (n, v) => n + (typeof v === 'string' ? 1 : Number(v?.quante) || 0),
-    0
-  )
-}
+// I QUATTRO CRITERI, IN ORDINE, TUTTI BOCCIATI DA CHI GUARDA:
+// 1. quanti GENERI di filtro stringevano (`filtriAccesi.length`): sei
+//    colonne spente facevano «1». «Non mi è chiaro come conta i filtri.
+//    Secondo me non funziona» (22/08, BUG-080);
+// 2. una restrizione per COLONNA, sommate a occhio (BUG-080): ma contava
+//    anche le colonne RIACCESE. «Credo che l'indicatore del numero di
+//    filtri attivi funzioni al contrario. Li ho disattivati tutti ma lui
+//    indica tre filtri attivi» (22/08, BUG-085);
+// 3. solo ciò che RESTRINGE davvero, guardando la lavagna e non la
+//    memoria delle spente (BUG-085, `corsieRistrette`): «non mi sembra che
+//    il conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+//    zero» (22/08);
+// 4. i chip ACCESI nella fila, contati e basta — mai arrivato a schermo:
+//    l'utente ha chiuso il giro togliendo il numero.
+//
+// PERCHÉ NESSUNO POTEVA FUNZIONARE. Ogni criterio è una risposta a «quanti
+// filtri ci sono?», e quella domanda non ha UNA risposta ovvia: chi guarda
+// conta i chip accesi, chi ha scritto il codice conta le restrizioni, e i
+// due numeri non coincidono quasi mai. Un numero che va spiegato non
+// avvisa di niente — chiede solo di essere interpretato, mentre si versa.
+// Il segnale, se serve, si va a leggere aprendo la fila: i chip accesi si
+// vedono da sé, ed è l'unica verità che non ha bisogno di un criterio.
+//
+// COSA SE N'È ANDATO CON LUI: `contaFiltri`, `corsieRistrette`,
+// `corsieDiverseDalNormale`, `NOME_FILTRO_STATO`, `nomeSottofiltro`, la
+// lista `filtriAccesi` della pagina, il badge `.coda-tastino-conta` e la
+// classe `.coda-tastino.active` — che si accendeva sul conteggio e senza
+// non ha più niente da leggere.
 
-// Come si legge una voce nell'elenco per esteso: un gruppo dice quante ne
-// tiene, e resta una riga sola.
-const nomeFiltro = (v) => (typeof v === 'string' ? v : `${v.nome} (${v.quante})`)
-
-// IL NOME DEL TASTO È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene,
-// deve essere "mostra filtri"» (l'utente, 20/08). Il tasto non filtra: apre
-// e chiude la fila dei filtri, e si chiama con quel gesto — a filtrare sono
-// le pastiglie che compaiono, una per una.
-//
-// L'ELENCO DI COSA È ACCESO resta accodato al nome, da chiuso: chiusa la
-// fila è l'unica cosa che dice QUALI filtri stanno lavorando. Sul tastino ci
-// sta solo il numero (44px); qui i nomi, che nel title larghezza non ne
-// costano.
-//
-// ARRIVA GIÀ PULITO: chi chiama compone l'elenco con dei `&&` e lo ripulisce
-// una volta — rifiltrarlo qui dentro era la seconda passata sulla stessa
-// lista, e faceva sembrare che i due posti potessero non essere d'accordo.
-//
-// LE COLONNE QUI RESTANO RAGGRUPPATE — «Colonne (3)» — anche se nel badge
-// contano tre. I loro nomi sono le TESTATE DELLA LAVAGNA, già a schermo:
-// elencarli qui vorrebbe dire leggerli due volte, e una riga di sei titoli
-// annegherebbe i filtri che un nome a schermo non ce l'hanno (lo staff, le
-// porzioni dei chiusi). Il numero è lo stesso che somma il badge — stessa
-// lista, letta in due modi.
-export function spiegaFiltri(accesi = [], aperti = false) {
-  if (aperti) return 'Nascondi filtri'
-  if (accesi.length === 0) return 'Mostra filtri'
-  return `Mostra filtri — accesi: ${accesi.map(nomeFiltro).join(', ')}`
+// QUELLO CHE RESTA È IL GESTO, e il title lo dice in due parole. L'elenco
+// dei filtri accesi stava qui accodato al nome: se n'è andato col badge,
+// perché per costruirlo serviva tutta la macchina del conteggio — la
+// stessa lista, letta in un altro modo — e tenerne in piedi metà per un
+// tooltip vorrebbe dire riaprire il giro alla prima occasione.
+export function spiegaFiltri(aperti = false) {
+  return aperti ? 'Nascondi filtri' : 'Mostra filtri'
 }
 
 // ── IL VERSO DELLA CODA, IN UNA FRECCIA E TRE PAROLE ─────────────────
@@ -997,41 +971,6 @@ export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
 // ── QUANDO LE COLONNE CONTANO COME FILTRO ACCESO ─────────────────────
 //
-// UN FILTRO È QUALCOSA CHE RESTRINGE, e il badge deve contare solo quello.
-// «Credo che l'indicatore del numero di filtri attivi funzioni al
-// contrario. Li ho disattivati tutti ma lui indica tre filtri attivi»
-// (l'utente, 22/08/2026, BUG-085).
-//
-// PRIMA SI CONTAVANO LE DEVIAZIONI DAL NORMALE, nei due versi: nascosta
-// una corsia che di serie è accesa, MA ANCHE riaccesa una che di serie è
-// spenta. Il secondo verso è il rovescio di un filtro — accendendo
-// «💶 Chiuse» e «✖️ Annullate» si vede DI PIÙ, non di meno — e con la
-// lavagna intera a schermo il badge segnava due. Il badge serve ad
-// avvisare che la coda non sta facendo vedere tutto: si accende su quello
-// che è NASCOSTO, mai su quello che è stato aggiunto.
-//
-// SI GUARDA LA LAVAGNA, NON LA MEMORIA DELLE SPENTE. Sono due cose
-// diverse: spegnendo TUTTE le colonne `corsieVisibili` le rimette a
-// schermo tutte quante — una lavagna senza colonne è indistinguibile da
-// un'app rotta — e la memoria resta piena di id spenti che a schermo non
-// nascondono niente. Contando la memoria uscivano tre filtri su una
-// lavagna che mostrava tutto: è la fotografia che l'utente ha mandato.
-// Contando quello che manca all'appello escono zero, che è la verità.
-//
-// BUG-058 RESTA IN PIEDI: al primo avvio le due corsie dello sguardo
-// all'indietro sono spente e il badge è spento, perché quelle non le ha
-// nascoste nessuno — sono il normale. Il conteggio è «le corsie
-// normalmente visibili che adesso non sono a schermo».
-//
-// SOLO LE CORSIE SCEGLIBILI: una corsia che l'assetto di oggi non disegna
-// («Da fare» col salto acceso, «Da ritirare» col pronto riunito) non l'ha
-// tolta chi guarda, e non deve accendere niente.
-export function corsieRistrette(sceglibili, mostrate = [], normale = CORSIE_SPENTE_ALL_INIZIO) {
-  const aSchermo = new Set((mostrate || []).map((c) => c.id))
-  const spenteDiSerie = new Set(normale || [])
-  return (sceglibili || []).filter((c) => !spenteDiSerie.has(c.id) && !aSchermo.has(c.id))
-}
-
 export function corsieComande(
   ordini,
   { isChiuso = () => false, prontoDiviso = null, ritiroEsiste = true } = {}

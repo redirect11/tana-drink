@@ -4,6 +4,16 @@
 
 ### Per chi gestisce
 
+- **Il tasto «▾ Filtri» non porta più nessun numero.** «Sì ma infatti
+  togliamo quel numero. Non serve» (22/08/2026). Accanto alla parola
+  «Filtri» c'era una cifra con quanti filtri erano accesi: è stata
+  calcolata in quattro modi diversi in due giorni e nessuno diceva quello
+  che chi guardava si aspettava — «non mi è chiaro come conta i filtri»,
+  «funziona al contrario», «ne ho tre e lui dice zero». Adesso il tasto
+  dice «▾ Filtri» e basta, in tutte le viste della coda, e non si colora
+  più. **Cosa fanno i filtri non cambia**: quali sono accesi si vede
+  aprendo la fila, dove i gettoni accesi si distinguono da soli.
+
 - **Le chiusure di cassa si guardano per serata, per settimana o per
   mese.** «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare
   quelle settimanali o mensili oltre che per data» (22/08/2026). Sopra la
