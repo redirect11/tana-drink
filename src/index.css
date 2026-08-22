@@ -4369,7 +4369,10 @@ body.fullbleed,
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
 .posd-comanda-foot {
   flex-shrink: 0;
-  padding: 6px 14px 14px;
+  /* Poco sopra: quello che separa il piede da quello che c'e' sopra e' il
+     bordo, non un cuscino. Il respiro che conta e' fra i TASTI (il `gap`
+     qui sotto), non fra il bordo e la maniglia. */
+  padding: 4px 14px 14px;
   border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -4432,16 +4435,20 @@ body.fullbleed,
 }
 
 .posd-foot-handle {
-  height: 16px;
-  /* L'AREA DA AFFERRARE RESTA 16px, LO STACCO SOTTO NO. La maniglia e' il
-     primo figlio di una colonna con `gap`, quindi si prendeva anche quello:
-     sedici pixel di area piu' il gap piu' il margine facevano un vuoto piu'
-     alto della riga del Totale, e con lo zoom cresceva insieme a tutto il
-     resto («diminuire lo spazio tra la maniglia e il contenuto», l'utente,
-     21/08/2026). Il margine negativo riassorbe il gap: la presa sotto il
-     dito non cambia di un pixel, il vuoto si dimezza. Segue `--foot-scale`
-     perche' lo segue il gap che sta annullando. */
-  margin: 0 -12px calc(2px - 8px * var(--foot-scale, 1));
+  height: 14px;
+  /* LA MANIGLIA RIENTRA SOPRA E SOTTO, L'AREA DA AFFERRARE NO. Era il primo
+     figlio di una colonna con `gap` e si prendeva tutto: la sua area, il
+     gap, il margine e il cuscino del piede — un vuoto piu' alto della riga
+     del Totale che stava separando, e col piede ingrandito cresceva insieme
+     a tutto il resto. Due giri di lima: «diminuire lo spazio tra la maniglia
+     e il contenuto» e poi «vedo ancora che la maniglia occupa troppo spazio
+     sopra e sotto» (l'utente, 21 e 22/08/2026).
+     I margini negativi la fanno rientrare nei vicini invece di aggiungersi:
+     sopra si mangia il cuscino del piede, sotto riassorbe il gap — e quello
+     segue `--foot-scale`, perche' lo segue il gap che sta annullando.
+     I quattordici pixel di area restano: e' una presa, e una presa che non
+     si prende non serve a niente. Quello che si e' stretto e' il VUOTO. */
+  margin: -2px -12px calc(-2px - 8px * var(--foot-scale, 1));
   cursor: row-resize;
   touch-action: none;
   display: flex;
