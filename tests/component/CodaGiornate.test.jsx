@@ -326,3 +326,43 @@ describe('un conto con la data monca', () => {
     expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
   })
 })
+
+// ── IL TAGLIO DEI GIORNI SCORSI SI PORTA DIETRO (BUG-080) ─────────
+//
+// «Solo oggi» non è un filtro della griglia: taglia la lista da cui
+// scendono TUTTE le viste. Il chip però stava solo in griglia, e il badge
+// lo contava solo lì: chi lo accendeva e poi passava alle comande — stessa
+// pagina, un tocco — si ritrovava la coda tagliata, nessun numero sul
+// tastino e nessun chip per rimetterla a posto.
+describe('«Solo oggi» passando dai conti alle comande', () => {
+  const tasto = () => screen.getByRole('button', { name: 'Filtri' })
+
+  it('resta contato, e il chip per spegnerlo c’è', async () => {
+    const utente = userEvent.setup()
+    // il tasto che porta alle comande esiste solo con gli stati del
+    // servizio accesi
+    impostazioni = { ...impostazioni, workflow_enabled: true }
+    montaCoda()
+    await screen.findByText('#11')
+
+    // in griglia: accendo il taglio e richiudo la fila
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: /Solo oggi/ }))
+    await apriFiltri(utente)
+    expect(tasto()).toHaveTextContent('1')
+
+    // stessa pagina, un tocco: adesso si guardano le comande
+    await utente.click(screen.getByRole('button', { name: 'Comande' }))
+    // IL TAGLIO È ANCORA LÌ, e il numero lo dice anche di qua
+    expect(tasto()).toHaveTextContent('1')
+    expect(tasto()).toHaveAttribute('title', expect.stringContaining('Solo oggi'))
+
+    // e si spegne da dove si vede, senza tornare in griglia
+    await apriFiltri(utente)
+    const chip = screen.getByRole('button', { name: /Solo oggi/ })
+    expect(chip).toHaveClass('active')
+    await utente.click(chip)
+    await apriFiltri(utente)
+    expect(tasto()).not.toHaveClass('active')
+  })
+})

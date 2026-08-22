@@ -1932,9 +1932,12 @@ describe('le corsie del banco: una card per comanda', () => {
   // aperta si vede da sé quali sono spente. Il conto è rimasto identico e
   // vive nel BADGE del tastino «▾ Filtri» — che è l'unico posto dove
   // serve, cioè da fila CHIUSA: lì una colonna spenta è una lavagna che
-  // sembra sbagliata e niente a schermo che lo dica. Le colonne contano
-  // come UN filtro, come gli stati o gli autori: il numero di quante sono
-  // sta nel title, per esteso.
+  // sembra sbagliata e niente a schermo che lo dica.
+  //
+  // QUANTE SONO, PERÒ, ADESSO LE CONTA IL BADGE (BUG-080). Contavano come
+  // UN filtro solo, col numero relegato nel title: due colonne diverse e
+  // un «1» sul tastino — «non mi è chiaro come conta i filtri» (l'utente,
+  // 22/08/2026). Il badge conta le DEVIAZIONI, una per una.
   it('le colonne spente accendono il badge dei filtri solo discostandosi dal normale', async () => {
     const utente = userEvent.setup()
     montaCoda()
@@ -1957,12 +1960,13 @@ describe('le corsie del banco: una card per comanda', () => {
     expect(tasto()).toHaveTextContent('1')
     expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (1)'))
 
-    // Riaccendo una di serie spenta: anche quella è una differenza (2) — ma
-    // le colonne restano UN filtro solo, quindi il badge dice ancora 1.
+    // Riaccendo una di serie spenta: è una seconda differenza, e il badge
+    // dice DUE — quello che si vede a schermo e quello che dice il numero
+    // devono tornare a occhio (BUG-080).
     await apriFiltri(utente)
     await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
     await apriFiltri(utente)
-    expect(tasto()).toHaveTextContent('1')
+    expect(tasto()).toHaveTextContent('2')
     expect(tasto()).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
 
     // Torno al normale: tastino grigio, senza badge e senza elenco.
@@ -2001,6 +2005,57 @@ describe('le corsie del banco: una card per comanda', () => {
       'chiusi',
       'annullati',
     ])
+  })
+
+  // ── IL BADGE CONTA QUELLO CHE SI VEDE (BUG-080) ──────────────────
+  //
+  // «Non mi è chiaro come conta i filtri. Secondo me non funziona»
+  // (l'utente, 22/08/2026), con due fotografie della stessa lavagna: sei
+  // colonne a schermo e «▾ Filtri ①», tre colonne e nessun numero.
+  //
+  // I DUE CASI SONO DUE COSE DIVERSE. Quello a sei colonne era il difetto:
+  // le colonne diverse dal normale collassavano in UNA voce, quindi due
+  // colonne riaccese facevano «1». Adesso il badge conta le deviazioni
+  // una per una — chi guarda conta a occhio e ritrova lo stesso numero.
+  it('due colonne riaccese fanno DUE, non una', async () => {
+    const utente = userEvent.setup()
+    montaCoda()
+    await screen.findByText('Da fare')
+
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: '💶 Chiuse', pressed: false }))
+    await utente.click(screen.getByRole('button', { name: '✖️ Annullate', pressed: false }))
+    await apriFiltri(utente)
+
+    // le sei colonne della fotografia
+    for (const id of ['da-fare', 'al-banco', 'al-ritiro', 'ritirati', 'chiusi', 'annullati'])
+      expect(corsia(id)).toBeTruthy()
+
+    const tasto = screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto).toHaveTextContent('2')
+    // il title invece le RAGGRUPPA: i nomi delle colonne sono già le
+    // testate della lavagna, elencarli qui sarebbe leggerli due volte.
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('Colonne (2)'))
+  })
+
+  // L'ALTRA FOTOGRAFIA, invece, il badge ce l'aveva giusto: tre colonne
+  // perché il locale fa nascere le comande già in preparazione — «Da fare»
+  // non la spegne il terminale, non esiste proprio finché è vuota
+  // (`corsieSceglibili`) — e le due dello sguardo all'indietro nascono
+  // spente di serie. Niente di diverso dal normale, niente numero.
+  it('col locale che parte «in preparazione» le tre colonne non sono un filtro', async () => {
+    impostazioni = { ...impostazioni, comande_in_preparazione: true }
+    ordini = CODA.filter((o) => o.workflow_status !== 'ricevuto')
+    montaCoda()
+    await screen.findByText('In preparazione')
+
+    // le tre colonne della fotografia, e «Da fare» che non c'è
+    for (const id of ['al-banco', 'al-ritiro', 'ritirati']) expect(corsia(id)).toBeTruthy()
+    for (const id of ['da-fare', 'chiusi', 'annullati']) expect(corsia(id)).toBeFalsy()
+
+    const tasto = screen.getByRole('button', { name: 'Filtri' })
+    expect(tasto).not.toHaveClass('active')
+    expect(tasto).toHaveAttribute('title', 'Mostra filtri')
   })
 
   it('un conto appena battuto si vede subito, prima ancora del server', async () => {

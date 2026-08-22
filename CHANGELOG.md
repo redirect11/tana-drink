@@ -4,6 +4,25 @@
 
 ### Per chi gestisce
 
+- **Il numero sul tasto «Filtri» conta quello che si vede.** Con due
+  colonne riaccese sulla lavagna del banco diceva «1»: tutte le colonne
+  diverse dal solito valevano un filtro solo — «non mi è chiaro come conta
+  i filtri» (22/08/2026). Adesso conta una per una le cose che stanno
+  diversamente dal normale: due colonne in più fanno **2**, e con lo staff
+  filtrato **3**. Chi guarda può contare a occhio e ritrovare lo stesso
+  numero. **Cosa si conta non cambia**: le differenze dal normale, non i
+  filtri accesi — a terminale mai toccato il tasto resta spento — e ad
+  aprire la fila il numero sparisce, perché i tasti accesi si vedono da
+  sé. Fermandosi sul tasto, l'elenco per esteso è sempre lì, con le
+  colonne raggruppate («Colonne (2)»): i loro nomi sono già le testate
+  della lavagna.
+
+- **«📅 Solo oggi» adesso si vede anche fuori dalla griglia.** Accendendolo
+  fra i conti e passando alle comande, la coda restava tagliata dei giorni
+  scorsi senza niente a schermo che lo dicesse e senza un tasto per
+  rimetterla a posto. Ora il tasto lo si ritrova acceso dov'è acceso, e il
+  numero sui filtri lo conta in tutte le viste.
+
 - **Nel conto, la maniglia del piede sta più vicina al totale.** Fra la
   maniglia e la riga del Totale c'era più vuoto della riga stessa, e tirando
   su la maniglia per ingrandire i tasti quel vuoto cresceva insieme a loro.

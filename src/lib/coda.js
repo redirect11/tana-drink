@@ -553,10 +553,35 @@ export function statiDaFiltro(filtro) {
 // schermo che lo dica). QUALI siano lo dice il title (`spiegaFiltri`), che
 // larghezza non ne costa: in 44px non ci sta un nome, ci sta una cifra.
 //
-// IL NUMERO NON HA UNA FUNZIONE SUA: c'era una `contaFiltri` che filtrava
-// via i vuoti e contava, ma chi la chiamava l'elenco già pulito ce l'aveva
-// in mano — è `.length`, e una funzione per dirlo è un giro in più da
-// leggere.
+// IL NUMERO CONTA LE DEVIAZIONI, NON I GENERI (BUG-080). «Non mi è chiaro
+// come conta i filtri. Secondo me non funziona» (l'utente, 22/08/2026),
+// con la fotografia di una lavagna a sei colonne e un «▾ Filtri ①»: due
+// colonne riaccese a mano, e un uno. Tutte le colonne diverse dal normale
+// collassavano in UNA voce, e il badge contava le voci. Chi guarda conta a
+// occhio quello che vede — due colonne in più, lo staff filtrato — e deve
+// ritrovare lo stesso numero, o smette di fidarsi del numero.
+//
+// UNA LISTA SOLA PER IL BADGE E PER IL TITLE, o sono due verità sulla
+// stessa cosa e prima o poi divergono — il numero da una parte, i nomi
+// dall'altra. Una voce è un nome secco («Chiusi», «Solo oggi») e vale UNO,
+// oppure un gruppo che porta quante deviazioni tiene dentro
+// (`{ nome: 'Colonne', quante: 3 }`): il badge somma, il title raggruppa.
+//
+// A FILA APERTA NON SI CONTA NIENTE, e la regola sta qui e non nella
+// pagina: i chip accesi si vedono da sé, e ripetere col numero quello che
+// è già a schermo è rumore. Il gemello `spiegaFiltri` prende lo stesso
+// «aperti» per la stessa ragione.
+export function contaFiltri(accesi = [], aperti = false) {
+  if (aperti) return 0
+  return (accesi || []).reduce(
+    (n, v) => n + (typeof v === 'string' ? 1 : Number(v?.quante) || 0),
+    0
+  )
+}
+
+// Come si legge una voce nell'elenco per esteso: un gruppo dice quante ne
+// tiene, e resta una riga sola.
+const nomeFiltro = (v) => (typeof v === 'string' ? v : `${v.nome} (${v.quante})`)
 
 // IL NOME DEL TASTO È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va bene,
 // deve essere "mostra filtri"» (l'utente, 20/08). Il tasto non filtra: apre
@@ -571,10 +596,17 @@ export function statiDaFiltro(filtro) {
 // ARRIVA GIÀ PULITO: chi chiama compone l'elenco con dei `&&` e lo ripulisce
 // una volta — rifiltrarlo qui dentro era la seconda passata sulla stessa
 // lista, e faceva sembrare che i due posti potessero non essere d'accordo.
+//
+// LE COLONNE QUI RESTANO RAGGRUPPATE — «Colonne (3)» — anche se nel badge
+// contano tre. I loro nomi sono le TESTATE DELLA LAVAGNA, già a schermo:
+// elencarli qui vorrebbe dire leggerli due volte, e una riga di sei titoli
+// annegherebbe i filtri che un nome a schermo non ce l'hanno (lo staff, le
+// porzioni dei chiusi). Il numero è lo stesso che somma il badge — stessa
+// lista, letta in due modi.
 export function spiegaFiltri(accesi = [], aperti = false) {
   if (aperti) return 'Nascondi filtri'
   if (accesi.length === 0) return 'Mostra filtri'
-  return `Mostra filtri — accesi: ${accesi.join(', ')}`
+  return `Mostra filtri — accesi: ${accesi.map(nomeFiltro).join(', ')}`
 }
 
 // ── IL VERSO DELLA CODA, IN UNA FRECCIA E TRE PAROLE ─────────────────

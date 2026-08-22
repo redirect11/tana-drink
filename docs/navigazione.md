@@ -198,7 +198,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   **Da chiuso il tastino non nasconde lo stato**: si accende e porta il
   numero di **quanto la coda è filtrata diversamente da come si apre** —
   non dei filtri accesi, che con gli stati combinabili è sempre almeno uno
-  e non distinguerebbe niente. Quali siano lo dice il titolo, dopo il nome
+  e non distinguerebbe niente. Le conta **una per una**, non per genere:
+  tre colonne diverse dal solito fanno tre, e con lo staff filtrato
+  quattro. Contarle per genere dava «tre colonne in meno e un uno» —
+  «non mi è chiaro come conta i filtri» (l'utente, 22/08/2026) — e chi non
+  ritrova a occhio il numero che vede smette di guardarlo. Quali siano lo dice il titolo, dopo il nome
   del tasto — che è **«Mostra filtri»** e **«Nascondi filtri»**, cioè
   quello che il tasto fa. A fila **aperta** il numero sparisce: i chip
   accesi si vedono da sé.
