@@ -3065,3 +3065,60 @@ bugs:
       - tests/unit/coda.test.js
       - tests/component/CodaCorsie.test.jsx
       - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-081
+    title: "Sui temi chiari il testo su fondo tinto spariva: i passi della comanda, e non solo"
+    area: "src/index.css"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Il colore verde del testo non
+      si legge bene sullo sfondo verde qui». Lo screenshot e' il dettaglio
+      comanda, la fila dei passi in cima — Da fare, In preparazione,
+      Pronto, Servito: i riquadri gia' fatti sono verdi e le scritte
+      dentro erano verde-menta, quasi invisibili. Sotto ogni nome c'e'
+      anche l'ora, che spariva allo stesso modo.
+      LA CAUSA. `.step.done` scriveva `color: #c8f7da`, un pastello nato
+      per il tema SCURO — dove un testo chiaro su un velo verde si stacca.
+      Sul chiaro quel pallido finisce su un fondo altrettanto chiaro:
+      1,03:1 misurato su «chiaro» e «Pico chiaro», 1,05 su «crema», 1,14
+      su «Catppuccin chiaro». E' la stessa famiglia di BUG-065 un piano
+      piu' in su — li' erano il velo e il bordo bianchi a dare per
+      scontato lo scuro, qui e' l'inchiostro.
+      NON ERA UN CASO SOLO. Passando in rassegna i pastelli cablati del
+      foglio, misurati in Chrome su tutti e otto i preset di themes.js:
+      l'ora dentro un passo stava a 1,03 sul passo IN CORSO (--muted sul
+      dorato dei tasti) e sotto 4,5 su sei temi su otto, SCURI COMPRESI;
+      il numero dentro un chip acceso dell'inventario («scarsi 7») teneva
+      la sua tinta d'allarme sul fondo dell'azione, 1,2:1 su TUTTI e otto
+      i temi — il caso peggiore del foglio — e l'etichetta accanto stava a
+      `#fff` secco, 1,7:1 sul dorato di casa; la pill dei turni in corso e
+      quella dei conti chiusi erano copie di quella del «pronto» ma senza
+      la sua variante chiara, e sparivano a 1,02:1; i numeri in perdita
+      (`.neg`) stavano a 2,0:1 su bianco; la pill «pagato» scriveva con
+      --accent-2, che cambia col tema, e faceva 2,3:1 su Catppuccin chiaro
+      (e su Pico era azzurra, come «in preparazione»).
+      LA CURA, e la regola che ne resta. I passi prendono i gettoni:
+      --tile-bg per il riquadro spento (era un velo bianco), --ok mescolato
+      con --card per quello fatto, --text per il nome, e l'ora eredita
+      l'inchiostro del suo riquadro invece di essere --muted — dentro un
+      passo non c'e' testo di servizio, quei minuti dicono se il ticket e'
+      fermo. Nascono due gettoni con la loro variante chiara,
+      --testo-rosso e --testo-ambra, che raccolgono sei pastelli scritti a
+      mano. La regola generale sta in DESIGN.md — «un inchiostro chiaro
+      cablato non sta su un fondo tinto: o un gettone, o la sua regola
+      gemella [data-luma='light']» — insieme alle soglie, che prima erano
+      sottintese: 4,5:1 per il testo normale, 3:1 per quello grande e per
+      --muted. La sorveglia tests/unit/css.test.js leggendo il foglio
+      regola per regola.
+      COSA RESTA SOTTO 4,5 E PERCHE'. Le pill «ritirato» (3,16 su Pico
+      scuro) e «al banco» (3,40): sono --muted su un neutro, gli stati che
+      devono recedere, nessun pastello cablato, e stanno sopra il 3:1 del
+      testo secondario.
+      SUL TEMA SCURO NON PEGGIORA NIENTE: ogni riga misurata e' uguale o
+      migliore di prima.
+    labels: [bug, ui, tema, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js

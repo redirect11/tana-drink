@@ -636,12 +636,11 @@ a.btn.block {
   font-size: 0.68rem;
   font-weight: 600;
 }
-.pill.live {
-  background: rgba(46, 204, 113, 0.22);
-  color: #9ff5c0;
-}
+/* Un numero in perdita, o una riga sotto il prezzo minimo. Sta su una
+   superficie nuda (una tabella dentro una card), non su un fondo tinto:
+   il pastello cablato di prima sul tema chiaro dava 2,0:1 su bianco. */
 .neg {
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 /* Pill con la SOLA icona (es. 💳 sulla card ordine): tonda e con l'icona
@@ -657,7 +656,14 @@ a.btn.block {
   background: rgba(52, 152, 219, 0.2);
   color: #9ad0ff;
 }
-.pill.pronto {
+/* IL VERDE DEL «È FATTO», in tre posti che dicono la stessa cosa: la
+   comanda è pronta, il turno è in corso, il conto del gruppo è chiuso.
+   Erano tre regole identiche scritte in tre punti del foglio, e solo
+   questa aveva la variante chiara: le altre due sparivano sul chiaro
+   (1,02:1). Un elenco solo, così la prossima non nasce già rotta. */
+.pill.pronto,
+.pill.live,
+.pill.chiuso {
   background: rgba(46, 204, 113, 0.22);
   color: #9ff5c0;
 }
@@ -665,9 +671,14 @@ a.btn.block {
   background: rgba(255, 255, 255, 0.12);
   color: var(--muted);
 }
+/* PAGATO. L'inchiostro era --accent-2, che cambia col tema: sui chiari e'
+   un ambra scuro su un velo d'ambra chiaro (3,3:1) e su Catppuccin chiaro
+   un pesca acceso sullo stesso velo (2,3:1). Lo stato di un ordine non
+   cambia colore fra un tema e l'altro (guardrail 5): la tinta è l'ambra
+   del gettone, la forza segue il fondo. */
 .pill.pagato {
   background: rgba(245, 185, 74, 0.2);
-  color: var(--accent-2);
+  color: var(--testo-ambra);
 }
 /* Stato dell'ORDINE (conto): aperto finché non viene incassato. */
 .pill.aperto {
@@ -676,7 +687,7 @@ a.btn.block {
 }
 .pill.annullato {
   background: rgba(244, 67, 54, 0.18);
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 .menu-item h3 {
@@ -732,11 +743,11 @@ a.btn.block {
 }
 .badge-low {
   background: rgba(255, 193, 7, 0.18);
-  color: #ffd54f;
+  color: var(--testo-ambra);
 }
 .badge-empty {
   background: rgba(244, 67, 54, 0.2);
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 /* ── Inventario: vista compatta ─────────────────────────────── */
@@ -835,14 +846,21 @@ a.btn.block {
   color: var(--btn-ink);
 }
 .chip.warn strong {
-  color: #ffd54f;
+  color: var(--testo-ambra);
 }
 .chip.danger strong {
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
+/* IL CHIP ACCESO HA IL FONDO DELL'AZIONE, e dentro ci va l'inchiostro del
+   tasto — anche il numero. Era `#fff` secco: sul dorato di casa faceva
+   1,7:1, e il numero dentro teneva comunque la sua tinta d'allarme (1,2:1
+   su TUTTI e otto i temi, il caso peggiore del foglio). --btn-ink è già
+   deciso dalla luminanza del colore d'azione, tema per tema. */
 .chip.warn.active,
-.chip.danger.active {
-  color: #fff;
+.chip.danger.active,
+.chip.warn.active strong,
+.chip.danger.active strong {
+  color: var(--btn-ink);
 }
 
 .inv-search {
@@ -1002,14 +1020,37 @@ a.btn.block {
   margin: 14px 0;
 }
 
+/* I PASSI DI UNA COMANDA — «Da fare, In preparazione, Pronto, Servito» —
+   col loro orario sotto. Tre riquadri di fondo, tre inchiostri, e nessuno
+   dei tre dà più per scontato il tema scuro:
+   - il riquadro spento era un velo bianco (invisibile sul chiaro: la
+     stessa famiglia di BUG-065) e adesso è --tile-bg;
+   - il nome del passo era --muted, e su due temi cadeva sotto la soglia:
+     è il nome di quello che si sta facendo, non un'etichetta di servizio;
+   - il riquadro fatto aveva l'inchiostro cablato #c8f7da, verde-menta
+     nato per il fondo scuro: sul chiaro era verde pallido su verde
+     pallido, 1,03:1. «Il colore verde del testo non si legge bene sullo
+     sfondo verde qui» (l'utente, 22/08/2026).
+   Il verde del fatto resta lo stesso di prima (--ok al 25%), ma mescolato
+   con --card invece che sovrapposto: la fermata è un colore opaco e il
+   contrasto misurato è quello che si vede davvero. */
 .step {
   flex: 1;
   text-align: center;
   padding: 10px 6px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tile-bg);
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--text);
+}
+
+/* L'ORA DENTRO UN PASSO NON È TESTO DI SERVIZIO: sono i minuti che dicono
+   se il ticket è fermo da un quarto d'ora. Su un fondo tinto --muted
+   cadeva sotto la soglia su sei temi su otto — fino a 1,03:1 sul passo in
+   corso, dove il fondo è il dorato dei tasti — e la gerarchia col nome la
+   fa già la misura del carattere. */
+.step .muted {
+  color: inherit;
 }
 
 .step.active {
@@ -1019,8 +1060,8 @@ a.btn.block {
 }
 
 .step.done {
-  background: rgba(46, 204, 113, 0.25);
-  color: #c8f7da;
+  background: color-mix(in srgb, var(--ok) 25%, var(--card));
+  color: var(--text);
 }
 
 input,
@@ -4179,7 +4220,6 @@ body.fullbleed,
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .groups-panel .group-row:last-child { border-bottom: none; }
-.pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
 
 /* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
 /* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso.
@@ -5138,11 +5178,23 @@ body.fullbleed,
      restare i più forti — ma PRESENTE. Definito qui una volta sola: segue
      il tema perché segue --muted. */
   --strip-spenta: var(--muted);
+  /* L'INCHIOSTRO D'ALLARME E QUELLO D'ATTENZIONE. Il rosso di un numero in
+     perdita, l'ambra di una scorta agli sgoccioli: la TINTA non cambia col
+     tema — è memoria del banco (guardrail 5) — ma la sua forza sì. I
+     pastelli qui sotto sono nati per il fondo scuro; sul chiaro sparivano,
+     ed erano scritti a mano in mezza dozzina di regole, ognuna con la sua
+     variante chiara — o senza, ed è lì che si stava a 2:1 (.neg e i numeri
+     dei chip dell'inventario). Un gettone solo, la variante chiara
+     accanto, come --line e --strip-spenta. */
+  --testo-rosso: #ff8a80;
+  --testo-ambra: #ffd54f;
 }
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
   --tile-bg: rgba(0, 0, 0, 0.05);
   --velo-superficie: none;
+  --testo-rosso: #b02a37;
+  --testo-ambra: #7a5c00;
 }
 :root[data-luma='light'] .pill.aperto {
   background: rgba(46, 204, 113, 0.2);
@@ -5150,7 +5202,6 @@ body.fullbleed,
 }
 :root[data-luma='light'] .pill.annullato {
   background: rgba(244, 67, 54, 0.14);
-  color: #b02a37;
 }
 :root[data-luma='light'] .pill.ricevuto {
   background: rgba(243, 156, 18, 0.18);
@@ -5160,7 +5211,9 @@ body.fullbleed,
   background: rgba(52, 152, 219, 0.16);
   color: #0b5cad;
 }
-:root[data-luma='light'] .pill.pronto {
+:root[data-luma='light'] .pill.pronto,
+:root[data-luma='light'] .pill.live,
+:root[data-luma='light'] .pill.chiuso {
   background: rgba(46, 204, 113, 0.18);
   color: #157347;
 }
@@ -5176,11 +5229,9 @@ body.fullbleed,
 }
 :root[data-luma='light'] .badge-low {
   background: rgba(255, 193, 7, 0.22);
-  color: #7a5c00;
 }
 :root[data-luma='light'] .badge-empty {
   background: rgba(244, 67, 54, 0.15);
-  color: #b02a37;
 }
 :root[data-luma='light'] .btn.ghost {
   border-color: rgba(0, 0, 0, 0.25);

@@ -23,6 +23,23 @@
   rimetterla a posto. Ora il tasto lo si ritrova acceso dov'è acceso, e il
   numero sui filtri lo conta in tutte le viste.
 
+- **Sui temi chiari il testo non sparisce più dentro i riquadri colorati.**
+  Nel dettaglio di una comanda i passi già fatti sono verdi, e la scritta
+  dentro era verde pallido: «il colore verde del testo non si legge bene
+  sullo sfondo verde qui». Adesso il nome del passo e **l'ora sotto**
+  prendono il colore del testo normale, su tutti i temi — e l'ora si legge
+  anche sul passo in corso, dove il riquadro è dorato e prima era quasi
+  invisibile su ogni tema, scuri compresi.
+  Cercando lo stesso difetto altrove sono venuti fuori: il **numero dentro
+  un riquadro acceso** dell'inventario («scarsi 7», «finiti 3»), che non si
+  leggeva su nessun tema; le pastiglie **«in corso»** del registro ore e
+  **«chiuso»** dei gruppi, che sparivano sui temi chiari; i **numeri in
+  perdita**, rosso pallido su bianco; e la pastiglia **«pagato»**, che
+  cambiava colore col tema — su Pico era azzurra come «in preparazione», e
+  adesso è ambra ovunque, come lo stato vuole.
+  Sui temi scuri, quelli che si usano al banco, non è cambiato in peggio
+  niente: ogni riga è stata rimisurata in un browser vero, tema per tema.
+
 - **Nel conto, la maniglia del piede sta più vicina al totale.** Fra la
   maniglia e la riga del Totale c'era più vuoto della riga stessa, e tirando
   su la maniglia per ingrandire i tasti quel vuoto cresceva insieme a loro.

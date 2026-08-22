@@ -1100,3 +1100,199 @@ ${nome} {`)
     expect(Number(pad[1]), 'sopra la maniglia bastano pochi pixel').toBeLessThanOrEqual(4)
   })
 })
+
+// ── UN TESTO SU FONDO TINTO NON PORTA UN PASTELLO CABLATO ────────────
+//
+// «Il colore verde del testo non si legge bene sullo sfondo verde qui»
+// (l'utente, 22/08/2026): i passi del dettaglio comanda, dove i riquadri
+// fatti erano verdi e le scritte dentro verde-menta (#c8f7da). Quel
+// pastello è nato per il tema scuro, dove un testo chiaro su un velo
+// verde si stacca; sul chiaro finiva su un fondo altrettanto chiaro e
+// spariva — 1,03:1, misurato in Chrome sui preset di themes.js.
+//
+// È la stessa famiglia di BUG-065, un piano più in su: lì il velo e il
+// bordo bianchi davano per scontato lo scuro, qui è l'inchiostro. E non
+// era un caso solo: la pill dei turni in corso, quella dei conti chiusi,
+// i numeri dei chip dell'inventario, i numeri in perdita.
+//
+// LA REGOLA (DESIGN.md): un inchiostro chiaro cablato non sta su un fondo
+// tinto. O viene da un gettone che ha la sua variante chiara
+// (--text, --muted, --btn-ink, --testo-rosso, --testo-ambra), o la regola
+// ha accanto la sua `:root[data-luma='light']`, che è come il foglio
+// tratta le pill degli stati da sempre.
+describe('nessun inchiostro chiaro cablato su un fondo tinto', () => {
+  // Qui NON si usa `nudo`: quella svuota anche le stringhe, e i selettori
+  // che contano — `[data-luma='light']` — sono fatti di stringhe.
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+
+  // Le regole "foglia" del foglio: prelude + corpo, saltando le graffe
+  // degli at-rule (@media, @container, @supports), che non dichiarano
+  // niente di loro.
+  function regoleFoglia(testo) {
+    const trovate = []
+    let profondita = 0
+    let apertura = -1
+    let dopoUltima = 0
+    for (let i = 0; i < testo.length; i++) {
+      const c = testo[i]
+      if (c === '{') {
+        if (profondita === 0) apertura = i
+        profondita++
+      } else if (c === '}') {
+        profondita--
+        if (profondita === 0) {
+          trovate.push({
+            prelude: testo.slice(dopoUltima, apertura).trim(),
+            corpo: testo.slice(apertura + 1, i),
+          })
+          dopoUltima = i + 1
+        }
+      }
+    }
+    // Un at-rule contiene altre regole: si guarda dentro, non lui.
+    return trovate.flatMap((r) => (r.prelude.startsWith('@') ? regoleFoglia(r.corpo) : [r]))
+  }
+
+  // Luminanza relativa WCAG: sopra 0,25 è un colore da fondo scuro (i
+  // pastelli sono tutti ben oltre; #157347 e #b02a37, gli inchiostri
+  // scuri delle varianti chiare, stanno sotto 0,1).
+  function chiaro(hex) {
+    const pieno = hex.length === 4 ? hex.slice(1).replace(/./g, (d) => d + d) : hex.slice(1)
+    const n = parseInt(pieno, 16)
+    const canali = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * canali[0] + 0.7152 * canali[1] + 0.0722 * canali[2] > 0.25
+  }
+
+  const regole = regoleFoglia(css)
+
+  it('il foglio si lascia leggere: le regole si contano', () => {
+    expect(regole.length).toBeGreaterThan(500)
+  })
+
+  it('e chi tinge il proprio fondo scrive il testo col gettone, o ha la sua variante chiara', () => {
+    // Un fondo "tinto" è quello da cui il TEMA traspare: velature colorate,
+    // mescole coi gettoni, il gradiente dell'azione. Se la pila ha sotto un
+    // colore pieno — `#1c0709`, `linear-gradient(#2f6bd8, #3f7ce0)` — quello
+    // che si vede non dipende dal tema e un bianco sopra ci sta benissimo:
+    // è il tasto blu dell'incasso, non un difetto.
+    // Bianchi e neri trasparenti sono l'ALTRO difetto (BUG-065) e hanno già
+    // i loro test qui sopra: quello che si guarda qui è l'inchiostro.
+    const tinto = (corpo) => {
+      const m = /background(?:-color)?:((?:[^;{}]|\([^)]*\))*)/.exec(corpo)
+      if (!m) return false
+      const valore = m[1]
+      if (/#[0-9a-fA-F]{3,8}\b/.test(valore)) return false
+      if (/\brgb\(|rgba\([^)]*,\s*1\s*\)/.test(valore)) return false
+      return /rgba\(\s*(?!255,\s*255,\s*255|0,\s*0,\s*0)\d|color-mix|var\(--btn-bg\)/.test(valore)
+    }
+    const pastello = (corpo) => {
+      const m = /(?:^|[;{])\s*color:\s*(#[0-9a-fA-F]{3,8})\s*(?:!important)?\s*(?:;|$)/m.exec(corpo)
+      return m && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(m[1]) && chiaro(m[1]) ? m[1] : null
+    }
+
+    const scoperte = []
+    for (const r of regole) {
+      if (r.prelude.includes("data-luma='light'")) continue
+      if (!tinto(r.corpo)) continue
+      const ink = pastello(r.corpo)
+      if (!ink) continue
+      // OGNI selettore della regola deve avere la sua variante chiara, non
+      // uno solo: quando una pill si accoda a un elenco già coperto
+      // (`.pill.pronto, .pill.live, .pill.chiuso`) è proprio lì che ci si
+      // dimentica di elencarla anche di sotto — ed è così che «in corso» e
+      // «chiuso» sono nate scoperte.
+      const coperta = r.prelude
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .every((sel) =>
+          new RegExp(
+            ":root\\[data-luma='light'\\] " +
+              sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+              '[\\s,{]'
+          ).test(css)
+        )
+      if (!coperta) scoperte.push(r.prelude + ' → color: ' + ink)
+    }
+    expect(
+      scoperte,
+      'inchiostro chiaro cablato su fondo tinto, senza variante per i temi chiari'
+    ).toEqual([])
+  })
+
+  it('i due gettoni d’allarme hanno la loro variante chiara', () => {
+    for (const gettone of ['--testo-rosso', '--testo-ambra']) {
+      expect(css, gettone + ' non è dichiarato').toMatch(
+        new RegExp(':root \\{[^{}]*?' + gettone + ':\\s*#')
+      )
+      expect(css, gettone + ' non ha la variante per i temi chiari').toMatch(
+        new RegExp("\\[data-luma='light'\\] \\{[^{}]*?" + gettone + ':\\s*#')
+      )
+    }
+  })
+})
+
+// ── I PASSI DI UNA COMANDA SI LEGGONO SU TUTTI I TEMI ────────────────
+//
+// Il caso da cui è nata la regola qui sopra. Tre riquadri — da fare, in
+// corso, fatto — e sotto ogni nome l'ora: al banco quei minuti dicono se
+// il ticket è fermo, e sparivano insieme al nome.
+describe('i passi del dettaglio comanda', () => {
+  const css = nudo(readFileSync(join(CARTELLA, 'index.css'), 'utf8'))
+  const regola = (nome) => {
+    const i = css.indexOf('\n' + nome + ' {')
+    expect(i, nome + ' non c’è più').toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('il riquadro spento è un gettone, non un velo bianco', () => {
+    const r = regola('.step')
+    expect(r, 'un velo bianco sul tema chiaro non si vede').not.toMatch(/rgba\(255,\s*255,\s*255/)
+    expect(r).toMatch(/background:\s*var\(--tile-bg\)/)
+  })
+
+  it('il nome del passo è testo primario: dice cosa si sta facendo', () => {
+    const r = regola('.step')
+    expect(r).toMatch(/color:\s*var\(--text\)/)
+    expect(r, '--muted qui cadeva sotto 4:1 su due temi').not.toMatch(/color:\s*var\(--muted\)/)
+  })
+
+  it('il passo fatto tinge il fondo col gettone --ok e scrive col testo', () => {
+    const r = regola('.step.done')
+    expect(r).toMatch(/color-mix\(in srgb, var\(--ok\) \d+%, var\(--card\)\)/)
+    expect(r).toMatch(/color:\s*var\(--text\)/)
+    expect(r, 'era #c8f7da: verde pallido su verde pallido').not.toMatch(/color:\s*#/)
+  })
+
+  it('e l’ora sotto prende l’inchiostro del suo riquadro, non lo sbiadito', () => {
+    // Dentro il passo in corso il fondo è il dorato dei tasti: --muted ci
+    // finiva sopra a 1,03:1.
+    expect(regola('.step .muted')).toMatch(/color:\s*inherit/)
+  })
+})
+
+// ── IL NUMERO DENTRO UN CHIP ACCESO ─────────────────────────────────
+//
+// I chip riassuntivi dell'inventario («scarsi 7», «finiti 3»): acceso, il
+// chip prende il fondo dell'azione, e lì dentro il numero teneva la sua
+// tinta d'allarme — 1,2:1 su tutti e otto i temi, il caso peggiore del
+// foglio. L'etichetta accanto stava a `#fff` secco, che sul dorato di
+// casa fa 1,7:1.
+describe('i chip accesi dell’inventario', () => {
+  const css = nudo(readFileSync(join(CARTELLA, 'index.css'), 'utf8'))
+
+  it('scrivono tutto con --btn-ink, numero compreso', () => {
+    const i = css.indexOf('.chip.warn.active,')
+    expect(i, 'la regola dei chip accesi non c’è più').toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('}', i))
+    expect(blocco, 'il numero dentro il chip acceso resta scoperto').toMatch(
+      /\.chip\.warn\.active strong/
+    )
+    expect(blocco).toMatch(/\.chip\.danger\.active strong/)
+    expect(blocco).toMatch(/color:\s*var\(--btn-ink\)/)
+    expect(blocco, '#fff sul dorato dei tasti fa 1,7:1').not.toMatch(/color:\s*#/)
+  })
+})
