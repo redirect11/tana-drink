@@ -2992,6 +2992,34 @@ body.bar-wide .app {
   padding: 6px 10px;
   font-size: 0.95rem;
 }
+/* LA RIGA È UNA SOLA, e porta due cose diverse: a sinistra i gettoni che
+   decidono DI COSA parla una riga (serata, settimana, mese), a destra il
+   campo con cui si SALTA a una serata. Ai due capi perché sono due domande
+   distinte — e appoggiandosi a una riga che c'era già non costano altezza
+   alla lista, che è la cosa per cui la pagina esiste.
+   Stretto vanno a capo, e allora il campo torna a filo a sinistra: spinto a
+   destra su una riga tutta sua sarebbe appeso nel vuoto. */
+.cerca-serata-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .cerca-serata-data { margin-left: 0; }
+}
+/* LE SERATE DENTRO UNA RIGA AGGREGATA sono le righe di sempre, non un
+   secondo tipo di lista: stessa famiglia, stessa altezza del bersaglio,
+   stesso dettaglio che scende sotto. Quello che si toglie è il riquadro —
+   un bordo dentro un bordo disegna una scatola dentro la scatola, e la
+   settimana non è un contenitore: è la somma delle sue sere. Resta il
+   filo in cima, che dice dove finisce il totale e cominciano le serate. */
+.inv-sotto-lista {
+  margin-top: 0;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
 .cerca-serata-esito {
   margin: 0 0 8px;
 }

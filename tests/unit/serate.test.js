@@ -13,6 +13,11 @@ import {
   giornoDellaSerata,
   serataDelGiorno,
   limitiRicercaSerate,
+  raggruppaSerate,
+  periodoDellaSerata,
+  chiaveSettimana,
+  chiaveMese,
+  etichettaPeriodo,
 } from '../../src/lib/serate.js'
 
 const conto = (id, at, total, extra = {}) => ({
@@ -199,5 +204,181 @@ describe('cercare una serata per data', () => {
     expect(limitiRicercaSerate()).toEqual({ dal: null, al: null })
     // Una sessione senza apertura non è una serata e non ha un giorno.
     expect(giornoDellaSerata({ id: 'rotta' })).toBe(null)
+  })
+})
+
+// ── SETTIMANE E MESI ─────────────────────────────────────────────────
+//
+// «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare quelle
+// settimanali o mensili oltre che per data» (l'utente, 22/08/2026). Con la
+// lista per serata a «com'è andato agosto?» si risponde sommando a mente
+// trenta righe.
+//
+// I due punti delicati sono il BORDO DELLA SETTIMANA (comincia di lunedì:
+// venerdì, sabato e domenica — le tre sere che fanno l'incasso — devono
+// cadere insieme) e il BORDO DELLA NOTTE (una cassa aperta alle 02:20 è
+// ancora la serata di ieri, quindi la settimana di ieri).
+describe('raggruppare le serate per settimana e per mese', () => {
+  const perSettimana = (ss) => raggruppaSerate(ss, { raggruppamento: 'settimana' })
+  const perMese = (ss) => raggruppaSerate(ss, { raggruppamento: 'mese' })
+
+  // Venerdì 7, sabato 8 e domenica 9 agosto 2026: lo STESSO fine settimana.
+  it('la settimana comincia di lunedì, quindi la domenica sta col suo sabato', () => {
+    const gruppi = perSettimana([s7, s8, aperta])
+    expect(gruppi.length).toBe(1)
+    // Col lunedì in testa la chiave è il lunedì 3 agosto. Con la domenica in
+    // testa la serata del 9 finirebbe in una riga sua, staccata dal sabato.
+    expect(gruppi[0].chiave).toBe('2026-08-03')
+    expect(gruppi[0].nSerate).toBe(3)
+    expect(gruppi[0].etichetta).toBe('3–9 ago')
+  })
+
+  it('e il lunedì apre la settimana dopo, non chiude quella prima', () => {
+    const lunedi = {
+      id: 'lun',
+      status: 'closed',
+      opened_at: '2026-08-10T17:00:00.000Z', // lunedì 10, ore 19:00
+      closed_at: '2026-08-10T23:00:00.000Z',
+      snapshot: { incassato: 200 },
+    }
+    expect(perSettimana([s8, lunedi]).map((g) => g.chiave)).toEqual([
+      '2026-08-10',
+      '2026-08-03',
+    ])
+  })
+
+  // IL BORDO DELLA NOTTE. Una cassa aperta lunedì 10 alle 02:20 è la coda
+  // della serata di domenica 9: sta nella settimana di domenica. Se il taglio
+  // fosse quello solare, quell'incasso salterebbe nella settimana dopo — e
+  // due settimane confrontate sarebbero tutte e due sbagliate.
+  it('una serata aperta dopo mezzanotte resta nella settimana della sua nottata', () => {
+    const notturna = {
+      id: 'notturna',
+      status: 'closed',
+      opened_at: '2026-08-10T00:20:00.000Z', // 02:20 di lunedì in Italia
+      closed_at: '2026-08-10T02:00:00.000Z',
+      snapshot: { incassato: 80 },
+    }
+    const gruppi = perSettimana([s8, notturna])
+    expect(gruppi.length).toBe(1)
+    expect(gruppi[0].chiave).toBe('2026-08-03')
+    expect(periodoDellaSerata(notturna, 'settimana')).toBe('2026-08-03')
+    // E lo stesso per il mese: la nottata del 9 è di agosto, non del 10.
+    expect(periodoDellaSerata(notturna, 'mese')).toBe('2026-08')
+  })
+
+  // I NUMERI DELLA RIGA AGGREGATA: quante serate, quanto in tutto, e quanto a
+  // serata. La media è quella che rende confrontabili due settimane di
+  // lunghezza diversa — cinque aperture contro tre fanno totali diversi per un
+  // motivo che non c'entra con com'è andata la sera.
+  it('somma gli incassi, conta le serate e ne fa la media a serata', () => {
+    const [g] = perSettimana([s7, s8])
+    expect(g.incasso).toBe(1149) // 999 + 150, dai numeri congelati alla chiusura
+    expect(g.nSerate).toBe(2)
+    expect(g.media).toBe(574.5)
+  })
+
+  // La serata di stasera non ha snapshot: nasce alla chiusura. Contarla come
+  // zero abbasserebbe la media di tutta la settimana.
+  it('la serata ancora aperta non entra nel totale né nella media, e la riga lo dice', () => {
+    const [g] = perSettimana([s7, s8, aperta])
+    expect(g.nSerate).toBe(3)
+    expect(g.incasso).toBe(1149)
+    expect(g.serateContate).toBe(2)
+    expect(g.media).toBe(574.5)
+    expect(g.inCorso).toBe(true)
+    // Senza serate aperte la riga non lo dice.
+    expect(perSettimana([s7, s8])[0].inCorso).toBe(false)
+  })
+
+  // Una settimana può stare a cavallo di due mesi: resta UNA riga, e i suoi
+  // giorni finiscono nei mesi giusti quando si guarda per mese.
+  it('una settimana a cavallo di due mesi è una riga sola, e i mesi restano distinti', () => {
+    const ven31lug = {
+      id: 'l31',
+      status: 'closed',
+      opened_at: '2026-07-31T17:00:00.000Z',
+      closed_at: '2026-07-31T23:00:00.000Z',
+      snapshot: { incassato: 300 },
+    }
+    const sab1ago = {
+      id: 'a1',
+      status: 'closed',
+      opened_at: '2026-08-01T17:00:00.000Z',
+      closed_at: '2026-08-01T23:00:00.000Z',
+      snapshot: { incassato: 500 },
+    }
+    const [settimana] = perSettimana([ven31lug, sab1ago])
+    expect(settimana.chiave).toBe('2026-07-27')
+    expect(settimana.nSerate).toBe(2)
+    expect(settimana.incasso).toBe(800)
+    // L'etichetta scrive tutti e due i mesi: «27–2 ago» sarebbe falso.
+    expect(settimana.etichetta).toBe('27 lug – 2 ago')
+
+    const mesi = perMese([ven31lug, sab1ago])
+    expect(mesi.map((g) => g.chiave)).toEqual(['2026-08', '2026-07'])
+    expect(mesi.map((g) => g.incasso)).toEqual([500, 300])
+    expect(mesi[0].etichetta).toBe('agosto 2026')
+  })
+
+  // Il locale chiude per ferie, o salta una settimana: quella settimana non è
+  // una riga a zero — che si leggerebbe come «è andata male» — semplicemente
+  // non c'è.
+  it('le settimane e i mesi senza chiusure non compaiono', () => {
+    const vecchia = {
+      id: 'giugno',
+      status: 'closed',
+      opened_at: '2026-06-06T17:00:00.000Z',
+      closed_at: '2026-06-06T23:00:00.000Z',
+      snapshot: { incassato: 100 },
+    }
+    // Fra giugno e agosto c'è luglio, e non è una riga.
+    expect(perMese([s8, vecchia]).map((g) => g.chiave)).toEqual(['2026-08', '2026-06'])
+    expect(perSettimana([s8, vecchia]).length).toBe(2)
+  })
+
+  it('il periodo più recente sta in cima, e dentro le serate più recenti prima', () => {
+    const gruppi = perSettimana([s7, aperta, s8])
+    expect(gruppi[0].serate.map((s) => s.id)).toEqual(['s9', 's8', 's7'])
+  })
+
+  it('«serata» non raggruppa niente, e i dati storti non fanno esplodere', () => {
+    expect(raggruppaSerate([s7, s8], { raggruppamento: 'serata' })).toEqual([])
+    expect(raggruppaSerate([s7, s8])).toEqual([])
+    expect(raggruppaSerate([s7, s8], { raggruppamento: 'trimestre' })).toEqual([])
+    expect(raggruppaSerate([], { raggruppamento: 'mese' })).toEqual([])
+    expect(raggruppaSerate(undefined, { raggruppamento: 'mese' })).toEqual([])
+    // Una sessione senza apertura non è una serata e non sta in un periodo.
+    expect(perMese([{ id: 'rotta' }, s8]).length).toBe(1)
+    expect(perMese([{ id: 'rotta' }, s8])[0].nSerate).toBe(1)
+    // Una chiusa senza snapshot vale zero, ma la serata c'è stata: conta.
+    const senzaNumeri = {
+      id: 'muta',
+      status: 'closed',
+      opened_at: '2026-08-08T17:00:00.000Z',
+      closed_at: '2026-08-08T23:00:00.000Z',
+    }
+    const [g] = perSettimana([s8, senzaNumeri])
+    expect(g.nSerate).toBe(2)
+    expect(g.incasso).toBe(150)
+    expect(g.media).toBe(75)
+  })
+
+  it('le chiavi e le etichette reggono il capodanno', () => {
+    // La settimana del 31 dicembre 2026 finisce il 3 gennaio 2027: una riga
+    // sola, e senza il ballo della «settimana 53».
+    expect(chiaveSettimana('2026-12-31')).toBe('2026-12-28')
+    expect(chiaveSettimana('2027-01-01')).toBe('2026-12-28')
+    expect(etichettaPeriodo('2026-12-28', 'settimana')).toBe('28 dic – 3 gen')
+    // Il mese porta l'anno: «gennaio» da solo è la stessa parola ogni anno.
+    expect(etichettaPeriodo('2027-01', 'mese')).toBe('gennaio 2027')
+    expect(chiaveMese('2026-12-31')).toBe('2026-12')
+    expect(chiaveSettimana(null)).toBe(null)
+    expect(chiaveSettimana('boh')).toBe(null)
+    expect(chiaveMese(null)).toBe(null)
+    expect(etichettaPeriodo(null, 'settimana')).toBe('—')
+    expect(periodoDellaSerata({ id: 'rotta' }, 'settimana')).toBe(null)
+    // Senza raggruppamento il periodo di una serata è il suo giorno.
+    expect(periodoDellaSerata(s8, 'serata')).toBe('2026-08-08')
   })
 })

@@ -1668,6 +1668,96 @@ requirements:
       prima chiusura registrata. Escono dalle sessioni GIA' caricate
       (`limitiRicercaSerate`) — nessuna lettura nuova nel percorso di
       disegno, come per tutto il resto della lista.
+      NELLA LISTA RAGGRUPPATA LA RICERCA NON CAMBIA VISTA (22/08/2026, vedi
+      REQ-CASSA-014). Guardando per settimana o per mese, scegliere una data
+      APRE il periodo che contiene quella serata e accende la riga della
+      serata li' dentro — il raggruppamento resta quello che si era scelto.
+      Cambiarlo da soli vorrebbe dire buttare via la vista scelta al primo
+      giorno cercato; cosi' invece si risponde a tutt'e due le domande
+      insieme, «com'e' andata quella sera» e «in che settimana era». La
+      regola e' una sola frase e vale nei tre modi: la ricerca apre il
+      periodo che contiene la serata e la accende — con le serate in fila
+      non c'e' niente da aprire, ed e' il comportamento di sempre.
+      E LA FRASE DICE DOVE GUARDARE, che dentro una riga aggregata non e'
+      piu' ovvio: «evidenziata nella settimana 17–23 ago», «evidenziata in
+      agosto 2026», «evidenziata nell'elenco» quando le serate sono in fila.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases:
+      - tests/unit/serate.test.js
+      - tests/component/CashSessionsList.test.jsx
+
+  - id: REQ-CASSA-014
+    title: "Le chiusure per serata, per settimana o per mese"
+    area: "src/lib/serate.js, src/components/CashSessionsList.jsx"
+    description: >
+      «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare
+      quelle settimanali o mensili oltre che per data» (l'utente,
+      22/08/2026). Con la lista per serata (REQ-CASSA-006) a «com'e' andato
+      agosto?» si risponde sommando a mente trenta righe, e a «questa
+      settimana e' andata meglio della scorsa?» pure.
+      LA LISTA RESTA LA STESSA LISTA: cambia solo di cosa parla una riga —
+      una serata, una settimana o un mese. Stessa famiglia condivisa
+      (`.inv-list`, `.inv-row`, `.inv-row-main`), stessi numeri incolonnati
+      e auto-etichettati, stesso dettaglio che scende sotto la riga.
+      COME SI SCEGLIE: tre gettoni attaccati in un gruppo solo
+      (`.chip-gruppo`, gli stessi dei filtri della coda) — «Serata»,
+      «Settimana», «Mese» — dentro la riga della ricerca per data, che
+      c'e' comunque. A lista aperta non costano una riga a nessuno, e
+      questa pagina esiste per la lista. Non una tendina: con tre voci
+      bisognerebbe aprirla per sapere cosa c'e' dentro
+      (docs/navigazione.md). Non in Impostazioni: la' ci vanno le viste
+      della coda, che si scelgono una volta e non si toccano piu' — questa
+      si cambia MENTRE si guarda. La scelta si ricorda su questo terminale
+      (`tana:chiusure:raggruppamento`).
+      COSA DICE UNA RIGA AGGREGATA: il periodo, quante SERATE contiene,
+      quanto ha INCASSATO in tutto, e la MEDIA A SERATA. La media non e' un
+      di piu': e' l'unico numero con cui due settimane si confrontano
+      davvero, perche' una settimana con cinque aperture e una con tre
+      (Ferragosto, il lunedi' di riposo, una serata privata) hanno totali
+      diversi per un motivo che non c'entra con com'e' andata la sera. E'
+      la stessa struttura della riga per serata — incasso = conti ×
+      scontrino medio — letta un piano piu' su: incasso = serate × media.
+      LA MEDIA SI DIVIDE PER LE SERATE GIA' CHIUSE, non per tutte: quella
+      di stasera non ha ancora un incasso (lo snapshot nasce alla
+      chiusura), e contarla come zero tirerebbe giu' la media di tutta la
+      settimana. Il periodo che contiene una serata aperta porta la
+      pastiglia «in corso» e la striscia verde, che e' anche il motivo per
+      cui il totale non e' ancora quello definitivo — gli stessi due segni
+      della riga per serata, non uno nuovo.
+      TOCCANDO UNA RIGA AGGREGATA SI APRE sulle serate che contiene, e sono
+      le righe di sempre: la settimana si spiega con le sue sere, e da li'
+      si arriva al riepilogo di cassa e al rendiconto per la strada che si
+      conosce gia'. Portare a un dettaglio diverso vorrebbe dire una
+      seconda schermata da imparare per la stessa domanda. Un periodo alla
+      volta, come il dettaglio di una serata: aperti tutti, la lista
+      tornerebbe l'elenco piatto da cui si e' usciti. Cambiando
+      raggruppamento si riparte chiusi.
+      LA SETTIMANA COMINCIA DI LUNEDI'. E' l'uso italiano (e lo standard
+      ISO), ma qui conta soprattutto un fatto del mestiere: per un locale
+      la domenica e' la coda del fine settimana, non l'inizio di quello
+      dopo — col lunedi' in testa venerdi', sabato e domenica cadono nella
+      stessa riga. La chiave e' la data del lunedi', non il numero di
+      settimana: si ordina come una stringa e non porta dietro i casi
+      limite della settimana 53 a cavallo dell'anno.
+      IL BORDO DELLA NOTTE VALE ANCHE QUI: una serata aperta sabato alle
+      19:00 e chiusa all'01:08 appartiene a sabato, quindi alla settimana e
+      al mese di sabato. Il taglio e' quello di `giornoDellaSerata`
+      (businessDay.js), lo stesso di REQ-CASSA-013: due posti che tagliano
+      la nottata in modo diverso sono due verita' diverse sullo stesso
+      incasso.
+      I PERIODI SENZA CHIUSURE NON COMPAIONO. Una settimana di ferie non e'
+      una riga a zero, che si leggerebbe come «e' andata male»: non c'e'.
+      TUTTO IN LOCALE. Le righe aggregate escono dalle sessioni GIA' in
+      mano — nessuna lettura nuova, nessuna attesa fra il tocco sul gettone
+      e la lista nuova — e i numeri sono quelli CONGELATI nello snapshot
+      della chiusura, che stanno sulla sessione: una settimana di due mesi
+      fa somma quanto ha davvero incassato, non zero perche' i suoi ordini
+      sono fuori dalla finestra scaricata. La logica e' pura
+      (`raggruppaSerate`, `periodoDellaSerata`, `chiaveSettimana`,
+      `chiaveMese`, `etichettaPeriodo` in src/lib/serate.js); il componente
+      disegna e basta.
     status: implemented
     generate_issue: false
     labels: [cassa, ux]

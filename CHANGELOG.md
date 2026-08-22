@@ -4,6 +4,28 @@
 
 ### Per chi gestisce
 
+- **Le chiusure di cassa si guardano per serata, per settimana o per
+  mese.** «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare
+  quelle settimanali o mensili oltre che per data» (22/08/2026). Sopra la
+  lista, nella riga della ricerca per data, ci sono tre gettoni: **Serata**
+  (com'era), **Settimana**, **Mese**. Una riga di settimana o di mese dice
+  il periodo, **quante serate** contiene, la **media a serata** e **quanto
+  ha incassato in tutto** — la media perché è quella che rende confrontabili
+  due settimane di lunghezza diversa: cinque aperture e tre aperture fanno
+  totali diversi per un motivo che non c'entra con com'è andata la sera.
+  **Toccando una riga si apre sulle sue serate**, che sono le righe di
+  sempre: da lì il riepilogo di cassa e il rendiconto si aprono come prima.
+  La **settimana comincia di lunedì**, così venerdì, sabato e domenica
+  stanno nella stessa riga; e una serata chiusa all'una di notte resta nella
+  settimana del giorno in cui è cominciata. Le settimane e i mesi senza
+  chiusure non compaiono. La scelta si ricorda sul tablet che si sta usando.
+
+- **Cercare una data non fa più perdere la vista scelta.** Guardando per
+  settimana o per mese, scegliere un giorno **apre il periodo che contiene
+  quella serata** e accende la riga della serata lì dentro, invece di
+  riportare all'elenco piatto. La frase sopra la lista dice dove guardare:
+  «evidenziata nella settimana 17–23 ago».
+
 - **L'aliquota IVA è una sola, quella del locale.** Ce n'erano due senza
   che nessuno lo sapesse: una nelle impostazioni della stampante, salvata
   **nel browser di ogni tablet**, che finiva sullo scontrino; e una nelle
