@@ -158,3 +158,159 @@ export function limitiRicercaSerate(sessions = [], cutoffHour = DEFAULT_CUTOFF_H
     .sort()
   return { dal: giorni[0] || null, al: giorni[giorni.length - 1] || null }
 }
+
+// ── RAGGRUPPARE LE SERATE: PER SETTIMANA E PER MESE ──────────────────
+//
+// «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare quelle
+// settimanali o mensili oltre che per data» (l'utente, 22/08/2026). Con la
+// lista per serata a «com'è andato agosto?» si risponde sommando a mente
+// trenta righe, e a «questa settimana è andata meglio della scorsa?» pure.
+//
+// Le righe aggregate escono dalle STESSE sessioni che la lista sta già
+// disegnando: nessuna lettura in più, nessuna attesa. E i numeri sono
+// quelli CONGELATI nello snapshot della chiusura — che stanno sulla
+// sessione — quindi una settimana di due mesi fa somma quanto ha davvero
+// incassato, non zero perché i suoi ordini sono fuori dalla finestra
+// scaricata (stessa ragione di `elencoSerate`).
+
+export const RAGGRUPPAMENTI = ['serata', 'settimana', 'mese']
+
+// Come si chiamano nei tre gettoni sopra la lista. Stanno qui e non nella
+// schermata perché sono il nome di quello che la lista diventa: chi aggiunge
+// un raggruppamento aggiunge la voce accanto alla chiave, e non se ne
+// dimentica una in un altro file.
+export const ETICHETTA_RAGGRUPPAMENTO = {
+  serata: 'Serata',
+  settimana: 'Settimana',
+  mese: 'Mese',
+}
+
+// LA SETTIMANA COMINCIA DI LUNEDÌ. È l'uso italiano (e lo standard ISO), ma
+// qui conta soprattutto un fatto del mestiere: per un locale la domenica è
+// la coda del fine settimana, non l'inizio di quello dopo. Col lunedì in
+// testa venerdì, sabato e domenica — le tre sere che fanno l'incasso —
+// cadono nella stessa riga, e due settimane si confrontano davvero. Con la
+// domenica in testa il sabato e la domenica dello stesso weekend finirebbero
+// in due righe diverse.
+//
+// LA CHIAVE È LA DATA DEL LUNEDÌ (`YYYY-MM-DD`), non il numero di settimana:
+// si ordina come una stringa, si formatta senza tabelle, e non porta dietro
+// i casi limite della settimana 53 a cavallo dell'anno.
+export function chiaveSettimana(giorno) {
+  if (!giorno) return null
+  const d = new Date(`${giorno}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  // getUTCDay(): 0 è domenica. Quanti giorni indietro sta il lunedì.
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7))
+  return d.toISOString().slice(0, 10)
+}
+
+export function chiaveMese(giorno) {
+  return giorno ? giorno.slice(0, 7) : null
+}
+
+// Il periodo a cui appartiene una serata. Passa da `giornoDellaSerata`, che
+// il bordo della nottata lo taglia già: una serata aperta sabato alle 19:00 e
+// chiusa all'01:08 è la serata di sabato, quindi la settimana di sabato — e
+// non quella dopo, che comincerebbe alla mezzanotte in mezzo alla serata.
+export function periodoDellaSerata(s, raggruppamento, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const giorno = giornoDellaSerata(s, cutoffHour)
+  if (!giorno) return null
+  if (raggruppamento === 'settimana') return chiaveSettimana(giorno)
+  if (raggruppamento === 'mese') return chiaveMese(giorno)
+  return giorno
+}
+
+const dataDaChiave = (giorno) => new Date(`${giorno}T00:00:00Z`)
+
+// Come si legge un periodo in riga: «10–16 ago» per la settimana, «agosto
+// 2026» per il mese. La settimana non porta l'anno — le righe stanno in
+// ordine di data, come quelle delle serate, che l'anno non lo scrivono; il
+// mese sì, perché «agosto» da solo è la stessa parola tutti gli anni.
+export function etichettaPeriodo(chiave, raggruppamento) {
+  if (!chiave) return '—'
+  const opzioni = { timeZone: 'UTC' }
+  if (raggruppamento === 'mese') {
+    return dataDaChiave(`${chiave}-01`).toLocaleDateString('it-IT', {
+      ...opzioni,
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+  if (raggruppamento === 'settimana') {
+    const lun = dataDaChiave(chiave)
+    const dom = dataDaChiave(chiave)
+    dom.setUTCDate(dom.getUTCDate() + 6)
+    const mese = (d) => d.toLocaleDateString('it-IT', { ...opzioni, month: 'short' })
+    const giorno = (d) => d.toLocaleDateString('it-IT', { ...opzioni, day: 'numeric' })
+    // Dentro lo stesso mese il mese si scrive una volta sola: «10–16 ago».
+    // A cavallo di due mesi ci vanno tutti e due, o «27–2 ago» sarebbe falso.
+    return mese(lun) === mese(dom)
+      ? `${giorno(lun)}–${giorno(dom)} ${mese(dom)}`
+      : `${giorno(lun)} ${mese(lun)} – ${giorno(dom)} ${mese(dom)}`
+  }
+  return chiave
+}
+
+// Le righe aggregate, il periodo più recente in cima.
+//
+// COSA DICE UNA RIGA, e perché proprio questi tre numeri: il PERIODO, quante
+// SERATE contiene e quanto ha INCASSATO in tutto — più la MEDIA A SERATA.
+// La media non è un di più: è l'unico numero con cui due settimane si
+// confrontano davvero. Una settimana con cinque aperture e una con tre
+// (Ferragosto, il lunedì di riposo, una serata privata) hanno totali diversi
+// per un motivo che non c'entra con com'è andata la sera. È la stessa
+// struttura della riga per serata — incasso = conti × scontrino medio —
+// letta un piano più su: incasso = serate × media.
+//
+// LA MEDIA SI DIVIDE PER LE SERATE GIÀ CHIUSE, non per tutte: quella di
+// stasera non ha ancora un incasso, e contarla come zero tirerebbe giù la
+// media di tutta la settimana.
+export function raggruppaSerate(sessions = [], { raggruppamento, cutoffHour } = {}) {
+  if (!RAGGRUPPAMENTI.includes(raggruppamento) || raggruppamento === 'serata') return []
+  const gruppi = new Map()
+  for (const s of sessions || []) {
+    const chiave = periodoDellaSerata(s, raggruppamento, cutoffHour)
+    // Una sessione senza apertura non è una serata e non sta in nessun
+    // periodo: fuori, come nell'elenco.
+    if (!chiave) continue
+    if (!gruppi.has(chiave)) {
+      gruppi.set(chiave, {
+        chiave,
+        etichetta: etichettaPeriodo(chiave, raggruppamento),
+        serate: [],
+        incasso: 0,
+        serateContate: 0,
+        inCorso: false,
+      })
+    }
+    const g = gruppi.get(chiave)
+    g.serate.push(s)
+    // UNA SERATA CHIUSA CONTA SEMPRE, e per quello che dice la sua chiusura.
+    // Una ancora APERTA no: lo snapshot nasce alla chiusura, quindi il suo
+    // incasso non si sa — sommarlo come zero abbasserebbe la media di tutta
+    // la settimana. Il periodo lo dice con «in corso», che è anche il motivo
+    // per cui il totale non è ancora quello definitivo. È la stessa scelta
+    // della riga per serata, che al posto dell'incasso mette un trattino.
+    if (s.closed_at) {
+      const incassato = Number(s.snapshot?.incassato)
+      g.incasso += Number.isFinite(incassato) ? incassato : 0
+      g.serateContate += 1
+    } else {
+      g.inCorso = true
+    }
+  }
+  // I periodi senza serate non esistono: la Map ha solo quelli che una
+  // chiusura ce l'hanno. Una settimana di ferie non è una riga a zero, che
+  // si leggerebbe come «quella settimana è andata male».
+  return [...gruppi.values()]
+    .sort((a, b) => b.chiave.localeCompare(a.chiave))
+    .map((g) => ({
+      ...g,
+      serate: g.serate
+        .slice()
+        .sort((a, b) => String(b.opened_at).localeCompare(String(a.opened_at))),
+      nSerate: g.serate.length,
+      media: g.serateContate ? g.incasso / g.serateContate : 0,
+    }))
+}

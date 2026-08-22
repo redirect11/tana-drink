@@ -256,6 +256,19 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   decine di volte a serata. Filtri e ordinamento non ci sono più nemmeno
   loro: stanno giù, in fondo alla riga dei conteggi, sul telefono come
   ovunque — in due posti sarebbero due stati da tenere allineati a mano.
+- **Una lista che si può leggere in più modi lo sceglie SOPRA DI SÉ, in una
+  riga che c'è già.** Le chiusure di cassa si guardano per serata, per
+  settimana o per mese, e i tre gettoni stanno in fondo alla riga della
+  ricerca per data (`.chip-gruppo`, gli stessi dei filtri della coda):
+  attaccati, perché sono una domanda sola con tre risposte, e appoggiati a
+  una riga che esiste comunque, perché la pagina esiste per la lista.
+  Non una tendina — con tre voci bisognerebbe aprirla per sapere cosa c'è
+  dentro. Non in Impostazioni: là ci vanno le viste della coda, che si
+  scelgono una volta e non si toccano più; questa si cambia MENTRE si
+  guarda («com'è andato agosto? e questa settimana?»), come i filtri.
+  **E una riga aggregata si apre su quello che contiene**, non porta a un
+  dettaglio nuovo: la settimana si spiega con le sue sere, che sono le righe
+  che si conoscono già.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
   lista, che si trovano solo scorrendo.
 

@@ -197,3 +197,161 @@ describe('le chiusure di cassa senza riquadro, con la ricerca per data', () => {
     expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(sessioni.length)
   })
 })
+
+// ── PER SERATA, PER SETTIMANA O PER MESE ─────────────────────────────
+//
+// «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare quelle
+// settimanali o mensili oltre che per data» (l'utente, 22/08/2026).
+//
+// La lista resta la stessa lista: cambia di cosa parla una riga. Si sceglie
+// coi gettoni che il progetto usa già per i filtri della coda, dentro la riga
+// della ricerca — che c'è comunque — così non costano altezza a una pagina che
+// esiste per la lista. Una riga aggregata SI APRE sulle sue serate, che sono
+// le righe di sempre: la settimana si spiega con le sue sere, e da lì si
+// arriva al riepilogo di cassa per la strada che si conosce già.
+describe('le chiusure raggruppate per settimana e per mese', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  const gettone = (nome) => screen.getByRole('button', { name: nome })
+  // Le righe di primo livello: la sotto-lista di un periodo aperto porta la
+  // stessa classe di famiglia, ed è apposta — ma qui si contano i periodi.
+  const primoLivello = (c) => c.querySelectorAll('.inv-list:not(.inv-sotto-lista) > .inv-row')
+
+  it('si sceglie coi gettoni, e non costano una riga alla lista', async () => {
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    // Un gruppo solo di gettoni attaccati: è una domanda con tre risposte,
+    // non tre interruttori indipendenti.
+    const gruppo = container.querySelector('.chip-gruppo')
+    expect(gruppo, 'i gettoni non usano il gruppo condiviso').not.toBe(null)
+    expect([...gruppo.querySelectorAll('.chip')].map((b) => b.textContent)).toEqual([
+      'Serata',
+      'Settimana',
+      'Mese',
+    ])
+    // Stanno nella riga della ricerca per data, che esisteva già: nessuna
+    // riga in più sopra la lista.
+    expect(gruppo.closest('.cerca-serata')).not.toBe(null)
+    // Di suo la lista è per serata, com'era.
+    expect(gettone('Serata').className).toMatch(/\bactive\b/)
+    expect(primoLivello(container).length).toBe(sessioni.length)
+  })
+
+  it('per settimana la lista diventa una riga per settimana: periodo, serate, media e totale', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Settimana'))
+
+    // Le tre serate stanno tutte nella settimana di lunedì 17 agosto 2026
+    // (mer 19, ven 21, sab 22): una riga sola.
+    const righe = primoLivello(container)
+    expect(righe.length).toBe(1)
+    const riga = righe[0].querySelector('.inv-row-main')
+    expect(riga.textContent).toMatch(/17–23 ago/)
+    expect(riga.textContent).toMatch(/3 serate/)
+    // Il totale è la somma dei numeri congelati alla chiusura: 1240,50 + 420.
+    expect(riga.querySelector('.cash-sess-incasso').textContent).toMatch(/1\.660,50/)
+    // E LA MEDIA È SU DUE SERATE, non su tre: quella di stasera è ancora
+    // aperta e il suo incasso si saprà alla chiusura. Divisa per tre uscirebbe
+    // 553,50, e la settimana sembrerebbe peggiore di com'è andata.
+    expect(riga.textContent).toMatch(/830,25/)
+    expect(riga.textContent).toMatch(/a serata/)
+    // La pastiglia dice perché il totale non è ancora quello definitivo.
+    expect(riga.textContent).toMatch(/in corso/)
+  })
+
+  it('per mese è una riga per mese, e i numeri sono gli stessi sommati più in là', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Mese'))
+    const righe = primoLivello(container)
+    expect(righe.length).toBe(1)
+    expect(righe[0].textContent).toMatch(/agosto 2026/)
+    expect(righe[0].querySelector('.cash-sess-incasso').textContent).toMatch(/1\.660,50/)
+  })
+
+  it('la riga aggregata si apre sulle sue serate, che sono le righe di sempre', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Settimana'))
+
+    const settimana = primoLivello(container)[0]
+    // Chiusa non mostra nessuna serata: la lista resta corta.
+    expect(settimana.querySelector('.inv-sotto-lista')).toBe(null)
+    await user.click(settimana.querySelector('button.inv-row-main'))
+
+    const dentro = settimana.querySelectorAll('.inv-sotto-lista > .inv-row')
+    expect(dentro.length).toBe(sessioni.length)
+    // Sono le righe della famiglia condivisa, non un secondo tipo di riga.
+    for (const r of dentro) expect(r.querySelector('button.inv-row-main')).not.toBe(null)
+    // La più recente in cima, come nell'elenco piatto.
+    expect(dentro[0].textContent).toMatch(/in corso/)
+
+    // E da lì il dettaglio della cassa si apre come sempre, sotto la serata:
+    // non c'è un secondo dettaglio da imparare.
+    const serata = [...dentro].find((r) => r.textContent.includes('1.240,50'))
+    await user.click(serata.querySelector('button.inv-row-main'))
+    await waitFor(() => {
+      expect(serata.querySelector('.inv-row-dettaglio')).not.toBe(null)
+    })
+    expect(serata.textContent).toMatch(/Conti chiusi/)
+  })
+
+  it('cercando una data apre il periodo che la contiene e accende la serata, senza cambiare vista', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Settimana'))
+
+    const campo = screen.getByLabelText('Cerca per data')
+    fireEvent.change(campo, { target: { value: '2026-08-21' } })
+
+    // LA VISTA SCELTA NON SI PERDE: si continua a guardare per settimana.
+    expect(gettone('Settimana').className).toMatch(/\bactive\b/)
+    expect(primoLivello(container).length).toBe(1)
+    // La settimana si è aperta da sé e la serata cercata è accesa lì dentro.
+    const accesa = container.querySelector('.inv-sotto-lista .inv-row.trovata')
+    expect(accesa, 'la serata cercata non si trova dentro il suo periodo').not.toBe(null)
+    expect(accesa.textContent).toMatch(/1\.240,50/)
+    // E la frase sopra l'elenco dice DOVE guardare, che dentro una riga
+    // aggregata non è più ovvio.
+    expect(screen.getByRole('status').textContent).toMatch(/evidenziata nella settimana 17–23 ago/)
+  })
+
+  it('e per mese la frase dice il mese', async () => {
+    const user = userEvent.setup()
+    render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Mese'))
+    fireEvent.change(screen.getByLabelText('Cerca per data'), { target: { value: '2026-08-19' } })
+    expect(screen.getByRole('status').textContent).toMatch(/evidenziata in agosto 2026/)
+  })
+
+  it('un giorno senza chiusura lo dice anche da raggruppati, e non apre niente', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Settimana'))
+    fireEvent.change(screen.getByLabelText('Cerca per data'), { target: { value: '2026-08-20' } })
+    expect(screen.getByRole('status').textContent).toMatch(/Nessuna chiusura di cassa registrata/)
+    expect(container.querySelector('.inv-row.trovata')).toBe(null)
+  })
+
+  it('la scelta si ricorda su questo terminale', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    await user.click(gettone('Mese'))
+    unmount()
+
+    render(<CashSessionsList />)
+    await screen.findByText(/agosto 2026/)
+    expect(gettone('Mese').className).toMatch(/\bactive\b/)
+  })
+})
