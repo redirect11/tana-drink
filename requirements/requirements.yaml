@@ -1610,11 +1610,69 @@ requirements:
       si legge come «stasera non e' entrato niente», ed e' una bugia.
       Adesso c'e' un trattino finche' il dato non c'e'; aprendo la riga il
       riepilogo viene ricalcolato dagli ordini e la cifra vera compare.
+      NIENTE RIQUADRO ATTORNO ALLA LISTA (22/08/2026): «togli il box,
+      lascia solo la lista, e aggiungi un selettore di data per cercare una
+      chiusura cassa». La `.card` che avvolgeva l'elenco non lo separava da
+      niente — e' l'unica cosa della sottosezione — e su una schermata
+      fatta di righe si mangiava margine a destra e a sinistra.
+      Col riquadro se ne va anche il TITOLO «📒 Chiusure di cassa»: il
+      titolo di una pagina sta nella barra in alto, che quando si e' qui
+      dice gia' «Chiusure» (src/lib/sezioni.js), e ripeterlo dieci pixel
+      piu' sotto costa una riga senza aggiungere niente. E se ne va la
+      didascalia «Una riga per serata, dall'apertura alla chiusura. Tocca
+      per il venduto.»: descriveva quello che la riga ha gia' scritto
+      sopra, ed era il tono confidenziale da cui ci si e' allontanati lo
+      stesso giorno (DESIGN.md, guardrail 3).
+      Resta la lista, esattamente come nelle statistiche (StatsTab.jsx →
+      «📒 Per serata», dove un riquadro non c'e' mai stato): sono lo stesso
+      elenco e devono leggersi allo stesso modo. La ricerca per data che si
+      e' aggiunta sopra la lista sta in REQ-CASSA-013.
     status: implemented
     generate_issue: false
     labels: [cassa, ux]
     test_cases:
       - tests/unit/sezioni.test.js
+      - tests/component/CashSessionsList.test.jsx
+
+  - id: REQ-CASSA-013
+    title: "Cercare una chiusura per data: porta alla serata, non filtra"
+    area: "src/lib/serate.js, src/components/CashSessionsList.jsx"
+    description: >
+      «Togli il box, lascia solo la lista, e aggiungi un selettore di data
+      per cercare una chiusura cassa» (l'utente, 22/08/2026). Con due mesi
+      di righe in fila, a «com'e' andata il 15 agosto?» si rispondeva
+      scorrendo.
+      Sopra la lista delle chiusure (REQ-CASSA-006) c'e' un campo data.
+      Scegliendo un giorno la lista NON si filtra: si scorre fino alla
+      serata di quel giorno e la riga si accende. Filtrare lascerebbe una
+      riga sola, e questa lista serve anche a confrontare le serate fra
+      loro — si cerca il 15 per vedere com'e' andata e subito dopo si
+      guarda il sabato prima. Per lo stesso motivo non serve un modo per
+      «togliere il filtro»: non c'e' niente di nascosto.
+      IL GIORNO DI UNA SERATA E' LA SUA GIORNATA COMMERCIALE, non la data
+      solare degli orari: una serata aperta il 15 alle 19:00 e chiusa
+      all'01:08 e' la serata del 15, e chi cerca il 16 non deve trovarla.
+      Il taglio e' quello di businessDay.js (`businessDayKey`,
+      `DEFAULT_CUTOFF_HOUR`), lo stesso con cui sono raggruppati gli
+      ordini: due posti che tagliano la nottata in modo diverso sono due
+      verita' diverse sullo stesso incasso.
+      UN GIORNO SENZA CHIUSURA SI DICE, in una frase piana: «Nessuna
+      chiusura di cassa registrata per lunedi' 18 agosto». Capita spesso —
+      il locale e' chiuso il lunedi' — e la lista resta intera, cosi' chi
+      ha cercato non si ritrova davanti una schermata vuota. Quando invece
+      la serata c'e', la stessa riga dice quale: l'esito si legge, non si
+      deduce dal colore di una riga, e con `role="status"` lo annuncia
+      anche un lettore di schermo.
+      I LIMITI DEL CAMPO sono la prima e l'ultima serata dell'elenco
+      (`min`/`max`): non si cerca nel futuro e non si cerca prima della
+      prima chiusura registrata. Escono dalle sessioni GIA' caricate
+      (`limitiRicercaSerate`) — nessuna lettura nuova nel percorso di
+      disegno, come per tutto il resto della lista.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, ux]
+    test_cases:
+      - tests/unit/serate.test.js
       - tests/component/CashSessionsList.test.jsx
 
   - id: REQ-CASSA-005

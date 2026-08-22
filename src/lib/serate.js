@@ -1,4 +1,5 @@
 import { kpiSummary } from './stats.js'
+import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 // ── L'ELENCO DELLE SERATE (chiusure di cassa) ────────────────────────
 //
@@ -15,6 +16,9 @@ import { kpiSummary } from './stats.js'
 // la lista non deve mai far aspettare chi la apre.
 
 const fmt = (iso, opt) => {
+  // Senza data non si inventa un giorno: `new Date(null)` è l'epoch, non una
+  // data invalida, e uscirebbe «gio 01/01» al posto del trattino.
+  if (!iso) return '—'
   try {
     const d = new Date(iso)
     return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('it-IT', opt)
@@ -26,7 +30,7 @@ const fmt = (iso, opt) => {
 export const giornoSerata = (iso) =>
   fmt(iso, { weekday: 'short', day: '2-digit', month: '2-digit' })
 
-const ora = (iso) => fmt(iso, { hour: '2-digit', minute: '2-digit' })
+export const oraSerata = (iso) => fmt(iso, { hour: '2-digit', minute: '2-digit' })
 
 // Quanto è durata: "7h 30m", o "45m" sotto l'ora. Dice a colpo d'occhio se
 // una serata ha incassato tanto perché è andata forte o perché è stata lunga.
@@ -43,8 +47,8 @@ export function durataSerata(da, a) {
 // ci è entrato sa quale serata sta guardando anche dopo aver scorso.
 export function etichettaSerata(s) {
   if (!s?.opened_at) return '—'
-  return `${giornoSerata(s.opened_at)} · ${ora(s.opened_at)}→${
-    s.closed_at ? ora(s.closed_at) : 'in corso'
+  return `${giornoSerata(s.opened_at)} · ${oraSerata(s.opened_at)}→${
+    s.closed_at ? oraSerata(s.closed_at) : 'in corso'
   }`
 }
 
@@ -99,7 +103,7 @@ export function elencoSerate(sessions = [], orders = [], { adesso } = {}) {
         session: s,
         inCorso: inCorso(s),
         giorno: giornoSerata(s.opened_at),
-        orario: `${ora(s.opened_at)} → ${s.closed_at ? ora(s.closed_at) : 'in corso'}`,
+        orario: `${oraSerata(s.opened_at)} → ${s.closed_at ? oraSerata(s.closed_at) : 'in corso'}`,
         durata: durataSerata(s.opened_at, fine),
         incasso,
         conti,
@@ -109,4 +113,48 @@ export function elencoSerate(sessions = [], orders = [], { adesso } = {}) {
         daSnapshot,
       }
     })
+}
+
+// ── CERCARE UNA SERATA PER DATA ──────────────────────────────────────
+//
+// «Togli il box, lascia solo la lista, e aggiungi un selettore di data per
+// cercare una chiusura cassa» (l'utente, 22/08/2026). Con due mesi di
+// righe in fila, a «com'è andata il 15 agosto?» si rispondeva scorrendo.
+//
+// IL GIORNO DI UNA SERATA È LA SUA GIORNATA COMMERCIALE, non la data
+// solare dell'apertura e nemmeno quella della chiusura: una serata aperta
+// il 15 alle 19:00 e chiusa all'01:08 è la serata del 15, e chi cerca il
+// 16 non deve trovarla. Il taglio è quello di `businessDay.js` — lo stesso
+// con cui sono raggruppati gli ordini — perché due posti che tagliano la
+// nottata in modo diverso sono due verità diverse sullo stesso incasso.
+export function giornoDellaSerata(s, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  return s?.opened_at ? businessDayKey(s.opened_at, cutoffHour) : null
+}
+
+// La serata di una data (`YYYY-MM-DD`), oppure null se quel giorno la cassa
+// non ha aperto — il lunedì di riposo, o una serata saltata. Se per un
+// guaio di dati la stessa giornata avesse due sessioni si prende la prima
+// aperta: è quella che ha iniziato la serata.
+export function serataDelGiorno(sessions = [], giorno, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!giorno) return null
+  const stessoGiorno = (sessions || []).filter(
+    (s) => giornoDellaSerata(s, cutoffHour) === giorno
+  )
+  if (stessoGiorno.length === 0) return null
+  return stessoGiorno.reduce((primo, s) =>
+    String(s.opened_at) < String(primo.opened_at) ? s : primo
+  )
+}
+
+// I bordi entro cui ha senso cercare: la prima e l'ultima serata che la
+// lista ha già in mano. Vanno nel `min`/`max` del campo data, che così non
+// lascia nemmeno provare una data futura o precedente alla prima chiusura
+// registrata — un limite che si vede è meglio di un messaggio dopo. Nessuna
+// lettura in più: sono le stesse sessioni che la lista sta disegnando.
+export function limitiRicercaSerate(sessions = [], cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const giorni = (sessions || [])
+    .map((s) => giornoDellaSerata(s, cutoffHour))
+    .filter(Boolean)
+    .sort()
+  return { dal: giorni[0] || null, al: giorni[giorni.length - 1] || null }
 }

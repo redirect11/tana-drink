@@ -2965,6 +2965,36 @@ body.bar-wide .app {
 .inv-row.in-corso {
   border-left-color: var(--ok);
 }
+/* LA SERATA TROVATA cercandola per data. La lista non si filtra — resta
+   intera, perché serve anche a confrontare le serate fra loro — quindi la
+   riga cercata deve staccarsi da righe tutte uguali: cornice interna e velo
+   dell'accento, che non toccano la striscia a sinistra (quella dice se la
+   serata è in corso, ed è un'altra informazione). Il colore non è l'unico
+   segno: sopra l'elenco c'è la frase che dice quale serata è stata trovata. */
+.inv-row.trovata .inv-row-main {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* CERCARE UNA SERATA PER DATA: etichetta e campo su una riga sola, sopra
+   l'elenco. Il campo si tiene alto `--riga-lista` come le righe che sta
+   cercando — si tocca in piedi, col vassoio in mano — e largo quanto una
+   data per esteso: quello dei numeri (`.setting-amount`) è 90px e
+   taglierebbe il calendario nativo. */
+.cerca-serata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
+.cerca-serata input[type='date'] {
+  min-height: var(--riga-lista);
+  padding: 6px 10px;
+  font-size: 0.95rem;
+}
+.cerca-serata-esito {
+  margin: 0 0 8px;
+}
 :root[data-luma='light'] .inv-row.open .inv-row-main { background: rgba(0, 0, 0, 0.03); }
 .admin-card.off .grid-card-main {
   opacity: 0.55;

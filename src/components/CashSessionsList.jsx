@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchCashSessions,
   fetchOrdersBetween,
@@ -7,7 +7,14 @@ import {
 } from '../lib/api.js'
 import { sessionReport } from '../lib/stats.js'
 import { cashRecap } from '../lib/cassa.js'
-import { businessDayKey } from '../lib/businessDay.js'
+import { businessDayKey, businessDayLabel } from '../lib/businessDay.js'
+import {
+  giornoSerata,
+  oraSerata,
+  durataSerata,
+  serataDelGiorno,
+  limitiRicercaSerate,
+} from '../lib/serate.js'
 import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
@@ -19,35 +26,18 @@ import RendicontoSerata from './RendicontoSerata.jsx'
 // snapshot congelato alla chiusura. Si vede anche COSA è stato venduto in
 // quella finestra — comprese le ore dopo la mezzanotte, perché il periodo è
 // quello della sessione e non della giornata solare.
-
-const fmtData = (iso) => {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString('it-IT', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
-}
-const fmtOra = (iso) => {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return '—'
-  }
-}
-const durata = (a, b) => {
-  const t1 = Date.parse(a)
-  const t2 = Date.parse(b)
-  if (!Number.isFinite(t1) || !Number.isFinite(t2) || t2 < t1) return ''
-  const min = Math.floor((t2 - t1) / 60000)
-  const h = Math.floor(min / 60)
-  return h > 0 ? `${h}h ${min % 60}m` : `${min}m`
-}
+//
+// NIENTE RIQUADRO ATTORNO (22/08/2026): «togli il box, lascia solo la lista».
+// La `.card` qui non separava questa lista da nient'altro — è l'unica cosa
+// della sottosezione — e su una schermata fatta di righe si mangiava margine
+// a sinistra e a destra. Via anche il titolo «📒 Chiusure di cassa»: il
+// titolo di una pagina sta nella barra in alto, che quando si è qui dice già
+// «Chiusure» (`src/lib/sezioni.js`), e ripeterlo dieci pixel più sotto costa
+// una riga per non aggiungere niente. Via la didascalia «Una riga per
+// serata…»: descriveva quello che la riga ha già scritto sopra. Resta la
+// lista, com'è nelle statistiche (`StatsTab.jsx` → «📒 Per serata», che il
+// riquadro non l'ha mai avuto): sono lo stesso elenco e devono leggersi
+// allo stesso modo.
 
 export default function CashSessionsList() {
   const [sessions, setSessions] = useState([])
@@ -58,6 +48,11 @@ export default function CashSessionsList() {
   const [caricando, setCaricando] = useState(false)
   // Serata aperta a tutta pagina nel rendiconto tabellare.
   const [rendiconto, setRendiconto] = useState(null)
+  // Ricerca per data. Si tiene SOLO la data cercata: la serata e la frase da
+  // leggere si ricavano da lì a ogni disegno, così non ci sono tre stati da
+  // tenere d'accordo fra loro.
+  const [giornoCercato, setGiornoCercato] = useState('')
+  const righe = useRef(new Map())
 
   useEffect(() => {
     let vivo = true
@@ -69,6 +64,35 @@ export default function CashSessionsList() {
       vivo = false
     }
   }, [])
+
+  // I bordi del campo data escono dalle sessioni già in mano: nessuna lettura
+  // in più per sapere fin dove ha senso cercare.
+  const limiti = useMemo(() => limitiRicercaSerate(sessions), [sessions])
+
+  // CERCARE UNA SERATA PORTA ALLA RIGA, NON FILTRA LA LISTA. Filtrando
+  // resterebbe una riga sola, e questa lista serve anche a confrontare le
+  // serate fra loro: si cerca il 15 agosto per vedere com'è andata, e subito
+  // dopo si guarda il sabato prima. Qui la lista resta intera, si scorre fino
+  // alla serata cercata e la riga si accende — e non serve nemmeno un modo
+  // per «togliere il filtro», perché non c'è niente di nascosto.
+  const trovata = useMemo(
+    () => (giornoCercato ? serataDelGiorno(sessions, giornoCercato)?.id || null : null),
+    [sessions, giornoCercato]
+  )
+  const esito = !giornoCercato
+    ? ''
+    : trovata
+      ? `Serata di ${businessDayLabel(giornoCercato)}: evidenziata nell’elenco.`
+      : `Nessuna chiusura di cassa registrata per ${businessDayLabel(giornoCercato)}.`
+
+  // Trovata la serata, la si porta sotto gli occhi: la riga può stare a due
+  // mesi di scorrimento da qui, e accenderla senza mostrarla non servirebbe a
+  // niente. `scrollIntoView` è chiamato in modo opzionale perché il DOM finto
+  // dei test non ce l'ha.
+  useEffect(() => {
+    if (!trovata) return
+    righe.current.get(trovata)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+  }, [trovata])
 
   // Venduto della serata: si caricano gli ordini della finestra solo quando
   // si apre la riga (sono letture, non servono a colpo d'occhio).
@@ -133,16 +157,42 @@ export default function CashSessionsList() {
   }
 
   return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <strong>📒 Chiusure di cassa</strong>
-      <div className="muted small" style={{ margin: '2px 0 8px' }}>
-        Una riga per serata, dall’apertura alla chiusura. Tocca per il venduto.
-      </div>
-
+    <div>
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <p className="muted small">Carico le chiusure…</p>}
       {!loading && sessions.length === 0 && (
         <p className="muted small">Nessuna sessione di cassa registrata.</p>
+      )}
+
+      {/* IL CAMPO DATA STA IN CIMA, sopra la lista: è il modo di arrivare a
+          una serata lontana, e va visto prima di mettersi a scorrere. Il
+          `min` e il `max` sono la prima e l'ultima serata in elenco — dentro
+          quei bordi la ricerca ha sempre una risposta sensata, e una data
+          futura non si può nemmeno scegliere. */}
+      {!loading && sessions.length > 0 && (
+        <div className="cerca-serata">
+          <label className="muted small" htmlFor="cerca-serata-data">
+            Cerca per data
+          </label>
+          <input
+            id="cerca-serata-data"
+            type="date"
+            value={giornoCercato}
+            min={limiti.dal || undefined}
+            max={limiti.al || undefined}
+            onChange={(e) => setGiornoCercato(e.target.value)}
+          />
+        </div>
+      )}
+      {/* L'ESITO SI LEGGE, non si deduce dal colore di una riga. Quando la
+          serata c'è dice quale; quando non c'è lo dice invece di lasciare la
+          lista ferma e muta, che si leggerebbe come «non ha funzionato».
+          `role="status"` perché niente scompare e niente si sposta: senza,
+          chi usa un lettore di schermo non saprebbe che è successo qualcosa. */}
+      {esito && (
+        <p className="muted small cerca-serata-esito" role="status">
+          {esito}
+        </p>
       )}
 
       {/* UNA SOLA FAMIGLIA DI LISTE in tutta l'app (`.inv-list` e parenti,
@@ -166,8 +216,14 @@ export default function CashSessionsList() {
               snap.incassato != null ? formatPrice(snap.incassato) : aperta ? '—' : formatPrice(0)
             return (
               <div
-                className={`inv-row${aperta ? ' in-corso' : ''}${isOpen ? ' open' : ''}`}
+                className={`inv-row${aperta ? ' in-corso' : ''}${isOpen ? ' open' : ''}${
+                  trovata === s.id ? ' trovata' : ''
+                }`}
                 key={s.id}
+                ref={(el) => {
+                  if (el) righe.current.set(s.id, el)
+                  else righe.current.delete(s.id)
+                }}
               >
                 <button
                   type="button"
@@ -175,10 +231,10 @@ export default function CashSessionsList() {
                   onClick={() => apri(s)}
                   aria-expanded={isOpen}
                 >
-                  <span className="inv-row-name">{fmtData(s.opened_at)}</span>
+                  <span className="inv-row-name">{giornoSerata(s.opened_at)}</span>
                   <span className="muted small inv-row-cat">
-                    {fmtOra(s.opened_at)} → {aperta ? '…' : fmtOra(s.closed_at)}
-                    {!aperta && ` · ${durata(s.opened_at, s.closed_at)}`}
+                    {oraSerata(s.opened_at)} → {aperta ? '…' : oraSerata(s.closed_at)}
+                    {!aperta && ` · ${durataSerata(s.opened_at, s.closed_at)}`}
                   </span>
                   {/* LA SERATA IN CORSO si riconosce senza leggere: la
                       pastiglia verde al posto dell'ora di chiusura, e la

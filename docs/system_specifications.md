@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 174 | fatto e coperto dai test |
+| ✅ | 175 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**210 voci** in tutto. **188** descrivono il sistema com'è oggi e
+**211 voci** in tutto. **189** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **8** difetti noti sono ancora aperti.
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 11 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -1093,7 +1093,19 @@ QUELLO CHE LA RIGA DICE NON CAMBIA: data, apertura → chiusura, durata, incasso
 
 LA SERATA IN CORSO SI RICONOSCE SENZA LEGGERE, e con due segni non uno: la pastiglia verde «in corso» al posto dell'ora di chiusura, e la striscia accesa a sinistra della riga. E NON DICHIARA UN INCASSO CHE NON CONOSCE: lo snapshot nasce alla chiusura, quindi finche' la serata e' aperta al suo posto c'era «0,00 €» — in una lista di soldi si legge come «stasera non e' entrato niente», ed e' una bugia. Adesso c'e' un trattino finche' il dato non c'e'; aprendo la riga il riepilogo viene ricalcolato dagli ordini e la cifra vera compare.
 
+NIENTE RIQUADRO ATTORNO ALLA LISTA (22/08/2026): «togli il box, lascia solo la lista, e aggiungi un selettore di data per cercare una chiusura cassa». La `.card` che avvolgeva l'elenco non lo separava da niente — e' l'unica cosa della sottosezione — e su una schermata fatta di righe si mangiava margine a destra e a sinistra. Col riquadro se ne va anche il TITOLO «📒 Chiusure di cassa»: il titolo di una pagina sta nella barra in alto, che quando si e' qui dice gia' «Chiusure» (src/lib/sezioni.js), e ripeterlo dieci pixel piu' sotto costa una riga senza aggiungere niente. E se ne va la didascalia «Una riga per serata, dall'apertura alla chiusura. Tocca per il venduto.»: descriveva quello che la riga ha gia' scritto sopra, ed era il tono confidenziale da cui ci si e' allontanati lo stesso giorno (DESIGN.md, guardrail 3). Resta la lista, esattamente come nelle statistiche (StatsTab.jsx → «📒 Per serata», dove un riquadro non c'e' mai stato): sono lo stesso elenco e devono leggersi allo stesso modo. La ricerca per data che si e' aggiunta sopra la lista sta in REQ-CASSA-013.
+
 **Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`, `tests/component/CashSessionsList.test.jsx`
+
+#### REQ-CASSA-013 — Cercare una chiusura per data: porta alla serata, non filtra
+
+«Togli il box, lascia solo la lista, e aggiungi un selettore di data per cercare una chiusura cassa» (l'utente, 22/08/2026). Con due mesi di righe in fila, a «com'e' andata il 15 agosto?» si rispondeva scorrendo. Sopra la lista delle chiusure (REQ-CASSA-006) c'e' un campo data. Scegliendo un giorno la lista NON si filtra: si scorre fino alla serata di quel giorno e la riga si accende. Filtrare lascerebbe una riga sola, e questa lista serve anche a confrontare le serate fra loro — si cerca il 15 per vedere com'e' andata e subito dopo si guarda il sabato prima. Per lo stesso motivo non serve un modo per «togliere il filtro»: non c'e' niente di nascosto.
+
+IL GIORNO DI UNA SERATA E' LA SUA GIORNATA COMMERCIALE, non la data solare degli orari: una serata aperta il 15 alle 19:00 e chiusa all'01:08 e' la serata del 15, e chi cerca il 16 non deve trovarla. Il taglio e' quello di businessDay.js (`businessDayKey`, `DEFAULT_CUTOFF_HOUR`), lo stesso con cui sono raggruppati gli ordini: due posti che tagliano la nottata in modo diverso sono due verita' diverse sullo stesso incasso.
+
+UN GIORNO SENZA CHIUSURA SI DICE, in una frase piana: «Nessuna chiusura di cassa registrata per lunedi' 18 agosto». Capita spesso — il locale e' chiuso il lunedi' — e la lista resta intera, cosi' chi ha cercato non si ritrova davanti una schermata vuota. Quando invece la serata c'e', la stessa riga dice quale: l'esito si legge, non si deduce dal colore di una riga, e con `role="status"` lo annuncia anche un lettore di schermo. I LIMITI DEL CAMPO sono la prima e l'ultima serata dell'elenco (`min`/`max`): non si cerca nel futuro e non si cerca prima della prima chiusura registrata. Escono dalle sessioni GIA' caricate (`limitiRicercaSerate`) — nessuna lettura nuova nel percorso di disegno, come per tutto il resto della lista.
+
+**Dove**: `src/lib/serate.js, src/components/CashSessionsList.jsx` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/CashSessionsList.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 

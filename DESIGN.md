@@ -252,6 +252,14 @@ Regole:
   stessa lista vista in tre pagine, e tre numeri scritti a mano in tre
   punti del foglio diventano tre numeri diversi. Vale il guardrail 2 —
   queste righe si toccano in piedi, col vassoio in mano.
+  **E una lista non si svuota per farci trovare una riga.** Dove si cerca
+  dentro un elenco (le chiusure di cassa per data, REQ-CASSA-013) la lista
+  resta intera e si scorre fino alla riga, che si accende: `.inv-row.trovata`
+  — velo e cornice interna dell'accento, che non toccano la striscia a
+  sinistra perché quella dice un'altra cosa. Filtrando resterebbe una riga
+  sola, e un elenco serve anche a confrontare le sue righe fra loro. E il
+  colore non è l'unico segno: sopra l'elenco una frase dice cosa è stato
+  trovato, o che per quella data non c'è nessuna chiusura.
 
 - **La tavolozza del conto sta in una modale, non nel menu.** Dal «⋯
   Azioni» di una card — del conto e della comanda — il colore si dà da un
