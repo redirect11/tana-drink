@@ -478,8 +478,16 @@ Otto temi per riga, si tiene il peggiore.
    Ed è il caso delle **righe delle liste** (`--riga-lista`, BUG-082): il
    magazzino si tocca in piedi, e una lista è fatta solo di bersagli — se
    lo zoom li gonfia, la schermata ne mostra un quinto in meno per niente.
-3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
-   gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
+3. **Le parole sono da vassoio, non da bar**: comuni, brevi, in italiano;
+   nessun gergo tecnico; nessun messaggio che scarichi la colpa su chi
+   legge. Ma il registro e' PROFESSIONALE: una didascalia dice cosa fa una
+   cosa e a cosa serve, in una frase piana — niente battute, niente pacche
+   sulla spalla, niente aneddoti. «Comune» vuol dire comprensibile, non
+   confidenziale: chi legge sta lavorando e maneggia i soldi del locale.
+   Il colore, il perche' e i casi visti al banco vivono nei commenti del
+   codice e nel registro, non a schermo (l'utente, 22/08/2026: «per le
+   didascalie e le spiegazioni dovresti usare un linguaggio meno
+   informale»).
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner
    e attese lunghe sono un difetto, non uno stato normale.
 5. **Gli stati degli ordini non cambiano colore** tra un tema e l'altro:
