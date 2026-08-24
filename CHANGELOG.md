@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.5.4-beta
+## 1.5.5-beta
 
 ### Per chi gestisce
 
@@ -134,31 +134,6 @@
   al ticket è sempre quello giusto. Ne guadagna anche la **ricevuta unica**
   di più comande, che prima poteva perdere per strada una delle due note.
 
-- **Il numero sul tasto «Filtri» conta quello che si vede.** Con due
-  colonne riaccese sulla lavagna del banco diceva «1»: tutte le colonne
-  diverse dal solito valevano un filtro solo — «non mi è chiaro come conta
-  i filtri» (22/08/2026). Adesso le conta una per una: due colonne
-  nascoste fanno **2**, e con lo staff filtrato **3**. Chi guarda può
-  contare a occhio e ritrovare lo stesso numero. Ad aprire la fila il
-  numero sparisce, perché i tasti accesi si vedono da sé. Fermandosi sul
-  tasto, l'elenco per esteso è sempre lì, con le colonne raggruppate
-  («Colonne (2)»): i loro nomi sono già le testate della lavagna.
-
-- **E conta solo quello che nasconde qualcosa.** «Credo che l'indicatore
-  del numero di filtri attivi funzioni al contrario. Li ho disattivati
-  tutti ma lui indica tre filtri attivi» (22/08/2026), con la lavagna del
-  banco che mostrava tutte e sei le colonne. Il numero saliva anche
-  **aggiungendo** una colonna — accendere «💶 Chiuse» e «✖️ Annullate»
-  contava per due — mentre un filtro è qualcosa che *restringe*: quel
-  segnale serve ad avvertire che la coda **non sta facendo vedere tutto**.
-  Adesso contano solo le colonne che **mancano** dalla lavagna, insieme
-  allo staff ridotto a una parte, a «📅 Solo oggi», allo stato diverso dal
-  solito e alla porzione dei chiusi. E si guarda la lavagna, non la
-  memoria: spegnendo **tutte** le colonne la coda le rimette a schermo
-  tutte — senza colonne non si può lavorare — e allora nascosto non c'è
-  niente, e il numero non c'è. Su un terminale appena aperto il tasto
-  resta spento come prima.
-
 - **«📅 Solo oggi» adesso si vede anche fuori dalla griglia.** Accendendolo
   fra i conti e passando alle comande, la coda restava tagliata dei giorni
   scorsi senza niente a schermo che lo dicesse e senza un tasto per
@@ -243,6 +218,10 @@
   sta per intero; su una finestra molto bassa tenuta a zoom alto scorre da
   sé, e i tasti che incassano restano dove sono. Provato a ogni livello di
   zoom, dal 100% al 160%.
+
+## 1.5.4-beta
+
+### Per chi gestisce
 
 - **Non nascono più due conti con lo stesso numero dopo un ricaricamento.**
   Ricaricando la pagina l'app per un attimo non sapeva ancora quale cassa
