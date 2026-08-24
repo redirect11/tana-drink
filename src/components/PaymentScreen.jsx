@@ -13,9 +13,10 @@ import {
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
+import { useResizable } from '../lib/useResizable.js'
 import { allServed } from '../lib/comande.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { showToast, toastError } from '../lib/toast.js'
 import {
@@ -277,6 +278,26 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     setOp(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order.id, paymentsCount])
+
+  // LE TRE COLONNE SI RIDIMENSIONANO, come quelle del dettaglio ordine —
+  // chiesto dall'utente il 21/08/2026, subito dopo il lavoro sullo zoom.
+  // Stesso attrezzo del POS (useResizable): larghezza ricordata PER
+  // TERMINALE, perché il tablet del banco e quello della sala non hanno lo
+  // stesso schermo né lo stesso mestiere — al banco si guarda il
+  // tastierino, in sala la lista delle voci.
+  // I MINIMI NON SONO A OCCHIO. A sinistra 200px: sotto quella misura il
+  // prezzo di una voce va a capo sotto il nome e la lista smette di
+  // leggersi in colonna. A destra 170px: i metodi devono restare tutti
+  // leggibili su una riga sola («Carta di Credito» è il più lungo), e
+  // quella colonna non deve poter sparire — ci sono i tasti con cui si
+  // sceglie come si incassa. I massimi (460 / 380) sono generosi ma finiti:
+  // oltre, il centro comincia a stare stretto sul tablet del banco. Il
+  // pavimento vero del centro però non sta qui: lo tiene il foglio, che
+  // limita ogni colonna anche in percentuale (vedi .payscreen-items) — così
+  // il tastierino resta grande abbastanza a QUALUNQUE zoom, che è
+  // esattamente il guaio di BUG-075.
+  const vociRz = useResizable('pay-items', { def: 340, min: 200, max: 460, side: 'right' })
+  const metodiRz = useResizable('pay-methods', { def: 230, min: 170, max: 380, side: 'left' })
 
   const remaining = useMemo(() => remainingItems(order), [order])
   // LA LISTA PARTE DAL FONDO. Il conto lo si legge dall'ultima riga battuta:
@@ -709,7 +730,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       const inv = await createInvoice({
         order: { ...order, id: await orderId() },
         customer: billing,
-        ivaRate: loadPrinterSettings().ivaRate ?? 10,
+        // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): la fattura
+        // di cortesia deve dire la stessa cosa dello scontrino.
+        ivaRate: aliquotaScontrino(settings),
       })
       setInvoice(inv)
     })
@@ -787,7 +810,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
 
       {error && <div className="banner" style={{ margin: '8px 12px 0', flexShrink: 0 }}>{error}</div>}
 
-      <div className="payscreen-body">
+      <div
+        className="payscreen-body"
+        style={{
+          '--pay-items-w': `${vociRz.width}px`,
+          '--pay-methods-w': `${metodiRz.width}px`,
+        }}
+      >
         {/* ── SINISTRA: articoli del conto (split) + riepilogo ── */}
         <div className="payscreen-items">
           <div ref={listaRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
@@ -981,6 +1010,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           </div>
         </div>
 
+        {/* Maniglia fra le voci e il tastierino. Sul telefono le colonne
+            sono impilate e la maniglia sparisce (foglio, sotto gli 800px):
+            trascinare una larghezza quando la colonna è larga quanto lo
+            schermo non vuol dire niente. */}
+        <div className="payscreen-resize-handle" {...vociRz.handleProps} />
+
         {/* ── CENTRO: display + tastierino + Riscuotere + Preconto ── */}
         <div className="payscreen-pad">
           <div className="row between" style={{ alignItems: 'baseline', flexShrink: 0 }}>
@@ -1034,19 +1069,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
             </p>
           )}
-          {/* L'avviso ha senso solo se si sta seguendo la preparazione: con la
-              gestione spenta non esistono comande "da servire" — sono servite
-              per definizione — e leggerlo a ogni incasso era un allarme che non
-              voleva dire niente. */}
-          {/* Col servizio seguito, incassare NON chiude: il conto resta
-              aperto finché le comande non sono servite. Prima qui c'era
-              scritto il contrario. */}
-          {!autoServeBase && !served && !closed && (
-            <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              ⚠️ Comande non ancora servite: il conto resta aperto anche dopo
-              l'incasso{riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.
-            </p>
-          )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
               📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
@@ -1084,9 +1106,30 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             </div>
           )}
 
+          {/* PERCHÉ QUESTO INCASSO POTREBBE NON CHIUDERE IL CONTO, e perché
+              sta scritto QUI dentro invece che su una riga sua. Col servizio
+              seguito, riscuotere non chiude: il conto resta aperto finché le
+              comande non sono servite. Era un avviso a schermo — «Comande non
+              ancora servite: il conto resta aperto anche dopo l'incasso» —
+              tolto il 21/08/2026 su richiesta dell'utente: «questo messaggio
+              toglilo, che occupa spazio quando zoomo». Una riga fissa nella
+              colonna centrale, a zoom alto, è spazio tolto al tastierino
+              (BUG-075), e la si legge una volta sola in una vita.
+              L'informazione non sparisce, cambia posto e non costa altezza:
+              nel `title` del tasto che la riguarda, e detta a voce alta dal
+              gemello «Riscuoti e servi · chiude il conto» quando c'è — quel
+              «chiude il conto» dice per differenza che l'altro non chiude.
+              Quando quel tasto è spento nelle impostazioni resta solo questo
+              `title`: è l'unico posto dov'era, e serviva un posto che non
+              rubasse una riga. */}
           {!closed && (
             <button
               className="btn block payscreen-collect"
+              title={
+                !autoServeBase && !served
+                  ? `Comande non ancora servite: il conto resta aperto anche dopo l'incasso${riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.`
+                  : undefined
+              }
               disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={() => riscuoti()}
             >
@@ -1172,6 +1215,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             </button>
           </div>
         </div>
+
+        {/* Maniglia fra il tastierino e i metodi */}
+        <div className="payscreen-resize-handle" {...metodiRz.handleProps} />
 
         {/* ── DESTRA: metodi di pagamento + Sconto ── */}
         <div className="payscreen-methods">

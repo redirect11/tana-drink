@@ -92,6 +92,14 @@ issue da solo.
 - L'interfaccia va spiegata a chi ha in mano un vassoio: parole comuni,
   nessun gergo tecnico, nessun messaggio d'errore che scarica la colpa
   addosso a chi legge.
+- **Ma il tono resta professionale.** Didascalie, descrizioni delle
+  impostazioni e messaggi non danno del tu con la pacca sulla spalla, non
+  fanno battute e non raccontano aneddoti: dicono cosa fa una cosa e a cosa
+  serve, in una frase piana. «Parole comuni» vuol dire *comprensibili*, non
+  *confidenziali* — questa è l'app con cui si incassano i soldi di un
+  locale, e chi la legge sta lavorando. Il perché di una scelta, i casi
+  visti al banco e il colore vanno nei COMMENTI del codice e nel registro,
+  dove servono a chi sviluppa: non a schermo.
 - **La navigazione ha delle regole scritte**: barra in alto a tre zone, cosa
   si toglie per primo quando lo spazio manca, dove stanno pagine,
   sottosezioni e filtri. Stanno in [docs/navigazione.md](docs/navigazione.md)

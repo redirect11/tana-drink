@@ -101,7 +101,7 @@ vi.mock('../../src/lib/printer.js', async (originale) => ({
   printComanda: vi.fn(() => Promise.resolve()),
   printComande: vi.fn(() => Promise.resolve(0)),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
+  loadPrinterSettings: vi.fn(() => ({})),
 }))
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({

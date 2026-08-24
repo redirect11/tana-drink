@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOrdersBetween,
   fetchDrinks,
@@ -23,6 +23,8 @@ import {
   extrasBreakdown,
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
+import { elencoSerate, etichettaSerata } from '../lib/serate.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -34,36 +36,35 @@ const fmtQty = (u) =>
 // di una chiusura di cassa).
 const PERIOD_PRESETS = [7, 10, 20, 30, 60]
 
-// Etichetta di una serata nell'elenco: data, orari e incasso, così si sceglie
-// riconoscendola e non a numero di riga.
-const etichettaSerata = (s) => {
-  const d = (iso, opt) => {
-    try {
-      return new Date(iso).toLocaleString('it-IT', opt)
-    } catch {
-      return '—'
-    }
-  }
-  const giorno = d(s.opened_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
-  const da = d(s.opened_at, { hour: '2-digit', minute: '2-digit' })
-  const a = s.closed_at ? d(s.closed_at, { hour: '2-digit', minute: '2-digit' }) : 'in corso'
-  const inc = Number(s.snapshot?.incassato)
-  return `${giorno} · ${da}→${a}${Number.isFinite(inc) && inc > 0 ? ` · ${Math.round(inc)} €` : ''}`
-}
-
-// LE STATISTICHE SONO RIMASTE UNA SOLA VISTA. Il «Mensile per macro» ha
-// traslocato in Bilancio → Venduto × Incassato: quanto ha reso ogni gruppo
-// del menù è una domanda da conti di fine mese, e questi sono i numeri di
-// chi lavora — com'è andata ieri sera.
+// LE DUE DOMANDE, DUE SOTTOSEZIONI. «È la cosa principale che si vuole
+// vedere, il resto dei filtri sono secondari» (l'utente, 22/08/2026): la
+// serata viene prima e si apre di suo, il periodo resta per chi guarda
+// l'andamento. Stanno nel menu laterale come in Magazzino e in Cassa —
+// docs/navigazione.md — e non in una riga di pastiglie in pagina, che su una
+// schermata di grafici costerebbe altezza tutto il giorno.
 //
-// E l'ELENCO DELLE SOTTOSEZIONI SE N'È ANDATO CON LEI: una pagina con una
-// sezione sola non ha niente da far scegliere, e lasciarne una spuntata da
-// sé nel menu è una scelta che non è una scelta.
+// (Il «Mensile per macro» non c'entra: ha traslocato in Bilancio → Venduto ×
+// Incassato, ed è per quello che le sottosezioni erano sparite — una sola
+// voce spuntata da sé nel menu è una scelta che non è una scelta.)
+const SEZIONI = [
+  { id: 'serate', icona: '📒', label: 'Per serata' },
+  { id: 'periodo', icona: '📈', label: 'Per periodo' },
+]
+
 export default function StatsTab() {
-  return <DailyStats />
+  const [sezione, setSezione] = useState('serate')
+  return (
+    <div>
+      <Sottosezioni voci={SEZIONI} attiva={sezione} scegli={setSezione} />
+      <DailyStats sezione={sezione} />
+    </div>
+  )
 }
 
-function DailyStats() {
+// I dati stanno QUI, sopra le due sottosezioni: sono gli stessi ordini e le
+// stesse sessioni: caricarli una volta sola vuol dire che passare da una
+// vista all'altra non fa aspettare nessuno.
+function DailyStats({ sezione = 'serate' }) {
   const [loaded, setLoaded] = useState(false)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
@@ -87,33 +88,34 @@ function DailyStats() {
   // mezzanotte.
   const [sessions, setSessions] = useState([])
   const [sessionId, setSessionId] = useState(null)
-  // Si apre sull'ULTIMA CHIUSURA, non su sette giorni: la domanda del
-  // mattino dopo è «com'è andata ieri sera». Solo la prima volta — se poi
-  // si sceglie un altro periodo, quella scelta resta.
-  const primaScelta = useRef(true)
   useEffect(() => {
     let vivo = true
     fetchCashSessions({ limit: 60 })
-      .then((list) => {
-        if (!vivo) return
-        const utili = list.filter((x) => x.opened_at)
-        setSessions(utili)
-        const ultimaChiusa = utili.find((x) => x.status !== 'open')
-        if (primaScelta.current && ultimaChiusa) {
-          primaScelta.current = false
-          setSessionId(ultimaChiusa.id)
-        }
-      })
+      .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
       .catch(() => {})
     return () => {
       vivo = false
     }
   }, [])
+  // La serata aperta nel dettaglio esiste solo dentro la sua sottosezione.
   const serata = useMemo(
-    () => sessions.find((x) => x.id === sessionId) || null,
-    [sessions, sessionId]
+    () => (sezione === 'serate' && sessions.find((x) => x.id === sessionId)) || null,
+    [sessions, sessionId, sezione]
   )
-  // Una serata vecchia può stare fuori dalla finestra già scaricata.
+  // E USCENDO SI DIMENTICA: rientrando si riparte dalla lista. Il dettaglio
+  // era stato chiuso apposta, e ritrovarcisi dentro vuol dire non sapere più
+  // cosa fa la freccia in cima — se sta chiudendo qualcosa che si era aperto
+  // o riportando indietro di due passi.
+  useEffect(() => {
+    if (sezione !== 'serate') setSessionId(null)
+  }, [sezione])
+  // Le righe dell'elenco: costruite da quello che c'è già in mano — nessuna
+  // lettura, nessuna attesa fra il tocco e la lista.
+  const righe = useMemo(() => elencoSerate(sessions, orders), [sessions, orders])
+  // Una serata vecchia può stare fuori dalla finestra già scaricata: allora
+  // si allarga, ed è l'UNICO punto in cui si aspetta qualcosa. Succede
+  // aprendo il dettaglio di una serata vecchia, mai scorrendo la lista — che
+  // per quelle mostra i numeri congelati alla chiusura (vedi serate.js).
   useEffect(() => {
     if (!serata) return
     const oggi = businessDayKey(new Date(), cutoff)
@@ -210,6 +212,11 @@ function DailyStats() {
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
+
+  // A) PER SERATA — l'elenco è la schermata di partenza, il dettaglio si apre
+  // toccando una riga.
+  if (sezione === 'serate' && !serata) return <ElencoSerate righe={righe} onApri={setSessionId} />
+
   if (giorniAttivi.length === 0) {
     return (
       <div className="empty">
@@ -218,32 +225,47 @@ function DailyStats() {
     )
   }
 
-  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras, fascia } = view
+  // Gli stessi comandi valgono per tutte e due le sottosezioni: le fasce
+  // orarie e l'intervallo del «venduto nella fascia» sono di chi guarda, non
+  // del periodo guardato.
+  const comandi = {
+    hourRange,
+    setHourRange,
+    dayRange,
+    setDayRange,
+    fasciaDal,
+    setFasciaDal,
+    fasciaAl,
+    setFasciaAl,
+  }
 
+  if (serata) {
+    return (
+      <div>
+        {/* UNA SOLA VIA D'USCITA, e dice dove riporta — non «indietro», che
+            si capisce solo ricordandosi da dove si è arrivati. */}
+        <button className="btn ghost small" onClick={() => setSessionId(null)}>
+          ← Chiusure
+        </button>
+        <p className="muted small" style={{ margin: '8px 0 12px' }}>
+          Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
+          mezzanotte compresa.
+        </p>
+        <CorpoStatistiche view={view} comandi={comandi} />
+      </div>
+    )
+  }
+
+  // B) PER PERIODO — le pastiglie di sempre, senza quelle della serata: la
+  // serata ha una sottosezione sua e qui non servono più.
   return (
     <div>
       <div className="chips-row" style={{ marginBottom: 6 }}>
-        {/* LA SERATA PER PRIMA, ED È QUELLA DI PARTENZA. La domanda del
-            mattino dopo è «com'è andata ieri sera», non «com'è andata la
-            settimana»: era in fondo alla riga e si apriva sempre su sette
-            giorni, che è un'altra domanda. */}
-        {sessions.length > 0 && (
-          <button
-            className={`chip${serata ? ' active' : ''}`}
-            onClick={() => {
-              setCustom(false)
-              setSessionId(serata ? null : (sessions.find((x) => x.status !== 'open') || sessions[0]).id)
-            }}
-          >
-            🧾 Ultima chiusura
-          </button>
-        )}
         {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
-            className={`chip${!custom && !serata && period === v ? ' active' : ''}`}
+            className={`chip${!custom && period === v ? ' active' : ''}`}
             onClick={() => {
-              setSessionId(null)
               setCustom(false)
               setPeriod(v)
             }}
@@ -251,30 +273,9 @@ function DailyStats() {
             Ultime {v}
           </button>
         ))}
-        <button
-          className={`chip${custom ? ' active' : ''}`}
-          onClick={() => {
-            setSessionId(null)
-            setCustom(true)
-          }}
-        >
+        <button className={`chip${custom ? ' active' : ''}`} onClick={() => setCustom(true)}>
           Personalizzato
         </button>
-        {serata && (
-          <select
-            className="setting-amount"
-            value={sessionId}
-            onChange={(e) => setSessionId(e.target.value)}
-            aria-label="Scegli la serata"
-            style={{ maxWidth: 260 }}
-          >
-            {sessions.map((x) => (
-              <option key={x.id} value={x.id}>
-                {etichettaSerata(x)}
-              </option>
-            ))}
-          </select>
-        )}
         {custom && (
           <input
             className="setting-amount"
@@ -288,19 +289,74 @@ function DailyStats() {
         )}
       </div>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
-        {serata ? (
-          <>
-            Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
-            mezzanotte compresa.
-          </>
-        ) : (
-          <>
-            Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
-            {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
-          </>
-        )}
+        Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
+        {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
       </p>
+      <CorpoStatistiche view={view} comandi={comandi} />
+    </div>
+  )
+}
 
+// ── L'ELENCO DELLE CHIUSURE ──────────────────────────────────────────
+// La forma è quella della lista del magazzino (`inv-list`/`inv-row`), che
+// l'utente ha indicato come la lista fatta bene: una famiglia sola di righe
+// per tutto il gestionale, invece di una forma nuova per ogni schermata.
+// I numeri stanno in colonne allineate a destra e si LEGGONO DA SOLI («12
+// conti», «24,00 € medio»): senza intestazione da tenere a mente, e
+// sopravvivono al capo riga sul telefono.
+function ElencoSerate({ righe, onApri }) {
+  if (righe.length === 0) {
+    return <div className="empty">Nessuna chiusura di cassa registrata.</div>
+  }
+  return (
+    <div>
+      <p className="muted small" style={{ margin: '0 0 8px' }}>
+        Tocca una serata per vederne le statistiche.
+      </p>
+      <div className="inv-list">
+        {righe.map((r) => (
+          <div className="inv-row" key={r.id}>
+            <button
+              type="button"
+              className="inv-row-main"
+              onClick={() => onApri(r.id)}
+              title={
+                r.inCorso
+                  ? 'Cassa ancora aperta: i numeri sono quelli di adesso.'
+                  : r.daSnapshot
+                    ? 'Numeri della chiusura di cassa: gli ordini di questa serata sono troppo vecchi per essere qui.'
+                    : undefined
+              }
+            >
+              <span className="inv-row-name">{r.giorno}</span>
+              <span className="muted small inv-row-cat">
+                {r.orario}
+                {r.durata ? ` · ${r.durata}` : ''}
+              </span>
+              <span className="muted small inv-row-price">
+                {r.conti} cont{r.conti === 1 ? 'o' : 'i'}
+              </span>
+              <span className="muted small inv-row-price">{formatPrice(r.scontrinoMedio)} medio</span>
+              <span className="inv-row-price inv-row-stock">{formatPrice(r.incasso)}</span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── IL CORPO DELLE STATISTICHE ───────────────────────────────────────
+// Gli stessi grafici per tutte e due le sottosezioni: cambia solo QUALI
+// ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
+// lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
+// `view`.
+function CorpoStatistiche({ view, comandi }) {
+  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras, fascia } = view
+  const { hourRange, setHourRange, dayRange, setDayRange, fasciaDal, setFasciaDal, fasciaAl, setFasciaAl } =
+    comandi
+  return (
+    <div>
       {/* KPI */}
       <div className="kpi-grid">
         <Kpi label="Incasso" value={formatPrice(kpi.incasso)} />

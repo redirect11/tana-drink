@@ -20,6 +20,7 @@
 // può essere ancora in preparazione — e le due cose vanno dette insieme.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { mergeLines } from './orderLines.js'
 
 // Stati dell'ORDINE (conto).
 export const ORDER_OPEN = 'aperto'
@@ -183,6 +184,47 @@ export function aggregateItems(comande) {
     }
   }
   return out
+}
+
+// ── SUL TICKET DEL BANCO LE VOCI SONO SEMPRE ACCORPATE (BUG-083) ─────
+//
+// «Per la comanda, le voci devono essere sempre accorpate. Al momento, se
+// sono separate escono separate, se sono unite escono unite. Devono essere
+// sempre unite sulla comanda» (l'utente, 22/08/2026).
+//
+// PERCHÉ NON È UNA PREFERENZA. «Unisci / Separa uguali» sul conto serve ai
+// SOLDI: si separano le righe per dividere il conto fra chi paga cosa. Chi
+// prepara, invece, conta PEZZI — e quattro righe «1 JEFFERSON» una sotto
+// l'altra si contano peggio di una «4 JEFFERSON». Sono due domande diverse
+// sulla stessa lista, e la comanda risponde sempre alla seconda: sullo
+// scontrino e nella schermata di pagamento non cambia niente.
+//
+// LA CHIAVE È QUELLA DEL POS (`lineSignature` in lib/orderLines.js), non una
+// nuova: se «uguali» volesse dire una cosa a schermo e un'altra sulla carta,
+// il banco riceverebbe un ticket che non corrisponde a quello che si vede.
+// Distingue drink, nome, PREZZO, ricetta e NOTA — e sono le due che contano
+// qui: un prodotto libero «Coperto 2€» e uno «Coperto 3€» restano due righe
+// (stesso nome, prezzi diversi: sommarli direbbe una bugia su cosa è stato
+// battuto), e soprattutto «poco ghiaccio» su due dei quattro Jefferson è
+// LAVORO DIVERSO — accorparli farebbe sparire la nota, o la stamperebbe su
+// tutti e quattro.
+//
+// STA IN comande.js e non in pagamento.js perché è una regola sul CONTENUTO
+// di una comanda, non sul denaro: pagamento.js non deve nemmeno sapere che
+// esiste — quella parte non cambia.
+export function righeDellaComanda(items) {
+  // La quantità si normalizza PRIMA di sommare: sui documenti vecchi (e
+  // sugli item scritti a mano dagli script) `qty` può mancare, e la stampa
+  // se la cavava con `qty || 1`. Sommando, un `undefined` diventerebbe NaN
+  // e il ticket uscirebbe con «NaN NEGRONI».
+  return mergeLines((items || []).map((i) => ({ ...i, qty: Math.max(1, Math.floor(Number(i.qty) || 1)) })))
+}
+
+// I PEZZI DA PREPARARE: il «CL: N» in cima al ticket. Si conta sulle righe
+// già accorpate — la somma non cambia, accorpare sposta le quantità ma non
+// ne crea né ne perde, e questa è esattamente la cosa che deve restare vera.
+export function pezziDellaComanda(items) {
+  return (items || []).reduce((s, i) => s + (Number(i.qty) || 1), 0)
 }
 
 // Totale drink dell'ordine (senza coperto/servizio/mancia).

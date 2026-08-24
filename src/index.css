@@ -27,6 +27,22 @@
      bassa dei 44px di chi si preme di corsa: «e i tasti dei filtri, tutti,
      devono essere leggermente più piccoli» (l'utente, 20/08/2026). */
   --tastino-alto: 34px;
+  /* L'ALTEZZA MINIMA DI UNA RIGA DI LISTA CHE SI TOCCA. Una misura sola
+     per tutte le liste della stessa famiglia — il magazzino, le chiusure
+     di cassa, le statistiche — perché sono la stessa lista vista in tre
+     pagine: se ognuna si tenesse il suo numero, fra sei mesi sarebbero
+     tre numeri diversi e nessuno saprebbe quale è quello giusto.
+     Il valore è la soglia di DESIGN.md e docs/navigazione.md: 44px, il
+     bersaglio di chi tocca in piedi, col vassoio in mano e le dita
+     bagnate. Prima queste righe erano alte quanto il loro testo (8px di
+     aria sopra e sotto, ~36px in tutto) e si apriva la riga sbagliata.
+     SCRITTA COME MISURA FISICA, non come numero nel foglio: lo zoom
+     dell'app scala `#root`, quindi 44px CSS al 120% sono 52,8px veri —
+     una garanzia già superata che intanto ruba altezza a una schermata
+     fatta di righe. Divisa per lo zoom la riga resta grande sotto il dito
+     quanto a zoom 1. È l'idioma di BUG-075, e come là: chi lo trova non
+     lo «corregga» in 44px secchi (DESIGN.md, guardrail 2). */
+  --riga-lista: calc(44px / var(--zoom, 1));
   /* LO SPAZIO FRA I TASTI DI UNA CARD DELLA CODA: il piede («⋯ Azioni» e
      il tasto grande, affiancati o impilati quando la card è stretta) e il
      menu che si apre sotto. Una misura sola, o gli stessi tasti avrebbero
@@ -636,12 +652,11 @@ a.btn.block {
   font-size: 0.68rem;
   font-weight: 600;
 }
-.pill.live {
-  background: rgba(46, 204, 113, 0.22);
-  color: #9ff5c0;
-}
+/* Un numero in perdita, o una riga sotto il prezzo minimo. Sta su una
+   superficie nuda (una tabella dentro una card), non su un fondo tinto:
+   il pastello cablato di prima sul tema chiaro dava 2,0:1 su bianco. */
 .neg {
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 /* Pill con la SOLA icona (es. 💳 sulla card ordine): tonda e con l'icona
@@ -657,7 +672,14 @@ a.btn.block {
   background: rgba(52, 152, 219, 0.2);
   color: #9ad0ff;
 }
-.pill.pronto {
+/* IL VERDE DEL «È FATTO», in tre posti che dicono la stessa cosa: la
+   comanda è pronta, il turno è in corso, il conto del gruppo è chiuso.
+   Erano tre regole identiche scritte in tre punti del foglio, e solo
+   questa aveva la variante chiara: le altre due sparivano sul chiaro
+   (1,02:1). Un elenco solo, così la prossima non nasce già rotta. */
+.pill.pronto,
+.pill.live,
+.pill.chiuso {
   background: rgba(46, 204, 113, 0.22);
   color: #9ff5c0;
 }
@@ -665,9 +687,14 @@ a.btn.block {
   background: rgba(255, 255, 255, 0.12);
   color: var(--muted);
 }
+/* PAGATO. L'inchiostro era --accent-2, che cambia col tema: sui chiari e'
+   un ambra scuro su un velo d'ambra chiaro (3,3:1) e su Catppuccin chiaro
+   un pesca acceso sullo stesso velo (2,3:1). Lo stato di un ordine non
+   cambia colore fra un tema e l'altro (guardrail 5): la tinta è l'ambra
+   del gettone, la forza segue il fondo. */
 .pill.pagato {
   background: rgba(245, 185, 74, 0.2);
-  color: var(--accent-2);
+  color: var(--testo-ambra);
 }
 /* Stato dell'ORDINE (conto): aperto finché non viene incassato. */
 .pill.aperto {
@@ -676,7 +703,7 @@ a.btn.block {
 }
 .pill.annullato {
   background: rgba(244, 67, 54, 0.18);
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 .menu-item h3 {
@@ -732,11 +759,11 @@ a.btn.block {
 }
 .badge-low {
   background: rgba(255, 193, 7, 0.18);
-  color: #ffd54f;
+  color: var(--testo-ambra);
 }
 .badge-empty {
   background: rgba(244, 67, 54, 0.2);
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
 
 /* ── Inventario: vista compatta ─────────────────────────────── */
@@ -835,14 +862,21 @@ a.btn.block {
   color: var(--btn-ink);
 }
 .chip.warn strong {
-  color: #ffd54f;
+  color: var(--testo-ambra);
 }
 .chip.danger strong {
-  color: #ff8a80;
+  color: var(--testo-rosso);
 }
+/* IL CHIP ACCESO HA IL FONDO DELL'AZIONE, e dentro ci va l'inchiostro del
+   tasto — anche il numero. Era `#fff` secco: sul dorato di casa faceva
+   1,7:1, e il numero dentro teneva comunque la sua tinta d'allarme (1,2:1
+   su TUTTI e otto i temi, il caso peggiore del foglio). --btn-ink è già
+   deciso dalla luminanza del colore d'azione, tema per tema. */
 .chip.warn.active,
-.chip.danger.active {
-  color: #fff;
+.chip.danger.active,
+.chip.warn.active strong,
+.chip.danger.active strong {
+  color: var(--btn-ink);
 }
 
 .inv-search {
@@ -1002,14 +1036,37 @@ a.btn.block {
   margin: 14px 0;
 }
 
+/* I PASSI DI UNA COMANDA — «Da fare, In preparazione, Pronto, Servito» —
+   col loro orario sotto. Tre riquadri di fondo, tre inchiostri, e nessuno
+   dei tre dà più per scontato il tema scuro:
+   - il riquadro spento era un velo bianco (invisibile sul chiaro: la
+     stessa famiglia di BUG-065) e adesso è --tile-bg;
+   - il nome del passo era --muted, e su due temi cadeva sotto la soglia:
+     è il nome di quello che si sta facendo, non un'etichetta di servizio;
+   - il riquadro fatto aveva l'inchiostro cablato #c8f7da, verde-menta
+     nato per il fondo scuro: sul chiaro era verde pallido su verde
+     pallido, 1,03:1. «Il colore verde del testo non si legge bene sullo
+     sfondo verde qui» (l'utente, 22/08/2026).
+   Il verde del fatto resta lo stesso di prima (--ok al 25%), ma mescolato
+   con --card invece che sovrapposto: la fermata è un colore opaco e il
+   contrasto misurato è quello che si vede davvero. */
 .step {
   flex: 1;
   text-align: center;
   padding: 10px 6px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--tile-bg);
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--text);
+}
+
+/* L'ORA DENTRO UN PASSO NON È TESTO DI SERVIZIO: sono i minuti che dicono
+   se il ticket è fermo da un quarto d'ora. Su un fondo tinto --muted
+   cadeva sotto la soglia su sei temi su otto — fino a 1,03:1 sul passo in
+   corso, dove il fondo è il dorato dei tasti — e la gerarchia col nome la
+   fa già la misura del carattere. */
+.step .muted {
+  color: inherit;
 }
 
 .step.active {
@@ -1019,8 +1076,8 @@ a.btn.block {
 }
 
 .step.done {
-  background: rgba(46, 204, 113, 0.25);
-  color: #c8f7da;
+  background: color-mix(in srgb, var(--ok) 25%, var(--card));
+  color: var(--text);
 }
 
 input,
@@ -2040,34 +2097,15 @@ body.fullbleed .bar-content {
   color: var(--accent-2);
   border-color: var(--accent-2);
 }
-/* Acceso = c'è un filtro che sta lavorando e la fila è chiusa. Adesso che
-   il riquadro c'è, si accende anche quello: il colore del solo testo, su
-   un bottone bordato, si perdeva. */
-.coda-tastino.active {
-  color: var(--accent-2);
-  border-color: var(--accent-2);
-  font-weight: 600;
-}
-
-/* QUANTI FILTRI DEVIANO DAL DEFAULT, accanto al nome e SOLO a fila chiusa.
-   Senza, chiusa la fila non resterebbe a schermo niente a dire che la coda
-   è filtrata — dodici conti dove ce ne sono quaranta. Aperta non serve: i
-   chip accesi si vedono da sé, e ridirlo con un numero è rumore. */
-.coda-tastino-conta {
-  display: inline-block;
-  min-width: 16px;
-  margin-left: 4px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--accent-2);
-  /* L'inchiostro sopra un fondo d'accento ha già il suo gettone, e segue
-     il tema: scritto a mano sarebbe nero su nero sul primo tema scuro. */
-  color: var(--btn-ink);
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-}
+/* NIENTE BADGE E NIENTE «ACCESO» SUL TASTO DEI FILTRI. Il numero dei
+   filtri accesi (`.coda-tastino-conta`) e la classe `.active` che lo
+   accompagnava sono stati tolti il 22/08/2026: «sì ma infatti togliamo
+   quel numero. Non serve» (l'utente). Il conteggio era stato provato con
+   quattro criteri diversi e nessuno diceva a chi guarda quello che si
+   aspettava — la storia sta in `spiegaFiltri`, src/lib/coda.js. Se
+   tornasse la tentazione di riaccendere il tasto «quando c'è un filtro»,
+   quel colore ha bisogno di un conteggio sotto, ed è esattamente la parte
+   che è stata rimossa. */
 
 
 
@@ -2517,19 +2555,13 @@ body.fullbleed .bar-content {
 }
 
 /* Indietro nelle sezioni del gestionale: piccolo, in cima al contenuto. */
-/* Riga di una serata nello storico chiusure di cassa. */
-.cash-sess-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 4px 0;
-  border: none;
-  background: none;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  font-size: 0.95rem;
+/* L'INCASSO DELLA SERATA, in coda alla riga della lista chiusure. È il
+   numero che si cerca — «com'è andata ieri sera» si risponde con quello,
+   non con l'orario — quindi sta un gradino sopra i prezzi normali: la
+   riga adesso è alta abbastanza per portarlo. L'oro è quello dei soldi
+   in tutta l'app (`.price`), su fondo card e non tinto. */
+.cash-sess-incasso {
+  font-size: 1.2rem;
 }
 
 /* Elenco dei prodotti venduti in una fascia oraria: righe compatte scorrevoli. */
@@ -2851,11 +2883,15 @@ body.bar-wide .app {
 .inv-row.ass-linea { border-left-color: #3498db; }
 .inv-row.ass-premium { border-left-color: #f0b429; }
 .inv-row.ass-out { border-left-color: #e74c3c; }
+/* La riga si tocca: alta almeno `--riga-lista` (vedi il gettone in cima
+   al foglio). Il minimo, non l'altezza fissa — una riga che va a capo
+   cresce, non si taglia. */
 .inv-row-main {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: var(--riga-lista);
   padding: 8px 12px;
   background: none;
   border: none;
@@ -2897,6 +2933,76 @@ body.bar-wide .app {
 }
 .inv-row .grid-card-actions {
   padding: 0 12px 10px;
+}
+/* IL DETTAGLIO DI UNA RIGA sta SOTTO la riga, rientrato come le azioni
+   del magazzino: aprendo si scende, non si va altrove. */
+.inv-row-dettaglio {
+  padding: 0 12px 12px;
+}
+/* LA SERATA IN CORSO: la striscia accesa la fa trovare senza leggere la
+   lista. Verde come la pastiglia «in corso» che porta in riga — stesso
+   fatto, stesso colore — e come le altre strisce dice qualcosa DELLA
+   riga, non del suo stato di apertura. */
+.inv-row.in-corso {
+  border-left-color: var(--ok);
+}
+/* LA SERATA TROVATA cercandola per data. La lista non si filtra — resta
+   intera, perché serve anche a confrontare le serate fra loro — quindi la
+   riga cercata deve staccarsi da righe tutte uguali: cornice interna e velo
+   dell'accento, che non toccano la striscia a sinistra (quella dice se la
+   serata è in corso, ed è un'altra informazione). Il colore non è l'unico
+   segno: sopra l'elenco c'è la frase che dice quale serata è stata trovata. */
+.inv-row.trovata .inv-row-main {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* CERCARE UNA SERATA PER DATA: etichetta e campo su una riga sola, sopra
+   l'elenco. Il campo si tiene alto `--riga-lista` come le righe che sta
+   cercando — si tocca in piedi, col vassoio in mano — e largo quanto una
+   data per esteso: quello dei numeri (`.setting-amount`) è 90px e
+   taglierebbe il calendario nativo. */
+.cerca-serata {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 8px;
+}
+.cerca-serata input[type='date'] {
+  min-height: var(--riga-lista);
+  padding: 6px 10px;
+  font-size: 0.95rem;
+}
+/* LA RIGA È UNA SOLA, e porta due cose diverse: a sinistra i gettoni che
+   decidono DI COSA parla una riga (serata, settimana, mese), a destra il
+   campo con cui si SALTA a una serata. Ai due capi perché sono due domande
+   distinte — e appoggiandosi a una riga che c'era già non costano altezza
+   alla lista, che è la cosa per cui la pagina esiste.
+   Stretto vanno a capo, e allora il campo torna a filo a sinistra: spinto a
+   destra su una riga tutta sua sarebbe appeso nel vuoto. */
+.cerca-serata-data {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .cerca-serata-data { margin-left: 0; }
+}
+/* LE SERATE DENTRO UNA RIGA AGGREGATA sono le righe di sempre, non un
+   secondo tipo di lista: stessa famiglia, stessa altezza del bersaglio,
+   stesso dettaglio che scende sotto. Quello che si toglie è il riquadro —
+   un bordo dentro un bordo disegna una scatola dentro la scatola, e la
+   settimana non è un contenitore: è la somma delle sue sere. Resta il
+   filo in cima, che dice dove finisce il totale e cominciano le serate. */
+.inv-sotto-lista {
+  margin-top: 0;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+.cerca-serata-esito {
+  margin: 0 0 8px;
 }
 :root[data-luma='light'] .inv-row.open .inv-row-main { background: rgba(0, 0, 0, 0.03); }
 .admin-card.off .grid-card-main {
@@ -4179,7 +4285,6 @@ body.fullbleed,
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .groups-panel .group-row:last-child { border-bottom: none; }
-.pill.chiuso { background: rgba(46, 204, 113, 0.22); color: #9ff5c0; }
 
 /* ── Dettaglio ordine POS (stile SumUp, solo bartender) ─────────────── */
 /* Tablet/desktop: comanda come colonna destra; telefono: pannello in basso.
@@ -4234,9 +4339,87 @@ body.fullbleed,
      di "saltare": niente sensazione di ricaricamento del layout. */
   transition: width 0.14s ease;
 }
-/* Barra in alto del POS: scostata dalla barra di sistema del tablet. */
+/* Barra in alto del POS: scostata dalla barra di sistema del tablet.
+   Com'è messa la riga sta QUI e non su uno `style` inline del componente:
+   da inline vinceva sempre, e il `gap: 8px` che il blocco del telefono le
+   dava più sotto non ha mai avuto effetto. */
 .posd-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   padding: calc(8px + var(--safe-top)) 10px 8px;
+  border-bottom: 1px solid var(--line);
+  /* Su UNA riga, sempre: una seconda riga sotto la barra costa altezza a
+     ogni conto per un'informazione che si legge una volta
+     (docs/navigazione.md). Quello che non ci sta si toglie — vedi le soglie
+     qui sotto — e quello che avanza si taglia. */
+  flex-wrap: nowrap;
+  overflow: hidden;
+  /* LA BARRA MISURA SE STESSA. Le soglie qui sotto guardano quanto è larga
+     LEI, non la finestra: lo zoom dell'app scala `#root` (proprietà `zoom`,
+     vedi ZoomControl) e una media query non se ne accorge — al 120% un
+     tablet da 768px di barra ne ha 640 veri, al 160% ne ha 480. È la stessa
+     ragione per cui la lavagna della coda si misura da sé (@container
+     corsie). */
+  container: barra-conto / inline-size;
+}
+
+/* COSA CEDE QUANDO LA BARRA SI STRINGE, e in quest'ordine — l'id interno,
+   chi ha aperto il conto, l'ora — cioè l'ordine di docs/navigazione.md:
+   prima quello che si rilegge altrove (Comande, Dati conto, la storia nel
+   ⋯), mai quello che dice dove sei e cosa sta succedendo.
+   VALE SOLO CON LO STATO DEL LAVORO A BORDO (`.con-lavoro`): senza quella
+   pastiglia la barra è quella di sempre e ci sta come ci stava. */
+@container barra-conto (max-width: 620px) {
+  .posd-topbar.con-lavoro .posd-serial {
+    display: none;
+  }
+}
+@container barra-conto (max-width: 560px) {
+  .posd-topbar.con-lavoro .posd-autore {
+    display: none;
+  }
+}
+@container barra-conto (max-width: 500px) {
+  .posd-topbar.con-lavoro .posd-aperto {
+    display: none;
+  }
+}
+
+/* SE PROPRIO NON CI STA, A CEDERE È LA PAROLA DEL LAVORO — NON LO ZOOM.
+   La barra taglia quello che avanza, e senza questo a finire fuori era
+   l'ULTIMO della fila, cioè i tasti dello zoom: un comando che sparisce
+   senza dirlo. Così invece si accorciano i puntini della pastiglia, che è
+   testo e si legge lo stesso. */
+.posd-topbar .posd-stato {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* I puntini non funzionano dentro un flex: qui la pastiglia torna un
+     blocco di testo, che è quello che è (segno + parola). */
+  display: block;
+}
+
+/* LO STATO DELLA LAVORAZIONE STA IN FONDO A DESTRA. Nella barra gli
+   elementi stanno in fila da sinistra, e lo spazio che avanza restava tutto
+   in coda: la spinta (`margin-left: auto`) apre il gruppo di destra e la
+   pastiglia va dove punta l'occhio di chi cerca «a che punto è».
+   LA SPINTA STA QUI, non su uno `style` inline: la barra ha già una sua
+   grammatica in questo foglio (le taglie, cosa cede sul telefono) e un
+   inline la scavalcherebbe senza comparire dov'è scritta. */
+.posd-topbar .posd-stato {
+  margin-left: auto;
+}
+
+/* LO ZOOM RESTA L'ULTIMO, ATTACCATO ALLA PASTIGLIA. Anche lui ha la sua
+   spinta a destra (.zoom-control.zoom-inline), e due spinte nella stessa
+   riga si dividono lo spazio a metà: la pastiglia finiva a mezz'aria e lo
+   zoom staccato in fondo. Con la pastiglia davanti la spinta è già stata
+   data, e allo zoom serve solo stare al suo fianco. */
+.posd-topbar .posd-stato ~ .zoom-control.zoom-inline {
+  margin-left: 0;
 }
 
 /* Nome del conto in testata (#4 · iole): GRANDE quanto i nomi degli item della
@@ -4291,7 +4474,10 @@ body.fullbleed,
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
 .posd-comanda-foot {
   flex-shrink: 0;
-  padding: 6px 14px 14px;
+  /* Poco sopra: quello che separa il piede da quello che c'e' sopra e' il
+     bordo, non un cuscino. Il respiro che conta e' fra i TASTI (il `gap`
+     qui sotto), non fra il bordo e la maniglia. */
+  padding: 4px 14px 14px;
   border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -4354,8 +4540,20 @@ body.fullbleed,
 }
 
 .posd-foot-handle {
-  height: 16px;
-  margin: 0 -12px 2px;
+  height: 14px;
+  /* LA MANIGLIA RIENTRA SOPRA E SOTTO, L'AREA DA AFFERRARE NO. Era il primo
+     figlio di una colonna con `gap` e si prendeva tutto: la sua area, il
+     gap, il margine e il cuscino del piede — un vuoto piu' alto della riga
+     del Totale che stava separando, e col piede ingrandito cresceva insieme
+     a tutto il resto. Due giri di lima: «diminuire lo spazio tra la maniglia
+     e il contenuto» e poi «vedo ancora che la maniglia occupa troppo spazio
+     sopra e sotto» (l'utente, 21 e 22/08/2026).
+     I margini negativi la fanno rientrare nei vicini invece di aggiungersi:
+     sopra si mangia il cuscino del piede, sotto riassorbe il gap — e quello
+     segue `--foot-scale`, perche' lo segue il gap che sta annullando.
+     I quattordici pixel di area restano: e' una presa, e una presa che non
+     si prende non serve a niente. Quello che si e' stretto e' il VUOTO. */
+  margin: -2px -12px calc(-2px - 8px * var(--foot-scale, 1));
   cursor: row-resize;
   touch-action: none;
   display: flex;
@@ -4374,10 +4572,18 @@ body.fullbleed,
   background: var(--accent-2, #f5b94a);
 }
 
-/* Maniglia di ridimensionamento fra le colonne del POS: area ampia e
-   comoda da afferrare col dito, con un indicatore a pallini centrale che
-   segnala che si può trascinare. */
-.posd-resize-handle {
+/* Maniglia di ridimensionamento fra le colonne del POS — e da 21/08/2026
+   fra le tre della schermata di pagamento, che si trascinano allo stesso
+   modo: stesso gesto, stessa presa, stessa larghezza sotto il dito. Area
+   ampia e comoda da afferrare, con un indicatore a pallini centrale che
+   segnala che si può trascinare.
+   LE DUE CLASSI RESTANO DISTINTE anche se lo stile è lo stesso, perché il
+   punto in cui SPARISCONO non è lo stesso: il POS impila le colonne sotto
+   i 900px, il pagamento sotto gli 800. Un nome solo avrebbe fatto sparire
+   le maniglie del pagamento in una fascia di larghezze in cui le sue
+   colonne sono ancora affiancate. */
+.posd-resize-handle,
+.payscreen-resize-handle {
   flex-shrink: 0;
   width: 18px;
   cursor: col-resize;
@@ -4391,7 +4597,8 @@ body.fullbleed,
   justify-content: center;
 }
 /* Traccia verticale */
-.posd-resize-handle::before {
+.posd-resize-handle::before,
+.payscreen-resize-handle::before {
   content: '';
   position: absolute;
   top: 0;
@@ -4403,7 +4610,8 @@ body.fullbleed,
   transition: opacity 0.15s, background 0.15s;
 }
 /* Presa a pallini al centro (⣿ verticale) */
-.posd-resize-handle::after {
+.posd-resize-handle::after,
+.payscreen-resize-handle::after {
   content: '';
   position: relative;
   width: 4px;
@@ -4414,12 +4622,16 @@ body.fullbleed,
   opacity: 0.8;
 }
 .posd-resize-handle:hover::before,
-.posd-resize-handle:active::before {
+.posd-resize-handle:active::before,
+.payscreen-resize-handle:hover::before,
+.payscreen-resize-handle:active::before {
   opacity: 1;
   background: var(--accent-2, #f5b94a);
 }
 .posd-resize-handle:hover::after,
-.posd-resize-handle:active::after {
+.posd-resize-handle:active::after,
+.payscreen-resize-handle:hover::after,
+.payscreen-resize-handle:active::after {
   opacity: 1;
 }
 @media (max-width: 899px) {
@@ -4503,15 +4715,15 @@ body.fullbleed,
    00197" andava a capo due volte e mangiava mezzo schermo. Restano le
    cose che servono mentre si lavora: da dove si torna, che conto è, com'è
    messo. Chi l'ha aperto e il progressivo interno si leggono in Comande e
-   nei Dati conto — lì c'è spazio. */
+   nei Dati conto — lì c'è spazio.
+   DA QUANDO C'È ANCHE LO STATO DEL LAVORO la riga è più affollata, e chi
+   cede lo decide il componente (`barraStretta`): via l'ora, e lo stato del
+   conto ridotto al suo segno. Qui resta la rete di sicurezza per i telefoni
+   più stretti — sotto i 375px anche così avanzano pochi pixel. */
 @media (max-width: 700px) {
   .posd-topbar {
     gap: 8px;
     padding: calc(6px + var(--safe-top)) 8px 6px;
-    /* Niente sovrapposizioni: chi ha testo lungo si tronca, gli altri
-       restano interi. Prima "#5" e l'ora finivano uno sull'altro. */
-    flex-wrap: nowrap;
-    overflow: hidden;
   }
   .posd-topbar > * {
     flex-shrink: 0;
@@ -4755,7 +4967,18 @@ body.fullbleed,
 .payscreen-items {
   display: flex;
   flex-direction: column;
-  width: min(340px, 34%);
+  /* LARGHEZZA TRASCINABILE (--pay-items-w, da useResizable), COL TETTO IN
+     PERCENTUALE. Il tetto non è un ripensamento sul minimo/massimo che
+     stanno nel JS: è la rete che protegge il TASTIERINO. La misura
+     trascinata è in pixel e resta scritta per quel terminale, ma i pixel
+     CSS a disposizione dipendono dallo zoom dell'app — a zoom 1,6 una
+     finestra da 1440 ne ha 900 — e una colonna da 460px lì dentro
+     schiaccerebbe il centro fino a coprire i tasti, che è esattamente
+     BUG-075. In percentuale il conto si rifà da solo a ogni zoom e a ogni
+     finestra: sinistra al massimo il 34%, destra al massimo il 30%, quindi
+     al centro resta SEMPRE almeno il 36% meno le due maniglie. Senza
+     variabile la regola è identica a quella di prima. */
+  width: min(var(--pay-items-w, 340px), 34%);
   flex-shrink: 0;
   padding: 4px 14px 12px;
   min-width: 0;
@@ -4827,6 +5050,17 @@ body.fullbleed,
   gap: 6px;
   margin-top: 10px;
   min-height: 0;
+  /* LA RETE SOTTO AL TASTIERINO. La scatola si stringe, i tasti no: hanno
+     un minimo da dito, e cinque righe di quel minimo sono un pavimento che
+     non scende. Quando la finestra è più bassa di così la griglia sborda, e
+     senza questo `overflow` l'ultima riga (00 0 = ←) finisce SOTTO
+     «Riscuotere», che ha il fondo pieno e la nasconde del tutto (BUG-075).
+     Qui invece scorre, e i tasti che incassano restano dove sono: su una
+     schermata che maneggia soldi un tasto che non si vede è peggio di un
+     tasto scomodo, e «Riscuotere» è quello che si preme sempre.
+     Con la riga qui sotto — il minimo che segue lo zoom — succede solo su
+     finestre molto basse tenute a zoom alto. */
+  overflow-y: auto;
 }
 /* Il tastierino del solo sconto: tre colonne, perché ci sono le cifre e basta.
    Con le quattro colonne del pagamento le cifre si spezzavano a metà riga. */
@@ -4840,7 +5074,16 @@ body.fullbleed,
   color: var(--text);
   font-size: 1.25rem;
   cursor: pointer;
-  min-height: 44px;
+  /* 44px VERI, non 44px CSS. La soglia dei bersagli (DESIGN.md) è una
+     misura FISICA: quanto è grande il tasto sotto il dito. Dentro `#root`,
+     che lo zoom dell'app scala, 44px CSS a zoom 1.2 sono già 52,8px veri —
+     la garanzia è superata di suo, e intanto il tastierino non ci sta più
+     in altezza e sborda addosso a «Riscuotere» (BUG-075). Diviso per lo
+     zoom il tasto resta grande quanto a zoom 1, in centimetri veri, e la
+     griglia rientra. È lo stesso idioma delle altezze che dividono 100dvh.
+     Non rimettere `44px` secchi: la regola non si ammorbidisce, si misura
+     dove va misurata. */
+  min-height: calc(44px / var(--zoom, 1));
 }
 .paypad-key.accent {
   color: #3f7ce0;
@@ -4907,7 +5150,12 @@ body.fullbleed,
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 230px;
+  /* Trascinabile come la colonna delle voci, col suo tetto in percentuale
+     (vedi .payscreen-items). Il 30% non morde mai al banco — 230px su un
+     tablet sono il 22% — ma tiene quando la finestra è piccola o lo zoom
+     alto. Il minimo lo tiene il JS (170px): questa colonna non deve poter
+     sparire, ci sono i tasti con cui si sceglie come si incassa. */
+  width: min(var(--pay-methods-w, 230px), 30%);
   flex-shrink: 0;
   padding: 12px;
   background: var(--bg-2);
@@ -4963,6 +5211,10 @@ body.fullbleed,
   .payscreen-methods .payscreen-method {
     flex: 1 1 40%;
   }
+  /* Colonne impilate: una larghezza da trascinare non esiste più. */
+  .payscreen-resize-handle {
+    display: none;
+  }
 }
 
 /* ── Varianti per TEMI CHIARI (impostate da applyTheme via data-luma) ──
@@ -4991,11 +5243,23 @@ body.fullbleed,
      restare i più forti — ma PRESENTE. Definito qui una volta sola: segue
      il tema perché segue --muted. */
   --strip-spenta: var(--muted);
+  /* L'INCHIOSTRO D'ALLARME E QUELLO D'ATTENZIONE. Il rosso di un numero in
+     perdita, l'ambra di una scorta agli sgoccioli: la TINTA non cambia col
+     tema — è memoria del banco (guardrail 5) — ma la sua forza sì. I
+     pastelli qui sotto sono nati per il fondo scuro; sul chiaro sparivano,
+     ed erano scritti a mano in mezza dozzina di regole, ognuna con la sua
+     variante chiara — o senza, ed è lì che si stava a 2:1 (.neg e i numeri
+     dei chip dell'inventario). Un gettone solo, la variante chiara
+     accanto, come --line e --strip-spenta. */
+  --testo-rosso: #ff8a80;
+  --testo-ambra: #ffd54f;
 }
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
   --tile-bg: rgba(0, 0, 0, 0.05);
   --velo-superficie: none;
+  --testo-rosso: #b02a37;
+  --testo-ambra: #7a5c00;
 }
 :root[data-luma='light'] .pill.aperto {
   background: rgba(46, 204, 113, 0.2);
@@ -5003,7 +5267,6 @@ body.fullbleed,
 }
 :root[data-luma='light'] .pill.annullato {
   background: rgba(244, 67, 54, 0.14);
-  color: #b02a37;
 }
 :root[data-luma='light'] .pill.ricevuto {
   background: rgba(243, 156, 18, 0.18);
@@ -5013,7 +5276,9 @@ body.fullbleed,
   background: rgba(52, 152, 219, 0.16);
   color: #0b5cad;
 }
-:root[data-luma='light'] .pill.pronto {
+:root[data-luma='light'] .pill.pronto,
+:root[data-luma='light'] .pill.live,
+:root[data-luma='light'] .pill.chiuso {
   background: rgba(46, 204, 113, 0.18);
   color: #157347;
 }
@@ -5029,11 +5294,9 @@ body.fullbleed,
 }
 :root[data-luma='light'] .badge-low {
   background: rgba(255, 193, 7, 0.22);
-  color: #7a5c00;
 }
 :root[data-luma='light'] .badge-empty {
   background: rgba(244, 67, 54, 0.15);
-  color: #b02a37;
 }
 :root[data-luma='light'] .btn.ghost {
   border-color: rgba(0, 0, 0, 0.25);
@@ -7613,10 +7876,10 @@ body.pagina-piena .inv-scheda {
   white-space: nowrap;
 }
 
-/* IL BADGE DEL CONTEGGIO NON STA PIÙ QUI. Era nell'angolo del tastino
-   quadrato ⚗️ (`.board-icona-conta`); il tasto dei filtri adesso è un
-   bottone basso e scritto, e il numero gli sta accanto — vedi
-   `.coda-tastino-conta`. */
+/* IL BADGE DEL CONTEGGIO NON ESISTE PIÙ. Stava nell'angolo del tastino
+   quadrato ⚗️ (`.board-icona-conta`), poi accanto al «▾ Filtri» scritto
+   (`.coda-tastino-conta`); dal 22/08/2026 il tasto dei filtri non porta
+   nessun numero — vedi `.coda-tastino`. */
 
 .board-icona.active {
   border-color: var(--accent-2);

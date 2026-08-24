@@ -36,6 +36,12 @@ se lo mette da sé, il tasto flottante si spegne (`StaffDrawer`, proprietà
 Non si rimpiccioliscono i tasti: al banco si tocca con le dita bagnate, e
 sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
+> I 44px si contano **sotto il dito**, non nel foglio: dove lo spazio è
+> contato e lo zoom dell'app è in mezzo, il minimo si scrive
+> `calc(44px / var(--zoom, 1))` — a zoom 1 è identico, ingrandendo il tasto
+> resta grande **quanto prima davvero** invece di far sbordare i vicini
+> (DESIGN.md, punto 2).
+
 1. **il nome del locale** (sotto i 700px resta il logo): chi lavora sa in che
    app è — è a tutto schermo;
 2. **l'«indietro»**: sul telefono il ☰ fa quello che fa lui **e in più** —
@@ -68,6 +74,20 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 
   Nel menu compaiono le sezioni della **pagina aperta**: sono le uniche che
   si conoscono senza esserci passati.
+- **Dentro una sottosezione, lista e dettaglio non sono un terzo livello di
+  menu.** Una sottosezione può essere fatta di una lista che si apre su un
+  dettaglio — le chiusure di cassa in Statistiche → Per serata: si tocca una
+  serata e si vedono i suoi numeri. Quel dettaglio **non entra nel menu**:
+  nel menu ci sono i posti dove si va, e qui il posto è la lista; il
+  dettaglio è una cosa che si guarda e si richiude, e la sottosezione resta
+  accesa mentre lo si guarda.
+  **La via d'uscita è una sola e sta in cima al dettaglio, a sinistra**, e
+  **dice dove riporta** — «← Chiusure», non «← Indietro»: il nome del posto
+  si legge senza doversi ricordare da dove si è arrivati.
+  **E uscendo si dimentica.** Tornando alla sottosezione si riparte dalla
+  lista: il dettaglio era stato chiuso apposta, e ritrovarcisi dentro vuol
+  dire non sapere più cosa fa la freccia in cima — se chiude quello che si è
+  appena aperto o riporta indietro di due passi.
 - **Dove la pagina ha sezioni sue, il menu resta agganciato**: da 768px in
   su non copre il contenuto, è una colonna della pagina e il contenuto si
   stringe per fargli posto. Lì dentro si salta da una sezione all'altra
@@ -192,7 +212,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   **Da chiuso il tastino non nasconde lo stato**: si accende e porta il
   numero di **quanto la coda è filtrata diversamente da come si apre** —
   non dei filtri accesi, che con gli stati combinabili è sempre almeno uno
-  e non distinguerebbe niente. Quali siano lo dice il titolo, dopo il nome
+  e non distinguerebbe niente. Le conta **una per una**, non per genere:
+  tre colonne diverse dal solito fanno tre, e con lo staff filtrato
+  quattro. Contarle per genere dava «tre colonne in meno e un uno» —
+  «non mi è chiaro come conta i filtri» (l'utente, 22/08/2026) — e chi non
+  ritrova a occhio il numero che vede smette di guardarlo. Quali siano lo dice il titolo, dopo il nome
   del tasto — che è **«Mostra filtri»** e **«Nascondi filtri»**, cioè
   quello che il tasto fa. A fila **aperta** il numero sparisce: i chip
   accesi si vedono da sé.
@@ -232,6 +256,19 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
   decine di volte a serata. Filtri e ordinamento non ci sono più nemmeno
   loro: stanno giù, in fondo alla riga dei conteggi, sul telefono come
   ovunque — in due posti sarebbero due stati da tenere allineati a mano.
+- **Una lista che si può leggere in più modi lo sceglie SOPRA DI SÉ, in una
+  riga che c'è già.** Le chiusure di cassa si guardano per serata, per
+  settimana o per mese, e i tre gettoni stanno in fondo alla riga della
+  ricerca per data (`.chip-gruppo`, gli stessi dei filtri della coda):
+  attaccati, perché sono una domanda sola con tre risposte, e appoggiati a
+  una riga che esiste comunque, perché la pagina esiste per la lista.
+  Non una tendina — con tre voci bisognerebbe aprirla per sapere cosa c'è
+  dentro. Non in Impostazioni: là ci vanno le viste della coda, che si
+  scelgono una volta e non si toccano più; questa si cambia MENTRE si
+  guarda («com'è andato agosto? e questa settimana?»), come i filtri.
+  **E una riga aggregata si apre su quello che contiene**, non porta a un
+  dettaglio nuovo: la settimana si spiega con le sue sere, che sono le righe
+  che si conoscono già.
 - **Il contenuto non porta navigazione**: niente tasti «vai a…» in mezzo a una
   lista, che si trovano solo scorrendo.
 

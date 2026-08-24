@@ -1,5 +1,224 @@
 # Cosa è cambiato
 
+## 1.5.5-beta
+
+### Per chi gestisce
+
+- **Il tasto «▾ Filtri» non porta più nessun numero.** «Sì ma infatti
+  togliamo quel numero. Non serve» (22/08/2026). Accanto alla parola
+  «Filtri» c'era una cifra con quanti filtri erano accesi: è stata
+  calcolata in quattro modi diversi in due giorni e nessuno diceva quello
+  che chi guardava si aspettava — «non mi è chiaro come conta i filtri»,
+  «funziona al contrario», «ne ho tre e lui dice zero». Adesso il tasto
+  dice «▾ Filtri» e basta, in tutte le viste della coda, e non si colora
+  più. **Cosa fanno i filtri non cambia**: quali sono accesi si vede
+  aprendo la fila, dove i gettoni accesi si distinguono da soli.
+
+- **Le chiusure di cassa si guardano per serata, per settimana o per
+  mese.** «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare
+  quelle settimanali o mensili oltre che per data» (22/08/2026). Sopra la
+  lista, nella riga della ricerca per data, ci sono tre gettoni: **Serata**
+  (com'era), **Settimana**, **Mese**. Una riga di settimana o di mese dice
+  il periodo, **quante serate** contiene, la **media a serata** e **quanto
+  ha incassato in tutto** — la media perché è quella che rende confrontabili
+  due settimane di lunghezza diversa: cinque aperture e tre aperture fanno
+  totali diversi per un motivo che non c'entra con com'è andata la sera.
+  **Toccando una riga si apre sulle sue serate**, che sono le righe di
+  sempre: da lì il riepilogo di cassa e il rendiconto si aprono come prima.
+  La **settimana comincia di lunedì**, così venerdì, sabato e domenica
+  stanno nella stessa riga; e una serata chiusa all'una di notte resta nella
+  settimana del giorno in cui è cominciata. Le settimane e i mesi senza
+  chiusure non compaiono. La scelta si ricorda sul tablet che si sta usando.
+
+- **Cercare una data non fa più perdere la vista scelta.** Guardando per
+  settimana o per mese, scegliere un giorno **apre il periodo che contiene
+  quella serata** e accende la riga della serata lì dentro, invece di
+  riportare all'elenco piatto. La frase sopra la lista dice dove guardare:
+  «evidenziata nella settimana 17–23 ago».
+
+- **L'aliquota IVA è una sola, quella del locale.** Ce n'erano due senza
+  che nessuno lo sapesse: una nelle impostazioni della stampante, salvata
+  **nel browser di ogni tablet**, che finiva sullo scontrino; e una nelle
+  impostazioni del bar, condivisa, usata da margini e statistiche. Due
+  tablet potevano quindi stampare scontrini con aliquote diverse, e l'IVA
+  sulla carta poteva non tornare con quella dei conti. Adesso la stampa
+  legge **l'aliquota del locale** — quella in *Impostazioni → Prezzi e
+  supplementi*, la stessa dei margini — e anche la fattura di cortesia. Il
+  campo nel pannello della stampante è sparito, con scritto dove si
+  imposta. Se su un tablet era rimasto un valore diverso, **viene
+  ignorato**: quel numero non lo legge più nessuno e da lì esce la stessa
+  carta di tutti gli altri. Con le due aliquote uguali, lo scontrino è
+  identico a prima.
+
+- **Le impostazioni di stampa automatica sono passate in «Cassa e
+  giornata».** Stavano sparse: due nel pannello della stampante, una fra i
+  pagamenti — «le impostazioni di stampa automatica riguardano la cassa»
+  (22/08/2026). Adesso stanno tutte in un riquadro solo, **🖨️ Stampa
+  automatica**, subito sotto Pagamenti: quando esce la comanda, quando esce
+  lo scontrino, chi stampa le comande prese in sala e la ricevuta d'acconto
+  automatica. Il riquadro dice anche **quali valgono solo per il tablet che
+  si ha in mano** e quali per tutto il locale. Nella sezione «Stampante»
+  restano le cose della macchina — indirizzo, prova di stampa, i dati che
+  finiscono sulla carta — con scritto dove sono andate le altre. Niente si
+  è spento: gli interruttori sono quelli di prima, cambiati di posto.
+
+- **Le statistiche si aprono sull'elenco delle serate.** «Statistiche»
+  adesso ha due voci nel menu: **Per serata** — quella che si apre di suo —
+  e **Per periodo**, quella di prima. La prima è la lista delle chiusure di
+  cassa, la più recente in cima, con per ogni serata **giorno, orari e
+  durata** e tre numeri incolonnati: **incasso, conti, scontrino medio**.
+  Così due sabati si confrontano guardandoli, senza aprire niente — e
+  toccando una riga si aprono tutte le statistiche di quella serata,
+  identiche a prima, con «← Chiusure» in alto per tornare all'elenco. **La
+  cassa ancora aperta è la prima riga**, con l'orario che dice «in corso» e
+  i numeri di adesso. Prima la serata era una pastiglia con una tendina:
+  per confrontare due sere bisognava aprirla, sceglierne una, leggere,
+  riaprirla e ricominciare. In «Per periodo» restano le giornate
+  (7/10/20/30/60 e Personalizzato); la pastiglia «Ultima chiusura» e la
+  tendina delle serate non ci sono più, perché quella è diventata una
+  sezione sua.
+
+- **Le chiusure di cassa sono una lista, la stessa del magazzino.** «Anche
+  qui nei rendiconti delle chiusure di cassa serve una lista fatta meglio,
+  stile quella del magazzino ma con righe più alte» (22/08/2026). Prima
+  ogni serata era un riquadro a sé; adesso è un elenco solo, con le righe
+  alte come quelle del magazzino e il dettaglio che si apre sotto la riga
+  toccata. La riga dice le stesse cose — data, apertura → chiusura, durata,
+  incasso — ma **l'incasso si legge da lontano**: è il numero che si cerca
+  quando ci si chiede com'è andata ieri sera.
+  **La serata in corso si riconosce a colpo d'occhio**, con due segni e non
+  uno: la pastiglia verde «in corso» al posto dell'ora di chiusura e la
+  striscia accesa a sinistra. E non dichiara più **0,00 €**: l'incasso di
+  una serata aperta si sa solo aprendo la riga, e uno zero in una lista di
+  soldi si legge come «stasera non è entrato niente». Finché il dato non
+  c'è, c'è un trattino.
+
+- **Le chiusure di cassa si cercano per data, e il riquadro è sparito.**
+  «Togli il box, lascia solo la lista, e aggiungi un selettore di data per
+  cercare una chiusura cassa» (22/08/2026). L'elenco non sta più dentro un
+  riquadro: occupa tutta la larghezza, come quello delle statistiche. Il
+  titolo «Chiusure di cassa» e la riga di spiegazione sotto non ci sono
+  più — il titolo è già nella barra in alto e la spiegazione ripeteva
+  quello che ogni riga dice da sé.
+  Sopra l'elenco c'è un **campo data**: scegliendo un giorno, la pagina
+  scorre fino a quella serata e la riga si accende. **L'elenco non si
+  filtra**, quindi le altre serate restano lì da confrontare e non serve
+  annullare niente per tornare a vederle tutte. Vale la serata, non il
+  giorno sul calendario: una serata aperta il 15 e chiusa all'una e otto si
+  cerca al **15**. Nel campo non si possono scegliere date future né
+  precedenti alla prima chiusura registrata, e se in quel giorno la cassa
+  non ha aperto lo dice: «Nessuna chiusura di cassa registrata per lunedì
+  18 agosto».
+
+- **Le righe del magazzino si toccano col dito.** Erano alte quanto la
+  scritta che ci sta dentro, e in piedi al banco — con 388 articoli in
+  elenco — si finiva per aprire la riga di fianco: «aumenta l'altezza
+  anche delle righe della tabella dell'inventario per un touch migliore»
+  (22/08/2026). Adesso sono alte quanto un bersaglio pieno, la misura di
+  tutti i tasti che si premono di corsa. La riga è più alta, non diversa:
+  striscia dell'assortimento, pallino delle scorte, legenda e dettaglio
+  che si apre sotto restano dov'erano. **Ed è una misura sola** per tutte
+  le liste dell'app — magazzino, chiusure di cassa, statistiche — così le
+  tre schermate non prendono strade diverse. Con lo zoom dell'app alzato
+  le righe non si gonfiano: restano grandi sotto il dito quanto a zoom
+  normale, e se ne vedono altrettante.
+- **Sulla comanda le voci sono sempre unite.** Se sul conto le righe erano
+  separate — perché si stava dividendo chi paga cosa — al banco uscivano
+  quattro righe «1 JEFFERSON» una sotto l'altra invece di una
+  «4 JEFFERSON»: «devono essere sempre unite sulla comanda»
+  (22/08/2026). Adesso la comanda si conta a colpo d'occhio, e il conto
+  resta come lo si è lasciato: separare le righe serve a dividere il conto,
+  e su scontrino e schermata di pagamento non cambia niente. **Le note
+  restano righe a sé**: «poco ghiaccio» su due dei quattro è lavoro
+  diverso, e non si mescola con gli altri due. Il numero dei pezzi in cima
+  al ticket è sempre quello giusto. Ne guadagna anche la **ricevuta unica**
+  di più comande, che prima poteva perdere per strada una delle due note.
+
+- **«📅 Solo oggi» adesso si vede anche fuori dalla griglia.** Accendendolo
+  fra i conti e passando alle comande, la coda restava tagliata dei giorni
+  scorsi senza niente a schermo che lo dicesse e senza un tasto per
+  rimetterla a posto. Ora il tasto lo si ritrova acceso dov'è acceso, e il
+  numero sui filtri lo conta in tutte le viste.
+
+- **Sui temi chiari il testo non sparisce più dentro i riquadri colorati.**
+  Nel dettaglio di una comanda i passi già fatti sono verdi, e la scritta
+  dentro era verde pallido: «il colore verde del testo non si legge bene
+  sullo sfondo verde qui». Adesso il nome del passo e **l'ora sotto**
+  prendono il colore del testo normale, su tutti i temi — e l'ora si legge
+  anche sul passo in corso, dove il riquadro è dorato e prima era quasi
+  invisibile su ogni tema, scuri compresi.
+  Cercando lo stesso difetto altrove sono venuti fuori: il **numero dentro
+  un riquadro acceso** dell'inventario («scarsi 7», «finiti 3»), che non si
+  leggeva su nessun tema; le pastiglie **«in corso»** del registro ore e
+  **«chiuso»** dei gruppi, che sparivano sui temi chiari; i **numeri in
+  perdita**, rosso pallido su bianco; e la pastiglia **«pagato»**, che
+  cambiava colore col tema — su Pico era azzurra come «in preparazione», e
+  adesso è ambra ovunque, come lo stato vuole.
+  Sui temi scuri, quelli che si usano al banco, non è cambiato in peggio
+  niente: ogni riga è stata rimisurata in un browser vero, tema per tema.
+
+- **Nel conto, la maniglia del piede sta più vicina al totale.** Fra la
+  maniglia e la riga del Totale c'era più vuoto della riga stessa, e tirando
+  su la maniglia per ingrandire i tasti quel vuoto cresceva insieme a loro.
+  La presa sotto il dito è rimasta identica: si è stretto solo lo spazio.
+
+- **Dal pannello delle comande non si stampa più lo scontrino del conto.**
+  C'era un tasto che, da dentro la finestra delle comande, mandava in stampa
+  il riepilogo del cliente: due carte diverse dietro lo stesso vetro, e
+  quella sbagliata era la più lunga. Lì si stampano le comande; lo scontrino
+  esce riscuotendo, e il riepilogo da mostrare prima di pagare è il
+  «Preconto».
+
+- **Lo stato del servizio è passato nella barra in alto del conto**, in
+  fondo a destra: «🍹 In preparazione», «🔔 Pronto», «🧾 Da fare». Stava
+  nella testata della colonna del conto, schiacciato fra il numero e i
+  tastini delle righe; adesso la riga in cima si legge in due metà — a
+  sinistra il conto e i soldi (numero, ora, «🟢 Conto aperto» o «💳
+  Pagato», chi l'ha aperto), a destra **a che punto è il lavoro**. Le due
+  pastiglie non si confondono: fermandocisi sopra ognuna dice di cosa
+  parla. **Quando compare e cosa dice non cambiano**: si vede solo sui
+  conti in corso, dove il locale segue il servizio, e porta sempre il
+  passo **più indietro** fra le comande ancora aperte — quello che manca,
+  non quello che è già uscito.
+  **Sul telefono**, dove quella riga è stretta, per far posto cedono
+  l'**ora di apertura** (si rilegge nella storia del conto, dal ⋯) e la
+  **parola** dello stato del conto, che resta il suo segno (🟢 / 💳 / 🟡)
+  col nome per esteso tenendoci premuto sopra. In cambio i tasti dello
+  **zoom** non finiscono più fuori dallo schermo.
+  **Con l'app ingrandita** vale la stessa regola: la riga si guarda per
+  quanto è larga davvero, non per quanto è larga la finestra, e man mano
+  che lo spazio manca lascia andare prima l'**id interno**, poi **chi ha
+  aperto il conto**, poi l'**ora**. Su una riga sola, sempre — provato dal
+  telefono al monitor e da 100% a 160%.
+
+- **Le tre colonne della schermata di pagamento si allargano e si
+  stringono**, come già quelle del dettaglio ordine: si prende il bordo fra
+  una colonna e l'altra e lo si trascina (col dito, tenendo premuto un
+  istante). Chi batte gli importi a mano si fa il **tastierino grande**;
+  chi divide un conto lungo si allarga la **lista delle voci**. La misura
+  **resta su quel tablet** — il banco e la sala possono tenerla diversa — e
+  non si può stringere niente fino a farlo sparire: i tasti con cui si
+  sceglie come incassare restano sempre lì, e al tastierino resta sempre
+  almeno un terzo dello schermo, a qualunque zoom. Sul telefono, dove le
+  colonne sono già una sotto l'altra, non cambia nulla.
+
+- **Via l'avviso «Comande non ancora servite» dalla schermata di
+  pagamento.** Era una riga fissa sotto l'importo, e quando si ingrandisce
+  l'app quella riga è spazio tolto al **tastierino**. Quello che diceva non
+  si perde: lo dice il tasto **«Riscuoti e servi · chiude il conto»** — se
+  quello chiude, l'altro no — e chi passa col mouse su **«Riscuotere»** se
+  lo trova scritto per esteso. Non cambia niente di come si incassa.
+
+- **Con lo zoom su, il tastierino del pagamento non finisce più dietro
+  «Riscuotere».** Ingrandendo l'app al 120% l'ultima riga di tasti — lo
+  **0**, il **00**, l'**=** e il tasto per **cancellare una cifra** —
+  spariva sotto il tasto blu dell'incasso: chi batteva un importo a mano
+  non trovava più né lo zero né il modo di correggersi. Adesso i tasti
+  restano grandi **quanto prima davvero sotto il dito** e il tastierino ci
+  sta per intero; su una finestra molto bassa tenuta a zoom alto scorre da
+  sé, e i tasti che incassano restano dove sono. Provato a ogni livello di
+  zoom, dal 100% al 160%.
+
 ## 1.5.4-beta
 
 ### Per chi gestisce

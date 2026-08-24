@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
+import ToggleRow from './ToggleRow.jsx'
 import {
   avvisiPerRuolo,
   avvisoAttivo,
@@ -83,20 +84,3 @@ export default function AvvisiPanel({ gestore }) {
   )
 }
 
-function ToggleRow({ label, desc, checked, onChange, disabled }) {
-  return (
-    <div className="toggle-row">
-      <div>
-        <div>{label}</div>
-        {desc && <div className="desc">{desc}</div>}
-      </div>
-      <input
-        type="checkbox"
-        className="toggle"
-        checked={!!checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-    </div>
-  )
-}
