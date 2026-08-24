@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 21 agosto 2026.
+> Generato il 22 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,15 +22,15 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 171 | fatto e coperto dai test |
+| ✅ | 176 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**207 voci** in tutto. **185** descrivono il sistema com'è oggi e
+**212 voci** in tutto. **190** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **6** difetti noti sono ancora aperti.
+cosa che l'app fa; **8** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -42,13 +42,13 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 12 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 13 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 10 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -59,8 +59,9 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 22 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [STAT](#stat) | 1 | — |  |
 
 ## Cosa fa il sistema
 
@@ -76,7 +77,7 @@ Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al b
 
 Un ordine è un CONTO che resta aperto (aperto/pagato/annullato) e contiene una o più comande. La lavorazione (ricevuto, in preparazione, pronto, ritirato) vive sulla singola comanda: un tavolo può avere un giro già servito e uno ancora al banco. La comanda attiva è quella al passo più indietro; a parità di passo vince la più vecchia.
 
-**Dove**: `src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`
+**Dove**: `src/lib/comande.js, src/lib/api.js, src/components/OrderPosDetail.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-002 — Gli ordini vecchi continuano a funzionare
 
@@ -110,7 +111,7 @@ Chiudendo o annullando si torna alla lista ordini, dove quel conto non deve più
 
 #### REQ-ORD-007 — La coda distingue aperti e chiusi, e ignora gli annullati
 
-La coda smista i conti per stato, conta e somma solo i non annullati e sa dire quanti conti sono ancora aperti. Con la gestione della preparazione attiva un conto pagato ma non servito resta da fare; senza, il pagamento chiude e basta — e nella schermata di pagamento non compare l'avviso «comande non ancora servite», che senza preparazione non vuol dire niente e uscirebbe a ogni incasso. E la coda è il lavoro di ADESSO: un conto incassato o annullato prima dell'ultima chiusura di cassa non compare, in nessuna tab — chiusi, annullati o tutti — perché quei conti sono già stati contati e rendicontati; stanno in Cassa, nella lista ordini. Non basta guardare la giornata: in una serata la cassa si chiude e si riapre. I conti APERTI restano sempre, cassa chiusa compresa: quelli sono da chiudere, e nasconderli vorrebbe dire perderli. Chiudendo o annullando un conto si scrive in QUALE cassa è successo, e la coda tiene d'occhio anche quelli: senza, un conto aperto giorni prima e annullato stasera usciva dall'elenco dei conti aperti, non entrava in quello di oggi — che guarda la data di apertura — e spariva dallo schermo nell'istante in cui lo si annullava. Vale anche per il rendiconto di cassa: un tavolo aperto ieri e incassato stasera è incasso di stasera. Conta QUANDO è stato chiuso, non quando è stato aperto: un conto di ieri rimasto aperto e annullato stasera è successo stasera, e guardando la sessione in cui era nato spariva dalla tab «annullati» nell'istante in cui lo si annullava — si agisce su un conto e quello svanisce, senza sapere se l'operazione è andata a buon fine. Il riepilogo in testata NON cambia cambiando tab: è cumulativo — aperti, chiusi e annullati di questa apertura — e si calcola sugli ordini grezzi, non su quelli che la tab sta mostrando. «In corso» nasconde i conti appena chiusi da qui e le altre tab no: il numero ballava solo perché si toccava un filtro. Il riepilogo in testata è di questa apertura di cassa — a cassa chiusa sono zeri — e accanto ad aperti e chiusi dice quanti conti sono stati ANNULLATI, che non fanno cassa ma sono un dato del banco. Chi la cassa non la apre mai continua a vedere la giornata: è l'unico riferimento che ha.
+La coda smista i conti per stato, conta e somma solo i non annullati e sa dire quanti conti sono ancora aperti. Con la gestione della preparazione attiva un conto pagato ma non servito resta da fare; senza, il pagamento chiude e basta. (Dell'avviso «comande non ancora servite» che compariva nella schermata di pagamento non resta niente a schermo dal 21/08/2026: occupava una riga fissa nella colonna del tastierino. Quello che diceva sta nel `title` di «Riscuotere» — vedi REQ-ORD-014.) E la coda è il lavoro di ADESSO: un conto incassato o annullato prima dell'ultima chiusura di cassa non compare, in nessuna tab — chiusi, annullati o tutti — perché quei conti sono già stati contati e rendicontati; stanno in Cassa, nella lista ordini. Non basta guardare la giornata: in una serata la cassa si chiude e si riapre. I conti APERTI restano sempre, cassa chiusa compresa: quelli sono da chiudere, e nasconderli vorrebbe dire perderli. Chiudendo o annullando un conto si scrive in QUALE cassa è successo, e la coda tiene d'occhio anche quelli: senza, un conto aperto giorni prima e annullato stasera usciva dall'elenco dei conti aperti, non entrava in quello di oggi — che guarda la data di apertura — e spariva dallo schermo nell'istante in cui lo si annullava. Vale anche per il rendiconto di cassa: un tavolo aperto ieri e incassato stasera è incasso di stasera. Conta QUANDO è stato chiuso, non quando è stato aperto: un conto di ieri rimasto aperto e annullato stasera è successo stasera, e guardando la sessione in cui era nato spariva dalla tab «annullati» nell'istante in cui lo si annullava — si agisce su un conto e quello svanisce, senza sapere se l'operazione è andata a buon fine. Il riepilogo in testata NON cambia cambiando tab: è cumulativo — aperti, chiusi e annullati di questa apertura — e si calcola sugli ordini grezzi, non su quelli che la tab sta mostrando. «In corso» nasconde i conti appena chiusi da qui e le altre tab no: il numero ballava solo perché si toccava un filtro. Il riepilogo in testata è di questa apertura di cassa — a cassa chiusa sono zeri — e accanto ad aperti e chiusi dice quanti conti sono stati ANNULLATI, che non fanno cassa ma sono un dato del banco. Chi la cassa non la apre mai continua a vedere la giornata: è l'unico riferimento che ha.
 
 **Dove**: `src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/codaCache.test.js`, `tests/unit/cashSessionHook.test.js`, `tests/component/PaymentScreen.test.jsx`
 
@@ -444,6 +445,18 @@ CHI SOMMAVA UN NUMERO ADESSO NE SOMMA UNA LISTA: cassa, statistiche, rendiconto,
 
 **Dove**: `src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js` · **Lo dimostrano**: `tests/unit/scontiAccumulati.test.js`, `tests/unit/contoScontatoSiChiude.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/campiDiStampa.test.js`
 
+#### REQ-PAG-014 — Le tre colonne del pagamento si trascinano, e la misura resta su quel terminale
+
+Chiesto dall'utente il 21/08/2026, subito dopo il lavoro sullo zoom (BUG-075): «rendi ridimensionabili le tre colonne della schermata pagamento come lo sono quelle nel dettaglio dell'ordine». Al banco chi batte importi a mano vuole il tastierino grande; chi divide un conto lungo vuole la lista delle voci. Sono due mestieri diversi sullo stesso schermo, e finora la misura la decideva il foglio di stile. COM'E' FATTO: le stesse maniglie del POS, lo stesso attrezzo ('useResizable', quindi anche la presa col dito solo tenendo premuto — REQ-POS-008). Due bordi trascinabili, fra le voci e il tastierino e fra il tastierino e i metodi; il centro prende quello che resta, come nel POS. La larghezza si ricorda PER TERMINALE (localStorage): il tablet del banco e quello della sala non hanno lo stesso schermo ne' lo stesso mestiere. I LIMITI, e perche' sono quelli. A sinistra da 200 a 460px: sotto i 200 il prezzo di una voce va a capo sotto il nome e la lista smette di leggersi in colonna. A destra da 170 a 380px: i metodi devono restare leggibili su una riga sola («Carta di Credito» e' il piu' lungo) e quella colonna NON DEVE POTER SPARIRE — li' ci sono i tasti con cui si sceglie come si incassa.
+
+IL PAVIMENTO DEL CENTRO PERO' NON STA NEL JAVASCRIPT, sta nel foglio: ogni colonna laterale e' limitata anche in PERCENTUALE (34% e 30%), quindi al tastierino resta sempre almeno un terzo della larghezza. Il motivo e' BUG-075: la misura trascinata e' in pixel e resta scritta, ma i pixel CSS disponibili dipendono dallo zoom dell'app — a zoom 1,6 una finestra da 1440 ne ha 900 — e una colonna larga trascinata a zoom 1 schiaccerebbe il centro fino a coprire i tasti. In percentuale il conto si rifa' da solo a ogni zoom e a ogni finestra.
+
+SUL TELEFONO NON C'E': sotto gli 800px le colonne sono impilate a tutta larghezza e una larghezza da trascinare non esiste — le maniglie spariscono. I TESTI NON SCALANO con la colonna, e qui e' una scelta contraria a quella del POS (dove '--comanda-scale' segue la larghezza). Nel POS quel pannello e' la superficie di lavoro e la sua larghezza varia moltissimo; qui la leggibilita' ha gia' il suo comando, ed e' lo ZOOM dell'app, che vale per tutta la schermata. Due manopole per la stessa cosa vorrebbero dire una voce leggibile a una larghezza e non a un'altra, e chi allarga la colonna lo fa per vedere PIU' RIGHE, non righe piu' grandi.
+
+MISURATO IN CHROME VERO, non a occhio: 96 combinazioni (colonne strette al minimo, a riposo e larghe al massimo x sei finestre x quattro livelli di zoom), leggendo per ogni tasto chi gli finisce sopra con 'elementFromPoint'. Ai due estremi del trascinamento non nasce nessun caso nuovo di tasto coperto — anzi, uno di quelli che c'erano prima sparisce, perche' il tetto in percentuale tiene il tastierino piu' largo di quanto lo tenesse la misura fissa.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/useResizable.js, src/index.css` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/css.test.js`, `tests/unit/useResizable.test.js`
+
 ### La coda del banco
 
 Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine.
@@ -548,9 +561,33 @@ LA PASTIGLIA VISTA RESTA IN TESTATA (🧾/🍸): l'utente non ha chiesto di spos
 
 3) IL TASTO DEI FILTRI SI CHIAMA COL GESTO CHE FA: «Mostra filtri» da chiuso, «Nascondi filtri» da aperto. «Filtra la coda» diceva una cosa che il tasto non fa — a filtrare sono i chip, uno per uno. L'elenco dei filtri accesi per esteso resta accodato nel title da chiuso, dopo il nome; il badge col conteggio e la classe `active` non cambiano. ── QUARTO GIRO, 20/08/2026:
 
-QUELLO CHE QUI SOPRA NON VALE PIU' ── Rimane vero il PERCHE' (i filtri a scomparsa, lo stato leggibile da chiusi, un meccanismo solo per tutte e quattro le viste). Tre cose del COME le ha riscritte REQ-CODA-009, che va letto dopo questo: · LE QUATTRO SCHEDE NON CI SONO PIU'. «In corso / Chiusi / Annullati / Tutti» erano esclusive e non erano filtri; adesso sono tre interruttori combinabili, «In corso» si chiama «Aperti» e «Tutti» e' sparito (`FILTRI_STATO` al posto di `SCHEDE_GRIGLIA`, `NOME_FILTRO_STATO` al posto di `NOME_SCHEDA`). · I DUE TASTINI NON STANNO PIU' DENTRO LA FILA DEI CHIP, e la fila da chiusa non viene proprio disegnata. Stavano dentro, e la riga doveva quindi esistere sempre per contenerli: «il tasto dei filtri deve essere sulla destra insieme a quello dell'ordinamento non a sinistra dei filtri [...] i filtri devono uscire sotto». Adesso si appoggiano a una riga che c'e' comunque (i conteggi sulle lavagne, la ricerca in lista e schede) e la fila dei chip esiste solo da aperta: `.chips-tastini` e il suo `sticky` sono spariti con lei. · IL TASTINO NON E' PIU' UN QUADRATO DA 44px COL BADGE NELL'ANGOLO: e' un bottone BASSO, scritto «▾ Filtri» (`.coda-tastino`, non `.board-icona`), e il conteggio gli sta accanto (`.coda-tastino-conta`) SOLO a fila chiusa. Per un giro era stato anche senza riquadro, sul modello del «▾ altre 3» di una card delle comande; l'utente l'ha rimandato a bottone lo stesso giorno («aggiungi un bordo e rendilo un bottone»), tenendolo pero' piu' basso della famiglia da 44px — il dettaglio sta in REQ-CODA-009. · I SOTTOFILTRI DEI CHIUSI non hanno piu' una riga «Dei chiusi:» tutta loro: sono chip in riga con gli altri. E dal 20/08 nemmeno la scelta delle colonne ne ha una: si accoda alla stessa riga — e nello stesso giorno, secondo passaggio, ha perso anche il tasto «▦ Colonne» che la apriva. Al banco le colonne SONO chip della fila, uno per colonna: «▾ Filtri» e' l'unico livello di nascondimento (REQ-CODA-009).
+QUELLO CHE QUI SOPRA NON VALE PIU' ── Rimane vero il PERCHE' (i filtri a scomparsa, lo stato leggibile da chiusi, un meccanismo solo per tutte e quattro le viste). Tre cose del COME le ha riscritte REQ-CODA-009, che va letto dopo questo: · LE QUATTRO SCHEDE NON CI SONO PIU'. «In corso / Chiusi / Annullati / Tutti» erano esclusive e non erano filtri; adesso sono tre interruttori combinabili, «In corso» si chiama «Aperti» e «Tutti» e' sparito (`FILTRI_STATO` al posto di `SCHEDE_GRIGLIA`, `NOME_FILTRO_STATO` al posto di `NOME_SCHEDA`). · I DUE TASTINI NON STANNO PIU' DENTRO LA FILA DEI CHIP, e la fila da chiusa non viene proprio disegnata. Stavano dentro, e la riga doveva quindi esistere sempre per contenerli: «il tasto dei filtri deve essere sulla destra insieme a quello dell'ordinamento non a sinistra dei filtri [...] i filtri devono uscire sotto». Adesso si appoggiano a una riga che c'e' comunque (i conteggi sulle lavagne, la ricerca in lista e schede) e la fila dei chip esiste solo da aperta: `.chips-tastini` e il suo `sticky` sono spariti con lei. · IL TASTINO NON E' PIU' UN QUADRATO DA 44px COL BADGE NELL'ANGOLO: e' un bottone BASSO, scritto «▾ Filtri» (`.coda-tastino`, non `.board-icona`), e il conteggio gli sta accanto (`.coda-tastino-conta`) SOLO a fila chiusa. Per un giro era stato anche senza riquadro, sul modello del «▾ altre 3» di una card delle comande; l'utente l'ha rimandato a bottone lo stesso giorno («aggiungi un bordo e rendilo un bottone»), tenendolo pero' piu' basso della famiglia da 44px — il dettaglio sta in REQ-CODA-009. · I SOTTOFILTRI DEI CHIUSI non hanno piu' una riga «Dei chiusi:» tutta loro: sono chip in riga con gli altri. E dal 20/08 nemmeno la scelta delle colonne ne ha una: si accoda alla stessa riga — e nello stesso giorno, secondo passaggio, ha perso anche il tasto «▦ Colonne» che la apriva. Al banco le colonne SONO chip della fila, uno per colonna: «▾ Filtri» e' l'unico livello di nascondimento (REQ-CODA-009). ── QUINTO GIRO, 22/08/2026:
 
-**Dove**: `src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri), src/lib/coda.js (etichettaFiltri, spiegaFiltri, SCHEDE_GRIGLIA), src/lib/impostazioniLocali.js (filtriAperti), src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/css.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/CodaGiornate.test.jsx`
+IL BADGE CONTA QUELLO CHE SI VEDE ── «Non mi e' chiaro come conta i filtri. Secondo me non funziona» (l'utente, con lo screenshot di una lavagna a sei colonne e un «▾ Filtri ①»). Il numero era `filtriAccesi.length`, cioe' quanti GENERI di filtro stringevano: e le colonne del banco, per quante fossero, erano un genere solo. Adesso conta UNA PER UNA — tre colonne fanno 3, con lo staff filtrato 4 — e chi guarda puo' contare a occhio e ritrovare lo stesso numero (BUG-080). Al primo avvio, tutto di serie, il badge e' spento (BUG-058); a fila APERTA resta zero, che i chip si vedono da se'. Quella regola sta adesso in `contaFiltri(accesi, aperti)`, non in un ternario della pagina, ed e' provata a unita' come il suo gemello `spiegaFiltri`.
+
+UNA LISTA SOLA PER IL BADGE E PER IL TITLE. Una voce e' un nome secco («Chiusi», «Solo oggi») e vale uno, oppure un gruppo che porta quante restrizioni tiene dentro (`{ nome: 'Colonne', quante: 3 }`): il badge somma, il title raggruppa. Due liste, o un numero calcolato per conto suo, sarebbero due verita' sulla stessa cosa. «SOLO OGGI»
+
+VALE IN TUTTE LE VISTE, e prima veniva contato solo in griglia. Taglia `ordersInVista`, la lista da cui scendono tutte e quattro le viste: chi lo accendeva in griglia e poi passava alle comande si portava dietro il taglio senza niente a schermo che lo dicesse. Adesso il chip e' uno solo (`chipSoloOggi`), sta in tutte le file — fuori dalla griglia solo se e' ACCESO, che li' e' l'unico modo per spegnerlo — e il badge lo conta ovunque. ── SESTO GIRO, 22/08/2026:
+
+IL BADGE CONTA SOLO CIO' CHE RESTRINGE ── «Credo che l'indicatore del numero di filtri attivi funzioni al contrario. Li ho disattivati tutti ma lui indica tre filtri attivi» (l'utente, BUG-085).
+
+QUELLO CHE IL QUINTO GIRO DICE SUL CRITERIO NON VALE PIU': il numero non conta le DEVIAZIONI dal normale. Un filtro e' qualcosa che RESTRINGE. Il badge esiste per avvisare che la coda non sta facendo vedere tutto, quindi si accende su quello che e' NASCOSTO: una corsia normalmente visibile che manca dalla lavagna, lo staff ridotto a una parte, «Solo oggi», uno stato diverso dal default in griglia, la porzione dei chiusi. NON conta una corsia MOSTRATA che di suo sarebbe spenta: accendere «Chiuse» o «Annullate» fa vedere di piu', e col «diverso dal normale» il numero saliva proprio mentre la lavagna si apriva. E SI GUARDA LA LAVAGNA, NON LA MEMORIA DELLE SPENTE: spegnendo tutte le colonne la coda le rimette a schermo tutte (`corsieVisibili`, che una lavagna senza colonne non si puo' mostrare) e la memoria resta piena di id che non nascondono niente. La regola sta in `corsieRistrette(sceglibili, mostrate)`, pura, al posto di `corsieDiverseDalNormale`.
+
+RESTA TUTTO IL RESTO: cosa fanno i filtri non cambia — cambia solo cosa il numero conta — e restano BUG-058 (terminale nuovo, badge spento: quelle due non le ha nascoste nessuno) e BUG-080 (si somma una per una, e badge e title leggono la stessa lista). ── SETTIMO GIRO, 22/08/2026:
+
+IL NUMERO SI RITIRA ── «Si' ma infatti togliamo quel numero. Non serve» (l'utente).
+
+TUTTO QUELLO CHE SOPRA SI LEGGE SUL BADGE NON VALE PIU': il tastino non porta nessun numero, e non deve tornare a portarlo. Resta «▾ Filtri» e basta.
+
+NON E' UN DIFETTO, E' UNA FUNZIONE CHE SI RITIRA, ed e' la fine di quattro giri sullo stesso numero. Il badge e' stato calcolato in quattro modi diversi, e chi guardava li ha bocciati tutti: i GENERI di filtro accesi (sei colonne spente facevano «1» — BUG-080), una restrizione per COLONNA ma contando anche le riaccese («funziona al contrario» — BUG-085), solo cio' che RESTRINGE davvero guardando la lavagna e non la memoria («ne ho tre e lui dice zero»), e infine i chip ACCESI contati e basta — quest'ultimo mai arrivato a schermo, perche' nel frattempo la richiesta e' diventata toglierlo. PERCHE' NESSUN CRITERIO POTEVA REGGERE. «Quanti filtri ci sono?» non ha una risposta sola: chi guarda conta i chip accesi, il codice conta le restrizioni, e i due numeri non coincidono quasi mai. Un numero che va spiegato non avvisa di niente — chiede di essere interpretato, mentre si versa. Il segnale, se serve, si legge aprendo la fila: i chip accesi si vedono da se'.
+
+COSA SE N'E' ANDATO CON LUI: `contaFiltri` e `corsieRistrette` in coda.js, con loro `NOME_FILTRO_STATO` e `nomeSottofiltro` (nomi che esistevano solo per il title del badge), la lista `filtriAccesi` della pagina, il badge `.coda-tastino-conta` e la classe `.coda-tastino.active` — che si accendeva sul conteggio e senza non ha piu' niente da leggere. Sono spariti anche i test del conteggio: non si adattano a un numero che non c'e'.
+
+IL TITLE RESTA, MA DICE SOLO IL GESTO: «Mostra filtri» / «Nascondi filtri». Accodava l'elenco dei filtri accesi, che era la STESSA lista da cui il badge tirava il numero letta in un altro modo: tenerla in piedi per un tooltip voleva dire tenere in piedi la macchina intera, pronta a farsi ricollegare a una cifra alla prima occasione. C'e' un test che controlla che il title non elenchi piu' niente, ed e' li' per quello.
+
+PER CHI LEGGE FRA SEI MESI: se venisse l'idea di «aggiungere un utile contatore accanto a Filtri», c'e' gia' stato, quattro volte, e la decisione finale e' stata toglierlo. Resta vero tutto il resto — i filtri a scomparsa, un meccanismo solo per le quattro viste, la fila che da chiusa non si disegna.
+
+**Dove**: `src/pages/BartenderPage.jsx (filaFiltri, pastigliaFiltri, chipSoloOggi), src/lib/coda.js (etichettaFiltri, spiegaFiltri), src/lib/impostazioniLocali.js (filtriAperti), src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/css.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/CodaGiornate.test.jsx`
 
 #### REQ-CODA-009 — I filtri della coda sono combinabili, e gli autori stanno in una tendina
 
@@ -594,7 +631,9 @@ LA LUNGHEZZA NON E' UN PROBLEMA: al banco la fila arriva a sei o sette chip piu'
 
 MUORE CON LUI lo stato che lo governava (`scegliCorsie`) e la regola «chiudendo la fila si chiude anche la scelta delle colonne», che senza il tasto non ha piu' niente da chiudere. Muore anche `corsieSpente` in coda.js: contava le spente per il TITLE di quel chip, e da aperta la fila lo dicono i chip stessi.
 
-IL BADGE NON CAMBIA. Le colonne diverse dal normale (`corsieDiverseDalNormale`) contano come UNA deviazione dal default, esattamente come prima: a fila chiusa il tastino «▾ Filtri» resta acceso col suo numero e il title dice «Colonne (2)». E' l'unico posto dove quel segnale serve ancora — a fila aperta i chip si vedono.
+IL BADGE NON CAMBIA con la morte del chip: a fila chiusa il tastino «▾ Filtri» resta acceso col suo numero e il title dice «Colonne (2)», ed e' l'unico posto dove quel segnale serve ancora — a fila aperta i chip si vedono.
+
+QUANTO VALGONO, invece, e' cambiato due volte il 22/08: le colonne non sono piu' UNA voce sola ma valgono quante ne sono (BUG-080), e non sono piu' quelle «diverse dal normale» ma quelle NASCOSTE (`corsieRistrette`, BUG-085) — riaccenderne una fa vedere di piu', che e' l'opposto di filtrare. Il dettaglio sta in REQ-CODA-008, sesto giro. E DAL 22/08 NON VALGONO PIU' NIENTE, perche' il badge non c'e' piu': «si' ma infatti togliamo quel numero. Non serve» (l'utente). A fila chiusa il tastino dice «▾ Filtri» e basta, e il suo title dice solo il gesto — niente «Colonne (2)», niente elenco. Sono spariti con lui `corsieRistrette`, `contaFiltri` e `nomeSottofiltro`, che nominava la porzione dei chiusi PER QUEL TITLE e non aveva altri clienti (le porzioni sul tasto se le nomina `sottofiltriChiusi`, che resta). La storia dei quattro criteri sta in REQ-CODA-008, settimo giro.
 
 RESTA IL PATTERN DEI SOTTOFILTRI DEI CHIUSI, che e' un'altra cosa: «Serviti / Da servire» compaiono quando «Chiusi» e' acceso perche' fuori di li' non vogliono dire niente. Non e' un chip che apre chip, e' un filtro che ne implica altri. --- QUINTA CORREZIONE, 20/08/2026 — LA TENDINA SI CHIAMA «STAFF», E IL TAGLIO DEL PRONTO SE NE VA DALLA FILA. Parole dell'utente: «la dropdown che hai chiamato Autori chiamala Staff. E Dividi il pronto dobbiamo integrarlo meglio con gli altri due bottoni, in qualche modo non si capisce a che serve. E poi è troppo lungo. Non so, troviamo una soluzione migliore». Poco dopo, sul secondo punto: «ovviamente vale solo se è attivo il ritiro al banco». «STAFF», NON «AUTORI». Tutto quello che sopra si legge «Autori» sulla PASTIGLIA è superato: da chiusa dice «✍️ Staff» con tutti dentro. «Autore» è una parola da redazione; al banco si dice «chi l'ha battuto», e la squadra della serata è lo staff. Il pannello continua a intitolarsi «Chi ha aperto il conto», che è la domanda per esteso. I NOMI INTERNI RESTANO `autori*` (`autoriDeiConti`, `riassuntoAutori`, `conAutori`…): un rinomino a tappeto costa un diff che non serve a nessuno (CLAUDE.md), e a dover parlare italiano da bar è lo SCHERMO. C'è un test che tiene la cerniera: la pastiglia non deve contenere «autor» in nessuno dei suoi tre casi.
 
@@ -616,9 +655,9 @@ NEUTRO = nessuna delle due accesa = tutti i chiusi, da servire E serviti («Chiu
 
 ESISTONO SOLO COGLI STATI DEL SERVIZIO ACCESI («sono attivi solo quando sono attivi gli stati di servizio»): senza la preparazione tutto quello che è stato pagato è uscito per definizione, e la domanda non c'è. Nelle CORSIE DEI CONTI, dove la colonna «Chiusi» c'è sempre e non c'è nessun filtro da accendere, le due porzioni restano un gruppo da due, con lo stesso vestito. I NOMI SEGUONO IL RITIRO, e valgono per porzioni, chip delle colonne e titoli delle corsie: col ritiro al banco «Da servire/Ritirare» e «Serviti/Ritirati», col solo servizio «Da servire» e «Serviti». Una funzione pura, `nomiDelServizio(ritiroEsiste)` in lib/coda.js, usata da tutti e tre: scritti a mano tre volte divergerebbero al primo ritocco. Il resto (i titoli delle corsie del banco) sta in REQ-ORD-020.
 
-IL BADGE DEL TASTINO non cambia mestiere: conta sempre le DEVIAZIONI dal default — stato diverso da «Aperti», staff filtrato, colonne spente, porzione dei chiusi accesa. Con un solo stato acceso alla volta il conto si semplifica: uno stato vale uno, non tre.
+IL BADGE DEL TASTINO non cambia mestiere: conta sempre le DEVIAZIONI dal default — stato diverso da «Aperti», staff filtrato, colonne spente, porzione dei chiusi accesa. Con un solo stato acceso alla volta il conto si semplifica: uno stato vale uno, non tre. --- 22/08/2026 — QUANTE DEVIAZIONI, NON QUANTI GENERI. Quello che sopra si legge «le colonne diverse dal normale contano come UNA deviazione dal default» non vale piu': ne contano una per COLONNA. Il badge diceva «1» con due colonne riaccese — «non mi e' chiaro come conta i filtri» (l'utente, BUG-080) — e un numero che non torna con quello che si vede e' un numero che si smette di guardare. Il title invece le raggruppa ancora in «Colonne (2)»: i loro nomi sono le testate della lavagna, gia' a schermo. Badge e title leggono la STESSA lista (`contaFiltri` e `spiegaFiltri`, lib/coda.js), dove una voce vale uno o porta quante ne tiene dentro.
 
-**Dove**: `src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, statoAlDefault, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi, sottofiltriChiusi, nomiDelServizio, nomeSottofiltro), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/css.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/CodaGiornate.test.jsx`
+**Dove**: `src/lib/coda.js (FILTRI_STATO, cambiaFiltroStato, statoAlDefault, passaStatiCoda, statiDaFiltro, autoriDeiConti, cambiaAutoreScelto, conAutori, riassuntoAutori, frasePerCodaVuota, cambiaSottoChiusi, sottofiltriChiusi, nomiDelServizio), src/pages/BartenderPage.jsx, src/components/Tendina.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/css.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/CodaGiornate.test.jsx`
 
 ### Gruppi di conti
 
@@ -797,6 +836,8 @@ Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie, Fornitori e Mo
 CI STANNO DENTRO: sono in magazzino, solo pochi. «In esaurimento» è una lente più stretta dentro la stessa famiglia, non un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima bottiglia di gin, che è proprio quella che gli serve sapere. Così il conto torna a vista: in scorta più esauriti fa il totale, e chi somma le voci non trova numeri che non tornano.
 
 QUELLO CHE NON È UNA SCORTA non sta né di qua né di là: il «Tempo di Lavorazione» non ha giacenza, e non è né disponibile né esaurito (vedi REQ-MAG-012). Metterlo fra i disponibili vorrebbe dire dire che c'è sullo scaffale una cosa che sullo scaffale non ci va; fra gli esauriti, mandare a comprare il tempo. Tutto sta nella finestra: filtri, ricerca e categorie restano fermi, a scorrere è solo l'elenco dei prodotti — prima, per tornare alla ricerca dopo aver guardato in fondo, si risaliva da capo. Anche i MOVIMENTI sono una sezione: stavano in fondo alla lista dei prodotti dietro un tasto largo quanto lo schermo, fuori contesto e in mezzo ai piedi.
+
+LA VISTA A LISTA E' LA CAPOSTIPITE di una famiglia che adesso vale per tre schermate — magazzino, chiusure di cassa (REQ-CASSA-006), statistiche: riquadro unico, righe separate da una linea, striscia a sinistra quando c'e' qualcosa da dire sulla riga, il numero che si cerca in fondo a destra, il dettaglio che si apre SOTTO. L'altezza della riga e' una sola per tutte e tre e sta in un gettone (`--riga-lista`, BUG-082): «aumenta l'altezza anche delle righe della tabella dell'inventario per un touch migliore» (l'utente, 22/08/2026) — con 388 articoli, in piedi al banco, una riga alta quanto il suo testo fa aprire quella di fianco.
 
 **Dove**: `src/components/InventoryManager.jsx, src/components/CategoryRail.jsx` · **Lo dimostrano**: `tests/component/InventoryManager.test.jsx`
 
@@ -1064,15 +1105,57 @@ Il rendiconto mostra gli ordini (in lista o in tabella, apribili nel dettaglio) 
 
 «Cassa» (prima «Flusso cassa») ha tre sottosezioni nel menu laterale: il FLUSSO della serata in corso, la LISTA ORDINI e le CHIUSURE. Erano tre posti per la stessa domanda — quanto ho incassato — e due si raggiungevano da tasti in fondo alla pagina del flusso, che si trovano solo scorrendo fino in fondo; la lista ordini aveva perfino una voce sua nel menu, accanto alla cassa, come se fosse un altro mestiere. Le TIMBRATURE stanno in Staff, in cima alle ore, non in cassa: erano in fondo alla pagina del flusso — dove ci si va per i soldi — e per battere l'ingresso di chi arriva bisognava passare di lì. Il vecchio indirizzo `?tab=storico` continua a funzionare: porta alla cassa, aperta sulla lista ordini. Sta nei collegamenti salvati e nei messaggi, e non deve finire in una pagina senza nome.
 
-**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`
+LE CHIUSURE SONO UNA LISTA, LA STESSA DEL MAGAZZINO (22/08/2026): «Anche qui nei rendiconti delle chiusure di cassa serve una lista fatta meglio, stile quella del magazzino ma con righe piu' alte». Prima ogni serata era una card a se' — riquadro, margine, ombra — con dentro una riga alta quanto il suo testo: tre pagine dell'app mostrano lo stesso oggetto (righe uguali che si aprono su un dettaglio) e lo mostravano in tre modi. Adesso la lista usa la famiglia condivisa (`.inv-list`, `.inv-row`, `.inv-row-main`, `.inv-row-dettaglio`, DESIGN.md): riquadro unico, righe separate da una linea, altezza `--riga-lista` — il bersaglio pieno di BUG-082 — e il dettaglio che si apre SOTTO la riga, dov'era.
+
+QUELLO CHE LA RIGA DICE NON CAMBIA: data, apertura → chiusura, durata, incasso. Cambia quanto pesa: l'INCASSO e' il numero che si cerca — «com'e' andata ieri sera» si risponde con quello, non con l'orario — e sta un gradino sopra i prezzi normali, in coda alla riga.
+
+LA SERATA IN CORSO SI RICONOSCE SENZA LEGGERE, e con due segni non uno: la pastiglia verde «in corso» al posto dell'ora di chiusura, e la striscia accesa a sinistra della riga. E NON DICHIARA UN INCASSO CHE NON CONOSCE: lo snapshot nasce alla chiusura, quindi finche' la serata e' aperta al suo posto c'era «0,00 €» — in una lista di soldi si legge come «stasera non e' entrato niente», ed e' una bugia. Adesso c'e' un trattino finche' il dato non c'e'; aprendo la riga il riepilogo viene ricalcolato dagli ordini e la cifra vera compare.
+
+NIENTE RIQUADRO ATTORNO ALLA LISTA (22/08/2026): «togli il box, lascia solo la lista, e aggiungi un selettore di data per cercare una chiusura cassa». La `.card` che avvolgeva l'elenco non lo separava da niente — e' l'unica cosa della sottosezione — e su una schermata fatta di righe si mangiava margine a destra e a sinistra. Col riquadro se ne va anche il TITOLO «📒 Chiusure di cassa»: il titolo di una pagina sta nella barra in alto, che quando si e' qui dice gia' «Chiusure» (src/lib/sezioni.js), e ripeterlo dieci pixel piu' sotto costa una riga senza aggiungere niente. E se ne va la didascalia «Una riga per serata, dall'apertura alla chiusura. Tocca per il venduto.»: descriveva quello che la riga ha gia' scritto sopra, ed era il tono confidenziale da cui ci si e' allontanati lo stesso giorno (DESIGN.md, guardrail 3). Resta la lista, esattamente come nelle statistiche (StatsTab.jsx → «📒 Per serata», dove un riquadro non c'e' mai stato): sono lo stesso elenco e devono leggersi allo stesso modo. La ricerca per data che si e' aggiunta sopra la lista sta in REQ-CASSA-013.
+
+**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`, `tests/component/CashSessionsList.test.jsx`
+
+#### REQ-CASSA-013 — Cercare una chiusura per data: porta alla serata, non filtra
+
+«Togli il box, lascia solo la lista, e aggiungi un selettore di data per cercare una chiusura cassa» (l'utente, 22/08/2026). Con due mesi di righe in fila, a «com'e' andata il 15 agosto?» si rispondeva scorrendo. Sopra la lista delle chiusure (REQ-CASSA-006) c'e' un campo data. Scegliendo un giorno la lista NON si filtra: si scorre fino alla serata di quel giorno e la riga si accende. Filtrare lascerebbe una riga sola, e questa lista serve anche a confrontare le serate fra loro — si cerca il 15 per vedere com'e' andata e subito dopo si guarda il sabato prima. Per lo stesso motivo non serve un modo per «togliere il filtro»: non c'e' niente di nascosto.
+
+IL GIORNO DI UNA SERATA E' LA SUA GIORNATA COMMERCIALE, non la data solare degli orari: una serata aperta il 15 alle 19:00 e chiusa all'01:08 e' la serata del 15, e chi cerca il 16 non deve trovarla. Il taglio e' quello di businessDay.js (`businessDayKey`, `DEFAULT_CUTOFF_HOUR`), lo stesso con cui sono raggruppati gli ordini: due posti che tagliano la nottata in modo diverso sono due verita' diverse sullo stesso incasso.
+
+UN GIORNO SENZA CHIUSURA SI DICE, in una frase piana: «Nessuna chiusura di cassa registrata per lunedi' 18 agosto». Capita spesso — il locale e' chiuso il lunedi' — e la lista resta intera, cosi' chi ha cercato non si ritrova davanti una schermata vuota. Quando invece la serata c'e', la stessa riga dice quale: l'esito si legge, non si deduce dal colore di una riga, e con `role="status"` lo annuncia anche un lettore di schermo. I LIMITI DEL CAMPO sono la prima e l'ultima serata dell'elenco (`min`/`max`): non si cerca nel futuro e non si cerca prima della prima chiusura registrata. Escono dalle sessioni GIA' caricate (`limitiRicercaSerate`) — nessuna lettura nuova nel percorso di disegno, come per tutto il resto della lista.
+
+NELLA LISTA RAGGRUPPATA LA RICERCA NON CAMBIA VISTA (22/08/2026, vedi REQ-CASSA-014). Guardando per settimana o per mese, scegliere una data APRE il periodo che contiene quella serata e accende la riga della serata li' dentro — il raggruppamento resta quello che si era scelto. Cambiarlo da soli vorrebbe dire buttare via la vista scelta al primo giorno cercato; cosi' invece si risponde a tutt'e due le domande insieme, «com'e' andata quella sera» e «in che settimana era». La regola e' una sola frase e vale nei tre modi: la ricerca apre il periodo che contiene la serata e la accende — con le serate in fila non c'e' niente da aprire, ed e' il comportamento di sempre. E LA FRASE DICE DOVE GUARDARE, che dentro una riga aggregata non e' piu' ovvio: «evidenziata nella settimana 17–23 ago», «evidenziata in agosto 2026», «evidenziata nell'elenco» quando le serate sono in fila.
+
+**Dove**: `src/lib/serate.js, src/components/CashSessionsList.jsx` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/CashSessionsList.test.jsx`
+
+#### REQ-CASSA-014 — Le chiusure per serata, per settimana o per mese
+
+«Aggiungi dei filtri alla lista delle chiusure cassa per mostrare quelle settimanali o mensili oltre che per data» (l'utente, 22/08/2026). Con la lista per serata (REQ-CASSA-006) a «com'e' andato agosto?» si risponde sommando a mente trenta righe, e a «questa settimana e' andata meglio della scorsa?» pure.
+
+LA LISTA RESTA LA STESSA LISTA: cambia solo di cosa parla una riga — una serata, una settimana o un mese. Stessa famiglia condivisa (`.inv-list`, `.inv-row`, `.inv-row-main`), stessi numeri incolonnati e auto-etichettati, stesso dettaglio che scende sotto la riga.
+
+COME SI SCEGLIE: tre gettoni attaccati in un gruppo solo (`.chip-gruppo`, gli stessi dei filtri della coda) — «Serata», «Settimana», «Mese» — dentro la riga della ricerca per data, che c'e' comunque. A lista aperta non costano una riga a nessuno, e questa pagina esiste per la lista. Non una tendina: con tre voci bisognerebbe aprirla per sapere cosa c'e' dentro (docs/navigazione.md). Non in Impostazioni: la' ci vanno le viste della coda, che si scelgono una volta e non si toccano piu' — questa si cambia MENTRE si guarda. La scelta si ricorda su questo terminale (`tana:chiusure:raggruppamento`).
+
+COSA DICE UNA RIGA AGGREGATA: il periodo, quante SERATE contiene, quanto ha INCASSATO in tutto, e la MEDIA A SERATA. La media non e' un di piu': e' l'unico numero con cui due settimane si confrontano davvero, perche' una settimana con cinque aperture e una con tre (Ferragosto, il lunedi' di riposo, una serata privata) hanno totali diversi per un motivo che non c'entra con com'e' andata la sera. E' la stessa struttura della riga per serata — incasso = conti × scontrino medio — letta un piano piu' su: incasso = serate × media.
+
+LA MEDIA SI DIVIDE PER LE SERATE GIA' CHIUSE, non per tutte: quella di stasera non ha ancora un incasso (lo snapshot nasce alla chiusura), e contarla come zero tirerebbe giu' la media di tutta la settimana. Il periodo che contiene una serata aperta porta la pastiglia «in corso» e la striscia verde, che e' anche il motivo per cui il totale non e' ancora quello definitivo — gli stessi due segni della riga per serata, non uno nuovo.
+
+TOCCANDO UNA RIGA AGGREGATA SI APRE sulle serate che contiene, e sono le righe di sempre: la settimana si spiega con le sue sere, e da li' si arriva al riepilogo di cassa e al rendiconto per la strada che si conosce gia'. Portare a un dettaglio diverso vorrebbe dire una seconda schermata da imparare per la stessa domanda. Un periodo alla volta, come il dettaglio di una serata: aperti tutti, la lista tornerebbe l'elenco piatto da cui si e' usciti. Cambiando raggruppamento si riparte chiusi.
+
+LA SETTIMANA COMINCIA DI LUNEDI'. E' l'uso italiano (e lo standard ISO), ma qui conta soprattutto un fatto del mestiere: per un locale la domenica e' la coda del fine settimana, non l'inizio di quello dopo — col lunedi' in testa venerdi', sabato e domenica cadono nella stessa riga. La chiave e' la data del lunedi', non il numero di settimana: si ordina come una stringa e non porta dietro i casi limite della settimana 53 a cavallo dell'anno.
+
+IL BORDO DELLA NOTTE VALE ANCHE QUI: una serata aperta sabato alle 19:00 e chiusa all'01:08 appartiene a sabato, quindi alla settimana e al mese di sabato. Il taglio e' quello di `giornoDellaSerata` (businessDay.js), lo stesso di REQ-CASSA-013: due posti che tagliano la nottata in modo diverso sono due verita' diverse sullo stesso incasso. I PERIODI SENZA CHIUSURE NON COMPAIONO. Una settimana di ferie non e' una riga a zero, che si leggerebbe come «e' andata male»: non c'e'.
+
+TUTTO IN LOCALE. Le righe aggregate escono dalle sessioni GIA' in mano — nessuna lettura nuova, nessuna attesa fra il tocco sul gettone e la lista nuova — e i numeri sono quelli CONGELATI nello snapshot della chiusura, che stanno sulla sessione: una settimana di due mesi fa somma quanto ha davvero incassato, non zero perche' i suoi ordini sono fuori dalla finestra scaricata. La logica e' pura (`raggruppaSerate`, `periodoDellaSerata`, `chiaveSettimana`, `chiaveMese`, `etichettaPeriodo` in src/lib/serate.js); il componente disegna e basta.
+
+**Dove**: `src/lib/serate.js, src/components/CashSessionsList.jsx` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/CashSessionsList.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
 Statistiche per serata: incassi, prodotti più venduti, tempi di preparazione e consegna misurati, preparazione più lunga. I tempi misurati raffinano progressivamente la stima mostrata al cliente.
 
-SI APRONO SULL'ULTIMA CHIUSURA di cassa, e quel periodo sta PRIMA degli altri nella riga: la domanda del mattino dopo è «com'è andata ieri sera», non «com'è andata la settimana». Prima partivano da sette giorni — un'altra domanda — e la serata era in fondo alla riga. Chi sceglie un altro periodo se lo tiene: la preselezione vale solo alla prima apertura. Le due viste (giornaliero e mensile per macro) sono SOTTOSEZIONI della pagina, come in Magazzino e Impostazioni: stanno nel menu invece che in una riga di chip sopra il contenuto, che costava altezza a una schermata già fatta di tabelle.
+QUESTI SONO I CONTI; come si sceglie la serata da guardare lo dice REQ-STAT-001, che ci si è stratificato sopra il 22/08/2026: la serata non è più una pastiglia con una tendina ma una sottosezione con la lista delle chiusure. La matematica non è cambiata di una riga — è la stessa (kpi, byHour, top, byCategory, ingredients, prep, split, extras), riusata dalle due sottosezioni.
 
-**Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`, `tests/component/StatsTab.test.jsx`
+**Dove**: `src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/unit/eta.test.js`
 
 #### REQ-CASSA-009 — Bilancio → Venduto × Incassato: la tabella trasloca, con le due incidenze
 
@@ -1152,7 +1235,9 @@ STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita
 
 VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai fatto uscire niente — la stampa è appesa a `closePaid` — ed era una scelta presa quando l'acconto era un caso di margine. Adesso quella riscossione ha la SUA carta, che è un documento diverso: lo scontrino d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto non prende né l'una né l'altro, perché è un evento e non lo stato del conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire uno solo.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`
+SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono.
+
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
@@ -1194,15 +1279,17 @@ Nella coda ordini, per chiunque la guardi — banco e sala — un pallino dice s
 
 #### REQ-STAMPA-010 — Le impostazioni della stampante sono del dispositivo e di chi ci lavora
 
-Indirizzo della stampante, stampa automatica di comande e scontrini, dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo dipende da dove sei, il tablet del banco la raggiunge e il telefono della sala forse no — e sono di chi è collegato, perché sullo stesso tablet si alternano persone diverse e la stampa automatica la vuole accesa chi sta al banco, non chi passa a battere due conti. Chi entra per la prima volta su un dispositivo eredita le impostazioni che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza stampante a servizio iniziato. Da lì in poi la scheda è sua. Conseguenza da sapere: su un ambiente diverso (test, produzione) la memoria è un'altra, e la stampante va impostata una volta anche lì.
+Indirizzo della stampante, stampa automatica di comande e scontrini, dati del locale sullo scontrino: stanno nel dispositivo — l'indirizzo dipende da dove sei, il tablet del banco la raggiunge e il telefono della sala forse no — e sono di chi è collegato, perché sullo stesso tablet si alternano persone diverse e la stampa automatica la vuole accesa chi sta al banco, non chi passa a battere due conti. Chi entra per la prima volta su un dispositivo eredita le impostazioni che quel dispositivo aveva: al passaggio nessuno si è ritrovato senza stampante a servizio iniziato. Da lì in poi la scheda è sua. Conseguenza da sapere: su un ambiente diverso (test, produzione) la memoria è un'altra, e la stampante va impostata una volta anche lì. L'ALIQUOTA IVA NON È UNA DI QUESTE (BUG-084, 22/08/2026): stava qui, e quindi due tablet potevano stampare scontrini con aliquote diverse. È un fatto del locale, non una preferenza del tablet che ha stampato: la stampa legge `sale_vat` dalle impostazioni del bar, come i margini e le statistiche.
+
+DOVE SI TOCCANO NON È DOVE VIVONO (REQ-UI-025, 22/08/2026): dal 22/08 gli interruttori della stampa automatica — e la scelta di chi stampa le comande della sala — si accendono in «Cassa e giornata», non nel pannello Stampante. Restano queste, del dispositivo e di chi ci lavora, e la scheda lo dice a schermo sotto «Su questo terminale».
 
 **Dove**: `src/lib/printer.js, src/App.jsx` · **Lo dimostrano**: `tests/unit/impostazioniStampante.test.js`
 
 #### REQ-STAMPA-008 — Il locale sceglie chi stampa le comande della sala
 
-In Impostazioni → Stampante si sceglie, sul terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora: REQ-STAMPA-010): «la stampa il telefono», cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di partenza stampa il telefono, anche per le configurazioni salvate prima che la scelta esistesse. Scegliendo il banco con la stampa automatica spenta non stamperebbe nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a servizio iniziato. E col rimbalzo il pallino della sala non finge di sapere: dice che a stampare è il banco.
+In Impostazioni → Cassa e giornata → Stampa automatica si sceglie, sul terminale del banco, fra due modi (le impostazioni sono del dispositivo e di chi ci lavora: REQ-STAMPA-010): «la stampa il telefono», cioè chi prende l'ordine al tavolo stampa dal suo, e «la stampa il banco», cioè la comanda esce al bancone all'arrivo dell'ordine. Di partenza stampa il telefono, anche per le configurazioni salvate prima che la scelta esistesse. Scegliendo il banco con la stampa automatica spenta non stamperebbe nessuno: l'impostazione lo dice, invece di lasciarlo scoprire a servizio iniziato. E col rimbalzo il pallino della sala non finge di sapere: dice che a stampare è il banco.
 
-**Dove**: `src/components/PrinterSetup.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
+**Dove**: `src/components/StampaAutomatica.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`, `tests/unit/statoStampante.test.js`
 
 #### REQ-STAMPA-011 — Il logo sugli scontrini si sceglie: quale, e su quali stampe
 
@@ -1798,6 +1885,24 @@ RESTA PICCOLO: con la testata cresciuta, scritto della stessa misura sembrerebbe
 
 **Dove**: `src/components/CorsieComande.jsx, src/components/CorsieStato.jsx, src/components/RigheCorsia.jsx, src/index.css` · **Lo dimostrano**: `tests/component/CodaCorsie.test.jsx`
 
+#### REQ-UI-025 — Le impostazioni si raggruppano per momento d'uso: la stampa automatica sta in Cassa
+
+Regola data dall'utente il 22/08/2026, con parole sue: «Questo setting è in cassa e giornata mentre le altre impostazioni di stampa automatica sono in stampante. Perché hai scelto di metterla lì? Le impostazioni di stampa automatica riguardano la cassa, quindi anche le impostazioni di stampa automatiche spostale in cassa».
+
+LA REGOLA GENERALE, che è la cosa da tenere: un'impostazione sta dove sta il MOMENTO in cui la si vive, non dove sta il pezzo tecnico che la esegue. È il gemello di REQ-UI-024 («tutto ciò che riguarda l'aspetto sta sotto Aspetto») su un'altra famiglia, e i due insieme dicono come si dispone questo pannello: per «quando lo cerco», non per «da cosa è fatto». «Stampante» è la MACCHINA — indirizzo, porta, prova di stampa, i dati e i campi che finiscono sulla carta;
+
+QUANDO la carta esce da sé è una faccenda dell'incasso, e chi la cerca apre la cassa.
+
+COSA È TRASLOCATO in «💳 Cassa e giornata», riquadro «🖨️ Stampa automatica», subito sotto «Pagamenti»: · `autoPrintComanda` e `autoPrintScontrino` — erano nel pannello Stampante, riquadro «Stampa automatica». · `stampaSala` («Comande prese in sala», REQ-STAMPA-008) — decide se il telefono della sala stampa da sé o se la comanda esce al banco: è la stessa domanda, e l'avviso «così non le stampa nessuno» guarda proprio l'interruttore della comanda. Separarli lasciava un avviso che parla di un tasto che non è in pagina. · `scontrino_acconto_sempre` e `scontrino_acconto_tasto` (REQ-STAMPA-015) — erano in «Pagamenti». «Esce da sola a ogni riscossione» è stampa automatica; il gemello col tasto la segue perché uno SPEGNE l'altro, e due interruttori legati così si guardano insieme. La lezione di BUG-070 regge lo stesso: restano nella stessa SEZIONE dei tasti dell'incasso, a uno scorrimento.
+
+LE DUE FAMIGLIE SI DICONO A SCHERMO, sotto due intestazioni: «Su questo terminale» (vivono con le impostazioni della stampante, per dispositivo e per chi ci lavora — REQ-STAMPA-010: la comanda la vuole stampare il banco, non il telefono che passa a battere due conti) e «Per tutto il locale» (stanno su settings/bar e valgono ovunque). Senza dirlo, si accende una cosa al banco e ci si stupisce che in sala non sia cambiato niente.
+
+NEL PANNELLO STAMPANTE resta un rimando scritto a dove sono andate, e la scheda salva SOLO I SUOI CAMPI: prima mandava il `form` intero, che è una fotografia scattata all'apertura, e correggere l'indirizzo IP avrebbe rimesso la stampa automatica al valore di mezz'ora prima — spegnendola sotto le mani di chi l'aveva appena accesa.
+
+LE CHIAVI NON SI RINOMINANO: sono già scritte sui documenti dei locali e nella memoria dei terminali. Si sposta solo dove si toccano.
+
+**Dove**: `src/components/StampaAutomatica.jsx, src/components/SettingsTab.jsx, src/components/PrinterSetup.jsx` · **Lo dimostrano**: `tests/component/StampaAutomatica.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -1921,6 +2026,22 @@ ADESSO c'e' l'interruttore DEL TERMINALE, nella sezione Dev («Stampante simulat
 IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la accende — il tablet del banco che prova la stampante vera non deve trovarsi facsimili a sorpresa.
 
 **Dove**: `src/lib/stampanteFinta.js, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/stampanteFinta.test.js`
+
+### STAT
+
+#### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
+
+«Nelle statistiche dovremmo rendere più sofisticata la selezione della serata. È la cosa principale che si vuole vedere, il resto dei filtri sono secondari. Io metterei una lista con dettaglio: di default la lista si apre sulle chiusure di cassa, e se ci clicco apre il dettaglio delle statistiche di quella chiusura di cassa. Facciamo due sottosezioni: una per le statistiche così come te le ho descritte, per le chiusure di cassa; una è quella che c'è adesso, che mostra le statistiche in base al filtro e al tempo» (l'utente, 22/08/2026).
+
+DUE SOTTOSEZIONI nel menu laterale — «Per serata» e «Per periodo» — con lo stesso meccanismo di Cassa e Magazzino (docs/navigazione.md): niente riga di pastiglie in pagina, che su una schermata di grafici costa altezza tutto il giorno. A) PER SERATA, ed è quella che si apre di suo. La LISTA delle chiusure di cassa, la più recente in cima, una riga per serata: quando (giorno, apertura→chiusura, durata) e TRE NUMERI incolonnati — incasso, conti, scontrino medio. Il primo è la domanda, gli altri due sono il perché: incasso = conti × scontrino medio, quindi una serata migliore dell'altra lo è perché è entrata più gente o perché ognuno ha speso di più, e sono due cose che si affrontano in modo diverso. Il resto (ora di punta, attese, top prodotti) sta un tocco più in là: in riga sarebbero numeri da leggere uno per uno, e la lista si guarda in una scorsa. La forma è quella della lista del magazzino (`inv-list` / `inv-row`), una famiglia sola di righe per tutto il gestionale.
+
+TOCCANDO UNA RIGA si apre il DETTAGLIO: le statistiche di quella serata, cioè lo stesso corpo di grafici della sottosezione del periodo (`CorpoStatistiche`), sugli ordini della finestra della cassa — mezzanotte compresa.
+
+SI TORNA CON «← Chiusure», in cima al dettaglio: una sola via d'uscita, e dice dove riporta invece di dire «indietro». Uscendo dalla sottosezione il dettaglio si dimentica: rientrando si riparte dalla lista, perché era stato chiuso apposta e ritrovarcisi dentro vuol dire non sapere più cosa fa la freccia in cima.
+
+LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in corso» e i numeri di adesso: mentre si lavora è la serata che interessa di più, e senza di lei la prima sera del locale la lista sarebbe vuota. B) PER PERIODO: le pastiglie di sempre (7/10/20/30/60 e Personalizzato) MENO «🧾 Ultima chiusura» e la tendina delle serate, che ora vivono nella sottosezione A — lo stesso posto raggiunto in due modi prima o poi si contraddice. LOCAL-FIRST: la lista si costruisce da quello che la pagina ha già in mano (sessioni e ordini), senza una lettura in più e senza attese fra il tocco e la riga. Le serate più vecchie della finestra di ordini scaricata non si possono ricalcolare: per quelle si usano i numeri congelati nello `snapshot` della chiusura, che stanno già sulla sessione — una riga a zero si leggerebbe come «quella sera non ha incassato», che è un'altra cosa.
+
+**Dove**: `src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/StatsTab.test.jsx`
 
 ## Lavori previsti
 
@@ -2318,6 +2439,8 @@ COSA RESTA DA TRASLOCARE — trovato guardando SettingsTab.jsx, e sta qui perch�
 
 ATTENZIONE, questo è il caso da discutere prima di muoverlo: sta lì per una scelta scritta (ThemeSettings.jsx) — messo sotto quello del gestionale sembravano due varianti della stessa cosa e non si capiva quale si stesse toccando. Se trasloca, deve traslocare con un'etichetta che lo distingua a colpo d'occhio. · `queue_view` e `bartender_view` — «Coda ordini»: come si dispone la coda (griglia, corsie, schede, lista). Sono il confine della regola: cambiano la FORMA della schermata, non il colore di un elemento. Va deciso, e scritto qui, se la regola li prende o li lascia dove sono.
 
+HA UN GEMELLO, dal 22/08/2026: REQ-UI-025 dice la stessa cosa per il MOMENTO D'USO — la stampa automatica sta dove si incassa, non dove sta la stampante. I due insieme sono la regola di come si dispone questo pannello: per «quando lo cerco», non per «da cosa è fatto».
+
 COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impostazioni dentro un lavoro che parla d'altro rende i due cambiamenti impossibili da rileggere separatamente. Le chiavi non si rinominano (sono già scritte sui documenti dei locali): si sposta solo dove si toccano.
 
 **Dove**: `src/components/SettingsTab.jsx, src/components/ThemeSettings.jsx`
@@ -2346,6 +2469,8 @@ della correzione è il test citato nel requisito della sua area.
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 | 🔴 | [BUG-043](#bug-043--due-nomi-con-la-stessa-iniziale-e-in-legenda-ne-resta-uno-solo) — Due nomi con la stessa iniziale, e in legenda ne resta uno solo | lieve | P3 |
+| 🔴 | [BUG-076](#bug-076--con-lo-zoom-alto-la-finestrella-dello-sconto-esce-dallo-schermo-sopra-e-sotto) — Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto | lieve | P3 |
+| 🔴 | [BUG-077](#bug-077--con-lo-zoom-alto-nel-conto-i-tasti-in-fondo-escono-dallo-schermo-e-non-si-scorre) — Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -2402,6 +2527,30 @@ NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava facendo, e per
 TRE STRADE, da pesare quando si lavora: due lettere quando la prima collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle card, oppure un colore per persona come si e' fatto per i conti. La prima e' la piu' piccola e la piu' vicina a come si legge oggi.
 
 **Dove**: `src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)`
+
+#### BUG-076 — Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto
+
+Trovato misurando BUG-075, non segnalato al banco: la registro perche' e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE le finestrelle di conferma dell'app, non solo lo sconto.
+
+COSA SUCCEDE. '.confirm-overlay' centra la finestrella ('align-items: center') dentro un velo fisso che non scorre. Quando la finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non c'e' modo di raggiungerli, perche' non scorre niente.
+
+MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano 11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi, ma non li chiude.
+
+COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella fermarsi all'altezza dello schermo con dentro il suo scorrimento — 'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni '.confirm-box' dell'app, quindi va provato dove le finestrelle sono piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+
+**Dove**: `src/index.css (.confirm-overlay, .confirm-box)`
+
+#### BUG-077 — Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre
+
+Trovato misurando BUG-075, non segnalato al banco. Stessa causa di fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
+
+COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha una pila di tasti che non si stringe. Quando la somma delle fasce fisse supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e niente scorre per andarli a prendere: sono irraggiungibili, non solo scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non aiuta.
+
+MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom): 16 combinazioni con almeno un tasto fuori. Il primo a sparire e' «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai fino al 160%.
+
+DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a capo, o se le fasce fisse debbano seguire lo zoom come il tastierino del pagamento. La regola che non si tratta e' quella: nessun tasto finisce sotto o fuori senza un modo di arrivarci.
+
+**Dove**: `src/components/OrderPosDetail.jsx (.posd-root, il piede del conto)`
 
 ## Non più valido
 

@@ -18,13 +18,9 @@ import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
+import StampaAutomatica from './StampaAutomatica.jsx'
+import ToggleRow from './ToggleRow.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
-import {
-  CHIAVE_ACCONTO_SEMPRE,
-  CHIAVE_TASTO_ACCONTO,
-  accontoSempre,
-  tastoAcconto,
-} from '../lib/scontrinoAcconto.js'
 
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
@@ -326,34 +322,12 @@ export default function SettingsTab({ role = null }) {
                   onChange={(v) => save({ riscuoti_e_servi: v })}
                 />
               )}
-              {/* ── LO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ──────────────
-                  Stessa famiglia dei due qui sopra — quali tasti compaiono
-                  quando si incassa — quindi stesso posto: è la lezione di
-                  BUG-070, dove un interruttore di questa famiglia stava
-                  altrove e l'utente non lo trovava. */}
-              <ToggleRow
-                label="Lo scontrino d’acconto a ogni riscossione"
-                desc="Chi versa una parte e se ne va si porta via la sua ricevuta, senza premere niente: esce da sola a ogni incasso che non chiude il conto. Segue la stampa automatica dello scontrino di questo terminale (Impostazioni → Stampante)."
-                checked={accontoSempre(settings)}
-                onChange={(v) => save({ [CHIAVE_ACCONTO_SEMPRE]: v })}
-              />
-              {/* L'INTERRUTTORE DISABILITATO RESTA IN PAGINA, spento e col
-                  suo perché. «Quando la riscossione dello scontrino di
-                  acconto è attiva, disabilita l'opzione del terzo bottone»
-                  (l'utente, 21/08/2026): farlo SPARIRE sembrerebbe un
-                  guasto — «l'avevo acceso, dov'è finito?» — e chi torna qui
-                  per spegnere l'automatico non capirebbe cosa ha perso. */}
-              <ToggleRow
-                label="Un tasto per l’acconto con lo scontrino"
-                desc={
-                  accontoSempre(settings)
-                    ? 'Non serve: la ricevuta d’acconto esce già da sola a ogni riscossione, qui sopra. Spegni quella e il tasto torna disponibile.'
-                    : 'Nella schermata di pagamento compare anche «Acconto con scontrino»: incassa una parte e stampa la ricevuta di chi se ne va, quando serve.'
-                }
-                checked={tastoAcconto(settings)}
-                disabled={accontoSempre(settings)}
-                onChange={(v) => save({ [CHIAVE_TASTO_ACCONTO]: v })}
-              />
+              {/* LO SCONTRINO D'ACCONTO NON È PIÙ QUI: «esce da sola a ogni
+                  riscossione» è stampa automatica, e sta nel riquadro qui
+                  sotto insieme a tutte le altre (REQ-UI-025). Resta nella
+                  stessa sezione, a uno scorrimento di distanza, quindi la
+                  lezione di BUG-070 — gli interruttori dei tasti
+                  dell'incasso si accendono dove si incassa — regge. */}
               <ToggleRow
                 label="Pagamento online (SumUp)"
                 desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
@@ -391,6 +365,12 @@ export default function SettingsTab({ role = null }) {
               {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
             </div>
       ),
+    },
+    {
+      id: 'stampa-automatica',
+      icona: '🖨️',
+      label: 'Stampa automatica',
+      nodo: <StampaAutomatica settings={settings} save={save} />,
     },
     {
       id: 'gruppi',
@@ -1125,6 +1105,9 @@ export default function SettingsTab({ role = null }) {
     tempi: 'servizio',
     annullamenti: 'servizio',
     pagamenti: 'cassa',
+    // QUANDO parte la carta è una faccenda dell'incasso, non della
+    // macchina: sta con la cassa, non con la stampante (REQ-UI-025).
+    'stampa-automatica': 'cassa',
     giornata: 'cassa',
     prezzo: 'prezzi',
     sconto: 'prezzi',
@@ -1434,24 +1417,6 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
           {etichetta}
         </button>
       ))}
-    </div>
-  )
-}
-
-function ToggleRow({ label, desc, checked, onChange, disabled }) {
-  return (
-    <div className="toggle-row">
-      <div>
-        <div>{label}</div>
-        {desc && <div className="desc">{desc}</div>}
-      </div>
-      <input
-        type="checkbox"
-        className="toggle"
-        checked={!!checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
     </div>
   )
 }

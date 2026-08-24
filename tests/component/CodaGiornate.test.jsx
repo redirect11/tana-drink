@@ -326,3 +326,49 @@ describe('un conto con la data monca', () => {
     expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
   })
 })
+
+// ── IL TAGLIO DEI GIORNI SCORSI SI PORTA DIETRO (BUG-080) ─────────
+//
+// «Solo oggi» non è un filtro della griglia: taglia la lista da cui
+// scendono TUTTE le viste. Il chip però stava solo in griglia: chi lo
+// accendeva e poi passava alle comande — stessa pagina, un tocco — si
+// ritrovava la coda tagliata e nessun chip per rimetterla a posto.
+//
+// IL BADGE NON C'ENTRA PIÙ. Questo test controllava anche il numero sul
+// tastino («1» di qua e di là): il numero è stato tolto il 22/08/2026
+// («sì ma infatti togliamo quel numero. Non serve»), e quello che conta
+// qui è che il CHIP viaggi con la vista — è lui il modo di spegnere il
+// taglio, ed è l'unica cosa che chi guarda può usare.
+describe('«Solo oggi» passando dai conti alle comande', () => {
+  const tasto = () => screen.getByRole('button', { name: 'Filtri' })
+
+  it('il chip per spegnerlo c’è anche fra le comande', async () => {
+    const utente = userEvent.setup()
+    // il tasto che porta alle comande esiste solo con gli stati del
+    // servizio accesi
+    impostazioni = { ...impostazioni, workflow_enabled: true }
+    montaCoda()
+    await screen.findByText('#11')
+
+    // in griglia: accendo il taglio e richiudo la fila
+    await apriFiltri(utente)
+    await utente.click(screen.getByRole('button', { name: /Solo oggi/ }))
+    await apriFiltri(utente)
+
+    // stessa pagina, un tocco: adesso si guardano le comande
+    await utente.click(screen.getByRole('button', { name: 'Comande' }))
+
+    // e si spegne da dove si vede, senza tornare in griglia
+    await apriFiltri(utente)
+    const chip = screen.getByRole('button', { name: /Solo oggi/ })
+    expect(chip).toHaveClass('active')
+    await utente.click(chip)
+    // Spento, il chip se ne va: fuori dalla griglia sta in fila solo
+    // quando è ACCESO, che lì è l'unico motivo per farlo vedere.
+    expect(screen.queryByRole('button', { name: /Solo oggi/ })).not.toBeInTheDocument()
+
+    // IL TASTINO, IN TUTTO QUESTO, NON HA MAI PORTATO UN NUMERO.
+    await apriFiltri(utente)
+    expect(tasto().textContent).not.toMatch(/\d/)
+  })
+})

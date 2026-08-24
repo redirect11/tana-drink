@@ -954,3 +954,413 @@ ${nome} {`)
     expect(Number(alto[1])).toBeGreaterThanOrEqual(44)
   })
 })
+
+describe('il tastierino del pagamento non finisce sotto «Riscuotere»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // «Lo zoom al 120% nel pagamento fa sì che i tasti del tastierino
+  // finiscano dietro al tasto Riscuotere» (l'utente, 21/08/2026).
+  //
+  // Perché succedeva: `#root` è scalato dallo zoom dell'app, quindi
+  // l’altezza a disposizione in pixel CSS SCENDE quando si ingrandisce,
+  // mentre il minimo dei tasti restava 44px secchi. Cinque righe da 44 più
+  // i vuoti fanno un pavimento che non scende: la griglia sbordava dalla
+  // sua scatola e l’ultima riga (00 0 = ←) finiva sotto «Riscuotere», che
+  // ha il fondo pieno e la copriva.
+  //
+  // Qui si guarda il foglio, non il layout: jsdom non impagina. Misurato
+  // in Chrome vero (1440×600 a zoom 1,2 e 1440×768 a zoom 1,5) il difetto
+  // torna esatto rimettendo una delle due righe.
+  it('i tasti valgono 44px VERI: il minimo segue lo zoom', () => {
+    const r = regola('.paypad-key')
+    // Non `min-height: 44px` secchi: dentro un contenitore scalato sarebbero
+    // 52,8px veri a zoom 1,2 — garanzia già superata, e intanto la griglia
+    // non ci sta più.
+    expect(r, 'il minimo dei tasti non segue più lo zoom: il tastierino sborda').toMatch(
+      /min-height:\s*calc\(\s*44px\s*\/\s*var\(--zoom,\s*1\)\s*\)/
+    )
+  })
+
+  it('e se anche così non ci sta, il tastierino scorre invece di sbordare', () => {
+    // La seconda rete, per le finestre molto basse tenute a zoom alto:
+    // scorre il tastierino, non i tasti che incassano — quelli restano dove
+    // sono. Su una schermata che maneggia soldi un tasto che non si vede è
+    // peggio di un tasto scomodo.
+    expect(regola('.paypad')).toMatch(/overflow-y:\s*auto/)
+    expect(regola('.payscreen-collect')).toMatch(/flex-shrink:\s*0/)
+  })
+})
+
+describe('le tre colonne del pagamento si trascinano, ma non fino a coprire il tastierino', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // «Rendi ridimensionabili le tre colonne della schermata pagamento come lo
+  // sono quelle nel dettaglio dell'ordine» (l'utente, 21/08/2026). La
+  // larghezza trascinata arriva dal JS come variabile CSS, esattamente come
+  // --pos-comanda-w nel POS.
+  it('la larghezza trascinata arriva dal JS, per tutte e due le colonne laterali', () => {
+    expect(regola('.payscreen-items')).toMatch(/width:\s*min\(\s*var\(--pay-items-w/)
+    expect(regola('.payscreen-methods')).toMatch(/width:\s*min\(\s*var\(--pay-methods-w/)
+  })
+
+  // IL TETTO IN PERCENTUALE È LA RETE DI BUG-075. La misura trascinata è in
+  // pixel e resta scritta per quel terminale, ma i pixel CSS disponibili
+  // dipendono dallo zoom dell'app: a zoom 1,6 una finestra da 1440 ne ha
+  // 900. Senza tetto, una colonna larga trascinata a zoom 1 schiaccia il
+  // centro a zoom alto — e lì sotto ci sono i tasti del tastierino.
+  // Con 34% + 30% al centro resta sempre almeno il 36%.
+  it('nessuna colonna laterale può mangiarsi il centro: tetto in percentuale', () => {
+    const voci = regola('.payscreen-items').match(/width:\s*min\([^)]*\)\s*,\s*(\d+)%\s*\)/)
+    const metodi = regola('.payscreen-methods').match(/width:\s*min\([^)]*\)\s*,\s*(\d+)%\s*\)/)
+    expect(voci, 'il tetto in percentuale della colonna voci non c’è più').not.toBeNull()
+    expect(metodi, 'il tetto in percentuale della colonna metodi non c’è più').not.toBeNull()
+    const restaAlCentro = 100 - Number(voci[1]) - Number(metodi[1])
+    expect(restaAlCentro, 'al tastierino resta meno di un terzo della larghezza').toBeGreaterThanOrEqual(33)
+  })
+
+  // Le maniglie del pagamento hanno lo stile di quelle del POS — stesso
+  // gesto, stessa presa — ma sono una classe a parte apposta: il POS impila
+  // le colonne sotto i 900px, il pagamento sotto gli 800. Con un nome solo,
+  // fra 800 e 899px le maniglie del pagamento sarebbero sparite mentre le
+  // sue colonne sono ancora affiancate.
+  it('la maniglia del pagamento è larga e afferrabile come quella del POS', () => {
+    expect(regola('.payscreen-resize-handle')).toMatch(/cursor:\s*col-resize/)
+    const largo = regola('.payscreen-resize-handle').match(/width:\s*(\d+)px/)
+    expect(largo, 'la maniglia non ha più una larghezza da dito').not.toBeNull()
+    expect(Number(largo[1])).toBeGreaterThanOrEqual(14)
+    // `touch-action: none` o il dito che trascina fa scorrere la pagina.
+    expect(regola('.payscreen-resize-handle')).toMatch(/touch-action:\s*none/)
+  })
+
+  it('sul telefono, con le colonne impilate, le maniglie spariscono', () => {
+    // Sotto gli 800px .payscreen-body va in colonna: trascinare una
+    // larghezza quando la colonna è larga quanto lo schermo non vuol dire
+    // niente, e la maniglia sarebbe solo una barra da sfiorare per sbaglio.
+    const i = css.indexOf('@media (max-width: 799px)')
+    expect(i, 'la fascia telefono del pagamento non c’è più').toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('\n}', i))
+    expect(blocco).toMatch(/\.payscreen-resize-handle\s*\{\s*display:\s*none/)
+  })
+})
+
+// ── LA MANIGLIA DEL PIEDE NON SI PRENDE ANCHE IL GAP ─────────────────
+//
+// «Diminuire lo spazio tra la maniglia e il contenuto nel dettaglio
+// ordine» (l'utente, 21/08/2026). La maniglia è il primo figlio di una
+// colonna flex con `gap`, quindi fra lei e la riga del Totale finivano
+// insieme: i sedici pixel della sua area, il gap della colonna e il suo
+// margine — un vuoto più alto della riga che stava separando, e che con lo
+// zoom del piede cresceva insieme a tutto il resto.
+//
+// L'area da afferrare NON si tocca: sedici pixel sotto il dito restano
+// sedici. A rientrare è solo lo spazio sotto, con un margine negativo che
+// segue `--foot-scale` perché lo segue il gap che sta annullando.
+describe('la maniglia del piede del conto', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('tiene la sua area da afferrare', () => {
+    const h = regola('.posd-foot-handle').match(/height:\s*(\d+)px/)
+    expect(h, 'la maniglia ha perso l' + String.fromCharCode(39) + 'altezza').toBeTruthy()
+    // Sotto i dodici non e' piu' una presa: e' una riga da centrare col dito.
+    expect(Number(h[1])).toBeGreaterThanOrEqual(12)
+  })
+
+  it('ma rientra nei vicini invece di aggiungersi, sopra e sotto', () => {
+    const r = regola('.posd-foot-handle')
+    const m = r.match(/margin:\s*(-?\d+)px\s+-12px\s+calc\(([^)]*)\)/)
+    expect(m, 'il margine non rientra piu da nessuna parte').toBeTruthy()
+    // Sopra: si mangia il cuscino del piede.
+    expect(Number(m[1]), 'sopra deve rientrare, non aggiungere').toBeLessThan(0)
+    // Sotto: riassorbe il gap, e lo segue quando il piede si ingrandisce.
+    expect(m[2], 'lo stacco deve seguire --foot-scale, come il gap').toMatch(/--foot-scale/)
+    expect(m[2], 'e deve essere negativo, o non riassorbe').toMatch(/-\s*\d/)
+  })
+
+  it('e il piede non mette un cuscino sopra la maniglia', () => {
+    const pad = regola('.posd-comanda-foot').match(/padding:\s*(\d+)px/)
+    expect(pad, 'il piede ha perso il padding').toBeTruthy()
+    expect(Number(pad[1]), 'sopra la maniglia bastano pochi pixel').toBeLessThanOrEqual(4)
+  })
+})
+
+// ── UN TESTO SU FONDO TINTO NON PORTA UN PASTELLO CABLATO ────────────
+//
+// «Il colore verde del testo non si legge bene sullo sfondo verde qui»
+// (l'utente, 22/08/2026): i passi del dettaglio comanda, dove i riquadri
+// fatti erano verdi e le scritte dentro verde-menta (#c8f7da). Quel
+// pastello è nato per il tema scuro, dove un testo chiaro su un velo
+// verde si stacca; sul chiaro finiva su un fondo altrettanto chiaro e
+// spariva — 1,03:1, misurato in Chrome sui preset di themes.js.
+//
+// È la stessa famiglia di BUG-065, un piano più in su: lì il velo e il
+// bordo bianchi davano per scontato lo scuro, qui è l'inchiostro. E non
+// era un caso solo: la pill dei turni in corso, quella dei conti chiusi,
+// i numeri dei chip dell'inventario, i numeri in perdita.
+//
+// LA REGOLA (DESIGN.md): un inchiostro chiaro cablato non sta su un fondo
+// tinto. O viene da un gettone che ha la sua variante chiara
+// (--text, --muted, --btn-ink, --testo-rosso, --testo-ambra), o la regola
+// ha accanto la sua `:root[data-luma='light']`, che è come il foglio
+// tratta le pill degli stati da sempre.
+describe('nessun inchiostro chiaro cablato su un fondo tinto', () => {
+  // Qui NON si usa `nudo`: quella svuota anche le stringhe, e i selettori
+  // che contano — `[data-luma='light']` — sono fatti di stringhe.
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+
+  // Le regole "foglia" del foglio: prelude + corpo, saltando le graffe
+  // degli at-rule (@media, @container, @supports), che non dichiarano
+  // niente di loro.
+  function regoleFoglia(testo) {
+    const trovate = []
+    let profondita = 0
+    let apertura = -1
+    let dopoUltima = 0
+    for (let i = 0; i < testo.length; i++) {
+      const c = testo[i]
+      if (c === '{') {
+        if (profondita === 0) apertura = i
+        profondita++
+      } else if (c === '}') {
+        profondita--
+        if (profondita === 0) {
+          trovate.push({
+            prelude: testo.slice(dopoUltima, apertura).trim(),
+            corpo: testo.slice(apertura + 1, i),
+          })
+          dopoUltima = i + 1
+        }
+      }
+    }
+    // Un at-rule contiene altre regole: si guarda dentro, non lui.
+    return trovate.flatMap((r) => (r.prelude.startsWith('@') ? regoleFoglia(r.corpo) : [r]))
+  }
+
+  // Luminanza relativa WCAG: sopra 0,25 è un colore da fondo scuro (i
+  // pastelli sono tutti ben oltre; #157347 e #b02a37, gli inchiostri
+  // scuri delle varianti chiare, stanno sotto 0,1).
+  function chiaro(hex) {
+    const pieno = hex.length === 4 ? hex.slice(1).replace(/./g, (d) => d + d) : hex.slice(1)
+    const n = parseInt(pieno, 16)
+    const canali = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      const s = v / 255
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * canali[0] + 0.7152 * canali[1] + 0.0722 * canali[2] > 0.25
+  }
+
+  const regole = regoleFoglia(css)
+
+  it('il foglio si lascia leggere: le regole si contano', () => {
+    expect(regole.length).toBeGreaterThan(500)
+  })
+
+  it('e chi tinge il proprio fondo scrive il testo col gettone, o ha la sua variante chiara', () => {
+    // Un fondo "tinto" è quello da cui il TEMA traspare: velature colorate,
+    // mescole coi gettoni, il gradiente dell'azione. Se la pila ha sotto un
+    // colore pieno — `#1c0709`, `linear-gradient(#2f6bd8, #3f7ce0)` — quello
+    // che si vede non dipende dal tema e un bianco sopra ci sta benissimo:
+    // è il tasto blu dell'incasso, non un difetto.
+    // Bianchi e neri trasparenti sono l'ALTRO difetto (BUG-065) e hanno già
+    // i loro test qui sopra: quello che si guarda qui è l'inchiostro.
+    const tinto = (corpo) => {
+      const m = /background(?:-color)?:((?:[^;{}]|\([^)]*\))*)/.exec(corpo)
+      if (!m) return false
+      const valore = m[1]
+      if (/#[0-9a-fA-F]{3,8}\b/.test(valore)) return false
+      if (/\brgb\(|rgba\([^)]*,\s*1\s*\)/.test(valore)) return false
+      return /rgba\(\s*(?!255,\s*255,\s*255|0,\s*0,\s*0)\d|color-mix|var\(--btn-bg\)/.test(valore)
+    }
+    const pastello = (corpo) => {
+      const m = /(?:^|[;{])\s*color:\s*(#[0-9a-fA-F]{3,8})\s*(?:!important)?\s*(?:;|$)/m.exec(corpo)
+      return m && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(m[1]) && chiaro(m[1]) ? m[1] : null
+    }
+
+    const scoperte = []
+    for (const r of regole) {
+      if (r.prelude.includes("data-luma='light'")) continue
+      if (!tinto(r.corpo)) continue
+      const ink = pastello(r.corpo)
+      if (!ink) continue
+      // OGNI selettore della regola deve avere la sua variante chiara, non
+      // uno solo: quando una pill si accoda a un elenco già coperto
+      // (`.pill.pronto, .pill.live, .pill.chiuso`) è proprio lì che ci si
+      // dimentica di elencarla anche di sotto — ed è così che «in corso» e
+      // «chiuso» sono nate scoperte.
+      const coperta = r.prelude
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .every((sel) =>
+          new RegExp(
+            ":root\\[data-luma='light'\\] " +
+              sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+              '[\\s,{]'
+          ).test(css)
+        )
+      if (!coperta) scoperte.push(r.prelude + ' → color: ' + ink)
+    }
+    expect(
+      scoperte,
+      'inchiostro chiaro cablato su fondo tinto, senza variante per i temi chiari'
+    ).toEqual([])
+  })
+
+  it('i due gettoni d’allarme hanno la loro variante chiara', () => {
+    for (const gettone of ['--testo-rosso', '--testo-ambra']) {
+      expect(css, gettone + ' non è dichiarato').toMatch(
+        new RegExp(':root \\{[^{}]*?' + gettone + ':\\s*#')
+      )
+      expect(css, gettone + ' non ha la variante per i temi chiari').toMatch(
+        new RegExp("\\[data-luma='light'\\] \\{[^{}]*?" + gettone + ':\\s*#')
+      )
+    }
+  })
+})
+
+// ── I PASSI DI UNA COMANDA SI LEGGONO SU TUTTI I TEMI ────────────────
+//
+// Il caso da cui è nata la regola qui sopra. Tre riquadri — da fare, in
+// corso, fatto — e sotto ogni nome l'ora: al banco quei minuti dicono se
+// il ticket è fermo, e sparivano insieme al nome.
+describe('i passi del dettaglio comanda', () => {
+  const css = nudo(readFileSync(join(CARTELLA, 'index.css'), 'utf8'))
+  const regola = (nome) => {
+    const i = css.indexOf('\n' + nome + ' {')
+    expect(i, nome + ' non c’è più').toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('il riquadro spento è un gettone, non un velo bianco', () => {
+    const r = regola('.step')
+    expect(r, 'un velo bianco sul tema chiaro non si vede').not.toMatch(/rgba\(255,\s*255,\s*255/)
+    expect(r).toMatch(/background:\s*var\(--tile-bg\)/)
+  })
+
+  it('il nome del passo è testo primario: dice cosa si sta facendo', () => {
+    const r = regola('.step')
+    expect(r).toMatch(/color:\s*var\(--text\)/)
+    expect(r, '--muted qui cadeva sotto 4:1 su due temi').not.toMatch(/color:\s*var\(--muted\)/)
+  })
+
+  it('il passo fatto tinge il fondo col gettone --ok e scrive col testo', () => {
+    const r = regola('.step.done')
+    expect(r).toMatch(/color-mix\(in srgb, var\(--ok\) \d+%, var\(--card\)\)/)
+    expect(r).toMatch(/color:\s*var\(--text\)/)
+    expect(r, 'era #c8f7da: verde pallido su verde pallido').not.toMatch(/color:\s*#/)
+  })
+
+  it('e l’ora sotto prende l’inchiostro del suo riquadro, non lo sbiadito', () => {
+    // Dentro il passo in corso il fondo è il dorato dei tasti: --muted ci
+    // finiva sopra a 1,03:1.
+    expect(regola('.step .muted')).toMatch(/color:\s*inherit/)
+  })
+})
+
+// ── IL NUMERO DENTRO UN CHIP ACCESO ─────────────────────────────────
+//
+// I chip riassuntivi dell'inventario («scarsi 7», «finiti 3»): acceso, il
+// chip prende il fondo dell'azione, e lì dentro il numero teneva la sua
+// tinta d'allarme — 1,2:1 su tutti e otto i temi, il caso peggiore del
+// foglio. L'etichetta accanto stava a `#fff` secco, che sul dorato di
+// casa fa 1,7:1.
+describe('i chip accesi dell’inventario', () => {
+  const css = nudo(readFileSync(join(CARTELLA, 'index.css'), 'utf8'))
+
+  it('scrivono tutto con --btn-ink, numero compreso', () => {
+    const i = css.indexOf('.chip.warn.active,')
+    expect(i, 'la regola dei chip accesi non c’è più').toBeGreaterThan(-1)
+    const blocco = css.slice(i, css.indexOf('}', i))
+    expect(blocco, 'il numero dentro il chip acceso resta scoperto').toMatch(
+      /\.chip\.warn\.active strong/
+    )
+    expect(blocco).toMatch(/\.chip\.danger\.active strong/)
+    expect(blocco).toMatch(/color:\s*var\(--btn-ink\)/)
+    expect(blocco, '#fff sul dorato dei tasti fa 1,7:1').not.toMatch(/color:\s*#/)
+  })
+})
+
+// ── LE RIGHE DELLE LISTE SI TOCCANO, E LA MISURA È UNA SOLA ─────────
+//
+// «Anche qui nei rendiconti delle chiusure di cassa serve una lista fatta
+// meglio, stile quella del magazzino ma con righe più alte. […] E altra
+// cosa, aumenta l'altezza anche delle righe della tabella dell'inventario
+// per un touch migliore» (l'utente, 22/08/2026, BUG-082).
+//
+// Le righe erano alte quanto il loro testo — 8px di aria sopra e sotto,
+// una trentina di pixel in tutto — e il magazzino al banco si tocca in
+// piedi: sotto i 44px di docs/navigazione.md si apre la riga di fianco.
+// La misura sta in UN gettone perché le liste della famiglia sono tre
+// (magazzino, chiusure di cassa, statistiche) e devono somigliarsi senza
+// che nessuno debba ricordarsi tre numeri.
+describe('le righe delle liste sono un bersaglio da dito', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const nudoCss = () => nudo(css())
+
+  const regola = (nome) => {
+    const testo = nudoCss()
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste più nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('il gettone vale 44px e SEGUE LO ZOOM', () => {
+    // Non `44px` secchi: `#root` è scalato dallo zoom dell'app, quindi a
+    // zoom 1,2 sarebbero 52,8px veri — garanzia già superata, e intanto
+    // una schermata fatta di righe ne perde un quinto. Stesso idioma del
+    // tastierino del pagamento (BUG-075).
+    const radice = nudoCss()
+    const i = radice.indexOf('--riga-lista:')
+    expect(i, 'il gettone --riga-lista non c’è più').toBeGreaterThan(-1)
+    const valore = radice.slice(i, radice.indexOf(';', i))
+    expect(valore, 'la misura del bersaglio non segue più lo zoom').toMatch(
+      /calc\(\s*44px\s*\/\s*var\(--zoom,\s*1\)\s*\)/
+    )
+  })
+
+  it('è dichiarato UNA volta sola', () => {
+    // Due dichiarazioni sono due misure che prima o poi divergono.
+    const quante = (nudoCss().match(/--riga-lista:/g) || []).length
+    expect(quante, 'il gettone è dichiarato più di una volta').toBe(1)
+  })
+
+  it('la riga della lista lo usa come minimo, non come altezza fissa', () => {
+    // Minimo: una riga che va a capo cresce invece di tagliare il testo.
+    const r = regola('.inv-row-main')
+    expect(r, 'le righe sono tornate alte quanto il loro testo').toMatch(
+      /min-height:\s*var\(--riga-lista\)/
+    )
+    expect(r, 'un’altezza fissa taglia la riga che va a capo').not.toMatch(/\n\s*height:/)
+  })
+
+  it('e nessuna lista si scrive un’altezza sua', () => {
+    // Il gettone serve a questo: se una lista della famiglia dichiara un
+    // suo min-height in pixel, le tre schermate ricominciano a divergere.
+    const testo = nudoCss()
+    for (const nome of ['.inv-row', '.inv-row-main', '.inv-row-dettaglio']) {
+      const i = testo.indexOf(A_CAPO + nome + ' {')
+      if (i < 0) continue
+      const blocco = testo.slice(i, testo.indexOf('}', i))
+      expect(blocco, nome + ' si è scritto un’altezza sua invece del gettone').not.toMatch(
+        /min-height:\s*\d+px/
+      )
+    }
+  })
+})

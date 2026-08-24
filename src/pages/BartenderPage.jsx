@@ -55,7 +55,6 @@ import {
   attesaPagamento,
   corsieDaMostrare,
   corsieSceglibili,
-  corsieDiverseDalNormale,
   gruppiColonne,
   soloCorsieVive,
   intestazioneGiornata,
@@ -68,8 +67,6 @@ import {
   nomiDelServizio,
   FILTRI_STATO,
   STATO_DEFAULT,
-  NOME_FILTRO_STATO,
-  nomeSottofiltro,
   frasePerCodaVuota,
   autoriDeiConti,
   autoriAttivi,
@@ -1451,11 +1448,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // Le colonne che si possono accendere e spegnere a mano: da qui escono i
   // chip, uno per colonna, dentro la fila dei filtri.
   const sceglibili = corsieBanco ? corsieSceglibili(corsieDelBanco, { passoDiNascita }) : []
-  // Quante di quelle stanno diversamente dal normale (due corsie nascono
-  // spente di serie): è il numero che finisce nel badge del tastino «Filtri»
-  // quando la fila è chiusa — il perché di «diverse» e non «spente» sta in
-  // coda.js. Contarle e basta terrebbe il badge acceso dal primo avvio.
-  const diverse = corsieDiverseDalNormale(sceglibili, nascoste)
   const cambiaPronto = () => {
     const nuovo = !prontoSeparato
     setProntoSeparato(nuovo)
@@ -1636,45 +1628,6 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       </Tendina>
     ) : null
 
-  // ── COSA È ACCESO ADESSO, IN PAROLE ────────────────────────
-  //
-  // Serve al tastino quando la fila è chiusa: un filtro acceso e invisibile
-  // è una coda che sembra sbagliata — si guardano dodici conti dove ce ne
-  // sono quaranta, e non c'è niente a schermo che lo dica. Sul tastino ci
-  // sta il NUMERO; questi nomi corti, senza emoji, vivono nel title, che
-  // larghezza non ne costa.
-  //
-  // SI CONTANO LE DEVIAZIONI DAL DEFAULT, non i filtri accesi. Da quando
-  // gli stati sono tre interruttori ce n'è sempre almeno uno acceso:
-  // contarli vorrebbe dire un badge perenne, che è esattamente la cosa che
-  // l'utente ha bocciato — «il conteggio dei filtri accesi è inutile sulla
-  // schermata degli ordini» (20/08/2026). Con la coda com'è di suo — solo
-  // «Aperti», tutto lo staff — non c'è niente da segnalare.
-  //
-  // Ogni vista ha i suoi filtri, quindi ha il suo elenco: la griglia ha gli
-  // stati e i giorni scorsi, il banco le colonne spente, la lista e le
-  // schede solo lo staff.
-  const sottoAcceso = workflowOn ? nomeSottofiltro(sottoChiusi, ritiroEsiste) : null
-  const nomeStaff = staffFiltra ? riassuntoStaff : null
-  const filtriAccesi = (
-    corsieView
-      ? [
-          nomeStaff,
-          corsieBanco && diverse.length > 0 && `Colonne (${diverse.length})`,
-          !corsieBanco && sottoAcceso,
-        ]
-      : gridView
-        ? [
-            // Gli stati si nominano solo quando NON sono il default: al
-            // default il badge deve restare spento.
-            stato !== STATO_DEFAULT && NOME_FILTRO_STATO[stato],
-            stato === 'chiusi' && sottoAcceso,
-            nomeStaff,
-            soloOggi && 'Solo oggi',
-          ]
-        : [nomeStaff]
-  ).filter(Boolean)
-
   const cambiaFiltri = () => {
     const aperti = !filtriVisibili
     setFiltriVisibili(aperti)
@@ -1704,25 +1657,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // filtri» (20/08/2026). Stanno in fondo alla riga dei conteggi, che c'è
   // comunque: da chiusi costano ZERO altezza.
   //
-  // LO STATO RESTA VISIBILE DA CHIUSO, ed è l'unica ragione del badge: un
-  // filtro acceso e invisibile è una coda che sembra sbagliata — dodici
-  // conti dove ce ne sono quaranta, e niente a schermo che lo dica. Aperta
-  // la fila il badge sparisce: i chip accesi si vedono da sé, e ripetere
-  // col numero quello che è già a schermo è rumore.
-  const quantiFiltri = filtriVisibili ? 0 : filtriAccesi.length
+  // NON PORTA NESSUN NUMERO, ed è una decisione presa dopo averlo provato
+  // quattro volte. «Sì ma infatti togliamo quel numero. Non serve»
+  // (l'utente, 22/08/2026). La storia per esteso — i quattro criteri e
+  // perché nessuno reggeva — sta accanto a `spiegaFiltri` in coda.js:
+  // qui basta sapere che non è una dimenticanza.
   const tastoFiltri = (
     <button
-      className={`coda-tastino${quantiFiltri > 0 ? ' active' : ''}`}
+      className="coda-tastino"
       onClick={cambiaFiltri}
       aria-expanded={filtriVisibili}
-      // IL NOME NON CAMBIA MAI. Chi lo cerca lo cerca come «Filtri»: il
-      // conteggio è STATO, e uno stato non è il nome di un tasto. Sta nel
-      // title insieme all'elenco per esteso.
+      // IL NOME NON CAMBIA MAI: chi lo cerca lo cerca come «Filtri». Quello
+      // che cambia è il title, che dice il gesto — aprire o chiudere.
       aria-label="Filtri"
-      title={spiegaFiltri(filtriAccesi, filtriVisibili)}
+      title={spiegaFiltri(filtriVisibili)}
     >
       {filtriVisibili ? '▴' : '▾'} Filtri
-      {quantiFiltri > 0 && <span className="coda-tastino-conta">{quantiFiltri}</span>}
     </button>
   )
 
@@ -1812,6 +1762,32 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const filaFiltri = (chip) =>
     filtriVisibili ? <div className="chips-filtri">{chip()}</div> : null
 
+  // ── «SOLO OGGI», DOVUNQUE SIA ACCESO ─────────────────────────
+  //
+  // Nasconde i conti rimasti aperti dai giorni scorsi, che di suo stanno in
+  // coda sotto la loro data. NON È UN FILTRO DELLA SOLA GRIGLIA: taglia
+  // `ordersInVista`, la lista da cui scendono tutte e quattro le viste — ma
+  // il chip nasceva solo lì. Chi lo accendeva in griglia e poi passava alle
+  // comande si portava dietro il taglio, senza un chip per spegnerlo e
+  // senza niente a schermo che lo dicesse: una coda che sembra sbagliata.
+  //
+  // FUORI DALLA GRIGLIA COMPARE SOLO DA ACCESO, e lì serve a rimettere la
+  // coda com'era: i conti dei giorni scorsi si vanno a cercare in griglia,
+  // che è la vista che li raggruppa per data.
+  const chipSoloOggi = (gridView ? arretrati.length > 0 || soloOggi : soloOggi) && (
+    <button
+      className={`chip ${soloOggi ? 'active' : ''}`}
+      onClick={() => setSoloOggi((v) => !v)}
+      title={
+        arretrati.length
+          ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
+          : 'Nascondi i conti rimasti aperti dai giorni scorsi'
+      }
+    >
+      📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
+    </button>
+  )
+
   // Il chip di una colonna: acceso = la colonna è a schermo. Scritto una
   // volta sola perché lo disegnano due rami — dentro il gruppo del pronto
   // e fuori — e due copie divergono al primo ritocco.
@@ -1851,6 +1827,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     ? filaFiltri(() => (
       <>
         {tendinaStaff}
+        {/* E se il taglio dei giorni scorsi è rimasto acceso passando qui
+            dalla griglia, il chip per spegnerlo c'è (vedi `chipSoloOggi`). */}
+        {chipSoloOggi}
         {/* LE DUE PORZIONI DEI CHIUSI stanno qui, in riga con gli altri:
             nelle corsie dei conti la colonna «Chiusi» c'è sempre, quindi la
             domanda ha sempre senso e non c'è nessun «Chiusi» da accendere a
@@ -1998,20 +1977,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             chiuso, sta fra i chiusi, e chi vuole sapere quali hanno ancora
             roba da portare lo chiede lì dentro («Da servire»). */}
         {/* Conti dei giorni scorsi: di default sono in coda, sotto la loro
-            data. Questo tasto li nasconde e lascia solo oggi. */}
-        {(arretrati.length > 0 || soloOggi) && (
-          <button
-            className={`chip ${soloOggi ? 'active' : ''}`}
-            onClick={() => setSoloOggi((v) => !v)}
-            title={
-              arretrati.length
-                ? `Nascondi i ${arretrati.length} conti rimasti aperti dai giorni scorsi`
-                : 'Nascondi i conti rimasti aperti dai giorni scorsi'
-            }
-          >
-            📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
-          </button>
-        )}
+            data. Questo tasto li nasconde e lascia solo oggi — ed è lo
+            stesso chip delle altre viste, che il taglio se lo portano
+            dietro (vedi `chipSoloOggi`). */}
+        {chipSoloOggi}
       </>
       ))
     : null
@@ -2971,11 +2940,17 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {avvisoRicerca}
             </p>
           )}
-          {/* STESSA FILA DELLE LAVAGNE: qui il chip è uno solo — gli stati
+          {/* STESSA FILA DELLE LAVAGNE: qui i chip sono pochi — gli stati
               li fanno le linguette di questa vista — ma un meccanismo che
               vale in tre viste su quattro è una cosa da imparare due
-              volte. */}
-          {filaFiltri(() => tendinaStaff)}
+              volte. Il taglio dei giorni scorsi compare solo se è acceso:
+              da spento, in questa vista, non avrebbe niente da offrire. */}
+          {filaFiltri(() => (
+            <>
+              {tendinaStaff}
+              {chipSoloOggi}
+            </>
+          ))}
         </>
       )}
 

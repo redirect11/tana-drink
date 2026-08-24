@@ -2012,7 +2012,7 @@ bugs:
 
   - id: BUG-058
     title: "Il tasto «▦ Colonne» è acceso sempre, e non dice perché"
-    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieDiverseDalNormale, soloCorsieVive)"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieRistrette, soloCorsieVive)"
     description: >
       Segnalato dall'utente il 20/08 con lo screenshot della lavagna: il
       chip «▦ Colonne» è arancione — cioè «ci sono colonne spente» —
@@ -2056,8 +2056,13 @@ bugs:
       partiva acceso su ogni terminale nuovo. L'acceso deve dire «questo
       terminale si e' discostato dal normale», nei due versi — nascosta
       una corsia di serie accesa, O riaccesa una di serie spenta. La
-      regola sta in `corsieDiverseDalNormale` (coda.js), pura e provata:
-      terminale mai toccato = tasto grigio senza numero.
+      regola stava in `corsieDiverseDalNormale` (coda.js), pura e provata:
+      terminale mai toccato = tasto grigio senza numero. IL VERSO DI
+      RITORNO E' STATO TOLTO IL 22/08 (BUG-085): riaccendere una corsia di
+      serie spenta faceva salire il numero, ed e' l'opposto di filtrare. Si
+      conta solo cio' che NASCONDE, e la parte che qui conta — terminale
+      mai toccato, tasto grigio — vale identica: le due dello sguardo
+      all'indietro non le ha nascoste nessuno.
       E LE OMBRE, DI NUOVO (stesso giro): il respiro dato in BUG-044 era
       6px ai lati — un compromesso «per non stringere la card» — ma
       l'ombra sfuma per 18px e usciva tagliata di netto sul fianco;
@@ -2070,9 +2075,9 @@ bugs:
       quello che sopra e' scritto sul TASTO — il numero «▦ Colonne (2)», il
       title che elenca quali, l'arancione — va letto sul BADGE del tastino
       «▾ Filtri», e solo a fila CHIUSA: a fila aperta i chip delle colonne
-      si vedono da se', spenti o accesi. La cura vera resta identica e
-      resta dov'era: si conta la differenza dal normale
-      (`corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
+      si vedono da se', spenti o accesi. La cura vera resta dov'era: si
+      conta con una funzione pura (dal 22/08 `corsieRistrette`, BUG-085 —
+      prima `corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
       (`soloCorsieVive`). E' sparito `corsieSpente`, che serviva solo al
       title di quel chip.
     in_produzione: false
@@ -2828,3 +2833,541 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/cassaDellaSerata.test.js
+
+  - id: BUG-075
+    title: "Zoom al 120% nel pagamento: l'ultima riga del tastierino finisce dietro «Riscuotere»"
+    area: "src/index.css (.paypad, .paypad-key)"
+    description: >
+      «Lo zoom al 120% nel pagamento fa si' che i tasti del tastierino
+      finiscano dietro al tasto Riscuotere» (l'utente, 21/08/2026, con la
+      schermata di pagamento su desktop e il controllo «- 120% +» in basso a
+      sinistra: lo zoom dell'APP, non quello del browser). Si vedono 7 8 9,
+      4 5 6, 1 2 3; l'ultima riga — 00, 0, =, il tasto per cancellare una
+      cifra — sta sotto al tasto blu «Riscuotere», che ha il fondo pieno e la
+      copre del tutto. Su una schermata che maneggia soldi un tasto che non
+      si vede e' peggio di un tasto scomodo: chi batte un importo a mano non
+      trova piu' ne' lo zero ne' il modo di correggere una cifra sbagliata.
+      LA CAUSA. Lo zoom scala '#root', quindi dentro la pagina l'altezza a
+      disposizione in pixel CSS SCENDE di un quinto a 120%. La colonna
+      centrale e' un flex verticale: display, avvisi, tastierino (che si puo'
+      stringere, 'flex: 1; min-height: 0') e sotto i tasti che incassano
+      ('flex-shrink: 0'). Ma i TASTI del tastierino non si stringono:
+      'min-height: 44px' secchi. Cinque righe da 44 piu' i vuoti fanno un
+      pavimento di 244px che non scende. Quando l'altezza disponibile va
+      sotto quel pavimento la griglia sborda dalla sua scatola, e siccome
+      niente ha 'overflow' l'ultima riga finisce sotto i tasti che vengono
+      dopo nel DOM.
+      COME E' STATO SISTEMATO, due reti. (1) Il minimo dei tasti segue lo
+      zoom: 'calc(44px / var(--zoom, 1))'. La soglia dei 44px (DESIGN.md) e'
+      una misura FISICA — quanto e' grande il tasto sotto il dito — e dentro
+      un contenitore scalato 44px CSS a zoom 1,2 sono gia' 52,8px veri: la
+      garanzia era superata di suo, e intanto il tastierino non ci stava piu'.
+      Diviso per lo zoom il tasto resta grande quanto a zoom 1, in centimetri
+      veri, e la griglia rientra. E' lo stesso idioma delle altezze che
+      dividono 100dvh, gia' in uso nel foglio. (2) Se anche cosi' non ci sta
+      (finestre molto basse tenute a zoom alto) il tastierino SCORRE
+      ('overflow-y: auto') invece di sbordare, e i tasti che incassano
+      restano appiccicati in fondo: «Riscuotere» e' quello che si preme
+      sempre, e non deve mai andare cercato.
+      MISURATO IN CHROME VERO, non a occhio: 63 combinazioni di finestra
+      (1440 x 500..1080) e zoom (100%..160%), leggendo per ogni tasto chi gli
+      finisce sopra con 'elementFromPoint'. Prima: 15 combinazioni con tasti
+      coperti, a partire da 1440x600 al 120% — il caso segnalato. Dopo: zero,
+      e in 8 combinazioni in piu' il tastierino ci sta per intero senza
+      nemmeno dover scorrere. Il tastierino dello sconto (tre colonne, dentro
+      la finestrella) non aveva questo guaio — la' la griglia e' alta quanto
+      il contenuto — e ci guadagna lo stesso: i suoi tasti restano 44px veri.
+      RIMETTENDO UNA QUALUNQUE DELLE DUE RIGHE, tests/unit/css.test.js torna
+      rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-076
+    title: "Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto"
+    area: "src/index.css (.confirm-overlay, .confirm-box)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco: la registro perche'
+      e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo
+      zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE
+      le finestrelle di conferma dell'app, non solo lo sconto.
+      COSA SUCCEDE. '.confirm-overlay' centra la finestrella
+      ('align-items: center') dentro un velo fisso che non scorre. Quando la
+      finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla
+      dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non
+      c'e' modo di raggiungerli, perche' non scorre niente.
+      MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e
+      zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in
+      giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano
+      11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi,
+      ma non li chiude.
+      COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella
+      fermarsi all'altezza dello schermo con dentro il suo scorrimento —
+      'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare
+      non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni
+      '.confirm-box' dell'app, quindi va provato dove le finestrelle sono
+      piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+    labels: [bug, interfaccia]
+    severity: lieve
+    priority: P3
+    status: todo
+    generate_issue: true
+    in_produzione: true
+
+  - id: BUG-077
+    title: "Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre"
+    area: "src/components/OrderPosDetail.jsx (.posd-root, il piede del conto)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco. Stessa causa di
+      fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse
+      no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
+      COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo
+      ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha
+      una pila di tasti che non si stringe. Quando la somma delle fasce fisse
+      supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e
+      niente scorre per andarli a prendere: sono irraggiungibili, non solo
+      scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non
+      aiuta.
+      MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom):
+      16 combinazioni con almeno un tasto fuori. Il primo a sparire e'
+      «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e
+      «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra
+      alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai
+      fino al 160%.
+      DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a
+      capo, o se le fasce fisse debbano seguire lo zoom come il tastierino
+      del pagamento. La regola che non si tratta e' quella: nessun tasto
+      finisce sotto o fuori senza un modo di arrivarci.
+    labels: [bug, interfaccia, pos]
+    severity: media
+    priority: P2
+    status: todo
+    generate_issue: true
+    in_produzione: true
+
+
+  - id: BUG-078
+    title: "Nel conto, fra la maniglia del piede e il Totale c'era piu' vuoto della riga stessa"
+    area: "src/index.css (.posd-foot-handle)"
+    description: >
+      Segnalato dall'utente il 21/08/2026 con lo screenshot: «diminuire lo
+      spazio tra la maniglia e il contenuto nel dettaglio ordine».
+      PERCHE'. La maniglia e' il primo figlio di una colonna flex con
+      `gap`, quindi fra lei e la riga del Totale finivano insieme tre
+      cose: i 16px della sua area da afferrare, il gap della colonna e il
+      suo margine. Un vuoto piu' alto della riga che stava separando — e
+      siccome il gap scala con `--foot-scale`, tirando su la maniglia per
+      ingrandire il piede quel vuoto cresceva con tutto il resto.
+      COME E' STATO SISTEMATO, IN DUE GIRI. Il primo ha stretto solo
+      sotto: «vedo ancora che la maniglia occupa troppo spazio sopra e
+      sotto» (l'utente, 22/08/2026, col secondo screenshot) — perche'
+      sopra restava il cuscino del piede, che non c'entrava col gap.
+      Adesso la maniglia RIENTRA nei vicini invece di aggiungersi: sopra
+      si mangia il cuscino (il piede scende a 4px di padding, che a
+      separarlo da quello che ha sopra basta il bordo), sotto riassorbe il
+      gap con un margine negativo che segue `--foot-scale`, perche' lo
+      segue il gap che sta annullando.
+      L'AREA DA AFFERRARE RESTA: quattordici pixel a tutta larghezza. Una
+      presa che non si prende non serve a niente, e quello che dava
+      fastidio non era la presa ma il VUOTO. Sorvegliato da
+      tests/unit/css.test.js su tutti e due i lati: rimettendo il cuscino
+      sopra, o togliendo il rientro, il test diventa rosso (provato).
+    labels: [bug, interfaccia, pos]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-079
+    title: "Dal pannello delle comande si stampava lo scontrino del conto intero"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 21/08/2026: «il tasto per stampare lo
+      scontrino dal box delle comande non serve».
+      COSA C'ERA. In fondo alla finestra «Comande» stava un tasto
+      «Scontrino (non fiscale)» che stampava il CONTO INTERO. Due
+      documenti diversi dietro lo stesso vetro, e quello sbagliato era il
+      piu' grande: chi cercava la carta per il banco poteva mandare in
+      stampa il riepilogo del cliente.
+      PERCHE' NON SERVE. Lo scontrino appartiene al gesto della
+      riscossione (REQ-STAMPA-001), e il riepilogo da mostrare al cliente
+      prima di pagare ha gia' il suo tasto — «Preconto» — nella schermata
+      dei pagamenti. Nel pannello delle comande la stampa che ha senso e'
+      quella del ticket al banco, ed e' il tasto «Stampa» di ogni comanda,
+      che resta.
+      Tolto anche l'import di `printScontrino` da quella schermata, che
+      restava senza chiamanti.
+    labels: [bug, stampa, pos]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-080
+    title: "Il badge dei filtri conta i generi, non le deviazioni: tre colonne diverse e un «1»"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx (chipSoloOggi)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «non mi e' chiaro
+      come conta i filtri. Secondo me non funziona». Con due fotografie
+      della coda a corsie del banco: in una sei colonne a schermo e il
+      tastino «▾ Filtri ①», nell'altra tre colonne e nessun numero.
+      COSA C'ERA. Il badge era `filtriAccesi.length`, e `filtriAccesi` era
+      una lista di GENERI di filtro: tutte le colonne diverse dal normale
+      collassavano in una voce sola, `Colonne (n)`. Due colonne riaccese a
+      mano facevano quindi «1». Chi guarda conta a occhio quello che vede
+      — due colonne in piu' del solito, lo staff filtrato — e trova un
+      numero che non torna: da li' in poi il numero non lo guarda piu'.
+      LA SECONDA FOTOGRAFIA NON ERA UN DIFETTO, e la prova sta in un test
+      che riproduce quella lavagna (tests/component/CodaCorsie.test.jsx,
+      «col locale che parte in preparazione»). Tre colonne senza badge
+      succede col locale che fa nascere le comande gia' IN PREPARAZIONE:
+      «Da fare» non e' spenta da nessuno, non esiste come colonna
+      sceglibile finche' e' vuota (`corsieSceglibili`), e le due dello
+      sguardo all'indietro nascono spente di serie
+      (CORSIE_SPENTE_ALL_INIZIO). Niente di diverso dal normale, niente
+      numero: il badge diceva la verita'.
+      LA CURA. Il conteggio e' una funzione pura, `contaFiltri` in
+      lib/coda.js, e conta le voci una per una: tre colonne fanno 3, con
+      lo staff filtrato fanno 4. Resta che al primo avvio, con tutto di
+      serie, il badge e' spento (BUG-058). Resta anche che a fila APERTA
+      il numero sparisce, e la regola sta nella funzione (secondo
+      argomento) invece che in un ternario nella pagina.
+      IL CRITERIO E' CAMBIATO IL GIORNO DOPO (BUG-085). Qui si contavano
+      le DEVIAZIONI dal normale nei due versi, e sopra si legge «due
+      colonne riaccese a mano» come esempio di cosa il badge deve contare:
+      non e' piu' vero. Riaccendere una colonna fa vedere di piu', che e'
+      l'opposto di filtrare, e il badge ora conta solo cio' che RESTRINGE
+      (`corsieRistrette`). Quello che regge di questa voce e' l'altra
+      meta': il badge conta UNA PER UNA e non per generi, e badge e title
+      leggono la stessa lista.
+      UNA LISTA SOLA PER BADGE E TITLE, che e' il modo di non avere due
+      verita': una voce e' un nome secco («Chiusi», «Solo oggi») e vale
+      uno, oppure un gruppo che porta quante restrizioni tiene dentro
+      (`{ nome: 'Colonne', quante: 3 }`). Il title continua a elencare per
+      esteso e le colonne le RAGGRUPPA — «Colonne (3)» — perche' i loro
+      nomi sono le testate della lavagna, gia' sotto gli occhi: sei titoli
+      in fila annegherebbero i filtri che a schermo un nome non ce l'hanno.
+      TROVATO STRADA FACENDO: «Solo oggi» non veniva contato fuori dalla
+      griglia. Taglia `ordersInVista`, cioe' la lista da cui scendono
+      TUTTE le viste, ma il chip nasceva solo in griglia: chi lo accendeva
+      li' e poi passava alle comande — stessa pagina, un tocco — si
+      portava dietro il taglio senza numero sul tastino e senza un chip
+      per rimetterlo a posto. Adesso dove e' acceso si conta, e il chip
+      per spegnerlo compare in tutte le viste (da spento resta solo in
+      griglia, che e' la vista che raggruppa per data).
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie,
+      aprire «▾ Filtri», nascondere due colonne del lavoro, richiudere. Il
+      tastino dice «1» con due colonne in meno a schermo. (Il passo
+      originale erano due colonne RIACCESE: da BUG-085 quelle non fanno
+      piu' numero, ed e' giusto cosi'.)
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      «Si' ma infatti togliamo quel numero. Non serve» (l'utente, lo stesso
+      giorno). Questo bug resta `fixed` — il conteggio per generi era
+      sbagliato e la cura c'e' stata — ma la cosa che curava non esiste
+      piu': il tastino «▾ Filtri» non porta nessun badge.
+      IL GIRO PER INTERO, che e' la parte da ricordare. Il numero e' stato
+      calcolato in quattro modi: i GENERI di filtro (questo bug), una
+      restrizione per COLONNA contando anche le riaccese (BUG-085), solo
+      cio' che RESTRINGE guardando la lavagna («non mi sembra che il
+      conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+      zero»), e i chip ACCESI e basta — mai arrivato a schermo. Ogni
+      criterio era una risposta diversa a «quanti filtri ci sono?», e chi
+      guarda ne aveva in mente una sola: i chip che vede. Un numero che va
+      spiegato non avvisa di niente.
+      COSA NON RIAPRIRE. `contaFiltri`, `corsieRistrette`, la lista
+      `filtriAccesi` e il badge `.coda-tastino-conta` sono stati rimossi
+      insieme, e con loro i test del conteggio. Il dettaglio sta in
+      REQ-CODA-008, settimo giro.
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-081
+    title: "Sui temi chiari il testo su fondo tinto spariva: i passi della comanda, e non solo"
+    area: "src/index.css"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Il colore verde del testo non
+      si legge bene sullo sfondo verde qui». Lo screenshot e' il dettaglio
+      comanda, la fila dei passi in cima — Da fare, In preparazione,
+      Pronto, Servito: i riquadri gia' fatti sono verdi e le scritte
+      dentro erano verde-menta, quasi invisibili. Sotto ogni nome c'e'
+      anche l'ora, che spariva allo stesso modo.
+      LA CAUSA. `.step.done` scriveva `color: #c8f7da`, un pastello nato
+      per il tema SCURO — dove un testo chiaro su un velo verde si stacca.
+      Sul chiaro quel pallido finisce su un fondo altrettanto chiaro:
+      1,03:1 misurato su «chiaro» e «Pico chiaro», 1,05 su «crema», 1,14
+      su «Catppuccin chiaro». E' la stessa famiglia di BUG-065 un piano
+      piu' in su — li' erano il velo e il bordo bianchi a dare per
+      scontato lo scuro, qui e' l'inchiostro.
+      NON ERA UN CASO SOLO. Passando in rassegna i pastelli cablati del
+      foglio, misurati in Chrome su tutti e otto i preset di themes.js:
+      l'ora dentro un passo stava a 1,03 sul passo IN CORSO (--muted sul
+      dorato dei tasti) e sotto 4,5 su sei temi su otto, SCURI COMPRESI;
+      il numero dentro un chip acceso dell'inventario («scarsi 7») teneva
+      la sua tinta d'allarme sul fondo dell'azione, 1,2:1 su TUTTI e otto
+      i temi — il caso peggiore del foglio — e l'etichetta accanto stava a
+      `#fff` secco, 1,7:1 sul dorato di casa; la pill dei turni in corso e
+      quella dei conti chiusi erano copie di quella del «pronto» ma senza
+      la sua variante chiara, e sparivano a 1,02:1; i numeri in perdita
+      (`.neg`) stavano a 2,0:1 su bianco; la pill «pagato» scriveva con
+      --accent-2, che cambia col tema, e faceva 2,3:1 su Catppuccin chiaro
+      (e su Pico era azzurra, come «in preparazione»).
+      LA CURA, e la regola che ne resta. I passi prendono i gettoni:
+      --tile-bg per il riquadro spento (era un velo bianco), --ok mescolato
+      con --card per quello fatto, --text per il nome, e l'ora eredita
+      l'inchiostro del suo riquadro invece di essere --muted — dentro un
+      passo non c'e' testo di servizio, quei minuti dicono se il ticket e'
+      fermo. Nascono due gettoni con la loro variante chiara,
+      --testo-rosso e --testo-ambra, che raccolgono sei pastelli scritti a
+      mano. La regola generale sta in DESIGN.md — «un inchiostro chiaro
+      cablato non sta su un fondo tinto: o un gettone, o la sua regola
+      gemella [data-luma='light']» — insieme alle soglie, che prima erano
+      sottintese: 4,5:1 per il testo normale, 3:1 per quello grande e per
+      --muted. La sorveglia tests/unit/css.test.js leggendo il foglio
+      regola per regola.
+      COSA RESTA SOTTO 4,5 E PERCHE'. Le pill «ritirato» (3,16 su Pico
+      scuro) e «al banco» (3,40): sono --muted su un neutro, gli stati che
+      devono recedere, nessun pastello cablato, e stanno sopra il 3:1 del
+      testo secondario.
+      SUL TEMA SCURO NON PEGGIORA NIENTE: ogni riga misurata e' uguale o
+      migliore di prima.
+    labels: [bug, ui, tema, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-082
+    title: "Le righe delle liste sono troppo basse per un dito: magazzino e chiusure di cassa"
+    area: "src/index.css (gettone --riga-lista, .inv-row-main)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, insieme alla richiesta sulla
+      lista delle chiusure di cassa: «E altra cosa, aumenta l'altezza anche
+      delle righe della tabella dell'inventario per un touch migliore».
+      LA MISURA CHE C'ERA. Le righe della lista del magazzino
+      (`.inv-row-main`) erano alte quanto il loro testo: 8px di aria sopra
+      e sotto una riga da 0,9rem, una trentina di pixel in tutto. Il
+      magazzino al banco si guarda in piedi, col telefono in una mano, e
+      sotto i 44px di docs/navigazione.md — la soglia dichiarata per chi
+      lavora col dito — si apre la riga di fianco a quella che si voleva.
+      Con 388 articoli in elenco succede spesso, e aprire la riga
+      sbagliata durante il servizio vuol dire cercare due volte.
+      LA CURA. Un gettone solo, `--riga-lista`, e le righe lo prendono come
+      MINIMO — non come altezza fissa, o una riga che va a capo verrebbe
+      tagliata. Il gettone e' una misura FISICA:
+      `calc(44px / var(--zoom, 1))`, lo stesso idioma di BUG-075. Lo zoom
+      dell'app scala `#root`: 44px secchi al 120% sono 52,8px veri, cioe'
+      una garanzia gia' superata che intanto fa vedere un quinto di righe
+      in meno su una schermata fatta solo di righe. Diviso per lo zoom il
+      bersaglio resta grande sotto il dito quanto a zoom 1.
+      PERCHE' UN GETTONE E NON UN NUMERO. Le liste di questa famiglia sono
+      tre — magazzino, chiusure di cassa (REQ-CASSA-006), statistiche — e
+      tre numeri scritti a mano in tre punti del foglio, fra sei mesi,
+      sono tre numeri diversi. La regola sta in DESIGN.md.
+      QUELLO CHE NON CAMBIA: la striscia dell'assortimento, il pallino
+      delle scorte, la legenda, la riga aperta e il dettaglio sotto, le
+      colonne che spariscono sotto i 900px. La riga e' piu' alta, non
+      diversa.
+      RIMETTENDO IL DIFETTO — il gettone a 44px secchi, o il minimo tolto
+      dalla riga — tests/unit/css.test.js torna rosso.
+    labels: [bug, interfaccia, magazzino, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-083
+    title: "Sulla comanda le voci uscivano separate se erano separate sul conto"
+    area: "src/lib/comande.js (righeDellaComanda, pezziDellaComanda), src/lib/printer.js (printComanda, printComande, printComandaUnita)"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Per la comanda, le voci devono
+      essere sempre accorpate. Al momento, se sono separate escono separate,
+      se sono unite escono unite. Devono essere sempre unite sulla comanda».
+      COSA SUCCEDEVA. `printComanda` stampava le righe COSÌ COME STANNO sul
+      conto. Al POS c'è «Unisci / Separa uguali» e ogni tocco sul prodotto
+      nasce come riga a sé: chi aveva separato le righe per dividere il
+      conto mandava al banco quattro righe «1 JEFFERSON» una sotto l'altra
+      invece di una «4 JEFFERSON». Chi prepara conta PEZZI, e quattro righe
+      uguali si contano peggio di un numero.
+      PERCHÉ NON È UNA PREFERENZA. Separare serve ai SOLDI — dividere il
+      conto fra chi paga cosa — e sui soldi non cambia niente: scontrino e
+      schermata di pagamento restano come sono. La comanda risponde a
+      un'altra domanda, «quanti pezzi devo fare», e a quella la risposta è
+      sempre la stessa.
+      LA CURA. Una funzione pura in lib/comande.js, `righeDellaComanda`,
+      che tutte le stampe del banco attraversano — comanda singola,
+      ristampa, ticket unito — perché il punto in cui si accorpa è UNO
+      SOLO, dentro `printComanda`, e non nei cinque chiamanti.
+      LA CHIAVE È QUELLA DEL POS (`lineSignature`, lib/orderLines.js), non
+      una nuova: se «uguali» volesse dire una cosa a schermo e un'altra
+      sulla carta, il banco riceverebbe un ticket che non corrisponde al
+      conto. Distingue drink, nome, PREZZO, ricetta e NOTA. Le due che
+      contano qui: la NOTA è lavoro diverso — «poco ghiaccio» vale per due
+      dei quattro Jefferson, e accorparli farebbe sparire la nota o la
+      stamperebbe su tutti e quattro — e il PREZZO tiene separati due
+      prodotti liberi battuti con lo stesso nome a cifre diverse, dove
+      sommare direbbe una bugia su cosa è stato battuto.
+      IL «CL: N» IN CIMA RESTA GIUSTO: si conta sulle righe già accorpate
+      (`pezziDellaComanda`), e la somma non cambia — accorpare sposta le
+      quantità, non ne crea e non ne perde. C'è un test che lo dice.
+      UN DIFETTO IN PIÙ, TROVATO STRADA FACENDO. Il ticket unito
+      (`printComandaUnita`, più comande dello stesso conto su una ricevuta
+      sola) passava per `aggregateItems`, che è l'aggregato PER I SOLDI:
+      fonde per `drink_id` e basta, senza guardare la nota. Due Spritz con
+      note diverse diventavano una riga sola e una delle due note spariva
+      dalla carta. Adesso passa le righe grezze e le accorpa `printComanda`
+      con la chiave giusta.
+    labels: [bug, stampa, comanda, banco]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAccorpata.test.js
+
+  - id: BUG-084
+    title: "Due aliquote IVA per la stessa cosa: una per terminale sullo scontrino, una del locale nei margini"
+    area: "src/lib/printer.js (aliquotaScontrino, printScontrino), src/components/PrinterSetup.jsx, src/components/PaymentScreen.jsx"
+    description: >
+      Trovato il 22/08/2026 rispondendo a una domanda dell'utente: «perché il
+      setting dell'aliquota è nelle impostazioni della stampante?». La
+      risposta è che ce n'erano DUE, e non lo sapeva nessuno.
+      · `ivaRate`, fra le impostazioni della stampante: vive NEL BROWSER, per
+        terminale (e per chi ci è collegato), ed era quella che finiva sulla
+        riga IVA dello scontrino.
+      · `sale_vat`, su settings/bar: vive SU FIRESTORE, condivisa da tutto il
+        locale, e la usano margini, prezzo consigliato e statistiche.
+      CONSEGUENZE VERE, non teoriche: due tablet potevano stampare scontrini
+      con aliquote diverse per lo stesso conto — basta che qualcuno avesse
+      toccato il campo su uno solo — e l'IVA scritta sulla carta poteva non
+      tornare con quella su cui il locale calcola i suoi margini. Nessuna
+      delle due cose lascia traccia: si scopre guardando due scontrini
+      affiancati, o non si scopre affatto.
+      LA CURA. Un'aliquota è un fatto del LOCALE, non una preferenza del
+      tablet che ha stampato: vince `sale_vat`. La stampa la legge dalla
+      copia locale delle impostazioni del bar (come già fa per i campi dello
+      scontrino: la carta non aspetta la rete), il campo nelle impostazioni
+      della stampante è sparito, e al suo posto c'è scritto dove si imposta.
+      Anche la fattura di cortesia prende la stessa: prima leggeva `ivaRate`,
+      e poteva dire una cosa diversa dallo scontrino dello stesso conto.
+      CHI AVEVA UN VALORE DIVERSO NEL BROWSER: si ignora, e basta. Quel
+      numero resta scritto nella memoria del terminale — non c'è migrazione
+      da far girare, nessuno lo legge più — e da quel tablet esce la stessa
+      carta di tutti gli altri. Non si travasa in `sale_vat`: sarebbe un
+      terminale a caso che decide l'aliquota di tutto il locale. C'è un test
+      che, con le due aliquote coincidenti, confronta la riga IVA prima e
+      dopo la cura: identica. Nessun locale si sveglia con la carta cambiata.
+      UN CASO LIMITE CHE IL TEST HA TROVATO: `Number(null)` e `Number('')`
+      fanno ZERO, e uno zero è un'aliquota vera (non si scorpora niente). Un
+      campo lasciato vuoto avrebbe stampato uno scontrino senza IVA: il vuoto
+      si guarda prima della conversione e torna al 10 della somministrazione.
+    labels: [bug, stampa, impostazioni, iva]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/aliquotaIva.test.js
+
+  - id: BUG-085
+    title: "Il badge dei filtri conta al contrario: mostrare più colonne fa salire il numero"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «credo che
+      l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
+      disattivati tutti ma lui indica tre filtri attivi». Con la fotografia
+      della coda a corsie del banco: tutte e sei le colonne a schermo — Da
+      fare, In preparazione, Da servire/Ritirare, Serviti/Ritirati, Chiuse,
+      Annullate — nessun filtro di staff, nessun «Solo oggi», e il tastino
+      che dice «▾ Filtri ③».
+      COSA CONTAVA. `corsieDiverseDalNormale` contava le DEVIAZIONI dal
+      normale nei due versi: nascosta una corsia che di serie è accesa, MA
+      ANCHE riaccesa una che di serie è spenta (le due dello sguardo
+      all'indietro, CORSIE_SPENTE_ALL_INIZIO). Il secondo verso è il
+      rovescio di un filtro: accendendo «Chiuse» e «Annullate» si vede DI
+      PIÙ, non di meno, e il badge saliva mostrando la lavagna intera.
+      PERCHÉ ERA IL CRITERIO SBAGLIATO. Il badge esiste per avvisare che la
+      coda non sta facendo vedere tutto — un filtro acceso e invisibile è
+      una lavagna che sembra sbagliata. Quel segnale ha senso solo su
+      quello che è NASCOSTO. «Deviazione dal normale» rispondeva a
+      un'altra domanda («questo terminale è stato configurato?»), che a chi
+      lavora non serve e che sul tastino dei filtri si legge al contrario.
+      E PERCHÉ TRE E NON DUE. Due colonne riaccese avrebbero fatto due: il
+      terzo veniva dal fatto che il conto leggeva la MEMORIA delle spente
+      (`nascoste`) invece della lavagna. Spegnendo TUTTE le colonne
+      `corsieVisibili` le rimette a schermo tutte quante — una lavagna
+      senza colonne è indistinguibile da un'app rotta — e la memoria resta
+      piena di id che a schermo non nascondono niente. Nel locale le
+      comande nascono già IN PREPARAZIONE, quindi «Da fare» non è una
+      colonna sceglibile: i chip erano cinque, spenti tutti e cinque, e di
+      quei cinque tre erano corsie normalmente visibili. Tre. Le due dello
+      sguardo all'indietro, spente e spente di serie, non contavano — è la
+      combinazione che fa tornare il numero della fotografia.
+      LA CURA. Una funzione pura nuova, `corsieRistrette(sceglibili,
+      mostrate)`: conta le corsie normalmente visibili che a schermo NON
+      ci sono, confrontandosi con le corsie DISEGNATE e non con la memoria.
+      Non conta una corsia mostrata che di suo sarebbe spenta, non conta
+      una corsia che l'assetto di oggi non disegna proprio, e non conta
+      niente quando la lavagna mostra tutto — comunque ci si sia arrivati.
+      `corsieDiverseDalNormale` sparisce con la sua idea.
+      COSA NON CAMBIA. Cosa fanno i filtri: solo cosa il numero conta.
+      Restano contati lo staff ristretto a una parte, «Solo oggi», lo stato
+      diverso dal default in griglia e la porzione dei chiusi — sono tutte
+      cose che restringono. Resta BUG-058: al primo avvio, con le due
+      corsie spente di serie, il badge è spento. Resta BUG-080: il badge
+      somma una per una e il title raggruppa, leggendo la STESSA lista.
+      Resta che a fila aperta il numero sparisce.
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie in
+      un locale che fa nascere le comande in preparazione, aprire
+      «▾ Filtri», spegnere tutti i chip delle colonne, richiudere. La
+      lavagna mostra tutte e sei le colonne e il tastino dice «3». Oppure,
+      più corto: accendere «💶 Chiuse» e «✖️ Annullate» e richiudere — sei
+      colonne a schermo e il tastino dice «2».
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      La cura di questo bug non ha retto alla prova successiva. Col
+      criterio «solo ciò che restringe» l'utente ha riguardato la stessa
+      coda e ha scritto: «non mi sembra che il conteggio dei filtri
+      funzioni ancora. Deve contare le colonne visualizzate. Ne ho tre e
+      lui dice zero. Se ne seleziono 1 dice 2. Comunque non funziona» —
+      con lo screenshot di cinque chip in fila, i primi tre accesi, e
+      nessun badge. E subito dopo, chiudendo il discorso: «sì ma infatti
+      togliamo quel numero. Non serve».
+      QUINDI IL BADGE NON C'È PIÙ. Il bug resta `fixed` (il criterio a
+      rovescio era davvero sbagliato), ma quello che curava è stato
+      ritirato: il tastino dice «▾ Filtri» e basta, e il title dice solo
+      il gesto. `corsieRistrette` — nata qui — è stata eliminata insieme a
+      `contaFiltri`: senza badge non aveva più chiamanti.
+      LA MORALE, per chi ci ripassa. Quattro criteri in due giorni
+      (generi, deviazioni, restrizioni, chip accesi) e nessuno che
+      corrispondesse a quello che chi guarda si aspetta: «quanti filtri ci
+      sono?» non ha una risposta sola. Il segnale si legge aprendo la
+      fila, dove i chip accesi si vedono da sé. Il racconto per esteso sta
+      in REQ-CODA-008, settimo giro.
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx

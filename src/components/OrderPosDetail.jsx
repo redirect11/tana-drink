@@ -72,7 +72,7 @@ import {
   reconcileLayout,
 } from '../lib/orderLines.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { printComanda, printComande, printComandaUnita, comandeStampabili, printScontrino, releaseReceiptPrint } from '../lib/printer.js'
+import { printComanda, printComande, printComandaUnita, comandeStampabili, releaseReceiptPrint } from '../lib/printer.js'
 import PosProductPicker from './PosProductPicker.jsx'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
 import { useComandeLocali, comandaProvvisoria } from '../lib/comandeLocali.js'
@@ -1833,6 +1833,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // ── Comanda attiva: azione rapida di avanzamento (modifica) ──
   const active = activeComanda({ comande: effComande })
 
+  // SI LEGGE A CHE PUNTO STA IL LAVORO? Solo su un conto già nato, in un
+  // locale che segue il servizio, e finché il conto è in corso: su un conto
+  // chiuso quel passo non è più una cosa da fare. Le condizioni sono quelle
+  // di sempre — è la POSIZIONE della pastiglia che è cambiata, non quando
+  // compare — e stanno in una costante perché adesso le guarda anche la
+  // barra in alto, per sapere quanto spazio le resta.
+  const mostraStatoLavoro = !isNew && workflowOn && !!active && !closed
+
+  // SUL TELEFONO NON CI STANNO DUE PASTIGLIE PER ESTESO. Misurato in Chrome
+  // vero: la barra al completo chiede 505px, e un telefono ne ha 360-430.
+  // Cedono in quest'ordine — l'ora, che si rilegge nella storia del conto, e
+  // poi la PAROLA dello stato del conto, che resta il suo segno col nome nel
+  // title: quel conto ce l'hai aperto davanti, e quanto c'è da incassare lo
+  // dice comunque il tasto in fondo. Resta per esteso quello che nella barra
+  // ci è appena arrivato, e che nient'altro lassù dice: il lavoro.
+  const barraStretta = telefono && mostraStatoLavoro
+
   // ── Info conto ──
   const [info, setInfo] = useState({
     customer_name: order?.customer_name || '',
@@ -2049,16 +2066,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       }}
     >
       {/* ── Barra in alto (sotto la barra di sistema del tablet: --safe-top) ── */}
-      <div
-        className="posd-topbar"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexShrink: 0,
-          borderBottom: '1px solid var(--line)',
-        }}
-      >
+      {/* Com'è messa la riga sta in .posd-topbar, non qui: da `style` inline
+          vinceva sempre lei, e il `gap` del telefono non ha mai contato. */}
+      {/* `con-lavoro`: con la pastiglia del lavoro a bordo la riga è più
+          piena, e le soglie del foglio di stile sanno cosa togliere. */}
+      <div className={`posd-topbar${mostraStatoLavoro ? ' con-lavoro' : ''}`}>
         {/* Sul telefono la sola freccia: "Ordini" scritto per esteso andava a
             capo e si mangiava la riga, dove servono numero, ora e stato. */}
         <button className="btn ghost small" aria-label="Torna agli ordini" onClick={handleExit}>
@@ -2066,8 +2078,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         </button>
         <strong className="posd-num">{headTitle}</strong>
         {/* QUANDO è stato aperto il conto, accanto al numero: sapere che quel
-            tavolo è lì dalle nove cambia come lo si tratta. */}
-        {!isNew && order.created_at && (
+            tavolo è lì dalle nove cambia come lo si tratta. Sul telefono, con
+            lo stato del lavoro a bordo, è la prima cosa che cede: la si
+            rilegge nella storia del conto, dal ⋯. */}
+        {!isNew && order.created_at && !barraStretta && (
           <span className="muted small posd-aperto" title="Conto aperto il">
             {apertoIl(order.created_at)}
           </span>
@@ -2090,8 +2104,30 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 ? `Acconto ${formatPrice(paidAmount(order))}`
                 : STATUS_LABELS[order.status]
           return (
-            <span className={`pill ${cls}`}>
-              {emoji} {label}
+            // IL `title` DICE DI COSA PARLA QUESTA PASTIGLIA. Da quando in
+            // fondo alla barra c'è anche quella della lavorazione
+            // (posd-stato), due pastiglie sulla stessa riga possono sembrare
+            // due versioni della stessa cosa — e «🟢 Conto aperto» e «🔔
+            // Pronto» sono pure dello stesso verde. Qui i SOLDI, là il
+            // LAVORO, e ognuna lo dice a chi ci si ferma sopra.
+            // SUL TELEFONO RESTA IL SOLO SEGNO (🟢 / 💳 / 🟡): la parola non
+            // ci sta in due, e questa è quella che si può perdere — il conto
+            // è aperto davanti a chi guarda, e quanto resta da incassare sta
+            // scritto sul tasto in fondo. Il nome per esteso non sparisce:
+            // resta nel `title`, come già per l'ora e per l'id.
+            <span className={`pill ${cls} posd-conto-stato`} title={`Stato del conto: ${label}`}>
+              {/* Il ramo largo resta scritto com'era — `{emoji} {label}`, tre
+                  figli e i 6px del pill in mezzo — perché è così che si
+                  vestono tutte le pastiglie dell'app: unirli in una stringa
+                  sola l'avrebbe stretta di una decina di pixel rispetto alle
+                  sorelle in coda. */}
+              {barraStretta ? (
+                emoji
+              ) : (
+                <>
+                  {emoji} {label}
+                </>
+              )}
             </span>
           )
         })()}
@@ -2109,8 +2145,36 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             id {String(order.serial).padStart(5, '0')}
           </span>
         )}
+        {/* A CHE PUNTO STA IL LAVORO, IN FONDO A DESTRA DELLA BARRA.
+            «Sposta lo stato di servizio nella barra in alto» (l'utente,
+            21/08/2026, con la freccia sullo spazio vuoto a destra). Stava
+            nella testata della colonna del conto, accanto al numero: lì
+            rispondeva alla stessa domanda, ma era una pastiglia dentro la
+            riga dei tasti del conto, e la barra in alto — che è la riga
+            del «com'è messo questo conto» — quello spazio ce l'aveva
+            vuoto. A sinistra il CONTO e i SOLDI (numero, ora, stato del
+            conto, chi l'ha aperto), a destra il LAVORO: due domande
+            diverse, due estremi della stessa riga.
+            CON PIÙ COMANDE IN PASSI DIVERSI il conto non ha UN solo
+            stato: si mostra quello della comanda ATTIVA, cioè il passo
+            PIÙ INDIETRO fra quelle aperte (activeComanda). Chi apre un
+            conto vuole sapere quanto MANCA, non quanto è già uscito — ed
+            è la stessa regola con cui la coda decide lo stato di un
+            conto, quindi le due schermate non possono discordare. */}
+        {mostraStatoLavoro && (
+          <span
+            className={`pill ${active.status} posd-stato`}
+            title={`Stato della lavorazione: ${statoAlBanco(active.status, order.service_mode)}`}
+          >
+            {STATUS_EMOJI[active.status]} {statoAlBanco(active.status, order.service_mode)}
+          </span>
+        )}
         {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
-            nell'angolo finiva sopra i tasti del conto e si premeva lui. */}
+            nell'angolo finiva sopra i tasti del conto e si premeva lui.
+            RESTA L'ULTIMO anche adesso che la pastiglia del lavoro gli sta
+            davanti: è un COMANDO, e i comandi della barra stanno agli
+            estremi (l'uscita a sinistra, lo zoom a destra) dove il pollice
+            li trova senza guardare; quello che si legge sta in mezzo. */}
         {telefono && <ZoomControl inline />}
       </div>
 
@@ -2212,24 +2276,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <strong className="posd-title" style={{ display: 'block', flex: 1, minWidth: 0 }}>
                 {panelTitle}
               </strong>
-              {/* A CHE PUNTO STA, TUTTO INSIEME. È la domanda con cui si
-                  apre un conto, e la risposta sta accanto al numero — dove
-                  in coda stanno i bolli delle card, così le due schermate si
-                  leggono allo stesso modo. Stava in fondo, sopra il Totale:
-                  lì diceva una cosa che i gruppi delle righe hanno già detto
-                  tre volte più su, e la diceva nel punto dove si leggono i
-                  soldi.
-                  CON PIÙ COMANDE IN PASSI DIVERSI il conto non ha UN solo
-                  stato: si mostra quello della comanda ATTIVA, cioè il passo
-                  PIÙ INDIETRO fra quelle aperte (activeComanda). Chi apre un
-                  conto vuole sapere quanto MANCA, non quanto è già uscito —
-                  ed è la stessa regola con cui la coda decide lo stato di un
-                  conto, quindi le due schermate non possono discordare. */}
-              {!isNew && workflowOn && active && !closed && (
-                <span className={`pill ${active.status} posd-stato`}>
-                  {STATUS_EMOJI[active.status]} {statoAlBanco(active.status, order.service_mode)}
-                </span>
-              )}
+              {/* A CHE PUNTO STA IL LAVORO NON SI LEGGE PIÙ QUI: sta nella
+                  barra in alto, in fondo a destra (il `posd-stato` della
+                  testata di pagina). Qui restano il nome del conto e i
+                  tasti che agiscono sulle righe — la riga è loro. */}
               {/* LA STORIA E LO SVUOTA STANNO NEL ⋯. Erano due icone qui in
                   alto, in mezzo a quelle che si usano davvero: la storia si
                   guarda una volta a serata, e svuotare un conto è la cosa
@@ -3051,20 +3101,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             })}
             {comande.length === 0 && <p className="muted small">Nessuna comanda.</p>}
 
-            {/* Scontrino NON FISCALE del conto intero (il riepilogo per il
-                cliente): sta qui con le altre stampe, mentre "Invia comanda"
-                nel footer manda il ticket al banco. */}
-            <button
-              className="btn ghost small block"
-              style={{ marginTop: 12 }}
-              onClick={() =>
-                printScontrino(order)
-                  .then(() => toastSuccess('Scontrino stampato'))
-                  .catch((e) => setError(`Stampa: ${e.message}`))
-              }
-            >
-              <IconReceipt /> Scontrino (non fiscale)
-            </button>
+            {/* QUI NON SI STAMPA PIU' LO SCONTRINO. C'era un tasto
+                «Scontrino (non fiscale)» in fondo a questo pannello: «non
+                serve» (l'utente, 21/08/2026). E non serviva davvero — lo
+                scontrino appartiene al gesto della riscossione (REQ-STAMPA-001),
+                e il conto che il cliente vuole vedere prima di pagare ha gia'
+                il suo tasto, «Preconto», nella schermata dei pagamenti. Qui
+                dentro ci sono le COMANDE: la stampa che ha senso e' quella
+                del ticket al banco, ed e' il tasto «Stampa» di ogni comanda. */}
           </div>
         </div>
       )}

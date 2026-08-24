@@ -6,7 +6,7 @@
 // "Riscuotere" al CENTRO, metodi di pagamento e Sconto a DESTRA.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, within, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -39,7 +39,10 @@ vi.mock('../../src/lib/printer.js', () => ({
   printScontrino: vi.fn(() => Promise.resolve()),
   printScontrinoAcconto: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10, businessName: 'La Tana' })),
+  loadPrinterSettings: vi.fn(() => ({ businessName: 'La Tana' })),
+  // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): non sta più fra le
+  // impostazioni della stampante. Qui il finto legge `sale_vat` come il vero.
+  aliquotaScontrino: (impostazioni) => Number(impostazioni?.sale_vat ?? 10),
   // Guardia "una copia sola per conto": nei test lascia sempre passare.
   claimReceiptPrint: vi.fn(() => true),
   reclaimReceiptPrint: vi.fn(() => true),
@@ -108,7 +111,7 @@ const conComandaDaServire = () =>
     ],
   })
 
-const noReader = { payments_reader_enabled: false, sumup_reader_id: null }
+const noReader = { payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
 const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 
 function mount(order, settings = noReader) {
@@ -271,22 +274,40 @@ describe('metodi di pagamento', () => {
     expect(registerPayment).not.toHaveBeenCalled()
   })
 
-  // Il motivo stava scritto sotto al tasto e occupava una riga a una
-  // schermata che ne ha poche. Ora il tasto è spento e basta: il perché lo
-  // dice se lo si tocca.
-  // La gestione preparazione si può spegnere (Impostazioni): senza, non
-  // esistono comande "da servire" e l'avviso era un allarme che non voleva
-  // dire niente, a ogni singolo incasso.
-  it('gestione preparazione SPENTA: niente avviso sulle comande da servire', () => {
-    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+  // «QUESTO MESSAGGIO TOGLILO, CHE OCCUPA SPAZIO QUANDO ZOOMO» (l'utente,
+  // 21/08/2026). L'avviso «Comande non ancora servite: il conto resta aperto
+  // anche dopo l'incasso» era una riga FISSA nella colonna centrale: a zoom
+  // alto quella riga è spazio tolto al tastierino, che proprio lì finiva
+  // sotto «Riscuotere» (BUG-075). E la si legge una volta sola in una vita.
+  // È lo stesso ragionamento con cui il motivo di un metodo spento non sta
+  // più scritto sotto al tasto (REQ-PAG-004).
+  it('l’avviso sulle comande da servire non occupa più una riga', () => {
+    mount(conComandaDaServire())
     expect(screen.queryByText(/Comande non ancora servite/)).toBeNull()
   })
 
-  it('gestione preparazione ACCESA: l’avviso c’è, il conto si chiude servendo tutto', () => {
-    mount(baseOrder({ comande: [{ id: 'c1', seq: 1, status: 'in_preparazione', items: [
-      { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 },
-    ] }] }))
-    expect(screen.getByText(/Comande non ancora servite/)).toBeInTheDocument()
+  // L'informazione non è sparita: sta dove non costa altezza. Col servizio
+  // seguito e comande ancora da servire, «Riscuotere» se la porta nel
+  // `title` — e quando «Riscuoti e servi» è ACCESO la nomina, perché quella
+  // è l'unica strada che chiude subito.
+  it('il perché resta nel title di «Riscuotere», senza rubare una riga', () => {
+    mount(conComandaDaServire())
+    const tasto = screen.getByRole('button', { name: /Riscuotere/ })
+    expect(tasto).toHaveAttribute('title', expect.stringContaining('resta aperto'))
+    expect(tasto.getAttribute('title')).not.toMatch(/Riscuoti e servi/)
+    cleanup()
+    mount(conComandaDaServire(), { ...noReader, riscuoti_e_servi: true })
+    expect(screen.getByRole('button', { name: /Riscuotere/ }).getAttribute('title')).toMatch(
+      /Riscuoti e servi/
+    )
+  })
+
+  // Senza gestione della preparazione non esistono comande «da servire» —
+  // sono servite per definizione — e l'incasso chiude e basta: niente da
+  // spiegare, nemmeno nel title.
+  it('gestione preparazione SPENTA: «Riscuotere» non ha niente da spiegare', () => {
+    mount(baseOrder(), { ...noReader, workflow_enabled: false })
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).not.toHaveAttribute('title')
   })
 
   // IL CONTO SI RISCUOTE SEMPRE, SI CHIUDE SOLO SE SERVITO. Ma al banco si
@@ -463,6 +484,9 @@ describe('codice lotteria e fattura', () => {
         denominazione: 'ACME srl',
         email: 'amministrazione@acme.it',
       }),
+      // L'aliquota della FATTURA è quella del locale, la stessa dello
+      // scontrino: prima veniva dalle impostazioni della stampante di
+      // questo terminale e le due potevano non tornare (BUG-084).
       ivaRate: 10,
     })
     // emessa: numero visibile + stampa
@@ -498,7 +522,6 @@ describe('scontrino: il metodo di pagamento', () => {
   // Lo scontrino a fine incasso esce solo con l'auto-stampa accesa.
   beforeEach(() => {
     loadPrinterSettings.mockReturnValue({
-      ivaRate: 10,
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
@@ -859,7 +882,6 @@ describe('lo scontrino d’acconto', () => {
     // TERMINALE: è carta che esce da sola, e il telefono della sala che
     // gli scontrini non li stampa non deve cominciare a stampare acconti.
     loadPrinterSettings.mockReturnValue({
-      ivaRate: 10,
       businessName: 'La Tana',
       autoPrintScontrino: true,
     })
@@ -966,7 +988,7 @@ describe('lo scontrino d’acconto', () => {
     // terminale; il terzo tasto è un gesto esplicito e stampa comunque,
     // come fa «Preconto».
     const user = userEvent.setup()
-    loadPrinterSettings.mockReturnValue({ ivaRate: 10, autoPrintScontrino: false })
+    loadPrinterSettings.mockReturnValue({ autoPrintScontrino: false })
     mount(baseOrder(), sempre)
     await riscuotiUnaRigaSola(user)
     await user.click(screen.getByRole('button', { name: /^Riscuotere/ }))
@@ -1589,5 +1611,73 @@ describe('la schermata con niente selezionato', () => {
         })
       )
     )
+  })
+})
+
+
+// «RENDI RIDIMENSIONABILI LE TRE COLONNE DELLA SCHERMATA PAGAMENTO come lo
+// sono quelle nel dettaglio dell'ordine» (l'utente, 21/08/2026). Stesso
+// attrezzo del POS (useResizable), quindi qui non si riprova come si arma
+// una maniglia col dito — c'è tests/unit/useResizable.test.js: si prova che
+// le maniglie CI SIANO, che muovano la colonna giusta nel verso giusto, che
+// i limiti tengano e che la misura resti scritta per questo terminale.
+describe('le tre colonne del pagamento si trascinano', () => {
+  const corpo = () => document.querySelector('.payscreen-body')
+  const larghezza = (nome) => corpo().style.getPropertyValue(nome)
+  // Col mouse la maniglia prende subito: niente pressione lunga da simulare.
+  const trascina = (maniglia, da, a) => {
+    fireEvent.pointerDown(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: da })
+    fireEvent.pointerMove(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: a })
+    fireEvent.pointerUp(maniglia, { pointerType: 'mouse', pointerId: 1, clientX: a })
+  }
+
+  beforeEach(() => localStorage.clear())
+
+  it('fra una colonna e l’altra c’è una maniglia, e sono due', () => {
+    mount(baseOrder())
+    const m = screen.getAllByRole('separator')
+    expect(m).toHaveLength(2)
+    for (const h of m) expect(h).toHaveAttribute('aria-orientation', 'vertical')
+    // Sul telefono le colonne sono impilate e le maniglie spariscono: lo fa
+    // il foglio (sotto gli 800px), e la prova sta in tests/unit/css.test.js —
+    // qui non c'è impaginazione da guardare.
+  })
+
+  it('trascinare la maniglia di sinistra allarga le voci, quella di destra i metodi', () => {
+    mount(baseOrder())
+    const [voci, metodi] = screen.getAllByRole('separator')
+    expect(larghezza('--pay-items-w')).toBe('340px')
+    expect(larghezza('--pay-methods-w')).toBe('230px')
+    trascina(voci, 500, 560) // verso destra: la colonna di sinistra cresce
+    expect(larghezza('--pay-items-w')).toBe('400px')
+    trascina(metodi, 900, 840) // verso sinistra: la colonna di destra cresce
+    expect(larghezza('--pay-methods-w')).toBe('290px')
+  })
+
+  // I METODI NON DEVONO POTER SPARIRE: lì ci sono i tasti con cui si sceglie
+  // come si incassa, e una colonna trascinata a zero è un pezzo di cassa che
+  // non si trova più. Le voci hanno il loro pavimento per un altro motivo:
+  // sotto i 200px il prezzo va a capo sotto il nome e la lista smette di
+  // leggersi in colonna.
+  it('nessuna delle due si può stringere fino a sparire', () => {
+    mount(baseOrder())
+    const [voci, metodi] = screen.getAllByRole('separator')
+    trascina(metodi, 900, 9000) // tutta a destra: i metodi si stringono
+    expect(Number.parseInt(larghezza('--pay-methods-w'), 10)).toBeGreaterThanOrEqual(170)
+    trascina(voci, 500, -9000) // tutta a sinistra: le voci si stringono
+    expect(Number.parseInt(larghezza('--pay-items-w'), 10)).toBeGreaterThanOrEqual(200)
+  })
+
+  // PER TERMINALE, non per conto e non per utente: il tablet del banco e
+  // quello della sala hanno schermi e mestieri diversi — al banco si guarda
+  // il tastierino, in sala la lista delle voci. Chi ha sistemato le colonne
+  // una volta le ritrova così alla riapertura, non ogni sera da capo.
+  it('la misura scelta si ritrova riaprendo la schermata', () => {
+    mount(baseOrder())
+    trascina(screen.getAllByRole('separator')[0], 500, 560)
+    expect(larghezza('--pay-items-w')).toBe('400px')
+    cleanup()
+    mount(baseOrder())
+    expect(larghezza('--pay-items-w')).toBe('400px')
   })
 })

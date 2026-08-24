@@ -241,6 +241,26 @@ Regole:
   c'è la stella dei preferiti — un tasto, che non si copre.
   In magazzino è sempre un pallino: lì il segno è uno STATO, non un colore
   scelto a mano.
+- **Le liste lunghe hanno tutte lo stesso vestito** — magazzino, chiusure
+  di cassa, statistiche. È una sola famiglia di classi (`.inv-list`,
+  `.inv-row`, `.inv-row-main` e parenti): riquadro unico con gli angoli
+  stondati, righe separate da una linea, **striscia a sinistra** di 4px
+  quando c'è qualcosa da dire sulla riga, il **numero che si cerca** in
+  fondo a destra, e il dettaglio che si apre **sotto** la riga invece che
+  altrove. Tre schermate, un modo solo di leggere un elenco.
+  **L'altezza è una sola e sta in un gettone**, `--riga-lista`: sono la
+  stessa lista vista in tre pagine, e tre numeri scritti a mano in tre
+  punti del foglio diventano tre numeri diversi. Vale il guardrail 2 —
+  queste righe si toccano in piedi, col vassoio in mano.
+  **E una lista non si svuota per farci trovare una riga.** Dove si cerca
+  dentro un elenco (le chiusure di cassa per data, REQ-CASSA-013) la lista
+  resta intera e si scorre fino alla riga, che si accende: `.inv-row.trovata`
+  — velo e cornice interna dell'accento, che non toccano la striscia a
+  sinistra perché quella dice un'altra cosa. Filtrando resterebbe una riga
+  sola, e un elenco serve anche a confrontare le sue righe fra loro. E il
+  colore non è l'unico segno: sopra l'elenco una frase dice cosa è stato
+  trovato, o che per quella data non c'è nessuna chiusura.
+
 - **La tavolozza del conto sta in una modale, non nel menu.** Dal «⋯
   Azioni» di una card — del conto e della comanda — il colore si dà da un
   **tasto solo**, che porta accanto al testo il **pallino del colore di
@@ -298,8 +318,23 @@ Regole:
   Stessa regola per le superfici minori delle stesse schermate
   (`.toggle-row`, `.cat-chip`, `.group-tile`, `.chip`, `.mode-option`):
   fondo `--tile-bg`, bordo `--line`, mai un `rgba(255,255,255,…)` fisso.
+- **I passi di una comanda** (`.step`, nel dettaglio comanda e nella
+  pagina di stato del cliente): quattro riquadri in fila — da fare, in
+  preparazione, pronto, servito — col loro **orario sotto**. Tre vestiti:
+  spento è `--tile-bg`, **fatto** è `--ok` mescolato con `--card` al 25%,
+  **in corso** è il fondo dell'azione (`--btn-bg`). L'inchiostro viene dal
+  gettone che gli corrisponde — `--text` sui primi due, `--btn-ink` sul
+  terzo — e **dentro un passo non c'è testo di servizio**: l'ora eredita
+  il colore del suo riquadro, perché quei minuti dicono se il ticket è
+  fermo, e la gerarchia col nome la fa già la misura del carattere. Il
+  fatto aveva l'inchiostro cablato (`#c8f7da`, verde-menta) e sui temi
+  chiari era 1,03:1 — «il colore verde del testo non si legge bene sullo
+  sfondo verde qui» (l'utente, 22/08/2026).
 - **Chip e filtri**: pillole compatte, stato attivo con `--accent`;
-  i filtri della coda stanno su una riga sola.
+  i filtri della coda stanno su una riga sola. Un chip **acceso** ha il
+  fondo dell'azione, e lì dentro scrive tutto con `--btn-ink`, **numero
+  compreso**: nei riassunti dell'inventario («scarsi 7») il numero teneva
+  la sua tinta d'allarme sul dorato, 1,2:1 su tutti e otto i temi.
 - **Toast e banner**: brevi, in linguaggio comune, mai colpevolizzanti.
 
 ## Layout e spaziatura
@@ -375,15 +410,57 @@ I colori "strutturali" — la linea che separa, il velo di una superficie,
 il fondo di una tessera — non si scrivono a mano: sono gettoni dichiarati
 una volta sola, con la variante chiara accanto, e `applyTheme` la accende
 scrivendo `data-luma` sul documento. Oggi sono `--line`, `--tile-bg`,
-`--velo-superficie` e `--strip-spenta`. Un `rgba(255, 255, 255, …)` usato
+`--velo-superficie`, `--strip-spenta` e i due inchiostri d'allarme
+`--testo-rosso` e `--testo-ambra`. Un `rgba(255, 255, 255, …)` usato
 come fondo o come bordo nasce per il tema scuro e sul chiaro sparisce: è
 sempre lo stesso difetto, e `tests/unit/css.test.js` lo boccia sulle
 superfici delle sezioni.
 
+## Il contrasto: i numeri, e la regola dell'inchiostro
+
+**La soglia è WCAG AA**, e adesso è scritta invece che sottintesa:
+
+| Testo | Rapporto minimo col fondo |
+|---|---|
+| normale (< 24px, o < 19px se in grassetto) | **4,5:1** |
+| grande (≥ 24px, o ≥ 19px in grassetto) | **3:1** |
+| `--muted`, che è testo **secondario** | **3:1**, e mai da solo su un'informazione che conta |
+
+**Un inchiostro chiaro cablato non sta su un fondo tinto.** Un pastello —
+`#c8f7da`, `#9ff5c0`, `#ffd54f` — nasce per il fondo scuro, dove si stacca
+da una velatura; sul tema chiaro finisce su un fondo altrettanto chiaro e
+sparisce. È lo stesso difetto dei bianchi trasparenti (BUG-065) un piano
+più in su: lì era la superficie, qui è quello che ci si scrive sopra.
+Le due vie ammesse:
+
+- **un gettone** — `--text`, `--muted`, `--btn-ink`, e i due nati qui:
+  **`--testo-rosso`** (un numero in perdita, una scorta finita) e
+  **`--testo-ambra`** (una scorta agli sgoccioli, un conto pagato). La
+  tinta non cambia col tema — è memoria del banco, guardrail 5 — cambia
+  la forza, con la variante `[data-luma='light']` accanto;
+- **la regola gemella `:root[data-luma='light'] …`**, che è come il foglio
+  tratta le pill degli stati da sempre. Se il selettore è un elenco, di
+  sotto vanno elencati **tutti**: è accodandone uno a un elenco già
+  coperto che si dimentica la variante.
+
+Un fondo **opaco** — il blu pieno del tasto «Riscuotere», la campitura del
+riquadro Ceres — non c'entra: lì il tema non traspare e un bianco fisso è
+giusto. La regola la sorveglia `tests/unit/css.test.js`, che legge il
+foglio regola per regola.
+
+**Si misura, non si guarda a occhio.** Il metodo che ha trovato questi
+casi: la pagina renderizzata in Chrome headless con il foglio vero, ogni
+preset di `themes.js` applicato con la `applyTheme` del prodotto, uno
+screenshot e i **pixel campionati** ai due estremi di ogni fondo — perché
+il fondo che conta è quello *dipinto*, non quello dichiarato (velature su
+velature, gradienti), e il colore del testo viene da `getComputedStyle`.
+Otto temi per riga, si tiene il peggiore.
+
 ## Guardrail (non negoziabili, per qualsiasi tema)
 
-1. **Si legge al buio e di fretta**: contrasto testo/fondo mai sotto la
-   soglia di comodità; le informazioni critiche mai affidate solo a
+1. **Si legge al buio e di fretta**: 4,5:1 per il testo normale, 3:1 per
+   quello grande e per `--muted` — i numeri e la regola dell'inchiostro
+   stanno qui sopra. Le informazioni critiche mai affidate solo a
    `--muted` o solo al colore.
 2. **Si tocca col pollice**: bersagli ≥ 44px, azioni distruttive lontane
    da quelle frequenti. Le deroghe scritte sono due, e sono nello stesso
@@ -394,8 +471,31 @@ superfici delle sezioni.
    fila si tocca **quando si decide cosa guardare**, non con l'ordine in
    mano. Tutto il resto (tasti del conto, della card, della testata) resta
    ≥ 44px.
-3. **Le parole sono da vassoio**: comuni, brevi, in italiano; nessun
-   gergo tecnico; nessun messaggio che scarichi la colpa su chi legge.
+
+   **I 44px sono una misura fisica, non un numero nel foglio.** Contano
+   quanto è grande il tasto *sotto il dito*. Lo zoom dell'app scala
+   `#root`, quindi dove lo spazio è contato ci va
+   `calc(44px / var(--zoom, 1))`: a zoom 1 non cambia niente, e ingrandendo
+   il tasto resta grande **quanto prima in centimetri veri** invece di
+   gonfiarsi — 44px CSS al 120% sarebbero 52,8px veri, cioè una garanzia già
+   superata che intanto fa sbordare quello che ha attorno. È il caso del
+   tastierino del pagamento (`.paypad-key`, BUG-075), dove il minimo secco
+   spingeva l'ultima riga di tasti sotto «Riscuotere». Chi trova quel
+   `calc` non lo «corregga» in `44px`: la regola non è ammorbidita, è
+   misurata dove va misurata.
+   Ed è il caso delle **righe delle liste** (`--riga-lista`, BUG-082): il
+   magazzino si tocca in piedi, e una lista è fatta solo di bersagli — se
+   lo zoom li gonfia, la schermata ne mostra un quinto in meno per niente.
+3. **Le parole sono da vassoio, non da bar**: comuni, brevi, in italiano;
+   nessun gergo tecnico; nessun messaggio che scarichi la colpa su chi
+   legge. Ma il registro e' PROFESSIONALE: una didascalia dice cosa fa una
+   cosa e a cosa serve, in una frase piana — niente battute, niente pacche
+   sulla spalla, niente aneddoti. «Comune» vuol dire comprensibile, non
+   confidenziale: chi legge sta lavorando e maneggia i soldi del locale.
+   Il colore, il perche' e i casi visti al banco vivono nei commenti del
+   codice e nel registro, non a schermo (l'utente, 22/08/2026: «per le
+   didascalie e le spiegazioni dovresti usare un linguaggio meno
+   informale»).
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner
    e attese lunghe sono un difetto, non uno stato normale.
 5. **Gli stati degli ordini non cambiano colore** tra un tema e l'altro:

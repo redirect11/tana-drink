@@ -11,7 +11,7 @@
 
 import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
-import { aggregateItems } from './comande.js'
+import { pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import {
@@ -88,7 +88,6 @@ export const DEFAULT_PRINTER_SETTINGS = {
   ip: '',
   port: 8043,       // 8043 = HTTPS (WSS), 8008 = HTTP (WS)
   https: true,      // false → HTTP, solo se l'app è servita in HTTP
-  ivaRate: 10,      // aliquota IVA applicata sullo scontrino
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
   autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
   // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
@@ -319,6 +318,33 @@ export function comandeDaStampare(order, opzioni = {}) {
 // schermata che prende l'ordine e il pallino che dice se si stamperà.
 export function salaStampaDaSe(s = loadPrinterSettings()) {
   return s.stampaSala !== 'rimbalzo'
+}
+
+// ── L'ALIQUOTA IVA È UNA SOLA, QUELLA DEL LOCALE (BUG-084) ───────────
+//
+// Ce n'erano DUE, e non lo sapeva nessuno: `ivaRate` qui fra le
+// impostazioni della stampante — nel browser, per terminale — che finiva
+// sulla riga IVA dello scontrino, e `sale_vat` su settings/bar — condivisa
+// — che usano margini, prezzo consigliato e statistiche. Due tablet
+// potevano stampare scontrini con aliquote diverse, e l'IVA sulla carta
+// poteva non tornare con quella dei conti.
+//
+// Un'aliquota è del LOCALE: è un fatto fiscale, non una preferenza del
+// tablet che ha stampato. Vince `sale_vat`, e il campo nelle impostazioni
+// della stampante è sparito.
+//
+// Si legge dalla copia locale delle impostazioni del bar, come tutto il
+// resto della stampa: la carta non aspetta la rete.
+export const ALIQUOTA_DEFAULT = 10
+export function aliquotaScontrino(impostazioni = impostazioniDelLocale()) {
+  const scelta = impostazioni?.sale_vat
+  // Uno ZERO è un'aliquota vera (non si scorpora niente): solo un valore
+  // assente o storto torna al 10 della somministrazione. Il vuoto va
+  // guardato PRIMA di `Number`, che di `null` e di `''` fa uno zero — e un
+  // campo lasciato vuoto stamperebbe uno scontrino senza IVA.
+  if (scelta === null || scelta === undefined || scelta === '') return ALIQUOTA_DEFAULT
+  const aliquota = Number(scelta)
+  return Number.isFinite(aliquota) ? aliquota : ALIQUOTA_DEFAULT
 }
 
 export function loadPrinterSettings() {
@@ -653,8 +679,13 @@ export function printComanda(order, comanda = null) {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()
     const hhmm = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-    const ticketItems = comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
-    const totalQty = ticketItems.reduce((s, i) => s + (i.qty || 1), 0)
+    // ACCORPATE SEMPRE, qui e non nei chiamanti: la regola vale per la
+    // CARTA — comanda singola, ristampa, ticket unito — e passa tutta da
+    // questo punto (BUG-083). La regola è pura e sta in lib/comande.js.
+    const ticketItems = righeDellaComanda(
+      comandaDelTicket(order, comanda)?.items ?? order.order_items ?? []
+    )
+    const totalQty = pezziDellaComanda(ticketItems)
 
     prn.addTextLang('it')
     prn.addTextSmooth(true)
@@ -782,8 +813,9 @@ export async function printComande(order, comande) {
 //
 // Il ticket è quello di sempre — stesso formato, non c'è un secondo
 // disegno da mantenere: cambia solo cosa ci finisce dentro, cioè le righe
-// di tutte le comande del conto messe insieme (aggregateItems somma le
-// quantità dello stesso drink, gli item personalizzati restano righe loro).
+// di tutte le comande del conto messe insieme (accorpate come su ogni
+// comanda, vedi `righeDellaComanda`: stesso drink allo stesso prezzo e con
+// la stessa nota fa una riga sola, il resto resta riga a sé).
 //
 // È LA STESSA FORMA che in BUG-051 era il ripiego accidentale di
 // `printComanda` senza comanda. La differenza è tutta qui: prima capitava,
@@ -791,7 +823,15 @@ export async function printComande(order, comande) {
 // questa funzione prende un ordine, non una lista, e non c'è modo di
 // passarle roba di conti diversi.
 export function printComandaUnita(order) {
-  return printComanda(order, { id: 'unita', items: aggregateItems(comandeStampabili(order)) })
+  // LE RIGHE GREZZE DI TUTTE LE COMANDE, e ad accorparle ci pensa
+  // `printComanda` come per ogni altro ticket. Prima qui c'era
+  // `aggregateItems`, che è l'aggregato PER I SOLDI: fonde per `drink_id` e
+  // basta, quindi due Spritz con note diverse diventavano una riga sola e
+  // una delle due note spariva dalla carta.
+  return printComanda(order, {
+    id: 'unita',
+    items: comandeStampabili(order).flatMap((c) => c.items || []),
+  })
 }
 
 // ── SCONTRINO NON FISCALE ─────────────────────────────────────────────────────
@@ -894,8 +934,9 @@ async function stampaLogo(prn, tipo) {
 export function printScontrino(order, opts = {}) {
   return lavoroDiStampa(async (prn) => {
     const s = loadPrinterSettings()
-    const cfg = configStampa(impostazioniDelLocale(), 'scontrino')
-    const ivaRate = Number(opts.ivaRate ?? s.ivaRate ?? 10) / 100
+    const impostazioni = impostazioniDelLocale()
+    const cfg = configStampa(impostazioni, 'scontrino')
+    const ivaRate = Number(opts.ivaRate ?? aliquotaScontrino(impostazioni)) / 100
     const { date, time } = italianDateTime(order.created_at)
     const lordo = Number(order.total ?? 0)
     // GLI SCONTI, AL PLURALE. Uno per ogni riscossione che se n'è portato via
