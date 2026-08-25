@@ -3515,3 +3515,60 @@ bugs:
     in_produzione: true
     test_cases:
       - tests/unit/serviceWorkerCache.test.js
+
+  - id: BUG-088
+    title: "Lo scontrino diceva «Utente A», ripeteva il numero chiamandolo comanda e scriveva «2 clientei»"
+    area: "src/lib/printer.js (printScontrino, printScontrinoAcconto), src/lib/campiStampa.js, src/App.jsx"
+    description: >
+      Visto dall'utente il 25/08/2026 su uno scontrino vero appena uscito:
+      «"Utente A" che sarebbe? E poi scrivi "scontrino 28" e poi "comanda n
+      28". Non ha molto senso». Tre righe una sotto l'altra, tre difetti
+      diversi, tutti residui del modello da cui il ticket e' nato — la
+      stessa provenienza di «CONTATORIE» e «Vendeur» sulla comanda.
+      COSA STAMPAVA. Sotto «SCONTRINO - 28» uscivano «Utente A», poi
+      «1 cliente» (o «2 clientei» con due coperti), poi «Vendita - Comanda
+      #28».
+      UNO. «Utente A» era una costante scritta a mano: uguale per sempre e
+      per chiunque, su ogni scontrino di ogni terminale. L'impostazione che
+      la accendeva si chiamava pero' «Chi ha battuto il conto» — prometteva
+      una persona e ne stampava una formula. Stessa cosa sulla ricevuta
+      d'acconto, dove il campo si chiamava «Chi ha incassato».
+      DUE. «Vendita - Comanda #28» ripeteva il numero gia' stampato in cima
+      e per giunta lo chiamava comanda, mentre 28 e' il numero del CONTO:
+      le comande di quel conto sono la 1 e la 2, ed e' cosi' che il banco
+      le chiama. Col tavolo la riga diceva «Vendita - Tavolo 4», e quella
+      andava bene: dice a chi appartiene il conto.
+      TRE. «${n} cliente${n > 1 ? 'i' : ''}» attaccava la «i» a «cliente»:
+      con due coperti usciva «2 clientei». Notato giorni prima e mai
+      chiuso.
+      COME E' STATO SISTEMATO. La riga dell'operatore porta il NOME DI CHI
+      STA STAMPANDO — l'utente collegato a quel terminale, deciso
+      dall'utente stesso il 25/08: «quell'"Utente A" dovrebbe essere il
+      nome dell'utente che stampa lo scontrino». Il nome arriva
+      dall'ascolto di Firebase Auth (App.jsx) insieme all'uid con cui la
+      stampante gia' sceglie la sua scheda, e si ricava con `placedByName`,
+      la stessa funzione della coda e del dettaglio conto: sulla carta e
+      sullo schermo la stessa persona si chiama allo stesso modo. Una
+      RISTAMPA porta quindi il nome di chi ristampa, ed e' giusto cosi': e'
+      lui che quel foglio lo consegna. Se non si sa chi e' — nessuno
+      collegato — LA RIGA NON SI STAMPA: una riga in meno e' meglio di una
+      formula vuota.
+      La riga di vendita dice il tavolo, o il nome del cliente se il tavolo
+      non c'e' (la stessa scelta del titolo grande della comanda), oppure
+      non esce: il numero e' gia' in cima, e una riga che lo ripete si
+      legge come un secondo numero.
+      Il plurale e' «2 clienti». Le tre regole sono funzioni pure in
+      campiStampa.js, accanto ai campi che le accendono.
+      GLI INTERRUTTORI RESTANO tutti e tre: cambia cosa stampano da accesi,
+      non se si possono spegnere. Le etichette nelle impostazioni dicono
+      adesso quello che esce davvero: «Chi stampa lo scontrino» e «Tavolo o
+      nome del cliente».
+    labels: [bug, stampa]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/campiDiStampa.test.js
+      - tests/unit/cartaAcconto.test.js
+      - tests/component/CampiStampa.test.jsx

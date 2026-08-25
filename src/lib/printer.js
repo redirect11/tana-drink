@@ -9,7 +9,12 @@
 //   3. Dal browser dell'iPad: vai su https://<IP>:8043 e accetta il certificato
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
-import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
+import {
+  CASH_METHOD_ORDER,
+  cashMethodKeys,
+  PAYMENT_METHOD_PRINT,
+  placedByName,
+} from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
 import { pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
@@ -18,6 +23,8 @@ import {
   configStampa,
   immagineCaricata,
   logoAcceso,
+  rigaPersone,
+  rigaVendita,
   tipoScontrino,
   LARGHEZZA_LOGO,
 } from './campiStampa.js'
@@ -60,26 +67,55 @@ const COL = 48
 // banco, non chi passa di lì a battere due conti.
 const SETTINGS_KEY = 'tana_printer_v2'
 const UTENTE_KEY = 'tana_printer_utente'
+const PERSONA_KEY = 'tana_printer_persona'
 
 // L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
 // Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
 // un istante si leggerebbe la scheda di un altro — «nessuna stampante
 // impostata» che compare e sparisce.
 let _utente = null
+// E DI QUELLA PERSONA SI RICORDA ANCHE IL NOME, perché è quello che va
+// stampato sullo scontrino (REQ-STAMPA-014, BUG-088). Sta qui e non nel
+// conto: la riga dice CHI STA STAMPANDO, cioè chi è collegato a questo
+// terminale nell'istante in cui la carta esce. Una ristampa porta quindi
+// il nome di chi ristampa — è lui che quel foglio lo consegna.
+//
+// Si ricorda in memoria locale per la stessa ragione dell'uid: la prima
+// stampa può capitare prima che Firebase abbia finito di riconoscere chi
+// è collegato, e uno scontrino senza nome sarebbe la conseguenza di un
+// ritardo, non di un dato che manca.
+let _persona = null
 try {
   _utente = localStorage.getItem(UTENTE_KEY) || null
+  _persona = JSON.parse(localStorage.getItem(PERSONA_KEY) || 'null')
 } catch {
   /* storage negato: si lavora senza memoria, come prima */
 }
 
-export function impostaUtenteStampante(uid) {
+// `persona`: { name, email } di chi è collegato, o niente se non c'è
+// nessuno. Le due cose arrivano insieme perché insieme cambiano — è la
+// stessa persona che si siede al terminale.
+export function impostaUtenteStampante(uid, persona = null) {
   _utente = uid || null
+  const nome = persona?.name || null
+  const email = persona?.email || null
+  _persona = nome || email ? { name: nome, email } : null
   try {
     if (uid) localStorage.setItem(UTENTE_KEY, uid)
     else localStorage.removeItem(UTENTE_KEY)
+    if (_persona) localStorage.setItem(PERSONA_KEY, JSON.stringify(_persona))
+    else localStorage.removeItem(PERSONA_KEY)
   } catch {
     /* niente memoria: le impostazioni restano quelle del dispositivo */
   }
+}
+
+// Il nome da mettere sulla carta, o stringa vuota se non si sa chi sta
+// stampando. Si ricava con `placedByName`, la STESSA funzione della coda e
+// del dettaglio conto: sullo scontrino e sullo schermo la stessa persona
+// si deve chiamare allo stesso modo.
+export function nomeDiChiStampa() {
+  return placedByName(_persona)
 }
 
 const chiaveImpostazioni = () => (_utente ? `${SETTINGS_KEY}:${_utente}` : SETTINGS_KEY)
@@ -1075,17 +1111,22 @@ export function printScontrino(order, opts = {}) {
     if (cfg.mostra('numero')) {
       prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
     }
-    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
-    if (cfg.mostra('persone')) {
-      const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
-      prn.addText(`${totalPers}\n`)
-    }
-    if (cfg.mostra('riga_vendita')) {
-      const comandaLabel = order.table_label
-        ? `Vendita - Tavolo ${order.table_label}`
-        : `Vendita - Comanda #${order.daily_number}`
-      prn.addText(`${comandaLabel}\n`)
-    }
+    // ── LE TRE RIGHE SOTTO AL NUMERO (BUG-088) ──────────────────────
+    // Erano un residuo del modello da cui il ticket è nato: una
+    // costante scritta a mano («Utente A»), il numero del conto
+    // ripetuto e chiamato comanda, e un plurale attaccato male («2
+    // clientei»). Le regole stanno in campiStampa.js, pure e provate
+    // senza stampante; qui restano gli interruttori, che nessuno ha
+    // chiesto di togliere.
+    //
+    // Nome e riga di vendita si stampano SOLO SE DICONO QUALCOSA: senza
+    // nessuno collegato, e senza tavolo né cliente, la riga non esce
+    // affatto. Meglio una riga in meno di una formula vuota.
+    const operatore = nomeDiChiStampa()
+    if (operatore && cfg.mostra('operatore')) prn.addText(`${operatore}\n`)
+    if (cfg.mostra('persone')) prn.addText(`${rigaPersone(order.coperto_persons)}\n`)
+    const vendita = rigaVendita(order)
+    if (vendita && cfg.mostra('riga_vendita')) prn.addText(`${vendita}\n`)
     prn.addText(line())
 
     // ── Header colonne ──
@@ -1281,14 +1322,14 @@ export function printScontrinoAcconto(order, incasso = {}) {
     if (cfg.mostra('numero')) {
       prn.addText(row(`ACCONTO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
     }
-    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
-    if (cfg.mostra('riga_vendita')) {
-      prn.addText(
-        order.table_label
-          ? `Vendita - Tavolo ${order.table_label}\n`
-          : `Vendita - Comanda #${order.daily_number}\n`
-      )
-    }
+    // Le stesse due righe dello scontrino, e per le stesse ragioni
+    // (BUG-088): il nome di chi sta stampando, e a chi appartiene il
+    // conto. Il numero è già scritto qui sopra, e nessuna delle due esce
+    // se non ha niente da dire.
+    const operatore = nomeDiChiStampa()
+    if (operatore && cfg.mostra('operatore')) prn.addText(`${operatore}\n`)
+    const vendita = rigaVendita(order)
+    if (vendita && cfg.mostra('riga_vendita')) prn.addText(`${vendita}\n`)
     prn.addText(line())
 
     // ── Cosa ha pagato ──

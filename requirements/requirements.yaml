@@ -5837,8 +5837,8 @@ requirements:
       conto senza totale non è un conto, e chi lo riceve non avrebbe niente
       da controllare.
       SCONTRINO — si possono togliere: nome del locale, indirizzo, CAP e
-      città, numero e data, chi ha battuto il conto, quante persone, tavolo
-      o numero di comanda, intestazione delle colonne, coperto, sconto, IVA
+      città, numero e data, chi stampa lo scontrino, quante persone, tavolo
+      o nome del cliente, intestazione delle colonne, coperto, sconto, IVA
       e imponibile, come è stato pagato, codice lotteria, codice del conto,
       ragione sociale in fondo. Si può aggiungere una riga di saluto, spenta
       di suo. Le PAROLE del nome del locale, dell'indirizzo e della ragione
@@ -5874,6 +5874,31 @@ requirements:
       conto finto passando dalle stesse funzioni della serata — in locale
       apre il facsimile, al banco esce la carta: scegliere i campi senza
       vedere il risultato è scegliere alla cieca.
+      COSA STAMPANO `operatore` E `riga_vendita` (dal 25/08/2026, BUG-088).
+      Fino ad allora l'interruttore c'era ma quello che accendeva non
+      diceva il vero: `operatore` scriveva la costante «Utente A» — uguale
+      per chiunque e per sempre — e `riga_vendita`, senza tavolo,
+      ripiegava su «Vendita - Comanda #28», cioè il numero del CONTO già
+      stampato in cima e per giunta chiamato comanda.
+      `operatore` porta il NOME DI CHI STA STAMPANDO: l'utente collegato a
+      quel terminale, non chi ha battuto il conto né chi ha incassato
+      («quell'"Utente A" dovrebbe essere il nome dell'utente che stampa lo
+      scontrino», l'utente, 25/08/2026). Il nome arriva dall'ascolto di
+      Firebase Auth (App.jsx) insieme all'uid con cui la stampante sceglie
+      già la sua scheda, si ricorda in memoria locale — la prima stampa può
+      capitare prima che Firebase abbia finito — e si ricava con
+      `placedByName`, la stessa funzione della coda e del dettaglio conto.
+      Una RISTAMPA porta il nome di chi ristampa: è lui che quel foglio lo
+      consegna. Nessuno collegato: LA RIGA NON ESCE, che è meglio di una
+      formula vuota.
+      `riga_vendita` dice a chi appartiene il conto e nient'altro: il
+      tavolo, o il nome del cliente se il tavolo non c'è (la stessa scelta
+      del titolo grande della comanda), o niente. Il numero sta in cima, e
+      una riga che lo ripete si legge come un secondo numero.
+      Il plurale della riga `persone` è «2 clienti»: fino al 25/08 usciva
+      «2 clientei».
+      Le stesse due regole valgono sulla ricevuta d'acconto
+      (REQ-STAMPA-015), che ha gli stessi due campi.
     status: implemented
     generate_issue: true
     labels: [stampa, impostazioni]
@@ -5952,6 +5977,12 @@ requirements:
       a mente chi teneva il foglio davanti al cliente. Adesso su un conto
       ancora aperto con degli incassi presi c'è anche «Resta da pagare»; su
       uno scontrino di chiusura il residuo è zero e la riga non compare.
+      LE DUE RIGHE SOTTO AL NUMERO seguono le stesse regole dello scontrino
+      (REQ-STAMPA-014, BUG-088): `operatore` porta il nome di chi sta
+      stampando — al banco è chi ha appena preso i soldi, la persona che il
+      cliente ha davanti — e non esce se non si sa chi è; `riga_vendita`
+      dice il tavolo o il nome del cliente, e non esce se non ce n'è
+      nessuno dei due, perché il numero è già in cima («ACCONTO - 12»).
     status: implemented
     generate_issue: true
     labels: [stampa, pagamenti]

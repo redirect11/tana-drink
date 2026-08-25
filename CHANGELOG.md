@@ -4,6 +4,20 @@
 
 ### Per chi sta al banco
 
+- **Lo scontrino dice chi lo stampa, e non ripete il numero.** Sotto al
+  numero uscivano tre righe che non dicevano il vero: **«Utente A»** —
+  scritto a mano, uguale su ogni scontrino di ogni terminale — il numero
+  del conto ripetuto come **«Vendita - Comanda #28»** (28 è il numero del
+  conto: le sue comande sono la 1 e la 2), e **«2 clientei»** quando i
+  coperti erano più di uno. Adesso la prima riga porta il **nome di chi sta
+  stampando**, cioè di chi è collegato a quel terminale — se lo scontrino
+  si ristampa, porta il nome di chi lo ristampa — e se non si sa chi è, la
+  riga non esce affatto. La seconda dice **il tavolo, o il nome del
+  cliente**, e quando non c'è né l'uno né l'altro sparisce: il numero è già
+  in cima. E i coperti sono **«2 clienti»**. Vale anche per la ricevuta
+  d'acconto. Le tre righe si accendono e si spengono come prima, in
+  Impostazioni → Stampante.
+
 - **L'app si apre più in fretta, e la stampa non aspetta più il logo.** Il
   logo pesava mezzo megabyte ed era la prima cosa che ogni scontrino doveva
   caricare prima di uscire; adesso ne pesa otto, con la stessa resa sulla
