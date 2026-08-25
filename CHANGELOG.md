@@ -1,6 +1,12 @@
 # Cosa è cambiato
 
-## 1.5.5-beta
+## 1.5.5 — 25 agosto 2026
+
+In produzione questa versione porta tutto quello che è passato dalle prove
+delle beta 1.5.2, 1.5.3 e 1.5.4, elencate qui sotto: dall'ultima versione
+uscita — la 1.5.1 del 19 agosto — è cambiato tutto quello che si legge fino
+alla sezione «1.5.1».
+
 
 ### Per chi gestisce
 
