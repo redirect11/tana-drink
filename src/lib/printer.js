@@ -383,6 +383,17 @@ function sdkAvailable() {
   return typeof window !== 'undefined' && typeof window.epson?.ePOSDevice === 'function'
 }
 
+// SI DIMENTICA IL COLLEGAMENTO: la prossima stampa rifà la stretta di mano.
+// Non si chiama `disconnect()` — se il collegamento è appeso, quella
+// chiamata può appendersi a sua volta, ed è proprio quello da cui si sta
+// scappando. Serve alla caduta vista dal battito, al ritorno in primo piano
+// e al lavoro di stampa che scade (BUG-086).
+function scordaConnessione() {
+  _printer = null
+  _device = null
+  _connectPromise = null
+}
+
 // Termina la connessione corrente (se attiva).
 export function disconnectPrinter() {
   fermaBattito()
@@ -422,12 +433,8 @@ function avviaBattito() {
   fermaBattito()
   _battito = setInterval(() => {
     try {
-      if (_device && !_device.isConnected()) {
-        // Caduta: si libera tutto, la prossima stampa riconnette.
-        _printer = null
-        _device = null
-        _connectPromise = null
-      }
+      // Caduta: si libera tutto, la prossima stampa riconnette.
+      if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* SDK in uno stato strano: si lascia stare */
     }
@@ -458,11 +465,7 @@ if (typeof document !== 'undefined') {
     if (document.visibilityState !== 'visible') return
     if (!loadPrinterSettings().ip) return
     try {
-      if (_device && !_device.isConnected()) {
-        _printer = null
-        _device = null
-        _connectPromise = null
-      }
+      if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* niente da fare */
     }
@@ -610,20 +613,88 @@ function italianDateTime(iso) {
 // nemmeno uno scritto domani.
 let _codaStampa = Promise.resolve()
 
+// ── UNA STAMPA CHE NON FINISCE NON PUÒ TENERSI IL CONTO (BUG-086) ────
+//
+// La sera del 24/08 il logo non è mai arrivato e `printScontrino` è
+// rimasto sospeso lì dentro. Il danno non è stato solo la carta che non
+// usciva: una promessa che non si chiude NÉ BENE NÉ MALE non fa partire
+// il `catch` di chi ha chiesto la stampa, e quel `catch` è l'unico posto
+// dove la pretesa dello scontrino torna libera (`releaseReceiptPrint`).
+// Risultato: la pretesa presa per sempre — quel conto non stampava più,
+// nemmeno riaperto, nemmeno dalla coda — e nessun errore a schermo. Al
+// banco: cinque riscossioni, zero scontrini, e nessuno che capisse perché.
+//
+// Il tempo massimo sul logo (BUG-053) copre QUEL passaggio. Questo copre
+// il lavoro INTERO — la connessione che non risponde, un `await` aggiunto
+// qui domani, qualunque cosa si impicchi: scaduto il tempo la promessa
+// RIFIUTA, e da lì funziona tutto quello che è già scritto (pretesa
+// liberata, messaggio a schermo, stampa dopo che parte).
+//
+// QUINDICI SECONDI. Sotto ci sta comoda ogni attesa legittima: l'SDK molla
+// il collegamento da sé intorno ai dieci secondi, il logo ai tre. Sopra non
+// c'è più niente da aspettare — è una stampante che non risponde, e chi ha
+// il cliente davanti deve saperlo adesso, non a fine serata.
+const TEMPO_MASSIMO_LAVORO = 15000
+
+// E NIENTE DOPPIONI. Un lavoro scaduto non si può interrompere a metà —
+// una Promise non si annulla — ma gli si può togliere la penna: da lì in
+// poi scrive su un guscio sordo. Così se poi arriva davvero in fondo, il
+// suo `send()` non fa uscire una seconda copia e il suo
+// `clearCommandBuffer()` non cancella la carta di chi sta stampando
+// adesso. Le costanti (ALIGN_CENTER, COLOR_1…) passano sempre: sono
+// valori, non gesti.
+function pennaDelLavoro(prn, vivo) {
+  const guscio = new Proxy(prn, {
+    get(target, chiave) {
+      const v = target[chiave]
+      if (typeof v !== 'function') return v
+      return (...args) => {
+        // L'SDK Epson concatena (`prn.addText(...).addCut()`): chi
+        // restituisce sé stesso deve restituire il GUSCIO, o il resto del
+        // ticket scavalcherebbe la difesa scrivendo sulla stampante vera.
+        if (!vivo()) return guscio
+        const esito = v.apply(target, args)
+        return esito === target ? guscio : esito
+      }
+    },
+  })
+  return guscio
+}
+
 function lavoroDiStampa(componi) {
-  const mio = _codaStampa.then(async () => {
-    const prn = await getPrinter()
-    // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
-    // non finiscono sulla nostra carta.
-    prn.clearCommandBuffer?.()
-    try {
-      await componi(prn)
-      prn.send()
-    } catch (e) {
-      // E non si lasciano resti a chi viene dopo.
+  let scaduto = false
+  const mio = _codaStampa.then(() => {
+    // Il cronometro parte col LAVORO, non con la richiesta: chi aspetta il
+    // suo turno in coda non ha ancora fatto niente di lento.
+    let cronometro
+    const scadenza = new Promise((_, ko) => {
+      cronometro = setTimeout(() => {
+        scaduto = true
+        // Il collegamento non è più affidabile: la stampa dopo rifà la
+        // stretta di mano invece di mettersi in fila dietro la stessa
+        // attesa appesa.
+        scordaConnessione()
+        ko(new Error('la stampante non ha risposto entro 15 secondi'))
+      }, TEMPO_MASSIMO_LAVORO)
+    })
+    const lavoro = (async () => {
+      const prn = pennaDelLavoro(await getPrinter(), () => !scaduto)
+      // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
+      // non finiscono sulla nostra carta.
       prn.clearCommandBuffer?.()
-      throw e
-    }
+      try {
+        await componi(prn)
+        prn.send()
+      } catch (e) {
+        // E non si lasciano resti a chi viene dopo.
+        prn.clearCommandBuffer?.()
+        throw e
+      }
+    })()
+    // Se ha già vinto la scadenza, il rifiuto del lavoro non lo ascolta più
+    // nessuno: si raccoglie qui, per non lasciarlo per aria.
+    lavoro.catch(() => {})
+    return Promise.race([lavoro, scadenza]).finally(() => clearTimeout(cronometro))
   })
   // La catena non si spezza su un errore: la stampa dopo deve partire
   // comunque — carta finita adesso non vuol dire stampante morta.
