@@ -4,6 +4,18 @@
 
 ### Per chi sta al banco
 
+- **Nel conto i tasti in fondo non spariscono più.** Con lo zoom dell'app
+  alto, o su una finestra bassa, la pila di tasti sotto il totale usciva dal
+  riquadro: se ne andava prima «Annulla ordine», poi «Stato servizio», poi
+  anche «Invia comanda» e «Pagamento» — e non c'era niente da scorrere per
+  andarli a prendere. Adesso **«Invia comanda» e «Pagamento» restano sempre
+  lì**, alla stessa altezza, con qualunque finestra e qualunque zoom; quello
+  che sta sopra — la testata della colonna, i totali, gli altri due tasti —
+  si stringe fino a una riga comoda per il dito e da lì in poi **scorre**,
+  invece di sparire. Sul telefono e sul tablet stretto il pannello del conto
+  è alto davvero quanto dice la maniglia anche a zoom alto, e i tre tasti in
+  fondo restano interi.
+
 - **Le finestrelle di conferma non escono più dallo schermo.** Con lo zoom
   dell'app alto, o su una finestra bassa, una finestrella come quella dello
   sconto veniva tagliata sopra e sotto: sparivano il titolo e il tasto che

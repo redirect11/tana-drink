@@ -4493,10 +4493,55 @@ body.fullbleed,
 .posd-list .qty {
   gap: 0.4em;
 }
+/* ─── LA COLONNA DEL CONTO SI STRINGE, E QUELLO CHE CONTA RESTA ───────
+   LO ZOOM RIMPICCIOLISCE L'ALTEZZA, LE MISURE FISSE NO (BUG-077). La
+   colonna era tre fasce che non cedevano — testata, lista, piede — per
+   circa 500px CSS sempre uguali, mentre lo spazio è 100dvh/zoom: al 160%
+   su una finestra bassa non ci stanno, e siccome `.posd-body` taglia
+   (overflow: hidden) i tasti in fondo finivano FUORI, senza niente da
+   scorrere per andarli a prendere. Misurato in Chrome su 77 combinazioni
+   di finestra e zoom: 40 con almeno un tasto perso.
+   LA REGOLA È UNA SOLA: qui dentro non cede mai la riga con «Invia
+   comanda» e «Pagamento». Tutto il resto ha un pavimento — una riga da
+   44px VERI dove si preme (`--riga-lista`, che segue lo zoom), una riga
+   di testo dove si legge — e sotto quel pavimento scorre invece di
+   sparire. Chi cede per primo: la lista delle righe (`flex: 1`, quindi
+   restituisce lo spazio libero prima di tutti), poi la testata, poi i
+   numeri del piede, e per ultimi i due tasti secondari. */
+.posd-testa {
+  padding: 8px 12px 0;
+  /* Cede quattro volte più in fretta del piede: là sotto ci sono i tasti,
+     qui il nome del conto e comandi che stanno anche nel menu «⋯». */
+  flex: 0 4 auto;
+  min-height: var(--riga-lista);
+  overflow: hidden auto;
+}
+/* Quello che si LEGGE nel piede: subtotale, supplementi, totale, incassi.
+   Sono numeri, non bersagli: il pavimento è una riga di testo, non 44px. */
+.posd-foot-info {
+  display: flex;
+  flex-direction: column;
+  /* Lo stesso respiro che il piede dà alle sue fasce, e continua a seguire
+     la maniglia che lo scala: `inherit` invece di ricopiare il calc. */
+  gap: inherit;
+  flex: 0 6 auto;
+  min-height: 1.6em;
+  overflow: hidden auto;
+}
 /* Footer dell'ordine, ridimensionabile: la scala (--foot-scale) guida la
    dimensione del font, e tasti/prezzi la seguono perché espressi in em. */
 .posd-comanda-foot {
-  flex-shrink: 0;
+  /* SI STRINGE, e `min-height: 0` è la riga che glielo permette davvero:
+     lasciata su `auto` varrebbe il minimo di CONTENUTO, e per un flex
+     annidato Chrome lo calcola sommando le altezze piene dei figli — il
+     piede non cedeva di un pixel e i tasti restavano fuori (misurato).
+     A tenere in piedi la fascia sono i pavimenti dei suoi pezzi, non il
+     suo; e se anche quelli non bastassero — finestre più basse di
+     qualunque schermo vero — a scorrere è il piede stesso, che è sempre
+     meglio che veder sparire un tasto. */
+  flex-shrink: 1;
+  min-height: 0;
+  overflow: hidden auto;
   /* Poco sopra: quello che separa il piede da quello che c'e' sopra e' il
      bordo, non un cuscino. Il respiro che conta e' fra i TASTI (il `gap`
      qui sotto), non fra il bordo e la maniglia. */
@@ -4523,8 +4568,38 @@ body.fullbleed,
   gap: calc(10px * var(--foot-scale, 1));
   margin-top: calc(4px * var(--foot-scale, 1));
 }
+/* LA RIGA CHE NON CEDE MAI: i due gesti della serata. Qualunque finestra,
+   qualunque zoom, stanno lì e per intero — è il punto fermo su cui si
+   appoggia tutto il resto della regola qui sopra. */
 .posd-comanda-foot .posd-foot-azioni .grid-2 {
   gap: calc(10px * var(--foot-scale, 1));
+  flex-shrink: 0;
+}
+/* I due secondari — «Stato servizio» e «Annulla ordine» — servono, ma non
+   cento volte a sera: quando l'altezza non basta per tutti sono loro a
+   scorrere. Il pavimento è un bersaglio intero, così ce n'è sempre almeno
+   uno premibile e da lì si arriva all'altro. */
+.posd-foot-secondarie {
+  display: flex;
+  flex-direction: column;
+  gap: calc(10px * var(--foot-scale, 1));
+  flex: 0 1 auto;
+  min-height: var(--riga-lista);
+  overflow: hidden auto;
+}
+/* Alti ESATTAMENTE una `--riga-lista`, cioè 44px veri sotto il dito a
+   qualunque zoom (DESIGN.md, guardrail 2: chi lo trova non lo «corregga»
+   in 44px secchi — al 160% sarebbero 70px veri rubati all'altezza). Così
+   il pavimento qui sopra è alto quanto UN TASTO: quando si scorre se ne
+   vede sempre uno intero, mai mezzo. Flex e `gap` come i tasti del
+   telefono qui sotto: senza, l'icona si appiccica alla parola. */
+.posd-foot-secondarie .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--riga-lista);
+  padding-block: 0;
 }
 /* La domanda su dove vanno le righe nuove (servizio spento): staccata dai
    tasti sotto da una riga sottile, cosi' si legge come una domanda e non
@@ -4702,8 +4777,14 @@ body.fullbleed,
        quanto il suo contenuto: con poche righe tirare la maniglia in su non
        faceva niente — si alzava solo il tetto, e sembrava che funzionasse
        solo per rimpicciolire. Ora l'altezza è quella scelta, e la lista
-       dentro scorre o lascia spazio vuoto. */
-    height: var(--pos-comanda-h, 46dvh);
+       dentro scorre o lascia spazio vuoto.
+       DIVISA PER LO ZOOM, come `.posd-root` (BUG-077): dentro `#root`
+       scalato, `50dvh` vale mezzo schermo in pixel CSS, che allo zoom del
+       160% sono OTTO DECIMI di schermo veri — il pannello sfondava il
+       corpo e il suo piede finiva sotto il bordo. Diviso, la maniglia
+       continua a promettere quello che dice: mezzo schermo è mezzo
+       schermo, a qualunque ingrandimento. */
+    height: calc(var(--pos-comanda-h, 46dvh) / var(--zoom, 1));
     max-height: none;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
@@ -6185,6 +6266,9 @@ body:has(.overlay) .zoom-control {
      le tre colonne restano uguali e si stringono davvero. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  /* Non si stringe col piede (BUG-077): sul telefono è l'ultima riga e
+     sotto non c'è altro che possa cedere al posto suo. */
+  flex-shrink: 0;
 }
 .posd-foot-telefono .btn {
   display: inline-flex;
@@ -6192,7 +6276,11 @@ body:has(.overlay) .zoom-control {
   justify-content: center;
   gap: 6px;
   min-width: 0;
-  min-height: 52px;
+  /* 52px VERI sotto il pollice, non 52px CSS: diviso lo zoom la riga resta
+     grande uguale in centimetri e smette di rubare l'altezza che serve alla
+     lista (BUG-077, stesso idioma di BUG-075 — non «correggerlo» in 52px
+     secchi). */
+  min-height: calc(52px / var(--zoom, 1));
   padding: 0.6em 0.3em;
   /* Cresce con la maniglia: è il senso di quella maniglia. Quando le
      parole non ci stanno più, in JS restano le sole icone (soloIcone). */

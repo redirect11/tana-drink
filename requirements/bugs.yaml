@@ -2961,30 +2961,65 @@ bugs:
       Trovato misurando BUG-075, non segnalato al banco. Stessa causa di
       fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse
       no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
-      COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo
-      ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha
-      una pila di tasti che non si stringe. Quando la somma delle fasce fisse
-      supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e
-      niente scorre per andarli a prendere: sono irraggiungibili, non solo
-      scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non
-      aiuta.
-      MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom):
-      16 combinazioni con almeno un tasto fuori. Il primo a sparire e'
-      «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e
-      «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra
-      alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai
-      fino al 160%.
-      DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a
-      capo, o se le fasce fisse debbano seguire lo zoom come il tastierino
-      del pagamento. La regola che non si tratta e' quella: nessun tasto
-      finisce sotto o fuori senza un modo di arrivarci.
+      E' la schermata piu' usata della serata.
+      COSA SUCCEDEVA. La schermata del conto e' alta quanto lo schermo
+      ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e la colonna
+      dell'ordine era fatta di tre fasce che non cedevano: testata, lista,
+      piede. Sommate fanno circa 500px CSS SEMPRE UGUALI, mentre lo spazio
+      disponibile e' 100dvh diviso lo zoom. Quando la somma superava
+      l'altezza, gli ultimi tasti finivano FUORI dal riquadro e niente
+      scorreva per andarli a prendere: irraggiungibili, non solo scomodi. A
+      scorrere era la lista delle righe, che pero' sta sopra e non aiuta.
+      COME E' STATO SISTEMATO. La regola adesso e' una sola: in quella
+      colonna non cede mai la riga con «Invia comanda» e «Pagamento» — i due
+      gesti della serata restano alla stessa altezza a qualunque finestra e
+      qualunque zoom ('flex-shrink: 0' sulla '.grid-2'). Tutto il resto ha un
+      pavimento e sotto quel pavimento SCORRE invece di sparire: la testata
+      ('.posd-testa', che smette di essere uno 'style' inline dove
+      'flex-shrink: 0' vinceva sempre) e i due tasti secondari
+      ('.posd-foot-secondarie': «Stato servizio» e «Annulla ordine») si
+      fermano a una '--riga-lista', cioe' 44px VERI sotto il dito a qualunque
+      zoom; i numeri del piede ('.posd-foot-info': subtotale, supplementi,
+      totale, incassi) a una riga di testo, perche' non sono bersagli. I due
+      tasti secondari sono alti esattamente una '--riga-lista', cosi' il
+      pavimento del loro contenitore e' alto quanto UN TASTO e scorrendo se
+      ne vede sempre uno intero. Il piede cede grazie a 'min-height: 0': su
+      'auto' varrebbe il minimo di CONTENUTO, e per un flex annidato Chrome
+      lo calcola sommando le altezze piene dei figli — con 'auto' il piede
+      non cedeva di un pixel (misurato). Ultima rete, se anche i pavimenti
+      non bastassero: a scorrere e' il piede stesso.
+      SUL TELEFONO E SUL TABLET STRETTO la colonna diventa un pannello in
+      basso alto 'var(--pos-comanda-h)' in 'dvh', e quel 'dvh' aveva la
+      stessa malattia: dentro '#root' scalato, '50dvh' vale mezzo schermo in
+      pixel CSS, che al 160% sono OTTO DECIMI di schermo veri — il pannello
+      sfondava il corpo e il suo piede finiva sotto il bordo. Ora l'altezza
+      e' divisa per lo zoom, cosi' la maniglia continua a promettere quello
+      che dice, e i tre gesti in fondo ('.posd-foot-telefono') hanno 52px
+      veri invece di 52px CSS.
+      MISURATO IN CHROME VERO, non a occhio: 77 combinazioni di finestra
+      (460..1080px di altezza) per zoom 100%..160%, per tre larghezze, con
+      'elementFromPoint' e contando solo i tasti raggiungibili PER INTERO
+      dopo aver scorso quello che l'utente puo' davvero scorrere (attenzione:
+      'scrollIntoView' scorre anche i contenitori 'overflow: hidden', e
+      usarlo come giudice assolverebbe proprio il difetto che si cerca).
+      Portatile 1440: prima 40 combinazioni con almeno un tasto perso, dopo
+      ZERO. Tablet stretto 820, dove la colonna e' un pannello in basso:
+      prima 63, dopo ZERO. Telefono 390: prima 18, dopo ZERO. I due gesti
+      principali non chiedono mai di scorrere su 1440 e su 820; sul telefono
+      restano 5 combinazioni su 77 (schermi alti 460..540 al 140..160%) in
+      cui l'ultima riga vuole una spinta di pochi pixel dentro il piede —
+      prima, negli stessi casi, non c'era proprio.
+      RIMETTENDO UNA QUALUNQUE DELLE SEI RIGHE, tests/unit/css.test.js torna
+      rosso; togliendo gli involucri dal componente ne cadono tre in
+      tests/component/OrderPosDetail.test.jsx (provato).
     labels: [bug, interfaccia, pos]
     severity: media
     priority: P2
-    status: todo
-    generate_issue: true
+    status: fixed
     in_produzione: true
-
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: BUG-078
     title: "Nel conto, fra la maniglia del piede e il Totale c'era piu' vuoto della riga stessa"

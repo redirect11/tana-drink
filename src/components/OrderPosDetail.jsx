@@ -2269,7 +2269,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               <span className="muted" style={{ marginLeft: 'auto', fontSize: '1.4rem' }}>▲</span>
             </button>
           )}
-          <div style={{ padding: '8px 12px 0', flexShrink: 0 }}>
+          {/* Com'è messa la testata sta in `.posd-testa`, non su uno `style`
+              inline: da inline `flex-shrink: 0` vinceva sempre, e con poca
+              altezza (finestra bassa, zoom alto) restava una fascia rigida
+              che spingeva i tasti del piede fuori dallo schermo (BUG-077). */}
+          <div className="posd-testa">
             {/* Il nome del conto si prende tutta la riga: schiacciato fra i
                 tasti restava un filo di spazio e spariva nei puntini. */}
             <div className="row between" style={{ alignItems: 'center', gap: 8 }}>
@@ -2617,6 +2621,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
           <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
             <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
+            {/* QUELLO CHE SI LEGGE, separato da quello che si preme. Sono
+                numeri: quando l'altezza manca cedono loro e scorrono, mentre
+                i tasti qui sotto restano dove sono (BUG-077). */}
+            <div className="posd-foot-info">
             {/* IL BOLLO DELLO STATO SE N'È ANDATO IN TESTATA (vedi sopra);
                 qui resta il tasto, che è un'altra cosa: chiudere un conto
                 già pagato senza far avanzare gli stati uno per uno. Sta
@@ -2750,8 +2758,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 </div>
               </div>
             )}
+            </div>
 
             <div className="posd-foot-azioni">
+            {/* LA RIGA CHE NON CEDE MAI. «Invia comanda» e «Pagamento» sono i
+                due gesti della serata: restano dove sono, alla stessa
+                altezza, qualunque sia la finestra e qualunque lo zoom. */}
             <div className="grid-2">
               <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
                 <IconPrinter /> Invia comanda
@@ -2775,6 +2787,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               )}
             </div>
 
+            {/* I DUE SECONDARI. Servono, ma non cento volte a sera: se
+                l'altezza non basta per tutti sono loro a scorrere — mai a
+                sparire, che è quello che facevano prima (BUG-077). */}
+            <div className="posd-foot-secondarie">
             {workflowOn && (
               <button
                 className="btn ghost small block"
@@ -2792,6 +2808,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             >
               <IconX /> Annulla ordine
             </button>
+            </div>
             </div>
 
             {/* TELEFONO: un tasto solo, tutto il resto nel menu dal basso.
