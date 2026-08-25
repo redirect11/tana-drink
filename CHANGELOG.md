@@ -4,6 +4,17 @@
 
 ### Per chi sta al banco
 
+- **La comanda dice quale comanda è.** La fascia nera in cima diceva
+  **«DIRETTO»** su ogni ticket — anche sul secondo e sul terzo invio dello
+  stesso tavolo, che «diretto» non erano affatto: era una parola presa dal
+  registratore di cassa da cui questa stampa è stata copiata, dove indica
+  la prima infornata di un ordine mandato in cucina a portate. Adesso c'è
+  scritto **«COMANDA 2 - ORDINE 28»**: quale comanda è e di quale conto,
+  con gli stessi numeri che si leggono a schermo. L'ora è scesa sotto, nel
+  nero, perché accanto non ci stava. La fascia si può ancora spegnere; la
+  casella per scriverci dentro non serve più, e chi ci aveva messo una sua
+  parola non trova niente di rotto.
+
 - **Lo scontrino dice chi lo stampa, e non ripete il numero.** Sotto al
   numero uscivano tre righe che non dicevano il vero: **«Utente A»** —
   scritto a mano, uguale su ogni scontrino di ogni terminale — il numero

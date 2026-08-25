@@ -94,12 +94,17 @@ describe('i campi che sono puro testo', () => {
     expect(screen.getByLabelText('Cosa c’è scritto')).toBeInTheDocument()
   })
 
-  it('sulla comanda si cambiano le parole della fascia', () => {
+  // LA FASCIA NON HA PIÙ UNA CASELLA (BUG-089): dice quale ticket è
+  // («COMANDA 2 - ORDINE 28») e quel contenuto viene dai dati. Le righe
+  // di servizio, che sono etichette e non fatti, le parole ce l'hanno
+  // ancora.
+  it('la fascia si accende e si spegne, ma non si scrive', () => {
     pannello('comanda')
-    const casella = screen.getByLabelText('Cosa c’è scritto nella fascia')
-    expect(casella).toHaveValue('DIRETTO')
+    expect(screen.getByLabelText('Fascia nera in cima')).toBeChecked()
+    expect(screen.queryByLabelText('Cosa c’è scritto nella fascia')).toBeNull()
+    const casella = screen.getByLabelText('Come si chiama il reparto')
     fireEvent.change(casella, { target: { value: 'CUCINA' } })
-    expect(salva).toHaveBeenLastCalledWith({ stampa_comanda: { testi: { fascia: 'CUCINA' } } })
+    expect(salva).toHaveBeenLastCalledWith({ stampa_comanda: { testi: { reparto: 'CUCINA' } } })
   })
 })
 

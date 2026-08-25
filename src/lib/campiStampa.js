@@ -103,18 +103,33 @@ export const CAMPI_SCONTRINO = [
 // ── I CAMPI DELLA COMANDA ────────────────────────────────────────────
 //
 // Qui il lettore è il banco, non il cliente: quello che non si legge in
-// mezzo secondo è carta sprecata. Le parole della fascia e delle righe di
-// servizio arrivano dal modello da cui il ticket è nato — «CONTATORIE»,
+// mezzo secondo è carta sprecata. Le parole delle righe di servizio
+// arrivano dal modello da cui il ticket è nato — «CONTATORIE»,
 // «Vendeur» — e sono le prime che un locale vuole cambiare o togliere.
+//
+// LA FASCIA NON HA PIÙ PAROLE DA SCRIVERE (BUG-089). Fino al 25/08/2026
+// era una casella di testo con dentro «DIRETTO»; adesso la fascia dice
+// QUALE TICKET È — «COMANDA 2 - ORDINE 28» — e quel contenuto viene dai
+// dati, non da un'impostazione: un testo libero lì sopra vorrebbe dire
+// poterla far mentire, e a corpo doppio non ci starebbe comunque
+// accanto. L'interruttore resta: chi la fascia non la vuole la spegne.
+// Un locale che aveva scritto la sua parola non trova niente di rotto —
+// quel testo semplicemente non viene più letto, e la fascia esce piena.
+// Per dire «questo ticket è del bar» c'è la riga del reparto, che di
+// parole ne ha ancora.
 export const CAMPI_COMANDA = [
   {
     id: 'fascia',
     label: 'Fascia nera in cima',
-    desc: 'La riga bianco-su-nero che si vede da lontano.',
+    desc: 'La riga bianco-su-nero che si vede da lontano: «COMANDA 2 - ORDINE 28».',
     acceso: true,
-    testo: { valore: 'DIRETTO', label: 'Cosa c’è scritto nella fascia' },
   },
-  { id: 'ora', label: 'Ora nella fascia', desc: 'Quando è stata battuta.', acceso: true },
+  {
+    id: 'ora',
+    label: 'Ora nella fascia',
+    desc: 'Quando è stata battuta: sta sotto al numero, dentro il nero.',
+    acceso: true,
+  },
   {
     id: 'conteggio',
     label: 'Riga del conteggio',
