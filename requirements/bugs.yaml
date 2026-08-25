@@ -1788,7 +1788,28 @@ bugs:
       Tre secondi perche' il logo sta nella cache del service worker e in
       condizioni sane arriva in millisecondi: se non e' arrivato in tre
       secondi, stasera non arriva.
-    in_produzione: true
+      ── ADESSO È STATO VISTO: LA SERA DEL 24/08/2026 ──
+      «Mai visto accadere al banco» è rimasto vero per quattro giorni.
+      Flavio, dal locale, il 24/08 sera, sulla 1.5.1: «in fase di
+      riscossione non stampava lo scontrino», e «ieri sera buona parte
+      delle stampe non sono uscite». Era questo, per intero, e con un
+      danno che qui sopra non era stato previsto: la pretesa dello
+      scontrino si prende PRIMA di stampare e torna libera solo nel
+      `catch` della stampa — una promessa che non si chiude né bene né
+      male quel `catch` non lo fa partire mai, quindi quel conto non
+      stampava più nemmeno riaperto. Il racconto per intero, con la catena
+      riga per riga e il nesso con gli ingredienti sotto soglia (le
+      notifiche di scorta chiedono LO STESSO logo, dalla stessa strada di
+      rete, mentre lo scontrino lo aspetta), sta in BUG-086.
+      DUE COSE CAMBIANO DA QUI. Una: `in_produzione` passa a false, perché
+      la 1.5.5 — che porta questa cura — è in produzione dal 25/08. L'altra:
+      la riga qui sopra che dice «il logo sta nella cache del service
+      worker» NON ERA VERA quando è stata scritta. `logo.png` non stava fra
+      le risorse precaricate, e la strada era «prima la rete»: è per questo
+      che il tempo massimo è servito davvero invece di restare una cintura
+      di sicurezza. Adesso ci sta, e per lui si guarda prima la cache
+      (REQ-OFFLINE-007).
+    in_produzione: false
     status: fixed
     generate_issue: true
     labels: [bug, stampa]
@@ -3371,3 +3392,91 @@ bugs:
     test_cases:
       - tests/unit/coda.test.js
       - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-086
+    title: "Riscuotendo, lo scontrino non usciva — e quel conto non stampava piu'"
+    area: "src/lib/printer.js (lavoroDiStampa, logoPerStampa), public/sw.js, src/components/PaymentScreen.jsx"
+    description: >
+      Segnalato da Flavio la sera del 24/08/2026, dal locale, parole sue:
+      «in fase di riscossione non stampava lo scontrino», e «ieri sera
+      buona parte delle stampe non sono uscite». Sospettava un legame con
+      le voci di menu che avevano ingredienti esauriti o sotto soglia.
+      Girava la 1.5.1.
+      È IL PRIMO CASO IN CUI QUESTO DIFETTO È STATO VISTO. Il meccanismo
+      era già scritto qui dentro — BUG-053, registrato il 20/08 con la
+      nota «mai visto accadere al banco, ma il meccanismo è certo» — e
+      quella sera è successo davvero, con il locale pieno.
+      LA CATENA, riga per riga. 1) `closePaid` prende la pretesa dello
+      scontrino (`reclaimReceiptPrint`) PRIMA di stampare — deve, se no due
+      schermate stampano la stessa cosa — e poi chiama `printScontrino`.
+      2) `printScontrino` si ferma su `await stampaLogo(prn)`;
+      `logoPerStampa` caricava l'immagine SENZA tempo massimo. 3)
+      `logo.png` non stava fra le risorse precaricate del service worker,
+      che è «prima la rete»: una `fetch` che PENDE non risolve e non
+      rifiuta, quindi l'`<img>` non fa né `onload` né `onerror` e la
+      promessa non si chiude mai. 4) Niente carta — e, peggio,
+      `releaseReceiptPrint` NON VIENE MAI CHIAMATO, perché sta nel `catch`
+      di una promessa che non fallisce: la pretesa resta presa per sempre.
+      Quel conto non stampa più, nemmeno riaperto, nemmeno dalla coda. 5)
+      Il fallimento non veniva ricordato (BUG-032), quindi il conto dopo
+      rifaceva lo stesso identico giro. Prova rifatta sulla 1.5.1: 0
+      scontrini su 5 riscossioni, e nessun errore a schermo.
+      IL NESSO CON GLI INGREDIENTI BASSI, che sembrava una coincidenza e
+      non lo è: `notifyLowStock` → `notify()` chiede LO STESSO `logo.png`
+      (icona e badge) per ogni ingrediente sotto soglia, dalla stessa
+      strada di rete, mentre lo scontrino lo sta aspettando. Più voci
+      scarse, più richieste alla stessa risorsa appesa: è per questo che
+      Flavio vedeva il legame.
+      E LA STAMPANTE RESTAVA MUTA PER LA SERATA. Da BUG-052 la stampa è
+      una coda seriale: un lavoro che non finisce non sporca più i ticket
+      degli altri, li FERMA. Dietro allo scontrino appeso restavano le
+      comande — «buona parte delle stampe non sono uscite».
+      SULLA 1.5.5 IL DIFETTO NON C'È: lo hanno chiuso `947359c` (tre
+      secondi di tempo massimo sul caricamento del logo, BUG-053) e
+      `f65622e` (il «provato e non c'è» si ricorda, BUG-032). Stessa prova,
+      stessa scena: 5 fogli su 5. Per questo `in_produzione` è false —
+      quello che gira al banco adesso non ha più questo problema.
+      COSA SI È FATTO IN PIÙ, il 25/08, per quello che restava scoperto.
+      1) `logo.png` ENTRA NEL PRECACHE del service worker e per lui si
+      guarda PRIMA LA CACHE (REQ-OFFLINE-007): così la rete esce dal
+      percorso della stampa, invece di avere solo un limite di tempo
+      sopra. Precaricarlo e basta non sarebbe servito a niente — con
+      «prima la rete» la copia salvata si guarda solo quando la rete
+      FALLISCE, e una richiesta appesa non fallisce mai.
+      2) IL TEMPO MASSIMO STA ANCHE SUL LAVORO INTERO, non solo sul logo:
+      quindici secondi in `lavoroDiStampa`. Il limite sul logo copre IL
+      LOGO; se domani si impiccasse un altro passaggio — la stampante che
+      accetta il collegamento e poi tace, un `await` aggiunto lì dentro —
+      si tornerebbe al 24/08. Scaduti i quindici secondi la promessa
+      rifiuta, e da lì funziona tutto quello che era già scritto: pretesa
+      liberata, messaggio a schermo, coda che riparte. Quindici perché
+      sotto ci sta comoda ogni attesa legittima (l'SDK molla il
+      collegamento da sé intorno ai dieci secondi, il logo ai tre) e
+      sopra non c'è più niente da aspettare. Il lavoro abbandonato non si
+      può interrompere a metà, ma gli si toglie la penna: scrive su un
+      guscio sordo, quindi se poi arriva davvero in fondo non fa uscire
+      una seconda copia e non cancella la carta di chi sta stampando
+      adesso.
+      3) UN DATO STORTO NON FERMA PIÙ IL TICKET: `item.name.toUpperCase()`
+      sulla comanda era senza difesa (mentre `printOrdineFornitore`, due
+      funzioni più sotto, faceva già `String(l.name || '')`). Su un
+      documento malformato la comanda saltava e l'auto-stampa ci riprovava
+      all'infinito. Adesso una riga senza nome esce come «(SENZA NOME)»,
+      una senza prezzo come «0.00€» — niente più «undefined» e «NaN€» sullo
+      scontrino del cliente — e la carta esce.
+      LA CATENA INTERA ADESSO HA UN TEST, che è la cosa che mancava: i
+      pezzi erano provati (il logo, la serializzazione), il giro
+      riscossione → pretesa → stampa impiccata → pretesa liberata → coda
+      che rimedia non lo provava nessuno, ed è esattamente lì che è
+      successo il danno.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti, banco]
+    severity: bloccante
+    priority: P1
+    test_cases:
+      - tests/unit/stampaCheNonSiChiude.test.js
+      - tests/unit/serviceWorkerCache.test.js
+      - tests/unit/stampaSerializzata.test.js
+      - tests/unit/logoScontrino.test.js

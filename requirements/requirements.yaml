@@ -3525,6 +3525,22 @@ requirements:
       separati due prodotti liberi battuti con lo stesso nome a cifre
       diverse. Sui soldi non cambia niente: scontrino e schermata di
       pagamento restano come sono.
+      E UNA STAMPA NON PUÒ RESTARE APPESA (BUG-086, 24/08/2026). La carta
+      che non esce è un guaio; una stampa che non finisce MAI è un guaio
+      peggiore: la pretesa dello scontrino si prende PRIMA di stampare e
+      torna libera solo nel `catch` di chi l'ha chiesta — e una promessa
+      che non si chiude né bene né male quel `catch` non lo fa partire
+      mai. Quel conto non stampa più, nemmeno riaperto, nemmeno dalla
+      coda, e a schermo non compare niente. Quindi ogni lavoro di stampa
+      ha un tempo massimo suo, QUINDICI SECONDI: scaduti, la promessa
+      rifiuta, la pretesa torna libera, il messaggio arriva a schermo e la
+      coda delle stampe riparte. Il lavoro abbandonato, se poi arriva in
+      fondo, scrive nel vuoto: una seconda copia non esce.
+      E UN DOCUMENTO STORTO NON SI MANGIA IL TICKET: una riga senza nome
+      esce come «(senza nome)» e una senza prezzo come «0.00€», ma la
+      carta esce. Prima `item.name.toUpperCase()` faceva saltare la
+      comanda a metà, e l'auto-stampa ci riprovava a ogni snapshot senza
+      farla uscire mai.
     status: implemented
     generate_issue: false
     labels: [stampa]
@@ -3533,6 +3549,7 @@ requirements:
       - tests/unit/scontrinoSegnato.test.js
       - tests/unit/comandaAccorpata.test.js
       - tests/unit/aliquotaIva.test.js
+      - tests/unit/stampaCheNonSiChiude.test.js
 
   - id: REQ-STAMPA-002
     title: "La stampante non deve smettere di funzionare a metà serata"
@@ -7296,6 +7313,40 @@ requirements:
     labels: [metodo, offline, ordini]
     priority: P1
     test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js]
+
+  - id: REQ-OFFLINE-007
+    title: "Il guscio dell'app e il logo non si aspettano dalla rete"
+    area: "public/sw.js"
+    description: >
+      Il service worker tiene in cache quello che serve ad aprire l'app —
+      la pagina, il manifest, l'icona — e da BUG-086 anche `logo.png`, che
+      e' la risorsa piu' richiesta di tutte: sta in cima allo scontrino e
+      al preconto, negli avvisi in pagina e nelle notifiche di sistema.
+      PER IL LOGO SI GUARDA PRIMA LA CACHE, e questa e' la parte che conta.
+      Tutto il resto e' servito «prima la rete, e la cache se la rete
+      fallisce» — che va benissimo per una pagina, ma non protegge da una
+      richiesta che resta APPESA: una fetch che non risolve e non rifiuta
+      non fa scattare nessun ripiego, e chi la aspetta aspetta per sempre.
+      La sera del 24/08 e' successo esattamente questo, e ad aspettare
+      c'era la stampa dello scontrino (BUG-086): l'<img> del logo non ha
+      fatto ne' onload ne' onerror, e il conto appena riscosso non e'
+      uscito. Precaricarlo da solo non sarebbe bastato — la cache non la si
+      sarebbe guardata mai.
+      Il logo se lo puo' permettere perche' e' un'immagine ferma: la copia
+      nuova si va a prendere lo stesso, in sottofondo, per la volta dopo, e
+      un logo cambiato dalle impostazioni ha comunque un altro indirizzo.
+      QUANDO LA LISTA CAMBIA, CAMBIA IL NOME DELLA CACHE (v3 → v4). Il
+      service worker nuovo si installa, `skipWaiting` lo fa partire subito
+      e `activate` butta le cache vecchie: chi ha l'app aperta con la
+      versione di prima non perde niente, perche' quello che stava nella
+      cache vecchia sta anche nella nuova. E se una risorsa della lista
+      manca, l'installazione non si pianta: `addAll` e' tutto-o-niente, il
+      suo errore si ingoia e le richieste passano dalla rete come prima.
+    status: implemented
+    generate_issue: true
+    labels: [offline, pwa, stampa]
+    priority: P2
+    test_cases: [tests/unit/serviceWorkerCache.test.js]
   - id: REQ-PAG-012
     title: "«Riscuoti (senza stampa)»: incassare senza far uscire lo scontrino"
     area: "src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/lib/api.js (riscuoti_senza_stampa)"
