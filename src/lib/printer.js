@@ -558,6 +558,31 @@ async function getPrinter() {
 
 // ── Utility di formattazione ──────────────────────────────────────────────────
 
+// ── UN DATO STORTO NON FERMA LA CARTA (BUG-086) ──────────────────────
+//
+// `item.name.toUpperCase()` sulla comanda: una riga senza nome — un
+// documento vecchio, una scrittura arrivata a metà — faceva saltare il
+// ticket a metà builder, e l'auto-stampa ci riprovava a ogni snapshot
+// senza uscire mai. Due funzioni più sotto, l'ordine al fornitore faceva
+// già `String(l.name || '')`: la difesa c'era, ma in un posto solo.
+//
+// La scelta è che la carta ESCA COMUNQUE, e che si veda cos'è storto: al
+// banco un ticket con «(senza nome)» si legge e si rimedia, un ticket che
+// non esce no. Vale per tutte le stampe: comanda, scontrino, acconto,
+// fattura.
+const nomeRiga = (item) => String(item?.name ?? '').trim() || '(senza nome)'
+
+// Quanti pezzi. Un valore che non è un numero non diventa «undefined»
+// sulla carta: la riga c'è, quindi il pezzo è almeno uno.
+const qtaRiga = (item) => {
+  const q = Number(item?.qty)
+  return Number.isFinite(q) ? q : 1
+}
+
+// Quanti euro. Un prezzo mancante vale zero e si stampa «0.00€»: prima
+// diventava «NaN€», che sullo scontrino del cliente è peggio di uno zero.
+const euroRiga = (v) => Number(v) || 0
+
 // Riga testo-sinistra + testo-destra allineato col padding spazi.
 function row(left, right, width = COL) {
   const avail = width - right.length
@@ -811,7 +836,7 @@ export function printComanda(order, comanda = null) {
     prn.addTextSize(1, 2)
     const conNote = cfg.mostra('note_riga')
     for (const item of ticketItems) {
-      prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
+      prn.addText(`${qtaRiga(item)}  ${nomeRiga(item).toUpperCase()}\n`)
       // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
       // deve vederla sotto al prodotto, in corpo normale.
       if (item.note && conNote) {
@@ -1075,9 +1100,9 @@ export function printScontrino(order, opts = {}) {
     // NON SI TOLGONO: le righe e il totale sono lo scontrino. Non stanno
     // fra i campi, e nessuna impostazione può arrivare qui.
     for (const item of (order.order_items || [])) {
-      const pu = `${Number(item.unit_price).toFixed(2)}€`
-      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-      const left = `${item.qty}x  ${item.name}`
+      const pu = `${euroRiga(item.unit_price).toFixed(2)}€`
+      const tot = `${(qtaRiga(item) * euroRiga(item.unit_price)).toFixed(2)}€`
+      const left = `${qtaRiga(item)}x  ${nomeRiga(item)}`
       prn.addText(row(left, `${pu.padStart(7)} ${tot.padStart(7)}`))
     }
 
@@ -1277,9 +1302,9 @@ export function printScontrinoAcconto(order, incasso = {}) {
         prn.addText(line())
       }
       for (const i of righe) {
-        const pu = `${(Number(i.unit_price) || 0).toFixed(2)}€`
-        const tot = `${((Number(i.qty) || 0) * (Number(i.unit_price) || 0)).toFixed(2)}€`
-        prn.addText(row(`${i.qty}x  ${i.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+        const pu = `${euroRiga(i.unit_price).toFixed(2)}€`
+        const tot = `${(qtaRiga(i) * euroRiga(i.unit_price)).toFixed(2)}€`
+        prn.addText(row(`${qtaRiga(i)}x  ${nomeRiga(i)}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
       }
       prn.addText(line())
     }
@@ -1388,9 +1413,9 @@ export function printFattura(invoice) {
     prn.addTextStyle(false, false, false, prn.COLOR_1)
     prn.addText(line())
     for (const item of invoice.items || []) {
-      const pu = `${Number(item.unit_price).toFixed(2)}€`
-      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-      prn.addText(row(`${item.qty}x  ${item.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+      const pu = `${euroRiga(item.unit_price).toFixed(2)}€`
+      const tot = `${(qtaRiga(item) * euroRiga(item.unit_price)).toFixed(2)}€`
+      prn.addText(row(`${qtaRiga(item)}x  ${nomeRiga(item)}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
     }
     prn.addText(line())
     if (invoice.discount_amount > 0) {
@@ -1435,7 +1460,7 @@ export function printOrdineFornitore(order) {
     prn.addText(line())
     prn.addTextSize(1, 2)
     for (const l of order.lines || []) {
-      prn.addText(`${l.qty_packages}  ${String(l.name || '').toUpperCase()}\n`)
+      prn.addText(`${l.qty_packages}  ${nomeRiga(l).toUpperCase()}\n`)
     }
     prn.addTextSize(1, 1)
     prn.addText(line())
