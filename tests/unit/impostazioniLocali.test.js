@@ -8,7 +8,20 @@
 // dopo, in un locale che le aveva spente.
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { ricordaImpostazioni, impostazioniRicordate } from '../../src/lib/impostazioniLocali.js'
+import {
+  ricordaImpostazioni,
+  impostazioniRicordate,
+  corsieNascoste,
+  ricordaCorsieNascoste,
+  vistaCorsie,
+  ricordaVistaCorsie,
+  azioniContoRidotte,
+  ricordaAzioniContoRidotte,
+  prontoDiviso,
+  ricordaProntoDiviso,
+  filtriAperti,
+  ricordaFiltriAperti,
+} from '../../src/lib/impostazioniLocali.js'
 
 const DEFAULTS = { stripe_pos: 'prodotto', queue_view: 'griglia' }
 
@@ -45,5 +58,61 @@ describe('le impostazioni ricordate', () => {
 
   it('senza default torna comunque un oggetto', () => {
     expect(impostazioniRicordate()).toEqual({})
+  })
+})
+
+// LE PREFERENZE DEL DISPOSITIVO. Sono cinque coppie leggi/scrivi che
+// facevano cinque volte lo stesso try/catch; adesso il try/catch è uno solo,
+// e queste prove ci stanno attorno — perché la risposta a «la memoria non
+// c'è» dev'essere la stessa per tutte, e non è più scritta cinque volte.
+describe('le preferenze di questo terminale', () => {
+  it('quando non si è mai scelto niente, ognuna dice il suo «non lo so»', () => {
+    expect(corsieNascoste()).toBe(null)
+    expect(vistaCorsie()).toBe(null)
+    expect(azioniContoRidotte()).toBe(false)
+    expect(prontoDiviso()).toBe(false)
+    // La fila dei filtri nasce CHIUSA: la coda si guarda, non si filtra.
+    expect(filtriAperti()).toBe(false)
+  })
+
+  it('quello che si sceglie si ritrova', () => {
+    ricordaCorsieNascoste(['da-fare', 'da-fare', 'al-banco'])
+    ricordaVistaCorsie('comande')
+    ricordaAzioniContoRidotte(true)
+    ricordaProntoDiviso(true)
+    ricordaFiltriAperti(true)
+    expect(filtriAperti()).toBe(true)
+    expect(corsieNascoste()).toEqual(['da-fare', 'al-banco'])
+    expect(vistaCorsie()).toBe('comande')
+    expect(azioniContoRidotte()).toBe(true)
+    expect(prontoDiviso()).toBe(true)
+  })
+
+  it('tornando indietro la scelta si cancella davvero', () => {
+    ricordaVistaCorsie('conti')
+    ricordaAzioniContoRidotte(true)
+    ricordaVistaCorsie(null)
+    ricordaAzioniContoRidotte(false)
+    ricordaFiltriAperti(true)
+    ricordaFiltriAperti(false)
+    expect(vistaCorsie()).toBe(null)
+    expect(azioniContoRidotte()).toBe(false)
+    expect(filtriAperti()).toBe(false)
+    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe(null)
+  })
+
+  it('«unite» resta scritto: è una scelta, non un silenzio', () => {
+    // Il pronto diviso è l'unica che scrive anche il «no»: serve a
+    // distinguere chi ha deciso di tenerle unite da chi non ha deciso.
+    ricordaProntoDiviso(false)
+    expect(localStorage.getItem('tana:corsie:pronto-diviso')).toBe('0')
+    expect(prontoDiviso()).toBe(false)
+  })
+
+  it('roba illeggibile non fa saltare niente: decide il default', () => {
+    localStorage.setItem('tana:corsie:nascoste', '{rotto')
+    localStorage.setItem('tana:corsie:vista', 'boh')
+    expect(corsieNascoste()).toBe(null)
+    expect(vistaCorsie()).toBe(null)
   })
 })

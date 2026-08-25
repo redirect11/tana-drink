@@ -21,7 +21,37 @@
 
 const COL = 48 // colonne della testina 80 mm, come la stampante vera
 
+// L'interruttore DEL TERMINALE, acceso dalla sezione Dev: serve sul sito
+// di TEST, dove l'ambiente è quello vero (niente DEV, niente emulatori) ma
+// la stampante spesso non c'è — chi prova da casa deve poter vedere i
+// facsimili invece di stampe che falliscono in silenzio. È in localStorage
+// perché la stampante è una faccenda del dispositivo, come le sue
+// impostazioni. La sezione Dev esiste solo in locale e sul test
+// (devToolsEnabled), quindi in produzione questo interruttore non ha una
+// leva da nessuna parte.
+const CHIAVE_FINTA = 'tana_stampante_finta'
+export function stampanteFintaForzata() {
+  try {
+    return localStorage.getItem(CHIAVE_FINTA)
+  } catch {
+    return null
+  }
+}
+export function forzaStampanteFinta(attiva) {
+  try {
+    if (attiva === null) localStorage.removeItem(CHIAVE_FINTA)
+    else localStorage.setItem(CHIAVE_FINTA, attiva ? 'true' : 'false')
+  } catch {
+    /* niente memoria: resta la regola d'ambiente */
+  }
+}
+
 export function stampanteFintaAttiva(env = import.meta.env) {
+  // La scelta del terminale vince su tutto: è chi sta provando a dire
+  // «qui la stampante è finta» (o «voglio quella vera anche in locale»).
+  const forzata = stampanteFintaForzata()
+  if (forzata === 'true') return true
+  if (forzata === 'false') return false
   if (env?.VITE_STAMPANTE_FINTA === 'false') return false
   // Forzabile a mano, per provarla dove serve.
   if (env?.VITE_STAMPANTE_FINTA === 'true') return true
@@ -62,7 +92,7 @@ function componi(pezzi) {
 // finisce in console — meglio che perderlo.
 function mostra(righe, titolo, logo) {
   const testo = righe.join('\n')
-  const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=420,height=700') : null
+  const w = typeof window !== 'undefined' ? window.open('', '_blank', 'width=520,height=760') : null
   if (!w) {
     console.info(`[stampante finta] ${titolo}\n${testo}`)
     return
@@ -74,11 +104,17 @@ function mostra(righe, titolo, logo) {
     `<!doctype html><meta charset="utf-8"><title>${scampato(titolo)}</title>` +
       '<style>' +
       'body{margin:0;padding:16px;background:#e8e8ee;font-family:system-ui,sans-serif}' +
-      '.scontrino{width:80mm;max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
+      // LA CARTA È LARGA 48 CARATTERI, e il facsimile deve esserlo. Con una
+      // misura in millimetri e un corpo fisso le righe andavano a capo dove
+      // la stampante vera non le manda: «La Tana del Conigli / o», e ogni
+      // riga di un drink spezzata in due. Qui la larghezza la decide il
+      // TESTO — 48 caratteri di un monospaziato (48ch) — così quello che si
+      // vede è quello che esce dalla stampante.
+      '.scontrino{width:calc(48ch + 8mm);max-width:100%;margin:0 auto;background:#fff;padding:6mm 4mm;' +
       'box-shadow:0 2px 10px rgba(0,0,0,.18)}' +
-      '.scontrino img{display:block;margin:0 auto 6px;max-width:40mm}' +
-      'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre-wrap;margin:0}' +
-      '.barra{max-width:80mm;margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
+      '.scontrino img{display:block;margin:0 auto 6px;max-width:24ch}' +
+      'pre{font:12px/1.35 "Courier New",monospace;color:#000;white-space:pre;margin:0;overflow-x:auto}' +
+      '.barra{max-width:calc(48ch + 8mm);margin:0 auto 10px;display:flex;gap:8px;align-items:center;' +
       'font:13px system-ui,sans-serif;color:#333}' +
       '.barra button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #bbb;' +
       'background:#fff;cursor:pointer}' +
@@ -110,6 +146,11 @@ export function creaStampanteFinta(titolo = 'Stampa') {
     addTextSize: (w) => (pezzi.push({ tipo: 'size', doppio: Number(w) > 1 }), finta),
     addTextStyle: () => finta,
     addText: (t) => (pezzi.push({ tipo: 'text', testo: t }), finta),
+    // Butta quello che è stato accumulato senza stamparlo. La stampante
+    // vera ce l'ha (clearCommandBuffer dell'SDK) e serve alla coda delle
+    // stampe: un lavoro che si ferma a metà non deve lasciare i suoi pezzi
+    // sulla carta di quello dopo (BUG-052).
+    clearCommandBuffer: () => ((pezzi.length = 0), finta),
     addFeedLine: (n) => (pezzi.push({ tipo: 'feed', righe: Number(n) || 1 }), finta),
     addCut: () => (pezzi.push({ tipo: 'cut' }), finta),
     // Il logo: la stampante vera riceve un'immagine, qui basta l'indirizzo

@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import {
   decideStaffCallPush,
   decideStaffServePush,
+  destinatariPush,
   STAFF_CALL_VIBRATION,
   terminaliDi,
 } from '../../functions/lib/push-core.js'
@@ -73,13 +74,19 @@ describe('decideStaffServePush', () => {
     expect(msg.body).toContain('Mario')
   })
 
-  it('non notifica il ritiro al banco (lo gestisce il cliente)', () => {
-    expect(
-      decideStaffServePush(
-        { ...ordine, service_mode: 'banco' },
-        { ...ordine, service_mode: 'banco', status: 'pronto' }
-      )
-    ).toBeNull()
+  // IL RITIRO SI ANNUNCIA COME IL SERVIZIO (BUG-036). Questa prova diceva
+  // il contrario — «il ritiro lo gestisce il cliente» — e sulla carta
+  // reggeva: al cliente la push arriva. Solo che gli arriva se ha ordinato
+  // dal menù, perché è lì che nasce il `push_token` sull'ordine; un conto
+  // battuto al POS non ce l'ha. Su quei conti non partiva niente per
+  // nessuno: drink pronto sul banco e nessuno avvisato.
+  it('anche il drink da ritirare al banco avvisa lo staff', () => {
+    const msg = decideStaffServePush(
+      { ...ordine, service_mode: 'banco' },
+      { ...ordine, service_mode: 'banco', status: 'pronto' }
+    )
+    expect(msg.title).toContain('da consegnare')
+    expect(msg.body).toContain('#12')
   })
 
   it('non notifica se lo stato non cambia o non è pronto', () => {
@@ -138,5 +145,54 @@ describe('terminaliDi: i dispositivi di chi viene cercato', () => {
       { id: 'giulia', uid: 'giulia', token: 'T-uno' },
     ]
     expect(terminaliDi(doppia, 'giulia')).toHaveLength(1)
+  })
+})
+
+// ── LA CATENA INTERA DEL «PRONTO» (BUG-036) ──────────────────────
+//
+// Le due metà provate una per una passavano tutte e due, e insieme non
+// mandavano niente: il messaggio nasceva, e poi l’elenco dei destinatari
+// si svuotava. Il locale ha lavorato così per giorni — drink pronti sul
+// banco e nessun telefono che suona. Qui si prova il pezzo intero: nasce
+// il messaggio E c’è qualcuno a cui mandarlo.
+describe('un drink pronto: nasce il messaggio e c’è chi lo riceve', () => {
+  // Come sta davvero un locale: tre terminali, e tutti si sono registrati
+  // dalla coda, quindi tutti intestati 'bartender'. Nessuno 'staff'.
+  const terminali = [
+    { token: 't-ipad', role: 'bartender', device: 'ipad-del-banco' },
+    { token: 't-flavio', role: 'bartender', device: 'telefono-di-flavio' },
+    { token: 't-sala', role: 'bartender', device: 'telefono-di-sala' },
+  ]
+  const conto = {
+    daily_number: 21,
+    status: 'in_preparazione',
+    service_mode: 'tavolo',
+    table_label: '3',
+  }
+
+  it('al tavolo: il messaggio parte e arriva agli altri due terminali', () => {
+    const msg = decideStaffServePush(conto, { ...conto, status: 'pronto' })
+    expect(msg).not.toBeNull()
+    const chi = destinatariPush(terminali, { dispositivoOrigine: 'ipad-del-banco' })
+    expect(chi.map((t) => t.token)).toEqual(['t-flavio', 't-sala'])
+  })
+
+  it('al banco: anche il ritiro parte, e non resta senza destinatari', () => {
+    const ritiro = { ...conto, service_mode: 'banco', table_label: null }
+    const msg = decideStaffServePush(ritiro, { ...ritiro, status: 'pronto' })
+    expect(msg.title).toContain('da consegnare')
+    expect(msg.body).toBe('Ordine #21')
+    expect(destinatariPush(terminali, { dispositivoOrigine: 'ipad-del-banco' })).toHaveLength(2)
+  })
+
+  it('chi ha premuto «pronto» non se lo sente squillare in mano', () => {
+    const chi = destinatariPush(terminali, { dispositivoOrigine: 'telefono-di-flavio' })
+    expect(chi.some((t) => t.device === 'telefono-di-flavio')).toBe(false)
+  })
+
+  it('senza sapere chi ha premuto, si avvisano tutti', () => {
+    // Un terminale vecchio che non scrive il dispositivo: meglio un avviso
+    // in più sul telefono di chi ha già premuto, che un drink che resta lì.
+    expect(destinatariPush(terminali, { dispositivoOrigine: null })).toHaveLength(3)
   })
 })

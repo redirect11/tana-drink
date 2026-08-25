@@ -1,5 +1,947 @@
 # Cosa è cambiato
 
+## 1.5.5 — 25 agosto 2026
+
+In produzione questa versione porta tutto quello che è passato dalle prove
+delle beta 1.5.2, 1.5.3 e 1.5.4, elencate qui sotto: dall'ultima versione
+uscita — la 1.5.1 del 19 agosto — è cambiato tutto quello che si legge fino
+alla sezione «1.5.1».
+
+
+### Per chi gestisce
+
+- **Il tasto «▾ Filtri» non porta più nessun numero.** «Sì ma infatti
+  togliamo quel numero. Non serve» (22/08/2026). Accanto alla parola
+  «Filtri» c'era una cifra con quanti filtri erano accesi: è stata
+  calcolata in quattro modi diversi in due giorni e nessuno diceva quello
+  che chi guardava si aspettava — «non mi è chiaro come conta i filtri»,
+  «funziona al contrario», «ne ho tre e lui dice zero». Adesso il tasto
+  dice «▾ Filtri» e basta, in tutte le viste della coda, e non si colora
+  più. **Cosa fanno i filtri non cambia**: quali sono accesi si vede
+  aprendo la fila, dove i gettoni accesi si distinguono da soli.
+
+- **Le chiusure di cassa si guardano per serata, per settimana o per
+  mese.** «Aggiungi dei filtri alla lista delle chiusure cassa per mostrare
+  quelle settimanali o mensili oltre che per data» (22/08/2026). Sopra la
+  lista, nella riga della ricerca per data, ci sono tre gettoni: **Serata**
+  (com'era), **Settimana**, **Mese**. Una riga di settimana o di mese dice
+  il periodo, **quante serate** contiene, la **media a serata** e **quanto
+  ha incassato in tutto** — la media perché è quella che rende confrontabili
+  due settimane di lunghezza diversa: cinque aperture e tre aperture fanno
+  totali diversi per un motivo che non c'entra con com'è andata la sera.
+  **Toccando una riga si apre sulle sue serate**, che sono le righe di
+  sempre: da lì il riepilogo di cassa e il rendiconto si aprono come prima.
+  La **settimana comincia di lunedì**, così venerdì, sabato e domenica
+  stanno nella stessa riga; e una serata chiusa all'una di notte resta nella
+  settimana del giorno in cui è cominciata. Le settimane e i mesi senza
+  chiusure non compaiono. La scelta si ricorda sul tablet che si sta usando.
+
+- **Cercare una data non fa più perdere la vista scelta.** Guardando per
+  settimana o per mese, scegliere un giorno **apre il periodo che contiene
+  quella serata** e accende la riga della serata lì dentro, invece di
+  riportare all'elenco piatto. La frase sopra la lista dice dove guardare:
+  «evidenziata nella settimana 17–23 ago».
+
+- **L'aliquota IVA è una sola, quella del locale.** Ce n'erano due senza
+  che nessuno lo sapesse: una nelle impostazioni della stampante, salvata
+  **nel browser di ogni tablet**, che finiva sullo scontrino; e una nelle
+  impostazioni del bar, condivisa, usata da margini e statistiche. Due
+  tablet potevano quindi stampare scontrini con aliquote diverse, e l'IVA
+  sulla carta poteva non tornare con quella dei conti. Adesso la stampa
+  legge **l'aliquota del locale** — quella in *Impostazioni → Prezzi e
+  supplementi*, la stessa dei margini — e anche la fattura di cortesia. Il
+  campo nel pannello della stampante è sparito, con scritto dove si
+  imposta. Se su un tablet era rimasto un valore diverso, **viene
+  ignorato**: quel numero non lo legge più nessuno e da lì esce la stessa
+  carta di tutti gli altri. Con le due aliquote uguali, lo scontrino è
+  identico a prima.
+
+- **Le impostazioni di stampa automatica sono passate in «Cassa e
+  giornata».** Stavano sparse: due nel pannello della stampante, una fra i
+  pagamenti — «le impostazioni di stampa automatica riguardano la cassa»
+  (22/08/2026). Adesso stanno tutte in un riquadro solo, **🖨️ Stampa
+  automatica**, subito sotto Pagamenti: quando esce la comanda, quando esce
+  lo scontrino, chi stampa le comande prese in sala e la ricevuta d'acconto
+  automatica. Il riquadro dice anche **quali valgono solo per il tablet che
+  si ha in mano** e quali per tutto il locale. Nella sezione «Stampante»
+  restano le cose della macchina — indirizzo, prova di stampa, i dati che
+  finiscono sulla carta — con scritto dove sono andate le altre. Niente si
+  è spento: gli interruttori sono quelli di prima, cambiati di posto.
+
+- **Le statistiche si aprono sull'elenco delle serate.** «Statistiche»
+  adesso ha due voci nel menu: **Per serata** — quella che si apre di suo —
+  e **Per periodo**, quella di prima. La prima è la lista delle chiusure di
+  cassa, la più recente in cima, con per ogni serata **giorno, orari e
+  durata** e tre numeri incolonnati: **incasso, conti, scontrino medio**.
+  Così due sabati si confrontano guardandoli, senza aprire niente — e
+  toccando una riga si aprono tutte le statistiche di quella serata,
+  identiche a prima, con «← Chiusure» in alto per tornare all'elenco. **La
+  cassa ancora aperta è la prima riga**, con l'orario che dice «in corso» e
+  i numeri di adesso. Prima la serata era una pastiglia con una tendina:
+  per confrontare due sere bisognava aprirla, sceglierne una, leggere,
+  riaprirla e ricominciare. In «Per periodo» restano le giornate
+  (7/10/20/30/60 e Personalizzato); la pastiglia «Ultima chiusura» e la
+  tendina delle serate non ci sono più, perché quella è diventata una
+  sezione sua.
+
+- **Le chiusure di cassa sono una lista, la stessa del magazzino.** «Anche
+  qui nei rendiconti delle chiusure di cassa serve una lista fatta meglio,
+  stile quella del magazzino ma con righe più alte» (22/08/2026). Prima
+  ogni serata era un riquadro a sé; adesso è un elenco solo, con le righe
+  alte come quelle del magazzino e il dettaglio che si apre sotto la riga
+  toccata. La riga dice le stesse cose — data, apertura → chiusura, durata,
+  incasso — ma **l'incasso si legge da lontano**: è il numero che si cerca
+  quando ci si chiede com'è andata ieri sera.
+  **La serata in corso si riconosce a colpo d'occhio**, con due segni e non
+  uno: la pastiglia verde «in corso» al posto dell'ora di chiusura e la
+  striscia accesa a sinistra. E non dichiara più **0,00 €**: l'incasso di
+  una serata aperta si sa solo aprendo la riga, e uno zero in una lista di
+  soldi si legge come «stasera non è entrato niente». Finché il dato non
+  c'è, c'è un trattino.
+
+- **Le chiusure di cassa si cercano per data, e il riquadro è sparito.**
+  «Togli il box, lascia solo la lista, e aggiungi un selettore di data per
+  cercare una chiusura cassa» (22/08/2026). L'elenco non sta più dentro un
+  riquadro: occupa tutta la larghezza, come quello delle statistiche. Il
+  titolo «Chiusure di cassa» e la riga di spiegazione sotto non ci sono
+  più — il titolo è già nella barra in alto e la spiegazione ripeteva
+  quello che ogni riga dice da sé.
+  Sopra l'elenco c'è un **campo data**: scegliendo un giorno, la pagina
+  scorre fino a quella serata e la riga si accende. **L'elenco non si
+  filtra**, quindi le altre serate restano lì da confrontare e non serve
+  annullare niente per tornare a vederle tutte. Vale la serata, non il
+  giorno sul calendario: una serata aperta il 15 e chiusa all'una e otto si
+  cerca al **15**. Nel campo non si possono scegliere date future né
+  precedenti alla prima chiusura registrata, e se in quel giorno la cassa
+  non ha aperto lo dice: «Nessuna chiusura di cassa registrata per lunedì
+  18 agosto».
+
+- **Le righe del magazzino si toccano col dito.** Erano alte quanto la
+  scritta che ci sta dentro, e in piedi al banco — con 388 articoli in
+  elenco — si finiva per aprire la riga di fianco: «aumenta l'altezza
+  anche delle righe della tabella dell'inventario per un touch migliore»
+  (22/08/2026). Adesso sono alte quanto un bersaglio pieno, la misura di
+  tutti i tasti che si premono di corsa. La riga è più alta, non diversa:
+  striscia dell'assortimento, pallino delle scorte, legenda e dettaglio
+  che si apre sotto restano dov'erano. **Ed è una misura sola** per tutte
+  le liste dell'app — magazzino, chiusure di cassa, statistiche — così le
+  tre schermate non prendono strade diverse. Con lo zoom dell'app alzato
+  le righe non si gonfiano: restano grandi sotto il dito quanto a zoom
+  normale, e se ne vedono altrettante.
+- **Sulla comanda le voci sono sempre unite.** Se sul conto le righe erano
+  separate — perché si stava dividendo chi paga cosa — al banco uscivano
+  quattro righe «1 JEFFERSON» una sotto l'altra invece di una
+  «4 JEFFERSON»: «devono essere sempre unite sulla comanda»
+  (22/08/2026). Adesso la comanda si conta a colpo d'occhio, e il conto
+  resta come lo si è lasciato: separare le righe serve a dividere il conto,
+  e su scontrino e schermata di pagamento non cambia niente. **Le note
+  restano righe a sé**: «poco ghiaccio» su due dei quattro è lavoro
+  diverso, e non si mescola con gli altri due. Il numero dei pezzi in cima
+  al ticket è sempre quello giusto. Ne guadagna anche la **ricevuta unica**
+  di più comande, che prima poteva perdere per strada una delle due note.
+
+- **«📅 Solo oggi» adesso si vede anche fuori dalla griglia.** Accendendolo
+  fra i conti e passando alle comande, la coda restava tagliata dei giorni
+  scorsi senza niente a schermo che lo dicesse e senza un tasto per
+  rimetterla a posto. Ora il tasto lo si ritrova acceso dov'è acceso, e il
+  numero sui filtri lo conta in tutte le viste.
+
+- **Sui temi chiari il testo non sparisce più dentro i riquadri colorati.**
+  Nel dettaglio di una comanda i passi già fatti sono verdi, e la scritta
+  dentro era verde pallido: «il colore verde del testo non si legge bene
+  sullo sfondo verde qui». Adesso il nome del passo e **l'ora sotto**
+  prendono il colore del testo normale, su tutti i temi — e l'ora si legge
+  anche sul passo in corso, dove il riquadro è dorato e prima era quasi
+  invisibile su ogni tema, scuri compresi.
+  Cercando lo stesso difetto altrove sono venuti fuori: il **numero dentro
+  un riquadro acceso** dell'inventario («scarsi 7», «finiti 3»), che non si
+  leggeva su nessun tema; le pastiglie **«in corso»** del registro ore e
+  **«chiuso»** dei gruppi, che sparivano sui temi chiari; i **numeri in
+  perdita**, rosso pallido su bianco; e la pastiglia **«pagato»**, che
+  cambiava colore col tema — su Pico era azzurra come «in preparazione», e
+  adesso è ambra ovunque, come lo stato vuole.
+  Sui temi scuri, quelli che si usano al banco, non è cambiato in peggio
+  niente: ogni riga è stata rimisurata in un browser vero, tema per tema.
+
+- **Nel conto, la maniglia del piede sta più vicina al totale.** Fra la
+  maniglia e la riga del Totale c'era più vuoto della riga stessa, e tirando
+  su la maniglia per ingrandire i tasti quel vuoto cresceva insieme a loro.
+  La presa sotto il dito è rimasta identica: si è stretto solo lo spazio.
+
+- **Dal pannello delle comande non si stampa più lo scontrino del conto.**
+  C'era un tasto che, da dentro la finestra delle comande, mandava in stampa
+  il riepilogo del cliente: due carte diverse dietro lo stesso vetro, e
+  quella sbagliata era la più lunga. Lì si stampano le comande; lo scontrino
+  esce riscuotendo, e il riepilogo da mostrare prima di pagare è il
+  «Preconto».
+
+- **Lo stato del servizio è passato nella barra in alto del conto**, in
+  fondo a destra: «🍹 In preparazione», «🔔 Pronto», «🧾 Da fare». Stava
+  nella testata della colonna del conto, schiacciato fra il numero e i
+  tastini delle righe; adesso la riga in cima si legge in due metà — a
+  sinistra il conto e i soldi (numero, ora, «🟢 Conto aperto» o «💳
+  Pagato», chi l'ha aperto), a destra **a che punto è il lavoro**. Le due
+  pastiglie non si confondono: fermandocisi sopra ognuna dice di cosa
+  parla. **Quando compare e cosa dice non cambiano**: si vede solo sui
+  conti in corso, dove il locale segue il servizio, e porta sempre il
+  passo **più indietro** fra le comande ancora aperte — quello che manca,
+  non quello che è già uscito.
+  **Sul telefono**, dove quella riga è stretta, per far posto cedono
+  l'**ora di apertura** (si rilegge nella storia del conto, dal ⋯) e la
+  **parola** dello stato del conto, che resta il suo segno (🟢 / 💳 / 🟡)
+  col nome per esteso tenendoci premuto sopra. In cambio i tasti dello
+  **zoom** non finiscono più fuori dallo schermo.
+  **Con l'app ingrandita** vale la stessa regola: la riga si guarda per
+  quanto è larga davvero, non per quanto è larga la finestra, e man mano
+  che lo spazio manca lascia andare prima l'**id interno**, poi **chi ha
+  aperto il conto**, poi l'**ora**. Su una riga sola, sempre — provato dal
+  telefono al monitor e da 100% a 160%.
+
+- **Le tre colonne della schermata di pagamento si allargano e si
+  stringono**, come già quelle del dettaglio ordine: si prende il bordo fra
+  una colonna e l'altra e lo si trascina (col dito, tenendo premuto un
+  istante). Chi batte gli importi a mano si fa il **tastierino grande**;
+  chi divide un conto lungo si allarga la **lista delle voci**. La misura
+  **resta su quel tablet** — il banco e la sala possono tenerla diversa — e
+  non si può stringere niente fino a farlo sparire: i tasti con cui si
+  sceglie come incassare restano sempre lì, e al tastierino resta sempre
+  almeno un terzo dello schermo, a qualunque zoom. Sul telefono, dove le
+  colonne sono già una sotto l'altra, non cambia nulla.
+
+- **Via l'avviso «Comande non ancora servite» dalla schermata di
+  pagamento.** Era una riga fissa sotto l'importo, e quando si ingrandisce
+  l'app quella riga è spazio tolto al **tastierino**. Quello che diceva non
+  si perde: lo dice il tasto **«Riscuoti e servi · chiude il conto»** — se
+  quello chiude, l'altro no — e chi passa col mouse su **«Riscuotere»** se
+  lo trova scritto per esteso. Non cambia niente di come si incassa.
+
+- **Con lo zoom su, il tastierino del pagamento non finisce più dietro
+  «Riscuotere».** Ingrandendo l'app al 120% l'ultima riga di tasti — lo
+  **0**, il **00**, l'**=** e il tasto per **cancellare una cifra** —
+  spariva sotto il tasto blu dell'incasso: chi batteva un importo a mano
+  non trovava più né lo zero né il modo di correggersi. Adesso i tasti
+  restano grandi **quanto prima davvero sotto il dito** e il tastierino ci
+  sta per intero; su una finestra molto bassa tenuta a zoom alto scorre da
+  sé, e i tasti che incassano restano dove sono. Provato a ogni livello di
+  zoom, dal 100% al 160%.
+
+## 1.5.4-beta
+
+### Per chi gestisce
+
+- **Non nascono più due conti con lo stesso numero dopo un ricaricamento.**
+  Ricaricando la pagina l'app per un attimo non sapeva ancora quale cassa
+  fosse aperta, e un conto battuto proprio in quell'istante prendeva il
+  numero da un'altra serie: usciva un **secondo #5** nella stessa sera — e
+  quel conto per giunta non finiva nella chiusura di cassa. Adesso l'app
+  **si ricorda la cassa della serata** e non se la dimentica al ricarico.
+  Come sempre, non aspetta niente e nessuno: il conto compare nell'istante
+  in cui lo confermi.
+
+- **Un conto annullato e poi rimesso in piedi avvisa una volta sola, e dice
+  che è tornato.** Prima ne arrivavano due, una dietro l'altra e con parole
+  diverse: «🆕 Nuovo ordine — Ordine #5 ricevuto.» e «Ordine ricevuto —
+  Ordine #5». Chi legge si chiede se siano due cose, e va a cercare un
+  ordine che non è mai arrivato. Adesso l'avviso è uno e dice **«↩️ Conto
+  ripristinato»** — quello che è successo davvero. Un conto che il banco ha
+  già visto non torna a essere «nuovo» nemmeno se nel frattempo era sparito
+  dalla coda, e **chi preme «Ripristina» non se lo sente ripetere**, come
+  già succede per chi annulla.
+
+- **Annullando un conto appena battuto, la comanda non esce più.** Si
+  batteva un ordine alla cassa, si cambiava idea, si annullava — e il
+  ticket usciva lo stesso: carta buttata, e al banco si cominciava a
+  preparare roba che nessuno doveva fare. Adesso l'annullo ferma anche la
+  stampa. E il tasto **«Comanda»** su un conto annullato non stampa più
+  niente: prima faceva uscire un ticket con dentro *tutte* le righe del
+  conto.
+
+- **Chi versa un acconto adesso può portarsi via la sua ricevuta.** Se
+  riscuotevi solo una parte del conto non usciva niente: la stampa era
+  attaccata alla chiusura, e un acconto non chiude. Adesso c'è un
+  **documento suo** — in cima c'è scritto **ACCONTO** in nero, e in fondo
+  che **il conto resta aperto**, così non si può scambiare per lo
+  scontrino finale — con **cosa ha pagato** (le righe di quella
+  riscossione, quando ce ne sono), **quanto**, **con che metodo** e
+  **quanto resta da incassare**.
+  Si accende da **Impostazioni → Pagamenti**, e ci sono due modi:
+  **«Un tasto per l'acconto con lo scontrino»** aggiunge il tasto
+  *«Acconto con scontrino»* accanto agli altri due, da premere quando
+  serve; **«Lo scontrino d'acconto a ogni riscossione»** lo fa uscire da
+  solo ogni volta che incassi una parte, senza premere niente. Acceso il
+  secondo, il primo si spegne da sé (dice anche perché): la carta esce
+  già, e il tasto non servirebbe più. Se l'incasso salda tutto il tasto
+  resta lì spento — lì quello che esce è lo scontrino, non un acconto — e
+  toccandolo te lo dice.
+  Cosa c'è scritto sulla carta lo scegli tu in **Impostazioni →
+  Stampante → Campi dell'acconto**, come per lo scontrino e la comanda.
+  Di suo non cambia niente per nessuno: nasce spento.
+
+- **Il preconto adesso dice anche quanto manca.** Su un conto con degli
+  acconti già presi elencava gli incassi ma non il resto: il totale
+  sopra, i versamenti sotto, e la sottrazione la facevi a mente col
+  cliente davanti. Adesso c'è la riga **«Resta da pagare»**. Su uno
+  scontrino di conto chiuso non compare: lì non resta niente.
+
+- **I due tasti in più del pagamento stanno affiancati, e si accendono
+  tutti e due da «Pagamenti».** Sotto il tastierino c'erano tre tasti uno
+  sopra l'altro: il grande «Riscuotere» e, in fila sotto di lui, «Riscuoti
+  (senza stampa)» e «Riscuoti e servi». Adesso **«Riscuotere» resta da
+  solo, largo quanto la schermata** — è il gesto di sempre — e le altre due
+  vie stanno **una accanto all'altra su una riga sola**, metà e metà. Se ne
+  hai accesa una sola, quella si allarga e prende tutta la riga. Sul
+  telefono, dove due tasti così sarebbero troppo stretti, tornano uno sotto
+  l'altro invece di stringersi.
+  E l'interruttore di **«Un tasto per incassare e servire insieme»** si è
+  spostato in **Impostazioni → Pagamenti**, accanto a quello di «incassare
+  senza stampare»: era in «Gestione preparazione» e non lo trovava
+  nessuno. Fa esattamente quello che faceva prima, ma adesso sta dove uno
+  lo cerca. Come prima, si vede solo se segui la preparazione degli
+  ordini: senza quei passi «servire» non esiste.
+
+- **I tasti per incassare non si toccano più.** «Riscuoti e servi» stava
+  appiccicato a «Riscuotere» e sembrava la sua seconda riga: due gesti
+  diversi — uno incassa, l'altro incassa e dà per servito tutto — a un
+  millimetro l'uno dall'altro. Ora sono staccati, e lo stesso vale per
+  «Riscuoti (senza stampa)».
+
+## 1.5.3-beta
+
+### Per chi gestisce
+
+- **Nel pagamento c'è «Deseleziona tutti»: un tasto e il conto va a
+  zero.** Sta **in cima alla lista delle voci**, accanto a «Separa
+  uguali»/«Unisci uguali». Quando il cliente comincia a dirti cosa ha
+  preso, lo premi una volta: **tutte le voci si spengono insieme** e da lì
+  aggiungi solo quelle che ti sta pagando, una per una. Su un conto da
+  venti prodotti dove ne paga uno, prima toccava togliere la spunta a
+  diciannove voci; adesso è un tasto e un tocco. Quando la lista è tutta
+  spenta lo stesso tasto diventa **«Seleziona tutti»** e rimette dentro
+  tutto. Il vecchio **«Rimetti tutto in pagamento»**, che stava in fondo
+  alla lista, non c'è più: fa lo stesso lavoro questo, dove lo vedi.
+  Con **niente selezionato** l'importo è 0,00 € e sopra c'è scritto
+  «nessuna riga scelta»: «Riscuotere» resta spento finché non scegli una
+  voce — così non parte un incasso vuoto — ma il **tastierino** funziona
+  come sempre, se vuoi battere una cifra a mano. E uno **sconto già
+  preparato non si perde**: resta lì, e appena tocchi la prima voce torna
+  a seguire quello che stai riscuotendo.
+
+- **Il tasto del menu non copre più i conteggi della coda, e sopra le card
+  c'è una riga in meno.** A tutto schermo, con la barra in alto nascosta,
+  il ☰ era appeso sull'angolo dello schermo: appena scorrevi la coda ci
+  finiva sotto l'inizio delle scritte — «4 aperti · 16 chiusi · 583,00 €»
+  si leggeva «…erti · 16 chiusi», e il nome del terminale «…o Bar · sei
+  tu». Adesso il ☰ **sta dentro la testata**, primo tasto in alto a
+  sinistra, e scorre insieme a lei: non copre più niente, né in cima né
+  scorrendo. Quando la testata è scorsa via il menu si riapre dalla
+  linguetta, come tutto il resto.
+  E la testata sul **telefono** è passata da **quattro righe a tre**: «▾
+  Filtri» e «↓» non hanno più una riga tutta loro — stanno in fondo alla
+  riga della ricerca, che è dove la lista e le schede li tengono già — e
+  «In servizio» non si spezza più in due. Non si è perso niente:
+  conteggi, incasso, chi sei e su che terminale, ricerca, filtri,
+  ordinamento, cambio vista, stampante e il ＋ sono tutti dove erano. Sulla
+  lavagna sono una ventina di pixel restituiti alle card.
+
+- **Nel pagamento, il primo tocco sceglie: «di tutto il conto, mi paghi
+  questo».** La schermata si apre con tutto acceso, come sempre. Ma
+  adesso, **appena tocchi una voce — il nome del prodotto, o il suo «+» —
+  tutte le altre si spengono** e resta in riscossione solo quella. Da lì
+  in poi ogni tocco **aggiunge**: tocchi un'altra voce e si accende
+  anche lei. Le voci fuori restano lì, **smorte** ma leggibili: si
+  rimettono dentro toccandole. Prima, per incassare una birra su un conto
+  da dieci righe, dovevi spegnerne nove a una a una. Il **«−»** funziona
+  come ha sempre funzionato, e con **«Seleziona tutti»** in cima
+  torni ad avere tutto acceso. Su un prodotto con più pezzi: toccare il
+  nome prende **tutta la riga**, il «+» e il «−» muovono **un pezzo per
+  volta** — e visto che il conto si apre già a pezzi separati, di solito
+  è un tocco solo.
+
+- **Lo sconto si fa sui prodotti che stai riscuotendo, e se ne può fare
+  più d'uno.** Prima lo sconto era uno solo e stava sul conto intero:
+  se poi si toglievano prodotti dalla schermata di pagamento, chi pagava
+  la sua parte si portava via *una fetta* di quello sconto, e il conto
+  non tornava con niente di quello che aveva sul tavolo. Adesso lo sconto
+  cade **sulle righe che sono accese in quel momento**: togline una e
+  l'importo si rifà su quelle rimaste. Quando riscuoti, quello sconto se
+  ne va **dentro quell'incasso** e il conto riparte pulito — così chi
+  resta al tavolo può farsi scontare le sue, e **sono due sconti**, non
+  uno diviso in due. Sullo scontrino li trovi elencati uno per uno, con
+  scritto su cosa cadevano («Sconto 10% su 3 prodotti −6,00 €»). Se fai
+  **un solo sconto su tutto il conto** — che è quello che si fa quasi
+  sempre — non cambia niente: la riga è «Sconto», come è sempre stata.
+  Vale anche per il **buono**: copre le righe che stai riscuotendo, e mai
+  più di quanto valgono. I conti già aperti stasera restano com'erano e
+  si chiudono come prima.
+
+- **Il colore del conto si sceglie da una finestrella.** Nel «⋯ Azioni»
+  di una card — del conto come della comanda — c'era la fila dei dodici
+  colori: tre righe di quadratini che coprivano le azioni vere. Adesso c'è
+  **un tasto solo**, «Colore del conto», con accanto **il pallino del
+  colore che il conto ha adesso** — si legge senza aprire niente. A
+  toccarlo si apre la tavolozza con i **gettoni grossi**, comodi da
+  prendere col pollice: scelto il colore, si applica e si richiude tutto,
+  finestrella e menu.
+
+- **I tasti delle card della coda stanno un filo più vicini.** Un paio di
+  pixel in meno fra l'uno e l'altro, dappertutto la stessa misura. I tasti
+  restano grandi come prima, e lo stacco dal contenuto sopra pure: serve a
+  non premere quello sbagliato di corsa.
+
+- **La striscia colorata delle card può dire il colore del conto.** In
+  *Impostazioni ▸ 🎨 Aspetto ▸ Le card della coda* si sceglie cosa dice
+  quella riga a sinistra: **«💳 Com'è messo il conto»** — da incassare,
+  acconto, pagato, annullato, com'è sempre stato — oppure **«🎨 Il colore
+  del conto»**, quello scelto dal «⋯ Azioni» della card o assegnato da solo
+  ai conti nuovi. Vale in tutte le viste della coda, comprese le corsie del
+  banco. Chi non tocca niente non vede cambiare niente. Un conto **senza
+  colore**, e un conto **annullato**, tengono sempre la striscia dello
+  stato.
+
+- **Il colore del conto si vede molto di più.** Era un velo così tenue da
+  non riconoscersi da due passi: adesso la card è tinta il doppio, e da
+  lontano si vede al volo che tre comande sparse in tre colonne sono lo
+  stesso tavolo. Il testo resta leggibile su tutti i temi, chiaro e scuro.
+
+- **Nella griglia il conto pagato-ma-da-servire torna ambra.** Era verde
+  come uno concluso: la striscia ambra — «i soldi li hai già presi, il
+  drink lo devi ancora fare» — c'era ma non si vedeva mai. Nelle corsie il
+  difetto non c'era.
+
+- **Le card del banco non si sfasciano più con tante colonne accese.**
+  Quando la card diventa stretta — sette colonne su un tablet, ma succede
+  già a quattro — i tasti **si impilano invece di schiacciarsi**: prima
+  scende sotto, **a tutta larghezza**, quello che porta avanti il lavoro
+  («Pronto», «Servito», «Incassa»), che è quello che si preme di corsa;
+  più stretta ancora, vanno in colonna tutti e tre. A decidere è la
+  **larghezza vera della card**, non quante colonne sono accese: la stessa
+  card è stretta con sette corsie e larga con tre, sullo stesso schermo. E
+  il tempo — «5 min» — **non va più a capo una lettera per riga**.
+
+- **Sopra i conti ci sono tre filtri, e se ne guarda uno per volta.**
+  **Aperti** (si chiamava «In corso»), **💶 Chiusi**, **✖️ Annullati**:
+  toccandone uno gli altri si spengono, e ce n'è sempre uno acceso — la
+  coda si apre sugli **Aperti**, che è il lavoro da fare. La scheda
+  **«Tutti» non c'è più**: mescolava gli incassi con gli annullati, e non
+  rispondeva a nessuna domanda vera.
+
+- **«💶 Chiusi» è un tasto solo, con tre porzioni.** Accendendolo, dentro
+  lo stesso tasto compaiono **«Da servire/Ritirare»** e
+  **«Serviti/Ritirati»**: senza toccarle si vedono **tutti i conti
+  chiusi**, accendendone una si vede solo quella — quali hanno ancora
+  qualcosa da portare, o quali sono usciti per intero. Ritoccandola si
+  torna a vederli tutti. Le due porzioni ci sono solo dove si segue la
+  **preparazione**; e dove al banco **non si ritira** si chiamano
+  semplicemente «Da servire» e «Serviti».
+
+- **«✍️ Miei» è diventato la tendina «Staff».** Dentro c'è **chi ha
+  aperto almeno un conto** stasera — più una voce **Clienti** per gli ordini
+  arrivati dall'app — e sono **tutti selezionati**: si vede tutto. Da lì si
+  spegne chi non interessa e restano **i conti di chi si vuole**: i propri,
+  come prima, oppure quelli di un collega. Da chiusa la pastiglia lo dice
+  senza aprirla — «✍️ Staff», «✍️ Marta», «✍️ 2 di 5» — e si
+  incrocia con gli stati: **i chiusi di una persona sola** si chiedono in due
+  tocchi. Anche qui non si resta mai senza nessuno: spegnendo l'ultimo
+  tornano tutti.
+
+- **Le colonne del banco si chiamano col lavoro che c'è dentro.** Dove
+  c'era **«Pronto»** adesso c'è **«Da servire/Ritirare»**, e dove c'era
+  «Ritirato/Servito» c'è **«Serviti/Ritirati»**: una colonna non dice a che
+  punto sta il drink, dice cosa c'è da farci. Dove al banco **non si
+  ritira** restano «Da servire» e «Serviti». Sono le stesse parole delle
+  porzioni del tasto dei chiusi, così la colonna e il filtro che parlano
+  della stessa cosa si chiamano allo stesso modo.
+
+- **Il pronto si divide dal suo stesso tasto.** Al banco quella colonna
+  può aprirsi in due — **«Da servire»** e **«Da ritirare»** — e
+  fino a ieri lo chiedeva un tasto in fondo alla fila dei filtri che diceva
+  «✂️ Dividi il pronto»: lungo, e lontano dalla colonna di cui parlava.
+  Adesso il segno **✂️ sta attaccato al chip della colonna**, e premendolo
+  **nello stesso punto** compaiono i due chip «Da servire» e «Da ritirare»,
+  con un **🔗** per rimetterli insieme. Si vede a colpo d'occhio a cosa
+  serve, perché sta dove agisce. Come sempre è una scelta **di quel
+  tablet**, e **compare solo se al banco si ritira**: col solo servizio ai
+  tavoli non c'è niente da separare e il segno non c'è.
+
+- **Il tasto dei filtri sta a destra, e i filtri escono sotto in UNA riga
+  sola.** È un **«▾ Filtri»** in **fondo a destra**, accanto alla freccia
+  dell'ordinamento, **sulla riga dei conteggi che c'era già**: a filtri
+  chiusi la coda **non perde nemmeno una riga**. Toccandolo compaiono i
+  chip, **tutti sulla stessa riga**: al banco ci sono anche **le colonne**,
+  una pastiglia per colonna, in fila con gli altri — non più dietro un
+  «▦ Colonne» da toccare, e non più in una seconda riga sotto. Un tasto
+  solo apre e chiude tutto. Richiudendo la fila **sparisce del tutto**.
+  Le due porzioni dei chiusi stanno **dentro il tasto «💶 Chiusi»**, non
+  più in una riga «Dei chiusi:» tutta loro.
+
+- **Filtri e ordinamento sono due bottoni bassi, gemelli.** Si vede che sono
+  tasti — hanno il loro riquadro — ma sono **più bassi** di quelli che si
+  premono di corsa: in mezzo a una riga di testo un tasto alto è uno
+  scalino, e la riga dei conteggi **non è cresciuta di un pixel**. Il tasto
+  dei filtri tiene la freccetta e la scritta; l'ordinamento è un quadratino
+  con la sua freccia, della stessa misura. E **tutti i tasti dei filtri sono
+  un filo più piccoli**, così in una riga sola ce ne sta di più.
+
+- **Il numerino sul tasto dei filtri conta solo quello che hai cambiato.**
+  Prima segnava sempre almeno uno, e non distingueva niente: adesso compare
+  **solo se la coda è filtrata diversamente da come si apre**, e **solo a
+  filtri chiusi** — aperti, i chip accesi si vedono da soli.
+
+- **I filtri della coda stanno a scomparsa.** Sopra i conti c'era una fila
+  di pastiglie che si mangiava tutta la riga: adesso stanno dietro il tasto
+  qui sopra, e si aprono quando servono. Vale allo stesso modo per gli
+  **ordini** e per le **comande** — dove dentro ci sono anche le colonne da
+  accendere e spegnere — e **ogni tablet se lo ricorda a modo suo**: chi la
+  tiene aperta la ritrova aperta.
+
+- **Il tasto dell'ordinamento dice com'è messa la coda adesso**, in tre
+  parole: **«Prima i più recenti»** oppure **«Prima i più vecchi»**. Prima
+  c'era una frase lunga che metteva insieme com'era messa e cosa sarebbe
+  successo a premere, e non se ne leggeva nessuna delle due. Anche l'icona
+  lo dice: una **freccia sola** — **↓** quando si parte dai più recenti,
+  **↑** quando si parte dai più vecchi — dove il «↕» era uguale nei due
+  casi. Sta **in riga col tasto dei filtri**, sotto la testata, sul tablet
+  come sul telefono, e **non si nasconde mai**: non è un filtro, è il verso
+  in cui si legge la coda.
+
+- **Il tasto per passare da ordini a comande è salito in alto**, ed è
+  diventato un'icona piccola accanto agli altri: **🧾** quando porta ai
+  conti, **🍸** quando porta alle comande. Continua a dire dove porta, non
+  dove sei, e resta a un tocco anche col telefono in mano — è l'unico dei
+  tre rimasto lassù.
+
+- **«Chiudi cassa» non occupa più mezza testata, e torna a dire perché è
+  spento.** Era largo quanto la frase che aveva sotto; adesso il tasto resta
+  della sua misura e **la riga sotto è tornata, più corta**: «Chiudi 3 conti
+  e 2 comande». Provando a chiuderla lo dice comunque, per chi preme di
+  corsa.
+
+- **Il magazzino spiega i suoi segni**: sopra la lista c'è la legenda dei
+  pallini (quanta roba c'è) e delle strisce colorate (in linea, premium,
+  fuori assortimento). Era la domanda di Flavio: «che significa la
+  bacchettina davanti?» — ora lo dice da solo.
+
+- **Lo scontrino e la comanda si scelgono campo per campo.** In
+  *Impostazioni → Stampante* ci sono due riquadri nuovi, «Cosa c'è sullo
+  scontrino» e «Cosa c'è sulla comanda»: un interruttore per ogni riga che
+  la stampa può avere — il numero del conto, chi l'ha battuto, quante
+  persone, l'IVA, il codice lotteria, la fascia nera della comanda, le note
+  dei prodotti — e dove la riga è solo testo si cambiano anche le parole
+  («DIRETTO» sulla fascia, «Il tuo menu» sotto al nome). Si può aggiungere
+  una **riga di saluto** in fondo allo scontrino. **La lista dei prodotti
+  non si tocca** — e sullo scontrino nemmeno il totale: sono la carta, non
+  un di più. Ogni riquadro ha una **prova di stampa** che fa uscire un
+  conto finto coi campi scelti, così si vede prima di stampare quello vero.
+  **Se non si cambia niente, non cambia niente**: le stampe restano
+  identiche a prima, riga per riga.
+
+- **Il logo si carica dall'app, e si sceglie su quali stampe esce.** Prima
+  usciva in cima allo scontrino e basta, e per cambiarlo bisognava toccare
+  il codice. Adesso in *Impostazioni → Stampante → Logo sulle stampe* si
+  decide stampa per stampa — scontrino, preconto, comanda, chiusura di
+  cassa — e si **carica l'immagine** (la cambia solo l'amministratore).
+  L'immagine viene ridotta alla misura che la stampante vuole, e se non va
+  bene **lo si sa subito**: una foto scura, che sulla carta uscirebbe come
+  un rettangolo nero, viene rifiutata spiegando perché, e il logo resta
+  quello di prima. Di suo tutto come sempre: logo su scontrino e preconto,
+  non sulla comanda — al banco è solo carta consumata.
+
+- **Le comande si spostano anche col dito.** Nella lavagna del banco si
+  tiene premuto su una comanda, la card si stacca e si lascia nella colonna
+  che si vuole: lo stato diventa quello della colonna, avanti o indietro che
+  sia. **I tasti non cambiano di niente** — questa è solo una seconda
+  strada per lo stesso gesto. Le colonne che non accettano una comanda
+  («Chiuse» e «Annullate») lo dicono mentre la card è ancora in mano, e
+  restano com'erano.
+
+- **La comanda la stampa il terminale che ha battuto l'ordine, e solo
+  lui.** Prima la faceva uscire il primo tablet che vedeva l'ordine fra
+  quelli con la stampa automatica accesa: si batteva un conto al banco e la
+  carta poteva uscire dal terminale in fondo alla sala. Adesso stampa chi
+  l'ha inserito. Gli ordini presi **dai clienti col telefono** non hanno un
+  terminale che li ha battuti e restano come prima — li stampa chi ha
+  l'interruttore acceso, cioè il banco. E se il locale ha scelto **«la
+  stampa il banco»** per le comande della sala, non cambia niente: quella
+  scelta vince.
+
+- **I filtri della coda stanno nello stesso punto in tutte e due le viste.**
+  Nella vista a griglia degli ordini occupavano una riga tutta loro, nelle
+  corsie no: passando dall'una all'altra bisognava ricercarli. Adesso stanno
+  **sulla riga dei conteggi** anche in griglia — dove non ci stanno tutti la
+  riga **scorre di lato**, non va a capo — e si è guadagnata una riga di
+  altezza per i conti.
+
+- **Niente più «Invalid Date» sopra un gruppo di conti.** Un conto di cui
+  non si riusciva a leggere la data finiva sotto un'intestazione che diceva
+  proprio così. Adesso la data si cerca in **tutte** le date che il conto si
+  porta dietro — quella scritta alla nascita, l'ora del server, l'apertura
+  segnata dal tablet — e il conto finisce sotto **il suo giorno**. Se
+  davvero non ce n'è nessuna, il conto sta **sotto oggi**, dove chi lavora
+  lo vede: nessuna etichetta inventata.
+
+- **Fra i conti chiusi non c'è più scritto «Da chiudere».** La riga che
+  separa i giorni scorsi diceva **«⏳ Da chiudere · ieri»** in ogni scheda,
+  anche sopra conti pagati e chiusi — e si andava a cercare cosa mancasse su
+  conti a posto. Adesso l'etichetta dice quello che quei conti sono davvero:
+  **«💶 Chiusi · ieri»**, **«✖️ Annullati · ieri»**, e nella scheda «Tutti»,
+  dove sono mescolati, la sola data.
+
+- **Le colonne spente al banco si vedono anche a filtri chiusi.** C'era un
+  tasto «▦ Colonne» arancione **sempre**, anche su un tablet appena aperto:
+  «Chiuse» e «Annullate» nascono spente apposta, quindi l'arancione c'era
+  comunque e non distingueva niente. Adesso quel tasto non c'è più — le
+  colonne sono pastiglie in fila coi filtri, e da aperta si vede da sé
+  quali sono spente — e a filtri **chiusi** lo dice il numerino sul tasto
+  «▾ Filtri», che ci passa sopra e si legge quante e quali. E le colonne
+  **che non esistono più** (gli id sono cambiati negli anni) non restano
+  più appese nella memoria del terminale a tenerlo acceso senza che si
+  potesse spegnerlo.
+
+- **Un ordine appena battuto è UNA comanda sola, e il ticket esce quando si
+  esce.** Battendo un conto nuovo poteva uscire **più di una comanda** — e
+  con l'auto-stampa accesa più di un foglio, uno col primo prodotto da solo.
+  Adesso, finché non si torna agli ordini, il conto **si sta ancora
+  battendo**: tutto quello che si aggiunge entra nella stessa comanda, e la
+  stampante aspetta. Andare in pagamento e tornare indietro **non** chiude
+  la battuta. Quando si esce, esce **un ticket solo, completo**.
+- **Una comanda si allunga finché nessuno l'ha presa in mano.** Non conta
+  più in che passo si trova, ma se qualcuno l'ha **presa in carico**
+  davvero: se il locale fa nascere le comande già «in preparazione», quelle
+  non le ha ancora prese in mano nessuno e le righe nuove ci entrano. Da
+  quando qualcuno segna «la preparo io», le aggiunte fanno un **ticket
+  nuovo**. E se la comanda era **già stampata** e si allunga, **il ticket si
+  ristampa completo**: il foglio vecchio si butta, quello nuovo ha tutto.
+- **Con gli stati del servizio spenti, sceglie chi sta al banco.** Aprendo
+  un conto già creato e aggiungendo righe, sotto il totale compaiono due
+  tasti — **«Nella comanda»** e **«Comanda nuova»** — perché lì l'app non ha
+  modo di saperlo da sola. Finché non si sceglie, le righe restano a
+  schermo; uscendo senza scegliere vanno nella comanda.
+
+- **Battendo in fretta non si perde più niente.** Aggiungendo prodotti uno
+  dietro l'altro su uno stesso conto poteva restare **solo il primo**: due
+  modifiche partite nello stesso istante scrivevano tutte e due l'elenco
+  delle comande, e l'ultima cancellava l'altra. Adesso le modifiche di uno
+  stesso conto si mettono **in fila**, e ognuna parte da quello che ha
+  fatto quella prima. Non si aspetta niente in più: il conto a schermo si
+  aggiorna al tocco come sempre, e **conti diversi non si fanno la coda a
+  vicenda**.
+
+- **Sul sito di test si può provare la stampa senza stampante**: nella
+  sezione Dev c'è «Stampante simulata» — le stampe escono come facsimile a
+  schermo, solo su quel dispositivo.
+
+- **Tornando in coda ordini non escono più gli scontrini.** Rientrando
+  nella coda — la prima volta della serata, o dopo aver svuotato la memoria
+  del browser — la stampante sfornava lo **scontrino di ogni conto pagato**
+  che vedeva, uno dietro l'altro. Adesso la coda stampa **solo comande**: lo
+  scontrino esce **quando si incassa**, dal pannello dei pagamenti o dai
+  tasti rapidi 💶 Contanti / 💳 Carta, che è il momento in cui serve.
+  E il segno «già stampato» sta **sul conto**, non nella memoria del
+  singolo tablet: due terminali accesi non fanno due copie, e un tablet
+  nuovo non ristampa niente di vecchio. Riaprendo un conto il segno si
+  azzera: riscuotendo di nuovo, la carta esce di nuovo.
+
+- **Sul tema chiaro i tasti delle impostazioni hanno di nuovo il contorno.**
+  Le scelte a pulsanti e i filtri non selezionati erano senza bordo — bianco
+  su bianco — e sembravano scritte, non tasti.
+
+- **Nella lavagna delle comande ci sta una comanda in più.** I filtri
+  («✍️ Miei», le colonne, e il tasto che passa agli ordini) non hanno più
+  una riga tutta loro fra i conteggi e le colonne: stanno **sulla riga dei
+  conteggi**, a destra. Sono **44px guadagnati** e un livello in meno prima
+  di vedere la prima comanda — quella lavagna si guarda da lontano mentre
+  si versa, e ogni riga sprecata sopra è una comanda in meno sotto. I
+  filtri fanno esattamente quello che facevano: è cambiato solo dove
+  stanno. Sul **telefono** restano com'erano, sotto e scorrevoli.
+
+- **Al cliente si promette solo quello che succede davvero.** Il tasto
+  **«🔔 Avvisami quando è pronto»** compare soltanto sui conti da **ritiro
+  al banco**: è l'unico caso in cui, quando il drink è pronto, deve alzarsi
+  lui. Chi è servito al tavolo legge invece che non deve fare niente, e chi
+  non ha dato il permesso alle notifiche legge che **la pagina si aggiorna
+  da sola** — è la strada che funziona sempre. Con **gli stati del servizio
+  spenti** non si promette nessun avviso: si dice di ritirare al banco
+  quando il drink è pronto. E l'avviso parte **una volta sola per comanda**:
+  se qualcuno riporta indietro lo stato e lo rimette «pronto», niente
+  secondo squillo.
+  ⚠️ **Quest'ultimo pezzo gira sul server e resta senza effetto finché non
+  si autorizza il deploy delle Cloud Functions** — come per le notifiche di
+  ritiro e servizio allo staff, corrette giorni fa e ancora ferme per lo
+  stesso motivo.
+
+- **Ogni conto può avere il suo colore, e le sue comande se lo portano
+  dietro.** La card si tinge — un velo di colore sfumato dall'angolo, sulla
+  card del conto e su tutte le card delle sue comande: un conto battuto in
+  tre volte finisce in tre colonne diverse della lavagna, e da lontano quel
+  colore è l'unica cosa che dice che sono lo stesso tavolo. In **Impostazioni → Coda ordini → «Il
+  colore del conto»** si accende «ogni conto nuovo nasce col suo colore»;
+  acceso o spento che sia, il colore si sceglie e si toglie a mano dal
+  **«⋯ Azioni»** della card — anche sui conti già aperti. La striscia a
+  sinistra non cambia: quella continua a dire a che punto sta il lavoro.
+
+- **Nella conta di magazzino si legge quanto se ne va a settimana**, accanto
+  al consumo del periodo — ed è diviso per le settimane **vere**, contate
+  dalle date della conta, non per un numero fisso da tenere aggiornato a
+  mano. È il numero su cui si decide quanto ordinare. Finché la conta è
+  troppo fresca per dire qualcosa non compare: meglio niente che un numero
+  inventato, che manda a comprare merce che non serve.
+
+- **L'IVA di vendita si cambia sulla singola voce di menù**: nella scheda
+  del prodotto, accanto al prezzo. Lasciala vuota e vale quella del locale —
+  si compila solo dove fa eccezione. Serve perché una bottiglia intera non
+  si rivende come un drink servito al banco: mettere tutto al 10% gonfia il
+  netto, e dal netto scendono margine e conto di fine mese.
+
+- **Nell'elenco delle categorie si vede a quale gruppo appartengono** — in
+  magazzino e nel menù. Accanto al nome c'è la macro, e dove non ce n'è si
+  legge «senza macro». Non è un rimprovero: ALTRO e BOTTIGLIE stanno fuori
+  apposta. Serve a distinguerle da quelle che ci sono finite per
+  dimenticanza, che prima si somigliavano troppo.
+
+- **Il «Mensile per macro» è diventato «Venduto × Incassato», e sta nel
+  Bilancio**: quanto ha reso ogni gruppo del menù è una domanda di fine
+  mese, non di serata — le Statistiche restano com'erano andate ieri sera,
+  ed è quello che si guarda al banco. La tabella non è cambiata di un
+  centesimo; ha due righe in più. **Incidenza**: quanto pesa un gruppo sul
+  margine del mese, se i gruppi insieme fanno cento. **Incidenza
+  sull'anno**: quanto pesa un mese sull'incassato dell'anno. E sotto c'è
+  scritto cosa vuol dire ogni riga — e perché, se lo confronti col foglio,
+  non tornerà mai: qui si guarda la merce **venduta**, il foglio quella
+  **entrata dalla porta**.
+
+- **«Bilancio»: i conti del locale hanno una pagina loro** — nel menu, e la
+  vede solo l'admin. Dentro ci sono le tre tabelle di fine mese: «Mesi»
+  (quanto doveva fare e quanto ha fatto, giorno per giorno), «Acquisti ×
+  Fatturato» e «Venduto × Incassato». I numeri arrivano una tabella per
+  volta; il posto e le parole per leggerli ci sono già — sotto ognuna c'è
+  scritto che numero è e da dove viene. Le Statistiche restano dove sono e
+  le guarda chi lavora: com'è andata ieri sera è un'altra domanda da com'è
+  andato il mese.
+
+- **Basta box bianchi nelle impostazioni e nel menù, e i titoli delle
+  sezioni si leggono.** Sui temi chiari i riquadri che dividono una
+  schermata erano bianchi su fondo quasi bianco, **senza contorno**:
+  adesso hanno un bordo che si vede e si staccano dal fondo, su ogni tema.
+  Stessa cura per le righe fra un'impostazione e l'altra, per le categorie
+  del menù e per le tessere dei gruppi. E il **nome della sezione è
+  diventato un titolo** — grande, ben leggibile, col carattere di casa — invece
+  dell'etichettina grigia in maiuscoletto da dodici pixel: chi cerca
+  «Stampante» o «Coperto» adesso la trova scorrendo, senza andare a
+  tentativi.
+
+### Al banco
+
+- **Le colonne spente accendono il numerino dei filtri solo se hai cambiato
+  qualcosa**: prima era sempre arancione, perché due colonne nascono
+  nascoste di serie. Le
+  ombre delle card hanno il loro spazio pieno (non più tagliate sul
+  fianco), e l'interruttore «incassare senza stampare» ora sta dove uno lo
+  cerca: **Impostazioni → Pagamenti**.
+
+- **Contanti e Carta dalla card stampano lo scontrino come il pannello dei
+  pagamenti**: al tocco, col metodo scelto scritto sopra. E per chi lo
+  scontrino non lo vuole c'è il nuovo **«Riscuoti (senza stampa)»** nella
+  schermata di pagamento — si accende dalle impostazioni, e vale solo per
+  quel gesto: alla prossima riscossione normale la stampa torna.
+
+- **Un logo che non si carica non tiene più ferma la stampante**: dopo tre
+  secondi lo scontrino esce senza logo, e non si riprova a ogni stampa.
+
+- **Una comanda presa in carico non si allunga più sotto le mani.** Quando
+  una comanda passa da **«da fare»** a **«in preparazione»**, i prodotti
+  aggiunti dopo al conto fanno una **comanda nuova** — prima ci finivano
+  dentro, e chi stava già versando si vedeva comparire righe su un ticket
+  che aveva in mano da un pezzo (succedeva nei locali che hanno acceso «le
+  comande nascono già in preparazione»). Stessa cosa per una comanda già
+  **uscita dalla stampante**: la carta è al banco, e una riga aggiunta dopo
+  lì non ci sarebbe mai comparsa. La comanda nuova **stampa da sola**, come
+  le altre.
+
+- **Mai più due conti sulla stessa comanda.** Capitava che uscisse un
+  ticket solo con dentro le comande di **ordini diversi** — due
+  intestazioni, due numeri di conto, le righe di tutti e due — e al banco è
+  un pezzo di carta da buttare, o peggio un drink portato al tavolo
+  sbagliato. La stampante ha **una coda sola**: adesso ogni stampa aspetta
+  quella prima, parte da un foglio pulito e non lascia niente in giro
+  nemmeno quando non riesce. Una stampa fallita **non blocca** quelle dopo.
+
+- **Il tasto «Comanda» stampa UNA comanda, non il conto intero.** Su un
+  conto con più comande, quando non ce n'era più nessuna in lavorazione —
+  tutto servito, oppure il conto già incassato — quel tasto faceva uscire
+  un ticket solo con dentro le righe di **tutte** le comande, sommate:
+  sembrava una comanda e ne conteneva due. Adesso, se non si dice quale,
+  esce **l'ultima**. Per averle tutte c'è il tasto apposta (qui sotto).
+
+- **Le comande di un conto si stampano insieme, in due modi.** Un conto
+  battuto in tre riprese ha tre ticket: in **«Comande»**, sopra l'elenco,
+  ci sono due tasti — compaiono solo quando le comande sono più d'una.
+  **«Una per comanda (3)»** fa uscire i ticket separati, identici a come
+  uscirebbero da soli: al banco un ticket è un giro di lavoro.
+  **«Tutto su una»** fa uscire **un foglio solo** con tutti i prodotti del
+  conto, le quantità dello stesso drink sommate. Sempre e solo **di quel
+  conto**: due conti sulla stessa carta non succede più. Le comande
+  **annullate** restano fuori da tutte e due.
+
+- **Il conto con lo sconto si chiude davvero, e lo scontrino esce** (i due
+  vocali del 19 agosto). Chiudendo un tavolo scontato il conto risultava
+  pagato «a metà» — restava in coda e bloccava la chiusura di cassa — e lo
+  scontrino non usciva; e se una stampa falliva, quel conto restava muto
+  per sempre. Adesso il conto scontato si chiude, la stampa fallita si
+  ritenta alla chiusura successiva, e **riscuotere di nuovo un conto
+  riaperto ristampa lo scontrino** — quello nuovo, con le cifre corrette.
+  L'interruttore in Impostazioni → Stampante ora dice il vero: la stampa
+  parte **alla riscossione**, non «quando l'ordine è pronto».
+
+- **Le card della lavagna hanno di nuovo la loro ombra.** Nelle colonne
+  erano tagliate ai bordi, e dopo il pagamento sparivano del tutto
+  lasciando un bordino più spesso al loro posto.
+
+- **Senza connessione l'app mostra subito quello che hai fatto.** Aggiungere
+  righe a un conto, annullarlo, riaprirlo: il totale e le voci si vedono
+  aggiornati nell'istante del gesto, non «quando sincronizza». Prima, con la
+  rete lenta o assente, la card restava indietro e il conto sembrava
+  sbagliato.
+
+- **Le card del banco si leggono da lontano.** Numero del conto e nome del
+  tavolo ora stanno sulla stessa riga e sono grandi uguali — «il ventidue,
+  quello di Peppe» si legge in un colpo invece di cercare il nome in
+  piccolo sotto. È sparita la pastiglia «Ritiro / Servizio», che diceva una
+  cosa già scritta nel nome, e le righe dei drink a vista sono **quattro**
+  invece di sei: così in colonna ci stanno più comande, e chi ne ha di più
+  tocca «altre N».
+
+- **Nella legenda della coda c'è anche chi è collegato adesso**, non solo
+  chi ha già battuto un conto: chi apre l'app trova subito la sua iniziale —
+  con scritto «sei tu» — e sa come si riconoscerà sulle card. La riga di chi
+  è online è più chiara, con un pallino verde davanti. **La vedono solo
+  l'admin e il banco**: chi è in sala continua a vedere le lettere dei conti
+  battuti, e i clienti non vedono niente. Chi chiude l'app sparisce da solo
+  dopo qualche minuto.
+
+- **Lo scontrino non aspetta più un logo che non c'è**: se `logo.png` manca
+  o non è nella memoria dell'app, ogni stampa rifaceva il caricamento e
+  aspettava l'errore prima di far uscire la carta. Adesso ci prova una volta
+  sola: dalla seconda in poi lo scontrino esce subito.
+
+- **Aprendo un conto annullato da un collega non arriva più l'avviso del
+  cliente**: «⚠️ Problema con il tuo ordine — prego recarsi al bancone»
+  spuntava addosso a chi sta *dietro* al bancone. Adesso a chi lavora non
+  arriva niente che interrompa: l'annullamento finisce nella lista della
+  campanella, dove lo si trova entrando nell'app. Il cliente riceve il suo
+  avviso come sempre.
+
+- **Il magazzino si scala quando il drink è pronto, non quando arriva al
+  tavolo**: è lì che il fatto succede — fra «pronto» e «servito» il gin è già
+  nel bicchiere — e a segnarlo è chi l'ha fatto. Prima si aspettava la
+  consegna, e da quando «servito» lo segna la sala quello scarico non
+  arrivava proprio: la sala sul magazzino non scrive, l'errore spariva in
+  silenzio e la giacenza restava ferma. Un drink pronto sul banco adesso è
+  merce consumata, non più «impegnata». Quello che ti ritrovi a fine serata
+  non cambia di un millilitro: cambia solo *quando* il conto passa da una
+  colonna all'altra. Dove gli stati del servizio sono spenti non cambia
+  niente: si scala alla riscossione, come sempre.
+
+- **Col servizio spento non si vedono più i passi**: il bollo «In
+  preparazione» spuntava nel riquadro delle comande e nella vista di un
+  gruppo anche dove la preparazione non si segue.
+- **Lo «Storico ordini» è una pagina, non un riquadro** — e si chiama così
+  anche nel menu, dove prima era «Lista ordini».
+- **Il rendiconto si chiama «Rendiconto chiusura cassa»**, che è quello che
+  è: il conto di una cassa aperta e chiusa, non di una serata.
+- **Nel flusso di cassa le tessere stanno in fila**: «ancora da incassare»
+  finiva da sola su una riga sua, larga un quarto e circondata di vuoto.
+
+- **Un drink pronto fa squillare i telefoni degli altri**: l’avviso «pronto
+  da servire» non arrivava a nessuno, e per i drink da ritirare al banco non
+  partiva proprio. Adesso parte per tutti e due — «da servire» al tavolo,
+  «da consegnare» al banco — e va a **tutti i terminali accesi tranne quello
+  che ha appena premuto il tasto**, che sa già. Prima si smistava per ruolo,
+  e il ruolo scritto sul telefono non diceva chi fosse la persona: diceva da
+  quale schermata si era registrato. Un drink pronto che nessuno viene a
+  prendere è il modo più veloce per far aspettare un tavolo.
+
+- **L’avviso non sparisce più col telefono in tasca**: se il gestionale era
+  rimasto aperto, la notifica dei drink pronti veniva saltata anche a
+  schermo spento — cioè proprio quando serviva. Adesso si tace solo se la
+  coda è davvero sotto gli occhi.
+
+- **Sul telefono le corsie si impilano invece di stringersi**: cinque o sei
+  colonne su uno schermo di telefono diventavano strisce dove non entrava
+  nemmeno il nome di un drink. Adesso, quando lo spazio manca, ogni corsia
+  diventa una sezione — col suo titolo e il suo totale — e si scorre in
+  verticale. A dire quando c'è spazio è la larghezza vera della lavagna, non
+  quella della finestra: col menu agganciato alla pagina la lavagna ha
+  200-250px in meno, e prima nessuno se ne accorgeva.
+
+- **La chiamata dal bancone si presenta dovunque sei**: chi veniva chiamato
+  sentiva il telefono, riapriva l'app e non trovava niente — la chiamata
+  compariva solo andando a mano su «Da servire». Adesso il riquadro salta
+  fuori su qualunque schermata, coda o conto o cassa, ed è già lì quando
+  riapri l'app: si risponde e si torna al lavoro.
+
+- **La sala serve, non prepara**: chi porta i vassoi vede a che punto sono le
+  comande — gli serve per sapere cosa portare — ma l'unico passo che segna è
+  «servito». Prendere in carico, segnare pronto, tornare indietro, dividere
+  una comanda e annullare un conto restano di chi versa, e quei tasti alla
+  sala non compaiono più. Sul conto invece lavora come prima: quello che
+  aggiunge — anche col «+» su una riga già mandata — arriva al banco come una
+  **comanda nuova**, invece di infilarsi in una che qualcuno sta già
+  preparando. La regola vale anche sul database, non solo a schermo.
+
+- **Chi lavora entra nel conto, non nella pagina del cliente**: toccando un
+  ordine — dal banco o dalla sala, con o senza gli stati del servizio — si
+  apre la schermata del conto, quella con la griglia dei prodotti. Prima la
+  sala si ritrovava il riquadro «Il tuo numero», scritto per chi ordina, e
+  per aggiungere una birra doveva cercare un tasto in fondo alla pagina. La
+  schermata da girare al cliente resta: si apre dal ⋯ del conto, «Mostra al
+  cliente», e ha il QR per seguire l'ordine e un «✏️ Modifica» per tornare
+  al lavoro.
+
+- **«Mensile per macro» dice quanto rende davvero ogni gruppo del menù**: le
+  righe sono le macro-categorie del **menù**, e ogni drink venduto ci conta
+  intero — incasso e costo di tutti i suoi ingredienti insieme. La Schweppes
+  finita in un Gin Tonic conta sui distillati, perché lì l'hai venduta; in
+  «birre e bibite» resta solo quello venduto come bibita. Al posto di
+  «Acquisti / Fatturato / Utile» ci sono ora **Incassato / Costo del venduto /
+  Margine**: così il margine di una macro non si porta dentro merce comprata e
+  non ancora venduta. «Quanto ho speso in bibite» è un'altra domanda, e la si
+  chiederà alle fatture.
+
+- **Nel pagamento i drink sono già separati**: la schermata di incasso si apre
+  con «2× Mojito» diviso in due righe da una, perché al banco si paga quasi
+  sempre a pezzi — uno paga il suo, un altro offre due birre — e ogni volta
+  serviva un tocco in più con la fila alla cassa. Chi incassa tutto preme
+  «Riscuotere» come prima, senza toccare niente; chi ha un conto lungo e
+  illeggibile lo rimette in gruppo con «Unisci uguali».
+
+- **Le note dei singoli drink si leggono anche a schermo**: «senza ghiaccio»,
+  «per Anna» comparivano solo dentro il conto e sulla comanda stampata. Ora
+  stanno sotto il loro prodotto anche sulle card della coda del gestionale e
+  di quella di sala: chi prepara o chi porta il vassoio le vede senza aprire
+  niente.
+
+- **Nel pagamento si vede subito di chi è il conto**: tavolo e nome stanno in
+  testata accanto al numero, non più in mezzo alle righe dei drink dove
+  sembravano una voce del conto.
+
+- **Il facsimile dello scontrino è largo quanto la carta**: le righe andavano
+  a capo dove la stampante vera non le manda, e si leggeva «La Tana del
+  Conigli / o». Adesso quello che si vede è quello che esce.
+
+- **Nel menu a lato le icone si vedono, e il numero delle categorie è quello
+  vero**: «Categorie» e «Macro-categorie» avevano due icone che su Windows
+  uscivano come rettangolini storti, come un’immagine che non si carica. Ora
+  si vedono a colori, come tutte le altre della fila. E la scritta «Categorie (7)»
+  contava le categorie di quando avevi aperto la pagina: una aggiunta
+  dall’altro terminale si vedeva solo entrando nella sezione. Adesso il
+  numero si aggiorna da solo.
+
+- **«In attesa del pagamento: non si prepara» funziona anche col salto
+  acceso**: dove il pagamento è obbligatorio il blocco valeva solo per i conti
+  fermi a «da fare», e in un locale che fa nascere le comande già in
+  preparazione non scattava mai. Adesso guarda il passo in cui il lavoro
+  nasce, comunque sia messo il locale.
+
 ## 1.5.1 — 19 agosto 2026
 
 Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
@@ -29,7 +971,8 @@ Correzione urgente su una cosa sola: **chiudere un conto con lo sconto**.
   terminale, anche per la seconda comanda di un conto già aperto.** Prima la
   stampa seguiva le regole degli avvisi — e «non avvisare chi l'ha battuto»
   lasciava il banco senza carta proprio sui suoi ordini. Una copia sola per
-  comanda: tornare agli ordini non ristampa.
+  comanda **in tutto il locale**: il segno «stampata» sta sul conto, quindi
+  tornare agli ordini non ristampa e un secondo tablet non fa il doppione.
 
 ## 1.5.0 — 18 agosto 2026
 
@@ -41,7 +984,97 @@ sempre a pezzi — e i prodotti di prima si aggiornano quando lo decidi tu,
 con una prova a vuoto che dice cosa cambierebbe prima di toccare niente.
 
 
+### Per chi gestisce
+
+- **Il drink pronto si chiama «Pronto», e basta.** Lo stesso passo si leggeva
+  in quattro modi a seconda di dove guardavi: «Pronto» nel conto, «Pronto al
+  servizio» sulla pastiglia, «Ritiro/Servizio» in testa alla colonna, «È
+  pronto» sul tasto. Quattro parole per una cosa sola fanno chiedere se siano
+  quattro cose. Adesso al banco è una: sul tasto, sulla colonna, sulla
+  pastiglia e nel conto. Al cliente continua a dire «Pronto al servizio», che
+  a lui serve a capire se deve alzarsi.
+
+- **Finché il magazzino non è aggiornato, non lo scrive più nessuno.** Il
+  blocco c'era, ma solo in due strade su sette: da **Acquisti → «Ricevuto»**
+  si caricava la merce su giacenze ancora scritte alla vecchia maniera, e i
+  numeri uscivano storti senza che niente lo dicesse. Adesso tutte le strade
+  che caricano o correggono una giacenza si fermano allo stesso modo, e
+  Acquisti lo dice prima: gli ordini si preparano e si mandano lo stesso — è
+  carta — ma la merce si carica dopo l'aggiornamento. Battere comande e
+  scaricare le scorte continua a funzionare: quella è la serata, e non
+  aspetta noi.
+
+- **La comanda si apre subito, anche con la rete che fa i capricci.** Toccando
+  una card al banco la schermata restava su «Apro la comanda…» finché non
+  rispondevano il server e il controllo di chi sei — e con il wifi del locale
+  collegato ma muto quella risposta non arriva. Adesso l'app parte da quello
+  che sa già: chi sei l'ha letto poco fa, e il conto ce l'aveva in mano la
+  coda un istante prima. È un tocco che si fa trecento volte a sera.
+
+- **Girando fra «Comande» e «Ordini» non si torna indietro nel tempo.**
+  Avanzavi un ticket al banco, giravi la pastiglia, e il conto era ancora
+  dov'era — finché non arrivava la risposta del server, che offline non
+  arriva mai. Adesso le due viste raccontano sempre la stessa cosa: il gesto
+  si vede da tutte e due le parti nell'istante in cui lo fai. E un conto con
+  due comande in due passi diversi si legge dal passo più indietro — se una
+  comanda è ancora da fare, il conto è ancora da fare.
+
 ### Sotto il cofano
+
+- **Le due lavagne a colonne hanno smesso di essere scritte due volte.** La
+  coda dei conti e quella del banco sono viste diverse — una dice come sta
+  andando la serata, l'altra cosa c'è da fare adesso — ma il contorno era lo
+  stesso, copiato: la testata col conteggio e il totale, la card di un conto
+  appena battuto e ancora in volo, il bollo dell'acconto, il piede col ⋯ e il
+  tasto grande. Una novantina di righe in doppio, e una correzione da fare in
+  due posti. Adesso il contorno è uno; le due viste restano due, che un conto
+  e una comanda non sono la stessa cosa.
+
+- **La coda prepara la vista che stai guardando, non tutte e quattro.**
+  Griglia, corsie, lista e schede venivano rifatte a ogni ridisegno e se ne
+  mostrava una: con centoventi conti erano una diciottina di passate sulla
+  lista e quattro ordinamenti buttati, ogni volta che si premeva un tasto
+  nella ricerca, si apriva una card o arrivava qualcosa dal server. In una
+  serata piena sono centinaia. Adesso si calcola quella in pagina, e le tre
+  linguette in corso/chiusi/annullati si contano in un giro solo invece che
+  in sei.
+
+- **Via una vista che non esisteva.** Nel codice della coda c'erano ancora le
+  quattro colonne del servizio sui CONTI — con tanto di «Da incassare» — e
+  non le accendeva più niente: a tenerle in piedi erano soltanto i loro test,
+  che le raccontavano come se ci fossero. I passi del servizio si guardano
+  dalla vista del banco, che è fatta per quello. E il tasto sulla card di un
+  conto adesso dipende da com'è messo il conto, non da come si chiama la
+  colonna: è la lezione della colonna del pronto divisa in due, dove un nome
+  nuovo aveva fatto sparire il tasto.
+
+- **Il totale di un conto si rifà in un posto solo.** Modificare le righe dal
+  telefono del cliente, aggiungere al conto, dividere una comanda e
+  correggerla dal banco rifacevano tutti e quattro lo stesso conto — righe,
+  coperto, costo di servizio, mancia, sconto — ognuno con la sua copia delle
+  stesse righe di codice. Adesso è una sola: se un giorno cambia una regola
+  sui soldi, cambia per tutti e quattro insieme, e non c'è il gesto rimasto
+  indietro che fa pagare una cifra diversa.
+
+- **Toccare una card costa la metà**: avanzare una comanda, dividerla o
+  cambiare il modo di consegna si rileggevano il conto dal server subito dopo
+  averlo scritto, per restituire un valore che nessuna schermata guardava. Con
+  centocinquanta comande a sera erano centinaia di letture buttate, tutte
+  dentro il momento in cui si preme il tasto. Sulla linea del locale che va e
+  viene, è il momento in cui si nota.
+
+- **Le ripetizioni segnate al giro di rilettura sono state tolte**, tutte
+  insieme: le preferenze di questo terminale hanno un solo posto in cui
+  leggere e scrivere, le pastiglie «sceglie un modo» delle Impostazioni sono
+  un pezzo solo invece di quattordici copie, il riquadro dell'aggiornamento
+  magazzino è uno invece di tre, e il numero «a fine serata» lo calcola una
+  funzione sola per la tabella e per le card. Non cambia niente di quello che
+  si vede al banco: cambia che d'ora in poi si corregge in un posto.
+
+- **Il carico a colli non può più restare indietro**: la quantità è sempre
+  cartoni × pezzi per collo, calcolata sul momento. Prima era un numero
+  tenuto a parte, da rifare a ogni campo toccato — e chi cambiava i pezzi per
+  collo dopo aver scritto i cartoni caricava quello di prima.
 
 - **Un giro di rilettura sul lavoro di questa versione** (riuso,
   semplificazione, efficienza, profondità): la stessa regola adesso sta in un

@@ -20,6 +20,7 @@
 // può essere ancora in preparazione — e le due cose vanno dette insieme.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { mergeLines } from './orderLines.js'
 
 // Stati dell'ORDINE (conto).
 export const ORDER_OPEN = 'aperto'
@@ -82,6 +83,26 @@ export function activeComanda(order) {
   return aperte.reduce((best, c) =>
     COMANDA_FLOW.indexOf(c.status) < COMANDA_FLOW.indexOf(best.status) ? c : best
   )
+}
+
+// ── LO STATO DI LAVORO DI UN CONTO ───────────────────────
+//
+// È quello che la coda mostra e fa avanzare, e NON è un campo suo: si
+// ricava dalle comande. Lo dà la comanda ATTIVA — quella al passo più
+// indietro — perché è lì che c'è ancora lavoro. Pagato e annullato invece
+// sono stati del CONTO, e vincono: i soldi presi non li rimette in
+// discussione una comanda.
+//
+// Sta qui, e non nella lettura da Firestore, perché serve anche a chi lo
+// ricalcola in locale: chi avanza un conto dalla coda vede subito l'esito,
+// e deve vedere lo STESSO stato che scriverà il server un istante dopo.
+export function statoDiLavoro(order) {
+  const stato = order?.status
+  if (stato === ORDER_STATUSES.PAGATO || stato === ORDER_STATUSES.ANNULLATO) return stato
+  const attiva = activeComanda(order)
+  if (attiva) return attiva.status
+  // Nessuna comanda aperta: se ce n'erano, sono tutte uscite.
+  return (order?.comande || []).length > 0 ? ORDER_STATUSES.RITIRATO : ORDER_STATUSES.RICEVUTO
 }
 
 // Un conto PAGATO risulta interamente servito: le comande ancora in
@@ -165,6 +186,47 @@ export function aggregateItems(comande) {
   return out
 }
 
+// ── SUL TICKET DEL BANCO LE VOCI SONO SEMPRE ACCORPATE (BUG-083) ─────
+//
+// «Per la comanda, le voci devono essere sempre accorpate. Al momento, se
+// sono separate escono separate, se sono unite escono unite. Devono essere
+// sempre unite sulla comanda» (l'utente, 22/08/2026).
+//
+// PERCHÉ NON È UNA PREFERENZA. «Unisci / Separa uguali» sul conto serve ai
+// SOLDI: si separano le righe per dividere il conto fra chi paga cosa. Chi
+// prepara, invece, conta PEZZI — e quattro righe «1 JEFFERSON» una sotto
+// l'altra si contano peggio di una «4 JEFFERSON». Sono due domande diverse
+// sulla stessa lista, e la comanda risponde sempre alla seconda: sullo
+// scontrino e nella schermata di pagamento non cambia niente.
+//
+// LA CHIAVE È QUELLA DEL POS (`lineSignature` in lib/orderLines.js), non una
+// nuova: se «uguali» volesse dire una cosa a schermo e un'altra sulla carta,
+// il banco riceverebbe un ticket che non corrisponde a quello che si vede.
+// Distingue drink, nome, PREZZO, ricetta e NOTA — e sono le due che contano
+// qui: un prodotto libero «Coperto 2€» e uno «Coperto 3€» restano due righe
+// (stesso nome, prezzi diversi: sommarli direbbe una bugia su cosa è stato
+// battuto), e soprattutto «poco ghiaccio» su due dei quattro Jefferson è
+// LAVORO DIVERSO — accorparli farebbe sparire la nota, o la stamperebbe su
+// tutti e quattro.
+//
+// STA IN comande.js e non in pagamento.js perché è una regola sul CONTENUTO
+// di una comanda, non sul denaro: pagamento.js non deve nemmeno sapere che
+// esiste — quella parte non cambia.
+export function righeDellaComanda(items) {
+  // La quantità si normalizza PRIMA di sommare: sui documenti vecchi (e
+  // sugli item scritti a mano dagli script) `qty` può mancare, e la stampa
+  // se la cavava con `qty || 1`. Sommando, un `undefined` diventerebbe NaN
+  // e il ticket uscirebbe con «NaN NEGRONI».
+  return mergeLines((items || []).map((i) => ({ ...i, qty: Math.max(1, Math.floor(Number(i.qty) || 1)) })))
+}
+
+// I PEZZI DA PREPARARE: il «CL: N» in cima al ticket. Si conta sulle righe
+// già accorpate — la somma non cambia, accorpare sposta le quantità ma non
+// ne crea né ne perde, e questa è esattamente la cosa che deve restare vera.
+export function pezziDellaComanda(items) {
+  return (items || []).reduce((s, i) => s + (Number(i.qty) || 1), 0)
+}
+
 // Totale drink dell'ordine (senza coperto/servizio/mancia).
 export function itemsTotal(items) {
   return (items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price ?? i.price) || 0), 0)
@@ -204,15 +266,34 @@ export function contoChiuso(o, { workflowOn = false } = {}) {
   return workflowOn ? pagato && servito : pagato
 }
 
-// QUANDO IL MAGAZZINO SI SCALA DAVVERO. Alla comanda SERVITA, non alla
-// presa in carico: un drink iniziato e poi non fatto — riga tolta, cliente
-// che cambia idea, comanda annullata — aveva già portato via gli
-// ingredienti. Servito vuol dire che quel drink è uscito per certo.
-// Una volta sola: se lo scarico è già stato applicato non si ripete.
-// Senza gli stati del servizio le comande risultano servite alla
-// riscossione, ed è lì che si scala (vedi unappliedEntries in api.js).
+// QUANDO IL MAGAZZINO SI SCALA DAVVERO: A «PRONTO».
+//
+// È il momento in cui il fatto succede. A «pronto» il drink è FATTO — il
+// gin è già nel bicchiere — e chi lo segna è chi lo ha fatto: il banco.
+// «Servito» è un'altra cosa, è il drink arrivato al tavolo, e fra i due
+// passi in magazzino non si muove più niente.
+//
+// Prima si scaricava al RITIRATO, e c'erano due guai. Uno di sostanza: si
+// aspettava la consegna per registrare un consumo già avvenuto, e un drink
+// pronto sul banco restava fra gli «impegnati» come se potesse ancora non
+// farsi. Uno pratico, che è quello che ha portato qui: «servito» ormai lo
+// segna la SALA — è lei che porta il vassoio — e la sala sul magazzino non
+// scrive (le regole glielo negano, ed è giusto così). Lo scarico falliva in
+// silenzio e il magazzino restava fermo (BUG-040). Spostandolo a «pronto»
+// il difetto sparisce da sé, e non perché si sia allargato un permesso.
+//
+// Non si scala PRIMA — allo «in preparazione» — perché un drink iniziato e
+// poi non fatto (riga tolta, cliente che cambia idea, comanda annullata)
+// avrebbe già portato via gli ingredienti.
+//
+// Una volta sola: se lo scarico è già stato applicato non si ripete, ed è
+// questa guardia che regge il pronto → indietro → pronto.
+//
+// Senza gli stati del servizio non esiste nessun «pronto»: lì le comande
+// risultano servite alla riscossione, ed è lì che si scala (vedi
+// unappliedEntries in api.js). Quella strada non cambia.
 export function comandaDaScaricare(comanda, nuovoStato) {
-  return nuovoStato === ORDER_STATUSES.RITIRATO && comanda?.inventory_applied !== true
+  return nuovoStato === ORDER_STATUSES.PRONTO && comanda?.inventory_applied !== true
 }
 
 export function comandaEditable(c) {
@@ -224,19 +305,51 @@ export function comandaEditable(c) {
 
 // ── DOVE FINISCONO LE RIGHE AGGIUNTE A UN CONTO APERTO ────────────
 //
-// Nel passo in cui NASCE il lavoro nuovo (statoComandaNuova), non nel passo
-// in cui si trova la comanda che sta lì accanto. Chiedeva `comandaEditable`,
-// che dice «si può ancora toccare» ed è vera sia per «da fare» sia per «in
-// preparazione»: le righe aggiunte a un conto con una comanda già al banco
-// ci finivano dentro e risultavano prese in carico da qualcuno. Al banco
-// sparivano dalla colonna «Da fare» e non le cominciava nessuno — lo
-// stesso danno del ticket che non compare, ma più subdolo, perché la card
-// c'è: sta nella colonna sbagliata.
+// SOLO IN UNA COMANDA ANCORA «DA FARE», e in nessun'altra.
 //
-// Se una comanda in quel passo c'è già, ci confluiscono: è lo stesso giro
-// da fare, non due ticket per la stessa cosa. Se non c'è, ne nasce una —
-// anche con una comanda in preparazione accanto. Una comanda PRONTA o
-// SERVITA non risponde mai: non è nel passo di nascita, e viene da sé.
+// «Se una comanda passa da "da fare" a "in preparazione", i prodotti
+// successivi che aggiungo all'ordine dovranno creare una NUOVA comanda. Al
+// momento succede solo se da in preparazione passano a da servire. Se sono
+// in preparazione significa che la vecchia comanda è stata già presa in
+// carico» (l'utente, 20/08 sera). Il perché sta in quell'ultima riga: chi
+// sta già shakerando non deve vedersi allungare il ticket sotto le mani.
+//
+// POI HA VISTO IL DANNO E HA CORRETTO LA REGOLA (20/08, dopo la prova al
+// banco: un conto solo, DUE facsimili — un LIMONCELLO da solo, e poi tutto
+// il resto). Parole sue: «mi crea più comande quando creo un solo ordine.
+// In fase di creazione deve gestire tutto come UNA comanda. Devi
+// aggiungere prodotti a una NUOVA comanda solo se lo stato viene PASSATO
+// in preparazione (comanda presa in carico)».
+//
+// DA QUI DUE COSE, e sono l'una il seguito dell'altra.
+//
+// (1) IL DISCRIMINE È LA PRESA IN CARICO, NON LO STATO. Una comanda NATA
+//     «in preparazione» perché il locale ha acceso quell'impostazione non
+//     è presa in carico da nessuno: nessuno l'ha guardata, nessuno ha
+//     premuto niente. Una comanda PORTATA a «in preparazione» da un gesto
+//     — qualcuno ha detto «lo preparo io» — sì. I due casi si distinguono
+//     solo con un segno, ed è `presa_in_carico`, scritto da advanceComanda
+//     e solo da lì (mai alla nascita). Sui documenti vecchi il campo non
+//     c'è: lì si guarda lo stato con la regola prudente — «in
+//     preparazione» senza segno vale come presa in carico, così i ticket
+//     già in mano al banco stasera non si gonfiano.
+//
+// (2) LA SESSIONE DI CREAZIONE È UN'ALTRA COSA ANCORA. Finché chi ha
+//     battuto il conto non è uscito dalla creazione, quella è UNA COMANDA
+//     SOLA: qualunque stato abbia, qualunque impostazione abbia il locale.
+//     «Se non sono ancora uscito dalla creazione ordine quella è sempre
+//     una sola comanda (anche se da creazione ordine vado in pagamento)».
+//     Il segno sta sul conto (`in_creazione`) e lo toglie l'uscita.
+//
+// L'ESCLUSIONE DI IERI SULLA COMANDA GIÀ STAMPATA (`auto_print_at`) NON C'È
+// PIÙ: contraddiceva la regola nuova. La ragione per cui era nata resta
+// vera — se una comanda già stampata si gonfia, la carta al banco è
+// vecchia — e la cura coerente è un'altra: quando una comanda non presa in
+// carico riceve aggiunte, il suo `auto_print_at` si AZZERA e il ticket si
+// RISTAMPA completo. Il banco butta il foglio vecchio e ha quello giusto.
+//
+// Una comanda PRONTA, SERVITA o ANNULLATA non risponde: quando non
+// risponde nessuno, ne nasce una nuova.
 // ── FIN DOVE SI PUÒ TORNARE INDIETRO ─────────────────────────
 //
 // I passi già passati, meno quelli PRIMA di dove nasce il lavoro. Col
@@ -255,8 +368,36 @@ export function statiPrimaComanda(status, passo) {
   return COMANDA_FLOW.slice(daDove, arrivata)
 }
 
-export function comandaPerLeAggiunte(comande, passo) {
-  return (comande || []).find((c) => c.status === passo) || null
+// QUALCUNO L'HA PRESA IN MANO? Non «in che stato è»: chi l'ha messa in
+// quello stato. Il segno esplicito vince sempre; senza segno (documenti
+// nati prima) si guarda lo stato, e «in preparazione» si dà per preso in
+// carico — è la risposta prudente, quella che non allunga un ticket che
+// forse è già al banco.
+export function presaInCarico(comanda) {
+  if (!comanda) return true
+  if (comanda.presa_in_carico === true) return true
+  if (comanda.status === ORDER_STATUSES.RICEVUTO) return false
+  if (comanda.status === ORDER_STATUSES.IN_PREPARAZIONE) {
+    return comanda.presa_in_carico === undefined
+  }
+  // Pronta, servita, ritirata: fuori dal banco comunque.
+  return true
+}
+
+// L'ULTIMA comanda viva del conto: è quella a cui si riferisce «aggiungi
+// alla comanda» quando a sceglierlo è una persona (servizio spento). Non la
+// prima: quella che si ha davanti è l'ultima battuta.
+export function ultimaComandaViva(comande) {
+  const vive = (comande || []).filter((c) => c && c.status !== ORDER_STATUSES.ANNULLATO)
+  return vive[vive.length - 1] || null
+}
+
+export function comandaPerLeAggiunte(comande, { inCreazione = false } = {}) {
+  const vive = (comande || []).filter((c) => c && c.status !== ORDER_STATUSES.ANNULLATO)
+  // IN CREAZIONE È UNA COMANDA SOLA, sempre: il conto lo si sta ancora
+  // componendo, e chi lo compone non sta mandando ticket al banco.
+  if (inCreazione) return vive[0] || null
+  return vive.find((c) => !presaInCarico(c)) || null
 }
 
 // Quantità per item bloccate (comande pronte/servite): sotto questa soglia

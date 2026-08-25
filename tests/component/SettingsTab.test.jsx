@@ -11,18 +11,23 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
+// LE IMPOSTAZIONI FINTE, in un oggetto che le prove possono ritoccare:
+// alcune sezioni cambiano forma a seconda di come è messo il locale (col
+// servizio spento spariscono le voci che parlano di «servire»). È
+// `vi.hoisted` perché `vi.mock` viene issato in cima al file e non vedrebbe
+// una costante normale definita qui fuori.
+const impostazioni = vi.hoisted(() => ({
+  menu_only: false,
+  workflow_enabled: true,
+  groups_enabled: false,
+  customer_accounts_enabled: true,
+  queue_view: 'tabs',
+  service_mode: 'banco',
+  cancel_phrase_default: 'bancone',
+}))
+const IMPOSTAZIONI_BASE = { ...impostazioni }
+
 vi.mock('../../src/lib/api.js', () => {
-  // Dichiarate QUI dentro: vi.mock viene issato in cima al file e non
-  // vedrebbe una costante definita fuori.
-  const impostazioni = {
-    menu_only: false,
-    workflow_enabled: true,
-    groups_enabled: false,
-    customer_accounts_enabled: true,
-    queue_view: 'tabs',
-    service_mode: 'banco',
-    cancel_phrase_default: 'bancone',
-  }
   return {
     subscribeSettings: (cb) => {
       cb(impostazioni)
@@ -31,6 +36,7 @@ vi.mock('../../src/lib/api.js', () => {
     updateSettings: vi.fn(() => Promise.resolve()),
     resetOpenOrdersToReceived: vi.fn(() => Promise.resolve(0)),
     replaceCatalog: vi.fn(() => Promise.resolve()),
+    savePrinterConfig: vi.fn(),
     DEFAULT_SETTINGS: impostazioni,
     settingsIniziali: () => (impostazioni),
   }
@@ -88,7 +94,10 @@ const mostra = (props = { role: 'admin' }) =>
     </MemoryRouter>
   )
 
-beforeEach(() => localStorage.clear())
+beforeEach(() => {
+  localStorage.clear()
+  Object.assign(impostazioni, IMPOSTAZIONI_BASE)
+})
 
 describe('impostazioni a schede', () => {
   it('si apre una sezione sola, non la pagina intera', async () => {
@@ -156,7 +165,7 @@ describe('impostazioni a schede', () => {
       ['Catalogo prodotti', [/Catalogo/]],
       ['Banco: coda e ordine', [/Coda ordini/, /Vista ordine/]],
       [/Servizio$/, [/Consegna/, /preparazione/, /Tempi di servizio/, /Annullamenti/]],
-      ['Cassa e giornata', [/Pagamenti/, /Giornata/]],
+      ['Cassa e giornata', [/Pagamenti/, /^Stampa automatica$/, /Giornata/]],
       ['Prezzi e supplementi', [/Prezzo consigliato/, /Sconto/, /^Coperto$/, /Servizio e mancia/]],
       ['Clienti', [/Account clienti/, /Posizione/, /Notifiche/]],
     ]
@@ -217,5 +226,106 @@ describe('la vista del banco', () => {
     expect(suoi.map((b) => b.textContent)).toEqual(['🚦 Corsie di stato'])
     expect(suoi[0]).toHaveClass('active')
     expect(suoi[0]).toBeEnabled()
+  })
+})
+
+// ── I DUE TASTI DEL PAGAMENTO SI ACCENDONO IN «PAGAMENTI» ───────────
+//
+// «Metti che anche il tasto "riscuoti e servi" è opzionale nelle
+// impostazioni» (l'utente, 21/08/2026). L'impostazione c'era già: stava in
+// «Gestione preparazione» e non l'ha trovata. È lo STESSO inciampo del
+// 20/08 con «Riscuoti senza stampa», che stava nello stesso posto
+// sbagliato per la stessa parentela di forma.
+// Chi cerca un tasto della schermata di pagamento apre Pagamenti. I due
+// tasti compaiono nella stessa schermata, affiancati: si accendono nello
+// stesso posto.
+describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
+  const apriPagamenti = async (user) =>
+    user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+  // Il riquadro che contiene una certa riga: si risale dalla scritta al
+  // suo `.settings-section`, così la prova dice «in QUALE sezione sta» e
+  // non solo «c'è da qualche parte in pagina».
+  const sezioneDi = (testo) =>
+    screen.getByText(testo).closest('.settings-section').querySelector('h3').textContent
+
+  it('«incassare e servire insieme» sta accanto al suo gemello, in Pagamenti', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    expect(sezioneDi('Un tasto per incassare e servire insieme')).toBe('Pagamenti')
+    expect(sezioneDi('Un tasto per incassare senza stampare')).toBe('Pagamenti')
+  })
+
+  it('e non è rimasto un doppione in «Gestione preparazione»', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Servizio$/ }))
+    expect(screen.getByRole('heading', { name: /preparazione/ })).toBeInTheDocument()
+    expect(screen.queryByText('Un tasto per incassare e servire insieme')).toBeNull()
+  })
+
+  // ── LE DUE DELLO SCONTRINO D'ACCONTO (REQ-STAMPA-015) ───────────
+  // QUESTA PROVA DICEVA «Pagamenti», ed è cambiata la DECISIONE, non il
+  // codice sotto: «le impostazioni di stampa automatica riguardano la
+  // cassa, quindi anche le impostazioni di stampa automatiche spostale in
+  // cassa» (l'utente, 22/08/2026 — REQ-UI-025). «Esce da sola a ogni
+  // riscossione» è stampa automatica, e adesso sta con le sue. La lezione
+  // di BUG-070 regge lo stesso: restano nella SEZIONE dove si incassa, a
+  // uno scorrimento dai tasti dell'incasso, non in un'altra pagina.
+  it('le due dell’acconto stanno in «Stampa automatica», nella stessa sezione', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    expect(sezioneDi('Lo scontrino d’acconto a ogni riscossione')).toBe('Stampa automatica')
+    expect(sezioneDi('Un tasto per l’acconto con lo scontrino')).toBe('Stampa automatica')
+    // …e i tasti dell'incasso sono lì accanto, nella stessa schermata.
+    expect(sezioneDi('Un tasto per incassare senza stampare')).toBe('Pagamenti')
+  })
+
+  // «Quando la riscossione dello scontrino di acconto è attiva, disabilita
+  // l'opzione del terzo bottone» (l'utente, 21/08/2026). Disabilitata, NON
+  // sparita: sparire sembrerebbe un guasto — «l'avevo acceso, dov'è
+  // finito?» — e chi torna qui non capirebbe cosa ha perso.
+  it('con l’acconto automatico acceso, il terzo tasto è spento e dice perché', async () => {
+    impostazioni.scontrino_acconto_sempre = true
+    impostazioni.scontrino_acconto_tasto = true
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    const riga = screen.getByText('Un tasto per l’acconto con lo scontrino').closest('.toggle-row')
+    const interruttore = riga.querySelector('input[type="checkbox"]')
+    expect(interruttore).toBeDisabled()
+    // Spento anche a vedersi, benché la scelta di prima sia ancora scritta
+    // nelle impostazioni: quel tasto in cassa non compare.
+    expect(interruttore).not.toBeChecked()
+    expect(riga).toHaveTextContent(/esce già da sola a ogni riscossione/)
+  })
+
+  it('spento l’automatico, il terzo tasto torna toccabile com’era', async () => {
+    impostazioni.scontrino_acconto_sempre = false
+    impostazioni.scontrino_acconto_tasto = true
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    const interruttore = screen
+      .getByText('Un tasto per l’acconto con lo scontrino')
+      .closest('.toggle-row')
+      .querySelector('input[type="checkbox"]')
+    expect(interruttore).toBeEnabled()
+    expect(interruttore).toBeChecked()
+  })
+
+  it('col servizio spento l’interruttore non c’è: «servire» non esiste', async () => {
+    // La condizione se l'è portata dietro dal trasloco. Senza i passi del
+    // servizio quel tasto non comparirebbe comunque in cassa, e un
+    // interruttore che non fa niente è peggio di uno assente.
+    // Il gemello «senza stampa» invece resta: con la stampa il servizio
+    // non c'entra niente.
+    impostazioni.workflow_enabled = false
+    const user = userEvent.setup()
+    mostra()
+    await apriPagamenti(user)
+    expect(screen.queryByText('Un tasto per incassare e servire insieme')).toBeNull()
+    expect(screen.getByText('Un tasto per incassare senza stampare')).toBeInTheDocument()
   })
 })

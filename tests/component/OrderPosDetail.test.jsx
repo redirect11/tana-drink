@@ -16,6 +16,7 @@ const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
 vi.mock('../../src/lib/api.js', () => ({
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
+  chiudiCreazione: vi.fn(),
   bartenderUpdateComanda: vi.fn(() => Promise.resolve()),
   updateOrderInfo: vi.fn(() => Promise.resolve()),
   registerPayment: vi.fn(() => Promise.resolve({ closed: true })),
@@ -48,7 +49,21 @@ vi.mock('../../src/lib/api.js', () => ({
 }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({ submitPosOrder: vi.fn() }))
 vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: {} }))
-vi.mock('firebase/auth', () => ({ onAuthStateChanged: vi.fn(() => () => {}) }))
+// CHI GUARDA IL CONTO lo decide il singolo test. Di suo è il banco, che è
+// il caso di quasi tutti i test qui sotto; la sala ha una schermata più
+// stretta (REQ-STAFF-014) e ha il suo blocco in fondo.
+let ruoloCorrente = 'bartender'
+vi.mock('firebase/auth', () => ({
+  onAuthStateChanged: vi.fn((a, cb) => {
+    cb({
+      uid: 'u1',
+      email: 'chi@tana.local',
+      displayName: 'Chi lavora',
+      getIdTokenResult: () => Promise.resolve({ claims: { role: ruoloCorrente } }),
+    })
+    return () => {}
+  }),
+}))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
@@ -69,12 +84,19 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     loading: false,
   }),
 }))
-vi.mock('../../src/lib/printer.js', () => ({
+// La stampante è finta ma le REGOLE sono quelle vere: `comandeStampabili`
+// e `printComande` arrivano dal modulo autentico (printComande gira sopra
+// il printComanda finto, che è quello che si conta).
+vi.mock('../../src/lib/printer.js', async (originale) => ({
+  ...(await originale()),
   printComanda: vi.fn(() => Promise.resolve()),
+  printComande: vi.fn(() => Promise.resolve(2)),
+  printComandaUnita: vi.fn(() => Promise.resolve()),
   printScontrino: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ ivaRate: 10 })),
+  loadPrinterSettings: vi.fn(() => ({})),
   releaseReceiptPrint: vi.fn(),
+  scontrinoGiaUscito: vi.fn(() => false),
 }))
 
 import OrderPosDetail from '../../src/components/OrderPosDetail.jsx'
@@ -82,6 +104,7 @@ import {
   advanceComanda,
   addComanda,
   bartenderUpdateComanda,
+  chiudiCreazione,
   registerPayment,
   updateOrderInfo,
   cancelOrder,
@@ -91,7 +114,7 @@ import {
   setOrderServiceMode,
 } from '../../src/lib/api.js'
 import { readerCheckout } from '../../src/lib/paymentsApi.js'
-import { printComanda } from '../../src/lib/printer.js'
+import { printComanda, printComande, printComandaUnita } from '../../src/lib/printer.js'
 
 // IL CONTO DI PROVA NASCE «DA FARE», come nasce davvero: si battono tre
 // conti di fila e poi si comincia a versare. Era «in preparazione» da
@@ -141,6 +164,7 @@ const azioni = () => within(document.querySelector('.posd-foot-azioni'))
 
 beforeEach(() => {
   vi.clearAllMocks()
+  ruoloCorrente = 'bartender'
   // La bozza è persistita in localStorage per ordine: pulisco tra i test.
   localStorage.clear()
 })
@@ -366,6 +390,32 @@ describe('diminuzioni: solo dalle comande ancora modificabili', () => {
 })
 
 describe('modale comande: consultazione, avanzamento e stampa', () => {
+  // «Il tasto per stampare lo scontrino dal box delle comande non serve»
+  // (l'utente, 21/08/2026). In fondo a questo pannello c'era «Scontrino (non
+  // fiscale)», che stampava il conto INTERO da dentro la finestra delle
+  // comande: due documenti diversi dietro lo stesso vetro, e quello sbagliato
+  // era il piu' grande. Lo scontrino appartiene al gesto della riscossione
+  // (REQ-STAMPA-001) e il riepilogo prima di pagare ha il suo «Preconto»
+  // nella schermata dei pagamenti. Qui dentro si stampano le comande.
+  it('non si stampa lo scontrino da qui: questo pannello e delle comande', async () => {
+    const user = userEvent.setup()
+    const order = baseOrder({
+      comande: [
+        {
+          id: 'c1', seq: 1, status: 'ricevuto', status_times: {},
+          items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+        },
+      ],
+    })
+    mount(order)
+    await user.click(screen.getByRole('button', { name: /Comande \(1\)/ }))
+    expect(screen.getByText(/COMANDA 1/)).toBeInTheDocument()
+    // La stampa della comanda resta: e' la carta che serve al banco.
+    expect(screen.getByRole('button', { name: /Stampa/ })).toBeInTheDocument()
+    // Quella del conto no.
+    expect(screen.queryByRole('button', { name: /Scontrino/ })).not.toBeInTheDocument()
+  })
+
   it('le comande si aprono a parte e ognuna si stampa singolarmente', async () => {
     const user = userEvent.setup()
     const order = baseOrder({
@@ -391,6 +441,75 @@ describe('modale comande: consultazione, avanzamento e stampa', () => {
     const [printedOrder, printedComanda] = printComanda.mock.calls[0]
     expect(printedOrder.id).toBe('ord1')
     expect(printedComanda.id).toBe('c2')
+  })
+
+  // «Se ho più di una comanda (dello stesso ordine!) devo poterle stampare
+  // insieme» (l'utente, 20/08). Un conto battuto in tre riprese ha tre
+  // ticket, e rifarli uno per uno col conto in mano è tempo perso al banco.
+  it('con più di una comanda si stampano tutte in un colpo', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'annullato', status_times: {},
+            items: [{ drink_id: 'neg', name: 'Negroni', unit_price: 9, qty: 1 }],
+          },
+          {
+            id: 'c3', seq: 3, status: 'ricevuto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Comande \(3\)/ }))
+    // Il conto ne ha tre, ma l'annullata è lavoro buttato: il tasto conta due.
+    await user.click(screen.getByRole('button', { name: /Una per comanda \(2\)/ }))
+    expect(printComande).toHaveBeenCalledTimes(1)
+    const [ordine, comande] = printComande.mock.calls[0]
+    expect(ordine.id).toBe('ord1')
+    expect(comande.map((c) => c.id)).toEqual(['c1', 'c3'])
+  })
+
+  // «Va bene stampare tutte le comande insieme su più ricevute ma serve
+  // anche stampare tutto su una sola ricevuta» (l'utente, 20/08). Sono due
+  // gesti diversi e servono tutti e due: il gemello dell'altro tasto.
+  it('e con lo stesso conto si può stampare tutto su un foglio solo', async () => {
+    const user = userEvent.setup()
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'ricevuto', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Comande \(2\)/ }))
+    await user.click(screen.getByRole('button', { name: /Tutto su una/ }))
+    expect(printComandaUnita).toHaveBeenCalledTimes(1)
+    // UN ORDINE, non una lista: è il confine che l'utente ha sottolineato
+    // («ma sempre dello stesso ordine!»).
+    expect(printComandaUnita.mock.calls[0]).toHaveLength(1)
+    expect(printComandaUnita.mock.calls[0][0].id).toBe('ord1')
+    expect(printComande).not.toHaveBeenCalled()
+  })
+
+  it('con una comanda sola i due tasti non ci sono: niente da mettere insieme', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Comande/ }))
+    expect(screen.queryByRole('button', { name: /Una per comanda/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Tutto su una/ })).toBeNull()
   })
 })
 
@@ -438,10 +557,13 @@ describe('schermata Pagamento', () => {
     const user = userEvent.setup()
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    // schermata: articoli a sinistra, importo al centro, avviso (c1 in prep.)
+    // schermata: articoli a sinistra, importo al centro. L'avviso «comande
+    // non ancora servite» NON c'è più a schermo dal 21/08/2026 — occupava
+    // una riga fissa nella colonna del tastierino; quello che diceva sta nel
+    // `title` di «Riscuotere» (le prove sono in PaymentScreen.test.jsx).
     expect(screen.getByRole('dialog', { name: 'Pagamento' })).toBeInTheDocument()
     expect(screen.getByTestId('pay-amount')).toHaveTextContent('14,00')
-    expect(screen.getByText(/[Cc]omande non ancora servite/)).toBeInTheDocument()
+    expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
     expect(registerPayment).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
@@ -450,10 +572,11 @@ describe('schermata Pagamento', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
-  it('con tutto servito la schermata non mostra avvisi', async () => {
+  it('con tutto servito la schermata non mostra avvisi né spiegazioni', async () => {
     const user = userEvent.setup()
     mount(
       baseOrder({
@@ -471,6 +594,9 @@ describe('schermata Pagamento', () => {
     )
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
     expect(screen.queryByText(/[Cc]omande non ancora servite/)).not.toBeInTheDocument()
+    // Non c'è nemmeno il `title`: con tutto servito l'incasso chiude, e non
+    // c'è nessuna differenza da spiegare.
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).not.toHaveAttribute('title')
     await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
     expect(registerPayment).toHaveBeenCalledWith('ord1', {
       amount: 14,
@@ -478,6 +604,7 @@ describe('schermata Pagamento', () => {
       items: null,
       autoServe: false,
       chiude: true,
+      sconto: null,
     })
   })
 
@@ -490,7 +617,7 @@ describe('schermata Pagamento', () => {
       await user.click(screen.getByRole('button', { name: /Pagamento/ }))
       await user.click(screen.getByRole('button', { name: /SumUp/ }))
       await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
-      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null })
+      expect(readerCheckout).toHaveBeenCalledWith('ord1', { amount: 14, items: null, sconto: null })
       expect(registerPayment).not.toHaveBeenCalled()
     } finally {
       mockSettings.payments_reader_enabled = false
@@ -781,6 +908,31 @@ describe('menu azioni del telefono', () => {
     expect(menu.getByRole('button', { name: /Svuota il conto/ })).toBeInTheDocument()
   })
 
+  // LA SCHERMATA DA GIRARE AL CLIENTE si apre da qui. Il QR con cui il
+  // cliente segue l'ordine dal suo telefono stava sulla pagina di stato, che
+  // adesso chi lavora non apre più: senza questa voce non ci si arriverebbe
+  // da nessuna parte.
+  it('«Mostra al cliente» c’è: è la via al QR', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    const menu = await apriMenu(user)
+    expect(menu.getByRole('button', { name: /Mostra al cliente/ })).toBeInTheDocument()
+  })
+
+  // Senza gli stati del servizio non c'è nessun punto da seguire: offrire il
+  // QR sarebbe promettere una cosa che non succede.
+  it('col servizio spento non c’è: non ci sarebbe niente da seguire', async () => {
+    mockSettings.workflow_enabled = false
+    try {
+      const user = userEvent.setup()
+      mount(baseOrder())
+      const menu = await apriMenu(user)
+      expect(menu.queryByRole('button', { name: /Mostra al cliente/ })).toBeNull()
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('quello che si usa sempre NON è nel menu: sta in fondo, su una riga', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
@@ -914,21 +1066,29 @@ describe('dove finiscono le righe aggiunte a un conto', () => {
     expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
   })
 
-  it('con l’interruttore acceso confluiscono nella comanda in preparazione', async () => {
+  // QUESTO TEST DICEVA IL CONTRARIO, e la decisione è dell'utente (20/08):
+  // «Se sono in preparazione significa che la vecchia comanda è stata già
+  // presa in carico». Con l'interruttore acceso il passo di nascita è «in
+  // preparazione», e la vecchia regola («confluisce nella comanda che sta
+  // nel passo di nascita») faceva finire le aggiunte dentro un ticket che
+  // il banco aveva già in mano. Il passo di nascita dice in che stato NASCE
+  // una comanda; non dice più dove finiscono le righe che arrivano dopo.
+  it('nemmeno con l’interruttore acceso: la comanda al banco non si allunga', async () => {
     const user = userEvent.setup()
     mockSettings.comande_in_preparazione = true
     try {
       mount(conUnaComandaAlBanco())
       await user.click(screen.getAllByText('Gin Tonic')[0])
-      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
-      const [, comandaId, payload] = bartenderUpdateComanda.mock.calls.at(-1)
-      expect(comandaId).toBe('c1')
-      expect(payload.items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
-      expect(addComanda).not.toHaveBeenCalled()
+      await waitFor(() => expect(addComanda).toHaveBeenCalled(), { timeout: 3000 })
+      expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+      const [id, items] = addComanda.mock.calls.at(-1)
+      expect(id).toBe('ord1')
+      expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(1)
     } finally {
       mockSettings.comande_in_preparazione = false
     }
   })
+
 })
 
 describe('il passo in cui nasce una comanda lo dice il locale', () => {
@@ -1041,6 +1201,155 @@ describe('creazione: niente si perde mentre l’ordine nasce', () => {
     expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
     expect(screen.getAllByText('Gin Tonic').length).toBeGreaterThan(0)
     expect(createOrder).toHaveBeenCalledTimes(1) // un ordine solo, non due
+  })
+})
+
+
+// -- LA SESSIONE DI CREAZIONE: UN ORDINE, UNA COMANDA --------------------
+//
+// Il danno, visto al banco il 20/08: un conto solo (#20) battuto in
+// creazione, e DUE facsimili di comanda -- un LIMONCELLO da solo, poi tutto
+// il resto. Parole sue: "mi crea piu' comande quando creo un solo ordine.
+// In fase di creazione deve gestire tutto come UNA comanda".
+//
+// Concorrevano due cose: la regola di ieri (una comanda "in preparazione"
+// non accoglie aggiunte -- e col locale che le fa NASCERE in preparazione
+// non le accoglieva mai) e la corsa fra due scritture ravvicinate
+// (BUG-056). Qui si sorveglia la prima, nel caso che l'ha fatta vedere.
+describe('in creazione il conto resta UNA comanda', () => {
+  it('tre aggiunte rapide, col passo di nascita «in preparazione»: una sola', async () => {
+    const user = userEvent.setup()
+    mockSettings.comande_in_preparazione = true
+    try {
+      createOrder.mockImplementationOnce(async () => ({
+        id: 'ord-nuovo',
+        status: 'aperto',
+        // Nasce gia' in preparazione (impostazione del locale) e con la
+        // sessione di creazione APERTA: nessuno l'ha presa in mano.
+        in_creazione: true,
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            presa_in_carico: false,
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+        ],
+        order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        payments: [],
+      }))
+
+      render(
+        <MemoryRouter>
+          <OrderPosDetail order={null} />
+        </MemoryRouter>
+      )
+
+      await user.click(screen.getAllByText('Mojito')[0])
+      await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+      // La sessione e' aperta: lo dice il conto, non un'impostazione.
+      expect(createOrder.mock.calls[0][0].in_creazione).toBe(true)
+
+      // Altre due righe, subito dopo.
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+      await user.click(screen.getAllByText('Gin Tonic')[0])
+
+      await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+      // NESSUNA comanda nuova: le righe entrano in quella che c'e' gia'.
+      // Prima di questa cura ognuna faceva il suo ticket.
+      expect(addComanda).not.toHaveBeenCalled()
+      expect(bartenderUpdateComanda.mock.calls.at(-1)[1]).toBe('c1')
+      const items = bartenderUpdateComanda.mock.calls.at(-1)[2].items
+      expect(items.filter((i) => i.drink_id === 'gin')).toHaveLength(2)
+    } finally {
+      mockSettings.comande_in_preparazione = false
+    }
+  })
+
+  it('uscendo, la sessione si chiude: da li\' in poi vale la regola normale', async () => {
+    const user = userEvent.setup()
+    createOrder.mockImplementationOnce(async () => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      in_creazione: true,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        },
+      ],
+      order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      payments: [],
+    }))
+    const { unmount } = render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    unmount()
+    // E' l'uscita a chiudere la composizione: da qui la comanda puo'
+    // uscire dalla stampante, completa.
+    await waitFor(() => expect(chiudiCreazione).toHaveBeenCalledWith('ord-nuovo'))
+  })
+
+  // ── MA NON SE SI STA ANNULLANDO (BUG-071) ────────────────────────
+  //
+  // «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+  // uscire se è abilitata la stampa automatica» (l'utente, 21/08/2026).
+  //
+  // `in_creazione` è il cancello della stampa: finché c'è, la comanda non
+  // esce. Annullando, l'uscita lo toglieva SUBITO mentre l'annullo doveva
+  // ancora leggersi il conto — e in quel buco la coda vedeva un conto
+  // composto, aperto e da stampare. Adesso l'uscita non tocca niente: a
+  // chiudere la composizione ci pensa l'annullo, insieme allo stato, in
+  // una scrittura sola (cancelOrder in api.js).
+  //
+  // LA PROVA BATTE UNA RIGA PRIMA DI ANNULLARE, e non è un dettaglio: da
+  // lì il conto è già NATO (la schermata passa a modifica) ma resta «in
+  // creazione». È il caso vero al banco — si batte, si cambia idea, si
+  // annulla — ed è quello che sfuggiva, perché passa dal ramo dell'annullo
+  // normale e non da quello del conto ancora nuovo.
+  it('annullando in creazione, l’uscita NON apre il cancello della stampa', async () => {
+    const user = userEvent.setup()
+    // La prova qui sopra ha chiuso una creazione, e la spia se lo ricorda.
+    chiudiCreazione.mockClear()
+    createOrder.mockImplementationOnce(async () => ({
+      id: 'ord-nuovo',
+      status: 'aperto',
+      in_creazione: true,
+      comande: [
+        {
+          id: 'c1',
+          seq: 1,
+          status: 'ricevuto',
+          status_times: {},
+          items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+        },
+      ],
+      order_items: [{ id: 'x', drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+      payments: [],
+    }))
+    const { unmount } = render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    await user.click(screen.getAllByText('Mojito')[0])
+    await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
+    await user.click(screen.getAllByRole('button', { name: /Annulla ordine/ })[0])
+    const conferme = screen.getAllByRole('button', { name: /^Annulla ordine$/ })
+    await user.click(conferme[conferme.length - 1])
+    // Tornando alla coda la schermata si smonta: è lì che l'uscita partiva.
+    unmount()
+    await waitFor(() => expect(cancelOrder).toHaveBeenCalled())
+    expect(chiudiCreazione).not.toHaveBeenCalled()
   })
 })
 
@@ -1828,6 +2137,24 @@ describe('le righe del conto dicono a che punto sono', () => {
   // parla di soldi: dice cosa è già stato incassato e cosa no, e serve
   // esattamente quanto prima — anzi di più, perché senza i passi del
   // servizio è l'unica cosa che divide le righe.
+  // I BOLLI DEL SERVIZIO SEGUONO LA STESSA REGOLA DEI TITOLI: se il locale
+  // non segue la preparazione, «In preparazione» non va scritto da nessuna
+  // parte — nemmeno nel riquadro delle comande, che è il posto dove si
+  // guarda cosa è stato battuto.
+  it('col servizio spento il riquadro Comande non mostra i passi', async () => {
+    mockSettings.workflow_enabled = false
+    try {
+      const user = userEvent.setup()
+      mount(baseOrder())
+      await user.click(screen.getByRole('button', { name: /Comande/ }))
+      const box = document.querySelector('.confirm-box')
+      expect(box).toBeTruthy()
+      expect(box.textContent).not.toMatch(/In preparazione|Da fare|Pronto/)
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
   it('col servizio spento i pagati restano separati, e in fondo', () => {
     mockSettings.workflow_enabled = false
     try {
@@ -1912,5 +2239,276 @@ describe('le righe del conto dicono a che punto sono', () => {
       })
     )
     expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
+  })
+})
+
+// ── LA SALA SERVE, NON PREPARA (REQ-STAFF-014) ────────────────────────
+//
+// Chi sta in sala vede a che punto è il lavoro — gli serve per sapere cosa
+// portare — ma non lo comanda: l'unico passo che segna è «servito», perché
+// è lui a portare il drink al tavolo. Sul CONTO invece lavora, e quello che
+// aggiunge arriva al banco come un ticket NUOVO: infilarlo in una comanda
+// che qualcuno sta già preparando vuol dire cambiargli il lavoro sotto le
+// mani.
+describe('la sala e il conto', () => {
+  const inSala = (order = baseOrder()) => {
+    ruoloCorrente = 'staff'
+    return mount(order)
+  }
+
+  it('quello che aggiunge fa una comanda NUOVA, non entra in quella del banco', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    // La comanda c1 del conto di prova è ancora «da fare»: al banco le righe
+    // ci sarebbero confluite dentro. Alla sala no.
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+    const [orderId, items] = addComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(items.some((i) => i.drink_id === 'gin')).toBe(true)
+  })
+
+  it('anche il «+» su una riga già mandata: un drink in più, in un ticket nuovo', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getByRole('button', { name: 'Aumenta Mojito' }))
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    expect(bartenderUpdateComanda).not.toHaveBeenCalled()
+  })
+
+  // Il ruolo arriva dal token, cioè un battito dopo il primo disegno: fino a
+  // lì la schermata resta quella del banco, apposta (vedi ruoli.js).
+  it('le righe già mandate al banco non le toglie', async () => {
+    inSala()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    )
+  })
+
+  it('non prende in carico: «Segna “In preparazione”» non c’è', async () => {
+    const user = userEvent.setup()
+    inSala()
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    expect(screen.queryByRole('button', { name: /Segna “In preparazione”/ })).toBeNull()
+  })
+
+  it('ma quello che porta al tavolo lo segna servito', async () => {
+    const user = userEvent.setup()
+    inSala(
+      baseOrder({
+        workflow_status: 'pronto',
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'pronto',
+            status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    await user.click(screen.getByRole('button', { name: /Segna “Ritirato\/Servito”/ }))
+    expect(advanceComanda).toHaveBeenCalledWith('ord1', 'c1', 'ritirato')
+  })
+
+  it('non divide e non torna indietro', async () => {
+    const user = userEvent.setup()
+    inSala(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'in_preparazione',
+            status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 5 }],
+          },
+        ],
+      })
+    )
+    await user.click(screen.getByRole('button', { name: /Stato servizio/ }))
+    expect(screen.queryByRole('button', { name: /Preparazione parziale/ })).toBeNull()
+    expect(screen.queryByText('Torna a')).toBeNull()
+  })
+
+  it('e non butta il conto: annullare è di chi versa', async () => {
+    inSala()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeDisabled()
+    )
+  })
+
+  it('al banco invece non cambia niente', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    expect(addComanda).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /Annulla ordine/ })).toBeEnabled()
+  })
+})
+
+// ── LO STATO DELLA LAVORAZIONE STA NELLA BARRA IN ALTO ──────────────────
+// «Sposta lo stato di servizio nella barra in alto come indicato dalla
+// freccia rossa» (l'utente, 21/08/2026, con la freccia sullo spazio vuoto a
+// destra della barra). Prima la pastiglia stava nella testata della colonna
+// del conto, accanto al numero e in mezzo ai tasti delle righe.
+// QUI SI CONTROLLA SOLO DOVE STA: quando compare e cosa dice non sono
+// cambiati, e i test che lo dicono stanno qui sotto insieme agli altri —
+// serve a non «sistemare» il posto rompendo la regola.
+describe('lo stato della lavorazione sta nella barra in alto', () => {
+  const barra = () => document.querySelector('.posd-topbar')
+  const pastiglia = () => document.querySelector('.posd-topbar .posd-stato')
+  // La testata della colonna del conto: la riga col nome e i tasti ↕ ▲ ⋯.
+  const testataColonna = () => document.querySelector('.posd-title')?.parentElement
+
+  // SCHERMO LARGO, salvo dove è scritto il contrario: un blocco più su lascia
+  // `matchMedia` incantato sul telefono, e senza questo i test di qui
+  // leggerebbero una barra diversa da quella che stanno descrivendo.
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+  })
+
+  it('sta nella barra in alto, e non più nella testata della colonna', () => {
+    mount(baseOrder())
+    expect(pastiglia()).toBeTruthy()
+    expect(pastiglia().textContent).toMatch(/Da fare/)
+    // Una sola in tutta la schermata: se restasse anche di là sarebbero due
+    // posti per la stessa risposta, e uno dei due invecchierebbe.
+    expect(document.querySelectorAll('.posd-stato')).toHaveLength(1)
+    expect(testataColonna()).toBeTruthy()
+    expect(testataColonna().querySelector('.posd-stato')).toBeNull()
+  })
+
+  // I SOLDI DA UNA PARTE, IL LAVORO DALL'ALTRA. Nella barra si legge da
+  // sinistra: numero, ora e stato del CONTO stanno insieme, lo stato del
+  // LAVORO va in fondo — dove punta la freccia dell'utente.
+  it('è l’ultima della barra, dopo lo stato del conto', () => {
+    mount(baseOrder())
+    const figli = [...barra().children]
+    const conto = barra().querySelector('.posd-conto-stato')
+    expect(figli.indexOf(conto)).toBeGreaterThan(-1)
+    expect(figli.indexOf(conto)).toBeLessThan(figli.indexOf(pastiglia()))
+    expect(figli.at(-1)).toBe(pastiglia())
+  })
+
+  // DUE PASTIGLIE VICINE NON DEVONO SEMBRARE LA STESSA COSA: «🟢 Conto
+  // aperto» e «🔔 Pronto» sono pure dello stesso verde. Ognuna dice di cosa
+  // parla a chi ci si ferma sopra.
+  it('si distingue da quella del conto: ognuna dice di cosa parla', () => {
+    mount(baseOrder())
+    expect(barra().querySelector('.posd-conto-stato').getAttribute('title')).toMatch(
+      /^Stato del conto/
+    )
+    expect(pastiglia().getAttribute('title')).toMatch(/^Stato della lavorazione/)
+  })
+
+  // IL PASSO PIÙ INDIETRO, non il più avanti: chi apre un conto vuole sapere
+  // quanto MANCA. È la stessa regola con cui la coda decide lo stato di un
+  // conto, e le due schermate non possono discordare.
+  it('con più comande dice il passo PIÙ INDIETRO', () => {
+    mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'pronto', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1 }],
+          },
+          {
+            id: 'c2', seq: 2, status: 'in_preparazione', status_times: {},
+            items: [{ drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1 }],
+          },
+        ],
+      })
+    )
+    expect(pastiglia().textContent).toMatch(/In preparazione/)
+  })
+
+  // LA BARRA SA DI ESSERE PIÙ PIENA. Con la pastiglia a bordo si marca
+  // `con-lavoro`, e da lì il foglio di stile decide cosa togliere quando lo
+  // spazio manca — misurando la barra e non la finestra, che con lo zoom
+  // dell'app mente (`zoom` su #root: al 120% un tablet da 768px di barra ne
+  // ha 640 veri).
+  it('la barra si marca «con-lavoro» solo quando la pastiglia c’è', () => {
+    mount(baseOrder())
+    expect(barra().classList.contains('con-lavoro')).toBe(true)
+    mockSettings.workflow_enabled = false
+    try {
+      mount(baseOrder())
+      expect([...document.querySelectorAll('.posd-topbar')].at(-1).classList.contains('con-lavoro')).toBe(
+        false
+      )
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  it('col servizio spento non c’è: quel passo lì non esiste per nessuno', () => {
+    mockSettings.workflow_enabled = false
+    try {
+      mount(baseOrder())
+      expect(document.querySelector('.posd-stato')).toBeNull()
+    } finally {
+      delete mockSettings.workflow_enabled
+    }
+  })
+
+  it('a conto chiuso non c’è: non è più una cosa da fare', () => {
+    mount(baseOrder({ status: 'pagato', payment_status: 'pagato' }))
+    expect(document.querySelector('.posd-stato')).toBeNull()
+  })
+
+  it('in creazione non c’è: non c’è ancora nessuna comanda', () => {
+    render(
+      <MemoryRouter>
+        <OrderPosDetail order={null} />
+      </MemoryRouter>
+    )
+    expect(document.querySelector('.posd-stato')).toBeNull()
+  })
+
+  // SUL TELEFONO LA BARRA È STRETTA. Misurata in Chrome vero: al completo
+  // chiede 505px, e un telefono ne ha 360-430. Con lo stato del lavoro a
+  // bordo cedono l'ora (si rilegge nella storia del conto) e la PAROLA
+  // dello stato del conto, che resta il suo segno — il nome per esteso non
+  // si perde, sta nel title. Quello che NON cede è la pastiglia appena
+  // arrivata: è l'unica cosa lassù che dice a che punto è il lavoro.
+  describe('sul telefono', () => {
+    beforeEach(() => {
+      window.matchMedia = (query) => ({
+        matches: query.includes('700px'),
+        media: query,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      })
+    })
+
+    it('la pastiglia del lavoro resta per esteso, e cedono ora e parola del conto', () => {
+      mount(baseOrder({ created_at: '2026-08-21T21:00:00.000Z' }))
+      expect(pastiglia().textContent).toMatch(/Da fare/)
+      expect(document.querySelector('.posd-aperto')).toBeNull()
+      const conto = barra().querySelector('.posd-conto-stato')
+      expect(conto.textContent.trim()).toBe('🟢')
+      expect(conto.getAttribute('title')).toBe('Stato del conto: Conto aperto')
+    })
+
+    it('senza lo stato del lavoro la barra resta quella di prima', () => {
+      mockSettings.workflow_enabled = false
+      try {
+        mount(baseOrder({ created_at: '2026-08-21T21:00:00.000Z' }))
+        expect(document.querySelector('.posd-aperto')).toBeTruthy()
+        expect(barra().querySelector('.posd-conto-stato').textContent).toMatch(/Conto aperto/)
+      } finally {
+        delete mockSettings.workflow_enabled
+      }
+    })
   })
 })

@@ -11,6 +11,8 @@ import {
   deleteGroup,
   payGroupCash,
   createPendingGroupPayment,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import {
@@ -30,13 +32,18 @@ import {
   splitAmounts,
   canNest,
 } from '../lib/groups.js'
-import { formatPrice, STATUS_LABELS, STATUS_EMOJI } from '../lib/orderStatus.js'
+import { formatPrice, STATUS_EMOJI, statoAlBanco } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
 // scende mantenendo la stessa vista. Gestione annidamento (aggiungi/sgancia).
 export default function GroupView({ groupId, onClose }) {
+  // IL PASSO DEL SERVIZIO SI MOSTRA SOLO DOVE ESISTE: in un locale che non
+  // segue la preparazione quel bollo parla di una cosa che lì non si fa.
+  const [impostazioni, setImpostazioni] = useState(DEFAULT_SETTINGS)
+  useEffect(() => subscribeSettings(setImpostazioni), [])
+  const workflowOn = impostazioni.workflow_enabled !== false
   const [groups, setGroups] = useState([])
   const [recent, setRecent] = useState([])
   const [orders, setOrders] = useState([])
@@ -275,9 +282,11 @@ export default function GroupView({ groupId, onClose }) {
             <div className="row between" key={o.id} style={{ padding: '4px 0' }}>
               <span>
                 #{o.daily_number ?? '—'} {o.customer_name ? `· ${o.customer_name}` : ''}{' '}
-                <span className="muted small">
-                  {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
-                </span>
+                {workflowOn && (
+                  <span className="muted small">
+                    {STATUS_EMOJI[o.workflow_status]} {statoAlBanco(o.workflow_status, o.service_mode)}
+                  </span>
+                )}
               </span>
               <span className="price">{formatPrice(o.total)}</span>
             </div>

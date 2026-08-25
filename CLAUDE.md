@@ -92,6 +92,14 @@ issue da solo.
 - L'interfaccia va spiegata a chi ha in mano un vassoio: parole comuni,
   nessun gergo tecnico, nessun messaggio d'errore che scarica la colpa
   addosso a chi legge.
+- **Ma il tono resta professionale.** Didascalie, descrizioni delle
+  impostazioni e messaggi non danno del tu con la pacca sulla spalla, non
+  fanno battute e non raccontano aneddoti: dicono cosa fa una cosa e a cosa
+  serve, in una frase piana. «Parole comuni» vuol dire *comprensibili*, non
+  *confidenziali* — questa è l'app con cui si incassano i soldi di un
+  locale, e chi la legge sta lavorando. Il perché di una scelta, i casi
+  visti al banco e il colore vanno nei COMMENTI del codice e nel registro,
+  dove servono a chi sviluppa: non a schermo.
 - **La navigazione ha delle regole scritte**: barra in alto a tre zone, cosa
   si toglie per primo quando lo spazio manca, dove stanno pagine,
   sottosezioni e filtri. Stanno in [docs/navigazione.md](docs/navigazione.md)
@@ -104,17 +112,47 @@ flusso di un conto, sicurezza — sta in
 [docs/architettura.md](docs/architettura.md): **da leggere prima di
 toccare coda, conto, pagamento o il modello dati.** Qui i vincoli secchi:
 
-- **Coda, conto e pagamento lavorano in locale.** Quelle tre schermate
-  fanno tutto sui dati che hanno già: leggono dalla cache, scrivono in
-  sottofondo, e si aggiornano da sole quando il server manda qualcosa di
-  nuovo. Niente `await` su una lettura prima di far vedere l'esito di un
-  gesto — un conto incassato, annullato, una riga aggiunta si devono
-  vedere nell'istante in cui si tocca. Se un dato serve e non c'è, si
-  precarica (vedi `src/lib/progressivi.js`), non si va a chiederlo al
-  momento del bisogno.
-- **Niente aspetta la rete.** Le scritture partono in sottofondo; le
-  schermate si aggiornano subito. Un `await` su una scrittura Firestore
-  offline non torna mai: al banco significa l'app bloccata.
+### Il local-first è la prima regola, e non si negozia
+
+Questa è la regola che viene prima di tutte le altre, per chi lavora qui —
+persone e agenti. È già stata violata più volte, sempre per distrazione e
+sempre con lo stesso danno: si aggiungono tre drink a un conto, si torna
+alla coda, e la card mostra ancora il totale di prima «finché non
+sincronizza». Al banco quello è un conto sbagliato.
+
+**Coda ordini, comande, nuovo ordine, modifica ordine, contanti e
+pagamenti lavorano SOLO in locale.** Tutto il giro di una serata con la
+cassa aperta deve funzionare con la rete staccata: le card si aggiornano
+subito, le liste anche quando un conto cambia stato, i pagamenti pure. La
+sincronizzazione è una cosa che succede dopo, in sottofondo, e nessuno la
+aspetta.
+
+Da qui scendono quattro cose pratiche:
+
+- **Niente `await` prima di mostrare l'esito di un gesto.** Un conto
+  incassato, annullato, una riga aggiunta si vedono nell'istante in cui si
+  tocca. Un `await` su una scrittura Firestore offline non torna mai: è
+  l'app bloccata col locale pieno.
+- **Non si rilegge quello che si è appena scritto: si compone.** La
+  scrittura parte in sottofondo, quindi nell'istante della rilettura la
+  cache contiene ancora la versione di prima — chi rilegge, rilegge il
+  passato. Il risultato si costruisce in memoria dal documento di partenza
+  più la patch appena mandata (`ordineDopo` in `src/lib/api.js`). Questo è
+  stato il difetto di BUG-045, ed è tornato più di una volta.
+- **Se un dato serve e non c'è, si precarica** (vedi
+  `src/lib/progressivi.js`): non lo si va a chiedere nel mezzo di un gesto.
+- **Le scritture partono in sottofondo** (`bgWrite`), con l'indicatore di
+  sincronizzazione che dice come sta andando.
+
+**E i test lo devono dimostrare, non darlo per buono.** Chi tocca queste
+schermate scrive un test che gira **senza rete**: si mocka `firebase/firestore`
+in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda
+con quello che c'era prima — che è quello che fa davvero una cache mentre
+la scrittura è in coda. Non si mocka `src/lib/api.js`, se no si prova il
+mock e non il codice. Il modello è
+[`tests/unit/giroInLocale.test.js`](tests/unit/giroInLocale.test.js), che è
+scritto apposta per essere copiato. I test con la rete che risponde si
+fanno **in più**, non al posto di quelli.
 - **Il magazzino si scala con lo snapshot**, non ricalcolando la ricetta:
   la ricetta cambia, il drink già fatto no.
 - **I ruoli si confrontano solo con `src/lib/ruoli.js`.** C'è un test che
@@ -145,8 +183,14 @@ test; un test appartiene a un requisito.
 
 ```sh
 node scripts/requisiti.mjs              # a che punto siamo
-node scripts/requisiti.mjs --documento  # scrive docs/requisiti.md
+node scripts/requisiti.mjs --documento  # rigenera la specifica di sistema
 ```
+
+Il documento che ne esce, [docs/system_specifications.md](docs/system_specifications.md), è **la
+specifica di sistema**: cosa fa l'app, area per area, coi test che lo
+dimostrano, i lavori previsti in un capitolo a parte e i difetti noti in
+fondo. È **generato** e non si tocca a mano — si tocca il registro e si
+rigenera, se no torna vecchio come era già successo (REQ-DEV-012).
 
 Tre stati che contano:
 
@@ -214,5 +258,5 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
-| capire cosa fa (o non fa) l'app | [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |

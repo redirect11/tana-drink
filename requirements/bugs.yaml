@@ -118,13 +118,27 @@ bugs:
       compare solo nella lista notifiche in-app (ordini annullati e
       ricevuti), e la si vede entrando nell'app, non aprendo l'ordine.
       Il cliente continua a ricevere la sua push come oggi.
+      CAUSA (trovata il 19/08). Il messaggio non veniva dal server: la push
+      delle Functions va al `push_token` scritto sull'ORDINE, che è del
+      telefono del cliente. Veniva da OrderStatusPage, che è la STESSA
+      pagina per tutti e due — chi lavora ci trova il conto, il cliente lo
+      stato del suo ordine — e mostrava l'avviso dell'annullamento senza
+      guardare chi stesse davanti allo schermo. Il gemello «drink pronto»
+      quel controllo ce l'aveva già.
+      RISOLTO: a chi lavora niente che interrompa — nessun avviso a schermo
+      e nessuna notifica di sistema — ma l'evento si scrive nella lista
+      della campanella con parole da banco («✖️ Conto annullato», numero e
+      nome del conto). Un annullamento non è una cosa da fare, è una cosa
+      successa: la si trova entrando nell'app, non addosso aprendo un conto.
+      Al cliente resta la sua, identica.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, notifiche, staff]
     severity: lieve
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/OrderStatusPage.test.jsx
 
   - id: BUG-004
     title: "Nel dettaglio ordine il subtotale di riga non segue la quantità"
@@ -159,13 +173,19 @@ bugs:
       lo schermo invece della stampante non la vede mai. Comportamento
       atteso: la nota dell'item compare sotto la riga anche nelle card
       delle code, come già avviene per la nota del conto.
+      RISOLTO (1.5.x). La nota della riga va a capo sotto il nome del
+      prodotto — non a fianco, dove il prezzo a destra la tagliava a metà —
+      in tutte e due le card: quella della coda del gestionale e quella
+      della coda di sala. Le viste a corsie e il dettaglio della comanda la
+      mostravano già; mancavano proprio le due card citate qui. La griglia
+      compatta resta senza righe, come da disegno: non elenca i prodotti.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, comande, ui]
     severity: grave
     priority: P1
-    test_cases: []
+    test_cases: [tests/component/NoteRigheCoda.test.jsx]
 
   - id: BUG-006
     title: "Nel pagamento a righe separate il meno spegne anche quelle sotto"
@@ -453,7 +473,7 @@ bugs:
       10 travasati alla lettura, 0 da sistemare).
     in_produzione: true
     status: fixed
-    generate_issue: false
+    generate_issue: true
     labels: [bug, magazzino]
     severity: lieve
     priority: P3
@@ -802,14 +822,22 @@ bugs:
       non mostra il tasto «modifica»; riaprendo un conto annullato le sue
       comande tornano in una colonna che quel locale non guarda.
       Nessun test lo vede, perché girano tutti col default.
-      COME SI SISTEMA: il confronto si fa col passo di nascita, non con la
-      costante — e il predicato «in attesa del pagamento» va scritto una
-      volta in coda.js invece che copiato cinque volte nella pagina.
+      RISOLTO (1.5.0, prima che uscisse): il predicato sta scritto una volta
+      in coda.js (`attesaPagamento`) e confronta col PASSO DI NASCITA, non
+      con la costante — così il blocco scatta comunque sia messo il locale,
+      e non c'è più una riga da ricordarsi di copiare. Nella pagina era
+      ripetuto in cinque punti: adesso in nessuno.
+      RESTANO da portare alla stessa regola gli altri quattro punti dove
+      «ricevuto» è ancora cablato (modifica dell'ordine dal cliente, lato
+      client e lato regole Firestore; aggancio del token push; ripristino di
+      un conto annullato): non toccano i soldi, e vanno guardati insieme.
     in_produzione: false
-    status: todo
-    generate_issue: true
+    status: fixed
+    generate_issue: false
     labels: [bug, coda, pagamenti]
-    test_cases: []
+    severity: grave
+    priority: P0
+    test_cases: [tests/unit/coda.test.js]
 
   - id: BUG-028
     title: "Due memorie di «l'ho appena fatto io» sulla stessa schermata"
@@ -832,11 +860,24 @@ bugs:
       (`activeComanda`) e togliere `queueOverrides`. Non è un refactoring
       di comodo: finché sono due, ogni gesto nuovo va ricordato in due
       posti.
+      RISOLTO (19/08) così: `queueOverrides` non c'è più. La memoria è una
+      sola — `comandeLocali` — e lo stato del conto si RICAVA dalle sue
+      comande con `statoDiLavoro` (comande.js), la stessa funzione che usa
+      la lettura da Firestore: due strade per lo stesso stato sono due
+      strade per farle divergere. Avanzare dalla griglia adesso muove la
+      comanda attiva, come fa già il server, e le due viste raccontano la
+      stessa cosa anche offline.
+      IN PIÙ, ed è la parte che prima sbagliava di suo: con due comande in
+      due passi diversi il conto segue quella più indietro invece dello
+      stato premuto. È quello che scriverà il server un istante dopo, ed è
+      quello che è vero al banco.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, coda, local-first]
-    test_cases: []
+    severity: media
+    priority: P1
+    test_cases: [tests/component/UnaMemoriaLocale.test.jsx]
 
   - id: BUG-029
     title: "Il magazzino si legge da una porta e si scrive da sette finestre"
@@ -862,6 +903,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, magazzino]
+    severity: grave
+    priority: P1
     test_cases: []
 
   - id: BUG-030
@@ -883,6 +926,8 @@ bugs:
     status: todo
     generate_issue: true
     labels: [bug, clienti, menu]
+    severity: grave
+    priority: P1
     test_cases: []
 
   - id: BUG-031
@@ -901,11 +946,27 @@ bugs:
       COME SI SISTEMA: il ruolo è già noto altrove (App, BartenderPage):
       tenerlo dove si legge senza rete e disegnare subito con l'ultimo
       valore noto; l'ordine può arrivare dalla card che l'ha già in mano.
+      RISOLTO (19/08), tutte e due le attese.
+      IL RUOLO: `src/lib/ruoloLocale.js` tiene l'ultimo ruolo letto con
+      l'utente a cui apparteneva, e chi legge il token (App, BartenderPage,
+      la comanda stessa) lo scrive. La schermata parte da lì, che si legge
+      senza rete, e il token conferma un istante dopo. OTTIMISTI IN UN VERSO
+      SOLO: si ENTRA sulla memoria, non si MANDA VIA nessuno — allontanare
+      qualcuno per una memoria vecchia sarebbe peggio del lampo che si sta
+      togliendo, e a difendere i dati ci sono le regole del database, che
+      guardano il token e non questa copia. Senza memoria si aspetta come
+      prima, e la memoria di un altro utente non vale.
+      L'ORDINE: `subscribeOrder` legge prima dalla cache, come già fa la coda
+      (`subscribeActiveOrders`). onSnapshot risponde subito col dato locale
+      solo quando SA di essere offline: con la rete collegata e muta crede di
+      essere online e aspetta il server, col conto già in tasca.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, local-first, banco]
-    test_cases: []
+    severity: media
+    priority: P1
+    test_cases: [tests/component/ComandaSenzaAttesa.test.jsx]
 
   - id: BUG-032
     title: "Il logo dello scontrino si ritenta a ogni stampa se manca"
@@ -917,11 +978,19 @@ bugs:
       worker, ogni scontrino rifà il caricamento e aspetta l'errore prima
       di stampare. La carta esce dopo, ogni volta.
       Si sistema con un terzo valore (o un flag «già tentato»): due righe.
+      RISOLTO (19/08) col terzo valore: `undefined` vuol dire «mai
+      provato», `null` vuol dire «provato e non c'è». Si tenta una volta
+      sola per sessione, e dal secondo scontrino in poi la carta esce
+      subito. `logoPerStampa` è esportata apposta per la prova: il «una
+      volta sola» si dimostra solo contando i tentativi.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, stampa]
-    test_cases: []
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/logoScontrino.test.js
 
   - id: BUG-033
     title: "I passi del servizio si vedevano nel conto anche col servizio spento"
@@ -947,6 +1016,468 @@ bugs:
     generate_issue: false
     labels: [bug, pos, comande]
     test_cases: [tests/component/OrderPosDetail.test.jsx, tests/unit/comande.test.js]
+
+  - id: BUG-034
+    title: "Il facsimile dello scontrino andava a capo dove la stampante non va"
+    area: "src/lib/stampanteFinta.js"
+    description: >
+      Segnalato dall'utente il 18/08, con lo screenshot: nella finestra del
+      facsimile «La Tana del Conigli / o» e ogni riga di un drink spezzata
+      in due, con il prezzo sotto al nome.
+      CAUSA: la carta è larga 48 caratteri (COL in printer.js) e il testo è
+      già impaginato su quella misura, ma il facsimile era largo 80mm con un
+      corpo fisso e `pre-wrap`: due misure diverse, e vinceva quella
+      sbagliata. Quello che si vedeva a schermo non era quello che esce
+      dalla stampante — che è l'unica cosa che quella finestra deve fare.
+      RISOLTO: la larghezza la decide il testo (48ch di monospaziato) e le
+      righe non vanno più a capo. Il logo si misura nella stessa unità.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, stampa]
+    test_cases: [tests/unit/stampanteFinta.test.js]
+
+  - id: BUG-035
+    title: "Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta"
+    area: "src/lib/stampanteFinta.js"
+    description: >
+      Segnalato dall'utente il 18/08 dopo BUG-034: le righe non vanno più a
+      capo, ma l'intestazione (il nome del locale spaziato, l'indirizzo, il
+      totale in grande) non risulta centrata come esce dalla stampante — il
+      blocco è spostato di qualche carattere.
+      Sospetto: il centraggio del testo lo fa la stampante con un suo
+      comando (`addTextAlign`), mentre nel facsimile il testo arriva già
+      impaginato e viene messo in un `pre` allineato a sinistra: le righe
+      che la stampante centrerebbe da sé restano dove sono.
+      Non urgente e detto dall'utente stesso: è una finestra di prova, la
+      carta vera esce giusta. Si sistema quando si passa di lì.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, stampa]
+    severity: lieve
+    priority: P3
+    test_cases: []
+
+  - id: BUG-036
+    title: "Lo staff non riceve le notifiche di ritiro e servizio"
+    area: "functions/lib/push-core.js, functions/index.js, src/lib/api.js, public/sw.js"
+    description: >
+      Segnalato dall'utente il 19/08: «lo staff non riceve le notifiche del
+      ritiro/servizio, quelle devono assolutamente arrivare».
+      Sono le notifiche che dicono a chi lavora che c'è un drink pronto da
+      portare o da consegnare: senza, la comanda resta ferma sul banco
+      finché qualcuno non guarda lo schermo — che è esattamente quello che
+      le corsie dovevano evitare.
+      DOVE SI FERMAVA: NON PARTIVA. Due guasti distinti.
+      1) SERVIZIO. Il messaggio nasceva (decideStaffServePush) ma
+      `pushToStaff` lo mandava con `roles: ['staff']`, e `destinatariPush`
+      teneva solo le righe di `staff_tokens` col campo `role` a 'staff'.
+      Quel campo non era il ruolo della persona: era il nome della
+      SCHERMATA che aveva registrato il dispositivo, e la schermata dove
+      si finisce tutti è la coda, che ci scriveva 'bartender'. Elenco
+      vuoto, uscita silenziosa. PROVA: su tana-drink-test tutte e quattro
+      le righe di `staff_tokens` avevano role 'bartender', nessuna 'staff'.
+      2) RITIRO. Nessun messaggio nasceva affatto: decideStaffServePush
+      usciva su `service_mode === 'banco'`, dando per scontato che ci
+      pensasse il cliente — che però riceve la push solo se ha ordinato
+      dal menù (il `push_token` sul conto), e un conto battuto al POS non
+      ce l'ha. Su quei conti non partiva niente per nessuno.
+      CORREZIONE: via il filtro per ruolo (chi porta i drink non è un
+      ruolo, è chi è in piedi); il messaggio nasce anche per il ritiro,
+      con parole sue; a non riceverlo è solo il terminale che ha premuto
+      «pronto», che ora lascia scritto `avanzamento_device` sul conto. Il
+      campo `role` in `staff_tokens` non lo scrive né lo legge più
+      nessuno: mentiva, ed è stato tolto. Corretto nello stesso giro l'OR
+      troppo largo del service worker (`focused ||`), che avrebbe fatto
+      sparire l'avviso appena riattivato su un tablet a schermo spento.
+      RESTA DA FARE: il DEPLOY delle Cloud Functions. Finché non si
+      deploya, in produzione gira ancora il codice vecchio.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, notifiche, banco]
+    test_cases:
+      - tests/bdd/notify-staff-call.test.js
+      - tests/bdd/notify-order.test.js
+      - tests/unit/scritturaComande.test.js
+      - tests/unit/serviceWorkerAvvisi.test.js
+
+  - id: BUG-037
+    title: "Aprendo l'app la chiamata dello staff non compare finché non si naviga"
+    area: "src/components/ChiamataInArrivo.jsx, src/App.jsx, src/components/ServiceQueue.jsx"
+    description: >
+      Segnalato dall'utente il 19/08. Con l'app in secondo piano o lo
+      schermo spento la notifica della chiamata arriva; ma riaprendo l'app
+      la chiamata vera e propria non si presenta finché non si naviga da
+      qualche parte. Chi è stato chiamato apre il telefono e non trova
+      niente: il gesto di chi ha chiamato si perde.
+      DOVE SI FERMAVA: arrivava e non si vedeva. L'ascolto delle chiamate
+      (`subscribeMyCalls`) e il riquadro stavano DENTRO ServiceQueue, cioè
+      la sola sezione «Da servire» del gestionale, montata solo con quella
+      scheda aperta. La scheda di partenza è la coda, e la notifica di
+      sistema porta anch'essa su /bar (public/sw.js, notificationclick):
+      riaprendo si finiva sempre dove la chiamata non era neanche
+      ascoltata. Andando su «Da servire» il componente si montava, la
+      sottoscrizione partiva e la chiamata saltava fuori — da qui il
+      «finché non si naviga».
+      CORREZIONE: l'ascolto e il riquadro sono diventati un componente a
+      sé (ChiamataInArrivo) montato in App.jsx per tutto il tempo in cui
+      c'è qualcuno dello staff collegato. La chiamata in sospeso è già lì
+      al rientro, su qualunque schermata, e non serve navigare.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, notifiche, sala]
+    test_cases: [tests/component/ChiamataInArrivo.test.jsx]
+
+  - id: BUG-038
+    title: "Sulla PWA Android le notifiche arrivano solo accendendo lo schermo"
+    area: "public/sw.js, functions/lib/push-core.js"
+    description: >
+      Segnalato dall'utente il 19/08: sull'app installata su Android le
+      notifiche non arrivano in tempo reale — restano ferme finché non si
+      accende lo schermo. Al banco vuol dire che una chiamata dalla sala
+      arriva quando ormai non serve più.
+      DIAGNOSI (19/08), e in buona parte non dipende da noi.
+      LA PRIORITÀ È GIÀ ALTA: tutte le push allo staff partono con
+      `webpush: { headers: { Urgency: 'high' } }` — nuovo ordine e pronto
+      con TTL 600, la chiamata con TTL 180 (functions/index.js). Lì non c'è
+      niente da guadagnare: l'ipotesi «mandiamo una notifica normale» è
+      esclusa.
+      Quello che resta è il risparmio energetico di Android sull'app
+      installata: a schermo spento il sistema sospende la consegna e la
+      rilascia quando il telefono si sveglia. Non è una cosa che si
+      corregge nel codice — si toglie l'ottimizzazione batteria per il
+      browser/la PWA dalle impostazioni del telefono. Da dire all'utente
+      così com'è, invece di inseguire una correzione impossibile.
+      C'È PERÒ UN NOSTRO DIFETTO LATENTE, che si vedrà appena BUG-036 sarà
+      risolto: in public/sw.js la notifica «drink pronti da servire» viene
+      SALTATA se una finestra su /bar risulta
+      `w.focused || w.visibilityState === 'visible'`. È un OR, cioè il
+      controllo più largo possibile: un telefono lasciato aperto sulla coda
+      con lo schermo spento può restare `focused`, e in quel caso la
+      notifica non viene mostrata affatto. Va stretto a una sola
+      condizione, la visibilità.
+      NON RIPRODOTTO: in locale le push non si provano (niente emulatore
+      FCM, service worker non registrato in sviluppo).
+      19/08 — il difetto del service worker è CORRETTO (è andato con
+      BUG-036: si guarda la visibilità, non il fuoco, e ora public/sw.js
+      ha i suoi test). Resta aperto solo quello che non dipende da noi:
+      il risparmio energetico di Android. Da chiudere con l'utente dopo
+      il deploy, provando col telefono in mano.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, notifiche, pwa]
+    severity: media
+    priority: P2
+    test_cases: []
+
+  - id: BUG-039
+    title: "Col servizio spento i bolli dei passi comparivano lo stesso"
+    area: "src/components/OrderPosDetail.jsx, src/components/GroupView.jsx"
+    description: >
+      Segnalato dall'utente il 19/08, dopo BUG-033: nel riquadro «Comande»
+      del conto la comanda portava il bollo «🍹 In preparazione» anche in un
+      locale che non segue la preparazione, e lo stesso capitava nella vista
+      di un gruppo. È lo stesso difetto dei titoli delle righe, in altri due
+      punti: le comande uno stato ce l'hanno comunque — è il dato — ma
+      scriverlo a schermo vuol dire parlare di una cosa che lì non si fa.
+      RISOLTO: i bolli seguono l'impostazione del servizio. Resta «✂️
+      Divisa», che non è un passo del servizio ma cosa ne è stato di quel
+      ticket, e vale anche a preparazione spenta.
+    in_produzione: false
+    status: fixed
+    generate_issue: false
+    labels: [bug, pos, comande]
+    test_cases: [tests/component/OrderPosDetail.test.jsx]
+
+  - id: BUG-040
+    title: "La sala segna «servito» e il magazzino non si scala"
+    area: "src/lib/comande.js (comandaDaScaricare), src/lib/api.js, firestore.rules"
+    description: >
+      Trovato lavorando REQ-STAFF-014, il 19/08. Non era nuovo, ma da quel
+      giorno era diventato la strada normale: segnare «servito» è il mestiere
+      della SALA — è lei che porta il drink al tavolo — e prima quel tasto lo
+      premeva quasi sempre il banco.
+      DOVE SI FERMAVA. Il magazzino si scalava quando la comanda diventava
+      «servito»: `advanceComanda` salvava l'avanzamento e poi chiamava
+      `scaricaInSottofondo`, che scrive le nuove giacenze su
+      `inventory_items`. Quella collection in `firestore.rules` è
+      `read, write: if isBartender()`: al ruolo `staff` il permesso è negato.
+      La scrittura falliva e il `catch {}` di `scaricaInSottofondo` la
+      ingoiava in silenzio — nessun toast, nessun avviso: l'avanzamento si
+      vedeva, il magazzino no.
+      COSA RESTAVA STORTO. La comanda manteneva `inventory_applied: false`,
+      quindi gli ingredienti di quel drink risultavano ancora IMPEGNATI (la
+      colonna «a fine serata», lib/impegnato.js) invece che consumati. Il
+      recupero c'era — «si riprende al pagamento», `unappliedEntries` — ma
+      valeva solo se a incassare quel conto era poi il banco: se incassava la
+      stessa persona di sala il tentativo falliva di nuovo allo stesso modo.
+      Una serata servita e incassata tutta dalla sala lasciava il magazzino
+      fermo, e se ne sarebbe accorto qualcuno tre giorni dopo guardando una
+      giacenza che non torna.
+      RISOLTO SPOSTANDO IL MOMENTO, non il permesso. Lo scarico è passato a
+      «PRONTO» (`comandaDaScaricare`, REQ-MAG-003), che è dove il fatto
+      succede davvero: lì il drink è fatto — fra «pronto» e «servito» il gin
+      è già nel bicchiere — e a segnarlo è chi l'ha fatto, il BANCO, che sul
+      magazzino scrive. Il difetto dei permessi sparisce da sé, e per la
+      ragione giusta: non si è allargato niente a nessuno.
+      Le due strade scartate, perché non tornino: dare a `staff` la scrittura
+      su `inventory_items` gli darebbe tutto il magazzino, che è esattamente
+      quello che quelle regole tengono chiuso; e una Cloud Function per lo
+      scarico sarebbe stata una macchina nuova per rimettere una toppa a un
+      momento sbagliato.
+      SE QUALCUNO UN DOMANI RIMETTE LO SCARICO SU «SERVITO», questo difetto
+      torna identico. È il motivo per cui la voce resta scritta.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, magazzino, ruoli, sala]
+      VERIFICATO E COPERTO (19/08, chiesto dall'utente: «vanno scritti i
+      test, si e' verificato che e' implementato davvero»). Il codice fa
+      quello che questa voce dice: `comandaDaScaricare` risponde solo a
+      PRONTO, e nessun passo della sala fa partire uno scarico.
+      I TEST GUARDANO IL DANNO, NON LA FUNZIONE: rimettendo lo scarico su
+      «servito» ne falliscono tre, ed e' stato provato davvero prima di
+      chiudere la voce. Coperta anche l'altra meta' del difetto — gli
+      ingredienti che restavano IMPEGNATI invece che consumati — con la
+      guardia sul metro che regge tutto: il conto degli impegnati si fa su
+      `inventory_applied`, non sullo stato, ed e' la ragione per cui
+      spostare lo scarico non ha richiesto di cambiare una riga li' dentro.
+      CORRETTO ANCHE UN RIMANDO SBAGLIATO: il commento in
+      `tests/unit/comande.test.js` attribuiva questo difetto a BUG-039, che
+      e' un'altra cosa (i bolli dei passi col servizio spento). Residuo del
+      giorno in cui due id si sono accavallati.
+    test_cases: [tests/unit/salaEMagazzino.test.js, tests/unit/comande.test.js, tests/unit/impegnato.test.js]
+
+  - id: BUG-041
+    title: "Icone storte nel menu a lato, e il numero delle categorie fermo"
+    area: "src/lib/sottosezioni.js, src/components/MenuManager.jsx, src/components/InventoryManager.jsx, src/components/StatsTab.jsx, src/components/SettingsTab.jsx, src/components/MacroCategoryManager.jsx, src/components/MacroMonthlyTab.jsx"
+    description: >
+      Segnalati dall'utente il 19/08, due difetti del menu a lato delle
+      pagine (le sottosezioni, roba di 1.5.x).
+      PRIMO: le voci «Categorie» e «Macro-categorie» avevano per icona gli
+      emoji lumaca e cartelle. Sono emoji a presentazione TESTUALE: Windows
+      non ci mette la faccina colorata, li disegna come glifi monocromi
+      storti, e nella fila del menu sembravano immagini non caricate. Non
+      era la prima volta: lo stesso era successo al bollo dei gruppi, ed è
+      per quello che in src/components/Icons.jsx esistevano già IconTag e
+      IconCartelle, disegni SVG che seguono il colore del testo e vengono
+      uguali su ogni sistema — nati apposta e mai messi in opera.
+      RISOLTO IN DUE TEMPI, e il primo era sbagliato. Prima si erano messi
+      quei due disegni ovunque la voce fosse una sottosezione: il glifo si
+      vedeva, ma l'utente ha subito notato il perché sbagliato — «perché
+      sono diverse dallo stile delle altre icone?». In una fila fatta di
+      emoji a colori (scatola, carrello, fabbrica) due sagome monocrome al
+      tratto stonavano, e lo stacco dava più fastidio del rettangolino.
+      RISOLTO DAVVERO tenendo le emoji di sempre e scrivendole a colori: in
+      coda va il selettore di variante U+FE0F, un carattere invisibile che
+      dice al font «questa disegnala a colori». Stessa emoji, stesso senso,
+      stessa fila — e il difetto di partenza sparisce lo stesso, perché
+      quello che si vedeva storto era proprio la resa monocroma di serie.
+      Nelle due frasi di MacroMonthlyTab che citano «Menù → Macro-categorie»
+      l'emoji è stato tolto e basta: è prosa, e non ha bisogno del bollo.
+      LA LEZIONE, che vale oltre queste due icone: un difetto di resa si
+      cura al livello della resa. Cambiare famiglia di icone per aggirarlo
+      sposta il problema sull'insieme, e l'insieme si vede tutto insieme.
+      I disegni IconTag e IconCartelle restano in Icons.jsx: serviranno il
+      giorno in cui le icone si uniformeranno per scelta, non per rattoppo.
+      SECONDO: la scritta «Categorie (N)» contava un numero vecchio. Due
+      cause, una dietro l’altra. Le categorie si leggevano UNA VOLTA SOLA
+      all’apertura della pagina (fetchCategories dentro load), quindi una
+      creata dall’altro terminale — o al volo dalla scheda di un drink —
+      non si contava. E anche quando il numero cambiava, la barra non lo
+      sapeva: useSottosezioni rideclarava le voci solo se cambiavano gli id
+      o la sezione attiva, mai la scritta. Ecco perché il numero si
+      sistemava entrando nella sezione: era il cambio di sezione a far
+      ripartire l’effetto, non il dato.
+      RISOLTO su tutt’e due: la pagina del menù ora sta in ascolto con
+      subscribeCategories finché è aperta (e le ricariche a mano dopo ogni
+      scrittura, che la sottoscrizione rende inutili, sono sparite), e
+      useSottosezioni guarda anche le scritte delle voci — non le icone,
+      che sono elementi nuovi a ogni disegno e lo farebbero girare in
+      tondo.
+      RESTANO EMOJI, fuori da questa voce perché non sono sottosezioni:
+      il titolo «Prodotto libero» (CustomDrinkForm, MenuPage), il bollo dei
+      gruppi in OrderSummary, la scheda «Schede per stato» e il titolo del
+      grafico per categoria. In SettingsTab il campo icona dei riquadri
+      (id prezzo) non lo disegna nessuno: è metadato morto.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, menu]
+    severity: lieve
+    priority: P2
+    test_cases: [tests/component/MenuManager.test.jsx]
+
+  - id: BUG-042
+    title: "Nelle corsie i filtri costano una riga intera, e le comande scendono"
+    area: "src/pages/BartenderPage.jsx, src/index.css"
+    description: >
+      Segnalato dall'utente il 19/08: «rispetto alla lista ordini, i filtri
+      qua nella vista comande occupano troppo spazio insieme agli header.
+      Dovrebbe stare più in alto come per gli ordini».
+      PERCHÉ È UN DIFETTO E NON UN GUSTO. La lavagna delle comande si
+      guarda da lontano mentre si versa: quello che non entra nello schermo
+      non esiste, e ogni riga sprecata sopra è una comanda in meno sotto.
+      Prima della prima card c'erano TRE livelli: la testata, la riga dei
+      conteggi, la riga dei filtri — e solo dopo le testate delle colonne.
+      La riga dei filtri costava 64px (8 di stacco + 40 di pastiglia + 4 di
+      imbottitura + 12 sotto) per DUE pastiglie corte: «✍️ Miei» e
+      «▦ Colonne», più la pastiglia «🧾 Ordini» a destra.
+      RISOLTO portando i filtri sulla RIGA DEI CONTEGGI (.board-sotto), che
+      è corta — «12 aperti · 40 chiusi · 380,00 €» — e ha spazio a destra.
+      La riga in più sparisce; quella dei conteggi cresce di 20px, perché
+      la pastiglia è più alta del testo e NON si rimpicciolisce (sotto i
+      44px, con le dita bagnate, si sbaglia). PRIMA/DOPO: 64px spesi
+      diventano 20px, 44px guadagnati, e sopra la prima comanda restano due
+      livelli invece di tre.
+      SUL TELEFONO RESTA COM'ERA. Lì la riga dei conteggi è già piena
+      (conti, avviso della ricerca, legenda degli autori) e i filtri
+      tornano sotto, a filo a sinistra, e scorrono in orizzontale come
+      hanno sempre fatto. A dire da dove in su è la LAVAGNA e non la
+      finestra — container query `corsie`, la stessa soglia delle due
+      colonne: col menu agganciato la lavagna ha 200-250px in meno.
+      COSA NON È CAMBIATO: quello che i filtri FANNO. Stessi tasti, stesso
+      comportamento, stessa regola di docs/navigazione.md — a sinistra
+      quello che restringe la lista, a destra quello che cambia vista,
+      staccati da un margine automatico. È cambiato solo dove stanno.
+      LA GRIGLIA NON ERA STATA TOCCATA: lì le pastiglie sono sette (In
+      corso, Chiusi, Annullati, Tutti, Miei, Solo oggi, Comande) e sembrava
+      che una riga se la meritasse. L'utente ha corretto il giorno dopo —
+      «rispetto alla vista corsie li vorrei nello stesso punto» — e la
+      griglia è andata dietro alle corsie: vedi BUG-061.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-043
+    title: "Due nomi con la stessa iniziale, e in legenda ne resta uno solo"
+    area: "src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)"
+    description: >
+      Trovato il 19/08 scrivendo i test di REQ-CODA-005: il caso e' saltato
+      fuori da solo perche' nei dati di prova c'era gia' una MARTA, e il
+      MARCO che stavo aggiungendo non compariva.
+      IL DIFETTO E' VECCHIO QUANTO LA LEGENDA e non nasce dalle presenze:
+      la legenda raccoglie le iniziali in una mappa lettera -> nome, e se
+      due persone hanno la stessa iniziale la seconda non entra. Marta batte
+      un conto, Marco ne batte un altro: in legenda c'e' solo «M — Marta»,
+      e i conti di Marco portano una M che dice il nome sbagliato.
+      QUANTO FA MALE: non si perde nessun dato — sulla card resta scritto
+      chi ha battuto — ma la legenda MENTE, e mente proprio su «di chi e'
+      questo conto», che e' l'unica domanda a cui serve rispondere. In una
+      sera con Marco e Marta, o con Sara e Simone, chi guarda attribuisce
+      conti alla persona sbagliata.
+      NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava
+      facendo, e perche' la cura tocca anche la lettera SULLE CARD
+      (placedByLetter): metterne una in legenda e un'altra sulle card
+      sarebbe peggio del difetto.
+      TRE STRADE, da pesare quando si lavora: due lettere quando la prima
+      collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle
+      card, oppure un colore per persona come si e' fatto per i conti. La
+      prima e' la piu' piccola e la piu' vicina a come si legge oggi.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, coda, ui]
+    severity: lieve
+    priority: P3
+    test_cases: []
+
+  - id: BUG-044
+    title: "Le ombre delle card tagliate nelle corsie, e sparite dopo il pagamento"
+    area: "src/index.css (.corsia-lista, .corsia-card.pagato-da-servire, .corsia-card.acconto, .order-card.conto-acceso)"
+    description: >
+      Segnalato dall'utente il 19/08 guardando la lavagna: «qualcosa non va
+      con le ombre, su da fare sono tagliate, su ritirato/servito non c'e'
+      nulla», e poco dopo: «l'ombra scompare dopo il pagamento e il bordino
+      diventa piu' spesso».
+      DUE CAUSE DIVERSE, e la seconda spiega la prima meta' della frase.
+      UNO: la lista di ogni corsia SCORRE (`overflow-y: auto` da 900px in
+      su) e non aveva spazio attorno alle card. Un contenitore che scorre
+      taglia quello che esce dai suoi bordi, e l'ombra esce: 18px di
+      sfocatura piu' 4 di scostamento. Le card risultavano mozzate a destra
+      e in basso, e nelle colonne strette sembravano piatte.
+      RISOLTO con un padding sulla lista (2px sopra, 6 ai lati, 16 sotto):
+      lo spazio va DENTRO il contenitore che scorre, quindi un margine sulle
+      card non sarebbe servito — sarebbe finito fuori dal riquadro e tagliato
+      come l'ombra. In piu' `overflow-x: clip`, se no i pochi pixel
+      dell'ombra facevano comparire una barra di scorrimento orizzontale in
+      fondo a ogni colonna (`auto` su un asse rende `auto` anche l'altro).
+      DUE, ed e' un difetto piu' serio perche' toglieva l'ombra del tutto:
+      TRE REGOLE RISCRIVEVANO `box-shadow` invece di aggiungersi. La
+      proprieta' non si somma — chi la riscrive cancella quella di prima — e
+      `.corsia-card.pagato-da-servire`, `.corsia-card.acconto` e
+      `.order-card.conto-acceso` mettevano il loro filo interno buttando via
+      `var(--ombra-card)`. Da qui i due sintomi insieme: card piatta e
+      «bordino piu' spesso», che era il filo da 3px rimasto solo.
+      RISOLTO rimettendo `var(--ombra-card)` in coda a ognuna delle tre.
+      LA REGOLA, per chi tocchera' un'altra card: se aggiungi un'ombra a una
+      card, l'ombra della casa va rimessa in fondo alla lista. Sorvegliata
+      da tests/unit/css.test.js.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, coda]
+    severity: lieve
+    priority: P3
+    test_cases: [tests/unit/css.test.js]
+
+  - id: BUG-045
+    title: "Modificare un conto senza rete mostrava ancora i dati di prima"
+    area: "src/lib/api.js (ordineDopo, updateOrderItems, addComanda, bartenderUpdateComanda, cancelOrder, restoreOrder, setOrderGroup)"
+    description: >
+      Segnalato dall'utente il 19/08, e questa e' la frase che conta: «non
+      voglio aggiungere prodotti in un ordine quando non ho connessione e
+      non vedere i dati perche' non c'e' internet». Sintomo preciso: «gli
+      item dopo che ho aperto il conto non sono tutti e il costo e' errato
+      finche' non sincronizza».
+      LA CAUSA, una sola e ripetuta sei volte: le funzioni che toccano un
+      conto scrivevano in sottofondo (`bgWrite`) e poi RILEGGEVANO il
+      documento per restituirlo (`return mapOrder(await leggiOrdine(ref))`).
+      Ma la scrittura in sottofondo parte dopo — e' fire-and-forget — quindi
+      nell'istante della rilettura la cache contiene ancora la versione di
+      PRIMA. Chi rilegge, rilegge il passato: tre drink aggiunti e il totale
+      fermo, finche' non arriva lo snapshot dal server. Con la rete a terra
+      non arriva mai.
+      QUANTE: sei funzioni, tutte nel giro di una serata — la modifica dal
+      telefono del cliente, l'aggiunta al conto, la modifica dal banco,
+      l'annullo, la riapertura e il gruppo del conto.
+      RISOLTO COMPONENDO, non rileggendo: `ordineDopo(id, cur, patch)` monta
+      il conto aggiornato dal documento di partenza piu' la patch appena
+      mandata, e lo passa da `mapOrder` come se venisse dal server — la
+      forma dev'essere la stessa, chi lo riceve non deve sapere da dove
+      viene. `salvaComandeERifaiTotale` restituisce ora la patch intera
+      invece di due campi, cosi' chi la chiama puo' comporre.
+      IL TEST E' LA PARTE CHE VALE DI PIU', e va copiato per le prossime
+      volte: tests/unit/giroInLocale.test.js gira SENZA RETE nel modo piu'
+      cattivo possibile — ogni scrittura resta appesa per sempre, ogni
+      lettura risponde con quello che c'era prima. Non mocka
+      `src/lib/api.js`, mocka solo Firestore: quello che si prova e' il
+      codice vero. Senza la correzione quattro prove su sei falliscono.
+      E C'E' UNA GUARDIA SULLA REGOLA, non solo sul comportamento: un test
+      legge `api.js` e boccia qualunque `return mapOrder(await
+      leggiOrdine(...))`. Il difetto e' tornato piu' di una volta, sempre
+      per distrazione, e una regola scritta solo nella documentazione non
+      basta a fermarlo.
+      SCOLPITO ANCHE IN CLAUDE.md, in testa alle regole del mestiere: coda,
+      comande, nuovo ordine, modifica ordine, contanti e pagamenti lavorano
+      SOLO in locale, tutto il giro con la cassa aperta deve funzionare a
+      rete staccata, e i test lo devono dimostrare invece di darlo per
+      buono.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, local-first, ordini, pagamenti]
+    severity: grave
+    priority: P1
+    test_cases: [tests/unit/giroInLocale.test.js]
 
   - id: BUG-046
     title: "Chiudendo un conto con lo sconto, lo scontrino non esce"
@@ -1050,7 +1581,34 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/ristampaScontrino.test.js]
-
+  - id: BUG-049
+    title: "Sul tema chiaro i tasti delle impostazioni non hanno contorno"
+    area: "src/index.css (.mode-option, .chip)"
+    description: >
+      Segnalato dall'utente il 20/08: «i bordi dei tasti dei settings — hai
+      aggiunto il bordo solo sul tema scuro. Su quello chiaro non ci sono i
+      bordi sugli switch non selezionati».
+      LA CAUSA, la stessa gia' vista sulla striscia degli stati spenti
+      (--strip-spenta): bordo e fondo di `.mode-option` (le scelte a
+      pulsanti delle impostazioni) e di `.chip` (i filtri) erano BIANCHI
+      FISSI — rgba(255,255,255,…) — nati per il fondo scuro. Sul tema
+      chiaro diventano bianco su bianco: i tasti non scelti sembravano
+      testo appoggiato, senza contorno, e non si capiva che fossero
+      tasti.
+      LA CURA: i gettoni. --line e --tile-bg esistono apposta e hanno gia'
+      la variante chiara (data-luma='light'): bordo e fondo dei controlli
+      si scrivono con quelli, mai con un colore assoluto.
+      NEL FOGLIO RESTANO ALTRI BIANCHI FISSI (una cinquantina): si
+      bonificano quando si tocca la loro schermata, non a tappeto — la
+      regola di casa vieta le riscritture di massa. Il test sorveglia i
+      due controlli corretti e la regola e' scritta nel commento del CSS.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, ui, temi]
+    severity: lieve
+    priority: P3
+    test_cases: [tests/unit/css.test.js]
 
   - id: BUG-050
     title: "La comanda automatica non stampava per chi l'aveva battuta, ne' per la seconda comanda"
@@ -1077,10 +1635,27 @@ bugs:
       `claimComandaPrint` in localStorage, come gli scontrini: una copia
       per comanda per terminale, chiunque l'abbia battuta, da qualunque
       vista, e tornare agli ordini non ristampa.
-      LA FINESTRA DEI DIECI MINUTI e' la scelta da capire: senza, il primo
-      terminale con la memoria vuota stamperebbe in raffica tutte le
-      comande vive della serata. Il banco con la stampante tiene la coda
-      aperta tutta la sera: la finestra non gli toglie niente.
+      RIVISTO SUBITO (20/08, l'utente): la prima versione usava una
+      finestra di dieci minuti per non far ristampare la serata a un
+      browser con la memoria vuota. Domanda sua, giusta: «semplicemente non
+      puoi segnare le comande stampate gia'?». Si': IL SEGNO STA SUL DATO —
+      `auto_print_at` sulla comanda, scritto in sottofondo A CARTA USCITA
+      (segnare prima vorrebbe dire che una stampa fallita mette a tacere
+      tutti i terminali per sempre; fallita, la pretesa locale si libera e
+      al prossimo snapshot si riprova). Cosi' un browser nuovo non
+      ristampa niente, e DUE TABLET con l'auto-stampa accesa non fanno due
+      copie: il secondo vede il segno del primo. La pretesa locale resta
+      come primo filtro, per i propri snapshot che arrivano prima che la
+      scrittura del segno torni.
+      CAMBIATA LA DECISIONE, sempre il 20/08 e sempre l'utente: «solo il
+      terminale che inserisce l'ordine stampa automaticamente la comanda».
+      Il «chiunque l'abbia battuta» qui sopra vale ancora per il DIFETTO —
+      la stampa non e' un avviso, e il proprio terminale non va tagliato
+      fuori — ma non e' piu' la regola: adesso il proprio terminale e'
+      l'UNICO che stampa. Il verso e' esattamente opposto a quello di questo
+      bug, ed e' la trappola da non rifare distrattamente. La regola nuova,
+      con l'assunzione sugli ordini dei clienti e l'incastro col rimbalzo,
+      sta in REQ-STAMPA-013.
     in_produzione: true
     status: fixed
     generate_issue: true
@@ -1088,3 +1663,1711 @@ bugs:
     severity: media
     priority: P2
     test_cases: [tests/unit/stampaComande.test.js]
+
+  - id: BUG-051
+    title: "Un facsimile con dentro DUE comande: senza indicazione si stampava il conto intero"
+    area: "src/lib/printer.js (printComanda, comandaDelTicket), src/pages/BartenderPage.jsx"
+    description: >
+      NON E' QUESTO CHE HA VISTO L'UTENTE. La segnalazione del 20/08 — «ho
+      trovato una finestra facsimile con una comanda ma in realta' ne aveva
+      due» — l'ha poi precisata lui stesso: «il bug era che venivano
+      stampate comande di ordini DIVERSI», ed e' BUG-052, un'altra causa in
+      un altro punto. Questo qui e' un difetto vero trovato guardando la
+      prima pista, e vale la pena averlo chiuso: e' il modo in cui due
+      comande DELLO STESSO conto potevano finire su un ticket solo.
+      LA CAUSA. `printComanda(order, comanda)` accetta la comanda come
+      parametro OPZIONALE, e senza ripiegava su `order.order_items` — che
+      NON e' una comanda: e' l'AGGREGATO del conto, cioe' le righe di tutte
+      le comande non annullate messe insieme, con le quantita' dello stesso
+      drink SOMMATE. Un ticket solo, che sembra una comanda e ne contiene
+      due, e dal facsimile non si distingue: la comanda non porta scritto il
+      suo numero.
+      CHI CI ARRIVAVA. Non l'auto-stampa (quella passa sempre la comanda,
+      BUG-050) e nemmeno la stampante finta, che non accorpa niente: i lavori
+      arrivano uno per volta e ognuno apre la sua finestra. Ci arrivava il
+      tasto «Comanda» della card in coda (BartenderPage), che cercava la
+      comanda ATTIVA — `o.comande?.find((c) => c.id === o.active_comanda_id)
+      ?? null`. La comanda attiva e' quella al passo piu' indietro fra le
+      APERTE: quando non ce n'e' piu' nessuna aperta — tutto servito, o il
+      conto pagato, che porta tutte le comande a «ritirato» — `find` non
+      trova niente, il `?? null` faceva il resto e usciva il conto intero.
+      PASSI PER RIPRODURLO: conto con due comande (una battuta, poi altre
+      righe aggiunte dopo che la prima e' stata presa in carico); si portano
+      tutte e due a «servito», oppure si incassa il conto; dalla coda si apre
+      la card e si tocca «Comanda». Esce un facsimile solo con dentro le
+      righe di tutte e due, sommate.
+      LA CURA. La scelta di quale comanda finisce sul ticket sta in un posto
+      solo, `comandaDelTicket` (printer.js, pura): quella che il chiamante
+      indica; senza indicazione l'ULTIMA comanda non annullata del conto —
+      che e' quella che si vuole ristampare quando si chiede «la comanda»
+      senza dire quale. L'aggregato resta il ripiego solo per un ordine che
+      di comande non ne ha (i doc vecchi, un conto appena nato in locale):
+      li' l'aggregato E' la comanda, non la somma di due. Serve piu' di un
+      ticket? C'e' il gesto apposta (REQ-STAMPA-012), che le stampa
+      SEPARATE.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/stampaComande.test.js]
+
+  - id: BUG-052
+    title: "Comande di ORDINI DIVERSI stampate sullo stesso ticket"
+    area: "src/lib/printer.js (lavoroDiStampa), src/lib/stampanteFinta.js"
+    description: >
+      «Il bug era che venivano stampate comande di ordini DIVERSI»
+      (l'utente, 20/08, provando sull'emulatore): un facsimile solo con
+      dentro DUE intestazioni, DUE numeri di conto e le righe di tutti e
+      due. Al banco e' un ticket da buttare, e peggio: due conti sulla
+      stessa carta vuol dire drink portati al tavolo sbagliato.
+      LA CAUSA NON ERA IL FORMATO DEL TICKET, era il BUILDER.
+      `getPrinter()` restituisce sempre lo STESSO oggetto — la connessione
+      si tiene viva fra una stampa e l'altra, ed e' giusto cosi' — ma
+      quell'oggetto ACCUMULA i comandi e li spedisce tutti insieme a
+      `send()`. Chi ci scrive dentro sta scrivendo in un posto condiviso, e
+      finche' non chiama `send()` quel posto e' suo. Due modi di rovinare
+      la carta, tutti e due veri:
+      (1) UNA STAMPA CHE SI FERMA A META'. Se fra il primo comando e
+      `send()` salta un'eccezione — una riga senza nome, un dato storto — i
+      pezzi gia' scritti RESTANO nel builder, e il lavoro dopo se li porta
+      via. Peggiorato dall'auto-stampa, che RIPROVA: `releaseComandaPrint`
+      libera la pretesa, al prossimo snapshot ci si riprova, e il residuo
+      si accumula a ogni giro finche' una stampa riesce e li stampa tutti.
+      (2) DUE STAMPE CHE SI ACCAVALLANO. Ogni print* comincia con un
+      `await` (getPrinter), e `printScontrino` ne ha un altro DENTRO, sul
+      logo (`logoPerStampa`, che aspetta il caricamento dell'immagine e non
+      ha un tempo massimo). La coda ordini stampa comande e scontrini di
+      PIU' conti nello stesso snapshot, in due `for` sincroni senza
+      aspettare: il secondo lavoro scrive nel builder mentre il primo e'
+      sospeso.
+      PASSI PER RIPRODURLO (il primo modo, il piu' facile da vedere): una
+      comanda con una riga senza nome — la stampa si interrompe DOPO aver
+      scritto la prima riga, e non esce niente; poi si stampa la comanda di
+      un ALTRO conto. Esce un facsimile solo, con dentro tutte e due, due
+      intestazioni «DIRETTO» e due numeri.
+      LA CURA STA IN PRINTER.JS, NON NEI CHIAMANTI. Sistemare il `for`
+      dell'auto-stampa avrebbe lasciato la porta aperta a tutti gli altri
+      (il tasto della coda, quello del conto, la sala, il fornitore, e
+      qualunque strada scritta domani). Ogni lavoro passa da una CODA
+      interna (`lavoroDiStampa`, una catena di promesse di modulo): aspetta
+      chi lo precede, parte da un builder PULITO (`clearCommandBuffer`,
+      che c'e' nell'SDK Epson e adesso anche nella stampante finta) e lo
+      lascia pulito anche quando fallisce. La catena non si spezza su un
+      errore: carta finita adesso non vuol dire stampante morta.
+      IL CONFINE CHE NE ESCE, ed e' quello che l'utente ha sottolineato
+      («ma sempre dello stesso ordine!»): un lavoro di stampa contiene
+      SOLO roba di UN conto. Sta nella FIRMA delle funzioni — prendono un
+      ordine, non una lista — e c'e' un test che lo sorveglia.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco]
+    severity: alta
+    priority: P1
+    test_cases: [tests/unit/stampaSerializzata.test.js]
+  - id: BUG-053
+    title: "Un logo che non arriva mai fermava tutta la coda di stampa"
+    area: "src/lib/printer.js (logoPerStampa)"
+    description: >
+      Notato dall'agente chiudendo BUG-052, registrato il 20/08 — mai visto
+      accadere al banco, ma il meccanismo e' certo. `logoPerStampa` aspetta
+      il caricamento dell'immagine SENZA tempo massimo: se il caricamento
+      non finisce mai — rete che pende, service worker in stallo — la
+      promessa resta aperta per sempre.
+      PRIMA di BUG-052 questo sporcava: lo scontrino in attesa del logo
+      teneva il builder condiviso aperto e ci si mescolava la comanda dopo.
+      DOPO BUG-052 la stampa e' una coda seriale, quindi non si mescola
+      piu' niente — ma un lavoro che non finisce BLOCCA tutti quelli dopo:
+      la stampante muta per la serata intera, senza un errore da nessuna
+      parte.
+      LA CURA: tre secondi di tempo massimo sul caricamento. Scaduti, si
+      stampa senza logo e il fallimento finisce nella cache dei tre stati
+      di BUG-032 («provato e non c'e'»): non si riprova a ogni scontrino.
+      Tre secondi perche' il logo sta nella cache del service worker e in
+      condizioni sane arriva in millisecondi: se non e' arrivato in tre
+      secondi, stasera non arriva.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa]
+    severity: media
+    priority: P2
+    test_cases: [tests/unit/logoScontrino.test.js]
+  - id: BUG-054
+    title: "La chiusura rapida Contanti/Carta dalla card non stampava lo scontrino"
+    area: "src/pages/BartenderPage.jsx (tasti rapidi della card)"
+    description: >
+      Segnalato dall'utente il 20/08: «la chiusura veloce da CONTANTI o
+      CARTA dalla card dell'ordine (azioni nascoste) deve mandare in stampa
+      lo scontrino di chiusura proprio come il pannello dei pagamenti col
+      tab RISCUOTERE».
+      LA CAUSA: i due tasti chiamavano solo markOrderPaid e si affidavano
+      allo snapshot della coda per la stampa. Ma quel percorso usa la
+      pretesa NORMALE (claim), che su un conto gia' stampato una volta
+      tace: riscosso, riaperto, richiuso dal tasto rapido — niente carta.
+      Il pannello dei pagamenti invece stampa AL GESTO con la pretesa
+      forzata (reclaim: un incasso vero e' una chiusura nuova).
+      LA CURA: stessa regola sui tasti rapidi. Al tocco, se l'auto-stampa
+      e' accesa: pretesa forzata e scontrino subito, col METODO appena
+      scelto scritto sopra (contanti o carta — era il motivo per cui i
+      tasti sono due) e il residuo incassato adesso. Local-first: la
+      stampa non aspetta la scrittura, il gesto e' gia' fatto. Stampa
+      fallita: pretesa restituita, avviso a schermo.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, pagamenti]
+    severity: media
+    priority: P2
+    test_cases: [tests/component/CodaCorsie.test.jsx]
+
+  - id: BUG-055
+    title: "Tornando in coda uscivano gli SCONTRINI di tutti i conti pagati"
+    area: "src/pages/BartenderPage.jsx (snapshot della coda), src/components/PaymentScreen.jsx, src/lib/api.js (segnaScontrinoStampato), src/lib/printer.js"
+    description: >
+      Segnalato dall'utente il 20/08, provando al banco: «alla prima
+      apertura dell'app ero in inventario. Sono tornato in coda ordini e mi
+      ha stampato tutti gli SCONTRINI. C'era un solo ordine e una sola
+      comanda ma mi ha stampato lo scontrino».
+      LA CAUSA e' LA STESSA MALATTIA gia' curata per le comande (BUG-050,
+      rivisto): nello snapshot della coda viveva un blocco che stampava
+      OGNI conto con `payment_status: pagato` che gli passava davanti, e
+      l'unica guardia era una pretesa in localStorage (`claimReceiptPrint`).
+      Un browser nuovo, un'origine diversa, una memoria svuotata: di
+      pretese non ne ha nessuna, e la serata intera esce dalla stampante in
+      raffica al primo sguardo sulla coda.
+      COSA VUOLE CHI STA AL BANCO, parole sue: «deve avvenire solo quando
+      esco dall'ordine e deve stampare la COMANDA, non lo scontrino». Lo
+      scontrino appartiene al GESTO della riscossione, non a uno snapshot.
+      LA CURA, due pezzi.
+      (1) LA CODA STAMPA SOLO COMANDE. Il blocco dell'auto-scontrino se ne
+      va da BartenderPage. Restava li' per un caso solo, ed era vero: nel
+      pagamento diretto dal POS la schermata si apre su un guscio locale
+      senza id, il conto nasce in sottofondo e la stampa veniva delegata
+      alla coda. Quel caso ora se lo prende PaymentScreen, che ha il gesto
+      in mano: la carta esce subito, col numero che la testata mostra gia',
+      e la pretesa e il segno raggiungono il conto appena ha un id. Per
+      tenere in piedi quell'unico caso si stampava tutto il resto.
+      (2) IL SEGNO STA SUL DATO: `receipt_print_at` sul conto, scritto in
+      sottofondo A CARTA USCITA (segnarlo prima vorrebbe dire che una
+      stampa fallita mette a tacere tutti i terminali per sempre). Lo
+      scrivono tutte le strade dell'incasso — il pannello dei pagamenti e i
+      tasti rapidi Contanti/Carta (BUG-054) — e tutte lo guardano prima di
+      stampare: due tablet accesi non fanno due copie, e la pretesa locale
+      resta come primo filtro per i propri doppioni.
+      LA RISTAMPA A NUOVA RISCOSSIONE RESTA (BUG-047 e la richiesta del
+      19/08: «se riapro il conto e cambio qualcosa e riscuoto di nuovo,
+      deve ristampare»). Riaprendo un conto il segno si AZZERA — lo scrive
+      `restoreOrder` insieme alla riapertura — proprio dove si liberava gia'
+      la pretesa locale.
+      PASSI PER RIPRODURLO (prima della cura): accendere l'auto-stampa
+      dello scontrino, incassare qualche conto, svuotare la memoria del
+      browser (o aprire l'app da un'altra origine), entrare in coda ordini.
+      Esce uno scontrino per ogni conto pagato della serata.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, stampa, banco, local-first]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/scontrinoSegnato.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/PaymentScreen.test.jsx
+
+  - id: BUG-056
+    title: "Aggiunte veloci allo stesso conto: l'ultima scrittura cancellava le altre"
+    area: "src/lib/mutazioniOrdine.js (nuovo), src/lib/api.js"
+    description: >
+      Segnalato dall'utente il 20/08 provando al banco: «ho creato un
+      ordine, ho aggiunto velocemente item, ma ha sincronizzato e mi ha
+      lasciato solo il primo item». E dallo stesso giro, con le aggiunte
+      fatte tutte insieme: due comande separate per un conto solo.
+      LA CAUSA. Ogni mutazione di un conto — `addComanda`,
+      `bartenderUpdateComanda`, `updateOrderItems`, `preparazioneParziale`,
+      `advanceComanda`, l'incasso — LEGGE il documento, ricompone l'array
+      `comande` e lo RISCRIVE INTERO: Firestore un array lo riscrive
+      intero, non esiste un percorso tipo `comande.2.items`. Due gesti
+      ravvicinati sullo stesso conto partono insieme, il secondo legge
+      PRIMA che la scrittura del primo sia comparsa in cache, compone dal
+      passato, e l'ultimo che scrive cancella l'altro. Stessa radice di
+      BUG-022, che era stato curato in un punto solo (`scriviCampiComanda`,
+      che si rilegge dentro la scrittura): le funzioni grosse leggevano
+      ancora all'inizio del lavoro.
+      LA CURA, alla radice, in due pezzi che stanno insieme.
+      (1) LE MUTAZIONI DI UNO STESSO CONTO SI METTONO IN FILA: una catena
+      di promesse per `orderId`, la stessa idea della coda di stampa di
+      BUG-052. Conti DIVERSI non si aspettano fra loro — al banco si lavora
+      su piu' conti insieme, e un conto lento non deve fermare gli altri.
+      Il local-first non si tocca: a mettersi in fila e' il lavoro interno,
+      non chi ha toccato lo schermo, che continua a ricevere subito il
+      conto composto (`ordineDopo`).
+      (2) LA FILA DA SOLA NON BASTA. Il turno finisce quando la scrittura e'
+      PARTITA, non quando la cache l'ha applicata, e fra le due cose passa
+      un giro. Quindi ogni mutazione RICORDA il conto come l'ha appena
+      composto, e la mutazione dopo legge quel ricordo finche' la cache non
+      ha recuperato — si capisce che ha recuperato guardando se i campi
+      scritti sono tornati indietro uguali, senza timer che indovinano. Un
+      tempo massimo di due secondi c'e', ma e' solo la rete di sicurezza
+      per la scrittura che in cache non arrivera' MAI (documento cancellato
+      sotto, rifiuto definitivo).
+      DEADLOCK EVITATO A MANO: `preparazioneParziale` chiama l'avanzamento
+      dentro il proprio turno, e mettersi in fila dietro se stessi vuol
+      dire non ripartire mai. Per quello `advanceComandaOra` esiste
+      separato da `advanceComanda`.
+      IL LIMITE, dichiarato: finche' il ricordo e' vivo, una modifica
+      arrivata da un ALTRO terminale sugli stessi campi si perde. E' la
+      finestra fra la scrittura e la cache — millisecondi — ed e' lo stesso
+      «l'ultimo che scrive vince» che c'era gia', ristretto invece che
+      allargato.
+      PASSI PER RIPRODURLO: due `addComanda` sullo stesso conto partite
+      nello stesso giro. Il test lo fa con una cache che applica le
+      scritture in ritardo, che e' quello che fa davvero: spegnendo una
+      qualunque delle due meta' della cura, cinque prove su sette
+      falliscono.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, ordini, local-first, banco]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/mutazioniInFila.test.js
+
+  - id: BUG-057
+    title: "Un ordine solo, due comande: la creazione non era una battuta sola"
+    area: "src/lib/comande.js (comandaPerLeAggiunte, presaInCarico), src/lib/printer.js (comandeDaStampare), src/lib/api.js, src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 20/08 con lo schermo davanti: un conto solo,
+      il #20, battuto in creazione, e DUE facsimili di comanda — un
+      LIMONCELLO da solo, poi JEFFERSON + AMERICANO + MONTENEGRO +
+      JAGERMEISTER. «Mi crea piu' comande quando creo un solo ordine. In
+      fase di creazione deve gestire tutto come UNA comanda».
+      DUE CAUSE INSIEME, e lo screenshot era compatibile con tutte e due.
+      (1) LA REGOLA DI IERI SERA (REQ-ORD-016): le aggiunte non entrano in
+      una comanda «da in preparazione in poi». Nel locale che fa NASCERE le
+      comande gia' in preparazione — l'impostazione «Le comande nascono
+      gia' in preparazione» — quella condizione e' vera dal primo istante:
+      ogni riga battuta dopo la prima faceva per forza un ticket nuovo. E
+      l'esclusione della comanda gia' stampata (`auto_print_at`) faceva lo
+      stesso danno appena l'auto-stampa era accesa.
+      (2) LA CORSA DI BUG-056: due scritture ravvicinate sullo stesso conto
+      componevano dallo stesso passato. Curata a parte, nel suo commit.
+      LA REGOLA, CORRETTA DALL'UTENTE, in due mosse.
+      IL DISCRIMINE E' LA PRESA IN CARICO, NON LO STATO: «devi aggiungere
+      prodotti a una NUOVA comanda solo se lo stato viene PASSATO in
+      preparazione (comanda presa in carico)». Una comanda nata in
+      preparazione per impostazione del locale non l'ha presa in mano
+      nessuno. Serve un segno, ed e' `presa_in_carico`, scritto solo da
+      advanceComanda. Documenti vecchi senza il campo: si guarda lo stato
+      con la regola prudente («in preparazione» senza segno = presa in
+      carico), cosi' i ticket gia' in mano al banco stasera non si gonfiano.
+      LA SESSIONE DI CREAZIONE E' UN SOTTOSTATO DEL CONTO (`in_creazione`).
+      «Se non sono ancora uscito dalla creazione ordine (solo con il tasto
+      indietro agli ordini) quella e' sempre UNA SOLA comanda (anche se da
+      creazione ordine vado in pagamento)». Lo apre il POS alla nascita, lo
+      chiude l'uscita dalla schermata — il pagamento no, e' sempre la
+      stessa battuta. Finche' e' aperto: ogni aggiunta entra nella comanda
+      1, e L'AUTO-STAMPA NON PARTE. E' il facsimile col LIMONCELLO da solo:
+      la carta era uscita a meta' composizione. Il ticket esce quando la
+      sessione si chiude, e allora e' completo.
+      L'ESCLUSIONE `auto_print_at` E' STATA TOLTA come discrimine —
+      contraddiceva la regola nuova — ma la ragione per cui era nata resta
+      vera: una comanda gia' stampata che si gonfia lascia al banco una
+      carta vecchia. LA CURA COERENTE: quando una comanda NON presa in
+      carico riceve aggiunte, il suo `auto_print_at` si AZZERA e la coda
+      RISTAMPA il ticket completo. Il banco butta il foglio vecchio e ha
+      quello giusto. Perche' funzioni anche sul terminale che aveva gia'
+      stampato, la pretesa locale segue le RIGHE della comanda e non solo
+      il suo id.
+      COL SERVIZIO SPENTO NON C'E' NIENTE DA GUARDARE — non esistono passi,
+      non esiste «preso in carico» — e allora sceglie una persona: «se non
+      ci sono gli stati di servizio, il bartender/admin SCEGLIE, solo in
+      modifica». Due tasti sotto il totale, «Nella comanda» e «Comanda
+      nuova»; finche' non si risponde le righe restano a schermo. Uscendo
+      senza scegliere vanno nella comanda, che e' la strada che non fa
+      carta in piu'.
+      IL CASO CHE RESTA SCOPERTO, e non per dimenticanza: se l'app muore a
+      meta' battuta il segno `in_creazione` resta appeso e quella comanda
+      non esce da sola. «Non e' un problema, Flavio puo' ristampare la
+      comanda con l'apposito tasto» (l'utente, 20/08). Niente scadenze a
+      tempo, niente chiusure da altri terminali: un avanzamento di stato la
+      chiude comunque, e il resto ha gia' il suo rimedio a mano.
+      PASSI PER RIPRODURLO (prima della cura): accendere «Le comande
+      nascono gia' in preparazione», aprire un conto nuovo dal POS e
+      battere quattro prodotti con una pausa in mezzo. Escono due comande,
+      e con l'auto-stampa accesa due facsimili.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, comande, stampa, banco]
+    severity: alta
+    priority: P1
+    test_cases:
+      - tests/unit/comande.test.js
+      - tests/unit/stampaComande.test.js
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-058
+    title: "Il tasto «▦ Colonne» è acceso sempre, e non dice perché"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (corsieRistrette, soloCorsieVive)"
+    description: >
+      Segnalato dall'utente il 20/08 con lo screenshot della lavagna: il
+      chip «▦ Colonne» è arancione — cioè «ci sono colonne spente» —
+      SEMPRE, anche su un terminale appena aperto dove nessuno ha toccato
+      niente.
+      LA CAUSA È DOPPIA, e le due cose si sommavano.
+      (1) NON È MEMORIA SPORCA, È IL VALORE DI PARTENZA. Le due corsie
+      dello sguardo all'indietro — «💶 Chiuse» e «✖️ Annullate» — nascono
+      spente apposta (CORSIE_SPENTE_ALL_INIZIO): al banco lo schermo serve
+      al lavoro di adesso, e sei colonne su un tablet vogliono dire sei
+      colonne strette. Ma il chip guardava `nascoste.length > 0`, che è
+      vero dal primo avvio: l'arancione c'era comunque e quindi non
+      distingueva niente. Chi lo vedeva apriva l'elenco per scoprire di non
+      aver toccato nulla.
+      (2) GLI ID MORTI RESTAVANO IN MEMORIA. Le corsie sono state
+      rimaneggiate più volte e gli id sono cambiati; la preferenza è del
+      DISPOSITIVO (localStorage `tana:corsie:nascoste`) e teneva dentro id
+      che nessun assetto disegna più. Quelli tenevano acceso il chip per
+      sempre, con l'aggravante che nell'elenco non c'era niente da
+      riaccendere per spegnerlo: un tasto acceso che non si può spegnere.
+      LA CURA, due mosse.
+      IL NUMERO È SCRITTO SUL TASTO: «▦ Colonne (2)». L'arancione da solo
+      non può dire il perché, il numero sì — e il titolo elenca quali sono,
+      per chi ci passa sopra. Senza nessuna spenta il tasto torna «▦
+      Colonne», senza parentesi e senza arancione.
+      SI CONTANO SOLO LE COLONNE CHE SI POSSONO SCEGLIERE (corsieSpente):
+      una nascosta che non è nemmeno in elenco — «Da fare» col salto
+      acceso, «Da ritirare» col pronto riunito — non è una scelta di
+      nessuno, è un residuo, e non deve accendere niente.
+      LA MEMORIA SI RIPULISCE ALL'APERTURA (soloCorsieVive): gli id che non
+      esistono in NESSUN assetto si buttano e la scelta si riscrive. Quelli
+      che esistono ma in questo momento non si disegnano restano: spegnere
+      «Da ritirare» e poi riunire il pronto non è dimenticarsene, e
+      ridividendolo la scelta dev'essere ancora lì.
+      PASSI PER RIPRODURLO (prima della cura): aprire la coda del banco su
+      un browser nuovo, senza toccare niente. Il chip «▦ Colonne» è
+      arancione.
+      SECONDA CURA (20/08, stesso giorno — l'utente l'ha rivisto acceso):
+      il conteggio spiegava l'arancione ma non lo spegneva, perche' due
+      corsie («chiusi» e «annullati») nascono spente DI SERIE: il tasto
+      partiva acceso su ogni terminale nuovo. L'acceso deve dire «questo
+      terminale si e' discostato dal normale», nei due versi — nascosta
+      una corsia di serie accesa, O riaccesa una di serie spenta. La
+      regola stava in `corsieDiverseDalNormale` (coda.js), pura e provata:
+      terminale mai toccato = tasto grigio senza numero. IL VERSO DI
+      RITORNO E' STATO TOLTO IL 22/08 (BUG-085): riaccendere una corsia di
+      serie spenta faceva salire il numero, ed e' l'opposto di filtrare. Si
+      conta solo cio' che NASCONDE, e la parte che qui conta — terminale
+      mai toccato, tasto grigio — vale identica: le due dello sguardo
+      all'indietro non le ha nascoste nessuno.
+      E LE OMBRE, DI NUOVO (stesso giro): il respiro dato in BUG-044 era
+      6px ai lati — un compromesso «per non stringere la card» — ma
+      l'ombra sfuma per 18px e usciva tagliata di netto sul fianco;
+      l'utente l'ha rivista subito. Ora il padding e' la misura che serve
+      (16 ai lati, 24 sotto), e il test non si accontenta piu' che un
+      padding esista: pretende le misure dell'ombra.
+      DOVE E' FINITO IL SEGNALE (20/08/2026, stesso giorno). Il chip «▦
+      Colonne» non esiste piu': le colonne sono chip in fila coi filtri, e
+      «▾ Filtri» e' l'unico livello di nascondimento (REQ-CODA-009). Quindi
+      quello che sopra e' scritto sul TASTO — il numero «▦ Colonne (2)», il
+      title che elenca quali, l'arancione — va letto sul BADGE del tastino
+      «▾ Filtri», e solo a fila CHIUSA: a fila aperta i chip delle colonne
+      si vedono da se', spenti o accesi. La cura vera resta dov'era: si
+      conta con una funzione pura (dal 22/08 `corsieRistrette`, BUG-085 —
+      prima `corsieDiverseDalNormale`) e la memoria si ripulisce dagli id morti
+      (`soloCorsieVive`). E' sparito `corsieSpente`, che serviva solo al
+      title di quel chip.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-059
+    title: "Nella scheda dei chiusi l'intestazione del giorno dice «Da chiudere»"
+    area: "src/pages/BartenderPage.jsx, src/lib/coda.js (intestazioneGiornata)"
+    description: >
+      Segnalato dall'utente il 20/08 con lo screenshot della scheda
+      «💶 Chiusi»: sopra i conti dell'altra sera c'era scritto
+      «⏳ Da chiudere · ieri».
+      LA CAUSA. La coda separa i conti per giornata commerciale e mette una
+      riga sopra ogni giorno che non è oggi. Quella riga era scritta a
+      mano, uguale in tutti e due i punti in cui compare (la griglia e la
+      lista), e non guardava quale scheda fosse aperta: una sola etichetta
+      per quattro schede.
+      PERCHÉ FA MALE. Dentro «In corso» l'etichetta è giusta e utile: un
+      conto di ieri ancora aperto è davvero roba rimasta da chiudere, e
+      quella riga è l'unica cosa che dice perché sta ancora lì. Dentro
+      «Chiusi» dice il contrario di quello che è vero: quei conti sono
+      pagati e chiusi, non c'è più niente da fare — e chi legge va a
+      cercare cosa manca su conti a posto. Stessa cosa fra gli annullati.
+      LA CURA: l'etichetta la sceglie la scheda (intestazioneGiornata,
+      logica pura in coda.js). «⏳ Da chiudere · ieri» in corso,
+      «💶 Chiusi · ieri» fra i chiusi, «✖️ Annullati · ieri» fra gli
+      annullati. Nella scheda «Tutti» i conti sono mescolati e non si può
+      dire niente di più della data: resta «📅 ieri», che è tutto quello
+      che si sa con certezza.
+      La LISTA continua a dire «Da chiudere» ed è giusto: lì la sezione è
+      una sola, i conti IN CORSO, e di un conto di ieri ancora aperto c'è
+      una cosa sola da dire.
+      PASSI PER RIPRODURLO (prima della cura): lasciare un conto pagato
+      della sera prima in coda, aprire la scheda «💶 Chiusi». Sopra al
+      gruppo c'è «⏳ Da chiudere».
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-060
+    title: "«Invalid Date» come intestazione di un gruppo in coda"
+    area: "src/pages/BartenderPage.jsx (dayOf, groupByDay), src/lib/coda.js (giornataDelConto, raggruppaPerGiornata)"
+    description: >
+      Segnalato dall'utente il 20/08 con lo screenshot: in coda, sopra un
+      gruppo di conti, l'intestazione diceva «Invalid Date».
+      LA CAUSA, secca. La coda raggruppava per giornata con
+      `dayOf(o) || '—'`: un conto di cui non si riusciva a leggere la data
+      finiva in un gruppo che aveva per chiave un TRATTINO. Ma la chiave del
+      gruppo è la stessa cosa che poi va al formattatore
+      (`businessDayLabel`), e lì dentro diventa `new Date('—T00:00:00')` —
+      che non è una data. Il formattatore stampava «Invalid Date», e quello
+      si leggeva a schermo.
+      LA REGOLA, DETTA DALL'UTENTE: «la data ce la metti in locale, se non
+      la leggi c'è qualche problema, non inventare soluzioni». È vero, ed è
+      il punto: `createOrder` scrive `order_date` dall'orologio del client
+      nell'istante in cui il conto nasce — non aspetta il server, vale anche
+      offline, e non è mai vuota.
+      LA CURA, in tre pezzi.
+      (1) `giornataDelConto` (coda.js, logica pura) impara il ripiego
+      COMPLETO sulle date locali che un conto si porta dietro, in ordine di
+      attendibilità: `order_date`, poi `created_at` (l'orario del server,
+      che finché la scrittura è per strada vale null e quindi non può stare
+      per primo), poi l'APERTURA scritta dal client
+      (`status_times.aperto` sul conto, che mapOrder porta in
+      `tempi_conto`), poi la nascita della prima comanda. Così anche un
+      documento monco finisce sotto IL SUO giorno.
+      TRAPPOLA TROVATA SCRIVENDO I TEST: `businessDayKey` ha un valore di
+      riserva (`new Date()`), quindi passandogli `undefined` risponde OGGI.
+      Un campo mancante sarebbe diventato «oggi» invece di «non lo so», e i
+      ripieghi dopo non sarebbero stati nemmeno provati: si passa `?? null`.
+      (2) `raggruppaPerGiornata` non usa più nessun segnaposto: se dopo
+      tutti i ripieghi la data non c'è — caso patologico — il conto va sotto
+      OGGI, dove chi lavora lo vede. Al formattatore arriva sempre una
+      chiave vera.
+      (3) La lista continua a raggruppare con le stesse regole: le due
+      funzioni sono una sola, e si provano senza rete.
+      L'ORDINE FANTASMA «#—» COL 🌐, cosa si è escluso coi fatti. Nella
+      stessa segnalazione compariva fra i chiusi una card senza numero e
+      senza autore. Il 🌐 non è un segno di guasto: OrderBy lo mostra a
+      QUALUNQUE conto senza `placed_by`, quindi un conto senza numero e
+      senza autore si disegna così. Nel client non esiste una strada che
+      fabbrichi un conto senza documento sotto, e sono state guardate tutte
+      le memorie locali che potevano farlo:
+      · `lib/pendingOrders.js` — i conti battuti e non ancora sincronizzati
+        sono disegnati a parte (renderPendingCard) e scrivono «#…», non
+        «#—»; e non entrano mai in `ordersRaw`.
+      · `lib/comandeLocali.js` — sostituisce solo l'array `comande` di un
+        conto che ESISTE già nella lista: non ne crea nessuno.
+      · `lib/mutazioniOrdine.js` — la memoria di «quello che ho appena
+        scritto» la leggono le MUTAZIONI (leggiOrdine), mai la coda; scade
+        da sé al confronto con la cache o dopo 2 secondi.
+      · `lib/ordiniNascosti.js` — toglie conti dalla lista, non ne aggiunge.
+      · `BartenderPage` popola `ordersRaw` in un punto solo (riga 883), dal
+        solo `subscribeActiveOrders`, che rimappa gli snapshot a ogni giro:
+        un documento cancellato sparisce, non resta appeso.
+      RESTA QUINDI UN DOCUMENTO VERO, letto dalla CACHE del browser: la
+      persistenza di Firestore (IndexedDB) sopravvive a un database
+      ricostruito da zero — è la stessa cosa che `lib/sync.js` dice già
+      degli errori «not found» in locale — e `subscribeActiveOrders` legge
+      APPOSTA la cache per prima (`dallaCache`) e disegna prima che il
+      server risponda. Con l'emulatore piantato, quello che si vede è la
+      cache di ieri notte. NON RIPRODOTTO su dati puliti; se ricapita, la
+      prova che lo dimostra è aprire quel conto e vedere se il documento
+      esiste sul server.
+      COSA CAMBIA COMUNQUE AL BANCO: qualunque sia la sua provenienza, un
+      conto del genere adesso non stampa più «Invalid Date» e sta sotto un
+      giorno vero.
+      PASSI PER RIPRODURLO (prima della cura): un conto in coda senza
+      `order_date` e senza `created_at`. L'intestazione del suo gruppo dice
+      «Invalid Date».
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, coda, dati]
+    severity: media
+    priority: P2
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-061
+    title: "Nella vista ordini i filtri stanno in un punto, nelle corsie in un altro"
+    area: "src/pages/BartenderPage.jsx (filtriOrdini), src/index.css"
+    description: >
+      Segnalato dall'utente il 20/08, subito dopo BUG-042: «rispetto alla
+      vista corsie li vorrei nello stesso punto». Nelle corsie i filtri
+      erano appena passati sulla riga dei conteggi; nella vista a griglia
+      degli ordini restavano una riga a sé fra la testata e la prima card.
+      PERCHÉ È UN DIFETTO E NON UN GUSTO. Sono due modi di guardare la
+      STESSA coda, e nella stessa serata si passa dall'una all'altra
+      (pastiglia «🍸 Comande» / «🧾 Ordini»). Trovare i filtri in due posti
+      diversi vuol dire cercarli ogni volta — e in griglia quella riga
+      costava un livello di altezza fra la testata e i conti, sulla
+      lavagna che si guarda da lontano.
+      LA CURA: `filtriOrdini`, gemello di `filtriCorsie`, appeso alla
+      stessa riga dei conteggi (`.board-sotto`). Il meccanismo è quello di
+      BUG-042, non un secondo inventato apposta: stessa classe
+      (`chips-row chips-lavagna`), stesso margine automatico che stacca il
+      cambio vista, stessa regola di docs/navigazione.md.
+      SONO SETTE, NON DUE, e questo è il punto delicato. Sui 1000-1300px
+      del banco non ci stanno tutte accanto ai conteggi. NON vanno a capo
+      (una seconda riga di pastiglie sarebbe esattamente quello che si
+      stava togliendo) e non si schiacciano: la riga SCORRE in orizzontale,
+      che è quello che `.chips-row` fa già e che le corsie facevano già sul
+      telefono. E la pastiglia più lunga si accorcia: «📅 Solo oggi (3)»
+      invece di «📅 Solo oggi (3 da chiudere)» — un'ottantina di pixel in
+      meno, e cosa siano quei tre lo dice il titolo, che è dove si va a
+      chiederlo.
+      UN BUG DENTRO IL BUG, trovato spostandoli: la soglia «sul telefono i
+      filtri tornano sotto» è una container query sulla LAVAGNA
+      (`@container corsie`), ma il contenitore era dichiarato solo su
+      `.queue-board.corsie-board`. In griglia quel contenitore non esiste,
+      quindi la regola non si sarebbe applicata MAI e sul telefono i filtri
+      sarebbero rimasti schiacciati a destra. Il contenitore è passato su
+      `.queue-board`: la lavagna è una, che sia a corsie o a griglia.
+      COSA NON È CAMBIATO: quello che i filtri fanno. Stessi tasti, stesso
+      comportamento, stesso ordine.
+      PASSI PER RIPRODURLO (prima della cura): coda a griglia, guardare
+      dove stanno i filtri; passare alle comande con «🍸 Comande» e
+      guardare di nuovo. Sono in due punti diversi.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-062
+    title: "Il tasto «Chiudi cassa» e' largo il doppio del suo nome e mangia la testata"
+    area: "src/pages/BartenderPage.jsx (testata della coda), src/index.css (.board-cassa)"
+    description: >
+      Segnalato dall'utente il 20/08, con lo screenshot: «il tasto chiudi
+      cassa nella schermata ordini e' troppo largo e occupa troppo spazio».
+      PERCHE' ERA LARGO. Il tasto stava in un riquadro incolonnato
+      (`.board-cassa-box`) con sotto la riga che spiega perche' non si puo'
+      chiudere — «Prima chiudi 3 conti e servi 2 comande» — e in una
+      colonna la larghezza la fa il figlio piu' largo: il bottone veniva
+      lungo quanto la frase, il doppio del suo nome, in una testata dove lo
+      spazio e' della barra di ricerca. La frase era stata messa li' per un
+      motivo buono (in fondo alla riga finiva accanto al «+» e si leggeva
+      come una nota del «nuovo ordine»): il difetto e' il POSTO, non la
+      frase.
+      LA CURA: il tasto torna un bottone normale, largo quanto «🔒 Chiudi
+      cassa», e la spiegazione NON si butta — e' la sola cosa che dice
+      perche' e' spento. Vive nel `title`, dove chi ha un mouse la trova
+      passandoci sopra, e al banco — dove il mouse non c'e' — esce come
+      avviso (toast) appena si prova a chiudere. Che e' il momento in cui
+      la domanda nasce davvero: prima di allora e' una riga che nessuno
+      legge, pagata da tutti in larghezza.
+      PER QUESTO IL TASTO NON E' PIU' `disabled` MA `aria-disabled`: un
+      tasto spento davvero non riceve il tocco, e chi lo preme non saprebbe
+      mai perche' non succede niente. Resta scolorito (`.board-cassa.spento`)
+      e continua a non chiudere niente. Sul telefono non cambia nulla: li'
+      la cassa e' gia' una voce del ⋯, col suo hint.
+      PASSI PER RIPRODURLO (prima della cura): coda ordini da tablet, con
+      un conto aperto — il tasto «Chiudi cassa» e' largo come la frase che
+      ha sotto.
+      ── CORRETTA LA CURA IL 20/08/2026 ──
+      «E' scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+      comande"» (l'utente, guardando il risultato). Togliere la frase aveva
+      curato la larghezza portandosi via la sola cosa che dice perche' il
+      tasto e' grigio: il `title` lo vede chi ha un mouse da fermare sopra,
+      e al banco il mouse non c'e'; l'avviso al tocco arriva DOPO aver
+      premuto un tasto che sembrava rotto.
+      LA FRASE TORNA SOTTO IL TASTO, E PIU' CORTA: «Chiudi 3 conti e 2
+      comande» invece di «Prima chiudi 3 conti e servi 2 comande» — via il
+      «Prima» e via il verbo di mezzo, che una riga sotto un tasto in cima
+      alla coda si legge di sguincio mentre si versa. Declinata al singolare
+      («Chiudi 1 conto e 1 comanda») e, se una delle due quantita' e' zero,
+      nomina solo l'altra.
+      E IL TASTO NON SI RIALLARGA, che era il difetto vero: la colonna
+      (`.board-cassa-box`) adesso CENTRA i figli invece di stirarli — niente
+      `align-items: stretch` — quindi il bottone tiene la sua larghezza
+      naturale e la frase, che e' testo leggero e non un bersaglio, puo'
+      sporgere di lato senza che nessuno provi a premerla. A sorvegliare
+      l'allineamento c'e' tests/unit/css.test.js: jsdom non fa layout, e dal
+      DOM quella cosa non si vede.
+      L'AVVISO AL TOCCO RESTA: un tocco che non fa NIENTE si legge come
+      un'app rotta, e chi preme di corsa la riga sotto non l'ha guardata.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/component/CodaCorsie.test.jsx
+      - tests/unit/coda.test.js
+      - tests/unit/css.test.js
+
+  - id: BUG-063
+    title: "Con tutte le corsie accese le card si sballano: i tasti si tagliano a vicenda"
+    area: "src/index.css (.corsia-card, .corsia-piede, .corsia-quando), src/components/CorsieComande.jsx, src/components/CorsieStato.jsx"
+    description: >
+      Segnalato dall'utente il 20/08/2026, con lo screenshot: «poi quando
+      sono attive tutte le lane il layout delle card si sballa. Nel caso
+      siano troppo strette per i tasti, li impiliamo verticalmente». E
+      subito dopo, con un secondo screenshot: «anche con 4 corsie succede.
+      Ovviamente dobbiamo farlo in modo che sia dinamico».
+      COSA SI VEDEVA. Al banco, con tutte le colonne accese (sette, col
+      pronto diviso), le card diventano strisce da centoventi pixel: il
+      piede tiene TRE tasti in fila — «🧾 Conto», «⋯ Azioni» e quello che
+      porta avanti il lavoro («Pronto», «Servito», «Incassa») — che in
+      riga ne vogliono quasi trecento. Si schiacciavano fino a tagliare le
+      parole, il terzo usciva dal bordo della card, e nella testata «5
+      min» andava a capo una lettera per riga accanto al numero del conto.
+      LA CURA, IN DUE PASSI, E IL TASTO GRANDE SI DIFENDE PER PRIMO. È il
+      gesto più frequente della serata — si preme di corsa e al buio — e a
+      nessuna larghezza deve diventare piccolo o finire tagliato. Quindi:
+      sotto i 300px di card il tasto grande SCENDE SOTTO a tutta
+      larghezza, e i due piccoli si dividono la riga di sopra (il
+      bersaglio che conta CRESCE, invece di stringersi: è un guadagno
+      prima ancora di essere un ripiego); sotto i 200px nemmeno i due
+      piccoli ci stanno affiancati — «⋯ Azioni» da solo ne vuole più di
+      ottanta — e allora vanno in colonna tutti e tre.
+      LA SOGLIA È LA LARGHEZZA MISURATA DELLA CARD, e non poteva essere
+      altro: «ovviamente dobbiamo farlo in modo che sia dinamico» (parole
+      sue). Niente «se le colonne sono più di N»: la stessa card è stretta
+      con sette corsie e larga con tre, sullo stesso schermo, e col menu
+      agganciato alla pagina o col browser allo zoom la finestra mente di
+      duecentocinquanta pixel. Si fa con una container query sulla card
+      (`container: card-corsia / inline-size`), che è lo stesso attrezzo —
+      e la stessa lezione — di BUG-021 e delle due colonne delle righe.
+      E IL TEMPO NON VA PIÙ A CAPO: «5 min» è testo corto e si tiene
+      intero (`.corsia-quando`, `white-space: nowrap`); a cedere è il nome
+      del tavolo, che a capo ci va bene, e la testata può andare su due
+      righe — meglio due righe che una parola in colonna.
+      PASSI PER RIPRODURLO (prima della cura): coda del banco da tablet,
+      fila dei filtri aperta, tutte le colonne accese e il pronto diviso —
+      le card hanno «⋯ Azioni» tagliato e il tasto di stato fuori dal
+      bordo. Succede già con quattro colonne.
+      A SORVEGLIARE È tests/unit/css.test.js: jsdom non fa layout, e dal
+      DOM una container query non si vede.
+    in_produzione: false
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-064
+    title: "Nella griglia il conto pagato-ma-da-servire si vede verde come uno concluso"
+    area: "src/index.css (.order-card.pagato-da-servire, .order-card.pay-*), src/pages/BartenderPage.jsx"
+    description: >
+      Trovato il 20/08/2026 lavorando alla striscia colorata delle card
+      (REQ-UI-020), non segnalato: c'era da mesi e in produzione c'e'
+      ancora.
+      COSA SI VEDEVA. Nella coda a GRIGLIA la card di un conto gia'
+      incassato ma non ancora consegnato porta la classe
+      `pagato-da-servire`, che le da' la striscia AMBRA — «i soldi li hai
+      gia' presi, il drink lo devi ancora fare», il caso strano che si
+      deve notare. Non compariva mai: la stessa card porta anche
+      `pay-pagato`, e nel foglio le regole `pay-*` stavano DOPO. A parita'
+      di peso (`.order-card.qualcosa` per tutte) vince l'ultima letta, e
+      vinceva il verde. Risultato: nella griglia un conto pagato e ancora
+      da consegnare si vedeva concluso come tutti gli altri, e chi passava
+      a ritirare non aveva niente che glielo dicesse.
+      NELLE CORSIE IL DIFETTO NON SI VEDE, ed e' il motivo per cui e'
+      passato inosservato: li' la card non ha le classi `pay-*`, e l'ambra
+      restava l'unica a scrivere sulla striscia.
+      LA CURA E' L'ORDINE. `.order-card.pagato-da-servire` e' stata
+      spostata DOPO le quattro `pay-*`, con scritto sopra perche' sta li'.
+      Nessuna specificita' gonfiata a posta (un `!important` o un
+      selettore doppio avrebbero risolto il sintomo e lasciato la trappola
+      al prossimo).
+      PASSI PER RIPRODURLO (prima della cura): coda a griglia, un conto
+      incassato con la preparazione ancora indietro — la striscia e' verde
+      invece che ambra.
+      A SORVEGLIARE E' tests/unit/css.test.js, che misura la POSIZIONE
+      delle regole nel foglio: dal DOM la cascata non si vede, e senza un
+      test il prossimo riordino del foglio se lo rimangia. Lo stesso test
+      tiene fermo anche il gradino sopra, il colore del conto
+      (`.order-card.bordo-conto`), che deve restare l'ultima parola.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-065
+    title: "Box bianchi e titoli minuscoli nelle sezioni di impostazioni e menù"
+    area: "src/index.css, src/components/SettingsTab.jsx, src/components/AvvisiPanel.jsx"
+    description: >
+      SEGNALATO AL BANCO, parole sue: «Un bug è che in alcune voci del menù
+      e impostazioni vengono usati ancora dei box bianchi. E questi box
+      bianchi che rappresentano le sezioni della pagina hanno i titoli
+      troppo piccoli».
+      I BOX BIANCHI. `.card` — il riquadro che fa una sezione di pagina, e
+      che in impostazioni e menù si usa una quarantina di volte come «card
+      settings-section» — era scritta per il tema SCURO: sopra `--card`
+      stendeva un velo bianco (`rgba(255,255,255,0.025)`) e un bordo bianco
+      (`rgba(255,255,255,0.07)`). Sullo scuro quel velo è rilievo; sul
+      tema CHIARO, dove diversi preset hanno `--card: #ffffff`, il velo
+      non si vede e il bordo bianco su fondo chiaro sparisce: resta un
+      rettangolo bianco senza contorno appoggiato su un fondo quasi
+      bianco. Da qui i «box bianchi». Lo stesso errore l'avevano
+      `.toggle-row` (la riga fra un'impostazione e l'altra), `.cat-chip`
+      (le categorie del menù) e `.group-tile` (le tessere dei gruppi nel
+      menù laterale) — la stessa lezione già imparata con `--strip-spenta`
+      e con `.chip`/`.mode-option`.
+      LA CURA: i colori strutturali stanno nei gettoni, che hanno già la
+      variante chiara. Il bordo è `--line`; il rilievo è un gettone nuovo,
+      `--velo-superficie`, che sullo scuro è il velo di luce di sempre
+      (identico a prima: sullo scuro non cambia niente) e sul tema chiaro
+      è `none`. Sul chiaro lo stacco lo fanno il bordo e l'ombra della
+      famiglia di forme (`--ombra-card`), che è quello che fa un riquadro
+      su un fondo chiaro: schiarire una superficie già bianca non si può.
+      I TITOLI TROPPO PICCOLI. `.settings-section h3` era `0.75rem` +
+      `text-transform: uppercase` + `letter-spacing: 1px` + `--muted`:
+      dodici pixel di maiuscoletto grigio slavato. È il titolo che dice
+      cosa c'è dentro il riquadro, e dentro una schermata piena di
+      interruttori chi cercava «Stampante» o «Coperto» andava a tentativi.
+      Adesso è un titolo vero — `1.15rem`, peso 700, colore `--text` —
+      col serif di casa che gli h1-h3 hanno già. Sotto, l'`h4` di sezione
+      diventa una classe (`0.98rem`, peso 600, di sistema) invece dello
+      `style` inline `margin: 16px 0 4px` ripetuto in mezza SettingsTab: è
+      un gradino sotto l'h3 e si distingue anche per il carattere.
+      PASSI PER RIPRODURLO (prima della cura): Impostazioni → Aspetto,
+      tema «☀️ Chiaro» (o «💠 Pico chiaro», `--card: #ffffff`), poi
+      qualsiasi altra scheda delle impostazioni o il menù: i riquadri
+      delle sezioni non hanno contorno e i loro titoli sono etichette
+      grigie di dodici pixel.
+      A SORVEGLIARE È tests/unit/css.test.js: le superfici delle sezioni
+      non dichiarano bianchi fissi per fondo o bordo, il velo ha la sua
+      variante chiara, e il titolo di sezione non scende sotto 1rem né
+      torna maiuscoletto grigio.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, interfaccia, tema]
+    severity: lieve
+    priority: P2
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-066
+    title: "Un test della coda diventava rosso di notte, nelle ore in cui il locale lavora"
+    area: "tests/component/CodaGiornate.test.jsx"
+    description: >
+      Trovato il 21/08/2026 verificando un altro lavoro, alle 3:47 del
+      mattino: il test «ma se una data locale c'e', il conto finisce sotto
+      IL SUO giorno» falliva. Non per il codice dell'app, che era ed e'
+      giusto: per il suo apparecchio di prova.
+      COSA SUCCEDEVA. Il conto finto di «ieri sera» nasceva come «adesso
+      meno venti ore». Di giorno funziona; ma la giornata commerciale
+      comincia alle 6 del mattino, quindi fra mezzanotte e le sei quel
+      timestamp cade DENTRO la giornata corrente — il separatore «ieri»
+      non ha piu' motivo di esserci e il test cade. Cioe' il test era
+      rosso proprio nelle ore in cui il bar e' aperto e in cui qualcuno
+      guarda la pipeline.
+      COME E' STATO SISTEMATO. L'istante si conta DA IERI e non da adesso:
+      le 21 del giorno prima stanno sempre nella giornata di ieri, a
+      qualunque ora si provi. Nessuna riga di codice dell'app toccata.
+    labels: [bug, test, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-067
+    title: "Il ☰ finiva sopra i conteggi della coda: il menu flottante copriva la testata"
+    area: "src/index.css, src/pages/BartenderPage.jsx"
+    description: >
+      «Il tasto menu va a finire sulla label» (l'utente, 21/08/2026), con
+      uno screenshot dal telefono sul sito di test: coda a corsie, barra in
+      alto nascosta, il ☰ sopra le prime due righe della testata. «4 aperti
+      · 6 chiusi · 222,00 €» si leggeva «…erti · 6 chiusi» e «Banco Bar ·
+      sei tu» si leggeva «…o Bar · sei tu»: sotto il ☰ finivano il
+      conteggio dei conti aperti e il nome del terminale, due cose che si
+      guardano di continuo.
+      DA DOVE VENIVA. A tutto schermo la barra in alto non c'e' e il menu
+      si apriva da un tasto FISSO nell'angolo (position: fixed), fuori dal
+      flusso: non spingeva niente, e il posto glielo teneva la testata a
+      mano — 54px di rientro sul titolo, 62 sull'avviso «Cassa chiusa», un
+      «top» calcolato per centrarlo sulla riga 1. Misurando: A PAGINA IN
+      CIMA quel posto tornava, i conteggi partivano 20px sotto il ☰. Il
+      guaio era lo SCORRIMENTO: la coda scorre tutta, testata compresa, e
+      un tasto fisso sopra una pagina che scorre finisce prima o poi su
+      quello che c'e' scritto sotto — bastavano 60px di scorrimento perche'
+      il ☰ si mangiasse i primi 36px delle due righe.
+      COME E' STATO SISTEMATO. Il ☰ della lavagna e' diventato un figlio
+      della testata (.board-burger), primo pezzo della prima fascia: scorre
+      con lei invece di starle sopra, e non c'e' piu' niente che possa
+      finirci sotto — ne' in cima ne' scorrendo. Il menu resta a un tocco
+      dov'e' sempre stato (a sinistra, in alto, docs/navigazione.md) e
+      quando la testata e' scorsa via si riapre dalla linguetta della barra
+      come tutto il resto. Sono spariti insieme a lui i tre posti che gli
+      tenevano il posto a mano: il rientro del titolo, quello dell'avviso e
+      il «top» calcolato. StaffDrawer riceve «flottante={false}» dal
+      gestionale: un ☰ solo per schermata.
+    labels: [bug, ui, coda, telefono]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/StaffDrawer.test.jsx
+
+  - id: BUG-068
+    title: "Quattro fasce di testata prima della prima card, sul telefono"
+    area: "src/index.css, src/pages/BartenderPage.jsx"
+    description: >
+      «Il layout sopra le card non è il massimo su mobile» (l'utente,
+      21/08/2026), guardando la coda a griglia dal telefono con la barra in
+      alto nascosta. Prima della prima card c'erano quattro fasce:
+      1) il titolo — con «In servizio» spezzato su due righe perche'
+      schiacciato — piu' stampante, ⋯, cambio vista e ➕;
+      2) i conteggi e la legenda di chi e' in servizio;
+      3) «▾ Filtri» e «↓» DA SOLI, spinti a destra, su una fascia tutta
+      loro: lo spreco piu' evidente;
+      4) la ricerca, a tutta larghezza.
+      Su una lavagna ogni fascia di testata e' una card in meno a schermo, e
+      il giro di lavoro di questi giorni va tutto nella direzione opposta.
+      COME E' STATO SISTEMATO. Tre fasce invece di quattro, senza perdere
+      niente: 1) ☰, titolo, stampante, ⋯, cambio vista, ➕; 2) ricerca coi
+      due tastini in fondo — dove la lista e le schede li tengono gia', per
+      cui chi cambia vista li ritrova; 3) conteggi e legenda, e sotto, da
+      aperti, i chip dei filtri. Il titolo non va piu' a capo: si accorcia
+      coi puntini, che una riga in piu' costa piu' di due lettere. Il
+      respiro fra i tasti passa da 8 a 6px sul telefono (i bersagli restano
+      44px: si avvicinano, non si rimpiccioliscono) e sono i 10px che fanno
+      stare «In servizio» scritto per intero da 390px in su. Misurato: la
+      testata passa da 161 a 141px su un telefono da 360.
+      RIPULITO PER STRADA: la testata del telefono era dichiarata in due
+      blocchi (700px e 640px) con ordini diversi — valevano tutt'e due e
+      vinceva l'ultima scritta — e nel secondo c'era un ➕ da 46px che non
+      ha mai colorato un pixel, perche' la regola di base che lo fa da 60
+      sta piu' in basso nel foglio. Il ➕ e' sempre stato grande anche sul
+      telefono, ed e' giusto cosi'.
+    labels: [bug, ui, coda, telefono]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/CodaCorsie.test.jsx
+
+  - id: BUG-069
+    title: "«Riscuoti e servi» stava appiccicato a «Riscuotere»"
+    area: "src/index.css (.payscreen-collect-muto, .payscreen-collect-servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026 con lo screenshot: «serve mettere
+      un po' di spazio tra i due bottoni».
+      COSA SI VEDEVA. Sotto il tastierino, «Riscuotere · 23,00 €» e
+      «Riscuoti e servi · chiude il conto» si toccavano: sembravano un
+      tasto e la sua seconda riga. Non lo sono — uno incassa, l'altro
+      incassa E da' per servito tutto quanto — e con le mani di corsa si
+      prende quello sbagliato. Lo stesso valeva per «Riscuoti (senza
+      stampa)», dove il locale l'ha acceso.
+      PERCHE'. Il difetto stava nel non-detto: le due varianti non avevano
+      NESSUNA regola nel foglio, quindi ereditavano margine zero da
+      `.btn.block`, mentre il tasto grande si prendeva i suoi 10px da
+      quello che ha sopra.
+      COME E' STATO SISTEMATO. Una regola per tutte e due, 8px di stacco —
+      la stessa aria che gia' separa i metodi di pagamento nella colonna a
+      fianco. Sorvegliata da `tests/unit/css.test.js`, che jsdom non fa
+      layout: rimettendo il difetto il test diventa rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-070
+    title: "L'interruttore di «Riscuoti e servi» era introvabile: stava in «Gestione preparazione»"
+    area: "src/components/SettingsTab.jsx (riscuoti_e_servi)"
+    description: >
+      Segnalato dall'utente il 21/08/2026: «metti che anche il tasto
+      "riscuoti e servi" e' opzionale nelle impostazioni».
+      COSA C'ERA GIA'. L'impostazione esisteva da tempo —
+      `riscuoti_e_servi`, spenta di default — e il suo interruttore c'era
+      eccome. Il difetto non e' una funzione mancante: e' che l'utente non
+      l'ha trovata, e ha chiesto di aggiungere una cosa che aveva gia'.
+      Un'impostazione che non si trova, per chi la cerca, non esiste.
+      DOV'ERA E PERCHE' NON SI TROVAVA. In «Gestione preparazione»,
+      annidata sotto «Segui la preparazione degli ordini». Ci era finita
+      per parentela tecnica — il tasto marca «servito», e «servito» e'
+      uno stato del servizio — mentre chi cerca un tasto della SCHERMATA
+      DI PAGAMENTO apre «Pagamenti».
+      LO STESSO IDENTICO INCIAMPO, LA SECONDA VOLTA. Il 20/08 era successo
+      con «Riscuoti (senza stampa)»: stessa sezione sbagliata, stessa
+      parentela di forma, e fu spostato in «Pagamenti» proprio perche'
+      non si trovava. Il gemello rimasto indietro ha ripetuto il difetto
+      un giorno dopo — spostarne uno solo dei due non aveva risolto la
+      causa, che e' la sezione, non il singolo interruttore.
+      COME E' STATO SISTEMATO. L'interruttore trasloca in «Pagamenti»,
+      accanto al gemello: due tasti che compaiono nella stessa schermata,
+      uno accanto all'altro, si accendono nello stesso posto. La
+      CONDIZIONE SE L'E' PORTATA DIETRO — si vede solo col servizio acceso
+      (`workflow_enabled !== false`) — perche' «servire» esiste solo se si
+      seguono i passi: col servizio spento il tasto non comparirebbe
+      comunque, e un interruttore che non fa niente e' peggio di uno
+      assente.
+    labels: [bug, interfaccia, impostazioni, pagamenti]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/component/SettingsTab.test.jsx
+
+  - id: BUG-071
+    title: "Annullando un conto appena battuto, la comanda usciva lo stesso"
+    area: "src/lib/printer.js, src/lib/api.js (cancelOrder), src/components/OrderPosDetail.jsx"
+    description: >
+      «Se alla creazione di un ordine lo annullo anche, la comanda non deve
+      uscire se e' abilitata la stampa automatica» (l'utente, 21/08/2026).
+      Al banco: si batte un conto al POS, si cambia idea, lo si annulla — e
+      il ticket esce lo stesso. Carta buttata, e peggio: al banco si comincia
+      a preparare un lavoro che nessuno deve fare.
+      LE GUARDIE C'ERANO GIA' E NON BASTAVANO. `comandeDaStampare` scarta i
+      conti annullati e le comande annullate, e `cancelOrder` scrive
+      `status: annullato` e annulla tutte le comande non ritirate. Sulla
+      carta il caso sembrava coperto. Il buco era in due posti diversi.
+      UNO: IL CANCELLO SI APRIVA PRIMA CHE L'ANNULLO ARRIVASSE. Il segno
+      `in_creazione` e' quello che tiene ferma la stampa finche' il conto si
+      sta componendo (REQ-STAMPA-013); a toglierlo era l'USCITA dalla
+      schermata, che annullando parte per prima — mentre l'annullo deve
+      ancora leggersi il documento. In quel pezzo di secondo la coda vede un
+      conto composto, aperto e da stampare, e la stampa automatica non
+      aspetta nessuno. Ed e' il caso NORMALE, non un caso di margine:
+      battuta la prima riga il conto e' gia' nato — la schermata passa a
+      modifica, `isNew` diventa falso — ma resta `in_creazione`, quindi chi
+      annulla li' passa dal ramo dell'annullo di sempre.
+      DUE: IL TASTO «COMANDA» A MANO su un conto annullato stampava ancora, e
+      stampava il peggio. `comandaDelTicket` scarta le annullate, su un conto
+      annullato non ne trova nessuna, e `printComanda` ripiegava
+      sull'AGGREGATO del conto (BUG-051): un ticket con TUTTE le righe di un
+      lavoro che non si deve fare.
+      COME E' STATO SISTEMATO, senza ritardi e senza riletture.
+      · L'annullo chiude anche la composizione: `in_creazione: false` viaggia
+        nello STESSO patch di `status: annullato`. Non esiste piu' un istante
+        in cui il conto risulta composto e non ancora annullato.
+      · L'uscita non tocca niente quando si sta annullando: il segno si mette
+        in cima al gesto (memoria locale immediata, come `ordiniNascosti` per
+        la coda), prima ancora di distinguere il conto nuovo da quello nato.
+      · La domanda «questo lavoro e' annullato?» sta in una funzione pura
+        sola (`lavoroAnnullato` in printer.js) e la fanno tutti e due i
+        posti che stampano: chi sceglie (`comandeDaStampare`) e chi mette
+        l'inchiostro (`printComanda`, dove il cancello vale anche per i
+        chiamanti di domani, come per la coda delle stampe di BUG-052).
+        Guarda `status` E `workflow_status`: annullato e' annullato da
+        qualunque vista lo si guardi.
+      NON ERA IN PRODUZIONE: ne' `in_creazione` ne' `comandaDelTicket`
+      esistono su main — sono tutti e due della 1.5.x.
+    labels: [bug, stampa, pos]
+    severity: media
+    priority: P1
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAnnullata.test.js
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-072
+    title: "Due avvisi per lo stesso conto: «Nuovo ordine» e il cambio di stato, sullo stesso #5"
+    area: "src/pages/BartenderPage.jsx (coda: gestore di snapshot)"
+    description: >
+      Segnalato dall'utente il 21/08/2026, con due schermate — il centro
+      notifiche del sistema e la lista della campanella dentro l'app —
+      sull'ordine #5 delle 21:20: «perche' arrivano due notifiche diverse di
+      ordine ricevuto?». Nella sequenza, uno dietro l'altro: «Annullato»,
+      «Nuovo ordine · Ordine #5 ricevuto.», «Ordine ricevuto · Ordine #5»,
+      «Annullato». E poi: «vedi che tra l'altro le notifiche sono diverse».
+      COSA NON ERA. Non e' la stessa notifica consegnata due volte: quella la
+      fonderebbe il `tag`, che l'app e la push del server portano uguale
+      apposta. Sono DUE avvisi, con due titoli e due corpi.
+      LA CAUSA. Nello stesso gestore di snapshot della coda vivevano due
+      strade che potevano parlare dello stesso conto: «ordine nuovo», che
+      chiedeva solo «l'ho gia' visto?» a una memoria (`knownIds`) rifatta da
+      capo a ogni snapshot, e «cambio di stato», che guarda lo stato di
+      prima. Bastava che il conto uscisse dalla finestra della coda e
+      rientrasse — cioe' un annullo seguito da un ripristino — perche' la
+      prima lo credesse nuovo mentre la seconda raccontava il ritorno.
+      E SUCCEDEVA ANCHE SENZA CHE IL CONTO SPARISSE MAI, col pagamento
+      obbligatorio: un conto nuovo che aspetta di essere pagato entrava
+      nell'insieme `awaiting`, e da li' non usciva piu' nemmeno annullandolo
+      — il ripristino lo faceva scattare come «nuovo ordine» mesi dopo essere
+      arrivato. E' il giro che riproduce la sequenza vista al banco, riga per
+      riga.
+      COME E' STATO SISTEMATO. Una memoria sola, che si aggiunge e non si
+      azzera: «mai visto» e' l'unica cosa che rende nuovo un conto, e i conti
+      spariti dalla vista ci restano dentro. L'attesa del pagamento si pulisce
+      quando il conto viene annullato — annullato vuol dire uscito, non «in
+      arrivo». Un conto che rientra in coda si annuncia per quello che e',
+      «Conto ripristinato», e chi l'ha ripristinato da quel terminale non se
+      lo sente ripetere (`ripristinato_device`, stesso metro di
+      `cancelled_device`). Rimettendo il difetto,
+      tests/component/AvvisiRipristino.test.jsx torna rosso.
+    labels: [bug, notifiche, coda]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/component/AvvisiRipristino.test.jsx
+
+  - id: BUG-073
+    title: "Lo stesso fatto annunciato con due vocabolari: «Nuovo ordine» e «Ordine ricevuto»"
+    area: "src/lib/orderStatus.js, src/pages/BartenderPage.jsx, public/sw.js, functions/lib/push-core.js"
+    description: >
+      Dalla stessa segnalazione del 21/08/2026: «vedi che tra l'altro le
+      notifiche sono diverse». Che gli avvisi fossero due era BUG-072; che
+      dicessero due cose diverse e' questo, e sarebbe rimasto anche
+      togliendone uno.
+      COSA SI LEGGEVA. Lo stesso conto tornato in coda arrivava come «Nuovo
+      ordine — Ordine #5 ricevuto.» da una strada e come «Ordine ricevuto —
+      Ordine #5» dall'altra. Il primo titolo era battuto a mano dentro la
+      coda; il secondo veniva dalle etichette di stato, cioe' dalle parole
+      che si dicono AL CLIENTE («Ordine ricevuto»), finite in un avviso per
+      il banco — dove lo stesso passo si chiama «Da fare».
+      PERCHE' E' UN DIFETTO A SE'. Il progetto ha gia' la regola che le
+      parole del banco stanno in un posto solo (`statoAlBanco`, sorvegliata
+      da tests/unit/paroleDelBanco.test.js), ma l'avviso di ordine nuovo la
+      aggirava: le sue parole erano scritte a mano in TRE posti che non
+      possono importarsi a vicenda — la coda nel browser, la push del server
+      (functions/, altro pacchetto) e il service worker che la disegna
+      (public/sw.js, fuori dal bundle). Tre copie a mano divergono, ed erano
+      gia' divergenti.
+      E IL TITOLO DEVE ESSERE IDENTICO, non «simile»: la notifica dell'app e
+      quella del server portano lo stesso `tag` e il sistema le fonde in una.
+      Due titoli diversi sotto lo stesso tag sono una notifica che cambia
+      parole sotto gli occhi di chi la legge.
+      COME E' STATO SISTEMATO. Le parole degli avvisi hanno un posto solo,
+      src/lib/orderStatus.js (`AVVISO_NUOVO_ORDINE`, `AVVISO_RIPRISTINO`), e
+      un test le tiene allineate alle due copie che non possono importarle:
+      tests/unit/paroleDegliAvvisi.test.js confronta il titolo con quello
+      della push del server e col ripiego scritto nel service worker.
+      Un avviso annuncia un FATTO, e non porta il nome della colonna dove il
+      conto atterra: un conto ripristinato non e' «Da fare», e' «Conto
+      ripristinato».
+    labels: [bug, notifiche, interfaccia]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/paroleDegliAvvisi.test.js
+
+  - id: BUG-074
+    title: "Due ordini #5 nella stessa sera: il conto battuto prima che si sapesse la cassa si numera sul giorno"
+    area: "src/lib/progressivi.js, src/lib/api.js (creaOrdine)"
+    description: >
+      Segnalato dall'utente il 21/08/2026, con la schermata della coda: «e
+      poi vedi che ci sono due ordini #5». Il numero del conto e' quello che
+      il cliente si sente dire ad alta voce: due conti con lo stesso numero,
+      la stessa sera, sono due comande che si scambiano di posto al banco.
+      LA CAUSA. Il numero lo da' il contatore che il dispositivo ha gia' in
+      memoria, e quale contatore sia lo decide una domanda sola: c'e' una
+      cassa aperta? Se si' si conta dentro la SERATA (`cash-<sessione>`), se
+      no dentro la GIORNATA. Sono due contatori indipendenti: nella stessa
+      sera danno benissimo lo stesso #5. Il difetto stava nella terza
+      risposta possibile, che non veniva considerata: «non lo so ancora».
+      L'ascolto su `counters/_active_cash` riparte da capo a ogni
+      ricaricamento della pagina, e finche' non ha risposto `cassaCorrente()`
+      tornava `null` — che il codice prendeva per «cassa chiusa».
+      COSA NE VENIVA, provato: il conto battuto in quella finestra nasce con
+      `daily_number` preso dal contatore del giorno — cioe' un numero gia'
+      usato quella sera — E con `cash_session_id: null`. Non e' «numerato
+      male ma nella serata giusta»: e' proprio SENZA SERATA, quindi non
+      compare nella chiusura di cassa. Due danni, uno visibile e uno no.
+      E LA RETE DI SICUREZZA DEL SERVER NON LO PRENDE. `risolviNumeroDuplicato`
+      (functions/index.js) cerca i fratelli dentro `cash_session_id` se c'e',
+      dentro `order_date` altrimenti: il conto orfano si confronta con la
+      giornata e vede il gemello, ma il conto REGOLARE che arriva dopo si
+      confronta con la sola serata, dove l'orfano non c'e'. Nato per primo
+      l'orfano, il doppione sopravvive. Resta cosi': allargare il confronto
+      alla giornata romperebbe il caso legittimo di due casse nella stessa
+      giornata commerciale, dove la numerazione riparte apposta.
+      COME E' STATO SISTEMATO, restando local-first: non si aspetta nessuno,
+      ci si RICORDA. L'ultima cassa che si sapeva aperta resta in memoria
+      locale (`tana:cassa-aperta`), come gia' i numeri assegnati, e vale per
+      la giornata commerciale in cui e' stata scritta — quella di ieri non e'
+      una risposta, e' un'altra serata. Un ricaricamento non fa piu'
+      dimenticare in che serata si sta; il server corregge appena risponde, e
+      quando dice che nessuna cassa e' aperta la memoria si cancella.
+      SCARTATE: aspettare il server prima di battere (un'attesa di rete a
+      ogni conto, il contrario di tutto il progetto) e impedire di battere
+      finche' non si sa (blocca il banco). Rimettendo il difetto,
+      tests/unit/cassaDellaSerata.test.js torna rosso.
+    labels: [bug, ordini, cassa, offline]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/cassaDellaSerata.test.js
+
+  - id: BUG-075
+    title: "Zoom al 120% nel pagamento: l'ultima riga del tastierino finisce dietro «Riscuotere»"
+    area: "src/index.css (.paypad, .paypad-key)"
+    description: >
+      «Lo zoom al 120% nel pagamento fa si' che i tasti del tastierino
+      finiscano dietro al tasto Riscuotere» (l'utente, 21/08/2026, con la
+      schermata di pagamento su desktop e il controllo «- 120% +» in basso a
+      sinistra: lo zoom dell'APP, non quello del browser). Si vedono 7 8 9,
+      4 5 6, 1 2 3; l'ultima riga — 00, 0, =, il tasto per cancellare una
+      cifra — sta sotto al tasto blu «Riscuotere», che ha il fondo pieno e la
+      copre del tutto. Su una schermata che maneggia soldi un tasto che non
+      si vede e' peggio di un tasto scomodo: chi batte un importo a mano non
+      trova piu' ne' lo zero ne' il modo di correggere una cifra sbagliata.
+      LA CAUSA. Lo zoom scala '#root', quindi dentro la pagina l'altezza a
+      disposizione in pixel CSS SCENDE di un quinto a 120%. La colonna
+      centrale e' un flex verticale: display, avvisi, tastierino (che si puo'
+      stringere, 'flex: 1; min-height: 0') e sotto i tasti che incassano
+      ('flex-shrink: 0'). Ma i TASTI del tastierino non si stringono:
+      'min-height: 44px' secchi. Cinque righe da 44 piu' i vuoti fanno un
+      pavimento di 244px che non scende. Quando l'altezza disponibile va
+      sotto quel pavimento la griglia sborda dalla sua scatola, e siccome
+      niente ha 'overflow' l'ultima riga finisce sotto i tasti che vengono
+      dopo nel DOM.
+      COME E' STATO SISTEMATO, due reti. (1) Il minimo dei tasti segue lo
+      zoom: 'calc(44px / var(--zoom, 1))'. La soglia dei 44px (DESIGN.md) e'
+      una misura FISICA — quanto e' grande il tasto sotto il dito — e dentro
+      un contenitore scalato 44px CSS a zoom 1,2 sono gia' 52,8px veri: la
+      garanzia era superata di suo, e intanto il tastierino non ci stava piu'.
+      Diviso per lo zoom il tasto resta grande quanto a zoom 1, in centimetri
+      veri, e la griglia rientra. E' lo stesso idioma delle altezze che
+      dividono 100dvh, gia' in uso nel foglio. (2) Se anche cosi' non ci sta
+      (finestre molto basse tenute a zoom alto) il tastierino SCORRE
+      ('overflow-y: auto') invece di sbordare, e i tasti che incassano
+      restano appiccicati in fondo: «Riscuotere» e' quello che si preme
+      sempre, e non deve mai andare cercato.
+      MISURATO IN CHROME VERO, non a occhio: 63 combinazioni di finestra
+      (1440 x 500..1080) e zoom (100%..160%), leggendo per ogni tasto chi gli
+      finisce sopra con 'elementFromPoint'. Prima: 15 combinazioni con tasti
+      coperti, a partire da 1440x600 al 120% — il caso segnalato. Dopo: zero,
+      e in 8 combinazioni in piu' il tastierino ci sta per intero senza
+      nemmeno dover scorrere. Il tastierino dello sconto (tre colonne, dentro
+      la finestrella) non aveva questo guaio — la' la griglia e' alta quanto
+      il contenuto — e ci guadagna lo stesso: i suoi tasti restano 44px veri.
+      RIMETTENDO UNA QUALUNQUE DELLE DUE RIGHE, tests/unit/css.test.js torna
+      rosso.
+    labels: [bug, interfaccia, pagamenti]
+    severity: grave
+    priority: P1
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-076
+    title: "Con lo zoom alto la finestrella dello sconto esce dallo schermo sopra e sotto"
+    area: "src/index.css (.confirm-overlay, .confirm-box)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco: la registro perche'
+      e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo
+      zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE
+      le finestrelle di conferma dell'app, non solo lo sconto.
+      COSA SUCCEDE. '.confirm-overlay' centra la finestrella
+      ('align-items: center') dentro un velo fisso che non scorre. Quando la
+      finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla
+      dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non
+      c'e' modo di raggiungerli, perche' non scorre niente.
+      MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e
+      zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in
+      giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano
+      11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi,
+      ma non li chiude.
+      COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella
+      fermarsi all'altezza dello schermo con dentro il suo scorrimento —
+      'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare
+      non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni
+      '.confirm-box' dell'app, quindi va provato dove le finestrelle sono
+      piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+    labels: [bug, interfaccia]
+    severity: lieve
+    priority: P3
+    status: todo
+    generate_issue: true
+    in_produzione: true
+
+  - id: BUG-077
+    title: "Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre"
+    area: "src/components/OrderPosDetail.jsx (.posd-root, il piede del conto)"
+    description: >
+      Trovato misurando BUG-075, non segnalato al banco. Stessa causa di
+      fondo — lo zoom rimpicciolisce l'altezza disponibile e le misure fisse
+      no — ma un'altra schermata e un'altra struttura, quindi un lavoro a se'.
+      COSA SUCCEDE. La schermata del conto e' alta quanto lo schermo
+      ('calc(100dvh / var(--zoom, 1))') con 'overflow: hidden', e in fondo ha
+      una pila di tasti che non si stringe. Quando la somma delle fasce fisse
+      supera l'altezza, gli ultimi tasti finiscono FUORI dal riquadro e
+      niente scorre per andarli a prendere: sono irraggiungibili, non solo
+      scomodi. A scorrere e' la lista delle righe, che pero' e' sopra e non
+      aiuta.
+      MISURATO IN CHROME (conto aperto, 63 combinazioni di finestra e zoom):
+      16 combinazioni con almeno un tasto fuori. Il primo a sparire e'
+      «Annulla ordine», poi «Stato servizio», poi «Invia comanda» e
+      «Pagamento». Su un portatile 1440x768 succede dal 160%; su una finestra
+      alta 600px gia' dal 130%. Su schermi da 860px in su non succede mai
+      fino al 160%.
+      DA DECIDERE: se il piede debba scorrere, se i tasti debbano andare a
+      capo, o se le fasce fisse debbano seguire lo zoom come il tastierino
+      del pagamento. La regola che non si tratta e' quella: nessun tasto
+      finisce sotto o fuori senza un modo di arrivarci.
+    labels: [bug, interfaccia, pos]
+    severity: media
+    priority: P2
+    status: todo
+    generate_issue: true
+    in_produzione: true
+
+
+  - id: BUG-078
+    title: "Nel conto, fra la maniglia del piede e il Totale c'era piu' vuoto della riga stessa"
+    area: "src/index.css (.posd-foot-handle)"
+    description: >
+      Segnalato dall'utente il 21/08/2026 con lo screenshot: «diminuire lo
+      spazio tra la maniglia e il contenuto nel dettaglio ordine».
+      PERCHE'. La maniglia e' il primo figlio di una colonna flex con
+      `gap`, quindi fra lei e la riga del Totale finivano insieme tre
+      cose: i 16px della sua area da afferrare, il gap della colonna e il
+      suo margine. Un vuoto piu' alto della riga che stava separando — e
+      siccome il gap scala con `--foot-scale`, tirando su la maniglia per
+      ingrandire il piede quel vuoto cresceva con tutto il resto.
+      COME E' STATO SISTEMATO, IN DUE GIRI. Il primo ha stretto solo
+      sotto: «vedo ancora che la maniglia occupa troppo spazio sopra e
+      sotto» (l'utente, 22/08/2026, col secondo screenshot) — perche'
+      sopra restava il cuscino del piede, che non c'entrava col gap.
+      Adesso la maniglia RIENTRA nei vicini invece di aggiungersi: sopra
+      si mangia il cuscino (il piede scende a 4px di padding, che a
+      separarlo da quello che ha sopra basta il bordo), sotto riassorbe il
+      gap con un margine negativo che segue `--foot-scale`, perche' lo
+      segue il gap che sta annullando.
+      L'AREA DA AFFERRARE RESTA: quattordici pixel a tutta larghezza. Una
+      presa che non si prende non serve a niente, e quello che dava
+      fastidio non era la presa ma il VUOTO. Sorvegliato da
+      tests/unit/css.test.js su tutti e due i lati: rimettendo il cuscino
+      sopra, o togliendo il rientro, il test diventa rosso (provato).
+    labels: [bug, interfaccia, pos]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-079
+    title: "Dal pannello delle comande si stampava lo scontrino del conto intero"
+    area: "src/components/OrderPosDetail.jsx"
+    description: >
+      Segnalato dall'utente il 21/08/2026: «il tasto per stampare lo
+      scontrino dal box delle comande non serve».
+      COSA C'ERA. In fondo alla finestra «Comande» stava un tasto
+      «Scontrino (non fiscale)» che stampava il CONTO INTERO. Due
+      documenti diversi dietro lo stesso vetro, e quello sbagliato era il
+      piu' grande: chi cercava la carta per il banco poteva mandare in
+      stampa il riepilogo del cliente.
+      PERCHE' NON SERVE. Lo scontrino appartiene al gesto della
+      riscossione (REQ-STAMPA-001), e il riepilogo da mostrare al cliente
+      prima di pagare ha gia' il suo tasto — «Preconto» — nella schermata
+      dei pagamenti. Nel pannello delle comande la stampa che ha senso e'
+      quella del ticket al banco, ed e' il tasto «Stampa» di ogni comanda,
+      che resta.
+      Tolto anche l'import di `printScontrino` da quella schermata, che
+      restava senza chiamanti.
+    labels: [bug, stampa, pos]
+    severity: lieve
+    priority: P3
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: BUG-080
+    title: "Il badge dei filtri conta i generi, non le deviazioni: tre colonne diverse e un «1»"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx (chipSoloOggi)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «non mi e' chiaro
+      come conta i filtri. Secondo me non funziona». Con due fotografie
+      della coda a corsie del banco: in una sei colonne a schermo e il
+      tastino «▾ Filtri ①», nell'altra tre colonne e nessun numero.
+      COSA C'ERA. Il badge era `filtriAccesi.length`, e `filtriAccesi` era
+      una lista di GENERI di filtro: tutte le colonne diverse dal normale
+      collassavano in una voce sola, `Colonne (n)`. Due colonne riaccese a
+      mano facevano quindi «1». Chi guarda conta a occhio quello che vede
+      — due colonne in piu' del solito, lo staff filtrato — e trova un
+      numero che non torna: da li' in poi il numero non lo guarda piu'.
+      LA SECONDA FOTOGRAFIA NON ERA UN DIFETTO, e la prova sta in un test
+      che riproduce quella lavagna (tests/component/CodaCorsie.test.jsx,
+      «col locale che parte in preparazione»). Tre colonne senza badge
+      succede col locale che fa nascere le comande gia' IN PREPARAZIONE:
+      «Da fare» non e' spenta da nessuno, non esiste come colonna
+      sceglibile finche' e' vuota (`corsieSceglibili`), e le due dello
+      sguardo all'indietro nascono spente di serie
+      (CORSIE_SPENTE_ALL_INIZIO). Niente di diverso dal normale, niente
+      numero: il badge diceva la verita'.
+      LA CURA. Il conteggio e' una funzione pura, `contaFiltri` in
+      lib/coda.js, e conta le voci una per una: tre colonne fanno 3, con
+      lo staff filtrato fanno 4. Resta che al primo avvio, con tutto di
+      serie, il badge e' spento (BUG-058). Resta anche che a fila APERTA
+      il numero sparisce, e la regola sta nella funzione (secondo
+      argomento) invece che in un ternario nella pagina.
+      IL CRITERIO E' CAMBIATO IL GIORNO DOPO (BUG-085). Qui si contavano
+      le DEVIAZIONI dal normale nei due versi, e sopra si legge «due
+      colonne riaccese a mano» come esempio di cosa il badge deve contare:
+      non e' piu' vero. Riaccendere una colonna fa vedere di piu', che e'
+      l'opposto di filtrare, e il badge ora conta solo cio' che RESTRINGE
+      (`corsieRistrette`). Quello che regge di questa voce e' l'altra
+      meta': il badge conta UNA PER UNA e non per generi, e badge e title
+      leggono la stessa lista.
+      UNA LISTA SOLA PER BADGE E TITLE, che e' il modo di non avere due
+      verita': una voce e' un nome secco («Chiusi», «Solo oggi») e vale
+      uno, oppure un gruppo che porta quante restrizioni tiene dentro
+      (`{ nome: 'Colonne', quante: 3 }`). Il title continua a elencare per
+      esteso e le colonne le RAGGRUPPA — «Colonne (3)» — perche' i loro
+      nomi sono le testate della lavagna, gia' sotto gli occhi: sei titoli
+      in fila annegherebbero i filtri che a schermo un nome non ce l'hanno.
+      TROVATO STRADA FACENDO: «Solo oggi» non veniva contato fuori dalla
+      griglia. Taglia `ordersInVista`, cioe' la lista da cui scendono
+      TUTTE le viste, ma il chip nasceva solo in griglia: chi lo accendeva
+      li' e poi passava alle comande — stessa pagina, un tocco — si
+      portava dietro il taglio senza numero sul tastino e senza un chip
+      per rimetterlo a posto. Adesso dove e' acceso si conta, e il chip
+      per spegnerlo compare in tutte le viste (da spento resta solo in
+      griglia, che e' la vista che raggruppa per data).
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie,
+      aprire «▾ Filtri», nascondere due colonne del lavoro, richiudere. Il
+      tastino dice «1» con due colonne in meno a schermo. (Il passo
+      originale erano due colonne RIACCESE: da BUG-085 quelle non fanno
+      piu' numero, ed e' giusto cosi'.)
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      «Si' ma infatti togliamo quel numero. Non serve» (l'utente, lo stesso
+      giorno). Questo bug resta `fixed` — il conteggio per generi era
+      sbagliato e la cura c'e' stata — ma la cosa che curava non esiste
+      piu': il tastino «▾ Filtri» non porta nessun badge.
+      IL GIRO PER INTERO, che e' la parte da ricordare. Il numero e' stato
+      calcolato in quattro modi: i GENERI di filtro (questo bug), una
+      restrizione per COLONNA contando anche le riaccese (BUG-085), solo
+      cio' che RESTRINGE guardando la lavagna («non mi sembra che il
+      conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+      zero»), e i chip ACCESI e basta — mai arrivato a schermo. Ogni
+      criterio era una risposta diversa a «quanti filtri ci sono?», e chi
+      guarda ne aveva in mente una sola: i chip che vede. Un numero che va
+      spiegato non avvisa di niente.
+      COSA NON RIAPRIRE. `contaFiltri`, `corsieRistrette`, la lista
+      `filtriAccesi` e il badge `.coda-tastino-conta` sono stati rimossi
+      insieme, e con loro i test del conteggio. Il dettaglio sta in
+      REQ-CODA-008, settimo giro.
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx
+      - tests/component/CodaGiornate.test.jsx
+
+  - id: BUG-081
+    title: "Sui temi chiari il testo su fondo tinto spariva: i passi della comanda, e non solo"
+    area: "src/index.css"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Il colore verde del testo non
+      si legge bene sullo sfondo verde qui». Lo screenshot e' il dettaglio
+      comanda, la fila dei passi in cima — Da fare, In preparazione,
+      Pronto, Servito: i riquadri gia' fatti sono verdi e le scritte
+      dentro erano verde-menta, quasi invisibili. Sotto ogni nome c'e'
+      anche l'ora, che spariva allo stesso modo.
+      LA CAUSA. `.step.done` scriveva `color: #c8f7da`, un pastello nato
+      per il tema SCURO — dove un testo chiaro su un velo verde si stacca.
+      Sul chiaro quel pallido finisce su un fondo altrettanto chiaro:
+      1,03:1 misurato su «chiaro» e «Pico chiaro», 1,05 su «crema», 1,14
+      su «Catppuccin chiaro». E' la stessa famiglia di BUG-065 un piano
+      piu' in su — li' erano il velo e il bordo bianchi a dare per
+      scontato lo scuro, qui e' l'inchiostro.
+      NON ERA UN CASO SOLO. Passando in rassegna i pastelli cablati del
+      foglio, misurati in Chrome su tutti e otto i preset di themes.js:
+      l'ora dentro un passo stava a 1,03 sul passo IN CORSO (--muted sul
+      dorato dei tasti) e sotto 4,5 su sei temi su otto, SCURI COMPRESI;
+      il numero dentro un chip acceso dell'inventario («scarsi 7») teneva
+      la sua tinta d'allarme sul fondo dell'azione, 1,2:1 su TUTTI e otto
+      i temi — il caso peggiore del foglio — e l'etichetta accanto stava a
+      `#fff` secco, 1,7:1 sul dorato di casa; la pill dei turni in corso e
+      quella dei conti chiusi erano copie di quella del «pronto» ma senza
+      la sua variante chiara, e sparivano a 1,02:1; i numeri in perdita
+      (`.neg`) stavano a 2,0:1 su bianco; la pill «pagato» scriveva con
+      --accent-2, che cambia col tema, e faceva 2,3:1 su Catppuccin chiaro
+      (e su Pico era azzurra, come «in preparazione»).
+      LA CURA, e la regola che ne resta. I passi prendono i gettoni:
+      --tile-bg per il riquadro spento (era un velo bianco), --ok mescolato
+      con --card per quello fatto, --text per il nome, e l'ora eredita
+      l'inchiostro del suo riquadro invece di essere --muted — dentro un
+      passo non c'e' testo di servizio, quei minuti dicono se il ticket e'
+      fermo. Nascono due gettoni con la loro variante chiara,
+      --testo-rosso e --testo-ambra, che raccolgono sei pastelli scritti a
+      mano. La regola generale sta in DESIGN.md — «un inchiostro chiaro
+      cablato non sta su un fondo tinto: o un gettone, o la sua regola
+      gemella [data-luma='light']» — insieme alle soglie, che prima erano
+      sottintese: 4,5:1 per il testo normale, 3:1 per quello grande e per
+      --muted. La sorveglia tests/unit/css.test.js leggendo il foglio
+      regola per regola.
+      COSA RESTA SOTTO 4,5 E PERCHE'. Le pill «ritirato» (3,16 su Pico
+      scuro) e «al banco» (3,40): sono --muted su un neutro, gli stati che
+      devono recedere, nessun pastello cablato, e stanno sopra il 3:1 del
+      testo secondario.
+      SUL TEMA SCURO NON PEGGIORA NIENTE: ogni riga misurata e' uguale o
+      migliore di prima.
+    labels: [bug, ui, tema, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-082
+    title: "Le righe delle liste sono troppo basse per un dito: magazzino e chiusure di cassa"
+    area: "src/index.css (gettone --riga-lista, .inv-row-main)"
+    description: >
+      Segnalato dall'utente il 22/08/2026, insieme alla richiesta sulla
+      lista delle chiusure di cassa: «E altra cosa, aumenta l'altezza anche
+      delle righe della tabella dell'inventario per un touch migliore».
+      LA MISURA CHE C'ERA. Le righe della lista del magazzino
+      (`.inv-row-main`) erano alte quanto il loro testo: 8px di aria sopra
+      e sotto una riga da 0,9rem, una trentina di pixel in tutto. Il
+      magazzino al banco si guarda in piedi, col telefono in una mano, e
+      sotto i 44px di docs/navigazione.md — la soglia dichiarata per chi
+      lavora col dito — si apre la riga di fianco a quella che si voleva.
+      Con 388 articoli in elenco succede spesso, e aprire la riga
+      sbagliata durante il servizio vuol dire cercare due volte.
+      LA CURA. Un gettone solo, `--riga-lista`, e le righe lo prendono come
+      MINIMO — non come altezza fissa, o una riga che va a capo verrebbe
+      tagliata. Il gettone e' una misura FISICA:
+      `calc(44px / var(--zoom, 1))`, lo stesso idioma di BUG-075. Lo zoom
+      dell'app scala `#root`: 44px secchi al 120% sono 52,8px veri, cioe'
+      una garanzia gia' superata che intanto fa vedere un quinto di righe
+      in meno su una schermata fatta solo di righe. Diviso per lo zoom il
+      bersaglio resta grande sotto il dito quanto a zoom 1.
+      PERCHE' UN GETTONE E NON UN NUMERO. Le liste di questa famiglia sono
+      tre — magazzino, chiusure di cassa (REQ-CASSA-006), statistiche — e
+      tre numeri scritti a mano in tre punti del foglio, fra sei mesi,
+      sono tre numeri diversi. La regola sta in DESIGN.md.
+      QUELLO CHE NON CAMBIA: la striscia dell'assortimento, il pallino
+      delle scorte, la legenda, la riga aperta e il dettaglio sotto, le
+      colonne che spariscono sotto i 900px. La riga e' piu' alta, non
+      diversa.
+      RIMETTENDO IL DIFETTO — il gettone a 44px secchi, o il minimo tolto
+      dalla riga — tests/unit/css.test.js torna rosso.
+    labels: [bug, interfaccia, magazzino, accessibilita]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
+
+  - id: BUG-083
+    title: "Sulla comanda le voci uscivano separate se erano separate sul conto"
+    area: "src/lib/comande.js (righeDellaComanda, pezziDellaComanda), src/lib/printer.js (printComanda, printComande, printComandaUnita)"
+    description: >
+      Segnalato dall'utente il 22/08/2026: «Per la comanda, le voci devono
+      essere sempre accorpate. Al momento, se sono separate escono separate,
+      se sono unite escono unite. Devono essere sempre unite sulla comanda».
+      COSA SUCCEDEVA. `printComanda` stampava le righe COSÌ COME STANNO sul
+      conto. Al POS c'è «Unisci / Separa uguali» e ogni tocco sul prodotto
+      nasce come riga a sé: chi aveva separato le righe per dividere il
+      conto mandava al banco quattro righe «1 JEFFERSON» una sotto l'altra
+      invece di una «4 JEFFERSON». Chi prepara conta PEZZI, e quattro righe
+      uguali si contano peggio di un numero.
+      PERCHÉ NON È UNA PREFERENZA. Separare serve ai SOLDI — dividere il
+      conto fra chi paga cosa — e sui soldi non cambia niente: scontrino e
+      schermata di pagamento restano come sono. La comanda risponde a
+      un'altra domanda, «quanti pezzi devo fare», e a quella la risposta è
+      sempre la stessa.
+      LA CURA. Una funzione pura in lib/comande.js, `righeDellaComanda`,
+      che tutte le stampe del banco attraversano — comanda singola,
+      ristampa, ticket unito — perché il punto in cui si accorpa è UNO
+      SOLO, dentro `printComanda`, e non nei cinque chiamanti.
+      LA CHIAVE È QUELLA DEL POS (`lineSignature`, lib/orderLines.js), non
+      una nuova: se «uguali» volesse dire una cosa a schermo e un'altra
+      sulla carta, il banco riceverebbe un ticket che non corrisponde al
+      conto. Distingue drink, nome, PREZZO, ricetta e NOTA. Le due che
+      contano qui: la NOTA è lavoro diverso — «poco ghiaccio» vale per due
+      dei quattro Jefferson, e accorparli farebbe sparire la nota o la
+      stamperebbe su tutti e quattro — e il PREZZO tiene separati due
+      prodotti liberi battuti con lo stesso nome a cifre diverse, dove
+      sommare direbbe una bugia su cosa è stato battuto.
+      IL «CL: N» IN CIMA RESTA GIUSTO: si conta sulle righe già accorpate
+      (`pezziDellaComanda`), e la somma non cambia — accorpare sposta le
+      quantità, non ne crea e non ne perde. C'è un test che lo dice.
+      UN DIFETTO IN PIÙ, TROVATO STRADA FACENDO. Il ticket unito
+      (`printComandaUnita`, più comande dello stesso conto su una ricevuta
+      sola) passava per `aggregateItems`, che è l'aggregato PER I SOLDI:
+      fonde per `drink_id` e basta, senza guardare la nota. Due Spritz con
+      note diverse diventavano una riga sola e una delle due note spariva
+      dalla carta. Adesso passa le righe grezze e le accorpa `printComanda`
+      con la chiave giusta.
+    labels: [bug, stampa, comanda, banco]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/comandaAccorpata.test.js
+
+  - id: BUG-084
+    title: "Due aliquote IVA per la stessa cosa: una per terminale sullo scontrino, una del locale nei margini"
+    area: "src/lib/printer.js (aliquotaScontrino, printScontrino), src/components/PrinterSetup.jsx, src/components/PaymentScreen.jsx"
+    description: >
+      Trovato il 22/08/2026 rispondendo a una domanda dell'utente: «perché il
+      setting dell'aliquota è nelle impostazioni della stampante?». La
+      risposta è che ce n'erano DUE, e non lo sapeva nessuno.
+      · `ivaRate`, fra le impostazioni della stampante: vive NEL BROWSER, per
+        terminale (e per chi ci è collegato), ed era quella che finiva sulla
+        riga IVA dello scontrino.
+      · `sale_vat`, su settings/bar: vive SU FIRESTORE, condivisa da tutto il
+        locale, e la usano margini, prezzo consigliato e statistiche.
+      CONSEGUENZE VERE, non teoriche: due tablet potevano stampare scontrini
+      con aliquote diverse per lo stesso conto — basta che qualcuno avesse
+      toccato il campo su uno solo — e l'IVA scritta sulla carta poteva non
+      tornare con quella su cui il locale calcola i suoi margini. Nessuna
+      delle due cose lascia traccia: si scopre guardando due scontrini
+      affiancati, o non si scopre affatto.
+      LA CURA. Un'aliquota è un fatto del LOCALE, non una preferenza del
+      tablet che ha stampato: vince `sale_vat`. La stampa la legge dalla
+      copia locale delle impostazioni del bar (come già fa per i campi dello
+      scontrino: la carta non aspetta la rete), il campo nelle impostazioni
+      della stampante è sparito, e al suo posto c'è scritto dove si imposta.
+      Anche la fattura di cortesia prende la stessa: prima leggeva `ivaRate`,
+      e poteva dire una cosa diversa dallo scontrino dello stesso conto.
+      CHI AVEVA UN VALORE DIVERSO NEL BROWSER: si ignora, e basta. Quel
+      numero resta scritto nella memoria del terminale — non c'è migrazione
+      da far girare, nessuno lo legge più — e da quel tablet esce la stessa
+      carta di tutti gli altri. Non si travasa in `sale_vat`: sarebbe un
+      terminale a caso che decide l'aliquota di tutto il locale. C'è un test
+      che, con le due aliquote coincidenti, confronta la riga IVA prima e
+      dopo la cura: identica. Nessun locale si sveglia con la carta cambiata.
+      UN CASO LIMITE CHE IL TEST HA TROVATO: `Number(null)` e `Number('')`
+      fanno ZERO, e uno zero è un'aliquota vera (non si scorpora niente). Un
+      campo lasciato vuoto avrebbe stampato uno scontrino senza IVA: il vuoto
+      si guarda prima della conversione e torna al 10 della somministrazione.
+    labels: [bug, stampa, impostazioni, iva]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: false
+    test_cases:
+      - tests/unit/aliquotaIva.test.js
+
+  - id: BUG-085
+    title: "Il badge dei filtri conta al contrario: mostrare più colonne fa salire il numero"
+    area: "src/lib/coda.js (spiegaFiltri), src/pages/BartenderPage.jsx"
+    description: >
+      Segnalato dall'utente il 22/08/2026, parole sue: «credo che
+      l'indicatore del numero di filtri attivi funzioni al contrario. Li ho
+      disattivati tutti ma lui indica tre filtri attivi». Con la fotografia
+      della coda a corsie del banco: tutte e sei le colonne a schermo — Da
+      fare, In preparazione, Da servire/Ritirare, Serviti/Ritirati, Chiuse,
+      Annullate — nessun filtro di staff, nessun «Solo oggi», e il tastino
+      che dice «▾ Filtri ③».
+      COSA CONTAVA. `corsieDiverseDalNormale` contava le DEVIAZIONI dal
+      normale nei due versi: nascosta una corsia che di serie è accesa, MA
+      ANCHE riaccesa una che di serie è spenta (le due dello sguardo
+      all'indietro, CORSIE_SPENTE_ALL_INIZIO). Il secondo verso è il
+      rovescio di un filtro: accendendo «Chiuse» e «Annullate» si vede DI
+      PIÙ, non di meno, e il badge saliva mostrando la lavagna intera.
+      PERCHÉ ERA IL CRITERIO SBAGLIATO. Il badge esiste per avvisare che la
+      coda non sta facendo vedere tutto — un filtro acceso e invisibile è
+      una lavagna che sembra sbagliata. Quel segnale ha senso solo su
+      quello che è NASCOSTO. «Deviazione dal normale» rispondeva a
+      un'altra domanda («questo terminale è stato configurato?»), che a chi
+      lavora non serve e che sul tastino dei filtri si legge al contrario.
+      E PERCHÉ TRE E NON DUE. Due colonne riaccese avrebbero fatto due: il
+      terzo veniva dal fatto che il conto leggeva la MEMORIA delle spente
+      (`nascoste`) invece della lavagna. Spegnendo TUTTE le colonne
+      `corsieVisibili` le rimette a schermo tutte quante — una lavagna
+      senza colonne è indistinguibile da un'app rotta — e la memoria resta
+      piena di id che a schermo non nascondono niente. Nel locale le
+      comande nascono già IN PREPARAZIONE, quindi «Da fare» non è una
+      colonna sceglibile: i chip erano cinque, spenti tutti e cinque, e di
+      quei cinque tre erano corsie normalmente visibili. Tre. Le due dello
+      sguardo all'indietro, spente e spente di serie, non contavano — è la
+      combinazione che fa tornare il numero della fotografia.
+      LA CURA. Una funzione pura nuova, `corsieRistrette(sceglibili,
+      mostrate)`: conta le corsie normalmente visibili che a schermo NON
+      ci sono, confrontandosi con le corsie DISEGNATE e non con la memoria.
+      Non conta una corsia mostrata che di suo sarebbe spenta, non conta
+      una corsia che l'assetto di oggi non disegna proprio, e non conta
+      niente quando la lavagna mostra tutto — comunque ci si sia arrivati.
+      `corsieDiverseDalNormale` sparisce con la sua idea.
+      COSA NON CAMBIA. Cosa fanno i filtri: solo cosa il numero conta.
+      Restano contati lo staff ristretto a una parte, «Solo oggi», lo stato
+      diverso dal default in griglia e la porzione dei chiusi — sono tutte
+      cose che restringono. Resta BUG-058: al primo avvio, con le due
+      corsie spente di serie, il badge è spento. Resta BUG-080: il badge
+      somma una per una e il title raggruppa, leggendo la STESSA lista.
+      Resta che a fila aperta il numero sparisce.
+      PASSI PER RIPRODURLO (prima della cura): coda del banco a corsie in
+      un locale che fa nascere le comande in preparazione, aprire
+      «▾ Filtri», spegnere tutti i chip delle colonne, richiudere. La
+      lavagna mostra tutte e sei le colonne e il tastino dice «3». Oppure,
+      più corto: accendere «💶 Chiuse» e «✖️ Annullate» e richiudere — sei
+      colonne a schermo e il tastino dice «2».
+      ── COME E' FINITA: IL NUMERO E' STATO TOLTO (22/08/2026) ──
+      La cura di questo bug non ha retto alla prova successiva. Col
+      criterio «solo ciò che restringe» l'utente ha riguardato la stessa
+      coda e ha scritto: «non mi sembra che il conteggio dei filtri
+      funzioni ancora. Deve contare le colonne visualizzate. Ne ho tre e
+      lui dice zero. Se ne seleziono 1 dice 2. Comunque non funziona» —
+      con lo screenshot di cinque chip in fila, i primi tre accesi, e
+      nessun badge. E subito dopo, chiudendo il discorso: «sì ma infatti
+      togliamo quel numero. Non serve».
+      QUINDI IL BADGE NON C'È PIÙ. Il bug resta `fixed` (il criterio a
+      rovescio era davvero sbagliato), ma quello che curava è stato
+      ritirato: il tastino dice «▾ Filtri» e basta, e il title dice solo
+      il gesto. `corsieRistrette` — nata qui — è stata eliminata insieme a
+      `contaFiltri`: senza badge non aveva più chiamanti.
+      LA MORALE, per chi ci ripassa. Quattro criteri in due giorni
+      (generi, deviazioni, restrizioni, chip accesi) e nessuno che
+      corrispondesse a quello che chi guarda si aspetta: «quanti filtri ci
+      sono?» non ha una risposta sola. Il segnale si legge aprendo la
+      fila, dove i chip accesi si vedono da sé. Il racconto per esteso sta
+      in REQ-CODA-008, settimo giro.
+    labels: [bug, interfaccia, coda]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    test_cases:
+      - tests/unit/coda.test.js
+      - tests/component/CodaCorsie.test.jsx

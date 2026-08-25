@@ -50,6 +50,21 @@ export const STATUS_LABELS = {
 // passa di qui, chi scrive per il cliente usa STATUS_LABELS.
 export function statoAlBanco(stato, serviceMode) {
   if (stato === ORDER_STATUSES.RICEVUTO) return 'Da fare'
+  // UNA PAROLA SOLA PER IL PRONTO. Lo stesso passo si chiamava in tre modi a
+  // seconda di dove lo si leggeva: «Pronto» nella tabella del servizio,
+  // «Pronto al servizio» sull'etichetta di stato, «Ritiro/Servizio» in testa
+  // alla colonna. Chi lavora vedeva tre parole per una cosa sola, ed è lo
+  // stesso guaio — più piccolo — della pastiglia che diceva «Ordine
+  // ricevuto» accanto alla colonna «Da fare».
+  //
+  // Al banco vince la più corta: una testata di colonna si legge da lontano
+  // mentre si versa, e «Ritiro/Servizio» diceva DOVE VA il drink — che è
+  // un'altra domanda, e ha già le sue due colonne quando il pronto si divide
+  // («Da servire» / «Da ritirare»).
+  //
+  // Al CLIENTE resta «Pronto al servizio» (STATUS_LABELS): a lui «Pronto»
+  // da solo non dice se deve alzarsi o aspettare.
+  if (stato === ORDER_STATUSES.PRONTO) return 'Pronto'
   if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
   return STATUS_LABELS[stato]
 }
@@ -66,6 +81,29 @@ export const CANCEL_PHRASES = {
   bancone: 'Prego recarsi al bancone.',
   staff: 'Lo staff sarà subito da te.',
 }
+
+// ── LE PAROLE DEGLI AVVISI ───────────────────────────────────────────
+//
+// Un avviso non annuncia uno STATO, annuncia un FATTO: «è arrivato un
+// ordine», «un conto è tornato in coda». Per questo non passa da
+// `statoAlBanco`, che dà il nome del PASSO — e «🧾 Da fare — Ordine #5»,
+// in una notifica, non dice a nessuno cosa è successo.
+//
+// Stanno qui perché lo stesso annuncio lo scrivono in tre posti: la coda
+// (BartenderPage), la push del server (functions/lib/push-core.js) e il
+// service worker che la disegna (public/sw.js). Erano tre copie battute a
+// mano, e al banco lo stesso conto è arrivato una volta come «Nuovo
+// ordine» e una come «Ordine ricevuto» (BUG-073). Un test le tiene
+// allineate: tests/unit/paroleDegliAvvisi.test.js.
+export const AVVISO_NUOVO_ORDINE = {
+  titolo: '🆕 Nuovo ordine',
+  corpo: (numero) => `Ordine #${numero ?? '—'} ricevuto.`,
+}
+
+// UN CONTO CHE TORNA IN CODA NON È UN ORDINE NUOVO. È un conto che il banco
+// aveva già visto, annullato, e che qualcuno ha rimesso in piedi: chiamarlo
+// «nuovo» manda a cercare un ordine che non è mai arrivato.
+export const AVVISO_RIPRISTINO = { titolo: '↩️ Conto ripristinato' }
 
 export const STATUS_EMOJI = {
   [ORDER_STATUSES.APERTO]: '🟢',

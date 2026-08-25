@@ -49,3 +49,12 @@ export function battutoDaQui(placedBy, id = idDispositivo()) {
 export function annullatoDaQui(order, id = idDispositivo()) {
   return !!order?.cancelled_device && order.cancelled_device === id
 }
+
+// L'ho rimesso in piedi io, da qui? Un conto ripristinato rientra in coda e
+// il banco lo deve sapere — tranne il terminale da cui è partito il gesto,
+// che l'ha appena fatto. Stesso metro di `annullatoDaQui`, e per la stessa
+// ragione: si ripristina quasi sempre dal conto, non dalla coda, quindi
+// «l'ho premuto io» di quella schermata non basta.
+export function ripristinatoDaQui(order, id = idDispositivo()) {
+  return !!order?.ripristinato_device && order.ripristinato_device === id
+}
