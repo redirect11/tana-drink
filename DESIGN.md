@@ -206,6 +206,15 @@ Regole:
   ed è così che ci si rientra. Il colore non è l'unico segno — accanto
   resta scritto «0/2», perché una cosa che conta non si affida al colore
   (guardrail 1).
+- **Un comando spento che ha un motivo si tocca lo stesso** e al tocco
+  dice perché: `aria-disabled` e la classe `.spento` (opacità 0,4), **mai**
+  l'attributo `disabled` — che non fa nemmeno partire l'evento, e chi preme
+  resta a premere un tasto morto senza sapere cosa ha sbagliato. La
+  spiegazione arriva come toast, in una frase piana. Vale per i tasti (i
+  metodi di pagamento non disponibili, «Acconto» quando l'incasso
+  salderebbe il conto) e per gli interruttori (`ToggleRow`, prop `motivo`:
+  le funzioni premium nelle impostazioni). `disabled` resta solo dove non
+  c'è niente da spiegare, perché il motivo è già in pagina.
 - **I comandi di una lista stanno sopra la lista, in una riga sola**
   (`.payscreen-comandi`, nel pagamento): come si guardano le righe
   («Separa/Unisci uguali») e come si porta la selezione ai due estremi

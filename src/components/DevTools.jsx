@@ -9,7 +9,9 @@ import {
   simulateReaderPayment,
   isDevEnvironment,
 } from '../dev/devActions.js'
-import { subscribeActiveOrders } from '../lib/api.js'
+import { subscribeActiveOrders, subscribeSettings, updateSettings } from '../lib/api.js'
+import { chiaveModulo, moduliPremium, moduloAttivo } from '../lib/licenza.js'
+import ToggleRow from './ToggleRow.jsx'
 import { runImport } from '../dev/importExcel.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
@@ -26,6 +28,10 @@ export default function DevTools() {
   // l'esito del checkout SumUp si "recita" da qui.
   const [pending, setPending] = useState([])
   const [unpaid, setUnpaid] = useState([])
+  // Le impostazioni del bar servono agli interruttori dei moduli premium
+  // qui sotto: si guarda e si scrive lo stesso flag che legge lib/licenza.js.
+  const [impostazioni, setImpostazioni] = useState(null)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   useEffect(() => {
     return subscribeActiveOrders((orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
@@ -94,6 +100,33 @@ export default function DevTools() {
           />
           <span>Simula la stampa su questo dispositivo</span>
         </label>
+      </div>
+
+      {/* LE FUNZIONI PREMIUM SI ACCENDONO DA QUI, e solo da qui: nelle
+          impostazioni normali sono spente e non toccabili (lib/licenza.js).
+          Serve a provarle — hanno i loro test e c'è l'ambiente di test —
+          senza inventare un meccanismo di vendita che ancora non esiste.
+          Scrive il flag su settings/bar: l'altra strada, equivalente, è
+          scriverlo a mano dalla console Firestore o dall'emulatore.
+          SPEGNERE NASCONDE, NON CANCELLA: conte e fatture già scritte
+          restano dove sono e tornano quando il modulo si riaccende. */}
+      <div className="card settings-section">
+        <h3>Funzioni premium</h3>
+        <p className="muted small" style={{ margin: '4px 0 8px' }}>
+          Accendono le sezioni del magazzino che di partenza non ci sono.
+          Valgono per tutto il locale, non per questo dispositivo.
+        </p>
+        {moduliPremium().map((m) => (
+          <ToggleRow
+            key={m.id}
+            label={m.label}
+            desc={`settings/bar · ${chiaveModulo(m.id)}`}
+            checked={moduloAttivo(impostazioni, m.id)}
+            onChange={(v) =>
+              updateSettings({ [chiaveModulo(m.id)]: v }).catch((e) => setError(e.message))
+            }
+          />
+        ))}
       </div>
 
       {/* Azioni distruttive sul database: solo emulatore locale (usano un

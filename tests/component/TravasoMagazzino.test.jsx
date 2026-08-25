@@ -50,6 +50,10 @@ vi.mock('../../src/lib/api.js', () => ({
     cb({ price_markup: 3, purchase_vat: 22 })
     return () => {}
   },
+  // Il magazzino parte dalla CACHE delle impostazioni (REQ-LIC-001): le
+  // sezioni premium non devono comparire e sparire mentre il server
+  // risponde. Qui i moduli sono spenti, come sul locale che non li ha.
+  settingsIniziali: () => ({ price_markup: 3, purchase_vat: 22 }),
   subscribeOpenCashSession: (cb) => {
     cb(null)
     return () => {}

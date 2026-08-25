@@ -81,6 +81,10 @@ vi.mock('../../src/lib/api.js', () => {
       cb({ price_markup: 3, purchase_vat: 22 })
       return () => {}
     },
+    // Il magazzino parte dalla CACHE delle impostazioni (REQ-LIC-001): le
+    // sezioni premium non devono comparire e sparire mentre il server
+    // risponde. Qui i moduli sono spenti, come sul locale che non li ha.
+    settingsIniziali: () => ({ price_markup: 3, purchase_vat: 22 }),
     // La colonna «a fine serata» (REQ-MAG-014) legge anche la cassa aperta,
     // i conti in corso e il listino: qui la serata non è aperta, quindi la
     // colonna non compare — ma senza queste tre voci la schermata non si

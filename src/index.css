@@ -3971,6 +3971,14 @@ body.drawer-open .status-bell-float { display: none; }
   cursor: not-allowed;
 }
 
+/* Spento ma TOCCABILE: si vede come uno disabilitato, ma l'evento parte e
+   al tocco arriva la spiegazione (ToggleRow, prop `motivo`). Stesso modo
+   dei metodi di pagamento non disponibili in .payscreen-method.spento. */
+.toggle.spento {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .setting-amount {
   width: 90px;
   padding: 7px 10px;
