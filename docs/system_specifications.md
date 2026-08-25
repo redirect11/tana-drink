@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 22 agosto 2026.
+> Generato il 25 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 176 | fatto e coperto dai test |
+| ✅ | 177 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**212 voci** in tutto. **190** descrivono il sistema com'è oggi e
+**213 voci** in tutto. **191** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **8** difetti noti sono ancora aperti.
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
-| [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 5 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
+| [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -1235,9 +1235,9 @@ STA SUL DATO: `receipt_print_at` sul conto, scritto in sottofondo a carta uscita
 
 VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parziale non ha mai fatto uscire niente — la stampa è appesa a `closePaid` — ed era una scelta presa quando l'acconto era un caso di margine. Adesso quella riscossione ha la SUA carta, che è un documento diverso: lo scontrino d'acconto (REQ-STAMPA-015). Lo scontrino di chiusura resta quello descritto qui, con la sua pretesa e il suo segno sul dato; l'acconto non prende né l'una né l'altro, perché è un evento e non lo stato del conto — su un conto ce ne stanno tre, e il segno ne lascerebbe uscire uno solo.
 
-SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono.
+SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono. E UNA STAMPA NON PUÒ RESTARE APPESA (BUG-086, 24/08/2026). La carta che non esce è un guaio; una stampa che non finisce MAI è un guaio peggiore: la pretesa dello scontrino si prende PRIMA di stampare e torna libera solo nel `catch` di chi l'ha chiesta — e una promessa che non si chiude né bene né male quel `catch` non lo fa partire mai. Quel conto non stampa più, nemmeno riaperto, nemmeno dalla coda, e a schermo non compare niente. Quindi ogni lavoro di stampa ha un tempo massimo suo, QUINDICI SECONDI: scaduti, la promessa rifiuta, la pretesa torna libera, il messaggio arriva a schermo e la coda delle stampe riparte. Il lavoro abbandonato, se poi arriva in fondo, scrive nel vuoto: una seconda copia non esce. E UN DOCUMENTO STORTO NON SI MANGIA IL TICKET: una riga senza nome esce come «(senza nome)» e una senza prezzo come «0.00€», ma la carta esce. Prima `item.name.toUpperCase()` faceva saltare la comanda a metà, e l'auto-stampa ci riprovava a ogni snapshot senza farla uscire mai.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`
+**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`, `tests/unit/stampaCheNonSiChiude.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
@@ -1618,6 +1618,16 @@ LE QUATTRO REGOLE che ne scendono: 1) niente `await` prima di mostrare l'esito d
 2) NON SI RILEGGE QUELLO CHE SI E' APPENA SCRITTO, si compone: la scrittura parte in sottofondo, quindi la rilettura prende la versione di prima. Si monta il risultato in memoria (`ordineDopo`) dal documento di partenza piu' la patch mandata; 3) se un dato serve e non c'e', si PRECARICA (progressivi.js), non lo si chiede in mezzo a un gesto; 4) le scritture partono in sottofondo (`bgWrite`), con l'indicatore di sincronizzazione a dire come sta andando. I TEST LO DEVONO DIMOSTRARE, non darlo per buono. Chi tocca queste schermate scrive un test che gira SENZA RETE: si mocka `firebase/firestore` in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda con quello che c'era prima — che e' quello che fa davvero una cache mentre la scrittura e' in coda. NON si mocka `src/lib/api.js`: si proverebbe il mock invece del codice. Il modello da copiare e' tests/unit/giroInLocale.test.js. I test con la rete che risponde si fanno IN PIU', non al posto di quelli. E C'E' UNA GUARDIA NEL CODICE: un test legge api.js e boccia qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta solo nella documentazione non ferma nessuno — questa e' tornata tre volte.
 
 **Dove**: `src/lib/api.js, src/lib/sync.js, tests/unit/giroInLocale.test.js, CLAUDE.md` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/scritturaComande.test.js`
+
+#### REQ-OFFLINE-007 — Il guscio dell'app e il logo non si aspettano dalla rete
+
+Il service worker tiene in cache quello che serve ad aprire l'app — la pagina, il manifest, l'icona — e da BUG-086 anche `logo.png`, che e' la risorsa piu' richiesta di tutte: sta in cima allo scontrino e al preconto, negli avvisi in pagina e nelle notifiche di sistema.
+
+PER IL LOGO SI GUARDA PRIMA LA CACHE, e questa e' la parte che conta. Tutto il resto e' servito «prima la rete, e la cache se la rete fallisce» — che va benissimo per una pagina, ma non protegge da una richiesta che resta APPESA: una fetch che non risolve e non rifiuta non fa scattare nessun ripiego, e chi la aspetta aspetta per sempre. La sera del 24/08 e' successo esattamente questo, e ad aspettare c'era la stampa dello scontrino (BUG-086): l'<img> del logo non ha fatto ne' onload ne' onerror, e il conto appena riscosso non e' uscito. Precaricarlo da solo non sarebbe bastato — la cache non la si sarebbe guardata mai. Il logo se lo puo' permettere perche' e' un'immagine ferma: la copia nuova si va a prendere lo stesso, in sottofondo, per la volta dopo, e un logo cambiato dalle impostazioni ha comunque un altro indirizzo.
+
+QUANDO LA LISTA CAMBIA, CAMBIA IL NOME DELLA CACHE (v3 → v4). Il service worker nuovo si installa, `skipWaiting` lo fa partire subito e `activate` butta le cache vecchie: chi ha l'app aperta con la versione di prima non perde niente, perche' quello che stava nella cache vecchia sta anche nella nuova. E se una risorsa della lista manca, l'installazione non si pianta: `addAll` e' tutto-o-niente, il suo errore si ingoia e le richieste passano dalla rete come prima.
+
+**Dove**: `public/sw.js` · **Lo dimostrano**: `tests/unit/serviceWorkerCache.test.js`
 
 ### Dati e ambienti
 

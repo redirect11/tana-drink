@@ -1,5 +1,37 @@
 # Cosa è cambiato
 
+## 1.5.6-beta
+
+### Per chi sta al banco
+
+- **Una stampa che si blocca non si tiene più il conto.** La sera del 24
+  agosto, sulla versione di allora, riscuotendo non usciva lo scontrino e
+  «buona parte delle stampe non sono uscite»: la stampa restava in attesa
+  del logo, non finiva mai, e da lì in poi **quel conto non stampava più**
+  — nemmeno riaprendolo, nemmeno dalla coda — senza che comparisse un
+  errore. Dietro a quella stampa ferma restavano in fila anche le comande.
+  La causa era già stata chiusa con la 1.5.5. Adesso c'è anche la
+  protezione generale: **se una stampa non si conclude entro quindici
+  secondi si ferma da sola**, a schermo compare che lo scontrino non è
+  uscito, e il conto **torna stampabile** — dal tasto del conto, dalla coda
+  o riscuotendo di nuovo. La stampante ricomincia a lavorare subito, e se
+  la stampa lenta arriva in ritardo **non esce una seconda copia**.
+
+- **Il logo non si aspetta più dalla rete.** Era l'unica immagine che l'app
+  andava a riprendere ogni volta, ed è quella che sta in cima a scontrino e
+  preconto, negli avvisi e nelle notifiche: adesso **è tenuta da parte come
+  il resto dell'app**, quindi la stampa non dipende più da come va la
+  connessione in quel momento. Il logo cambiato dalle impostazioni continua
+  a cambiare come prima.
+
+- **Una riga con i dati incompleti non blocca più il ticket.** Se su un
+  conto vecchio o su una riga arrivata a metà manca il nome del prodotto,
+  la comanda esce lo stesso, con scritto **«(SENZA NOME)»** al posto del
+  prodotto; se manca il prezzo, sullo scontrino si legge **0.00€**. Prima
+  quel ticket non usciva affatto e l'app continuava a riprovarci in
+  silenzio — al banco era un giro di lavoro che non arrivava mai. Sullo
+  scontrino del cliente non compaiono più le scritte «undefined» e «NaN€».
+
 ## 1.5.5 — 25 agosto 2026
 
 In produzione questa versione porta tutto quello che è passato dalle prove
