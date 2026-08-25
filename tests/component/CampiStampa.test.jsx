@@ -47,7 +47,7 @@ describe('cosa si può togliere dallo scontrino', () => {
 
   it('di suo è tutto acceso: è la carta di oggi', () => {
     pannello('scontrino')
-    expect(screen.getByLabelText('Chi ha battuto il conto')).toBeChecked()
+    expect(screen.getByLabelText('Chi stampa lo scontrino')).toBeChecked()
     // Tranne la riga di saluto, che oggi non c'è.
     expect(screen.getByLabelText('Riga di saluto')).not.toBeChecked()
   })
@@ -55,7 +55,7 @@ describe('cosa si può togliere dallo scontrino', () => {
   it('spegnere un campo lo scrive nelle impostazioni del locale', async () => {
     const user = userEvent.setup()
     pannello('scontrino')
-    await user.click(screen.getByLabelText('Chi ha battuto il conto'))
+    await user.click(screen.getByLabelText('Chi stampa lo scontrino'))
     expect(salva).toHaveBeenCalledWith({
       stampa_scontrino: { campi: { operatore: false } },
     })
