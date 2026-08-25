@@ -1364,3 +1364,44 @@ describe('le righe delle liste sono un bersaglio da dito', () => {
     }
   })
 })
+
+// ── LE FINESTRELLE DI CONFERMA NON SI TAGLIANO (BUG-076) ─────────────
+//
+// Centrare una cosa più alta dello schermo vuol dire tagliarla dai DUE
+// lati: sopra spariva il titolo, sotto il tasto che applica, e il velo è
+// fisso — non c'era niente da scorrere per arrivarci. Misurato in Chrome:
+// 4 combinazioni su 77 sul portatile, 22 su 77 sul telefono. Vale per
+// TUTTE le `.confirm-box` dell'app — sconto, buono, ripristino conto,
+// apertura e chiusura cassa, prodotto libero — quindi la cura è una sola
+// e sta qui, non in una schermata.
+describe('le finestrelle di conferma stanno nello schermo', () => {
+  const css = () => readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+
+  function regola(nome) {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const i = testo.indexOf(A_CAPO + nome + ' {')
+    expect(i, nome + ' non esiste piu’ nel foglio').toBeGreaterThan(-1)
+    return testo.slice(i, testo.indexOf('}', i))
+  }
+
+  it('centrare non taglia piu’ dalla cima', () => {
+    // `safe center`: quando la scatola non ci sta, il troppo esce solo di
+    // sotto — dove il velo scorre. Con `center` secco usciva anche da
+    // sopra, e sopra non si scorre mai: spariva il titolo.
+    const r = regola('.confirm-overlay')
+    expect(r, 'il velo e’ tornato a centrare in modo secco').toMatch(
+      /align-items:\s*safe center/
+    )
+    expect(r, 'il velo non scorre piu’').toMatch(/overflow-y:\s*auto/)
+  })
+
+  it('la finestrella non e’ mai piu’ alta dello schermo, e dentro scorre lei', () => {
+    const r = regola('.confirm-box')
+    expect(r, 'la finestrella puo’ tornare piu’ alta dello schermo').toMatch(
+      /max-height:\s*calc\(\s*100dvh\s*\/\s*var\(--zoom,\s*1\)/
+    )
+    expect(r, 'quello che avanza nella finestrella non si puo’ piu’ raggiungere').toMatch(
+      /overflow-y:\s*auto/
+    )
+  })
+})

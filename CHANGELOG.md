@@ -4,6 +4,14 @@
 
 ### Per chi sta al banco
 
+- **Le finestrelle di conferma non escono più dallo schermo.** Con lo zoom
+  dell'app alto, o su una finestra bassa, una finestrella come quella dello
+  sconto veniva tagliata sopra e sotto: sparivano il titolo e il tasto che
+  conferma, e non c'era modo di arrivarci. Adesso la finestrella **non è mai
+  più alta dello schermo** e, quando serve, scorre dentro di sé. Vale per
+  tutte le finestrelle dell'app — sconto, buono, ripristino conto, apertura
+  e chiusura cassa, prodotto libero.
+
 - **La comanda dice quale comanda è.** La fascia nera in cima diceva
   **«DIRETTO»** su ogni ticket — anche sul secondo e sul terzo invio dello
   stesso tavolo, che «diretto» non erano affatto: era una parola presa dal

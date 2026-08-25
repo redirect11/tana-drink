@@ -2916,28 +2916,43 @@ bugs:
       e' lo stesso guaio di fondo — una misura fissa dentro una pagina che lo
       zoom rimpicciolisce — ma la cura e' un'altra riga di CSS e tocca TUTTE
       le finestrelle di conferma dell'app, non solo lo sconto.
-      COSA SUCCEDE. '.confirm-overlay' centra la finestrella
+      COSA SUCCEDEVA. '.confirm-overlay' centrava la finestrella
       ('align-items: center') dentro un velo fisso che non scorre. Quando la
       finestrella e' piu' alta dello schermo, centrare vuol dire tagliarla
-      dai DUE lati: sopra sparisce il titolo, sotto il tasto che applica. Non
-      c'e' modo di raggiungerli, perche' non scorre niente.
-      MISURATO IN CHROME (sconto del pagamento, 63 combinazioni di finestra e
-      zoom): esce dallo schermo in 6, dal 120% su una finestra alta 500px in
-      giu' fino al 160% su una alta 600px. Prima della cura di BUG-075 erano
-      11 — il minimo dei tasti che segue lo zoom ha gia' tolto meta' dei casi,
-      ma non li chiude.
-      COME SI SISTEMA (da fare): il velo deve poter scorrere e la finestrella
-      fermarsi all'altezza dello schermo con dentro il suo scorrimento —
-      'overflow-y: auto' sul velo, 'align-items: safe center' perche' centrare
-      non tagli in cima, e un tetto d'altezza sulla scatola. Vale per ogni
-      '.confirm-box' dell'app, quindi va provato dove le finestrelle sono
-      piu' lunghe (ripristino conto, scelta del buono), non solo qui.
+      dai DUE lati: sopra spariva il titolo, sotto il tasto che applica. Non
+      c'era modo di raggiungerli, perche' non scorreva niente.
+      COME E' STATO SISTEMATO, due reti che servono tutte e due. (1) La
+      scatola non e' mai piu' alta dello schermo e dentro scorre lei:
+      'max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 32px)' e
+      'overflow-y: auto' — e' l'idioma delle altezze a tutto schermo gia' in
+      uso nel foglio ('.posd-root'), e tiene il velo fermo mentre si scorre.
+      (2) 'align-items: safe center' e velo scorrevole ('overflow-y: auto'),
+      per le finestrelle che si mettono un 'max-height' per conto loro in
+      'vh' — che dentro '#root' scalato NON segue lo zoom e resta piu' alto
+      dello schermo. Con 'center' secco il troppo esce anche DA SOPRA, dove
+      non si scorre mai; con 'safe' esce solo di sotto, e di sotto il velo
+      scorre. In piu' il cuscino del velo scende da 24 a 16px: ogni pixel li'
+      e' un pixel che non si deve scorrere.
+      MISURATO IN CHROME VERO, non a occhio: 77 combinazioni di finestra
+      (460..1080px di altezza) per zoom 100%..160%, chiedendo per ogni
+      elemento chi gli finisce sopra con 'elementFromPoint' e contando solo i
+      casi in cui e' raggiungibile PER INTERO, dopo aver scorso quello che
+      l'utente puo' davvero scorrere. Sul portatile (1440 di larghezza):
+      prima 4 combinazioni con titolo e tasto tagliati, dopo ZERO. Sul
+      telefono (390): prima 22, dopo ZERO. Quello che resta e' inevitabile e
+      non e' un difetto: quando la finestrella e' piu' alta della finestra,
+      per premere «Applica» si scorre dentro la finestrella (16 combinazioni
+      su 77 sul portatile, 32 sul telefono) — prima, negli stessi casi, il
+      tasto non c'era proprio.
+      RIMETTENDO 'align-items: center' O TOGLIENDO IL TETTO ALLA SCATOLA,
+      tests/unit/css.test.js torna rosso (provato).
     labels: [bug, interfaccia]
     severity: lieve
     priority: P3
-    status: todo
-    generate_issue: true
+    status: fixed
     in_produzione: true
+    test_cases:
+      - tests/unit/css.test.js
 
   - id: BUG-077
     title: "Con lo zoom alto, nel conto i tasti in fondo escono dallo schermo e non si scorre"

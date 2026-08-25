@@ -3729,10 +3729,29 @@ body.drawer-open .status-bell-float { display: none; }
   text-align: right;
 }
 
-/* Conferma in-app (sostituisce window.confirm) */
+/* Conferma in-app (sostituisce window.confirm)
+
+   CENTRARE UNA COSA PIÙ ALTA DELLO SCHERMO VUOL DIRE TAGLIARLA DAI DUE
+   LATI (BUG-076). Il velo è fisso e non scorre: quando la finestrella non
+   ci stava — schermo basso, o zoom alto, che rimpicciolisce l'altezza
+   mentre le misure della scatola restano quelle — spariva il titolo sopra
+   e il tasto che applica sotto, e non c'era modo di arrivarci. Misurato in
+   Chrome su 77 combinazioni di finestra e zoom: 4 con la finestrella
+   tagliata. Vale per TUTTE le `.confirm-box` dell'app, non per una sola.
+   Due reti, e servono tutte e due:
+   1) la scatola non è mai più alta dello schermo e dentro scorre lei —
+      è lo scorrimento giusto, quello che tiene il velo fermo;
+   2) `safe center` + velo scorrevole per le finestrelle che si mettono un
+      `max-height` per conto loro in `vh` (che dentro `#root` scalato NON
+      segue lo zoom): con `center` secco il troppo esce anche DA SOPRA,
+      dove non si scorre; con `safe` esce solo di sotto, e di sotto il
+      velo scorre. */
 .confirm-overlay {
-  align-items: center;
-  padding: 24px;
+  align-items: safe center;
+  /* 16 e non 24: il cuscino attorno al velo è altezza in meno per la
+     finestrella, e ogni pixel qui è un pixel che NON si deve scorrere. */
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .confirm-box {
@@ -3743,6 +3762,10 @@ body.drawer-open .status-bell-float { display: none; }
   width: 100%;
   max-width: 420px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  /* 100dvh diviso lo zoom, meno la barra di sistema e i due cuscini del
+     velo: l'idioma delle altezze a tutto schermo (vedi `.posd-root`). */
+  max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 32px);
+  overflow-y: auto;
 }
 
 .btn.danger {
