@@ -3480,3 +3480,38 @@ bugs:
       - tests/unit/serviceWorkerCache.test.js
       - tests/unit/stampaSerializzata.test.js
       - tests/unit/logoScontrino.test.js
+
+  - id: BUG-087
+    title: "Il logo pesava mezzo mega, ed e' la prima cosa che ogni stampa aspetta"
+    area: "public/logo.png, public/logo-full.png"
+    description: >
+      Trovato il 25/08/2026 chiudendo BUG-086, e messo in lista dall'utente:
+      «alleggerisci anche il logo».
+      COSA C'ERA. `public/logo.png` era 596x596 e pesava 523 KB. E' la
+      risorsa piu' richiesta dell'app: la chiede ogni scontrino e ogni
+      preconto prima di stampare, ogni notifica (icona e badge), la barra
+      in alto, il menu laterale, l'insegna del menu clienti e il segnaposto
+      di ogni drink senza foto. Dal 25/08 sta anche nel precache del
+      service worker (BUG-086), quindi mezzo mega lo si scarica alla prima
+      apertura, su tablet e telefoni del locale.
+      A COSA SERVE DAVVERO. Il posto piu' grande in cui compare e'
+      l'insegna del menu, 72 px; la stampa lo riduce a 220 px
+      (LARGHEZZA_LOGO) e la testina termica lo tira in bianco e nero. Sopra
+      i 320 px non lo guarda nessuno, nemmeno su uno schermo a tripla
+      densita'.
+      COME E' STATO SISTEMATO. 320x320 e tavolozza a 256 colori: da 523 KB
+      a 8,4 KB, cioe' un sessantesimo. Misurato prima di sostituirlo: solo
+      lo 0,02% dei pixel cambia di piu' di 16/255, e in stampa la resa e'
+      identica al pixel — 57,4% di inchiostro prima e dopo. La trasparenza
+      resta.
+      E UN FILE CHE NON GUARDAVA NESSUNO. `public/logo-full.png`, altri 727
+      KB, non era citato da nessuna parte: ne' nel codice, ne' nel
+      manifest, ne' nella pagina. Finiva nella build e basta. Rimosso.
+      In tutto, un mega e un quarto in meno da scaricare.
+    labels: [bug, stampa, pwa, prestazioni]
+    severity: media
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/serviceWorkerCache.test.js
