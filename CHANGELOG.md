@@ -4,6 +4,13 @@
 
 ### Per chi sta al banco
 
+- **L'app si apre più in fretta, e la stampa non aspetta più il logo.** Il
+  logo pesava mezzo megabyte ed era la prima cosa che ogni scontrino doveva
+  caricare prima di uscire; adesso ne pesa otto, con la stessa resa sulla
+  carta e a schermo. Tolto anche un secondo file da tre quarti di megabyte
+  che non usava nessuno: in tutto un megabyte e un quarto in meno da
+  scaricare sui tablet del locale.
+
 - **Una stampa che si blocca non si tiene più il conto.** La sera del 24
   agosto, sulla versione di allora, riscuotendo non usciva lo scontrino e
   «buona parte delle stampe non sono uscite»: la stampa restava in attesa
