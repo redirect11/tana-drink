@@ -2,11 +2,21 @@
 // riepilogo. Il servizio è perpetuo: non esistono più "serate", i conti
 // restano aperti finché non li si chiude a mano. Testabile a unità.
 
-import { ORDER_STATUSES, STATUS_LABELS, ritiratoLabel } from './orderStatus.js'
+import {
+  ORDER_STATUSES,
+  STATUS_LABELS,
+  statoAlBanco,
+  placedByLetter,
+  placedByName,
+} from './orderStatus.js'
 // Il totale di un conto è quello EFFETTIVO (sconto già tolto): la regola sta
 // in pagamento.js e non si riscrive qui, o le corsie direbbero una cifra e
 // la card un'altra.
 import { orderTotal, round2 } from './pagamento.js'
+import { isAwaitingPayment } from './payments.js'
+// La sala serve e non prepara: quale passo può segnare lo dice ruoli.js,
+// che è l'unico posto dove i ruoli si confrontano.
+import { puoSegnare } from './ruoli.js'
 // Le comande sono il LAVORO del banco: le corsie del bartender le mostrano
 // una per una, e le regole su cosa è servito e quanto vale una riga stanno
 // in comande.js — qui non si riscrivono.
@@ -17,7 +27,11 @@ import {
   itemsTotal,
   MOTIVO_ANNULLO,
   motivoAnnullo,
+  ORDER_OPEN,
 } from './comande.js'
+// La giornata commerciale di un conto: la regola del taglio delle 5 sta
+// tutta lì dentro, qui si sceglie solo QUALE data guardare.
+import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 // Smista gli ordini negli stati di lavorazione della COMANDA ATTIVA
 // (workflow_status; esclude gli annullati).
@@ -68,13 +82,126 @@ export function openOrdersCount(orders) {
   ).length
 }
 
-// I conti INSERITI DA una persona (placed_by). È il filtro «Miei» della
-// coda, che ha preso il posto della pagina «I miei ordini» della sala:
-// stessa coda per tutti, e chi vuole ritrovare i propri la filtra.
-export function inseritiDa(orders, email) {
-  const e = String(email || '').trim().toLowerCase()
-  if (!e) return []
-  return (orders || []).filter((o) => o.placed_by?.email?.toLowerCase() === e)
+// ── CHI HA APERTO IL CONTO: IL FILTRO DEGLI AUTORI ───────────────────
+//
+// ERA UNA PASTIGLIA «✍️ Miei», accesa o spenta: o tutti o solo i propri.
+// «Il filtro miei dovrebbe diventare un menu a tendina dove di default
+// sono selezionati tutti gli utenti che hanno aperto almeno un ordine per
+// vedere tutti gli ordini. Poi posso scegliere di deselezionare e vedere
+// solo gli ordini di qualcuno (i miei ad esempio)» (l'utente, 20/08/2026).
+//
+// La chiave di un autore è la sua EMAIL, non la lettera della legenda: due
+// persone con la stessa iniziale sulle card si distinguono a fatica, ma nel
+// filtro sarebbero proprio lo stesso autore.
+export const AUTORE_CLIENTE = '__cliente__'
+
+// Chi ha aperto questo conto. Gli ordini arrivati dall'app del cliente non
+// hanno uno staff dietro: stanno tutti sotto una voce sola, come nella
+// legenda sopra la coda (placedByLetter torna null proprio per loro).
+export function autoreDi(o) {
+  const p = o?.placed_by
+  if (!placedByLetter(p)) return AUTORE_CLIENTE
+  return String(p.email || placedByName(p)).trim().toLowerCase()
+}
+
+// GLI AUTORI CHE LA TENDINA MOSTRA: chi ha aperto almeno un conto fra
+// quelli caricati. Non l'elenco del personale — un filtro con dentro gente
+// che stasera non ha battuto niente è una lista da leggere per niente — e
+// non le presenze, che rispondono a un'altra domanda (chi c'è adesso).
+//
+// In ordine alfabetico, i clienti in fondo: sono una voce sola e non un
+// nome, e in mezzo ai nomi si cercherebbero alla lettera «C».
+export function autoriDeiConti(orders) {
+  const visti = new Map()
+  for (const o of orders || []) {
+    const chiave = autoreDi(o)
+    if (visti.has(chiave)) continue
+    visti.set(chiave, {
+      chiave,
+      nome: chiave === AUTORE_CLIENTE ? 'Clienti' : placedByName(o.placed_by) || chiave,
+    })
+  }
+  const voci = [...visti.values()]
+  return [
+    ...voci.filter((v) => v.chiave !== AUTORE_CLIENTE).sort((a, b) => a.nome.localeCompare(b.nome)),
+    ...voci.filter((v) => v.chiave === AUTORE_CLIENTE),
+  ]
+}
+
+// QUALI AUTORI STANNO FILTRANDO ADESSO. `null` vuol dire TUTTI, e non è
+// la stessa cosa di «l'elenco di tutti quelli di adesso»: la coda vive
+// mentre si lavora, e chi apre il suo primo conto alle undici deve entrare
+// da solo in una tendina lasciata al default — con l'elenco materializzato
+// resterebbe fuori senza che nessuno l'abbia deciso.
+//
+// Una scelta che non esiste più (chi aveva conti e adesso non ne ha) si
+// ignora, e se non ne resta nessuna si torna a tutti: MAI ZERO AUTORI,
+// stessa regola degli stati (una coda vuota per forza è un'app rotta).
+export function autoriAttivi(scelti, elenco = []) {
+  const chiavi = elenco.map((v) => v.chiave)
+  if (scelti == null) return chiavi
+  const vivi = chiavi.filter((k) => scelti.includes(k))
+  return vivi.length > 0 ? vivi : chiavi
+}
+
+// Accendi o spegni un autore. Torna `null` quando la scelta ricopre tutti
+// quelli in elenco: «tutti» è uno stato a sé, non una lista che per caso
+// li contiene tutti — solo così un autore nuovo entra da solo.
+//
+// MAI ZERO: deselezionare l'ultimo rimasto riseleziona tutti. È la stessa
+// risposta della regola sugli stati (l'utente non l'ha chiesto per gli
+// autori, ma è la stessa domanda: una coda vuota non si può mostrare) e
+// nella tendina si legge da sé — tutte le voci tornano accese.
+export function cambiaAutoreScelto(scelti, tocco, elenco = []) {
+  const chiavi = elenco.map((v) => v.chiave)
+  if (!chiavi.includes(tocco)) return scelti
+  const attivi = new Set(autoriAttivi(scelti, elenco))
+  if (attivi.has(tocco)) attivi.delete(tocco)
+  else attivi.add(tocco)
+  if (attivi.size === 0 || attivi.size === chiavi.length) return null
+  return chiavi.filter((k) => attivi.has(k))
+}
+
+// I conti di chi è selezionato. Con tutti selezionati non si tocca niente:
+// non si paga una passata sulla lista per una domanda a cui la risposta è
+// «tutto».
+export function conAutori(orders, scelti, elenco = []) {
+  if (scelti == null) return orders || []
+  const dentro = new Set(autoriAttivi(scelti, elenco))
+  if (dentro.size === elenco.length) return orders || []
+  return (orders || []).filter((o) => dentro.has(autoreDi(o)))
+}
+
+// COSA DICE LA PASTIGLIA DA CHIUSA. Una tendina che non dice cosa è scelto
+// costringe ad aprirla per ricordarselo (docs/navigazione.md): col nome se
+// la persona è una sola — è il caso che si usa, «vedo i miei» — col
+// conteggio se sono di più, che tre nomi in fila non ci stanno.
+//
+// SI CHIAMA «STAFF», NON «AUTORI»: «la dropdown che hai chiamato Autori
+// chiamala Staff» (l'utente, 20/08/2026). «Autore» è una parola da
+// redazione — al banco si dice «chi l'ha battuto», e la squadra della
+// serata è lo staff. I nomi interni restano `autori*` (rinominarli a
+// tappeto costa un diff che non serve a nessuno, CLAUDE.md): a doverlo
+// dire in italiano è lo schermo.
+//
+// COL CONTEGGIO SI DICE ANCHE SU QUANTI: «2 di 5» invece di «2 persone».
+// La tendina si apre per capire QUANTO stringe, e il denominatore lo dice
+// senza aprirla. Vale anche quando fra i selezionati c'è la voce
+// «Clienti», che staff non è: «2 di 5» resta vero, «2 di staff» no.
+//
+// TORNA IL TESTO NUDO, SENZA «✍️ ». L'emoji la metteva questa funzione, e
+// chi il nome lo voleva pulito — il title del tastino «▾ Filtri», dove le
+// emoji non ci stanno — se la doveva togliere con un `replace` a valle:
+// due posti che dovevano restare d'accordo su una stringa. L'emoji è il
+// VESTITO della pastiglia e la mette il JSX della pastiglia, che è l'unico
+// posto che la vuole.
+export function riassuntoAutori(scelti, elenco = []) {
+  const attivi = autoriAttivi(scelti, elenco)
+  if (attivi.length === 0 || attivi.length === elenco.length) return 'Staff'
+  if (attivi.length === 1) {
+    return elenco.find((v) => v.chiave === attivi[0])?.nome || 'Staff'
+  }
+  return `${attivi.length} di ${elenco.length}`
 }
 
 // "Questo conto risponde a quello che sto cercando?" — numero, cliente,
@@ -156,6 +283,22 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
   return !isChiuso(o)
 }
 
+// L'UNIONE DEGLI STATI ACCESI, sottofiltro dei chiusi compreso.
+//
+// Il sottofiltro («Serviti» / «Da servire») è una domanda sui CHIUSI e
+// vale solo dentro di loro: con «Aperti» e «Chiusi» accesi insieme deve
+// stringere i chiusi e lasciare stare gli aperti, che serviti o no sono
+// comunque da chiudere. Per questo si prova stato per stato invece di
+// filtrare l'unione dopo: un conto entra se c'è ALMENO UN filtro acceso
+// che lo prende, sottofiltro incluso.
+export function passaStatiCoda(o, filtro, isChiuso = () => false, sottoChiusi = 'tutti') {
+  return statiDaFiltro(filtro).some(
+    (id) =>
+      passaFiltroCoda(o, id, isChiuso) &&
+      (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+  )
+}
+
 // COSA MOSTRA LA CODA, in una funzione sola: quello che resta in coda per
 // questa apertura di cassa, filtrato per la tab scelta. Sta qui e non nella
 // pagina perché è la cosa da provare — «annullo un conto e lo ritrovo sotto
@@ -164,7 +307,10 @@ export function passaFiltroCoda(o, filtro, isChiuso = () => false) {
 export function ordiniInCoda(
   orders,
   {
-    filtro = 'attivi',
+    // Uno stato — i tre filtri sono esclusivi — oppure 'tutti', che è la
+    // lista intera e serve a smistare le corsie in una passata sola: a
+    // normalizzare è `statiDaFiltro`.
+    filtro = STATO_DEFAULT,
     sottoChiusi = 'tutti',
     isChiuso = () => false,
     cassa = null,
@@ -183,8 +329,89 @@ export function ordiniInCoda(
         oggi,
       })
     )
-    .filter((o) => passaFiltroCoda(o, filtro, isChiuso))
-    .filter((o) => filtro !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
+    .filter((o) => passaStatiCoda(o, filtro, isChiuso, sottoChiusi))
+}
+
+// ── LE TRE SCHEDE IN UNA PASSATA SOLA ────────────────────
+//
+// Le schede della coda sono una DIVISIONE della stessa lista: ogni conto sta
+// in una e una sola — in corso, chiuso, annullato. Chiederle una per una
+// vuol dire ripassare la lista da capo ogni volta, e la coda lo faceva sei
+// volte per disegno (tre per i conteggi delle linguette, due identiche a due
+// righe di distanza, una per le corsie) su una lista che con 120 conti è
+// già lunga.
+//
+// Qui si passa una volta e si smista. Le regole sono le stesse di
+// `ordiniInCoda` — sono proprio le sue, chiamate qui — perché due modi di
+// decidere dove sta un conto sono un modo di farli divergere.
+export function contiPerScheda(orders, opzioni = {}) {
+  const { isChiuso = () => false, sottoChiusi = 'tutti' } = opzioni
+  const dentro = ordiniInCoda(orders, { ...opzioni, filtro: 'tutti' })
+  const per = { tutti: dentro, attivi: [], chiusi: [], annullati: [] }
+  for (const o of dentro) {
+    for (const id of ID_FILTRI_STATO) {
+      if (passaStatiCoda(o, id, isChiuso, sottoChiusi)) per[id].push(o)
+    }
+  }
+  return per
+}
+
+// Le stesse schede quando non c'è niente da smistare: la vista che non è in
+// pagina non paga la passata, ma non deve nemmeno accorgersene.
+export const SCHEDE_VUOTE = { tutti: [], attivi: [], chiusi: [], annullati: [] }
+
+// ── COME SI CHIAMANO LE DUE META' DEL SERVIZIO ───────────────────────
+//
+// «Diventano Da Servire/Ritirare e Serviti/Ritirati. Anche la label sopra
+// la lane, non deve essere Pronto ma Da servire/Ritirare. [...] se il
+// ritiro non è attivo diventano solo Da servire e Serviti (sia filtri che
+// label lane)» (l'utente, 20/08/2026).
+//
+// «PRONTO» NON DICEVA COSA C'È DA FARE. Un drink pronto è pronto per
+// qualcuno: o lo si porta a un tavolo o lo si consegna a chi viene a
+// prenderselo. La colonna si chiamava con lo STATO del drink, mentre chi
+// la guarda cerca il PROPRIO lavoro — e la parola giusta è quella del
+// gesto. Stessa storia per «Ritirato/Servito», che è il participio dello
+// stesso equivoco.
+//
+// I DUE NOMI STANNO IN UNA FUNZIONE SOLA, e li usano tutti e tre i posti
+// che ne hanno bisogno: le porzioni del tasto dei chiusi in griglia, i
+// chip delle colonne al banco e i titoli delle corsie. Scritti a mano tre
+// volte divergerebbero al primo ritocco — è già successo con «Pronto», che
+// sul tasto della card si chiamava in un modo e sulla colonna in un altro.
+//
+// SENZA RITIRO LA META' DI DESTRA NON ESISTE: dove il locale serve e
+// basta, «/Ritirare» nomina una cosa che nel bar non succede e fa cercare
+// una colonna che non c'è.
+export function nomiDelServizio(ritiroEsiste = true) {
+  return ritiroEsiste
+    ? { daServire: 'Da servire/Ritirare', serviti: 'Serviti/Ritirati' }
+    : { daServire: 'Da servire', serviti: 'Serviti' }
+}
+
+// LE DUE PORZIONI DEL TASTO DEI CHIUSI, e un neutro che non si disegna.
+// C'era anche ['tutti', 'Tutti']: acceso quasi sempre, diceva «nessun
+// filtro» sembrando un filtro. Il neutro è NESSUNA DELLE DUE accesa —
+// «Chiusi: sia da servire che serviti» (l'utente, 20/08/2026) — e le due
+// restano esclusive fra loro: accese insieme sarebbero tutti i chiusi,
+// cioè il neutro.
+//
+// PRIMA «DA SERVIRE», POI «SERVITI»: è l'ordine del lavoro, e in un tasto
+// segmentato si legge da sinistra. Quella da guardare di corsa è la prima
+// — sono i drink che qualcuno aspetta ancora.
+export function sottofiltriChiusi(ritiroEsiste = true) {
+  const nomi = nomiDelServizio(ritiroEsiste)
+  return [
+    ['non-serviti', nomi.daServire],
+    ['serviti', nomi.serviti],
+  ]
+}
+
+// Toccare quello acceso lo spegne e torna al neutro; toccare l'altro
+// cambia domanda. Vale la stessa regola dei filtri di stato: quello che si
+// vede acceso è quello che si sta guardando.
+export function cambiaSottoChiusi(sotto, tocco) {
+  return sotto === tocco ? 'tutti' : tocco
 }
 
 // ── DENTRO I CHIUSI: SERVITI E NON SERVITI ──────────────────────
@@ -199,12 +426,6 @@ export function ordiniInCoda(
 // tutte le sue comande sono uscite (allServed). E le comande ANNULLATE non
 // contano — quella roba non si fa e non si serve — se no un conto con
 // dentro un drink annullato non risulterebbe servito mai più.
-export const SOTTOFILTRI_CHIUSI = [
-  ['tutti', 'Tutti'],
-  ['serviti', '✅ Serviti'],
-  ['non-serviti', '⏳ Da servire'],
-]
-
 export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   if (sotto !== 'serviti' && sotto !== 'non-serviti') return true
   // Un conto ANNULLATO non è né servito né da servire: non c'è più niente
@@ -212,6 +433,184 @@ export function passaSottofiltroChiusi(o, sotto = 'tutti') {
   if (annullato(o)) return false
   const tutto = allServed(o) || o?.workflow_status === ORDER_STATUSES.RITIRATO
   return sotto === 'serviti' ? tutto : !tutto
+}
+
+// ── I FILTRI DI STATO DELLA CODA: TRE, E UNO SOLO ALLA VOLTA ─────────
+//
+// ERANO QUATTRO SCHEDE — In corso, Chiusi, Annullati, Tutti — e non erano
+// filtri: erano quattro code diverse, e per vedere gli aperti insieme ai
+// chiusi bisognava chiedere «Tutti», cioè anche gli annullati. Il
+// 20/08/2026 sono diventati tre interruttori COMBINABILI, con la coda che
+// mostrava l'unione degli accesi.
+//
+// E IL GIORNO STESSO, PROVATI, SONO TORNATI ESCLUSIVI. «No allora
+// riportiamo aperti, chiusi e annullati come mutuamente esclusivi»
+// (l'utente, 20/08/2026, guardando la coda vera).
+//
+// Quello che si è imparato dal giro in mezzo: la combinazione non serviva
+// alla domanda che si fa davvero. Sopra la coda si chiede UNA cosa per
+// volta — «cosa c'è da fare», «quanto ho incassato», «cosa ho annullato» —
+// e una coda mista costringe a rileggere ogni card per capire in quale dei
+// tre mondi sta. Quello che mancava alle vecchie schede era altro: il modo
+// di stringere DENTRO i chiusi, ed è lì che è andata a finire la fatica
+// (vedi il tasto a tre porzioni, `sottofiltriChiusi`).
+//
+// «TUTTI» NON TORNA: non l'ha chiesto nessuno, e resta quello che era —
+// una scheda che mescolava gli incassi con gli annullati.
+//
+// «APERTI» E NON «IN CORSO»: è la parola con cui la riga dei conteggi
+// sopra la coda li chiama già («12 aperti · 40 chiusi»), ed è la parola
+// che l'utente ha chiesto. Cambia SOLO qui, dove è il nome del filtro: le
+// colonne delle corsie e le linguette della vista a schede (schedeCoda)
+// restano «In corso», che lì è il titolo di una colonna, non un filtro.
+//
+// UNA TABELLA SOLA, TRE RIGHE. Gli stessi tre stati erano scritti in tre
+// elenchi diversi e lontani — il chip della fila, il nome corto nel title,
+// l'aggettivo della coda vuota — più le linguette della vista a schede: si
+// rinominava «Annullati» in un posto e negli altri restava com'era. Qui
+// ogni stato è UNA riga, e chi ha bisogno di una colonna se la deriva.
+//
+//   nome      — corto e senza emoji: è quello che sta nel `title` del
+//               tastino, dove si legge di corsa
+//   segno     — l'emoji davanti al chip, dove c'è spazio per un colpo
+//               d'occhio. «Aperti» non ce l'ha: è il caso normale
+//   colonna   — il titolo della colonna nella vista a schede, quando
+//               diverge dal nome del filtro (vedi sopra: lì «In corso» è
+//               il titolo di una colonna, non il nome di un filtro)
+//   aggettivo — per la coda vuota: «Nessun ordine aperto.»
+const STATI_CODA = [
+  { id: 'attivi', nome: 'Aperti', segno: '', colonna: 'In corso', aggettivo: 'aperto' },
+  { id: 'chiusi', nome: 'Chiusi', segno: '💶', colonna: null, aggettivo: 'chiuso' },
+  // Gli annullati hanno un filtro loro: fra i chiusi facevano numero senza
+  // essere incassi, e per ritrovarne uno da riaprire si cercava in mezzo a
+  // quelli buoni.
+  { id: 'annullati', nome: 'Annullati', segno: '✖️', colonna: null, aggettivo: 'annullato' },
+]
+
+const etichettaStato = (s) => (s.segno ? `${s.segno} ${s.nome}` : s.nome)
+
+export const FILTRI_STATO = STATI_CODA.map((s) => [s.id, etichettaStato(s)])
+
+export const ID_FILTRI_STATO = STATI_CODA.map((s) => s.id)
+
+// Come si apre la coda: quello che c'è da fare, e basta.
+export const STATO_DEFAULT = 'attivi'
+
+// QUALI STATI SONO IN CODA. Uno solo — i tre filtri sono esclusivi — ma
+// `ordiniInCoda` e `contiPerScheda` chiamano anche con 'tutti', che è la
+// lista intera e serve a smistare le corsie in una passata sola. Torna
+// sempre un elenco: chi filtra fa `.some` e non deve sapere quale dei due
+// casi gli è capitato.
+//
+// UNO SCONOSCIUTO RIPIEGA SUL DEFAULT. Non dovrebbe succedere — a
+// scegliere sono i tre chip, che hanno questi id addosso — ma una coda che
+// non mostra NIENTE è indistinguibile da un'app rotta, e vale la riga di
+// prudenza.
+export function statiDaFiltro(filtro) {
+  if (filtro === 'tutti' || filtro == null) return [...ID_FILTRI_STATO]
+  return ID_FILTRI_STATO.includes(filtro) ? [filtro] : [STATO_DEFAULT]
+}
+
+// TOCCARNE UNO SPEGNE GLI ALTRI, e uno resta acceso sempre: la scelta è
+// esclusiva, quindi il tocco È la scelta e il chiamante fa `setStato(id)`.
+// C'era una `cambiaFiltroStato` che sapeva combinare gli stati, ed era
+// rimasta dai giorni in cui erano interruttori — normalizzava, rifiutava
+// in silenzio i tocchi che non cambiavano niente, e con tre chip esclusivi
+// non poteva più tornare altro che il tocco stesso.
+// Che la selezione resti esclusiva lo prova il component test della coda,
+// che è dove si vede: si tocca «Chiusi» e «Aperti» si spegne.
+
+// ── IL TASTO CHE APRE E CHIUDE LA FILA DEI FILTRI ────────────────────
+//
+// «I filtri e tutti i bottoni li voglio a scomparsa, con un tasto che non
+// occupi troppo spazio, sia per ordini sia per comande» (l'utente, 20/08).
+//
+// ED ERA DIVENTATO UN TASTO IN PIÙ. Prima stava nella riga dei chip e
+// portava scritto il filtro acceso — «⚗️ Chiusi», «⚗️ Miei +2» — cioè una
+// pastiglia larga in una riga che, da chiusa, esisteva solo per lei.
+// «Quando dicevo di nascondere i tasti intendevo tutti e non aggiungere un
+// nuovo tasto. Lo spazio da risparmiare è in altezza non in larghezza»
+// (l'utente, 20/08). Adesso è un tastino solo icona nella testata, con gli
+// altri, e la riga dei chip da chiusa non c'è proprio.
+//
+// IL NOME DEL TASTO È QUELLO CHE IL TASTO FA. «"Filtra la coda" non va
+// bene, deve essere "mostra filtri"» (l'utente, 20/08). Il tasto non
+// filtra: apre e chiude la fila dei filtri, e si chiama con quel gesto —
+// a filtrare sono le pastiglie che compaiono, una per una.
+//
+// ── IL NUMERO SUL TASTINO NON C'È PIÙ, E NON VA RIMESSO ──────────────
+//
+// «Sì ma infatti togliamo quel numero. Non serve» (l'utente, 22/08/2026).
+// Questa riga vale più di tutte quelle che seguono: se fra sei mesi
+// sembrasse una buona idea «aggiungere un utile contatore accanto a
+// Filtri», c'è già stato, per quattro giri, e la decisione finale è stata
+// toglierlo.
+//
+// COS'ERA. A fila chiusa il tastino portava un badge con quanti filtri
+// erano accesi. La ragione sembrava solida: un filtro acceso e invisibile
+// è una coda che sembra sbagliata — dodici conti dove ce ne sono quaranta,
+// e niente a schermo che lo dica.
+//
+// I QUATTRO CRITERI, IN ORDINE, TUTTI BOCCIATI DA CHI GUARDA:
+// 1. quanti GENERI di filtro stringevano (`filtriAccesi.length`): sei
+//    colonne spente facevano «1». «Non mi è chiaro come conta i filtri.
+//    Secondo me non funziona» (22/08, BUG-080);
+// 2. una restrizione per COLONNA, sommate a occhio (BUG-080): ma contava
+//    anche le colonne RIACCESE. «Credo che l'indicatore del numero di
+//    filtri attivi funzioni al contrario. Li ho disattivati tutti ma lui
+//    indica tre filtri attivi» (22/08, BUG-085);
+// 3. solo ciò che RESTRINGE davvero, guardando la lavagna e non la
+//    memoria delle spente (BUG-085, `corsieRistrette`): «non mi sembra che
+//    il conteggio dei filtri funzioni ancora [...] ne ho tre e lui dice
+//    zero» (22/08);
+// 4. i chip ACCESI nella fila, contati e basta — mai arrivato a schermo:
+//    l'utente ha chiuso il giro togliendo il numero.
+//
+// PERCHÉ NESSUNO POTEVA FUNZIONARE. Ogni criterio è una risposta a «quanti
+// filtri ci sono?», e quella domanda non ha UNA risposta ovvia: chi guarda
+// conta i chip accesi, chi ha scritto il codice conta le restrizioni, e i
+// due numeri non coincidono quasi mai. Un numero che va spiegato non
+// avvisa di niente — chiede solo di essere interpretato, mentre si versa.
+// Il segnale, se serve, si va a leggere aprendo la fila: i chip accesi si
+// vedono da sé, ed è l'unica verità che non ha bisogno di un criterio.
+//
+// COSA SE N'È ANDATO CON LUI: `contaFiltri`, `corsieRistrette`,
+// `corsieDiverseDalNormale`, `NOME_FILTRO_STATO`, `nomeSottofiltro`, la
+// lista `filtriAccesi` della pagina, il badge `.coda-tastino-conta` e la
+// classe `.coda-tastino.active` — che si accendeva sul conteggio e senza
+// non ha più niente da leggere.
+
+// QUELLO CHE RESTA È IL GESTO, e il title lo dice in due parole. L'elenco
+// dei filtri accesi stava qui accodato al nome: se n'è andato col badge,
+// perché per costruirlo serviva tutta la macchina del conteggio — la
+// stessa lista, letta in un altro modo — e tenerne in piedi metà per un
+// tooltip vorrebbe dire riaprire il giro alla prima occasione.
+export function spiegaFiltri(aperti = false) {
+  return aperti ? 'Nascondi filtri' : 'Mostra filtri'
+}
+
+// ── IL VERSO DELLA CODA, IN UNA FRECCIA E TRE PAROLE ─────────────────
+//
+// «Questo testo è completamente insensato. Cioè basta scrivere Prima i più
+// recenti/vecchi in base all'ordinamento attuale. E cambia anche l'icona
+// (freccia giù freccia sopra)» (l'utente, 20/08). Diceva «Adesso: prima gli
+// ultimi — tocca per partire dai primi»: due frasi in una — com'è messa la
+// coda e cosa succede a premere — e al banco non se ne legge nessuna.
+//
+// QUI IL TASTO DICE DOVE SEI, NON DOVE PORTA, ed è una scelta esplicita.
+// La regola opposta (docs/navigazione.md) vale per il cambio vista, dove
+// «Comande» acceso e «Comande» spento si distinguono solo guardando la
+// lista sotto. Un ordinamento invece si legge dalla coda stessa: quello che
+// manca è il nome di com'è messa adesso, e quello ci si scrive.
+//
+// LA FRECCIA SEGUE IL VERSO IN CUI SI SCORRE LA CODA: giù si parte dai più
+// recenti e si scende verso i vecchi, su si parte dai più vecchi e si sale
+// verso gli ultimi arrivati. Il «↕» di prima era identico nei due stati —
+// diceva «qui si ordina», non come.
+export function spiegaOrdine(desc = true) {
+  return desc
+    ? { nome: 'Prima i più recenti', icona: '↓' }
+    : { nome: 'Prima i più vecchi', icona: '↑' }
 }
 
 // ── LA VOCE DELLA CASSA NEL MENU DELLA CODA ──────────────────────────
@@ -240,6 +639,22 @@ export function haLavoroDaFare(o) {
   return (o?.comande || []).some(
     (c) => c.status !== ORDER_STATUSES.RITIRATO && c.status !== ORDER_STATUSES.ANNULLATO
   )
+}
+
+// ── NON SI PREPARA QUELLO CHE NON È STATO PAGATO ──────────────
+//
+// Dove il pagamento è obbligatorio (l'ordine del cliente dal telefono), il
+// lavoro non comincia finché i soldi non ci sono. Il blocco vale finché la
+// comanda NON È ANCORA STATA PRESA IN CARICO: da lì in poi qualcuno ci ha
+// già messo le mani, e togliergli il drink di sotto sarebbe peggio.
+//
+// «Ancora da prendere in carico» è il passo IN CUI IL LAVORO NASCE, che il
+// locale sceglie (statoComandaNuova) — non la costante «ricevuto». Era
+// scritta a mano, e in un locale che fa nascere le comande già «in
+// preparazione» quel confronto non era mai vero: il blocco non scattava, e
+// si preparava un ordine con pagamento obbligatorio non pagato (BUG-027).
+export function attesaPagamento(o, passoDiNascita = ORDER_STATUSES.RICEVUTO) {
+  return isAwaitingPayment(o) && o?.workflow_status === passoDiNascita
 }
 
 export function comandeDaServire(ordini) {
@@ -284,18 +699,27 @@ export function voceCassa({
   // comande al banco vuol dire mandare a casa la serata con tre drink
   // pagati e mai usciti.
   //
-  // LA FRASE RESTA UNA RIGA. Sta sotto il tasto, in cima alla coda, dove lo
-  // spazio è quello che avanza: due frasi incolonnate non si leggono in
-  // un'occhiata, e quello che serve capire è «non si chiude, e perché».
+  // LA FRASE RESTA UNA RIGA, E CORTA. Sta sotto il tasto, in cima alla
+  // coda, dove lo spazio è quello che avanza: due frasi incolonnate non si
+  // leggono in un'occhiata, e quello che serve capire è «non si chiude, e
+  // perché».
+  //
+  // «È scomparsa la label sotto al tasto. Diventa "chiudi X conti e X
+  // comande"» (l'utente, 20/08). Era «Prima chiudi 3 conti e servi 2
+  // comande»: il verbo di mezzo era la parte che la faceva lunga, e la
+  // riga sotto un tasto la si legge di sguincio mentre si versa — due
+  // numeri e due nomi bastano. Se una delle due quantità è zero si nomina
+  // solo l'altra: «Chiudi 2 comande» è l'unica cosa che manca, e scrivere
+  // «0 conti» sarebbe una bugia in più da leggere.
   const manca = []
-  if (contiAperti > 0) manca.push(`chiudi ${quantiConti(contiAperti)}`)
-  if (daServire > 0) manca.push(`servi ${quanteComande(daServire)}`)
+  if (contiAperti > 0) manca.push(quantiConti(contiAperti))
+  if (daServire > 0) manca.push(quanteComande(daServire))
   return {
     id: 'chiudi-cassa',
     icon: '🔒',
     label: 'Chiudi cassa',
     disabled: manca.length > 0,
-    hint: manca.length > 0 ? `Prima ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
+    hint: manca.length > 0 ? `Chiudi ${manca.join(' e ')}` : 'Conta il contante e chiudi la serata.',
   }
 }
 
@@ -328,40 +752,42 @@ export function gruppiInCoda({ accesi = false, inCoda = false, pannelli = false 
 // linguette per dirne una. Spenti gli stati, un conto è solo in corso,
 // chiuso o annullato: le stesse tre voci della griglia, con le stesse
 // regole (passaFiltroCoda), così le due viste non litigano mai.
+// I nomi vengono dalla tabella degli stati (STATI_CODA): «In corso» è la
+// deroga scritta lì dentro — qui è il titolo di una COLONNA, non il nome di
+// un filtro — e le altre due sono le stesse etichette dei chip.
 export function schedeCoda(workflowOn) {
   if (workflowOn) return null // ci pensano gli stati di servizio
-  return [
-    ['attivi', 'In corso'],
-    ['chiusi', '💶 Chiusi'],
-    ['annullati', '✖️ Annullati'],
-  ]
+  return STATI_CODA.map((s) => [s.id, s.colonna ?? etichettaStato(s)])
 }
 
 
-// ── LE CORSIE DI STATO ───────────────────────────────────────────────
+// ── LE CORSIE DEI CONTI ───────────────────────────────────────────────
 //
-// La quarta vista della coda: una colonna per passo del lavoro, e su ogni
-// card UN tasto solo, quello che porta l'ordine al passo dopo. Al banco si
-// preme col pollice, di corsa: la domanda a cui risponde è «cosa c'è da
-// fare adesso?», non «com'è messo questo conto».
+// La quarta vista della coda, per i CONTI: tre colonne — in corso, chiusi,
+// annullati — che sono le tre cose che un conto può essere. Le stesse voci
+// della griglia e delle schede, con le stesse regole (schedeCoda +
+// passaFiltroCoda), così le viste non raccontano mai due storie diverse.
+// Chi chiama passa la lista già ripulita da ordiniInCoda — cioè quello che
+// resta in coda per QUESTA apertura di cassa — e qui si smista soltanto.
 //
-// Le corsie NON sono un elenco di stati scritto qui dentro: sono gli stessi
-// che usa il resto dell'app (ORDER_STATUSES), riempiti con le stesse regole
-// della griglia. Chi chiama passa la lista già ripulita da ordiniInCoda —
-// cioè quello che resta in coda per QUESTA apertura di cassa — e qui si
-// smista soltanto.
+// I PASSI DEL LAVORO NON STANNO QUI. C'era anche un ramo con le quattro
+// colonne del servizio (da fare → in preparazione → pronto → da incassare),
+// e non lo chiamava più nessuno: l'unico chiamante passava
+// `workflowOn: false`, e a tenerlo in vita erano soltanto i suoi test — che
+// raccontavano una colonna «Da incassare» che al banco non ha mai visto
+// nessuno. Costava più dello spazio: i test sono la specifica, e leggere
+// «Da incassare sono i consegnati non saldati» faceva credere che quella
+// colonna ci fosse davvero.
+//
+// I passi del servizio si guardano dalla vista del BANCO, che ragiona per
+// COMANDE (corsieComande, qui sotto): un conto con tre comande in tre passi
+// diversi non sta in una colonna sola, ed è il motivo per cui quella vista
+// è nata.
 // I NOMI DELLE CORSIE SONO GLI STATI, non delle perifrasi. «Al banco» e
 // «Al ritiro» raccontavano DOVE sta il drink; lo stato del servizio dice a
 // che punto è, ed è quello che si cerca quando si guarda la colonna e
 // quando si legge la storia del conto. Gli id restano quelli di prima: se
 // li cambiassimo, chi ha nascosto una colonna se la ritroverebbe accesa.
-const CORSIE_LAVORO = [
-  { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
-  { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
-  { id: 'al-ritiro', titolo: 'Ritiro/Servizio', stato: ORDER_STATUSES.PRONTO },
-  { id: 'da-incassare', titolo: 'Da incassare', stato: ORDER_STATUSES.RITIRATO },
-]
-
 // Il conto è già saldato? (il pagamento sta sul CONTO, non sulla comanda:
 // un ordine può essere pagato in anticipo e non essere ancora uscito)
 const contoSaldato = (o) =>
@@ -373,59 +799,45 @@ const contoSaldato = (o) =>
 const totaleCorsia = (ordini) =>
   round2(ordini.reduce((s, o) => s + orderTotal(o), 0))
 
-export function corsieDiStato(
-  ordini,
-  { isChiuso = () => false, workflowOn = true, sottoChiusi = 'tutti' } = {}
-) {
+// LO STATO CHE OGNI COLONNA RAPPRESENTA. Serve al tasto della card: cosa si
+// può fare su un conto dipende da com'è messo, non da come si chiama la
+// colonna in cui sta (vedi azioneCorsia).
+const STATO_CORSIA_CONTI = {
+  attivi: ORDER_OPEN,
+  chiusi: ORDER_STATUSES.PAGATO,
+  annullati: ORDER_STATUSES.ANNULLATO,
+}
+
+export function corsieDiStato(ordini, { isChiuso = () => false, sottoChiusi = 'tutti' } = {}) {
   const lista = ordini || []
-
-  // STATI DI SERVIZIO SPENTI: i quattro passi non esistono proprio, e
-  // quattro colonne vuote non sono una vista — sono un malinteso. Restano
-  // le tre cose che un conto può essere, con le etichette e le regole già
-  // usate dalla griglia e dalle schede (schedeCoda + passaFiltroCoda), così
-  // le viste non raccontano mai due storie diverse.
-  if (!workflowOn) {
-    return schedeCoda(false).map(([id, titolo]) => {
-      const dentro = lista.filter(
-        (o) =>
-          passaFiltroCoda(o, id, isChiuso) &&
-          // Il sottofiltro vale solo dentro i chiusi: è una domanda su
-          // quelli, e sugli altri non vuol dire niente.
-          (id !== 'chiusi' || passaSottofiltroChiusi(o, sottoChiusi))
-      )
-      return { id, titolo, stato: null, ordini: dentro, totale: totaleCorsia(dentro) }
-    })
-  }
-
-  const secchi = bucketByStatus(lista) // gli annullati restano fuori da sé
-  return CORSIE_LAVORO.map(({ id, titolo, stato }) => {
-    const dentro = (secchi[stato] || [])
-      // «Da incassare» sono i conti CONSEGNATI e non ancora saldati: quello
-      // già pagato non ha più niente da chiedere e lascia la coda.
-      .filter((o) => !isChiuso(o) && !(stato === ORDER_STATUSES.RITIRATO && contoSaldato(o)))
-      // PAGATO MA NON ANCORA CONSEGNATO: resta dov'è, con un bollo. Sono i
-      // conti saldati in anticipo — il drink è pagato ma non è ancora
-      // uscito — e sparire sarebbe il modo migliore per dimenticarseli.
-      .map((o) => (contoSaldato(o) ? { ...o, pagatoDaServire: true } : o))
-    return { id, titolo, stato, ordini: dentro, totale: totaleCorsia(dentro) }
+  return schedeCoda(false).map(([id, titolo]) => {
+    // Il sottofiltro vale solo dentro i chiusi — è una domanda su quelli, e
+    // sugli altri non vuol dire niente: a saperlo è `passaStatiCoda`, che è
+    // il predicato che usano anche la griglia e le schede.
+    const dentro = lista.filter((o) => passaStatiCoda(o, id, isChiuso, sottoChiusi))
+    return {
+      id,
+      titolo,
+      stato: STATO_CORSIA_CONTI[id],
+      ordini: dentro,
+      totale: totaleCorsia(dentro),
+    }
   })
 }
 
-// Cosa fa il tasto, corsia per corsia. Le corsie senza voce qui — «Chiusi»
-// e «Annullati», che compaiono solo a stati di servizio spenti — non hanno
-// tasto: su un conto già chiuso non c'è niente da far avanzare.
-export const AZIONI_CORSIA = {
-  // Il tasto dice DOVE VA il conto, non chi lo prende in carico: «Lo
-  // preparo io» era una promessa, e la colonna accanto si chiama con lo
-  // stato in cui il conto finisce. Stessa parola sul tasto e sulla
-  // colonna: si vede dove va a finire prima di premere.
-  'da-fare': { etichetta: 'In preparazione', tipo: 'avanza' },
-  'al-banco': { etichetta: 'È pronto', tipo: 'avanza' },
-  'al-ritiro': { etichetta: 'Ritirato/Servito', tipo: 'avanza' },
-  'da-incassare': { etichetta: 'Incassa', tipo: 'incassa' },
-  // Stati di servizio spenti: l'unica cosa che resta da fare a un conto in
-  // corso è incassarlo, come sulla griglia.
-  attivi: { etichetta: 'Incassa', tipo: 'incassa' },
+// ── COSA FA IL TASTO DI UNA CARD DI CONTO ────────────────────
+//
+// DIPENDE DALLO STATO, NON DALL'ID DELLA COLONNA. Prima era una mappa per id
+// (`AZIONI_CORSIA`), ed è esattamente da lì che è nato BUG-026 nella vista
+// delle comande: dividendo la colonna del pronto nascevano id nuovi, che in
+// quella mappa non c'erano — niente voce, niente tasto, e una funzione
+// spariva a seconda di come uno guardava la coda. Lì si è già passati allo
+// stato (azioneComanda); qui si fa lo stesso.
+//
+// Su un conto in corso l'unica cosa da fare è incassarlo, come sulla
+// griglia. Su uno chiuso o annullato non c'è più niente da chiedere.
+export function azioneCorsia(stato) {
+  return stato === ORDER_OPEN ? { etichetta: 'Incassa', tipo: 'incassa' } : null
 }
 
 // Dove va il drink e per chi: «Tavolo 4», «Bancone · Giulia». È la riga che
@@ -460,8 +872,9 @@ export function destinazioneConto(o) {
 // CORSIE_SPENTE_ALL_INIZIO). DENTRO CI SONO COMANDE, in tutte:
 //
 //   Da fare · In preparazione ·       i passi del lavoro, una card per
-//   Ritiro/Servizio ·                 comanda
-//   Ritirato/Servito
+//   Da servire/Ritirare ·             comanda (i due nomi seguono il
+//   Serviti/Ritirati                  mondo della consegna: senza ritiro
+//                                     sono «Da servire» e «Serviti»)
 //   Chiuse                            le comande SERVITE di conti PAGATI:
 //                                     non c'è più niente da fare né da
 //                                     chiedere. Serve a guardare indietro.
@@ -478,15 +891,15 @@ export function destinazioneConto(o) {
 // tre comande servite dello stesso tavolo diventassero tre tasti che
 // chiedono tre volte gli stessi soldi. Ma con la regola «servita ⇒ o da
 // incassare o chiusa» quella colonna conteneva esattamente gli stessi drink
-// di «Ritirato/Servito», solo raggruppati per conto invece che per ticket:
+// dei serviti, solo raggruppati per conto invece che per ticket:
 // due colonne per la stessa cosa. Adesso la card resta la comanda e non
 // chiede soldi — dice che quei drink sono usciti — e chi deve ancora
 // prenderli lo legge dal bollo, che c'è già e dice se il conto è pagato, in
 // parte o per niente.
 //
 // QUANDO UNA COMANDA È CHIUSA: dopo essere stata SERVITA, non prima. Da lì,
-// se il conto è pagato va fra le chiuse; se no resta in «Ritirato/Servito»,
-// che il lavoro è finito ma i soldi no.
+// se il conto è pagato va fra le chiuse; se no resta fra i serviti, che il
+// lavoro è finito ma i soldi no.
 // PAGATA MA NON ANCORA SERVITA NON È CHIUSA: il drink va fatto lo stesso,
 // e quella comanda resta nella corsia del suo passo — col bollo «Pagato»,
 // perché è il caso strano (i soldi presi, il drink ancora da fare) ed è
@@ -495,12 +908,30 @@ export function destinazioneConto(o) {
 //
 // I nomi delle ultime due sono al femminile — chiuse, annullate — perché
 // qui dentro non ci sono conti: ci sono comande.
-const CORSIE_COMANDE = [
-  ...CORSIE_LAVORO.filter((c) => c.id !== 'da-incassare'),
-  { id: 'ritirati', titolo: 'Ritirato/Servito', stato: ORDER_STATUSES.RITIRATO },
-  { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
-  { id: 'annullati', titolo: '✖️ Annullate', stato: null },
-]
+//
+// «RITIRATO/SERVITO» SI CHIAMA «SERVITI/RITIRATI» (o «Serviti» senza
+// ritiro): è la stessa parola delle due porzioni del tasto dei chiusi in
+// griglia, e sono la stessa domanda fatta in due viste — chi guarda la
+// colonna e chi filtra la coda devono leggere lo stesso nome, o si
+// convincono di star guardando due cose diverse.
+//
+// I PRIMI TRE SONO I PASSI DEL LAVORO, e la terza colonna PORTA IL NOME DEL
+// GESTO — «Da servire/Ritirare», o solo «Da servire» dove il ritiro non c'è
+// (nomiDelServizio) — e non più «Pronto»: «anche la label sopra la lane,
+// non deve essere Pronto ma Da servire/Ritirare» (l'utente, 20/08/2026).
+// Gli id restano quelli di sempre: cambiandoli, chi ha spento una colonna
+// se la ritroverebbe accesa.
+const corsieDelBanco = (ritiroEsiste) => {
+  const nomi = nomiDelServizio(ritiroEsiste)
+  return [
+    { id: 'da-fare', titolo: 'Da fare', stato: ORDER_STATUSES.RICEVUTO },
+    { id: 'al-banco', titolo: 'In preparazione', stato: ORDER_STATUSES.IN_PREPARAZIONE },
+    { id: 'al-ritiro', titolo: nomi.daServire, stato: ORDER_STATUSES.PRONTO },
+    { id: 'ritirati', titolo: nomi.serviti, stato: ORDER_STATUSES.RITIRATO },
+    { id: 'chiusi', titolo: '💶 Chiuse', stato: null },
+    { id: 'annullati', titolo: '✖️ Annullate', stato: null },
+  ]
+}
 
 // ── IL PRONTO, UNITO O DIVISO ───────────────────────────────
 //
@@ -512,9 +943,9 @@ const CORSIE_COMANDE = [
 // UNITE DI SUO, col badge sulla card che dice quale delle due è: una
 // colonna in più costa larghezza a tutte le altre, e in un locale dove il
 // ritiro è l'eccezione sarebbe una colonna quasi sempre vuota. Chi ha le
-// due cose a metà e metà le divide, ed è una scelta del TERMINALE (sta nel
-// filtro «▦ Colonne»): il tablet della sala e quello del banco non
-// guardano lo stesso lavoro.
+// due cose a metà e metà le divide col tastino ✂️ APPESO AL CHIP DEL
+// PRONTO (vedi `gruppiColonne`), ed è una scelta del TERMINALE: il tablet
+// della sala e quello del banco non guardano lo stesso lavoro.
 //
 // «RITIRATO/SERVITO» NON SI DIVIDE, ed è voluto: lì il drink è già uscito
 // e come sia uscito non cambia più niente da fare. È il traguardo, non una
@@ -538,16 +969,22 @@ export function corsieDelPronto({ divise = false, ritiroEsiste = true } = {}) {
 // poi è una scelta di questo terminale.
 export const CORSIE_SPENTE_ALL_INIZIO = ['chiusi', 'annullati']
 
-export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = null } = {}) {
+// ── QUANDO LE COLONNE CONTANO COME FILTRO ACCESO ─────────────────────
+//
+export function corsieComande(
+  ordini,
+  { isChiuso = () => false, prontoDiviso = null, ritiroEsiste = true } = {}
+) {
   // La colonna del pronto può diventare due: al suo posto, nello stesso
   // punto della fila, così le altre non si spostano sotto gli occhi.
+  const base = corsieDelBanco(ritiroEsiste)
   const corsie = prontoDiviso
-    ? CORSIE_COMANDE.flatMap((c) =>
+    ? base.flatMap((c) =>
         c.id === 'al-ritiro'
           ? prontoDiviso.map((d) => ({ ...d, stato: ORDER_STATUSES.PRONTO }))
           : [c]
       )
-    : CORSIE_COMANDE
+    : base
   const secchi = Object.fromEntries(corsie.map((c) => [c.id, []]))
   // Dove va una comanda, per il passo in cui sta. Col pronto diviso il
   // passo da solo non basta: serve anche come si consegna quel conto, e a
@@ -610,7 +1047,7 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
         // SERVITA. Col conto pagato non resta più niente da fare né da
         // chiedere: chiusa. Se no il lavoro è finito ma i soldi no, e
         // restano due cose diverse da guardare — la comanda in
-        // «Ritirato/Servito», che dice che è uscita, e il CONTO fra quelli
+        // fra i serviti, che dice che è uscita, e il CONTO fra quelli
         // da incassare, che è quello che si porta al tavolo.
         secchi[saldato ? 'chiusi' : 'ritirati'].push(scheda(c))
         continue
@@ -653,13 +1090,13 @@ export function corsieComande(ordini, { isChiuso = () => false, prontoDiviso = n
 // Dividendo la colonna del pronto nascono due corsie con id nuovi
 // (`al-ritiro-banco`), che in quella mappa non c'erano: niente voce,
 // niente tasto — e nella colonna «Da ritirare» la card restava senza il
-// tasto che porta la comanda a «Ritirato/Servito» (BUG-026). Una funzione
+// tasto che porta la comanda ai serviti (BUG-026). Una funzione
 // che spariva a seconda di come uno guarda la coda. Legandola allo stato
 // non si ripresenta al prossimo modo di dividere le colonne.
 //
 // Chi non ha niente da fare resta senza tasto: le annullate, e le servite
 // di un conto già saldato — niente da preparare, niente da chiedere.
-export function azioneComanda(comanda, order) {
+export function azioneComanda(comanda, order, { ruolo = null } = {}) {
   // Card del CONTO (la colonna dei soldi): lì non c'è un ticket da far
   // avanzare, c'è un conto da incassare.
   if (!comanda) return { etichetta: 'Incassa', tipo: 'incassa' }
@@ -673,18 +1110,67 @@ export function azioneComanda(comanda, order) {
   }
   const dopo = nextComandaStatus(comanda.status)
   if (!dopo) return null
+  // LA SALA SERVE, NON PREPARA. Portare avanti una comanda è di chi versa;
+  // alla sala resta l'ultimo passo — «servito» — perché è lei che porta il
+  // drink al tavolo. Senza un ruolo dichiarato non si toglie niente: qui si
+  // disegna una coda, il permesso vero sta in `ruoli.js` e nelle regole del
+  // database.
+  if (ruolo && !puoSegnare(ruolo, dopo)) return null
   return { etichetta: etichettaAvanzamento(dopo, order?.service_mode), tipo: 'avanza' }
 }
 
-// La parola sul tasto è quella dello STATO IN CUI IL DRINK FINISCE: si vede
-// dove va a finire prima di premere. Sull'ultimo passo dipende da come si
-// consegna — «Ritirato» al banco, «Servito» al tavolo — perché è la parola
-// che si usa davvero: nessuno dice «ritirato» di un drink portato al tavolo.
-function etichettaAvanzamento(stato, serviceMode) {
-  if (stato === ORDER_STATUSES.RITIRATO) return ritiratoLabel(serviceMode)
-  if (stato === ORDER_STATUSES.PRONTO) return 'È pronto'
-  return STATUS_LABELS[stato]
+// ── LASCIANDO CADERE UNA COMANDA IN UN'ALTRA COLONNA ──────────────────
+//
+// «Le comande nella vista a lane possono essere trascinate da una colonna
+// all'altra per cambiare stato [...] posso spostarla in QUALSIASI lane,
+// quindi gli stati della comanda cambiano di conseguenza» (l'utente,
+// 20/08). E la precisazione che dice cos'è: «non è che DEVONO — come modo
+// ALTERNATIVO per cambiare stato, le posso trascinare». I tasti restano
+// quelli di prima, questa è una seconda strada per lo stesso gesto.
+//
+// QUI SI DECIDE SOLO DOVE FINISCE. Chi ci scrive è la strada di sempre
+// (avanzaComanda → advanceComanda), la stessa dei tasti: le regole del
+// magazzino — lo scarico che si applica una volta a «pronto» e non si disfa
+// tornando indietro — vivono lì e non si rifanno qui. Un trascinamento che
+// scrivesse lo stato per conto suo sarebbe una seconda verità.
+//
+// VALE IN TUTTE LE DIREZIONI, avanti e indietro: si segna «pronto» il
+// ticket sbagliato e lo si riporta a «da fare» col dito, invece di aprire
+// il ⋯ e cercare la voce. Restituisce lo stato in cui la comanda finisce,
+// oppure null se lì non si può lasciare — e allora la colonna lo dice
+// prima, mentre la card è ancora in mano.
+//
+// LE DUE COLONNE DELLO SGUARDO ALL'INDIETRO NON ACCETTANO NIENTE:
+//   «Chiuse» non è un passo del lavoro ma il risultato di due cose insieme
+//   (servita + conto pagato), e trascinarci una comanda vorrebbe dire
+//   incassare un conto per sbaglio con un dito;
+//   «Annullate» sarebbe un annullo, ed è la cosa giusta — ma la strada per
+//   annullare UNA comanda con quello che ne consegue sui soldi non c'è
+//   ancora (REQ-ORD-021): finché non c'è, quella colonna rifiuta il
+//   rilascio invece di far sparire un ticket senza dire dove sono finiti i
+//   suoi drink.
+export function statoDelRilascio(scheda, corsia, { ruolo = null } = {}) {
+  const c = scheda?.comanda
+  // Senza uno stato la colonna non è un passo: è uno sguardo all'indietro.
+  if (!c || !corsia?.stato) return null
+  // Una comanda annullata è lavoro buttato: rianimarla col dito nasconderebbe
+  // il motivo per cui è finita lì.
+  if (c.status === ORDER_STATUSES.ANNULLATO) return null
+  // Rilasciata dov'era già: niente da scrivere, e nessun errore da mostrare.
+  if (c.status === corsia.stato) return null
+  // LA SALA SERVE, NON PREPARA: lo stesso metro del tasto (azioneComanda),
+  // o il trascinamento sarebbe una scorciatoia per aggirare i ruoli.
+  if (ruolo && !puoSegnare(ruolo, corsia.stato)) return null
+  return corsia.stato
 }
+
+// La parola sul tasto è quella dello STATO IN CUI IL DRINK FINISCE: si vede
+// dove va a finire prima di premere — ed è la STESSA che intitola la colonna
+// in cui finirà, e la stessa dell'etichetta di stato. Per questo passa da
+// `statoAlBanco`: le parole del banco stanno in un posto solo, e prima
+// «pronto» ne aveva quattro («Pronto», «Pronto al servizio»,
+// «Ritiro/Servizio», «È pronto»).
+const etichettaAvanzamento = (stato, serviceMode) => statoAlBanco(stato, serviceMode)
 
 // ── QUALI CORSIE SI VEDONO ──────────────────────────────────
 //
@@ -703,6 +1189,131 @@ export function corsieVisibili(corsie, nascoste = []) {
   return restano.length > 0 ? restano : corsie || []
 }
 
+// ── DI CHE GIORNATA È QUESTO CONTO ───────────────────────────────────
+//
+// La data di un conto ESISTE SEMPRE, e la scrive il client: `order_date` è
+// la giornata commerciale calcolata dall'orologio di chi batte, messa sul
+// documento nell'istante in cui il conto nasce (api.js, creaOrdine). Non è
+// mai `null`, non aspetta il server, e vale anche offline.
+//
+// Ma un documento può arrivare monco — importato da un sistema vecchio,
+// nato da una strada che non passava di qui, o semplicemente rimasto
+// indietro di qualche versione — e allora si ripiega su TUTTE le altre
+// date locali che quel conto si porta dietro, in ordine di attendibilità:
+//
+//   1. `order_date`, la giornata scritta alla nascita;
+//   2. `created_at`, l'orario del server (null finché la scrittura è per
+//      strada, quindi non può essere il primo);
+//   3. l'APERTURA scritta dal client (`status_times.aperto` sul conto, che
+//      mapOrder porta in `tempi_conto`): è un ISO dell'orologio di qui,
+//      c'è dal primo istante;
+//   4. la nascita della prima comanda, anch'essa scritta dal client.
+//
+// Così anche un conto monco finisce sotto IL SUO giorno, non in un limbo.
+export function giornataDelConto(o, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  if (!o) return null
+  // `?? null` NON È DECORAZIONE: businessDayKey ha un valore di riserva —
+  // `new Date()` — e passandogli `undefined` risponderebbe OGGI. Un campo
+  // che manca diventerebbe «oggi» invece di «non lo so», e il ripiego dopo
+  // non verrebbe nemmeno provato.
+  const giorno = (quando) => businessDayKey(quando ?? null, cutoffHour)
+  return (
+    o.order_date ||
+    giorno(o.created_at) ||
+    giorno(o.tempi_conto?.[ORDER_OPEN]) ||
+    giorno(o.status_times?.[ORDER_OPEN]) ||
+    giorno((o.comande || [])[0]?.created_at) ||
+    null
+  )
+}
+
+// Raggruppa i conti per giornata: oggi in cima, poi i giorni scorsi dal più
+// recente. Serve a separare con una riga i conti rimasti indietro.
+//
+// IL SEGNAPOSTO «—» NON ESISTE PIÙ. I conti senza data finivano in un
+// gruppo con quel trattino per chiave, e la chiave del gruppo è la stessa
+// cosa che poi va al formattatore delle date: `new Date('—T00:00:00')` non
+// è una data, e in cima al gruppo si leggeva «Invalid Date». Se dopo tutti
+// i ripieghi la data proprio non c'è — documento monco, caso patologico —
+// il conto va sotto OGGI: lì chi lavora lo vede, e non gli si racconta
+// niente che non sia vero.
+export function raggruppaPerGiornata(lista, { giornataDi, oggi }) {
+  const map = new Map()
+  for (const o of lista || []) {
+    const k = giornataDi(o) || oggi
+    if (!map.has(k)) map.set(k, [])
+    map.get(k).push(o)
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] === oggi ? -1 : b[0] === oggi ? 1 : b[0].localeCompare(a[0])))
+    .map(([day, orders]) => ({ day, orders }))
+}
+
+// ── L'INTESTAZIONE DI UNA GIORNATA IN CODA ───────────────────────────
+//
+// La coda separa i conti per giornata: oggi in cima, poi i giorni scorsi
+// con una riga sopra ciascuno. Quella riga diceva «⏳ Da chiudere · ieri»
+// SEMPRE, qualunque scheda fosse aperta — ed è giusta solo dentro «In
+// corso», dove un conto di ieri è davvero roba rimasta da chiudere. Fra i
+// CHIUSI diceva una bugia: quelli sono pagati e chiusi, non c'è più niente
+// da fare. Nella scheda «Tutti», dove i conti sono mescolati, non si può
+// dire niente di più della data — e allora si dice solo quella.
+//
+// La data arriva già scritta da chi chiama (businessDayLabel): qui c'è la
+// regola di cosa dire, non come si formatta un giorno.
+//
+// CON 'TUTTI' si dice solo la data: lì sotto la stessa riga finiscono
+// conti di tre nature, e qualunque etichetta sarebbe giusta per un terzo.
+// In coda non capita — i tre stati sono esclusivi — ma la funzione è
+// chiamata anche dalle viste che smistano tutto in una passata sola.
+export function intestazioneGiornata(filtro, data) {
+  const stati = statiDaFiltro(filtro)
+  if (stati.length > 1) return `📅 ${data}`
+  if (stati[0] === 'chiusi') return `💶 Chiusi · ${data}`
+  if (stati[0] === 'annullati') return `✖️ Annullati · ${data}`
+  return `⏳ Da chiudere · ${data}`
+}
+
+// ── LA CODA VUOTA, DETTA COME È FILTRATA ─────────────────────────────
+//
+// «Nessun ordine in corso» era esatto finché la coda era una scheda sola,
+// e lo è di nuovo adesso che i tre stati si escludono. Con 'tutti' nessun
+// aggettivo è vero per tutti: lì si dice solo che non c'è niente, ed è la
+// verità intera.
+const AGGETTIVO_STATO = Object.fromEntries(STATI_CODA.map((s) => [s.id, s.aggettivo]))
+
+export function frasePerCodaVuota(filtro, soloOggi = false) {
+  const stati = statiDaFiltro(filtro)
+  const che = stati.length === 1 ? ` ${AGGETTIVO_STATO[stati[0]]}` : ''
+  return `Nessun ordine${che}${soloOggi ? ' oggi' : ''}.`
+}
+
+// ── LA MEMORIA DELLE COLONNE SPENTE SI RIPULISCE ─────────────────────
+//
+// Il terminale poteva tenersi id di colonne che non esistono più — le
+// corsie sono state rimaneggiate più volte — e un id morto teneva acceso
+// il badge dei filtri per sempre, con l'aggravante che nell'elenco non
+// c'era niente da riaccendere per spegnerlo (BUG-058).
+//
+// Tutti gli id di corsia che l'app conosce, in qualunque assetto: le
+// colonne del banco, quelle dei conti, e le due del pronto diviso — che
+// esistono solo dove il ritiro c'è, ma spegnerne una e poi riunire il
+// pronto è una scelta che va ricordata, non buttata.
+const ID_CORSIE = new Set([
+  // I titoli seguono il mondo della consegna, gli id no: qui servono
+  // soltanto quelli, e uno dei due assetti li nomina tutti.
+  ...corsieDelBanco(true).map((c) => c.id),
+  ...CORSIE_PRONTO_DIVISO.map((c) => c.id),
+  ...schedeCoda(false).map(([id]) => id),
+])
+
+// La memoria del terminale, ripulita dagli id morti. Si chiama all'apertura
+// della coda: un id che nessun assetto disegna più non si riaccende da
+// nessuna parte, e restando lì terrebbe acceso il chip per sempre.
+export function soloCorsieVive(nascoste) {
+  return (nascoste || []).filter((id) => ID_CORSIE.has(id))
+}
+
 // ── LA COLONNA CHE IL LOCALE NON USA ──────────────────────────
 //
 // Col locale che fa nascere le comande già in preparazione, «Da fare» non
@@ -717,6 +1328,61 @@ export function corsieVisibili(corsie, nascoste = []) {
 export function corsieSceglibili(corsie, { passoDiNascita = null } = {}) {
   if (passoDiNascita !== ORDER_STATUSES.IN_PREPARAZIONE) return corsie || []
   return (corsie || []).filter((c) => c.id !== 'da-fare')
+}
+
+// ── I CHIP DELLE COLONNE, E DOVE STA IL ✂️ ─────────────────────────
+//
+// La fila dei filtri, al banco, ha un chip per colonna. Il taglio del
+// pronto ne era un altro — «✂️ Dividi il pronto», in fondo, dopo
+// «✖️ Annullate» — e non funzionava: «Dividi il pronto dobbiamo integrarlo
+// meglio con gli altri due bottoni, in qualche modo non si capisce a che
+// serve. E poi è troppo lungo» (l'utente, 20/08/2026).
+//
+// PERCHÉ NON SI CAPIVA. In quella fila ogni chip ACCENDE O SPEGNE la sua
+// colonna; quello lì cambiava il MODO in cui una colonna è fatta. Stesso
+// vestito, due mestieri diversi, e per giunta lontano dalla colonna di cui
+// parlava: l'unico modo di capirlo era premerlo e guardare cosa succedeva
+// a mezzo schermo di distanza.
+//
+// DOVE AGISCE. Adesso il tastino sta ATTACCATO al chip della colonna che
+// divide, dentro lo stesso gruppo, e il suo effetto si vede lì: da unito
+// c'è «Da servire/Ritirare ✂️», premuto diventa «Da servire | Da ritirare
+// 🔗». L'interruttore è nel posto della cosa che cambia — niente frase da
+// leggere, niente chip orfano in fondo alla fila.
+//
+// SOLO COL RITIRO ATTIVO: «ovviamente vale solo se è attivo il ritiro al
+// banco» (l'utente, 20/08/2026). Col solo servizio non c'è niente da
+// separare, e un tasto che non fa niente è peggio di un tasto che non c'è.
+//
+// Questa funzione dice SOLO come i chip si raggruppano; il vestito e i
+// nomi dei tasti stanno nella pagina. Il gruppo del pronto tiene una
+// corsia (unito) o due (diviso), e `taglio` dice se il tastino ci va.
+//
+// «DIVISO» NON È UN CAMPO: era scritto accanto alle corsie e valeva sempre
+// `corsie.length > 1`, cioè la stessa cosa detta due volte — un campo che
+// si può contraddire col suo array è un campo che prima o poi lo fa. Chi
+// disegna guarda quante corsie ha in mano.
+const CORSIE_DEL_PRONTO = new Set(['al-ritiro', ...CORSIE_PRONTO_DIVISO.map((c) => c.id)])
+
+export function gruppiColonne(sceglibili, { taglioPossibile = false } = {}) {
+  const gruppi = []
+  let pronto = null
+  for (const c of sceglibili || []) {
+    if (!CORSIE_DEL_PRONTO.has(c.id)) {
+      gruppi.push({ id: c.id, corsie: [c], taglio: false })
+      continue
+    }
+    // Le due corsie del pronto diviso arrivano una dopo l'altra e stanno
+    // nello STESSO gruppo: è quello che le fa leggere come una colonna
+    // sola aperta in due, e non come due colonne qualsiasi.
+    if (!pronto) {
+      pronto = { id: 'pronto', corsie: [c], taglio: taglioPossibile }
+      gruppi.push(pronto)
+    } else {
+      pronto.corsie.push(c)
+    }
+  }
+  return gruppi
 }
 
 export function corsieDaMostrare(corsie, nascoste = [], { passoDiNascita = null } = {}) {

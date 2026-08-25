@@ -7,8 +7,8 @@
 // non si accende: lì ci si collega alla stampante vera, ed è il posto dove
 // provarla davvero.
 
-import { describe, it, expect, vi } from 'vitest'
-import { stampanteFintaAttiva, creaStampanteFinta } from '../../src/lib/stampanteFinta.js'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { stampanteFintaAttiva, creaStampanteFinta, forzaStampanteFinta } from '../../src/lib/stampanteFinta.js'
 
 describe('quando si accende la stampante finta', () => {
   it('col server di sviluppo', () => {
@@ -102,5 +102,37 @@ describe('quello che esce dalla stampante finta', () => {
     expect(doc.write.mock.calls[1][0]).not.toContain('prima')
     vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+})
+
+// ── L'INTERRUTTORE DEL TERMINALE (sezione Dev) ───────────────────────
+//
+// «Se non ho la stampante voglio poter fare le prove di stampa simulata
+// anche sulla versione web» (l'utente, 20/08). Sul sito di TEST l'ambiente
+// è quello vero e la finta resta spenta di suo — la regola qui sopra non
+// cambia — ma il TERMINALE può forzarla dalla sezione Dev: localStorage,
+// vale solo per quel dispositivo, e vince in tutti e due i versi.
+describe('la forzatura dal terminale', () => {
+  afterEach(() => {
+    forzaStampanteFinta(null)
+  })
+
+  const AMBIENTE_TEST = { DEV: false, MODE: 'production' }
+
+  it('accesa dalla sezione Dev, simula anche sul sito di test', () => {
+    forzaStampanteFinta(true)
+    expect(stampanteFintaAttiva(AMBIENTE_TEST)).toBe(true)
+  })
+
+  it('e vince anche al contrario: stampante vera in locale', () => {
+    forzaStampanteFinta(false)
+    expect(stampanteFintaAttiva({ DEV: true })).toBe(false)
+  })
+
+  it('tolta la forzatura, torna la regola d’ambiente', () => {
+    forzaStampanteFinta(true)
+    forzaStampanteFinta(null)
+    expect(stampanteFintaAttiva(AMBIENTE_TEST)).toBe(false)
+    expect(stampanteFintaAttiva({ DEV: true })).toBe(true)
   })
 })

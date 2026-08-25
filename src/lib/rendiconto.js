@@ -24,6 +24,7 @@
 
 import { recipeCost } from './pricing.js'
 import { discountFactor } from './eta.js'
+import { scontoTotale } from './pagamento.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
@@ -46,11 +47,14 @@ const recipeOf = (line, drink) =>
 // Costo di UNA riga (già moltiplicato per la quantità).
 // `noto: false` quando la ricetta manca del tutto: il costo è 0 ma non è un
 // costo, è un "non lo so" — chi mostra il dato deve poterli distinguere.
-export function lineCost(line, drink, itemsById) {
+// `gross: false` per il costo al NETTO dell'IVA d'acquisto: serve dove il
+// costo si confronta con un incasso già scorporato (il mensile per macro),
+// altrimenti il margine esce falsato di un'aliquota.
+export function lineCost(line, drink, itemsById, { gross = true } = {}) {
   const qty = Number(line?.qty) || 0
   const recipe = recipeOf(line, drink)
   if (qty <= 0 || recipe.length === 0) return { costo: 0, noto: false, mancanti: [] }
-  const { cost, missing } = recipeCost(recipe, itemsById)
+  const { cost, missing } = recipeCost(recipe, itemsById, { gross })
   return { costo: round2(cost * qty), noto: cost > 0, mancanti: missing }
 }
 
@@ -91,7 +95,9 @@ export function orderRecap(order, { drinksById, itemsById } = {}) {
     })
   }
 
-  const sconto = round2(Number(order?.discount_amount) || 0)
+  // TUTTI gli sconti del conto, non uno: da quando ognuno cade sulle righe
+  // che si stanno riscuotendo, un conto ne può portare più d'uno.
+  const sconto = scontoTotale(order)
   const netto = round2(lordo - sconto)
   const pagato = order?.payment_status === 'pagato'
   // Metodi dai pagamenti registrati; per i conti vecchi, chiusi prima che

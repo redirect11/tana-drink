@@ -154,6 +154,18 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
           notification: { icon: '/logo.png', badge: '/logo.png' },
         },
       })
+      // SEGNARE CHE È PARTITO. Le comande annunciate si scrivono
+      // sull'ordine: se qualcuno riporta indietro lo stato e lo rimette
+      // «pronto», il cliente non riceve un secondo squillo per un drink che
+      // ha già in mano — al secondo si smette di credere al primo.
+      // Si segna DOPO l'invio riuscito: un avviso mai partito non deve
+      // risultare dato. La scrittura fa ripartire questo stesso trigger,
+      // che con la comanda ormai segnata non manda più niente.
+      if (msg.comande?.length) {
+        await event.data.after.ref
+          .update({ pronto_avvisate: FieldValue.arrayUnion(...msg.comande) })
+          .catch((e) => console.error('[push] pronto_avvisate:', e?.message || e))
+      }
     } catch (e) {
       // Token scaduto/non valido: rimuovilo dall'ordine, niente retry.
       if (e?.code === 'messaging/registration-token-not-registered') {
@@ -176,15 +188,18 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
     })
   }
 
-  // 3) Push allo staff DI SALA quando c'è un ordine pronto da servire al
-  //    tavolo. Non al bancone: è il bancone che lo segna pronto.
+  // 3) Push allo staff quando un drink e' pronto: da portare al tavolo
+  //    oppure da consegnare a chi viene a ritirarlo. A TUTTI I TERMINALI
+  //    tranne quello che ha premuto «pronto», che sa gia'. Prima si
+  //    smistava per ruolo — roles: ['staff'] — e non arrivava a nessuno
+  //    (BUG-036).
   const serveMsg = decideStaffServePush(before, after)
   if (serveMsg) {
     await pushToStaff({
       kind: 'staff_serve',
       orderId: event.params.orderId,
       msg: serveMsg,
-      roles: ['staff'],
+      dispositivoOrigine: after?.avanzamento_device ?? null,
     })
   }
 })
@@ -193,30 +208,39 @@ exports.notifyOrderUpdate = onDocumentUpdated({ ...OPTS, document: 'orders/{orde
 // (staff_tokens). La notifica vera (titolo/corpo/vibrazione) la costruisce il
 // service worker dal campo `kind`, così arriva anche ad app in background o
 // chiusa. Rimuove in automatico i token scaduti.
-async function pushToStaff({ kind, orderId, msg, url = '/bar', roles = null, dispositivoOrigine = null }) {
+async function pushToStaff({ kind, orderId, msg, url = '/bar', dispositivoOrigine = null }) {
   const tokensSnap = await db.collection('staff_tokens').get()
   // Chi avvisare lo decide destinatariPush (push-core, pura e provata):
-  // `roles` dove serve — i drink pronti DA SERVIRE riguardano la sala, non
-  // il bancone che li segna pronti — e mai il terminale da cui è partito
-  // l'ordine, che sa già di averlo mandato.
+  // tutti i terminali registrati, tranne quello da cui è partita la cosa
+  // che si sta annunciando — chi ha battuto l'ordine, o chi ha appena
+  // premuto «pronto», sa già di averlo fatto.
   const ammessi = new Set(
     destinatariPush(
-      tokensSnap.docs.map((d) => ({
-        token: d.get('token'),
-        role: d.get('role'),
-        device: d.get('device'),
-      })),
-      { roles, dispositivoOrigine }
+      tokensSnap.docs.map((d) => ({ token: d.get('token'), device: d.get('device') })),
+      { dispositivoOrigine }
     ).map((t) => t.token)
   )
   const docs = tokensSnap.docs.filter((d) => ammessi.has(d.get('token')))
-  if (docs.length === 0) return
+  // A VOCE ALTA CHI SI E' AVVISATO. BUG-036 era invisibile dai log: la
+  // funzione usciva in silenzio con zero destinatari, identica a una che
+  // non era mai stata chiamata, e per scoprirlo e' servito leggere
+  // `staff_tokens` a mano. Una riga sola dice se il messaggio e' partito
+  // e a quanti terminali.
+  if (docs.length === 0) {
+    console.log(`[push staff] ${kind}: nessun terminale da avvisare (${tokensSnap.size} registrati)`)
+    return
+  }
 
   const res = await getMessaging().sendEachForMulticast({
     tokens: docs.map((d) => d.get('token')),
     data: { kind, order_id: orderId, title: msg.title, body: msg.body, url },
     webpush: { headers: { Urgency: 'high', TTL: '600' } },
   })
+
+  console.log(
+    `[push staff] ${kind}: inviata a ${docs.length}/${tokensSnap.size} terminali ` +
+      `(ok ${res.successCount}, ko ${res.failureCount})`
+  )
 
   await Promise.all(
     res.responses.map((r, i) =>

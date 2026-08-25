@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
+import ToggleRow from './ToggleRow.jsx'
 import {
   avvisiPerRuolo,
   avvisoAttivo,
@@ -51,7 +52,7 @@ export default function AvvisiPanel({ gestore }) {
           interrompe: arriva mentre stai battendo un conto o contando la
           cassa. Il fumetto sta solo nella coda ordini — che è il posto dove
           gli ordini si aspettano — e toccandolo apre gli avvisi. */}
-      <h4 style={{ margin: '16px 0 4px' }}>Dove compaiono, ad app aperta</h4>
+      <h4>Dove compaiono, ad app aperta</h4>
       <div className="mode-choice">
         {[
           ['toast', '🔔 In alto, ovunque'],
@@ -83,20 +84,3 @@ export default function AvvisiPanel({ gestore }) {
   )
 }
 
-function ToggleRow({ label, desc, checked, onChange, disabled }) {
-  return (
-    <div className="toggle-row">
-      <div>
-        <div>{label}</div>
-        {desc && <div className="desc">{desc}</div>}
-      </div>
-      <input
-        type="checkbox"
-        className="toggle"
-        checked={!!checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-    </div>
-  )
-}

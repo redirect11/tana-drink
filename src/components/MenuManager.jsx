@@ -4,7 +4,7 @@ import {
   fetchDrinks,
   updateDrink,
   deleteDrink,
-  fetchCategories,
+  subscribeCategories,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -23,6 +23,8 @@ import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
+import EtichettaMacro from './EtichettaMacro.jsx'
+import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -38,6 +40,9 @@ const EMPTY = {
   description: '',
   category_id: '',
   price: '',
+  // Vuoto = si usa l'IVA di vendita del locale. Un prodotto nuovo non deve
+  // chiedere niente a chi non ha eccezioni da scrivere.
+  sale_vat: '',
   recipe: '',
   available: true,
   image_url: null,
@@ -93,13 +98,11 @@ export default function MenuManager() {
   async function load() {
     setLoading(true)
     try {
-      const [d, c, inv] = await Promise.all([
+      const [d, inv] = await Promise.all([
         fetchDrinks(),
-        fetchCategories(),
         fetchInventoryItems().catch(() => []), // l'inventario richiede auth: in caso fallisca, lista vuota
       ])
       setDrinks(d)
-      setCategories(c)
       setInventory(inv)
     } catch (e) {
       setError(e.message)
@@ -111,6 +114,14 @@ export default function MenuManager() {
   useEffect(() => {
     load()
   }, [])
+
+  // LE CATEGORIE RESTANO IN ASCOLTO finché la pagina è aperta. Erano lette
+  // una volta sola all’apertura, e il numero di «Categorie (N)» nel menu a
+  // lato restava quello: chi ne aggiungeva una dall’altro terminale (o la
+  // creava al volo dalla scheda di un drink) vedeva il conteggio vecchio
+  // finché non entrava nella sezione. Così il numero è sempre quello vero,
+  // e rinomine e cancellazioni si vedono senza ricaricare.
+  useEffect(() => subscribeCategories(setCategories, () => {}), [])
 
   // Crea una categoria al volo dal form drink e la restituisce.
   async function handleCreateCategory(name) {
@@ -300,6 +311,7 @@ export default function MenuManager() {
         initial={editing === 'new' ? copiaDa || EMPTY : editing}
         categories={categories}
         inventory={inventory}
+        saleVatLocale={settings.sale_vat}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}
@@ -316,8 +328,8 @@ export default function MenuManager() {
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
     { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
-    { id: 'categorie', icona: '🏷', label: `Categorie (${categories.length})` },
-    { id: 'macro', icona: '🗂', label: 'Macro-categorie' },
+    { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
+    { id: 'macro', icona: '🗂️', label: 'Macro-categorie' },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
   ]
 
@@ -325,10 +337,7 @@ export default function MenuManager() {
     return (
       <div>
         <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
-        <MacroMenuPanel
-          categories={categories}
-          onChange={async () => setCategories(await fetchCategories())}
-        />
+        <MacroMenuPanel categories={categories} />
       </div>
     )
   }
@@ -337,10 +346,7 @@ export default function MenuManager() {
     return (
       <div>
         <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
-        <CategoryManager
-          categories={categories}
-          onChange={async () => setCategories(await fetchCategories())}
-        />
+        <CategoryManager categories={categories} />
       </div>
     )
   }
@@ -579,16 +585,32 @@ export default function MenuManager() {
 // ── MACRO-CATEGORIE DEL MENÙ ─────────────────────────────────────────
 //
 // Le stesse macro del magazzino, ma dall'altro lato del banco: qui si
-// raggruppa quello che si VENDE. Servono per sapere quanto è entrato su
-// «Cocktail classici» e confrontarlo con quanto è uscito sulla macro di
-// spesa corrispondente — l'aggancio si sceglie in Magazzino, dove stanno
-// le macro di acquisto.
-function MacroMenuPanel({ categories, onChange }) {
+// raggruppa quello che si VENDE. Sono queste le righe di «Statistiche →
+// Mensile per macro»: ogni vendita ci conta INTERA, incasso e costo dei
+// suoi ingredienti insieme (REQ-MAG-015).
+//
+// GLI ELENCHI SONO DUE APPOSTA, e la domanda è chiusa (19/08, REQ-MAG-015):
+// uno per quello che si COMPRA, uno per quello che si VENDE. Un elenco solo
+// non reggerebbe — la Schweppes si compra in «birre e bibite» e si vende
+// dentro un Gin Tonic, che sta in «alcolici e distillati»: sono due tagli
+// diversi della stessa merce, non due nomi per la stessa cosa.
+//
+// L'aggancio «a quale macro di spesa corrisponde» (`macro_menu_id`) sta in
+// Magazzino, e questa tabella non lo legge: serve il giorno in cui gli
+// acquisti avranno la loro schermata, per mettere speso e incassato uno
+// accanto all'altro. Toglierlo adesso vorrebbe dire richiedere a mano un
+// lavoro già fatto, e chi l'ha compilato lo ha fatto una volta sola.
+//
+// Su `tana-drink-test` le macro ci sono (quattro d'acquisto e quattro di
+// vendita, con gli agganci); in produzione `macro_categories` è ancora
+// vuota e ci resta finché non arriva il via libera. Lì «Mensile per macro»
+// non mostra numeri ma il suo messaggio, che dice dove crearle: non è un
+// guasto, è un elenco che nessuno ha ancora riempito.
+function MacroMenuPanel({ categories }) {
   const [macros, setMacros] = useState([])
-  const ricarica = async () => {
-    setMacros(await fetchMacroCategories('menu'))
-    await onChange()
-  }
+  // Solo le macro: le categorie le tiene aggiornate la sottoscrizione della
+  // pagina, e rileggerle qui sarebbe un giro in più per lo stesso dato.
+  const ricarica = async () => setMacros(await fetchMacroCategories('menu'))
   useEffect(() => {
     fetchMacroCategories('menu').then(setMacros).catch(() => {})
   }, [])
@@ -606,9 +628,24 @@ function MacroMenuPanel({ categories, onChange }) {
 
 // --- Gestione categorie -------------------------------------------------
 
-function CategoryManager({ categories, onChange }) {
+// L’elenco arriva dalla sottoscrizione della pagina: dopo una scrittura non
+// si richiama nessuno, la lista si riscrive da sola (Firestore avvisa subito,
+// anche prima che la scrittura arrivi al server).
+function CategoryManager({ categories }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
+  // LE MACRO SERVONO ANCHE QUI. Questo elenco mostrava nome, icona e
+  // colore: a quale gruppo appartenesse una categoria — o che non ne
+  // avesse nessuno — si scopriva solo aprendo il pannello delle macro.
+  // Solo le macro: le categorie le tiene aggiornate la sottoscrizione
+  // della pagina.
+  const [macros, setMacros] = useState([])
+  useEffect(() => {
+    fetchMacroCategories('menu')
+      .then(setMacros)
+      .catch(() => {})
+  }, [])
+  const indice = useMemo(() => indiceMacro(macros), [macros])
 
   async function add() {
     if (!name.trim()) return
@@ -616,7 +653,6 @@ function CategoryManager({ categories, onChange }) {
     try {
       await createCategory({ name: name.trim(), sort_order: categories.length })
       setName('')
-      await onChange()
     } finally {
       setBusy(false)
     }
@@ -626,13 +662,11 @@ function CategoryManager({ categories, onChange }) {
     const n = prompt('Nuovo nome categoria:', cat.name)
     if (n == null || !n.trim()) return
     await updateCategory(cat.id, { name: n.trim() })
-    await onChange()
   }
 
   async function remove(cat) {
     if (!confirm(`Eliminare la categoria “${cat.name}”? I drink resteranno, ma senza categoria.`)) return
     await deleteCategory(cat.id)
-    await onChange()
   }
 
   // Scambia l'ordine con il vicino (su/giù).
@@ -645,7 +679,6 @@ function CategoryManager({ categories, onChange }) {
       updateCategory(a.id, { sort_order: b.sort_order }),
       updateCategory(b.id, { sort_order: a.sort_order }),
     ])
-    await onChange()
   }
 
   return (
@@ -673,6 +706,7 @@ function CategoryManager({ categories, onChange }) {
                 {c.icon || '•'}
               </span>
               {c.name}
+              <EtichettaMacro macro={macroDiCategoria(c, indice)} />
             </span>
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
@@ -686,7 +720,7 @@ function CategoryManager({ categories, onChange }) {
             <button
               className={`chip ${!c.icon ? 'active' : ''}`}
               title="Nessuna icona"
-              onClick={() => updateCategory(c.id, { icon: null }).then(onChange)}
+              onClick={() => updateCategory(c.id, { icon: null })}
             >
               ∅
             </button>
@@ -694,7 +728,7 @@ function CategoryManager({ categories, onChange }) {
               <button
                 key={ic}
                 className={`chip ${c.icon === ic ? 'active' : ''}`}
-                onClick={() => updateCategory(c.id, { icon: ic }).then(onChange)}
+                onClick={() => updateCategory(c.id, { icon: ic })}
               >
                 {ic}
               </button>
@@ -705,11 +739,11 @@ function CategoryManager({ categories, onChange }) {
             <input
               type="color"
               value={c.color || catColor(c)}
-              onChange={(e) => updateCategory(c.id, { color: e.target.value }).then(onChange)}
+              onChange={(e) => updateCategory(c.id, { color: e.target.value })}
               style={{ width: 40, height: 28, padding: 0, border: 'none', background: 'none' }}
             />
             {c.color && (
-              <button className="btn ghost small" onClick={() => updateCategory(c.id, { color: null }).then(onChange)}>
+              <button className="btn ghost small" onClick={() => updateCategory(c.id, { color: null })}>
                 Auto
               </button>
             )}

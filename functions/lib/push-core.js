@@ -20,25 +20,61 @@ function countComande(o, status) {
   return o.status === status ? 1 : 0
 }
 
+// QUALI comande sono pronte, non quante. Serve a squillare UNA VOLTA SOLA
+// per comanda: contarle non basta, perché una comanda riportata indietro e
+// rimessa «pronto» fa risalire il totale, e il cliente si prenderebbe il
+// secondo squillo per un drink che ha già in mano.
+// I conti vecchi non hanno l'elenco delle comande: valgono per uno solo.
+function idsPronte(o) {
+  if (!o) return []
+  if (Array.isArray(o.comande)) {
+    return o.comande.filter((c) => c && c.status === 'pronto').map((c, i) => c.id || `#${i}`)
+  }
+  return o.status === 'pronto' ? ['#legacy'] : []
+}
+
 // Dati (before, after) di un documento ordine. Restituisce il messaggio da
 // inviare ({ title, body }) oppure null se non va notificato nulla.
+//
+// Sul «pronto» il messaggio porta anche `comande`: gli identificativi che
+// chi invia deve segnare in `pronto_avvisate` sull'ordine, così quello
+// squillo non si ripete più per quelle comande.
 function decideOrderPush(before, after) {
   if (!after || !after.push_token) return null
 
-  // Una comanda in più è passata a "pronto" (vale anche per le aggiunte
-  // a un conto aperto: ogni comanda pronta notifica il cliente).
-  // SOLO col RITIRO AL BANCO: è l'unico caso in cui il cliente deve fare
-  // qualcosa (alzarsi e venire a prendere il drink). Al tavolo ci pensa il
-  // servizio, quindi avvisarlo sarebbe un disturbo inutile.
+  // Una comanda è appena passata a "pronto" (vale anche per le aggiunte a
+  // un conto aperto: ogni comanda pronta avvisa il cliente).
+  //
+  // SOLO COL RITIRO AL BANCO: è l'unico caso in cui il cliente deve fare
+  // qualcosa — alzarsi e venire a prendere il drink. Al tavolo ci pensa chi
+  // porta il vassoio, e avvisarlo sarebbe un disturbo inutile.
+  //
+  // UNA VOLTA SOLA PER COMANDA. Al banco succede: si segna «pronto» la
+  // comanda sbagliata, la si riporta indietro, la si rimette pronta un
+  // minuto dopo. Il cliente non deve ricevere due squilli per lo stesso
+  // drink — al secondo si smette di credere al primo. Le comande già
+  // annunciate stanno scritte sull'ordine (`pronto_avvisate`); finché quel
+  // campo non c'è, l'avviso resta legato al solo passaggio di stato, che è
+  // come si comportava prima.
+  //
+  // CON GLI STATI DI SERVIZIO SPENTI questo passaggio non esiste — nessuna
+  // comanda arriva mai a «pronto» — e non parte niente. Non è un caso
+  // scoperto: è che non c'è niente da annunciare, perché chi batte l'ordine
+  // lo prepara e lo consegna sul momento. La pagina del QR resta comunque
+  // aggiornata, ed è quella che il cliente guarda.
+  //
   // Il push arriva comunque solo a chi ha ordinato dal menù: gli ordini
-  // battuti dallo staff nascono senza push_token (vedi sopra).
-  if (
-    after.service_mode === 'banco' &&
-    countComande(after, 'pronto') > countComande(before, 'pronto')
-  ) {
-    return {
-      title: '🔔 Il tuo drink è pronto!',
-      body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
+  // battuti dallo staff nascono senza push_token.
+  if (after.service_mode === 'banco') {
+    const prima = idsPronte(before)
+    const gia = Array.isArray(after.pronto_avvisate) ? after.pronto_avvisate : []
+    const nuove = idsPronte(after).filter((id) => !prima.includes(id) && !gia.includes(id))
+    if (nuove.length > 0) {
+      return {
+        title: '🔔 Il tuo drink è pronto!',
+        body: `Ordine #${after.daily_number ?? '—'} pronto al ritiro.`,
+        comande: nuove,
+      }
     }
   }
 
@@ -82,16 +118,27 @@ function decideStaffCallPush(call) {
   }
 }
 
-// Ordine passato a "pronto" da servire al tavolo → notifica per lo
-// staff di sala (il ritiro al banco lo gestisce il cliente).
+// Una comanda e' passata a "pronto": c'e' un drink fermo sul banco che
+// aspetta qualcuno.
+//
+// VALE ANCHE PER IL RITIRO. Prima qui si usciva subito sui conti da
+// ritirare al banco, dando per scontato che ci pensasse il cliente. Ma il
+// cliente lo avvisiamo solo se ha ordinato dal menu' (e' il `push_token`
+// scritto sull'ordine), e un conto battuto al POS non ce l'ha: su quelli
+// non partiva niente per nessuno e il drink restava li' (BUG-036).
+//
+// Chi ha appena premuto «pronto» non ha bisogno che glielo si dica: di
+// quello si occupa destinatariPush, col dispositivo di origine.
 function decideStaffServePush(before, after) {
   if (!after) return null
   if (countComande(after, 'pronto') <= countComande(before, 'pronto')) return null
-  if (after.service_mode === 'banco') return null
+  const alBanco = after.service_mode === 'banco'
   const tavolo = after.table_label ? ` · Tavolo ${after.table_label}` : ''
   const nome = after.customer_name ? ` — ${after.customer_name}` : ''
   return {
-    title: '🫱 Drink pronti da servire',
+    // Due parole diverse perche' sono due gesti diversi: uno lo si porta,
+    // l'altro lo si consegna a chi viene a prenderlo.
+    title: alBanco ? '🚶 Drink pronti da consegnare' : '🫱 Drink pronti da servire',
     body: `Ordine #${after.daily_number ?? '—'}${tavolo}${nome}`,
   }
 }
@@ -170,15 +217,26 @@ function decideNewOrderStaffPush(before, after) {
       }
 }
 
-// A CHI MANDARLO. `tokens` sono i dispositivi registrati
-// ({ token, role, device }); `roles` limita per ruolo dove serve (i drink da
-// servire riguardano la sala); `dispositivoOrigine` e' il terminale da cui e'
-// partita la cosa che si sta annunciando, e quello si salta.
+// A CHI MANDARLO. `tokens` sono i dispositivi registrati ({ token, device });
+// `dispositivoOrigine` e' il terminale da cui e' partita la cosa che si sta
+// annunciando, e quello si salta.
+//
+// NON SI SMISTA PER RUOLO. Qui c'era un filtro `roles`, e il «pronto da
+// servire» partiva solo verso le righe con `role: 'staff'`. Ma quel campo
+// non diceva chi fosse la persona: diceva quale SCHERMATA aveva registrato
+// il dispositivo, e la schermata dove finiscono tutti e' la coda, che ci
+// scriveva 'bartender'. Nessuna riga era mai 'staff', l'elenco restava
+// vuoto e non partiva niente: al banco, drink pronti e nessun avviso
+// (BUG-036).
+//
+// Chi porta i drink non e' un ruolo, e' chi in quel momento e' in piedi. Il
+// solo taglio che regge e' il TERMINALE: si salta quello che ha appena
+// premuto il tasto, perche' sa gia'.
 //
 // Chi si e' registrato prima che il dispositivo venisse segnato non ha
 // `device`: nel dubbio lo si avvisa. Un avviso in piu' si chiude, uno in
 // meno e' un drink che non parte.
-function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {}) {
+function destinatariPush(tokens, { dispositivoOrigine = null } = {}) {
   const righe = (tokens || []).filter((t) => t && t.token)
   // SI SALTA IL TELEFONO, NON LA RIGA. Lo stesso apparecchio puo' avere piu'
   // righe: quella nuova col dispositivo scritto e una vecchia intestata alla
@@ -193,7 +251,6 @@ function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {
   )
   const visti = new Set()
   return righe
-    .filter((t) => (roles ? roles.includes(t.role || 'staff') : true))
     .filter((t) => !suoi.has(t.token))
     .filter((t) => !(dispositivoOrigine && t.device && t.device === dispositivoOrigine))
     // UNA VOLTA A DISPOSITIVO. Lo stesso telefono puo' comparire due volte:
@@ -210,6 +267,7 @@ function destinatariPush(tokens, { roles = null, dispositivoOrigine = null } = {
 module.exports = {
   terminaliDi,
   countComande,
+  idsPronte,
   comandeDaFare,
   idsDaFare,
   destinatariPush,

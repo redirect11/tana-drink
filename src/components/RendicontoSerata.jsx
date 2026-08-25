@@ -100,7 +100,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
     <div className="rendiconto">
       <div className="row between" style={{ alignItems: 'flex-start', gap: 12 }}>
         <div>
-          <h2 style={{ margin: 0 }}>Rendiconto serata</h2>
+          <h2 style={{ margin: 0 }}>Rendiconto chiusura cassa</h2>
           <div className="muted small">
             {fmtData(session?.opened_at)} · {fmtOra(session?.opened_at)} →{' '}
             {session?.closed_at ? fmtOra(session.closed_at) : 'in corso'}

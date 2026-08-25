@@ -96,7 +96,7 @@ si legge in `firestore.rules` e `src/lib/api.js`.
 
 | Collection | Cosa contiene |
 |---|---|
-| `orders` | il CONTO: `order_items` aggregati, più le `comande[]` (invii in preparazione, ognuno col suo stato) |
+| `orders` | il CONTO: `order_items` aggregati, più le `comande[]` (invii in preparazione, ognuno col suo stato) e i `payments[]` (le riscossioni, ognuna con le sue righe e il suo sconto) |
 | `drinks`, `categories` | il listino e le sue categorie |
 | `inventory_*`, `suppliers`, `stock_*`, `purchase_orders`, `supplier_invoices` | magazzino, fornitori, acquisti |
 | `counters` | progressivi: `serial` (assoluto), per giornata, `fatture-<anno>`, `_active_cash` (la cassa aperta) |
@@ -112,9 +112,22 @@ Regole di sopravvivenza del modello:
   le versioni: gli ordini vecchi si normalizzano al volo (REQ-ORD-002),
   le migrazioni sono additive e idempotenti, mai un'app che presuppone la
   migrazione già fatta.
-- **Il magazzino si scala con lo snapshot** della ricetta al momento
-  della preparazione (la ricetta cambia, il drink già fatto no); le
-  modifiche riallineano per differenza, l'annullo reintegra.
+- **Il magazzino si scala con lo snapshot** della ricetta al momento in cui
+  la comanda è **pronta** (la ricetta cambia, il drink già fatto no); le
+  modifiche riallineano per differenza, l'annullo reintegra. Il momento è
+  uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
+  segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
+  magazzino non scrive.
+- **Lo sconto appartiene alla riscossione, non al conto.** Cade sulle
+  righe che si stanno incassando, e all'incasso viene consumato dentro quel
+  pagamento (`payments[].sconto`): due riscossioni scontate sono due sconti,
+  e il residuo è totale − sconti consumati − sconto in preparazione − pagato.
+  Sul documento resta solo quello **in preparazione** (`discount`,
+  `discount_amount`, `discount_items`), perché la selezione vive dentro la
+  schermata e senza le righe scritte un altro terminale leggerebbe un importo
+  senza sapere di che cosa. Chi somma gli sconti passa da `scontoTotale()`
+  (`pagamento.js`), mai da `discount_amount`: su un conto vecchio i due numeri
+  coincidono, su uno di stasera no. Regola completa in REQ-PAG-013.
 - **La giornata è commerciale, non solare** (`businessDay.js`): taglio
   alle 5 del mattino (configurabile), fuso `Europe/Rome` cablato.
 
@@ -138,8 +151,9 @@ Regole di sopravvivenza del modello:
 
 bozza (locale) → conferma = **comanda** con progressivo → stati di
 lavorazione (`ricevuto → in preparazione → pronto → ritirato/servito`,
-con `pagato` e `annullato` a parte) → magazzino scalato alla
-preparazione → pagamento (contanti/carta a mano, SumUp via Functions,
+con `pagato` e `annullato` a parte) → magazzino scalato a **«pronto»**,
+dove il drink è fatto (senza stati di servizio, alla riscossione) →
+pagamento (contanti/carta a mano, SumUp via Functions,
 acconti, gruppi anche alla romana) → chiusura, e il conto sparisce
 subito dalla coda. Aumenti su un conto in corso confluiscono nella
 comanda giusta senza riaprire quelle servite.

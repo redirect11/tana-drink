@@ -35,6 +35,62 @@ describe('decideOrderPush per comande', () => {
     const after = { daily_number: 3, push_token: 't', status: 'pronto', service_mode: 'banco' }
     expect(decideOrderPush(before, after)).not.toBeNull()
   })
+
+  // ── IL CLIENTE SA CHE IL SUO DRINK È PRONTO (REQ-CLI-006) ───
+  //
+  // Su un conto da RITIRO, quando la comanda passa a «pronto» da lì in poi
+  // la palla è del cliente: deve alzarsi e venire al banco. Le cose che qui
+  // fanno la differenza, e che prima non erano provate:
+
+  it('dice QUALI comande ha annunciato, per non annunciarle due volte', () => {
+    const before = ord([c('c1', 'in_preparazione')], { service_mode: 'banco' })
+    const after = ord([c('c1', 'pronto')], { service_mode: 'banco' })
+    expect(decideOrderPush(before, after).comande).toEqual(['c1'])
+  })
+
+  it('UNA VOLTA SOLA: riportata indietro e rimessa pronta, niente secondo squillo', () => {
+    // Al banco succede: si segna «pronto» la comanda sbagliata, la si
+    // riporta indietro, la si rimette pronta un minuto dopo. Il cliente ha
+    // già il drink in mano, e al secondo squillo smette di credere al primo.
+    const avvisate = { service_mode: 'banco', pronto_avvisate: ['c1'] }
+    const indietro = ord([c('c1', 'in_preparazione')], avvisate)
+    const diNuovoPronta = ord([c('c1', 'pronto')], avvisate)
+    expect(decideOrderPush(indietro, diNuovoPronta)).toBeNull()
+    // Ma una comanda NUOVA sullo stesso conto si annuncia eccome: è un
+    // altro drink, e sta fermo sul banco come il primo.
+    const conAggiunta = ord([c('c1', 'pronto'), c('c2', 'pronto')], avvisate)
+    expect(decideOrderPush(diNuovoPronta, conAggiunta).comande).toEqual(['c2'])
+  })
+
+  it('niente squilli per un conto che non è cambiato', () => {
+    // Il documento si riscrive per mille motivi — una nota, il pagamento —
+    // e una comanda già pronta da prima non deve suonare a ogni ritocco.
+    const fermo = ord([c('c1', 'pronto')], { service_mode: 'banco' })
+    expect(decideOrderPush(fermo, { ...fermo, note: 'poco ghiaccio' })).toBeNull()
+  })
+
+  it('col servizio al tavolo non parte niente: ci pensa chi porta il vassoio', () => {
+    const before = ord([c('c1', 'in_preparazione')], { service_mode: 'tavolo' })
+    const after = ord([c('c1', 'pronto')], { service_mode: 'tavolo' })
+    expect(decideOrderPush(before, after)).toBeNull()
+  })
+
+  it('con gli stati del servizio spenti non c’è nessun «pronto» da annunciare', () => {
+    // Senza quei passi la comanda va da «ricevuto» dritta a servita: non
+    // è un caso scoperto, è che non c'è niente da dire — chi batte
+    // l'ordine lo prepara e lo consegna sul momento. La pagina del QR
+    // resta comunque aggiornata, ed è quella che il cliente guarda.
+    const before = ord([c('c1', 'ricevuto')], { service_mode: 'banco' })
+    const after = ord([c('c1', 'ritirato')], { service_mode: 'banco' })
+    expect(decideOrderPush(before, after)).toBeNull()
+  })
+
+  it('senza permesso alle notifiche non c’è token, e non si manda niente', () => {
+    // La pagina col QR resta la strada che funziona sempre.
+    const before = ord([c('c1', 'in_preparazione')], { service_mode: 'banco', push_token: null })
+    const after = ord([c('c1', 'pronto')], { service_mode: 'banco', push_token: null })
+    expect(decideOrderPush(before, after)).toBeNull()
+  })
 })
 
 describe('decideStaffServePush / decideNewOrderStaffPush', () => {

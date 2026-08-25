@@ -157,6 +157,16 @@ export const FILE_REQUISITI = join(
   'requirements.yaml'
 )
 
+// L'altro registro: i difetti veri. Stesso formato, letto dallo stesso
+// parser — chi vuole tutti e due (il documento della specifica) non deve
+// ricostruirsi il percorso a mano.
+export const FILE_BUGS = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'requirements',
+  'bugs.yaml'
+)
+
 export function caricaRequisiti(file = FILE_REQUISITI) {
   return parseRequirementsYaml(readFileSync(file, 'utf8'))
 }
@@ -256,7 +266,15 @@ export function deveNascere(req, esisteGia) {
   return !STATI_CHIUSI.has(String(req?.status || '').toLowerCase())
 }
 
-export const STATI_CHIUSI = new Set(['fixed', 'implemented', 'done'])
+// GLI STATI CHE CHIUDONO UN'ISSUE, in due famiglie che GitHub distingue e
+// che vanno tenute distinte anche qui: una cosa fatta e una cosa che
+// abbiamo deciso di non fare non si leggono allo stesso modo fra sei mesi.
+export const STATI_FATTI = new Set(['fixed', 'implemented', 'done'])
+// Scartate: la voce RESTA nel registro col suo perche' — non si cancella
+// mai niente — ma l'issue va chiusa come «won't do», se no resta li' a
+// chiedere per sempre un lavoro che abbiamo deciso di non fare.
+export const STATI_SCARTATI = new Set(['deprecated', 'wontfix'])
+export const STATI_CHIUSI = new Set([...STATI_FATTI, ...STATI_SCARTATI])
 
 // LE ISSUE PER IDENTIFICATIVO. Il legame col registro è l'id fra parentesi
 // quadre in testa al titolo: è l'unica cosa che non cambia quando una voce

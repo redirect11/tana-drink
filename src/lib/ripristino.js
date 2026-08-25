@@ -100,23 +100,44 @@ export function patchRipristino(order, { comande, nowIso, motivo = null, chi = n
 // `restituito_at`: annullando un conto il saldo torna, e riaprendo quello
 // stesso conto non deve tornare una seconda volta — sarebbe credito
 // inventato, l'errore opposto a quello che si stava correggendo.
+// E ANCHE I BUONI GIÀ CONSUMATI COME SCONTO. Da quando lo sconto viaggia
+// dentro il pagamento (uno sconto per riscossione), un buono speso su due
+// birre resta scritto lì: `payments[].sconto`, col suo `voucher_id`. Riaprendo
+// il conto quel pagamento sparisce — e con lui lo sconto — quindi il credito
+// deve tornare al beneficiario, se no ha pagato due volte le stesse due birre.
+const buonoScontatoNel = (p) =>
+  p?.sconto?.type === 'buono' && p.sconto.voucher_id && !p.sconto.restituito_at
+    ? { voucher_id: p.sconto.voucher_id, amount: r2(p.sconto.amount) }
+    : null
+
 export function buoniDaRestituire(order) {
   const per = new Map()
+  const aggiungi = ({ voucher_id, amount }) => {
+    if (!(amount > 0)) return
+    per.set(voucher_id, r2((per.get(voucher_id) || 0) + amount))
+  }
   for (const p of order?.payments || []) {
-    if (p?.method !== 'buono' || !p.voucher_id || p.restituito_at) continue
-    const amt = r2(p.amount)
-    if (!(amt > 0)) continue
-    per.set(p.voucher_id, r2((per.get(p.voucher_id) || 0) + amt))
+    if (p?.method === 'buono' && p.voucher_id && !p.restituito_at) {
+      aggiungi({ voucher_id: p.voucher_id, amount: r2(p.amount) })
+    }
+    const sconto = buonoScontatoNel(p)
+    if (sconto) aggiungi(sconto)
   }
   return [...per.entries()].map(([voucher_id, amount]) => ({ voucher_id, amount }))
 }
 
-// Le righe di incasso col buono, segnate come restituite: si scrivono
-// sull'ordine insieme allo storno, così nessuno le restituisce di nuovo.
+// Le righe di incasso col buono — e gli sconti col buono che si portano
+// dentro — segnate come restituite: si scrivono sull'ordine insieme allo
+// storno, così nessuno le restituisce di nuovo.
 export function segnaBuoniRestituiti(payments, nowIso) {
-  return (payments || []).map((p) =>
-    p?.method === 'buono' && p.voucher_id && !p.restituito_at
-      ? { ...p, restituito_at: nowIso }
-      : p
-  )
+  return (payments || []).map((p) => {
+    let out = p
+    if (p?.method === 'buono' && p.voucher_id && !p.restituito_at) {
+      out = { ...out, restituito_at: nowIso }
+    }
+    if (buonoScontatoNel(p)) {
+      out = { ...out, sconto: { ...p.sconto, restituito_at: nowIso } }
+    }
+    return out
+  })
 }

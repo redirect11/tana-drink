@@ -50,7 +50,7 @@ export default function AvvisiSpenti({ ruolo }) {
     if (nuovo === 'ok') {
       const uid = auth.currentUser?.uid
       const token = await getPushToken()
-      if (uid && token) saveStaffToken(uid, token, ruolo, idDispositivo()).catch(() => {})
+      if (uid && token) saveStaffToken(uid, token, idDispositivo()).catch(() => {})
     }
   }
 

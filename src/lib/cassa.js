@@ -8,7 +8,7 @@
 //
 // Logica pura (niente Firebase), interamente testabile.
 
-import { orderDue } from './pagamento.js'
+import { orderDue, scontoTotale } from './pagamento.js'
 import { CASH_METHOD_ORDER } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
@@ -96,7 +96,7 @@ export function cashRecap(orders, session, nowIso) {
       }
     } else if (o?.payment_status === 'pagato' && inRange(o?.paid_at, from, to)) {
       // Chiusura "secca" (contanti/singolo ordine): l'intero conto scontato.
-      const amt = round2((Number(o.total) || 0) - (Number(o.discount_amount) || 0))
+      const amt = round2((Number(o.total) || 0) - scontoTotale(o))
       bump(o.paid_at, amt, o.payment_method || 'banco', nomeDi(o.placed_by))
       collected += amt
     }
@@ -107,7 +107,7 @@ export function cashRecap(orders, session, nowIso) {
     // Sconti concessi sui conti chiusi in questa cassa: sono già dedotti dagli
     // incassi, ma vanno mostrati per sapere quanto si è "lasciato sul tavolo".
     if (o?.payment_status === 'pagato' && inRange(o?.paid_at, from, to)) {
-      sconti = round2(sconti + (Number(o.discount_amount) || 0))
+      sconti = round2(sconti + scontoTotale(o))
     }
 
     if (o?.payment_status !== 'pagato') {

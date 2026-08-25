@@ -30,8 +30,9 @@ import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
+import { recordNotif } from '../lib/notifyStore.js'
 import { rememberOrderId } from '../lib/cart.js'
-import { isGestore, isPersonale } from '../lib/ruoli.js'
+import { isPersonale } from '../lib/ruoli.js'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
@@ -49,19 +50,16 @@ export default function OrderStatusPage() {
   const [saving, setSaving] = useState(false)
   const navigate = useNavigate()
   const [confirmCancel, setConfirmCancel] = useState(false)
-  // MODIFICARE VUOL DIRE POTER AGGIUNGERE. Qui si cambiavano solo le
-  // quantità di quello che c'era già: chi ha preso l'ordine e si sente dire
-  // «aggiungi anche una birra» doveva battere un secondo conto. Il tasto
-  // apre la schermata del conto — la stessa del banco, con la griglia dei
-  // prodotti — senza la cassa, che non è cosa della sala.
-  const [modificaPos, setModificaPos] = useState(false)
-  // Stessa schermata, aperta però sul pagamento: chi serve al tavolo incassa
-  // lì, e non deve passare dal conto per premere un secondo tasto.
-  // Ci si arriva anche da fuori, con «?pagamento=1»: è il tasto «Incassa»
-  // delle corsie di stato in coda, che porta dritto qui invece di far
-  // aprire il conto e cercare un secondo tasto col cliente davanti.
   const [ricerca] = useSearchParams()
-  const [pagamentoPos, setPagamentoPos] = useState(ricerca.get('pagamento') === '1')
+  // Il conto aperto direttamente sul pagamento: è il tasto «Incassa» delle
+  // corsie di stato in coda, che porta dritto all'incasso invece di far
+  // aprire il conto e cercare un secondo tasto col cliente davanti.
+  const apriPagamento = ricerca.get('pagamento') === '1'
+  // LA STESSA PAGINA CAMBIA MESTIERE A SECONDA DI CHI GUARDA. Chi lavora
+  // entra nel CONTO; con «?cliente=1» chiede invece la schermata da GIRARE
+  // al cliente — il QR per seguire l'ordine — e da lì «Modifica» riporta al
+  // conto.
+  const vistaCliente = ricerca.get('cliente') === '1'
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])
@@ -144,17 +142,39 @@ export default function OrderStatusPage() {
             `Ordine #${updated.daily_number} pronto al ritiro.`
           )
         }
-        // Annullamento da parte del bartender con notifica richiesta.
+        // ANNULLAMENTO: DUE MESSAGGI DIVERSI, PERCHÉ SONO DUE PERSONE.
+        //
+        // Il DIFETTO (BUG-003): un admin che apriva un conto annullato da un
+        // collega su un altro dispositivo si vedeva arrivare «⚠️ Problema
+        // con il tuo ordine — prego recarsi al bancone», che a chi sta
+        // dietro al bancone non vuol dire niente. Questa pagina cambia
+        // mestiere a seconda di chi guarda, e quel messaggio era scritto per
+        // una sola delle due persone.
+        //
+        // AL CLIENTE resta la sua, com'era. A CHI LAVORA niente che
+        // interrompa: nessun avviso a schermo e nessuna notifica di sistema
+        // — l'annullamento non è una cosa da fare, è una cosa successa — ma
+        // l'evento si scrive nella lista della campanella, dove lo si trova
+        // entrando nell'app invece di trovarselo addosso aprendo un conto.
         if (
           prevStatus.current !== updated.workflow_status &&
           updated.workflow_status === ORDER_STATUSES.ANNULLATO &&
           updated.cancelled_by === 'bartender' &&
           updated.cancel_notify
         ) {
-          notify(
-            '⚠️ Problema con il tuo ordine',
-            CANCEL_PHRASES[updated.cancel_phrase] || CANCEL_PHRASES.bancone
-          )
+          if (viewerRoleRef.current) {
+            recordNotif(
+              '✖️ Conto annullato',
+              `Ordine #${updated.daily_number ?? '—'}${
+                updated.customer_name ? ` · ${updated.customer_name}` : ''
+              }`
+            )
+          } else {
+            notify(
+              '⚠️ Problema con il tuo ordine',
+              CANCEL_PHRASES[updated.cancel_phrase] || CANCEL_PHRASES.bancone
+            )
+          }
         }
         prevStatus.current = updated.workflow_status
       },
@@ -186,14 +206,17 @@ export default function OrderStatusPage() {
   const [showQr, setShowQr] = useState(false)
   useEffect(() => {
     if (!showQr || qr) return
-    QRCode.toDataURL(window.location.href, {
+    // L'indirizzo PULITO dell'ordine, non quello della barra: da qui la
+    // pagina si apre con «?cliente=1» (è la vista da girare al cliente), e
+    // quel pezzo nel QR se lo porterebbe dietro chi scansiona.
+    QRCode.toDataURL(`${window.location.origin}/ordine/${id}`, {
       width: 260,
       margin: 1,
       color: { dark: '#1c1305', light: '#f5f5f7' },
     })
       .then(setQr)
       .catch(() => {})
-  }, [showQr, qr])
+  }, [showQr, qr, id])
 
   // Impostazioni + statistiche servizio (per il tempo stimato personalizzato).
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
@@ -289,20 +312,15 @@ export default function OrderStatusPage() {
   if (error) return <div className="banner">Errore: {error}</div>
   if (!order) return <div className="empty">Carico l’ordine…</div>
 
-  // Chi sta al banco (admin o bartender) vede il dettaglio in stile POS
-  // (come la cassa SumUp): griglia prodotti per aggiungere alla comanda +
-  // gestione completa. Lo staff di sala e il cliente vedono lo stato.
-  if (isGestore(viewerRole)) {
-    return <OrderPosDetail order={order} />
-  }
-
-  // Sala che ha premuto «Modifica ordine»: la schermata del banco, quella
-  // vera. Niente versioni ridotte: chi prende un ordine al tavolo ci fa le
-  // stesse cose — aggiunge, corregge e, se il cliente paga lì, incassa. Un
-  // tasto spento in una schermata e acceso nell'altra è solo una cosa che
-  // non si capisce.
-  if ((modificaPos || pagamentoPos) && viewerIsStaff) {
-    return <OrderPosDetail order={order} apriPagamento={pagamentoPos} />
+  // CHI LAVORA ENTRA NEL CONTO, chiunque sia. Prima ci entravano solo admin
+  // e bartender: la sala che toccava un ordine si ritrovava la pagina del
+  // CLIENTE — quella col riquadro «Il tuo numero» — che a chi serve non dice
+  // niente, e per aggiungere una birra doveva prima trovare «Modifica
+  // ordine». La schermata del conto è quella del banco, quella vera: niente
+  // versioni ridotte, chi prende un ordine al tavolo ci fa le stesse cose.
+  // Con «?cliente=1» si chiede apposta la schermata da girare al cliente.
+  if (isPersonale(viewerRole) && !vistaCliente) {
+    return <OrderPosDetail order={order} apriPagamento={apriPagamento} />
   }
 
   const currentIdx = STATUS_FLOW.indexOf(order.workflow_status)
@@ -327,6 +345,10 @@ export default function OrderStatusPage() {
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
   const workflowOn = settings.workflow_enabled !== false
+  // CHI DEVE ALZARSI. Il ritiro al banco è l'unico caso in cui, quando il
+  // drink è pronto, la palla passa al cliente: da qui in poi cambia cosa
+  // gli si promette e cosa gli si dice.
+  const ritiroAlBanco = order.service_mode === 'banco'
   const showEta = settings.eta_enabled && workflowOn && orderActive
   const queueAhead = queue.filter(
     (q) => (q.daily_number || 0) < (order.daily_number || 0)
@@ -377,25 +399,44 @@ export default function OrderStatusPage() {
     )
   }
 
+  const statoPill = (
+    <span className={`pill ${order.workflow_status}`}>
+      {STATUS_EMOJI[order.workflow_status]}{' '}
+      {order.workflow_status === ORDER_STATUSES.RITIRATO
+        ? ritiratoLabel(order.service_mode)
+        : STATUS_LABELS[order.workflow_status]}
+    </span>
+  )
+
   return (
     <div>
-      <div className="card" style={{ textAlign: 'center' }}>
-        <div className="muted">Il tuo numero</div>
-        <div className="bignum">#{order.daily_number ?? '—'}</div>
-        <div style={{ marginTop: 8 }}>
-          <span className={`pill ${order.workflow_status}`}>
-            {STATUS_EMOJI[order.workflow_status]}{' '}
-            {order.workflow_status === ORDER_STATUSES.RITIRATO
-              ? ritiratoLabel(order.service_mode)
-              : STATUS_LABELS[order.workflow_status]}
+      {vistaCliente && viewerIsStaff ? (
+        // LA SCHERMATA DA GIRARE AL CLIENTE non è la sua. «Il tuo numero» e
+        // «Ti serviamo in ~x min» sono scritti per chi ordina: in mano a chi
+        // serve prendono mezzo schermo per dire una cosa che lui sa già.
+        // Resta il numero, il passo in cui sta, e la via per tornare al
+        // lavoro — il conto — senza uscire e rientrare dalla coda.
+        <div className="card row between" style={{ alignItems: 'center', gap: 8 }}>
+          <span className="row" style={{ alignItems: 'center', gap: 8 }}>
+            <strong>Ordine #{order.daily_number ?? '—'}</strong>
+            {statoPill}
           </span>
+          <button className="btn small" onClick={() => navigate(`/ordine/${order.id}`)}>
+            ✏️ Modifica
+          </button>
         </div>
-        {myEta != null && (
-          <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.9rem' }}>
-            ⏱ {order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~{myEta} min
-          </p>
-        )}
-      </div>
+      ) : (
+        <div className="card" style={{ textAlign: 'center' }}>
+          <div className="muted">Il tuo numero</div>
+          <div className="bignum">#{order.daily_number ?? '—'}</div>
+          <div style={{ marginTop: 8 }}>{statoPill}</div>
+          {myEta != null && (
+            <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.9rem' }}>
+              ⏱ {order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~{myEta} min
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Avanzamento della lavorazione: senza gestione della preparazione
           non c'è nessun percorso da mostrare al cliente. */}
@@ -418,7 +459,16 @@ export default function OrderStatusPage() {
       </div>
       )}
 
-      {workflowOn && 'Notification' in window && !notifOn && (
+      {/* ── «AVVISAMI QUANDO È PRONTO» È SOLO DI CHI RITIRA ────────────
+          Da lì in poi la palla è del cliente: deve alzarsi e venire al
+          banco, e senza un avviso resta a fissare il telefono. Chi è
+          servito al tavolo non deve fare niente — ci pensa chi porta il
+          vassoio — e un tasto che promette uno squillo che non arriverà
+          mai è peggio di nessun tasto: il tasto c'era, l'avviso no, e la
+          prossima volta non ci si fida più di quello che dice l'app.
+          (Anche lato server la push del pronto parte solo col ritiro:
+          functions/lib/push-core.js.) */}
+      {workflowOn && ritiroAlBanco && 'Notification' in window && !notifOn && (
         <button className="btn secondary block" onClick={enableNotifications}>
           🔔 Avvisami quando è pronto
         </button>
@@ -426,6 +476,26 @@ export default function OrderStatusPage() {
       {notifMsg && (
         <p className="muted" style={{ textAlign: 'center', margin: '8px 0 0' }}>
           {notifMsg}
+        </p>
+      )}
+      {/* QUESTA PAGINA È LA STRADA CHE FUNZIONA SEMPRE. Le notifiche
+          possono mancare per mille motivi che il cliente non controlla —
+          permesso negato, telefono che le blocca, browser che le ignora —
+          e senza dirlo si resta a fissare uno schermo aspettando qualcosa
+          che non arriva. La pagina si aggiorna da sola: basta tenerla
+          aperta, e col QR ci si torna quando si vuole.
+          Con gli stati del servizio SPENTI non c'è nessun passaggio a
+          «pronto» da annunciare: qui non si finge il contrario, si dice
+          che il drink si ritira al banco quando è fatto. */}
+      {orderActive && (
+        <p className="muted small" style={{ textAlign: 'center', margin: '8px 0 0' }}>
+          {!workflowOn
+            ? 'Questa pagina resta aggiornata: ritira al banco quando il drink è pronto.'
+            : ritiroAlBanco
+              ? notifOn
+                ? 'Ti avvisiamo appena è pronto. Questa pagina si aggiorna da sola: puoi anche tenerla aperta.'
+                : 'Senza notifiche non si perde niente: questa pagina si aggiorna da sola, tienila aperta o riapri il QR.'
+              : 'Non devi fare niente: te lo portiamo al tavolo. Questa pagina si aggiorna da sola.'}
         </p>
       )}
 
@@ -517,39 +587,12 @@ export default function OrderStatusPage() {
           </button>
         </div>
       )}
-      {/* AGGIUNGERE È UN'ALTRA COSA DA CAMBIARE UNA QUANTITÀ. Qui sopra si
-          correggono le righe che ci sono; per mettere dentro un altro drink
-          serve la griglia dei prodotti, cioè la schermata del conto — la
-          stessa del banco, senza la cassa. Chi ha preso l'ordine e si sente
-          dire «aggiungi anche una birra» non deve battere un secondo
-          conto. */}
-      {viewerIsStaff && (
-        <div className="grid-2" style={{ marginTop: 8 }}>
-          {editable && (
-            <button
-              className="btn ghost"
-              onClick={() => setModificaPos(true)}
-              disabled={saving}
-            >
-              ✏️ Modifica ordine
-            </button>
-          )}
-          {/* E IL PAGAMENTO. Al tavolo si incassa lì: senza questo tasto
-              bisognava tornare in coda, riaprire il conto dal banco e
-              incassare da lì, col cliente che aspetta col portafogli in
-              mano. Su un conto già saldato non compare. */}
-          {order.payment_status !== 'pagato' &&
-            order.workflow_status !== ORDER_STATUSES.ANNULLATO && (
-              <button
-                className="btn"
-                onClick={() => setPagamentoPos(true)}
-                disabled={saving}
-              >
-                💳 Pagamento
-              </button>
-            )}
-        </div>
-      )}
+      {/* «MODIFICA ORDINE» E «PAGAMENTO» NON STANNO PIÙ QUI: chi lavora
+          adesso apre direttamente il conto, dove aggiungere una riga e
+          incassare sono i due tasti principali. Due strade per la stessa
+          cosa, una dentro l'altra, erano solo un modo per non trovare né
+          l'una né l'altra. Qui resta il «✏️ Modifica» in testata: questa è
+          la schermata che si gira al cliente. */}
       {!editable && cancellable && (
         <button
           className="btn ghost block"
