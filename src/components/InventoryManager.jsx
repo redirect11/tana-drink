@@ -20,8 +20,10 @@ import {
   subscribeSettings,
   subscribeActiveOrders,
   subscribeDrinks,
+  settingsIniziali,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { voceVisibile } from '../lib/licenza.js'
 import { useCashSession } from '../lib/cashSession.js'
 import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
@@ -182,6 +184,9 @@ function UnitPrice({ item, markup }) {
 
 // Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
 // fornitore e scadenzario — la controparte software dei fogli Excel storici.
+// CONTA e SCADENZARIO sono funzioni premium (lib/licenza.js): restano in
+// questo elenco, ma si vedono solo dove il modulo è acceso. L'elenco non si
+// sdoppia apposta — l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
   ['prodotti', '📦', 'Prodotti'],
   ['conta', '📋', 'Conta'],
@@ -199,12 +204,29 @@ const INV_VIEWS = [
 // tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
 // il comando, e sul telefono si apre il foglio dal basso.
 export default function InventoryManager() {
-  const [view, setView] = useState('prodotti')
+  const [sezione, setSezione] = useState('prodotti')
   usePaginaPiena()
+  // DUE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): Conta e Scadenzario
+  // compaiono solo dove il modulo è acceso. Le impostazioni si prendono
+  // dalla cache (`settingsIniziali`) e si aggiornano da sole: nessuna
+  // lettura in più e nessuna attesa, se no la barra delle sezioni si
+  // disegnerebbe due volte e le voci ballerebbero sotto il dito.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const voci = useMemo(
+    () => INV_VIEWS.filter(([id]) => voceVisibile(impostazioni, id)),
+    [impostazioni]
+  )
+  // Il modulo può spegnersi mentre la sua sezione è aperta (lo si spegne
+  // da un altro terminale). La vista aperta si RICAVA dall'elenco invece di
+  // essere solo quella scelta: così si torna ai Prodotti senza un giro di
+  // stato in più, e non resta a schermo un pannello che non è più in
+  // elenco.
+  const view = voci.some(([id]) => id === sezione) ? sezione : 'prodotti'
   useSottosezioni(
-    INV_VIEWS.map(([id, icona, label]) => ({ id, icona, label })),
+    voci.map(([id, icona, label]) => ({ id, icona, label })),
     view,
-    setView
+    setSezione
   )
   return (
     <div className="pagina-inventario">

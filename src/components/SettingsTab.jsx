@@ -20,6 +20,7 @@ import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import StampaAutomatica from './StampaAutomatica.jsx'
 import ToggleRow from './ToggleRow.jsx'
+import { MOTIVO_PREMIUM, moduliPremium, moduloAttivo } from '../lib/licenza.js'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
@@ -1037,6 +1038,12 @@ export default function SettingsTab({ role = null }) {
       nodo: <InfoTab />,
     },
     {
+      id: 'funzioni-premium',
+      icona: '🔒',
+      label: 'Funzioni premium',
+      nodo: <FunzioniPremium settings={settings} />,
+    },
+    {
       id: 'annullamenti',
       icona: '✖️',
       label: 'Annullamenti',
@@ -1124,6 +1131,7 @@ export default function SettingsTab({ role = null }) {
     'logo-stampe': 'stampante',
     backup: 'sistema',
     informazioni: 'sistema',
+    'funzioni-premium': 'premium',
   }
   const GRUPPI = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
@@ -1137,6 +1145,18 @@ export default function SettingsTab({ role = null }) {
     { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
     { id: 'clienti', icona: '🙋', label: 'Clienti' },
     { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    // UN GRUPPO SUO, e non una voce infilata nei gruppi delle schermate che
+    // le funzioni accendono. La regola del momento d'uso (REQ-UI-025) dice
+    // di raggruppare per «quando lo cerco»: qui il momento è «cosa ha questo
+    // locale, e cosa potrebbe avere», che non è il momento in cui si conta
+    // il magazzino né quello in cui si registra una fattura — tanto più che
+    // a modulo spento quelle schermate non ci sono, e cercare l'interruttore
+    // dentro la sezione che non compare sarebbe una caccia. Sono la prima
+    // famiglia di questo tipo e ne arriveranno altre (Fase 3 del piano ne
+    // elenca cinque pacchetti): un gruppo che cresce è meglio di cinque voci
+    // sparse. E non sta in «Sistema», che parla di questa installazione
+    // (backup, versione): la licenza è del locale, non della macchina.
+    { id: 'premium', icona: '🔒', label: 'Funzioni premium' },
     { id: 'sistema', icona: '💾', label: 'Sistema' },
   ]
   // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
@@ -1452,5 +1472,42 @@ function AmountInput({ value, min, max, step, onCommit }) {
       onBlur={commit}
       onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
     />
+  )
+}
+
+// ── LE FUNZIONI PREMIUM ───────────────────────────────────
+// Quello che questa installazione potrebbe avere e non ha. Restano in
+// elenco APPOSTA (decisione dell'utente, 26/08/2026): sparite del tutto,
+// nessuno saprebbe che esistono, e chi le ha viste una volta si
+// chiederebbe dove sono finite.
+// Gli interruttori dicono lo stato VERO — acceso dove il modulo c'è — e non
+// si toccano da qui: si accendono con la licenza dell'installazione
+// (lib/licenza.js). Spenti ma non `disabled`: al tocco dicono perché.
+function FunzioniPremium({ settings }) {
+  return (
+    <div className="card settings-section">
+      <h3>Funzioni premium</h3>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Funzioni non incluse in questa installazione. Sono elencate qui per
+        sapere che esistono e cosa fanno; l’attivazione non si fa da questa
+        schermata.
+      </p>
+      {moduliPremium().map((m) => {
+        const attivo = moduloAttivo(settings, m.id)
+        return (
+          <ToggleRow
+            key={m.id}
+            label={m.label}
+            desc={`${m.descrizione} ${
+              attivo
+                ? 'Funzione premium, attiva su questa installazione.'
+                : 'Funzione premium: non inclusa.'
+            }`}
+            checked={attivo}
+            motivo={MOTIVO_PREMIUM}
+          />
+        )
+      })}
+    </div>
   )
 }

@@ -99,7 +99,10 @@ const SUPS = [
 
 // Quello che la serata sta facendo, quando serve: cassa aperta, conti in
 // corso, listino. Di suo il locale è chiuso e non c'è niente in ballo.
-const stato = { cassa: null, ordini: [], drinks: [] }
+// I moduli premium (conta, scadenzario) sono SPENTI di partenza, come sul
+// locale che non li ha comprati: le prove che li vogliono se li accendono.
+const IMPOSTAZIONI_BASE = { price_markup: 3, purchase_vat: 22 }
+const stato = { cassa: null, ordini: [], drinks: [], impostazioni: IMPOSTAZIONI_BASE }
 
 // La cassa aperta la tiene un modulo solo per tutta l'app (una
 // sottoscrizione sola, vedi lib/cashSession.js): fra un test e l'altro
@@ -144,9 +147,12 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   subscribeSettings: vi.fn((cb) => {
-    cb({ price_markup: 3, purchase_vat: 22 })
+    cb(stato.impostazioni)
     return () => {}
   }),
+  // Il magazzino parte dalla CACHE delle impostazioni: le sezioni premium
+  // non devono comparire e sparire mentre il server risponde.
+  settingsIniziali: () => stato.impostazioni,
   DEFAULT_SETTINGS: { price_markup: 3, purchase_vat: 22 },
 }))
 
@@ -186,18 +192,17 @@ beforeEach(() => {
   stato.cassa = null
   stato.ordini = []
   stato.drinks = []
+  stato.impostazioni = IMPOSTAZIONI_BASE
 })
 
 describe('la schermata del magazzino (REQ-MAG-010)', () => {
-  it('le sezioni stanno nella barra: otto voci, e ognuna apre il suo pannello', async () => {
+  it('le sezioni stanno nella barra, e ognuna apre il suo pannello', async () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
     for (const voce of [
       'Prodotti',
-      'Conta',
       'Ordini',
-      'Scadenzario',
       'Categorie',
       'Macro-categorie',
       'Fornitori',
@@ -205,8 +210,8 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
-    await user.click(screen.getByRole('button', { name: /Conta/ }))
-    expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Ordini/ }))
+    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
     expect(screen.queryByText('Gin Mare')).toBeNull()
   })
 
@@ -465,5 +470,43 @@ describe('la legenda del magazzino', () => {
     // E i campioncini sono le classi VERE dei segni, non copie.
     expect(legenda.querySelector('.dot-empty')).toBeTruthy()
     expect(legenda.querySelector('.tacca-linea')).toBeTruthy()
+  })
+})
+
+// LE DUE SEZIONI PREMIUM (REQ-LIC-001). Conta e Scadenzario si vedono solo
+// dove il modulo è acceso: di partenza il magazzino ne ha sei, non otto.
+// Rimettendo il difetto — cioè togliendo il filtro da INV_VIEWS — la prima
+// prova qui sotto diventa rossa.
+describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
+  it('col modulo spento Conta e Scadenzario non ci sono, e il loro pannello non si monta', async () => {
+    mostra()
+    await aspettaLista()
+    expect(screen.queryByRole('button', { name: /Conta/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Scadenzario/ })).toBeNull()
+    expect(screen.queryByText('PANNELLO CONTA')).toBeNull()
+    expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
+  })
+
+  it('accesi i moduli le due voci tornano, e aprono il loro pannello', async () => {
+    const user = userEvent.setup()
+    stato.impostazioni = {
+      ...IMPOSTAZIONI_BASE,
+      modulo_conta_enabled: true,
+      modulo_scadenzario_enabled: true,
+    }
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /Conta/ }))
+    expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
+    expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
+  })
+
+  it('acceso uno solo, l’altro resta fuori', async () => {
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, modulo_conta_enabled: true }
+    mostra()
+    await aspettaLista()
+    expect(screen.getByRole('button', { name: /Conta/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Scadenzario/ })).toBeNull()
   })
 })

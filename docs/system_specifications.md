@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 25 agosto 2026.
+> Generato il 26 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 177 | fatto e coperto dai test |
+| ✅ | 178 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**213 voci** in tutto. **191** descrivono il sistema com'è oggi e
+**214 voci** in tutto. **192** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -62,6 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 1 | — |  |
+| [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
 
@@ -831,7 +832,11 @@ Ogni articolo è assortimento, linea, premium o fuori servizio. Serve a distingu
 
 #### REQ-MAG-010 — Il magazzino sta in una schermata, con le sezioni a lato
 
-Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie, Fornitori e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della pagina è il comando. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. GLI «IN ESAURIMENTO»
+Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie, Fornitori e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della pagina è il comando.
+
+DUE DI QUELLE SEZIONI SONO FUNZIONI PREMIUM dal 26/08/2026:
+
+CONTA e SCADENZARIO compaiono solo dove il modulo è acceso (REQ-LIC-001), e di partenza il magazzino ne ha SEI. Restano nello stesso elenco (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua sezione è aperta si torna ai Prodotti. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. GLI «IN ESAURIMENTO»
 
 CI STANNO DENTRO: sono in magazzino, solo pochi. «In esaurimento» è una lente più stretta dentro la stessa famiglia, non un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima bottiglia di gin, che è proprio quella che gli serve sapere. Così il conto torna a vista: in scorta più esauriti fa il totale, e chi somma le voci non trova numeri che non tornano.
 
@@ -2043,7 +2048,7 @@ PRIMA la stampante finta si accendeva solo dall'ambiente (dev, locale, emulatori
 
 ADESSO c'e' l'interruttore DEL TERMINALE, nella sezione Dev («Stampante simulata»): localStorage, vale solo per quel dispositivo, e vince sulla regola d'ambiente nei due versi — «qui simula» sul test, o «qui voglio la stampante vera» in locale. La sezione Dev esiste solo in locale e sul test (devToolsEnabled), quindi in produzione l'interruttore non ha una leva da nessuna parte.
 
-IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la accende — il tablet del banco che prova la stampante vera non deve trovarsi facsimili a sorpresa.
+IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la accende — il tablet del banco che prova la stampante vera non deve trovarsi facsimili a sorpresa. DAL 26/08 LA SEZIONE DEV ACCENDE ANCHE LE FUNZIONI PREMIUM (REQ-LIC-001): il riquadro «Funzioni premium» scrive i flag su settings/bar, che è l'unico modo di provare la conta di magazzino e le fatture ai fornitori finché un meccanismo di attivazione non esiste. Sta qui per la stessa ragione della stampante finta: gli strumenti di sviluppo esistono solo in locale e sul test, quindi in produzione la leva non c'è da nessuna parte. Differenza da tenere a mente: la stampante finta è del TERMINALE (localStorage), i moduli premium sono di TUTTO IL LOCALE (settings/bar).
 
 **Dove**: `src/lib/stampanteFinta.js, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/stampanteFinta.test.js`
 
@@ -2062,6 +2067,32 @@ SI TORNA CON «← Chiusure», in cima al dettaglio: una sola via d'uscita, e di
 LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in corso» e i numeri di adesso: mentre si lavora è la serata che interessa di più, e senza di lei la prima sera del locale la lista sarebbe vuota. B) PER PERIODO: le pastiglie di sempre (7/10/20/30/60 e Personalizzato) MENO «🧾 Ultima chiusura» e la tendina delle serate, che ora vivono nella sottosezione A — lo stesso posto raggiunto in due modi prima o poi si contraddice. LOCAL-FIRST: la lista si costruisce da quello che la pagina ha già in mano (sessioni e ordini), senza una lettura in più e senza attese fra il tocco e la riga. Le serate più vecchie della finestra di ordini scaricata non si possono ricalcolare: per quelle si usano i numeri congelati nello `snapshot` della chiusura, che stanno già sulla sessione — una riga a zero si leggerebbe come «quella sera non ha incassato», che è un'altra cosa.
 
 **Dove**: `src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/StatsTab.test.jsx`
+
+### LIC
+
+#### REQ-LIC-001 — Le funzioni premium si accendono da un posto solo, e di partenza sono spente
+
+Decisione dell'utente del 26/08/2026, parole sue: «Facciamo che la conta di magazzino e le fatture (le due sezioni) diventano funzioni premium che si attivano all'occorrenza. Le chiamo premium perché in futuro diventerà multitenant; per il momento possiamo semplicemente disabilitarle dalle opzioni, e disabilitiamo le checkbox per attivarle scrivendo "funzione premium". Poi capiamo come fare a sbloccare gli switch».
+
+ANTICIPA LA FASE 3 del piano di sbrandizzazione (docs/piano-sbrandizzazione.md, «Licenza e moduli»): là il documento `settings/licenza` porta piano e moduli attivi, e le voci del gestionale compaiono solo dove il modulo è acceso, «estendendo lo schema già esistente di workflow_enabled». Qui nasce il meccanismo con le prime due funzioni; il documento della licenza arriverà dopo.
+
+UN POSTO SOLO CHE RISPONDE, `src/lib/licenza.js`: una tabella dei moduli e la funzione pura `moduloAttivo(stato, id)`. Due interruttori sparsi diventano tre e poi cinque, e a quel punto per sapere cosa vede un locale bisogna leggersi mezza app. Aggiungere il prossimo modulo è una voce nella tabella: `id` (lo stesso della sezione che accende), `chiave` (il flag su settings/bar), nome e descrizione da mostrare.
+
+LO SCHEMA DI OGGI è un flag booleano su `settings/bar`, della stessa forma di `workflow_enabled`: `modulo_conta_enabled` e `modulo_scadenzario_enabled`, in DEFAULT_SETTINGS a `false`. Stessa cache delle altre impostazioni, quindi nessuna lettura nuova e niente da aspettare (local-first).
+
+COME SI AGGANCERÀ LA LICENZA VERA: `moduloAttivo` guarda PRIMA un campo `licenza.moduli` nello stato che riceve. Oggi non c'è e si ricade sui flag; il giorno che `settings/licenza` esiste, chi lo collega lo fa arrivare fin lì e la licenza vince — nessuna schermata cambia, perché nessuna schermata sa da dove viene la risposta. Se la licenza c'è ma non nomina il modulo, il modulo è spento: ricadere sul flag vorrebbe dire che chi scrive a mano il documento del bar si riapre da solo quello che la licenza non gli dà.
+
+SPENTO È IL DEFAULT IN TUTTI I CASI STORTI — impostazioni non ancora arrivate, documento salvato prima che il flag esistesse, valore che non è il booleano `true`, id sconosciuto. Una funzione a pagamento non si regala per una svista, e una sezione che compare per mezzo secondo e poi sparisce è peggio di una che non c'è.
+
+NEL MAGAZZINO le due sezioni Conta e Scadenzario restano nell'unico elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano con `voceVisibile`. La vista aperta si RICAVA dall'elenco filtrato: se il modulo si spegne da un altro terminale mentre la sezione è aperta, la schermata torna ai Prodotti invece di restare su un pannello che non è più in elenco. Vedi REQ-MAG-010.
+
+NELLE IMPOSTAZIONI le due voci NON spariscono: gruppo «🔒 Funzioni premium», suo, prima di «Sistema». La regola del momento d'uso (REQ-UI-025) chiede di raggruppare per «quando lo cerco», e qui il momento è «cosa ha questo locale, e cosa potrebbe avere» — che non è il momento in cui si conta il magazzino né quello in cui si registra una fattura, tanto più che a modulo spento quelle schermate non esistono e l'interruttore sarebbe da cercare dentro una sezione che non compare. Sono la prima famiglia di questo tipo e ne arriveranno altre (la Fase 3 elenca cinque pacchetti): un gruppo che cresce è meglio di cinque voci sparse. E non sta in «Sistema», che parla della macchina (backup, versione): la licenza è del locale. I TESTI SONO ASCIUTTI (DESIGN.md, guardrail 3): la didascalia dice cosa fa la funzione e che non è inclusa. Niente «Sblocca ora», niente toni pubblicitari. L'INTERRUTTORE SPENTO DICE PERCHÉ: `ToggleRow` ha una prop `motivo` che lo rende `aria-disabled` invece di `disabled`, con la stessa ragione dei metodi di pagamento non disponibili e del tasto «Acconto» che salderebbe il conto — `disabled` non fa nemmeno partire l'evento, e chi preme resta a premere un tasto morto. L'interruttore mostra lo stato VERO: acceso dove il modulo c'è, e comunque non toccabile da lì.
+
+PER PROVARLE si accende il flag su settings/bar: dagli strumenti di sviluppo (REQ-DEV-014, che ci sono solo in locale e sul sito di test) o scrivendo il campo a mano da console/emulatore. NON dalla schermata normale delle impostazioni: un meccanismo di vendita non esiste ancora, e inventarne uno adesso sarebbe da buttare.
+
+SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nelle loro collezioni (`stock_counts`, fatture fornitore): spegnere un modulo non tocca un documento. Caso spiacevole da sapere: una conta APERTA nel momento in cui il modulo si spegne resta aperta e non allineata — la si ritrova esattamente com'era riaccendendo il modulo, ma finché è spento nessuno la può chiudere. ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la distinzione è teorica; quando i locali saranno tanti il controllo vero va sul SERVER — Cloud Functions e regole Firestore — perché chiunque apra la console del browser può accendersi un modulo da sé. Lo dice anche il piano: «mai fidarsi del solo frontend per una funzione a pagamento».
+
+**Dove**: `src/lib/licenza.js, src/components/InventoryManager.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
 ## Lavori previsti
 

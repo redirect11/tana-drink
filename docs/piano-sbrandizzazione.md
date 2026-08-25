@@ -197,11 +197,31 @@ la Tana in produzione invariata; stesso commit → due deployment.
 
 ## Fase 3 — Licenza e moduli (candidata: release 1.8)
 
+> **Un pezzo è già arrivato, in 1.5.x** (REQ-LIC-001, decisione dell'utente
+> del 26/08/2026). Esiste `src/lib/licenza.js`: la tabella dei moduli
+> premium e la funzione pura `moduloAttivo(stato, id)`, che è l'unico posto
+> che risponde a «questa funzione è attiva?». I primi due moduli sono la
+> **conta di magazzino** e le **fatture ai fornitori** — le due sezioni del
+> magazzino — spente di partenza. Lo schema è quello previsto qui sotto,
+> preso dal verso più semplice: un flag booleano su `settings/bar`
+> (`modulo_conta_enabled`, `modulo_scadenzario_enabled`), della stessa forma
+> di `workflow_enabled`. Nelle impostazioni le due voci ci sono ma sono
+> spente e non toccabili, e al tocco dicono perché; si accendono dagli
+> strumenti di sviluppo (locale e test) o scrivendo il campo a mano.
+> **Quello che resta da fare qui**: il documento `settings/licenza` vero, e
+> il controllo sul server. Il punto di innesto è già pronto — `moduloAttivo`
+> guarda prima un campo `licenza.moduli` nello stato che riceve, e se c'è
+> vince sui flag: collegarlo vuol dire far arrivare il documento fin lì,
+> senza toccare nessuna schermata.
+
 1. **Documento `settings/licenza`** (o campo nel venue): piano e moduli
    attivi. Per la Tana: tutto acceso.
 2. **`sezioni.js` legge la licenza**: le voci del gestionale (magazzino,
    fatture, ore staff, statistiche…) compaiono solo se il modulo è attivo.
-   Si estende lo schema già esistente di `workflow_enabled`.
+   Si estende lo schema già esistente di `workflow_enabled`. Le sezioni del
+   MAGAZZINO lo fanno già (`InventoryManager.jsx` filtra `INV_VIEWS` con
+   `voceVisibile`): quando toccherà alle voci del gestionale, `sezioni.js`
+   userà la stessa funzione, non un secondo meccanismo.
 3. **Il controllo vero sta sul server**: le Functions premium (pagamenti,
    staffAdmin, notifiche) e/o le regole verificano la licenza. Il flag
    client nasconde, non protegge: mai fidarsi del solo frontend per una
