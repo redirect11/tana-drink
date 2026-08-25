@@ -3572,3 +3572,60 @@ bugs:
       - tests/unit/campiDiStampa.test.js
       - tests/unit/cartaAcconto.test.js
       - tests/component/CampiStampa.test.jsx
+
+  - id: BUG-089
+    title: "La comanda diceva «DIRETTO» su ogni ticket, anche sul secondo invio dello stesso tavolo"
+    area: "src/lib/printer.js (strisciaComanda, printComanda), src/lib/comande.js (numeroComanda), src/lib/campiStampa.js"
+    description: >
+      Trovato il 25/08/2026 cercando cosa volesse dire «DIRETTO» sulla
+      fascia nera del ticket.
+      DA DOVE VENIVA. E' un'etichetta di SumUp POS Pro (l'ex Tiller), il
+      modello da cui questa carta e' stata copiata — la stessa provenienza
+      di «CONTATORIE» e «Vendeur». La' vuol dire una cosa precisa: quando
+      un ordine si spedisce in cucina a portate, «Diretto» e' la PRIMA
+      infornata, quella che parte subito, e le successive si chiamano
+      «Ordine 1», «Ordine 2».
+      COSA STAMPAVAMO NOI. La stessa parola su OGNI comanda, anche sulla
+      seconda e sulla terza dello stesso conto: un ticket che dichiarava
+      «questo va adesso» mentre era il secondo invio di quel tavolo. Il
+      contrario di quello che la parola vuol dire, e il banco non aveva
+      modo di capire quale ticket avesse in mano — la comanda il suo
+      numero non lo portava scritto.
+      LA DECISIONE DELL'UTENTE, parole sue: «Non usiamo Diretto o Subito.
+      Chiamiamo Comanda X - Ordine Y sulla comanda». I dati c'erano gia':
+      la comanda ha il suo progressivo (`seq`) e il conto ha
+      `daily_number`. La fascia dice «COMANDA 2 - ORDINE 28», e lo dice
+      anche quando la comanda e' una sola («COMANDA 1 - ORDINE 28»):
+      «senza numero vuol dire la prima» e' una regola che chi legge un
+      ticket non deve conoscere. «Comanda 2» e' anche come la chiamano la
+      corsia e il dettaglio del conto: sulla carta e sullo schermo lo
+      stesso ticket si chiama allo stesso modo.
+      DUE RIGHE E NON UNA. A corpo doppio sulla carta da 80 mm ci stanno
+      24 caratteri e «COMANDA 2 - ORDINE 28» ne occupa 21: l'ora non ci
+      sta piu' accanto ed e' scesa sotto, dentro lo stesso rettangolo
+      nero, con le due righe pareggiate in larghezza — se no il nero
+      uscirebbe a scaletta. Il suo interruttore («Ora nella fascia») resta
+      quello di prima.
+      IL TESTO LIBERO DELLA FASCIA NON C'E' PIU'. Il contenuto adesso
+      viene dai dati, e una casella li' sopra vorrebbe dire poter far
+      mentire il ticket; a corpo doppio non ci starebbe comunque accanto.
+      L'INTERRUTTORE RESTA: chi la fascia non la vuole la spegne. Un
+      locale che aveva scritto la sua parola non trova niente di rotto —
+      quel testo semplicemente non viene piu' letto, e la fascia esce
+      piena lo stesso. Per dire «questo ticket e' del bar» c'e' gia' la
+      riga del reparto, che di parole ne ha ancora.
+      QUELLO CHE NON SI SA NON SI SCRIVE (la lezione di BUG-086): un conto
+      appena nato senza `daily_number` stampa solo «COMANDA 1», il ticket
+      unito — che non e' nessuna comanda in particolare, le contiene tutte
+      — stampa solo «ORDINE 28», e una comanda vecchia senza `seq` prende
+      il suo posto nell'elenco. Niente «undefined» sulla carta.
+    labels: [bug, stampa]
+    severity: lieve
+    priority: P2
+    status: fixed
+    in_produzione: true
+    test_cases:
+      - tests/unit/campiDiStampa.test.js
+      - tests/unit/comande.test.js
+      - tests/unit/campiStampa.test.js
+      - tests/component/CampiStampa.test.jsx

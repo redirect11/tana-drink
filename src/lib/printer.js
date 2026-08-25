@@ -16,7 +16,7 @@ import {
   placedByName,
 } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
-import { pezziDellaComanda, righeDellaComanda } from './comande.js'
+import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import {
@@ -789,14 +789,52 @@ export function comandaDelTicket(order, comanda = null) {
   return aperte.at(-1) || null
 }
 
-// LA FASCIA NERA, IN UNA FUNZIONE SOLA. È il pezzo con più modi di
-// venire storto — la scritta si può cambiare, l'ora si può togliere, e
-// tutte e due insieme vorrebbero dire una striscia nera vuota in cima al
-// ticket — quindi la decide una funzione pura, che si prova senza
-// stampante: torna la riga da scrivere, o niente.
-export function strisciaComanda(cfg, hhmm) {
-  const dentro = [cfg.parole('fascia'), cfg.mostra('ora') ? hhmm : ''].filter(Boolean).join('  ')
-  return cfg.mostra('fascia') && dentro ? `  ${dentro}  ` : null
+// ── LA FASCIA NERA DICE QUALE TICKET È (BUG-089) ─────────────────────
+//
+// «Non usiamo Diretto o Subito. Chiamiamo Comanda X - Ordine Y sulla
+// comanda» (l'utente, 25/08/2026).
+//
+// PRIMA C'ERA «DIRETTO», SU OGNI TICKET. È un'etichetta di SumUp POS Pro
+// — il modello da cui questa carta è stata copiata — e là vuol dire una
+// cosa precisa: quando un ordine si spedisce in cucina a portate,
+// «Diretto» è la PRIMA infornata, quella che parte subito, e le
+// successive si chiamano «Ordine 1», «Ordine 2». Noi la stampavamo
+// uguale su tutte, anche sulla seconda e sulla terza comanda dello stesso
+// tavolo: un ticket che dichiarava «questo va adesso» mentre era il
+// secondo invio. La parola giusta ce l'avevamo già nei dati.
+//
+// DUE RIGHE E NON UNA. A corpo doppio sulla carta da 80 mm ci stanno 24
+// caratteri: «COMANDA 2 - ORDINE 28» ne occupa 21, e con l'ora accanto
+// sfonderebbe. L'ora scende sotto, dentro lo stesso rettangolo nero, e le
+// due righe si pareggiano in larghezza — se no il nero uscirebbe a
+// scaletta.
+//
+// Torna l'elenco delle righe da scrivere, vuoto se la fascia è spenta:
+// resta una funzione pura, che si prova senza stampante.
+export const LARGHEZZA_FASCIA = COL / 2
+
+export function strisciaComanda(cfg, hhmm, order = null, comanda = null) {
+  if (!cfg.mostra('fascia')) return []
+  const quale = numeroComanda(order, comanda)
+  const conto = order?.daily_number
+  // Niente «undefined» sulla carta: quello che non si sa non si scrive, e
+  // se non si sa niente la fascia non esce (stessa regola di nomeRiga e
+  // compagni, BUG-086).
+  const nomi = [
+    quale ? `COMANDA ${quale}` : '',
+    conto == null || conto === '' ? '' : `ORDINE ${conto}`,
+  ].filter(Boolean)
+  const righe = [nomi.join(' - '), cfg.mostra('ora') ? hhmm : ''].filter(Boolean)
+  if (!righe.length) return []
+  // Il respiro ai lati si dà solo se ci sta: senza, la fascia andrebbe a
+  // capo da sola e il rettangolo nero si spezzerebbe in due.
+  const testo = Math.max(...righe.map((r) => r.length))
+  const largo = Math.min(testo + 2, LARGHEZZA_FASCIA)
+  return righe.map((r) => {
+    const vuoto = Math.max(largo - r.length, 0)
+    const sinistra = Math.floor(vuoto / 2)
+    return `${' '.repeat(sinistra)}${r}${' '.repeat(vuoto - sinistra)}`
+  })
 }
 
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
@@ -825,13 +863,13 @@ export function printComanda(order, comanda = null) {
     // Di suo il logo sulla comanda non esce: al banco è carta consumata.
     await stampaLogo(prn, 'comanda')
 
-    // ── Header nero: "DIRETTO  22:09" ──
-    const striscia = strisciaComanda(cfg, hhmm)
-    if (striscia) {
+    // ── Header nero: "COMANDA 2 - ORDINE 28", e sotto l'ora ──
+    const striscia = strisciaComanda(cfg, hhmm, order, comandaDelTicket(order, comanda))
+    if (striscia.length) {
       prn.addTextAlign(prn.ALIGN_CENTER)
       prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
       prn.addTextSize(2, 2)
-      prn.addText(`${striscia}\n`)
+      for (const riga of striscia) prn.addText(`${riga}\n`)
       prn.addTextSize(1, 1)
       prn.addTextStyle(false, false, false, prn.COLOR_1)
       prn.addText('\n')

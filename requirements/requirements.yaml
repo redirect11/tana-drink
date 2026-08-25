@@ -5846,12 +5846,34 @@ requirements:
       riquadro «Dati del locale»): lì si scrivono, qui si sceglie se
       stamparle — due posti che scrivono la stessa cosa sarebbero un modo
       per perderla.
-      COMANDA — si possono togliere: fascia nera in cima (con le sue
-      parole), ora nella fascia, riga del conteggio, riga del reparto, nome
-      o tavolo in grande, riga sotto al nome, note dei singoli prodotti,
-      nota del conto. Si può aggiungere una riga in fondo, spenta di suo.
+      COMANDA — si possono togliere: fascia nera in cima, ora nella
+      fascia, riga del conteggio, riga del reparto, nome o tavolo in
+      grande, riga sotto al nome, note dei singoli prodotti, nota del
+      conto. Si può aggiungere una riga in fondo, spenta di suo.
       Fascia e ora spente insieme non lasciano una striscia nera vuota: la
       fascia non esce proprio (strisciaComanda, funzione pura).
+      COSA DICE LA FASCIA (dal 25/08/2026, BUG-089). «COMANDA 2 - ORDINE
+      28»: quale ticket è, dentro quale conto. Fino ad allora era una
+      casella di testo che diceva «DIRETTO» su ogni comanda — un'etichetta
+      di SumUp POS Pro, il modello da cui questa carta è stata copiata,
+      dove indica la PRIMA infornata di un ordine spedito a portate
+      (le successive sono «Ordine 1», «Ordine 2»). Noi la stampavamo anche
+      sulla seconda e sulla terza comanda dello stesso tavolo, cioè col
+      significato ribaltato. «Non usiamo Diretto o Subito. Chiamiamo
+      Comanda X - Ordine Y sulla comanda» (l'utente, 25/08/2026).
+      Il numero c'è anche quando la comanda è una sola: «senza numero vuol
+      dire la prima» è una regola che chi legge un ticket non deve
+      conoscere. È lo stesso nome che la comanda ha sullo schermo (corsia
+      e dettaglio del conto).
+      IL TESTO LIBERO DELLA FASCIA È SPARITO, l'interruttore no: il
+      contenuto viene dai dati e una casella lì sopra vorrebbe dire poter
+      far mentire il ticket. Un locale che aveva scritto la sua parola non
+      trova niente di rotto — quel testo non viene più letto — e per dire
+      «questo ticket è del bar» resta la riga del reparto.
+      L'ORA È SCESA SOTTO, dentro lo stesso rettangolo nero: a corpo
+      doppio sulla carta da 80 mm ci stanno 24 caratteri e la riga ne
+      occupa 21. Le due righe si pareggiano in larghezza, se no il nero
+      uscirebbe a scaletta.
       SONO IMPOSTAZIONI DEL LOCALE (settings/bar: `stampa_scontrino`,
       `stampa_comanda`, `stampa_logo`), non del terminale: lo scontrino è
       l'identità del bar, non una preferenza del tablet che l'ha stampato.

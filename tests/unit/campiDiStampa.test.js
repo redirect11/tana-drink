@@ -153,7 +153,16 @@ Codice Lotteria                         ABCD1234
                  EFFEVI - SRLS
 ────────────────────────────────────────────────`
 
-const COMANDA_DI_SEMPRE = `          D I R E T T O     2 3 : 3 0
+// AGGIORNATO IL 25/08/2026, LA FASCIA (BUG-089). Diceva «DIRETTO» su
+// ogni ticket — l'etichetta di SumUp POS Pro che là vuol dire «la prima
+// infornata», mentre noi la stampavamo anche sulla seconda e sulla terza
+// comanda dello stesso tavolo. Adesso dice QUALE ticket è, e l'ora scende
+// sotto: «COMANDA 2 - ORDINE 28» a corpo doppio occupa 21 dei 24
+// caratteri che ci stanno sulla carta, e accanto l'ora non ci sta più.
+// Le due righe si pareggiano in larghezza, se no il nero uscirebbe a
+// scaletta. Dal conteggio in giù è tutto identico.
+const COMANDA_DI_SEMPRE = `   C O M A N D A   1   -   O R D I N E   1 2
+                   2 3 : 3 0
 CONTATORIE                                 CL: 3
 BAR                                      Vendeur
                     A n n a
@@ -360,18 +369,73 @@ describe('lo scontrino dice chi stampa, di chi è il conto, e quante persone', (
 })
 
 describe('i campi della comanda', () => {
-  it('le parole della fascia si cambiano', async () => {
+  // LA FASCIA DICE QUALE TICKET È (BUG-089), e non si scrive più: il
+  // testo salvato ieri da chi aveva messo la sua parola non viene più
+  // letto, e la carta esce piena lo stesso.
+  it('la fascia porta il numero della comanda e quello del conto', async () => {
     impostazioni({ stampa_comanda: { testi: { fascia: 'CUCINA' } } })
     const uscito = await stampa('comanda')
-    expect(compatto(uscito)).toContain('CUCINA23:30')
+    expect(compatto(uscito)).toContain('COMANDA1-ORDINE12')
+    expect(compatto(uscito)).not.toContain('CUCINA')
     expect(compatto(uscito)).not.toContain('DIRETTO')
+  })
+
+  // La seconda comanda di quel tavolo dice che è la seconda: era proprio
+  // questo che «DIRETTO» su ogni ticket non diceva.
+  it('la seconda comanda dello stesso conto si vede che è la seconda', async () => {
+    const conDue = {
+      ...CONTO,
+      comande: [
+        { id: 'c1', seq: 1, status: 'ritirato', items: [{ qty: 1, name: 'Spritz', unit_price: 7 }] },
+        { id: 'c2', seq: 2, status: 'ricevuto', items: [{ qty: 2, name: 'Negroni', unit_price: 8 }] },
+      ],
+    }
+    expect(compatto(await stampa('comanda', conDue))).toContain('COMANDA2-ORDINE12')
   })
 
   it('l’ora si può togliere dalla fascia', async () => {
     impostazioni({ stampa_comanda: { campi: { ora: false } } })
     const uscito = await stampa('comanda')
-    expect(compatto(uscito)).toContain('DIRETTO')
+    expect(compatto(uscito)).toContain('COMANDA1-ORDINE12')
     expect(compatto(uscito)).not.toContain('23:30')
+  })
+
+  // NIENTE «undefined» SULLA CARTA. Un conto appena nato non ha ancora il
+  // suo numero del giorno, e il ticket unito non è nessuna comanda in
+  // particolare: quello che non si sa non si scrive.
+  it('senza il numero del conto la fascia dice solo la comanda', async () => {
+    const uscito = await stampa('comanda', { ...CONTO, daily_number: null })
+    expect(compatto(uscito)).toContain('COMANDA1')
+    expect(uscito).not.toContain('ORDINE')
+    expect(uscito).not.toContain('undefined')
+  })
+
+  // LA FASCIA STA IN UNA RIGA. A corpo doppio sulla carta da 80 mm ci
+  // stanno 24 caratteri: se il respiro ai lati la facesse sfondare, la
+  // stampante andrebbe a capo da sola e il rettangolo nero si
+  // spezzerebbe in due.
+  it('la fascia non sfonda la carta, nemmeno coi numeri lunghi', async () => {
+    const printer = await import('../../src/lib/printer.js')
+    const { configStampa } = await import('../../src/lib/campiStampa.js')
+    const cfg = configStampa({}, 'comanda')
+    const larghe = [
+      [{ daily_number: 12, comande: [] }, { seq: 1 }],
+      [{ daily_number: 1234, comande: [] }, { seq: 12 }],
+    ]
+    for (const [ordine, comanda] of larghe) {
+      for (const riga of printer.strisciaComanda(cfg, '23:30', ordine, comanda)) {
+        expect(riga.length).toBeLessThanOrEqual(printer.LARGHEZZA_FASCIA)
+      }
+    }
+  })
+
+  it('sul ticket unito la fascia dice solo il conto', async () => {
+    const printer = await import('../../src/lib/printer.js')
+    await printer.printComandaUnita(CONTO)
+    const uscito = compatto(carta())
+    expect(uscito).toContain('ORDINE12')
+    expect(uscito).not.toContain('COMANDA')
+    expect(uscito).not.toContain('undefined')
   })
 
   // Fascia spenta E ora spenta vorrebbero dire una striscia nera vuota in
@@ -379,7 +443,7 @@ describe('i campi della comanda', () => {
   it('spegnendo la fascia il ticket comincia dal conteggio', async () => {
     impostazioni({ stampa_comanda: { campi: { fascia: false } } })
     const uscito = await stampa('comanda')
-    expect(uscito).not.toContain('DIRETTO')
+    expect(compatto(uscito)).not.toContain('COMANDA1-ORDINE12')
     expect(uscito).not.toContain('23:30')
     expect(nudo(uscito).split('\n')[0]).toContain('CONTATORIE')
   })

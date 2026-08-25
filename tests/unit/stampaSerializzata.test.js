@@ -232,8 +232,10 @@ describe('un lavoro di stampa contiene un ordine solo', () => {
     expect(foglio).toMatch(/3\s+M ?O ?J ?I ?T ?O/)
     expect(foglio).toContain('SPRITZ')
     expect(foglio).not.toContain('NEGRONI') // annullata: lavoro buttato
-    // Un'intestazione sola, cioè un conto solo.
-    expect(foglio.match(/D ?I ?R ?E ?T ?T ?O/g)).toHaveLength(1)
+    // Un'intestazione sola, cioè un conto solo. Dal 25/08 la fascia dice
+    // il conto invece di «DIRETTO» (BUG-089); sul ticket unito, che non è
+    // nessuna comanda in particolare, dice solo quello.
+    expect(foglio.match(/O ?R ?D ?I ?N ?E/g)).toHaveLength(1)
   })
 
   it('e prende un ORDINE, non una lista: non c’è modo di passargliene due', async () => {
