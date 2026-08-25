@@ -2512,3 +2512,53 @@ describe('lo stato della lavorazione sta nella barra in alto', () => {
     })
   })
 })
+
+// ── LE FASCE CHE POSSONO CEDERE (BUG-077) ────────────────────────────
+//
+// Con lo zoom alto l'altezza disponibile cala di un terzo, le misure fisse
+// no, e i tasti in fondo finivano FUORI dal riquadro — `overflow: hidden`
+// sopra, niente da scorrere: irraggiungibili, non scomodi (40 combinazioni
+// su 77, misurate in Chrome). Le regole che li tengono dentro stanno nel
+// foglio e sono sorvegliate da tests/unit/css.test.js, ma si appoggiano a
+// una STRUTTURA: quello che si legge separato da quello che si preme, e i
+// due gesti della serata in un contenitore che non cede. Se qualcuno
+// togliesse questi involucri dal componente, il foglio resterebbe giusto e
+// inerte — e il difetto tornerebbe senza che niente si accorga.
+describe('il piede del conto: cosa cede e cosa resta', () => {
+  it('i numeri stanno in `.posd-foot-info`, separati dai tasti', () => {
+    mount(baseOrder({ coperto_amount: 2, service_charge_amount: 1.5 }))
+    const info = document.querySelector('.posd-comanda-foot .posd-foot-info')
+    expect(info, 'i numeri del piede non hanno più il loro involucro').toBeTruthy()
+    expect(within(info).getByText('Totale')).toBeInTheDocument()
+    // E NON contiene i tasti: se li inglobasse, cedendo si porterebbe via
+    // anche quelli — che è esattamente il difetto.
+    expect(info.querySelector('.posd-foot-azioni')).toBeNull()
+  })
+
+  it('«Invia comanda» e «Pagamento» stanno nella riga che non cede', () => {
+    mount(baseOrder())
+    const riga = document.querySelector('.posd-foot-azioni .grid-2')
+    expect(riga, 'la riga dei due gesti non c’è più').toBeTruthy()
+    expect(within(riga).getByRole('button', { name: /Invia comanda/ })).toBeInTheDocument()
+    expect(within(riga).getByRole('button', { name: /Pagamento/ })).toBeInTheDocument()
+  })
+
+  it('«Stato servizio» e «Annulla ordine» stanno in `.posd-foot-secondarie`', () => {
+    // Sono loro a scorrere quando l'altezza non basta per tutti: mai a
+    // sparire, che è quello che facevano prima.
+    mount(baseOrder())
+    const secondarie = document.querySelector('.posd-foot-azioni .posd-foot-secondarie')
+    expect(secondarie, 'i due secondari non hanno più il loro involucro').toBeTruthy()
+    expect(within(secondarie).getByRole('button', { name: /Annulla ordine/ })).toBeInTheDocument()
+    expect(within(secondarie).getByRole('button', { name: /Stato servizio/ })).toBeInTheDocument()
+  })
+
+  it('la testata della colonna è `.posd-testa`, non uno `style` inline', () => {
+    // Da inline `flex-shrink: 0` vinceva sempre, e la testata restava una
+    // fascia rigida che spingeva fuori i tasti del piede.
+    mount(baseOrder())
+    const testa = document.querySelector('.posd-comanda .posd-testa')
+    expect(testa, 'la testata della colonna non ha più la sua classe').toBeTruthy()
+    expect(testa.getAttribute('style')).toBeNull()
+  })
+})
