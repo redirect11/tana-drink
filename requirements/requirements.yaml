@@ -7195,14 +7195,60 @@ requirements:
       ribattere a mano: sono le stesse merci, e ribatterle e' lavoro doppio con
       due occasioni di sbagliare. Resta possibile correggerle, aggiungerne e
       toglierne: la fattura fa fede sulla merce arrivata, non l'ordine.
-      RESTA APERTO: se una fattura le cui righe sono gia' state caricate debba
-      impedire un secondo carico da sola (probabile: basta ricordare sulla
-      riga se il carico e' avvenuto) o solo avvisare.
-    status: todo
+      FATTO (26/08/2026). Il tasto sta SOTTO ogni documento dello scadenzario
+      e si chiama «Aggiungi prodotti». Apre una finestra che cerca il
+      prodotto per nome, ne mette la quantita' in confezioni e il prezzo, e
+      scrive le righe dentro il documento (`lines` su `supplier_invoices`):
+      la fattura, che era solo una testata, guadagna le sue righe.
+      IL CARICO E' UNA CASELLA A PARTE, e il tasto di conferma cambia
+      dicitura con lei — «Aggiungi e carica» oppure «Aggiungi senza
+      caricare» — cosi' il gesto non si puo' fare alla cieca. Il
+      pre-impostato e' ACCESO, perche' e' il giro che Flavio descrive («in
+      modo tale che li va gia' a caricare»), ma il doppio carico non e'
+      impedito dall'attenzione: resta scritto sulla riga se il carico e'
+      avvenuto (`caricata`), e le righe gia' in archivio non tornano mai
+      dentro la finestra — di li' si aggiunge, non si ricarica. E' la
+      risposta al RESTA APERTO qui sopra, presa nella direzione che quel
+      testo dava per probabile.
+      LA DOMANDA SUL PREZZO COMPARE SOLO DOVE IL PREZZO E' CAMBIATO (oltre il
+      centesimo), con vecchio e nuovo affiancati e il nuovo che e' il campo
+      stesso, quindi modificabile. Parte SPENTA. Il si' scrive la riga di
+      listino di quel fornitore con la sua data e il costo di riferimento del
+      prodotto; il prezzo di vendita del menu non lo tocca nessuno.
+      UNA STRADA SOLA COL CARICO DEGLI ORDINI: la sequenza «prezzo accettato
+      → listino → costo → giacenza e movimento» e' stata ESTRATTA da
+      `consegnaRigheOrdine` in `registraAcquisto` (api.js), con due leve —
+      `carica` e `aggiornaPrezzo` — che alla consegna sono accese tutte e
+      due. Il conto delle unita' base sta in `caricoDaConfezioni`
+      (inventory.js), perche' due copie della stessa moltiplicazione sono due
+      occasioni di scriverla diversa.
+      DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) l'IMPORTO della
+      testata non si muove da solo — i prodotti si aggiungono a mano, un po'
+      per volta, e riscrivere l'importo dopo la prima riga farebbe sembrare
+      sbagliata una fattura che e' giusta; il netto delle righe si legge
+      accanto, e il confronto lo fa una persona; (2) il MAGAZZINO IN SOLA
+      LETTURA (BUG-029) spegne il carico ma NON impedisce di aggiungere le
+      righe: sono carta, non giacenze, e bloccarle sarebbe un divieto per un
+      motivo che non le riguarda; (3) il catalogo dentro la finestra si vede
+      solo cercando, perche' 388 prodotti dentro una finestrella non si
+      scorrono.
+      IL RAPPORTO CON GLI ORDINI, per adesso, e' SOLO UN AIUTO DI
+      COMPILAZIONE: «Riprendi le righe da un ordine» pesca fra gli ordini
+      dello stesso fornitore che hanno gia' consegnato qualcosa e ne copia le
+      righe come punto di partenza, modificabili. NON scrive nessun id
+      d'ordine sulla fattura: il gancio persistente fattura-ordine e'
+      REQ-MAG-025, ancora da decidere, e inventarlo qui vorrebbe dire creare
+      un dato che poi qualcun altro dovrebbe reggere. Le righe riprese da un
+      ordine consegnato spengono il carico da sole: quella merce e' entrata
+      in magazzino alla consegna.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, scadenzario]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/fatture.test.js
+      - tests/unit/prodottiFattura.test.js
+      - tests/component/SupplierInvoicesPanel.test.jsx
 
   - id: REQ-MAG-029
     title: "Un prodotto, piu' fornitori: il listino si stacca dal magazzino"
