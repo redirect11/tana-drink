@@ -32,6 +32,7 @@ import {
   giacenzaPerCarico,
   articoloNormalizzato,
   patchNormalizza,
+  caricoDaConfezioni,
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
 import { idRigaListino, livelloDi, statoOrdine, coloreACaso } from './listini.js'
@@ -1033,6 +1034,88 @@ export async function deletePurchaseOrder(id) {
   await deleteDoc(doc(db, 'purchase_orders', id))
 }
 
+// ── UNA STRADA SOLA PER LA MERCE CHE ENTRA (REQ-MAG-029, REQ-MAG-030) ─
+//
+// Il carico di un ordine consegnato e i prodotti aggiunti a una fattura
+// fanno lo stesso mestiere: prezzo accettato → riga di listino di QUEL
+// fornitore con la sua data → costo di riferimento del prodotto → giacenza
+// e movimento. Erano la stessa sequenza scritta due volte, ed è il genere
+// di duplicato che si scopre il mese dopo, quando una delle due copie ha
+// smesso di aggiornare il listino e nessuno se n'è accorto.
+//
+// LE DUE LEVE SONO SEPARATE PERCHÉ AL BANCO LO SONO. Dalla fattura si
+// possono aggiungere le righe SENZA toccare le giacenze — «magari me li
+// sono caricati già prima in altro modo» (Flavio, REQ-MAG-030) — e senza
+// muovere i prezzi, perché chi non risponde alla domanda non aggiorna
+// niente. Alla consegna di un ordine sono accese tutte e due.
+function registraAcquisto({
+  articolo,
+  itemId,
+  qtyPackages,
+  costo,
+  supplierId = null,
+  adesso,
+  motivo,
+  carica = true,
+  aggiornaPrezzo = true,
+}) {
+  // Nessun articolo, nessuna giacenza da alzare e nessun costo da scrivere:
+  // il documento resta valido lo stesso, il magazzino non c'entra.
+  if (!articolo) return
+  const { addQty, bottles_total } = caricoDaConfezioni(articolo, qtyPackages)
+  const patch = {}
+  if (carica) {
+    patch.stock = increment(addQty)
+    if (bottles_total != null) patch.bottles_total = bottles_total
+  }
+  // IL COSTO DEL PRODOTTO RESTA UN NUMERO SOLO: l'ultimo effettivamente
+  // pagato, chiunque fosse il fornitore. È quello che valorizza il
+  // magazzino e il costo ricetta; il confronto fra fornitori vive nel
+  // listino, che è un'altra cosa (REQ-MAG-029). Il PREZZO DI VENDITA del
+  // menu non lo tocca nessuno: è di Flavio.
+  if (aggiornaPrezzo) patch.cost = costo
+  if (Object.keys(patch).length > 0) {
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', itemId), patch), `carico ${motivo}`)
+  }
+  if (carica) {
+    bgWrite(
+      () =>
+        addDoc(movementsCol, {
+          item_id: itemId,
+          item_name: articolo.name,
+          type: 'load',
+          qty: addQty,
+          unit: articolo.unit ?? null,
+          reason: motivo,
+          created_at: serverTimestamp(),
+        }),
+      `movimento ${motivo}`
+    )
+  }
+  // IL PREZZO ACCETTATO AGGIORNA IL LISTINO DI QUEL FORNITORE, con la sua
+  // data. È anche il modo in cui i listini si popolano da soli usandoli:
+  // chi ordina e riceve scrive il prezzo vero senza compilare niente a
+  // parte.
+  const rigaId = aggiornaPrezzo ? idRigaListino(supplierId, itemId) : null
+  if (rigaId) {
+    bgWrite(
+      () =>
+        setDoc(
+          doc(db, 'supplier_prices', rigaId),
+          {
+            supplier_id: supplierId,
+            item_id: itemId,
+            price: costo,
+            last_price: costo,
+            last_price_at: adesso,
+          },
+          { merge: true }
+        ),
+      'listino fornitore'
+    )
+  }
+}
+
 // ── I TRE LIVELLI DELLA RIGA D'ORDINE (REQ-MAG-029) ─────────────────
 //
 // Flavio: «io mi creo l'ordine che devo mandare al fornitore e in quel
@@ -1089,70 +1172,24 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
     l.stato = 'consegnato'
     l.delivered_at = adesso
 
-    const cur = articoli[k]
     // Prodotto sparito dall'anagrafica mentre l'ordine viaggiava: la riga
     // avanza lo stesso, se no resterebbe «richiesta» per sempre e l'ordine
     // non si chiuderebbe mai. Quello che non si può fare è caricarne la
-    // giacenza, perché non c'è più nessuna giacenza da alzare.
-    if (!cur) continue
-
-    const qty = Number(l.qty_packages) || 0
-    const size = Number(cur.package_size) || 0
-    const stock = Number(cur.stock) || 0
-    let addQty
-    const patch = {}
-    if (cur.unit === 'pz' || !size) {
-      addQty = qty
-      patch.stock = increment(addQty)
-    } else {
-      addQty = qty * size
-      const full = Math.floor(stock / size)
-      const hasOpen = stock - full * size > 1e-9
-      patch.stock = increment(addQty)
-      patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
-    }
-    // IL COSTO DEL PRODOTTO RESTA UN NUMERO SOLO: l'ultimo effettivamente
-    // pagato, chiunque fosse il fornitore. È quello che valorizza il
-    // magazzino e il costo ricetta; il confronto fra fornitori vive nel
-    // listino, che è un'altra cosa (REQ-MAG-029).
-    patch.cost = costo
-    bgWrite(() => updateDoc(doc(db, 'inventory_items', l.item_id), patch), 'carico ordine')
-    bgWrite(
-      () =>
-        addDoc(movementsCol, {
-          item_id: l.item_id,
-          item_name: cur.name,
-          type: 'load',
-          qty: addQty,
-          unit: cur.unit ?? null,
-          reason: 'ordine fornitore',
-          created_at: serverTimestamp(),
-        }),
-      'movimento ordine'
-    )
-
-    // LA CORREZIONE AGGIORNA IL LISTINO DI QUEL FORNITORE, con la sua data.
-    // È anche il modo in cui i listini si popolano da soli usandoli: chi
-    // ordina e riceve scrive il prezzo vero senza compilare niente a parte.
-    const supplierId = l.supplier_id ?? order.supplier_id ?? null
-    const rigaId = idRigaListino(supplierId, l.item_id)
-    if (rigaId) {
-      bgWrite(
-        () =>
-          setDoc(
-            doc(db, 'supplier_prices', rigaId),
-            {
-              supplier_id: supplierId,
-              item_id: l.item_id,
-              price: costo,
-              last_price: costo,
-              last_price_at: adesso,
-            },
-            { merge: true }
-          ),
-        'listino fornitore'
-      )
-    }
+    // giacenza, perché non c'è più nessuna giacenza da alzare: se ne occupa
+    // registraAcquisto, che davanti a un articolo che non c'è non scrive
+    // niente.
+    //
+    // ALLA CONSEGNA IL PREZZO SI ACCETTA SEMPRE: quello scritto qui è quello
+    // del documento in mano al fornitore, quindi è il prezzo vero.
+    registraAcquisto({
+      articolo: articoli[k],
+      itemId: l.item_id,
+      qtyPackages: l.qty_packages,
+      costo,
+      supplierId: l.supplier_id ?? order.supplier_id ?? null,
+      adesso,
+      motivo: 'ordine fornitore',
+    })
   }
 
   return scriviRigheOrdine(orderRef, orderSnap, lines)
@@ -1213,6 +1250,10 @@ function mapInvoice(snap) {
     amount: Number(i.amount) || 0,
     paid: !!i.paid,
     notes: i.notes ?? null,
+    // LE RIGHE (REQ-MAG-030). Una fattura scritta prima di questa voce non
+    // ce le ha, ed è la normalità di tutte quelle già in archivio: la
+    // testata resta valida, le righe si aggiungono quando qualcuno le mette.
+    lines: Array.isArray(i.lines) ? i.lines : [],
     created_at: toIso(i.created_at),
   }
 }
@@ -1240,6 +1281,90 @@ export async function updateSupplierInvoice(id, patch) {
 
 export async function deleteSupplierInvoice(id) {
   await deleteDoc(doc(db, 'supplier_invoices', id))
+}
+
+// ── «AGGIUNGI PRODOTTI» A UNA FATTURA (REQ-MAG-030) ──────────────────
+//
+// Flavio: «sotto mi deve apparire un tasto che fa il carico. Dobbiamo usare
+// un'altra dicitura sicuramente, tipo AGGIUNGI PRODOTTI magari, e ci
+// mettiamo anche i prodotti, in modo tale che li va già a caricare
+// all'interno dei prodotti di magazzino. Sempre che poi dopo mi fa la
+// domanda se voglio aggiornare il prezzo — nel caso lo vado a modificare —
+// oppure lasciarlo invariato, così, senza carico, perché magari me li sono
+// caricati già prima in altro modo».
+//
+// DUE COSE DISTINTE, e la seconda è FACOLTATIVA: ricostruire un documento
+// contabile (le righe sulla fattura) e muovere una giacenza. Con `carica` a
+// false le righe si scrivono e il magazzino non si tocca.
+//
+// `righe` sono le righe da aggiungere: item_id, quantità in confezioni,
+// prezzo e — per riga — se quel prezzo deve aggiornare l'archivio.
+export async function aggiungiProdottiAFattura(id, { righe = [], carica = true } = {}) {
+  const ref = doc(db, 'supplier_invoices', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Documento non trovato')
+  const fattura = snap.data()
+  const nuove = (righe || []).filter((r) => r?.item_id && (Number(r.qty_packages) || 0) > 0)
+  if (nuove.length === 0) return mapInvoice(snap)
+
+  // PRIMA SI LEGGE TUTTO, POI SI SCRIVE, come alla consegna di un ordine:
+  // fermandosi a metà, metà fattura risulterebbe caricata e metà no, e
+  // nessuno saprebbe più dove ricominciare.
+  const snaps = await Promise.all(
+    nuove.map((r) => getDoc(doc(db, 'inventory_items', r.item_id)))
+  )
+  // `articoloScrivibile` si ferma se il magazzino è ancora scritto alla
+  // vecchia maniera (BUG-029) — ma solo quando c'è davvero una giacenza da
+  // alzare. Senza carico non si tocca nessuno stock: bloccare anche lì
+  // impedirebbe di ricostruire una fattura per un motivo che non la
+  // riguarda.
+  const articoli = snaps.map((sn) =>
+    carica ? articoloScrivibile(sn) : sn.exists() ? sn.data() : null
+  )
+
+  // Firestore non accetta `serverTimestamp()` DENTRO un array: la data della
+  // riga è quella del terminale, come per le comande.
+  const adesso = new Date().toISOString()
+  const supplierId = fattura.supplier_id ?? null
+
+  const scritte = nuove.map((r, k) => {
+    const costo = Number(r.unit_cost) || 0
+    registraAcquisto({
+      articolo: articoli[k],
+      itemId: r.item_id,
+      qtyPackages: r.qty_packages,
+      costo,
+      supplierId,
+      adesso,
+      motivo: 'fattura fornitore',
+      carica,
+      // CHI NON RISPONDE NON AGGIORNA NIENTE: il pre-impostato della domanda
+      // sul prezzo è «lascia com'è», e qui si limita a obbedire.
+      aggiornaPrezzo: !!r.aggiorna_prezzo,
+    })
+    return {
+      item_id: r.item_id,
+      name: r.name ?? articoli[k]?.name ?? '',
+      unit: r.unit ?? articoli[k]?.unit ?? 'pz',
+      package_size: r.package_size ?? articoli[k]?.package_size ?? null,
+      qty_packages: Number(r.qty_packages) || 0,
+      unit_cost: costo,
+      vat: r.vat ?? 22,
+      // SE IL CARICO È GIÀ AVVENUTO RESTA SCRITTO SULLA RIGA: è quello che
+      // impedisce di caricare due volte la stessa merce, che è l'errore da
+      // evitare (REQ-MAG-030). Una riga già in archivio non si ripresenta
+      // mai nella finestra: da lì si aggiunge, non si ricarica.
+      caricata: !!carica,
+      added_at: adesso,
+    }
+  })
+
+  const lines = [...(Array.isArray(fattura.lines) ? fattura.lines : []), ...scritte]
+  // Non si rilegge quello che si è appena scritto: la scrittura parte in
+  // sottofondo e la cache risponderebbe col documento di prima (BUG-045).
+  // Il risultato si compone qui.
+  bgWrite(() => updateDoc(ref, { lines }), 'prodotti fattura')
+  return { ...mapInvoice(snap), lines }
 }
 
 // --- SERVIZIO (perpetuo) ---
