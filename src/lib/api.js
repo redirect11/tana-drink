@@ -1516,6 +1516,95 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, 
   return { ...mapInvoice(snap), ...patch }
 }
 
+// ── ALTRE SPESE: QUELLO CHE ESCE E NON ENTRA IN MAGAZZINO ────────────
+//
+// Terza sottosezione di Fornitori (REQ-MAG-034, da REQ-MAG-025). I campi
+// sono le colonne del foglio «TO BUY» — articolo, quantità, prezzo, dove si
+// compra, note — più la cosa che il foglio non sa dire: se quella voce è
+// GIÀ STATA COMPRATA. Solo le comprate pesano sul mese; le altre sono un
+// promemoria, e senza quella distinzione un divano desiderato abbasserebbe
+// l'utile di gennaio.
+//
+// I conti (cosa pesa, su quale mese, quanto) stanno in `lib/spese.js`: qui
+// c'è solo il giro su Firestore.
+function mapSpesa(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    name: s.name ?? '',
+    qty: Number(s.qty) || 0,
+    unit_cost: Number(s.unit_cost) || 0,
+    // DOVE SI COMPRA: nel foglio è una colonna sua (Amazon, Bricoware,
+    // IKEA, Vente-Unique) e serve a ritrovare la stessa cosa la volta dopo.
+    shop: s.shop ?? '',
+    notes: s.notes ?? null,
+    // I DUE CAMPI DELLA DISTINZIONE: `bought` dice SE, `bought_at` dice
+    // QUANDO — ed è la data che decide su quale mese l'uscita pesa.
+    bought: !!s.bought,
+    bought_at: s.bought_at ?? null, // YYYY-MM-DD
+    created_at: toIso(s.created_at),
+  }
+}
+
+// I campi come vanno scritti, da qualunque parte arrivino: i numeri numeri e
+// il testo ripulito. Sta qui e non nel modulo dei conti perché è la forma del
+// DOCUMENTO, e chi scrive è uno solo.
+function datiSpesa(dati = {}) {
+  const testo = (v) => (typeof v === 'string' ? v.trim() : (v ?? ''))
+  return {
+    name: testo(dati.name),
+    qty: Number(dati.qty) || 0,
+    unit_cost: Number(dati.unit_cost) || 0,
+    shop: testo(dati.shop),
+    notes: testo(dati.notes) || null,
+    bought: !!dati.bought,
+    // La data serve solo a quello che è stato comprato: su un promemoria
+    // sarebbe un mese di competenza per una cosa che non è successa.
+    bought_at: dati.bought ? dati.bought_at || null : null,
+  }
+}
+
+export async function fetchAltreSpese({ limit = 200 } = {}) {
+  const snap = await getDocs(
+    query(collection(db, 'altre_spese'), orderBy('created_at', 'desc'), fbLimit(limit))
+  )
+  return snap.docs.map(mapSpesa)
+}
+
+// L'IDENTIFICATIVO SE LO FA IL TERMINALE, e non è un vezzo: con `addDoc` si
+// aspetta il server per sapere come si chiama il documento appena scritto, e
+// senza rete quell'attesa non finisce mai. Così invece la riga compare
+// nell'istante in cui si tocca «Salva» e la scrittura la insegue.
+export async function creaAltraSpesa(dati) {
+  const ref = doc(collection(db, 'altre_spese'))
+  const spesa = datiSpesa(dati)
+  bgWrite(() => setDoc(ref, { ...spesa, created_at: serverTimestamp() }), 'altra spesa')
+  // Non si rilegge quello che si è appena scritto: si compone (BUG-045). La
+  // data di creazione la mette il server, e qui vale quella del terminale —
+  // serve solo a mettere in ordine l'elenco.
+  return { id: ref.id, ...spesa, created_at: new Date().toISOString() }
+}
+
+// La spesa di partenza si legge, si scrive in sottofondo e il risultato si
+// COMPONE: rileggere dopo la scrittura tornerebbe la versione di prima
+// (BUG-045).
+export async function aggiornaAltraSpesa(id, patch) {
+  const ref = doc(db, 'altre_spese', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Spesa non trovata')
+  const prima = mapSpesa(snap)
+  const dopo = datiSpesa({ ...prima, ...patch })
+  bgWrite(() => updateDoc(ref, dopo), 'altra spesa')
+  return { ...prima, ...dopo }
+}
+
+// Niente da portarsi dietro (nessun allegato, nessuna giacenza): la riga
+// sparisce dall'elenco nell'istante del gesto e la cancellazione parte in
+// sottofondo come tutte le altre scritture.
+export async function eliminaAltraSpesa(id) {
+  bgWrite(() => deleteDoc(doc(db, 'altre_spese', id)), 'altra spesa')
+}
+
 // --- SERVIZIO (perpetuo) ---
 // Niente più "serate": il locale lavora in continuità. I conti restano
 // aperti finché non li si chiude a mano, anche a giorni di distanza. Le
