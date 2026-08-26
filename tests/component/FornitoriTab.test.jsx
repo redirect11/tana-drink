@@ -14,8 +14,8 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import { useEffect, useState } from 'react'
 
-// I tre pannelli hanno i loro giri: qui basta sapere che la sottosezione
-// giusta monta il pannello giusto.
+// Ogni pannello ha il suo giro: qui basta sapere che la sottosezione giusta
+// monta il pannello giusto.
 vi.mock('../../src/components/InventoryManager.jsx', () => ({
   FornitoriPanel: () => <div>PANNELLO ANAGRAFICA</div>,
   default: () => <div>MAGAZZINO</div>,
@@ -25,6 +25,12 @@ vi.mock('../../src/components/PurchaseOrdersPanel.jsx', () => ({
 }))
 vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
   default: () => <div>PANNELLO SCADENZARIO</div>,
+}))
+vi.mock('../../src/components/AltreSpesePanel.jsx', () => ({
+  default: () => <div>PANNELLO ALTRE SPESE</div>,
+}))
+vi.mock('../../src/components/RiepilogoFornitoriPanel.jsx', () => ({
+  default: () => <div>PANNELLO RIEPILOGO</div>,
 }))
 
 // Le impostazioni del locale: di partenza quelle vere di questa
@@ -74,17 +80,21 @@ beforeEach(() => {
   stato.impostazioni = {}
 })
 
-describe('le tre sottosezioni di Fornitori', () => {
+// LE SOTTOSEZIONI SONO DIVENTATE CINQUE il 27/08/2026 (REQ-MAG-034): «Altre
+// spese» e «Riepilogo» sono gli ultimi due pezzi di REQ-MAG-025, e stanno
+// qui perché i soldi che escono si guardano dove si registrano. Non sono
+// premium: l'elenco filtrato deve continuare a comportarsi allo stesso modo.
+describe('le sottosezioni di Fornitori', () => {
   it('si apre sull’anagrafica: è il posto da cui si parte', () => {
     mostra()
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
     expect(screen.queryByText('PANNELLO ORDINI')).toBeNull()
   })
 
-  it('ci sono tutt’e tre, e ognuna apre il suo pannello', async () => {
+  it('ci sono tutte, e ognuna apre il suo pannello', async () => {
     const user = userEvent.setup()
     mostra()
-    for (const voce of ['Gestione fornitori', 'Ordini', 'Scadenzario']) {
+    for (const voce of ['Gestione fornitori', 'Ordini', 'Scadenzario', 'Altre spese', 'Riepilogo']) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
     await user.click(screen.getByRole('button', { name: /Ordini/ }))
@@ -94,8 +104,25 @@ describe('le tre sottosezioni di Fornitori', () => {
     await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
     expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: /Altre spese/ }))
+    expect(screen.getByText('PANNELLO ALTRE SPESE')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Riepilogo/ }))
+    expect(screen.getByText('PANNELLO RIEPILOGO')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: /Gestione fornitori/ }))
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
+  })
+
+  // Non sono premium e non se ne è inventato un modulo: le altre spese si
+  // scrivono a mano, e il riepilogo mette insieme quello che c'è — con lo
+  // scadenzario spento la colonna della merce resta a zero, che è la verità
+  // di quel locale e non un pezzo mancante.
+  it('le due voci nuove restano anche con lo scadenzario spento', async () => {
+    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    mostra()
+    expect(screen.getByRole('button', { name: /Altre spese/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Riepilogo/ })).toBeInTheDocument()
   })
 })
 

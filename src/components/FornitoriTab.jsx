@@ -5,6 +5,8 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import { FornitoriPanel } from './InventoryManager.jsx'
 import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
 import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
+import AltreSpesePanel from './AltreSpesePanel.jsx'
+import RiepilogoFornitoriPanel from './RiepilogoFornitoriPanel.jsx'
 
 // ── FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa dobbiamo ──
 //
@@ -30,6 +32,14 @@ const SEZIONI = [
   // Funzione premium (REQ-LIC-001): dove il modulo non lavora, la voce non
   // c'è. Le altre due restano, quindi la sezione non resta mai vuota.
   { id: 'scadenzario', icona: '📄', label: 'Scadenzario' },
+  // ALTRE SPESE E RIEPILOGO (REQ-MAG-034, ritagliati da REQ-MAG-025). Non
+  // sono premium e non se ne inventa un modulo: le altre spese si scrivono a
+  // mano e non dipendono da nessuna funzione a pagamento, e il riepilogo
+  // mette insieme quello che c'è — con lo scadenzario spento la colonna
+  // della merce resta a zero, che è la verità di quel locale e non un pezzo
+  // mancante.
+  { id: 'spese', icona: '🧾', label: 'Altre spese' },
+  { id: 'riepilogo', icona: '📊', label: 'Riepilogo' },
 ]
 
 export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
@@ -52,6 +62,10 @@ export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
         <PurchaseOrdersPanel />
       ) : attiva === 'scadenzario' ? (
         <SupplierInvoicesPanel />
+      ) : attiva === 'spese' ? (
+        <AltreSpesePanel />
+      ) : attiva === 'riepilogo' ? (
+        <RiepilogoFornitoriPanel />
       ) : (
         <FornitoriPanel />
       )}
