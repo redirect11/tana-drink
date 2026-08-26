@@ -23,7 +23,6 @@ import {
 import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { splitAmounts } from './groups.js'
-import { createSumUpSale, updateSumUpSaleStatus, toSumUpStatus } from './sumupApi.js'
 import {
   computeConsumption,
   eScorta,
@@ -2116,19 +2115,6 @@ async function creaOrdine({
   const snap = await getDoc(newOrderRef)
   const order = mapOrder(snap)
 
-  // Invia l'ordine a SumUp POS Pro in background (non blocca il flusso cliente).
-  createSumUpSale({
-    orderId: order.id,
-    tableLabel: table_label,
-    note,
-    items: order.order_items.map((i) => ({
-      sumup_product_id: i.sumup_product_id,
-      name: i.name,
-      qty: i.qty,
-      unit_price: i.unit_price,
-    })),
-  }).catch((e) => console.error('[SumUp] createSale failed:', e))
-
   return order
 }
 
@@ -2910,13 +2896,6 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
   updateServiceTimeStats(raw, comandaScritta, newStatus).catch((e) =>
     console.error('[eta] aggiornamento statistiche fallito:', e)
   )
-
-  // Sync stato verso SumUp POS Pro in background (fire-and-forget).
-  const sumupStatus = toSumUpStatus(newStatus)
-  if (sumupStatus && raw.sumup_sale_id) {
-    updateSumUpSaleStatus(raw.sumup_sale_id, sumupStatus)
-      .catch((e) => console.error('[SumUp] updateStatus failed:', e))
-  }
 }
 
 export const advanceComanda = perConto(advanceComandaOra)
