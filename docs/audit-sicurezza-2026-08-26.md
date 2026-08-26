@@ -172,6 +172,28 @@ Innocuo finché SumUp è spento (`functions/.env` vuoto), ma da chiudere **prima
 accenderlo. **Fix:** `requireRole(request.auth, BANCO)` come per i pagamenti, più
 validazione di `orderId`/`items` e ricalcolo prezzi server-side.
 
+> **✅ CHIUSO il 26/08/2026** (BUG-094). Ruolo nel servizio, stesso metro dei
+> pagamenti: **BANCO** per `syncProducts` (riscrivere il menù è back-office),
+> **tutto il personale** per `createSale`/`updateSaleStatus` (la sala prende gli
+> ordini al tavolo e segna «servito»). `index.js` passa `request.auth` e traduce
+> `{code, message}` in `HttpsError`.
+> **L'ordine dei controlli è voluto:** prima `isConfigured()`, poi il ruolo. Da
+> spenta la funzione non fa nulla e deve restare un no-op *silenzioso* —
+> altrimenti il primo a prendersi l'errore sarebbe il telefono del cliente, che
+> chiama `createSumUpSale` a ogni ordine. Così oggi non cambia niente e il buco
+> si chiude nell'istante in cui SumUp si accende.
+> **Prezzi lato server:** il payload si costruisce dagli item dell'ordine su
+> Firestore. Se l'ordine non c'è ancora si usano quelli arrivati — il conto è
+> local-first e il documento può essere per strada; ora però di lì passa solo
+> il personale.
+> **⚠️ Da decidere:** `createSumUpSale` parte oggi dal **browser del cliente** a
+> ogni ordine dal menù, e il cliente non è autenticato. Col ruolo, ad
+> integrazione accesa quegli ordini **non arriveranno più al POS**: solo quelli
+> battuti dal personale. La strada giusta è spostare l'invio lato server
+> (trigger `onDocumentCreated` su `orders`) — cambiamento d'architettura, da
+> decidere. Finché SumUp è spento non cambia niente per nessuno.
+> Prove: 12 casi nuovi in `tests/bdd/`. **Non deployato.**
+
 ### 6. `sumupWebhook` si fida del payload *(latente — SumUp spento)*
 
 `functions/index.js:118` → `sumup-service.js:89`. Prende `sale_id` **e `status`** dal corpo

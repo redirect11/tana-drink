@@ -3903,13 +3903,52 @@ bugs:
       pagamenti (payment-service.js), validare orderId/items (esistenza
       dell'ordine) e RICALCOLARE i prezzi lato server invece di prenderli dal
       client. Insieme, imporre App Check (BUG-092).
+      RISOLTO (26/08/2026). Il controllo di ruolo sta nel servizio
+      (functions/lib/sumup-service.js), con lo stesso metro dei pagamenti: il
+      ruolo vive nel custom claim, che nessuno puo' darsi da solo. BANCO per
+      syncProducts — riscrivere il menu' e' back-office, non servizio — e
+      TUTTO IL PERSONALE per createSale e updateSaleStatus, perche' la sala
+      prende gli ordini al tavolo e segna «servito». index.js passa
+      request.auth e traduce { code, message } in HttpsError, come staffAdmin.
+      L'ORDINE DEI CONTROLLI E' VOLUTO: prima `isConfigured()`, poi il ruolo.
+      Con SumUp spento queste funzioni non fanno NIENTE — nessuna chiamata,
+      nessuna scrittura — e devono restare un no-op silenzioso: mettere il
+      ruolo davanti trasformerebbe un nulla di fatto in un errore, e il primo a
+      prenderlo sarebbe il telefono del CLIENTE, che chiama createSumUpSale a
+      ogni ordine (api.js, creaOrdine). Cosi' il comportamento di oggi non
+      cambia di una virgola, e il buco si chiude nell'istante in cui SumUp si
+      accende.
+      I PREZZI LI METTE IL SERVER: se l'ordine e' gia' su Firestore il payload
+      della vendita si costruisce dai SUOI item. Se non c'e' ancora si usano
+      quelli arrivati, e non e' una svista: il conto e' local-first, creaOrdine
+      scrive senza aspettare e chiama subito la callable, quindi il documento
+      puo' essere ancora per strada — pretenderlo vorrebbe dire perdere la
+      vendita di ogni conto battuto con la linea lenta. Ora che di li' passa
+      solo il personale, il salto vale la pena.
+      DA DECIDERE, e non e' un dettaglio: `createSumUpSale` oggi parte dal
+      BROWSER DEL CLIENTE a ogni ordine dal menu' (api.js), e il cliente non e'
+      autenticato. Col ruolo, quando SumUp verra' acceso, gli ordini fatti dal
+      telefono del cliente NON arriveranno piu' al POS: arriveranno solo quelli
+      battuti dal personale. La strada giusta e' spostare l'invio lato server
+      (un trigger onDocumentCreated su orders), ma e' un cambiamento
+      d'architettura e lo decide l'utente. Finche' SumUp e' spento non cambia
+      niente per nessuno.
+      PROVATO in tests/bdd/: 12 casi nuovi fra create-sale, sync-products e
+      update-sale-status — cliente e non autenticato respinti, sala e banco che
+      passano dove devono, la sala respinta sul catalogo, il no-op silenzioso a
+      SumUp spento, e i prezzi falsi dal client che vengono ignorati a favore
+      di quelli dell'ordine.
+      NON DEPLOYATO: le Functions non si pubblicano senza via libera esplicito.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, sicurezza, pagamenti]
     severity: grave
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/bdd/create-sale.test.js
+      - tests/bdd/sync-products.test.js
+      - tests/bdd/update-sale-status.test.js
 
   - id: BUG-095
     title: "sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica"

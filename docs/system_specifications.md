@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **217 voci** in tutto. **194** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -1694,9 +1694,9 @@ Se SUMUP_VENDOR_ID o SUMUP_OUTLET_ID non sono impostati, tutte le callable (sync
 
 #### REQ-SUMUP-SYNC-001 — Sincronizzazione catalogo SumUp → Firestore drinks
 
-syncSumUpProducts scarica il catalogo da GET /products e aggiorna la collezione `drinks`. I prodotti già presenti (identificati da sumup_product_id) vengono aggiornati; i nuovi vengono creati con un timestamp created_at. Ritorna { synced, total }.
+syncSumUpProducts scarica il catalogo da GET /products e aggiorna la collezione `drinks`. I prodotti già presenti (identificati da sumup_product_id) vengono aggiornati; i nuovi vengono creati con un timestamp created_at. Ritorna { synced, total }. DAL 26/08/2026 (BUG-094) SERVE IL BANCO (admin o bartender), non tutto il personale: questa riscrive il MENÙ con quello che risponde SumUp, ed è back-office, non servizio. Prima non chiedeva niente a nessuno, e con l'integrazione accesa chiunque conoscesse l'id del progetto — sta nel bundle — poteva rifare la carta del locale da internet.
 
-**Dove**: `functions/index.js syncSumUpProducts, functions/lib/sumup-service.js syncProducts` · **Lo dimostrano**: `TC-SYNC-002`, `TC-SYNC-003`, `TC-SYNC-004`, `tests/bdd/sync-products.test.js`
+**Dove**: `functions/index.js syncSumUpProducts, functions/lib/sumup-service.js syncProducts` · **Lo dimostrano**: `TC-SYNC-002`, `TC-SYNC-003`, `TC-SYNC-004`, `TC-SYNC-005`, `TC-SYNC-006`, `TC-SYNC-007`, `TC-SYNC-008`, `tests/bdd/sync-products.test.js`
 
 #### REQ-SUMUP-SYNC-002 — Normalizzazione robusta della risposta prodotti SumUp
 
@@ -1706,15 +1706,17 @@ La risposta di /products può essere un array diretto o un oggetto con chiave "p
 
 #### REQ-SUMUP-SALE-001 — Invio ordine a SumUp come External Sale
 
-createSumUpSale costruisce il payload External Sale dall'ordine (customer_name derivato dal tavolo, note, sale_items con product_id/quantity/unit_price e total_price arrotondato a 2 decimali) e lo invia in POST a /external_sales. Se la vendita ha un id e l'ordine ha un orderId, persiste sumup_sale_id sull'ordine Firestore. Ritorna { saleId }.
+createSumUpSale costruisce il payload External Sale dall'ordine (customer_name derivato dal tavolo, note, sale_items con product_id/quantity/unit_price e total_price arrotondato a 2 decimali) e lo invia in POST a /external_sales. Se la vendita ha un id e l'ordine ha un orderId, persiste sumup_sale_id sull'ordine Firestore. Ritorna { saleId }. DAL 26/08/2026 (BUG-094) SERVE UN RUOLO — tutto il personale, perché la sala prende gli ordini al tavolo — e I PREZZI LI METTE IL SERVER: se l'ordine è già su Firestore, il payload si costruisce dai SUOI item, non da quelli passati dal client. Se l'ordine non c'è ancora si usano quelli arrivati: il conto è local-first, creaOrdine scrive senza aspettare e chiama subito questa, quindi il documento può essere ancora per strada — e pretenderlo vorrebbe dire perdere la vendita di ogni conto battuto con la linea lenta. L'ordine dei controlli è voluto:
 
-**Dove**: `functions/index.js createSumUpSale, functions/lib/sumup-service.js createSale` · **Lo dimostrano**: `TC-SALE-002`, `TC-SALE-003`, `TC-CORE-004`, `tests/bdd/create-sale.test.js`, `tests/unit/sumup-core.test.js`
+PRIMA `isConfigured()`, poi il ruolo. Da spenta la funzione non fa niente, e deve restare un no-op silenzioso.
+
+**Dove**: `functions/index.js createSumUpSale, functions/lib/sumup-service.js createSale` · **Lo dimostrano**: `TC-SALE-002`, `TC-SALE-003`, `TC-SALE-004`, `TC-SALE-005`, `TC-SALE-006`, `TC-SALE-007`, `TC-SALE-008`, `TC-SALE-009`, `TC-CORE-004`, `tests/bdd/create-sale.test.js`, `tests/unit/sumup-core.test.js`
 
 #### REQ-SUMUP-STATUS-001 — Aggiornamento stato vendita su SumUp
 
-updateSumUpSaleStatus invia in PUT a /external_sales/{saleId}/status il nuovo stato. Se saleId è assente ritorna { skipped: true, reason } senza chiamare SumUp. Ritorna { updated: true } in caso di successo.
+updateSumUpSaleStatus invia in PUT a /external_sales/{saleId}/status il nuovo stato. Se saleId è assente ritorna { skipped: true, reason } senza chiamare SumUp. Ritorna { updated: true } in caso di successo. DAL 26/08/2026 (BUG-094) SERVE UN RUOLO: tutto il personale, perché la sala segna «servito» al tavolo. Prima non chiedeva niente, e chi indovinava un sumup_sale_id faceva avanzare la vendita di un altro tavolo.
 
-**Dove**: `functions/index.js updateSumUpSaleStatus, functions/lib/sumup-service.js updateSaleStatus` · **Lo dimostrano**: `TC-STATUS-002`, `TC-STATUS-003`, `tests/bdd/update-sale-status.test.js`
+**Dove**: `functions/index.js updateSumUpSaleStatus, functions/lib/sumup-service.js updateSaleStatus` · **Lo dimostrano**: `TC-STATUS-002`, `TC-STATUS-003`, `TC-STATUS-004`, `TC-STATUS-005`, `TC-STATUS-006`, `TC-STATUS-007`, `tests/bdd/update-sale-status.test.js`
 
 #### REQ-SUMUP-WEBHOOK-001 — Webhook SumUp → aggiornamento stato ordine Firestore
 
@@ -2605,7 +2607,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-093](#bug-093--ogni-ordine-è-leggibile-e-creabile-da-chiunque-dati-personali-esposti) — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti | grave | P1 |
-| · | [BUG-094](#bug-094--le-callable-sumup-pos-pro-non-controllano-né-login-né-ruolo) — Le callable SumUp POS Pro non controllano né login né ruolo | grave | P2 |
 | · | [BUG-095](#bug-095--sumupwebhook-si-fida-dello-stato-nel-payload-senza-firma-né-ri-verifica) — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica | grave | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
@@ -2699,12 +2700,6 @@ SCARTATA una scorciatoia: un ramo `resource.id is string` fa passare la query pe
 DA FARE A MANO: le regole hanno effetto solo dopo `firebase deploy --only firestore:rules`.
 
 **Dove**: `firestore.rules (match /orders/{orderId}), src/lib/api.js`
-
-#### BUG-094 — Le callable SumUp POS Pro non controllano né login né ruolo
-
-LATENTE — oggi innocuo perché SumUp è spento (functions/.env vuoto), ma da chiudere PRIMA di accendere l'integrazione. Le tre callable syncSumUpProducts, createSumUpSale e updateSumUpSaleStatus non leggono request.auth; un onCall v2 non richiede autenticazione di default, e non c'è requireRole né App Check. A integrazione attiva, chiunque conosca l'id progetto (è nel bundle) può, da internet: - syncSumUpProducts: riscrivere l'intera collezione drinks (il menù) con la risposta dell'API SumUp; - createSumUpSale: passare orderId/items/unit_price/qty DAL CLIENT e scrivere sumup_sale_id su un ordine arbitrario con prezzi a piacere; - updateSumUpSaleStatus: cambiare lo stato di qualunque vendita. Comportamento atteso: sono operazioni di back-office, mai di un cliente. CURA: aggiungere `requireRole(request.auth, BANCO)` come già fanno i pagamenti (payment-service.js), validare orderId/items (esistenza dell'ordine) e RICALCOLARE i prezzi lato server invece di prenderli dal client. Insieme, imporre App Check (BUG-092).
-
-**Dove**: `functions/index.js (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus), functions/lib/sumup-service.js, functions/lib/sumup-core.js`
 
 #### BUG-095 — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica
 
