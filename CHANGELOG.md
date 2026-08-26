@@ -4,6 +4,15 @@
 
 ### Per chi sta al banco
 
+- **I fornitori hanno una sezione loro.** Nel menu compare **«🏭
+  Fornitori»**, e dentro ci sono le tre cose che prima stavano sparse nel
+  magazzino: **Gestione fornitori** (l'anagrafica), **Ordini** e
+  **Scadenzario**. Il magazzino resta con quello che dice cosa c'è sullo
+  scaffale — Prodotti, Categorie, Macro-categorie e Movimenti. La sezione
+  nuova **la vede l'admin**: ordini e fatture ai fornitori sono i soldi che
+  escono dal locale. Chi lavora al banco continua ad aggiungere un fornitore
+  nuovo dalla scheda del prodotto, come ha sempre fatto.
+
 - **La conta di magazzino e le fatture ai fornitori diventano funzioni
   premium.** Nelle impostazioni compare un gruppo nuovo, **«🔒 Funzioni
   premium»**, che dice cosa fa parte di questa installazione e cosa no.

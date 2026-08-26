@@ -13,16 +13,12 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import { useEffect, useState } from 'react'
 
-// I pannelli pesanti hanno i loro giri (conta, ordini, scadenzario): qui
-// basta sapere che la sezione giusta monta il pannello giusto.
+// Il pannello pesante ha il suo giro (la conta): qui basta sapere che la
+// sezione giusta monta il pannello giusto. Ordini, Scadenzario e Fornitori
+// dal 26/08/2026 non stanno più qui — sono nella sezione «Fornitori»
+// (tests/component/FornitoriTab.test.jsx).
 vi.mock('../../src/components/StockCountPanel.jsx', () => ({
   default: () => <div>PANNELLO CONTA</div>,
-}))
-vi.mock('../../src/components/PurchaseOrdersPanel.jsx', () => ({
-  default: () => <div>PANNELLO ORDINI</div>,
-}))
-vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
-  default: () => <div>PANNELLO SCADENZARIO</div>,
 }))
 vi.mock('../../src/lib/paginaPiena.js', () => ({ usePaginaPiena: () => {} }))
 vi.mock('../../src/lib/toast.js', () => ({
@@ -211,19 +207,16 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    for (const voce of [
-      'Prodotti',
-      'Ordini',
-      'Scadenzario',
-      'Categorie',
-      'Macro-categorie',
-      'Fornitori',
-      'Movimenti',
-    ]) {
+    for (const voce of ['Prodotti', 'Categorie', 'Macro-categorie', 'Movimenti']) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
-    await user.click(screen.getByRole('button', { name: /Ordini/ }))
-    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+    // QUELLO CHE NON C'È PIÙ: ordini, scadenzario e anagrafica fornitori
+    // sono passati alla sezione «Fornitori» del gestionale.
+    for (const andata of ['Ordini', 'Scadenzario', 'Fornitori']) {
+      expect(screen.queryByRole('button', { name: new RegExp(andata) })).toBeNull()
+    }
+    await user.click(screen.getByRole('button', { name: /Movimenti/ }))
+    expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
     expect(screen.queryByText('Gin Mare')).toBeNull()
   })
 
@@ -490,55 +483,47 @@ describe('la legenda del magazzino', () => {
 // Rimettendo il difetto — cioè togliendo il filtro da INV_VIEWS — la prima
 // prova qui sotto diventa rossa.
 describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
-  it('la CONTA non c’è: non è inclusa in questa installazione', async () => {
+  it('la CONTA non c\u2019\u00e8: non \u00e8 inclusa in questa installazione', async () => {
     mostra()
     await aspettaLista()
     expect(screen.queryByRole('button', { name: /Conta/ })).toBeNull()
     expect(screen.queryByText('PANNELLO CONTA')).toBeNull()
   })
 
-  it('lo SCADENZARIO c’è: è incluso, e sta al suo posto fra Ordini e Categorie', async () => {
+  it('la licenza che la include la fa comparire, al suo posto, senza toccare il codice', async () => {
+    // \u00c8 il punto di innesto della Fase 3: il dato dice cosa il locale ha.
+    // E la voce torna DOVE STAVA, fra Prodotti e Categorie: l'elenco delle
+    // sezioni \u00e8 uno solo, filtrato.
     const user = userEvent.setup()
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
     mostra()
     await aspettaLista()
-    // L'ordine delle sezioni non cambia quando una voce torna in elenco:
-    // è lo stesso INV_VIEWS, filtrato.
     const voci = screen
       .getAllByRole('button')
       .map((b) => b.textContent)
-      .filter((t) => /Prodotti|Ordini|Scadenzario|Categorie|Fornitori|Movimenti/.test(t))
+      .filter((t) => /Prodotti|Conta|Categorie|Movimenti/.test(t))
     const pos = (nome) => voci.findIndex((t) => t.includes(nome))
-    expect(pos('Ordini')).toBeLessThan(pos('Scadenzario'))
-    expect(pos('Scadenzario')).toBeLessThan(pos('Categorie'))
-    await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
-    expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
+    expect(pos('Prodotti')).toBeLessThan(pos('Conta'))
+    expect(pos('Conta')).toBeLessThan(pos('Categorie'))
+    await user.click(screen.getByRole('button', { name: /Conta/ }))
+    expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
   })
 
-  it('spegnendo l’interruttore d’uso lo scadenzario sparisce, pur restando incluso', async () => {
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, modulo_scadenzario_enabled: false }
-    mostra()
-    await aspettaLista()
-    expect(screen.queryByRole('button', { name: /Scadenzario/ })).toBeNull()
-  })
-
-  it('la licenza che include la conta la fa comparire, senza toccare il codice', async () => {
-    // È il punto di innesto della Fase 3: il dato dice cosa il locale ha.
-    const user = userEvent.setup()
+  it('inclusa ma spenta a mano: non c\u2019\u00e8', async () => {
     stato.impostazioni = {
       ...IMPOSTAZIONI_BASE,
-      licenza: { moduli: { conta: true, scadenzario: true } },
+      licenza: { moduli: { conta: true } },
+      modulo_conta_enabled: false,
     }
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /Conta/ }))
-    expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Scadenzario/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Conta/ })).toBeNull()
   })
 
-  it('la sezione aperta non si sposta sotto le mani quando l’elenco cambia', async () => {
+  it('la sezione aperta non si sposta sotto le mani quando l\u2019elenco cambia', async () => {
     // La vista si tiene per ID, non per posizione: se un modulo si accende
     // da un altro terminale mentre si guardano i Movimenti, la voce nuova
-    // entra in elenco e basta — non porta altrove chi sta leggendo.
+    // entra in elenco e basta \u2014 non porta altrove chi sta leggendo.
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
@@ -546,26 +531,24 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({
-        ...IMPOSTAZIONI_BASE,
-        licenza: { moduli: { conta: true, scadenzario: true } },
-      })
+      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } })
     })
     expect(screen.getByRole('button', { name: /Conta/ })).toBeInTheDocument()
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
   })
 
-  it('e se a spegnersi è la sezione che si sta guardando, si torna ai Prodotti', async () => {
+  it('e se a spegnersi \u00e8 la sezione che si sta guardando, si torna ai Prodotti', async () => {
     const user = userEvent.setup()
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
-    expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Conta/ }))
+    expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, modulo_scadenzario_enabled: false })
+      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: {} } })
     })
-    expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
+    expect(screen.queryByText('PANNELLO CONTA')).toBeNull()
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
   })
 })

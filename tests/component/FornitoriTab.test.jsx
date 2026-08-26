@@ -1,0 +1,139 @@
+// @vitest-environment happy-dom
+'use strict'
+
+// LA SEZIONE «FORNITORI» (REQ-NAV-001). Chiesta dall'utente il 26/08/2026:
+// anagrafica, ordini e scadenzario stavano nel magazzino, che però risponde
+// a «cosa ho sullo scaffale»; queste tre rispondono a «con chi lavoro e
+// quanto gli devo». Lo Scadenzario resta una funzione premium
+// (REQ-LIC-001): dove il modulo non lavora, la voce non c'è — e la sezione
+// non resta né vuota né monca, perché le altre due ci sono sempre.
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import '@testing-library/jest-dom/vitest'
+import { useEffect, useState } from 'react'
+
+// I tre pannelli hanno i loro giri: qui basta sapere che la sottosezione
+// giusta monta il pannello giusto.
+vi.mock('../../src/components/InventoryManager.jsx', () => ({
+  FornitoriPanel: () => <div>PANNELLO ANAGRAFICA</div>,
+  default: () => <div>MAGAZZINO</div>,
+}))
+vi.mock('../../src/components/PurchaseOrdersPanel.jsx', () => ({
+  default: () => <div>PANNELLO ORDINI</div>,
+}))
+vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
+  default: () => <div>PANNELLO SCADENZARIO</div>,
+}))
+
+// Le impostazioni del locale: di partenza quelle vere di questa
+// installazione (lo scadenzario è incluso, vedi lib/licenza.js).
+const stato = { impostazioni: {}, avvisaImpostazioni: null }
+
+vi.mock('../../src/lib/api.js', () => ({
+  subscribeSettings: vi.fn((cb) => {
+    // La callback si tiene: le impostazioni cambiano anche a schermata
+    // aperta, ed è proprio il caso che le prove premium devono rifare.
+    stato.avvisaImpostazioni = cb
+    cb(stato.impostazioni)
+    return () => {}
+  }),
+  settingsIniziali: () => stato.impostazioni,
+}))
+
+import FornitoriTab from '../../src/components/FornitoriTab.jsx'
+import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
+
+// Le sottosezioni stanno nel menu a scomparsa, sotto la pagina aperta: qui
+// si rifà quel pezzetto di menu, come nelle prove del magazzino.
+function BarraSezioni() {
+  const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
+  useEffect(() => subscribeSottosezioni(setSotto), [])
+  return (
+    <div>
+      {(sotto.voci || []).map((v) => (
+        <button key={v.id} onClick={() => sotto.scegli?.(v.id)}>
+          {v.icona} {v.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const mostra = () =>
+  render(
+    <>
+      <FornitoriTab />
+      <BarraSezioni />
+    </>
+  )
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  stato.impostazioni = {}
+})
+
+describe('le tre sottosezioni di Fornitori', () => {
+  it('si apre sull’anagrafica: è il posto da cui si parte', () => {
+    mostra()
+    expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
+    expect(screen.queryByText('PANNELLO ORDINI')).toBeNull()
+  })
+
+  it('ci sono tutt’e tre, e ognuna apre il suo pannello', async () => {
+    const user = userEvent.setup()
+    mostra()
+    for (const voce of ['Gestione fornitori', 'Ordini', 'Scadenzario']) {
+      expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
+    }
+    await user.click(screen.getByRole('button', { name: /Ordini/ }))
+    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+    expect(screen.queryByText('PANNELLO ANAGRAFICA')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
+    expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Gestione fornitori/ }))
+    expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
+  })
+})
+
+describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
+  it('spento non c’è, e la sezione resta in piedi con le altre due', async () => {
+    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    mostra()
+    expect(screen.queryByRole('button', { name: /Scadenzario/ })).toBeNull()
+    expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
+    // Non vuota e non monca: l'anagrafica è aperta e gli ordini ci sono.
+    expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ordini/ })).toBeInTheDocument()
+  })
+
+  it('e se si spegne mentre lo si guarda, si torna all’anagrafica', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
+    expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
+
+    await act(async () => {
+      stato.avvisaImpostazioni({ modulo_scadenzario_enabled: false })
+    })
+    expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
+    expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
+  })
+
+  it('e se si accende mentre si guardano gli ordini, non sposta nessuno', async () => {
+    const user = userEvent.setup()
+    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Ordini/ }))
+    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+
+    await act(async () => {
+      stato.avvisaImpostazioni({})
+    })
+    expect(screen.getByRole('button', { name: /Scadenzario/ })).toBeInTheDocument()
+    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+  })
+})

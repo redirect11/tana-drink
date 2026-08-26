@@ -67,8 +67,6 @@ import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
-import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
-import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
@@ -182,19 +180,20 @@ function UnitPrice({ item, markup }) {
   )
 }
 
-// Sezioni del magazzino: prodotti (giacenze), conta periodica, ordini
-// fornitore e scadenzario — la controparte software dei fogli Excel storici.
-// CONTA e SCADENZARIO sono funzioni premium (lib/licenza.js): restano in
-// questo elenco, ma si vedono solo dove il modulo è acceso. L'elenco non si
-// sdoppia apposta — l'ordine delle sezioni è uno solo.
+// Sezioni del magazzino: cosa c'è sullo scaffale e come è ordinato —
+// giacenze, conta periodica, anagrafiche e movimenti.
+// DAL 26/08/2026 ORDINI, SCADENZARIO E FORNITORI NON SONO PIÙ QUI: sono
+// passati alla sezione «Fornitori» del gestionale (FornitoriTab.jsx), che
+// risponde a un'altra domanda — non «cosa ho» ma «con chi lavoro e quanto
+// gli devo».
+// La CONTA è una funzione premium (lib/licenza.js): resta in questo elenco,
+// ma si vede solo dove il modulo lavora. L'elenco non si sdoppia apposta —
+// l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
   ['prodotti', '📦', 'Prodotti'],
   ['conta', '📋', 'Conta'],
-  ['ordini', '🛒', 'Ordini'],
-  ['scadenzario', '📄', 'Scadenzario'],
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
-  ['fornitori', '🏭', 'Fornitori'],
   ['movimenti', '📜', 'Movimenti'],
 ]
 
@@ -232,11 +231,8 @@ export default function InventoryManager() {
     <div className="pagina-inventario">
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
-      {view === 'ordini' && <PurchaseOrdersPanel />}
-      {view === 'scadenzario' && <SupplierInvoicesPanel />}
       {view === 'categorie' && <CategoriePanel />}
       {view === 'macro' && <MacroPanel />}
-      {view === 'fornitori' && <FornitoriPanel />}
       {view === 'movimenti' && <MovimentiPanel />}
     </div>
   )
@@ -329,7 +325,12 @@ function MovimentiPanel() {
   )
 }
 
-function FornitoriPanel() {
+// L'ANAGRAFICA DEI FORNITORI vive nella sezione «Fornitori»
+// (FornitoriTab.jsx), non più qui. Il pannello resta in questo file perché
+// ci resta `SupplierManager`, che è il modulo vero e non ha altri clienti:
+// spostare seicento righe per una voce di menu avrebbe reso illeggibile il
+// diff di un trasloco che di suo è una riga.
+export function FornitoriPanel() {
   const [suppliers, setSuppliers] = useState([])
   const ricarica = async () => setSuppliers(await fetchSuppliers())
   useEffect(() => {

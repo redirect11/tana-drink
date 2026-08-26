@@ -26,6 +26,17 @@ export const NAV_GESTIONALE = [
   ['bilancio', '⚖️', 'Bilancio', isAdmin],
   ['menu', '🍸', 'Menù'],
   ['inventario', '📦', 'Magazzino'],
+  // FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa gli dobbiamo
+  // (anagrafica, ordini, scadenzario). Chiesta dall'utente il 26/08/2026:
+  // stavano nel magazzino, che però risponde a «cosa ho sullo scaffale»,
+  // mentre queste rispondono a «con chi lavoro e quanto gli devo».
+  // SOLO ADMIN, come il Bilancio e per la stessa ragione, già messa a
+  // verbale in REQ-MAG-025: ordini e fatture fornitore sono i soldi che
+  // ESCONO dal locale, e non sono roba da turno. Finché stavano dentro il
+  // magazzino li vedeva ogni gestore, ma per contiguità, non per una
+  // scelta. Chi lavora al banco non perde niente di quello che gli serve:
+  // un fornitore nuovo si crea ancora dalla tendina del modulo prodotto.
+  ['fornitori', '🏭', 'Fornitori', isAdmin],
   ['staff', '👥', 'Staff'],
   ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
   ['vista-cliente', '👀', 'Vista cliente'],
