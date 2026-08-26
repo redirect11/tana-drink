@@ -4,6 +4,15 @@
 
 ### Per chi sta al banco
 
+- **Gli avvisi che arrivano dal POS SumUp non si prendono più per buoni.**
+  Quando il registratore SumUp avvisa che una vendita è cambiata, adesso l'app
+  va a chiedere a SumUp com'è andata davvero invece di credere al messaggio, e
+  accetta l'avviso solo se porta il codice di verifica che si imposta nel back
+  office di SumUp. Il collegamento con SumUp non è attivo al locale, quindi
+  oggi non cambia niente. Per accenderlo servirà impostare quel codice —
+  è scritto in `functions/.env` dove si prende. **Ha effetto solo dopo la
+  pubblicazione delle Cloud Functions.**
+
 - **Il collegamento col registratore di cassa SumUp chiede le credenziali.**
   Le tre funzioni che parlano col POS SumUp — sincronizzare il listino,
   mandare una vendita, cambiarle stato — adesso rispondono solo a chi è

@@ -3968,10 +3968,55 @@ bugs:
       la offre, oppure — come già fa il webhook pagamenti — rileggere l'esito
       dall'API SumUp e non fidarsi del payload; aggiungere `if (!isConfigured())
       return {status: 200}`.
+      RISOLTO (26/08/2026), e prima si e' andati a vedere cosa offre davvero
+      SumUp. RISPOSTA: NIENTE FIRMA. Su SumUp POS Pro (Goodtill,
+      api.thegoodtill.com) non esiste HMAC, ne' timestamp firmato, ne'
+      anti-replay: l'intera specifica dell'API non nomina mai «webhook» o
+      «signature». L'unica difesa documentata e' un SEGRETO CONDIVISO STATICO
+      nell'header `Verification-Token`, che si legge nel back office
+      (Impostazioni -> Integrazioni -> Webhook), da confrontare a tempo
+      costante. E i documenti stessi dicono che il corpo del messaggio porta un
+      id e nient'altro: «you will then need to use the API to retrieve the
+      relevant data». Cioe' il disegno giusto e' proprio quello dei pagamenti —
+      il webhook e' una sveglia, la verita' si chiede all'API.
+      FATTO COSI': (1) guardia `isConfigured()` in testa, che mancava — a SumUp
+      spento l'endpoint risponde 200 e non tocca niente; (2) il gettone
+      `Verification-Token` e' OBBLIGATORIO quando SumUp e' acceso, e se manca o
+      non corrisponde si risponde 401 senza chiedere niente a nessuno — se non
+      e' configurato si rifiuta invece di lasciar correre, perche' un controllo
+      che si spegne da solo quando manca la configurazione non e' un controllo
+      (e' la stessa trappola di BUG-092); (3) lo `status` del corpo NON SI
+      GUARDA PIU': si cerca l'ordine col sumup_sale_id, e se e' nostro si
+      rilegge la vendita dall'API e si prende `current_status` da li'.
+      IN PIU', trovato leggendo la documentazione vera: il messaggio di SumUp
+      annida la vendita — {data: {sale: {id, url}}} — mentre il parser leggeva
+      solo `sale_id`/`id` in cima. Di un messaggio vero non avrebbe trovato
+      niente. Ora tollera tutt'e due le forme.
+      IL SEGRETO NON E' STATO INVENTATO: `firebase functions:secrets:set
+      SUMUP_POS_WEBHOOK_TOKEN`, e in functions/.env i valori restano vuoti come
+      documentato (quel file e' committato apposta). Il commento nel .env dice
+      dove si prende il gettone e perche' non sta li'.
+      DA CONFERMARE CON SUMUP prima di accendere: i percorsi. La documentazione
+      pubblica dice `/external_sale/sale/:id` al SINGOLARE, mentre il codice usa
+      `/external_sales` — e l'intestazione di functions/index.js dice gia' che
+      l'URL base va confermato col supporto quando arriva il Vendor-Id. Non si
+      e' cambiato alla cieca: la ri-lettura usa la stessa famiglia di percorsi
+      del resto del file, e resta da allineare tutta insieme quando SumUp
+      risponde. La ri-lettura vuole anche un Bearer JWT che oggi sumupFetch non
+      manda (manda solo Vendor-Id/Outlet-Id): altro pezzo da sistemare
+      all'accensione.
+      PROVATO in tests/bdd/webhook.test.js (11 casi) e
+      tests/unit/sumup-core.test.js: status falso nel corpo che perde contro
+      l'API, gettone sbagliato/assente/non configurato -> 401 senza scritture,
+      SumUp spento -> 200 e nessuna scrittura, messaggio annidato che trova
+      comunque l'ordine, e tutti i casi di prima che continuano a valere.
+      NON DEPLOYATO: le Functions non si pubblicano senza via libera esplicito.
     in_produzione: false
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, sicurezza, pagamenti]
     severity: grave
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/bdd/webhook.test.js
+      - tests/unit/sumup-core.test.js

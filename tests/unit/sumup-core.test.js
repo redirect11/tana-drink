@@ -12,6 +12,8 @@ import {
   parseWebhookBody,
   buildSumupHeaders,
   buildSumupUrl,
+  leggiTokenWebhook,
+  tokenCorrisponde,
 } from '../../functions/lib/sumup-core.js'
 
 // ── TC-CORE-001: extractProducts ──────────────────────────────────────────────
@@ -169,5 +171,33 @@ describe('helpers HTTP', () => {
 
   it('buildSumupUrl concatena base e path', () => {
     expect(buildSumupUrl('https://api.example/api', '/products')).toBe('https://api.example/api/products')
+  })
+})
+
+// ── IL GETTONE DEL WEBHOOK (BUG-095) ────────────────────────────────────────
+// SumUp POS Pro non firma i webhook: niente HMAC, niente timestamp firmato.
+// L'unica difesa che offre è un segreto condiviso statico nell'header
+// `Verification-Token`.
+describe('Il gettone del webhook POS Pro', () => {
+  it('si legge dall’header, comunque sia scritto', () => {
+    expect(leggiTokenWebhook({ 'verification-token': 'abc' })).toBe('abc')
+    expect(leggiTokenWebhook({ 'Verification-Token': 'abc' })).toBe('abc')
+    expect(leggiTokenWebhook({})).toBe('')
+    expect(leggiTokenWebhook(null)).toBe('')
+  })
+
+  it('corrisponde solo se è identico', () => {
+    expect(tokenCorrisponde('segreto', 'segreto')).toBe(true)
+    expect(tokenCorrisponde('segreto', 'segretx')).toBe(false)
+    expect(tokenCorrisponde('segreto', 'segret')).toBe(false)
+    expect(tokenCorrisponde('segreto', 'segretoo')).toBe(false)
+  })
+
+  // Se il gettone non è configurato NON passa niente: un controllo che si
+  // spegne da solo quando manca la configurazione non è un controllo.
+  it('e senza gettone configurato non corrisponde mai', () => {
+    expect(tokenCorrisponde('', '')).toBe(false)
+    expect(tokenCorrisponde(null, 'qualsiasi')).toBe(false)
+    expect(tokenCorrisponde(undefined, undefined)).toBe(false)
   })
 })

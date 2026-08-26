@@ -5125,15 +5125,28 @@ requirements:
     title: "Webhook SumUp → aggiornamento stato ordine Firestore"
     area: "functions/index.js sumupWebhook, functions/lib/sumup-service.js handleWebhook"
     description: >
-      sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae sale_id (o id)
-      e status dal corpo; senza sale_id risponde 400. Mappa lo stato SumUp su quello
-      Tana Drink (ACCEPTED→in_preparazione, COMPLETED/CANCELLED→ritirato); stati non
-      mappati rispondono 200 OK senza modifiche. Per stati mappati aggiorna lo status
-      dell'ordine con sumup_sale_id corrispondente, rispondendo sempre 200 OK.
+      sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae il sale_id
+      dal corpo — sia in cima (sale_id/id) sia nella forma vera di SumUp, che lo
+      annida in data.sale.id — e senza sale_id risponde 400. Cerca l'ordine con
+      quel sumup_sale_id; se non è nostro risponde 200 senza chiedere niente.
+      Mappa lo stato su quello Tana Drink (ACCEPTED→in_preparazione,
+      COMPLETED/CANCELLED→ritirato); stati non mappati rispondono 200 OK senza
+      modifiche. Risponde sempre 200 quando la richiesta è legittima: un errore
+      farebbe ritentare SumUp per un'ora.
+      DAL 26/08/2026 (BUG-095) IL PAYLOAD NON SI CREDE MAI. Lo `status` del
+      corpo non si guarda nemmeno: lo stato si RILEGGE dall'API SumUp, come fa
+      già il webhook dei pagamenti. Chi bussa lo dice il gettone
+      `Verification-Token` (SumUp POS Pro non firma i webhook: niente HMAC,
+      l'unica cosa che offre è quel segreto condiviso statico, che si legge nel
+      back office e vive in `firebase functions:secrets:set
+      SUMUP_POS_WEBHOOK_TOKEN`). Gettone mancante o sbagliato → 401, e il
+      gettone è obbligatorio quando SumUp è acceso: un controllo che si spegne
+      da solo quando manca la configurazione non è un controllo. Con SumUp
+      spento l'endpoint risponde 200 e non tocca niente.
     status: implemented
     generate_issue: false
     labels: [sumup, webhook, functions]
-    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005, tests/bdd/webhook.test.js]
+    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005, TC-HOOK-006, TC-HOOK-007, TC-HOOK-008, TC-HOOK-009, TC-HOOK-010, TC-HOOK-011, tests/bdd/webhook.test.js]
 
   - id: REQ-ORD-021
     title: "Le comande annullate: o si rifanno, o si stornano dal conto"

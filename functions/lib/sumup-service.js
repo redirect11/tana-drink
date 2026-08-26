@@ -13,6 +13,8 @@ const {
   buildSalePayload,
   mapWebhookStatus,
   parseWebhookBody,
+  leggiTokenWebhook,
+  tokenCorrisponde,
 } = require('./sumup-core')
 
 // CHI PUÒ TOCCARE SUMUP. Queste tre callable non chiedevano NIENTE: un
@@ -147,22 +149,47 @@ async function updateSaleStatus({ sumupFetch, isConfigured }, auth, data) {
   return { updated: true }
 }
 
-// Gestisce il webhook in entrata da SumUp POS Pro: traduce lo stato e aggiorna
-// l'ordine Firestore corrispondente. Restituisce { status, body } HTTP da inoltrare.
-async function handleWebhook({ db }, { method, body }) {
+// Gestisce il webhook in entrata da SumUp POS Pro.
+//
+// IL PAYLOAD NON SI CREDE MAI. Prima `sale_id` E `status` si prendevano dal
+// corpo della richiesta e finivano dritti sull'ordine: chi conosceva o
+// indovinava un `sumup_sale_id` mandava `{sale_id, status: 'COMPLETED'}`
+// all'endpoint pubblico e faceva avanzare di stato l'ordine di un altro
+// tavolo. Il webhook dei PAGAMENTI era già fatto bene (rilegge sempre
+// l'esito da SumUp); questo no.
+//
+// Adesso il messaggio è solo una sveglia — è anche quello che dicono i
+// documenti di SumUp, visto che il corpo porta un id e nient'altro. Chi
+// bussa lo dice il gettone `Verification-Token` (SumUp POS Pro non firma i
+// webhook: non c'è HMAC, l'unica cosa che offre è quel segreto condiviso), e
+// COSA è successo lo si rilegge dall'API.
+//
+// Restituisce { status, body } HTTP da inoltrare. Sempre 200 quando la
+// richiesta è legittima, anche se non c'è niente da fare: un errore farebbe
+// ritentare SumUp per un'ora.
+async function handleWebhook({ db, sumupFetch, isConfigured, webhookToken }, { method, body, headers }) {
   if (method !== 'POST') {
     return { status: 405, body: 'Method Not Allowed' }
   }
 
-  const { saleId, status } = parseWebhookBody(body)
-  if (!saleId) {
-    return { status: 400, body: 'Missing sale_id' }
+  // SumUp spento: l'endpoint è pubblico e risponde comunque, ma non tocca
+  // niente. Mancava anche questa guardia.
+  if (typeof isConfigured === 'function' && !isConfigured()) {
+    return { status: 200, body: 'OK' }
   }
 
-  const ourStatus = mapWebhookStatus(status)
-  if (!ourStatus) {
-    // Stato non mappato (es. CREATED): ignora silenziosamente.
-    return { status: 200, body: 'OK' }
+  // IL GETTONE È OBBLIGATORIO quando SumUp è acceso. Se non è configurato si
+  // rifiuta invece di lasciar correre: un controllo che si spegne da solo
+  // quando manca la configurazione non è un controllo — è la stessa trappola
+  // di App Check, che il token lo produce e nessuno lo pretende.
+  const atteso = typeof webhookToken === 'function' ? webhookToken() : webhookToken
+  if (!tokenCorrisponde(atteso, leggiTokenWebhook(headers))) {
+    return { status: 401, body: 'Unauthorized' }
+  }
+
+  const { saleId } = parseWebhookBody(body)
+  if (!saleId) {
+    return { status: 400, body: 'Missing sale_id' }
   }
 
   const snap = await db
@@ -171,10 +198,24 @@ async function handleWebhook({ db }, { method, body }) {
     .limit(1)
     .get()
 
-  if (!snap.empty) {
-    await snap.docs[0].ref.update({ status: ourStatus })
+  // Vendita che non è nostra: niente da fare, e nessuna informazione di
+  // ritorno su quali id esistano.
+  if (snap.empty) {
+    return { status: 200, body: 'OK' }
   }
 
+  // LA VERITÀ SI CHIEDE A SUMUP. Il corpo diceva `status`, e quel campo qui
+  // non si guarda nemmeno.
+  const vendita = await sumupFetch(`/external_sales/${saleId}`)
+  const ourStatus = mapWebhookStatus(
+    vendita?.current_status || vendita?.status || ''
+  )
+  if (!ourStatus) {
+    // Stato non mappato (es. CREATED): ignora silenziosamente.
+    return { status: 200, body: 'OK' }
+  }
+
+  await snap.docs[0].ref.update({ status: ourStatus })
   return { status: 200, body: 'OK' }
 }
 
