@@ -3940,15 +3940,28 @@ bugs:
       di quelli dell'ordine.
       NON DEPLOYATO: le Functions non si pubblicano senza via libera esplicito.
     in_produzione: false
-    status: fixed
+      CHIUSO SENZA CORREZIONE (26/08/2026): IL DIFETTO NON C'È PIÙ PERCHÉ LA
+      FUNZIONE NON C'È PIÙ. Due giorni dopo la cura qui sopra l'utente ha
+      deciso di buttare tutta l'integrazione SumUp Cassa Pro: «Sta cosa di
+      SumUp Cassa Pro possiamo anche toglierla, non serve. A noi serve solo
+      inviare il pagamento al POS in modo che si possa riscuotere tramite il
+      POS SumUp». Le tre callable syncSumUpProducts, createSumUpSale e
+      updateSumUpSaleStatus sono state rimosse, insieme ai moduli
+      functions/lib/sumup-core.js e functions/lib/sumup-service.js e a
+      src/lib/sumupApi.js. Anche i controlli di ruolo aggiunti il 26/08 se ne
+      sono andati con loro, e con essi i test che li provavano.
+      NON È «CORRETTO», ED È BENE DIRLO: la superficie d'attacco è sparita, non
+      è stata difesa. Se un domani si volesse rimandare le vendite a un
+      registratore di cassa, questo bug torna in piedi tale e quale e la sua
+      cura è ancora quella scritta sopra — per questo il testo resta.
+      Cade anche la domanda lasciata aperta («createSumUpSale parte dal browser
+      del cliente»): non parte più niente.
+    status: wontfix
     generate_issue: true
     labels: [bug, sicurezza, pagamenti]
     severity: grave
     priority: P2
-    test_cases:
-      - tests/bdd/create-sale.test.js
-      - tests/bdd/sync-products.test.js
-      - tests/bdd/update-sale-status.test.js
+    test_cases: []
 
   - id: BUG-095
     title: "sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica"
@@ -4012,11 +4025,23 @@ bugs:
       comunque l'ordine, e tutti i casi di prima che continuano a valere.
       NON DEPLOYATO: le Functions non si pubblicano senza via libera esplicito.
     in_produzione: false
-    status: fixed
+      CHIUSO SENZA CORREZIONE (26/08/2026): IL DIFETTO NON C'È PIÙ PERCHÉ
+      L'ENDPOINT NON C'È PIÙ. Con la rimozione di SumUp Cassa Pro decisa
+      dall'utente, `sumupWebhook` è stato cancellato: non esiste più un
+      indirizzo pubblico a cui bussare, e con lui se ne sono andati il gettone
+      `Verification-Token`, la ri-lettura dall'API e i test che li provavano.
+      Cadono anche i due punti lasciati «da confermare con SumUp» (i percorsi
+      al singolare o al plurale, e il Bearer JWT mancante in sumupFetch): non
+      c'è più codice a cui si riferiscano.
+      DA NON CONFONDERE COL WEBHOOK DEI PAGAMENTI: `paymentWebhook`, quello del
+      lettore e del checkout, è un'altra cosa, è fatto bene (rilegge l'esito
+      dall'API) e RESTA IN PIEDI.
+      NON È «CORRETTO», ED È BENE DIRLO: se un domani tornasse un webhook di
+      Cassa Pro, tornerebbe anche questo buco — la cura scritta sopra vale
+      ancora, e per questo il testo resta.
+    status: wontfix
     generate_issue: true
     labels: [bug, sicurezza, pagamenti]
     severity: grave
     priority: P2
-    test_cases:
-      - tests/bdd/webhook.test.js
-      - tests/unit/sumup-core.test.js
+    test_cases: []

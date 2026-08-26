@@ -222,12 +222,14 @@ il service account di runtime (`8401382511-compute@developer…`): serve
 cloudbuild, artifactregistry, run, eventarc, pubsub, serviceusage, storage.
 Richiede il piano Blaze, ma per un bar resta nel tier gratuito.
 
-**`functions/.env` è committato apposta**, con valori vuoti, ed è esentato
-nel `.gitignore`. Le Functions leggono `SUMUP_VENDOR_ID` e
-`SUMUP_OUTLET_ID` da `process.env`: senza quel file il deploy non
-interattivo si blocca a chiedere i valori da tastiera. Valori vuoti = SumUp
-spento. Per accenderlo davvero **non** si scrivono le credenziali lì:
-`firebase functions:secrets:set`, e lato sito `VITE_SUMUP_ENABLED=true`.
+**`functions/.env` è committato apposta**, ed è esentato nel `.gitignore`:
+è il posto dichiarato per la configurazione **non segreta** delle Functions,
+e serve a far passare il deploy non interattivo, che senza un valore — anche
+vuoto — per le variabili attese si blocca a chiederle da tastiera. Oggi non
+contiene nessuna variabile: le due che ci stavano (`SUMUP_VENDOR_ID`,
+`SUMUP_OUTLET_ID`) erano di **SumUp Cassa Pro**, rimossa il 26/08/2026. I
+segreti veri lì non ci vanno mai: `firebase functions:secrets:set` — è così
+che vive `SUMUP_API_KEY`, la chiave del **lettore**, che resta.
 
 **La bozza del POS non si perde mai.** Le righe non confermate sopravvivono
 all'uscita dalla schermata (chiave `new` in creazione, id ordine in
