@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 178 | fatto e coperto dai test |
+| ✅ | 179 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 1 | non più valido |
 
-**214 voci** in tutto. **192** descrivono il sistema com'è oggi e
+**215 voci** in tutto. **193** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **6** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 20 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 21 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -832,11 +832,11 @@ Ogni articolo è assortimento, linea, premium o fuori servizio. Serve a distingu
 
 #### REQ-MAG-010 — Il magazzino sta in una schermata, con le sezioni a lato
 
-Prodotti, Conta, Ordini, Scadenzario, Categorie, Macro-categorie, Fornitori e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della pagina è il comando.
+Prodotti, Conta, Categorie, Macro-categorie e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della pagina è il comando.
 
-DUE DI QUELLE SEZIONI SONO FUNZIONI PREMIUM dal 26/08/2026:
+TRE SEZIONI SONO USCITE DI QUI il 26/08/2026 — Ordini, Scadenzario e Fornitori sono passate alla sezione «Fornitori» del gestionale (REQ-MAG-028): il magazzino risponde a «cosa ho sullo scaffale», loro a «con chi lavoro e quanto gli devo».
 
-CONTA e SCADENZARIO compaiono solo dove il modulo lavora (REQ-LIC-001). Per la Tana lo SCADENZARIO è incluso e c'è; la CONTA no, quindi di partenza il magazzino ha SETTE sezioni. Restano nello stesso elenco (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua sezione è aperta si torna ai Prodotti. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. GLI «IN ESAURIMENTO»
+LA CONTA È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per la Tana non è inclusa: di partenza il magazzino ha QUATTRO sezioni. Restano nello stesso elenco (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua sezione è aperta si torna ai Prodotti. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. GLI «IN ESAURIMENTO»
 
 CI STANNO DENTRO: sono in magazzino, solo pochi. «In esaurimento» è una lente più stretta dentro la stessa famiglia, non un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima bottiglia di gin, che è proprio quella che gli serve sapere. Così il conto torna a vista: in scorta più esauriti fa il totale, e chi somma le voci non trova numeri che non tornano.
 
@@ -1055,6 +1055,28 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-028 — «Fornitori» è una sezione sua: anagrafica, ordini e scadenzario
+
+Chiesto dall'utente il 26/08/2026, parole sue: «Dobbiamo spostare Fornitori come sezione a parte, e sotto Fornitori andrà la sottosezione Gestione Fornitori, lo Scadenzario e Ordini (che attualmente è sottosezione di magazzino)».
+
+PERCHÉ NON STAVANO BENE NEL MAGAZZINO. Il magazzino risponde a «cosa ho sullo scaffale»; queste tre rispondono a «con chi lavoro e quanto gli devo». Erano tre sottosezioni sparse fra prodotti e categorie, e non si parlavano: si ordinava di là, si segnava la fattura di qua, e quale fattura pagasse quale ordine non lo sapeva nessuno — è la stessa osservazione da cui nasce REQ-MAG-025, che questa voce ANTICIPA in parte (la pagina loro, e il ruolo che la vede) senza toccarne il cuore (il legame fattura-ordine e il giro d'ordini, ancora da fare).
+
+LE TRE SOTTOSEZIONI, in quest'ordine: «🏭 Gestione fornitori» (l'anagrafica: era la sottosezione `fornitori` del magazzino), «🛒 Ordini» e «📄 Scadenzario». Si apre sull'anagrafica, che è il posto da cui si parte quando si entra qui senza un motivo preciso.
+
+NEL MAGAZZINO RESTANO Prodotti, Conta, Categorie, Macro-categorie e Movimenti (vedi REQ-MAG-010).
+
+IL MECCANISMO È QUELLO CHE C'È GIÀ: `lib/sottosezioni.js`, come Cassa, Magazzino, Impostazioni e Statistiche — le voci vanno nel menu a scomparsa, rientrate sotto la pagina aperta (docs/navigazione.md). FornitoriTab.jsx è scritto sul modello di CassaTab: un elenco `SEZIONI` e un ramo per voce. Aggiungerne una costa una voce e un ramo.
+
+SOLO ADMIN, e non è una stretta nuova: è la decisione già a verbale in REQ-MAG-025 («visibile SOLO all'ADMIN: sono i soldi che escono dal locale, e non è roba da turno»). Finché stavano dentro il magazzino le vedeva ogni gestore, ma per contiguità, non per una scelta. Il ruolo si confronta con `ruoli.js` (`isAdmin`), come per Bilancio, e la voce si TOGLIE dal menu invece di aprirsi per dire «non puoi»; anche l'indirizzo battuto a mano (`?tab=fornitori`) è filtrato, da `sezioneConsentita`.
+
+COSA NON PERDE CHI STA AL BANCO: un fornitore nuovo si crea ancora dalla tendina del modulo prodotto, nel magazzino, senza passare da qui. È la strada che si usa davvero quando si inventaria una referenza nuova.
+
+NIENTE COLLEGAMENTI ROTTI: le sottosezioni non erano indirizzabili (nessun `?sezione=` per il magazzino, lo stato è del componente), quindi non c'era nessun vecchio indirizzo da rimappare in `VECCHI_INDIRIZZI`. `?tab=inventario` continua ad aprire il magazzino, che esiste ancora.
+
+LO SCADENZARIO RESTA UNA FUNZIONE PREMIUM (REQ-LIC-001): dove il modulo non lavora la sua voce non c'è, e la sezione non resta né vuota né monca perché le altre due ci sono sempre. La sottosezione aperta si ricava dall'elenco filtrato: se il modulo si spegne da un altro terminale mentre lo si guarda, si torna all'anagrafica.
+
+**Dove**: `src/components/FornitoriTab.jsx, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/component/FornitoriTab.test.jsx`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`
 
 #### REQ-MAG-027 — I segni del magazzino si spiegano da soli: la legenda sopra la lista
 
@@ -2090,7 +2112,9 @@ COME SI AGGANCERÀ LA LICENZA VERA: `moduloIncluso` guarda PRIMA un campo `licen
 
 NEL DUBBIO NON LAVORA — id sconosciuto, licenza che tace, modulo non incluso: una funzione a pagamento non si regala per una svista. E una sezione che compare per mezzo secondo e poi sparisce è peggio di una che non c'è: le schermate partono dalla cache, non dal vuoto.
 
-NEL MAGAZZINO le due sezioni Conta e Scadenzario restano nell'unico elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano con `voceVisibile`. Una voce che rientra torna al SUO posto, perché l'elenco è quello e basta. La vista aperta si RICAVA dall'elenco filtrato: se un modulo si accende da un altro terminale mentre si sta guardando un'altra sezione, la voce nuova entra e nient'altro si muove; se a spegnersi è proprio la sezione aperta, si torna ai Prodotti invece di restare su un pannello che non è più in elenco. Vedi REQ-MAG-010.
+DOVE VIVONO LE DUE SEZIONI, dal 26/08/2026: la CONTA nel magazzino, lo SCADENZARIO nella sezione «Fornitori» (REQ-MAG-028). Il filtro è lo stesso, `voceVisibile`, in tutt'e due i posti — è il motivo per cui l'id del modulo è l'id della sezione.
+
+NEL MAGAZZINO la sezione Conta resta nell'unico elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano con `voceVisibile`. Una voce che rientra torna al SUO posto, perché l'elenco è quello e basta. La vista aperta si RICAVA dall'elenco filtrato: se un modulo si accende da un altro terminale mentre si sta guardando un'altra sezione, la voce nuova entra e nient'altro si muove; se a spegnersi è proprio la sezione aperta, si torna ai Prodotti invece di restare su un pannello che non è più in elenco. Vedi REQ-MAG-010.
 
 NELLE IMPOSTAZIONI le due voci NON spariscono: gruppo «🔒 Funzioni premium», suo, prima di «Sistema». La regola del momento d'uso (REQ-UI-025) chiede di raggruppare per «quando lo cerco», e qui il momento è «cosa ha questo locale, e cosa potrebbe avere» — che non è il momento in cui si conta il magazzino né quello in cui si registra una fattura, tanto più che a modulo spento quelle schermate non esistono e l'interruttore sarebbe da cercare dentro una sezione che non compare. Sono la prima famiglia di questo tipo e ne arriveranno altre (la Fase 3 elenca cinque pacchetti): un gruppo che cresce è meglio di cinque voci sparse. E non sta in «Sistema», che parla della macchina (backup, versione): la licenza è del locale. I TESTI SONO ASCIUTTI (DESIGN.md, guardrail 3): la didascalia dice cosa fa la funzione e che non è inclusa. Niente «Sblocca ora», niente toni pubblicitari.
 
@@ -2258,7 +2282,7 @@ IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a propor
 
 #### REQ-MAG-025 — Ordini e fatture: una pagina sola, e una fattura paga un ordine
 
-Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno dentro Magazzino, in due sottosezioni che non si parlano: si ordina di la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno.
+Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno dentro Magazzino, in due sottosezioni che non si parlano: si ordina di la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno. ⚠️ IL CONTENITORE C'E' GIA', dal 26/08/2026: e' la sezione «Fornitori» (REQ-MAG-028), che l'utente ha chiesto con quel nome e con tre sottosezioni — anagrafica, Ordini, Scadenzario — visibile solo all'admin, esattamente per la ragione scritta qui sopra. Quindi di questa voce restano da fare LE DUE COSE CHE CONTANO, e non il trasloco: il LEGAME fattura-ordine e il GIRO d'ordini descritti qui sotto, piu' il prodotto nuovo che oggi si perde in silenzio. Chi la lavora parte da `FornitoriTab.jsx`, non da zero.
 
 IL LEGAME, che e' il cuore della richiesta:
 

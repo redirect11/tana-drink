@@ -1,0 +1,60 @@
+import { useEffect, useState } from 'react'
+import { subscribeSettings, settingsIniziali } from '../lib/api.js'
+import { voceVisibile } from '../lib/licenza.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
+import { FornitoriPanel } from './InventoryManager.jsx'
+import PurchaseOrdersPanel from './PurchaseOrdersPanel.jsx'
+import SupplierInvoicesPanel from './SupplierInvoicesPanel.jsx'
+
+// ── FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa dobbiamo ──
+//
+// Chiesto dall'utente il 26/08/2026: «Dobbiamo spostare Fornitori come
+// sezione a parte, e sotto Fornitori andrà la sottosezione Gestione
+// Fornitori, lo Scadenzario e Ordini (che attualmente è sottosezione di
+// magazzino)».
+//
+// PERCHÉ NON STAVANO BENE NEL MAGAZZINO. Il magazzino risponde a «cosa ho
+// sullo scaffale»; queste tre rispondono a «con chi lavoro e quanto gli
+// devo». Erano tre sottosezioni sparse in mezzo a prodotti e categorie, e
+// non si parlavano: si ordinava di là, si segnava la fattura di qua, e
+// quale fattura pagasse quale ordine non lo sapeva nessuno (è la stessa
+// osservazione da cui nasce REQ-MAG-025).
+//
+// COME SI AGGIUNGE UNA SOTTOSEZIONE QUI: una voce in SEZIONI e un ramo nel
+// corpo, come in CassaTab. Se la voce è una funzione premium, il suo id va
+// messo nella tabella di `lib/licenza.js` e il filtro qui sotto la toglie
+// da solo — non serve un `if` in più.
+const SEZIONI = [
+  { id: 'anagrafica', icona: '🏭', label: 'Gestione fornitori' },
+  { id: 'ordini', icona: '🛒', label: 'Ordini' },
+  // Funzione premium (REQ-LIC-001): dove il modulo non lavora, la voce non
+  // c'è. Le altre due restano, quindi la sezione non resta mai vuota.
+  { id: 'scadenzario', icona: '📄', label: 'Scadenzario' },
+]
+
+export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
+  const [sezione, setSezione] = useState(sezioneIniziale)
+  // Dalla cache, come il magazzino: le voci non devono comparire e sparire
+  // mentre il server risponde (local-first, nessuna lettura nuova).
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+
+  const voci = SEZIONI.filter((v) => voceVisibile(impostazioni, v.id))
+  // La sezione aperta si RICAVA dall'elenco: se il modulo si spegne da un
+  // altro terminale mentre si guarda lo scadenzario, si torna all'anagrafica
+  // invece di restare su un pannello che non è più in elenco.
+  const attiva = voci.some((v) => v.id === sezione) ? sezione : 'anagrafica'
+
+  return (
+    <div>
+      <Sottosezioni voci={voci} attiva={attiva} scegli={setSezione} />
+      {attiva === 'ordini' ? (
+        <PurchaseOrdersPanel />
+      ) : attiva === 'scadenzario' ? (
+        <SupplierInvoicesPanel />
+      ) : (
+        <FornitoriPanel />
+      )}
+    </div>
+  )
+}

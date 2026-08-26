@@ -123,3 +123,34 @@ describe('chi vede quali sezioni', () => {
     expect(titoloPagina('/bar', '?tab=bilancio').titolo).toBe('Bilancio')
   })
 })
+
+// ── FORNITORI È UNA SEZIONE SUA, E DELL'ADMIN ────────────────────────
+// Chiesta dall'utente il 26/08/2026: anagrafica, ordini e scadenzario
+// stavano nel magazzino, che però risponde a «cosa ho sullo scaffale».
+// Solo admin per la ragione già a verbale in REQ-MAG-025: ordini e fatture
+// fornitore sono i soldi che ESCONO dal locale, e non sono roba da turno.
+describe('la sezione Fornitori', () => {
+  it('è una voce del menu, con la sua icona e il suo nome nella barra', () => {
+    expect(NAV_GESTIONALE.some(([id]) => id === 'fornitori')).toBe(true)
+    expect(titoloPagina('/bar', '?tab=fornitori')).toEqual({
+      icona: '🏭',
+      titolo: 'Fornitori',
+    })
+  })
+
+  it('la vede l’admin, non il bartender', () => {
+    expect(vociPerRuolo('admin').some(([id]) => id === 'fornitori')).toBe(true)
+    expect(vociPerRuolo('bartender').some(([id]) => id === 'fornitori')).toBe(false)
+  })
+
+  it('e non ci si entra battendo l’indirizzo a mano', () => {
+    expect(sezioneConsentita('fornitori', 'admin')).toBe(true)
+    expect(sezioneConsentita('fornitori', 'bartender')).toBe(false)
+  })
+
+  it('il magazzino invece resta di tutti i gestori', () => {
+    // Il trasloco non porta via al banco quello che gli serve: le giacenze
+    // restano dov'erano.
+    expect(sezioneConsentita('inventario', 'bartender')).toBe(true)
+  })
+})

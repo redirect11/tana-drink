@@ -139,6 +139,7 @@ import { printComanda, printScontrino, loadPrinterSettings, reclaimReceiptPrint,
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
+import FornitoriTab from '../components/FornitoriTab.jsx'
 import SettingsTab from '../components/SettingsTab.jsx'
 import PallinoStampante from '../components/PallinoStampante.jsx'
 import StatsTab from '../components/StatsTab.jsx'
@@ -368,6 +369,7 @@ export default function BartenderPage() {
         {tabEffettivo === 'bilancio' && <BilancioTab />}
         {tabEffettivo === 'menu' && <MenuTab />}
         {tabEffettivo === 'inventario' && <InventoryManager />}
+        {tabEffettivo === 'fornitori' && <FornitoriTab />}
         {(tabEffettivo === 'staff' || tabEffettivo === 'ore') && <StaffHoursTab />}
         {tabEffettivo === 'utenti' && <UtentiTab role={role} />}
         {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
