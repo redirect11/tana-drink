@@ -19,7 +19,6 @@ import {
   prezzoInArchivio,
   prezzoDiverso,
   rigaDaProdotto,
-  ordiniRiprendibili,
   righeDaOrdine,
 } from '../../src/lib/fatture.js'
 
@@ -96,7 +95,13 @@ describe('una riga nuova parte dal prezzo in archivio', () => {
   })
 })
 
-describe('riprendere le righe da un ordine è una comodità, non un legame', () => {
+// QUESTO GRUPPO PROVAVA ANCHE `ordiniRiprendibili`, che non c'è più
+// (REQ-MAG-031): quali ordini si possano riprendere adesso lo dicono le
+// fette collegabili, perché riprendere le righe e agganciare la fattura sono
+// lo stesso gesto. Della vecchia funzione è caduta anche la condizione «solo
+// se ha già consegnato qualcosa»: una proforma arriva anche prima della
+// merce, e allora quelle righe sono proprio quelle da copiare.
+describe('le righe di un ordine si riprendono sulla fattura', () => {
   const ordine = {
     id: 'po-1',
     created_at: '2026-08-20T09:00:00.000Z',
@@ -105,19 +110,6 @@ describe('riprendere le righe da un ordine è una comodità, non un legame', () 
       { item_id: 'gin', name: 'Gin Mare', qty_packages: 1, unit_cost: 30, vat: 22, supplier_id: 'enofel', stato: 'consegnato' },
     ],
   }
-
-  it('si pescano solo gli ordini di quel fornitore', () => {
-    expect(ordiniRiprendibili([ordine], 'nova').map((o) => o.id)).toEqual(['po-1'])
-    expect(ordiniRiprendibili([ordine], 'altro')).toEqual([])
-    expect(ordiniRiprendibili([ordine], null)).toEqual([])
-  })
-
-  // La fattura arriva dopo la merce: un ordine ancora tutto «richiesto» non
-  // ha niente da fatturare.
-  it('e solo quelli che hanno già consegnato qualcosa', () => {
-    const soloRichiesto = { ...ordine, lines: ordine.lines.map((l) => ({ ...l, stato: 'richiesto' })) }
-    expect(ordiniRiprendibili([soloRichiesto], 'nova')).toEqual([])
-  })
 
   it('le righe copiate sono solo quelle di quel fornitore', () => {
     const righe = righeDaOrdine(ordine, 'nova')
@@ -143,7 +135,6 @@ describe('riprendere le righe da un ordine è una comodità, non un legame', () 
       created_at: '2026-08-01T09:00:00.000Z',
       lines: [{ item_id: 'campari', name: 'Campari', qty_packages: 2, unit_cost: 12, stato: 'consegnato' }],
     }
-    expect(ordiniRiprendibili([vecchio], 'nova')).toHaveLength(1)
     expect(righeDaOrdine(vecchio, 'nova')).toHaveLength(1)
   })
 })
