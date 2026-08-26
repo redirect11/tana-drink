@@ -118,6 +118,10 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => ITEMS),
   fetchInventoryCategories: vi.fn(async () => CATS),
   fetchSuppliers: vi.fn(async () => SUPS),
+  // Il listino prodotto-fornitore (REQ-MAG-029): qui vuoto, che è il caso
+  // vero finché nessuno l'ha compilato.
+  fetchSupplierPrices: vi.fn(async () => []),
+  salvaRigaListino: vi.fn(async () => ({})),
   fetchStockMovements: vi.fn(async () => []),
   fetchMacroCategories: vi.fn(async (ambito) => (ambito === 'magazzino' ? MACRO_MAG : [])),
   createInventoryItem: vi.fn(),
