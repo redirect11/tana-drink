@@ -9,6 +9,7 @@ import {
   fetchSupplierPrices,
   fetchPurchaseOrders,
   aggiungiProdottiAFattura,
+  collegaFatturaAFetta,
 } from '../lib/api.js'
 import { invoiceTotals } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
@@ -19,8 +20,10 @@ import {
   prezzoInArchivio,
   prezzoDiverso,
   rigaDaProdotto,
-  ordiniRiprendibili,
   righeDaOrdine,
+  fettaDellaFattura,
+  fetteCollegabili,
+  fattureSenzaFetta,
 } from '../lib/fatture.js'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
@@ -41,6 +44,10 @@ export default function SupplierInvoicesPanel() {
   const [adding, setAdding] = useState(false)
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [onlyUnpaid, setOnlyUnpaid] = useState(false)
+  // Il secondo dei due buchi (REQ-MAG-031): i documenti che non stanno su
+  // nessun ordine. Si guardano a fine mese, quindi serve poterli isolare e
+  // non solo riconoscerli uno per uno scorrendo.
+  const [soloSenzaOrdine, setSoloSenzaOrdine] = useState(false)
   // Il magazzino serve solo a «Aggiungi prodotti», ma si carica insieme al
   // resto: aprire la finestra e trovarla vuota per mezzo secondo, con una
   // fattura in mano, è peggio di una lettura in più su una schermata che si
@@ -49,6 +56,7 @@ export default function SupplierInvoicesPanel() {
   const [listini, setListini] = useState([])
   const [ordini, setOrdini] = useState([])
   const [prodottiPer, setProdottiPer] = useState(null)
+  const [collegaPer, setCollegaPer] = useState(null)
 
   async function load() {
     try {
@@ -82,9 +90,10 @@ export default function SupplierInvoicesPanel() {
       invoices.filter((i) => {
         if (supplierFilter !== 'all' && i.supplier_id !== supplierFilter) return false
         if (onlyUnpaid && i.paid) return false
+        if (soloSenzaOrdine && i.order_id) return false
         return true
       }),
-    [invoices, supplierFilter, onlyUnpaid]
+    [invoices, supplierFilter, onlyUnpaid, soloSenzaOrdine]
   )
 
   // IL MAGAZZINO IN SOLA LETTURA VALE ANCHE QUI (BUG-029): finché il
@@ -97,11 +106,22 @@ export default function SupplierInvoicesPanel() {
   // NIENTE `await` PRIMA DI MOSTRARE L'ESITO: `aggiungiProdottiAFattura`
   // compone il documento aggiornato in memoria e le scritture partono in
   // sottofondo.
-  function aggiungiProdotti(righe, carica) {
+  function aggiungiProdotti(righe, carica, order_id) {
     const fattura = prodottiPer
     setProdottiPer(null)
     setError(null)
-    aggiungiProdottiAFattura(fattura.id, { righe, carica }).then(
+    aggiungiProdottiAFattura(fattura.id, { righe, carica, order_id }).then(
+      (agg) => setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i))),
+      (e) => setError(e.message)
+    )
+  }
+
+  // Attaccare e staccare sono lo stesso gesto al contrario, e passano dalla
+  // stessa strada: `order_id` a null stacca.
+  function collega(fattura, order_id) {
+    setCollegaPer(null)
+    setError(null)
+    collegaFatturaAFetta(fattura.id, { order_id }).then(
       (agg) => setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i))),
       (e) => setError(e.message)
     )
@@ -153,6 +173,12 @@ export default function SupplierInvoicesPanel() {
         </span>
         <button className={`chip ${onlyUnpaid ? 'active' : ''}`} onClick={() => setOnlyUnpaid((v) => !v)}>
           Solo da pagare
+        </button>
+        <button
+          className={`chip ${soloSenzaOrdine ? 'active' : ''}`}
+          onClick={() => setSoloSenzaOrdine((v) => !v)}
+        >
+          Senza ordine ({fattureSenzaFetta(invoices).length})
         </button>
       </div>
 
@@ -220,6 +246,17 @@ export default function SupplierInvoicesPanel() {
                 perché il carico a magazzino è una conseguenza, e per giunta
                 facoltativa. */}
             <RigheDelDocumento fattura={inv} />
+            {/* IL LEGAME CON LA FETTA (REQ-MAG-031). Un documento senza
+                ordine non è un errore — può essere una spesa telefonata al
+                fornitore — ma a fine mese è una delle due cose che fanno
+                tornare o non tornare i conti, e va vista senza cercarla. */}
+            <LegameConLOrdine
+              fattura={inv}
+              ordini={ordini}
+              suppliers={suppliers}
+              onCollega={() => setCollegaPer(inv)}
+              onScollega={() => collega(inv, null)}
+            />
             <button
               className="btn secondary small block"
               style={{ marginTop: 6 }}
@@ -239,9 +276,22 @@ export default function SupplierInvoicesPanel() {
           items={items}
           listini={listini}
           ordini={ordini}
+          fatture={invoices}
+          suppliers={suppliers}
           bloccato={bloccato}
           onCancel={() => setProdottiPer(null)}
           onConfirm={aggiungiProdotti}
+        />
+      )}
+
+      {collegaPer && (
+        <DialogoOrdine
+          fattura={collegaPer}
+          ordini={ordini}
+          fatture={invoices}
+          suppliers={suppliers}
+          onCancel={() => setCollegaPer(null)}
+          onConfirm={(orderId) => collega(collegaPer, orderId)}
         />
       )}
     </div>
@@ -262,6 +312,106 @@ function RigheDelDocumento({ fattura }) {
       {' · netto '}
       {formatPrice(totali.net)}
       {caricate > 0 ? ` · ${caricate === righe.length ? 'caricati' : `${caricate} caricati`} a magazzino` : ''}
+    </div>
+  )
+}
+
+// Come si nomina una fetta in un elenco: la data dell'ordine, quanti
+// articoli e il netto. Il fornitore non ci va — sono tutte dello stesso
+// fornitore, e ripeterlo toglierebbe spazio ai numeri che le distinguono.
+function etichettaFetta(fetta) {
+  return `${String(fetta.created_at || '').slice(0, 10)} · ${fetta.lines.length} art. · netto ${formatPrice(fetta.total_net)}`
+}
+
+// ── A QUALE PARTE DI QUALE ORDINE SI RIFERISCE ───────────────────────
+//
+// «La fattura è collegata all'ordine PER IL FORNITORE, perché è il
+// fornitore che rilascia la fattura» (l'utente, 20/08). Qui si legge il
+// legame dal lato del documento; dal lato dell'ordine lo mostra la fetta.
+//
+// L'ambra e non il rosso: un documento senza ordine non è un errore, è
+// lavoro che manca (DESIGN.md — il rosso qui vuol dire annullato).
+function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega }) {
+  const fetta = fettaDellaFattura(fattura, ordini, { suppliers })
+  const quale = `${fattura.supplier_name || 'fornitore'}${fattura.number ? ` #${fattura.number}` : ''}`
+  return (
+    <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
+      {fattura.order_id ? (
+        <>
+          <span className="muted small grow" style={{ minWidth: 0 }}>
+            {/* In mano ci sono gli ultimi venticinque ordini: di uno più
+                vecchio si sa che il legame c'è, non cosa contiene — e dirlo
+                è meglio che far sparire il legame. */}
+            Ordine {fetta ? etichettaFetta(fetta) : 'collegato'}
+          </span>
+          <button
+            className="btn ghost small"
+            aria-label={`Scollega l’ordine dal documento di ${quale}`}
+            onClick={onScollega}
+          >
+            Scollega
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="badge-low">senza ordine</span>
+          <button
+            className="btn ghost small"
+            aria-label={`Collega a un ordine il documento di ${quale}`}
+            onClick={onCollega}
+          >
+            🔗 Collega a un ordine
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// La scelta dell'ordine, per chi parte dal documento. Le fette proposte sono
+// solo quelle dello stesso fornitore e ancora libere: il fornitore sbagliato
+// e la fetta già coperta non si possono nemmeno scegliere, che è meglio che
+// spiegarli dopo con un errore.
+function DialogoOrdine({ fattura, ordini, fatture, suppliers, onCancel, onConfirm }) {
+  const [scelto, setScelto] = useState('')
+  const fette = useMemo(
+    () => fetteCollegabili(fattura, ordini, { suppliers, fatture }),
+    [fattura, ordini, suppliers, fatture]
+  )
+  const nome = fattura.supplier_name || 'questo fornitore'
+  return (
+    <div className="overlay confirm-overlay" onClick={onCancel}>
+      <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>🔗 Collega a un ordine</h3>
+        <p className="muted">
+          Il documento si collega alla parte dell’ordine di {nome}: un ordine
+          può contenere più fornitori, e ognuno rilascia la sua fattura.
+        </p>
+        {fette.length === 0 ? (
+          <p className="muted small">
+            Nessun ordine di {nome} da collegare: o non ce ne sono fra gli
+            ultimi, o la loro parte ha già un documento.
+          </p>
+        ) : (
+          <>
+            <label htmlFor="fo-ordine">Ordine</label>
+            <select id="fo-ordine" value={scelto} onChange={(e) => setScelto(e.target.value)}>
+              <option value="">— Scegli un ordine —</option>
+              {fette.map((f) => (
+                <option key={f.order_id} value={f.order_id}>
+                  {etichettaFetta(f)}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        <div className="row" style={{ gap: 10, marginTop: 16 }}>
+          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
+          <button className="btn grow" disabled={!scelto} onClick={() => onConfirm(scelto)}>
+            Collega
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -363,9 +513,12 @@ function InvoiceForm({ suppliers, busy, onCancel, onSave }) {
 //  2. il CARICO a magazzino è una scelta a parte, che si può dire di no;
 //  3. il PREZZO si chiede solo dove è cambiato, e il pre-impostato è
 //     «lascia com'è»: chi non risponde non muove niente.
-function DialogoProdotti({ fattura, items, listini, ordini, bloccato, onCancel, onConfirm }) {
+function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, bloccato, onCancel, onConfirm }) {
   const [query, setQuery] = useState('')
   const [righe, setRighe] = useState([])
+  // L'ordine da cui si riprendono le righe È l'ordine a cui il documento
+  // resta agganciato: si parte da quello che ha già, se ce l'ha.
+  const [ordineScelto, setOrdineScelto] = useState(fattura.order_id || '')
   // Col magazzino ancora da travasare il carico non si può fare (BUG-029),
   // ma le righe sì: la casella parte spenta e resta spenta.
   const [carica, setCarica] = useState(!bloccato)
@@ -382,11 +535,19 @@ function DialogoProdotti({ fattura, items, listini, ordini, bloccato, onCancel, 
     return items.filter((i) => (i.name || '').toLowerCase().includes(q))
   }, [items, query])
 
-  // «Riprendi le righe da un ordine» è una COMODITÀ DI COMPILAZIONE: la
-  // merce è quella, e ribatterla a mano è lavoro doppio con due occasioni di
-  // sbagliare. Sulla fattura non si scrive nessun id d'ordine — il legame
-  // fattura-ordine è un'altra voce, ancora da decidere (REQ-MAG-025).
-  const riprendibili = useMemo(() => ordiniRiprendibili(ordini, supplierId), [ordini, supplierId])
+  // RIPRENDERE LE RIGHE E COLLEGARE LA FATTURA SONO LO STESSO GESTO
+  // (REQ-MAG-031). Erano due cose separate: le righe si copiavano e il
+  // legame restava non scritto proprio nell'istante in cui uno l'aveva
+  // appena dimostrato — «questa fattura è di quest'ordine» — e a fine mese
+  // quella fetta risultava senza documento. Da qui la scelta di unirli: si
+  // sta ricopiando il documento dall'ordine che l'ha generato, ed è un gesto
+  // solo. Chi vuole il legame senza le righe ha «Collega a un ordine» sulla
+  // riga del documento; chi vuole le righe senza il legame le cerca per
+  // nome, come per un documento qualsiasi.
+  const collegabili = useMemo(
+    () => fetteCollegabili(fattura, ordini, { suppliers, fatture }),
+    [fattura, ordini, suppliers, fatture]
+  )
 
   function aggiungi(item) {
     setRighe((prev) => [
@@ -402,6 +563,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, bloccato, onCancel, 
   function riprendi(orderId) {
     const ordine = ordini.find((o) => o.id === orderId)
     if (!ordine) return
+    setOrdineScelto(orderId)
     const copiate = righeDaOrdine(ordine, supplierId)
     setRighe(copiate.map((r) => ({ rid: prossimoRid.current++, aggiorna_prezzo: false, ...r })))
     // QUELLA MERCE È GIÀ IN MAGAZZINO: è entrata alla consegna dell'ordine.
@@ -429,18 +591,22 @@ function DialogoProdotti({ fattura, items, listini, ordini, bloccato, onCancel, 
           sotto, ed è una cosa a parte.
         </p>
 
-        {riprendibili.length > 0 && (
+        {collegabili.length > 0 && (
           <>
-            <label htmlFor="fp-ordine">Riprendi le righe da un ordine</label>
-            <select id="fp-ordine" value="" onChange={(e) => riprendi(e.target.value)}>
+            <label htmlFor="fp-ordine">Riprendi le righe da un ordine, e collegalo</label>
+            <select id="fp-ordine" value={ordineScelto} onChange={(e) => riprendi(e.target.value)}>
               <option value="">— Scegli un ordine —</option>
-              {riprendibili.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {String(o.created_at || '').slice(0, 10)} ·{' '}
-                  {righeDaOrdine(o, supplierId).length} art.
+              {collegabili.map((f) => (
+                <option key={f.order_id} value={f.order_id}>
+                  {etichettaFetta(f)}
                 </option>
               ))}
             </select>
+            <p className="muted small">
+              {ordineScelto
+                ? 'Il documento resta collegato alla parte di quest’ordine che è di questo fornitore.'
+                : 'Le righe si copiano dall’ordine e il documento gli resta collegato.'}
+            </p>
           </>
         )}
 
@@ -575,7 +741,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, bloccato, onCancel, 
           <button
             className="btn grow"
             disabled={righe.length === 0}
-            onClick={() => onConfirm(righe, carica)}
+            onClick={() => onConfirm(righe, carica, ordineScelto || null)}
           >
             {carica ? 'Aggiungi e carica' : 'Aggiungi senza caricare'}
           </button>

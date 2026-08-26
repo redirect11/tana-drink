@@ -34,7 +34,7 @@ const LISTINI = [
   { id: 'enofel__campari', supplier_id: 'enofel', item_id: 'campari', price: 11.9, last_price_at: '2024-02-01T10:00:00.000Z' },
 ]
 
-const stato = { ordini: [], listini: LISTINI }
+const stato = { ordini: [], listini: LISTINI, fatture: [] }
 
 vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => ARTICOLI),
@@ -45,6 +45,12 @@ vi.mock('../../src/lib/api.js', () => ({
   consegnaRigheOrdine: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   segnaRighePagate: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   deletePurchaseOrder: vi.fn(async () => {}),
+  // Lo storico dice, fetta per fetta, se la fattura c'è (REQ-MAG-031).
+  fetchSupplierInvoices: vi.fn(async () => stato.fatture),
+  collegaFatturaAFetta: vi.fn(async (id, { order_id }) => ({
+    ...stato.fatture.find((f) => f.id === id),
+    order_id: order_id || null,
+  })),
 }))
 
 vi.mock('../../src/lib/printer.js', () => ({ printOrdineFornitore: vi.fn(async () => {}) }))
@@ -62,6 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   stato.ordini = []
   stato.listini = LISTINI
+  stato.fatture = []
 })
 
 describe('si parte dal prodotto, non dal fornitore', () => {
