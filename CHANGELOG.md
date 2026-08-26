@@ -4,6 +4,14 @@
 
 ### Per chi sta al banco
 
+- **Le fatture ai clienti diventano una funzione premium.** La sezione
+  **«📄 Fatture»** non è più nel menu, e nella schermata di pagamento non
+  c'è più il tasto **«📧 Invia fattura»**: la fattura di cortesia non fa
+  parte di questa installazione. Restano al loro posto «🎟 Codice Lotteria»
+  e «🖨 Preconto». **Le fatture già emesse non si perdono**: il numero resta
+  scritto sul conto e il documento resta salvato — tornano a vedersi se la
+  funzione viene attivata.
+
 - **I fornitori hanno una sezione loro.** Nel menu compare **«🏭
   Fornitori»**, e dentro ci sono le tre cose che prima stavano sparse nel
   magazzino: **Gestione fornitori** (l'anagrafica), **Ordini** e

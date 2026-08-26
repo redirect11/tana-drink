@@ -4130,7 +4130,7 @@ requirements:
 
   - id: REQ-LIC-001
     title: "Le funzioni premium si accendono da un posto solo, e di partenza sono spente"
-    area: "src/lib/licenza.js, src/components/InventoryManager.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx"
+    area: "src/lib/licenza.js, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/components/FornitoriTab.jsx, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx"
     description: >
       Decisione dell'utente del 26/08/2026, parole sue: «Facciamo che la
       conta di magazzino e le fatture (le due sezioni) diventano funzioni
@@ -4199,10 +4199,46 @@ requirements:
       incluso: una funzione a pagamento non si regala per una svista. E una
       sezione che compare per mezzo secondo e poi sparisce è peggio di una
       che non c'è: le schermate partono dalla cache, non dal vuoto.
-      DOVE VIVONO LE DUE SEZIONI, dal 26/08/2026: la CONTA nel magazzino,
-      lo SCADENZARIO nella sezione «Fornitori» (REQ-MAG-028). Il filtro è lo
-      stesso, `voceVisibile`, in tutt'e due i posti — è il motivo per cui
-      l'id del modulo è l'id della sezione.
+      I MODULI DI OGGI SONO TRE, e vivono in tre posti diversi con lo
+      STESSO filtro (`voceVisibile`) — è il motivo per cui l'id del modulo è
+      l'id della sezione che accende:
+      · `conta` — sottosezione del magazzino. Non inclusa.
+      · `scadenzario` — sottosezione di «Fornitori» (REQ-MAG-028). INCLUSA.
+      · `fatture` — la SEZIONE del gestionale «Fatture», cioè le fatture di
+        cortesia al cliente (collezione `invoices`). Non inclusa.
+      ⚠️ LE DUE FATTURE NON SONO LA STESSA COSA, e stanno una sotto l'altra
+      nelle impostazioni: «Fatture ai clienti» sono soldi che ENTRANO
+      (`invoices`, il documento che si dà a chi lo chiede), «Fatture ai
+      fornitori» sono soldi che ESCONO (lo scadenzario, `supplier_invoices`).
+      Hanno in comune solo la parola, e le etichette a schermo lo dicono
+      senza doverle aprire.
+      LE FATTURE AI CLIENTI PORTANO VIA ANCHE UN TASTO. Chiesto dall'utente
+      il 26/08/2026: «Un'altra funzione premium è la sezione delle fatture,
+      e insieme a quello va nascosto il tasto fattura nel pagamento
+      dell'ordine». Col modulo spento sparisce la voce «📄 Fatture» dal menu
+      e il tasto «📧 Invia fattura» dalla schermata di pagamento. Quel tasto
+      è l'UNICA porta della modale della fattura (`showInvoice` lo accende
+      solo lui), quindi togliendolo si chiude tutto il flusso — emissione,
+      stampa e invio per email — senza lasciare in giro mezze strade.
+      UN CONTO CHE UNA FATTURA CE L'HA GIÀ non la perde: `invoice_number`
+      resta scritto sull'ordine e il documento resta nella collezione
+      `invoices`. Col modulo spento non si vede — le uniche schermate che lo
+      mostravano erano il ✓ sul tasto, l'avviso dentro la modale e la
+      sezione Fatture, e sono tutte dietro il modulo — e torna a vedersi
+      identico appena il modulo si riaccende. Nessuna scrittura, nessuna
+      cancellazione.
+      SEZIONI.JS LEGGE LA LICENZA, ed è il pezzo che la Fase 3 del piano di
+      sbrandizzazione chiede a quel file. `vociPerRuolo(role, impostazioni)`
+      e `sezioneConsentita(id, role, impostazioni)` fanno DUE domande che
+      restano separate: CHI SEI (la funzione di `ruoli.js` sulla voce) e
+      COSA HA IL LOCALE (`voceVisibile`). Una voce premium non c'è per
+      nessuno, admin compreso; una voce di ruolo non c'è per chi non ha il
+      ruolo. Le impostazioni arrivano da chi le ha già in cache (StaffDrawer
+      e BartenderPage): nessuna lettura nuova. Se non sono ancora arrivate
+      passa solo quello che è incluso di suo — meglio una voce che compare
+      che una che lampeggia e sparisce.
+      DOVE VIVONO, in breve: la CONTA nel magazzino, lo SCADENZARIO in
+      «Fornitori», le FATTURE nel menu del gestionale.
       NEL MAGAZZINO la sezione Conta resta nell'unico elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano
       con `voceVisibile`. Una voce che rientra torna al SUO posto, perché
       l'elenco è quello e basta. La vista aperta si RICAVA dall'elenco
@@ -4263,7 +4299,10 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/licenza.test.js
+      - tests/unit/sezioni.test.js
       - tests/component/InventoryManager.test.jsx
+      - tests/component/FornitoriTab.test.jsx
+      - tests/component/PaymentScreen.test.jsx
       - tests/component/SettingsTab.test.jsx
 
   # ══════════════════════════════════════════════════════════════════════

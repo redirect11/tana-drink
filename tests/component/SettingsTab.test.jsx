@@ -360,9 +360,12 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
     expect(screen.getByText('Conta di magazzino')).toBeInTheDocument()
     expect(screen.getByText('Fatture ai fornitori')).toBeInTheDocument()
+    // Le due fatture stanno una sotto l'altra e sono mestieri opposti:
+    // l'etichetta deve dire di chi sono senza doverle aprire.
+    expect(screen.getByText('Fatture ai clienti')).toBeInTheDocument()
     // Il registro è professionale: si dice cosa fa e com'è messa, niente
     // toni da venditore (DESIGN.md, guardrail 3).
-    expect(screen.getByText(/Funzione premium: non inclusa\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/Funzione premium: non inclusa\./).length).toBeGreaterThan(0)
     expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
     expect(screen.queryByText(/sblocca|acquista|scopri/i)).toBeNull()
   })

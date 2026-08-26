@@ -154,3 +154,49 @@ describe('la sezione Fornitori', () => {
     expect(sezioneConsentita('inventario', 'bartender')).toBe(true)
   })
 })
+
+// ── LE FUNZIONI PREMIUM TOLGONO VOCI A TUTTI ─────────────────────────
+// REQ-LIC-001, chiesto dall'utente il 26/08/2026: le fatture ai clienti
+// sono premium e per questa installazione non sono incluse. Non è una
+// domanda sul ruolo — la voce non c'è per nessuno — ma il filtro sta qui,
+// accanto all'elenco, com'è già per il ruolo. È il pezzo che la Fase 3 del
+// piano di sbrandizzazione chiede a questo file.
+describe('le voci che il locale non ha', () => {
+  it('«Fatture» non è nel menu di nessuno, admin compreso', () => {
+    expect(vociPerRuolo('admin').some(([id]) => id === 'fatture')).toBe(false)
+    expect(vociPerRuolo('bartender').some(([id]) => id === 'fatture')).toBe(false)
+  })
+
+  it('e non ci si entra battendo l’indirizzo a mano', () => {
+    expect(sezioneConsentita('fatture', 'admin')).toBe(false)
+  })
+
+  it('con la licenza che le include, la voce torna a tutto il gestionale', () => {
+    const licenza = { licenza: { moduli: { fatture: true } } }
+    expect(vociPerRuolo('admin', licenza).some(([id]) => id === 'fatture')).toBe(true)
+    expect(vociPerRuolo('bartender', licenza).some(([id]) => id === 'fatture')).toBe(true)
+    expect(sezioneConsentita('fatture', 'bartender', licenza)).toBe(true)
+  })
+
+  it('inclusa ma spenta dalle impostazioni: la voce non c’è', () => {
+    const spenta = { licenza: { moduli: { fatture: true } }, modulo_fatture_enabled: false }
+    expect(vociPerRuolo('admin', spenta).some(([id]) => id === 'fatture')).toBe(false)
+    expect(sezioneConsentita('fatture', 'admin', spenta)).toBe(false)
+  })
+
+  it('il ruolo e la licenza si sommano, non si sostituiscono', () => {
+    // «Fornitori» è dell'admin e non è premium; «Fatture» è premium e non è
+    // di un ruolo: le due domande restano separate.
+    const licenza = { licenza: { moduli: { fatture: true } } }
+    expect(vociPerRuolo('bartender', licenza).some(([id]) => id === 'fornitori')).toBe(false)
+    expect(sezioneConsentita('fornitori', 'bartender', licenza)).toBe(false)
+  })
+
+  it('senza impostazioni passa solo quello che è incluso di suo', () => {
+    // Il primo disegno arriva prima del server: meglio una voce che compare
+    // che una che lampeggia e sparisce.
+    const ids = vociPerRuolo('admin').map(([id]) => id)
+    expect(ids).toContain('inventario')
+    expect(ids).not.toContain('fatture')
+  })
+})

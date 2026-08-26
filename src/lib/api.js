@@ -4177,6 +4177,7 @@ export const DEFAULT_SETTINGS = {
   // ha comprato funziona senza che nessuno lo debba accendere.
   modulo_conta_enabled: true,
   modulo_scadenzario_enabled: true,
+  modulo_fatture_enabled: true,
   // RISCUOTI E SERVI: col servizio seguito, incassare non chiude il conto —
   // si può pagare in anticipo con tre drink ancora da fare. Ma al banco
   // capita spessissimo il contrario: si consegna e si incassa nello stesso
