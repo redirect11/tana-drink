@@ -3679,3 +3679,189 @@ bugs:
       - tests/unit/comande.test.js
       - tests/unit/campiStampa.test.js
       - tests/component/CampiStampa.test.jsx
+
+  # ── I guai trovati dall'audit di sicurezza del 26 agosto 2026 ────────────
+  # Non arrivano dal banco ma da una verifica su tutto il progetto (backend,
+  # frontend, regole Firebase, segreti). Il racconto per esteso, con gli
+  # scenari di abuso e le cose fatte bene, sta in
+  # docs/audit-sicurezza-2026-08-26.md. Qui i difetti da chiudere, ognuno
+  # con la sua voce perché ognuno si sistema per conto suo.
+
+  - id: BUG-090
+    title: "Il repository è pubblico e contiene vocali e foto di persone vere"
+    area: "registrazioni/ (storia git e rami release/1.3.0, release/1.4.0), .gitignore, repository GitHub"
+    description: >
+      Il repo redirect11/tana-drink è PUBBLICO, e in registrazioni/ ci sono
+      63 file — note vocali WhatsApp e foto dal 26/07 al 10/08/2026 — che, per
+      stessa ammissione del .gitignore e di scripts/trascrivi-registrazioni.py,
+      contengono i nomi dei clienti e le voci di chi lavora al banco. Sono dati
+      personali (voce e immagine identificabili) pubblicati senza base
+      giuridica: un problema di privacy prima ancora che di sicurezza.
+      Il commit che li ha tolti (c002eb1, «fuori dal versionamento i vocali dal
+      banco») li ha rimossi SOLO dal tip. Restano scaricabili da chiunque:
+      dai tip dei rami remoti vivi release/1.3.0 e release/1.4.0 (63 file
+      ciascuno), dalla storia raggiungibile di main e develop (i commit che li
+      aggiungono — c89e4f5, fefa53a, 64573ad… — sono antenati del tip), e dai
+      rami locali agents/configurazione-agenti e feature/riordino-css.
+      Comportamento atteso: quei file non devono essere raggiungibili da un
+      repository pubblico, né dal tip né dalla storia.
+      COSA FARE (in quest'ordine): (1) cancellare sul server i rami
+      release/1.3.0 e release/1.4.0 (e i locali citati, o riscriverli);
+      (2) riscrivere la storia di tutti i rami con
+      `git filter-repo --path registrazioni/ --invert-paths` (o BFG) e
+      force-push; (3) aprire un ticket al GitHub Support per purgare gli
+      oggetti dalle cache/reflog lato server — i commit restano raggiungibili
+      per SHA anche dopo il force-push — e verificare che non esistano fork;
+      (4) decidere se il repo debba restare pubblico. Non c'è un segreto da
+      ruotare: è privacy di persone reali, ed è il finding più grave dell'audit.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, infrastruttura]
+    severity: grave
+    priority: P0
+    test_cases: []
+
+  - id: BUG-091
+    title: "counters/{dateKey} è scrivibile da chiunque, anche senza login"
+    area: "firestore.rules (match /counters/{dateKey}), src/lib/progressivi.js"
+    description: >
+      In firestore.rules la collezione dei progressivi ha `allow read, write:
+      if true`: nessun login, nessun ruolo, nessun App Check imposto. Chiunque
+      abbia estratto apiKey e projectId dal bundle (pubblici per design) può
+      fare setDoc(counters/2026-08-26, {last: 999999}) o azzerare il contatore.
+      Danno: la sera i nuovi conti prendono numeri assurdi o DUPLICATI di conti
+      già in mano ai clienti — la comanda stampata «#15» e quella a schermo non
+      coincidono più. È la stessa classe di incidente che progressivi.js
+      documenta come già vissuta; risolviNumeroDuplicato gestisce le collisioni
+      accidentali fra terminali, non un avvelenamento deliberato del contatore.
+      L'apertura è motivata dalla numerazione lato client offline, ma va
+      ristretta. Comportamento atteso: la scrittura dei counter solo allo staff.
+      CURA: `allow write: if isStaffMember();`. Se serve l'incremento dal
+      client anonimo, vincolarlo a
+      `request.resource.data.last == resource.data.last + 1` con App Check
+      imposto (vedi BUG-092), o spostare l'assegnazione del progressivo
+      interamente server-side. Serve un test delle regole
+      (@firebase/rules-unit-testing), oggi assente: l'anonimo non deve poter
+      scrivere counters.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: grave
+    priority: P1
+    test_cases: []
+
+  - id: BUG-092
+    title: "App Check è inizializzato sul client ma non imposto da nessuna parte"
+    area: "src/lib/firebaseClient.js (initializeAppCheck), functions/index.js (OPTS delle onCall), firestore.rules"
+    description: >
+      Il client registra App Check con reCAPTCHA v3 (firebaseClient.js), ma il
+      backend non lo pretende mai: nessuna Cloud Function dichiara
+      `enforceAppCheck: true` (OPTS è solo la region), l'enforcement non risulta
+      acceso per Firestore/Storage, e se manca VITE_RECAPTCHA_SITE_KEY App Check
+      si spegne in silenzio. Risultato: il token viene prodotto e allegato, ma
+      le callable restano invocabili da qualunque client, anche fuori dall'app.
+      È il moltiplicatore che rende sfruttabili i buchi da anonimo (BUG-091,
+      BUG-093) e apre a spam/DoS/costo battendo createOrder o
+      createPaymentCheckout in loop con la sola apiKey pubblica. È anche il
+      sospetto già annotato per BUG-001 (il banner «Missing or insufficient
+      permissions» in coda).
+      Comportamento atteso: le operazioni riservate all'app passano solo da
+      client legittimi con App Check valido.
+      CURA: accendere l'enforcement in console per Firestore/Storage/Functions;
+      aggiungere `enforceAppCheck: true` alle callable riservate allo staff
+      (staffAdmin, sync/sale SumUp, pagamenti), lasciando fuori con grazia
+      quelle pensate per il cliente anonimo con capability-token (checkout
+      online); far fallire la build in produzione se manca
+      VITE_RECAPTCHA_SITE_KEY, invece di spegnere App Check in silenzio.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, produzione]
+    severity: grave
+    priority: P1
+    test_cases: []
+
+  - id: BUG-093
+    title: "Ogni ordine è leggibile e creabile da chiunque: dati personali esposti"
+    area: "firestore.rules (match /orders/{orderId}), src/lib/api.js"
+    description: >
+      In firestore.rules gli ordini hanno `allow read: if true` e `create`
+      senza requisito di autenticazione. È la scelta «id ordine come capability
+      token», ma gli ordini contengono dati personali: customer_name,
+      customer_uid, note, push_token FCM, placed_by (email/ruolo dello staff).
+      Con l'API REST di Firestore e l'apiKey pubblica, uno script itera o
+      indovina gli id ordine e raccoglie nomi clienti, consumazioni, importi e
+      i token push di staff e clienti; oppure crea migliaia di ordini fittizi
+      che intasano la coda del banco.
+      Comportamento atteso: il cliente anonimo con l'id in mano vede e modifica
+      il SUO conto, ma i dati personali e i token non sono esposti a lettura
+      pubblica, e la creazione non è un rubinetto aperto.
+      CURA: mantenere il modello capability ma (1) accendere App Check
+      (BUG-092) per limitare la creazione ai client legittimi; (2) non esporre
+      push_token, customer_uid e placed_by in documenti a lettura pubblica —
+      spostarli in un sottodocumento a lettura ristretta o proiettarli via
+      callable; (3) valutare un rate-limit sulla creazione ordini. Test delle
+      regole a corredo.
+    in_produzione: true
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza]
+    severity: grave
+    priority: P1
+    test_cases: []
+
+  - id: BUG-094
+    title: "Le callable SumUp POS Pro non controllano né login né ruolo"
+    area: "functions/index.js (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus), functions/lib/sumup-service.js, functions/lib/sumup-core.js"
+    description: >
+      LATENTE — oggi innocuo perché SumUp è spento (functions/.env vuoto), ma
+      da chiudere PRIMA di accendere l'integrazione. Le tre callable
+      syncSumUpProducts, createSumUpSale e updateSumUpSaleStatus non leggono
+      request.auth; un onCall v2 non richiede autenticazione di default, e non
+      c'è requireRole né App Check. A integrazione attiva, chiunque conosca
+      l'id progetto (è nel bundle) può, da internet:
+      - syncSumUpProducts: riscrivere l'intera collezione drinks (il menù) con
+        la risposta dell'API SumUp;
+      - createSumUpSale: passare orderId/items/unit_price/qty DAL CLIENT e
+        scrivere sumup_sale_id su un ordine arbitrario con prezzi a piacere;
+      - updateSumUpSaleStatus: cambiare lo stato di qualunque vendita.
+      Comportamento atteso: sono operazioni di back-office, mai di un cliente.
+      CURA: aggiungere `requireRole(request.auth, BANCO)` come già fanno i
+      pagamenti (payment-service.js), validare orderId/items (esistenza
+      dell'ordine) e RICALCOLARE i prezzi lato server invece di prenderli dal
+      client. Insieme, imporre App Check (BUG-092).
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, pagamenti]
+    severity: grave
+    priority: P2
+    test_cases: []
+
+  - id: BUG-095
+    title: "sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica"
+    area: "functions/index.js (sumupWebhook), functions/lib/sumup-service.js (handleWebhook), functions/lib/sumup-core.js (parseWebhookBody)"
+    description: >
+      LATENTE — innocuo finché SumUp è spento (nessun ordine ha sumup_sale_id),
+      ma si attiva insieme al POS Pro. A differenza del webhook dei pagamenti,
+      che è fatto bene, sumupWebhook prende sale_id E status dal corpo della
+      richiesta e li scrive direttamente sull'ordine, senza verifica di firma
+      HMAC, senza segreto condiviso e senza ri-verifica via API. Chi conosce o
+      indovina un sumup_sale_id POSTa {sale_id, status: 'COMPLETED'}
+      sull'endpoint pubblico e fa avanzare di stato ordini altrui. Manca anche
+      la guardia isConfigured().
+      Comportamento atteso: come per i pagamenti, lo stato non si prende mai per
+      buono dal payload.
+      CURA: verificare la firma/segreto del webhook SumUp POS Pro se il prodotto
+      la offre, oppure — come già fa il webhook pagamenti — rileggere l'esito
+      dall'API SumUp e non fidarsi del payload; aggiungere `if (!isConfigured())
+      return {status: 200}`.
+    in_produzione: false
+    status: todo
+    generate_issue: true
+    labels: [bug, sicurezza, pagamenti]
+    severity: grave
+    priority: P2
+    test_cases: []
