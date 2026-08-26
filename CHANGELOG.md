@@ -4,6 +4,37 @@
 
 ### Per chi sta al banco
 
+- **Lo stesso prodotto si può comprare da più fornitori.** Negli **Ordini**
+  c'è un **campo di ricerca**: si cerca il prodotto e lo si aggiunge senza
+  dover scegliere prima il fornitore. Nell'elenco ogni prodotto compare una
+  volta per fornitore che lo vende, con **il prezzo di quel fornitore**, una
+  **striscia del suo colore** e le scritte «ultimo acquisto» e «più
+  economico» per confrontare a colpo d'occhio. Scegliendo un fornitore in
+  alto si vede solo il suo catalogo. **Il magazzino non cambia**: il Campari
+  resta un prodotto solo, con una giacenza sola.
+
+- **Un ordine può contenere prodotti di più fornitori.** Il fornitore si
+  sceglie sulla riga dell'ordine, e quello già usato per lo stesso prodotto
+  non si può riscegliere. Nello **storico**, l'ordine si legge diviso per
+  fornitore: email, stampa e copia riguardano **solo le righe di quel
+  fornitore**.
+
+- **Richiesto, consegnato, pagato.** Ogni fornitore dell'ordine ha il suo
+  passo. **La merce entra in magazzino quando si segna «Consegnato»**, non
+  prima: alla consegna si controllano i prezzi come sono sul documento, e
+  quello che si scrive lì diventa il prezzo di quel fornitore e il costo del
+  prodotto. Il fornitore invece non si cambia più: da lui la merce è stata
+  comprata. «Pagato» si può mettere solo su una consegna già arrivata.
+
+- **Ogni fornitore ha un colore.** Si sceglie quando lo si crea — ne viene
+  proposto uno — e si cambia dall'anagrafica toccando il pallino accanto al
+  nome. È il colore che distingue i doppioni nella lista degli ordini.
+
+- **Il fornitore si scrive dalla scheda del prodotto, come prima**, ma
+  adesso finisce nel listino di quel fornitore col prezzo indicato: gli
+  altri fornitori dello stesso prodotto restano dove sono. **Niente si
+  perde**: i prodotti che avevano già un fornitore continuano a mostrarlo.
+
 - **Via il collegamento col registratore di cassa SumUp Cassa Pro.** Doveva
   ricopiare ogni vendita dentro il registratore di SumUp, ma non è mai stato
   acceso: nessuno l'ha mai visto funzionare e al banco non cambia niente.

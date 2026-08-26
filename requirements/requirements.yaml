@@ -7263,11 +7263,61 @@ requirements:
       quanti prodotti col vecchio campo e quanti ordini ci siano davvero in
       produzione, da contare in SOLA LETTURA prima di scrivere il ramo di
       compatibilita'.
-    status: todo
+      FATTO (26/08/2026). Il listino vive nella collezione `supplier_prices`,
+      con id `<fornitore>__<prodotto>`: l'unicita' della coppia e' cosi' un
+      fatto del database e non un controllo che qualcuno dimentica di fare
+      da un secondo terminale. La logica pura sta in `src/lib/listini.js`,
+      senza Firebase, perche' e' li' che si prova.
+      LA SCHERMATA ORDINI PARTE DALLA RICERCA. Campo «Cerca un prodotto» in
+      cima, filtro fornitore sotto come VISTA; il catalogo ha una riga per
+      coppia prodotto-fornitore, con la striscia del colore del fornitore —
+      le stesse di REQ-MAG-027, riusate e non riscritte — e le due etichette
+      «ultimo acquisto» e «piu' economico». Il fornitore si sceglie sulla
+      RIGA DELL'ORDINE, dove la decisione conta: la tendina propone l'ultimo
+      acquisto e DISABILITA chi e' gia' stato usato per quel prodotto nello
+      stesso ordine.
+      I TRE LIVELLI stanno sulla RIGA (`stato`: richiesto / consegnato /
+      pagato). Il carico avviene alla consegna, per FETTA di fornitore:
+      `consegnaRigheOrdine` in api.js alza la giacenza, scrive il movimento,
+      aggiorna il prezzo di quella riga di listino con la sua data e il costo
+      di riferimento del prodotto. Il vecchio `receivePurchaseOrder`, che
+      caricava l'ordine intero in un colpo, non c'e' piu': con piu' fornitori
+      dentro quel gesto non esiste, perche' consegnano in giorni diversi.
+      Il PAGATO si puo' mettere solo su cio' che e' gia' consegnato.
+      EMAIL, STAMPA E COPIA VANNO PER FETTA. `fetteFornitore` taglia l'ordine
+      e ogni fetta ha la stessa FORMA di un ordine (data, nome, righe,
+      totali): cosi' `purchaseOrderText` e `printOrdineFornitore` non
+      cambiano di una riga, e a Nova non arrivano le righe di Enofel.
+      IL COLORE DEL FORNITORE si sceglie alla creazione — a caso, oppure a
+      mano dalla tavolozza nell'anagrafica — e chi e' nato prima ne riceve
+      uno STABILE calcolato dal suo id (`coloreFornitore`), perche' un colore
+      che cambia a ogni ricarica non identifica niente.
+      NESSUNA MIGRAZIONE, NESSUNO SCRIPT LANCIATO. `rigaVirtuale` fa il ramo
+      di compatibilita': un prodotto senza righe di listino ma col vecchio
+      `supplier_id` scritto produce una riga virtuale con quel fornitore e
+      quel costo. La scheda prodotto ha smesso di SCRIVERE quel campo — ne
+      fa una riga di listino — e non lo cancella; il filtro per fornitore
+      del magazzino guarda il listino (`fornitoriPerArticolo`) e ricade sul
+      vecchio campo dove il listino non c'e'.
+      DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) un prodotto senza
+      nessun fornitore resta ORDINABILE, con la casella vuota e la fetta
+      «Senza fornitore» — sono 378 su 388, e nasconderli avrebbe lasciato la
+      schermata vuota; (2) la scheda prodotto TIENE la sua tendina fornitore
+      (REQ-MAG-028 dice che di li' si crea un fornitore nuovo, e quella
+      strada resta), ma adesso scrive nel listino; (3) il catalogo a schermo
+      si ferma a 60 righe e lo dice, perche' 388 prodotti per i loro
+      fornitori non si scorrono — si cercano; (4) il campo `status` in testa
+      all'ordine resta nel vocabolario di prima (inviato / ricevuto) e si
+      ricava dalle righe, per non rinominare un campo scritto su documenti
+      veri.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, dati]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/listini.test.js
+      - tests/unit/consegnaOrdine.test.js
+      - tests/component/PurchaseOrdersPanel.test.jsx
 
   - id: REQ-MAG-028
     title: "«Fornitori» è una sezione sua: anagrafica, ordini e scadenzario"
@@ -7377,6 +7427,14 @@ requirements:
       riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e
       scrive un movimento «ordine fornitore». Questa voce ci aggiunge il pezzo
       che manca.
+      ⚠️ AGGIORNAMENTO 26/08/2026 (REQ-MAG-029): `receivePurchaseOrder` non
+      esiste piu'. Il carico avviene al passaggio della RIGA a «consegnato»,
+      per FETTA di fornitore — `consegnaRigheOrdine` — perche' con piu'
+      fornitori dentro un ordine solo il gesto «ricevuto» sull'ordine intero
+      non esiste: consegnano in giorni diversi. Il conto del carico e' lo
+      stesso di prima, e il punto 4 qui sotto («il carico non e' automatico»)
+      e' fatto a meta': il gesto e' gia' per riga, quello che manca e' il
+      tasto «CARICA TUTTI».
       IL PRODOTTO NUOVO, che oggi si perde in silenzio. Quel ciclo salta le
       righe il cui articolo non esiste in anagrafica (`if (!s.exists())
       continue`): se il fornitore manda una referenza nuova, la riga non
