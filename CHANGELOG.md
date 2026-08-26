@@ -4,6 +4,17 @@
 
 ### Per chi sta al banco
 
+- **I numeri dei conti sono chiusi a chiave.** Il contatore da cui esce il
+  «#» di ogni conto adesso può solo salire, di uno per volta, e a spostarlo
+  o correggerlo è soltanto chi ha fatto il login al gestionale. Al banco non
+  cambia niente: il numero compare nell'istante in cui si tocca «Conferma»,
+  come prima, e anche l'ordine che arriva dal telefono del cliente continua
+  a prendere il suo. Serviva perché un contatore che qualcuno può riportare
+  indietro vuol dire due conti con lo stesso numero nella stessa serata —
+  uno stampato e in mano al cliente, l'altro a schermo.
+  **Ha effetto solo dopo la pubblicazione delle regole Firestore**, che è un
+  passo a parte e va fatto a mano.
+
 - **Le fatture ai clienti diventano una funzione premium.** La sezione
   **«📄 Fatture»** non è più nel menu, e nella schermata di pagamento non
   c'è più il tasto **«📧 Invia fattura»**: la fattura di cortesia non fa

@@ -98,10 +98,43 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // COUNTERS — scritti dalla transazione di creazione ordine (lato client, non autenticato).
+    // COUNTERS — i numeri dei conti, e il puntatore alla cassa aperta.
+    //
+    // Erano `write: if true`: chiunque avesse letto apiKey e projectId dal
+    // bundle (sono pubblici per disegno) poteva scrivere `last: 0` e far
+    // ripartire la numerazione da capo. La sera dopo, due conti #15 — uno
+    // stampato e in mano al cliente, l'altro a schermo. È lo stesso guaio
+    // che progressivi.js racconta di aver già vissuto per sbaglio, stavolta
+    // fatto apposta.
+    //
+    // Chiudere agli anonimi non si poteva: il cliente che ordina dal menù
+    // NON è autenticato, e il suo conto prende il numero dallo stesso
+    // contatore del banco, senza aspettare il server (lib/progressivi.js).
+    // Una regola che pretendesse il login gli spegnerebbe l'incremento —
+    // il conto uscirebbe lo stesso, ma il contatore non salirebbe, e il
+    // cliente dopo prenderebbe lo stesso numero. Il doppione, di nuovo.
+    //
+    // Quindi non si chiede CHI scrive, si chiede COSA scrive: a chi non è
+    // del personale si concede esattamente il gesto che fa progressivi.js —
+    // un `increment(1)` sul solo campo `last` — e nient'altro. Il numero
+    // può solo salire, di uno per volta: azzerarlo, spararlo a 999999 o
+    // infilare altri campi non passa più. Le regole vedono il valore DOPO
+    // l'incremento, quindi il vincolo si può scrivere così com'è.
+    //
+    // Resta il gocciolamento: mille chiamate spingono il contatore avanti di
+    // mille. Sono numeri alti, brutti da vedere, ma mai due conti con lo
+    // stesso numero — che è il danno vero. A fermare anche quello è App
+    // Check imposto (BUG-092), che è una decisione a parte.
     match /counters/{dateKey} {
       allow read: if true;
-      allow write: if true;
+      // Il personale fa tutto: apre la cassa (_active_cash), numera le
+      // fatture (fatture-AAAA), corregge, importa.
+      allow write: if isStaffMember();
+      allow create: if request.resource.data.keys().hasOnly(['last'])
+        && request.resource.data.last == 1;
+      allow update: if request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['last'])
+        && request.resource.data.last == resource.data.last + 1;
     }
 
     // SERVIZIO PERPETUO — niente più "serate". Statistiche tempi (ETA):

@@ -3744,13 +3744,40 @@ bugs:
       interamente server-side. Serve un test delle regole
       (@firebase/rules-unit-testing), oggi assente: l'anonimo non deve poter
       scrivere counters.
+      RISOLTO (26/08/2026). La cura secca suggerita dall'audit — `allow
+      write: if isStaffMember()` — È SBAGLIATA, e la prova lo dimostra: il
+      cliente che ordina dal menù NON è autenticato e passa dallo stesso
+      contatore; con quella regola il suo conto uscirebbe lo stesso ma il
+      contatore non salirebbe, e il cliente dopo prenderebbe lo stesso
+      numero — cioè proprio il doppione che si voleva evitare. Quindi non si
+      chiede CHI scrive ma COSA scrive: a chi non è del personale si concede
+      esattamente il gesto di progressivi.js — un `increment(1)` sul solo
+      campo `last` — e nient'altro. Le regole vedono il valore DOPO
+      l'incremento (verificato sull'emulatore), quindi il vincolo
+      `request.resource.data.last == resource.data.last + 1` si può scrivere
+      così com'è. Un contatore nuovo può nascere solo a 1. Il personale
+      resta libero (apertura cassa `_active_cash`, `fatture-AAAA`,
+      correzioni). Il local-first è intatto: nessuna lettura in più prima di
+      scrivere, `prendiNumero` resta a fuoco e via.
+      PROVATO con la prima suite di test delle regole del progetto
+      (tests/regole/, `npm run test:regole`, emulatore Firestore): 14 prove,
+      metà sull'abuso e metà sull'uso legittimo. Doppia prova del rosso —
+      rimessa la regola vecchia, i 9 test dell'abuso falliscono (l'abuso
+      passa); messa la regola troppo stretta, falliscono i 3 dell'uso
+      legittimo del cliente.
+      RESTA il gocciolamento: mille chiamate spingono il contatore avanti di
+      mille. Numeri alti e brutti, mai due conti uguali — il danno vero è
+      chiuso. A fermare anche quello è App Check imposto (BUG-092).
+      DA FARE A MANO: le regole hanno effetto solo dopo `firebase deploy
+      --only firestore:rules`, che è una decisione dell'utente.
     in_produzione: true
-    status: todo
+    status: fixed
     generate_issue: true
     labels: [bug, sicurezza]
     severity: grave
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/regole/counters.test.js
 
   - id: BUG-092
     title: "App Check è inizializzato sul client ma non imposto da nessuna parte"

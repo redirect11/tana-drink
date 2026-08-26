@@ -7852,6 +7852,35 @@ requirements:
     labels: [dev, stampa]
     test_cases: [tests/unit/stampanteFinta.test.js]
 
+  - id: REQ-DEV-015
+    title: "Le regole Firestore hanno delle prove, e ogni prova è doppia"
+    area: "tests/regole/, vitest.regole.config.mjs, firestore.rules"
+    description: >
+      Le regole di Firestore sono l'UNICA barriera fra i dati del locale e
+      chiunque abbia letto apiKey e projectId dal bundle — che sono pubblici
+      per disegno. Fino all'audit del 26/08/2026 non avevano un solo test: si
+      leggevano e si sperava. L'audit stesso lo mette fra le cose da fare.
+      ADESSO ci sono: girano contro l'emulatore Firestore con le regole VERE
+      lette da firestore.rules, così una regola che cambia cambia anche
+      quello che si prova.
+      OGNI PROVA È DOPPIA, ed è il punto di questo requisito: che l'abuso sia
+      bloccato conta quanto che l'uso legittimo passi. Una regola che chiude
+      tutto è facile da scrivere e la sera manda a casa il locale — è già
+      successo di sfiorarlo con BUG-091, dove la cura ovvia («solo lo staff
+      scrive i contatori») spegneva la numerazione degli ordini che arrivano
+      dal telefono del cliente, che non è autenticato.
+      STANNO PER CONTO LORO, fuori da `npm test`: senza emulatore acceso non
+      partirebbero e renderebbero rossa la CI per un motivo che non è un
+      difetto. Si lanciano con `npm run test:regole`, dopo aver acceso gli
+      emulatori (vedi docs/ambiente-locale.md). Per la stessa ragione non
+      contano per la copertura: quello che misurano non è codice nostro.
+    status: implemented
+    generate_issue: true
+    labels: [metodo, sicurezza]
+    priority: P1
+    test_cases:
+      - tests/regole/counters.test.js
+
   - id: REQ-CODA-006
     title: "I conti dei giorni scorsi restano in coda, sotto la loro data"
     area: "src/lib/coda.js (giornataDelConto, raggruppaPerGiornata, intestazioneGiornata), src/pages/BartenderPage.jsx"
