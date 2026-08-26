@@ -4,6 +4,19 @@
 
 ### Per chi sta al banco
 
+- **La fattura si porta dietro il documento vero.** Nello **Scadenzario**,
+  sotto ogni documento, c'è **«Allega foto o PDF»**: si fotografa la fattura
+  col telefono, o si sceglie il PDF scaricato dal fornitore, e resta lì. Da
+  quella riga si **apre**, si **sostituisce** e si **toglie**. Le foto
+  vengono **ridotte prima di partire** — una fattura si deve leggere, non
+  stampare — così il caricamento regge anche con la connessione del
+  magazzino. Vanno bene JPG, PNG, WebP e PDF **fino a 8 MB**, e il limite sta
+  scritto sul tasto: se un file non va, l'app lo dice subito e spiega cosa
+  fare, senza toccare il documento. **Quali fatture hanno la carta e quali no
+  si vede senza cercarlo**: chi non ce l'ha porta scritto «senza allegato», e
+  il filtro **«Senza allegato»** in testa alla pagina tiene solo quelli, come
+  già fa «Senza ordine». Eliminando una fattura se ne va anche il suo file.
+
 - **Un prodotto che arriva e in magazzino non c'era adesso viene creato.**
   Prima quella riga passava a «consegnato» e basta: la merce non entrava in
   magazzino e non risultava da nessuna parte, mentre la consegna sembrava
