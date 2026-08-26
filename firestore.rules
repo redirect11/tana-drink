@@ -240,6 +240,16 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // ALTRE SPESE — quello che esce dal conto e non entra in magazzino
+    // (REQ-MAG-034): arredi, attrezzature, materiale di consumo. Stessa mano
+    // delle altre collezioni dei fornitori: nell'app la sezione è del solo
+    // admin (sezioni.js, ruoli.js), ma qui vale il permesso di chi registra i
+    // soldi che escono — un documento contabile non può essere più aperto
+    // della fattura che gli sta accanto.
+    match /altre_spese/{spesaId} {
+      allow read, write: if isBartender();
+    }
+
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
     match /staff_calls/{callId} {
       allow read: if isStaffMember();
