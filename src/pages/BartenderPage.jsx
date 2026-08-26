@@ -134,7 +134,6 @@ import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
-import { syncSumUpProducts, isSumUpEnabled } from '../lib/sumupApi.js'
 import { printComanda, printScontrino, loadPrinterSettings, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
@@ -392,60 +391,7 @@ export default function BartenderPage() {
 }
 
 function MenuTab() {
-  const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState(null)
-
-  async function handleSync() {
-    setSyncing(true)
-    setSyncResult(null)
-    try {
-      const res = await syncSumUpProducts()
-      if (res.skipped) {
-        setSyncResult({ ok: false, msg: res.message || 'SumUp non abilitato.' })
-      } else {
-        setSyncResult({ ok: true, msg: `Sincronizzati ${res.synced} prodotti da SumUp POS Pro.` })
-      }
-    } catch (e) {
-      setSyncResult({ ok: false, msg: `Errore: ${e.message}` })
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  return (
-    <div>
-      {/* Box sync visibile solo con l'integrazione SumUp abilitata. */}
-      {isSumUpEnabled && (
-      <div className="card" style={{ marginBottom: 8 }}>
-        <div className="row between" style={{ alignItems: 'center' }}>
-          <div>
-            <strong>SumUp POS Pro</strong>
-            <div className="muted" style={{ fontSize: '0.85rem' }}>
-              Importa il catalogo drink direttamente da SumUp POS Pro.
-            </div>
-          </div>
-          <button
-            className="btn small"
-            disabled={syncing}
-            onClick={handleSync}
-            style={{ marginLeft: 12, flexShrink: 0 }}
-          >
-            {syncing ? 'Sync…' : '↻ Sync catalogo'}
-          </button>
-        </div>
-        {syncResult && (
-          <div
-            className={syncResult.ok ? '' : 'banner'}
-            style={syncResult.ok ? { marginTop: 8, color: 'var(--green, #4caf50)', fontSize: '0.9rem' } : { marginTop: 8 }}
-          >
-            {syncResult.msg}
-          </div>
-        )}
-      </div>
-      )}
-      <MenuManager />
-    </div>
-  )
+  return <MenuManager />
 }
 
 function LoginForm() {

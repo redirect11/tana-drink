@@ -93,10 +93,6 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(async () => ({})),
   readerTerminate: vi.fn(async () => {}),
 }))
-vi.mock('../../src/lib/sumupApi.js', () => ({
-  syncSumUpProducts: vi.fn(async () => ({ synced: 0 })),
-  isSumUpEnabled: false,
-}))
 vi.mock('../../src/lib/staffApi.js', () => ({ preloadStaff: vi.fn() }))
 vi.mock('../../src/lib/pendingOrders.js', () => ({
   subscribePending: (cb) => {
