@@ -77,6 +77,7 @@ import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
+import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
 import { inCodaOrdine, ricordaOrdine, ordineRicordato } from './mutazioniOrdine.js'
 import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
 import {
@@ -1289,6 +1290,10 @@ function mapInvoice(snap) {
     // è la fetta. Chi non ce l'ha è una fattura senza ordine, che è uno dei
     // due buchi da vedere a colpo d'occhio.
     order_id: i.order_id ?? null,
+    // IL DOCUMENTO VERO (REQ-MAG-033): foto o PDF su Storage. `null` per
+    // tutte quelle registrate a mano senza allegare niente, che è il terzo
+    // buco da vedere a colpo d'occhio.
+    attachment: i.attachment ?? null,
     created_at: toIso(i.created_at),
   }
 }
@@ -1314,8 +1319,62 @@ export async function updateSupplierInvoice(id, patch) {
   await updateDoc(doc(db, 'supplier_invoices', id), patch)
 }
 
+// CHI CANCELLA LA FATTURA PORTA VIA ANCHE L'ALLEGATO (REQ-MAG-033): il file
+// resterebbe su Storage per sempre, e senza il documento che lo nomina
+// nessuno saprebbe più di chi era né perché è lì. Prima se ne va la fattura
+// — è quella che conta e la si aspetta — poi il file, che è un tentativo e
+// non solleva niente.
 export async function deleteSupplierInvoice(id) {
-  await deleteDoc(doc(db, 'supplier_invoices', id))
+  const ref = doc(db, 'supplier_invoices', id)
+  const snap = await getDoc(ref)
+  const allegato = snap.exists() ? mapInvoice(snap).attachment : null
+  await deleteDoc(ref)
+  if (allegato?.path) await eliminaAllegato(allegato.path)
+}
+
+// ── L'ALLEGATO: IL DOCUMENTO VERO, NON SOLO UN NUMERO (REQ-MAG-033) ──
+//
+// «Allegare = il documento vero (foto/PDF), non solo un numero. Serve lo
+// Storage» (l'utente, 20/08).
+//
+// QUI SI ASPETTA, ed è l'eccezione che conferma la regola: non c'è modo di
+// scrivere sulla fattura il riferimento a un file che non è ancora su
+// Storage, e comporre in memoria un allegato che potrebbe non esistere
+// vorrebbe dire una fattura che dice di avere una foto e non ce l'ha. Questa
+// è una schermata di gestione e non la coda: l'attesa si può permettere,
+// purché si veda — e a mostrarla è il pannello.
+//
+// La scrittura su Firestore invece resta in sottofondo come tutte le altre,
+// e il documento aggiornato si COMPONE: la cache risponderebbe con quello di
+// prima (BUG-045).
+export async function allegaDocumentoAFattura(id, file) {
+  const ref = doc(db, 'supplier_invoices', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Documento non trovato')
+  const fattura = mapInvoice(snap)
+
+  const allegato = await caricaAllegatoFattura(id, file)
+
+  bgWrite(() => updateDoc(ref, { attachment: allegato }), 'allegato fattura')
+  // IL VECCHIO SI TOGLIE DOPO CHE IL NUOVO È SU. Sostituire è caricare e
+  // basta: se il caricamento non riesce, la riga qui sopra non è mai stata
+  // eseguita e sulla fattura c'è ancora l'allegato di prima, intero.
+  if (fattura.attachment?.path && fattura.attachment.path !== allegato.path) {
+    await eliminaAllegato(fattura.attachment.path)
+  }
+  return { ...fattura, attachment: allegato }
+}
+
+// Togliere l'allegato è cancellarlo davvero: tenerlo su Storage senza niente
+// che lo nomini sarebbe lo stesso orfano di una fattura eliminata.
+export async function togliAllegatoDaFattura(id) {
+  const ref = doc(db, 'supplier_invoices', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Documento non trovato')
+  const fattura = mapInvoice(snap)
+  bgWrite(() => updateDoc(ref, { attachment: null }), 'allegato fattura')
+  if (fattura.attachment?.path) await eliminaAllegato(fattura.attachment.path)
+  return { ...fattura, attachment: null }
 }
 
 // ── LA FATTURA SI AGGANCIA ALLA FETTA DEL SUO FORNITORE (REQ-MAG-031) ─
