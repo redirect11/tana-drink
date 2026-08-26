@@ -4,6 +4,15 @@
 
 ### Per chi sta al banco
 
+- **Il collegamento col registratore di cassa SumUp chiede le credenziali.**
+  Le tre funzioni che parlano col POS SumUp — sincronizzare il listino,
+  mandare una vendita, cambiarle stato — adesso rispondono solo a chi è
+  entrato nel gestionale, e i prezzi della vendita li prende il server dal
+  conto invece che da chi chiama. Il collegamento con SumUp non è attivo al
+  locale, quindi oggi non cambia niente: serve a farsi trovare pronti il
+  giorno in cui si accende. **Ha effetto solo dopo la pubblicazione delle
+  Cloud Functions.**
+
 - **Un conto non può più nascere firmato da qualcun altro.** Chi apre un
   conto dal telefono senza essere entrato nel gestionale adesso può scrivere
   soltanto quello che serve a ordinare: niente firma col nome di chi sta al

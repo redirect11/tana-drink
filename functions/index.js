@@ -97,16 +97,36 @@ const deps = {
   serverTimestamp: () => FieldValue.serverTimestamp(),
 }
 
+// ── Chi chiama, e cosa gli si risponde se sbaglia ─────────────────────────────
+// Le tre callable SumUp non guardavano `request.auth`: un `onCall` v2 non
+// chiede autenticazione di suo. Ora il controllo di ruolo sta nel servizio
+// (lib/sumup-service.js) e torna { code, message }, come fanno i pagamenti:
+// qui si traduce in HttpsError. Il dettaglio grezzo non esce mai da solo.
+async function callableSumUp(fn) {
+  try {
+    return await fn()
+  } catch (e) {
+    if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
+    throw new HttpsError('internal', e?.message || 'Errore interno.')
+  }
+}
+
 // ── Sincronizza prodotti SumUp → Firestore ────────────────────────────────────
-exports.syncSumUpProducts = onCall(OPTS, () => syncProducts(deps))
+exports.syncSumUpProducts = onCall(OPTS, (request) =>
+  callableSumUp(() => syncProducts(deps, request.auth))
+)
 
 // ── Invia ordine a SumUp POS Pro ──────────────────────────────────────────────
 // Chiamata dopo createOrder su Firestore. L'ID della vendita SumUp viene
 // salvato sull'ordine Firebase per consentire aggiornamenti di stato futuri.
-exports.createSumUpSale = onCall(OPTS, (request) => createSale(deps, request.data))
+exports.createSumUpSale = onCall(OPTS, (request) =>
+  callableSumUp(() => createSale(deps, request.auth, request.data))
+)
 
 // ── Aggiorna stato vendita su SumUp POS Pro ───────────────────────────────────
-exports.updateSumUpSaleStatus = onCall(OPTS, (request) => updateSaleStatus(deps, request.data))
+exports.updateSumUpSaleStatus = onCall(OPTS, (request) =>
+  callableSumUp(() => updateSaleStatus(deps, request.auth, request.data))
+)
 
 // ── Webhook in entrata da SumUp POS Pro ───────────────────────────────────────
 // Quando il bartender cambia stato su SumUp POS Pro, questo endpoint aggiorna

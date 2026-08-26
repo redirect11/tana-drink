@@ -15,12 +15,44 @@ const {
   parseWebhookBody,
 } = require('./sumup-core')
 
+// CHI PUÒ TOCCARE SUMUP. Queste tre callable non chiedevano NIENTE: un
+// `onCall` v2 non richiede autenticazione di suo, e qui non c'era né un
+// controllo di ruolo né App Check. A integrazione accesa, chiunque conoscesse
+// l'id del progetto — sta nel bundle — poteva da internet riscrivere il menù
+// con la risposta di SumUp, attaccare una vendita a un ordine altrui con i
+// prezzi che voleva, o far avanzare di stato una vendita qualsiasi.
+//
+// Stesso metro dei pagamenti (payment-service.js): il ruolo vive nel custom
+// claim, che nessuno può darsi da solo.
+//   · BANCO per il catalogo: riscrivere il menù è back-office, non servizio.
+//   · Tutto il personale per vendite e stati: la sala prende gli ordini al
+//     tavolo, e deve poterli mandare al POS.
+const STAFF_ROLES = ['admin', 'bartender', 'staff']
+const BANCO = ['admin', 'bartender']
+
+function err(code, message) {
+  return { code, message }
+}
+
+function requireRole(auth, roles) {
+  const role = auth?.token?.role
+  if (!roles.includes(role)) {
+    throw err('permission-denied', 'Operazione riservata allo staff.')
+  }
+}
+
 // Sincronizza il catalogo SumUp → collezione Firestore `drinks`.
 // I prodotti già presenti (per sumup_product_id) vengono aggiornati, i nuovi creati.
-async function syncProducts({ db, sumupFetch, isConfigured, serverTimestamp }) {
+async function syncProducts({ db, sumupFetch, isConfigured, serverTimestamp }, auth) {
+  // PRIMA se è spento, POI chi sei. Non è distrazione: SumUp è spento
+  // (functions/.env vuoto) e da spenta questa funzione non fa NIENTE — nessuna
+  // chiamata, nessuna scrittura. Mettere il controllo di ruolo davanti
+  // cambierebbe un no-op silenzioso in un errore, e il primo a prenderlo
+  // sarebbe il telefono del cliente, che chiama createSale a ogni ordine.
   if (!isConfigured()) {
     return { skipped: true, message: 'SUMUP_VENDOR_ID o SUMUP_OUTLET_ID non configurati.' }
   }
+  requireRole(auth, BANCO)
 
   const data = await sumupFetch('/products')
   const products = extractProducts(data)
@@ -49,11 +81,41 @@ async function syncProducts({ db, sumupFetch, isConfigured, serverTimestamp }) {
 
 // Invia un ordine a SumUp POS Pro come External Sale e persiste il sale id
 // sull'ordine Firebase per consentire aggiornamenti di stato futuri.
-async function createSale({ db, sumupFetch, isConfigured }, data) {
+async function createSale({ db, sumupFetch, isConfigured }, auth, data) {
   if (!isConfigured()) return { skipped: true }
+  requireRole(auth, STAFF_ROLES)
 
   const { orderId, tableLabel, items, note } = data || {}
-  const payload = buildSalePayload({ tableLabel, note, items })
+
+  // I PREZZI LI METTE IL SERVER, non chi chiama. Prima `unit_price` e `qty`
+  // arrivavano dal client e finivano tali e quali nella vendita SumUp: bastava
+  // chiamare la funzione a mano per registrare due Negroni a un centesimo.
+  // Se l'ordine è già sul server si prende da lì, che è l'unica copia di cui
+  // ci si fidi.
+  //
+  // Se non c'è ancora si usa quello che è arrivato, e NON è una svista: il
+  // conto è local-first — `creaOrdine` scrive senza aspettare e chiama subito
+  // questa — quindi il documento può essere ancora per strada. Pretenderlo
+  // vorrebbe dire perdere la vendita di ogni conto battuto con la linea lenta.
+  // Adesso che di qui passa solo il personale, il salto vale la pena.
+  let vendita = { tableLabel, note, items }
+  if (orderId) {
+    const snap = await db.collection('orders').doc(orderId).get()
+    if (snap.exists) {
+      const order = snap.data() || {}
+      vendita = {
+        tableLabel: order.table_label ?? tableLabel,
+        note: order.note ?? note,
+        items: (order.items || []).map((i) => ({
+          sumup_product_id: i.sumup_product_id ?? null,
+          name: i.name,
+          qty: i.qty,
+          unit_price: i.unit_price,
+        })),
+      }
+    }
+  }
+  const payload = buildSalePayload(vendita)
 
   const sale = await sumupFetch('/external_sales', {
     method: 'POST',
@@ -70,8 +132,9 @@ async function createSale({ db, sumupFetch, isConfigured }, data) {
 }
 
 // Aggiorna lo stato di una vendita su SumUp POS Pro.
-async function updateSaleStatus({ sumupFetch, isConfigured }, data) {
+async function updateSaleStatus({ sumupFetch, isConfigured }, auth, data) {
   if (!isConfigured()) return { skipped: true }
+  requireRole(auth, STAFF_ROLES)
 
   const { saleId, status } = data || {}
   if (!saleId) return { skipped: true, reason: 'nessun sumup_sale_id' }
