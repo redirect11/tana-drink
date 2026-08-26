@@ -80,6 +80,21 @@ const ITEMS = [
     supplier_id: 's1',
     status: 'assortimento',
   },
+  {
+    // NATO DA UNA CONSEGNA (REQ-MAG-032): l'ordine portava una referenza che
+    // in anagrafica non c'era. Ha nome, costo e giacenza; categoria, misura
+    // del pezzo e soglia sono quello che l'ordine non poteva sapere.
+    id: 'i5',
+    name: 'Mezcal Verde',
+    unit: 'pz',
+    stock: 4,
+    category_id: null,
+    cost: 20,
+    vat: 22,
+    low_threshold: 0,
+    status: 'assortimento',
+    scheda_da_completare: true,
+  },
 ]
 const CATS = [
   // «Distillati» sta in una macro, ALTRO no — ed è una scelta, non una
@@ -273,8 +288,10 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
     const voce = screen.getByRole('button', { name: /In scorta/ })
-    // Il conteggio c'è come sulle altre voci: Gin Mare, Rum e Ichnusa.
-    expect(voce).toHaveTextContent('3')
+    // Il conteggio c'è come sulle altre voci: Gin Mare, Rum, Ichnusa e il
+    // Mezcal nato da una consegna (REQ-MAG-032) — una scheda da completare è
+    // pur sempre merce sullo scaffale.
+    expect(voce).toHaveTextContent('4')
     await user.click(voce)
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
     expect(screen.queryByText('Vodka Vecchia')).toBeNull()
@@ -452,6 +469,40 @@ describe('la macro di ogni categoria, nell’elenco delle categorie', () => {
     expect(within(distillati).getByText('Alcolici')).toBeInTheDocument()
     const altro = screen.getByText('ALTRO').closest('.row')
     expect(within(altro).getByText('senza macro')).toBeInTheDocument()
+  })
+})
+
+// ── L'ALTRO LATO DELLO STESSO BUCO (REQ-MAG-032) ─────────────────────
+//
+// Un prodotto nato da una consegna non ha categoria, quindi non ha macro
+// d'acquisto: la sua spesa non compare in «Acquisti × Fatturato» invece di
+// risultare sbagliata, che è peggio. Sta accanto alle categorie senza macro
+// perché è la stessa mancanza vista dall'altro lato, e si guardano nello
+// stesso momento.
+//
+// E IL NOME NON È QUELLO DEL TRAVASO: in magazzino «da sistemare» sono i
+// prodotti che il passaggio ai pezzi non sa convertire, e finché ce n'è uno
+// il magazzino resta in sola lettura. Questa lista non blocca niente.
+describe('i prodotti con la scheda da completare', () => {
+  it('si guardano insieme alle categorie senza macro', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    await user.click(screen.getByRole('button', { name: /Macro-categorie/ }))
+    expect(await screen.findByText(/Prodotti con la scheda da completare/)).toBeInTheDocument()
+    expect(screen.getByText('Mezcal Verde')).toBeInTheDocument()
+    // Le categorie senza macro restano dov'erano: le due liste convivono.
+    expect(screen.getByText(/Categorie senza macro/)).toBeInTheDocument()
+  })
+
+  it('nella lista si riconoscono senza aprirli, e aperti dicono cosa manca', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    const riga = screen.getByText('Mezcal Verde').closest('.inv-row')
+    expect(within(riga).getByTitle('Scheda da completare')).toBeInTheDocument()
+    await user.click(within(riga).getByRole('button'))
+    expect(screen.getByText(/Scheda da completare: manca la categoria/)).toBeInTheDocument()
   })
 })
 
