@@ -891,6 +891,30 @@ export function contenutoDelPezzo(item) {
   return formatQty(c.size, c.base)
 }
 
+// ── QUANTO ENTRA IN GIACENZA COMPRANDO N CONFEZIONI ──────────────────
+//
+// LE QUANTITÀ IN MAGAZZINO SONO IN UNITÀ BASE: sei cartoni da 70 cl non
+// sono «sei», sono quattromiladuecento millilitri. Il conto stava dentro il
+// carico degli ordini; da REQ-MAG-030 lo fa anche la fattura, e due copie
+// della stessa moltiplicazione sono due occasioni di scriverla diversa.
+//
+// `bottles_total` conta i PEZZI passati per il magazzino, aperti e chiusi:
+// serve al costo medio e alla conta. Si ricalcola da quello che c'è in
+// giacenza (i pezzi interi, più quello aperto se avanza un fondo) più
+// quelli appena arrivati; per chi si conta a pezzi non esiste, perché il
+// pezzo È l'unità.
+export function caricoDaConfezioni(item, qtyPackages) {
+  const qty = Number(qtyPackages) || 0
+  const size = Number(item?.package_size) || 0
+  if (item?.unit === 'pz' || !size) return { addQty: qty, bottles_total: null }
+  const stock = Number(item?.stock) || 0
+  const interi = Math.floor(stock / size)
+  // Un fondo di bottiglia è una bottiglia aperta, non zero: il margine
+  // toglie di mezzo gli spiccioli della virgola mobile.
+  const aperta = stock - interi * size > 1e-9
+  return { addQty: qty * size, bottles_total: interi + (aperta ? 1 : 0) + qty }
+}
+
 // ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
 // Cosa si porta dietro la copia, e cosa no. Sta qui e non nella
 // schermata perché è una regola sui dati: la giacenza NON si copia — la
