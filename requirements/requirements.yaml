@@ -7145,6 +7145,86 @@ requirements:
       - tests/component/InventoryManager.test.jsx
       - tests/component/MenuManager.test.jsx
 
+  - id: REQ-MAG-031
+    title: "La fattura si aggancia alla FETTA di fornitore dentro l'ordine"
+    area: "src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx"
+    description: >
+      Ritagliato da REQ-MAG-025, che resta da fare per il resto: qui c'e' il
+      solo LEGAME, che l'utente ha precisato il 20/08 con parole sue.
+      «La vista degli ordini contiene piu' fornitori, ma la fattura e'
+      collegata all'ordine PER IL FORNITORE, perche' e' il fornitore che
+      rilascia la fattura».
+      QUINDI IL LEGAME NON E' FATTURA-ORDINE, E' FATTURA-FETTA: la fetta di
+      quel fornitore dentro l'ordine, la stessa che il filtro gia' mostra
+      (REQ-MAG-029). Un ordine con tre fornitori ha fino a tre fatture,
+      ognuna agganciata alla sua fetta.
+      PERCHE' SERVE, ed e' la ragione per cui l'utente l'ha chiesto: «sono le
+      due cose che a fine mese fanno tornare o non tornare i conti con il
+      commercialista». Le due cose sono i due buchi — una fetta CONSEGNATA
+      MA SENZA FATTURA (la merce e' arrivata, il documento no) e una FATTURA
+      SENZA FETTA (il documento c'e', l'ordine no) — e vanno visti a colpo
+      d'occhio, non cercati.
+      DOVE VIVE IL DATO: `order_id` sulla FATTURA, e basta quello. Il
+      fornitore la fattura ce l'ha gia' (`supplier_id`), e la coppia dei due
+      E' la fetta — la stessa chiave con cui `fetteFornitore` la ritaglia.
+      Su un campo solo, «una fattura sta su al massimo una fetta» e' vero per
+      costruzione: non c'e' nessun posto dove scriverne una seconda.
+      SULL'ORDINE NON SI SCRIVE NIENTE, ed e' deliberato: l'ordine lo
+      scrivono la consegna e il pagamento, gesti che partono dal banco, e un
+      secondo scrittore su quel documento vuol dire due terminali che si
+      sovrascrivono le righe per aggiungere un riferimento che sta comodo
+      dall'altra parte.
+      IL VERSO OPPOSTO — una fetta, al massimo una fattura — nessun campo lo
+      garantisce da solo, e lo tiene `aggancioAmmesso` (src/lib/fatture.js):
+      la stessa funzione filtra gli elenchi delle candidate E sta davanti
+      alla scrittura in api.js, cosi' le due cose non possono divergere. Le
+      schermate aperte sono due e i terminali del locale pure: una fetta
+      coperta da un altro terminale un minuto fa non si vede.
+      IL FORNITORE FA DA GUARDIA: si aggancia solo un documento DELLO STESSO
+      FORNITORE della fetta, e il modo di impedirlo e' non farlo comparire
+      nell'elenco — non spiegarlo dopo con un errore. Agganciare la fattura
+      di Nova alla fetta di Enofel non e' un errore di battitura: e' merce
+      pagata a chi non l'ha venduta.
+      SI AGGANCIA E SI SGANCIA DAI DUE LATI. Dalla fetta (Fornitori ->
+      Ordini) si sceglie il documento di quel fornitore; dal documento
+      (Fornitori -> Scadenzario) si sceglie l'ordine, e si legge a quale
+      fetta si riferisce — data, articoli, netto della sola fetta. Staccare
+      e' lo stesso gesto al contrario (`order_id` a null) ed e' un gesto che
+      si vede: il campo e' uno solo, e riscriverlo di nascosto lascerebbe
+      scoperta la fetta di prima senza che nessuno l'abbia deciso.
+      I DUE BUCHI, DOVE SI VEDONO. Negli Ordini, una fetta consegnata e
+      senza documento porta la scritta «manca la fattura» e in testa allo
+      storico c'e' quante sono; nello Scadenzario, un documento senza ordine
+      porta «senza ordine» e il chip «Senza ordine (n)» tiene solo quelli.
+      L'ambra e non il rosso: non e' un errore, e' lavoro che manca — in
+      questa app il rosso vuol dire annullato (DESIGN.md).
+      «RIPRENDI LE RIGHE DA UN ORDINE» E L'AGGANCIO SONO STATI UNITI, ed e'
+      una decisione presa in implementazione. Erano due gesti: si copiavano
+      le righe (REQ-MAG-030, aiuto di compilazione) e il legame restava non
+      scritto proprio nell'istante in cui uno l'aveva appena dimostrato —
+      «questa fattura e' di quest'ordine» — e a fine mese quella fetta
+      risultava scoperta. Adesso scegliere l'ordine copia le righe E aggancia
+      il documento, in UNA scrittura sola (due scritture, e una delle due puo'
+      restare indietro). Chi vuole il legame senza le righe ha «Collega a un
+      ordine» sulla riga del documento; chi vuole le righe senza il legame
+      cerca i prodotti per nome, come per un documento qualsiasi.
+      CADUTA LA CONDIZIONE «SOLO ORDINI GIA' CONSEGNATI» che filtrava gli
+      ordini riprendibili: una proforma arriva anche prima della merce, e
+      allora quelle righe sono proprio quelle da copiare. La fetta ancora
+      «richiesta» si collega, ma non conta come buco: li' non e' arrivato
+      niente, e segnalarla insegnerebbe a ignorare il segnale.
+      NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025
+      cita nello stesso punto: serve lo Storage e non sono decisi ne' peso
+      ne' formati. Resta li'.
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, fornitori, scadenzario]
+    priority: P2
+    test_cases:
+      - tests/unit/legameFattura.test.js
+      - tests/unit/agganciaFattura.test.js
+      - tests/component/FatturaDellaFetta.test.jsx
+
   - id: REQ-MAG-030
     title: "Dalla fattura al magazzino: «Aggiungi prodotti», col prezzo che si decide"
     area: "src/components/SupplierInvoicesPanel.jsx, src/lib/listini.js, src/lib/inventory.js, src/lib/api.js"
@@ -7639,6 +7719,18 @@ requirements:
       il carico di quel prodotto e' stato fatto davvero. Serve a preparare
       il listino mentre la merce viaggia, senza che il cambio scatti prima
       che la merce esista.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-031): IL LEGAME E' FATTO, ed e'
+      il punto 2 qui sopra — la fattura agganciata alla FETTA di fornitore,
+      i due versi, la guardia sul fornitore e i due buchi a colpo d'occhio.
+      Vive in `order_id` sulla fattura piu' `aggancioAmmesso`
+      (src/lib/fatture.js), e si usa da Fornitori -> Ordini e da Fornitori
+      -> Scadenzario. Di quel punto 2 resta fuori solo l'ALLEGATO del
+      documento (foto/PDF): serve lo Storage e non sono decisi ne' peso ne'
+      formati.
+      QUESTA VOCE RESTA DA FARE per tutto il resto: il tasto «CARICA
+      TUTTI», i due gesti separati arrivato/carico (punti 3 e 4),
+      l'assortimento pre-impostato (punto 5), «Altre spese» col Riepilogo, e
+      il prodotto nuovo che oggi si perde in silenzio.
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, admin]

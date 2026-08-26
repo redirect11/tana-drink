@@ -4,6 +4,23 @@
 
 ### Per chi sta al banco
 
+- **Ogni fornitore ha la sua fattura, dentro lo stesso ordine.** Un ordine
+  può contenere più fornitori, e ognuno rilascia il suo documento: adesso la
+  fattura si collega **alla parte dell'ordine di quel fornitore**, non
+  all'ordine intero. Si fa dai due lati — negli **Ordini**, sulla riga del
+  fornitore, e nello **Scadenzario**, sotto il documento — e da tutti e due
+  si vede a cosa è collegata l'altra. Si può collegare **solo un documento
+  dello stesso fornitore**, e gli altri non compaiono nemmeno in elenco.
+  Una parte d'ordine ha al massimo una fattura, e una fattura sta su una
+  parte d'ordine sola: per cambiarla si stacca prima.
+  **Le due cose che a fine mese fanno tornare i conti si vedono senza
+  cercarle**: negli Ordini una consegna arrivata senza documento porta
+  scritto «manca la fattura», e in testa allo storico c'è quante sono; nello
+  Scadenzario un documento senza ordine porta «senza ordine», e il filtro
+  **«Senza ordine»** tiene solo quelli.
+  Riprendere le righe da un ordine, nello Scadenzario, adesso **collega
+  anche il documento**: è lo stesso gesto.
+
 - **Dalla fattura al magazzino: «Aggiungi prodotti».** Nello **Scadenzario**,
   sotto ogni documento, c'è un tasto che apre l'elenco dei prodotti: si cerca
   per nome, si scrive quanti pezzi e a che prezzo, e le righe restano sulla
