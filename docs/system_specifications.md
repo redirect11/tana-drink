@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 178 | fatto e coperto dai test |
+| ✅ | 179 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 21 | da fare |
 | 🗑 | 7 | non più valido |
 
-**220 voci** in tutto. **192** descrivono il sistema com'è oggi e
+**221 voci** in tutto. **193** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 25 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 26 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1054,6 +1054,48 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-033 — L'allegato della fattura: il documento vero, foto o PDF
+
+Ritagliato da REQ-MAG-025, punto 2 delle DECISIONI DEL 20/08, di cui REQ-MAG-031 aveva gia' fatto il legame. Qui c'e' l'ultima riga di quel punto, con le parole dell'utente: «Allegare = IL DOCUMENTO VERO (foto/PDF), non solo un numero. Serve lo Storage; da decidere in implementazione limite di peso e formati». PERCHE' SERVE: il numero dice quale fattura e', la carta e' quella che il commercialista chiede. Fino a ieri lo scadenzario teneva la testata (fornitore, numero, data, importo), le righe (REQ-MAG-030) e il legame con la fetta d'ordine (REQ-MAG-031) — tutto tranne il documento. La carta restava in una cartelletta al banco, e a fine mese si cercava li'.
+
+FATTO (27/08/2026).
+
+COSA SI PUO' FARE: dalla riga del documento, nello Scadenzario, si allega una foto o un PDF; l'allegato si riapre, si sostituisce e si toglie; e i documenti senza allegato si vedono a colpo d'occhio.
+
+IL TERZO BUCO, e si guarda come gli altri due (REQ-MAG-031): il segno «senza allegato» in ambra sulla riga e il chip «Senza allegato (n)» che tiene solo quelli. NON e' un linguaggio nuovo, ed e' deliberato: e' lo stesso del «senza ordine» che sta due righe piu' su, perche' e' la stessa cosa — lavoro che manca, non un errore dell'app (in questa app il rosso vuol dire annullato, DESIGN.md).
+
+SI CHIAMA «ALLEGATO» E NON «DOCUMENTO», per forza: in questa schermata «documento» e' gia' la fattura stessa — «Nuovo documento», «Eliminare il documento» — e un badge «senza documento» sotto un documento sarebbe una parola con due significati sulla stessa riga. ── LA DECISIONE SU PESO E FORMATI, che il requisito lasciava aperta ── FORMATI AMMESSI:
+
+JPG, PNG, WebP e PDF. Una fattura arriva in due modi soli — fotografata col telefono (JPEG, o PNG per uno screenshot) oppure scaricata dal portale del fornitore (PDF) — e tutto il resto non e' una cosa che il locale possa poi riaprire. L'ELENCO E' CHIUSO E NON E' `image/*`, ed e' la parte che costa: un HEIC di iPhone passerebbe da `image/*`, ma il canvas del browser non lo sa decodificare — finirebbe su Storage a piena dimensione e non si aprirebbe piu'. Meglio rifiutarlo nell'istante in cui lo si sceglie, dicendo cosa va bene. In pratica quasi non capita: caricando dalla libreria foto, iOS consegna gia' un JPEG.
+
+PESO MASSIMO: 8 MB, ed e' quello che finisce su Storage. Una foto ridotta sta in mezzo mega e un PDF di fattura pure, ma un PDF scansionato di piu' pagine — che certi fornitori mandano — arriva tranquillamente a cinque; sopra gli otto non e' piu' una fattura, e' un catalogo, e riscaricarlo dalla connessione del locale costerebbe piu' che ricercare la carta. Il limite vero sta in `storage.rules`; quello nell'app serve a DIRLO PRIMA, sul tasto, invece di far fallire un caricamento gia' partito.
+
+LE FOTO SI RIDUCONO NEL BROWSER, prima di partire: 2000 punti sul lato lungo e qualita' JPEG 0,72. Chi scatta e' in piedi in magazzino con la connessione del locale, e uno scatto di una fattura A4 sono facilmente 5 MB; da qui esce intorno al mezzo. Duemila punti su un A4 fanno circa 170 punti per pollice, che e' la soglia sotto la quale il corpo piccolo — aliquote, numeri di riga — comincia a impastarsi:
+
+UNA FATTURA SI DEVE LEGGERE, NON STAMPARE. Le foto dei drink si riducono a 1200 perche' sono francobolli in un menu; e' lo stesso conto (`downscaleImage` in storage.js) con numeri diversi, non una seconda strada.
+
+IL PDF NON SI TOCCA: ricomprimerlo vorrebbe dire rovinare il testo, che e' esattamente la cosa da leggere. Si accetta o si rifiuta.
+
+UN TERZO LIMITE, prima di tutti: 25 MB sullo scatto NON ancora ridotto. Una foto da telefono sta fra i 3 e i 5 MB e passa senza accorgersene; venticinque vuol dire un file che non viene da una fotocamera, e provare ad aprirlo in canvas su un telefono di tre anni fa vuol dire la schermata piantata con la merce in mano.
+
+IL LIMITE SI DICE PRIMA, e non dopo: formati e peso stanno scritti sul tasto («Allega foto o PDF, fino a 8 MB») e ogni rifiuto dice cosa fare — allegare solo le pagine che servono, rifare la foto — non che cosa chi legge ha sbagliato.
+
+DOVE FINISCE IL FILE: `fatture/<id fattura>/<istante>-<caso>.<est>` su Firebase Storage. Una cartella per fattura, cosi' la regola parla del documento e non di un mucchio comune; l'istante piu' un numero a caso nel nome perche' due terminali che allegano nello stesso secondo non si sovrascrivano. L'estensione la decide il TIPO e non il nome di partenza: dopo la riduzione il file E' un JPEG anche se si chiamava `.png`.
+
+SULLA FATTURA SI SCRIVE UNA SCHEDA, non solo l'URL: `attachment` con url, PERCORSO, tipo, peso, nome originale e data. Il percorso e' quello che permette di cancellare — senza, il file di una fattura eliminata resterebbe su Storage per sempre senza che nessuno sappia piu' di chi era; il nome originale e' l'unica cosa che permette di riconoscere l'allegato senza aprirlo. COM'E' PROTETTO: `storage.rules`, cartella `fatture/`, lettura scrittura e cancellazione al solo bartender/admin — LO STESSO permesso che ha `supplier_invoices` in `firestore.rules`, perche' la carta di un documento contabile non puo' essere piu' aperta del documento stesso. Non e' la regola delle foto dei drink, che sono a lettura pubblica.
+
+DA SAPERE, e non e' nascosto: l'app apre l'allegato con il download URL (`getDownloadURL`), che porta un token e vale per chiunque ce l'abbia. Quel link pero' sta scritto SOLO dentro il documento della fattura, che le regole proteggono: per averlo bisogna gia' poter leggere la fattura. Sostituire o togliere l'allegato cancella il file, e con lui il token. La strada alternativa — tenere solo il percorso e scaricare il file con `getBlob`, che passa dalle regole a ogni lettura — vuole la CORS del bucket configurata a mano, e senza quella l'allegato non si aprirebbe affatto: si e' scelto quello che funziona, scrivendo qui il prezzo.
+
+QUI SI ASPETTA, ed e' l'eccezione che conferma il local-first: non c'e' modo di scrivere sulla fattura il riferimento a un file che non e' ancora su Storage, e comporre in memoria un allegato che potrebbe non esistere vorrebbe dire una fattura che dice di avere una foto e non ce l'ha. Questa e' una schermata di gestione e non la coda. L'ATTESA SI VEDE («Carico l'allegato…» al posto della riga) e un caricamento fallito lo dice e lascia il documento esattamente com'era. La scrittura su Firestore invece resta `bgWrite` come tutte, e il documento aggiornato si COMPONE senza rileggerlo (BUG-045).
+
+SOSTITUIRE NON BUTTA VIA PRIMA DI AVERE: il vecchio file si cancella solo dopo che il nuovo e' su. E' il caso che fa il danno — la rete che cade a meta' sostituzione — e a quel punto sulla fattura c'e' ancora l'allegato di prima, intero.
+
+CHI CANCELLA LA FATTURA PORTA VIA ANCHE L'ALLEGATO. Prima se ne va il documento, che e' quello che conta e lo si aspetta; poi il file, che e' un tentativo e non solleva niente: un file gia' assente non e' un motivo per lasciare in pagina una fattura appena eliminata.
+
+COSA DEVE PUBBLICARE CHI GESTISCE, e senza quello non funziona: `storage.rules` (`firebase deploy --only storage`). Le regole sono scritte, NON pubblicate — la pubblicazione e' un gesto suo.
+
+**Dove**: `src/lib/allegati.js, src/lib/storage.js, src/lib/api.js, src/components/SupplierInvoicesPanel.jsx, storage.rules` · **Lo dimostrano**: `tests/unit/allegatoFattura.test.js`, `tests/unit/allegatoInArchivio.test.js`, `tests/component/AllegatoFattura.test.jsx`
 
 #### REQ-MAG-032 — Il prodotto che nasce da una consegna, e il carico che si sceglie
 
@@ -2447,7 +2489,13 @@ DI QUESTA VOCE RESTANO: i due gesti separati arrivato/carico (punti 3 e 4, che s
 
 CONSEGNARE UNA RIGA LA CARICA, come lo descrive Flavio — «lo metto come consegnato e me lo inizia anche a caricare nel magazzino» — e come e' stato costruito. L'utente, richiesto di scegliere: «resta com'e'». Il punto 4 del 20/08 («e' il bartender che decide SE e QUALI prodotti caricare») NON viene tradito, ed e' la ragione per cui la scelta costa poco: quel «se e quali» c'e' gia', perche' si consegnano le righe che si spuntano, una per una, piu' il tasto «Carica tutti» per farle tutte insieme (REQ-MAG-032). Quello che cade e' solo il PASSAGGIO IN PIU': nessun livello «arrivato» fra richiesto e consegnato, e nessuna divisione di ruoli fra chi segna l'arrivo e chi carica. Un passaggio in piu' a ogni consegna, su una schermata che si usa con la merce in mano, si paga tutte le sere; il controllo che avrebbe dato lo si ha gia' spuntando le righe. Il punto 3 («arrivato lo decide l'admin») decade con lui.
 
-DI QUESTA VOCE RESTANO DUNQUE SOLO: «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF).
+DI QUESTA VOCE RESTANO DUNQUE SOLO: «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF). ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-033): L'ALLEGATO E' FATTO, ed e' l'ultima riga del punto 2 qui sopra — «il documento vero (foto/PDF), non solo un numero». Dalla riga del documento, in Fornitori -> Scadenzario, si allega una foto o un PDF, lo si riapre, si sostituisce e si toglie; i documenti senza allegato si contano in testa e si isolano col chip «Senza allegato», con lo stesso linguaggio degli altri due buchi. Il file vive su Firebase Storage sotto `fatture/<id fattura>/`, protetto dalla stessa mano che protegge le fatture (bartender/admin, `storage.rules`), e se ne va insieme alla fattura che lo nomina.
+
+IL PESO E I FORMATI, che questa voce lasciava da decidere, sono decisi:
+
+JPG, PNG, WebP e PDF, fino a 8 MB, con le foto ridotte nel browser a 2000 punti sul lato lungo prima di partire — il perche' di ognuno di quei numeri sta in REQ-MAG-033.
+
+DI QUESTA VOCE RESTA DUNQUE SOLO «Altre spese» col Riepilogo.
 
 **Dove**: `src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx`
 
