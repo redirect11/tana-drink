@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 175 | fatto e coperto dai test |
+| ✅ | 176 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| ⬜ | 21 | da fare |
 | 🗑 | 7 | non più valido |
 
-**218 voci** in tutto. **189** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**218 voci** in tutto. **190** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 22 | 8 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 23 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1054,6 +1054,38 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-030 — Dalla fattura al magazzino: «Aggiungi prodotti», col prezzo che si decide
+
+Nasce da Flavio, che ha guardato lo scadenzario (registrazione del 26/08/2026, 00:40): «ho appena visto che questa cosa quasi gia' c'e' ed e' scadenzario, e dalla foto e' proprio quello che mi serve. Pero' sotto mi deve apparire un tasto che fa il carico. Dobbiamo usare un'altra dicitura sicuramente, tipo AGGIUNGI PRODOTTI magari, e ci mettiamo anche i prodotti, in modo tale che li va gia' a caricare all'interno dei prodotti di magazzino. Sempre che poi dopo mi fa la domanda se voglio aggiornare il prezzo — nel caso lo vado a modificare — oppure lasciarlo invariato, cosi', senza carico, perche' magari me li sono caricati gia' prima in altro modo».
+
+IL DATO CHE VINCOLA IL DISEGNO, verificato il 26/08: una fattura in `supplier_invoices` oggi e' SOLO UNA TESTATA — fornitore, data, importo, stato pagato, note.
+
+NON HA RIGHE. Quindi il tasto non puo' «elencare i prodotti della fattura»: quei prodotti non esistono ancora come dato. E' il tasto stesso a metterli, ed e' quello che Flavio dice con «ci mettiamo anche i prodotti». La fattura guadagna delle righe, e le guadagna li'.
+
+LA DICITURA NON E' UN DETTAGLIO. Flavio chiede esplicitamente di NON chiamarlo «carico»: «dobbiamo usare un'altra dicitura sicuramente». Il tasto si chiama «Aggiungi prodotti» perche' e' quello che fa — il carico a magazzino e' una CONSEGUENZA, e per giunta facoltativa. Chiamarlo «carico» prometterebbe una cosa che l'utente puo' decidere di non fare.
+
+IL CARICO E' FACOLTATIVO, e la ragione e' operativa, non teorica: «magari me li sono caricati gia' prima in altro modo». Chi aggiunge i prodotti a una fattura sta ricostruendo un documento contabile, che e' cosa diversa dal muovere una giacenza. Le due cose vanno tenute separate: si possono aggiungere le righe SENZA toccare il magazzino. Caricare due volte la stessa merce e' l'errore da impedire, e qui lo si impedisce lasciando scegliere invece che decidendo al posto suo.
+
+IL PREZZO SI CHIEDE, NON SI IMPONE. Dopo aver messo le righe, per ogni prodotto il cui prezzo di acquisto differisce da quello in archivio si chiede se aggiornarlo, mostrando vecchio e nuovo affiancati e lasciando il nuovo MODIFICABILE («nel caso lo vado a modificare»). Chi non risponde non aggiorna niente: il pre-impostato non muove i prezzi. Il prezzo accettato aggiorna la riga di listino di quel fornitore con la sua data e il costo di riferimento del prodotto, esattamente come alla consegna di un ordine (REQ-MAG-029): e' la stessa strada, e va riusata, non riscritta.
+
+IL PREZZO DI VENDITA NON LO TOCCA NESSUNO. Vale qui la regola gia' scritta in REQ-MAG-029: cambia il costo, non il prezzo del menu, che e' di Flavio.
+
+RAPPORTO CON GLI ORDINI. Quando la fattura e' gia' agganciata a un ordine (REQ-MAG-025), le righe si propongono da quell'ordine invece di farle ribattere a mano: sono le stesse merci, e ribatterle e' lavoro doppio con due occasioni di sbagliare. Resta possibile correggerle, aggiungerne e toglierne: la fattura fa fede sulla merce arrivata, non l'ordine.
+
+FATTO (26/08/2026). Il tasto sta SOTTO ogni documento dello scadenzario e si chiama «Aggiungi prodotti». Apre una finestra che cerca il prodotto per nome, ne mette la quantita' in confezioni e il prezzo, e scrive le righe dentro il documento (`lines` su `supplier_invoices`): la fattura, che era solo una testata, guadagna le sue righe.
+
+IL CARICO E' UNA CASELLA A PARTE, e il tasto di conferma cambia dicitura con lei — «Aggiungi e carica» oppure «Aggiungi senza caricare» — cosi' il gesto non si puo' fare alla cieca. Il pre-impostato e' ACCESO, perche' e' il giro che Flavio descrive («in modo tale che li va gia' a caricare»), ma il doppio carico non e' impedito dall'attenzione: resta scritto sulla riga se il carico e' avvenuto (`caricata`), e le righe gia' in archivio non tornano mai dentro la finestra — di li' si aggiunge, non si ricarica. E' la risposta al RESTA APERTO qui sopra, presa nella direzione che quel testo dava per probabile.
+
+LA DOMANDA SUL PREZZO COMPARE SOLO DOVE IL PREZZO E' CAMBIATO (oltre il centesimo), con vecchio e nuovo affiancati e il nuovo che e' il campo stesso, quindi modificabile. Parte SPENTA. Il si' scrive la riga di listino di quel fornitore con la sua data e il costo di riferimento del prodotto; il prezzo di vendita del menu non lo tocca nessuno.
+
+UNA STRADA SOLA COL CARICO DEGLI ORDINI: la sequenza «prezzo accettato → listino → costo → giacenza e movimento» e' stata ESTRATTA da `consegnaRigheOrdine` in `registraAcquisto` (api.js), con due leve — `carica` e `aggiornaPrezzo` — che alla consegna sono accese tutte e due. Il conto delle unita' base sta in `caricoDaConfezioni` (inventory.js), perche' due copie della stessa moltiplicazione sono due occasioni di scriverla diversa.
+
+DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) l'IMPORTO della testata non si muove da solo — i prodotti si aggiungono a mano, un po' per volta, e riscrivere l'importo dopo la prima riga farebbe sembrare sbagliata una fattura che e' giusta; il netto delle righe si legge accanto, e il confronto lo fa una persona; (2) il MAGAZZINO IN SOLA LETTURA (BUG-029) spegne il carico ma NON impedisce di aggiungere le righe: sono carta, non giacenze, e bloccarle sarebbe un divieto per un motivo che non le riguarda; (3) il catalogo dentro la finestra si vede solo cercando, perche' 388 prodotti dentro una finestrella non si scorrono.
+
+IL RAPPORTO CON GLI ORDINI, per adesso, e' SOLO UN AIUTO DI COMPILAZIONE: «Riprendi le righe da un ordine» pesca fra gli ordini dello stesso fornitore che hanno gia' consegnato qualcosa e ne copia le righe come punto di partenza, modificabili. NON scrive nessun id d'ordine sulla fattura: il gancio persistente fattura-ordine e' REQ-MAG-025, ancora da decidere, e inventarlo qui vorrebbe dire creare un dato che poi qualcun altro dovrebbe reggere. Le righe riprese da un ordine consegnato spengono il carico da sole: quella merce e' entrata in magazzino alla consegna.
+
+**Dove**: `src/components/SupplierInvoicesPanel.jsx, src/lib/listini.js, src/lib/inventory.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/fatture.test.js`, `tests/unit/prodottiFattura.test.js`, `tests/component/SupplierInvoicesPanel.test.jsx`
 
 #### REQ-MAG-029 — Un prodotto, piu' fornitori: il listino si stacca dal magazzino
 
@@ -2300,28 +2332,6 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-030 — Dalla fattura al magazzino: «Aggiungi prodotti», col prezzo che si decide
-
-Nasce da Flavio, che ha guardato lo scadenzario (registrazione del 26/08/2026, 00:40): «ho appena visto che questa cosa quasi gia' c'e' ed e' scadenzario, e dalla foto e' proprio quello che mi serve. Pero' sotto mi deve apparire un tasto che fa il carico. Dobbiamo usare un'altra dicitura sicuramente, tipo AGGIUNGI PRODOTTI magari, e ci mettiamo anche i prodotti, in modo tale che li va gia' a caricare all'interno dei prodotti di magazzino. Sempre che poi dopo mi fa la domanda se voglio aggiornare il prezzo — nel caso lo vado a modificare — oppure lasciarlo invariato, cosi', senza carico, perche' magari me li sono caricati gia' prima in altro modo».
-
-IL DATO CHE VINCOLA IL DISEGNO, verificato il 26/08: una fattura in `supplier_invoices` oggi e' SOLO UNA TESTATA — fornitore, data, importo, stato pagato, note.
-
-NON HA RIGHE. Quindi il tasto non puo' «elencare i prodotti della fattura»: quei prodotti non esistono ancora come dato. E' il tasto stesso a metterli, ed e' quello che Flavio dice con «ci mettiamo anche i prodotti». La fattura guadagna delle righe, e le guadagna li'.
-
-LA DICITURA NON E' UN DETTAGLIO. Flavio chiede esplicitamente di NON chiamarlo «carico»: «dobbiamo usare un'altra dicitura sicuramente». Il tasto si chiama «Aggiungi prodotti» perche' e' quello che fa — il carico a magazzino e' una CONSEGUENZA, e per giunta facoltativa. Chiamarlo «carico» prometterebbe una cosa che l'utente puo' decidere di non fare.
-
-IL CARICO E' FACOLTATIVO, e la ragione e' operativa, non teorica: «magari me li sono caricati gia' prima in altro modo». Chi aggiunge i prodotti a una fattura sta ricostruendo un documento contabile, che e' cosa diversa dal muovere una giacenza. Le due cose vanno tenute separate: si possono aggiungere le righe SENZA toccare il magazzino. Caricare due volte la stessa merce e' l'errore da impedire, e qui lo si impedisce lasciando scegliere invece che decidendo al posto suo.
-
-IL PREZZO SI CHIEDE, NON SI IMPONE. Dopo aver messo le righe, per ogni prodotto il cui prezzo di acquisto differisce da quello in archivio si chiede se aggiornarlo, mostrando vecchio e nuovo affiancati e lasciando il nuovo MODIFICABILE («nel caso lo vado a modificare»). Chi non risponde non aggiorna niente: il pre-impostato non muove i prezzi. Il prezzo accettato aggiorna la riga di listino di quel fornitore con la sua data e il costo di riferimento del prodotto, esattamente come alla consegna di un ordine (REQ-MAG-029): e' la stessa strada, e va riusata, non riscritta.
-
-IL PREZZO DI VENDITA NON LO TOCCA NESSUNO. Vale qui la regola gia' scritta in REQ-MAG-029: cambia il costo, non il prezzo del menu, che e' di Flavio.
-
-RAPPORTO CON GLI ORDINI. Quando la fattura e' gia' agganciata a un ordine (REQ-MAG-025), le righe si propongono da quell'ordine invece di farle ribattere a mano: sono le stesse merci, e ribatterle e' lavoro doppio con due occasioni di sbagliare. Resta possibile correggerle, aggiungerne e toglierne: la fattura fa fede sulla merce arrivata, non l'ordine.
-
-RESTA APERTO: se una fattura le cui righe sono gia' state caricate debba impedire un secondo carico da sola (probabile: basta ricordare sulla riga se il carico e' avvenuto) o solo avvisare.
-
-**Dove**: `src/components/SupplierInvoicesPanel.jsx, src/lib/listini.js, src/lib/inventory.js, src/lib/api.js`
 
 #### REQ-MAG-025 — Ordini e fatture: una pagina sola, e una fattura paga un ordine
 

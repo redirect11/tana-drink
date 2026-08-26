@@ -4,6 +4,18 @@
 
 ### Per chi sta al banco
 
+- **Dalla fattura al magazzino: «Aggiungi prodotti».** Nello **Scadenzario**,
+  sotto ogni documento, c'è un tasto che apre l'elenco dei prodotti: si cerca
+  per nome, si scrive quanti pezzi e a che prezzo, e le righe restano sulla
+  fattura. **Il carico a magazzino è una scelta a parte**, che si può anche
+  non fare — la merce può essere già stata caricata in altro modo — e il
+  tasto dice sempre quale delle due si sta facendo. Dove il prezzo scritto è
+  **diverso da quello in archivio** compare la domanda, col vecchio e il
+  nuovo affiancati: se non si risponde **non cambia niente**. Il prezzo di
+  vendita del menù non si tocca mai. Se di quel fornitore c'è un ordine già
+  consegnato, le sue righe si possono **riprendere** invece di ribatterle, e
+  in quel caso il carico parte spento: quella merce è già entrata.
+
 - **Lo stesso prodotto si può comprare da più fornitori.** Negli **Ordini**
   c'è un **campo di ricerca**: si cerca il prodotto e lo si aggiunge senza
   dover scegliere prima il fornitore. Nell'elenco ogni prodotto compare una
