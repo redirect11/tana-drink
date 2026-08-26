@@ -2084,7 +2084,7 @@ OGNI PROVA È DOPPIA, ed è il punto di questo requisito: che l'abuso sia blocca
 
 STANNO PER CONTO LORO, fuori da `npm test`: senza emulatore acceso non partirebbero e renderebbero rossa la CI per un motivo che non è un difetto. Si lanciano con `npm run test:regole`, dopo aver acceso gli emulatori (vedi docs/ambiente-locale.md). Per la stessa ragione non contano per la copertura: quello che misurano non è codice nostro.
 
-**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`
+**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`, `tests/regole/orders.test.js`
 
 ### STAT
 
@@ -2681,6 +2681,22 @@ Il client registra App Check con reCAPTCHA v3 (firebaseClient.js), ma il backend
 #### BUG-093 — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti
 
 In firestore.rules gli ordini hanno `allow read: if true` e `create` senza requisito di autenticazione. È la scelta «id ordine come capability token», ma gli ordini contengono dati personali: customer_name, customer_uid, note, push_token FCM, placed_by (email/ruolo dello staff). Con l'API REST di Firestore e l'apiKey pubblica, uno script itera o indovina gli id ordine e raccoglie nomi clienti, consumazioni, importi e i token push di staff e clienti; oppure crea migliaia di ordini fittizi che intasano la coda del banco. Comportamento atteso: il cliente anonimo con l'id in mano vede e modifica il SUO conto, ma i dati personali e i token non sono esposti a lettura pubblica, e la creazione non è un rubinetto aperto. CURA: mantenere il modello capability ma (1) accendere App Check (BUG-092) per limitare la creazione ai client legittimi; (2) non esporre push_token, customer_uid e placed_by in documenti a lettura pubblica — spostarli in un sottodocumento a lettura ristretta o proiettarli via callable; (3) valutare un rate-limit sulla creazione ordini. Test delle regole a corredo.
+
+FATTO A META' (26/08/2026), e la meta' che manca aspetta una decisione.
+
+CHIUSA LA CREAZIONE. Era un rubinetto aperto: con la sola apiKey del bundle si faceva comparire in coda un conto firmato `placed_by: {email: admin@…, role: admin}` — la legenda della coda, la stampa e lo storico dicevano tutti «l'ha battuto lui» — oppure gia' pagato, gia' scontato, gia' fatturato, gia' venduto a SumUp, intestato all'account di un ALTRO cliente (che se lo ritrovava nei «miei ordini» e nel suo gruppo), gia' avanti di stato (saltando la coda: nessuno lo prepara e risulta servito) o con un totale che non e' un numero. Adesso chi non e' del personale puo' scrivere solo la forma che scrive davvero creaOrdine: conto `aperto`, una comanda sola, `placed_by` nullo, nessun campo di incasso/sconto/fattura/SumUp, `customer_uid` solo il proprio, totale numero non negativo. Il personale resta libero.
+
+RESTA APERTA LA LETTURA, e non si chiude senza toccare il client. Gli ordini contengono dati personali (customer_name, note, push_token, placed_by) e sono a lettura pubblica per disegno. Le regole di Firestore NON sanno proiettare campi: nascondere push_token, customer_uid e placed_by vuol dire spostarli, cioe' cambiare il client, e placed_by e' letto in mezza app (coda.js, ServiceQueue, printer.js, storiaOrdine, cassa.js).
+
+SI POTREBBE pero' chiudere il TRAVASO IN BLOCCO — oggi un `getDocs` senza filtri scarica l'archivio intero, mesi di nomi, note, importi ed email — con un `allow list` a quattro rami: banco, le due liste del tabellone del cliente (array-contains sui comande_statuses) e il cliente registrato sui propri (customer_uid == auth.uid).
+
+VERIFICATO SULL'EMULATORE: quel `list` blocca il travaso e lascia passare tutte e quattro. MA rompe «I miei ordini» del cliente NON registrato, che chiede i suoi conti con `where(documentId(), 'in', [...])` (fetchOrdersByIds in api.js) — verificato: permission-denied. Quella query non e' riconoscibile dentro una regola.
+
+SERVE UNA DECISIONE: cambiare quella riga del client in N letture per id (il lasciapassare gia' le permette: `allow get: if true` resta), e poi pubblicare il `list`. E' un cambiamento nell'app e non si fa di nascosto. Finche' non e' preso, tests/regole/orders.test.js tiene una prova che DICE che il travaso e' ancora possibile, cosi' il buco si vede nella suite e non solo in un documento.
+
+SCARTATA una scorciatoia: un ramo `resource.id is string` fa passare la query per id e blocca il travaso, ma e' un comportamento non documentato del pianificatore (la condizione e' vera per qualunque documento). Una barriera di sicurezza non si appoggia a un difetto d'implementazione che domani puo' sparire.
+
+DA FARE A MANO: le regole hanno effetto solo dopo `firebase deploy --only firestore:rules`.
 
 **Dove**: `firestore.rules (match /orders/{orderId}), src/lib/api.js`
 

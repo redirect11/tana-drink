@@ -135,6 +135,30 @@ creazione ai client legittimi; (b) non esporre `push_token`/`customer_uid`/`plac
 documenti a lettura pubblica (sottodocumento a lettura ristretta, o proiezione via
 callable); (c) valutare un rate-limit sulla creazione.
 
+> **🟡 META' CHIUSO il 26/08/2026** (BUG-093).
+> **La creazione e' chiusa.** Era un rubinetto aperto: con la sola apiKey del
+> bundle si faceva comparire in coda un conto firmato `placed_by: {email:
+> admin@…, role: admin}` — coda, stampa e storico dicevano tutti «l'ha battuto
+> lui» — o gia' pagato, scontato, fatturato, venduto a SumUp, intestato
+> all'account di un altro cliente, gia' avanti di stato, o con un totale che
+> non e' un numero. Ora chi non e' del personale scrive solo la forma che
+> scrive davvero `creaOrdine`. Prove: `tests/regole/orders.test.js`.
+> **La lettura resta aperta, e serve una decisione.** Le regole non sanno
+> proiettare campi: nascondere `push_token`/`customer_uid`/`placed_by` vuol
+> dire spostarli, cioe' cambiare il client (`placed_by` e' letto in mezza app).
+> Si potrebbe pero' chiudere il **travaso in blocco** — oggi un `getDocs` senza
+> filtri scarica l'archivio intero — con un `allow list` a quattro rami
+> (banco · le due liste del tabellone · il cliente registrato sui propri).
+> Verificato sull'emulatore: **blocca il travaso e lascia passare tutte e
+> quattro**, ma rompe «I miei ordini» del cliente **non** registrato, che
+> chiede i suoi conti con `where(documentId(), 'in', [...])` — query che una
+> regola non sa riconoscere. Serve una riga diversa nel client (N letture per
+> id, che il lasciapassare gia' permette): e' un cambiamento nell'app e lo
+> decide chi tiene il locale.
+> Scartata la scorciatoia `resource.id is string`: fa passare la query per id e
+> blocca il travaso, ma e' un comportamento non documentato del pianificatore.
+> Una barriera di sicurezza non si appoggia a un difetto d'implementazione.
+
 ### 5. Callable SumUp POS Pro senza autenticazione né ruolo *(latente — SumUp spento)*
 
 `functions/index.js:101,106,109` — `syncSumUpProducts`, `createSumUpSale`,

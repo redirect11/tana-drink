@@ -7880,6 +7880,7 @@ requirements:
     priority: P1
     test_cases:
       - tests/regole/counters.test.js
+      - tests/regole/orders.test.js
 
   - id: REQ-CODA-006
     title: "I conti dei giorni scorsi restano in coda, sotto la loro data"

@@ -4,6 +4,13 @@
 
 ### Per chi sta al banco
 
+- **Un conto non può più nascere firmato da qualcun altro.** Chi apre un
+  conto dal telefono senza essere entrato nel gestionale adesso può scrivere
+  soltanto quello che serve a ordinare: niente firma col nome di chi sta al
+  banco, niente conto che nasce già pagato, già scontato o già servito.
+  Ordinare dal menù funziona esattamente come prima.
+  **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
+
 - **I numeri dei conti sono chiusi a chiave.** Il contatore da cui esce il
   «#» di ogni conto adesso può solo salire, di uno per volta, e a spostarlo
   o correggerlo è soltanto chi ha fatto il login al gestionale. Al banco non

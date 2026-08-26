@@ -58,12 +58,45 @@ service cloud.firestore {
                 'sumup_pending_amount', 'sumup_pending_items',
                 'invoice_id', 'invoice_number'];
       }
+      // CHI NON È DEL PERSONALE NON FIRMA COL NOME DEL PERSONALE, e non
+      // apre un conto che è già successo qualcosa. Prima la creazione era
+      // un rubinetto aperto: bastava l'apiKey del bundle per far comparire
+      // in coda un conto intestato all'email dell'admin, o già pagato, o
+      // già fatturato. Il personale continua a fare quello che vuole:
+      // questi vincoli valgono solo per chi non è autenticato col ruolo.
+      //
+      // Quello che il cliente scrive davvero passando dal menù sta in
+      // src/lib/api.js (creaOrdine): un conto `aperto`, con UNA comanda,
+      // `placed_by` nullo, nessun campo di pagamento già valorizzato.
+      // Questi vincoli sono la stessa cosa, detta dal lato del server.
+      function conteNuovoDaCliente() {
+        let d = request.resource.data;
+        return
+          // Mai già pagato (era l'unico controllo che c'era).
+          (!('payment_status' in d)
+            || d.payment_status in ['non_richiesto', 'in_attesa'])
+          // Mai firmato da qualcuno del personale.
+          && d.get('placed_by', null) == null
+          // Mai già incassato, scontato, fatturato o venduto a SumUp.
+          && !d.keys().hasAny(['paid_at', 'payment_id', 'payments',
+                               'discount', 'discount_amount',
+                               'invoice_id', 'invoice_number',
+                               'sumup_sale_id', 'sumup_checkout_id',
+                               'sumup_transaction_id',
+                               'closed_in_session'])
+          // Mai intestato all'account di un ALTRO cliente: quello
+          // finirebbe nei «miei ordini» e nel gruppo di chi non c'entra.
+          && (d.get('customer_uid', null) == null
+              || (isSignedIn() && d.customer_uid == request.auth.uid))
+          // Un conto nasce aperto, con una comanda sola e un totale che è
+          // un numero non negativo.
+          && d.get('status', '') == 'aperto'
+          && d.get('comande', []).size() == 1
+          && d.get('total', 0) is number
+          && d.get('total', 0) >= 0;
+      }
       allow read: if true;
-      // Alla creazione il pagamento può solo essere assente, non
-      // richiesto o in attesa (mai già "pagato").
-      allow create: if isStaffMember()
-        || !('payment_status' in request.resource.data)
-        || request.resource.data.payment_status in ['non_richiesto', 'in_attesa'];
+      allow create: if isStaffMember() || conteNuovoDaCliente();
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
