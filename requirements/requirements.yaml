@@ -7321,6 +7321,14 @@ requirements:
       un dato che poi qualcun altro dovrebbe reggere. Le righe riprese da un
       ordine consegnato spengono il carico da sole: quella merce e' entrata
       in magazzino alla consegna.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-031): il paragrafo qui sopra e'
+      SUPERATO. Il gancio persistente e' stato deciso e fatto, e non e' verso
+      l'ordine ma verso la FETTA di fornitore. «Riprendi le righe da un
+      ordine» quindi non e' piu' solo un aiuto di compilazione: scegliere
+      l'ordine copia le righe E aggancia il documento, in una scrittura sola.
+      Erano due gesti, e il legame restava non scritto proprio nell'istante in
+      cui uno l'aveva appena dimostrato. Resta vero tutto il resto, compreso
+      che le righe riprese da una consegna spengono il carico.
     status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, scadenzario]
