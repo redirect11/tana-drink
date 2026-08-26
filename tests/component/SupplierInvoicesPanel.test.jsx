@@ -61,7 +61,13 @@ vi.mock('../../src/lib/api.js', () => ({
   aggiungiProdottiAFattura: vi.fn(async (id, arg) => ({
     ...stato.fatture[0],
     id,
+    order_id: arg.order_id ?? stato.fatture[0].order_id ?? null,
     lines: arg.righe.map((r) => ({ ...r, caricata: !!arg.carica })),
+  })),
+  collegaFatturaAFetta: vi.fn(async (id, { order_id }) => ({
+    ...stato.fatture[0],
+    id,
+    order_id: order_id || null,
   })),
 }))
 
@@ -186,7 +192,7 @@ describe('il prezzo si chiede, non si impone', () => {
   })
 })
 
-describe('riprendere le righe da un ordine già consegnato', () => {
+describe('riprendere le righe da un ordine, che è anche collegarlo', () => {
   const ORDINE = {
     id: 'po-1',
     created_at: '2026-08-20T09:00:00.000Z',
@@ -204,10 +210,14 @@ describe('riprendere le righe da un ordine già consegnato', () => {
     expect(screen.queryByLabelText(/Riprendi le righe da un ordine/)).toBeNull()
   })
 
-  // È una COMODITÀ DI COMPILAZIONE: ribattere le stesse merci è lavoro
-  // doppio con due occasioni di sbagliare. Sulla fattura non si scrive
-  // nessun id d'ordine.
-  it('le righe dell’ordine si copiano, e restano modificabili', async () => {
+  // QUESTO TEST DICEVA IL CONTRARIO, ed è cambiato apposta (REQ-MAG-031):
+  // «nessun riferimento all'ordine finisce sulla fattura, il legame è
+  // un'altra voce ancora da decidere». Adesso quella voce è decisa e il
+  // legame è un dato vero, e riprendere le righe è lo stesso gesto che
+  // agganciare il documento: si sta ricopiando la fattura dall'ordine che
+  // l'ha generata. Lasciare il legame non scritto proprio lì voleva dire
+  // ritrovarsi a fine mese quella fetta senza documento.
+  it('le righe si copiano, e l’ordine resta collegato al documento', async () => {
     stato.ordini = [ORDINE]
     const user = userEvent.setup()
     render(<SupplierInvoicesPanel />)
@@ -218,9 +228,7 @@ describe('riprendere le righe da un ordine già consegnato', () => {
     await user.click(screen.getByRole('button', { name: /Aggiungi senza caricare/ }))
     const [, arg] = aggiunti.mock.calls[0]
     expect(arg.righe[0]).toMatchObject({ item_id: 'campari', qty_packages: 6 })
-    // Nessun riferimento all'ordine finisce sulla fattura: il legame
-    // fattura-ordine è un'altra voce, ancora da decidere (REQ-MAG-025).
-    expect(JSON.stringify(arg)).not.toContain('po-1')
+    expect(arg.order_id).toBe('po-1')
   })
 
   // QUELLA MERCE È GIÀ IN MAGAZZINO, entrata alla consegna: caricarla una
