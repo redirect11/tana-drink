@@ -4,6 +4,27 @@
 
 ### Per chi sta al banco
 
+- **Le spese che non sono merce hanno un posto: Fornitori → «Altre spese».**
+  Tavoli, sgabelli, una tenda, i bicchieri di plastica: quello che esce dal
+  conto e non entra in magazzino si scrive lì, con le colonne che si usano già
+  sul foglio — articolo, quantità, prezzo, dove si compra e note. **Ogni voce
+  dice se è già stata comprata**: quelle comprate pesano sul mese, le altre
+  restano un promemoria, così una cosa che si vorrebbe comprare non fa
+  scendere l'utile. Una voce si riapre e si corregge — spesso il prezzo si sa
+  solo il giorno che si compra — e se è segnata comprata senza prezzo porta
+  scritto **«senza prezzo»**, col filtro in testa che tiene solo quelle.
+
+- **Il «Riepilogo» dice quanto è uscito, mese per mese.** Quarta voce di
+  Fornitori: per ogni mese la **merce** (dalle fatture dei fornitori), le
+  **altre spese** e il totale. Sotto, quello che resta aperto: quanto di quel
+  mese è **ancora da pagare** e quanta merce è arrivata **senza fattura**.
+  Queste due righe non entrano nel totale, e c'è scritto perché: il da pagare
+  è già contato nella merce, e la merce senza documento entrerà nel mese
+  quando la fattura arriva. **Il totale è più basso di quello del foglio
+  mensile** — lì la riga «spese» comprende anche la merce, qui la merce si
+  conta una volta sola — e anche questo sta scritto in schermata, per non
+  doverselo chiedere al primo confronto.
+
 - **La fattura si porta dietro il documento vero.** Nello **Scadenzario**,
   sotto ogni documento, c'è **«Allega foto o PDF»**: si fotografa la fattura
   col telefono, o si sceglie il PDF scaricato dal fornitore, e resta lì. Da

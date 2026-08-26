@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 179 | fatto e coperto dai test |
-| ⚠️  | 14 | fatto ma nessun test lo verifica |
-| ⬜ | 21 | da fare |
+| ✅ | 180 | fatto e coperto dai test |
+| ⚠️  | 15 | fatto ma nessun test lo verifica |
+| ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**221 voci** in tutto. **193** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
+**222 voci** in tutto. **195** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 26 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 28 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1055,6 +1055,38 @@ SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebb
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
 
+#### REQ-MAG-034 — «Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese
+
+Ritagliato da REQ-MAG-025, di cui sono gli ULTIMI DUE PEZZI: la terza sottosezione di Fornitori e la quarta voce che le tiene insieme.
+
+DA DOVE NASCE, ed è una domanda dell'utente (19/08): «quelle spese da inserire a mano non sono gli ordini?». La risposta, misurata sui fogli, è che in parte sì: la sua riga SPESE è sempre più grande degli acquisti dello stesso mese — gennaio 2.380 contro 1.809, aprile 5.005 contro 2.884, giugno 12.726 contro 8.673 — quindi contiene la merce PIÙ altro, da 570 a 4.050 euro al mese. COS'È QUELL'ALTRO, trovato e non ipotizzato: il foglio «TO BUY» di FORNITORI REC.xlsx — tavoli da esterno, sgabelli, divani, una tenda, uno scaffale IKEA, bicchieri di plastica in cinque misure — con le colonne articolo, quantità, prezzo, totale, DOVE si compra (Amazon, Bricoware, IKEA, Vente-Unique) e note, per 2.468,59 in tutto. Sono arredi, attrezzature e materiale di consumo: roba che esce dal conto corrente, non entra in magazzino e che nessun ordine fornitore intercetterà mai. Le colonne della sottosezione sono quelle del foglio. ── LA COSA CHE REGGE TUTTO:
+
+COMPRATA O SOLO DESIDERATA ── Quel foglio è una LISTA DELLA SPESA, non un registro: si chiama «da comprare» e diverse righe hanno prezzo zero, cioè non sono ancora prezzate. Serve quindi sapere se una voce è GIÀ STATA COMPRATA: solo quelle comprate pesano sul mese, le altre sono un promemoria. Senza questa distinzione un divano desiderato abbasserebbe l'utile di gennaio.
+
+IL DATO SONO DUE CAMPI E NON UNO: `bought` dice SE, `bought_at` dice QUANDO — ed è la data che decide su quale mese l'uscita pesa. Una spesa non comprata non ha mese, perché non è successo niente; segnarla comprata dalla riga ci mette la data di oggi, che è quando il gesto sta succedendo, e chi l'ha comprata un altro giorno la corregge dalla modifica.
+
+LA MODIFICA NON È UN DI PIÙ, ed è la conseguenza di com'è fatto il foglio: una voce nasce spesso senza prezzo e lo prende il giorno che la si compra. Senza poterla riaprire, quel numero non entrerebbe mai.
+
+IL BUCO DI QUESTA SOTTOSEZIONE, con lo stesso linguaggio degli altri due (REQ-MAG-031): una voce segnata comprata ma senza prezzo pesa zero sul mese e nessuno se ne accorge finché non si confrontano i totali. Porta la scritta «senza prezzo» in ambra e si isola col chip in testa. Su una riga ancora DA comprare invece il prezzo a zero è la normalità del foglio, e segnalarla insegnerebbe a ignorare il segnale.
+
+NIENTE ESEMPI NEI CAMPI, e non è una svista: REQ-CASSA-012 avverte che l'elenco «affitto, SIAE, commercialista, utenze» era una LISTA INVENTATA da chi scriveva quella voce, non una frase di Flavio. Un segnaposto nel campo insegnerebbe a scriverci quello che ci siamo immaginati noi. Campi vuoti, e basta. ── IL RIEPILOGO, QUARTA VOCE ── Mette insieme i tre elenchi in un totale PER MESE: merce (dalle fatture fornitore), altre spese (quelle comprate) e quanto resta APERTO. È il numero che poi Bilancio → Mesi userà per il netto, e la ragione per cui sta QUI e non lì è che i soldi che escono si guardano dove si registrano.
+
+COSA ENTRA NEL TOTALE E COSA NO, ed è il modo in cui questo numero potrebbe sbagliare in silenzio.
+
+TOTALE = merce + altre spese. «Da pagare» è una FETTA della merce già contata — quelle fatture stanno dentro «merce», sommarle conterebbe due volte la stessa uscita — e dice solo quanta parte del mese è ancora un debito. «Senza fattura» è merce ARRIVATA di cui manca il documento (il primo buco di REQ-MAG-031): sommarla la conterebbe una seconda volta il giorno che la fattura arriva, e tenerla fuori mostrandola accanto dice quanto manca al mese senza sporcarlo. Sotto le righe c'è scritto in una frase.
+
+DA DOVE VIENE OGNI NUMERO: la merce dall'importo dei documenti, sul mese della loro DATA (non del pagamento); le altre spese dal totale quantità per prezzo delle comprate, sul mese di `bought_at`; il senza fattura dal NETTO delle fette consegnate e non fatturate (`fetteSenzaFattura`, già scritto per REQ-MAG-031), sul mese dell'ordine. Una fattura senza data non ha mese e resta fuori: metterla in quello corrente sposterebbe soldi da un mese all'altro senza che nessuno l'abbia deciso. ⚠️ IL NUMERO DELL'APP VALE MENO DI QUELLO DEI FOGLI, e sta scritto a schermo: è la conseguenza della decisione di REQ-CASSA-012 («nell'app le due cose restano separate»). Nel foglio mensile la riga «spese» comprende anche la merce; qui la merce si conta una volta sola, nella sua colonna. La frase sta in testa al Riepilogo, dove i totali si confrontano — se non la si dice, al primo confronto sembra che l'app sbagli e si torna al foglio. La stessa cosa detta dall'altro lato è la didascalia di «Altre spese»: la merce dei fornitori non va lì, si conta dalle fatture, e riscriverla la conterebbe due volte.
+
+DOVE VIVONO I DATI: collezione `altre_spese`, un documento per riga (name, qty, unit_cost, shop, notes, bought, bought_at). Il TOTALE non si scrive: è quantità per prezzo, e un terzo numero da tenere d'accordo con gli altri due è il primo che qualcuno dimentica di aggiornare. La quantità che manca vale UNO e non zero — chi scrive solo il prezzo ha comprato una cosa, non zero cose — perché con lo zero il totale sparirebbe dal mese in silenzio. LOCAL-FIRST ANCHE QUI, che è di gestione e non la coda: l'IDENTIFICATIVO SE LO FA IL TERMINALE (`doc(collection(...))` e `setDoc`, non `addDoc`), perché con `addDoc` si aspetta il server per sapere come si chiama il documento appena scritto e senza rete quell'attesa non finisce mai. Le scritture partono in `bgWrite` e il risultato si COMPONE invece di rileggerlo (BUG-045). Lo dimostra un test che gira senza rete, sul modello di `giroInLocale.test.js`. ── LE DECISIONI PRESE IN IMPLEMENTAZIONE ── 1) LE DUE VOCI NON SONO PREMIUM e non se ne è inventato un modulo nuovo: le altre spese si scrivono a mano e non dipendono da nessuna funzione a pagamento; il riepilogo mette insieme quello che c'è, e con lo scadenzario spento la colonna della merce resta a zero — che è la verità di quel locale, non un pezzo mancante. Il filtro `voceVisibile` di FornitoriTab le lascia passare senza un «if» in più.
+
+2) LE REGOLE FIRESTORE DI `altre_spese` sono quelle delle altre collezioni dei fornitori (`isBartender()`, che vale anche per l'admin): nell'app la sezione è del solo admin, ma un documento contabile non può essere più aperto della fattura che gli sta accanto. Le regole sono SCRITTE, non pubblicate: la pubblicazione è un gesto di chi gestisce.
+
+3) IL RIEPILOGO GUARDA CENTO ORDINI e non venticinque come lo Scadenzario: lì servono gli ultimi, per agganciare il documento che si ha in mano; qui si guarda indietro di mesi, e una consegna senza fattura di marzo sparirebbe dal conto del suo mese senza dire niente.
+
+RESTA APERTA UNA DOMANDA CHE NON È DI QUESTA VOCE (REQ-CASSA-012): fra gennaio e giugno le spese di Flavio superano gli acquisti di 11.243 euro e il foglio «TO BUY» ne spiega 2.469 — restano quasi novemila euro in sei mesi di cui non si sa la natura, e la risposta ce l'ha solo lui. La forma di questa sottosezione regge in tutti e due i casi: poche voci ricorrenti o tante di natura diversa. Se un giorno servirà RAGGRUPPARLE, il campo si aggiunge senza rifare niente — e finché la domanda non ha risposta, inventare le categorie sarebbe rifare l'errore che REQ-CASSA-012 nomina per nome.
+
+**Dove**: `src/lib/spese.js, src/lib/riepilogoFornitori.js, src/lib/api.js, src/components/AltreSpesePanel.jsx, src/components/RiepilogoFornitoriPanel.jsx, src/components/FornitoriTab.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/spese.test.js`, `tests/unit/riepilogoFornitori.test.js`, `tests/unit/speseInLocale.test.js`, `tests/component/AltreSpesePanel.test.jsx`, `tests/component/RiepilogoFornitori.test.jsx`
+
 #### REQ-MAG-033 — L'allegato della fattura: il documento vero, foto o PDF
 
 Ritagliato da REQ-MAG-025, punto 2 delle DECISIONI DEL 20/08, di cui REQ-MAG-031 aveva gia' fatto il legame. Qui c'e' l'ultima riga di quel punto, con le parole dell'utente: «Allegare = IL DOCUMENTO VERO (foto/PDF), non solo un numero. Serve lo Storage; da decidere in implementazione limite di peso e formati». PERCHE' SERVE: il numero dice quale fattura e', la carta e' quella che il commercialista chiede. Fino a ieri lo scadenzario teneva la testata (fornitore, numero, data, importo), le righe (REQ-MAG-030) e il legame con la fetta d'ordine (REQ-MAG-031) — tutto tranne il documento. La carta restava in una cartelletta al banco, e a fine mese si cercava li'.
@@ -1250,6 +1282,80 @@ NIENTE COLLEGAMENTI ROTTI: le sottosezioni non erano indirizzabili (nessun `?sez
 LO SCADENZARIO RESTA UNA FUNZIONE PREMIUM (REQ-LIC-001): dove il modulo non lavora la sua voce non c'è, e la sezione non resta né vuota né monca perché le altre due ci sono sempre. La sottosezione aperta si ricava dall'elenco filtrato: se il modulo si spegne da un altro terminale mentre lo si guarda, si torna all'anagrafica.
 
 **Dove**: `src/components/FornitoriTab.jsx, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/component/FornitoriTab.test.jsx`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`
+
+#### REQ-MAG-025 — Ordini e fatture: una pagina sola, e una fattura paga un ordine
+
+Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno dentro Magazzino, in due sottosezioni che non si parlano: si ordina di la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno. ⚠️ IL CONTENITORE C'E' GIA', dal 26/08/2026: e' la sezione «Fornitori» (REQ-MAG-028), che l'utente ha chiesto con quel nome e con tre sottosezioni — anagrafica, Ordini, Scadenzario — visibile solo all'admin, esattamente per la ragione scritta qui sopra. Quindi di questa voce restano da fare LE DUE COSE CHE CONTANO, e non il trasloco: il LEGAME fattura-ordine e il GIRO d'ordini descritti qui sotto, piu' il prodotto nuovo che oggi si perde in silenzio. Chi la lavora parte da `FornitoriTab.jsx`, non da zero.
+
+IL LEGAME, che e' il cuore della richiesta:
+
+UNA FATTURA PAGA UN ORDINE (e un ordine e' di UN fornitore solo). Dall'ordine si arriva alla sua fattura e viceversa; un ordine senza fattura si vede a colpo d'occhio (la merce e' arrivata ma il documento no), e una fattura senza ordine pure — sono le due cose che a fine mese fanno tornare o non tornare i conti con il commercialista.
+
+TRE LIVELLI, NON DUE (precisato dall'utente il 19/08). Non e' una fattura che copre piu' ordini: e' un GIRO D'ORDINI che ne contiene diversi, UNO PER FORNITORE, e ogni fornitore manda la SUA fattura. «Un giro di ordini, non un ordine. Sono piu' fatture perche' ci sono diversi fornitori» — parole sue. Quindi: giro -> N ordini (uno per fornitore) -> N fatture (una per ordine). Il legame fattura-ordine resta uno-a-uno; quello che sta sopra e' il giro, che tiene insieme la serata di ordinazione.
+
+LO DICONO ANCHE I FOGLI, e adesso si spiegano: in GEN ORD REC ogni foglio e' un giro e si chiama coi numeri dei documenti che lo compongono («1410+1438+AGO+PAD+PIC», «nova+ago+picc»), col fornitore scritto sull'ARTICOLO e non sull'ordine — un foglio solo, piu' fornitori dentro (REQ-MAG-023).
+
+COSA CAMBIA PER L'APP: oggi `purchase_orders` e' gia' UN ORDINE PER FORNITORE, quindi quel livello c'e' e non si tocca. Manca il giro sopra: si guarda il fabbisogno una volta sola e ne escono N ordini insieme, che poi vivono ognuno per conto suo (arriva, si carica, si fattura). Da decidere se il giro e' un dato scritto (una collezione sua, che tiene la data e i suoi ordini) o solo un modo di crearli in blocco: la prima strada permette di chiedersi «quanto e' costato il giro di martedi'», la seconda costa meno.
+
+IL CARICO AL RICEVIMENTO C'E' GIA' e non va rifatto: receivePurchaseOrder in api.js, quando l'ordine passa a «ricevuto», alza la giacenza riga per riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e scrive un movimento «ordine fornitore». Questa voce ci aggiunge il pezzo che manca. ⚠️ AGGIORNAMENTO 26/08/2026 (REQ-MAG-029): `receivePurchaseOrder` non esiste piu'. Il carico avviene al passaggio della RIGA a «consegnato», per FETTA di fornitore — `consegnaRigheOrdine` — perche' con piu' fornitori dentro un ordine solo il gesto «ricevuto» sull'ordine intero non esiste: consegnano in giorni diversi. Il conto del carico e' lo stesso di prima, e il punto 4 qui sotto («il carico non e' automatico») e' fatto a meta': il gesto e' gia' per riga, quello che manca e' il tasto «CARICA TUTTI».
+
+IL PRODOTTO NUOVO, che oggi si perde in silenzio. Quel ciclo salta le righe il cui articolo non esiste in anagrafica (`if (!s.exists()) continue`): se il fornitore manda una referenza nuova, la riga non carica niente e nessuno se ne accorge. Deve invece NASCERE il prodotto, inventariato con quello che l'ordine sa gia' (nome, fornitore, prezzo, confezione) e marcato come DA SISTEMARE — perche' quello che l'ordine non sa e' proprio cio' che serve al resto del sistema: la categoria (e quindi la macro d'acquisto), l'unita' di misura vera, la soglia di riordino.
+
+ATTENZIONE AL NOME: nel magazzino esiste gia' una lista «da sistemare», ma e' del travaso a pezzi (i prodotti che la migrazione non sa convertire da sola) ed e' una cosa diversa. O si riusa quella stessa strada — e allora si dice perche' le due situazioni sono la stessa — o il nuovo stato ha un nome suo. Due liste omonime che vogliono dire cose diverse, sulla stessa schermata, sono un guaio che si paga dopo.
+
+COME SI INCASTRA COL RESTO, ed e' la parte da non sbagliare: 1) MACRO-CATEGORIE. Un prodotto nuovo senza categoria non ha macro d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare sbagliata, che e' peggio. Il prodotto da sistemare va quindi mostrato insieme alle categorie senza macro (REQ-UI-022): sono lo stesso buco visto da due lati. 2) SCARICO. La giacenza caricata da un ordine si scala con le regole di sempre — snapshot della ricetta, unita' base, scarico a «pronto»: qui non cambia niente, e non deve cambiare. 3) IVA. L'ordine porta il prezzo d'acquisto; l'IVA d'acquisto ha gia' il suo default (22%) e il campo per prodotto. Un prodotto nato da un ordine eredita il default finche' qualcuno non lo corregge.
+
+4) SPESE DEL MESE (REQ-CASSA-012): le fatture fornitore sono spesa registrata. Va deciso — e scritto — se entrano da sole nel netto del mese o se restano due elenchi separati, altrimenti la stessa uscita si conta due volte.
+
+ATTENZIONE, DUE «FATTURE»
+
+NEL CODICE: `supplier_invoices` sono i documenti dei FORNITORI (quello di cui parla questa voce), `invoices` sono le fatture di VENDITA ai clienti. Nomi vicini, mestieri opposti.
+
+TRE SOTTOSEZIONI, NON DUE (utente, 19/08): «Ordini», «Fatture» e «ALTRE SPESE», piu' un RIEPILOGO che le tiene insieme. La terza nasce da una domanda sua — «quelle spese da inserire a mano non sono gli ordini?» — e la risposta, misurata sui fogli, e' che in parte SI': la sua riga SPESE e' sempre piu' grande degli acquisti dello stesso mese (gen 2.380 contro 1.809, giu 12.726 contro 8.673), quindi contiene la merce PIU' altro, da 570 a 4.050 euro al mese.
+
+COSA C'E' IN QUELL'ALTRO, trovato il 19/08 e non piu' un'ipotesi: sta in FORNITORI REC.xlsx, foglio «TO BUY» — tavoli da esterno, sgabelli, divani, una tenda, uno scaffale IKEA, bicchieri di plastica in cinque misure. Colonne: articolo, quantita', prezzo, totale, DOVE si compra (Amazon, Bricoware, IKEA, Vente-Unique) e note. Totale del foglio 2.468,59.
+
+QUINDI SONO ARREDI, ATTREZZATURE E MATERIALE DI CONSUMO: roba che esce dal conto corrente e non entra in magazzino, e che nessun ordine fornitore intercettera' mai. Da qui la sottosezione, e le sue colonne sono quelle del foglio.
+
+IL FOGLIO PERO' E' UNA LISTA DELLA SPESA, non un registro: si chiama «da comprare» e diverse righe hanno prezzo zero, cioe' non ancora prezzate. Serve quindi sapere se una voce e' GIA' STATA COMPRATA: solo quelle comprate pesano sul netto del mese, le altre sono un promemoria. Senza questa distinzione un divano desiderato abbasserebbe l'utile di gennaio.
+
+IL RIEPILOGO, quarta voce del menu: mette insieme i tre elenchi in un totale per mese — merce (dalle fatture), altre spese, e quanto resta aperto (ordini senza fattura, fatture non pagate). E' il numero che poi Bilancio -> Mesi usa per il netto, e la ragione per cui sta QUI e non li': i soldi che escono si guardano dove si registrano.
+
+DECISIONI DEL 20/08 (l'utente, a voce sua), che AGGIORNANO il modello scritto sopra — dove si contraddicono, vince quanto segue: 1) L'ORDINE PUO' CONTENERE ITEM DI PIU' FORNITORI: «un ordine puo' contenere item da piu' fornitori, per questo deve essere possibile FILTRARE l'ordine per fornitori». Il giro e l'ordine collassano in una cosa sola: quello che sopra si chiamava «giro» E' l'ordine, e il livello per-fornitore diventa una VISTA (il filtro), non un documento. Le fatture restano piu' d'una — di norma una per fornitore coinvolto.
+
+2) LE FATTURE SI ALLEGANO ALL'ORDINE **PER FORNITORE** (precisato dall'utente subito dopo): «la vista degli ordini contiene piu' fornitori, ma la fattura e' collegata all'ordine PER IL FORNITORE, perche' e' il fornitore che rilascia la fattura». Quindi il legame della fattura non e' con l'ordine intero ma con LA FETTA di quel fornitore dentro l'ordine — la stessa fetta che il filtro mostra: filtro su Nova = le sue righe E la sua fattura. Un ordine con tre fornitori ha fino a tre fatture, ognuna agganciata alla sua fetta, e si vede a colpo d'occhio quale fetta e' ancora senza documento. Allegare = il documento vero (foto/PDF), non solo un numero. Serve lo Storage; da decidere in implementazione limite di peso e formati. 3) «ARRIVATO»
+
+LO DECIDE L'ADMIN: e' il suo gesto a segnare l'ordine arrivato, ed e' quel gesto che APRE la possibilita' di caricare l'inventario.
+
+4) IL CARICO NON E' AUTOMATICO: «e' il bartender che decide, quando l'ordine e' arrivato, SE e QUALI prodotti caricare in inventario». Riga per riga, piu' un tasto «CARICA TUTTI» quando l'ordine e' arrivato. Il receivePurchaseOrder di oggi (carica tutto in un colpo al ricevimento) va quindi spezzato in due: l'arrivo (admin) e il carico (bartender, selettivo o tutto).
+
+5) ASSORTIMENTO PRE-IMPOSTATO, opzionale: prima che l'ordine arrivi si puo' segnare, per ogni prodotto dell'ordine, il passaggio a «in assortimento» — e il cambio si applica quando l'ordine e' arrivato e il carico di quel prodotto e' stato fatto davvero. Serve a preparare il listino mentre la merce viaggia, senza che il cambio scatti prima che la merce esista. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-031):
+
+IL LEGAME E' FATTO, ed e' il punto 2 qui sopra — la fattura agganciata alla FETTA di fornitore, i due versi, la guardia sul fornitore e i due buchi a colpo d'occhio. Vive in `order_id` sulla fattura piu' `aggancioAmmesso` (src/lib/fatture.js), e si usa da Fornitori -> Ordini e da Fornitori -> Scadenzario. Di quel punto 2 resta fuori solo l'ALLEGATO del documento (foto/PDF): serve lo Storage e non sono decisi ne' peso ne' formati.
+
+QUESTA VOCE RESTA DA FARE per tutto il resto: il tasto «CARICA TUTTI», i due gesti separati arrivato/carico (punti 3 e 4), l'assortimento pre-impostato (punto 5), «Altre spese» col Riepilogo, e il prodotto nuovo che oggi si perde in silenzio. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-032):
+
+TRE PEZZI SONO FATTI, e sono il PRODOTTO NUOVO che si perdeva in silenzio, il tasto «CARICA TUTTI» col carico riga per riga (punto 4) e l'ASSORTIMENTO PRE-IMPOSTATO (punto 5). Il prodotto nasce alla consegna con lo stesso id della riga d'ordine e passa da `registraAcquisto` (api.js) come ogni altra merce che entra; la sua forma la compone `prodottoDaRigaOrdine` (src/lib/inventory.js). Lo stato nuovo NON riusa il nome «da sistemare» del travaso — le due situazioni non sono la stessa, e quella blocca il magazzino mentre questa non blocca niente — e si chiama SCHEDA DA COMPLETARE; si guarda accanto alle categorie senza macro (REQ-UI-022), che e' lo stesso buco visto dall'altro lato. La spunta riga per riga e il tasto che le prende tutte stanno nella finestra della consegna e passano dagli `indici` di `consegnaRigheOrdine`, senza nessuna seconda strada.
+
+DI QUESTA VOCE RESTANO: i due gesti separati arrivato/carico (punti 3 e 4, che si contraddicono con la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi — la decisione e' dell'utente, e REQ-MAG-032 dice dove andrebbe messo il taglio), «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF). ⚠️ DECISIONE DEL 27/08/2026, che CHIUDE la contraddizione fra i punti 3 e 4 qui sopra (20/08) e REQ-MAG-029 (26/08). Vale il gesto solo:
+
+CONSEGNARE UNA RIGA LA CARICA, come lo descrive Flavio — «lo metto come consegnato e me lo inizia anche a caricare nel magazzino» — e come e' stato costruito. L'utente, richiesto di scegliere: «resta com'e'». Il punto 4 del 20/08 («e' il bartender che decide SE e QUALI prodotti caricare») NON viene tradito, ed e' la ragione per cui la scelta costa poco: quel «se e quali» c'e' gia', perche' si consegnano le righe che si spuntano, una per una, piu' il tasto «Carica tutti» per farle tutte insieme (REQ-MAG-032). Quello che cade e' solo il PASSAGGIO IN PIU': nessun livello «arrivato» fra richiesto e consegnato, e nessuna divisione di ruoli fra chi segna l'arrivo e chi carica. Un passaggio in piu' a ogni consegna, su una schermata che si usa con la merce in mano, si paga tutte le sere; il controllo che avrebbe dato lo si ha gia' spuntando le righe. Il punto 3 («arrivato lo decide l'admin») decade con lui.
+
+DI QUESTA VOCE RESTANO DUNQUE SOLO: «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF). ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-033): L'ALLEGATO E' FATTO, ed e' l'ultima riga del punto 2 qui sopra — «il documento vero (foto/PDF), non solo un numero». Dalla riga del documento, in Fornitori -> Scadenzario, si allega una foto o un PDF, lo si riapre, si sostituisce e si toglie; i documenti senza allegato si contano in testa e si isolano col chip «Senza allegato», con lo stesso linguaggio degli altri due buchi. Il file vive su Firebase Storage sotto `fatture/<id fattura>/`, protetto dalla stessa mano che protegge le fatture (bartender/admin, `storage.rules`), e se ne va insieme alla fattura che lo nomina.
+
+IL PESO E I FORMATI, che questa voce lasciava da decidere, sono decisi:
+
+JPG, PNG, WebP e PDF, fino a 8 MB, con le foto ridotte nel browser a 2000 punti sul lato lungo prima di partire — il perche' di ognuno di quei numeri sta in REQ-MAG-033.
+
+DI QUESTA VOCE RESTA DUNQUE SOLO «Altre spese» col Riepilogo. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-034): «ALTRE SPESE»
+
+COL RIEPILOGO È FATTO, ed erano gli ultimi due pezzi rimasti. «Altre spese» è la terza sottosezione di Fornitori, con le colonne del foglio «TO BUY» e la distinzione che regge tutto — comprata o solo desiderata, `bought` e `bought_at` in `src/lib/spese.js`: solo il comprato pesa sul mese. Il «Riepilogo» è la quarta voce e somma per mese la merce (dalle fatture), le altre spese e quanto resta aperto, tenendo fuori dal totale il «da pagare» (già dentro la merce) e il «consegnato senza fattura» (che entrerà quando il documento arriva) — `src/lib/riepilogoFornitori.js`. Che il numero dell'app valga MENO di quello dei fogli di Flavio sta scritto in testa al Riepilogo, come chiedeva REQ-CASSA-012.
+
+QUESTA VOCE PASSA A «implemented», e non le resta niente: il legame fattura-fetta è REQ-MAG-031, il prodotto nuovo col carico scelto e l'assortimento pre-impostato REQ-MAG-032, l'allegato del documento REQ-MAG-033, i punti 3 e 4 sono decaduti con la decisione del 27/08 («resta com'è», il gesto solo) e questi due sono REQ-MAG-034. Le prove stanno nei `test_cases` di quelle voci, che è dove vive il lavoro: qui resta la storia di come ci si è arrivati.
+
+NON CI SONO DENTRO, e non c'erano nemmeno prima: gli ordini che nascono dalle giacenze (REQ-MAG-026) e le spese del mese in Bilancio → Mesi (REQ-CASSA-012), che questa voce alimenta ma non contiene.
+
+**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx` · ⚠️ **Nessun test lo verifica.**
 
 #### REQ-MAG-027 — I segni del magazzino si spiegano da soli: la legenda sopra la lista
 
@@ -2431,74 +2537,6 @@ IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a propor
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
 
-#### REQ-MAG-025 — Ordini e fatture: una pagina sola, e una fattura paga un ordine
-
-Chiesto dall'utente il 19/08. Oggi ordini fornitore e documenti stanno dentro Magazzino, in due sottosezioni che non si parlano: si ordina di la', si segna la fattura di qua, e nessuno sa quale fattura paghi quale ordine. Devono diventare UNA PAGINA LORO, «Ordini e fatture», nel menu laterale e visibile SOLO ALL'ADMIN, con due sottosezioni: «Ordini» e «Fatture». Sono i soldi che escono dal locale, e non e' roba da turno. ⚠️ IL CONTENITORE C'E' GIA', dal 26/08/2026: e' la sezione «Fornitori» (REQ-MAG-028), che l'utente ha chiesto con quel nome e con tre sottosezioni — anagrafica, Ordini, Scadenzario — visibile solo all'admin, esattamente per la ragione scritta qui sopra. Quindi di questa voce restano da fare LE DUE COSE CHE CONTANO, e non il trasloco: il LEGAME fattura-ordine e il GIRO d'ordini descritti qui sotto, piu' il prodotto nuovo che oggi si perde in silenzio. Chi la lavora parte da `FornitoriTab.jsx`, non da zero.
-
-IL LEGAME, che e' il cuore della richiesta:
-
-UNA FATTURA PAGA UN ORDINE (e un ordine e' di UN fornitore solo). Dall'ordine si arriva alla sua fattura e viceversa; un ordine senza fattura si vede a colpo d'occhio (la merce e' arrivata ma il documento no), e una fattura senza ordine pure — sono le due cose che a fine mese fanno tornare o non tornare i conti con il commercialista.
-
-TRE LIVELLI, NON DUE (precisato dall'utente il 19/08). Non e' una fattura che copre piu' ordini: e' un GIRO D'ORDINI che ne contiene diversi, UNO PER FORNITORE, e ogni fornitore manda la SUA fattura. «Un giro di ordini, non un ordine. Sono piu' fatture perche' ci sono diversi fornitori» — parole sue. Quindi: giro -> N ordini (uno per fornitore) -> N fatture (una per ordine). Il legame fattura-ordine resta uno-a-uno; quello che sta sopra e' il giro, che tiene insieme la serata di ordinazione.
-
-LO DICONO ANCHE I FOGLI, e adesso si spiegano: in GEN ORD REC ogni foglio e' un giro e si chiama coi numeri dei documenti che lo compongono («1410+1438+AGO+PAD+PIC», «nova+ago+picc»), col fornitore scritto sull'ARTICOLO e non sull'ordine — un foglio solo, piu' fornitori dentro (REQ-MAG-023).
-
-COSA CAMBIA PER L'APP: oggi `purchase_orders` e' gia' UN ORDINE PER FORNITORE, quindi quel livello c'e' e non si tocca. Manca il giro sopra: si guarda il fabbisogno una volta sola e ne escono N ordini insieme, che poi vivono ognuno per conto suo (arriva, si carica, si fattura). Da decidere se il giro e' un dato scritto (una collezione sua, che tiene la data e i suoi ordini) o solo un modo di crearli in blocco: la prima strada permette di chiedersi «quanto e' costato il giro di martedi'», la seconda costa meno.
-
-IL CARICO AL RICEVIMENTO C'E' GIA' e non va rifatto: receivePurchaseOrder in api.js, quando l'ordine passa a «ricevuto», alza la giacenza riga per riga (confezioni x contenuto, o pezzi), aggiorna le bottiglie totali e scrive un movimento «ordine fornitore». Questa voce ci aggiunge il pezzo che manca. ⚠️ AGGIORNAMENTO 26/08/2026 (REQ-MAG-029): `receivePurchaseOrder` non esiste piu'. Il carico avviene al passaggio della RIGA a «consegnato», per FETTA di fornitore — `consegnaRigheOrdine` — perche' con piu' fornitori dentro un ordine solo il gesto «ricevuto» sull'ordine intero non esiste: consegnano in giorni diversi. Il conto del carico e' lo stesso di prima, e il punto 4 qui sotto («il carico non e' automatico») e' fatto a meta': il gesto e' gia' per riga, quello che manca e' il tasto «CARICA TUTTI».
-
-IL PRODOTTO NUOVO, che oggi si perde in silenzio. Quel ciclo salta le righe il cui articolo non esiste in anagrafica (`if (!s.exists()) continue`): se il fornitore manda una referenza nuova, la riga non carica niente e nessuno se ne accorge. Deve invece NASCERE il prodotto, inventariato con quello che l'ordine sa gia' (nome, fornitore, prezzo, confezione) e marcato come DA SISTEMARE — perche' quello che l'ordine non sa e' proprio cio' che serve al resto del sistema: la categoria (e quindi la macro d'acquisto), l'unita' di misura vera, la soglia di riordino.
-
-ATTENZIONE AL NOME: nel magazzino esiste gia' una lista «da sistemare», ma e' del travaso a pezzi (i prodotti che la migrazione non sa convertire da sola) ed e' una cosa diversa. O si riusa quella stessa strada — e allora si dice perche' le due situazioni sono la stessa — o il nuovo stato ha un nome suo. Due liste omonime che vogliono dire cose diverse, sulla stessa schermata, sono un guaio che si paga dopo.
-
-COME SI INCASTRA COL RESTO, ed e' la parte da non sbagliare: 1) MACRO-CATEGORIE. Un prodotto nuovo senza categoria non ha macro d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare sbagliata, che e' peggio. Il prodotto da sistemare va quindi mostrato insieme alle categorie senza macro (REQ-UI-022): sono lo stesso buco visto da due lati. 2) SCARICO. La giacenza caricata da un ordine si scala con le regole di sempre — snapshot della ricetta, unita' base, scarico a «pronto»: qui non cambia niente, e non deve cambiare. 3) IVA. L'ordine porta il prezzo d'acquisto; l'IVA d'acquisto ha gia' il suo default (22%) e il campo per prodotto. Un prodotto nato da un ordine eredita il default finche' qualcuno non lo corregge.
-
-4) SPESE DEL MESE (REQ-CASSA-012): le fatture fornitore sono spesa registrata. Va deciso — e scritto — se entrano da sole nel netto del mese o se restano due elenchi separati, altrimenti la stessa uscita si conta due volte.
-
-ATTENZIONE, DUE «FATTURE»
-
-NEL CODICE: `supplier_invoices` sono i documenti dei FORNITORI (quello di cui parla questa voce), `invoices` sono le fatture di VENDITA ai clienti. Nomi vicini, mestieri opposti.
-
-TRE SOTTOSEZIONI, NON DUE (utente, 19/08): «Ordini», «Fatture» e «ALTRE SPESE», piu' un RIEPILOGO che le tiene insieme. La terza nasce da una domanda sua — «quelle spese da inserire a mano non sono gli ordini?» — e la risposta, misurata sui fogli, e' che in parte SI': la sua riga SPESE e' sempre piu' grande degli acquisti dello stesso mese (gen 2.380 contro 1.809, giu 12.726 contro 8.673), quindi contiene la merce PIU' altro, da 570 a 4.050 euro al mese.
-
-COSA C'E' IN QUELL'ALTRO, trovato il 19/08 e non piu' un'ipotesi: sta in FORNITORI REC.xlsx, foglio «TO BUY» — tavoli da esterno, sgabelli, divani, una tenda, uno scaffale IKEA, bicchieri di plastica in cinque misure. Colonne: articolo, quantita', prezzo, totale, DOVE si compra (Amazon, Bricoware, IKEA, Vente-Unique) e note. Totale del foglio 2.468,59.
-
-QUINDI SONO ARREDI, ATTREZZATURE E MATERIALE DI CONSUMO: roba che esce dal conto corrente e non entra in magazzino, e che nessun ordine fornitore intercettera' mai. Da qui la sottosezione, e le sue colonne sono quelle del foglio.
-
-IL FOGLIO PERO' E' UNA LISTA DELLA SPESA, non un registro: si chiama «da comprare» e diverse righe hanno prezzo zero, cioe' non ancora prezzate. Serve quindi sapere se una voce e' GIA' STATA COMPRATA: solo quelle comprate pesano sul netto del mese, le altre sono un promemoria. Senza questa distinzione un divano desiderato abbasserebbe l'utile di gennaio.
-
-IL RIEPILOGO, quarta voce del menu: mette insieme i tre elenchi in un totale per mese — merce (dalle fatture), altre spese, e quanto resta aperto (ordini senza fattura, fatture non pagate). E' il numero che poi Bilancio -> Mesi usa per il netto, e la ragione per cui sta QUI e non li': i soldi che escono si guardano dove si registrano.
-
-DECISIONI DEL 20/08 (l'utente, a voce sua), che AGGIORNANO il modello scritto sopra — dove si contraddicono, vince quanto segue: 1) L'ORDINE PUO' CONTENERE ITEM DI PIU' FORNITORI: «un ordine puo' contenere item da piu' fornitori, per questo deve essere possibile FILTRARE l'ordine per fornitori». Il giro e l'ordine collassano in una cosa sola: quello che sopra si chiamava «giro» E' l'ordine, e il livello per-fornitore diventa una VISTA (il filtro), non un documento. Le fatture restano piu' d'una — di norma una per fornitore coinvolto.
-
-2) LE FATTURE SI ALLEGANO ALL'ORDINE **PER FORNITORE** (precisato dall'utente subito dopo): «la vista degli ordini contiene piu' fornitori, ma la fattura e' collegata all'ordine PER IL FORNITORE, perche' e' il fornitore che rilascia la fattura». Quindi il legame della fattura non e' con l'ordine intero ma con LA FETTA di quel fornitore dentro l'ordine — la stessa fetta che il filtro mostra: filtro su Nova = le sue righe E la sua fattura. Un ordine con tre fornitori ha fino a tre fatture, ognuna agganciata alla sua fetta, e si vede a colpo d'occhio quale fetta e' ancora senza documento. Allegare = il documento vero (foto/PDF), non solo un numero. Serve lo Storage; da decidere in implementazione limite di peso e formati. 3) «ARRIVATO»
-
-LO DECIDE L'ADMIN: e' il suo gesto a segnare l'ordine arrivato, ed e' quel gesto che APRE la possibilita' di caricare l'inventario.
-
-4) IL CARICO NON E' AUTOMATICO: «e' il bartender che decide, quando l'ordine e' arrivato, SE e QUALI prodotti caricare in inventario». Riga per riga, piu' un tasto «CARICA TUTTI» quando l'ordine e' arrivato. Il receivePurchaseOrder di oggi (carica tutto in un colpo al ricevimento) va quindi spezzato in due: l'arrivo (admin) e il carico (bartender, selettivo o tutto).
-
-5) ASSORTIMENTO PRE-IMPOSTATO, opzionale: prima che l'ordine arrivi si puo' segnare, per ogni prodotto dell'ordine, il passaggio a «in assortimento» — e il cambio si applica quando l'ordine e' arrivato e il carico di quel prodotto e' stato fatto davvero. Serve a preparare il listino mentre la merce viaggia, senza che il cambio scatti prima che la merce esista. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-031):
-
-IL LEGAME E' FATTO, ed e' il punto 2 qui sopra — la fattura agganciata alla FETTA di fornitore, i due versi, la guardia sul fornitore e i due buchi a colpo d'occhio. Vive in `order_id` sulla fattura piu' `aggancioAmmesso` (src/lib/fatture.js), e si usa da Fornitori -> Ordini e da Fornitori -> Scadenzario. Di quel punto 2 resta fuori solo l'ALLEGATO del documento (foto/PDF): serve lo Storage e non sono decisi ne' peso ne' formati.
-
-QUESTA VOCE RESTA DA FARE per tutto il resto: il tasto «CARICA TUTTI», i due gesti separati arrivato/carico (punti 3 e 4), l'assortimento pre-impostato (punto 5), «Altre spese» col Riepilogo, e il prodotto nuovo che oggi si perde in silenzio. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-032):
-
-TRE PEZZI SONO FATTI, e sono il PRODOTTO NUOVO che si perdeva in silenzio, il tasto «CARICA TUTTI» col carico riga per riga (punto 4) e l'ASSORTIMENTO PRE-IMPOSTATO (punto 5). Il prodotto nasce alla consegna con lo stesso id della riga d'ordine e passa da `registraAcquisto` (api.js) come ogni altra merce che entra; la sua forma la compone `prodottoDaRigaOrdine` (src/lib/inventory.js). Lo stato nuovo NON riusa il nome «da sistemare» del travaso — le due situazioni non sono la stessa, e quella blocca il magazzino mentre questa non blocca niente — e si chiama SCHEDA DA COMPLETARE; si guarda accanto alle categorie senza macro (REQ-UI-022), che e' lo stesso buco visto dall'altro lato. La spunta riga per riga e il tasto che le prende tutte stanno nella finestra della consegna e passano dagli `indici` di `consegnaRigheOrdine`, senza nessuna seconda strada.
-
-DI QUESTA VOCE RESTANO: i due gesti separati arrivato/carico (punti 3 e 4, che si contraddicono con la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi — la decisione e' dell'utente, e REQ-MAG-032 dice dove andrebbe messo il taglio), «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF). ⚠️ DECISIONE DEL 27/08/2026, che CHIUDE la contraddizione fra i punti 3 e 4 qui sopra (20/08) e REQ-MAG-029 (26/08). Vale il gesto solo:
-
-CONSEGNARE UNA RIGA LA CARICA, come lo descrive Flavio — «lo metto come consegnato e me lo inizia anche a caricare nel magazzino» — e come e' stato costruito. L'utente, richiesto di scegliere: «resta com'e'». Il punto 4 del 20/08 («e' il bartender che decide SE e QUALI prodotti caricare») NON viene tradito, ed e' la ragione per cui la scelta costa poco: quel «se e quali» c'e' gia', perche' si consegnano le righe che si spuntano, una per una, piu' il tasto «Carica tutti» per farle tutte insieme (REQ-MAG-032). Quello che cade e' solo il PASSAGGIO IN PIU': nessun livello «arrivato» fra richiesto e consegnato, e nessuna divisione di ruoli fra chi segna l'arrivo e chi carica. Un passaggio in piu' a ogni consegna, su una schermata che si usa con la merce in mano, si paga tutte le sere; il controllo che avrebbe dato lo si ha gia' spuntando le righe. Il punto 3 («arrivato lo decide l'admin») decade con lui.
-
-DI QUESTA VOCE RESTANO DUNQUE SOLO: «Altre spese» col Riepilogo, e l'allegato del documento (foto/PDF). ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-033): L'ALLEGATO E' FATTO, ed e' l'ultima riga del punto 2 qui sopra — «il documento vero (foto/PDF), non solo un numero». Dalla riga del documento, in Fornitori -> Scadenzario, si allega una foto o un PDF, lo si riapre, si sostituisce e si toglie; i documenti senza allegato si contano in testa e si isolano col chip «Senza allegato», con lo stesso linguaggio degli altri due buchi. Il file vive su Firebase Storage sotto `fatture/<id fattura>/`, protetto dalla stessa mano che protegge le fatture (bartender/admin, `storage.rules`), e se ne va insieme alla fattura che lo nomina.
-
-IL PESO E I FORMATI, che questa voce lasciava da decidere, sono decisi:
-
-JPG, PNG, WebP e PDF, fino a 8 MB, con le foto ridotte nel browser a 2000 punti sul lato lungo prima di partire — il perche' di ognuno di quei numeri sta in REQ-MAG-033.
-
-DI QUESTA VOCE RESTA DUNQUE SOLO «Altre spese» col Riepilogo.
-
-**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx, src/components/InventoryManager.jsx, src/lib/api.js, src/lib/ruoli.js, src/components/StaffDrawer.jsx`
-
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
 
 Chiesto dall'utente il 19/08: «gli ordini andrebbero creati dalle giacenze di magazzino. Se un articolo e' in esaurimento dovrebbe essere aggiunto automaticamente all'ordine per quel fornitore».
@@ -2609,7 +2647,15 @@ NON E' PRONTO DA LAVORARE, e l'utente l'ha detto chiaro il 19/08 dopo aver visto
 
 COSA ASPETTA, in una riga: la risposta di Flavio su cosa mette in quel numero. Non e' un dettaglio di implementazione: e' la differenza fra una schermata con due campi e una che deve raggruppare voci di natura diversa, e sbagliarla vuol dire rifarla.
 
-COSA SI PUO' FARE INTANTO, senza aspettare nessuno: la sottosezione «Altre spese» in Ordini e fatture (REQ-MAG-025) e il riepilogo. La forma minima — descrizione, importo, data, comprato si o no — regge qualunque risposta arrivi; quello che cambia e' se serve un modo di raggruppare, e quello si aggiunge dopo.
+COSA SI PUO' FARE INTANTO, senza aspettare nessuno: la sottosezione «Altre spese» in Ordini e fatture (REQ-MAG-025) e il riepilogo. La forma minima — descrizione, importo, data, comprato si o no — regge qualunque risposta arrivi; quello che cambia e' se serve un modo di raggruppare, e quello si aggiunge dopo. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-034):
+
+IL POSTO DOVE SI SCRIVONO C'È. «Altre spese» è la terza sottosezione di Fornitori, col riepilogo per mese accanto, esattamente dove questa voce diceva di metterle. La forma è quella minima che questa voce indicava — descrizione, importo, data, comprato sì o no — più le due colonne che il foglio «TO BUY» ha e che servono a ritrovare la stessa cosa: quantità e dove si compra.
+
+QUESTA VOCE RESTA APERTA, e per la ragione di sempre: manca il DATO, non il posto. La domanda a Flavio — cosa mette in quel numero — decide solo se serve un modo di RAGGRUPPARE le voci, e quello si aggiunge senza rifare niente. Nessuna categoria è stata inventata: i campi sono vuoti, senza esempi, apposta.
+
+QUELLO CHE RESTA DA FARE QUI È IL PONTE: Bilancio → Mesi deve leggere il totale delle altre spese del mese e sottrarlo nel netto, insieme agli stipendi e alle fatture fornitore. I numeri sono già calcolati e si prendono da `src/lib/spese.js` (`totaleSpeseDelMese`) e da `src/lib/riepilogoFornitori.js`: non c'è nessuna somma da riscrivere.
+
+LA COSA CHE QUESTA VOCE CHIEDEVA DI DIRE A SCHERMO È DETTA: che il numero dell'app vale MENO di quello dei fogli, perché lì le spese contengono anche la merce. Sta in testa al Riepilogo di Fornitori, dove i totali si confrontano.
 
 **Dove**: `src/lib/api.js (collezione `spese`, nuova), src/components/BilancioTab.jsx (nuovo)`
 
