@@ -63,6 +63,18 @@ export const MODULI_PREMIUM = {
     descrizione:
       'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
   },
+  fatture: {
+    // Le fatture di cortesia al CLIENTE (collezione `invoices`), da non
+    // confondere con lo scadenzario qui sotto, che è dei FORNITORI: sono
+    // due mestieri opposti — soldi che entrano e soldi che escono — e
+    // l'unica cosa che hanno in comune è la parola. Le etichette lo dicono
+    // a schermo, perché stanno una sotto l'altra nelle impostazioni.
+    chiave: 'modulo_fatture_enabled',
+    incluso: false,
+    label: 'Fatture ai clienti',
+    descrizione:
+      'Fattura di cortesia per il cliente che la chiede: dati di fatturazione, numero progressivo, stampa e invio per email.',
+  },
   scadenzario: {
     // Riacceso il 26/08/2026 su richiesta dell'utente: la Tana lo usa
     // davvero. Resta una funzione premium — cambia che qui è INCLUSA, e

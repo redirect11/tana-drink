@@ -200,6 +200,12 @@ export default function BartenderPage() {
   // "← Ordini" o il tasto indietro sembravano non fare niente — l'indirizzo
   // cambiava, la schermata no.
   const tabParam = params.get('tab')
+  // Le impostazioni del locale servono a sapere quali sezioni ESISTONO qui:
+  // le funzioni premium (REQ-LIC-001) tolgono voci a tutti, non a un ruolo.
+  // Dalla cache, come ovunque: nessuna lettura nuova, e nessuna sezione che
+  // lampeggia in attesa del server.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   useEffect(() => {
     setTab(tabParam || 'coda')
   }, [tabParam])
@@ -223,12 +229,12 @@ export default function BartenderPage() {
   // sopra. `replace`, non push: il tasto indietro deve uscire dal
   // gestionale, non rimbalzare su un indirizzo che non si può aprire.
   useEffect(() => {
-    if (!isGestore(role) || sezioneConsentita(tabParam, role)) return
+    if (!isGestore(role) || sezioneConsentita(tabParam, role, impostazioni)) return
     const next = new URLSearchParams(params)
     next.delete('tab')
     setParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabParam, role])
+  }, [tabParam, role, impostazioni])
 
   // L'elenco dello staff passa da una Cloud Function: lo si scalda appena si
   // entra nel gestionale, così quando si aprono i pannelli i nomi ci sono già
@@ -328,7 +334,7 @@ export default function BartenderPage() {
     ? tab === 'servizio'
       ? 'servizio'
       : 'coda'
-    : sezioneConsentita(tab, role)
+    : sezioneConsentita(tab, role, impostazioni)
       ? tab
       : 'coda'
 

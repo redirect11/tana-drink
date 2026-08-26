@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **215 voci** in tutto. **193** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **6** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -2110,9 +2110,15 @@ DOVE STA SCRITTO COSA È INCLUSO, oggi: nel campo `incluso` della tabella, cioè
 
 COME SI AGGANCERÀ LA LICENZA VERA: `moduloIncluso` guarda PRIMA un campo `licenza.moduli` nello stato che riceve. Oggi non c'è e si ricade sulla tabella; il giorno che `settings/licenza` esiste, chi lo collega lo fa arrivare fin lì e la licenza vince — nessuna schermata cambia, perché nessuna schermata sa da dove viene la risposta. L'interruttore d'uso resta dov'è: è del locale, non della licenza — un locale che ha comprato lo scadenzario può volerlo spento a gennaio. Se la licenza c'è ma non nomina il modulo, il modulo NON è incluso: ricadere sulla tabella vorrebbe dire riaprirsi da soli un modulo che la licenza non dà. Una licenza a metà (piano scritto, elenco dei moduli no) invece non conta: è un caso di migrazione, non una decisione commerciale.
 
-NEL DUBBIO NON LAVORA — id sconosciuto, licenza che tace, modulo non incluso: una funzione a pagamento non si regala per una svista. E una sezione che compare per mezzo secondo e poi sparisce è peggio di una che non c'è: le schermate partono dalla cache, non dal vuoto.
+NEL DUBBIO NON LAVORA — id sconosciuto, licenza che tace, modulo non incluso: una funzione a pagamento non si regala per una svista. E una sezione che compare per mezzo secondo e poi sparisce è peggio di una che non c'è: le schermate partono dalla cache, non dal vuoto. I MODULI DI OGGI SONO TRE, e vivono in tre posti diversi con lo STESSO filtro (`voceVisibile`) — è il motivo per cui l'id del modulo è l'id della sezione che accende: · `conta` — sottosezione del magazzino. Non inclusa. · `scadenzario` — sottosezione di «Fornitori» (REQ-MAG-028). INCLUSA. · `fatture` — la SEZIONE del gestionale «Fatture», cioè le fatture di cortesia al cliente (collezione `invoices`). Non inclusa. ⚠️ LE DUE FATTURE NON SONO LA STESSA COSA, e stanno una sotto l'altra nelle impostazioni: «Fatture ai clienti» sono soldi che ENTRANO (`invoices`, il documento che si dà a chi lo chiede), «Fatture ai fornitori» sono soldi che ESCONO (lo scadenzario, `supplier_invoices`). Hanno in comune solo la parola, e le etichette a schermo lo dicono senza doverle aprire.
 
-DOVE VIVONO LE DUE SEZIONI, dal 26/08/2026: la CONTA nel magazzino, lo SCADENZARIO nella sezione «Fornitori» (REQ-MAG-028). Il filtro è lo stesso, `voceVisibile`, in tutt'e due i posti — è il motivo per cui l'id del modulo è l'id della sezione.
+LE FATTURE AI CLIENTI PORTANO VIA ANCHE UN TASTO. Chiesto dall'utente il 26/08/2026: «Un'altra funzione premium è la sezione delle fatture, e insieme a quello va nascosto il tasto fattura nel pagamento dell'ordine». Col modulo spento sparisce la voce «📄 Fatture» dal menu e il tasto «📧 Invia fattura» dalla schermata di pagamento. Quel tasto è l'UNICA porta della modale della fattura (`showInvoice` lo accende solo lui), quindi togliendolo si chiude tutto il flusso — emissione, stampa e invio per email — senza lasciare in giro mezze strade.
+
+UN CONTO CHE UNA FATTURA CE L'HA GIÀ non la perde: `invoice_number` resta scritto sull'ordine e il documento resta nella collezione `invoices`. Col modulo spento non si vede — le uniche schermate che lo mostravano erano il ✓ sul tasto, l'avviso dentro la modale e la sezione Fatture, e sono tutte dietro il modulo — e torna a vedersi identico appena il modulo si riaccende. Nessuna scrittura, nessuna cancellazione. SEZIONI.JS LEGGE LA LICENZA, ed è il pezzo che la Fase 3 del piano di sbrandizzazione chiede a quel file. `vociPerRuolo(role, impostazioni)` e `sezioneConsentita(id, role, impostazioni)` fanno DUE domande che restano separate:
+
+CHI SEI (la funzione di `ruoli.js` sulla voce) e COSA HA IL LOCALE (`voceVisibile`). Una voce premium non c'è per nessuno, admin compreso; una voce di ruolo non c'è per chi non ha il ruolo. Le impostazioni arrivano da chi le ha già in cache (StaffDrawer e BartenderPage): nessuna lettura nuova. Se non sono ancora arrivate passa solo quello che è incluso di suo — meglio una voce che compare che una che lampeggia e sparisce.
+
+DOVE VIVONO, in breve: la CONTA nel magazzino, lo SCADENZARIO in «Fornitori», le FATTURE nel menu del gestionale.
 
 NEL MAGAZZINO la sezione Conta resta nell'unico elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano con `voceVisibile`. Una voce che rientra torna al SUO posto, perché l'elenco è quello e basta. La vista aperta si RICAVA dall'elenco filtrato: se un modulo si accende da un altro terminale mentre si sta guardando un'altra sezione, la voce nuova entra e nient'altro si muove; se a spegnersi è proprio la sezione aperta, si torna ai Prodotti invece di restare su un pannello che non è più in elenco. Vedi REQ-MAG-010.
 
@@ -2124,7 +2130,7 @@ PER CAMBIARE LA LICENZA (cosa è incluso) ci sono gli strumenti di sviluppo (REQ
 
 SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nelle loro collezioni (`stock_counts`, fatture fornitore): spegnere un modulo non tocca un documento. Caso spiacevole da sapere: una conta APERTA nel momento in cui il modulo si spegne resta aperta e non allineata — la si ritrova esattamente com'era riaccendendo il modulo, ma finché è spento nessuno la può chiudere. ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la distinzione è teorica; quando i locali saranno tanti il controllo vero va sul SERVER — Cloud Functions e regole Firestore — perché chiunque apra la console del browser può accendersi un modulo da sé. Lo dice anche il piano: «mai fidarsi del solo frontend per una funzione a pagamento».
 
-**Dove**: `src/lib/licenza.js, src/components/InventoryManager.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/SettingsTab.test.jsx`
+**Dove**: `src/lib/licenza.js, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/components/FornitoriTab.jsx, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/FornitoriTab.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
 ## Lavori previsti
 
@@ -2552,6 +2558,12 @@ della correzione è il test citato nel requisito della sua area.
 | · | [BUG-035](#bug-035--nel-facsimile-dello-scontrino-lintestazione-non-è-centrata-come-sulla-carta) — Nel facsimile dello scontrino l'intestazione non è centrata come sulla carta | lieve | P3 |
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 | 🔴 | [BUG-043](#bug-043--due-nomi-con-la-stessa-iniziale-e-in-legenda-ne-resta-uno-solo) — Due nomi con la stessa iniziale, e in legenda ne resta uno solo | lieve | P3 |
+| 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
+| 🔴 | [BUG-091](#bug-091--countersdatekey-è-scrivibile-da-chiunque-anche-senza-login) — counters/{dateKey} è scrivibile da chiunque, anche senza login | grave | P1 |
+| 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
+| 🔴 | [BUG-093](#bug-093--ogni-ordine-è-leggibile-e-creabile-da-chiunque-dati-personali-esposti) — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti | grave | P1 |
+| · | [BUG-094](#bug-094--le-callable-sumup-pos-pro-non-controllano-né-login-né-ruolo) — Le callable SumUp POS Pro non controllano né login né ruolo | grave | P2 |
+| · | [BUG-095](#bug-095--sumupwebhook-si-fida-dello-stato-nel-payload-senza-firma-né-ri-verifica) — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica | grave | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -2608,6 +2620,44 @@ NON L'HO RISOLTO IN QUEL GIRO perche' non era quello che si stava facendo, e per
 TRE STRADE, da pesare quando si lavora: due lettere quando la prima collide (Ma / Mo), il nome intero in legenda con la sola lettera sulle card, oppure un colore per persona come si e' fatto per i conti. La prima e' la piu' piccola e la piu' vicina a come si legge oggi.
 
 **Dove**: `src/pages/BartenderPage.jsx (legenda), src/lib/presenza.js, src/lib/orderStatus.js (placedByLetter)`
+
+#### BUG-090 — Il repository è pubblico e contiene vocali e foto di persone vere
+
+Il repo redirect11/tana-drink è PUBBLICO, e in registrazioni/ ci sono 63 file — note vocali WhatsApp e foto dal 26/07 al 10/08/2026 — che, per stessa ammissione del .gitignore e di scripts/trascrivi-registrazioni.py, contengono i nomi dei clienti e le voci di chi lavora al banco. Sono dati personali (voce e immagine identificabili) pubblicati senza base giuridica: un problema di privacy prima ancora che di sicurezza. Il commit che li ha tolti (c002eb1, «fuori dal versionamento i vocali dal banco») li ha rimossi SOLO dal tip. Restano scaricabili da chiunque: dai tip dei rami remoti vivi release/1.3.0 e release/1.4.0 (63 file ciascuno), dalla storia raggiungibile di main e develop (i commit che li aggiungono — c89e4f5, fefa53a, 64573ad… — sono antenati del tip), e dai rami locali agents/configurazione-agenti e feature/riordino-css. Comportamento atteso: quei file non devono essere raggiungibili da un repository pubblico, né dal tip né dalla storia.
+
+COSA FARE (in quest'ordine): (1) cancellare sul server i rami release/1.3.0 e release/1.4.0 (e i locali citati, o riscriverli); (2) riscrivere la storia di tutti i rami con `git filter-repo --path registrazioni/ --invert-paths` (o BFG) e force-push; (3) aprire un ticket al GitHub Support per purgare gli oggetti dalle cache/reflog lato server — i commit restano raggiungibili per SHA anche dopo il force-push — e verificare che non esistano fork; (4) decidere se il repo debba restare pubblico. Non c'è un segreto da ruotare: è privacy di persone reali, ed è il finding più grave dell'audit.
+
+**Dove**: `registrazioni/ (storia git e rami release/1.3.0, release/1.4.0), .gitignore, repository GitHub`
+
+#### BUG-091 — counters/{dateKey} è scrivibile da chiunque, anche senza login
+
+In firestore.rules la collezione dei progressivi ha `allow read, write: if true`: nessun login, nessun ruolo, nessun App Check imposto. Chiunque abbia estratto apiKey e projectId dal bundle (pubblici per design) può fare setDoc(counters/2026-08-26, {last: 999999}) o azzerare il contatore. Danno: la sera i nuovi conti prendono numeri assurdi o DUPLICATI di conti già in mano ai clienti — la comanda stampata «#15» e quella a schermo non coincidono più. È la stessa classe di incidente che progressivi.js documenta come già vissuta; risolviNumeroDuplicato gestisce le collisioni accidentali fra terminali, non un avvelenamento deliberato del contatore. L'apertura è motivata dalla numerazione lato client offline, ma va ristretta. Comportamento atteso: la scrittura dei counter solo allo staff. CURA: `allow write: if isStaffMember();`. Se serve l'incremento dal client anonimo, vincolarlo a `request.resource.data.last == resource.data.last + 1` con App Check imposto (vedi BUG-092), o spostare l'assegnazione del progressivo interamente server-side. Serve un test delle regole (@firebase/rules-unit-testing), oggi assente: l'anonimo non deve poter scrivere counters.
+
+**Dove**: `firestore.rules (match /counters/{dateKey}), src/lib/progressivi.js`
+
+#### BUG-092 — App Check è inizializzato sul client ma non imposto da nessuna parte
+
+Il client registra App Check con reCAPTCHA v3 (firebaseClient.js), ma il backend non lo pretende mai: nessuna Cloud Function dichiara `enforceAppCheck: true` (OPTS è solo la region), l'enforcement non risulta acceso per Firestore/Storage, e se manca VITE_RECAPTCHA_SITE_KEY App Check si spegne in silenzio. Risultato: il token viene prodotto e allegato, ma le callable restano invocabili da qualunque client, anche fuori dall'app. È il moltiplicatore che rende sfruttabili i buchi da anonimo (BUG-091, BUG-093) e apre a spam/DoS/costo battendo createOrder o createPaymentCheckout in loop con la sola apiKey pubblica. È anche il sospetto già annotato per BUG-001 (il banner «Missing or insufficient permissions» in coda). Comportamento atteso: le operazioni riservate all'app passano solo da client legittimi con App Check valido. CURA: accendere l'enforcement in console per Firestore/Storage/Functions; aggiungere `enforceAppCheck: true` alle callable riservate allo staff (staffAdmin, sync/sale SumUp, pagamenti), lasciando fuori con grazia quelle pensate per il cliente anonimo con capability-token (checkout online); far fallire la build in produzione se manca VITE_RECAPTCHA_SITE_KEY, invece di spegnere App Check in silenzio.
+
+**Dove**: `src/lib/firebaseClient.js (initializeAppCheck), functions/index.js (OPTS delle onCall), firestore.rules`
+
+#### BUG-093 — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti
+
+In firestore.rules gli ordini hanno `allow read: if true` e `create` senza requisito di autenticazione. È la scelta «id ordine come capability token», ma gli ordini contengono dati personali: customer_name, customer_uid, note, push_token FCM, placed_by (email/ruolo dello staff). Con l'API REST di Firestore e l'apiKey pubblica, uno script itera o indovina gli id ordine e raccoglie nomi clienti, consumazioni, importi e i token push di staff e clienti; oppure crea migliaia di ordini fittizi che intasano la coda del banco. Comportamento atteso: il cliente anonimo con l'id in mano vede e modifica il SUO conto, ma i dati personali e i token non sono esposti a lettura pubblica, e la creazione non è un rubinetto aperto. CURA: mantenere il modello capability ma (1) accendere App Check (BUG-092) per limitare la creazione ai client legittimi; (2) non esporre push_token, customer_uid e placed_by in documenti a lettura pubblica — spostarli in un sottodocumento a lettura ristretta o proiettarli via callable; (3) valutare un rate-limit sulla creazione ordini. Test delle regole a corredo.
+
+**Dove**: `firestore.rules (match /orders/{orderId}), src/lib/api.js`
+
+#### BUG-094 — Le callable SumUp POS Pro non controllano né login né ruolo
+
+LATENTE — oggi innocuo perché SumUp è spento (functions/.env vuoto), ma da chiudere PRIMA di accendere l'integrazione. Le tre callable syncSumUpProducts, createSumUpSale e updateSumUpSaleStatus non leggono request.auth; un onCall v2 non richiede autenticazione di default, e non c'è requireRole né App Check. A integrazione attiva, chiunque conosca l'id progetto (è nel bundle) può, da internet: - syncSumUpProducts: riscrivere l'intera collezione drinks (il menù) con la risposta dell'API SumUp; - createSumUpSale: passare orderId/items/unit_price/qty DAL CLIENT e scrivere sumup_sale_id su un ordine arbitrario con prezzi a piacere; - updateSumUpSaleStatus: cambiare lo stato di qualunque vendita. Comportamento atteso: sono operazioni di back-office, mai di un cliente. CURA: aggiungere `requireRole(request.auth, BANCO)` come già fanno i pagamenti (payment-service.js), validare orderId/items (esistenza dell'ordine) e RICALCOLARE i prezzi lato server invece di prenderli dal client. Insieme, imporre App Check (BUG-092).
+
+**Dove**: `functions/index.js (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus), functions/lib/sumup-service.js, functions/lib/sumup-core.js`
+
+#### BUG-095 — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica
+
+LATENTE — innocuo finché SumUp è spento (nessun ordine ha sumup_sale_id), ma si attiva insieme al POS Pro. A differenza del webhook dei pagamenti, che è fatto bene, sumupWebhook prende sale_id E status dal corpo della richiesta e li scrive direttamente sull'ordine, senza verifica di firma HMAC, senza segreto condiviso e senza ri-verifica via API. Chi conosce o indovina un sumup_sale_id POSTa {sale_id, status: 'COMPLETED'} sull'endpoint pubblico e fa avanzare di stato ordini altrui. Manca anche la guardia isConfigured(). Comportamento atteso: come per i pagamenti, lo stato non si prende mai per buono dal payload. CURA: verificare la firma/segreto del webhook SumUp POS Pro se il prodotto la offre, oppure — come già fa il webhook pagamenti — rileggere l'esito dall'API SumUp e non fidarsi del payload; aggiungere `if (!isConfigured()) return {status: 200}`.
+
+**Dove**: `functions/index.js (sumupWebhook), functions/lib/sumup-service.js (handleWebhook), functions/lib/sumup-core.js (parseWebhookBody)`
 
 ## Non più valido
 
