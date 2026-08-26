@@ -4,23 +4,14 @@
 
 ### Per chi sta al banco
 
-- **Gli avvisi che arrivano dal POS SumUp non si prendono più per buoni.**
-  Quando il registratore SumUp avvisa che una vendita è cambiata, adesso l'app
-  va a chiedere a SumUp com'è andata davvero invece di credere al messaggio, e
-  accetta l'avviso solo se porta il codice di verifica che si imposta nel back
-  office di SumUp. Il collegamento con SumUp non è attivo al locale, quindi
-  oggi non cambia niente. Per accenderlo servirà impostare quel codice —
-  è scritto in `functions/.env` dove si prende. **Ha effetto solo dopo la
-  pubblicazione delle Cloud Functions.**
-
-- **Il collegamento col registratore di cassa SumUp chiede le credenziali.**
-  Le tre funzioni che parlano col POS SumUp — sincronizzare il listino,
-  mandare una vendita, cambiarle stato — adesso rispondono solo a chi è
-  entrato nel gestionale, e i prezzi della vendita li prende il server dal
-  conto invece che da chi chiama. Il collegamento con SumUp non è attivo al
-  locale, quindi oggi non cambia niente: serve a farsi trovare pronti il
-  giorno in cui si accende. **Ha effetto solo dopo la pubblicazione delle
-  Cloud Functions.**
+- **Via il collegamento col registratore di cassa SumUp Cassa Pro.** Doveva
+  ricopiare ogni vendita dentro il registratore di SumUp, ma non è mai stato
+  acceso: nessuno l'ha mai visto funzionare e al banco non cambia niente.
+  **Il POS SumUp con cui si incassa non c'entra ed è rimasto dov'era.**
+  Sparisce anche il riquadro «Sync catalogo» dal gestionale, che serviva solo
+  a quello. In questa stessa versione, mai pubblicata, c'erano due voci che
+  irrobustivano quel collegamento: sono state tolte da qui perché parlavano di
+  codice che adesso non esiste più.
 
 - **Un conto non può più nascere firmato da qualcun altro.** Chi apre un
   conto dal telefono senza essere entrato nel gestionale adesso può scrivere

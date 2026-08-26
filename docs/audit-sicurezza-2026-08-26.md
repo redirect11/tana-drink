@@ -26,8 +26,8 @@ mai imposto**, che è proprio la cintura che dovrebbe proteggere quei percorsi.
 | 🔴 Critica | 2. `counters/{dateKey}` scrivibile da chiunque, anche non autenticato |
 | 🟠 Alta | 3. App Check inizializzato ma **mai imposto** (Functions/Firestore/Storage) |
 | 🟠 Alta | 4. `orders` leggibili e creabili da chiunque — dati personali esposti |
-| 🟠 Alta | 5. Tre callable SumUp POS Pro senza auth né ruolo (latente: SumUp spento) |
-| 🟠 Alta | 6. `sumupWebhook` si fida del payload senza firma né ri-verifica (latente) |
+| ⚫ Decaduta | 5. Tre callable SumUp POS Pro senza auth né ruolo — **il codice non c'è più** |
+| ⚫ Decaduta | 6. `sumupWebhook` si fida del payload — **l'endpoint non c'è più** |
 | 🟡 Media | 7. Script di manutenzione con default sulla **produzione** |
 | 🟡 Media | 8. Cache offline e localStorage in chiaro sul tablet condiviso |
 | 🟡 Media | 9. Assenza di CSP e header di sicurezza sull'hosting |
@@ -159,7 +159,7 @@ callable); (c) valutare un rate-limit sulla creazione.
 > blocca il travaso, ma e' un comportamento non documentato del pianificatore.
 > Una barriera di sicurezza non si appoggia a un difetto d'implementazione.
 
-### 5. Callable SumUp POS Pro senza autenticazione né ruolo *(latente — SumUp spento)*
+### 5. Callable SumUp POS Pro senza autenticazione né ruolo *(DECADUTA — il codice non esiste più)*
 
 `functions/index.js:101,106,109` — `syncSumUpProducts`, `createSumUpSale`,
 `updateSumUpSaleStatus` non leggono `request.auth`. Un `onCall` v2 non richiede auth di
@@ -193,8 +193,19 @@ validazione di `orderId`/`items` e ricalcolo prezzi server-side.
 > (trigger `onDocumentCreated` su `orders`) — cambiamento d'architettura, da
 > decidere. Finché SumUp è spento non cambia niente per nessuno.
 > Prove: 12 casi nuovi in `tests/bdd/`. **Non deployato.**
+>
+> **DECADUTA (26/08/2026), e non perché sia stata difesa.** Poche ore dopo
+> questa cura l'utente ha deciso di togliere tutta l'integrazione SumUp Cassa
+> Pro: «Sta cosa di SumUp Cassa Pro possiamo anche toglierla, non serve. A noi
+> serve solo inviare il pagamento al POS in modo che si possa riscuotere
+> tramite il POS SumUp». Le tre callable, i moduli `sumup-core.js` /
+> `sumup-service.js` e `src/lib/sumupApi.js` sono stati rimossi, e con loro i
+> controlli di ruolo aggiunti qui sopra e i test che li provavano. La
+> superficie d'attacco è **sparita**, non protetta: se un domani si volesse
+> rimandare le vendite a un registratore di cassa, questo finding torna in
+> piedi tale e quale. Vedi BUG-094 nel registro.
 
-### 6. `sumupWebhook` si fida del payload *(latente — SumUp spento)*
+### 6. `sumupWebhook` si fida del payload *(DECADUTA — l'endpoint non esiste più)*
 
 `functions/index.js:118` → `sumup-service.js:89`. Prende `sale_id` **e `status`** dal corpo
 e li scrive sull'ordine, senza firma HMAC né ri-verifica via API (a differenza del webhook
@@ -230,6 +241,13 @@ pagamenti — rileggere lo stato dall'API SumUp e non fidarsi mai del payload.
 > non manda. Non si è cambiato alla cieca — va allineato tutto insieme quando
 > arriva il Vendor-Id.
 > Prove: 11 casi in `tests/bdd/webhook.test.js` + unit sul gettone. **Non deployato.**
+>
+> **DECADUTA (26/08/2026):** `sumupWebhook` è stato cancellato insieme al resto
+> di SumUp Cassa Pro. Non esiste più un indirizzo pubblico a cui bussare, e
+> cadono anche i due punti lasciati «da confermare» (i percorsi al singolare o
+> al plurale, il `Bearer` JWT mancante). **Attenzione a non confonderli:**
+> `paymentWebhook` — quello del lettore e del checkout online — è un'altra
+> cosa, è fatto bene e **resta in piedi**. Vedi BUG-095 nel registro.
 
 ---
 

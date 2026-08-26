@@ -5044,10 +5044,30 @@ requirements:
       (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus) devono ritornare
       un esito { skipped: true } senza effettuare alcuna chiamata di rete verso
       SumUp né scritture su Firestore.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Questa cosa di SumUp Cassa Pro non
+      ha senso, anche perché non ho capito come potrebbe mai inviare gli ordini
+      al SumUp Cassa Pro. Sta cosa di SumUp Cassa Pro possiamo anche toglierla,
+      non serve. A noi serve solo inviare il pagamento al POS in modo che si
+      possa riscuotere tramite il POS SumUp».
+      Il testo qui sopra resta per capire, fra sei mesi, cosa faceva questa
+      roba — e perché non serviva. SumUp Cassa Pro (POS Pro / Goodtill)
+      ricopiava ogni vendita nel loro registratore di cassa: NON È MAI STATA
+      ACCESA (VITE_SUMUP_ENABLED non era impostato da nessuna parte e
+      functions/.env aveva i valori vuoti), quindi al banco non cambia niente.
+      Teneva però in piedi, pronte ad accendersi, tre callable e un webhook
+      pubblico: superficie d'attacco per una funzione che nessuno usava.
+      RIMOSSI il 26/08/2026: le quattro Cloud Functions (syncSumUpProducts,
+      createSumUpSale, updateSumUpSaleStatus, sumupWebhook), i moduli
+      functions/lib/sumup-core.js e functions/lib/sumup-service.js,
+      src/lib/sumupApi.js, il riquadro «Sync catalogo» del gestionale e i
+      relativi test.
+      DA NON CONFONDERE COL LETTORE: il lettore SumUp Solo e il checkout
+      online — quelli con cui si incassa davvero — sono un'altra integrazione,
+      non c'entrano niente con questa e restano dove sono (REQ-PAY-*).
+    status: deprecated
     generate_issue: false
     labels: [sumup, config, functions]
-    test_cases: [TC-SYNC-001, TC-SALE-001, TC-STATUS-001]
+    test_cases: []
 
   - id: REQ-SUMUP-SYNC-001
     title: "Sincronizzazione catalogo SumUp → Firestore drinks"
@@ -5062,10 +5082,16 @@ requirements:
       back-office, non servizio. Prima non chiedeva niente a nessuno, e con
       l'integrazione accesa chiunque conoscesse l'id del progetto — sta nel
       bundle — poteva rifare la carta del locale da internet.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Sta cosa di SumUp Cassa Pro possiamo
+      anche toglierla, non serve. A noi serve solo inviare il pagamento al POS
+      in modo che si possa riscuotere tramite il POS SumUp». Codice, moduli e
+      test sono stati rimossi: l'integrazione non è mai stata accesa, quindi al
+      banco non cambia niente. La storia per intero sta in REQ-SUMUP-CONFIG-001.
+      Il LETTORE SumUp, con cui si incassa, è un'altra cosa e resta.
+    status: deprecated
     generate_issue: false
     labels: [sumup, sync, functions]
-    test_cases: [TC-SYNC-002, TC-SYNC-003, TC-SYNC-004, TC-SYNC-005, TC-SYNC-006, TC-SYNC-007, TC-SYNC-008, tests/bdd/sync-products.test.js]
+    test_cases: []
 
   - id: REQ-SUMUP-SYNC-002
     title: "Normalizzazione robusta della risposta prodotti SumUp"
@@ -5077,10 +5103,16 @@ requirements:
       description, available) con fallback sui nomi di campo alternativi; i prodotti
       privi di id vengono saltati. available è true salvo p.active===false o
       p.available===false.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Sta cosa di SumUp Cassa Pro possiamo
+      anche toglierla, non serve. A noi serve solo inviare il pagamento al POS
+      in modo che si possa riscuotere tramite il POS SumUp». Codice, moduli e
+      test sono stati rimossi: l'integrazione non è mai stata accesa, quindi al
+      banco non cambia niente. La storia per intero sta in REQ-SUMUP-CONFIG-001.
+      Il LETTORE SumUp, con cui si incassa, è un'altra cosa e resta.
+    status: deprecated
     generate_issue: false
     labels: [sumup, sync, functions]
-    test_cases: [TC-CORE-001, TC-CORE-002, TC-CORE-003]
+    test_cases: []
 
   - id: REQ-SUMUP-SALE-001
     title: "Invio ordine a SumUp come External Sale"
@@ -5101,10 +5133,16 @@ requirements:
       la linea lenta.
       L'ordine dei controlli è voluto: PRIMA `isConfigured()`, poi il ruolo. Da
       spenta la funzione non fa niente, e deve restare un no-op silenzioso.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Sta cosa di SumUp Cassa Pro possiamo
+      anche toglierla, non serve. A noi serve solo inviare il pagamento al POS
+      in modo che si possa riscuotere tramite il POS SumUp». Codice, moduli e
+      test sono stati rimossi: l'integrazione non è mai stata accesa, quindi al
+      banco non cambia niente. La storia per intero sta in REQ-SUMUP-CONFIG-001.
+      Il LETTORE SumUp, con cui si incassa, è un'altra cosa e resta.
+    status: deprecated
     generate_issue: false
     labels: [sumup, sale, functions]
-    test_cases: [TC-SALE-002, TC-SALE-003, TC-SALE-004, TC-SALE-005, TC-SALE-006, TC-SALE-007, TC-SALE-008, TC-SALE-009, TC-CORE-004, tests/bdd/create-sale.test.js, tests/unit/sumup-core.test.js]
+    test_cases: []
 
   - id: REQ-SUMUP-STATUS-001
     title: "Aggiornamento stato vendita su SumUp"
@@ -5116,10 +5154,16 @@ requirements:
       DAL 26/08/2026 (BUG-094) SERVE UN RUOLO: tutto il personale, perché la
       sala segna «servito» al tavolo. Prima non chiedeva niente, e chi
       indovinava un sumup_sale_id faceva avanzare la vendita di un altro tavolo.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Sta cosa di SumUp Cassa Pro possiamo
+      anche toglierla, non serve. A noi serve solo inviare il pagamento al POS
+      in modo che si possa riscuotere tramite il POS SumUp». Codice, moduli e
+      test sono stati rimossi: l'integrazione non è mai stata accesa, quindi al
+      banco non cambia niente. La storia per intero sta in REQ-SUMUP-CONFIG-001.
+      Il LETTORE SumUp, con cui si incassa, è un'altra cosa e resta.
+    status: deprecated
     generate_issue: false
     labels: [sumup, status, functions]
-    test_cases: [TC-STATUS-002, TC-STATUS-003, TC-STATUS-004, TC-STATUS-005, TC-STATUS-006, TC-STATUS-007, tests/bdd/update-sale-status.test.js]
+    test_cases: []
 
   - id: REQ-SUMUP-WEBHOOK-001
     title: "Webhook SumUp → aggiornamento stato ordine Firestore"
@@ -5143,10 +5187,16 @@ requirements:
       gettone è obbligatorio quando SumUp è acceso: un controllo che si spegne
       da solo quando manca la configurazione non è un controllo. Con SumUp
       spento l'endpoint risponde 200 e non tocca niente.
-    status: implemented
+      SCARTATA (26/08/2026, dall'utente): «Sta cosa di SumUp Cassa Pro possiamo
+      anche toglierla, non serve. A noi serve solo inviare il pagamento al POS
+      in modo che si possa riscuotere tramite il POS SumUp». Codice, moduli e
+      test sono stati rimossi: l'integrazione non è mai stata accesa, quindi al
+      banco non cambia niente. La storia per intero sta in REQ-SUMUP-CONFIG-001.
+      Il LETTORE SumUp, con cui si incassa, è un'altra cosa e resta.
+    status: deprecated
     generate_issue: false
     labels: [sumup, webhook, functions]
-    test_cases: [TC-HOOK-001, TC-HOOK-002, TC-HOOK-003, TC-HOOK-004, TC-HOOK-005, TC-HOOK-006, TC-HOOK-007, TC-HOOK-008, TC-HOOK-009, TC-HOOK-010, TC-HOOK-011, tests/bdd/webhook.test.js]
+    test_cases: []
 
   - id: REQ-ORD-021
     title: "Le comande annullate: o si rifanno, o si stornano dal conto"

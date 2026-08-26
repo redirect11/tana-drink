@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 180 | fatto e coperto dai test |
+| ✅ | 174 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 22 | da fare |
-| 🗑 | 1 | non più valido |
+| 🗑 | 7 | non più valido |
 
-**217 voci** in tutto. **194** descrivono il sistema com'è oggi e
+**217 voci** in tutto. **188** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
@@ -57,7 +57,6 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 14 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
@@ -1682,48 +1681,6 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 **Dove**: `scripts/specchia-db.js, scripts/ripristina-db.js, scripts/migra-in-produzione.js` · ⚠️ **Nessun test lo verifica.**
 
-### Integrazione SumUp
-
-Il dialogo con il terminale SumUp, dalle Cloud Functions.
-
-#### REQ-SUMUP-CONFIG-001 — Le functions SumUp sono no-op se non configurate
-
-Se SUMUP_VENDOR_ID o SUMUP_OUTLET_ID non sono impostati, tutte le callable (syncSumUpProducts, createSumUpSale, updateSumUpSaleStatus) devono ritornare un esito { skipped: true } senza effettuare alcuna chiamata di rete verso SumUp né scritture su Firestore.
-
-**Dove**: `functions/index.js isSumUpConfigured, functions/lib/sumup-service.js` · **Lo dimostrano**: `TC-SYNC-001`, `TC-SALE-001`, `TC-STATUS-001`
-
-#### REQ-SUMUP-SYNC-001 — Sincronizzazione catalogo SumUp → Firestore drinks
-
-syncSumUpProducts scarica il catalogo da GET /products e aggiorna la collezione `drinks`. I prodotti già presenti (identificati da sumup_product_id) vengono aggiornati; i nuovi vengono creati con un timestamp created_at. Ritorna { synced, total }. DAL 26/08/2026 (BUG-094) SERVE IL BANCO (admin o bartender), non tutto il personale: questa riscrive il MENÙ con quello che risponde SumUp, ed è back-office, non servizio. Prima non chiedeva niente a nessuno, e con l'integrazione accesa chiunque conoscesse l'id del progetto — sta nel bundle — poteva rifare la carta del locale da internet.
-
-**Dove**: `functions/index.js syncSumUpProducts, functions/lib/sumup-service.js syncProducts` · **Lo dimostrano**: `TC-SYNC-002`, `TC-SYNC-003`, `TC-SYNC-004`, `TC-SYNC-005`, `TC-SYNC-006`, `TC-SYNC-007`, `TC-SYNC-008`, `tests/bdd/sync-products.test.js`
-
-#### REQ-SUMUP-SYNC-002 — Normalizzazione robusta della risposta prodotti SumUp
-
-La risposta di /products può essere un array diretto o un oggetto con chiave "products"/"items"; input nullo o non valido produce zero prodotti. Ogni prodotto viene mappato sui campi drink (name, price numerico, category, description, available) con fallback sui nomi di campo alternativi; i prodotti privi di id vengono saltati. available è true salvo p.active===false o p.available===false.
-
-**Dove**: `functions/lib/sumup-core.js extractProducts, mapProductToDrink` · **Lo dimostrano**: `TC-CORE-001`, `TC-CORE-002`, `TC-CORE-003`
-
-#### REQ-SUMUP-SALE-001 — Invio ordine a SumUp come External Sale
-
-createSumUpSale costruisce il payload External Sale dall'ordine (customer_name derivato dal tavolo, note, sale_items con product_id/quantity/unit_price e total_price arrotondato a 2 decimali) e lo invia in POST a /external_sales. Se la vendita ha un id e l'ordine ha un orderId, persiste sumup_sale_id sull'ordine Firestore. Ritorna { saleId }. DAL 26/08/2026 (BUG-094) SERVE UN RUOLO — tutto il personale, perché la sala prende gli ordini al tavolo — e I PREZZI LI METTE IL SERVER: se l'ordine è già su Firestore, il payload si costruisce dai SUOI item, non da quelli passati dal client. Se l'ordine non c'è ancora si usano quelli arrivati: il conto è local-first, creaOrdine scrive senza aspettare e chiama subito questa, quindi il documento può essere ancora per strada — e pretenderlo vorrebbe dire perdere la vendita di ogni conto battuto con la linea lenta. L'ordine dei controlli è voluto:
-
-PRIMA `isConfigured()`, poi il ruolo. Da spenta la funzione non fa niente, e deve restare un no-op silenzioso.
-
-**Dove**: `functions/index.js createSumUpSale, functions/lib/sumup-service.js createSale` · **Lo dimostrano**: `TC-SALE-002`, `TC-SALE-003`, `TC-SALE-004`, `TC-SALE-005`, `TC-SALE-006`, `TC-SALE-007`, `TC-SALE-008`, `TC-SALE-009`, `TC-CORE-004`, `tests/bdd/create-sale.test.js`, `tests/unit/sumup-core.test.js`
-
-#### REQ-SUMUP-STATUS-001 — Aggiornamento stato vendita su SumUp
-
-updateSumUpSaleStatus invia in PUT a /external_sales/{saleId}/status il nuovo stato. Se saleId è assente ritorna { skipped: true, reason } senza chiamare SumUp. Ritorna { updated: true } in caso di successo. DAL 26/08/2026 (BUG-094) SERVE UN RUOLO: tutto il personale, perché la sala segna «servito» al tavolo. Prima non chiedeva niente, e chi indovinava un sumup_sale_id faceva avanzare la vendita di un altro tavolo.
-
-**Dove**: `functions/index.js updateSumUpSaleStatus, functions/lib/sumup-service.js updateSaleStatus` · **Lo dimostrano**: `TC-STATUS-002`, `TC-STATUS-003`, `TC-STATUS-004`, `TC-STATUS-005`, `TC-STATUS-006`, `TC-STATUS-007`, `tests/bdd/update-sale-status.test.js`
-
-#### REQ-SUMUP-WEBHOOK-001 — Webhook SumUp → aggiornamento stato ordine Firestore
-
-sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae il sale_id dal corpo — sia in cima (sale_id/id) sia nella forma vera di SumUp, che lo annida in data.sale.id — e senza sale_id risponde 400. Cerca l'ordine con quel sumup_sale_id; se non è nostro risponde 200 senza chiedere niente. Mappa lo stato su quello Tana Drink (ACCEPTED→in_preparazione, COMPLETED/CANCELLED→ritirato); stati non mappati rispondono 200 OK senza modifiche. Risponde sempre 200 quando la richiesta è legittima: un errore farebbe ritentare SumUp per un'ora. DAL 26/08/2026 (BUG-095) IL PAYLOAD NON SI CREDE MAI. Lo `status` del corpo non si guarda nemmeno: lo stato si RILEGGE dall'API SumUp, come fa già il webhook dei pagamenti. Chi bussa lo dice il gettone `Verification-Token` (SumUp POS Pro non firma i webhook: niente HMAC, l'unica cosa che offre è quel segreto condiviso statico, che si legge nel back office e vive in `firebase functions:secrets:set SUMUP_POS_WEBHOOK_TOKEN`). Gettone mancante o sbagliato → 401, e il gettone è obbligatorio quando SumUp è acceso: un controllo che si spegne da solo quando manca la configurazione non è un controllo. Con SumUp spento l'endpoint risponde 200 e non tocca niente.
-
-**Dove**: `functions/index.js sumupWebhook, functions/lib/sumup-service.js handleWebhook` · **Lo dimostrano**: `TC-HOOK-001`, `TC-HOOK-002`, `TC-HOOK-003`, `TC-HOOK-004`, `TC-HOOK-005`, `TC-HOOK-006`, `TC-HOOK-007`, `TC-HOOK-008`, `TC-HOOK-009`, `TC-HOOK-010`, `TC-HOOK-011`, `tests/bdd/webhook.test.js`
-
 ### Interfaccia
 
 Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie.
@@ -2707,3 +2664,9 @@ registro perché cancellarle vorrebbe dire riproporle fra sei mesi come idee
 nuove, ma **non sono specifica**: qui c'è solo il titolo.
 
 - `REQ-MENU-012` — In carta due tipi di voce: il prodotto e la ricetta
+- `REQ-SUMUP-CONFIG-001` — Le functions SumUp sono no-op se non configurate
+- `REQ-SUMUP-SYNC-001` — Sincronizzazione catalogo SumUp → Firestore drinks
+- `REQ-SUMUP-SYNC-002` — Normalizzazione robusta della risposta prodotti SumUp
+- `REQ-SUMUP-SALE-001` — Invio ordine a SumUp come External Sale
+- `REQ-SUMUP-STATUS-001` — Aggiornamento stato vendita su SumUp
+- `REQ-SUMUP-WEBHOOK-001` — Webhook SumUp → aggiornamento stato ordine Firestore
