@@ -61,6 +61,9 @@ import {
   filterItems,
   ASSORTIMENTI,
   assortimentoDi,
+  mancaNellaScheda,
+  prodottiDaCompletare,
+  schedaCompletata,
   costWithVat,
   stockValue,
   smallUnits,
@@ -136,6 +139,14 @@ const ASSORTIMENTO_TITOLO = {
   premium: 'I prodotti buoni',
   out: 'Fuori assortimento: non si ricompra',
 }
+// Il segno della SCHEDA DA COMPLETARE (REQ-MAG-032), accanto al nome come la
+// coroncina del premium: un prodotto nato da una consegna si riconosce
+// scorrendo la lista, senza doverlo aprire.
+function SegnoSchedaDaCompletare({ item }) {
+  if (!item?.scheda_da_completare) return null
+  return <span className="badge-segno" title="Scheda da completare">✏️</span>
+}
+
 function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
@@ -278,15 +289,24 @@ function MacroPanel() {
   // Le macro del MENÙ servono qui solo per l'aggancio: su ogni macro di
   // spesa si sceglie a quale macro di vendita corrisponde.
   const [macroMenu, setMacroMenu] = useState([])
+  // I PRODOTTI CON LA SCHEDA DA COMPLETARE SI GUARDANO QUI (REQ-MAG-032), coi
+  // conti che hanno un buco: una categoria senza macro e un prodotto senza
+  // categoria sono lo stesso buco visto da due lati (REQ-UI-022), e in tutti
+  // e due i casi una spesa vera non compare in «Acquisti × Fatturato».
+  const [daCompletare, setDaCompletare] = useState([])
   const ricarica = async () => {
-    const [macs, cats, menu] = await Promise.all([
+    const [macs, cats, menu, items] = await Promise.all([
       fetchMacroCategories('magazzino'),
       fetchInventoryCategories(),
       fetchMacroCategories('menu').catch(() => []),
+      // Il pannello deve reggere anche se il magazzino non risponde: le
+      // macro sono la cosa per cui si è entrati, i prodotti un di più.
+      fetchInventoryItems().catch(() => []),
     ])
     setMacros(macs)
     setCategories(cats)
     setMacroMenu(menu)
+    setDaCompletare(prodottiDaCompletare(items))
   }
   useEffect(() => {
     ricarica()
@@ -300,6 +320,7 @@ function MacroPanel() {
       aggiornaCategoria={updateInventoryCategory}
       creaCategoria={createInventoryCategory}
       macroDiVendita={macroMenu}
+      prodottiDaCompletare={daCompletare}
     />
   )
 }
@@ -571,6 +592,19 @@ function ProductsPanel() {
   // vista a LISTA: carico, rettifica, costi e modifica/elimina.
   const itemActions = (it, bd) => (
     <div className="grid-card-actions">
+      {/* SCHEDA DA COMPLETARE (REQ-MAG-032): il prodotto è nato da una
+          consegna, con quello che l'ordine sapeva. Non è la lista «da
+          sistemare» del travaso e non blocca niente — si dice cosa manca e
+          basta, perché è chi conosce il prodotto a poterlo scrivere.
+          L'ambra vuol dire «lavoro che manca»: il rosso, in questa app, vuol
+          dire annullato (DESIGN.md). */}
+      {it.scheda_da_completare && (
+        <p className="badge-low" style={{ display: 'block', margin: '0 0 8px' }}>
+          ✏️ Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
+          {!it.category_id &&
+            ' Finché manca la categoria, quello che si spende per questo prodotto resta fuori dai conti degli acquisti.'}
+        </p>
+      )}
       <dl className="inv-info">
         {/* QUANTO CE N'È, PER PRIMO — è la ragione per cui un prodotto si
             apre. Dove si conta a pezzi lo dice la riga «Pezzi», che è più
@@ -784,10 +818,17 @@ function ProductsPanel() {
   async function handleSave(payload, { supplier_id } = {}) {
     setError(null)
     try {
+      // LA SCHEDA NATA DA UN ORDINE SI CHIUDE QUI (REQ-MAG-032), e la
+      // chiude la CATEGORIA: è quella che serve al resto del sistema, ed è
+      // per lei che la spesa del prodotto sparirebbe dai conti.
+      const completa =
+        editing && editing !== 'new' && schedaCompletata(editing, payload)
+          ? { ...payload, scheda_da_completare: false }
+          : payload
       const salvato =
         editing && editing !== 'new'
-          ? await updateInventoryItem(editing.id, payload)
-          : await createInventoryItem(payload)
+          ? await updateInventoryItem(editing.id, completa)
+          : await createInventoryItem(completa)
       if (supplier_id && salvato?.id) {
         await salvaRigaListino({
           supplier_id,
@@ -1137,6 +1178,7 @@ function ProductsPanel() {
                   <span className="inv-row-name">
                     {it.name}
                     <SegnoAssortimento item={it} />
+                    <SegnoSchedaDaCompletare item={it} />
                   </span>
                   <span className="muted small inv-row-cat">{catName(it.category_id) || '—'}</span>
                   <span className="inv-cell-num">{it.cost != null ? formatPrice(it.cost) : '—'}</span>
@@ -1187,6 +1229,7 @@ function ProductsPanel() {
                 <div className="row between" style={{ alignItems: 'flex-start', gap: 6 }}>
                   <strong style={{ fontSize: '0.92rem', lineHeight: 1.25 }}>
                     {it.name} <SegnoAssortimento item={it} />
+                    <SegnoSchedaDaCompletare item={it} />
                   </strong>
                   <span className={`dot dot-${st}`} title={STATUS_LABEL[st] || 'ok'} />
                 </div>

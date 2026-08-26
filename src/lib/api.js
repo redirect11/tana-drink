@@ -33,6 +33,7 @@ import {
   articoloNormalizzato,
   patchNormalizza,
   caricoDaConfezioni,
+  prodottoDaRigaOrdine,
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
 import { idRigaListino, livelloDi, statoOrdine, coloreACaso, fetteFornitore } from './listini.js'
@@ -188,6 +189,10 @@ function mapItem(snap) {
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
     // scelta esplicita (i prodotti che non devono mancare), non il default.
     status: i.status ?? 'assortimento',
+    // SCHEDA DA COMPLETARE (REQ-MAG-032): il prodotto è nato da una consegna,
+    // quindi porta solo quello che l'ordine sapeva. Non è la lista «da
+    // sistemare» del travaso, che blocca il magazzino: qui non blocca niente.
+    scheda_da_completare: i.scheda_da_completare === true,
     created_at: toIso(i.created_at),
   })
 }
@@ -1059,14 +1064,20 @@ function registraAcquisto({
   motivo,
   carica = true,
   aggiornaPrezzo = true,
+  nasce = false,
+  statusTarget = null,
 }) {
   // Nessun articolo, nessuna giacenza da alzare e nessun costo da scrivere:
   // il documento resta valido lo stesso, il magazzino non c'entra.
   if (!articolo) return
   const { addQty, bottles_total } = caricoDaConfezioni(articolo, qtyPackages)
+  // I VALORI CHE IL CARICO SCRIVE SUL PRODOTTO. Su un prodotto che c'è già
+  // sono una patch e la giacenza si somma; su uno che nasce adesso
+  // (REQ-MAG-032) sono i suoi valori di partenza, perché `increment()` non ha
+  // niente da incrementare su un documento che non esiste.
   const patch = {}
   if (carica) {
-    patch.stock = increment(addQty)
+    patch.stock = nasce ? addQty : increment(addQty)
     if (bottles_total != null) patch.bottles_total = bottles_total
   }
   // IL COSTO DEL PRODOTTO RESTA UN NUMERO SOLO: l'ultimo effettivamente
@@ -1075,8 +1086,20 @@ function registraAcquisto({
   // listino, che è un'altra cosa (REQ-MAG-029). Il PREZZO DI VENDITA del
   // menu non lo tocca nessuno: è di Flavio.
   if (aggiornaPrezzo) patch.cost = costo
-  if (Object.keys(patch).length > 0) {
-    bgWrite(() => updateDoc(doc(db, 'inventory_items', itemId), patch), `carico ${motivo}`)
+  // L'ASSORTIMENTO PRE-IMPOSTATO (REQ-MAG-025 punto 5, REQ-MAG-032): il
+  // cambio di stato commerciale deciso quando l'ordine è partito si applica
+  // QUI e solo col carico, cioè quando la merce esiste davvero. Metterlo in
+  // assortimento mentre viaggia vorrebbe dire offrire in carta una bottiglia
+  // che non c'è.
+  if (carica && statusTarget) patch.status = statusTarget
+  const ref = doc(db, 'inventory_items', itemId)
+  if (nasce) {
+    bgWrite(
+      () => setDoc(ref, { ...articolo, ...patch, created_at: serverTimestamp() }),
+      `prodotto nuovo da ${motivo}`
+    )
+  } else if (Object.keys(patch).length > 0) {
+    bgWrite(() => updateDoc(ref, patch), `carico ${motivo}`)
   }
   if (carica) {
     bgWrite(
@@ -1173,23 +1196,29 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
     l.stato = 'consegnato'
     l.delivered_at = adesso
 
-    // Prodotto sparito dall'anagrafica mentre l'ordine viaggiava: la riga
-    // avanza lo stesso, se no resterebbe «richiesta» per sempre e l'ordine
-    // non si chiuderebbe mai. Quello che non si può fare è caricarne la
-    // giacenza, perché non c'è più nessuna giacenza da alzare: se ne occupa
-    // registraAcquisto, che davanti a un articolo che non c'è non scrive
-    // niente.
+    // IL PRODOTTO CHE NON C'È IN ANAGRAFICA NASCE QUI (REQ-MAG-032). Prima
+    // la riga avanzava a «consegnato» e basta: niente giacenza, nessun
+    // movimento, nessun messaggio — la merce di una referenza nuova spariva
+    // mentre a schermo la consegna sembrava andata a buon fine. Adesso il
+    // prodotto si crea CON LO STESSO id della riga: l'ordine continua a
+    // puntare a un prodotto vero, e una seconda consegna della stessa
+    // referenza ritrova quello di prima invece di farne un doppione.
     //
     // ALLA CONSEGNA IL PREZZO SI ACCETTA SEMPRE: quello scritto qui è quello
     // del documento in mano al fornitore, quindi è il prezzo vero.
+    const nasce = !articoli[k]
     registraAcquisto({
-      articolo: articoli[k],
+      articolo: articoli[k] ?? prodottoDaRigaOrdine(l),
+      nasce,
       itemId: l.item_id,
       qtyPackages: l.qty_packages,
       costo,
       supplierId: l.supplier_id ?? order.supplier_id ?? null,
       adesso,
       motivo: 'ordine fornitore',
+      // L'assortimento deciso quando l'ordine è partito si applica adesso,
+      // che la merce è arrivata davvero (REQ-MAG-025 punto 5).
+      statusTarget: l.status_target ?? null,
     })
   }
 

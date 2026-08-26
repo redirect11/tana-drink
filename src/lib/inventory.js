@@ -915,6 +915,90 @@ export function caricoDaConfezioni(item, qtyPackages) {
   return { addQty: qty * size, bottles_total: interi + (aperta ? 1 : 0) + qty }
 }
 
+// ── IL PRODOTTO CHE NASCE DA UN ORDINE (REQ-MAG-032) ─────────────────
+//
+// Prima, davanti a una riga d'ordine il cui articolo non esiste in
+// anagrafica, non succedeva niente: la riga passava a «consegnato», la
+// giacenza non si muoveva e nessuno se ne accorgeva. Se il fornitore
+// mandava una referenza nuova, quella merce spariva — non entrava in
+// magazzino, non risultava da nessuna parte, e a schermo la consegna
+// sembrava andata a buon fine. Una merce contata male si vede; una merce
+// che sparisce in silenzio no, e quella è la peggiore delle due.
+//
+// IL NOME NON È QUELLO DEL TRAVASO, ed è una scelta. In magazzino c'è già
+// una lista «da sistemare»: sono i prodotti che il passaggio alla gestione
+// a pezzi (REQ-MAG-018) non sa convertire da solo, e finché ce n'è uno il
+// magazzino intero resta in sola lettura. Qui non c'è niente di bloccato e
+// niente da convertire: c'è una scheda nata a metà, che si compila con
+// calma mentre il locale lavora. Due liste con lo stesso nome sulla stessa
+// schermata sono due significati per una parola sola, e si pagano il giorno
+// in cui qualcuno legge «da sistemare» e ferma un turno per niente. Questa
+// si chiama SCHEDA DA COMPLETARE, e non blocca nessuno.
+//
+// LA CONFEZIONE NON SI SCRIVE, ed è la trappola da non calpestare. La riga
+// d'ordine porta un `package_size` ma non dice di che misura sia quel
+// contenuto: scriverlo senza `content_unit` farebbe rispondere
+// `motivoNonMigrabile` — «c'è scritto che un pezzo contiene 700, ma non di
+// che misura» — e da quel momento il magazzino INTERO andrebbe in sola
+// lettura per colpa di un prodotto appena nato. Il prodotto nasce quindi
+// contato a pezzi e basta, che è esattamente quello che l'ordine sa: sei
+// confezioni sono sei pezzi. Quanto contiene un pezzo è una delle cose da
+// completare a mano.
+export function prodottoDaRigaOrdine(riga) {
+  const costo = Number(riga?.unit_cost)
+  return {
+    name: riga?.name || 'Prodotto senza nome',
+    unit: 'pz',
+    display_unit: 'pz',
+    package_size: null,
+    content_unit: null,
+    stock: 0,
+    bottles_total: 0,
+    // La soglia di riordino è una delle tre cose che l'ordine non sa: a zero
+    // il prodotto non entrerà mai nei «sotto scorta», ed è meglio così —
+    // proporre un riordino su una soglia inventata è peggio che non
+    // proporlo.
+    low_threshold: 0,
+    category_id: null,
+    cost: Number.isFinite(costo) ? costo : 0,
+    // L'IVA D'ACQUISTO EREDITA IL DEFAULT (REQ-MAG-025 punto 3): l'ordine
+    // porta il prezzo, non l'aliquota, e chi la sa la corregge.
+    vat: riga?.vat != null ? Number(riga.vat) : 22,
+    // Il fornitore NON si scrive sul prodotto (REQ-MAG-029): la merce
+    // arrivata scrive la sua riga di listino, che è il posto dove quel
+    // legame vive da quando un prodotto può averne più d'uno.
+    status: 'assortimento',
+    scheda_da_completare: true,
+  }
+}
+
+// Cosa manca a una scheda nata da un ordine, detto a chi deve compilarla.
+// Sono le tre cose che l'ordine non poteva sapere, e la prima è quella che
+// fa danno: senza categoria non c'è macro d'acquisto, e la spesa di quel
+// prodotto SPARISCE da «Bilancio → Acquisti × Fatturato» invece di
+// risultare sbagliata (REQ-MAG-022). È lo stesso buco delle categorie senza
+// macro (REQ-UI-022), visto dall'altro lato.
+export function mancaNellaScheda(item) {
+  const manca = []
+  if (!item?.category_id) manca.push('la categoria')
+  if (!(Number(item?.package_size) > 0)) manca.push('quanto contiene un pezzo')
+  if (!(Number(item?.low_threshold) > 0)) manca.push('la soglia di riordino')
+  return manca
+}
+
+export const prodottiDaCompletare = (items) =>
+  (items || []).filter((it) => it?.scheda_da_completare)
+
+// LA SCHEDA SI CHIUDE CON LA CATEGORIA, non col semplice fatto di averla
+// aperta. Bastasse un salvataggio qualunque, il segno sparirebbe dal
+// prodotto che qualcuno ha guardato per un secondo, e la spesa continuerebbe
+// a non comparire nei conti senza più niente che lo dica. Le altre due cose
+// che mancano si leggono nella scheda e non tolgono soldi a nessun totale.
+export function schedaCompletata(prima, patch) {
+  if (!prima?.scheda_da_completare) return false
+  return !!(patch && 'category_id' in patch ? patch.category_id : prima.category_id)
+}
+
 // ── DUPLICARE UN PRODOTTO ────────────────────────────────────────────
 // Cosa si porta dietro la copia, e cosa no. Sta qui e non nella
 // schermata perché è una regola sui dati: la giacenza NON si copia — la
