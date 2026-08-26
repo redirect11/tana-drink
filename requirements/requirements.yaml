@@ -7064,6 +7064,130 @@ requirements:
       - tests/component/InventoryManager.test.jsx
       - tests/component/MenuManager.test.jsx
 
+  - id: REQ-MAG-029
+    title: "Un prodotto, piu' fornitori: il listino si stacca dal magazzino"
+    area: "src/lib/listini.js, src/components/PurchaseOrdersPanel.jsx, src/lib/inventory.js, src/lib/api.js, firestore.rules"
+    description: >
+      Nasce da Flavio, che ha provato la sezione Ordini (registrazioni del
+      26/08/2026): «questo significa che quel prodotto — ad esempio il
+      Campari — deve essere associato a quel fornitore, e io questo non lo
+      posso fare CATEGORICAMENTE: e' quasi sicuro che il Campari lo prendo
+      anche da fornitori differenti». E subito dopo: «sarebbe buono se avesse
+      il campetto di ricerca, in modo tale che io posso mettere il prodotto
+      INDIPENDENTEMENTE da quale fornitore resta associato».
+      IL DATO CHE CAMBIA LA DISCUSSIONE, misurato il 26/08: il legame
+      prodotto-fornitore oggi non esiste. Dieci prodotti su 388 hanno un
+      fornitore scritto; gli altri hanno il campo a nullo, perche' l'import
+      da Excel lo scrive nullo per ogni riga (src/dev/importExcel.js). La
+      sezione Ordini non ha un limite di disegno: non ha i dati. Scegliendo
+      NOVA si vedono tre prodotti su 388. Non c'e' niente da migrare.
+      IL MODELLO, deciso dall'utente il 26/08: si associano I PRODOTTI AI
+      FORNITORI e non i fornitori ai prodotti. Nasce il LISTINO, una
+      collezione con una riga per coppia prodotto-fornitore (id
+      deterministico, cosi' l'unicita' della coppia e' un fatto strutturale
+      e non un controllo applicativo): fornitore, prodotto, prezzo netto per
+      pezzo, la confezione DI QUEL FORNITORE, il codice sul suo listino,
+      l'ultimo prezzo pagato con la sua data.
+      IL MAGAZZINO NON CAMBIA: il prodotto Campari resta UNO, con UNA
+      giacenza. Parole dell'utente: «l'entita' prodotto sara' sempre la
+      stessa anche se associata a fornitori diversi: se ordino il Campari da
+      Pippo o da Pluto deve valere la SOMMA dell'ordine Campari, e il
+      magazzino deve popolare il prodotto Campari, che NON sara' duplicato».
+      A DUPLICARSI E' LA RIGA DELLA TABELLA. Sempre parole sue: «facciamo
+      una tabella con tutta la lista di prodotti, anche se sono duplicati, e
+      li distinguiamo per fornitore. Quando Flavio seleziona un fornitore
+      vedra' solamente la lista dei prodotti ordinabili da quel fornitore;
+      se seleziona un altro fornitore lo puo' ordinare da quell'altro. Se
+      non seleziona nessun fornitore vedremo i doppioni, identificati da un
+      COLORE e dal fornitore associato». Quindi: senza filtro una riga per
+      coppia prodotto-fornitore, col filtro il catalogo di quel fornitore.
+      Il colore del fornitore si sceglie alla creazione (a caso, oppure
+      scelto a mano) e si vede come le strisce laterali della lista del
+      magazzino (REQ-MAG-027).
+      I TRE LIVELLI DELL'ORDINE, parole di Flavio del 26/08: «ci devono
+      stare i livelli di RICHIESTO, CONSEGNATO, PAGATO. Io mi creo l'ordine
+      che devo mandare al fornitore e in quel momento lui non mi carica
+      ancora i prodotti; una volta che me li ha portati io faccio
+      consegnato, e dopo mi fa il carico». Il carico a magazzino avviene
+      quindi al passaggio a CONSEGNATO, non prima: e' questo che risolve
+      «ordinato ma non ancora ricevuto» senza inventare uno stato nuovo.
+      IL PREZZO SI CORREGGE ALLA CONSEGNA, IL FORNITORE NO. Flavio: «prendo
+      dieci cose, mi esce 300 euro di ordine; una volta che il fornitore mi
+      scarica l'ordine vedo se veramente sono 300 o di piu' o di meno, e
+      modifico il prezzo quando necessario. NON POSSO MODIFICARE IL
+      FORNITORE PERCHE' DA LUI L'HO COMPRATO. Lo metto come consegnato, e da
+      li' me lo metto come da pagare, e me lo inizia anche a caricare nel
+      magazzino». La correzione aggiorna il prezzo di quella riga di listino
+      (con la sua data) e il costo di riferimento del prodotto.
+      IL COSTO, deciso dall'utente: «il costo del prodotto dipendera' da
+      quanto e' stato pagato, dallo specifico fornitore, ma il costo che poi
+      viene del menu rimane quello che decide Flavio». Due numeri distinti,
+      e nessuno dei due si muove da solo: il LISTINO tiene il prezzo per
+      fornitore e serve a CONFRONTARE PRIMA DI ORDINARE; il costo sul
+      prodotto resta UN NUMERO SOLO — l'ultimo effettivamente pagato,
+      chiunque fosse il fornitore, come gia' fa il carico — e serve a
+      VALORIZZARE il magazzino e a calcolare il costo ricetta. Il PREZZO DI
+      VENDITA del drink non lo tocca nessuno: e' di Flavio, e il prezzo
+      consigliato resta un suggerimento.
+      IL FORNITORE PROPOSTO quando si aggiunge un prodotto a un ordine e'
+      quello dell'ULTIMO ACQUISTO. Non il piu' economico: il prezzo piu'
+      basso in archivio e' quasi sempre il piu' vecchio, perche' nessuno
+      aggiorna al rialzo un fornitore da cui non compra piu'. Il piu'
+      economico si MOSTRA accanto, come confronto, non si sceglie. Un
+      fornitore da cui quel prodotto e' gia' stato ordinato nello stesso
+      giro non e' piu' scegliibile per la stessa riga: «va anche bene che e'
+      disabilitato il fornitore in quanto gia' l'ho ordinato a quel
+      fornitore» (Flavio).
+      L'ORDINE RESTA UNO, coi fornitori dentro, e il per-fornitore e' una
+      VISTA: e' la decisione del 20/08 in REQ-MAG-025. Di conseguenza il
+      testo dell'email, la stampa e il gancio con la fattura vanno per FETTA
+      di fornitore: mandare a Nova anche le righe di Enofel e' un errore
+      verso il fornitore, non un dettaglio grafico.
+      «IN ASSORTIMENTO» NON CAMBIA SIGNIFICATO. Il campo di stato del
+      prodotto (assortimento / linea / premium / fuori assortimento,
+      REQ-MAG-007) resta politica commerciale. Lo stato «ordinato ma non
+      ancora ricevuto» non ha bisogno di un nome nuovo, perche' e' un
+      LIVELLO DELLA RIGA D'ORDINE ed e' Flavio stesso a nominarlo:
+      richiesto, consegnato, pagato. Il pre-impostato di REQ-MAG-025 punto 5
+      resta quello che era: alla consegna, insieme al carico, si puo'
+      applicare il cambio di stato commerciale deciso al momento
+      dell'ordine.
+      COME SI POPOLANO I LISTINI. Li associa Flavio a mano, e va bene cosi':
+      «devo associare io i prodotti ai fornitori, in modo tale che magari il
+      Campari ce l'ho associato a due fornitori su cinque, e va bene cosi'».
+      L'utente ha aggiunto che si puo' tentare di ripassare l'Excel, e il
+      dato c'e': REQ-MAG-023 descrive GEN ORD REC.xlsx, centotrenta fogli,
+      ognuno il catalogo intero con IL FORNITORE SULL'ARTICOLO e il prezzo
+      netto al pezzo. Centotrenta fogli nel tempo vogliono dire lo stesso
+      prodotto con fornitori diversi in giri diversi: cioe' il listino, con
+      prezzi e date. Il reimport e' una strada, non un prerequisito: la
+      schermata deve reggere anche con zero listini.
+      IL PASSAGGIO NON MIGRA NIENTE. La compatibilita' sta in una funzione
+      sola: un prodotto senza righe di listino ma col vecchio fornitore
+      scritto produce una riga VIRTUALE con quel fornitore e quel costo. I
+      dieci prodotti agganciati si comportano come oggi, senza che nessuno
+      lanci niente contro il database. La scheda prodotto smette di SCRIVERE
+      il vecchio campo e non lo cancella. Uno script di pulizia e'
+      facoltativo, idempotente, e gira su emulatore o test: LA PRODUZIONE
+      NON SI TOCCA.
+      DOPO, NON ADESSO (Flavio, 26/08): «affronteremo in un secondo momento
+      il discorso delle statistiche, mettiamo prima a posto inventario e
+      ordini. Poi vediamo: potrebbe essere carino l'andamento dei prezzi —
+      ogni volta che carico qualcosa e vado a modificare il prezzo, il
+      sistema mi dovrebbe registrare quanto acquistato e la variazione di
+      prezzo su un grafico». La riga di listino con prezzo e data e' gia' il
+      dato che serve: la voce si aprira' quando sara' il momento.
+      RESTA APERTO: se la confezione di un fornitore diversa da quella del
+      prodotto debba potersi ordinare come tale o convertirsi al carico;
+      quanti prodotti col vecchio campo e quanti ordini ci siano davvero in
+      produzione, da contare in SOLA LETTURA prima di scrivere il ramo di
+      compatibilita'.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori, dati]
+    priority: P2
+    test_cases: []
+
   - id: REQ-MAG-028
     title: "«Fornitori» è una sezione sua: anagrafica, ordini e scadenzario"
     area: "src/components/FornitoriTab.jsx, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/pages/BartenderPage.jsx"
