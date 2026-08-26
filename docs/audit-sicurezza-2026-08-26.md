@@ -203,6 +203,34 @@ pagamenti, che è fatto bene). Chi conosce/indovina un `sumup_sale_id` POSTa
 `isConfigured()`. **Fix:** verificare la firma del webhook oppure — come già per i
 pagamenti — rileggere lo stato dall'API SumUp e non fidarsi mai del payload.
 
+> **✅ CHIUSO il 26/08/2026** (BUG-095), dopo essere andati a vedere cosa offre
+> davvero SumUp. **Non c'è nessuna firma.** Su SumUp POS Pro (Goodtill,
+> `api.thegoodtill.com`) non esiste HMAC, né timestamp firmato, né anti-replay:
+> l'intera specifica dell'API non nomina mai «webhook» o «signature». L'unica
+> difesa documentata è un **segreto condiviso statico** nell'header
+> `Verification-Token`, dal back office (Impostazioni → Integrazioni → Webhook).
+> E i documenti dicono che il corpo porta un id e nient'altro — *«you will then
+> need to use the API to retrieve the relevant data»*: il disegno giusto è
+> esattamente quello dei pagamenti, il webhook è una sveglia e la verità si
+> chiede all'API.
+> Fatto: guardia `isConfigured()` in testa · gettone `Verification-Token`
+> **obbligatorio** quando SumUp è acceso (mancante, sbagliato o non
+> configurato → `401`: un controllo che si spegne da solo quando manca la
+> configurazione non è un controllo) · lo `status` del corpo non si guarda più,
+> si rilegge `current_status` dall'API.
+> **In più**, trovato leggendo la documentazione vera: il messaggio annida la
+> vendita — `{data: {sale: {id, url}}}` — mentre il parser leggeva solo
+> `sale_id`/`id` in cima, e di un messaggio vero non avrebbe trovato niente.
+> **Il segreto non è stato inventato:** `firebase functions:secrets:set
+> SUMUP_POS_WEBHOOK_TOKEN`; in `functions/.env` i valori restano vuoti come
+> documentato.
+> **⚠️ Da confermare con SumUp prima di accendere:** i percorsi. La doc pubblica
+> dice `/external_sale/sale/:id` al **singolare**, il codice usa
+> `/external_sales`; e la ri-lettura vuole un `Bearer` JWT che oggi `sumupFetch`
+> non manda. Non si è cambiato alla cieca — va allineato tutto insieme quando
+> arriva il Vendor-Id.
+> Prove: 11 casi in `tests/bdd/webhook.test.js` + unit sul gettone. **Non deployato.**
+
 ---
 
 ## 🟡 Media

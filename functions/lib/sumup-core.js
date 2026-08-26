@@ -67,12 +67,50 @@ function mapWebhookStatus(sumupStatus) {
 }
 
 // Estrae sale id e stato dal corpo del webhook (campi alternativi tollerati).
+//
+// LA FORMA VERA del messaggio di SumUp POS Pro annida la vendita:
+//   { "event_type": "sale.completed",
+//     "data": { "sale": { "id": "…", "url": "https://api.thegoodtill.com/…" } } }
+// Qui si leggeva solo `sale_id`/`id` in cima, e di quel messaggio non si
+// sarebbe trovato niente. Si tollerano tutt'e due le forme.
+//
+// LO STATO SI ESTRAE MA NON SI CREDE: serve solo a capire se il messaggio
+// riguarda qualcosa che ci interessa. Quello che finisce sull'ordine si
+// rilegge dall'API (vedi handleWebhook).
 function parseWebhookBody(body) {
   const b = body || {}
+  const sale = b.data?.sale || {}
   return {
-    saleId: String(b.sale_id || b.id || ''),
-    status: String(b.status || ''),
+    saleId: String(b.sale_id || b.id || sale.id || ''),
+    status: String(b.status || sale.status || b.event_type || ''),
   }
+}
+
+// Il gettone di verifica del webhook, come lo manda SumUp POS Pro.
+//
+// SumUp POS Pro NON FIRMA i webhook: non c'è HMAC, non c'è timestamp firmato,
+// non c'è anti-replay. L'unica cosa che offre è un SEGRETO CONDIVISO statico
+// nell'header `Verification-Token`, che si legge nel back office (Impostazioni
+// → Integrazioni → Webhook). È un bearer, non una firma: dice chi bussa, non
+// garantisce che il corpo non sia stato toccato. Per questo autentica la
+// chiamata ma non basta, e lo stato si rilegge comunque dall'API.
+//
+// Gli header di una richiesta HTTP arrivano in minuscolo su Cloud Run, ma non
+// si dà per scontato.
+function leggiTokenWebhook(headers) {
+  const h = headers || {}
+  return String(h['verification-token'] || h['Verification-Token'] || '')
+}
+
+// Confronto a tempo costante: la lunghezza la si lascia trapelare (è quella
+// del token vero, che non è un segreto in sé), i caratteri no.
+function tokenCorrisponde(atteso, ricevuto) {
+  const a = String(atteso || '')
+  const b = String(ricevuto || '')
+  if (!a || a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
 }
 
 // ── Helpers HTTP ──────────────────────────────────────────────────────────────
@@ -90,6 +128,8 @@ function buildSumupUrl(base, path) {
 }
 
 module.exports = {
+  leggiTokenWebhook,
+  tokenCorrisponde,
   extractProducts,
   mapProductToDrink,
   buildSalePayload,

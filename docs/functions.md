@@ -41,6 +41,7 @@ Imposta i secret prima del deploy:
 ```bash
 firebase functions:secrets:set SUMUP_VENDOR_ID
 firebase functions:secrets:set SUMUP_OUTLET_ID
+firebase functions:secrets:set SUMUP_POS_WEBHOOK_TOKEN
 ```
 
 | Variabile | Tipo | Default | Descrizione |
@@ -48,6 +49,15 @@ firebase functions:secrets:set SUMUP_OUTLET_ID
 | `SUMUP_VENDOR_ID` | param/secret | `''` | Vendor-Id SumUp (richiesto via `pos.support.uk.ie@sumup.com`) |
 | `SUMUP_OUTLET_ID` | param/secret | `''` | Outlet-Id del punto vendita |
 | `SUMUP_API_BASE` | env | `https://api.thegoodtill.com/api` | URL base API (da confermare con SumUp) |
+| `SUMUP_POS_WEBHOOK_TOKEN` | secret | `''` | Gettone `Verification-Token` del webhook, dal back office SumUp |
+
+> **Il gettone del webhook è obbligatorio con SumUp acceso.** SumUp POS Pro non
+> firma i webhook — niente HMAC, niente anti-replay: l'unica difesa che offre è
+> quel segreto condiviso statico nell'header `Verification-Token`, che si legge
+> nel back office (**Impostazioni → Integrazioni → Webhook**). Senza il secret,
+> `sumupWebhook` rifiuta tutto con `401`, ed è voluto: un controllo che si
+> spegne da solo quando manca la configurazione non è un controllo. Non va **mai**
+> in `functions/.env`, che è committato.
 
 > Il deploy delle functions nel workflow CI è disattivato di default ed è gated dalla
 > variabile di repository `DEPLOY_FUNCTIONS` (vedi
@@ -104,8 +114,15 @@ corrispondente (riflesso in tempo reale sul cliente).
 
 - **Tipo**: `onRequest` (HTTP), `cors: false`
 - **URL**: `https://europe-west1-<project-id>.cloudfunctions.net/sumupWebhook`
-- **Input**: corpo JSON `{ sale_id | id, status }`
-- **Output**: `200 OK` / `400 Missing sale_id` / `405 Method Not Allowed`
+- **Header richiesto**: `Verification-Token` — deve corrispondere al secret
+  `SUMUP_POS_WEBHOOK_TOKEN` (confronto a tempo costante)
+- **Input**: corpo JSON `{ sale_id | id, status }` oppure la forma vera di SumUp,
+  che annida la vendita: `{ event_type, data: { sale: { id, url } } }`
+- **Output**: `200 OK` / `400 Missing sale_id` / `401 Unauthorized` / `405 Method Not Allowed`
+- **IL PAYLOAD NON SI CREDE MAI**: lo `status` del corpo non viene guardato. Si
+  cerca l'ordine col `sumup_sale_id`; se è nostro, lo stato si **rilegge
+  dall'API** (`GET /external_sales/{saleId}` → `current_status`), come fa già il
+  webhook dei pagamenti. Con SumUp spento risponde `200` senza toccare niente.
 - **Mappatura stati**:
 
   | Stato SumUp | Stato Tana Drink |

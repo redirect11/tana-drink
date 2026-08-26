@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **217 voci** in tutto. **194** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **10** difetti noti sono ancora aperti.
+cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -1720,9 +1720,9 @@ updateSumUpSaleStatus invia in PUT a /external_sales/{saleId}/status il nuovo st
 
 #### REQ-SUMUP-WEBHOOK-001 — Webhook SumUp → aggiornamento stato ordine Firestore
 
-sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae sale_id (o id) e status dal corpo; senza sale_id risponde 400. Mappa lo stato SumUp su quello Tana Drink (ACCEPTED→in_preparazione, COMPLETED/CANCELLED→ritirato); stati non mappati rispondono 200 OK senza modifiche. Per stati mappati aggiorna lo status dell'ordine con sumup_sale_id corrispondente, rispondendo sempre 200 OK.
+sumupWebhook accetta solo richieste POST (altrimenti 405). Estrae il sale_id dal corpo — sia in cima (sale_id/id) sia nella forma vera di SumUp, che lo annida in data.sale.id — e senza sale_id risponde 400. Cerca l'ordine con quel sumup_sale_id; se non è nostro risponde 200 senza chiedere niente. Mappa lo stato su quello Tana Drink (ACCEPTED→in_preparazione, COMPLETED/CANCELLED→ritirato); stati non mappati rispondono 200 OK senza modifiche. Risponde sempre 200 quando la richiesta è legittima: un errore farebbe ritentare SumUp per un'ora. DAL 26/08/2026 (BUG-095) IL PAYLOAD NON SI CREDE MAI. Lo `status` del corpo non si guarda nemmeno: lo stato si RILEGGE dall'API SumUp, come fa già il webhook dei pagamenti. Chi bussa lo dice il gettone `Verification-Token` (SumUp POS Pro non firma i webhook: niente HMAC, l'unica cosa che offre è quel segreto condiviso statico, che si legge nel back office e vive in `firebase functions:secrets:set SUMUP_POS_WEBHOOK_TOKEN`). Gettone mancante o sbagliato → 401, e il gettone è obbligatorio quando SumUp è acceso: un controllo che si spegne da solo quando manca la configurazione non è un controllo. Con SumUp spento l'endpoint risponde 200 e non tocca niente.
 
-**Dove**: `functions/index.js sumupWebhook, functions/lib/sumup-service.js handleWebhook` · **Lo dimostrano**: `TC-HOOK-001`, `TC-HOOK-002`, `TC-HOOK-003`, `TC-HOOK-004`, `TC-HOOK-005`, `tests/bdd/webhook.test.js`
+**Dove**: `functions/index.js sumupWebhook, functions/lib/sumup-service.js handleWebhook` · **Lo dimostrano**: `TC-HOOK-001`, `TC-HOOK-002`, `TC-HOOK-003`, `TC-HOOK-004`, `TC-HOOK-005`, `TC-HOOK-006`, `TC-HOOK-007`, `TC-HOOK-008`, `TC-HOOK-009`, `TC-HOOK-010`, `TC-HOOK-011`, `tests/bdd/webhook.test.js`
 
 ### Interfaccia
 
@@ -2607,7 +2607,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-093](#bug-093--ogni-ordine-è-leggibile-e-creabile-da-chiunque-dati-personali-esposti) — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti | grave | P1 |
-| · | [BUG-095](#bug-095--sumupwebhook-si-fida-dello-stato-nel-payload-senza-firma-né-ri-verifica) — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica | grave | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -2700,12 +2699,6 @@ SCARTATA una scorciatoia: un ramo `resource.id is string` fa passare la query pe
 DA FARE A MANO: le regole hanno effetto solo dopo `firebase deploy --only firestore:rules`.
 
 **Dove**: `firestore.rules (match /orders/{orderId}), src/lib/api.js`
-
-#### BUG-095 — sumupWebhook si fida dello stato nel payload, senza firma né ri-verifica
-
-LATENTE — innocuo finché SumUp è spento (nessun ordine ha sumup_sale_id), ma si attiva insieme al POS Pro. A differenza del webhook dei pagamenti, che è fatto bene, sumupWebhook prende sale_id E status dal corpo della richiesta e li scrive direttamente sull'ordine, senza verifica di firma HMAC, senza segreto condiviso e senza ri-verifica via API. Chi conosce o indovina un sumup_sale_id POSTa {sale_id, status: 'COMPLETED'} sull'endpoint pubblico e fa avanzare di stato ordini altrui. Manca anche la guardia isConfigured(). Comportamento atteso: come per i pagamenti, lo stato non si prende mai per buono dal payload. CURA: verificare la firma/segreto del webhook SumUp POS Pro se il prodotto la offre, oppure — come già fa il webhook pagamenti — rileggere l'esito dall'API SumUp e non fidarsi del payload; aggiungere `if (!isConfigured()) return {status: 200}`.
-
-**Dove**: `functions/index.js (sumupWebhook), functions/lib/sumup-service.js (handleWebhook), functions/lib/sumup-core.js (parseWebhookBody)`
 
 ## Non più valido
 

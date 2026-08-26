@@ -6,6 +6,7 @@
 // Configura le variabili prima del deploy:
 //   firebase functions:secrets:set SUMUP_VENDOR_ID
 //   firebase functions:secrets:set SUMUP_OUTLET_ID
+//   firebase functions:secrets:set SUMUP_POS_WEBHOOK_TOKEN   (gettone del webhook)
 //
 // L'URL base e il formato esatto dei payload vanno verificati con SumUp support
 // dopo aver ricevuto il Vendor-Id: pos.support.uk.ie@sumup.com
@@ -63,6 +64,16 @@ const db = getFirestore()
 const SUMUP_VENDOR_ID = process.env.SUMUP_VENDOR_ID || ''
 const SUMUP_OUTLET_ID = process.env.SUMUP_OUTLET_ID || ''
 
+// IL GETTONE DEL WEBHOOK POS PRO. SumUp POS Pro non firma i webhook: niente
+// HMAC, niente timestamp firmato. L'unica cosa che offre è un segreto
+// condiviso statico nell'header `Verification-Token`, che si legge nel back
+// office (Impostazioni → Integrazioni → Webhook).
+//
+// È un segreto vero e sta nei secret, non in functions/.env — quel file è
+// committato apposta, con valori vuoti, e ci deve restare:
+//   firebase functions:secrets:set SUMUP_POS_WEBHOOK_TOKEN
+const SUMUP_POS_WEBHOOK_TOKEN = defineSecret('SUMUP_POS_WEBHOOK_TOKEN')
+
 // URL base da confermare con SumUp support al momento del rilascio del Vendor-Id.
 // Goodtill (il sistema dietro SumUp POS Pro) usa tipicamente:
 //   https://api.thegoodtill.com/api
@@ -95,6 +106,8 @@ const deps = {
   sumupFetch,
   isConfigured: isSumUpConfigured,
   serverTimestamp: () => FieldValue.serverTimestamp(),
+  // Pigro: il valore del secret si può leggere solo dentro la richiesta.
+  webhookToken: () => SUMUP_POS_WEBHOOK_TOKEN.value() || '',
 }
 
 // ── Chi chiama, e cosa gli si risponde se sbaglia ─────────────────────────────
@@ -135,10 +148,17 @@ exports.updateSumUpSaleStatus = onCall(OPTS, (request) =>
 // Configura l'URL nel Back Office di SumUp POS Pro:
 //   Impostazioni → Integrazioni → Webhook
 //   URL: https://europe-west1-<project-id>.cloudfunctions.net/sumupWebhook
-exports.sumupWebhook = onRequest({ ...OPTS, cors: false }, async (req, res) => {
-  const { status, body } = await handleWebhook(deps, { method: req.method, body: req.body })
-  res.status(status).send(body)
-})
+exports.sumupWebhook = onRequest(
+  { ...OPTS, cors: false, secrets: [SUMUP_POS_WEBHOOK_TOKEN] },
+  async (req, res) => {
+    const { status, body } = await handleWebhook(deps, {
+      method: req.method,
+      body: req.body,
+      headers: req.headers,
+    })
+    res.status(status).send(body)
+  }
+)
 
 // ── Gestione utenze staff (solo bartender) ────────────────────────────────────
 // Crea/elenca/modifica/elimina gli account dello staff con il ruolo
