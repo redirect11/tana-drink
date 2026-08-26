@@ -4168,13 +4168,15 @@ export const DEFAULT_SETTINGS = {
   // listino lo sanno tutti a memoria si spegne, e le card restano pulite.
   pos_ricetta_info: true,
   workflow_enabled: false,
-  // LE FUNZIONI PREMIUM (lib/licenza.js), spente di partenza: la conta di
-  // magazzino e le fatture ai fornitori. Sono flag come `workflow_enabled`
-  // apposta — quando arriverà il documento `settings/licenza` (Fase 3 del
-  // piano di sbrandizzazione) sarà lui a comandare, e questi resteranno la
-  // strada per accendere un modulo in sviluppo e in test.
-  modulo_conta_enabled: false,
-  modulo_scadenzario_enabled: false,
+  // LE FUNZIONI PREMIUM (lib/licenza.js). Questi sono gli interruttori
+  // D'USO — «il locale lo sta usando?» — e NON dicono cosa il locale ha
+  // comprato: quella è la licenza, e sta in licenza.js (campo `incluso`)
+  // finché non arriva il documento `settings/licenza` della Fase 3. Un
+  // modulo non incluso resta spento comunque, qualunque cosa dica il flag.
+  // Accesi di suo, come `workflow_enabled !== false`: quello che il locale
+  // ha comprato funziona senza che nessuno lo debba accendere.
+  modulo_conta_enabled: true,
+  modulo_scadenzario_enabled: true,
   // RISCUOTI E SERVI: col servizio seguito, incassare non chiude il conto —
   // si può pagare in anticipo con tre drink ancora da fare. Ma al banco
   // capita spessissimo il contrario: si consegna e si incassa nello stesso

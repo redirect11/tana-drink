@@ -24,12 +24,16 @@ const impostazioni = vi.hoisted(() => ({
   queue_view: 'tabs',
   service_mode: 'banco',
   cancel_phrase_default: 'bancone',
-  // I moduli premium (REQ-LIC-001) sono spenti come su un locale che non li
-  // ha: la chiave sta QUI e non solo nella prova che l'accende, se no
-  // `Object.assign` del beforeEach non la rimetterebbe a posto — aggiunge,
-  // non toglie — e resterebbe accesa per tutte le prove dopo.
-  modulo_conta_enabled: false,
-  modulo_scadenzario_enabled: false,
+  // I MODULI PREMIUM (REQ-LIC-001) come li scrive il documento del bar:
+  // qui ci sono solo gli interruttori D'USO, che dicono se il locale li sta
+  // usando. Cosa il locale HA lo dice la licenza (licenza.js), e per queste
+  // prove è quella vera: scadenzario incluso, conta no.
+  // Le chiavi stanno QUI e non solo nella prova che le cambia: l'assign del
+  // beforeEach aggiunge, non toglie, e un valore scritto da una prova
+  // resterebbe addosso a tutte quelle dopo.
+  modulo_conta_enabled: true,
+  modulo_scadenzario_enabled: true,
+  licenza: null,
 }))
 const IMPOSTAZIONI_BASE = { ...impostazioni }
 
@@ -349,33 +353,30 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
   const interruttoreDi = (etichetta) =>
     screen.getByText(etichetta).closest('.toggle-row').querySelector('input[type="checkbox"]')
 
-  it('le due funzioni ci sono, e dicono cosa fanno e che non sono incluse', async () => {
+  it('le due funzioni ci sono, e dicono cosa fanno e come sono messe', async () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
     expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
     expect(screen.getByText('Conta di magazzino')).toBeInTheDocument()
     expect(screen.getByText('Fatture ai fornitori')).toBeInTheDocument()
-    // Il registro è professionale: si dice cosa fa e che non è inclusa,
-    // niente toni da venditore (DESIGN.md, guardrail 3).
-    for (const riga of screen.getAllByText(/Funzione premium: non inclusa\./)) {
-      expect(riga).toBeInTheDocument()
-    }
+    // Il registro è professionale: si dice cosa fa e com'è messa, niente
+    // toni da venditore (DESIGN.md, guardrail 3).
+    expect(screen.getByText(/Funzione premium: non inclusa\./)).toBeInTheDocument()
+    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
     expect(screen.queryByText(/sblocca|acquista|scopri/i)).toBeNull()
   })
 
-  it('gli interruttori sono spenti e non si toccano', async () => {
+  it('quella NON INCLUSA è spenta e non si tocca', async () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
-    for (const etichetta of ['Conta di magazzino', 'Fatture ai fornitori']) {
-      const interruttore = interruttoreDi(etichetta)
-      expect(interruttore).not.toBeChecked()
-      expect(interruttore).toHaveAttribute('aria-disabled', 'true')
-    }
+    const interruttore = interruttoreDi('Conta di magazzino')
+    expect(interruttore).not.toBeChecked()
+    expect(interruttore).toHaveAttribute('aria-disabled', 'true')
   })
 
-  it('al tocco dicono perché, invece di non fare niente', async () => {
+  it('e al tocco dice perché, invece di non fare niente', async () => {
     // La ragione dei metodi di pagamento non disponibili: `disabled` non fa
     // partire l'evento, e chi preme resta a premere un tasto morto.
     const { subscribeToasts, dismissToast } = await import('../../src/lib/toast.js')
@@ -399,17 +400,49 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     stop()
   })
 
-  it('dove il modulo è acceso l’interruttore lo dice, e resta non toccabile', async () => {
-    // Acceso non vuol dire modificabile da qui: l'accensione è una faccenda
-    // della licenza dell'installazione.
-    impostazioni.modulo_conta_enabled = true
+  it('quella INCLUSA è accesa, si tocca, e si spegne davvero', async () => {
+    // Quello che il locale ha comprato lo accende e lo spegne come ogni
+    // altra impostazione: premium non vuol dire bloccato.
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    const interruttore = interruttoreDi('Fatture ai fornitori')
+    expect(interruttore).toBeChecked()
+    expect(interruttore).not.toHaveAttribute('aria-disabled')
+    expect(interruttore).toBeEnabled()
+
+    updateSettings.mockClear()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ modulo_scadenzario_enabled: false })
+  })
+
+  it('spenta a mano, resta toccabile: è inclusa, non è sparita', async () => {
+    impostazioni.modulo_scadenzario_enabled = false
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    const interruttore = interruttoreDi('Fatture ai fornitori')
+    expect(interruttore).not.toBeChecked()
+    expect(interruttore).not.toHaveAttribute('aria-disabled')
+    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
+
+    updateSettings.mockClear()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ modulo_scadenzario_enabled: true })
+  })
+
+  it('la licenza che include la conta le sblocca l’interruttore', async () => {
+    // Il punto di innesto della Fase 3, visto dalla schermata: cambia il
+    // DATO, e la riga passa da bloccata a normale senza toccare il codice.
+    impostazioni.licenza = { moduli: { conta: true, scadenzario: true } }
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
     const interruttore = interruttoreDi('Conta di magazzino')
     expect(interruttore).toBeChecked()
-    expect(interruttore).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByText(/attiva su questa installazione/)).toBeInTheDocument()
-    expect(interruttoreDi('Fatture ai fornitori')).not.toBeChecked()
+    expect(interruttore).not.toHaveAttribute('aria-disabled')
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)
   })
 })

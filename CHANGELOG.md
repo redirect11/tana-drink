@@ -5,14 +5,16 @@
 ### Per chi sta al banco
 
 - **La conta di magazzino e le fatture ai fornitori diventano funzioni
-  premium.** Le due sezioni del magazzino — «Conta» e «Scadenzario» — non
-  sono più incluse di partenza: chi non le ha attive vede sei sezioni invece
-  di otto. Nelle impostazioni compare un gruppo nuovo, **«🔒 Funzioni
-  premium»**, dove le due voci restano elencate con la loro descrizione e un
-  interruttore spento: si vede che esistono e cosa fanno, e toccando
-  l'interruttore l'app dice perché non si accende da lì. **Niente è andato
-  perso**: le conte già fatte e le fatture già registrate restano dove sono
-  e ricompaiono quando la funzione viene attivata.
+  premium.** Nelle impostazioni compare un gruppo nuovo, **«🔒 Funzioni
+  premium»**, che dice cosa fa parte di questa installazione e cosa no.
+  · Le **fatture ai fornitori** («Scadenzario» nel magazzino) sono
+    **incluse**: funzionano come sempre, e adesso c'è un interruttore per
+    spegnerle e riaccenderle quando serve.
+  · La **conta di magazzino** non è inclusa: la sua sezione non compare più
+    nel magazzino, e l'interruttore resta spento. Toccandolo, l'app dice
+    perché invece di non fare niente.
+  **Niente è andato perso**: le conte già fatte restano dove sono e
+  ricompaiono se la funzione viene attivata.
 
 - **Nel conto i tasti in fondo non spariscono più.** Con lo zoom dell'app
   alto, o su una finestra bassa, la pila di tasti sotto il totale usciva dal
