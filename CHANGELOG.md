@@ -4,6 +4,30 @@
 
 ### Per chi sta al banco
 
+- **Un prodotto che arriva e in magazzino non c'era adesso viene creato.**
+  Prima quella riga passava a «consegnato» e basta: la merce non entrava in
+  magazzino e non risultava da nessuna parte, mentre la consegna sembrava
+  andata a buon fine. Adesso il prodotto **nasce con la merce dentro**, col
+  nome e il prezzo dell'ordine, e resta segnato come **scheda da
+  completare**: nella lista porta una matita accanto al nome, e aperto dice
+  cosa manca — la categoria, quanto contiene un pezzo, la soglia di
+  riordino. L'elenco di questi prodotti sta in **Magazzino →
+  Macro-categorie**, accanto alle categorie senza macro: finché manca la
+  categoria, quello che si spende per quel prodotto resta fuori dai conti
+  degli acquisti. Il segno sparisce quando gli si dà una categoria.
+
+- **La consegna si può caricare in parte, o tutta in un colpo.** Nella
+  finestra «Merce arrivata» ogni riga ha la sua spunta: si toglie a quello
+  che il fornitore non ha portato, e quella riga resta in attesa fino alla
+  prossima consegna. Si parte con **tutto spuntato**, e il tasto dice sempre
+  quante righe sta per caricare — **«Carica tutti»** oppure «Carica i
+  selezionati». Le righe già consegnate non tornano più in quella finestra.
+
+- **L'assortimento si può preparare mentre la merce viaggia.** Quando si
+  compone l'ordine, sui prodotti che non sono in assortimento c'è la casella
+  **«In assortimento quando arriva»**: il cambio si applica al carico, cioè
+  quando la merce è davvero arrivata.
+
 - **Ogni fornitore ha la sua fattura, dentro lo stesso ordine.** Un ordine
   può contenere più fornitori, e ognuno rilascia il suo documento: adesso la
   fattura si collega **alla parte dell'ordine di quel fornitore**, non

@@ -7145,6 +7145,141 @@ requirements:
       - tests/component/InventoryManager.test.jsx
       - tests/component/MenuManager.test.jsx
 
+  - id: REQ-MAG-032
+    title: "Il prodotto che nasce da una consegna, e il carico che si sceglie"
+    area: "src/lib/inventory.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/InventoryManager.jsx, src/components/MacroCategoryManager.jsx"
+    description: >
+      Ritagliato da REQ-MAG-025, che resta da fare per il resto: qui ci sono
+      tre pezzi soli, quelli che toccano la merce che entra.
+      1) IL PRODOTTO NUOVO CHE SI PERDEVA IN SILENZIO, ed e' la ragione per
+      cui questa voce esiste. Davanti a una riga d'ordine il cui articolo non
+      sta in anagrafica non succedeva niente: la riga passava a «consegnato»,
+      la giacenza non si muoveva, nessun movimento veniva scritto e nessuno
+      se ne accorgeva — a schermo la consegna sembrava andata a buon fine. Se
+      il fornitore mandava una referenza nuova, quella merce SPARIVA: non
+      entrava in magazzino e non risultava da nessuna parte. Una merce
+      contata male si vede e si corregge; una che sparisce in silenzio no, e
+      quella e' la peggiore delle due.
+      2) IL TASTO «CARICA TUTTI» (REQ-MAG-025 punto 4).
+      3) L'ASSORTIMENTO PRE-IMPOSTATO (REQ-MAG-025 punto 5).
+      FATTO (27/08/2026).
+      IL PRODOTTO NASCE ALLA CONSEGNA, con quello che l'ordine sa gia' —
+      nome, prezzo, IVA della riga — e CON LO STESSO id della riga d'ordine:
+      cosi' l'ordine continua a puntare a un prodotto vero, e una seconda
+      consegna della stessa referenza ritrova quello di prima invece di farne
+      un doppione. Passa dalla stessa strada di ogni altra merce che entra
+      (`registraAcquisto` in api.js, REQ-MAG-030), quindi alza la giacenza,
+      scrive il movimento «ordine fornitore» e la riga di listino di quel
+      fornitore col prezzo e la sua data. La forma del prodotto la compone
+      `prodottoDaRigaOrdine` (src/lib/inventory.js), che e' logica pura e si
+      prova senza database.
+      SI SCRIVE UN DOCUMENTO INTERO, NON UNA PATCH: `increment()` non ha
+      niente da incrementare su un documento che non esiste, e `updateDoc`
+      su un id che non c'e' fallisce. Il prodotto nasce con la merce gia'
+      dentro, in una scrittura sola.
+      IL NOME NON E' QUELLO DEL TRAVASO, ed e' la trappola che REQ-MAG-025
+      segnalava. In magazzino esiste gia' una lista «da sistemare»: sono i
+      prodotti che il passaggio alla gestione a pezzi (REQ-MAG-018) non sa
+      convertire da solo, e finche' ce n'e' uno il magazzino INTERO resta in
+      sola lettura. Qui non c'e' niente di bloccato e niente da convertire:
+      c'e' una scheda nata a meta', che si compila con calma mentre il locale
+      lavora. Le due situazioni NON sono la stessa, e due liste omonime sulla
+      stessa schermata sarebbero due significati per una parola sola — si
+      pagherebbero il giorno in cui qualcuno legge «da sistemare» e ferma un
+      turno per niente. Questo stato ha quindi un nome suo: SCHEDA DA
+      COMPLETARE (`scheda_da_completare` sul prodotto), e non blocca nessuno.
+      LA CONFEZIONE NON SI SCRIVE, e non e' una dimenticanza. La riga
+      d'ordine porta un `package_size` ma non dice di che misura sia quel
+      contenuto: scriverlo senza `content_unit` farebbe rispondere
+      `motivoNonMigrabile` — «c'e' scritto che un pezzo contiene 700, ma non
+      di che misura» — e da quel momento IL MAGAZZINO INTERO andrebbe in sola
+      lettura per colpa di un prodotto appena nato, col locale aperto. Il
+      prodotto nasce quindi contato a pezzi e basta, che e' esattamente
+      quello che l'ordine sa: sei confezioni sono sei pezzi.
+      DOVE SI VEDE, ED E' L'ALTRO LATO DELLO STESSO BUCO. Un prodotto senza
+      categoria non ha macro d'acquisto, quindi la sua spesa non compare in
+      «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti
+      invece di risultare sbagliata, che e' peggio. Sta percio' accanto alle
+      CATEGORIE SENZA MACRO (REQ-UI-022), in Magazzino → Macro-categorie,
+      perche' e' la stessa mancanza vista dall'altro lato e si guardano nello
+      stesso momento. Nella lista dei prodotti il segno e' una matita accanto
+      al nome, come la coroncina del premium; aperto, il prodotto dice cosa
+      manca — la categoria, quanto contiene un pezzo, la soglia di riordino —
+      in ambra, che vuol dire lavoro che manca (il rosso, in questa app, vuol
+      dire annullato: DESIGN.md).
+      LA SCHEDA SI CHIUDE CON LA CATEGORIA, non col semplice fatto di averla
+      aperta. Bastasse un salvataggio qualunque, il segno sparirebbe dal
+      prodotto guardato per un secondo e la spesa continuerebbe a non
+      comparire nei conti senza piu' niente che lo dica. Le altre due cose
+      che mancano si leggono nella scheda e non tolgono soldi a nessun
+      totale.
+      L'IVA D'ACQUISTO eredita quella della riga d'ordine, e il default (22%)
+      dove la riga non la dice: l'ordine porta il prezzo, non l'aliquota
+      (REQ-MAG-025 punto 3). IL FORNITORE NON SI SCRIVE SUL PRODOTTO: da
+      REQ-MAG-029 quel legame vive nel listino, perche' un prodotto puo'
+      averne piu' d'uno, ed e' la riga di listino a nascere insieme al
+      prodotto.
+      «CARICA TUTTI», E RIGA PER RIGA. La finestra della consegna adesso ha
+      una spunta per riga: il fornitore consegna quello che ha, non quello
+      che e' stato ordinato, e le due casse su tre arrivate si caricano
+      mentre la terza resta «richiesta» e si carichera' quando arriva. SI
+      PARTE CON TUTTO SPUNTATO, perche' la consegna intera e' il caso normale
+      e chi non tocca niente carica quello che ha ordinato; il tasto dice
+      sempre quante righe sta per caricare e se sono tutte — «Carica tutti
+      (3)» oppure «Carica i selezionati (2)» — cosi' il gesto non si fa alla
+      cieca, e con una riga sola non cambia niente rispetto a prima. C'e' un
+      «Spunta tutte / Togli tutte le spunte» per non spuntarle a una a una.
+      Passa dalla stessa strada del carico singolo (`consegnaRigheOrdine` con
+      i suoi `indici`, REQ-MAG-029): non c'e' nessuna seconda funzione.
+      Le righe gia' consegnate non compaiono piu' nella finestra: di li' si
+      carica, non si ricarica — la stessa regola delle righe gia' in archivio
+      di una fattura (REQ-MAG-030).
+      L'ASSORTIMENTO PRE-IMPOSTATO si segna quando l'ordine si compone, con
+      una casella sulla riga («In assortimento quando arriva»), e si applica
+      AL CARICO: metterlo in assortimento mentre la merce viaggia vorrebbe
+      dire offrire in carta una bottiglia che non c'e'. Sul dato e' un campo
+      `status_target` sulla riga d'ordine — generico apposta, perche' e' uno
+      stato commerciale e non un si'/no: il giorno in cui serviranno anche
+      «in linea» o «premium» cambia la sola casella. «In assortimento» NON
+      cambia significato: resta lo stato commerciale di REQ-MAG-007, come
+      REQ-MAG-029 dice a chiare lettere. Qui si programma quel cambio e lo si
+      applica al momento giusto, e basta.
+      DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) la casella
+      dell'assortimento si chiede SOLO dove cambia qualcosa — su un prodotto
+      gia' in assortimento sarebbe una casella che non fa niente, e su un
+      premium spuntata per sbaglio sarebbe una retrocessione silenziosa;
+      (2) il campo si scrive sulla riga solo dove e' stato chiesto, per non
+      seminare un dato in piu' su ogni riga di ogni ordine; (3) il
+      pre-impostato oggi si sceglie solo in COMPOSIZIONE, non su un ordine
+      gia' mandato: modificare le righe di un ordine salvato e' un gesto che
+      non esiste ancora, e inventarlo qui vorrebbe dire un secondo scrittore
+      su un documento che consegna e pagamento gia' scrivono dal banco.
+      RESTA APERTO, ed e' una domanda per chi decide: il pre-impostato serve
+      soprattutto a far RIENTRARE un prodotto «fuori assortimento», ma oggi
+      quei prodotti non compaiono nel catalogo ordinabile («non si
+      ricompra», REQ-MAG-007), quindi quel caso non si puo' ancora
+      raggiungere. La casella e' pronta e il campo pure; se si decide che un
+      «out» si puo' riordinare, e' una riga di filtro.
+      DOVE VA LA CESOIA, se si decidera' di separare l'arrivo dal carico
+      (REQ-MAG-025 punti 3 e 4, che contraddicono la registrazione di Flavio
+      del 26/08 su cui e' costruito il flusso di oggi): il taglio sta in
+      `consegnaRigheOrdine` (api.js), che oggi fa due cose in fila — segna la
+      riga e chiama `registraAcquisto`. Si spezza in due funzioni che
+      scrivono le righe con lo stesso `scriviRigheOrdine`, si aggiunge un
+      livello «arrivato» fra «richiesto» e «consegnato» in `LIVELLI`
+      (src/lib/listini.js), e la finestra della consegna — che gia' sceglie
+      le righe — diventa la finestra del carico. Il resto non si muove: il
+      prodotto che nasce, il listino, il movimento e il pre-impostato stanno
+      tutti dentro `registraAcquisto`, cioe' dalla parte del carico.
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, fornitori, dati]
+    priority: P2
+    test_cases:
+      - tests/unit/prodottoNuovoDaOrdine.test.js
+      - tests/component/CaricoOrdine.test.jsx
+      - tests/component/InventoryManager.test.jsx
+
   - id: REQ-MAG-031
     title: "La fattura si aggancia alla FETTA di fornitore dentro l'ordine"
     area: "src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx"
@@ -7739,6 +7874,25 @@ requirements:
       TUTTI», i due gesti separati arrivato/carico (punti 3 e 4),
       l'assortimento pre-impostato (punto 5), «Altre spese» col Riepilogo, e
       il prodotto nuovo che oggi si perde in silenzio.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-032): TRE PEZZI SONO FATTI, e sono
+      il PRODOTTO NUOVO che si perdeva in silenzio, il tasto «CARICA TUTTI»
+      col carico riga per riga (punto 4) e l'ASSORTIMENTO PRE-IMPOSTATO
+      (punto 5). Il prodotto nasce alla consegna con lo stesso id della riga
+      d'ordine e passa da `registraAcquisto` (api.js) come ogni altra merce
+      che entra; la sua forma la compone `prodottoDaRigaOrdine`
+      (src/lib/inventory.js). Lo stato nuovo NON riusa il nome «da
+      sistemare» del travaso — le due situazioni non sono la stessa, e
+      quella blocca il magazzino mentre questa non blocca niente — e si
+      chiama SCHEDA DA COMPLETARE; si guarda accanto alle categorie senza
+      macro (REQ-UI-022), che e' lo stesso buco visto dall'altro lato. La
+      spunta riga per riga e il tasto che le prende tutte stanno nella
+      finestra della consegna e passano dagli `indici` di
+      `consegnaRigheOrdine`, senza nessuna seconda strada.
+      DI QUESTA VOCE RESTANO: i due gesti separati arrivato/carico (punti 3
+      e 4, che si contraddicono con la registrazione di Flavio del 26/08 su
+      cui e' costruito il flusso di oggi — la decisione e' dell'utente, e
+      REQ-MAG-032 dice dove andrebbe messo il taglio), «Altre spese» col
+      Riepilogo, e l'allegato del documento (foto/PDF).
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, admin]
