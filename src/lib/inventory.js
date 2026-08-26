@@ -529,10 +529,24 @@ export const ASSORTIMENTI = ['assortimento', 'linea', 'premium', 'out']
 export const assortimentoDi = (item) =>
   ASSORTIMENTI.includes(item?.status) ? item.status : 'assortimento'
 
+// `fornitoriPerArticolo` (item_id -> [supplier_id]) arriva dal LISTINO
+// (REQ-MAG-029): da quando il legame prodotto-fornitore vive lì, un
+// prodotto può averne più d'uno e il campo sul prodotto non basta più.
+// Quando non c'è si guarda il vecchio campo, ed è il caso di chi chiama
+// questa funzione senza saperne niente.
 export function filterItems(
   items,
-  { query = '', categoryId = 'all', supplierId = 'all', status = 'all', assortimenti = null } = {}
+  {
+    query = '',
+    categoryId = 'all',
+    supplierId = 'all',
+    status = 'all',
+    assortimenti = null,
+    fornitoriPerArticolo = null,
+  } = {}
 ) {
+  const fornitoriDi = (it) =>
+    fornitoriPerArticolo?.get(it.id) ?? (it.supplier_id ? [it.supplier_id] : [])
   const q = query.trim().toLowerCase()
   const out = (items || []).filter((it) => {
     if (q && !(it.name || '').toLowerCase().includes(q)) return false
@@ -542,9 +556,9 @@ export function filterItems(
       if (it.category_id !== categoryId) return false
     }
     if (supplierId === 'none') {
-      if (it.supplier_id) return false
+      if (fornitoriDi(it).length > 0) return false
     } else if (supplierId !== 'all') {
-      if (it.supplier_id !== supplierId) return false
+      if (!fornitoriDi(it).includes(supplierId)) return false
     }
     // «In scorta» non è uno stato di stockStatus: è la domanda «c'è?», e
     // comprende anche quello che sta finendo (vedi haGiacenza).

@@ -17,6 +17,8 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  fetchSupplierPrices,
+  salvaRigaListino,
   subscribeSettings,
   subscribeActiveOrders,
   subscribeDrinks,
@@ -24,6 +26,14 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { voceVisibile } from '../lib/licenza.js'
+import {
+  coloreACaso,
+  coloreFornitore,
+  COLORI_FORNITORE,
+  righeDiProdotto,
+  fornitoreProposto,
+  fornitoriPerArticolo,
+} from '../lib/listini.js'
 import { useCashSession } from '../lib/cashSession.js'
 import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
@@ -385,6 +395,9 @@ function ProductsPanel() {
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
+  // Il listino: chi vende cosa, e a quanto (REQ-MAG-029). Serve alla scheda
+  // prodotto, che il fornitore lo scrive lì e non più sul prodotto.
+  const [listini, setListini] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -464,18 +477,26 @@ function ProductsPanel() {
 
   const catName = (id) => categories.find((c) => c.id === id)?.name
   const supName = (id) => suppliers.find((s) => s.id === id)?.name
+  // Sulla card si leggono TUTTI i fornitori di quel prodotto: uno solo
+  // farebbe credere che sia l'unico da cui si compra.
+  const supNames = (it) =>
+    (fornitoriDegliArticoli.get(it.id) || []).map(supName).filter(Boolean).join(', ')
 
   async function load() {
     setLoading(true)
     try {
-      const [its, cats, sups] = await Promise.all([
+      const [its, cats, sups, list] = await Promise.all([
         fetchInventoryItems(),
         fetchInventoryCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
+        // Un magazzino senza nessun listino è la normalità finché non li si
+        // compila: la schermata regge lo stesso.
+        fetchSupplierPrices().catch(() => []),
       ])
       setItems(its)
       setCategories(cats)
       setSuppliers(sups)
+      setListini(list)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -683,6 +704,13 @@ function ProductsPanel() {
     </div>
   )
 
+  // Chi vende cosa, secondo il listino: il filtro per fornitore non può più
+  // guardare il campo sul prodotto, che da REQ-MAG-029 non si scrive più.
+  const fornitoriDegliArticoli = useMemo(
+    () => fornitoriPerArticolo(items, listini),
+    [items, listini]
+  )
+
   const visible = useMemo(
     () =>
       filterItems(items, {
@@ -691,8 +719,9 @@ function ProductsPanel() {
         supplierId: supplierFilter,
         status: statusFilter,
         assortimenti,
+        fornitoriPerArticolo: fornitoriDegliArticoli,
       }),
-    [items, query, categoryFilter, supplierFilter, statusFilter, assortimenti]
+    [items, query, categoryFilter, supplierFilter, statusFilter, assortimenti, fornitoriDegliArticoli]
   )
 
   // Righe ordinate per la TABELLA: testo in ordine alfabetico, numeri per
@@ -748,13 +777,23 @@ function ProductsPanel() {
     return creato
   }
 
-  async function handleSave(payload) {
+  // IL FORNITORE NON SI SCRIVE PIÙ SUL PRODOTTO (REQ-MAG-029): finisce nel
+  // LISTINO, come riga prodotto-fornitore. Il vecchio campo `supplier_id`
+  // non si cancella — resta a leggersi sui dieci prodotti che ce l'hanno,
+  // dove fa da riga virtuale — ma da qui in poi nessuno lo riscrive.
+  async function handleSave(payload, { supplier_id } = {}) {
     setError(null)
     try {
-      if (editing && editing !== 'new') {
-        await updateInventoryItem(editing.id, payload)
-      } else {
-        await createInventoryItem(payload)
+      const salvato =
+        editing && editing !== 'new'
+          ? await updateInventoryItem(editing.id, payload)
+          : await createInventoryItem(payload)
+      if (supplier_id && salvato?.id) {
+        await salvaRigaListino({
+          supplier_id,
+          item_id: salvato.id,
+          price: payload.cost ?? null,
+        })
       }
       setEditing(null)
       await load()
@@ -829,6 +868,7 @@ function ProductsPanel() {
         initial={editing === 'new' ? null : editing}
         categories={categories}
         suppliers={suppliers}
+        listini={listini}
         defaultVat={purchaseVat}
         onCancel={() => setEditing(null)}
         onSave={handleSave}
@@ -1153,7 +1193,7 @@ function ProductsPanel() {
                 <div className="row between" style={{ alignItems: 'baseline' }}>
                   <span className="muted small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {catName(it.category_id) || 'Senza categoria'}
-                    {supName(it.supplier_id) ? ` · ${supName(it.supplier_id)}` : ''}
+                    {supNames(it) ? ` · ${supNames(it)}` : ''}
                   </span>
                   {(() => {
                     // Item da drink: bottiglie (pezzi) come numero grande, il
@@ -1281,6 +1321,11 @@ function SupplierManager({ suppliers, onChange }) {
   const [busy, setBusy] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState('')
+  // OGNI FORNITORE HA UN COLORE (REQ-MAG-029): è quello che distingue i
+  // doppioni nella lista degli ordini, dove lo stesso Campari compare una
+  // volta per fornitore. Si propone a caso e si può cambiare a mano.
+  const [colore, setColore] = useState(coloreACaso)
+  const [tavolozzaPer, setTavolozzaPer] = useState(null) // id fornitore | 'nuovo'
 
   // Import in blocco (es. dall'Excel): un fornitore per riga, ";email"
   // opzionale. I nomi già presenti vengono saltati.
@@ -1315,12 +1360,22 @@ function SupplierManager({ suppliers, onChange }) {
     if (!name.trim()) return
     setBusy(true)
     try {
-      await createSupplier({ name: name.trim(), sort_order: suppliers.length })
+      await createSupplier({ name: name.trim(), sort_order: suppliers.length, color: colore })
       setName('')
+      // Il prossimo fornitore nasce con un altro colore: due creati di
+      // fila con lo stesso non si distinguerebbero proprio dove serve.
+      setColore(coloreACaso())
+      setTavolozzaPer(null)
       await onChange()
     } finally {
       setBusy(false)
     }
+  }
+
+  async function cambiaColore(s, nuovo) {
+    setTavolozzaPer(null)
+    await updateSupplier(s.id, { color: nuovo })
+    await onChange()
   }
   async function rename(s) {
     const n = prompt('Nuovo nome fornitore:', s.name)
@@ -1344,9 +1399,17 @@ function SupplierManager({ suppliers, onChange }) {
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <div className="row" style={{ gap: 8 }}>
+        <PastigliaColore
+          colore={colore}
+          etichetta="Colore del nuovo fornitore"
+          onClick={() => setTavolozzaPer((v) => (v === 'nuovo' ? null : 'nuovo'))}
+        />
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nuovo fornitore (es. NOVA)" />
         <button className="btn small" onClick={add} disabled={busy}>Aggiungi</button>
       </div>
+      {tavolozzaPer === 'nuovo' && (
+        <Tavolozza scelto={colore} onScegli={(c) => { setColore(c); setTavolozzaPer(null) }} />
+      )}
       <button
         className="btn ghost small block"
         style={{ marginTop: 8 }}
@@ -1372,17 +1435,77 @@ function SupplierManager({ suppliers, onChange }) {
         <div className="muted small" style={{ marginTop: 8 }}>Nessun fornitore.</div>
       )}
       {suppliers.map((s) => (
-        <div className="row between" key={s.id} style={{ marginTop: 8 }}>
-          <span>
-            {s.name}
-            {s.email && <span className="muted small"> · {s.email}</span>}
-          </span>
-          <span className="row" style={{ gap: 4 }}>
-            <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
-            <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
-            <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
-          </span>
+        <div key={s.id}>
+          <div className="row between" style={{ marginTop: 8 }}>
+            <span className="row" style={{ gap: 8, alignItems: 'center', minWidth: 0 }}>
+              <PastigliaColore
+                colore={coloreFornitore(s)}
+                etichetta={`Colore di ${s.name}`}
+                onClick={() => setTavolozzaPer((v) => (v === s.id ? null : s.id))}
+              />
+              <span>
+                {s.name}
+                {s.email && <span className="muted small"> · {s.email}</span>}
+              </span>
+            </span>
+            <span className="row" style={{ gap: 4 }}>
+              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
+              <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
+              <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
+            </span>
+          </div>
+          {tavolozzaPer === s.id && (
+            <Tavolozza scelto={coloreFornitore(s)} onScegli={(c) => cambiaColore(s, c)} />
+          )}
         </div>
+      ))}
+    </div>
+  )
+}
+
+// Il segno del colore del fornitore: la stessa pastiglia tonda dei pallini
+// della scorta, ma qui dice CHI vende, non quanto ce n'è.
+function PastigliaColore({ colore, etichetta, onClick }) {
+  return (
+    <button
+      type="button"
+      className="btn ghost small"
+      aria-label={etichetta}
+      title={etichetta}
+      onClick={onClick}
+      style={{ padding: 4, lineHeight: 0 }}
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          background: colore || 'transparent',
+        }}
+      />
+    </button>
+  )
+}
+
+function Tavolozza({ scelto, onScegli }) {
+  return (
+    <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+      {COLORI_FORNITORE.map((c) => (
+        <button
+          key={c}
+          type="button"
+          aria-label={`Colore ${c}`}
+          onClick={() => onScegli(c)}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: c,
+            border: c === scelto ? '2px solid var(--text)' : '1px solid var(--line)',
+            cursor: 'pointer',
+          }}
+        />
       ))}
     </div>
   )
@@ -1985,7 +2108,7 @@ function AiutoPezzo({ onClose }) {
   )
 }
 
-function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
+function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
   // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
@@ -2025,7 +2148,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     category_id: initial?.category_id ?? '',
-    supplier_id: initial?.supplier_id ?? '',
+    // Il fornitore si legge dal LISTINO, con la compatibilità già dentro
+    // (`righeDiProdotto` ricade sul vecchio campo del prodotto). Fra più
+    // fornitori si propone quello dell'ULTIMO ACQUISTO, che è la stessa
+    // regola degli ordini: due schermate che propongono fornitori diversi
+    // per lo stesso prodotto sono due risposte alla stessa domanda.
+    supplier_id: fornitoreProposto(righeDiProdotto(initial, listini))?.supplier_id ?? '',
     // IL COSTO È SEMPRE QUELLO DI UN PEZZO. Sotto resta salvato nel campo
     // `cost`, che il resto dell'app legge come «costo della confezione» da
     // sempre: con l'unità bloccata sul pezzo le due cose coincidono.
@@ -2108,7 +2236,6 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         // un dato che non vuol dire più niente.
         tipo: null,
         category_id: form.category_id || null,
-        supplier_id: form.supplier_id || null,
         cost: form.cost === '' ? null : arrotonda(costNum),
         vat: Number(form.vat) || 0,
         status: form.status || 'assortimento',
@@ -2124,6 +2251,9 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         // La soglia si scrive in pezzi, come la giacenza.
         low_threshold: scorta ? num(form.low_threshold) : 0,
       }
+      // Il fornitore viaggia a parte perché non è più un campo del
+      // prodotto: chi salva ne fa una riga di listino (REQ-MAG-029).
+      const scelte = { supplier_id: form.supplier_id || null }
       if (isEdit) {
         // In modifica la giacenza non si tocca: quella la muovono il carico e
         // la conta. Due eccezioni, tutte e due sulla stessa cosa — il
@@ -2138,12 +2268,12 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
             return
           }
           const stock = Math.round((num0(initial.stock) / convertibile) * 100) / 100
-          await onSave({ ...base, stock, bottles_total: Math.round(stock) })
+          await onSave({ ...base, stock, bottles_total: Math.round(stock) }, scelte)
           return
         }
         // La giacenza letta è già quella giusta anche per un prodotto
         // ancora da migrare: si salva com'è.
-        await onSave({ ...base, stock: Number(initial?.stock) || 0 })
+        await onSave({ ...base, stock: Number(initial?.stock) || 0 }, scelte)
       } else {
         // In creazione la giacenza è quello che si scrive: i pezzi interi più
         // la frazione della confezione già aperta, che non è né zero né uno.
@@ -2151,7 +2281,7 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
         const apertaBase = toBaseQty(num(form.open_content), form.content_unit)
         const stock =
           pieni + (apertaBase > 0 && contenutoPezzo > 0 ? apertaBase / contenutoPezzo : 0)
-        await onSave({ ...base, stock, bottles_total: 0 })
+        await onSave({ ...base, stock, bottles_total: 0 }, scelte)
       }
     } finally {
       setSaving(false)
@@ -2193,6 +2323,10 @@ function ItemForm({ initial, categories, suppliers, defaultVat = 22, onCancel, o
       </select>
 
       <label htmlFor="isup">Fornitore</label>
+      <p className="muted small" style={{ marginTop: 0 }}>
+        Va nel listino di questo fornitore, col prezzo qui sotto. Gli altri
+        fornitori dello stesso prodotto restano dove sono.
+      </p>
       {nuovoFornitore != null ? (
         <div className="row" style={{ gap: 8 }}>
           <input
