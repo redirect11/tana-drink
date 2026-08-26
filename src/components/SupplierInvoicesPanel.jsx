@@ -10,6 +10,8 @@ import {
   fetchPurchaseOrders,
   aggiungiProdottiAFattura,
   collegaFatturaAFetta,
+  allegaDocumentoAFattura,
+  togliAllegatoDaFattura,
 } from '../lib/api.js'
 import { invoiceTotals } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
@@ -25,6 +27,12 @@ import {
   fetteCollegabili,
   fattureSenzaFetta,
 } from '../lib/fatture.js'
+import {
+  PESO_MASSIMO,
+  allegatoDi,
+  fattureSenzaAllegato,
+  pesoLeggibile,
+} from '../lib/allegati.js'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
 // Poche righe per volta e non sessanta come nella schermata degli ordini,
@@ -48,6 +56,18 @@ export default function SupplierInvoicesPanel() {
   // nessun ordine. Si guardano a fine mese, quindi serve poterli isolare e
   // non solo riconoscerli uno per uno scorrendo.
   const [soloSenzaOrdine, setSoloSenzaOrdine] = useState(false)
+  // Il terzo buco (REQ-MAG-033): i documenti registrati senza la carta. Si
+  // guarda come gli altri due, perché è la stessa domanda del
+  // commercialista fatta un mese dopo.
+  const [soloSenzaAllegato, setSoloSenzaAllegato] = useState(false)
+  // Quale documento sta caricando il suo allegato. Il caricamento aspetta —
+  // qui si può, è gestione e non la coda — ma l'attesa si deve VEDERE: chi
+  // ha toccato deve sapere che sta succedendo qualcosa.
+  const [allegando, setAllegando] = useState(null)
+  // UNA SOLA CASELLA DEL FILE PER TUTTO IL PANNELLO, aperta dal tasto della
+  // riga: una per documento vorrebbe dire trenta caselle nascoste in pagina.
+  const fileRef = useRef(null)
+  const perAllegare = useRef(null)
   // Il magazzino serve solo a «Aggiungi prodotti», ma si carica insieme al
   // resto: aprire la finestra e trovarla vuota per mezzo secondo, con una
   // fattura in mano, è peggio di una lettura in più su una schermata che si
@@ -91,9 +111,10 @@ export default function SupplierInvoicesPanel() {
         if (supplierFilter !== 'all' && i.supplier_id !== supplierFilter) return false
         if (onlyUnpaid && i.paid) return false
         if (soloSenzaOrdine && i.order_id) return false
+        if (soloSenzaAllegato && allegatoDi(i)) return false
         return true
       }),
-    [invoices, supplierFilter, onlyUnpaid, soloSenzaOrdine]
+    [invoices, supplierFilter, onlyUnpaid, soloSenzaOrdine, soloSenzaAllegato]
   )
 
   // IL MAGAZZINO IN SOLA LETTURA VALE ANCHE QUI (BUG-029): finché il
@@ -125,6 +146,52 @@ export default function SupplierInvoicesPanel() {
       (agg) => setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i))),
       (e) => setError(e.message)
     )
+  }
+
+  // ── L'ALLEGATO (REQ-MAG-033) ───────────────────────────────────────
+  //
+  // Scegliere il file apre la casella nascosta, e chi ha chiesto se lo
+  // ricorda: il gesto parte dalla riga, il file arriva dal sistema.
+  function scegliAllegato(inv) {
+    perAllegare.current = inv.id
+    setError(null)
+    fileRef.current?.click()
+  }
+
+  async function allegaScelto(e) {
+    const file = e.target.files?.[0]
+    const id = perAllegare.current
+    // La casella si svuota SEMPRE, anche quando non si è scelto niente:
+    // senza, riscegliere lo stesso file due volte di fila non farebbe
+    // scattare nessun cambiamento e sembrerebbe un tasto rotto.
+    if (fileRef.current) fileRef.current.value = ''
+    perAllegare.current = null
+    if (!file || !id) return
+    setError(null)
+    setAllegando(id)
+    try {
+      const agg = await allegaDocumentoAFattura(id, file)
+      setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i)))
+    } catch (err) {
+      // IL DOCUMENTO RESTA COM'ERA: se il caricamento non riesce, la riga in
+      // pagina non si tocca — mostrare un allegato che non è mai partito
+      // sarebbe peggio del caricamento fallito.
+      setError(err.message)
+    } finally {
+      setAllegando(null)
+    }
+  }
+
+  async function togliAllegato(inv) {
+    const quale = `${inv.supplier_name || 'fornitore'}${inv.number ? ` #${inv.number}` : ''}`
+    if (!confirm(`Togliere l’allegato dal documento di ${quale}? Il file viene cancellato.`)) return
+    setError(null)
+    try {
+      const agg = await togliAllegatoDaFattura(inv.id)
+      setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i)))
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   async function togglePaid(inv) {
@@ -167,6 +234,19 @@ export default function SupplierInvoicesPanel() {
     <div>
       {error && <div className="banner">Errore: {error}</div>}
 
+      {/* `accept` LARGO APPOSTA: elencando i tipi uno per uno, su Android
+          certi telefoni smettono di offrire la fotocamera — ed è proprio da
+          lì che arriva una fattura. La selezione la stringe il controllo in
+          `allegati.js`, che sa anche dirlo con parole. */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        aria-label="Il file da allegare al documento"
+        style={{ display: 'none' }}
+        onChange={allegaScelto}
+      />
+
       <div className="inv-summary">
         <span className="chip" style={{ cursor: 'default' }}>
           Da pagare <strong>{formatPrice(totals.unpaid)}</strong>
@@ -179,6 +259,14 @@ export default function SupplierInvoicesPanel() {
           onClick={() => setSoloSenzaOrdine((v) => !v)}
         >
           Senza ordine ({fattureSenzaFetta(invoices).length})
+        </button>
+        {/* Lo stesso mestiere del chip qui accanto (REQ-MAG-031): un buco si
+            conta in testa e si isola con un tocco. */}
+        <button
+          className={`chip ${soloSenzaAllegato ? 'active' : ''}`}
+          onClick={() => setSoloSenzaAllegato((v) => !v)}
+        >
+          Senza allegato ({fattureSenzaAllegato(invoices).length})
         </button>
       </div>
 
@@ -256,6 +344,16 @@ export default function SupplierInvoicesPanel() {
               suppliers={suppliers}
               onCollega={() => setCollegaPer(inv)}
               onScollega={() => collega(inv, null)}
+            />
+            {/* IL DOCUMENTO VERO (REQ-MAG-033). «Allegare = il documento
+                vero (foto/PDF), non solo un numero» (l'utente, 20/08): il
+                numero dice quale fattura è, la carta è quella che il
+                commercialista chiede. */}
+            <AllegatoDelDocumento
+              fattura={inv}
+              caricando={allegando === inv.id}
+              onAllega={() => scegliAllegato(inv)}
+              onTogli={() => togliAllegato(inv)}
             />
             <button
               className="btn secondary small block"
@@ -361,6 +459,77 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
             onClick={onCollega}
           >
             🔗 Collega a un ordine
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── IL DOCUMENTO VERO: FOTO O PDF (REQ-MAG-033) ──────────────────────
+//
+// Stesso linguaggio del legame con l'ordine, qui sopra, e non un terzo modo
+// di dire la stessa cosa: l'ambra della mancanza, il tasto a destra, il
+// conto in testa alla pagina. Un documento senza allegato non è un errore —
+// è la carta che manca, e la si cerca a fine mese.
+//
+// SI DICE PRIMA COSA CI STA: formati e peso sono sul tasto, non in un errore
+// che arriva dopo aver aspettato il caricamento di una foto da cinque mega.
+function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
+  const allegato = allegatoDi(fattura)
+  const quale = `${fattura.supplier_name || 'fornitore'}${fattura.number ? ` #${fattura.number}` : ''}`
+
+  if (caricando) {
+    return (
+      <div className="muted small" style={{ margin: '4px 4px 0' }}>
+        Carico l’allegato…
+      </div>
+    )
+  }
+
+  return (
+    <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
+      {allegato ? (
+        <>
+          <span className="muted small grow" style={{ minWidth: 0 }}>
+            📎 {allegato.name} · {pesoLeggibile(allegato.size)}
+          </span>
+          {/* UN LINK E NON UN TASTO: sul telefono apre la foto o il PDF con
+              quello che la persona usa già per guardarli, e funziona anche
+              tenendo premuto per salvarlo. */}
+          <a
+            className="btn ghost small"
+            href={allegato.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Apri l’allegato del documento di ${quale}`}
+          >
+            Apri
+          </a>
+          <button
+            className="btn ghost small"
+            aria-label={`Sostituisci l’allegato del documento di ${quale}`}
+            onClick={onAllega}
+          >
+            Sostituisci
+          </button>
+          <button
+            className="btn ghost small"
+            aria-label={`Togli l’allegato dal documento di ${quale}`}
+            onClick={onTogli}
+          >
+            Togli
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="badge-low">senza allegato</span>
+          <button
+            className="btn ghost small"
+            aria-label={`Allega il documento di ${quale}`}
+            onClick={onAllega}
+          >
+            📎 Allega foto o PDF, fino a {pesoLeggibile(PESO_MASSIMO)}
           </button>
         </>
       )}
