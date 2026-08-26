@@ -12,6 +12,7 @@ import {
   collegaFatturaAFetta,
 } from '../lib/api.js'
 import {
+  assortimentoDi,
   formatQty,
   contenutoDelPezzo,
   magazzinoBloccato,
@@ -26,6 +27,7 @@ import {
   piuEconomica,
   fornitoriGiaUsati,
   fetteFornitore,
+  livelloDi,
   ETICHETTA_LIVELLO,
 } from '../lib/listini.js'
 import {
@@ -154,6 +156,11 @@ export default function PurchaseOrdersPanel() {
             supplier_name: sup?.name ?? null,
             code: listino?.code ?? null,
             stato: 'richiesto',
+            // L'ASSORTIMENTO PRE-IMPOSTATO (REQ-MAG-025 punto 5): si scrive
+            // solo dove è stato chiesto. Il campo è generico apposta — è uno
+            // stato commerciale, non un sì/no — così il giorno in cui
+            // serviranno anche «in linea» o «premium» cambia la sola tendina.
+            ...(r.assortimento ? { status_target: 'assortimento' } : {}),
           }
         })
         .filter((l) => l && l.qty_packages > 0),
@@ -189,6 +196,8 @@ export default function PurchaseOrdersPanel() {
     setBozza((prev) =>
       prev.map((r) => (r.rid === rid ? { ...r, supplier_id: supplier_id || null } : r))
     )
+  const cambiaAssortimento = (rid, assortimento) =>
+    setBozza((prev) => prev.map((r) => (r.rid === rid ? { ...r, assortimento } : r)))
   const togli = (rid) => setBozza((prev) => prev.filter((r) => r.rid !== rid))
 
   async function save() {
@@ -212,11 +221,11 @@ export default function PurchaseOrdersPanel() {
   //
   // Niente `await` prima di mostrare l'esito: `consegnaRigheOrdine` compone
   // l'ordine aggiornato in memoria e le scritture partono in sottofondo.
-  function consegna(prezzi) {
-    const { ordine, fetta } = consegnaFor
+  function consegna(prezzi, indici) {
+    const { ordine } = consegnaFor
     setConsegnaFor(null)
     setError(null)
-    consegnaRigheOrdine(ordine.id, { indici: fetta.indici, prezzi }).then(
+    consegnaRigheOrdine(ordine.id, { indici, prezzi }).then(
       (o) => setOrders((prev) => prev.map((x) => (x.id === o.id ? o : x))),
       (e) => setError(e.message)
     )
@@ -434,6 +443,23 @@ export default function PurchaseOrdersPanel() {
                       Più economico: {supsById.get(economica.supplier_id)?.name || '—'} a{' '}
                       {formatPrice(economica.price)}/pz
                     </span>
+                  )}
+                  {/* L'ASSORTIMENTO SI PREPARA MENTRE LA MERCE VIAGGIA
+                      (REQ-MAG-025 punto 5), e il cambio scatta al carico:
+                      metterlo in assortimento adesso vorrebbe dire offrire
+                      una bottiglia che non è ancora arrivata. Si chiede solo
+                      dove cambia qualcosa: su un prodotto già in assortimento
+                      sarebbe una casella che non fa niente. */}
+                  {assortimentoDi(it) !== 'assortimento' && (
+                    <label className="row small" style={{ gap: 6, alignItems: 'center', marginTop: 4 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!r.assortimento}
+                        aria-label={`Metti ${it.name} in assortimento quando arriva`}
+                        onChange={(e) => cambiaAssortimento(r.rid, e.target.checked)}
+                      />
+                      <span className="muted">In assortimento quando arriva</span>
+                    </label>
                   )}
                 </div>
                 <input
@@ -692,13 +718,39 @@ function DialogoFattura({ fetta, fatture, onCancel, onConfirm }) {
 // fornitore mi scarica l'ordine vedo se veramente sono 300 o di più o di
 // meno, e modifico il prezzo quando necessario. NON POSSO MODIFICARE IL
 // FORNITORE PERCHÉ DA LUI L'HO COMPRATO».
+//
+// RIGA PER RIGA, PIÙ UN TASTO CHE LE PRENDE TUTTE (REQ-MAG-025 punto 4,
+// REQ-MAG-032). Il fornitore consegna quello che ha, non quello che è stato
+// ordinato: le due casse su tre arrivate si caricano, la terza resta
+// «richiesta» e si carica quando arriva. Si parte con TUTTO spuntato, che è
+// il caso normale — chi non tocca niente carica quello che ha ordinato — e
+// il tasto dice sempre quante righe sta per caricare e se sono tutte: un
+// carico fatto alla cieca lo si scopre contando le bottiglie.
+//
+// Le righe già consegnate non compaiono: di lì si carica, non si ricarica.
 function DialogoConsegna({ fetta, onCancel, onConfirm }) {
   const [prezzi, setPrezzi] = useState({})
+  const righe = useMemo(
+    () =>
+      fetta.lines
+        .map((l, k) => ({ l, i: fetta.indici[k] }))
+        .filter(({ l }) => livelloDi(l) === 'richiesto' && (Number(l.qty_packages) || 0) > 0),
+    [fetta]
+  )
+  const [scelti, setScelti] = useState(() => new Set(righe.map((r) => r.i)))
+  const tutte = scelti.size === righe.length && righe.length > 0
   const valore = (i, l) => prezzi[i] ?? String(Number(l.unit_cost) || 0)
-  const totale = fetta.lines.reduce(
-    (t, l, k) => t + (Number(l.qty_packages) || 0) * (Number(valore(fetta.indici[k], l)) || 0),
+  const totale = righe.reduce(
+    (t, { l, i }) => t + (scelti.has(i) ? (Number(l.qty_packages) || 0) * (Number(valore(i, l)) || 0) : 0),
     0
   )
+  const spunta = (i, dentro) =>
+    setScelti((prev) => {
+      const next = new Set(prev)
+      if (dentro) next.add(i)
+      else next.delete(i)
+      return next
+    })
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
@@ -706,36 +758,57 @@ function DialogoConsegna({ fetta, onCancel, onConfirm }) {
           📦 Merce arrivata da {fetta.supplier_name || 'questo fornitore'}?
         </h3>
         <p className="muted">
-          Controlla i prezzi come sono sul documento: quello che scrivi qui
-          diventa il prezzo di questo fornitore e il costo del prodotto. La
-          merce viene caricata a magazzino.
+          Togli la spunta a quello che non è arrivato: resta in attesa e si
+          carica quando arriva. Controlla i prezzi come sono sul documento —
+          quello che scrivi qui diventa il prezzo di questo fornitore e il
+          costo del prodotto.
         </p>
-        {fetta.lines.map((l, k) => {
-          const i = fetta.indici[k]
-          return (
-            <div className="row between" key={i} style={{ alignItems: 'center', marginTop: 6, gap: 8 }}>
-              <span className="grow" style={{ minWidth: 0 }}>
+        {righe.length > 1 && (
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => setScelti(tutte ? new Set() : new Set(righe.map((r) => r.i)))}
+          >
+            {tutte ? 'Togli tutte le spunte' : 'Spunta tutte'}
+          </button>
+        )}
+        {righe.map(({ l, i }) => (
+          <div className="row between" key={i} style={{ alignItems: 'center', marginTop: 6, gap: 8 }}>
+            <label className="row grow" style={{ minWidth: 0, gap: 6, alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={scelti.has(i)}
+                aria-label={`Carica ${l.name}`}
+                onChange={(e) => spunta(i, e.target.checked)}
+              />
+              <span style={{ minWidth: 0 }}>
                 {l.qty_packages}× {l.name}
               </span>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                aria-label={`Prezzo di ${l.name}`}
-                value={valore(i, l)}
-                onChange={(e) => setPrezzi((p) => ({ ...p, [i]: e.target.value }))}
-                style={{ width: 96, textAlign: 'right' }}
-              />
-            </div>
-          )
-        })}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              aria-label={`Prezzo di ${l.name}`}
+              value={valore(i, l)}
+              onChange={(e) => setPrezzi((p) => ({ ...p, [i]: e.target.value }))}
+              style={{ width: 96, textAlign: 'right' }}
+            />
+          </div>
+        ))}
         <div className="row between" style={{ marginTop: 10 }}>
           <span className="muted">Totale netto</span>
           <strong>{formatPrice(totale)}</strong>
         </div>
         <div className="row" style={{ gap: 10, marginTop: 16 }}>
           <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
-          <button className="btn grow" onClick={() => onConfirm(prezzi)}>Carica a magazzino</button>
+          <button
+            className="btn grow"
+            disabled={scelti.size === 0}
+            onClick={() => onConfirm(prezzi, [...scelti])}
+          >
+            {tutte ? `Carica tutti (${scelti.size})` : `Carica i selezionati (${scelti.size})`}
+          </button>
         </div>
       </div>
     </div>

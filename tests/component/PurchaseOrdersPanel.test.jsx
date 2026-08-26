@@ -240,7 +240,10 @@ describe('lo storico va per FETTA di fornitore', () => {
     expect(screen.queryByLabelText(/Fornitore di/)).toBeNull()
     await user.clear(prezzo)
     await user.type(prezzo, '13.5')
-    await user.click(screen.getByRole('button', { name: 'Carica a magazzino' }))
+    // Il tasto dice quante righe carica e se sono tutte: da REQ-MAG-032 la
+    // consegna si può spuntare riga per riga, e un carico fatto alla cieca
+    // lo si scopre contando le bottiglie.
+    await user.click(screen.getByRole('button', { name: 'Carica tutti (1)' }))
 
     await waitFor(() => expect(consegnato).toHaveBeenCalled())
     const [id, opts] = consegnato.mock.calls.at(-1)
