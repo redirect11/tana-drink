@@ -22,15 +22,15 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 179 | fatto e coperto dai test |
+| ✅ | 180 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 22 | da fare |
 | 🗑 | 1 | non più valido |
 
-**216 voci** in tutto. **193** descrivono il sistema com'è oggi e
+**217 voci** in tutto. **194** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **12** difetti noti sono ancora aperti.
+cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Integrazione SumUp](#integrazione-sumup) | 6 | — | Il dialogo con il terminale SumUp, dalle Cloud Functions. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 13 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 14 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 1 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
@@ -2074,6 +2074,18 @@ IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche' qualcuno non la ac
 
 **Dove**: `src/lib/stampanteFinta.js, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/stampanteFinta.test.js`
 
+#### REQ-DEV-015 — Le regole Firestore hanno delle prove, e ogni prova è doppia
+
+Le regole di Firestore sono l'UNICA barriera fra i dati del locale e chiunque abbia letto apiKey e projectId dal bundle — che sono pubblici per disegno. Fino all'audit del 26/08/2026 non avevano un solo test: si leggevano e si sperava. L'audit stesso lo mette fra le cose da fare.
+
+ADESSO ci sono: girano contro l'emulatore Firestore con le regole VERE lette da firestore.rules, così una regola che cambia cambia anche quello che si prova.
+
+OGNI PROVA È DOPPIA, ed è il punto di questo requisito: che l'abuso sia bloccato conta quanto che l'uso legittimo passi. Una regola che chiude tutto è facile da scrivere e la sera manda a casa il locale — è già successo di sfiorarlo con BUG-091, dove la cura ovvia («solo lo staff scrive i contatori») spegneva la numerazione degli ordini che arrivano dal telefono del cliente, che non è autenticato.
+
+STANNO PER CONTO LORO, fuori da `npm test`: senza emulatore acceso non partirebbero e renderebbero rossa la CI per un motivo che non è un difetto. Si lanciano con `npm run test:regole`, dopo aver acceso gli emulatori (vedi docs/ambiente-locale.md). Per la stessa ragione non contano per la copertura: quello che misurano non è codice nostro.
+
+**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`
+
 ### STAT
 
 #### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
@@ -2591,7 +2603,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-038](#bug-038--sulla-pwa-android-le-notifiche-arrivano-solo-accendendo-lo-schermo) — Sulla PWA Android le notifiche arrivano solo accendendo lo schermo | media | P2 |
 | 🔴 | [BUG-043](#bug-043--due-nomi-con-la-stessa-iniziale-e-in-legenda-ne-resta-uno-solo) — Due nomi con la stessa iniziale, e in legenda ne resta uno solo | lieve | P3 |
 | 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
-| 🔴 | [BUG-091](#bug-091--countersdatekey-è-scrivibile-da-chiunque-anche-senza-login) — counters/{dateKey} è scrivibile da chiunque, anche senza login | grave | P1 |
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-093](#bug-093--ogni-ordine-è-leggibile-e-creabile-da-chiunque-dati-personali-esposti) — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti | grave | P1 |
 | · | [BUG-094](#bug-094--le-callable-sumup-pos-pro-non-controllano-né-login-né-ruolo) — Le callable SumUp POS Pro non controllano né login né ruolo | grave | P2 |
@@ -2660,12 +2671,6 @@ Il repo redirect11/tana-drink è PUBBLICO, e in registrazioni/ ci sono 63 file �
 COSA FARE (in quest'ordine): (1) cancellare sul server i rami release/1.3.0 e release/1.4.0 (e i locali citati, o riscriverli); (2) riscrivere la storia di tutti i rami con `git filter-repo --path registrazioni/ --invert-paths` (o BFG) e force-push; (3) aprire un ticket al GitHub Support per purgare gli oggetti dalle cache/reflog lato server — i commit restano raggiungibili per SHA anche dopo il force-push — e verificare che non esistano fork; (4) decidere se il repo debba restare pubblico. Non c'è un segreto da ruotare: è privacy di persone reali, ed è il finding più grave dell'audit.
 
 **Dove**: `registrazioni/ (storia git e rami release/1.3.0, release/1.4.0), .gitignore, repository GitHub`
-
-#### BUG-091 — counters/{dateKey} è scrivibile da chiunque, anche senza login
-
-In firestore.rules la collezione dei progressivi ha `allow read, write: if true`: nessun login, nessun ruolo, nessun App Check imposto. Chiunque abbia estratto apiKey e projectId dal bundle (pubblici per design) può fare setDoc(counters/2026-08-26, {last: 999999}) o azzerare il contatore. Danno: la sera i nuovi conti prendono numeri assurdi o DUPLICATI di conti già in mano ai clienti — la comanda stampata «#15» e quella a schermo non coincidono più. È la stessa classe di incidente che progressivi.js documenta come già vissuta; risolviNumeroDuplicato gestisce le collisioni accidentali fra terminali, non un avvelenamento deliberato del contatore. L'apertura è motivata dalla numerazione lato client offline, ma va ristretta. Comportamento atteso: la scrittura dei counter solo allo staff. CURA: `allow write: if isStaffMember();`. Se serve l'incremento dal client anonimo, vincolarlo a `request.resource.data.last == resource.data.last + 1` con App Check imposto (vedi BUG-092), o spostare l'assegnazione del progressivo interamente server-side. Serve un test delle regole (@firebase/rules-unit-testing), oggi assente: l'anonimo non deve poter scrivere counters.
-
-**Dove**: `firestore.rules (match /counters/{dateKey}), src/lib/progressivi.js`
 
 #### BUG-092 — App Check è inizializzato sul client ma non imposto da nessuna parte
 

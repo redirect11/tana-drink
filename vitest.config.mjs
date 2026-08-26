@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -24,6 +24,11 @@ export default defineConfig({
     // passerebbero o fallirebbero a seconda di dove gira la macchina.
     env: { TZ: 'Europe/Rome' },
     include: ['tests/**/*.test.js', 'tests/**/*.test.jsx'],
+    // Fuori i test delle REGOLE Firestore: vogliono l'emulatore acceso e
+    // hanno una configurazione loro (vitest.regole.config.mjs, `npm run
+    // test:regole`). Qui dentro renderebbero rossa la CI senza che ci sia
+    // niente di rotto.
+    exclude: [...configDefaults.exclude, 'tests/regole/**'],
     coverage: {
       provider: 'v8',
       include: ['functions/lib/**/*.js', 'src/**/*.js', 'src/**/*.jsx'],

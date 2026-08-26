@@ -82,6 +82,23 @@ documenta come già vissuta.
 vincolare a `request.resource.data.last == resource.data.last + 1` con App Check imposto,
 o spostare l'assegnazione del progressivo interamente server-side.
 
+> **✅ CHIUSO il 26/08/2026** (BUG-091). E la cura secca proposta qui sopra era
+> **sbagliata**: il cliente che ordina dal menù non è autenticato e passa dallo
+> **stesso** contatore, quindi `write: if isStaffMember()` gli spegnerebbe
+> l'incremento — il conto uscirebbe lo stesso, il contatore no, e il cliente
+> dopo prenderebbe **lo stesso numero**. Esattamente il doppione da evitare
+> (dimostrato da un test: con quella regola l'uso legittimo diventa rosso).
+> Fatto invece così: non si chiede *chi* scrive ma *cosa* scrive — a chi non è
+> del personale si concede il solo gesto di `progressivi.js`, un `increment(1)`
+> sul solo campo `last`, e un contatore nuovo può nascere solo a `1`. Le regole
+> vedono il valore **dopo** il transform (verificato sull'emulatore), quindi il
+> vincolo `+ 1` si scrive tale e quale. Il personale resta libero
+> (`_active_cash`, `fatture-AAAA`, correzioni); il local-first è intatto.
+> Resta il gocciolamento — N chiamate spingono avanti di N: numeri alti, mai
+> duplicati. Lo chiude App Check (finding 3).
+> Prove: `tests/regole/counters.test.js`, 14 casi (abuso + uso legittimo).
+> **Da fare a mano:** pubblicare le regole (`firebase deploy --only firestore:rules`).
+
 ---
 
 ## 🟠 Alta
