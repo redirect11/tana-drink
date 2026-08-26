@@ -35,7 +35,8 @@ import {
   caricoDaConfezioni,
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
-import { idRigaListino, livelloDi, statoOrdine, coloreACaso } from './listini.js'
+import { idRigaListino, livelloDi, statoOrdine, coloreACaso, fetteFornitore } from './listini.js'
+import { aggancioAmmesso } from './fatture.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
 import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
@@ -1254,6 +1255,11 @@ function mapInvoice(snap) {
     // ce le ha, ed è la normalità di tutte quelle già in archivio: la
     // testata resta valida, le righe si aggiungono quando qualcuno le mette.
     lines: Array.isArray(i.lines) ? i.lines : [],
+    // IL LEGAME CON LA FETTA (REQ-MAG-031): l'ordine da cui viene la merce
+    // di questo documento. Il fornitore è già qui sopra, e la coppia dei due
+    // è la fetta. Chi non ce l'ha è una fattura senza ordine, che è uno dei
+    // due buchi da vedere a colpo d'occhio.
+    order_id: i.order_id ?? null,
     created_at: toIso(i.created_at),
   }
 }
@@ -1283,6 +1289,51 @@ export async function deleteSupplierInvoice(id) {
   await deleteDoc(doc(db, 'supplier_invoices', id))
 }
 
+// ── LA FATTURA SI AGGANCIA ALLA FETTA DEL SUO FORNITORE (REQ-MAG-031) ─
+//
+// «La vista degli ordini contiene più fornitori, ma la fattura è collegata
+// all'ordine PER IL FORNITORE, perché è il fornitore che rilascia la
+// fattura» (l'utente, 20/08). Si scrive un campo solo, `order_id` sulla
+// fattura: il fornitore ce l'ha già, e la coppia dei due è la fetta.
+//
+// `order_id` a null STACCA, ed è lo stesso gesto al contrario: un documento
+// attaccato all'ordine sbagliato si stacca, non si corregge di nascosto.
+export async function collegaFatturaAFetta(id, { order_id = null } = {}) {
+  const ref = doc(db, 'supplier_invoices', id)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) throw new Error('Documento non trovato')
+  const fattura = mapInvoice(snap)
+  if (order_id) await verificaAggancio(order_id, fattura)
+  // Non si rilegge quello che si è appena scritto: la scrittura parte in
+  // sottofondo e la cache risponderebbe col documento di prima (BUG-045).
+  bgWrite(() => updateDoc(ref, { order_id: order_id || null }), 'legame fattura-ordine')
+  return { ...fattura, order_id: order_id || null }
+}
+
+// LA GUARDIA STA DAVANTI ALLA SCRITTURA, non solo davanti all'elenco delle
+// candidate: le schermate aperte sono due e i terminali del locale pure, e
+// una fetta coperta da un altro terminale un minuto fa non si vede.
+//
+// La regola è la stessa che filtra gli elenchi — `aggancioAmmesso` in
+// fatture.js — e viene chiamata, non riscritta: due copie della stessa
+// regola divergono, e quella che perde è sempre la copia che scrive.
+async function verificaAggancio(orderId, fattura) {
+  const ordineSnap = await getDoc(doc(db, 'purchase_orders', orderId))
+  if (!ordineSnap.exists()) throw new Error('Ordine non trovato')
+  const ordine = mapPurchaseOrder(ordineSnap)
+  const fetta = fetteFornitore(ordine).find((f) => f.supplier_id === fattura.supplier_id)
+  if (!fetta) {
+    throw new Error(`In quell’ordine non c’è niente di ${fattura.supplier_name || 'questo fornitore'}`)
+  }
+  // Le altre fatture di QUELL'ordine, non tutte: è l'unica lettura che serve
+  // per sapere se la fetta è già coperta.
+  const altre = await getDocs(
+    query(collection(db, 'supplier_invoices'), where('order_id', '==', orderId))
+  )
+  const motivo = aggancioAmmesso(fattura, fetta, { fatture: altre.docs.map(mapInvoice) })
+  if (motivo) throw new Error(motivo)
+}
+
 // ── «AGGIUNGI PRODOTTI» A UNA FATTURA (REQ-MAG-030) ──────────────────
 //
 // Flavio: «sotto mi deve apparire un tasto che fa il carico. Dobbiamo usare
@@ -1299,13 +1350,22 @@ export async function deleteSupplierInvoice(id) {
 //
 // `righe` sono le righe da aggiungere: item_id, quantità in confezioni,
 // prezzo e — per riga — se quel prezzo deve aggiornare l'archivio.
-export async function aggiungiProdottiAFattura(id, { righe = [], carica = true } = {}) {
+//
+// `order_id` AGGANCIA LA FATTURA MENTRE SE NE RIPRENDONO LE RIGHE
+// (REQ-MAG-031): sono lo stesso gesto — si ricopia il documento dall'ordine
+// che l'ha generato — e tenerli separati voleva dire lasciare il legame non
+// scritto proprio nel momento in cui uno l'aveva appena dimostrato. Va in
+// una sola scrittura con le righe: due scritture, e una delle due può
+// restare indietro.
+export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, order_id = null } = {}) {
   const ref = doc(db, 'supplier_invoices', id)
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Documento non trovato')
   const fattura = snap.data()
+  const collega = !!order_id && order_id !== (fattura.order_id ?? null)
+  if (collega) await verificaAggancio(order_id, mapInvoice(snap))
   const nuove = (righe || []).filter((r) => r?.item_id && (Number(r.qty_packages) || 0) > 0)
-  if (nuove.length === 0) return mapInvoice(snap)
+  if (nuove.length === 0 && !collega) return mapInvoice(snap)
 
   // PRIMA SI LEGGE TUTTO, POI SI SCRIVE, come alla consegna di un ordine:
   // fermandosi a metà, metà fattura risulterebbe caricata e metà no, e
@@ -1360,11 +1420,12 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true }
   })
 
   const lines = [...(Array.isArray(fattura.lines) ? fattura.lines : []), ...scritte]
+  const patch = collega ? { lines, order_id } : { lines }
   // Non si rilegge quello che si è appena scritto: la scrittura parte in
   // sottofondo e la cache risponderebbe col documento di prima (BUG-045).
   // Il risultato si compone qui.
-  bgWrite(() => updateDoc(ref, { lines }), 'prodotti fattura')
-  return { ...mapInvoice(snap), lines }
+  bgWrite(() => updateDoc(ref, patch), 'prodotti fattura')
+  return { ...mapInvoice(snap), ...patch }
 }
 
 // --- SERVIZIO (perpetuo) ---
