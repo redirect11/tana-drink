@@ -33,7 +33,8 @@ import {
   articoloNormalizzato,
   patchNormalizza,
 } from './inventory.js'
-import { consumptionDiff } from './warehouse.js'
+import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
+import { idRigaListino, livelloDi, statoOrdine, coloreACaso } from './listini.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
 import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
@@ -90,6 +91,10 @@ const inventoryCol = collection(db, 'inventory_items')
 const inventoryCategoriesCol = collection(db, 'inventory_categories')
 const macroCategoriesCol = collection(db, 'macro_categories')
 const suppliersCol = collection(db, 'suppliers')
+// IL LISTINO: una riga per coppia prodotto-fornitore (REQ-MAG-029). Sta
+// accanto ai fornitori e non dentro il prodotto perché il prodotto resta
+// UNO — è la riga a duplicarsi, non il Campari.
+const supplierPricesCol = collection(db, 'supplier_prices')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const groupsCol = collection(db, 'groups')
@@ -516,6 +521,10 @@ function mapSupplier(snap) {
     sort_order: s.sort_order ?? 0,
     notes: s.notes ?? null,
     email: s.email ?? null,
+    // Il colore con cui il fornitore si riconosce nelle liste degli ordini
+    // (REQ-MAG-029). Chi non ce l'ha ne riceve uno stabile calcolato dal
+    // suo id: la regola sta in `listini.js`, non qui.
+    color: s.color ?? null,
     created_at: toIso(s.created_at),
   }
 }
@@ -527,10 +536,21 @@ export async function fetchSuppliers() {
   return list
 }
 
-export async function createSupplier({ name, sort_order = 0, notes = null }) {
-  const ref = await addDoc(suppliersCol, { name, sort_order, notes, created_at: serverTimestamp() })
+// IL COLORE SI SCEGLIE ALLA CREAZIONE: a caso, oppure a mano. A caso e non
+// «il prossimo libero» perché i fornitori si creano anche dalla scheda
+// prodotto, di corsa, e chiedere lì una scelta cromatica sarebbe un passo
+// in più in un momento in cui si sta inventariando una bottiglia.
+export async function createSupplier({ name, sort_order = 0, notes = null, color = null }) {
+  const ref = await addDoc(suppliersCol, {
+    name,
+    sort_order,
+    notes,
+    color: color || coloreACaso(),
+    created_at: serverTimestamp(),
+  })
   return mapSupplier(await getDoc(ref))
 }
+
 
 export async function updateSupplier(id, patch) {
   const ref = doc(db, 'suppliers', id)
@@ -540,6 +560,66 @@ export async function updateSupplier(id, patch) {
 
 export async function deleteSupplier(id) {
   await deleteDoc(doc(db, 'suppliers', id))
+}
+
+// ── IL LISTINO: UN PRODOTTO, PIÙ FORNITORI (REQ-MAG-029) ─────────────
+//
+// Una riga per coppia prodotto-fornitore, con id DETERMINISTICO: l'unicità
+// della coppia è così un fatto strutturale del database e non un controllo
+// applicativo che un secondo terminale può scavalcare.
+
+function mapSupplierPrice(snap) {
+  const r = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: r.supplier_id ?? null,
+    item_id: r.item_id ?? null,
+    // Il prezzo NETTO di un pezzo, come il costo del prodotto: due misure
+    // diverse per la stessa cosa vorrebbero dire un confronto sbagliato
+    // proprio dove serve confrontare.
+    price: r.price == null ? null : Number(r.price),
+    // La confezione DI QUEL FORNITORE («cartone da 6») e il codice sul suo
+    // listino: servono a chi scrive l'ordine e a chi lo riceve dall'altra
+    // parte, e non sono la confezione del prodotto in magazzino.
+    package_label: r.package_label ?? null,
+    code: r.code ?? null,
+    last_price: r.last_price == null ? null : Number(r.last_price),
+    last_price_at: r.last_price_at ?? null,
+  }
+}
+
+export async function fetchSupplierPrices() {
+  const snap = await getDocs(supplierPricesCol)
+  return snap.docs.map(mapSupplierPrice)
+}
+
+// Salva (o aggiorna) una riga di listino. `merge` perché la consegna scrive
+// solo il prezzo e la sua data: riscrivere tutto cancellerebbe il codice
+// articolo e la confezione che qualcuno aveva compilato a mano.
+export async function salvaRigaListino({
+  supplier_id,
+  item_id,
+  price = null,
+  package_label = null,
+  code = null,
+}) {
+  const id = idRigaListino(supplier_id, item_id)
+  if (!id) throw new Error('Serve il fornitore e il prodotto')
+  const riga = {
+    supplier_id,
+    item_id,
+    price: price == null || price === '' ? null : Number(price),
+    package_label: package_label || null,
+    code: code || null,
+  }
+  await setDoc(doc(db, 'supplier_prices', id), riga, { merge: true })
+  return { id, ...riga, last_price: null, last_price_at: null }
+}
+
+export async function eliminaRigaListino(supplier_id, item_id) {
+  const id = idRigaListino(supplier_id, item_id)
+  if (!id) return
+  await deleteDoc(doc(db, 'supplier_prices', id))
 }
 
 export async function createInventoryItem(item) {
@@ -919,10 +999,19 @@ function mapPurchaseOrder(snap) {
   }
 }
 
+// L'ORDINE RESTA UNO, COI FORNITORI DENTRO (REQ-MAG-025 del 20/08, e
+// REQ-MAG-029): il fornitore sta sulla RIGA, e il per-fornitore è una vista.
+// I due campi in testa restano scritti quando l'ordine ha un fornitore solo
+// — è il caso normale, ed è quello che leggono la stampa, l'email e lo
+// scadenzario senza sapere niente delle fette.
 export async function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
+  const fornitori = new Set((lines || []).map((l) => l.supplier_id ?? supplier_id ?? null))
+  const unico = fornitori.size === 1 ? [...fornitori][0] : null
   const ref = await addDoc(collection(db, 'purchase_orders'), {
-    supplier_id,
-    supplier_name,
+    supplier_id: supplier_id ?? unico ?? null,
+    supplier_name:
+      supplier_name ??
+      (unico ? (lines || []).find((l) => l.supplier_id === unico)?.supplier_name ?? '' : ''),
     status: 'inviato',
     created_at: serverTimestamp(),
     received_at: null,
@@ -944,30 +1033,72 @@ export async function deletePurchaseOrder(id) {
   await deleteDoc(doc(db, 'purchase_orders', id))
 }
 
-// Segna un ordine come ricevuto e carica la merce a magazzino: per ogni riga
-// aumenta la giacenza (confezioni × contenuto, o pezzi) e registra il
-// movimento; le bottiglie totali vengono aggiornate scartando le vuote,
-// come nel carico manuale.
-export async function receivePurchaseOrder(id) {
+// ── I TRE LIVELLI DELLA RIGA D'ORDINE (REQ-MAG-029) ─────────────────
+//
+// Flavio: «io mi creo l'ordine che devo mandare al fornitore e in quel
+// momento lui non mi carica ancora i prodotti; una volta che me li ha
+// portati io faccio consegnato, e dopo mi fa il carico». IL CARICO A
+// MAGAZZINO AVVIENE QUI, al passaggio a CONSEGNATO — non alla creazione
+// dell'ordine e non al pagamento.
+//
+// Prima c'era `receivePurchaseOrder`, che caricava l'ordine INTERO in un
+// colpo al «ricevuto»: con un ordine di più fornitori quel gesto non esiste
+// più, perché i fornitori consegnano in giorni diversi.
+//
+// `indici` sono le posizioni delle righe nell'array `lines`; `prezzi` è la
+// correzione del prezzo per riga, indicizzata allo stesso modo — ALLA
+// CONSEGNA SI CORREGGE IL PREZZO, MAI IL FORNITORE: «non posso modificare
+// il fornitore perché da lui l'ho comprato» (Flavio).
+export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {}) {
   const orderRef = doc(db, 'purchase_orders', id)
   const orderSnap = await getDoc(orderRef)
   if (!orderSnap.exists()) throw new Error('Ordine non trovato')
   const order = orderSnap.data()
-  if (order.status === 'ricevuto') return
+  const lines = (Array.isArray(order.lines) ? order.lines : []).map((l) => ({ ...l }))
 
-  const lines = (order.lines || []).filter((l) => (Number(l.qty_packages) || 0) > 0)
-  const itemSnaps = await Promise.all(
-    lines.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
+  const scelti = (indici ?? lines.map((_, i) => i)).filter(
+    (i) =>
+      lines[i] &&
+      livelloDi(lines[i]) === 'richiesto' &&
+      (Number(lines[i].qty_packages) || 0) > 0
   )
+  if (scelti.length === 0) return mapPurchaseOrder(orderSnap)
 
-  for (let idx = 0; idx < lines.length; idx++) {
-    const l = lines[idx]
-    const cur = articoloScrivibile(itemSnaps[idx])
+  // PRIMA SI LEGGE TUTTO, POI SI SCRIVE. `articoloScrivibile` si ferma se il
+  // magazzino è ancora scritto alla vecchia maniera (BUG-029): fermandosi a
+  // metà del giro, metà ordine risulterebbe consegnato e metà no, e nessuno
+  // saprebbe più dove ricominciare.
+  const snaps = await Promise.all(
+    scelti.map((i) => getDoc(doc(db, 'inventory_items', lines[i].item_id)))
+  )
+  const articoli = snaps.map(articoloScrivibile)
+
+  // Firestore non accetta `serverTimestamp()` DENTRO un array: la data della
+  // riga è quella del terminale, come per le comande.
+  const adesso = new Date().toISOString()
+
+  for (let k = 0; k < scelti.length; k++) {
+    const i = scelti[k]
+    const l = lines[i]
+    const corretto = prezzi?.[i]
+    const costo =
+      corretto == null || corretto === '' || !(Number(corretto) >= 0)
+        ? Number(l.unit_cost) || 0
+        : Number(corretto)
+    l.unit_cost = costo
+    l.stato = 'consegnato'
+    l.delivered_at = adesso
+
+    const cur = articoli[k]
+    // Prodotto sparito dall'anagrafica mentre l'ordine viaggiava: la riga
+    // avanza lo stesso, se no resterebbe «richiesta» per sempre e l'ordine
+    // non si chiuderebbe mai. Quello che non si può fare è caricarne la
+    // giacenza, perché non c'è più nessuna giacenza da alzare.
     if (!cur) continue
+
     const qty = Number(l.qty_packages) || 0
     const size = Number(cur.package_size) || 0
     const stock = Number(cur.stock) || 0
-
     let addQty
     const patch = {}
     if (cur.unit === 'pz' || !size) {
@@ -980,19 +1111,92 @@ export async function receivePurchaseOrder(id) {
       patch.stock = increment(addQty)
       patch.bottles_total = full + (hasOpen ? 1 : 0) + qty
     }
-    await updateDoc(doc(db, 'inventory_items', l.item_id), patch)
-    await addDoc(movementsCol, {
-      item_id: l.item_id,
-      item_name: cur.name,
-      type: 'load',
-      qty: addQty,
-      unit: cur.unit ?? null,
-      reason: 'ordine fornitore',
-      created_at: serverTimestamp(),
-    })
+    // IL COSTO DEL PRODOTTO RESTA UN NUMERO SOLO: l'ultimo effettivamente
+    // pagato, chiunque fosse il fornitore. È quello che valorizza il
+    // magazzino e il costo ricetta; il confronto fra fornitori vive nel
+    // listino, che è un'altra cosa (REQ-MAG-029).
+    patch.cost = costo
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', l.item_id), patch), 'carico ordine')
+    bgWrite(
+      () =>
+        addDoc(movementsCol, {
+          item_id: l.item_id,
+          item_name: cur.name,
+          type: 'load',
+          qty: addQty,
+          unit: cur.unit ?? null,
+          reason: 'ordine fornitore',
+          created_at: serverTimestamp(),
+        }),
+      'movimento ordine'
+    )
+
+    // LA CORREZIONE AGGIORNA IL LISTINO DI QUEL FORNITORE, con la sua data.
+    // È anche il modo in cui i listini si popolano da soli usandoli: chi
+    // ordina e riceve scrive il prezzo vero senza compilare niente a parte.
+    const supplierId = l.supplier_id ?? order.supplier_id ?? null
+    const rigaId = idRigaListino(supplierId, l.item_id)
+    if (rigaId) {
+      bgWrite(
+        () =>
+          setDoc(
+            doc(db, 'supplier_prices', rigaId),
+            {
+              supplier_id: supplierId,
+              item_id: l.item_id,
+              price: costo,
+              last_price: costo,
+              last_price_at: adesso,
+            },
+            { merge: true }
+          ),
+        'listino fornitore'
+      )
+    }
   }
 
-  await updateDoc(orderRef, { status: 'ricevuto', received_at: serverTimestamp() })
+  return scriviRigheOrdine(orderRef, orderSnap, lines)
+}
+
+// «Lo metto come consegnato, e da lì me lo metto come da pagare» (Flavio):
+// si paga quello che è arrivato, non quello che è stato solo chiesto.
+export async function segnaRighePagate(id, { indici = null } = {}) {
+  const orderRef = doc(db, 'purchase_orders', id)
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const order = orderSnap.data()
+  const lines = (Array.isArray(order.lines) ? order.lines : []).map((l) => ({ ...l }))
+  const adesso = new Date().toISOString()
+  let toccate = 0
+  for (const i of indici ?? lines.map((_, k) => k)) {
+    if (!lines[i] || livelloDi(lines[i]) !== 'consegnato') continue
+    lines[i].stato = 'pagato'
+    lines[i].paid_at = adesso
+    toccate += 1
+  }
+  if (toccate === 0) return mapPurchaseOrder(orderSnap)
+  return scriviRigheOrdine(orderRef, orderSnap, lines)
+}
+
+// Scrive le righe toccate e ricompone l'ordine IN MEMORIA. Non lo si
+// rilegge: la scrittura parte in sottofondo, quindi nell'istante della
+// rilettura la cache conterrebbe ancora la versione di prima e la schermata
+// mostrerebbe il passato (è stato il difetto di BUG-045).
+function scriviRigheOrdine(orderRef, orderSnap, lines) {
+  const totali = purchaseOrderTotals(lines)
+  const status = statoOrdine({ lines })
+  const prima = mapPurchaseOrder(orderSnap)
+  const patch = { lines, total_net: totali.net, total_gross: totali.gross, status }
+  // La data del ricevimento si scrive una volta sola, quando non resta più
+  // niente da consegnare.
+  const primoRicevimento = status === 'ricevuto' && !prima.received_at
+  if (primoRicevimento) patch.received_at = serverTimestamp()
+  bgWrite(() => updateDoc(orderRef, patch), 'ordine fornitore')
+  return {
+    ...prima,
+    ...patch,
+    received_at: primoRicevimento ? new Date().toISOString() : prima.received_at,
+  }
 }
 
 // --- SCADENZARIO FORNITORI (documenti / pagamenti) ---

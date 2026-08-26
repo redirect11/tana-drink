@@ -214,6 +214,12 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // LISTINO FORNITORI — il prezzo di un prodotto PRESSO un fornitore
+    // (REQ-MAG-029). Sta con i fornitori: un prodotto, più listini.
+    match /supplier_prices/{rigaId} {
+      allow read, write: if isBartender();
+    }
+
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
       allow read, write: if isBartender();
