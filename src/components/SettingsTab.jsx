@@ -20,7 +20,13 @@ import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import StampaAutomatica from './StampaAutomatica.jsx'
 import ToggleRow from './ToggleRow.jsx'
-import { MOTIVO_PREMIUM, moduliPremium, moduloAttivo } from '../lib/licenza.js'
+import {
+  MOTIVO_PREMIUM,
+  chiaveModulo,
+  moduliPremium,
+  moduloAttivo,
+  moduloIncluso,
+} from '../lib/licenza.js'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
@@ -1041,7 +1047,7 @@ export default function SettingsTab({ role = null }) {
       id: 'funzioni-premium',
       icona: '🔒',
       label: 'Funzioni premium',
-      nodo: <FunzioniPremium settings={settings} />,
+      nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
     {
       id: 'annullamenti',
@@ -1476,35 +1482,40 @@ function AmountInput({ value, min, max, step, onCommit }) {
 }
 
 // ── LE FUNZIONI PREMIUM ───────────────────────────────────
-// Quello che questa installazione potrebbe avere e non ha. Restano in
-// elenco APPOSTA (decisione dell'utente, 26/08/2026): sparite del tutto,
-// nessuno saprebbe che esistono, e chi le ha viste una volta si
+// Cosa ha questo locale, e cosa potrebbe avere. Anche quelle che NON ha
+// restano in elenco APPOSTA (decisione dell'utente, 26/08/2026): sparite
+// del tutto, nessuno saprebbe che esistono, e chi le ha viste una volta si
 // chiederebbe dove sono finite.
-// Gli interruttori dicono lo stato VERO — acceso dove il modulo c'è — e non
-// si toccano da qui: si accendono con la licenza dell'installazione
-// (lib/licenza.js). Spenti ma non `disabled`: al tocco dicono perché.
-function FunzioniPremium({ settings }) {
+//
+// DUE RIGHE DIVERSE, e lo si vede (lib/licenza.js):
+// · modulo NON INCLUSO — interruttore spento e bloccato, che al tocco dice
+//   perché. Cosa il locale ha comprato non si decide da qui.
+// · modulo INCLUSO — interruttore NORMALE: si accende e si spegne come
+//   ogni altra impostazione. Resta scritto che è una funzione premium, ma
+//   «non inclusa» su una funzione che il locale ha sarebbe falso.
+function FunzioniPremium({ settings, onSave }) {
   return (
     <div className="card settings-section">
       <h3>Funzioni premium</h3>
       <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Funzioni non incluse in questa installazione. Sono elencate qui per
-        sapere che esistono e cosa fanno; l’attivazione non si fa da questa
-        schermata.
+        Funzioni che fanno parte della licenza dell’installazione. Quelle
+        incluse si accendono e si spengono da qui; le altre sono elencate per
+        sapere che esistono e cosa fanno.
       </p>
       {moduliPremium().map((m) => {
-        const attivo = moduloAttivo(settings, m.id)
+        const incluso = moduloIncluso(settings, m.id)
         return (
           <ToggleRow
             key={m.id}
             label={m.label}
             desc={`${m.descrizione} ${
-              attivo
-                ? 'Funzione premium, attiva su questa installazione.'
+              incluso
+                ? 'Funzione premium, inclusa in questa installazione.'
                 : 'Funzione premium: non inclusa.'
             }`}
-            checked={attivo}
-            motivo={MOTIVO_PREMIUM}
+            checked={moduloAttivo(settings, m.id)}
+            motivo={incluso ? undefined : MOTIVO_PREMIUM}
+            onChange={(v) => onSave({ [chiaveModulo(m.id)]: v })}
           />
         )
       })}

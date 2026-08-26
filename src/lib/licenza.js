@@ -1,22 +1,46 @@
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
-// ai fornitori si attivano all'occorrenza, e di partenza sono spente. Sono
-// le prime due di una famiglia — il piano di sbrandizzazione (Fase 3,
+// ai fornitori si attivano all'occorrenza. Sono le prime due di una
+// famiglia — il piano di sbrandizzazione (Fase 3,
 // docs/piano-sbrandizzazione.md) prevede pacchetti interi — quindi la
 // risposta sta QUI e non in un `if` dentro ogni schermata: due interruttori
 // sparsi diventano tre, poi cinque, e a quel punto per sapere cosa vede un
 // locale bisogna leggersi mezza app. Aggiungere il prossimo modulo è una
 // voce in questa tabella; il resto del codice non cambia.
 //
-// COME SI AGGANCERÀ ALLA LICENZA VERA. La Fase 3 prevede un documento
-// `settings/licenza` (piano + moduli attivi) e dice di estendere lo schema
-// che c'è già, quello di `workflow_enabled` su settings/bar. Finché quel
-// documento non esiste, un modulo è acceso da un flag booleano su
-// settings/bar: stessa forma, stessa cache, nessuna lettura in più. Quando
-// arriverà, chi lo collega tocca SOLO `moduloAttivo` — lo stato che le
-// schermate passano già oggi si porterà dietro un campo `licenza`, e la
-// licenza vincerà sui flag. Nessuna schermata se ne accorge, perché
-// nessuna schermata sa da dove viene la risposta.
+// ── DUE DOMANDE, NON UNA ─────────────────────────────────────────────
+// È la distinzione che una licenza fa per mestiere, e vale la pena averla
+// nel modello fin da subito (l'utente, 26/08/2026: «dobbiamo riattivare lo
+// scadenziario, ma lasciamolo sempre funzione premium: va abilitato lo
+// switch e abilitata la funzione»).
+//
+//   INCLUSO  — la licenza dice cosa il locale HA comprato.
+//   ACCESO   — l'impostazione dice se in questo momento lo USA.
+//
+// Un modulo è ATTIVO quando è incluso E acceso. Le due domande non si
+// possono impastare in un flag solo: senza «incluso» non si distingue un
+// locale che la funzione non ce l'ha da uno che ce l'ha e l'ha spenta —
+// e sono due schermate diverse, una con l'interruttore bloccato e una con
+// l'interruttore normale.
+//
+// COSA È INCLUSO, OGGI: lo dice `incluso` in questa tabella. Sta nel
+// CODICE apposta, non nelle impostazioni del bar: quello che un locale ha
+// comprato non è una preferenza che si cambia dal pannello — lì si accende
+// e si spegne quello che si ha, non si decide cosa si ha. Finché non esiste
+// il documento della licenza, la licenza di questa installazione è la sua
+// build; è lo stesso posto dove finirà la configurazione per cliente della
+// Fase 2 (`clienti/<slug>/`).
+//
+// COME SI AGGANCERÀ LA LICENZA VERA. La Fase 3 prevede `settings/licenza`
+// (o un campo nel venue) con piano e moduli attivi, estendendo lo schema
+// che c'è già — quello di `workflow_enabled` su settings/bar. Il punto di
+// innesto è uno solo, `moduloIncluso`: se lo stato porta con sé una
+// `licenza` con l'elenco dei moduli, comanda lei e la colonna `incluso`
+// della tabella non si guarda nemmeno. L'interruttore d'uso resta dov'è,
+// perché quello è del locale e non della licenza — un locale che ha
+// comprato lo scadenzario può comunque volerlo spento a gennaio.
+// Gli strumenti di sviluppo scrivono già `licenza.moduli` in quella forma
+// (DevTools.jsx): è la prova generale del documento vero.
 //
 // ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la
 // distinzione è teorica; il giorno che i locali sono tanti, il controllo
@@ -27,27 +51,33 @@
 // I MODULI, uno per riga. La chiave `id` è la stessa della sezione che il
 // modulo accende (`conta`, `scadenzario` nel magazzino): così filtrare un
 // elenco di sezioni è una riga sola e non una tabella di corrispondenze.
-// `chiave` è il nome del flag su settings/bar — scritto per esteso e non
-// calcolato, perché è un nome che finisce su documenti veri e chi lo cerca
-// nel codice lo deve trovare.
+// `chiave` è il nome del flag D'USO su settings/bar — scritto per esteso e
+// non calcolato, perché è un nome che finisce su documenti veri e chi lo
+// cerca nel codice lo deve trovare.
+// `incluso` è cosa ha QUESTA installazione finché non c'è una licenza vera.
 export const MODULI_PREMIUM = {
   conta: {
     chiave: 'modulo_conta_enabled',
+    incluso: false,
     label: 'Conta di magazzino',
     descrizione:
       'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
   },
   scadenzario: {
+    // Riacceso il 26/08/2026 su richiesta dell'utente: la Tana lo usa
+    // davvero. Resta una funzione premium — cambia che qui è INCLUSA, e
+    // quindi il suo interruttore si tocca.
     chiave: 'modulo_scadenzario_enabled',
+    incluso: true,
     label: 'Fatture ai fornitori',
     descrizione:
       'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.',
   },
 }
 
-// Quello che si legge al tocco di un interruttore spento. Dice il perché
-// senza promettere niente: l'attivazione è una faccenda della licenza
-// dell'installazione, non di questa schermata.
+// Quello che si legge al tocco dell'interruttore di un modulo NON INCLUSO.
+// Dice il perché senza promettere niente: l'inclusione è una faccenda della
+// licenza dell'installazione, non di questa schermata.
 export const MOTIVO_PREMIUM =
   'Funzione premium: fa parte della licenza dell’installazione e non si attiva da questa schermata.'
 
@@ -64,23 +94,39 @@ export const chiaveModulo = (id) => MODULI_PREMIUM[id]?.chiave ?? null
 // una voce che non è premium non ha una licenza da controllare.
 export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, id)
 
-// LA DOMANDA: questo modulo è acceso per questo locale? `stato` sono le
-// impostazioni del bar già in mano a chi chiama (settings/bar, dalla cache:
-// nessuna lettura nuova, vedi CLAUDE.md sul local-first).
+// PRIMA DOMANDA: il locale ce l'ha? È quello che dirà la licenza.
 //
-// Spento è il default in tutti i casi storti — impostazioni non ancora
-// arrivate, documento salvato prima che il flag esistesse, id sconosciuto:
-// una funzione a pagamento non si regala per una svista, e una sezione che
-// compare per mezzo secondo e poi sparisce è peggio di una che non c'è.
-export function moduloAttivo(stato, id) {
+// Un id sconosciuto non è incluso: una funzione a pagamento non si regala
+// per una svista di chi chiama.
+export function moduloIncluso(stato, id) {
   const modulo = MODULI_PREMIUM[id]
   if (!modulo) return false
-  // Il punto di innesto della licenza vera (Fase 3): se lo stato ne porta
-  // una, comanda lei e i flag di settings/bar non si guardano nemmeno.
+  // Il punto di innesto della licenza vera (Fase 3). Se la licenza c'è, è
+  // LEI la verità, anche per quello che non nomina: ricadere sulla tabella
+  // vorrebbe dire riaprirsi da soli un modulo che la licenza non dà.
   const moduli = stato?.licenza?.moduli
   if (moduli && typeof moduli === 'object') return moduli[id] === true
-  return stato?.[modulo.chiave] === true
+  return modulo.incluso === true
 }
+
+// SECONDA DOMANDA: il locale lo sta usando? È l'interruttore delle
+// impostazioni, e vale solo per quello che è incluso.
+//
+// Acceso di suo, con l'idioma di `workflow_enabled`: quello che il locale
+// ha comprato funziona senza che nessuno debba accenderlo, e si spegne solo
+// se qualcuno lo spegne davvero. La sicurezza («di partenza spento») sta
+// tutta nella prima domanda, che è quella che non si può sbagliare.
+export function moduloAcceso(stato, id) {
+  const modulo = MODULI_PREMIUM[id]
+  if (!modulo) return false
+  return stato?.[modulo.chiave] !== false
+}
+
+// LA DOMANDA CHE FANNO LE SCHERMATE: questa funzione lavora, qui e adesso?
+// `stato` sono le impostazioni del bar già in mano a chi chiama
+// (settings/bar, dalla cache: nessuna lettura nuova, vedi CLAUDE.md sul
+// local-first).
+export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcceso(stato, id)
 
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci

@@ -2179,8 +2179,9 @@ requirements:
       Fornitori e Movimenti si scelgono dalla BARRA IN ALTO: il titolo della
       pagina è il comando.
       DUE DI QUELLE SEZIONI SONO FUNZIONI PREMIUM dal 26/08/2026: CONTA e
-      SCADENZARIO compaiono solo dove il modulo è acceso (REQ-LIC-001), e di
-      partenza il magazzino ne ha SEI. Restano nello stesso elenco
+      SCADENZARIO compaiono solo dove il modulo lavora (REQ-LIC-001). Per la
+      Tana lo SCADENZARIO è incluso e c'è; la CONTA no, quindi di partenza
+      il magazzino ha SETTE sezioni. Restano nello stesso elenco
       (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un
       secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si
       ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua
@@ -4143,36 +4144,69 @@ requirements:
       gestionale compaiono solo dove il modulo è acceso, «estendendo lo
       schema già esistente di workflow_enabled». Qui nasce il meccanismo con
       le prime due funzioni; il documento della licenza arriverà dopo.
+      RAFFINATO LO STESSO GIORNO, parole sue: «Ok dobbiamo riattivare lo
+      scadenziario, ma lasciamolo sempre funzione premium: va abilitato lo
+      switch e abilitata la funzione». Da lì nasce la distinzione qui
+      sotto, che è quella che una licenza fa per mestiere.
+      DUE DOMANDE, NON UNA:
+      · INCLUSO — la licenza dice cosa il locale HA comprato;
+      · ACCESO — l'impostazione dice se in questo momento lo USA.
+      Un modulo lavora quando è incluso E acceso. Impastarle in un flag solo
+      non permetterebbe di distinguere un locale che la funzione non ce l'ha
+      da uno che ce l'ha e l'ha spenta — e sono due schermate diverse, una
+      con l'interruttore bloccato e una con l'interruttore normale.
+      PER LA TANA, OGGI: scadenzario INCLUSO (e quindi acceso, e col suo
+      interruttore che si tocca), conta NON INCLUSA (interruttore spento e
+      bloccato).
       UN POSTO SOLO CHE RISPONDE, `src/lib/licenza.js`: una tabella dei
-      moduli e la funzione pura `moduloAttivo(stato, id)`. Due interruttori
+      moduli e tre funzioni pure — `moduloIncluso`, `moduloAcceso` e
+      `moduloAttivo`, che è l'AND delle prime due e l'unica che le
+      schermate chiamano. Due interruttori
       sparsi diventano tre e poi cinque, e a quel punto per sapere cosa vede
       un locale bisogna leggersi mezza app. Aggiungere il prossimo modulo è
       una voce nella tabella: `id` (lo stesso della sezione che accende),
       `chiave` (il flag su settings/bar), nome e descrizione da mostrare.
-      LO SCHEMA DI OGGI è un flag booleano su `settings/bar`, della stessa
-      forma di `workflow_enabled`: `modulo_conta_enabled` e
-      `modulo_scadenzario_enabled`, in DEFAULT_SETTINGS a `false`. Stessa
+      DOVE STA SCRITTO COSA È INCLUSO, oggi: nel campo `incluso` della
+      tabella, cioè nel CODICE. Quello che un locale ha comprato non è una
+      preferenza da pannello — lì si accende e si spegne quello che si ha,
+      non si decide cosa si ha — e finché non esiste il documento della
+      licenza, la licenza di questa installazione è la sua build. È lo
+      stesso posto dove finirà la configurazione per cliente della Fase 2
+      (`clienti/<slug>/`). Dalla schermata normale delle impostazioni non è
+      modificabile; dagli strumenti di sviluppo sì (REQ-DEV-014).
+      L'INTERRUTTORE D'USO è un flag booleano su `settings/bar`, della
+      stessa forma di `workflow_enabled`: `modulo_conta_enabled` e
+      `modulo_scadenzario_enabled`, in DEFAULT_SETTINGS a `true`. Stessa
       cache delle altre impostazioni, quindi nessuna lettura nuova e niente
-      da aspettare (local-first).
-      COME SI AGGANCERÀ LA LICENZA VERA: `moduloAttivo` guarda PRIMA un
+      da aspettare (local-first). Acceso di suo con l'idioma `!== false`:
+      quello che il locale ha comprato funziona senza che nessuno lo debba
+      andare ad accendere, e si spegne solo se qualcuno lo spegne davvero.
+      La sicurezza sta tutta nell'altra domanda.
+      COME SI AGGANCERÀ LA LICENZA VERA: `moduloIncluso` guarda PRIMA un
       campo `licenza.moduli` nello stato che riceve. Oggi non c'è e si
-      ricade sui flag; il giorno che `settings/licenza` esiste, chi lo
+      ricade sulla tabella; il giorno che `settings/licenza` esiste, chi lo
       collega lo fa arrivare fin lì e la licenza vince — nessuna schermata
-      cambia, perché nessuna schermata sa da dove viene la risposta. Se la
-      licenza c'è ma non nomina il modulo, il modulo è spento: ricadere sul
-      flag vorrebbe dire che chi scrive a mano il documento del bar si
-      riapre da solo quello che la licenza non gli dà.
-      SPENTO È IL DEFAULT IN TUTTI I CASI STORTI — impostazioni non ancora
-      arrivate, documento salvato prima che il flag esistesse, valore che
-      non è il booleano `true`, id sconosciuto. Una funzione a pagamento non
-      si regala per una svista, e una sezione che compare per mezzo secondo
-      e poi sparisce è peggio di una che non c'è.
+      cambia, perché nessuna schermata sa da dove viene la risposta.
+      L'interruttore d'uso resta dov'è: è del locale, non della licenza — un
+      locale che ha comprato lo scadenzario può volerlo spento a gennaio.
+      Se la licenza c'è ma non nomina il modulo, il modulo NON è incluso:
+      ricadere sulla tabella vorrebbe dire riaprirsi da soli un modulo che
+      la licenza non dà. Una licenza a metà (piano scritto, elenco dei
+      moduli no) invece non conta: è un caso di migrazione, non una
+      decisione commerciale.
+      NEL DUBBIO NON LAVORA — id sconosciuto, licenza che tace, modulo non
+      incluso: una funzione a pagamento non si regala per una svista. E una
+      sezione che compare per mezzo secondo e poi sparisce è peggio di una
+      che non c'è: le schermate partono dalla cache, non dal vuoto.
       NEL MAGAZZINO le due sezioni Conta e Scadenzario restano nell'unico
       elenco `INV_VIEWS` (l'ordine delle sezioni è uno solo) e si filtrano
-      con `voceVisibile`. La vista aperta si RICAVA dall'elenco filtrato: se
-      il modulo si spegne da un altro terminale mentre la sezione è aperta,
-      la schermata torna ai Prodotti invece di restare su un pannello che
-      non è più in elenco. Vedi REQ-MAG-010.
+      con `voceVisibile`. Una voce che rientra torna al SUO posto, perché
+      l'elenco è quello e basta. La vista aperta si RICAVA dall'elenco
+      filtrato: se un modulo si accende da un altro terminale mentre si sta
+      guardando un'altra sezione, la voce nuova entra e nient'altro si
+      muove; se a spegnersi è proprio la sezione aperta, si torna ai
+      Prodotti invece di restare su un pannello che non è più in elenco.
+      Vedi REQ-MAG-010.
       NELLE IMPOSTAZIONI le due voci NON spariscono: gruppo «🔒 Funzioni
       premium», suo, prima di «Sistema». La regola del momento d'uso
       (REQ-UI-025) chiede di raggruppare per «quando lo cerco», e qui il
@@ -4187,17 +4221,26 @@ requirements:
       I TESTI SONO ASCIUTTI (DESIGN.md, guardrail 3): la didascalia dice
       cosa fa la funzione e che non è inclusa. Niente «Sblocca ora», niente
       toni pubblicitari.
-      L'INTERRUTTORE SPENTO DICE PERCHÉ: `ToggleRow` ha una prop `motivo`
-      che lo rende `aria-disabled` invece di `disabled`, con la stessa
-      ragione dei metodi di pagamento non disponibili e del tasto «Acconto»
-      che salderebbe il conto — `disabled` non fa nemmeno partire l'evento,
-      e chi preme resta a premere un tasto morto. L'interruttore mostra lo
-      stato VERO: acceso dove il modulo c'è, e comunque non toccabile da lì.
-      PER PROVARLE si accende il flag su settings/bar: dagli strumenti di
-      sviluppo (REQ-DEV-014, che ci sono solo in locale e sul sito di test)
-      o scrivendo il campo a mano da console/emulatore. NON dalla schermata
-      normale delle impostazioni: un meccanismo di vendita non esiste
-      ancora, e inventarne uno adesso sarebbe da buttare.
+      DUE RIGHE DIVERSE, E SI VEDE:
+      · modulo NON INCLUSO — interruttore spento e BLOCCATO, che al tocco
+        dice perché. `ToggleRow` ha una prop `motivo` che lo rende
+        `aria-disabled` invece di `disabled`, con la stessa ragione dei
+        metodi di pagamento non disponibili e del tasto «Acconto» che
+        salderebbe il conto: `disabled` non fa nemmeno partire l'evento, e
+        chi preme resta a premere un tasto morto.
+      · modulo INCLUSO — interruttore NORMALE, che si accende e si spegne
+        come ogni altra impostazione e salva sul documento del bar. Resta
+        scritto che è una funzione premium, ma la didascalia dice «inclusa
+        in questa installazione»: scrivere «non inclusa» su una funzione che
+        il locale ha sarebbe falso.
+      PER CAMBIARE LA LICENZA (cosa è incluso) ci sono gli strumenti di
+      sviluppo (REQ-DEV-014, solo in locale e sul sito di test): scrivono
+      `licenza.moduli` su settings/bar, cioè la stessa forma che avrà il
+      documento della Fase 3 — è la sua prova generale. L'altra strada,
+      equivalente, è scrivere il campo a mano da console o dall'emulatore.
+      NON dalla schermata normale delle impostazioni: un meccanismo di
+      vendita non esiste ancora, e inventarne uno adesso sarebbe da
+      buttare.
       SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte
       restano nelle loro collezioni (`stock_counts`, fatture fornitore):
       spegnere un modulo non tocca un documento. Caso spiacevole da sapere:
@@ -7559,10 +7602,13 @@ requirements:
       IL DEFAULT NON CAMBIA: sul test la finta resta spenta finche'
       qualcuno non la accende — il tablet del banco che prova la stampante
       vera non deve trovarsi facsimili a sorpresa.
-      DAL 26/08 LA SEZIONE DEV ACCENDE ANCHE LE FUNZIONI PREMIUM
-      (REQ-LIC-001): il riquadro «Funzioni premium» scrive i flag su
-      settings/bar, che è l'unico modo di provare la conta di magazzino e le
-      fatture ai fornitori finché un meccanismo di attivazione non esiste.
+      DAL 26/08 LA SEZIONE DEV FA LA LICENZA (REQ-LIC-001): il riquadro
+      «Funzioni premium» ha DUE interruttori per modulo, che sono due
+      domande diverse — «inclusa nella licenza» scrive `licenza.moduli` su
+      settings/bar, cioè la stessa forma che avrà il documento della Fase 3,
+      e «accesa» scrive il flag d'uso. È l'unico modo di provare un modulo
+      non incluso finché un meccanismo di attivazione non esiste, ed è anche
+      la prova generale del documento della licenza.
       Sta qui per la stessa ragione della stampante finta: gli strumenti di
       sviluppo esistono solo in locale e sul test, quindi in produzione la
       leva non c'è da nessuna parte. Differenza da tenere a mente: la

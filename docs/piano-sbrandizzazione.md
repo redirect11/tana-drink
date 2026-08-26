@@ -197,22 +197,35 @@ la Tana in produzione invariata; stesso commit → due deployment.
 
 ## Fase 3 — Licenza e moduli (candidata: release 1.8)
 
-> **Un pezzo è già arrivato, in 1.5.x** (REQ-LIC-001, decisione dell'utente
+> **Un pezzo è già arrivato, in 1.5.x** (REQ-LIC-001, decisioni dell'utente
 > del 26/08/2026). Esiste `src/lib/licenza.js`: la tabella dei moduli
-> premium e la funzione pura `moduloAttivo(stato, id)`, che è l'unico posto
-> che risponde a «questa funzione è attiva?». I primi due moduli sono la
-> **conta di magazzino** e le **fatture ai fornitori** — le due sezioni del
-> magazzino — spente di partenza. Lo schema è quello previsto qui sotto,
-> preso dal verso più semplice: un flag booleano su `settings/bar`
-> (`modulo_conta_enabled`, `modulo_scadenzario_enabled`), della stessa forma
-> di `workflow_enabled`. Nelle impostazioni le due voci ci sono ma sono
-> spente e non toccabili, e al tocco dicono perché; si accendono dagli
-> strumenti di sviluppo (locale e test) o scrivendo il campo a mano.
+> premium e le funzioni pure che rispondono per tutta l'app. I primi due
+> moduli sono la **conta di magazzino** e le **fatture ai fornitori** — le
+> due sezioni del magazzino.
+>
+> **La distinzione che serve a una licenza è già nel modello**, e vale la
+> pena tenerla presente scrivendo il resto della fase:
+>
+> | Domanda | Chi risponde | Dove sta oggi |
+> |---|---|---|
+> | Il locale ce l'**ha**? (*incluso*) | la licenza | campo `incluso` nella tabella di `licenza.js`, cioè la build |
+> | Lo sta **usando**? (*acceso*) | l'impostazione | flag su `settings/bar`, forma di `workflow_enabled` |
+>
+> Un modulo lavora quando è incluso **e** acceso. Senza la prima domanda non
+> si distingue un locale che la funzione non ce l'ha da uno che ce l'ha e
+> l'ha spenta — e sono due schermate diverse: interruttore bloccato con la
+> spiegazione al tocco, oppure interruttore normale.
+>
+> Per la Tana, oggi: **scadenzario incluso e acceso, conta non inclusa**.
+>
 > **Quello che resta da fare qui**: il documento `settings/licenza` vero, e
-> il controllo sul server. Il punto di innesto è già pronto — `moduloAttivo`
-> guarda prima un campo `licenza.moduli` nello stato che riceve, e se c'è
-> vince sui flag: collegarlo vuol dire far arrivare il documento fin lì,
-> senza toccare nessuna schermata.
+> il controllo sul server. Il punto di innesto è già pronto e ha un nome —
+> `moduloIncluso` guarda prima un campo `licenza.moduli` nello stato che
+> riceve, e se c'è vince sulla tabella. Collegarlo vuol dire far arrivare il
+> documento fin lì, senza toccare nessuna schermata; l'interruttore d'uso
+> resta dov'è, perché è del locale e non della licenza. Gli strumenti di
+> sviluppo scrivono già `licenza.moduli` in quella forma: è la prova
+> generale del documento vero.
 
 1. **Documento `settings/licenza`** (o campo nel venue): piano e moduli
    attivi. Per la Tana: tutto acceso.
