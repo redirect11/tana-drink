@@ -7011,6 +7011,26 @@ requirements:
       forma minima — descrizione, importo, data, comprato si o no — regge
       qualunque risposta arrivi; quello che cambia e' se serve un modo di
       raggruppare, e quello si aggiunge dopo.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-034): IL POSTO DOVE SI SCRIVONO
+      C'È. «Altre spese» è la terza sottosezione di Fornitori, col riepilogo
+      per mese accanto, esattamente dove questa voce diceva di metterle. La
+      forma è quella minima che questa voce indicava — descrizione, importo,
+      data, comprato sì o no — più le due colonne che il foglio «TO BUY» ha e
+      che servono a ritrovare la stessa cosa: quantità e dove si compra.
+      QUESTA VOCE RESTA APERTA, e per la ragione di sempre: manca il DATO,
+      non il posto. La domanda a Flavio — cosa mette in quel numero — decide
+      solo se serve un modo di RAGGRUPPARE le voci, e quello si aggiunge
+      senza rifare niente. Nessuna categoria è stata inventata: i campi sono
+      vuoti, senza esempi, apposta.
+      QUELLO CHE RESTA DA FARE QUI È IL PONTE: Bilancio → Mesi deve leggere
+      il totale delle altre spese del mese e sottrarlo nel netto, insieme
+      agli stipendi e alle fatture fornitore. I numeri sono già calcolati e
+      si prendono da `src/lib/spese.js` (`totaleSpeseDelMese`) e da
+      `src/lib/riepilogoFornitori.js`: non c'è nessuna somma da riscrivere.
+      LA COSA CHE QUESTA VOCE CHIEDEVA DI DIRE A SCHERMO È DETTA: che il
+      numero dell'app vale MENO di quello dei fogli, perché lì le spese
+      contengono anche la merce. Sta in testa al Riepilogo di Fornitori, dove
+      i totali si confrontano.
     status: todo
     generate_issue: true
     labels: [statistiche, cassa]
@@ -7144,6 +7164,135 @@ requirements:
       - tests/unit/macros.test.js
       - tests/component/InventoryManager.test.jsx
       - tests/component/MenuManager.test.jsx
+
+  - id: REQ-MAG-034
+    title: "«Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese"
+    area: "src/lib/spese.js, src/lib/riepilogoFornitori.js, src/lib/api.js, src/components/AltreSpesePanel.jsx, src/components/RiepilogoFornitoriPanel.jsx, src/components/FornitoriTab.jsx, firestore.rules"
+    description: >
+      Ritagliato da REQ-MAG-025, di cui sono gli ULTIMI DUE PEZZI: la terza
+      sottosezione di Fornitori e la quarta voce che le tiene insieme.
+      DA DOVE NASCE, ed è una domanda dell'utente (19/08): «quelle spese da
+      inserire a mano non sono gli ordini?». La risposta, misurata sui fogli,
+      è che in parte sì: la sua riga SPESE è sempre più grande degli acquisti
+      dello stesso mese — gennaio 2.380 contro 1.809, aprile 5.005 contro
+      2.884, giugno 12.726 contro 8.673 — quindi contiene la merce PIÙ altro,
+      da 570 a 4.050 euro al mese.
+      COS'È QUELL'ALTRO, trovato e non ipotizzato: il foglio «TO BUY» di
+      FORNITORI REC.xlsx — tavoli da esterno, sgabelli, divani, una tenda,
+      uno scaffale IKEA, bicchieri di plastica in cinque misure — con le
+      colonne articolo, quantità, prezzo, totale, DOVE si compra (Amazon,
+      Bricoware, IKEA, Vente-Unique) e note, per 2.468,59 in tutto. Sono
+      arredi, attrezzature e materiale di consumo: roba che esce dal conto
+      corrente, non entra in magazzino e che nessun ordine fornitore
+      intercetterà mai. Le colonne della sottosezione sono quelle del foglio.
+      ── LA COSA CHE REGGE TUTTO: COMPRATA O SOLO DESIDERATA ──
+      Quel foglio è una LISTA DELLA SPESA, non un registro: si chiama «da
+      comprare» e diverse righe hanno prezzo zero, cioè non sono ancora
+      prezzate. Serve quindi sapere se una voce è GIÀ STATA COMPRATA: solo
+      quelle comprate pesano sul mese, le altre sono un promemoria. Senza
+      questa distinzione un divano desiderato abbasserebbe l'utile di
+      gennaio.
+      IL DATO SONO DUE CAMPI E NON UNO: `bought` dice SE, `bought_at` dice
+      QUANDO — ed è la data che decide su quale mese l'uscita pesa. Una spesa
+      non comprata non ha mese, perché non è successo niente; segnarla
+      comprata dalla riga ci mette la data di oggi, che è quando il gesto sta
+      succedendo, e chi l'ha comprata un altro giorno la corregge dalla
+      modifica.
+      LA MODIFICA NON È UN DI PIÙ, ed è la conseguenza di com'è fatto il
+      foglio: una voce nasce spesso senza prezzo e lo prende il giorno che la
+      si compra. Senza poterla riaprire, quel numero non entrerebbe mai.
+      IL BUCO DI QUESTA SOTTOSEZIONE, con lo stesso linguaggio degli altri
+      due (REQ-MAG-031): una voce segnata comprata ma senza prezzo pesa zero
+      sul mese e nessuno se ne accorge finché non si confrontano i totali.
+      Porta la scritta «senza prezzo» in ambra e si isola col chip in testa.
+      Su una riga ancora DA comprare invece il prezzo a zero è la normalità
+      del foglio, e segnalarla insegnerebbe a ignorare il segnale.
+      NIENTE ESEMPI NEI CAMPI, e non è una svista: REQ-CASSA-012 avverte che
+      l'elenco «affitto, SIAE, commercialista, utenze» era una LISTA
+      INVENTATA da chi scriveva quella voce, non una frase di Flavio. Un
+      segnaposto nel campo insegnerebbe a scriverci quello che ci siamo
+      immaginati noi. Campi vuoti, e basta.
+      ── IL RIEPILOGO, QUARTA VOCE ──
+      Mette insieme i tre elenchi in un totale PER MESE: merce (dalle fatture
+      fornitore), altre spese (quelle comprate) e quanto resta APERTO. È il
+      numero che poi Bilancio → Mesi userà per il netto, e la ragione per cui
+      sta QUI e non lì è che i soldi che escono si guardano dove si
+      registrano.
+      COSA ENTRA NEL TOTALE E COSA NO, ed è il modo in cui questo numero
+      potrebbe sbagliare in silenzio. TOTALE = merce + altre spese. «Da
+      pagare» è una FETTA della merce già contata — quelle fatture stanno
+      dentro «merce», sommarle conterebbe due volte la stessa uscita — e dice
+      solo quanta parte del mese è ancora un debito. «Senza fattura» è merce
+      ARRIVATA di cui manca il documento (il primo buco di REQ-MAG-031):
+      sommarla la conterebbe una seconda volta il giorno che la fattura
+      arriva, e tenerla fuori mostrandola accanto dice quanto manca al mese
+      senza sporcarlo. Sotto le righe c'è scritto in una frase.
+      DA DOVE VIENE OGNI NUMERO: la merce dall'importo dei documenti, sul
+      mese della loro DATA (non del pagamento); le altre spese dal totale
+      quantità per prezzo delle comprate, sul mese di `bought_at`; il senza
+      fattura dal NETTO delle fette consegnate e non fatturate
+      (`fetteSenzaFattura`, già scritto per REQ-MAG-031), sul mese
+      dell'ordine. Una fattura senza data non ha mese e resta fuori: metterla
+      in quello corrente sposterebbe soldi da un mese all'altro senza che
+      nessuno l'abbia deciso.
+      ⚠️ IL NUMERO DELL'APP VALE MENO DI QUELLO DEI FOGLI, e sta scritto a
+      schermo: è la conseguenza della decisione di REQ-CASSA-012 («nell'app
+      le due cose restano separate»). Nel foglio mensile la riga «spese»
+      comprende anche la merce; qui la merce si conta una volta sola, nella
+      sua colonna. La frase sta in testa al Riepilogo, dove i totali si
+      confrontano — se non la si dice, al primo confronto sembra che l'app
+      sbagli e si torna al foglio. La stessa cosa detta dall'altro lato è la
+      didascalia di «Altre spese»: la merce dei fornitori non va lì, si conta
+      dalle fatture, e riscriverla la conterebbe due volte.
+      DOVE VIVONO I DATI: collezione `altre_spese`, un documento per riga
+      (name, qty, unit_cost, shop, notes, bought, bought_at). Il TOTALE non
+      si scrive: è quantità per prezzo, e un terzo numero da tenere d'accordo
+      con gli altri due è il primo che qualcuno dimentica di aggiornare. La
+      quantità che manca vale UNO e non zero — chi scrive solo il prezzo ha
+      comprato una cosa, non zero cose — perché con lo zero il totale
+      sparirebbe dal mese in silenzio.
+      LOCAL-FIRST ANCHE QUI, che è di gestione e non la coda: l'IDENTIFICATIVO
+      SE LO FA IL TERMINALE (`doc(collection(...))` e `setDoc`, non `addDoc`),
+      perché con `addDoc` si aspetta il server per sapere come si chiama il
+      documento appena scritto e senza rete quell'attesa non finisce mai. Le
+      scritture partono in `bgWrite` e il risultato si COMPONE invece di
+      rileggerlo (BUG-045). Lo dimostra un test che gira senza rete, sul
+      modello di `giroInLocale.test.js`.
+      ── LE DECISIONI PRESE IN IMPLEMENTAZIONE ──
+      1) LE DUE VOCI NON SONO PREMIUM e non se ne è inventato un modulo
+      nuovo: le altre spese si scrivono a mano e non dipendono da nessuna
+      funzione a pagamento; il riepilogo mette insieme quello che c'è, e con
+      lo scadenzario spento la colonna della merce resta a zero — che è la
+      verità di quel locale, non un pezzo mancante. Il filtro `voceVisibile`
+      di FornitoriTab le lascia passare senza un «if» in più.
+      2) LE REGOLE FIRESTORE DI `altre_spese` sono quelle delle altre
+      collezioni dei fornitori (`isBartender()`, che vale anche per l'admin):
+      nell'app la sezione è del solo admin, ma un documento contabile non può
+      essere più aperto della fattura che gli sta accanto. Le regole sono
+      SCRITTE, non pubblicate: la pubblicazione è un gesto di chi gestisce.
+      3) IL RIEPILOGO GUARDA CENTO ORDINI e non venticinque come lo
+      Scadenzario: lì servono gli ultimi, per agganciare il documento che si
+      ha in mano; qui si guarda indietro di mesi, e una consegna senza
+      fattura di marzo sparirebbe dal conto del suo mese senza dire niente.
+      RESTA APERTA UNA DOMANDA CHE NON È DI QUESTA VOCE (REQ-CASSA-012): fra
+      gennaio e giugno le spese di Flavio superano gli acquisti di 11.243
+      euro e il foglio «TO BUY» ne spiega 2.469 — restano quasi novemila euro
+      in sei mesi di cui non si sa la natura, e la risposta ce l'ha solo lui.
+      La forma di questa sottosezione regge in tutti e due i casi: poche voci
+      ricorrenti o tante di natura diversa. Se un giorno servirà
+      RAGGRUPPARLE, il campo si aggiunge senza rifare niente — e finché la
+      domanda non ha risposta, inventare le categorie sarebbe rifare l'errore
+      che REQ-CASSA-012 nomina per nome.
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, fornitori, admin]
+    priority: P2
+    test_cases:
+      - tests/unit/spese.test.js
+      - tests/unit/riepilogoFornitori.test.js
+      - tests/unit/speseInLocale.test.js
+      - tests/component/AltreSpesePanel.test.jsx
+      - tests/component/RiepilogoFornitori.test.jsx
 
   - id: REQ-MAG-033
     title: "L'allegato della fattura: il documento vero, foto o PDF"
@@ -8049,7 +8198,28 @@ requirements:
       browser a 2000 punti sul lato lungo prima di partire — il perche' di
       ognuno di quei numeri sta in REQ-MAG-033.
       DI QUESTA VOCE RESTA DUNQUE SOLO «Altre spese» col Riepilogo.
-    status: todo
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-034): «ALTRE SPESE» COL RIEPILOGO
+      È FATTO, ed erano gli ultimi due pezzi rimasti. «Altre spese» è la
+      terza sottosezione di Fornitori, con le colonne del foglio «TO BUY» e
+      la distinzione che regge tutto — comprata o solo desiderata, `bought` e
+      `bought_at` in `src/lib/spese.js`: solo il comprato pesa sul mese. Il
+      «Riepilogo» è la quarta voce e somma per mese la merce (dalle fatture),
+      le altre spese e quanto resta aperto, tenendo fuori dal totale il «da
+      pagare» (già dentro la merce) e il «consegnato senza fattura» (che
+      entrerà quando il documento arriva) — `src/lib/riepilogoFornitori.js`.
+      Che il numero dell'app valga MENO di quello dei fogli di Flavio sta
+      scritto in testa al Riepilogo, come chiedeva REQ-CASSA-012.
+      QUESTA VOCE PASSA A «implemented», e non le resta niente: il legame
+      fattura-fetta è REQ-MAG-031, il prodotto nuovo col carico scelto e
+      l'assortimento pre-impostato REQ-MAG-032, l'allegato del documento
+      REQ-MAG-033, i punti 3 e 4 sono decaduti con la decisione del 27/08
+      («resta com'è», il gesto solo) e questi due sono REQ-MAG-034. Le prove
+      stanno nei `test_cases` di quelle voci, che è dove vive il lavoro: qui
+      resta la storia di come ci si è arrivati.
+      NON CI SONO DENTRO, e non c'erano nemmeno prima: gli ordini che nascono
+      dalle giacenze (REQ-MAG-026) e le spese del mese in Bilancio → Mesi
+      (REQ-CASSA-012), che questa voce alimenta ma non contiene.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, admin]
     priority: P2
