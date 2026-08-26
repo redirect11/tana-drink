@@ -269,6 +269,13 @@ Regole:
   sola, e un elenco serve anche a confrontare le sue righe fra loro. E il
   colore non è l'unico segno: sopra l'elenco una frase dice cosa è stato
   trovato, o che per quella data non c'è nessuna chiusura.
+  **La striscia dice una cosa sola per elenco, e cambia da elenco a
+  elenco.** Nel magazzino dice l'assortimento (`.inv-row.ass-*`); negli
+  **ordini fornitore** dice DI CHI È la riga — il colore del fornitore,
+  scritto in linea perché è un dato e non un tema (`coloreFornitore` in
+  `lib/listini.js`, tavolozza `CATEGORY_PALETTE`). Lì lo stesso prodotto
+  compare una volta per fornitore, e senza il colore due righe con lo
+  stesso nome si leggono soltanto arrivando in fondo alla riga.
 
 - **La tavolozza del conto sta in una modale, non nel menu.** Dal «⋯
   Azioni» di una card — del conto e della comanda — il colore si dà da un

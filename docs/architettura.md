@@ -98,7 +98,7 @@ si legge in `firestore.rules` e `src/lib/api.js`.
 |---|---|
 | `orders` | il CONTO: `order_items` aggregati, più le `comande[]` (invii in preparazione, ognuno col suo stato) e i `payments[]` (le riscossioni, ognuna con le sue righe e il suo sconto) |
 | `drinks`, `categories` | il listino e le sue categorie |
-| `inventory_*`, `suppliers`, `stock_*`, `purchase_orders`, `supplier_invoices` | magazzino, fornitori, acquisti |
+| `inventory_*`, `suppliers`, `supplier_prices`, `stock_*`, `purchase_orders`, `supplier_invoices` | magazzino, fornitori, acquisti. `supplier_prices` è il LISTINO: una riga per coppia prodotto-fornitore, con id `<fornitore>__<prodotto>` — l'unicità della coppia è così strutturale, non un controllo applicativo (REQ-MAG-029) |
 | `counters` | progressivi: `serial` (assoluto), per giornata, `fatture-<anno>`, `_active_cash` (la cassa aperta) |
 | `settings` | doc `bar` (tutte le impostazioni del locale) e `printer` (stampante condivisa) |
 | `cash_sessions`, `payments`, `invoices`, `vouchers` | cassa, incassi, fatture di cortesia, buoni VIP |
