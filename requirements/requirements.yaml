@@ -7893,6 +7893,25 @@ requirements:
       cui e' costruito il flusso di oggi — la decisione e' dell'utente, e
       REQ-MAG-032 dice dove andrebbe messo il taglio), «Altre spese» col
       Riepilogo, e l'allegato del documento (foto/PDF).
+      ⚠️ DECISIONE DEL 27/08/2026, che CHIUDE la contraddizione fra i punti
+      3 e 4 qui sopra (20/08) e REQ-MAG-029 (26/08). Vale il gesto solo:
+      CONSEGNARE UNA RIGA LA CARICA, come lo descrive Flavio — «lo metto
+      come consegnato e me lo inizia anche a caricare nel magazzino» — e
+      come e' stato costruito. L'utente, richiesto di scegliere: «resta
+      com'e'».
+      Il punto 4 del 20/08 («e' il bartender che decide SE e QUALI prodotti
+      caricare») NON viene tradito, ed e' la ragione per cui la scelta
+      costa poco: quel «se e quali» c'e' gia', perche' si consegnano le
+      righe che si spuntano, una per una, piu' il tasto «Carica tutti» per
+      farle tutte insieme (REQ-MAG-032). Quello che cade e' solo il
+      PASSAGGIO IN PIU': nessun livello «arrivato» fra richiesto e
+      consegnato, e nessuna divisione di ruoli fra chi segna l'arrivo e chi
+      carica. Un passaggio in piu' a ogni consegna, su una schermata che si
+      usa con la merce in mano, si paga tutte le sere; il controllo che
+      avrebbe dato lo si ha gia' spuntando le righe.
+      Il punto 3 («arrivato lo decide l'admin») decade con lui.
+      DI QUESTA VOCE RESTANO DUNQUE SOLO: «Altre spese» col Riepilogo, e
+      l'allegato del documento (foto/PDF).
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, admin]
