@@ -471,6 +471,17 @@ export function stockStatus(item) {
   return 'ok'
 }
 
+// I TRE STATI DELLA DISPONIBILITÀ, scritti in italiano una volta sola.
+// Servono alla tabella del nuovo ordine (REQ-MAG-036), dove la
+// disponibilità è una colonna che si legge e si ordina: chiedendola qui,
+// accanto alla funzione che la calcola, non si finisce con due elenchi di
+// parole per gli stessi tre stati.
+export const ETICHETTA_SCORTA = {
+  ok: 'In scorta',
+  low: 'In esaurimento',
+  empty: 'Esaurito',
+}
+
 // ── C'È O NON C'È ────────────────────────────────────────────────────
 //
 // La domanda più ovvia di tutte — cosa c'è davvero sullo scaffale — nel
@@ -528,6 +539,17 @@ export function inventorySummary(items) {
 export const ASSORTIMENTI = ['assortimento', 'linea', 'premium', 'out']
 export const assortimentoDi = (item) =>
   ASSORTIMENTI.includes(item?.status) ? item.status : 'assortimento'
+
+// Come si legge un assortimento a parole. Sta qui e non in una schermata
+// perché a chiederlo sono in due — la lista del magazzino e la tabella del
+// nuovo ordine (REQ-MAG-036) — e due elenchi di parole per gli stessi
+// quattro stati diventano due vocabolari appena qualcuno ne cambia uno.
+export const ETICHETTA_ASSORTIMENTO = {
+  assortimento: 'In assortimento',
+  linea: 'In linea: non deve mancare',
+  premium: 'Premium',
+  out: 'Fuori assortimento: non si ricompra',
+}
 
 // `fornitoriPerArticolo` (item_id -> [supplier_id]) arriva dal LISTINO
 // (REQ-MAG-029): da quando il legame prodotto-fornitore vive lì, un
