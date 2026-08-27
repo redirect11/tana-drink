@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 181 | fatto e coperto dai test |
+| ✅ | 182 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 24 | da fare |
+| ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**227 voci** in tutto. **196** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**227 voci** in tutto. **197** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 29 | 10 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 30 | 9 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1078,6 +1078,42 @@ LE TRE STRADE CHE LA SCRIVONO passano tutte da `scriviVariazionePrezzo` in `api.
 RESTA FUORI, ed e' voluto: il grafico dell'andamento dei prezzi (voce sua), e la schermata degli ordini, che si rifa' col 036/037.
 
 **Dove**: `src/components/ListinoFornitore.jsx, src/lib/storicoPrezzi.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/storicoPrezzi.test.js`, `tests/unit/storicoPrezziScrittura.test.js`, `tests/component/ListinoFornitore.test.jsx`
+
+#### REQ-MAG-036 — «Nuovo Ordine»: una tabella sola, e la riga che si apre
+
+Chiesto dall'utente il 27/08/2026, bocciando quello che era stato costruito: «nella sezione ordini NON MI PIACE LA DOPPIA LISTA e quei box sono POSTICCI. Serve una UX e UI piu' moderna e semplice. Deve esserci UNA SOLA TABELLA dove su ogni riga vedro' il nome del prodotto e i vari campi per compilare l'ordine, compresa una dropdown per la scelta del fornitore».
+
+LA RIGA. Nome del prodotto · fornitore (tendina) · prezzo unitario preso dal LISTINO di quel fornitore (REQ-MAG-035) · prezzo totale rispetto ai pezzi voluti, modificabile sulla riga stessa · e un modo per selezionare le righe da ordinare.
+
+IL FILTRO E LA RICERCA, parole sue: «quando filtro per fornitore vedro' nella tabella solo gli item di quel fornitore; se cerco un prodotto vedro' probabilmente il prodotto DUPLICATO se associato a piu' di un fornitore». Il duplicato non e' un difetto: e' lo stesso prodotto in due listini, e si distingue per fornitore e colore (REQ-MAG-029).
+
+LA RIGA CHE SI APRE: «quando seleziono un item mi si deve aprire la riga che mi dira' anche le info di quel prodotto — se in assortimento, out, in linea eccetera, quante scorte ho ancora in magazzino — piu' la possibilita' di modificare gli stessi campi che modificherei inline sulla riga stessa». Le stesse cose, due strade: in linea per chi sa gia' cosa vuole, aperta per chi deve guardare prima di decidere.
+
+LA PRESELEZIONE, che e' il motivo per cui questa schermata esiste: sono spuntati di partenza i prodotti FINITI o SOTTO LA SOGLIA di riordino impostata sul prodotto. Chi apre la schermata trova gia' fatto il lavoro di girare il magazzino.
+
+NON SI PRECOMPILA CHI E' FUORI LINEA: «se e' fuori linea non viene considerato nella precompilazione dell'ordine» (utente, 27/08). Un prodotto `out` si puo' sempre ordinare a mano — e' cosi' che rientra — ma non si propone da solo. L'ORDINE STA DI FIANCO, NON IN FONDO. Aggiunto dall'utente il 27/08/2026 dopo aver provato: «e' SCOMODISSIMO l'ordine in basso. Dobbiamo metterlo affianco, e gia' li' separare i prodotti di un fornitore rispetto a un altro». La schermata si legge quindi a due colonne: a sinistra il catalogo da cui si sceglie, a destra l'ordine che si sta componendo, gia' diviso per fornitore. In fondo obbligava a scorrere avanti e indietro per sapere cosa si era gia' messo — e il riepilogo per fornitore (REQ-MAG-037) arrivava troppo tardi, alla conferma, quando lo si vuole sapere MENTRE si sceglie. L'INTESTAZIONE RESTA IN ALTO E ORDINA. «Voglio l'header della tabella fisso in alto, coi titoli delle colonne che posso usare per ordinare»: per NOME, per DISPONIBILITA' IN INVENTARIO, per PREZZO DI LISTINO e per FORNITORE. Con centinaia di righe, un'intestazione che scorre via lascia chi guarda a indovinare che cosa sia la terza colonna.
+
+LA DISPONIBILITA' HA TRE STATI e vanno mostrati:
+
+IN SCORTA, IN ESAURIMENTO, ESAURITO. Non e' un dato nuovo — e' `stockStatus` in src/lib/inventory.js (`ok` / `low` / `empty`), lo stesso che decide la preselezione: si mostra quello, non se ne calcola un altro.
+
+LE RIGHE SI PAGINANO. «Sono tanti e possono essere duplicati per piu' fornitori: e' vero che abbiamo la ricerca, ma dobbiamo paginare, e posso selezionare anche quanti risultati per pagina — oppure implementiamo un endless scroll che carica i successivi dopo un tot». Il numero misurato il 27/08 dice perche' serve: 388 prodotti e 367 righe di listino gia' importate, e una riga per COPPIA prodotto-fornitore. La ricerca non basta, perche' il primo gesto di chi apre la schermata non e' cercare: e' GUARDARE cosa manca. Delle due strade, quella da preferire e' lo SCORRIMENTO CONTINUO, e la ragione e' d'uso: si compone un ordine scorrendo, e una paginazione costringerebbe a ricordarsi cosa si e' spuntato a pagina 2 mentre si guarda la 3. Se pero' lo scorrimento continuo litiga con l'intestazione fissa o con l'ordinamento, si fa la paginazione con la scelta di quanti per pagina: e' la seconda strada che l'utente indica, non un ripiego inventato.
+
+LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del prodotto, questo viene selezionato automaticamente per l'ordine». Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la spunta sarebbe far dire due volte la stessa cosa. COM'E' STATO FATTO (27/08/2026). La composizione e' una schermata sua, `NuovoOrdinePanel`, dentro il pannello Ordini; i conti — ordinamento, preselezione, prezzi, finestra delle righe, raggruppamento per fornitore — stanno in `src/lib/composizioneOrdine.js`, dove si provano senza Firebase. La tabella riusa le classi che esistono gia' (`inv-list inv-table`, `inv-thead`, `inv-row`, `inv-row-dettaglio`) e l'intestazione ordinabile e' lo stesso componente della lista del magazzino, spostato in `src/components/SortTh.jsx` invece di essere riscritto due volte.
+
+SCORRIMENTO CONTINUO, non paginazione: e' la strada che l'utente preferisce e non litiga con niente. L'intestazione resta in alto perche' a scorrere e' la TABELLA, che ha una barra sua (`position: sticky` dentro un riquadro che scorre), e l'ordinamento riparte dalla prima finestra invece di tenere in vita seicento righe gia' disegnate. Il passo e' 40 righe. Accanto al conteggio c'e' un tasto «Mostra altre righe»: chi arriva con la tastiera non fa scorrere niente col tabulatore, e senza quel tasto la finestra non crescerebbe mai.
+
+IL FUORI LINEA ADESSO E' IN TABELLA. Prima gli `out` erano esclusi dal catalogo ordinabile (REQ-MAG-007, «non si ricompra»): cosi' pero' non c'era modo di farli rientrare, e ordinarne uno e' esattamente il gesto con cui rientrano. Restano fuori dalla PRESELEZIONE, che e' quello che l'utente ha chiesto, e portano scritto «fuori linea» accanto al nome.
+
+IL TOTALE SI CORREGGE, IL €/pz NO. La colonna del prezzo unitario e' il LISTINO di quel fornitore e resta di sola lettura: e' il dato che dice quanto ci si aspetta di pagare, e non deve mettersi a ballare mentre si scrive. Il totale della riga si scrive a mano, e da li' si ricava il prezzo che finisce sull'ordine (totale / pezzi). Cambiando i pezzi o il fornitore la correzione si perde: valeva per QUEI pezzi da QUEL fornitore.
+
+LA PRESELEZIONE PRENDE UNA RIGA SOLA PER PRODOTTO — quella del fornitore dell'ULTIMO ACQUISTO — perche' lo stesso Campari su due listini ha due righe, e spuntarle tutte e due vorrebbe dire comprarlo due volte. I DUE SUGGERIMENTI DI REQ-MAG-029 (chi e' l'ultimo acquisto, chi e' il piu' economico) sono passati dalla riga alla SCHEDA che si apre: in una riga di tabella a otto colonne non ci stavano, e la scheda e' dove si guarda un prodotto prima di decidere.
+
+LA TENDINA SELEZIONA COME LA QUANTITA': scegliere chi ci vende quel prodotto e' la stessa decisione di scrivere quanti pezzi servono, e lasciare la riga non spuntata dopo averlo fatto sarebbe un secondo gesto per la stessa cosa.
+
+RESTA FUORI, ed e' voluto: lo STORICO ORDINI e' rimasto quello di prima, sotto la composizione, con le sue fette per fornitore — diventa «Lista Ordini» con REQ-MAG-038, e il riepilogo di conferma e' REQ-MAG-037. La bozza della composizione vive finche' si sta sulla schermata: non e' la bozza del POS e non e' stato chiesto che sopravviva a un'uscita.
+
+**Dove**: `src/components/NuovoOrdinePanel.jsx, src/components/PurchaseOrdersPanel.jsx, src/lib/composizioneOrdine.js, src/lib/listini.js, src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/composizioneOrdine.test.js`, `tests/component/NuovoOrdineTabella.test.jsx`
 
 #### REQ-MAG-034 — «Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese
 
@@ -2568,30 +2604,6 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-036 — «Nuovo Ordine»: una tabella sola, e la riga che si apre
-
-Chiesto dall'utente il 27/08/2026, bocciando quello che era stato costruito: «nella sezione ordini NON MI PIACE LA DOPPIA LISTA e quei box sono POSTICCI. Serve una UX e UI piu' moderna e semplice. Deve esserci UNA SOLA TABELLA dove su ogni riga vedro' il nome del prodotto e i vari campi per compilare l'ordine, compresa una dropdown per la scelta del fornitore».
-
-LA RIGA. Nome del prodotto · fornitore (tendina) · prezzo unitario preso dal LISTINO di quel fornitore (REQ-MAG-035) · prezzo totale rispetto ai pezzi voluti, modificabile sulla riga stessa · e un modo per selezionare le righe da ordinare.
-
-IL FILTRO E LA RICERCA, parole sue: «quando filtro per fornitore vedro' nella tabella solo gli item di quel fornitore; se cerco un prodotto vedro' probabilmente il prodotto DUPLICATO se associato a piu' di un fornitore». Il duplicato non e' un difetto: e' lo stesso prodotto in due listini, e si distingue per fornitore e colore (REQ-MAG-029).
-
-LA RIGA CHE SI APRE: «quando seleziono un item mi si deve aprire la riga che mi dira' anche le info di quel prodotto — se in assortimento, out, in linea eccetera, quante scorte ho ancora in magazzino — piu' la possibilita' di modificare gli stessi campi che modificherei inline sulla riga stessa». Le stesse cose, due strade: in linea per chi sa gia' cosa vuole, aperta per chi deve guardare prima di decidere.
-
-LA PRESELEZIONE, che e' il motivo per cui questa schermata esiste: sono spuntati di partenza i prodotti FINITI o SOTTO LA SOGLIA di riordino impostata sul prodotto. Chi apre la schermata trova gia' fatto il lavoro di girare il magazzino.
-
-NON SI PRECOMPILA CHI E' FUORI LINEA: «se e' fuori linea non viene considerato nella precompilazione dell'ordine» (utente, 27/08). Un prodotto `out` si puo' sempre ordinare a mano — e' cosi' che rientra — ma non si propone da solo. L'ORDINE STA DI FIANCO, NON IN FONDO. Aggiunto dall'utente il 27/08/2026 dopo aver provato: «e' SCOMODISSIMO l'ordine in basso. Dobbiamo metterlo affianco, e gia' li' separare i prodotti di un fornitore rispetto a un altro». La schermata si legge quindi a due colonne: a sinistra il catalogo da cui si sceglie, a destra l'ordine che si sta componendo, gia' diviso per fornitore. In fondo obbligava a scorrere avanti e indietro per sapere cosa si era gia' messo — e il riepilogo per fornitore (REQ-MAG-037) arrivava troppo tardi, alla conferma, quando lo si vuole sapere MENTRE si sceglie. L'INTESTAZIONE RESTA IN ALTO E ORDINA. «Voglio l'header della tabella fisso in alto, coi titoli delle colonne che posso usare per ordinare»: per NOME, per DISPONIBILITA' IN INVENTARIO, per PREZZO DI LISTINO e per FORNITORE. Con centinaia di righe, un'intestazione che scorre via lascia chi guarda a indovinare che cosa sia la terza colonna.
-
-LA DISPONIBILITA' HA TRE STATI e vanno mostrati:
-
-IN SCORTA, IN ESAURIMENTO, ESAURITO. Non e' un dato nuovo — e' `stockStatus` in src/lib/inventory.js (`ok` / `low` / `empty`), lo stesso che decide la preselezione: si mostra quello, non se ne calcola un altro.
-
-LE RIGHE SI PAGINANO. «Sono tanti e possono essere duplicati per piu' fornitori: e' vero che abbiamo la ricerca, ma dobbiamo paginare, e posso selezionare anche quanti risultati per pagina — oppure implementiamo un endless scroll che carica i successivi dopo un tot». Il numero misurato il 27/08 dice perche' serve: 388 prodotti e 367 righe di listino gia' importate, e una riga per COPPIA prodotto-fornitore. La ricerca non basta, perche' il primo gesto di chi apre la schermata non e' cercare: e' GUARDARE cosa manca. Delle due strade, quella da preferire e' lo SCORRIMENTO CONTINUO, e la ragione e' d'uso: si compone un ordine scorrendo, e una paginazione costringerebbe a ricordarsi cosa si e' spuntato a pagina 2 mentre si guarda la 3. Se pero' lo scorrimento continuo litiga con l'intestazione fissa o con l'ordinamento, si fa la paginazione con la scelta di quanti per pagina: e' la seconda strada che l'utente indica, non un ripiego inventato.
-
-LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del prodotto, questo viene selezionato automaticamente per l'ordine». Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la spunta sarebbe far dire due volte la stessa cosa.
-
-**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/inventory.js`
 
 #### REQ-MAG-037 — Il riepilogo per fornitore, e «in assortimento» come stato di passaggio
 
