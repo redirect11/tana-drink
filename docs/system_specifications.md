@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 180 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 20 | da fare |
+| ⬜ | 24 | da fare |
 | 🗑 | 7 | non più valido |
 
-**222 voci** in tutto. **195** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**226 voci** in tutto. **195** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 28 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 28 | 10 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1161,7 +1161,9 @@ DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) la casella dell'assortimen
 
 RESTA APERTO, ed e' una domanda per chi decide: il pre-impostato serve soprattutto a far RIENTRARE un prodotto «fuori assortimento», ma oggi quei prodotti non compaiono nel catalogo ordinabile («non si ricompra», REQ-MAG-007), quindi quel caso non si puo' ancora raggiungere. La casella e' pronta e il campo pure; se si decide che un «out» si puo' riordinare, e' una riga di filtro.
 
-DOVE VA LA CESOIA, se si decidera' di separare l'arrivo dal carico (REQ-MAG-025 punti 3 e 4, che contraddicono la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi): il taglio sta in `consegnaRigheOrdine` (api.js), che oggi fa due cose in fila — segna la riga e chiama `registraAcquisto`. Si spezza in due funzioni che scrivono le righe con lo stesso `scriviRigheOrdine`, si aggiunge un livello «arrivato» fra «richiesto» e «consegnato» in `LIVELLI` (src/lib/listini.js), e la finestra della consegna — che gia' sceglie le righe — diventa la finestra del carico. Il resto non si muove: il prodotto che nasce, il listino, il movimento e il pre-impostato stanno tutti dentro `registraAcquisto`, cioe' dalla parte del carico.
+DOVE VA LA CESOIA, se si decidera' di separare l'arrivo dal carico (REQ-MAG-025 punti 3 e 4, che contraddicono la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi): il taglio sta in `consegnaRigheOrdine` (api.js), che oggi fa due cose in fila — segna la riga e chiama `registraAcquisto`. Si spezza in due funzioni che scrivono le righe con lo stesso `scriviRigheOrdine`, si aggiunge un livello «arrivato» fra «richiesto» e «consegnato» in `LIVELLI` (src/lib/listini.js), e la finestra della consegna — che gia' sceglie le righe — diventa la finestra del carico. Il resto non si muove: il prodotto che nasce, il listino, il movimento e il pre-impostato stanno tutti dentro `registraAcquisto`, cioe' dalla parte del carico. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-038): i tre livelli per riga (richiesto/consegnato/pagato) e la consegna per fetta lasciano il posto agli STATI DELL'ORDINE — aperto, ricevuto, chiuso — perche' con un ordine per fornitore non c'e' piu' bisogno di distinguere consegne diverse dentro lo stesso documento. Il carico avviene al passaggio a ORDINE RICEVUTO, sulle quantita' RICEVUTE.
+
+RESTA VALIDO E NON SI TOCCA il pezzo che questa voce ha di suo: il prodotto che nasce quando il fornitore manda una referenza che in anagrafica non c'e', con la sua «scheda da completare» — quello e' indipendente da come e' fatto l'ordine, e continua a valere.
 
 **Dove**: `src/lib/inventory.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/InventoryManager.jsx, src/components/MacroCategoryManager.jsx` · **Lo dimostrano**: `tests/unit/prodottoNuovoDaOrdine.test.js`, `tests/component/CaricoOrdine.test.jsx`, `tests/component/InventoryManager.test.jsx`
 
@@ -1181,7 +1183,7 @@ SI AGGANCIA E SI SGANCIA DAI DUE LATI. Dalla fetta (Fornitori -> Ordini) si sceg
 
 CADUTA LA CONDIZIONE «SOLO ORDINI GIA' CONSEGNATI» che filtrava gli ordini riprendibili: una proforma arriva anche prima della merce, e allora quelle righe sono proprio quelle da copiare. La fetta ancora «richiesta» si collega, ma non conta come buco: li' non e' arrivato niente, e segnalarla insegnerebbe a ignorare il segnale.
 
-NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'.
+NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038): con un ordine per fornitore la FETTA non esiste piu' come cosa a se', perche' l'ordine ha gia' un fornitore solo. Il legame diventa quindi FATTURA-ORDINE, che e' la forma semplice di quello che questa voce descrive. Restano validi e vanno riusati: la guardia che vieta di agganciare la fattura di un fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione, e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e fattura senza ordine.
 
 **Dove**: `src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx` · **Lo dimostrano**: `tests/unit/legameFattura.test.js`, `tests/unit/agganciaFattura.test.js`, `tests/component/FatturaDellaFetta.test.jsx`
 
@@ -1257,7 +1259,9 @@ IL COLORE DEL FORNITORE si sceglie alla creazione — a caso, oppure a mano dall
 
 NESSUNA MIGRAZIONE, NESSUNO SCRIPT LANCIATO. `rigaVirtuale` fa il ramo di compatibilita': un prodotto senza righe di listino ma col vecchio `supplier_id` scritto produce una riga virtuale con quel fornitore e quel costo. La scheda prodotto ha smesso di SCRIVERE quel campo — ne fa una riga di listino — e non lo cancella; il filtro per fornitore del magazzino guarda il listino (`fornitoriPerArticolo`) e ricade sul vecchio campo dove il listino non c'e'.
 
-DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) un prodotto senza nessun fornitore resta ORDINABILE, con la casella vuota e la fetta «Senza fornitore» — sono 378 su 388, e nasconderli avrebbe lasciato la schermata vuota; (2) la scheda prodotto TIENE la sua tendina fornitore (REQ-MAG-028 dice che di li' si crea un fornitore nuovo, e quella strada resta), ma adesso scrive nel listino; (3) il catalogo a schermo si ferma a 60 righe e lo dice, perche' 388 prodotti per i loro fornitori non si scorrono — si cercano; (4) il campo `status` in testa all'ordine resta nel vocabolario di prima (inviato / ricevuto) e si ricava dalle righe, per non rinominare un campo scritto su documenti veri.
+DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) un prodotto senza nessun fornitore resta ORDINABILE, con la casella vuota e la fetta «Senza fornitore» — sono 378 su 388, e nasconderli avrebbe lasciato la schermata vuota; (2) la scheda prodotto TIENE la sua tendina fornitore (REQ-MAG-028 dice che di li' si crea un fornitore nuovo, e quella strada resta), ma adesso scrive nel listino; (3) il catalogo a schermo si ferma a 60 righe e lo dice, perche' 388 prodotti per i loro fornitori non si scorrono — si cercano; (4) il campo `status` in testa all'ordine resta nel vocabolario di prima (inviato / ricevuto) e si ricava dalle righe, per non rinominare un campo scritto su documenti veri. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038). Due cose scritte qui sopra sono SUPERATE, e vanno lette li'. 1) «L'ORDINE RESTA UNO, coi fornitori dentro, e il per-fornitore e' una VISTA»: non piu'. L'utente ha deciso il 27/08 UN ORDINE PER FORNITORE. La schermata di composizione resta una sola e attraversa i fornitori, ma alla conferma nascono N ordini distinti. 2) «IN ASSORTIMENTO NON CAMBIA SIGNIFICATO»: cambia. E' uno stato SUPERIORE e temporaneo che prende il posto di «in linea» o «premium» e poi restituisce quello di prima. Il perche' e le regole di entrata e uscita stanno in REQ-MAG-037.
+
+RESTA VERO tutto il resto, ed e' la parte che regge il seguito: il listino come collezione con id deterministico, un prodotto solo in magazzino con una giacenza sola, il fornitore proposto che e' quello dell'ultimo acquisto e non il piu' economico, il costo come numero solo e il prezzo del menu che non si tocca.
 
 **Dove**: `src/lib/listini.js, src/components/PurchaseOrdersPanel.jsx, src/lib/inventory.js, src/lib/api.js, firestore.rules` · **Lo dimostrano**: `tests/unit/listini.test.js`, `tests/unit/consegnaOrdine.test.js`, `tests/component/PurchaseOrdersPanel.test.jsx`
 
@@ -2536,6 +2540,84 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
+
+#### REQ-MAG-035 — Il listino si compila nella scheda del fornitore, non ordinando
+
+Chiesto dall'utente il 27/08/2026, dopo aver provato quello che era stato costruito: «l'associazione prodotto -> fornitori DEVE avvenire nella gestione Fornitori. Quando creo/modifico un fornitore mi si deve aprire una pagina dove posso associare i prodotti gia' in magazzino a quel fornitore, o addirittura CREARE un prodotto che poi andra' a finire in magazzino. Posso aggiungere anche un prezzo di listino, che poi sara' quello che vedro' quando compilero'/precompilero' un ordine nella sezione ordini».
+
+COSA CAMBIA RISPETTO A OGGI. Il listino (REQ-MAG-029) esiste gia' come dato — `supplier_prices`, una riga per coppia prodotto-fornitore — ma non ha una schermata: si popola da solo consegnando gli ordini, e la scheda prodotto ha una tendina che ne scrive una riga. Chi implemento' REQ-MAG-029 lascio' fuori l'editor scrivendo che «non era chiesto». Adesso lo e', ed e' il PUNTO DI PARTENZA di tutto il giro: senza listino compilato la schermata dell'ordine non ha prezzi da proporre.
+
+LA SCHEDA DEL FORNITORE diventa quindi il posto dove si dice CHE COSA quel fornitore vende e A QUANTO: si cercano i prodotti gia' in magazzino e li si associa, si mette il prezzo di listino per pezzo, e si puo' creare li' un prodotto che ancora non esiste — che nasce in magazzino come qualunque altro.
+
+IL PREZZO DI LISTINO E' QUELLO CHE SI VEDE QUANDO SI ORDINA. Non e' il costo del prodotto (che resta uno solo, l'ultimo pagato, REQ-MAG-029) e non e' il prezzo di vendita del menu, che e' di Flavio.
+
+RESTA VERO che il prezzo si aggiorna anche dall'altro capo: quando si riceve merce e si corregge il prezzo, quella riga di listino si aggiorna con la sua data. Le due strade scrivono lo stesso dato.
+
+**Dove**: `src/components/SuppliersPanel.jsx, src/lib/listini.js, src/lib/api.js`
+
+#### REQ-MAG-036 — «Nuovo Ordine»: una tabella sola, e la riga che si apre
+
+Chiesto dall'utente il 27/08/2026, bocciando quello che era stato costruito: «nella sezione ordini NON MI PIACE LA DOPPIA LISTA e quei box sono POSTICCI. Serve una UX e UI piu' moderna e semplice. Deve esserci UNA SOLA TABELLA dove su ogni riga vedro' il nome del prodotto e i vari campi per compilare l'ordine, compresa una dropdown per la scelta del fornitore».
+
+LA RIGA. Nome del prodotto · fornitore (tendina) · prezzo unitario preso dal LISTINO di quel fornitore (REQ-MAG-035) · prezzo totale rispetto ai pezzi voluti, modificabile sulla riga stessa · e un modo per selezionare le righe da ordinare.
+
+IL FILTRO E LA RICERCA, parole sue: «quando filtro per fornitore vedro' nella tabella solo gli item di quel fornitore; se cerco un prodotto vedro' probabilmente il prodotto DUPLICATO se associato a piu' di un fornitore». Il duplicato non e' un difetto: e' lo stesso prodotto in due listini, e si distingue per fornitore e colore (REQ-MAG-029).
+
+LA RIGA CHE SI APRE: «quando seleziono un item mi si deve aprire la riga che mi dira' anche le info di quel prodotto — se in assortimento, out, in linea eccetera, quante scorte ho ancora in magazzino — piu' la possibilita' di modificare gli stessi campi che modificherei inline sulla riga stessa». Le stesse cose, due strade: in linea per chi sa gia' cosa vuole, aperta per chi deve guardare prima di decidere.
+
+LA PRESELEZIONE, che e' il motivo per cui questa schermata esiste: sono spuntati di partenza i prodotti FINITI o SOTTO LA SOGLIA di riordino impostata sul prodotto. Chi apre la schermata trova gia' fatto il lavoro di girare il magazzino.
+
+NON SI PRECOMPILA CHI E' FUORI LINEA: «se e' fuori linea non viene considerato nella precompilazione dell'ordine» (utente, 27/08). Un prodotto `out` si puo' sempre ordinare a mano — e' cosi' che rientra — ma non si propone da solo.
+
+LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del prodotto, questo viene selezionato automaticamente per l'ordine». Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la spunta sarebbe far dire due volte la stessa cosa.
+
+**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/inventory.js`
+
+#### REQ-MAG-037 — Il riepilogo per fornitore, e «in assortimento» come stato di passaggio
+
+Chiesto dall'utente il 27/08/2026. La conferma di un giro d'ordini non e' un tasto: e' una schermata di revisione, fornitore per fornitore. «La creazione dell'ordine deve portarmi a una schermata di RIEPILOGO dove avro' una serie di tabelle in base all'ordine che voglio fare ai vari fornitori. Le tabelle saranno A SCOMPARSA, una sotto l'altra: se clicco sul nome di un fornitore mi si apre la tabella dei prodotti selezionati per quel fornitore, che io posso revisionare, e PER SINGOLO FORNITORE posso creare l'ordine. Se confermo l'ordine per quel fornitore, sulla riga relativa al fornitore vedro' il badge ORDINATO e tutti i prodotti di quell'ordine passeranno IN ASSORTIMENTO. E deve funzionare cosi' per tutte le tabelle, per tutti i fornitori — che sono ovviamente visibili SOLO se ho selezionato e sto ordinando prodotti da quel fornitore».
+
+UN ORDINE PER FORNITORE, deciso dall'utente il 27/08 rispondendo a una domanda diretta. Questo SOSTITUISCE la decisione del 20/08 («un ordine puo' contenere item di piu' fornitori, il per-fornitore e' una vista») e con lei il modello a FETTE costruito il 26-27/08: alla conferma nascono N ordini distinti, uno per fornitore, ognuno col suo stato e la sua fattura. Il «giro» torna a essere la SESSIONE di composizione — cioe' la schermata «Nuovo Ordine» — e non un documento. PERCHE' SEMPLIFICA: la Lista Ordini (REQ-MAG-038), la riconciliazione e il legame con la fattura diventano cose per ORDINE invece che per fetta. Il legame fattura-fetta di REQ-MAG-031 diventa fattura-ordine, e la guardia sul fornitore resta (la fattura e' di chi la emette). «IN ASSORTIMENTO», e qui va letto con attenzione perche' ribalta quanto scritto in REQ-MAG-029 («non cambia significato»). Parole dell'utente, 27/08, che chiudono la questione: «e' la gestione di Flavio che usa lo stato. In assortimento e' piu' relativo allo STATO DEI PRODOTTI: dipende dalla giacenza di magazzino ma viene comunque gestito come stato commerciale». I VERI STATI COMMERCIALI SONO TRE:
+
+IN LINEA, PREMIUM, FUORI LINEA (out). «In assortimento» e' UNO STATO SUPERIORE che viene indicato AL POSTO di «in linea» o «premium», e alla fine RESTITUISCE quello di prima. Quindi il prodotto deve RICORDARE lo stato da cui viene: senza quella memoria, un premium tornerebbe indietro come un prodotto qualunque e la classificazione di Flavio si cancellerebbe da sola, un ordine per volta, su tutto il magazzino.
+
+QUANDO SI ENTRA, e questo va letto senza scorciatoie (precisato dall'utente il 27/08: «va in assortimento SOLO DOPO CHE FLAVIO HA CREATO L'ORDINE, o solo se lo imposta manualmente, mi raccomando»). Il grilletto e' la CONFERMA DELL'ORDINE a quel fornitore nel riepilogo, e nient'altro: NON la giacenza sotto soglia, NON la spunta nella tabella, NON l'aver aperto la schermata. La catena, detta dall'utente: «se lo spunti in tabella verra' visualizzato nel RIEPILOGO dell'ordine, e SOLO DOPO LA CONFERMA di Flavio passera' in assortimento». La spunta porta il prodotto nel riepilogo e li' si ferma: finche' Flavio non conferma quel fornitore, in magazzino non e' cambiato niente — e infatti dal riepilogo si puo' ancora togliere. Un prodotto sotto soglia che nessuno ordina resta in linea o premium — e' basso, non e' in arrivo, e dire il contrario riempirebbe il magazzino di prodotti «in assortimento» che non ha ordinato nessuno. La giacenza bassa resta la condizione per cui il prodotto si PROPONE da solo nella tabella (REQ-MAG-036), che e' un'altra cosa dal cambiargli stato. Il prodotto «DEVE essere in linea o premium per poter passare allo stato in assortimento quando fa parte di un ordine aperto»: un `out` non ci passa, e' fuori linea e non lo si sta rifornendo.
+
+QUANDO SI ESCE: al carico. Se la giacenza torna SOPRA LA SOGLIA il prodotto riprende lo stato di prima — in linea o premium. Se il carico non basta a superarla, resta in assortimento: non e' ancora rifornito, e dirlo a posto sarebbe una bugia. A MANO SI PUO', MA COSTA UNA DOMANDA. «Siccome Flavio potrebbe voler impostare a mano quello stato, bisogna fargli presente che se lo imposta bisogna associarlo anche a un ordine — internamente sara' tipo IN ASSORTIMENTO SENZA ORDINE — e anche in quel caso verra' preso in considerazione come un prodotto sotto soglia o esaurito nella precompilazione dell'ordine». Quindi: lo stato messo a mano e' legittimo, si distingue perche' non ha un ordine dietro, e fa entrare il prodotto fra quelli proposti al prossimo giro. L'INTERFACCIA DEL MAGAZZINO NON SI TOCCA: «non deve cambiare l'attuale UI o UX del magazzino, mi raccomando» (utente, 27/08). I quattro stati restano quattro in schermata e nei filtri; quello che cambia e' chi li scrive e il fatto che uno dei quattro sia di passaggio e ricordi il precedente.
+
+**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/inventory.js, src/lib/api.js`
+
+#### REQ-MAG-038 — «Lista Ordini»: gli stati, la fattura, e i due confronti che contano
+
+Chiesto dall'utente il 27/08/2026. La sottosezione «Ordini» si divide in due: «NUOVO ORDINE» e' la schermata di composizione (REQ-MAG-036), e nasce «LISTA ORDINI», «che conterra' lo storico di tutti gli ordini fatti, filtrabile per STATO dell'ordine».
+
+GLI STATI DELL'ORDINE, dalle sue parole: EFFETTUATO/APERTO alla conferma;
+
+ORDINE RICEVUTO quando la merce arriva davvero in negozio;
+
+CHIUSO quando la fattura e' stata riconciliata. Il filtro della lista e' su questi.
+
+LA FATTURA, e sono due strade diverse che finiscono nello stesso posto:
+
+1) SI ASSOCIA: «un tasto associa fattura che mi permettera' di selezionare una fattura/proforma — qualsiasi documento fiscale — a quell'ordine»;
+
+2) SI GENERA DALL'ORDINE: «la posso anche generare dall'ordine, coi prezzi dell'ordine», che sono quelli del listino definito nella scheda del fornitore (REQ-MAG-035).
+
+QUINDI ANCHE LA FATTURA HA DEGLI STATI, e la differenza che conta e' fra una fattura GENERATA da noi — utile per sapere quanto ci si aspetta di pagare — e una fattura VERA, arrivata dal fornitore, «che puo' essere fatto caricando il documento reale della fattura, anche una foto o un pdf» (l'allegato c'e' gia': REQ-MAG-033).
+
+IL PRIMO CONFRONTO — PREZZI: «nel caso l'ordine abbia la fattura associata, bisognera' mostrare la DIFFERENZA DI PREZZO da quando e' stato fatto l'ordine rispetto al prezzo indicato in fattura». E' il motivo per cui il listino serve: senza un prezzo atteso non c'e' niente da confrontare, e un aumento passa inosservato.
+
+IL SECONDO CONFRONTO — QUELLO CHE E' ARRIVATO: se l'ordine e' ancora aperto, «quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello che ha effettivamente ricevuto». Da qui nascono tre elenchi da tenere distinti: quello che si e' ORDINATO, quello che si e' RICEVUTO, e quello che c'e' SULLA FATTURA. «Quando associera' la fattura potra' verificare se ci sono gli stessi articoli e i prezzi rispetto a quanto indicato nell'ordine effettuato e nell'ordine ricevuto».
+
+LA RICONCILIAZIONE e' il gesto che dichiara che i tre elenchi tornano. Solo dopo l'ordine si puo' mettere a CHIUSO.
+
+IL CARICO A MAGAZZINO avviene «automaticamente dopo che Flavio ha effettivamente verificato che gli sia arrivato tutto quello che ha richiesto» — cioe' al passaggio a ORDINE RICEVUTO, sulle quantita' ricevute e non su quelle ordinate. In quel momento i prodotti «non avranno piu' lo stato in assortimento» e riprendono quello di prima se la giacenza torna sopra la soglia (REQ-MAG-037).
+
+COSA SOSTITUISCE. I tre livelli per riga richiesto/consegnato/pagato (REQ-MAG-029) e la consegna per fetta (REQ-MAG-032) lasciano il posto agli stati dell'ordine: il documento e' di un fornitore solo, quindi il livello per riga non serve piu' a distinguere consegne diverse. Resta il principio, che non cambia: il prezzo si corregge quando la merce arriva, il fornitore no.
+
+DOPO, NON ADESSO: l'OCR con l'AI sul documento allegato, «per associare i prodotti in fattura all'ordine, o anche solo verificare». La strada e' gia' apparecchiata dai tre elenchi e dall'allegato; e' una voce sua (REQ-AI-001) e non un pezzo di questa.
+
+**Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js`
 
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
 
