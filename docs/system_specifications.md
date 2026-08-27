@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 180 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 24 | da fare |
+| ⬜ | 25 | da fare |
 | 🗑 | 7 | non più valido |
 
-**226 voci** in tutto. **195** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**227 voci** in tutto. **195** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 28 | 10 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 28 | 11 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -2583,7 +2583,17 @@ IN LINEA, PREMIUM, FUORI LINEA (out). «In assortimento» e' UNO STATO SUPERIORE
 
 QUANDO SI ENTRA, e questo va letto senza scorciatoie (precisato dall'utente il 27/08: «va in assortimento SOLO DOPO CHE FLAVIO HA CREATO L'ORDINE, o solo se lo imposta manualmente, mi raccomando»). Il grilletto e' la CONFERMA DELL'ORDINE a quel fornitore nel riepilogo, e nient'altro: NON la giacenza sotto soglia, NON la spunta nella tabella, NON l'aver aperto la schermata. La catena, detta dall'utente: «se lo spunti in tabella verra' visualizzato nel RIEPILOGO dell'ordine, e SOLO DOPO LA CONFERMA di Flavio passera' in assortimento». La spunta porta il prodotto nel riepilogo e li' si ferma: finche' Flavio non conferma quel fornitore, in magazzino non e' cambiato niente — e infatti dal riepilogo si puo' ancora togliere. Un prodotto sotto soglia che nessuno ordina resta in linea o premium — e' basso, non e' in arrivo, e dire il contrario riempirebbe il magazzino di prodotti «in assortimento» che non ha ordinato nessuno. La giacenza bassa resta la condizione per cui il prodotto si PROPONE da solo nella tabella (REQ-MAG-036), che e' un'altra cosa dal cambiargli stato. Il prodotto «DEVE essere in linea o premium per poter passare allo stato in assortimento quando fa parte di un ordine aperto»: un `out` non ci passa, e' fuori linea e non lo si sta rifornendo.
 
-QUANDO SI ESCE: al carico. Se la giacenza torna SOPRA LA SOGLIA il prodotto riprende lo stato di prima — in linea o premium. Se il carico non basta a superarla, resta in assortimento: non e' ancora rifornito, e dirlo a posto sarebbe una bugia. A MANO SI PUO', MA COSTA UNA DOMANDA. «Siccome Flavio potrebbe voler impostare a mano quello stato, bisogna fargli presente che se lo imposta bisogna associarlo anche a un ordine — internamente sara' tipo IN ASSORTIMENTO SENZA ORDINE — e anche in quel caso verra' preso in considerazione come un prodotto sotto soglia o esaurito nella precompilazione dell'ordine». Quindi: lo stato messo a mano e' legittimo, si distingue perche' non ha un ordine dietro, e fa entrare il prodotto fra quelli proposti al prossimo giro. L'INTERFACCIA DEL MAGAZZINO NON SI TOCCA: «non deve cambiare l'attuale UI o UX del magazzino, mi raccomando» (utente, 27/08). I quattro stati restano quattro in schermata e nei filtri; quello che cambia e' chi li scrive e il fatto che uno dei quattro sia di passaggio e ricordi il precedente.
+QUANDO SI ESCE: al carico. Se la giacenza torna SOPRA LA SOGLIA il prodotto riprende lo stato di prima — in linea o premium. Se il carico non basta a superarla, resta in assortimento: non e' ancora rifornito, e dirlo a posto sarebbe una bugia. A MANO SI PUO', MA COSTA UNA DOMANDA. «Siccome Flavio potrebbe voler impostare a mano quello stato, bisogna fargli presente che se lo imposta bisogna associarlo anche a un ordine — internamente sara' tipo IN ASSORTIMENTO SENZA ORDINE — e anche in quel caso verra' preso in considerazione come un prodotto sotto soglia o esaurito nella precompilazione dell'ordine». Quindi: lo stato messo a mano e' legittimo, si distingue perche' non ha un ordine dietro, e fa entrare il prodotto fra quelli proposti al prossimo giro.
+
+IL CARICO A MANO RESTA, E NON SPEGNE LO STATO. Parole dell'utente, 27/08: «Flavio potrebbe aver comprato la bottiglia oggi al supermercato perche' si e' scordato di ordinarla. Se lo stato e' in assortimento e Flavio fa carico manuale, NON CAMBIA NIENTE: rimane in assortimento. Questo puo' succedere perche' ha fatto un ordine, ma l'ordine e' in ritardo e a lui servono bottiglie. Semplicemente aumentano le scorte, ma siccome c'e' un ordine attivo in attesa di essere ricevuto lui rimane in assortimento». Quindi non e' la GIACENZA a spegnere lo stato: e' il fatto che il prodotto non stia piu' dentro un ordine aperto. Legarlo alla soglia farebbe sparire l'informazione «sta arrivando altra merce» proprio nel momento in cui serve — Flavio si ritroverebbe la cassa piena di roba comprata di corsa e nessun segno che dal fornitore ne arriva dell'altra.
+
+DUE SOLE STRADE PER USCIRNE, ed e' l'utente a dirle: 1) L'ORDINE ARRIVA (passa a consegnato): si carica sulle quantita' ricevute e il prodotto torna al suo stato di prima, in linea o premium.
+
+2) SI TOGLIE L'ITEM DALL'ORDINE: «quello che Flavio puo' fare e' eliminare quell'item dall'ordine ANCHE SE GIA' FATTO, e si ripristina lo stato in linea o premium».
+
+SE INVECE CAMBIA LO STATO A MANO DAL MAGAZZINO, l'app non lo lascia fare in silenzio: «gli si deve DIRE che quel prodotto e' presente in un ordine in attesa di essere ricevuto. Se cambia lo stato manualmente, il prodotto va eliminato dall'ordine». Sono la stessa decisione presa dai due capi, e non possono divergere: un prodotto che non e' piu' «in assortimento» ma resta dentro un ordine aperto e' un ordine che nessuno sa piu' di aver fatto.
+
+RESTA APERTO, e va deciso guardandolo: se l'ordine arriva ma la giacenza caricata NON supera la soglia, il prodotto non ha piu' un ordine dietro pur essendo ancora scarso. Ricade nel caso «in assortimento senza ordine» descritto sopra — cioe' torna fra quelli che si propongono da soli al giro dopo — oppure torna in linea/premium e basta. L'INTERFACCIA DEL MAGAZZINO NON SI TOCCA: «non deve cambiare l'attuale UI o UX del magazzino, mi raccomando» (utente, 27/08). I quattro stati restano quattro in schermata e nei filtri; quello che cambia e' chi li scrive e il fatto che uno dei quattro sia di passaggio e ricordi il precedente.
 
 MA QUELLO CHE SI LEGGE CAMBIA, e va detto invece di far finta che il magazzino resti identico (precisazione dell'utente, 27/08: «non e' del tutto vero, perche' i prodotti ordinati in magazzino diventeranno in assortimento»). Non si spostano comandi ne' colonne: cambia il VALORE che la lista mostra. Un prodotto dentro un ordine aperto si legge «in assortimento» al posto di «in linea» o «premium», e ci resta finche' l'ordine non arriva. Quindi in magazzino comparira' un gruppo di prodotti in quello stato che prima non c'era mai, i filtri per stato ne risentiranno, e chi cerca «i premium» in quel momento non ci trovera' quelli in arrivo. E' voluto — e' l'informazione che Flavio vuole a colpo d'occhio — ma e' un cambiamento di cosa dice la schermata, non solo di cosa fa l'ordine.
 
@@ -2617,6 +2627,10 @@ IL PRIMO CONFRONTO — PREZZI: «nel caso l'ordine abbia la fattura associata, b
 
 IL SECONDO CONFRONTO — QUELLO CHE E' ARRIVATO: se l'ordine e' ancora aperto, «quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello che ha effettivamente ricevuto». Da qui nascono tre elenchi da tenere distinti: quello che si e' ORDINATO, quello che si e' RICEVUTO, e quello che c'e' SULLA FATTURA. «Quando associera' la fattura potra' verificare se ci sono gli stessi articoli e i prezzi rispetto a quanto indicato nell'ordine effettuato e nell'ordine ricevuto».
 
+LA BOZZA, stato in piu' chiesto dall'utente il 27/08: «forse sarebbe meglio anche salvare l'ordine come BOZZA. L'ordine bozza NON IMPATTA SUL MAGAZZINO. In questo modo Flavio puo' riprendere la creazione dell'ordine in un altro momento e confermarlo quando effettivamente gli serve». Sta PRIMA di «richiesto» ed e' l'unico stato che non fa niente: niente «in assortimento» sui prodotti, niente segnalazioni, niente numeri nel riepilogo dei soldi che escono. E' importante che non impatti, perche' comporre un ordine di venti righe e' un lavoro che si interrompe — arriva gente, si apre il locale — e senza bozza si ricomincia da capo oppure si conferma un ordine solo per non perderlo, che e' peggio.
+
+LO STORICO DELL'ORDINE, chiesto per lo stesso motivo: «serve a questo punto una LISTA DEI MOVIMENTI fatti per quell'ordine, una specie di history, se l'ordine e' gia' stato confermato da Flavio ma Flavio fa delle modifiche». Un ordine mandato al fornitore che poi cambia — una riga tolta perche' la bottiglia e' stata comprata al supermercato, una quantita' corretta all'arrivo, un prezzo rifatto sulla fattura — senza storico diventa un documento che non corrisponde piu' a niente e nessuno sa piu' perche'. Con tre elenchi da confrontare (ordinato, ricevuto, fatturato) le modifiche sono la norma, non l'eccezione: vanno registrate con cosa e' cambiato e quando.
+
 LA RICONCILIAZIONE e' il gesto che dichiara che i tre elenchi tornano. Solo dopo l'ordine si puo' mettere a CHIUSO.
 
 IL CARICO A MAGAZZINO avviene «automaticamente dopo che Flavio ha effettivamente verificato che gli sia arrivato tutto quello che ha richiesto» — cioe' al passaggio a ORDINE RICEVUTO, sulle quantita' ricevute e non su quelle ordinate. In quel momento i prodotti «non avranno piu' lo stato in assortimento» e riprendono quello di prima se la giacenza torna sopra la soglia (REQ-MAG-037).
@@ -2626,6 +2640,20 @@ COSA SOSTITUISCE. I tre livelli per riga richiesto/consegnato/pagato (REQ-MAG-02
 DOPO, NON ADESSO: l'OCR con l'AI sul documento allegato, «per associare i prodotti in fattura all'ordine, o anche solo verificare». La strada e' gia' apparecchiata dai tre elenchi e dall'allegato; e' una voce sua (REQ-AI-001) e non un pezzo di questa.
 
 **Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js`
+
+#### REQ-MAG-039 — L'ordine che si rifa' uguale: i modelli d'ordine
+
+Chiesto dall'utente il 27/08/2026: «Flavio potrebbe voler salvare un ordine come TEMPLATE, e nella creazione dell'ordine, oltre alla precompilazione, deve poter usare un template salvato — con quantita' gia' impostate e prodotti per fornitore gia' selezionati — in modo da poter partire da una situazione che lui conosce. Il template si puo' salvare in fase di creazione». PERCHE' SERVE, ed e' diverso dalla precompilazione. La precompilazione (REQ-MAG-036) guarda le SCORTE: propone quello che sta finendo adesso. Il modello guarda l'ABITUDINE: e' il giro che Flavio fa sempre — la settimana tipo, l'ordine grosso di inizio mese, quello prima di un evento. Le due cose rispondono a domande diverse e devono poter convivere: si parte dal modello e la precompilazione aggiunge quello che manca oggi, oppure si parte dalle scorte e si aggiunge il modello.
+
+COSA CONTIENE: prodotti, il fornitore scelto per ognuno e la quantita'. Non i prezzi — quelli si rileggono ogni volta dal listino (REQ-MAG-035), perche' un modello di due mesi fa coi prezzi dentro farebbe partire un ordine a cifre vecchie senza che nessuno se ne accorga.
+
+SI SALVA DURANTE LA COMPOSIZIONE, non dopo: e' li' che Flavio ha davanti quello che vuole conservare. Un modello ha un nome suo, se ne tengono piu' d'uno, e si possono cambiare e cancellare.
+
+COSA FARE QUANDO IL MONDO E' CAMBIATO, e va deciso perche' succedera': un modello puo' contenere un prodotto che non esiste piu', o un fornitore che non lo vende piu' (riga di listino tolta). Chi lo applica deve vedere cosa non e' stato ripreso e perche', invece di trovarsi un ordine piu' corto senza spiegazione.
+
+RESTA APERTO: se un modello debba potersi ricavare da un ordine gia' fatto («salva questo come modello» dalla Lista Ordini), che e' il modo piu' naturale di crearne uno e costa poco una volta che il modello esiste.
+
+**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/api.js`
 
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
 
