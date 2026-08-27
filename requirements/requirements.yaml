@@ -8363,6 +8363,29 @@ requirements:
       all'ordine resta nel vocabolario di prima (inviato / ricevuto) e si
       ricava dalle righe, per non rinominare un campo scritto su documenti
       veri.
+      ⚠️ FATTO IL 27/08/2026: IL REIMPORT DEI FOGLI, che qui sopra era
+      chiamato «una strada, non un prerequisito». La strada c'era davvero. In
+      `GEN ORD REC.xlsx` la colonna `FORNIT` e' compilata su TUTTI e 126 i
+      fogli — 420 coppie prodotto-fornitore distinte col prezzo netto, e 33
+      prodotti comprati da piu' fornitori, che e' la prova nei dati di quello
+      che diceva Flavio. I fogli nominano 13 fornitori mentre l'anagrafica ne
+      aveva 6.
+      Attrezzi: `scripts/migra-listini.mjs` (il vecchio campo `supplier_id`
+      del prodotto diventa una riga di listino) e `scripts/importa-listini.mjs`
+      (i fogli diventano listini, agganciando i nomi con `nameMatch.js`).
+      Girano SOLO sull'emulatore; la produzione non compare in quei file.
+      LA LEZIONE, che vale per il prossimo aggancio di nomi: la somiglianza
+      dei nomi NON basta e sbaglia in modo pericoloso, perche' i nomi vicini
+      sono spesso prodotti DIVERSI — «Brockmans Agave Cut» non e' «Brockmans»
+      (e' gin tagliato con agave, un'altra categoria merceologica) e «Mazzetti
+      Barricata» non e' «Mazzetti Bianca». Quello che decide davvero e' IL
+      FORMATO: il foglio porta la colonna `cl`, il magazzino il contenuto del
+      pezzo, e confrontarli scioglie i casi che il nome lascia aperti —
+      «Estathe' Limone» a 33 cl e' la LATTINA e non il vetro, «Schweppes
+      Ginger» a 18 cl e' la Ginger BEER (180 ml) e non la Ale (200 ml),
+      «Pompelmo» a 20 cl NON e' il «Pompelmo 1L» e va creato. Ha sciolto anche
+      «Nikka From the Barrel» → «Nikka»: 50 cl, che e' il formato tipico di
+      quella bottiglia mentre le altre Nikka sono da 70.
       ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038). Due cose scritte qui
       sopra sono SUPERATE, e vanno lette li'.
       1) «L'ORDINE RESTA UNO, coi fornitori dentro, e il per-fornitore e' una
