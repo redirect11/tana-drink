@@ -4,6 +4,40 @@
 
 ### Per chi sta al banco
 
+- **Chi vende a cartoni adesso si ordina a cartoni.** Sul listino di un
+  fornitore c'è **«Pezzi per collo»**: si compila solo dove quel fornitore
+  vende a casse o a cartoni — le Bjorne da FONT vanno a 24 — e da lì in poi il
+  prezzo che si scrive è quello del **collo intero**, cioè la cifra che
+  compare sulla sua fattura. Il **prezzo del singolo pezzo si calcola da sé**
+  e si legge accanto: è l'unico modo di confrontare due fornitori che vendono
+  in confezioni diverse, e dice per esempio che la Bjorne a cassa costa meno
+  che a bottiglia. Nel nuovo ordine la riga chiede **colli** invece di pezzi e
+  mostra quante bottiglie ne arrivano; in magazzino entrano sempre **pezzi**.
+  Prima l'app moltiplicava i pezzi voluti per il prezzo del cartone: otto
+  Bjorne risultavano **200 euro** invece di **8,35**. Per i prodotti che si
+  comprano a pezzo — quasi tutti — **non cambia niente**: stessa riga, stesso
+  prezzo, e la parola «collo» non compare.
+
+- **E si può scrivere il listino come lo scrive il fornitore.** Accanto al
+  prezzo c'è **«Prezzo espresso per»**: il **collo** (la cifra che fattura, ed
+  è il caso normale), il **pezzo** quando vende a cartoni ma quota la
+  bottiglia, oppure **litri, centilitri, chili o grammi** quando prezza il
+  contenuto — un vino a 9 €/litro in bottiglie da 75 cl fa 6,75 a bottiglia, e
+  il cartone da 6 costa 40,50. **Il prezzo della bottiglia si vede sempre
+  accanto**, mentre si scrive: è il numero che si riconosce a colpo d'occhio,
+  e un gin che risulta costare 0,80 € si nota subito. Se il prodotto non dice
+  quanto contiene, l'app **non inventa un prezzo**: scrive che cosa manca
+  nella sua scheda.
+
+- **Nel nuovo ordine basta toccare la riga.** Toccando una riga della tabella
+  il prodotto **entra** nell'ordine; toccandola di nuovo **esce**. Vale tutta
+  la riga, non solo la casella: componendo un ordine si passano in rassegna
+  decine di prodotti, e centrare un quadratino ogni volta è una fatica
+  inutile. I campi che si scrivono — pezzi, totale, tendina del fornitore — e
+  il tasto che apre la scheda restano esclusi, così scriverci dentro non
+  toglie quello che si è appena aggiunto. Le righe già nell'ordine si
+  riconoscono dal fondo colorato.
+
 - **L'ordine si conferma un fornitore per volta, e ognuno diventa un ordine
   suo.** Finita la composizione, **«Rivedi e conferma»** porta a una schermata
   di **riepilogo**: una riga per ogni fornitore da cui si sta ordinando, e

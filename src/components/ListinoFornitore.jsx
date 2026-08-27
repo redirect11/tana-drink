@@ -7,7 +7,12 @@ import {
   eliminaRigaListino,
   creaProdottoAListino,
 } from '../lib/api.js'
-import { coloreFornitore } from '../lib/listini.js'
+import {
+  ETICHETTA_UNITA_PREZZO,
+  UNITA_PREZZO,
+  coloreFornitore,
+  scalaListino,
+} from '../lib/listini.js'
 import { contenutoDelPezzo, formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { ETICHETTA_ORIGINE, origineDi, storicoDiCoppia } from '../lib/storicoPrezzi.js'
@@ -173,6 +178,9 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
           supplier_id: fornitore.id,
           item_id: riga.item_id,
           price: 'price' in bozza ? bozza.price : riga.price,
+          pezzi_per_collo:
+            'pezzi_per_collo' in bozza ? bozza.pezzi_per_collo : riga.pezzi_per_collo,
+          unita_prezzo: 'unita_prezzo' in bozza ? bozza.unita_prezzo : riga.unita_prezzo,
           package_label: 'package_label' in bozza ? bozza.package_label : riga.package_label,
           code: 'code' in bozza ? bozza.code : riga.code,
           precedente: riga,
@@ -208,8 +216,10 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
       <div className="card" style={{ marginTop: 8, borderLeft: `4px solid ${colore}` }}>
         <h3 style={{ marginTop: 0 }}>Listino di {fornitore.name}</h3>
         <p className="muted">
-          Che cosa vende questo fornitore e a quanto. Il prezzo è quello di un pezzo,
-          al netto, ed è quello che comparirà quando si compila un ordine.
+          Che cosa vende questo fornitore e a quanto. Il prezzo è al netto ed è quello
+          che comparirà quando si compila un ordine: di un pezzo, oppure del collo
+          intero se questo fornitore vende a cartoni. In quel caso si indicano anche
+          i pezzi per collo, e il prezzo del singolo pezzo si calcola da sé.
         </p>
 
         <label htmlFor="lf-cerca">Cerca un prodotto in magazzino</label>
@@ -287,6 +297,30 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
             const nome = item?.name || 'Prodotto non più in magazzino'
             const bozza = bozze[riga.item_id] || {}
             const prezzo = 'price' in bozza ? bozza.price : (riga.price ?? '')
+            // QUELLO CHE SI LEGGE NEI CAMPI resta la cifra scritta a mano —
+            // anche mentre la si sta cancellando, o il campo non si potrebbe
+            // svuotare per riscriverlo. È la stessa trappola dei pezzi e del
+            // totale nella tabella dell'ordine.
+            const colloScritto =
+              'pezzi_per_collo' in bozza ? bozza.pezzi_per_collo : (riga.pezzi_per_collo ?? 1)
+            const unitaScritta =
+              'unita_prezzo' in bozza ? bozza.unita_prezzo : riga.unita_prezzo
+            // I CONTI invece passano SEMPRE dalla scala (REQ-MAG-040), che è
+            // il posto in cui il collo vuoto vale 1 e l'unità mancante vale
+            // «collo»: le 367 righe già in archivio quei campi non ce li
+            // hanno, e un `undefined` in una moltiplicazione dà un ordine da
+            // zero pezzi, in una divisione un prezzo Infinity.
+            const scala = scalaListino(
+              { price: prezzo, pezzi_per_collo: colloScritto, unita_prezzo: unitaScritta },
+              item
+            )
+            // IL PREZZO AL PEZZO SI MOSTRA DOVE È STATO RICAVATO, ed è la
+            // difesa che vale più di tutte: è il numero che una persona
+            // riconosce a colpo d'occhio, e un gin che risulta 0,80 € si vede
+            // subito. Dove non c'è niente da ricavare — prezzo al collo, collo
+            // da uno — sarebbe la stessa cifra scritta due volte, e una riga
+            // che ripete se stessa insegna a non leggerla.
+            const ricavato = scala.unita !== 'collo' || scala.perCollo > 1
             const daSalvare = Object.keys(bozza).length > 0
             const ultima = storicoDiCoppia(variazioni, fornitore.id, riga.item_id)[0] || null
             const aperto = aperta === riga.item_id
@@ -310,16 +344,31 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                         : ''}
                     </span>
                   </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    aria-label={`Prezzo di ${nome}`}
-                    value={prezzo}
-                    placeholder="€/pz"
-                    onChange={(e) => cambia(riga.item_id, 'price', e.target.value)}
-                    style={{ width: 92, textAlign: 'right' }}
-                  />
+                  <span style={{ textAlign: 'right' }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      aria-label={`Prezzo di ${nome}`}
+                      value={prezzo}
+                      placeholder={`€/${ETICHETTA_UNITA_PREZZO[scala.unita]}`}
+                      onChange={(e) => cambia(riga.item_id, 'price', e.target.value)}
+                      style={{ width: 92, textAlign: 'right' }}
+                    />
+                    {ricavato && scala.prezzoPezzo != null && (
+                      <span className="muted small" style={{ display: 'block' }}>
+                        {formatPrice(scala.prezzoPezzo)}/pz
+                      </span>
+                    )}
+                    {/* Un conto che non si può fare non produce un numero:
+                        produce il perché, con le stesse parole che il
+                        magazzino usa già per la stessa mancanza. */}
+                    {scala.problema && (
+                      <span className="muted small" style={{ display: 'block' }}>
+                        {scala.problema}
+                      </span>
+                    )}
+                  </span>
                   {daSalvare && (
                     <button className="btn small" onClick={() => salva(riga)}>
                       Salva
@@ -360,10 +409,58 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                           onChange={(e) => cambia(riga.item_id, 'package_label', e.target.value)}
                         />
                       </span>
+                      {/* L'UNITÀ IN CUI QUESTO FORNITORE PREZZA (REQ-MAG-040).
+                          «Collo» è il caso normale: il prezzo è quello che
+                          fattura. Le altre sono i modi in cui un listino può
+                          essere scritto — al pezzo quando vende a cartoni ma
+                          quota la bottiglia, al litro o al chilo quando prezza
+                          il contenuto. Il conto resta sempre lo stesso: prezzo
+                          × contenuto del pezzo × pezzi per collo. */}
+                      <span style={{ minWidth: 140, flex: 1 }}>
+                        <label htmlFor={`lf-unita-${riga.item_id}`}>Prezzo espresso per</label>
+                        <select
+                          id={`lf-unita-${riga.item_id}`}
+                          value={scala.unita}
+                          onChange={(e) => cambia(riga.item_id, 'unita_prezzo', e.target.value)}
+                        >
+                          {UNITA_PREZZO.map((u) => (
+                            <option key={u} value={u}>{ETICHETTA_UNITA_PREZZO[u]}</option>
+                          ))}
+                        </select>
+                      </span>
+                      {/* IL NUMERO STA QUI, ACCANTO ALLA SCRITTA (REQ-MAG-040).
+                          «Confezione» resta la dicitura per chi riceve
+                          l'ordine; questo è il numero su cui si fanno i conti,
+                          e serve perché lo stesso prodotto da un fornitore va
+                          a bottiglia e da un altro a cartone da 24. */}
+                      <span style={{ minWidth: 140, flex: 1 }}>
+                        <label htmlFor={`lf-collo-${riga.item_id}`}>Pezzi per collo</label>
+                        <input
+                          id={`lf-collo-${riga.item_id}`}
+                          type="number"
+                          step="1"
+                          min="0"
+                          inputMode="numeric"
+                          value={colloScritto}
+                          placeholder="Es. 24"
+                          onChange={(e) => cambia(riga.item_id, 'pezzi_per_collo', e.target.value)}
+                        />
+                      </span>
                     </div>
                     <p className="muted small" style={{ marginTop: 6 }}>
                       Codice e confezione sono quelli di questo fornitore, e servono a chi
-                      riceve l’ordine dall’altra parte.
+                      riceve l’ordine dall’altra parte. I <strong>pezzi per collo</strong> si
+                      compilano solo se questo fornitore vende a cartoni o a casse: allora
+                      l’ordine si conta in colli e in magazzino entrano i pezzi che
+                      contengono. Lasciandoli a 1 si compra a pezzo, come per quasi tutti i
+                      prodotti.
+                    </p>
+                    <p className="muted small" style={{ marginTop: 6 }}>
+                      <strong>Prezzo espresso per</strong> dice com’è scritto il listino di
+                      questo fornitore: <em>collo</em> è la cifra che fattura, <em>pz</em> il
+                      prezzo della singola bottiglia, e litri, centilitri, chili o grammi
+                      quando prezza il contenuto. Il prezzo del pezzo si calcola da sé e si
+                      legge accanto al campo.
                     </p>
 
                     <StoricoDellaRiga

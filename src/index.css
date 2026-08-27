@@ -2908,10 +2908,51 @@ body.bar-wide .app {
   top: 0;
   z-index: 2;
 }
-/* La riga non è più un tasto: dentro ci sono tendine e campi, e il gesto che
-   apre la scheda ha un tasto suo in fondo. */
+/* IL TOCCO SULLA RIGA AGGIUNGE E TOGLIE (REQ-MAG-036): «in pratica basta che
+   tocco la riga». Il dito ha tutta la riga come bersaglio; i campi che si
+   scrivono e il tasto che apre restano esclusi, e si riprendono il cursore
+   loro. La riga non è un tasto — a portare ruolo e stato è la casella, che
+   resta al suo posto e si preme con lo spazio. */
 .ordine-tabella .inv-row-main {
-  cursor: default;
+  cursor: pointer;
+}
+.ordine-tabella .inv-row-main input,
+.ordine-tabella .inv-row-main select,
+.ordine-tabella .inv-row-main button {
+  cursor: auto;
+}
+/* Quello che è già nell'ordine si riconosce senza rileggere la casella:
+   componendo si scorrono decine di righe, e la spunta da sola è un segno
+   piccolo in fondo a sinistra. */
+.ordine-tabella .inv-row.ordine-riga-scelta {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+/* COLLI E PEZZI (REQ-MAG-040): sotto il prezzo del pezzo c'è la cifra del
+   collo, sotto i colli i pezzi che ne escono. Sono la seconda riga di una
+   cella, non una colonna in più: le colonne sono già otto. */
+.ordine-prezzo,
+.ordine-quanti {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: right;
+}
+.ordine-collo {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.15;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+/* Un prezzo che non si può ricavare — un listino al litro su un prodotto che
+   non dice quanto contiene — non mostra un numero inventato: mostra che c'è
+   da sistemare qualcosa, e il perché per esteso nella scheda che si apre. */
+.ordine-prezzo-guasto {
+  color: var(--warn);
+  opacity: 1;
 }
 .ordine-tabella input,
 .ordine-tabella select {

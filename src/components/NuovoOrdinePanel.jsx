@@ -5,6 +5,7 @@ import {
   fornitoreProposto,
   fornitoriGiaUsati,
   piuEconomica,
+  prezzoAlPezzo,
   righeDiProdotto,
 } from '../lib/listini.js'
 import {
@@ -17,10 +18,12 @@ import {
 } from '../lib/inventory.js'
 import {
   PASSO_RIGHE,
+  didascaliaListino,
+  etichettaQuantita,
+  listinoDelFornitore,
   ordinaCatalogo,
   ordiniDaCreare,
   preselezioneIniziale,
-  prezzoDiListino,
   prossimaFinestra,
   raggruppaPerFornitore,
   righeOrdine,
@@ -358,7 +361,11 @@ export default function NuovoOrdinePanel({
                   {g.righe.map((r) => (
                     <div className="row between ordine-gruppo-riga" key={r.key}>
                       <span className="muted small grow" style={{ minWidth: 0 }}>
-                        {r.qty}× {r.item_name}
+                        {/* A collo si leggono i cartoni E i pezzi: sono i
+                            cartoni che si chiedono al fornitore e i pezzi
+                            che arrivano in magazzino (REQ-MAG-040). */}
+                        {r.aCollo ? `${etichettaQuantita(r)} ` : `${r.qty}× `}
+                        {r.item_name}
                       </span>
                       <span className="muted small">{formatPrice(r.totale)}</span>
                       <button
@@ -420,7 +427,18 @@ function RigaCatalogo({
   const st = stockStatus(item)
   const scelta = sel ? scelte.find((s) => s.key === riga.key) : null
   const supplierId = sel?.supplier_id ?? riga.supplier_id ?? null
-  const prezzo = prezzoDiListino(item, listini, supplierId)
+  // COLLI E PEZZI (REQ-MAG-040). `prezzoCollo` è quello che il fornitore
+  // fattura e `prezzoPezzo` quello ricavato, l'unico con cui si confrontano
+  // due fornitori che vendono in confezioni diverse. La colonna mostra il
+  // pezzo. `aCollo` governa solo le PAROLE: dove il collo è da uno — la
+  // grande maggioranza — la schermata resta identica a prima, e la parola
+  // «collo» non compare da nessuna parte.
+  const listino = listinoDelFornitore(item, listini, supplierId)
+  const { perCollo, aCollo, prezzoPezzo, problema } = listino
+  // Da dove viene quel prezzo al pezzo: il prezzo come il fornitore l'ha
+  // scritto e il collo, dove un collo c'è. Null dove non c'è niente da
+  // spiegare, e allora la riga è quella di sempre.
+  const daDove = didascaliaListino(listino)
   const nome = nomeRiga(riga)
   // Un fornitore già usato per QUESTO prodotto in QUESTO ordine non si può
   // riscegliere: due righe uguali sono un doppione, e un doppione si paga
@@ -432,12 +450,21 @@ function RigaCatalogo({
   // I listini di QUESTO prodotto: servono ai due suggerimenti della scheda.
   const altriListini = righeDiProdotto(item, listini)
   const ultimo = altriListini.length > 1 ? fornitoreProposto(altriListini) : null
-  const economica = altriListini.length > 1 ? piuEconomica(altriListini) : null
+  const economica = altriListini.length > 1 ? piuEconomica(altriListini, { item }) : null
   const nomeFornitore = (id) => suppliers.find((s) => s.id === id)?.name || '—'
   // Quello che si legge nel campo: la cifra scritta a mano se c'è — anche
   // mentre la si sta cancellando, o il campo non si potrebbe svuotare per
   // riscriverlo — se no il conto pezzi × listino.
   const totale = sel?.totale ?? (scelta && scelta.qty > 0 ? String(arrotonda(scelta.totale)) : '')
+
+  // Quello che il tocco sulla riga NON deve prendere: i campi che si
+  // scrivono, la tendina del fornitore e il tasto che apre la scheda. Se no
+  // scriverci dentro toglierebbe il prodotto dall'ordine — ed è proprio il
+  // gesto che si fa subito dopo averlo aggiunto.
+  function tocca(e) {
+    if (e.target.closest('input, select, textarea, button, label, a')) return
+    onSpunta(riga, !sel)
+  }
 
   const campoFornitore = (dettaglio) => (
     <select
@@ -453,15 +480,19 @@ function RigaCatalogo({
       ))}
     </select>
   )
+  // SI ORDINA NELL'UNITÀ IN CUI QUEL FORNITORE VENDE (REQ-MAG-040): cartoni
+  // da chi vende a cartoni, pezzi da tutti gli altri. Il nome del campo lo
+  // dice, perché «8» su una riga a cartoni sono 192 bottiglie e chi scrive
+  // deve saperlo mentre lo scrive, non dopo.
   const campoPezzi = (dettaglio) => (
     <input
       type="number"
       step="1"
       min="0"
       inputMode="numeric"
-      aria-label={`Pezzi di ${nome}${dettaglio ? ' nella scheda' : ''}`}
+      aria-label={`${aCollo ? 'Colli' : 'Pezzi'} di ${nome}${dettaglio ? ' nella scheda' : ''}`}
       value={sel?.qty ?? ''}
-      placeholder="pz"
+      placeholder={aCollo ? 'colli' : 'pz'}
       onChange={(e) => onQta(riga, e.target.value)}
     />
   )
@@ -480,10 +511,20 @@ function RigaCatalogo({
 
   return (
     <div
-      className={`inv-row${aperta ? ' open' : ''}`}
+      className={`inv-row${aperta ? ' open' : ''}${sel ? ' ordine-riga-scelta' : ''}`}
       style={{ borderLeftColor: riga.colore || undefined }}
     >
-      <div className="inv-row-main">
+      {/* IL TOCCO SULLA RIGA AGGIUNGE E TOGLIE (REQ-MAG-036): «in pratica
+          basta che tocco la riga». Si compone un ordine passando in rassegna
+          decine di prodotti, e centrare una casella piccola decine di volte è
+          il tipo di fatica che non si nota finché non la si fa.
+          LA CASELLA RESTA, ed è voluto: è lei a portare ruolo e stato per chi
+          legge con la tastiera o con un lettore di schermo — «Ordina Bjorne,
+          casella di controllo, selezionata» — e a farsi premere con lo spazio.
+          Qui sopra c'è solo un bersaglio più grande per il dito. Un `div`
+          cliccabile al suo posto sarebbe un gesto che col tabulatore non
+          esiste e che nessuno annuncia. */}
+      <div className="inv-row-main ordine-riga-tocco" onClick={tocca}>
         {/* La spunta si tocca in piedi: il bersaglio è l'etichetta, alta
             quanto la riga, non il quadratino da venti pixel. */}
         <label className="ordine-spunta">
@@ -510,8 +551,30 @@ function RigaCatalogo({
           <span className={`dot dot-${st}`} aria-hidden /> {ETICHETTA_SCORTA[st]}
         </span>
         {campoFornitore(false)}
-        <span className="inv-cell-num muted">{prezzo != null ? formatPrice(prezzo) : '—'}</span>
-        {campoPezzi(false)}
+        {/* IL PREZZO DEL PEZZO STA SEMPRE IN COLONNA, ed è la difesa che vale
+            più di tutte le altre: è il numero che una persona riconosce a
+            colpo d'occhio, e un gin che risulta costare 0,80 € si vede
+            subito. Sotto, da dove è uscito — il prezzo come il fornitore
+            l'ha scritto, il collo dove c'è — perché per correggere un numero
+            sbagliato bisogna sapere da quale è venuto.
+            Se il conto non si può fare non esce un numero: esce il perché. */}
+        <span className="inv-cell-num muted ordine-prezzo">
+          {prezzoPezzo != null ? formatPrice(prezzoPezzo) : '—'}
+          {daDove && <span className="small ordine-collo">{daDove}</span>}
+          {problema && (
+            <span className="small ordine-collo ordine-prezzo-guasto" title={problema}>
+              prezzo da sistemare
+            </span>
+          )}
+        </span>
+        <span className="inv-cell-num ordine-quanti">
+          {campoPezzi(false)}
+          {/* I pezzi che entrano davvero in magazzino: due cartoni non sono
+              due bottiglie, e la moltiplicazione non si fa a mente. */}
+          {aCollo && Number(sel?.qty) > 0 && (
+            <span className="muted small ordine-collo">= {Number(sel.qty) * perCollo} pz</span>
+          )}
+        </span>
         {campoTotale(false)}
         <button
           type="button"
@@ -543,10 +606,25 @@ function RigaCatalogo({
             {contenutoDelPezzo(item) ? ` · 1 pz = ${contenutoDelPezzo(item)}` : ''}
           </div>
           <div className="muted small">
-            {prezzo != null ? `Listino ${formatPrice(prezzo)}/pz` : 'Nessun prezzo di listino'}
+            {prezzoPezzo != null
+              ? `Listino ${formatPrice(prezzoPezzo)}/pz`
+              : 'Nessun prezzo di listino'}
+            {/* Per esteso: com'è scritto il listino di quel fornitore. Chi
+                controlla la bolla cerca la cifra che c'è sul documento, non
+                quella che l'app ha ricavato (REQ-MAG-040). */}
+            {daDove ? ` · ${daDove}` : ''}
             {riga.package_label ? ` · ${riga.package_label}` : ''}
             {riga.code ? ` · codice ${riga.code}` : ''}
           </div>
+          {problema && <div className="muted small">Prezzo da sistemare: {problema}</div>}
+          {/* La riga scelta si rilegge per intero: quanti colli, quanti pezzi
+              ne escono, quanto costa. È il conto che va sbagliato di venti
+              volte se si moltiplicano i pezzi per il prezzo del collo. */}
+          {scelta && scelta.qty > 0 && (
+            <div className="muted small">
+              In ordine: {etichettaQuantita(scelta)} · {formatPrice(scelta.totale)}
+            </div>
+          )}
           {/* CHI LO VENDE, E A QUANTO (REQ-MAG-029). Il fornitore proposto è
               quello dell'ULTIMO ACQUISTO; il più economico si MOSTRA e non si
               sceglie, perché il prezzo più basso in archivio è quasi sempre
@@ -557,8 +635,11 @@ function RigaCatalogo({
             <div className="muted small">
               Su {altriListini.length} listini
               {ultimo ? ` · ultimo acquisto ${nomeFornitore(ultimo.supplier_id)}` : ''}
+              {/* Al pezzo, sempre: fra 1,23 a bottiglia e 25,05 al cartone da
+                  24 il più economico è il cartone, e confrontando i due
+                  numeri come sono scritti sembrerebbe il contrario. */}
               {economica
-                ? ` · più economico ${nomeFornitore(economica.supplier_id)} a ${formatPrice(economica.price)}/pz`
+                ? ` · più economico ${nomeFornitore(economica.supplier_id)} a ${formatPrice(prezzoAlPezzo(economica, item))}/pz`
                 : ''}
             </div>
           )}
@@ -568,7 +649,7 @@ function RigaCatalogo({
               {campoFornitore(true)}
             </span>
             <span>
-              <label>Pezzi</label>
+              <label>{aCollo ? 'Colli' : 'Pezzi'}</label>
               {campoPezzi(true)}
             </span>
             <span>

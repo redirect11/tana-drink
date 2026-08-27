@@ -128,7 +128,19 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
               <div className="inv-row" key={r.key}>
                 <div className="inv-row-main">
                   <span className="inv-row-name">{r.item_name}</span>
-                  <span className="inv-cell-num muted">{r.qty}</span>
+                  {/* I PEZZI SONO I PEZZI, ANCHE ORDINANDO A COLLI
+                      (REQ-MAG-040): due cartoni da 24 sono quarantotto
+                      bottiglie, ed è quello che entra in magazzino. I colli
+                      si leggono accanto, perché sono quelli che si chiedono
+                      al fornitore e quelli scritti sulla sua bolla. */}
+                  <span className="inv-cell-num muted">
+                    {r.pezzi ?? r.qty}
+                    {r.aCollo ? (
+                      <span className="small ordine-collo">
+                        {r.qty} × {r.perCollo}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="inv-cell-num muted">{formatPrice(r.unit_cost)}</span>
                   <span className="inv-cell-num">{formatPrice(r.totale)}</span>
                   {/* Finché il fornitore non è confermato si può ancora
