@@ -1229,9 +1229,11 @@ IL BUCO SI SEGNALA SOLO DOVE C'E': «senza documento» compare sui soli ordini c
 
 LA PAROLA E' UNA SOLA:
 
-CONSEGNATO, in tutte le schermate, e c'e' un test che sorveglia che «Ricevuto» non ricompaia come etichetta.
+CONSEGNATO, in tutte le schermate, e c'e' un test che sorveglia che «Ricevuto» non ricompaia come etichetta. ⚠️ IL LIMITE E' STATO TOLTO, il 27/08/2026, appena scritto. Questa voce diceva che la Lista ordini legge gli ULTIMI VENTICINQUE ordini, come faceva lo storico, e che il filtro lavora su quelli — quindi «tutti i pagati» voleva dire «fra gli ultimi venticinque». L'utente ha risposto: «questa cosa non ha senso, non deve esserci un limite». Ha ragione, e chiamarlo «limite noto» era archiviare un difetto invece di correggerlo.
 
-RESTA FUORI, e non e' una dimenticanza: la Lista ordini legge gli ULTIMI VENTICINQUE ordini, come faceva lo storico. Il filtro lavora su quelli, quindi «tutti i pagati» vuol dire «fra gli ultimi venticinque». Va bene per un bar che ordina qualche volta a settimana; il giorno che non bastera' servira' una lettura paginata, che e' un lavoro suo e non un dettaglio di questa voce.
+DA DOVE VENIVA: non e' stato scelto adesso, arriva dal commit `aafa62f`, da quando quella lista era «gli ultimi ordini» in fondo alla schermata del magazzino. Li' andava bene. Ha smesso di andare bene nel momento in cui e' diventata l'ARCHIVIO con i filtri, e nessuno se n'era accorto perche' il numero sbagliato non si vede: la lista sembrava completa. E TRONCAVA IN TRE PUNTI, tutti e tre in silenzio: la Lista ordini (25), l'elenco da cui si aggancia una fattura (25 — non si arrivava agli ordini piu' vecchi, quindi certe fatture non erano agganciabili) e il riepilogo dei soldi che escono (100 — sommava un pezzo di anno e basta). Adesso `fetchPurchaseOrders()` senza argomenti li legge TUTTI; il limite resta accettato come parametro per chi ne avesse davvero bisogno.
+
+UN TRONCAMENTO SILENZIOSO SU DEI SOLDI E' PEGGIO DI UNA LETTURA LENTA: il numero sbagliato non si vede, la lentezza si'. Se un giorno gli ordini diventassero tanti da pesare, la cura e' una lettura paginata — che e' un lavoro suo, e si fara' quando il problema esiste invece di prevenirlo con un taglio che mente.
 
 **Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/statiOrdine.test.js`, `tests/unit/confrontoOrdine.test.js`, `tests/unit/listaOrdiniSenzaRete.test.js`, `tests/component/ListaOrdini.test.jsx`
 
