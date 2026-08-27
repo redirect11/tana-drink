@@ -1342,8 +1342,9 @@ function scriviStatoAssortimento(articoli, patchDi, motivo) {
 // SENZA `limit` SI LEGGONO TUTTI, ed è il pre-impostato voluto. Il limite
 // c'era da quando questa era «gli ultimi ordini» in fondo alla schermata del
 // magazzino, e lì andava bene; da quando è la LISTA ORDINI con i filtri
-// (REQ-MAG-038) è diventato una bugia — «tutti i pagati» voleva dire «fra gli
-// ultimi venticinque», e chi guardava non aveva modo di saperlo. Lo stesso
+// (REQ-MAG-038) è diventato una bugia: un filtro su una lettura troncata dà
+// una risposta troncata che sembra intera — chi filtra «pagati» vede i pagati
+// fra i venticinque letti, e niente glielo dice. Lo stesso
 // valeva per il riepilogo dei soldi che escono, che sommava un pezzo di anno,
 // e per l'elenco da cui si aggancia una fattura, che non arrivava agli ordini
 // più vecchi. Un troncamento silenzioso su dei soldi è peggio di una lettura
