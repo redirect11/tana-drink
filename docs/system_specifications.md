@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 185 | fatto e coperto dai test |
+| ✅ | 186 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 21 | da fare |
+| ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**228 voci** in tutto. **200** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
+**228 voci** in tutto. **201** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 33 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 34 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1238,6 +1238,34 @@ DA DOVE VENIVA: non e' una scelta di questa voce, arriva dal commit `aafa62f`, d
 LA REGOLA CHE RESTA: una risposta parziale che non dichiara di esserlo e' peggio di una lettura lenta. La lentezza si vede, il pezzo mancante no. Se un giorno gli ordini peseranno, la cura e' una lettura paginata, e si fara' quando il problema esiste.
 
 **Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/statiOrdine.test.js`, `tests/unit/confrontoOrdine.test.js`, `tests/unit/listaOrdiniSenzaRete.test.js`, `tests/component/ListaOrdini.test.jsx`
+
+#### REQ-MAG-039 — L'ordine che si rifa' uguale: i modelli d'ordine
+
+Chiesto dall'utente il 27/08/2026: «Flavio potrebbe voler salvare un ordine come TEMPLATE, e nella creazione dell'ordine, oltre alla precompilazione, deve poter usare un template salvato — con quantita' gia' impostate e prodotti per fornitore gia' selezionati — in modo da poter partire da una situazione che lui conosce. Il template si puo' salvare in fase di creazione». PERCHE' SERVE, ed e' diverso dalla precompilazione. La precompilazione (REQ-MAG-036) guarda le SCORTE: propone quello che sta finendo adesso. Il modello guarda l'ABITUDINE: e' il giro che Flavio fa sempre — la settimana tipo, l'ordine grosso di inizio mese, quello prima di un evento. Le due cose rispondono a domande diverse e devono poter convivere: si parte dal modello e la precompilazione aggiunge quello che manca oggi, oppure si parte dalle scorte e si aggiunge il modello.
+
+COSA CONTIENE: prodotti, il fornitore scelto per ognuno e la quantita'.
+
+IL MODELLO NON MEMORIZZA IL PREZZO. Detto dall'utente il 27/08: «fa fede il prezzo ATTUALE del listino del fornitore, e il modello mostra sempre il prezzo aggiornato — il modello non memorizza il prezzo, ma quando lo carico il prezzo sulla creazione/modifica ordine e' sempre quello del listino del fornitore, aggiornato all'ultima fattura». Quindi il modello porta CHE COSA e QUANTO, mai A QUANTO. Il prezzo arriva sempre dal listino nel momento in cui si compone l'ordine, e quel listino e' tenuto allineato dalle fatture (REQ-MAG-035): la catena e' fattura -> listino -> ordine, e il modello non ci si mette in mezzo. Un modello che si portasse dietro i prezzi farebbe partire un ordine a cifre di due mesi fa senza che nessuno se ne accorga — ed e' proprio la cosa che il confronto ordine-fattura serve a scoprire, quindi ci si sparerebbe sui piedi da soli.
+
+SI SALVA DURANTE LA COMPOSIZIONE, non dopo: e' li' che Flavio ha davanti quello che vuole conservare. Un modello ha un nome suo, se ne tengono piu' d'uno, e si possono cambiare e cancellare.
+
+COSA FARE QUANDO IL MONDO E' CAMBIATO, e va deciso perche' succedera': un modello puo' contenere un prodotto che non esiste piu', o un fornitore che non lo vende piu' (riga di listino tolta). Chi lo applica deve vedere cosa non e' stato ripreso e perche', invece di trovarsi un ordine piu' corto senza spiegazione. IL «RESTA APERTO» E' CHIUSO, E LA RISPOSTA E' SI'. La domanda era se un modello debba potersi ricavare da un ordine gia' fatto («salva questo come modello» dalla Lista Ordini). Si fa, e la ragione che ha deciso NON e' che costava poco: e' che applicare un modello SI SOMMA a quello che e' gia' selezionato. Un ordine e' di un fornitore solo (REQ-MAG-037), quindi da un ordine esce un modello di un fornitore solo — e da solo non sarebbe «il giro» — ma quattro modelli applicati uno dopo l'altro rifanno il giro intero. Senza la somma la risposta sarebbe stata no, perche' avrebbe prodotto frammenti non ricomponibili. ── COM'E' STATO FATTO (27/08/2026) ── DOVE SI SALVA: nella composizione, in una riga sopra i filtri, con la tendina dei modelli, i tre gesti che li governano (usa, rinomina, elimina) e il salvataggio di quello che si sta componendo. Il tasto del salvataggio DICE QUANTE RIGHE SALVA («Salva le 12 righe come modello»): si salva mentre la tabella e' piena di righe che nell'ordine non ci sono, e senza quel numero non si saprebbe se sta per conservare le dodici scelte o tutto il magazzino. E DALLA LISTA ORDINI: dentro il DETTAGLIO dell'ordine, non fra i tasti in testa alla riga — quelli sono gia' cinque e vanno tutti a un fornitore vero, mentre questo non manda niente a nessuno. Il nome parte da quello del fornitore. La quantita' ripresa sono i COLLI ordinati e non `qty_packages`: quelli sono i pezzi entrati in magazzino, e riprenderne 48 come colli su un cartone da 24 vorrebbe dire ordinarne 1152 (REQ-MAG-040). Le righe scritte prima del collo ricadono su un collo da uno, che e' il caso degenere della scala.
+
+SALVARE CON UN NOME GIA' USATO AGGIORNA quel modello, e lo si dice prima di salvare: due voci con lo stesso nome in tendina sono il modo piu' rapido per applicare quella sbagliata.
+
+LA LOGICA E' PURA e sta in `src/lib/modelliOrdine.js` — comporre un modello, ricavarlo da un ordine, applicarlo — dove si prova senza Firebase. La collezione e' `purchase_order_templates`, sua e non dentro gli ordini: un modello non ha stato, non ha una consegna e non entra nei soldi che escono, e tenerlo fra gli ordini vorrebbe dire che ogni filtro e ogni totale della Lista ordini debba ricordarsi di scartarlo.
+
+IL PREZZO NON PASSA, E SI VEDE IN UN PUNTO SOLO: la selezione che `applicaModello` compone non porta il campo `totale`, che e' quello della correzione a mano nella tabella. Senza quel campo il prezzo lo rifa' il listino del fornitore ogni volta che si applica. C'e' un test che guarda proprio l'assenza di quel campo, e uno che guarda le chiavi del documento scritto su Firestore.
+
+APPLICARE SI SOMMA, NON SOSTITUISCE: la preselezione ha gia' messo quello che sta finendo adesso, il modello aggiunge il giro che si fa sempre, e sulle righe che il modello nomina vince la sua quantita' — e' quella che Flavio ha deciso di conservare.
+
+COSA SUCCEDE QUANDO IL MONDO E' CAMBIATO, caso per caso, e ognuno ha la sua frase a schermo: · PRODOTTO SPARITO dal magazzino: non si riprende. E' l'unico caso in cui una riga si perde, e per poterla NOMINARE il modello salva il nome del prodotto accanto al suo id — e' l'unico posto in cui quel nome serve, perche' per le righe riprese vale il nome vivo del magazzino. · FORNITORE CHE NON LO VENDE PIU' (riga di listino tolta): il prodotto SI RIPRENDE lo stesso, sulla riga che ha in tabella, col fornitore ancora scelto. Si puo' ordinare a chiunque — 378 prodotti su 388 non stanno sul listino di nessuno — e buttare via la riga sarebbe perdere un prodotto che Flavio voleva. Quello che si perde e' il PREZZO DI LISTINO, e infatti e' quello che l'avviso dice. · FORNITORE CANCELLATO dall'anagrafica: il prodotto si riprende SENZA fornitore. Riscrivere un id che non corrisponde piu' a nessuno sarebbe un ordine intestato al vuoto. · PRODOTTO MESSO FUORI LINEA nel frattempo: si riprende — ordinarlo e' il gesto con cui rientra (REQ-MAG-036) — ma va detto, perche' e' una decisione commerciale presa dopo che il modello era stato salvato. · DUE RIGHE CHE CADREBBERO SULLA STESSA RIGA di tabella: la seconda non si riprende. Si fermerebbe sopra la prima e ne cancellerebbe la quantita' senza che nessuno se ne accorga.
+
+LA QUANTITA' E' NELL'UNITA' DEL FORNITORE (colli da chi vende a colli), cioe' quella che si e' scritta, e i pezzi per collo NON si salvano: e' la stessa scelta del prezzo presa dall'altro capo — il modello dice «due cartoni», e quanto sia un cartone lo dice il listino nel momento in cui si compone l'ordine.
+
+RESTA FUORI, ed e' voluto: un modello non ha una sua schermata, e non si vede da nessuna parte quando e' stato usato l'ultima volta. Non e' stato chiesto, e una tendina con cinque voci non ha bisogno di un'anagrafica.
+
+**Dove**: `src/lib/modelliOrdine.js, src/components/ModelliOrdine.jsx, src/components/NuovoOrdinePanel.jsx, src/components/OrdiniListaPanel.jsx, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/modelliOrdine.test.js`, `tests/unit/modelliSenzaRete.test.js`, `tests/component/ModelliOrdine.test.jsx`
 
 #### REQ-MAG-040 — Colli e pezzi: lo stesso prodotto a cartone da uno, a bottiglia dall'altro
 
@@ -2748,22 +2776,6 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-039 — L'ordine che si rifa' uguale: i modelli d'ordine
-
-Chiesto dall'utente il 27/08/2026: «Flavio potrebbe voler salvare un ordine come TEMPLATE, e nella creazione dell'ordine, oltre alla precompilazione, deve poter usare un template salvato — con quantita' gia' impostate e prodotti per fornitore gia' selezionati — in modo da poter partire da una situazione che lui conosce. Il template si puo' salvare in fase di creazione». PERCHE' SERVE, ed e' diverso dalla precompilazione. La precompilazione (REQ-MAG-036) guarda le SCORTE: propone quello che sta finendo adesso. Il modello guarda l'ABITUDINE: e' il giro che Flavio fa sempre — la settimana tipo, l'ordine grosso di inizio mese, quello prima di un evento. Le due cose rispondono a domande diverse e devono poter convivere: si parte dal modello e la precompilazione aggiunge quello che manca oggi, oppure si parte dalle scorte e si aggiunge il modello.
-
-COSA CONTIENE: prodotti, il fornitore scelto per ognuno e la quantita'.
-
-IL MODELLO NON MEMORIZZA IL PREZZO. Detto dall'utente il 27/08: «fa fede il prezzo ATTUALE del listino del fornitore, e il modello mostra sempre il prezzo aggiornato — il modello non memorizza il prezzo, ma quando lo carico il prezzo sulla creazione/modifica ordine e' sempre quello del listino del fornitore, aggiornato all'ultima fattura». Quindi il modello porta CHE COSA e QUANTO, mai A QUANTO. Il prezzo arriva sempre dal listino nel momento in cui si compone l'ordine, e quel listino e' tenuto allineato dalle fatture (REQ-MAG-035): la catena e' fattura -> listino -> ordine, e il modello non ci si mette in mezzo. Un modello che si portasse dietro i prezzi farebbe partire un ordine a cifre di due mesi fa senza che nessuno se ne accorga — ed e' proprio la cosa che il confronto ordine-fattura serve a scoprire, quindi ci si sparerebbe sui piedi da soli.
-
-SI SALVA DURANTE LA COMPOSIZIONE, non dopo: e' li' che Flavio ha davanti quello che vuole conservare. Un modello ha un nome suo, se ne tengono piu' d'uno, e si possono cambiare e cancellare.
-
-COSA FARE QUANDO IL MONDO E' CAMBIATO, e va deciso perche' succedera': un modello puo' contenere un prodotto che non esiste piu', o un fornitore che non lo vende piu' (riga di listino tolta). Chi lo applica deve vedere cosa non e' stato ripreso e perche', invece di trovarsi un ordine piu' corto senza spiegazione.
-
-RESTA APERTO: se un modello debba potersi ricavare da un ordine gia' fatto («salva questo come modello» dalla Lista Ordini), che e' il modo piu' naturale di crearne uno e costa poco una volta che il modello esiste.
-
-**Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/api.js`
 
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
 
