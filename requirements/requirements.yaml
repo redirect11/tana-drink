@@ -7263,7 +7263,7 @@ requirements:
 
   - id: REQ-MAG-036
     title: "«Nuovo Ordine»: una tabella sola, e la riga che si apre"
-    area: "src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/inventory.js"
+    area: "src/components/NuovoOrdinePanel.jsx, src/components/PurchaseOrdersPanel.jsx, src/lib/composizioneOrdine.js, src/lib/listini.js, src/lib/inventory.js"
     description: >
       Chiesto dall'utente il 27/08/2026, bocciando quello che era stato
       costruito: «nella sezione ordini NON MI PIACE LA DOPPIA LISTA e quei
@@ -7331,11 +7331,60 @@ requirements:
       prodotto, questo viene selezionato automaticamente per l'ordine».
       Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la
       spunta sarebbe far dire due volte la stessa cosa.
-    status: todo
+      COM'E' STATO FATTO (27/08/2026). La composizione e' una schermata sua,
+      `NuovoOrdinePanel`, dentro il pannello Ordini; i conti — ordinamento,
+      preselezione, prezzi, finestra delle righe, raggruppamento per
+      fornitore — stanno in `src/lib/composizioneOrdine.js`, dove si provano
+      senza Firebase. La tabella riusa le classi che esistono gia'
+      (`inv-list inv-table`, `inv-thead`, `inv-row`, `inv-row-dettaglio`) e
+      l'intestazione ordinabile e' lo stesso componente della lista del
+      magazzino, spostato in `src/components/SortTh.jsx` invece di essere
+      riscritto due volte.
+      SCORRIMENTO CONTINUO, non paginazione: e' la strada che l'utente
+      preferisce e non litiga con niente. L'intestazione resta in alto
+      perche' a scorrere e' la TABELLA, che ha una barra sua
+      (`position: sticky` dentro un riquadro che scorre), e l'ordinamento
+      riparte dalla prima finestra invece di tenere in vita seicento righe
+      gia' disegnate. Il passo e' 40 righe. Accanto al conteggio c'e' un
+      tasto «Mostra altre righe»: chi arriva con la tastiera non fa scorrere
+      niente col tabulatore, e senza quel tasto la finestra non crescerebbe
+      mai.
+      IL FUORI LINEA ADESSO E' IN TABELLA. Prima gli `out` erano esclusi dal
+      catalogo ordinabile (REQ-MAG-007, «non si ricompra»): cosi' pero' non
+      c'era modo di farli rientrare, e ordinarne uno e' esattamente il gesto
+      con cui rientrano. Restano fuori dalla PRESELEZIONE, che e' quello che
+      l'utente ha chiesto, e portano scritto «fuori linea» accanto al nome.
+      IL TOTALE SI CORREGGE, IL €/pz NO. La colonna del prezzo unitario e' il
+      LISTINO di quel fornitore e resta di sola lettura: e' il dato che dice
+      quanto ci si aspetta di pagare, e non deve mettersi a ballare mentre si
+      scrive. Il totale della riga si scrive a mano, e da li' si ricava il
+      prezzo che finisce sull'ordine (totale / pezzi). Cambiando i pezzi o il
+      fornitore la correzione si perde: valeva per QUEI pezzi da QUEL
+      fornitore.
+      LA PRESELEZIONE PRENDE UNA RIGA SOLA PER PRODOTTO — quella del
+      fornitore dell'ULTIMO ACQUISTO — perche' lo stesso Campari su due
+      listini ha due righe, e spuntarle tutte e due vorrebbe dire comprarlo
+      due volte.
+      I DUE SUGGERIMENTI DI REQ-MAG-029 (chi e' l'ultimo acquisto, chi e' il
+      piu' economico) sono passati dalla riga alla SCHEDA che si apre: in una
+      riga di tabella a otto colonne non ci stavano, e la scheda e' dove si
+      guarda un prodotto prima di decidere.
+      LA TENDINA SELEZIONA COME LA QUANTITA': scegliere chi ci vende quel
+      prodotto e' la stessa decisione di scrivere quanti pezzi servono, e
+      lasciare la riga non spuntata dopo averlo fatto sarebbe un secondo
+      gesto per la stessa cosa.
+      RESTA FUORI, ed e' voluto: lo STORICO ORDINI e' rimasto quello di prima,
+      sotto la composizione, con le sue fette per fornitore — diventa «Lista
+      Ordini» con REQ-MAG-038, e il riepilogo di conferma e' REQ-MAG-037.
+      La bozza della composizione vive finche' si sta sulla schermata: non e'
+      la bozza del POS e non e' stato chiesto che sopravviva a un'uscita.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/composizioneOrdine.test.js
+      - tests/component/NuovoOrdineTabella.test.jsx
 
   - id: REQ-MAG-037
     title: "Il riepilogo per fornitore, e «in assortimento» come stato di passaggio"

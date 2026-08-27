@@ -4,6 +4,29 @@
 
 ### Per chi sta al banco
 
+- **«Nuovo ordine» è una tabella sola, e l'ordine si compone di fianco.** In
+  **Fornitori → Ordini** i prodotti stanno in un elenco unico: su ogni riga il
+  nome, **com'è messa la scorta** (in scorta, in esaurimento, esaurito), il
+  **fornitore** in una tendina, il **prezzo di un pezzo** preso dal suo listino,
+  i **pezzi** e il **totale**, che si può correggere lì dove si scrive — se il
+  fornitore ha fatto un altro prezzo per quel lotto, comanda la cifra scritta a
+  mano. Accanto alla tabella, e non più in fondo alla pagina, c'è **l'ordine che
+  si sta componendo, già diviso per fornitore**: si vede mentre si sceglie cosa
+  ordinare, senza scorrere avanti e indietro. **All'apertura è già spuntato
+  quello che manca** — esaurito o sotto la soglia di riordino — così il giro del
+  magazzino è già fatto; **quello che è fuori linea non si propone da solo**, ma
+  resta in elenco e si può ordinare a mano, che è il modo in cui rientra.
+  Scrivere una quantità **seleziona la riga**: non serve anche la spunta. Le
+  **intestazioni ordinano** l'elenco per nome, disponibilità, prezzo di listino
+  e fornitore, e **restano in alto** mentre si scorre; le righe **si caricano
+  scorrendo**, a blocchi, perché il magazzino è di quasi quattrocento prodotti e
+  lo stesso prodotto compare **una volta per fornitore** che lo vende — il
+  doppione non è un errore, serve a confrontare due prezzi. Toccando **▸** la
+  riga **si apre** e dice com'è messo quel prodotto — in linea, premium, in
+  assortimento, fuori linea — quante scorte restano, su quanti listini sta, chi
+  è stato l'ultimo fornitore e chi fa il prezzo più basso, con gli stessi campi
+  da compilare.
+
 - **Il listino di un fornitore si compila dalla sua scheda.** In **Fornitori →
   Gestione fornitori** ogni fornitore ha il tasto **«📋 Listino»**: si cerca un
   prodotto del magazzino, lo si associa a quel fornitore e gli si scrive il
