@@ -148,16 +148,25 @@ describe('si decide SE e QUALI righe caricare', () => {
   })
 })
 
+// IL GESTO È CAMBIATO CON REQ-MAG-036, NON LA REGOLA. La composizione non ha
+// più il tasto «Aggiungi» e la lista sotto: c'è una tabella sola, e la
+// casella dell'assortimento sta nella scheda che si apre dalla riga — che è
+// il posto dove si guarda un prodotto prima di decidere. Quello che questi
+// test sorvegliano resta identico: la casella si chiede solo dove cambia
+// qualcosa, e quello che scrive finisce sulla riga d'ordine.
 describe('l’assortimento si prepara mentre la merce viaggia', () => {
+  const apri = (user, nome) =>
+    user.click(screen.getByRole('button', { name: `Apri la scheda di ${nome} (senza fornitore)` }))
+
   // La casella si chiede solo dove cambia qualcosa: su un prodotto già in
   // assortimento sarebbe una casella che non fa niente.
   it('la casella compare solo dove il passaggio cambia lo stato', async () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    await user.click(screen.getByRole('button', { name: 'Aggiungi Campari' }))
-    await user.click(screen.getByRole('button', { name: 'Aggiungi Rum Zacapa' }))
+    await apri(user, 'Rum Zacapa')
     expect(screen.getByLabelText('Metti Rum Zacapa in assortimento quando arriva')).toBeInTheDocument()
+    await apri(user, 'Campari')
     expect(screen.queryByLabelText('Metti Campari in assortimento quando arriva')).toBeNull()
   })
 
@@ -165,7 +174,7 @@ describe('l’assortimento si prepara mentre la merce viaggia', () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    await user.click(screen.getByRole('button', { name: 'Aggiungi Rum Zacapa' }))
+    await apri(user, 'Rum Zacapa')
     await user.click(screen.getByLabelText('Metti Rum Zacapa in assortimento quando arriva'))
     await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
     const salvato = creato.mock.calls.at(-1)[0]
@@ -178,7 +187,7 @@ describe('l’assortimento si prepara mentre la merce viaggia', () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    await user.click(screen.getByRole('button', { name: 'Aggiungi Rum Zacapa' }))
+    await user.type(screen.getByLabelText('Pezzi di Rum Zacapa (senza fornitore)'), '1')
     await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
     expect(creato.mock.calls.at(-1)[0].lines[0].status_target).toBeUndefined()
   })

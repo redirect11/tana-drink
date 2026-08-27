@@ -2859,6 +2859,193 @@ body.bar-wide .app {
   }
 }
 
+/* ── NUOVO ORDINE: UNA TABELLA SOLA, E L'ORDINE DI FIANCO (REQ-MAG-036) ──
+   La schermata di prima aveva due elenchi — il catalogo sopra, l'ordine
+   sotto — ed è stata bocciata: «non mi piace LA DOPPIA LISTA e quei box sono
+   POSTICCI», «è SCOMODISSIMO l'ordine in basso. Dobbiamo metterlo affianco»
+   (l'utente, 27/08/2026). Qui la tabella è una sola e l'ordine le sta
+   accanto, già diviso per fornitore.
+   A decidere quando le colonne diventano una è il CONTENITORE, non la
+   finestra: col menu agganciato questa sezione ha 200-250px in meno, e una
+   media query sulla finestra spezzerebbe la tabella proprio lì. */
+.ordine-composizione {
+  container-type: inline-size;
+}
+.ordine-filtri {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.ordine-filtri > span {
+  min-width: 180px;
+}
+.ordine-due-colonne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 12px;
+  align-items: start;
+  margin-top: 10px;
+}
+/* Il nome del selettore è doppio apposta: `.inv-list` è dichiarata più sotto
+   e porta `overflow: hidden`, e a parità di peso vince l'ultima letta — con
+   un `.ordine-tabella` da solo la tabella non scorrerebbe affatto. */
+/* L'INTESTAZIONE RESTA IN ALTO. «Voglio l'header della tabella fisso in
+   alto, coi titoli delle colonne che posso usare per ordinare»: a scorrere è
+   la tabella, che ha una barra sua — con seicento righe un'intestazione che
+   se ne va lascia chi guarda a indovinare cos'è la terza colonna.
+   La cella della spunta e quella del tasto che apre seguono lo zoom: sono
+   bersagli, e a zoom alto devono restare larghi quanto prima davvero. */
+.inv-list.ordine-tabella {
+  --inv-cols: calc(38px / var(--zoom, 1)) minmax(120px, 1.8fr) minmax(104px, 1fr)
+    minmax(120px, 1.2fr) 74px 68px 92px calc(38px / var(--zoom, 1));
+  max-height: min(62vh, 680px);
+  overflow-y: auto;
+}
+.ordine-tabella .inv-thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+/* La riga non è più un tasto: dentro ci sono tendine e campi, e il gesto che
+   apre la scheda ha un tasto suo in fondo. */
+.ordine-tabella .inv-row-main {
+  cursor: default;
+}
+.ordine-tabella input,
+.ordine-tabella select {
+  min-height: var(--riga-lista);
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
+.ordine-tabella input[type='number'] {
+  text-align: right;
+}
+.ordine-spunta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--riga-lista);
+  margin: 0;
+  cursor: pointer;
+}
+.ordine-spunta input {
+  width: calc(20px / var(--zoom, 1));
+  height: calc(20px / var(--zoom, 1));
+  min-height: 0;
+  padding: 0;
+}
+.ordine-scorta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ordine-apri {
+  min-width: 0;
+  padding: 4px 6px;
+}
+.ordine-conta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 6px 0 0;
+}
+.ordine-campi-scheda {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.ordine-campi-scheda > span {
+  min-width: 96px;
+}
+.ordine-campi-scheda > span.grow {
+  flex: 1;
+  min-width: 160px;
+}
+/* Il nome del fornitore accanto al prodotto serve solo quando la sua colonna
+   non c'è più: due righe dello stesso Campari, senza, sarebbero identiche. */
+.ordine-nome-fornitore {
+  display: none;
+}
+/* L'ORDINE IN COMPOSIZIONE. È una superficie minore dentro la sezione, non
+   una card dentro la card: fondo `--tile-bg` e bordo `--line`, come le altre
+   tessere (DESIGN.md). Resta in vista mentre la tabella scorre — è il punto
+   di tutta la richiesta. */
+.ordine-carrello {
+  background: var(--tile-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--raggio-card);
+  padding: 12px;
+  position: sticky;
+  top: 8px;
+  max-height: min(72vh, 760px);
+  overflow-y: auto;
+}
+/* La striscia del fornitore, come nello storico: lì lo stesso prodotto
+   compare una volta per fornitore, e senza il colore due righe con lo stesso
+   nome si leggono soltanto arrivando in fondo alla riga. */
+.ordine-gruppo {
+  border-left: 4px solid var(--line);
+  padding: 6px 0 6px 8px;
+  margin-top: 8px;
+}
+.ordine-gruppo-riga {
+  align-items: center;
+  gap: 6px;
+}
+.ordine-totale {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+@container (max-width: 900px) {
+  .ordine-due-colonne {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ordine-carrello {
+    position: static;
+    max-height: none;
+  }
+}
+/* Stretto si tolgono i due numeri — €/pz e totale — che restano nella scheda
+   della riga: la domanda, lì, è cosa manca e quanti pezzi servono. */
+@container (max-width: 760px) {
+  .inv-list.ordine-tabella {
+    --inv-cols: calc(38px / var(--zoom, 1)) minmax(110px, 1.8fr) minmax(96px, 1fr)
+      minmax(110px, 1.2fr) 68px calc(38px / var(--zoom, 1));
+  }
+  .ordine-tabella .inv-thead > :nth-child(5),
+  .ordine-tabella .inv-row-main > :nth-child(5),
+  .ordine-tabella .inv-thead > :nth-child(7),
+  .ordine-tabella .inv-row-main > :nth-child(7) {
+    display: none;
+  }
+}
+/* Sul telefono se ne va anche la tendina del fornitore, e il suo nome torna
+   accanto al prodotto: si sceglie chi ci vende aprendo la riga. */
+@container (max-width: 520px) {
+  .inv-list.ordine-tabella {
+    --inv-cols: calc(34px / var(--zoom, 1)) minmax(90px, 1.6fr) minmax(88px, 1fr) 56px
+      calc(34px / var(--zoom, 1));
+  }
+  .ordine-tabella .inv-thead,
+  .ordine-tabella .inv-row-main {
+    gap: 6px;
+  }
+  .ordine-tabella .inv-thead > :nth-child(4),
+  .ordine-tabella .inv-row-main > :nth-child(4) {
+    display: none;
+  }
+  .ordine-nome-fornitore {
+    display: block;
+  }
+}
+
 /* ── Inventario in LISTA condensata ── */
 .inv-list {
   display: flex;

@@ -90,9 +90,9 @@ describe('si parte dal prodotto, non dal fornitore', () => {
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
     expect(screen.getAllByText('Campari')).toHaveLength(2)
-    // Le due righe portano il nome del loro fornitore.
-    expect(within(catalogo()).getByText(/^Nova ·/)).toBeInTheDocument()
-    expect(within(catalogo()).getByText(/^Enofel ·/)).toBeInTheDocument()
+    // Le due righe si distinguono dal fornitore, che sta sulla riga stessa.
+    expect(screen.getByLabelText('Fornitore per Campari (Nova)')).toHaveValue('nova')
+    expect(screen.getByLabelText('Fornitore per Campari (Enofel)')).toHaveValue('enofel')
   })
 
   // «Quando Flavio seleziona un fornitore vedrà solamente la lista dei
@@ -101,7 +101,7 @@ describe('si parte dal prodotto, non dal fornitore', () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    await user.selectOptions(screen.getByLabelText('Fornitore'), 'nova')
+    await user.selectOptions(screen.getByLabelText('Filtra per fornitore'), 'nova')
     await waitFor(() => expect(screen.getAllByText('Campari')).toHaveLength(1))
     // Il Gin non sta sul listino di Nova: non si ordina da lui.
     expect(screen.queryByText('Gin Mare')).toBeNull()
@@ -110,11 +110,18 @@ describe('si parte dal prodotto, non dal fornitore', () => {
   // Il fornitore proposto è quello dell'ULTIMO ACQUISTO; il più economico si
   // MOSTRA, perché il prezzo più basso in archivio è quasi sempre il più
   // vecchio — nessuno aggiorna al rialzo un fornitore da cui non compra più.
-  it('la riga dice qual è l’ultimo acquisto e qual è il più economico', async () => {
+  //
+  // DA REQ-MAG-036 I DUE SUGGERIMENTI STANNO NELLA SCHEDA DELLA RIGA, non
+  // accanto al nome: la riga è diventata una riga di tabella, con otto
+  // colonne, e la scheda è dove si guarda un prodotto prima di decidere.
+  it('la scheda dice qual è l’ultimo acquisto e qual è il più economico', async () => {
+    const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    expect(within(catalogo()).getByText(/Nova · ultimo acquisto/)).toBeInTheDocument()
-    expect(within(catalogo()).getByText(/Enofel · più economico/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Apri la scheda di Campari (Nova)' }))
+    const scheda = document.querySelector('.inv-row-dettaglio')
+    expect(scheda).toHaveTextContent(/ultimo acquisto Nova/)
+    expect(scheda).toHaveTextContent(/più economico Enofel/)
   })
 
   // La schermata deve reggere anche con ZERO listini: sono da compilare a
@@ -128,19 +135,24 @@ describe('si parte dal prodotto, non dal fornitore', () => {
   })
 })
 
+// DA REQ-MAG-036 L'ORDINE SI COMPONE SULLA RIGA: niente più tasto
+// «Aggiungi» e lista sotto — «non mi piace la doppia lista» — ma quantità e
+// fornitore scritti sulla riga della tabella. La regola di REQ-MAG-029 non
+// cambia: un ordine solo può contenere prodotti di più fornitori, e il
+// prezzo è quello del listino di chi vende. Il fornitore già usato che si
+// spegne nella tendina è passato ai test della schermata nuova
+// (tests/component/NuovoOrdineTabella.test.jsx).
 describe('l’ordine si compone, col fornitore sulla riga', () => {
   it('un ordine solo può contenere prodotti di più fornitori', async () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
-    // Si prende la riga del Campari di Nova, non una a caso: sono due, e
-    // l'ordine dipende da chi vende.
-    const rigaNova = within(catalogo()).getByText(/^Nova ·/).closest('.inv-row')
-    await user.click(within(rigaNova).getByRole('button', { name: 'Aggiungi Campari' }))
-    await user.click(screen.getByRole('button', { name: 'Aggiungi Gin Mare' }))
-
-    // Il Gin non ha fornitore: si sceglie qui.
-    await user.selectOptions(screen.getByLabelText('Fornitore per Gin Mare'), 'enofel')
+    // Si scrive sulla riga del Campari di Nova, non su una a caso: sono due,
+    // e l'ordine dipende da chi vende.
+    await user.type(screen.getByLabelText('Pezzi di Campari (Nova)'), '6')
+    await user.type(screen.getByLabelText('Pezzi di Gin Mare (senza fornitore)'), '2')
+    // Il Gin non ha fornitore: si sceglie sulla riga.
+    await user.selectOptions(screen.getByLabelText('Fornitore per Gin Mare (senza fornitore)'), 'enofel')
     await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
 
     await waitFor(() => expect(creato).toHaveBeenCalled())
@@ -151,30 +163,6 @@ describe('l’ordine si compone, col fornitore sulla riga', () => {
     ])
     // Il prezzo è quello del listino DI QUEL FORNITORE.
     expect(righe[0].unit_cost).toBe(12.5)
-  })
-
-  // «Va anche bene che è disabilitato il fornitore in quanto già l'ho
-  // ordinato a quel fornitore» (Flavio): due righe dello stesso prodotto
-  // allo stesso fornitore sono un doppione, e un doppione si paga due volte.
-  it('un fornitore già usato per quel prodotto non si può riscegliere', async () => {
-    const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await screen.findAllByText('Campari')
-    // Le due righe del Campari: Nova e Enofel.
-    const aggiungi = screen.getAllByRole('button', { name: 'Aggiungi Campari' })
-    await user.click(aggiungi[0])
-    await user.click(aggiungi[1])
-
-    const tendine = screen.getAllByLabelText('Fornitore per Campari')
-    expect(tendine).toHaveLength(2)
-    const scelti = tendine.map((t) => t.value)
-    // Su ognuna delle due, l'altro fornitore risulta già in questo ordine.
-    for (const t of tendine) {
-      const altro = scelti.find((v) => v !== t.value)
-      const opzione = [...t.options].find((o) => o.value === altro)
-      expect(opzione).toBeDisabled()
-      expect(opzione.textContent).toMatch(/già in questo ordine/)
-    }
   })
 })
 
