@@ -20,8 +20,11 @@ vi.mock('../../src/components/InventoryManager.jsx', () => ({
   FornitoriPanel: () => <div>PANNELLO ANAGRAFICA</div>,
   default: () => <div>MAGAZZINO</div>,
 }))
+// DA REQ-MAG-038 IL PANNELLO È LO STESSO PER DUE SOTTOSEZIONI: dice quale
+// mostra con `vista`, così qui si vede che la voce toccata apre la schermata
+// giusta e non solo «il pannello degli ordini».
 vi.mock('../../src/components/PurchaseOrdersPanel.jsx', () => ({
-  default: () => <div>PANNELLO ORDINI</div>,
+  default: ({ vista }) => <div>PANNELLO ORDINI {vista}</div>,
 }))
 vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
   default: () => <div>PANNELLO SCADENZARIO</div>,
@@ -88,18 +91,31 @@ describe('le sottosezioni di Fornitori', () => {
   it('si apre sull’anagrafica: è il posto da cui si parte', () => {
     mostra()
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
-    expect(screen.queryByText('PANNELLO ORDINI')).toBeNull()
+    expect(screen.queryByText(/PANNELLO ORDINI/)).toBeNull()
   })
 
   it('ci sono tutte, e ognuna apre il suo pannello', async () => {
     const user = userEvent.setup()
     mostra()
-    for (const voce of ['Gestione fornitori', 'Ordini', 'Scadenzario', 'Altre spese', 'Riepilogo']) {
+    for (const voce of [
+      'Gestione fornitori',
+      'Nuovo ordine',
+      'Lista ordini',
+      'Scadenzario',
+      'Altre spese',
+      'Riepilogo',
+    ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
     }
-    await user.click(screen.getByRole('button', { name: /Ordini/ }))
-    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+    // LE DUE VOCI SONO DUE SCHERMATE (REQ-MAG-038): comporre un ordine e
+    // guardare quelli già fatti sono lavori diversi, e prima stavano nella
+    // stessa pagina uno sotto l'altro.
+    await user.click(screen.getByRole('button', { name: /Nuovo ordine/ }))
+    expect(screen.getByText('PANNELLO ORDINI nuovo')).toBeInTheDocument()
     expect(screen.queryByText('PANNELLO ANAGRAFICA')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /Lista ordini/ }))
+    expect(screen.getByText('PANNELLO ORDINI lista')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Scadenzario/ }))
     expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
@@ -134,7 +150,8 @@ describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
     expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
     // Non vuota e non monca: l'anagrafica è aperta e gli ordini ci sono.
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Ordini/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Nuovo ordine/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lista ordini/ })).toBeInTheDocument()
   })
 
   it('e se si spegne mentre lo si guarda, si torna all’anagrafica', async () => {
@@ -154,13 +171,13 @@ describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
     const user = userEvent.setup()
     stato.impostazioni = { modulo_scadenzario_enabled: false }
     mostra()
-    await user.click(screen.getByRole('button', { name: /Ordini/ }))
-    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Lista ordini/ }))
+    expect(screen.getByText('PANNELLO ORDINI lista')).toBeInTheDocument()
 
     await act(async () => {
       stato.avvisaImpostazioni({})
     })
     expect(screen.getByRole('button', { name: /Scadenzario/ })).toBeInTheDocument()
-    expect(screen.getByText('PANNELLO ORDINI')).toBeInTheDocument()
+    expect(screen.getByText('PANNELLO ORDINI lista')).toBeInTheDocument()
   })
 })

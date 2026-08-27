@@ -26,9 +26,20 @@ import RiepilogoFornitoriPanel from './RiepilogoFornitoriPanel.jsx'
 // corpo, come in CassaTab. Se la voce è una funzione premium, il suo id va
 // messo nella tabella di `lib/licenza.js` e il filtro qui sotto la toglie
 // da solo — non serve un `if` in più.
+// ── ORDINI: DUE SOTTOSEZIONI AL POSTO DI UNA (REQ-MAG-038) ──────────
+//
+// «La sottosezione Ordini si divide in due: NUOVO ORDINE è la schermata di
+// composizione, e nasce LISTA ORDINI, che conterrà lo storico di tutti gli
+// ordini fatti, filtrabile per stato dell'ordine» (utente, 27/08/2026).
+//
+// Erano una schermata sola, con la composizione in alto e lo storico in
+// fondo: per guardare un ordine di ieri bisognava scorrere sotto seicento
+// righe di catalogo, e per ordinare bisognava passare accanto a tutti gli
+// ordini già fatti. Sono due lavori diversi e si fanno in momenti diversi.
 const SEZIONI = [
   { id: 'anagrafica', icona: '🏭', label: 'Gestione fornitori' },
-  { id: 'ordini', icona: '🛒', label: 'Ordini' },
+  { id: 'nuovo-ordine', icona: '🛒', label: 'Nuovo ordine' },
+  { id: 'lista-ordini', icona: '📋', label: 'Lista ordini' },
   // Funzione premium (REQ-LIC-001): dove il modulo non lavora, la voce non
   // c'è. Le altre due restano, quindi la sezione non resta mai vuota.
   { id: 'scadenzario', icona: '📄', label: 'Scadenzario' },
@@ -58,8 +69,10 @@ export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {
   return (
     <div>
       <Sottosezioni voci={voci} attiva={attiva} scegli={setSezione} />
-      {attiva === 'ordini' ? (
-        <PurchaseOrdersPanel />
+      {attiva === 'nuovo-ordine' ? (
+        <PurchaseOrdersPanel vista="nuovo" />
+      ) : attiva === 'lista-ordini' ? (
+        <PurchaseOrdersPanel vista="lista" />
       ) : attiva === 'scadenzario' ? (
         <SupplierInvoicesPanel />
       ) : attiva === 'spese' ? (

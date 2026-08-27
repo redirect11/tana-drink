@@ -27,16 +27,31 @@ const ARTICOLI = [
   { id: 'gin', name: 'Gin Mare', unit: 'pz', stock: 5, package_size: 700, content_unit: 'ml', cost: 30, vat: 22, kind: 'scorta', status: 'linea' },
 ]
 
-// L'ordine del 20 agosto: due fornitori dentro. Nova ha consegnato, Enofel
-// no — è il caso normale, consegnano in giorni diversi.
+// Il giro del 20 agosto: DUE ORDINI, uno per fornitore (REQ-MAG-037). Nova
+// ha consegnato, Enofel no — è il caso normale, consegnano in giorni
+// diversi, ed è la ragione per cui i documenti sono due e non uno.
 const ORDINE = {
   id: 'po-1',
+  supplier_id: 'nova',
+  supplier_name: 'Nova',
   created_at: '2026-08-20T09:00:00.000Z',
-  status: 'inviato',
-  total_net: 105,
-  total_gross: 128.1,
+  status: 'ricevuto',
+  total_net: 75,
+  total_gross: 91.5,
   lines: [
     { item_id: 'campari', name: 'Campari', unit: 'pz', package_size: 700, qty_packages: 6, unit_cost: 12.5, vat: 22, supplier_id: 'nova', supplier_name: 'Nova', stato: 'consegnato' },
+  ],
+}
+
+const ORDINE_ENOFEL = {
+  id: 'po-2',
+  supplier_id: 'enofel',
+  supplier_name: 'Enofel',
+  created_at: '2026-08-20T09:05:00.000Z',
+  status: 'inviato',
+  total_net: 30,
+  total_gross: 36.6,
+  lines: [
     { item_id: 'gin', name: 'Gin Mare', unit: 'pz', package_size: 700, qty_packages: 1, unit_cost: 30, vat: 22, supplier_id: 'enofel', supplier_name: 'Enofel', stato: 'richiesto' },
   ],
 }
@@ -56,7 +71,7 @@ const FATTURA_NOVA = {
 
 const FATTURA_ENOFEL = { ...FATTURA_NOVA, id: 'inv-enofel', supplier_id: 'enofel', supplier_name: 'Enofel', number: '77', amount: 30 }
 
-const stato = { ordini: [ORDINE], fatture: [FATTURA_NOVA] }
+const stato = { ordini: [ORDINE, ORDINE_ENOFEL], fatture: [FATTURA_NOVA] }
 
 vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => ARTICOLI),
@@ -72,8 +87,14 @@ vi.mock('../../src/lib/api.js', () => ({
   segnaInAssortimento: vi.fn(() => []),
   togliRigaOrdine: vi.fn(async () => ({ ordine: stato.ordini[0], articolo: null })),
   consegnaRigheOrdine: vi.fn(async () => ({})),
-  segnaRighePagate: vi.fn(async () => ({})),
   deletePurchaseOrder: vi.fn(async () => {}),
+  // I gesti nuovi della Lista ordini (REQ-MAG-038).
+  confermaOrdine: vi.fn((o) => o),
+  chiudiOrdine: vi.fn((o) => o),
+  registraMovimentoOrdine: vi.fn((o) => o),
+  generaFatturaDaOrdine: vi.fn(() => ({})),
+  segnaFatturaPagata: vi.fn((f, paid) => ({ ...f, paid })),
+  allineaPrezziDaFattura: vi.fn(async (o) => o),
   createSupplierInvoice: vi.fn(async () => ({})),
   updateSupplierInvoice: vi.fn(async () => {}),
   deleteSupplierInvoice: vi.fn(async () => {}),
@@ -94,41 +115,52 @@ import { collegaFatturaAFetta as collegato } from '../../src/lib/api.js'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  stato.ordini = [ORDINE]
+  stato.ordini = [ORDINE, ORDINE_ENOFEL]
   stato.fatture = [{ ...FATTURA_NOVA }]
 })
 
+// Apre il dettaglio di un ordine nella Lista ordini: il documento sta lì
+// dentro, perché la lista si scorre per trovare un ordine e non per
+// rileggerlo tutto (REQ-MAG-038).
+async function apriOrdine(user, nome) {
+  render(<PurchaseOrdersPanel vista="lista" />)
+  await user.click(await screen.findByRole('button', { name: new RegExp(`L’ordine di ${nome}`) }))
+}
+
 describe('dall’ordine si vede se la fattura c’è', () => {
   // IL PRIMO DEI DUE BUCHI: la merce è arrivata, il documento no.
-  it('una fetta consegnata senza documento lo dice, e si conta in testa', async () => {
-    render(<PurchaseOrdersPanel />)
-    expect(await screen.findByText('manca la fattura')).toBeInTheDocument()
-    expect(screen.getByText('1 consegna senza fattura')).toBeInTheDocument()
+  it('un ordine consegnato senza documento lo dice, e si conta in testa', async () => {
+    render(<PurchaseOrdersPanel vista="lista" />)
+    expect(await screen.findByText('senza documento')).toBeInTheDocument()
+    expect(screen.getByText('1 consegna senza documento')).toBeInTheDocument()
   })
 
-  // La fetta di Enofel è ancora «richiesta»: lì non è arrivato niente, e
-  // segnalarla insegnerebbe a ignorare il segnale.
-  it('la fetta ancora richiesta non risulta scoperta', async () => {
-    render(<PurchaseOrdersPanel />)
-    await screen.findByText('manca la fattura')
-    expect(screen.getAllByText('manca la fattura')).toHaveLength(1)
+  // L'ordine di Enofel è ancora «richiesto»: lì non è arrivato niente, e
+  // segnalarlo insegnerebbe a ignorare il segnale.
+  it('l’ordine ancora richiesto non risulta scoperto', async () => {
+    render(<PurchaseOrdersPanel vista="lista" />)
+    await screen.findByText('senza documento')
+    expect(screen.getAllByText('senza documento')).toHaveLength(1)
   })
 
   it('con la fattura attaccata si legge il documento, e il buco si chiude', async () => {
     stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
-    render(<PurchaseOrdersPanel />)
-    expect(await screen.findByText(/Fattura #1556/)).toBeInTheDocument()
-    expect(screen.queryByText('manca la fattura')).toBeNull()
-    expect(screen.queryByText(/consegna senza fattura/)).toBeNull()
+    const user = userEvent.setup()
+    await apriOrdine(user, 'Nova')
+    expect(await screen.findByText(/Fattura n\. 1556/)).toBeInTheDocument()
+    expect(screen.queryByText('senza documento')).toBeNull()
+    expect(screen.queryByText(/consegna senza documento/)).toBeNull()
   })
 })
 
 describe('il fornitore fa da guardia, e non si può nemmeno sbagliare', () => {
-  it('alla fetta di Enofel si propongono solo i documenti di Enofel', async () => {
+  it('all’ordine di Enofel si propongono solo i documenti di Enofel', async () => {
     stato.fatture = [FATTURA_NOVA, FATTURA_ENOFEL]
     const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await user.click(await screen.findByRole('button', { name: 'Collega una fattura a Enofel' }))
+    await apriOrdine(user, 'Enofel')
+    await user.click(
+      screen.getByRole('button', { name: 'Associa un documento all’ordine di Enofel' })
+    )
 
     const tendina = screen.getByLabelText('Documento')
     expect(tendina.textContent).toContain('#77')
@@ -140,40 +172,47 @@ describe('il fornitore fa da guardia, e non si può nemmeno sbagliare', () => {
   it('un documento già agganciato altrove non si propone una seconda volta', async () => {
     stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-vecchio' }]
     const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await user.click(await screen.findByRole('button', { name: 'Collega una fattura a Nova' }))
-    expect(screen.getByText(/Nessun documento di Nova da collegare/)).toBeInTheDocument()
+    await apriOrdine(user, 'Nova')
+    // Non c'è niente da scegliere, quindi il tasto è spento: il modo di
+    // impedirlo è non farlo comparire, non spiegarlo dopo con un errore.
+    expect(
+      screen.getByRole('button', { name: 'Associa un documento all’ordine di Nova' })
+    ).toBeDisabled()
   })
 })
 
 describe('si aggancia e si sgancia, dai due lati', () => {
   it('dall’ordine si sceglie il documento e la riga lo mostra subito', async () => {
     const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await user.click(await screen.findByRole('button', { name: 'Collega una fattura a Nova' }))
+    await apriOrdine(user, 'Nova')
+    await user.click(
+      screen.getByRole('button', { name: 'Associa un documento all’ordine di Nova' })
+    )
     await user.selectOptions(screen.getByLabelText('Documento'), 'inv-nova')
     await user.click(screen.getByRole('button', { name: 'Collega' }))
 
     expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1' })
     // Niente attesa: l'esito si vede nell'istante in cui si tocca.
-    expect(await screen.findByText(/Fattura #1556/)).toBeInTheDocument()
+    expect(await screen.findByText(/Fattura n\. 1556/)).toBeInTheDocument()
   })
 
   it('e dall’ordine si stacca, che è lo stesso gesto al contrario', async () => {
     stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
     const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await user.click(await screen.findByRole('button', { name: 'Scollega la fattura di Nova' }))
+    await apriOrdine(user, 'Nova')
+    await user.click(
+      await screen.findByRole('button', { name: 'Scollega il documento dall’ordine di Nova' })
+    )
 
     expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: null })
-    await waitFor(() => expect(screen.getByText('manca la fattura')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('senza documento')).toBeInTheDocument())
   })
 
   it('dal documento si vede a quale parte di quale ordine si riferisce', async () => {
     stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
     render(<SupplierInvoicesPanel />)
-    // La data dell'ordine, quanti articoli e il netto: è la FETTA di Nova,
-    // non l'ordine intero, e il gin di Enofel non ci sta dentro.
+    // La data dell'ordine, quanti articoli e il netto: l'ordine è di Nova,
+    // e il gin di Enofel sta nel suo, che è un altro documento.
     expect(await screen.findByText(/Ordine 2026-08-20 · 1 art\./)).toBeInTheDocument()
   })
 

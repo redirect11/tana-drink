@@ -4,55 +4,58 @@ import {
   fetchSuppliers,
   fetchSupplierPrices,
   createPurchaseOrder,
+  confermaOrdine,
+  chiudiOrdine,
+  registraMovimentoOrdine,
   fetchPurchaseOrders,
   consegnaRigheOrdine,
   segnaInAssortimento,
   liberaDaAssortimento,
   togliRigaOrdine,
-  segnaRighePagate,
   deletePurchaseOrder,
   fetchSupplierInvoices,
   collegaFatturaAFetta,
+  generaFatturaDaOrdine,
+  segnaFatturaPagata,
+  allineaPrezziDaFattura,
 } from '../lib/api.js'
 import { magazzinoBloccato } from '../lib/inventory.js'
 import { purchaseOrderText } from '../lib/warehouse.js'
-import { fetteFornitore, livelloDi, ETICHETTA_LIVELLO } from '../lib/listini.js'
-import {
-  fatturaDellaFetta,
-  fattureCollegabili,
-  fetteSenzaFattura,
-} from '../lib/fatture.js'
-import { formatPrice } from '../lib/orderStatus.js'
 import { printOrdineFornitore } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import NuovoOrdinePanel from './NuovoOrdinePanel.jsx'
+import OrdiniListaPanel from './OrdiniListaPanel.jsx'
 
-// ── ORDINI FORNITORE ──────────────────────────────────────────────────
+// ── ORDINI FORNITORE: LA STANZA DEI DATI E DEI GESTI ─────────────────
 //
-// Questo pannello tiene insieme due cose che si guardano una dopo l'altra:
-// la COMPOSIZIONE di un ordine nuovo — che è una schermata sua,
-// `NuovoOrdinePanel` (REQ-MAG-036) — e lo STORICO di quelli già fatti, che
-// resta qui finché non diventa «Lista Ordini» (REQ-MAG-038).
+// Le schermate sono due, e da REQ-MAG-038 sono due SOTTOSEZIONI: «Nuovo
+// ordine» è la composizione (`NuovoOrdinePanel`, REQ-MAG-036) e «Lista
+// ordini» è lo storico filtrabile (`OrdiniListaPanel`). Questo pannello non
+// disegna niente di suo: legge i dati una volta e tiene i GESTI, perché sono
+// gli stessi da tutte e due le parti — un ordine si crea di là e si modifica
+// di qua, ma il magazzino che si muove è lo stesso.
 //
 // I dati si leggono una volta sola e si passano giù: magazzino, fornitori e
 // listini servono a tutte e due, e leggerli due volte vorrebbe dire due
 // versioni della stessa serata a schermo nello stesso momento.
-export default function PurchaseOrdersPanel() {
+//
+// NIENTE `await` PRIMA DI MOSTRARE L'ESITO. Ogni gesto qui sotto compone il
+// risultato in memoria e manda la scrittura in sottofondo: con la cassa
+// offline un'attesa su Firestore non torna mai, e il tasto resterebbe
+// premuto senza che succeda niente.
+export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
   const [suppliers, setSuppliers] = useState([])
   const [items, setItems] = useState([])
   const [listini, setListini] = useState([])
   const [orders, setOrders] = useState([])
-  // I documenti servono a dire, fetta per fetta, se la fattura c'è
-  // (REQ-MAG-031). Una fetta consegnata e senza documento è uno dei due
-  // buchi che a fine mese fanno tornare o non tornare i conti.
+  // I documenti servono a dire, ordine per ordine, se la fattura c'è
+  // (REQ-MAG-031) e se è stata pagata (REQ-MAG-038): «pagato» non è un dato
+  // dell'ordine, è una domanda alla sua fattura.
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState(null)
 
-  const [consegnaFor, setConsegnaFor] = useState(null) // { ordine, fetta }
-  const [togliFor, setTogliFor] = useState(null) // { ordine, fetta, indice, riga }
-  const [confermaPagato, setConfermaPagato] = useState(null) // { ordine, fetta }
-  const [fatturaPer, setFatturaPer] = useState(null) // la fetta da collegare
+  const [togliFor, setTogliFor] = useState(null) // { ordine, indice, riga, fetta }
 
   async function load() {
     try {
@@ -88,19 +91,22 @@ export default function PurchaseOrdersPanel() {
   // chiede — non la si riscrive.
   const bloccato = useMemo(() => magazzinoBloccato(items), [items])
 
+  const rimpiazza = (o) => setOrders((prev) => prev.map((x) => (x.id === o.id ? o : x)))
+
   // ── UN ORDINE PER FORNITORE (REQ-MAG-037) ──────────────────
   //
   // Il riepilogo conferma un fornitore per volta, e ogni conferma è un
   // documento suo. Niente `await` e niente ricarica: l'ordine si compone in
-  // memoria e si infila in cima allo storico. Con la cassa offline,
-  // aspettare la scrittura vorrebbe dire il tasto premuto e niente che
-  // succede.
+  // memoria e si infila in cima alla lista.
   //
   // ED È QUI CHE I PRODOTTI PASSANO IN ASSORTIMENTO, non un momento prima:
   // «va in assortimento SOLO DOPO CHE FLAVIO HA CREATO L'ORDINE». Gli
-  // articoli li abbiamo già in mano, quindi non si rilegge niente e la
-  // lista aggiornata la si tiene subito.
-  function creaOrdine(fetta) {
+  // articoli li abbiamo già in mano, quindi non si rilegge niente.
+  //
+  // MA UNA BOZZA NON TOCCA NIENTE (REQ-MAG-038): è l'unico stato che non fa
+  // niente, e in assortimento ci si va alla conferma — che per una bozza
+  // arriva dopo, dalla Lista ordini.
+  function creaOrdine(fetta, { bozza = false } = {}) {
     setError(null)
     return Promise.resolve(
       createPurchaseOrder({
@@ -109,17 +115,13 @@ export default function PurchaseOrdersPanel() {
         lines: fetta.lines,
         total_net: fetta.totali.net,
         total_gross: fetta.totali.gross,
+        bozza,
       })
     ).then(
       (ordine) => {
         if (!ordine?.id) return null
         setOrders((prev) => [ordine, ...prev])
-        const articoli = fetta.lines
-          .map((l) => items.find((i) => i.id === l.item_id))
-          .filter(Boolean)
-        const aggiornati = segnaInAssortimento(articoli, ordine.id)
-        if (aggiornati.length > 0)
-          setItems((prev) => prev.map((i) => aggiornati.find((a) => a.id === i.id) || i))
+        if (!bozza) inAssortimento(ordine)
         return ordine
       },
       (e) => {
@@ -129,16 +131,42 @@ export default function PurchaseOrdersPanel() {
     )
   }
 
+  // I prodotti di un ordine passano in assortimento. Gli articoli sono già
+  // quelli in mano alla schermata: nessuna lettura in mezzo a un gesto.
+  function inAssortimento(ordine) {
+    const articoli = (ordine.lines || [])
+      .map((l) => items.find((i) => i.id === l.item_id))
+      .filter(Boolean)
+    const aggiornati = segnaInAssortimento(articoli, ordine.id)
+    if (aggiornati.length > 0)
+      setItems((prev) => prev.map((i) => aggiornati.find((a) => a.id === i.id) || i))
+  }
+
+  // LA BOZZA CHE PARTE. È il momento in cui l'ordine diventa una cosa che
+  // esiste anche per il fornitore, quindi è qui che i suoi prodotti passano
+  // in assortimento — non alla creazione, che per una bozza non vuol dire
+  // ancora niente.
+  function conferma(ordine) {
+    setError(null)
+    try {
+      const agg = confermaOrdine(ordine)
+      rimpiazza(agg)
+      inAssortimento(agg)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   // TOGLIERE UN ITEM DA UN ORDINE GIÀ FATTO (REQ-MAG-037): è una delle due
-  // sole strade per far uscire un prodotto da «in assortimento», e prima
-  // non c'era. L'esito si vede subito — l'ordine si ricompone in memoria.
+  // sole strade per far uscire un prodotto da «in assortimento». L'esito si
+  // vede subito — l'ordine si ricompone in memoria.
   function togliRiga() {
     const { ordine, indice } = togliFor
     setTogliFor(null)
     setError(null)
     togliRigaOrdine(ordine.id, { indice }).then(
       ({ ordine: agg, articolo }) => {
-        setOrders((prev) => prev.map((x) => (x.id === agg.id ? agg : x)))
+        rimpiazza(agg)
         if (articolo)
           setItems((prev) => prev.map((i) => (i.id === articolo.id ? articolo : i)))
       },
@@ -146,49 +174,95 @@ export default function PurchaseOrdersPanel() {
     )
   }
 
-  // LA CONSEGNA CARICA IL MAGAZZINO, e lo fa per FETTA di fornitore: i
-  // fornitori consegnano in giorni diversi, e caricare tutto l'ordine al
-  // primo che arriva metterebbe in giacenza merce ancora per strada.
-  //
-  // Niente `await` prima di mostrare l'esito: `consegnaRigheOrdine` compone
-  // l'ordine aggiornato in memoria e le scritture partono in sottofondo.
-  function consegna(prezzi, indici) {
-    const { ordine } = consegnaFor
-    setConsegnaFor(null)
+  // LA CONSEGNA CARICA IL MAGAZZINO SULLE QUANTITÀ RICEVUTE (REQ-MAG-038) e
+  // fa uscire i prodotti da «in assortimento»: è il momento in cui l'ordine
+  // finisce. `consegnaRigheOrdine` compone l'ordine aggiornato in memoria e
+  // le scritture partono in sottofondo.
+  function consegna(ordine, { indici, prezzi, quantita }) {
     setError(null)
-    consegnaRigheOrdine(ordine.id, { indici, prezzi }).then(
-      (o) => setOrders((prev) => prev.map((x) => (x.id === o.id ? o : x))),
-      (e) => setError(e.message)
-    )
-  }
-
-  function paga() {
-    const { ordine, fetta } = confermaPagato
-    setConfermaPagato(null)
-    setError(null)
-    segnaRighePagate(ordine.id, { indici: fetta.indici }).then(
-      (o) => setOrders((prev) => prev.map((x) => (x.id === o.id ? o : x))),
+    consegnaRigheOrdine(ordine.id, { indici, prezzi, quantita }).then(
+      (o) => rimpiazza(o),
       (e) => setError(e.message)
     )
   }
 
   // ATTACCARE E STACCARE SONO LO STESSO GESTO AL CONTRARIO, e passano dalla
-  // stessa strada: `order_id` a null stacca. Niente `await` prima di
-  // mostrare l'esito — la scrittura parte in sottofondo e il documento
-  // aggiornato si compone in memoria.
-  function collega(order_id, invoiceId) {
-    setFatturaPer(null)
+  // stessa strada: `order_id` a null stacca. Il legame resta scritto in un
+  // posto solo, sulla fattura (REQ-MAG-031); nella storia dell'ordine ne
+  // resta la riga di diario, che è un'altra cosa dal dato.
+  function collega(ordine, invoiceId, fatturaAttuale = null) {
     setError(null)
-    collegaFatturaAFetta(invoiceId, { order_id }).then(
-      (agg) => setInvoices((prev) => prev.map((f) => (f.id === agg.id ? agg : f))),
+    const id = invoiceId || fatturaAttuale?.id
+    if (!id) return
+    collegaFatturaAFetta(id, { order_id: invoiceId ? ordine.id : null }).then(
+      (agg) => {
+        setInvoices((prev) => prev.map((f) => (f.id === agg.id ? agg : f)))
+        rimpiazza(
+          registraMovimentoOrdine(
+            ordine,
+            invoiceId ? 'fattura_collegata' : 'fattura_scollegata',
+            invoiceId ? { numero: agg.number || null } : null
+          )
+        )
+      },
       (e) => setError(e.message)
     )
   }
 
-  // Invia la FETTA di quel fornitore: mandare a Nova anche le righe di
-  // Enofel è un errore verso il fornitore, non un dettaglio grafico. La
-  // fetta ha la stessa forma di un ordine, quindi testo e stampa non
-  // cambiano di una riga.
+  // LA FATTURA GENERATA DALL'ORDINE, e la stessa strada per «Nessun
+  // documento»: non esiste pagare un fornitore senza una riga nello
+  // scadenzario, se no quei soldi sarebbero gli unici a non comparire nel
+  // totale del mese (REQ-MAG-038).
+  function genera(ordine, opzioni) {
+    setError(null)
+    try {
+      const fattura = generaFatturaDaOrdine(ordine, opzioni)
+      setInvoices((prev) => [fattura, ...prev])
+      rimpiazza(
+        registraMovimentoOrdine(ordine, 'fattura_generata', { importo: fattura.amount })
+      )
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  // PAGATO SI SCRIVE SULLA FATTURA, sempre: è lì che stanno anche il filtro
+  // «solo da pagare» dello scadenzario e il totale del mese.
+  function pagata(fattura, paid) {
+    setError(null)
+    try {
+      const agg = segnaFatturaPagata(fattura, paid)
+      setInvoices((prev) => prev.map((f) => (f.id === agg.id ? agg : f)))
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  // IL PREZZO DEL DOCUMENTO ALLINEA IL LISTINO (REQ-MAG-035): mostrare la
+  // differenza e lasciare il listino fermo farebbe ricomparire lo stesso
+  // scarto al giro dopo, e l'avviso diventerebbe rumore.
+  function allinea(ordine, fattura) {
+    setError(null)
+    allineaPrezziDaFattura(ordine, fattura).then(
+      (agg) => {
+        rimpiazza(agg)
+        toastSuccess('Listino allineato al documento')
+      },
+      (e) => setError(e.message)
+    )
+  }
+
+  function chiudi(ordine) {
+    setError(null)
+    try {
+      rimpiazza(chiudiOrdine(ordine))
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  // Invia l'ordine di quel fornitore. La fetta ha la stessa forma di un
+  // ordine, quindi testo e stampa non cambiano di una riga.
   function inviaEmail(fetta) {
     const body = purchaseOrderText(fetta)
     window.location.href = `mailto:${encodeURIComponent(fetta.email || '')}?subject=${encodeURIComponent(
@@ -223,11 +297,6 @@ export default function PurchaseOrdersPanel() {
     }
   }
 
-  const scoperte = useMemo(
-    () => fetteSenzaFattura(orders, invoices, { suppliers }),
-    [orders, invoices, suppliers]
-  )
-
   return (
     <div>
       {error && <div className="banner">Errore: {error}</div>}
@@ -246,369 +315,45 @@ export default function PurchaseOrdersPanel() {
         </div>
       )}
 
-      <NuovoOrdinePanel
-        items={items}
-        suppliers={suppliers}
-        listini={listini}
-        onCrea={creaOrdine}
-      />
-
-      {orders.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <strong>Storico ordini</strong>
-          {/* IL PRIMO DEI DUE BUCHI (REQ-MAG-031): la merce è arrivata, il
-              documento no. Il numero sta in testa perché è la domanda che
-              uno si fa a fine mese, e scorrere venticinque ordini per
-              contarle è il modo in cui non lo si fa. */}
-          {scoperte.length > 0 && (
-            <div className="muted small" style={{ marginTop: 2 }}>
-              {scoperte.length === 1
-                ? '1 consegna senza fattura'
-                : `${scoperte.length} consegne senza fattura`}
-            </div>
-          )}
-          {orders.map((o) => (
-            <div key={o.id} style={{ marginTop: 10 }}>
-              <div className="row between" style={{ alignItems: 'center' }}>
-                <span className="muted small">
-                  {o.created_at?.slice(0, 10)} · {o.lines.length} art. · {formatPrice(o.total_gross)}
-                </span>
-                <button className="btn ghost small" title="Elimina l’ordine" onClick={() => remove(o)}>🗑</button>
-              </div>
-              {/* L'ORDINE È UNO, coi fornitori dentro; il per-fornitore è una
-                  VISTA (REQ-MAG-025 del 20/08). Ma email, stampa e consegna
-                  vanno per fetta, perché è per fetta che il fornitore
-                  consegna e fattura. */}
-              <div className="inv-list">
-              {fetteFornitore(o, { suppliers }).map((fetta) => {
-                const fattura = fatturaDellaFetta(invoices, fetta)
-                return (
-                <div
-                  className="inv-row"
-                  key={fetta.supplier_id || 'senza'}
-                  style={{ borderLeftColor: fetta.colore || undefined }}
-                >
-                  <div className="inv-row-main" style={{ flexWrap: 'wrap' }}>
-                    <span className="grow" style={{ minWidth: 0 }}>
-                      <span className="inv-row-name">{fetta.supplier_name || 'Senza fornitore'}</span>{' '}
-                      <span className="muted small">{ETICHETTA_LIVELLO[fetta.stato]}</span>
-                      {/* LE RIGHE, UNA PER UNA, E SI POSSONO TOGLIERE
-                          (REQ-MAG-037). Erano un elenco separato da virgole:
-                          per far uscire un prodotto da un ordine già mandato
-                          — e quindi da «in assortimento» — non c'era nessun
-                          gesto. Quello che è già arrivato non si toglie: si
-                          corregge dal magazzino. */}
-                      <span className="muted small ordine-righe-storico">
-                        {fetta.lines.map((l, k) => (
-                          <span className="ordine-riga-storico" key={`${l.item_id || 'riga'}-${k}`}>
-                            {l.qty_packages}× {l.name}
-                            {/* La data nel nome del tasto non è un vezzo: due
-                                ordini allo stesso fornitore darebbero due tasti
-                                identici, e questo toglie roba da un ordine già
-                                mandato. */}
-                            {livelloDi(l) === 'richiesto' && (
-                              <button
-                                type="button"
-                                className="btn ghost small"
-                                aria-label={`Togli ${l.name} dall’ordine di ${fetta.supplier_name || 'questo fornitore'} del ${String(o.created_at || '').slice(0, 10)}`}
-                                title="Togli dall’ordine"
-                                onClick={() =>
-                                  setTogliFor({ ordine: o, fetta, indice: fetta.indici[k], riga: l })
-                                }
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </span>
-                      <span className="muted small" style={{ display: 'block' }}>
-                        netto {formatPrice(fetta.total_net)}
-                      </span>
-                      {/* IL DOCUMENTO DI QUESTA FETTA (REQ-MAG-031): è il
-                          fornitore che rilascia la fattura, quindi sta qui e
-                          non sull'ordine intero. L'ambra dice «manca», non
-                          «sbagliato»: il rosso in questa app vuol dire
-                          annullato (DESIGN.md). */}
-                      {fattura ? (
-                        <span className="muted small" style={{ display: 'block' }}>
-                          Fattura {fattura.number ? `#${fattura.number} ` : ''}
-                          {fattura.date || ''} · {formatPrice(fattura.amount)}
-                        </span>
-                      ) : fetta.stato !== 'richiesto' ? (
-                        <span className="badge-low" style={{ marginTop: 2 }}>manca la fattura</span>
-                      ) : null}
-                    </span>
-                    <span className="row" style={{ gap: 4 }}>
-                      {fetta.stato === 'richiesto' && (
-                        <button
-                          className="btn small"
-                          onClick={() => setConsegnaFor({ ordine: o, fetta })}
-                          // Spento col perché, non sparito: un tasto che non
-                          // c'è fa dubitare di averlo immaginato, e chi
-                          // aspetta la merce lo cerca.
-                          disabled={bloccato}
-                          title={
-                            bloccato
-                              ? 'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
-                              : undefined
-                          }
-                        >
-                          📦 Consegnato
-                        </button>
-                      )}
-                      {fetta.stato === 'consegnato' && (
-                        <button className="btn small" onClick={() => setConfermaPagato({ ordine: o, fetta })}>
-                          💶 Pagato
-                        </button>
-                      )}
-                      {/* Il nome del fornitore sta nell'etichetta e non solo
-                          nel `title`: con tre fette a schermo, tre tasti
-                          «📧» uguali non dicono a chi si sta scrivendo — e
-                          questi tasti mandano roba fuori dal locale. */}
-                      <button
-                        className="btn ghost small"
-                        aria-label={`Invia a ${fetta.supplier_name || 'fornitore'}`}
-                        title={`Invia a ${fetta.supplier_name || 'fornitore'}`}
-                        onClick={() => inviaEmail(fetta)}
-                      >
-                        📧
-                      </button>
-                      <button
-                        className="btn ghost small"
-                        aria-label={`Copia l’ordine di ${fetta.supplier_name || 'fornitore'}`}
-                        title="Copia il testo"
-                        onClick={() => copia(fetta)}
-                      >
-                        📋
-                      </button>
-                      <button
-                        className="btn ghost small"
-                        aria-label={`Stampa l’ordine di ${fetta.supplier_name || 'fornitore'}`}
-                        title="Stampa"
-                        onClick={() => printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))}
-                      >
-                        🖨
-                      </button>
-                      {/* Il gancio col documento, nei due sensi: da qui si
-                          attacca e da qui si stacca. Una fetta senza
-                          fornitore non può averne uno — la fattura la
-                          rilascia qualcuno. */}
-                      {fetta.supplier_id && (
-                        <button
-                          className="btn ghost small"
-                          aria-label={
-                            fattura
-                              ? `Scollega la fattura di ${fetta.supplier_name}`
-                              : `Collega una fattura a ${fetta.supplier_name}`
-                          }
-                          title={fattura ? 'Scollega la fattura' : 'Collega una fattura'}
-                          onClick={() =>
-                            fattura ? collega(null, fattura.id) : setFatturaPer(fetta)
-                          }
-                        >
-                          {fattura ? '🔗✕' : '🧾'}
-                        </button>
-                      )}
-                    </span>
-                  </div>
-                </div>
-                )
-              })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {consegnaFor && (
-        <DialogoConsegna
-          fetta={consegnaFor.fetta}
-          onCancel={() => setConsegnaFor(null)}
-          onConfirm={consegna}
-        />
-      )}
-
-      {fatturaPer && (
-        <DialogoFattura
-          fetta={fatturaPer}
+      {vista === 'lista' ? (
+        <OrdiniListaPanel
+          ordini={orders}
           fatture={invoices}
-          onCancel={() => setFatturaPer(null)}
-          onConfirm={(invoiceId) => collega(fatturaPer.order_id, invoiceId)}
+          suppliers={suppliers}
+          bloccato={bloccato}
+          onConferma={conferma}
+          onConsegna={consegna}
+          onTogliRiga={(ordine, dati) => setTogliFor({ ordine, ...dati })}
+          onCollega={collega}
+          onGenera={genera}
+          onPagata={pagata}
+          onAllinea={allinea}
+          onChiudi={chiudi}
+          onElimina={remove}
+          onEmail={inviaEmail}
+          onCopia={copia}
+          onStampa={(fetta) =>
+            printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))
+          }
+        />
+      ) : (
+        <NuovoOrdinePanel
+          items={items}
+          suppliers={suppliers}
+          listini={listini}
+          onCrea={creaOrdine}
         />
       )}
 
       {togliFor && (
         <ConfirmDialog
           title="Togliere il prodotto dall’ordine?"
-          message={`«${togliFor.riga.name}» esce dall’ordine di ${togliFor.fetta.supplier_name || 'questo fornitore'} e torna allo stato che aveva prima: non risulta più in arrivo.`}
+          message={`«${togliFor.riga.name}» esce dall’ordine di ${togliFor.fetta?.supplier_name || 'questo fornitore'} e torna allo stato che aveva prima: non risulta più in arrivo.`}
           confirmLabel="Togli dall’ordine"
           onCancel={() => setTogliFor(null)}
           onConfirm={togliRiga}
         />
       )}
-
-      {confermaPagato && (
-        <ConfirmDialog
-          title="💶 Fattura pagata?"
-          message={`Le righe di ${confermaPagato.fetta.supplier_name || 'questo fornitore'} passano a «pagato» (netto ${formatPrice(confermaPagato.fetta.total_net)}).`}
-          confirmLabel="Segna pagato"
-          onCancel={() => setConfermaPagato(null)}
-          onConfirm={paga}
-        />
-      )}
-    </div>
-  )
-}
-
-// ── LA FATTURA DI QUESTA FETTA ───────────────────────────────────────
-//
-// I documenti proposti sono solo quelli DELLO STESSO FORNITORE e ancora
-// liberi: agganciare la fattura di Nova alla fetta di Enofel non è un errore
-// di battitura, è merce pagata a chi non l'ha venduta. Il modo di impedirlo
-// è non farla comparire, non spiegarlo dopo.
-function DialogoFattura({ fetta, fatture, onCancel, onConfirm }) {
-  const [scelta, setScelta] = useState('')
-  const candidate = useMemo(() => fattureCollegabili(fatture, fetta), [fatture, fetta])
-  return (
-    <div className="overlay confirm-overlay" onClick={onCancel}>
-      <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>🧾 La fattura di {fetta.supplier_name}</h3>
-        <p className="muted">
-          Si collega un documento di {fetta.supplier_name} a questa parte
-          dell’ordine: quello che ha mandato lui, per la merce che ha portato
-          lui.
-        </p>
-        {candidate.length === 0 ? (
-          <p className="muted small">
-            Nessun documento di {fetta.supplier_name} da collegare. Si scrive
-            nello <strong>Scadenzario</strong>, e da lì si collega anche a
-            questo ordine.
-          </p>
-        ) : (
-          <>
-            <label htmlFor="pf-fattura">Documento</label>
-            <select id="pf-fattura" value={scelta} onChange={(e) => setScelta(e.target.value)}>
-              <option value="">— Scegli un documento —</option>
-              {candidate.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.number ? `#${f.number} · ` : ''}
-                  {f.date || '—'} · {formatPrice(f.amount)}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-        <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
-          <button className="btn grow" disabled={!scelta} onClick={() => onConfirm(scelta)}>
-            Collega
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── ALLA CONSEGNA SI CORREGGE IL PREZZO, MAI IL FORNITORE ────────────
-//
-// Flavio: «prendo dieci cose, mi esce 300 euro di ordine; una volta che il
-// fornitore mi scarica l'ordine vedo se veramente sono 300 o di più o di
-// meno, e modifico il prezzo quando necessario. NON POSSO MODIFICARE IL
-// FORNITORE PERCHÉ DA LUI L'HO COMPRATO».
-//
-// RIGA PER RIGA, PIÙ UN TASTO CHE LE PRENDE TUTTE (REQ-MAG-025 punto 4,
-// REQ-MAG-032). Il fornitore consegna quello che ha, non quello che è stato
-// ordinato: le due casse su tre arrivate si caricano, la terza resta
-// «richiesta» e si carica quando arriva. Si parte con TUTTO spuntato, che è
-// il caso normale — chi non tocca niente carica quello che ha ordinato — e
-// il tasto dice sempre quante righe sta per caricare e se sono tutte: un
-// carico fatto alla cieca lo si scopre contando le bottiglie.
-//
-// Le righe già consegnate non compaiono: di lì si carica, non si ricarica.
-function DialogoConsegna({ fetta, onCancel, onConfirm }) {
-  const [prezzi, setPrezzi] = useState({})
-  const righe = useMemo(
-    () =>
-      fetta.lines
-        .map((l, k) => ({ l, i: fetta.indici[k] }))
-        .filter(({ l }) => livelloDi(l) === 'richiesto' && (Number(l.qty_packages) || 0) > 0),
-    [fetta]
-  )
-  const [scelti, setScelti] = useState(() => new Set(righe.map((r) => r.i)))
-  const tutte = scelti.size === righe.length && righe.length > 0
-  const valore = (i, l) => prezzi[i] ?? String(Number(l.unit_cost) || 0)
-  const totale = righe.reduce(
-    (t, { l, i }) => t + (scelti.has(i) ? (Number(l.qty_packages) || 0) * (Number(valore(i, l)) || 0) : 0),
-    0
-  )
-  const spunta = (i, dentro) =>
-    setScelti((prev) => {
-      const next = new Set(prev)
-      if (dentro) next.add(i)
-      else next.delete(i)
-      return next
-    })
-  return (
-    <div className="overlay confirm-overlay" onClick={onCancel}>
-      <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>
-          📦 Merce arrivata da {fetta.supplier_name || 'questo fornitore'}?
-        </h3>
-        <p className="muted">
-          Togli la spunta a quello che non è arrivato: resta in attesa e si
-          carica quando arriva. Controlla i prezzi come sono sul documento —
-          quello che scrivi qui diventa il prezzo di questo fornitore e il
-          costo del prodotto.
-        </p>
-        {righe.length > 1 && (
-          <button
-            type="button"
-            className="btn ghost small"
-            onClick={() => setScelti(tutte ? new Set() : new Set(righe.map((r) => r.i)))}
-          >
-            {tutte ? 'Togli tutte le spunte' : 'Spunta tutte'}
-          </button>
-        )}
-        {righe.map(({ l, i }) => (
-          <div className="row between" key={i} style={{ alignItems: 'center', marginTop: 6, gap: 8 }}>
-            <label className="row grow" style={{ minWidth: 0, gap: 6, alignItems: 'center' }}>
-              <input
-                type="checkbox"
-                checked={scelti.has(i)}
-                aria-label={`Carica ${l.name}`}
-                onChange={(e) => spunta(i, e.target.checked)}
-              />
-              <span style={{ minWidth: 0 }}>
-                {l.qty_packages}× {l.name}
-              </span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              aria-label={`Prezzo di ${l.name}`}
-              value={valore(i, l)}
-              onChange={(e) => setPrezzi((p) => ({ ...p, [i]: e.target.value }))}
-              style={{ width: 96, textAlign: 'right' }}
-            />
-          </div>
-        ))}
-        <div className="row between" style={{ marginTop: 10 }}>
-          <span className="muted">Totale netto</span>
-          <strong>{formatPrice(totale)}</strong>
-        </div>
-        <div className="row" style={{ gap: 10, marginTop: 16 }}>
-          <button className="btn ghost grow" onClick={onCancel}>Annulla</button>
-          <button
-            className="btn grow"
-            disabled={scelti.size === 0}
-            onClick={() => onConfirm(prezzi, [...scelti])}
-          >
-            {tutte ? `Carica tutti (${scelti.size})` : `Carica i selezionati (${scelti.size})`}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

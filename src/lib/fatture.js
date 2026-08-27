@@ -17,6 +17,31 @@
 
 import { purchaseOrderTotals } from './warehouse.js'
 import { righeDiProdotto, livelloDi, fetteFornitore } from './listini.js'
+import { eBozza } from './statiOrdine.js'
+
+// ── I TIPI DI DOCUMENTO ──────────────────────────────────────────────
+//
+// «NESSUN DOCUMENTO» è il valore chiesto dall'utente il 27/08/2026: «il caso
+// di pagare un fornitore senza fattura non c'è. Anche se può capitare, io
+// creerò SEMPRE un item nello scadenzario che paga un ordine anche senza
+// fattura/scontrino/proforma allegato. Possiamo semplicemente indicare nella
+// fattura NESSUN DOCUMENTO, ma farlo risultare lo stesso pagato».
+//
+// Non è un caso speciale: è un tipo di documento come gli altri, e proprio
+// per questo il contante al piccolo fornitore e il contrassegno alla
+// consegna finiscono nel totale del mese come tutte le altre uscite. Se
+// esistesse una seconda strada per segnare pagato un ordine, sarebbero gli
+// unici soldi a non comparirci.
+export const DOC_NESSUNO = 'Nessun documento'
+
+export const TIPI_DOCUMENTO = ['Proforma', 'Fattura', 'Reso', DOC_NESSUNO, 'Altro']
+
+// UNA FATTURA GENERATA DA NOI NON È UNA FATTURA DEL FORNITORE (REQ-MAG-038),
+// e le due non vanno confuse: la prima dice quanto ci si ASPETTA di pagare
+// coi prezzi dell'ordine, la seconda è quello che il fornitore CHIEDE. Il
+// documento vero si allega (REQ-MAG-033), e finché non arriva quella cifra
+// resta un'aspettativa.
+export const fatturaGenerata = (fattura) => !!fattura?.generata
 
 // Le righe di una fattura, sempre un array: una fattura scritta prima di
 // questa voce non ha il campo, e non è un errore — è la normalità di tutte
@@ -202,8 +227,12 @@ export function fattureCollegabili(fatture, fetta) {
 // La merce è arrivata, il documento no. Una fetta ancora «richiesta» non
 // conta: lì non è arrivato niente, e segnalarla insegnerebbe a ignorare il
 // segnale.
+// LE BOZZE NON CONTANO (REQ-MAG-038): una bozza non è stata mandata a
+// nessuno, quindi non c'è nessun documento che debba arrivare — e i suoi
+// numeri non devono comparire fra i soldi che escono.
 export function fetteSenzaFattura(ordini, fatture, { suppliers = [] } = {}) {
   return (ordini || [])
+    .filter((o) => !eBozza(o))
     .flatMap((o) => fetteFornitore(o, { suppliers }))
     .filter((f) => f.supplier_id && f.stato !== 'richiesto' && !fatturaDellaFetta(fatture, f))
 }

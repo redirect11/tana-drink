@@ -181,7 +181,7 @@ describe('per singolo fornitore si crea l’ordine', () => {
 // GIÀ FATTO, e si ripristina lo stato in linea o premium» (utente, 27/08).
 // Prima di oggi questo gesto non esisteva: le righe di un ordine mandato
 // erano un elenco separato da virgole, da leggere e basta.
-describe('dallo storico si toglie un item da un ordine già mandato', () => {
+describe('dalla lista ordini si toglie un item da un ordine già mandato', () => {
   const ORDINE = {
     id: 'po-1',
     created_at: '2026-08-26T09:00:00.000Z',
@@ -197,8 +197,11 @@ describe('dallo storico si toglie un item da un ordine già mandato', () => {
   it('chiede conferma, e toglie la riga giusta di quell’ordine', async () => {
     const user = userEvent.setup()
     stato.ordini = [ORDINE]
-    render(<PurchaseOrdersPanel />)
-    await screen.findByText('Storico ordini')
+    render(<PurchaseOrdersPanel vista="lista" />)
+    await screen.findByText('Lista ordini')
+    // Le righe stanno nel dettaglio dell'ordine (REQ-MAG-038): si apre
+    // toccando il nome del fornitore.
+    await user.click(screen.getByRole('button', { name: /L’ordine di Nova/ }))
     await user.click(
       screen.getByRole('button', { name: 'Togli Campari dall’ordine di Nova del 2026-08-26' })
     )
@@ -212,10 +215,12 @@ describe('dallo storico si toglie un item da un ordine già mandato', () => {
   // La merce già arrivata ha alzato la giacenza: toglierla vorrebbe dire
   // scaricare roba che sta sullo scaffale.
   it('la riga già consegnata non ha nessun tasto per toglierla', async () => {
+    const user = userEvent.setup()
     stato.ordini = [ORDINE]
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
-    // Nello storico, e non nell'ordine in composizione: lì il Gin c'è ancora
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = (await screen.findByText('Lista ordini')).closest('.card')
+    await user.click(within(storico).getByRole('button', { name: /L’ordine di Nova/ }))
+    // Nella lista, e non nell'ordine in composizione: lì il Gin c'è ancora
     // e si toglie eccome, perché non è partito per nessuno.
     expect(within(storico).queryByRole('button', { name: /Togli Gin Mare dall/ })).toBeNull()
     expect(within(storico).getByRole('button', { name: /Togli Campari dall/ })).toBeInTheDocument()

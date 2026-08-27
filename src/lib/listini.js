@@ -495,6 +495,11 @@ function totaliRighe(righe) {
 // niente da consegnare. Serve a non rinominare un campo che sta scritto su
 // documenti veri.
 export function statoOrdine(order) {
+  // UNA BOZZA RESTA UNA BOZZA anche quando le si toccano le righe
+  // (REQ-MAG-038): le righe di una bozza sono tutte «richieste» per
+  // definizione, e ricavare lo stato solo da lì la farebbe partire da sola
+  // verso il fornitore alla prima modifica.
+  if (order?.status === 'bozza') return 'bozza'
   const livello = livelloDelGruppo(order?.lines || [])
   return livello === 'richiesto' ? 'inviato' : 'ricevuto'
 }

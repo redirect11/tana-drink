@@ -18,7 +18,7 @@
 //     bottiglie.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -100,12 +100,14 @@ describe('la riga di chi vende a collo', () => {
   })
 
   it('scrivendo due colli si leggono i quarantotto pezzi che arrivano', async () => {
-    const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Bjorne')
     const colli = screen.getByLabelText('Colli di Bjorne (FONT)')
-    await user.clear(colli)
-    await user.type(colli, '2')
+    // UN EVENTO SOLO, non tasto per tasto: `clear` piu' `type` sotto carico
+    // finiscono nello stesso giro di React e il campo resta a metà — questo
+    // test faceva rosso una volta su tre. Qui non si sta provando la
+    // tastiera, si sta provando il conto.
+    fireEvent.change(colli, { target: { value: '2' } })
     expect(within(rigaDi('Bjorne (FONT)')).getByText('= 48 pz')).toBeInTheDocument()
     expect(within(carrello()).getByText(/2 colli · 48 pz/)).toBeInTheDocument()
     // 2 × 25,05: il totale è quello che FONT fattura.

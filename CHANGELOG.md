@@ -4,6 +4,68 @@
 
 ### Per chi sta al banco
 
+- **Gli ordini adesso sono due schermate: «Nuovo ordine» e «Lista ordini».**
+  La prima è quella di sempre, dove si compone. La seconda è **lo storico di
+  tutti gli ordini fatti**, con in alto i **filtri per stato** — bozze,
+  richiesti, consegnati, da pagare, pagati, chiusi — e il numero su ogni
+  filtro. Prima lo storico stava in fondo alla schermata di composizione: per
+  guardare un ordine di ieri bisognava scorrere sotto tutto il catalogo.
+
+- **Un ordine si può salvare in bozza.** Nel riepilogo, accanto a «Crea
+  l'ordine», c'è **«Salva in bozza»**: l'ordine resta lì, si riprende dalla
+  Lista ordini e **non tocca niente** — i prodotti non passano in
+  assortimento e la cifra non entra nei soldi che escono del mese. Serve
+  perché comporre venti righe è un lavoro che si interrompe, e prima le
+  alternative erano ricominciare da capo o confermare un ordine solo per non
+  perderlo. Quando serve, dalla Lista ordini si tocca **«Manda l'ordine»** e
+  da lì in poi vale come tutti gli altri.
+
+- **Quando la merce arriva si scrive quanto è arrivato davvero.** Nella
+  finestra della consegna, accanto al prezzo, c'è il campo dei **pezzi
+  ricevuti**: parte con quelli che erano stati chiesti, e **in magazzino
+  entra quello che si scrive lì**. Se di sei casse ne arrivano quattro, si
+  caricano quattro — e **l'ordine continua a ricordare che ne erano state
+  chieste sei**, che è quello che serve per non pagarne sei in fattura.
+
+- **Ordinato, ricevuto e fatturato, uno accanto all'altro.** Aprendo un
+  ordine si vede una tabella con le **tre colonne** e la **differenza di
+  prezzo** fra quanto costava quando l'ordine è partito e quanto costa sul
+  documento, col segno. Sotto ogni riga che non torna c'è scritto **cosa non
+  torna**: arrivato meno del richiesto, non è sul documento, prezzo diverso.
+
+- **E il prezzo del documento si porta sul listino in un gesto.** Dove c'è
+  uno scarto compare **«Allinea il listino al documento»**: da lì in poi
+  quello è il prezzo di quel fornitore, e la variazione resta nello **storico
+  dei prezzi**. Senza, lo stesso scarto ricomparirebbe al prossimo ordine.
+
+- **Il documento di un ordine: si associa, si genera, oppure non c'è.**
+  Dentro l'ordine si può **collegare un documento** già scritto nello
+  Scadenzario, oppure **generarlo dall'ordine** coi prezzi dell'ordine — e in
+  quel caso porta il segno **«Generata dall'ordine»**, così non si confonde
+  con la fattura vera del fornitore, che si allega quando arriva. Quando non
+  c'è nessuna carta — il contante al piccolo fornitore, il contrassegno alla
+  consegna — c'è **«Pagato senza documento»**: crea comunque la riga nello
+  Scadenzario, tipo **«Nessun documento»**, e la segna pagata. Così quei
+  soldi compaiono nel totale del mese come tutti gli altri.
+
+- **«Pagato» si scrive sul documento, non sull'ordine.** Il tasto «Pagato»
+  che stava sull'ordine non c'è più: sulla riga dell'ordine si vede il chip
+  **«da pagare» / «pagato»** del suo documento, e toccarlo scrive lì — nello
+  stesso posto da cui lo Scadenzario fa il totale «Da pagare». Prima erano
+  due segni diversi per la stessa cosa, e a fine mese potevano non tornare.
+  Un ordine consegnato senza documento lo dice a chiare lettere.
+
+- **«Chiudi» c'è, ma solo quando i conti tornano.** Un ordine si può chiudere
+  quando **ordinato, ricevuto e fatturato tornano**: finché non tornano il
+  tasto è spento e dice perché. Chiuso **non vuol dire pagato** — si può aver
+  pagato in anticipo, e si può aver ricevuto tutto senza aver ancora pagato.
+
+- **Ogni ordine tiene il suo diario.** In fondo al dettaglio c'è **«Cosa è
+  successo»**: quando è stato creato e mandato, cosa è stato tolto, quali
+  quantità e quali prezzi sono cambiati all'arrivo, quando è stato collegato
+  un documento. Un ordine che cambia dopo essere partito, senza diario,
+  diventa un foglio che non corrisponde più a niente.
+
 - **Chi vende a cartoni adesso si ordina a cartoni.** Sul listino di un
   fornitore c'è **«Pezzi per collo»**: si compila solo dove quel fornitore
   vende a casse o a cartoni — le Bjorne da FONT vanno a 24 — e da lì in poi il

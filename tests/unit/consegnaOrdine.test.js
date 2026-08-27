@@ -183,12 +183,64 @@ describe('l’esito si vede subito, senza aspettare la rete', () => {
     expect(dopo.lines[0].delivered_at).toBeTruthy()
   })
 
-  it('anche il pagato, e solo su quello che è arrivato', async () => {
-    stato.ordine.lines[0].stato = 'consegnato'
-    const dopo = await subito(api.segnaRighePagate('po-1', { indici: [0, 1] }))
-    expect(dopo.lines[0].stato).toBe('pagato')
-    // La riga 1 è ancora soltanto richiesta: non si paga quello che non è
-    // arrivato.
-    expect(dopo.lines[1].stato).toBe('richiesto')
+  // «PAGATO» NON SI SCRIVE PIÙ SULLA RIGA (REQ-MAG-038). C'era
+  // `segnaRighePagate`, che portava le righe consegnate al livello «pagato»:
+  // non c'è più, ed è una cancellazione voluta — «il discorso degli ordini
+  // pagati è già nello scadenzario» (utente, 27/08). Lo stato del pagamento
+  // sta in un posto solo, `paid` sulla fattura, perché chi paga paga un
+  // DOCUMENTO. Due copie dello stesso stato divergono sempre.
+  it('non esiste più nessuna strada per segnare pagata una riga d’ordine', () => {
+    expect(api.segnaRighePagate).toBeUndefined()
+  })
+})
+
+// ── QUELLO CHE È ARRIVATO, E QUELLO CHE ERA STATO CHIESTO ────────────
+//
+// «Quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello
+// che ha effettivamente ricevuto» (utente, 27/08, REQ-MAG-038). Sono due
+// elenchi distinti, e tenerli distinti è quello che impedisce di pagare in
+// fattura una cassa che non è mai arrivata.
+describe('la consegna registra le quantità ricevute', () => {
+  it('il carico va sui pezzi ricevuti, e l’ordinato resta scritto', async () => {
+    const dopo = await subito(
+      api.consegnaRigheOrdine('po-1', { indici: [0], quantita: { 0: '4' } })
+    )
+    // Chiesti sei, arrivati quattro: `qty_packages` non si tocca.
+    expect(dopo.lines[0].qty_packages).toBe(6)
+    expect(dopo.lines[0].qty_received).toBe(4)
+    // In magazzino entrano quattro confezioni, non sei: caricare l'ordinato
+    // quando è arrivato meno vuol dire una giacenza che nessuno ha sullo
+    // scaffale.
+    expect(scritture('inventory_items', 'update')[0].patch.stock).toEqual({ __increment: 4 })
+  })
+
+  it('senza dire niente si è ricevuto quello che si era chiesto', async () => {
+    const dopo = await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
+    expect(dopo.lines[0].qty_received).toBe(6)
+  })
+
+  // Il prezzo dell'ordine si conserva la prima volta che lo si corregge: se
+  // il prezzo della bolla lo sovrascrivesse, il confronto con la fattura
+  // direbbe per sempre «nessuna differenza».
+  it('il prezzo di quando l’ordine è partito resta a parte', async () => {
+    const dopo = await subito(
+      api.consegnaRigheOrdine('po-1', { indici: [0], prezzi: { 0: '13.5' } })
+    )
+    expect(dopo.lines[0].unit_cost).toBe(13.5)
+    expect(dopo.lines[0].unit_cost_ordinato).toBe(12)
+  })
+
+  // «Serve una lista dei movimenti fatti per quell'ordine, una specie di
+  // history»: una quantità corretta all'arrivo cancella quella di prima, e
+  // quello che non si scrive adesso non si ricostruisce dopo.
+  it('la storia dice cosa è cambiato, e quando', async () => {
+    const dopo = await subito(
+      api.consegnaRigheOrdine('po-1', { indici: [0], prezzi: { 0: '13.5' }, quantita: { 0: '4' } })
+    )
+    const tipi = dopo.storia.map((v) => v.tipo)
+    expect(tipi).toContain('consegnato')
+    expect(tipi).toContain('prezzo')
+    expect(tipi).toContain('quantita')
+    expect(dopo.storia.every((v) => !!v.at)).toBe(true)
   })
 })

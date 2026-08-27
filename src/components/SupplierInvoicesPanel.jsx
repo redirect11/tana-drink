@@ -26,6 +26,9 @@ import {
   fettaDellaFattura,
   fetteCollegabili,
   fattureSenzaFetta,
+  fatturaGenerata,
+  DOC_NESSUNO,
+  TIPI_DOCUMENTO,
 } from '../lib/fatture.js'
 import {
   PESO_MASSIMO,
@@ -313,6 +316,13 @@ export default function SupplierInvoicesPanel() {
                   {inv.date || '—'} · {inv.doc_type}
                   {inv.notes && ` · ${inv.notes}`}
                 </div>
+                {/* GENERATA DA NOI, NON ARRIVATA DAL FORNITORE
+                    (REQ-MAG-038): la cifra si legge uguale, ma la prima dice
+                    quanto ci si aspetta di pagare e la seconda quanto lui
+                    chiede. Il documento vero si allega qui sotto. */}
+                {fatturaGenerata(inv) && (
+                  <span className="pill small">Generata dall’ordine</span>
+                )}
               </div>
               <div className="inv-qty">
                 <div>{formatPrice(inv.amount)}</div>
@@ -521,6 +531,24 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
             Togli
           </button>
         </>
+      ) : fattura.doc_type === DOC_NESSUNO ? (
+        // «NESSUN DOCUMENTO» DICE GIÀ CHE NON C'È NIENTE DA ALLEGARE: il
+        // chip ambra su quella riga sarebbe un lavoro che manca segnalato a
+        // chi ha appena dichiarato che non esiste, ed è così che si impara a
+        // ignorare gli avvisi. Il tasto per allegare resta, perché una
+        // ricevuta può arrivare dopo.
+        <>
+          <span className="muted small grow" style={{ minWidth: 0 }}>
+            Nessun documento da allegare.
+          </span>
+          <button
+            className="btn ghost small"
+            aria-label={`Allega il documento di ${quale}`}
+            onClick={onAllega}
+          >
+            📎 Allega
+          </button>
+        </>
       ) : (
         <>
           <span className="badge-low">senza allegato</span>
@@ -640,11 +668,16 @@ function InvoiceForm({ suppliers, busy, onCancel, onSave }) {
       <div className="grid-2">
         <div>
           <label htmlFor="if-type">Tipo</label>
+          {/* «NESSUN DOCUMENTO» È UN TIPO COME GLI ALTRI (REQ-MAG-038):
+              «il caso di pagare un fornitore senza fattura non c'è. Anche se
+              può capitare, io creerò SEMPRE un item nello scadenzario che
+              paga un ordine anche senza fattura allegata» (utente, 27/08).
+              Il contante al piccolo fornitore deve comparire nel totale del
+              mese come tutti gli altri soldi che escono. */}
           <select id="if-type" value={form.doc_type} onChange={set('doc_type')}>
-            <option>Proforma</option>
-            <option>Fattura</option>
-            <option>Reso</option>
-            <option>Altro</option>
+            {TIPI_DOCUMENTO.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
         </div>
         <div>

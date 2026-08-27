@@ -83,8 +83,8 @@ beforeEach(() => {
 
 // Apre la finestra della consegna sulla fetta di Nova.
 async function apriConsegna(user) {
-  render(<PurchaseOrdersPanel />)
-  const storico = (await screen.findByText('Storico ordini')).closest('.card')
+  render(<PurchaseOrdersPanel vista="lista" />)
+  const storico = (await screen.findByText('Lista ordini')).closest('.card')
   const riga = within(storico).getByText('Nova').closest('.inv-row')
   await user.click(within(riga).getByRole('button', { name: /Consegnato/ }))
   return await screen.findByLabelText('Carica Campari')
@@ -145,8 +145,8 @@ describe('si decide SE e QUALI righe caricare', () => {
     stato.ordini = [
       { ...ORDINE, lines: [{ ...ORDINE.lines[0], stato: 'consegnato' }, ORDINE.lines[1], ORDINE.lines[2]] },
     ]
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = (await screen.findByText('Lista ordini')).closest('.card')
     const riga = within(storico).getByText('Nova').closest('.inv-row')
     await user.click(within(riga).getByRole('button', { name: /Consegnato/ }))
     await screen.findByLabelText('Carica Gin Mare')
@@ -166,6 +166,10 @@ describe('si decide SE e QUALI righe caricare', () => {
 //
 // Il passaggio in assortimento non si chiede più a nessuno: lo decide la
 // conferma dell'ordine nel riepilogo, e basta quella.
+//
+// DA REQ-MAG-038 LE SCHERMATE SONO DUE: la consegna si fa dalla «Lista
+// ordini» (`vista="lista"`), la composizione dal «Nuovo ordine», che è
+// quello che il pannello mostra senza dirgli niente.
 describe('la casella dell’assortimento non c’è più', () => {
   const apri = (user, nome) =>
     user.click(screen.getByRole('button', { name: `Apri la scheda di ${nome} (senza fornitore)` }))
