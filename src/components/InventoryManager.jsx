@@ -19,6 +19,7 @@ import {
   deleteSupplier,
   fetchSupplierPrices,
   salvaRigaListino,
+  togliProdottoDagliOrdini,
   subscribeSettings,
   subscribeActiveOrders,
   subscribeDrinks,
@@ -74,6 +75,7 @@ import {
   unitaGenerica,
   UNIT_LABEL,
 } from '../lib/inventory.js'
+import { cambioAMano, cambioDaAvvisare } from '../lib/statoAssortimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
@@ -87,6 +89,7 @@ import SortTh from './SortTh.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 
@@ -429,6 +432,9 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  // Lo stato cambiato a mano su un prodotto che sta in un ordine aperto:
+  // { payload, scelte, ordini } finché non si risponde alla domanda.
+  const [avvisaOrdine, setAvvisaOrdine] = useState(null)
   // Aperta la scheda, «indietro» torna al magazzino invece di uscire dalla
   // pagina: vedi lib/schermate.js.
   useChiudiConIndietro(!!editing, () => setEditing(null))
@@ -817,20 +823,47 @@ function ProductsPanel() {
     return creato
   }
 
+  // ── LO STATO A MANO, SU UN PRODOTTO CHE STA IN UN ORDINE (REQ-MAG-037)
+  //
+  // «Gli si deve DIRE che quel prodotto è presente in un ordine in attesa di
+  // essere ricevuto. Se cambia lo stato manualmente, il prodotto va eliminato
+  // dall'ordine» (utente, 27/08). Sono la stessa decisione presa dai due
+  // capi: un prodotto non più «in assortimento» che resta dentro un ordine
+  // aperto è un ordine che nessuno sa più di aver fatto.
+  //
+  // La domanda si fa con la sola scheda in mano — gli ordini che lo tengono
+  // dentro sono scritti sul prodotto — quindi il magazzino non legge niente
+  // di nuovo, e la sua interfaccia resta quella di prima.
+  async function handleSave(payload, scelte = {}) {
+    const ordini = editing && editing !== 'new' ? cambioDaAvvisare(editing, payload.status) : null
+    if (ordini) {
+      setAvvisaOrdine({ payload, scelte, ordini })
+      return
+    }
+    return salva(payload, scelte)
+  }
+
   // IL FORNITORE NON SI SCRIVE PIÙ SUL PRODOTTO (REQ-MAG-029): finisce nel
   // LISTINO, come riga prodotto-fornitore. Il vecchio campo `supplier_id`
   // non si cancella — resta a leggersi sui dieci prodotti che ce l'hanno,
   // dove fa da riga virtuale — ma da qui in poi nessuno lo riscrive.
-  async function handleSave(payload, { supplier_id } = {}) {
+  async function salva(payload, { supplier_id } = {}, ordiniDaLiberare = null) {
     setError(null)
     try {
+      // LO STATO COMMERCIALE SI SCRIVE CON LA SUA MEMORIA (REQ-MAG-037):
+      // passando in assortimento il prodotto si ricorda da dove viene, e
+      // uscendone si liberano memoria e legame con gli ordini. Senza, un
+      // premium tornerebbe indietro come prodotto qualunque.
+      const patchStato =
+        editing && editing !== 'new' ? cambioAMano(editing, payload.status) : null
+      const conStato = patchStato ? { ...payload, ...patchStato } : payload
       // LA SCHEDA NATA DA UN ORDINE SI CHIUDE QUI (REQ-MAG-032), e la
       // chiude la CATEGORIA: è quella che serve al resto del sistema, ed è
       // per lei che la spesa del prodotto sparirebbe dai conti.
       const completa =
         editing && editing !== 'new' && schedaCompletata(editing, payload)
-          ? { ...payload, scheda_da_completare: false }
-          : payload
+          ? { ...conStato, scheda_da_completare: false }
+          : conStato
       const salvato =
         editing && editing !== 'new'
           ? await updateInventoryItem(editing.id, completa)
@@ -848,6 +881,11 @@ function ProductsPanel() {
           ),
         })
       }
+      // Il legame si taglia dall'altra parte SOLO dopo che lo stato è
+      // scritto: se la scheda non si salva, il prodotto resta dentro
+      // l'ordine e nessuno ha perso niente.
+      if (ordiniDaLiberare?.length > 0 && salvato?.id)
+        await togliProdottoDagliOrdini(salvato.id, ordiniDaLiberare)
       setEditing(null)
       await load()
     } catch (e) {
@@ -917,16 +955,35 @@ function ProductsPanel() {
 
   if (editing) {
     return (
-      <ItemForm
-        initial={editing === 'new' ? null : editing}
-        categories={categories}
-        suppliers={suppliers}
-        listini={listini}
-        defaultVat={purchaseVat}
-        onCancel={() => setEditing(null)}
-        onSave={handleSave}
-        onCreateSupplier={creaFornitoreAlVolo}
-      />
+      <>
+        {avvisaOrdine && (
+          <ConfirmDialog
+            title="Il prodotto è in un ordine aperto"
+            message={`«${editing?.name || 'Questo prodotto'}» fa parte di ${
+              avvisaOrdine.ordini.length === 1
+                ? 'un ordine ancora in attesa di consegna'
+                : `${avvisaOrdine.ordini.length} ordini ancora in attesa di consegna`
+            }. Cambiando lo stato viene tolto da quell’ordine: le righe già consegnate restano dove sono.`}
+            confirmLabel="Cambia lo stato"
+            onCancel={() => setAvvisaOrdine(null)}
+            onConfirm={() => {
+              const { payload, scelte, ordini } = avvisaOrdine
+              setAvvisaOrdine(null)
+              salva(payload, scelte, ordini)
+            }}
+          />
+        )}
+        <ItemForm
+          initial={editing === 'new' ? null : editing}
+          categories={categories}
+          suppliers={suppliers}
+          listini={listini}
+          defaultVat={purchaseVat}
+          onCancel={() => setEditing(null)}
+          onSave={handleSave}
+          onCreateSupplier={creaFornitoreAlVolo}
+        />
+      </>
     )
   }
 

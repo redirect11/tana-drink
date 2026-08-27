@@ -65,6 +65,12 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchPurchaseOrders: vi.fn(async () => stato.ordini),
   fetchSupplierInvoices: vi.fn(async () => stato.fatture),
   createPurchaseOrder: vi.fn(async () => ({})),
+  // I due gesti nuovi di REQ-MAG-037: i prodotti che passano in
+  // assortimento alla conferma, e la riga che si toglie da un ordine già
+  // fatto.
+  liberaDaAssortimento: vi.fn(() => []),
+  segnaInAssortimento: vi.fn(() => []),
+  togliRigaOrdine: vi.fn(async () => ({ ordine: stato.ordini[0], articolo: null })),
   consegnaRigheOrdine: vi.fn(async () => ({})),
   segnaRighePagate: vi.fn(async () => ({})),
   deletePurchaseOrder: vi.fn(async () => {}),

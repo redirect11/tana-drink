@@ -9,13 +9,14 @@
 // consegna quello che ha, non quello che è stato ordinato: le due casse su
 // tre arrivate si caricano, la terza resta in attesa.
 //
-// E REQ-MAG-025 punto 5, l'assortimento pre-impostato: il passaggio a «in
-// assortimento» si segna quando l'ordine parte e si applica quando la merce
-// è arrivata e caricata davvero — preparare il listino mentre la merce
-// viaggia, senza offrire in carta una bottiglia che non c'è (REQ-MAG-032).
+// L'ASSORTIMENTO PRE-IMPOSTATO NON C'È PIÙ (REQ-MAG-025 punto 5), e la sua
+// casella nemmeno: da REQ-MAG-037 «in assortimento» vuol dire «c'è un ordine
+// aperto», quindi la consegna è il momento in cui quello stato FINISCE, non
+// quello in cui comincia. Cosa succede allo stato commerciale al carico lo
+// sorveglia tests/unit/prodottoNuovoDaOrdine.test.js, sul codice vero.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -50,7 +51,13 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSuppliers: vi.fn(async () => [NOVA]),
   fetchSupplierPrices: vi.fn(async () => stato.listini),
   fetchPurchaseOrders: vi.fn(async () => stato.ordini),
-  createPurchaseOrder: vi.fn(async (o) => ({ id: 'po-nuovo', created_at: '2026-08-27T09:00:00.000Z', status: 'inviato', ...o })),
+  createPurchaseOrder: vi.fn(async (o) => ({ id: `po-nuovo-${(stato.creati = (stato.creati || 0) + 1)}`, created_at: '2026-08-27T09:00:00.000Z', status: 'inviato', ...o })),
+  // I due gesti nuovi di REQ-MAG-037: i prodotti che passano in
+  // assortimento alla conferma, e la riga che si toglie da un ordine già
+  // fatto.
+  liberaDaAssortimento: vi.fn(() => []),
+  segnaInAssortimento: vi.fn(() => []),
+  togliRigaOrdine: vi.fn(async () => ({ ordine: stato.ordini[0], articolo: null })),
   consegnaRigheOrdine: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   segnaRighePagate: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   deletePurchaseOrder: vi.fn(async () => {}),
@@ -148,47 +155,37 @@ describe('si decide SE e QUALI righe caricare', () => {
   })
 })
 
-// IL GESTO È CAMBIATO CON REQ-MAG-036, NON LA REGOLA. La composizione non ha
-// più il tasto «Aggiungi» e la lista sotto: c'è una tabella sola, e la
-// casella dell'assortimento sta nella scheda che si apre dalla riga — che è
-// il posto dove si guarda un prodotto prima di decidere. Quello che questi
-// test sorvegliano resta identico: la casella si chiede solo dove cambia
-// qualcosa, e quello che scrive finisce sulla riga d'ordine.
-describe('l’assortimento si prepara mentre la merce viaggia', () => {
+// ── LA CASELLA DELL'ASSORTIMENTO NON DEVE TORNARE (REQ-MAG-037) ────
+//
+// Fino al 27/08 la scheda della riga aveva una casella «In assortimento
+// quando arriva», e la riga d'ordine si portava dietro un `status_target`.
+// Non è stata tolta per semplificare: «in assortimento» ha cambiato
+// significato, e adesso vuol dire «c'è un ordine aperto». Una casella che
+// dice «mettilo in assortimento QUANDO ARRIVA» chiederebbe di accendere uno
+// stato nell'istante esatto in cui va spento.
+//
+// Il passaggio in assortimento non si chiede più a nessuno: lo decide la
+// conferma dell'ordine nel riepilogo, e basta quella.
+describe('la casella dell’assortimento non c’è più', () => {
   const apri = (user, nome) =>
     user.click(screen.getByRole('button', { name: `Apri la scheda di ${nome} (senza fornitore)` }))
 
-  // La casella si chiede solo dove cambia qualcosa: su un prodotto già in
-  // assortimento sarebbe una casella che non fa niente.
-  it('la casella compare solo dove il passaggio cambia lo stato', async () => {
+  it('la scheda della riga non chiede più niente sull’assortimento', async () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
     await apri(user, 'Rum Zacapa')
-    expect(screen.getByLabelText('Metti Rum Zacapa in assortimento quando arriva')).toBeInTheDocument()
-    await apri(user, 'Campari')
-    expect(screen.queryByLabelText('Metti Campari in assortimento quando arriva')).toBeNull()
+    expect(screen.queryByLabelText(/in assortimento quando arriva/i)).toBeNull()
   })
 
-  it('spuntata, la riga d’ordine si porta dietro il cambio da applicare', async () => {
-    const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    await screen.findAllByText('Campari')
-    await apri(user, 'Rum Zacapa')
-    await user.click(screen.getByLabelText('Metti Rum Zacapa in assortimento quando arriva'))
-    await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
-    const salvato = creato.mock.calls.at(-1)[0]
-    expect(salvato.lines[0]).toMatchObject({ item_id: 'rum', status_target: 'assortimento' })
-  })
-
-  // Non spuntata non si scrive niente: un campo in più su ogni riga di ogni
-  // ordine sarebbe un dato che nessuno ha chiesto.
-  it('non spuntata, sulla riga non si scrive niente', async () => {
+  it('sulla riga d’ordine non si scrive nessuno stato da applicare', async () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
     await user.type(screen.getByLabelText('Pezzi di Rum Zacapa (senza fornitore)'), '1')
-    await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
+    await user.click(screen.getByRole('button', { name: /Rivedi e conferma/ }))
+    await user.click(screen.getByRole('button', { name: /Crea l/ }))
+    await waitFor(() => expect(creato).toHaveBeenCalled())
     expect(creato.mock.calls.at(-1)[0].lines[0].status_target).toBeUndefined()
   })
 })

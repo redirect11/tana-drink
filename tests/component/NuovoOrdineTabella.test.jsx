@@ -43,7 +43,13 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSuppliers: vi.fn(async () => [NOVA, ENOFEL]),
   fetchSupplierPrices: vi.fn(async () => stato.listini),
   fetchPurchaseOrders: vi.fn(async () => stato.ordini),
-  createPurchaseOrder: vi.fn(async (o) => ({ id: 'po-nuovo', created_at: '2026-08-27T09:00:00.000Z', status: 'inviato', ...o })),
+  createPurchaseOrder: vi.fn(async (o) => ({ id: `po-nuovo-${(stato.creati = (stato.creati || 0) + 1)}`, created_at: '2026-08-27T09:00:00.000Z', status: 'inviato', ...o })),
+  // I due gesti nuovi di REQ-MAG-037: i prodotti che passano in
+  // assortimento alla conferma, e la riga che si toglie da un ordine già
+  // fatto.
+  liberaDaAssortimento: vi.fn(() => []),
+  segnaInAssortimento: vi.fn(() => []),
+  togliRigaOrdine: vi.fn(async () => ({ ordine: stato.ordini[0], articolo: null })),
   consegnaRigheOrdine: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   segnaRighePagate: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   deletePurchaseOrder: vi.fn(async () => {}),
@@ -56,6 +62,15 @@ vi.mock('../../src/lib/toast.js', () => ({ toastSuccess: vi.fn(), toastError: vi
 
 import PurchaseOrdersPanel from '../../src/components/PurchaseOrdersPanel.jsx'
 import { createPurchaseOrder as creato } from '../../src/lib/api.js'
+
+// LA CONFERMA PASSA DAL RIEPILOGO (REQ-MAG-037): il tasto della
+// composizione non manda più niente a nessuno, porta a rivedere fornitore per
+// fornitore, e l'ordine si crea per singolo fornitore.
+async function confermaOrdine(user, fornitore) {
+  await user.click(screen.getByRole('button', { name: /Rivedi e conferma/ }))
+  const riga = screen.getByRole('button', { name: `I prodotti di ${fornitore}` }).closest('.inv-row')
+  await user.click(within(riga).getByRole('button', { name: /Crea l/ }))
+}
 
 const tabella = () => document.querySelector('.ordine-tabella')
 const righe = () => [...document.querySelectorAll('.ordine-tabella .inv-row')]
@@ -212,7 +227,7 @@ describe('i campi si compilano sulla riga', () => {
     const totale = screen.getByLabelText('Totale di Campari (Nova)')
     await user.clear(totale)
     await user.type(totale, '40')
-    await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
+    await confermaOrdine(user, 'Nova')
     await waitFor(() => expect(creato).toHaveBeenCalled())
     const riga = creato.mock.calls.at(-1)[0].lines.find((l) => l.item_id === 'campari')
     expect(riga.qty_packages).toBe(4)
@@ -226,7 +241,7 @@ describe('i campi si compilano sulla riga', () => {
     await user.selectOptions(screen.getByLabelText('Fornitore per Gin Mare (Enofel)'), 'nova')
     await waitFor(() => expect(within(carrello()).getByText('Nova')).toBeInTheDocument())
     // Nova non ha il Gin sul listino: vale il costo del prodotto (30).
-    await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
+    await confermaOrdine(user, 'Nova')
     await waitFor(() => expect(creato).toHaveBeenCalled())
     const riga = creato.mock.calls.at(-1)[0].lines.find((l) => l.item_id === 'gin')
     expect(riga).toMatchObject({ supplier_id: 'nova', unit_cost: 30 })

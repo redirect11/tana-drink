@@ -6,6 +6,9 @@ import {
   createPurchaseOrder,
   fetchPurchaseOrders,
   consegnaRigheOrdine,
+  segnaInAssortimento,
+  liberaDaAssortimento,
+  togliRigaOrdine,
   segnaRighePagate,
   deletePurchaseOrder,
   fetchSupplierInvoices,
@@ -45,9 +48,9 @@ export default function PurchaseOrdersPanel() {
   // buchi che a fine mese fanno tornare o non tornare i conti.
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState(null)
-  const [busy, setBusy] = useState(false)
 
   const [consegnaFor, setConsegnaFor] = useState(null) // { ordine, fetta }
+  const [togliFor, setTogliFor] = useState(null) // { ordine, fetta, indice, riga }
   const [confermaPagato, setConfermaPagato] = useState(null) // { ordine, fetta }
   const [fatturaPer, setFatturaPer] = useState(null) // la fetta da collegare
 
@@ -85,18 +88,62 @@ export default function PurchaseOrdersPanel() {
   // chiede — non la si riscrive.
   const bloccato = useMemo(() => magazzinoBloccato(items), [items])
 
-  async function save(lines, totals) {
-    if (!lines || lines.length === 0) return
-    setBusy(true)
+  // ── UN ORDINE PER FORNITORE (REQ-MAG-037) ──────────────────
+  //
+  // Il riepilogo conferma un fornitore per volta, e ogni conferma è un
+  // documento suo. Niente `await` e niente ricarica: l'ordine si compone in
+  // memoria e si infila in cima allo storico. Con la cassa offline,
+  // aspettare la scrittura vorrebbe dire il tasto premuto e niente che
+  // succede.
+  //
+  // ED È QUI CHE I PRODOTTI PASSANO IN ASSORTIMENTO, non un momento prima:
+  // «va in assortimento SOLO DOPO CHE FLAVIO HA CREATO L'ORDINE». Gli
+  // articoli li abbiamo già in mano, quindi non si rilegge niente e la
+  // lista aggiornata la si tiene subito.
+  function creaOrdine(fetta) {
     setError(null)
-    try {
-      await createPurchaseOrder({ lines, total_net: totals.net, total_gross: totals.gross })
-      await load()
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusy(false)
-    }
+    return Promise.resolve(
+      createPurchaseOrder({
+        supplier_id: fetta.supplier_id ?? null,
+        supplier_name: fetta.supplier_name ?? '',
+        lines: fetta.lines,
+        total_net: fetta.totali.net,
+        total_gross: fetta.totali.gross,
+      })
+    ).then(
+      (ordine) => {
+        if (!ordine?.id) return null
+        setOrders((prev) => [ordine, ...prev])
+        const articoli = fetta.lines
+          .map((l) => items.find((i) => i.id === l.item_id))
+          .filter(Boolean)
+        const aggiornati = segnaInAssortimento(articoli, ordine.id)
+        if (aggiornati.length > 0)
+          setItems((prev) => prev.map((i) => aggiornati.find((a) => a.id === i.id) || i))
+        return ordine
+      },
+      (e) => {
+        setError(e.message)
+        return null
+      }
+    )
+  }
+
+  // TOGLIERE UN ITEM DA UN ORDINE GIÀ FATTO (REQ-MAG-037): è una delle due
+  // sole strade per far uscire un prodotto da «in assortimento», e prima
+  // non c'era. L'esito si vede subito — l'ordine si ricompone in memoria.
+  function togliRiga() {
+    const { ordine, indice } = togliFor
+    setTogliFor(null)
+    setError(null)
+    togliRigaOrdine(ordine.id, { indice }).then(
+      ({ ordine: agg, articolo }) => {
+        setOrders((prev) => prev.map((x) => (x.id === agg.id ? agg : x)))
+        if (articolo)
+          setItems((prev) => prev.map((i) => (i.id === articolo.id ? articolo : i)))
+      },
+      (e) => setError(e.message)
+    )
   }
 
   // LA CONSEGNA CARICA IL MAGAZZINO, e lo fa per FETTA di fornitore: i
@@ -163,6 +210,14 @@ export default function PurchaseOrdersPanel() {
     try {
       await deletePurchaseOrder(order.id)
       setOrders((prev) => prev.filter((o) => o.id !== order.id))
+      // L'ordine cancellato libera i suoi prodotti (REQ-MAG-037): senza,
+      // resterebbero «in arrivo» da un ordine che non esiste più.
+      const articoli = (order.lines || [])
+        .map((l) => items.find((i) => i.id === l.item_id))
+        .filter(Boolean)
+      const aggiornati = liberaDaAssortimento(articoli, order.id)
+      if (aggiornati.length > 0)
+        setItems((prev) => prev.map((i) => aggiornati.find((a) => a.id === i.id) || i))
     } catch (e) {
       setError(e.message)
     }
@@ -195,8 +250,7 @@ export default function PurchaseOrdersPanel() {
         items={items}
         suppliers={suppliers}
         listini={listini}
-        busy={busy}
-        onSalva={save}
+        onCrea={creaOrdine}
       />
 
       {orders.length > 0 && (
@@ -238,8 +292,35 @@ export default function PurchaseOrdersPanel() {
                     <span className="grow" style={{ minWidth: 0 }}>
                       <span className="inv-row-name">{fetta.supplier_name || 'Senza fornitore'}</span>{' '}
                       <span className="muted small">{ETICHETTA_LIVELLO[fetta.stato]}</span>
-                      <span className="muted small" style={{ display: 'block' }}>
-                        {fetta.lines.map((l) => `${l.qty_packages}× ${l.name}`).join(', ')}
+                      {/* LE RIGHE, UNA PER UNA, E SI POSSONO TOGLIERE
+                          (REQ-MAG-037). Erano un elenco separato da virgole:
+                          per far uscire un prodotto da un ordine già mandato
+                          — e quindi da «in assortimento» — non c'era nessun
+                          gesto. Quello che è già arrivato non si toglie: si
+                          corregge dal magazzino. */}
+                      <span className="muted small ordine-righe-storico">
+                        {fetta.lines.map((l, k) => (
+                          <span className="ordine-riga-storico" key={`${l.item_id || 'riga'}-${k}`}>
+                            {l.qty_packages}× {l.name}
+                            {/* La data nel nome del tasto non è un vezzo: due
+                                ordini allo stesso fornitore darebbero due tasti
+                                identici, e questo toglie roba da un ordine già
+                                mandato. */}
+                            {livelloDi(l) === 'richiesto' && (
+                              <button
+                                type="button"
+                                className="btn ghost small"
+                                aria-label={`Togli ${l.name} dall’ordine di ${fetta.supplier_name || 'questo fornitore'} del ${String(o.created_at || '').slice(0, 10)}`}
+                                title="Togli dall’ordine"
+                                onClick={() =>
+                                  setTogliFor({ ordine: o, fetta, indice: fetta.indici[k], riga: l })
+                                }
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </span>
+                        ))}
                       </span>
                       <span className="muted small" style={{ display: 'block' }}>
                         netto {formatPrice(fetta.total_net)}
@@ -266,7 +347,7 @@ export default function PurchaseOrdersPanel() {
                           // Spento col perché, non sparito: un tasto che non
                           // c'è fa dubitare di averlo immaginato, e chi
                           // aspetta la merce lo cerca.
-                          disabled={busy || bloccato}
+                          disabled={bloccato}
                           title={
                             bloccato
                               ? 'Prima va aggiornato il magazzino alla nuova gestione (Magazzino → il banner in alto).'
@@ -354,6 +435,16 @@ export default function PurchaseOrdersPanel() {
           fatture={invoices}
           onCancel={() => setFatturaPer(null)}
           onConfirm={(invoiceId) => collega(fatturaPer.order_id, invoiceId)}
+        />
+      )}
+
+      {togliFor && (
+        <ConfirmDialog
+          title="Togliere il prodotto dall’ordine?"
+          message={`«${togliFor.riga.name}» esce dall’ordine di ${togliFor.fetta.supplier_name || 'questo fornitore'} e torna allo stato che aveva prima: non risulta più in arrivo.`}
+          confirmLabel="Togli dall’ordine"
+          onCancel={() => setTogliFor(null)}
+          onConfirm={togliRiga}
         />
       )}
 

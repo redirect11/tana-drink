@@ -15,7 +15,8 @@
 // listini.js): una per COPPIA prodotto-fornitore, col suo prezzo di listino.
 
 import { assortimentoDi, stockStatus } from './inventory.js'
-import { suggestedPackages } from './warehouse.js'
+import { inAssortimentoAMano } from './statoAssortimento.js'
+import { purchaseOrderTotals, suggestedPackages } from './warehouse.js'
 import { righeDiProdotto, fornitoreProposto, coloreFornitore } from './listini.js'
 
 // Quante righe si aggiungono a ogni caricata dello scorrimento continuo.
@@ -108,7 +109,12 @@ export function preselezioneIniziale(righe) {
     if (!item) continue
     if (assortimentoDi(item) === 'out') continue
     const stato = stockStatus(item)
-    if (stato !== 'empty' && stato !== 'low') continue
+    // IN ASSORTIMENTO SENZA ORDINE SI PROPONE LO STESSO (REQ-MAG-037):
+    // «anche in quel caso verrà preso in considerazione come un prodotto
+    // sotto soglia o esaurito nella precompilazione dell'ordine». È lo stato
+    // che Flavio mette a mano quando quel prodotto gli serve, e l'ordine è
+    // esattamente la cosa che gli manca.
+    if (stato !== 'empty' && stato !== 'low' && !inAssortimentoAMano(item)) continue
     const proposto = fornitoreProposto(gruppo)
     const riga = (proposto && gruppo.find((r) => r.supplier_id === proposto.supplier_id)) || gruppo[0]
     // Almeno un pezzo: `suggestedPackages` risponde 0 quando il prodotto non
@@ -172,10 +178,6 @@ export function righeScelte(selezioni, { perChiave, listini = [], suppliers = []
       qty,
       prezzo,
       totale,
-      // L'assortimento preparato mentre la merce viaggia (REQ-MAG-025): sta
-      // sulla riga scelta perché è una decisione per prodotto, non per
-      // ordine — e il cambio scatta al carico, non adesso.
-      assortimento: !!sel?.assortimento,
       // Il prezzo che finisce sull'ordine: se il totale è stato corretto a
       // mano, è quello a comandare.
       unit_cost: corretto ? prezzoDaTotale(totale, qty) : prezzo,
@@ -234,11 +236,44 @@ export function righeOrdine(scelte, { listini = [] } = {}) {
         supplier_name: s.supplier_name,
         code: riga?.code ?? null,
         stato: 'richiesto',
-        // Il campo si scrive solo dove è stato chiesto: uno in più su ogni
-        // riga di ogni ordine sarebbe un dato che nessuno ha chiesto.
-        ...(s.assortimento ? { status_target: 'assortimento' } : {}),
       }
     })
+}
+
+// ── I FORNITORI DEL RIEPILOGO, UNO PER ORDINE (REQ-MAG-037) ──────────
+//
+// UN ORDINE PER FORNITORE: alla conferma nascono N ordini distinti, uno per
+// fornitore, ognuno col suo stato e la sua fattura. Il «giro» torna a essere
+// la SESSIONE di composizione — questa schermata — e non un documento.
+// Sostituisce il modello a fette del 20/08, di cui una fetta resta il caso
+// degenere (un ordine con un fornitore solo): è il motivo per cui lo storico
+// già scritto continua a leggersi senza rifarlo.
+//
+// Ogni voce porta DUE forme della stessa cosa: le `righe` scelte, che sono
+// quelle da rivedere a schermo (hanno la chiave, il nome, i pezzi), e le
+// `lines`, che sono quelle da salvare sull'ordine. Tenerle insieme evita che
+// il riepilogo mostri una riga e ne salvi un'altra.
+//
+// Chi non ha fornitore resta in fondo e si può mandare lo stesso: 378
+// prodotti su 388 non stanno sul listino di nessuno, e rifiutare quel gruppo
+// vorrebbe dire perdere per strada quello che si è appena scelto.
+export function ordiniDaCreare(scelte, { listini = [] } = {}) {
+  const fette = []
+  for (const g of raggruppaPerFornitore(scelte)) {
+    const lines = righeOrdine(g.righe, { listini })
+    // Un fornitore le cui righe sono tutte a zero pezzi non è un ordine da
+    // mandare a nessuno: è un ripensamento.
+    if (lines.length === 0) continue
+    const dentro = new Set(lines.map((l) => l.item_id))
+    fette.push({
+      ...g,
+      chiave: g.supplier_id || 'senza',
+      righe: g.righe.filter((r) => dentro.has(r.item_id) && r.qty > 0),
+      lines,
+      totali: purchaseOrderTotals(lines),
+    })
+  }
+  return fette
 }
 
 // ── LO SCORRIMENTO CONTINUO ──────────────────────────────────────────

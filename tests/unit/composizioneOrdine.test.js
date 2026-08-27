@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PASSO_RIGHE,
   ordinaCatalogo,
+  ordiniDaCreare,
   preselezioneIniziale,
   prezzoDiListino,
   prezzoDaTotale,
@@ -130,6 +131,30 @@ describe('la preselezione: quello che manca è già spuntato', () => {
     expect(campari).toEqual(['campari|nova'])
   })
 
+  // IN ASSORTIMENTO SENZA ORDINE SI PROPONE LO STESSO (REQ-MAG-037): è lo
+  // stato che Flavio mette a mano quando quel prodotto gli serve, e «anche in
+  // quel caso verrà preso in considerazione come un prodotto sotto soglia o
+  // esaurito nella precompilazione». Qui il Rum è pieno e non si proporrebbe.
+  it('quello messo a mano in assortimento si propone anche se è pieno', () => {
+    const aMano = { ...RUM, status: 'assortimento', assortimento_da: 'premium' }
+    const scelte = preselezioneIniziale(
+      catalogoOrdinabile({ items: [aMano], listini: [], suppliers: [] })
+    )
+    expect([...scelte.keys()].some((k) => k.startsWith('rum'))).toBe(true)
+  })
+
+  // IL VECCHIO DEFAULT NON È UNA SCELTA DI FLAVIO. 'assortimento' era il
+  // valore di partenza di ogni prodotto che non dichiarava niente — metà del
+  // magazzino vero — e se contasse come «messo a mano» si troverebbero
+  // preselezionate centinaia di righe piene.
+  it('il vecchio default non si propone se le scorte ci sono', () => {
+    const vecchio = { ...RUM, status: 'assortimento' }
+    const scelte = preselezioneIniziale(
+      catalogoOrdinabile({ items: [vecchio], listini: [], suppliers: [] })
+    )
+    expect([...scelte.keys()]).toEqual([])
+  })
+
   // `suggestedPackages` risponde 0 quando il prodotto non ha soglia o non si
   // conta a confezioni: una riga proposta con zero pezzi sarebbe una spunta
   // che non ordina niente.
@@ -225,7 +250,11 @@ describe('l’ordine in composizione, già diviso per fornitore', () => {
       qty_packages: 6,
       stato: 'richiesto',
     })
-    // Il campo dell'assortimento si scrive solo dove è stato chiesto.
+    // IL CAMPO `status_target` NON SI SCRIVE PIÙ, ed è una decisione, non una
+    // dimenticanza: portava «mettilo in assortimento quando arriva»
+    // (REQ-MAG-025 punto 5), e da REQ-MAG-037 l'arrivo è esattamente il
+    // momento in cui il prodotto ESCE dall'assortimento. Le due cose non
+    // possono stare sulla stessa riga.
     expect(lines[0].status_target).toBeUndefined()
   })
 
@@ -240,17 +269,65 @@ describe('l’ordine in composizione, già diviso per fornitore', () => {
     expect(righeOrdine(scelte, { listini: LISTINI })).toHaveLength(0)
   })
 
-  it('l’assortimento preparato viaggia sulla riga d’ordine', () => {
-    const scelte = righeScelte(
-      { 'rum|': { qty: '1', supplier_id: 'nova', assortimento: true } },
-      { perChiave: perChiave(), listini: LISTINI, suppliers: FORNITORI }
-    )
-    expect(righeOrdine(scelte, { listini: LISTINI })[0].status_target).toBe('assortimento')
-  })
-
   it('una selezione su una riga che non esiste più si ignora', () => {
     const scelte = righeScelte({ 'sparito|nova': { qty: '3' } }, { perChiave: perChiave(), listini: LISTINI, suppliers: FORNITORI })
     expect(scelte).toEqual([])
+  })
+})
+
+// ── UN ORDINE PER FORNITORE (REQ-MAG-037) ────────────────────
+//
+// «Tutti i prodotti di quell'ordine» non sono più le righe di un documento
+// solo: alla conferma nascono N ordini distinti, uno per fornitore. Qui si
+// prova il conto che li prepara — chi va con chi, quanto fa, e chi non
+// compare affatto.
+describe('gli ordini da creare, uno per fornitore', () => {
+  const selezioni = () => ({
+    'campari|nova': { qty: '6', supplier_id: 'nova' },
+    'gin|enofel': { qty: '2', supplier_id: 'enofel' },
+    'rum|': { qty: '1', supplier_id: null },
+  })
+  const fette = () =>
+    ordiniDaCreare(
+      righeScelte(selezioni(), { perChiave: perChiave(), listini: LISTINI, suppliers: FORNITORI }),
+      { listini: LISTINI }
+    )
+
+  it('ogni fornitore porta le sue righe, il suo totale e la sua chiave', () => {
+    const f = fette()
+    expect(f.map((g) => g.supplier_name)).toEqual(['Enofel', 'Nova', null])
+    expect(f.map((g) => g.chiave)).toEqual(['enofel', 'nova', 'senza'])
+    expect(f[1].lines).toHaveLength(1)
+    expect(f[1].lines[0]).toMatchObject({ item_id: 'campari', qty_packages: 6, stato: 'richiesto' })
+    expect(f[1].totali.net).toBe(75)
+  })
+
+  // «Sono ovviamente visibili SOLO se ho selezionato e sto ordinando prodotti
+  // da quel fornitore»: un fornitore le cui righe sono tutte a zero non è un
+  // ordine da mandare a nessuno.
+  it('un fornitore senza righe da ordinare non compare', () => {
+    const f = ordiniDaCreare(
+      righeScelte(
+        { 'campari|nova': { qty: '', supplier_id: 'nova' }, 'gin|enofel': { qty: '2', supplier_id: 'enofel' } },
+        { perChiave: perChiave(), listini: LISTINI, suppliers: FORNITORI }
+      ),
+      { listini: LISTINI }
+    )
+    expect(f.map((g) => g.supplier_name)).toEqual(['Enofel'])
+  })
+
+  // Le righe da rivedere a schermo e quelle da salvare devono dire la stessa
+  // cosa: se il riepilogo mostrasse una riga e ne salvasse un'altra, la
+  // revisione non servirebbe a niente.
+  it('quello che si rivede e quello che si salva sono la stessa cosa', () => {
+    for (const g of fette()) {
+      expect(g.righe.map((r) => r.item_id)).toEqual(g.lines.map((l) => l.item_id))
+      expect(g.righe.map((r) => r.qty)).toEqual(g.lines.map((l) => l.qty_packages))
+    }
+  })
+
+  it('senza niente di selezionato non c’è nessun ordine da creare', () => {
+    expect(ordiniDaCreare([], { listini: LISTINI })).toEqual([])
   })
 })
 
