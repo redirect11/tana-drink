@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 183 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**227 voci** in tutto. **198** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**228 voci** in tutto. **198** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 31 | 8 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 31 | 9 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1098,6 +1098,8 @@ LA DISPONIBILITA' HA TRE STATI e vanno mostrati:
 IN SCORTA, IN ESAURIMENTO, ESAURITO. Non e' un dato nuovo — e' `stockStatus` in src/lib/inventory.js (`ok` / `low` / `empty`), lo stesso che decide la preselezione: si mostra quello, non se ne calcola un altro.
 
 LE RIGHE SI PAGINANO. «Sono tanti e possono essere duplicati per piu' fornitori: e' vero che abbiamo la ricerca, ma dobbiamo paginare, e posso selezionare anche quanti risultati per pagina — oppure implementiamo un endless scroll che carica i successivi dopo un tot». Il numero misurato il 27/08 dice perche' serve: 388 prodotti e 367 righe di listino gia' importate, e una riga per COPPIA prodotto-fornitore. La ricerca non basta, perche' il primo gesto di chi apre la schermata non e' cercare: e' GUARDARE cosa manca. Delle due strade, quella da preferire e' lo SCORRIMENTO CONTINUO, e la ragione e' d'uso: si compone un ordine scorrendo, e una paginazione costringerebbe a ricordarsi cosa si e' spuntato a pagina 2 mentre si guarda la 3. Se pero' lo scorrimento continuo litiga con l'intestazione fissa o con l'ordinamento, si fa la paginazione con la scelta di quanti per pagina: e' la seconda strada che l'utente indica, non un ripiego inventato.
+
+IL TOCCO SULLA RIGA AGGIUNGE E TOGLIE. Chiesto dall'utente il 27/08 dopo aver provato: «se clicco su una riga degli ordini, questo deve essere aggiunto se non e' aggiunto e toglierlo se e' aggiunto. In pratica basta che tocco la riga». Il bersaglio e' tutta la riga, non solo la casella: si compone un ordine passando in rassegna decine di prodotti, e centrare una casella piccola decine di volte e' il tipo di fatica che non si nota finche' non la si fa. I campi che si scrivono (quantita', tendina del fornitore) e il tasto che apre la riga restano esclusi dal tocco, se no scriverci dentro toglierebbe il prodotto dall'ordine.
 
 LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del prodotto, questo viene selezionato automaticamente per l'ordine». Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la spunta sarebbe far dire due volte la stessa cosa. COM'E' STATO FATTO (27/08/2026). La composizione e' una schermata sua, `NuovoOrdinePanel`, dentro il pannello Ordini; i conti — ordinamento, preselezione, prezzi, finestra delle righe, raggruppamento per fornitore — stanno in `src/lib/composizioneOrdine.js`, dove si provano senza Firebase. La tabella riusa le classi che esistono gia' (`inv-list inv-table`, `inv-thead`, `inv-row`, `inv-row-dettaglio`) e l'intestazione ordinabile e' lo stesso componente della lista del magazzino, spostato in `src/components/SortTh.jsx` invece di essere riscritto due volte.
 
@@ -2706,6 +2708,26 @@ COSA FARE QUANDO IL MONDO E' CAMBIATO, e va deciso perche' succedera': un modell
 RESTA APERTO: se un modello debba potersi ricavare da un ordine gia' fatto («salva questo come modello» dalla Lista Ordini), che e' il modo piu' naturale di crearne uno e costa poco una volta che il modello esiste.
 
 **Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/listini.js, src/lib/api.js`
+
+#### REQ-MAG-040 — Colli e pezzi: lo stesso prodotto a cartone da uno, a bottiglia dall'altro
+
+Trovato dall'utente il 27/08/2026 provando la tabella del nuovo ordine: «bisogna distinguere colli e pezzi in qualche modo. Da un fornitore le Bjorne vanno a pezzo, da un altro vanno a collo (cartone da X bottiglie): hai messo Bjorne 8 pz ma il prezzo unitario del fornitore e' AL COLLO, che e' 25 euro, e viene fuori 200 euro per 8 pezzi».
+
+IL NUMERO E' DEL FORNITORE, NON DEL PRODOTTO, ed e' questo che decide dove va scritto: la Bjorne da MAR si compra a bottiglia, da FONT a cartone da 24. Sul prodotto non ci puo' stare, perche' sarebbe uno solo per tutti i fornitori. Va sulla RIGA DI LISTINO, dove REQ-MAG-029 aveva gia' previsto «la confezione DI QUEL FORNITORE» col campo `package_label` — che pero' e' una scritta e non un numero, e su una scritta non ci si moltiplica.
+
+IL MECCANISMO ESISTE GIA' A META', e non va rifatto: nel carico a magazzino c'e' l'interruttore «Carico a colli — un cartone, una cassa» (REQ-MAG-018), dove si scrivono i pezzi per cartone e il totale del collo e l'app ricava l'unitario. Ma li' quel numero E' SOLO PER IL CALCOLO E NON VIENE SALVATO — c'e' scritto nel commento del codice. Quello che manca e' ricordarselo, per fornitore.
+
+IL DATO PER RIEMPIRLO C'E' NEI FOGLI, e si riconosce senza indovinare. In `GEN ORD REC.xlsx` Flavio usa la colonna `cl` con DUE significati: di norma il contenuto, ma quando il fornitore vende a cartone ci scrive i PEZZI PER CARTONE, e nella colonna del prezzo mette il prezzo del cartone. La Bjorne da MAR e' `cl 33` a 1,2333; da FONT e' `cl 24` a 25,05 — e 25,05 diviso 24 fa 1,04 a bottiglia, meno di 1,2333, che e' quello che ci si aspetta comprando a cassa.
+
+LA REGOLA PER RICONOSCERLI, misurata il 27/08 su 409 coppie: se il `cl` del foglio non torna col contenuto del prodotto, si guarda il prezzo. Se `prezzo` somiglia al costo del prodotto e' AL PEZZO; se `prezzo / cl` somiglia al costo e' UN COLLO da `cl` pezzi. Ne sono usciti DIECI, tutti FONT: 24 pezzi per le bibite e le birre industriali, 12 per le due birre artigianali MBU — e il prezzo al pezzo ricavato coincide col costo che l'app gia' conosceva (MBU California: 19,98/12 = 1,665 contro 1,67). Il fatto che il 12 esca da solo accanto al 24 dice che la regola non e' cucita addosso a un numero.
+
+RESTANO TRE RIGHE che non sono ne' pezzo ne' collo (Abaca Granatina, Lampone e Melone da NOVA: foglio 75 cl, prodotto 70 cl, prezzo 6,20 contro un costo in app di 9,85). Li' il `cl` e' una discrepanza di formato e il prezzo e' semplicemente diverso da quello in archivio: si trattano al pezzo, ed e' il caso in cui il listino serve — dice che da quel fornitore costa meno.
+
+COSA SI VEDE E COSA SI CONTA. Il listino tiene il prezzo di CIO' CHE IL FORNITORE FATTURA — il collo, dove c'e' un collo — piu' i pezzi che contiene; il prezzo al pezzo si RICAVA e si mostra accanto, perche' e' l'unico modo di confrontare due fornitori che vendono in confezioni diverse. L'ordine si compone nell'unita' in cui quel fornitore vende (cartoni, dove vende a cartoni), e cio' che entra in magazzino sono sempre PEZZI: cartoni x pezzi per collo. Il magazzino non impara una unita' nuova.
+
+IL BAGLIO DA EVITARE E' QUELLO GIA' VISTO: moltiplicare i pezzi per il prezzo del collo. Otto Bjorne da FONT costano 8,35 euro, non 200.
+
+**Dove**: `src/lib/listini.js, src/lib/composizioneOrdine.js, src/components/ListinoFornitore.jsx, src/components/NuovoOrdinePanel.jsx`
 
 #### REQ-MAG-026 — Gli ordini nascono dalle giacenze: chi e' in esaurimento entra da solo
 
