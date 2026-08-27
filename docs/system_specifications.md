@@ -1161,7 +1161,7 @@ DECISO IN IMPLEMENTAZIONE, e non stava nel testo: (1) la casella dell'assortimen
 
 RESTA APERTO, ed e' una domanda per chi decide: il pre-impostato serve soprattutto a far RIENTRARE un prodotto «fuori assortimento», ma oggi quei prodotti non compaiono nel catalogo ordinabile («non si ricompra», REQ-MAG-007), quindi quel caso non si puo' ancora raggiungere. La casella e' pronta e il campo pure; se si decide che un «out» si puo' riordinare, e' una riga di filtro.
 
-DOVE VA LA CESOIA, se si decidera' di separare l'arrivo dal carico (REQ-MAG-025 punti 3 e 4, che contraddicono la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi): il taglio sta in `consegnaRigheOrdine` (api.js), che oggi fa due cose in fila — segna la riga e chiama `registraAcquisto`. Si spezza in due funzioni che scrivono le righe con lo stesso `scriviRigheOrdine`, si aggiunge un livello «arrivato» fra «richiesto» e «consegnato» in `LIVELLI` (src/lib/listini.js), e la finestra della consegna — che gia' sceglie le righe — diventa la finestra del carico. Il resto non si muove: il prodotto che nasce, il listino, il movimento e il pre-impostato stanno tutti dentro `registraAcquisto`, cioe' dalla parte del carico. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-038): i tre livelli per riga (richiesto/consegnato/pagato) e la consegna per fetta lasciano il posto agli STATI DELL'ORDINE — aperto, ricevuto, chiuso — perche' con un ordine per fornitore non c'e' piu' bisogno di distinguere consegne diverse dentro lo stesso documento. Il carico avviene al passaggio a ORDINE RICEVUTO, sulle quantita' RICEVUTE.
+DOVE VA LA CESOIA, se si decidera' di separare l'arrivo dal carico (REQ-MAG-025 punti 3 e 4, che contraddicono la registrazione di Flavio del 26/08 su cui e' costruito il flusso di oggi): il taglio sta in `consegnaRigheOrdine` (api.js), che oggi fa due cose in fila — segna la riga e chiama `registraAcquisto`. Si spezza in due funzioni che scrivono le righe con lo stesso `scriviRigheOrdine`, si aggiunge un livello «arrivato» fra «richiesto» e «consegnato» in `LIVELLI` (src/lib/listini.js), e la finestra della consegna — che gia' sceglie le righe — diventa la finestra del carico. Il resto non si muove: il prodotto che nasce, il listino, il movimento e il pre-impostato stanno tutti dentro `registraAcquisto`, cioe' dalla parte del carico. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-038): i tre livelli richiesto/consegnato/pagato NON SPARISCONO — si spostano dalla RIGA all'ORDINE, ed e' li' che vanno letti. Con un ordine per fornitore non serve piu' distinguere consegne diverse dentro lo stesso documento, quindi il livello per riga perde il suo mestiere; ma i tre nomi sono di Flavio e restano i suoi, sul documento. Cade la consegna per FETTA, non la scala dei livelli. Il carico avviene al passaggio a ORDINE RICEVUTO, sulle quantita' RICEVUTE.
 
 RESTA VALIDO E NON SI TOCCA il pezzo che questa voce ha di suo: il prodotto che nasce quando il fornitore manda una referenza che in anagrafica non c'e', con la sua «scheda da completare» — quello e' indipendente da come e' fatto l'ordine, e continua a valere.
 
@@ -2593,11 +2593,17 @@ MA QUELLO CHE SI LEGGE CAMBIA, e va detto invece di far finta che il magazzino r
 
 Chiesto dall'utente il 27/08/2026. La sottosezione «Ordini» si divide in due: «NUOVO ORDINE» e' la schermata di composizione (REQ-MAG-036), e nasce «LISTA ORDINI», «che conterra' lo storico di tutti gli ordini fatti, filtrabile per STATO dell'ordine».
 
-GLI STATI DELL'ORDINE, dalle sue parole: EFFETTUATO/APERTO alla conferma;
+GLI STATI DELL'ORDINE SONO I TRE LIVELLI DI FLAVIO, spostati dalla riga all'ordine (precisato dall'utente il 27/08: «richiesto, consegnato, pagato RIMANGONO per ordine per fornitore, non vanno via completamente, mi raccomando»). Non spariscono con il modello a fette: cambiano soltanto di posto, e il posto giusto e' il documento, perche' adesso il documento e' di un fornitore solo.
 
-ORDINE RICEVUTO quando la merce arriva davvero in negozio;
+RICHIESTO = l'ordine e' stato mandato al fornitore ed e' aperto (e' quello che l'utente chiama anche «effettuato/aperto»).
 
-CHIUSO quando la fattura e' stata riconciliata. Il filtro della lista e' su questi.
+CONSEGNATO = la merce e' arrivata in negozio ed e' stata verificata: e' qui che avviene il carico a magazzino, sulle quantita' RICEVUTE, e i prodotti escono da «in assortimento» (REQ-MAG-037). «CONSEGNATO» E «ORDINE RICEVUTO»
+
+SONO LA STESSA COSA: «e' solo estetica, parole — il concetto e' lo stesso» (utente, 27/08). Non sono due stati e non vanno messi in fila uno dopo l'altro. A schermo se ne usa UNA sola, sempre la stessa, in tutte e tre le schermate: due nomi per lo stesso stato fanno cercare a chi legge una differenza che non c'e', ed e' il modo piu' rapido per far credere che manchi un passaggio.
+
+PAGATO = il documento del fornitore e' stato pagato.
+
+CHIUSO e' il gesto in piu' che l'utente chiede, e non e' un sinonimo di pagato: si puo' mettere solo quando la fattura e' stata RICONCILIATA — cioe' quando ordinato, ricevuto e fatturato tornano. Un ordine puo' essere pagato e non ancora riconciliato (si paga per non far aspettare il fornitore) e riconciliato ma non pagato: per questo la chiusura e' un gesto suo e non arriva da sola. Il filtro della Lista Ordini e' su questi.
 
 LA FATTURA, e sono due strade diverse che finiscono nello stesso posto:
 
