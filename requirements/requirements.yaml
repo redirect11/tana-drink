@@ -7322,6 +7322,18 @@ requirements:
       restano quattro in schermata e nei filtri; quello che cambia e' chi li
       scrive e il fatto che uno dei quattro sia di passaggio e ricordi il
       precedente.
+      MA QUELLO CHE SI LEGGE CAMBIA, e va detto invece di far finta che il
+      magazzino resti identico (precisazione dell'utente, 27/08: «non e' del
+      tutto vero, perche' i prodotti ordinati in magazzino diventeranno in
+      assortimento»). Non si spostano comandi ne' colonne: cambia il VALORE
+      che la lista mostra. Un prodotto dentro un ordine aperto si legge «in
+      assortimento» al posto di «in linea» o «premium», e ci resta finche'
+      l'ordine non arriva. Quindi in magazzino comparira' un gruppo di
+      prodotti in quello stato che prima non c'era mai, i filtri per stato ne
+      risentiranno, e chi cerca «i premium» in quel momento non ci trovera'
+      quelli in arrivo. E' voluto — e' l'informazione che Flavio vuole a
+      colpo d'occhio — ma e' un cambiamento di cosa dice la schermata, non
+      solo di cosa fa l'ordine.
     status: todo
     generate_issue: true
     labels: [magazzino, fornitori, ux]
