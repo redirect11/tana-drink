@@ -65,7 +65,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
         // La schermata deve reggere anche con ZERO listini: sono da
         // compilare a mano e nessuno ha ancora cominciato.
         fetchSupplierPrices().catch(() => []),
-        fetchPurchaseOrders({ limit: 25 }),
+        fetchPurchaseOrders(),
         // E deve reggere anche se lo scadenzario non risponde: gli ordini
         // sono la cosa che serve sempre, il documento è un di più.
         fetchSupplierInvoices({ limit: 200 }).catch(() => []),

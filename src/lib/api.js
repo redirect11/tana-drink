@@ -1339,10 +1339,19 @@ function scriviStatoAssortimento(articoli, patchDi, motivo) {
   return aggiornati
 }
 
-export async function fetchPurchaseOrders({ limit = 30 } = {}) {
-  const snap = await getDocs(
-    query(collection(db, 'purchase_orders'), orderBy('created_at', 'desc'), fbLimit(limit))
-  )
+// SENZA `limit` SI LEGGONO TUTTI, ed è il pre-impostato voluto. Il limite
+// c'era da quando questa era «gli ultimi ordini» in fondo alla schermata del
+// magazzino, e lì andava bene; da quando è la LISTA ORDINI con i filtri
+// (REQ-MAG-038) è diventato una bugia — «tutti i pagati» voleva dire «fra gli
+// ultimi venticinque», e chi guardava non aveva modo di saperlo. Lo stesso
+// valeva per il riepilogo dei soldi che escono, che sommava un pezzo di anno,
+// e per l'elenco da cui si aggancia una fattura, che non arrivava agli ordini
+// più vecchi. Un troncamento silenzioso su dei soldi è peggio di una lettura
+// lenta: il numero sbagliato non si vede, la lentezza sì.
+export async function fetchPurchaseOrders({ limit = null } = {}) {
+  const vincoli = [collection(db, 'purchase_orders'), orderBy('created_at', 'desc')]
+  if (Number(limit) > 0) vincoli.push(fbLimit(Number(limit)))
+  const snap = await getDocs(query(...vincoli))
   return snap.docs.map(mapPurchaseOrder)
 }
 

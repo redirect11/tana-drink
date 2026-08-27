@@ -19,11 +19,11 @@ import { riepilogoMesi, totaleRiepilogo, nomeMese } from '../lib/riepilogoFornit
 // I conti stanno in `lib/riepilogoFornitori.js`, dove si provano senza
 // Firebase: qui c'è solo come si leggono.
 //
-// PERCHÉ GLI ORDINI SI CHIEDONO A CENTO e non a venticinque come nello
-// Scadenzario: lì servono gli ultimi, per agganciare il documento che si ha
-// in mano; qui si guarda indietro di mesi, e una consegna senza fattura di
-// marzo sparirebbe dal conto del suo mese senza dire niente.
-const ORDINI_DA_GUARDARE = 100
+// GLI ORDINI SI LEGGONO TUTTI, senza limite. Prima erano cento, e la ragione
+// scritta qui era giusta a metà: si guarda indietro di mesi, e una consegna
+// senza fattura di marzo sparirebbe dal conto del suo mese senza dire niente.
+// Ma centouno ordini fa sparire lo stesso, e un troncamento silenzioso su dei
+// soldi è peggio di una lettura lenta: il numero sbagliato non si vede.
 
 export default function RiepilogoFornitoriPanel() {
   const [fatture, setFatture] = useState([])
@@ -42,7 +42,7 @@ export default function RiepilogoFornitoriPanel() {
           // I due elenchi di contorno non devono far cadere la pagina: il
           // riepilogo con una colonna in meno vale più di una schermata
           // vuota.
-          fetchPurchaseOrders({ limit: ORDINI_DA_GUARDARE }).catch(() => []),
+          fetchPurchaseOrders().catch(() => []),
           fetchSuppliers().catch(() => []),
         ])
         if (!vivo) return

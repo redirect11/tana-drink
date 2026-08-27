@@ -91,7 +91,7 @@ export default function SupplierInvoicesPanel() {
         // un di più.
         fetchInventoryItems().catch(() => []),
         fetchSupplierPrices().catch(() => []),
-        fetchPurchaseOrders({ limit: 25 }).catch(() => []),
+        fetchPurchaseOrders().catch(() => []),
       ])
       setSuppliers(sups)
       setInvoices(invs)
