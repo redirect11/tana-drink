@@ -7709,6 +7709,38 @@ requirements:
       sa piu' perche'. Con tre elenchi da confrontare (ordinato, ricevuto,
       fatturato) le modifiche sono la norma, non l'eccezione: vanno registrate
       con cosa e' cambiato e quando.
+      «PAGATO» NON E' UN DATO DELL'ORDINE: E' UNA DOMANDA ALLA SUA FATTURA.
+      Deciso il 27/08/2026 dopo che l'utente ha notato la sovrapposizione:
+      «il discorso degli ordini pagati e' gia' nello scadenzario». E' vero, e
+      resta scritto in un posto solo — sulla fattura (`paid`), che e' anche
+      dove sta il tasto, il filtro «solo da pagare» e il totale «Da pagare».
+      Chi paga, paga un DOCUMENTO: il bonifico porta sopra il numero della
+      fattura, non quello dell'ordine. Quindi:
+      · l'ORDINE sa cosa hai chiesto e cosa e' arrivato — richiesto,
+      consegnato — perche' e' lui a conoscerli;
+      · la FATTURA sa se e' stata pagata;
+      · l'ordine e' «pagato» quando la fattura collegata lo e'.
+      Due copie dello stesso stato divergono sempre, e il giorno che
+      divergono il totale «Da pagare» smette di valere qualcosa proprio
+      quando serve, a fine mese col commercialista.
+      DA QUI IL GANCIO DIVENTA PORTANTE e non piu' una comodita': senza
+      fattura collegata, un ordine non sa se e' stato pagato (REQ-MAG-031).
+      E NESSUN PAGAMENTO SENZA UNA RIGA NELLO SCADENZARIO. Chiesto
+      esplicitamente dall'utente il 27/08: «il caso di pagare un fornitore
+      senza fattura non c'e'. Anche se puo' capitare, io creero' SEMPRE un
+      item nello scadenzario che paga un ordine anche senza
+      fattura/scontrino/proforma allegato. Possiamo semplicemente indicare
+      nella fattura NESSUN DOCUMENTO, ma farlo risultare lo stesso pagato».
+      Quindi non nasce nessuna strada alternativa per segnare pagato un
+      ordine: si crea la riga nello scadenzario, la si marca «Nessun
+      documento» e si paga. Il contante al piccolo fornitore e il
+      contrassegno alla consegna restano soldi che escono, e devono comparire
+      nel totale del mese come tutti gli altri — se ne esistesse una seconda
+      strada, sarebbero gli unici a non comparirci.
+      «Nessun documento» e' quindi un valore del TIPO DI DOCUMENTO
+      (`doc_type`, che gia' esiste), non un caso speciale: e la fattura senza
+      allegato si vede gia' a colpo d'occhio col chip «Senza allegato»
+      (REQ-MAG-033), che qui diventa la spia giusta.
       LA RICONCILIAZIONE e' il gesto che dichiara che i tre elenchi tornano.
       Solo dopo l'ordine si puo' mettere a CHIUSO.
       IL CARICO A MAGAZZINO avviene «automaticamente dopo che Flavio ha

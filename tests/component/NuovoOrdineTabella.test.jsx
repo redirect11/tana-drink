@@ -72,6 +72,17 @@ async function confermaOrdine(user, fornitore) {
   await user.click(within(riga).getByRole('button', { name: /Crea l/ }))
 }
 
+// SCRIVERE IN UN CAMPO SI FA IN UN COLPO SOLO, non tasto per tasto.
+// `user.clear` + `user.type` battono un carattere alla volta e ogni battuta
+// e' un giro di stato di React: con la suite intera in parallelo la macchina
+// va sotto carico, lo svuotamento e la prima battuta finiscono nello stesso
+// giro e il campo si ritrova «44» invece di «4». Il test falliva una volta
+// su tre, ed e' il genere di rosso che insegna a rilanciare invece che a
+// guardare. Qui non si sta provando la tastiera — quello lo fanno i test
+// del tocco sulla riga — ma che il numero scritto arrivi fino all'ordine
+// salvato: `fireEvent.change` lo dice in un evento solo, deterministico.
+const scriviCampo = (campo, valore) => fireEvent.change(campo, { target: { value: valore } })
+
 const tabella = () => document.querySelector('.ordine-tabella')
 const righe = () => [...document.querySelectorAll('.ordine-tabella .inv-row')]
 const carrello = () => screen.getByLabelText('Ordine in composizione')
@@ -209,8 +220,7 @@ describe('i campi si compilano sulla riga', () => {
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
     const pezzi = screen.getByLabelText('Pezzi di Campari (Nova)')
-    await user.clear(pezzi)
-    await user.type(pezzi, '4')
+    scriviCampo(pezzi, '4')
     await waitFor(() => expect(screen.getByLabelText('Totale di Campari (Nova)')).toHaveValue(50))
   })
 
@@ -222,11 +232,9 @@ describe('i campi si compilano sulla riga', () => {
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
     const pezzi = screen.getByLabelText('Pezzi di Campari (Nova)')
-    await user.clear(pezzi)
-    await user.type(pezzi, '4')
+    scriviCampo(pezzi, '4')
     const totale = screen.getByLabelText('Totale di Campari (Nova)')
-    await user.clear(totale)
-    await user.type(totale, '40')
+    scriviCampo(totale, '40')
     await confermaOrdine(user, 'Nova')
     await waitFor(() => expect(creato).toHaveBeenCalled())
     const riga = creato.mock.calls.at(-1)[0].lines.find((l) => l.item_id === 'campari')
