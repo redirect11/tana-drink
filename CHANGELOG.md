@@ -4,6 +4,34 @@
 
 ### Per chi sta al banco
 
+- **Il giro che si fa sempre si salva come modello.** Sopra la tabella del
+  nuovo ordine c'è la riga dei **modelli d'ordine**: mentre si compone si
+  tocca **«Salva le N righe come modello»**, gli si dà un nome, e da lì in poi
+  con **«Usa il modello»** si ritrovano gli stessi prodotti, dagli stessi
+  fornitori, con le stesse quantità. Un modello si può **rinominare** e
+  **eliminare**, e salvarne uno con un nome già usato aggiorna quello che
+  c'era.
+
+- **Il modello non si porta dietro i prezzi.** Conserva cosa ordinare, a chi e
+  quanto: il prezzo è sempre quello del **listino di quel fornitore**, com'è
+  in questo momento. Così un modello di due mesi fa non fa partire un ordine a
+  cifre vecchie.
+
+- **Modello e precompilazione lavorano insieme.** La precompilazione spunta
+  quello che **sta finendo adesso**; il modello aggiunge il **giro che si fa
+  sempre**. Applicandone uno non si perde niente di quello che era già
+  spuntato.
+
+- **E se qualcosa non c'è più, si legge.** Applicando un modello compare
+  l'elenco di **cosa non è stato ripreso e perché**: un prodotto tolto dal
+  magazzino non si riprende, uno uscito dal listino di quel fornitore si
+  riprende ma senza il suo prezzo, un fornitore cancellato lascia la riga da
+  riassegnare.
+
+- **Un ordine già fatto si può conservare com'è.** Nella Lista ordini, aprendo
+  un ordine, in fondo c'è **«Salva come modello»**: riprende prodotti,
+  fornitore e quantità ordinate.
+
 - **Gli ordini adesso sono due schermate: «Nuovo ordine» e «Lista ordini».**
   La prima è quella di sempre, dove si compone. La seconda è **lo storico di
   tutti gli ordini fatti**, con in alto i **filtri per stato** — bozze,
