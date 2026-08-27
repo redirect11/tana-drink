@@ -66,6 +66,7 @@ export default function OrdiniListaPanel({
   onEmail,
   onCopia,
   onStampa,
+  onSalvaModello,
 }) {
   const [filtro, setFiltro] = useState('tutti')
   // Un ordine aperto per volta, come nella lista del magazzino: due dettagli
@@ -164,6 +165,7 @@ export default function OrdiniListaPanel({
               onEmail={onEmail}
               onCopia={onCopia}
               onStampa={onStampa}
+              onSalvaModello={onSalvaModello}
             />
           ))}
         </div>
@@ -224,6 +226,7 @@ function RigaOrdine({
   onEmail,
   onCopia,
   onStampa,
+  onSalvaModello,
 }) {
   // Gli ordini sono di un fornitore solo (REQ-MAG-037), ma quelli scritti
   // nella settimana in cui non lo erano stanno ancora in archivio: il nome e
@@ -359,6 +362,7 @@ function RigaOrdine({
           <IlProspetto ordine={ordine} fattura={fattura} onAllinea={onAllinea} />
           <LeRigheAperte ordine={ordine} fette={fette} onTogliRiga={onTogliRiga} />
           <LaStoria ordine={ordine} />
+          <SalvaComeModello ordine={ordine} nome={nome} onSalva={onSalvaModello} />
         </div>
       )}
     </div>
@@ -608,6 +612,74 @@ function LaStoria({ ordine }) {
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+// ── «SALVA QUESTO COME MODELLO» (REQ-MAG-039) ────────────────────────
+//
+// Un ordine già fatto è il modo più naturale di crearne uno: è il giro
+// esatto, con le sue quantità, e non va ricomposto a mano nella tabella per
+// riconservarlo. Sta DENTRO il dettaglio dell'ordine e non fra i tasti in
+// testa alla riga, che sono già cinque e vanno tutti a un fornitore vero:
+// questo non manda niente a nessuno, conserva.
+//
+// NON PORTA I PREZZI, come nessun modello: da un ordine si riprendono il
+// prodotto, il fornitore e quanto se ne era chiesto. Il prezzo lo rimette il
+// listino quando il modello si applica, e il listino lo tiene allineato la
+// fattura — che è tutto il punto della catena.
+function SalvaComeModello({ ordine, nome, onSalva }) {
+  const [aperto, setAperto] = useState(false)
+  const [testo, setTesto] = useState('')
+  if (!onSalva || (ordine.lines || []).length === 0) return null
+  return (
+    <div className="ordine-blocco">
+      <strong className="small">Rifarlo uguale</strong>
+      {!aperto ? (
+        <p className="muted small" style={{ marginTop: 4 }}>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => {
+              setTesto(nome)
+              setAperto(true)
+            }}
+          >
+            Salva come modello
+          </button>{' '}
+          Il modello conserva i prodotti, il fornitore e le quantità: i prezzi
+          restano quelli del listino.
+        </p>
+      ) : (
+        <form
+          className="row"
+          style={{ gap: 8, marginTop: 4, flexWrap: 'wrap' }}
+          onSubmit={(e) => {
+            e.preventDefault()
+            const pulito = testo.trim()
+            if (!pulito) return
+            onSalva(ordine, pulito)
+            setAperto(false)
+          }}
+        >
+          <label htmlFor={`modello-${ordine.id}`} className="muted small">
+            Nome del modello
+          </label>
+          <input
+            id={`modello-${ordine.id}`}
+            type="text"
+            value={testo}
+            autoFocus
+            onChange={(e) => setTesto(e.target.value)}
+          />
+          <button type="submit" className="btn small" disabled={!testo.trim()}>
+            Salva
+          </button>
+          <button type="button" className="btn ghost small" onClick={() => setAperto(false)}>
+            Annulla
+          </button>
+        </form>
+      )}
     </div>
   )
 }

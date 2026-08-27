@@ -61,6 +61,11 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSupplierPrices: vi.fn(async () => []),
   fetchPurchaseOrders: vi.fn(async () => stato.ordini),
   fetchSupplierInvoices: vi.fn(async () => stato.fatture),
+  // I modelli d'ordine (REQ-MAG-039): qui non si provano, ma il pannello li
+  // legge insieme al resto e senza questi non partirebbe la lettura.
+  fetchModelliOrdine: vi.fn(async () => []),
+  salvaModelloOrdine: vi.fn((m) => ({ id: 'mod-1', ...m })),
+  eliminaModelloOrdine: vi.fn(),
   createPurchaseOrder: vi.fn(() => ({ id: 'po-nuovo' })),
   // Come l'api vera: compongono in memoria e non aspettano la rete.
   confermaOrdine: vi.fn((o) => ({ ...o, status: 'inviato' })),
