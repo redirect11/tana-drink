@@ -3090,6 +3090,68 @@ body.bar-wide .app {
   align-items: center;
   gap: 2px;
 }
+
+/* ── LISTA ORDINI (REQ-MAG-038) ──────────────────────────────────────
+   La riga di testa non è una griglia di colonne: sono un nome, gli stati e
+   i gesti, e su un telefono vanno a capo invece di stringersi fino a non
+   leggersi più. */
+.ordine-riga .inv-row-main {
+  align-items: center;
+  gap: 8px;
+}
+.ordine-stati {
+  flex-wrap: wrap;
+  align-items: center;
+}
+/* Ogni blocco del dettaglio è separato da un filo, non da un riquadro: sono
+   quattro cose che si leggono una dopo l'altra — documento, prospetto,
+   righe aperte, storia — e quattro card dentro una card sarebbero scatole
+   dentro scatole. */
+.ordine-blocco {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bordo);
+}
+.ordine-blocco:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.ordine-prospetto {
+  --inv-cols: minmax(120px, 2fr) 78px 78px 84px 92px;
+  margin-top: 6px;
+}
+.ordine-scarti {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.ordine-storia {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* GLI STATI DELL'ORDINE FORNITORE. La bozza è l'unico che non fa niente e
+   il colore lo dice: neutra, come una cosa messa da parte. Il richiesto è
+   l'ambra dell'attesa — la stessa della comanda ricevuta — e il consegnato
+   il verde del «è fatto», che questa app usa già per la stessa idea. Il
+   chiuso è neutro e non verde: è archiviato, non riuscito. */
+.pill.stato-bozza,
+.pill.stato-chiuso {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+.pill.stato-richiesto {
+  background: rgba(243, 156, 18, 0.2);
+  color: #ffd591;
+}
+.pill.stato-consegnato {
+  background: rgba(46, 204, 113, 0.22);
+  color: #9ff5c0;
+}
 @container (max-width: 900px) {
   .ordine-due-colonne {
     grid-template-columns: minmax(0, 1fr);
@@ -5671,6 +5733,18 @@ body.fullbleed,
 }
 :root[data-luma='light'] .pill.ritirato {
   background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .pill.stato-bozza,
+:root[data-luma='light'] .pill.stato-chiuso {
+  background: rgba(0, 0, 0, 0.08);
+}
+:root[data-luma='light'] .pill.stato-richiesto {
+  background: rgba(243, 156, 18, 0.18);
+  color: #8a5200;
+}
+:root[data-luma='light'] .pill.stato-consegnato {
+  background: rgba(46, 204, 113, 0.18);
+  color: #157347;
 }
 :root[data-luma='light'] .pill.pagato {
   background: rgba(180, 130, 20, 0.15);

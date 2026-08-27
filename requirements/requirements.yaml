@@ -7759,11 +7759,118 @@ requirements:
       prodotti in fattura all'ordine, o anche solo verificare». La strada e'
       gia' apparecchiata dai tre elenchi e dall'allegato; e' una voce sua
       (REQ-AI-001) e non un pezzo di questa.
-    status: todo
+      ── COM'E' STATO FATTO (27/08/2026) ──
+      DUE SOTTOSEZIONI AL POSTO DI UNA: «Nuovo ordine» e «Lista ordini» in
+      FornitoriTab. A tenere i dati e i gesti resta un pannello solo
+      (PurchaseOrdersPanel, con `vista`), perche' magazzino, fornitori,
+      listini, ordini e documenti servono a tutte e due e leggerli due volte
+      vorrebbe dire due versioni della stessa serata a schermo nello stesso
+      momento. Quello che si vede sta in `OrdiniListaPanel.jsx`; le decisioni
+      e i conti in `src/lib/statiOrdine.js` e `src/lib/confrontoOrdine.js`,
+      logica pura, dove si provano senza Firebase.
+      DUE ASSI, NON UNA FILA SOLA, ed e' la decisione piu' pesante presa in
+      implementazione. I cinque stati SEMBRANO in fila (bozza -> richiesto ->
+      consegnato -> pagato -> chiuso) ma non lo sono: il ciclo della MERCE lo
+      sa l'ordine, il PAGAMENTO lo sa la fattura, la CHIUSURA e' un gesto a
+      parte. Metterli in fila vorrebbe dire che un ordine pagato in anticipo
+      — una proforma saldata prima che parta il camion, cosa che si fa per
+      non far aspettare il fornitore — smetterebbe di risultare «richiesto»,
+      e la merce mai arrivata non la cercherebbe piu' nessuno. A schermo si
+      legge quindi lo stato della merce come BADGE e il pagamento come chip
+      ACCANTO; il filtro invece e' uno solo, e ogni voce fa la sua domanda
+      all'asse che la riguarda.
+      IL FILTRO HA UNA VOCE IN PIU', «Da pagare», che il requisito non
+      chiedeva: e' la stessa domanda del totale dello scadenzario vista dal
+      lato dell'ordine, costa niente una volta che «pagato» c'e', e senza di
+      lei l'unico modo di sapere cosa resta aperto sarebbe contare a mano.
+      Esclude le bozze: una bozza non e' stata mandata a nessuno, quindi
+      nessuno la fatturera', e comparire fra i debiti la farebbe sembrare un
+      conto in sospeso.
+      IL VOCABOLARIO IN ARCHIVIO NON SI TOCCA. Sul documento il campo resta
+      `status` coi suoi valori di sempre, 'inviato' e 'ricevuto', piu' il
+      nuovo 'bozza'; a tradurli in «richiesto» e «consegnato» ci pensa
+      `statoOrdineDi`, in un punto solo. Rinominare due parole su ordini veri
+      sarebbe una migrazione pagata per non guadagnare niente, e gli ordini
+      senza il campo (quelli piu' vecchi) continuano a leggersi dalle righe —
+      un ordine di ieri non e' una bozza per il fatto di non avere il campo.
+      CHIUSO E' UNA DATA A PARTE (`closed_at`) E NON UNO STATO: un ordine
+      chiuso resta consegnato. Se la chiusura sostituisse lo stato, chiudere
+      un ordine cancellerebbe l'informazione che la merce era arrivata.
+      «PAGATO» NON SI SCRIVE PIU' NEMMENO SULLA RIGA: `segnaRighePagate` e
+      il tasto «💶 Pagato» sull'ordine non ci sono piu'. Il livello 'pagato'
+      della riga resta LEGGIBILE, pero': sta scritto su ordini veri, e
+      toglierlo dal vocabolario farebbe rileggere una riga pagata come se non
+      fosse mai stata consegnata. Non si scrive piu', si legge ancora.
+      TRE ELENCHI, TRE CAMPI. `qty_packages` resta SEMPRE quello ordinato e
+      il ricevuto va in `qty_received`; il prezzo di quando l'ordine e'
+      partito si conserva in `unit_cost_ordinato` la prima volta che lo si
+      corregge, mentre `unit_cost` segue la bolla. Senza questi due campi il
+      ricevuto sovrascriverebbe l'ordinato — la cassa mancante non la
+      vedrebbe nessuno e la si pagherebbe in fattura — e il confronto dei
+      prezzi direbbe per sempre «nessuna differenza». Le righe scritte prima
+      ricadono sull'ordinato, che e' anche il caso normale: e' arrivato
+      quello che si e' chiesto.
+      LA RICONCILIAZIONE SI CALCOLA, NON SI SPUNTA. `riconciliato` guarda il
+      prospetto: se ha un solo scarto non torna niente. Con una fattura SENZA
+      RIGHE — la testata registrata a mano, che e' il caso normale
+      (REQ-MAG-030) — la merce non e' confrontabile ma i soldi si': si accetta
+      il documento che cade fra il netto ricevuto e il netto piu' l'IVA, che
+      e' la forbice dentro cui deve stare per forza. Piu' stretti si direbbe
+      «non torna» a un documento che torna, e chi legge imparerebbe a
+      ignorare l'avviso.
+      L'ALLINEAMENTO DEL LISTINO E' UN GESTO, non una conseguenza automatica
+      dell'aggancio, ed e' la scelta prudente: riscrive il listino di quel
+      fornitore e lascia una riga nello storico dei prezzi, e farlo di
+      nascosto nell'istante in cui si collega un documento vorrebbe dire
+      muovere prezzi che nessuno ha guardato. Il tasto dice quanti prezzi
+      sposta. Passa da `registraAcquisto` con il carico SPENTO — la merce e'
+      gia' entrata alla consegna — quindi resta una strada sola per cui un
+      prezzo si aggiorna, con origine 'fattura'.
+      LA FATTURA GENERATA SI RICONOSCE DA UN CAMPO, `generata`, e da un chip
+      («Generata dall'ordine») che si vede sia nella Lista ordini sia nello
+      Scadenzario. L'importo e' il LORDO, come su qualunque documento dello
+      scadenzario, e le righe arrivano da `righeDaOrdine`, la stessa funzione
+      con cui lo scadenzario le ricopia: una seconda versione qui vorrebbe
+      dire due forme della stessa riga.
+      «NESSUN DOCUMENTO» E' UN TIPO COME GLI ALTRI in `TIPI_DOCUMENTO`, e la
+      riga si crea dalla stessa strada che genera la fattura, gia' pagata. Su
+      quelle righe il chip ambra «senza allegato» non compare: segnalare un
+      lavoro che manca a chi ha appena dichiarato che non esiste e' il modo
+      di far ignorare gli avvisi.
+      LA STORIA E' UN ARRAY SUL DOCUMENTO (`storia`), non una collezione a
+      parte: un ordine ha una decina di movimenti in tutto e si scrivono
+      nella STESSA `updateDoc` che tocca le righe — due scritture, e a
+      restare indietro sarebbe proprio il diario che spiega l'altra. Non si
+      ricostruisce all'indietro come quella di un conto (`storiaOrdine.js`):
+      una riga tolta non lascia traccia e una quantita' corretta cancella
+      quella di prima.
+      E LA STORIA SI SCRIVE ANCHE DAL LATO DELLA FATTURA (collegata,
+      scollegata, generata), che REQ-MAG-031 aveva escluso per non avere due
+      scrittori sullo stesso documento. Quella ragione resta buona per i DATI
+      — il legame sta ancora su un campo solo, `order_id` sulla fattura — e
+      qui si accetta il rischio solo per il diario: se due terminali
+      scrivessero nello stesso istante si perderebbe una RIGA DI DIARIO, non
+      un numero.
+      IL BUCO SI SEGNALA SOLO DOVE C'E': «senza documento» compare sui soli
+      ordini consegnati. Su uno ancora richiesto non e' arrivato niente, e su
+      una bozza non e' mai partito niente.
+      LA PAROLA E' UNA SOLA: CONSEGNATO, in tutte le schermate, e c'e' un
+      test che sorveglia che «Ricevuto» non ricompaia come etichetta.
+      RESTA FUORI, e non e' una dimenticanza: la Lista ordini legge gli
+      ULTIMI VENTICINQUE ordini, come faceva lo storico. Il filtro lavora su
+      quelli, quindi «tutti i pagati» vuol dire «fra gli ultimi
+      venticinque». Va bene per un bar che ordina qualche volta a settimana;
+      il giorno che non bastera' servira' una lettura paginata, che e' un
+      lavoro suo e non un dettaglio di questa voce.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/statiOrdine.test.js
+      - tests/unit/confrontoOrdine.test.js
+      - tests/unit/listaOrdiniSenzaRete.test.js
+      - tests/component/ListaOrdini.test.jsx
 
   - id: REQ-MAG-039
     title: "L'ordine che si rifa' uguale: i modelli d'ordine"
@@ -8487,6 +8594,17 @@ requirements:
       fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione,
       e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e
       fattura senza ordine.
+      E IL GANCIO DIVENTA PORTANTE: senza fattura collegata un ordine non sa
+      se e' stato pagato, perche' «pagato» e' una domanda alla fattura e non
+      un dato dell'ordine (REQ-MAG-038). Da qui due conseguenze su questa
+      voce. La prima: «SULL'ORDINE NON SI SCRIVE NIENTE» vale ancora per i
+      DATI — il legame resta su `order_id`, un campo solo, sulla fattura — ma
+      NON piu' per il diario: collegare, scollegare e generare un documento
+      lasciano una riga nella `storia` dell'ordine, e il rischio dei due
+      scrittori si accetta perche' cio' che si perderebbe e' una riga di
+      diario, non un numero. La seconda: un ordine senza documento non e'
+      «da pagare», e' un ordine di cui non si sa niente — e va detto cosi',
+      invece di darlo per non pagato.
     status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, scadenzario]

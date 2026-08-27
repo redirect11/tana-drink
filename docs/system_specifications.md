@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 184 | fatto e coperto dai test |
+| ✅ | 185 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| ⬜ | 21 | da fare |
 | 🗑 | 7 | non più valido |
 
-**228 voci** in tutto. **199** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**228 voci** in tutto. **200** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **21** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 32 | 8 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 33 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1163,6 +1163,78 @@ LE RIGHE CONFERMATE ESCONO DALLA COMPOSIZIONE, e il riepilogo lavora su una FOTO
 
 **Dove**: `src/components/PurchaseOrdersPanel.jsx, src/lib/inventory.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/statoAssortimento.test.js`, `tests/unit/ordiniSenzaRete.test.js`, `tests/component/RiepilogoOrdini.test.jsx`, `tests/component/AssortimentoAMano.test.jsx`
 
+#### REQ-MAG-038 — «Lista Ordini»: gli stati, la fattura, e i due confronti che contano
+
+Chiesto dall'utente il 27/08/2026. La sottosezione «Ordini» si divide in due: «NUOVO ORDINE» e' la schermata di composizione (REQ-MAG-036), e nasce «LISTA ORDINI», «che conterra' lo storico di tutti gli ordini fatti, filtrabile per STATO dell'ordine».
+
+GLI STATI DELL'ORDINE SONO I TRE LIVELLI DI FLAVIO, spostati dalla riga all'ordine (precisato dall'utente il 27/08: «richiesto, consegnato, pagato RIMANGONO per ordine per fornitore, non vanno via completamente, mi raccomando»). Non spariscono con il modello a fette: cambiano soltanto di posto, e il posto giusto e' il documento, perche' adesso il documento e' di un fornitore solo.
+
+RICHIESTO = l'ordine e' stato mandato al fornitore ed e' aperto (e' quello che l'utente chiama anche «effettuato/aperto»).
+
+CONSEGNATO = la merce e' arrivata in negozio ed e' stata verificata: e' qui che avviene il carico a magazzino, sulle quantita' RICEVUTE, e i prodotti escono da «in assortimento» (REQ-MAG-037). «CONSEGNATO» E «ORDINE RICEVUTO»
+
+SONO LA STESSA COSA: «e' solo estetica, parole — il concetto e' lo stesso» (utente, 27/08). Non sono due stati e non vanno messi in fila uno dopo l'altro. A schermo se ne usa UNA sola, sempre la stessa, in tutte e tre le schermate: due nomi per lo stesso stato fanno cercare a chi legge una differenza che non c'e', ed e' il modo piu' rapido per far credere che manchi un passaggio.
+
+PAGATO = il documento del fornitore e' stato pagato.
+
+CHIUSO e' il gesto in piu' che l'utente chiede, e non e' un sinonimo di pagato: si puo' mettere solo quando la fattura e' stata RICONCILIATA — cioe' quando ordinato, ricevuto e fatturato tornano. Un ordine puo' essere pagato e non ancora riconciliato (si paga per non far aspettare il fornitore) e riconciliato ma non pagato: per questo la chiusura e' un gesto suo e non arriva da sola. Il filtro della Lista Ordini e' su questi.
+
+LA FATTURA, e sono due strade diverse che finiscono nello stesso posto:
+
+1) SI ASSOCIA: «un tasto associa fattura che mi permettera' di selezionare una fattura/proforma — qualsiasi documento fiscale — a quell'ordine»;
+
+2) SI GENERA DALL'ORDINE: «la posso anche generare dall'ordine, coi prezzi dell'ordine», che sono quelli del listino definito nella scheda del fornitore (REQ-MAG-035).
+
+QUINDI ANCHE LA FATTURA HA DEGLI STATI, e la differenza che conta e' fra una fattura GENERATA da noi — utile per sapere quanto ci si aspetta di pagare — e una fattura VERA, arrivata dal fornitore, «che puo' essere fatto caricando il documento reale della fattura, anche una foto o un pdf» (l'allegato c'e' gia': REQ-MAG-033).
+
+IL PRIMO CONFRONTO — PREZZI: «nel caso l'ordine abbia la fattura associata, bisognera' mostrare la DIFFERENZA DI PREZZO da quando e' stato fatto l'ordine rispetto al prezzo indicato in fattura». E' il motivo per cui il listino serve: senza un prezzo atteso non c'e' niente da confrontare, e un aumento passa inosservato. E IL CONFRONTO NON FINISCE IN UN AVVISO: il prezzo della fattura ALLINEA il listino di quel fornitore, e la variazione finisce nello storico dei prezzi (REQ-MAG-035). Mostrare la differenza e lasciare il listino fermo vorrebbe dire far ricomparire lo stesso scarto al giro dopo, e a quel punto l'avviso diventa rumore che si impara a ignorare.
+
+IL SECONDO CONFRONTO — QUELLO CHE E' ARRIVATO: se l'ordine e' ancora aperto, «quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello che ha effettivamente ricevuto». Da qui nascono tre elenchi da tenere distinti: quello che si e' ORDINATO, quello che si e' RICEVUTO, e quello che c'e' SULLA FATTURA. «Quando associera' la fattura potra' verificare se ci sono gli stessi articoli e i prezzi rispetto a quanto indicato nell'ordine effettuato e nell'ordine ricevuto».
+
+LA BOZZA, stato in piu' chiesto dall'utente il 27/08: «forse sarebbe meglio anche salvare l'ordine come BOZZA. L'ordine bozza NON IMPATTA SUL MAGAZZINO. In questo modo Flavio puo' riprendere la creazione dell'ordine in un altro momento e confermarlo quando effettivamente gli serve». Sta PRIMA di «richiesto» ed e' l'unico stato che non fa niente: niente «in assortimento» sui prodotti, niente segnalazioni, niente numeri nel riepilogo dei soldi che escono. E' importante che non impatti, perche' comporre un ordine di venti righe e' un lavoro che si interrompe — arriva gente, si apre il locale — e senza bozza si ricomincia da capo oppure si conferma un ordine solo per non perderlo, che e' peggio.
+
+LO STORICO DELL'ORDINE, chiesto per lo stesso motivo: «serve a questo punto una LISTA DEI MOVIMENTI fatti per quell'ordine, una specie di history, se l'ordine e' gia' stato confermato da Flavio ma Flavio fa delle modifiche». Un ordine mandato al fornitore che poi cambia — una riga tolta perche' la bottiglia e' stata comprata al supermercato, una quantita' corretta all'arrivo, un prezzo rifatto sulla fattura — senza storico diventa un documento che non corrisponde piu' a niente e nessuno sa piu' perche'. Con tre elenchi da confrontare (ordinato, ricevuto, fatturato) le modifiche sono la norma, non l'eccezione: vanno registrate con cosa e' cambiato e quando. «PAGATO»
+
+NON E' UN DATO DELL'ORDINE: E' UNA DOMANDA ALLA SUA FATTURA. Deciso il 27/08/2026 dopo che l'utente ha notato la sovrapposizione: «il discorso degli ordini pagati e' gia' nello scadenzario». E' vero, e resta scritto in un posto solo — sulla fattura (`paid`), che e' anche dove sta il tasto, il filtro «solo da pagare» e il totale «Da pagare». Chi paga, paga un DOCUMENTO: il bonifico porta sopra il numero della fattura, non quello dell'ordine. Quindi: · l'ORDINE sa cosa hai chiesto e cosa e' arrivato — richiesto, consegnato — perche' e' lui a conoscerli; · la FATTURA sa se e' stata pagata; · l'ordine e' «pagato» quando la fattura collegata lo e'. Due copie dello stesso stato divergono sempre, e il giorno che divergono il totale «Da pagare» smette di valere qualcosa proprio quando serve, a fine mese col commercialista.
+
+DA QUI IL GANCIO DIVENTA PORTANTE e non piu' una comodita': senza fattura collegata, un ordine non sa se e' stato pagato (REQ-MAG-031). E NESSUN PAGAMENTO SENZA UNA RIGA NELLO SCADENZARIO. Chiesto esplicitamente dall'utente il 27/08: «il caso di pagare un fornitore senza fattura non c'e'. Anche se puo' capitare, io creero' SEMPRE un item nello scadenzario che paga un ordine anche senza fattura/scontrino/proforma allegato. Possiamo semplicemente indicare nella fattura NESSUN DOCUMENTO, ma farlo risultare lo stesso pagato». Quindi non nasce nessuna strada alternativa per segnare pagato un ordine: si crea la riga nello scadenzario, la si marca «Nessun documento» e si paga. Il contante al piccolo fornitore e il contrassegno alla consegna restano soldi che escono, e devono comparire nel totale del mese come tutti gli altri — se ne esistesse una seconda strada, sarebbero gli unici a non comparirci. «Nessun documento» e' quindi un valore del TIPO DI DOCUMENTO (`doc_type`, che gia' esiste), non un caso speciale: e la fattura senza allegato si vede gia' a colpo d'occhio col chip «Senza allegato» (REQ-MAG-033), che qui diventa la spia giusta.
+
+LA RICONCILIAZIONE e' il gesto che dichiara che i tre elenchi tornano. Solo dopo l'ordine si puo' mettere a CHIUSO.
+
+IL CARICO A MAGAZZINO avviene «automaticamente dopo che Flavio ha effettivamente verificato che gli sia arrivato tutto quello che ha richiesto» — cioe' al passaggio a ORDINE RICEVUTO, sulle quantita' ricevute e non su quelle ordinate. In quel momento i prodotti «non avranno piu' lo stato in assortimento» e riprendono quello di prima se la giacenza torna sopra la soglia (REQ-MAG-037).
+
+COSA SOSTITUISCE. I tre livelli per riga richiesto/consegnato/pagato (REQ-MAG-029) e la consegna per fetta (REQ-MAG-032) lasciano il posto agli stati dell'ordine: il documento e' di un fornitore solo, quindi il livello per riga non serve piu' a distinguere consegne diverse. Resta il principio, che non cambia: il prezzo si corregge quando la merce arriva, il fornitore no.
+
+DOPO, NON ADESSO: l'OCR con l'AI sul documento allegato, «per associare i prodotti in fattura all'ordine, o anche solo verificare». La strada e' gia' apparecchiata dai tre elenchi e dall'allegato; e' una voce sua (REQ-AI-001) e non un pezzo di questa. ── COM'E' STATO FATTO (27/08/2026) ── DUE SOTTOSEZIONI AL POSTO DI UNA: «Nuovo ordine» e «Lista ordini» in FornitoriTab. A tenere i dati e i gesti resta un pannello solo (PurchaseOrdersPanel, con `vista`), perche' magazzino, fornitori, listini, ordini e documenti servono a tutte e due e leggerli due volte vorrebbe dire due versioni della stessa serata a schermo nello stesso momento. Quello che si vede sta in `OrdiniListaPanel.jsx`; le decisioni e i conti in `src/lib/statiOrdine.js` e `src/lib/confrontoOrdine.js`, logica pura, dove si provano senza Firebase.
+
+DUE ASSI, NON UNA FILA SOLA, ed e' la decisione piu' pesante presa in implementazione. I cinque stati SEMBRANO in fila (bozza -> richiesto -> consegnato -> pagato -> chiuso) ma non lo sono: il ciclo della MERCE lo sa l'ordine, il PAGAMENTO lo sa la fattura, la CHIUSURA e' un gesto a parte. Metterli in fila vorrebbe dire che un ordine pagato in anticipo — una proforma saldata prima che parta il camion, cosa che si fa per non far aspettare il fornitore — smetterebbe di risultare «richiesto», e la merce mai arrivata non la cercherebbe piu' nessuno. A schermo si legge quindi lo stato della merce come BADGE e il pagamento come chip ACCANTO; il filtro invece e' uno solo, e ogni voce fa la sua domanda all'asse che la riguarda.
+
+IL FILTRO HA UNA VOCE IN PIU', «Da pagare», che il requisito non chiedeva: e' la stessa domanda del totale dello scadenzario vista dal lato dell'ordine, costa niente una volta che «pagato» c'e', e senza di lei l'unico modo di sapere cosa resta aperto sarebbe contare a mano. Esclude le bozze: una bozza non e' stata mandata a nessuno, quindi nessuno la fatturera', e comparire fra i debiti la farebbe sembrare un conto in sospeso.
+
+IL VOCABOLARIO IN ARCHIVIO NON SI TOCCA. Sul documento il campo resta `status` coi suoi valori di sempre, 'inviato' e 'ricevuto', piu' il nuovo 'bozza'; a tradurli in «richiesto» e «consegnato» ci pensa `statoOrdineDi`, in un punto solo. Rinominare due parole su ordini veri sarebbe una migrazione pagata per non guadagnare niente, e gli ordini senza il campo (quelli piu' vecchi) continuano a leggersi dalle righe — un ordine di ieri non e' una bozza per il fatto di non avere il campo.
+
+CHIUSO E' UNA DATA A PARTE (`closed_at`) E NON UNO STATO: un ordine chiuso resta consegnato. Se la chiusura sostituisse lo stato, chiudere un ordine cancellerebbe l'informazione che la merce era arrivata. «PAGATO»
+
+NON SI SCRIVE PIU' NEMMENO SULLA RIGA: `segnaRighePagate` e il tasto «💶 Pagato» sull'ordine non ci sono piu'. Il livello 'pagato' della riga resta LEGGIBILE, pero': sta scritto su ordini veri, e toglierlo dal vocabolario farebbe rileggere una riga pagata come se non fosse mai stata consegnata. Non si scrive piu', si legge ancora.
+
+TRE ELENCHI, TRE CAMPI. `qty_packages` resta SEMPRE quello ordinato e il ricevuto va in `qty_received`; il prezzo di quando l'ordine e' partito si conserva in `unit_cost_ordinato` la prima volta che lo si corregge, mentre `unit_cost` segue la bolla. Senza questi due campi il ricevuto sovrascriverebbe l'ordinato — la cassa mancante non la vedrebbe nessuno e la si pagherebbe in fattura — e il confronto dei prezzi direbbe per sempre «nessuna differenza». Le righe scritte prima ricadono sull'ordinato, che e' anche il caso normale: e' arrivato quello che si e' chiesto.
+
+LA RICONCILIAZIONE SI CALCOLA, NON SI SPUNTA. `riconciliato` guarda il prospetto: se ha un solo scarto non torna niente. Con una fattura SENZA RIGHE — la testata registrata a mano, che e' il caso normale (REQ-MAG-030) — la merce non e' confrontabile ma i soldi si': si accetta il documento che cade fra il netto ricevuto e il netto piu' l'IVA, che e' la forbice dentro cui deve stare per forza. Piu' stretti si direbbe «non torna» a un documento che torna, e chi legge imparerebbe a ignorare l'avviso. L'ALLINEAMENTO DEL LISTINO E' UN GESTO, non una conseguenza automatica dell'aggancio, ed e' la scelta prudente: riscrive il listino di quel fornitore e lascia una riga nello storico dei prezzi, e farlo di nascosto nell'istante in cui si collega un documento vorrebbe dire muovere prezzi che nessuno ha guardato. Il tasto dice quanti prezzi sposta. Passa da `registraAcquisto` con il carico SPENTO — la merce e' gia' entrata alla consegna — quindi resta una strada sola per cui un prezzo si aggiorna, con origine 'fattura'.
+
+LA FATTURA GENERATA SI RICONOSCE DA UN CAMPO, `generata`, e da un chip («Generata dall'ordine») che si vede sia nella Lista ordini sia nello Scadenzario. L'importo e' il LORDO, come su qualunque documento dello scadenzario, e le righe arrivano da `righeDaOrdine`, la stessa funzione con cui lo scadenzario le ricopia: una seconda versione qui vorrebbe dire due forme della stessa riga. «NESSUN DOCUMENTO» E' UN TIPO COME GLI ALTRI in `TIPI_DOCUMENTO`, e la riga si crea dalla stessa strada che genera la fattura, gia' pagata. Su quelle righe il chip ambra «senza allegato» non compare: segnalare un lavoro che manca a chi ha appena dichiarato che non esiste e' il modo di far ignorare gli avvisi.
+
+LA STORIA E' UN ARRAY SUL DOCUMENTO (`storia`), non una collezione a parte: un ordine ha una decina di movimenti in tutto e si scrivono nella STESSA `updateDoc` che tocca le righe — due scritture, e a restare indietro sarebbe proprio il diario che spiega l'altra. Non si ricostruisce all'indietro come quella di un conto (`storiaOrdine.js`): una riga tolta non lascia traccia e una quantita' corretta cancella quella di prima. E LA STORIA SI SCRIVE ANCHE DAL LATO DELLA FATTURA (collegata, scollegata, generata), che REQ-MAG-031 aveva escluso per non avere due scrittori sullo stesso documento. Quella ragione resta buona per i DATI — il legame sta ancora su un campo solo, `order_id` sulla fattura — e qui si accetta il rischio solo per il diario: se due terminali scrivessero nello stesso istante si perderebbe una RIGA DI DIARIO, non un numero.
+
+IL BUCO SI SEGNALA SOLO DOVE C'E': «senza documento» compare sui soli ordini consegnati. Su uno ancora richiesto non e' arrivato niente, e su una bozza non e' mai partito niente.
+
+LA PAROLA E' UNA SOLA:
+
+CONSEGNATO, in tutte le schermate, e c'e' un test che sorveglia che «Ricevuto» non ricompaia come etichetta.
+
+RESTA FUORI, e non e' una dimenticanza: la Lista ordini legge gli ULTIMI VENTICINQUE ordini, come faceva lo storico. Il filtro lavora su quelli, quindi «tutti i pagati» vuol dire «fra gli ultimi venticinque». Va bene per un bar che ordina qualche volta a settimana; il giorno che non bastera' servira' una lettura paginata, che e' un lavoro suo e non un dettaglio di questa voce.
+
+**Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/statiOrdine.test.js`, `tests/unit/confrontoOrdine.test.js`, `tests/unit/listaOrdiniSenzaRete.test.js`, `tests/component/ListaOrdini.test.jsx`
+
 #### REQ-MAG-040 — Colli e pezzi: lo stesso prodotto a cartone da uno, a bottiglia dall'altro
 
 Trovato dall'utente il 27/08/2026 provando la tabella del nuovo ordine: «bisogna distinguere colli e pezzi in qualche modo. Da un fornitore le Bjorne vanno a pezzo, da un altro vanno a collo (cartone da X bottiglie): hai messo Bjorne 8 pz ma il prezzo unitario del fornitore e' AL COLLO, che e' 25 euro, e viene fuori 200 euro per 8 pezzi».
@@ -1311,7 +1383,7 @@ SI AGGANCIA E SI SGANCIA DAI DUE LATI. Dalla fetta (Fornitori -> Ordini) si sceg
 
 CADUTA LA CONDIZIONE «SOLO ORDINI GIA' CONSEGNATI» che filtrava gli ordini riprendibili: una proforma arriva anche prima della merce, e allora quelle righe sono proprio quelle da copiare. La fetta ancora «richiesta» si collega, ma non conta come buco: li' non e' arrivato niente, e segnalarla insegnerebbe a ignorare il segnale.
 
-NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038): con un ordine per fornitore la FETTA non esiste piu' come cosa a se', perche' l'ordine ha gia' un fornitore solo. Il legame diventa quindi FATTURA-ORDINE, che e' la forma semplice di quello che questa voce descrive. Restano validi e vanno riusati: la guardia che vieta di agganciare la fattura di un fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione, e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e fattura senza ordine.
+NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038): con un ordine per fornitore la FETTA non esiste piu' come cosa a se', perche' l'ordine ha gia' un fornitore solo. Il legame diventa quindi FATTURA-ORDINE, che e' la forma semplice di quello che questa voce descrive. Restano validi e vanno riusati: la guardia che vieta di agganciare la fattura di un fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione, e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e fattura senza ordine. E IL GANCIO DIVENTA PORTANTE: senza fattura collegata un ordine non sa se e' stato pagato, perche' «pagato» e' una domanda alla fattura e non un dato dell'ordine (REQ-MAG-038). Da qui due conseguenze su questa voce. La prima: «SULL'ORDINE NON SI SCRIVE NIENTE» vale ancora per i DATI — il legame resta su `order_id`, un campo solo, sulla fattura — ma NON piu' per il diario: collegare, scollegare e generare un documento lasciano una riga nella `storia` dell'ordine, e il rischio dei due scrittori si accetta perche' cio' che si perderebbe e' una riga di diario, non un numero. La seconda: un ordine senza documento non e' «da pagare», e' un ordine di cui non si sa niente — e va detto cosi', invece di darlo per non pagato.
 
 **Dove**: `src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx` · **Lo dimostrano**: `tests/unit/legameFattura.test.js`, `tests/unit/agganciaFattura.test.js`, `tests/component/FatturaDellaFetta.test.jsx`
 
@@ -2672,52 +2744,6 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-038 — «Lista Ordini»: gli stati, la fattura, e i due confronti che contano
-
-Chiesto dall'utente il 27/08/2026. La sottosezione «Ordini» si divide in due: «NUOVO ORDINE» e' la schermata di composizione (REQ-MAG-036), e nasce «LISTA ORDINI», «che conterra' lo storico di tutti gli ordini fatti, filtrabile per STATO dell'ordine».
-
-GLI STATI DELL'ORDINE SONO I TRE LIVELLI DI FLAVIO, spostati dalla riga all'ordine (precisato dall'utente il 27/08: «richiesto, consegnato, pagato RIMANGONO per ordine per fornitore, non vanno via completamente, mi raccomando»). Non spariscono con il modello a fette: cambiano soltanto di posto, e il posto giusto e' il documento, perche' adesso il documento e' di un fornitore solo.
-
-RICHIESTO = l'ordine e' stato mandato al fornitore ed e' aperto (e' quello che l'utente chiama anche «effettuato/aperto»).
-
-CONSEGNATO = la merce e' arrivata in negozio ed e' stata verificata: e' qui che avviene il carico a magazzino, sulle quantita' RICEVUTE, e i prodotti escono da «in assortimento» (REQ-MAG-037). «CONSEGNATO» E «ORDINE RICEVUTO»
-
-SONO LA STESSA COSA: «e' solo estetica, parole — il concetto e' lo stesso» (utente, 27/08). Non sono due stati e non vanno messi in fila uno dopo l'altro. A schermo se ne usa UNA sola, sempre la stessa, in tutte e tre le schermate: due nomi per lo stesso stato fanno cercare a chi legge una differenza che non c'e', ed e' il modo piu' rapido per far credere che manchi un passaggio.
-
-PAGATO = il documento del fornitore e' stato pagato.
-
-CHIUSO e' il gesto in piu' che l'utente chiede, e non e' un sinonimo di pagato: si puo' mettere solo quando la fattura e' stata RICONCILIATA — cioe' quando ordinato, ricevuto e fatturato tornano. Un ordine puo' essere pagato e non ancora riconciliato (si paga per non far aspettare il fornitore) e riconciliato ma non pagato: per questo la chiusura e' un gesto suo e non arriva da sola. Il filtro della Lista Ordini e' su questi.
-
-LA FATTURA, e sono due strade diverse che finiscono nello stesso posto:
-
-1) SI ASSOCIA: «un tasto associa fattura che mi permettera' di selezionare una fattura/proforma — qualsiasi documento fiscale — a quell'ordine»;
-
-2) SI GENERA DALL'ORDINE: «la posso anche generare dall'ordine, coi prezzi dell'ordine», che sono quelli del listino definito nella scheda del fornitore (REQ-MAG-035).
-
-QUINDI ANCHE LA FATTURA HA DEGLI STATI, e la differenza che conta e' fra una fattura GENERATA da noi — utile per sapere quanto ci si aspetta di pagare — e una fattura VERA, arrivata dal fornitore, «che puo' essere fatto caricando il documento reale della fattura, anche una foto o un pdf» (l'allegato c'e' gia': REQ-MAG-033).
-
-IL PRIMO CONFRONTO — PREZZI: «nel caso l'ordine abbia la fattura associata, bisognera' mostrare la DIFFERENZA DI PREZZO da quando e' stato fatto l'ordine rispetto al prezzo indicato in fattura». E' il motivo per cui il listino serve: senza un prezzo atteso non c'e' niente da confrontare, e un aumento passa inosservato. E IL CONFRONTO NON FINISCE IN UN AVVISO: il prezzo della fattura ALLINEA il listino di quel fornitore, e la variazione finisce nello storico dei prezzi (REQ-MAG-035). Mostrare la differenza e lasciare il listino fermo vorrebbe dire far ricomparire lo stesso scarto al giro dopo, e a quel punto l'avviso diventa rumore che si impara a ignorare.
-
-IL SECONDO CONFRONTO — QUELLO CHE E' ARRIVATO: se l'ordine e' ancora aperto, «quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello che ha effettivamente ricevuto». Da qui nascono tre elenchi da tenere distinti: quello che si e' ORDINATO, quello che si e' RICEVUTO, e quello che c'e' SULLA FATTURA. «Quando associera' la fattura potra' verificare se ci sono gli stessi articoli e i prezzi rispetto a quanto indicato nell'ordine effettuato e nell'ordine ricevuto».
-
-LA BOZZA, stato in piu' chiesto dall'utente il 27/08: «forse sarebbe meglio anche salvare l'ordine come BOZZA. L'ordine bozza NON IMPATTA SUL MAGAZZINO. In questo modo Flavio puo' riprendere la creazione dell'ordine in un altro momento e confermarlo quando effettivamente gli serve». Sta PRIMA di «richiesto» ed e' l'unico stato che non fa niente: niente «in assortimento» sui prodotti, niente segnalazioni, niente numeri nel riepilogo dei soldi che escono. E' importante che non impatti, perche' comporre un ordine di venti righe e' un lavoro che si interrompe — arriva gente, si apre il locale — e senza bozza si ricomincia da capo oppure si conferma un ordine solo per non perderlo, che e' peggio.
-
-LO STORICO DELL'ORDINE, chiesto per lo stesso motivo: «serve a questo punto una LISTA DEI MOVIMENTI fatti per quell'ordine, una specie di history, se l'ordine e' gia' stato confermato da Flavio ma Flavio fa delle modifiche». Un ordine mandato al fornitore che poi cambia — una riga tolta perche' la bottiglia e' stata comprata al supermercato, una quantita' corretta all'arrivo, un prezzo rifatto sulla fattura — senza storico diventa un documento che non corrisponde piu' a niente e nessuno sa piu' perche'. Con tre elenchi da confrontare (ordinato, ricevuto, fatturato) le modifiche sono la norma, non l'eccezione: vanno registrate con cosa e' cambiato e quando. «PAGATO»
-
-NON E' UN DATO DELL'ORDINE: E' UNA DOMANDA ALLA SUA FATTURA. Deciso il 27/08/2026 dopo che l'utente ha notato la sovrapposizione: «il discorso degli ordini pagati e' gia' nello scadenzario». E' vero, e resta scritto in un posto solo — sulla fattura (`paid`), che e' anche dove sta il tasto, il filtro «solo da pagare» e il totale «Da pagare». Chi paga, paga un DOCUMENTO: il bonifico porta sopra il numero della fattura, non quello dell'ordine. Quindi: · l'ORDINE sa cosa hai chiesto e cosa e' arrivato — richiesto, consegnato — perche' e' lui a conoscerli; · la FATTURA sa se e' stata pagata; · l'ordine e' «pagato» quando la fattura collegata lo e'. Due copie dello stesso stato divergono sempre, e il giorno che divergono il totale «Da pagare» smette di valere qualcosa proprio quando serve, a fine mese col commercialista.
-
-DA QUI IL GANCIO DIVENTA PORTANTE e non piu' una comodita': senza fattura collegata, un ordine non sa se e' stato pagato (REQ-MAG-031). E NESSUN PAGAMENTO SENZA UNA RIGA NELLO SCADENZARIO. Chiesto esplicitamente dall'utente il 27/08: «il caso di pagare un fornitore senza fattura non c'e'. Anche se puo' capitare, io creero' SEMPRE un item nello scadenzario che paga un ordine anche senza fattura/scontrino/proforma allegato. Possiamo semplicemente indicare nella fattura NESSUN DOCUMENTO, ma farlo risultare lo stesso pagato». Quindi non nasce nessuna strada alternativa per segnare pagato un ordine: si crea la riga nello scadenzario, la si marca «Nessun documento» e si paga. Il contante al piccolo fornitore e il contrassegno alla consegna restano soldi che escono, e devono comparire nel totale del mese come tutti gli altri — se ne esistesse una seconda strada, sarebbero gli unici a non comparirci. «Nessun documento» e' quindi un valore del TIPO DI DOCUMENTO (`doc_type`, che gia' esiste), non un caso speciale: e la fattura senza allegato si vede gia' a colpo d'occhio col chip «Senza allegato» (REQ-MAG-033), che qui diventa la spia giusta.
-
-LA RICONCILIAZIONE e' il gesto che dichiara che i tre elenchi tornano. Solo dopo l'ordine si puo' mettere a CHIUSO.
-
-IL CARICO A MAGAZZINO avviene «automaticamente dopo che Flavio ha effettivamente verificato che gli sia arrivato tutto quello che ha richiesto» — cioe' al passaggio a ORDINE RICEVUTO, sulle quantita' ricevute e non su quelle ordinate. In quel momento i prodotti «non avranno piu' lo stato in assortimento» e riprendono quello di prima se la giacenza torna sopra la soglia (REQ-MAG-037).
-
-COSA SOSTITUISCE. I tre livelli per riga richiesto/consegnato/pagato (REQ-MAG-029) e la consegna per fetta (REQ-MAG-032) lasciano il posto agli stati dell'ordine: il documento e' di un fornitore solo, quindi il livello per riga non serve piu' a distinguere consegne diverse. Resta il principio, che non cambia: il prezzo si corregge quando la merce arriva, il fornitore no.
-
-DOPO, NON ADESSO: l'OCR con l'AI sul documento allegato, «per associare i prodotti in fattura all'ordine, o anche solo verificare». La strada e' gia' apparecchiata dai tre elenchi e dall'allegato; e' una voce sua (REQ-AI-001) e non un pezzo di questa.
-
-**Dove**: `src/components/FornitoriTab.jsx, src/components/OrdiniListaPanel.jsx, src/lib/api.js`
 
 #### REQ-MAG-039 — L'ordine che si rifa' uguale: i modelli d'ordine
 

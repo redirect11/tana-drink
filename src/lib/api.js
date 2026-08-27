@@ -46,8 +46,10 @@ import {
   unitaPrezzo,
 } from './listini.js'
 import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
-import { variazioneDiPrezzo } from './storicoPrezzi.js'
-import { aggancioAmmesso } from './fatture.js'
+import { variazioneDiPrezzo, prezzoCambiato } from './storicoPrezzi.js'
+import { aggancioAmmesso, righeDaOrdine, DOC_NESSUNO } from './fatture.js'
+import { SUL_DOCUMENTO, conMovimento, movimento, storiaDi } from './statiOrdine.js'
+import { prezziDaAllineare } from './confrontoOrdine.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
 import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
@@ -1174,9 +1176,20 @@ function mapPurchaseOrder(snap) {
     id: snap.id,
     supplier_id: o.supplier_id ?? null,
     supplier_name: o.supplier_name ?? '',
-    status: o.status ?? 'inviato', // inviato | ricevuto
+    // LO STATO DELLA MERCE, come sta scritto in archivio (REQ-MAG-038):
+    // 'bozza' | 'inviato' | 'ricevuto'. Le due parole vecchie non si
+    // rinominano — stanno su ordini veri — e a tradurle in «richiesto» e
+    // «consegnato» ci pensa `statiOrdine.js`, una volta sola.
+    status: o.status ?? 'inviato',
     created_at: toIso(o.created_at),
     received_at: toIso(o.received_at),
+    // LA CHIUSURA (REQ-MAG-038): si può mettere solo a fattura riconciliata,
+    // e non è un sinonimo di pagato. Un ordine chiuso resta consegnato: la
+    // data si aggiunge, non sostituisce lo stato.
+    closed_at: toIso(o.closed_at),
+    // LA STORIA DELL'ORDINE (REQ-MAG-038). Gli ordini scritti prima non ce
+    // l'hanno, e non è un errore: la storia comincia da quando la si scrive.
+    storia: Array.isArray(o.storia) ? o.storia : [],
     lines: Array.isArray(o.lines) ? o.lines : [],
     total_net: Number(o.total_net) || 0,
     total_gross: Number(o.total_gross) || 0,
@@ -1196,19 +1209,37 @@ function mapPurchaseOrder(snap) {
 // nuovo. L'id si prende da Firestore senza chiedere niente a nessuno, la
 // scrittura parte in sottofondo e l'ordine si compone in memoria — non lo si
 // rilegge, che la cache direbbe ancora il passato (BUG-045).
-export function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
+export function createPurchaseOrder({
+  supplier_id,
+  supplier_name,
+  lines,
+  total_net,
+  total_gross,
+  // LA BOZZA (REQ-MAG-038): «l'ordine bozza NON IMPATTA SUL MAGAZZINO. In
+  // questo modo Flavio può riprendere la creazione dell'ordine in un altro
+  // momento e confermarlo quando effettivamente gli serve». È l'unico stato
+  // che non fa niente — niente «in assortimento», niente numeri nel
+  // riepilogo dei soldi che escono — e chi la crea NON deve chiamare
+  // `segnaInAssortimento`: quel passaggio è della conferma.
+  bozza = false,
+} = {}) {
   const fornitori = new Set((lines || []).map((l) => l.supplier_id ?? supplier_id ?? null))
   const unico = fornitori.size === 1 ? [...fornitori][0] : null
   const ref = doc(collection(db, 'purchase_orders'))
+  const righe = Array.isArray(lines) ? lines : []
   const dati = {
     supplier_id: supplier_id ?? unico ?? null,
     supplier_name:
       supplier_name ??
       (unico ? (lines || []).find((l) => l.supplier_id === unico)?.supplier_name ?? '' : ''),
-    status: 'inviato',
+    status: bozza ? 'bozza' : 'inviato',
     created_at: serverTimestamp(),
     received_at: null,
-    lines: Array.isArray(lines) ? lines : [],
+    closed_at: null,
+    // La storia comincia qui, con quello che è appena successo: senza la
+    // prima voce, il primo cambiamento non avrebbe niente da cui distinguersi.
+    storia: [movimento(bozza ? 'bozza' : 'creato', { righe: righe.length })],
+    lines: righe,
     total_net: Number(total_net) || 0,
     total_gross: Number(total_gross) || 0,
   }
@@ -1220,6 +1251,60 @@ export function createPurchaseOrder({ supplier_id, supplier_name, lines, total_n
     // il riepilogo e lo storico mostrano nell'istante della conferma.
     created_at: new Date().toISOString(),
   }
+}
+
+// ── LA BOZZA CHE PARTE, E L'ORDINE CHE SI CHIUDE (REQ-MAG-038) ───────
+//
+// Tutti e due prendono l'ORDINE GIÀ IN MANO alla schermata invece del suo
+// id: non c'è niente da leggere — lo stato nuovo è deciso, la storia si
+// compone su quella che si ha davanti — e una lettura in mezzo a un gesto
+// offline risponderebbe comunque col passato (BUG-045).
+//
+// CHI CONFERMA UNA BOZZA deve anche far passare i prodotti in assortimento
+// (`segnaInAssortimento`): è la conferma il grilletto, non la creazione
+// (REQ-MAG-037). La schermata ha già gli articoli in mano, quindi lo fa lei.
+export function confermaOrdine(ordine) {
+  if (!ordine?.id) throw new Error('Ordine non trovato')
+  const patch = {
+    status: SUL_DOCUMENTO.richiesto,
+    storia: conMovimento(ordine, movimento('confermato')),
+  }
+  bgWrite(() => updateDoc(doc(db, 'purchase_orders', ordine.id), patch), 'ordine fornitore')
+  return { ...ordine, ...patch }
+}
+
+// CHIUDERE È UN GESTO A PARTE e non arriva da solo: si può fare solo quando
+// la fattura è stata riconciliata — cioè quando ordinato, ricevuto e
+// fatturato tornano. Chi chiama ha già chiesto a `percheNonSiChiude` se si
+// può; qui non si ricontrolla, perché quel controllo ha bisogno della
+// fattura e riportarselo dietro vorrebbe dire due copie della stessa regola.
+export function chiudiOrdine(ordine) {
+  if (!ordine?.id) throw new Error('Ordine non trovato')
+  const adesso = new Date().toISOString()
+  const patch = {
+    closed_at: adesso,
+    storia: conMovimento(ordine, movimento('chiuso', null, adesso)),
+  }
+  bgWrite(() => updateDoc(doc(db, 'purchase_orders', ordine.id), patch), 'ordine fornitore')
+  return { ...ordine, ...patch }
+}
+
+// UN MOVIMENTO SCRITTO DA FUORI. Collegare o generare un documento è una
+// cosa che succede all'ordine, e senza questa riga la storia salterebbe
+// proprio i passaggi che spiegano perché i numeri sono cambiati.
+//
+// REQ-MAG-031 aveva deciso di NON scrivere niente sull'ordine dal lato della
+// fattura, per non avere due scrittori sullo stesso documento. Quella
+// ragione resta buona per i DATI — il legame sta ancora su un campo solo,
+// sulla fattura — e qui si accetta il rischio solo per la storia: se due
+// terminali scrivono nello stesso istante si perde una RIGA DI DIARIO, non
+// un numero.
+export function registraMovimentoOrdine(ordine, tipo, dettaglio = null) {
+  const voce = movimento(tipo, dettaglio)
+  if (!ordine?.id || !voce) return ordine
+  const patch = { storia: conMovimento(ordine, voce) }
+  bgWrite(() => updateDoc(doc(db, 'purchase_orders', ordine.id), patch), 'storia ordine')
+  return { ...ordine, ...patch }
 }
 
 // ── I PRODOTTI DELL'ORDINE PASSANO IN ASSORTIMENTO (REQ-MAG-037) ─────
@@ -1421,7 +1506,21 @@ async function prezzoDiListino(supplierId, itemId) {
 // correzione del prezzo per riga, indicizzata allo stesso modo — ALLA
 // CONSEGNA SI CORREGGE IL PREZZO, MAI IL FORNITORE: «non posso modificare
 // il fornitore perché da lui l'ho comprato» (Flavio).
-export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {}) {
+//
+// ── E ADESSO ANCHE LE QUANTITÀ (REQ-MAG-038) ─────────────────────────
+//
+// «Quando l'ordine arriva deve poter MODIFICARE L'ORDINE in base a quello
+// che ha effettivamente ricevuto» (utente, 27/08). `quantita` è la quantità
+// davvero arrivata, riga per riga, e IL CARICO A MAGAZZINO VA SU QUELLA:
+// caricare l'ordinato quando è arrivato meno vuol dire una giacenza che
+// nessuno ha sullo scaffale.
+//
+// L'ORDINATO NON SI SOVRASCRIVE. `qty_packages` resta quello che si è
+// chiesto e il ricevuto va in `qty_received`; lo stesso per il prezzo, dove
+// `unit_cost_ordinato` conserva quello di partenza. Sono i due elenchi che
+// il confronto tiene distinti, e se il ricevuto cancellasse l'ordinato la
+// cassa mancante non la vedrebbe più nessuno — la si pagherebbe in fattura.
+export async function consegnaRigheOrdine(id, { indici = null, prezzi = {}, quantita = {} } = {}) {
   const orderRef = doc(db, 'purchase_orders', id)
   const orderSnap = await getDoc(orderRef)
   if (!orderSnap.exists()) throw new Error('Ordine non trovato')
@@ -1456,6 +1555,11 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
   // Firestore non accetta `serverTimestamp()` DENTRO un array: la data della
   // riga è quella del terminale, come per le comande.
   const adesso = new Date().toISOString()
+  // I MOVIMENTI DA SCRIVERE NELLA STORIA (REQ-MAG-038). Si raccolgono
+  // mentre si scorrono le righe e si scrivono con loro, nella stessa
+  // `updateDoc`: una quantità corretta all'arrivo cancella quella di prima,
+  // e quello che non si scrive adesso non si ricostruisce dopo.
+  const movimenti = []
 
   for (let k = 0; k < scelti.length; k++) {
     const i = scelti[k]
@@ -1465,7 +1569,26 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
       corretto == null || corretto === '' || !(Number(corretto) >= 0)
         ? Number(l.unit_cost) || 0
         : Number(corretto)
+    const ordinati = Number(l.qty_packages) || 0
+    const dettoRicevuto = quantita?.[i]
+    // Il campo lasciato com'era vuol dire «è arrivato quello che ho
+    // chiesto», che è il caso normale. Uno svuotato non è zero: zero lo si
+    // scrive, e chi non ha ricevuto niente toglie la spunta alla riga.
+    const ricevuti =
+      dettoRicevuto == null || dettoRicevuto === '' || !(Number(dettoRicevuto) >= 0)
+        ? ordinati
+        : Number(dettoRicevuto)
+    // Il prezzo dell'ordine si conserva la PRIMA volta che lo si corregge:
+    // riscriverlo a ogni consegna parziale lo sostituirebbe con quello della
+    // consegna precedente, e il confronto direbbe sempre «nessuna
+    // differenza».
+    if (l.unit_cost_ordinato == null) l.unit_cost_ordinato = Number(l.unit_cost) || 0
+    if (prezzoCambiato(l.unit_cost_ordinato, costo))
+      movimenti.push(movimento('prezzo', { nome: l.name, da: l.unit_cost_ordinato, a: costo }, adesso))
+    if (ricevuti !== ordinati)
+      movimenti.push(movimento('quantita', { nome: l.name, da: ordinati, a: ricevuti }, adesso))
     l.unit_cost = costo
+    l.qty_received = ricevuti
     l.stato = 'consegnato'
     l.delivered_at = adesso
 
@@ -1484,7 +1607,8 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
       articolo: articoli[k] ?? prodottoDaRigaOrdine(l),
       nasce,
       itemId: l.item_id,
-      qtyPackages: l.qty_packages,
+      // SI CARICA QUELLO CHE È ARRIVATO, non quello che si era chiesto.
+      qtyPackages: ricevuti,
       costo,
       supplierId: l.supplier_id ?? order.supplier_id ?? null,
       adesso,
@@ -1498,28 +1622,28 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
     })
   }
 
-  return scriviRigheOrdine(orderRef, orderSnap, lines)
+  movimenti.unshift(movimento('consegnato', { righe: scelti.length }, adesso))
+  return scriviRigheOrdine(orderRef, orderSnap, lines, movimenti)
 }
 
-// «Lo metto come consegnato, e da lì me lo metto come da pagare» (Flavio):
-// si paga quello che è arrivato, non quello che è stato solo chiesto.
-export async function segnaRighePagate(id, { indici = null } = {}) {
-  const orderRef = doc(db, 'purchase_orders', id)
-  const orderSnap = await getDoc(orderRef)
-  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
-  const order = orderSnap.data()
-  const lines = (Array.isArray(order.lines) ? order.lines : []).map((l) => ({ ...l }))
-  const adesso = new Date().toISOString()
-  let toccate = 0
-  for (const i of indici ?? lines.map((_, k) => k)) {
-    if (!lines[i] || livelloDi(lines[i]) !== 'consegnato') continue
-    lines[i].stato = 'pagato'
-    lines[i].paid_at = adesso
-    toccate += 1
-  }
-  if (toccate === 0) return mapPurchaseOrder(orderSnap)
-  return scriviRigheOrdine(orderRef, orderSnap, lines)
-}
+// ── «PAGATO» NON SI SCRIVE PIÙ SULLA RIGA (REQ-MAG-038) ──────────────
+//
+// C'era `segnaRighePagate`, che portava le righe consegnate al livello
+// «pagato». Non c'è più, ed è una cancellazione voluta: «il discorso degli
+// ordini pagati è già nello scadenzario» (utente, 27/08). Lo stato del
+// pagamento sta in un posto solo — `paid` sulla fattura — e chi paga paga un
+// DOCUMENTO, non un ordine: il bonifico porta sopra il numero della fattura.
+// Due copie dello stesso stato divergono sempre, e il giorno che divergono
+// il totale «Da pagare» smette di valere qualcosa proprio a fine mese.
+//
+// IL LIVELLO 'pagato' SULLA RIGA RESTA LEGGIBILE (`LIVELLI` in listini.js):
+// sta scritto su ordini veri, e toglierlo di lì farebbe rileggere una riga
+// pagata come se non fosse mai stata consegnata. Non si scrive più, si legge
+// ancora.
+//
+// SEGNARE PAGATO SENZA DOCUMENTO NON ESISTE: si crea la riga nello
+// scadenzario, la si marca «Nessun documento» e la si paga
+// (`generaFatturaDaOrdine` qui sotto).
 
 // ── TOGLIERE UN ITEM DA UN ORDINE GIÀ FATTO (REQ-MAG-037) ────────
 //
@@ -1549,7 +1673,8 @@ export async function togliRigaOrdine(id, { indice, item_id = null } = {}) {
     throw new Error('La merce di questa riga è già arrivata: si corregge dal magazzino.')
   lines.splice(indice, 1)
   const articolo = await ripristinaStatoFuoriOrdine(item_id ?? riga.item_id, id)
-  return { ordine: scriviRigheOrdine(orderRef, orderSnap, lines), articolo }
+  const voce = movimento('riga_tolta', { nome: riga.name || null })
+  return { ordine: scriviRigheOrdine(orderRef, orderSnap, lines, [voce]), articolo }
 }
 
 // Rimette il prodotto allo stato che aveva prima dell'ordine, se quell'ordine
@@ -1598,11 +1723,23 @@ export async function togliProdottoDagliOrdini(itemId, orderIds = []) {
 // rilegge: la scrittura parte in sottofondo, quindi nell'istante della
 // rilettura la cache conterrebbe ancora la versione di prima e la schermata
 // mostrerebbe il passato (è stato il difetto di BUG-045).
-function scriviRigheOrdine(orderRef, orderSnap, lines) {
+function scriviRigheOrdine(orderRef, orderSnap, lines, movimenti = []) {
   const totali = purchaseOrderTotals(lines)
-  const status = statoOrdine({ lines })
   const prima = mapPurchaseOrder(orderSnap)
-  const patch = { lines, total_net: totali.net, total_gross: totali.gross, status }
+  // Lo stato si ricava dalle righe, ma una BOZZA resta una bozza: le sue
+  // righe sono tutte «richieste» per definizione, e senza lo stato di prima
+  // la prima modifica la manderebbe da sola al fornitore (REQ-MAG-038).
+  const status = statoOrdine({ lines, status: prima.status })
+  const patch = {
+    lines,
+    total_net: totali.net,
+    total_gross: totali.gross,
+    status,
+    // La storia si compone su quella che si ha in mano e va nella STESSA
+    // scrittura delle righe: due scritture, e una delle due può restare
+    // indietro — resterebbe indietro proprio il diario che spiega l'altra.
+    storia: (movimenti || []).filter(Boolean).reduce((st, v) => conMovimento({ storia: st }, v), storiaDi(prima)),
+  }
   // La data del ricevimento si scrive una volta sola, quando non resta più
   // niente da consegnare.
   const primoRicevimento = status === 'ricevuto' && !prima.received_at
@@ -1642,6 +1779,11 @@ function mapInvoice(snap) {
     // tutte quelle registrate a mano senza allegare niente, che è il terzo
     // buco da vedere a colpo d'occhio.
     attachment: i.attachment ?? null,
+    // GENERATA DA NOI O ARRIVATA DAL FORNITORE (REQ-MAG-038). Una fattura
+    // che ci siamo fatti da soli coi prezzi dell'ordine dice quanto ci si
+    // ASPETTA di pagare; quella del fornitore dice quanto chiede. Confonderle
+    // vorrebbe dire dare per buona una cifra che nessuno ha ancora emesso.
+    generata: !!i.generata,
     created_at: toIso(i.created_at),
   }
 }
@@ -1768,6 +1910,102 @@ async function verificaAggancio(orderId, fattura) {
   )
   const motivo = aggancioAmmesso(fattura, fetta, { fatture: altre.docs.map(mapInvoice) })
   if (motivo) throw new Error(motivo)
+}
+
+// ── LA FATTURA GENERATA DALL'ORDINE (REQ-MAG-038) ────────────────────
+//
+// Sono due strade che finiscono nello stesso posto: si ASSOCIA un documento
+// che c'è già (`collegaFatturaAFetta`), oppure «la posso anche generare
+// dall'ordine, coi prezzi dell'ordine» (utente, 27/08) — che sono quelli del
+// listino di quel fornitore (REQ-MAG-035).
+//
+// LA STESSA STRADA SERVE A «NESSUN DOCUMENTO»: con `doc_type` a «Nessun
+// documento» e `paid` acceso nasce la riga di scadenzario che paga un ordine
+// per cui non è arrivata nessuna carta. Non è un secondo modo di segnare
+// pagato un ordine — è l'unico, e passa comunque dallo scadenzario, se no
+// quei soldi sarebbero gli unici a non comparire nel totale del mese.
+//
+// LE RIGHE SONO QUELLE DELL'ORDINE, prese con `righeDaOrdine`: la stessa
+// funzione con cui lo scadenzario le ricopia quando si riprende un ordine.
+// Una seconda versione qui vorrebbe dire due forme della stessa riga.
+//
+// NON SI ASPETTA LA RETE: l'id si prende in locale, la scrittura parte in
+// sottofondo e il documento si compone in memoria (BUG-045).
+export function generaFatturaDaOrdine(ordine, { doc_type = 'Proforma', paid = false, date = null } = {}) {
+  if (!ordine?.id) throw new Error('Ordine non trovato')
+  if (!ordine.supplier_id) throw new Error('Questo ordine non ha un fornitore: il documento lo emette qualcuno.')
+  const righe = righeDaOrdine(ordine, ordine.supplier_id)
+  const totali = purchaseOrderTotals(righe)
+  const ref = doc(collection(db, 'supplier_invoices'))
+  const dati = {
+    supplier_id: ordine.supplier_id,
+    supplier_name: ordine.supplier_name ?? '',
+    number: null,
+    doc_type,
+    date: date || new Date().toISOString().slice(0, 10),
+    // L'IMPORTO È IL LORDO, come su qualunque documento dello scadenzario:
+    // è la cifra che si paga, non l'imponibile.
+    amount: totali.gross,
+    paid: !!paid,
+    notes: null,
+    lines: righe,
+    order_id: ordine.id,
+    attachment: null,
+    generata: true,
+    created_at: serverTimestamp(),
+  }
+  bgWrite(() => setDoc(ref, dati), 'documento generato dall’ordine')
+  return { ...dati, id: ref.id, created_at: new Date().toISOString() }
+}
+
+// PAGATO SI SCRIVE SULLA FATTURA, e da qualunque schermata lo si tocchi è
+// sempre quel campo (REQ-MAG-038). Niente `await` prima di mostrare l'esito
+// e nessuna rilettura: il documento aggiornato si compone su quello in mano.
+export function segnaFatturaPagata(fattura, paid) {
+  if (!fattura?.id) throw new Error('Documento non trovato')
+  bgWrite(() => updateDoc(doc(db, 'supplier_invoices', fattura.id), { paid: !!paid }), 'fattura pagata')
+  return { ...fattura, paid: !!paid }
+}
+
+// ── IL PREZZO DELLA FATTURA ALLINEA IL LISTINO (REQ-MAG-035/038) ─────
+//
+// «Il confronto non finisce in un avviso»: mostrare la differenza e lasciare
+// il listino fermo vorrebbe dire far ricomparire lo stesso scarto al giro
+// dopo, e a quel punto l'avviso diventa rumore che si impara a ignorare.
+//
+// PASSA DA `registraAcquisto`, con il carico SPENTO: qui non entra niente in
+// magazzino — la merce è già entrata alla consegna — si tocca solo il prezzo
+// di quel fornitore e la sua variazione nello storico, con origine
+// «fattura». È la strada unica per cui un prezzo si aggiorna, e una seconda
+// copia smetterebbe di aggiornare il listino senza che nessuno se ne accorga.
+export async function allineaPrezziDaFattura(ordine, fattura) {
+  const righe = prezziDaAllineare(ordine, fattura)
+  if (righe.length === 0) return ordine
+  const supplierId = fattura?.supplier_id ?? ordine?.supplier_id ?? null
+  // PRIMA SI LEGGE TUTTO, POI SI SCRIVE: il prezzo di listino di prima va
+  // letto adesso, perché dopo la riga sarà già stata riscritta e la cache
+  // direbbe il nuovo.
+  const [snaps, prezziPrima] = await Promise.all([
+    Promise.all(righe.map((r) => getDoc(doc(db, 'inventory_items', r.item_id)))),
+    Promise.all(righe.map((r) => prezzoDiListino(supplierId, r.item_id))),
+  ])
+  const adesso = new Date().toISOString()
+  righe.forEach((r, k) => {
+    registraAcquisto({
+      articolo: snaps[k].exists() ? snaps[k].data() : null,
+      itemId: r.item_id,
+      qtyPackages: 0,
+      costo: r.prezzo,
+      supplierId,
+      adesso,
+      motivo: 'fattura fornitore',
+      carica: false,
+      aggiornaPrezzo: true,
+      prezzoPrima: prezziPrima[k] ?? r.prezzo_prima,
+      origine: 'fattura',
+    })
+  })
+  return registraMovimentoOrdine(ordine, 'prezzi_allineati', { righe: righe.length })
 }
 
 // ── «AGGIUNGI PRODOTTI» A UNA FATTURA (REQ-MAG-030) ──────────────────

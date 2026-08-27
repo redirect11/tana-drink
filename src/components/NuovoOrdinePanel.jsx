@@ -209,10 +209,20 @@ export default function NuovoOrdinePanel({
   // Confermato un fornitore, le sue righe escono dalla composizione: tornando
   // indietro resta da fare quello che non è ancora partito. Niente `await`
   // prima di mostrare l'esito — l'ordine si compone in memoria.
-  function conferma(fetta) {
-    Promise.resolve(onCrea?.(fetta)).then((ordine) => {
+  //
+  // LA BOZZA PASSA DA QUI (REQ-MAG-038) ed è lo stesso gesto con un
+  // interruttore: «l'ordine bozza NON IMPATTA SUL MAGAZZINO», quindi nasce
+  // un documento e basta — nessun prodotto in assortimento, nessun numero
+  // nel riepilogo dei soldi che escono. Le righe escono comunque dalla
+  // composizione: sono state messe da parte, non dimenticate, e si
+  // riprendono dalla Lista ordini.
+  function conferma(fetta, opzioni) {
+    Promise.resolve(onCrea?.(fetta, opzioni)).then((ordine) => {
       if (!ordine?.id) return
-      setConfermati((prev) => ({ ...prev, [fetta.chiave]: ordine.id }))
+      setConfermati((prev) => ({
+        ...prev,
+        [fetta.chiave]: { id: ordine.id, bozza: !!opzioni?.bozza },
+      }))
       setSelezioni((prev) => {
         const next = { ...prev }
         for (const r of fetta.righe) delete next[r.key]

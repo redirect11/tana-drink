@@ -46,6 +46,8 @@ export default function RiepilogoOrdini({
         Si crea un ordine per ogni fornitore. Tocca il nome per rivedere i
         prodotti scelti per lui, poi conferma quel fornitore: i suoi prodotti
         passano <strong>in assortimento</strong> finché la merce non arriva.
+        Una <strong>bozza</strong> si salva e basta: si riprende dalla Lista
+        ordini e non tocca il magazzino.
       </p>
 
       {fette.length === 0 ? (
@@ -60,7 +62,7 @@ export default function RiepilogoOrdini({
                 ordine={confermati[f.chiave] || null}
                 aperta={aperta === f.chiave}
                 onApri={() => setAperta(aperta === f.chiave ? null : f.chiave)}
-                onConferma={() => onConferma?.(f)}
+                onConferma={(opzioni) => onConferma?.(f, opzioni)}
                 onTogli={onTogli}
               />
             ))}
@@ -106,11 +108,29 @@ function FornitoreDaConfermare({ fetta, ordine, aperta, onApri, onConferma, onTo
           {formatPrice(fetta.totali.gross)} <span className="muted small">+IVA</span>
         </span>
         {ordinato ? (
-          <span className="pill small ordinato">Ordinato</span>
+          <span className={`pill small ${ordine.bozza ? '' : 'ordinato'}`}>
+            {ordine.bozza ? 'In bozza' : 'Ordinato'}
+          </span>
         ) : (
-          <button type="button" className="btn small" onClick={onConferma}>
-            Crea l’ordine
-          </button>
+          <span className="row" style={{ gap: 4 }}>
+            {/* LA BOZZA (REQ-MAG-038): «Flavio può riprendere la creazione
+                dell'ordine in un altro momento e confermarlo quando
+                effettivamente gli serve». Comporre venti righe è un lavoro
+                che si interrompe — arriva gente, si apre il locale — e senza
+                bozza si ricomincia da capo oppure si conferma un ordine solo
+                per non perderlo, che è peggio. */}
+            <button
+              type="button"
+              className="btn ghost small"
+              title="Salva senza mandarlo: non tocca il magazzino"
+              onClick={() => onConferma?.({ bozza: true })}
+            >
+              Salva in bozza
+            </button>
+            <button type="button" className="btn small" onClick={() => onConferma?.()}>
+              Crea l’ordine
+            </button>
+          </span>
         )}
       </div>
 

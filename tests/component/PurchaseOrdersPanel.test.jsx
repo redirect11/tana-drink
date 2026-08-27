@@ -15,7 +15,7 @@
 // magazzino quasi non esiste. Qui si sorveglia che non ci si torni.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -183,32 +183,58 @@ describe('l’ordine si compone, col fornitore sulla riga', () => {
   })
 })
 
-describe('lo storico va per FETTA di fornitore', () => {
-  const ORDINE = {
+// ── LA LISTA ORDINI (REQ-MAG-038) ───────────────────────────────────
+//
+// Era lo «Storico ordini», in fondo a questa stessa schermata, e andava per
+// FETTA di fornitore perché un ordine poteva contenerne più d'uno. Da
+// REQ-MAG-037 UN ORDINE È DI UN FORNITORE SOLO, e da REQ-MAG-038 lo storico
+// è una sottosezione sua — `vista="lista"`. Quello che resta uguale, ed è
+// quello che si sorveglia qui: a ogni fornitore si manda la sua roba e si
+// carica la sua roba, perché mandare a Nova le righe di Enofel è un errore
+// verso il fornitore.
+describe('la lista ordini, un ordine per fornitore', () => {
+  const ORDINE_NOVA = {
     id: 'po-1',
+    supplier_id: 'nova',
+    supplier_name: 'Nova',
     created_at: '2026-08-26T09:00:00.000Z',
     status: 'inviato',
-    total_net: 95,
-    total_gross: 115.9,
+    total_net: 75,
+    total_gross: 91.5,
     lines: [
-      { item_id: 'campari', name: 'Campari', qty_packages: 6, unit_cost: 12.5, vat: 22, supplier_id: 'nova', stato: 'richiesto' },
-      { item_id: 'gin', name: 'Gin Mare', qty_packages: 1, unit_cost: 20, vat: 22, supplier_id: 'enofel', stato: 'richiesto' },
+      { item_id: 'campari', name: 'Campari', qty_packages: 6, unit_cost: 12.5, vat: 22, supplier_id: 'nova', supplier_name: 'Nova', stato: 'richiesto' },
+    ],
+  }
+  const ORDINE_ENOFEL = {
+    id: 'po-2',
+    supplier_id: 'enofel',
+    supplier_name: 'Enofel',
+    created_at: '2026-08-26T09:05:00.000Z',
+    status: 'inviato',
+    total_net: 20,
+    total_gross: 24.4,
+    lines: [
+      { item_id: 'gin', name: 'Gin Mare', qty_packages: 1, unit_cost: 20, vat: 22, supplier_id: 'enofel', supplier_name: 'Enofel', stato: 'richiesto' },
     ],
   }
 
+  const lista = async () => (await screen.findByText('Lista ordini')).closest('.card')
+
   beforeEach(() => {
-    stato.ordini = [ORDINE]
+    stato.ordini = [ORDINE_NOVA, ORDINE_ENOFEL]
   })
 
-  // Mandare a Nova anche le righe di Enofel è un errore verso il fornitore,
-  // non un dettaglio grafico.
   it('ogni fornitore ha la sua riga, con le sue sole voci', async () => {
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
+    const user = userEvent.setup()
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = await lista()
     expect(within(storico).getByText('Nova')).toBeInTheDocument()
     expect(within(storico).getByText('Enofel')).toBeInTheDocument()
-    expect(within(storico).getByText('6× Campari')).toBeInTheDocument()
-    expect(within(storico).getByText('1× Gin Mare')).toBeInTheDocument()
+    // Le righe stanno nel dettaglio: la lista si scorre per trovare
+    // l'ordine, non per rileggerlo tutto.
+    await user.click(within(storico).getByRole('button', { name: /L’ordine di Nova/ }))
+    expect(within(storico).getByText(/6× Campari/)).toBeInTheDocument()
+    expect(within(storico).queryByText(/1× Gin Mare/)).toBeNull()
   })
 
   it('l’email parte con l’indirizzo di quel fornitore e le sue righe', async () => {
@@ -220,8 +246,8 @@ describe('lo storico va per FETTA di fornitore', () => {
       configurable: true,
       value: { set href(v) { aperto.push(v) } },
     })
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = await lista()
     await user.click(within(storico).getByRole('button', { name: 'Invia a Nova' }))
     expect(aperto).toHaveLength(1)
     const testo = decodeURIComponent(aperto[0])
@@ -231,45 +257,43 @@ describe('lo storico va per FETTA di fornitore', () => {
     expect(testo).not.toMatch(/Gin Mare/)
   })
 
-  // IL CARICO AVVIENE AL PASSAGGIO A CONSEGNATO, e per la sola fetta
-  // arrivata: i fornitori consegnano in giorni diversi.
-  it('«Consegnato» carica solo le righe di quel fornitore, coi prezzi corretti', async () => {
+  // IL CARICO AVVIENE AL PASSAGGIO A CONSEGNATO, e per il solo ordine
+  // arrivato: i fornitori consegnano in giorni diversi.
+  it('«Consegnato» carica solo le righe di quell’ordine, coi prezzi corretti', async () => {
     const user = userEvent.setup()
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = await lista()
     const rigaNova = within(storico).getByText('Nova').closest('.inv-row')
     await user.click(within(rigaNova).getByRole('button', { name: /Consegnato/ }))
 
-    // La finestra della consegna: si correggono i PREZZI, non il fornitore.
+    // La finestra della consegna: si correggono i PREZZI e le QUANTITÀ, mai
+    // il fornitore.
     const prezzo = await screen.findByLabelText('Prezzo di Campari')
     expect(screen.queryByLabelText(/Fornitore di/)).toBeNull()
-    await user.clear(prezzo)
-    await user.type(prezzo, '13.5')
-    // Il tasto dice quante righe carica e se sono tutte: da REQ-MAG-032 la
-    // consegna si può spuntare riga per riga, e un carico fatto alla cieca
-    // lo si scopre contando le bottiglie.
+    // Un evento solo, non tasto per tasto: sotto carico le battute
+    // finiscono nello stesso giro di React e il campo resta a metà.
+    fireEvent.change(prezzo, { target: { value: '13.5' } })
+    // Il tasto dice quante righe carica e se sono tutte: un carico fatto
+    // alla cieca lo si scopre contando le bottiglie.
     await user.click(screen.getByRole('button', { name: 'Carica tutti (1)' }))
 
     await waitFor(() => expect(consegnato).toHaveBeenCalled())
     const [id, opts] = consegnato.mock.calls.at(-1)
     expect(id).toBe('po-1')
-    // Solo la riga 0, che è quella di Nova.
     expect(opts.indici).toEqual([0])
     expect(opts.prezzi[0]).toBe('13.5')
   })
 
-  // «Lo metto come consegnato, e da lì me lo metto come da pagare»: il
-  // pagato non si può saltare avanti.
-  it('«Pagato» compare solo su una fetta già consegnata', async () => {
-    stato.ordini = [
-      { ...ORDINE, lines: [{ ...ORDINE.lines[0], stato: 'consegnato' }, ORDINE.lines[1]] },
-    ]
-    render(<PurchaseOrdersPanel />)
-    const storico = (await screen.findByText('Storico ordini')).closest('.card')
+  // «PAGATO» NON È PIÙ UN TASTO DELL'ORDINE (REQ-MAG-038): «il discorso
+  // degli ordini pagati è già nello scadenzario». Si chiede alla fattura, e
+  // senza fattura la domanda non ha risposta — la riga lo dice invece di
+  // dare per non pagato un ordine di cui non si sa niente.
+  it('sull’ordine non c’è nessun tasto «Pagato»: sta sul documento', async () => {
+    stato.ordini = [{ ...ORDINE_NOVA, status: 'ricevuto', lines: [{ ...ORDINE_NOVA.lines[0], stato: 'consegnato' }] }]
+    render(<PurchaseOrdersPanel vista="lista" />)
+    const storico = await lista()
     const rigaNova = within(storico).getByText('Nova').closest('.inv-row')
-    const rigaEnofel = within(storico).getByText('Enofel').closest('.inv-row')
-    expect(within(rigaNova).getByRole('button', { name: /Pagato/ })).toBeInTheDocument()
-    expect(within(rigaEnofel).queryByRole('button', { name: /Pagato/ })).toBeNull()
-    expect(within(rigaEnofel).getByRole('button', { name: /Consegnato/ })).toBeInTheDocument()
+    expect(within(rigaNova).queryByRole('button', { name: /^Pagato/ })).toBeNull()
+    expect(within(rigaNova).getByText('senza documento')).toBeInTheDocument()
   })
 })
