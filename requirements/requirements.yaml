@@ -7349,6 +7349,16 @@ requirements:
       (quantita', tendina del fornitore) e il tasto che apre la riga restano
       esclusi dal tocco, se no scriverci dentro toglierebbe il prodotto
       dall'ordine.
+      LA CASELLA RESTA DOV'E', ed e' la scelta che tiene in piedi il gesto per
+      chi non usa il dito: e' lei a portare ruolo, nome e stato («Ordina
+      Bjorne, casella di controllo, selezionata») e a farsi premere con lo
+      spazio dopo esserci arrivati col tabulatore. Il tocco sulla riga e' un
+      bersaglio piu' grande sopra la stessa cosa, non un gesto suo: un `div`
+      cliccabile al posto della casella sarebbe un comando che col tabulatore
+      non esiste e che nessun lettore di schermo annuncia. Quello che e' gia'
+      nell'ordine si riconosce anche dal FONDO della riga, perche' componendo
+      se ne scorrono decine e la spunta da sola e' un segno piccolo in fondo a
+      sinistra.
       LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del
       prodotto, questo viene selezionato automaticamente per l'ordine».
       Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la
@@ -7826,11 +7836,134 @@ requirements:
       unita' nuova.
       IL BAGLIO DA EVITARE E' QUELLO GIA' VISTO: moltiplicare i pezzi per il
       prezzo del collo. Otto Bjorne da FONT costano 8,35 euro, non 200.
-    status: todo
+      ── LA SCALA E' UNA SOLA, E IL COLLO NON E' UN'ECCEZIONE ──
+      Deciso dall'utente il 27/08/2026, DOPO la stesura qui sopra e in luogo
+      di quello che quella stesura lasciava intendere («chi non ha un collo
+      non cambia», cioe' due strade nel codice). Parole sue: «le cose da un
+      pezzo, banalmente possiamo dire che in un collo c'e' un pezzo, cioe'
+      equivale a un pezzo, e dovrebbe funzionare sempre. E anche i calcoli non
+      si dovrebbero rompere». La gerarchia e' quindi UNA:
+
+          COLLO -> PEZZI -> UNITA' DI CONTENUTO
+
+      e chi si compra a bottiglia e' il CASO DEGENERE di un collo da 1.
+      Nessun ramo «se e' a colli»: un numero che a volte vale 1, e
+      moltiplicare per uno non cambia niente. E' anche piu' sicuro che
+      tenere due strade, perche' una strada sola non si puo' prendere storta.
+      IL PRE-IMPOSTATO E' 1, MAI VUOTO E MAI ZERO, ed e' la difesa che conta:
+      le 367 righe di listino gia' in archivio quel campo NON ce l'hanno, e un
+      `undefined` che finisce in una moltiplicazione da' un ordine da zero
+      pezzi, in una divisione da' Infinity. Non ci si difende ricordandosene
+      nei punti d'uso — e' cosi' che questi difetti tornano — ma leggendolo da
+      UNA FUNZIONE SOLA, `pezziPerCollo` in src/lib/listini.js, da cui passa
+      tutto il resto.
+      L'UNIFORMITA' STA NEI CONTI, NON NELLE PAROLE. A schermo «1 collo di
+      Tanqueray» non lo dice nessuno: chi ordina al banco pensa a bottiglie.
+      Dove il collo e' da uno si continua a dire PEZZI e la parola «collo» non
+      compare; «collo» si vede solo dove un collo c'e' davvero, e a governarlo
+      e' `aCollo` (pezzi per collo > 1), che e' l'unica cosa che le due strade
+      se le divide — le parole, non i numeri.
+      NON SI SALVA IL PREZZO AL PEZZO, SI SALVA QUELLO DEL COLLO. 25,05 / 24
+      fa 1,04375: congelare quel numero arrotondato e rimoltiplicarlo per 24
+      da' 24,96, e il totale dell'ordine non coincide piu' con la fattura. Si
+      tiene il prezzo di CIO' CHE IL FORNITORE FATTURA e il prezzo al pezzo si
+      RICAVA ogni volta che serve mostrarlo o confrontarlo.
+      ── IL TERZO GRADINO: L'UNITA' IN CUI IL FORNITORE PREZZA ──
+      Deciso dall'utente il 27/08/2026, subito dopo la scala unica e per la
+      stessa ragione: costa poco adesso perche' la scala e' gia' quella, e
+      farlo dopo vorrebbe dire riaprire listino, tabella e conti una seconda
+      volta. Il conto e' SEMPRE questo, tre moltiplicazioni e nessun ramo
+      speciale:
+
+          prezzo per unita' di contenuto x contenuto di un pezzo
+            x pezzi per collo = PREZZO DEL COLLO
+
+      Vino a 9 euro/litro in bottiglie da 75 cl: 9 x 0,75 = 6,75 a bottiglia;
+      cartone da 6 -> il collo costa 40,50.
+      QUINDI LA RIGA DI LISTINO PORTA DUE NUMERI E UNA PAROLA: il prezzo,
+      l'unita' in cui e' espresso (`unita_prezzo`: collo, pz, l, cl, ml, kg,
+      g — «collo» e' il valore di partenza e il caso normale) e i pezzi per
+      collo. Tutto il resto si ricava.
+      IL CONTENUTO DEL PEZZO NON ENTRA NEL LISTINO: sta sul PRODOTTO
+      (`content_unit` + `package_size`, e `resa`/`resa_unit` per chi compra a
+      peso e dosa a volume) e da li' si legge. Quanto contiene una bottiglia
+      e' un fatto della bottiglia, non del fornitore, e duplicarlo vorrebbe
+      dire due numeri che prima o poi non sono d'accordo — e quel giorno
+      nessuno saprebbe a quale dei due crede l'ordine.
+      IL TERZO LIVELLO E' FACOLTATIVO E LO ERA GIA'. Le unita' d'acquisto
+      ammesse sono `ml`, `g`, `pz`, `U` (BASE_UNITS): una busta di patatine si
+      compra a pezzo e non ha contenuto da dichiarare — «una U era gia' una
+      cosa che si conta, quindi un pezzo e' una U e non serve nessuna
+      confezione dichiarata» — e per lei la catena non chiede niente. Quando
+      non arriva niente di contabile (limoni sfusi al chilo) l'unita'
+      d'acquisto e' `g` e non `pz`: il pezzo COINCIDE con l'unita' base, la
+      prima moltiplicazione e' per uno, e la catena regge senza casi speciali.
+      SE IL CONTENUTO NON E' DICHIARATO IL CONTO NON SI FA, e non esce un
+      numero inventato: esce un RIFIUTO LEGGIBILE, appoggiato a
+      `motivoNonMigrabile` — il controllo che l'app ha gia' per la stessa
+      mancanza — invece di scriverne un secondo da tenere allineato. Un prezzo
+      inventato diventa un ordine, e poi una fattura che non torna.
+      NON SI INVENTANO CONVERSIONI FRA PESO E VOLUME: in questo progetto non
+      esistono. Un prezzo al chilo su una cosa che si misura in millilitri e'
+      una riga scritta male e si rifiuta. Da un chilo di limoni esce mezzo
+      litro di succo perche' lo dice chi compra: e' la RESA (`resaUso`), non
+      una legge di natura.
+      IL PREZZO AL PEZZO SI MOSTRA DOVE E' STATO RICAVATO, ed e' la difesa che
+      vale piu' di tutte le altre: e' il numero che una persona riconosce a
+      colpo d'occhio, e se una bottiglia di gin risulta costare 0,80 euro
+      l'errore si vede subito. Contro una moltiplicazione sbagliata l'unica
+      difesa vera e' che il risultato stia sotto gli occhi di chi sa quanto
+      costa davvero quella bottiglia. Nella tabella dell'ordine la colonna
+      EUR/pz e' SEMPRE il prezzo del pezzo; nel listino il prezzo ricavato
+      compare sotto il campo ogni volta che una moltiplicazione c'e' stata —
+      dove non c'e' stata sarebbe la stessa cifra scritta due volte, e una
+      riga che ripete se stessa insegna a non leggerla. Sotto il prezzo, in
+      tabella e nella scheda, si legge anche DA DOVE viene: il prezzo come il
+      fornitore l'ha scritto e il collo, perche' per correggere un numero
+      sbagliato bisogna sapere da quale e' uscito.
+      ── COM'E' STATO FATTO (27/08/2026) ──
+      I DUE CAMPI SI CHIAMANO `pezzi_per_collo` E `unita_prezzo` E STANNO SU
+      `supplier_prices`, la riga di listino, accanto a `package_label` che
+      resta la SCRITTA per chi riceve l'ordine dall'altra parte. Si leggono
+      SOLO da `pezziPerCollo` e `unitaPrezzo`, e la scala intera sta in
+      `scalaListino` (src/lib/listini.js), che e' l'unico posto in cui i due
+      prezzi si ricavano. Non si chiama «confezione» perche' in
+      questo codice «confezione» vuol gia' dire IL PEZZO
+      (`caricoDaConfezioni`, `qty_packages`, `package_size` contano
+      bottiglie): usare la stessa parola per due cose dentro lo stesso conto
+      e' precisamente l'errore da cui questa voce nasce.
+      COSA SI VEDE. Nella tabella del nuovo ordine la colonna «EUR/pz» porta il
+      prezzo del PEZZO — l'unico con cui si confrontano due fornitori — e
+      sotto la didascalia che dice da dove viene («collo da 24: 25,05 EUR»,
+      «9,00 EUR/L · collo da 6: 40,50 EUR»), che e' la cifra scritta sulla
+      bolla. Il campo della quantita' chiede COLLI, e accanto compare quanti
+      pezzi ne escono. Nel listino del fornitore ci sono «Prezzo espresso per»
+      e «Pezzi per collo» accanto a «Confezione», e il prezzo al pezzo si
+      legge sotto il campo del prezzo mentre lo si scrive.
+      COSA SI CONTA. L'ordine si compone in colli; la riga salvata tiene
+      `qty_packages` in PEZZI — com'e' sempre stato, cosi' il carico a
+      magazzino non cambia di una riga — piu' `colli`, `pezzi_per_collo` e
+      `prezzo_collo` accanto, per rileggere l'ordine come lo si e' composto e
+      per riconciliarlo con la fattura senza rifare una divisione.
+      LA PRESELEZIONE PROPONE COLLI: la soglia di riordino e' in pezzi, e si
+      divide arrotondando PER ECCESSO, perche' mezzo cartone non lo vende
+      nessuno. Con un collo da uno la divisione non fa niente.
+      IL CONFRONTO FRA FORNITORI SI FA AL PEZZO (`piuEconomica`) E COSI'
+      L'ORDINAMENTO DELLA COLONNA PREZZO: fra 1,2333 a bottiglia da MAR e
+      25,05 al cartone da 24 da FONT il piu' economico e' FONT, e leggendo i
+      due prezzi come sono scritti sembrerebbe il contrario — il cartone
+      finirebbe in fondo alla lista dei cari.
+      I DIECI GIA' IMPORTATI si correggono con `scripts/correggi-colli.mjs`,
+      che legge `scripts/colli-noti.json`, scrive SOLO sull'emulatore, ha
+      `--prova` e si puo' rilanciare: una riga gia' a posto la salta.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, dati]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/colliEPezzi.test.js
+      - tests/component/ColliEPezzi.test.jsx
+      - tests/component/ListinoFornitore.test.jsx
 
   - id: REQ-MAG-034
     title: "«Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese"

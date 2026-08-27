@@ -263,6 +263,81 @@ describe('i campi si compilano sulla riga', () => {
   })
 })
 
+// ── IL TOCCO SULLA RIGA AGGIUNGE E TOGLIE (REQ-MAG-036) ──────────────
+//
+// Chiesto dall'utente il 27/08 dopo aver provato: «se clicco su una riga
+// degli ordini, questo deve essere aggiunto se non è aggiunto e toglierlo se
+// è aggiunto. In pratica basta che tocco la riga». Il bersaglio è TUTTA la
+// riga: si compone un ordine passando in rassegna decine di prodotti, e
+// centrare una casella piccola decine di volte è il tipo di fatica che non si
+// nota finché non la si fa.
+describe('il tocco sulla riga', () => {
+  const rigaDi = (nome) => screen.getByLabelText(`Ordina ${nome}`).closest('.inv-row-main')
+
+  it('toccando la riga il prodotto entra nell’ordine, e ritoccandola esce', async () => {
+    const user = userEvent.setup()
+    render(<PurchaseOrdersPanel />)
+    await screen.findAllByText('Campari')
+    const spunta = screen.getByLabelText('Ordina Rum Zacapa (senza fornitore)')
+    expect(spunta).not.toBeChecked()
+    // Il nome del prodotto è in mezzo alla riga: è lì che va il dito.
+    await user.click(within(rigaDi('Rum Zacapa (senza fornitore)')).getByText('Rum Zacapa'))
+    expect(spunta).toBeChecked()
+    expect(within(carrello()).getByText(/Rum Zacapa/)).toBeInTheDocument()
+    await user.click(within(rigaDi('Rum Zacapa (senza fornitore)')).getByText('Rum Zacapa'))
+    expect(spunta).not.toBeChecked()
+  })
+
+  // I campi che si scrivono e la tendina restano esclusi: se no scriverci
+  // dentro toglierebbe dall'ordine il prodotto appena aggiunto.
+  it('scrivere nella quantità o nella tendina non toglie il prodotto', async () => {
+    const user = userEvent.setup()
+    render(<PurchaseOrdersPanel />)
+    await screen.findAllByText('Campari')
+    const spunta = screen.getByLabelText('Ordina Campari (Nova)')
+    expect(spunta).toBeChecked() // preselezionato: è esaurito
+    await user.click(screen.getByLabelText('Pezzi di Campari (Nova)'))
+    expect(spunta).toBeChecked()
+    await user.click(screen.getByLabelText('Totale di Campari (Nova)'))
+    expect(spunta).toBeChecked()
+    await user.click(screen.getByLabelText('Fornitore per Campari (Nova)'))
+    expect(spunta).toBeChecked()
+  })
+
+  // Il tasto che apre la scheda è escluso anche lui: aprire un prodotto per
+  // guardarlo non è la decisione di comprarlo.
+  it('aprire la scheda non aggiunge niente all’ordine', async () => {
+    const user = userEvent.setup()
+    render(<PurchaseOrdersPanel />)
+    await screen.findAllByText('Campari')
+    const spunta = screen.getByLabelText('Ordina Rum Zacapa (senza fornitore)')
+    await user.click(
+      screen.getByRole('button', { name: 'Apri la scheda di Rum Zacapa (senza fornitore)' })
+    )
+    expect(document.querySelector('.inv-row-dettaglio')).toBeInTheDocument()
+    expect(spunta).not.toBeChecked()
+  })
+
+  // DEVE FUNZIONARE ANCHE DA TASTIERA, e chi legge con un lettore di schermo
+  // deve capire cosa sta toccando: per questo la casella resta al suo posto
+  // invece di essere sostituita da un `div` cliccabile. È lei a portare ruolo
+  // («casella di controllo»), nome («Ordina Rum Zacapa») e stato, ed è lei a
+  // farsi premere con lo spazio dopo esserci arrivati col tabulatore.
+  it('da tastiera la casella porta nome, ruolo e stato, e lo spazio la preme', async () => {
+    const user = userEvent.setup()
+    render(<PurchaseOrdersPanel />)
+    await screen.findAllByText('Campari')
+    const spunta = screen.getByRole('checkbox', { name: 'Ordina Rum Zacapa (senza fornitore)' })
+    expect(spunta).not.toBeChecked()
+    spunta.focus()
+    expect(spunta).toHaveFocus()
+    await user.keyboard(' ')
+    expect(spunta).toBeChecked()
+    await user.keyboard(' ')
+    expect(spunta).not.toBeChecked()
+  })
+})
+
 describe('la riga che si apre', () => {
   // «Quando seleziono un item mi si deve aprire la riga che mi dirà anche le
   // info di quel prodotto — se in assortimento, out, in linea eccetera,

@@ -36,7 +36,15 @@ import {
   prodottoDaRigaOrdine,
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
-import { idRigaListino, livelloDi, statoOrdine, coloreACaso, fetteFornitore } from './listini.js'
+import {
+  idRigaListino,
+  livelloDi,
+  statoOrdine,
+  coloreACaso,
+  fetteFornitore,
+  pezziPerCollo,
+  unitaPrezzo,
+} from './listini.js'
 import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
 import { variazioneDiPrezzo } from './storicoPrezzi.js'
 import { aggancioAmmesso } from './fatture.js'
@@ -597,13 +605,29 @@ function mapSupplierPrice(snap) {
     id: snap.id,
     supplier_id: r.supplier_id ?? null,
     item_id: r.item_id ?? null,
-    // Il prezzo NETTO di un pezzo, come il costo del prodotto: due misure
-    // diverse per la stessa cosa vorrebbero dire un confronto sbagliato
-    // proprio dove serve confrontare.
+    // Il prezzo NETTO di CIÒ CHE QUEL FORNITORE FATTURA (REQ-MAG-040): il
+    // pezzo per quasi tutti, il COLLO per chi vende a cartoni — 25,05 per il
+    // cartone da 24 di Bjorne, non 1,04. Il prezzo al pezzo si ricava
+    // (`prezzoAlPezzo` in listini.js) e resta quello con cui si confrontano
+    // due fornitori e si valorizza il magazzino.
     price: r.price == null ? null : Number(r.price),
+    // Quanti PEZZI ci sono nel collo di questo fornitore. È suo e non del
+    // prodotto: la stessa Bjorne da MAR va a bottiglia e da FONT a cartone
+    // da 24, e sul prodotto ce ne starebbe uno solo per tutti.
+    // Si normalizza già qui, con la stessa funzione che lo rilegge ovunque:
+    // le 367 righe scritte prima di REQ-MAG-040 quel campo non ce l'hanno, e
+    // nessun conto a valle deve trovarsi un `undefined` da moltiplicare.
+    pezzi_per_collo: pezziPerCollo(r),
+    // In che unità è espresso `price`: «collo» (quello che fattura) è il
+    // caso normale e il valore di partenza, ma un fornitore può quotare la
+    // bottiglia o il contenuto (il vino al litro, la frutta al chilo). Il
+    // contenuto del pezzo NON sta qui: sta sul prodotto, ed è da lì che si
+    // legge — duplicarlo vorrebbe dire due numeri che prima o poi litigano.
+    unita_prezzo: unitaPrezzo(r),
     // La confezione DI QUEL FORNITORE («cartone da 6») e il codice sul suo
     // listino: servono a chi scrive l'ordine e a chi lo riceve dall'altra
-    // parte, e non sono la confezione del prodotto in magazzino.
+    // parte, e non sono la confezione del prodotto in magazzino. È una
+    // SCRITTA, e su una scritta non ci si moltiplica: il numero è qui sopra.
     package_label: r.package_label ?? null,
     code: r.code ?? null,
     last_price: r.last_price == null ? null : Number(r.last_price),
@@ -689,6 +713,17 @@ export function salvaRigaListino({
   supplier_id,
   item_id,
   price = null,
+  // Sta a parte dagli altri campi, e il valore di partenza è `undefined` e
+  // non `null` apposta (REQ-MAG-040): chi non lo nomina — la consegna che
+  // aggiorna un prezzo, il prodotto che nasce dal listino — NON deve
+  // cancellare il collo già scritto. La scrittura è un `merge`, e un `null`
+  // esplicito è una cancellazione: un fornitore che aumenta di dieci
+  // centesimi il cartone si ritroverebbe a vendere a pezzo.
+  pezzi_per_collo = undefined,
+  // Come i pezzi per collo, e per lo stesso motivo: chi non la nomina non
+  // deve cancellarla. La consegna che aggiorna un prezzo non sa in che unità
+  // quel listino è scritto, e sovrascriverla la manderebbe a «collo».
+  unita_prezzo = undefined,
   package_label = null,
   code = null,
   precedente = null,
@@ -703,6 +738,16 @@ export function salvaRigaListino({
     package_label: package_label || null,
     code: code || null,
   }
+  // Si scrive il numero NORMALIZZATO dalla stessa funzione che poi lo
+  // rilegge: un campo svuotato, zero o una virgola andata storta diventano 1,
+  // che è il collo da un pezzo — cioè «si compra a bottiglia», il caso
+  // normale. Così un collo messo per sbaglio si toglie davvero invece di
+  // restare a dividere il prezzo, e sul database non finisce mai un valore
+  // che un conto non sa moltiplicare.
+  if (pezzi_per_collo !== undefined) {
+    riga.pezzi_per_collo = pezziPerCollo({ pezzi_per_collo })
+  }
+  if (unita_prezzo !== undefined) riga.unita_prezzo = unitaPrezzo({ unita_prezzo })
   bgWrite(() => setDoc(doc(db, 'supplier_prices', id), riga, { merge: true }), 'listino fornitore')
   const variazione = scriviVariazionePrezzo({
     supplier_id,

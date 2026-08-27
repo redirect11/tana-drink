@@ -14,6 +14,10 @@
 // ordina e da chi, e vanno provati senza database.
 
 import { categoryColor, CATEGORY_PALETTE } from './categoryColors.js'
+// Il contenuto di un pezzo e il perché non si può ricavare stanno in
+// `inventory.js` e si LEGGONO da lì: sono fatti del prodotto, non del
+// listino, e riscriverli qui vorrebbe dire due verità da tenere allineate.
+import { contentBase, formatQty, fromBaseQty, motivoNonMigrabile } from './inventory.js'
 
 // ── I TRE LIVELLI DELLA RIGA D'ORDINE ────────────────────────────────
 //
@@ -72,6 +76,174 @@ export function coloreACaso() {
   return COLORI_FORNITORE[Math.floor(Math.random() * COLORI_FORNITORE.length)]
 }
 
+// ── COLLI E PEZZI: UNA SCALA SOLA (REQ-MAG-040) ──────────────────────
+//
+// La stessa Bjorne si compra A BOTTIGLIA da MAR e A CARTONE DA 24 da FONT,
+// e il prezzo che FONT fattura è quello del cartone. Il numero di pezzi che
+// c'è dentro è quindi DEL FORNITORE, non del prodotto: sul prodotto sarebbe
+// uno solo per tutti i fornitori, e per MAR sarebbe falso. Vive qui, sulla
+// riga di listino.
+//
+// LA SCALA È UNA E VALE SEMPRE, e sono tre moltiplicazioni:
+//
+//     COLLO → PEZZI → UNITÀ DI CONTENUTO
+//
+//     prezzo per unità di contenuto × contenuto di un pezzo
+//       × pezzi per collo = PREZZO DEL COLLO
+//
+// Vino a 9 €/litro in bottiglie da 75 cl: 9 × 0,75 = 6,75 a bottiglia;
+// cartone da 6 → il collo costa 40,50. Nessun ramo speciale in mezzo.
+//
+// Parole dell'utente: «le cose da un pezzo, banalmente possiamo dire che in
+// un collo c'è un pezzo». Chi si compra a bottiglia è quindi il caso
+// degenere di un collo da 1, non un ramo a parte: moltiplicare per uno non
+// cambia niente, e una strada sola non si può prendere storta. Il codice non
+// ha un «se è a colli»: ha un numero che a volte vale 1.
+//
+// PERCHÉ NON `package_label`: quella è la scritta che serve a chi riceve
+// l'ordine dall'altra parte («cartone da 6»), e su una scritta non ci si
+// moltiplica. Il conto vuole un numero.
+//
+// PERCHÉ SI CHIAMA «COLLO» E NON «CONFEZIONE»: in questo codice
+// «confezione» vuol già dire IL PEZZO — `caricoDaConfezioni`, `qty_packages`
+// e `package_size` contano bottiglie, non cartoni. Usare la stessa parola
+// per due cose dentro lo stesso conto è precisamente l'errore da cui nasce
+// questa voce (8 pezzi × il prezzo del cartone = 200 euro invece di 8,35).
+// «Collo» è anche la parola che l'app già usa dove il meccanismo esisteva a
+// metà: il carico a magazzino («Carico a colli — un cartone, una cassa»,
+// REQ-MAG-018), dove però quel numero serviva solo al calcolo del momento e
+// non veniva salvato da nessuna parte. Questo è ricordarselo, per fornitore.
+//
+// LA RIGA DI LISTINO PORTA DUE NUMERI E UNA PAROLA — il prezzo, l'unità in
+// cui è espresso, i pezzi per collo — e tutto il resto si ricava.
+//
+// IL CONTENUTO DEL PEZZO NON STA QUI, e non è un dettaglio: sta sul PRODOTTO
+// (`content_unit` + `package_size`, e `resa`/`resa_unit` per chi compra a
+// peso e dosa a volume). Quanto contiene una bottiglia è un fatto della
+// bottiglia, non del fornitore: duplicarlo vorrebbe dire due numeri che
+// prima o poi non sono d'accordo, e quel giorno nessuno saprebbe quale dei
+// due crede l'ordine.
+//
+// SE IL CONTENUTO NON È DICHIARATO IL CONTO NON SI FA. Un fornitore che
+// prezza al centilitro un prodotto di cui non si sa quanto contiene un pezzo
+// non deve produrre un numero inventato: produce un RIFIUTO LEGGIBILE, e si
+// appoggia al controllo che l'app ha già (`motivoNonMigrabile`) invece di
+// scriverne un secondo che dica la stessa cosa con altre parole.
+//
+// E NON SI INVENTANO CONVERSIONI FRA PESO E VOLUME: in questo progetto non
+// esistono. Da un chilo di limoni esce mezzo litro di succo perché lo dice
+// chi compra — è la RESA (`resaUso`), non una legge di natura.
+
+// Un collo vuoto vale UNO. È la difesa che conta: le 367 righe di listino
+// già in archivio quel campo non ce l'hanno, e un `undefined` che finisce in
+// una moltiplicazione dà un ordine da zero pezzi, in una divisione dà
+// Infinity. Si legge SOLO da qui — non ricordandosene nei punti d'uso, che è
+// il modo in cui questi difetti tornano.
+export const PEZZI_PER_COLLO_PREDEFINITO = 1
+
+export function pezziPerCollo(riga) {
+  const n = Number(riga?.pezzi_per_collo)
+  return Number.isFinite(n) && n >= 1 ? Math.round(n) : PEZZI_PER_COLLO_PREDEFINITO
+}
+
+// Se un collo c'è DAVVERO. Serve solo alle PAROLE: i conti sono uniformi,
+// ma a schermo «1 collo di Tanqueray» non lo dice nessuno — chi ordina al
+// banco pensa a bottiglie. «Collo» compare dove un collo esiste.
+export const aCollo = (riga) => pezziPerCollo(riga) > 1
+
+// ── L'UNITÀ IN CUI IL FORNITORE PREZZA ───────────────────────────────
+//
+// «Collo» è il caso normale e il valore di partenza: il prezzo è quello che
+// il fornitore fattura per un collo, che con un collo da uno è la bottiglia.
+// Gli altri sono i modi in cui un listino può essere scritto: al pezzo
+// (quando vende a cartoni ma quota la bottiglia) e all'unità di contenuto
+// (il vino al litro, la frutta al chilo).
+export const UNITA_PREZZO_PREDEFINITA = 'collo'
+export const UNITA_PREZZO = ['collo', 'pz', 'l', 'cl', 'ml', 'kg', 'g']
+
+// A quale famiglia appartiene un'unità di prezzo di contenuto. Le due
+// famiglie non si mescolano: un prezzo al chilo su una cosa che si misura in
+// millilitri non è una conversione da fare, è una riga scritta male.
+const FAMIGLIA_UNITA_PREZZO = { l: 'ml', cl: 'ml', ml: 'ml', kg: 'g', g: 'g' }
+
+export function unitaPrezzo(riga) {
+  const u = String(riga?.unita_prezzo || '').toLowerCase()
+  return UNITA_PREZZO.includes(u) ? u : UNITA_PREZZO_PREDEFINITA
+}
+
+export const ETICHETTA_UNITA_PREZZO = {
+  collo: 'collo',
+  pz: 'pz',
+  l: 'L',
+  cl: 'cl',
+  ml: 'ml',
+  kg: 'kg',
+  g: 'g',
+}
+
+// ── LA SCALA, IN UN POSTO SOLO ───────────────────────────────────────
+//
+// Da una riga di listino e dal suo prodotto escono i due prezzi che servono:
+// quello del COLLO, che è ciò che il fornitore fattura e la cifra scritta
+// sulla sua bolla, e quello del PEZZO, che è l'unico con cui si confrontano
+// due fornitori e si valorizza il magazzino.
+//
+// IL PREZZO AL PEZZO NON SI SALVA MAI. 25,05 / 24 fa 1,04375: congelato
+// arrotondato e rimoltiplicato per 24 dà 24,96, e il totale dell'ordine non
+// coinciderebbe più con la fattura. Si ricava ogni volta che serve, e la
+// cifra buona resta una sola.
+//
+// Quando il conto non si può fare, `problema` dice perché con parole che si
+// leggono: meglio un rifiuto in chiaro che un prezzo inventato, perché un
+// prezzo inventato diventa un ordine e poi una fattura che non torna.
+export function scalaListino(riga, item = null) {
+  const perCollo = pezziPerCollo(riga)
+  const unita = unitaPrezzo(riga)
+  const grezzo = riga?.price == null || riga.price === '' ? null : Number(riga.price)
+  const base = {
+    perCollo,
+    aCollo: perCollo > 1,
+    unita,
+    prezzo: grezzo,
+    contenuto: null,
+    prezzoCollo: null,
+    prezzoPezzo: null,
+    problema: null,
+  }
+  if (grezzo == null || !Number.isFinite(grezzo)) return base
+  if (unita === 'collo') return { ...base, prezzoCollo: grezzo, prezzoPezzo: grezzo / perCollo }
+  if (unita === 'pz') return { ...base, prezzoCollo: grezzo * perCollo, prezzoPezzo: grezzo }
+  // A unità di contenuto servono i centilitri (o i grammi) che stanno dentro
+  // un pezzo, e quelli li sa il PRODOTTO.
+  const famiglia = FAMIGLIA_UNITA_PREZZO[unita]
+  const c = contentBase(item)
+  if (!c || c.base !== famiglia) return { ...base, problema: perchePrezzoNonSiRicava(item, unita, c) }
+  // `contentBase` risponde in unità base (700 ml): si riporta all'unità in
+  // cui il fornitore ha scritto il prezzo (0,7 L).
+  const contenuto = fromBaseQty(c.size, unita)
+  const prezzoPezzo = grezzo * contenuto
+  return { ...base, contenuto, prezzoPezzo, prezzoCollo: prezzoPezzo * perCollo }
+}
+
+// Il rifiuto, detto a chi deve sistemarlo. Prima si prova con il controllo
+// che l'app ha già — è la stessa mancanza, e ripeterla con altre parole
+// vorrebbe dire due messaggi da tenere allineati per sempre.
+function perchePrezzoNonSiRicava(item, unita, contenuto) {
+  const eti = ETICHETTA_UNITA_PREZZO[unita] || unita
+  const suo = motivoNonMigrabile(item)
+  if (suo) return suo
+  if (contenuto) {
+    return `il prezzo è a ${eti}, ma un pezzo contiene ${formatQty(contenuto.size, contenuto.base)}: sono due misure diverse`
+  }
+  return `il prezzo è a ${eti} e non si sa quanto contiene un pezzo: va detto nella scheda del prodotto`
+}
+
+// Il prezzo di UN PEZZO, ricavato lungo la scala. È la porta da cui passa
+// chiunque debba confrontare due fornitori o valorizzare il magazzino.
+export function prezzoAlPezzo(riga, item = null) {
+  return scalaListino(riga, item).prezzoPezzo
+}
+
 // ── LE RIGHE DI LISTINO ──────────────────────────────────────────────
 
 // L'id di una riga è DETERMINISTICO: così l'unicità della coppia
@@ -94,6 +266,11 @@ export function rigaVirtuale(item) {
     supplier_id: item.supplier_id,
     item_id: item.id,
     price: item.cost ?? null,
+    // Il vecchio campo `supplier_id` sul prodotto porta un costo AL PEZZO,
+    // cioè un collo da uno prezzato al collo: il caso degenere della scala,
+    // non un'eccezione.
+    pezzi_per_collo: PEZZI_PER_COLLO_PREDEFINITO,
+    unita_prezzo: UNITA_PREZZO_PREDEFINITA,
     package_label: null,
     code: null,
     last_price: null,
@@ -140,6 +317,12 @@ export function catalogoOrdinabile({ items = [], listini = [], suppliers = [] } 
 }
 
 function componiRiga(item, riga, fornitore) {
+  // La riga da cui si fanno i conti: quella di listino, o — se il prodotto
+  // non sta sul listino di nessuno — una fatta col costo del prodotto. Una
+  // sola forma, così i prezzi si ricavano sempre nello stesso modo invece di
+  // avere un ramo per il caso normale e uno per gli altri 378 prodotti.
+  const effettiva = riga?.price != null ? riga : { price: item.cost ?? null }
+  const scala = scalaListino(effettiva, item)
   return {
     // La chiave della riga a schermo: prodotto + fornitore, come l'id di
     // listino. Senza fornitore resta il solo prodotto.
@@ -150,9 +333,22 @@ function componiRiga(item, riga, fornitore) {
     supplier_id: riga?.supplier_id ?? null,
     supplier_name: fornitore?.name ?? null,
     colore: coloreFornitore(fornitore),
-    // Il prezzo di listino di QUEL fornitore; senza riga si ricade sul
-    // costo del prodotto, che è l'ultimo pagato a chiunque.
-    price: riga?.price != null ? Number(riga.price) : (item.cost ?? null),
+    // `price` È IL PREZZO DEL COLLO, sempre (REQ-MAG-040): cioè quello che
+    // il fornitore fattura. Dove il collo è da uno — quasi ovunque — è anche
+    // il prezzo del pezzo, e non cambia niente rispetto a prima. Il prezzo
+    // del singolo pezzo si ricava ed è `prezzo_pezzo`, qui accanto:
+    // scambiarli è il difetto da cui questa voce è nata.
+    // Senza riga di listino si ricade sul costo del prodotto, che è l'ultimo
+    // pagato a chiunque — un prezzo al pezzo, cioè un collo da uno.
+    price: scala.prezzo,
+    pezzi_per_collo: scala.perCollo,
+    unita_prezzo: scala.unita,
+    // I due che si usano: il collo è quello che il fornitore fattura, il
+    // pezzo è quello che si confronta e si mostra. `problema` c'è quando il
+    // conto non si può fare, e allora si dice invece di inventare.
+    prezzo_collo: scala.prezzoCollo,
+    prezzo_pezzo: scala.prezzoPezzo,
+    problema: scala.problema,
     package_label: riga?.package_label ?? null,
     code: riga?.code ?? null,
     last_price: riga?.last_price ?? null,
@@ -208,13 +404,19 @@ export function fornitoreProposto(righe, { esclusi = [] } = {}) {
 
 // IL PIÙ ECONOMICO SI MOSTRA, NON SI SCEGLIE: serve a confrontare prima di
 // ordinare, ed è chi ordina a decidere se quel prezzo è ancora vero.
-export function piuEconomica(righe, { esclusi = [] } = {}) {
+//
+// SI CONFRONTA AL PEZZO, SEMPRE (REQ-MAG-040): la Bjorne da MAR costa 1,23 a
+// bottiglia e da FONT 25,05 al cartone da 24, cioè 1,04. Confrontando i due
+// prezzi così come sono scritti, il cartone sembrerebbe venti volte più caro
+// del pezzo — ed è il fornitore più conveniente.
+export function piuEconomica(righe, { esclusi = [], item = null } = {}) {
   const fuori = new Set(esclusi || [])
+  const al = (r) => prezzoAlPezzo(r, item)
   const candidate = (righe || []).filter(
-    (r) => r.supplier_id && !fuori.has(r.supplier_id) && Number(r.price) > 0
+    (r) => r.supplier_id && !fuori.has(r.supplier_id) && Number(al(r)) > 0
   )
   if (candidate.length === 0) return null
-  return candidate.reduce((min, r) => (Number(r.price) < Number(min.price) ? r : min))
+  return candidate.reduce((min, r) => (al(r) < al(min) ? r : min))
 }
 
 // I fornitori da cui QUEL prodotto è già stato messo in QUESTO ordine.

@@ -49,18 +49,24 @@ vi.mock('../../src/lib/api.js', () => ({
   // Le due scritture del listino tornano quello che hanno COMPOSTO in
   // memoria: la vera non rilegge niente, e il mock non deve poter far
   // sembrare che funzioni una schermata che invece aspetta la rete.
-  salvaRigaListino: vi.fn(({ supplier_id, item_id, price, package_label, code, precedente }) => ({
-    riga: {
-      ...(precedente || {}),
-      id: `${supplier_id}__${item_id}`,
-      supplier_id,
-      item_id,
-      price: price == null || price === '' ? null : Number(price),
-      package_label: package_label || null,
-      code: code || null,
-    },
-    variazione: null,
-  })),
+  salvaRigaListino: vi.fn(
+    ({ supplier_id, item_id, price, pezzi_per_collo, package_label, code, precedente }) => ({
+      riga: {
+        ...(precedente || {}),
+        id: `${supplier_id}__${item_id}`,
+        supplier_id,
+        item_id,
+        price: price == null || price === '' ? null : Number(price),
+        // Il collo vuoto vale UNO, come nella vera: è la scala di
+        // REQ-MAG-040, e un mock che rispondesse `undefined` proverebbe una
+        // schermata che nella realtà non esiste.
+        pezzi_per_collo: Number(pezzi_per_collo) >= 1 ? Math.round(Number(pezzi_per_collo)) : 1,
+        package_label: package_label || null,
+        code: code || null,
+      },
+      variazione: null,
+    })
+  ),
   eliminaRigaListino: vi.fn(),
   creaProdottoAListino: vi.fn(({ supplier_id, name, price }) => ({
     item: { id: 'nato', name, unit: 'pz', stock: 0, cost: 0, scheda_da_completare: true },
@@ -223,6 +229,104 @@ describe('che cosa vende questo fornitore, e a quanto', () => {
 
     expect(eliminaRigaListino).toHaveBeenCalledWith('nova', 'campari')
     await waitFor(() => expect(screen.queryByText('Campari')).toBeNull())
+  })
+})
+
+// ── I PEZZI PER COLLO SI SCRIVONO QUI (REQ-MAG-040) ──────────────────
+//
+// «Da un fornitore le Bjorne vanno a pezzo, da un altro vanno a collo
+// (cartone da X bottiglie)» (utente, 27/08/2026). Il numero è DEL FORNITORE e
+// non del prodotto — sul prodotto sarebbe uno solo per tutti — quindi si
+// compila da qui, che è la schermata del listino di quel fornitore: è dove
+// Flavio dirà che da FONT la Bjorne va a 24.
+describe('i pezzi per collo, e il prezzo che si ricava', () => {
+  const BJORNE = { id: 'bjorne', name: 'Bjorne', unit: 'pz', stock: 0, cost: 1.2333, vat: 22, kind: 'scorta' }
+
+  it('si scrive il numero, e accanto compare il prezzo del pezzo', async () => {
+    const user = userEvent.setup()
+    stato.items = [BJORNE]
+    stato.listini = [{ id: 'nova__bjorne', supplier_id: 'nova', item_id: 'bjorne', price: 25.05 }]
+    render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
+    // Finché il collo non c'è, il prezzo è quello del pezzo e basta: nessun
+    // secondo numero, nessuna parola nuova.
+    expect(await screen.findByLabelText('Prezzo di Bjorne')).toHaveValue(25.05)
+    expect(screen.queryByText('1,04 €/pz')).toBeNull()
+
+    await user.click(screen.getByLabelText('Dettagli di Bjorne'))
+    // Il campo parte da 1 — il collo da un pezzo, che è il caso normale — e
+    // si riscrive: mostrare vuoto lascerebbe credere che il dato manchi.
+    const perCollo = await screen.findByLabelText('Pezzi per collo')
+    expect(perCollo).toHaveValue(1)
+    await user.clear(perCollo)
+    await user.type(perCollo, '24')
+
+    // Adesso quel 25,05 è il prezzo del CARTONE, e la schermata lo dice: il
+    // segnaposto del campo diventa €/collo e sotto compare il prezzo del
+    // pezzo, che è il numero che una persona riconosce a colpo d'occhio.
+    expect(screen.getByLabelText('Prezzo di Bjorne')).toHaveAttribute('placeholder', '€/collo')
+    expect(screen.getByText('1,04 €/pz')).toBeInTheDocument()
+  })
+
+  it('il numero si salva sulla riga di listino', async () => {
+    const user = userEvent.setup()
+    stato.items = [BJORNE]
+    stato.listini = [{ id: 'nova__bjorne', supplier_id: 'nova', item_id: 'bjorne', price: 25.05 }]
+    render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
+    await user.click(await screen.findByLabelText('Dettagli di Bjorne'))
+    const perCollo = await screen.findByLabelText('Pezzi per collo')
+    await user.clear(perCollo)
+    await user.type(perCollo, '24')
+    await user.click(screen.getByText('Salva'))
+    expect(salvaRigaListino).toHaveBeenCalledWith(
+      expect.objectContaining({ item_id: 'bjorne', pezzi_per_collo: '24' })
+    )
+  })
+
+  // IL TERZO GRADINO DELLA SCALA: l'unità in cui quel fornitore prezza. Vino
+  // a 9 €/litro in bottiglie da 75 cl fa 6,75 a bottiglia, e il numero si
+  // vede mentre lo si scrive — è la difesa vera contro una moltiplicazione
+  // sbagliata: il risultato sta sotto gli occhi di chi sa quanto costa quella
+  // bottiglia.
+  it('si può prezzare al litro, e il prezzo della bottiglia si calcola da sé', async () => {
+    const user = userEvent.setup()
+    const VINO = { id: 'vino', name: 'Falanghina', unit: 'pz', stock: 0, package_size: 750, content_unit: 'ml', cost: 6.75, vat: 22, kind: 'scorta' }
+    stato.items = [VINO]
+    stato.listini = [{ id: 'nova__vino', supplier_id: 'nova', item_id: 'vino', price: 9 }]
+    render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
+    await user.click(await screen.findByLabelText('Dettagli di Falanghina'))
+    await user.selectOptions(await screen.findByLabelText('Prezzo espresso per'), 'l')
+    expect(screen.getByText('6,75 €/pz')).toBeInTheDocument()
+    await user.click(screen.getByText('Salva'))
+    expect(salvaRigaListino).toHaveBeenCalledWith(
+      expect.objectContaining({ item_id: 'vino', unita_prezzo: 'l' })
+    )
+  })
+
+  // SE IL CONTENUTO NON È DICHIARATO IL CONTO NON SI FA, e non esce un numero
+  // inventato: esce il perché, con le parole che il magazzino usa già per la
+  // stessa mancanza. Un prezzo inventato diventa un ordine, e poi una fattura
+  // che non torna.
+  it('un prezzo al litro su un prodotto senza contenuto dice perché non si può', async () => {
+    const user = userEvent.setup()
+    stato.items = [BJORNE]
+    stato.listini = [{ id: 'nova__bjorne', supplier_id: 'nova', item_id: 'bjorne', price: 9 }]
+    render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
+    await user.click(await screen.findByLabelText('Dettagli di Bjorne'))
+    await user.selectOptions(await screen.findByLabelText('Prezzo espresso per'), 'l')
+    expect(screen.getByText(/non si sa quanto contiene un pezzo/)).toBeInTheDocument()
+    expect(screen.queryByText(/€\/pz/)).toBeNull()
+  })
+
+  // IL COLLO VUOTO VALE UNO, mai zero e mai niente: le 367 righe già in
+  // archivio quel campo non ce l'hanno, e un `undefined` che finisce in una
+  // moltiplicazione dà un ordine da zero pezzi.
+  it('una riga senza il campo mostra un collo da un pezzo', async () => {
+    const user = userEvent.setup()
+    stato.items = [BJORNE]
+    stato.listini = [{ id: 'nova__bjorne', supplier_id: 'nova', item_id: 'bjorne', price: 1.2333 }]
+    render(<ListinoFornitore fornitore={NOVA} onIndietro={() => {}} />)
+    await user.click(await screen.findByLabelText('Dettagli di Bjorne'))
+    expect(await screen.findByLabelText('Pezzi per collo')).toHaveValue(1)
   })
 })
 
