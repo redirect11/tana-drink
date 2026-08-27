@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   fetchInventoryItems,
   fetchSuppliers,
@@ -11,25 +11,9 @@ import {
   fetchSupplierInvoices,
   collegaFatturaAFetta,
 } from '../lib/api.js'
-import {
-  assortimentoDi,
-  formatQty,
-  contenutoDelPezzo,
-  magazzinoBloccato,
-  stockStatus,
-} from '../lib/inventory.js'
-import { purchaseOrderTotals, suggestedPackages, purchaseOrderText } from '../lib/warehouse.js'
-import {
-  catalogoOrdinabile,
-  filtraCatalogo,
-  righeDiProdotto,
-  fornitoreProposto,
-  piuEconomica,
-  fornitoriGiaUsati,
-  fetteFornitore,
-  livelloDi,
-  ETICHETTA_LIVELLO,
-} from '../lib/listini.js'
+import { magazzinoBloccato } from '../lib/inventory.js'
+import { purchaseOrderText } from '../lib/warehouse.js'
+import { fetteFornitore, livelloDi, ETICHETTA_LIVELLO } from '../lib/listini.js'
 import {
   fatturaDellaFetta,
   fattureCollegabili,
@@ -39,26 +23,18 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { printOrdineFornitore } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-
-// Il catalogo intero sono quasi quattrocento prodotti moltiplicati per
-// quanti fornitori li vendono: disegnarli tutti appesantisce la schermata, e
-// nessuno scorre quattrocento righe — si cerca. Il limite si dice, così chi
-// non trova qualcosa sa che deve restringere, non che manca.
-const LIMITE_CATALOGO = 60
+import NuovoOrdinePanel from './NuovoOrdinePanel.jsx'
 
 // ── ORDINI FORNITORE ──────────────────────────────────────────────────
 //
-// SI PARTE DAL PRODOTTO, NON DAL FORNITORE (REQ-MAG-029). La schermata di
-// prima chiedeva prima il fornitore e mostrava solo i suoi prodotti:
-// scegliendo NOVA se ne vedevano tre su 388, perché il legame
-// prodotto-fornitore in magazzino quasi non esiste. Flavio: «sarebbe buono
-// se avesse il campetto di ricerca, in modo tale che io posso mettere il
-// prodotto INDIPENDENTEMENTE da quale fornitore resta associato».
+// Questo pannello tiene insieme due cose che si guardano una dopo l'altra:
+// la COMPOSIZIONE di un ordine nuovo — che è una schermata sua,
+// `NuovoOrdinePanel` (REQ-MAG-036) — e lo STORICO di quelli già fatti, che
+// resta qui finché non diventa «Lista Ordini» (REQ-MAG-038).
 //
-// Quindi: in alto la ricerca, sotto il catalogo con una riga per coppia
-// prodotto-fornitore (i doppioni si distinguono dal colore e dal nome del
-// fornitore), e il fornitore si sceglie sulla RIGA DELL'ORDINE, che è dove
-// la decisione conta davvero.
+// I dati si leggono una volta sola e si passano giù: magazzino, fornitori e
+// listini servono a tutte e due, e leggerli due volte vorrebbe dire due
+// versioni della stessa serata a schermo nello stesso momento.
 export default function PurchaseOrdersPanel() {
   const [suppliers, setSuppliers] = useState([])
   const [items, setItems] = useState([])
@@ -71,14 +47,6 @@ export default function PurchaseOrdersPanel() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  const [query, setQuery] = useState('')
-  const [filtroFornitore, setFiltroFornitore] = useState('all')
-  // L'ordine in composizione: una riga per prodotto-fornitore scelto. Il
-  // `rid` è un numero interno che resta lo stesso anche cambiando fornitore
-  // alla riga — se la chiave fosse prodotto+fornitore, cambiando tendina
-  // React smonterebbe il campo e la quantità appena scritta sparirebbe.
-  const [bozza, setBozza] = useState([])
-  const prossimoRid = useRef(1)
   const [consegnaFor, setConsegnaFor] = useState(null) // { ordine, fetta }
   const [confermaPagato, setConfermaPagato] = useState(null) // { ordine, fetta }
   const [fatturaPer, setFatturaPer] = useState(null) // la fetta da collegare
@@ -117,96 +85,12 @@ export default function PurchaseOrdersPanel() {
   // chiede — non la si riscrive.
   const bloccato = useMemo(() => magazzinoBloccato(items), [items])
 
-  // Fuori assortimento vuol dire «non si ricompra» (REQ-MAG-007): resta
-  // fuori dal catalogo ordinabile, come nella schermata di prima.
-  const ordinabili = useMemo(() => items.filter((i) => i.status !== 'out'), [items])
-  const catalogo = useMemo(
-    () => catalogoOrdinabile({ items: ordinabili, listini, suppliers }),
-    [ordinabili, listini, suppliers]
-  )
-  const visibili = useMemo(
-    () => filtraCatalogo(catalogo, { query, supplierId: filtroFornitore }),
-    [catalogo, query, filtroFornitore]
-  )
-
-  const itemsById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
-  const supsById = useMemo(() => new Map(suppliers.map((s) => [s.id, s])), [suppliers])
-
-  // Le righe dell'ordine, nella forma in cui vengono salvate.
-  const lines = useMemo(
-    () =>
-      bozza
-        .map((r) => {
-          const it = itemsById.get(r.item_id)
-          if (!it) return null
-          const listino = righeDiProdotto(it, listini).find((x) => x.supplier_id === r.supplier_id)
-          const sup = r.supplier_id ? supsById.get(r.supplier_id) : null
-          return {
-            item_id: it.id,
-            name: it.name,
-            unit: it.unit,
-            package_size: it.package_size ?? null,
-            // Il prezzo è quello del listino DI QUEL FORNITORE; senza riga
-            // di listino si ricade sul costo del prodotto, che è l'ultimo
-            // pagato a chiunque.
-            unit_cost: listino?.price != null ? Number(listino.price) : Number(it.cost) || 0,
-            vat: it.vat ?? 22,
-            qty_packages: Number(r.qty) || 0,
-            supplier_id: r.supplier_id ?? null,
-            supplier_name: sup?.name ?? null,
-            code: listino?.code ?? null,
-            stato: 'richiesto',
-            // L'ASSORTIMENTO PRE-IMPOSTATO (REQ-MAG-025 punto 5): si scrive
-            // solo dove è stato chiesto. Il campo è generico apposta — è uno
-            // stato commerciale, non un sì/no — così il giorno in cui
-            // serviranno anche «in linea» o «premium» cambia la sola tendina.
-            ...(r.assortimento ? { status_target: 'assortimento' } : {}),
-          }
-        })
-        .filter((l) => l && l.qty_packages > 0),
-    [bozza, itemsById, listini, supsById]
-  )
-  const totals = useMemo(() => purchaseOrderTotals(lines), [lines])
-
-  // Aggiunge una riga del catalogo all'ordine. Se quella coppia c'è già non
-  // se ne fa una seconda: si somma alla quantità, perché due righe uguali
-  // nello stesso ordine sono un doppione e non una scelta.
-  function aggiungi(riga, quanti = null) {
-    const suggerite = quanti ?? Math.max(1, suggestedPackages(riga.item))
-    setBozza((prev) => {
-      const gia = prev.find((r) => r.item_id === riga.item_id && r.supplier_id === riga.supplier_id)
-      if (gia) {
-        return prev.map((r) => (r === gia ? { ...r, qty: (Number(r.qty) || 0) + suggerite } : r))
-      }
-      // Senza un fornitore sulla riga si propone quello dell'ULTIMO
-      // ACQUISTO — non il più economico, che è quasi sempre il più vecchio.
-      const proposto = riga.supplier_id
-        ? riga.supplier_id
-        : (fornitoreProposto(righeDiProdotto(riga.item, listini))?.supplier_id ?? null)
-      return [
-        ...prev,
-        { rid: prossimoRid.current++, item_id: riga.item_id, supplier_id: proposto, qty: suggerite },
-      ]
-    })
-  }
-
-  const cambiaQta = (rid, qty) =>
-    setBozza((prev) => prev.map((r) => (r.rid === rid ? { ...r, qty } : r)))
-  const cambiaFornitore = (rid, supplier_id) =>
-    setBozza((prev) =>
-      prev.map((r) => (r.rid === rid ? { ...r, supplier_id: supplier_id || null } : r))
-    )
-  const cambiaAssortimento = (rid, assortimento) =>
-    setBozza((prev) => prev.map((r) => (r.rid === rid ? { ...r, assortimento } : r)))
-  const togli = (rid) => setBozza((prev) => prev.filter((r) => r.rid !== rid))
-
-  async function save() {
-    if (lines.length === 0) return
+  async function save(lines, totals) {
+    if (!lines || lines.length === 0) return
     setBusy(true)
     setError(null)
     try {
       await createPurchaseOrder({ lines, total_net: totals.net, total_gross: totals.gross })
-      setBozza([])
       await load()
     } catch (e) {
       setError(e.message)
@@ -284,7 +168,6 @@ export default function PurchaseOrdersPanel() {
     }
   }
 
-  const sottoScorta = visibili.filter((r) => suggestedPackages(r.item) > 0)
   const scoperte = useMemo(
     () => fetteSenzaFattura(orders, invoices, { suppliers }),
     [orders, invoices, suppliers]
@@ -308,189 +191,13 @@ export default function PurchaseOrdersPanel() {
         </div>
       )}
 
-      <div className="card">
-        <strong>Nuovo ordine</strong>
-        <p className="muted small" style={{ marginTop: 4 }}>
-          Cerca il prodotto e aggiungilo: il fornitore si sceglie sulla riga
-          dell’ordine. Un ordine può contenere prodotti di più fornitori.
-        </p>
-
-        <label htmlFor="po-cerca" style={{ marginTop: 8 }}>Cerca un prodotto</label>
-        <input
-          id="po-cerca"
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Es. Campari"
-        />
-
-        <label htmlFor="po-filtro" style={{ marginTop: 8 }}>Fornitore</label>
-        <select
-          id="po-filtro"
-          value={filtroFornitore}
-          onChange={(e) => setFiltroFornitore(e.target.value)}
-        >
-          <option value="all">Tutti i fornitori</option>
-          <option value="none">Senza fornitore</option>
-          {suppliers.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-
-        {sottoScorta.length > 0 && (
-          <button
-            className="btn secondary small block"
-            style={{ marginTop: 8 }}
-            onClick={() => sottoScorta.forEach((r) => aggiungi(r, suggestedPackages(r.item)))}
-          >
-            ⚡ Aggiungi i sotto scorta ({sottoScorta.length})
-          </button>
-        )}
-
-        {visibili.length === 0 && (
-          <p className="muted small" style={{ marginTop: 8 }}>
-            Nessun prodotto corrisponde alla ricerca.
-          </p>
-        )}
-
-        {/* IL CATALOGO. Una riga per coppia prodotto-fornitore: senza filtro
-            i doppioni si vedono tutti, distinti dalla striscia del colore e
-            dal nome del fornitore — sono le stesse strisce della lista del
-            magazzino (REQ-MAG-027). */}
-        <div className="inv-list">
-          {visibili.slice(0, LIMITE_CATALOGO).map((r) => {
-            const st = stockStatus(r.item)
-            const righeProdotto = righeDiProdotto(r.item, listini)
-            const economica = righeProdotto.length > 1 ? piuEconomica(righeProdotto) : null
-            const ultimo = righeProdotto.length > 1 ? fornitoreProposto(righeProdotto) : null
-            return (
-              <div className="inv-row" key={r.key} style={{ borderLeftColor: r.colore || undefined }}>
-                <div className="inv-row-main">
-                  <span className={`dot dot-${st}`} />
-                  <span className="grow" style={{ minWidth: 0 }}>
-                    <span className="inv-row-name">{r.item_name}</span>{' '}
-                    <span className="muted small">
-                      {r.supplier_name || 'senza fornitore'}
-                      {ultimo?.supplier_id === r.supplier_id ? ' · ultimo acquisto' : ''}
-                      {economica?.supplier_id === r.supplier_id ? ' · più economico' : ''}
-                    </span>
-                    <span className="muted small" style={{ display: 'block' }}>
-                      In casa: {formatQty(r.item.stock, r.item.unit)}
-                      {contenutoDelPezzo(r.item) ? ` · 1 pz = ${contenutoDelPezzo(r.item)}` : ''}
-                      {r.price != null ? ` · ${formatPrice(r.price)}/pz` : ''}
-                      {r.package_label ? ` · ${r.package_label}` : ''}
-                      {suggestedPackages(r.item) > 0 ? ` · sugg. ${suggestedPackages(r.item)} pz` : ''}
-                    </span>
-                  </span>
-                  <button
-                    className="btn small"
-                    aria-label={`Aggiungi ${r.item_name}`}
-                    onClick={() => aggiungi(r)}
-                  >
-                    ＋
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        {visibili.length > LIMITE_CATALOGO && (
-          <p className="muted small" style={{ marginTop: 6 }}>
-            Mostrati {LIMITE_CATALOGO} prodotti su {visibili.length}: restringi la ricerca.
-          </p>
-        )}
-      </div>
-
-      {bozza.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <strong>Ordine in composizione</strong>
-          {bozza.map((r) => {
-            const it = itemsById.get(r.item_id)
-            if (!it) return null
-            const righeProdotto = righeDiProdotto(it, listini)
-            // «Va anche bene che è disabilitato il fornitore in quanto già
-            // l'ho ordinato a quel fornitore» (Flavio): un fornitore già
-            // usato per QUESTO prodotto in QUESTO ordine non è più
-            // scegliibile per un'altra riga dello stesso prodotto.
-            const usati = fornitoriGiaUsati(
-              bozza.filter((x) => x.rid !== r.rid),
-              r.item_id
-            )
-            const economica = piuEconomica(righeProdotto, { esclusi: [r.supplier_id] })
-            return (
-              <div className="row between" key={r.rid} style={{ alignItems: 'center', marginTop: 8, gap: 8 }}>
-                <div className="grow" style={{ minWidth: 0 }}>
-                  <span>{it.name}</span>
-                  <select
-                    aria-label={`Fornitore per ${it.name}`}
-                    value={r.supplier_id || ''}
-                    onChange={(e) => cambiaFornitore(r.rid, e.target.value)}
-                    style={{ marginTop: 4 }}
-                  >
-                    <option value="">— Nessun fornitore —</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id} disabled={usati.has(s.id)}>
-                        {s.name}{usati.has(s.id) ? ' (già in questo ordine)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {/* Il più economico si MOSTRA, non si sceglie: il prezzo
-                      più basso in archivio è quasi sempre il più vecchio,
-                      perché nessuno aggiorna al rialzo il listino di un
-                      fornitore da cui non compra più. */}
-                  {economica?.supplier_id && (
-                    <span className="muted small" style={{ display: 'block' }}>
-                      Più economico: {supsById.get(economica.supplier_id)?.name || '—'} a{' '}
-                      {formatPrice(economica.price)}/pz
-                    </span>
-                  )}
-                  {/* L'ASSORTIMENTO SI PREPARA MENTRE LA MERCE VIAGGIA
-                      (REQ-MAG-025 punto 5), e il cambio scatta al carico:
-                      metterlo in assortimento adesso vorrebbe dire offrire
-                      una bottiglia che non è ancora arrivata. Si chiede solo
-                      dove cambia qualcosa: su un prodotto già in assortimento
-                      sarebbe una casella che non fa niente. */}
-                  {assortimentoDi(it) !== 'assortimento' && (
-                    <label className="row small" style={{ gap: 6, alignItems: 'center', marginTop: 4 }}>
-                      <input
-                        type="checkbox"
-                        checked={!!r.assortimento}
-                        aria-label={`Metti ${it.name} in assortimento quando arriva`}
-                        onChange={(e) => cambiaAssortimento(r.rid, e.target.checked)}
-                      />
-                      <span className="muted">In assortimento quando arriva</span>
-                    </label>
-                  )}
-                </div>
-                <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  aria-label={`Quantità di ${it.name}`}
-                  value={r.qty ?? ''}
-                  placeholder="pz"
-                  onChange={(e) => cambiaQta(r.rid, e.target.value)}
-                  style={{ width: 76, textAlign: 'right' }}
-                />
-                <button className="btn ghost small" title="Togli dall’ordine" onClick={() => togli(r.rid)}>✕</button>
-              </div>
-            )
-          })}
-
-          {lines.length > 0 && (
-            <>
-              <hr style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-              <div className="row between">
-                <span className="muted">{totals.pieces} confezioni · netto {formatPrice(totals.net)}</span>
-                <strong>{formatPrice(totals.gross)} <span className="muted small">+IVA</span></strong>
-              </div>
-              <button className="btn block" style={{ marginTop: 8 }} onClick={save} disabled={busy}>
-                📤 Salva ordine
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      <NuovoOrdinePanel
+        items={items}
+        suppliers={suppliers}
+        listini={listini}
+        busy={busy}
+        onSalva={save}
+      />
 
       {orders.length > 0 && (
         <div className="card" style={{ marginTop: 12 }}>
