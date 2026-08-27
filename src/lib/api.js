@@ -37,6 +37,7 @@ import {
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
 import { idRigaListino, livelloDi, statoOrdine, coloreACaso, fetteFornitore } from './listini.js'
+import { variazioneDiPrezzo } from './storicoPrezzi.js'
 import { aggancioAmmesso } from './fatture.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
@@ -99,6 +100,11 @@ const suppliersCol = collection(db, 'suppliers')
 // accanto ai fornitori e non dentro il prodotto perché il prodotto resta
 // UNO — è la riga a duplicarsi, non il Campari.
 const supplierPricesCol = collection(db, 'supplier_prices')
+// LO STORICO DEI PREZZI (REQ-MAG-035): una riga per ogni volta che il
+// prezzo di una coppia prodotto-fornitore cambia. È un registro, non uno
+// stato: le righe si aggiungono e non si riscrivono, perché la domanda a
+// cui risponde — «quanto è aumentato da gennaio» — vive nel passato.
+const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const groupsCol = collection(db, 'groups')
@@ -601,15 +607,83 @@ export async function fetchSupplierPrices() {
   return snap.docs.map(mapSupplierPrice)
 }
 
+// ── LO STORICO DELLE VARIAZIONI DI PREZZO (REQ-MAG-035) ─────────────
+//
+// Una porta sola per scriverlo, e la usano TUTTE le strade che cambiano un
+// prezzo di listino: il listino compilato a mano nella scheda del
+// fornitore, la correzione alla consegna di un ordine, l'allineamento
+// fatto da una fattura. Se una delle tre non passasse di qui, il grafico
+// che verrà racconterebbe una storia con dei buchi dentro, e i buchi in uno
+// storico non si riempiono dopo.
+//
+// `prezzo_prima` lo porta il chiamante, letto PRIMA di scrivere: qui non si
+// rilegge niente, perché la scrittura parte in sottofondo e nell'istante
+// della rilettura la cache conterrebbe ancora il prezzo di prima.
+function scriviVariazionePrezzo({ supplier_id, item_id, price, prezzo_prima, origine, quando }) {
+  const variazione = variazioneDiPrezzo({
+    supplier_id,
+    item_id,
+    price,
+    prezzo_prima,
+    origine,
+    quando: quando || new Date().toISOString(),
+  })
+  // Niente variazione, niente riga: uno storico che registra anche i
+  // «non è cambiato niente» smette di essere leggibile alla terza consegna.
+  if (!variazione) return null
+  const { id, ...dati } = variazione
+  bgWrite(
+    () => setDoc(doc(db, 'supplier_price_history', id), dati),
+    'storico prezzi fornitore'
+  )
+  return variazione
+}
+
+function mapVariazionePrezzo(snap) {
+  const v = snap.data() || {}
+  return {
+    id: snap.id,
+    supplier_id: v.supplier_id ?? null,
+    item_id: v.item_id ?? null,
+    price: v.price == null ? null : Number(v.price),
+    previous_price: v.previous_price == null ? null : Number(v.previous_price),
+    origine: v.origine ?? 'manuale',
+    at: v.at ?? null,
+  }
+}
+
+// Le variazioni di un fornitore. Il filtro è su un campo solo — niente
+// indice composto da tenere allineato — e l'ordine si fa in memoria, dove
+// costa niente: sono le variazioni di un fornitore, non di un magazzino.
+export async function fetchVariazioniPrezzo({ supplier_id = null } = {}) {
+  const q = supplier_id
+    ? query(supplierPriceHistoryCol, where('supplier_id', '==', supplier_id))
+    : supplierPriceHistoryCol
+  const snap = await getDocs(q)
+  return snap.docs.map(mapVariazionePrezzo)
+}
+
 // Salva (o aggiorna) una riga di listino. `merge` perché la consegna scrive
 // solo il prezzo e la sua data: riscrivere tutto cancellerebbe il codice
 // articolo e la confezione che qualcuno aveva compilato a mano.
-export async function salvaRigaListino({
+//
+// NON SI ASPETTA LA RETE e non si rilegge: la riga che torna è composta in
+// memoria da quella di partenza più quello che si è appena scritto. Chi
+// compila un listino ne tocca venti righe di fila, e ogni riga che aspetta
+// l'ACK del server è una riga che al primo buco di rete resta ferma con il
+// prezzo vecchio a schermo.
+//
+// `precedente` è la riga com'era prima — la schermata ce l'ha già davanti —
+// e serve a due cose: sapere se il prezzo è cambiato davvero, e non perdere
+// i campi che questa scrittura non tocca.
+export function salvaRigaListino({
   supplier_id,
   item_id,
   price = null,
   package_label = null,
   code = null,
+  precedente = null,
+  origine = 'manuale',
 }) {
   const id = idRigaListino(supplier_id, item_id)
   if (!id) throw new Error('Serve il fornitore e il prodotto')
@@ -620,14 +694,62 @@ export async function salvaRigaListino({
     package_label: package_label || null,
     code: code || null,
   }
-  await setDoc(doc(db, 'supplier_prices', id), riga, { merge: true })
-  return { id, ...riga, last_price: null, last_price_at: null }
+  bgWrite(() => setDoc(doc(db, 'supplier_prices', id), riga, { merge: true }), 'listino fornitore')
+  const variazione = scriviVariazionePrezzo({
+    supplier_id,
+    item_id,
+    price: riga.price,
+    prezzo_prima: precedente?.price ?? null,
+    origine,
+  })
+  // `last_price` e `last_price_at` dicono l'ultimo acquisto VERO, e un
+  // prezzo battuto a mano non è un acquisto: si tengono quelli di prima,
+  // se no il fornitore proposto al prossimo ordine sarebbe quello che
+  // qualcuno ha toccato per ultimo invece di quello da cui si è comprato.
+  //
+  // La variazione torna INSIEME alla riga perché la schermata la mostra
+  // accanto al prezzo: andarsela a rileggere vorrebbe dire aspettare la
+  // rete per far comparire una cosa che si è appena scritta.
+  return {
+    riga: { last_price: null, last_price_at: null, ...(precedente || {}), id, ...riga },
+    variazione,
+  }
 }
 
-export async function eliminaRigaListino(supplier_id, item_id) {
+export function eliminaRigaListino(supplier_id, item_id) {
   const id = idRigaListino(supplier_id, item_id)
   if (!id) return
-  await deleteDoc(doc(db, 'supplier_prices', id))
+  // Lo storico NON si cancella: quel prezzo è stato pagato davvero, e
+  // togliere un prodotto dal catalogo di un fornitore non lo rende falso.
+  bgWrite(() => deleteDoc(doc(db, 'supplier_prices', id)), 'listino fornitore')
+}
+
+// ── UN PRODOTTO CHE NASCE DAL LISTINO (REQ-MAG-035) ──────────────────
+//
+// «Posso associare i prodotti già in magazzino a quel fornitore, o
+// addirittura CREARE un prodotto che poi andrà a finire in magazzino»
+// (l'utente, 27/08/2026). La strada è la stessa del prodotto che nasce da
+// una consegna (REQ-MAG-032) e passa dalla stessa funzione: nome, prezzo e
+// nient'altro, contato a pezzi, con la SCHEDA DA COMPLETARE addosso. Le tre
+// cose che mancano — categoria, quanto contiene un pezzo, soglia di
+// riordino — un listino non le sa, e inventarle sarebbe peggio.
+//
+// L'ID SE LO DÀ IL CLIENT. `addDoc` risolve solo con l'ACK del server:
+// offline non torna mai, e chi ha appena creato un prodotto resterebbe a
+// guardare una schermata ferma. Con un id generato qui la scrittura parte
+// in sottofondo e il prodotto esiste subito, anche senza rete.
+export function creaProdottoAListino({ supplier_id, name, price = null }) {
+  if (!supplier_id) throw new Error('Serve il fornitore')
+  const nome = String(name || '').trim()
+  if (!nome) throw new Error('Serve il nome del prodotto')
+  const prodotto = prodottoDaRigaOrdine({ name: nome, unit_cost: price })
+  const ref = doc(inventoryCol)
+  bgWrite(
+    () => setDoc(ref, { ...prodotto, created_at: serverTimestamp() }),
+    'prodotto nuovo dal listino'
+  )
+  const { riga, variazione } = salvaRigaListino({ supplier_id, item_id: ref.id, price })
+  return { item: { id: ref.id, ...prodotto }, riga, variazione }
 }
 
 export async function createInventoryItem(item) {
@@ -1067,6 +1189,13 @@ function registraAcquisto({
   aggiornaPrezzo = true,
   nasce = false,
   statusTarget = null,
+  // Il prezzo che quel fornitore faceva PRIMA di questa merce, letto dalla
+  // riga di listino insieme all'articolo: serve solo allo storico, e si
+  // legge prima di scrivere perché dopo la cache direbbe già il nuovo.
+  prezzoPrima = null,
+  // Da dove viene il prezzo che si sta accettando (REQ-MAG-035): alla
+  // consegna lo detta la bolla, sulla fattura il documento fiscale.
+  origine = 'consegna',
 }) {
   // Nessun articolo, nessuna giacenza da alzare e nessun costo da scrivere:
   // il documento resta valido lo stesso, il magazzino non c'entra.
@@ -1138,6 +1267,35 @@ function registraAcquisto({
         ),
       'listino fornitore'
     )
+    // E LA VARIAZIONE RESTA SCRITTA (REQ-MAG-035). La riga di listino tiene
+    // un prezzo solo: senza questa seconda scrittura, l'aumento che si sta
+    // accettando cancellerebbe per sempre quello che si pagava prima.
+    scriviVariazionePrezzo({
+      supplier_id: supplierId,
+      item_id: itemId,
+      price: costo,
+      prezzo_prima: prezzoPrima,
+      origine,
+      quando: adesso,
+    })
+  }
+}
+
+// Il prezzo che quel fornitore faceva finora, letto dalla riga di listino.
+// Si legge INSIEME agli articoli, nella lettura che precede le scritture:
+// dopo non si potrebbe più: la riga sarebbe già stata riscritta in cache.
+async function prezzoDiListino(supplierId, itemId) {
+  const rigaId = idRigaListino(supplierId, itemId)
+  if (!rigaId) return null
+  try {
+    const snap = await getDoc(doc(db, 'supplier_prices', rigaId))
+    const p = snap.exists() ? snap.data()?.price : null
+    return p == null ? null : Number(p)
+  } catch {
+    // Il listino non è il motivo per cui si sta caricando la merce: se non
+    // si riesce a leggerlo, la consegna va avanti e lo storico registra una
+    // variazione senza il prezzo di prima.
+    return null
   }
 }
 
@@ -1176,9 +1334,17 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
   // magazzino è ancora scritto alla vecchia maniera (BUG-029): fermandosi a
   // metà del giro, metà ordine risulterebbe consegnato e metà no, e nessuno
   // saprebbe più dove ricominciare.
-  const snaps = await Promise.all(
-    scelti.map((i) => getDoc(doc(db, 'inventory_items', lines[i].item_id)))
-  )
+  const [snaps, prezziPrima] = await Promise.all([
+    Promise.all(scelti.map((i) => getDoc(doc(db, 'inventory_items', lines[i].item_id)))),
+    // Il prezzo di listino di prima, per lo storico (REQ-MAG-035): si legge
+    // qui, nella stessa attesa degli articoli, perché più avanti la riga di
+    // listino sarà già stata riscritta e la cache direbbe il prezzo nuovo.
+    Promise.all(
+      scelti.map((i) =>
+        prezzoDiListino(lines[i].supplier_id ?? order.supplier_id ?? null, lines[i].item_id)
+      )
+    ),
+  ])
   const articoli = snaps.map(articoloScrivibile)
 
   // Firestore non accetta `serverTimestamp()` DENTRO un array: la data della
@@ -1217,6 +1383,8 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
       supplierId: l.supplier_id ?? order.supplier_id ?? null,
       adesso,
       motivo: 'ordine fornitore',
+      prezzoPrima: prezziPrima[k],
+      origine: 'consegna',
       // L'assortimento deciso quando l'ordine è partito si applica adesso,
       // che la merce è arrivata davvero (REQ-MAG-025 punto 5).
       statusTarget: l.status_target ?? null,
@@ -1458,9 +1626,17 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, 
   // PRIMA SI LEGGE TUTTO, POI SI SCRIVE, come alla consegna di un ordine:
   // fermandosi a metà, metà fattura risulterebbe caricata e metà no, e
   // nessuno saprebbe più dove ricominciare.
-  const snaps = await Promise.all(
-    nuove.map((r) => getDoc(doc(db, 'inventory_items', r.item_id)))
-  )
+  const [snaps, prezziPrima] = await Promise.all([
+    Promise.all(nuove.map((r) => getDoc(doc(db, 'inventory_items', r.item_id)))),
+    // Il prezzo di listino di prima, per lo storico (REQ-MAG-035): la
+    // fattura è il documento che ALLINEA il listino, quindi è anche la
+    // strada da cui arrivano le variazioni che pesano di più.
+    Promise.all(
+      nuove.map((r) =>
+        r?.aggiorna_prezzo ? prezzoDiListino(fattura.supplier_id ?? null, r.item_id) : null
+      )
+    ),
+  ])
   // `articoloScrivibile` si ferma se il magazzino è ancora scritto alla
   // vecchia maniera (BUG-029) — ma solo quando c'è davvero una giacenza da
   // alzare. Senza carico non si tocca nessuno stock: bloccare anche lì
@@ -1489,6 +1665,8 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, 
       // CHI NON RISPONDE NON AGGIORNA NIENTE: il pre-impostato della domanda
       // sul prezzo è «lascia com'è», e qui si limita a obbedire.
       aggiornaPrezzo: !!r.aggiorna_prezzo,
+      prezzoPrima: prezziPrima[k],
+      origine: 'fattura',
     })
     return {
       item_id: r.item_id,
