@@ -220,6 +220,14 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // STORICO DEI PREZZI — una riga per ogni variazione di un prezzo di
+    // listino, con la data e da dove viene (REQ-MAG-035). Stessa mano del
+    // listino: chi può cambiare un prezzo può scriverne la variazione, e
+    // chi legge il listino deve poter leggere com'è arrivato a quel numero.
+    match /supplier_price_history/{variazioneId} {
+      allow read, write: if isBartender();
+    }
+
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
       allow read, write: if isBartender();
