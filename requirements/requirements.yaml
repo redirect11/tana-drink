@@ -7167,7 +7167,7 @@ requirements:
 
   - id: REQ-MAG-035
     title: "Il listino si compila nella scheda del fornitore, non ordinando"
-    area: "src/components/SuppliersPanel.jsx, src/lib/listini.js, src/lib/api.js"
+    area: "src/components/ListinoFornitore.jsx, src/lib/storicoPrezzi.js, src/lib/api.js"
     description: >
       Chiesto dall'utente il 27/08/2026, dopo aver provato quello che era
       stato costruito: «l'associazione prodotto -> fornitori DEVE avvenire
@@ -7220,11 +7220,46 @@ requirements:
       un'altra voce; QUI si scrive il dato senza cui non potra' mai esistere.
       Chi tocca questa parte scriva lo storico anche se il grafico non c'e'
       ancora: uno storico non si puo' ricostruire all'indietro.
-    status: todo
+      COM'E' STATO FATTO (27/08/2026). Il listino e' il DETTAGLIO della riga
+      del fornitore, non una sottosezione in piu': si apre da «📋 Listino» in
+      Fornitori -> Gestione fornitori, si esce con «← Fornitori» e uscendo si
+      dimentica (docs/navigazione.md). Creando un fornitore si apre subito il
+      suo listino, che e' quello che l'utente chiedeva con «quando
+      creo/modifico un fornitore». La scheda prodotto del magazzino resta
+      dov'era, tendina fornitore compresa: «non deve cambiare l'attuale UI o
+      UX del magazzino» — scrive la sua riga di listino come prima, e adesso
+      anche la variazione.
+      IL PRODOTTO CHE NASCE DA QUI passa dalla stessa funzione del prodotto
+      che nasce da una consegna (`prodottoDaRigaOrdine`, REQ-MAG-032): nome e
+      prezzo, contato a pezzi, con la SCHEDA DA COMPLETARE addosso. L'id se
+      lo da' il client invece di aspettare `addDoc`, che offline non torna
+      mai: il prodotto esiste subito, anche senza rete.
+      LO STORICO E' UNA COLLEZIONE A RADICE, `supplier_price_history`, una
+      riga per variazione: `supplier_id`, `item_id`, `price`,
+      `previous_price`, `origine` (manuale / consegna / fattura) e `at`. L'id
+      e' deterministico — coppia piu' istante — perche' le scritture in
+      sottofondo si ripetono quando falliscono, e con un id casuale il
+      secondo tentativo lascerebbe un doppione che sul grafico si legge come
+      un'oscillazione mai avvenuta. Il prezzo di prima sta SULLA RIGA: chi
+      legge una variazione da sola deve poter dire di quanto e' salita.
+      LE TRE STRADE CHE LA SCRIVONO passano tutte da `scriviVariazionePrezzo`
+      in `api.js`: `salvaRigaListino` (a mano), il ramo dentro
+      `registraAcquisto` chiamato dalla consegna di un ordine, e lo stesso
+      ramo chiamato dalle righe di una fattura. Il prezzo di prima si legge
+      PRIMA di scrivere, nella stessa attesa che gia' legge gli articoli:
+      dopo, la cache direbbe gia' quello nuovo. Una variazione si scrive solo
+      se il prezzo cambia davvero, al centesimo — se no lo storico si
+      riempirebbe di righe uguali a ogni consegna.
+      RESTA FUORI, ed e' voluto: il grafico dell'andamento dei prezzi (voce
+      sua), e la schermata degli ordini, che si rifa' col 036/037.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/storicoPrezzi.test.js
+      - tests/unit/storicoPrezziScrittura.test.js
+      - tests/component/ListinoFornitore.test.jsx
 
   - id: REQ-MAG-036
     title: "«Nuovo Ordine»: una tabella sola, e la riga che si apre"
