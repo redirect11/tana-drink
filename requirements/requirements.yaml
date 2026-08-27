@@ -7343,11 +7343,23 @@ requirements:
       due capi, e non possono divergere: un prodotto che non e' piu' «in
       assortimento» ma resta dentro un ordine aperto e' un ordine che nessuno
       sa piu' di aver fatto.
-      RESTA APERTO, e va deciso guardandolo: se l'ordine arriva ma la giacenza
-      caricata NON supera la soglia, il prodotto non ha piu' un ordine dietro
-      pur essendo ancora scarso. Ricade nel caso «in assortimento senza
-      ordine» descritto sopra — cioe' torna fra quelli che si propongono da
-      soli al giro dopo — oppure torna in linea/premium e basta.
+      SE L'ORDINE ARRIVA MA LE SCORTE RESTANO BASSE, il prodotto torna
+      comunque IN LINEA o PREMIUM. Deciso dall'utente il 27/08, che ha
+      scartato l'ipotesi contraria: «ma anche no. In assortimento SENZA
+      ORDINE e' solo se Flavio lo cambia manualmente. Torna in linea o premium
+      ma con scorte in esaurimento».
+      E' la regola piu' semplice, ed e' anche la piu' giusta: sono DUE ASSI
+      DIVERSI, e nel codice lo sono gia'. Lo STATO COMMERCIALE dice che posto
+      ha quel prodotto nel locale (in linea, premium, fuori linea); la SCORTA
+      — `stockStatus`, che confronta giacenza e soglia — dice se ce n'e'
+      abbastanza. «In assortimento» e' l'unico punto in cui i due assi si
+      toccano, e li si tocca per una ragione precisa e temporanea: c'e' un
+      ordine aperto. Finito l'ordine, i due assi si separano di nuovo.
+      Quindi uscire dall'ordine restituisce SEMPRE lo stato di prima, senza
+      guardare la giacenza. Che le scorte siano ancora in esaurimento lo dice
+      gia' la scorta, si vede in magazzino come per qualunque altro prodotto
+      basso, e basta quello per farlo tornare fra i proposti al giro dopo
+      (REQ-MAG-036). Non serve un secondo modo di dire la stessa cosa.
       L'INTERFACCIA DEL MAGAZZINO NON SI TOCCA: «non deve cambiare l'attuale
       UI o UX del magazzino, mi raccomando» (utente, 27/08). I quattro stati
       restano quattro in schermata e nei filtri; quello che cambia e' chi li
