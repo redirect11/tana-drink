@@ -37,6 +37,7 @@ import {
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
 import { idRigaListino, livelloDi, statoOrdine, coloreACaso, fetteFornitore } from './listini.js'
+import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
 import { variazioneDiPrezzo } from './storicoPrezzi.js'
 import { aggancioAmmesso } from './fatture.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
@@ -196,6 +197,14 @@ function mapItem(snap) {
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
     // scelta esplicita (i prodotti che non devono mancare), non il default.
     status: i.status ?? 'assortimento',
+    // LA MEMORIA DELLO STATO DI PRIMA (REQ-MAG-037). «In assortimento» è uno
+    // stato di PASSAGGIO che prende il posto di «in linea» o «premium»
+    // mentre c'è un ordine aperto: `assortimento_da` dice a quale stato
+    // tornare, `ordini_assortimento` quali ordini lo tengono lì. Assenti su
+    // tutto quello che c'è già, ed è giusto così: un prodotto senza memoria
+    // uscendo dall'ordine resta dov'è, non si promuove a indovinare.
+    assortimento_da: i.assortimento_da ?? null,
+    ordini_assortimento: Array.isArray(i.ordini_assortimento) ? i.ordini_assortimento : [],
     // SCHEDA DA COMPLETARE (REQ-MAG-032): il prodotto è nato da una consegna,
     // quindi porta solo quello che l'ordine sapeva. Non è la lista «da
     // sistemare» del travaso, che blocca il magazzino: qui non blocca niente.
@@ -1129,15 +1138,24 @@ function mapPurchaseOrder(snap) {
   }
 }
 
-// L'ORDINE RESTA UNO, COI FORNITORI DENTRO (REQ-MAG-025 del 20/08, e
-// REQ-MAG-029): il fornitore sta sulla RIGA, e il per-fornitore è una vista.
-// I due campi in testa restano scritti quando l'ordine ha un fornitore solo
-// — è il caso normale, ed è quello che leggono la stampa, l'email e lo
-// scadenzario senza sapere niente delle fette.
-export async function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
+// UN ORDINE PER FORNITORE (REQ-MAG-037): alla conferma del riepilogo ne
+// nasce uno per ogni fornitore da cui si sta ordinando. I due campi in testa
+// restano quelli che leggono la stampa, l'email e lo scadenzario; il
+// fornitore sulla riga resta scritto, ed è il motivo per cui `fetteFornitore`
+// continua a funzionare sullo storico già in archivio (REQ-MAG-038 lo
+// rifarà).
+//
+// NON SI ASPETTA LA RETE. Prima erano due attese in fila — la scrittura e la
+// rilettura — e con la cassa offline la conferma restava appesa per sempre:
+// il tasto premuto e niente che succede, che al banco vuol dire premerlo di
+// nuovo. L'id si prende da Firestore senza chiedere niente a nessuno, la
+// scrittura parte in sottofondo e l'ordine si compone in memoria — non lo si
+// rilegge, che la cache direbbe ancora il passato (BUG-045).
+export function createPurchaseOrder({ supplier_id, supplier_name, lines, total_net, total_gross }) {
   const fornitori = new Set((lines || []).map((l) => l.supplier_id ?? supplier_id ?? null))
   const unico = fornitori.size === 1 ? [...fornitori][0] : null
-  const ref = await addDoc(collection(db, 'purchase_orders'), {
+  const ref = doc(collection(db, 'purchase_orders'))
+  const dati = {
     supplier_id: supplier_id ?? unico ?? null,
     supplier_name:
       supplier_name ??
@@ -1145,11 +1163,50 @@ export async function createPurchaseOrder({ supplier_id, supplier_name, lines, t
     status: 'inviato',
     created_at: serverTimestamp(),
     received_at: null,
-    lines,
-    total_net,
-    total_gross,
-  })
-  return mapPurchaseOrder(await getDoc(ref))
+    lines: Array.isArray(lines) ? lines : [],
+    total_net: Number(total_net) || 0,
+    total_gross: Number(total_gross) || 0,
+  }
+  bgWrite(() => setDoc(ref, dati), 'ordine fornitore')
+  return {
+    ...dati,
+    id: ref.id,
+    // La data del terminale al posto del segnaposto del server: è quella che
+    // il riepilogo e lo storico mostrano nell'istante della conferma.
+    created_at: new Date().toISOString(),
+  }
+}
+
+// ── I PRODOTTI DELL'ORDINE PASSANO IN ASSORTIMENTO (REQ-MAG-037) ─────
+//
+// «Va in assortimento SOLO DOPO CHE FLAVIO HA CREATO L'ORDINE»: il grilletto
+// è la conferma di quel fornitore nel riepilogo, e nient'altro.
+//
+// GLI ARTICOLI ARRIVANO GIÀ IN MANO A CHI CHIAMA — la schermata degli ordini
+// ha il magazzino caricato — quindi qui non si legge niente: si calcola la
+// patch, la si manda in sottofondo e si restituiscono i prodotti aggiornati,
+// che è quello che la schermata mostra nell'istante del gesto.
+export function segnaInAssortimento(articoli, orderId) {
+  return scriviStatoAssortimento(articoli, (it) => entraInAssortimento(it, orderId), 'in assortimento')
+}
+
+// L'ordine cancellato libera i suoi prodotti: senza questo resterebbero «in
+// arrivo» per sempre, da un ordine che non esiste più, e l'unico modo di
+// tirarli fuori sarebbe cambiargli stato a mano uno per uno.
+export function liberaDaAssortimento(articoli, orderId) {
+  return scriviStatoAssortimento(articoli, (it) => esceDaAssortimento(it, orderId), 'fuori assortimento')
+}
+
+function scriviStatoAssortimento(articoli, patchDi, motivo) {
+  const aggiornati = []
+  for (const it of articoli || []) {
+    if (!it?.id) continue
+    const patch = patchDi(it)
+    if (!patch) continue
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', it.id), patch), motivo)
+    aggiornati.push({ ...it, ...patch })
+  }
+  return aggiornati
 }
 
 export async function fetchPurchaseOrders({ limit = 30 } = {}) {
@@ -1188,7 +1245,11 @@ function registraAcquisto({
   carica = true,
   aggiornaPrezzo = true,
   nasce = false,
-  statusTarget = null,
+  // I campi dello stato commerciale da riscrivere insieme al carico
+  // (REQ-MAG-037): il prodotto esce da «in assortimento» e torna a quello di
+  // prima. Si passa già calcolata — la macchina degli stati sta in
+  // `statoAssortimento.js`, dove si prova senza Firebase.
+  patchStato = null,
   // Il prezzo che quel fornitore faceva PRIMA di questa merce, letto dalla
   // riga di listino insieme all'articolo: serve solo allo storico, e si
   // legge prima di scrivere perché dopo la cache direbbe già il nuovo.
@@ -1216,12 +1277,12 @@ function registraAcquisto({
   // listino, che è un'altra cosa (REQ-MAG-029). Il PREZZO DI VENDITA del
   // menu non lo tocca nessuno: è di Flavio.
   if (aggiornaPrezzo) patch.cost = costo
-  // L'ASSORTIMENTO PRE-IMPOSTATO (REQ-MAG-025 punto 5, REQ-MAG-032): il
-  // cambio di stato commerciale deciso quando l'ordine è partito si applica
-  // QUI e solo col carico, cioè quando la merce esiste davvero. Metterlo in
-  // assortimento mentre viaggia vorrebbe dire offrire in carta una bottiglia
-  // che non c'è.
-  if (carica && statusTarget) patch.status = statusTarget
+  // LA MERCE È ARRIVATA, QUINDI SI ESCE DA «IN ASSORTIMENTO» (REQ-MAG-037).
+  // È il contrario di quello che si faceva fino a ieri, e non per caso: da
+  // quando «in assortimento» vuol dire «c'è un ordine aperto», la consegna è
+  // il momento in cui quello stato finisce e il prodotto torna a essere in
+  // linea o premium com'era prima.
+  if (patchStato) Object.assign(patch, patchStato)
   const ref = doc(db, 'inventory_items', itemId)
   if (nasce) {
     bgWrite(
@@ -1385,9 +1446,10 @@ export async function consegnaRigheOrdine(id, { indici = null, prezzi = {} } = {
       motivo: 'ordine fornitore',
       prezzoPrima: prezziPrima[k],
       origine: 'consegna',
-      // L'assortimento deciso quando l'ordine è partito si applica adesso,
-      // che la merce è arrivata davvero (REQ-MAG-025 punto 5).
-      statusTarget: l.status_target ?? null,
+      // La merce è arrivata: il prodotto esce dall'ordine e torna allo stato
+      // di prima (REQ-MAG-037). Sui prodotti che nascono adesso non c'è
+      // niente da restituire.
+      patchStato: nasce ? null : esceDaAssortimento(articoli[k], id),
     })
   }
 
@@ -1412,6 +1474,79 @@ export async function segnaRighePagate(id, { indici = null } = {}) {
   }
   if (toccate === 0) return mapPurchaseOrder(orderSnap)
   return scriviRigheOrdine(orderRef, orderSnap, lines)
+}
+
+// ── TOGLIERE UN ITEM DA UN ORDINE GIÀ FATTO (REQ-MAG-037) ────────
+//
+// «Quello che Flavio può fare è eliminare quell'item dall'ordine ANCHE SE
+// GIÀ FATTO, e si ripristina lo stato in linea o premium» (utente, 27/08).
+// È una delle due sole strade per uscire da «in assortimento», e prima di
+// oggi non esisteva.
+//
+// SI TOGLIE SOLO QUELLO CHE NON È ANCORA ARRIVATO. Una riga già consegnata
+// ha alzato la giacenza, scritto un movimento e aggiornato il listino:
+// toglierla vorrebbe dire scaricare merce che sta sullo scaffale, e non è
+// quello che è stato chiesto. Chi ha ricevuto per sbaglio corregge con una
+// rettifica di magazzino, che è il gesto fatto apposta.
+//
+// L'ordine che resta senza righe NON si cancella: è comunque un ordine che
+// è stato mandato a un fornitore, e farlo sparire vorrebbe dire non poter
+// più spiegare la telefonata che arriva dopo.
+export async function togliRigaOrdine(id, { indice, item_id = null } = {}) {
+  const orderRef = doc(db, 'purchase_orders', id)
+  const orderSnap = await getDoc(orderRef)
+  if (!orderSnap.exists()) throw new Error('Ordine non trovato')
+  const order = orderSnap.data()
+  const lines = (Array.isArray(order.lines) ? order.lines : []).map((l) => ({ ...l }))
+  const riga = lines[indice]
+  if (!riga) return { ordine: mapPurchaseOrder(orderSnap), articolo: null }
+  if (livelloDi(riga) !== 'richiesto')
+    throw new Error('La merce di questa riga è già arrivata: si corregge dal magazzino.')
+  lines.splice(indice, 1)
+  const articolo = await ripristinaStatoFuoriOrdine(item_id ?? riga.item_id, id)
+  return { ordine: scriviRigheOrdine(orderRef, orderSnap, lines), articolo }
+}
+
+// Rimette il prodotto allo stato che aveva prima dell'ordine, se quell'ordine
+// era l'ultimo a tenerlo in assortimento. Legge il prodotto perché la memoria
+// sta lì e chi chiama non ce l'ha sempre in mano; offline la lettura risponde
+// dalla cache, che è la stessa strada del carico.
+async function ripristinaStatoFuoriOrdine(itemId, orderId) {
+  if (!itemId) return null
+  const ref = doc(db, 'inventory_items', itemId)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return null
+  const articolo = mapItem(snap)
+  const patch = esceDaAssortimento(articolo, orderId)
+  if (!patch) return articolo
+  bgWrite(() => updateDoc(ref, patch), 'fuori assortimento')
+  return { ...articolo, ...patch }
+}
+
+// ── LO STATO CAMBIATO A MANO TOGLIE IL PRODOTTO DAGLI ORDINI ───────
+//
+// «Se cambia lo stato manualmente, il prodotto va eliminato dall'ordine»
+// (utente, 27/08). Sono la stessa decisione presa dai due capi e non possono
+// divergere: un prodotto non più «in assortimento» che resta dentro un ordine
+// aperto è un ordine che nessuno sa più di aver fatto.
+//
+// Lo stato sul prodotto lo scrive chi salva la scheda del magazzino, con la
+// patch di `cambioAMano`: qui si taglia solo il legame dall'altra parte.
+export async function togliProdottoDagliOrdini(itemId, orderIds = []) {
+  const toccati = []
+  for (const orderId of orderIds || []) {
+    const orderRef = doc(db, 'purchase_orders', orderId)
+    const orderSnap = await getDoc(orderRef)
+    if (!orderSnap.exists()) continue
+    const order = orderSnap.data()
+    const lines = (Array.isArray(order.lines) ? order.lines : []).map((l) => ({ ...l }))
+    // Solo le righe ancora in attesa: quello che è già arrivato è storia
+    // dell'ordine, e cancellarlo farebbe sparire una consegna dai conti.
+    const restano = lines.filter((l) => !(l.item_id === itemId && livelloDi(l) === 'richiesto'))
+    if (restano.length === lines.length) continue
+    toccati.push(scriviRigheOrdine(orderRef, orderSnap, restano))
+  }
+  return toccati
 }
 
 // Scrive le righe toccate e ricompone l'ordine IN MEMORIA. Non lo si

@@ -41,7 +41,13 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSuppliers: vi.fn(async () => [NOVA, ENOFEL]),
   fetchSupplierPrices: vi.fn(async () => stato.listini),
   fetchPurchaseOrders: vi.fn(async () => stato.ordini),
-  createPurchaseOrder: vi.fn(async (o) => ({ id: 'po-nuovo', created_at: '2026-08-26T09:00:00.000Z', status: 'inviato', ...o })),
+  createPurchaseOrder: vi.fn(async (o) => ({ id: `po-nuovo-${(stato.creati = (stato.creati || 0) + 1)}`, created_at: '2026-08-26T09:00:00.000Z', status: 'inviato', ...o })),
+  // I due gesti nuovi di REQ-MAG-037: i prodotti che passano in
+  // assortimento alla conferma, e la riga che si toglie da un ordine già
+  // fatto.
+  liberaDaAssortimento: vi.fn(() => []),
+  segnaInAssortimento: vi.fn(() => []),
+  togliRigaOrdine: vi.fn(async () => ({ ordine: stato.ordini[0], articolo: null })),
   consegnaRigheOrdine: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   segnaRighePagate: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   deletePurchaseOrder: vi.fn(async () => {}),
@@ -135,15 +141,16 @@ describe('si parte dal prodotto, non dal fornitore', () => {
   })
 })
 
-// DA REQ-MAG-036 L'ORDINE SI COMPONE SULLA RIGA: niente più tasto
-// «Aggiungi» e lista sotto — «non mi piace la doppia lista» — ma quantità e
-// fornitore scritti sulla riga della tabella. La regola di REQ-MAG-029 non
-// cambia: un ordine solo può contenere prodotti di più fornitori, e il
-// prezzo è quello del listino di chi vende. Il fornitore già usato che si
-// spegne nella tendina è passato ai test della schermata nuova
-// (tests/component/NuovoOrdineTabella.test.jsx).
+// L'ORDINE SI COMPONE SULLA RIGA (REQ-MAG-036) E SI CONFERMA PER FORNITORE
+// (REQ-MAG-037).
+//
+// QUESTO TEST DICEVA IL CONTRARIO FINO A IERI: «un ordine solo può contenere
+// prodotti di più fornitori» era la decisione del 20/08, e il 27/08 l'utente
+// l'ha ribaltata rispondendo a una domanda diretta — UN ORDINE PER
+// FORNITORE. Quello che resta identico è il prezzo: viene dal listino DI QUEL
+// FORNITORE, e il fornitore si sceglie sulla riga.
 describe('l’ordine si compone, col fornitore sulla riga', () => {
-  it('un ordine solo può contenere prodotti di più fornitori', async () => {
+  it('ogni fornitore diventa un ordine suo, col prezzo del suo listino', async () => {
     const user = userEvent.setup()
     render(<PurchaseOrdersPanel />)
     await screen.findAllByText('Campari')
@@ -153,16 +160,26 @@ describe('l’ordine si compone, col fornitore sulla riga', () => {
     await user.type(screen.getByLabelText('Pezzi di Gin Mare (senza fornitore)'), '2')
     // Il Gin non ha fornitore: si sceglie sulla riga.
     await user.selectOptions(screen.getByLabelText('Fornitore per Gin Mare (senza fornitore)'), 'enofel')
-    await user.click(screen.getByRole('button', { name: /Salva ordine/ }))
+    await user.click(screen.getByRole('button', { name: /Rivedi e conferma/ }))
 
-    await waitFor(() => expect(creato).toHaveBeenCalled())
-    const righe = creato.mock.calls.at(-1)[0].lines
-    expect(righe.map((l) => [l.item_id, l.supplier_id])).toEqual([
-      ['campari', 'nova'],
-      ['gin', 'enofel'],
-    ])
+    // Nel riepilogo ci sono tutti e due, e si confermano uno per volta.
+    const riga = (nome) =>
+      screen.getByRole('button', { name: `I prodotti di ${nome}` }).closest('.inv-row')
+    await user.click(within(riga('Nova')).getByRole('button', { name: /Crea l/ }))
+    await waitFor(() => expect(creato).toHaveBeenCalledTimes(1))
+    const primo = creato.mock.calls.at(-1)[0]
+    expect(primo.supplier_id).toBe('nova')
+    expect(primo.lines.map((l) => [l.item_id, l.supplier_id])).toEqual([['campari', 'nova']])
     // Il prezzo è quello del listino DI QUEL FORNITORE.
-    expect(righe[0].unit_cost).toBe(12.5)
+    expect(primo.lines[0].unit_cost).toBe(12.5)
+    // Confermato, sulla sua riga compare il badge e il tasto non c'è più.
+    await waitFor(() => expect(within(riga('Nova')).getByText('Ordinato')).toBeInTheDocument())
+
+    await user.click(within(riga('Enofel')).getByRole('button', { name: /Crea l/ }))
+    await waitFor(() => expect(creato).toHaveBeenCalledTimes(2))
+    const secondo = creato.mock.calls.at(-1)[0]
+    expect(secondo.supplier_id).toBe('enofel')
+    expect(secondo.lines.map((l) => l.item_id)).toEqual(['gin'])
   })
 })
 

@@ -679,7 +679,8 @@ a.btn.block {
    (1,02:1). Un elenco solo, così la prossima non nasce già rotta. */
 .pill.pronto,
 .pill.live,
-.pill.chiuso {
+.pill.chiuso,
+.pill.ordinato {
   background: rgba(46, 204, 113, 0.22);
   color: #9ff5c0;
 }
@@ -3002,6 +3003,51 @@ body.bar-wide .app {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
+}
+/* ── IL RIEPILOGO PER FORNITORE (REQ-MAG-037) ─────────────────
+   Tabelle a scomparsa, una per fornitore, una sotto l'altra: si tocca il
+   nome e si apre quella del fornitore. La riga di testa non è una griglia di
+   colonne come la tabella della composizione — sono un nome, un totale e un
+   gesto — quindi non eredita `--inv-cols`. */
+.ordine-riepilogo .inv-list {
+  margin-top: 10px;
+}
+.riepilogo-testa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+/* IL BERSAGLIO CHE APRE È IL NOME, alto quanto una riga di lista: si prende
+   con le mani occupate, non con un triangolino da venti pixel. La misura
+   segue lo zoom, se no a zoom alto il bersaglio resta grande sullo schermo ma
+   piccolo sotto il dito (DESIGN.md). */
+.riepilogo-nome {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  min-height: calc(44px / var(--zoom, 1));
+  padding: 4px 8px;
+  text-align: left;
+}
+.riepilogo-tabella {
+  --inv-cols: minmax(120px, 2fr) 56px 78px 88px calc(38px / var(--zoom, 1));
+  margin-top: 6px;
+}
+/* LE RIGHE DI UN ORDINE MANDATO, nello storico: ognuna col suo gesto per
+   toglierla dall'ordine, quindi non più un elenco separato da virgole. */
+.ordine-righe-storico {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 2px;
+}
+.ordine-riga-storico {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 @container (max-width: 900px) {
   .ordine-due-colonne {
@@ -5577,7 +5623,8 @@ body.fullbleed,
 }
 :root[data-luma='light'] .pill.pronto,
 :root[data-luma='light'] .pill.live,
-:root[data-luma='light'] .pill.chiuso {
+:root[data-luma='light'] .pill.chiuso,
+:root[data-luma='light'] .pill.ordinato {
   background: rgba(46, 204, 113, 0.18);
   color: #157347;
 }

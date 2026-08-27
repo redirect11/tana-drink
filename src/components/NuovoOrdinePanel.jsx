@@ -18,6 +18,7 @@ import {
 import {
   PASSO_RIGHE,
   ordinaCatalogo,
+  ordiniDaCreare,
   preselezioneIniziale,
   prezzoDiListino,
   prossimaFinestra,
@@ -29,6 +30,7 @@ import {
 import { purchaseOrderTotals } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import SortTh from './SortTh.jsx'
+import RiepilogoOrdini from './RiepilogoOrdini.jsx'
 
 // ── NUOVO ORDINE: UNA TABELLA SOLA, E L'ORDINE DI FIANCO (REQ-MAG-036) ─
 //
@@ -54,8 +56,7 @@ export default function NuovoOrdinePanel({
   items = [],
   suppliers = [],
   listini = [],
-  busy = false,
-  onSalva,
+  onCrea,
 }) {
   const [query, setQuery] = useState('')
   const [filtroFornitore, setFiltroFornitore] = useState('all')
@@ -70,6 +71,13 @@ export default function NuovoOrdinePanel({
   // le dita di chi sta cancellando per riscrivere.
   const [selezioni, setSelezioni] = useState({})
   const [mostrate, setMostrate] = useState(PASSO_RIGHE)
+  // IL RIEPILOGO LAVORA SU UNA FOTOGRAFIA (REQ-MAG-037). Confermare un
+  // fornitore toglie le sue righe dalla composizione — sono ordinate, non
+  // si ordinano due volte — ma la sua tabella deve restare a schermo col
+  // badge «Ordinato»: se il riepilogo leggesse la composizione dal vivo, il
+  // fornitore appena confermato sparirebbe nell'istante della conferma.
+  const [inRevisione, setInRevisione] = useState(null)
+  const [confermati, setConfermati] = useState({})
   // La preselezione si fa UNA VOLTA SOLA: il magazzino si ricarica anche
   // dopo un salvataggio, e rifarla cancellerebbe le spunte tolte a mano.
   const preselezionato = useRef(false)
@@ -160,16 +168,6 @@ export default function NuovoOrdinePanel({
     })
   }
 
-  // L'ASSORTIMENTO SI PREPARA MENTRE LA MERCE VIAGGIA (REQ-MAG-025 punto 5),
-  // e il cambio scatta al carico: metterlo in assortimento adesso vorrebbe
-  // dire offrire una bottiglia che non è ancora arrivata.
-  function cambiaAssortimento(riga, assortimento) {
-    setSelezioni((prev) => {
-      const attuale = prev[riga.key] || { qty: '1', supplier_id: riga.supplier_id ?? null }
-      return { ...prev, [riga.key]: { ...attuale, assortimento } }
-    })
-  }
-
   function cambiaFornitore(riga, supplier_id) {
     setSelezioni((prev) => {
       const attuale = prev[riga.key] || { qty: '1' }
@@ -193,7 +191,51 @@ export default function NuovoOrdinePanel({
     if (vicinoAlFondo(el)) altreRighe()
   }
 
-  const salva = () => onSalva?.(lines, totals)
+  const fette = useMemo(
+    () => (inRevisione ? ordiniDaCreare(inRevisione, { listini }) : []),
+    [inRevisione, listini]
+  )
+
+  // «La creazione dell'ordine deve portarmi a una schermata di RIEPILOGO»:
+  // il tasto non manda niente a nessuno, porta a rivedere.
+  const rivedi = () => {
+    setInRevisione(scelte.filter((s) => s.qty > 0))
+    setConfermati({})
+  }
+
+  // Confermato un fornitore, le sue righe escono dalla composizione: tornando
+  // indietro resta da fare quello che non è ancora partito. Niente `await`
+  // prima di mostrare l'esito — l'ordine si compone in memoria.
+  function conferma(fetta) {
+    Promise.resolve(onCrea?.(fetta)).then((ordine) => {
+      if (!ordine?.id) return
+      setConfermati((prev) => ({ ...prev, [fetta.chiave]: ordine.id }))
+      setSelezioni((prev) => {
+        const next = { ...prev }
+        for (const r of fetta.righe) delete next[r.key]
+        return next
+      })
+    })
+  }
+
+  // Dal riepilogo si può ancora togliere: finché il fornitore non è
+  // confermato, in magazzino non è cambiato niente.
+  function togliDalRiepilogo(riga) {
+    setInRevisione((prev) => (prev || []).filter((s) => s.key !== riga.key))
+    togli(riga.key)
+  }
+
+  if (inRevisione) {
+    return (
+      <RiepilogoOrdini
+        fette={fette}
+        confermati={confermati}
+        onConferma={conferma}
+        onTogli={togliDalRiepilogo}
+        onIndietro={() => setInRevisione(null)}
+      />
+    )
+  }
 
   return (
     <div className="card ordine-composizione">
@@ -267,7 +309,6 @@ export default function NuovoOrdinePanel({
                     onQta={cambiaQta}
                     onTotale={cambiaTotale}
                     onFornitore={cambiaFornitore}
-                    onAssortimento={cambiaAssortimento}
                   />
                 ))}
               </div>
@@ -344,10 +385,10 @@ export default function NuovoOrdinePanel({
               <button
                 className="btn block"
                 style={{ marginTop: 8 }}
-                onClick={salva}
-                disabled={busy || lines.length === 0}
+                onClick={rivedi}
+                disabled={lines.length === 0}
               >
-                📤 Salva ordine
+                Rivedi e conferma
               </button>
             </>
           )}
@@ -374,7 +415,6 @@ function RigaCatalogo({
   onQta,
   onTotale,
   onFornitore,
-  onAssortimento,
 }) {
   const item = riga.item
   const st = stockStatus(item)
@@ -536,20 +576,6 @@ function RigaCatalogo({
               {campoTotale(true)}
             </span>
           </div>
-          {/* La casella si chiede solo dove cambia qualcosa: su un prodotto
-              già in assortimento sarebbe una casella che non fa niente. */}
-          {assortimentoDi(item) !== 'assortimento' && (
-            <label className="row small" style={{ gap: 6, alignItems: 'center', marginTop: 6 }}>
-              <input
-                type="checkbox"
-                style={{ width: 'auto' }}
-                checked={!!sel?.assortimento}
-                aria-label={`Metti ${item.name} in assortimento quando arriva`}
-                onChange={(e) => onAssortimento(riga, e.target.checked)}
-              />
-              <span className="muted">In assortimento quando arriva</span>
-            </label>
-          )}
         </div>
       )}
     </div>

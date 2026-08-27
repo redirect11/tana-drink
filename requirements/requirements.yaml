@@ -1992,6 +1992,18 @@ requirements:
       Ogni articolo è assortimento, linea, premium o fuori servizio. Serve a
       distinguere quello che si tiene sempre da quello che si compra su richiesta,
       e a filtrare l'inventario di conseguenza.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037): i quattro valori restano
+      quattro in schermata e nei filtri, ma NON SONO PIU' ALLA PARI. I veri
+      stati commerciali sono TRE — in linea, premium, fuori linea — e
+      «in assortimento» e' diventato uno stato SUPERIORE e TEMPORANEO: lo
+      prende chi sta dentro un ordine aperto, al posto del suo, e alla fine
+      restituisce quello di prima (il prodotto se lo ricorda). Quindi in
+      magazzino comparira' un gruppo di prodotti in quello stato che prima non
+      c'era mai, e chi cerca «i premium» in quel momento non ci trovera'
+      quelli in arrivo. La regola «fuori assortimento non si ricompra» e'
+      gia' stata ammorbidita da REQ-MAG-036: un `out` sta in tabella e si puo'
+      ordinare a mano — e' cosi' che rientra — ma non si propone da solo, e
+      in assortimento non ci passa.
     status: implemented
     generate_issue: false
     labels: [magazzino]
@@ -7447,10 +7459,13 @@ requirements:
       Il prodotto «DEVE essere in linea o premium per poter passare allo stato
       in assortimento quando fa parte di un ordine aperto»: un `out` non ci
       passa, e' fuori linea e non lo si sta rifornendo.
-      QUANDO SI ESCE: al carico. Se la giacenza torna SOPRA LA SOGLIA il
-      prodotto riprende lo stato di prima — in linea o premium. Se il carico
-      non basta a superarla, resta in assortimento: non e' ancora rifornito, e
-      dirlo a posto sarebbe una bugia.
+      QUANDO SI ESCE, e questo paragrafo e' stato CORRETTO il 27/08 in
+      implementazione perche' si contraddiceva da solo: diceva che si esce al
+      carico "se la giacenza torna sopra la soglia", e trenta righe piu' sotto
+      lo stesso testo decide l'opposto ("torna comunque in linea o premium",
+      "due sole strade per uscirne"). Vale quello che viene dopo, che e'
+      anche l'ultima cosa detta dall'utente: SI ESCE QUANDO IL PRODOTTO NON
+      STA PIU' IN UN ORDINE APERTO, e la giacenza non entra nella decisione.
       A MANO SI PUO', MA COSTA UNA DOMANDA. «Siccome Flavio potrebbe voler
       impostare a mano quello stato, bisogna fargli presente che se lo imposta
       bisogna associarlo anche a un ordine — internamente sara' tipo IN
@@ -7519,11 +7534,78 @@ requirements:
       quelli in arrivo. E' voluto — e' l'informazione che Flavio vuole a
       colpo d'occhio — ma e' un cambiamento di cosa dice la schermata, non
       solo di cosa fa l'ordine.
-    status: todo
+      COM'E' STATO FATTO (27/08/2026). Il riepilogo e' una schermata sua,
+      `RiepilogoOrdini`, dove `NuovoOrdinePanel` porta col tasto «Rivedi e
+      conferma»: una riga per fornitore, la tabella dei suoi prodotti che si
+      apre toccando il nome, un tasto «Crea l'ordine» per ognuno e il badge
+      «Ordinato» al posto del tasto quando e' fatto. La macchina degli stati
+      del prodotto sta in `src/lib/statoAssortimento.js`, logica pura, dove si
+      prova senza Firebase: e' la parte che, se sbagliata, fa danni silenziosi
+      sui dati veri.
+      DOVE VIVE LA MEMORIA: due campi sul prodotto, `assortimento_da` (lo
+      stato a cui tornare) e `ordini_assortimento` (gli id degli ordini aperti
+      che ce lo tengono). E' una LISTA e non un id solo perche' lo stesso
+      prodotto puo' finire in due giri diversi: si esce quando non resta piu'
+      nessun ordine, se no il primo che arriva spegnerebbe lo stato mentre
+      l'altra merce e' ancora per strada.
+      SE LA MEMORIA MANCA NON SI INVENTA NIENTE: un prodotto senza
+      `assortimento_da` — tutti quelli scritti prima di questa voce —
+      uscendo dall'ordine resta dov'e', e si liberano solo i due campi. Meglio
+      fermo che promosso a caso.
+      «IN ASSORTIMENTO SENZA ORDINE» SI RICONOSCE DALLA MEMORIA, non dal solo
+      stato, e questa e' una decisione presa in implementazione sui numeri
+      veri: 'assortimento' e' stato per anni il valore di DEFAULT di ogni
+      prodotto che non dichiarava niente — 65 su 150 nella prima pagina del
+      magazzino importato. Se bastasse lo stato a dire «l'ha messo Flavio a
+      mano», meta' del magazzino risulterebbe messa a mano e si ritroverebbe
+      preselezionata al primo ordine. Chi lo sceglie davvero scrive anche da
+      dove veniva, e quella e' la firma.
+      L'ASSORTIMENTO PRE-IMPOSTATO DI REQ-MAG-025 PUNTO 5 E' STATO TOLTO
+      (casella «In assortimento quando arriva» e campo `status_target` sulla
+      riga d'ordine). Non e' una semplificazione: chiedeva di ACCENDERE quello
+      stato nell'istante esatto in cui adesso va spento, e tenere tutti e due
+      i comportamenti vorrebbe dire una consegna che mette e toglie la stessa
+      cosa nello stesso momento.
+      SI TOGLIE SOLO QUELLO CHE NON E' ANCORA ARRIVATO. Una riga gia'
+      consegnata ha alzato la giacenza, scritto un movimento e aggiornato il
+      listino: toglierla vorrebbe dire scaricare merce che sta sullo scaffale,
+      e non e' quello che e' stato chiesto. Chi ha ricevuto per sbaglio
+      corregge con una rettifica di magazzino. Vale per tutte e due le strade
+      — il tasto nello storico e il cambio di stato a mano.
+      L'ORDINE CHE RESTA SENZA RIGHE NON SI CANCELLA: e' comunque un ordine
+      mandato a un fornitore, e farlo sparire vorrebbe dire non poter piu'
+      spiegare la telefonata che arriva dopo.
+      IL GRUPPO «SENZA FORNITORE» SI PUO' CONFERMARE LO STESSO: 378 prodotti
+      su 388 non stanno sul listino di nessuno, e rifiutarlo vorrebbe dire
+      perdere per strada quello che si e' appena scelto. Resta in fondo, come
+      nella composizione.
+      LA CONFERMA NON ASPETTA LA RETE: `createPurchaseOrder` prendeva l'id da
+      Firestore e poi RILEGGEVA il documento appena scritto — due attese in
+      fila, e con la cassa offline il tasto restava premuto senza che
+      succedesse niente. Adesso l'id si prende in locale, la scrittura parte
+      in sottofondo e l'ordine si compone in memoria (BUG-045). Lo stesso vale
+      per il passaggio in assortimento, che usa gli articoli gia' in mano alla
+      schermata e non rilegge niente.
+      L'ORDINE CANCELLATO LIBERA I SUOI PRODOTTI, e non era stato chiesto: il
+      cestino dello storico c'era gia', e senza questo i prodotti di
+      quell'ordine sarebbero rimasti «in arrivo» per sempre, da un documento
+      che non esiste piu', con la sola via d'uscita di cambiargli stato a mano
+      uno per uno. E' la terza porta della stessa stanza, e non poteva
+      restare murata.
+      LE RIGHE CONFERMATE ESCONO DALLA COMPOSIZIONE, e il riepilogo lavora su
+      una FOTOGRAFIA: tornando indietro resta da fare solo quello che non e'
+      partito, ma la tabella del fornitore confermato resta a schermo col suo
+      badge. Se il riepilogo leggesse la composizione dal vivo, il fornitore
+      appena confermato sparirebbe nell'istante della conferma.
+    status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/statoAssortimento.test.js
+      - tests/unit/ordiniSenzaRete.test.js
+      - tests/component/RiepilogoOrdini.test.jsx
+      - tests/component/AssortimentoAMano.test.jsx
 
   - id: REQ-MAG-038
     title: "«Lista Ordini»: gli stati, la fattura, e i due confronti che contano"
@@ -8070,6 +8152,18 @@ requirements:
       prodotto che nasce quando il fornitore manda una referenza che in
       anagrafica non c'e', con la sua «scheda da completare» — quello e'
       indipendente da come e' fatto l'ordine, e continua a valere.
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037): L'ASSORTIMENTO
+      PRE-IMPOSTATO NON C'E' PIU'. La casella «In assortimento quando arriva»
+      e il campo `status_target` sulla riga d'ordine sono stati tolti, e non
+      per semplificare: da REQ-MAG-037 «in assortimento» vuol dire «c'e' un
+      ordine aperto», quindi la consegna è il momento in cui quello stato
+      FINISCE. Una casella che chiede di accenderlo QUANDO ARRIVA chiederebbe
+      di accendere uno stato nell'istante esatto in cui va spento. Al carico,
+      adesso, `registraAcquisto` scrive la patch che fa USCIRE il prodotto
+      dall'assortimento e gli restituisce lo stato di prima. Cade con la
+      casella anche la domanda che restava aperta qui sopra (far rientrare un
+      «out» col pre-impostato): un `out` si riordina dalla tabella di
+      REQ-MAG-036, che è il modo in cui rientra.
     status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, dati]

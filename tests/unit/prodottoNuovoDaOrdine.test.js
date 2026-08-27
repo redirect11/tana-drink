@@ -237,25 +237,77 @@ describe('il prodotto nato da un ordine è marcato DA COMPLETARE', () => {
   })
 })
 
-describe('l’assortimento pre-impostato si applica col carico, non prima', () => {
-  it('il cambio deciso all’ordine arriva sul prodotto quando la merce arriva', async () => {
-    stato.articoli.campari.status = 'premium'
-    stato.ordine.lines[0].status_target = 'assortimento'
+// ── LA CONSEGNA FA USCIRE DA «IN ASSORTIMENTO» (REQ-MAG-037) ───────
+//
+// QUESTI TEST DICONO IL CONTRARIO DI QUELLI DI IERI, E NON PER CASO. Fino al
+// 27/08 la riga d'ordine poteva portarsi dietro un `status_target`: alla
+// consegna il prodotto veniva MESSO in assortimento («l'assortimento
+// pre-impostato», REQ-MAG-025 punto 5). Da REQ-MAG-037 «in assortimento» ha
+// cambiato significato — non è più uno dei quattro stati alla pari, è il
+// segno che c'è un ORDINE APERTO — e quindi la consegna è il momento in cui
+// quello stato FINISCE. Tenere tutti e due i comportamenti vorrebbe dire una
+// consegna che mette e toglie lo stesso stato nello stesso istante.
+describe('la consegna fa uscire il prodotto da «in assortimento»', () => {
+  // Il premium torna PREMIUM, non «assortimento» generico: è la memoria che
+  // impedisce alla classificazione di Flavio di cancellarsi da sola.
+  it('la merce arrivata restituisce lo stato di prima', async () => {
+    stato.articoli.campari.status = 'assortimento'
+    stato.articoli.campari.assortimento_da = 'premium'
+    stato.articoli.campari.ordini_assortimento = ['po-1']
     await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
-    expect(scritture('inventory_items', 'update')[0].patch.status).toBe('assortimento')
+    expect(scritture('inventory_items', 'update')[0].patch).toMatchObject({
+      status: 'premium',
+      assortimento_da: null,
+      ordini_assortimento: [],
+    })
   })
 
-  it('senza il pre-impostato lo stato commerciale non si tocca', async () => {
+  // «Torna in linea o premium ma con scorte in esaurimento»: la giacenza non
+  // entra nella decisione, sono due assi diversi.
+  it('torna allo stato di prima anche se le scorte restano basse', async () => {
+    stato.articoli.campari.stock = 0
+    stato.articoli.campari.low_threshold = 10
+    stato.articoli.campari.status = 'assortimento'
+    stato.articoli.campari.assortimento_da = 'linea'
+    stato.articoli.campari.ordini_assortimento = ['po-1']
+    await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
+    expect(scritture('inventory_items', 'update')[0].patch.status).toBe('linea')
+  })
+
+  // Un altro ordine ancora per strada tiene il prodotto dov'è: dire «tutto a
+  // posto» mentre altra merce sta arrivando sarebbe una bugia.
+  it('con un altro ordine aperto non esce', async () => {
+    stato.articoli.campari.status = 'assortimento'
+    stato.articoli.campari.assortimento_da = 'premium'
+    stato.articoli.campari.ordini_assortimento = ['po-1', 'po-2']
+    await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
+    const patch = scritture('inventory_items', 'update')[0].patch
+    expect(patch.ordini_assortimento).toEqual(['po-2'])
+    expect(patch.status).toBeUndefined()
+  })
+
+  it('un prodotto che non era in assortimento non cambia stato', async () => {
+    stato.articoli.campari.status = 'premium'
     await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
     expect(scritture('inventory_items', 'update')[0].patch.status).toBeUndefined()
   })
 
-  // La riga che resta «richiesta» non applica niente: è tutto il senso del
-  // pre-impostato — il cambio scatta quando la merce esiste, non mentre
-  // viaggia.
-  it('la riga non consegnata non muove nessuno stato', async () => {
-    stato.ordine.lines[1].status_target = 'assortimento'
+  // Senza memoria (i prodotti scritti prima di questa voce) non si promuove
+  // niente: si liberano i campi e lo stato resta quello che è.
+  it('senza memoria non si inventa uno stato', async () => {
+    stato.articoli.campari.status = 'assortimento'
+    stato.articoli.campari.ordini_assortimento = ['po-1']
     await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
-    expect(scritture('inventory_items', 'set')).toEqual([])
+    const patch = scritture('inventory_items', 'update')[0].patch
+    expect(patch.status).toBeUndefined()
+    expect(patch.ordini_assortimento).toEqual([])
+  })
+
+  // La riga che resta «richiesta» non muove niente: il prodotto è ancora in
+  // attesa, e in attesa deve restare.
+  it('la riga non consegnata non muove nessuno stato', async () => {
+    stato.articoli.mezcal = { name: 'Mezcal Verde', unit: 'pz', stock: 1, status: 'assortimento', assortimento_da: 'linea', ordini_assortimento: ['po-1'] }
+    await subito(api.consegnaRigheOrdine('po-1', { indici: [0] }))
+    expect(scritture('inventory_items', 'update').filter((s) => s.id === 'mezcal')).toEqual([])
   })
 })

@@ -4,6 +4,40 @@
 
 ### Per chi sta al banco
 
+- **L'ordine si conferma un fornitore per volta, e ognuno diventa un ordine
+  suo.** Finita la composizione, **«Rivedi e conferma»** porta a una schermata
+  di **riepilogo**: una riga per ogni fornitore da cui si sta ordinando, e
+  toccando il nome si apre **la tabella dei suoi prodotti** — pezzi, prezzo
+  del pezzo e totale — da rivedere prima di mandare. Da lì si può ancora
+  **togliere** quello che non serve più. Ogni fornitore ha il suo tasto
+  **«Crea l'ordine»**: confermato, sulla sua riga compare **«Ordinato»** e le
+  sue righe escono dalla composizione, così non si ordina due volte. Gli altri
+  fornitori restano lì, da confermare quando si vuole. Il gesto **non aspetta
+  la rete**: l'ordine compare subito anche con la cassa offline.
+
+- **«In assortimento» adesso vuol dire «ordinato, in attesa che arrivi».**
+  Confermato un ordine, i suoi prodotti passano **in assortimento** in
+  magazzino: è il modo per vedere a colpo d'occhio cosa sta arrivando. Il
+  prodotto **si ricorda com'era prima** — in linea o premium — e ci torna
+  quando la merce arriva, anche se le scorte sono ancora basse: che siano
+  basse lo dice già la scorta. **Il carico a mano non lo cambia**: se una
+  bottiglia si compra di corsa al supermercato mentre l'ordine è in ritardo,
+  le scorte salgono ma il prodotto resta in assortimento, perché dal fornitore
+  ne sta arrivando dell'altra. Ci passano solo i prodotti **in linea o
+  premium**: un fuori linea no.
+
+- **Un prodotto si può togliere da un ordine già mandato.** Nello storico ogni
+  riga dell'ordine ha adesso il suo **✕**: si toglie quello che non arriverà
+  o non serve più, e il prodotto **torna allo stato che aveva prima**. Quello
+  che è già stato consegnato non si tocca — la merce è in magazzino, e si
+  corregge da lì.
+
+- **Cambiando a mano lo stato di un prodotto che sta in un ordine aperto, l'app
+  lo dice.** Compare una domanda che avvisa: cambiando lo stato, il prodotto
+  **viene tolto da quell'ordine**. È per non ritrovarsi merce ordinata di cui
+  nessuno sa più niente. Il resto del magazzino non cambia: stessi comandi,
+  stesse colonne, stessi filtri.
+
 - **«Nuovo ordine» è una tabella sola, e l'ordine si compone di fianco.** In
   **Fornitori → Ordini** i prodotti stanno in un elenco unico: su ogni riga il
   nome, **com'è messa la scorta** (in scorta, in esaurimento, esaurito), il
