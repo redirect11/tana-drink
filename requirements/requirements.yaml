@@ -7348,10 +7348,31 @@ requirements:
       due: «NUOVO ORDINE» e' la schermata di composizione (REQ-MAG-036), e
       nasce «LISTA ORDINI», «che conterra' lo storico di tutti gli ordini
       fatti, filtrabile per STATO dell'ordine».
-      GLI STATI DELL'ORDINE, dalle sue parole: EFFETTUATO/APERTO alla
-      conferma; ORDINE RICEVUTO quando la merce arriva davvero in negozio;
-      CHIUSO quando la fattura e' stata riconciliata. Il filtro della lista e'
-      su questi.
+      GLI STATI DELL'ORDINE SONO I TRE LIVELLI DI FLAVIO, spostati dalla
+      riga all'ordine (precisato dall'utente il 27/08: «richiesto,
+      consegnato, pagato RIMANGONO per ordine per fornitore, non vanno via
+      completamente, mi raccomando»). Non spariscono con il modello a fette:
+      cambiano soltanto di posto, e il posto giusto e' il documento, perche'
+      adesso il documento e' di un fornitore solo.
+      RICHIESTO = l'ordine e' stato mandato al fornitore ed e' aperto (e'
+      quello che l'utente chiama anche «effettuato/aperto»).
+      CONSEGNATO = la merce e' arrivata in negozio ed e' stata verificata:
+      e' qui che avviene il carico a magazzino, sulle quantita' RICEVUTE, e i
+      prodotti escono da «in assortimento» (REQ-MAG-037).
+      «CONSEGNATO» E «ORDINE RICEVUTO» SONO LA STESSA COSA: «e' solo estetica,
+      parole — il concetto e' lo stesso» (utente, 27/08). Non sono due stati e
+      non vanno messi in fila uno dopo l'altro. A schermo se ne usa UNA sola,
+      sempre la stessa, in tutte e tre le schermate: due nomi per lo stesso
+      stato fanno cercare a chi legge una differenza che non c'e', ed e' il
+      modo piu' rapido per far credere che manchi un passaggio.
+      PAGATO = il documento del fornitore e' stato pagato.
+      CHIUSO e' il gesto in piu' che l'utente chiede, e non e' un sinonimo di
+      pagato: si puo' mettere solo quando la fattura e' stata RICONCILIATA —
+      cioe' quando ordinato, ricevuto e fatturato tornano. Un ordine puo'
+      essere pagato e non ancora riconciliato (si paga per non far aspettare
+      il fornitore) e riconciliato ma non pagato: per questo la chiusura e'
+      un gesto suo e non arriva da sola.
+      Il filtro della Lista Ordini e' su questi.
       LA FATTURA, e sono due strade diverse che finiscono nello stesso posto:
       1) SI ASSOCIA: «un tasto associa fattura che mi permettera' di
       selezionare una fattura/proforma — qualsiasi documento fiscale — a
@@ -7778,11 +7799,13 @@ requirements:
       le righe — diventa la finestra del carico. Il resto non si muove: il
       prodotto che nasce, il listino, il movimento e il pre-impostato stanno
       tutti dentro `registraAcquisto`, cioe' dalla parte del carico.
-      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-038): i tre livelli per riga
-      (richiesto/consegnato/pagato) e la consegna per fetta lasciano il posto
-      agli STATI DELL'ORDINE — aperto, ricevuto, chiuso — perche' con un
-      ordine per fornitore non c'e' piu' bisogno di distinguere consegne
-      diverse dentro lo stesso documento. Il carico avviene al passaggio a
+      ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-038): i tre livelli
+      richiesto/consegnato/pagato NON SPARISCONO — si spostano dalla RIGA
+      all'ORDINE, ed e' li' che vanno letti. Con un ordine per fornitore non
+      serve piu' distinguere consegne diverse dentro lo stesso documento,
+      quindi il livello per riga perde il suo mestiere; ma i tre nomi sono di
+      Flavio e restano i suoi, sul documento. Cade la consegna per FETTA, non
+      la scala dei livelli. Il carico avviene al passaggio a
       ORDINE RICEVUTO, sulle quantita' RICEVUTE.
       RESTA VALIDO E NON SI TOCCA il pezzo che questa voce ha di suo: il
       prodotto che nasce quando il fornitore manda una referenza che in
