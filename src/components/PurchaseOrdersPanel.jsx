@@ -18,7 +18,11 @@ import {
   generaFatturaDaOrdine,
   segnaFatturaPagata,
   allineaPrezziDaFattura,
+  fetchModelliOrdine,
+  salvaModelloOrdine,
+  eliminaModelloOrdine,
 } from '../lib/api.js'
+import { righeModelloDaOrdine } from '../lib/modelliOrdine.js'
 import { magazzinoBloccato } from '../lib/inventory.js'
 import { purchaseOrderText } from '../lib/warehouse.js'
 import { printOrdineFornitore } from '../lib/printer.js'
@@ -53,13 +57,17 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
   // (REQ-MAG-031) e se è stata pagata (REQ-MAG-038): «pagato» non è un dato
   // dell'ordine, è una domanda alla sua fattura.
   const [invoices, setInvoices] = useState([])
+  // I MODELLI D'ORDINE (REQ-MAG-039): servono da tutte e due le parti — si
+  // salvano componendo, e da un ordine già fatto — quindi stanno qui come
+  // tutto il resto.
+  const [modelli, setModelli] = useState([])
   const [error, setError] = useState(null)
 
   const [togliFor, setTogliFor] = useState(null) // { ordine, indice, riga, fetta }
 
   async function load() {
     try {
-      const [sups, its, list, ords, fatt] = await Promise.all([
+      const [sups, its, list, ords, fatt, mod] = await Promise.all([
         fetchSuppliers(),
         fetchInventoryItems(),
         // La schermata deve reggere anche con ZERO listini: sono da
@@ -69,12 +77,16 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
         // E deve reggere anche se lo scadenzario non risponde: gli ordini
         // sono la cosa che serve sempre, il documento è un di più.
         fetchSupplierInvoices({ limit: 200 }).catch(() => []),
+        // E anche senza modelli si ordina: sono una comodità, non un dato
+        // senza il quale la schermata non ha senso.
+        fetchModelliOrdine().catch(() => []),
       ])
       setSuppliers(sups)
       setItems(its)
       setListini(list)
       setOrders(ords)
       setInvoices(fatt)
+      setModelli(mod)
     } catch (e) {
       setError(e.message)
     }
@@ -252,6 +264,42 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
     )
   }
 
+  // ── I MODELLI D'ORDINE (REQ-MAG-039) ───────────────────────────────
+  //
+  // Salvare non aspetta la rete: il modello si compone in memoria e compare
+  // in tendina nell'istante in cui si tocca «Salva». Con l'`id` di uno che
+  // c'è già lo si aggiorna — è la stessa strada per cambiargli le righe e per
+  // rinominarlo — e la lista si ricompone al posto di rileggersi, che offline
+  // risponderebbe col passato.
+  function salvaModello({ id = null, nome, righe }) {
+    setError(null)
+    try {
+      const modello = salvaModelloOrdine({ id, nome, righe })
+      setModelli((prev) => {
+        const senza = prev.filter((m) => m.id !== modello.id)
+        return [...senza, modello].sort((a, b) => a.nome.localeCompare(b.nome, 'it-IT'))
+      })
+      toastSuccess(`Modello «${modello.nome}» salvato`)
+      return modello
+    } catch (e) {
+      setError(e.message)
+      return null
+    }
+  }
+
+  // «SALVA QUESTO COME MODELLO» DALLA LISTA ORDINI. Un ordine è di un
+  // fornitore solo (REQ-MAG-037), quindi ne esce un modello di un fornitore
+  // solo: il giro intero si rifà applicandone più d'uno, perché applicare
+  // SOMMA a quello che è già selezionato.
+  const salvaModelloDaOrdine = (ordine, nome) =>
+    salvaModello({ nome, righe: righeModelloDaOrdine(ordine) })
+
+  function eliminaModello(id) {
+    setError(null)
+    eliminaModelloOrdine(id)
+    setModelli((prev) => prev.filter((m) => m.id !== id))
+  }
+
   function chiudi(ordine) {
     setError(null)
     try {
@@ -332,6 +380,7 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
           onElimina={remove}
           onEmail={inviaEmail}
           onCopia={copia}
+          onSalvaModello={salvaModelloDaOrdine}
           onStampa={(fetta) =>
             printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))
           }
@@ -342,6 +391,9 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
           suppliers={suppliers}
           listini={listini}
           onCrea={creaOrdine}
+          modelli={modelli}
+          onSalvaModello={salvaModello}
+          onEliminaModello={eliminaModello}
         />
       )}
 

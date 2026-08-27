@@ -30,10 +30,12 @@ import {
   righeScelte,
   vicinoAlFondo,
 } from '../lib/composizioneOrdine.js'
+import { applicaModello, righeModello } from '../lib/modelliOrdine.js'
 import { purchaseOrderTotals } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import SortTh from './SortTh.jsx'
 import RiepilogoOrdini from './RiepilogoOrdini.jsx'
+import ModelliOrdine from './ModelliOrdine.jsx'
 
 // ── NUOVO ORDINE: UNA TABELLA SOLA, E L'ORDINE DI FIANCO (REQ-MAG-036) ─
 //
@@ -60,6 +62,12 @@ export default function NuovoOrdinePanel({
   suppliers = [],
   listini = [],
   onCrea,
+  // I MODELLI (REQ-MAG-039) sono il giro che si fa sempre, e stanno accanto
+  // alla precompilazione senza sostituirla: quella guarda le scorte, questi
+  // guardano l'abitudine.
+  modelli = [],
+  onSalvaModello,
+  onEliminaModello,
 }) {
   const [query, setQuery] = useState('')
   const [filtroFornitore, setFiltroFornitore] = useState('all')
@@ -185,6 +193,18 @@ export default function NuovoOrdinePanel({
     setMostrate((m) => prossimaFinestra(m, visibili.length))
   }
 
+  // APPLICARE UN MODELLO SI SOMMA, NON SOSTITUISCE (REQ-MAG-039): la
+  // precompilazione ha già messo quello che sta finendo adesso, il modello
+  // aggiunge il giro che si fa sempre. Per le righe che il modello nomina
+  // vince la sua quantità — è quella che Flavio ha deciso di conservare.
+  // L'esito torna a chi l'ha chiesto e lo mostra: chi applica un modello deve
+  // vedere cosa non è stato ripreso e perché.
+  function applica(modello) {
+    const esito = applicaModello(modello, { catalogo, suppliers, selezioni })
+    setSelezioni(esito.selezioni)
+    return esito
+  }
+
   // SCORRIMENTO CONTINUO. Si guarda quanto manca al fondo del riquadro che
   // scorre — non della finestra: la tabella ha una barra sua, perché
   // l'intestazione deve restare in alto mentre si scorrono seicento righe.
@@ -258,6 +278,14 @@ export default function NuovoOrdinePanel({
         Il fornitore e i pezzi si cambiano sulla riga; a destra l’ordine in
         composizione, diviso per fornitore.
       </p>
+
+      <ModelliOrdine
+        modelli={modelli}
+        righe={righeModello(scelte)}
+        onApplica={applica}
+        onSalva={onSalvaModello}
+        onElimina={onEliminaModello}
+      />
 
       <div className="ordine-filtri">
         <span className="grow">

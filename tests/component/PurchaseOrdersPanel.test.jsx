@@ -53,6 +53,11 @@ vi.mock('../../src/lib/api.js', () => ({
   deletePurchaseOrder: vi.fn(async () => {}),
   // Lo storico dice, fetta per fetta, se la fattura c'è (REQ-MAG-031).
   fetchSupplierInvoices: vi.fn(async () => stato.fatture),
+  // I modelli d'ordine (REQ-MAG-039): qui non si provano, ma il pannello li
+  // legge insieme al resto e senza questi non partirebbe la lettura.
+  fetchModelliOrdine: vi.fn(async () => []),
+  salvaModelloOrdine: vi.fn((m) => ({ id: 'mod-1', ...m })),
+  eliminaModelloOrdine: vi.fn(),
   collegaFatturaAFetta: vi.fn(async (id, { order_id }) => ({
     ...stato.fatture.find((f) => f.id === id),
     order_id: order_id || null,

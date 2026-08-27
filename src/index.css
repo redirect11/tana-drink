@@ -2872,6 +2872,39 @@ body.bar-wide .app {
 .ordine-composizione {
   container-type: inline-size;
 }
+/* ── I MODELLI D'ORDINE (REQ-MAG-039) ─────────────────────────
+   Una riga sola sopra i filtri: la tendina dei modelli coi suoi tre gesti a
+   sinistra, il salvataggio di quello che si sta componendo a destra. È la
+   stessa famiglia dei comandi di una lista (DESIGN.md): `btn ghost small`
+   che vanno a capo invece di stringersi, così a 360px si legge ancora. */
+.modelli-ordine {
+  margin-top: 8px;
+}
+.modelli-riga {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.modelli-riga + .modelli-riga {
+  margin-top: 8px;
+}
+.modelli-riga > .grow {
+  flex: 1;
+}
+/* Cosa è stato ripreso e cosa no: una superficie minore dentro la sezione,
+   come l'ordine in composizione — non una card dentro la card. */
+.modelli-esito {
+  background: var(--tile-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--raggio-card);
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+.modelli-avvisi {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
 .ordine-filtri {
   display: flex;
   gap: 10px;

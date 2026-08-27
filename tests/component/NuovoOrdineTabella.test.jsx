@@ -54,6 +54,11 @@ vi.mock('../../src/lib/api.js', () => ({
   segnaRighePagate: vi.fn(async (id) => ({ ...stato.ordini[0], id })),
   deletePurchaseOrder: vi.fn(async () => {}),
   fetchSupplierInvoices: vi.fn(async () => stato.fatture),
+  // I modelli d'ordine (REQ-MAG-039): qui non si provano, ma il pannello li
+  // legge insieme al resto e senza questi non partirebbe la lettura.
+  fetchModelliOrdine: vi.fn(async () => []),
+  salvaModelloOrdine: vi.fn((m) => ({ id: 'mod-1', ...m })),
+  eliminaModelloOrdine: vi.fn(),
   collegaFatturaAFetta: vi.fn(async (id) => ({ id })),
 }))
 
