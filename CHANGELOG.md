@@ -4,6 +4,27 @@
 
 ### Per chi sta al banco
 
+- **Il listino di un fornitore si compila dalla sua scheda.** In **Fornitori →
+  Gestione fornitori** ogni fornitore ha il tasto **«📋 Listino»**: si cerca un
+  prodotto del magazzino, lo si associa a quel fornitore e gli si scrive il
+  **prezzo di un pezzo**. È il prezzo che comparirà quando si compila un
+  ordine. Un fornitore appena creato apre il suo listino da solo, che è il
+  lavoro che viene subito dopo. **Se il prodotto in magazzino non c'è, si crea
+  da lì**: entra col nome e il prezzo, come quelli che arrivano con una
+  consegna, e resta segnato come **scheda da completare** — categoria,
+  contenuto di un pezzo e soglia di riordino si mettono dal magazzino. Sulla
+  riga si scrivono anche il **codice del fornitore** e la **confezione**, che
+  servono a chi riceve l'ordine dall'altra parte. **Il magazzino non cambia**:
+  la scheda del prodotto resta com'era, tendina del fornitore compresa.
+
+- **I prezzi che cambiano restano scritti.** Il listino teneva un prezzo solo,
+  e ogni aggiornamento cancellava quello di prima. Adesso ogni variazione
+  resta registrata con la sua data e con **da dove viene** — compilato a mano,
+  corretto alla consegna, allineato da una fattura — e si legge aprendo la
+  riga del prodotto nel listino. Serve a rispondere a «quanto è aumentato il
+  Campari da gennaio»: un prezzo battuto a mano e uno preso da una fattura non
+  pesano uguale, e restano distinti.
+
 - **Le spese che non sono merce hanno un posto: Fornitori → «Altre spese».**
   Tavoli, sgabelli, una tenda, i bicchieri di plastica: quello che esce dal
   conto e non entra in magazzino si scrive lì, con le colonne che si usano già

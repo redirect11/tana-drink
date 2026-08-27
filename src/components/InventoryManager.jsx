@@ -34,6 +34,7 @@ import {
   fornitoreProposto,
   fornitoriPerArticolo,
 } from '../lib/listini.js'
+import ListinoFornitore from './ListinoFornitore.jsx'
 import { useCashSession } from '../lib/cashSession.js'
 import { impegnatoPerArticolo, articoloPrevisto } from '../lib/impegnato.js'
 import {
@@ -363,11 +364,22 @@ function MovimentiPanel() {
 // diff di un trasloco che di suo è una riga.
 export function FornitoriPanel() {
   const [suppliers, setSuppliers] = useState([])
+  // IL LISTINO È IL DETTAGLIO DELLA RIGA, non una sottosezione in più
+  // (docs/navigazione.md): si apre da un fornitore, si chiude e si torna
+  // all'elenco. Uscendo si dimentica, come le chiusure di cassa: tornando
+  // qui si riparte sempre dalla lista.
+  const [listinoPer, setListinoPer] = useState(null)
   const ricarica = async () => setSuppliers(await fetchSuppliers())
   useEffect(() => {
     ricarica()
   }, [])
-  return <SupplierManager suppliers={suppliers} onChange={ricarica} />
+  const aperto = suppliers.find((s) => s.id === listinoPer)
+  if (aperto) {
+    return <ListinoFornitore fornitore={aperto} onIndietro={() => setListinoPer(null)} />
+  }
+  return (
+    <SupplierManager suppliers={suppliers} onChange={ricarica} onListino={setListinoPer} />
+  )
 }
 
 // QUANTO NE RESTA A FINE SERATA. Si legge con le stesse regole della
@@ -830,10 +842,16 @@ function ProductsPanel() {
           ? await updateInventoryItem(editing.id, completa)
           : await createInventoryItem(completa)
       if (supplier_id && salvato?.id) {
-        await salvaRigaListino({
+        // LA RIGA DI PRIMA SERVE ALLO STORICO (REQ-MAG-035): senza, ogni
+        // salvataggio della scheda risulterebbe una variazione di prezzo,
+        // anche quello di chi ha solo corretto il nome del prodotto.
+        salvaRigaListino({
           supplier_id,
           item_id: salvato.id,
           price: payload.cost ?? null,
+          precedente: listini.find(
+            (r) => r.supplier_id === supplier_id && r.item_id === salvato.id
+          ),
         })
       }
       setEditing(null)
@@ -1359,7 +1377,7 @@ function InvCategoryManager({ categories, macros = [], onChange }) {
 
 // --- Gestione fornitori --------------------------------------------------
 
-function SupplierManager({ suppliers, onChange }) {
+function SupplierManager({ suppliers, onChange, onListino = null }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [showImport, setShowImport] = useState(false)
@@ -1403,13 +1421,22 @@ function SupplierManager({ suppliers, onChange }) {
     if (!name.trim()) return
     setBusy(true)
     try {
-      await createSupplier({ name: name.trim(), sort_order: suppliers.length, color: colore })
+      const creato = await createSupplier({
+        name: name.trim(),
+        sort_order: suppliers.length,
+        color: colore,
+      })
       setName('')
       // Il prossimo fornitore nasce con un altro colore: due creati di
       // fila con lo stesso non si distinguerebbero proprio dove serve.
       setColore(coloreACaso())
       setTavolozzaPer(null)
       await onChange()
+      // «Quando creo un fornitore mi si deve aprire una pagina dove posso
+      // associare i prodotti» (l'utente, 27/08/2026): un fornitore appena
+      // creato è un fornitore da cui non si sa ancora cosa si compra, e
+      // quello è il lavoro che viene subito dopo.
+      if (creato?.id && onListino) onListino(creato.id)
     } finally {
       setBusy(false)
     }
@@ -1492,6 +1519,15 @@ function SupplierManager({ suppliers, onChange }) {
               </span>
             </span>
             <span className="row" style={{ gap: 4 }}>
+              {onListino && (
+                <button
+                  className="btn ghost small"
+                  aria-label={`Listino di ${s.name}`}
+                  onClick={() => onListino(s.id)}
+                >
+                  📋 Listino
+                </button>
+              )}
               <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
               <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
               <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
