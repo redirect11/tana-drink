@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 180 | fatto e coperto dai test |
+| ✅ | 181 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 25 | da fare |
+| ⬜ | 24 | da fare |
 | 🗑 | 7 | non più valido |
 
-**227 voci** in tutto. **195** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
+**227 voci** in tutto. **196** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **9** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 28 | 11 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 29 | 10 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 14 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1054,6 +1054,30 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-035 — Il listino si compila nella scheda del fornitore, non ordinando
+
+Chiesto dall'utente il 27/08/2026, dopo aver provato quello che era stato costruito: «l'associazione prodotto -> fornitori DEVE avvenire nella gestione Fornitori. Quando creo/modifico un fornitore mi si deve aprire una pagina dove posso associare i prodotti gia' in magazzino a quel fornitore, o addirittura CREARE un prodotto che poi andra' a finire in magazzino. Posso aggiungere anche un prezzo di listino, che poi sara' quello che vedro' quando compilero'/precompilero' un ordine nella sezione ordini».
+
+COSA CAMBIA RISPETTO A OGGI. Il listino (REQ-MAG-029) esiste gia' come dato — `supplier_prices`, una riga per coppia prodotto-fornitore — ma non ha una schermata: si popola da solo consegnando gli ordini, e la scheda prodotto ha una tendina che ne scrive una riga. Chi implemento' REQ-MAG-029 lascio' fuori l'editor scrivendo che «non era chiesto». Adesso lo e', ed e' il PUNTO DI PARTENZA di tutto il giro: senza listino compilato la schermata dell'ordine non ha prezzi da proporre.
+
+LA SCHEDA DEL FORNITORE diventa quindi il posto dove si dice CHE COSA quel fornitore vende e A QUANTO: si cercano i prodotti gia' in magazzino e li si associa, si mette il prezzo di listino per pezzo, e si puo' creare li' un prodotto che ancora non esiste — che nasce in magazzino come qualunque altro.
+
+IL PREZZO DI LISTINO E' QUELLO CHE SI VEDE QUANDO SI ORDINA. Non e' il costo del prodotto (che resta uno solo, l'ultimo pagato, REQ-MAG-029) e non e' il prezzo di vendita del menu, che e' di Flavio.
+
+RESTA VERO che il prezzo si aggiorna anche dall'altro capo: quando si riceve merce e si corregge il prezzo, quella riga di listino si aggiorna con la sua data. Le due strade scrivono lo stesso dato. E LA FATTURA HA L'ULTIMA PAROLA. Aggiunto dall'utente il 27/08: «se il fornitore cambia i prezzi rispetto all'ordine — e possiamo vederlo solo dalla fattura — I PREZZI DEL LISTINO VANNO ALLINEATI A QUELLI DELLA FATTURA, mantenendo lo STORICO DEI PREZZI per le statistiche che voleva Flavio sull'andamento dei prezzi». E' la regola giusta perche' segue chi decide davvero: il listino e' cio' che ci aspettiamo di pagare, la fattura e' cio' che si paga. Un listino che resta fermo mentre le fatture salgono fa preventivare ordini a cifre che non esistono piu', e l'aumento si scopre solo guardando il conto corrente.
+
+SERVE QUINDI UNO STORICO, e oggi NON C'E': la riga di `supplier_prices` tiene UN prezzo solo (`price`, `last_price`, `last_price_at`), quindi ogni aggiornamento CANCELLA quello di prima. Finche' e' cosi', la domanda «quanto e' aumentato il Campari da gennaio» non ha dove leggersi. Va aggiunto un registro delle variazioni — per coppia prodotto-fornitore: prezzo, data, e DA DOVE viene (compilato a mano, corretto alla consegna, allineato da una fattura), perche' un prezzo scritto a mano e uno preso da un documento non hanno lo stesso peso. E' il dato che rende possibile il grafico che Flavio ha chiesto e che REQ-MAG-029 aveva rimandato: «ogni volta che carico qualcosa e vado a modificare il prezzo, il sistema mi dovrebbe registrare quanto acquistato e la variazione di prezzo su un grafico». Il grafico resta un'altra voce; QUI si scrive il dato senza cui non potra' mai esistere. Chi tocca questa parte scriva lo storico anche se il grafico non c'e' ancora: uno storico non si puo' ricostruire all'indietro. COM'E' STATO FATTO (27/08/2026). Il listino e' il DETTAGLIO della riga del fornitore, non una sottosezione in piu': si apre da «📋 Listino» in Fornitori -> Gestione fornitori, si esce con «← Fornitori» e uscendo si dimentica (docs/navigazione.md). Creando un fornitore si apre subito il suo listino, che e' quello che l'utente chiedeva con «quando creo/modifico un fornitore». La scheda prodotto del magazzino resta dov'era, tendina fornitore compresa: «non deve cambiare l'attuale UI o UX del magazzino» — scrive la sua riga di listino come prima, e adesso anche la variazione.
+
+IL PRODOTTO CHE NASCE DA QUI passa dalla stessa funzione del prodotto che nasce da una consegna (`prodottoDaRigaOrdine`, REQ-MAG-032): nome e prezzo, contato a pezzi, con la SCHEDA DA COMPLETARE addosso. L'id se lo da' il client invece di aspettare `addDoc`, che offline non torna mai: il prodotto esiste subito, anche senza rete.
+
+LO STORICO E' UNA COLLEZIONE A RADICE, `supplier_price_history`, una riga per variazione: `supplier_id`, `item_id`, `price`, `previous_price`, `origine` (manuale / consegna / fattura) e `at`. L'id e' deterministico — coppia piu' istante — perche' le scritture in sottofondo si ripetono quando falliscono, e con un id casuale il secondo tentativo lascerebbe un doppione che sul grafico si legge come un'oscillazione mai avvenuta. Il prezzo di prima sta SULLA RIGA: chi legge una variazione da sola deve poter dire di quanto e' salita.
+
+LE TRE STRADE CHE LA SCRIVONO passano tutte da `scriviVariazionePrezzo` in `api.js`: `salvaRigaListino` (a mano), il ramo dentro `registraAcquisto` chiamato dalla consegna di un ordine, e lo stesso ramo chiamato dalle righe di una fattura. Il prezzo di prima si legge PRIMA di scrivere, nella stessa attesa che gia' legge gli articoli: dopo, la cache direbbe gia' quello nuovo. Una variazione si scrive solo se il prezzo cambia davvero, al centesimo — se no lo storico si riempirebbe di righe uguali a ogni consegna.
+
+RESTA FUORI, ed e' voluto: il grafico dell'andamento dei prezzi (voce sua), e la schermata degli ordini, che si rifa' col 036/037.
+
+**Dove**: `src/components/ListinoFornitore.jsx, src/lib/storicoPrezzi.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/storicoPrezzi.test.js`, `tests/unit/storicoPrezziScrittura.test.js`, `tests/component/ListinoFornitore.test.jsx`
 
 #### REQ-MAG-034 — «Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese
 
@@ -2540,22 +2564,6 @@ COSA RESTA DI QUESTA VOCE. Il generatore vero è REQ-MAG-026, e non aspetta nien
 IL CONSUMO A SETTIMANA (REQ-MAG-024) l'app ora lo calcola, ma non serve a proporre le quantità: serve a chi guarda, per accorgersi che una minima è tarata male.
 
 **Dove**: `src/lib/warehouse.js suggestedPackages, src/components/PurchaseOrdersPanel.jsx`
-
-#### REQ-MAG-035 — Il listino si compila nella scheda del fornitore, non ordinando
-
-Chiesto dall'utente il 27/08/2026, dopo aver provato quello che era stato costruito: «l'associazione prodotto -> fornitori DEVE avvenire nella gestione Fornitori. Quando creo/modifico un fornitore mi si deve aprire una pagina dove posso associare i prodotti gia' in magazzino a quel fornitore, o addirittura CREARE un prodotto che poi andra' a finire in magazzino. Posso aggiungere anche un prezzo di listino, che poi sara' quello che vedro' quando compilero'/precompilero' un ordine nella sezione ordini».
-
-COSA CAMBIA RISPETTO A OGGI. Il listino (REQ-MAG-029) esiste gia' come dato — `supplier_prices`, una riga per coppia prodotto-fornitore — ma non ha una schermata: si popola da solo consegnando gli ordini, e la scheda prodotto ha una tendina che ne scrive una riga. Chi implemento' REQ-MAG-029 lascio' fuori l'editor scrivendo che «non era chiesto». Adesso lo e', ed e' il PUNTO DI PARTENZA di tutto il giro: senza listino compilato la schermata dell'ordine non ha prezzi da proporre.
-
-LA SCHEDA DEL FORNITORE diventa quindi il posto dove si dice CHE COSA quel fornitore vende e A QUANTO: si cercano i prodotti gia' in magazzino e li si associa, si mette il prezzo di listino per pezzo, e si puo' creare li' un prodotto che ancora non esiste — che nasce in magazzino come qualunque altro.
-
-IL PREZZO DI LISTINO E' QUELLO CHE SI VEDE QUANDO SI ORDINA. Non e' il costo del prodotto (che resta uno solo, l'ultimo pagato, REQ-MAG-029) e non e' il prezzo di vendita del menu, che e' di Flavio.
-
-RESTA VERO che il prezzo si aggiorna anche dall'altro capo: quando si riceve merce e si corregge il prezzo, quella riga di listino si aggiorna con la sua data. Le due strade scrivono lo stesso dato. E LA FATTURA HA L'ULTIMA PAROLA. Aggiunto dall'utente il 27/08: «se il fornitore cambia i prezzi rispetto all'ordine — e possiamo vederlo solo dalla fattura — I PREZZI DEL LISTINO VANNO ALLINEATI A QUELLI DELLA FATTURA, mantenendo lo STORICO DEI PREZZI per le statistiche che voleva Flavio sull'andamento dei prezzi». E' la regola giusta perche' segue chi decide davvero: il listino e' cio' che ci aspettiamo di pagare, la fattura e' cio' che si paga. Un listino che resta fermo mentre le fatture salgono fa preventivare ordini a cifre che non esistono piu', e l'aumento si scopre solo guardando il conto corrente.
-
-SERVE QUINDI UNO STORICO, e oggi NON C'E': la riga di `supplier_prices` tiene UN prezzo solo (`price`, `last_price`, `last_price_at`), quindi ogni aggiornamento CANCELLA quello di prima. Finche' e' cosi', la domanda «quanto e' aumentato il Campari da gennaio» non ha dove leggersi. Va aggiunto un registro delle variazioni — per coppia prodotto-fornitore: prezzo, data, e DA DOVE viene (compilato a mano, corretto alla consegna, allineato da una fattura), perche' un prezzo scritto a mano e uno preso da un documento non hanno lo stesso peso. E' il dato che rende possibile il grafico che Flavio ha chiesto e che REQ-MAG-029 aveva rimandato: «ogni volta che carico qualcosa e vado a modificare il prezzo, il sistema mi dovrebbe registrare quanto acquistato e la variazione di prezzo su un grafico». Il grafico resta un'altra voce; QUI si scrive il dato senza cui non potra' mai esistere. Chi tocca questa parte scriva lo storico anche se il grafico non c'e' ancora: uno storico non si puo' ricostruire all'indietro.
-
-**Dove**: `src/components/SuppliersPanel.jsx, src/lib/listini.js, src/lib/api.js`
 
 #### REQ-MAG-036 — «Nuovo Ordine»: una tabella sola, e la riga che si apre
 
