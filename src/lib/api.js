@@ -116,6 +116,10 @@ const supplierPricesCol = collection(db, 'supplier_prices')
 // stato: le righe si aggiungono e non si riscrivono, perché la domanda a
 // cui risponde — «quanto è aumentato da gennaio» — vive nel passato.
 const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
+// I MODELLI D'ORDINE (REQ-MAG-039): il giro che si fa sempre, con i prodotti,
+// il fornitore scelto per ognuno e le quantità. Senza prezzi — quelli restano
+// del listino, che è tenuto allineato dalle fatture.
+const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
 const groupsCol = collection(db, 'groups')
@@ -1358,6 +1362,84 @@ export async function fetchPurchaseOrders({ limit = null } = {}) {
 
 export async function deletePurchaseOrder(id) {
   await deleteDoc(doc(db, 'purchase_orders', id))
+}
+
+// ── I MODELLI D'ORDINE (REQ-MAG-039) ─────────────────────────────────
+//
+// «Flavio potrebbe voler salvare un ordine come TEMPLATE […] con quantità
+// già impostate e prodotti per fornitore già selezionati» (l'utente,
+// 27/08/2026). Il documento porta un nome e delle righe, e le righe portano
+// tre cose: il prodotto, il fornitore scelto e la quantità.
+//
+// IL PREZZO NON C'È, e non è una dimenticanza: «il modello non memorizza il
+// prezzo, ma quando lo carico il prezzo sulla creazione/modifica ordine è
+// sempre quello del listino del fornitore, aggiornato all'ultima fattura».
+// La catena è fattura → listino → ordine e il modello non ci si mette in
+// mezzo. Chi aggiungesse un campo prezzo qui riaprirebbe il difetto che il
+// confronto ordine-fattura (REQ-MAG-038) esiste apposta per scoprire.
+//
+// STA IN UNA COLLEZIONE SUA e non fra gli ordini: un modello non è un ordine
+// — non ha stato, non ha una data di consegna, non entra nei soldi che
+// escono — e tenerlo lì vorrebbe dire che ogni filtro e ogni totale della
+// Lista ordini debba ricordarsi di scartarlo.
+function mapModelloOrdine(snap) {
+  const m = snap.data() || {}
+  return {
+    id: snap.id,
+    nome: m.nome ?? '',
+    // Le righe si rileggono normalizzate: una quantità arrivata come stringa
+    // da una versione più vecchia non deve finire dentro una moltiplicazione.
+    righe: (Array.isArray(m.righe) ? m.righe : []).map((r) => ({
+      item_id: r?.item_id ?? null,
+      item_name: r?.item_name ?? null,
+      supplier_id: r?.supplier_id ?? null,
+      qty: Number(r?.qty) || 0,
+    })),
+    created_at: m.created_at ?? null,
+    updated_at: m.updated_at ?? null,
+  }
+}
+
+export async function fetchModelliOrdine() {
+  const snap = await getDocs(orderTemplatesCol)
+  // In ordine di nome, e l'ordinamento si fa in memoria: sono una manciata di
+  // documenti, e un `orderBy` su Firestore vorrebbe dire un indice da tenere
+  // allineato per una tendina di cinque voci.
+  return snap.docs
+    .map(mapModelloOrdine)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'it-IT'))
+}
+
+// Salva un modello, nuovo o già esistente. NON SI ASPETTA LA RETE e non si
+// rilegge niente: il modello che torna è composto qui, così compare in
+// tendina nell'istante in cui si tocca «Salva» anche con la cassa offline.
+// Passando l'`id` di uno che c'è già lo si aggiorna — ed è la stessa strada
+// per cambiargli le righe e per rinominarlo.
+export function salvaModelloOrdine({ id = null, nome, righe = [] } = {}) {
+  const nomePulito = String(nome ?? '').trim()
+  if (!nomePulito) throw new Error('Serve un nome per il modello')
+  const ref = id ? doc(db, 'purchase_order_templates', id) : doc(orderTemplatesCol)
+  const adesso = new Date().toISOString()
+  const dati = {
+    nome: nomePulito,
+    righe: (righe || []).map((r) => ({
+      item_id: r.item_id,
+      item_name: r.item_name ?? null,
+      supplier_id: r.supplier_id ?? null,
+      qty: Number(r.qty) || 0,
+    })),
+    updated_at: adesso,
+  }
+  // La data di nascita si scrive una volta sola: il `merge` lascia dov'è
+  // quella del modello che c'era già.
+  if (!id) dati.created_at = adesso
+  bgWrite(() => setDoc(ref, dati, { merge: true }), 'modello d’ordine')
+  return { id: ref.id, created_at: adesso, ...dati }
+}
+
+export function eliminaModelloOrdine(id) {
+  if (!id) return
+  bgWrite(() => deleteDoc(doc(db, 'purchase_order_templates', id)), 'modello d’ordine')
 }
 
 // ── UNA STRADA SOLA PER LA MERCE CHE ENTRA (REQ-MAG-029, REQ-MAG-030) ─

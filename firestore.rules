@@ -243,6 +243,13 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // MODELLI D'ORDINE — il giro che si rifà uguale (REQ-MAG-039): prodotti,
+    // fornitore scelto e quantità, senza prezzi. Stessa mano degli ordini:
+    // chi compone un ordine è chi salva e riusa un modello.
+    match /purchase_order_templates/{modelloId} {
+      allow read, write: if isBartender();
+    }
+
     // SCADENZARIO FORNITORI — documenti/proforma, pagato, note.
     match /supplier_invoices/{invoiceId} {
       allow read, write: if isBartender();
