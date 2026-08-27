@@ -62,6 +62,7 @@ import {
   filterItems,
   ASSORTIMENTI,
   assortimentoDi,
+  ETICHETTA_ASSORTIMENTO,
   mancaNellaScheda,
   prodottiDaCompletare,
   schedaCompletata,
@@ -82,6 +83,7 @@ import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
 import CategoryRail from './CategoryRail.jsx'
+import SortTh from './SortTh.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
@@ -96,14 +98,6 @@ const STATUS_ITEM = [
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
-// La striscia a sinistra della riga: si legge anche col dito (title),
-// oltre che dalla legenda sopra la lista.
-const ETICHETTA_ASSORTIMENTO = {
-  assortimento: 'In assortimento',
-  linea: 'In linea: non deve mancare',
-  premium: 'Premium',
-  out: 'Fuori assortimento: non si ricompra',
-}
 
 // Come si chiama, a parole, il modo in cui un articolo è gestito: è quello che
 // si legge nell'avviso quando lo si cambia in modifica.
@@ -2656,19 +2650,3 @@ function ScegliUnita({ valore, unita, onChange, etichetta, conPezzi = false }) {
   )
 }
 
-// Intestazione di colonna ORDINABILE della tabella inventario: un click ordina,
-// il ri-click inverte; la freccia indica il verso attivo.
-function SortTh({ label, col, sort, onSort, num = false }) {
-  const active = sort.col === col
-  return (
-    <button
-      type="button"
-      className={`inv-th${num ? ' inv-cell-num' : ''}${active ? ' active' : ''}`}
-      onClick={() => onSort(col)}
-      title={`Ordina per ${label}`}
-    >
-      {label}
-      <span aria-hidden className="inv-th-arrow">{active ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</span>
-    </button>
-  )
-}
