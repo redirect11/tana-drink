@@ -7532,9 +7532,19 @@ requirements:
       convivere: si parte dal modello e la precompilazione aggiunge quello che
       manca oggi, oppure si parte dalle scorte e si aggiunge il modello.
       COSA CONTIENE: prodotti, il fornitore scelto per ognuno e la quantita'.
-      Non i prezzi — quelli si rileggono ogni volta dal listino (REQ-MAG-035),
-      perche' un modello di due mesi fa coi prezzi dentro farebbe partire un
-      ordine a cifre vecchie senza che nessuno se ne accorga.
+      IL MODELLO NON MEMORIZZA IL PREZZO. Detto dall'utente il 27/08: «fa fede
+      il prezzo ATTUALE del listino del fornitore, e il modello mostra sempre
+      il prezzo aggiornato — il modello non memorizza il prezzo, ma quando lo
+      carico il prezzo sulla creazione/modifica ordine e' sempre quello del
+      listino del fornitore, aggiornato all'ultima fattura».
+      Quindi il modello porta CHE COSA e QUANTO, mai A QUANTO. Il prezzo arriva
+      sempre dal listino nel momento in cui si compone l'ordine, e quel listino
+      e' tenuto allineato dalle fatture (REQ-MAG-035): la catena e' fattura ->
+      listino -> ordine, e il modello non ci si mette in mezzo. Un modello che
+      si portasse dietro i prezzi farebbe partire un ordine a cifre di due mesi
+      fa senza che nessuno se ne accorga — ed e' proprio la cosa che il
+      confronto ordine-fattura serve a scoprire, quindi ci si sparerebbe sui
+      piedi da soli.
       SI SALVA DURANTE LA COMPOSIZIONE, non dopo: e' li' che Flavio ha davanti
       quello che vuole conservare. Un modello ha un nome suo, se ne tengono
       piu' d'uno, e si possono cambiare e cancellare.
