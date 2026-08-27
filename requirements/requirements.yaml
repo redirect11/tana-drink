@@ -7339,6 +7339,16 @@ requirements:
       l'intestazione fissa o con l'ordinamento, si fa la paginazione con la
       scelta di quanti per pagina: e' la seconda strada che l'utente indica,
       non un ripiego inventato.
+      IL TOCCO SULLA RIGA AGGIUNGE E TOGLIE. Chiesto dall'utente il 27/08
+      dopo aver provato: «se clicco su una riga degli ordini, questo deve
+      essere aggiunto se non e' aggiunto e toglierlo se e' aggiunto. In
+      pratica basta che tocco la riga». Il bersaglio e' tutta la riga, non
+      solo la casella: si compone un ordine passando in rassegna decine di
+      prodotti, e centrare una casella piccola decine di volte e' il tipo di
+      fatica che non si nota finche' non la si fa. I campi che si scrivono
+      (quantita', tendina del fornitore) e il tasto che apre la riga restano
+      esclusi dal tocco, se no scriverci dentro toglierebbe il prodotto
+      dall'ordine.
       LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del
       prodotto, questo viene selezionato automaticamente per l'ordine».
       Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la
@@ -7760,6 +7770,66 @@ requirements:
     generate_issue: true
     labels: [magazzino, fornitori, ux]
     priority: P3
+    test_cases: []
+
+  - id: REQ-MAG-040
+    title: "Colli e pezzi: lo stesso prodotto a cartone da uno, a bottiglia dall'altro"
+    area: "src/lib/listini.js, src/lib/composizioneOrdine.js, src/components/ListinoFornitore.jsx, src/components/NuovoOrdinePanel.jsx"
+    description: >
+      Trovato dall'utente il 27/08/2026 provando la tabella del nuovo ordine:
+      «bisogna distinguere colli e pezzi in qualche modo. Da un fornitore le
+      Bjorne vanno a pezzo, da un altro vanno a collo (cartone da X
+      bottiglie): hai messo Bjorne 8 pz ma il prezzo unitario del fornitore e'
+      AL COLLO, che e' 25 euro, e viene fuori 200 euro per 8 pezzi».
+      IL NUMERO E' DEL FORNITORE, NON DEL PRODOTTO, ed e' questo che decide
+      dove va scritto: la Bjorne da MAR si compra a bottiglia, da FONT a
+      cartone da 24. Sul prodotto non ci puo' stare, perche' sarebbe uno solo
+      per tutti i fornitori. Va sulla RIGA DI LISTINO, dove REQ-MAG-029 aveva
+      gia' previsto «la confezione DI QUEL FORNITORE» col campo
+      `package_label` — che pero' e' una scritta e non un numero, e su una
+      scritta non ci si moltiplica.
+      IL MECCANISMO ESISTE GIA' A META', e non va rifatto: nel carico a
+      magazzino c'e' l'interruttore «Carico a colli — un cartone, una cassa»
+      (REQ-MAG-018), dove si scrivono i pezzi per cartone e il totale del
+      collo e l'app ricava l'unitario. Ma li' quel numero E' SOLO PER IL
+      CALCOLO E NON VIENE SALVATO — c'e' scritto nel commento del codice.
+      Quello che manca e' ricordarselo, per fornitore.
+      IL DATO PER RIEMPIRLO C'E' NEI FOGLI, e si riconosce senza indovinare.
+      In `GEN ORD REC.xlsx` Flavio usa la colonna `cl` con DUE significati: di
+      norma il contenuto, ma quando il fornitore vende a cartone ci scrive i
+      PEZZI PER CARTONE, e nella colonna del prezzo mette il prezzo del
+      cartone. La Bjorne da MAR e' `cl 33` a 1,2333; da FONT e' `cl 24` a
+      25,05 — e 25,05 diviso 24 fa 1,04 a bottiglia, meno di 1,2333, che e'
+      quello che ci si aspetta comprando a cassa.
+      LA REGOLA PER RICONOSCERLI, misurata il 27/08 su 409 coppie: se il `cl`
+      del foglio non torna col contenuto del prodotto, si guarda il prezzo. Se
+      `prezzo` somiglia al costo del prodotto e' AL PEZZO; se `prezzo / cl`
+      somiglia al costo e' UN COLLO da `cl` pezzi. Ne sono usciti DIECI, tutti
+      FONT: 24 pezzi per le bibite e le birre industriali, 12 per le due birre
+      artigianali MBU — e il prezzo al pezzo ricavato coincide col costo che
+      l'app gia' conosceva (MBU California: 19,98/12 = 1,665 contro 1,67). Il
+      fatto che il 12 esca da solo accanto al 24 dice che la regola non e'
+      cucita addosso a un numero.
+      RESTANO TRE RIGHE che non sono ne' pezzo ne' collo (Abaca Granatina,
+      Lampone e Melone da NOVA: foglio 75 cl, prodotto 70 cl, prezzo 6,20
+      contro un costo in app di 9,85). Li' il `cl` e' una discrepanza di
+      formato e il prezzo e' semplicemente diverso da quello in archivio: si
+      trattano al pezzo, ed e' il caso in cui il listino serve — dice che da
+      quel fornitore costa meno.
+      COSA SI VEDE E COSA SI CONTA. Il listino tiene il prezzo di CIO' CHE IL
+      FORNITORE FATTURA — il collo, dove c'e' un collo — piu' i pezzi che
+      contiene; il prezzo al pezzo si RICAVA e si mostra accanto, perche' e'
+      l'unico modo di confrontare due fornitori che vendono in confezioni
+      diverse. L'ordine si compone nell'unita' in cui quel fornitore vende
+      (cartoni, dove vende a cartoni), e cio' che entra in magazzino sono
+      sempre PEZZI: cartoni x pezzi per collo. Il magazzino non impara una
+      unita' nuova.
+      IL BAGLIO DA EVITARE E' QUELLO GIA' VISTO: moltiplicare i pezzi per il
+      prezzo del collo. Otto Bjorne da FONT costano 8,35 euro, non 200.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, fornitori, dati]
+    priority: P2
     test_cases: []
 
   - id: REQ-MAG-034
