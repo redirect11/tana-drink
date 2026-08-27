@@ -7294,6 +7294,39 @@ requirements:
       considerato nella precompilazione dell'ordine» (utente, 27/08). Un
       prodotto `out` si puo' sempre ordinare a mano — e' cosi' che rientra —
       ma non si propone da solo.
+      L'ORDINE STA DI FIANCO, NON IN FONDO. Aggiunto dall'utente il
+      27/08/2026 dopo aver provato: «e' SCOMODISSIMO l'ordine in basso.
+      Dobbiamo metterlo affianco, e gia' li' separare i prodotti di un
+      fornitore rispetto a un altro». La schermata si legge quindi a due
+      colonne: a sinistra il catalogo da cui si sceglie, a destra l'ordine
+      che si sta componendo, gia' diviso per fornitore. In fondo obbligava a
+      scorrere avanti e indietro per sapere cosa si era gia' messo — e il
+      riepilogo per fornitore (REQ-MAG-037) arrivava troppo tardi, alla
+      conferma, quando lo si vuole sapere MENTRE si sceglie.
+      L'INTESTAZIONE RESTA IN ALTO E ORDINA. «Voglio l'header della tabella
+      fisso in alto, coi titoli delle colonne che posso usare per ordinare»:
+      per NOME, per DISPONIBILITA' IN INVENTARIO, per PREZZO DI LISTINO e per
+      FORNITORE. Con centinaia di righe, un'intestazione che scorre via
+      lascia chi guarda a indovinare che cosa sia la terza colonna.
+      LA DISPONIBILITA' HA TRE STATI e vanno mostrati: IN SCORTA, IN
+      ESAURIMENTO, ESAURITO. Non e' un dato nuovo — e' `stockStatus` in
+      src/lib/inventory.js (`ok` / `low` / `empty`), lo stesso che decide la
+      preselezione: si mostra quello, non se ne calcola un altro.
+      LE RIGHE SI PAGINANO. «Sono tanti e possono essere duplicati per piu'
+      fornitori: e' vero che abbiamo la ricerca, ma dobbiamo paginare, e
+      posso selezionare anche quanti risultati per pagina — oppure
+      implementiamo un endless scroll che carica i successivi dopo un tot».
+      Il numero misurato il 27/08 dice perche' serve: 388 prodotti e 367
+      righe di listino gia' importate, e una riga per COPPIA
+      prodotto-fornitore. La ricerca non basta, perche' il primo gesto di chi
+      apre la schermata non e' cercare: e' GUARDARE cosa manca.
+      Delle due strade, quella da preferire e' lo SCORRIMENTO CONTINUO, e la
+      ragione e' d'uso: si compone un ordine scorrendo, e una paginazione
+      costringerebbe a ricordarsi cosa si e' spuntato a pagina 2 mentre si
+      guarda la 3. Se pero' lo scorrimento continuo litiga con
+      l'intestazione fissa o con l'ordinamento, si fa la paginazione con la
+      scelta di quanti per pagina: e' la seconda strada che l'utente indica,
+      non un ripiego inventato.
       LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del
       prodotto, questo viene selezionato automaticamente per l'ordine».
       Scrivere una quantita' E' la decisione di ordinarlo: chiedere anche la
