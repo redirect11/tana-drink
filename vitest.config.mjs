@@ -23,6 +23,11 @@ export default defineConfig({
     // (giornata commerciale, chiusure) dipendono dal fuso: senza, i test
     // passerebbero o fallirebbero a seconda di dove gira la macchina.
     env: { TZ: 'Europe/Rome' },
+    // LA GUARDIA DELLA CONSOLE: un avviso che nessuno si aspetta fa fallire
+    // il test che lo ha stampato, invece di finire in fondo a migliaia di
+    // righe che nessuno legge più. Il perché — e la lista, corta, di quelli
+    // ammessi — sta nel file.
+    setupFiles: ['./tests/helpers/guardiaConsole.js'],
     include: ['tests/**/*.test.js', 'tests/**/*.test.jsx'],
     // Fuori i test delle REGOLE Firestore: vogliono l'emulatore acceso e
     // hanno una configurazione loro (vitest.regole.config.mjs, `npm run
