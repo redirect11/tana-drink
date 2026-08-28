@@ -4045,3 +4045,78 @@ bugs:
     severity: grave
     priority: P2
     test_cases: []
+
+  - id: BUG-096
+    title: "Fuori da «organizza» i sensori del trascinamento venivano tolti, non spenti"
+    area: "src/components/PosProductPicker.jsx, src/components/OrderPosDetail.jsx, src/lib/sensoriDnd.js"
+    description: >
+      Sia la griglia dei prodotti sia la lista del conto passavano a dnd-kit
+      una lista di sensori VUOTA quando «organizza» era spento, e la lista
+      piena quando era acceso.
+      IL PUNTO: dnd-kit usa quella lista come dipendenze di un `useEffect`
+      (`useSensorSetup`), e React le dipendenze le confronta una a una PER
+      POSIZIONE. Una lista che cambia LUNGHEZZA fra un disegno e l'altro non e'
+      un confronto valido — React lo dice a voce alta, «The final argument
+      passed to useEffect changed size between renders» — e in pratica,
+      entrando e uscendo dalla modalita', il montaggio e lo smontaggio dei
+      sensori si disallineano: nessuno puo' garantire che dopo un giro dentro e
+      fuori la maniglia prenda ancora. Al banco e' il tipo di guaio che non si
+      riproduce a comando e si liquida con «non ha funzionato, riprovo».
+      Trovato ripulendo gli avvisi della suite (agosto 2026), non da una
+      segnalazione: l'avviso c'era da sempre, sepolto sotto migliaia di righe.
+      Comportamento atteso: la lista dei sensori non cambia mai lunghezza;
+      fuori da «organizza» nessun tocco deve poter far partire un
+      trascinamento.
+      RISOLTO: `src/lib/sensoriDnd.js` — `spegnibile(Sensore)` avvolge un
+      sensore di dnd-kit in modo che il suo attivatore risponda «no» quando
+      l'opzione `attiva` e' falsa. I sensori restano montati sempre (tre nella
+      griglia, uno nella lista del conto) e si spengono con un'opzione, invece
+      di sparire dalla lista. Il comportamento a schermo non cambia: dentro
+      «organizza» si trascina come prima, fuori non si trascina come prima.
+      PROVATO: i test che entrano ed escono da «organizza» ci passavano gia'
+      sopra (tests/component/PosProductPicker.test.jsx, «la griglia non viene
+      rifatta»); quello che mancava era che l'avviso COSTASSE qualcosa. Da ora
+      lo fa: tests/helpers/guardiaConsole.js fa fallire il test che stampa un
+      avviso inatteso, quindi se la lista tornasse a cambiare lunghezza la
+      suite diventa rossa.
+    status: fixed
+    generate_issue: true
+    labels: [bug, pos]
+    in_produzione: true
+    severity: media
+    priority: P2
+    test_cases:
+      - tests/component/PosProductPicker.test.jsx
+
+  - id: BUG-097
+    title: "Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala"
+    area: "src/components/OrderPosDetail.jsx (effetto onAuthStateChanged, `ruolo`)"
+    description: >
+      Aprendo un conto, `ruolo` parte da `null` e diventa quello vero solo
+      quando il token risponde (`getIdTokenResult`, una promessa). Nel mezzo
+      `puoGestireComande(null)` e' falso, quindi al primo disegno la schermata
+      si comporta come se a guardarla fosse la sala: i passi della preparazione
+      non ci sono, «Annulla ordine» e' spento, e i tasti di divisione della
+      comanda non compaiono. Un istante dopo arrivano tutti insieme.
+      Al banco vuol dire una schermata che si assesta sotto le mani nel momento
+      in cui ci si appoggia il dito — e col token scaduto o la rete lenta quel
+      momento si allunga: si tocca «Annulla» e non risponde, si tocca di nuovo
+      e intanto e' diventato attivo.
+      Trovato mentre si ripulivano gli avvisi `act(...)` della suite (agosto
+      2026): erano proprio quei tre aggiornamenti che atterravano a test
+      finito. I test adesso lo aspettano, quindi la schermata che verificano e'
+      quella completa — ma il ritardo nel prodotto resta.
+      Comportamento atteso: chi apre un conto vede subito la schermata del
+      proprio ruolo. Il ruolo e' gia' noto altrove nell'app (il gestionale non
+      si apre senza), e va tenuto da parte invece di richiederlo da capo a ogni
+      montaggio — per esempio ricordandolo come si fa col numero di conto
+      previsto (`progressivi.js`, «se un dato serve e non c'e', si precarica»).
+      NON CORRETTO QUI: cambiarlo cambia cosa si vede al primo disegno, e
+      questo giro era una pulizia degli avvisi, non un cambio di comportamento.
+    status: todo
+    generate_issue: true
+    labels: [bug, pos]
+    in_produzione: true
+    severity: media
+    priority: P2
+    test_cases: []

@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 27 agosto 2026.
+> Generato il 28 agosto 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **228 voci** in tutto. **201** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **9** difetti noti sono ancora aperti.
+cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -3010,6 +3010,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-093](#bug-093--ogni-ordine-è-leggibile-e-creabile-da-chiunque-dati-personali-esposti) — Ogni ordine è leggibile e creabile da chiunque: dati personali esposti | grave | P1 |
+| 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -3102,6 +3103,14 @@ SCARTATA una scorciatoia: un ramo `resource.id is string` fa passare la query pe
 DA FARE A MANO: le regole hanno effetto solo dopo `firebase deploy --only firestore:rules`.
 
 **Dove**: `firestore.rules (match /orders/{orderId}), src/lib/api.js`
+
+#### BUG-097 — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala
+
+Aprendo un conto, `ruolo` parte da `null` e diventa quello vero solo quando il token risponde (`getIdTokenResult`, una promessa). Nel mezzo `puoGestireComande(null)` e' falso, quindi al primo disegno la schermata si comporta come se a guardarla fosse la sala: i passi della preparazione non ci sono, «Annulla ordine» e' spento, e i tasti di divisione della comanda non compaiono. Un istante dopo arrivano tutti insieme. Al banco vuol dire una schermata che si assesta sotto le mani nel momento in cui ci si appoggia il dito — e col token scaduto o la rete lenta quel momento si allunga: si tocca «Annulla» e non risponde, si tocca di nuovo e intanto e' diventato attivo. Trovato mentre si ripulivano gli avvisi `act(...)` della suite (agosto 2026): erano proprio quei tre aggiornamenti che atterravano a test finito. I test adesso lo aspettano, quindi la schermata che verificano e' quella completa — ma il ritardo nel prodotto resta. Comportamento atteso: chi apre un conto vede subito la schermata del proprio ruolo. Il ruolo e' gia' noto altrove nell'app (il gestionale non si apre senza), e va tenuto da parte invece di richiederlo da capo a ogni montaggio — per esempio ricordandolo come si fa col numero di conto previsto (`progressivi.js`, «se un dato serve e non c'e', si precarica»).
+
+NON CORRETTO QUI: cambiarlo cambia cosa si vede al primo disegno, e questo giro era una pulizia degli avvisi, non un cambio di comportamento.
+
+**Dove**: `src/components/OrderPosDetail.jsx (effetto onAuthStateChanged, `ruolo`)`
 
 ## Non più valido
 

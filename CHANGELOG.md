@@ -4,6 +4,16 @@
 
 ### Per chi sta al banco
 
+- **La striscia colorata delle tile non si spegne più da sola.** Il bordo
+  sinistro della card di un prodotto — quello che dice colore, categoria o
+  scorte — poteva tornare grigio quando la griglia si ridisegnava, e restare
+  così finché non si cambiava categoria. Adesso il colore lo tiene.
+
+- **La maniglia per spostare le card prende sempre.** Entrando e uscendo da
+  «organizza» — sia nella griglia dei prodotti sia nella lista del conto — il
+  trascinamento poteva smettere di rispondere finché non si riapriva la
+  schermata.
+
 - **Il giro che si fa sempre si salva come modello.** Sopra la tabella del
   nuovo ordine c'è la riga dei **modelli d'ordine**: mentre si compone si
   tocca **«Salva le N righe come modello»**, gli si dà un nome, e da lì in poi
