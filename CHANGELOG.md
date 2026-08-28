@@ -350,6 +350,16 @@
   Ordinare dal menù funziona esattamente come prima.
   **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
 
+- **E non si scarica più l'elenco dei conti dal di fuori.** Un conto si legge
+  solo conoscendone l'id — che è quello che fa il link del proprio ordine —
+  mentre a chiederne tanti insieme sono soltanto il gestionale, il cliente
+  registrato sui conti del suo account e il tabellone del menù. Prima quella
+  richiesta era aperta a chiunque, e da lì passavano nomi, note e importi dei
+  clienti. **Al banco non cambia niente**: coda, storico, statistiche e cassa
+  leggono come prima, e anche «I miei ordini» sul telefono del cliente
+  continua a mostrare gli stessi conti.
+  **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
+
 - **I numeri dei conti sono chiusi a chiave.** Il contatore da cui esce il
   «#» di ogni conto adesso può solo salire, di uno per volta, e a spostarlo
   o correggerlo è soltanto chi ha fatto il login al gestionale. Al banco non

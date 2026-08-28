@@ -4101,14 +4101,26 @@ requirements:
     title: "Le regole del database seguono i ruoli"
     area: "firestore.rules"
     description: >
-      Menù, impostazioni e ordini sono a lettura libera (servono al cliente); cassa,
+      Menù e impostazioni sono a lettura libera (servono al cliente); cassa,
       magazzino, gruppi, ore e fatture sono riservati al personale; le paghe e la
       gestione utenti all'admin. Nessuno può cancellare incassi o sessioni di cassa
       dall'app.
+      GLI ORDINI SONO IL CASO DELICATO, perché contengono dati personali e
+      insieme devono restare raggiungibili da un cliente che non si è
+      registrato. Le due cose stanno insieme separando i due mestieri che
+      Firestore chiama entrambi «lettura»: UN conto di cui si conosce l'id si
+      legge sempre — l'id è il lasciapassare, ed è così che funziona il link
+      del proprio conto — mentre ELENCARNE tanti passa solo dove la domanda
+      si dimostra sicura da sé: il personale, il cliente registrato sui conti
+      del suo account, e le due liste del tabellone del menù. Da qui scende
+      una cosa nel client: «i miei ordini» del cliente non registrato chiede
+      i conti salvati sul telefono uno per id, non con una lista (BUG-093).
     status: implemented
     generate_issue: false
     labels: [sicurezza]
-    test_cases: [tests/unit/utenze.test.js]
+    test_cases:
+      - tests/unit/utenze.test.js
+      - tests/unit/mieiOrdiniPerId.test.js
 
   - id: REQ-SIC-002
     title: "App Check protegge la produzione senza chiudere fuori il locale"
