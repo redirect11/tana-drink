@@ -9,7 +9,14 @@ import {
   simulateReaderPayment,
   isDevEnvironment,
 } from '../dev/devActions.js'
-import { subscribeActiveOrders } from '../lib/api.js'
+import { subscribeActiveOrders, subscribeSettings, updateSettings } from '../lib/api.js'
+import {
+  chiaveModulo,
+  moduliPremium,
+  moduloAcceso,
+  moduloIncluso,
+} from '../lib/licenza.js'
+import ToggleRow from './ToggleRow.jsx'
 import { runImport } from '../dev/importExcel.js'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
@@ -26,6 +33,23 @@ export default function DevTools() {
   // l'esito del checkout SumUp si "recita" da qui.
   const [pending, setPending] = useState([])
   const [unpaid, setUnpaid] = useState([])
+  // Le impostazioni del bar servono agli interruttori dei moduli premium
+  // qui sotto: si guarda e si scrive lo stesso flag che legge lib/licenza.js.
+  const [impostazioni, setImpostazioni] = useState(null)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+
+  // L'inclusione si scrive SEMPRE per intero: `licenza.moduli` è la verità
+  // completa su cosa il locale ha, e una mappa scritta a metà direbbe che
+  // tutto il resto non è incluso. Si parte da com'è messo adesso ogni
+  // modulo e si cambia solo quello toccato.
+  const scriviInclusione = (id, incluso) => {
+    const moduli = Object.fromEntries(
+      moduliPremium().map((m) => [m.id, m.id === id ? incluso : moduloIncluso(impostazioni, m.id)])
+    )
+    updateSettings({ licenza: { ...(impostazioni?.licenza || {}), moduli } }).catch((e) =>
+      setError(e.message)
+    )
+  }
   useEffect(() => {
     return subscribeActiveOrders((orders) => {
       setPending(orders.filter((o) => o.payment_status === 'in_attesa'))
@@ -94,6 +118,46 @@ export default function DevTools() {
           />
           <span>Simula la stampa su questo dispositivo</span>
         </label>
+      </div>
+
+      {/* QUI SI FA LA LICENZA, e solo qui: nelle impostazioni normali si
+          accende e si spegne quello che il locale HA, non si decide cosa
+          ha (lib/licenza.js). Serve a provare i moduli — hanno i loro test
+          e c'è l'ambiente di test — senza inventare un meccanismo di
+          vendita che ancora non esiste.
+          DUE INTERRUTTORI PER MODULO, che sono due domande diverse:
+          «inclusa» scrive `licenza.moduli` su settings/bar, cioè la stessa
+          forma che avrà il documento della licenza della Fase 3 — questa
+          è la sua prova generale; «accesa» scrive il flag d'uso, quello
+          che si tocca anche dalle impostazioni normali.
+          L'altra strada, equivalente, è scrivere quei campi a mano dalla
+          console Firestore o dall'emulatore.
+          SPEGNERE NASCONDE, NON CANCELLA: conte e fatture già scritte
+          restano dove sono e tornano quando il modulo si riaccende. */}
+      <div className="card settings-section">
+        <h3>Funzioni premium</h3>
+        <p className="muted small" style={{ margin: '4px 0 8px' }}>
+          Valgono per tutto il locale, non per questo dispositivo. Un modulo
+          lavora solo se è incluso <em>e</em> acceso.
+        </p>
+        {moduliPremium().map((m) => (
+          <div key={m.id}>
+            <ToggleRow
+              label={`${m.label} — inclusa nella licenza`}
+              desc={`settings/bar · licenza.moduli.${m.id}`}
+              checked={moduloIncluso(impostazioni, m.id)}
+              onChange={(v) => scriviInclusione(m.id, v)}
+            />
+            <ToggleRow
+              label={`${m.label} — accesa`}
+              desc={`settings/bar · ${chiaveModulo(m.id)}`}
+              checked={moduloAcceso(impostazioni, m.id)}
+              onChange={(v) =>
+                updateSettings({ [chiaveModulo(m.id)]: v }).catch((e) => setError(e.message))
+              }
+            />
+          </div>
+        ))}
       </div>
 
       {/* Azioni distruttive sul database: solo emulatore locale (usano un
