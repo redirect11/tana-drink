@@ -11,7 +11,6 @@ import {
   deleteDoc,
   query,
   where,
-  documentId,
   orderBy,
   limit as fbLimit,
   onSnapshot,
@@ -3393,16 +3392,23 @@ export async function fetchOrdersByCustomer(uid, limitN = 30) {
 
 export async function fetchOrdersByIds(ids) {
   if (!ids || ids.length === 0) return []
-  // Firestore: massimo 30 valori per clausola "in"; suddividi in blocchi.
-  const chunks = []
-  for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30))
-  const results = []
-  for (const chunk of chunks) {
-    const snap = await getDocs(
-      query(ordersCol, where(documentId(), 'in', chunk))
-    )
-    results.push(...snap.docs.map(mapOrder))
-  }
+  // LETTURE SINGOLE, NON UNA LISTA (BUG-093). Qui prima c'era una query su
+  // `documentId() in [...]`, spezzata in blocchi da 30 per il limite della
+  // clausola `in`. Ma una query è un `list`, e sugli ordini il `list` adesso
+  // passa solo dove la domanda si dimostra sicura da sé (firestore.rules):
+  // «solo questi id» non è una domanda che una regola sappia riconoscere,
+  // mentre il `get` per id è esattamente il modello che regge il link del
+  // conto. Gli id sono al massimo venti — tanti ne tiene il telefono
+  // (cart.js) — quindi venti letture in parallelo: non si sente, e la
+  // complicazione dei blocchi sparisce.
+  const unici = [...new Set(ids)]
+  // Un conto che non risponde non azzera la lista degli altri: la query,
+  // senza rete, tornava quello che la cache aveva e non un errore, e questa
+  // schermata deve comportarsi allo stesso modo.
+  const snaps = await Promise.all(
+    unici.map((id) => getDoc(doc(ordersCol, id)).catch(() => null))
+  )
+  const results = snaps.filter((s) => s && s.exists()).map(mapOrder)
   results.sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   )
