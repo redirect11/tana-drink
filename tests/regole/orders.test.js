@@ -10,13 +10,19 @@
 // l'email dell'admin, o già pagato, o già fatturato. Qui si prova che
 // quella porta è chiusa e che il conto del cliente vero passa ancora.
 //
-// C'È ANCHE UN PEZZO ANCORA APERTO, ed è in fondo al file, scritto come
-// prova: la lettura in blocco di TUTTA la collezione. Chiuderla richiede un
-// cambiamento nel client e non si fa di nascosto — sta in BUG-093.
+// IN FONDO AL FILE STA LA LETTURA, che è la seconda metà di BUG-093.
+// «Leggere» sono due mestieri diversi: prendere UN conto di cui si conosce
+// l'id (get) e scaricarne tanti insieme (list). Il primo è il modello
+// voluto; il secondo era concesso per errore, e con la sola chiave pubblica
+// del bundle portava ai dati dei clienti. Qui si prova che l'archivio non si
+// travasa più e che le liste legittime passano ancora.
 
 import { describe, it, beforeAll, afterAll, beforeEach, expect } from 'vitest'
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
-import { doc, setDoc, getDoc, getDocs, collection, query, where } from 'firebase/firestore'
+import {
+  doc, setDoc, getDoc, getDocs, collection, query, where,
+  documentId, orderBy, limit, Timestamp,
+} from 'firebase/firestore'
 import { avviaAmbiente, CHI } from './ambiente.js'
 
 let env
@@ -71,10 +77,18 @@ beforeEach(async () => {
         placed_by: { email: 'admin@latanadelconiglio.it', role: 'admin' },
       })
     )
+    // UN CONTO VECCHIO, di prima delle comande: `comande_statuses` non ce
+    // l'ha proprio. Sta qui perché le regole della lettura ci passano
+    // sopra, e un campo che manca in una regola non è `false`, è un errore
+    // — se il tabellone del cliente lo incrociasse, si spegnerebbe.
+    const vecchio = contoDalMenu({ status: 'consegnato' })
+    delete vecchio.comande
+    delete vecchio.comande_statuses
+    await setDoc(doc(db, 'orders/conto-vecchio'), vecchio)
   })
 })
 
-describe('L’USO LEGITTIMO PASSA: il cliente ordina e segue il suo conto', () => {
+describe('L’USO LEGITTIMO PASSA: il conto si apre da tutte e tre le mani', () => {
   it('il cliente non autenticato apre un conto dal menù', async () => {
     await assertSucceeds(setDoc(doc(CHI.anonimo(env), 'orders/nuovo-1'), contoDalMenu()))
   })
@@ -86,11 +100,6 @@ describe('L’USO LEGITTIMO PASSA: il cliente ordina e segue il suo conto', () =
         contoDalMenu({ payment_method: 'online', payment_status: 'in_attesa' })
       )
     )
-  })
-
-  // Il lasciapassare è l'id: chi ha il link del proprio conto lo legge.
-  it('con l’id in mano, chiunque legge quel conto', async () => {
-    await assertSucceeds(getDoc(doc(CHI.anonimo(env), 'orders/conto-in-coda')))
   })
 
   // Il cliente REGISTRATO intesta il conto al suo account: è così che «i
@@ -135,26 +144,6 @@ describe('L’USO LEGITTIMO PASSA: il cliente ordina e segue il suo conto', () =
     )
   })
 
-  // Il tabellone del menù («stiamo servendo») e la stima dei tempi: due
-  // liste che il cliente non autenticato deve poter chiedere.
-  it('il cliente vede la coda e il tabellone dei pronti', async () => {
-    const db = CHI.anonimo(env)
-    await assertSucceeds(
-      getDocs(
-        query(
-          collection(db, 'orders'),
-          where('comande_statuses', 'array-contains-any', ['ricevuto', 'in_preparazione'])
-        )
-      )
-    )
-    await assertSucceeds(
-      getDocs(query(collection(db, 'orders'), where('comande_statuses', 'array-contains', 'pronto')))
-    )
-  })
-
-  it('il banco legge tutto, che è il suo mestiere', async () => {
-    await assertSucceeds(getDocs(collection(CHI.banco(env), 'orders')))
-  })
 })
 
 describe('L’ABUSO È BLOCCATO: un conto non nasce firmato o già successo', () => {
@@ -239,30 +228,117 @@ describe('L’ABUSO È BLOCCATO: un conto non nasce firmato o già successo', ()
   })
 })
 
-describe('QUELLO CHE RESTA APERTO, e sta scritto perché si veda (BUG-093)', () => {
-  // I documenti degli ordini contengono dati personali — nome del cliente,
-  // note, token push, email di chi li ha battuti — e sono a lettura
-  // pubblica per disegno (il lasciapassare è l'id).
-  //
-  // Chiudere la lettura IN BLOCCO si può, ed è provato che funziona: un
-  // `allow list` che lasci passare solo le liste del banco, le due del
-  // tabellone e quella del cliente sui propri ordini blocca il travaso
-  // dell'archivio. Ma manda in errore «I miei ordini» del cliente NON
-  // registrato, che chiede i suoi conti con una query su
-  // `documentId() in [...]` — e quella query non c'è modo di riconoscerla
-  // dentro una regola.
-  //
-  // Servirebbe una riga diversa nel client (chiedere i conti uno per id,
-  // che il lasciapassare già permette): è un cambiamento nell'app e lo
-  // decide chi tiene il locale, non chi scrive le regole. Finché non è
-  // deciso, questa prova dice la verità su com'è adesso — e diventerà
-  // `assertFails` il giorno in cui si chiude.
-  it('oggi la collezione degli ordini si legge ancora tutta insieme', async () => {
-    const snap = await assertSucceeds(getDocs(collection(CHI.anonimo(env), 'orders')))
-    expect(snap.size).toBeGreaterThan(0)
-    // Ed ecco cosa ne esce: il nome del cliente e l'email di chi l'ha battuto.
-    const chiuso = snap.docs.find((d) => d.id === 'conto-chiuso').data()
-    expect(chiuso.customer_name).toBe('Marco Esposito')
-    expect(chiuso.placed_by.email).toBe('admin@latanadelconiglio.it')
+describe('LA LETTURA: un conto per id sì, l’archivio no (BUG-093)', () => {
+  // IL TRAVASO: un `getDocs` senza filtri sulla collezione. Prima tornava
+  // tutto — mesi di nomi, note, importi ed email di chi ha battuto i conti —
+  // e bastava la chiave pubblica del bundle per chiederlo.
+  it('un anonimo non elenca gli ordini', async () => {
+    await assertFails(getDocs(collection(CHI.anonimo(env), 'orders')))
+  })
+
+  // E non lo elenca nemmeno travestendo la domanda: un filtro qualunque non
+  // è un filtro che dimostra qualcosa. È il punto per cui le regole non sono
+  // un colino — misurano la query, non i documenti che ne tornerebbero.
+  it('né lo elenca mettendo davanti un filtro qualsiasi', async () => {
+    const db = CHI.anonimo(env)
+    await assertFails(getDocs(query(collection(db, 'orders'), where('status', '==', 'aperto'))))
+    await assertFails(
+      getDocs(query(collection(db, 'orders'), where('customer_name', '==', 'Marco Esposito')))
+    )
+    await assertFails(
+      getDocs(query(collection(db, 'orders'), orderBy('created_at', 'desc'), limit(300)))
+    )
+    await assertFails(
+      getDocs(query(collection(db, 'orders'), where('created_at', '>=', Timestamp.fromMillis(0))))
+    )
+  })
+
+  // Nemmeno con un account: registrarsi non è un ruolo.
+  it('né lo elenca un cliente registrato, né sui conti di un altro', async () => {
+    const db = CHI.cliente(env, 'cliente-1')
+    await assertFails(getDocs(collection(db, 'orders')))
+    await assertFails(
+      getDocs(query(collection(db, 'orders'), where('customer_uid', '==', 'cliente-2')))
+    )
+  })
+
+  // IL LASCIAPASSARE RESTA L'ID: per chi ha il link del proprio conto non è
+  // cambiato niente, autenticato o no.
+  it('con l’id in mano il conto si legge, anche da anonimo', async () => {
+    await assertSucceeds(getDoc(doc(CHI.anonimo(env), 'orders/conto-in-coda')))
+    await assertSucceeds(getDoc(doc(CHI.anonimo(env), 'orders/conto-chiuso')))
+  })
+
+  // «I MIEI ORDINI» DEL CLIENTE NON REGISTRATO: gli id stanno nel telefono e
+  // si chiedono uno per uno. Era una query su `documentId() in [...]`, che
+  // nessuna regola sa riconoscere; adesso sono N letture singole
+  // (fetchOrdersByIds in src/lib/api.js), ed è questa la riga che le prova.
+  it('«i miei ordini» del cliente non registrato passa per letture singole', async () => {
+    const db = CHI.anonimo(env)
+    const miei = ['conto-in-coda', 'conto-chiuso']
+    const letti = await Promise.all(miei.map((id) => assertSucceeds(getDoc(doc(db, 'orders', id)))))
+    expect(letti.map((snap) => snap.id)).toEqual(miei)
+    // La vecchia strada è chiusa: se il client ci tornasse, quella schermata
+    // resterebbe vuota.
+    await assertFails(getDocs(query(collection(db, 'orders'), where(documentId(), 'in', miei))))
+  })
+
+  // IL CLIENTE REGISTRATO ritrova i suoi conti da un altro telefono, e solo
+  // i suoi: la lista si dimostra col filtro sul proprio account.
+  it('il cliente registrato elenca i propri conti', async () => {
+    const db = CHI.cliente(env, 'cliente-1')
+    await assertSucceeds(
+      getDocs(query(collection(db, 'orders'), where('customer_uid', '==', 'cliente-1'), limit(30)))
+    )
+  })
+
+  // IL PERSONALE LEGGE TUTTO, che è il suo mestiere: queste sono le liste
+  // vere della coda, dello storico e della cassa (src/lib/api.js). Se una
+  // smettesse di passare, la sera la coda resterebbe vuota — ed è per questo
+  // che stanno qui una per una e non solo come «legge tutto».
+  it('il personale elenca: sono le liste della coda e della cassa', async () => {
+    for (const db of [CHI.banco(env), CHI.admin(env), CHI.sala(env)]) {
+      await assertSucceeds(getDocs(collection(db, 'orders')))
+      await assertSucceeds(
+        getDocs(query(collection(db, 'orders'), where('status', 'in', ['aperto', 'ricevuto'])))
+      )
+      await assertSucceeds(
+        getDocs(query(collection(db, 'orders'), where('created_at', '>=', Timestamp.fromMillis(0))))
+      )
+      await assertSucceeds(
+        getDocs(query(collection(db, 'orders'), where('closed_in_session', '==', 'cassa-1')))
+      )
+      await assertSucceeds(
+        getDocs(query(collection(db, 'orders'), orderBy('created_at', 'desc'), limit(300)))
+      )
+      await assertSucceeds(
+        getDocs(query(collection(db, 'orders'), where('group_id', '==', 'gruppo-1')))
+      )
+    }
+  })
+
+  // IL TABELLONE DEL MENÙ resta acceso: le due liste che dicono a chi
+  // aspetta quanta coda c'è e cosa è pronto al ritiro. Sono liste, ma sono
+  // domande che si dimostrano da sé, e sono le sole che un anonimo può fare.
+  it('il tabellone del cliente continua a funzionare', async () => {
+    const db = CHI.anonimo(env)
+    await assertSucceeds(
+      getDocs(
+        query(
+          collection(db, 'orders'),
+          where('comande_statuses', 'array-contains-any', ['ricevuto', 'in_preparazione'])
+        )
+      )
+    )
+    await assertSucceeds(
+      getDocs(query(collection(db, 'orders'), where('comande_statuses', 'array-contains', 'pronto')))
+    )
+    // Ma sotto non gli si allarga: «tutti i conti serviti» non è il
+    // tabellone, è l'archivio con un'altra faccia.
+    await assertFails(
+      getDocs(
+        query(collection(db, 'orders'), where('comande_statuses', 'array-contains', 'consegnato'))
+      )
+    )
   })
 })

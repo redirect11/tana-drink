@@ -95,7 +95,49 @@ service cloud.firestore {
           && d.get('total', 0) is number
           && d.get('total', 0) >= 0;
       }
-      allow read: if true;
+      // GET E LIST SONO DUE COSE DIVERSE, e per questo stanno su due righe.
+      // Chi un domani vorrà «semplificare» rimettendo un `allow read` unico
+      // riapre BUG-093: `read` è la somma delle due, e quella che fa male è
+      // la seconda.
+      //
+      //   · GET è leggere UN documento di cui si conosce l'id. È il modello
+      //     voluto — l'id fa da lasciapassare, è casuale a 20 caratteri, e
+      //     chi ha il link del proprio conto lo vede senza registrarsi.
+      //     Resta aperto: chiuderlo vuol dire spegnere il menù del cliente.
+      //   · LIST è scaricarne tanti insieme, ed era concesso per errore: la
+      //     lettura non era ristretta, e con la sola chiave pubblica del
+      //     bundle si arrivava ai dati dei clienti — mesi di nomi, note,
+      //     importi, email di chi ha battuto i conti.
+      //
+      // Adesso una lista passa solo se la DOMANDA dimostra da sé di restare
+      // dentro un recinto: le regole non filtrano i risultati, misurano la
+      // query prima di eseguirla, e una lista senza filtri viene respinta
+      // anche quando i documenti che tornerebbero sarebbero tutti leciti.
+      //
+      // I recinti sono i tre modi legittimi di chiedere una lista:
+      //   · il PERSONALE, che per mestiere legge tutto (coda, storico,
+      //     statistiche, cassa, gruppi);
+      //   · il CLIENTE REGISTRATO sui conti intestati al suo account, che è
+      //     come «i miei ordini» lo ritrova da un altro telefono;
+      //   · il TABELLONE del menù: le due liste che dicono a chi aspetta
+      //     quanta coda c'è e cosa è pronto al ritiro.
+      //
+      // Il cliente NON registrato non ha un recinto e non gli serve: «i miei
+      // ordini» tiene gli id nel telefono e li chiede uno per uno, con dei
+      // get (fetchOrdersByIds in src/lib/api.js). Era una query su
+      // `documentId() in [...]`, che nessuna regola sa riconoscere; la strada
+      // è cambiata nel client invece di allargare il permesso qui.
+      //
+      // RESTA FUORI, ed è il terzo passo di BUG-093: il tabellone e la coda
+      // del banco tornano i documenti INTERI, e lì dentro ci sono ancora
+      // push_token, customer_uid e placed_by. Le regole non sanno proiettare
+      // campi: per non mostrarli vanno spostati, e quello tocca cinque punti
+      // dell'app.
+      allow get: if true;
+      allow list: if isStaffMember()
+        || (isSignedIn() && resource.data.customer_uid == request.auth.uid)
+        || resource.data.comande_statuses.hasAny(['ricevuto', 'in_preparazione'])
+        || resource.data.comande_statuses.hasAny(['pronto']);
       allow create: if isStaffMember() || conteNuovoDaCliente();
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
