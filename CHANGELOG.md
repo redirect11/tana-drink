@@ -348,7 +348,8 @@
   soltanto quello che serve a ordinare: niente firma col nome di chi sta al
   banco, niente conto che nasce già pagato, già scontato o già servito.
   Ordinare dal menù funziona esattamente come prima.
-  **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio.
 
 - **E non si scarica più l'elenco dei conti dal di fuori.** Un conto si legge
   solo conoscendone l'id — che è quello che fa il link del proprio ordine —
@@ -358,7 +359,8 @@
   clienti. **Al banco non cambia niente**: coda, storico, statistiche e cassa
   leggono come prima, e anche «I miei ordini» sul telefono del cliente
   continua a mostrare gli stessi conti.
-  **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio.
 
 - **I numeri dei conti sono chiusi a chiave.** Il contatore da cui esce il
   «#» di ogni conto adesso può solo salire, di uno per volta, e a spostarlo
@@ -368,8 +370,9 @@
   a prendere il suo. Serviva perché un contatore che qualcuno può riportare
   indietro vuol dire due conti con lo stesso numero nella stessa serata —
   uno stampato e in mano al cliente, l'altro a schermo.
-  **Ha effetto solo dopo la pubblicazione delle regole Firestore**, che è un
-  passo a parte e va fatto a mano.
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio: le pubblica la pipeline insieme all'app, non serve nessun passo
+  a mano.
 
 - **Le fatture ai clienti diventano una funzione premium.** La sezione
   **«📄 Fatture»** non è più nel menu, e nella schermata di pagamento non
