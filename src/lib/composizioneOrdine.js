@@ -106,6 +106,15 @@ export function ordinaCatalogo(righe, { col = 'nome', dir = 'asc' } = {}) {
 // righe. Spuntarle tutte e due vorrebbe dire comprarlo due volte. Si sceglie
 // il fornitore dell'ULTIMO ACQUISTO (`fornitoreProposto`), che è la stessa
 // regola con cui si propone un fornitore ovunque.
+// LA PRESELEZIONE SI AGGIUNGE A QUELLO CHE C'È GIÀ, e chi ha scritto vince.
+// Sembra una sottigliezza e non lo è: la preselezione arriva DOPO il primo
+// disegno delle righe, quindi sostituire lo stato butta via quello che
+// qualcuno ha appena scritto — senza un errore e senza un segno. L'ha trovato
+// la CI, dove la macchina è più lenta: due colli scritti tornavano a uno.
+export function uniscePreselezione(iniziali, gia) {
+  return { ...(iniziali || {}), ...(gia || {}) }
+}
+
 export function preselezioneIniziale(righe) {
   const perProdotto = new Map()
   for (const r of righe || []) {

@@ -18,6 +18,7 @@ import {
   ordinaCatalogo,
   ordiniDaCreare,
   preselezioneIniziale,
+  uniscePreselezione,
   prezzoDiListino,
   prezzoDaTotale,
   prossimaFinestra,
@@ -344,5 +345,35 @@ describe('lo scorrimento continuo', () => {
     expect(prossimaFinestra(PASSO_RIGHE, 1000)).toBe(PASSO_RIGHE * 2)
     expect(prossimaFinestra(PASSO_RIGHE, 50)).toBe(50)
     expect(prossimaFinestra(50, 50)).toBe(50)
+  })
+})
+
+// ── LA PRESELEZIONE NON CANCELLA QUELLO CHE SI E' SCRITTO ─────────────
+//
+// Trovato dalla CI il 28/08/2026, su una macchina piu' lenta della mia: due
+// colli scritti tornavano a uno. La preselezione arriva DOPO il primo disegno
+// delle righe, e sostituendo lo stato buttava via quello che qualcuno aveva
+// appena scritto — senza un errore e senza un segno, che e' il modo peggiore
+// di sbagliare. Sul tablet del banco, con 388 prodotti e 367 listini da
+// mettere in fila, quella finestra non e' zero.
+describe('la preselezione si aggiunge, non sostituisce', () => {
+  it('quello che e gia scritto vince sulla proposta', () => {
+    const proposta = { 'campari|nova': { qty: '1', supplier_id: 'nova' } }
+    const scritto = { 'campari|nova': { qty: '5', supplier_id: 'nova' } }
+    expect(uniscePreselezione(proposta, scritto)['campari|nova'].qty).toBe('5')
+  })
+
+  it('le righe proposte che nessuno ha toccato restano', () => {
+    const proposta = { a: { qty: '1' }, b: { qty: '2' } }
+    const scritto = { a: { qty: '9' } }
+    const unione = uniscePreselezione(proposta, scritto)
+    expect(unione.a.qty).toBe('9')
+    expect(unione.b.qty).toBe('2')
+  })
+
+  it('senza niente di scritto vale la proposta, e viceversa', () => {
+    expect(uniscePreselezione({ a: { qty: '1' } }, {})).toEqual({ a: { qty: '1' } })
+    expect(uniscePreselezione({}, { a: { qty: '3' } })).toEqual({ a: { qty: '3' } })
+    expect(uniscePreselezione(null, null)).toEqual({})
   })
 })
