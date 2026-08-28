@@ -8,7 +8,7 @@
 // si accende la prima card trovata e ce la si porta sotto gli occhi.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -210,11 +210,14 @@ describe('la striscia delle tile', () => {
     expect(bordo(container, 'Mojito')).toBe('var(--line)')
   })
 
-  it('«scorte»: senza ricetta collegata non si inventa un allarme', () => {
+  it('«scorte»: senza ricetta collegata non si inventa un allarme', async () => {
     // Un drink senza ingredienti in magazzino non è «esaurito»: non lo
     // sappiamo, e col verde spento resta grigio.
     const { container } = mostra({ modoStriscia: 'scorte' })
-    expect(bordo(container, 'Mojito')).toBe('var(--line)')
+    // Con la striscia «scorte» la griglia va a prendersi il magazzino, e la
+    // risposta arriva dopo il primo disegno: si aspetta, se no si guarda la
+    // griglia di prima e l'aggiornamento cade fuori dal test.
+    await waitFor(() => expect(bordo(container, 'Mojito')).toBe('var(--line)'))
   })
 
   it('senza indicazioni resta il modo di sempre: il colore del prodotto', () => {
