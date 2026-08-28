@@ -63,6 +63,7 @@ import {
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
+import { spegnibile } from '../lib/sensoriDnd.js'
 import {
   makeLineId,
   mergeLines,
@@ -187,7 +188,11 @@ function ricordaNumeroPrevisto(n) {
 // E come nella griglia si entra in «organizza»: fuori di lì le righe non si
 // muovono — toccarle apre la riga, che è quello che si fa mille volte a
 // sera — e dentro compare la maniglia, che è l'unica cosa che trascina.
-const SENSORI_SPENTI = []
+// I sensori restano montati anche fuori da «organizza»: a spegnerli è
+// l'opzione `attiva`. Svuotare la lista cambierebbe la lunghezza delle
+// dipendenze di un `useEffect` dentro dnd-kit, che è vietato — il perché
+// per esteso sta in `lib/sensoriDnd.js`.
+const PointerSensorSpegnibile = spegnibile(PointerSensor)
 
 function RigaOrdinabile({ id, attiva, bloccata, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -276,7 +281,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const sensoriLista = useSensors(
     // Otto pixel prima di considerarlo un trascinamento: sotto quella soglia
     // è un tocco, e il tocco apre la riga.
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensorSpegnibile, {
+      attiva: organizzaLista,
+      activationConstraint: { distance: 8 },
+    })
   )
   // Menu delle azioni: esiste solo sul telefono, dove i tasti non ci stanno
   // tutti in pagina senza mangiarsi le righe del conto.
@@ -2479,7 +2487,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
 
             <DndContext
-              sensors={organizzaLista ? sensoriLista : SENSORI_SPENTI}
+              sensors={sensoriLista}
               collisionDetection={closestCenter}
               onDragEnd={({ active, over }) => {
                 if (!over || active.id === over.id) return
