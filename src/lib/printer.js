@@ -9,15 +9,22 @@
 //   3. Dal browser dell'iPad: vai su https://<IP>:8043 e accetta il certificato
 //   4. Da quel momento la connessione WSS funziona senza dialoghi
 
-import { CASH_METHOD_ORDER, cashMethodKeys, PAYMENT_METHOD_PRINT } from './orderStatus.js'
+import {
+  CASH_METHOD_ORDER,
+  cashMethodKeys,
+  PAYMENT_METHOD_PRINT,
+  placedByName,
+} from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
-import { pezziDellaComanda, righeDellaComanda } from './comande.js'
+import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import {
   configStampa,
   immagineCaricata,
   logoAcceso,
+  rigaPersone,
+  rigaVendita,
   tipoScontrino,
   LARGHEZZA_LOGO,
 } from './campiStampa.js'
@@ -60,26 +67,55 @@ const COL = 48
 // banco, non chi passa di lì a battere due conti.
 const SETTINGS_KEY = 'tana_printer_v2'
 const UTENTE_KEY = 'tana_printer_utente'
+const PERSONA_KEY = 'tana_printer_persona'
 
 // L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
 // Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
 // un istante si leggerebbe la scheda di un altro — «nessuna stampante
 // impostata» che compare e sparisce.
 let _utente = null
+// E DI QUELLA PERSONA SI RICORDA ANCHE IL NOME, perché è quello che va
+// stampato sullo scontrino (REQ-STAMPA-014, BUG-088). Sta qui e non nel
+// conto: la riga dice CHI STA STAMPANDO, cioè chi è collegato a questo
+// terminale nell'istante in cui la carta esce. Una ristampa porta quindi
+// il nome di chi ristampa — è lui che quel foglio lo consegna.
+//
+// Si ricorda in memoria locale per la stessa ragione dell'uid: la prima
+// stampa può capitare prima che Firebase abbia finito di riconoscere chi
+// è collegato, e uno scontrino senza nome sarebbe la conseguenza di un
+// ritardo, non di un dato che manca.
+let _persona = null
 try {
   _utente = localStorage.getItem(UTENTE_KEY) || null
+  _persona = JSON.parse(localStorage.getItem(PERSONA_KEY) || 'null')
 } catch {
   /* storage negato: si lavora senza memoria, come prima */
 }
 
-export function impostaUtenteStampante(uid) {
+// `persona`: { name, email } di chi è collegato, o niente se non c'è
+// nessuno. Le due cose arrivano insieme perché insieme cambiano — è la
+// stessa persona che si siede al terminale.
+export function impostaUtenteStampante(uid, persona = null) {
   _utente = uid || null
+  const nome = persona?.name || null
+  const email = persona?.email || null
+  _persona = nome || email ? { name: nome, email } : null
   try {
     if (uid) localStorage.setItem(UTENTE_KEY, uid)
     else localStorage.removeItem(UTENTE_KEY)
+    if (_persona) localStorage.setItem(PERSONA_KEY, JSON.stringify(_persona))
+    else localStorage.removeItem(PERSONA_KEY)
   } catch {
     /* niente memoria: le impostazioni restano quelle del dispositivo */
   }
+}
+
+// Il nome da mettere sulla carta, o stringa vuota se non si sa chi sta
+// stampando. Si ricava con `placedByName`, la STESSA funzione della coda e
+// del dettaglio conto: sullo scontrino e sullo schermo la stessa persona
+// si deve chiamare allo stesso modo.
+export function nomeDiChiStampa() {
+  return placedByName(_persona)
 }
 
 const chiaveImpostazioni = () => (_utente ? `${SETTINGS_KEY}:${_utente}` : SETTINGS_KEY)
@@ -383,6 +419,17 @@ function sdkAvailable() {
   return typeof window !== 'undefined' && typeof window.epson?.ePOSDevice === 'function'
 }
 
+// SI DIMENTICA IL COLLEGAMENTO: la prossima stampa rifà la stretta di mano.
+// Non si chiama `disconnect()` — se il collegamento è appeso, quella
+// chiamata può appendersi a sua volta, ed è proprio quello da cui si sta
+// scappando. Serve alla caduta vista dal battito, al ritorno in primo piano
+// e al lavoro di stampa che scade (BUG-086).
+function scordaConnessione() {
+  _printer = null
+  _device = null
+  _connectPromise = null
+}
+
 // Termina la connessione corrente (se attiva).
 export function disconnectPrinter() {
   fermaBattito()
@@ -422,12 +469,8 @@ function avviaBattito() {
   fermaBattito()
   _battito = setInterval(() => {
     try {
-      if (_device && !_device.isConnected()) {
-        // Caduta: si libera tutto, la prossima stampa riconnette.
-        _printer = null
-        _device = null
-        _connectPromise = null
-      }
+      // Caduta: si libera tutto, la prossima stampa riconnette.
+      if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* SDK in uno stato strano: si lascia stare */
     }
@@ -458,11 +501,7 @@ if (typeof document !== 'undefined') {
     if (document.visibilityState !== 'visible') return
     if (!loadPrinterSettings().ip) return
     try {
-      if (_device && !_device.isConnected()) {
-        _printer = null
-        _device = null
-        _connectPromise = null
-      }
+      if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* niente da fare */
     }
@@ -555,6 +594,31 @@ async function getPrinter() {
 
 // ── Utility di formattazione ──────────────────────────────────────────────────
 
+// ── UN DATO STORTO NON FERMA LA CARTA (BUG-086) ──────────────────────
+//
+// `item.name.toUpperCase()` sulla comanda: una riga senza nome — un
+// documento vecchio, una scrittura arrivata a metà — faceva saltare il
+// ticket a metà builder, e l'auto-stampa ci riprovava a ogni snapshot
+// senza uscire mai. Due funzioni più sotto, l'ordine al fornitore faceva
+// già `String(l.name || '')`: la difesa c'era, ma in un posto solo.
+//
+// La scelta è che la carta ESCA COMUNQUE, e che si veda cos'è storto: al
+// banco un ticket con «(senza nome)» si legge e si rimedia, un ticket che
+// non esce no. Vale per tutte le stampe: comanda, scontrino, acconto,
+// fattura.
+const nomeRiga = (item) => String(item?.name ?? '').trim() || '(senza nome)'
+
+// Quanti pezzi. Un valore che non è un numero non diventa «undefined»
+// sulla carta: la riga c'è, quindi il pezzo è almeno uno.
+const qtaRiga = (item) => {
+  const q = Number(item?.qty)
+  return Number.isFinite(q) ? q : 1
+}
+
+// Quanti euro. Un prezzo mancante vale zero e si stampa «0.00€»: prima
+// diventava «NaN€», che sullo scontrino del cliente è peggio di uno zero.
+const euroRiga = (v) => Number(v) || 0
+
 // Riga testo-sinistra + testo-destra allineato col padding spazi.
 function row(left, right, width = COL) {
   const avail = width - right.length
@@ -610,20 +674,88 @@ function italianDateTime(iso) {
 // nemmeno uno scritto domani.
 let _codaStampa = Promise.resolve()
 
+// ── UNA STAMPA CHE NON FINISCE NON PUÒ TENERSI IL CONTO (BUG-086) ────
+//
+// La sera del 24/08 il logo non è mai arrivato e `printScontrino` è
+// rimasto sospeso lì dentro. Il danno non è stato solo la carta che non
+// usciva: una promessa che non si chiude NÉ BENE NÉ MALE non fa partire
+// il `catch` di chi ha chiesto la stampa, e quel `catch` è l'unico posto
+// dove la pretesa dello scontrino torna libera (`releaseReceiptPrint`).
+// Risultato: la pretesa presa per sempre — quel conto non stampava più,
+// nemmeno riaperto, nemmeno dalla coda — e nessun errore a schermo. Al
+// banco: cinque riscossioni, zero scontrini, e nessuno che capisse perché.
+//
+// Il tempo massimo sul logo (BUG-053) copre QUEL passaggio. Questo copre
+// il lavoro INTERO — la connessione che non risponde, un `await` aggiunto
+// qui domani, qualunque cosa si impicchi: scaduto il tempo la promessa
+// RIFIUTA, e da lì funziona tutto quello che è già scritto (pretesa
+// liberata, messaggio a schermo, stampa dopo che parte).
+//
+// QUINDICI SECONDI. Sotto ci sta comoda ogni attesa legittima: l'SDK molla
+// il collegamento da sé intorno ai dieci secondi, il logo ai tre. Sopra non
+// c'è più niente da aspettare — è una stampante che non risponde, e chi ha
+// il cliente davanti deve saperlo adesso, non a fine serata.
+const TEMPO_MASSIMO_LAVORO = 15000
+
+// E NIENTE DOPPIONI. Un lavoro scaduto non si può interrompere a metà —
+// una Promise non si annulla — ma gli si può togliere la penna: da lì in
+// poi scrive su un guscio sordo. Così se poi arriva davvero in fondo, il
+// suo `send()` non fa uscire una seconda copia e il suo
+// `clearCommandBuffer()` non cancella la carta di chi sta stampando
+// adesso. Le costanti (ALIGN_CENTER, COLOR_1…) passano sempre: sono
+// valori, non gesti.
+function pennaDelLavoro(prn, vivo) {
+  const guscio = new Proxy(prn, {
+    get(target, chiave) {
+      const v = target[chiave]
+      if (typeof v !== 'function') return v
+      return (...args) => {
+        // L'SDK Epson concatena (`prn.addText(...).addCut()`): chi
+        // restituisce sé stesso deve restituire il GUSCIO, o il resto del
+        // ticket scavalcherebbe la difesa scrivendo sulla stampante vera.
+        if (!vivo()) return guscio
+        const esito = v.apply(target, args)
+        return esito === target ? guscio : esito
+      }
+    },
+  })
+  return guscio
+}
+
 function lavoroDiStampa(componi) {
-  const mio = _codaStampa.then(async () => {
-    const prn = await getPrinter()
-    // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
-    // non finiscono sulla nostra carta.
-    prn.clearCommandBuffer?.()
-    try {
-      await componi(prn)
-      prn.send()
-    } catch (e) {
-      // E non si lasciano resti a chi viene dopo.
+  let scaduto = false
+  const mio = _codaStampa.then(() => {
+    // Il cronometro parte col LAVORO, non con la richiesta: chi aspetta il
+    // suo turno in coda non ha ancora fatto niente di lento.
+    let cronometro
+    const scadenza = new Promise((_, ko) => {
+      cronometro = setTimeout(() => {
+        scaduto = true
+        // Il collegamento non è più affidabile: la stampa dopo rifà la
+        // stretta di mano invece di mettersi in fila dietro la stessa
+        // attesa appesa.
+        scordaConnessione()
+        ko(new Error('la stampante non ha risposto entro 15 secondi'))
+      }, TEMPO_MASSIMO_LAVORO)
+    })
+    const lavoro = (async () => {
+      const prn = pennaDelLavoro(await getPrinter(), () => !scaduto)
+      // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
+      // non finiscono sulla nostra carta.
       prn.clearCommandBuffer?.()
-      throw e
-    }
+      try {
+        await componi(prn)
+        prn.send()
+      } catch (e) {
+        // E non si lasciano resti a chi viene dopo.
+        prn.clearCommandBuffer?.()
+        throw e
+      }
+    })()
+    // Se ha già vinto la scadenza, il rifiuto del lavoro non lo ascolta più
+    // nessuno: si raccoglie qui, per non lasciarlo per aria.
+    lavoro.catch(() => {})
+    return Promise.race([lavoro, scadenza]).finally(() => clearTimeout(cronometro))
   })
   // La catena non si spezza su un errore: la stampa dopo deve partire
   // comunque — carta finita adesso non vuol dire stampante morta.
@@ -657,14 +789,52 @@ export function comandaDelTicket(order, comanda = null) {
   return aperte.at(-1) || null
 }
 
-// LA FASCIA NERA, IN UNA FUNZIONE SOLA. È il pezzo con più modi di
-// venire storto — la scritta si può cambiare, l'ora si può togliere, e
-// tutte e due insieme vorrebbero dire una striscia nera vuota in cima al
-// ticket — quindi la decide una funzione pura, che si prova senza
-// stampante: torna la riga da scrivere, o niente.
-export function strisciaComanda(cfg, hhmm) {
-  const dentro = [cfg.parole('fascia'), cfg.mostra('ora') ? hhmm : ''].filter(Boolean).join('  ')
-  return cfg.mostra('fascia') && dentro ? `  ${dentro}  ` : null
+// ── LA FASCIA NERA DICE QUALE TICKET È (BUG-089) ─────────────────────
+//
+// «Non usiamo Diretto o Subito. Chiamiamo Comanda X - Ordine Y sulla
+// comanda» (l'utente, 25/08/2026).
+//
+// PRIMA C'ERA «DIRETTO», SU OGNI TICKET. È un'etichetta di SumUp POS Pro
+// — il modello da cui questa carta è stata copiata — e là vuol dire una
+// cosa precisa: quando un ordine si spedisce in cucina a portate,
+// «Diretto» è la PRIMA infornata, quella che parte subito, e le
+// successive si chiamano «Ordine 1», «Ordine 2». Noi la stampavamo
+// uguale su tutte, anche sulla seconda e sulla terza comanda dello stesso
+// tavolo: un ticket che dichiarava «questo va adesso» mentre era il
+// secondo invio. La parola giusta ce l'avevamo già nei dati.
+//
+// DUE RIGHE E NON UNA. A corpo doppio sulla carta da 80 mm ci stanno 24
+// caratteri: «COMANDA 2 - ORDINE 28» ne occupa 21, e con l'ora accanto
+// sfonderebbe. L'ora scende sotto, dentro lo stesso rettangolo nero, e le
+// due righe si pareggiano in larghezza — se no il nero uscirebbe a
+// scaletta.
+//
+// Torna l'elenco delle righe da scrivere, vuoto se la fascia è spenta:
+// resta una funzione pura, che si prova senza stampante.
+export const LARGHEZZA_FASCIA = COL / 2
+
+export function strisciaComanda(cfg, hhmm, order = null, comanda = null) {
+  if (!cfg.mostra('fascia')) return []
+  const quale = numeroComanda(order, comanda)
+  const conto = order?.daily_number
+  // Niente «undefined» sulla carta: quello che non si sa non si scrive, e
+  // se non si sa niente la fascia non esce (stessa regola di nomeRiga e
+  // compagni, BUG-086).
+  const nomi = [
+    quale ? `COMANDA ${quale}` : '',
+    conto == null || conto === '' ? '' : `ORDINE ${conto}`,
+  ].filter(Boolean)
+  const righe = [nomi.join(' - '), cfg.mostra('ora') ? hhmm : ''].filter(Boolean)
+  if (!righe.length) return []
+  // Il respiro ai lati si dà solo se ci sta: senza, la fascia andrebbe a
+  // capo da sola e il rettangolo nero si spezzerebbe in due.
+  const testo = Math.max(...righe.map((r) => r.length))
+  const largo = Math.min(testo + 2, LARGHEZZA_FASCIA)
+  return righe.map((r) => {
+    const vuoto = Math.max(largo - r.length, 0)
+    const sinistra = Math.floor(vuoto / 2)
+    return `${' '.repeat(sinistra)}${r}${' '.repeat(vuoto - sinistra)}`
+  })
 }
 
 // `comanda` opzionale: stampa i soli item di quella comanda (aggiunte a un
@@ -693,13 +863,13 @@ export function printComanda(order, comanda = null) {
     // Di suo il logo sulla comanda non esce: al banco è carta consumata.
     await stampaLogo(prn, 'comanda')
 
-    // ── Header nero: "DIRETTO  22:09" ──
-    const striscia = strisciaComanda(cfg, hhmm)
-    if (striscia) {
+    // ── Header nero: "COMANDA 2 - ORDINE 28", e sotto l'ora ──
+    const striscia = strisciaComanda(cfg, hhmm, order, comandaDelTicket(order, comanda))
+    if (striscia.length) {
       prn.addTextAlign(prn.ALIGN_CENTER)
       prn.addTextStyle(true, false, true, prn.COLOR_1)  // reverse = bianco su nero
       prn.addTextSize(2, 2)
-      prn.addText(`${striscia}\n`)
+      for (const riga of striscia) prn.addText(`${riga}\n`)
       prn.addTextSize(1, 1)
       prn.addTextStyle(false, false, false, prn.COLOR_1)
       prn.addText('\n')
@@ -740,7 +910,7 @@ export function printComanda(order, comanda = null) {
     prn.addTextSize(1, 2)
     const conNote = cfg.mostra('note_riga')
     for (const item of ticketItems) {
-      prn.addText(`${item.qty}  ${item.name.toUpperCase()}\n`)
+      prn.addText(`${qtaRiga(item)}  ${nomeRiga(item).toUpperCase()}\n`)
       // Nota della singola riga (es. "poco ghiaccio", o per chi è): il banco
       // deve vederla sotto al prodotto, in corpo normale.
       if (item.note && conNote) {
@@ -979,17 +1149,22 @@ export function printScontrino(order, opts = {}) {
     if (cfg.mostra('numero')) {
       prn.addText(row(`SCONTRINO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
     }
-    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
-    if (cfg.mostra('persone')) {
-      const totalPers = order.coperto_persons ? `${order.coperto_persons} cliente${order.coperto_persons > 1 ? 'i' : ''}` : '1 cliente'
-      prn.addText(`${totalPers}\n`)
-    }
-    if (cfg.mostra('riga_vendita')) {
-      const comandaLabel = order.table_label
-        ? `Vendita - Tavolo ${order.table_label}`
-        : `Vendita - Comanda #${order.daily_number}`
-      prn.addText(`${comandaLabel}\n`)
-    }
+    // ── LE TRE RIGHE SOTTO AL NUMERO (BUG-088) ──────────────────────
+    // Erano un residuo del modello da cui il ticket è nato: una
+    // costante scritta a mano («Utente A»), il numero del conto
+    // ripetuto e chiamato comanda, e un plurale attaccato male («2
+    // clientei»). Le regole stanno in campiStampa.js, pure e provate
+    // senza stampante; qui restano gli interruttori, che nessuno ha
+    // chiesto di togliere.
+    //
+    // Nome e riga di vendita si stampano SOLO SE DICONO QUALCOSA: senza
+    // nessuno collegato, e senza tavolo né cliente, la riga non esce
+    // affatto. Meglio una riga in meno di una formula vuota.
+    const operatore = nomeDiChiStampa()
+    if (operatore && cfg.mostra('operatore')) prn.addText(`${operatore}\n`)
+    if (cfg.mostra('persone')) prn.addText(`${rigaPersone(order.coperto_persons)}\n`)
+    const vendita = rigaVendita(order)
+    if (vendita && cfg.mostra('riga_vendita')) prn.addText(`${vendita}\n`)
     prn.addText(line())
 
     // ── Header colonne ──
@@ -1004,9 +1179,9 @@ export function printScontrino(order, opts = {}) {
     // NON SI TOLGONO: le righe e il totale sono lo scontrino. Non stanno
     // fra i campi, e nessuna impostazione può arrivare qui.
     for (const item of (order.order_items || [])) {
-      const pu = `${Number(item.unit_price).toFixed(2)}€`
-      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-      const left = `${item.qty}x  ${item.name}`
+      const pu = `${euroRiga(item.unit_price).toFixed(2)}€`
+      const tot = `${(qtaRiga(item) * euroRiga(item.unit_price)).toFixed(2)}€`
+      const left = `${qtaRiga(item)}x  ${nomeRiga(item)}`
       prn.addText(row(left, `${pu.padStart(7)} ${tot.padStart(7)}`))
     }
 
@@ -1185,14 +1360,14 @@ export function printScontrinoAcconto(order, incasso = {}) {
     if (cfg.mostra('numero')) {
       prn.addText(row(`ACCONTO - ${order.daily_number ?? '-'}`, `${date}, ${time}`))
     }
-    if (cfg.mostra('operatore')) prn.addText('Utente A\n')
-    if (cfg.mostra('riga_vendita')) {
-      prn.addText(
-        order.table_label
-          ? `Vendita - Tavolo ${order.table_label}\n`
-          : `Vendita - Comanda #${order.daily_number}\n`
-      )
-    }
+    // Le stesse due righe dello scontrino, e per le stesse ragioni
+    // (BUG-088): il nome di chi sta stampando, e a chi appartiene il
+    // conto. Il numero è già scritto qui sopra, e nessuna delle due esce
+    // se non ha niente da dire.
+    const operatore = nomeDiChiStampa()
+    if (operatore && cfg.mostra('operatore')) prn.addText(`${operatore}\n`)
+    const vendita = rigaVendita(order)
+    if (vendita && cfg.mostra('riga_vendita')) prn.addText(`${vendita}\n`)
     prn.addText(line())
 
     // ── Cosa ha pagato ──
@@ -1206,9 +1381,9 @@ export function printScontrinoAcconto(order, incasso = {}) {
         prn.addText(line())
       }
       for (const i of righe) {
-        const pu = `${(Number(i.unit_price) || 0).toFixed(2)}€`
-        const tot = `${((Number(i.qty) || 0) * (Number(i.unit_price) || 0)).toFixed(2)}€`
-        prn.addText(row(`${i.qty}x  ${i.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+        const pu = `${euroRiga(i.unit_price).toFixed(2)}€`
+        const tot = `${(qtaRiga(i) * euroRiga(i.unit_price)).toFixed(2)}€`
+        prn.addText(row(`${qtaRiga(i)}x  ${nomeRiga(i)}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
       }
       prn.addText(line())
     }
@@ -1317,9 +1492,9 @@ export function printFattura(invoice) {
     prn.addTextStyle(false, false, false, prn.COLOR_1)
     prn.addText(line())
     for (const item of invoice.items || []) {
-      const pu = `${Number(item.unit_price).toFixed(2)}€`
-      const tot = `${(item.qty * item.unit_price).toFixed(2)}€`
-      prn.addText(row(`${item.qty}x  ${item.name}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
+      const pu = `${euroRiga(item.unit_price).toFixed(2)}€`
+      const tot = `${(qtaRiga(item) * euroRiga(item.unit_price)).toFixed(2)}€`
+      prn.addText(row(`${qtaRiga(item)}x  ${nomeRiga(item)}`, `${pu.padStart(7)} ${tot.padStart(7)}`))
     }
     prn.addText(line())
     if (invoice.discount_amount > 0) {
@@ -1364,7 +1539,7 @@ export function printOrdineFornitore(order) {
     prn.addText(line())
     prn.addTextSize(1, 2)
     for (const l of order.lines || []) {
-      prn.addText(`${l.qty_packages}  ${String(l.name || '').toUpperCase()}\n`)
+      prn.addText(`${l.qty_packages}  ${nomeRiga(l).toUpperCase()}\n`)
     }
     prn.addTextSize(1, 1)
     prn.addText(line())

@@ -26,6 +26,7 @@ import {
   MODO_STRISCIA_DEFAULT,
 } from '../lib/strisce.js'
 import { stockStatus } from '../lib/inventory.js'
+import { spegnibile } from '../lib/sensoriDnd.js'
 import {
   applyOrder,
   moveInOrder,
@@ -64,7 +65,13 @@ import DrinkForm from './DrinkForm.jsx'
 // il tempo di rifare il riquadro, rimisurarlo e ridisegnare. Senza gesti
 // attivi (sensori spenti) e senza niente di trascinabile dentro, qui non
 // fa nulla: è solo un contenitore che resta al suo posto.
-const SENSORI_SPENTI = []
+//
+// E ANCHE I SENSORI STANNO SEMPRE, TUTTI E TRE: la lista non si svuota più
+// fuori da «organizza» — cambiarle lunghezza è il difetto spiegato in
+// `lib/sensoriDnd.js` — e a spegnere il gesto è l'opzione `attiva`.
+const PointerSensorSpegnibile = spegnibile(PointerSensor)
+const TouchSensorSpegnibile = spegnibile(TouchSensor)
+const KeyboardSensorSpegnibile = spegnibile(KeyboardSensor)
 
 // LA CARD IN MANO NON ESCE DALLA GRIGLIA.
 //
@@ -90,10 +97,10 @@ function dentroLaGriglia({ transform, draggingNodeRect, containerNodeRect }) {
   }
 }
 
-function Riordinabile({ attiva, sensori, ids, onFine, children }) {
+function Riordinabile({ sensori, ids, onFine, children }) {
   return (
     <DndContext
-      sensors={attiva ? sensori : SENSORI_SPENTI}
+      sensors={sensori}
       collisionDetection={closestCenter}
       modifiers={[dentroLaGriglia]}
       onDragEnd={onFine}
@@ -355,12 +362,27 @@ export default function PosProductPicker({
   // (`moveInOrder` su tutti gli id), anche quando a schermo c'è una sola
   // categoria — se no spostare una birra dentro «Birre» la lascerebbe al suo
   // posto in «Tutti».
+  // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
+  // ricerca; con l'ordine globale, filtrare per categoria lo preserva.
+  // Sta qui sopra perché lo leggono già i sensori, subito sotto.
+  const canReorder = reordering && selectedCat !== '__recent__' && !q
+  // `attiva` è quello che spegne i gesti fuori da «organizza» (vedi
+  // `spegnibile` in cima): i sensori restano tre in ogni caso.
   const sensori = useSensors(
     // Col dito: si parte dopo un attimo di pressione, se no scorrere la
     // griglia trascinerebbe le card. Col mouse basta uno spostamento.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(PointerSensorSpegnibile, {
+      attiva: canReorder,
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(TouchSensorSpegnibile, {
+      attiva: canReorder,
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensorSpegnibile, {
+      attiva: canReorder,
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   )
   const fineRiordino = ({ active, over }) => {
     if (!over || active.id === over.id) return
@@ -368,9 +390,6 @@ export default function PosProductPicker({
   }
 
   const toggleFav = (id) => commitFavorites(toggleFavorite(favorites, id))
-  // Riordino disponibile ovunque tranne Recenti (ordine per recenza) e in
-  // ricerca; con l'ordine globale, filtrare per categoria lo preserva.
-  const canReorder = reordering && selectedCat !== '__recent__' && !q
 
   // Voci della barra: Preferiti e Recenti in cima, poi le categorie.
   const specialCats = [
@@ -500,7 +519,6 @@ export default function PosProductPicker({
             trascinamento; fuori da quella modalità non c'è niente da
             trascinare e non serve. */}
         <Riordinabile
-          attiva={canReorder}
           sensori={sensori}
           ids={visibleDrinks.map((d) => d.id)}
           onFine={fineRiordino}

@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { consumptionDiff } from '../../src/lib/warehouse.js'
 import {
+  caricoDaConfezioni,
   toBaseQty,
   formatQty,
   stockStatus,
@@ -1170,5 +1171,36 @@ describe('filterItems: in scorta', () => {
     expect(filterItems(items, { status: 'low' }).map((i) => i.id)).toEqual(['b'])
     expect(filterItems(items, { status: 'empty' }).map((i) => i.id)).toEqual(['c'])
     expect(filterItems(items, { status: 'all' })).toHaveLength(4)
+  })
+})
+
+// ── QUANTO ENTRA COMPRANDO N CONFEZIONI (REQ-MAG-029, REQ-MAG-030) ───
+//
+// Il conto stava dentro il carico degli ordini; da quando lo fa anche la
+// fattura è una funzione sola, perché due copie della stessa
+// moltiplicazione sono due occasioni di scriverla diversa.
+describe('caricoDaConfezioni', () => {
+  it('chi si conta a pezzi sale di pezzi, e non ha bottiglie da contare', () => {
+    const item = { unit: 'pz', stock: 2, package_size: 700 }
+    expect(caricoDaConfezioni(item, 6)).toEqual({ addQty: 6, bottles_total: null })
+  })
+
+  // Il ramo dei prodotti ancora scritti alla vecchia maniera: LE QUANTITÀ IN
+  // MAGAZZINO SONO IN UNITÀ BASE, e sei confezioni da 700 ml sono 4200 ml.
+  it('chi si conta a volume sale in unità base', () => {
+    const item = { unit: 'ml', stock: 1400, package_size: 700 }
+    expect(caricoDaConfezioni(item, 6)).toEqual({ addQty: 4200, bottles_total: 8 })
+  })
+
+  // Un fondo di bottiglia è una bottiglia aperta, non zero: se non contasse,
+  // il totale dei pezzi passati per il magazzino perderebbe un pezzo a ogni
+  // carico fatto con una bottiglia in uso.
+  it('la bottiglia aperta conta come una', () => {
+    const item = { unit: 'ml', stock: 900, package_size: 700 }
+    expect(caricoDaConfezioni(item, 1)).toEqual({ addQty: 700, bottles_total: 3 })
+  })
+
+  it('senza confezione dichiarata si sale di uno per confezione', () => {
+    expect(caricoDaConfezioni({ unit: 'ml', stock: 0 }, 3)).toEqual({ addQty: 3, bottles_total: null })
   })
 })
