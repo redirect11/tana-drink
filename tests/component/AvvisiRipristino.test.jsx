@@ -31,7 +31,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
 vi.mock('react-router-dom', async (orig) => {

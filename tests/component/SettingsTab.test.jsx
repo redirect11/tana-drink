@@ -70,7 +70,7 @@ vi.mock('../../src/components/ThemeSettings.jsx', () => ({
   TemaMenuClienti: () => <div>COLORI MENÙ CLIENTI</div>,
 }))
 
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from '../helpers/router.jsx'
 import SettingsTab from '../../src/components/SettingsTab.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { useEffect, useState } from 'react'
