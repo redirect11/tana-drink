@@ -24,6 +24,7 @@ import {
   ordinaCatalogo,
   ordiniDaCreare,
   preselezioneIniziale,
+  uniscePreselezione,
   prossimaFinestra,
   raggruppaPerFornitore,
   righeOrdine,
@@ -116,7 +117,15 @@ export default function NuovoOrdinePanel({
     for (const [key, qty] of pre) {
       iniziali[key] = { qty: String(qty), supplier_id: perChiave.get(key)?.supplier_id ?? null }
     }
-    setSelezioni(iniziali)
+    // LA PRESELEZIONE SI AGGIUNGE, NON SOSTITUISCE: quello che è già stato
+    // scritto vince. Prima qui c'era `setSelezioni(iniziali)`, che buttava via
+    // l'intero stato — e questo effetto gira DOPO il primo disegno delle
+    // righe, quindi chiunque tocchi un campo in quella finestra si vedeva
+    // sparire quello che aveva appena scritto, senza un errore e senza un
+    // segno. L'ha trovato la CI, dove la macchina è più lenta: due colli
+    // scritti tornavano a uno. Sul tablet del banco, con 388 prodotti e 367
+    // listini da mettere in fila, quella finestra non è zero.
+    setSelezioni((prev) => uniscePreselezione(iniziali, prev))
   }, [catalogo, perChiave])
 
   // Cambiando filtro, ricerca o ordinamento si riparte dalla prima finestra:
