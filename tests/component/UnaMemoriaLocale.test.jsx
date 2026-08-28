@@ -23,7 +23,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
 // Dove si va toccando una card: la spia dice se si apre il conto giusto.
