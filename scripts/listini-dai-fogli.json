@@ -1,0 +1,2102 @@
+[
+ {
+  "articolo": "Jefferson",
+  "fornitore": "NOVA",
+  "prezzo": 22.0
+ },
+ {
+  "articolo": "Unicum",
+  "fornitore": "NOVA",
+  "prezzo": 14.8
+ },
+ {
+  "articolo": "Biancosarti",
+  "fornitore": "NOVA",
+  "prezzo": 14.4
+ },
+ {
+  "articolo": "Campari Soda",
+  "fornitore": "MAR",
+  "prezzo": 1.0
+ },
+ {
+  "articolo": "Coca Cola Vetro",
+  "fornitore": "NOVA",
+  "prezzo": 0.75
+ },
+ {
+  "articolo": "Gosling Ginger Beer",
+  "fornitore": "MAR",
+  "prezzo": 1.161
+ },
+ {
+  "articolo": "Powerade",
+  "fornitore": "NOVA",
+  "prezzo": 0.75
+ },
+ {
+  "articolo": "Schweppes Ginger",
+  "fornitore": "BERNABEI",
+  "prezzo": 1.25
+ },
+ {
+  "articolo": "Sprite",
+  "fornitore": "NOVA",
+  "prezzo": 0.5208
+ },
+ {
+  "articolo": "Tassoni Tonica Superfine",
+  "fornitore": "CONAD",
+  "prezzo": 0.797
+ },
+ {
+  "articolo": "Thomas Henry Pompelmo",
+  "fornitore": "NOVA",
+  "prezzo": 1.02916
+ },
+ {
+  "articolo": "Thomas Henry Tonica",
+  "fornitore": "NOVA",
+  "prezzo": 1.02916
+ },
+ {
+  "articolo": "Three Cents Tonica",
+  "fornitore": "NOVA",
+  "prezzo": 0.95
+ },
+ {
+  "articolo": "Becks",
+  "fornitore": "PICCOLO",
+  "prezzo": 0.68
+ },
+ {
+  "articolo": "Ceres Non Filtr",
+  "fornitore": "NOVA",
+  "prezzo": 1.25
+ },
+ {
+  "articolo": "Ceres Ten",
+  "fornitore": "NOVA",
+  "prezzo": 1.65
+ },
+ {
+  "articolo": "Chimay Blu",
+  "fornitore": "PICCOLO",
+  "prezzo": 2.665
+ },
+ {
+  "articolo": "Franziskaner Dunkel",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.229
+ },
+ {
+  "articolo": "Ichnusa 50",
+  "fornitore": "MAR",
+  "prezzo": 1.23
+ },
+ {
+  "articolo": "Leffe Blonde",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.557
+ },
+ {
+  "articolo": "Okorei Nunenapils",
+  "fornitore": "OKOREY",
+  "prezzo": 90.0
+ },
+ {
+  "articolo": "Okorei Tramalti",
+  "fornitore": "OKOREY",
+  "prezzo": 2.35
+ },
+ {
+  "articolo": "Okorei Ultra",
+  "fornitore": "OKOREY",
+  "prezzo": 2.35
+ },
+ {
+  "articolo": "Tourtel Analcolica",
+  "fornitore": "MAR",
+  "prezzo": 0.65
+ },
+ {
+  "articolo": "Okorei Santa Subito",
+  "fornitore": "OKOREY",
+  "prezzo": 105.0
+ },
+ {
+  "articolo": "Okorei White Elephant",
+  "fornitore": "OKOREY",
+  "prezzo": 105.0
+ },
+ {
+  "articolo": "Berto Bitter",
+  "fornitore": "NOVA",
+  "prezzo": 12.95
+ },
+ {
+  "articolo": "Aqva di Gin",
+  "fornitore": "NOVA",
+  "prezzo": 25.9
+ },
+ {
+  "articolo": "Beefeater",
+  "fornitore": "NOVA",
+  "prezzo": 13.8
+ },
+ {
+  "articolo": "Beefeater 24",
+  "fornitore": "NOVA",
+  "prezzo": 19.6
+ },
+ {
+  "articolo": "Berto Gin",
+  "fornitore": "NOVA",
+  "prezzo": 15.9
+ },
+ {
+  "articolo": "Gin Arte",
+  "fornitore": "NOVA",
+  "prezzo": 26.8
+ },
+ {
+  "articolo": "GinRaw",
+  "fornitore": "NOVA",
+  "prezzo": 34.4
+ },
+ {
+  "articolo": "Greenall’s",
+  "fornitore": "NOVA",
+  "prezzo": 9.5
+ },
+ {
+  "articolo": "Haswell",
+  "fornitore": "NOVA",
+  "prezzo": 30.0
+ },
+ {
+  "articolo": "Mazzetti Barricata",
+  "fornitore": "NOVA",
+  "prezzo": 13.7
+ },
+ {
+  "articolo": "Moist",
+  "fornitore": "NOVA",
+  "prezzo": 35.0
+ },
+ {
+  "articolo": "Adriatico",
+  "fornitore": "NOVA",
+  "prezzo": 26.9
+ },
+ {
+  "articolo": "Bols Elderflower",
+  "fornitore": "NOVA",
+  "prezzo": 9.5
+ },
+ {
+  "articolo": "Bols Triple Sec",
+  "fornitore": "NOVA",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Luxardo Maraschino",
+  "fornitore": "NOVA",
+  "prezzo": 14.6
+ },
+ {
+  "articolo": "Monin Violetta",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Saint Germain",
+  "fornitore": "NOVA",
+  "prezzo": 25.7
+ },
+ {
+  "articolo": "Volare Triple Sec",
+  "fornitore": "NOVA",
+  "prezzo": 9.3
+ },
+ {
+  "articolo": "Appleton Estate 7 anni",
+  "fornitore": "NOVA",
+  "prezzo": 17.5
+ },
+ {
+  "articolo": "Bodega Papiamento 15 anni",
+  "fornitore": "ARUBA",
+  "prezzo": 50.73
+ },
+ {
+  "articolo": "Centenario 12 anni",
+  "fornitore": "NOVA",
+  "prezzo": 30.0
+ },
+ {
+  "articolo": "Flor de Caña 12 anni",
+  "fornitore": "NOVA",
+  "prezzo": 28.4
+ },
+ {
+  "articolo": "Monin Fragola",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Mela Verde",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Melone",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Pesca",
+  "fornitore": "NOVA",
+  "prezzo": 12.6
+ },
+ {
+  "articolo": "Monin Vaniglia",
+  "fornitore": "NOVA",
+  "prezzo": 10.3
+ },
+ {
+  "articolo": "Ace",
+  "fornitore": "NOVA",
+  "prezzo": 0.4958
+ },
+ {
+  "articolo": "Albicocca",
+  "fornitore": "NOVA",
+  "prezzo": 0.4958
+ },
+ {
+  "articolo": "Arancia 1L",
+  "fornitore": "NOVA",
+  "prezzo": 1.5833
+ },
+ {
+  "articolo": "Pera",
+  "fornitore": "NOVA",
+  "prezzo": 0.4916
+ },
+ {
+  "articolo": "Espolon",
+  "fornitore": "NOVA",
+  "prezzo": 17.5
+ },
+ {
+  "articolo": "Patron Reposado",
+  "fornitore": "NOVA",
+  "prezzo": 42.0
+ },
+ {
+  "articolo": "Berto Vermouth",
+  "fornitore": "NOVA",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Carlo Alberto",
+  "fornitore": "NOVA",
+  "prezzo": 21.1
+ },
+ {
+  "articolo": "Cocchi Storico",
+  "fornitore": "NOVA",
+  "prezzo": 15.4
+ },
+ {
+  "articolo": "Martini Rosso",
+  "fornitore": "NOVA",
+  "prezzo": 6.4
+ },
+ {
+  "articolo": "Astoria",
+  "fornitore": "MAR",
+  "prezzo": 2.55
+ },
+ {
+  "articolo": "Bellavista",
+  "fornitore": "NOVA",
+  "prezzo": 26.4
+ },
+ {
+  "articolo": "Ca Venezze",
+  "fornitore": "NOVA",
+  "prezzo": 2.9
+ },
+ {
+  "articolo": "Col De Mez",
+  "fornitore": "NOVA",
+  "prezzo": 6.75
+ },
+ {
+  "articolo": "Rufu",
+  "fornitore": "LUPIN",
+  "prezzo": 2.73
+ },
+ {
+  "articolo": "Tintoretto",
+  "fornitore": "MAR",
+  "prezzo": 2.5
+ },
+ {
+  "articolo": "Valdo",
+  "fornitore": "COL NAPPI",
+  "prezzo": 4.92
+ },
+ {
+  "articolo": "Vedrai",
+  "fornitore": "MAR",
+  "prezzo": 2.5
+ },
+ {
+  "articolo": "Aglianico Mojo",
+  "fornitore": "MAR",
+  "prezzo": 2.45
+ },
+ {
+  "articolo": "Coda di Volpe",
+  "fornitore": "MAR",
+  "prezzo": 3.27
+ },
+ {
+  "articolo": "Falanghina",
+  "fornitore": "MAR",
+  "prezzo": 2.1
+ },
+ {
+  "articolo": "Nero di Troja",
+  "fornitore": "PICCOLO",
+  "prezzo": 3.16
+ },
+ {
+  "articolo": "Sangue di Giuda",
+  "fornitore": "MAR",
+  "prezzo": 5.0
+ },
+ {
+  "articolo": "Keglevich",
+  "fornitore": "MAR",
+  "prezzo": 8.2
+ },
+ {
+  "articolo": "Kirowa Agrumi",
+  "fornitore": "PICCOLO",
+  "prezzo": 5.33
+ },
+ {
+  "articolo": "Akashi Meisei",
+  "fornitore": "NOVA",
+  "prezzo": 28.0
+ },
+ {
+  "articolo": "Kensei",
+  "fornitore": "NOVA",
+  "prezzo": 33.96
+ },
+ {
+  "articolo": "Knob Creek",
+  "fornitore": "NOVA",
+  "prezzo": 26.9
+ },
+ {
+  "articolo": "Amaro del Capo",
+  "fornitore": "NOVA",
+  "prezzo": 15.5
+ },
+ {
+  "articolo": "Cynar",
+  "fornitore": "NOVA",
+  "prezzo": 12.9
+ },
+ {
+  "articolo": "Fernet Branca",
+  "fornitore": "NOVA",
+  "prezzo": 16.7
+ },
+ {
+  "articolo": "Jagermeister",
+  "fornitore": "NOVA",
+  "prezzo": 13.8
+ },
+ {
+  "articolo": "Aperol",
+  "fornitore": "NOVA",
+  "prezzo": 10.1
+ },
+ {
+  "articolo": "Select",
+  "fornitore": "NOVA",
+  "prezzo": 11.1
+ },
+ {
+  "articolo": "Acqua Brillante Tonica",
+  "fornitore": "NOVA",
+  "prezzo": 0.655
+ },
+ {
+  "articolo": "Acqua Lete",
+  "fornitore": "NOVA",
+  "prezzo": 0.17
+ },
+ {
+  "articolo": "Acqua San Benedetto",
+  "fornitore": "NOVA",
+  "prezzo": 0.116666
+ },
+ {
+  "articolo": "Caribia Ginger Beer",
+  "fornitore": "MAR",
+  "prezzo": 1.22
+ },
+ {
+  "articolo": "Chinotto",
+  "fornitore": "NOVA",
+  "prezzo": 0.49
+ },
+ {
+  "articolo": "Coca Cola Lattina",
+  "fornitore": "NOVA",
+  "prezzo": 0.529
+ },
+ {
+  "articolo": "Coca Cola Zero",
+  "fornitore": "NOVA",
+  "prezzo": 0.529
+ },
+ {
+  "articolo": "Crodino",
+  "fornitore": "PICCOLO",
+  "prezzo": 0.68
+ },
+ {
+  "articolo": "Estathe' Limone",
+  "fornitore": "NOVA",
+  "prezzo": 0.74
+ },
+ {
+  "articolo": "Estathe' Pesca",
+  "fornitore": "NOVA",
+  "prezzo": 0.74
+ },
+ {
+  "articolo": "Fanta",
+  "fornitore": "NOVA",
+  "prezzo": 0.5208
+ },
+ {
+  "articolo": "Fever Tree Indian",
+  "fornitore": "NOVA",
+  "prezzo": 0.97
+ },
+ {
+  "articolo": "Fever Tree Mediterranea",
+  "fornitore": "NOVA",
+  "prezzo": 0.97
+ },
+ {
+  "articolo": "Kinley Ginger Beer",
+  "fornitore": "NOVA",
+  "prezzo": 0.579
+ },
+ {
+  "articolo": "Red Bull",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.0
+ },
+ {
+  "articolo": "Schweppes Lemon",
+  "fornitore": "NOVA",
+  "prezzo": 0.9333
+ },
+ {
+  "articolo": "Schweppes Pompelmo 18cL",
+  "fornitore": "MAR",
+  "prezzo": 0.683
+ },
+ {
+  "articolo": "Schweppes Pompelmo 1L",
+  "fornitore": "MAR",
+  "prezzo": 1.07
+ },
+ {
+  "articolo": "Schweppes Tonica 18cL",
+  "fornitore": "NOVA",
+  "prezzo": 0.579
+ },
+ {
+  "articolo": "Schweppes Tonica 1L",
+  "fornitore": "NOVA",
+  "prezzo": 1.15
+ },
+ {
+  "articolo": "Tassoni Ginger Beer",
+  "fornitore": "NOVA",
+  "prezzo": 0.73
+ },
+ {
+  "articolo": "Tassoni",
+  "fornitore": "NOVA",
+  "prezzo": 0.664
+ },
+ {
+  "articolo": "Bjorne",
+  "fornitore": "MAR",
+  "prezzo": 1.2333
+ },
+ {
+  "articolo": "Ceres",
+  "fornitore": "MAR",
+  "prezzo": 1.35
+ },
+ {
+  "articolo": "Ceres Ipa",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.311
+ },
+ {
+  "articolo": "Ceres Red Erik",
+  "fornitore": "NOVA",
+  "prezzo": 1.25
+ },
+ {
+  "articolo": "Chimay Rossa",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.97
+ },
+ {
+  "articolo": "Ichnusa 33",
+  "fornitore": "NOVA",
+  "prezzo": 0.895
+ },
+ {
+  "articolo": "Karmeliet",
+  "fornitore": "MAR",
+  "prezzo": 2.62
+ },
+ {
+  "articolo": "Kwak",
+  "fornitore": "MAR",
+  "prezzo": 2.79
+ },
+ {
+  "articolo": "La Trappe Blonde",
+  "fornitore": "PICCOLO",
+  "prezzo": 2.05
+ },
+ {
+  "articolo": "Moretti Ipa",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.05
+ },
+ {
+  "articolo": "Nastro",
+  "fornitore": "MAR",
+  "prezzo": 0.6875
+ },
+ {
+  "articolo": "Nastro 00",
+  "fornitore": "MAR",
+  "prezzo": 0.83
+ },
+ {
+  "articolo": "Paulaner",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.2
+ },
+ {
+  "articolo": "Slalom",
+  "fornitore": "MAR",
+  "prezzo": 1.147
+ },
+ {
+  "articolo": "Tennents",
+  "fornitore": "MAR",
+  "prezzo": 1.354166
+ },
+ {
+  "articolo": "Bitter Rouge Bianco",
+  "fornitore": "NOVA",
+  "prezzo": 17.9
+ },
+ {
+  "articolo": "Campari",
+  "fornitore": "NOVA",
+  "prezzo": 14.5
+ },
+ {
+  "articolo": "Gran Torino Bitter",
+  "fornitore": "NOVA",
+  "prezzo": 14.0
+ },
+ {
+  "articolo": "Fusetti",
+  "fornitore": "NOVA",
+  "prezzo": 14.5
+ },
+ {
+  "articolo": "Luxardo Bianco",
+  "fornitore": "NOVA",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Martini Bitter",
+  "fornitore": "NOVA",
+  "prezzo": 11.4
+ },
+ {
+  "articolo": "Cardinal Mendoza",
+  "fornitore": "NOVA",
+  "prezzo": 22.7
+ },
+ {
+  "articolo": "Dom Benedictine",
+  "fornitore": "NOVA",
+  "prezzo": 18.8
+ },
+ {
+  "articolo": "Gelas Armagnac",
+  "fornitore": "NOVA",
+  "prezzo": 30.0
+ },
+ {
+  "articolo": "Stravecchio Branca",
+  "fornitore": "NOVA",
+  "prezzo": 12.3
+ },
+ {
+  "articolo": "Cachaca 51",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Cachaca Barrique",
+  "fornitore": "NOVA",
+  "prezzo": 50.0
+ },
+ {
+  "articolo": "Courvoisier",
+  "fornitore": "MAR",
+  "prezzo": 18.05
+ },
+ {
+  "articolo": "Hine",
+  "fornitore": "MAR",
+  "prezzo": 40.0
+ },
+ {
+  "articolo": "Jehan Foucart Calvados",
+  "fornitore": "NOVA",
+  "prezzo": 19.2
+ },
+ {
+  "articolo": "Martel Vsop",
+  "fornitore": "NOVA",
+  "prezzo": 32.8
+ },
+ {
+  "articolo": "Noces Royal De Poir",
+  "fornitore": "NOVA",
+  "prezzo": 19.5
+ },
+ {
+  "articolo": "Peyrot Pera",
+  "fornitore": "PICCOLO",
+  "prezzo": 25.2
+ },
+ {
+  "articolo": "Acqueverdi Dry",
+  "fornitore": "NOVA",
+  "prezzo": 28.6
+ },
+ {
+  "articolo": "Bombay",
+  "fornitore": "NOVA",
+  "prezzo": 17.8
+ },
+ {
+  "articolo": "Brockmans",
+  "fornitore": "NOVA",
+  "prezzo": 31.2
+ },
+ {
+  "articolo": "Bulldog",
+  "fornitore": "NOVA",
+  "prezzo": 15.7
+ },
+ {
+  "articolo": "Cubical Dry",
+  "fornitore": "NOVA",
+  "prezzo": 26.5
+ },
+ {
+  "articolo": "Elephant Gin",
+  "fornitore": "NOVA",
+  "prezzo": 29.9
+ },
+ {
+  "articolo": "Etsu",
+  "fornitore": "NOVA",
+  "prezzo": 29.9
+ },
+ {
+  "articolo": "Generous",
+  "fornitore": "NOVA",
+  "prezzo": 32.9
+ },
+ {
+  "articolo": "Gin Mare",
+  "fornitore": "NOVA",
+  "prezzo": 22.8
+ },
+ {
+  "articolo": "Gold 999",
+  "fornitore": "NOVA",
+  "prezzo": 29.5
+ },
+ {
+  "articolo": "Hendricks",
+  "fornitore": "CASAM",
+  "prezzo": 29.9
+ },
+ {
+  "articolo": "J. Rose",
+  "fornitore": "NOVA",
+  "prezzo": 30.9
+ },
+ {
+  "articolo": "Martin’s Miller",
+  "fornitore": "NOVA",
+  "prezzo": 21.2
+ },
+ {
+  "articolo": "Monkey47",
+  "fornitore": "NOVA",
+  "prezzo": 31.2
+ },
+ {
+  "articolo": "N3",
+  "fornitore": "NOVA",
+  "prezzo": 29.1
+ },
+ {
+  "articolo": "Roku",
+  "fornitore": "NOVA",
+  "prezzo": 21.5
+ },
+ {
+  "articolo": "Sabatini",
+  "fornitore": "NOVA",
+  "prezzo": 31.1
+ },
+ {
+  "articolo": "Sipsmith",
+  "fornitore": "NOVA",
+  "prezzo": 29.9
+ },
+ {
+  "articolo": "Tanqueray",
+  "fornitore": "NOVA",
+  "prezzo": 15.9
+ },
+ {
+  "articolo": "Berta",
+  "fornitore": "NOVA",
+  "prezzo": 21.5
+ },
+ {
+  "articolo": "Berta Barricata",
+  "fornitore": "NOVA",
+  "prezzo": 21.5
+ },
+ {
+  "articolo": "Assenzio Desirè",
+  "fornitore": "MAR",
+  "prezzo": 10.7
+ },
+ {
+  "articolo": "Baileys",
+  "fornitore": "NOVA",
+  "prezzo": 15.0
+ },
+ {
+  "articolo": "Bols Blue Curacao",
+  "fornitore": "NOVA",
+  "prezzo": 9.8
+ },
+ {
+  "articolo": "Bols Melon",
+  "fornitore": "NOVA",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Bols Sloe",
+  "fornitore": "NOVA",
+  "prezzo": 9.5
+ },
+ {
+  "articolo": "Borghetti",
+  "fornitore": "NOVA",
+  "prezzo": 12.1
+ },
+ {
+  "articolo": "Briottet Cocco",
+  "fornitore": "NOVA",
+  "prezzo": 12.8
+ },
+ {
+  "articolo": "Briottet Lampone",
+  "fornitore": "NOVA",
+  "prezzo": 13.4
+ },
+ {
+  "articolo": "Briottet Mirtillo Rosso",
+  "fornitore": "NOVA",
+  "prezzo": 13.4
+ },
+ {
+  "articolo": "Briottet Violetta",
+  "fornitore": "NOVA",
+  "prezzo": 11.6
+ },
+ {
+  "articolo": "Chartreuse Gialla",
+  "fornitore": "NOVA",
+  "prezzo": 28.8
+ },
+ {
+  "articolo": "Chartreuse Verde",
+  "fornitore": "NOVA",
+  "prezzo": 29.7
+ },
+ {
+  "articolo": "Cointreau",
+  "fornitore": "NOVA",
+  "prezzo": 21.3
+ },
+ {
+  "articolo": "Disaronno",
+  "fornitore": "NOVA",
+  "prezzo": 16.3
+ },
+ {
+  "articolo": "Drambuie",
+  "fornitore": "NOVA",
+  "prezzo": 21.8
+ },
+ {
+  "articolo": "Frangelico",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Genziana",
+  "fornitore": "NOVA",
+  "prezzo": 9.9
+ },
+ {
+  "articolo": "Kahlua",
+  "fornitore": "NOVA",
+  "prezzo": 13.2
+ },
+ {
+  "articolo": "Licor 43",
+  "fornitore": "NOVA",
+  "prezzo": 19.0
+ },
+ {
+  "articolo": "Limoncello",
+  "fornitore": "MAR",
+  "prezzo": 6.57
+ },
+ {
+  "articolo": "Midori",
+  "fornitore": "NOVA",
+  "prezzo": 18.9
+ },
+ {
+  "articolo": "Molinari",
+  "fornitore": "NOVA",
+  "prezzo": 15.9
+ },
+ {
+  "articolo": "Monin Orange Curacao",
+  "fornitore": "NOVA",
+  "prezzo": 14.8
+ },
+ {
+  "articolo": "Pernod",
+  "fornitore": "NOVA",
+  "prezzo": 13.7
+ },
+ {
+  "articolo": "Quaglia Bergamotto",
+  "fornitore": "NOVA",
+  "prezzo": 17.7
+ },
+ {
+  "articolo": "Quaglia Camomilla",
+  "fornitore": "NOVA",
+  "prezzo": 14.7
+ },
+ {
+  "articolo": "Quaglia Chinotto",
+  "fornitore": "NOVA",
+  "prezzo": 17.8
+ },
+ {
+  "articolo": "Quaglia Liquirizia",
+  "fornitore": "NOVA",
+  "prezzo": 18.7
+ },
+ {
+  "articolo": "Quaglia Orange Brandy",
+  "fornitore": "NOVA",
+  "prezzo": 23.21
+ },
+ {
+  "articolo": "Quaglia Rabarbaro",
+  "fornitore": "NOVA",
+  "prezzo": 19.7
+ },
+ {
+  "articolo": "Quaglia Rosa",
+  "fornitore": "NOVA",
+  "prezzo": 14.8
+ },
+ {
+  "articolo": "Rodnik's Absinthe",
+  "fornitore": "NOVA",
+  "prezzo": 16.7
+ },
+ {
+  "articolo": "Roots",
+  "fornitore": "NOVA",
+  "prezzo": 26.5
+ },
+ {
+  "articolo": "Southern Confort",
+  "fornitore": "NOVA",
+  "prezzo": 14.2
+ },
+ {
+  "articolo": "Stock Cherry",
+  "fornitore": "MAR",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Stock Maraschino",
+  "fornitore": "NOVA",
+  "prezzo": 11.0
+ },
+ {
+  "articolo": "Strega",
+  "fornitore": "SOLE",
+  "prezzo": 8.2
+ },
+ {
+  "articolo": "Volare Pesca",
+  "fornitore": "NOVA",
+  "prezzo": 8.4
+ },
+ {
+  "articolo": "Volare Elderflower",
+  "fornitore": "NOVA",
+  "prezzo": 8.4
+ },
+ {
+  "articolo": "Beneva",
+  "fornitore": "NOVA",
+  "prezzo": 19.5
+ },
+ {
+  "articolo": "Gusano Rojo",
+  "fornitore": "NOVA",
+  "prezzo": 17.9
+ },
+ {
+  "articolo": "Montelobos",
+  "fornitore": "NOVA",
+  "prezzo": 34.5
+ },
+ {
+  "articolo": "Barsol Pisco",
+  "fornitore": "NOVA",
+  "prezzo": 17.9
+ },
+ {
+  "articolo": "Appleton Estate 12 anni",
+  "fornitore": "NOVA",
+  "prezzo": 32.9
+ },
+ {
+  "articolo": "Bacardi Carta Blanca",
+  "fornitore": "NOVA",
+  "prezzo": 12.8
+ },
+ {
+  "articolo": "Brugal Blanco",
+  "fornitore": "NOVA",
+  "prezzo": 13.2
+ },
+ {
+  "articolo": "Clement",
+  "fornitore": "NOVA",
+  "prezzo": 48.0
+ },
+ {
+  "articolo": "Diplomatico",
+  "fornitore": "NOVA",
+  "prezzo": 28.2
+ },
+ {
+  "articolo": "Don Papa 7 anni",
+  "fornitore": "NOVA",
+  "prezzo": 33.0
+ },
+ {
+  "articolo": "Kraken",
+  "fornitore": "NOVA",
+  "prezzo": 22.6
+ },
+ {
+  "articolo": "Legendario",
+  "fornitore": "MAR",
+  "prezzo": 18.05
+ },
+ {
+  "articolo": "Matusalem 7 anni",
+  "fornitore": "NOVA",
+  "prezzo": 15.4
+ },
+ {
+  "articolo": "Mezan",
+  "fornitore": "NOVA",
+  "prezzo": 26.9
+ },
+ {
+  "articolo": "Plantation Ananas",
+  "fornitore": "NOVA",
+  "prezzo": 28.2
+ },
+ {
+  "articolo": "St. James Blanc",
+  "fornitore": "NOVA",
+  "prezzo": 13.6
+ },
+ {
+  "articolo": "St. James Dark",
+  "fornitore": "NOVA",
+  "prezzo": 14.4
+ },
+ {
+  "articolo": "Sugar Estate",
+  "fornitore": "NOVA",
+  "prezzo": 110.0
+ },
+ {
+  "articolo": "Abaca Fragola",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Abaca Granatina",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Abaca Lampone",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Abaca Passion Fruit",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Abaca Cocco",
+  "fornitore": "NOVA",
+  "prezzo": 7.0
+ },
+ {
+  "articolo": "Abaca Zenzero",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Monin Agave",
+  "fornitore": "NOVA",
+  "prezzo": 14.9
+ },
+ {
+  "articolo": "Monin Basilico",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Cocco",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Granatina",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Monin Mango",
+  "fornitore": "NOVA",
+  "prezzo": 9.85
+ },
+ {
+  "articolo": "Orzata",
+  "fornitore": "NOVA",
+  "prezzo": 4.1
+ },
+ {
+  "articolo": "Angostura Bitter",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Bitter Arancia",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Bitter Cacao",
+  "fornitore": "NOVA",
+  "prezzo": 13.9
+ },
+ {
+  "articolo": "Bitter Peychaud",
+  "fornitore": "NOVA",
+  "prezzo": 9.9
+ },
+ {
+  "articolo": "Bitter Sedano",
+  "fornitore": "NOVA",
+  "prezzo": 12.7
+ },
+ {
+  "articolo": "Ananas",
+  "fornitore": "NOVA",
+  "prezzo": 1.39
+ },
+ {
+  "articolo": "Ananas 1L",
+  "fornitore": "MAR",
+  "prezzo": 1.23
+ },
+ {
+  "articolo": "Cranberry",
+  "fornitore": "NOVA",
+  "prezzo": 4.5
+ },
+ {
+  "articolo": "Mango",
+  "fornitore": "PICCOLO",
+  "prezzo": 2.46
+ },
+ {
+  "articolo": "Mela Verde",
+  "fornitore": "NOVA",
+  "prezzo": 0.4916
+ },
+ {
+  "articolo": "Mela Verde 1L",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.19
+ },
+ {
+  "articolo": "Mirtillo",
+  "fornitore": "NOVA",
+  "prezzo": 0.7041
+ },
+ {
+  "articolo": "Passion Fruit",
+  "fornitore": "PICCOLO",
+  "prezzo": 2.46
+ },
+ {
+  "articolo": "Pesca",
+  "fornitore": "NOVA",
+  "prezzo": 0.4916
+ },
+ {
+  "articolo": "Pomodoro",
+  "fornitore": "NOVA",
+  "prezzo": 1.4
+ },
+ {
+  "articolo": "Pompelmo",
+  "fornitore": "NOVA",
+  "prezzo": 0.4916
+ },
+ {
+  "articolo": "Pompelmo 1L",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.35
+ },
+ {
+  "articolo": "Corralejo",
+  "fornitore": "NOVA",
+  "prezzo": 20.9
+ },
+ {
+  "articolo": "José Cuervo",
+  "fornitore": "NOVA",
+  "prezzo": 17.4
+ },
+ {
+  "articolo": "Jose Cuervo Reposado",
+  "fornitore": "NOVA",
+  "prezzo": 17.4
+ },
+ {
+  "articolo": "Patron Silver",
+  "fornitore": "BERNABEI",
+  "prezzo": 42.0
+ },
+ {
+  "articolo": "Carpano",
+  "fornitore": "NOVA",
+  "prezzo": 8.4
+ },
+ {
+  "articolo": "Carpano Dry",
+  "fornitore": "NOVA",
+  "prezzo": 8.8
+ },
+ {
+  "articolo": "Carpano Bianco",
+  "fornitore": "NOVA",
+  "prezzo": 8.8
+ },
+ {
+  "articolo": "Del Professore Rosso",
+  "fornitore": "NOVA",
+  "prezzo": 18.2
+ },
+ {
+  "articolo": "Lillet Rouge",
+  "fornitore": "NOVA",
+  "prezzo": 14.2
+ },
+ {
+  "articolo": "Martelletti",
+  "fornitore": "NOVA",
+  "prezzo": 8.0
+ },
+ {
+  "articolo": "Martini Ambrato",
+  "fornitore": "NOVA",
+  "prezzo": 12.0
+ },
+ {
+  "articolo": "Noilly Prat",
+  "fornitore": "NOVA",
+  "prezzo": 10.9
+ },
+ {
+  "articolo": "Punt e Mes",
+  "fornitore": "NOVA",
+  "prezzo": 8.4
+ },
+ {
+  "articolo": "Bogana",
+  "fornitore": "PICCOLO",
+  "prezzo": 4.15
+ },
+ {
+  "articolo": "Campiano",
+  "fornitore": "MAR",
+  "prezzo": 2.45
+ },
+ {
+  "articolo": "San Jenì",
+  "fornitore": "NOVA",
+  "prezzo": 2.7
+ },
+ {
+  "articolo": "Aglianico",
+  "fornitore": "NOVA",
+  "prezzo": 4.0
+ },
+ {
+  "articolo": "Fiano",
+  "fornitore": "NOVA",
+  "prezzo": 5.7
+ },
+ {
+  "articolo": "Montepulciano",
+  "fornitore": "NOVA",
+  "prezzo": 6.5
+ },
+ {
+  "articolo": "Nero d’Avola",
+  "fornitore": "NOVA",
+  "prezzo": 5.3
+ },
+ {
+  "articolo": "Passerina",
+  "fornitore": "NOVA",
+  "prezzo": 5.9
+ },
+ {
+  "articolo": "Pecorino",
+  "fornitore": "NOVA",
+  "prezzo": 6.3
+ },
+ {
+  "articolo": "Pinot Nero",
+  "fornitore": "NOVA",
+  "prezzo": 7.0
+ },
+ {
+  "articolo": "Primitivo",
+  "fornitore": "NOVA",
+  "prezzo": 6.5
+ },
+ {
+  "articolo": "Traminer",
+  "fornitore": "NOVA",
+  "prezzo": 5.3
+ },
+ {
+  "articolo": "Vermentino",
+  "fornitore": "NOVA",
+  "prezzo": 5.73
+ },
+ {
+  "articolo": "Fookiu",
+  "fornitore": "ARUBA",
+  "prezzo": 19.9
+ },
+ {
+  "articolo": "Gray Goose",
+  "fornitore": "NOVA",
+  "prezzo": 27.3
+ },
+ {
+  "articolo": "Moskovskaya",
+  "fornitore": "NOVA",
+  "prezzo": 11.15
+ },
+ {
+  "articolo": "Stolichnaya",
+  "fornitore": "MAR",
+  "prezzo": 11.5
+ },
+ {
+  "articolo": "Vodka Limone Zenzero",
+  "fornitore": "PICCOLO",
+  "prezzo": 5.33
+ },
+ {
+  "articolo": "Zubrowka",
+  "fornitore": "NOVA",
+  "prezzo": 12.9
+ },
+ {
+  "articolo": "Bruichladdich",
+  "fornitore": "NOVA",
+  "prezzo": 48.0
+ },
+ {
+  "articolo": "Bulleit Bourbon",
+  "fornitore": "NOVA",
+  "prezzo": 17.0
+ },
+ {
+  "articolo": "Bushmills Original Red",
+  "fornitore": "NOVA",
+  "prezzo": 13.9
+ },
+ {
+  "articolo": "Catskill Buckwheat",
+  "fornitore": "NOVA",
+  "prezzo": 55.0
+ },
+ {
+  "articolo": "Jack Daniels Fire",
+  "fornitore": "NOVA",
+  "prezzo": 28.2
+ },
+ {
+  "articolo": "Jim Beam",
+  "fornitore": "NOVA",
+  "prezzo": 14.65
+ },
+ {
+  "articolo": "Jim Beam Rye",
+  "fornitore": "NOVA",
+  "prezzo": 24.4
+ },
+ {
+  "articolo": "Jura",
+  "fornitore": "NOVA",
+  "prezzo": 40.0
+ },
+ {
+  "articolo": "JW Red Label",
+  "fornitore": "NOVA",
+  "prezzo": 13.9
+ },
+ {
+  "articolo": "Lagavulin",
+  "fornitore": "NOVA",
+  "prezzo": 62.9
+ },
+ {
+  "articolo": "Laphroaig",
+  "fornitore": "NOVA",
+  "prezzo": 27.5
+ },
+ {
+  "articolo": "Maker’s Mark",
+  "fornitore": "NOVA",
+  "prezzo": 25.5
+ },
+ {
+  "articolo": "Monkey Shoulder",
+  "fornitore": "NOVA",
+  "prezzo": 24.6
+ },
+ {
+  "articolo": "Smokey Joe",
+  "fornitore": "NOVA",
+  "prezzo": 38.4
+ },
+ {
+  "articolo": "Talisker",
+  "fornitore": "NOVA",
+  "prezzo": 34.2
+ },
+ {
+  "articolo": "The Balvenie",
+  "fornitore": "NOVA",
+  "prezzo": 53.0
+ },
+ {
+  "articolo": "Wild Turkey",
+  "fornitore": "NOVA",
+  "prezzo": 15.9
+ },
+ {
+  "articolo": "Wild Turkey Rye",
+  "fornitore": "NOVA",
+  "prezzo": 23.9
+ },
+ {
+  "articolo": "Franziskaner Hell",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.5
+ },
+ {
+  "articolo": "Heineken",
+  "fornitore": "MAR",
+  "prezzo": 0.875
+ },
+ {
+  "articolo": "Bobby’s Schiedam Dry",
+  "fornitore": "NOVA",
+  "prezzo": 24.8
+ },
+ {
+  "articolo": "Tia Maria",
+  "fornitore": "NOVA",
+  "prezzo": 13.1
+ },
+ {
+  "articolo": "JW Black Label",
+  "fornitore": "NOVA",
+  "prezzo": 23.9
+ },
+ {
+  "articolo": "Slent Pool",
+  "fornitore": "NOVA",
+  "prezzo": 35.9
+ },
+ {
+  "articolo": "Ancho Reyes",
+  "fornitore": "NOVA",
+  "prezzo": 24.9
+ },
+ {
+  "articolo": "Jameson",
+  "fornitore": "NOVA",
+  "prezzo": 21.1
+ },
+ {
+  "articolo": "Schweppes Soda",
+  "fornitore": "NOVA",
+  "prezzo": 0.74
+ },
+ {
+  "articolo": "Heineken",
+  "fornitore": "PICCOLO",
+  "prezzo": 0.88
+ },
+ {
+  "articolo": "Montenegro",
+  "fornitore": "NOVA",
+  "prezzo": 16.7
+ },
+ {
+  "articolo": "Silent Pool",
+  "fornitore": "NOVA",
+  "prezzo": 35.9
+ },
+ {
+  "articolo": "Corona",
+  "fornitore": "MAR",
+  "prezzo": 0.95
+ },
+ {
+  "articolo": "Tintoretto",
+  "fornitore": "NOVA",
+  "prezzo": 2.6
+ },
+ {
+  "articolo": "Volare Blue Curacao",
+  "fornitore": "NOVA",
+  "prezzo": 8.4
+ },
+ {
+  "articolo": "Holy Water Gin",
+  "fornitore": "NOVA",
+  "prezzo": 34.5
+ },
+ {
+  "articolo": "Trois Rivieres Blanc 50°",
+  "fornitore": "NOVA",
+  "prezzo": 16.6
+ },
+ {
+  "articolo": "Brockmans Agave Cut",
+  "fornitore": "NOVA",
+  "prezzo": 40.7
+ },
+ {
+  "articolo": "Monin Creme de Mure",
+  "fornitore": "NOVA",
+  "prezzo": 17.3
+ },
+ {
+  "articolo": "Capel",
+  "fornitore": "NOVA",
+  "prezzo": 14.4
+ },
+ {
+  "articolo": "Ceres Lager",
+  "fornitore": "PAD",
+  "prezzo": 0.7
+ },
+ {
+  "articolo": "Tanqueray Rangpur",
+  "fornitore": "PAD",
+  "prezzo": 16.5
+ },
+ {
+  "articolo": "De Kuypers Blue Curacao",
+  "fornitore": "PAD",
+  "prezzo": 10.0
+ },
+ {
+  "articolo": "Havana 7",
+  "fornitore": "PAD",
+  "prezzo": 15.4
+ },
+ {
+  "articolo": "Caffo Invecchiata",
+  "fornitore": "NOVA",
+  "prezzo": 11.5
+ },
+ {
+  "articolo": "Jack Daniels",
+  "fornitore": "NOVA",
+  "prezzo": 20.5
+ },
+ {
+  "articolo": "Nikka From the Barrel",
+  "fornitore": "NOVA",
+  "prezzo": 35.6
+ },
+ {
+  "articolo": "Estathe' Limone Vetro",
+  "fornitore": "NOVA",
+  "prezzo": 0.916
+ },
+ {
+  "articolo": "Estathe' Pesca Vetro",
+  "fornitore": "NOVA",
+  "prezzo": 0.916
+ },
+ {
+  "articolo": "Xenta Absinthe",
+  "fornitore": "NOVA",
+  "prezzo": 20.5
+ },
+ {
+  "articolo": "Coca Cola Vetro Zero",
+  "fornitore": "NOVA",
+  "prezzo": 0.75
+ },
+ {
+  "articolo": "Glenfiddich 12",
+  "fornitore": "NOVA",
+  "prezzo": 43.9
+ },
+ {
+  "articolo": "Nero di Troja",
+  "fornitore": "BERNABEI",
+  "prezzo": 4.8
+ },
+ {
+  "articolo": "Valpolicalla",
+  "fornitore": "BERNABEI",
+  "prezzo": 6.15
+ },
+ {
+  "articolo": "Sake Bijito Junmai Shu",
+  "fornitore": "NOVA",
+  "prezzo": 17.21
+ },
+ {
+  "articolo": "Lillet Blanc",
+  "fornitore": "NOVA",
+  "prezzo": 14.2
+ },
+ {
+  "articolo": "Alma Verde",
+  "fornitore": "NOVA",
+  "prezzo": 27.5
+ },
+ {
+  "articolo": "Aglianico Paternoster",
+  "fornitore": "MAR",
+  "prezzo": 8.5
+ },
+ {
+  "articolo": "Franziskaner",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.5
+ },
+ {
+  "articolo": "Brew Dog Punk IPA",
+  "fornitore": "MAR",
+  "prezzo": 2.0
+ },
+ {
+  "articolo": "MC Chouffe",
+  "fornitore": "MAR",
+  "prezzo": 2.2
+ },
+ {
+  "articolo": "Abaca Melone",
+  "fornitore": "NOVA",
+  "prezzo": 6.2
+ },
+ {
+  "articolo": "Brew Dog Hazy Jane IPA",
+  "fornitore": "MAR",
+  "prezzo": 1.75
+ },
+ {
+  "articolo": "Martini Bitter Riserva",
+  "fornitore": "NOVA",
+  "prezzo": 11.2
+ },
+ {
+  "articolo": "Giori Barricata",
+  "fornitore": "NOVA",
+  "prezzo": 13.0
+ },
+ {
+  "articolo": "Ca del Bosco",
+  "fornitore": "NOVA",
+  "prezzo": 31.0
+ },
+ {
+  "articolo": "Donafugata",
+  "fornitore": "PICCOLO",
+  "prezzo": 8.2
+ },
+ {
+  "articolo": "Fichimori",
+  "fornitore": "PICCOLO",
+  "prezzo": 6.56
+ },
+ {
+  "articolo": "Bulleit Rye",
+  "fornitore": "NOVA",
+  "prezzo": 24.9
+ },
+ {
+  "articolo": "Negramaro",
+  "fornitore": "NOVA",
+  "prezzo": 4.2
+ },
+ {
+  "articolo": "Mazzetti Bianca",
+  "fornitore": "NOVA",
+  "prezzo": 13.0
+ },
+ {
+  "articolo": "Frutti di Bosco Mix",
+  "fornitore": "NOVA",
+  "prezzo": 1.5
+ },
+ {
+  "articolo": "Verde Amaras",
+  "fornitore": "NOVA",
+  "prezzo": 27.5
+ },
+ {
+  "articolo": "Pnk",
+  "fornitore": "NOVA",
+  "prezzo": 18.7
+ },
+ {
+  "articolo": "Hibu Trhibù",
+  "fornitore": "BERNABEI",
+  "prezzo": 1.86
+ },
+ {
+  "articolo": "Hibu Dama Bianca",
+  "fornitore": "BERNABEI",
+  "prezzo": 1.86
+ },
+ {
+  "articolo": "Hibu Gotha",
+  "fornitore": "BERNABEI",
+  "prezzo": 1.86
+ },
+ {
+  "articolo": "Bumbu",
+  "fornitore": "BERNABEI",
+  "prezzo": 29.0
+ },
+ {
+  "articolo": "Desiderio 10 anni",
+  "fornitore": "BERNABEI",
+  "prezzo": 14.0
+ },
+ {
+  "articolo": "Negramaro Spacafico",
+  "fornitore": "BERNABEI",
+  "prezzo": 4.5
+ },
+ {
+  "articolo": "Schweppes Ginger Ale",
+  "fornitore": "BERNABEI",
+  "prezzo": 0.787
+ },
+ {
+  "articolo": "Schweppes Pompelmo 18cL",
+  "fornitore": "BERNABEI",
+  "prezzo": 0.696
+ },
+ {
+  "articolo": "Amazzoni",
+  "fornitore": "BERNABEI",
+  "prezzo": 29.42
+ },
+ {
+  "articolo": "Glendalough",
+  "fornitore": "BERNABEI",
+  "prezzo": 18.77
+ },
+ {
+  "articolo": "De Kuypers Creme de Cassis",
+  "fornitore": "BERNABEI",
+  "prezzo": 11.31
+ },
+ {
+  "articolo": "Monin Bitter",
+  "fornitore": "BERNABEI",
+  "prezzo": 12.95
+ },
+ {
+  "articolo": "Espolon",
+  "fornitore": "BERNABEI",
+  "prezzo": 14.67
+ },
+ {
+  "articolo": "Tanqueray Zero",
+  "fornitore": "PICCOLO",
+  "prezzo": 10.655
+ },
+ {
+  "articolo": "Quaglia Violetta",
+  "fornitore": "NOVA",
+  "prezzo": 16.9
+ },
+ {
+  "articolo": "Bulldog Strong Lager",
+  "fornitore": "PICCOLO",
+  "prezzo": 1.03
+ },
+ {
+  "articolo": "Amaro del Capo",
+  "fornitore": "FONT",
+  "prezzo": 14.56
+ },
+ {
+  "articolo": "Coca Cola Vetro",
+  "fornitore": "FONT",
+  "prezzo": 15.8
+ },
+ {
+  "articolo": "Coca Cola Vetro Zero",
+  "fornitore": "FONT",
+  "prezzo": 16.64
+ },
+ {
+  "articolo": "Estathe' Limone Vetro",
+  "fornitore": "FONT",
+  "prezzo": 20.47
+ },
+ {
+  "articolo": "Estathe' Pesca Vetro",
+  "fornitore": "FONT",
+  "prezzo": 20.47
+ },
+ {
+  "articolo": "Fever Tree Indian",
+  "fornitore": "FONT",
+  "prezzo": 21.18
+ },
+ {
+  "articolo": "Bjorne",
+  "fornitore": "FONT",
+  "prezzo": 25.05
+ },
+ {
+  "articolo": "Ceres",
+  "fornitore": "FONT",
+  "prezzo": 30.44
+ },
+ {
+  "articolo": "Ceres Lager",
+  "fornitore": "FONT",
+  "prezzo": 18.29
+ },
+ {
+  "articolo": "Ceres Ten",
+  "fornitore": "FONT",
+  "prezzo": 34.68
+ },
+ {
+  "articolo": "Tennents",
+  "fornitore": "FONT",
+  "prezzo": 30.48
+ },
+ {
+  "articolo": "Campari",
+  "fornitore": "FONT",
+  "prezzo": 13.5
+ },
+ {
+  "articolo": "Gin Mare",
+  "fornitore": "FONT",
+  "prezzo": 25.9
+ },
+ {
+  "articolo": "Tanqueray",
+  "fornitore": "FONT",
+  "prezzo": 15.8
+ },
+ {
+  "articolo": "José Cuervo",
+  "fornitore": "FONT",
+  "prezzo": 15.68
+ },
+ {
+  "articolo": "Carpano",
+  "fornitore": "FONT",
+  "prezzo": 7.37
+ },
+ {
+  "articolo": "Moskovskaya",
+  "fornitore": "FONT",
+  "prezzo": 10.4
+ },
+ {
+  "articolo": "Jim Beam",
+  "fornitore": "FONT",
+  "prezzo": 13.64
+ },
+ {
+  "articolo": "Nastro",
+  "fornitore": "NOVA",
+  "prezzo": 16.56
+ },
+ {
+  "articolo": "Heineken",
+  "fornitore": "FONT",
+  "prezzo": 17.52
+ },
+ {
+  "articolo": "Nastro",
+  "fornitore": "FONT",
+  "prezzo": 15.97
+ },
+ {
+  "articolo": "Fusetti Mexico",
+  "fornitore": "FONT",
+  "prezzo": 18.68
+ },
+ {
+  "articolo": "Curado",
+  "fornitore": "FONT",
+  "prezzo": 22.84
+ },
+ {
+  "articolo": "Alba de Luces",
+  "fornitore": "FONT",
+  "prezzo": 6.52
+ },
+ {
+  "articolo": "Sauvignon Leyda Cile",
+  "fornitore": "FONT",
+  "prezzo": 7.28
+ },
+ {
+  "articolo": "Piceno Superiore",
+  "fornitore": "FONT",
+  "prezzo": 8.06
+ },
+ {
+  "articolo": "Negramaro Don Cataldo",
+  "fornitore": "FONT",
+  "prezzo": 5.21
+ },
+ {
+  "articolo": "Primitio Papale",
+  "fornitore": "FONT",
+  "prezzo": 7.66
+ },
+ {
+  "articolo": "Negramaro Don Cataldo Bianco",
+  "fornitore": "FONT",
+  "prezzo": 5.27
+ },
+ {
+  "articolo": "Pinot Grigio Villa Vasi",
+  "fornitore": "FONT",
+  "prezzo": 7.05
+ },
+ {
+  "articolo": "Pecorino Ciprea Capecci",
+  "fornitore": "FONT",
+  "prezzo": 8.25
+ },
+ {
+  "articolo": "Curado",
+  "fornitore": "NOVA",
+  "prezzo": 22.84
+ },
+ {
+  "articolo": "Sant’Orsola",
+  "fornitore": "NOVA",
+  "prezzo": 3.1
+ },
+ {
+  "articolo": "Bumbu",
+  "fornitore": "NOVA",
+  "prezzo": 26.92
+ },
+ {
+  "articolo": "Ananas",
+  "fornitore": "MAR",
+  "prezzo": 8.41
+ },
+ {
+  "articolo": "Arancia Sicilia",
+  "fornitore": "MAR",
+  "prezzo": 8.41
+ },
+ {
+  "articolo": "Alto Silver",
+  "fornitore": "NOVA",
+  "prezzo": 18.07
+ },
+ {
+  "articolo": "Bulleit Rye",
+  "fornitore": "FONT",
+  "prezzo": 22.83
+ },
+ {
+  "articolo": "Jameson",
+  "fornitore": "FONT",
+  "prezzo": 17.9
+ },
+ {
+  "articolo": "Flaming Pig",
+  "fornitore": "NOVA",
+  "prezzo": 22.3
+ },
+ {
+  "articolo": "Morando",
+  "fornitore": "NOVA",
+  "prezzo": 3.6
+ },
+ {
+  "articolo": "San Benedetto Te Pesca",
+  "fornitore": "NOVA",
+  "prezzo": 3.73
+ },
+ {
+  "articolo": "San Benedetto Te Limone",
+  "fornitore": "NOVA",
+  "prezzo": 3.73
+ },
+ {
+  "articolo": "Brew Dog Punk IPA",
+  "fornitore": "PICCOLO",
+  "prezzo": 25.44
+ },
+ {
+  "articolo": "MC Chouffe",
+  "fornitore": "FONT",
+  "prezzo": 18.29
+ },
+ {
+  "articolo": "Tassoni Tonica Superfine",
+  "fornitore": "FONT",
+  "prezzo": 19.62
+ },
+ {
+  "articolo": "Kinley Ginger Beer",
+  "fornitore": "FONT",
+  "prezzo": 12.29
+ },
+ {
+  "articolo": "Fever Tree Natural Light",
+  "fornitore": "FONT",
+  "prezzo": 20.68
+ },
+ {
+  "articolo": "MBU Westcost IPA California",
+  "fornitore": "FONT",
+  "prezzo": 19.98
+ },
+ {
+  "articolo": "MBU Italian Tripel Forzuta",
+  "fornitore": "FONT",
+  "prezzo": 20.69
+ },
+ {
+  "articolo": "Tassoni Gin",
+  "fornitore": "FONT",
+  "prezzo": 20.54
+ }
+]
