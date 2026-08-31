@@ -3624,7 +3624,8 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [stampa, cassa]
-    test_cases: []
+    test_cases:
+      - tests/component/ChiusuraCassaStampa.test.jsx
 
   - id: REQ-STAMPA-009
     title: "In locale la stampante è di carta finta"
