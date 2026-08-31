@@ -4228,7 +4228,12 @@ bugs:
       davvero. Nel frattempo il danno e' ridotto: un errore vero adesso fa
       partire un secondo tentativo, e comunque lascia una traccia che
       sopravvive al toast di otto secondi.
-    status: fixed
+    # ATTENZIONE: NON e' `fixed`, ed e' voluto. Il testo qui sopra lo dice —
+    # «mitigato, non chiuso» — e un `fixed` chiuderebbe da solo la sua issue
+    # su GitHub, cioe' archivierebbe un difetto di cui NON conosciamo la
+    # causa e che puo' ripresentarsi la prossima serata. Resta aperto finche'
+    # il registro delle stampe non dice cos'e' successo davvero.
+    status: todo
     in_produzione: false
     generate_issue: true
     labels: [stampa, cassa]
