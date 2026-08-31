@@ -16,6 +16,7 @@ import {
   placedByName,
 } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
+import { ESITO, lavoroInCoda, lavoroPartito, lavoroFinito } from './registroStampe.js'
 import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
@@ -428,6 +429,7 @@ function scordaConnessione() {
   _printer = null
   _device = null
   _connectPromise = null
+  dimenticaLAscolto()
 }
 
 // Termina la connessione corrente (se attiva).
@@ -437,6 +439,126 @@ export function disconnectPrinter() {
   _device = null
   _printer = null
   _connectPromise = null
+  dimenticaLAscolto()
+}
+
+// ── SAPERE SE LA CARTA È USCITA (REQ-STAMPA-016, BUG-098) ────────────
+//
+// Fino a qui il lavoro si considerava finito quando `prn.send()` era stato
+// CHIAMATO. La stampante però una risposta la manda — `onreceive`, con
+// esito e codice: carta finita, coperchio aperto, fuori linea — e quella
+// risposta finiva in una riga di console scollegata dal lavoro che l'aveva
+// causata. Da qui in poi il lavoro si chiude SULLA RISPOSTA.
+//
+// COME SI CORRELA, senza identificativi di lavoro: la coda fa passare una
+// stampa per volta (`lavoroDiStampa`), quindi la risposta che arriva
+// mentre un lavoro è in volo è per forza sua. Restano due modi di
+// sbagliare, e sono coperti tutti e due:
+//   · la risposta di un lavoro ABBANDONATO che arriva tardi, mentre il
+//     lavoro dopo aspetta la sua. Le risposte tornano nell'ordine in cui
+//     sono partiti gli invii, quindi si contano: chi aspetta l'invio n
+//     ignora la risposta n-1, che è di un morto;
+//   · la risposta che arriva da una connessione VECCHIA, rifatta nel
+//     frattempo. Si confronta anche l'oggetto stampante: quello nuovo non
+//     è quello di prima.
+let _ascolto = null
+let _inviati = 0
+let _risposte = 0
+
+function dimenticaLAscolto() {
+  _ascolto = null
+  // I due contatori valgono per UNA connessione: rifatta la stretta di
+  // mano si riparte da zero, o resterebbero sfasati per sempre.
+  _inviati = 0
+  _risposte = 0
+}
+
+// Chiamata dall'`onreceive` di QUELLA stampante — vera o finta che sia.
+function rispostaDallaStampante(res, prn) {
+  _risposte += 1
+  // Una risposta, qualunque cosa dica, dimostra che questo apparecchio
+  // parla: da qui in poi il suo silenzio è un'anomalia (vedi
+  // `rispondeDiSolito`).
+  ricordaCheRisponde()
+  if (!_ascolto || _ascolto.prn !== prn || _ascolto.atteso !== _risposte) return
+  _ascolto.rispondi(res)
+}
+
+// ── LA STAMPANTE CHE NON RISPONDE MAI ────────────────────────────────
+//
+// È il rischio grosso di questa modifica, e il motivo per cui esiste
+// questa memoria. Passare da «riuscito = inviato» a «riuscito =
+// confermato» su un apparecchio che non conferma MAI — un altro modello,
+// un'altra configurazione — trasformerebbe un impianto che funziona in uno
+// che sembra rotto: un'attesa a vuoto e un avviso a ogni stampa, tutta la
+// sera.
+//
+// Quindi il silenzio NON è un fallimento, è un ESITO SCONOSCIUTO. E si
+// impara: al terzo lavoro di fila senza una risposta questo terminale
+// smette di aspettare, e da lì in poi la stampa si chiude sull'invio
+// esattamente come prima di BUG-098 — nessuna attesa in più, nessun
+// ritentativo, nessun avviso. Se invece una risposta arriva anche una sola
+// volta, questa stampante «parla»: da quel momento il suo silenzio è
+// un'anomalia e vale la pena rifare la stretta di mano e riprovare.
+const CHIAVE_RISPONDE = 'tana_stampante_risponde'
+const MUTE_PRIMA_DI_ARRENDERSI = 3
+
+function memoriaRisposte() {
+  try {
+    const grezzo = localStorage.getItem(CHIAVE_RISPONDE)
+    return grezzo ? JSON.parse(grezzo) : null
+  } catch {
+    return null
+  }
+}
+
+function scriviMemoriaRisposte(dati) {
+  try {
+    localStorage.setItem(CHIAVE_RISPONDE, JSON.stringify(dati))
+  } catch {
+    /* niente memoria: si riparte ogni volta dal «non lo so», che è prudente */
+  }
+}
+
+// `true` = parla · `false` = non parla, non aspettarla · `null` = non si sa
+export function rispondeDiSolito() {
+  const m = memoriaRisposte()
+  if (!m) return null
+  if (m.risponde) return true
+  return (m.muti || 0) >= MUTE_PRIMA_DI_ARRENDERSI ? false : null
+}
+
+function ricordaCheRisponde() {
+  const m = memoriaRisposte()
+  if (m?.risponde) return
+  scriviMemoriaRisposte({ risponde: true, muti: 0 })
+}
+
+function ricordaUnSilenzio() {
+  const m = memoriaRisposte()
+  if (m?.risponde) return // ha già parlato: un silenzio non lo smentisce
+  scriviMemoriaRisposte({ risponde: false, muti: (m?.muti || 0) + 1 })
+}
+
+// Che cosa dice la risposta, in italiano. I codici dell'SDK sono quelli
+// che si leggono sul manuale Epson; il resto passa com'è, perché un codice
+// sconosciuto scritto per intero è più utile di un «errore generico».
+const MOTIVI = {
+  EPTR_COVER_OPEN: 'il coperchio della stampante è aperto',
+  EPTR_REC_EMPTY: 'la carta è finita',
+  EPTR_AUTOMATICAL: 'la stampante segnala un errore meccanico',
+  EPTR_UNRECOVERABLE: 'la stampante è in errore e va riavviata',
+  EPTR_CUTTER: 'la taglierina è bloccata',
+  ASB_NO_PAPER: 'la carta è finita',
+  ASB_COVER_OPEN: 'il coperchio della stampante è aperto',
+  ASB_OFF_LINE: 'la stampante è fuori linea',
+  EX_TIMEOUT: 'la stampante non ha risposto in tempo',
+  DeviceNotFound: 'la stampante non risponde più',
+}
+
+function motivoDellaRisposta(res) {
+  const codice = String(res?.code || '').trim()
+  return MOTIVI[codice] || (codice ? `la stampante ha risposto «${codice}»` : 'la stampa non è riuscita')
 }
 
 // ── CONNESSIONE TENUTA VIVA ───────────────────────────────────────────────
@@ -516,7 +638,14 @@ async function getPrinter() {
   // scontrini si provava a occhio. Sull'ambiente di TEST no: lì ci si
   // collega a quella vera, ed è il posto dove provarla davvero.
   if (stampanteFintaAttiva()) {
-    if (!_printer) _printer = creaStampanteFinta('La Tana del Coniglio')
+    if (!_printer) {
+      const finta = creaStampanteFinta('La Tana del Coniglio')
+      // ANCHE LA FINTA CONFERMA. La macchina della conferma (BUG-098) si
+      // deve poter provare senza andare al banco: la stampante finta
+      // risponde come quella vera, e sa anche fingere un guasto.
+      finta.onreceive = (res) => rispostaDallaStampante(res, finta)
+      _printer = finta
+    }
     return _printer
   }
   if (_printer) return _printer
@@ -577,11 +706,10 @@ async function getPrinter() {
             fermaBattito()
           }
 
-          _printer.onreceive = (res) => {
-            if (!res.success) {
-              console.warn('[printer] risposta di errore:', res)
-            }
-          }
+          // LA RISPOSTA FINIVA IN CONSOLE (BUG-098). Adesso torna al
+          // lavoro che l'ha causata: è lui a decidere se la carta è
+          // uscita, se ritentare e cosa scrivere nel registro.
+          devobj.onreceive = (res) => rispostaDallaStampante(res, devobj)
 
           resolve(_printer)
         }
@@ -722,40 +850,166 @@ function pennaDelLavoro(prn, vivo) {
   return guscio
 }
 
-function lavoroDiStampa(componi) {
+// ── QUANTO SI ASPETTA LA CONFERMA ────────────────────────────────────
+//
+// Cinque secondi. La Epson risponde in meno di uno: sopra i cinque non si
+// sta più aspettando una risposta lenta, si sta aspettando una risposta
+// che non arriva. E il numero conta perché la coda passa una stampa per
+// volta: in una sera di comande, un'attesa lunga sarebbe la coda che
+// arranca. Su un apparecchio che si è già dimostrato muto non si aspetta
+// affatto (vedi `rispondeDiSolito`).
+const TEMPO_CONFERMA = 5000
+
+// Si mette in ascolto della risposta a QUESTO invio. Va armato PRIMA di
+// `send()`: la stampante finta risponde dentro `send()`, e chi si mettesse
+// in ascolto dopo perderebbe la risposta.
+//
+// `atteso` è il numero d'ordine dell'invio, e lo conta CHI SPEDISCE, non
+// questa funzione: anche gli invii SENZA ascolto — quelli verso una
+// stampante che si è già dimostrata muta — devono contare, o dal primo di
+// quelli in poi i due contatori resterebbero sfasati per sempre e ogni
+// risposta successiva verrebbe scartata come «di un lavoro morto».
+function attendiConferma(prn, atteso) {
+  return new Promise((risolvi) => {
+    let chiuso = false
+    const chiudi = (esito) => {
+      if (chiuso) return
+      chiuso = true
+      clearTimeout(orologio)
+      if (_ascolto?.atteso === atteso) _ascolto = null
+      risolvi(esito)
+    }
+    const orologio = setTimeout(() => {
+      ricordaUnSilenzio()
+      // E SI RIMETTONO I CONTATORI IN PARI. Contare gli invii funziona
+      // finché a ogni invio segue una risposta: una risposta che non
+      // arriva MAI lascerebbe il conto delle risposte indietro di uno per
+      // sempre, e da lì in poi ogni risposta buona verrebbe scartata come
+      // «di un lavoro morto» — una stampante lenta la prima volta
+      // resterebbe «non confermata» per tutta la serata. Qui si dichiara
+      // chiuso il conto di quello che è stato mandato fin qui: se la
+      // risposta arriva comunque, in ritardo, trova un numero più avanti
+      // del suo e non viene attribuita a nessuno, che è quello che si
+      // vuole.
+      _risposte = _inviati
+      chiudi({ stato: ESITO.sconosciuta, motivo: 'la stampante non ha confermato la stampa' })
+    }, TEMPO_CONFERMA)
+    _ascolto = {
+      prn,
+      atteso,
+      rispondi: (res) =>
+        chiudi(
+          res?.success
+            ? { stato: ESITO.riuscita, motivo: '' }
+            : { stato: ESITO.fallita, motivo: motivoDellaRisposta(res) }
+        ),
+    }
+  })
+}
+
+// Un giro solo: compone il ticket, lo manda e aspetta la risposta.
+// Rifiuta come ha sempre fatto quando il lavoro si impicca o il documento
+// è storto (BUG-086); restituisce l'esito quando la carta è partita.
+function unGiroDiStampa(componi) {
   let scaduto = false
-  const mio = _codaStampa.then(() => {
-    // Il cronometro parte col LAVORO, non con la richiesta: chi aspetta il
-    // suo turno in coda non ha ancora fatto niente di lento.
-    let cronometro
-    const scadenza = new Promise((_, ko) => {
-      cronometro = setTimeout(() => {
-        scaduto = true
-        // Il collegamento non è più affidabile: la stampa dopo rifà la
-        // stretta di mano invece di mettersi in fila dietro la stessa
-        // attesa appesa.
-        scordaConnessione()
-        ko(new Error('la stampante non ha risposto entro 15 secondi'))
-      }, TEMPO_MASSIMO_LAVORO)
-    })
-    const lavoro = (async () => {
-      const prn = pennaDelLavoro(await getPrinter(), () => !scaduto)
-      // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
-      // non finiscono sulla nostra carta.
+  let cronometro
+  const scadenza = new Promise((_, ko) => {
+    cronometro = setTimeout(() => {
+      scaduto = true
+      // Il collegamento non è più affidabile: la stampa dopo rifà la
+      // stretta di mano invece di mettersi in fila dietro la stessa
+      // attesa appesa.
+      scordaConnessione()
+      ko(new Error('la stampante non ha risposto entro 15 secondi'))
+    }, TEMPO_MASSIMO_LAVORO)
+  })
+  let conferma = null
+  const lavoro = (async () => {
+    const vera = await getPrinter()
+    const prn = pennaDelLavoro(vera, () => !scaduto)
+    // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
+    // non finiscono sulla nostra carta.
+    prn.clearCommandBuffer?.()
+    try {
+      await componi(prn)
+      // Se il lavoro è già scaduto la penna è sorda e `send()` non parte:
+      // quell'invio non si conta e non si aspetta, perché una risposta non
+      // arriverà mai.
+      if (!scaduto) {
+        _inviati += 1
+        if (attesaDellaConferma()) conferma = attendiConferma(vera, _inviati)
+      }
+      prn.send()
+    } catch (e) {
+      // E non si lasciano resti a chi viene dopo.
       prn.clearCommandBuffer?.()
+      throw e
+    }
+  })()
+  // Se ha già vinto la scadenza, il rifiuto del lavoro non lo ascolta più
+  // nessuno: si raccoglie qui, per non lasciarlo per aria.
+  lavoro.catch(() => {})
+  return Promise.race([lavoro, scadenza])
+    .finally(() => clearTimeout(cronometro))
+    .then(() => conferma ?? { stato: ESITO.sconosciuta, motivo: 'questa stampante non conferma le stampe' })
+}
+
+// Si aspetta la conferma solo finché ha senso: su una stampante che si è
+// già dimostrata muta ci si ferma alla `send()`, come prima di BUG-098.
+const attesaDellaConferma = () => rispondeDiSolito() !== false
+
+// SI RITENTA UNA VOLTA SOLA, E MAI ALLA CIECA.
+// · risposta di errore (carta finita, coperchio): si riprova, perché è
+//   spesso una cosa che nel frattempo qualcuno ha sistemato — ed è
+//   esattamente il gesto che si fa a mano ristampando dalla lista;
+// · silenzio da una stampante che di solito PARLA: è un'anomalia, si
+//   riprova;
+// · silenzio da una che non ha mai parlato: NON si riprova. Sarebbe una
+//   seconda copia a ogni stampa, tutta la sera, su un impianto che
+//   funziona benissimo.
+// In nessun caso più di due giri: mai una raffica.
+const daRitentare = (esito) =>
+  esito.stato === ESITO.fallita ||
+  (esito.stato === ESITO.sconosciuta && rispondeDiSolito() === true)
+
+// L'ETICHETTA DEL LAVORO NEL REGISTRO. Dice COSA si sta stampando e di
+// quale conto, e si ferma lì: il numero di giornata basta a ritrovarlo, e
+// non è il dato di nessuno. Il nome del cliente in un registro di
+// diagnostica non ci deve entrare (vedi registroStampe.js).
+const etichettaConto = (che, order) =>
+  order?.daily_number ? `${che} conto #${order.daily_number}` : che
+
+function lavoroDiStampa(componi, che = 'Stampa') {
+  const idLavoro = lavoroInCoda(che)
+  const mio = _codaStampa.then(async () => {
+    lavoroPartito(idLavoro)
+    let tentativi = 0
+    let esito
+    for (;;) {
+      tentativi += 1
       try {
-        await componi(prn)
-        prn.send()
+        esito = await unGiroDiStampa(componi)
       } catch (e) {
-        // E non si lasciano resti a chi viene dopo.
-        prn.clearCommandBuffer?.()
+        // Non è nemmeno arrivato a mandare: documento storto o lavoro
+        // impiccato. Qui non si ritenta — chi non risponde entro quindici
+        // secondi non risponde nemmeno al secondo giro, e la difesa di
+        // BUG-086 è che il chiamante lo sappia SUBITO.
+        lavoroFinito(idLavoro, ESITO.fallita, e.message, tentativi)
         throw e
       }
-    })()
-    // Se ha già vinto la scadenza, il rifiuto del lavoro non lo ascolta più
-    // nessuno: si raccoglie qui, per non lasciarlo per aria.
-    lavoro.catch(() => {})
-    return Promise.race([lavoro, scadenza]).finally(() => clearTimeout(cronometro))
+      if (tentativi >= 2 || !daRitentare(esito)) break
+      // Il gesto della ristampa a mano, quello che si sa già funzionare:
+      // si dimentica la connessione, la prossima `getPrinter()` rifà la
+      // stretta di mano e il foglio riparte. La penna del giro di prima è
+      // già sorda (pennaDelLavoro), quindi non esce una seconda copia se
+      // quello arriva in fondo in ritardo.
+      scordaConnessione()
+    }
+    lavoroFinito(idLavoro, esito.stato, esito.motivo, tentativi)
+    // L'esito SCONOSCIUTO non è un fallimento: chi ha chiesto la stampa
+    // non deve vedere un avviso perché la stampante è di poche parole.
+    if (esito.stato === ESITO.fallita) throw new Error(esito.motivo)
+    return esito
   })
   // La catena non si spezza su un errore: la stampa dopo deve partire
   // comunque — carta finita adesso non vuol dire stampante morta.
@@ -938,7 +1192,7 @@ export function printComanda(order, comanda = null) {
 
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Comanda', order))
 }
 
 // ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO ──────────────────────
@@ -1278,7 +1532,7 @@ export function printScontrino(order, opts = {}) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Scontrino', order))
 }
 
 // ── SCONTRINO D'ACCONTO ──────────────────────────────────────────────────────
@@ -1437,7 +1691,7 @@ export function printScontrinoAcconto(order, incasso = {}) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Acconto', order))
 }
 
 // ── FATTURA DI CORTESIA ──────────────────────────────────────────────────────
@@ -1514,7 +1768,7 @@ export function printFattura(invoice) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Fattura di cortesia')
 }
 
 // ── ORDINE FORNITORE ─────────────────────────────────────────────────────────
@@ -1548,7 +1802,7 @@ export function printOrdineFornitore(order) {
 
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Ordine fornitore')
 }
 
 // ── TEST STAMPA ───────────────────────────────────────────────────────────────
@@ -1642,7 +1896,7 @@ export function printChiusuraCassa(recap, session, opts = {}) {
     prn.addText(`${s.businessFooter}\n`)
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Chiusura cassa')
 }
 
 // ── LA PROVA DI STAMPA COI CAMPI SCELTI ──────────────────────────────
@@ -1720,5 +1974,5 @@ export function printTest() {
     prn.addText('Connessione OK\n')
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Prova di stampa')
 }
