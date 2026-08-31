@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import { stampanteFintaAttiva, forzaStampanteFinta } from '../lib/stampanteFinta.js'
+import {
+  stampanteFintaAttiva,
+  forzaStampanteFinta,
+  guastoFinto,
+  impostaGuastoFinto,
+} from '../lib/stampanteFinta.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import {
   clearDatabase,
@@ -28,6 +33,8 @@ export default function DevTools() {
   const [confirm, setConfirm] = useState(null) // { title, message, run }
   // La stampante finta com'è ADESSO su questo terminale (ambiente o forzatura).
   const [fintaAccesa, setFintaAccesa] = useState(() => stampanteFintaAttiva())
+  // Il guasto che la stampante finta deve simulare, se ne deve simulare uno.
+  const [guasto, setGuasto] = useState(() => guastoFinto() || '')
 
   // Pagamenti da simulare: in dev non ci sono Cloud Functions, quindi
   // l'esito del checkout SumUp si "recita" da qui.
@@ -118,6 +125,34 @@ export default function DevTools() {
           />
           <span>Simula la stampa su questo dispositivo</span>
         </label>
+
+        {/* IL GUASTO FINTO (BUG-098). La catena della conferma — risposta
+            di errore, silenzio, ritentativo, registro — fino a qui si
+            provava solo al banco, con la carta finita in mano: ed è
+            esattamente per questo che il difetto della chiusura di cassa è
+            sopravvissuto tanto. Vale solo per la stampante SIMULATA,
+            quindi in produzione non ha nemmeno un caso in cui accendersi. */}
+        {fintaAccesa && (
+          <div style={{ marginTop: 10 }}>
+            <label htmlFor="dev-guasto">Guasto simulato</label>
+            <select
+              id="dev-guasto"
+              value={guasto}
+              onChange={(e) => {
+                impostaGuastoFinto(e.target.value || null)
+                setGuasto(e.target.value)
+              }}
+            >
+              <option value="">Nessuno — la stampa riesce</option>
+              <option value="carta">Carta finita — la stampante risponde in errore</option>
+              <option value="muta">Nessuna risposta — la carta esce, la conferma no</option>
+            </select>
+            <p className="muted small" style={{ margin: '4px 0 0' }}>
+              Serve a provare cosa succede quando una stampa non riesce: l&apos;esito
+              si legge in <strong>Impostazioni → Stampante → Registro delle stampe</strong>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* QUI SI FA LA LICENZA, e solo qui: nelle impostazioni normali si
