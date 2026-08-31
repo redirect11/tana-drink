@@ -4,6 +4,31 @@
 
 ### Per chi sta al banco
 
+- **Adesso si sa se la stampante ha stampato.** Prima l'app considerava
+  finito il lavoro appena mandava il foglio alla stampante: se poi la carta
+  non usciva, non lo sapeva nessuno. Adesso aspetta la risposta
+  dell'apparecchio, e se quella dice che qualcosa non va — carta finita,
+  coperchio aperto, stampante fuori linea — **ci riprova una volta**
+  rifacendo il collegamento, che è lo stesso gesto della ristampa a mano.
+  Una volta sola: mai una raffica di fogli.
+
+- **C'è il registro delle stampe.** In **Impostazioni → Stampante** ci sono
+  le ultime stampe di questo dispositivo: cosa era, a che ora, se è uscita e,
+  quando non è uscita, **perché**. Sotto c'è anche la coda — cosa sta uscendo
+  adesso e quanto c'è in attesa. Serve la mattina dopo, quando ci si chiede
+  se la chiusura di ieri sera è uscita davvero: prima l'unica traccia era un
+  avviso che spariva dopo otto secondi.
+
+- **Una stampante che non risponde non viene scambiata per rotta.** Ci sono
+  apparecchi che stampano benissimo senza confermare niente: in quel caso il
+  registro scrive «esito non confermato» invece di un errore, non compare
+  nessun avviso e non parte nessun secondo foglio. Dopo qualche stampa l'app
+  smette anche di aspettare la risposta, così la serata non rallenta.
+
+- **Chiudere cassa resta immediato.** L'attesa della risposta della stampante
+  non trattiene il tasto: la cassa si chiude nell'istante in cui si tocca,
+  con o senza rete, e il foglio esce per conto suo.
+
 - **La striscia colorata delle tile non si spegne più da sola.** Il bordo
   sinistro della card di un prodotto — quello che dice colore, categoria o
   scorte — poteva tornare grigio quando la griglia si ridisegnava, e restare
