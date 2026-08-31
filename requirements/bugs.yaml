@@ -4127,8 +4127,7 @@ bugs:
 
   - id: BUG-098
     title: "Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge"
-    area: "src/lib/printer.js (lavoroDiStampa, getPrinter, onreceive), src/components/CashFlow.jsx"
-    in_produzione: true
+    area: "src/lib/printer.js (lavoroDiStampa, attendiConferma), src/lib/registroStampe.js, src/components/CashFlow.jsx"
     severity: media
     priority: P2
     description: >
@@ -4189,8 +4188,54 @@ bugs:
       campo: alla prossima chiusura mancata, guardare il BASSO dello schermo
       per una decina di secondi. Se compare una striscia rossa, il testo dice
       gia' la causa e questo difetto si chiude in un pomeriggio.
-    status: todo
+      ---
+      FATTO IL 31/08/2026, sul ramo feature/lettura-ordini-ristretta. La cura
+      e' stata applicata per intero, nei tre pezzi previsti.
+      1) LA CONFERMA (REQ-STAMPA-016). Il lavoro si chiude su `onreceive` e
+      non piu' sulla `send()`. La correlazione non usa identificativi — la
+      coda passa una stampa per volta — e para i due modi di sbagliare: la
+      risposta di un lavoro ABBANDONATO che arriva tardi (le risposte
+      tornano nell'ordine degli invii, e si contano: chi aspetta l'invio n
+      scarta la risposta n-1) e quella che arriva da una connessione VECCHIA
+      (si confronta anche l'oggetto stampante).
+      2) IL RITENTATIVO, UNO SOLO. Si dimentica la connessione, si rifa' la
+      stretta di mano e si rimanda — il gesto della ristampa a mano, l'unico
+      che si sa gia' funzionare. Il giro abbandonato ha gia' la penna sorda
+      (`pennaDelLavoro`), quindi niente doppio scontrino.
+      3) IL REGISTRO DELLE STAMPE (REQ-STAMPA-017), in Impostazioni →
+      Stampante: cosa, quando, com'e' andata e il motivo, piu' lo stato
+      della coda. Ultime 50 voci, niente dati personali, scritto di lato.
+      Funziona identico con la stampante FINTA, che adesso risponde come
+      quella vera e sa fingere due guasti (carta finita, nessuna risposta)
+      dal pannello Dev — cosi' la catena si prova senza andare al banco.
+      LA DIFESA DAL RISCHIO PEGGIORE, che era il motivo per andarci piano:
+      se una stampante NON RISPONDE MAI, passare a «riuscito = confermato»
+      trasformerebbe un impianto che funziona in uno che sembra rotto. Il
+      silenzio quindi NON e' un fallimento ma un ESITO SCONOSCIUTO — nessun
+      avviso a schermo — e non fa scattare nessun ritentativo finche' quella
+      stampante non ha dimostrato almeno una volta di parlare. Al terzo
+      lavoro muto di fila il terminale smette pure di aspettare la risposta,
+      e la stampa torna a chiudersi sull'invio come prima: nessun ritardo
+      aggiunto a una serata di comande. Se una risposta arriva anche una
+      volta sola, la memoria si corregge da se'.
+      MITIGATO, NON CHIUSO, e la differenza e' importante: la causa vera non
+      e' ancora DIMOSTRATA. Non sappiamo tuttora perche' proprio la chiusura
+      di cassa, e non lo sapremo finche' non capitera' di nuovo al banco. Il
+      registro delle stampe serve esattamente a questo: alla prossima
+      chiusura mancata si apre Impostazioni → Stampante e la riga dice se la
+      stampante ha risposto di errore (e quale), se non ha risposto affatto,
+      o se il lavoro non e' nemmeno partito. Da li' il difetto si chiude
+      davvero. Nel frattempo il danno e' ridotto: un errore vero adesso fa
+      partire un secondo tentativo, e comunque lascia una traccia che
+      sopravvive al toast di otto secondi.
+    status: fixed
+    in_produzione: false
     generate_issue: true
     labels: [stampa, cassa]
     test_cases:
       - tests/component/ChiusuraCassaStampa.test.jsx
+      - tests/unit/confermaDiStampa.test.js
+      - tests/unit/registroStampe.test.js
+      - tests/unit/scontrinoChiusura.test.js
+      - tests/unit/chiusuraCassaSenzaRete.test.js
+      - tests/component/RegistroStampe.test.jsx

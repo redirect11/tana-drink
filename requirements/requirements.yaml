@@ -1471,10 +1471,18 @@ requirements:
       La cassa si apre con un fondo e si chiude con il riepilogo della serata:
       incassato per metodo e per ora, conti chiusi, conti ancora da incassare.
       Senza cassa aperta non si battono ordini.
+      E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession`
+      non restituisce niente da aspettare, la scrittura parte in sottofondo
+      e lo scontrino di chiusura parte per conto suo — se la stampante non
+      risponde, la cassa resta comunque chiusa. Dal 28/08/2026 la stampa
+      aspetta anche la RISPOSTA della stampante (REQ-STAMPA-016): quell'
+      attesa non deve mai arrivare fino al tasto.
     status: implemented
     generate_issue: false
     labels: [cassa]
-    test_cases: [tests/unit/cassa.test.js]
+    test_cases:
+      - tests/unit/cassa.test.js
+      - tests/unit/chiusuraCassaSenzaRete.test.js
 
   - id: REQ-CASSA-007
     title: "Il flusso cassa serve DURANTE la serata, non solo alla chiusura"
@@ -3626,6 +3634,85 @@ requirements:
     labels: [stampa, cassa]
     test_cases:
       - tests/component/ChiusuraCassaStampa.test.jsx
+      - tests/unit/scontrinoChiusura.test.js
+
+  - id: REQ-STAMPA-016
+    title: "La stampa si chiude sulla RISPOSTA della stampante, non sull'invio"
+    area: "src/lib/printer.js (lavoroDiStampa, attendiConferma, rispondeDiSolito)"
+    description: >
+      Fino ad agosto 2026 un lavoro di stampa si considerava finito quando
+      `prn.send()` era stato CHIAMATO: non sapevamo se la carta fosse
+      uscita. La stampante una risposta la manda — `onreceive`, con esito e
+      codice: carta finita, coperchio aperto, fuori linea — ma quella
+      risposta finiva in una riga di console scollegata dal lavoro che
+      l'aveva causata. E' la causa strutturale di BUG-098 («la chiusura di
+      cassa spesso non stampa, e non compare nessun avviso»).
+      ADESSO IL LAVORO SI CHIUDE SULLA RISPOSTA. La correlazione non ha
+      bisogno di identificativi, che l'SDK non da': la coda fa passare una
+      stampa per volta, quindi la risposta che arriva mentre un lavoro e' in
+      volo e' per forza sua. Restano coperti i due modi di sbagliare: la
+      risposta di un lavoro ABBANDONATO che arriva tardi (le risposte
+      tornano nell'ordine degli invii, e si contano) e quella che arriva da
+      una connessione VECCHIA, rifatta nel frattempo (si confronta l'oggetto
+      stampante).
+      SI RITENTA UNA VOLTA SOLA, mai una raffica: si dimentica la
+      connessione, si rifa' la stretta di mano e si rimanda — che e'
+      esattamente il gesto che si fa a mano ristampando dalla lista, ed e'
+      l'unico che si sa gia' funzionare. Il giro abbandonato ha gia' la
+      penna sorda (`pennaDelLavoro`), quindi non esce una seconda copia.
+      E LA DIFESA CHE CONTA DI PIU': una stampante che non risponde MAI —
+      altro modello, altra configurazione — non deve diventare un impianto
+      che sembra rotto. Il silenzio quindi NON e' un fallimento, e' un
+      ESITO SCONOSCIUTO: nessun avviso a schermo, e chi ha chiesto la
+      stampa non vede niente di diverso da prima. E si impara: al terzo
+      lavoro di fila senza risposta questo terminale smette pure di
+      aspettarla, e la stampa torna a chiudersi sull'invio come prima —
+      nessun ritardo aggiunto a una serata di comande. Se una risposta
+      arriva anche una volta sola, la memoria si corregge da se' e da li'
+      in poi il silenzio torna a essere un'anomalia.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, difetto-risolto]
+    test_cases:
+      - tests/unit/confermaDiStampa.test.js
+
+  - id: REQ-STAMPA-017
+    title: "Il registro delle stampe: cosa e' uscito, quando e com'e' andata"
+    area: "src/lib/registroStampe.js, src/components/PrinterSetup.jsx"
+    description: >
+      Una stampa fallita non lasciava NIENTE. L'avviso viveva otto secondi
+      in una striscia che compare insieme a quella verde «Cassa chiusa» — e
+      coi toast che si accavallano (BUG-078) puo' passare inosservata — e la
+      risposta della stampante finiva in una console che nessuno legge. Con
+      una cassa che si chiude UNA VOLTA A NOTTE, cosi' si va per tentativi
+      per settimane: e' la seconda meta' di BUG-098.
+      IL REGISTRO STA SUL DISPOSITIVO e si legge in Impostazioni →
+      Stampante, dove c'e' la MACCHINA (indirizzo, prova di stampa, i dati):
+      e' il posto dove si va quando la stampante fa i capricci. Per ogni
+      lavoro dice COSA si e' provato a stampare, QUANDO, COM'E' ANDATA e il
+      MOTIVO quando e' andata male, piu' se c'e' voluto un secondo giro.
+      Accanto c'e' lo stato della CODA — cosa e' in corso e quanto c'e'
+      dietro — perche' la seconda domanda davanti a una stampante ferma e'
+      «si e' impiantata?».
+      TRE VINCOLI. Non cresce all'infinito: le ultime 50 voci, e bastano
+      perche' la voce che conta — la chiusura — e' l'ULTIMA stampa della
+      serata e non viene mai spinta fuori dalle comande della sera dopo.
+      Niente dati personali: la voce dice «Scontrino conto #42», mai il nome
+      di chi era al tavolo — un registro di diagnostica non e' il posto dove
+      tenere i clienti del locale. E non rallenta la stampa: la voce entra
+      in memoria subito, il salvataggio in localStorage parte di lato, su un
+      microtask.
+      FUNZIONA IDENTICO CON LA STAMPANTE FINTA (REQ-STAMPA-009), che dal
+      28/08/2026 risponde come quella vera e sa anche fingere due guasti —
+      carta finita e nessuna risposta — dal pannello Dev. Senza, questa
+      catena si sarebbe potuta provare solo al banco, che e' esattamente il
+      motivo per cui BUG-098 e' sopravvissuto tanto.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, difetto-risolto]
+    test_cases:
+      - tests/unit/registroStampe.test.js
+      - tests/component/RegistroStampe.test.jsx
 
   - id: REQ-STAMPA-009
     title: "In locale la stampante è di carta finta"
