@@ -30,7 +30,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **230 voci** in tutto. **203** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **9** difetti noti sono ancora aperti.
+cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -3034,6 +3034,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-090](#bug-090--il-repository-è-pubblico-e-contiene-vocali-e-foto-di-persone-vere) — Il repository è pubblico e contiene vocali e foto di persone vere | grave | P0 |
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
+| · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -3112,6 +3113,40 @@ Aprendo un conto, `ruolo` parte da `null` e diventa quello vero solo quando il t
 NON CORRETTO QUI: cambiarlo cambia cosa si vede al primo disegno, e questo giro era una pulizia degli avvisi, non un cambio di comportamento.
 
 **Dove**: `src/components/OrderPosDetail.jsx (effetto onAuthStateChanged, `ruolo`)`
+
+#### BUG-098 — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge
+
+Segnalato da Flavio il 28/08/2026: «quando fanno la chiusura cassa, la stampante non stampa lo scontrino di chiusura molto spesso». I FATTI CHE HA DATO, e valgono piu' di qualunque lettura del codice: · durante la serata la stampante stampa SEMPRE — comande e scontrini escono anche nelle sere lente, con mezz'ora fra un ordine e l'altro; · la RISTAMPA della stessa chiusura, dalla lista delle serate, esce SUBITO; · quando non stampa NON compare nessun avviso; · la chiusura si fa dalla schermata della cassa (`CashFlow`), non dal riquadro della coda.
+
+COSA E' STATO ESCLUSO, con la verifica accanto, perche' il prossimo che ci mette mano non rifaccia la stessa strada: · NON e' la coda di stampa piantata: durante la serata stampa tutto; · NON e' la connessione morta per inattivita': stampa anche dopo mezz'ora di pausa, e il battito cardiaco c'e' anche in produzione; · NON e' un `await` che non torna: `closeCashSession` non restituisce niente, quindi la riga della stampa viene raggiunta; · NON e' una regressione: il codice della chiusura in produzione (1.5.5) e' IDENTICO a quello attuale, in tutte e due le schermate; · NON e' un interruttore che spegne la stampa: non esiste, e se manca l'IP della stampante il codice lancia un errore invece di tacere; · NON e' la schermata: i due test nuovi (`tests/component/ChiusuraCassaStampa.test.jsx`) dimostrano che la chiusura CHIEDE la stampa coi dati giusti e che un fallimento viene detto.
+
+RESTA QUINDI UN SOLO SPAZIO: la stampa parte, il codice la considera riuscita, e la carta non esce.
+
+LA CAUSA STRUTTURALE, che e' anche il motivo per cui il difetto e' difficile da inseguire:
+
+NON SAPPIAMO SE LA STAMPANTE HA STAMPATO. Il lavoro si considera finito quando `prn.send()` e' stato CHIAMATO, non quando la carta e' uscita. La stampante una risposta la manda — `onreceive`, con esito e codice: carta finita, coperchio aperto, fuori linea, tempo scaduto — ma nel codice quella risposta finisce in una riga di console, scollegata dal lavoro che l'ha causata. Non usiamo nessuno degli altri strumenti dell'SDK: ne' il monitoraggio di stato (`startMonitor`/`onstatuschange`), ne' il tempo massimo del dispositivo, ne' l'identificativo di lavoro sulla `send`.
+
+LA CURA, in tre pezzi di valore decrescente:
+
+1) ASPETTARE LA CONFERMA: il lavoro si chiude su `onreceive`, non su `send()`. La coda fa passare una stampa per volta, quindi la risposta che arriva mentre un lavoro e' in volo e' per forza sua: si correla senza bisogno di identificativi.
+
+2) RIPROVARE UNA VOLTA SOLA, dopo aver dimenticato la connessione e rifatto la stretta di mano — che e' esattamente il gesto che si fa a mano ristampando dalla lista, ed e' l'unico che si sa gia' funzionare. Con la protezione dal doppio scontrino che esiste gia' per le ricevute.
+
+3) LASCIARE TRACCIA: oggi una stampa fallita non lascia niente. L'avviso vive OTTO SECONDI in una striscia che compare insieme a quella verde «Cassa chiusa» — e con i toast che si accavallano (BUG-078) puo' passare inosservata — e la risposta della stampante finisce in una console che nessuno legge. Con una cassa che si chiude una volta a notte, cosi' si va per tentativi per settimane. Serve un registro delle stampe sul dispositivo: cosa, quando, esito.
+
+DA VERIFICARE AL BANCO, ed e' la domanda che dividerebbe in due il campo: alla prossima chiusura mancata, guardare il BASSO dello schermo per una decina di secondi. Se compare una striscia rossa, il testo dice gia' la causa e questo difetto si chiude in un pomeriggio. --- FATTO IL 31/08/2026, sul ramo feature/lettura-ordini-ristretta. La cura e' stata applicata per intero, nei tre pezzi previsti.
+
+1) LA CONFERMA (REQ-STAMPA-016). Il lavoro si chiude su `onreceive` e non piu' sulla `send()`. La correlazione non usa identificativi — la coda passa una stampa per volta — e para i due modi di sbagliare: la risposta di un lavoro ABBANDONATO che arriva tardi (le risposte tornano nell'ordine degli invii, e si contano: chi aspetta l'invio n scarta la risposta n-1) e quella che arriva da una connessione VECCHIA (si confronta anche l'oggetto stampante).
+
+2) IL RITENTATIVO, UNO SOLO. Si dimentica la connessione, si rifa' la stretta di mano e si rimanda — il gesto della ristampa a mano, l'unico che si sa gia' funzionare. Il giro abbandonato ha gia' la penna sorda (`pennaDelLavoro`), quindi niente doppio scontrino.
+
+3) IL REGISTRO DELLE STAMPE (REQ-STAMPA-017), in Impostazioni → Stampante: cosa, quando, com'e' andata e il motivo, piu' lo stato della coda. Ultime 50 voci, niente dati personali, scritto di lato. Funziona identico con la stampante FINTA, che adesso risponde come quella vera e sa fingere due guasti (carta finita, nessuna risposta) dal pannello Dev — cosi' la catena si prova senza andare al banco.
+
+LA DIFESA DAL RISCHIO PEGGIORE, che era il motivo per andarci piano: se una stampante NON RISPONDE MAI, passare a «riuscito = confermato» trasformerebbe un impianto che funziona in uno che sembra rotto. Il silenzio quindi NON e' un fallimento ma un ESITO SCONOSCIUTO — nessun avviso a schermo — e non fa scattare nessun ritentativo finche' quella stampante non ha dimostrato almeno una volta di parlare. Al terzo lavoro muto di fila il terminale smette pure di aspettare la risposta, e la stampa torna a chiudersi sull'invio come prima: nessun ritardo aggiunto a una serata di comande. Se una risposta arriva anche una volta sola, la memoria si corregge da se'.
+
+MITIGATO, NON CHIUSO, e la differenza e' importante: la causa vera non e' ancora DIMOSTRATA. Non sappiamo tuttora perche' proprio la chiusura di cassa, e non lo sapremo finche' non capitera' di nuovo al banco. Il registro delle stampe serve esattamente a questo: alla prossima chiusura mancata si apre Impostazioni → Stampante e la riga dice se la stampante ha risposto di errore (e quale), se non ha risposto affatto, o se il lavoro non e' nemmeno partito. Da li' il difetto si chiude davvero. Nel frattempo il danno e' ridotto: un errore vero adesso fa partire un secondo tentativo, e comunque lascia una traccia che sopravvive al toast di otto secondi.
+
+**Dove**: `src/lib/printer.js (lavoroDiStampa, attendiConferma), src/lib/registroStampe.js, src/components/CashFlow.jsx`
 
 ## Non più valido
 
