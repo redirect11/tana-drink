@@ -8,10 +8,12 @@
 // la regola di tutte le altre: si scrive in sottofondo e l'esito si vede
 // nell'istante del gesto — mai «quando sincronizza».
 //
-// E DA BUG-098 C'È UNA COSA IN PIÙ DA SORVEGLIARE: adesso la stampa
-// aspetta la RISPOSTA della stampante prima di dirsi finita. Quell'attesa
-// non deve mai trattenere la chiusura: la cassa si chiude e basta, il
-// foglio è una conseguenza.
+// E DA BUG-098 C'È UNA COSA IN PIÙ DA SORVEGLIARE: la stampa adesso
+// racconta com'è andata, con un avviso quando la carta non esce. Ma quel
+// racconto arriva DOPO e per conto suo — il ripensamento del 01/09/2026 ha
+// tolto l'attesa che la prima stesura ci aveva messo — e non deve mai
+// trattenere la chiusura: la cassa si chiude e basta, il foglio è una
+// conseguenza.
 //
 // Come il modello (`giroInLocale.test.js`): non si mocka `api.js` — si
 // proverebbe il mock — si mocka SOLO Firestore, e nel modo più cattivo

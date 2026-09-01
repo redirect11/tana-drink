@@ -236,13 +236,12 @@ describe('una stampa che non si conclude non si tiene il conto', () => {
     // libero: la stampante torna a rispondere e il conto dopo esce.
     rispondiOra()
     const secondo = riscuoti(P, conto(2))
-    // TRE SECONDI PER IL LOGO CHE SI ARRENDE, PIÙ CINQUE DI CONFERMA.
-    // Da BUG-098 un lavoro non finisce sulla `send()`: aspetta la risposta
-    // della stampante. Questa qui non risponde MAI — è il suo mestiere in
-    // questa prova — quindi l'esito resta «non confermato», che NON è un
-    // fallimento: la carta è uscita e il banco non vede nessun avviso,
-    // esattamente come prima. Era `5000`, e con la conferma di mezzo
-    // scadevano prima i secondi del test che l'attesa del codice.
+    // TRE SECONDI PER IL LOGO CHE SI ARRENDE, e basta quello. Col
+    // ripensamento di BUG-098 (01/09/2026) il lavoro torna a chiudersi
+    // sulla `send()`: la risposta della stampante non trattiene più
+    // nessuno, e questa qui non risponde MAI — è il suo mestiere in questa
+    // prova. Il margine resta largo perché una prova che sta sul filo dei
+    // millisecondi è una prova ballerina.
     await vi.advanceTimersByTimeAsync(9000)
     await respira(60)
     expect(secondo()).toBe('carta uscita')

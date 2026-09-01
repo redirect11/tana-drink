@@ -1474,9 +1474,10 @@ requirements:
       E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession`
       non restituisce niente da aspettare, la scrittura parte in sottofondo
       e lo scontrino di chiusura parte per conto suo — se la stampante non
-      risponde, la cassa resta comunque chiusa. Dal 28/08/2026 la stampa
-      aspetta anche la RISPOSTA della stampante (REQ-STAMPA-016): quell'
-      attesa non deve mai arrivare fino al tasto.
+      risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la
+      risposta della stampante (REQ-STAMPA-016): il lavoro si chiude
+      sull'invio, l'esito arriva dopo e si legge nel registro delle stampe.
+      Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
     status: implemented
     generate_issue: false
     labels: [cassa]
@@ -3637,39 +3638,60 @@ requirements:
       - tests/unit/scontrinoChiusura.test.js
 
   - id: REQ-STAMPA-016
-    title: "La stampa si chiude sulla RISPOSTA della stampante, non sull'invio"
-    area: "src/lib/printer.js (lavoroDiStampa, attendiConferma, rispondeDiSolito)"
+    title: "La risposta della stampante e' DIAGNOSTICA: racconta, non trattiene"
+    area: "src/lib/printer.js (lavoroDiStampa, rispostaDallaStampante, raccontaLaRisposta)"
     description: >
-      Fino ad agosto 2026 un lavoro di stampa si considerava finito quando
-      `prn.send()` era stato CHIAMATO: non sapevamo se la carta fosse
-      uscita. La stampante una risposta la manda — `onreceive`, con esito e
-      codice: carta finita, coperchio aperto, fuori linea — ma quella
-      risposta finiva in una riga di console scollegata dal lavoro che
-      l'aveva causata. E' la causa strutturale di BUG-098 («la chiusura di
-      cassa spesso non stampa, e non compare nessun avviso»).
-      ADESSO IL LAVORO SI CHIUDE SULLA RISPOSTA. La correlazione non ha
-      bisogno di identificativi, che l'SDK non da': la coda fa passare una
-      stampa per volta, quindi la risposta che arriva mentre un lavoro e' in
-      volo e' per forza sua. Restano coperti i due modi di sbagliare: la
-      risposta di un lavoro ABBANDONATO che arriva tardi (le risposte
-      tornano nell'ordine degli invii, e si contano) e quella che arriva da
-      una connessione VECCHIA, rifatta nel frattempo (si confronta l'oggetto
-      stampante).
-      SI RITENTA UNA VOLTA SOLA, mai una raffica: si dimentica la
-      connessione, si rifa' la stretta di mano e si rimanda — che e'
-      esattamente il gesto che si fa a mano ristampando dalla lista, ed e'
-      l'unico che si sa gia' funzionare. Il giro abbandonato ha gia' la
-      penna sorda (`pennaDelLavoro`), quindi non esce una seconda copia.
-      E LA DIFESA CHE CONTA DI PIU': una stampante che non risponde MAI —
-      altro modello, altra configurazione — non deve diventare un impianto
-      che sembra rotto. Il silenzio quindi NON e' un fallimento, e' un
-      ESITO SCONOSCIUTO: nessun avviso a schermo, e chi ha chiesto la
-      stampa non vede niente di diverso da prima. E si impara: al terzo
-      lavoro di fila senza risposta questo terminale smette pure di
-      aspettarla, e la stampa torna a chiudersi sull'invio come prima —
-      nessun ritardo aggiunto a una serata di comande. Se una risposta
-      arriva anche una volta sola, la memoria si corregge da se' e da li'
-      in poi il silenzio torna a essere un'anomalia.
+      Fino ad agosto 2026 la risposta della stampante — `onreceive`, con
+      esito e codice: carta finita, coperchio aperto, fuori linea — finiva
+      in una riga di console scollegata dal lavoro che l'aveva causata:
+      NON SAPEVAMO SE LA CARTA FOSSE USCITA, ed e' la causa strutturale di
+      BUG-098 («la chiusura di cassa spesso non stampa, e non compare
+      nessun avviso»).
+      LA STAMPA SI CHIUDE SULL'INVIO, e non deve mai fare altro. Chi chiude
+      cassa o batte una comanda vede l'esito nell'istante in cui tocca: e'
+      il local-first del CLAUDE.md applicato alla stampante — come non si
+      aspetta Firestore per mostrare un conto incassato, non si aspetta la
+      testina per dire che la stampa e' partita.
+      LA RISPOSTA ARRIVA DOPO E PER CONTO SUO, e serve solo a RACCONTARE:
+      aggiorna la voce gia' scritta nel registro delle stampe (da «inviata»
+      a com'e' andata davvero) e, quando e' un errore, manda un avviso.
+      Non chiude niente, non trattiene nessuno, non fa ritentare.
+      PERCHE' QUESTO REQUISITO E' STATO RISCRITTO IL 01/09/2026, ed e' la
+      cosa che serve fra sei mesi: la prima stesura (31/08) aveva messo il
+      lavoro ad ASPETTARE la risposta, con un ritentativo automatico e una
+      memoria «questa stampante parla / non parla» per decidere quando
+      valesse la pena aspettare. Era un `await` sulla stampante nel mezzo
+      di un gesto, cioe' il divieto numero uno di questo progetto, e tutta
+      la macchina che ci stava intorno — attesa, ritentativo, memoria dei
+      silenzi — esisteva solo per rendere sopportabile quell'attesa. Tolta
+      l'attesa, e' sparita anche quella: quello che non serve piu' non
+      resta a fare da trappola per chi legge. Il ritentativo in
+      particolare NON torna: senza attesa non c'e' piu' il momento in cui
+      riprovare, a ristampare e' una persona, ed e' anche l'unico modo di
+      non rischiare il doppio scontrino su una stampa che era uscita.
+      COME SI CORRELA una risposta col foglio che l'ha causata, senza
+      identificativi (l'SDK non ne da'): le risposte tornano nell'ordine
+      degli invii, quindi si contano — chi aspetta l'invio n scarta la
+      risposta n-1, che e' di un foglio gia' passato — e si confronta anche
+      l'oggetto stampante, perche' dopo una riconnessione e' un altro.
+      L'ascolto si chiude da solo dopo qualche secondo: NON e' un'attesa
+      (il lavoro e' chiuso da un pezzo), e' il momento in cui si smette di
+      dare un padrone alle risposte, perche' un foglio che non riceve mai
+      risposta lascerebbe il conto indietro di uno per sempre e da li' in
+      poi ogni risposta finirebbe sul foglio sbagliato.
+      SOLO GLI ERRORI FANNO RUMORE. Su risposta di errore parte un avviso
+      (`notify`), che si vede subito e resta nello storico della
+      campanella: dice COSA non e' uscito e PERCHE' in parole da banco
+      («Scontrino conto #42: la carta e' finita»), mai il codice dell'SDK,
+      che resta nel registro dove serve a chi ripara. Su risposta buona non
+      si dice niente: la carta e' uscita e si vede, e un avviso a ogni
+      comanda diventa rumore in mezz'ora. E NIENTE VALANGHE: lo stesso
+      motivo non si ripete entro un minuto, perche' dieci strisce identiche
+      sono peggio di una — si smette di leggerle. Il registro le ha
+      comunque tutte.
+      IL TEMPO MASSIMO DEL LAVORO (15 secondi, BUG-086) RESTA, ed e'
+      un'altra cosa: difende da un lavoro che non finisce, e in quel caso
+      la stampa RIFIUTA — perche' li' il chiamante deve saperlo adesso.
     status: implemented
     generate_issue: false
     labels: [stampa, difetto-risolto]
@@ -3690,10 +3712,17 @@ requirements:
       Stampante, dove c'e' la MACCHINA (indirizzo, prova di stampa, i dati):
       e' il posto dove si va quando la stampante fa i capricci. Per ogni
       lavoro dice COSA si e' provato a stampare, QUANDO, COM'E' ANDATA e il
-      MOTIVO quando e' andata male, piu' se c'e' voluto un secondo giro.
-      Accanto c'e' lo stato della CODA — cosa e' in corso e quanto c'e'
-      dietro — perche' la seconda domanda davanti a una stampante ferma e'
-      «si e' impiantata?».
+      MOTIVO quando e' andata male. Accanto c'e' lo stato della CODA — cosa
+      e' in corso e quanto c'e' dietro — perche' la seconda domanda davanti
+      a una stampante ferma e' «si e' impiantata?».
+      LA VOCE NASCE «INVIATA» E SI CORREGGE DOPO (riscritto il 01/09/2026,
+      col ripensamento di REQ-STAMPA-016): la stampa non aspetta la
+      stampante, quindi la riga entra nel registro nell'istante in cui il
+      foglio parte, e la risposta — se arriva — la cambia in «stampata» o
+      «non stampata» col motivo. Una voce rimasta «in attesa di risposta»
+      NON e' un buco: e' una stampante che non conferma niente, ed e' la
+      prima cosa da leggere alla prossima chiusura mancata. Chi ha il
+      pannello aperto vede la riga cambiare da se'.
       TRE VINCOLI. Non cresce all'infinito: le ultime 50 voci, e bastano
       perche' la voce che conta — la chiusura — e' l'ULTIMA stampa della
       serata e non viene mai spinta fuori dalle comande della sera dopo.

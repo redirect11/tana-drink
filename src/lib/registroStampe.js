@@ -35,19 +35,25 @@ const CHIAVE = 'tana:registro-stampe'
 // Il tetto: vedi il punto 1 qui sopra.
 export const TETTO_VOCI = 50
 
-// Gli esiti, e cosa vogliono dire. `sconosciuta` NON è un fallimento: è
-// il caso della stampante che stampa ma non conferma — vedi il commento
-// sulla conferma in `printer.js`.
+// Gli esiti, e cosa vogliono dire.
+//
+// `inviata` è quello con cui OGNI stampa nasce, ed è il perno di come
+// funziona questo registro: il foglio è partito e la risposta della
+// stampante arriverà dopo — o non arriverà mai. Nessuno la aspetta (chi ha
+// chiesto la stampa è andato avanti da un pezzo: vedi il commento sulla
+// diagnostica in `printer.js`), ma una voce rimasta «inviata» è
+// un'informazione anche lei: quella stampante non conferma niente, ed è la
+// prima cosa da leggere alla prossima chiusura mancata.
 export const ESITO = {
+  inviata: 'inviata',
   riuscita: 'riuscita',
   fallita: 'fallita',
-  sconosciuta: 'sconosciuta',
 }
 
 export const ETICHETTA_ESITO = {
+  inviata: 'In attesa di risposta',
   riuscita: 'Stampata',
   fallita: 'Non stampata',
-  sconosciuta: 'Esito non confermato',
 }
 
 let _voci = null
@@ -124,8 +130,14 @@ export function iscrivitiAlRegistro(cb) {
 }
 
 // ── LA VITA DI UN LAVORO ─────────────────────────────────────────────
-// Tre momenti, chiamati da `lavoroDiStampa` in printer.js: entra in coda,
-// parte, finisce. `che` è l'etichetta — senza dati personali dentro.
+//
+// Quattro momenti, e i primi tre li chiama `lavoroDiStampa` in printer.js:
+// entra in coda, parte, ed esce dalla coda — «inviata» se il foglio è
+// partito, «fallita» se non ci è nemmeno arrivato. Il quarto momento
+// arriva DOPO e per conto suo (`aggiornaEsito`): è la risposta della
+// stampante, che dice com'è andata davvero.
+//
+// `che` è l'etichetta — senza dati personali dentro.
 
 export function lavoroInCoda(che) {
   const id = `stampa-${++_prossimoId}`
@@ -139,25 +151,56 @@ export function lavoroPartito(id) {
   cambiato()
 }
 
-// `tentativi` vale 2 quando si è ridato il foglio alla stampante dopo una
-// risposta storta: è il numero che dice se il ritentativo è servito.
-export function lavoroFinito(id, esito, motivo = '', tentativi = 1) {
+// Il motivo si taglia: è una frase, non un registro di sistema, e una
+// stringa lunga in localStorage la paga chi legge il pannello.
+const motivoCorto = (motivo) => String(motivo || '').slice(0, 200)
+
+function esciDallaCoda(id, esito, motivo) {
   const lavoro = _coda.find((l) => l.id === id)
+  // Chi non è più in coda ci è già uscito: succede al lavoro che scade
+  // DOPO aver mandato il foglio, e in quel caso la voce c'è già.
+  if (!lavoro) return
   _coda = _coda.filter((l) => l.id !== id)
   const elenco = voci()
   elenco.push({
     id,
-    che: lavoro?.che || 'Stampa',
+    che: lavoro.che,
     quando: new Date().toISOString(),
-    esito: ESITO[esito] || ESITO.sconosciuta,
-    // Il motivo si taglia: è una frase, non un registro di sistema, e una
-    // stringa lunga in localStorage la paga chi legge il pannello.
-    motivo: String(motivo || '').slice(0, 200),
-    tentativi,
+    esito: ESITO[esito] || ESITO.inviata,
+    motivo: motivoCorto(motivo),
   })
   // Il tetto si applica QUI e non alla lettura: quello che non entra non
   // deve nemmeno restare in memoria.
   if (elenco.length > TETTO_VOCI) elenco.splice(0, elenco.length - TETTO_VOCI)
+  salvaDiLato()
+  cambiato()
+}
+
+// Il foglio è partito. La voce entra nel registro SUBITO — è l'istante in
+// cui chi ha chiesto la stampa va avanti — e resta così finché la
+// stampante non dice altro.
+export function lavoroInviato(id) {
+  esciDallaCoda(id, ESITO.inviata, '')
+}
+
+// Non è nemmeno arrivato a mandare: documento storto o lavoro impiccato
+// (BUG-086). Qui il fallimento è certo, e il chiamante l'ha già saputo.
+export function lavoroNonPartito(id, motivo) {
+  esciDallaCoda(id, ESITO.fallita, motivo)
+}
+
+// LA RISPOSTA DELLA STAMPANTE, che arriva dopo: cambia l'esito della voce
+// già scritta. Se quella voce non c'è più — spinta fuori dal tetto delle
+// 50 in una serata di comande — non si inventa niente: la risposta di una
+// stampa vecchia non vale una riga nuova in cima al registro.
+export function aggiornaEsito(id, esito, motivo = '') {
+  const elenco = voci()
+  const i = elenco.findIndex((v) => v.id === id)
+  if (i === -1) return
+  // Si SOSTITUISCE l'oggetto invece di modificarlo: chi disegna la lista
+  // confronta i riferimenti, e una riga cambiata sul posto non si
+  // ridisegnerebbe.
+  elenco[i] = { ...elenco[i], esito: ESITO[esito] || elenco[i].esito, motivo: motivoCorto(motivo) }
   salvaDiLato()
   cambiato()
 }

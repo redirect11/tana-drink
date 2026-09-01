@@ -143,8 +143,8 @@ let finestre
 
 // ── IL GUASTO FINTO (BUG-098) ────────────────────────────────────────
 //
-// La catena della conferma — risposta di errore, silenzio, ritentativo,
-// registro — fino a qui si provava solo al banco, con la carta finita in
+// La catena della diagnostica — risposta di errore, registro, avviso a
+// schermo — fino a qui si provava solo al banco, con la carta finita in
 // mano: ed è esattamente per questo che «la chiusura di cassa spesso non
 // stampa» è sopravvissuto tanto. Con la stampante finta che sa rompersi,
 // tutta la catena si prova da un computer di sviluppo.
@@ -165,7 +165,7 @@ describe('la stampante finta sa anche rompersi', () => {
     }
   })
 
-  it('di suo non si rompe: nessun guasto, e la conferma arriva', async () => {
+  it('di suo non si rompe: nessun guasto, e la risposta arriva', async () => {
     const { guastoFinto } = await import('../../src/lib/stampanteFinta.js')
     expect(guastoFinto()).toBe(null)
 
@@ -177,39 +177,38 @@ describe('la stampante finta sa anche rompersi', () => {
   })
 
   it('«carta finita»: niente facsimile, e il motivo arriva fino al registro', async () => {
+    // CAMBIATO col ripensamento di BUG-098 (01/09/2026): la stampa non
+    // aspetta più la risposta, quindi NON rifiuta più — chi ha chiesto la
+    // stampa è andato avanti da un pezzo. Il guasto si legge dopo, nel
+    // registro, che è il posto dove serve a chi ripara.
     const { impostaGuastoFinto } = await import('../../src/lib/stampanteFinta.js')
     impostaGuastoFinto('carta')
 
     const P = await import('../../src/lib/printer.js')
     const { statoRegistro } = await import('../../src/lib/registroStampe.js')
-    await expect(P.printTest()).rejects.toThrow(/la carta è finita/)
+    await expect(P.printTest()).resolves.toBeUndefined()
     // Come al banco: la stampante ha detto di no e la carta non esce.
     expect(finestre).toHaveLength(0)
     const voce = statoRegistro().voci[0]
     expect(voce.esito).toBe('fallita')
     expect(voce.motivo).toMatch(/la carta è finita/)
-    // Un ritentativo, e poi ci si ferma: mai una raffica.
-    expect(voce.tentativi).toBe(2)
   })
 
-  it('«nessuna risposta»: la carta esce e l’esito resta sconosciuto', async () => {
+  it('«nessuna risposta»: la carta esce e la voce resta in attesa', async () => {
     // È il caso sospettato dietro la chiusura di cassa che non si vede
     // uscire, e il più difficile da riconoscere: la stampante fa MENO, non
-    // di più. Un fallimento non c'è — e dirlo sarebbe una bugia.
-    vi.useFakeTimers()
+    // di più. Un fallimento non c'è — e dirlo sarebbe una bugia. Da
+    // BUG-098 (ripensamento) non c'è nemmeno più un'attesa: la stampa si
+    // chiude subito e la voce resta «inviata» per sempre.
     const { impostaGuastoFinto } = await import('../../src/lib/stampanteFinta.js')
     impostaGuastoFinto('muta')
 
     const P = await import('../../src/lib/printer.js')
     const { statoRegistro } = await import('../../src/lib/registroStampe.js')
-    const stampa = P.printTest()
-    await vi.advanceTimersByTimeAsync(5100)
-    for (let i = 0; i < 30; i++) await Promise.resolve()
+    await P.printTest()
 
-    await expect(stampa).resolves.toBeTruthy()
     expect(finestre).toHaveLength(1) // il facsimile c'è: la carta è uscita
-    expect(statoRegistro().voci[0].esito).toBe('sconosciuta')
-    vi.useRealTimers()
+    expect(statoRegistro().voci[0].esito).toBe('inviata')
   })
 
   it('il guasto si spegne, e la stampa torna a riuscire', async () => {
