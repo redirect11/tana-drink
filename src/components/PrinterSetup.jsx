@@ -285,7 +285,10 @@ function RegistroStampe() {
       return ''
     }
   }
-  const segno = { riuscita: '✓', fallita: '✕', sconosciuta: '?' }
+  // Il puntino della voce appena mandata: la risposta della stampante
+  // arriva dopo, e finché non arriva l'esito è sospeso — non riuscito e
+  // nemmeno fallito.
+  const segno = { inviata: '·', riuscita: '✓', fallita: '✕' }
 
   return (
     <fieldset
@@ -302,7 +305,9 @@ function RegistroStampe() {
 
       <p className="muted" style={{ fontSize: '0.85rem', margin: '0 0 10px' }}>
         Le ultime stampe di questo dispositivo e come sono andate. Resta qui,
-        non viene inviato da nessuna parte.
+        non viene inviato da nessuna parte. Una voce «in attesa di risposta»
+        vuol dire che la stampa è partita e la stampante non ha detto come è
+        finita.
       </p>
 
       {/* LA CODA. La seconda domanda davanti a una stampante ferma è «si è
@@ -344,7 +349,6 @@ function RegistroStampe() {
               <div className="muted small">
                 {ETICHETTA_ESITO[v.esito] || v.esito}
                 {v.motivo ? ` — ${v.motivo}` : ''}
-                {v.tentativi > 1 ? ' (ritentata una volta)' : ''}
               </div>
             </li>
           ))}

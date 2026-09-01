@@ -56,7 +56,9 @@ describe('quello che si legge nel registro delle stampe', () => {
   it('una chiusura non uscita: cosa era, com’è andata e PERCHÉ', async () => {
     // È la riga che il giorno dopo risponde alla domanda «ieri sera la
     // chiusura è uscita?» — quella che oggi non ha risposta.
-    R.lavoroFinito(R.lavoroInCoda('Chiusura cassa'), 'fallita', 'la carta è finita')
+    const id = R.lavoroInCoda('Chiusura cassa')
+    R.lavoroInviato(id)
+    R.aggiornaEsito(id, 'fallita', 'la carta è finita')
     render(<PrinterSetup />)
 
     expect(await screen.findByText(/Chiusura cassa/)).toBeInTheDocument()
@@ -64,32 +66,38 @@ describe('quello che si legge nel registro delle stampe', () => {
     expect(screen.getByText(/la carta è finita/)).toBeInTheDocument()
   })
 
-  it('l’esito non confermato si legge per quello che è, non come un guasto', async () => {
-    // Ci sono stampanti che stampano e non rispondono: dire «non
-    // stampata» sarebbe una bugia, e manderebbe a cercare un guasto che
-    // non c'è.
-    R.lavoroFinito(
-      R.lavoroInCoda('Chiusura cassa'),
-      'sconosciuta',
-      'la stampante non ha confermato la stampa'
-    )
+  it('la stampa appena mandata si legge come in attesa, non come riuscita', async () => {
+    // BUG-098, ripensamento del 01/09/2026: la stampa non aspetta più la
+    // stampante, quindi la voce nasce «inviata». Ci sono stampanti che
+    // stampano e non rispondono mai: scrivere «non stampata» sarebbe una
+    // bugia, e manderebbe a cercare un guasto che non c'è.
+    R.lavoroInviato(R.lavoroInCoda('Chiusura cassa'))
     render(<PrinterSetup />)
-    expect(await screen.findByText(/Esito non confermato/)).toBeInTheDocument()
+    expect(await screen.findByText(/In attesa di risposta/)).toBeInTheDocument()
     expect(screen.queryByText(/Non stampata/)).not.toBeInTheDocument()
   })
 
-  it('e quando è servito un secondo giro, si vede', async () => {
-    // Serve a distinguere «è uscita» da «è uscita alla seconda»: la
-    // seconda volta è una stampante che sta per piantarsi.
-    R.lavoroFinito(R.lavoroInCoda('Scontrino conto #42'), 'riuscita', '', 2)
+  it('e quando la risposta arriva, la riga cambia sotto gli occhi', async () => {
+    // La risposta arriva DOPO, per conto suo, e chi ha il pannello aperto
+    // la deve vedere senza ricaricare niente: è il gesto vero di chi sta
+    // guardando il registro mentre prova a stampare.
+    const id = R.lavoroInCoda('Scontrino conto #42')
+    R.lavoroInviato(id)
     render(<PrinterSetup />)
-    expect(await screen.findByText(/ritentata una volta/)).toBeInTheDocument()
+    await screen.findByText(/In attesa di risposta/)
+
+    act(() => R.aggiornaEsito(id, 'fallita', 'la carta è finita'))
+    expect(await screen.findByText(/Non stampata/)).toBeInTheDocument()
+    expect(screen.getByText(/la carta è finita/)).toBeInTheDocument()
+    expect(screen.queryByText(/In attesa di risposta/)).not.toBeInTheDocument()
   })
 
   it('le stampe si leggono dalla più recente', async () => {
-    R.lavoroFinito(R.lavoroInCoda('Comanda conto #1'), 'riuscita')
-    R.lavoroFinito(R.lavoroInCoda('Comanda conto #2'), 'riuscita')
-    R.lavoroFinito(R.lavoroInCoda('Chiusura cassa'), 'fallita', 'la carta è finita')
+    R.lavoroInviato(R.lavoroInCoda('Comanda conto #1'))
+    R.lavoroInviato(R.lavoroInCoda('Comanda conto #2'))
+    const chiusura = R.lavoroInCoda('Chiusura cassa')
+    R.lavoroInviato(chiusura)
+    R.aggiornaEsito(chiusura, 'fallita', 'la carta è finita')
     const { container } = render(<PrinterSetup />)
 
     await screen.findByText(/Chiusura cassa/)
@@ -101,7 +109,7 @@ describe('quello che si legge nel registro delle stampe', () => {
   })
 
   it('si svuota, quando serve ripartire puliti', async () => {
-    R.lavoroFinito(R.lavoroInCoda('Chiusura cassa'), 'riuscita')
+    R.lavoroInviato(R.lavoroInCoda('Chiusura cassa'))
     const user = userEvent.setup()
     render(<PrinterSetup />)
     await user.click(await screen.findByRole('button', { name: /Svuota il registro/i }))
@@ -132,7 +140,9 @@ describe('la coda delle stampe si vede muoversi', () => {
     expect(await screen.findByText(/In stampa: Chiusura cassa/)).toBeInTheDocument()
     expect(screen.getByText(/1 in attesa/)).toBeInTheDocument()
 
-    act(() => R.lavoroFinito(uno, 'riuscita'))
+    // Il lavoro esce dalla coda quando il foglio è PARTITO: da lì in poi
+    // la stampa dopo non aspetta più niente (BUG-098).
+    act(() => R.lavoroInviato(uno))
     await waitFor(() => expect(screen.getByText(/Nessuna stampa in corso/i)).toBeInTheDocument())
     expect(screen.getByText(/1 in attesa/)).toBeInTheDocument()
   })

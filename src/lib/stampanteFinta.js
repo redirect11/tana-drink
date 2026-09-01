@@ -48,11 +48,11 @@ export function forzaStampanteFinta(attiva) {
 
 // ── IL GUASTO FINTO (BUG-098) ────────────────────────────────────────
 //
-// La conferma della stampa — il lavoro che si chiude sulla risposta della
-// stampante invece che sulla `send()` — è una catena lunga: risposta di
-// errore, silenzio, ritentativo, registro. Senza un modo di romperla
-// apposta, quella catena si prova solo al banco con la carta finita in
-// mano, che è esattamente il motivo per cui BUG-098 è sopravvissuto tanto.
+// La diagnostica della stampa — la risposta che arriva DOPO l'invio e
+// racconta com'è andata — è una catena lunga: risposta di errore, registro,
+// avviso a schermo. Senza un modo di romperla apposta, quella catena si
+// prova solo al banco con la carta finita in mano, che è esattamente il
+// motivo per cui BUG-098 è sopravvissuto tanto.
 //
 // La stampante finta sa quindi fingere due guasti:
 //   · `carta` — risponde di errore, come quando il rotolo è finito;

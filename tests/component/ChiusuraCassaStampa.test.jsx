@@ -326,10 +326,13 @@ describe('la chiusura dal riquadro della coda', () => {
 
 // ── LOCAL-FIRST: LA STAMPA NON TRATTIENE IL GESTO ────────────────────
 //
-// Da BUG-098 la stampa aspetta la RISPOSTA della stampante prima di dirsi
-// finita: qualche secondo, e con una stampante che tace anche di più.
-// Quell'attesa non deve MAI arrivare fino al tasto — se no chiudere cassa
-// diventa un tasto che sembra rotto proprio mentre si sta finendo.
+// La prima stesura di BUG-098 (31/08/2026) aveva messo la stampa ad
+// aspettare la RISPOSTA della stampante prima di dirsi finita: qualche
+// secondo, e con una stampante che tace anche di più. Il giorno dopo
+// quell'attesa è stata tolta, perché non doveva MAI arrivare fino al tasto
+// — se no chiudere cassa diventa un tasto che sembra rotto proprio mentre
+// si sta finendo. Questo test regge comunque, ed è il punto: qualunque
+// cosa la stampa si metta a fare, la chiusura non la aspetta.
 describe('la stampa non trattiene la chiusura', () => {
   beforeEach(() => {
     vi.clearAllMocks()

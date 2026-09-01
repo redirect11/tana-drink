@@ -126,8 +126,8 @@ export default function DevTools() {
           <span>Simula la stampa su questo dispositivo</span>
         </label>
 
-        {/* IL GUASTO FINTO (BUG-098). La catena della conferma — risposta
-            di errore, silenzio, ritentativo, registro — fino a qui si
+        {/* IL GUASTO FINTO (BUG-098). La catena della diagnostica —
+            risposta di errore, registro, avviso a schermo — fino a qui si
             provava solo al banco, con la carta finita in mano: ed è
             esattamente per questo che il difetto della chiusura di cassa è
             sopravvissuto tanto. Vale solo per la stampante SIMULATA,
@@ -145,11 +145,12 @@ export default function DevTools() {
             >
               <option value="">Nessuno — la stampa riesce</option>
               <option value="carta">Carta finita — la stampante risponde in errore</option>
-              <option value="muta">Nessuna risposta — la carta esce, la conferma no</option>
+              <option value="muta">Nessuna risposta — la carta esce, l&apos;esito no</option>
             </select>
             <p className="muted small" style={{ margin: '4px 0 0' }}>
-              Serve a provare cosa succede quando una stampa non riesce: l&apos;esito
-              si legge in <strong>Impostazioni → Stampante → Registro delle stampe</strong>.
+              Serve a provare cosa succede quando una stampa non riesce. La stampa
+              parte comunque senza attese: l&apos;esito arriva dopo e si legge in{' '}
+              <strong>Impostazioni → Stampante → Registro delle stampe</strong>.
             </p>
           </div>
         )}

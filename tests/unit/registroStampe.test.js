@@ -111,6 +111,50 @@ describe('ogni stampa lascia la sua traccia', () => {
   })
 })
 
+// ── LA VOCE NASCE «INVIATA», E SI AGGIORNA DOPO (BUG-098) ────────────
+//
+// È il ripensamento del 01/09/2026, e cambia QUANDO si sa l'esito, non che
+// lo si sappia: la stampa non aspetta più la stampante, quindi la voce
+// entra nel registro appena il foglio è partito e la risposta — se arriva
+// — la corregge. Una voce rimasta «inviata» non è un buco: è la stampante
+// che non ha detto niente, ed è un'informazione anche quella.
+describe('la voce si scrive prima e si corregge dopo', () => {
+  it('nasce «inviata» e diventa quello che dice la stampante', async () => {
+    const R = await import('../../src/lib/registroStampe.js')
+    const id = R.lavoroInCoda('Chiusura cassa')
+    R.lavoroPartito(id)
+    R.lavoroInviato(id)
+    expect(R.statoRegistro().voci[0].esito).toBe('inviata')
+    // E la coda è già libera: il lavoro dopo non aspetta questa risposta.
+    expect(R.statoRegistro().inCorso).toBe(null)
+
+    R.aggiornaEsito(id, 'fallita', 'la carta è finita')
+    const voce = R.statoRegistro().voci[0]
+    expect(voce.esito).toBe('fallita')
+    expect(voce.motivo).toBe('la carta è finita')
+    // Una sola riga, non due: è la stessa stampa raccontata meglio.
+    expect(R.statoRegistro().voci).toHaveLength(1)
+  })
+
+  it('se la risposta non arriva mai, resta «inviata» — che è la verità', async () => {
+    const R = await import('../../src/lib/registroStampe.js')
+    R.lavoroInviato(R.lavoroInCoda('Comanda conto #7'))
+    expect(R.statoRegistro().voci[0].esito).toBe('inviata')
+    expect(R.statoRegistro().voci[0].motivo).toBe('')
+  })
+
+  it('e una risposta per una stampa gia dimenticata non inventa una riga', async () => {
+    // Il tetto delle 50 puo spingere fuori una voce prima che la risposta
+    // arrivi. In quel caso non si scrive niente: una stampa di ieri in
+    // cima al registro sarebbe peggio di un buco.
+    const R = await import('../../src/lib/registroStampe.js')
+    R.lavoroInviato(R.lavoroInCoda('Comanda conto #1'))
+    R.aggiornaEsito('stampa-mai-esistita', 'fallita', 'la carta è finita')
+    expect(R.statoRegistro().voci).toHaveLength(1)
+    expect(R.statoRegistro().voci[0].esito).toBe('inviata')
+  })
+})
+
 // ── NIENTE DATI PERSONALI ────────────────────────────────────────────
 //
 // Un registro di diagnostica non è il posto dove tenere i clienti del
@@ -144,9 +188,11 @@ describe('il registro non si porta dietro i clienti', () => {
 describe('il tetto delle voci', () => {
   it('oltre cinquanta, le più vecchie se ne vanno', async () => {
     const R = await import('../../src/lib/registroStampe.js')
+    // La voce entra nel registro appena il foglio è PARTITO (BUG-098,
+    // ripensamento): il tetto si applica lì, non alla risposta — che può
+    // anche non arrivare mai.
     for (let n = 1; n <= R.TETTO_VOCI + 12; n++) {
-      const id = R.lavoroInCoda(`Comanda conto #${n}`)
-      R.lavoroFinito(id, 'riuscita')
+      R.lavoroInviato(R.lavoroInCoda(`Comanda conto #${n}`))
     }
     const voci = R.statoRegistro().voci
     expect(voci).toHaveLength(R.TETTO_VOCI)
@@ -160,8 +206,10 @@ describe('il tetto delle voci', () => {
     // la chiusura — non viene mai spinta fuori dalle comande della sera
     // dopo, perché quelle vengono DOPO di lei.
     const R = await import('../../src/lib/registroStampe.js')
-    R.lavoroFinito(R.lavoroInCoda('Chiusura cassa'), 'fallita', 'la carta è finita')
-    for (let n = 0; n < 20; n++) R.lavoroFinito(R.lavoroInCoda('Comanda conto #1'), 'riuscita')
+    const chiusura = R.lavoroInCoda('Chiusura cassa')
+    R.lavoroInviato(chiusura)
+    R.aggiornaEsito(chiusura, 'fallita', 'la carta è finita')
+    for (let n = 0; n < 20; n++) R.lavoroInviato(R.lavoroInCoda('Comanda conto #1'))
     expect(R.statoRegistro().voci.some((v) => v.che === 'Chiusura cassa')).toBe(true)
   })
 })
@@ -173,7 +221,11 @@ describe('il tetto delle voci', () => {
 describe('il registro resta dov’è', () => {
   it('la voce si ritrova dopo che la pagina è stata ricaricata', async () => {
     const R = await import('../../src/lib/registroStampe.js')
-    R.lavoroFinito(R.lavoroInCoda('Chiusura cassa'), 'fallita', 'la carta è finita')
+    // Anche l'esito che arriva DOPO va messo per iscritto: se restasse in
+    // memoria, la domanda del giorno dopo resterebbe senza risposta.
+    const id = R.lavoroInCoda('Chiusura cassa')
+    R.lavoroInviato(id)
+    R.aggiornaEsito(id, 'fallita', 'la carta è finita')
     await scritturaFinita()
 
     // Un ricaricamento: il modulo riparte da zero e ritrova solo quello
@@ -201,7 +253,7 @@ describe('il registro resta dov’è', () => {
 
   it('e si può svuotare, quando serve ripartire puliti', async () => {
     const R = await import('../../src/lib/registroStampe.js')
-    R.lavoroFinito(R.lavoroInCoda('Prova di stampa'), 'riuscita')
+    R.lavoroInviato(R.lavoroInCoda('Prova di stampa'))
     R.svuotaRegistro()
     await scritturaFinita()
 
@@ -243,7 +295,7 @@ describe('lo stato della coda', () => {
     expect(R.statoRegistro().inCorso.che).toBe('Comanda conto #1')
     expect(R.statoRegistro().inAttesa.map((l) => l.che)).toEqual(['Comanda conto #2'])
 
-    R.lavoroFinito(uno, 'riuscita')
+    R.lavoroInviato(uno)
     R.lavoroPartito(due)
     expect(R.statoRegistro().inCorso.che).toBe('Comanda conto #2')
     expect(R.statoRegistro().inAttesa).toHaveLength(0)
@@ -255,12 +307,16 @@ describe('lo stato della coda', () => {
     const smetti = R.iscrivitiAlRegistro(visto)
     const id = R.lavoroInCoda('Prova di stampa')
     R.lavoroPartito(id)
-    R.lavoroFinito(id, 'riuscita')
-    expect(visto).toHaveBeenCalledTimes(3)
+    R.lavoroInviato(id)
+    // QUATTRO passaggi, non tre: in coda, partito, inviato — e poi la
+    // risposta della stampante, che arriva dopo e cambia la voce già
+    // scritta. Chi ha il pannello aperto la deve vedere cambiare.
+    R.aggiornaEsito(id, 'riuscita')
+    expect(visto).toHaveBeenCalledTimes(4)
 
     smetti()
-    R.lavoroFinito(R.lavoroInCoda('Prova di stampa'), 'riuscita')
-    expect(visto).toHaveBeenCalledTimes(3)
+    R.lavoroInviato(R.lavoroInCoda('Prova di stampa'))
+    expect(visto).toHaveBeenCalledTimes(4)
   })
 
   it('l’istantanea non cambia se non è cambiato niente', async () => {
@@ -280,7 +336,7 @@ describe('il registro sta di lato', () => {
     const R = await import('../../src/lib/registroStampe.js')
     const scritture = vi.spyOn(window.localStorage, 'setItem')
     scritture.mockClear()
-    R.lavoroFinito(R.lavoroInCoda('Comanda conto #1'), 'riuscita')
+    R.lavoroInviato(R.lavoroInCoda('Comanda conto #1'))
     // Nell'istante del gesto non è ancora stato scritto niente: la voce è
     // in memoria, il disco viene dopo.
     expect(scritture).not.toHaveBeenCalled()
@@ -293,7 +349,7 @@ describe('il registro sta di lato', () => {
     const R = await import('../../src/lib/registroStampe.js')
     const scritture = vi.spyOn(window.localStorage, 'setItem')
     scritture.mockClear()
-    for (let n = 0; n < 10; n++) R.lavoroFinito(R.lavoroInCoda('Comanda conto #1'), 'riuscita')
+    for (let n = 0; n < 10; n++) R.lavoroInviato(R.lavoroInCoda('Comanda conto #1'))
     await scritturaFinita()
     expect(scritture).toHaveBeenCalledTimes(1)
     scritture.mockRestore()
