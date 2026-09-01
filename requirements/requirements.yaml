@@ -9812,7 +9812,7 @@ requirements:
     generate_issue: true
     labels: [metodo, offline, ordini]
     priority: P1
-    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js]
+    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js]
 
   - id: REQ-OFFLINE-007
     title: "Il guscio dell'app e il logo non si aspettano dalla rete"
