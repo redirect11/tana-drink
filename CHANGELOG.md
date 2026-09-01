@@ -4,6 +4,14 @@
 
 ### Per chi sta al banco
 
+- **Il conto appena incassato non si vede più sparire dalla coda.**
+  Chiudendo un conto si tornava alla coda ordini e per un attimo il conto era
+  ancora lì, poi spariva da solo: abbastanza per chiedersi se l'incasso
+  fosse andato. Adesso quando si torna alla coda il conto è già andato via,
+  anche senza rete. Vale allo stesso modo per l'annullo, per il ripristino di
+  un conto chiuso o annullato e per l'incasso di un tavolo intero, dove i
+  conti del gruppo escono dalla coda tutti insieme.
+
 - **Quando una stampa non esce, adesso lo dice.** Prima l'app dava per
   fatto il foglio appena lo mandava alla stampante: se poi la carta non
   usciva — rotolo finito, coperchio aperto, stampante fuori linea — non lo

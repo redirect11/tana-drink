@@ -89,7 +89,12 @@ import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
-import { inCodaOrdine, ricordaOrdine, ordineRicordato } from './mutazioniOrdine.js'
+import {
+  inCodaOrdine,
+  ricordaOrdine,
+  ordineRicordato,
+  VITA_MEMORIA,
+} from './mutazioniOrdine.js'
 import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
 import {
   cassaCorrente,
@@ -2405,23 +2410,100 @@ export function subscribeActiveOrders(
   onError,
   { cutoffHour = DEFAULT_CUTOFF_HOUR, cashSessionId = null } = {}
 ) {
-  let aperti = []
-  let recenti = []
+  // I DOCUMENTI COME ARRIVANO, non i conti già composti. La composizione
+  // (`mapOrder`) è scesa dentro `componi`, perché è lì che si consulta la
+  // memoria di quello che questo terminale ha appena scritto — e per
+  // consultarla serve il documento grezzo, non il conto già mappato.
+  let docsAperti = []
+  let docsRecenti = []
   // CHIUSI O ANNULLATI IN QUESTA CASSA, anche se il conto era di ieri.
   // Senza questo terzo ascolto un conto vecchio rimasto aperto spariva
   // dallo schermo nell'istante in cui lo si annullava: usciva dalla query
   // dei conti aperti e non entrava in quella di oggi, che guarda la data di
   // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
   // l'operazione è andata a buon fine.
-  let chiusiQui = []
-  const emit = () => {
-    const byId = new Map()
-    for (const o of aperti) byId.set(o.id, o)
-    for (const o of recenti) byId.set(o.id, o)
-    for (const o of chiusiQui) byId.set(o.id, o)
-    const list = [...byId.values()]
+  let docsChiusi = []
+
+  // ── LA MEMORIA VALE PER LA LISTA COME PER IL SINGOLO CONTO ───────────
+  //
+  // È la riga che qualcuno toglierà «semplificando», ed è il difetto di
+  // BUG-099: si riscuote un conto, si torna alla coda, e per un attimo il
+  // conto è ancora lì — poi sparisce. Il lampo.
+  //
+  // Il perché: `scriviOrdine` manda la scrittura in sottofondo e RICORDA
+  // com'è il conto dopo (`ricordaOrdine`, lib/mutazioniOrdine.js). Quel
+  // ricordo però era consultato solo rileggendo UN conto (`leggiOrdine`),
+  // mai componendo la LISTA: la coda si dipinge dalla cache, che
+  // nell'istante del gesto ha ancora la versione di prima, e mostrava il
+  // conto aperto finché la scrittura non atterrava. Una memoria e due
+  // letture, e una non la guardava.
+  //
+  // Il ricordo si difende da solo e qui non lo si indebolisce: muore appena
+  // il documento vero racconta la stessa cosa (confronto della patch) e
+  // scade comunque dopo `VITA_MEMORIA`, così un ricordo orfano non copre per
+  // sempre quello che fanno gli ALTRI terminali.
+  //
+  // Si applica a TUTTI e tre gli elenchi (aperti, recenti, chiusi in questa
+  // cassa) e una volta sola per conto: applicarlo a uno solo vorrebbe dire
+  // un conto che sparisce da un elenco e ricompare in un altro, che al banco
+  // è peggio del lampo.
+  let ricordiInUso = false
+  const componi = () => {
+    ricordiInUso = false
+    const oggi = businessDayKey(new Date(), cutoffHour)
+    // Il documento più fresco per ogni conto: vince l'ultimo elenco che ce
+    // l'ha, come faceva la fusione di prima (aperti, poi recenti, poi chiusi
+    // in questa cassa).
+    const perId = new Map()
+    for (const d of docsAperti) perId.set(d.id, d)
+    for (const d of docsRecenti) perId.set(d.id, d)
+    for (const d of docsChiusi) perId.set(d.id, d)
+    // Chi sta in coda senza guardare la data: i conti APERTI (si chiudono
+    // solo a mano, anche se sono di tre giorni fa) e quelli chiusi in questa
+    // cassa. Agli altri — gli «ultimi arrivati» — si applica la giornata
+    // commerciale, esattamente come prima.
+    const senzaLimiteDiData = new Set()
+    for (const d of docsAperti) senzaLimiteDiData.add(d.id)
+    for (const d of docsChiusi) senzaLimiteDiData.add(d.id)
+
+    const list = []
+    for (const [id, d] of perId) {
+      const visto = ordineRicordato(id, d)
+      if (visto !== d) ricordiInUso = true
+      const o = mapOrder(visto)
+      if (!senzaLimiteDiData.has(id) && businessDayKey(o.created_at, cutoffHour) !== oggi) continue
+      list.push(o)
+    }
     list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    return list
+  }
+
+  // `soloSeCiSonoConti` serve alla prima pennellata dalla cache: lì una lista
+  // vuota non vuol dire «non c'è niente», vuol dire «la cache non sapeva» — e
+  // si aspetta il listener, come ha sempre fatto.
+  const emit = (soloSeCiSonoConti = false) => {
+    const list = componi()
+    if (soloSeCiSonoConti && list.length === 0) return
+    // QUANDO IL RICORDO SCADE, LA CODA RIFÀ I CONTI DA SOLA. Il ricordo copre
+    // il documento vero al massimo per `VITA_MEMORIA`; se in quella finestra
+    // non arriva nessun altro snapshot — di notte, con un conto solo in
+    // ballo, capita — la lista resterebbe ferma su una versione che non
+    // esiste più da nessuna parte, e a quel punto sarebbe il ricordo a
+    // nascondere quello che hanno fatto gli altri terminali. Non è un
+    // ritardo che indovina la velocità della macchina (il meccanismo resta
+    // il confronto con la cache): è la sveglia che rimette in moto la
+    // ricomposizione quando il ricordo non vale più. Stessa idea del
+    // `setTimeout` di `ordiniNascosti`.
+    if (ricordiInUso) programmaRicontrollo()
     onChange(list)
+  }
+  let sveglia = null
+  const programmaRicontrollo = () => {
+    if (sveglia) return
+    sveglia = setTimeout(() => {
+      sveglia = null
+      emit()
+    }, VITA_MEMORIA + 50)
   }
   const fail = onError ?? (() => {})
 
@@ -2452,13 +2534,10 @@ export function subscribeActiveOrders(
         getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
         getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
       ])
-      if (aperti.length === 0 && recenti.length === 0) {
-        const oggi = businessDayKey(new Date(), cutoffHour)
-        aperti = a.docs.map(mapOrder)
-        recenti = r.docs
-          .map(mapOrder)
-          .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
-        if (aperti.length || recenti.length) emit()
+      if (docsAperti.length === 0 && docsRecenti.length === 0) {
+        docsAperti = a.docs
+        docsRecenti = r.docs
+        emit(true)
       }
     } catch {
       // Cache vuota o non disponibile: si aspetta il listener, come prima.
@@ -2471,7 +2550,7 @@ export function subscribeActiveOrders(
   const unsubAperti = onSnapshot(
     query(ordersCol, where('status', 'in', STATI_APERTI)),
     (snap) => {
-      aperti = snap.docs.map(mapOrder)
+      docsAperti = snap.docs
       emit()
     },
     fail
@@ -2481,10 +2560,7 @@ export function subscribeActiveOrders(
   const unsubRecenti = onSnapshot(
     query(ordersCol, where('created_at', '>=', copertura)),
     (snap) => {
-      const oggi = businessDayKey(new Date(), cutoffHour)
-      recenti = snap.docs
-        .map(mapOrder)
-        .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+      docsRecenti = snap.docs
       emit()
     },
     fail
@@ -2496,7 +2572,7 @@ export function subscribeActiveOrders(
     ? onSnapshot(
         query(ordersCol, where('closed_in_session', '==', cashSessionId)),
         (snap) => {
-          chiusiQui = snap.docs.map(mapOrder)
+          docsChiusi = snap.docs
           emit()
         },
         fail
@@ -2504,6 +2580,8 @@ export function subscribeActiveOrders(
     : () => {}
 
   return () => {
+    if (sveglia) clearTimeout(sveglia)
+    sveglia = null
     unsubChiusi()
     unsubAperti()
     unsubRecenti()
@@ -2967,16 +3045,28 @@ export async function payGroupCash({
   // possa dire è tutto fuori — quel gesto sta nella schermata del conto.
   const chiusure = covered.map(({ ref, raw }) => ({
     ref,
+    raw,
     chiusura: chiusuraPagamento(raw, nowIso, { autoServe: false }),
   }))
   const timbro = timbroChiusura(nowIso)
-  for (const { ref, chiusura } of chiusure) {
-    bgWrite(() => updateDoc(ref, {
-      ...chiusura,
-      payment_method: method,
-      payment_id: settlementId,
-      ...timbro,
-    }), 'pagamento gruppo')
+  for (const { ref, raw, chiusura } of chiusure) {
+    // SI PASSA DA `scriviOrdine` E NON DA `bgWrite` NUDO, e non è un
+    // riordino: è l'unico modo perché la coda veda sparire INSIEME tutti i
+    // conti del gruppo. `scriviOrdine` ricorda com'è il conto dopo, e la coda
+    // consulta quel ricordo (vedi subscribeActiveOrders); scrivendo e basta,
+    // i conti del tavolo restavano aperti a schermo finché non atterrava la
+    // scrittura, uno per volta.
+    scriviOrdine(
+      ref,
+      raw,
+      {
+        ...chiusura,
+        payment_method: method,
+        payment_id: settlementId,
+        ...timbro,
+      },
+      'pagamento gruppo'
+    )
   }
   // Il magazzino dopo, per conto suo: vedi closePaidOrder. Si scarica solo
   // quello che è davvero risultato servito — cioè niente, se è rimasta

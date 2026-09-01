@@ -4262,3 +4262,71 @@ bugs:
       - tests/unit/scontrinoChiusura.test.js
       - tests/unit/chiusuraCassaSenzaRete.test.js
       - tests/component/RegistroStampe.test.jsx
+  - id: BUG-099
+    title: "Il conto appena incassato si vede sparire dalla coda: una memoria, due letture, una non la guardava"
+    area: "src/lib/api.js (subscribeActiveOrders, payGroupCash), src/lib/mutazioniOrdine.js"
+    severity: media
+    priority: P1
+    description: >
+      Segnalato dall'utente il 01/09/2026: «dopo che riscuoto il conto e
+      torna automaticamente alla coda ordini, vedo per un attimo scomparire
+      l'ordine nella coda. Quando torno alla coda non voglio vedere
+      quell'ordine scomparire: deve essere gia' andato via».
+      LA CAUSA, e non e' una regressione di codice. Riscuotere passa da
+      `scriviOrdine`, che fa due cose giuste: RICORDA com'e' il conto dopo la
+      modifica (`ricordaOrdine`, lib/mutazioniOrdine.js) e manda la scrittura
+      in sottofondo (`bgWrite`). La coda, per non restare bianca su una rete
+      lenta, si dipinge SUBITO dalla cache di Firestore — scelta deliberata,
+      sorvegliata da tests/unit/codaCache.test.js. Ma quella lettura mappava i
+      documenti con `mapOrder` e NON consultava la memoria: `ordineRicordato`
+      era applicato solo rileggendo UN conto (`leggiOrdine`), mai alla LISTA.
+      Quindi la coda dipingeva il conto com'era — aperto — e un istante dopo
+      la scrittura atterrava e il conto spariva. E' il lampo.
+      In una riga: una memoria, due letture, e una non la guardava. E' la
+      stessa FORMA di BUG-028 («una sola memoria di l'ho appena fatto io»),
+      girata: li' erano due memorie e ogni vista ne leggeva una, qui e' una
+      memoria e due letture, e una non la guarda.
+      LA CURA (01/09/2026, ramo feature/lettura-ordini-ristretta).
+      1) `ordineRicordato` si applica anche alle LISTE della coda, e a tutte
+      e tre insieme — aperti, recenti, chiusi in questa cassa. `emit` non
+      fonde piu' conti gia' mappati: tiene i documenti GREZZI dei tre ascolti,
+      sceglie il piu' fresco per ogni conto (l'ultimo elenco che ce l'ha, come
+      prima) e compone UNA volta sola passando dalla memoria. Applicarlo a un
+      elenco solo, o due volte con esiti diversi, vorrebbe dire un conto che
+      sparisce da un elenco e ricompare in un altro — al banco, peggio del
+      lampo.
+      2) L'incasso di GRUPPO passa da `scriviOrdine` invece che da `bgWrite`
+      nudo: senza il ricordo, i conti di un tavolo restavano a schermo finche'
+      non atterrava la scrittura, uno per volta.
+      3) LA SVEGLIA. Il ricordo copre il documento vero al massimo per
+      `VITA_MEMORIA` (2 secondi); se in quella finestra non arriva nessun
+      altro snapshot — di notte, con un conto solo in ballo — la lista
+      resterebbe ferma su una versione che non esiste piu', e a quel punto
+      sarebbe il ricordo a nascondere quello che hanno fatto GLI ALTRI
+      terminali. Quando la lista usa un ricordo, la coda si programma una
+      ricomposizione alla scadenza. Non e' un ritardo che indovina la
+      velocita' della macchina — il meccanismo resta il confronto con la
+      cache, che si accorge da se' quando la scrittura e' arrivata: e' la
+      sveglia che rimette in moto la ricomposizione quando il ricordo non vale
+      piu'. Stessa idea del `setTimeout` di `ordiniNascosti`.
+      COSA NON E' STATO INDEBOLITO, ed e' la parte che protegge gli altri
+      terminali: il ricordo muore appena il documento vero racconta la stessa
+      cosa (confronto della patch) e scade comunque dopo `VITA_MEMORIA`. Il
+      limite dichiarato resta quello di sempre, ristretto a un paio di
+      secondi: se un ALTRO terminale riapre il conto mentre il nostro ricordo
+      e' vivo, per quella finestra qui si continua a vedere quello che si e'
+      appena fatto. E' l'«ultimo che scrive vince» che c'era gia', e i test lo
+      dimostrano invece di darlo per buono.
+      RESTA FUORI, apposta: `subscribeOrder` (il singolo conto in tempo reale)
+      e le liste di STORICO e rendicontazione (`subscribeOrdersHistory`,
+      `fetchOrdersBetween`, `fetchOrdersRange`, `fetchRecentDrinkIds`) non
+      consultano la memoria. Sullo storico sarebbe sbagliato — li' si guarda
+      cos'e' successo, non cosa si e' appena fatto — e sul singolo conto il
+      giro passa gia' dai valori COMPOSTI che le mutazioni restituiscono
+      (`ordineDopo`).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, coda, local-first]
+    test_cases:
+      - tests/unit/codaRicordo.test.js
