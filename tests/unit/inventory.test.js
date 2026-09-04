@@ -905,16 +905,19 @@ describe('articolo in unità generiche (U)', () => {
   })
 })
 
-// ── SOTTO ZERO NON SI SCENDE ─────────────────────────────────────────
+// ── IL FRENO A MANO, E IL CARICO CHE RIPARTE DA ZERO ─────────────────
 // Il 17 agosto il Jagermeister era a −0,04 pz, con «valore −0,67 €» e la
-// conta che si apriva già in rosso: continuando a battere un prodotto
-// finito lo scarico toglie comunque, perché increment(-qty) non guarda
-// quanto c'è (ed è giusto che non lo guardi: è commutativo e si accoda
-// offline — quello che va deciso prima è QUANTO chiedere di togliere).
-// Il danno vero arriva dopo: comprando e caricando una bottiglia il
-// carico riparte dal negativo e ne conta meno di una, mentre sullo
-// scaffale c'è tutta.
-describe('la giacenza non scende sotto zero', () => {
+// conta che si apriva già in rosso. Da quel giorno il freno stava DAPPERTUTTO
+// — anche sulla vendita — e la cura era peggio del male: quello che usciva
+// da un prodotto finito spariva senza traccia. Adesso la vendita sotto zero
+// ci va (BUG-101, `magazzinoSottoZero.test.js`), e di quel giorno restano le
+// due regole che erano giuste davvero.
+//
+// LA PRIMA è questa: `scaricoPossibile` frena lo scarico A MANO. Lì c'è una
+// persona che dichiara quanto ha tolto dallo scaffale, e da uno scaffale
+// vuoto non si toglie niente — un meno sarebbe solo un numero sbagliato in
+// più, non un'informazione.
+describe('lo scarico a mano non scende sotto zero', () => {
   it('si scarica al massimo quello che risulta in giacenza', () => {
     expect(scaricoPossibile(10, 4)).toBe(4)
     expect(scaricoPossibile(10, 12)).toBe(10)
@@ -922,7 +925,7 @@ describe('la giacenza non scende sotto zero', () => {
     expect(scaricoPossibile(0.02, 0.057)).toBeCloseTo(0.02, 6)
   })
 
-  it('la vendita passa comunque: il magazzino si ferma a zero, non a −2', () => {
+  it('chi dichiara di aver tolto più di quello che c’era si ferma a zero', () => {
     expect(10 - scaricoPossibile(10, 12)).toBe(0)
   })
 
@@ -936,6 +939,11 @@ describe('la giacenza non scende sotto zero', () => {
     expect(scaricoPossibile(10, -5)).toBe(0)
   })
 
+  // LA SECONDA REGOLA, che con la vendita sotto zero conta più di prima: il
+  // meno non è un debito da ripagare con la merce che arriva. Da uno scaffale
+  // vuoto non si versa — se un prodotto è uscito quando risultava finito, in
+  // frigo c'era davvero — quindi le sei bottiglie appena consegnate sullo
+  // scaffale ci sono tutte e sei, e il magazzino deve contarle tutte e sei.
   it('il carico parte da quello che c’è, mai dal negativo', () => {
     // Una bottiglia caricata su −0,04 deve valere UNA bottiglia: il buco
     // di prima è un errore vecchio, non un debito da ripagare.
@@ -1204,3 +1212,38 @@ describe('caricoDaConfezioni', () => {
     expect(caricoDaConfezioni({ unit: 'ml', stock: 0 }, 3)).toEqual({ addQty: 3, bottles_total: null })
   })
 })
+
+// ── E IL MENO SI DEVE VEDERE ─────────────────────────────────────────
+// Scriverlo nel dato non basta: la card del magazzino legge i PEZZI, e se il
+// conteggio si fermava a zero anche lui il meno non arrivava mai a chi
+// guarda. Un magazzino che sa di essere sotto zero e lo tiene per sé è
+// esattamente il silenzio da cui è nato BUG-101.
+describe('la giacenza sotto zero arriva fino a schermo', () => {
+  // Un gin nel modello di oggi: si conta a pezzi, la bottiglia fa 1 litro.
+  const gin = (stock) => ({ unit: 'pz', stock, package_size: 1000, content_unit: 'ml' })
+
+  it('i pezzi portano il meno', () => {
+    expect(pezziInGiacenza(gin(-0.25))).toBeCloseTo(-0.25, 6)
+    expect(formatPezzi(pezziInGiacenza(gin(-0.25)))).toBe('-0,25')
+  })
+
+  it('anche contando a volume, come i prodotti mai travasati', () => {
+    expect(pezziInGiacenza({ unit: 'ml', stock: -250, package_size: 1000 })).toBeCloseTo(-0.25, 6)
+  })
+
+  // LE BOTTIGLIE NO. Sono oggetti su uno scaffale: «−1 piena più 750 ml
+  // nell'aperta» non è una cosa che si può andare a guardare.
+  it('le bottiglie da toccare restano zero', () => {
+    const bd = bottleBreakdown(gin(-0.25))
+    expect(bd.full).toBe(0)
+    expect(bd.hasOpen).toBe(false)
+  })
+
+  // E NEMMENO I SOLDI. Un magazzino che vale meno di niente non vuol dire
+  // niente: il meno conta quanto è uscito senza risultare, non un credito.
+  it('il valore del magazzino non va sotto zero', () => {
+    expect(unitsInStock(gin(-0.25))).toBe(0)
+    expect(stockValue({ ...gin(-0.25), cost: 20 })).toBe(0)
+  })
+})
+

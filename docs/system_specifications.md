@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 190 | fatto e coperto dai test |
-| ⚠️  | 14 | fatto ma nessun test lo verifica |
+| ✅ | 191 | fatto e coperto dai test |
+| ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**231 voci** in tutto. **204** descrivono il sistema com'è oggi e
+**233 voci** in tutto. **206** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -41,12 +41,12 @@ come «vero oggi», non come «garantito».
 | Area | Fatto | Previsto | Di cosa parla |
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
-| [Cassa e POS](#cassa-e-pos) | 17 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
+| [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 13 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 10 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 35 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 16 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -344,6 +344,12 @@ Nel riepilogo del conto prima c'era una riga cumulativa («Coperto/servizio/manc
 SUBTOTALE in evidenza (il conto nudo, in grassetto, appena più grande delle voci), sotto le voci attive una per riga in piccolo — Coperto, Servizio, Mancia, solo quelle maggiori di zero — e in fondo il TOTALE grande che somma tutto. Le righe sono strette: il blocco non deve crescere in altezza. Sul telefono il dettaglio parte chiuso e si apre toccando il Subtotale.
 
 **Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+
+#### REQ-POS-020 — La ricerca dei prodotti si cancella con un tocco
+
+Chiesto da Flavio il 03/09/2026, con la foto del campo cerchiato: «nella selezione degli items di menu aggiungere qui il tastino di cancellazione scrittura». La ✕ che i browser mettono da soli nei campi di ricerca non c'è su tutte le piattaforme, e dov'è è un bersaglio da mouse: qui si batte col dito, di sera, con una mano occupata a reggere qualcosa. Per ripulire la ricerca bisognava tenere premuto il tasto di cancellazione finché il campo non si svuotava. Il tastino compare SOLO con del testo dentro — un campo vuoto con una ✕ accanto è un bersaglio che non fa niente — e lasciando il fuoco nel campo, perché il gesto dopo è quasi sempre riscrivere.
+
+**Dove**: `src/components/PosProductPicker.jsx, src/index.css` · **Lo dimostrano**: `tests/component/PosProductPicker.test.jsx`
 
 ### Pagamenti
 
@@ -769,6 +775,12 @@ NEL CALCOLO: `aliquotaDiVendita` (macroStats.js) sceglie per riga quella della V
 
 **Dove**: `src/components/MenuManager.jsx, src/lib/api.js, src/lib/macroStats.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/macroStats.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/MenuManager.test.jsx`
 
+#### REQ-MENU-014 — Un prodotto fuori menù si vede che è spento
+
+Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia è che la scritta da nera diventa grigia, e nei non disponibili si vede poco. Per farla più impattante metterei la scritta bianca e il fondo della card in grigio scuro». Aveva ragione: la differenza fra una card accesa e una spenta era la sola trasparenza al 55%, che di sera e con centinaia di card in griglia non si legge. Un drink spento scambiato per acceso è un drink promesso a un cliente e mai fatto. Adesso la card fuori menù ha il FONDO scuro e la scritta bianca: la differenza si vede da lontano e senza andare a leggere. La striscia colorata resta, e sul fondo scuro si distingue meglio di prima. Vale SOLO per la gestione del menù, dove la domanda è «cosa c'è e cosa no»: le altre schede amministrative continuano a sbiadire, che lì basta e il colpo d'occhio non serve.
+
+**Dove**: `src/index.css` · ⚠️ **Nessun test lo verifica.**
+
 ### Magazzino
 
 Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base.
@@ -801,13 +813,23 @@ TORNARE INDIETRO NON RISTORNA, ED È UNA SCELTA — decisa il 19/08 spostando lo
 
 3) IL GESTO GIUSTO ESISTE GIÀ. Per un drink che davvero non è stato fatto si annulla la comanda, che reintegra dallo snapshot di consumo (REQ-MAG-005). Lo stato intanto resta COERENTE: quegli ingredienti stanno nella giacenza scalata e fuori dall'impegnato, contati una volta e una sola, e «quello che ti ritrovi a fine serata» non si muove. Se un domani si decidesse di ristornare davvero, la strada è riusare il riallineo per DIFFERENZA che c'è già (`riallineaInSottofondo` / `consumptionDiff`, REQ-MAG-004), non scrivere un percorso nuovo. Il magazzino che non risponde non blocca la comanda: resta segnata come non scaricata e si recupera alla riscossione (`unappliedEntries`), che resta la rete di sicurezza anche con gli stati accesi.
 
-SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in giacenza, e un carico su una giacenza negativa riparte da zero. La vendita passa comunque (il conto è già scritto) e il magazzino si ferma a zero: altrimenti il buco resta, il carico dopo conta meno di una bottiglia e il valore in euro va in negativo.
+SOTTO ZERO CI SI SCENDE, ED È VOLUTO (BUG-101, chiesto da Flavio il 03/09/2026). Quello che esce si toglie tutto, anche quando la giacenza non basta: un prodotto che continua a uscire dopo essere finito non è finito davvero — è arrivato senza che nessuno lo caricasse, o l'ultimo inventario era vecchio — e fermarsi a zero cancellava proprio il numero che lo dice. Il meno arriva fino alla card, perché un magazzino che sa di essere sotto zero e lo tiene per sé è il silenzio da cui il difetto è nato.
 
-**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`
+IL MENO NON È MERCE CHE MANCA: da uno scaffale vuoto non si versa. È la misura di quanto se n'è versato senza che risultasse, e per questo si chiude da sé al primo CARICO, che riparte da zero (`giacenzaPerCarico`): le sei bottiglie appena consegnate sullo scaffale ci sono tutte e sei, e il magazzino deve contarle tutte e sei — non cinque, come farebbe trattando il buco da debito.
+
+DUE COSE RESTANO DA ZERO IN SU, e non è una svista. I SOLDI: un magazzino che vale meno di niente non vuol dire niente (`unitsInStock`, `stockValue`).
+
+LE BOTTIGLIE DA TOCCARE: sono oggetti su uno scaffale, e «−1 piena più 750 ml nell'aperta» non è una cosa che si può andare a guardare (`bottleBreakdown`). Il meno lo porta `pezziInGiacenza`, che conta una quantità e non degli oggetti.
+
+LO SCARICO A MANO INVECE SI FERMA A ZERO (`scaricoPossibile`): lì c'è una persona che dichiara quanto ha tolto dallo scaffale, e da uno scaffale vuoto non si toglie niente.
+
+**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`, `tests/unit/magazzinoSottoZero.test.js`
 
 #### REQ-MAG-004 — Modificare un ordine già scalato riallinea le scorte alla differenza
 
 Cambiando le righe di una comanda già scaricata si scala o si restituisce solo la differenza, non l'intero consumo: altrimenti ogni correzione falserebbe il magazzino.
+
+NEI DUE VERSI DAVVERO (BUG-101). La differenza si applica com'è: in più si scala, in meno TORNA in giacenza. Il freno che teneva il magazzino sopra lo zero stava anche qui, e non toglieva soltanto il meno — un drink tolto da una comanda già scalata porta una differenza negativa, cioè merce che torna sullo scaffale, e veniva azzerata insieme al resto: il movimento diceva «carico», la giacenza non si muoveva di un millilitro, e il magazzino restava indietro di un drink per sempre. A mangiarsela era `qtyInStockUnit`, che davanti a un numero negativo rispondeva zero: adesso converte conservando il segno. Qui NON si riparte da zero come fa un carico merce: questo non è un rifornimento, è la stessa uscita annullata, e deve rimettere il meno dov'era.
 
 **Dove**: `src/lib/warehouse.js consumptionDiff` · **Lo dimostrano**: `tests/unit/warehouse.test.js`
 

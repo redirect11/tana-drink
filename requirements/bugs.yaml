@@ -4409,3 +4409,72 @@ bugs:
       - tests/unit/fatture.test.js
       - tests/unit/riepilogoFornitori.test.js
       - tests/component/SupplierInvoicesPanel.test.jsx
+
+  - id: BUG-101
+    title: "Il magazzino si ferma a zero: quello che esce da un prodotto finito non lo sa piu' nessuno"
+    area: "src/lib/inventory.js, src/lib/api.js"
+    severity: grave
+    priority: P1
+    description: >
+      Chiesto da Flavio il 03/09/2026: «in Magazzino i prodotti devono andare
+      in negativo se vengono scaricati dagli items di Menu' dopo che sono
+      arrivati a 0».
+      COM'ERA. Lo scarico toglieva «al massimo quello che risulta in
+      giacenza» (`scaricoPossibile`): da un fondo di 0,2 pezzi se ne toglievano
+      0,2 anche quando ne erano usciti 0,75, e il magazzino si fermava a zero.
+      Sembrava prudenza — la vendita passa comunque, il conto e' gia' scritto
+      — ed era il contrario: gli altri due drink sparivano senza lasciare
+      traccia, e con loro l'unica cosa che diceva che qualcosa non tornava. Il
+      giorno dopo la giacenza diceva «0» esattamente come un prodotto finito
+      per bene, e chi guardava non aveva modo di sapere che c'era un buco.
+      QUANTO FA MALE. E' il caso di tutti i giorni al banco: arriva una
+      consegna, si mette in frigo e nessuno la carica, oppure l'ultimo
+      inventario e' di un mese fa. Da li' in poi ogni drink versato da quelle
+      bottiglie e' un consumo che il magazzino non registra. A fine mese il
+      valore del magazzino e' piu' alto del vero, il costo dei drink piu'
+      basso, e le proposte d'ordine chiedono meno di quello che serve.
+      PERCHE' IL MENO NON E' MERCE CHE MANCA — ed e' il punto che ha deciso
+      tutto il resto. Da uno scaffale vuoto non si versa: se un prodotto
+      continua a uscire dopo essere finito, sullo scaffale c'era davvero. Il
+      meno non conta bottiglie assenti, MISURA QUANTO SE N'E' VERSATO SENZA
+      CHE RISULTASSE. Da qui la risposta alla domanda che decideva la cura —
+      «se il magazzino segna meno una bottiglia e poi ne carichi sei, ne devi
+      trovare cinque o sei?»: SEI. Il carico riparte da zero
+      (`giacenzaPerCarico`, che c'era gia' e non si tocca): le sei bottiglie
+      appena consegnate sullo scaffale ci sono tutte e sei. Trattare il buco
+      da debito avrebbe scritto cinque, cioe' un numero falso, e per giunta
+      su ogni residuo di arrotondamento.
+      LA CURA (04/09/2026, ramo feature/lettura-ordini-ristretta).
+      1) LA VENDITA SCENDE SOTTO ZERO. In `depleteComandeInventory` si chiede
+         di togliere quello che e' uscito, punto. Il freno resta solo sullo
+         scarico A MANO (`scaricoPossibile`), dove c'e' una persona che
+         dichiara quanto ha tolto dallo scaffale — e da uno scaffale vuoto non
+         si toglie niente.
+      2) IL MENO ARRIVA A SCHERMO. Scriverlo nel dato non bastava: la card
+         del magazzino legge i PEZZI, e `pezziInGiacenza` e `formatPezzi` si
+         fermavano a zero anche loro. Un magazzino che sa di essere sotto zero
+         e lo tiene per se' e' lo stesso silenzio di prima.
+      3) QUELLO CHE RESTA DA ZERO IN SU, apposta. I SOLDI (`unitsInStock`,
+         `stockValue`): un magazzino che vale meno di niente non vuol dire
+         niente, e il meno non e' un credito. LE BOTTIGLIE DA TOCCARE
+         (`bottleBreakdown`): sono oggetti su uno scaffale, e «−1 piena piu'
+         750 ml nell'aperta» non e' una cosa che si puo' andare a guardare.
+      QUELLO CHE E' SALTATO FUORI STRADA FACENDO, e vale piu' della richiesta:
+      il freno teneva fermo anche IL VERSO OPPOSTO. `qtyInStockUnit`, che
+      converte una quantita' nell'unita' della giacenza, davanti a un numero
+      negativo rispondeva zero. Cosi' una comanda gia' scalata e poi RIDOTTA —
+      un drink tolto, merce che torna sullo scaffale — scriveva un movimento
+      di tipo «carico» e una giacenza che non si muoveva di un millilitro
+      (REQ-MAG-004): il magazzino restava indietro di un drink per sempre, e
+      il movimento raccontava un rientro mai avvenuto. Adesso la conversione
+      conserva il segno.
+      NESSUNA MIGRAZIONE E NESSUNO SCRIPT: le giacenze di oggi restano quelle
+      che sono, e il primo prodotto che esce da zero comincia a raccontarlo.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/unit/magazzinoSottoZero.test.js
+      - tests/unit/inventory.test.js
+

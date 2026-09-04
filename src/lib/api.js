@@ -4108,9 +4108,14 @@ function riallineaInSottofondo(orderId, comandaId) {
         // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
         // unità — il ghiaccio si conta a unità e si scarica eccome.
         if (!eScorta(curItem)) continue
-        // Anche qui non si scende sotto zero: una comanda modificata al rialzo
-        // su un prodotto già finito toglieva l'aggiunta comunque.
-        const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
+        // Il delta si applica com'è, nei due versi. Fermarlo a zero non
+        // toglieva soltanto il meno: una comanda RIDOTTA porta un delta
+        // negativo, cioè merce che torna sullo scaffale, e il freno lo
+        // azzerava — il movimento diceva «carico» e la giacenza non si
+        // muoveva di niente (BUG-101). Qui non si riparte da zero come fa un
+        // carico merce: questo non è un rifornimento, è la stessa uscita
+        // annullata, e deve rimettere il meno dov'era.
+        const scarico = qtyInStockUnit(d.delta, d.unit, curItem)
         bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
           stock: increment(-scarico),
         }), 'riallineo scorta')
@@ -4191,12 +4196,19 @@ async function depleteComandeInventory(entries) {
     const cur = itemsById[id]
     // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
     if (!eScorta(cur)) continue
-    // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
-    // giacenza: continuando a battere un prodotto finito si arrivava a
-    // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
-    // resta (commutativo, si accoda offline): cambia solo quanto si chiede.
-    const scarico = scaricoPossibile(cur.stock, qty)
-    const newStock = giacenzaPerCarico(cur.stock) - scarico
+    // SI SCENDE SOTTO ZERO, ed è voluto (BUG-101). Un prodotto che continua a
+    // uscire dopo essere finito non è finito davvero: è arrivato senza che
+    // nessuno lo caricasse, o l'ultimo inventario era vecchio. Fermandosi a
+    // zero si cancellava proprio il numero che lo dice — quanto se n'è
+    // versato senza che risultasse.
+    //
+    // Il meno non è merce che manca: da uno scaffale vuoto non si versa.
+    // È la misura del buco di conteggio, e si chiude da sé al primo carico,
+    // che riparte da zero (giacenzaPerCarico): le bottiglie appena arrivate
+    // sullo scaffale ci sono tutte, e il magazzino deve contarle tutte.
+    // L'increment resta (commutativo, si accoda offline).
+    const scarico = Number(qty) || 0
+    const newStock = (Number(cur.stock) || 0) - scarico
     bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-scarico) }), 'scarico scorta')
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
