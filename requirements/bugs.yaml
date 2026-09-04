@@ -4330,3 +4330,82 @@ bugs:
     labels: [bug, coda, local-first]
     test_cases:
       - tests/unit/codaRicordo.test.js
+
+  - id: BUG-100
+    title: "Nello scadenzario i resi si sommano invece di sottrarre, e «reso» non e' la dicitura giusta"
+    area: "src/lib/fatture.js, src/lib/riepilogoFornitori.js, src/lib/warehouse.js, src/components/SupplierInvoicesPanel.jsx, src/components/OrdiniListaPanel.jsx, src/index.css"
+    severity: grave
+    priority: P1
+    description: >
+      Segnalato da Flavio il 03/09/2026, a voce e per messaggio: «in
+      Scadenzario i resi si sommano alle fatture/proforma mentre dovrebbero
+      sottrarre, e l'importo dei resi dovrebbe apparire di colore verde».
+      A voce, la stessa cosa con dentro il perche': «quando si crea il
+      documento e si sceglie la tipologia — fattura, proforma e reso — reso
+      dovrebbe diventare NOTA DI CREDITO, perche' questa e' la dicitura
+      giusta. Non e' importante che io renda: magari e' sbagliato solamente
+      un prezzo, quindi io non rendo niente, mi devono modificare il prezzo
+      di una fattura magari gia' pagata, mi fanno la nota di credito. E la
+      nota di credito, che sostituisce la parola reso, deve andare a
+      modificare il totale dello scadenzario: deve essere in negativo, perche'
+      mi stanno scalando dei soldi. E poi il colore deve apparire in un altro
+      colore, preferibilmente verde».
+      QUANTO FA MALE: il totale sbagliava del DOPPIO della correzione. Mille
+      euro di fattura e centoventi di nota facevano 1.120 da pagare invece di
+      880, e lo stesso errore finiva nel «Da pagare» in testa allo
+      scadenzario, nei totali per fornitore e nel Riepilogo dei soldi che
+      escono (REQ-MAG-034), che conta la merce proprio dalle fatture. Sono i
+      numeri che a fine mese vanno dal commercialista, e sbagliavano in
+      silenzio: nessuna schermata diceva niente.
+      LA CURA (03/09/2026, ramo feature/lettura-ordini-ristretta). Tre cose,
+      piu' tre decisioni che il testo non chiedeva.
+      1) IL NOME. In `TIPI_DOCUMENTO` «Reso» diventa «Nota di credito».
+      2) IL SEGNO. `importoContabile` (src/lib/fatture.js) e' l'unico posto
+      dove una nota di credito diventa negativa, e da li' passano tutti i
+      totali: il «Da pagare», i totali per fornitore e il riepilogo mensile.
+      Il commento sopra dice PERCHE' sottrae — non e' una spesa, e' la spesa
+      tolta — perche' e' la riga che qualcuno «sistemera'» rimettendoci un
+      valore assoluto.
+      3) IL COLORE. `--testo-verde` accanto a `--testo-rosso` e
+      `--testo-ambra`, con la sua variante chiara, e la classe
+      `.importo-nota-credito`. Ma il colore non porta mai da solo il
+      significato: la cifra si legge «− 120,00 €», perche' un numero colorato
+      resta un numero che si somma.
+      LE TRE DECISIONI PRESE IN IMPLEMENTAZIONE.
+      a) I DOCUMENTI VECCHI NON SI MIGRANO. In archivio ci sono documenti con
+      `doc_type: 'Reso'`: nessuno script li riscrive. `eNotaDiCredito` e'
+      l'unica funzione che conosce il nome vecchio e lo tratta da sinonimo,
+      cosi' i documenti di ieri continuano a valere; chi confronta `doc_type`
+      a mano se li perde, ed e' per questo che non lo fa nessuno. Chi apre il
+      modulo di correzione su un vecchio «Reso» lo vede gia' su «Nota di
+      credito», e salvando lo riscrive col nome nuovo: una migrazione che
+      avviene quando qualcuno tocca quel documento, non tutta insieme.
+      b) COSA VUOL DIRE «PAGATA» PER UNA NOTA DI CREDITO. Il gesto resta uno
+      solo — lo stesso campo `paid`, lo stesso tasto, gli stessi totali —
+      perche' due modi di chiudere un documento vogliono dire due stati da
+      tenere allineati, ed e' la stessa ragione per cui «pagato» sta sulla
+      fattura e non sull'ordine (REQ-MAG-038). A cambiare e' la PAROLA: una
+      nota di credito non si paga, o la si incassa o — molto piu' spesso — la
+      si scala da quello che si deve. Il tasto dice «da scalare» / «scalata»
+      (`etichettaSaldo`), che e' il verbo di Flavio e copre tutti e due i
+      casi. Finche' non e' scalata resta dentro il «Da pagare», con il segno
+      meno: e' il netto verso quel fornitore, cioe' la cifra da cui si parte
+      quando si fa il bonifico.
+      c) L'IMPORTO SI SCRIVE POSITIVO E SI CONTA NEGATIVO. Chi batte il
+      documento ha in mano un foglio con scritto 120, non −120, e il campo
+      chiede da sempre un numero senza segno. Il segno e' una conseguenza del
+      TIPO. `importoContabile` usa `-Math.abs()` e non `-x`: se qualcuno
+      scrive −120 intendendo una detrazione, il segno non si gira due volte e
+      la nota non torna a sommare.
+      DOVE E' FINITO `invoiceTotals`: era in src/lib/warehouse.js ed e'
+      passato in src/lib/fatture.js, perche' adesso deve sapere che una nota
+      di credito sottrae e quella regola vive li'. Lasciandolo dov'era,
+      warehouse e fatture si sarebbero importati a vicenda.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino, fornitori]
+    test_cases:
+      - tests/unit/fatture.test.js
+      - tests/unit/riepilogoFornitori.test.js
+      - tests/component/SupplierInvoicesPanel.test.jsx

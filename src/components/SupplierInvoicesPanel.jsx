@@ -12,11 +12,17 @@ import {
   collegaFatturaAFetta,
   allegaDocumentoAFattura,
   togliAllegatoDaFattura,
+  modificaFattura,
 } from '../lib/api.js'
-import { invoiceTotals } from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { giornoEOra } from '../lib/ore.js'
+import { descriviMovimento, storiaDi } from '../lib/statiOrdine.js'
 import { contenutoDelPezzo, formatQty, magazzinoBloccato } from '../lib/inventory.js'
 import {
+  invoiceTotals,
+  eNotaDiCredito,
+  importoLeggibile,
+  etichettaSaldo,
   righeFattura,
   totaliRigheFattura,
   prezzoInArchivio,
@@ -28,6 +34,7 @@ import {
   fattureSenzaFetta,
   fatturaGenerata,
   DOC_NESSUNO,
+  DOC_NOTA_CREDITO,
   TIPI_DOCUMENTO,
 } from '../lib/fatture.js'
 import {
@@ -43,6 +50,12 @@ import {
 // sotto l'elenco, e un elenco lungo li spinge fuori dallo schermo. Il limite
 // si dice, così chi non trova qualcosa sa che deve restringere.
 const LIMITE_RICERCA = 8
+
+// Come si nomina un documento quando bisogna dirlo a voce alta: nel testo di
+// una conferma, nell'etichetta di un tasto. Era ricopiato in quattro punti, e
+// quattro copie della stessa frase prima o poi non dicono più la stessa cosa.
+const nomeDocumento = (fattura) =>
+  `${fattura?.supplier_name || 'fornitore'}${fattura?.number ? ` #${fattura.number}` : ''}`
 
 // Scadenzario fornitori (come FORNITORI REC dell'Excel): documenti/proforma
 // per fornitore con importo, stato pagato e note; totale da pagare a colpo
@@ -80,6 +93,10 @@ export default function SupplierInvoicesPanel() {
   const [ordini, setOrdini] = useState([])
   const [prodottiPer, setProdottiPer] = useState(null)
   const [collegaPer, setCollegaPer] = useState(null)
+  // Quale documento si sta correggendo (REQ-MAG-041). Uno per volta: il
+  // modulo prende il posto della riga, cosi' si vede quale documento si sta
+  // toccando senza doverlo cercare fra gli altri trenta.
+  const [modificaPer, setModificaPer] = useState(null)
 
   async function load() {
     try {
@@ -151,6 +168,24 @@ export default function SupplierInvoicesPanel() {
     )
   }
 
+  // ── CORREGGERE UN DOCUMENTO (REQ-MAG-041) ──────────────────────────
+  //
+  // «I documenti creati devono essere modificabili nel caso di variazione o
+  // errore» (Flavio, 03/09/2026). NIENTE `await` PRIMA DI MOSTRARE L'ESITO:
+  // `modificaFattura` compone il documento corretto in memoria e la scrittura
+  // parte in sottofondo. Se la correzione non e' ammessa il modulo resta
+  // aperto: chiuderlo butterebbe via quello che si e' appena scritto.
+  function salvaModifica(fattura, dati) {
+    setError(null)
+    try {
+      const agg = modificaFattura(fattura, dati)
+      setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i)))
+      setModificaPer(null)
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
   // ── L'ALLEGATO (REQ-MAG-033) ───────────────────────────────────────
   //
   // Scegliere il file apre la casella nascosta, e chi ha chiesto se lo
@@ -186,7 +221,7 @@ export default function SupplierInvoicesPanel() {
   }
 
   async function togliAllegato(inv) {
-    const quale = `${inv.supplier_name || 'fornitore'}${inv.number ? ` #${inv.number}` : ''}`
+    const quale = nomeDocumento(inv)
     if (!confirm(`Togliere l’allegato dal documento di ${quale}? Il file viene cancellato.`)) return
     setError(null)
     try {
@@ -307,6 +342,15 @@ export default function SupplierInvoicesPanel() {
       <div className="inv-list" style={{ marginTop: 8 }}>
         {visible.map((inv) => (
           <div className="inv-item" key={inv.id}>
+            {modificaPer === inv.id ? (
+              <InvoiceForm
+                suppliers={suppliers}
+                busy={false}
+                fattura={inv}
+                onCancel={() => setModificaPer(null)}
+                onSave={(dati) => salvaModifica(inv, dati)}
+              />
+            ) : (
             <div className="inv-row" style={{ cursor: 'default' }}>
               <div className="grow">
                 <div className="inv-name">
@@ -325,17 +369,35 @@ export default function SupplierInvoicesPanel() {
                 )}
               </div>
               <div className="inv-qty">
-                <div>{formatPrice(inv.amount)}</div>
+                {/* IL VERDE E IL MENO, INSIEME (BUG-100). Flavio: «il colore
+                    deve apparire in un altro colore, preferibilmente verde».
+                    Il colore da solo non basta — si legge su un telefono al
+                    banco, di sera, e un numero colorato resta un numero che
+                    si somma: il segno lo dice anche a chi non lo vede. */}
+                <div className={eNotaDiCredito(inv) ? 'importo-nota-credito' : undefined}>
+                  {importoLeggibile(inv)}
+                </div>
                 <button
                   className={inv.paid ? 'chip active' : 'chip'}
                   style={{ marginTop: 4 }}
                   onClick={() => togglePaid(inv)}
                 >
-                  {inv.paid ? '✅ pagato' : '⏳ da pagare'}
+                  {etichettaSaldo(inv)}
                 </button>
               </div>
+              <button
+                className="btn ghost small"
+                aria-label={`Modifica il documento di ${nomeDocumento(inv)}`}
+                onClick={() => {
+                  setAdding(false)
+                  setModificaPer(inv.id)
+                }}
+              >
+                ✏️
+              </button>
               <button className="btn ghost small" onClick={() => remove(inv)}>🗑</button>
             </div>
+            )}
 
             {/* I PRODOTTI DEL DOCUMENTO (REQ-MAG-030). Il tasto sta SOTTO la
                 fattura, ed è quello che li mette: prima di questa voce una
@@ -372,6 +434,10 @@ export default function SupplierInvoicesPanel() {
             >
               ➕ Aggiungi prodotti
             </button>
+            {/* COSA È STATO CORRETTO (REQ-MAG-041): una modifica su un
+                documento già pagato è legittima, ma è il gesto che a fine
+                mese qualcuno vorrà spiegarsi. */}
+            <LeCorrezioni fattura={inv} />
           </div>
         ))}
       </div>
@@ -441,7 +507,7 @@ function etichettaFetta(fetta) {
 // lavoro che manca (DESIGN.md — il rosso qui vuol dire annullato).
 function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega }) {
   const fetta = fettaDellaFattura(fattura, ordini, { suppliers })
-  const quale = `${fattura.supplier_name || 'fornitore'}${fattura.number ? ` #${fattura.number}` : ''}`
+  const quale = nomeDocumento(fattura)
   return (
     <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
       {fattura.order_id ? (
@@ -487,7 +553,7 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
 // che arriva dopo aver aspettato il caricamento di una foto da cinque mega.
 function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
   const allegato = allegatoDi(fattura)
-  const quale = `${fattura.supplier_name || 'fornitore'}${fattura.number ? ` #${fattura.number}` : ''}`
+  const quale = nomeDocumento(fattura)
 
   if (caricando) {
     return (
@@ -613,90 +679,204 @@ function DialogoOrdine({ fattura, ordini, fatture, suppliers, onCancel, onConfir
   )
 }
 
-function InvoiceForm({ suppliers, busy, onCancel, onSave }) {
+// ── COSA È STATO CORRETTO, E QUANDO (REQ-MAG-041) ────────────────────
+//
+// Stesso mestiere della storia dell'ordine, e stessi attrezzi: `storiaDi`
+// per leggere l'array, `descriviMovimento` per la frase. Dal più recente,
+// perché la domanda è «cos'è successo ultimamente a questo documento».
+//
+// Il blocco non c'è finché non c'è niente da dire: un «nessuna correzione»
+// su trenta documenti sarebbe rumore su una schermata già fitta.
+function LeCorrezioni({ fattura }) {
+  const voci = storiaDi(fattura)
+  if (voci.length === 0) return null
+  return (
+    <div className="muted small" style={{ margin: '6px 4px 0' }}>
+      <strong>Correzioni</strong>
+      <ul className="ordine-storia">
+        {[...voci].reverse().map((v, k) => (
+          <li key={`${v.at}-${k}`}>
+            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// ── IL MODULO: LO STESSO PER CREARE E PER CORREGGERE (REQ-MAG-041) ───
+//
+// I campi sono gli stessi — è lo stesso documento — e due copie del modulo
+// prima o poi divergono: una impara a chiedere il fornitore e l'altra no.
+// Passando una `fattura` il modulo corregge quella; senza, ne crea una nuova.
+//
+// COSA NON SI CORREGGE DA QUI: righe, allegato e legame con l'ordine. Ognuno
+// ha già il suo gesto, che sa fare anche le cose attorno (il carico a
+// magazzino, il file da cancellare su Storage, la guardia sulla fetta già
+// coperta), e passarli di qui vorrebbe dire una seconda strada che quelle
+// cose non le fa. Nemmeno «pagato»: quello è il tasto sulla riga, e resta
+// uno solo.
+function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
+  const modifica = !!fattura
+  // UN DOCUMENTO IN ARCHIVIO PUÒ AVERE IL NOME VECCHIO: «Reso» e «Nota di
+  // credito» sono la stessa cosa (BUG-100), e la tendina non troverebbe
+  // niente da selezionare — chi salva si ritroverebbe il tipo cambiato senza
+  // averlo chiesto. Il modulo mostra il nome nuovo. Un tipo che non conosce
+  // affatto se lo tiene invece com'è, per la stessa ragione.
+  const tipoIniziale = !modifica
+    ? 'Proforma'
+    : eNotaDiCredito(fattura)
+      ? DOC_NOTA_CREDITO
+      : fattura.doc_type || 'Proforma'
+  const tipi = TIPI_DOCUMENTO.includes(tipoIniziale)
+    ? TIPI_DOCUMENTO
+    : [...TIPI_DOCUMENTO, tipoIniziale]
+
   const [form, setForm] = useState({
-    supplier_id: '',
-    number: '',
-    doc_type: 'Proforma',
-    date: new Date().toISOString().slice(0, 10),
-    amount: '',
-    paid: false,
-    notes: '',
+    supplier_id: fattura?.supplier_id || '',
+    number: fattura?.number || '',
+    doc_type: tipoIniziale,
+    date: fattura?.date || new Date().toISOString().slice(0, 10),
+    amount: modifica ? String(fattura.amount ?? '') : '',
+    paid: !!fattura?.paid,
+    notes: fattura?.notes || '',
   })
   const set = (k) => (e) =>
     setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
 
+  // DUE MODULI APERTI INSIEME AVREBBERO GLI STESSI `id`, e ogni etichetta
+  // punterebbe al primo: si scriverebbe in un campo e si vedrebbe muovere
+  // quello di un altro documento.
+  const campo = (nome) => `if-${fattura?.id || 'nuovo'}-${nome}`
+
+  // IL FORNITORE DI UN DOCUMENTO AGGANCIATO NON SI CAMBIA: il legame con
+  // l'ordine È la coppia ordine + fornitore (REQ-MAG-031). La regola sta in
+  // `modificaAmmessa` e qui si spegne il campo, così non si spiega dopo con
+  // un errore quello che si può impedire prima.
+  const fornitoreBloccato = modifica && !!fattura.order_id
+
   function submit(e) {
     e.preventDefault()
-    if (!form.supplier_id || !form.amount) return
+    if (!form.supplier_id || form.amount === '') return
     const sup = suppliers.find((s) => s.id === form.supplier_id)
     onSave({
       supplier_id: form.supplier_id,
-      supplier_name: sup?.name ?? '',
+      supplier_name: sup?.name ?? fattura?.supplier_name ?? '',
       number: form.number.trim() || null,
       doc_type: form.doc_type,
       date: form.date,
       amount: Number(String(form.amount).replace(',', '.')) || 0,
-      paid: !!form.paid,
       notes: form.notes.trim() || null,
+      // «PAGATO» NON ESCE DA QUI QUANDO SI CORREGGE: il suo tasto è quello
+      // sulla riga, e resta uno solo (REQ-MAG-038). Alla creazione invece
+      // serve, perché una riga «Nessun documento» nasce già pagata.
+      ...(modifica ? {} : { paid: !!form.paid }),
     })
   }
 
   return (
     <form className="card" onSubmit={submit}>
-      <strong>Nuovo documento</strong>
+      <strong>{modifica ? `Correggi il documento di ${nomeDocumento(fattura)}` : 'Nuovo documento'}</strong>
+      {modifica && (
+        <p className="muted small" style={{ marginTop: 2 }}>
+          Prodotti, allegato e ordine collegato restano come sono. La
+          correzione resta scritta sotto il documento.
+        </p>
+      )}
 
-      <label htmlFor="if-sup" style={{ marginTop: 8 }}>Fornitore *</label>
-      <select id="if-sup" value={form.supplier_id} onChange={set('supplier_id')} required>
+      <label htmlFor={campo('sup')} style={{ marginTop: 8 }}>Fornitore *</label>
+      <select
+        id={campo('sup')}
+        value={form.supplier_id}
+        onChange={set('supplier_id')}
+        disabled={fornitoreBloccato}
+        required
+      >
         <option value="">— Scegli —</option>
         {suppliers.map((s) => (
           <option key={s.id} value={s.id}>{s.name}</option>
         ))}
       </select>
+      {fornitoreBloccato && (
+        <p className="muted small">
+          Il documento è collegato a un ordine di questo fornitore: per
+          cambiarlo, scollega prima l’ordine.
+        </p>
+      )}
 
       <div className="grid-2">
         <div>
-          <label htmlFor="if-num">Numero doc.</label>
-          <input id="if-num" value={form.number} onChange={set('number')} placeholder="Es. 1556" />
+          <label htmlFor={campo('num')}>Numero doc.</label>
+          <input id={campo('num')} value={form.number} onChange={set('number')} placeholder="Es. 1556" />
         </div>
         <div>
-          <label htmlFor="if-date">Data</label>
-          <input id="if-date" type="date" value={form.date} onChange={set('date')} />
+          <label htmlFor={campo('date')}>Data</label>
+          <input id={campo('date')} type="date" value={form.date} onChange={set('date')} />
         </div>
       </div>
 
       <div className="grid-2">
         <div>
-          <label htmlFor="if-type">Tipo</label>
+          <label htmlFor={campo('type')}>Tipo</label>
           {/* «NESSUN DOCUMENTO» È UN TIPO COME GLI ALTRI (REQ-MAG-038):
               «il caso di pagare un fornitore senza fattura non c'è. Anche se
               può capitare, io creerò SEMPRE un item nello scadenzario che
               paga un ordine anche senza fattura allegata» (utente, 27/08).
               Il contante al piccolo fornitore deve comparire nel totale del
               mese come tutti gli altri soldi che escono. */}
-          <select id="if-type" value={form.doc_type} onChange={set('doc_type')}>
-            {TIPI_DOCUMENTO.map((t) => (
+          <select id={campo('type')} value={form.doc_type} onChange={set('doc_type')}>
+            {tipi.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
         </div>
         <div>
-          <label htmlFor="if-amount">Importo € *</label>
-          <input id="if-amount" type="number" step="any" min="0" value={form.amount} onChange={set('amount')} required />
+          <label htmlFor={campo('amount')}>Importo € *</label>
+          <input
+            id={campo('amount')}
+            type="number"
+            step="any"
+            min="0"
+            value={form.amount}
+            onChange={set('amount')}
+            required
+          />
         </div>
       </div>
+      {/* L'IMPORTO SI SCRIVE COM'È SCRITTO SULLA CARTA (BUG-100): chi batte
+          una nota di credito ha in mano un foglio con 120, non −120. Il
+          segno lo mette il tipo di documento, e va detto qui perché è
+          l'istante in cui uno si chiede se deve metterlo lui. */}
+      {form.doc_type === DOC_NOTA_CREDITO && (
+        <p className="muted small">
+          L’importo si scrive positivo: una nota di credito viene sottratta
+          dai totali dello scadenzario.
+        </p>
+      )}
 
-      <label htmlFor="if-notes">Note</label>
-      <input id="if-notes" value={form.notes} onChange={set('notes')} placeholder="Es. -36,6 reso Ceres" />
+      <label htmlFor={campo('notes')}>Note</label>
+      <input
+        id={campo('notes')}
+        value={form.notes}
+        onChange={set('notes')}
+        placeholder="Es. differenza di prezzo sulla fattura 1556"
+      />
 
-      <label className="row" style={{ marginTop: 10 }}>
-        <input type="checkbox" style={{ width: 'auto' }} checked={form.paid} onChange={set('paid')} />
-        <span>Già pagato</span>
-      </label>
+      {/* «GIÀ PAGATO» SOLO ALLA CREAZIONE: correggendo, il pagamento resta il
+          tasto sulla riga. Due posti per dire la stessa cosa vogliono dire
+          due stati da tenere allineati. */}
+      {!modifica && (
+        <label className="row" style={{ marginTop: 10 }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={form.paid} onChange={set('paid')} />
+          <span>Già pagato</span>
+        </label>
+      )}
 
       <div className="grid-2" style={{ marginTop: 12 }}>
         <button type="button" className="btn ghost" onClick={onCancel} disabled={busy}>Annulla</button>
-        <button type="submit" className="btn" disabled={busy}>Salva</button>
+        <button type="submit" className="btn" disabled={busy}>
+          {modifica ? 'Salva le correzioni' : 'Salva'}
+        </button>
       </div>
     </form>
   )

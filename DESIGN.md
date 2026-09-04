@@ -426,8 +426,8 @@ I colori "strutturali" — la linea che separa, il velo di una superficie,
 il fondo di una tessera — non si scrivono a mano: sono gettoni dichiarati
 una volta sola, con la variante chiara accanto, e `applyTheme` la accende
 scrivendo `data-luma` sul documento. Oggi sono `--line`, `--tile-bg`,
-`--velo-superficie`, `--strip-spenta` e i due inchiostri d'allarme
-`--testo-rosso` e `--testo-ambra`. Un `rgba(255, 255, 255, …)` usato
+`--velo-superficie`, `--strip-spenta` e i tre inchiostri di stato
+`--testo-rosso`, `--testo-ambra` e `--testo-verde`. Un `rgba(255, 255, 255, …)` usato
 come fondo o come bordo nasce per il tema scuro e sul chiaro sparisce: è
 sempre lo stesso difetto, e `tests/unit/css.test.js` lo boccia sulle
 superfici delle sezioni.
@@ -450,10 +450,13 @@ più in su: lì era la superficie, qui è quello che ci si scrive sopra.
 Le due vie ammesse:
 
 - **un gettone** — `--text`, `--muted`, `--btn-ink`, e i due nati qui:
-  **`--testo-rosso`** (un numero in perdita, una scorta finita) e
-  **`--testo-ambra`** (una scorta agli sgoccioli, un conto pagato). La
-  tinta non cambia col tema — è memoria del banco, guardrail 5 — cambia
-  la forza, con la variante `[data-luma='light']` accanto;
+  **`--testo-rosso`** (un numero in perdita, una scorta finita),
+  **`--testo-ambra`** (una scorta agli sgoccioli, un conto pagato) e
+  **`--testo-verde`** (soldi che tornano indietro: l'importo di una nota
+  di credito nello scadenzario). La tinta non cambia col tema — è memoria
+  del banco, guardrail 5 — cambia la forza, con la variante
+  `[data-luma='light']` accanto. E il colore non porta mai da solo il
+  significato: la nota di credito ha anche il meno davanti alla cifra;
 - **la regola gemella `:root[data-luma='light'] …`**, che è come il foglio
   tratta le pill degli stati da sempre. Se il selettore è un elenco, di
   sotto vanno elencati **tutti**: è accodandone uno a un elenco già

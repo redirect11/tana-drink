@@ -4,6 +4,29 @@
 
 ### Per chi sta al banco
 
+- **Nello scadenzario il «reso» si chiama nota di credito, e scala.**
+  È la dicitura giusta, e dice la cosa giusta: una nota di credito non vuol
+  dire che è tornata della merce — spesso è solo un prezzo sbagliato su una
+  fattura, magari già pagata. Adesso il suo importo **si sottrae** dai
+  totali invece di sommarsi: dal «Da pagare» in testa, dal totale di quel
+  fornitore e dal Riepilogo dei soldi che escono. Sulla riga si legge in
+  verde e col meno davanti — `− 120,00 €` — e il tasto dice «da scalare»
+  invece di «da pagare», perché una nota di credito non si paga: la si
+  scala da quello che si deve. I documenti registrati prima, quelli scritti
+  «Reso», continuano a valere e scalano allo stesso modo: non c'è niente da
+  ribattere.
+
+- **I documenti dello scadenzario si possono correggere.** Prima, per
+  cambiare una cifra sbagliata, bisognava cancellare il documento e
+  rifarlo — e con la cancellazione se ne andavano i prodotti, l'allegato e
+  l'ordine collegato. Adesso c'è la matita sulla riga: si correggono
+  fornitore, numero, data, tipo, importo e note, e tutto il resto resta
+  dov'è. Anche su un documento già pagato, che è il caso in cui serve di
+  più. Ogni correzione resta scritta sotto il documento — cosa è cambiato,
+  da quanto a quanto, e se era già pagato — così a fine mese si sa perché
+  una cifra non è più quella. Il fornitore di un documento collegato a un
+  ordine si cambia solo dopo averlo scollegato.
+
 - **Il conto appena incassato non si vede più sparire dalla coda.**
   Chiudendo un conto si tornava alla coda ordini e per un attimo il conto era
   ancora lì, poi spariva da solo: abbastanza per chiedersi se l'incasso

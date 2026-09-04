@@ -46,7 +46,14 @@ import {
 } from './listini.js'
 import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
 import { variazioneDiPrezzo, prezzoCambiato } from './storicoPrezzi.js'
-import { aggancioAmmesso, righeDaOrdine, DOC_NESSUNO } from './fatture.js'
+import {
+  aggancioAmmesso,
+  righeDaOrdine,
+  cambiFattura,
+  modificaAmmessa,
+  CAMPI_MODIFICABILI,
+  DOC_NESSUNO,
+} from './fatture.js'
 import { SUL_DOCUMENTO, conMovimento, movimento, storiaDi } from './statiOrdine.js'
 import { prezziDaAllineare } from './confrontoOrdine.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
@@ -1880,6 +1887,10 @@ function mapInvoice(snap) {
     // ASPETTA di pagare; quella del fornitore dice quanto chiede. Confonderle
     // vorrebbe dire dare per buona una cifra che nessuno ha ancora emesso.
     generata: !!i.generata,
+    // LE CORREZIONI FATTE A QUESTO DOCUMENTO (REQ-MAG-041). Come la storia
+    // dell'ordine: un array sul documento, vuoto per tutti quelli scritti
+    // prima di questa voce — e non è un errore, è la normalità dell'archivio.
+    storia: Array.isArray(i.storia) ? i.storia : [],
     created_at: toIso(i.created_at),
   }
 }
@@ -1903,6 +1914,51 @@ export async function createSupplierInvoice(invoice) {
 
 export async function updateSupplierInvoice(id, patch) {
   await updateDoc(doc(db, 'supplier_invoices', id), patch)
+}
+
+// ── CORREGGERE UN DOCUMENTO (REQ-MAG-041) ────────────────────────────
+//
+// «In Scadenzario i documenti creati devono essere modificabili nel caso di
+// variazione o errore» (Flavio, 03/09/2026).
+//
+// SI CORREGGE, NON SI STRAVOLGE: nella patch entrano SOLO i campi della
+// testata (`CAMPI_MODIFICABILI`). Righe, allegato e `order_id` non sono
+// nominati, quindi restano dove sono — e questa non è una precauzione
+// teorica: prima di questa voce l'unico modo di cambiare una cifra era
+// cancellare il documento e rifarlo, che quelle tre cose se le portava via.
+//
+// NIENTE `await` E NESSUNA RILETTURA. Il documento di partenza è quello che
+// la schermata ha già in mano, il risultato si COMPONE in memoria e la
+// scrittura parte in sottofondo: rileggendo, la cache risponderebbe con la
+// versione di prima (BUG-045).
+//
+// LA TRACCIA STA SUL DOCUMENTO. Una correzione su una fattura già pagata è
+// legittima — è proprio il caso di Flavio — ma è il gesto che a fine mese
+// qualcuno vorrà spiegarsi, e allora deve trovarci scritto cosa è cambiato,
+// da cosa a cosa, e che quei soldi erano già usciti.
+export function modificaFattura(fattura, modifiche = {}) {
+  if (!fattura?.id) throw new Error('Documento non trovato')
+  const dopo = { ...fattura }
+  for (const campo of CAMPI_MODIFICABILI) {
+    if (campo in modifiche) dopo[campo] = modifiche[campo]
+  }
+  dopo.amount = Number(dopo.amount) || 0
+
+  const motivo = modificaAmmessa(fattura, dopo)
+  if (motivo) throw new Error(motivo)
+
+  const cambi = cambiFattura(fattura, dopo)
+  // NIENTE SCRITTURA SE NIENTE È CAMBIATO: aprire il modulo, guardarlo e
+  // chiuderlo non deve lasciare una riga di storia che dice «corretto» senza
+  // dire cosa — è così che uno storico smette di valere qualcosa.
+  if (cambi.length === 0) return fattura
+
+  const voce = movimento('documento_corretto', { cambi, pagato: !!fattura.paid })
+  const patch = { storia: conMovimento(fattura, voce) }
+  for (const campo of CAMPI_MODIFICABILI) patch[campo] = dopo[campo] ?? null
+
+  bgWrite(() => updateDoc(doc(db, 'supplier_invoices', fattura.id), patch), 'documento corretto')
+  return { ...fattura, ...patch }
 }
 
 // CHI CANCELLA LA FATTURA PORTA VIA ANCHE L'ALLEGATO (REQ-MAG-033): il file
