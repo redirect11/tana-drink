@@ -4,6 +4,29 @@
 
 ### Per chi sta al banco
 
+- **Il magazzino va sotto zero, invece di fermarsi a zero.** Prima, quando un
+  prodotto arrivava a zero, quello che continuava a uscire non veniva più
+  scalato: la giacenza restava a zero come un prodotto finito per bene, e non
+  c'era modo di accorgersi che si stava versando da bottiglie mai caricate.
+  Adesso la giacenza scende in negativo e il meno si legge sulla card. Quel
+  numero dice quanto è uscito senza risultare, e da lì si va a cercare la
+  consegna che nessuno ha registrato o l'inventario da rifare. Caricando la
+  merce il conto riparte da zero: sei bottiglie consegnate restano sei, il
+  meno di prima non se ne mangia una.
+
+- **Togliendo un drink da una comanda già preparata, gli ingredienti tornano
+  in magazzino.** Prima il movimento diceva «carico» ma la giacenza non si
+  muoveva, e il magazzino restava indietro di un drink.
+
+- **Nella ricerca dei prodotti c'è il tasto per cancellare.** Si svuota il
+  campo con un tocco, senza tenere premuta la cancellazione, e la scrittura
+  resta pronta per cercare un altro prodotto.
+
+- **I prodotti fuori menù si riconoscono da lontano.** Prima la card cambiava
+  solo di trasparenza, e di sera in una griglia piena si distingueva a fatica:
+  adesso ha il fondo scuro e la scritta bianca. Vale nella gestione del menù,
+  dove serve capire a colpo d'occhio cosa c'è e cosa no.
+
 - **Nello scadenzario il «reso» si chiama nota di credito, e scala.**
   È la dicitura giusta, e dice la cosa giusta: una nota di credito non vuol
   dire che è tornata della merce — spesso è solo un prezzo sbagliato su una

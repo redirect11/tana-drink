@@ -1942,11 +1942,29 @@ requirements:
       Il magazzino che non risponde non blocca la comanda: resta segnata come
       non scaricata e si recupera alla riscossione (`unappliedEntries`), che
       resta la rete di sicurezza anche con gli stati accesi.
-      SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
-      giacenza, e un carico su una giacenza negativa riparte da zero. La
-      vendita passa comunque (il conto è già scritto) e il magazzino si ferma
-      a zero: altrimenti il buco resta, il carico dopo conta meno di una
-      bottiglia e il valore in euro va in negativo.
+      SOTTO ZERO CI SI SCENDE, ED È VOLUTO (BUG-101, chiesto da Flavio il
+      03/09/2026). Quello che esce si toglie tutto, anche quando la giacenza
+      non basta: un prodotto che continua a uscire dopo essere finito non è
+      finito davvero — è arrivato senza che nessuno lo caricasse, o l'ultimo
+      inventario era vecchio — e fermarsi a zero cancellava proprio il numero
+      che lo dice. Il meno arriva fino alla card, perché un magazzino che sa
+      di essere sotto zero e lo tiene per sé è il silenzio da cui il difetto
+      è nato.
+      IL MENO NON È MERCE CHE MANCA: da uno scaffale vuoto non si versa. È la
+      misura di quanto se n'è versato senza che risultasse, e per questo si
+      chiude da sé al primo CARICO, che riparte da zero (`giacenzaPerCarico`):
+      le sei bottiglie appena consegnate sullo scaffale ci sono tutte e sei, e
+      il magazzino deve contarle tutte e sei — non cinque, come farebbe
+      trattando il buco da debito.
+      DUE COSE RESTANO DA ZERO IN SU, e non è una svista. I SOLDI: un
+      magazzino che vale meno di niente non vuol dire niente (`unitsInStock`,
+      `stockValue`). LE BOTTIGLIE DA TOCCARE: sono oggetti su uno scaffale, e
+      «−1 piena più 750 ml nell'aperta» non è una cosa che si può andare a
+      guardare (`bottleBreakdown`). Il meno lo porta `pezziInGiacenza`, che
+      conta una quantità e non degli oggetti.
+      LO SCARICO A MANO INVECE SI FERMA A ZERO (`scaricoPossibile`): lì c'è
+      una persona che dichiara quanto ha tolto dallo scaffale, e da uno
+      scaffale vuoto non si toglie niente.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]
@@ -1957,6 +1975,7 @@ requirements:
       - tests/unit/scritturaComande.test.js
       - tests/unit/impegnato.test.js
       - tests/unit/salaEMagazzino.test.js
+      - tests/unit/magazzinoSottoZero.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"
@@ -1965,6 +1984,18 @@ requirements:
       Cambiando le righe di una comanda già scaricata si scala o si restituisce
       solo la differenza, non l'intero consumo: altrimenti ogni correzione
       falserebbe il magazzino.
+      NEI DUE VERSI DAVVERO (BUG-101). La differenza si applica com'è: in più
+      si scala, in meno TORNA in giacenza. Il freno che teneva il magazzino
+      sopra lo zero stava anche qui, e non toglieva soltanto il meno — un
+      drink tolto da una comanda già scalata porta una differenza negativa,
+      cioè merce che torna sullo scaffale, e veniva azzerata insieme al resto:
+      il movimento diceva «carico», la giacenza non si muoveva di un
+      millilitro, e il magazzino restava indietro di un drink per sempre. A
+      mangiarsela era `qtyInStockUnit`, che davanti a un numero negativo
+      rispondeva zero: adesso converte conservando il segno.
+      Qui NON si riparte da zero come fa un carico merce: questo non è un
+      rifornimento, è la stessa uscita annullata, e deve rimettere il meno
+      dov'era.
     status: implemented
     generate_issue: false
     labels: [magazzino]
@@ -10961,3 +10992,47 @@ requirements:
       - tests/component/PaymentScreen.test.jsx
       - tests/unit/css.test.js
       - tests/unit/useResizable.test.js
+
+  - id: REQ-POS-020
+    title: "La ricerca dei prodotti si cancella con un tocco"
+    area: "src/components/PosProductPicker.jsx, src/index.css"
+    description: >
+      Chiesto da Flavio il 03/09/2026, con la foto del campo cerchiato:
+      «nella selezione degli items di menu aggiungere qui il tastino di
+      cancellazione scrittura».
+      La ✕ che i browser mettono da soli nei campi di ricerca non c'è su
+      tutte le piattaforme, e dov'è è un bersaglio da mouse: qui si batte
+      col dito, di sera, con una mano occupata a reggere qualcosa. Per
+      ripulire la ricerca bisognava tenere premuto il tasto di cancellazione
+      finché il campo non si svuotava.
+      Il tastino compare SOLO con del testo dentro — un campo vuoto con una
+      ✕ accanto è un bersaglio che non fa niente — e lasciando il fuoco nel
+      campo, perché il gesto dopo è quasi sempre riscrivere.
+    status: implemented
+    generate_issue: false
+    labels: [pos, menu, ux]
+    test_cases: [tests/component/PosProductPicker.test.jsx]
+
+  - id: REQ-MENU-014
+    title: "Un prodotto fuori menù si vede che è spento"
+    area: "src/index.css"
+    description: >
+      Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia
+      è che la scritta da nera diventa grigia, e nei non disponibili si vede
+      poco. Per farla più impattante metterei la scritta bianca e il fondo
+      della card in grigio scuro».
+      Aveva ragione: la differenza fra una card accesa e una spenta era la
+      sola trasparenza al 55%, che di sera e con centinaia di card in
+      griglia non si legge. Un drink spento scambiato per acceso è un drink
+      promesso a un cliente e mai fatto.
+      Adesso la card fuori menù ha il FONDO scuro e la scritta bianca: la
+      differenza si vede da lontano e senza andare a leggere. La striscia
+      colorata resta, e sul fondo scuro si distingue meglio di prima.
+      Vale SOLO per la gestione del menù, dove la domanda è «cosa c'è e cosa
+      no»: le altre schede amministrative continuano a sbiadire, che lì
+      basta e il colpo d'occhio non serve.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases: []
+
