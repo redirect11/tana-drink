@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 1 settembre 2026.
+> Generato il 4 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 189 | fatto e coperto dai test |
+| ✅ | 190 | fatto e coperto dai test |
 | ⚠️  | 14 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**230 voci** in tutto. **203** descrivono il sistema com'è oggi e
+**231 voci** in tutto. **204** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 9 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 34 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 35 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 16 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1286,6 +1286,26 @@ COSA SI VEDE E COSA SI CONTA. Il listino tiene il prezzo di CIO' CHE IL FORNITOR
 IL BAGLIO DA EVITARE E' QUELLO GIA' VISTO: moltiplicare i pezzi per il prezzo del collo. Otto Bjorne da FONT costano 8,35 euro, non 200. ── LA SCALA E' UNA SOLA, E IL COLLO NON E' UN'ECCEZIONE ── Deciso dall'utente il 27/08/2026, DOPO la stesura qui sopra e in luogo di quello che quella stesura lasciava intendere («chi non ha un collo non cambia», cioe' due strade nel codice). Parole sue: «le cose da un pezzo, banalmente possiamo dire che in un collo c'e' un pezzo, cioe' equivale a un pezzo, e dovrebbe funzionare sempre. E anche i calcoli non si dovrebbero rompere». La gerarchia e' quindi UNA:
 
 **Dove**: `src/lib/listini.js, src/lib/composizioneOrdine.js, src/components/ListinoFornitore.jsx, src/components/NuovoOrdinePanel.jsx` · **Lo dimostrano**: `tests/unit/colliEPezzi.test.js`, `tests/component/ColliEPezzi.test.jsx`, `tests/component/ListinoFornitore.test.jsx`
+
+#### REQ-MAG-041 — I documenti dello scadenzario si possono correggere
+
+Chiesto da Flavio il 03/09/2026: «in Scadenzario i documenti creati devono essere modificabili nel caso di variazione o errore». COM'ERA: sul documento si poteva solo segnare pagato o non pagato. Non c'era modo di correggere importo, data, numero, fornitore o tipo, e chi sbagliava a battere una cifra doveva CANCELLARE e rifare — portandosi via, con la cancellazione, i prodotti (REQ-MAG-030), l'allegato (REQ-MAG-033) e il legame con l'ordine (REQ-MAG-031). Su un documento con la foto della fattura dentro, quello e' un lavoro perso.
+
+SI CORREGGE, NON SI STRAVOLGE. Modificabili sono i sei campi della testata che una persona batte a mano guardando la carta: fornitore, numero, data, tipo, importo, note (`CAMPI_MODIFICABILI` in src/lib/fatture.js). Righe, allegato e `order_id` non sono nemmeno NOMINATI nella patch, e non e' una dimenticanza: ognuno ha gia' il suo gesto, che sa fare anche le cose attorno — il carico a magazzino, il file da cancellare su Storage, la guardia sulla fetta gia' coperta — e passarli da qui vorrebbe dire una seconda strada che quelle cose non le fa. Quello che non si nomina non si puo' sovrascrivere per sbaglio.
+
+NEMMENO «PAGATO»
+
+PASSA DI QUI: il suo tasto e' quello sulla riga e resta uno solo (REQ-MAG-038). La casella «Gia' pagato» del modulo e' della creazione — serve alla riga «Nessun documento», che nasce gia' pagata — e correggendo non compare: due posti per dire la stessa cosa vogliono dire due stati da tenere allineati.
+
+IL FORNITORE DI UN DOCUMENTO AGGANCIATO NON SI CAMBIA. Il legame con l'ordine E' la coppia ordine + fornitore (REQ-MAG-031): cambiando fornitore sotto un documento agganciato, quella fetta resterebbe legata alla fattura di qualcun altro — merce pagata a chi non l'ha venduta, che a fine mese e' un conto che non torna. La regola sta in `modificaAmmessa`, che e' la stessa risposta usata per spegnere il campo e per rifiutare la scrittura: si impedisce prima invece di spiegarlo dopo con un errore. Si scollega, e scollegare e' un gesto che si vede. LOCAL-FIRST. `modificaFattura` (src/lib/api.js) non aspetta e non rilegge: parte dal documento che la schermata ha gia' in mano, compone il risultato in memoria e manda la scrittura in sottofondo con `bgWrite`. Rileggendo, la cache risponderebbe con la versione di prima (BUG-045). Senza niente di cambiato non si scrive niente.
+
+IL CONFRONTO SI RIFA' DA SOLO. Il prospetto ordine/fattura (REQ-MAG-038) non e' un valore salvato: `totaliProspetto` e `riconciliato` leggono `fattura.amount` ogni volta, quindi correggere l'importo lo cambia nello stesso istante. Resta un limite dichiarato: un ordine gia' CHIUSO porta `closed_at` addosso e resta chiuso anche se la cifra corretta non riconcilia piu'. Riaprirlo da qui vorrebbe dire un secondo scrittore sull'ordine per una decisione che non e' di questa schermata.
+
+LA TRACCIA STA SUL DOCUMENTO, e la decisione va detta perche' e' il punto in cui si poteva sbagliare. Una modifica su un documento PAGATO e' legittima — e' proprio il caso di Flavio, «mi devono modificare il prezzo di una fattura magari gia' pagata» — ma e' il gesto che a fine mese qualcuno vorra' spiegarsi. Si e' riusato il meccanismo della storia dell'ordine (`movimento`, `conMovimento`, `storiaDi`, `descriviMovimento` in src/lib/statiOrdine.js) con un movimento nuovo, `documento_corretto`, ma scritto nell'array `storia` DEL DOCUMENTO e non dell'ordine: un documento dello scadenzario puo' non avere nessun ordine dietro — e' uno dei due buchi di REQ-MAG-031 — e la sua correzione resterebbe senza traccia proprio nei casi in cui non c'e' nient'altro che la spieghi. La voce porta cosa e' cambiato, da cosa a cosa, gia' scritto in italiano (`cambiFattura`), e dice se il documento era gia' pagato. Le frasi si compongono in fatture.js e non in `descriviMovimento` per due ragioni: un importo formattato nel momento in cui e' successo resta leggibile mesi dopo anche se il formato cambia, e statiOrdine.js resta fuori dai tipi di documento — che sarebbe un anello di import. L'IMPORTO SI CONFRONTA COL SEGNO. Una fattura da 120 diventata nota di credito (BUG-100) porta ancora scritto 120, ma sui conti quei soldi si sono spostati di 240: la storia deve accorgersene, se no la correzione piu' pesante sarebbe l'unica che non si racconta.
+
+COSA SI VEDE: sulla riga del documento un tasto «matita»; il modulo prende il posto della riga, gia' compilato, ed e' LO STESSO modulo della creazione — due copie prima o poi divergono, una impara a chiedere il fornitore e l'altra no. Sotto il documento, le correzioni fatte, dalla piu' recente.
+
+**Dove**: `src/lib/fatture.js, src/lib/statiOrdine.js, src/lib/ore.js, src/lib/api.js, src/components/SupplierInvoicesPanel.jsx` · **Lo dimostrano**: `tests/unit/modificaDocumento.test.js`, `tests/component/ModificaDocumento.test.jsx`, `tests/unit/fatture.test.js`
 
 #### REQ-MAG-034 — «Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese
 

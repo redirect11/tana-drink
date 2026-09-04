@@ -172,6 +172,15 @@ export const MOVIMENTI = [
   'fattura_generata',
   'prezzi_allineati',
   'chiuso',
+  // LA CORREZIONE DI UN DOCUMENTO (REQ-MAG-041). È l'unico movimento che non
+  // si scrive sull'ordine ma SUL DOCUMENTO, nel suo `storia`, e il posto è
+  // quello giusto: un documento dello scadenzario può non avere nessun ordine
+  // dietro — è uno dei due buchi di REQ-MAG-031 — e la sua correzione
+  // resterebbe senza traccia proprio nei casi in cui non c'è nient'altro che
+  // la spieghi. Il meccanismo però è lo stesso e si riusa invece di
+  // scriverne un secondo: un array sul documento, `movimento`/`conMovimento`
+  // per metterci una voce, `descriviMovimento` per leggerla.
+  'documento_corretto',
 ]
 
 // Una voce di storia. La data è quella del terminale, come per le comande:
@@ -225,6 +234,19 @@ export function descriviMovimento(v) {
       return `Listino allineato al documento${d.righe ? ` · ${d.righe} prezzi` : ''}`
     case 'chiuso':
       return 'Ordine chiuso: ordinato, ricevuto e fatturato tornano'
+    // LE FRASI ARRIVANO GIÀ SCRITTE (`cambiFattura` in fatture.js), e non è
+    // pigrizia: una correzione si rilegge mesi dopo, e l'importo formattato
+    // nel momento in cui è successo resta leggibile anche se il formato
+    // cambia. In più tiene questo file fuori dai tipi di documento.
+    // «GIÀ PAGATO» SI DICE SEMPRE: è il caso da cui nasce la voce — «mi
+    // devono modificare il prezzo di una fattura magari già pagata» — ed è
+    // anche l'unico in cui la correzione va guardata due volte, perché
+    // quei soldi sono già usciti.
+    case 'documento_corretto': {
+      const cambi = Array.isArray(d.cambi) ? d.cambi : []
+      const cosa = cambi.map((c) => `${c.campo} da ${c.da} a ${c.a}`).join(' · ')
+      return `Documento corretto${d.pagato ? ' (già pagato)' : ''}${cosa ? ` · ${cosa}` : ''}`
+    }
     default:
       return 'Modifica'
   }

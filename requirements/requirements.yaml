@@ -8327,6 +8327,88 @@ requirements:
       - tests/component/ColliEPezzi.test.jsx
       - tests/component/ListinoFornitore.test.jsx
 
+  - id: REQ-MAG-041
+    title: "I documenti dello scadenzario si possono correggere"
+    area: "src/lib/fatture.js, src/lib/statiOrdine.js, src/lib/ore.js, src/lib/api.js, src/components/SupplierInvoicesPanel.jsx"
+    description: >
+      Chiesto da Flavio il 03/09/2026: «in Scadenzario i documenti creati
+      devono essere modificabili nel caso di variazione o errore».
+      COM'ERA: sul documento si poteva solo segnare pagato o non pagato. Non
+      c'era modo di correggere importo, data, numero, fornitore o tipo, e chi
+      sbagliava a battere una cifra doveva CANCELLARE e rifare — portandosi
+      via, con la cancellazione, i prodotti (REQ-MAG-030), l'allegato
+      (REQ-MAG-033) e il legame con l'ordine (REQ-MAG-031). Su un documento
+      con la foto della fattura dentro, quello e' un lavoro perso.
+      SI CORREGGE, NON SI STRAVOLGE. Modificabili sono i sei campi della
+      testata che una persona batte a mano guardando la carta: fornitore,
+      numero, data, tipo, importo, note (`CAMPI_MODIFICABILI` in
+      src/lib/fatture.js). Righe, allegato e `order_id` non sono nemmeno
+      NOMINATI nella patch, e non e' una dimenticanza: ognuno ha gia' il suo
+      gesto, che sa fare anche le cose attorno — il carico a magazzino, il
+      file da cancellare su Storage, la guardia sulla fetta gia' coperta — e
+      passarli da qui vorrebbe dire una seconda strada che quelle cose non le
+      fa. Quello che non si nomina non si puo' sovrascrivere per sbaglio.
+      NEMMENO «PAGATO» PASSA DI QUI: il suo tasto e' quello sulla riga e resta
+      uno solo (REQ-MAG-038). La casella «Gia' pagato» del modulo e' della
+      creazione — serve alla riga «Nessun documento», che nasce gia' pagata —
+      e correggendo non compare: due posti per dire la stessa cosa vogliono
+      dire due stati da tenere allineati.
+      IL FORNITORE DI UN DOCUMENTO AGGANCIATO NON SI CAMBIA. Il legame con
+      l'ordine E' la coppia ordine + fornitore (REQ-MAG-031): cambiando
+      fornitore sotto un documento agganciato, quella fetta resterebbe legata
+      alla fattura di qualcun altro — merce pagata a chi non l'ha venduta, che
+      a fine mese e' un conto che non torna. La regola sta in
+      `modificaAmmessa`, che e' la stessa risposta usata per spegnere il campo
+      e per rifiutare la scrittura: si impedisce prima invece di spiegarlo
+      dopo con un errore. Si scollega, e scollegare e' un gesto che si vede.
+      LOCAL-FIRST. `modificaFattura` (src/lib/api.js) non aspetta e non
+      rilegge: parte dal documento che la schermata ha gia' in mano, compone
+      il risultato in memoria e manda la scrittura in sottofondo con
+      `bgWrite`. Rileggendo, la cache risponderebbe con la versione di prima
+      (BUG-045). Senza niente di cambiato non si scrive niente.
+      IL CONFRONTO SI RIFA' DA SOLO. Il prospetto ordine/fattura (REQ-MAG-038)
+      non e' un valore salvato: `totaliProspetto` e `riconciliato` leggono
+      `fattura.amount` ogni volta, quindi correggere l'importo lo cambia
+      nello stesso istante. Resta un limite dichiarato: un ordine gia' CHIUSO
+      porta `closed_at` addosso e resta chiuso anche se la cifra corretta non
+      riconcilia piu'. Riaprirlo da qui vorrebbe dire un secondo scrittore
+      sull'ordine per una decisione che non e' di questa schermata.
+      LA TRACCIA STA SUL DOCUMENTO, e la decisione va detta perche' e' il
+      punto in cui si poteva sbagliare. Una modifica su un documento PAGATO e'
+      legittima — e' proprio il caso di Flavio, «mi devono modificare il
+      prezzo di una fattura magari gia' pagata» — ma e' il gesto che a fine
+      mese qualcuno vorra' spiegarsi. Si e' riusato il meccanismo della storia
+      dell'ordine (`movimento`, `conMovimento`, `storiaDi`,
+      `descriviMovimento` in src/lib/statiOrdine.js) con un movimento nuovo,
+      `documento_corretto`, ma scritto nell'array `storia` DEL DOCUMENTO e non
+      dell'ordine: un documento dello scadenzario puo' non avere nessun ordine
+      dietro — e' uno dei due buchi di REQ-MAG-031 — e la sua correzione
+      resterebbe senza traccia proprio nei casi in cui non c'e' nient'altro
+      che la spieghi. La voce porta cosa e' cambiato, da cosa a cosa, gia'
+      scritto in italiano (`cambiFattura`), e dice se il documento era gia'
+      pagato. Le frasi si compongono in fatture.js e non in
+      `descriviMovimento` per due ragioni: un importo formattato nel momento
+      in cui e' successo resta leggibile mesi dopo anche se il formato cambia,
+      e statiOrdine.js resta fuori dai tipi di documento — che sarebbe un
+      anello di import.
+      L'IMPORTO SI CONFRONTA COL SEGNO. Una fattura da 120 diventata nota di
+      credito (BUG-100) porta ancora scritto 120, ma sui conti quei soldi si
+      sono spostati di 240: la storia deve accorgersene, se no la correzione
+      piu' pesante sarebbe l'unica che non si racconta.
+      COSA SI VEDE: sulla riga del documento un tasto «matita»; il modulo
+      prende il posto della riga, gia' compilato, ed e' LO STESSO modulo della
+      creazione — due copie prima o poi divergono, una impara a chiedere il
+      fornitore e l'altra no. Sotto il documento, le correzioni fatte, dalla
+      piu' recente.
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, fornitori, ux]
+    priority: P1
+    test_cases:
+      - tests/unit/modificaDocumento.test.js
+      - tests/component/ModificaDocumento.test.jsx
+      - tests/unit/fatture.test.js
+
   - id: REQ-MAG-034
     title: "«Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese"
     area: "src/lib/spese.js, src/lib/riepilogoFornitori.js, src/lib/api.js, src/components/AltreSpesePanel.jsx, src/components/RiepilogoFornitoriPanel.jsx, src/components/FornitoriTab.jsx, firestore.rules"

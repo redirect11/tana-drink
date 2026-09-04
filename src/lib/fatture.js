@@ -18,6 +18,7 @@
 import { purchaseOrderTotals } from './warehouse.js'
 import { righeDiProdotto, livelloDi, fetteFornitore } from './listini.js'
 import { eBozza } from './statiOrdine.js'
+import { formatPrice } from './orderStatus.js'
 
 // ── I TIPI DI DOCUMENTO ──────────────────────────────────────────────
 //
@@ -34,7 +35,91 @@ import { eBozza } from './statiOrdine.js'
 // unici soldi a non comparirci.
 export const DOC_NESSUNO = 'Nessun documento'
 
-export const TIPI_DOCUMENTO = ['Proforma', 'Fattura', 'Reso', DOC_NESSUNO, 'Altro']
+// ── LA NOTA DI CREDITO (BUG-100) ─────────────────────────────────────
+//
+// Si chiamava «Reso», e Flavio ha chiesto di cambiarle nome il 03/09/2026:
+// «reso dovrebbe diventare nota di credito, perché questa è la dicitura
+// giusta. Non è importante che io renda: magari è sbagliato solamente un
+// prezzo, quindi io non rendo niente, mi devono modificare il prezzo di una
+// fattura magari già pagata, mi fanno la nota di credito».
+//
+// La ragione è sostanziale e non estetica: «reso» dice che è tornata della
+// merce, e quasi sempre non è vero. Il documento è una correzione di conto.
+export const DOC_NOTA_CREDITO = 'Nota di credito'
+
+// IL NOME VECCHIO RESTA VALIDO IN LETTURA, e non si migra niente. In archivio
+// ci sono documenti scritti `doc_type: 'Reso'`: uno script che li riscrive
+// tutti è il modo più caro di non guadagnare niente, e il giorno che sbaglia
+// sbaglia su dei soldi. Chi legge riconosce le due parole come la stessa
+// cosa, ed è `eNotaDiCredito` a saperlo — una volta sola, per tutti.
+const DOC_RESO = 'Reso'
+
+export const TIPI_DOCUMENTO = ['Proforma', 'Fattura', DOC_NOTA_CREDITO, DOC_NESSUNO, 'Altro']
+
+// «Questo documento è una nota di credito?». È l'unica funzione che conosce
+// il nome vecchio: chi confronta `doc_type` a mano si porta dietro un
+// documento di ieri che smette di valere.
+export const eNotaDiCredito = (fattura) =>
+  fattura?.doc_type === DOC_NOTA_CREDITO || fattura?.doc_type === DOC_RESO
+
+// ── L'IMPORTO COL SEGNO CON CUI PESA SUI CONTI ───────────────────────
+//
+// PERCHÉ UNA NOTA DI CREDITO SOTTRAE, e questa è la riga che qualcuno prima
+// o poi «sistemerà» rimettendoci un valore assoluto: una nota di credito non
+// è una spesa, è la spesa TOLTA. Il fornitore riconosce di aver chiesto
+// troppo — «mi stanno scalando dei soldi» (Flavio) — quindi quei soldi dal
+// mese escono, dal debito verso quel fornitore escono, e dal riepilogo delle
+// uscite pure. Sommarla, com'era prima, gonfiava il totale del doppio della
+// correzione: 1.000 di fattura e 120 di nota facevano 1.120 invece di 880.
+//
+// L'IMPORTO SI SCRIVE POSITIVO E SI CONTA NEGATIVO. Chi batte il documento ha
+// in mano un foglio con scritto 120, non −120, e il campo dell'importo chiede
+// da sempre un numero senza segno. Il segno è una conseguenza del TIPO, e
+// vive solo qui. `Math.abs` non è una precauzione oziosa: se qualcuno scrive
+// −120 intendendo una detrazione, senza di lui il segno si girerebbe due
+// volte e la nota tornerebbe a sommare.
+export function importoContabile(fattura) {
+  const importo = Number(fattura?.amount) || 0
+  return eNotaDiCredito(fattura) ? -Math.abs(importo) : importo
+}
+
+// L'importo come si legge sulla riga. Una nota di credito si scrive col meno
+// davanti: colorarla e basta la lascerebbe leggere come un numero qualunque,
+// e chi somma a mente sommerebbe.
+export function importoLeggibile(fattura) {
+  const importo = importoContabile(fattura)
+  return importo < 0 ? `− ${formatPrice(-importo)}` : formatPrice(importo)
+}
+
+// ── I TOTALI DELLO SCADENZARIO ───────────────────────────────────────
+//
+// Stava in `warehouse.js`, ed è venuto qui con BUG-100 per una ragione sola:
+// adesso deve sapere che una nota di credito sottrae, e quella regola vive in
+// questo file. Lasciandolo là warehouse e fatture si sarebbero importati a
+// vicenda — un anello che regge finché nessuno lo tocca.
+//
+// «Da pagare» conta i documenti ancora aperti: le fatture in più, le note di
+// credito in meno. È il netto verso quel fornitore, che è la cifra da cui si
+// parte quando si fa un bonifico.
+export function invoiceTotals(invoices) {
+  const bySupplier = new Map()
+  let unpaid = 0
+  let paid = 0
+  for (const inv of invoices || []) {
+    const amount = importoContabile(inv)
+    if (inv.paid) {
+      paid += amount
+    } else {
+      unpaid += amount
+      const key = inv.supplier_id || 'sconosciuto'
+      const cur = bySupplier.get(key) || { supplier_id: key, supplier_name: inv.supplier_name || '', unpaid: 0, count: 0 }
+      cur.unpaid += amount
+      cur.count += 1
+      bySupplier.set(key, cur)
+    }
+  }
+  return { unpaid, paid, bySupplier: [...bySupplier.values()].sort((a, b) => b.unpaid - a.unpaid) }
+}
 
 // UNA FATTURA GENERATA DA NOI NON È UNA FATTURA DEL FORNITORE (REQ-MAG-038),
 // e le due non vanno confuse: la prima dice quanto ci si ASPETTA di pagare
@@ -241,4 +326,112 @@ export function fetteSenzaFattura(ordini, fatture, { suppliers = [] } = {}) {
 // (si è telefonato al fornitore), o il legame non l'ha ancora messo nessuno.
 export function fattureSenzaFetta(fatture) {
   return (fatture || []).filter((f) => !f?.order_id)
+}
+
+// ── LA CORREZIONE DI UN DOCUMENTO (REQ-MAG-041) ──────────────────────
+//
+// «In Scadenzario i documenti creati devono essere modificabili nel caso di
+// variazione o errore» (Flavio, 03/09/2026). Prima si poteva solo segnare
+// pagato: chi sbagliava a battere una cifra doveva cancellare e rifare, e
+// con la cancellazione se ne andavano righe, allegato e legame con l'ordine.
+//
+// SI CORREGGE LA TESTATA, NON IL CONTENUTO. Modificabili sono i sei campi
+// che una persona batte a mano guardando la carta; righe (REQ-MAG-030),
+// allegato (REQ-MAG-033) e `order_id` (REQ-MAG-031) NON stanno qui, e non è
+// una dimenticanza: ognuno ha già il suo gesto, che sa fare anche le cose
+// attorno — il carico a magazzino, il file su Storage da cancellare, la
+// guardia sulla fetta già coperta. Passarli da qui vorrebbe dire una seconda
+// strada che quelle cose non le fa.
+export const CAMPI_MODIFICABILI = [
+  'supplier_id',
+  'supplier_name',
+  'number',
+  'doc_type',
+  'date',
+  'amount',
+  'notes',
+]
+
+// Come si chiamano a schermo, e sono anche i campi di cui si racconta il
+// cambiamento. `supplier_id` non c'è: è il fornitore, e di un fornitore si
+// legge il nome.
+const ETICHETTA_CAMPO = {
+  supplier_name: 'Fornitore',
+  number: 'Numero',
+  doc_type: 'Tipo',
+  date: 'Data',
+  amount: 'Importo',
+  notes: 'Note',
+}
+
+const scritto = (v) => (v == null || v === '' ? '—' : String(v))
+
+// Due importi si considerano uguali fino al centesimo, come i prezzi: sotto
+// quella soglia non c'è nessuna correzione da raccontare.
+//
+// SI CONFRONTA L'IMPORTO COL SEGNO, non la cifra battuta, ed è il caso che
+// conta: una fattura da 120 diventata nota di credito porta ancora scritto
+// 120, ma sui conti quei soldi si sono spostati di 240. La storia serve a
+// spiegare perché i numeri sono cambiati, quindi deve accorgersene.
+function campoCambiato(campo, prima, dopo) {
+  if (campo === 'amount') {
+    return Math.abs(importoContabile(prima) - importoContabile(dopo)) >= 0.005
+  }
+  if (campo === 'supplier_name') {
+    return (prima?.supplier_id ?? null) !== (dopo?.supplier_id ?? null)
+  }
+  return (prima?.[campo] ?? '') !== (dopo?.[campo] ?? '')
+}
+
+// COSA È CAMBIATO, GIÀ IN ITALIANO. Le frasi si compongono qui e non in
+// `descriviMovimento` per una ragione pratica: la storia si legge mesi dopo,
+// e un importo formattato allora col codice di allora resta leggibile anche
+// se il formato cambia. In più tiene `statiOrdine.js` fuori dai tipi di
+// documento, che è l'anello di import che non vogliamo.
+export function cambiFattura(prima, dopo) {
+  const cambi = []
+  for (const campo of Object.keys(ETICHETTA_CAMPO)) {
+    if (!campoCambiato(campo, prima, dopo)) continue
+    cambi.push({
+      campo: ETICHETTA_CAMPO[campo],
+      da: campo === 'amount' ? importoLeggibile(prima) : scritto(prima?.[campo]),
+      a: campo === 'amount' ? importoLeggibile(dopo) : scritto(dopo?.[campo]),
+    })
+  }
+  return cambi
+}
+
+// IL FORNITORE DI UN DOCUMENTO AGGANCIATO NON SI CAMBIA, e la guardia sta
+// qui perché è la stessa regola di `aggancioAmmesso`: il legame con l'ordine
+// È la coppia ordine + fornitore (REQ-MAG-031). Cambiando fornitore sotto un
+// documento già agganciato, quella fetta resterebbe legata alla fattura di
+// qualcun altro — merce pagata a chi non l'ha venduta, che a fine mese è un
+// conto che non torna. Si stacca prima, e staccare è un gesto che si vede.
+//
+// Torna il motivo del rifiuto — una frase da mostrare — oppure `null`.
+export function modificaAmmessa(prima, dopo) {
+  if (!prima?.id) return 'Documento non trovato.'
+  if (!dopo?.supplier_id) return 'Il documento lo emette qualcuno: scegli il fornitore.'
+  if (prima.order_id && dopo.supplier_id !== prima.supplier_id) {
+    return 'Questo documento è collegato a un ordine: per cambiare fornitore scollegalo prima.'
+  }
+  return null
+}
+
+// ── «PAGATA» NON VUOL DIRE NIENTE SU UNA NOTA DI CREDITO ─────────────
+//
+// Il gesto resta uno solo — lo stesso campo `paid`, lo stesso tasto, gli
+// stessi totali — perché due modi di chiudere un documento vorrebbero dire
+// due stati da tenere allineati, e il giorno che divergono il «Da pagare»
+// smette di valere qualcosa (è la stessa ragione per cui «pagato» sta sulla
+// fattura e non sull'ordine, REQ-MAG-038).
+//
+// A CAMBIARE È LA PAROLA. Una nota di credito non si paga: o la si incassa,
+// o — molto più spesso — la si scala da quello che si deve. «Scalare» è il
+// verbo di Flavio («mi stanno scalando dei soldi») e copre tutti e due i
+// casi, che è quello che serve: il documento è chiuso quando quei soldi sono
+// tornati indietro, comunque siano tornati.
+export function etichettaSaldo(fattura) {
+  if (eNotaDiCredito(fattura)) return fattura?.paid ? '✅ scalata' : '⏳ da scalare'
+  return fattura?.paid ? '✅ pagato' : '⏳ da pagare'
 }
