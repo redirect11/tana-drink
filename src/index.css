@@ -3377,6 +3377,36 @@ body.bar-wide .app {
 .admin-card.off .grid-card-main {
   opacity: 0.55;
 }
+/* FUORI MENU SI DEVE VEDERE DA LONTANO. Chiesto da Flavio il 03/09/2026,
+   guardando la schermata del menu: «l'unica cosa che cambia è che la scritta
+   da nera diventa grigia, e nei non disponibili si vede poco. Per farla più
+   impattante metterei la scritta bianca e il fondo della card in grigio
+   scuro». Aveva ragione: la differenza era la sola trasparenza al 55%, che
+   di sera, su un monitor storto e con centinaia di card in griglia, non si
+   legge — e un drink spento scambiato per acceso è un drink promesso a un
+   cliente e mai fatto.
+   Vale SOLO per la gestione del menu (`.menu-card`), dove la domanda è
+   «cosa c'è e cosa no»: le altre schede amministrative continuano a
+   sbiadire, che lì basta.
+   La striscia colorata a sinistra resta: dice un'altra cosa (il colore al
+   banco) e sul fondo scuro si vede meglio di prima. */
+.menu-card.off {
+  background: #3a3a3a;
+  border-color: #3a3a3a;
+}
+/* Niente trasparenza: il contrasto lo fa il fondo, e sbiadire sopra al
+   grigio scuro riporterebbe il testo dov'era. */
+.menu-card.off .grid-card-main {
+  opacity: 1;
+  color: #fff;
+}
+.menu-card.off .grid-card-main .muted,
+.menu-card.off .grid-card-tot {
+  color: rgba(255, 255, 255, 0.82);
+}
+.menu-card.off .grid-card-toggle {
+  color: #fff;
+}
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
 .admin-card.ass-assortimento { border-left: 4px solid var(--line); }
 .admin-card.ass-linea { border-left: 4px solid #3498db; }
