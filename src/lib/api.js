@@ -11,7 +11,6 @@ import {
   deleteDoc,
   query,
   where,
-  documentId,
   orderBy,
   limit as fbLimit,
   onSnapshot,
@@ -47,7 +46,14 @@ import {
 } from './listini.js'
 import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
 import { variazioneDiPrezzo, prezzoCambiato } from './storicoPrezzi.js'
-import { aggancioAmmesso, righeDaOrdine, DOC_NESSUNO } from './fatture.js'
+import {
+  aggancioAmmesso,
+  righeDaOrdine,
+  cambiFattura,
+  modificaAmmessa,
+  CAMPI_MODIFICABILI,
+  DOC_NESSUNO,
+} from './fatture.js'
 import { SUL_DOCUMENTO, conMovimento, movimento, storiaDi } from './statiOrdine.js'
 import { prezziDaAllineare } from './confrontoOrdine.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
@@ -90,7 +96,12 @@ import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
-import { inCodaOrdine, ricordaOrdine, ordineRicordato } from './mutazioniOrdine.js'
+import {
+  inCodaOrdine,
+  ricordaOrdine,
+  ordineRicordato,
+  VITA_MEMORIA,
+} from './mutazioniOrdine.js'
 import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
 import {
   cassaCorrente,
@@ -1876,6 +1887,10 @@ function mapInvoice(snap) {
     // ASPETTA di pagare; quella del fornitore dice quanto chiede. Confonderle
     // vorrebbe dire dare per buona una cifra che nessuno ha ancora emesso.
     generata: !!i.generata,
+    // LE CORREZIONI FATTE A QUESTO DOCUMENTO (REQ-MAG-041). Come la storia
+    // dell'ordine: un array sul documento, vuoto per tutti quelli scritti
+    // prima di questa voce — e non è un errore, è la normalità dell'archivio.
+    storia: Array.isArray(i.storia) ? i.storia : [],
     created_at: toIso(i.created_at),
   }
 }
@@ -1899,6 +1914,51 @@ export async function createSupplierInvoice(invoice) {
 
 export async function updateSupplierInvoice(id, patch) {
   await updateDoc(doc(db, 'supplier_invoices', id), patch)
+}
+
+// ── CORREGGERE UN DOCUMENTO (REQ-MAG-041) ────────────────────────────
+//
+// «In Scadenzario i documenti creati devono essere modificabili nel caso di
+// variazione o errore» (Flavio, 03/09/2026).
+//
+// SI CORREGGE, NON SI STRAVOLGE: nella patch entrano SOLO i campi della
+// testata (`CAMPI_MODIFICABILI`). Righe, allegato e `order_id` non sono
+// nominati, quindi restano dove sono — e questa non è una precauzione
+// teorica: prima di questa voce l'unico modo di cambiare una cifra era
+// cancellare il documento e rifarlo, che quelle tre cose se le portava via.
+//
+// NIENTE `await` E NESSUNA RILETTURA. Il documento di partenza è quello che
+// la schermata ha già in mano, il risultato si COMPONE in memoria e la
+// scrittura parte in sottofondo: rileggendo, la cache risponderebbe con la
+// versione di prima (BUG-045).
+//
+// LA TRACCIA STA SUL DOCUMENTO. Una correzione su una fattura già pagata è
+// legittima — è proprio il caso di Flavio — ma è il gesto che a fine mese
+// qualcuno vorrà spiegarsi, e allora deve trovarci scritto cosa è cambiato,
+// da cosa a cosa, e che quei soldi erano già usciti.
+export function modificaFattura(fattura, modifiche = {}) {
+  if (!fattura?.id) throw new Error('Documento non trovato')
+  const dopo = { ...fattura }
+  for (const campo of CAMPI_MODIFICABILI) {
+    if (campo in modifiche) dopo[campo] = modifiche[campo]
+  }
+  dopo.amount = Number(dopo.amount) || 0
+
+  const motivo = modificaAmmessa(fattura, dopo)
+  if (motivo) throw new Error(motivo)
+
+  const cambi = cambiFattura(fattura, dopo)
+  // NIENTE SCRITTURA SE NIENTE È CAMBIATO: aprire il modulo, guardarlo e
+  // chiuderlo non deve lasciare una riga di storia che dice «corretto» senza
+  // dire cosa — è così che uno storico smette di valere qualcosa.
+  if (cambi.length === 0) return fattura
+
+  const voce = movimento('documento_corretto', { cambi, pagato: !!fattura.paid })
+  const patch = { storia: conMovimento(fattura, voce) }
+  for (const campo of CAMPI_MODIFICABILI) patch[campo] = dopo[campo] ?? null
+
+  bgWrite(() => updateDoc(doc(db, 'supplier_invoices', fattura.id), patch), 'documento corretto')
+  return { ...fattura, ...patch }
 }
 
 // CHI CANCELLA LA FATTURA PORTA VIA ANCHE L'ALLEGATO (REQ-MAG-033): il file
@@ -2406,23 +2466,100 @@ export function subscribeActiveOrders(
   onError,
   { cutoffHour = DEFAULT_CUTOFF_HOUR, cashSessionId = null } = {}
 ) {
-  let aperti = []
-  let recenti = []
+  // I DOCUMENTI COME ARRIVANO, non i conti già composti. La composizione
+  // (`mapOrder`) è scesa dentro `componi`, perché è lì che si consulta la
+  // memoria di quello che questo terminale ha appena scritto — e per
+  // consultarla serve il documento grezzo, non il conto già mappato.
+  let docsAperti = []
+  let docsRecenti = []
   // CHIUSI O ANNULLATI IN QUESTA CASSA, anche se il conto era di ieri.
   // Senza questo terzo ascolto un conto vecchio rimasto aperto spariva
   // dallo schermo nell'istante in cui lo si annullava: usciva dalla query
   // dei conti aperti e non entrava in quella di oggi, che guarda la data di
   // APERTURA. Si agisce su un conto e quello svanisce, senza sapere se
   // l'operazione è andata a buon fine.
-  let chiusiQui = []
-  const emit = () => {
-    const byId = new Map()
-    for (const o of aperti) byId.set(o.id, o)
-    for (const o of recenti) byId.set(o.id, o)
-    for (const o of chiusiQui) byId.set(o.id, o)
-    const list = [...byId.values()]
+  let docsChiusi = []
+
+  // ── LA MEMORIA VALE PER LA LISTA COME PER IL SINGOLO CONTO ───────────
+  //
+  // È la riga che qualcuno toglierà «semplificando», ed è il difetto di
+  // BUG-099: si riscuote un conto, si torna alla coda, e per un attimo il
+  // conto è ancora lì — poi sparisce. Il lampo.
+  //
+  // Il perché: `scriviOrdine` manda la scrittura in sottofondo e RICORDA
+  // com'è il conto dopo (`ricordaOrdine`, lib/mutazioniOrdine.js). Quel
+  // ricordo però era consultato solo rileggendo UN conto (`leggiOrdine`),
+  // mai componendo la LISTA: la coda si dipinge dalla cache, che
+  // nell'istante del gesto ha ancora la versione di prima, e mostrava il
+  // conto aperto finché la scrittura non atterrava. Una memoria e due
+  // letture, e una non la guardava.
+  //
+  // Il ricordo si difende da solo e qui non lo si indebolisce: muore appena
+  // il documento vero racconta la stessa cosa (confronto della patch) e
+  // scade comunque dopo `VITA_MEMORIA`, così un ricordo orfano non copre per
+  // sempre quello che fanno gli ALTRI terminali.
+  //
+  // Si applica a TUTTI e tre gli elenchi (aperti, recenti, chiusi in questa
+  // cassa) e una volta sola per conto: applicarlo a uno solo vorrebbe dire
+  // un conto che sparisce da un elenco e ricompare in un altro, che al banco
+  // è peggio del lampo.
+  let ricordiInUso = false
+  const componi = () => {
+    ricordiInUso = false
+    const oggi = businessDayKey(new Date(), cutoffHour)
+    // Il documento più fresco per ogni conto: vince l'ultimo elenco che ce
+    // l'ha, come faceva la fusione di prima (aperti, poi recenti, poi chiusi
+    // in questa cassa).
+    const perId = new Map()
+    for (const d of docsAperti) perId.set(d.id, d)
+    for (const d of docsRecenti) perId.set(d.id, d)
+    for (const d of docsChiusi) perId.set(d.id, d)
+    // Chi sta in coda senza guardare la data: i conti APERTI (si chiudono
+    // solo a mano, anche se sono di tre giorni fa) e quelli chiusi in questa
+    // cassa. Agli altri — gli «ultimi arrivati» — si applica la giornata
+    // commerciale, esattamente come prima.
+    const senzaLimiteDiData = new Set()
+    for (const d of docsAperti) senzaLimiteDiData.add(d.id)
+    for (const d of docsChiusi) senzaLimiteDiData.add(d.id)
+
+    const list = []
+    for (const [id, d] of perId) {
+      const visto = ordineRicordato(id, d)
+      if (visto !== d) ricordiInUso = true
+      const o = mapOrder(visto)
+      if (!senzaLimiteDiData.has(id) && businessDayKey(o.created_at, cutoffHour) !== oggi) continue
+      list.push(o)
+    }
     list.sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    return list
+  }
+
+  // `soloSeCiSonoConti` serve alla prima pennellata dalla cache: lì una lista
+  // vuota non vuol dire «non c'è niente», vuol dire «la cache non sapeva» — e
+  // si aspetta il listener, come ha sempre fatto.
+  const emit = (soloSeCiSonoConti = false) => {
+    const list = componi()
+    if (soloSeCiSonoConti && list.length === 0) return
+    // QUANDO IL RICORDO SCADE, LA CODA RIFÀ I CONTI DA SOLA. Il ricordo copre
+    // il documento vero al massimo per `VITA_MEMORIA`; se in quella finestra
+    // non arriva nessun altro snapshot — di notte, con un conto solo in
+    // ballo, capita — la lista resterebbe ferma su una versione che non
+    // esiste più da nessuna parte, e a quel punto sarebbe il ricordo a
+    // nascondere quello che hanno fatto gli altri terminali. Non è un
+    // ritardo che indovina la velocità della macchina (il meccanismo resta
+    // il confronto con la cache): è la sveglia che rimette in moto la
+    // ricomposizione quando il ricordo non vale più. Stessa idea del
+    // `setTimeout` di `ordiniNascosti`.
+    if (ricordiInUso) programmaRicontrollo()
     onChange(list)
+  }
+  let sveglia = null
+  const programmaRicontrollo = () => {
+    if (sveglia) return
+    sveglia = setTimeout(() => {
+      sveglia = null
+      emit()
+    }, VITA_MEMORIA + 50)
   }
   const fail = onError ?? (() => {})
 
@@ -2453,13 +2590,10 @@ export function subscribeActiveOrders(
         getDocsFromCache(query(ordersCol, where('status', 'in', STATI_APERTI))),
         getDocsFromCache(query(ordersCol, where('created_at', '>=', copertura))),
       ])
-      if (aperti.length === 0 && recenti.length === 0) {
-        const oggi = businessDayKey(new Date(), cutoffHour)
-        aperti = a.docs.map(mapOrder)
-        recenti = r.docs
-          .map(mapOrder)
-          .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
-        if (aperti.length || recenti.length) emit()
+      if (docsAperti.length === 0 && docsRecenti.length === 0) {
+        docsAperti = a.docs
+        docsRecenti = r.docs
+        emit(true)
       }
     } catch {
       // Cache vuota o non disponibile: si aspetta il listener, come prima.
@@ -2472,7 +2606,7 @@ export function subscribeActiveOrders(
   const unsubAperti = onSnapshot(
     query(ordersCol, where('status', 'in', STATI_APERTI)),
     (snap) => {
-      aperti = snap.docs.map(mapOrder)
+      docsAperti = snap.docs
       emit()
     },
     fail
@@ -2482,10 +2616,7 @@ export function subscribeActiveOrders(
   const unsubRecenti = onSnapshot(
     query(ordersCol, where('created_at', '>=', copertura)),
     (snap) => {
-      const oggi = businessDayKey(new Date(), cutoffHour)
-      recenti = snap.docs
-        .map(mapOrder)
-        .filter((o) => businessDayKey(o.created_at, cutoffHour) === oggi)
+      docsRecenti = snap.docs
       emit()
     },
     fail
@@ -2497,7 +2628,7 @@ export function subscribeActiveOrders(
     ? onSnapshot(
         query(ordersCol, where('closed_in_session', '==', cashSessionId)),
         (snap) => {
-          chiusiQui = snap.docs.map(mapOrder)
+          docsChiusi = snap.docs
           emit()
         },
         fail
@@ -2505,6 +2636,8 @@ export function subscribeActiveOrders(
     : () => {}
 
   return () => {
+    if (sveglia) clearTimeout(sveglia)
+    sveglia = null
     unsubChiusi()
     unsubAperti()
     unsubRecenti()
@@ -2968,16 +3101,28 @@ export async function payGroupCash({
   // possa dire è tutto fuori — quel gesto sta nella schermata del conto.
   const chiusure = covered.map(({ ref, raw }) => ({
     ref,
+    raw,
     chiusura: chiusuraPagamento(raw, nowIso, { autoServe: false }),
   }))
   const timbro = timbroChiusura(nowIso)
-  for (const { ref, chiusura } of chiusure) {
-    bgWrite(() => updateDoc(ref, {
-      ...chiusura,
-      payment_method: method,
-      payment_id: settlementId,
-      ...timbro,
-    }), 'pagamento gruppo')
+  for (const { ref, raw, chiusura } of chiusure) {
+    // SI PASSA DA `scriviOrdine` E NON DA `bgWrite` NUDO, e non è un
+    // riordino: è l'unico modo perché la coda veda sparire INSIEME tutti i
+    // conti del gruppo. `scriviOrdine` ricorda com'è il conto dopo, e la coda
+    // consulta quel ricordo (vedi subscribeActiveOrders); scrivendo e basta,
+    // i conti del tavolo restavano aperti a schermo finché non atterrava la
+    // scrittura, uno per volta.
+    scriviOrdine(
+      ref,
+      raw,
+      {
+        ...chiusura,
+        payment_method: method,
+        payment_id: settlementId,
+        ...timbro,
+      },
+      'pagamento gruppo'
+    )
   }
   // Il magazzino dopo, per conto suo: vedi closePaidOrder. Si scarica solo
   // quello che è davvero risultato servito — cioè niente, se è rimasta
@@ -3393,16 +3538,23 @@ export async function fetchOrdersByCustomer(uid, limitN = 30) {
 
 export async function fetchOrdersByIds(ids) {
   if (!ids || ids.length === 0) return []
-  // Firestore: massimo 30 valori per clausola "in"; suddividi in blocchi.
-  const chunks = []
-  for (let i = 0; i < ids.length; i += 30) chunks.push(ids.slice(i, i + 30))
-  const results = []
-  for (const chunk of chunks) {
-    const snap = await getDocs(
-      query(ordersCol, where(documentId(), 'in', chunk))
-    )
-    results.push(...snap.docs.map(mapOrder))
-  }
+  // LETTURE SINGOLE, NON UNA LISTA (BUG-093). Qui prima c'era una query su
+  // `documentId() in [...]`, spezzata in blocchi da 30 per il limite della
+  // clausola `in`. Ma una query è un `list`, e sugli ordini il `list` adesso
+  // passa solo dove la domanda si dimostra sicura da sé (firestore.rules):
+  // «solo questi id» non è una domanda che una regola sappia riconoscere,
+  // mentre il `get` per id è esattamente il modello che regge il link del
+  // conto. Gli id sono al massimo venti — tanti ne tiene il telefono
+  // (cart.js) — quindi venti letture in parallelo: non si sente, e la
+  // complicazione dei blocchi sparisce.
+  const unici = [...new Set(ids)]
+  // Un conto che non risponde non azzera la lista degli altri: la query,
+  // senza rete, tornava quello che la cache aveva e non un errore, e questa
+  // schermata deve comportarsi allo stesso modo.
+  const snaps = await Promise.all(
+    unici.map((id) => getDoc(doc(ordersCol, id)).catch(() => null))
+  )
+  const results = snaps.filter((s) => s && s.exists()).map(mapOrder)
   results.sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   )
@@ -3956,9 +4108,14 @@ function riallineaInSottofondo(orderId, comandaId) {
         // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
         // unità — il ghiaccio si conta a unità e si scarica eccome.
         if (!eScorta(curItem)) continue
-        // Anche qui non si scende sotto zero: una comanda modificata al rialzo
-        // su un prodotto già finito toglieva l'aggiunta comunque.
-        const scarico = scaricoPossibile(curItem.stock, qtyInStockUnit(d.delta, d.unit, curItem))
+        // Il delta si applica com'è, nei due versi. Fermarlo a zero non
+        // toglieva soltanto il meno: una comanda RIDOTTA porta un delta
+        // negativo, cioè merce che torna sullo scaffale, e il freno lo
+        // azzerava — il movimento diceva «carico» e la giacenza non si
+        // muoveva di niente (BUG-101). Qui non si riparte da zero come fa un
+        // carico merce: questo non è un rifornimento, è la stessa uscita
+        // annullata, e deve rimettere il meno dov'era.
+        const scarico = qtyInStockUnit(d.delta, d.unit, curItem)
         bgWrite(() => updateDoc(doc(db, 'inventory_items', d.inventory_item_id), {
           stock: increment(-scarico),
         }), 'riallineo scorta')
@@ -4039,12 +4196,19 @@ async function depleteComandeInventory(entries) {
     const cur = itemsById[id]
     // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
     if (!eScorta(cur)) continue
-    // NON SI SCENDE SOTTO ZERO. Si toglie al massimo quello che risulta in
-    // giacenza: continuando a battere un prodotto finito si arrivava a
-    // −0,04 pz, e il carico successivo ripartiva da quel buco. L'increment
-    // resta (commutativo, si accoda offline): cambia solo quanto si chiede.
-    const scarico = scaricoPossibile(cur.stock, qty)
-    const newStock = giacenzaPerCarico(cur.stock) - scarico
+    // SI SCENDE SOTTO ZERO, ed è voluto (BUG-101). Un prodotto che continua a
+    // uscire dopo essere finito non è finito davvero: è arrivato senza che
+    // nessuno lo caricasse, o l'ultimo inventario era vecchio. Fermandosi a
+    // zero si cancellava proprio il numero che lo dice — quanto se n'è
+    // versato senza che risultasse.
+    //
+    // Il meno non è merce che manca: da uno scaffale vuoto non si versa.
+    // È la misura del buco di conteggio, e si chiude da sé al primo carico,
+    // che riparte da zero (giacenzaPerCarico): le bottiglie appena arrivate
+    // sullo scaffale ci sono tutte, e il magazzino deve contarle tutte.
+    // L'increment resta (commutativo, si accoda offline).
+    const scarico = Number(qty) || 0
+    const newStock = (Number(cur.stock) || 0) - scarico
     bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-scarico) }), 'scarico scorta')
     if (newStock <= (Number(cur.low_threshold) || 0)) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })

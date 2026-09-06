@@ -236,7 +236,13 @@ describe('una stampa che non si conclude non si tiene il conto', () => {
     // libero: la stampante torna a rispondere e il conto dopo esce.
     rispondiOra()
     const secondo = riscuoti(P, conto(2))
-    await vi.advanceTimersByTimeAsync(5000)
+    // TRE SECONDI PER IL LOGO CHE SI ARRENDE, e basta quello. Col
+    // ripensamento di BUG-098 (01/09/2026) il lavoro torna a chiudersi
+    // sulla `send()`: la risposta della stampante non trattiene più
+    // nessuno, e questa qui non risponde MAI — è il suo mestiere in questa
+    // prova. Il margine resta largo perché una prova che sta sul filo dei
+    // millisecondi è una prova ballerina.
+    await vi.advanceTimersByTimeAsync(9000)
     await respira(60)
     expect(secondo()).toBe('carta uscita')
     // Un foglio solo: quello del conto 2. Il lavoro abbandonato del conto

@@ -1,5 +1,104 @@
 # Cosa è cambiato
 
+## 1.5.7-beta
+
+### Per chi sta al banco
+
+- **Quando la stampante smette di rispondere, l'app se ne accorge e lo dice.**
+  Il 5 settembre la stampante ha smesso di stampare tutto — comande,
+  scontrini, perfino le ristampe di chiusure vecchie — e il pallino in alto è
+  rimasto verde tutta la sera. Il motivo: l'app chiedeva al programma della
+  stampante se il collegamento era vivo, e quello rispondeva di sì anche
+  mentre stava solo provando a riconnettersi. Adesso è la stampante a essere
+  interrogata direttamente, ogni dieci secondi: se smette di rispondere il
+  collegamento viene buttato — così la stampa dopo lo rifà da capo invece di
+  parlare a vuoto — e arriva un avviso. Carta finita, coperchio aperto e
+  stampante fuori linea si vedono allo stesso modo, senza aspettare che sia
+  una stampa a scoprirlo.
+
+- **Il pallino della stampante adesso vuol dire qualcosa.** Prima era verde
+  perché il collegamento era riuscito una volta, all'inizio della serata.
+  Adesso è verde perché la stampante ha risposto, e diventa rosso col motivo
+  quando c'è un guaio.
+
+- **Il magazzino va sotto zero, invece di fermarsi a zero.** Prima, quando un
+  prodotto arrivava a zero, quello che continuava a uscire non veniva più
+  scalato: la giacenza restava a zero come un prodotto finito per bene, e non
+  c'era modo di accorgersi che si stava versando da bottiglie mai caricate.
+  Adesso la giacenza scende in negativo e il meno si legge sulla card. Quel
+  numero dice quanto è uscito senza risultare, e da lì si va a cercare la
+  consegna che nessuno ha registrato o l'inventario da rifare. Caricando la
+  merce il conto riparte da zero: sei bottiglie consegnate restano sei, il
+  meno di prima non se ne mangia una.
+
+- **Togliendo un drink da una comanda già preparata, gli ingredienti tornano
+  in magazzino.** Prima il movimento diceva «carico» ma la giacenza non si
+  muoveva, e il magazzino restava indietro di un drink.
+
+- **Nella ricerca dei prodotti c'è il tasto per cancellare.** Si svuota il
+  campo con un tocco, senza tenere premuta la cancellazione, e la scrittura
+  resta pronta per cercare un altro prodotto.
+
+- **I prodotti fuori menù si riconoscono da lontano.** Prima la card cambiava
+  solo di trasparenza, e di sera in una griglia piena si distingueva a fatica:
+  adesso ha il fondo scuro e la scritta bianca. Vale nella gestione del menù,
+  dove serve capire a colpo d'occhio cosa c'è e cosa no.
+
+- **Nello scadenzario il «reso» si chiama nota di credito, e scala.**
+  È la dicitura giusta, e dice la cosa giusta: una nota di credito non vuol
+  dire che è tornata della merce — spesso è solo un prezzo sbagliato su una
+  fattura, magari già pagata. Adesso il suo importo **si sottrae** dai
+  totali invece di sommarsi: dal «Da pagare» in testa, dal totale di quel
+  fornitore e dal Riepilogo dei soldi che escono. Sulla riga si legge in
+  verde e col meno davanti — `− 120,00 €` — e il tasto dice «da scalare»
+  invece di «da pagare», perché una nota di credito non si paga: la si
+  scala da quello che si deve. I documenti registrati prima, quelli scritti
+  «Reso», continuano a valere e scalano allo stesso modo: non c'è niente da
+  ribattere.
+
+- **I documenti dello scadenzario si possono correggere.** Prima, per
+  cambiare una cifra sbagliata, bisognava cancellare il documento e
+  rifarlo — e con la cancellazione se ne andavano i prodotti, l'allegato e
+  l'ordine collegato. Adesso c'è la matita sulla riga: si correggono
+  fornitore, numero, data, tipo, importo e note, e tutto il resto resta
+  dov'è. Anche su un documento già pagato, che è il caso in cui serve di
+  più. Ogni correzione resta scritta sotto il documento — cosa è cambiato,
+  da quanto a quanto, e se era già pagato — così a fine mese si sa perché
+  una cifra non è più quella. Il fornitore di un documento collegato a un
+  ordine si cambia solo dopo averlo scollegato.
+
+- **Il conto appena incassato non si vede più sparire dalla coda.**
+  Chiudendo un conto si tornava alla coda ordini e per un attimo il conto era
+  ancora lì, poi spariva da solo: abbastanza per chiedersi se l'incasso
+  fosse andato. Adesso quando si torna alla coda il conto è già andato via,
+  anche senza rete. Vale allo stesso modo per l'annullo, per il ripristino di
+  un conto chiuso o annullato e per l'incasso di un tavolo intero, dove i
+  conti del gruppo escono dalla coda tutti insieme.
+
+- **Quando una stampa non esce, adesso lo dice.** Prima l'app dava per
+  fatto il foglio appena lo mandava alla stampante: se poi la carta non
+  usciva — rotolo finito, coperchio aperto, stampante fuori linea — non lo
+  sapeva nessuno. Adesso l'apparecchio risponde, e quella risposta diventa
+  un avviso che resta anche nella campanella: dice **cosa** non è uscito e
+  **perché**. Le stampe riuscite non dicono niente, e se lo stesso guasto si
+  ripete non arriva una raffica di avvisi uguali.
+
+- **Stampare resta immediato.** L'avviso arriva dopo, per conto suo:
+  chiudere cassa, mandare una comanda o battere uno scontrino non aspetta la
+  stampante nemmeno un istante, con o senza rete. E non parte nessun secondo
+  foglio da solo — a ristampare, quando serve, si va col tasto della
+  ristampa.
+
+- **C'è il registro delle stampe.** In **Impostazioni → Stampante** ci sono
+  le ultime stampe di questo dispositivo: cosa era, a che ora, se è uscita e,
+  quando non è uscita, **perché**. Ogni stampa compare subito come mandata e
+  la riga si aggiorna quando la stampante risponde; se quella non risponde
+  mai, la riga resta «in attesa di risposta» invece di inventarsi un esito.
+  Sotto c'è anche la coda — cosa sta uscendo adesso e quanto c'è in attesa.
+  Serve la mattina dopo, quando ci si chiede se la chiusura di ieri sera è
+  uscita davvero: prima l'unica traccia era un avviso che spariva dopo otto
+  secondi.
+
 ## 1.5.6-beta
 
 ### Per chi sta al banco
@@ -348,7 +447,19 @@
   soltanto quello che serve a ordinare: niente firma col nome di chi sta al
   banco, niente conto che nasce già pagato, già scontato o già servito.
   Ordinare dal menù funziona esattamente come prima.
-  **Ha effetto solo dopo la pubblicazione delle regole Firestore.**
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio.
+
+- **E non si scarica più l'elenco dei conti dal di fuori.** Un conto si legge
+  solo conoscendone l'id — che è quello che fa il link del proprio ordine —
+  mentre a chiederne tanti insieme sono soltanto il gestionale, il cliente
+  registrato sui conti del suo account e il tabellone del menù. Prima quella
+  richiesta era aperta a chiunque, e da lì passavano nomi, note e importi dei
+  clienti. **Al banco non cambia niente**: coda, storico, statistiche e cassa
+  leggono come prima, e anche «I miei ordini» sul telefono del cliente
+  continua a mostrare gli stessi conti.
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio.
 
 - **I numeri dei conti sono chiusi a chiave.** Il contatore da cui esce il
   «#» di ogni conto adesso può solo salire, di uno per volta, e a spostarlo
@@ -358,8 +469,9 @@
   a prendere il suo. Serviva perché un contatore che qualcuno può riportare
   indietro vuol dire due conti con lo stesso numero nella stessa serata —
   uno stampato e in mano al cliente, l'altro a schermo.
-  **Ha effetto solo dopo la pubblicazione delle regole Firestore**, che è un
-  passo a parte e va fatto a mano.
+  **Ha effetto quando le regole Firestore vengono pubblicate**, cioè col
+  rilascio: le pubblica la pipeline insieme all'app, non serve nessun passo
+  a mano.
 
 - **Le fatture ai clienti diventano una funzione premium.** La sezione
   **«📄 Fatture»** non è più nel menu, e nella schermata di pagamento non

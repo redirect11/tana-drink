@@ -16,6 +16,15 @@ import {
   placedByName,
 } from './orderStatus.js'
 import { stampanteFintaAttiva, creaStampanteFinta } from './stampanteFinta.js'
+import {
+  ESITO,
+  lavoroInCoda,
+  lavoroPartito,
+  lavoroInviato,
+  lavoroNonPartito,
+  aggiornaEsito,
+} from './registroStampe.js'
+import { notify } from './notify.js'
 import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
@@ -425,18 +434,307 @@ function sdkAvailable() {
 // scappando. Serve alla caduta vista dal battito, al ritorno in primo piano
 // e al lavoro di stampa che scade (BUG-086).
 function scordaConnessione() {
+  fermaIlMonitor(_printer)
   _printer = null
   _device = null
   _connectPromise = null
+  dimenticaLAscolto()
 }
 
 // Termina la connessione corrente (se attiva).
 export function disconnectPrinter() {
   fermaBattito()
+  fermaIlMonitor(_printer)
   try { _device?.disconnect() } catch { /* ignora */ }
   _device = null
   _printer = null
   _connectPromise = null
+  dimenticaLAscolto()
+}
+
+// ── LA RISPOSTA DELLA STAMPANTE È DIAGNOSTICA (REQ-STAMPA-016, BUG-098)
+//
+// LA STAMPA NON ASPETTA, E NON DEVE ASPETTARE. Il lavoro si chiude quando
+// il foglio è stato MANDATO: chi chiude cassa o batte una comanda vede
+// l'esito nell'istante in cui tocca. È il local-first del CLAUDE.md
+// applicato alla stampante — come non si aspetta Firestore per mostrare un
+// conto incassato, non si aspetta la testina per dire che la stampa è
+// partita.
+//
+// LA RISPOSTA ARRIVA DOPO, PER CONTO SUO — `onreceive`, con esito e
+// codice: carta finita, coperchio aperto, fuori linea — e serve solo a
+// RACCONTARE: aggiorna la voce già scritta nel registro delle stampe (da
+// «inviata» a com'è andata davvero) e, se è un errore, manda un avviso.
+// Non chiude niente, non trattiene nessuno, non fa ritentare: a ristampare
+// è una persona, che è anche l'unico modo di non rischiare il doppio
+// scontrino.
+//
+// PERCHÉ STA SCRITTO QUI IN GRANDE: la prima stesura di BUG-098 aveva
+// messo il lavoro ad ASPETTARE questa risposta, cioè un `await` sulla
+// stampante nel mezzo di un gesto — la cosa che in questo progetto non si
+// fa. Chi passa di qui a «migliorare» rimettendoci un await sta rifacendo
+// quell'errore: la diagnostica non blocca mai chi ha il cliente davanti.
+//
+// COME SI CORRELA una risposta col foglio che l'ha causata, senza
+// identificativi (l'SDK non ne dà): le risposte tornano nell'ordine degli
+// invii, quindi si contano — chi aspetta l'invio n scarta la risposta n-1,
+// che è di un foglio già passato. E si guarda anche l'oggetto stampante:
+// dopo una riconnessione è un altro, e la risposta della connessione di
+// prima non è di nessuno.
+let _inAscolto = []
+let _inviati = 0
+let _risposte = 0
+let _orologioAscolto = null
+
+// QUANTO SI TIENE APERTO L'ASCOLTO — e non è un'attesa: il lavoro è già
+// chiuso da un pezzo e nessuno sta fermo qui. È il momento in cui si
+// smette di dare un padrone alle risposte, e serve perché contare gli
+// invii funziona finché a ogni invio ne segue una: un foglio che non
+// riceve MAI risposta lascerebbe il conto indietro di uno per sempre, e da
+// lì in poi ogni risposta finirebbe sul foglio sbagliato — cioè un avviso
+// di «carta finita» addosso a una stampa riuscita. Cinque secondi: la
+// Epson risponde in meno di uno.
+const TEMPO_ASCOLTO = 5000
+
+function smettiDiAscoltare() {
+  clearTimeout(_orologioAscolto)
+  _orologioAscolto = null
+  const muti = _inAscolto.length
+  _inAscolto = []
+  // Il conto riparte in pari. I fogli rimasti senza risposta restano
+  // «inviata» nel registro, che è l'informazione vera: non lo sappiamo.
+  _risposte = _inviati
+  // MA TRE DI FILA NON SONO PIÙ «NON LO SAPPIAMO» (BUG-102). Uno può
+  // perdersi; tre invii che nessuno raccoglie sono un collegamento che non
+  // c'è più, e continuare a mandarci dentro fogli è quello che ha fatto
+  // sparire una serata di stampe. Si molla e si dice.
+  if (!muti) return
+  _inviiMuti += muti
+  if (_inviiMuti >= INVII_MUTI_PRIMA_DI_MOLLARE) {
+    guaioDellaStampante('la stampante non risponde', { mollaIlCollegamento: true })
+  }
+}
+
+function dimenticaLAscolto() {
+  clearTimeout(_orologioAscolto)
+  _orologioAscolto = null
+  _inAscolto = []
+  // I contatori valgono per UNA connessione: rifatta la stretta di mano si
+  // riparte da zero, o resterebbero sfasati per sempre. Vale anche per gli
+  // invii muti: quelli erano della strada di prima, e lasciandoli lì il
+  // primo silenzio del collegamento nuovo la farebbe mollare subito.
+  _inviati = 0
+  _risposte = 0
+  _inviiMuti = 0
+}
+
+// Si mette in ascolto della risposta a QUESTO invio. Va armato PRIMA di
+// `send()`: la stampante finta risponde dentro `send()`, e chi si mettesse
+// in ascolto dopo perderebbe la risposta.
+function ascoltaLaRisposta(prn, atteso, racconta) {
+  _inAscolto.push({ prn, atteso, racconta })
+  clearTimeout(_orologioAscolto)
+  _orologioAscolto = setTimeout(smettiDiAscoltare, TEMPO_ASCOLTO)
+}
+
+// Chiamata dall'`onreceive` di QUELLA stampante — vera o finta che sia.
+function rispostaDallaStampante(res, prn) {
+  // Da una connessione già buttata: non è di nessuno. I contatori sono
+  // ripartiti da zero, contarla vorrebbe dire darla al foglio sbagliato.
+  if (prn !== _printer) return
+  _risposte += 1
+  // Le risposte tornano nell'ordine degli invii: quelle rimaste indietro
+  // non arriveranno più, e i loro fogli restano «inviata» nel registro.
+  while (_inAscolto.length && _inAscolto[0].atteso < _risposte) _inAscolto.shift()
+  if (_inAscolto[0]?.atteso !== _risposte) return
+  const suo = _inAscolto.shift()
+  if (_inAscolto.length === 0) {
+    clearTimeout(_orologioAscolto)
+    _orologioAscolto = null
+  }
+  // Qualcuno dall'altra parte c'è: la strada è aperta, e se la carta è
+  // uscita il guaio di prima è passato (BUG-102).
+  stampanteHaRisposto(!!res?.success)
+  suo.racconta(res)
+}
+
+// Che cosa dice la risposta, in italiano. I codici dell'SDK sono quelli
+// che si leggono sul manuale Epson; il resto passa com'è, perché un codice
+// sconosciuto scritto per intero è più utile di un «errore generico».
+const MOTIVI = {
+  EPTR_COVER_OPEN: 'il coperchio della stampante è aperto',
+  EPTR_REC_EMPTY: 'la carta è finita',
+  EPTR_AUTOMATICAL: 'la stampante segnala un errore meccanico',
+  EPTR_UNRECOVERABLE: 'la stampante è in errore e va riavviata',
+  EPTR_CUTTER: 'la taglierina è bloccata',
+  ASB_NO_PAPER: 'la carta è finita',
+  ASB_COVER_OPEN: 'il coperchio della stampante è aperto',
+  ASB_OFF_LINE: 'la stampante è fuori linea',
+  EX_TIMEOUT: 'la stampante non ha risposto in tempo',
+  DeviceNotFound: 'la stampante non risponde più',
+}
+
+function motivoDellaRisposta(res) {
+  const codice = String(res?.code || '').trim()
+  return MOTIVI[codice] || (codice ? `la stampante ha risposto «${codice}»` : 'la stampa non è riuscita')
+}
+
+// ── SOLO GLI ERRORI FANNO RUMORE (BUG-098) ───────────────────────────
+//
+// Una stampa riuscita non si annuncia: la carta è uscita e si vede, e un
+// avviso a ogni comanda diventa rumore nel giro di mezz'ora. Una stampa
+// NON riuscita sì, perché è l'unica cosa che nessuno nota — la chiusura di
+// cassa che non esce è rimasta invisibile per settimane. L'avviso dice
+// COSA non è uscito e PERCHÉ, in parole da banco; il codice dell'SDK resta
+// nel registro, dove serve a chi ripara.
+//
+// E NIENTE VALANGHE. Con la stampante fuori linea falliscono dieci stampe
+// di fila, e dieci strisce identiche una sull'altra sono peggio di una
+// sola: si smette di leggerle, che è il modo migliore per non accorgersi
+// di quella che conta. Lo STESSO motivo quindi non si ripete entro un
+// minuto — il guasto è uno, e chi lo legge va a guardare il rotolo, non
+// aspetta il decimo avviso. Le stampe mancate ci sono comunque TUTTE nel
+// registro, che è il posto dove si contano.
+const FINESTRA_AVVISO = 60000
+let _ultimoAvviso = { motivo: '', quando: 0 }
+
+function avvisaDiUnaStampaNonRiuscita(che, motivo) {
+  const adesso = Date.now()
+  if (motivo === _ultimoAvviso.motivo && adesso - _ultimoAvviso.quando < FINESTRA_AVVISO) return
+  _ultimoAvviso = { motivo, quando: adesso }
+  // `tag`: la notifica di sistema SOSTITUISCE la precedente invece di
+  // impilarsi sulla schermata di blocco.
+  notify('Stampa non riuscita', `${che}: ${motivo}`, { tag: 'stampa-non-riuscita' })
+}
+
+// Quello che la risposta ha da dire: al registro sempre, a schermo solo
+// quando è andata male.
+function raccontaLaRisposta(idLavoro, che, res) {
+  if (res?.success) {
+    aggiornaEsito(idLavoro, ESITO.riuscita, '')
+    return
+  }
+  const motivo = motivoDellaRisposta(res)
+  aggiornaEsito(idLavoro, ESITO.fallita, motivo)
+  avvisaDiUnaStampaNonRiuscita(che, motivo)
+}
+
+// ── SE È VIVA LO DICE LEI, NON L'SDK (BUG-102) ───────────────────────
+//
+// La sera del 05/09 la stampante ha smesso di stampare tutto: non solo la
+// chiusura — anche le RISTAMPE di chiusure vecchie, cioè fogli già pronti.
+// E il pallino in alto è rimasto verde tutto il tempo.
+//
+// PERCHÉ IL VERDE MENTIVA. La vita del collegamento si chiedeva a
+// `isConnected()` dell'SDK, che risponde di sì anche quando sta soltanto
+// PROVANDO a riconnettersi (nel codice Epson lo stato `RECONNECTING` conta
+// come connesso, ed è pure in OR fra due canali: basta che uno sembri su).
+// Quindi: il battito non scattava mai, l'oggetto stampante restava in
+// memoria, il controllo di stato lo trovava e diceva «ok», e ogni `send()`
+// finiva in un collegamento che non c'era più. Nessun errore, nessun
+// blocco, nessuna carta.
+//
+// LA CURA È SMETTERE DI CHIEDERLO ALL'SDK. La stampante quei fatti li dice
+// da sé — `startMonitor()` la fa interrogare a intervalli e alza
+// `onpoweroff` quando smette di rispondere, `onoffline` quando risponde ma
+// è fuori linea, `ononline` quando torna, più coperchio e carta. L'app non
+// ascoltava NESSUNO di questi: ascoltava solo la risposta ai singoli invii.
+//
+// PERCHÉ IL MONITOR NON PUÒ ROMPERE NIENTE, che è la condizione con cui è
+// stato acceso. Non passa dal WebSocket delle stampe ma da una richiesta
+// sua; quando fallisce alza `onstatuschange`/`onpoweroff` e NON butta giù
+// il collegamento (nel codice Epson quella strada chiama `fireStatusEvent`,
+// non `fireErrorEvent` — è l'altra che farebbe `cleanup()`); non alza
+// `onreceive`, quindi non sballa il conto invii/risposte da cui dipende il
+// registro; e nessuna stampa lo aspetta, mai.
+//
+// L'INTERROGAZIONE È UNA DOMANDA LUNGA, non un martellamento: la richiesta
+// resta aperta fino a dieci secondi e la stampante risponde appena qualcosa
+// cambia — un coperchio aperto si sa in un secondo, e a riposo il traffico
+// è una richiesta ogni dieci secondi scarsi.
+const INTERVALLO_MONITOR = 10000
+
+// Quanti invii di fila possono restare senza risposta prima di dire che la
+// strada è chiusa. UNO non vuol dire niente — una risposta può perdersi, e
+// «non lo sappiamo» è la risposta onesta (BUG-098). TRE di fila no: quello
+// è un collegamento che non c'è più, e continuare a mandarci fogli dentro è
+// esattamente quello che è successo il 05/09. Serve da rete quando il
+// monitor non c'è (firmware vecchio, richiesta bloccata dal browser).
+const INVII_MUTI_PRIMA_DI_MOLLARE = 3
+
+// L'ultimo guaio noto della STAMPANTE — non di una stampa. È quello che
+// rende il pallino una informazione invece di una decorazione: verde perché
+// la stampante ha risposto, non perché in memoria c'è un oggetto.
+let _guasto = null
+let _inviiMuti = 0
+
+export function guastoStampante() {
+  return _guasto
+}
+
+// HA RISPOSTO: la strada è aperta. Si azzera il conto dei muti — e se il
+// guaio era suo (carta, coperchio, fuori linea) è passato, perché la carta
+// è appena uscita.
+function stampanteHaRisposto(andataBene) {
+  _inviiMuti = 0
+  if (andataBene) _guasto = null
+}
+
+// UN GUAIO DELLA STAMPANTE. `mollaIlCollegamento` solo quando la stampante
+// ha smesso di RISPONDERE: lì il collegamento non serve più a niente e la
+// stampa dopo deve rifare la stretta di mano invece di parlare al vuoto.
+// Carta finita e coperchio aperto no — quella è viva e ci parla, il
+// collegamento è buono, e buttarlo vorrebbe dire una riconnessione inutile
+// nel mezzo del servizio.
+function guaioDellaStampante(motivo, { mollaIlCollegamento = false } = {}) {
+  _guasto = motivo
+  if (mollaIlCollegamento) scordaConnessione()
+  avvisaDellaStampante(motivo)
+}
+
+// Come per le stampe non riuscite: lo stesso guaio non si ripete entro un
+// minuto. Con la stampante spenta il monitor lo scoprirebbe ogni dieci
+// secondi, e sei strisce identiche al minuto sono il modo migliore per
+// smettere di leggerle.
+let _ultimoAvvisoStampante = { motivo: '', quando: 0 }
+
+function avvisaDellaStampante(motivo) {
+  const adesso = Date.now()
+  if (motivo === _ultimoAvvisoStampante.motivo && adesso - _ultimoAvvisoStampante.quando < FINESTRA_AVVISO) return
+  _ultimoAvvisoStampante = { motivo, quando: adesso }
+  notify('Stampante', motivo, { tag: 'stato-stampante' })
+}
+
+// Si ascolta quello che la stampante dice, e le si chiede di dirlo.
+function ascoltaLaStampante(prn) {
+  if (!prn) return
+  // NON RISPONDE PIÙ: è il caso del 05/09. Si molla il collegamento.
+  prn.onpoweroff = () => guaioDellaStampante('la stampante non risponde', { mollaIlCollegamento: true })
+  // Risponde, ma non è in grado di stampare.
+  prn.onoffline = () => guaioDellaStampante('la stampante è fuori linea')
+  prn.oncoveropen = () => guaioDellaStampante('il coperchio della stampante è aperto')
+  prn.onpaperend = () => guaioDellaStampante('la carta è finita')
+  // È tornata: il pallino torna verde perché LEI ha risposto.
+  prn.ononline = () => {
+    _guasto = null
+    _inviiMuti = 0
+  }
+  try {
+    prn.interval = INTERVALLO_MONITOR
+    prn.startMonitor?.()
+  } catch {
+    // Firmware che non lo sostiene, o richiesta bloccata: si resta come
+    // prima, con la rete degli invii senza risposta. Non è un motivo per
+    // non stampare.
+  }
+}
+
+function fermaIlMonitor(prn) {
+  try {
+    prn?.stopMonitor?.()
+  } catch {
+    /* SDK in uno stato strano: si lascia stare */
+  }
 }
 
 // ── CONNESSIONE TENUTA VIVA ───────────────────────────────────────────────
@@ -469,7 +767,11 @@ function avviaBattito() {
   fermaBattito()
   _battito = setInterval(() => {
     try {
-      // Caduta: si libera tutto, la prossima stampa riconnette.
+      // `isConnected()` vale solo al contrario: quando dice DI NO la caduta
+      // è certa e si libera tutto. Quando dice di sì non prova niente —
+      // risponde così anche mentre sta soltanto provando a riconnettersi
+      // (BUG-102), ed è per questo che a dire se la stampante è viva adesso
+      // è LEI, col monitor, non questa riga.
       if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* SDK in uno stato strano: si lascia stare */
@@ -487,7 +789,12 @@ export async function preparaStampante() {
   if (!s.ip) return { ok: false, motivo: 'non configurata' }
   try {
     await getPrinter()
-    return { ok: true }
+    // IL VERDE DEVE VOLER DIRE QUALCOSA (BUG-102). Prima bastava che la
+    // stretta di mano fosse riuscita UNA volta: da lì in poi questa
+    // funzione trovava l'oggetto in memoria e rispondeva «ok» senza
+    // chiedere niente a nessuno — pallino verde con la stampante spenta.
+    // Adesso se la stampante ha detto che c'è un guaio, quello si legge.
+    return _guasto ? { ok: false, motivo: _guasto } : { ok: true }
   } catch (e) {
     return { ok: false, motivo: e.message }
   }
@@ -516,7 +823,19 @@ async function getPrinter() {
   // scontrini si provava a occhio. Sull'ambiente di TEST no: lì ci si
   // collega a quella vera, ed è il posto dove provarla davvero.
   if (stampanteFintaAttiva()) {
-    if (!_printer) _printer = creaStampanteFinta('La Tana del Coniglio')
+    if (!_printer) {
+      const finta = creaStampanteFinta('La Tana del Coniglio')
+      // ANCHE LA FINTA RISPONDE. La catena della diagnostica (BUG-098) —
+      // risposta, registro, avviso — si deve poter provare senza andare al
+      // banco: la finta risponde come quella vera e sa fingere un guasto.
+      finta.onreceive = (res) => rispostaDallaStampante(res, finta)
+      // Anche la finta si ascolta: la catena «la stampante dice di stare
+      // male → il pallino diventa rosso → parte l'avviso» si deve poter
+      // provare senza avere l'apparecchio davanti.
+      _guasto = null
+      ascoltaLaStampante(finta)
+      _printer = finta
+    }
     return _printer
   }
   if (_printer) return _printer
@@ -577,11 +896,17 @@ async function getPrinter() {
             fermaBattito()
           }
 
-          _printer.onreceive = (res) => {
-            if (!res.success) {
-              console.warn('[printer] risposta di errore:', res)
-            }
-          }
+          // LA RISPOSTA FINIVA IN CONSOLE (BUG-098). Adesso torna al
+          // foglio che l'ha causata e ne racconta l'esito nel registro —
+          // senza trattenere nessuno: quel lavoro è chiuso da un pezzo.
+          devobj.onreceive = (res) => rispostaDallaStampante(res, devobj)
+
+          // E si sta a sentire quello che la stampante dice di sé: fuori
+          // linea, carta, coperchio, e soprattutto «non rispondo più»
+          // (BUG-102). Il collegamento è nuovo, quindi il guaio di prima
+          // non vale più: lo ridirà lei, se c'è ancora.
+          _guasto = null
+          ascoltaLaStampante(devobj)
 
           resolve(_printer)
         }
@@ -722,9 +1047,22 @@ function pennaDelLavoro(prn, vivo) {
   return guscio
 }
 
-function lavoroDiStampa(componi) {
+// L'ETICHETTA DEL LAVORO NEL REGISTRO. Dice COSA si sta stampando e di
+// quale conto, e si ferma lì: il numero di giornata basta a ritrovarlo, e
+// non è il dato di nessuno. Il nome del cliente in un registro di
+// diagnostica non ci deve entrare (vedi registroStampe.js).
+const etichettaConto = (che, order) =>
+  order?.daily_number ? `${che} conto #${order.daily_number}` : che
+
+// IL LAVORO SI CHIUDE SULL'INVIO. Chi ha chiesto la stampa ha il suo esito
+// appena il foglio è partito: nessuna attesa della stampante nel mezzo di
+// un gesto. La risposta, se e quando arriva, aggiorna la voce nel registro
+// per conto suo (vedi «la risposta della stampante è diagnostica»).
+function lavoroDiStampa(componi, che = 'Stampa') {
+  const idLavoro = lavoroInCoda(che)
   let scaduto = false
-  const mio = _codaStampa.then(() => {
+  const mio = _codaStampa.then(async () => {
+    lavoroPartito(idLavoro)
     // Il cronometro parte col LAVORO, non con la richiesta: chi aspetta il
     // suo turno in coda non ha ancora fatto niente di lento.
     let cronometro
@@ -739,12 +1077,25 @@ function lavoroDiStampa(componi) {
       }, TEMPO_MASSIMO_LAVORO)
     })
     const lavoro = (async () => {
-      const prn = pennaDelLavoro(await getPrinter(), () => !scaduto)
+      const vera = await getPrinter()
+      const prn = pennaDelLavoro(vera, () => !scaduto)
       // Si parte puliti: se chi c'era prima si è fermato a metà, i suoi pezzi
       // non finiscono sulla nostra carta.
       prn.clearCommandBuffer?.()
       try {
         await componi(prn)
+        // Se il lavoro è già scaduto la penna è sorda e `send()` non parte:
+        // quell'invio non si conta e non si ascolta, perché una risposta
+        // non arriverà mai.
+        if (!scaduto) {
+          _inviati += 1
+          // LA VOCE ENTRA NEL REGISTRO PRIMA DELLA `send()`, come
+          // «inviata»: la stampante finta risponde DENTRO `send()`, e una
+          // risposta che arrivasse prima della voce non avrebbe niente da
+          // aggiornare.
+          lavoroInviato(idLavoro)
+          ascoltaLaRisposta(vera, _inviati, (res) => raccontaLaRisposta(idLavoro, che, res))
+        }
         prn.send()
       } catch (e) {
         // E non si lasciano resti a chi viene dopo.
@@ -755,7 +1106,17 @@ function lavoroDiStampa(componi) {
     // Se ha già vinto la scadenza, il rifiuto del lavoro non lo ascolta più
     // nessuno: si raccoglie qui, per non lasciarlo per aria.
     lavoro.catch(() => {})
-    return Promise.race([lavoro, scadenza]).finally(() => clearTimeout(cronometro))
+    try {
+      await Promise.race([lavoro, scadenza])
+    } catch (e) {
+      // Non è nemmeno arrivato a mandare: documento storto o lavoro
+      // impiccato (BUG-086). Nessun avviso da qui — il chiamante riceve il
+      // rifiuto e lo dice già lui; questo lo scrive solo nel registro.
+      lavoroNonPartito(idLavoro, e.message)
+      throw e
+    } finally {
+      clearTimeout(cronometro)
+    }
   })
   // La catena non si spezza su un errore: la stampa dopo deve partire
   // comunque — carta finita adesso non vuol dire stampante morta.
@@ -938,7 +1299,7 @@ export function printComanda(order, comanda = null) {
 
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Comanda', order))
 }
 
 // ── PIÙ COMANDE DELLO STESSO CONTO, IN UN COLPO ──────────────────────
@@ -1278,7 +1639,7 @@ export function printScontrino(order, opts = {}) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Scontrino', order))
 }
 
 // ── SCONTRINO D'ACCONTO ──────────────────────────────────────────────────────
@@ -1437,7 +1798,7 @@ export function printScontrinoAcconto(order, incasso = {}) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, etichettaConto('Acconto', order))
 }
 
 // ── FATTURA DI CORTESIA ──────────────────────────────────────────────────────
@@ -1514,7 +1875,7 @@ export function printFattura(invoice) {
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Fattura di cortesia')
 }
 
 // ── ORDINE FORNITORE ─────────────────────────────────────────────────────────
@@ -1548,7 +1909,7 @@ export function printOrdineFornitore(order) {
 
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Ordine fornitore')
 }
 
 // ── TEST STAMPA ───────────────────────────────────────────────────────────────
@@ -1642,7 +2003,7 @@ export function printChiusuraCassa(recap, session, opts = {}) {
     prn.addText(`${s.businessFooter}\n`)
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Chiusura cassa')
 }
 
 // ── LA PROVA DI STAMPA COI CAMPI SCELTI ──────────────────────────────
@@ -1720,5 +2081,5 @@ export function printTest() {
     prn.addText('Connessione OK\n')
     prn.addFeedLine(3)
     prn.addCut(prn.CUT_FEED)
-  })
+  }, 'Prova di stampa')
 }

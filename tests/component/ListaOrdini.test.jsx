@@ -110,7 +110,12 @@ import {
   createPurchaseOrder as creato,
 } from '../../src/lib/api.js'
 
-const lista = () => screen.findByText('Lista ordini')
+// ASPETTA LE RIGHE, NON IL TITOLO. «Lista ordini» e' l'intestazione e
+// compare al primo disegno, mentre gli ordini arrivano dopo: un test che si
+// accontentava di quello asseriva su una lista ancora vuota, e sotto carico
+// perdeva la corsa — rosso una volta su tre, sempre su una schermata sana.
+// Qui si aspetta il primo ordine disegnato, che c'e' solo a dati arrivati.
+const lista = () => screen.findAllByRole('button', { name: /L’ordine di/ })
 
 async function apri(user, nome = 'Nova') {
   render(<PurchaseOrdersPanel vista="lista" />)

@@ -214,9 +214,15 @@ describe('la vista da girare al cliente', () => {
   it('niente riquadro «Il tuo numero»: quello è scritto per chi ordina', async () => {
     ruoloCorrente = 'staff'
     apri('?cliente=1')
-    await waitFor(() => expect(screen.queryByTestId('pos')).toBeNull())
+    // SI ASPETTA QUELLO CHE DEVE ESSERCI, non quello che non deve.
+    // Aspettare un'ASSENZA come segnale di «ha finito di caricare» non
+    // funziona: all'inizio non c'e' ancora niente, quindi l'attesa passa
+    // SUBITO e le prove sotto girano su una schermata a meta'. Questo test
+    // faceva rosso una volta su tre. Il conto disegnato, invece, c'e' solo
+    // a dati arrivati: da li' in poi le assenze si possono affermare.
+    expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
+    expect(screen.queryByTestId('pos')).toBeNull()
     expect(screen.queryByText('Il tuo numero')).toBeNull()
-    expect(screen.getByText(/Ordine #7/)).toBeInTheDocument()
   })
 
   it('«Modifica» riporta al conto', async () => {
