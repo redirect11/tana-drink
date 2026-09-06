@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.5.6-beta
+## 1.5.7-beta
 
 ### Per chi sta al banco
 
@@ -98,6 +98,10 @@
   Serve la mattina dopo, quando ci si chiede se la chiusura di ieri sera è
   uscita davvero: prima l'unica traccia era un avviso che spariva dopo otto
   secondi.
+
+## 1.5.6-beta
+
+### Per chi sta al banco
 
 - **La striscia colorata delle tile non si spegne più da sola.** Il bordo
   sinistro della card di un prodotto — quello che dice colore, categoria o
