@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 4 settembre 2026.
+> Generato il 6 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 191 | fatto e coperto dai test |
+| ✅ | 192 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**233 voci** in tutto. **206** descrivono il sistema com'è oggi e
+**234 voci** in tutto. **207** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 10 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 35 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 16 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 17 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -2001,6 +2001,18 @@ ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il 20/08): gli 
 
 **Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/comandaAnnullata.test.js`
 
+#### REQ-STAMPA-018 — Se la stampante è viva lo dice lei, non l'SDK
+
+La stampante viene INTERROGATA da sé (`startMonitor` dell'SDK Epson, una domanda lunga ogni dieci secondi) e quello che risponde si ascolta: `onpoweroff` quando smette di rispondere, `onoffline` quando risponde ma non è in grado di stampare, `oncoveropen`, `onpaperend`, `ononline` quando torna. Prima di BUG-102 l'app non ascoltava nessuno di questi segnali: sapeva solo la risposta ai singoli invii.
+
+NON RISPONDE PIÙ = SI MOLLA IL COLLEGAMENTO, così la stampa dopo rifà la stretta di mano invece di parlare al vuoto. Carta finita, coperchio aperto e fuori linea NO: lì la stampante ci parla, il collegamento è buono, e buttarlo sarebbe una riconnessione inutile in mezzo al servizio. Si avvisa e basta. `isConnected()` VALE SOLO AL CONTRARIO. Quando dice di no la caduta è certa; quando dice di sì non prova niente, perché nel codice Epson risponde così anche mentre sta soltanto PROVANDO a riconnettersi. È il motivo per cui il pallino restava verde con la stampante muta.
+
+IL PALLINO DICE QUELLO CHE LA STAMPANTE HA RISPOSTO, non che in memoria esista un oggetto: `preparaStampante` riporta il guaio noto.
+
+LA RETE PER QUANDO IL MONITOR NON C'È (firmware vecchio, domanda lunga bloccata): tre invii di fila senza risposta valgono come «strada chiusa». Uno solo no — quello resta un «non lo sappiamo» (REQ-STAMPA-016). E NIENTE DI QUESTO PUÒ FERMARE UNA STAMPA: il monitor non passa dal collegamento delle stampe, quando fallisce non lo butta giù, non alza `onreceive` (quindi non sfasa il conto invii/risposte da cui dipende il registro), e nessun lavoro lo aspetta. Un firmware che non lo sostiene non impedisce di stampare.
+
+**Dove**: `src/lib/printer.js (ascoltaLaStampante, avviaBattito, preparaStampante, smettiDiAscoltare)` · **Lo dimostrano**: `tests/unit/stampanteCheNonRisponde.test.js`
+
 ### Vista cliente
 
 Quello che vede il cliente: vetrina, menù, stato del suo ordine.
@@ -3196,7 +3208,9 @@ IL RIPENSAMENTO DEL 01/09/2026, ed e' la cosa che serve fra sei mesi piu' della 
 
 IL RITENTATIVO NON TORNA, ed e' una scelta, non una dimenticanza: senza attesa non c'e' piu' il momento in cui riprovare, la risposta e' solo diagnostica, e a ristampare e' una persona — che e' anche l'unico modo di non rischiare il doppio scontrino su una stampa che in realta' era uscita. Quello che resta e' il tempo massimo di 15 secondi sul lavoro impiccato (BUG-086): e' un'altra cosa, difende da un lavoro che non finisce, e li' la stampa RIFIUTA perche' il chiamante deve saperlo adesso.
 
-MITIGATO, NON CHIUSO, e la differenza e' importante: la causa vera non e' ancora DIMOSTRATA. Non sappiamo tuttora perche' proprio la chiusura di cassa, e non lo sapremo finche' non capitera' di nuovo al banco. Il registro delle stampe e l'avviso servono esattamente a questo: alla prossima chiusura mancata compare una striscia che dice cos'e' successo, e in Impostazioni → Stampante la riga dice se la stampante ha risposto di errore (e quale), se non ha risposto affatto, o se il lavoro non e' nemmeno partito. Da li' il difetto si chiude davvero.
+MITIGATO, NON CHIUSO, e la differenza e' importante: la causa vera non e' ancora DIMOSTRATA. Non sappiamo tuttora perche' proprio la chiusura di cassa, e non lo sapremo finche' non capitera' di nuovo al banco. Il registro delle stampe e l'avviso servono esattamente a questo: alla prossima chiusura mancata compare una striscia che dice cos'e' successo, e in Impostazioni → Stampante la riga dice se la stampante ha risposto di errore (e quale), se non ha risposto affatto, o se il lavoro non e' nemmeno partito. Da li' il difetto si chiude davvero. 06/09/2026 — UNA CAUSA CHE SPIEGHEREBBE TUTTO, e che nel frattempo e' stata trovata leggendo l'SDK per un'altra segnalazione (BUG-102): la vita del collegamento si chiedeva a `isConnected()`, che risponde di si' anche mentre l'SDK sta soltanto provando a riconnettersi. Un collegamento caduto restava quindi in memoria e ogni invio finiva nel vuoto, in silenzio. Perche' proprio la chiusura? Perche' e' la stampa che arriva dopo il buco piu' lungo senza stampare — durante il servizio le comande si susseguono e il collegamento resta caldo, mentre fra l'ultimo scontrino e la chiusura passano ore. E spiega anche perche' la RISTAMPA della stessa chiusura usciva subito: nel frattempo la stretta di mano era stata rifatta.
+
+NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una prova: nessuno ha visto il registro di quella sera. La cura di BUG-102 e' in ogni caso quella che serve, e alla prossima chiusura mancata il registro dira' se era questa.
 
 **Dove**: `src/lib/printer.js (lavoroDiStampa, raccontaLaRisposta), src/lib/registroStampe.js, src/lib/notify.js, src/components/CashFlow.jsx`
 

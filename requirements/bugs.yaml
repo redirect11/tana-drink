@@ -4246,6 +4246,21 @@ bugs:
       successo, e in Impostazioni → Stampante la riga dice se la stampante
       ha risposto di errore (e quale), se non ha risposto affatto, o se il
       lavoro non e' nemmeno partito. Da li' il difetto si chiude davvero.
+      06/09/2026 — UNA CAUSA CHE SPIEGHEREBBE TUTTO, e che nel frattempo e'
+      stata trovata leggendo l'SDK per un'altra segnalazione (BUG-102): la
+      vita del collegamento si chiedeva a `isConnected()`, che risponde di
+      si' anche mentre l'SDK sta soltanto provando a riconnettersi. Un
+      collegamento caduto restava quindi in memoria e ogni invio finiva nel
+      vuoto, in silenzio. Perche' proprio la chiusura? Perche' e' la stampa
+      che arriva dopo il buco piu' lungo senza stampare — durante il servizio
+      le comande si susseguono e il collegamento resta caldo, mentre fra
+      l'ultimo scontrino e la chiusura passano ore. E spiega anche perche' la
+      RISTAMPA della stessa chiusura usciva subito: nel frattempo la stretta
+      di mano era stata rifatta.
+      NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti,
+      non una prova: nessuno ha visto il registro di quella sera. La cura di
+      BUG-102 e' in ogni caso quella che serve, e alla prossima chiusura
+      mancata il registro dira' se era questa.
     # ATTENZIONE: NON e' `fixed`, ed e' voluto. Il testo qui sopra lo dice —
     # «mitigato, non chiuso» — e un `fixed` chiuderebbe da solo la sua issue
     # su GitHub, cioe' archivierebbe un difetto di cui NON conosciamo la
@@ -4477,4 +4492,59 @@ bugs:
     test_cases:
       - tests/unit/magazzinoSottoZero.test.js
       - tests/unit/inventory.test.js
+
+  - id: BUG-102
+    title: "La stampante smette di stampare tutto, e il pallino resta verde"
+    area: "src/lib/printer.js"
+    severity: critica
+    priority: P1
+    description: >
+      Segnalato il 06/09/2026: «nella versione di produzione, ieri la
+      stampante ha smesso di stampare. Non stampava piu' niente, nemmeno le
+      vecchie chiusure». E il pallino dello stato e' rimasto verde.
+      LE RISTAMPE SONO LA PROVA: quelle rifanno un documento gia' pronto,
+      quindi il guasto non era in quello che si stampava ma nella STRADA.
+      LA CAUSA. La vita del collegamento si chiedeva a `isConnected()`
+      dell'SDK Epson. Quella funzione risponde di si' anche quando lo stato
+      e' `RECONNECTING` — cioe' mentre sta soltanto PROVANDO a riconnettersi
+      — e per giunta mette in OR due canali: basta che uno sembri su. Quindi
+      il battito dei 30 secondi non scattava mai, l'oggetto stampante restava
+      in memoria, `getPrinter()` lo restituiva subito, `preparaStampante()`
+      rispondeva «ok» senza chiedere niente a nessuno (pallino verde), e ogni
+      `send()` finiva in un collegamento che non c'era piu'. Nessun errore,
+      nessun blocco, nessuna carta: il silenzio perfetto.
+      QUELLO CHE FA PIU' RABBIA: la stampante quei fatti li diceva. L'oggetto
+      dell'SDK puo' alzare `ononline`, `onoffline`, `onpoweroff`,
+      `oncoveropen`, `onpaperend`, `onstatuschange`, e c'e' `startMonitor()`
+      che la fa interrogare da sola. L'app non ascoltava NESSUNO di questi:
+      ascoltava solo la risposta ai singoli invii.
+      LA CURA (06/09/2026, ramo feature/lettura-ordini-ristretta). Si smette
+      di chiedere all'SDK e si ascolta la stampante — vedi REQ-STAMPA-018 per
+      la regola per intero. In breve: monitor acceso a dieci secondi, i suoi
+      segnali collegati (non risponde = si molla il collegamento; carta,
+      coperchio e fuori linea = si avvisa e basta), il pallino che riporta il
+      guaio noto, e tre invii di fila senza risposta come rete per quando il
+      monitor non c'e'.
+      PERCHE' IL MONITOR NON PUO' ROMPERE NIENTE, che era la condizione posta
+      per accenderlo: non passa dal collegamento delle stampe ma da una
+      richiesta sua; quando fallisce alza `fireStatusEvent` e NON
+      `fireErrorEvent`, quindi non chiama `cleanup()` e non butta giu' il
+      collegamento; non alza `onreceive`, quindi non sfasa il conto
+      invii/risposte da cui dipendono registro e avvisi; nessuna stampa lo
+      aspetta; e un firmware che non lo sostiene non impedisce di stampare.
+      C'e' un test per ognuna di queste quattro cose.
+      L'ALTRA STRADA, gia' chiusa nella 1.5.6-beta e ancora aperta in
+      produzione: nella 1.5.5 la stretta di mano non ha nessun tempo massimo
+      e viene aspettata DENTRO la coda delle stampe, quindi una connessione
+      che non risponde mai congela la coda per sempre — stesso sintomo,
+      «non stampa piu' niente», e l'unica via d'uscita e' chiudere e riaprire
+      l'app. Il tempo massimo di 15 secondi con `scordaConnessione` (BUG-086)
+      la chiude. Non sapendo se la sera del 05/09 sia stata questa o l'altra
+      — l'app non e' stata riaperta per provare — si chiudono tutte e due.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, stampa]
+    test_cases:
+      - tests/unit/stampanteCheNonRisponde.test.js
 

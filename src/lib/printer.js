@@ -434,6 +434,7 @@ function sdkAvailable() {
 // scappando. Serve alla caduta vista dal battito, al ritorno in primo piano
 // e al lavoro di stampa che scade (BUG-086).
 function scordaConnessione() {
+  fermaIlMonitor(_printer)
   _printer = null
   _device = null
   _connectPromise = null
@@ -443,6 +444,7 @@ function scordaConnessione() {
 // Termina la connessione corrente (se attiva).
 export function disconnectPrinter() {
   fermaBattito()
+  fermaIlMonitor(_printer)
   try { _device?.disconnect() } catch { /* ignora */ }
   _device = null
   _printer = null
@@ -497,20 +499,33 @@ const TEMPO_ASCOLTO = 5000
 function smettiDiAscoltare() {
   clearTimeout(_orologioAscolto)
   _orologioAscolto = null
+  const muti = _inAscolto.length
   _inAscolto = []
   // Il conto riparte in pari. I fogli rimasti senza risposta restano
   // «inviata» nel registro, che è l'informazione vera: non lo sappiamo.
   _risposte = _inviati
+  // MA TRE DI FILA NON SONO PIÙ «NON LO SAPPIAMO» (BUG-102). Uno può
+  // perdersi; tre invii che nessuno raccoglie sono un collegamento che non
+  // c'è più, e continuare a mandarci dentro fogli è quello che ha fatto
+  // sparire una serata di stampe. Si molla e si dice.
+  if (!muti) return
+  _inviiMuti += muti
+  if (_inviiMuti >= INVII_MUTI_PRIMA_DI_MOLLARE) {
+    guaioDellaStampante('la stampante non risponde', { mollaIlCollegamento: true })
+  }
 }
 
 function dimenticaLAscolto() {
   clearTimeout(_orologioAscolto)
   _orologioAscolto = null
   _inAscolto = []
-  // I due contatori valgono per UNA connessione: rifatta la stretta di
-  // mano si riparte da zero, o resterebbero sfasati per sempre.
+  // I contatori valgono per UNA connessione: rifatta la stretta di mano si
+  // riparte da zero, o resterebbero sfasati per sempre. Vale anche per gli
+  // invii muti: quelli erano della strada di prima, e lasciandoli lì il
+  // primo silenzio del collegamento nuovo la farebbe mollare subito.
   _inviati = 0
   _risposte = 0
+  _inviiMuti = 0
 }
 
 // Si mette in ascolto della risposta a QUESTO invio. Va armato PRIMA di
@@ -537,6 +552,9 @@ function rispostaDallaStampante(res, prn) {
     clearTimeout(_orologioAscolto)
     _orologioAscolto = null
   }
+  // Qualcuno dall'altra parte c'è: la strada è aperta, e se la carta è
+  // uscita il guaio di prima è passato (BUG-102).
+  stampanteHaRisposto(!!res?.success)
   suo.racconta(res)
 }
 
@@ -601,6 +619,124 @@ function raccontaLaRisposta(idLavoro, che, res) {
   avvisaDiUnaStampaNonRiuscita(che, motivo)
 }
 
+// ── SE È VIVA LO DICE LEI, NON L'SDK (BUG-102) ───────────────────────
+//
+// La sera del 05/09 la stampante ha smesso di stampare tutto: non solo la
+// chiusura — anche le RISTAMPE di chiusure vecchie, cioè fogli già pronti.
+// E il pallino in alto è rimasto verde tutto il tempo.
+//
+// PERCHÉ IL VERDE MENTIVA. La vita del collegamento si chiedeva a
+// `isConnected()` dell'SDK, che risponde di sì anche quando sta soltanto
+// PROVANDO a riconnettersi (nel codice Epson lo stato `RECONNECTING` conta
+// come connesso, ed è pure in OR fra due canali: basta che uno sembri su).
+// Quindi: il battito non scattava mai, l'oggetto stampante restava in
+// memoria, il controllo di stato lo trovava e diceva «ok», e ogni `send()`
+// finiva in un collegamento che non c'era più. Nessun errore, nessun
+// blocco, nessuna carta.
+//
+// LA CURA È SMETTERE DI CHIEDERLO ALL'SDK. La stampante quei fatti li dice
+// da sé — `startMonitor()` la fa interrogare a intervalli e alza
+// `onpoweroff` quando smette di rispondere, `onoffline` quando risponde ma
+// è fuori linea, `ononline` quando torna, più coperchio e carta. L'app non
+// ascoltava NESSUNO di questi: ascoltava solo la risposta ai singoli invii.
+//
+// PERCHÉ IL MONITOR NON PUÒ ROMPERE NIENTE, che è la condizione con cui è
+// stato acceso. Non passa dal WebSocket delle stampe ma da una richiesta
+// sua; quando fallisce alza `onstatuschange`/`onpoweroff` e NON butta giù
+// il collegamento (nel codice Epson quella strada chiama `fireStatusEvent`,
+// non `fireErrorEvent` — è l'altra che farebbe `cleanup()`); non alza
+// `onreceive`, quindi non sballa il conto invii/risposte da cui dipende il
+// registro; e nessuna stampa lo aspetta, mai.
+//
+// L'INTERROGAZIONE È UNA DOMANDA LUNGA, non un martellamento: la richiesta
+// resta aperta fino a dieci secondi e la stampante risponde appena qualcosa
+// cambia — un coperchio aperto si sa in un secondo, e a riposo il traffico
+// è una richiesta ogni dieci secondi scarsi.
+const INTERVALLO_MONITOR = 10000
+
+// Quanti invii di fila possono restare senza risposta prima di dire che la
+// strada è chiusa. UNO non vuol dire niente — una risposta può perdersi, e
+// «non lo sappiamo» è la risposta onesta (BUG-098). TRE di fila no: quello
+// è un collegamento che non c'è più, e continuare a mandarci fogli dentro è
+// esattamente quello che è successo il 05/09. Serve da rete quando il
+// monitor non c'è (firmware vecchio, richiesta bloccata dal browser).
+const INVII_MUTI_PRIMA_DI_MOLLARE = 3
+
+// L'ultimo guaio noto della STAMPANTE — non di una stampa. È quello che
+// rende il pallino una informazione invece di una decorazione: verde perché
+// la stampante ha risposto, non perché in memoria c'è un oggetto.
+let _guasto = null
+let _inviiMuti = 0
+
+export function guastoStampante() {
+  return _guasto
+}
+
+// HA RISPOSTO: la strada è aperta. Si azzera il conto dei muti — e se il
+// guaio era suo (carta, coperchio, fuori linea) è passato, perché la carta
+// è appena uscita.
+function stampanteHaRisposto(andataBene) {
+  _inviiMuti = 0
+  if (andataBene) _guasto = null
+}
+
+// UN GUAIO DELLA STAMPANTE. `mollaIlCollegamento` solo quando la stampante
+// ha smesso di RISPONDERE: lì il collegamento non serve più a niente e la
+// stampa dopo deve rifare la stretta di mano invece di parlare al vuoto.
+// Carta finita e coperchio aperto no — quella è viva e ci parla, il
+// collegamento è buono, e buttarlo vorrebbe dire una riconnessione inutile
+// nel mezzo del servizio.
+function guaioDellaStampante(motivo, { mollaIlCollegamento = false } = {}) {
+  _guasto = motivo
+  if (mollaIlCollegamento) scordaConnessione()
+  avvisaDellaStampante(motivo)
+}
+
+// Come per le stampe non riuscite: lo stesso guaio non si ripete entro un
+// minuto. Con la stampante spenta il monitor lo scoprirebbe ogni dieci
+// secondi, e sei strisce identiche al minuto sono il modo migliore per
+// smettere di leggerle.
+let _ultimoAvvisoStampante = { motivo: '', quando: 0 }
+
+function avvisaDellaStampante(motivo) {
+  const adesso = Date.now()
+  if (motivo === _ultimoAvvisoStampante.motivo && adesso - _ultimoAvvisoStampante.quando < FINESTRA_AVVISO) return
+  _ultimoAvvisoStampante = { motivo, quando: adesso }
+  notify('Stampante', motivo, { tag: 'stato-stampante' })
+}
+
+// Si ascolta quello che la stampante dice, e le si chiede di dirlo.
+function ascoltaLaStampante(prn) {
+  if (!prn) return
+  // NON RISPONDE PIÙ: è il caso del 05/09. Si molla il collegamento.
+  prn.onpoweroff = () => guaioDellaStampante('la stampante non risponde', { mollaIlCollegamento: true })
+  // Risponde, ma non è in grado di stampare.
+  prn.onoffline = () => guaioDellaStampante('la stampante è fuori linea')
+  prn.oncoveropen = () => guaioDellaStampante('il coperchio della stampante è aperto')
+  prn.onpaperend = () => guaioDellaStampante('la carta è finita')
+  // È tornata: il pallino torna verde perché LEI ha risposto.
+  prn.ononline = () => {
+    _guasto = null
+    _inviiMuti = 0
+  }
+  try {
+    prn.interval = INTERVALLO_MONITOR
+    prn.startMonitor?.()
+  } catch {
+    // Firmware che non lo sostiene, o richiesta bloccata: si resta come
+    // prima, con la rete degli invii senza risposta. Non è un motivo per
+    // non stampare.
+  }
+}
+
+function fermaIlMonitor(prn) {
+  try {
+    prn?.stopMonitor?.()
+  } catch {
+    /* SDK in uno stato strano: si lascia stare */
+  }
+}
+
 // ── CONNESSIONE TENUTA VIVA ───────────────────────────────────────────────
 //
 // Il certificato della stampante è auto-firmato: il browser lo accetta solo
@@ -631,7 +767,11 @@ function avviaBattito() {
   fermaBattito()
   _battito = setInterval(() => {
     try {
-      // Caduta: si libera tutto, la prossima stampa riconnette.
+      // `isConnected()` vale solo al contrario: quando dice DI NO la caduta
+      // è certa e si libera tutto. Quando dice di sì non prova niente —
+      // risponde così anche mentre sta soltanto provando a riconnettersi
+      // (BUG-102), ed è per questo che a dire se la stampante è viva adesso
+      // è LEI, col monitor, non questa riga.
       if (_device && !_device.isConnected()) scordaConnessione()
     } catch {
       /* SDK in uno stato strano: si lascia stare */
@@ -649,7 +789,12 @@ export async function preparaStampante() {
   if (!s.ip) return { ok: false, motivo: 'non configurata' }
   try {
     await getPrinter()
-    return { ok: true }
+    // IL VERDE DEVE VOLER DIRE QUALCOSA (BUG-102). Prima bastava che la
+    // stretta di mano fosse riuscita UNA volta: da lì in poi questa
+    // funzione trovava l'oggetto in memoria e rispondeva «ok» senza
+    // chiedere niente a nessuno — pallino verde con la stampante spenta.
+    // Adesso se la stampante ha detto che c'è un guaio, quello si legge.
+    return _guasto ? { ok: false, motivo: _guasto } : { ok: true }
   } catch (e) {
     return { ok: false, motivo: e.message }
   }
@@ -684,6 +829,11 @@ async function getPrinter() {
       // risposta, registro, avviso — si deve poter provare senza andare al
       // banco: la finta risponde come quella vera e sa fingere un guasto.
       finta.onreceive = (res) => rispostaDallaStampante(res, finta)
+      // Anche la finta si ascolta: la catena «la stampante dice di stare
+      // male → il pallino diventa rosso → parte l'avviso» si deve poter
+      // provare senza avere l'apparecchio davanti.
+      _guasto = null
+      ascoltaLaStampante(finta)
       _printer = finta
     }
     return _printer
@@ -750,6 +900,13 @@ async function getPrinter() {
           // foglio che l'ha causata e ne racconta l'esito nel registro —
           // senza trattenere nessuno: quel lavoro è chiuso da un pezzo.
           devobj.onreceive = (res) => rispostaDallaStampante(res, devobj)
+
+          // E si sta a sentire quello che la stampante dice di sé: fuori
+          // linea, carta, coperchio, e soprattutto «non rispondo più»
+          // (BUG-102). Il collegamento è nuovo, quindi il guaio di prima
+          // non vale più: lo ridirà lei, se c'è ancora.
+          _guasto = null
+          ascoltaLaStampante(devobj)
 
           resolve(_printer)
         }

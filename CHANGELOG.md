@@ -4,6 +4,23 @@
 
 ### Per chi sta al banco
 
+- **Quando la stampante smette di rispondere, l'app se ne accorge e lo dice.**
+  Il 5 settembre la stampante ha smesso di stampare tutto — comande,
+  scontrini, perfino le ristampe di chiusure vecchie — e il pallino in alto è
+  rimasto verde tutta la sera. Il motivo: l'app chiedeva al programma della
+  stampante se il collegamento era vivo, e quello rispondeva di sì anche
+  mentre stava solo provando a riconnettersi. Adesso è la stampante a essere
+  interrogata direttamente, ogni dieci secondi: se smette di rispondere il
+  collegamento viene buttato — così la stampa dopo lo rifà da capo invece di
+  parlare a vuoto — e arriva un avviso. Carta finita, coperchio aperto e
+  stampante fuori linea si vedono allo stesso modo, senza aspettare che sia
+  una stampa a scoprirlo.
+
+- **Il pallino della stampante adesso vuol dire qualcosa.** Prima era verde
+  perché il collegamento era riuscito una volta, all'inizio della serata.
+  Adesso è verde perché la stampante ha risposto, e diventa rosso col motivo
+  quando c'è un guaio.
+
 - **Il magazzino va sotto zero, invece di fermarsi a zero.** Prima, quando un
   prodotto arrivava a zero, quello che continuava a uscire non veniva più
   scalato: la giacenza restava a zero come un prodotto finito per bene, e non

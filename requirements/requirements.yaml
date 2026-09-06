@@ -11036,3 +11036,37 @@ requirements:
     labels: [menu, ux]
     test_cases: []
 
+  - id: REQ-STAMPA-018
+    title: "Se la stampante è viva lo dice lei, non l'SDK"
+    area: "src/lib/printer.js (ascoltaLaStampante, avviaBattito, preparaStampante, smettiDiAscoltare)"
+    description: >
+      La stampante viene INTERROGATA da sé (`startMonitor` dell'SDK Epson,
+      una domanda lunga ogni dieci secondi) e quello che risponde si
+      ascolta: `onpoweroff` quando smette di rispondere, `onoffline` quando
+      risponde ma non è in grado di stampare, `oncoveropen`, `onpaperend`,
+      `ononline` quando torna. Prima di BUG-102 l'app non ascoltava nessuno
+      di questi segnali: sapeva solo la risposta ai singoli invii.
+      NON RISPONDE PIÙ = SI MOLLA IL COLLEGAMENTO, così la stampa dopo rifà
+      la stretta di mano invece di parlare al vuoto. Carta finita, coperchio
+      aperto e fuori linea NO: lì la stampante ci parla, il collegamento è
+      buono, e buttarlo sarebbe una riconnessione inutile in mezzo al
+      servizio. Si avvisa e basta.
+      `isConnected()` VALE SOLO AL CONTRARIO. Quando dice di no la caduta è
+      certa; quando dice di sì non prova niente, perché nel codice Epson
+      risponde così anche mentre sta soltanto PROVANDO a riconnettersi. È il
+      motivo per cui il pallino restava verde con la stampante muta.
+      IL PALLINO DICE QUELLO CHE LA STAMPANTE HA RISPOSTO, non che in memoria
+      esista un oggetto: `preparaStampante` riporta il guaio noto.
+      LA RETE PER QUANDO IL MONITOR NON C'È (firmware vecchio, domanda lunga
+      bloccata): tre invii di fila senza risposta valgono come «strada
+      chiusa». Uno solo no — quello resta un «non lo sappiamo» (REQ-STAMPA-016).
+      E NIENTE DI QUESTO PUÒ FERMARE UNA STAMPA: il monitor non passa dal
+      collegamento delle stampe, quando fallisce non lo butta giù, non alza
+      `onreceive` (quindi non sfasa il conto invii/risposte da cui dipende il
+      registro), e nessun lavoro lo aspetta. Un firmware che non lo sostiene
+      non impedisce di stampare.
+    status: implemented
+    generate_issue: false
+    labels: [stampa]
+    test_cases: [tests/unit/stampanteCheNonRisponde.test.js]
+
