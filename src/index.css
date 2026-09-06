@@ -3167,6 +3167,20 @@ body.bar-wide .app {
   line-height: 1.5;
 }
 
+/* L'IMPORTO DI UNA NOTA DI CREDITO (BUG-100). «Il colore deve apparire in un
+   altro colore, preferibilmente verde» (Flavio, 03/09/2026): sono soldi che
+   tornano indietro, e il verde è quello che questa app usa già per il «è
+   fatto». Non è il verde pieno dei tasti — è inchiostro su fondo, quindi
+   segue --testo-verde, che ha la sua variante chiara come --testo-rosso e
+   --testo-ambra. Il colore però non basta e non è mai solo: il meno davanti
+   alla cifra lo mette `importoLeggibile`, perché una schermata si guarda
+   anche di sera, di fretta, e un numero colorato resta un numero che si
+   somma. */
+.importo-nota-credito {
+  color: var(--testo-verde);
+  font-weight: 600;
+}
+
 /* GLI STATI DELL'ORDINE FORNITORE. La bozza è l'unico che non fa niente e
    il colore lo dice: neutra, come una cosa messa da parte. Il richiesto è
    l'ambra dell'attesa — la stessa della comanda ricevuta — e il consegnato
@@ -3376,6 +3390,36 @@ body.bar-wide .app {
 :root[data-luma='light'] .inv-row.open .inv-row-main { background: rgba(0, 0, 0, 0.03); }
 .admin-card.off .grid-card-main {
   opacity: 0.55;
+}
+/* FUORI MENU SI DEVE VEDERE DA LONTANO. Chiesto da Flavio il 03/09/2026,
+   guardando la schermata del menu: «l'unica cosa che cambia è che la scritta
+   da nera diventa grigia, e nei non disponibili si vede poco. Per farla più
+   impattante metterei la scritta bianca e il fondo della card in grigio
+   scuro». Aveva ragione: la differenza era la sola trasparenza al 55%, che
+   di sera, su un monitor storto e con centinaia di card in griglia, non si
+   legge — e un drink spento scambiato per acceso è un drink promesso a un
+   cliente e mai fatto.
+   Vale SOLO per la gestione del menu (`.menu-card`), dove la domanda è
+   «cosa c'è e cosa no»: le altre schede amministrative continuano a
+   sbiadire, che lì basta.
+   La striscia colorata a sinistra resta: dice un'altra cosa (il colore al
+   banco) e sul fondo scuro si vede meglio di prima. */
+.menu-card.off {
+  background: #3a3a3a;
+  border-color: #3a3a3a;
+}
+/* Niente trasparenza: il contrasto lo fa il fondo, e sbiadire sopra al
+   grigio scuro riporterebbe il testo dov'era. */
+.menu-card.off .grid-card-main {
+  opacity: 1;
+  color: #fff;
+}
+.menu-card.off .grid-card-main .muted,
+.menu-card.off .grid-card-tot {
+  color: rgba(255, 255, 255, 0.82);
+}
+.menu-card.off .grid-card-toggle {
+  color: #fff;
 }
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
 .admin-card.ass-assortimento { border-left: 4px solid var(--line); }
@@ -5734,6 +5778,11 @@ body.fullbleed,
      accanto, come --line e --strip-spenta. */
   --testo-rosso: #ff8a80;
   --testo-ambra: #ffd54f;
+  /* Il verde dei soldi che tornano indietro: una nota di credito scala una
+     spesa (BUG-100). Sta con gli altri due inchiostri di stato e non con
+     --ok, che e' un FONDO: qui e' testo, e --ok su fondo scuro sarebbe la
+     stessa illeggibilita' gia' vista sul chiaro. */
+  --testo-verde: #7ee2a8;
 }
 :root[data-luma='light'] {
   --line: rgba(0, 0, 0, 0.14);
@@ -5741,6 +5790,7 @@ body.fullbleed,
   --velo-superficie: none;
   --testo-rosso: #b02a37;
   --testo-ambra: #7a5c00;
+  --testo-verde: #12653d;
 }
 :root[data-luma='light'] .pill.aperto {
   background: rgba(46, 204, 113, 0.2);

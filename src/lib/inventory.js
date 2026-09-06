@@ -194,7 +194,13 @@ export function formatQty(qty, unit) {
 export function bottleBreakdown(item) {
   const c = contentBase(item)
   if (!c) return null
-  const stock = Math.max(0, Number(item?.stock) || 0)
+  // QUI SI RESTA DA ZERO IN SU, e non è una svista. Questa funzione conta
+  // BOTTIGLIE: quante piene, quanta ce n'è nell'aperta. Sono oggetti sullo
+  // scaffale, e sotto zero non ce ne stanno — scomponendo un −0,25 usciva
+  // «−1 bottiglia, più 750 ml in quella aperta», che al banco non vuol dire
+  // niente. Il meno lo porta `pezziInGiacenza`, che conta quantità e non
+  // oggetti.
+  const stock = giacenzaPerCarico(item?.stock)
   const total = Number(item?.bottles_total) || 0
   // Con la giacenza contata a PEZZI, "0,8" è una bottiglia aperta all'80%:
   // la parte intera sono le bottiglie piene, il resto è quanto c'è nella
@@ -220,21 +226,31 @@ export function bottleBreakdown(item) {
 //
 // Il numero è comodo anche per il valore di magazzino: pezzi × costo.
 export function pezziInGiacenza(item) {
-  const bd = bottleBreakdown(item)
-  if (!bd) return null
+  const c = contentBase(item)
+  if (!c) return null
+  // IL MENO ARRIVA FIN QUI, ed è il numero che lo mostra a chi guarda il
+  // magazzino: un prodotto sceso sotto zero ha continuato a uscire dopo
+  // essere finito, cioè è arrivato senza che nessuno lo caricasse (BUG-101).
+  // Si divide la giacenza invece di rimettere insieme le bottiglie piene e
+  // il fondo di quella aperta: quelle non vanno sotto zero, e il conto
+  // tornerebbe a dire «0» proprio nel caso che interessa.
+  const stock = Number(item?.stock) || 0
   // Giacenza già contata a pezzi (le bibite in bottiglia): il numero c'è
   // di suo, decimali compresi — «17» sono diciassette bottiglie, «2,8»
   // due e otto decimi di quella aperta.
-  if ((item?.unit || 'pz') === 'pz') return Math.max(0, Number(item?.stock) || 0)
-  const c = contentBase(item)
-  if (!c || !(c.size > 0)) return null
-  return bd.full + bd.openRemaining / c.size
+  if ((item?.unit || 'pz') === 'pz') return stock
+  if (!(c.size > 0)) return null
+  return stock / c.size
 }
 
 // Il numero come si scrive: due decimali al massimo, senza zeri inutili in
 // coda («3 pz», non «3,00 pz») e con la virgola, che è come si legge qui.
 export function formatPezzi(n) {
-  const v = Math.max(0, Number(n) || 0)
+  // Scrive anche il meno. Un numero negativo qui non è un errore da
+  // nascondere: è un prodotto uscito più volte di quanto risultasse, e chi
+  // guarda il magazzino deve vederlo per andare a cercare la consegna che
+  // nessuno ha caricato.
+  const v = Number(n) || 0
   const arrotondato = Math.round(v * 100) / 100
   return arrotondato.toLocaleString('it-IT', { maximumFractionDigits: 2 })
 }
@@ -256,7 +272,7 @@ export function bottleSummary(item) {
   // cioè lo stesso dato due volte. Con la giacenza contata a pezzi il
   // contenuto sono i pezzi × la capienza della confezione; contata a volume
   // (o a peso) la giacenza È già il contenuto.
-  const stock = Math.max(0, Number(item?.stock) || 0)
+  const stock = Number(item?.stock) || 0
   const aPezzo = (item?.unit || 'pz') === 'pz'
   return {
     pezzi: pezziInGiacenza(item),
@@ -745,9 +761,14 @@ export function inventoryTotalValue(items, opts) {
 // niente aspetta la rete: quello che si decide prima di chiederlo è QUANTO
 // togliere.
 
-// Quanto si può DAVVERO scaricare: mai più di quello che risulta in
-// giacenza, e da una giacenza già a zero (o negativa) niente. La vendita
-// passa comunque — il conto è già scritto — e il magazzino si ferma a zero.
+// IL FRENO DELLO SCARICO A MANO: mai più di quello che risulta in giacenza,
+// e da una giacenza già a zero (o negativa) niente.
+//
+// Non vale per la vendita, che sotto zero ci va e deve andarci (BUG-101):
+// lì il meno misura quanto è uscito senza essere stato caricato. Qui invece
+// c'è una persona che dichiara quanto ha tolto dallo scaffale — e da uno
+// scaffale vuoto non si toglie niente, quindi un meno sarebbe solo un numero
+// sbagliato in più.
 export function scaricoPossibile(stock, qty) {
   const richiesta = Number(qty) || 0
   if (!(richiesta > 0)) return 0
@@ -777,7 +798,13 @@ export function giacenzaPerCarico(stock) {
 // un numero inventato con una moltiplicazione a caso.
 export function qtyInStockUnit(qty, unit, item) {
   const q = Number(qty) || 0
-  if (!(q > 0)) return 0
+  if (q === 0) return 0
+  // IL SEGNO SI CONSERVA. Qui si converte e basta — quanto vale in giacenza
+  // una quantità scritta in un'altra unità — e una conversione che sputa
+  // zero davanti a un numero negativo non è prudente, è sbagliata: era lei
+  // a mangiarsi la merce che TORNA sullo scaffale quando una comanda già
+  // scalata viene ridotta (BUG-101).
+  if (q < 0) return -qtyInStockUnit(-q, unit, item)
   const u = String(unit || 'pz').toLowerCase()
   const stockUnit = item?.unit || 'pz'
   if (u === stockUnit) return q

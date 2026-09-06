@@ -27,8 +27,10 @@ import {
   fattureCollegabili,
   fatturaGenerata,
   fetteSenzaFattura,
+  importoLeggibile,
 } from '../lib/fatture.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { giornoEOra } from '../lib/ore.js'
 
 // ── LISTA ORDINI (REQ-MAG-038) ───────────────────────────────────────
 //
@@ -394,7 +396,10 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
         <div className="muted small">
           {fattura.doc_type}
           {fattura.number ? ` n. ${fattura.number}` : ''} · {fattura.date || '—'} ·{' '}
-          {formatPrice(fattura.amount)}
+          {/* IL SEGNO SI LEGGE ANCHE QUI (BUG-100): una nota di credito
+              scala dei soldi, e la cifra nuda si leggerebbe come una
+              spesa in più. */}
+          {importoLeggibile(fattura)}
         </div>
         <div className="row" style={{ gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
           {/* UNA FATTURA CHE CI SIAMO FATTI DA SOLI NON È QUELLA DEL
@@ -608,7 +613,7 @@ function LaStoria({ ordine }) {
       <ul className="ordine-storia">
         {[...voci].reverse().map((v, k) => (
           <li key={`${v.at}-${k}`}>
-            <span className="muted small">{quando(v.at)}</span> {descriviMovimento(v)}
+            <span className="muted small">{giornoEOra(v.at)}</span> {descriviMovimento(v)}
           </li>
         ))}
       </ul>
@@ -682,14 +687,6 @@ function SalvaComeModello({ ordine, nome, onSalva }) {
       )}
     </div>
   )
-}
-
-// Data e ora come si leggono qui, senza fuso e senza secondi: chi guarda uno
-// storico vuole sapere «quando», non un timestamp.
-function quando(at) {
-  const d = new Date(at)
-  if (Number.isNaN(d.getTime())) return '—'
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 // ── IL DOCUMENTO DA ASSOCIARE ────────────────────────────────────────

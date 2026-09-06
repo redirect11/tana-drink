@@ -32,7 +32,7 @@
 // sembrerebbe che l'app sbagli.
 
 import { monthKey } from './ore.js'
-import { fetteSenzaFattura } from './fatture.js'
+import { fetteSenzaFattura, importoContabile } from './fatture.js'
 import { spesePerMese } from './spese.js'
 
 const rigaVuota = (mese) => ({
@@ -59,11 +59,18 @@ export function riepilogoMesi({ fatture = [], spese = [], ordini = [], suppliers
   // cui il fornitore l'ha fatturata, non di quando si è saldata. Una fattura
   // senza data non ha mese e resta fuori: metterla nel mese corrente
   // sposterebbe soldi da un mese all'altro senza che nessuno l'abbia deciso.
+  //
+  // IL SEGNO LO DÀ `importoContabile` (BUG-100), e non è un `Number()` scritto
+  // stretto: una NOTA DI CREDITO sottrae, perché non è una spesa ma la spesa
+  // tolta — il fornitore riconosce di aver chiesto troppo. Il mese è quello
+  // della nota, che è quando la correzione è stata emessa: portarla indietro
+  // sul mese della fattura corretta sposterebbe soldi fra due mesi già
+  // chiusi col commercialista.
   for (const f of fatture || []) {
     const mese = monthKey(f?.date)
     if (!mese) continue
     const r = riga(mese)
-    const importo = Number(f?.amount) || 0
+    const importo = importoContabile(f)
     r.merce += importo
     if (!f?.paid) r.daPagare += importo
   }

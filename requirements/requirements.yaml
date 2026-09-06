@@ -1471,10 +1471,19 @@ requirements:
       La cassa si apre con un fondo e si chiude con il riepilogo della serata:
       incassato per metodo e per ora, conti chiusi, conti ancora da incassare.
       Senza cassa aperta non si battono ordini.
+      E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession`
+      non restituisce niente da aspettare, la scrittura parte in sottofondo
+      e lo scontrino di chiusura parte per conto suo — se la stampante non
+      risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la
+      risposta della stampante (REQ-STAMPA-016): il lavoro si chiude
+      sull'invio, l'esito arriva dopo e si legge nel registro delle stampe.
+      Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
     status: implemented
     generate_issue: false
     labels: [cassa]
-    test_cases: [tests/unit/cassa.test.js]
+    test_cases:
+      - tests/unit/cassa.test.js
+      - tests/unit/chiusuraCassaSenzaRete.test.js
 
   - id: REQ-CASSA-007
     title: "Il flusso cassa serve DURANTE la serata, non solo alla chiusura"
@@ -1933,11 +1942,29 @@ requirements:
       Il magazzino che non risponde non blocca la comanda: resta segnata come
       non scaricata e si recupera alla riscossione (`unappliedEntries`), che
       resta la rete di sicurezza anche con gli stati accesi.
-      SOTTO ZERO NON SI SCENDE: si toglie al massimo quello che risulta in
-      giacenza, e un carico su una giacenza negativa riparte da zero. La
-      vendita passa comunque (il conto è già scritto) e il magazzino si ferma
-      a zero: altrimenti il buco resta, il carico dopo conta meno di una
-      bottiglia e il valore in euro va in negativo.
+      SOTTO ZERO CI SI SCENDE, ED È VOLUTO (BUG-101, chiesto da Flavio il
+      03/09/2026). Quello che esce si toglie tutto, anche quando la giacenza
+      non basta: un prodotto che continua a uscire dopo essere finito non è
+      finito davvero — è arrivato senza che nessuno lo caricasse, o l'ultimo
+      inventario era vecchio — e fermarsi a zero cancellava proprio il numero
+      che lo dice. Il meno arriva fino alla card, perché un magazzino che sa
+      di essere sotto zero e lo tiene per sé è il silenzio da cui il difetto
+      è nato.
+      IL MENO NON È MERCE CHE MANCA: da uno scaffale vuoto non si versa. È la
+      misura di quanto se n'è versato senza che risultasse, e per questo si
+      chiude da sé al primo CARICO, che riparte da zero (`giacenzaPerCarico`):
+      le sei bottiglie appena consegnate sullo scaffale ci sono tutte e sei, e
+      il magazzino deve contarle tutte e sei — non cinque, come farebbe
+      trattando il buco da debito.
+      DUE COSE RESTANO DA ZERO IN SU, e non è una svista. I SOLDI: un
+      magazzino che vale meno di niente non vuol dire niente (`unitsInStock`,
+      `stockValue`). LE BOTTIGLIE DA TOCCARE: sono oggetti su uno scaffale, e
+      «−1 piena più 750 ml nell'aperta» non è una cosa che si può andare a
+      guardare (`bottleBreakdown`). Il meno lo porta `pezziInGiacenza`, che
+      conta una quantità e non degli oggetti.
+      LO SCARICO A MANO INVECE SI FERMA A ZERO (`scaricoPossibile`): lì c'è
+      una persona che dichiara quanto ha tolto dallo scaffale, e da uno
+      scaffale vuoto non si toglie niente.
     status: implemented
     generate_issue: false
     labels: [magazzino, offline]
@@ -1948,6 +1975,7 @@ requirements:
       - tests/unit/scritturaComande.test.js
       - tests/unit/impegnato.test.js
       - tests/unit/salaEMagazzino.test.js
+      - tests/unit/magazzinoSottoZero.test.js
 
   - id: REQ-MAG-004
     title: "Modificare un ordine già scalato riallinea le scorte alla differenza"
@@ -1956,6 +1984,18 @@ requirements:
       Cambiando le righe di una comanda già scaricata si scala o si restituisce
       solo la differenza, non l'intero consumo: altrimenti ogni correzione
       falserebbe il magazzino.
+      NEI DUE VERSI DAVVERO (BUG-101). La differenza si applica com'è: in più
+      si scala, in meno TORNA in giacenza. Il freno che teneva il magazzino
+      sopra lo zero stava anche qui, e non toglieva soltanto il meno — un
+      drink tolto da una comanda già scalata porta una differenza negativa,
+      cioè merce che torna sullo scaffale, e veniva azzerata insieme al resto:
+      il movimento diceva «carico», la giacenza non si muoveva di un
+      millilitro, e il magazzino restava indietro di un drink per sempre. A
+      mangiarsela era `qtyInStockUnit`, che davanti a un numero negativo
+      rispondeva zero: adesso converte conservando il segno.
+      Qui NON si riparte da zero come fa un carico merce: questo non è un
+      rifornimento, è la stessa uscita annullata, e deve rimettere il meno
+      dov'era.
     status: implemented
     generate_issue: false
     labels: [magazzino]
@@ -3624,7 +3664,115 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [stampa, cassa]
-    test_cases: []
+    test_cases:
+      - tests/component/ChiusuraCassaStampa.test.jsx
+      - tests/unit/scontrinoChiusura.test.js
+
+  - id: REQ-STAMPA-016
+    title: "La risposta della stampante e' DIAGNOSTICA: racconta, non trattiene"
+    area: "src/lib/printer.js (lavoroDiStampa, rispostaDallaStampante, raccontaLaRisposta)"
+    description: >
+      Fino ad agosto 2026 la risposta della stampante — `onreceive`, con
+      esito e codice: carta finita, coperchio aperto, fuori linea — finiva
+      in una riga di console scollegata dal lavoro che l'aveva causata:
+      NON SAPEVAMO SE LA CARTA FOSSE USCITA, ed e' la causa strutturale di
+      BUG-098 («la chiusura di cassa spesso non stampa, e non compare
+      nessun avviso»).
+      LA STAMPA SI CHIUDE SULL'INVIO, e non deve mai fare altro. Chi chiude
+      cassa o batte una comanda vede l'esito nell'istante in cui tocca: e'
+      il local-first del CLAUDE.md applicato alla stampante — come non si
+      aspetta Firestore per mostrare un conto incassato, non si aspetta la
+      testina per dire che la stampa e' partita.
+      LA RISPOSTA ARRIVA DOPO E PER CONTO SUO, e serve solo a RACCONTARE:
+      aggiorna la voce gia' scritta nel registro delle stampe (da «inviata»
+      a com'e' andata davvero) e, quando e' un errore, manda un avviso.
+      Non chiude niente, non trattiene nessuno, non fa ritentare.
+      PERCHE' QUESTO REQUISITO E' STATO RISCRITTO IL 01/09/2026, ed e' la
+      cosa che serve fra sei mesi: la prima stesura (31/08) aveva messo il
+      lavoro ad ASPETTARE la risposta, con un ritentativo automatico e una
+      memoria «questa stampante parla / non parla» per decidere quando
+      valesse la pena aspettare. Era un `await` sulla stampante nel mezzo
+      di un gesto, cioe' il divieto numero uno di questo progetto, e tutta
+      la macchina che ci stava intorno — attesa, ritentativo, memoria dei
+      silenzi — esisteva solo per rendere sopportabile quell'attesa. Tolta
+      l'attesa, e' sparita anche quella: quello che non serve piu' non
+      resta a fare da trappola per chi legge. Il ritentativo in
+      particolare NON torna: senza attesa non c'e' piu' il momento in cui
+      riprovare, a ristampare e' una persona, ed e' anche l'unico modo di
+      non rischiare il doppio scontrino su una stampa che era uscita.
+      COME SI CORRELA una risposta col foglio che l'ha causata, senza
+      identificativi (l'SDK non ne da'): le risposte tornano nell'ordine
+      degli invii, quindi si contano — chi aspetta l'invio n scarta la
+      risposta n-1, che e' di un foglio gia' passato — e si confronta anche
+      l'oggetto stampante, perche' dopo una riconnessione e' un altro.
+      L'ascolto si chiude da solo dopo qualche secondo: NON e' un'attesa
+      (il lavoro e' chiuso da un pezzo), e' il momento in cui si smette di
+      dare un padrone alle risposte, perche' un foglio che non riceve mai
+      risposta lascerebbe il conto indietro di uno per sempre e da li' in
+      poi ogni risposta finirebbe sul foglio sbagliato.
+      SOLO GLI ERRORI FANNO RUMORE. Su risposta di errore parte un avviso
+      (`notify`), che si vede subito e resta nello storico della
+      campanella: dice COSA non e' uscito e PERCHE' in parole da banco
+      («Scontrino conto #42: la carta e' finita»), mai il codice dell'SDK,
+      che resta nel registro dove serve a chi ripara. Su risposta buona non
+      si dice niente: la carta e' uscita e si vede, e un avviso a ogni
+      comanda diventa rumore in mezz'ora. E NIENTE VALANGHE: lo stesso
+      motivo non si ripete entro un minuto, perche' dieci strisce identiche
+      sono peggio di una — si smette di leggerle. Il registro le ha
+      comunque tutte.
+      IL TEMPO MASSIMO DEL LAVORO (15 secondi, BUG-086) RESTA, ed e'
+      un'altra cosa: difende da un lavoro che non finisce, e in quel caso
+      la stampa RIFIUTA — perche' li' il chiamante deve saperlo adesso.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, difetto-risolto]
+    test_cases:
+      - tests/unit/confermaDiStampa.test.js
+
+  - id: REQ-STAMPA-017
+    title: "Il registro delle stampe: cosa e' uscito, quando e com'e' andata"
+    area: "src/lib/registroStampe.js, src/components/PrinterSetup.jsx"
+    description: >
+      Una stampa fallita non lasciava NIENTE. L'avviso viveva otto secondi
+      in una striscia che compare insieme a quella verde «Cassa chiusa» — e
+      coi toast che si accavallano (BUG-078) puo' passare inosservata — e la
+      risposta della stampante finiva in una console che nessuno legge. Con
+      una cassa che si chiude UNA VOLTA A NOTTE, cosi' si va per tentativi
+      per settimane: e' la seconda meta' di BUG-098.
+      IL REGISTRO STA SUL DISPOSITIVO e si legge in Impostazioni →
+      Stampante, dove c'e' la MACCHINA (indirizzo, prova di stampa, i dati):
+      e' il posto dove si va quando la stampante fa i capricci. Per ogni
+      lavoro dice COSA si e' provato a stampare, QUANDO, COM'E' ANDATA e il
+      MOTIVO quando e' andata male. Accanto c'e' lo stato della CODA — cosa
+      e' in corso e quanto c'e' dietro — perche' la seconda domanda davanti
+      a una stampante ferma e' «si e' impiantata?».
+      LA VOCE NASCE «INVIATA» E SI CORREGGE DOPO (riscritto il 01/09/2026,
+      col ripensamento di REQ-STAMPA-016): la stampa non aspetta la
+      stampante, quindi la riga entra nel registro nell'istante in cui il
+      foglio parte, e la risposta — se arriva — la cambia in «stampata» o
+      «non stampata» col motivo. Una voce rimasta «in attesa di risposta»
+      NON e' un buco: e' una stampante che non conferma niente, ed e' la
+      prima cosa da leggere alla prossima chiusura mancata. Chi ha il
+      pannello aperto vede la riga cambiare da se'.
+      TRE VINCOLI. Non cresce all'infinito: le ultime 50 voci, e bastano
+      perche' la voce che conta — la chiusura — e' l'ULTIMA stampa della
+      serata e non viene mai spinta fuori dalle comande della sera dopo.
+      Niente dati personali: la voce dice «Scontrino conto #42», mai il nome
+      di chi era al tavolo — un registro di diagnostica non e' il posto dove
+      tenere i clienti del locale. E non rallenta la stampa: la voce entra
+      in memoria subito, il salvataggio in localStorage parte di lato, su un
+      microtask.
+      FUNZIONA IDENTICO CON LA STAMPANTE FINTA (REQ-STAMPA-009), che dal
+      28/08/2026 risponde come quella vera e sa anche fingere due guasti —
+      carta finita e nessuna risposta — dal pannello Dev. Senza, questa
+      catena si sarebbe potuta provare solo al banco, che e' esattamente il
+      motivo per cui BUG-098 e' sopravvissuto tanto.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, difetto-risolto]
+    test_cases:
+      - tests/unit/registroStampe.test.js
+      - tests/component/RegistroStampe.test.jsx
 
   - id: REQ-STAMPA-009
     title: "In locale la stampante è di carta finta"
@@ -4101,14 +4249,26 @@ requirements:
     title: "Le regole del database seguono i ruoli"
     area: "firestore.rules"
     description: >
-      Menù, impostazioni e ordini sono a lettura libera (servono al cliente); cassa,
+      Menù e impostazioni sono a lettura libera (servono al cliente); cassa,
       magazzino, gruppi, ore e fatture sono riservati al personale; le paghe e la
       gestione utenti all'admin. Nessuno può cancellare incassi o sessioni di cassa
       dall'app.
+      GLI ORDINI SONO IL CASO DELICATO, perché contengono dati personali e
+      insieme devono restare raggiungibili da un cliente che non si è
+      registrato. Le due cose stanno insieme separando i due mestieri che
+      Firestore chiama entrambi «lettura»: UN conto di cui si conosce l'id si
+      legge sempre — l'id è il lasciapassare, ed è così che funziona il link
+      del proprio conto — mentre ELENCARNE tanti passa solo dove la domanda
+      si dimostra sicura da sé: il personale, il cliente registrato sui conti
+      del suo account, e le due liste del tabellone del menù. Da qui scende
+      una cosa nel client: «i miei ordini» del cliente non registrato chiede
+      i conti salvati sul telefono uno per id, non con una lista (BUG-093).
     status: implemented
     generate_issue: false
     labels: [sicurezza]
-    test_cases: [tests/unit/utenze.test.js]
+    test_cases:
+      - tests/unit/utenze.test.js
+      - tests/unit/mieiOrdiniPerId.test.js
 
   - id: REQ-SIC-002
     title: "App Check protegge la produzione senza chiudere fuori il locale"
@@ -8198,6 +8358,88 @@ requirements:
       - tests/component/ColliEPezzi.test.jsx
       - tests/component/ListinoFornitore.test.jsx
 
+  - id: REQ-MAG-041
+    title: "I documenti dello scadenzario si possono correggere"
+    area: "src/lib/fatture.js, src/lib/statiOrdine.js, src/lib/ore.js, src/lib/api.js, src/components/SupplierInvoicesPanel.jsx"
+    description: >
+      Chiesto da Flavio il 03/09/2026: «in Scadenzario i documenti creati
+      devono essere modificabili nel caso di variazione o errore».
+      COM'ERA: sul documento si poteva solo segnare pagato o non pagato. Non
+      c'era modo di correggere importo, data, numero, fornitore o tipo, e chi
+      sbagliava a battere una cifra doveva CANCELLARE e rifare — portandosi
+      via, con la cancellazione, i prodotti (REQ-MAG-030), l'allegato
+      (REQ-MAG-033) e il legame con l'ordine (REQ-MAG-031). Su un documento
+      con la foto della fattura dentro, quello e' un lavoro perso.
+      SI CORREGGE, NON SI STRAVOLGE. Modificabili sono i sei campi della
+      testata che una persona batte a mano guardando la carta: fornitore,
+      numero, data, tipo, importo, note (`CAMPI_MODIFICABILI` in
+      src/lib/fatture.js). Righe, allegato e `order_id` non sono nemmeno
+      NOMINATI nella patch, e non e' una dimenticanza: ognuno ha gia' il suo
+      gesto, che sa fare anche le cose attorno — il carico a magazzino, il
+      file da cancellare su Storage, la guardia sulla fetta gia' coperta — e
+      passarli da qui vorrebbe dire una seconda strada che quelle cose non le
+      fa. Quello che non si nomina non si puo' sovrascrivere per sbaglio.
+      NEMMENO «PAGATO» PASSA DI QUI: il suo tasto e' quello sulla riga e resta
+      uno solo (REQ-MAG-038). La casella «Gia' pagato» del modulo e' della
+      creazione — serve alla riga «Nessun documento», che nasce gia' pagata —
+      e correggendo non compare: due posti per dire la stessa cosa vogliono
+      dire due stati da tenere allineati.
+      IL FORNITORE DI UN DOCUMENTO AGGANCIATO NON SI CAMBIA. Il legame con
+      l'ordine E' la coppia ordine + fornitore (REQ-MAG-031): cambiando
+      fornitore sotto un documento agganciato, quella fetta resterebbe legata
+      alla fattura di qualcun altro — merce pagata a chi non l'ha venduta, che
+      a fine mese e' un conto che non torna. La regola sta in
+      `modificaAmmessa`, che e' la stessa risposta usata per spegnere il campo
+      e per rifiutare la scrittura: si impedisce prima invece di spiegarlo
+      dopo con un errore. Si scollega, e scollegare e' un gesto che si vede.
+      LOCAL-FIRST. `modificaFattura` (src/lib/api.js) non aspetta e non
+      rilegge: parte dal documento che la schermata ha gia' in mano, compone
+      il risultato in memoria e manda la scrittura in sottofondo con
+      `bgWrite`. Rileggendo, la cache risponderebbe con la versione di prima
+      (BUG-045). Senza niente di cambiato non si scrive niente.
+      IL CONFRONTO SI RIFA' DA SOLO. Il prospetto ordine/fattura (REQ-MAG-038)
+      non e' un valore salvato: `totaliProspetto` e `riconciliato` leggono
+      `fattura.amount` ogni volta, quindi correggere l'importo lo cambia
+      nello stesso istante. Resta un limite dichiarato: un ordine gia' CHIUSO
+      porta `closed_at` addosso e resta chiuso anche se la cifra corretta non
+      riconcilia piu'. Riaprirlo da qui vorrebbe dire un secondo scrittore
+      sull'ordine per una decisione che non e' di questa schermata.
+      LA TRACCIA STA SUL DOCUMENTO, e la decisione va detta perche' e' il
+      punto in cui si poteva sbagliare. Una modifica su un documento PAGATO e'
+      legittima — e' proprio il caso di Flavio, «mi devono modificare il
+      prezzo di una fattura magari gia' pagata» — ma e' il gesto che a fine
+      mese qualcuno vorra' spiegarsi. Si e' riusato il meccanismo della storia
+      dell'ordine (`movimento`, `conMovimento`, `storiaDi`,
+      `descriviMovimento` in src/lib/statiOrdine.js) con un movimento nuovo,
+      `documento_corretto`, ma scritto nell'array `storia` DEL DOCUMENTO e non
+      dell'ordine: un documento dello scadenzario puo' non avere nessun ordine
+      dietro — e' uno dei due buchi di REQ-MAG-031 — e la sua correzione
+      resterebbe senza traccia proprio nei casi in cui non c'e' nient'altro
+      che la spieghi. La voce porta cosa e' cambiato, da cosa a cosa, gia'
+      scritto in italiano (`cambiFattura`), e dice se il documento era gia'
+      pagato. Le frasi si compongono in fatture.js e non in
+      `descriviMovimento` per due ragioni: un importo formattato nel momento
+      in cui e' successo resta leggibile mesi dopo anche se il formato cambia,
+      e statiOrdine.js resta fuori dai tipi di documento — che sarebbe un
+      anello di import.
+      L'IMPORTO SI CONFRONTA COL SEGNO. Una fattura da 120 diventata nota di
+      credito (BUG-100) porta ancora scritto 120, ma sui conti quei soldi si
+      sono spostati di 240: la storia deve accorgersene, se no la correzione
+      piu' pesante sarebbe l'unica che non si racconta.
+      COSA SI VEDE: sulla riga del documento un tasto «matita»; il modulo
+      prende il posto della riga, gia' compilato, ed e' LO STESSO modulo della
+      creazione — due copie prima o poi divergono, una impara a chiedere il
+      fornitore e l'altra no. Sotto il documento, le correzioni fatte, dalla
+      piu' recente.
+    status: implemented
+    generate_issue: true
+    labels: [magazzino, fornitori, ux]
+    priority: P1
+    test_cases:
+      - tests/unit/modificaDocumento.test.js
+      - tests/component/ModificaDocumento.test.jsx
+      - tests/unit/fatture.test.js
+
   - id: REQ-MAG-034
     title: "«Altre spese» e il «Riepilogo»: i soldi che escono, mese per mese"
     area: "src/lib/spese.js, src/lib/riepilogoFornitori.js, src/lib/api.js, src/components/AltreSpesePanel.jsx, src/components/RiepilogoFornitoriPanel.jsx, src/components/FornitoriTab.jsx, firestore.rules"
@@ -9683,7 +9925,7 @@ requirements:
     generate_issue: true
     labels: [metodo, offline, ordini]
     priority: P1
-    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js]
+    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js]
 
   - id: REQ-OFFLINE-007
     title: "Il guscio dell'app e il logo non si aspettano dalla rete"
@@ -10750,3 +10992,81 @@ requirements:
       - tests/component/PaymentScreen.test.jsx
       - tests/unit/css.test.js
       - tests/unit/useResizable.test.js
+
+  - id: REQ-POS-020
+    title: "La ricerca dei prodotti si cancella con un tocco"
+    area: "src/components/PosProductPicker.jsx, src/index.css"
+    description: >
+      Chiesto da Flavio il 03/09/2026, con la foto del campo cerchiato:
+      «nella selezione degli items di menu aggiungere qui il tastino di
+      cancellazione scrittura».
+      La ✕ che i browser mettono da soli nei campi di ricerca non c'è su
+      tutte le piattaforme, e dov'è è un bersaglio da mouse: qui si batte
+      col dito, di sera, con una mano occupata a reggere qualcosa. Per
+      ripulire la ricerca bisognava tenere premuto il tasto di cancellazione
+      finché il campo non si svuotava.
+      Il tastino compare SOLO con del testo dentro — un campo vuoto con una
+      ✕ accanto è un bersaglio che non fa niente — e lasciando il fuoco nel
+      campo, perché il gesto dopo è quasi sempre riscrivere.
+    status: implemented
+    generate_issue: false
+    labels: [pos, menu, ux]
+    test_cases: [tests/component/PosProductPicker.test.jsx]
+
+  - id: REQ-MENU-014
+    title: "Un prodotto fuori menù si vede che è spento"
+    area: "src/index.css"
+    description: >
+      Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia
+      è che la scritta da nera diventa grigia, e nei non disponibili si vede
+      poco. Per farla più impattante metterei la scritta bianca e il fondo
+      della card in grigio scuro».
+      Aveva ragione: la differenza fra una card accesa e una spenta era la
+      sola trasparenza al 55%, che di sera e con centinaia di card in
+      griglia non si legge. Un drink spento scambiato per acceso è un drink
+      promesso a un cliente e mai fatto.
+      Adesso la card fuori menù ha il FONDO scuro e la scritta bianca: la
+      differenza si vede da lontano e senza andare a leggere. La striscia
+      colorata resta, e sul fondo scuro si distingue meglio di prima.
+      Vale SOLO per la gestione del menù, dove la domanda è «cosa c'è e cosa
+      no»: le altre schede amministrative continuano a sbiadire, che lì
+      basta e il colpo d'occhio non serve.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ux]
+    test_cases: []
+
+  - id: REQ-STAMPA-018
+    title: "Se la stampante è viva lo dice lei, non l'SDK"
+    area: "src/lib/printer.js (ascoltaLaStampante, avviaBattito, preparaStampante, smettiDiAscoltare)"
+    description: >
+      La stampante viene INTERROGATA da sé (`startMonitor` dell'SDK Epson,
+      una domanda lunga ogni dieci secondi) e quello che risponde si
+      ascolta: `onpoweroff` quando smette di rispondere, `onoffline` quando
+      risponde ma non è in grado di stampare, `oncoveropen`, `onpaperend`,
+      `ononline` quando torna. Prima di BUG-102 l'app non ascoltava nessuno
+      di questi segnali: sapeva solo la risposta ai singoli invii.
+      NON RISPONDE PIÙ = SI MOLLA IL COLLEGAMENTO, così la stampa dopo rifà
+      la stretta di mano invece di parlare al vuoto. Carta finita, coperchio
+      aperto e fuori linea NO: lì la stampante ci parla, il collegamento è
+      buono, e buttarlo sarebbe una riconnessione inutile in mezzo al
+      servizio. Si avvisa e basta.
+      `isConnected()` VALE SOLO AL CONTRARIO. Quando dice di no la caduta è
+      certa; quando dice di sì non prova niente, perché nel codice Epson
+      risponde così anche mentre sta soltanto PROVANDO a riconnettersi. È il
+      motivo per cui il pallino restava verde con la stampante muta.
+      IL PALLINO DICE QUELLO CHE LA STAMPANTE HA RISPOSTO, non che in memoria
+      esista un oggetto: `preparaStampante` riporta il guaio noto.
+      LA RETE PER QUANDO IL MONITOR NON C'È (firmware vecchio, domanda lunga
+      bloccata): tre invii di fila senza risposta valgono come «strada
+      chiusa». Uno solo no — quello resta un «non lo sappiamo» (REQ-STAMPA-016).
+      E NIENTE DI QUESTO PUÒ FERMARE UNA STAMPA: il monitor non passa dal
+      collegamento delle stampe, quando fallisce non lo butta giù, non alza
+      `onreceive` (quindi non sfasa il conto invii/risposte da cui dipende il
+      registro), e nessun lavoro lo aspetta. Un firmware che non lo sostiene
+      non impedisce di stampare.
+    status: implemented
+    generate_issue: false
+    labels: [stampa]
+    test_cases: [tests/unit/stampanteCheNonRisponde.test.js]
+

@@ -266,3 +266,64 @@ describe('il magazzino in sola lettura vale anche qui', () => {
     expect(aggiunti.mock.calls[0][1].carica).toBe(false)
   })
 })
+
+// ── LA NOTA DI CREDITO A SCHERMO (BUG-100) ───────────────────────────
+//
+// Flavio, 03/09/2026: «la nota di credito, che sostituisce la parola reso,
+// deve andare a modificare il totale dello scadenzario: deve essere in
+// negativo, perché mi stanno scalando dei soldi. E poi il colore deve
+// apparire in un altro colore, preferibilmente verde».
+//
+// Il colore da solo non basta e non è mai solo: la cifra si legge come una
+// sottrazione anche di sera, di fretta, su un telefono.
+describe('una nota di credito si vede che scala', () => {
+  const NOTA = {
+    ...FATTURA,
+    id: 'inv-nc',
+    number: '9',
+    doc_type: 'Nota di credito',
+    amount: 120,
+    paid: false,
+  }
+
+  it('la cifra ha il meno davanti e il verde della nota di credito', async () => {
+    stato.fatture = [NOTA]
+    render(<SupplierInvoicesPanel />)
+    const importo = await screen.findByText(/^−\s*120,00/)
+    expect(importo).toHaveClass('importo-nota-credito')
+  })
+
+  // La fattura accanto non cambia: il verde e il meno sono di quel documento
+  // lì, non di tutta la colonna.
+  it('la fattura accanto resta come prima', async () => {
+    stato.fatture = [NOTA, FATTURA]
+    render(<SupplierInvoicesPanel />)
+    const fattura = await screen.findByText(/^81,00/)
+    expect(fattura).not.toHaveClass('importo-nota-credito')
+  })
+
+  // NON SI MIGRA NIENTE: i documenti in archivio hanno `doc_type: 'Reso'`.
+  it('un documento di ieri, scritto «Reso», si legge come una nota di credito', async () => {
+    stato.fatture = [{ ...NOTA, id: 'inv-reso', doc_type: 'Reso' }]
+    render(<SupplierInvoicesPanel />)
+    const importo = await screen.findByText(/^−\s*120,00/)
+    expect(importo).toHaveClass('importo-nota-credito')
+  })
+
+  // UNA NOTA DI CREDITO NON SI PAGA: o la si incassa, o la si scala da
+  // quello che si deve. Il gesto resta uno, cambia la parola.
+  it('il tasto dice «da scalare», non «da pagare»', async () => {
+    stato.fatture = [NOTA]
+    render(<SupplierInvoicesPanel />)
+    expect(await screen.findByRole('button', { name: /da scalare/ })).toBeInTheDocument()
+  })
+
+  // IL «DA PAGARE» IN TESTA È IL NETTO: 81 di fattura meno 120 di nota fanno
+  // −39, e sommandoli — com'era — ne facevano 201.
+  it('il «Da pagare» in testa scende invece di salire', async () => {
+    stato.fatture = [NOTA, FATTURA]
+    render(<SupplierInvoicesPanel />)
+    const chip = (await screen.findByText('Da pagare')).closest('.chip')
+    expect(chip.textContent).toMatch(/-39,00/)
+  })
+})

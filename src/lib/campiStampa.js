@@ -372,7 +372,13 @@ export const TIPI_LOGO = [
   {
     id: 'comanda',
     label: 'Comanda',
-    desc: 'Al banco non serve a nessuno: è carta e inchiostro.',
+    // PARTE SPENTO, e il perché sta qui e non a schermo: la comanda resta al
+    // banco, non la vede nessun cliente, e il logo su ogni ticket è solo
+    // carta e inchiostro. Detto in didascalia — «al banco non serve a
+    // nessuno» — sembrava un giudizio sulla COMANDA invece che sul logo, e
+    // faceva pensare a una funzione inutile. Le altre righe di questo
+    // elenco descrivono il documento: questa fa lo stesso.
+    desc: 'Il ticket con cui il banco prepara.',
     acceso: false,
   },
   {

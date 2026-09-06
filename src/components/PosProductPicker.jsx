@@ -167,6 +167,7 @@ export default function PosProductPicker({
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
+  const cercaRef = useRef(null)
   const [order, setOrder] = useState(() => loadOrder())
   const [favorites, setFavorites] = useState(() => loadFavorites())
   const [tileColors, setTileColors] = useState(() => loadColors())
@@ -481,6 +482,7 @@ export default function PosProductPicker({
             spazio e "Organizza" diventa solo icona. */}
         <div style={{ padding: compact ? '6px 6px 0' : '8px 8px 0', display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
           <input
+            ref={cercaRef}
             type="search"
             value={query}
             onChange={(e) => {
@@ -492,6 +494,29 @@ export default function PosProductPicker({
             aria-label="Cerca prodotto"
             style={{ flex: 1, minWidth: 0, ...(compact ? { fontSize: '0.9rem', padding: '8px 10px' } : {}) }}
           />
+          {/* CANCELLARE LA RICERCA CON UN TOCCO (Flavio, 03/09/2026: «nella
+              selezione degli items di menù aggiungere qui il tastino di
+              cancellazione scrittura»). La ✕ nativa dei campi `search` non
+              c'è su tutte le piattaforme e dov'è è un bersaglio da mouse:
+              qui si batte col dito, di sera, con una mano occupata. Il fuoco
+              torna nel campo perché il gesto dopo è quasi sempre riscrivere.
+              Compare solo con del testo dentro: un tasto che non fa niente
+              e' un tasto in piu' da capire. */}
+          {query !== '' && (
+            <button
+              className="chip"
+              onClick={() => {
+                onInteract?.()
+                setQuery('')
+                cercaRef.current?.focus()
+              }}
+              aria-label="Cancella la ricerca"
+              title="Cancella la ricerca"
+              style={{ flexShrink: 0 }}
+            >
+              ✕
+            </button>
+          )}
           {selectedCat !== '__recent__' && !q && (
             <button
               className={`chip ${reordering ? 'active' : ''}`}

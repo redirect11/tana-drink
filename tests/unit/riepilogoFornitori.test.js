@@ -119,3 +119,49 @@ describe('il mese si legge in italiano', () => {
     expect(nomeMese(null)).toBe('—')
   })
 })
+
+// ── LA NOTA DI CREDITO SCALA ANCHE QUI (BUG-100) ─────────────────────
+//
+// «La nota di credito deve andare a modificare il totale dello scadenzario:
+// deve essere in negativo, perché mi stanno scalando dei soldi» (Flavio,
+// 03/09/2026). Il riepilogo conta la merce DALLE FATTURE, quindi è il posto
+// dove il segno sbagliato gonfiava il mese senza che nessuno lo vedesse.
+describe('la nota di credito abbassa il mese, non lo alza', () => {
+  const NOTA = {
+    id: 'nc1',
+    supplier_id: 'nova',
+    supplier_name: 'Nova',
+    doc_type: 'Nota di credito',
+    date: '2026-01-30',
+    amount: 300,
+    paid: false,
+  }
+
+  it('la merce di gennaio scende di quello che il fornitore ci scala', () => {
+    const righe = riepilogoMesi({ fatture: [...FATTURE, NOTA], spese: SPESE, suppliers: [NOVA] })
+    const gennaio = righe.find((r) => r.mese === '2026-01')
+    // 1.809 di documenti meno 300 di nota: 1.509, non 2.109.
+    expect(gennaio.merce).toBe(1509)
+    expect(gennaio.totale).toBeCloseTo(1668.6, 2)
+  })
+
+  // Finché non è stata scalata, quei soldi abbassano anche il debito: è la
+  // cifra da cui si parte quando si fa il bonifico a quel fornitore.
+  it('e abbassa anche quello che resta da pagare', () => {
+    const righe = riepilogoMesi({ fatture: [...FATTURE, NOTA], spese: SPESE, suppliers: [NOVA] })
+    expect(righe.find((r) => r.mese === '2026-01').daPagare).toBe(509)
+  })
+
+  // NON SI MIGRA NIENTE: i documenti in archivio hanno `doc_type: 'Reso'`, e
+  // devono continuare a valere come le note di credito di oggi.
+  it('un documento di ieri, scritto «Reso», scala come una nota di credito', () => {
+    const vecchio = { ...NOTA, id: 'nc0', doc_type: 'Reso' }
+    const righe = riepilogoMesi({ fatture: [...FATTURE, vecchio], spese: SPESE, suppliers: [NOVA] })
+    expect(righe.find((r) => r.mese === '2026-01').merce).toBe(1509)
+  })
+
+  it('il totale in testa la porta dentro una volta sola', () => {
+    const righe = riepilogoMesi({ fatture: [...FATTURE, NOTA], spese: SPESE, suppliers: [NOVA] })
+    expect(totaleRiepilogo(righe).merce).toBe(2009)
+  })
+})
