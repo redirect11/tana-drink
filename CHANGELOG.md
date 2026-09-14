@@ -23,6 +23,15 @@
 
 ### Per chi amministra
 
+- **La stampante lascia un diario sul server, una serata per documento.**
+  Collegamento rifiutato, stampante caduta, stampa non riuscita, pallino
+  rosso: ogni guaio diventa una riga con ora, motivo e l'indirizzo con cui
+  si stava parlando, in un documento intitolato alla sessione di cassa (o
+  alla giornata, a cassa chiusa) e al terminale. Lo stesso guaio ripetuto
+  entro un minuto si conta e non si riscrive, oltre duecento righe si tace,
+  e i documenti più vecchi di due settimane si cancellano da soli. Si legge
+  da remoto con `scripts/diagnostica-stampante.js`, senza essere al banco.
+
 - **Un carico si somma alla giacenza anche quando è sotto zero**: −1 più
   cinque pezzi fa quattro, non cinque. Il meno è quasi sempre merce già
   bevuta e caricata il giorno dopo, e il carico è quello che chiude il

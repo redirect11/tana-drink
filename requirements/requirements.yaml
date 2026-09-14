@@ -11449,6 +11449,65 @@ requirements:
     labels: [stampa]
     test_cases: [tests/unit/stampanteCheNonRisponde.test.js]
 
+  - id: REQ-STAMPA-019
+    title: "La stampante lascia un diario sul server: una serata, un documento"
+    area: "src/lib/diagnosticaStampante.js, src/lib/api.js (scriviDiagnosticaStampante, openCashSession), src/lib/printer.js, src/lib/registroStampe.js, src/lib/statoStampante.js, src/lib/cashSession.js, firestore.rules, scripts/diagnostica-stampante.js"
+    description: >
+      Daniele, 14/09/2026, dopo un'altra sera di «stampante disconnessa» in
+      produzione che da remoto non si poteva spiegare: «dobbiamo salvare i
+      log diagnostici della stampante quando ha problemi e quando risulta
+      offline nel database. Una log rotation per serata in modo da non
+      intasare il db. Ogni apertura cassa si logga tutto ciò che riguarda
+      gli errori della stampante, così possiamo diagnosticare da remoto».
+      PRIMA la stampante non lasciava niente fuori dal tablet: il registro
+      delle stampe (REQ-STAMPA-017) sta in localStorage, il pallino
+      (REQ-STAMPA-011) in memoria, e dal server si leggeva solo l'IP
+      salvato. Per capire un guaio bisognava essere al banco, di sera.
+      COSA SI SCRIVE. Ogni guaio che l'app già conosce diventa una riga
+      con ora, tipo, motivo e l'indirizzo con cui si stava parlando:
+      `collegamento_fallito` (la stretta di mano rifiutata, con lo stato
+      dell'SDK), `guasto` (le cadute e i guai che la stampante dichiara:
+      carta, coperchio, fuori linea, «non risponde»), `stampa_fallita`
+      (dal registro: cosa era e perché), `pallino_ko`/`pallino_ok` (i
+      PASSAGGI del pallino, non i controlli ogni mezzo minuto),
+      `stampante_tornata`, `apertura_cassa`. La prima riga della serata
+      porta l'intestazione: terminale, sessione, giornata, chi era al
+      banco, indirizzo/porta/SSL della stampante, versione e commit
+      dell'app, browser. NIENTE DATI PERSONALI: nessun cliente, nessun
+      conto.
+      UN DOCUMENTO PER SERATA E PER TERMINALE (`diagnostica_stampante`,
+      id `cassa-<sessione>--<dispositivo>` o, a cassa chiusa,
+      `giorno-<aaaa-mm-gg>--<dispositivo>`): è la rotazione chiesta, e
+      due tablet non si scrivono addosso. Gli eventi si accodano con
+      `arrayUnion` e si contano con `increment`: scritture commutative,
+      in sottofondo, che si accodano offline senza rileggere. Nessun
+      `await`: la stampa non aspetta il diario, e un diario che non parte
+      non tocca l'indicatore di sincronizzazione.
+      NON INTASA. Lo stesso guaio ripetuto entro un minuto non si riscrive
+      (si conta, e il conto esce con la riga dopo: `ripetuti_prima`);
+      oltre 200 righe in una serata se ne scrive una di «tetto» e poi si
+      tace. I documenti più vecchi di 14 giorni li cancella il terminale
+      che li ha scritti, quando ne apre uno nuovo: tiene la lista in
+      localStorage, senza query né indici né Cloud Function.
+      IL MODULO È PURO: `diagnosticaStampante.js` non importa né Firebase
+      né la stampante. Chi scrive (api.js), chi conosce l'indirizzo e chi
+      è al banco (printer.js) e chi sa la cassa (cashSession.js) si
+      registrano; così printer.js e il registro lo importano senza
+      trascinarsi Firebase, e i test lo provano con uno scrittore finto.
+      LE REGOLE: legge admin e bartender; scrive e cancella tutto il
+      personale, perché anche il telefono della sala stampa le sue
+      comande e i suoi guai valgono quanto quelli del banco.
+      SI LEGGE DA CASA con `node scripts/diagnostica-stampante.js
+      --project tana-drink [--giorni N] [--tutto]`: serata per serata,
+      con l'intestazione e le righe in ordine di tempo. Una schermata
+      nell'app non c'è: il diario serve a chi ripara, non a chi versa.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, diagnostica]
+    test_cases:
+      - tests/unit/diagnosticaStampante.test.js
+      - tests/unit/diagnosticaStampanteSenzaRete.test.js
+
   - id: REQ-DEV-016
     title: "Quello che dice quali pezzi caricare non si tiene in cache"
     area: "firebase.json (hosting.headers)"
