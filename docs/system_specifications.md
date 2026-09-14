@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 12 settembre 2026.
+> Generato il 14 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 198 | fatto e coperto dai test |
+| ✅ | 199 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**240 voci** in tutto. **213** descrivono il sistema com'è oggi e
+**241 voci** in tutto. **214** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -49,7 +49,7 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 11 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 17 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -2088,6 +2088,28 @@ SI CHIUDE, NON SI ABBANDONA, quando il collegamento può essere sano: abbandonar
 IL PALLINO DICE QUELLO CHE LA STAMPANTE HA RISPOSTO, non che in memoria esista un oggetto: `preparaStampante` riporta il guaio noto. E NIENTE DI QUESTO PUÒ FERMARE UNA STAMPA: il battito è in fila come le altre, un battito che inciampa non spezza la coda, gli eventi di stato non alzano `onreceive` (quindi non sfasano il conto invii/risposte da cui dipende il registro), e nessun lavoro aspetta nessuno.
 
 **Dove**: `src/lib/printer.js (battitoDellaStampante, avviaBattito, ascoltaLaStampante, getPrinter, preparaStampante, smettiDiAscoltare)` · **Lo dimostrano**: `tests/unit/stampanteCheNonRisponde.test.js`
+
+#### REQ-STAMPA-019 — La stampante lascia un diario sul server: una serata, un documento
+
+Daniele, 14/09/2026, dopo un'altra sera di «stampante disconnessa» in produzione che da remoto non si poteva spiegare: «dobbiamo salvare i log diagnostici della stampante quando ha problemi e quando risulta offline nel database. Una log rotation per serata in modo da non intasare il db. Ogni apertura cassa si logga tutto ciò che riguarda gli errori della stampante, così possiamo diagnosticare da remoto».
+
+PRIMA la stampante non lasciava niente fuori dal tablet: il registro delle stampe (REQ-STAMPA-017) sta in localStorage, il pallino (REQ-STAMPA-011) in memoria, e dal server si leggeva solo l'IP salvato. Per capire un guaio bisognava essere al banco, di sera.
+
+COSA SI SCRIVE. Ogni guaio che l'app già conosce diventa una riga con ora, tipo, motivo e l'indirizzo con cui si stava parlando: `collegamento_fallito` (la stretta di mano rifiutata, con lo stato dell'SDK), `guasto` (le cadute e i guai che la stampante dichiara: carta, coperchio, fuori linea, «non risponde»), `stampa_fallita` (dal registro: cosa era e perché), `pallino_ko`/`pallino_ok` (i PASSAGGI del pallino, non i controlli ogni mezzo minuto), `stampante_tornata`, `apertura_cassa`. La prima riga della serata porta l'intestazione: terminale, sessione, giornata, chi era al banco, indirizzo/porta/SSL della stampante, versione e commit dell'app, browser.
+
+NIENTE DATI PERSONALI: nessun cliente, nessun conto.
+
+UN DOCUMENTO PER SERATA E PER TERMINALE (`diagnostica_stampante`, id `cassa-<sessione>--<dispositivo>` o, a cassa chiusa, `giorno-<aaaa-mm-gg>--<dispositivo>`): è la rotazione chiesta, e due tablet non si scrivono addosso. Gli eventi si accodano con `arrayUnion` e si contano con `increment`: scritture commutative, in sottofondo, che si accodano offline senza rileggere. Nessun `await`: la stampa non aspetta il diario, e un diario che non parte non tocca l'indicatore di sincronizzazione.
+
+NON INTASA. Lo stesso guaio ripetuto entro un minuto non si riscrive (si conta, e il conto esce con la riga dopo: `ripetuti_prima`); oltre 200 righe in una serata se ne scrive una di «tetto» e poi si tace. I documenti più vecchi di 14 giorni li cancella il terminale che li ha scritti, quando ne apre uno nuovo: tiene la lista in localStorage, senza query né indici né Cloud Function.
+
+IL MODULO È PURO: `diagnosticaStampante.js` non importa né Firebase né la stampante. Chi scrive (api.js), chi conosce l'indirizzo e chi è al banco (printer.js) e chi sa la cassa (cashSession.js) si registrano; così printer.js e il registro lo importano senza trascinarsi Firebase, e i test lo provano con uno scrittore finto.
+
+LE REGOLE: legge admin e bartender; scrive e cancella tutto il personale, perché anche il telefono della sala stampa le sue comande e i suoi guai valgono quanto quelli del banco.
+
+SI LEGGE DA CASA con `node scripts/diagnostica-stampante.js --project tana-drink [--giorni N] [--tutto]`: serata per serata, con l'intestazione e le righe in ordine di tempo. Una schermata nell'app non c'è: il diario serve a chi ripara, non a chi versa.
+
+**Dove**: `src/lib/diagnosticaStampante.js, src/lib/api.js (scriviDiagnosticaStampante, openCashSession), src/lib/printer.js, src/lib/registroStampe.js, src/lib/statoStampante.js, src/lib/cashSession.js, firestore.rules, scripts/diagnostica-stampante.js` · **Lo dimostrano**: `tests/unit/diagnosticaStampante.test.js`, `tests/unit/diagnosticaStampanteSenzaRete.test.js`
 
 ### Vista cliente
 

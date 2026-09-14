@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from 'react'
 import { loadPrinterSettings, preparaStampante } from './printer.js'
+import { segnala, TIPO } from './diagnosticaStampante.js'
 
 const OGNI = 30000
 
@@ -29,8 +30,14 @@ let _timer = null
 let _inCorso = null
 
 function annuncia(next) {
+  const prima = _stato.stato
   _stato = next
   for (const f of _ascolto) f(_stato)
+  // Nel diario sul server (REQ-STAMPA-019) vanno i PASSAGGI, non i
+  // controlli: il pallino chiede ogni mezzo minuto, e una stampante
+  // spenta per due ore è una riga «rosso» e una «verde», non duecento.
+  if (next.stato === 'ko' && prima !== 'ko') segnala(TIPO.pallino_ko, next.motivo)
+  else if (next.stato === 'ok' && prima === 'ko') segnala(TIPO.pallino_ok, '')
 }
 
 export function statoStampante() {

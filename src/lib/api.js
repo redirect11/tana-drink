@@ -17,11 +17,19 @@ import {
   onSnapshot,
   serverTimestamp,
   increment,
+  arrayUnion,
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
 import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import {
+  COLLEZIONE as DIAGNOSTICA_STAMPANTE,
+  impostaScrittoreDiagnostica,
+  impostaSessioneDiagnostica,
+  segnala as segnalaStampante,
+  TIPO as TIPO_DIAGNOSTICA,
+} from './diagnosticaStampante.js'
 import { splitAmounts } from './groups.js'
 import {
   computeConsumption,
@@ -3317,6 +3325,9 @@ export function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUT
   // Puntatore pubblico: da qui anche gli ordini dei clienti prendono il
   // progressivo della sessione (vedi currentCashSessionId).
   setDoc(activeCashRef, { session_id: ref.id }, { merge: true }).catch(() => {})
+  // La serata della stampante comincia qui (REQ-STAMPA-019): il diario si
+  // intitola alla sessione appena aperta, con l'indirizzo che si sta usando.
+  segnalaStampante(TIPO_DIAGNOSTICA.apertura_cassa, '', null, { sessione: ref.id })
   return ref.id
 }
 
@@ -3340,7 +3351,27 @@ export function closeCashSession(id, { by = null, snapshot = null, countedCash =
   // Cassa chiusa: il puntatore pubblico si svuota, così il progressivo riparte
   // alla prossima apertura (e intanto si ricade sulla giornata commerciale).
   setDoc(activeCashRef, { session_id: null }, { merge: true }).catch(() => {})
+  impostaSessioneDiagnostica(null)
 }
+
+// ── IL DIARIO DELLA STAMPANTE (REQ-STAMPA-019) ───────────────────────
+// Un documento per serata e per terminale; gli eventi si accodano con
+// `arrayUnion` e il conto con `increment`: due operazioni commutative che
+// si accodano offline senza rileggere niente. L'intestazione arriva solo
+// quando il documento si apre. Fuori dall'indicatore di sincronizzazione:
+// un diario che non parte non è un conto che non parte.
+function scriviDiagnosticaStampante(id, { intestazione = null, evento = null } = {}) {
+  const patch = { ...(intestazione || {}), aggiornato_at: new Date().toISOString() }
+  if (evento) {
+    patch.eventi = arrayUnion(evento)
+    patch.n_eventi = increment(1)
+  }
+  setDoc(doc(db, DIAGNOSTICA_STAMPANTE, id), patch, { merge: true }).catch(() => {})
+}
+function cancellaDiagnosticaStampante(id) {
+  deleteDoc(doc(db, DIAGNOSTICA_STAMPANTE, id)).catch(() => {})
+}
+impostaScrittoreDiagnostica(scriviDiagnosticaStampante, cancellaDiagnosticaStampante)
 
 // Storico delle sessioni di cassa chiuse, più recenti prima.
 export async function fetchCashSessions({ limit = 30 } = {}) {

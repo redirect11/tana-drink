@@ -30,6 +30,8 @@
 //    percorso critico è la carta che esce, e un `JSON.stringify` non ci
 //    si mette in mezzo.
 
+import { segnala, TIPO } from './diagnosticaStampante.js'
+
 const CHIAVE = 'tana:registro-stampe'
 
 // Il tetto: vedi il punto 1 qui sopra.
@@ -174,6 +176,9 @@ function esciDallaCoda(id, esito, motivo) {
   if (elenco.length > TETTO_VOCI) elenco.splice(0, elenco.length - TETTO_VOCI)
   salvaDiLato()
   cambiato()
+  // Una stampa non partita finisce anche nel diario sul server
+  // (REQ-STAMPA-019): è la riga che da remoto dice «a che ora, e perché».
+  if (esito === ESITO.fallita) segnala(TIPO.stampa_fallita, motivo, { che: lavoro.che })
 }
 
 // Il foglio è partito. La voce entra nel registro SUBITO — è l'istante in
@@ -203,6 +208,7 @@ export function aggiornaEsito(id, esito, motivo = '') {
   elenco[i] = { ...elenco[i], esito: ESITO[esito] || elenco[i].esito, motivo: motivoCorto(motivo) }
   salvaDiLato()
   cambiato()
+  if (ESITO[esito] === ESITO.fallita) segnala(TIPO.stampa_fallita, motivo, { che: elenco[i].che })
 }
 
 export function svuotaRegistro() {
