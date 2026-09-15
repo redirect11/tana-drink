@@ -3657,7 +3657,23 @@ requirements:
       L'avviso di sicurezza che costringe ad accettare a mano il certificato della
       stampante va eliminato alla radice: certificato con SAN corretto installato
       come attendibile sul dispositivo, oppure altra strada (Server Direct Print).
-      Serve la verifica dal wifi del locale per decidere.
+      LA CAUSA E' ACCERTATA, e non e' la scadenza: il certificato di fabbrica
+      non ha l'INDIRIZZO nel campo SAN, e dal 2019 iOS guarda solo quello —
+      il vecchio Common Name da solo non basta piu'. Un certificato senza SAN
+      iOS lo rifiuta ANCHE se lo si installa fra quelli attendibili, ed e' per
+      questo che l'eccezione va rifatta di continuo. Lo dice
+      `scripts/certificato-stampante.js <IP>`, che legge il certificato senza
+      fidarsene e da' il verdetto.
+      LA PROCEDURA E' SCRITTA, passo per passo, in
+      [docs/certificato-stampante.md](../docs/certificato-stampante.md)
+      (15/09/2026): IP fisso sul router, certificato rigenerato dalla pagina
+      della stampante con l'indirizzo nel Common Name, file .cer installato
+      sull'iPad e FIDUCIA ATTIVATA in Impostazioni → Generali → Info →
+      Impostazioni fiducia certificati — che e' il passo che si dimentica e
+      senza il quale non cambia niente. Vale per il solo iPad del banco: la
+      sala e' su «rimbalzo» e non parla con la stampante.
+      RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar,
+      col portatile. Finche' non e' fatta questa voce resta aperta.
     status: todo
     generate_issue: true
     labels: [stampa, infrastruttura]
