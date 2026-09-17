@@ -25,6 +25,7 @@ import {
   aggiornaEsito,
 } from './registroStampe.js'
 import { notify } from './notify.js'
+import { impostaContestoDiagnostica, segnala, TIPO } from './diagnosticaStampante.js'
 import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
@@ -391,6 +392,17 @@ export function aliquotaScontrino(impostazioni = impostazioniDelLocale()) {
   const aliquota = Number(scelta)
   return Number.isFinite(aliquota) ? aliquota : ALIQUOTA_DEFAULT
 }
+
+// Il diario della stampante (REQ-STAMPA-019) vuole sapere a che indirizzo
+// si stava parlando e chi c'era al banco: glielo dice questo file, che è
+// l'unico a saperlo, senza che il diario debba importarlo.
+impostaContestoDiagnostica(() => {
+  const s = loadPrinterSettings()
+  return {
+    stampante: { ip: s.ip || null, port: Number(s.port) || null, https: !!s.https },
+    chi: nomeDiChiStampa() || null,
+  }
+})
 
 export function loadPrinterSettings() {
   try {
@@ -795,6 +807,9 @@ function guaioDellaStampante(motivo, { mollaIlCollegamento = false, chiudendo = 
   _guasto = motivo
   if (mollaIlCollegamento) scordaConnessione({ chiudendo })
   avvisaDellaStampante(motivo)
+  // Nel diario sul server (REQ-STAMPA-019): è da qui che passano le cadute
+  // rumorose e i guai che la stampante dichiara.
+  segnala(TIPO.guasto, motivo, mollaIlCollegamento ? { collegamento_mollato: true } : null)
 }
 
 // Lo stesso guaio non si ripete entro un minuto, e LA MEMORIA È UNA SOLA
@@ -820,6 +835,7 @@ function ascoltaLaStampante(prn) {
   prn.onpaperend = () => guaioDellaStampante('la carta è finita')
   // È tornata: il pallino torna verde perché LEI ha risposto.
   prn.ononline = () => {
+    if (_guasto) segnala(TIPO.stampante_tornata, '')
     _guasto = null
     _inviiMuti = 0
   }
@@ -1031,6 +1047,7 @@ async function getPrinter() {
       if (status !== 'OK' && status !== 'SSL_CONNECT_OK') {
         _device = null
         _connectPromise = null
+        segnala(TIPO.collegamento_fallito, `Connessione fallita (${status})`, { porta: Number(s.port) || null })
         reject(new Error(`Connessione fallita (${status}). Controlla IP e che la stampante sia accesa.`))
         return
       }
@@ -1043,6 +1060,7 @@ async function getPrinter() {
           _connectPromise = null
           if (retcode !== 'OK') {
             _device = null
+            segnala(TIPO.collegamento_fallito, `Errore inizializzazione stampante: ${retcode}`)
             reject(new Error(`Errore inizializzazione stampante: ${retcode}`))
             return
           }

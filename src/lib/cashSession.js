@@ -7,6 +7,7 @@
 // e chiudere anche a cassa chiusa).
 import { useEffect, useState } from 'react'
 import { subscribeOpenCashSession } from './api.js'
+import { impostaSessioneDiagnostica } from './diagnosticaStampante.js'
 
 let session = null
 let loaded = false
@@ -24,6 +25,8 @@ function start() {
     (s) => {
       session = s
       loaded = true
+      // Il diario della stampante si intitola alla serata (REQ-STAMPA-019).
+      impostaSessioneDiagnostica(s?.id || null)
       emit()
     },
     () => {} // il listener Firestore ritenta da solo

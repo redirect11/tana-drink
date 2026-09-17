@@ -266,5 +266,6 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
+| l'avviso del certificato della stampante | [docs/certificato-stampante.md](docs/certificato-stampante.md) |
 | capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |

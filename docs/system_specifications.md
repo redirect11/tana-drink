@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 10 settembre 2026.
+> Generato il 17 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 193 | fatto e coperto dai test |
+| ✅ | 200 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**235 voci** in tutto. **208** descrivono il sistema com'è oggi e
+**242 voci** in tutto. **215** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -46,10 +46,10 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 10 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 35 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 11 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 17 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 1 | — |  |
+| [STAT](#stat) | 2 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -321,7 +321,7 @@ Nel POS i prodotti si trovano per categoria, per preferiti (fissati a mano) e pe
 
 #### REQ-POS-012 — La ricerca prodotti: filtra, oppure accende la card e ci porta lì
 
-Cercando un prodotto nella griglia del POS (creazione e modifica ordine) si sceglie fra due comportamenti, in Impostazioni → Vista ordine. «Filtra la griglia» lascia le sole card che rispondono, come è sempre stato. «Accendi e porta lì» non toglie niente: la griglia scorre fino alla prima card che risponde e la accende con un anello nel colore d'accento, così si vede dov'è rispetto alle altre — serve a chi la griglia la conosce a memoria e non vuole vederla cambiare sotto le dita. Mentre si cerca mostra tutto il catalogo, perché il prodotto giusto può stare in un'altra categoria; toccando una card la ricerca si azzera da sé. La regola di corrispondenza è una sola per tutti e due i modi, altrimenti cambiando impostazione lo stesso testo troverebbe prodotti diversi. Se non risponde niente lo dice, invece di lasciare la griglia apparentemente immobile.
+Cercando un prodotto nella griglia del POS (creazione e modifica ordine) si sceglie fra due comportamenti, in Impostazioni → Vista ordine. «Filtra la griglia» lascia le sole card che rispondono, come è sempre stato. «Accendi e porta lì» non toglie niente: la griglia scorre fino alla prima card che risponde e la accende con un anello nel colore d'accento, così si vede dov'è rispetto alle altre — serve a chi la griglia la conosce a memoria e non vuole vederla cambiare sotto le dita. Mentre si cerca mostra tutto il catalogo, perché il prodotto giusto può stare in un'altra categoria; toccando una card la ricerca si azzera da sé. La regola di corrispondenza è una sola per tutti e due i modi, altrimenti cambiando impostazione lo stesso testo troverebbe prodotti diversi. Se non risponde niente lo dice, invece di lasciare la griglia apparentemente immobile. DAL 12/09/2026 LA RICERCA SI AZZERA IN TUTTI E DUE I MODI. Flavio, per iscritto: «negli ordini quando si cerca un item del menù, una volta trovato e selezionato si cancella in automatico ciò che si è scritto per cercarlo». In «filtra» la griglia restava ristretta sull'ultima ricerca, e il prodotto dopo si cercava cancellando prima quella a mano; adesso, toccata la card, la ricerca sparisce e la griglia torna intera, come già faceva in «accendi». Il gesto sulle frecce +/− della card non azzera niente: chi sta correggendo un numero non deve vedersi la griglia cambiare fra un tocco e l'altro.
 
 **Dove**: `src/lib/posCatalog.js, src/components/PosProductPicker.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/component/PosProductPicker.test.jsx`
 
@@ -781,6 +781,22 @@ Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia è che l
 
 **Dove**: `src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
+
+RIPENSATO IL 12/09/2026:
+
+NON PIU' ×1,5 MA ×2. Flavio, per iscritto: «moltiplicare ×2 l'ingrediente GHIACCIO HOSHIZAKI in tutte le ricette, ho fatto un errore di calcolo quindi va raddoppiato in tutte le ricette degli items di MENU dove e' presente». L'obiettivo si dice sempre RISPETTO ALLA DOSE ORIGINALE, quella scritta a mano: «×2» vuol dire che 100 g diventano 200, qualunque cosa ci sia scritto adesso. Sul test, dove il ×1,5 e' gia' passato il 10/09, si moltiplica per 4/3 (150 → 200, 300 → 400); in produzione, dove non e' passato niente, per 2 diretto — «in produzione faremo direttamente x2» (Daniele, 12/09).
+
+LA TABELLA DELLE DOSI NON BASTA PIU', e il «gia' fatto» cambia posto. Con il ×1,5 le dosi si riconoscevano da una tabella (100 → 150) e una riga gia' a 150 si lasciava stare; con il ×2 non funziona, perche' 200 e' insieme una dose di partenza e una d'arrivo. Il segno sta invece SULL'ARTICOLO DEL GHIACCIO: `ricette_fattore` dice a quante volte l'originale stanno le dosi adesso (1,5 dopo il primo script, 2 dopo questo), e `ricette_fattore_at` quando e' stato scritto. Lo script parte da li' — o da `--da <fattore>` se il segno manca, come su test dove il ×1,5 e' passato prima che il segno esistesse — moltiplica per quello che manca all'obiettivo (`--a`, 2 se non si dice altro) e alla fine scrive il segno nuovo. Rilanciato per sbaglio, trova il segno gia' a 2 e si ferma senza toccare niente. L'app non legge quel campo: e' memoria dello script, e basta. Lo script si chiama `scripts/ghiaccio-nelle-ricette.js`; la libreria che decide di quanto e cosa riscrivere (`fattoreDaApplicare`, `righeDaRiscrivere`) e' quella che si prova. Una riga di ghiaccio senza una dose vera (zero, o una scritta) si segnala e resta com'e'. Il resto vale come sotto: si toccano solo le righe di ricetta del ghiaccio e solo la quantita', anteprima di serie, produzione nominata a mano dopo il backup. ─── COM'ERA (09/09/2026) ─── Chiesto da Flavio il 09/09/2026, in un audio: «bisognerebbe moltiplicare tutte le quantita' di ghiaccio per 1,5. Quindi se ho 100 grammi diventano 150, se ho 200 diventano 300. Se e' possibile farlo in automatico bene, altrimenti lo faccio a mano». La dose scritta nelle ricette era piu' bassa del consumo vero al banco, e il magazzino del ghiaccio scendeva meno di quanto ne uscisse davvero. E' UNO SCRIPT DI MANUTENZIONE, non una funzione dell'app: si fa una volta, su dati che esistono gia'. Tocca SOLO le righe di ricetta (`recipe_items`) che puntano all'articolo del ghiaccio, e di quelle solo la quantita'; la ricetta in parole, il resto degli ingredienti e l'articolo in magazzino restano com'erano. Il magazzino gia' scalato non si ricalcola (lo snapshot resta quello che era).
+
+NON E' UN «PER 1,5»
+
+CIECO, ed e' la scelta che conta. Uno script che moltiplica si puo' lanciare due volte per sbaglio, e la seconda volta 100 grammi vanno a 225 senza che nessuno lo veda. Le dosi si riconoscono da una TABELLA — 100 → 150, 200 → 300 — e una riga gia' a 150 o 300 si lascia stare: rilanciato, lo script non fa niente. Una dose che non sta in tabella (un 220, un 80) si SEGNALA e non si tocca; per moltiplicare anche quelle c'e' `--anche-fuori-tabella`, da usare una volta sola guardando l'anteprima, perche' su quelle righe il «gia' fatto» non si riconosce. L'ANTEPRIMA E' IL DEFAULT: senza `--apply` non scrive niente, e stampa ricetta per ricetta cosa cambierebbe. Se di «ghiaccio» in magazzino ce n'e' piu' d'uno, si ferma e chiede quale (`--ghiaccio <id>`). Il progetto e' `tana-drink-test` se non si dice altro: la produzione si nomina a mano, dopo il backup.
+
+SUL TEST (10/09/2026): 87 ricette riscritte; 3 righe erano gia' a 150 o 300, 3 fuori tabella (Bramble 220, Rusty Nail 80, Black Russian 70) lasciate a Flavio. Nota per il passaggio a ×2 su test: quelle sei righe non sono a ×1,5 dell'originale, e con `--da 1.5` finiscono a 4/3 del loro valore e non a 2 — sono dati di prova, si sistemano a mano se servono. In produzione il problema non c'e'.
+
+**Dove**: `scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js` · **Lo dimostrano**: `tests/unit/ghiaccioNelleRicette.test.js`
+
 ### Magazzino
 
 Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base.
@@ -823,6 +839,10 @@ LE BOTTIGLIE DA TOCCARE: sono oggetti su uno scaffale, e «−1 piena più 750 m
 
 LO SCARICO A MANO INVECE SI FERMA A ZERO (`scaricoPossibile`): lì c'è una persona che dichiara quanto ha tolto dallo scaffale, e da uno scaffale vuoto non si toglie niente.
 
+RIPENSATO IL 12/09/2026:
+
+IL CARICO NON RIPARTE PIU' DA ZERO (REQ-MAG-045). Flavio: «se ho tre pezzi, ne consumo quattro, va a meno uno, e compro cinque pezzi: non me ne mette quattro, me ne mette cinque». Il meno, al banco, e' quasi sempre merce gia' bevuta e non ancora caricata, e il carico che arriva e' proprio quello: si somma e chiude il buco. Le due cose «da zero in su» — soldi e bottiglie da toccare — restano.
+
 **Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`, `tests/unit/magazzinoSottoZero.test.js`
 
 #### REQ-MAG-004 — Modificare un ordine già scalato riallinea le scorte alla differenza
@@ -836,6 +856,10 @@ NEI DUE VERSI DAVVERO (BUG-101). La differenza si applica com'è: in più si sca
 #### REQ-MAG-005 — Inventario fisico: conta, differenze, valorizzazione
 
 Si registra una conta fisica e si vedono le differenze rispetto al teorico (DEP + ACQ − RIM = CONS, come sui fogli di inventario), con la valorizzazione a costo e IVA.
+
+SI CHIAMA INVENTARIO, NON «CONTA» (17/09/2026). Daniele: «la conta deve diventare inventario, che conta e' fuorviante». Cambia la parola a schermo — la voce del magazzino, il pannello, l'etichetta del modulo nelle impostazioni — non gli id: `conta` resta la chiave del modulo (`modulo_conta_enabled`, `licenza.moduli.conta`) e `stock_counts` la collezione, perche' stanno sui documenti veri. E CHIUSO UN INVENTARIO NE PARTE SUBITO UN ALTRO. Flavio, 17/09/2026: «quando faccio un inventario, quando faccio un altro inventario, lui mi chiude l'inventario precedente e mi dice: hai fatto l'inventario da TOT a TOT … solitamente lo faccio una volta al mese o una ogni due settimane … cosi' vedo in una determinata fascia di inventario quanto ho veramente consumato». Il periodo che gli interessa e' quello FRA due conte, non quello fra l'apertura e la chiusura della stessa: un inventario aperto e chiuso nello stesso pomeriggio ha consumo zero. Quindi la chiusura, dopo aver allineato le giacenze, rilegge gli articoli e apre il prossimo con quelle come deposito: da li' in poi c'e' sempre un inventario in corso, e lo storico si legge «dal … al …» con le date per esteso. Il primo lo apre lui, una volta sola. La rilettura dopo la chiusura e' voluta e non viola il local-first: l'allineamento e' gia' stato atteso (questo e' un lavoro d'ufficio con la rete, non un gesto del banco), e il documento nuovo nasce dalle giacenze appena scritte. E SI PUO' SPEGNERE: `inventario_riapre_da_solo` su settings/bar, acceso di suo, con l'interruttore in Impostazioni → Funzioni premium sotto quello dell'inventario (compare solo quando l'inventario c'e'). Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica di un nuovo inventario alla chiusura del precedente, cosi' puo' decidere se aprire a mano o in automatico». Spento, dopo la chiusura non c'e' nessun inventario in corso, il tasto «Apri l'inventario» torna, e la conferma di chiusura non promette un inventario nuovo che non partira'.
+
+IN PRODUZIONE ERA SPENTO (17/09/2026): `incluso: false` nel codice e nessuna licenza scritta, quindi la sezione non c'era e Flavio non poteva fare l'inventario. Acceso con `scripts/licenza-moduli.js --project tana-drink --includi conta,scadenzario --apply`, che scrive `licenza.moduli` su settings/bar per intero (una mappa a meta' spegnerebbe quello che non nomina). Backup fatto prima (`backup/prima-inventario-2026-09-17.json`).
 
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`
 
@@ -870,6 +894,8 @@ LA VISTA A LISTA E' LA CAPOSTIPITE di una famiglia che adesso vale per tre scher
 #### REQ-MAG-012 — Unità generiche: la manodopera entra nel costo del drink
 
 Un articolo di magazzino si può misurare in unità generiche «U», senza contenuto e senza conversioni: serve per quello che non si versa e non si pesa — il «Tempo di Lavorazione», che si aggancia come ingrediente ai drink che richiedono lavorazione perché il lavoro entri nel costo della ricetta e quindi nel prezzo consigliato. Ha un costo per unità, e basta. Prima l'unica scelta possibile era il grammo, e nella ricetta del Daiquiri si leggeva «Tempo di Lavorazione 1 g». Un articolo in U NON È UNA SCORTA, e da qui vengono tre regole: non si scarica quando il drink si fa (resta fuori dal consumo, quindi non si reintegra nemmeno all'annullo); non è mai «esaurito» né «in esaurimento», così il drink che lo usa non sparisce dalla carta al primo che se ne fa e non finisce nelle proposte d'ordine al fornitore; non vale niente nel valore del magazzino, che il lavoro non sta sullo scaffale. Al cliente non si mostra: le righe in unità generiche restano fuori dalla lista ingredienti in carta — «Tempo di Lavorazione 3 U» non è roba da far leggere a chi ordina — e la lista compare da due ingredienti veri in su. Restano visibili dove servono a chi gestisce: ricetta, costi, margini e prezzo consigliato.
+
+SUPERATA IN PARTE (12/09/2026, REQ-MAG-044): «un articolo in U NON E' UNA SCORTA» non vale piu'. Tutto quello che sta in magazzino si scarica, e' esaurito a zero e vale quello che costa: la manodopera censita a listino nei dati veri non e' mai esistita, e l'interruttore che la permetteva ha lasciato una tequila spenta e mai scaricata. Restano l'unita' generica «U» come misura e la sua esclusione dalla lista ingredienti in carta.
 
 **Dove**: `src/lib/inventory.js, src/lib/pricing.js, src/components/InventoryManager.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/pricing.test.js`, `tests/component/InventoryManagerCard.test.jsx`, `tests/component/MenuPage.test.jsx`
 
@@ -1031,6 +1057,8 @@ SISTEMATO (19/08): il commento sopra `MacroMenuPanel` in `MenuManager.jsx` racco
 
 CONSEGUENZA DA DIRE A CHI GUARDA: finché le macro di menù non vengono create, «Mensile per macro» non mostra numeri — mostra il suo messaggio, che dice dove crearle (Menù → Macro-categorie) e che vanno collegate alle categorie dei drink. Non è un guasto ed è lo stesso comportamento di prima; cambia solo il posto dove si va a crearle, che adesso è il menù e non il magazzino.
 
+RIPENSATA IL 09/09/2026 (Flavio, nota vocale delle 12:22), e il disegno nuovo sta in REQ-MAG-042. In due righe: l'elenco torna UNO — la decisione del 19/08 sui «due elenchi» è superata —, dentro una macro ci vanno i SINGOLI prodotti e le SINGOLE voci (non le categorie), ognuno con una PERCENTUALE, e i pesi vivono sulla macro (`pesi_prodotti`, `pesi_voci`). Con un elenco solo l'aggancio `macro_menu_id` non serve più: il fatturato di una macro è il suo incasso, e la spesa è la sua spesa. Le otto macro create su test il 19/08 (quattro d'acquisto e quattro di vendita) restano lì come macro qualsiasi, da riempire o cancellare a mano; i campi `ambito` e `macro_menu_id` restano sui documenti e non si leggono più. Nessuna migrazione dei pesi: «questo vado a inserirlo io manualmente». La regola del costo che segue il drink resta com'è, con la quota della voce.
+
 **Dove**: `src/lib/macros.js, src/components/InventoryManager.jsx, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/macroStats.test.js`, `tests/component/MacroCategoryManager.test.jsx`
 
 #### REQ-MAG-014 — Le scorte dicono anche quello che ti ritrovi a fine serata
@@ -1057,7 +1085,7 @@ CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala cartone →
 
 #### REQ-MAG-009 — Macro-categorie: il magazzino letto per famiglie
 
-Le categorie di magazzino si raggruppano in macro-categorie (distillati, birre, bibite…): servono a leggere consumi, valore e margini per famiglia invece che articolo per articolo, e a capire dove se ne va il denaro.
+Prodotti e voci del menù si raggruppano in poche macro-categorie (distillati, birre, bibite…): servono a leggere consumi, valore e margini per famiglia invece che articolo per articolo, e a capire dove se ne va il denaro. Dal 09/09/2026 il legame è per singolo prodotto o voce, con una percentuale (REQ-MAG-042): prima passava dalla categoria.
 
 **Dove**: `src/lib/macros.js, src/lib/macroStats.js, src/components/MacroCategoryManager.jsx` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/unit/macroStats.test.js`
 
@@ -1113,6 +1141,10 @@ LA RIGA CHE SI APRE: «quando seleziono un item mi si deve aprire la riga che mi
 
 LA PRESELEZIONE, che e' il motivo per cui questa schermata esiste: sono spuntati di partenza i prodotti FINITI o SOTTO LA SOGLIA di riordino impostata sul prodotto. Chi apre la schermata trova gia' fatto il lavoro di girare il magazzino.
 
+RIPENSATA IL 09/09/2026, dopo un anno di uso: la schermata SI APRE VUOTA. Flavio, in un audio: «quando vado a creare un nuovo ordine mi da' gia' ottantasei prodotti precompilati, e non e' una cosa buona, perche' me li devo levare uno alla volta». Con un magazzino vero — e con la regola di REQ-MAG-039 che spunta anche l'assortimento senza un ordine — la proposta era diventata un lavoro di cancellazione, riga per riga, prima di poter cominciare. Il conto delle scorte non e' sparito: e' diventato un TASTO, «Spunta quello che manca (N)», nella riga dei filtri, che dice quante righe spunterebbe e resta spento quando non ce ne sono. Si SOMMA a quello che c'e' gia' come fa un modello, e i pezzi scritti a mano vincono: un aiuto che si chiede e' un aiuto, uno che arriva da solo ottantasei volte e' un ostacolo.
+
+IL FILTRO PER ASSORTIMENTO (09/09/2026), stesse parole: «mettere anche il filtro per assortimento, se e' in assortimento, premium, in linea o fuori assortimento». E' la stessa tendina del magazzino (REQ-MAG-007), con lo stesso componente (`FiltroAssortimento`) e la stessa regola: nessuna scelta = tutto; chi non ha uno stato e' «in assortimento». Il filtro GUARDA e non toglie: una riga gia' nell'ordine resta nell'ordine anche se il filtro la nasconde. Serve a comporre a pezzi — prima i premium, poi la linea — invece di scorrere ottanta righe.
+
 NON SI PRECOMPILA CHI E' FUORI LINEA: «se e' fuori linea non viene considerato nella precompilazione dell'ordine» (utente, 27/08). Un prodotto `out` si puo' sempre ordinare a mano — e' cosi' che rientra — ma non si propone da solo. L'ORDINE STA DI FIANCO, NON IN FONDO. Aggiunto dall'utente il 27/08/2026 dopo aver provato: «e' SCOMODISSIMO l'ordine in basso. Dobbiamo metterlo affianco, e gia' li' separare i prodotti di un fornitore rispetto a un altro». La schermata si legge quindi a due colonne: a sinistra il catalogo da cui si sceglie, a destra l'ordine che si sta componendo, gia' diviso per fornitore. In fondo obbligava a scorrere avanti e indietro per sapere cosa si era gia' messo — e il riepilogo per fornitore (REQ-MAG-037) arrivava troppo tardi, alla conferma, quando lo si vuole sapere MENTRE si sceglie. L'INTESTAZIONE RESTA IN ALTO E ORDINA. «Voglio l'header della tabella fisso in alto, coi titoli delle colonne che posso usare per ordinare»: per NOME, per DISPONIBILITA' IN INVENTARIO, per PREZZO DI LISTINO e per FORNITORE. Con centinaia di righe, un'intestazione che scorre via lascia chi guarda a indovinare che cosa sia la terza colonna.
 
 LA DISPONIBILITA' HA TRE STATI e vanno mostrati:
@@ -1129,17 +1161,17 @@ LA QUANTITA' SELEZIONA: «se aggiungo una quantita' sulla riga del prodotto, que
 
 SCORRIMENTO CONTINUO, non paginazione: e' la strada che l'utente preferisce e non litiga con niente. L'intestazione resta in alto perche' a scorrere e' la TABELLA, che ha una barra sua (`position: sticky` dentro un riquadro che scorre), e l'ordinamento riparte dalla prima finestra invece di tenere in vita seicento righe gia' disegnate. Il passo e' 40 righe. Accanto al conteggio c'e' un tasto «Mostra altre righe»: chi arriva con la tastiera non fa scorrere niente col tabulatore, e senza quel tasto la finestra non crescerebbe mai.
 
-IL FUORI LINEA ADESSO E' IN TABELLA. Prima gli `out` erano esclusi dal catalogo ordinabile (REQ-MAG-007, «non si ricompra»): cosi' pero' non c'era modo di farli rientrare, e ordinarne uno e' esattamente il gesto con cui rientrano. Restano fuori dalla PRESELEZIONE, che e' quello che l'utente ha chiesto, e portano scritto «fuori linea» accanto al nome.
+IL FUORI LINEA ADESSO E' IN TABELLA. Prima gli `out` erano esclusi dal catalogo ordinabile (REQ-MAG-007, «non si ricompra»): cosi' pero' non c'era modo di farli rientrare, e ordinarne uno e' esattamente il gesto con cui rientrano. Restano fuori da «Spunta quello che manca», che e' quello che l'utente ha chiesto, e portano scritto «fuori linea» accanto al nome.
 
-IL TOTALE SI CORREGGE, IL €/pz NO. La colonna del prezzo unitario e' il LISTINO di quel fornitore e resta di sola lettura: e' il dato che dice quanto ci si aspetta di pagare, e non deve mettersi a ballare mentre si scrive. Il totale della riga si scrive a mano, e da li' si ricava il prezzo che finisce sull'ordine (totale / pezzi). Cambiando i pezzi o il fornitore la correzione si perde: valeva per QUEI pezzi da QUEL fornitore.
+IL TOTALE SI CORREGGE, IL €/pz NO. La colonna del prezzo unitario e' il LISTINO di quel fornitore e resta di sola lettura: e' il dato che dice quanto ci si aspetta di pagare, e non deve mettersi a ballare mentre si scrive. Il totale della riga si scrive a mano, e da li' si ricava il prezzo che finisce sull'ordine (totale / pezzi). Cambiando i pezzi o il fornitore la correzione si perde: valeva per QUEI pezzi da QUEL fornitore. «SPUNTA QUELLO CHE MANCA»
 
-LA PRESELEZIONE PRENDE UNA RIGA SOLA PER PRODOTTO — quella del fornitore dell'ULTIMO ACQUISTO — perche' lo stesso Campari su due listini ha due righe, e spuntarle tutte e due vorrebbe dire comprarlo due volte. I DUE SUGGERIMENTI DI REQ-MAG-029 (chi e' l'ultimo acquisto, chi e' il piu' economico) sono passati dalla riga alla SCHEDA che si apre: in una riga di tabella a otto colonne non ci stavano, e la scheda e' dove si guarda un prodotto prima di decidere.
+PRENDE UNA RIGA SOLA PER PRODOTTO — quella del fornitore dell'ULTIMO ACQUISTO — perche' lo stesso Campari su due listini ha due righe, e spuntarle tutte e due vorrebbe dire comprarlo due volte. I DUE SUGGERIMENTI DI REQ-MAG-029 (chi e' l'ultimo acquisto, chi e' il piu' economico) sono passati dalla riga alla SCHEDA che si apre: in una riga di tabella a otto colonne non ci stavano, e la scheda e' dove si guarda un prodotto prima di decidere.
 
 LA TENDINA SELEZIONA COME LA QUANTITA': scegliere chi ci vende quel prodotto e' la stessa decisione di scrivere quanti pezzi servono, e lasciare la riga non spuntata dopo averlo fatto sarebbe un secondo gesto per la stessa cosa.
 
 RESTA FUORI, ed e' voluto: lo STORICO ORDINI e' rimasto quello di prima, sotto la composizione, con le sue fette per fornitore — diventa «Lista Ordini» con REQ-MAG-038, e il riepilogo di conferma e' REQ-MAG-037. La bozza della composizione vive finche' si sta sulla schermata: non e' la bozza del POS e non e' stato chiesto che sopravviva a un'uscita.
 
-**Dove**: `src/components/NuovoOrdinePanel.jsx, src/components/PurchaseOrdersPanel.jsx, src/lib/composizioneOrdine.js, src/lib/listini.js, src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/composizioneOrdine.test.js`, `tests/component/NuovoOrdineTabella.test.jsx`
+**Dove**: `src/components/NuovoOrdinePanel.jsx, src/components/PurchaseOrdersPanel.jsx, src/lib/composizioneOrdine.js, src/lib/listini.js, src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/composizioneOrdine.test.js`, `tests/unit/listini.test.js`, `tests/component/NuovoOrdineTabella.test.jsx`
 
 #### REQ-MAG-037 — Il riepilogo per fornitore, e «in assortimento» come stato di passaggio
 
@@ -1423,7 +1455,7 @@ SCHEDA DA COMPLETARE (`scheda_da_completare` sul prodotto), e non blocca nessuno
 
 LA CONFEZIONE NON SI SCRIVE, e non e' una dimenticanza. La riga d'ordine porta un `package_size` ma non dice di che misura sia quel contenuto: scriverlo senza `content_unit` farebbe rispondere `motivoNonMigrabile` — «c'e' scritto che un pezzo contiene 700, ma non di che misura» — e da quel momento IL MAGAZZINO INTERO andrebbe in sola lettura per colpa di un prodotto appena nato, col locale aperto. Il prodotto nasce quindi contato a pezzi e basta, che e' esattamente quello che l'ordine sa: sei confezioni sono sei pezzi.
 
-DOVE SI VEDE, ED E' L'ALTRO LATO DELLO STESSO BUCO. Un prodotto senza categoria non ha macro d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare sbagliata, che e' peggio. Sta percio' accanto alle CATEGORIE SENZA MACRO (REQ-UI-022), in Magazzino → Macro-categorie, perche' e' la stessa mancanza vista dall'altro lato e si guardano nello stesso momento. Nella lista dei prodotti il segno e' una matita accanto al nome, come la coroncina del premium; aperto, il prodotto dice cosa manca — la categoria, quanto contiene un pezzo, la soglia di riordino — in ambra, che vuol dire lavoro che manca (il rosso, in questa app, vuol dire annullato: DESIGN.md).
+DOVE SI VEDE, ED E' L'ALTRO LATO DELLO STESSO BUCO. Un prodotto senza categoria non ha macro d'acquisto, quindi la sua spesa non compare in «Bilancio → Acquisti x Fatturato» (REQ-MAG-022): sparisce dai conti invece di risultare sbagliata, che e' peggio. Sta percio' accanto alle CATEGORIE SENZA MACRO (REQ-UI-022), in Magazzino → Macro-categorie, perche' e' la stessa mancanza vista dall'altro lato e si guardano nello stesso momento. Nella lista dei prodotti il segno e' una matita accanto al nome, come la coroncina del premium; aperto, il prodotto dice cosa manca — la categoria, quanto contiene un pezzo, la soglia di riordino — in ambra, che vuol dire lavoro che manca (il rosso, in questa app, vuol dire annullato: DESIGN.md). DAL 09/09/2026 LA LISTA ACCANTO ALLE MACRO NON C'E' PIU' (REQ-MAG-042): la macro si da' al singolo prodotto, non alla categoria, quindi una categoria che manca non toglie piu' niente ai conti. Restano la matita nella lista e, nella scheda, l'elenco di cosa manca.
 
 LA SCHEDA SI CHIUDE CON LA CATEGORIA, non col semplice fatto di averla aperta. Bastasse un salvataggio qualunque, il segno sparirebbe dal prodotto guardato per un secondo e la spesa continuerebbe a non comparire nei conti senza piu' niente che lo dica. Le altre due cose che mancano si leggono nella scheda e non tolgono soldi a nessun totale. L'IVA D'ACQUISTO eredita quella della riga d'ordine, e il default (22%) dove la riga non la dice: l'ordine porta il prezzo, non l'aliquota (REQ-MAG-025 punto 3).
 
@@ -1646,6 +1678,48 @@ Nata da una domanda vera di Flavio (vocale del 20/08, 14:39, con lo screenshot d
 LA LEGENDA sta sopra la lista, una riga smorzata che va a capo da se' sul telefono, coi campioncini presi dalle CLASSI VERE dei segni (.dot-*, e le tacche coi colori di .inv-row.ass-*): se un colore cambia la', la legenda lo segue o il test la smaschera. In piu' ogni riga porta il title dell'assortimento, per chi tocca. Chiesta dall'utente: «aggiungi la legenda dei pallini e delle lineette vicino agli item dell'inventario».
 
 **Dove**: `src/components/InventoryManager.jsx, src/index.css` · **Lo dimostrano**: `tests/component/InventoryManager.test.jsx`
+
+#### REQ-MAG-042 — Le macro-categorie sono un elenco solo: prodotti e voci ci entrano uno a uno, con una percentuale
+
+Chiesto da Flavio il 09/09/2026 (nota vocale delle 12:22), dopo aver provato le macro com'erano: «io già me ne sono create quattro … clicco su una macro categoria e mi appaiono tutti i prodotti di magazzino e tutti gli items del menu … con una percentuale: il 100%, l'80%, il 60% … questo vado a inserirlo io manualmente … gli items del menu vanno caricati al 100% … i prodotti di magazzino una parte va in una macro categoria e una parte va nell'altra … sinistra prodotti destra items … non mi mettere tutta la categoria bibite ma le singole voci … tutti in ordine alfabetico … sempre con quello che ricavo, quindi gli items del menu, e sia quello che spendo, quindi i prodotti del magazzino».
+
+TRE COSE CAMBIANO rispetto a REQ-MAG-015. (1) L'ELENCO È UNO: la stessa macro tiene insieme quello che si spende e quello che si incassa, così a fine mese i due numeri stanno sulla stessa riga senza un aggancio da compilare a parte. (2) DENTRO CI VANNO I SINGOLI prodotti e le singole voci, non le categorie. (3) OGNI LEGAME HA UNA PERCENTUALE, intera da 1 a 100: una voce di solito sta al 100% in una macro sola, un prodotto può stare per il 60% in una e per il 40% nell'altra. Quello che le quote non coprono resta «non attribuito»: non sparisce e non si conta due volte.
+
+DOVE STANNO I PESI: sulla macro, in due mappe `pesi_prodotti` (id prodotto → percentuale) e `pesi_voci` (id voce → percentuale). Sulla macro e non sul prodotto perché è la macro che si apre per compilarli ed è la macro che si cancella: sparita lei, spariscono i suoi pesi e nessun prodotto resta a puntare un gruppo che non c'è più. I campi `ambito` e `macro_menu_id` delle macro nate con la 1.4.8 restano sui documenti e non si leggono più; il `macro_id` sulle categorie non si scrive più e non si legge più.
+
+LA SCHERMATA: Magazzino → 🗂️ Macro-categorie (quella del Menù è stata tolta: con un elenco solo non c'è un secondo posto). L'elenco dice per ogni macro quanti prodotti e quante voci ha dentro; aperta, mostra due colonne — a sinistra i prodotti del magazzino, a destra le voci del menù — in ordine alfabetico, ognuno con la casella della percentuale, la ricerca e il filtro «Solo senza macro». Accanto a chi ha già una quota altrove si legge «40% altrove», e la casella non lascia passare cento: un 100 scritto su un prodotto che sta già al 40% in un'altra macro si riporta a 60. LOCAL-FIRST, COME TUTTO IL RESTO: la casella si compila, si esce (o Invio), e il numero resta lì all'istante. Tutti i writer delle macro (`createMacroCategory`, `updateMacroCategory`, `impostaPesoMacro`, `deleteMacroCategory`) scrivono in sottofondo (`bgWrite`) e tornano subito il documento com'è dopo la scrittura, composto in memoria (`macroConPeso`): la schermata sostituisce quello che aveva in lista e non rilegge niente. L'id di una macro nuova lo fa il terminale (`doc()` senza rete). `impostaPesoMacro` applica la stessa regola della casella — `pesoAmmesso`, col tetto di cento meno quello che le altre macro hanno già — e uno zero toglie il campo (`deleteField`). È una lista lunga da riempire una casella dietro l'altra, e un giro di rete a ogni casella la renderebbe inusabile; il test della schermata gira con Firestore che non risponde mai. I CONTI. Venduto × Incassato spartisce ogni riga venduta fra le macro secondo `pesi_voci` della sua voce — incasso E costo con la stessa quota, perché il costo segue il drink (REQ-MAG-015: la Schweppes nel Gin Tonic conta sui distillati). Gli acquisti (`purchasesByMacro`, per REQ-MAG-022) spartiscono ogni riga d'ordine secondo `pesi_prodotti`. Se due persone scrivono insieme e la somma dei pesi passa cento, la ripartizione la riporta a cento in proporzione: un euro non si conta mai due volte.
+
+NESSUNA MIGRAZIONE dei pesi dalle vecchie categorie: «questo vado a inserirlo io manualmente». Su test le otto macro del 19/08 restano come macro qualsiasi, da riempire o cancellare a mano; in produzione `macro_categories` è ancora vuota.
+
+**Dove**: `src/lib/macros.js, src/lib/macroStats.js, src/lib/api.js (impostaPesoMacro), src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (MacroPanel), src/components/MacroMonthlyTab.jsx` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/unit/macroStats.test.js`, `tests/component/MacroCategoryManager.test.jsx`, `tests/component/MacroMonthlyTab.test.jsx`, `tests/component/InventoryManager.test.jsx`
+
+#### REQ-MAG-045 — Il carico si somma alla giacenza com'è, anche sotto zero
+
+Flavio, 12/09/2026 (vocale delle 12:46): «quando un prodotto va in negativo e vado ad aggiungere una quantità, la quantità parte comunque da zero. Se ho tre pezzi, ne consumo quattro, va a meno uno; compro cinque pezzi e me ne mette cinque, non quattro: il meno uno non me l'ha calcolato. Non è detto che un prodotto vada realmente in negativo: magari mi è arrivato e non l'ho caricato ancora, lo carico il giorno dopo, e si bilancia col carico». È IL CONTRARIO DI QUELLO DECISO IL 17/08 (BUG-007) e ribadito il 04/09 (BUG-101): allora il carico ripartiva da zero perché «da uno scaffale vuoto non si versa» e una bottiglia caricata su −0,04 doveva contarne una. Flavio guarda il caso di tutti i giorni, non il residuo di arrotondamento: il meno è merce già bevuta e non ancora caricata, e il carico che arriva è quello. Si somma, e il buco si chiude da sé. Il caso −0,04 + 1 = 0,96 resta, ed è accettato: è un centesimo di bottiglia, e per il magazzino conta più il pezzo intero che manca.
+
+DOVE SI SOMMA. Il carico a mano (`loadStock`) parte dalla giacenza com'è; il carico a confezioni (`receiveBottles`) idem, mentre le bottiglie da contare sullo scaffale partono da zero perché sotto zero non ce ne sono; la consegna di un ordine faceva già `increment`, che somma e basta. Lo scarico a mano resta fermo a zero (`scaricoPossibile`): lì una persona dichiara quanto ha tolto, e da uno scaffale vuoto non si toglie niente.
+
+COSA RESTA DA ZERO IN SU, e cambia nome per dirlo: `giacenzaPerCarico` diventa `giacenzaNonNegativa`, usata solo per contare OGGETTI (`bottleBreakdown`: «−1 piena più 750 ml nell'aperta» non vuol dire niente) e SOLDI (`unitsInStock`: un magazzino che vale meno di niente non vuol dire niente). Nessuna migrazione: le giacenze restano quelle, cambia solo cosa fa il prossimo carico.
+
+**Dove**: `src/lib/api.js (loadStock, receiveBottles, consegna), src/lib/inventory.js (giacenzaNonNegativa)` · **Lo dimostrano**: `tests/unit/scritturaMagazzino.test.js`, `tests/unit/inventory.test.js`
+
+#### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
+
+Flavio, 12/09/2026 (vocale delle 13:47): «alcuni prodotti non mi scarica il quantitativo ogni volta che lo vendo … ho comprato questa nuova tequila Agave Santa, l'ho associata a un item di menù, l'ho battuto, non è stato scaricato. Mi sono reso conto che stava spento il tasto "è una scorta, si scarica quando si usa". Ma perché sta questo tasto? Tutto bisogna che si scarica quando si usa». E Daniele, lo stesso giorno: «togli proprio quel tasto che disabilita lo scarico, in effetti non serve». A COSA SERVIVA. L'interruttore (`scorta`, REQ-MAG-016) era nato per la manodopera: un «Tempo di lavorazione» messo in ricetta per pesare sul costo del drink, che non sta su nessuno scaffale — se si fosse scaricato sarebbe andato a zero al primo drink e il menù avrebbe detto «ingrediente esaurito» (REQ-MAG-012).
+
+PRIMA DI TOGLIERLO SI E' GUARDATO NEI DATI: né in produzione (400 articoli) né su test (388) esiste un prodotto con lo scarico spento, e nessuno si affida alla vecchia regola dell'unità «U». La manodopera censita a listino non c'è mai stata; l'interruttore invece un danno l'ha fatto.
+
+COSA CAMBIA. La casella sparisce dalla scheda e il campo `scorta` non si scrive né si legge più: giacenza iniziale e soglia di avviso si chiedono sempre; `stockStatus`, `haGiacenza` e `unitsInStock` non hanno più l'eccezione «non è una scorta»; lo scarico delle comande, il riallineo di una comanda modificata, lo storno all'annullo e l'impegnato toccano tutti gli ingredienti della ricetta; il travaso (`patchNormalizza`) non scrive più il campo. Nessuna migrazione: i documenti che hanno `scorta: true` lo tengono e nessuno lo guarda. Se un giorno servisse davvero un ingrediente «solo per il costo», la strada non è un interruttore sul magazzino ma una voce di costo fuori dal magazzino — e allora si scrive un requisito suo.
+
+**Dove**: `src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)` · **Lo dimostrano**: `tests/unit/prodottoNuovoDaOrdine.test.js`, `tests/component/InventoryManagerCard.test.jsx`
+
+#### REQ-MAG-043 — Alla consegna ogni riga dice quanto costa, e sta su due linee
+
+Flavio, 11/09/2026, con la fattura ENOFEL accanto al tablet (due foto e tre vocali): «le bottiglie d'acqua costano 17 centesimi, ne ho prese 24, dovrei sapere il totale; la stessa cosa la tequila, ne ho prese 2, mi porta il prezzo dell'unità ma dovrebbe portare anche il totale». Il netto in fondo c'era già, ma per trovare LA RIGA che non torna con la fattura serve il totale di ogni riga — e deve seguire quello che si scrive nelle caselle, perché è mentre si correggono pezzi e prezzo che si fa il confronto.
+
+OGNI RIGA MOSTRA PEZZI × PREZZO, ricalcolato a ogni battuta, e il netto in fondo somma le sole righe spuntate: una riga senza spunta non si carica, quindi non conta, ma il suo totale resta leggibile perché è la riga che si sta decidendo. E LA RIGA STA SU DUE LINEE. Nella seconda foto la finestra della consegna aveva il nome ridotto a una colonnina di una parola per riga («Acqua / Lete / chiesti / 24») con i pezzi sopra il nome: in una scatola da 420 px, nome e due caselle sulla stessa linea non ci stanno, e le caselle avevano una larghezza «divisa per lo zoom» che sull'iPad le allargava ancora. Adesso sopra ci sono spunta, nome (che può andare a capo) e totale; sotto, rientrati sotto il nome, i «chiesti», la casella dei pezzi, «pz ×», la casella del prezzo e «€». È la regola `.consegna-riga` in index.css: una griglia a due aree, con le caselle di una misura loro.
+
+**Dove**: `src/components/OrdiniListaPanel.jsx (DialogoConsegna), src/index.css (.consegna-riga)` · **Lo dimostrano**: `tests/component/CaricoOrdine.test.jsx`
 
 ### Cassa di serata e statistiche
 
@@ -2018,6 +2092,28 @@ SI CHIUDE, NON SI ABBANDONA, quando il collegamento può essere sano: abbandonar
 IL PALLINO DICE QUELLO CHE LA STAMPANTE HA RISPOSTO, non che in memoria esista un oggetto: `preparaStampante` riporta il guaio noto. E NIENTE DI QUESTO PUÒ FERMARE UNA STAMPA: il battito è in fila come le altre, un battito che inciampa non spezza la coda, gli eventi di stato non alzano `onreceive` (quindi non sfasano il conto invii/risposte da cui dipende il registro), e nessun lavoro aspetta nessuno.
 
 **Dove**: `src/lib/printer.js (battitoDellaStampante, avviaBattito, ascoltaLaStampante, getPrinter, preparaStampante, smettiDiAscoltare)` · **Lo dimostrano**: `tests/unit/stampanteCheNonRisponde.test.js`
+
+#### REQ-STAMPA-019 — La stampante lascia un diario sul server: una serata, un documento
+
+Daniele, 14/09/2026, dopo un'altra sera di «stampante disconnessa» in produzione che da remoto non si poteva spiegare: «dobbiamo salvare i log diagnostici della stampante quando ha problemi e quando risulta offline nel database. Una log rotation per serata in modo da non intasare il db. Ogni apertura cassa si logga tutto ciò che riguarda gli errori della stampante, così possiamo diagnosticare da remoto».
+
+PRIMA la stampante non lasciava niente fuori dal tablet: il registro delle stampe (REQ-STAMPA-017) sta in localStorage, il pallino (REQ-STAMPA-011) in memoria, e dal server si leggeva solo l'IP salvato. Per capire un guaio bisognava essere al banco, di sera.
+
+COSA SI SCRIVE. Ogni guaio che l'app già conosce diventa una riga con ora, tipo, motivo e l'indirizzo con cui si stava parlando: `collegamento_fallito` (la stretta di mano rifiutata, con lo stato dell'SDK), `guasto` (le cadute e i guai che la stampante dichiara: carta, coperchio, fuori linea, «non risponde»), `stampa_fallita` (dal registro: cosa era e perché), `pallino_ko`/`pallino_ok` (i PASSAGGI del pallino, non i controlli ogni mezzo minuto), `stampante_tornata`, `apertura_cassa`. La prima riga della serata porta l'intestazione: terminale, sessione, giornata, chi era al banco, indirizzo/porta/SSL della stampante, versione e commit dell'app, browser.
+
+NIENTE DATI PERSONALI: nessun cliente, nessun conto.
+
+UN DOCUMENTO PER SERATA E PER TERMINALE (`diagnostica_stampante`, id `cassa-<sessione>--<dispositivo>` o, a cassa chiusa, `giorno-<aaaa-mm-gg>--<dispositivo>`): è la rotazione chiesta, e due tablet non si scrivono addosso. Gli eventi si accodano con `arrayUnion` e si contano con `increment`: scritture commutative, in sottofondo, che si accodano offline senza rileggere. Nessun `await`: la stampa non aspetta il diario, e un diario che non parte non tocca l'indicatore di sincronizzazione.
+
+NON INTASA. Lo stesso guaio ripetuto entro un minuto non si riscrive (si conta, e il conto esce con la riga dopo: `ripetuti_prima`); oltre 200 righe in una serata se ne scrive una di «tetto» e poi si tace. I documenti più vecchi di 14 giorni li cancella il terminale che li ha scritti, quando ne apre uno nuovo: tiene la lista in localStorage, senza query né indici né Cloud Function.
+
+IL MODULO È PURO: `diagnosticaStampante.js` non importa né Firebase né la stampante. Chi scrive (api.js), chi conosce l'indirizzo e chi è al banco (printer.js) e chi sa la cassa (cashSession.js) si registrano; così printer.js e il registro lo importano senza trascinarsi Firebase, e i test lo provano con uno scrittore finto.
+
+LE REGOLE: legge admin e bartender; scrive e cancella tutto il personale, perché anche il telefono della sala stampa le sue comande e i suoi guai valgono quanto quelli del banco.
+
+SI LEGGE DA CASA con `node scripts/diagnostica-stampante.js --project tana-drink [--giorni N] [--tutto]`: serata per serata, con l'intestazione e le righe in ordine di tempo. Una schermata nell'app non c'è: il diario serve a chi ripara, non a chi versa.
+
+**Dove**: `src/lib/diagnosticaStampante.js, src/lib/api.js (scriviDiagnosticaStampante, openCashSession), src/lib/printer.js, src/lib/registroStampe.js, src/lib/statoStampante.js, src/lib/cashSession.js, firestore.rules, scripts/diagnostica-stampante.js` · **Lo dimostrano**: `tests/unit/diagnosticaStampante.test.js`, `tests/unit/diagnosticaStampanteSenzaRete.test.js`
 
 ### Vista cliente
 
@@ -2485,6 +2581,8 @@ SCELTO IL SECONDO DEI DUE MODI: nessun campo «apposta» sulla categoria. L'elen
 
 UNA MACRO CANCELLATA VALE COME NESSUNA MACRO, esatto come in `groupCategoriesByMacro`: il `macro_id` resta attaccato alla categoria, ma il gruppo non esiste più.
 
+SUPERATA (09/09/2026, REQ-MAG-042): le categorie non portano più una macro — il legame è per singolo prodotto o voce, con una percentuale — quindi l'etichetta accanto alla categoria non ha più niente da dire ed è stata tolta da tutti e due gli elenchi (`EtichettaMacro` cancellato). Il bisogno di vedere «cosa manca» resta, e si soddisfa dentro la macro: nelle due colonne c'è il filtro «Solo senza macro», che mostra i prodotti e le voci a cui nessuna macro ha ancora dato una quota. I test citati sono quelli degli elenchi e della logica pura, che restano.
+
 **Dove**: `src/components/MacroCategoryManager.jsx, src/components/InventoryManager.jsx (InvCategoryManager), src/components/MenuManager.jsx (CategoryManager)` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/MenuManager.test.jsx`
 
 #### REQ-UI-023 — La card della comanda si legge da lontano: numero e nome grandi, meno righe
@@ -2687,6 +2785,24 @@ LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in cor
 
 **Dove**: `src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/StatsTab.test.jsx`
 
+#### REQ-STAT-002 — Il periodo si sceglie da data a data, e sotto ci sono i due elenchi
+
+Chiesto da Flavio il 17/09/2026, in un vocale, guardando Statistiche → Per periodo: «mi appare questo counter dei giorni, che penso significhi 24 da oggi indietro di 24 giorni. Ma qui in realta' mi dovrebbe apparire un inizio periodo, fine periodo … cosi' riesco a vedere realmente la fascia di periodo che mi interessa, cosi' come puo' essere il giugno, cosi' come puo' essere il periodo di Natale, e vedere quindi quanto ho fatturato, quanto ho movimentato invece i prodotti di magazzino». A) IL PERIODO E' UN INTERVALLO DI DATE. Due caselle, «Dal» e «Al», in GIORNATE COMMERCIALI come tutto il resto dell'app: la nottata oltre la mezzanotte appartiene alla giornata in cui e' cominciata. Col contatore di prima giugno non si guardava — si guardavano «gli ultimi 108 giorni», che e' un'altra domanda.
+
+LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti. Le due caselle si chiamano «Dal» e «Al» e non «Dal giorno»/«Al giorno»: quelle sono piu' sotto, nel venduto per fascia oraria, e dicono un'altra cosa — due etichette uguali a schermo si scambiano per la stessa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
+
+SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse — venti amari da un euro battono quindici negroni a pezzi e perdono a incasso; di suo per pezzi, che e' la domanda di partenza. C) IL MAGAZZINO NEL PERIODO. «Quello che mi serve sapere dal magazzino e' quanto avevo di deposito, quanto ho acquistato, quanto ho consumato in un determinato periodo … e vorrei avere la stessa identica visualizzazione a lista». Un elenco nella forma della lista del magazzino (`inv-list`), coi numeri che si leggono da soli.
+
+DA DOVE VENGONO I NUMERI: dai MOVIMENTI (`stock_movements`), che ogni cambio di giacenza lascia. Il deposito non e' scritto da nessuna parte e non serve che lo sia — si cammina all'indietro dalla giacenza di ADESSO togliendo quello che e' entrato e rimettendo quello che e' uscito. Ogni movimento porta un motivo, e sono i motivi a decidere la colonna: acquisto (carico, ordine fornitore, fattura fornitore), consumo (ordine, modifica ordine, storno — questi due nei due versi, perche' sono la stessa uscita rifatta o disfatta), rettifica (correzioni a mano e allineamento di una conta). Un motivo sconosciuto finisce fra le rettifiche: e' la colonna che non afferma niente, e il conto continua a tornare — deposito + acquisti − consumo + rettifiche fa sempre la giacenza di fine periodo.
+
+LA TRAPPOLA DELLE UNITA', ed e' la ragione per cui la logica sta in un file suo che si prova: un carico e' scritto in PEZZI, una vendita nell'unita' della ricetta (40 ml di gin). Sommarli com'e' darebbe «40 gin» dove ce n'e' meno di uno, e il numero uscito sembrerebbe plausibile a chi lo legge. Tutto passa da `qtyInStockUnit`.
+
+UN PRODOTTO CHE NON SI E' MOSSO NON E' UNA RIGA: su quattrocento articoli trecento sono fermi, ed elencarli tutti a zero nasconde i trenta che raccontano qualcosa. In cima quello che e' costato di piu', non quello che si e' mosso di piu': la domanda dietro l'elenco e' dove se ne va il denaro.
+
+SI CALCOLA A RICHIESTA, con un tasto. Gli altri riquadri lavorano sugli ordini gia' in mano; questo legge tutti gli articoli e tutti i movimenti del periodo, che su due mesi sono migliaia di documenti: chi apre le statistiche per guardare l'incasso non deve pagarli. E DICE COSA NON E': il consumo qui e' quello scalato dalle ricette battute, non quello contato sullo scaffale. Quello vero lo da' la CONTA (REQ-MAG-014), e la differenza fra i due e' il calo, l'offerto e la dose scritta larga. Senza quella riga i due numeri si leggono come se dovessero coincidere, e chi li confronta pensa a un difetto. I DUE ELENCHI VALGONO ANCHE PER UNA SERATA: la sottosezione «Per serata» passa gli stessi estremi, quindi «cosa ho consumato sabato» si legge dove si legge il resto della serata.
+
+**Dove**: `src/lib/magazzinoPeriodo.js, src/components/StatsTab.jsx, src/components/MagazzinoPeriodo.jsx, src/lib/api.js (fetchStockMovementsSince)` · **Lo dimostrano**: `tests/unit/magazzinoPeriodo.test.js`, `tests/component/StatsTab.test.jsx`, `tests/component/ElenchiPeriodo.test.jsx`
+
 ### LIC
 
 #### REQ-LIC-001 — Le funzioni premium si accendono da un posto solo, e di partenza sono spente
@@ -2849,6 +2965,8 @@ DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sotto
 
 IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
 
+SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare.
+
 GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
 
 ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
@@ -3009,7 +3127,13 @@ LA COSA CHE QUESTA VOCE CHIEDEVA DI DIRE A SCHERMO È DETTA: che il numero dell'
 
 #### REQ-STAMPA-003 — Il certificato della stampante non deve scadere ogni volta
 
-L'avviso di sicurezza che costringe ad accettare a mano il certificato della stampante va eliminato alla radice: certificato con SAN corretto installato come attendibile sul dispositivo, oppure altra strada (Server Direct Print). Serve la verifica dal wifi del locale per decidere.
+L'avviso di sicurezza che costringe ad accettare a mano il certificato della stampante va eliminato alla radice: certificato con SAN corretto installato come attendibile sul dispositivo, oppure altra strada (Server Direct Print).
+
+LA CAUSA E' ACCERTATA, e non e' la scadenza: il certificato di fabbrica non ha l'INDIRIZZO nel campo SAN, e dal 2019 iOS guarda solo quello — il vecchio Common Name da solo non basta piu'. Un certificato senza SAN iOS lo rifiuta ANCHE se lo si installa fra quelli attendibili, ed e' per questo che l'eccezione va rifatta di continuo. Lo dice `scripts/certificato-stampante.js <IP>`, che legge il certificato senza fidarsene e da' il verdetto.
+
+LA PROCEDURA E' SCRITTA, passo per passo, in [docs/certificato-stampante.md](../docs/certificato-stampante.md) (15/09/2026): IP fisso sul router, certificato rigenerato dalla pagina della stampante con l'indirizzo nel Common Name, file .cer installato sull'iPad e FIDUCIA ATTIVATA in Impostazioni → Generali → Info → Impostazioni fiducia certificati — che e' il passo che si dimentica e senza il quale non cambia niente. Vale per il solo iPad del banco: la sala e' su «rimbalzo» e non parla con la stampante.
+
+RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portatile. Finche' non e' fatta questa voce resta aperta.
 
 **Dove**: `scripts/certificato-stampante.js`
 
