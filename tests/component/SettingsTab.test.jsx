@@ -358,7 +358,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     mostra()
     await apriPremium(user)
     expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
-    expect(screen.getByText('Conta di magazzino')).toBeInTheDocument()
+    expect(screen.getByText('Inventario di magazzino')).toBeInTheDocument()
     expect(screen.getByText('Fatture ai fornitori')).toBeInTheDocument()
     // Le due fatture stanno una sotto l'altra e sono mestieri opposti:
     // l'etichetta deve dire di chi sono senza doverle aprire.
@@ -374,7 +374,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
-    const interruttore = interruttoreDi('Conta di magazzino')
+    const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).not.toBeChecked()
     expect(interruttore).toHaveAttribute('aria-disabled', 'true')
   })
@@ -394,11 +394,11 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     // Le altre prove hanno già salvato roba: qui conta solo cosa succede
     // DA questo tocco in poi.
     updateSettings.mockClear()
-    await user.click(interruttoreDi('Conta di magazzino'))
+    await user.click(interruttoreDi('Inventario di magazzino'))
     expect(visti.some((t) => /premium/i.test(t.message))).toBe(true)
     // E soprattutto: NON si è acceso niente.
     expect(updateSettings).not.toHaveBeenCalled()
-    expect(interruttoreDi('Conta di magazzino')).not.toBeChecked()
+    expect(interruttoreDi('Inventario di magazzino')).not.toBeChecked()
     visti.forEach((t) => dismissToast(t.id))
     stop()
   })
@@ -443,7 +443,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
-    const interruttore = interruttoreDi('Conta di magazzino')
+    const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
     expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)

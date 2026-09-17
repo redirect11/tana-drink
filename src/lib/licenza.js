@@ -59,7 +59,7 @@ export const MODULI_PREMIUM = {
   conta: {
     chiave: 'modulo_conta_enabled',
     incluso: false,
-    label: 'Conta di magazzino',
+    label: 'Inventario di magazzino',
     descrizione:
       'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
   },
