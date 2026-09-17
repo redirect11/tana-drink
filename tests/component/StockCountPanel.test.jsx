@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 'use strict'
 
-// LA CONTA DI MAGAZZINO, e il consumo A SETTIMANA (REQ-MAG-024).
+// L'INVENTARIO DI MAGAZZINO, e il consumo A SETTIMANA (REQ-MAG-024).
+//
+// Si chiama inventario, non «conta» (Daniele, 17/09/2026: «conta è
+// fuorviante»); e chiuso uno ne parte subito un altro, perché il consumo
+// che interessa è quello FRA due inventari (Flavio, stesso giorno).
 //
 // Nel foglio INV quel numero è diviso per una costante battuta a mano —
 // «÷ 3», poi «÷ 2», poi «÷ 1,5», poi «÷ 4» — che si aggiorna ogni tanto e
@@ -18,9 +22,14 @@ import '@testing-library/jest-dom/vitest'
 // Quattordici giorni tondi: 1500 ml consumati fanno 750 ml a settimana.
 const APERTA = new Date(Date.now() - 14 * 86400000).toISOString()
 
-const stato = { aperta: null, storico: [] }
+const stato = { aperta: null, storico: [], impostazioni: {} }
 
 vi.mock('../../src/lib/api.js', () => ({
+  subscribeSettings: (cb) => {
+    cb(stato.impostazioni)
+    return () => {}
+  },
+  settingsIniziali: () => stato.impostazioni,
   fetchInventoryItems: vi.fn(async () => []),
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
@@ -37,11 +46,13 @@ import StockCountPanel from '../../src/components/StockCountPanel.jsx'
 const scritto = (re) => expect(document.body.textContent).toMatch(re)
 
 beforeEach(() => {
+  vi.clearAllMocks()
   stato.aperta = null
   stato.storico = []
+  stato.impostazioni = {}
 })
 
-describe('la conta aperta', () => {
+describe('l’inventario in corso', () => {
   it('accanto al consumo dice quanto fa a settimana', async () => {
     stato.aperta = {
       id: 'c1',
@@ -53,7 +64,7 @@ describe('la conta aperta', () => {
       ],
     }
     render(<StockCountPanel />)
-    expect(await screen.findByText(/Conta aperta/)).toBeInTheDocument()
+    expect(await screen.findByText(/Inventario in corso/)).toBeInTheDocument()
     // 1500 ml in 14 giorni: 750 ml a settimana, che si scrivono «75 cl» —
     // e non un divisore fisso.
     scritto(/75 cl a settimana/)
@@ -72,12 +83,75 @@ describe('la conta aperta', () => {
       ],
     }
     render(<StockCountPanel />)
-    expect(await screen.findByText(/Conta aperta/)).toBeInTheDocument()
+    expect(await screen.findByText(/Inventario in corso/)).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/a settimana/)
+  })
+
+  // Flavio, 17/09/2026: «quando faccio un altro inventario, lui mi chiude
+  // l'inventario precedente e mi dice: hai fatto l'inventario da TOT a
+  // TOT». Il periodo che conta è quello fra due chiusure: se dopo la
+  // chiusura non ripartisse niente, il prossimo inventario partirebbe da
+  // giacenze vecchie di un mese.
+  it('chiuso, ne riapre subito un altro dalle giacenze allineate', async () => {
+    const api = await import('../../src/lib/api.js')
+    const gin = { id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, stock: 3, cost: 10, vat: 22 }
+    api.fetchInventoryItems.mockResolvedValue([gin])
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [{ item_id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, cost: 10, vat: 22, dep: 5, rim: null }],
+    }
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.type(screen.getByPlaceholderText(/RIM/), '3')
+    await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
+    expect(api.closeStockCount).toHaveBeenCalledTimes(1)
+    // Il nuovo parte dagli articoli riletti DOPO l'allineamento.
+    expect(api.startStockCount).toHaveBeenCalledWith([gin])
+    api.fetchInventoryItems.mockResolvedValue([])
+  })
+
+  // Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica,
+  // così può decidere se aprire a mano o in automatico». Spenta, dopo la
+  // chiusura non riparte niente, e il tasto per aprirne uno torna.
+  it('con la riapertura spenta, chiuso resta chiuso', async () => {
+    const api = await import('../../src/lib/api.js')
+    stato.impostazioni = { inventario_riapre_da_solo: false }
+    api.fetchInventoryItems.mockResolvedValue([{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }])
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [{ item_id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, cost: 10, vat: 22, dep: 5, rim: null }],
+    }
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.type(screen.getByPlaceholderText(/RIM/), '3')
+    await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
+    // La conferma non promette un inventario nuovo che non partirà.
+    expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
+    await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
+    expect(api.closeStockCount).toHaveBeenCalledTimes(1)
+    expect(api.startStockCount).not.toHaveBeenCalled()
+    api.fetchInventoryItems.mockResolvedValue([])
+  })
+
+  it('e con la riapertura spenta il tasto dice che il prossimo lo apri tu', async () => {
+    stato.impostazioni = { inventario_riapre_da_solo: false }
+    render(<StockCountPanel />)
+    expect(await screen.findByRole('button', { name: /Apri l’inventario/ })).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/il prossimo lo apri tu/)
+    expect(document.body.textContent).not.toMatch(/ne parte subito un altro/)
+  })
+
+  it('senza nessun inventario si apre il primo, e si dice che poi non finisce più', async () => {
+    render(<StockCountPanel />)
+    expect(await screen.findByRole('button', { name: /Apri l’inventario/ })).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/ne parte subito un altro/)
   })
 })
 
-describe('una conta già chiusa', () => {
+describe('un inventario già chiuso', () => {
   it('si riapre e ridice il consumo a settimana coi suoi giorni', async () => {
     stato.storico = [
       {
@@ -94,8 +168,10 @@ describe('una conta già chiusa', () => {
     render(<StockCountPanel />)
     // Le conte vecchie non hanno mai avuto un consumo settimanale salvato:
     // si ricalcola dalle date, che invece ce l'hanno sempre avute.
-    await userEvent.click(await screen.findByText(/2026-06-07 → 2026-06-21/))
-    await screen.findByText(/Dettaglio conta/)
+    // Le date si leggono come si scrivono, «dal 07/06/2026 al 21/06/2026»:
+    // è la frase con cui Flavio descrive l'inventario, «da TOT a TOT».
+    await userEvent.click(await screen.findByText(/dal 07\/06\/2026 al 21\/06\/2026/))
+    await screen.findByText(/Inventario dal 07\/06\/2026 al 21\/06\/2026/)
     scritto(/75 cl a settimana/)
   })
 })
