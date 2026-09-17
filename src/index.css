@@ -3283,6 +3283,12 @@ body.bar-wide .app {
   text-align: left;
 }
 .inv-row.open .inv-row-main { background: rgba(255, 255, 255, 0.04); }
+/* Una riga che non si apre: stessa forma, ma senza la mano che promette
+   un tocco che non fa niente (le liste di sola lettura delle statistiche). */
+.inv-row-main.statica {
+  cursor: default;
+  text-align: left;
+}
 .inv-row-name {
   font-weight: 600;
   font-size: 0.9rem;

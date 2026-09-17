@@ -1091,14 +1091,24 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
   return snap.docs.map(mapMovement)
 }
 
-// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
-// Filtro per tipo lato client: la query resta su un solo campo (niente
-// indici compositi).
-export async function fetchLoadMovementsSince(iso) {
+// TUTTI i movimenti da una certa data in poi. La query resta su un solo
+// campo, quindi niente indici compositi: chi vuole un tipo o un motivo
+// preciso filtra in memoria su quello che è già arrivato.
+//
+// Serve a due cose che chiedono la stessa lettura: la colonna ACQ della
+// conta e l'elenco del magazzino in un periodo (REQ-STAT-002), che dei
+// movimenti dopo il periodo ha bisogno per tornare indietro fino alla
+// giacenza di fine periodo.
+export async function fetchStockMovementsSince(iso) {
   const snap = await getDocs(
     query(movementsCol, where('created_at', '>', Timestamp.fromDate(new Date(iso))))
   )
-  return snap.docs.map(mapMovement).filter((m) => m.type === 'load')
+  return snap.docs.map(mapMovement)
+}
+
+// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
+export async function fetchLoadMovementsSince(iso) {
+  return (await fetchStockMovementsSince(iso)).filter((m) => m.type === 'load')
 }
 
 // --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---

@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 15 settembre 2026.
+> Generato il 17 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 199 | fatto e coperto dai test |
+| ✅ | 200 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**241 voci** in tutto. **214** descrivono il sistema com'è oggi e
+**242 voci** in tutto. **215** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 1 | — |  |
+| [STAT](#stat) | 2 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -2780,6 +2780,24 @@ SI TORNA CON «← Chiusure», in cima al dettaglio: una sola via d'uscita, e di
 LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in corso» e i numeri di adesso: mentre si lavora è la serata che interessa di più, e senza di lei la prima sera del locale la lista sarebbe vuota. B) PER PERIODO: le pastiglie di sempre (7/10/20/30/60 e Personalizzato) MENO «🧾 Ultima chiusura» e la tendina delle serate, che ora vivono nella sottosezione A — lo stesso posto raggiunto in due modi prima o poi si contraddice. LOCAL-FIRST: la lista si costruisce da quello che la pagina ha già in mano (sessioni e ordini), senza una lettura in più e senza attese fra il tocco e la riga. Le serate più vecchie della finestra di ordini scaricata non si possono ricalcolare: per quelle si usano i numeri congelati nello `snapshot` della chiusura, che stanno già sulla sessione — una riga a zero si leggerebbe come «quella sera non ha incassato», che è un'altra cosa.
 
 **Dove**: `src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/StatsTab.test.jsx`
+
+#### REQ-STAT-002 — Il periodo si sceglie da data a data, e sotto ci sono i due elenchi
+
+Chiesto da Flavio il 17/09/2026, in un vocale, guardando Statistiche → Per periodo: «mi appare questo counter dei giorni, che penso significhi 24 da oggi indietro di 24 giorni. Ma qui in realta' mi dovrebbe apparire un inizio periodo, fine periodo … cosi' riesco a vedere realmente la fascia di periodo che mi interessa, cosi' come puo' essere il giugno, cosi' come puo' essere il periodo di Natale, e vedere quindi quanto ho fatturato, quanto ho movimentato invece i prodotti di magazzino». A) IL PERIODO E' UN INTERVALLO DI DATE. Due caselle, «Dal» e «Al», in GIORNATE COMMERCIALI come tutto il resto dell'app: la nottata oltre la mezzanotte appartiene alla giornata in cui e' cominciata. Col contatore di prima giugno non si guardava — si guardavano «gli ultimi 108 giorni», che e' un'altra domanda.
+
+LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti. Le due caselle si chiamano «Dal» e «Al» e non «Dal giorno»/«Al giorno»: quelle sono piu' sotto, nel venduto per fascia oraria, e dicono un'altra cosa — due etichette uguali a schermo si scambiano per la stessa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
+
+SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse — venti amari da un euro battono quindici negroni a pezzi e perdono a incasso; di suo per pezzi, che e' la domanda di partenza. C) IL MAGAZZINO NEL PERIODO. «Quello che mi serve sapere dal magazzino e' quanto avevo di deposito, quanto ho acquistato, quanto ho consumato in un determinato periodo … e vorrei avere la stessa identica visualizzazione a lista». Un elenco nella forma della lista del magazzino (`inv-list`), coi numeri che si leggono da soli.
+
+DA DOVE VENGONO I NUMERI: dai MOVIMENTI (`stock_movements`), che ogni cambio di giacenza lascia. Il deposito non e' scritto da nessuna parte e non serve che lo sia — si cammina all'indietro dalla giacenza di ADESSO togliendo quello che e' entrato e rimettendo quello che e' uscito. Ogni movimento porta un motivo, e sono i motivi a decidere la colonna: acquisto (carico, ordine fornitore, fattura fornitore), consumo (ordine, modifica ordine, storno — questi due nei due versi, perche' sono la stessa uscita rifatta o disfatta), rettifica (correzioni a mano e allineamento di una conta). Un motivo sconosciuto finisce fra le rettifiche: e' la colonna che non afferma niente, e il conto continua a tornare — deposito + acquisti − consumo + rettifiche fa sempre la giacenza di fine periodo.
+
+LA TRAPPOLA DELLE UNITA', ed e' la ragione per cui la logica sta in un file suo che si prova: un carico e' scritto in PEZZI, una vendita nell'unita' della ricetta (40 ml di gin). Sommarli com'e' darebbe «40 gin» dove ce n'e' meno di uno, e il numero uscito sembrerebbe plausibile a chi lo legge. Tutto passa da `qtyInStockUnit`.
+
+UN PRODOTTO CHE NON SI E' MOSSO NON E' UNA RIGA: su quattrocento articoli trecento sono fermi, ed elencarli tutti a zero nasconde i trenta che raccontano qualcosa. In cima quello che e' costato di piu', non quello che si e' mosso di piu': la domanda dietro l'elenco e' dove se ne va il denaro.
+
+SI CALCOLA A RICHIESTA, con un tasto. Gli altri riquadri lavorano sugli ordini gia' in mano; questo legge tutti gli articoli e tutti i movimenti del periodo, che su due mesi sono migliaia di documenti: chi apre le statistiche per guardare l'incasso non deve pagarli. E DICE COSA NON E': il consumo qui e' quello scalato dalle ricette battute, non quello contato sullo scaffale. Quello vero lo da' la CONTA (REQ-MAG-014), e la differenza fra i due e' il calo, l'offerto e la dose scritta larga. Senza quella riga i due numeri si leggono come se dovessero coincidere, e chi li confronta pensa a un difetto. I DUE ELENCHI VALGONO ANCHE PER UNA SERATA: la sottosezione «Per serata» passa gli stessi estremi, quindi «cosa ho consumato sabato» si legge dove si legge il resto della serata.
+
+**Dove**: `src/lib/magazzinoPeriodo.js, src/components/StatsTab.jsx, src/components/MagazzinoPeriodo.jsx, src/lib/api.js (fetchStockMovementsSince)` · **Lo dimostrano**: `tests/unit/magazzinoPeriodo.test.js`, `tests/component/StatsTab.test.jsx`, `tests/component/ElenchiPeriodo.test.jsx`
 
 ### LIC
 
