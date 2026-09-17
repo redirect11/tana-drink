@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.6.0-beta
+## 1.6.0
 
 ### Per chi sta al banco
 
