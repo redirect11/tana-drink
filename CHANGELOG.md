@@ -23,6 +23,21 @@
 
 ### Per chi amministra
 
+- **Le statistiche per periodo si scelgono da data a data.** Al posto del
+  contatore di giornate ci sono due caselle, «Dal» e «Al», così si guarda
+  giugno o le due settimane di Natale invece degli «ultimi 108 giorni». Le
+  pastiglie restano come scorciatoie e ora contano giorni di calendario,
+  non giornate lavorate.
+
+- **Sotto ai grafici ci sono due elenchi nuovi.** La **classifica del
+  venduto**: tutte le voci battute nel periodo, dalla più venduta
+  all'ultima, con pezzi e incasso, e si può ordinare per l'uno o per
+  l'altro. E il **magazzino nel periodo**: per ogni prodotto quanto c'era
+  in deposito, quanto è entrato, quanto è uscito e cosa resta, in euro. Si
+  calcola con un tasto perché legge tutti i movimenti del periodo, e dice
+  chiaramente che il suo consumo è quello scalato dalle ricette: quello
+  contato sullo scaffale lo dà la Conta.
+
 - **La stampante lascia un diario sul server, una serata per documento.**
   Collegamento rifiutato, stampante caduta, stampa non riuscita, pallino
   rosso: ogni guaio diventa una riga con ora, motivo e l'indirizzo con cui
