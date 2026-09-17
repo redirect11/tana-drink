@@ -22,9 +22,14 @@ import '@testing-library/jest-dom/vitest'
 // Quattordici giorni tondi: 1500 ml consumati fanno 750 ml a settimana.
 const APERTA = new Date(Date.now() - 14 * 86400000).toISOString()
 
-const stato = { aperta: null, storico: [] }
+const stato = { aperta: null, storico: [], impostazioni: {} }
 
 vi.mock('../../src/lib/api.js', () => ({
+  subscribeSettings: (cb) => {
+    cb(stato.impostazioni)
+    return () => {}
+  },
+  settingsIniziali: () => stato.impostazioni,
   fetchInventoryItems: vi.fn(async () => []),
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
@@ -41,8 +46,10 @@ import StockCountPanel from '../../src/components/StockCountPanel.jsx'
 const scritto = (re) => expect(document.body.textContent).toMatch(re)
 
 beforeEach(() => {
+  vi.clearAllMocks()
   stato.aperta = null
   stato.storico = []
+  stato.impostazioni = {}
 })
 
 describe('l’inventario in corso', () => {
@@ -103,6 +110,38 @@ describe('l’inventario in corso', () => {
     // Il nuovo parte dagli articoli riletti DOPO l'allineamento.
     expect(api.startStockCount).toHaveBeenCalledWith([gin])
     api.fetchInventoryItems.mockResolvedValue([])
+  })
+
+  // Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica,
+  // così può decidere se aprire a mano o in automatico». Spenta, dopo la
+  // chiusura non riparte niente, e il tasto per aprirne uno torna.
+  it('con la riapertura spenta, chiuso resta chiuso', async () => {
+    const api = await import('../../src/lib/api.js')
+    stato.impostazioni = { inventario_riapre_da_solo: false }
+    api.fetchInventoryItems.mockResolvedValue([{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }])
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [{ item_id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, cost: 10, vat: 22, dep: 5, rim: null }],
+    }
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.type(screen.getByPlaceholderText(/RIM/), '3')
+    await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
+    // La conferma non promette un inventario nuovo che non partirà.
+    expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
+    await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
+    expect(api.closeStockCount).toHaveBeenCalledTimes(1)
+    expect(api.startStockCount).not.toHaveBeenCalled()
+    api.fetchInventoryItems.mockResolvedValue([])
+  })
+
+  it('e con la riapertura spenta il tasto dice che il prossimo lo apri tu', async () => {
+    stato.impostazioni = { inventario_riapre_da_solo: false }
+    render(<StockCountPanel />)
+    expect(await screen.findByRole('button', { name: /Apri l’inventario/ })).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/il prossimo lo apri tu/)
+    expect(document.body.textContent).not.toMatch(/ne parte subito un altro/)
   })
 
   it('senza nessun inventario si apre il primo, e si dice che poi non finisce più', async () => {

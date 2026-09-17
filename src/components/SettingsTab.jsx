@@ -1520,6 +1520,19 @@ function FunzioniPremium({ settings, onSave }) {
           />
         )
       })}
+      {/* COME SI COMPORTA L'INVENTARIO, sotto il suo interruttore e solo
+          quando c'è: un'impostazione di una funzione che non si vede non
+          avrebbe dove portare. Il default è «riapre da sé» — il consumo si
+          legge fra due chiusure — ma Flavio deve poter scegliere di aprirlo
+          a mano (Daniele, 17/09/2026). */}
+      {moduloAttivo(settings, 'conta') && (
+        <ToggleRow
+          label="Chiuso un inventario, ne apre subito un altro"
+          desc="Acceso: alla chiusura, l’inventario successivo parte da sé dalle giacenze appena allineate, e il consumo si legge fra una chiusura e l’altra. Spento: dopo la chiusura non c’è nessun inventario in corso, e il prossimo lo apri tu quando vuoi."
+          checked={settings.inventario_riapre_da_solo !== false}
+          onChange={(v) => onSave({ inventario_riapre_da_solo: v })}
+        />
+      )}
     </div>
   )
 }

@@ -7,6 +7,8 @@ import {
   closeStockCount,
   fetchStockCounts,
   fetchLoadMovementsSince,
+  subscribeSettings,
+  settingsIniziali,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
 import { stockCountCompute, giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
@@ -40,6 +42,11 @@ export default function StockCountPanel() {
   const [busy, setBusy] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
   const [viewing, setViewing] = useState(null) // conta chiusa in dettaglio
+  // Dalla cache, e poi aggiornate da sole: la scelta «riapre da sé o a mano»
+  // è del locale (settings/bar), non di questo terminale.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const riapreDaSola = impostazioni.inventario_riapre_da_solo !== false
 
   async function load() {
     try {
@@ -124,8 +131,10 @@ export default function StockCountPanel() {
       // dell'allineamento sono già state attese, quindi la rilettura le
       // vede: questo non è un gesto del banco, è un lavoro d'ufficio con
       // la rete accesa.
-      const items = await fetchInventoryItems()
-      if (items.length > 0) await startStockCount(items)
+      if (riapreDaSola) {
+        const items = await fetchInventoryItems()
+        if (items.length > 0) await startStockCount(items)
+      }
       await load()
     } catch (e) {
       setError(e.message)
@@ -146,9 +155,9 @@ export default function StockCountPanel() {
             ▶️ Apri l’inventario
           </button>
           <p className="muted small" style={{ margin: '8px 0 0' }}>
-            Da qui in poi c’è sempre un inventario in corso: quando lo chiudi
-            scrivendo le rimanenze, ne parte subito un altro. Il consumo si
-            legge fra una chiusura e l’altra.
+            {riapreDaSola
+              ? 'Da qui in poi c’è sempre un inventario in corso: quando lo chiudi scrivendo le rimanenze, ne parte subito un altro. Il consumo si legge fra una chiusura e l’altra.'
+              : 'Quando lo chiudi scrivendo le rimanenze, il prossimo lo apri tu da qui. Il consumo si legge fra l’apertura e la chiusura dello stesso inventario. (Si cambia in Impostazioni → Funzioni premium.)'}
           </p>
         </>
       ) : (
@@ -238,7 +247,7 @@ export default function StockCountPanel() {
       {confirmClose && computed && (
         <ConfirmDialog
           title="✅ Chiudere l’inventario?"
-          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati verranno allineate alle rimanenze inserite.\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.\nNe parte subito uno nuovo, da oggi.`}
+          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati verranno allineate alle rimanenze inserite.\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
           confirmLabel="Chiudi l’inventario"
           onCancel={() => setConfirmClose(false)}
           onConfirm={doClose}
