@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 200 | fatto e coperto dai test |
+| ✅ | 201 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**242 voci** in tutto. **215** descrivono il sistema com'è oggi e
+**243 voci** in tutto. **216** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -53,7 +53,7 @@ come «vero oggi», non come «garantito».
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -2288,6 +2288,24 @@ Nella vista menù il personale non vede più i propri ordini attivi in cima: que
 La home dello staff di sala è la coda ordini, identica a quella del gestionale: quello che vede il banco lo vede anche chi porta i vassoi. Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è il filtro «Miei» della coda, che tiene solo i conti con la propria firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva col filtro già acceso. «Da servire» resta come sezione. Le sezioni amministrative restano ai gestori: per la sala un tab non suo riporta alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il menù che mostra al tavolo, con la ricerca), non il POS del banco.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/StaffDrawer.test.jsx`
+
+#### REQ-STAFF-016 — Chi apre la cassa: si sceglie fra gli admin, senza rifare il login
+
+Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei sottoutenti della cassa. Flavio e Vittorio sarebbero i due sottoutenti admin. Una volta loggato admin, all'apertura della cassa il sistema dovrebbe chiedere quale sottoutente sta gestendo la cassa … in modo da non dover fare il login ogni volta che l'app viene aperta … ad ogni apertura di cassa dell'admin, gia' con login automatico, verra' chiesto se sta aprendo Flavio o Vittorio».
+
+IL PROBLEMA VERO: il tablet del banco resta collegato con un account solo e non lo si slogga mai — e' quello che tiene in piedi il login automatico — ma a lavorarci sono due persone. Il nome in cima allo schermo e la firma della serata erano di chi aveva fatto il login mesi fa, non di chi c'era.
+
+NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione di Firebase resta quella dell'admin collegato: qui si sceglie soltanto CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero senza password vorrebbe dire o tenere in giro le credenziali degli altri, o aprire una strada per entrare in un account altrui: due porte che non si aprono per comodita'. E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si sceglie ha esattamente i permessi di chi ha fatto il login, quindi passare dall'uno all'altro non sposta niente di quello che si puo' fare. Un utente disattivato non si sceglie; un admin declassato smette di essere scelto anche sul tablet che se lo ricordava. Se un domani si volessero scegliere anche i bartender, quella sarebbe una decisione di sicurezza vera, da pensare a parte: per questo il filtro sta in un posto solo (`operatoriSelezionabili`). «ASSOCIATI»
+
+VUOL DIRE GLI ADMIN DELLO STESSO LOCALE, e non c'e' nessun elenco di associazioni da compilare: nominare un admin e' gia' dirlo. Una seconda lista da tenere allineata a quella dei ruoli divergerebbe dalla prima, e si finirebbe col non sapere quale delle due comanda.
+
+DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto di ruoloLocale.js) e si porta dietro CHI ERA COLLEGATO: se al tablet si collega un altro account, la scelta di ieri sera non si eredita, se no si firma la serata col nome di chi non c'e'. L'ELENCO NON PUO' FAR ASPETTARE L'APERTURA: gli admin arrivano da una Cloud Function, lenta, e con la rete del locale che «risulta collegata ma non passa» non arriverebbe mai. Si mostra la cache (`staffFromCache`) e si rinfresca in sottofondo: aprire la cassa e' il primo gesto della serata e non aspetta niente.
+
+COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto (`opened_by`), e il nome in cima alla barra e' il suo.
+
+ANCORA DA FARE, ed e' la seconda meta' della richiesta: l'ASPETTO PER PERSONA — «le impostazioni dell'aspetto memorizzate per utente; se non ho customizzazioni, l'aspetto viene ereditato dall'utenza admin loggata». Oggi tema e colori sono del locale (`theme_staff` e `theme_client` su settings/bar) e valgono per tutti. Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
+
+**Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
 
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
