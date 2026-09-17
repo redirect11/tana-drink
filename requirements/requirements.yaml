@@ -6290,6 +6290,66 @@ requirements:
     labels: [coda, ui, mobile]
     test_cases: [tests/unit/css.test.js]
 
+  - id: REQ-STAFF-016
+    title: "Chi apre la cassa: si sceglie fra gli admin, senza rifare il login"
+    area: "src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/App.jsx"
+    description: >
+      Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei
+      sottoutenti della cassa. Flavio e Vittorio sarebbero i due sottoutenti
+      admin. Una volta loggato admin, all'apertura della cassa il sistema
+      dovrebbe chiedere quale sottoutente sta gestendo la cassa … in modo da
+      non dover fare il login ogni volta che l'app viene aperta … ad ogni
+      apertura di cassa dell'admin, gia' con login automatico, verra' chiesto
+      se sta aprendo Flavio o Vittorio».
+      IL PROBLEMA VERO: il tablet del banco resta collegato con un account
+      solo e non lo si slogga mai — e' quello che tiene in piedi il login
+      automatico — ma a lavorarci sono due persone. Il nome in cima allo
+      schermo e la firma della serata erano di chi aveva fatto il login mesi
+      fa, non di chi c'era.
+      NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione
+      di Firebase resta quella dell'admin collegato: qui si sceglie soltanto
+      CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero
+      senza password vorrebbe dire o tenere in giro le credenziali degli
+      altri, o aprire una strada per entrare in un account altrui: due porte
+      che non si aprono per comodita'.
+      E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si
+      sceglie ha esattamente i permessi di chi ha fatto il login, quindi
+      passare dall'uno all'altro non sposta niente di quello che si puo'
+      fare. Un utente disattivato non si sceglie; un admin declassato smette
+      di essere scelto anche sul tablet che se lo ricordava. Se un domani si
+      volessero scegliere anche i bartender, quella sarebbe una decisione di
+      sicurezza vera, da pensare a parte: per questo il filtro sta in un
+      posto solo (`operatoriSelezionabili`).
+      «ASSOCIATI» VUOL DIRE GLI ADMIN DELLO STESSO LOCALE, e non c'e' nessun
+      elenco di associazioni da compilare: nominare un admin e' gia' dirlo.
+      Una seconda lista da tenere allineata a quella dei ruoli divergerebbe
+      dalla prima, e si finirebbe col non sapere quale delle due comanda.
+      DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se
+      c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta
+      resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto
+      di ruoloLocale.js) e si porta dietro CHI ERA COLLEGATO: se al tablet si
+      collega un altro account, la scelta di ieri sera non si eredita, se no
+      si firma la serata col nome di chi non c'e'.
+      L'ELENCO NON PUO' FAR ASPETTARE L'APERTURA: gli admin arrivano da una
+      Cloud Function, lenta, e con la rete del locale che «risulta collegata
+      ma non passa» non arriverebbe mai. Si mostra la cache
+      (`staffFromCache`) e si rinfresca in sottofondo: aprire la cassa e' il
+      primo gesto della serata e non aspetta niente.
+      COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto
+      (`opened_by`), e il nome in cima alla barra e' il suo.
+      ANCORA DA FARE, ed e' la seconda meta' della richiesta: l'ASPETTO PER
+      PERSONA — «le impostazioni dell'aspetto memorizzate per utente; se non
+      ho customizzazioni, l'aspetto viene ereditato dall'utenza admin
+      loggata». Oggi tema e colori sono del locale (`theme_staff` e
+      `theme_client` su settings/bar) e valgono per tutti. Manca anche il
+      cambio di persona a cassa gia' aperta, per il cambio turno.
+    status: implemented
+    generate_issue: false
+    labels: [staff, cassa, sicurezza]
+    test_cases:
+      - tests/unit/operatore.test.js
+      - tests/component/ApriCassaBox.test.jsx
+
   - id: REQ-STAFF-014
     title: "La sala serve, non prepara: gli stati delle comande non li tocca"
     area: "src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules"

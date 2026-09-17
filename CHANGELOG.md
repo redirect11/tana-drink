@@ -4,6 +4,14 @@
 
 ### Per chi sta al banco
 
+- **All'apertura della cassa si sceglie chi sta lavorando.** Il tablet resta
+  collegato con un account solo, ma la domanda «Chi apre la cassa?» elenca
+  gli admin del locale: la serata risulta aperta da chi hai scelto e il nome
+  in cima alla barra è il suo. La scelta resta sul tablet, quindi non te la
+  richiede ogni sera, e compare solo se gli admin sono più di uno. Non è un
+  login: la sessione resta quella di chi è collegato, e si sceglie solo fra
+  admin, che hanno già gli stessi permessi.
+
 - **Nel conto, scelto il prodotto cercato, la ricerca si svuota da sé** e
   la griglia torna intera — anche nel modo «filtra», dove prima restava
   ristretta sull'ultima ricerca e bisognava cancellarla a mano prima di

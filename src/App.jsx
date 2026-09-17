@@ -23,6 +23,7 @@ import {
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
+import { iscrivitiAllOperatore, operatoreRicordato } from './lib/operatore.js'
 import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
@@ -186,6 +187,19 @@ export default function App() {
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
   const [staffName, setStaffName] = useState('')
+  // CHI STA LAVORANDO A QUESTO TERMINALE (REQ-STAFF-016): può non essere
+  // chi ha fatto il login — al tablet del banco si collega un account solo
+  // e ci lavorano due persone, che si scelgono all'apertura della cassa. In
+  // barra si scrive chi c'è ADESSO, se no il nome in cima mente tutta la
+  // serata.
+  const [uidCollegato, setUidCollegato] = useState(null)
+  const [operatore, setOperatore] = useState(null)
+  useEffect(() => {
+    if (!uidCollegato) return setOperatore(null)
+    const leggi = () => setOperatore(operatoreRicordato(uidCollegato))
+    leggi()
+    return iscrivitiAllOperatore(leggi)
+  }, [uidCollegato])
   // C'È QUALCUNO DENTRO? Serve a decidere cosa mostrare a chi non è
   // entrato: da sloggati si è un cliente qualunque, e la campanella degli
   // avvisi non lo riguarda.
@@ -200,6 +214,7 @@ export default function App() {
       // (BUG-088).
       impostaUtenteStampante(u?.uid || null, u ? { name: u.displayName, email: u.email } : null)
       setCollegato(!!u)
+      setUidCollegato(u?.uid || null)
       if (!u) return setStaffRole(null)
       try {
         const token = await u.getIdTokenResult()
@@ -275,6 +290,9 @@ export default function App() {
   // serve a vedere il menù com'è per chi ordina, e i colori sono parte di
   // com'è. Il menù usato dallo staff per gli ordini manuali (/menu senza
   // quel parametro) resta invece sul tema del gestionale: lì si lavora.
+  // Il nome che si legge in cima: chi sta lavorando, se è stato scelto;
+  // altrimenti chi ha fatto il login.
+  const nomeInBarra = operatore?.nome || staffName
   const anteprimaCliente =
     location.pathname.startsWith('/menu') &&
     new URLSearchParams(location.search).get('vista') === 'cliente'
@@ -475,8 +493,8 @@ export default function App() {
                quadratino è la stessa che marca gli ordini aperti da questa
                persona, così si riconosce a colpo d'occhio chi sta battendo. */
             <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
-              <span className="order-by staff">{(staffName || '?')[0].toUpperCase()}</span>
-              <span className="topbar-io-nome">{staffName}</span>
+              <span className="order-by staff">{(nomeInBarra || '?')[0].toUpperCase()}</span>
+              <span className="topbar-io-nome">{nomeInBarra}</span>
             </Link>
           ) : telefono ? null : (
             <>
@@ -526,7 +544,7 @@ export default function App() {
       <ActionSheet
         open={menuTopbar}
         onClose={() => setMenuTopbar(false)}
-        titolo={staffName ? staffName : 'La Tana del Coniglio'}
+        titolo={nomeInBarra ? nomeInBarra : 'La Tana del Coniglio'}
         voci={[
 
           {
