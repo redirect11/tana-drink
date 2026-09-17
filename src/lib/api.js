@@ -5628,6 +5628,12 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // L'INVENTARIO, CHIUSO, NE RIAPRE SUBITO UN ALTRO (REQ-MAG-005). Acceso
+  // di suo: il consumo si legge fra due chiusure, e chi non tocca niente
+  // trova sempre un inventario in corso. Spento, dopo la chiusura si resta
+  // senza, e il prossimo lo si apre a mano quando si vuole (Daniele,
+  // 17/09/2026: «così può decidere se aprire a mano o in automatico»).
+  inventario_riapre_da_solo: true,
   // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
   // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
   // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi

@@ -27,7 +27,8 @@
   E **chiuso un inventario ne parte subito un altro** dalle giacenze
   appena allineate: il consumo si legge fra una chiusura e l'altra, e lo
   storico dice «dal … al …» con le date per esteso. Il primo lo si apre una
-  volta sola.
+  volta sola. Chi preferisce aprirlo a mano spegne «Chiuso un inventario,
+  ne apre subito un altro» in Impostazioni → Funzioni premium.
 
 - **Le statistiche per periodo si scelgono da data a data.** Al posto del
   contatore di giornate ci sono due caselle, «Dal» e «Al», così si guarda

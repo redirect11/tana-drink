@@ -2121,6 +2121,15 @@ requirements:
       l'allineamento e' gia' stato atteso (questo e' un lavoro d'ufficio con
       la rete, non un gesto del banco), e il documento nuovo nasce dalle
       giacenze appena scritte.
+      E SI PUO' SPEGNERE: `inventario_riapre_da_solo` su settings/bar,
+      acceso di suo, con l'interruttore in Impostazioni → Funzioni premium
+      sotto quello dell'inventario (compare solo quando l'inventario c'e').
+      Daniele, 17/09/2026: «metti una impostazione per l'apertura
+      automatica di un nuovo inventario alla chiusura del precedente, cosi'
+      puo' decidere se aprire a mano o in automatico». Spento, dopo la
+      chiusura non c'e' nessun inventario in corso, il tasto «Apri
+      l'inventario» torna, e la conferma di chiusura non promette un
+      inventario nuovo che non partira'.
       IN PRODUZIONE ERA SPENTO (17/09/2026): `incluso: false` nel codice e
       nessuna licenza scritta, quindi la sezione non c'era e Flavio non
       poteva fare l'inventario. Acceso con `scripts/licenza-moduli.js

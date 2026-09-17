@@ -403,6 +403,29 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     stop()
   })
 
+  // L'INVENTARIO HA UNA SCELTA SUA, sotto il suo interruttore e solo quando
+  // c'è: riaprire da sé alla chiusura, o lasciar fare a mano (Daniele,
+  // 17/09/2026). Di suo riapre.
+  it('l’inventario incluso porta con sé la scelta «riapre da sé», accesa di suo', async () => {
+    impostazioni.licenza = { moduli: { conta: true, fatture: false, scadenzario: true } }
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    const interruttore = interruttoreDi('Chiuso un inventario, ne apre subito un altro')
+    expect(interruttore).toBeChecked()
+    updateSettings.mockClear()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ inventario_riapre_da_solo: false })
+  })
+
+  it('senza l’inventario, la sua scelta non compare', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await apriPremium(user)
+    expect(screen.queryByText('Chiuso un inventario, ne apre subito un altro')).toBeNull()
+  })
+
   it('quella INCLUSA è accesa, si tocca, e si spegne davvero', async () => {
     // Quello che il locale ha comprato lo accende e lo spegne come ogni
     // altra impostazione: premium non vuol dire bloccato.
