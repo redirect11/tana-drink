@@ -1,5 +1,98 @@
 # Cosa è cambiato
 
+## 1.6.0
+
+### Per chi sta al banco
+
+- **Nel conto, scelto il prodotto cercato, la ricerca si svuota da sé** e
+  la griglia torna intera — anche nel modo «filtra», dove prima restava
+  ristretta sull'ultima ricerca e bisognava cancellarla a mano prima di
+  cercare il prodotto dopo.
+
+- **«Nuovo ordine» si apre vuoto.** Prima la schermata arrivava con già
+  spuntato tutto quello sotto soglia e in assortimento — a magazzino pieno
+  erano ottantasei righe da togliere una alla volta prima di cominciare.
+  Adesso non è spuntato niente; la proposta di prima è un tasto, «Spunta
+  quello che manca», che dice quante righe aggiungerebbe e si somma a
+  quello che si è già scelto senza toccare i pezzi scritti a mano.
+
+- **In «Nuovo ordine» si filtra per assortimento** — in assortimento, in
+  linea, premium, fuori assortimento — con la stessa tendina del magazzino.
+  Il filtro cambia solo cosa si vede in tabella: quello che è già
+  nell'ordine ci resta.
+
+### Per chi amministra
+
+- **La «Conta» si chiama Inventario**, in Magazzino e nelle impostazioni.
+  E **chiuso un inventario ne parte subito un altro** dalle giacenze
+  appena allineate: il consumo si legge fra una chiusura e l'altra, e lo
+  storico dice «dal … al …» con le date per esteso. Il primo lo si apre una
+  volta sola. Chi preferisce aprirlo a mano spegne «Chiuso un inventario,
+  ne apre subito un altro» in Impostazioni → Funzioni premium.
+
+- **Le statistiche per periodo si scelgono da data a data.** Al posto del
+  contatore di giornate ci sono due caselle, «Dal» e «Al», così si guarda
+  giugno o le due settimane di Natale invece degli «ultimi 108 giorni». Le
+  pastiglie restano come scorciatoie e ora contano giorni di calendario,
+  non giornate lavorate.
+
+- **Sotto ai grafici ci sono due elenchi nuovi.** La **classifica del
+  venduto**: tutte le voci battute nel periodo, dalla più venduta
+  all'ultima, con pezzi e incasso, e si può ordinare per l'uno o per
+  l'altro. E il **magazzino nel periodo**: per ogni prodotto quanto c'era
+  in deposito, quanto è entrato, quanto è uscito e cosa resta, in euro. Si
+  calcola con un tasto perché legge tutti i movimenti del periodo, e dice
+  chiaramente che il suo consumo è quello scalato dalle ricette: quello
+  contato sullo scaffale lo dà la Conta.
+
+- **La stampante lascia un diario sul server, una serata per documento.**
+  Collegamento rifiutato, stampante caduta, stampa non riuscita, pallino
+  rosso: ogni guaio diventa una riga con ora, motivo e l'indirizzo con cui
+  si stava parlando, in un documento intitolato alla sessione di cassa (o
+  alla giornata, a cassa chiusa) e al terminale. Lo stesso guaio ripetuto
+  entro un minuto si conta e non si riscrive, oltre duecento righe si tace,
+  e i documenti più vecchi di due settimane si cancellano da soli. Si legge
+  da remoto con `scripts/diagnostica-stampante.js`, senza essere al banco.
+
+- **Un carico si somma alla giacenza anche quando è sotto zero**: −1 più
+  cinque pezzi fa quattro, non cinque. Il meno è quasi sempre merce già
+  bevuta e caricata il giorno dopo, e il carico è quello che chiude il
+  buco. (Fino a oggi il carico ripartiva da zero.)
+
+- **La casella «È una scorta: si scarica quando si usa» non c'è più**:
+  tutto quello che sta in magazzino si scarica quando si usa, è esaurito a
+  zero e vale quello che costa. L'interruttore era nato per la manodopera
+  messa in ricetta per il costo, che nei dati del locale non è mai
+  esistita, e aveva lasciato una tequila nuova spenta e mai scaricata.
+  Giacenza iniziale e soglia di avviso si chiedono sempre.
+
+- **Alla consegna di un ordine ogni riga dice quanto costa** (pezzi ×
+  prezzo, che si rifà mentre si correggono le caselle), così il confronto
+  con la fattura si fa riga per riga e non solo sul netto in fondo. La
+  riga della finestra sta su due linee — nome e totale sopra, pezzi e
+  prezzo sotto — invece di schiacciare il nome in una colonnina.
+
+- **Le macro-categorie sono un elenco solo, e dentro ci vanno i singoli
+  prodotti e le singole voci del menù, con una percentuale.** Si apre una
+  macro da **Magazzino → Macro-categorie** e si trovano due colonne in
+  ordine alfabetico: a sinistra i prodotti del magazzino, a destra le voci
+  del menù, ognuno con la casella della quota (100, 80, 60…). Un prodotto
+  può stare per il 60% in una macro e per il 40% in un'altra; accanto al
+  nome si legge quanto è già altrove, e la somma non passa cento. La
+  ricerca e il filtro «Solo senza macro» aiutano a compilare l'elenco.
+  Ogni casella si salva da sola, subito. «Venduto × Incassato» spartisce
+  incasso e costo secondo le quote delle voci. La sezione **Menù →
+  Macro-categorie** non c'è più, e le macro non si assegnano più alle
+  categorie: le quote vanno inserite a mano — le macro già create restano.
+
+- **Il ghiaccio nelle ricette raddoppia** (100 g → 200, 200 g → 400)
+  con uno script di manutenzione, `scripts/ghiaccio-nelle-ricette.js`:
+  l'obiettivo è sempre rispetto alla dose scritta in origine, un segno
+  sull'articolo del ghiaccio ricorda a che punto si è, e rilanciato per
+  sbaglio non moltiplica una seconda volta. Anteprima di serie, scrive solo
+  con `--apply`. (Era «una volta e mezzo» fino al 12/09: Flavio ha corretto
+  il calcolo.)
+
 ## 1.5.10
 
 ### Per chi sta al banco

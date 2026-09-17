@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchInventoryItems,
+  fetchDrinks,
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
@@ -50,7 +51,6 @@ import {
   magazzinoBloccato,
   motivoNonMigrabile,
   fromStockUnit,
-  eScorta,
   stockStatus,
   bottleSummary,
   bottleBreakdown,
@@ -61,11 +61,9 @@ import {
   contenutoDelPezzo,
   inventorySummary,
   filterItems,
-  ASSORTIMENTI,
   assortimentoDi,
   ETICHETTA_ASSORTIMENTO,
   mancaNellaScheda,
-  prodottiDaCompletare,
   schedaCompletata,
   costWithVat,
   stockValue,
@@ -79,8 +77,6 @@ import { cambioAMano, cambioDaAvvisare } from '../lib/statoAssortimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { parseSupplierList } from '../lib/warehouse.js'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
-import EtichettaMacro from './EtichettaMacro.jsx'
-import { indiceMacro, macroDiCategoria } from '../lib/macros.js'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
@@ -89,6 +85,8 @@ import SortTh from './SortTh.jsx'
 import SectionPanels from './SectionPanels.jsx'
 import { IconFornitore } from './Icons.jsx'
 import Tendina from './Tendina.jsx'
+import FiltroAssortimento from './FiltroAssortimento.jsx'
+import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
@@ -111,32 +109,8 @@ const GESTIONE_LABEL = { pz: 'pezzi', g: 'peso', ml: 'liquidi', U: 'unità gener
 // linea" non porta niente: è la normalità, e un segno su tutto non segna nulla.
 // Il chip del filtro porta lo STESSO segno che compare nella riga: è lì che
 // si impara cosa vuol dire il bollino, senza una legenda a parte da cercare.
-const ASSORTIMENTO_LABEL = {
-  assortimento: <>📦 In assortimento</>,
-  linea: <>🍾 In linea</>,
-  premium: <>👑 Premium</>,
-  out: (
-    <>
-      <span className="badge-empty">OUT</span> Fuori assortimento
-    </>
-  ),
-}
-// Gli stessi nomi, in parole: servono al tasto della tendina, che deve dire
-// cosa è scelto senza doversi aprire.
-const ASSORTIMENTO_NOME = {
-  assortimento: 'In assortimento',
-  linea: 'In linea',
-  premium: 'Premium',
-  out: 'Fuori assortimento',
-}
-const ASSORTIMENTO_TITOLO = {
-  assortimento: 'Si tiene, senza niente di speciale',
-  linea: 'I primi da controllare prima di una serata',
-  // «Bottiglie premium» dava per scontato che qui dentro ci fossero solo
-  // bottiglie: un gestionale deve restare generico (REQ-MAG-019).
-  premium: 'I prodotti buoni',
-  out: 'Fuori assortimento: non si ricompra',
-}
+// Le etichette e le voci del filtro stanno in `FiltroAssortimento.jsx`,
+// perché lo stesso filtro sta anche nel nuovo ordine al fornitore.
 // Il segno della SCHEDA DA COMPLETARE (REQ-MAG-032), accanto al nome come la
 // coroncina del premium: un prodotto nato da una consegna si riconosce
 // scorrendo la lista, senza doverlo aprire.
@@ -210,7 +184,9 @@ function UnitPrice({ item, markup }) {
 // l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
   ['prodotti', '📦', 'Prodotti'],
-  ['conta', '📋', 'Conta'],
+  // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
+  // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
+  ['conta', '📋', 'Inventario'],
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
   ['movimenti', '📜', 'Movimenti'],
@@ -262,65 +238,43 @@ export default function InventoryManager() {
 // altri motivi — e infatti erano finite lì.
 function CategoriePanel() {
   const [categories, setCategories] = useState([])
-  // LE MACRO SERVONO ANCHE QUI. Finora questo elenco mostrava il solo
-  // nome, e a quale gruppo appartenesse una categoria si andava a vedere
-  // nel pannello delle macro — cioè da un'altra parte, dopo essersi
-  // chiesti se valeva la pena.
-  const [macros, setMacros] = useState([])
-  const ricarica = async () => {
-    const [cats, macs] = await Promise.all([
-      fetchInventoryCategories(),
-      fetchMacroCategories('magazzino').catch(() => []),
-    ])
-    setCategories(cats)
-    setMacros(macs)
-  }
+  const ricarica = async () => setCategories(await fetchInventoryCategories())
   useEffect(() => {
     ricarica()
   }, [])
-  return <InvCategoryManager categories={categories} macros={macros} onChange={ricarica} />
+  return <InvCategoryManager categories={categories} onChange={ricarica} />
 }
 
+// LE MACRO STANNO QUI, E SOLO QUI. Dentro ogni macro ci vanno i singoli
+// prodotti del magazzino e le singole voci del menù (REQ-MAG-042): la
+// schermata ha bisogno di tutt'e due gli elenchi, completi — anche le voci
+// fuori menù, che hanno venduto nei mesi passati e nei conti ci sono.
+//
+// Si legge una volta sola, all'apertura: da lì in poi ogni gesto aggiorna
+// l'elenco sul posto con quello che il writer compone, senza rileggere.
 function MacroPanel() {
   const [macros, setMacros] = useState([])
-  const [categories, setCategories] = useState([])
-  // Le macro del MENÙ servono qui solo per l'aggancio: su ogni macro di
-  // spesa si sceglie a quale macro di vendita corrisponde.
-  const [macroMenu, setMacroMenu] = useState([])
-  // I PRODOTTI CON LA SCHEDA DA COMPLETARE SI GUARDANO QUI (REQ-MAG-032), coi
-  // conti che hanno un buco: una categoria senza macro e un prodotto senza
-  // categoria sono lo stesso buco visto da due lati (REQ-UI-022), e in tutti
-  // e due i casi una spesa vera non compare in «Acquisti × Fatturato».
-  const [daCompletare, setDaCompletare] = useState([])
-  const ricarica = async () => {
-    const [macs, cats, menu, items] = await Promise.all([
-      fetchMacroCategories('magazzino'),
-      fetchInventoryCategories(),
-      fetchMacroCategories('menu').catch(() => []),
-      // Il pannello deve reggere anche se il magazzino non risponde: le
-      // macro sono la cosa per cui si è entrati, i prodotti un di più.
-      fetchInventoryItems().catch(() => []),
-    ])
-    setMacros(macs)
-    setCategories(cats)
-    setMacroMenu(menu)
-    setDaCompletare(prodottiDaCompletare(items))
-  }
+  const [prodotti, setProdotti] = useState([])
+  const [voci, setVoci] = useState([])
   useEffect(() => {
-    ricarica()
+    let attivo = true
+    Promise.all([
+      fetchMacroCategories(),
+      // Il pannello deve reggere anche se un elenco non risponde: le macro
+      // sono la cosa per cui si è entrati, il resto arriva dopo.
+      fetchInventoryItems().catch(() => []),
+      fetchDrinks().catch(() => []),
+    ]).then(([macs, items, drinks]) => {
+      if (!attivo) return
+      setMacros(macs)
+      setProdotti(items)
+      setVoci(drinks)
+    })
+    return () => {
+      attivo = false
+    }
   }, [])
-  return (
-    <MacroCategoryManager
-      ambito="magazzino"
-      macros={macros}
-      categories={categories}
-      onChange={ricarica}
-      aggiornaCategoria={updateInventoryCategory}
-      creaCategoria={createInventoryCategory}
-      macroDiVendita={macroMenu}
-      prodottiDaCompletare={daCompletare}
-    />
-  )
+  return <MacroCategoryManager macros={macros} prodotti={prodotti} voci={voci} />
 }
 
 // I MOVIMENTI HANNO UNA SEZIONE LORO. Stavano in fondo alla lista dei
@@ -447,8 +401,7 @@ function ProductsPanel() {
   // Assortimento: si possono tenere accesi PIÙ valori insieme (linea +
   // premium, linea + out…). Vuoto = si vede tutto.
   const [assortimenti, setAssortimenti] = useState([])
-  const toggleAssortimento = (k) =>
-    setAssortimenti((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
+  const toggleAssortimento = (k) => setAssortimenti((cur) => toggleVoce(cur, k))
 
   // Riga espansa + carico in corso
   const [invView, setInvView] = useState('lista') // 'lista' | 'card' — default LISTA
@@ -1055,22 +1008,7 @@ function ProductsPanel() {
               <strong>{n}</strong>
             </button>
           ))}
-          <div className="tendina-titolo">Assortimento</div>
-          {ASSORTIMENTI.map((k) => {
-            const quanti = items.filter((it) => assortimentoDi(it) === k).length
-            return (
-              <button
-                key={k}
-                type="button"
-                className={`tendina-voce${assortimenti.includes(k) ? ' scelta' : ''}`}
-                onClick={() => toggleAssortimento(k)}
-                title={ASSORTIMENTO_TITOLO[k]}
-              >
-                <span>{ASSORTIMENTO_LABEL[k]}</span>
-                <strong>{quanti}</strong>
-              </button>
-            )
-          })}
+          <FiltroAssortimento items={items} scelti={assortimenti} onToggle={toggleAssortimento} />
           {(assortimenti.length > 0 || statusFilter !== 'all') && (
             <button
               type="button"
@@ -1360,10 +1298,9 @@ function ProductsPanel() {
 
 // --- Gestione categorie inventario --------------------------------------
 
-function InvCategoryManager({ categories, macros = [], onChange }) {
+function InvCategoryManager({ categories, onChange }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
-  const indice = useMemo(() => indiceMacro(macros), [macros])
 
   async function add() {
     if (!name.trim()) return
@@ -1410,10 +1347,7 @@ function InvCategoryManager({ categories, macros = [], onChange }) {
       )}
       {categories.map((c, idx) => (
         <div className="row between" key={c.id} style={{ marginTop: 8 }}>
-          <span className="row" style={{ gap: 8, alignItems: 'center' }}>
-            {c.name}
-            <EtichettaMacro macro={macroDiCategoria(c, indice)} />
-          </span>
+          <span>{c.name}</span>
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
@@ -2306,12 +2240,6 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
     bottles: '',
     open_content: '',
   })
-  // SI SCARICA DAL MAGAZZINO? Lo decide il prodotto, non la sua unità: il
-  // ghiaccio si conta a unità e finisce eccome, il tempo di lavorazione sta
-  // a listino ma non su nessuno scaffale. Se rispondesse sempre «sì», al
-  // primo drink la manodopera andrebbe a zero e il menù direbbe
-  // «Ingrediente esaurito», facendo sparire il drink dalla carta.
-  const [scorta, setScorta] = useState(initial ? eScorta(initial) : true)
   const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const num = (v) => Number(String(v).replace(',', '.')) || 0
@@ -2377,9 +2305,8 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         // due risposte alla stessa domanda (resaUso preferisce la resa).
         resa: null,
         resa_unit: null,
-        scorta,
         // La soglia si scrive in pezzi, come la giacenza.
-        low_threshold: scorta ? num(form.low_threshold) : 0,
+        low_threshold: num(form.low_threshold),
       }
       // Il fornitore viaggia a parte perché non è più un campo del
       // prodotto: chi salva ne fa una riga di listino (REQ-MAG-029).
@@ -2605,22 +2532,11 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         </div>
       )}
 
-      {/* SI SCARICA DAL MAGAZZINO? Lo decide il prodotto: il ghiaccio finisce,
-          il tempo di lavorazione no. */}
-      <label className="row between" style={{ alignItems: 'center', gap: 8, marginTop: 8 }}>
-        <span>
-          È una scorta: si scarica quando si usa
-          <span className="muted small"> — spegnilo per il lavoro a servizio</span>
-        </span>
-        <input
-          type="checkbox"
-          className="toggle"
-          checked={scorta}
-          onChange={(e) => setScorta(e.target.checked)}
-        />
-      </label>
-
-      {!isEdit && scorta && (
+      {/* NIENTE PIÙ «È UNA SCORTA» (12/09/2026): tutto quello che sta in
+          magazzino si scarica quando si usa. L'interruttore, nato per la
+          manodopera che non è mai stata censita, aveva lasciato una tequila
+          spenta e mai scaricata. Il perché per esteso è in lib/inventory.js. */}
+      {!isEdit && (
         <>
           <label htmlFor="ibottles">Quantità iniziale (pz)</label>
           <input id="ibottles" type="number" step="any" min="0" value={form.bottles} onChange={set('bottles')} />
@@ -2645,25 +2561,19 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         </>
       )}
 
-      {/* Niente soglia per quello che non è una scorta: non finisce, quindi
-          non c'è niente da avvisare e niente da riordinare al fornitore. */}
-      {scorta && (
-        <>
-          <label htmlFor="ithr">Soglia di avviso (pz)</label>
-          <input
-            id="ithr"
-            type="number"
-            step="any"
-            min="0"
-            value={form.low_threshold}
-            onChange={set('low_threshold')}
-            placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
-          />
-          <p className="muted small" style={{ margin: '2px 0 8px' }}>
-            Sotto questo livello l’articolo compare fra quelli in esaurimento.
-          </p>
-        </>
-      )}
+      <label htmlFor="ithr">Soglia di avviso (pz)</label>
+      <input
+        id="ithr"
+        type="number"
+        step="any"
+        min="0"
+        value={form.low_threshold}
+        onChange={set('low_threshold')}
+        placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+      />
+      <p className="muted small" style={{ margin: '2px 0 8px' }}>
+        Sotto questo livello l’articolo compare fra quelli in esaurimento.
+      </p>
 
       {avviso && (
         <div className="banner" role="alert" style={{ marginTop: 8 }}>

@@ -358,7 +358,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     mostra()
     await apriPremium(user)
     expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
-    expect(screen.getByText('Conta di magazzino')).toBeInTheDocument()
+    expect(screen.getByText('Inventario di magazzino')).toBeInTheDocument()
     expect(screen.getByText('Fatture ai fornitori')).toBeInTheDocument()
     // Le due fatture stanno una sotto l'altra e sono mestieri opposti:
     // l'etichetta deve dire di chi sono senza doverle aprire.
@@ -374,7 +374,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
-    const interruttore = interruttoreDi('Conta di magazzino')
+    const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).not.toBeChecked()
     expect(interruttore).toHaveAttribute('aria-disabled', 'true')
   })
@@ -394,13 +394,36 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     // Le altre prove hanno già salvato roba: qui conta solo cosa succede
     // DA questo tocco in poi.
     updateSettings.mockClear()
-    await user.click(interruttoreDi('Conta di magazzino'))
+    await user.click(interruttoreDi('Inventario di magazzino'))
     expect(visti.some((t) => /premium/i.test(t.message))).toBe(true)
     // E soprattutto: NON si è acceso niente.
     expect(updateSettings).not.toHaveBeenCalled()
-    expect(interruttoreDi('Conta di magazzino')).not.toBeChecked()
+    expect(interruttoreDi('Inventario di magazzino')).not.toBeChecked()
     visti.forEach((t) => dismissToast(t.id))
     stop()
+  })
+
+  // L'INVENTARIO HA UNA SCELTA SUA, sotto il suo interruttore e solo quando
+  // c'è: riaprire da sé alla chiusura, o lasciar fare a mano (Daniele,
+  // 17/09/2026). Di suo riapre.
+  it('l’inventario incluso porta con sé la scelta «riapre da sé», accesa di suo', async () => {
+    impostazioni.licenza = { moduli: { conta: true, fatture: false, scadenzario: true } }
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    const interruttore = interruttoreDi('Chiuso un inventario, ne apre subito un altro')
+    expect(interruttore).toBeChecked()
+    updateSettings.mockClear()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ inventario_riapre_da_solo: false })
+  })
+
+  it('senza l’inventario, la sua scelta non compare', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await apriPremium(user)
+    expect(screen.queryByText('Chiuso un inventario, ne apre subito un altro')).toBeNull()
   })
 
   it('quella INCLUSA è accesa, si tocca, e si spegne davvero', async () => {
@@ -443,7 +466,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)
-    const interruttore = interruttoreDi('Conta di magazzino')
+    const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
     expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)

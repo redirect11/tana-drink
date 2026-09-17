@@ -200,7 +200,7 @@ export function bottleBreakdown(item) {
   // «−1 bottiglia, più 750 ml in quella aperta», che al banco non vuol dire
   // niente. Il meno lo porta `pezziInGiacenza`, che conta quantità e non
   // oggetti.
-  const stock = giacenzaPerCarico(item?.stock)
+  const stock = giacenzaNonNegativa(item?.stock)
   const total = Number(item?.bottles_total) || 0
   // Con la giacenza contata a PEZZI, "0,8" è una bottiglia aperta all'80%:
   // la parte intera sono le bottiglie piene, il resto è quanto c'è nella
@@ -285,21 +285,19 @@ export function bottleSummary(item) {
   }
 }
 
-// ── SI SCARICA DAL MAGAZZINO? ────────────────────────────────────────
+// ── TUTTO QUELLO CHE STA IN MAGAZZINO SI SCARICA QUANDO SI USA ───────
 //
-// Lo decide IL PRODOTTO, non la sua unità di misura. La regola stava
-// sull'unità — «quello che si conta a unità generiche non si scarica» — ed è
-// giusta per la manodopera, che non sta su nessuno scaffale, ma non per il
-// GHIACCIO: si conta a unità e finisce eccome, e chi lo finisce a mezzanotte
-// vorrebbe averlo visto scendere.
-//
-// Il valore di partenza resta quello di prima, così i prodotti già in
-// magazzino non cambiano comportamento: le unità generiche non sono una
-// scorta finché qualcuno non dice il contrario, tutto il resto sì.
-export function eScorta(item) {
-  if (typeof item?.scorta === 'boolean') return item.scorta
-  return !unitaGenerica(item?.unit)
-}
+// Fino al 12/09/2026 c'era un interruttore per prodotto («È una scorta: si
+// scarica quando si usa», `scorta`), pensato per la manodopera: il «Tempo di
+// lavorazione» messo in ricetta per il costo non sta su nessuno scaffale, e
+// se si fosse scaricato sarebbe andato a zero al primo drink facendo sparire
+// il drink dalla carta. Quel prodotto NON È MAI ESISTITO nei dati veri: né
+// in produzione né su test c'era un articolo con lo scarico spento. In
+// compenso l'interruttore ha fatto un danno: una tequila nuova è rimasta
+// spenta senza che si vedesse, venduta per giorni e mai scaricata. Flavio:
+// «tutto bisogna che si scarica quando si usa». Daniele: «togli proprio
+// quel tasto, in effetti non serve». Il campo `scorta` sui documenti non si
+// legge più.
 
 // ── LEGGERE UN ARTICOLO SCRITTO COL MODELLO VECCHIO ──────────────────
 //
@@ -329,11 +327,7 @@ export function eScorta(item) {
 //   lavora vuol dire buttare via l'altra: se una ricetta dosava nella misura
 //   buttata, da quel momento scarica un chilo dove voleva un grammo. Quelli
 //   restano come sono, e li si sistema a mano.
-//   `scorta` VA SCRITTA. «Si scarica dal magazzino?» aveva un valore di
-//   partenza legato all'unità: quello che si contava a «U» non era una
-//   scorta. Portando tutto a pezzi quel valore cambierebbe risposta da solo,
-//   e il «Tempo di Lavorazione» diventerebbe merce: andrebbe a zero al primo
-//   drink e il menù farebbe sparire dalla carta i drink che lo usano.
+//   (`scorta` non si scrive più: dal 12/09/2026 tutto si scarica.)
 //
 // NIENTE ALTRO SI TOCCA: prezzi, ricette e voci di menù restano dove sono —
 // in produzione sono stati sistemati a mano, uno per uno.
@@ -374,7 +368,6 @@ export function patchNormalizza(item) {
     content_unit: resaValida ? resaBase : unitaGenerica(unit) ? UNITA_GENERICA : unit,
     resa: null,
     resa_unit: null,
-    scorta: eScorta(item),
   }
 }
 
@@ -474,13 +467,6 @@ export function statoTravaso(items) {
 
 // Stato scorta di un item: 'empty' (≤0), 'low' (≤ soglia), 'ok'.
 export function stockStatus(item) {
-  // Quello che non è una scorta non finisce mai: la manodopera non sta su
-  // nessuno scaffale. Se rispondesse 'empty' — e a giacenza zero
-  // risponderebbe sempre — il menù direbbe «Ingrediente esaurito» e il drink
-  // che la usa sparirebbe dalla carta, oltre a finire nelle proposte
-  // d'ordine al fornitore. Il ghiaccio, che invece è una scorta anche se si
-  // conta a unità, passa di qui come tutti gli altri.
-  if (!eScorta(item)) return 'ok'
   const stock = Number(item?.stock) || 0
   if (stock <= 0) return 'empty'
   if (stock <= (Number(item?.low_threshold) || 0)) return 'low'
@@ -509,13 +495,8 @@ export const ETICHETTA_SCORTA = {
 // «In esaurimento» è una lente più stretta dentro la stessa famiglia, non
 // un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima
 // bottiglia di gin, che è proprio quella che gli serve sapere.
-//
-// Quello che NON È UNA SCORTA — il tempo di lavorazione, il lavoro a
-// servizio — non sta né di qua né di là: non ha giacenza, non è né
-// disponibile né esaurito. Metterlo fra i disponibili vorrebbe dire dire
-// che c'è sullo scaffale una cosa che sullo scaffale non ci va.
 export function haGiacenza(item) {
-  return eScorta(item) && (Number(item?.stock) || 0) > 0
+  return (Number(item?.stock) || 0) > 0
 }
 
 // Conteggi per i chip di riepilogo: totale prodotti, in scorta, in
@@ -626,12 +607,9 @@ export function costWithVat(cost, vat = 22) {
 // magazzino si leggeva «valore −0,67 €», cioè un magazzino che vale meno di
 // niente. Quello che manca è un errore da correggere, non un credito.
 export function unitsInStock(item) {
-  // Il lavoro non sta sullo scaffale: quello che non è una scorta non è
-  // giacenza e non entra nel valore del magazzino.
-  if (!eScorta(item)) return 0
-  const stock = giacenzaPerCarico(item?.stock)
-  // Il pezzo conta se stesso — e così l'unità, quando è una scorta: un
-  // sacchetto di ghiaccio è uno, non una frazione di confezione.
+  const stock = giacenzaNonNegativa(item?.stock)
+  // Il pezzo conta se stesso — e così l'unità: un sacchetto di ghiaccio è
+  // uno, non una frazione di confezione.
   if (item?.unit === 'pz' || unitaGenerica(item?.unit)) return stock
   const size = Number(item?.package_size) || 0
   return size > 0 ? stock / size : 0
@@ -777,11 +755,22 @@ export function scaricoPossibile(stock, qty) {
   return Math.min(richiesta, giacenza)
 }
 
-// La giacenza da cui parte un CARICO, che non è mai negativa: comprando una
-// bottiglia e caricandola su −0,04 se ne deve contare UNA. Partendo dal
-// negativo il carico ne conta meno di una, sullo scaffale però c'è tutta, e
-// da quel momento il magazzino mente su quanto prodotto c'è davvero.
-export function giacenzaPerCarico(stock) {
+// LA GIACENZA DA ZERO IN SU, per contare OGGETTI e SOLDI: sotto zero non ci
+// sono bottiglie da toccare né un valore in euro («−1 piena più 750 ml
+// nell'aperta», «valore −0,67 €» non vogliono dire niente).
+//
+// NON È PIÙ LA GIACENZA DA CUI PARTE UN CARICO. Lo era dal 17/08/2026
+// (BUG-007: una bottiglia caricata su −0,04 doveva contarne una), e il
+// 12/09/2026 Flavio ha chiesto il contrario: «se ho tre pezzi, ne consumo
+// quattro, va a meno uno, e compro cinque pezzi: non me ne mette quattro, me
+// ne mette cinque. Non è detto che un prodotto vada realmente in negativo:
+// magari mi è arrivato e non l'ho caricato ancora, lo carico il giorno dopo,
+// e si bilancia col carico». Il meno, al banco, è quasi sempre merce già
+// bevuta e non ancora caricata: il carico che arriva è quello, e deve
+// chiudere il buco, non sommarsi a un conteggio azzerato. I carichi ora
+// partono dalla giacenza com'è (`loadStock`, `receiveBottles`, e la consegna
+// che già faceva `increment`).
+export function giacenzaNonNegativa(stock) {
   return Math.max(0, Number(stock) || 0)
 }
 
@@ -883,9 +872,8 @@ export function computeConsumption(orderItems, drinksById) {
     const mult = Number(oi.qty) || 0
     for (const ri of recipe) {
       if (!ri.inventory_item_id) continue
-      // QUI SI CONTA TUTTO QUELLO CHE LA RICETTA CHIEDE, manodopera compresa:
-      // cosa poi vada tolto dalla giacenza lo decide il PRODOTTO (eScorta),
-      // e lo decide chi scrive la giacenza, che l'articolo ce l'ha in mano.
+      // QUI SI CONTA TUTTO QUELLO CHE LA RICETTA CHIEDE, e tutto si toglie
+      // dalla giacenza (dal 12/09/2026 non c'è più un «non è una scorta»).
       // Filtrare qui sull'unità significava che il ghiaccio — contato a
       // unità ma scorta vera — non si scaricava mai.
       const add = (Number(ri.qty) || 0) * mult
@@ -1022,11 +1010,12 @@ export function prodottoDaRigaOrdine(riga) {
 }
 
 // Cosa manca a una scheda nata da un ordine, detto a chi deve compilarla.
-// Sono le tre cose che l'ordine non poteva sapere, e la prima è quella che
-// fa danno: senza categoria non c'è macro d'acquisto, e la spesa di quel
-// prodotto SPARISCE da «Bilancio → Acquisti × Fatturato» invece di
-// risultare sbagliata (REQ-MAG-022). È lo stesso buco delle categorie senza
-// macro (REQ-UI-022), visto dall'altro lato.
+// Sono le tre cose che l'ordine non poteva sapere. La categoria è quella che
+// decide dove il prodotto si trova negli elenchi e nei filtri; la macro,
+// invece, dal 09/09/2026 si dà al singolo prodotto (REQ-MAG-042) e non
+// dipende più dalla categoria — un prodotto nuovo va comunque attribuito
+// a mano, in Magazzino → Macro-categorie, se no la sua spesa resta «non
+// attribuita» (REQ-MAG-022).
 export function mancaNellaScheda(item) {
   const manca = []
   if (!item?.category_id) manca.push('la categoria')
@@ -1034,9 +1023,6 @@ export function mancaNellaScheda(item) {
   if (!(Number(item?.low_threshold) > 0)) manca.push('la soglia di riordino')
   return manca
 }
-
-export const prodottiDaCompletare = (items) =>
-  (items || []).filter((it) => it?.scheda_da_completare)
 
 // LA SCHEDA SI CHIUDE CON LA CATEGORIA, non col semplice fatto di averla
 // aperta. Bastasse un salvataggio qualunque, il segno sparirebbe dal
