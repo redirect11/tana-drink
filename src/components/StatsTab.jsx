@@ -23,8 +23,10 @@ import {
   extrasBreakdown,
   DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
+import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -34,7 +36,32 @@ const fmtQty = (u) =>
 
 // Statistiche del locale, per GIORNATA COMMERCIALE o per SERATA (la finestra
 // di una chiusura di cassa).
+//
+// IL PERIODO È UN INTERVALLO DI DATE, e le pastiglie sono scorciatoie che lo
+// riempiono. Prima era un CONTATORE di giornate all'indietro, e Flavio
+// (17/09/2026) ha detto cosa non funzionava: «mi appare questo counter dei
+// giorni … ma qui in realtà mi dovrebbe apparire un inizio periodo fine
+// periodo … così riesco a vedere realmente la fascia di periodo che mi
+// interessa, così come può essere il giugno, così come può essere il periodo
+// di Natale». Con un contatore giugno non si guarda: si guarda «gli ultimi
+// 108 giorni», che è un'altra domanda.
 const PERIOD_PRESETS = [7, 10, 20, 30, 60]
+
+// Le date sono GIORNATE COMMERCIALI, non giorni solari: la nottata oltre la
+// mezzanotte appartiene alla giornata in cui è cominciata, qui come nel
+// resto dell'app.
+//
+// LE PASTIGLIE HANNO CAMBIATO SENSO, e l'etichetta lo dice. «Ultime 7»
+// voleva dire le ultime sette giornate CON ORDINI, quante che fossero
+// indietro nel tempo; adesso riempiono un intervallo, quindi sono sette
+// GIORNI di calendario — e un locale chiuso il lunedì ne troverà sei
+// lavorati. È la stessa unità delle due caselle qui sotto: due comandi che
+// riempiono la stessa cosa non possono contare in due modi diversi.
+const periodoDaPreset = (n, oggi) => ({ preset: n, dal: shiftDay(oggi, -(n - 1)), al: oggi })
+const giorniFra = (dal, al) => Math.round((Date.parse(al) - Date.parse(dal)) / 86400000) + 1
+// La data per esteso, non «oggi»/«ieri»: qui si sta verificando un periodo
+// scelto a mano, e le parole comode costringerebbero a fidarsi.
+const dataBreve = (key) => (key ? key.split('-').reverse().join('/') : '')
 
 // LE DUE DOMANDE, DUE SOTTOSEZIONI. «È la cosa principale che si vuole
 // vedere, il resto dei filtri sono secondari» (l'utente, 22/08/2026): la
@@ -69,16 +96,23 @@ function DailyStats({ sezione = 'serate' }) {
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
   const [error, setError] = useState(null)
-  const [period, setPeriod] = useState(10) // ultime N giornate
-  const [custom, setCustom] = useState(false)
-  const [customInput, setCustomInput] = useState('15')
-  const effective = custom ? Math.max(1, Number(customInput) || 1) : period
-  // Carica abbastanza giornate da coprire il periodo scelto (min 60).
-  const [loadLimit, setLoadLimit] = useState(60)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const cutoff = settings.business_day_cutoff_hour
-  if (effective > loadLimit) setLoadLimit(Math.ceil(effective / 30) * 30)
+  // Il periodo guardato: due giornate commerciali, più la pastiglia che lo
+  // ha riempito (null quando le date sono state scritte a mano) — serve solo
+  // a sapere quale accendere e come scrivere la didascalia.
+  const [periodo, setPeriodo] = useState(() =>
+    periodoDaPreset(10, businessDayKey(new Date(), DEFAULT_SETTINGS.business_day_cutoff_hour))
+  )
+  // L'ora di taglio arriva dalle impostazioni DOPO il primo disegno: finché
+  // il periodo è una pastiglia si rifà da sé, se no resta quello scritto a
+  // mano, che è una scelta di chi guarda e non si tocca.
+  useEffect(() => {
+    setPeriodo((p) => (p.preset ? periodoDaPreset(p.preset, businessDayKey(new Date(), cutoff)) : p))
+  }, [cutoff])
+  // Carica abbastanza giornate da coprire il periodo scelto (min 60).
+  const [loadLimit, setLoadLimit] = useState(60)
   // Range orari configurabili dei grafici.
   const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
   // SERATA (chiusura di cassa): in alternativa alle ultime N giornate si
@@ -129,14 +163,17 @@ function DailyStats({ sezione = 'serate' }) {
   const [fasciaAl, setFasciaAl] = useState(() => businessDayKey(new Date(), cutoff))
   const [dayRange, setDayRange] = useState({ from: '22:00', to: '00:00' })
 
-  // Date scelte fuori dai dati già scaricati: si allarga la finestra.
+  // Date scelte fuori dai dati già scaricati: si allarga la finestra. Vale
+  // per il periodo e per l'intervallo della fascia oraria, che sono due
+  // scelte indipendenti e possono guardare indietro l'una più dell'altra.
   useEffect(() => {
     const oggi = businessDayKey(new Date(), cutoff)
-    const giorni = Math.ceil((Date.parse(oggi) - Date.parse(fasciaDal)) / 86400000) + 1
+    const indietro = [fasciaDal, periodo.dal].map((d) => giorniFra(d, oggi))
+    const giorni = Math.max(...indietro.filter(Number.isFinite))
     if (Number.isFinite(giorni) && giorni > loadLimit) {
       setLoadLimit(Math.ceil(giorni / 30) * 30)
     }
-  }, [fasciaDal, cutoff, loadLimit])
+  }, [fasciaDal, periodo.dal, cutoff, loadLimit])
 
   useEffect(() => {
     let active = true
@@ -180,7 +217,7 @@ function DailyStats({ sezione = 'serate' }) {
       ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
       sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
     } else {
-      sel = giorniAttivi.slice(0, effective)
+      sel = giorniAttivi.filter((g) => g >= periodo.dal && g <= periodo.al)
       const selSet = new Set(sel)
       ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
     }
@@ -192,6 +229,12 @@ function DailyStats({ sezione = 'serate' }) {
       byDay: revenueByDay(ord, cutoff),
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
+      // La classifica INTERA, che è un'altra cosa dai primi dieci a grafico:
+      // «capisco cosa ho venduto di più, che cosa credevo di poter vendere e
+      // invece alla fine non ho venduto» (Flavio, 17/09/2026). La coda
+      // dell'elenco è metà della risposta, e un grafico a dieci barre la
+      // taglia via.
+      classifica: aggregateProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
       // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
       // categorie), sulle GIORNATE indicate qui sotto — non sul periodo sopra.
@@ -208,7 +251,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, effective, hourRange, dayRange, cutoff, fasciaDal, fasciaAl, serata])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, hourRange, dayRange, cutoff, fasciaDal, fasciaAl, serata])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -251,7 +294,15 @@ function DailyStats({ sezione = 'serate' }) {
           Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
           mezzanotte compresa.
         </p>
-        <CorpoStatistiche view={view} comandi={comandi} />
+        <CorpoStatistiche
+          view={view}
+          comandi={comandi}
+          intervallo={{
+            dal: businessDayKey(serata.opened_at, cutoff),
+            al: businessDayKey(serata.closed_at || new Date(), cutoff),
+          }}
+          cutoff={cutoff}
+        />
       </div>
     )
   }
@@ -264,35 +315,56 @@ function DailyStats({ sezione = 'serate' }) {
         {PERIOD_PRESETS.map((v) => (
           <button
             key={v}
-            className={`chip${!custom && period === v ? ' active' : ''}`}
-            onClick={() => {
-              setCustom(false)
-              setPeriod(v)
-            }}
+            className={`chip${periodo.preset === v ? ' active' : ''}`}
+            onClick={() => setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))}
           >
-            Ultime {v}
+            {v} giorni
           </button>
         ))}
-        <button className={`chip${custom ? ' active' : ''}`} onClick={() => setCustom(true)}>
-          Personalizzato
-        </button>
-        {custom && (
+      </div>
+      {/* LE DATE SONO IL COMANDO, le pastiglie sono le scorciatoie. Scrivere
+          una delle due spegne la pastiglia: da lì in poi il periodo è quello
+          che c'è scritto, e non si sposta più da solo. */}
+      <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
+        <span>
+          {/* «Dal» e non «Dal giorno»: più sotto, nel venduto per fascia
+              oraria, ci sono altre due date che dicono un'altra cosa, e due
+              etichette uguali a schermo si scambiano per la stessa. */}
+          <label htmlFor="periodo-dal" className="muted small">Dal</label>
           <input
-            className="setting-amount"
-            type="number"
-            min="1"
-            value={customInput}
-            onChange={(e) => setCustomInput(e.target.value)}
-            style={{ width: 80 }}
-            aria-label="Numero di giornate"
+            id="periodo-dal"
+            type="date"
+            value={periodo.dal}
+            max={periodo.al}
+            onChange={(e) =>
+              e.target.value && setPeriodo((p) => ({ preset: null, dal: e.target.value, al: p.al }))
+            }
           />
-        )}
+        </span>
+        <span>
+          <label htmlFor="periodo-al" className="muted small">Al</label>
+          <input
+            id="periodo-al"
+            type="date"
+            value={periodo.al}
+            min={periodo.dal}
+            onChange={(e) =>
+              e.target.value && setPeriodo((p) => ({ preset: null, dal: p.dal, al: e.target.value }))
+            }
+          />
+        </span>
       </div>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
-        Statistiche sulle ultime {Math.min(effective, giorniAttivi.length)} giornate
-        {giorniAttivi.length < effective ? ` (${giorniAttivi.length} disponibili)` : ''}.
+        Dal {dataBreve(periodo.dal)} al {dataBreve(periodo.al)}: {view.sel.length}{' '}
+        {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini su{' '}
+        {giorniFra(periodo.dal, periodo.al)}.
       </p>
-      <CorpoStatistiche view={view} comandi={comandi} />
+      <CorpoStatistiche
+        view={view}
+        comandi={comandi}
+        intervallo={{ dal: periodo.dal, al: periodo.al }}
+        cutoff={cutoff}
+      />
     </div>
   )
 }
@@ -346,13 +418,69 @@ function ElencoSerate({ righe, onApri }) {
   )
 }
 
+// ── LA CLASSIFICA DEL VENDUTO (REQ-STAT-002) ─────────────────────────
+//
+// «Anche per poter capire una classifica di quello che piaceva, che me li
+// metti in ordine, in modo tale capisco cosa ho venduto di più, che cosa
+// credevo di poter vendere e invece alla fine, analizzando i dati, non ho
+// venduto» (Flavio, 17/09/2026).
+//
+// PERCHÉ NON BASTAVANO I GRAFICI CHE CI SONO GIÀ: mostrano i primi dieci, e
+// la domanda di Flavio riguarda soprattutto la CODA — quello che si pensava
+// di vendere e non si è venduto sta in fondo, dove le barre non arrivano.
+// Qui c'è l'elenco intero, nella forma della lista del magazzino.
+//
+// SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse: dieci
+// amari da tre euro battono un cocktail da dodici nella prima e perdono
+// nella seconda. Di suo per pezzi, che è la domanda di partenza («cosa
+// piaceva»).
+function ClassificaVenduto({ righe }) {
+  const [perIncasso, setPerIncasso] = useState(false)
+  const ordinate = useMemo(
+    () => (perIncasso ? [...righe].sort((a, b) => b.revenue - a.revenue) : righe),
+    [righe, perIncasso]
+  )
+  if (righe.length === 0) return null
+  return (
+    <div className="card">
+      <div className="row between" style={{ alignItems: 'center' }}>
+        <h3 className="cat-header" style={{ margin: 0 }}>
+          🏆 Classifica del venduto
+        </h3>
+        <button type="button" className="btn ghost small" onClick={() => setPerIncasso((v) => !v)}>
+          {perIncasso ? 'Ordina per pezzi' : 'Ordina per incasso'}
+        </button>
+      </div>
+      <p className="muted small" style={{ margin: '8px 0 0' }}>
+        Tutte le voci battute nel periodo, dalla più venduta all’ultima.
+      </p>
+      <div className="inv-list">
+        {ordinate.map((p, i) => (
+          <div className="inv-row" key={p.name}>
+            <div className="inv-row-main statica">
+              <span className="muted small" style={{ minWidth: 28 }}>
+                {i + 1}
+              </span>
+              <span className="inv-row-name">{p.name}</span>
+              <span className="inv-row-cat" />
+              <span className="muted small inv-row-price">{p.qty} pz</span>
+              <span className="inv-row-price inv-row-stock">{formatPrice(p.revenue)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── IL CORPO DELLE STATISTICHE ───────────────────────────────────────
 // Gli stessi grafici per tutte e due le sottosezioni: cambia solo QUALI
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi }) {
-  const { kpi, byHour, byDay, byDayRange, top, byCategory, ingredients, prep, split, extras, fascia } = view
+function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
+  const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
+    view
   const { hourRange, setHourRange, dayRange, setDayRange, fasciaDal, setFasciaDal, fasciaAl, setFasciaAl } =
     comandi
   return (
@@ -487,6 +615,17 @@ function CorpoStatistiche({ view, comandi }) {
         <ChartCard title="🗂 Incasso per categoria">
           <HBars data={byCategory.map((c) => ({ label: c.name, value: c.revenue, text: formatPrice(c.revenue) }))} />
         </ChartCard>
+      )}
+
+      {/* ── I DUE ELENCHI DEL PERIODO (REQ-STAT-002) ───────────────────
+          Flavio, 17/09/2026: «tutti questi dati mi servirebbero in formato di
+          lista, un po' la visualizzazione come sono i prodotti del
+          magazzino». I grafici qui sopra rispondono a «com'è andata»; questi
+          due rispondono a «cosa, di preciso» — e una classifica si legge in
+          fila, non a barre. */}
+      <ClassificaVenduto righe={classifica} />
+      {intervallo?.dal && intervallo?.al && (
+        <MagazzinoPeriodo dal={intervallo.dal} al={intervallo.al} cutoffHour={cutoff} />
       )}
 
       <div className="card">

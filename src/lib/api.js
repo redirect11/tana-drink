@@ -9,6 +9,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   where,
   orderBy,
@@ -16,25 +17,33 @@ import {
   onSnapshot,
   serverTimestamp,
   increment,
+  arrayUnion,
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
 import { db, auth } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import {
+  COLLEZIONE as DIAGNOSTICA_STAMPANTE,
+  impostaScrittoreDiagnostica,
+  impostaSessioneDiagnostica,
+  segnala as segnalaStampante,
+  TIPO as TIPO_DIAGNOSTICA,
+} from './diagnosticaStampante.js'
 import { splitAmounts } from './groups.js'
 import {
   computeConsumption,
-  eScorta,
   formatQty,
   qtyInStockUnit,
   scaricoPossibile,
-  giacenzaPerCarico,
+  giacenzaNonNegativa,
   articoloNormalizzato,
   patchNormalizza,
   caricoDaConfezioni,
   prodottoDaRigaOrdine,
 } from './inventory.js'
 import { consumptionDiff, purchaseOrderTotals } from './warehouse.js'
+import { LATI, macroConPeso, ordinaMacro, pesiPuliti, pesoAmmesso, quotaAltrove } from './macros.js'
 import {
   idRigaListino,
   livelloDi,
@@ -179,7 +188,6 @@ function mapCategory(snap) {
     sort_order: c.sort_order ?? 0,
     icon: c.icon ?? null, // emoji scelta per la categoria (opzionale)
     color: c.color ?? null, // colore custom (hex); null = colore automatico
-    macro_id: c.macro_id ?? null, // macro-categoria di appartenenza (inventario)
     created_at: toIso(c.created_at),
   }
 }
@@ -212,7 +220,6 @@ function mapItem(snap) {
     // questo campo il «Tempo di Lavorazione», appena l'unità passa al pezzo,
     // ridiventerebbe merce — a zero al primo drink, e il menù farebbe
     // sparire dalla carta i drink che lo usano.
-    scorta: typeof i.scorta === 'boolean' ? i.scorta : null,
     bottles_total: Number(i.bottles_total) || 0,
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
@@ -478,8 +485,8 @@ export async function fetchInventoryCategories() {
   return cats
 }
 
-export async function createInventoryCategory({ name, sort_order = 0, macro_id = null }) {
-  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, macro_id, created_at: serverTimestamp() })
+export async function createInventoryCategory({ name, sort_order = 0 }) {
+  const ref = await addDoc(inventoryCategoriesCol, { name, sort_order, created_at: serverTimestamp() })
   return mapCategory(await getDoc(ref))
 }
 
@@ -494,17 +501,22 @@ export async function deleteInventoryCategory(id) {
 }
 
 // --- MACRO-CATEGORIE ---
-// Raggruppano le categorie d'inventario (Distillati, Birre+Bibite, Vino…) per
-// i conti aggregati di acquisti/fatturato. Il legame vive sulla categoria
-// (campo macro_id), così una categoria sta in al più una macro.
-
-// DUE ELENCHI, NON UNO. Le macro nascono sul MAGAZZINO — raggruppano quello
-// che si compra — ma servono anche sul MENÙ, sulle categorie dei drink che
-// si vendono: sono due mestieri diversi (si compra «Distillati», si vende
-// «Cocktail classici») e mescolarli farebbe due somme sbagliate.
-// Stessa collezione, campo `ambito`: le righe vecchie non ce l'hanno e sono
-// tutte di magazzino, che è come stavano prima.
-export const AMBITI_MACRO = ['magazzino', 'menu']
+// Pochi gruppi (Distillati, Birre e bibite, Food…) per i conti di quello
+// che si spende e di quello che si incassa. UN ELENCO SOLO, e dentro ogni
+// macro i SINGOLI prodotti del magazzino e le SINGOLE voci del menù, ognuno
+// con la sua percentuale (lib/macros.js dice il perché: Flavio, 09/09/2026).
+//
+// I pesi stanno sul documento della macro, in due mappe `pesi_prodotti` e
+// `pesi_voci` (id → percentuale intera). I campi `ambito` e `macro_menu_id`
+// delle macro nate prima (1.4.8) restano sui documenti e non si leggono
+// più: quelle macro adesso sono macro come le altre, da riempire.
+//
+// TUTTI I WRITER QUI SOTTO SCRIVONO IN SOTTOFONDO E TORNANO SUBITO quello
+// che la schermata deve mostrare, composto in memoria (come le altre
+// spese, e per la stessa ragione: BUG-045). La schermata delle macro è una
+// lista lunga di caselle da compilare una dietro l'altra, e un giro di
+// rete a ogni gesto — o un `await` che offline non torna mai — la
+// renderebbe inusabile.
 
 function mapMacro(snap) {
   const m = snap.data() || {}
@@ -512,51 +524,56 @@ function mapMacro(snap) {
     id: snap.id,
     name: m.name ?? '',
     sort_order: m.sort_order ?? 0,
-    ambito: m.ambito === 'menu' ? 'menu' : 'magazzino',
-    // Solo sulle macro di magazzino: a quale macro di VENDITA corrisponde
-    // questa spesa. È l'aggancio che fa il confronto speso/incassato.
-    macro_menu_id: m.macro_menu_id ?? null,
+    pesi_prodotti: pesiPuliti(m.pesi_prodotti),
+    pesi_voci: pesiPuliti(m.pesi_voci),
     created_at: toIso(m.created_at),
   }
 }
 
-export async function fetchMacroCategories(ambito = 'magazzino') {
+export async function fetchMacroCategories() {
   const snap = await getDocs(macroCategoriesCol)
-  const list = snap.docs.map(mapMacro).filter((m) => m.ambito === ambito)
-  list.sort((a, b) => (a.sort_order - b.sort_order) || (a.name || '').localeCompare(b.name || ''))
-  return list
+  return ordinaMacro(snap.docs.map(mapMacro))
 }
 
-export async function createMacroCategory({ name, sort_order = 0, ambito = 'magazzino' }) {
-  const ref = await addDoc(macroCategoriesCol, {
-    name,
-    sort_order,
-    ambito: ambito === 'menu' ? 'menu' : 'magazzino',
-    created_at: serverTimestamp(),
-  })
-  return mapMacro(await getDoc(ref))
+// L'identificativo se lo fa il terminale (vedi creaAltraSpesa): con
+// `addDoc` si aspetta il server per sapere come si chiama il documento, e
+// senza rete quell'attesa non finisce mai.
+export function createMacroCategory({ name, sort_order = 0 }) {
+  const ref = doc(macroCategoriesCol)
+  bgWrite(() => setDoc(ref, { name, sort_order, created_at: serverTimestamp() }), 'macro-categoria')
+  return { id: ref.id, name, sort_order, pesi_prodotti: {}, pesi_voci: {}, created_at: new Date().toISOString() }
 }
 
-export async function updateMacroCategory(id, patch) {
-  const ref = doc(db, 'macro_categories', id)
-  await updateDoc(ref, patch)
-  return mapMacro(await getDoc(ref))
+export function updateMacroCategory(macro, patch) {
+  bgWrite(() => updateDoc(doc(db, 'macro_categories', macro.id), patch), 'macro-categoria')
+  return { ...macro, ...patch }
 }
 
-// Eliminando una macro, le sue categorie tornano "senza macro" (non si
-// perdono): si azzera macro_id su quelle che la puntano — quelle del
-// magazzino o quelle del menù, secondo l'ambito. E si sgancia da chi la
-// indicava come macro di vendita, altrimenti resterebbe un aggancio a un
-// gruppo che non esiste più e il confronto mostrerebbe una riga vuota.
-export async function deleteMacroCategory(id, ambito = 'magazzino') {
-  const collezione = ambito === 'menu' ? categoriesCol : inventoryCategoriesCol
-  const cats = await getDocs(query(collezione, where('macro_id', '==', id)))
-  await Promise.all(cats.docs.map((d) => updateDoc(d.ref, { macro_id: null })))
-  if (ambito === 'menu') {
-    const agganciate = await getDocs(query(macroCategoriesCol, where('macro_menu_id', '==', id)))
-    await Promise.all(agganciate.docs.map((d) => updateDoc(d.ref, { macro_menu_id: null })))
-  }
-  await deleteDoc(doc(db, 'macro_categories', id))
+// QUANTO DI UN PRODOTTO (o di una voce) STA IN QUESTA MACRO. Torna la macro
+// composta col peso nuovo, già riportato al tetto di cento meno quello che
+// le altre macro hanno preso: il vincolo sta qui e non solo nella casella,
+// così vale anche per uno script.
+//
+// `setDoc` con merge e non `updateDoc` col percorso «pesi_voci.<id>»: un
+// id di Firestore può avere caratteri che in un percorso a punti vanno
+// interpretati, e la mappa annidata li prende com'è. Uno zero TOGLIE il
+// campo: un peso a zero non è un peso.
+export function impostaPesoMacro(macros, macroId, lato, id, perc) {
+  const campo = LATI[lato]
+  const macro = (macros || []).find((m) => m.id === macroId)
+  if (!campo || !macro || !id) return null
+  const p = pesoAmmesso(perc, 100 - quotaAltrove(macros, lato, id, macroId))
+  const valore = p > 0 ? p : deleteField()
+  bgWrite(
+    () => setDoc(doc(db, 'macro_categories', macroId), { [campo]: { [id]: valore } }, { merge: true }),
+    'macro-categoria'
+  )
+  return macroConPeso(macro, lato, id, p)
+}
+
+// I pesi vivono sulla macro: cancellata lei, non resta niente che la punti.
+export function deleteMacroCategory(id) {
+  bgWrite(() => deleteDoc(doc(db, 'macro_categories', id)), 'macro-categoria')
 }
 
 // --- FORNITORI ---
@@ -985,11 +1002,13 @@ function nonEsistePiu(errore) {
 // `qty` è già in unità base; può essere negativo per uno scarico manuale.
 export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
   const ref = doc(db, 'inventory_items', itemId)
-  // Un carico parte da quello che c'è, e quello che c'è non è mai negativo:
-  // una bottiglia caricata su −0,04 deve valere una bottiglia. Lo scarico a
-  // mano, dall'altra parte, non può scavare sotto lo zero.
+  // UN CARICO SI SOMMA A QUELLO CHE C'È, ANCHE SOTTO ZERO (Flavio,
+  // 12/09/2026): −1 più cinque pezzi fa quattro, perché il meno è merce già
+  // bevuta e non ancora caricata, e questo carico è quello che la chiude.
+  // Fino al 12/09 il carico ripartiva da zero (BUG-007). Lo scarico a mano,
+  // dall'altra parte, non può scavare sotto lo zero.
   const cur = await leggiArticoloPerScrittura(ref)
-  const partenza = giacenzaPerCarico(cur.stock)
+  const partenza = Number(cur.stock) || 0
   const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
   await updateDoc(ref, { stock: nuovo })
   await addDoc(movementsCol, {
@@ -1011,12 +1030,13 @@ export async function receiveBottles(itemId, count, openQty = 0) {
   const ref = doc(db, 'inventory_items', itemId)
   const cur = await leggiArticoloPerScrittura(ref)
   const size = Number(cur.package_size) || 0
-  // Il carico riparte da zero se la giacenza era andata sotto: altrimenti la
-  // bottiglia appena comprata copre il buco e in magazzino ne risulta meno
-  // di una, mentre sullo scaffale c'è tutta.
-  const stock = giacenzaPerCarico(cur.stock)
-  const full = size ? Math.floor(stock / size) : 0
-  const hasOpen = size ? stock - full * size > 1e-9 : false
+  // La giacenza si somma com'è, anche sotto zero (Flavio, 12/09/2026, vedi
+  // `loadStock`); le bottiglie da contare sullo scaffale invece partono da
+  // zero, perché sotto zero non ce ne sono.
+  const stock = Number(cur.stock) || 0
+  const sulloScaffale = giacenzaNonNegativa(stock)
+  const full = size ? Math.floor(sulloScaffale / size) : 0
+  const hasOpen = size ? sulloScaffale - full * size > 1e-9 : false
   const withContent = full + (hasOpen ? 1 : 0)
 
   const addQty = count * size + openQty
@@ -1071,14 +1091,24 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
   return snap.docs.map(mapMovement)
 }
 
-// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
-// Filtro per tipo lato client: la query resta su un solo campo (niente
-// indici compositi).
-export async function fetchLoadMovementsSince(iso) {
+// TUTTI i movimenti da una certa data in poi. La query resta su un solo
+// campo, quindi niente indici compositi: chi vuole un tipo o un motivo
+// preciso filtra in memoria su quello che è già arrivato.
+//
+// Serve a due cose che chiedono la stessa lettura: la colonna ACQ della
+// conta e l'elenco del magazzino in un periodo (REQ-STAT-002), che dei
+// movimenti dopo il periodo ha bisogno per tornare indietro fino alla
+// giacenza di fine periodo.
+export async function fetchStockMovementsSince(iso) {
   const snap = await getDocs(
     query(movementsCol, where('created_at', '>', Timestamp.fromDate(new Date(iso))))
   )
-  return snap.docs.map(mapMovement).filter((m) => m.type === 'load')
+  return snap.docs.map(mapMovement)
+}
+
+// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
+export async function fetchLoadMovementsSince(iso) {
+  return (await fetchStockMovementsSince(iso)).filter((m) => m.type === 'load')
 }
 
 // --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---
@@ -3305,6 +3335,9 @@ export function openCashSession({ by = null, fondo = 0, cutoffHour = DEFAULT_CUT
   // Puntatore pubblico: da qui anche gli ordini dei clienti prendono il
   // progressivo della sessione (vedi currentCashSessionId).
   setDoc(activeCashRef, { session_id: ref.id }, { merge: true }).catch(() => {})
+  // La serata della stampante comincia qui (REQ-STAMPA-019): il diario si
+  // intitola alla sessione appena aperta, con l'indirizzo che si sta usando.
+  segnalaStampante(TIPO_DIAGNOSTICA.apertura_cassa, '', null, { sessione: ref.id })
   return ref.id
 }
 
@@ -3328,7 +3361,27 @@ export function closeCashSession(id, { by = null, snapshot = null, countedCash =
   // Cassa chiusa: il puntatore pubblico si svuota, così il progressivo riparte
   // alla prossima apertura (e intanto si ricade sulla giornata commerciale).
   setDoc(activeCashRef, { session_id: null }, { merge: true }).catch(() => {})
+  impostaSessioneDiagnostica(null)
 }
+
+// ── IL DIARIO DELLA STAMPANTE (REQ-STAMPA-019) ───────────────────────
+// Un documento per serata e per terminale; gli eventi si accodano con
+// `arrayUnion` e il conto con `increment`: due operazioni commutative che
+// si accodano offline senza rileggere niente. L'intestazione arriva solo
+// quando il documento si apre. Fuori dall'indicatore di sincronizzazione:
+// un diario che non parte non è un conto che non parte.
+function scriviDiagnosticaStampante(id, { intestazione = null, evento = null } = {}) {
+  const patch = { ...(intestazione || {}), aggiornato_at: new Date().toISOString() }
+  if (evento) {
+    patch.eventi = arrayUnion(evento)
+    patch.n_eventi = increment(1)
+  }
+  setDoc(doc(db, DIAGNOSTICA_STAMPANTE, id), patch, { merge: true }).catch(() => {})
+}
+function cancellaDiagnosticaStampante(id) {
+  deleteDoc(doc(db, DIAGNOSTICA_STAMPANTE, id)).catch(() => {})
+}
+impostaScrittoreDiagnostica(scriviDiagnosticaStampante, cancellaDiagnosticaStampante)
 
 // Storico delle sessioni di cassa chiuse, più recenti prima.
 export async function fetchCashSessions({ limit = 30 } = {}) {
@@ -4104,10 +4157,6 @@ function riallineaInSottofondo(orderId, comandaId) {
         const sn = invSnaps[idx]
         if (!sn.exists()) continue
         const curItem = sn.data()
-        // QUELLO CHE NON È UNA SCORTA NON SI TOCCA: la manodopera entra nel
-        // costo del drink, non nel magazzino. Lo dice il prodotto, non la sua
-        // unità — il ghiaccio si conta a unità e si scarica eccome.
-        if (!eScorta(curItem)) continue
         // Il delta si applica com'è, nei due versi. Fermarlo a zero non
         // toglieva soltanto il meno: una comanda RIDOTTA porta un delta
         // negativo, cioè merce che torna sullo scaffale, e il freno lo
@@ -4194,19 +4243,16 @@ async function depleteComandeInventory(entries) {
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
     const cur = itemsById[id]
-    // Come sopra: si scarica solo quello che sta davvero su uno scaffale.
-    if (!eScorta(cur)) continue
     // SI SCENDE SOTTO ZERO, ed è voluto (BUG-101). Un prodotto che continua a
     // uscire dopo essere finito non è finito davvero: è arrivato senza che
     // nessuno lo caricasse, o l'ultimo inventario era vecchio. Fermandosi a
     // zero si cancellava proprio il numero che lo dice — quanto se n'è
     // versato senza che risultasse.
     //
-    // Il meno non è merce che manca: da uno scaffale vuoto non si versa.
-    // È la misura del buco di conteggio, e si chiude da sé al primo carico,
-    // che riparte da zero (giacenzaPerCarico): le bottiglie appena arrivate
-    // sullo scaffale ci sono tutte, e il magazzino deve contarle tutte.
-    // L'increment resta (commutativo, si accoda offline).
+    // Il meno è quasi sempre merce già bevuta e non ancora caricata: il
+    // carico che arriva dopo si SOMMA e chiude il buco (Flavio, 12/09/2026;
+    // fino a quel giorno il carico ripartiva da zero). L'increment resta
+    // (commutativo, si accoda offline).
     const scarico = Number(qty) || 0
     const newStock = (Number(cur.stock) || 0) - scarico
     bgWrite(() => updateDoc(doc(db, 'inventory_items', id), { stock: increment(-scarico) }), 'scarico scorta')
@@ -4918,10 +4964,6 @@ async function stornaScorte(orderId, consumption) {
       // che rimetterci dentro pezzi darebbe un numero senza senso.
       if (!s.exists() || patchNormalizza(s.data())) continue
       const cur = s.data()
-      // Si rimette a posto solo quello che era stato tolto: se non è una
-      // scorta non era mai uscito dal magazzino, e rimetterlo dentro
-      // regalerebbe giacenza dal nulla.
-      if (!eScorta(cur)) continue
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')
@@ -5586,6 +5628,12 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // L'INVENTARIO, CHIUSO, NE RIAPRE SUBITO UN ALTRO (REQ-MAG-005). Acceso
+  // di suo: il consumo si legge fra due chiusure, e chi non tocca niente
+  // trova sempre un inventario in corso. Spento, dopo la chiusura si resta
+  // senza, e il prossimo lo si apre a mano quando si vuole (Daniele,
+  // 17/09/2026: «così può decidere se aprire a mano o in automatico»).
+  inventario_riapre_da_solo: true,
   // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
   // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
   // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi

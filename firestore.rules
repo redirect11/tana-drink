@@ -434,5 +434,16 @@ service cloud.firestore {
       allow create, update: if isStaffMember();
       allow delete: if false;
     }
+
+    // IL DIARIO DELLA STAMPANTE (REQ-STAMPA-019): un documento per serata
+    // e per terminale, scritto dal terminale che stampa — anche quello
+    // della sala, che stampa le sue comande — e cancellato dallo stesso
+    // terminale quando invecchia. Lo legge da remoto chi manda avanti il
+    // locale. Dentro non ci sono clienti né conti: indirizzo della
+    // stampante, versione dell'app, nome di chi era al banco e i guai.
+    match /diagnostica_stampante/{docId} {
+      allow read: if isBartender();
+      allow create, update, delete: if isStaffMember();
+    }
   }
 }
