@@ -184,7 +184,9 @@ function UnitPrice({ item, markup }) {
 // l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
   ['prodotti', '📦', 'Prodotti'],
-  ['conta', '📋', 'Conta'],
+  // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
+  // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
+  ['conta', '📋', 'Inventario'],
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
   ['movimenti', '📜', 'Movimenti'],

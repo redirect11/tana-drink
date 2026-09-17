@@ -78,11 +78,11 @@ export default function MagazzinoPeriodo({ dal, al, cutoffHour }) {
           {/* COSA DICE QUESTO ELENCO, E COSA NO. Il consumo qui è quello che
               l'app ha scalato dalle ricette battute, non quello contato sullo
               scaffale: fra i due c'è il calo, l'offerto e la dose scritta
-              larga, ed è la CONTA a misurarlo. Senza questa riga i due numeri
+              larga, ed è l'INVENTARIO a misurarlo. Senza questa riga i due numeri
               si leggono come se dovessero coincidere, e non coincidono. */}
           <p className="muted small" style={{ margin: '8px 0 0' }}>
             Il consumo è quello scalato dalle ricette battute. Quello contato
-            davvero sullo scaffale lo dà la <strong>Conta</strong> in
+            davvero sullo scaffale lo dà l’<strong>Inventario</strong> in
             Magazzino, e la differenza fra i due è il calo.
           </p>
 

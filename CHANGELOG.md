@@ -23,6 +23,12 @@
 
 ### Per chi amministra
 
+- **La «Conta» si chiama Inventario**, in Magazzino e nelle impostazioni.
+  E **chiuso un inventario ne parte subito un altro** dalle giacenze
+  appena allineate: il consumo si legge fra una chiusura e l'altra, e lo
+  storico dice «dal … al …» con le date per esteso. Il primo lo si apre una
+  volta sola.
+
 - **Le statistiche per periodo si scelgono da data a data.** Al posto del
   contatore di giornate ci sono due caselle, «Dal» e «Al», così si guarda
   giugno o le due settimane di Natale invece degli «ultimi 108 giorni». Le

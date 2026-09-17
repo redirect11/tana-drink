@@ -524,10 +524,10 @@ describe('la legenda del magazzino', () => {
 // Rimettendo il difetto — cioè togliendo il filtro da INV_VIEWS — la prima
 // prova qui sotto diventa rossa.
 describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
-  it('la CONTA non c\u2019\u00e8: non \u00e8 inclusa in questa installazione', async () => {
+  it('l\u2019INVENTARIO non c\u2019\u00e8: non \u00e8 incluso in questa installazione', async () => {
     mostra()
     await aspettaLista()
-    expect(screen.queryByRole('button', { name: /Conta/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Inventario/ })).toBeNull()
     expect(screen.queryByText('PANNELLO CONTA')).toBeNull()
   })
 
@@ -542,11 +542,11 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     const voci = screen
       .getAllByRole('button')
       .map((b) => b.textContent)
-      .filter((t) => /Prodotti|Conta|Categorie|Movimenti/.test(t))
+      .filter((t) => /Prodotti|Inventario|Categorie|Movimenti/.test(t))
     const pos = (nome) => voci.findIndex((t) => t.includes(nome))
-    expect(pos('Prodotti')).toBeLessThan(pos('Conta'))
-    expect(pos('Conta')).toBeLessThan(pos('Categorie'))
-    await user.click(screen.getByRole('button', { name: /Conta/ }))
+    expect(pos('Prodotti')).toBeLessThan(pos('Inventario'))
+    expect(pos('Inventario')).toBeLessThan(pos('Categorie'))
+    await user.click(screen.getByRole('button', { name: /Inventario/ }))
     expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
   })
 
@@ -558,7 +558,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     }
     mostra()
     await aspettaLista()
-    expect(screen.queryByRole('button', { name: /Conta/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Inventario/ })).toBeNull()
   })
 
   it('la sezione aperta non si sposta sotto le mani quando l\u2019elenco cambia', async () => {
@@ -574,7 +574,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     await act(async () => {
       stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } })
     })
-    expect(screen.getByRole('button', { name: /Conta/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Inventario/ })).toBeInTheDocument()
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
   })
 
@@ -583,7 +583,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /Conta/ }))
+    await user.click(screen.getByRole('button', { name: /Inventario/ }))
     expect(screen.getByText('PANNELLO CONTA')).toBeInTheDocument()
 
     await act(async () => {

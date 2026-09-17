@@ -104,14 +104,14 @@ describe('il magazzino nel periodo', () => {
 
   // I DUE NUMERI NON COINCIDONO, E VA DETTO PRIMA. Qui il consumo è quello
   // scalato dalle ricette; quello vero lo dà la conta, contando le
-  // bottiglie. Senza questa riga si leggono come se dovessero tornare
+  // bottiglie (l'Inventario). Senza questa riga si leggono come se dovessero tornare
   // uguali, e chi li confronta pensa a un difetto.
   it('dice che questo consumo non è quello contato sullo scaffale', async () => {
     const user = userEvent.setup()
     render(<MagazzinoPeriodo {...PERIODO} cutoffHour={5} />)
     await user.click(screen.getByRole('button', { name: 'Calcola' }))
     expect(await screen.findByText(/scalato dalle ricette battute/i)).toBeInTheDocument()
-    expect(screen.getByText(/Conta/)).toBeInTheDocument()
+    expect(screen.getByText(/Inventario/)).toBeInTheDocument()
   })
 
   it('un periodo senza movimenti lo dice, invece di restare vuoto', async () => {
