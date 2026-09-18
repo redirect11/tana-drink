@@ -11317,6 +11317,51 @@ requirements:
     labels: [menu, ux]
     test_cases: []
 
+  - id: REQ-MENU-016
+    title: "La ricetta ritoccata su un conto si salva come voce nuova del menù"
+    area: "src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js"
+    description: >
+      Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come
+      nuova" deve apparire, da aggiungere ai due gia' presenti. Quando lo
+      clicco mi si apre la schermata, che gia' esiste da qualche parte, di
+      creazione nuova ricetta gia' popolata con le modifiche fatte al drink
+      che ho appena modificato. Quando poi clicco salva in questa schermata
+      torno alla schermata della coda degli ordini».
+      DA DOVE SI PARTE: dal dettaglio di un conto si tocca una riga e si apre
+      il ritocco per-item (`CustomDrinkForm`, REQ-POS-014) — si cambia il
+      nome, il prezzo, e si sostituiscono o si tolgono gli ingredienti. Quel
+      ritocco vale per QUELLA riga di QUEL conto e muore li'. Se e' venuto
+      bene, rifarlo nel menu' vuol dire ribattere a mano tutti gli
+      ingredienti.
+      IL TERZO TASTO, «✨ Salva come nuova ricetta», sta SOTTO gli altri due
+      e non accanto: «Annulla» e «Salva» chiudono il gesto su questa riga,
+      questo porta in un'altra schermata — accanto a «Salva» si toccherebbe
+      per sbaglio proprio quando si ha fretta. Compare solo IN MODIFICA e
+      solo se chi apre il form sa dove portare: creando un prodotto libero da
+      zero non c'e' ancora niente da salvare altrove.
+      QUELLO CHE PASSA SONO LE MODIFICHE, non i valori di partenza: nome,
+      prezzo e ricetta come sono NEL FORM in quel momento. Passare `initial`
+      farebbe nascere il prodotto nuovo identico a quello di catalogo, cioe'
+      senza il ritocco che e' la ragione per cui lo si sta salvando. I due
+      tasti compongono la stessa cosa (`composto()`), se no il prodotto nuovo
+      nascerebbe diverso dal drink appena ritoccato.
+      LA SCHERMATA E' QUELLA CHE C'E' GIA': `DrinkForm`, la stessa del Menu',
+      aperta sopra il conto e compilata coi dati di partenza. Il magazzino
+      che le serve si legge quando si apre, non all'ingresso nel conto, dove
+      non lo guarderebbe nessuno. Il nome arriva com'era: se il drink si
+      chiamava «Negroni» il prodotto nuovo si chiamera' «Negroni» finche' non
+      gli si da' un nome suo, e a deciderlo e' chi salva.
+      IL TASTO NON TOCCA LA RIGA DEL CONTO: manda altrove e basta. Il ritocco
+      sulla riga si conferma con «Salva», che e' un gesto suo.
+      SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal
+      Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito
+      quello che era venuto a fare.
+    status: implemented
+    generate_issue: false
+    labels: [menu, pos]
+    test_cases:
+      - tests/component/CustomDrinkForm.test.jsx
+
   - id: REQ-MENU-015
     title: "Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta"
     area: "scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js"
