@@ -846,18 +846,29 @@ function ProductsPanel() {
     }
   }
 
-  async function doCarico(item, { count, unit, newCost }) {
+  // IL CARICO SI VEDE SUBITO (BUG-109). Prima qui si aspettavano quattro
+  // giri di rete prima di far vedere qualcosa, e con la linea del locale che
+  // non passa la finestrella restava aperta: sembrava di non aver premuto, si
+  // ripremeva, e ogni pressione accodava un carico. Adesso la giacenza si
+  // compone in memoria, la riga si aggiorna sul posto e la finestrella si
+  // chiude nell'istante del tocco: niente `await`, niente rilettura.
+  function doCarico(item, { count, unit, newCost }) {
     setError(null)
     try {
       // Quello che si scrive è nell'unità che si ha in mano; in giacenza va
       // in pezzi, con lo stesso conto che fa lo scarico. Gli articoli
       // arrivano qui sempre nella forma nuova (REQ-MAG-018, la lettura
       // tollerante sta in api.js), quindi non c'è nessun altro caso.
-      if (count > 0) await loadStock(item.id, qtyInStockUnit(count, unit, item))
-      // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa).
-      if (newCost != null) await updateInventoryItem(item.id, { cost: newCost })
+      let dopo = count > 0 ? loadStock(item, qtyInStockUnit(count, unit, item)) : item
+      if (newCost != null) {
+        dopo = { ...dopo, cost: newCost }
+        // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa). Non
+        // si aspetta nemmeno questo: quello che si sta guardando è la
+        // giacenza, e un prezzo che non parte lo dice l'errore, dopo.
+        updateInventoryItem(item.id, { cost: newCost }).catch((e) => setError(e.message))
+      }
       setCaricoFor(null)
-      await load()
+      setItems((prev) => prev.map((x) => (x.id === dopo.id ? dopo : x)))
     } catch (e) {
       setError(e.message)
     }

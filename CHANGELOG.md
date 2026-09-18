@@ -4,6 +4,14 @@
 
 ### Per chi sta al banco
 
+- **Il carico di magazzino si vede subito.** Prima il tasto sembrava non
+  funzionare: la finestrella restava aperta finché la rete non rispondeva, e
+  chi ripremeva si ritrovava un carico per ogni pressione al ricaricamento
+  della pagina. Adesso la giacenza nuova compare nell'istante del tocco e la
+  scrittura parte in sottofondo. Se nei giorni scorsi ti sono rimaste
+  giacenze gonfiate, le riconosci da Magazzino → Movimenti (più carichi
+  identici ravvicinati) e le sistemi con l'inventario.
+
 - **All'apertura della cassa si sceglie chi sta lavorando.** Il tablet resta
   collegato con un account solo, ma la domanda «Chi apre la cassa?» elenca
   gli admin del locale: la serata risulta aperta da chi hai scelto e il nome

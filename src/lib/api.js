@@ -39,6 +39,7 @@ import {
   giacenzaNonNegativa,
   articoloNormalizzato,
   patchNormalizza,
+  motivoNonMigrabile,
   caricoDaConfezioni,
   prodottoDaRigaOrdine,
 } from './inventory.js'
@@ -904,6 +905,18 @@ function articoloScrivibile(snap) {
 }
 
 // Per chi ne scrive uno solo: rilegge, controlla, e restituisce l'articolo.
+// LO STESSO CONTROLLO DI `articoloScrivibile`, ma su un articolo che chi
+// chiama ha già in mano — quindi senza andare in rete. L'articolo è quello
+// che legge l'app (passato da `articoloNormalizzato`), e i due segni che
+// porta con sé dicono esattamente quello che il documento grezzo direbbe:
+// `formaVecchia` che sul database è ancora scritto alla vecchia maniera,
+// `motivoNonMigrabile` che nemmeno la lettura lo sa portare a pezzi.
+function articoloScrivibileInMano(item) {
+  if (!item?.id) throw new Error('Prodotto non trovato')
+  if (item.formaVecchia || motivoNonMigrabile(item)) throw new Error(ATTESA_TRAVASO)
+  return item
+}
+
 async function leggiArticoloPerScrittura(ref) {
   const cur = articoloScrivibile(await getDoc(ref))
   if (!cur) throw new Error('Prodotto non trovato')
@@ -998,29 +1011,55 @@ function nonEsistePiu(errore) {
   return /not[_\s-]?found|no entity to update/i.test(String(errore?.message || ''))
 }
 
-// Carico merce: incrementa lo stock e registra un movimento (atomico).
-// `qty` è già in unità base; può essere negativo per uno scarico manuale.
-export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
-  const ref = doc(db, 'inventory_items', itemId)
-  // UN CARICO SI SOMMA A QUELLO CHE C'È, ANCHE SOTTO ZERO (Flavio,
-  // 12/09/2026): −1 più cinque pezzi fa quattro, perché il meno è merce già
-  // bevuta e non ancora caricata, e questo carico è quello che la chiude.
-  // Fino al 12/09 il carico ripartiva da zero (BUG-007). Lo scarico a mano,
-  // dall'altra parte, non può scavare sotto lo zero.
-  const cur = await leggiArticoloPerScrittura(ref)
+// ── CARICO MERCE, SENZA ASPETTARE LA RETE (BUG-109) ──────────────────
+//
+// Prende l'ARTICOLO, non il suo id: quello che serve a scrivere — giacenza
+// di partenza, nome, unità — chi chiama ce l'ha già in mano, e andarlo a
+// rileggere era la prima delle tre attese che bloccavano il gesto.
+//
+// PRIMA ERANO QUATTRO GIRI DI RETE prima di far vedere qualcosa: una
+// lettura, due scritture e una rilettura, tutte attese. Con la linea del
+// locale che «risulta collegata ma non passa» le due scritture non tornano
+// mai — si risolvono solo con l'ack del server — quindi la finestrella
+// restava aperta e non compariva niente. Chi carica ripreme, e ogni pressione
+// accodava un carico: al ricaricamento della pagina se ne trovavano cinque.
+//
+// ADESSO: si compone in memoria e si torna subito. La giacenza si muove con
+// `increment`, che è commutativo e si accoda offline senza litigare con chi
+// scrive dallo stesso prodotto da un altro terminale.
+//
+// IL CONTROLLO DEL TRAVASO RESTA QUI e non si è spostato nella schermata
+// (era il difetto di BUG-029): si fa sull'articolo che arriva, che porta con
+// sé il segno della forma vecchia (`formaVecchia`, `motivoNonMigrabile`) —
+// lo stesso che usa `magazzinoBloccato`. È anche più robusto di prima:
+// una rilettura che non torna non protegge niente.
+//
+// `qty` è già in unità base; può essere negativo per uno scarico a mano, che
+// non scava sotto lo zero. Un carico invece si somma a quello che c'è ANCHE
+// SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa quattro, perché il
+// meno è merce già bevuta e non ancora caricata.
+export function loadStock(item, qty, { reason = 'carico' } = {}) {
+  const cur = articoloScrivibileInMano(item)
   const partenza = Number(cur.stock) || 0
-  const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
-  await updateDoc(ref, { stock: nuovo })
-  await addDoc(movementsCol, {
-    item_id: itemId,
-    item_name: cur.name,
-    type: qty >= 0 ? 'load' : 'unload',
-    qty: Math.abs(qty),
-    unit: cur.unit ?? null,
-    reason,
-    created_at: serverTimestamp(),
-  })
-  return mapItem(await getDoc(ref))
+  const delta = qty >= 0 ? qty : -scaricoPossibile(partenza, -qty)
+  bgWrite(
+    () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
+    'carico scorta'
+  )
+  bgWrite(
+    () =>
+      addDoc(movementsCol, {
+        item_id: cur.id,
+        item_name: cur.name,
+        type: qty >= 0 ? 'load' : 'unload',
+        qty: Math.abs(qty),
+        unit: cur.unit ?? null,
+        reason,
+        created_at: serverTimestamp(),
+      }),
+    'movimento scorta'
+  )
+  return { ...cur, stock: partenza + delta }
 }
 
 // Carico a confezioni: aggiunge `count` bottiglie piene (+ eventuale bottiglia
