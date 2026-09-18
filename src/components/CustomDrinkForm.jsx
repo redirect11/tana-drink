@@ -14,7 +14,26 @@ import PriceSuggestion from './PriceSuggestion.jsx'
 // solo aggiungere. `warnNoRecipe` segnala che il prodotto di partenza non
 // ha ingredienti configurati: probabilmente non sono mai stati inseriti
 // nella sua scheda, e senza di essi non c'è scarico di magazzino.
-export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnNoRecipe = false }) {
+//
+// ── E LA RICETTA RITOCCATA PUÒ DIVENTARE UNA VOCE DEL MENÙ (REQ-MENU-016) ──
+//
+// Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come
+// nuova" deve apparire». Quello che si ritocca qui vale per UNA riga di UN
+// conto e muore lì: se il ritocco è venuto bene — mezza dose in meno, un
+// amaro al posto di un altro — rifarlo a mano nel menù vuol dire ribattere
+// tutti gli ingredienti. Con `onSaveAsNew` si passa quello che c'è nel form
+// a chi sa aprire la scheda di un prodotto nuovo, già compilata.
+//
+// IL TASTO COMPARE SOLO IN MODIFICA e solo se chi chiama sa dove portare:
+// creando un prodotto libero da zero non c'è ancora niente da salvare
+// altrove, e un tasto che non porta da nessuna parte è peggio di uno assente.
+export default function CustomDrinkForm({
+  onCancel,
+  onAdd,
+  initial = null,
+  warnNoRecipe = false,
+  onSaveAsNew = null,
+}) {
   const initRows = (initial?.recipe_items || []).map((r) => ({
     inventory_item_id: r.inventory_item_id || '',
     name: r.name || '',
@@ -85,9 +104,11 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
   const priceNum = Number(String(price).replace(',', '.')) || 0
   const valid = name.trim() && priceNum > 0
 
-  function submit(e) {
-    e.preventDefault()
-    if (!valid) return
+  // Quello che c'è nel form ADESSO, nella forma in cui si salva: lo usano
+  // il salvataggio sulla riga e «salva come nuova», che devono mandare
+  // esattamente la stessa cosa — se no il prodotto nuovo nascerebbe diverso
+  // dal drink appena ritoccato.
+  function composto() {
     const recipe_items = rows
       .filter((r) => Number(r.qty) > 0)
       .map((r) => ({
@@ -98,7 +119,13 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
         unit: r.unit ? baseUnit(r.unit) : (r.invUnit ?? 'pz'),
         qty: toBaseQty(r.qty, r.unit),
       }))
-    onAdd({ name: name.trim(), price: priceNum, recipe_items, note: note.trim() || null })
+    return { name: name.trim(), price: priceNum, recipe_items, note: note.trim() || null }
+  }
+
+  function submit(e) {
+    e.preventDefault()
+    if (!valid) return
+    onAdd(composto())
   }
 
   return (
@@ -251,6 +278,20 @@ export default function CustomDrinkForm({ onCancel, onAdd, initial = null, warnN
             {initial ? 'Salva' : 'Aggiungi'} {priceNum > 0 ? formatPrice(priceNum) : ''}
           </button>
         </div>
+        {/* SOTTO E NON ACCANTO: gli altri due chiudono il gesto su questa
+            riga, questo porta in un'altra schermata. Accanto a «Salva» si
+            toccherebbe per sbaglio proprio quando si ha fretta. */}
+        {initial && onSaveAsNew && (
+          <button
+            type="button"
+            className="btn ghost block"
+            style={{ marginTop: 8 }}
+            disabled={!valid}
+            onClick={() => onSaveAsNew(composto())}
+          >
+            ✨ Salva come nuova ricetta
+          </button>
+        )}
       </form>
     </div>
   )

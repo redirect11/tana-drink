@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 201 | fatto e coperto dai test |
+| ✅ | 202 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 20 | da fare |
 | 🗑 | 7 | non più valido |
 
-**243 voci** in tutto. **216** descrivono il sistema com'è oggi e
+**244 voci** in tutto. **217** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -46,7 +46,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 11 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -780,6 +780,24 @@ NEL CALCOLO: `aliquotaDiVendita` (macroStats.js) sceglie per riga quella della V
 Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia è che la scritta da nera diventa grigia, e nei non disponibili si vede poco. Per farla più impattante metterei la scritta bianca e il fondo della card in grigio scuro». Aveva ragione: la differenza fra una card accesa e una spenta era la sola trasparenza al 55%, che di sera e con centinaia di card in griglia non si legge. Un drink spento scambiato per acceso è un drink promesso a un cliente e mai fatto. Adesso la card fuori menù ha il FONDO scuro e la scritta bianca: la differenza si vede da lontano e senza andare a leggere. La striscia colorata resta, e sul fondo scuro si distingue meglio di prima. Vale SOLO per la gestione del menù, dove la domanda è «cosa c'è e cosa no»: le altre schede amministrative continuano a sbiadire, che lì basta e il colpo d'occhio non serve.
 
 **Dove**: `src/index.css` · ⚠️ **Nessun test lo verifica.**
+
+#### REQ-MENU-016 — La ricetta ritoccata su un conto si salva come voce nuova del menù
+
+Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come nuova" deve apparire, da aggiungere ai due gia' presenti. Quando lo clicco mi si apre la schermata, che gia' esiste da qualche parte, di creazione nuova ricetta gia' popolata con le modifiche fatte al drink che ho appena modificato. Quando poi clicco salva in questa schermata torno alla schermata della coda degli ordini».
+
+DA DOVE SI PARTE: dal dettaglio di un conto si tocca una riga e si apre il ritocco per-item (`CustomDrinkForm`, REQ-POS-014) — si cambia il nome, il prezzo, e si sostituiscono o si tolgono gli ingredienti. Quel ritocco vale per QUELLA riga di QUEL conto e muore li'. Se e' venuto bene, rifarlo nel menu' vuol dire ribattere a mano tutti gli ingredienti.
+
+IL TERZO TASTO, «✨ Salva come nuova ricetta», sta SOTTO gli altri due e non accanto: «Annulla» e «Salva» chiudono il gesto su questa riga, questo porta in un'altra schermata — accanto a «Salva» si toccherebbe per sbaglio proprio quando si ha fretta. Compare solo IN MODIFICA e solo se chi apre il form sa dove portare: creando un prodotto libero da zero non c'e' ancora niente da salvare altrove.
+
+QUELLO CHE PASSA SONO LE MODIFICHE, non i valori di partenza: nome, prezzo e ricetta come sono NEL FORM in quel momento. Passare `initial` farebbe nascere il prodotto nuovo identico a quello di catalogo, cioe' senza il ritocco che e' la ragione per cui lo si sta salvando. I due tasti compongono la stessa cosa (`composto()`), se no il prodotto nuovo nascerebbe diverso dal drink appena ritoccato.
+
+LA SCHERMATA E' QUELLA CHE C'E' GIA': `DrinkForm`, la stessa del Menu', aperta sopra il conto e compilata coi dati di partenza. Il magazzino che le serve si legge quando si apre, non all'ingresso nel conto, dove non lo guarderebbe nessuno. Il nome arriva com'era: se il drink si chiamava «Negroni» il prodotto nuovo si chiamera' «Negroni» finche' non gli si da' un nome suo, e a deciderlo e' chi salva.
+
+IL TASTO NON TOCCA LA RIGA DEL CONTO: manda altrove e basta. Il ritocco sulla riga si conferma con «Salva», che e' un gesto suo.
+
+SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito quello che era venuto a fare.
+
+**Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
 
 #### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
 

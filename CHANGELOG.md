@@ -4,6 +4,13 @@
 
 ### Per chi sta al banco
 
+- **Una ricetta ritoccata su un conto si può salvare come voce nuova del
+  menù.** Toccando una riga del conto si apre il ritocco degli ingredienti
+  come sempre; sotto «Annulla» e «Salva» c'è ora **«Salva come nuova
+  ricetta»**, che apre la scheda del Menù già compilata con le modifiche
+  appena fatte. Salvata, si torna alla coda degli ordini. La riga del conto
+  non viene toccata: per quella c'è «Salva».
+
 - **Il carico di magazzino si vede subito.** Prima il tasto sembrava non
   funzionare: la finestrella restava aperta finché la rete non rispondeva, e
   chi ripremeva si ritrovava un carico per ogni pressione al ricaricamento
