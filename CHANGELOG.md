@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.6.0
+## 1.7.0
 
 ### Per chi sta al banco
 
@@ -26,6 +26,10 @@
   richiede ogni sera, e compare solo se gli admin sono più di uno. Non è un
   login: la sessione resta quella di chi è collegato, e si sceglie solo fra
   admin, che hanno già gli stessi permessi.
+
+## 1.6.0
+
+### Per chi sta al banco
 
 - **Nel conto, scelto il prodotto cercato, la ricerca si svuota da sé** e
   la griglia torna intera — anche nel modo «filtra», dove prima restava
