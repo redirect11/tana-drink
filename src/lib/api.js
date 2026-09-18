@@ -5667,6 +5667,11 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // CHI PUÒ APRIRE LA CASSA, PER OGNI ACCOUNT (REQ-STAFF-016): una mappa
+  // «uid di chi fa il login → uid degli admin che può scegliere». Vuota o
+  // assente vuol dire «tutti gli admin», che è il comportamento di partenza:
+  // il locale che non decide niente non deve accorgersi che la cosa esiste.
+  admin_associati: null,
   // L'INVENTARIO, CHIUSO, NE RIAPRE SUBITO UN ALTRO (REQ-MAG-005). Acceso
   // di suo: il consumo si legge fra due chiusure, e chi non tocca niente
   // trova sempre un inventario in corso. Spento, dopo la chiusura si resta

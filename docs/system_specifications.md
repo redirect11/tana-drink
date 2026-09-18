@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 18 settembre 2026.
+> Generato il 19 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -2313,9 +2313,13 @@ Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei sottoutent
 
 IL PROBLEMA VERO: il tablet del banco resta collegato con un account solo e non lo si slogga mai — e' quello che tiene in piedi il login automatico — ma a lavorarci sono due persone. Il nome in cima allo schermo e la firma della serata erano di chi aveva fatto il login mesi fa, non di chi c'era.
 
-NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione di Firebase resta quella dell'admin collegato: qui si sceglie soltanto CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero senza password vorrebbe dire o tenere in giro le credenziali degli altri, o aprire una strada per entrare in un account altrui: due porte che non si aprono per comodita'. E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si sceglie ha esattamente i permessi di chi ha fatto il login, quindi passare dall'uno all'altro non sposta niente di quello che si puo' fare. Un utente disattivato non si sceglie; un admin declassato smette di essere scelto anche sul tablet che se lo ricordava. Se un domani si volessero scegliere anche i bartender, quella sarebbe una decisione di sicurezza vera, da pensare a parte: per questo il filtro sta in un posto solo (`operatoriSelezionabili`). «ASSOCIATI»
+NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione di Firebase resta quella dell'admin collegato: qui si sceglie soltanto CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero senza password vorrebbe dire o tenere in giro le credenziali degli altri, o aprire una strada per entrare in un account altrui: due porte che non si aprono per comodita'. E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si sceglie ha esattamente i permessi di chi ha fatto il login, quindi passare dall'uno all'altro non sposta niente di quello che si puo' fare. Un utente disattivato non si sceglie; un admin declassato smette di essere scelto anche sul tablet che se lo ricordava. Se un domani si volessero scegliere anche i bartender, quella sarebbe una decisione di sicurezza vera, da pensare a parte: per questo il filtro sta in un posto solo (`operatoriSelezionabili`).
 
-VUOL DIRE GLI ADMIN DELLO STESSO LOCALE, e non c'e' nessun elenco di associazioni da compilare: nominare un admin e' gia' dirlo. Una seconda lista da tenere allineata a quella dei ruoli divergerebbe dalla prima, e si finirebbe col non sapere quale delle due comanda.
+CHI E' ASSOCIATO A CHI SI DECIDE, E PER ACCOUNT (19/09/2026). All'inizio erano «tutti gli admin del locale», uguale per chiunque facesse il login; Daniele: «si deve decidere quali sono gli admin, anche perche' puo' essere Vittorio o io a fare il login, e li' sono altre associazioni». Il tablet del banco resta collegato con UN account, e chi ci lavora dipende da quale: l'elenco e' quindi una lista PER ACCOUNT, su settings/bar in `admin_associati` (uid di chi fa il login → uid degli admin che puo' scegliere). Sta li' e non su una collezione sua perche' le impostazioni sono gia' in cache: aprire la cassa non aspetta nessuna lettura.
+
+DUE REGOLE CHE NON SI SCAVALCANO. Una lista VUOTA o assente vale «tutti gli admin» e non «nessuno»: il locale che non decide niente non deve accorgersi che la cosa esiste. E CHI E' COLLEGATO C'E' SEMPRE, qualunque cosa dica la lista: e' il suo account, e un elenco che non contiene nemmeno chi lo sta guardando lascerebbe la cassa senza nessuno da scegliere. Le associazioni si sommano al filtro dei ruoli, non lo sostituiscono: un associato declassato resta fuori lo stesso.
+
+SI DECIDE IN UTENTI E RUOLI → «Chi apre la cassa», dove stanno gli account: un blocco per ogni admin, e sotto le pastiglie degli altri da accendere o spegnere. La propria non si spegne.
 
 DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto di ruoloLocale.js) e si porta dietro CHI ERA COLLEGATO: se al tablet si collega un altro account, la scelta di ieri sera non si eredita, se no si firma la serata col nome di chi non c'e'. L'ELENCO NON PUO' FAR ASPETTARE L'APERTURA: gli admin arrivano da una Cloud Function, lenta, e con la rete del locale che «risulta collegata ma non passa» non arriverebbe mai. Si mostra la cache (`staffFromCache`) e si rinfresca in sottofondo: aprire la cassa e' il primo gesto della serata e non aspetta niente.
 
@@ -2323,7 +2327,7 @@ COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto (`opened_
 
 ANCORA DA FARE, ed e' la seconda meta' della richiesta: l'ASPETTO PER PERSONA — «le impostazioni dell'aspetto memorizzate per utente; se non ho customizzazioni, l'aspetto viene ereditato dall'utenza admin loggata». Oggi tema e colori sono del locale (`theme_staff` e `theme_client` su settings/bar) e valgono per tutti. Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
 
-**Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
+**Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
 
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 

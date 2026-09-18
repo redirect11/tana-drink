@@ -12,12 +12,21 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
-vi.mock('../../src/lib/api.js', () => ({ openCashSession: vi.fn(() => Promise.resolve()) }))
+vi.mock('../../src/lib/api.js', () => ({
+  openCashSession: vi.fn(() => Promise.resolve()),
+  // Le associazioni per account stanno qui: la cassa le legge dalla cache,
+  // senza aspettare la rete.
+  settingsIniziali: () => stato.impostazioni,
+  subscribeSettings: (cb) => {
+    cb(stato.impostazioni)
+    return () => {}
+  },
+}))
 vi.mock('../../src/lib/toast.js', () => ({ toastError: vi.fn() }))
 
 // L'elenco degli admin arriva da una Cloud Function: qui si comanda cosa
 // sa il tablet, perché è proprio quello che decide se la domanda compare.
-const stato = { staff: [] }
+const stato = { staff: [], impostazioni: {} }
 vi.mock('../../src/lib/staffApi.js', () => ({
   staffFromCache: () => stato.staff,
   listStaff: vi.fn(async () => stato.staff),
@@ -34,6 +43,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   stato.staff = []
+  stato.impostazioni = {}
 })
 
 describe('il box «apri la cassa»', () => {
@@ -53,6 +63,20 @@ describe('il box «apri la cassa»', () => {
     await user.click(screen.getByRole('button', { name: /^Apri cassa$/ }))
     await waitFor(() => expect(openCashSession).toHaveBeenCalled())
     expect(openCashSession.mock.calls[0][0].fondo).toBe(0)
+  })
+
+  // LE ASSOCIAZIONI SONO PER ACCOUNT (Daniele, 19/09/2026): col login di
+  // Flavio si sceglie fra chi è associato a lui, e col login di un altro
+  // l'elenco è un altro.
+  it('con le associazioni, l’elenco è quello dell’account collegato', async () => {
+    stato.staff = [FLAVIO, VITTORIO, { uid: 'u-dani', email: 'd@bar.it', name: 'Daniele', role: 'admin' }]
+    stato.impostazioni = { admin_associati: { 'u-flavio': ['u-vittorio'] } }
+    render(<ApriCassaBox cutoffHour={5} by={{ uid: 'u-flavio', email: 'flavio@bar.it' }} onClose={vi.fn()} />)
+    expect(screen.getByText('Chi apre la cassa?')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vittorio' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Flavio' })).toBeInTheDocument()
+    // Daniele non è associato a Flavio: col suo login non c'è.
+    expect(screen.queryByRole('button', { name: 'Daniele' })).toBeNull()
   })
 
   // ── E CHI LA APRE? (REQ-STAFF-016) ──────────────────────────────

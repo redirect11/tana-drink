@@ -6292,7 +6292,7 @@ requirements:
 
   - id: REQ-STAFF-016
     title: "Chi apre la cassa: si sceglie fra gli admin, senza rifare il login"
-    area: "src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/App.jsx"
+    area: "src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx"
     description: >
       Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei
       sottoutenti della cassa. Flavio e Vittorio sarebbero i due sottoutenti
@@ -6320,10 +6320,26 @@ requirements:
       volessero scegliere anche i bartender, quella sarebbe una decisione di
       sicurezza vera, da pensare a parte: per questo il filtro sta in un
       posto solo (`operatoriSelezionabili`).
-      «ASSOCIATI» VUOL DIRE GLI ADMIN DELLO STESSO LOCALE, e non c'e' nessun
-      elenco di associazioni da compilare: nominare un admin e' gia' dirlo.
-      Una seconda lista da tenere allineata a quella dei ruoli divergerebbe
-      dalla prima, e si finirebbe col non sapere quale delle due comanda.
+      CHI E' ASSOCIATO A CHI SI DECIDE, E PER ACCOUNT (19/09/2026). All'inizio
+      erano «tutti gli admin del locale», uguale per chiunque facesse il
+      login; Daniele: «si deve decidere quali sono gli admin, anche perche'
+      puo' essere Vittorio o io a fare il login, e li' sono altre
+      associazioni». Il tablet del banco resta collegato con UN account, e
+      chi ci lavora dipende da quale: l'elenco e' quindi una lista PER
+      ACCOUNT, su settings/bar in `admin_associati` (uid di chi fa il login →
+      uid degli admin che puo' scegliere). Sta li' e non su una collezione
+      sua perche' le impostazioni sono gia' in cache: aprire la cassa non
+      aspetta nessuna lettura.
+      DUE REGOLE CHE NON SI SCAVALCANO. Una lista VUOTA o assente vale
+      «tutti gli admin» e non «nessuno»: il locale che non decide niente non
+      deve accorgersi che la cosa esiste. E CHI E' COLLEGATO C'E' SEMPRE,
+      qualunque cosa dica la lista: e' il suo account, e un elenco che non
+      contiene nemmeno chi lo sta guardando lascerebbe la cassa senza
+      nessuno da scegliere. Le associazioni si sommano al filtro dei ruoli,
+      non lo sostituiscono: un associato declassato resta fuori lo stesso.
+      SI DECIDE IN UTENTI E RUOLI → «Chi apre la cassa», dove stanno gli
+      account: un blocco per ogni admin, e sotto le pastiglie degli altri da
+      accendere o spegnere. La propria non si spegne.
       DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se
       c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta
       resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto
