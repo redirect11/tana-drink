@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { openCashSession } from '../lib/api.js'
+import { openCashSession, settingsIniziali, subscribeSettings } from '../lib/api.js'
 import { toastError } from '../lib/toast.js'
 import { listStaff, staffFromCache } from '../lib/staffApi.js'
 import {
@@ -39,6 +39,11 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
   const [fondo, setFondo] = useState('')
   const [busy, setBusy] = useState(false)
   const [staff, setStaff] = useState(() => staffFromCache() || [])
+  // Le associazioni stanno sulle impostazioni del locale: si leggono dalla
+  // cache, come tutto quello che serve ad aprire la cassa.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const associazioni = impostazioni.admin_associati
   useEffect(() => {
     let vivo = true
     listStaff()
@@ -48,12 +53,12 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
       vivo = false
     }
   }, [])
-  const scelte = operatoriSelezionabili(staff, by?.uid)
-  const chiedere = valeLaPenaChiedere(staff, by?.uid)
+  const scelte = operatoriSelezionabili(staff, by?.uid, associazioni)
+  const chiedere = valeLaPenaChiedere(staff, by?.uid, associazioni)
   const [chi, setChi] = useState(null)
   // Di suo è chi ci lavorava l'ultima volta da questo tablet: a inizio
   // serata è quasi sempre lo stesso, e la risposta giusta è già pronta.
-  const scelto = chi || operatoreCorrente(staff, by?.uid)
+  const scelto = chi || operatoreCorrente(staff, by?.uid, associazioni)
 
   const apri = async () => {
     if (busy) return

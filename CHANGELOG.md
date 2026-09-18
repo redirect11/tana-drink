@@ -25,7 +25,10 @@
   in cima alla barra è il suo. La scelta resta sul tablet, quindi non te la
   richiede ogni sera, e compare solo se gli admin sono più di uno. Non è un
   login: la sessione resta quella di chi è collegato, e si sceglie solo fra
-  admin, che hanno già gli stessi permessi.
+  admin, che hanno già gli stessi permessi. **Chi compare nell'elenco lo
+  decidi tu**, da Utenti e ruoli → «Chi apre la cassa»: una lista per ogni
+  account, perché il tablet resta collegato con uno solo e da quale dipende
+  chi ci lavora. Senza spuntare niente compaiono tutti.
 
 ## 1.6.0
 

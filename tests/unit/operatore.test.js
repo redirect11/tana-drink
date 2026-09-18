@@ -21,6 +21,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
+  associazioniDi,
   operatoriSelezionabili,
   operatoreCorrente,
   operatoreRicordato,
@@ -77,6 +78,67 @@ describe('chi si può scegliere', () => {
     expect(valeLaPenaChiedere([FLAVIO, GIULIA], 'u-flavio')).toBe(false)
     expect(valeLaPenaChiedere(STAFF, 'u-flavio')).toBe(true)
     expect(valeLaPenaChiedere([], 'u-flavio')).toBe(false)
+  })
+})
+
+// ── LE ASSOCIAZIONI, PER ACCOUNT ─────────────────────────────────────
+// Daniele, 19/09/2026: «si deve decidere quali sono gli admin, anche perché
+// può essere Vittorio o io a fare il login, e lì sono altre associazioni».
+// L'elenco dipende da CHI ha fatto il login, non è uno solo per il locale.
+describe('chi è associato a quale account', () => {
+  const MAPPA = {
+    'u-flavio': ['u-vittorio'],
+    'u-daniele': ['u-flavio', 'u-vittorio'],
+  }
+
+  it('col login di Flavio si sceglie fra lui e chi gli è associato', () => {
+    expect(operatoriSelezionabili(STAFF, 'u-flavio', MAPPA).map((u) => u.uid)).toEqual([
+      'u-flavio',
+      'u-vittorio',
+    ])
+  })
+
+  it('e con un altro login l’elenco è un altro', () => {
+    expect(operatoriSelezionabili(STAFF, 'u-daniele', MAPPA).map((u) => u.uid)).toEqual([
+      'u-daniele',
+      'u-flavio',
+      'u-vittorio',
+    ])
+  })
+
+  // L'account c'è SEMPRE: una lista che non contiene nemmeno chi la sta
+  // guardando lascerebbe la cassa senza nessuno da scegliere.
+  it('chi è collegato c’è anche se la lista non lo nomina', () => {
+    expect(operatoriSelezionabili(STAFF, 'u-vittorio', { 'u-vittorio': ['u-flavio'] }).map((u) => u.uid)).toEqual([
+      'u-vittorio',
+      'u-flavio',
+    ])
+  })
+
+  // Non aver deciso niente vuol dire «tutti», non «nessuno»: il locale che
+  // non tocca questa schermata non deve accorgersi che esiste.
+  it('senza associazioni si torna a tutti gli admin', () => {
+    expect(associazioniDi(null, 'u-flavio')).toBeNull()
+    expect(associazioniDi({ 'u-flavio': [] }, 'u-flavio')).toBeNull()
+    expect(operatoriSelezionabili(STAFF, 'u-flavio', { 'u-flavio': [] }).map((u) => u.uid)).toEqual([
+      'u-flavio',
+      'u-daniele',
+      'u-vittorio',
+    ])
+  })
+
+  // Un associato che non è più admin non rientra dalla finestra: le due
+  // regole si sommano, non si sostituiscono.
+  it('e un associato declassato resta fuori lo stesso', () => {
+    const declassato = STAFF.map((u) => (u.uid === 'u-vittorio' ? { ...u, role: 'bartender' } : u))
+    expect(operatoriSelezionabili(declassato, 'u-flavio', MAPPA).map((u) => u.uid)).toEqual(['u-flavio'])
+  })
+
+  it('con un associato solo, non vale la pena chiedere', () => {
+    expect(valeLaPenaChiedere(STAFF, 'u-flavio', { 'u-flavio': [] })).toBe(true)
+    expect(valeLaPenaChiedere(STAFF, 'u-vittorio', { 'u-vittorio': [] })).toBe(true)
+    // Nessun associato oltre a sé: una risposta sola, niente da chiedere.
+    expect(valeLaPenaChiedere(STAFF, 'u-flavio', { 'u-flavio': ['u-flavio'] })).toBe(false)
   })
 })
 
