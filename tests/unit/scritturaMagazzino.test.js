@@ -112,11 +112,21 @@ const api = await import('../../src/lib/api.js')
 const { articoloNormalizzato, magazzinoBloccato, patchNormalizza } = await import(
   '../../src/lib/inventory.js'
 )
+// Il mock di Firestore, per guardare COME si scrive: il carico deve tornare
+// senza aspettare l'ack (BUG-109).
+const fs = await import('firebase/firestore')
+// `bgWrite` manda la scrittura su un microtask: chi guarda cosa è finito sul
+// database deve lasciar girare un giro di eventi.
+const giro = () => new Promise((r) => setTimeout(r, 0))
 
 // Le strade che caricano o correggono una giacenza: sono quelle che devono
 // fermarsi tutte allo stesso modo.
+// L'articolo come lo legge l'app: il carico lo prende in mano invece di
+// rileggerlo, quindi il controllo del travaso si fa su QUESTO (BUG-109).
+const articolo = (id = 'art-1') => articoloNormalizzato({ id, ...stato.articolo })
+
 const strade = [
-  ['carico a mano', () => api.loadStock('art-1', 2)],
+  ['carico a mano', async () => api.loadStock(articolo(), 2)],
   ['carico a confezioni', () => api.receiveBottles('art-1', 2)],
   ['rettifica della giacenza', () => api.adjustStock('art-1', 3)],
   // Era `receivePurchaseOrder`, che caricava l'ordine intero al «ricevuto».
@@ -136,6 +146,7 @@ const strade = [
 ]
 
 beforeEach(() => {
+  vi.clearAllMocks()
   stato.articolo = nuovo
   stato.scritture = []
 })
@@ -172,9 +183,13 @@ describe('il carico parte dalla giacenza com’è, anche sotto zero', () => {
 
   it('a mano: −1 più cinque fa quattro', async () => {
     stato.articolo = sottoZero
-    await api.loadStock('art-1', 5)
+    // Quello che si vede subito…
+    expect(api.loadStock(articolo(), 5).stock).toBe(4)
+    await giro()
+    // …e quello che arriva al database: un incremento, che si accoda
+    // offline e non litiga con chi scrive dallo stesso prodotto altrove.
     const s = stato.scritture.find((w) => w.col === 'inventory_items')
-    expect(s.patch.stock).toBe(4)
+    expect(s.patch.stock).toEqual({ __increment: 5 })
   })
 
   // Lo scarico a mano invece non scava sotto lo zero: lì c'è una persona che
@@ -182,9 +197,44 @@ describe('il carico parte dalla giacenza com’è, anche sotto zero', () => {
   // toglie niente.
   it('lo scarico a mano si ferma a zero', async () => {
     stato.articolo = { ...nuovo, stock: 2 }
-    await api.loadStock('art-1', -5)
+    expect(api.loadStock(articolo(), -5).stock).toBe(0)
+    await giro()
     const s = stato.scritture.find((w) => w.col === 'inventory_items')
-    expect(s.patch.stock).toBe(0)
+    expect(s.patch.stock).toEqual({ __increment: -2 })
+  })
+})
+
+// ── IL CARICO NON ASPETTA LA RETE (BUG-109) ──────────────────────────
+//
+// Daniele, 18/09/2026: «in Magazzino se inserisco un carico non viene
+// visualizzato subito, anzi sembra che non ho premuto il tasto; poi ricarico
+// la pagina e mi trovo i carichi per ogni volta che ho cliccato».
+//
+// PERCHÉ SUCCEDEVA: il carico aspettava quattro giri di rete prima di far
+// vedere qualcosa — una lettura, due scritture e una rilettura. Le due
+// scritture si risolvono solo con l'ack del server, quindi con la linea del
+// locale che «risulta collegata ma non passa» non tornavano mai: niente a
+// schermo, si ripremeva, e ogni pressione accodava un carico.
+describe('il carico si vede subito, anche se le scritture restano appese', () => {
+  it('torna la giacenza nuova senza aspettare niente', () => {
+    stato.articolo = { ...nuovo, stock: 5 }
+    // Le scritture non si risolveranno mai, come al banco quando la rete
+    // non passa: il gesto deve valere lo stesso.
+    fs.updateDoc.mockImplementationOnce(() => new Promise(() => {}))
+    fs.addDoc.mockImplementationOnce(() => new Promise(() => {}))
+    const dopo = api.loadStock(articolo(), 3)
+    expect(dopo.stock).toBe(8)
+    expect(dopo.id).toBe('art-1')
+  })
+
+  // E il movimento parte lo stesso: si accoda, e arriverà quando la rete
+  // torna. Quello che non deve succedere è che lo aspetti qualcuno.
+  it('e il movimento parte in sottofondo', async () => {
+    stato.articolo = { ...nuovo, stock: 5 }
+    api.loadStock(articolo(), 3)
+    await giro()
+    expect(fs.addDoc).toHaveBeenCalledTimes(1)
+    expect(fs.addDoc.mock.calls[0][1]).toMatchObject({ item_id: 'art-1', type: 'load', qty: 3, reason: 'carico' })
   })
 })
 
