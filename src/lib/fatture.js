@@ -224,14 +224,29 @@ export function righeDaOrdine(ordine, supplierId) {
 // fattura-FETTA: la parte di quel fornitore dentro l'ordine, la stessa che
 // il filtro mostra. Un ordine con tre fornitori ha fino a tre fatture.
 //
-// DOVE VIVE IL DATO: `order_id` sulla FATTURA, e basta quello. Il fornitore
-// la fattura ce l'ha già (`supplier_id`), e la coppia dei due È la fetta —
-// la stessa chiave con cui `fetteFornitore` la ritaglia. Così «una fattura
-// sta su al massimo una fetta» è vero per costruzione: non c'è nessun posto
-// dove scriverne una seconda. Il verso opposto — «una fetta ha al massimo
-// una fattura» — nessun campo lo garantisce da solo, e lo tiene
-// `aggancioAmmesso`: è la stessa guardia che filtra gli elenchi delle
-// candidate, così le due cose non possono divergere.
+// UN DOCUMENTO PUÒ COPRIRE PIÙ ORDINI (19/09/2026). Flavio: «soprattutto
+// nel weekend io faccio un ordine, mi viene consegnato, ma non mi fanno il
+// proforma perché l'azienda è chiusa; il giorno dopo faccio un altro ordine,
+// e il lunedì mi fanno un unico proforma o un'unica fattura. Quindi sotto
+// una fattura devo poter aggiungere un ordine, e poi aggiungerne un altro».
+// Prima era uno-a-uno e il secondo aggancio veniva rifiutato: l'unica strada
+// era scollegare il primo, cioè scegliere quale dei due ordini raccontare.
+//
+// DOVE VIVE IL DATO: `order_ids` sulla FATTURA, una lista. Il fornitore la
+// fattura ce l'ha già (`supplier_id`), e la coppia fornitore + ordine È la
+// fetta — la stessa chiave con cui `fetteFornitore` la ritaglia.
+//
+// QUELLO CHE RESTA UNO-A-UNO È L'ALTRO VERSO: una fetta ha al massimo un
+// documento. Due fatture sulla stessa merce vorrebbero dire pagarla due
+// volte, e nessun campo lo impedisce da solo: lo tiene `aggancioAmmesso`,
+// la stessa guardia che filtra gli elenchi delle candidate — così le due
+// cose non possono divergere.
+//
+// IL CAMPO VECCHIO `order_id` RESTA SCRITTO, col primo della lista: in
+// produzione gira ancora una versione che legge quello, e toglierlo di
+// colpo le farebbe sparire i legami sotto le mani. Si legge da `order_ids`
+// e basta (`elencoOrdini` qui sotto lo ricava anche dai documenti vecchi);
+// si potrà smettere di scriverlo quando la 1.7.0 sarà dappertutto.
 //
 // NON SI SCRIVE NIENTE SULL'ORDINE, ed è deliberato: l'ordine lo scrivono
 // la consegna e il pagamento, gesti che partono dal banco. Un secondo
@@ -239,26 +254,36 @@ export function righeDaOrdine(ordine, supplierId) {
 // sovrascrivono le righe per aggiungere un riferimento che sta comodo
 // dall'altra parte.
 
+// GLI ORDINI DI UN DOCUMENTO, sempre come lista. Legge il campo nuovo e
+// ricade su quello vecchio: un documento scritto prima del 19/09/2026 ha
+// solo `order_id`, e deve continuare a raccontare il suo legame.
+export function elencoOrdini(fattura) {
+  if (Array.isArray(fattura?.order_ids)) return fattura.order_ids.filter(Boolean)
+  return fattura?.order_id ? [fattura.order_id] : []
+}
+
 // La fattura agganciata a una fetta, se c'è.
 export function fatturaDellaFetta(fatture, fetta) {
   if (!fetta?.order_id || !fetta?.supplier_id) return null
   return (
     (fatture || []).find(
-      (f) => f?.order_id === fetta.order_id && f?.supplier_id === fetta.supplier_id
+      (f) => f?.supplier_id === fetta.supplier_id && elencoOrdini(f).includes(fetta.order_id)
     ) ?? null
   )
 }
 
-// La fetta a cui una fattura è agganciata. Gli ordini in mano sono gli
-// ultimi venticinque: di uno più vecchio si sa che il legame c'è, non quali
-// righe contenga — e dirlo è meglio che far sparire il legame.
-export function fettaDellaFattura(fattura, ordini, { suppliers = [] } = {}) {
-  if (!fattura?.order_id) return null
-  const ordine = (ordini || []).find((o) => o?.id === fattura.order_id)
-  if (!ordine) return null
-  return (
-    fetteFornitore(ordine, { suppliers }).find((f) => f.supplier_id === fattura.supplier_id) ?? null
-  )
+// LE FETTE a cui una fattura è agganciata, nell'ordine in cui sono state
+// collegate. Gli ordini in mano sono gli ultimi venticinque: di uno più
+// vecchio si sa che il legame c'è, non quali righe contenga — per quello la
+// riga esce col suo id e senza fetta, invece di sparire.
+export function fetteDellaFattura(fattura, ordini, { suppliers = [] } = {}) {
+  return elencoOrdini(fattura).map((id) => {
+    const ordine = (ordini || []).find((o) => o?.id === id)
+    const fetta = ordine
+      ? fetteFornitore(ordine, { suppliers }).find((f) => f.supplier_id === fattura.supplier_id)
+      : null
+    return { order_id: id, fetta: fetta ?? null }
+  })
 }
 
 // IL FORNITORE FA DA GUARDIA. Agganciare la fattura di Nova alla fetta di
@@ -275,13 +300,9 @@ export function aggancioAmmesso(fattura, fetta, { fatture = [] } = {}) {
   }
   const altra = fatturaDellaFetta(fatture, fetta)
   if (altra && altra.id !== fattura.id) return 'Quella parte dell’ordine ha già un documento collegato.'
-  // Uno-a-uno anche dall'altro verso: si stacca prima, e staccare è un gesto
-  // che si vede. Lasciar riscrivere il campo staccherebbe in silenzio la
-  // fetta di prima, che tornerebbe scoperta senza che nessuno l'abbia
-  // deciso.
-  if (fattura.order_id && fattura.order_id !== fetta.order_id) {
-    return 'Questo documento è già collegato a un altro ordine.'
-  }
+  // E BASTA: dal 19/09/2026 un documento può coprire più ordini, quindi non
+  // si guarda più se ne ha già uno. Quello che resta vietato è la stessa
+  // merce su due documenti, ed è la riga qui sopra.
   return null
 }
 
@@ -291,8 +312,12 @@ export function aggancioAmmesso(fattura, fetta, { fatture = [] } = {}) {
 // perché è quello con cui il documento in mano ha a che fare.
 export function fetteCollegabili(fattura, ordini, { suppliers = [], fatture = [] } = {}) {
   if (!fattura?.supplier_id) return []
+  // Quelle che questo documento ha GIÀ non si ripropongono: prima le teneva
+  // fuori la regola «un documento, un ordine», che non c'è più.
+  const gia = new Set(elencoOrdini(fattura))
   return (ordini || [])
     .flatMap((o) => fetteFornitore(o, { suppliers }))
+    .filter((f) => !gia.has(f.order_id))
     .filter((f) => aggancioAmmesso(fattura, f, { fatture }) === null)
 }
 
@@ -325,7 +350,7 @@ export function fetteSenzaFattura(ordini, fatture, { suppliers = [] } = {}) {
 // Il documento c'è, l'ordine no: o l'ordine non è mai stato scritto nell'app
 // (si è telefonato al fornitore), o il legame non l'ha ancora messo nessuno.
 export function fattureSenzaFetta(fatture) {
-  return (fatture || []).filter((f) => !f?.order_id)
+  return (fatture || []).filter((f) => elencoOrdini(f).length === 0)
 }
 
 // ── LA CORREZIONE DI UN DOCUMENTO (REQ-MAG-041) ──────────────────────
@@ -412,7 +437,7 @@ export function cambiFattura(prima, dopo) {
 export function modificaAmmessa(prima, dopo) {
   if (!prima?.id) return 'Documento non trovato.'
   if (!dopo?.supplier_id) return 'Il documento lo emette qualcuno: scegli il fornitore.'
-  if (prima.order_id && dopo.supplier_id !== prima.supplier_id) {
+  if (elencoOrdini(prima).length > 0 && dopo.supplier_id !== prima.supplier_id) {
     return 'Questo documento è collegato a un ordine: per cambiare fornitore scollegalo prima.'
   }
   return null
