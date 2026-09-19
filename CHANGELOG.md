@@ -4,6 +4,12 @@
 
 ### Per chi sta al banco
 
+- **Nelle statistiche per periodo, la fascia oraria non ha più date sue.**
+  Ne aveva un paio, rimaste da quando il periodo era un contatore di
+  giornate: dicevano la stessa cosa in un altro posto e potevano far vedere
+  «nessuna vendita» mentre il periodo in alto era pieno. Adesso fa fede il
+  periodo scelto in cima, e lì si stringe soltanto l'ora.
+
 - **Una ricetta ritoccata su un conto si può salvare come voce nuova del
   menù.** Toccando una riga del conto si apre il ritocco degli ingredienti
   come sempre; sotto «Annulla» e «Salva» c'è ora **«Salva come nuova

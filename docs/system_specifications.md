@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 202 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 20 | da fare |
+| ⬜ | 22 | da fare |
 | 🗑 | 7 | non più valido |
 
-**244 voci** in tutto. **217** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**246 voci** in tutto. **217** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -53,7 +53,7 @@ come «vero oggi», non come «garantito».
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 3 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -2325,7 +2325,9 @@ DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se c'e' piu' d
 
 COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto (`opened_by`), e il nome in cima alla barra e' il suo.
 
-ANCORA DA FARE, ed e' la seconda meta' della richiesta: l'ASPETTO PER PERSONA — «le impostazioni dell'aspetto memorizzate per utente; se non ho customizzazioni, l'aspetto viene ereditato dall'utenza admin loggata». Oggi tema e colori sono del locale (`theme_staff` e `theme_client` su settings/bar) e valgono per tutti. Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
+COSA CAMBIA DAVVERO, OGGI: la sessione di cassa risulta aperta da chi e' stato scelto (`opened_by`) e il nome in cima alla barra e' il suo. NON cambiano l'attribuzione dei conti battuti (`placed_by`), il nome sullo scontrino ne' il badge delle ore, che escono tutti dall'account collegato: rimetterli in riga e' REQ-STAFF-018.
+
+ANCORA DA FARE, e sono due requisiti loro: l'ASPETTO PER PERSONA (REQ-STAFF-017), che e' la seconda meta' della richiesta di Flavio, e L'ATTRIBUZIONE (REQ-STAFF-018). Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
 
 **Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
 
@@ -2829,7 +2831,9 @@ LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in cor
 
 Chiesto da Flavio il 17/09/2026, in un vocale, guardando Statistiche → Per periodo: «mi appare questo counter dei giorni, che penso significhi 24 da oggi indietro di 24 giorni. Ma qui in realta' mi dovrebbe apparire un inizio periodo, fine periodo … cosi' riesco a vedere realmente la fascia di periodo che mi interessa, cosi' come puo' essere il giugno, cosi' come puo' essere il periodo di Natale, e vedere quindi quanto ho fatturato, quanto ho movimentato invece i prodotti di magazzino». A) IL PERIODO E' UN INTERVALLO DI DATE. Due caselle, «Dal» e «Al», in GIORNATE COMMERCIALI come tutto il resto dell'app: la nottata oltre la mezzanotte appartiene alla giornata in cui e' cominciata. Col contatore di prima giugno non si guardava — si guardavano «gli ultimi 108 giorni», che e' un'altra domanda.
 
-LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti. Le due caselle si chiamano «Dal» e «Al» e non «Dal giorno»/«Al giorno»: quelle sono piu' sotto, nel venduto per fascia oraria, e dicono un'altra cosa — due etichette uguali a schermo si scambiano per la stessa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
+LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti.
+
+UNA COPPIA DI DATE SOLA IN TUTTA LA SCHERMATA (19/09/2026). Il «venduto nella fascia oraria» ne aveva un'altra, nata quando il periodo qui sopra era un contatore di giornate: per chiedere «sabato scorso fra le 22 e l'una» bisognava dirlo li'. Da quando il periodo si sceglie da data a data quelle due caselle dicevano la stessa cosa in un altro posto, e chi le trovava non sapeva quale delle due comandasse: Daniele l'ha visto con una schermata in cui il periodo era impostato in alto e la fascia diceva «nessuna vendita», perche' guardava altrove. Adesso la fascia lavora sugli STESSI conti del resto della schermata e stringe soltanto l'ORA; vale anche in «Per serata», dove i conti sono quelli della cassa aperta e chiusa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
 
 SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse — venti amari da un euro battono quindici negroni a pezzi e perdono a incasso; di suo per pezzi, che e' la domanda di partenza. C) IL MAGAZZINO NEL PERIODO. «Quello che mi serve sapere dal magazzino e' quanto avevo di deposito, quanto ho acquistato, quanto ho consumato in un determinato periodo … e vorrei avere la stessa identica visualizzazione a lista». Un elenco nella forma della lista del magazzino (`inv-list`), coi numeri che si leggono da soli.
 
@@ -3178,6 +3182,36 @@ RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portat
 **Dove**: `scripts/certificato-stampante.js`
 
 ### Persone: ruoli, utenze, ore
+
+#### REQ-STAFF-017 — L'aspetto e' della persona, non del locale
+
+Chiesto da Flavio l'11/09/2026, nella stessa richiesta dei sottoutenti della cassa (REQ-STAFF-016): «le impostazioni dell'aspetto dovrebbero essere memorizzate per utente: tema, colori, tutto cio' che riguarda l'aspetto. Quando seleziono utente all'apertura cassa e non ho customizzazioni di aspetto, l'aspetto viene ereditato dall'utenza admin loggata. Se l'utente associato cambia le impostazioni d'aspetto, le impostazioni vengono memorizzate solo per quel sottoutente». Con parole sue: «Vittorio vuole lo sfondo nero mentre Flavio vuole lo sfondo bianco», e lavorano sullo stesso tablet.
+
+OGGI L'ASPETTO E' DEL LOCALE: `theme_staff` e `theme_client` stanno su settings/bar e valgono per tutti. Chi cambia il tema lo cambia a chiunque, anche al terminale dell'altro.
+
+COSA SERVE. Le preferenze d'aspetto diventano DELLA PERSONA scelta all'apertura della cassa (REQ-STAFF-016), con EREDITA': la persona che non ha deciso niente vede quello del locale, e solo quando tocca i colori nasce la sua copia. Serve anche la strada per tornare indietro, «rimetti come il locale»: se no la prima prova di un colore resta addosso per sempre.
+
+DUE COSE DA DECIDERE PRIMA DI SCRIVERE. (1) DOVE: una collezione per persona, che pero' va letta prima di disegnare, oppure dentro settings/bar in una mappa per uid, che e' gia' in cache e non fa aspettare niente. La seconda e' la stessa scelta fatta per le associazioni della cassa, e per lo stesso motivo. (2) CHI PUO' SCRIVERLA: la persona scelta non ha una sessione sua - chi e' collegato e' un altro admin - quindi la regola non puo' essere «solo il proprio documento», e va scritta guardando che siano tutti e due admin.
+
+IL TEMA DEL CLIENTE NON C'ENTRA: quello e' del locale e resta li'. Qui si parla solo di come vede il gestionale chi ci lavora.
+
+**Dove**: `src/lib/themes.js, src/App.jsx, src/components/ThemeSettings.jsx, src/lib/api.js`
+
+#### REQ-STAFF-018 — Conti, scontrino e ore li firma chi sta lavorando, non l'account collegato
+
+Nato controllando REQ-STAFF-016 il 19/09/2026, con Daniele: «quando si apre la cassa e l'utente loggato e' Flavio, e la apre Vittorio, che differenze ci sono?». La risposta, guardando il codice, e' che oggi ne cambiano poche: la sessione di cassa risulta aperta da Vittorio e il nome in barra e' il suo, ma tutto il resto resta di Flavio.
+
+COSA RESTA INDIETRO, e sono le tre cose che si guardano davvero. I CONTI BATTUTI: `placed_by` prende nome, email e ruolo dall'account collegato (OrderPosDetail, `placedBy()`), quindi l'iniziale accanto al numero d'ordine, la legenda della coda e lo storico dicono Flavio anche quando a battere e' Vittorio. E' il dato su cui si discute a fine serata: «questo conto chi l'ha aperto?».
+
+LO SCONTRINO: la riga dell'operatore esce da `impostaUtenteStampante`, alimentata dall'account collegato in App.jsx. BUG-088 aveva stabilito che quella riga dice CHI STA STAMPANDO, ed e' proprio quello che adesso sbaglia.
+
+LE ORE: il badge virtuale (`clockIn`) timbra l'entrata dell'account collegato, quindi le ore finiscono sulla persona sbagliata - e da li' esce una paga.
+
+COSA SERVE: chi e' stato scelto all'apertura della cassa diventa la persona che firma, in questi tre punti. Il ruolo resta quello del token (e' un permesso, non un'etichetta): si sostituiscono nome, email e uid.
+
+DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una riga in piu': si tocca il documento degli ORDINI, che e' il cuore della serata, e il badge delle ore, che diventa paga. Vanno decisi anche i casi di bordo: il conto aperto prima di cambiare persona resta firmato com'era, e il turno aperto da `clockIn` va chiuso e riaperto quando cambia chi lavora, oppure no?
+
+**Dove**: `src/components/OrderPosDetail.jsx (placedBy), src/App.jsx (impostaUtenteStampante, clockIn), src/pages/MenuPage.jsx`
 
 #### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
 
