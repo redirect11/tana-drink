@@ -156,24 +156,25 @@ function DailyStats({ sezione = 'serate' }) {
     const giorni = Math.ceil((Date.parse(oggi) - Date.parse(businessDayKey(serata.opened_at, cutoff))) / 86400000) + 2
     if (Number.isFinite(giorni) && giorni > loadLimit) setLoadLimit(Math.ceil(giorni / 30) * 30)
   }, [serata, cutoff, loadLimit])
-  // Sezione "venduto nella fascia oraria": ha un suo intervallo di DATE, così
-  // si può chiedere "sabato scorso, fra le 22 e l'una" indipendentemente dal
-  // periodo generale scelto sopra.
-  const [fasciaDal, setFasciaDal] = useState(() => businessDayKey(new Date(), cutoff))
-  const [fasciaAl, setFasciaAl] = useState(() => businessDayKey(new Date(), cutoff))
+  // IL «VENDUTO NELLA FASCIA ORARIA» NON HA PIÙ DATE SUE (19/09/2026). Ne
+  // aveva un paio, nate quando il periodo qui sopra era un contatore di
+  // giornate e non un intervallo: per chiedere «sabato scorso fra le 22 e
+  // l'una» serviva dirlo lì. Da quando il periodo si sceglie da data a data
+  // (REQ-STAT-002) quelle due caselle dicevano la stessa cosa in un altro
+  // posto, e chi le trovava non sapeva quale delle due comandasse — nella
+  // foto di Daniele il periodo era impostato in alto e la fascia diceva
+  // «nessuna vendita», perché guardava altrove. Adesso la fascia lavora
+  // sugli stessi conti del resto della schermata: cambia solo l'ORA.
   const [dayRange, setDayRange] = useState({ from: '22:00', to: '00:00' })
 
-  // Date scelte fuori dai dati già scaricati: si allarga la finestra. Vale
-  // per il periodo e per l'intervallo della fascia oraria, che sono due
-  // scelte indipendenti e possono guardare indietro l'una più dell'altra.
+  // Un periodo che guarda più indietro dei dati già scaricati: si allarga la
+  // finestra.
   useEffect(() => {
-    const oggi = businessDayKey(new Date(), cutoff)
-    const indietro = [fasciaDal, periodo.dal].map((d) => giorniFra(d, oggi))
-    const giorni = Math.max(...indietro.filter(Number.isFinite))
+    const giorni = giorniFra(periodo.dal, businessDayKey(new Date(), cutoff))
     if (Number.isFinite(giorni) && giorni > loadLimit) {
       setLoadLimit(Math.ceil(giorni / 30) * 30)
     }
-  }, [fasciaDal, periodo.dal, cutoff, loadLimit])
+  }, [periodo.dal, cutoff, loadLimit])
 
   useEffect(() => {
     let active = true
@@ -237,21 +238,15 @@ function DailyStats({ sezione = 'serate' }) {
       classifica: aggregateProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
       // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
-      // categorie), sulle GIORNATE indicate qui sotto — non sul periodo sopra.
-      fascia: hourRangeReport(
-        orders.filter((o) => {
-          const k = businessDayKey(o.created_at, cutoff)
-          return k && k >= fasciaDal && k <= fasciaAl
-        }),
-        hourRange,
-        drinksById
-      ),
+      // categorie), sugli STESSI conti del periodo: qui si stringe l'ora, non
+      // le date — quelle le ha già dette chi ha scelto il periodo.
+      fascia: hourRangeReport(ord, hourRange, drinksById),
       ingredients: ingredientUsage(ord, drinksById),
       prep: prepTimeStats(ord),
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, hourRange, dayRange, cutoff, fasciaDal, fasciaAl, serata])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, hourRange, dayRange, cutoff, serata])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -271,16 +266,7 @@ function DailyStats({ sezione = 'serate' }) {
   // Gli stessi comandi valgono per tutte e due le sottosezioni: le fasce
   // orarie e l'intervallo del «venduto nella fascia» sono di chi guarda, non
   // del periodo guardato.
-  const comandi = {
-    hourRange,
-    setHourRange,
-    dayRange,
-    setDayRange,
-    fasciaDal,
-    setFasciaDal,
-    fasciaAl,
-    setFasciaAl,
-  }
+  const comandi = { hourRange, setHourRange, dayRange, setDayRange }
 
   if (serata) {
     return (
@@ -327,10 +313,7 @@ function DailyStats({ sezione = 'serate' }) {
           che c'è scritto, e non si sposta più da solo. */}
       <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
         <span>
-          {/* «Dal» e non «Dal giorno»: più sotto, nel venduto per fascia
-              oraria, ci sono altre due date che dicono un'altra cosa, e due
-              etichette uguali a schermo si scambiano per la stessa. */}
-          <label htmlFor="periodo-dal" className="muted small">Dal</label>
+          <label htmlFor="periodo-dal" className="muted small">Dal giorno</label>
           <input
             id="periodo-dal"
             type="date"
@@ -342,7 +325,7 @@ function DailyStats({ sezione = 'serate' }) {
           />
         </span>
         <span>
-          <label htmlFor="periodo-al" className="muted small">Al</label>
+          <label htmlFor="periodo-al" className="muted small">Al giorno</label>
           <input
             id="periodo-al"
             type="date"
@@ -481,8 +464,7 @@ function ClassificaVenduto({ righe }) {
 function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
-  const { hourRange, setHourRange, dayRange, setDayRange, fasciaDal, setFasciaDal, fasciaAl, setFasciaAl } =
-    comandi
+  const { hourRange, setHourRange, dayRange, setDayRange } = comandi
   return (
     <div>
       {/* KPI */}
@@ -522,29 +504,9 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
 
       {/* Cosa si è venduto nella fascia oraria scelta qui sopra: totale, tutti
           i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
+      {/* Le date non ci sono più: fa fede il periodo scelto in cima
+          (19/09/2026). Qui si stringe soltanto l'ora. */}
       <ChartCard title="🧾 Venduto nella fascia oraria">
-        <div className="grid-2" style={{ gap: 8, marginBottom: 8 }}>
-          <div>
-            <label htmlFor="fascia-dal" className="muted small">Dal giorno</label>
-            <input
-              id="fascia-dal"
-              type="date"
-              value={fasciaDal}
-              max={fasciaAl}
-              onChange={(e) => setFasciaDal(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="fascia-al" className="muted small">Al giorno</label>
-            <input
-              id="fascia-al"
-              type="date"
-              value={fasciaAl}
-              min={fasciaDal}
-              onChange={(e) => setFasciaAl(e.target.value)}
-            />
-          </div>
-        </div>
         <TimeRange value={hourRange} onChange={setHourRange} />
         <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
           <span className="muted small">
