@@ -28,6 +28,7 @@ import {
   fatturaGenerata,
   fetteSenzaFattura,
   importoLeggibile,
+  elencoOrdini,
 } from '../lib/fatture.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { giornoEOra } from '../lib/ore.js'
@@ -78,9 +79,12 @@ export default function OrdiniListaPanel({
   const [consegnaFor, setConsegnaFor] = useState(null)
   const [fatturaPer, setFatturaPer] = useState(null)
 
+  // UN DOCUMENTO PUÒ COPRIRE PIÙ ORDINI (19/09/2026), quindi si passa dalla
+  // sua lista e non da un campo solo: la fattura del lunedì sta sopra la
+  // consegna del sabato e quella della domenica.
   const fatturaDi = useMemo(() => {
     const per = new Map()
-    for (const f of fatture || []) if (f?.order_id) per.set(f.order_id, f)
+    for (const f of fatture || []) for (const id of elencoOrdini(f)) per.set(id, f)
     return (o) => per.get(o?.id) ?? null
   }, [fatture])
 

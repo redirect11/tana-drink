@@ -206,7 +206,10 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
     setError(null)
     const id = invoiceId || fatturaAttuale?.id
     if (!id) return
-    collegaFatturaAFetta(id, { order_id: invoiceId ? ordine.id : null }).then(
+    // Staccando da qui si toglie SOLO questo ordine: il documento può
+    // coprirne altri (19/09/2026), e toglierli tutti sarebbe un danno fatto
+    // da una schermata che ne guarda uno.
+    collegaFatturaAFetta(id, { order_id: ordine.id, stacca: !invoiceId }).then(
       (agg) => {
         setInvoices((prev) => prev.map((f) => (f.id === agg.id ? agg : f)))
         rimpiazza(

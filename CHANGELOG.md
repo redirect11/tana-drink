@@ -4,6 +4,13 @@
 
 ### Per chi sta al banco
 
+- **Un documento dello scadenzario può coprire più ordini.** Prima, se un
+  documento era già collegato a un ordine, il secondo veniva rifiutato e
+  l'unica strada era scollegare il primo. Ora sotto il documento c'è
+  l'elenco degli ordini, ognuno col suo «Scollega», e in fondo «Aggiungi un
+  altro ordine». Serve al caso del weekend: la merce arriva senza carta e il
+  lunedì il fornitore fa una fattura sola per tutte le consegne.
+
 - **Nelle statistiche per periodo, la fascia oraria non ha più date sue.**
   Ne aveva un paio, rimaste da quando il periodo era un contatore di
   giornate: dicevano la stessa cosa in un altro posto e potevano far vedere

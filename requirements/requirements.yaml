@@ -9325,6 +9325,41 @@ requirements:
       diario, non un numero. La seconda: un ordine senza documento non e'
       «da pagare», e' un ordine di cui non si sa niente — e va detto cosi',
       invece di darlo per non pagato.
+      UN DOCUMENTO PUO' COPRIRE PIU' ORDINI (19/09/2026). Flavio, in un
+      vocale: «nello scadenzario si dovrebbe poter aggiungere a un documento
+      piu' di un ordine. In questo momento, se carico un ordine in un
+      documento, mi dice di scollegare l'ordine. Soprattutto nel weekend io
+      faccio un ordine, me lo consegnano, ma non mi fanno il proforma perche'
+      l'azienda e' chiusa e mi fanno semplicemente il piacere di portarmi la
+      roba; il giorno dopo faccio un altro ordine, e il lunedi' mi fanno un
+      unico proforma o un'unica fattura. Quindi sotto una fattura, alla
+      domanda aggiungi ordine, io aggiungo un ordine, e poi dopo ci deve
+      essere aggiungi altro ordine oppure scollega gli ordini».
+      COSA CAMBIA: il campo diventa una LISTA, `order_ids`. Prima era
+      `order_id`, uno solo, e la regola «questo documento e' gia' collegato a
+      un altro ordine» rifiutava il secondo aggancio: l'unica strada era
+      scollegare il primo, cioe' scegliere quale dei due ordini raccontare —
+      e l'altro tornava a risultare senza documento.
+      QUELLO CHE RESTA UNO-A-UNO E' L'ALTRO VERSO: una fetta ha al massimo un
+      documento. Due fatture sulla stessa merce vorrebbero dire pagarla due
+      volte, ed e' la riga che `aggancioAmmesso` continua a tenere.
+      A SCHERMO: sotto il documento c'e' l'ELENCO degli ordini collegati,
+      ognuno col suo «Scollega», e in fondo «＋ Aggiungi un altro ordine» —
+      non «Collega», perche' la parola deve dire che si somma invece di
+      sostituire. Dal lato dell'ordine, «Scollega» toglie SOLO quell'ordine:
+      una schermata che ne guarda uno non deve toglierli in blocco.
+      IL CAMPO VECCHIO RESTA SCRITTO, col primo della lista, e non e' una
+      dimenticanza: in produzione gira una versione che legge `order_id`, e
+      toglierlo di colpo le farebbe sparire i legami sotto le mani. In
+      lettura `elencoOrdini` normalizza i due casi, cosi' i documenti scritti
+      prima continuano a raccontare il loro ordine senza nessuna migrazione.
+      Si potra' smettere di scrivere il campo vecchio quando la 1.7.0 sara'
+      dappertutto.
+      LA VERIFICA NON PASSA PIU' DA UNA QUERY PER ORDINE: il campo su cui
+      filtrare e' diventato una lista e i documenti vecchi hanno solo quello
+      singolo — una query su uno dei due ne perderebbe meta'. Si chiedono i
+      documenti di QUEL fornitore e si filtra in memoria: sono pochi, ed e'
+      un gesto d'ufficio.
     status: implemented
     generate_issue: true
     labels: [magazzino, fornitori, scadenzario]
