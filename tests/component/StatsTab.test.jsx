@@ -226,11 +226,12 @@ describe('Statistiche per periodo', () => {
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     expect(await screen.findByText(paragrafo(/dal \d\d\/\d\d\/\d{4} al \d\d\/\d\d\/\d{4}/i))).toBeTruthy()
-    expect(screen.getByLabelText('Dal')).toBeTruthy()
-    expect(screen.getByLabelText('Al')).toBeTruthy()
-    // Le date della fascia oraria sono un'altra cosa e hanno un'altra
-    // etichetta: due uguali a schermo si scambiano per la stessa.
-    expect(screen.getByLabelText('Dal giorno')).toBeTruthy()
+    // UNA COPPIA DI DATE SOLA IN TUTTA LA SCHERMATA (19/09/2026): il
+    // «venduto nella fascia oraria» ne aveva un'altra, nata quando il
+    // periodo era un contatore di giornate. Da quando il periodo si sceglie
+    // da data a data quelle dicevano la stessa cosa in un altro posto, e chi
+    // le trovava non sapeva quale delle due comandasse.
+    expect(screen.getAllByLabelText(/^(Dal|Al) giorno$/)).toHaveLength(2)
     // Le pastiglie restano, ma adesso contano GIORNI e non giornate lavorate:
     // riempiono lo stesso intervallo delle due caselle, e due comandi che
     // riempiono la stessa cosa non possono contare in due modi diversi.
@@ -250,8 +251,8 @@ describe('Statistiche per periodo', () => {
     await m.vai('periodo')
     await screen.findByLabelText('Dal giorno')
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-07' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: '2026-08-07' } })
+      fireEvent.change(screen.getByLabelText('Al giorno'), { target: { value: '2026-08-08' } })
     })
     expect(
       await screen.findByText(paragrafo(/dal 07\/08\/2026 al 08\/08\/2026: 2 giornate con ordini su 2/i))
@@ -270,8 +271,8 @@ describe('Statistiche per periodo', () => {
     await m.vai('periodo')
     await screen.findByLabelText('Dal giorno')
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Al giorno'), { target: { value: '2026-08-08' } })
     })
     expect(
       await screen.findByText(paragrafo(/dal 08\/08\/2026 al 08\/08\/2026: 1 giornata con ordini su 1/i))
@@ -290,10 +291,10 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal')
+    await screen.findByLabelText('Dal giorno')
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Al giorno'), { target: { value: '2026-08-08' } })
     })
     const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
     // Venti amari battono quindici negroni, a pezzi.
@@ -310,10 +311,10 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal')
+    await screen.findByLabelText('Dal giorno')
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Dal giorno'), { target: { value: '2026-08-08' } })
+      fireEvent.change(screen.getByLabelText('Al giorno'), { target: { value: '2026-08-08' } })
     })
     const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
     await user.click(within(lista).getByRole('button', { name: 'Ordina per incasso' }))
