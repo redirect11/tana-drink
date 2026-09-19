@@ -61,7 +61,10 @@ vi.mock('../../src/lib/api.js', () => {
     createInventoryItem: vi.fn((x) => Promise.resolve({ id: 'nuovo', ...x })),
     updateInventoryItem: vi.fn(() => Promise.resolve({})),
     deleteInventoryItem: vi.fn(() => Promise.resolve()),
-    loadStock: vi.fn(() => Promise.resolve({})),
+    // COME QUELLO VERO (BUG-109): torna l'articolo già aggiornato, senza
+    // promessa. Un finto che risponde con una Promise nasconderebbe proprio
+    // il difetto che si sta sorvegliando.
+    loadStock: vi.fn((item, qty) => ({ ...item, stock: (Number(item?.stock) || 0) + qty })),
     receiveBottles: vi.fn(() => Promise.resolve({})),
     adjustStock: vi.fn(() => Promise.resolve({})),
     fetchStockMovements: vi.fn(() => Promise.resolve([])),
@@ -544,6 +547,28 @@ describe('carico e rettifica si scrivono nell’unità che si ha in mano', () =>
     await user.click(screen.getByRole('button', { name: /Conferma carico/ }))
     await waitFor(() => expect(loadStock).toHaveBeenCalled())
     expect(loadStock.mock.calls.at(-1)[1]).toBeCloseTo(2.5, 6)
+    // E prende l'ARTICOLO, non il suo id: quello che serve a scrivere chi
+    // chiama ce l'ha già, e rileggerlo era una delle attese di BUG-109.
+    expect(loadStock.mock.calls.at(-1)[0]).toMatchObject({ id: 'campari' })
+  })
+
+  // ── IL CARICO SI VEDE SUBITO (BUG-109) ────────────────────────────
+  // Daniele, 18/09/2026: «se inserisco un carico non viene visualizzato
+  // subito, sembra che non ho premuto il tasto; poi ricarico la pagina e mi
+  // trovo i carichi per ogni volta che ho cliccato». La finestrella
+  // aspettava quattro giri di rete, e con la linea che non passa non
+  // tornava: si ripremeva, e ogni pressione accodava un carico.
+  it('la giacenza nuova compare subito, senza rileggere il magazzino', async () => {
+    const user = userEvent.setup()
+    const { fetchInventoryItems } = await import('../../src/lib/api.js')
+    await apriCarico(user)
+    fetchInventoryItems.mockClear()
+    await user.type(screen.getByLabelText(/Quanto aggiungi/), '2')
+    await user.click(screen.getByRole('button', { name: /Conferma carico/ }))
+    // La finestrella si chiude nell'istante del tocco…
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Conferma carico/ })).toBeNull())
+    // …e il magazzino non si rilegge: il numero nuovo è composto in memoria.
+    expect(fetchInventoryItems).not.toHaveBeenCalled()
   })
 
   it('anche la rettifica: si conta quello che resta nella bottiglia', async () => {
