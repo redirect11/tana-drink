@@ -22,7 +22,7 @@ import '@testing-library/jest-dom/vitest'
 // Quattordici giorni tondi: 1500 ml consumati fanno 750 ml a settimana.
 const APERTA = new Date(Date.now() - 14 * 86400000).toISOString()
 
-const stato = { aperta: null, storico: [], impostazioni: {} }
+const stato = { aperta: null, storico: [], impostazioni: {}, movimenti: [] }
 
 vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: (cb) => {
@@ -36,7 +36,7 @@ vi.mock('../../src/lib/api.js', () => ({
   salvaRimanenza: vi.fn(),
   closeStockCount: vi.fn(),
   fetchStockCounts: vi.fn(async () => stato.storico),
-  fetchLoadMovementsSince: vi.fn(async () => []),
+  fetchStockMovementsSince: vi.fn(async () => stato.movimenti),
 }))
 
 import StockCountPanel from '../../src/components/StockCountPanel.jsx'
@@ -50,6 +50,7 @@ beforeEach(() => {
   stato.aperta = null
   stato.storico = []
   stato.impostazioni = {}
+  stato.movimenti = []
 })
 
 describe('l’inventario in corso', () => {
@@ -153,6 +154,32 @@ describe('l’inventario in corso', () => {
     render(<StockCountPanel />)
     expect(await screen.findByRole('button', { name: /Apri l’inventario/ })).toBeInTheDocument()
     expect(document.body.textContent).toMatch(/ne parte subito un altro/)
+  })
+})
+
+// BUG-111, la foto di Flavio del 22/09/2026: «DEP −0,1 · ACQ 0,2» sul 400
+// Conigli, dove lo 0,2 era la rettifica di un inventario. Gli acquisti sono
+// solo merce comprata; la modifica del contenuto reale sposta il DEP.
+describe('DEP e ACQ di un inventario aperto', () => {
+  it('ACQ solo dagli acquisti, e il contenuto reale corretto sposta il DEP', async () => {
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [
+        { item_id: 'gin', name: '400 Conigli Gin', unit: 'pz', package_size: 500, cost: 28, vat: 22, dep: -0.1, rim: null },
+        { item_id: 'lete', name: 'Acqua Lete', unit: 'pz', package_size: 500, cost: 0.17, vat: 22, dep: 66, rim: null },
+      ],
+    }
+    stato.movimenti = [
+      { item_id: 'gin', type: 'load', qty: 0.2, unit: 'pz', reason: 'conta' },
+      { item_id: 'lete', type: 'unload', qty: 39, unit: 'pz', reason: 'rettifica' },
+      { item_id: 'lete', type: 'load', qty: 6, unit: 'pz', reason: 'ordine fornitore' },
+    ]
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    const riga = (nome) => screen.getByText(nome).closest('.inv-row').textContent
+    expect(riga('400 Conigli Gin')).toMatch(/DEP -0,1 pz · ACQ 0 pz/)
+    expect(riga('Acqua Lete')).toMatch(/DEP 27 pz · ACQ 6 pz/)
   })
 })
 

@@ -6,12 +6,18 @@ import {
   salvaRimanenza,
   closeStockCount,
   fetchStockCounts,
-  fetchLoadMovementsSince,
+  fetchStockMovementsSince,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
-import { stockCountCompute, giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
+import {
+  stockCountCompute,
+  giorniDiConta,
+  consumoSettimanale,
+  movimentiDellInventario,
+  depositoDellaRiga,
+} from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
@@ -84,12 +90,12 @@ export default function StockCountPanel() {
         getOpenStockCount(),
         fetchStockCounts({ limit: 15 }),
       ])
-      // ACQ live: carichi registrati dopo l'apertura della conta.
+      // ACQ e rettifiche live: i movimenti dopo l'apertura, ognuno nella
+      // sua colonna (BUG-111 — vedi movimentiDellInventario).
       if (oc) {
-        const loads = await fetchLoadMovementsSince(oc.started_at).catch(() => [])
-        const acqByItem = {}
-        for (const m of loads) acqByItem[m.item_id] = (acqByItem[m.item_id] || 0) + m.qty
-        oc.lines = oc.lines.map((l) => ({ ...l, acq: acqByItem[l.item_id] || 0 }))
+        const movimenti = await fetchStockMovementsSince(oc.started_at).catch(() => [])
+        const { acq, rett } = movimentiDellInventario(movimenti, oc.lines)
+        oc.lines = oc.lines.map((l) => ({ ...l, acq: acq[l.item_id] || 0, rett: rett[l.item_id] || 0 }))
         setRims(Object.fromEntries(oc.lines.map((l) => [l.item_id, l.rim ?? ''])))
       }
       setOpen(oc)
@@ -211,7 +217,7 @@ export default function StockCountPanel() {
                   <div className="grow">
                     <div className="inv-name">{l.name}</div>
                     <div className="muted small">
-                      DEP {formatQty(l.dep, l.unit)} · ACQ {formatQty(l.acq, l.unit)}
+                      DEP {formatQty(depositoDellaRiga(l), l.unit)} · ACQ {formatQty(l.acq, l.unit)}
                       {l.cons != null && (
                         <>
                           {' · '}CONS <strong>{formatQty(l.cons, l.unit)}</strong>

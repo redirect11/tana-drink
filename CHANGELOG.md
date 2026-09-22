@@ -13,6 +13,10 @@
 - **Le rimanenze si salvano mentre le scrivi.** Il tasto «Salva bozza» non
   c'è più: si può smettere di contare e riprendere più tardi, anche da un
   altro dispositivo.
+- **Nell'inventario, ACQ conta solo la merce comprata**: il carico diretto
+  e la consegna di un ordine fornitore. Prima ci finivano anche le
+  correzioni dell'inventario precedente. Se durante l'inventario si
+  corregge il contenuto reale di un prodotto, cambia il DEP.
 
 ## 1.6.0
 
