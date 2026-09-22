@@ -4820,3 +4820,95 @@ bugs:
     test_cases:
       - tests/unit/stampanteCheNonRisponde.test.js
 
+  - id: BUG-110
+    title: "La chiusura dell'inventario si fermava a meta', e i conteggi scritti andavano persi"
+    area: "src/lib/api.js (closeStockCount, salvaRimanenza), src/components/StockCountPanel.jsx"
+    severity: critica
+    priority: P1
+    description: >
+      Segnalato da Flavio il 22/09/2026, con le foto, dopo il primo
+      inventario completo fatto dal telefono la sera del 21/09: «il Gin 400
+      Conigli mi appare DEP -0,1 e ACQ 0,2», «l'acqua l'ho contata 27 e 26,
+      ma il DEP mi porta 66 e 125», «lo Jagermeister l'ho contato 0,9 e
+      nelle scorte vedo ancora 3,16». In produzione girava la 1.6.0.
+      COSA DICONO I DATI DI PRODUZIONE (letti il 22/09, sola lettura): c'e'
+      UN solo inventario, aperto alle 20:03 del 21/09, e risulta ANCORA
+      APERTO con zero rimanenze salvate. Alle 21:48 la chiusura e' partita e
+      ha allineato i prodotti in ordine alfabetico, da «400 Conigli Gin» a
+      «Fever Tree Indian» (riga 154 di 403, 62 rettifiche), poi dopo 27
+      secondi si e' fermata. Da «Fever Tree Mediterranea» in giu' non e'
+      stato allineato niente, Jagermeister compreso. L'«inventario nuovo»
+      che Flavio vedeva era lo stesso di prima, ricaricato vuoto: i DEP 66 e
+      125 sono le giacenze delle 20:03, e l'ACQ 0,2 del gin e' la rettifica
+      della chiusura stessa (quella parte e' BUG-111).
+      LA CAUSA SONO DUE SCELTE DI COSTRUZIONE, non un dato storto (nessun
+      prodotto era da convertire):
+      1) la chiusura scriveva UN PRODOTTO ALLA VOLTA, aspettando il server a
+      ogni giacenza e a ogni movimento (circa mezzo secondo a prodotto), e
+      il segno «chiuso» arrivava per ultimo. Una pagina interrotta a meta' —
+      l'app in secondo piano, lo schermo bloccato, la rete che salta: sul
+      telefono basta mandare una foto — lasciava il magazzino mezzo
+      allineato e l'inventario aperto, senza che da fuori si vedesse il
+      confine;
+      2) le rimanenze stavano SOLO SULLO SCHERMO fino alla chiusura (o a
+      «Salva bozza», che nessuno si ricorda di premere): interrotta la
+      chiusura, i numeri non esistevano piu' da nessuna parte.
+      LA CORREZIONE: la chiusura e' UN writeBatch — giacenze, movimenti di
+      rettifica, il segno «chiuso» e l'apertura del prossimo inventario —
+      che si registra subito sul dispositivo e parte in sottofondo: o arriva
+      tutto o niente, e se la pagina muore riparte alla riapertura. Tutti i
+      controlli (un prodotto ancora nella forma vecchia) si fanno PRIMA di
+      scrivere. Il prossimo inventario nasce nello stesso pacchetto con DEP
+      uguale alla rimanenza appena contata, e con lo stesso orario dei
+      movimenti di rettifica, che quindi non ricadono nel periodo nuovo.
+      Il tetto delle 500 scritture per pacchetto, che Firestore aveva, e'
+      stato tolto da Google; resta quello dei 10 MB, lontanissimo.
+      Le rimanenze si salvano mentre si scrivono, una voce alla volta, in
+      una mappa `rimanenze` sul documento dell'inventario (mezzo secondo
+      dopo l'ultima cifra, o subito all'uscita dal campo); «Salva bozza»
+      non serve piu' ed e' sparito. In lettura la mappa vince sulla riga.
+      I DATI DI PRODUZIONE si sistemano a parte, col via libera e un backup:
+      i conteggi dalla «F» in giu' vanno rifatti, perche' non sono mai
+      arrivati sul database.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, hotfix]
+    test_cases:
+      - tests/unit/chiusuraInventario.test.js
+      - tests/component/StockCountPanel.test.jsx
+      - tests/unit/scritturaMagazzino.test.js
+
+  - id: BUG-111
+    title: "Nell'inventario ACQ contava anche le rettifiche, e la modifica del contenuto reale non spostava il DEP"
+    area: "src/lib/warehouse.js (movimentiDellInventario, countLineCons), src/components/StockCountPanel.jsx"
+    severity: grave
+    priority: P1
+    description: >
+      Segnalato da Flavio il 22/09/2026, con la foto del 400 Conigli Gin
+      dopo l'inventario: «DEP -0,1 · ACQ 0,2», dove la rimanenza vera era
+      0,1. Lo 0,2 era la rettifica scritta dalla chiusura dell'inventario,
+      contata come merce comprata. Flavio: «sul nuovo inventario dovrebbero
+      apparire 0 acquisti, che poi aumentano quando carico prodotti da un
+      ordine a fornitore consegnato o dal carico diretto; se invece modifico
+      il contenuto reale, mi modifica il valore del deposito».
+      LA CAUSA: la colonna ACQ sommava OGNI movimento di entrata dopo
+      l'apertura (`type === 'load'`), qualunque fosse il motivo — carico,
+      consegna, ma anche le rettifiche a mano e quelle di un inventario — e
+      ignorava del tutto le uscite, quindi un carico tolto lasciava l'ACQ
+      gonfio.
+      LA CORREZIONE (`movimentiDellInventario`): ACQ somma, col segno, solo
+      carico diretto, consegna di un ordine fornitore e fattura fornitore;
+      le modifiche del contenuto reale (`rettifica`) vanno in una colonna a
+      parte che si somma al DEP a schermo e nel consumo; le rettifiche di
+      chiusura e le vendite non toccano nessuna delle due — le vendite sono
+      il consumo, che l'inventario ricava da DEP + ACQ − RIM.
+      Il DEP -0,1 del gin e i 66/125 delle acque invece erano BUG-110:
+      l'inventario non si era mai chiuso.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, hotfix]
+    test_cases:
+      - tests/unit/warehouse.test.js
+      - tests/component/StockCountPanel.test.jsx
