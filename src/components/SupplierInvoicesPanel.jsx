@@ -29,7 +29,8 @@ import {
   prezzoDiverso,
   rigaDaProdotto,
   righeDaOrdine,
-  fettaDellaFattura,
+  fetteDellaFattura,
+  elencoOrdini,
   fetteCollegabili,
   fattureSenzaFetta,
   fatturaGenerata,
@@ -130,7 +131,7 @@ export default function SupplierInvoicesPanel() {
       invoices.filter((i) => {
         if (supplierFilter !== 'all' && i.supplier_id !== supplierFilter) return false
         if (onlyUnpaid && i.paid) return false
-        if (soloSenzaOrdine && i.order_id) return false
+        if (soloSenzaOrdine && elencoOrdini(i).length > 0) return false
         if (soloSenzaAllegato && allegatoDi(i)) return false
         return true
       }),
@@ -158,11 +159,11 @@ export default function SupplierInvoicesPanel() {
   }
 
   // Attaccare e staccare sono lo stesso gesto al contrario, e passano dalla
-  // stessa strada: `order_id` a null stacca.
-  function collega(fattura, order_id) {
+  // stessa strada: `order_id` a null li stacca tutti, `stacca` ne toglie uno.
+  function collega(fattura, order_id, stacca = false) {
     setCollegaPer(null)
     setError(null)
-    collegaFatturaAFetta(fattura.id, { order_id }).then(
+    collegaFatturaAFetta(fattura.id, { order_id, stacca }).then(
       (agg) => setInvoices((prev) => prev.map((i) => (i.id === agg.id ? agg : i))),
       (e) => setError(e.message)
     )
@@ -415,7 +416,7 @@ export default function SupplierInvoicesPanel() {
               ordini={ordini}
               suppliers={suppliers}
               onCollega={() => setCollegaPer(inv)}
-              onScollega={() => collega(inv, null)}
+              onScollega={(order_id) => collega(inv, order_id, true)}
             />
             {/* IL DOCUMENTO VERO (REQ-MAG-033). «Allegare = il documento
                 vero (foto/PDF), non solo un numero» (l'utente, 20/08): il
@@ -506,12 +507,31 @@ function etichettaFetta(fetta) {
 // L'ambra e non il rosso: un documento senza ordine non è un errore, è
 // lavoro che manca (DESIGN.md — il rosso qui vuol dire annullato).
 function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega }) {
-  const fetta = fettaDellaFattura(fattura, ordini, { suppliers })
+  // UN DOCUMENTO PUÒ COPRIRE PIÙ ORDINI (19/09/2026). Flavio: «sotto una
+  // fattura devo poter aggiungere un ordine, e poi dopo ci deve essere
+  // aggiungi altro ordine oppure scollega gli ordini». Nel weekend la merce
+  // arriva senza carta e il lunedì il fornitore fa un documento solo per
+  // tutto quello che ha portato.
+  const righe = fetteDellaFattura(fattura, ordini, { suppliers })
   const quale = nomeDocumento(fattura)
+  if (righe.length === 0) {
+    return (
+      <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
+        <span className="badge-low">senza ordine</span>
+        <button
+          className="btn ghost small"
+          aria-label={`Collega a un ordine il documento di ${quale}`}
+          onClick={onCollega}
+        >
+          🔗 Collega a un ordine
+        </button>
+      </div>
+    )
+  }
   return (
-    <div className="row between" style={{ alignItems: 'center', gap: 8, margin: '4px 4px 0' }}>
-      {fattura.order_id ? (
-        <>
+    <div style={{ margin: '4px 4px 0' }}>
+      {righe.map(({ order_id, fetta }) => (
+        <div className="row between" style={{ alignItems: 'center', gap: 8 }} key={order_id}>
           <span className="muted small grow" style={{ minWidth: 0 }}>
             {/* In mano ci sono gli ultimi venticinque ordini: di uno più
                 vecchio si sa che il legame c'è, non cosa contiene — e dirlo
@@ -520,24 +540,23 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
           </span>
           <button
             className="btn ghost small"
-            aria-label={`Scollega l’ordine dal documento di ${quale}`}
-            onClick={onScollega}
+            aria-label={`Scollega questo ordine dal documento di ${quale}`}
+            onClick={() => onScollega(order_id)}
           >
             Scollega
           </button>
-        </>
-      ) : (
-        <>
-          <span className="badge-low">senza ordine</span>
-          <button
-            className="btn ghost small"
-            aria-label={`Collega a un ordine il documento di ${quale}`}
-            onClick={onCollega}
-          >
-            🔗 Collega a un ordine
-          </button>
-        </>
-      )}
+        </div>
+      ))}
+      {/* «Aggiungi un altro ordine» e non «Collega»: qui ce n'è già almeno
+          uno, e la parola deve dire che si somma invece di sostituire. */}
+      <button
+        className="btn ghost small"
+        style={{ marginTop: 4 }}
+        aria-label={`Aggiungi un altro ordine al documento di ${quale}`}
+        onClick={onCollega}
+      >
+        ＋ Aggiungi un altro ordine
+      </button>
     </div>
   )
 }
@@ -753,7 +772,7 @@ function InvoiceForm({ suppliers, busy, fattura = null, onCancel, onSave }) {
   // l'ordine È la coppia ordine + fornitore (REQ-MAG-031). La regola sta in
   // `modificaAmmessa` e qui si spegne il campo, così non si spiega dopo con
   // un errore quello che si può impedire prima.
-  const fornitoreBloccato = modifica && !!fattura.order_id
+  const fornitoreBloccato = modifica && elencoOrdini(fattura).length > 0
 
   function submit(e) {
     e.preventDefault()
@@ -900,7 +919,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
   const [righe, setRighe] = useState([])
   // L'ordine da cui si riprendono le righe È l'ordine a cui il documento
   // resta agganciato: si parte da quello che ha già, se ce l'ha.
-  const [ordineScelto, setOrdineScelto] = useState(fattura.order_id || '')
+  const [ordineScelto, setOrdineScelto] = useState(elencoOrdini(fattura)[0] || '')
   // Col magazzino ancora da travasare il carico non si può fare (BUG-029),
   // ma le righe sì: la casella parte spenta e resta spenta.
   const [carica, setCarica] = useState(!bloccato)

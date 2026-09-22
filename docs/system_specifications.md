@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 200 | fatto e coperto dai test |
+| ✅ | 202 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 20 | da fare |
+| ⬜ | 22 | da fare |
 | 🗑 | 7 | non più valido |
 
-**242 voci** in tutto. **215** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**246 voci** in tutto. **217** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -46,14 +46,14 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 11 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 3 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -781,6 +781,24 @@ Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia è che l
 
 **Dove**: `src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-MENU-016 — La ricetta ritoccata su un conto si salva come voce nuova del menù
+
+Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come nuova" deve apparire, da aggiungere ai due gia' presenti. Quando lo clicco mi si apre la schermata, che gia' esiste da qualche parte, di creazione nuova ricetta gia' popolata con le modifiche fatte al drink che ho appena modificato. Quando poi clicco salva in questa schermata torno alla schermata della coda degli ordini».
+
+DA DOVE SI PARTE: dal dettaglio di un conto si tocca una riga e si apre il ritocco per-item (`CustomDrinkForm`, REQ-POS-014) — si cambia il nome, il prezzo, e si sostituiscono o si tolgono gli ingredienti. Quel ritocco vale per QUELLA riga di QUEL conto e muore li'. Se e' venuto bene, rifarlo nel menu' vuol dire ribattere a mano tutti gli ingredienti.
+
+IL TERZO TASTO, «✨ Salva come nuova ricetta», sta SOTTO gli altri due e non accanto: «Annulla» e «Salva» chiudono il gesto su questa riga, questo porta in un'altra schermata — accanto a «Salva» si toccherebbe per sbaglio proprio quando si ha fretta. Compare solo IN MODIFICA e solo se chi apre il form sa dove portare: creando un prodotto libero da zero non c'e' ancora niente da salvare altrove.
+
+QUELLO CHE PASSA SONO LE MODIFICHE, non i valori di partenza: nome, prezzo e ricetta come sono NEL FORM in quel momento. Passare `initial` farebbe nascere il prodotto nuovo identico a quello di catalogo, cioe' senza il ritocco che e' la ragione per cui lo si sta salvando. I due tasti compongono la stessa cosa (`composto()`), se no il prodotto nuovo nascerebbe diverso dal drink appena ritoccato.
+
+LA SCHERMATA E' QUELLA CHE C'E' GIA': `DrinkForm`, la stessa del Menu', aperta sopra il conto e compilata coi dati di partenza. Il magazzino che le serve si legge quando si apre, non all'ingresso nel conto, dove non lo guarderebbe nessuno. Il nome arriva com'era: se il drink si chiamava «Negroni» il prodotto nuovo si chiamera' «Negroni» finche' non gli si da' un nome suo, e a deciderlo e' chi salva.
+
+IL TASTO NON TOCCA LA RIGA DEL CONTO: manda altrove e basta. Il ritocco sulla riga si conferma con «Salva», che e' un gesto suo.
+
+SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito quello che era venuto a fare.
+
+**Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
+
 #### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
 
 RIPENSATO IL 12/09/2026:
@@ -1494,6 +1512,16 @@ SI AGGANCIA E SI SGANCIA DAI DUE LATI. Dalla fetta (Fornitori -> Ordini) si sceg
 CADUTA LA CONDIZIONE «SOLO ORDINI GIA' CONSEGNATI» che filtrava gli ordini riprendibili: una proforma arriva anche prima della merce, e allora quelle righe sono proprio quelle da copiare. La fetta ancora «richiesta» si collega, ma non conta come buco: li' non e' arrivato niente, e segnalarla insegnerebbe a ignorare il segnale.
 
 NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038): con un ordine per fornitore la FETTA non esiste piu' come cosa a se', perche' l'ordine ha gia' un fornitore solo. Il legame diventa quindi FATTURA-ORDINE, che e' la forma semplice di quello che questa voce descrive. Restano validi e vanno riusati: la guardia che vieta di agganciare la fattura di un fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione, e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e fattura senza ordine. E IL GANCIO DIVENTA PORTANTE: senza fattura collegata un ordine non sa se e' stato pagato, perche' «pagato» e' una domanda alla fattura e non un dato dell'ordine (REQ-MAG-038). Da qui due conseguenze su questa voce. La prima: «SULL'ORDINE NON SI SCRIVE NIENTE» vale ancora per i DATI — il legame resta su `order_id`, un campo solo, sulla fattura — ma NON piu' per il diario: collegare, scollegare e generare un documento lasciano una riga nella `storia` dell'ordine, e il rischio dei due scrittori si accetta perche' cio' che si perderebbe e' una riga di diario, non un numero. La seconda: un ordine senza documento non e' «da pagare», e' un ordine di cui non si sa niente — e va detto cosi', invece di darlo per non pagato.
+
+UN DOCUMENTO PUO' COPRIRE PIU' ORDINI (19/09/2026). Flavio, in un vocale: «nello scadenzario si dovrebbe poter aggiungere a un documento piu' di un ordine. In questo momento, se carico un ordine in un documento, mi dice di scollegare l'ordine. Soprattutto nel weekend io faccio un ordine, me lo consegnano, ma non mi fanno il proforma perche' l'azienda e' chiusa e mi fanno semplicemente il piacere di portarmi la roba; il giorno dopo faccio un altro ordine, e il lunedi' mi fanno un unico proforma o un'unica fattura. Quindi sotto una fattura, alla domanda aggiungi ordine, io aggiungo un ordine, e poi dopo ci deve essere aggiungi altro ordine oppure scollega gli ordini».
+
+COSA CAMBIA: il campo diventa una LISTA, `order_ids`. Prima era `order_id`, uno solo, e la regola «questo documento e' gia' collegato a un altro ordine» rifiutava il secondo aggancio: l'unica strada era scollegare il primo, cioe' scegliere quale dei due ordini raccontare — e l'altro tornava a risultare senza documento.
+
+QUELLO CHE RESTA UNO-A-UNO E' L'ALTRO VERSO: una fetta ha al massimo un documento. Due fatture sulla stessa merce vorrebbero dire pagarla due volte, ed e' la riga che `aggancioAmmesso` continua a tenere. A SCHERMO: sotto il documento c'e' l'ELENCO degli ordini collegati, ognuno col suo «Scollega», e in fondo «＋ Aggiungi un altro ordine» — non «Collega», perche' la parola deve dire che si somma invece di sostituire. Dal lato dell'ordine, «Scollega» toglie SOLO quell'ordine: una schermata che ne guarda uno non deve toglierli in blocco.
+
+IL CAMPO VECCHIO RESTA SCRITTO, col primo della lista, e non e' una dimenticanza: in produzione gira una versione che legge `order_id`, e toglierlo di colpo le farebbe sparire i legami sotto le mani. In lettura `elencoOrdini` normalizza i due casi, cosi' i documenti scritti prima continuano a raccontare il loro ordine senza nessuna migrazione. Si potra' smettere di scrivere il campo vecchio quando la 1.7.0 sara' dappertutto.
+
+LA VERIFICA NON PASSA PIU' DA UNA QUERY PER ORDINE: il campo su cui filtrare e' diventato una lista e i documenti vecchi hanno solo quello singolo — una query su uno dei due ne perderebbe meta'. Si chiedono i documenti di QUEL fornitore e si filtra in memoria: sono pochi, ed e' un gesto d'ufficio.
 
 **Dove**: `src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx` · **Lo dimostrano**: `tests/unit/legameFattura.test.js`, `tests/unit/agganciaFattura.test.js`, `tests/component/FatturaDellaFetta.test.jsx`
 
@@ -2293,6 +2321,30 @@ La home dello staff di sala è la coda ordini, identica a quella del gestionale:
 
 **Dove**: `src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/StaffDrawer.test.jsx`
 
+#### REQ-STAFF-016 — Chi apre la cassa: si sceglie fra gli admin, senza rifare il login
+
+Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei sottoutenti della cassa. Flavio e Vittorio sarebbero i due sottoutenti admin. Una volta loggato admin, all'apertura della cassa il sistema dovrebbe chiedere quale sottoutente sta gestendo la cassa … in modo da non dover fare il login ogni volta che l'app viene aperta … ad ogni apertura di cassa dell'admin, gia' con login automatico, verra' chiesto se sta aprendo Flavio o Vittorio».
+
+IL PROBLEMA VERO: il tablet del banco resta collegato con un account solo e non lo si slogga mai — e' quello che tiene in piedi il login automatico — ma a lavorarci sono due persone. Il nome in cima allo schermo e la firma della serata erano di chi aveva fatto il login mesi fa, non di chi c'era.
+
+NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione di Firebase resta quella dell'admin collegato: qui si sceglie soltanto CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero senza password vorrebbe dire o tenere in giro le credenziali degli altri, o aprire una strada per entrare in un account altrui: due porte che non si aprono per comodita'. E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si sceglie ha esattamente i permessi di chi ha fatto il login, quindi passare dall'uno all'altro non sposta niente di quello che si puo' fare. Un utente disattivato non si sceglie; un admin declassato smette di essere scelto anche sul tablet che se lo ricordava. Se un domani si volessero scegliere anche i bartender, quella sarebbe una decisione di sicurezza vera, da pensare a parte: per questo il filtro sta in un posto solo (`operatoriSelezionabili`).
+
+CHI E' ASSOCIATO A CHI SI DECIDE, E PER ACCOUNT (19/09/2026). All'inizio erano «tutti gli admin del locale», uguale per chiunque facesse il login; Daniele: «si deve decidere quali sono gli admin, anche perche' puo' essere Vittorio o io a fare il login, e li' sono altre associazioni». Il tablet del banco resta collegato con UN account, e chi ci lavora dipende da quale: l'elenco e' quindi una lista PER ACCOUNT, su settings/bar in `admin_associati` (uid di chi fa il login → uid degli admin che puo' scegliere). Sta li' e non su una collezione sua perche' le impostazioni sono gia' in cache: aprire la cassa non aspetta nessuna lettura.
+
+DUE REGOLE CHE NON SI SCAVALCANO. Una lista VUOTA o assente vale «tutti gli admin» e non «nessuno»: il locale che non decide niente non deve accorgersi che la cosa esiste. E CHI E' COLLEGATO C'E' SEMPRE, qualunque cosa dica la lista: e' il suo account, e un elenco che non contiene nemmeno chi lo sta guardando lascerebbe la cassa senza nessuno da scegliere. Le associazioni si sommano al filtro dei ruoli, non lo sostituiscono: un associato declassato resta fuori lo stesso.
+
+SI DECIDE IN UTENTI E RUOLI → «Chi apre la cassa», dove stanno gli account: un blocco per ogni admin, e sotto le pastiglie degli altri da accendere o spegnere. La propria non si spegne.
+
+DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto di ruoloLocale.js) e si porta dietro CHI ERA COLLEGATO: se al tablet si collega un altro account, la scelta di ieri sera non si eredita, se no si firma la serata col nome di chi non c'e'. L'ELENCO NON PUO' FAR ASPETTARE L'APERTURA: gli admin arrivano da una Cloud Function, lenta, e con la rete del locale che «risulta collegata ma non passa» non arriverebbe mai. Si mostra la cache (`staffFromCache`) e si rinfresca in sottofondo: aprire la cassa e' il primo gesto della serata e non aspetta niente.
+
+COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto (`opened_by`), e il nome in cima alla barra e' il suo.
+
+COSA CAMBIA DAVVERO, OGGI: la sessione di cassa risulta aperta da chi e' stato scelto (`opened_by`) e il nome in cima alla barra e' il suo. NON cambiano l'attribuzione dei conti battuti (`placed_by`), il nome sullo scontrino ne' il badge delle ore, che escono tutti dall'account collegato: rimetterli in riga e' REQ-STAFF-018.
+
+ANCORA DA FARE, e sono due requisiti loro: l'ASPETTO PER PERSONA (REQ-STAFF-017), che e' la seconda meta' della richiesta di Flavio, e L'ATTRIBUZIONE (REQ-STAFF-018). Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
+
+**Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
+
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
 Chiesto dall'utente il 19/08. Chi sta in sala VEDE a che punto sono le preparazioni — gli serve per sapere cosa portare — ma non le comanda: l'unico passo che può segnare è «servito», perché è lui a portare il drink al tavolo. Tutto il resto (prendere in carico, segnare pronto, tornare indietro, dividere una comanda, annullarla) è del banco.
@@ -2793,7 +2845,9 @@ LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in cor
 
 Chiesto da Flavio il 17/09/2026, in un vocale, guardando Statistiche → Per periodo: «mi appare questo counter dei giorni, che penso significhi 24 da oggi indietro di 24 giorni. Ma qui in realta' mi dovrebbe apparire un inizio periodo, fine periodo … cosi' riesco a vedere realmente la fascia di periodo che mi interessa, cosi' come puo' essere il giugno, cosi' come puo' essere il periodo di Natale, e vedere quindi quanto ho fatturato, quanto ho movimentato invece i prodotti di magazzino». A) IL PERIODO E' UN INTERVALLO DI DATE. Due caselle, «Dal» e «Al», in GIORNATE COMMERCIALI come tutto il resto dell'app: la nottata oltre la mezzanotte appartiene alla giornata in cui e' cominciata. Col contatore di prima giugno non si guardava — si guardavano «gli ultimi 108 giorni», che e' un'altra domanda.
 
-LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti. Le due caselle si chiamano «Dal» e «Al» e non «Dal giorno»/«Al giorno»: quelle sono piu' sotto, nel venduto per fascia oraria, e dicono un'altra cosa — due etichette uguali a schermo si scambiano per la stessa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
+LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti.
+
+UNA COPPIA DI DATE SOLA IN TUTTA LA SCHERMATA (19/09/2026). Il «venduto nella fascia oraria» ne aveva un'altra, nata quando il periodo qui sopra era un contatore di giornate: per chiedere «sabato scorso fra le 22 e l'una» bisognava dirlo li'. Da quando il periodo si sceglie da data a data quelle due caselle dicevano la stessa cosa in un altro posto, e chi le trovava non sapeva quale delle due comandasse: Daniele l'ha visto con una schermata in cui il periodo era impostato in alto e la fascia diceva «nessuna vendita», perche' guardava altrove. Adesso la fascia lavora sugli STESSI conti del resto della schermata e stringe soltanto l'ORA; vale anche in «Per serata», dove i conti sono quelli della cassa aperta e chiusa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
 
 SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse — venti amari da un euro battono quindici negroni a pezzi e perdono a incasso; di suo per pezzi, che e' la domanda di partenza. C) IL MAGAZZINO NEL PERIODO. «Quello che mi serve sapere dal magazzino e' quanto avevo di deposito, quanto ho acquistato, quanto ho consumato in un determinato periodo … e vorrei avere la stessa identica visualizzazione a lista». Un elenco nella forma della lista del magazzino (`inv-list`), coi numeri che si leggono da soli.
 
@@ -3142,6 +3196,36 @@ RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portat
 **Dove**: `scripts/certificato-stampante.js`
 
 ### Persone: ruoli, utenze, ore
+
+#### REQ-STAFF-017 — L'aspetto e' della persona, non del locale
+
+Chiesto da Flavio l'11/09/2026, nella stessa richiesta dei sottoutenti della cassa (REQ-STAFF-016): «le impostazioni dell'aspetto dovrebbero essere memorizzate per utente: tema, colori, tutto cio' che riguarda l'aspetto. Quando seleziono utente all'apertura cassa e non ho customizzazioni di aspetto, l'aspetto viene ereditato dall'utenza admin loggata. Se l'utente associato cambia le impostazioni d'aspetto, le impostazioni vengono memorizzate solo per quel sottoutente». Con parole sue: «Vittorio vuole lo sfondo nero mentre Flavio vuole lo sfondo bianco», e lavorano sullo stesso tablet.
+
+OGGI L'ASPETTO E' DEL LOCALE: `theme_staff` e `theme_client` stanno su settings/bar e valgono per tutti. Chi cambia il tema lo cambia a chiunque, anche al terminale dell'altro.
+
+COSA SERVE. Le preferenze d'aspetto diventano DELLA PERSONA scelta all'apertura della cassa (REQ-STAFF-016), con EREDITA': la persona che non ha deciso niente vede quello del locale, e solo quando tocca i colori nasce la sua copia. Serve anche la strada per tornare indietro, «rimetti come il locale»: se no la prima prova di un colore resta addosso per sempre.
+
+DUE COSE DA DECIDERE PRIMA DI SCRIVERE. (1) DOVE: una collezione per persona, che pero' va letta prima di disegnare, oppure dentro settings/bar in una mappa per uid, che e' gia' in cache e non fa aspettare niente. La seconda e' la stessa scelta fatta per le associazioni della cassa, e per lo stesso motivo. (2) CHI PUO' SCRIVERLA: la persona scelta non ha una sessione sua - chi e' collegato e' un altro admin - quindi la regola non puo' essere «solo il proprio documento», e va scritta guardando che siano tutti e due admin.
+
+IL TEMA DEL CLIENTE NON C'ENTRA: quello e' del locale e resta li'. Qui si parla solo di come vede il gestionale chi ci lavora.
+
+**Dove**: `src/lib/themes.js, src/App.jsx, src/components/ThemeSettings.jsx, src/lib/api.js`
+
+#### REQ-STAFF-018 — Conti, scontrino e ore li firma chi sta lavorando, non l'account collegato
+
+Nato controllando REQ-STAFF-016 il 19/09/2026, con Daniele: «quando si apre la cassa e l'utente loggato e' Flavio, e la apre Vittorio, che differenze ci sono?». La risposta, guardando il codice, e' che oggi ne cambiano poche: la sessione di cassa risulta aperta da Vittorio e il nome in barra e' il suo, ma tutto il resto resta di Flavio.
+
+COSA RESTA INDIETRO, e sono le tre cose che si guardano davvero. I CONTI BATTUTI: `placed_by` prende nome, email e ruolo dall'account collegato (OrderPosDetail, `placedBy()`), quindi l'iniziale accanto al numero d'ordine, la legenda della coda e lo storico dicono Flavio anche quando a battere e' Vittorio. E' il dato su cui si discute a fine serata: «questo conto chi l'ha aperto?».
+
+LO SCONTRINO: la riga dell'operatore esce da `impostaUtenteStampante`, alimentata dall'account collegato in App.jsx. BUG-088 aveva stabilito che quella riga dice CHI STA STAMPANDO, ed e' proprio quello che adesso sbaglia.
+
+LE ORE: il badge virtuale (`clockIn`) timbra l'entrata dell'account collegato, quindi le ore finiscono sulla persona sbagliata - e da li' esce una paga.
+
+COSA SERVE: chi e' stato scelto all'apertura della cassa diventa la persona che firma, in questi tre punti. Il ruolo resta quello del token (e' un permesso, non un'etichetta): si sostituiscono nome, email e uid.
+
+DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una riga in piu': si tocca il documento degli ORDINI, che e' il cuore della serata, e il badge delle ore, che diventa paga. Vanno decisi anche i casi di bordo: il conto aperto prima di cambiare persona resta firmato com'era, e il turno aperto da `clockIn` va chiuso e riaperto quando cambia chi lavora, oppure no?
+
+**Dove**: `src/components/OrderPosDetail.jsx (placedBy), src/App.jsx (impostaUtenteStampante, clockIn), src/pages/MenuPage.jsx`
 
 #### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
 

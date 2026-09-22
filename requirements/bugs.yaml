@@ -4747,6 +4747,55 @@ bugs:
     test_cases:
       - tests/unit/stampanteCheNonRisponde.test.js
 
+  - id: BUG-109
+    title: "Il carico di magazzino non compariva, e ogni pressione ne accodava uno"
+    area: "src/lib/api.js (loadStock), src/components/InventoryManager.jsx (doCarico)"
+    severity: grave
+    priority: P1
+    description: >
+      Daniele, 18/09/2026: «in Magazzino, se inserisco un carico non viene
+      visualizzato subito, anzi sembra che non ho premuto il tasto di carico;
+      ma poi vado a ricaricare la pagina e mi trovo i carichi per ogni volta
+      che ho cliccato sul tasto Carico».
+      LA CAUSA, ed e' la prima regola del progetto violata per intero: il
+      carico aspettava QUATTRO GIRI DI RETE prima di far vedere qualcosa —
+      una lettura dell'articolo, la scrittura della giacenza, la scrittura
+      del movimento, e una rilettura per tornare il risultato. Le due
+      scritture si risolvono solo con l'ACK DEL SERVER: con la linea del
+      locale che «risulta collegata ma non passa» non tornano mai. Quindi la
+      finestrella del carico restava aperta, la lista non si aggiornava, e
+      non compariva nessun errore: identico a non aver premuto.
+      IL DANNO NON ERA SOLO L'ATTESA. Chi carica ripreme, ed e' la cosa
+      giusta da fare davanti a un tasto che sembra non funzionare: ogni
+      pressione accodava un altro carico. Quando la rete tornava, Firestore
+      li mandava tutti, e al ricaricamento della pagina la giacenza era
+      quella di cinque carichi invece che di uno. Una giacenza gonfiata non
+      si vede: e' un numero plausibile, e resta li' fino all'inventario.
+      LA CURA (18/09/2026). `loadStock` diventa LOCAL-FIRST e prende
+      l'ARTICOLO invece del suo id — quello che serve a scrivere chi chiama
+      ce l'ha gia' in mano, e andarlo a rileggere era la prima delle attese.
+      Compone la giacenza nuova in memoria e la torna SUBITO; le due
+      scritture partono con `bgWrite`, e la giacenza si muove con
+      `increment`, commutativo e sicuro offline. La schermata chiude la
+      finestrella e sostituisce la riga nella lista senza rileggere il
+      magazzino (niente `load()`).
+      IL CONTROLLO DEL TRAVASO RESTA IN api.js, dove BUG-029 l'aveva messo:
+      si fa sull'articolo che arriva, che porta con se' `formaVecchia` e
+      `motivoNonMigrabile` — gli stessi segni che guarda `magazzinoBloccato`.
+      E' anche piu' robusto di prima: una rilettura che non torna non
+      protegge niente.
+      DA GUARDARE IN PRODUZIONE: le giacenze dei prodotti caricati nei
+      giorni scorsi possono essere gonfiate dai carichi ripetuti. Si
+      riconoscono da Magazzino → Movimenti, dove compaiono piu' carichi
+      identici ravvicinati, e si correggono con l'inventario.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, magazzino, offline]
+    test_cases:
+      - tests/unit/scritturaMagazzino.test.js
+      - tests/component/InventoryManagerCard.test.jsx
+
   - id: BUG-107
     title: "Una stampante che sparisce in silenzio non la scopriva nessuno, e i ganci dell'SDK erano sull'oggetto sbagliato"
     area: "src/lib/printer.js (battitoDellaStampante, avviaBattito, getPrinter)"

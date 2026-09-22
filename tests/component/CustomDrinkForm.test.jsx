@@ -35,6 +35,81 @@ function mount(onAdd = vi.fn()) {
 
 beforeEach(() => vi.clearAllMocks())
 
+// ── LA RICETTA RITOCCATA DIVENTA UNA VOCE DEL MENÙ (REQ-MENU-016) ────
+//
+// Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come
+// nuova" deve apparire … mi si apre la schermata di creazione nuova ricetta
+// già popolata con le modifiche fatte al drink che ho appena modificato».
+//
+// QUELLO CHE PASSA SONO LE MODIFICHE, non i valori di partenza: se si passa
+// `initial` il prodotto nuovo nascerebbe uguale a quello di catalogo, cioè
+// senza il ritocco che è la ragione per cui lo si sta salvando.
+describe('salva come nuova ricetta', () => {
+  const INIZIALE = {
+    name: 'Negroni',
+    price: 8,
+    recipe_items: [{ inventory_item_id: 'rum', name: 'Rum bianco', unit: 'ml', qty: 40 }],
+    note: '',
+  }
+
+  it('il tasto c’è solo modificando una ricetta', async () => {
+    render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={INIZIALE} onSaveAsNew={vi.fn()} />)
+    expect(await screen.findByRole('button', { name: /Salva come nuova ricetta/ })).toBeInTheDocument()
+  })
+
+  // Creando un prodotto libero da zero non c'è ancora niente da salvare
+  // altrove; e senza qualcuno che sappia dove portare, un tasto che non
+  // porta da nessuna parte è peggio di uno assente.
+  it('e non c’è creando un prodotto libero da zero', async () => {
+    render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} onSaveAsNew={vi.fn()} />)
+    await screen.findByRole('button', { name: /Ingredienti/ })
+    expect(screen.queryByRole('button', { name: /Salva come nuova ricetta/ })).toBeNull()
+  })
+
+  // Senza qualcuno che sappia dove portare, un tasto che non porta da
+  // nessuna parte è peggio di uno assente.
+  it('né senza qualcuno che sappia dove portare', async () => {
+    render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={INIZIALE} />)
+    // In modifica gli ingredienti sono già aperti: si aspetta la riga della
+    // ricetta, che compare quando il magazzino è arrivato.
+    await screen.findByLabelText('Quantità Rum bianco')
+    expect(screen.queryByRole('button', { name: /Salva come nuova ricetta/ })).toBeNull()
+  })
+
+  it('porta con sé le modifiche appena fatte, non il drink di partenza', async () => {
+    const user = userEvent.setup()
+    const onSaveAsNew = vi.fn()
+    render(
+      <CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={INIZIALE} onSaveAsNew={onSaveAsNew} />
+    )
+    const nome = screen.getByLabelText('Nome *')
+    await user.clear(nome)
+    await user.type(nome, 'Negroni sbagliato')
+    const prezzo = screen.getByLabelText('Prezzo (€) *')
+    await user.clear(prezzo)
+    await user.type(prezzo, '9')
+    await user.click(screen.getByRole('button', { name: /Salva come nuova ricetta/ }))
+    expect(onSaveAsNew).toHaveBeenCalledWith({
+      name: 'Negroni sbagliato',
+      price: 9,
+      recipe_items: [{ inventory_item_id: 'rum', name: 'Rum bianco', unit: 'ml', qty: 40 }],
+      note: null,
+    })
+  })
+
+  // Il tasto manda ALTROVE: la riga del conto non si tocca, se no si
+  // ritroverebbe modificata senza averlo chiesto.
+  it('e non salva niente sulla riga del conto', async () => {
+    const user = userEvent.setup()
+    const onAdd = vi.fn()
+    render(
+      <CustomDrinkForm onCancel={vi.fn()} onAdd={onAdd} initial={INIZIALE} onSaveAsNew={vi.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Salva come nuova ricetta/ }))
+    expect(onAdd).not.toHaveBeenCalled()
+  })
+})
+
 describe('prodotto libero', () => {
   it('bastano nome e prezzo: nessun ingrediente, nessuno scarico', async () => {
     const user = userEvent.setup()

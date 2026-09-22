@@ -39,6 +39,7 @@ import {
   giacenzaNonNegativa,
   articoloNormalizzato,
   patchNormalizza,
+  motivoNonMigrabile,
   caricoDaConfezioni,
   prodottoDaRigaOrdine,
 } from './inventory.js'
@@ -57,6 +58,7 @@ import { entraInAssortimento, esceDaAssortimento } from './statoAssortimento.js'
 import { variazioneDiPrezzo, prezzoCambiato } from './storicoPrezzi.js'
 import {
   aggancioAmmesso,
+  elencoOrdini,
   righeDaOrdine,
   cambiFattura,
   modificaAmmessa,
@@ -904,6 +906,18 @@ function articoloScrivibile(snap) {
 }
 
 // Per chi ne scrive uno solo: rilegge, controlla, e restituisce l'articolo.
+// LO STESSO CONTROLLO DI `articoloScrivibile`, ma su un articolo che chi
+// chiama ha già in mano — quindi senza andare in rete. L'articolo è quello
+// che legge l'app (passato da `articoloNormalizzato`), e i due segni che
+// porta con sé dicono esattamente quello che il documento grezzo direbbe:
+// `formaVecchia` che sul database è ancora scritto alla vecchia maniera,
+// `motivoNonMigrabile` che nemmeno la lettura lo sa portare a pezzi.
+function articoloScrivibileInMano(item) {
+  if (!item?.id) throw new Error('Prodotto non trovato')
+  if (item.formaVecchia || motivoNonMigrabile(item)) throw new Error(ATTESA_TRAVASO)
+  return item
+}
+
 async function leggiArticoloPerScrittura(ref) {
   const cur = articoloScrivibile(await getDoc(ref))
   if (!cur) throw new Error('Prodotto non trovato')
@@ -998,29 +1012,55 @@ function nonEsistePiu(errore) {
   return /not[_\s-]?found|no entity to update/i.test(String(errore?.message || ''))
 }
 
-// Carico merce: incrementa lo stock e registra un movimento (atomico).
-// `qty` è già in unità base; può essere negativo per uno scarico manuale.
-export async function loadStock(itemId, qty, { reason = 'carico' } = {}) {
-  const ref = doc(db, 'inventory_items', itemId)
-  // UN CARICO SI SOMMA A QUELLO CHE C'È, ANCHE SOTTO ZERO (Flavio,
-  // 12/09/2026): −1 più cinque pezzi fa quattro, perché il meno è merce già
-  // bevuta e non ancora caricata, e questo carico è quello che la chiude.
-  // Fino al 12/09 il carico ripartiva da zero (BUG-007). Lo scarico a mano,
-  // dall'altra parte, non può scavare sotto lo zero.
-  const cur = await leggiArticoloPerScrittura(ref)
+// ── CARICO MERCE, SENZA ASPETTARE LA RETE (BUG-109) ──────────────────
+//
+// Prende l'ARTICOLO, non il suo id: quello che serve a scrivere — giacenza
+// di partenza, nome, unità — chi chiama ce l'ha già in mano, e andarlo a
+// rileggere era la prima delle tre attese che bloccavano il gesto.
+//
+// PRIMA ERANO QUATTRO GIRI DI RETE prima di far vedere qualcosa: una
+// lettura, due scritture e una rilettura, tutte attese. Con la linea del
+// locale che «risulta collegata ma non passa» le due scritture non tornano
+// mai — si risolvono solo con l'ack del server — quindi la finestrella
+// restava aperta e non compariva niente. Chi carica ripreme, e ogni pressione
+// accodava un carico: al ricaricamento della pagina se ne trovavano cinque.
+//
+// ADESSO: si compone in memoria e si torna subito. La giacenza si muove con
+// `increment`, che è commutativo e si accoda offline senza litigare con chi
+// scrive dallo stesso prodotto da un altro terminale.
+//
+// IL CONTROLLO DEL TRAVASO RESTA QUI e non si è spostato nella schermata
+// (era il difetto di BUG-029): si fa sull'articolo che arriva, che porta con
+// sé il segno della forma vecchia (`formaVecchia`, `motivoNonMigrabile`) —
+// lo stesso che usa `magazzinoBloccato`. È anche più robusto di prima:
+// una rilettura che non torna non protegge niente.
+//
+// `qty` è già in unità base; può essere negativo per uno scarico a mano, che
+// non scava sotto lo zero. Un carico invece si somma a quello che c'è ANCHE
+// SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa quattro, perché il
+// meno è merce già bevuta e non ancora caricata.
+export function loadStock(item, qty, { reason = 'carico' } = {}) {
+  const cur = articoloScrivibileInMano(item)
   const partenza = Number(cur.stock) || 0
-  const nuovo = qty >= 0 ? partenza + qty : partenza - scaricoPossibile(partenza, -qty)
-  await updateDoc(ref, { stock: nuovo })
-  await addDoc(movementsCol, {
-    item_id: itemId,
-    item_name: cur.name,
-    type: qty >= 0 ? 'load' : 'unload',
-    qty: Math.abs(qty),
-    unit: cur.unit ?? null,
-    reason,
-    created_at: serverTimestamp(),
-  })
-  return mapItem(await getDoc(ref))
+  const delta = qty >= 0 ? qty : -scaricoPossibile(partenza, -qty)
+  bgWrite(
+    () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
+    'carico scorta'
+  )
+  bgWrite(
+    () =>
+      addDoc(movementsCol, {
+        item_id: cur.id,
+        item_name: cur.name,
+        type: qty >= 0 ? 'load' : 'unload',
+        qty: Math.abs(qty),
+        unit: cur.unit ?? null,
+        reason,
+        created_at: serverTimestamp(),
+      }),
+    'movimento scorta'
+  )
+  return { ...cur, stock: partenza + delta }
 }
 
 // Carico a confezioni: aggiunge `count` bottiglie piene (+ eventuale bottiglia
@@ -1985,7 +2025,10 @@ function mapInvoice(snap) {
     // di questo documento. Il fornitore è già qui sopra, e la coppia dei due
     // è la fetta. Chi non ce l'ha è una fattura senza ordine, che è uno dei
     // due buchi da vedere a colpo d'occhio.
-    order_id: i.order_id ?? null,
+    // GLI ORDINI DI UN DOCUMENTO SONO UNA LISTA (REQ-MAG-031, 19/09/2026).
+    // I documenti scritti prima hanno solo `order_id`: `elencoOrdini` li
+    // rimette in riga, così il legame non sparisce a nessuno.
+    order_ids: elencoOrdini(i),
     // IL DOCUMENTO VERO (REQ-MAG-033): foto o PDF su Storage. `null` per
     // tutte quelle registrate a mano senza allegare niente, che è il terzo
     // buco da vedere a colpo d'occhio.
@@ -2136,16 +2179,34 @@ export async function togliAllegatoDaFattura(id) {
 //
 // `order_id` a null STACCA, ed è lo stesso gesto al contrario: un documento
 // attaccato all'ordine sbagliato si stacca, non si corregge di nascosto.
-export async function collegaFatturaAFetta(id, { order_id = null } = {}) {
+// UN DOCUMENTO, PIÙ ORDINI (19/09/2026). Tre gesti in una funzione perché
+// sono tre facce dello stesso campo, e chi legge deve vederli insieme:
+//   · `order_id` senza `stacca` → AGGIUNGE quell'ordine alla lista
+//   · `order_id` con `stacca`   → toglie QUELL'ordine
+//   · `order_id` nullo          → toglie TUTTI (è lo «scollega» di sempre)
+//
+// Si scrive anche il vecchio `order_id`, col primo della lista: in produzione
+// gira una versione che legge quello, e toglierlo di colpo le farebbe sparire
+// i legami. Vedi il commento in lib/fatture.js.
+export async function collegaFatturaAFetta(id, { order_id = null, stacca = false } = {}) {
   const ref = doc(db, 'supplier_invoices', id)
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Documento non trovato')
   const fattura = mapInvoice(snap)
-  if (order_id) await verificaAggancio(order_id, fattura)
+  if (order_id && !stacca) await verificaAggancio(order_id, fattura)
   // Non si rilegge quello che si è appena scritto: la scrittura parte in
   // sottofondo e la cache risponderebbe col documento di prima (BUG-045).
-  bgWrite(() => updateDoc(ref, { order_id: order_id || null }), 'legame fattura-ordine')
-  return { ...fattura, order_id: order_id || null }
+  const prima = fattura.order_ids
+  const dopo = !order_id
+    ? []
+    : stacca
+      ? prima.filter((x) => x !== order_id)
+      : [...new Set([...prima, order_id])]
+  bgWrite(
+    () => updateDoc(ref, { order_ids: dopo, order_id: dopo[0] ?? null }),
+    'legame fattura-ordine'
+  )
+  return { ...fattura, order_ids: dopo }
 }
 
 // LA GUARDIA STA DAVANTI ALLA SCRITTURA, non solo davanti all'elenco delle
@@ -2165,8 +2226,12 @@ async function verificaAggancio(orderId, fattura) {
   }
   // Le altre fatture di QUELL'ordine, non tutte: è l'unica lettura che serve
   // per sapere se la fetta è già coperta.
+  // SI CHIEDE PER FORNITORE, non per ordine: il campo su cui filtrare è
+  // diventato una lista, e i documenti scritti prima del 19/09/2026 hanno
+  // solo il campo vecchio — una query su uno dei due ne perderebbe metà.
+  // Sono i documenti di UN fornitore: pochi, e questo è un gesto d'ufficio.
   const altre = await getDocs(
-    query(collection(db, 'supplier_invoices'), where('order_id', '==', orderId))
+    query(collection(db, 'supplier_invoices'), where('supplier_id', '==', fattura.supplier_id))
   )
   const motivo = aggancioAmmesso(fattura, fetta, { fatture: altre.docs.map(mapInvoice) })
   if (motivo) throw new Error(motivo)
@@ -2209,7 +2274,8 @@ export function generaFatturaDaOrdine(ordine, { doc_type = 'Proforma', paid = fa
     paid: !!paid,
     notes: null,
     lines: righe,
-    order_id: ordine.id,
+    order_ids: [ordine.id],
+    order_id: ordine.id, // il campo vecchio, per la versione in produzione
     attachment: null,
     generata: true,
     created_at: serverTimestamp(),
@@ -2296,7 +2362,8 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, 
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Documento non trovato')
   const fattura = snap.data()
-  const collega = !!order_id && order_id !== (fattura.order_id ?? null)
+  const gia = elencoOrdini(fattura)
+  const collega = !!order_id && !gia.includes(order_id)
   if (collega) await verificaAggancio(order_id, mapInvoice(snap))
   const nuove = (righe || []).filter((r) => r?.item_id && (Number(r.qty_packages) || 0) > 0)
   if (nuove.length === 0 && !collega) return mapInvoice(snap)
@@ -2364,7 +2431,11 @@ export async function aggiungiProdottiAFattura(id, { righe = [], carica = true, 
   })
 
   const lines = [...(Array.isArray(fattura.lines) ? fattura.lines : []), ...scritte]
-  const patch = collega ? { lines, order_id } : { lines }
+  // Accoda invece di sostituire: la fattura del lunedi' copre anche
+  // l'ordine del sabato (19/09/2026).
+  const patch = collega
+    ? { lines, order_ids: [...gia, order_id], order_id: gia[0] ?? order_id }
+    : { lines }
   // Non si rilegge quello che si è appena scritto: la scrittura parte in
   // sottofondo e la cache risponderebbe col documento di prima (BUG-045).
   // Il risultato si compone qui.
@@ -5706,6 +5777,11 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // CHI PUÒ APRIRE LA CASSA, PER OGNI ACCOUNT (REQ-STAFF-016): una mappa
+  // «uid di chi fa il login → uid degli admin che può scegliere». Vuota o
+  // assente vuol dire «tutti gli admin», che è il comportamento di partenza:
+  // il locale che non decide niente non deve accorgersi che la cosa esiste.
+  admin_associati: null,
   // L'INVENTARIO, CHIUSO, NE RIAPRE SUBITO UN ALTRO (REQ-MAG-005). Acceso
   // di suo: il consumo si legge fra due chiusure, e chi non tocca niente
   // trova sempre un inventario in corso. Spento, dopo la chiusura si resta

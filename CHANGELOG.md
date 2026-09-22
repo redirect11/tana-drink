@@ -1,5 +1,47 @@
 # Cosa è cambiato
 
+## 1.7.0
+
+### Per chi sta al banco
+
+- **Un documento dello scadenzario può coprire più ordini.** Prima, se un
+  documento era già collegato a un ordine, il secondo veniva rifiutato e
+  l'unica strada era scollegare il primo. Ora sotto il documento c'è
+  l'elenco degli ordini, ognuno col suo «Scollega», e in fondo «Aggiungi un
+  altro ordine». Serve al caso del weekend: la merce arriva senza carta e il
+  lunedì il fornitore fa una fattura sola per tutte le consegne.
+
+- **Nelle statistiche per periodo, la fascia oraria non ha più date sue.**
+  Ne aveva un paio, rimaste da quando il periodo era un contatore di
+  giornate: dicevano la stessa cosa in un altro posto e potevano far vedere
+  «nessuna vendita» mentre il periodo in alto era pieno. Adesso fa fede il
+  periodo scelto in cima, e lì si stringe soltanto l'ora.
+
+- **Una ricetta ritoccata su un conto si può salvare come voce nuova del
+  menù.** Toccando una riga del conto si apre il ritocco degli ingredienti
+  come sempre; sotto «Annulla» e «Salva» c'è ora **«Salva come nuova
+  ricetta»**, che apre la scheda del Menù già compilata con le modifiche
+  appena fatte. Salvata, si torna alla coda degli ordini. La riga del conto
+  non viene toccata: per quella c'è «Salva».
+
+- **Il carico di magazzino si vede subito.** Prima il tasto sembrava non
+  funzionare: la finestrella restava aperta finché la rete non rispondeva, e
+  chi ripremeva si ritrovava un carico per ogni pressione al ricaricamento
+  della pagina. Adesso la giacenza nuova compare nell'istante del tocco e la
+  scrittura parte in sottofondo. Se nei giorni scorsi ti sono rimaste
+  giacenze gonfiate, le riconosci da Magazzino → Movimenti (più carichi
+  identici ravvicinati) e le sistemi con l'inventario.
+
+- **All'apertura della cassa si sceglie chi sta lavorando.** Il tablet resta
+  collegato con un account solo, ma la domanda «Chi apre la cassa?» elenca
+  gli admin del locale: la serata risulta aperta da chi hai scelto e il nome
+  in cima alla barra è il suo. La scelta resta sul tablet, quindi non te la
+  richiede ogni sera, e compare solo se gli admin sono più di uno. Non è un
+  login: la sessione resta quella di chi è collegato, e si sceglie solo fra
+  admin, che hanno già gli stessi permessi. **Chi compare nell'elenco lo
+  decidi tu**, da Utenti e ruoli → «Chi apre la cassa»: una lista per ogni
+  account, perché il tablet resta collegato con uno solo e da quale dipende
+  chi ci lavora. Senza spuntare niente compaiono tutti.
 ## 1.6.1
 
 ### Per chi amministra
