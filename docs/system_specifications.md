@@ -863,6 +863,8 @@ IN PRODUZIONE ERA SPENTO (17/09/2026): `incluso: false` nel codice e nessuna lic
 
 LA CHIUSURA E' UN PACCHETTO SOLO (BUG-110, 22/09/2026): giacenze, movimenti di rettifica, «chiuso» e il prossimo inventario vanno in un writeBatch — o tutto o niente — e le rimanenze si salvano mentre si scrivono, non piu' con «Salva bozza».
 
+ACQ CONTA SOLO GLI ACQUISTI (BUG-111): carico diretto, consegna di un ordine fornitore, fattura fornitore; una modifica del contenuto reale durante l'inventario sposta il DEP, non l'ACQ.
+
 **Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/unit/chiusuraInventario.test.js`
 
 #### REQ-MAG-006 — Ordini ai fornitori e fatture d'acquisto

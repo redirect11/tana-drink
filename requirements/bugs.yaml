@@ -4878,3 +4878,37 @@ bugs:
       - tests/unit/chiusuraInventario.test.js
       - tests/component/StockCountPanel.test.jsx
       - tests/unit/scritturaMagazzino.test.js
+
+  - id: BUG-111
+    title: "Nell'inventario ACQ contava anche le rettifiche, e la modifica del contenuto reale non spostava il DEP"
+    area: "src/lib/warehouse.js (movimentiDellInventario, countLineCons), src/components/StockCountPanel.jsx"
+    severity: grave
+    priority: P1
+    description: >
+      Segnalato da Flavio il 22/09/2026, con la foto del 400 Conigli Gin
+      dopo l'inventario: «DEP -0,1 · ACQ 0,2», dove la rimanenza vera era
+      0,1. Lo 0,2 era la rettifica scritta dalla chiusura dell'inventario,
+      contata come merce comprata. Flavio: «sul nuovo inventario dovrebbero
+      apparire 0 acquisti, che poi aumentano quando carico prodotti da un
+      ordine a fornitore consegnato o dal carico diretto; se invece modifico
+      il contenuto reale, mi modifica il valore del deposito».
+      LA CAUSA: la colonna ACQ sommava OGNI movimento di entrata dopo
+      l'apertura (`type === 'load'`), qualunque fosse il motivo — carico,
+      consegna, ma anche le rettifiche a mano e quelle di un inventario — e
+      ignorava del tutto le uscite, quindi un carico tolto lasciava l'ACQ
+      gonfio.
+      LA CORREZIONE (`movimentiDellInventario`): ACQ somma, col segno, solo
+      carico diretto, consegna di un ordine fornitore e fattura fornitore;
+      le modifiche del contenuto reale (`rettifica`) vanno in una colonna a
+      parte che si somma al DEP a schermo e nel consumo; le rettifiche di
+      chiusura e le vendite non toccano nessuna delle due — le vendite sono
+      il consumo, che l'inventario ricava da DEP + ACQ − RIM.
+      Il DEP -0,1 del gin e i 66/125 delle acque invece erano BUG-110:
+      l'inventario non si era mai chiuso.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, hotfix]
+    test_cases:
+      - tests/unit/warehouse.test.js
+      - tests/component/StockCountPanel.test.jsx

@@ -1106,11 +1106,6 @@ export async function fetchStockMovementsSince(iso) {
   return snap.docs.map(mapMovement)
 }
 
-// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
-export async function fetchLoadMovementsSince(iso) {
-  return (await fetchStockMovementsSince(iso)).filter((m) => m.type === 'load')
-}
-
 // --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---
 
 // LE RIMANENZE STANNO IN UNA MAPPA A PARTE (`rimanenze`, item_id → numero),

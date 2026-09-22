@@ -2141,6 +2141,9 @@ requirements:
       movimenti di rettifica, «chiuso» e il prossimo inventario vanno in un
       writeBatch — o tutto o niente — e le rimanenze si salvano mentre si
       scrivono, non piu' con «Salva bozza».
+      ACQ CONTA SOLO GLI ACQUISTI (BUG-111): carico diretto, consegna di un
+      ordine fornitore, fattura fornitore; una modifica del contenuto reale
+      durante l'inventario sposta il DEP, non l'ACQ.
     status: implemented
     generate_issue: false
     labels: [magazzino]
