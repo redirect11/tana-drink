@@ -1,17 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchInventoryItems,
   getOpenStockCount,
   startStockCount,
-  updateStockCountLines,
+  salvaRimanenza,
   closeStockCount,
   fetchStockCounts,
-  fetchLoadMovementsSince,
+  fetchStockMovementsSince,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
-import { stockCountCompute, giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
+import {
+  stockCountCompute,
+  giorniDiConta,
+  consumoSettimanale,
+  movimentiDellInventario,
+  depositoDellaRiga,
+} from '../lib/warehouse.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 
@@ -48,18 +54,48 @@ export default function StockCountPanel() {
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   const riapreDaSola = impostazioni.inventario_riapre_da_solo !== false
 
+  // OGNI RIMANENZA SI SALVA MENTRE SI SCRIVE (BUG-110). Il 21/09/2026 i
+  // numeri di un inventario intero stavano solo qui, nello stato della
+  // pagina, e con la chiusura interrotta sono spariti. Si aspetta un attimo
+  // che il dito si fermi — «0», «0.», «0.9» sarebbero tre scritture — e si
+  // salva subito all'uscita dal campo o dalla schermata.
+  const inSospeso = useRef({}) // item_id -> { timer, salva }
+  function salvaSubito(itemId) {
+    const p = inSospeso.current[itemId]
+    if (!p) return
+    clearTimeout(p.timer)
+    delete inSospeso.current[itemId]
+    p.salva()
+  }
+  function scriviRimanenza(itemId, valore) {
+    setRims((r) => ({ ...r, [itemId]: valore }))
+    if (!open) return
+    const contaId = open.id
+    clearTimeout(inSospeso.current[itemId]?.timer)
+    inSospeso.current[itemId] = {
+      salva: () => salvaRimanenza(contaId, itemId, valore),
+      timer: setTimeout(() => salvaSubito(itemId), 600),
+    }
+  }
+  useEffect(
+    () => () => {
+      for (const id of Object.keys(inSospeso.current)) salvaSubito(id)
+    },
+    []
+  )
+
   async function load() {
     try {
       const [oc, hist] = await Promise.all([
         getOpenStockCount(),
         fetchStockCounts({ limit: 15 }),
       ])
-      // ACQ live: carichi registrati dopo l'apertura della conta.
+      // ACQ e rettifiche live: i movimenti dopo l'apertura, ognuno nella
+      // sua colonna (BUG-111 — vedi movimentiDellInventario).
       if (oc) {
-        const loads = await fetchLoadMovementsSince(oc.started_at).catch(() => [])
-        const acqByItem = {}
-        for (const m of loads) acqByItem[m.item_id] = (acqByItem[m.item_id] || 0) + m.qty
-        oc.lines = oc.lines.map((l) => ({ ...l, acq: acqByItem[l.item_id] || 0 }))
+        const movimenti = await fetchStockMovementsSince(oc.started_at).catch(() => [])
+        const { acq, rett } = movimentiDellInventario(movimenti, oc.lines)
+        oc.lines = oc.lines.map((l) => ({ ...l, acq: acq[l.item_id] || 0, rett: rett[l.item_id] || 0 }))
         setRims(Object.fromEntries(oc.lines.map((l) => [l.item_id, l.rim ?? ''])))
       }
       setOpen(oc)
@@ -76,7 +112,10 @@ export default function StockCountPanel() {
 
   const computed = useMemo(() => {
     if (!open) return null
-    const lines = open.lines.map((l) => ({ ...l, rim: rims[l.item_id] === '' ? null : Number(rims[l.item_id]) }))
+    const lines = open.lines.map((l) => {
+      const v = rims[l.item_id]
+      return { ...l, rim: v == null || v === '' ? null : Number(v) }
+    })
     // La conta è APERTA: il suo periodo finisce adesso e si allunga mentre
     // la si compila. Il consumo a settimana si divide per i giorni veri,
     // non per una costante da tenere aggiornata a mano.
@@ -101,41 +140,35 @@ export default function StockCountPanel() {
     }
   }
 
-  async function saveDraft() {
-    if (!open || !computed) return
-    setBusy(true)
-    setError(null)
-    try {
-      await updateStockCountLines(open.id, computed.lines)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   async function doClose() {
     if (!open || !computed) return
     setConfirmClose(false)
     setBusy(true)
     setError(null)
+    // Le rimanenze vanno nelle righe della chiusura: un salvataggio rimasto
+    // indietro arriverebbe DOPO, su un inventario già chiuso.
+    for (const p of Object.values(inSospeso.current)) clearTimeout(p.timer)
+    inSospeso.current = {}
     try {
-      await closeStockCount(open.id, {
+      // Gli articoli servono al prossimo inventario, che nasce nello stesso
+      // pacchetto della chiusura (vedi closeStockCount). È una lettura: senza
+      // rete risponde la cache.
+      const items = riapreDaSola ? await fetchInventoryItems() : null
+      const prossimo = await closeStockCount(open.id, {
         lines: computed.lines,
         totals: computed.totals,
         align: true,
+        riapri: items && items.length > 0 ? items : null,
       })
-      setRims({})
-      // E il prossimo parte adesso, dalle giacenze appena allineate: il
-      // consumo da qui in poi si conta da questa chiusura. Le scritture
-      // dell'allineamento sono già state attese, quindi la rilettura le
-      // vede: questo non è un gesto del banco, è un lavoro d'ufficio con
-      // la rete accesa.
-      if (riapreDaSola) {
-        const items = await fetchInventoryItems()
-        if (items.length > 0) await startStockCount(items)
-      }
-      await load()
+      // L'esito si compone, non si rilegge: la chiusura è partita in
+      // sottofondo, e una rilettura adesso troverebbe l'inventario ancora
+      // aperto con le giacenze di prima.
+      setHistory((h) => [
+        { ...open, status: 'closed', closed_at: new Date().toISOString(), lines: computed.lines, totals: computed.totals },
+        ...h,
+      ])
+      setOpen(prossimo)
+      setRims(prossimo ? Object.fromEntries(prossimo.lines.map((l) => [l.item_id, ''])) : {})
     } catch (e) {
       setError(e.message)
     } finally {
@@ -184,7 +217,7 @@ export default function StockCountPanel() {
                   <div className="grow">
                     <div className="inv-name">{l.name}</div>
                     <div className="muted small">
-                      DEP {formatQty(l.dep, l.unit)} · ACQ {formatQty(l.acq, l.unit)}
+                      DEP {formatQty(depositoDellaRiga(l), l.unit)} · ACQ {formatQty(l.acq, l.unit)}
                       {l.cons != null && (
                         <>
                           {' · '}CONS <strong>{formatQty(l.cons, l.unit)}</strong>
@@ -202,7 +235,8 @@ export default function StockCountPanel() {
                     min="0"
                     value={rims[l.item_id] ?? ''}
                     placeholder={`RIM ${l.unit}`}
-                    onChange={(e) => setRims((r) => ({ ...r, [l.item_id]: e.target.value }))}
+                    onChange={(e) => scriviRimanenza(l.item_id, e.target.value)}
+                    onBlur={() => salvaSubito(l.item_id)}
                     style={{ width: 100, textAlign: 'right' }}
                   />
                 </div>
@@ -210,14 +244,12 @@ export default function StockCountPanel() {
             ))}
           </div>
 
-          <div className="grid-2" style={{ marginTop: 10 }}>
-            <button className="btn ghost small" onClick={saveDraft} disabled={busy}>
-              💾 Salva bozza
-            </button>
-            <button className="btn small" onClick={() => setConfirmClose(true)} disabled={busy}>
-              ✅ Chiudi l’inventario
-            </button>
-          </div>
+          <p className="muted small" style={{ margin: '10px 0 6px' }}>
+            Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.
+          </p>
+          <button className="btn block" onClick={() => setConfirmClose(true)} disabled={busy}>
+            ✅ Chiudi l’inventario
+          </button>
         </>
       )}
 
