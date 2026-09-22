@@ -1,5 +1,19 @@
 # Cosa è cambiato
 
+## 1.6.1
+
+### Per chi amministra
+
+- **L'inventario si chiude tutto insieme, o per niente.** Prima la chiusura
+  allineava un prodotto alla volta, e se la pagina si interrompeva a metà
+  — l'app messa da parte, lo schermo bloccato — metà magazzino restava
+  allineato e l'inventario risultava ancora aperto. Ora le giacenze, le
+  rettifiche e l'apertura del prossimo inventario partono in un pacchetto
+  solo, e se la pagina si chiude finiscono di partire alla riapertura.
+- **Le rimanenze si salvano mentre le scrivi.** Il tasto «Salva bozza» non
+  c'è più: si può smettere di contare e riprendere più tardi, anche da un
+  altro dispositivo.
+
 ## 1.6.0
 
 ### Per chi sta al banco

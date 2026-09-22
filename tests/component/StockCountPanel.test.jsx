@@ -33,7 +33,7 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => []),
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
-  updateStockCountLines: vi.fn(),
+  salvaRimanenza: vi.fn(),
   closeStockCount: vi.fn(),
   fetchStockCounts: vi.fn(async () => stato.storico),
   fetchLoadMovementsSince: vi.fn(async () => []),
@@ -107,8 +107,12 @@ describe('l’inventario in corso', () => {
     await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
-    // Il nuovo parte dagli articoli riletti DOPO l'allineamento.
-    expect(api.startStockCount).toHaveBeenCalledWith([gin])
+    // IL NUOVO NASCE DENTRO LA CHIUSURA, nello stesso pacchetto (BUG-110):
+    // fino al 22/09/2026 lo apriva `startStockCount` dopo, con una seconda
+    // scrittura e una rilettura delle giacenze — due passi in più che una
+    // chiusura interrotta poteva lasciare a metà.
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toEqual([gin])
+    expect(api.startStockCount).not.toHaveBeenCalled()
     api.fetchInventoryItems.mockResolvedValue([])
   })
 
@@ -132,6 +136,7 @@ describe('l’inventario in corso', () => {
     expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
     await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(null)
     expect(api.startStockCount).not.toHaveBeenCalled()
     api.fetchInventoryItems.mockResolvedValue([])
   })
@@ -148,6 +153,27 @@ describe('l’inventario in corso', () => {
     render(<StockCountPanel />)
     expect(await screen.findByRole('button', { name: /Apri l’inventario/ })).toBeInTheDocument()
     expect(document.body.textContent).toMatch(/ne parte subito un altro/)
+  })
+})
+
+// BUG-110: il 21/09/2026 i numeri di un inventario intero stavano solo
+// sullo schermo, e con la chiusura interrotta sono spariti.
+describe('le rimanenze mentre si conta', () => {
+  it('si salvano da sole, senza un tasto da ricordarsi', async () => {
+    const api = await import('../../src/lib/api.js')
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [{ item_id: 'a', name: 'Jagermeister', unit: 'pz', package_size: 1000, cost: 13.8, vat: 22, dep: 3.2, rim: null }],
+    }
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    expect(screen.queryByRole('button', { name: /Salva bozza/ })).toBeNull()
+    const campo = screen.getByPlaceholderText(/RIM/)
+    await userEvent.type(campo, '0.9')
+    // Uscendo dal campo si salva subito, senza aspettare che il dito si fermi.
+    await userEvent.tab()
+    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'a', '0.9')
   })
 })
 
