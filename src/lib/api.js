@@ -1146,21 +1146,28 @@ export async function fetchStockMovementsSince(iso) {
   return snap.docs.map(mapMovement)
 }
 
-// Carichi registrati dopo una certa data (per la colonna ACQ della conta).
-export async function fetchLoadMovementsSince(iso) {
-  return (await fetchStockMovementsSince(iso)).filter((m) => m.type === 'load')
-}
-
 // --- CONTA DI MAGAZZINO (inventario periodico: DEP → ACQ → RIM → CONS) ---
 
+// LE RIMANENZE STANNO IN UNA MAPPA A PARTE (`rimanenze`, item_id → numero),
+// scritta una voce alla volta mentre si conta (BUG-110). Le righe restano
+// com'erano all'apertura: riscriverle tutte e 403 a ogni cifra battuta
+// sarebbe un documento intero in viaggio per ogni tasto. In lettura la
+// mappa vince sulla riga; gli inventari scritti prima non ce l'hanno e si
+// leggono come sempre, dalla riga.
 function mapStockCount(snap) {
   const c = snap.data() || {}
+  const rimanenze = c.rimanenze && typeof c.rimanenze === 'object' ? c.rimanenze : {}
+  const lines = (Array.isArray(c.lines) ? c.lines : []).map((l) =>
+    l && Object.prototype.hasOwnProperty.call(rimanenze, l.item_id)
+      ? { ...l, rim: rimanenze[l.item_id] }
+      : l
+  )
   return {
     id: snap.id,
     status: c.status ?? 'open',
     started_at: toIso(c.started_at),
     closed_at: toIso(c.closed_at),
-    lines: Array.isArray(c.lines) ? c.lines : [],
+    lines,
     totals: c.totals ?? null,
   }
 }
@@ -1173,22 +1180,29 @@ export async function getOpenStockCount() {
   return snap.empty ? null : mapStockCount(snap.docs[0])
 }
 
-// Apre una nuova conta fotografando la giacenza corrente (DEP) di ogni
-// prodotto; costi/formnum denormalizzati per calcolare i valori alla chiusura.
-export async function startStockCount(items) {
-  const existing = await getOpenStockCount()
-  if (existing) return existing
-  const lines = (items || []).map((it) => ({
+// La riga di un prodotto in un inventario che si apre: la giacenza di
+// partenza (DEP) più costo e formato denormalizzati, per calcolare i valori
+// alla chiusura anche se nel frattempo il prodotto cambia.
+function rigaDiInventario(it, dep = it.stock) {
+  return {
     item_id: it.id,
     name: it.name,
     unit: it.unit,
     package_size: it.package_size ?? null,
     cost: it.cost ?? null,
     vat: it.vat ?? 22,
-    dep: it.stock,
+    dep: Number(dep) || 0,
     acq: 0,
     rim: null,
-  }))
+  }
+}
+
+// Apre una nuova conta fotografando la giacenza corrente (DEP) di ogni
+// prodotto; costi/formnum denormalizzati per calcolare i valori alla chiusura.
+export async function startStockCount(items) {
+  const existing = await getOpenStockCount()
+  if (existing) return existing
+  const lines = (items || []).map((it) => rigaDiInventario(it))
   const ref = await addDoc(collection(db, 'stock_counts'), {
     status: 'open',
     started_at: serverTimestamp(),
@@ -1198,15 +1212,54 @@ export async function startStockCount(items) {
   return mapStockCount(await getDoc(ref))
 }
 
-// Salva le rimanenze inserite (senza chiudere la conta).
-export async function updateStockCountLines(id, lines) {
-  await updateDoc(doc(db, 'stock_counts', id), { lines })
+// UNA RIMANENZA, APPENA SCRITTA (BUG-110). Il 21/09/2026 Flavio ha contato
+// tutto il magazzino dal telefono, e i numeri stavano solo sullo schermo:
+// la chiusura si è interrotta a metà e quelli dalla «F» in giù non esistono
+// più da nessuna parte. Ora ogni numero va sul database appena scritto — in
+// sottofondo, come ogni scrittura: chi conta non aspetta la rete.
+export function salvaRimanenza(id, itemId, valore) {
+  const n = valore === '' || valore == null ? null : Number(valore)
+  const ref = doc(db, 'stock_counts', id)
+  bgWrite(
+    () =>
+      updateDoc(ref, {
+        [`rimanenze.${itemId}`]: Number.isFinite(n) ? n : deleteField(),
+      }),
+    'rimanenza inventario'
+  )
 }
 
-// Chiude la conta salvando righe complete (cons/valori) e totali.
-// Se align=true le giacenze dei prodotti vengono allineate alle rimanenze
-// contate (con movimento di rettifica per la differenza).
-export async function closeStockCount(id, { lines, totals, align = true }) {
+// CHIUDE L'INVENTARIO IN UN PACCHETTO SOLO (BUG-110).
+//
+// Prima si scriveva un prodotto alla volta, aspettando il server a ogni
+// giacenza e a ogni movimento, e il segno «chiuso» veniva per ultimo. Il
+// 21/09/2026 in produzione quel giro si è fermato dopo 27 secondi, a
+// «Fever Tree Indian» (riga 154 di 403): 62 prodotti allineati, il resto
+// no, l'inventario rimasto aperto e i conteggi persi. Una chiusura che si
+// può interrompere a metà lascia il magazzino mezzo vero e mezzo no, e da
+// fuori non si vede dove passa il confine.
+//
+// Ora le giacenze, i movimenti di rettifica, il segno «chiuso» e — se il
+// locale la vuole — l'apertura del prossimo inventario vanno in UN
+// writeBatch: o arriva tutto o non arriva niente. Il pacchetto si registra
+// subito nella memoria del dispositivo e parte in sottofondo (`bgWrite`):
+// se la pagina muore dopo, riparte alla riapertura. Google non ha più il
+// tetto delle 500 scritture per pacchetto; restano i 10 MB, e un inventario
+// intero sono poche centinaia di KB.
+//
+// IL PROSSIMO INVENTARIO NASCE NELLO STESSO PACCHETTO, con DEP = la
+// rimanenza appena contata (non una rilettura: nell'istante dopo la cache
+// potrebbe avere ancora le giacenze di prima). E ha lo STESSO orario dei
+// movimenti di rettifica — dentro un pacchetto `serverTimestamp()` vale
+// uguale per tutti — quindi la query «dopo l'apertura» non se li ritrova
+// fra i movimenti del periodo nuovo.
+//
+// Le letture qui sotto (la conta e le giacenze di ora) restano attese: sono
+// letture, e senza rete rispondono dalla cache.
+//
+// `riapri`: gli articoli del magazzino, per aprire il prossimo; null per
+// non aprirlo. Ritorna il nuovo inventario composto in memoria, o null.
+export async function closeStockCount(id, { lines, totals, align = true, riapri = null }) {
   const countRef = doc(db, 'stock_counts', id)
   const countSnap = await getDoc(countRef)
   if (!countSnap.exists()) throw new Error('Conta non trovata')
@@ -1217,17 +1270,22 @@ export async function closeStockCount(id, { lines, totals, align = true }) {
     toAlign.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
   )
 
+  // Tutti i controlli PRIMA di scrivere qualsiasi cosa: un prodotto ancora
+  // nella forma vecchia ferma la chiusura intera, non la tronca a metà.
+  const batch = writeBatch(db)
+  const contati = {}
   for (let idx = 0; idx < toAlign.length; idx++) {
     const l = toAlign[idx]
     const cur = articoloScrivibile(itemSnaps[idx])
     if (!cur) continue
     const rim = Number(l.rim) || 0
+    contati[l.item_id] = rim
     const delta = rim - (Number(cur.stock) || 0)
     if (delta === 0) continue
     // Rettifica a valore assoluto: la conta è una fotografia autorevole,
     // quindi qui si imposta lo stock (non increment).
-    await updateDoc(doc(db, 'inventory_items', l.item_id), { stock: rim })
-    await addDoc(movementsCol, {
+    batch.update(doc(db, 'inventory_items', l.item_id), { stock: rim })
+    batch.set(doc(movementsCol), {
       item_id: l.item_id,
       item_name: cur.name,
       type: delta > 0 ? 'load' : 'unload',
@@ -1238,12 +1296,32 @@ export async function closeStockCount(id, { lines, totals, align = true }) {
     })
   }
 
-  await updateDoc(countRef, {
+  batch.update(countRef, {
     status: 'closed',
     closed_at: serverTimestamp(),
     lines,
     totals,
+    // Le rimanenze adesso stanno nelle righe: la mappa di lavoro non serve più.
+    rimanenze: deleteField(),
   })
+
+  let prossimo = null
+  if (riapri) {
+    const ref = doc(collection(db, 'stock_counts'))
+    const righe = riapri.map((it) => rigaDiInventario(it, contati[it.id] ?? it.stock))
+    batch.set(ref, { status: 'open', started_at: serverTimestamp(), lines: righe, totals: null })
+    prossimo = {
+      id: ref.id,
+      status: 'open',
+      started_at: new Date().toISOString(),
+      closed_at: null,
+      lines: righe,
+      totals: null,
+    }
+  }
+
+  bgWrite(() => batch.commit(), 'chiusura inventario')
+  return prossimo
 }
 
 export async function fetchStockCounts({ limit = 20 } = {}) {

@@ -15,6 +15,7 @@ import {
   consumoSettimanale,
   purchaseOrderTotals,
   consumptionDiff,
+  movimentiDellInventario,
 } from '../../src/lib/warehouse.js'
 
 describe('countLineCons (DEP + ACQ − RIM = CONS, come i fogli INV)', () => {
@@ -28,6 +29,67 @@ describe('countLineCons (DEP + ACQ − RIM = CONS, come i fogli INV)', () => {
   })
   it('rim zero è valido (tutto consumato)', () => {
     expect(countLineCons({ dep: 500, acq: 0, rim: 0 })).toBe(500)
+  })
+})
+
+// ── DOVE VA OGNI MOVIMENTO DI UN INVENTARIO APERTO (BUG-111) ─────────
+// Flavio, 22/09/2026: il 400 Conigli, dopo l'inventario, diceva «DEP −0,1 ·
+// ACQ 0,2»: la rettifica della chiusura contata come merce comprata. «Sul
+// nuovo inventario dovrebbero apparire 0 acquisti, che aumentano quando
+// carico da un ordine consegnato o dal carico diretto; se modifico il
+// contenuto reale, mi modifica il deposito».
+describe('i movimenti di un inventario aperto', () => {
+  const righe = [
+    { item_id: 'gin', unit: 'pz', package_size: 500 },
+    { item_id: 'lete', unit: 'pz', package_size: 500 },
+  ]
+  const mov = (item_id, type, qty, reason, unit = 'pz') => ({ item_id, type, qty, reason, unit })
+
+  it('ACQ conta il carico diretto e la consegna di un ordine fornitore', () => {
+    const { acq } = movimentiDellInventario(
+      [mov('gin', 'load', 1, 'carico'), mov('gin', 'load', 2, 'ordine fornitore')],
+      righe
+    )
+    expect(acq).toEqual({ gin: 3 })
+  })
+
+  // Il caso della foto: la correzione della chiusura non è un acquisto.
+  it('la rettifica di un inventario non è un acquisto, e non tocca niente', () => {
+    const { acq, rett } = movimentiDellInventario([mov('gin', 'load', 0.2, 'conta')], righe)
+    expect(acq).toEqual({})
+    expect(rett).toEqual({})
+  })
+
+  it('la modifica del contenuto reale va nel DEP, col suo segno', () => {
+    const { acq, rett } = movimentiDellInventario(
+      [mov('lete', 'unload', 39, 'rettifica'), mov('gin', 'load', 0.2, 'rettifica')],
+      righe
+    )
+    expect(acq).toEqual({})
+    expect(rett).toEqual({ lete: -39, gin: 0.2 })
+  })
+
+  // Prima le uscite dei carichi non si vedevano affatto: un carico tolto a
+  // mano lasciava l'ACQ gonfio.
+  it('un carico tolto sottrae dagli acquisti', () => {
+    const { acq } = movimentiDellInventario(
+      [mov('gin', 'load', 3, 'carico'), mov('gin', 'unload', 1, 'carico')],
+      righe
+    )
+    expect(acq).toEqual({ gin: 2 })
+  })
+
+  // Le vendite sono il consumo, che l'inventario ricava da DEP + ACQ − RIM:
+  // contarle anche qui le sottrarrebbe due volte.
+  it('le vendite non entrano né in ACQ né nel DEP', () => {
+    const { acq, rett } = movimentiDellInventario([mov('gin', 'unload', 40, 'ordine', 'ml')], righe)
+    expect(acq).toEqual({})
+    expect(rett).toEqual({})
+  })
+
+  it('e con le rettifiche il consumo parte dal DEP corretto', () => {
+    // DEP 66, contenuto reale portato a 27 (−39), rimanenza 27: consumo zero.
+    expect(countLineCons({ dep: 66, rett: -39, acq: 0, rim: 27 })).toBe(0)
   })
 })
 
