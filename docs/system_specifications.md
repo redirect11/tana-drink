@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 17 settembre 2026.
+> Generato il 22 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -861,7 +861,9 @@ SI CHIAMA INVENTARIO, NON «CONTA» (17/09/2026). Daniele: «la conta deve diven
 
 IN PRODUZIONE ERA SPENTO (17/09/2026): `incluso: false` nel codice e nessuna licenza scritta, quindi la sezione non c'era e Flavio non poteva fare l'inventario. Acceso con `scripts/licenza-moduli.js --project tana-drink --includi conta,scadenzario --apply`, che scrive `licenza.moduli` su settings/bar per intero (una mappa a meta' spegnerebbe quello che non nomina). Backup fatto prima (`backup/prima-inventario-2026-09-17.json`).
 
-**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`
+LA CHIUSURA E' UN PACCHETTO SOLO (BUG-110, 22/09/2026): giacenze, movimenti di rettifica, «chiuso» e il prossimo inventario vanno in un writeBatch — o tutto o niente — e le rimanenze si salvano mentre si scrivono, non piu' con «Salva bozza».
+
+**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/unit/chiusuraInventario.test.js`
 
 #### REQ-MAG-006 — Ordini ai fornitori e fatture d'acquisto
 

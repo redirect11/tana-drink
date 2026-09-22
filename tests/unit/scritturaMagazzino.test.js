@@ -97,7 +97,15 @@ vi.mock('firebase/firestore', () => ({
   onSnapshot: () => () => {},
   serverTimestamp: () => null,
   increment: (n) => ({ __increment: n }),
-  writeBatch: () => ({ update: vi.fn(), set: vi.fn(), commit: async () => {} }),
+  // Il pacchetto registra le sue scritture come le altre: la chiusura
+  // dell'inventario scrive le giacenze così (BUG-110), e la domanda qui è la
+  // stessa — cosa è finito sul database, non da quale porta.
+  writeBatch: () => ({
+    update: (ref, patch) => stato.scritture.push({ col: ref?.col, id: ref?.id, patch }),
+    set: vi.fn(),
+    commit: async () => {},
+  }),
+  deleteField: () => ({ __delete: true }),
   Timestamp: class Timestamp {
     static fromDate(d) {
       return d
