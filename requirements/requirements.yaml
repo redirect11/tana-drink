@@ -11695,6 +11695,90 @@ requirements:
       - tests/unit/scritturaMagazzino.test.js
       - tests/unit/inventory.test.js
 
+  - id: REQ-MAG-046
+    title: "L'inventario separa il venduto dalla differenza: DEP, ACQ, VENDUTO, ATTESO, DIFFERENZA"
+    area: "src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx"
+    description: >
+      Flavio, 23/09/2026: «in primis la creazione del deposito se non ho mai
+      fatto un inventario; a questo punto parte il valore DEP ed ACQ 0; poi
+      man mano che acquisto aumentera' il valore ACQ quando carico prodotti
+      da ordine a fornitore consegnato e carico diretto, mentre se modifico
+      il contenuto reale mi modifica il valore del deposito; intanto
+      utilizzando gli items del menu il valore si inizierà a modificare ma
+      dovra' essere comunque registrato come consumato; infine quando
+      inserisco manualmente le rimanenze mi allineero' con i consumi e le
+      rimanenze reali; da qui si partira' con il nuovo inventario, dove la
+      rimanenza di quello appena concluso diventera' il deposito». E: «il
+      vero CONSUMO e' la variazione del deposito dovuta alla vendita, cioe'
+      allo scarico dei prodotti nelle ricette degli items di menu.
+      L'inventario e' solo un allineamento con il consumo reale: piu' siamo
+      precisi con gli scarichi, meno dovremo intervenire sulle rimanenze».
+      PRIMA la riga diceva DEP + ACQ − RIM = CONS, il conto del foglio INV:
+      un numero solo, che mescolava quello che si e' venduto con quello che
+      e' sparito (ricette imprecise, merce persa, errori di carico).
+      ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del
+      periodo: contenuto reale modificato e rettifiche d'inventario), ACQ
+      (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico
+      delle ricette dei drink battuti, convertito dai ml nei pezzi del
+      magazzino, visibile prima ancora di contare), ATTESO (la giacenza del
+      prodotto adesso) e, scritto il contato, la DIFFERENZA = contato −
+      atteso, in pezzi e in €. In cima i totali: venduto, differenza,
+      valore delle rimanenze. La chiusura corregge la giacenza della
+      differenza (BUG-112), e il DEP del prossimo inventario e' la giacenza
+      appena allineata.
+      Il «consumo» della storia e del consumo a settimana (REQ-MAG-024)
+      resta quello che e' uscito davvero dallo scaffale: venduto piu' quello
+      che manca, cioe' lo stesso numero del foglio INV quando i conti
+      tornano. Gli inventari chiusi dalla 1.8 raccontano venduto e
+      differenza; i vecchi, che non li hanno, il consumo di sempre.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/component/StockCountPanel.test.jsx
+  - id: REQ-MAG-047
+    title: "L'inventario si scorre per categorie, come gli scaffali"
+    area: "src/components/StockCountPanel.jsx (CategoryRail)"
+    description: >
+      Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una
+      divisione in filtri di categorie come nei prodotti, perche' cosi' mi
+      e' un po' difficile fare l'inventario visto che devo passare da un
+      ripiano a un altro perche' sono mischiati … a me serve in ordine
+      alfabetico, ma per categorie, perche' le categorie ce l'ho quasi tutte
+      vicine». E: «dovrebbero sempre apparire filtri sopra dove io posso
+      selezionare se voglio vederli tutti oppure divisi per categoria».
+      L'inventario usa la stessa barra delle categorie dei Prodotti
+      (CategoryRail: a sinistra sullo schermo largo, una riga che scorre sul
+      telefono), con i conteggi. «Tutte» mette i prodotti in fila categoria
+      per categoria, nell'ordine delle categorie di magazzino e ognuna col
+      suo titolo, e dentro in ordine alfabetico; scelta una categoria
+      restano solo i suoi. I prodotti senza categoria vanno in fondo.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases:
+      - tests/component/StockCountPanel.test.jsx
+  - id: REQ-MAG-048
+    title: "Lo storico dei movimenti di un prodotto, diviso per tipo"
+    area: "src/components/InventoryManager.jsx (Movimenti)"
+    description: >
+      Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il
+      gestionale dovrebbe registrarmi tutte le movimentazioni e
+      suddividermele in quelle da consegna di ordine a fornitore, carico
+      diretto da prodotti di magazzino, modifica del contenuto reale,
+      rimanenza reale durante la chiusura di un inventario».
+      Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il
+      magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo
+      che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le
+      vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un
+      prodotto solo, coi movimenti raggruppati per tipo e i totali di
+      ciascuno nel periodo.
+    status: todo
+    priority: P2
+    generate_issue: true
+    labels: [magazzino]
+    test_cases: []
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"

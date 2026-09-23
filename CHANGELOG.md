@@ -1,5 +1,23 @@
 # Cosa è cambiato
 
+## 1.8.0-beta
+
+### Per chi amministra
+
+- **L'inventario separa il venduto dalla differenza.** Ogni prodotto
+  mostra DEP, ACQ, VENDUTO (quanto hanno scaricato i drink battuti, visibile
+  prima ancora di contare) e ATTESO (quanto risulta adesso in magazzino).
+  Scritto il contato, compare la DIFFERENZA, in pezzi e in euro: è quello
+  che la chiusura corregge. In cima ci sono i totali di venduto e
+  differenza. Una rettifica del contenuto reale durante l'inventario sposta
+  il DEP.
+- **Si può contare a locale aperto.** Ogni conteggio porta la sua ora, e la
+  chiusura tiene conto di quello che si vende dopo: prima le vendite fatte
+  fra il conteggio e la chiusura sparivano dalle scorte.
+- **L'inventario si scorre per categorie**, con la stessa barra dei
+  Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
+  dentro in ordine alfabetico.
+
 ## 1.7.0
 
 ### Per chi sta al banco

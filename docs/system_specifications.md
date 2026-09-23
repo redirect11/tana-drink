@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 22 settembre 2026.
+> Generato il 23 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 202 | fatto e coperto dai test |
+| ✅ | 204 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**246 voci** in tutto. **217** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**249 voci** in tutto. **219** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 41 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1735,6 +1735,22 @@ COSA RESTA DA ZERO IN SU, e cambia nome per dirlo: `giacenzaPerCarico` diventa `
 
 **Dove**: `src/lib/api.js (loadStock, receiveBottles, consegna), src/lib/inventory.js (giacenzaNonNegativa)` · **Lo dimostrano**: `tests/unit/scritturaMagazzino.test.js`, `tests/unit/inventory.test.js`
 
+#### REQ-MAG-046 — L'inventario separa il venduto dalla differenza: DEP, ACQ, VENDUTO, ATTESO, DIFFERENZA
+
+Flavio, 23/09/2026: «in primis la creazione del deposito se non ho mai fatto un inventario; a questo punto parte il valore DEP ed ACQ 0; poi man mano che acquisto aumentera' il valore ACQ quando carico prodotti da ordine a fornitore consegnato e carico diretto, mentre se modifico il contenuto reale mi modifica il valore del deposito; intanto utilizzando gli items del menu il valore si inizierà a modificare ma dovra' essere comunque registrato come consumato; infine quando inserisco manualmente le rimanenze mi allineero' con i consumi e le rimanenze reali; da qui si partira' con il nuovo inventario, dove la rimanenza di quello appena concluso diventera' il deposito». E: «il vero CONSUMO e' la variazione del deposito dovuta alla vendita, cioe' allo scarico dei prodotti nelle ricette degli items di menu. L'inventario e' solo un allineamento con il consumo reale: piu' siamo precisi con gli scarichi, meno dovremo intervenire sulle rimanenze».
+
+PRIMA la riga diceva DEP + ACQ − RIM = CONS, il conto del foglio INV: un numero solo, che mescolava quello che si e' venduto con quello che e' sparito (ricette imprecise, merce persa, errori di carico).
+
+ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del periodo: contenuto reale modificato e rettifiche d'inventario), ACQ (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico delle ricette dei drink battuti, convertito dai ml nei pezzi del magazzino, visibile prima ancora di contare), ATTESO (la giacenza del prodotto adesso) e, scritto il contato, la DIFFERENZA = contato − atteso, in pezzi e in €. In cima i totali: venduto, differenza, valore delle rimanenze. La chiusura corregge la giacenza della differenza (BUG-112), e il DEP del prossimo inventario e' la giacenza appena allineata. Il «consumo» della storia e del consumo a settimana (REQ-MAG-024) resta quello che e' uscito davvero dallo scaffale: venduto piu' quello che manca, cioe' lo stesso numero del foglio INV quando i conti tornano. Gli inventari chiusi dalla 1.8 raccontano venduto e differenza; i vecchi, che non li hanno, il consumo di sempre.
+
+**Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-047 — L'inventario si scorre per categorie, come gli scaffali
+
+Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione in filtri di categorie come nei prodotti, perche' cosi' mi e' un po' difficile fare l'inventario visto che devo passare da un ripiano a un altro perche' sono mischiati … a me serve in ordine alfabetico, ma per categorie, perche' le categorie ce l'ho quasi tutte vicine». E: «dovrebbero sempre apparire filtri sopra dove io posso selezionare se voglio vederli tutti oppure divisi per categoria». L'inventario usa la stessa barra delle categorie dei Prodotti (CategoryRail: a sinistra sullo schermo largo, una riga che scorre sul telefono), con i conteggi. «Tutte» mette i prodotti in fila categoria per categoria, nell'ordine delle categorie di magazzino e ognuna col suo titolo, e dentro in ordine alfabetico; scelta una categoria restano solo i suoi. I prodotti senza categoria vanno in fondo.
+
+**Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
+
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
 Flavio, 12/09/2026 (vocale delle 13:47): «alcuni prodotti non mi scarica il quantitativo ogni volta che lo vendo … ho comprato questa nuova tequila Agave Santa, l'ho associata a un item di menù, l'ho battuto, non è stato scaricato. Mi sono reso conto che stava spento il tasto "è una scorta, si scarica quando si usa". Ma perché sta questo tasto? Tutto bisogna che si scarica quando si usa». E Daniele, lo stesso giorno: «togli proprio quel tasto che disabilita lo scarico, in effetti non serve». A COSA SERVIVA. L'interruttore (`scorta`, REQ-MAG-016) era nato per la manodopera: un «Tempo di lavorazione» messo in ricetta per pesare sul costo del drink, che non sta su nessuno scaffale — se si fosse scaricato sarebbe andato a zero al primo drink e il menù avrebbe detto «ingrediente esaurito» (REQ-MAG-012).
@@ -3108,6 +3124,12 @@ DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quel
 NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
+
+#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
+
+Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
+
+**Dove**: `src/components/InventoryManager.jsx (Movimenti)`
 
 ### Cassa di serata e statistiche
 
