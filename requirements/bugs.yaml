@@ -4961,3 +4961,38 @@ bugs:
     test_cases:
       - tests/unit/warehouse.test.js
       - tests/component/StockCountPanel.test.jsx
+
+  - id: BUG-112
+    title: "Alla chiusura dell'inventario le vendite fatte dopo il conteggio sparivano"
+    area: "src/lib/api.js (closeStockCount, salvaRimanenza), src/lib/inventarioInCorso.js"
+    severity: grave
+    priority: P1
+    description: >
+      Visto ragionando sul 23/09/2026, dopo BUG-110, e confermato dalla
+      domanda di Daniele: «vuol dire che gli scarica subito la quantita'
+      appena inserisce il dato?» — no: la scriveva solo alla chiusura, ed e'
+      proprio quello il guaio. La chiusura portava la giacenza di ogni
+      prodotto contato AL NUMERO CONTATO. Ma si conta a locale aperto:
+      contate 5 Coca Cola alle 18, vendute 2 fino a mezzanotte (la giacenza
+      scende a 3), chiuso l'inventario a mezzanotte, la giacenza tornava a
+      5. Le vendite fatte fra il conteggio e la chiusura si cancellavano, e
+      la differenza a schermo le contava come merce in piu'.
+      LA CORREZIONE: ogni rimanenza porta la sua ORA (`rimanenze_ora` sul
+      documento dell'inventario, scritta dal dispositivo insieme al numero).
+      La differenza si misura sull'atteso di quel momento: atteso adesso
+      meno quello che si e' mosso dopo il conteggio. E la chiusura non
+      scrive piu' il numero contato: SOMMA la differenza alla giacenza con
+      `increment`, cosi' restano sia le vendite dopo il conteggio sia un
+      drink battuto mentre il pacchetto parte. Prima di chiudere il
+      pannello rilegge giacenze e movimenti, perche' le differenze a
+      schermo sono state calcolate all'apertura della pagina.
+      Le rimanenze senza ora — scritte con la 1.6.1, o le 62 sistemate a
+      mano in produzione il 23/09 — valgono come contate adesso: e' il
+      comportamento di prima, ed e' giusto per quelle.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/unit/chiusuraInventario.test.js

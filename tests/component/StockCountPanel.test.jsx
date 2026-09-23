@@ -22,7 +22,7 @@ import '@testing-library/jest-dom/vitest'
 // Quattordici giorni tondi: 1500 ml consumati fanno 750 ml a settimana.
 const APERTA = new Date(Date.now() - 14 * 86400000).toISOString()
 
-const stato = { aperta: null, storico: [], impostazioni: {}, movimenti: [] }
+const stato = { aperta: null, storico: [], impostazioni: {}, movimenti: [], articoli: [], categorie: [] }
 
 vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: (cb) => {
@@ -30,7 +30,8 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   settingsIniziali: () => stato.impostazioni,
-  fetchInventoryItems: vi.fn(async () => []),
+  fetchInventoryItems: vi.fn(async () => stato.articoli),
+  fetchInventoryCategories: vi.fn(async () => stato.categorie),
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
   salvaRimanenza: vi.fn(),
@@ -51,6 +52,8 @@ beforeEach(() => {
   stato.storico = []
   stato.impostazioni = {}
   stato.movimenti = []
+  stato.articoli = []
+  stato.categorie = []
 })
 
 describe('l’inventario in corso', () => {
@@ -96,7 +99,7 @@ describe('l’inventario in corso', () => {
   it('chiuso, ne riapre subito un altro dalle giacenze allineate', async () => {
     const api = await import('../../src/lib/api.js')
     const gin = { id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, stock: 3, cost: 10, vat: 22 }
-    api.fetchInventoryItems.mockResolvedValue([gin])
+    stato.articoli = [gin]
     stato.aperta = {
       id: 'c1',
       started_at: APERTA,
@@ -114,7 +117,9 @@ describe('l’inventario in corso', () => {
     // chiusura interrotta poteva lasciare a metà.
     expect(api.closeStockCount.mock.calls[0][1].riapri).toEqual([gin])
     expect(api.startStockCount).not.toHaveBeenCalled()
-    api.fetchInventoryItems.mockResolvedValue([])
+    // La riga arriva con la differenza già misurata (BUG-112): contato 3,
+    // atteso 3, niente da correggere.
+    expect(api.closeStockCount.mock.calls[0][1].lines[0].diff).toBe(0)
   })
 
   // Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica,
@@ -123,7 +128,7 @@ describe('l’inventario in corso', () => {
   it('con la riapertura spenta, chiuso resta chiuso', async () => {
     const api = await import('../../src/lib/api.js')
     stato.impostazioni = { inventario_riapre_da_solo: false }
-    api.fetchInventoryItems.mockResolvedValue([{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }])
+    stato.articoli = [{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }]
     stato.aperta = {
       id: 'c1',
       started_at: APERTA,
@@ -139,7 +144,6 @@ describe('l’inventario in corso', () => {
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
     expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(null)
     expect(api.startStockCount).not.toHaveBeenCalled()
-    api.fetchInventoryItems.mockResolvedValue([])
   })
 
   it('e con la riapertura spenta il tasto dice che il prossimo lo apri tu', async () => {
@@ -170,6 +174,10 @@ describe('DEP e ACQ di un inventario aperto', () => {
         { item_id: 'lete', name: 'Acqua Lete', unit: 'pz', package_size: 500, cost: 0.17, vat: 22, dep: 66, rim: null },
       ],
     }
+    stato.articoli = [
+      { id: 'gin', name: '400 Conigli Gin', unit: 'pz', package_size: 500, stock: 0.1 },
+      { id: 'lete', name: 'Acqua Lete', unit: 'pz', package_size: 500, stock: 33 },
+    ]
     stato.movimenti = [
       { item_id: 'gin', type: 'load', qty: 0.2, unit: 'pz', reason: 'conta' },
       { item_id: 'lete', type: 'unload', qty: 39, unit: 'pz', reason: 'rettifica' },
@@ -178,8 +186,87 @@ describe('DEP e ACQ di un inventario aperto', () => {
     render(<StockCountPanel />)
     await screen.findByText(/Inventario in corso/)
     const riga = (nome) => screen.getByText(nome).closest('.inv-row').textContent
-    expect(riga('400 Conigli Gin')).toMatch(/DEP -0,1 pz · ACQ 0 pz/)
+    // Dal 23/09 (REQ-MAG-046) anche la rettifica di un inventario finita
+    // DENTRO il periodo — la chiusura interrotta del 21/09 — va nel DEP: è
+    // quello che Flavio chiedeva, «mi dovrebbe apparire il reale come
+    // deposito, 0,1 pz, e 0 come acquisti».
+    expect(riga('400 Conigli Gin')).toMatch(/DEP 0,1 pz · ACQ 0 pz/)
     expect(riga('Acqua Lete')).toMatch(/DEP 27 pz · ACQ 6 pz/)
+  })
+})
+
+// ── VENDUTO, ATTESO, DIFFERENZA (REQ-MAG-046) ──────────────────────
+// Flavio, 23/09/2026: «il vero consumo è lo scarico dei prodotti nelle
+// ricette degli items di menù; l'inventario è solo un allineamento».
+describe('venduto, atteso e differenza', () => {
+  const JAGER = { id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, content_unit: 'ml', stock: 2.8, cost: 13.8, vat: 22 }
+  const aperta = () => ({
+    id: 'c1',
+    started_at: APERTA,
+    lines: [{ item_id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, cost: 13.8, vat: 22, dep: 3.2, rim: null }],
+  })
+
+  it('il venduto si vede subito, prima ancora di contare', async () => {
+    stato.articoli = [JAGER]
+    stato.aperta = aperta()
+    stato.movimenti = [{ item_id: 'jager', type: 'unload', qty: 400, unit: 'ml', reason: 'ordine', created_at: APERTA }]
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    const riga = screen.getByText('Jagermeister').closest('.inv-row').textContent
+    expect(riga).toMatch(/DEP 3,2 pz · ACQ 0 pz · VENDUTO 0,4 pz · ATTESO 2,8 pz/)
+    expect(riga).not.toMatch(/DIFFERENZA/)
+  })
+
+  it('scritto il contato, compare la differenza, e in cima il suo valore', async () => {
+    stato.articoli = [JAGER]
+    stato.aperta = aperta()
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.type(screen.getByLabelText('Rimanenza di Jagermeister'), '0.9')
+    const riga = screen.getByText('Jagermeister').closest('.inv-row').textContent
+    expect(riga).toMatch(/DIFFERENZA -1,9 pz/)
+    scritto(/Differenza: -31,99/)
+  })
+})
+
+// ── PER CATEGORIE, COME GLI SCAFFALI (REQ-MAG-047) ──────────────────
+// Flavio, vocale del 21/09/2026: «devo passare da un ripiano a un altro
+// perché sono mischiati … a me serve in ordine alfabetico, ma per
+// categorie». E: «dovrebbero sempre apparire filtri sopra dove posso
+// selezionare se voglio vederli tutti oppure divisi per categoria».
+describe('le categorie', () => {
+  const riga = (id, name) => ({ item_id: id, name, unit: 'pz', package_size: 700, cost: 10, vat: 22, dep: 1, rim: null })
+  beforeEach(() => {
+    // Nell'ordine in cui le dà il magazzino (sort_order): prima gli amari.
+    stato.categorie = [
+      { id: 'amari', name: 'AMARI', sort_order: 0 },
+      { id: 'gin', name: 'GIN', sort_order: 1 },
+    ]
+    stato.articoli = [
+      { id: 'bombay', name: 'Bombay', unit: 'pz', category_id: 'gin', stock: 1 },
+      { id: 'cynar', name: 'Cynar', unit: 'pz', category_id: 'amari', stock: 1 },
+      { id: 'jager', name: 'Jagermeister', unit: 'pz', category_id: 'amari', stock: 1 },
+      { id: 'acqua', name: 'Acqua', unit: 'pz', stock: 1 },
+    ]
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [riga('acqua', 'Acqua'), riga('bombay', 'Bombay'), riga('cynar', 'Cynar'), riga('jager', 'Jagermeister')],
+    }
+  })
+  const nomi = () => [...document.querySelectorAll('.inv-name')].map((n) => n.textContent)
+
+  it('«Tutte» li mette in fila categoria per categoria, in ordine alfabetico', async () => {
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    expect(nomi()).toEqual(['Cynar', 'Jagermeister', 'Bombay', 'Acqua'])
+  })
+
+  it('scelta una categoria, restano solo i suoi prodotti', async () => {
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.click(screen.getByRole('button', { name: /GIN/ }))
+    expect(nomi()).toEqual(['Bombay'])
   })
 })
 
@@ -200,7 +287,8 @@ describe('le rimanenze mentre si conta', () => {
     await userEvent.type(campo, '0.9')
     // Uscendo dal campo si salva subito, senza aspettare che il dito si fermi.
     await userEvent.tab()
-    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'a', '0.9')
+    // Con l'ora del conteggio (BUG-112).
+    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'a', '0.9', expect.any(String))
   })
 })
 

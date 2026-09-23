@@ -8,90 +8,16 @@ import {
   suggestedPackages,
   purchaseOrderText,
   parseSupplierList,
-  countLineCons,
   qtyValue,
-  stockCountCompute,
   giorniDiConta,
   consumoSettimanale,
   purchaseOrderTotals,
   consumptionDiff,
-  movimentiDellInventario,
 } from '../../src/lib/warehouse.js'
 
-describe('countLineCons (DEP + ACQ − RIM = CONS, come i fogli INV)', () => {
-  it('esempio Excel: dep 0.8, acq 1, rim 1 → cons 0.8 (bottiglie)', () => {
-    // In app le quantità sono in unità base: 800ml + 1000ml − 1000ml = 800ml
-    expect(countLineCons({ dep: 800, acq: 1000, rim: 1000 })).toBe(800)
-  })
-  it('rim mancante → non calcolabile', () => {
-    expect(countLineCons({ dep: 100, acq: 0, rim: null })).toBeNull()
-    expect(countLineCons({ dep: 100, acq: 0, rim: '' })).toBeNull()
-  })
-  it('rim zero è valido (tutto consumato)', () => {
-    expect(countLineCons({ dep: 500, acq: 0, rim: 0 })).toBe(500)
-  })
-})
-
-// ── DOVE VA OGNI MOVIMENTO DI UN INVENTARIO APERTO (BUG-111) ─────────
-// Flavio, 22/09/2026: il 400 Conigli, dopo l'inventario, diceva «DEP −0,1 ·
-// ACQ 0,2»: la rettifica della chiusura contata come merce comprata. «Sul
-// nuovo inventario dovrebbero apparire 0 acquisti, che aumentano quando
-// carico da un ordine consegnato o dal carico diretto; se modifico il
-// contenuto reale, mi modifica il deposito».
-describe('i movimenti di un inventario aperto', () => {
-  const righe = [
-    { item_id: 'gin', unit: 'pz', package_size: 500 },
-    { item_id: 'lete', unit: 'pz', package_size: 500 },
-  ]
-  const mov = (item_id, type, qty, reason, unit = 'pz') => ({ item_id, type, qty, reason, unit })
-
-  it('ACQ conta il carico diretto e la consegna di un ordine fornitore', () => {
-    const { acq } = movimentiDellInventario(
-      [mov('gin', 'load', 1, 'carico'), mov('gin', 'load', 2, 'ordine fornitore')],
-      righe
-    )
-    expect(acq).toEqual({ gin: 3 })
-  })
-
-  // Il caso della foto: la correzione della chiusura non è un acquisto.
-  it('la rettifica di un inventario non è un acquisto, e non tocca niente', () => {
-    const { acq, rett } = movimentiDellInventario([mov('gin', 'load', 0.2, 'conta')], righe)
-    expect(acq).toEqual({})
-    expect(rett).toEqual({})
-  })
-
-  it('la modifica del contenuto reale va nel DEP, col suo segno', () => {
-    const { acq, rett } = movimentiDellInventario(
-      [mov('lete', 'unload', 39, 'rettifica'), mov('gin', 'load', 0.2, 'rettifica')],
-      righe
-    )
-    expect(acq).toEqual({})
-    expect(rett).toEqual({ lete: -39, gin: 0.2 })
-  })
-
-  // Prima le uscite dei carichi non si vedevano affatto: un carico tolto a
-  // mano lasciava l'ACQ gonfio.
-  it('un carico tolto sottrae dagli acquisti', () => {
-    const { acq } = movimentiDellInventario(
-      [mov('gin', 'load', 3, 'carico'), mov('gin', 'unload', 1, 'carico')],
-      righe
-    )
-    expect(acq).toEqual({ gin: 2 })
-  })
-
-  // Le vendite sono il consumo, che l'inventario ricava da DEP + ACQ − RIM:
-  // contarle anche qui le sottrarrebbe due volte.
-  it('le vendite non entrano né in ACQ né nel DEP', () => {
-    const { acq, rett } = movimentiDellInventario([mov('gin', 'unload', 40, 'ordine', 'ml')], righe)
-    expect(acq).toEqual({})
-    expect(rett).toEqual({})
-  })
-
-  it('e con le rettifiche il consumo parte dal DEP corretto', () => {
-    // DEP 66, contenuto reale portato a 27 (−39), rimanenza 27: consumo zero.
-    expect(countLineCons({ dep: 66, rett: -39, acq: 0, rim: 27 })).toBe(0)
-  })
-})
+// Le righe dell'inventario in corso (DEP, ACQ, VENDUTO, ATTESO, DIFFERENZA)
+// e i casi che stavano qui — l'esempio del foglio INV, lo smistamento dei
+// movimenti di BUG-111 — sono in inventarioInCorso.test.js (REQ-MAG-046).
 
 describe('qtyValue', () => {
   const amaro = { unit: 'ml', package_size: 1000, cost: 12.9, vat: 22 }
@@ -105,21 +31,6 @@ describe('qtyValue', () => {
   it('quantità nulla o negativa → 0', () => {
     expect(qtyValue(0, amaro)).toBe(0)
     expect(qtyValue(-100, amaro)).toBe(0)
-  })
-})
-
-describe('stockCountCompute', () => {
-  it('calcola cons e valori per riga + totali', () => {
-    const { lines, totals } = stockCountCompute([
-      { item_id: 'a', unit: 'ml', package_size: 1000, cost: 10, vat: 0, dep: 2000, acq: 1000, rim: 1500 },
-      { item_id: 'b', unit: 'pz', cost: 1, vat: 0, dep: 24, acq: 0, rim: null },
-    ])
-    expect(lines[0].cons).toBe(1500) // 2000+1000-1500
-    expect(lines[0].cons_value).toBeCloseTo(15, 3) // 1,5 bottiglie × 10
-    expect(lines[0].rim_value).toBeCloseTo(15, 3)
-    expect(lines[1].cons).toBeNull()
-    expect(totals.counted).toBe(1)
-    expect(totals.cons_value).toBeCloseTo(15, 3)
   })
 })
 
@@ -174,29 +85,6 @@ describe('il consumo a settimana', () => {
     expect(consumoSettimanale(1400, null)).toBeNull()
     expect(consumoSettimanale(null, 14)).toBeNull()
     expect(consumoSettimanale(1400, 0)).toBeNull()
-  })
-
-  it('e la conta lo porta riga per riga', () => {
-    const { lines, giorni } = stockCountCompute(
-      [
-        { item_id: 'a', unit: 'ml', package_size: 1000, cost: 10, vat: 0, dep: 2000, acq: 1000, rim: 1500 },
-        { item_id: 'b', unit: 'pz', cost: 1, vat: 0, dep: 24, acq: 0, rim: null },
-      ],
-      { dal: '2026-06-07T00:00:00Z', al: '2026-06-21T00:00:00Z' }
-    )
-    expect(giorni).toBeCloseTo(14, 3)
-    expect(lines[0].cons_week).toBeCloseTo(750, 3) // 1500 in 14 giorni
-    // Riga non contata: niente consumo, quindi niente consumo a settimana.
-    expect(lines[1].cons_week).toBeNull()
-  })
-
-  it('senza periodo la conta resta com’era, senza colonna finta', () => {
-    const { lines, giorni } = stockCountCompute([
-      { item_id: 'a', unit: 'pz', cost: 1, vat: 0, dep: 10, acq: 0, rim: 4 },
-    ])
-    expect(lines[0].cons).toBe(6)
-    expect(lines[0].cons_week).toBeNull()
-    expect(giorni).toBeNull()
   })
 })
 
