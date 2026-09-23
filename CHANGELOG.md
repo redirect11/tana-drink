@@ -1,5 +1,7 @@
 # Cosa è cambiato
 
+## 1.8.0-beta
+
 ## 1.7.0
 
 ### Per chi sta al banco
