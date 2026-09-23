@@ -81,7 +81,13 @@ vi.mock('firebase/firestore', () => ({
   getDocFromCache: vi.fn(async () => {
     throw new Error('niente cache')
   }),
-  getDocs: vi.fn(async () => ({ docs: [] })),
+  // La chiusura dell'inventario legge il magazzino intero in una volta
+  // (BUG-112): la collezione degli articoli risponde con quello del test.
+  getDocs: vi.fn(async (ref) =>
+    ref?.__col === 'inventory_items'
+      ? { docs: [{ id: 'art-1', data: () => stato.articolo }] }
+      : { docs: [] }
+  ),
   getDocsFromCache: vi.fn(async () => ({ docs: [] })),
   addDoc: vi.fn(async () => ({ id: 'x' })),
   setDoc: vi.fn(async () => {}),
@@ -147,8 +153,6 @@ const strade = [
     () =>
       api.closeStockCount('sc-1', {
         lines: [{ item_id: 'art-1', rim: 3 }],
-        totals: {},
-        align: true,
       }),
   ],
 ]

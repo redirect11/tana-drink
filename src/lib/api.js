@@ -106,6 +106,7 @@ import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
+import { righeInventario } from './inventarioInCorso.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
 import {
   inCodaOrdine,
@@ -1160,8 +1161,9 @@ export async function fetchStockMovementsSince(iso) {
 // chiusura. Le rimanenze scritte senza ora valgono come contate adesso.
 function mapStockCount(snap) {
   const c = snap.data() || {}
-  const rimanenze = c.rimanenze && typeof c.rimanenze === 'object' ? c.rimanenze : {}
-  const ore = c.rimanenze_ora && typeof c.rimanenze_ora === 'object' ? c.rimanenze_ora : {}
+  const mappa = (x) => (x && typeof x === 'object' ? x : {})
+  const rimanenze = mappa(c.rimanenze)
+  const ore = mappa(c.rimanenze_ora)
   const lines = (Array.isArray(c.lines) ? c.lines : []).map((l) =>
     l && Object.prototype.hasOwnProperty.call(rimanenze, l.item_id)
       ? { ...l, rim: rimanenze[l.item_id], rim_at: ore[l.item_id] ?? null }
@@ -1264,46 +1266,50 @@ export function salvaRimanenza(id, itemId, valore, ora = new Date().toISOString(
 // uguale per tutti — quindi la query «dopo l'apertura» non se li ritrova
 // fra i movimenti del periodo nuovo.
 //
-// Le letture qui sotto (la conta e le giacenze di ora) restano attese: sono
-// letture, e senza rete rispondono dalla cache.
+// LE DIFFERENZE LE CALCOLA LA CHIUSURA, non chi la chiama (BUG-112). Si
+// rileggono giacenze e movimenti e si passa da `righeInventario`, lo stesso
+// calcolo che il pannello mostra: la differenza misurata sull'atteso
+// dell'ora del conteggio, e sommata alla giacenza con `increment` — così
+// restano sia le vendite fatte dopo il conteggio sia un drink battuto
+// mentre il pacchetto parte. Una strada sola: prima il pannello passava le
+// differenze e qui c'era anche la regola vecchia («la giacenza diventa il
+// numero contato»), pronta a tornare per chiunque si dimenticasse il campo.
 //
-// `riapri`: gli articoli del magazzino, per aprire il prossimo; null per
-// non aprirlo. Ritorna il nuovo inventario composto in memoria, o null.
-export async function closeStockCount(id, { lines, totals, align = true, riapri = null }) {
+// Le letture restano attese: sono letture, e senza rete rispondono dalla
+// cache, che ha anche le vendite appena battute da questo dispositivo.
+//
+// `lines`: le righe con quello che si è scritto (`rim`, `rim_at`).
+// `riapri`: se aprire il prossimo. Ritorna le righe e i totali della
+// chiusura, e il prossimo inventario composto in memoria (o null).
+export async function closeStockCount(id, { lines, riapri = false }) {
   const countRef = doc(db, 'stock_counts', id)
-  const countSnap = await getDoc(countRef)
+  const [countSnap, articoli] = await Promise.all([getDoc(countRef), fetchInventoryItems()])
   if (!countSnap.exists()) throw new Error('Conta non trovata')
-  if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
-
-  const toAlign = align ? lines.filter((l) => l.rim != null && l.rim !== '') : []
-  const itemSnaps = await Promise.all(
-    toAlign.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
-  )
+  const conta = mapStockCount(countSnap)
+  if (conta.status !== 'open') throw new Error('Conta già chiusa')
+  const movimenti = await fetchStockMovementsSince(conta.started_at)
+  const chiusa = righeInventario(lines, { movimenti, items: articoli, dal: conta.started_at })
 
   // Tutti i controlli PRIMA di scrivere qualsiasi cosa: un prodotto ancora
   // nella forma vecchia ferma la chiusura intera, non la tronca a metà.
+  const perId = new Map(articoli.map((a) => [a.id, a]))
   const batch = writeBatch(db)
-  const contati = {}
-  for (let idx = 0; idx < toAlign.length; idx++) {
-    const l = toAlign[idx]
-    const cur = articoloScrivibile(itemSnaps[idx])
+  const differenze = {}
+  for (const l of chiusa.lines) {
+    if (l.diff == null) continue
+    const cur = perId.get(l.item_id)
+    // Un prodotto cancellato nel frattempo non ha più una giacenza da
+    // correggere: si salta, come prima.
     if (!cur) continue
-    // SI APPLICA LA DIFFERENZA, NON LA RIMANENZA (BUG-112). Fino alla 1.7
-    // la giacenza diventava il numero contato: contato alle 18 e chiuso a
-    // mezzanotte, le vendite fatte in mezzo sparivano, perché la giacenza
-    // tornava al numero delle 18. `diff` è già misurata sull'atteso
-    // dell'ora del conteggio (lib/inventarioInCorso.js), e si somma con
-    // `increment`: anche un drink battuto mentre il pacchetto parte resta.
-    // Una riga che arriva senza `diff` si allinea come prima, al numero.
-    const diff = Number.isFinite(l.diff) ? l.diff : (Number(l.rim) || 0) - (Number(cur.stock) || 0)
-    contati[l.item_id] = diff
-    if (Math.abs(diff) < 1e-9) continue
-    batch.update(doc(db, 'inventory_items', l.item_id), { stock: increment(diff) })
+    articoloScrivibileInMano(cur)
+    differenze[l.item_id] = l.diff
+    if (Math.abs(l.diff) < 1e-9) continue
+    batch.update(doc(db, 'inventory_items', l.item_id), { stock: increment(l.diff) })
     batch.set(doc(movementsCol), {
       item_id: l.item_id,
       item_name: cur.name,
-      type: diff > 0 ? 'load' : 'unload',
-      qty: Math.abs(diff),
+      type: l.diff > 0 ? 'load' : 'unload',
+      qty: Math.abs(l.diff),
       unit: cur.unit ?? null,
       reason: 'conta',
       created_at: serverTimestamp(),
@@ -1313,19 +1319,21 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
   batch.update(countRef, {
     status: 'closed',
     closed_at: serverTimestamp(),
-    lines,
-    totals,
+    lines: chiusa.lines,
+    totals: chiusa.totals,
     // Le rimanenze adesso stanno nelle righe: le mappe di lavoro non servono più.
     rimanenze: deleteField(),
     rimanenze_ora: deleteField(),
   })
 
   let prossimo = null
-  if (riapri) {
+  if (riapri && articoli.length > 0) {
     const ref = doc(collection(db, 'stock_counts'))
     // DEP del prossimo = la giacenza dopo l'allineamento: quella di adesso
     // più la differenza appena applicata.
-    const righe = riapri.map((it) => rigaDiInventario(it, (Number(it.stock) || 0) + (contati[it.id] ?? 0)))
+    const righe = articoli.map((it) =>
+      rigaDiInventario(it, (Number(it.stock) || 0) + (differenze[it.id] ?? 0))
+    )
     batch.set(ref, { status: 'open', started_at: serverTimestamp(), lines: righe, totals: null })
     prossimo = {
       id: ref.id,
@@ -1338,7 +1346,7 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
   }
 
   bgWrite(() => batch.commit(), 'chiusura inventario')
-  return prossimo
+  return { ...chiusa, prossimo }
 }
 
 export async function fetchStockCounts({ limit = 20 } = {}) {

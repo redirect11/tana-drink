@@ -5,7 +5,7 @@
 // determinato periodo … e vorrei avere la stessa identica visualizzazione
 // a lista».
 //
-// È la stessa domanda della CONTA (warehouse.js, REQ-MAG-014), fatta però
+// È la stessa domanda dell'INVENTARIO (inventarioInCorso.js, REQ-MAG-046), fatta però
 // su un periodo scelto a mano invece che sul periodo di una conta — e
 // senza girare per il locale a contare le bottiglie. Le due cose non si
 // sostituiscono a vicenda, ed è importante saperlo prima di guardare i
@@ -66,11 +66,26 @@ export const GRUPPO_MOTIVO = {
 // fa sempre la giacenza di fine periodo — e il numero si vede.
 export const gruppoMovimento = (m) => GRUPPO_MOTIVO[String(m?.reason || '')] || 'rettifica'
 
-const arrotonda = (n, cifre) => {
+export const arrotonda = (n, cifre = 4) => {
   const f = 10 ** cifre
   // Lo zero negativo esiste e si stampa «-0»: quello che non si è mosso
   // deve leggersi zero.
   return (Math.round(n * f) / f) + 0
+}
+
+// UN MOVIMENTO, RIPORTATO A PEZZI: la quantità nell'unità della giacenza,
+// col segno (entrata positiva, uscita negativa), e il gruppo in cui cade.
+// È il passo che fanno sia questo elenco sia l'inventario in corso
+// (inventarioInCorso.js): in un posto solo, perché un segno o una
+// conversione corretti qui valgano per tutti e due. null se il prodotto non
+// c'è più: senza l'articolo non si sa in che unità sia quella quantità, e
+// un numero convertito a caso è peggio di una riga che manca.
+export function movimentoInPezzi(m, item) {
+  if (!item) return null
+  return {
+    q: qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1),
+    gruppo: gruppoMovimento(m),
+  }
 }
 
 /**
@@ -103,20 +118,16 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
 
   for (const m of movimenti || []) {
     const item = perId.get(m?.item_id)
-    // Prodotto cancellato dal magazzino: senza l'articolo non si sa in che
-    // unità sia quella quantità, e un numero convertito a caso è peggio di
-    // una riga che manca.
-    if (!item) continue
+    const mp = movimentoInPezzi(m, item)
+    if (!mp) continue
     const giornata = businessDayKey(m.created_at, cutoffHour)
     if (!giornata || giornata < dal) continue
-    // In pezzi, col segno: entrata positiva, uscita negativa.
-    const q = qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1)
+    const { q, gruppo } = mp
     const r = riga(item)
     if (al && giornata > al) {
       r.dopo += q
       continue
     }
-    const gruppo = gruppoMovimento(m)
     if (gruppo === 'acquisto') r.acq += q
     // Il consumo si legge in positivo: quello che è uscito. Un'entrata per
     // storno lo abbassa, che è esattamente quello che è successo.

@@ -35,7 +35,12 @@ vi.mock('../../src/lib/api.js', () => ({
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
   salvaRimanenza: vi.fn(),
-  closeStockCount: vi.fn(),
+  // Come la vera: le righe e i totali della chiusura, e il prossimo.
+  closeStockCount: vi.fn(async (_id, { lines }) => ({
+    lines,
+    totals: { vend_value: 0, diff_value: 0, rim_value: 0, cons_value: 0, counted: 0 },
+    prossimo: null,
+  })),
   fetchStockCounts: vi.fn(async () => stato.storico),
   fetchStockMovementsSince: vi.fn(async () => stato.movimenti),
 }))
@@ -115,11 +120,13 @@ describe('l’inventario in corso', () => {
     // fino al 22/09/2026 lo apriva `startStockCount` dopo, con una seconda
     // scrittura e una rilettura delle giacenze — due passi in più che una
     // chiusura interrotta poteva lasciare a metà.
-    expect(api.closeStockCount.mock.calls[0][1].riapri).toEqual([gin])
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(true)
     expect(api.startStockCount).not.toHaveBeenCalled()
-    // La riga arriva con la differenza già misurata (BUG-112): contato 3,
-    // atteso 3, niente da correggere.
-    expect(api.closeStockCount.mock.calls[0][1].lines[0].diff).toBe(0)
+    // Passa solo quello che si è scritto, con la sua ora: la differenza la
+    // calcola la chiusura, coi dati di quel momento (BUG-112).
+    const [riga] = api.closeStockCount.mock.calls[0][1].lines
+    expect(riga.rim).toBe('3')
+    expect(riga.rim_at).toEqual(expect.any(String))
   })
 
   // Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica,
@@ -142,7 +149,7 @@ describe('l’inventario in corso', () => {
     expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
     await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
-    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(null)
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(false)
     expect(api.startStockCount).not.toHaveBeenCalled()
   })
 
