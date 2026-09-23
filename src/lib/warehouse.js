@@ -2,56 +2,10 @@
 // ordini fornitore e scadenzario. Replica i calcoli dei fogli Excel storici
 // della Tana (INV / GENERATORE ORDINI / FORNITORI REC).
 
-import { costWithVat, qtyInStockUnit } from './inventory.js'
+import { costWithVat } from './inventory.js'
 
-// ── Conta periodica (INV: DEP → ACQ → RIM → CONS) ─────────────────────
-
-// Consumo di una riga di conta: giacenza iniziale (con le rettifiche del
-// periodo, BUG-111) + acquisti − rimanenza.
-// Valori in unità base (ml/g/pz); rim mancante ⇒ consumo non calcolabile (null).
-export function countLineCons(line) {
-  if (line?.rim == null || line.rim === '') return null
-  return depositoDellaRiga(line) + (Number(line.acq) || 0) - (Number(line.rim) || 0)
-}
-
-// Il DEP come si legge: la giacenza all'apertura più le modifiche del
-// contenuto reale fatte nel frattempo (BUG-111).
-export const depositoDellaRiga = (line) => (Number(line?.dep) || 0) + (Number(line?.rett) || 0)
-
-// ── QUALI MOVIMENTI ENTRANO IN UN INVENTARIO APERTO, E DOVE (BUG-111) ──
-//
-// Flavio, 22/09/2026, sul 400 Conigli che dopo l'inventario diceva «DEP
-// -0,1 · ACQ 0,2»: «sul nuovo inventario dovrebbero apparire 0 acquisti,
-// che poi aumentano quando carico prodotti da un ordine a fornitore
-// consegnato o dal carico diretto; se invece modifico il contenuto reale,
-// mi modifica il deposito».
-//
-// Prima ACQ sommava OGNI entrata di merce: anche le rettifiche a mano e
-// quelle della chiusura di un inventario, che non sono merce comprata. E
-// le uscite degli stessi gesti (un carico corretto in meno, una rettifica
-// al ribasso) non le vedeva affatto. Ora:
-//   · ACQ   = carico diretto, consegna di un ordine fornitore, fattura
-//             fornitore — col segno: un carico tolto sottrae;
-//   · DEP   = si sposta con le modifiche del contenuto reale (`rettifica`),
-//             che correggono la giacenza di partenza, non la comprano;
-//   · il resto (vendite, rettifiche di chiusura) non tocca nessuna delle
-//     due: le vendite sono il consumo, che l'inventario ricava da sé.
-export const MOTIVI_ACQUISTO = new Set(['carico', 'ordine fornitore', 'fattura fornitore'])
-
-export function movimentiDellInventario(movimenti, righe) {
-  const perId = new Map((righe || []).map((l) => [l.item_id, l]))
-  const acq = {}
-  const rett = {}
-  for (const m of movimenti || []) {
-    const riga = perId.get(m?.item_id)
-    if (!riga) continue
-    const dove = MOTIVI_ACQUISTO.has(m.reason) ? acq : m.reason === 'rettifica' ? rett : null
-    if (!dove) continue
-    const segno = m.type === 'load' ? 1 : -1
-    dove[m.item_id] = (dove[m.item_id] || 0) + segno * qtyInStockUnit(m.qty, m.unit, riga)
-  }
-  return { acq, rett }
-}
+// ── Conta periodica: valori e consumo a settimana ─────────────────────
+// Le righe dell'inventario in corso le compone lib/inventarioInCorso.js.
 
 // Valore in € di una quantità in unità base di un item (con IVA di default).
 export function qtyValue(qty, item, { gross = true } = {}) {
@@ -102,35 +56,6 @@ export function giorniDiConta(dal, al = null) {
 export function consumoSettimanale(cons, giorni) {
   if (cons == null || giorni == null || !(giorni > 0)) return null
   return Math.round((((Number(cons) || 0) / giorni) * 7 + Number.EPSILON) * 100) / 100
-}
-
-// Completa le righe della conta con consumo e valori e calcola i totali.
-//   lines: [{ item_id, name, unit, dep, acq, rim, cost, vat, package_size }]
-//   dal/al: gli estremi del periodo, per il consumo a settimana (`al`
-//           mancante = adesso, cioè conta ancora aperta).
-// Ritorna { lines: [...con cons, cons_week, rim_value, cons_value], totals,
-// giorni }.
-export function stockCountCompute(lines, { dal = null, al = null } = {}) {
-  const giorni = giorniDiConta(dal, al)
-  const out = (lines || []).map((l) => {
-    const cons = countLineCons(l)
-    return {
-      ...l,
-      cons,
-      cons_week: consumoSettimanale(cons, giorni),
-      rim_value: qtyValue(l.rim, l),
-      cons_value: cons != null ? qtyValue(cons, l) : 0,
-    }
-  })
-  const totals = out.reduce(
-    (t, l) => ({
-      rim_value: t.rim_value + (l.rim_value || 0),
-      cons_value: t.cons_value + (l.cons_value || 0),
-      counted: t.counted + (l.cons != null ? 1 : 0),
-    }),
-    { rim_value: 0, cons_value: 0, counted: 0 }
-  )
-  return { lines: out, totals, giorni }
 }
 
 // ── Ordini fornitore (GENERATORE ORDINI) ──────────────────────────────
