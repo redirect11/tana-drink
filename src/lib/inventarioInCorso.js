@@ -33,15 +33,15 @@
 //   atteso al conteggio = atteso adesso − quello che si è mosso DOPO
 // Una rimanenza senza ora (scritta con la 1.6.1, o sistemata a mano) vale
 // come contata adesso: è il comportamento di prima.
+//
+// DUE PASSI, perché il primo è pesante e il secondo no. Smistare qualche
+// migliaio di movimenti dipende solo dai movimenti e dagli articoli; le
+// righe dipendono anche da quello che si scrive, e si ricalcolano a ogni
+// cifra battuta. Chi ha i dati fermi (il pannello) smista una volta e
+// passa `raggruppati`; chi li legge una volta sola passa `movimenti`.
 
-import { qtyInStockUnit } from './inventory.js'
 import { qtyValue, giorniDiConta, consumoSettimanale } from './warehouse.js'
-import { gruppoMovimento } from './magazzinoPeriodo.js'
-
-const arrotonda = (n, cifre = 4) => {
-  const f = 10 ** cifre
-  return Math.round(n * f) / f + 0
-}
+import { arrotonda, movimentoInPezzi } from './magazzinoPeriodo.js'
 
 // Il valore in € CON IL SEGNO: qtyValue ne dà solo di positivi, e una
 // differenza è quasi sempre negativa — è proprio quella che interessa.
@@ -49,86 +49,87 @@ const valoreConSegno = (q, riga) => (q < 0 ? -qtyValue(-q, riga) : qtyValue(q, r
 
 const contato = (rim) => rim != null && rim !== '' && Number.isFinite(Number(rim))
 
+const VALORI = ['vend_value', 'diff_value', 'rim_value', 'cons_value']
+
+/**
+ * I movimenti del periodo, prodotto per prodotto: acq, vend (in positivo),
+ * rett, e la lista `{ at, q }` per sapere cosa è venuto dopo un conteggio.
+ */
+export function raggruppaMovimenti(movimenti, items) {
+  const perId = new Map((items || []).map((i) => [i.id, i]))
+  const out = new Map()
+  for (const m of movimenti || []) {
+    const mp = movimentoInPezzi(m, perId.get(m?.item_id))
+    if (!mp) continue
+    let r = out.get(m.item_id)
+    if (!r) out.set(m.item_id, (r = { acq: 0, vend: 0, rett: 0, lista: [] }))
+    if (mp.gruppo === 'acquisto') r.acq += mp.q
+    // Il venduto si legge in positivo: quello che è uscito. Uno storno lo
+    // abbassa, che è esattamente quello che è successo.
+    else if (mp.gruppo === 'consumo') r.vend -= mp.q
+    else r.rett += mp.q
+    r.lista.push({ at: m.created_at || null, q: mp.q })
+  }
+  return out
+}
+
+// Quello che si è mosso DOPO un conteggio. Un movimento senza ora è appena
+// stato scritto da questo dispositivo e il server non l'ha ancora datato:
+// è per forza dopo.
+function mossoDopo(lista, rimAt) {
+  if (!rimAt) return 0
+  let somma = 0
+  for (const x of lista) if (!x.at || x.at > rimAt) somma += x.q
+  return somma
+}
+
+const VUOTO = { acq: 0, vend: 0, rett: 0, lista: [] }
+
 /**
  * Le righe di un inventario, completate coi movimenti del periodo.
  *
  * @param lines le righe dell'inventario (dep all'apertura, rim, rim_at).
- * @param movimenti TUTTI i movimenti dall'apertura in poi.
+ * @param raggruppati quello che torna da `raggruppaMovimenti`; oppure
+ * @param movimenti TUTTI i movimenti dall'apertura in poi, smistati qui.
  * @param items gli articoli con la giacenza di ADESSO: servono per l'atteso
  *   e per convertire le vendite (scritte in ml) nei pezzi del magazzino.
  * @param dal / al estremi del periodo, per il consumo a settimana.
  */
-export function righeInventario(lines, { movimenti = [], items = [], dal = null, al = null } = {}) {
+export function righeInventario(lines, { raggruppati = null, movimenti = [], items = [], dal = null, al = null } = {}) {
+  const gruppi = raggruppati || raggruppaMovimenti(movimenti, items)
   const perId = new Map((items || []).map((i) => [i.id, i]))
-  const perRiga = new Map()
-  for (const m of movimenti || []) {
-    const item = perId.get(m?.item_id)
-    // Senza l'articolo non si sa in che unità sia quella quantità: un numero
-    // convertito a caso è peggio di un movimento che manca.
-    if (!item) continue
-    const q = qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1)
-    const lista = perRiga.get(m.item_id) || []
-    lista.push({ at: m.created_at || null, q, gruppo: gruppoMovimento(m) })
-    perRiga.set(m.item_id, lista)
-  }
-
   const giorni = giorniDiConta(dal, al)
+
   const out = (lines || []).map((l) => {
-    const ms = perRiga.get(l.item_id) || []
-    let acq = 0
-    let vend = 0
-    let rett = 0
-    for (const x of ms) {
-      if (x.gruppo === 'acquisto') acq += x.q
-      // Il venduto si legge in positivo: quello che è uscito. Uno storno lo
-      // abbassa, che è esattamente quello che è successo.
-      else if (x.gruppo === 'consumo') vend -= x.q
-      else rett += x.q
-    }
-    const dep = (Number(l.dep) || 0) + rett
+    const g = gruppi.get(l.item_id) || VUOTO
+    const dep = (Number(l.dep) || 0) + g.rett
     const item = perId.get(l.item_id)
     // L'atteso è la giacenza del prodotto, non il conto DEP + ACQ − VENDUTO:
     // se un movimento non è stato scritto (un prodotto cambiato dalla
-    // scheda, per dire), è la giacenza quella che la chiusura corregge.
-    const atteso = item ? Number(item.stock) || 0 : dep + acq - vend
-
-    let rim = null
-    let diff = null
-    if (contato(l.rim)) {
-      rim = Number(l.rim)
-      // Un movimento senza ora è appena stato scritto da questo dispositivo
-      // e il server non l'ha ancora datato: è per forza DOPO il conteggio.
-      const dopo = l.rim_at
-        ? ms.filter((x) => !x.at || x.at > l.rim_at).reduce((s, x) => s + x.q, 0)
-        : 0
-      diff = rim - (atteso - dopo)
-    }
-    const cons = diff == null ? null : vend - diff
+    // scheda, per dire), è la giacenza quella che la chiusura corregge. Un
+    // prodotto che non c'è più non ha movimenti smistati: resta il DEP.
+    const atteso = item ? Number(item.stock) || 0 : dep
+    const rim = contato(l.rim) ? Number(l.rim) : null
+    const diff = rim == null ? null : rim - (atteso - mossoDopo(g.lista, l.rim_at))
+    const cons = diff == null ? null : g.vend - diff
     return {
       ...l,
       dep: arrotonda(dep),
-      acq: arrotonda(acq),
-      vend: arrotonda(vend),
+      acq: arrotonda(g.acq),
+      vend: arrotonda(g.vend),
       atteso: arrotonda(atteso),
       rim,
       diff: diff == null ? null : arrotonda(diff),
       cons: cons == null ? null : arrotonda(cons),
       cons_week: consumoSettimanale(cons, giorni),
-      vend_value: arrotonda(valoreConSegno(vend, l), 2),
+      vend_value: arrotonda(valoreConSegno(g.vend, l), 2),
       diff_value: diff == null ? 0 : arrotonda(valoreConSegno(diff, l), 2),
-      rim_value: rim == null ? 0 : arrotonda(qtyValue(rim, l), 2),
+      rim_value: arrotonda(qtyValue(rim, l), 2),
       cons_value: cons == null ? 0 : arrotonda(valoreConSegno(cons, l), 2),
     }
   })
 
-  const totals = { vend_value: 0, diff_value: 0, rim_value: 0, cons_value: 0, counted: 0 }
-  for (const l of out) {
-    totals.vend_value += l.vend_value
-    totals.diff_value += l.diff_value
-    totals.rim_value += l.rim_value
-    totals.cons_value += l.cons_value
-    if (l.rim != null) totals.counted += 1
-  }
-  for (const k of ['vend_value', 'diff_value', 'rim_value', 'cons_value']) totals[k] = arrotonda(totals[k], 2)
+  const totals = { counted: out.filter((l) => l.rim != null).length }
+  for (const k of VALORI) totals[k] = arrotonda(out.reduce((s, l) => s + l[k], 0), 2)
   return { lines: out, totals, giorni }
 }

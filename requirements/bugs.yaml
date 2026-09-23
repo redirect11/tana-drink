@@ -4983,9 +4983,12 @@ bugs:
       meno quello che si e' mosso dopo il conteggio. E la chiusura non
       scrive piu' il numero contato: SOMMA la differenza alla giacenza con
       `increment`, cosi' restano sia le vendite dopo il conteggio sia un
-      drink battuto mentre il pacchetto parte. Prima di chiudere il
-      pannello rilegge giacenze e movimenti, perche' le differenze a
-      schermo sono state calcolate all'apertura della pagina.
+      drink battuto mentre il pacchetto parte. Le differenze le calcola la
+      CHIUSURA (closeStockCount rilegge giacenze e movimenti e passa da
+      `righeInventario`, lo stesso calcolo del pannello): una strada sola,
+      senza piu' la regola vecchia del numero contato come ripiego. E prima
+      di chiedere conferma il pannello rilegge i dati, cosi' l'importo nel
+      messaggio e' quello che viene applicato.
       Le rimanenze senza ora — scritte con la 1.6.1, o le 62 sistemate a
       mano in produzione il 23/09 — valgono come contate adesso: e' il
       comportamento di prima, ed e' giusto per quelle.
