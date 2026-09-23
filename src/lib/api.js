@@ -1154,12 +1154,17 @@ export async function fetchStockMovementsSince(iso) {
 // sarebbe un documento intero in viaggio per ogni tasto. In lettura la
 // mappa vince sulla riga; gli inventari scritti prima non ce l'hanno e si
 // leggono come sempre, dalla riga.
+//
+// ACCANTO C'È L'ORA DI OGNI CONTEGGIO (`rimanenze_ora`, BUG-112): la
+// differenza si misura sull'atteso di QUEL momento, non su quello della
+// chiusura. Le rimanenze scritte senza ora valgono come contate adesso.
 function mapStockCount(snap) {
   const c = snap.data() || {}
   const rimanenze = c.rimanenze && typeof c.rimanenze === 'object' ? c.rimanenze : {}
+  const ore = c.rimanenze_ora && typeof c.rimanenze_ora === 'object' ? c.rimanenze_ora : {}
   const lines = (Array.isArray(c.lines) ? c.lines : []).map((l) =>
     l && Object.prototype.hasOwnProperty.call(rimanenze, l.item_id)
-      ? { ...l, rim: rimanenze[l.item_id] }
+      ? { ...l, rim: rimanenze[l.item_id], rim_at: ore[l.item_id] ?? null }
       : l
   )
   return {
@@ -1217,13 +1222,18 @@ export async function startStockCount(items) {
 // la chiusura si è interrotta a metà e quelli dalla «F» in giù non esistono
 // più da nessuna parte. Ora ogni numero va sul database appena scritto — in
 // sottofondo, come ogni scrittura: chi conta non aspetta la rete.
-export function salvaRimanenza(id, itemId, valore) {
+//
+// `ora` è l'istante del conteggio (BUG-112), scritto dall'orologio del
+// dispositivo come ISO: è quello con cui chi conta confronta le vendite.
+export function salvaRimanenza(id, itemId, valore, ora = new Date().toISOString()) {
   const n = valore === '' || valore == null ? null : Number(valore)
+  const conta = Number.isFinite(n)
   const ref = doc(db, 'stock_counts', id)
   bgWrite(
     () =>
       updateDoc(ref, {
-        [`rimanenze.${itemId}`]: Number.isFinite(n) ? n : deleteField(),
+        [`rimanenze.${itemId}`]: conta ? n : deleteField(),
+        [`rimanenze_ora.${itemId}`]: conta ? ora : deleteField(),
       }),
     'rimanenza inventario'
   )
@@ -1248,7 +1258,7 @@ export function salvaRimanenza(id, itemId, valore) {
 // intero sono poche centinaia di KB.
 //
 // IL PROSSIMO INVENTARIO NASCE NELLO STESSO PACCHETTO, con DEP = la
-// rimanenza appena contata (non una rilettura: nell'istante dopo la cache
+// giacenza appena allineata (non una rilettura: nell'istante dopo la cache
 // potrebbe avere ancora le giacenze di prima). E ha lo STESSO orario dei
 // movimenti di rettifica — dentro un pacchetto `serverTimestamp()` vale
 // uguale per tutti — quindi la query «dopo l'apertura» non se li ritrova
@@ -1278,18 +1288,22 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
     const l = toAlign[idx]
     const cur = articoloScrivibile(itemSnaps[idx])
     if (!cur) continue
-    const rim = Number(l.rim) || 0
-    contati[l.item_id] = rim
-    const delta = rim - (Number(cur.stock) || 0)
-    if (delta === 0) continue
-    // Rettifica a valore assoluto: la conta è una fotografia autorevole,
-    // quindi qui si imposta lo stock (non increment).
-    batch.update(doc(db, 'inventory_items', l.item_id), { stock: rim })
+    // SI APPLICA LA DIFFERENZA, NON LA RIMANENZA (BUG-112). Fino alla 1.7
+    // la giacenza diventava il numero contato: contato alle 18 e chiuso a
+    // mezzanotte, le vendite fatte in mezzo sparivano, perché la giacenza
+    // tornava al numero delle 18. `diff` è già misurata sull'atteso
+    // dell'ora del conteggio (lib/inventarioInCorso.js), e si somma con
+    // `increment`: anche un drink battuto mentre il pacchetto parte resta.
+    // Una riga che arriva senza `diff` si allinea come prima, al numero.
+    const diff = Number.isFinite(l.diff) ? l.diff : (Number(l.rim) || 0) - (Number(cur.stock) || 0)
+    contati[l.item_id] = diff
+    if (Math.abs(diff) < 1e-9) continue
+    batch.update(doc(db, 'inventory_items', l.item_id), { stock: increment(diff) })
     batch.set(doc(movementsCol), {
       item_id: l.item_id,
       item_name: cur.name,
-      type: delta > 0 ? 'load' : 'unload',
-      qty: Math.abs(delta),
+      type: diff > 0 ? 'load' : 'unload',
+      qty: Math.abs(diff),
       unit: cur.unit ?? null,
       reason: 'conta',
       created_at: serverTimestamp(),
@@ -1301,14 +1315,17 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
     closed_at: serverTimestamp(),
     lines,
     totals,
-    // Le rimanenze adesso stanno nelle righe: la mappa di lavoro non serve più.
+    // Le rimanenze adesso stanno nelle righe: le mappe di lavoro non servono più.
     rimanenze: deleteField(),
+    rimanenze_ora: deleteField(),
   })
 
   let prossimo = null
   if (riapri) {
     const ref = doc(collection(db, 'stock_counts'))
-    const righe = riapri.map((it) => rigaDiInventario(it, contati[it.id] ?? it.stock))
+    // DEP del prossimo = la giacenza dopo l'allineamento: quella di adesso
+    // più la differenza appena applicata.
+    const righe = riapri.map((it) => rigaDiInventario(it, (Number(it.stock) || 0) + (contati[it.id] ?? 0)))
     batch.set(ref, { status: 'open', started_at: serverTimestamp(), lines: righe, totals: null })
     prossimo = {
       id: ref.id,

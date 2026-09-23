@@ -76,7 +76,7 @@ vi.mock('firebase/firestore', () => ({
   limit: () => ({}),
   onSnapshot: () => () => {},
   serverTimestamp: () => '__ora_del_server__',
-  increment: (n) => n,
+  increment: (n) => ({ incremento: n }),
   writeBatch: () => {
     const p = { scritture: [], spedito: false }
     stato.pacchetti.push(p)
@@ -142,10 +142,12 @@ describe('la chiusura, senza rete', () => {
     const [p] = stato.pacchetti
     expect(p.spedito).toBe(true)
     const giacenze = p.scritture.filter((s) => s.col === 'inventory_items')
-    expect(giacenze.map((s) => [s.id, s.patch.stock])).toEqual([
-      ['gin', 0.1],
-      ['jager', 0.9],
-      ['lete', 27],
+    // Righe senza differenza già calcolata: si allinea al numero contato,
+    // come prima — la differenza con la giacenza, sommata.
+    expect(giacenze.map((s) => [s.id, Math.round(s.patch.stock.incremento * 100) / 100])).toEqual([
+      ['gin', 0.2],
+      ['jager', -2.3],
+      ['lete', -39],
     ])
     // Un movimento di rettifica per ogni giacenza toccata, nello stesso pacchetto.
     expect(p.scritture.filter((s) => s.col === 'stock_movements')).toHaveLength(3)
@@ -165,17 +167,50 @@ describe('la chiusura, senza rete', () => {
       { id: 'cynar', name: 'Cynar', unit: 'pz', stock: 0.4, cost: 12.9 },
     ]
     const prossimo = await subito(api.closeStockCount('inv-1', { lines: righe(), totals: {}, riapri }))
-    const dep = Object.fromEntries(prossimo.lines.map((l) => [l.item_id, [l.dep, l.acq]]))
+    const dep = Object.fromEntries(
+      prossimo.lines.map((l) => [l.item_id, [Math.round(l.dep * 100) / 100, l.acq]])
+    )
     expect(dep).toEqual({ gin: [0.1, 0], jager: [0.9, 0], lete: [27, 0], cynar: [0.4, 0] })
     expect(prossimo.status).toBe('open')
 
     await giro()
     const nuovo = stato.pacchetti[0].scritture.find((s) => s.tipo === 'set' && s.col === 'stock_counts')
-    expect(nuovo.data.lines.map((l) => l.dep)).toEqual([0.1, 0.9, 27, 0.4])
+    expect(nuovo.data.lines.map((l) => Math.round(l.dep * 100) / 100)).toEqual([0.1, 0.9, 27, 0.4])
     // Stesso orario dei movimenti di rettifica: la query «dopo l'apertura»
     // non se li ritrova fra quelli del periodo nuovo.
     const mov = stato.pacchetti[0].scritture.find((s) => s.col === 'stock_movements')
     expect(nuovo.data.started_at).toBe(mov.data.created_at)
+  })
+
+  // BUG-112: contato 2,8 alle 18, vendute due bottiglie fino a mezzanotte.
+  // La riga arriva con la differenza già misurata sull'atteso delle 18
+  // (zero): la chiusura la SOMMA, invece di riportare la giacenza a 2,8 —
+  // che avrebbe cancellato le due bottiglie vendute.
+  it('applica la differenza, e le vendite dopo il conteggio restano', async () => {
+    stato.articoli.jager = articolo('Jagermeister', 0.8)
+    await subito(
+      api.closeStockCount('inv-1', {
+        lines: [{ ...riga('jager', 'Jagermeister', 3.2, 2.8), diff: -0.3 }],
+        totals: {},
+      })
+    )
+    await giro()
+    const [p] = stato.pacchetti
+    const giacenza = p.scritture.find((s) => s.col === 'inventory_items')
+    expect(giacenza.patch.stock).toEqual({ incremento: -0.3 })
+    const m = p.scritture.find((s) => s.col === 'stock_movements')
+    expect([m.data.type, m.data.qty, m.data.reason]).toEqual(['unload', 0.3, 'conta'])
+  })
+
+  it('e con differenza zero non tocca la giacenza', async () => {
+    await subito(
+      api.closeStockCount('inv-1', {
+        lines: [{ ...riga('jager', 'Jagermeister', 3.2, 2.8), diff: 0 }],
+        totals: {},
+      })
+    )
+    await giro()
+    expect(stato.pacchetti[0].scritture.filter((s) => s.col === 'inventory_items')).toEqual([])
   })
 
   // Un prodotto ancora da convertire ferma TUTTO prima di scrivere: il
@@ -192,18 +227,28 @@ describe('la chiusura, senza rete', () => {
 })
 
 describe('le rimanenze mentre si conta', () => {
-  it('si salvano una alla volta, senza aspettare la rete', async () => {
-    api.salvaRimanenza('inv-1', 'jager', '0.9')
+  // Con la sua ora (BUG-112): la differenza si misura sull'atteso di quel
+  // momento, non su quello della chiusura.
+  it('si salvano una alla volta, con l’ora, senza aspettare la rete', async () => {
+    api.salvaRimanenza('inv-1', 'jager', '0.9', '2026-09-23T16:00:00.000Z')
     await giro()
     expect(stato.scritture).toEqual([
-      { tipo: 'update', col: 'stock_counts', id: 'inv-1', patch: { 'rimanenze.jager': 0.9 } },
+      {
+        tipo: 'update',
+        col: 'stock_counts',
+        id: 'inv-1',
+        patch: { 'rimanenze.jager': 0.9, 'rimanenze_ora.jager': '2026-09-23T16:00:00.000Z' },
+      },
     ])
   })
 
-  it('un campo svuotato toglie la rimanenza, non scrive zero', async () => {
+  it('un campo svuotato toglie la rimanenza e la sua ora, non scrive zero', async () => {
     api.salvaRimanenza('inv-1', 'jager', '')
     await giro()
-    expect(stato.scritture[0].patch).toEqual({ 'rimanenze.jager': '__cancella__' })
+    expect(stato.scritture[0].patch).toEqual({
+      'rimanenze.jager': '__cancella__',
+      'rimanenze_ora.jager': '__cancella__',
+    })
   })
 
   // Riaprendo la schermata — o un altro telefono — i numeri ci sono ancora.
@@ -212,8 +257,10 @@ describe('le rimanenze mentre si conta', () => {
       status: 'open',
       lines: [riga('jager', 'Jagermeister', 3.2, null), riga('lete', 'Acqua Lete', 66, null)],
       rimanenze: { jager: 0.9 },
+      rimanenze_ora: { jager: '2026-09-23T16:00:00.000Z' },
     }
     const aperta = await api.getOpenStockCount()
     expect(aperta.lines.map((l) => l.rim)).toEqual([0.9, null])
+    expect(aperta.lines[0].rim_at).toBe('2026-09-23T16:00:00.000Z')
   })
 })
