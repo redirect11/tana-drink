@@ -369,7 +369,11 @@ const RigaInventario = memo(
           <div className="grow">
             <div className="inv-name">{l.name}</div>
             <div className="muted small">
-              DEP {q(l.dep)} · ACQ {q(l.acq)} · VENDUTO {q(l.vend)} · ATTESO {q(l.atteso)}
+              DEP {q(l.dep)}
+              {/* Il DEP viene dal contenuto reale corretto (REQ-MAG-049): da
+                  quel giorno ACQ e VENDUTO ripartono da zero. */}
+              {l.dep_da && ` (reale dal ${dataBreve(l.dep_da)})`} · ACQ {q(l.acq)} · VENDUTO {q(l.vend)} · ATTESO{' '}
+              {q(l.atteso)}
             </div>
             {l.diff != null && (
               <div className="small">
@@ -400,7 +404,7 @@ const RigaInventario = memo(
     a.valore === b.valore &&
     a.onScrivi === b.onScrivi &&
     a.onEsci === b.onEsci &&
-    ['name', 'unit', 'dep', 'acq', 'vend', 'atteso', 'diff', 'diff_value', 'cons_week'].every(
+    ['name', 'unit', 'dep', 'dep_da', 'acq', 'vend', 'atteso', 'diff', 'diff_value', 'cons_week'].every(
       (k) => a.riga[k] === b.riga[k]
     )
 )

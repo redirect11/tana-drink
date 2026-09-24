@@ -97,18 +97,56 @@ describe('dove va ogni movimento', () => {
     expect(l.acq).toBe(2)
   })
 
-  it('il contenuto reale corretto sposta il DEP, non l’ACQ', () => {
-    const l = una([riga()], { movimenti: [mov('unload', 0.5, 'rettifica', ieri)] })
-    expect(l.dep).toBe(2.7)
-    expect(l.acq).toBe(0)
+  // ── IL CONTENUTO REALE FA RIPARTIRE IL PRODOTTO (REQ-MAG-049) ──
+  // Flavio, 24/09/2026: la Schweppes al pompelmo rosa era a −8; arrivano
+  // 22 bottiglie dal fornitore e il magazzino va a 14; lui ne conta 24 e le
+  // scrive come contenuto reale. «Mi deve azzerare gli acquisti, perché
+  // altrimenti se mi segna 24 che tengo e 24 che ho acquistato, nel
+  // prossimo inventario me ne porta a 48». Prima la riga diceva DEP 2 ·
+  // ACQ 22: il conto tornava, ma si leggeva come due cose sommate.
+  const SCHWEPPES = { ...JAGER, id: 'jager', stock: 24 }
+  const consegna = mov('load', 22, 'ordine fornitore', '2026-09-24T10:00:00.000Z')
+  const reale = mov('load', 10, 'rettifica', '2026-09-24T14:00:00.000Z')
+
+  it('il contenuto reale diventa il DEP, e gli acquisti di prima spariscono', () => {
+    const l = righeInventario([riga({ dep: -8 })], { items: [SCHWEPPES], movimenti: [consegna, reale] }).lines[0]
+    expect([l.dep, l.acq, l.vend, l.atteso]).toEqual([24, 0, 0, 24])
+    // E la riga sa da quando: il DEP a schermo lo dice.
+    expect(l.dep_da).toBe('2026-09-24T14:00:00.000Z')
+  })
+
+  // Riparte anche il venduto: DEP + ACQ − VENDUTO deve dare lo scaffale, e
+  // il DEP nuovo ha già dentro le vendite di prima.
+  it('da lì ACQ e VENDUTO ripartono, e contano solo quello che viene dopo', () => {
+    const l = righeInventario([riga({ dep: -8 })], {
+      items: [{ ...SCHWEPPES, stock: 28 }],
+      movimenti: [
+        mov('unload', 1, 'ordine', '2026-09-23T22:00:00.000Z'), // prima: già dentro il 24
+        consegna,
+        reale,
+        mov('load', 6, 'carico', '2026-09-24T16:00:00.000Z'),
+        mov('unload', 2, 'ordine', '2026-09-24T22:00:00.000Z'),
+      ],
+    }).lines[0]
+    expect([l.dep, l.acq, l.vend, l.atteso]).toEqual([24, 6, 2, 28])
+  })
+
+  it('senza correzioni il DEP resta quello dell’apertura', () => {
+    const l = una([riga()], { movimenti: [mov('load', 1, 'carico', ieri)] })
+    expect(l.dep).toBe(3.2)
+    expect(l.dep_da).toBeNull()
   })
 
   // Il caso del 21/09: una chiusura interrotta a metà ha scritto le sue
-  // rettifiche DENTRO il periodo di questo inventario. Sono correzioni della
-  // giacenza di partenza: vanno nel DEP. È quello che Flavio chiedeva per il
-  // 400 Conigli: «da adesso mi dovrebbe apparire il reale come deposito».
-  it('una rettifica d’inventario dentro il periodo va nel DEP', () => {
-    const l = una([riga({ dep: -0.1 })], { movimenti: [mov('load', 0.2, 'conta', ieri)] })
+  // rettifiche DENTRO il periodo di questo inventario. Valgono come una
+  // correzione del contenuto reale, ed è quello che Flavio chiedeva per il
+  // 400 Conigli: «da adesso mi dovrebbe apparire il reale come deposito,
+  // 0,1 pz, e 0 come acquisti».
+  it('anche una rettifica d’inventario dentro il periodo fa ripartire il prodotto', () => {
+    const l = righeInventario([riga({ dep: -0.1 })], {
+      items: [{ ...JAGER, stock: 0.1 }],
+      movimenti: [mov('load', 0.2, 'conta', ieri)],
+    }).lines[0]
     expect(l.dep).toBe(0.1)
     expect(l.acq).toBe(0)
   })

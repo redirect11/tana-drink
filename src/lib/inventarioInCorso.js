@@ -12,8 +12,8 @@
 // SPARITO (ricette imprecise, merce persa, errori di carico). Adesso le due
 // cose stanno separate, perché sono due domande diverse:
 //
-//   DEP       la giacenza all'apertura, più le correzioni del periodo
-//             (contenuto reale modificato, BUG-111; rettifiche d'inventario)
+//   DEP       la giacenza all'apertura — o, se nel periodo il contenuto
+//             reale è stato corretto, quello scritto allora (REQ-MAG-049)
 //   ACQ       merce comprata: carico diretto, ordine consegnato, fattura
 //   VENDUTO   quello che hanno scaricato le ricette dei drink battuti
 //   ATTESO    quanto l'app pensa che ci sia ADESSO: la giacenza del prodotto
@@ -34,6 +34,22 @@
 // Una rimanenza senza ora (scritta con la 1.6.1, o sistemata a mano) vale
 // come contata adesso: è il comportamento di prima.
 //
+// IL CONTENUTO REALE FA RIPARTIRE IL PRODOTTO DA CAPO (REQ-MAG-049).
+// Flavio, 24/09/2026: «quando faccio contenuto reale su un prodotto mi va a
+// modificare il deposito, ma oltre a modificare il deposito mi deve anche
+// azzerare gli acquisti, perché altrimenti mi trovo anche quegli
+// acquisti». Il suo esempio: la Schweppes al pompelmo rosa a −8, arrivano
+// 22 bottiglie, il magazzino va a 14; lui ne conta 24 e le scrive come
+// contenuto reale. Prima la riga diceva DEP 2 · ACQ 22 — il conto tornava,
+// 2 + 22 = 24, ma si leggeva «24 in magazzino E 22 comprate». Ora dice
+// DEP 24 · ACQ 0: quello che è successo prima della correzione è già
+// dentro il numero scritto a mano.
+// Riparte anche il VENDUTO, e non per scelta: DEP + ACQ − VENDUTO deve
+// continuare a dare quello che c'è sullo scaffale, e il DEP nuovo ha già
+// dentro le vendite di prima. Vale per ogni correzione della giacenza
+// dentro il periodo — anche la rettifica di un inventario, come quella
+// della chiusura interrotta del 21/09.
+//
 // DUE PASSI, perché il primo è pesante e il secondo no. Smistare qualche
 // migliaio di movimenti dipende solo dai movimenti e dagli articoli; le
 // righe dipendono anche da quello che si scrive, e si ricalcolano a ogni
@@ -51,24 +67,44 @@ const contato = (rim) => rim != null && rim !== '' && Number.isFinite(Number(rim
 
 const VALORI = ['vend_value', 'diff_value', 'rim_value', 'cons_value']
 
+// In ordine di tempo; un movimento senza ora (appena scritto, il server
+// non l'ha ancora datato) è il più recente.
+const perOra = (a, b) => (a.at === b.at ? 0 : !a.at ? 1 : !b.at ? -1 : a.at < b.at ? -1 : 1)
+
 /**
- * I movimenti del periodo, prodotto per prodotto: acq, vend (in positivo),
- * rett, e la lista `{ at, q }` per sapere cosa è venuto dopo un conteggio.
+ * I movimenti del periodo, prodotto per prodotto: acq e vend (in positivo)
+ * da contare, e — se il contenuto reale è stato corretto — l'ora
+ * dell'ultima correzione (`azzerato_at`) con quello che si è mosso dopo
+ * (`dopo_azzeramento`), per risalire al DEP. La lista `{ at, q }` completa
+ * serve a sapere cosa è venuto dopo un conteggio.
  */
 export function raggruppaMovimenti(movimenti, items) {
   const perId = new Map((items || []).map((i) => [i.id, i]))
-  const out = new Map()
+  const liste = new Map()
   for (const m of movimenti || []) {
     const mp = movimentoInPezzi(m, perId.get(m?.item_id))
     if (!mp) continue
-    let r = out.get(m.item_id)
-    if (!r) out.set(m.item_id, (r = { acq: 0, vend: 0, rett: 0, lista: [] }))
-    if (mp.gruppo === 'acquisto') r.acq += mp.q
-    // Il venduto si legge in positivo: quello che è uscito. Uno storno lo
-    // abbassa, che è esattamente quello che è successo.
-    else if (mp.gruppo === 'consumo') r.vend -= mp.q
-    else r.rett += mp.q
-    r.lista.push({ at: m.created_at || null, q: mp.q })
+    const lista = liste.get(m.item_id) || []
+    lista.push({ at: m.created_at || null, ...mp })
+    liste.set(m.item_id, lista)
+  }
+  const out = new Map()
+  for (const [id, lista] of liste) {
+    lista.sort(perOra)
+    let ultima = -1
+    lista.forEach((x, i) => {
+      if (x.gruppo === 'rettifica') ultima = i
+    })
+    const r = { acq: 0, vend: 0, azzerato_at: null, dopo_azzeramento: 0, lista }
+    if (ultima >= 0) r.azzerato_at = lista[ultima].at || new Date().toISOString()
+    for (const x of lista.slice(ultima + 1)) {
+      if (ultima >= 0) r.dopo_azzeramento += x.q
+      if (x.gruppo === 'acquisto') r.acq += x.q
+      // Il venduto si legge in positivo: quello che è uscito. Uno storno lo
+      // abbassa, che è esattamente quello che è successo.
+      else if (x.gruppo === 'consumo') r.vend -= x.q
+    }
+    out.set(id, r)
   }
   return out
 }
@@ -83,7 +119,7 @@ function mossoDopo(lista, rimAt) {
   return somma
 }
 
-const VUOTO = { acq: 0, vend: 0, rett: 0, lista: [] }
+const VUOTO = { acq: 0, vend: 0, azzerato_at: null, dopo_azzeramento: 0, lista: [] }
 
 /**
  * Le righe di un inventario, completate coi movimenti del periodo.
@@ -102,19 +138,22 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
 
   const out = (lines || []).map((l) => {
     const g = gruppi.get(l.item_id) || VUOTO
-    const dep = (Number(l.dep) || 0) + g.rett
     const item = perId.get(l.item_id)
     // L'atteso è la giacenza del prodotto, non il conto DEP + ACQ − VENDUTO:
     // se un movimento non è stato scritto (un prodotto cambiato dalla
     // scheda, per dire), è la giacenza quella che la chiusura corregge. Un
     // prodotto che non c'è più non ha movimenti smistati: resta il DEP.
-    const atteso = item ? Number(item.stock) || 0 : dep
+    const atteso = item ? Number(item.stock) || 0 : Number(l.dep) || 0
+    // Col contenuto reale corretto, il DEP è la giacenza subito dopo la
+    // correzione: quella di adesso meno quello che si è mosso da allora.
+    const dep = g.azzerato_at ? atteso - g.dopo_azzeramento : Number(l.dep) || 0
     const rim = contato(l.rim) ? Number(l.rim) : null
     const diff = rim == null ? null : rim - (atteso - mossoDopo(g.lista, l.rim_at))
     const cons = diff == null ? null : g.vend - diff
     return {
       ...l,
       dep: arrotonda(dep),
+      dep_da: g.azzerato_at,
       acq: arrotonda(g.acq),
       vend: arrotonda(g.vend),
       atteso: arrotonda(atteso),

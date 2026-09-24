@@ -197,8 +197,10 @@ describe('DEP e ACQ di un inventario aperto', () => {
     // DENTRO il periodo — la chiusura interrotta del 21/09 — va nel DEP: è
     // quello che Flavio chiedeva, «mi dovrebbe apparire il reale come
     // deposito, 0,1 pz, e 0 come acquisti».
-    expect(riga('400 Conigli Gin')).toMatch(/DEP 0,1 pz · ACQ 0 pz/)
-    expect(riga('Acqua Lete')).toMatch(/DEP 27 pz · ACQ 6 pz/)
+    // E dal 24/09 (REQ-MAG-049) la correzione fa ripartire il prodotto: il
+    // DEP dice da quando, e ACQ conta solo quello che è arrivato dopo.
+    expect(riga('400 Conigli Gin')).toMatch(/DEP 0,1 pz \(reale dal [^)]+\) · ACQ 0 pz/)
+    expect(riga('Acqua Lete')).toMatch(/DEP 27 pz \(reale dal [^)]+\) · ACQ 6 pz/)
   })
 })
 

@@ -11752,8 +11752,8 @@ requirements:
       PRIMA la riga diceva DEP + ACQ − RIM = CONS, il conto del foglio INV:
       un numero solo, che mescolava quello che si e' venduto con quello che
       e' sparito (ricette imprecise, merce persa, errori di carico).
-      ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del
-      periodo: contenuto reale modificato e rettifiche d'inventario), ACQ
+      ADESSO ogni riga dice: DEP (all'apertura, o il contenuto reale
+      corretto nel periodo, REQ-MAG-049), ACQ
       (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico
       delle ricette dei drink battuti, convertito dai ml nei pezzi del
       magazzino, visibile prima ancora di contare), ATTESO (la giacenza del
@@ -11815,6 +11815,38 @@ requirements:
     generate_issue: true
     labels: [magazzino]
     test_cases: []
+  - id: REQ-MAG-049
+    title: "Nell'inventario il contenuto reale fa ripartire il prodotto: DEP = il numero scritto, ACQ e VENDUTO da zero"
+    area: "src/lib/inventarioInCorso.js (raggruppaMovimenti), src/components/StockCountPanel.jsx"
+    description: >
+      Flavio, vocali del 24/09/2026: «quando vado a fare su un prodotto
+      contenuto reale mi va a modificare il deposito, e fin qui ci siamo, ma
+      oltre a modificare il deposito mi deve anche azzerare gli acquisti,
+      perche' altrimenti mi trovo anche quegli acquisti». L'esempio: la
+      Schweppes al pompelmo rosa era a −8; il fornitore ne consegna 22 e il
+      magazzino va a 14; lui ne ha davvero 24 e le scrive come contenuto
+      reale: «mi deve azzerare gli acquisti, perche' altrimenti se mi segna
+      24 che tengo e 24 che ho acquistato, nel prossimo inventario me ne
+      porta a 48».
+      Il conto di prima (BUG-111: la correzione sommata al DEP) tornava —
+      DEP 2 · ACQ 22, che fa 24 — ma si leggeva come due cose sommate.
+      ADESSO la correzione del contenuto reale fa RIPARTIRE il prodotto: il
+      DEP diventa la giacenza subito dopo la correzione (quella di adesso
+      meno quello che si e' mosso da allora), e ACQ e VENDUTO contano solo i
+      movimenti successivi. Riparte anche il VENDUTO, e non per scelta:
+      DEP + ACQ − VENDUTO deve dare lo scaffale, e il DEP nuovo ha gia'
+      dentro le vendite di prima. Conta l'ULTIMA correzione del periodo, e
+      vale per ogni movimento del gruppo «rettifica»: anche la rettifica di
+      un inventario finita dentro il periodo, come quelle della chiusura
+      interrotta del 21/09 (il 400 Conigli: DEP 0,1 · ACQ 0, che era la
+      richiesta di Flavio del 22/09). La riga lo dice: «DEP 24 pz (reale
+      dal 24/09)».
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/component/StockCountPanel.test.jsx
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"

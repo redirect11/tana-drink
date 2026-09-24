@@ -9,8 +9,12 @@
   prima ancora di contare) e ATTESO (quanto risulta adesso in magazzino).
   Scritto il contato, compare la DIFFERENZA, in pezzi e in euro: è quello
   che la chiusura corregge. In cima ci sono i totali di venduto e
-  differenza. Una rettifica del contenuto reale durante l'inventario sposta
-  il DEP.
+  differenza.
+- **Nell'inventario il contenuto reale fa ripartire il prodotto.** Se
+  durante l'inventario si corregge il contenuto reale, il DEP diventa il
+  numero scritto e ACQ e VENDUTO ripartono da zero: prima gli acquisti
+  fatti prima della correzione restavano in colonna, e la riga si leggeva
+  come merce contata due volte. Il DEP dice da quando: «reale dal 24/09».
 - **Si può contare a locale aperto.** Ogni conteggio porta la sua ora, e la
   chiusura tiene conto di quello che si vende dopo: prima le vendite fatte
   fra il conteggio e la chiusura sparivano dalle scorte.
