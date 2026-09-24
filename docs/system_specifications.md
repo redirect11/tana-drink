@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 205 | fatto e coperto dai test |
+| ✅ | 206 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**250 voci** in tutto. **220** descrivono il sistema com'è oggi e
+**251 voci** in tutto. **221** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 41 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 42 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1741,7 +1741,7 @@ Flavio, 23/09/2026: «in primis la creazione del deposito se non ho mai fatto un
 
 PRIMA la riga diceva DEP + ACQ − RIM = CONS, il conto del foglio INV: un numero solo, che mescolava quello che si e' venduto con quello che e' sparito (ricette imprecise, merce persa, errori di carico).
 
-ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del periodo: contenuto reale modificato e rettifiche d'inventario), ACQ (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico delle ricette dei drink battuti, convertito dai ml nei pezzi del magazzino, visibile prima ancora di contare), ATTESO (la giacenza del prodotto adesso) e, scritto il contato, la DIFFERENZA = contato − atteso, in pezzi e in €. In cima i totali: venduto, differenza, valore delle rimanenze. La chiusura corregge la giacenza della differenza (BUG-112), e il DEP del prossimo inventario e' la giacenza appena allineata. Il «consumo» della storia e del consumo a settimana (REQ-MAG-024) resta quello che e' uscito davvero dallo scaffale: venduto piu' quello che manca, cioe' lo stesso numero del foglio INV quando i conti tornano. Gli inventari chiusi dalla 1.8 raccontano venduto e differenza; i vecchi, che non li hanno, il consumo di sempre.
+ADESSO ogni riga dice: DEP (all'apertura, o il contenuto reale corretto nel periodo, REQ-MAG-049), ACQ (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico delle ricette dei drink battuti, convertito dai ml nei pezzi del magazzino, visibile prima ancora di contare), ATTESO (la giacenza del prodotto adesso) e, scritto il contato, la DIFFERENZA = contato − atteso, in pezzi e in €. In cima i totali: venduto, differenza, valore delle rimanenze. La chiusura corregge la giacenza della differenza (BUG-112), e il DEP del prossimo inventario e' la giacenza appena allineata. Il «consumo» della storia e del consumo a settimana (REQ-MAG-024) resta quello che e' uscito davvero dallo scaffale: venduto piu' quello che manca, cioe' lo stesso numero del foglio INV quando i conti tornano. Gli inventari chiusi dalla 1.8 raccontano venduto e differenza; i vecchi, che non li hanno, il consumo di sempre.
 
 **Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
 
@@ -1750,6 +1750,14 @@ ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del periodo: conten
 Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione in filtri di categorie come nei prodotti, perche' cosi' mi e' un po' difficile fare l'inventario visto che devo passare da un ripiano a un altro perche' sono mischiati … a me serve in ordine alfabetico, ma per categorie, perche' le categorie ce l'ho quasi tutte vicine». E: «dovrebbero sempre apparire filtri sopra dove io posso selezionare se voglio vederli tutti oppure divisi per categoria». L'inventario usa la stessa barra delle categorie dei Prodotti (CategoryRail: a sinistra sullo schermo largo, una riga che scorre sul telefono), con i conteggi. «Tutte» mette i prodotti in fila categoria per categoria, nell'ordine delle categorie di magazzino e ognuna col suo titolo, e dentro in ordine alfabetico; scelta una categoria restano solo i suoi. I prodotti senza categoria vanno in fondo.
 
 **Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-049 — Nell'inventario il contenuto reale fa ripartire il prodotto: DEP = il numero scritto, ACQ e VENDUTO da zero
+
+Flavio, vocali del 24/09/2026: «quando vado a fare su un prodotto contenuto reale mi va a modificare il deposito, e fin qui ci siamo, ma oltre a modificare il deposito mi deve anche azzerare gli acquisti, perche' altrimenti mi trovo anche quegli acquisti». L'esempio: la Schweppes al pompelmo rosa era a −8; il fornitore ne consegna 22 e il magazzino va a 14; lui ne ha davvero 24 e le scrive come contenuto reale: «mi deve azzerare gli acquisti, perche' altrimenti se mi segna 24 che tengo e 24 che ho acquistato, nel prossimo inventario me ne porta a 48». Il conto di prima (BUG-111: la correzione sommata al DEP) tornava — DEP 2 · ACQ 22, che fa 24 — ma si leggeva come due cose sommate.
+
+ADESSO la correzione del contenuto reale fa RIPARTIRE il prodotto: il DEP diventa la giacenza subito dopo la correzione (quella di adesso meno quello che si e' mosso da allora), e ACQ e VENDUTO contano solo i movimenti successivi. Riparte anche il VENDUTO, e non per scelta: DEP + ACQ − VENDUTO deve dare lo scaffale, e il DEP nuovo ha gia' dentro le vendite di prima. Conta l'ULTIMA correzione del periodo, e vale per ogni movimento del gruppo «rettifica»: anche la rettifica di un inventario finita dentro il periodo, come quelle della chiusura interrotta del 21/09 (il 400 Conigli: DEP 0,1 · ACQ 0, che era la richiesta di Flavio del 22/09). La riga lo dice: «DEP 24 pz (reale dal 24/09)».
+
+**Dove**: `src/lib/inventarioInCorso.js (raggruppaMovimenti), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
