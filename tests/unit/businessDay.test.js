@@ -12,7 +12,32 @@ import {
   coverageStart,
   businessDayLabel,
   DEFAULT_CUTOFF_HOUR,
+  istanteDaOraDiRoma,
 } from '../../src/lib/businessDay.js'
+
+// ── L'ORA DI ROMA DI UN CAMPO «DATA E ORA» (REQ-STAT-003) ────────────
+// Il periodo personalizzato delle statistiche si sceglie all'ora, e l'ora
+// scritta è quella del locale: d'estate +2 da UTC, d'inverno +1. Sbagliare
+// di un'ora vuol dire mettere il primo giro della serata nel periodo sbagliato.
+describe('istanteDaOraDiRoma', () => {
+  it('d’estate le 18 a Roma sono le 16 UTC, d’inverno le 17', () => {
+    expect(istanteDaOraDiRoma('2026-09-20T18:00')).toBe('2026-09-20T16:00:00.000Z')
+    expect(istanteDaOraDiRoma('2026-01-10T18:00')).toBe('2026-01-10T17:00:00.000Z')
+  })
+
+  // Le due notti in cui l'ora cambia sono serate di lavoro come le altre.
+  it('regge i due cambi d’ora', () => {
+    expect(istanteDaOraDiRoma('2026-10-25T01:30')).toBe('2026-10-24T23:30:00.000Z')
+    expect(istanteDaOraDiRoma('2026-10-25T04:00')).toBe('2026-10-25T03:00:00.000Z')
+    expect(istanteDaOraDiRoma('2026-03-29T04:00')).toBe('2026-03-29T02:00:00.000Z')
+  })
+
+  it('un campo vuoto o scritto male non diventa una data', () => {
+    expect(istanteDaOraDiRoma('')).toBeNull()
+    expect(istanteDaOraDiRoma('boh')).toBeNull()
+    expect(istanteDaOraDiRoma(null)).toBeNull()
+  })
+})
 
 describe('businessDayKey', () => {
   it('la sera appartiene al proprio giorno', () => {

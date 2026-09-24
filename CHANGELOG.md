@@ -14,6 +14,11 @@
 - **Si può contare a locale aperto.** Ogni conteggio porta la sua ora, e la
   chiusura tiene conto di quello che si vende dopo: prima le vendite fatte
   fra il conteggio e la chiusura sparivano dalle scorte.
+- **Statistiche per periodo: «Personalizzato», con data e ora.** Accanto a
+  7 · 10 · 20 · 30 · 60 giorni c'è «Personalizzato», dove si scelgono
+  inizio e fine con l'ora: un giorno, novanta, lo stesso mese dell'anno
+  scorso, o una sola serata dalle 18 alle 4. Lo seguono incassi,
+  classifiche e magazzino nel periodo.
 - **L'inventario si scorre per categorie**, con la stessa barra dei
   Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
   dentro in ordine alfabetico.

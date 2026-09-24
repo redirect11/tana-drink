@@ -31,7 +31,30 @@ function romeParts(date) {
     d: Number(get('day')),
     // alcuni runtime rendono la mezzanotte come "24"
     h: Number(get('hour')) % 24,
+    mi: Number(get('minute')),
   }
+}
+
+// ── DA UN'ORA DI ROMA A UN ISTANTE ───────────────────────────────────
+// «2026-09-20T18:00», come la scrive un campo data e ora, vuol dire le 18
+// a Roma: +2 ore da UTC d'estate, +1 d'inverno. Si prova con l'ora come se
+// fosse UTC, si guarda che ora fa a Roma in quell'istante e si corregge
+// della differenza — due giri bastano anche a cavallo del cambio d'ora.
+// Serve al periodo personalizzato delle statistiche (REQ-STAT-003), dove
+// si sceglie un'ora precisa e non una giornata intera.
+const scartoDiRoma = (ms) => {
+  const { y, m, d, h, mi } = romeParts(new Date(ms))
+  return Date.UTC(y, m - 1, d, h, mi) - Math.floor(ms / 60000) * 60000
+}
+
+export function istanteDaOraDiRoma(locale) {
+  const x = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(locale || ''))
+  if (!x) return null
+  const [, y, mo, d, h, mi] = x.map(Number)
+  const comeUtc = Date.UTC(y, mo - 1, d, h, mi)
+  let t = comeUtc - scartoDiRoma(comeUtc)
+  t = comeUtc - scartoDiRoma(t)
+  return new Date(t).toISOString()
 }
 
 const normalizeCutoff = (h) => {

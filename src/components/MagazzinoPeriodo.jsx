@@ -19,7 +19,7 @@ import { shiftDay } from '../lib/ore.js'
 // sono migliaia di documenti. Farlo a ogni apertura delle statistiche
 // vorrebbe dire far pagare a chi guarda l'incasso una lettura che non ha
 // chiesto.
-export default function MagazzinoPeriodo({ dal, al, cutoffHour }) {
+export default function MagazzinoPeriodo({ dal, al, da = null, a = null, cutoffHour }) {
   const [aperto, setAperto] = useState(false)
   const [dati, setDati] = useState(null)
   const [caricando, setCaricando] = useState(false)
@@ -34,17 +34,18 @@ export default function MagazzinoPeriodo({ dal, al, cutoffHour }) {
     // mattino, quindi il suo primo istante sta DOPO la mezzanotte di quella
     // data — ma la notte precedente appartiene già alla giornata prima. Si
     // legge largo e si taglia preciso: il conto filtra per giornata.
-    const da = `${shiftDay(dal, -1)}T00:00:00.000Z`
-    Promise.all([fetchStockMovementsSince(da), fetchInventoryItems()])
+    // Col periodo all'ora (REQ-STAT-003) il primo istante si sa già.
+    const dove = da || `${shiftDay(dal, -1)}T00:00:00.000Z`
+    Promise.all([fetchStockMovementsSince(dove), fetchInventoryItems()])
       .then(([movimenti, items]) => {
-        if (vivo) setDati(magazzinoNelPeriodo(movimenti, items, { dal, al, cutoffHour }))
+        if (vivo) setDati(magazzinoNelPeriodo(movimenti, items, { dal, al, da, a, cutoffHour }))
       })
       .catch((e) => vivo && setErrore(e.message))
       .finally(() => vivo && setCaricando(false))
     return () => {
       vivo = false
     }
-  }, [aperto, dal, al, cutoffHour])
+  }, [aperto, dal, al, da, a, cutoffHour])
 
   return (
     <div className="card">

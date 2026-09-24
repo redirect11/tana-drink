@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 23 settembre 2026.
+> Generato il 24 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 204 | fatto e coperto dai test |
+| ✅ | 205 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**249 voci** in tutto. **219** descrivono il sistema com'è oggi e
+**250 voci** in tutto. **220** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 2 | — |  |
+| [STAT](#stat) | 3 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -2876,6 +2876,12 @@ UN PRODOTTO CHE NON SI E' MOSSO NON E' UNA RIGA: su quattrocento articoli trecen
 SI CALCOLA A RICHIESTA, con un tasto. Gli altri riquadri lavorano sugli ordini gia' in mano; questo legge tutti gli articoli e tutti i movimenti del periodo, che su due mesi sono migliaia di documenti: chi apre le statistiche per guardare l'incasso non deve pagarli. E DICE COSA NON E': il consumo qui e' quello scalato dalle ricette battute, non quello contato sullo scaffale. Quello vero lo da' la CONTA (REQ-MAG-014), e la differenza fra i due e' il calo, l'offerto e la dose scritta larga. Senza quella riga i due numeri si leggono come se dovessero coincidere, e chi li confronta pensa a un difetto. I DUE ELENCHI VALGONO ANCHE PER UNA SERATA: la sottosezione «Per serata» passa gli stessi estremi, quindi «cosa ho consumato sabato» si legge dove si legge il resto della serata.
 
 **Dove**: `src/lib/magazzinoPeriodo.js, src/components/StatsTab.jsx, src/components/MagazzinoPeriodo.jsx, src/lib/api.js (fetchStockMovementsSince)` · **Lo dimostrano**: `tests/unit/magazzinoPeriodo.test.js`, `tests/component/StatsTab.test.jsx`, `tests/component/ElenchiPeriodo.test.jsx`
+
+#### REQ-STAT-003 — Le statistiche per periodo hanno un «Personalizzato» con data e ora di inizio e di fine
+
+Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale periodo personalizzato, e' un periodo personalizzato all'interno dei 7, 10, 20, 30 o 60 giorni. Ma a me potrebbe servire un periodo di 90 giorni oppure di 30 giorni dell'anno scorso. Quindi dovrebbe apparire 7, 10, 20, 30 e 60 giorni e in piu' il tab personalizzato: ci metti tu la data, che puo' essere un giorno, due, dieci oppure tutto un anno». E: «oltre alla data di inizio e fine ci deve essere anche l'orario di inizio e di fine, e' importante perche' la mia giornata e' a cavallo tra due giorni». Le date c'erano gia' (REQ-STAT-002), libere, ma stavano sotto le pastiglie e toccarle ne spegneva una: si leggevano come un ritocco dei 7-60 giorni. Adesso le pastiglie sono 7 · 10 · 20 · 30 · 60 giorni · Personalizzato, e le date compaiono solo nell'ultima, con l'ORA: due campi data e ora, «Inizio» e «Fine» (non «Dalle»/«Alle», che sono gia' le etichette delle fasce orarie piu' sotto). La didascalia dice il periodo per esteso: «Dalle 18:00 di sabato 20/09/2026 alle 04:00 di domenica 21/09/2026: N giornate con ordini». Il periodo personalizzato e' fatto di ISTANTI, all'ora di Roma (ora legale compresa, `istanteDaOraDiRoma`), con la fine esclusa: lo seguono incassi, grafici, classifica e il magazzino nel periodo. Aprendolo si parte da quello che si stava guardando scritto all'ora (le giornate intere diventano «dalle 05:00 del primo giorno alle 05:00 del giorno dopo l'ultimo»), quindi gli stessi numeri. Con la fine prima dell'inizio lo si dice invece di mostrare numeri. Le pastiglie restano a giornate commerciali intere.
+
+**Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
 
 ### LIC
 
