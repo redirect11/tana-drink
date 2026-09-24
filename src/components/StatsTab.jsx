@@ -6,7 +6,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { businessDayKey } from '../lib/businessDay.js'
+import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { shiftDay } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
@@ -55,13 +55,44 @@ const PERIOD_PRESETS = [7, 10, 20, 30, 60]
 // voleva dire le ultime sette giornate CON ORDINI, quante che fossero
 // indietro nel tempo; adesso riempiono un intervallo, quindi sono sette
 // GIORNI di calendario — e un locale chiuso il lunedì ne troverà sei
-// lavorati. È la stessa unità delle due caselle qui sotto: due comandi che
-// riempiono la stessa cosa non possono contare in due modi diversi.
+// lavorati. È la stessa unità del periodo personalizzato, che parte da lì:
+// due comandi che riempiono la stessa cosa non possono contare in due modi
+// diversi.
 const periodoDaPreset = (n, oggi) => ({ preset: n, dal: shiftDay(oggi, -(n - 1)), al: oggi })
 const giorniFra = (dal, al) => Math.round((Date.parse(al) - Date.parse(dal)) / 86400000) + 1
 // La data per esteso, non «oggi»/«ieri»: qui si sta verificando un periodo
 // scelto a mano, e le parole comode costringerebbero a fidarsi.
 const dataBreve = (key) => (key ? key.split('-').reverse().join('/') : '')
+
+// ── IL PERIODO PERSONALIZZATO, ALL'ORA (REQ-STAT-003) ───────────────
+// Flavio, 24/09/2026: «il periodo personalizzato non è un reale periodo
+// personalizzato, è un periodo personalizzato all'interno dei 7, 10, 20, 30
+// o 60 giorni. Ma a me potrebbe servire un periodo di 90 giorni oppure di
+// 30 giorni dell'anno scorso … dovrebbe apparire 7, 10, 20, 30, 60 giorni e
+// in più il tab personalizzato». E: «oltre alla data di inizio e fine ci
+// deve essere anche l'orario di inizio e di fine, è importante perché la mia
+// giornata è a cavallo tra due giorni».
+//
+// Le date c'erano già, libere, ma stavano SOTTO le pastiglie e toccarle ne
+// spegneva una: si leggevano come un ritocco di quelle, non come un periodo
+// a sé. Adesso sono una pastiglia loro, e solo lì compaiono — con l'ora.
+//
+// Il periodo personalizzato è fatto di ISTANTI (ora di Roma), non di
+// giornate: «dalle 18 di sabato alle 4 di domenica» è una domanda che a
+// giornate intere non si fa. Si parte da quello che si stava guardando,
+// scritto all'ora: dieci giornate diventano «dalle 05:00 del primo giorno
+// alle 05:00 del giorno dopo l'ultimo», cioè gli stessi numeri.
+const PERSONALIZZATO = 'personalizzato'
+const allOra = (key, cutoff) => `${key}T${String(cutoff).padStart(2, '0')}:00`
+const GIORNI_SETTIMANA = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato']
+// «18:00 di sabato 20/09/2026»: l'ora e il giorno per esteso, perché è la
+// frase con cui si verifica di aver preso la notte giusta.
+const oraPerEsteso = (locale) => {
+  const [giorno, ora] = String(locale || '').split('T')
+  if (!giorno || !ora) return ''
+  const sett = GIORNI_SETTIMANA[new Date(`${giorno}T00:00:00Z`).getUTCDay()]
+  return `${ora.slice(0, 5)} di ${sett} ${dataBreve(giorno)}`
+}
 
 // LE DUE DOMANDE, DUE SOTTOSEZIONI. «È la cosa principale che si vuole
 // vedere, il resto dei filtri sono secondari» (l'utente, 22/08/2026): la
@@ -109,8 +140,46 @@ function DailyStats({ sezione = 'serate' }) {
   // il periodo è una pastiglia si rifà da sé, se no resta quello scritto a
   // mano, che è una scelta di chi guarda e non si tocca.
   useEffect(() => {
-    setPeriodo((p) => (p.preset ? periodoDaPreset(p.preset, businessDayKey(new Date(), cutoff)) : p))
+    setPeriodo((p) =>
+      typeof p.preset === 'number' ? periodoDaPreset(p.preset, businessDayKey(new Date(), cutoff)) : p
+    )
   }, [cutoff])
+  const personalizzato = periodo.preset === PERSONALIZZATO
+  // Gli estremi del periodo personalizzato come istanti; null se scritti male
+  // o all'incontrario, e allora non si mostra niente di finto.
+  const istanti = useMemo(() => {
+    if (!personalizzato) return null
+    const da = istanteDaOraDiRoma(periodo.dalle)
+    const a = istanteDaOraDiRoma(periodo.alle)
+    return da && a && da < a ? { da, a } : null
+  }, [personalizzato, periodo.dalle, periodo.alle])
+  // «Personalizzato» parte da quello che si stava guardando, scritto all'ora.
+  const apriPersonalizzato = () =>
+    setPeriodo((p) =>
+      p.preset === PERSONALIZZATO
+        ? p
+        : {
+            preset: PERSONALIZZATO,
+            dal: p.dal,
+            al: p.al,
+            dalle: allOra(p.dal, cutoff),
+            alle: allOra(shiftDay(p.al, 1), cutoff),
+          }
+    )
+  // Scritta un'ora, le giornate che la contengono restano al passo: servono
+  // a caricare abbastanza dati e al magazzino del periodo.
+  const scriviOra = (campo, valore) =>
+    valore &&
+    setPeriodo((p) => {
+      const nuovo = { ...p, [campo]: valore }
+      const da = istanteDaOraDiRoma(nuovo.dalle)
+      const a = istanteDaOraDiRoma(nuovo.alle)
+      return {
+        ...nuovo,
+        dal: da ? businessDayKey(da, cutoff) : p.dal,
+        al: a ? businessDayKey(a, cutoff) : p.al,
+      }
+    })
   // Carica abbastanza giornate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
   // Range orari configurabili dei grafici.
@@ -217,6 +286,10 @@ function DailyStats({ sezione = 'serate' }) {
       const a = serata.closed_at || new Date().toISOString()
       ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
       sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
+    } else if (personalizzato) {
+      // All'ora: dentro quello che sta fra i due istanti, la fine esclusa.
+      ord = istanti ? orders.filter((o) => o.created_at >= istanti.da && o.created_at < istanti.a) : []
+      sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
     } else {
       sel = giorniAttivi.filter((g) => g >= periodo.dal && g <= periodo.al)
       const selSet = new Set(sel)
@@ -246,7 +319,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, hourRange, dayRange, cutoff, serata])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, hourRange, dayRange, cutoff, serata])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -307,45 +380,58 @@ function DailyStats({ sezione = 'serate' }) {
             {v} giorni
           </button>
         ))}
+        <button className={`chip${personalizzato ? ' active' : ''}`} onClick={apriPersonalizzato}>
+          Personalizzato
+        </button>
       </div>
-      {/* LE DATE SONO IL COMANDO, le pastiglie sono le scorciatoie. Scrivere
-          una delle due spegne la pastiglia: da lì in poi il periodo è quello
-          che c'è scritto, e non si sposta più da solo. */}
-      <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
-        <span>
-          <label htmlFor="periodo-dal" className="muted small">Dal giorno</label>
-          <input
-            id="periodo-dal"
-            type="date"
-            value={periodo.dal}
-            max={periodo.al}
-            onChange={(e) =>
-              e.target.value && setPeriodo((p) => ({ preset: null, dal: e.target.value, al: p.al }))
-            }
-          />
-        </span>
-        <span>
-          <label htmlFor="periodo-al" className="muted small">Al giorno</label>
-          <input
-            id="periodo-al"
-            type="date"
-            value={periodo.al}
-            min={periodo.dal}
-            onChange={(e) =>
-              e.target.value && setPeriodo((p) => ({ preset: null, dal: p.dal, al: e.target.value }))
-            }
-          />
-        </span>
-      </div>
-      <p className="muted small" style={{ margin: '0 0 12px' }}>
-        Dal {dataBreve(periodo.dal)} al {dataBreve(periodo.al)}: {view.sel.length}{' '}
-        {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini su{' '}
-        {giorniFra(periodo.dal, periodo.al)}.
-      </p>
+      {personalizzato ? (
+        <>
+          {/* Data E ORA in un campo solo: il telefono apre il suo selettore,
+              e la notte a cavallo di due giorni si scrive com'è. */}
+          <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
+            <span>
+              <label htmlFor="periodo-dalle" className="muted small">Inizio</label>
+              <input
+                id="periodo-dalle"
+                type="datetime-local"
+                value={periodo.dalle}
+                max={periodo.alle}
+                onChange={(e) => scriviOra('dalle', e.target.value)}
+              />
+            </span>
+            <span>
+              <label htmlFor="periodo-alle" className="muted small">Fine</label>
+              <input
+                id="periodo-alle"
+                type="datetime-local"
+                value={periodo.alle}
+                min={periodo.dalle}
+                onChange={(e) => scriviOra('alle', e.target.value)}
+              />
+            </span>
+          </div>
+          <p className="muted small" style={{ margin: '0 0 12px' }}>
+            {istanti ? (
+              <>
+                Dalle {oraPerEsteso(periodo.dalle)} alle {oraPerEsteso(periodo.alle)}: {view.sel.length}{' '}
+                {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini.
+              </>
+            ) : (
+              'L’ora di fine deve venire dopo quella di inizio.'
+            )}
+          </p>
+        </>
+      ) : (
+        <p className="muted small" style={{ margin: '0 0 12px' }}>
+          Dal {dataBreve(periodo.dal)} al {dataBreve(periodo.al)}: {view.sel.length}{' '}
+          {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini su{' '}
+          {giorniFra(periodo.dal, periodo.al)}.
+        </p>
+      )}
       <CorpoStatistiche
         view={view}
         comandi={comandi}
-        intervallo={{ dal: periodo.dal, al: periodo.al }}
+        intervallo={{ dal: periodo.dal, al: periodo.al, da: istanti?.da ?? null, a: istanti?.a ?? null }}
         cutoff={cutoff}
       />
     </div>
@@ -587,7 +673,13 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           fila, non a barre. */}
       <ClassificaVenduto righe={classifica} />
       {intervallo?.dal && intervallo?.al && (
-        <MagazzinoPeriodo dal={intervallo.dal} al={intervallo.al} cutoffHour={cutoff} />
+        <MagazzinoPeriodo
+          dal={intervallo.dal}
+          al={intervallo.al}
+          da={intervallo.da ?? null}
+          a={intervallo.a ?? null}
+          cutoffHour={cutoff}
+        />
       )}
 
       <div className="card">

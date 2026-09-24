@@ -103,8 +103,29 @@ export function movimentoInPezzi(m, item) {
  * @param items gli articoli di magazzino, con la giacenza di ADESSO.
  * @param dal / al giornate commerciali estreme. `al` mancante vuol dire
  *   «fino a oggi».
+ * @param da / a ISTANTI (ISO), al posto delle giornate: il periodo
+ *   personalizzato delle statistiche si sceglie all'ora (REQ-STAT-003).
+ *   `a` è escluso: «dalle 18 alle 4» non comprende le 4 in punto.
  */
-export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+// Dove cade un movimento rispetto al periodo: 'prima', 'dentro', 'dopo', o
+// null se non ha una data. Con gli istanti si confronta l'ora esatta; se no
+// la giornata commerciale.
+function collocaMovimento(at, { dal, al, da, a, cutoffHour }) {
+  if (da) {
+    if (!at) return null
+    const iso = new Date(at).toISOString()
+    return iso < da ? 'prima' : a && iso >= a ? 'dopo' : 'dentro'
+  }
+  const giornata = businessDayKey(at, cutoffHour)
+  if (!giornata) return null
+  return giornata < dal ? 'prima' : al && giornata > al ? 'dopo' : 'dentro'
+}
+
+export function magazzinoNelPeriodo(
+  movimenti,
+  items,
+  { dal, al = null, da = null, a = null, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}
+) {
   const perId = new Map((items || []).map((i) => [i.id, i]))
   const righe = new Map()
   const riga = (item) => {
@@ -120,11 +141,11 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
     const item = perId.get(m?.item_id)
     const mp = movimentoInPezzi(m, item)
     if (!mp) continue
-    const giornata = businessDayKey(m.created_at, cutoffHour)
-    if (!giornata || giornata < dal) continue
+    const quando = collocaMovimento(m.created_at, { dal, al, da, a, cutoffHour })
+    if (!quando || quando === 'prima') continue
     const { q, gruppo } = mp
     const r = riga(item)
-    if (al && giornata > al) {
+    if (quando === 'dopo') {
       r.dopo += q
       continue
     }
