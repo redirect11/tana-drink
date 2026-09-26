@@ -17,6 +17,7 @@ import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js
 import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import CategoryRail from './CategoryRail.jsx'
+import { perScaffale } from '../lib/scaffali.js'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -47,8 +48,6 @@ import CategoryRail from './CategoryRail.jsx'
 // cosa si batte — lo smistamento dei movimenti, l'ordine delle righe — si
 // calcola una volta sola; a ogni cifra si rifanno i numeri, e si ridisegna
 // solo la riga che è cambiata.
-
-const collator = new Intl.Collator('it')
 
 // Le righe con quello che si è scritto a schermo (`modifiche`: item_id →
 // { v, at }), che vince su quello già salvato nell'inventario.
@@ -142,27 +141,12 @@ export default function StockCountPanel() {
   const rigaDi = useMemo(() => new Map((computed?.lines || []).map((l) => [l.item_id, l])), [computed])
 
   // ── LE CATEGORIE ────────────────────────────────────────────────────
-  // In fila come gli scaffali: categoria per categoria, nell'ordine del
-  // magazzino, e dentro in ordine alfabetico. Dipende solo da nomi e
+  // In fila come gli scaffali (lib/scaffali.js). Dipende solo da nomi e
   // categorie, non da quello che si scrive.
-  const { voci, gruppi } = useMemo(() => {
-    if (!open) return { voci: [], gruppi: [] }
-    const catDi = new Map(items.map((i) => [i.id, i.category_id]))
-    const perCat = new Map(categorie.map((c, i) => [c.id, { i, nome: c.name, righe: [] }]))
-    const senza = { i: Infinity, nome: 'Senza categoria', righe: [] }
-    for (const l of open.lines) (perCat.get(catDi.get(l.item_id)) || senza).righe.push(l)
-    const tutti = [...perCat.entries(), ['none', senza]]
-      .filter(([, g]) => g.righe.length > 0)
-      .sort(([, a], [, b]) => a.i - b.i)
-    for (const [, g] of tutti) g.righe.sort((a, b) => collator.compare(String(a.name), String(b.name)))
-    return {
-      voci: [
-        { key: 'all', label: 'Tutte', count: open.lines.length },
-        ...tutti.map(([key, g]) => ({ key, label: g.nome, count: g.righe.length })),
-      ],
-      gruppi: tutti.map(([key, g]) => ({ key, nome: g.nome, ids: g.righe.map((l) => l.item_id) })),
-    }
-  }, [open, items, categorie])
+  const { voci, gruppi } = useMemo(
+    () => (open ? perScaffale(open.lines, items, categorie) : { voci: [], gruppi: [] }),
+    [open, items, categorie]
+  )
   const visibili = categoria === 'all' ? gruppi : gruppi.filter((g) => g.key === categoria)
 
   async function start() {

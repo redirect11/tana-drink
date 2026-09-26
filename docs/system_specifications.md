@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 206 | fatto e coperto dai test |
+| ✅ | 207 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**251 voci** in tutto. **221** descrivono il sistema com'è oggi e
+**252 voci** in tutto. **222** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 42 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 43 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1756,6 +1756,20 @@ Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione
 Flavio, 25/09/2026 sera: «il contenuto reale serve per fare le modifiche sia in positivo sia in negativo … va direttamente sia sul magazzino dei prodotti sia sulle rimanenze di magazzino nell'inventario, e quindi mi modifica sia la rimanenza sia il consumato». E' IL CONTRARIO DI BUG-111 (22/09, in produzione con la 1.6.1), dove il contenuto reale corretto durante un inventario spostava il DEP. Adesso il DEP resta quello dell'apertura, l'ACQ resta la merce entrata, e la correzione — col suo segno — si legge nella RIM e quindi nel CONS. Lo stesso per le rettifiche d'inventario finite dentro il periodo, come quelle della chiusura interrotta del 21/09. Nel mezzo, il 24/09, per un giorno il contenuto reale aveva fatto «ripartire» il prodotto (DEP = il numero scritto, ACQ e VENDUTO da zero): e' stato abbandonato il giorno dopo, e non e' mai uscito dalla linea di sviluppo. Il contenuto reale resta com'era in Prodotti: si scrive il numero vero, e l'app registra il carico o lo scarico della differenza. Non accetta numeri negativi: e' quello che c'e' sullo scaffale.
 
 **Dove**: `src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-050 — Controllo del magazzino, pagina di prova: si conta un prodotto alla volta, e il rapporto dice dove si perde
+
+Daniele, 26/09/2026: «implementa come ha detto Flavio, e poi fai una nuova pagina inventario come la faresti tu. Una pagina attivabile, solo per test al momento, in modo da poter vedere la differenza di funzionamento». Nasce dalla domanda di prima: «penso che stia replicando il workflow che faceva sull'Excel, ma non mi e' chiaro cosa gli comunicano i dati alla fine della fiera». L'IDEA. Il foglio INV esisteva perche' Flavio non aveva i dati delle vendite: il consumo si ricavava contando, DEP + ACQ − RIM. Oggi l'app sa cosa si e' venduto e ogni cambio di giacenza e' un movimento col suo motivo: il conteggio non serve piu' a calcolare il consumo, serve a MISURARE quanto l'app si sbaglia. Le domande che contano sono tre — quanto devo ordinare, quanto sto perdendo, quanto vale il magazzino — e la pagina le prende una per una.
+
+CONTA: un prodotto alla volta, quando si vuole, scaffale per scaffale (la stessa barra delle categorie, `perScaffale`). Niente inventario da aprire e chiudere: `registraConteggio` corregge subito la giacenza della differenza (increment, in sottofondo, composto in memoria) e scrive un movimento `conta` anche quando il prodotto torna, perche' e' la traccia che dice «contato il …». Accanto a ogni prodotto, da quando non si conta.
+
+RAPPORTO: per 7, 30 o 90 giorni, Inizio + Acquisti − Venduto ± Differenza = Fine, dagli stessi movimenti e con la stessa tabella motivo → colonna delle statistiche (magazzinoNelPeriodo). In cima acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine periodo; l'elenco parte da dove la differenza costa di piu', e per ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
+
+DOVE SI VEDE: solo fuori dalla produzione (il progetto Firebase non e' `tana-drink`) e solo con l'interruttore «Controllo del magazzino (prova)» in Impostazioni → Funzioni premium, che in produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da provare, non una simulazione.
+
+NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
+
+**Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 

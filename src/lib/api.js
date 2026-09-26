@@ -1103,6 +1103,42 @@ export async function receiveBottles(itemId, count, openQty = 0) {
   return mapItem(await getDoc(ref))
 }
 
+// ── UN CONTEGGIO, APPLICATO SUBITO (REQ-MAG-050, pagina di prova) ────
+// Il controllo del magazzino non apre e chiude inventari: si conta un
+// prodotto e la giacenza si corregge lì, della differenza, con un
+// movimento `conta` che resta nella storia. Anche a differenza zero il
+// movimento si scrive: è la traccia che dice «contato il …», e senza un
+// prodotto che torna sembrerebbe mai controllato.
+// In sottofondo e composto in memoria come il carico: la differenza si
+// somma con `increment`, quindi una vendita battuta nello stesso istante
+// da un altro terminale non si perde.
+export function registraConteggio(item, contato) {
+  const cur = articoloScrivibileInMano(item)
+  const n = Number(contato)
+  if (!Number.isFinite(n) || n < 0) throw new Error('Il contato è un numero da zero in su.')
+  const diff = n - (Number(cur.stock) || 0)
+  if (Math.abs(diff) > 1e-9) {
+    bgWrite(
+      () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(diff) }),
+      'conteggio'
+    )
+  }
+  bgWrite(
+    () =>
+      addDoc(movementsCol, {
+        item_id: cur.id,
+        item_name: cur.name,
+        type: diff >= 0 ? 'load' : 'unload',
+        qty: Math.abs(diff),
+        unit: cur.unit ?? null,
+        reason: 'conta',
+        created_at: serverTimestamp(),
+      }),
+    'movimento conteggio'
+  )
+  return { item: { ...cur, stock: n }, diff }
+}
+
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
@@ -5819,6 +5855,9 @@ export const DEFAULT_SETTINGS = {
   // senza, e il prossimo lo si apre a mano quando si vuole (Daniele,
   // 17/09/2026: «così può decidere se aprire a mano o in automatico»).
   inventario_riapre_da_solo: true,
+  // La pagina di prova del controllo del magazzino (REQ-MAG-050): solo
+  // fuori dalla produzione, vedi lib/prova.js.
+  controllo_magazzino_prova: false,
   // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
   // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
   // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi

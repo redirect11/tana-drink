@@ -157,7 +157,7 @@ export function magazzinoNelPeriodo(
   }
 
   const out = []
-  const totali = { acq_valore: 0, cons_valore: 0, fine_valore: 0, prodotti: 0 }
+  const totali = { acq_valore: 0, cons_valore: 0, fine_valore: 0, rett_valore: 0, prodotti: 0 }
   for (const r of righe.values()) {
     // UN PRODOTTO CHE NON SI È MOSSO NON È UNA RIGA. Su quattrocento
     // articoli, trecento sono fermi: elencarli tutti a zero vuol dire
@@ -184,8 +184,13 @@ export function magazzinoNelPeriodo(
       acq_valore: v(qtyValue(r.acq, item)),
       cons_valore: v(qtyValue(r.cons, item)),
       fine_valore: v(qtyValue(fine, item)),
+      // Le rettifiche col loro segno: una differenza in meno è merce che
+      // manca, ed è il numero che il controllo del magazzino (REQ-MAG-050)
+      // mette in cima.
+      rett_valore: v(r.rett < 0 ? -qtyValue(-r.rett, item) : qtyValue(r.rett, item)),
     }
     totali.acq_valore += voce.acq_valore
+    totali.rett_valore += voce.rett_valore
     totali.cons_valore += voce.cons_valore
     totali.fine_valore += voce.fine_valore
     totali.prodotti += 1
@@ -194,10 +199,23 @@ export function magazzinoNelPeriodo(
   totali.acq_valore = arrotonda(totali.acq_valore, 2)
   totali.cons_valore = arrotonda(totali.cons_valore, 2)
   totali.fine_valore = arrotonda(totali.fine_valore, 2)
+  totali.rett_valore = arrotonda(totali.rett_valore, 2)
 
   // IN CIMA QUELLO CHE È COSTATO DI PIÙ, non quello che si è mosso di più:
   // la domanda dietro questo elenco è dove se ne va il denaro, e trenta
   // bottiglie d'acqua non sono la risposta.
   out.sort((a, b) => b.cons_valore - a.cons_valore || b.acq_valore - a.acq_valore || a.name.localeCompare(b.name, 'it'))
   return { righe: out, totali }
+}
+
+// QUANTI GIORNI DURA LA SCORTA al ritmo di un periodo (REQ-MAG-050): quello
+// che è uscito davvero — venduto più quello che manca, cioè inizio più
+// acquisti meno fine — giorno per giorno. È la domanda «quanto devo
+// ordinare?» detta in un numero solo. null dove non si può dire: niente
+// uscito, o niente sullo scaffale.
+export function giorniDiScorta(riga, giorni) {
+  const uscito = riga.dep + riga.acq - riga.fine
+  const alGiorno = uscito / giorni
+  if (!(alGiorno > 0) || !(riga.fine > 0)) return null
+  return Math.floor(riga.fine / alGiorno)
 }
