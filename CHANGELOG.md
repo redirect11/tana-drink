@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.8.0-beta
+## 1.8.1-beta
 
 ### Per chi amministra
 
