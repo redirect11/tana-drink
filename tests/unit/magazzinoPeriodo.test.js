@@ -131,6 +131,27 @@ describe('il periodo è un recinto', () => {
   })
 })
 
+// ── ALL'ORA, NON A GIORNATE (REQ-STAT-003) ───────────────────────
+// Il periodo personalizzato delle statistiche si sceglie con l'ora: «dalle
+// 18 alle 4» è una serata, e il magazzino deve dire quella, non le due
+// giornate intere che la contengono.
+describe('il periodo all’ora', () => {
+  const movimenti = [
+    mov('cola', 'unload', 5, 'pz', 'ordine', '2026-06-15T15:00:00.000Z'), // 17:00, PRIMA
+    mov('cola', 'unload', 7, 'pz', 'ordine', '2026-06-15T20:00:00.000Z'), // 22:00, dentro
+    mov('cola', 'unload', 3, 'pz', 'ordine', '2026-06-16T01:00:00.000Z'), // 03:00, dentro
+    mov('cola', 'unload', 2, 'pz', 'ordine', '2026-06-16T02:00:00.000Z'), // 04:00, DOPO (fine esclusa)
+  ]
+  const SERATA = { da: '2026-06-15T16:00:00.000Z', a: '2026-06-16T02:00:00.000Z' }
+
+  it('conta solo quello fra i due istanti, e la fine è esclusa', () => {
+    const r = riga(magazzinoNelPeriodo(movimenti, items, SERATA), 'cola')
+    expect(r.cons).toBe(10)
+    // Oggi 20; dopo la fine ne sono usciti 2, quindi alle 04:00 ce n'erano 22.
+    expect(r.fine).toBe(22)
+  })
+})
+
 describe('storni e rettifiche', () => {
   // Un conto annullato rimette il gin sullo scaffale: è consumo che si
   // disfa, non gin comprato.

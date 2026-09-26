@@ -34,7 +34,6 @@ import {
   formatPezzi,
   copiaProdotto,
   fmtContenuto,
-  scaricoPossibile,
   giacenzaNonNegativa,
   BASE_UNITS,
   contentBase,
@@ -893,32 +892,11 @@ describe('articolo in unità generiche (U)', () => {
 // ci va (BUG-101, `magazzinoSottoZero.test.js`), e di quel giorno restano le
 // due regole che erano giuste davvero.
 //
-// LA PRIMA è questa: `scaricoPossibile` frena lo scarico A MANO. Lì c'è una
-// persona che dichiara quanto ha tolto dallo scaffale, e da uno scaffale
-// vuoto non si toglie niente — un meno sarebbe solo un numero sbagliato in
-// più, non un'informazione.
-describe('lo scarico a mano non scende sotto zero', () => {
-  it('si scarica al massimo quello che risulta in giacenza', () => {
-    expect(scaricoPossibile(10, 4)).toBe(4)
-    expect(scaricoPossibile(10, 12)).toBe(10)
-    // Il Jager quasi finito: resta 0,02 pz e la ricetta ne chiede 0,057.
-    expect(scaricoPossibile(0.02, 0.057)).toBeCloseTo(0.02, 6)
-  })
-
-  it('chi dichiara di aver tolto più di quello che c’era si ferma a zero', () => {
-    expect(10 - scaricoPossibile(10, 12)).toBe(0)
-  })
-
-  it('da una giacenza già a zero (o negativa) non si toglie più niente', () => {
-    expect(scaricoPossibile(0, 3)).toBe(0)
-    expect(scaricoPossibile(-0.04, 1)).toBe(0)
-  })
-
-  it('un delta nullo o al contrario non muove la giacenza', () => {
-    expect(scaricoPossibile(10, 0)).toBe(0)
-    expect(scaricoPossibile(10, -5)).toBe(0)
-  })
-
+// LA PRIMA ERA `scaricoPossibile`, il freno dello scarico A MANO: tolta il
+// 26/09/2026, perché lo scarico a mano non c'è più (Flavio non vuole il
+// tasto: le correzioni in meno si fanno col contenuto reale). Resta la
+// seconda.
+describe('il carico', () => {
   // LA SECONDA REGOLA È CAMBIATA IL 12/09/2026. Dal 17/08 il carico
   // ripartiva da zero («il meno non è un debito da ripagare con la merce che
   // arriva»); Flavio ha chiesto il contrario: «se ho tre pezzi, ne consumo

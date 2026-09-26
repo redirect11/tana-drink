@@ -80,6 +80,8 @@ import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
+import ControlloMagazzino from './ControlloMagazzino.jsx'
+import { controlloMagazzinoVisibile } from '../lib/prova.js'
 import CategoryRail from './CategoryRail.jsx'
 import SortTh from './SortTh.jsx'
 import SectionPanels from './SectionPanels.jsx'
@@ -190,6 +192,9 @@ const INV_VIEWS = [
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
   ['movimenti', '📜', 'Movimenti'],
+  // La pagina di prova (REQ-MAG-050): solo fuori dalla produzione e solo
+  // se accesa, vedi lib/prova.js.
+  ['controllo', '🧪', 'Controllo (prova)'],
 ]
 
 // LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
@@ -208,7 +213,10 @@ export default function InventoryManager() {
   const [impostazioni, setImpostazioni] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   const voci = useMemo(
-    () => INV_VIEWS.filter(([id]) => voceVisibile(impostazioni, id)),
+    () =>
+      INV_VIEWS.filter(([id]) =>
+        id === 'controllo' ? controlloMagazzinoVisibile(impostazioni) : voceVisibile(impostazioni, id)
+      ),
     [impostazioni]
   )
   // Il modulo può spegnersi mentre la sua sezione è aperta (lo si spegne
@@ -229,6 +237,7 @@ export default function InventoryManager() {
       {view === 'categorie' && <CategoriePanel />}
       {view === 'macro' && <MacroPanel />}
       {view === 'movimenti' && <MovimentiPanel />}
+      {view === 'controllo' && <ControlloMagazzino />}
     </div>
   )
 }

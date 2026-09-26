@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 23 settembre 2026.
+> Generato il 26 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 204 | fatto e coperto dai test |
+| ✅ | 207 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 7 | non più valido |
 
-**249 voci** in tutto. **219** descrivono il sistema com'è oggi e
+**252 voci** in tutto. **222** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 41 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 43 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 2 | — |  |
+| [STAT](#stat) | 3 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -1729,19 +1729,19 @@ NESSUNA MIGRAZIONE dei pesi dalle vecchie categorie: «questo vado a inserirlo i
 
 Flavio, 12/09/2026 (vocale delle 12:46): «quando un prodotto va in negativo e vado ad aggiungere una quantità, la quantità parte comunque da zero. Se ho tre pezzi, ne consumo quattro, va a meno uno; compro cinque pezzi e me ne mette cinque, non quattro: il meno uno non me l'ha calcolato. Non è detto che un prodotto vada realmente in negativo: magari mi è arrivato e non l'ho caricato ancora, lo carico il giorno dopo, e si bilancia col carico». È IL CONTRARIO DI QUELLO DECISO IL 17/08 (BUG-007) e ribadito il 04/09 (BUG-101): allora il carico ripartiva da zero perché «da uno scaffale vuoto non si versa» e una bottiglia caricata su −0,04 doveva contarne una. Flavio guarda il caso di tutti i giorni, non il residuo di arrotondamento: il meno è merce già bevuta e non ancora caricata, e il carico che arriva è quello. Si somma, e il buco si chiude da sé. Il caso −0,04 + 1 = 0,96 resta, ed è accettato: è un centesimo di bottiglia, e per il magazzino conta più il pezzo intero che manca.
 
-DOVE SI SOMMA. Il carico a mano (`loadStock`) parte dalla giacenza com'è; il carico a confezioni (`receiveBottles`) idem, mentre le bottiglie da contare sullo scaffale partono da zero perché sotto zero non ce ne sono; la consegna di un ordine faceva già `increment`, che somma e basta. Lo scarico a mano resta fermo a zero (`scaricoPossibile`): lì una persona dichiara quanto ha tolto, e da uno scaffale vuoto non si toglie niente.
+DOVE SI SOMMA. Il carico a mano (`loadStock`) parte dalla giacenza com'è; il carico a confezioni (`receiveBottles`) idem, mentre le bottiglie da contare sullo scaffale partono da zero perché sotto zero non ce ne sono; la consegna di un ordine faceva già `increment`, che somma e basta.
+
+LO SCARICO A MANO NON C'È PIÙ (26/09/2026): era un ramo di `loadStock` fermato a zero da una regola nostra, senza nessun tasto che lo usasse; Flavio non vuole il tasto (le correzioni in meno si fanno col contenuto reale), quindi `loadStock` accetta solo numeri positivi e `scaricoPossibile` è stato tolto.
 
 COSA RESTA DA ZERO IN SU, e cambia nome per dirlo: `giacenzaPerCarico` diventa `giacenzaNonNegativa`, usata solo per contare OGGETTI (`bottleBreakdown`: «−1 piena più 750 ml nell'aperta» non vuol dire niente) e SOLDI (`unitsInStock`: un magazzino che vale meno di niente non vuol dire niente). Nessuna migrazione: le giacenze restano quelle, cambia solo cosa fa il prossimo carico.
 
 **Dove**: `src/lib/api.js (loadStock, receiveBottles, consegna), src/lib/inventory.js (giacenzaNonNegativa)` · **Lo dimostrano**: `tests/unit/scritturaMagazzino.test.js`, `tests/unit/inventory.test.js`
 
-#### REQ-MAG-046 — L'inventario separa il venduto dalla differenza: DEP, ACQ, VENDUTO, ATTESO, DIFFERENZA
+#### REQ-MAG-046 — L'inventario come il foglio INV: DEP · ACQ · CONS · RIM, con la RIM che si aggiorna da sola
 
-Flavio, 23/09/2026: «in primis la creazione del deposito se non ho mai fatto un inventario; a questo punto parte il valore DEP ed ACQ 0; poi man mano che acquisto aumentera' il valore ACQ quando carico prodotti da ordine a fornitore consegnato e carico diretto, mentre se modifico il contenuto reale mi modifica il valore del deposito; intanto utilizzando gli items del menu il valore si inizierà a modificare ma dovra' essere comunque registrato come consumato; infine quando inserisco manualmente le rimanenze mi allineero' con i consumi e le rimanenze reali; da qui si partira' con il nuovo inventario, dove la rimanenza di quello appena concluso diventera' il deposito». E: «il vero CONSUMO e' la variazione del deposito dovuta alla vendita, cioe' allo scarico dei prodotti nelle ricette degli items di menu. L'inventario e' solo un allineamento con il consumo reale: piu' siamo precisi con gli scarichi, meno dovremo intervenire sulle rimanenze».
+Lo schema l'ha chiuso Flavio il 25/09/2026 sera, dopo tre giorni di prove sui casi veri (vocale delle 21:53): «ordine a fornitore consegnato carica il magazzino e va a finire sugli acquisti durante l'inventario in corso; su prodotti il carico e' solo positivo e va a finire sugli acquisti nell'inventario; il contenuto reale serve per fare le modifiche sia in positivo sia in negativo, e va sulle rimanenze di magazzino nell'inventario, quindi mi modifica sia la rimanenza sia il consumato». E il 24/09: «i dati da visualizzare sono DEP, ACQ, CONS, RIM ed una casella vuota dove vado a confermare o a modificare il valore di RIM». E' il foglio INV che teneva a mano (una scheda per periodo, CONS = DEP + ACQ − RIM, la RIM di una scheda e' il DEP della successiva), con una cosa in piu': la RIM si aggiorna da sola. · DEP: la giacenza all'apertura. Non la sposta niente. · ACQ: ordine consegnato, fattura, carico da Prodotti. · RIM: la giacenza di adesso, che si muove con le vendite e col contenuto reale; accanto la casella per il contato, e un ✓ che conferma la RIM cosi' com'e'. · CONS: DEP + ACQ − RIM, quindi vendite, correzioni e merce mancante insieme — un numero solo, come nel foglio (scelta di Daniele, 24/09). In cima il consumo e il valore delle rimanenze in €; il consumo a settimana (REQ-MAG-024) resta sulla riga.
 
-PRIMA la riga diceva DEP + ACQ − RIM = CONS, il conto del foglio INV: un numero solo, che mescolava quello che si e' venduto con quello che e' sparito (ricette imprecise, merce persa, errori di carico).
-
-ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del periodo: contenuto reale modificato e rettifiche d'inventario), ACQ (carico diretto, ordine consegnato, fattura), VENDUTO (lo scarico delle ricette dei drink battuti, convertito dai ml nei pezzi del magazzino, visibile prima ancora di contare), ATTESO (la giacenza del prodotto adesso) e, scritto il contato, la DIFFERENZA = contato − atteso, in pezzi e in €. In cima i totali: venduto, differenza, valore delle rimanenze. La chiusura corregge la giacenza della differenza (BUG-112), e il DEP del prossimo inventario e' la giacenza appena allineata. Il «consumo» della storia e del consumo a settimana (REQ-MAG-024) resta quello che e' uscito davvero dallo scaffale: venduto piu' quello che manca, cioe' lo stesso numero del foglio INV quando i conti tornano. Gli inventari chiusi dalla 1.8 raccontano venduto e differenza; i vecchi, che non li hanno, il consumo di sempre.
+LA STRADA FATTA PRIMA, perche' non si rifaccia: il 23/09 Flavio aveva chiesto di separare il venduto dalla differenza, e per un giorno la riga ha detto DEP · ACQ · VENDUTO · ATTESO · DIFFERENZA; il 24 di far ripartire il prodotto dal contenuto reale. Tutte e due le forme sono state abbandonate da lui stesso: «ti sto facendo cambiare mille volte, ma poi mi capitano le situazioni e capisco dopo». Chiusa, la RIM contata diventa il DEP del prossimo inventario (vedi BUG-110, BUG-112).
 
 **Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
 
@@ -1750,6 +1750,26 @@ ADESSO ogni riga dice: DEP (all'apertura, piu' le correzioni del periodo: conten
 Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione in filtri di categorie come nei prodotti, perche' cosi' mi e' un po' difficile fare l'inventario visto che devo passare da un ripiano a un altro perche' sono mischiati … a me serve in ordine alfabetico, ma per categorie, perche' le categorie ce l'ho quasi tutte vicine». E: «dovrebbero sempre apparire filtri sopra dove io posso selezionare se voglio vederli tutti oppure divisi per categoria». L'inventario usa la stessa barra delle categorie dei Prodotti (CategoryRail: a sinistra sullo schermo largo, una riga che scorre sul telefono), con i conteggi. «Tutte» mette i prodotti in fila categoria per categoria, nell'ordine delle categorie di magazzino e ognuna col suo titolo, e dentro in ordine alfabetico; scelta una categoria restano solo i suoi. I prodotti senza categoria vanno in fondo.
 
 **Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-049 — Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP
+
+Flavio, 25/09/2026 sera: «il contenuto reale serve per fare le modifiche sia in positivo sia in negativo … va direttamente sia sul magazzino dei prodotti sia sulle rimanenze di magazzino nell'inventario, e quindi mi modifica sia la rimanenza sia il consumato». E' IL CONTRARIO DI BUG-111 (22/09, in produzione con la 1.6.1), dove il contenuto reale corretto durante un inventario spostava il DEP. Adesso il DEP resta quello dell'apertura, l'ACQ resta la merce entrata, e la correzione — col suo segno — si legge nella RIM e quindi nel CONS. Lo stesso per le rettifiche d'inventario finite dentro il periodo, come quelle della chiusura interrotta del 21/09. Nel mezzo, il 24/09, per un giorno il contenuto reale aveva fatto «ripartire» il prodotto (DEP = il numero scritto, ACQ e VENDUTO da zero): e' stato abbandonato il giorno dopo, e non e' mai uscito dalla linea di sviluppo. Il contenuto reale resta com'era in Prodotti: si scrive il numero vero, e l'app registra il carico o lo scarico della differenza. Non accetta numeri negativi: e' quello che c'e' sullo scaffale.
+
+**Dove**: `src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-050 — Controllo del magazzino, pagina di prova: si conta un prodotto alla volta, e il rapporto dice dove si perde
+
+Daniele, 26/09/2026: «implementa come ha detto Flavio, e poi fai una nuova pagina inventario come la faresti tu. Una pagina attivabile, solo per test al momento, in modo da poter vedere la differenza di funzionamento». Nasce dalla domanda di prima: «penso che stia replicando il workflow che faceva sull'Excel, ma non mi e' chiaro cosa gli comunicano i dati alla fine della fiera». L'IDEA. Il foglio INV esisteva perche' Flavio non aveva i dati delle vendite: il consumo si ricavava contando, DEP + ACQ − RIM. Oggi l'app sa cosa si e' venduto e ogni cambio di giacenza e' un movimento col suo motivo: il conteggio non serve piu' a calcolare il consumo, serve a MISURARE quanto l'app si sbaglia. Le domande che contano sono tre — quanto devo ordinare, quanto sto perdendo, quanto vale il magazzino — e la pagina le prende una per una.
+
+CONTA: un prodotto alla volta, quando si vuole, scaffale per scaffale (la stessa barra delle categorie, `perScaffale`). Niente inventario da aprire e chiudere: `registraConteggio` corregge subito la giacenza della differenza (increment, in sottofondo, composto in memoria) e scrive un movimento `conta` anche quando il prodotto torna, perche' e' la traccia che dice «contato il …». Accanto a ogni prodotto, da quando non si conta.
+
+RAPPORTO: per 7, 30 o 90 giorni, Inizio + Acquisti − Venduto ± Differenza = Fine, dagli stessi movimenti e con la stessa tabella motivo → colonna delle statistiche (magazzinoNelPeriodo). In cima acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine periodo; l'elenco parte da dove la differenza costa di piu', e per ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
+
+DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso controllo dei DevTools e della stampante finta (`devToolsEnabled`, dalla build con VITE_APP_ENV) — e solo con l'interruttore «Controllo del magazzino (prova)» in Impostazioni → Funzioni premium, che in produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da provare, non una simulazione.
+
+NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
+
+**Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
@@ -2876,6 +2896,12 @@ UN PRODOTTO CHE NON SI E' MOSSO NON E' UNA RIGA: su quattrocento articoli trecen
 SI CALCOLA A RICHIESTA, con un tasto. Gli altri riquadri lavorano sugli ordini gia' in mano; questo legge tutti gli articoli e tutti i movimenti del periodo, che su due mesi sono migliaia di documenti: chi apre le statistiche per guardare l'incasso non deve pagarli. E DICE COSA NON E': il consumo qui e' quello scalato dalle ricette battute, non quello contato sullo scaffale. Quello vero lo da' la CONTA (REQ-MAG-014), e la differenza fra i due e' il calo, l'offerto e la dose scritta larga. Senza quella riga i due numeri si leggono come se dovessero coincidere, e chi li confronta pensa a un difetto. I DUE ELENCHI VALGONO ANCHE PER UNA SERATA: la sottosezione «Per serata» passa gli stessi estremi, quindi «cosa ho consumato sabato» si legge dove si legge il resto della serata.
 
 **Dove**: `src/lib/magazzinoPeriodo.js, src/components/StatsTab.jsx, src/components/MagazzinoPeriodo.jsx, src/lib/api.js (fetchStockMovementsSince)` · **Lo dimostrano**: `tests/unit/magazzinoPeriodo.test.js`, `tests/component/StatsTab.test.jsx`, `tests/component/ElenchiPeriodo.test.jsx`
+
+#### REQ-STAT-003 — Le statistiche per periodo hanno un «Personalizzato» con data e ora di inizio e di fine
+
+Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale periodo personalizzato, e' un periodo personalizzato all'interno dei 7, 10, 20, 30 o 60 giorni. Ma a me potrebbe servire un periodo di 90 giorni oppure di 30 giorni dell'anno scorso. Quindi dovrebbe apparire 7, 10, 20, 30 e 60 giorni e in piu' il tab personalizzato: ci metti tu la data, che puo' essere un giorno, due, dieci oppure tutto un anno». E: «oltre alla data di inizio e fine ci deve essere anche l'orario di inizio e di fine, e' importante perche' la mia giornata e' a cavallo tra due giorni». Le date c'erano gia' (REQ-STAT-002), libere, ma stavano sotto le pastiglie e toccarle ne spegneva una: si leggevano come un ritocco dei 7-60 giorni. Adesso le pastiglie sono 7 · 10 · 20 · 30 · 60 giorni · Personalizzato, e le date compaiono solo nell'ultima, con l'ORA: due campi data e ora, «Inizio» e «Fine» (non «Dalle»/«Alle», che sono gia' le etichette delle fasce orarie piu' sotto). La didascalia dice il periodo per esteso: «Dalle 18:00 di sabato 20/09/2026 alle 04:00 di domenica 21/09/2026: N giornate con ordini». Il periodo personalizzato e' fatto di ISTANTI, all'ora di Roma (ora legale compresa, `istanteDaOraDiRoma`), con la fine esclusa: lo seguono incassi, grafici, classifica e il magazzino nel periodo. Aprendolo si parte da quello che si stava guardando scritto all'ora (le giornate intere diventano «dalle 05:00 del primo giorno alle 05:00 del giorno dopo l'ultimo»), quindi gli stessi numeri. Con la fine prima dell'inizio lo si dice invece di mostrare numeri. Le pastiglie restano a giornate commerciali intere.
+
+**Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
 
 ### LIC
 

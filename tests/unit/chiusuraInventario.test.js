@@ -12,10 +12,15 @@
 // uno 0,9 contato — l'inventario rimasto aperto, e i numeri scritti
 // persi, perché stavano solo sullo schermo.
 //
-// Le due cose che qui si sorvegliano:
+// E DAL 23/09 (BUG-112) la chiusura calcola da sé la differenza di ogni
+// prodotto, sull'atteso dell'ora del conteggio, e la SOMMA alla giacenza:
+// riportarla al numero contato cancellava le vendite fatte dopo.
+//
+// Le cose che qui si sorvegliano:
 //   1. la chiusura è UN pacchetto — giacenze, movimenti, «chiuso» e il
 //      prossimo inventario — e non aspetta la rete per dire com'è andata;
-//   2. le rimanenze vanno sul database mentre si scrivono.
+//   2. applica la differenza, e le vendite dopo il conteggio restano;
+//   3. le rimanenze vanno sul database mentre si scrivono, con la loro ora.
 //
 // Come in giroInLocale.test.js la rete non c'è: ogni scrittura resta
 // appesa per sempre, e le letture rispondono con quello che c'era prima.
@@ -24,7 +29,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mai = () => new Promise(() => {})
-const stato = { articoli: {}, conta: null, scritture: [], pacchetti: [] }
+const stato = { articoli: {}, conta: null, movimenti: [], scritture: [], pacchetti: [] }
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
@@ -44,6 +49,24 @@ const leggi = async (ref) => {
   return { exists: () => false, data: () => ({}) }
 }
 
+// Le letture di collezione, secondo cosa chiedono: gli articoli (la
+// collezione intera), i movimenti o l'inventario aperto (con una query).
+const leggiTanti = async (ref) => {
+  const nome = ref?.__col || ref?.__q
+  if (nome === 'inventory_items') {
+    const docs = Object.entries(stato.articoli).map(([id, a]) => ({ id, data: () => a }))
+    return { empty: docs.length === 0, docs }
+  }
+  if (nome === 'stock_movements') {
+    const docs = stato.movimenti.map((m, i) => ({ id: `m${i}`, data: () => m }))
+    return { empty: docs.length === 0, docs }
+  }
+  return {
+    empty: !stato.conta,
+    docs: stato.conta ? [{ id: 'inv-1', data: () => stato.conta }] : [],
+  }
+}
+
 vi.mock('firebase/firestore', () => ({
   collection: (_db, nome) => ({ __col: nome }),
   doc: (...args) => {
@@ -53,10 +76,7 @@ vi.mock('firebase/firestore', () => ({
   },
   getDoc: vi.fn(leggi),
   getDocFromCache: vi.fn(leggi),
-  getDocs: vi.fn(async () => ({
-    empty: !stato.conta,
-    docs: stato.conta ? [{ id: 'inv-1', data: () => stato.conta }] : [],
-  })),
+  getDocs: vi.fn(leggiTanti),
   getDocsFromCache: vi.fn(async () => ({ docs: [] })),
   addDoc: vi.fn((_c, data) => {
     stato.scritture.push({ tipo: 'add', data })
@@ -69,7 +89,7 @@ vi.mock('firebase/firestore', () => ({
   }),
   deleteDoc: vi.fn(() => mai()),
   deleteField: () => '__cancella__',
-  query: () => ({}),
+  query: (col) => ({ __q: col?.__col }),
   where: () => ({}),
   documentId: () => 'id',
   orderBy: () => ({}),
@@ -105,9 +125,20 @@ const subito = (p) =>
   Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('rimasto appeso')), 1000))])
 // bgWrite fa partire la scrittura al giro successivo: si aspetta quel giro.
 const giro = () => new Promise((r) => setTimeout(r, 0))
+const tondo = (n) => Math.round(n * 100) / 100
 
 const articolo = (nome, stock) => ({ name: nome, unit: 'pz', stock, package_size: 700, content_unit: 'ml', low_threshold: 0 })
-const riga = (id, nome, dep, rim) => ({ item_id: id, name: nome, unit: 'pz', package_size: 700, cost: 14, vat: 22, dep, acq: 0, rim })
+const riga = (id, nome, dep, rim, rim_at = null) => ({
+  item_id: id,
+  name: nome,
+  unit: 'pz',
+  package_size: 700,
+  cost: 14,
+  vat: 22,
+  dep,
+  rim,
+  rim_at,
+})
 
 beforeEach(() => {
   stato.articoli = {
@@ -115,7 +146,8 @@ beforeEach(() => {
     jager: articolo('Jagermeister', 3.2),
     lete: articolo('Acqua Lete', 66),
   }
-  stato.conta = { status: 'open', lines: [] }
+  stato.conta = { status: 'open', started_at: '2026-09-21T18:03:40.000Z', lines: [] }
+  stato.movimenti = []
   stato.scritture = []
   stato.pacchetti = []
 })
@@ -128,23 +160,22 @@ describe('la chiusura, senza rete', () => {
   ]
 
   it('torna subito, senza aspettare che il pacchetto arrivi', async () => {
-    await subito(api.closeStockCount('inv-1', { lines: righe(), totals: {} }))
+    await subito(api.closeStockCount('inv-1', { lines: righe() }))
   })
 
   // IL CUORE DI BUG-110. Nessuna scrittura sciolta: se una giacenza o il
   // segno «chiuso» passassero da updateDoc/addDoc, un'interruzione a metà
   // tornerebbe a lasciare il magazzino mezzo allineato.
   it('scrive tutto in UN pacchetto, e nient’altro fuori', async () => {
-    await subito(api.closeStockCount('inv-1', { lines: righe(), totals: {} }))
+    await subito(api.closeStockCount('inv-1', { lines: righe() }))
     await giro()
     expect(stato.scritture).toEqual([])
     expect(stato.pacchetti).toHaveLength(1)
     const [p] = stato.pacchetti
     expect(p.spedito).toBe(true)
+    // La differenza fra contato e giacenza, sommata.
     const giacenze = p.scritture.filter((s) => s.col === 'inventory_items')
-    // Righe senza differenza già calcolata: si allinea al numero contato,
-    // come prima — la differenza con la giacenza, sommata.
-    expect(giacenze.map((s) => [s.id, Math.round(s.patch.stock.incremento * 100) / 100])).toEqual([
+    expect(giacenze.map((s) => [s.id, tondo(s.patch.stock.incremento)])).toEqual([
       ['gin', 0.2],
       ['jager', -2.3],
       ['lete', -39],
@@ -153,62 +184,64 @@ describe('la chiusura, senza rete', () => {
     expect(p.scritture.filter((s) => s.col === 'stock_movements')).toHaveLength(3)
     const chiusa = p.scritture.find((s) => s.col === 'stock_counts' && s.id === 'inv-1')
     expect(chiusa.patch.status).toBe('closed')
+    // Le righe salvate sono quelle calcolate qui, con la loro differenza.
+    expect(chiusa.patch.lines.map((l) => tondo(l.diff))).toEqual([0.2, -2.3, -39])
   })
 
   // Il prossimo inventario nasce nello stesso pacchetto, e parte da quello
   // che si è appena contato. Flavio, il 22/09: «da adesso mi dovrebbe
   // apparire il reale come deposito, 0,1 pz, e 0 come acquisti».
-  it('il prossimo nasce nello stesso pacchetto, con DEP = la rimanenza contata', async () => {
-    const riapri = [
-      { id: 'gin', name: '400 Conigli Gin', unit: 'pz', stock: -0.1, cost: 28 },
-      { id: 'jager', name: 'Jagermeister', unit: 'pz', stock: 3.2, cost: 13.8 },
-      { id: 'lete', name: 'Acqua Lete', unit: 'pz', stock: 66, cost: 0.17 },
-      // Uno non contato riparte dalla giacenza che ha.
-      { id: 'cynar', name: 'Cynar', unit: 'pz', stock: 0.4, cost: 12.9 },
-    ]
-    const prossimo = await subito(api.closeStockCount('inv-1', { lines: righe(), totals: {}, riapri }))
-    const dep = Object.fromEntries(
-      prossimo.lines.map((l) => [l.item_id, [Math.round(l.dep * 100) / 100, l.acq]])
-    )
+  it('il prossimo nasce nello stesso pacchetto, con DEP = la giacenza allineata', async () => {
+    // Uno non contato riparte dalla giacenza che ha.
+    stato.articoli.cynar = articolo('Cynar', 0.4)
+    const { prossimo } = await subito(api.closeStockCount('inv-1', { lines: righe(), riapri: true }))
+    const dep = Object.fromEntries(prossimo.lines.map((l) => [l.item_id, [tondo(l.dep), l.acq]]))
     expect(dep).toEqual({ gin: [0.1, 0], jager: [0.9, 0], lete: [27, 0], cynar: [0.4, 0] })
     expect(prossimo.status).toBe('open')
 
     await giro()
     const nuovo = stato.pacchetti[0].scritture.find((s) => s.tipo === 'set' && s.col === 'stock_counts')
-    expect(nuovo.data.lines.map((l) => Math.round(l.dep * 100) / 100)).toEqual([0.1, 0.9, 27, 0.4])
+    expect(Object.fromEntries(nuovo.data.lines.map((l) => [l.item_id, tondo(l.dep)]))).toEqual({
+      gin: 0.1,
+      jager: 0.9,
+      lete: 27,
+      cynar: 0.4,
+    })
     // Stesso orario dei movimenti di rettifica: la query «dopo l'apertura»
     // non se li ritrova fra quelli del periodo nuovo.
     const mov = stato.pacchetti[0].scritture.find((s) => s.col === 'stock_movements')
     expect(nuovo.data.started_at).toBe(mov.data.created_at)
   })
 
-  // BUG-112: contato 2,8 alle 18, vendute due bottiglie fino a mezzanotte.
-  // La riga arriva con la differenza già misurata sull'atteso delle 18
-  // (zero): la chiusura la SOMMA, invece di riportare la giacenza a 2,8 —
-  // che avrebbe cancellato le due bottiglie vendute.
+  it('senza riapertura, il prossimo non nasce', async () => {
+    const { prossimo } = await subito(api.closeStockCount('inv-1', { lines: righe() }))
+    expect(prossimo).toBeNull()
+  })
+
+  // BUG-112: contato 2,5 alle 18, vendute due bottiglie alle 22 (la
+  // giacenza scende da 2,8 a 0,8). La differenza è quella delle 18 — 2,5
+  // contati contro 2,8 attesi, −0,3 — e la chiusura la SOMMA: riportare la
+  // giacenza a 2,5 avrebbe cancellato le due bottiglie vendute.
   it('applica la differenza, e le vendite dopo il conteggio restano', async () => {
     stato.articoli.jager = articolo('Jagermeister', 0.8)
+    stato.movimenti = [
+      { item_id: 'jager', type: 'unload', qty: 1400, unit: 'ml', reason: 'ordine', created_at: '2026-09-23T20:00:00.000Z' },
+    ]
     await subito(
       api.closeStockCount('inv-1', {
-        lines: [{ ...riga('jager', 'Jagermeister', 3.2, 2.8), diff: -0.3 }],
-        totals: {},
+        lines: [riga('jager', 'Jagermeister', 3.2, 2.5, '2026-09-23T16:00:00.000Z')],
       })
     )
     await giro()
     const [p] = stato.pacchetti
     const giacenza = p.scritture.find((s) => s.col === 'inventory_items')
-    expect(giacenza.patch.stock).toEqual({ incremento: -0.3 })
+    expect(tondo(giacenza.patch.stock.incremento)).toBe(-0.3)
     const m = p.scritture.find((s) => s.col === 'stock_movements')
-    expect([m.data.type, m.data.qty, m.data.reason]).toEqual(['unload', 0.3, 'conta'])
+    expect([m.data.type, tondo(m.data.qty), m.data.reason]).toEqual(['unload', 0.3, 'conta'])
   })
 
   it('e con differenza zero non tocca la giacenza', async () => {
-    await subito(
-      api.closeStockCount('inv-1', {
-        lines: [{ ...riga('jager', 'Jagermeister', 3.2, 2.8), diff: 0 }],
-        totals: {},
-      })
-    )
+    await subito(api.closeStockCount('inv-1', { lines: [riga('jager', 'Jagermeister', 3.2, 3.2)] }))
     await giro()
     expect(stato.pacchetti[0].scritture.filter((s) => s.col === 'inventory_items')).toEqual([])
   })
@@ -217,7 +250,7 @@ describe('la chiusura, senza rete', () => {
   // contrario di quello che è successo il 21/09, dove ci si fermava a metà.
   it('se un prodotto non si può scrivere, non parte niente', async () => {
     stato.articoli.lete = { name: 'Acqua Lete', unit: 'cl', stock: 3300, package_size: 50 }
-    await expect(api.closeStockCount('inv-1', { lines: righe(), totals: {} })).rejects.toThrow(
+    await expect(api.closeStockCount('inv-1', { lines: righe() })).rejects.toThrow(
       /aggiornato il magazzino/
     )
     await giro()
