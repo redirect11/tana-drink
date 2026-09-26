@@ -4,28 +4,24 @@
 
 ### Per chi amministra
 
-- **L'inventario separa il venduto dalla differenza.** Ogni prodotto
-  mostra DEP, ACQ, VENDUTO (quanto hanno scaricato i drink battuti, visibile
-  prima ancora di contare) e ATTESO (quanto risulta adesso in magazzino).
-  Scritto il contato, compare la DIFFERENZA, in pezzi e in euro: è quello
-  che la chiusura corregge. In cima ci sono i totali di venduto e
-  differenza.
-- **Nell'inventario il contenuto reale fa ripartire il prodotto.** Se
-  durante l'inventario si corregge il contenuto reale, il DEP diventa il
-  numero scritto e ACQ e VENDUTO ripartono da zero: prima gli acquisti
-  fatti prima della correzione restavano in colonna, e la riga si leggeva
-  come merce contata due volte. Il DEP dice da quando: «reale dal 24/09».
+- **L'inventario è come il foglio INV: DEP · ACQ · CONS · RIM.** DEP è la
+  giacenza all'apertura, ACQ la merce entrata (ordini consegnati e carichi
+  da Prodotti), RIM quanto c'è adesso — si aggiorna da sola con le vendite
+  — e CONS = DEP + ACQ − RIM. Accanto a ogni prodotto c'è la casella per
+  il contato, e un ✓ per confermare la RIM così com'è.
+- **Il contenuto reale va sulla RIM e sul consumo**, non più sul DEP: il
+  DEP resta quello dell'apertura.
 - **Si può contare a locale aperto.** Ogni conteggio porta la sua ora, e la
   chiusura tiene conto di quello che si vende dopo: prima le vendite fatte
   fra il conteggio e la chiusura sparivano dalle scorte.
+- **L'inventario si scorre per categorie**, con la stessa barra dei
+  Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
+  dentro in ordine alfabetico.
 - **Statistiche per periodo: «Personalizzato», con data e ora.** Accanto a
   7 · 10 · 20 · 30 · 60 giorni c'è «Personalizzato», dove si scelgono
   inizio e fine con l'ora: un giorno, novanta, lo stesso mese dell'anno
   scorso, o una sola serata dalle 18 alle 4. Lo seguono incassi,
   classifiche e magazzino nel periodo.
-- **L'inventario si scorre per categorie**, con la stessa barra dei
-  Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
-  dentro in ordine alfabetico.
 
 ## 1.7.0
 

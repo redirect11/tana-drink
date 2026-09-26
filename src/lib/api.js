@@ -35,7 +35,6 @@ import {
   computeConsumption,
   formatQty,
   qtyInStockUnit,
-  scaricoPossibile,
   giacenzaNonNegativa,
   articoloNormalizzato,
   patchNormalizza,
@@ -1036,14 +1035,21 @@ function nonEsistePiu(errore) {
 // lo stesso che usa `magazzinoBloccato`. È anche più robusto di prima:
 // una rilettura che non torna non protegge niente.
 //
-// `qty` è già in unità base; può essere negativo per uno scarico a mano, che
-// non scava sotto lo zero. Un carico invece si somma a quello che c'è ANCHE
-// SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa quattro, perché il
-// meno è merce già bevuta e non ancora caricata.
+// `qty` è già in unità base, e SOLO POSITIVO: è un carico. Si somma a quello
+// che c'è ANCHE SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa
+// quattro, perché il meno è merce già bevuta e non ancora caricata.
+//
+// LO SCARICO A MANO NON C'È (Flavio, 25-26/09/2026): «carico lo lasciamo
+// com'è, solo in positivo, e va negli acquisti»; le correzioni in meno si
+// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Qui
+// c'era un ramo per i numeri negativi, fermato a zero da una regola nostra
+// che nessuno aveva chiesto, e nessuna schermata lo usava più: un numero
+// negativo adesso è un errore, non un'altra funzione.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
   const cur = articoloScrivibileInMano(item)
+  if (!(Number(qty) > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
   const partenza = Number(cur.stock) || 0
-  const delta = qty >= 0 ? qty : -scaricoPossibile(partenza, -qty)
+  const delta = Number(qty)
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
     'carico scorta'
@@ -1053,8 +1059,8 @@ export function loadStock(item, qty, { reason = 'carico' } = {}) {
       addDoc(movementsCol, {
         item_id: cur.id,
         item_name: cur.name,
-        type: qty >= 0 ? 'load' : 'unload',
-        qty: Math.abs(qty),
+        type: 'load',
+        qty: delta,
         unit: cur.unit ?? null,
         reason,
         created_at: serverTimestamp(),

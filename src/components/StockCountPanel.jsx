@@ -18,12 +18,11 @@ import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import CategoryRail from './CategoryRail.jsx'
 
-// L'INVENTARIO periodico. Per ogni prodotto: DEP (giacenza all'apertura,
-// con le correzioni del periodo), ACQ (merce comprata), VENDUTO (scaricato
-// dalle ricette dei drink), ATTESO (quanto risulta adesso), e — quando si
-// scrive il contato — la DIFFERENZA, che alla chiusura corregge la
-// giacenza. Il perché di questa forma sta in lib/inventarioInCorso.js
-// (REQ-MAG-046): «l'inventario è solo un allineamento con il consumo reale».
+// L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
+// DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
+// adesso secondo l'app; accanto c'è la casella dove si scrive il contato, o
+// si conferma la RIM col ✓. Il perché di questa forma, e i giri che ha
+// fatto prima di arrivarci, stanno in lib/inventarioInCorso.js (REQ-MAG-046).
 //
 // SI CHIAMA INVENTARIO, NON «CONTA» (Daniele, 17/09/2026: «conta è
 // fuorviante»). L'id della sezione e del modulo resta `conta`, perché è
@@ -265,13 +264,12 @@ export default function StockCountPanel() {
               {computed.totals.counted}/{open.lines.length}
             </div>
             <div className="muted small">
-              Venduto: <strong>{formatPrice(computed.totals.vend_value)}</strong>
-              {' · '}Differenza: <strong>{formatPrice(computed.totals.diff_value)}</strong>
+              Consumo: <strong>{formatPrice(computed.totals.cons_value)}</strong>
               {' · '}Valore rimanenze: {formatPrice(computed.totals.rim_value)}
             </div>
             <p className="muted small" style={{ margin: '6px 0 0' }}>
-              Venduto: quanto hanno scaricato i drink battuti. Atteso: quanto risulta adesso in
-              magazzino. Differenza: contato meno atteso; alla chiusura corregge la giacenza.
+              RIM è quanto risulta adesso in magazzino. Nella casella si scrive quanto se ne conta
+              davvero, oppure si conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
             </p>
           </div>
 
@@ -323,16 +321,7 @@ export default function StockCountPanel() {
                 dal {dataBreve(c.started_at)} al {dataBreve(c.closed_at)}
               </span>
               <span className="muted small">
-                {c.totals?.vend_value != null ? (
-                  <>
-                    venduto <strong>{formatPrice(c.totals.vend_value)}</strong> · differenza{' '}
-                    <strong>{formatPrice(c.totals.diff_value || 0)}</strong>
-                  </>
-                ) : (
-                  <>
-                    consumo <strong>{formatPrice(c.totals?.cons_value || 0)}</strong>
-                  </>
-                )}
+                consumo <strong>{formatPrice(c.totals?.cons_value || 0)}</strong>
               </span>
             </div>
           ))}
@@ -344,7 +333,7 @@ export default function StockCountPanel() {
       {confirmClose && computed && (
         <ConfirmDialog
           title="✅ Chiudere l’inventario?"
-          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati vengono corrette della differenza: ${formatPrice(computed.totals.diff_value)}.\nVenduto nel periodo: ${formatPrice(computed.totals.vend_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
+          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
           confirmLabel="Chiudi l’inventario"
           onCancel={() => setConfirmClose(false)}
           onConfirm={doClose}
@@ -357,9 +346,10 @@ export default function StockCountPanel() {
 // «+0,4 pz», «-1,9 pz»: una differenza si legge col suo segno.
 const conSegno = (n, unit) => `${n > 0 ? '+' : ''}${formatQty(n, unit)}`
 
-// Una riga: i numeri del periodo, e il campo dove si scrive il contato. Si
-// ridisegna solo se cambia qualcosa che mostra: con quattrocento righe e un
-// telefono in mano, ridisegnarle tutte a ogni cifra si sente.
+// Una riga: i numeri del periodo, il campo dove si scrive il contato e il
+// ✓ che conferma la RIM così com'è. Si ridisegna solo se cambia qualcosa che
+// mostra: con quattrocento righe e un telefono in mano, ridisegnarle tutte a
+// ogni cifra si sente.
 const RigaInventario = memo(
   function RigaInventario({ riga: l, valore, onScrivi, onEsci }) {
     const q = (n) => formatQty(n, l.unit)
@@ -369,21 +359,11 @@ const RigaInventario = memo(
           <div className="grow">
             <div className="inv-name">{l.name}</div>
             <div className="muted small">
-              DEP {q(l.dep)}
-              {/* Il DEP viene dal contenuto reale corretto (REQ-MAG-049): da
-                  quel giorno ACQ e VENDUTO ripartono da zero. */}
-              {l.dep_da && ` (reale dal ${dataBreve(l.dep_da)})`} · ACQ {q(l.acq)} · VENDUTO {q(l.vend)} · ATTESO{' '}
-              {q(l.atteso)}
+              DEP {q(l.dep)} · ACQ {q(l.acq)} · CONS <strong>{q(l.cons)}</strong> · RIM {q(l.atteso)}
+              {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
+                  cui si decide quanto ordinare. */}
+              {l.cons_week != null && ` · ${q(l.cons_week)} a settimana`}
             </div>
-            {l.diff != null && (
-              <div className="small">
-                DIFFERENZA <strong>{conSegno(l.diff, l.unit)}</strong>
-                {l.diff_value !== 0 && ` (${formatPrice(l.diff_value)})`}
-                {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
-                    cui si decide quanto ordinare. */}
-                {l.cons_week != null && <span className="muted"> · consumo {q(l.cons_week)} a settimana</span>}
-              </div>
-            )}
           </div>
           <input
             type="number"
@@ -394,8 +374,22 @@ const RigaInventario = memo(
             aria-label={`Rimanenza di ${l.name}`}
             onChange={(e) => onScrivi(l.item_id, e.target.value)}
             onBlur={() => onEsci(l.item_id)}
-            style={{ width: 100, textAlign: 'right' }}
+            style={{ width: 90, textAlign: 'right' }}
           />
+          {/* «Confermare o modificare il valore di RIM» (Flavio, 24/09): la
+              maggior parte dei prodotti torna, e riscriverne il numero a mano
+              è solo un'occasione in più per sbagliarlo. */}
+          <button
+            type="button"
+            className="btn ghost small"
+            aria-label={`Conferma la rimanenza di ${l.name}`}
+            onClick={() => {
+              onScrivi(l.item_id, String(l.atteso))
+              onEsci(l.item_id)
+            }}
+          >
+            ✓
+          </button>
         </div>
       </div>
     )
@@ -404,9 +398,7 @@ const RigaInventario = memo(
     a.valore === b.valore &&
     a.onScrivi === b.onScrivi &&
     a.onEsci === b.onEsci &&
-    ['name', 'unit', 'dep', 'dep_da', 'acq', 'vend', 'atteso', 'diff', 'diff_value', 'cons_week'].every(
-      (k) => a.riga[k] === b.riga[k]
-    )
+    ['name', 'unit', 'dep', 'acq', 'cons', 'atteso', 'cons_week'].every((k) => a.riga[k] === b.riga[k])
 )
 
 // La data come la si legge, «17/09/2026», non com'è salvata.
@@ -424,8 +416,8 @@ function giorniScritti(giorni) {
 // IL DETTAGLIO DI UN INVENTARIO CHIUSO. Il periodo qui è finito, quindi i
 // giorni sono quelli veri fra apertura e chiusura — e il consumo a
 // settimana si ricalcola da quelli, non da un divisore salvato: gli
-// inventari vecchi non l'hanno mai avuto. Quelli chiusi dalla 1.8 hanno
-// anche venduto e differenza, e li dicono; i vecchi solo il consumo.
+// inventari vecchi non l'hanno mai avuto. Quelli chiusi dalla 1.8 dicono
+// anche la differenza fra il contato e quello che risultava all'app.
 function DettaglioInventario({ inventario }) {
   const conta = inventario
   const giorni = giorniDiConta(conta.started_at, conta.closed_at)
@@ -446,9 +438,8 @@ function DettaglioInventario({ inventario }) {
           <div className="row between" key={l.item_id} style={{ marginTop: 4 }}>
             <span className="muted small">{l.name}</span>
             <span className="muted small">
-              {l.diff != null
-                ? `venduto ${formatQty(l.vend || 0, l.unit)} · differenza ${conSegno(l.diff, l.unit)} (${formatPrice(l.diff_value || 0)})`
-                : `−${formatQty(l.cons, l.unit)} (${formatPrice(l.cons_value || 0)})`}
+              −{formatQty(l.cons, l.unit)} ({formatPrice(l.cons_value || 0)})
+              {l.diff ? ` · differenza ${conSegno(l.diff, l.unit)}` : ''}
               {giorni != null &&
                 ` · ${formatQty(consumoSettimanale(l.cons, giorni), l.unit)} a settimana`}
             </span>
