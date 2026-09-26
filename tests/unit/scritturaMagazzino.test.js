@@ -148,6 +148,9 @@ const strade = [
   // riga: il gesto ha un altro nome, la regola che deve rispettare è la
   // stessa — con un magazzino ancora da aggiornare non scrive niente.
   ['consegna di righe di un ordine fornitore', () => api.consegnaRigheOrdine('po-1')],
+  // Il conteggio della pagina di prova (REQ-MAG-050) corregge la giacenza
+  // anche lui: stessa porta, stessa regola.
+  ['conteggio del controllo del magazzino', async () => api.registraConteggio(articolo(), 3)],
   [
     'allineamento della conta',
     () =>

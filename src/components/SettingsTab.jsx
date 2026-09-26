@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { inProduzione } from '../lib/prova.js'
 import {
   subscribeSettings,
   updateSettings,
@@ -1531,6 +1532,16 @@ function FunzioniPremium({ settings, onSave }) {
           desc="Acceso: alla chiusura, l’inventario successivo parte da sé dalle giacenze appena allineate, e il consumo si legge fra una chiusura e l’altra. Spento: dopo la chiusura non c’è nessun inventario in corso, e il prossimo lo apri tu quando vuoi."
           checked={settings.inventario_riapre_da_solo !== false}
           onChange={(v) => onSave({ inventario_riapre_da_solo: v })}
+        />
+      )}
+      {/* LA PAGINA DI PROVA (REQ-MAG-050) esiste solo fuori dalla
+          produzione: lì l'interruttore non compare nemmeno. */}
+      {!inProduzione() && (
+        <ToggleRow
+          label="Controllo del magazzino (prova)"
+          desc="Mostra in Magazzino una pagina di prova: si conta un prodotto alla volta e il conteggio corregge subito la giacenza; il rapporto mostra acquisti, venduto, differenza e giorni di scorta per periodo. Disponibile solo nell’ambiente di test."
+          checked={settings.controllo_magazzino_prova === true}
+          onChange={(v) => onSave({ controllo_magazzino_prova: v })}
         />
       )}
     </div>

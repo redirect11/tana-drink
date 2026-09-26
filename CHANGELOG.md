@@ -17,6 +17,11 @@
 - **L'inventario si scorre per categorie**, con la stessa barra dei
   Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
   dentro in ordine alfabetico.
+- **Solo nell'ambiente di test: «Controllo del magazzino (prova)».** Una
+  pagina da confrontare con l'Inventario, che si accende dalle Impostazioni:
+  si conta un prodotto alla volta e il conteggio corregge subito la
+  giacenza; il rapporto mostra acquisti, venduto, differenza in euro e
+  giorni di scorta per periodo. In produzione non c'è.
 - **Statistiche per periodo: «Personalizzato», con data e ora.** Accanto a
   7 · 10 · 20 · 30 · 60 giorni c'è «Personalizzato», dove si scelgono
   inizio e fine con l'ora: un giorno, novanta, lo stesso mese dell'anno

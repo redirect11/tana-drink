@@ -11844,6 +11844,49 @@ requirements:
     test_cases:
       - tests/unit/inventarioInCorso.test.js
       - tests/component/StockCountPanel.test.jsx
+  - id: REQ-MAG-050
+    title: "Controllo del magazzino, pagina di prova: si conta un prodotto alla volta, e il rapporto dice dove si perde"
+    area: "src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js"
+    description: >
+      Daniele, 26/09/2026: «implementa come ha detto Flavio, e poi fai una
+      nuova pagina inventario come la faresti tu. Una pagina attivabile,
+      solo per test al momento, in modo da poter vedere la differenza di
+      funzionamento». Nasce dalla domanda di prima: «penso che stia
+      replicando il workflow che faceva sull'Excel, ma non mi e' chiaro cosa
+      gli comunicano i dati alla fine della fiera».
+      L'IDEA. Il foglio INV esisteva perche' Flavio non aveva i dati delle
+      vendite: il consumo si ricavava contando, DEP + ACQ − RIM. Oggi l'app
+      sa cosa si e' venduto e ogni cambio di giacenza e' un movimento col
+      suo motivo: il conteggio non serve piu' a calcolare il consumo, serve
+      a MISURARE quanto l'app si sbaglia. Le domande che contano sono tre —
+      quanto devo ordinare, quanto sto perdendo, quanto vale il magazzino —
+      e la pagina le prende una per una.
+      CONTA: un prodotto alla volta, quando si vuole, scaffale per scaffale
+      (la stessa barra delle categorie, `perScaffale`). Niente inventario da
+      aprire e chiudere: `registraConteggio` corregge subito la giacenza
+      della differenza (increment, in sottofondo, composto in memoria) e
+      scrive un movimento `conta` anche quando il prodotto torna, perche' e'
+      la traccia che dice «contato il …». Accanto a ogni prodotto, da quando
+      non si conta.
+      RAPPORTO: per 7, 30 o 90 giorni, Inizio + Acquisti − Venduto ±
+      Differenza = Fine, dagli stessi movimenti e con la stessa tabella
+      motivo → colonna delle statistiche (magazzinoNelPeriodo). In cima
+      acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine
+      periodo; l'elenco parte da dove la differenza costa di piu', e per
+      ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
+      DOVE SI VEDE: solo fuori dalla produzione (il progetto Firebase non e'
+      `tana-drink`) e solo con l'interruttore «Controllo del magazzino
+      (prova)» in Impostazioni → Funzioni premium, che in produzione non
+      compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da
+      provare, non una simulazione.
+      NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche'
+      Daniele e Flavio possano confrontare le due forme sui casi veri.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, prova]
+    test_cases:
+      - tests/unit/controlloMagazzino.test.js
+      - tests/component/ControlloMagazzino.test.jsx
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"
