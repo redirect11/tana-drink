@@ -7,7 +7,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
-import { shiftDay } from '../lib/ore.js'
+import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
   kpiSummary,
@@ -60,9 +60,6 @@ const PERIOD_PRESETS = [7, 10, 20, 30, 60]
 // diversi.
 const periodoDaPreset = (n, oggi) => ({ preset: n, dal: shiftDay(oggi, -(n - 1)), al: oggi })
 const giorniFra = (dal, al) => Math.round((Date.parse(al) - Date.parse(dal)) / 86400000) + 1
-// La data per esteso, non «oggi»/«ieri»: qui si sta verificando un periodo
-// scelto a mano, e le parole comode costringerebbero a fidarsi.
-const dataBreve = (key) => (key ? key.split('-').reverse().join('/') : '')
 
 // ── IL PERIODO PERSONALIZZATO, ALL'ORA (REQ-STAT-003) ───────────────
 // Flavio, 24/09/2026: «il periodo personalizzato non è un reale periodo
@@ -131,7 +128,7 @@ function DailyStats({ sezione = 'serate' }) {
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
   const cutoff = settings.business_day_cutoff_hour
   // Il periodo guardato: due giornate commerciali, più la pastiglia che lo
-  // ha riempito (null quando le date sono state scritte a mano) — serve solo
+  // ha riempito (un numero di giorni, o «personalizzato») — serve solo
   // a sapere quale accendere e come scrivere la didascalia.
   const [periodo, setPeriodo] = useState(() =>
     periodoDaPreset(10, businessDayKey(new Date(), DEFAULT_SETTINGS.business_day_cutoff_hour))
@@ -141,7 +138,7 @@ function DailyStats({ sezione = 'serate' }) {
   // mano, che è una scelta di chi guarda e non si tocca.
   useEffect(() => {
     setPeriodo((p) =>
-      typeof p.preset === 'number' ? periodoDaPreset(p.preset, businessDayKey(new Date(), cutoff)) : p
+      p.preset !== PERSONALIZZATO ? periodoDaPreset(p.preset, businessDayKey(new Date(), cutoff)) : p
     )
   }, [cutoff])
   const personalizzato = periodo.preset === PERSONALIZZATO
@@ -285,10 +282,13 @@ function DailyStats({ sezione = 'serate' }) {
       const da = serata.opened_at
       const a = serata.closed_at || new Date().toISOString()
       ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
-      sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
     } else if (personalizzato) {
       // All'ora: dentro quello che sta fra i due istanti, la fine esclusa.
       ord = istanti ? orders.filter((o) => o.created_at >= istanti.da && o.created_at < istanti.a) : []
+    }
+    // Una serata o un periodo all'ora: le giornate sono quelle dei conti
+    // che ci stanno dentro.
+    if (serata || personalizzato) {
       sel = [...new Set(ord.map((o) => businessDayKey(o.created_at, cutoff)).filter(Boolean))]
     } else {
       sel = giorniAttivi.filter((g) => g >= periodo.dal && g <= periodo.al)
@@ -431,7 +431,7 @@ function DailyStats({ sezione = 'serate' }) {
       <CorpoStatistiche
         view={view}
         comandi={comandi}
-        intervallo={{ dal: periodo.dal, al: periodo.al, da: istanti?.da ?? null, a: istanti?.a ?? null }}
+        intervallo={{ dal: periodo.dal, al: periodo.al, ...istanti }}
         cutoff={cutoff}
       />
     </div>
@@ -676,8 +676,8 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
         <MagazzinoPeriodo
           dal={intervallo.dal}
           al={intervallo.al}
-          da={intervallo.da ?? null}
-          a={intervallo.a ?? null}
+          da={intervallo.da}
+          a={intervallo.a}
           cutoffHour={cutoff}
         />
       )}

@@ -36,12 +36,8 @@
 // cifra battuta. Chi ha i dati fermi (il pannello) smista una volta e
 // passa `raggruppati`; chi li legge una volta sola passa `movimenti`.
 
-import { qtyValue, giorniDiConta, consumoSettimanale } from './warehouse.js'
+import { valoreConSegno, giorniDiConta, consumoSettimanale } from './warehouse.js'
 import { arrotonda, movimentoInPezzi } from './magazzinoPeriodo.js'
-
-// Il valore in € CON IL SEGNO: qtyValue ne dà solo di positivi, e un
-// consumo o una differenza possono essere negativi.
-const valoreConSegno = (q, riga) => (q < 0 ? -qtyValue(-q, riga) : qtyValue(q, riga))
 
 const contato = (rim) => rim != null && rim !== '' && Number.isFinite(Number(rim))
 
@@ -98,14 +94,13 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
     const dep = Number(l.dep) || 0
     // Quanto c'è adesso secondo l'app: la giacenza del prodotto. Un
     // prodotto che non c'è più non ha movimenti: resta quello di partenza.
-    const atteso = item ? Number(item.stock) || 0 : dep + g.acq
+    const atteso = item ? Number(item.stock) || 0 : dep
     const rim = contato(l.rim) ? Number(l.rim) : null
-    const dopo = rim == null ? 0 : mossoDopo(g.lista, l.rim_at)
-    // La differenza che la chiusura applica: contato meno atteso al momento
-    // del conteggio.
-    const diff = rim == null ? null : rim - (atteso - dopo)
     // La RIM che vale adesso: il contato portato fino a ora, o l'atteso.
-    const rimAdesso = rim == null ? atteso : rim + dopo
+    const rimAdesso = rim == null ? atteso : rim + mossoDopo(g.lista, l.rim_at)
+    // La differenza che la chiusura applica: la stessa cosa detta come
+    // contato meno atteso al momento del conteggio.
+    const diff = rim == null ? null : rimAdesso - atteso
     const cons = dep + g.acq - rimAdesso
     return {
       ...l,

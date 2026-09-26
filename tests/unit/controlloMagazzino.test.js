@@ -64,7 +64,7 @@ vi.mock('firebase/firestore', () => ({
 }))
 
 const api = await import('../../src/lib/api.js')
-const { controlloMagazzinoVisibile, inProduzione } = await import('../../src/lib/prova.js')
+const { controlloMagazzinoVisibile } = await import('../../src/lib/prova.js')
 const { magazzinoNelPeriodo, giorniDiScorta } = await import('../../src/lib/magazzinoPeriodo.js')
 
 const giro = () => new Promise((r) => setTimeout(r, 0))
@@ -76,25 +76,28 @@ beforeEach(() => {
 
 describe('dove si vede', () => {
   // In produzione ci sono i numeri veri del locale: la pagina non c'è,
-  // qualunque cosa ci sia scritto nelle impostazioni.
+  // qualunque cosa ci sia scritto nelle impostazioni. Il secondo argomento è
+  // «siamo nell'ambiente di test o in locale» (devToolsEnabled).
   it('in produzione mai, nemmeno con l’interruttore acceso', () => {
-    expect(inProduzione('tana-drink')).toBe(true)
-    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: true }, 'tana-drink')).toBe(false)
+    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: true }, false)).toBe(false)
   })
 
   it('sul test solo con l’interruttore acceso', () => {
-    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: true }, 'tana-drink-test')).toBe(true)
-    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: false }, 'tana-drink-test')).toBe(false)
-    expect(controlloMagazzinoVisibile({}, 'tana-drink-test')).toBe(false)
+    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: true }, true)).toBe(true)
+    expect(controlloMagazzinoVisibile({ controllo_magazzino_prova: false }, true)).toBe(false)
+    expect(controlloMagazzinoVisibile({}, true)).toBe(false)
   })
 })
 
 describe('un conteggio, senza rete', () => {
   it('corregge subito la giacenza della differenza, e lo dice senza aspettare', async () => {
-    const { item, diff } = api.registraConteggio(JAGER, '0.9')
-    // Composto in memoria: la schermata lo mostra nell'istante del tocco.
+    const { item, diff, movimento } = api.registraConteggio(JAGER, '0.9')
+    // Composto in memoria: la schermata lo mostra nell'istante del tocco,
+    // col movimento così com'è stato scritto.
     expect(item.stock).toBe(0.9)
     expect(diff).toBeCloseTo(-1.9, 6)
+    expect([movimento.type, movimento.reason, movimento.item_id]).toEqual(['unload', 'conta', 'jager'])
+    expect(movimento.created_at).toEqual(expect.any(String))
     await giro()
     const giacenza = stato.scritture.find((s) => s.col === 'inventory_items')
     // Col segno, con increment: una vendita battuta nello stesso istante da

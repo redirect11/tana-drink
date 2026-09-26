@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   fetchInventoryItems,
   fetchInventoryCategories,
   fetchStockMovementsSince,
   registraConteggio,
+  settingsIniziali,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
 import { magazzinoNelPeriodo, giorniDiScorta } from '../lib/magazzinoPeriodo.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from '../lib/businessDay.js'
-import { shiftDay } from '../lib/ore.js'
+import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { perScaffale } from '../lib/scaffali.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -43,7 +44,10 @@ import CategoryRail from './CategoryRail.jsx'
 
 const GIORNI_STORIA = 90
 const PERIODI = [7, 30, 90]
-const dataBreve = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '')
+const SCHEDE = [
+  ['conta', 'Conta'],
+  ['rapporto', 'Rapporto'],
+]
 
 export default function ControlloMagazzino() {
   const [scheda, setScheda] = useState('conta')
@@ -51,7 +55,9 @@ export default function ControlloMagazzino() {
   const [categorie, setCategorie] = useState([])
   const [movimenti, setMovimenti] = useState([])
   const [errore, setErrore] = useState(null)
-  const oggi = businessDayKey(new Date(), DEFAULT_CUTOFF_HOUR)
+  // L'ora di taglio del locale, dalla cache delle impostazioni.
+  const cutoff = settingsIniziali()?.business_day_cutoff_hour ?? DEFAULT_CUTOFF_HOUR
+  const oggi = businessDayKey(new Date(), cutoff)
 
   useEffect(() => {
     let vivo = true
@@ -76,19 +82,9 @@ export default function ControlloMagazzino() {
   const conta = useCallback((item, valore) => {
     setErrore(null)
     try {
-      const { item: dopo, diff } = registraConteggio(item, valore)
+      const { item: dopo, movimento } = registraConteggio(item, valore)
       setItems((lista) => lista.map((i) => (i.id === dopo.id ? dopo : i)))
-      setMovimenti((m) => [
-        ...m,
-        {
-          item_id: dopo.id,
-          type: diff >= 0 ? 'load' : 'unload',
-          qty: Math.abs(diff),
-          unit: dopo.unit,
-          reason: 'conta',
-          created_at: new Date().toISOString(),
-        },
-      ])
+      setMovimenti((m) => [...m, movimento])
     } catch (e) {
       setErrore(e.message)
     }
@@ -109,30 +105,25 @@ export default function ControlloMagazzino() {
         </p>
       </div>
       <div className="chips-row" style={{ margin: '8px 0' }}>
-        <button className={`chip${scheda === 'conta' ? ' active' : ''}`} onClick={() => setScheda('conta')}>
-          Conta
-        </button>
-        <button
-          className={`chip${scheda === 'rapporto' ? ' active' : ''}`}
-          onClick={() => setScheda('rapporto')}
-        >
-          Rapporto
-        </button>
+        {SCHEDE.map(([id, nome]) => (
+          <button key={id} className={`chip${scheda === id ? ' active' : ''}`} onClick={() => setScheda(id)}>
+            {nome}
+          </button>
+        ))}
       </div>
       {errore && <div className="banner">Errore: {errore}</div>}
       {scheda === 'conta' ? (
-        <Conta items={items} categorie={categorie} movimenti={movimenti} onConta={conta} />
+        <Conta items={items} categorie={categorie} movimenti={movimenti} cutoff={cutoff} onConta={conta} />
       ) : (
-        <Rapporto items={items} movimenti={movimenti} oggi={oggi} />
+        <Rapporto items={items} movimenti={movimenti} oggi={oggi} cutoff={cutoff} />
       )}
     </div>
   )
 }
 
 // ── CONTA ─────────────────────────────────────────────────────────────
-function Conta({ items, categorie, movimenti, onConta }) {
+function Conta({ items, categorie, movimenti, cutoff, onConta }) {
   const [categoria, setCategoria] = useState('all')
-  const [scritti, setScritti] = useState({}) // item_id -> valore nella casella
   const perId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   // L'ultimo conteggio di ogni prodotto: il movimento `conta` più recente.
   const ultimo = useMemo(() => {
@@ -160,43 +151,14 @@ function Conta({ items, categorie, movimenti, onConta }) {
               </div>
             )}
             {g.ids.map((id) => {
-              const it = perId.get(id)
               const quando = ultimo.get(id)
-              const valore = scritti[id] ?? ''
               return (
-                <div className="inv-item" key={id}>
-                  <div className="inv-row" style={{ cursor: 'default' }}>
-                    <div className="grow">
-                      <div className="inv-name">{it.name}</div>
-                      <div className="muted small">
-                        Risulta {formatQty(it.stock, it.unit)} ·{' '}
-                        {quando ? `contato il ${dataBreve(quando)}` : `non contato negli ultimi ${GIORNI_STORIA} giorni`}
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={valore}
-                      placeholder={it.unit}
-                      aria-label={`Quanto c'è di ${it.name}`}
-                      onChange={(e) => setScritti((s) => ({ ...s, [id]: e.target.value }))}
-                      style={{ width: 90, textAlign: 'right' }}
-                    />
-                    <button
-                      type="button"
-                      className="btn small"
-                      disabled={valore === ''}
-                      aria-label={`Conta ${it.name}`}
-                      onClick={() => {
-                        onConta(it, valore)
-                        setScritti((s) => ({ ...s, [id]: '' }))
-                      }}
-                    >
-                      Conta
-                    </button>
-                  </div>
-                </div>
+                <RigaConta
+                  key={id}
+                  item={perId.get(id)}
+                  contatoIl={quando ? dataBreve(businessDayKey(quando, cutoff)) : null}
+                  onConta={onConta}
+                />
               )
             })}
           </div>
@@ -206,13 +168,55 @@ function Conta({ items, categorie, movimenti, onConta }) {
   )
 }
 
+// Una riga della Conta. Quello che si scrive sta QUI, non nella lista: con
+// quattrocento righe e un telefono in mano, ridisegnarle tutte a ogni cifra
+// si sente (è la stessa cura dell'inventario).
+const RigaConta = memo(function RigaConta({ item: it, contatoIl, onConta }) {
+  const [valore, setValore] = useState('')
+  return (
+    <div className="inv-item">
+      <div className="inv-row" style={{ cursor: 'default' }}>
+        <div className="grow">
+          <div className="inv-name">{it.name}</div>
+          <div className="muted small">
+            Risulta {formatQty(it.stock, it.unit)} ·{' '}
+            {contatoIl ? `contato il ${contatoIl}` : `non contato negli ultimi ${GIORNI_STORIA} giorni`}
+          </div>
+        </div>
+        <input
+          type="number"
+          step="any"
+          min="0"
+          value={valore}
+          placeholder={it.unit}
+          aria-label={`Quanto c'è di ${it.name}`}
+          onChange={(e) => setValore(e.target.value)}
+          style={{ width: 90, textAlign: 'right' }}
+        />
+        <button
+          type="button"
+          className="btn small"
+          disabled={valore === ''}
+          aria-label={`Conta ${it.name}`}
+          onClick={() => {
+            onConta(it, valore)
+            setValore('')
+          }}
+        >
+          Conta
+        </button>
+      </div>
+    </div>
+  )
+})
+
 // ── RAPPORTO ──────────────────────────────────────────────────────────
-function Rapporto({ items, movimenti, oggi }) {
+function Rapporto({ items, movimenti, oggi, cutoff }) {
   const [giorni, setGiorni] = useState(30)
   const dal = shiftDay(oggi, -(giorni - 1))
   const { righe, totali } = useMemo(
-    () => magazzinoNelPeriodo(movimenti, items, { dal, al: oggi, cutoffHour: DEFAULT_CUTOFF_HOUR }),
-    [movimenti, items, dal, oggi]
+    () => magazzinoNelPeriodo(movimenti, items, { dal, al: oggi, cutoffHour: cutoff }),
+    [movimenti, items, dal, oggi, cutoff]
   )
   // IN CIMA DOVE SI PERDE DI PIÙ: la domanda del rapporto è dove sparisce la
   // merce, non cosa si è mosso di più.

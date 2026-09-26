@@ -1047,9 +1047,9 @@ function nonEsistePiu(errore) {
 // negativo adesso è un errore, non un'altra funzione.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
   const cur = articoloScrivibileInMano(item)
-  if (!(Number(qty) > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
-  const partenza = Number(cur.stock) || 0
   const delta = Number(qty)
+  if (!(delta > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
+  const partenza = Number(cur.stock) || 0
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
     'carico scorta'
@@ -1118,25 +1118,33 @@ export function registraConteggio(item, contato) {
   if (!Number.isFinite(n) || n < 0) throw new Error('Il contato è un numero da zero in su.')
   const diff = n - (Number(cur.stock) || 0)
   if (Math.abs(diff) > 1e-9) {
-    bgWrite(
-      () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(diff) }),
-      'conteggio'
-    )
+    const patch = { stock: increment(diff) }
+    // Le bottiglie in pari col contato, come fa il contenuto reale.
+    const minimo = bottiglieAlmeno(cur, n)
+    if (minimo > (Number(cur.bottles_total) || 0)) patch.bottles_total = minimo
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', cur.id), patch), 'conteggio')
   }
-  bgWrite(
-    () =>
-      addDoc(movementsCol, {
-        item_id: cur.id,
-        item_name: cur.name,
-        type: diff >= 0 ? 'load' : 'unload',
-        qty: Math.abs(diff),
-        unit: cur.unit ?? null,
-        reason: 'conta',
-        created_at: serverTimestamp(),
-      }),
-    'movimento conteggio'
-  )
-  return { item: { ...cur, stock: n }, diff }
+  const movimento = {
+    item_id: cur.id,
+    item_name: cur.name,
+    type: diff >= 0 ? 'load' : 'unload',
+    qty: Math.abs(diff),
+    unit: cur.unit ?? null,
+    reason: 'conta',
+  }
+  bgWrite(() => addDoc(movementsCol, { ...movimento, created_at: serverTimestamp() }), 'movimento conteggio')
+  // Si restituisce il movimento così come è stato scritto, con l'ora di
+  // questo dispositivo al posto di quella del server: chi lo mostra lo
+  // compone, non lo ricostruisce.
+  return { item: { ...cur, stock: n }, diff, movimento: { ...movimento, created_at: new Date().toISOString() } }
+}
+
+// QUANTE BOTTIGLIE ALMENO per una giacenza: a pezzi le bottiglie SONO i
+// pezzi (dividerle per il contenuto darebbe «1» su venti lattine da 33 cl);
+// a volume, la giacenza divisa per la confezione.
+function bottiglieAlmeno(cur, giacenza) {
+  const size = Number(cur.package_size) || 0
+  return (cur.unit || 'pz') === 'pz' ? Math.ceil(giacenza) : size ? Math.ceil(giacenza / size) : 0
 }
 
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
@@ -1146,12 +1154,8 @@ export async function adjustStock(itemId, newStock) {
   // scritta alla vecchia maniera vorrebbe dire un'altra cosa.
   const cur = await leggiArticoloPerScrittura(ref)
   const delta = newStock - (Number(cur.stock) || 0)
-  const size = Number(cur.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-  // Contando a pezzi le bottiglie SONO i pezzi: dividerle per il contenuto
-  // darebbe «1» su venti lattine da 33 cl.
-  const minTotal =
-    (cur.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
+  const minTotal = bottiglieAlmeno(cur, newStock)
   const patch = { stock: newStock }
   if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
   await updateDoc(ref, patch)

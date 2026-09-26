@@ -38,7 +38,7 @@ vi.mock('../../src/lib/api.js', () => ({
   // Come la vera: le righe e i totali della chiusura, e il prossimo.
   closeStockCount: vi.fn(async (_id, { lines }) => ({
     lines,
-    totals: { vend_value: 0, diff_value: 0, rim_value: 0, cons_value: 0, counted: 0 },
+    totals: { cons_value: 0, rim_value: 0, diff_value: 0, counted: 0 },
     prossimo: null,
   })),
   fetchStockCounts: vi.fn(async () => stato.storico),

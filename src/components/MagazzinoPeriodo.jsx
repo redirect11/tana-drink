@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { fetchInventoryItems, fetchStockMovementsSince } from '../lib/api.js'
 import { magazzinoNelPeriodo } from '../lib/magazzinoPeriodo.js'
 import { formatQty } from '../lib/inventory.js'
@@ -21,31 +21,39 @@ import { shiftDay } from '../lib/ore.js'
 // chiesto.
 export default function MagazzinoPeriodo({ dal, al, da = null, a = null, cutoffHour }) {
   const [aperto, setAperto] = useState(false)
-  const [dati, setDati] = useState(null)
+  // Quello che si è letto, e da quando: `{ movimenti, items, dove }`.
+  const [letti, setLetti] = useState(null)
   const [caricando, setCaricando] = useState(false)
   const [errore, setErrore] = useState(null)
+  // UN GIORNO DI MARGINE: la giornata commerciale comincia alle cinque del
+  // mattino, quindi il suo primo istante sta DOPO la mezzanotte di quella
+  // data — ma la notte precedente appartiene già alla giornata prima. Si
+  // legge largo e si taglia preciso: il conto filtra per giornata. Col
+  // periodo all'ora (REQ-STAT-003) il primo istante si sa già.
+  const dove = da || `${shiftDay(dal, -1)}T00:00:00.000Z`
 
+  // SI RILEGGE SOLO SE SI GUARDA PIÙ INDIETRO. Ritoccare l'ora di fine, o
+  // spostare l'inizio in avanti, lavora su quello che è già in mano: prima
+  // ogni ritocco rileggeva tutti i movimenti e tutti gli articoli.
+  const bastaQuelloCheCe = letti && letti.dove <= dove
   useEffect(() => {
-    if (!aperto) return undefined
+    if (!aperto || bastaQuelloCheCe) return undefined
     let vivo = true
     setCaricando(true)
     setErrore(null)
-    // UN GIORNO DI MARGINE: la giornata commerciale comincia alle cinque del
-    // mattino, quindi il suo primo istante sta DOPO la mezzanotte di quella
-    // data — ma la notte precedente appartiene già alla giornata prima. Si
-    // legge largo e si taglia preciso: il conto filtra per giornata.
-    // Col periodo all'ora (REQ-STAT-003) il primo istante si sa già.
-    const dove = da || `${shiftDay(dal, -1)}T00:00:00.000Z`
     Promise.all([fetchStockMovementsSince(dove), fetchInventoryItems()])
-      .then(([movimenti, items]) => {
-        if (vivo) setDati(magazzinoNelPeriodo(movimenti, items, { dal, al, da, a, cutoffHour }))
-      })
+      .then(([movimenti, items]) => vivo && setLetti({ movimenti, items, dove }))
       .catch((e) => vivo && setErrore(e.message))
       .finally(() => vivo && setCaricando(false))
     return () => {
       vivo = false
     }
-  }, [aperto, dal, al, da, a, cutoffHour])
+  }, [aperto, dove, bastaQuelloCheCe])
+
+  const dati = useMemo(
+    () => (letti ? magazzinoNelPeriodo(letti.movimenti, letti.items, { dal, al, da, a, cutoffHour }) : null),
+    [letti, dal, al, da, a, cutoffHour]
+  )
 
   return (
     <div className="card">

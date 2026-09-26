@@ -17,6 +17,11 @@ export function qtyValue(qty, item, { gross = true } = {}) {
   return size > 0 ? (n / size) * unitCost : 0
 }
 
+// Il valore in € CON IL SEGNO: qtyValue ne dà solo di positivi (un
+// magazzino che vale meno di niente non vuol dire niente), ma un consumo o
+// una differenza possono essere negativi, ed è proprio il segno che conta.
+export const valoreConSegno = (q, item) => (q < 0 ? -qtyValue(-q, item) : qtyValue(q, item))
+
 // ── IL CONSUMO A SETTIMANA, SULLE SETTIMANE VERE ─────────────────────
 // Nel foglio INV il consumo settimanale è diviso per una COSTANTE scritta
 // a mano — «÷ 3», poi «÷ 2», poi «÷ 1,5», poi «÷ 4» — che si aggiorna ogni

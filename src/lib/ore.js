@@ -153,6 +153,12 @@ export function weekDays(dateStr) {
 }
 
 // Sposta una data ISO di N giorni.
+// LA DATA COME LA SI LEGGE, «24/09/2026», da un ISO o da una giornata
+// («2026-09-24»): nelle schermate dove si verifica un periodo le parole
+// comode («oggi», «ieri») costringerebbero a fidarsi.
+export const dataBreve = (iso, vuoto = '') =>
+  iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : vuoto
+
 export function shiftDay(dateStr, delta) {
   const d = new Date(`${dateStr}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + delta)
