@@ -1765,11 +1765,11 @@ CONTA: un prodotto alla volta, quando si vuole, scaffale per scaffale (la stessa
 
 RAPPORTO: per 7, 30 o 90 giorni, Inizio + Acquisti − Venduto ± Differenza = Fine, dagli stessi movimenti e con la stessa tabella motivo → colonna delle statistiche (magazzinoNelPeriodo). In cima acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine periodo; l'elenco parte da dove la differenza costa di piu', e per ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
 
-DOVE SI VEDE: solo fuori dalla produzione (il progetto Firebase non e' `tana-drink`) e solo con l'interruttore «Controllo del magazzino (prova)» in Impostazioni → Funzioni premium, che in produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da provare, non una simulazione.
+DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso controllo dei DevTools e della stampante finta (`devToolsEnabled`, dalla build con VITE_APP_ENV) — e solo con l'interruttore «Controllo del magazzino (prova)» in Impostazioni → Funzioni premium, che in produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da provare, non una simulazione.
 
 NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
 
-**Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
+**Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 

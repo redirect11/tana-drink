@@ -31,7 +31,7 @@
 // all'unità con cui si conta la giacenza.
 
 import { qtyInStockUnit } from './inventory.js'
-import { qtyValue } from './warehouse.js'
+import { qtyValue, valoreConSegno } from './warehouse.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 // IN CHE COLONNA VA UN MOVIMENTO, secondo il suo motivo. I motivi sono
@@ -88,6 +88,20 @@ export function movimentoInPezzi(m, item) {
   }
 }
 
+// Dove cade un movimento rispetto al periodo: 'prima', 'dentro', 'dopo', o
+// null se non ha una data. Con gli istanti si confronta l'ora esatta; se no
+// la giornata commerciale.
+function collocaMovimento(at, { dal, al, da, a, cutoffHour }) {
+  // `created_at` arriva già come ISO (mapMovement): si confronta così com'è.
+  if (da) {
+    if (!at) return null
+    return at < da ? 'prima' : a && at >= a ? 'dopo' : 'dentro'
+  }
+  const giornata = businessDayKey(at, cutoffHour)
+  if (!giornata) return null
+  return giornata < dal ? 'prima' : al && giornata > al ? 'dopo' : 'dentro'
+}
+
 /**
  * Deposito, acquisti e consumo di ogni prodotto in un periodo.
  *
@@ -107,20 +121,6 @@ export function movimentoInPezzi(m, item) {
  *   personalizzato delle statistiche si sceglie all'ora (REQ-STAT-003).
  *   `a` è escluso: «dalle 18 alle 4» non comprende le 4 in punto.
  */
-// Dove cade un movimento rispetto al periodo: 'prima', 'dentro', 'dopo', o
-// null se non ha una data. Con gli istanti si confronta l'ora esatta; se no
-// la giornata commerciale.
-function collocaMovimento(at, { dal, al, da, a, cutoffHour }) {
-  if (da) {
-    if (!at) return null
-    const iso = new Date(at).toISOString()
-    return iso < da ? 'prima' : a && iso >= a ? 'dopo' : 'dentro'
-  }
-  const giornata = businessDayKey(at, cutoffHour)
-  if (!giornata) return null
-  return giornata < dal ? 'prima' : al && giornata > al ? 'dopo' : 'dentro'
-}
-
 export function magazzinoNelPeriodo(
   movimenti,
   items,
@@ -187,7 +187,7 @@ export function magazzinoNelPeriodo(
       // Le rettifiche col loro segno: una differenza in meno è merce che
       // manca, ed è il numero che il controllo del magazzino (REQ-MAG-050)
       // mette in cima.
-      rett_valore: v(r.rett < 0 ? -qtyValue(-r.rett, item) : qtyValue(r.rett, item)),
+      rett_valore: v(valoreConSegno(r.rett, item)),
     }
     totali.acq_valore += voce.acq_valore
     totali.rett_valore += voce.rett_valore

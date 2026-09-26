@@ -5,15 +5,15 @@
 // per test al momento, in modo da poter vedere la differenza».
 //
 // DUE CHIAVI, tutte e due necessarie. La prima non si può girare da
-// un'impostazione: in produzione la pagina non esiste, qualunque cosa ci
-// sia scritto in settings/bar — lì ci sono i soldi veri e i numeri veri del
-// locale, e una vista a metà strada non ci va. La seconda è l'interruttore
-// (Impostazioni → Funzioni premium), che sul test la accende e la spegne.
+// un'impostazione: fuori dall'ambiente di test (e dal locale) la pagina non
+// esiste, qualunque cosa ci sia scritto in settings/bar — in produzione ci
+// sono i numeri veri del locale. È lo stesso controllo dei DevTools e della
+// stampante finta (dev/devActions.js), costruito da VITE_APP_ENV. La seconda
+// è l'interruttore (Impostazioni → Funzioni premium).
 
-export const PROGETTO_PRODUZIONE = 'tana-drink'
+import { devToolsEnabled } from '../dev/devActions.js'
 
-export const inProduzione = (progetto = import.meta.env.VITE_FIREBASE_PROJECT_ID) =>
-  progetto === PROGETTO_PRODUZIONE
+export const paginaDiProvaDisponibile = devToolsEnabled
 
-export const controlloMagazzinoVisibile = (settings, progetto) =>
-  !inProduzione(progetto) && settings?.controllo_magazzino_prova === true
+export const controlloMagazzinoVisibile = (settings, disponibile = paginaDiProvaDisponibile) =>
+  disponibile && settings?.controllo_magazzino_prova === true

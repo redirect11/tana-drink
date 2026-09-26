@@ -11846,7 +11846,7 @@ requirements:
       - tests/component/StockCountPanel.test.jsx
   - id: REQ-MAG-050
     title: "Controllo del magazzino, pagina di prova: si conta un prodotto alla volta, e il rapporto dice dove si perde"
-    area: "src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js"
+    area: "src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)"
     description: >
       Daniele, 26/09/2026: «implementa come ha detto Flavio, e poi fai una
       nuova pagina inventario come la faresti tu. Una pagina attivabile,
@@ -11874,10 +11874,11 @@ requirements:
       acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine
       periodo; l'elenco parte da dove la differenza costa di piu', e per
       ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
-      DOVE SI VEDE: solo fuori dalla produzione (il progetto Firebase non e'
-      `tana-drink`) e solo con l'interruttore «Controllo del magazzino
-      (prova)» in Impostazioni → Funzioni premium, che in produzione non
-      compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da
+      DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso
+      controllo dei DevTools e della stampante finta (`devToolsEnabled`,
+      dalla build con VITE_APP_ENV) — e solo con l'interruttore «Controllo
+      del magazzino (prova)» in Impostazioni → Funzioni premium, che in
+      produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da
       provare, non una simulazione.
       NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche'
       Daniele e Flavio possano confrontare le due forme sui casi veri.

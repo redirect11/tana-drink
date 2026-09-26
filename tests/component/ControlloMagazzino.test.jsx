@@ -20,8 +20,14 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: vi.fn(async () => stato.articoli),
   fetchInventoryCategories: vi.fn(async () => stato.categorie),
   fetchStockMovementsSince: vi.fn(async () => stato.movimenti),
-  // Come la vera: la giacenza diventa il contato, composta in memoria.
-  registraConteggio: vi.fn((item, v) => ({ item: { ...item, stock: Number(v) }, diff: Number(v) - item.stock })),
+  settingsIniziali: () => ({ business_day_cutoff_hour: 5 }),
+  // Come la vera: la giacenza diventa il contato, composta in memoria, col
+  // movimento scritto.
+  registraConteggio: vi.fn((item, v) => ({
+    item: { ...item, stock: Number(v) },
+    diff: Number(v) - item.stock,
+    movimento: { item_id: item.id, type: 'unload', qty: 0, reason: 'conta', created_at: new Date().toISOString() },
+  })),
 }))
 
 import ControlloMagazzino from '../../src/components/ControlloMagazzino.jsx'

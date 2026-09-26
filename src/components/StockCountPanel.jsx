@@ -15,6 +15,7 @@ import { formatQty } from '../lib/inventory.js'
 import { giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
 import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { dataBreve as dataScritta } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import { perScaffale } from '../lib/scaffali.js'
@@ -385,8 +386,9 @@ const RigaInventario = memo(
     ['name', 'unit', 'dep', 'acq', 'cons', 'atteso', 'cons_week'].every((k) => a.riga[k] === b.riga[k])
 )
 
-// La data come la si legge, «17/09/2026», non com'è salvata.
-const dataBreve = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—')
+
+// La data come la si legge; dove manca, un trattino.
+const dataBreve = (iso) => dataScritta(iso, '—')
 
 // «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
 // settimane, ed è la misura in cui si legge il consumo qui sotto.
