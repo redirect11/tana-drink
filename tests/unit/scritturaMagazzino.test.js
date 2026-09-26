@@ -204,15 +204,14 @@ describe('il carico parte dalla giacenza com’è, anche sotto zero', () => {
     expect(s.patch.stock).toEqual({ __increment: 5 })
   })
 
-  // Lo scarico a mano invece non scava sotto lo zero: lì c'è una persona che
-  // dichiara quanto ha tolto dallo scaffale, e da uno scaffale vuoto non si
-  // toglie niente.
-  it('lo scarico a mano si ferma a zero', async () => {
+  // LO SCARICO A MANO NON C'È (26/09/2026): Flavio non vuole il tasto, e le
+  // correzioni in meno si fanno col contenuto reale. Un numero negativo al
+  // carico è un errore, e non scrive niente.
+  it('un numero negativo non è un carico, e non scrive niente', async () => {
     stato.articolo = { ...nuovo, stock: 2 }
-    expect(api.loadStock(articolo(), -5).stock).toBe(0)
+    expect(() => api.loadStock(articolo(), -5)).toThrow(/maggiore di zero/)
     await giro()
-    const s = stato.scritture.find((w) => w.col === 'inventory_items')
-    expect(s.patch.stock).toEqual({ __increment: -2 })
+    expect(stato.scritture.filter((w) => w.col === 'inventory_items')).toEqual([])
   })
 })
 
