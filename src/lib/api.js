@@ -35,7 +35,6 @@ import {
   computeConsumption,
   formatQty,
   qtyInStockUnit,
-  scaricoPossibile,
   giacenzaNonNegativa,
   articoloNormalizzato,
   patchNormalizza,
@@ -106,6 +105,7 @@ import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
+import { righeInventario } from './inventarioInCorso.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
 import {
   inCodaOrdine,
@@ -1035,14 +1035,21 @@ function nonEsistePiu(errore) {
 // lo stesso che usa `magazzinoBloccato`. È anche più robusto di prima:
 // una rilettura che non torna non protegge niente.
 //
-// `qty` è già in unità base; può essere negativo per uno scarico a mano, che
-// non scava sotto lo zero. Un carico invece si somma a quello che c'è ANCHE
-// SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa quattro, perché il
-// meno è merce già bevuta e non ancora caricata.
+// `qty` è già in unità base, e SOLO POSITIVO: è un carico. Si somma a quello
+// che c'è ANCHE SOTTO ZERO (Flavio, 12/09/2026): −1 più cinque pezzi fa
+// quattro, perché il meno è merce già bevuta e non ancora caricata.
+//
+// LO SCARICO A MANO NON C'È (Flavio, 25-26/09/2026): «carico lo lasciamo
+// com'è, solo in positivo, e va negli acquisti»; le correzioni in meno si
+// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Qui
+// c'era un ramo per i numeri negativi, fermato a zero da una regola nostra
+// che nessuno aveva chiesto, e nessuna schermata lo usava più: un numero
+// negativo adesso è un errore, non un'altra funzione.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
   const cur = articoloScrivibileInMano(item)
+  const delta = Number(qty)
+  if (!(delta > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
   const partenza = Number(cur.stock) || 0
-  const delta = qty >= 0 ? qty : -scaricoPossibile(partenza, -qty)
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
     'carico scorta'
@@ -1052,8 +1059,8 @@ export function loadStock(item, qty, { reason = 'carico' } = {}) {
       addDoc(movementsCol, {
         item_id: cur.id,
         item_name: cur.name,
-        type: qty >= 0 ? 'load' : 'unload',
-        qty: Math.abs(qty),
+        type: 'load',
+        qty: delta,
         unit: cur.unit ?? null,
         reason,
         created_at: serverTimestamp(),
@@ -1096,6 +1103,50 @@ export async function receiveBottles(itemId, count, openQty = 0) {
   return mapItem(await getDoc(ref))
 }
 
+// ── UN CONTEGGIO, APPLICATO SUBITO (REQ-MAG-050, pagina di prova) ────
+// Il controllo del magazzino non apre e chiude inventari: si conta un
+// prodotto e la giacenza si corregge lì, della differenza, con un
+// movimento `conta` che resta nella storia. Anche a differenza zero il
+// movimento si scrive: è la traccia che dice «contato il …», e senza un
+// prodotto che torna sembrerebbe mai controllato.
+// In sottofondo e composto in memoria come il carico: la differenza si
+// somma con `increment`, quindi una vendita battuta nello stesso istante
+// da un altro terminale non si perde.
+export function registraConteggio(item, contato) {
+  const cur = articoloScrivibileInMano(item)
+  const n = Number(contato)
+  if (!Number.isFinite(n) || n < 0) throw new Error('Il contato è un numero da zero in su.')
+  const diff = n - (Number(cur.stock) || 0)
+  if (Math.abs(diff) > 1e-9) {
+    const patch = { stock: increment(diff) }
+    // Le bottiglie in pari col contato, come fa il contenuto reale.
+    const minimo = bottiglieAlmeno(cur, n)
+    if (minimo > (Number(cur.bottles_total) || 0)) patch.bottles_total = minimo
+    bgWrite(() => updateDoc(doc(db, 'inventory_items', cur.id), patch), 'conteggio')
+  }
+  const movimento = {
+    item_id: cur.id,
+    item_name: cur.name,
+    type: diff >= 0 ? 'load' : 'unload',
+    qty: Math.abs(diff),
+    unit: cur.unit ?? null,
+    reason: 'conta',
+  }
+  bgWrite(() => addDoc(movementsCol, { ...movimento, created_at: serverTimestamp() }), 'movimento conteggio')
+  // Si restituisce il movimento così come è stato scritto, con l'ora di
+  // questo dispositivo al posto di quella del server: chi lo mostra lo
+  // compone, non lo ricostruisce.
+  return { item: { ...cur, stock: n }, diff, movimento: { ...movimento, created_at: new Date().toISOString() } }
+}
+
+// QUANTE BOTTIGLIE ALMENO per una giacenza: a pezzi le bottiglie SONO i
+// pezzi (dividerle per il contenuto darebbe «1» su venti lattine da 33 cl);
+// a volume, la giacenza divisa per la confezione.
+function bottiglieAlmeno(cur, giacenza) {
+  const size = Number(cur.package_size) || 0
+  return (cur.unit || 'pz') === 'pz' ? Math.ceil(giacenza) : size ? Math.ceil(giacenza / size) : 0
+}
+
 // Rettifica: imposta lo stock a un valore assoluto e registra il delta.
 export async function adjustStock(itemId, newStock) {
   const ref = doc(db, 'inventory_items', itemId)
@@ -1103,12 +1154,8 @@ export async function adjustStock(itemId, newStock) {
   // scritta alla vecchia maniera vorrebbe dire un'altra cosa.
   const cur = await leggiArticoloPerScrittura(ref)
   const delta = newStock - (Number(cur.stock) || 0)
-  const size = Number(cur.package_size) || 0
   // Mantieni coerente il numero totale di bottiglie con la nuova giacenza.
-  // Contando a pezzi le bottiglie SONO i pezzi: dividerle per il contenuto
-  // darebbe «1» su venti lattine da 33 cl.
-  const minTotal =
-    (cur.unit || 'pz') === 'pz' ? Math.ceil(newStock) : size ? Math.ceil(newStock / size) : 0
+  const minTotal = bottiglieAlmeno(cur, newStock)
   const patch = { stock: newStock }
   if (minTotal > (Number(cur.bottles_total) || 0)) patch.bottles_total = minTotal
   await updateDoc(ref, patch)
@@ -1160,8 +1207,9 @@ export async function fetchStockMovementsSince(iso) {
 // chiusura. Le rimanenze scritte senza ora valgono come contate adesso.
 function mapStockCount(snap) {
   const c = snap.data() || {}
-  const rimanenze = c.rimanenze && typeof c.rimanenze === 'object' ? c.rimanenze : {}
-  const ore = c.rimanenze_ora && typeof c.rimanenze_ora === 'object' ? c.rimanenze_ora : {}
+  const mappa = (x) => (x && typeof x === 'object' ? x : {})
+  const rimanenze = mappa(c.rimanenze)
+  const ore = mappa(c.rimanenze_ora)
   const lines = (Array.isArray(c.lines) ? c.lines : []).map((l) =>
     l && Object.prototype.hasOwnProperty.call(rimanenze, l.item_id)
       ? { ...l, rim: rimanenze[l.item_id], rim_at: ore[l.item_id] ?? null }
@@ -1264,46 +1312,50 @@ export function salvaRimanenza(id, itemId, valore, ora = new Date().toISOString(
 // uguale per tutti — quindi la query «dopo l'apertura» non se li ritrova
 // fra i movimenti del periodo nuovo.
 //
-// Le letture qui sotto (la conta e le giacenze di ora) restano attese: sono
-// letture, e senza rete rispondono dalla cache.
+// LE DIFFERENZE LE CALCOLA LA CHIUSURA, non chi la chiama (BUG-112). Si
+// rileggono giacenze e movimenti e si passa da `righeInventario`, lo stesso
+// calcolo che il pannello mostra: la differenza misurata sull'atteso
+// dell'ora del conteggio, e sommata alla giacenza con `increment` — così
+// restano sia le vendite fatte dopo il conteggio sia un drink battuto
+// mentre il pacchetto parte. Una strada sola: prima il pannello passava le
+// differenze e qui c'era anche la regola vecchia («la giacenza diventa il
+// numero contato»), pronta a tornare per chiunque si dimenticasse il campo.
 //
-// `riapri`: gli articoli del magazzino, per aprire il prossimo; null per
-// non aprirlo. Ritorna il nuovo inventario composto in memoria, o null.
-export async function closeStockCount(id, { lines, totals, align = true, riapri = null }) {
+// Le letture restano attese: sono letture, e senza rete rispondono dalla
+// cache, che ha anche le vendite appena battute da questo dispositivo.
+//
+// `lines`: le righe con quello che si è scritto (`rim`, `rim_at`).
+// `riapri`: se aprire il prossimo. Ritorna le righe e i totali della
+// chiusura, e il prossimo inventario composto in memoria (o null).
+export async function closeStockCount(id, { lines, riapri = false }) {
   const countRef = doc(db, 'stock_counts', id)
-  const countSnap = await getDoc(countRef)
+  const [countSnap, articoli] = await Promise.all([getDoc(countRef), fetchInventoryItems()])
   if (!countSnap.exists()) throw new Error('Conta non trovata')
-  if (countSnap.data().status !== 'open') throw new Error('Conta già chiusa')
-
-  const toAlign = align ? lines.filter((l) => l.rim != null && l.rim !== '') : []
-  const itemSnaps = await Promise.all(
-    toAlign.map((l) => getDoc(doc(db, 'inventory_items', l.item_id)))
-  )
+  const conta = mapStockCount(countSnap)
+  if (conta.status !== 'open') throw new Error('Conta già chiusa')
+  const movimenti = await fetchStockMovementsSince(conta.started_at)
+  const chiusa = righeInventario(lines, { movimenti, items: articoli, dal: conta.started_at })
 
   // Tutti i controlli PRIMA di scrivere qualsiasi cosa: un prodotto ancora
   // nella forma vecchia ferma la chiusura intera, non la tronca a metà.
+  const perId = new Map(articoli.map((a) => [a.id, a]))
   const batch = writeBatch(db)
-  const contati = {}
-  for (let idx = 0; idx < toAlign.length; idx++) {
-    const l = toAlign[idx]
-    const cur = articoloScrivibile(itemSnaps[idx])
+  const differenze = {}
+  for (const l of chiusa.lines) {
+    if (l.diff == null) continue
+    const cur = perId.get(l.item_id)
+    // Un prodotto cancellato nel frattempo non ha più una giacenza da
+    // correggere: si salta, come prima.
     if (!cur) continue
-    // SI APPLICA LA DIFFERENZA, NON LA RIMANENZA (BUG-112). Fino alla 1.7
-    // la giacenza diventava il numero contato: contato alle 18 e chiuso a
-    // mezzanotte, le vendite fatte in mezzo sparivano, perché la giacenza
-    // tornava al numero delle 18. `diff` è già misurata sull'atteso
-    // dell'ora del conteggio (lib/inventarioInCorso.js), e si somma con
-    // `increment`: anche un drink battuto mentre il pacchetto parte resta.
-    // Una riga che arriva senza `diff` si allinea come prima, al numero.
-    const diff = Number.isFinite(l.diff) ? l.diff : (Number(l.rim) || 0) - (Number(cur.stock) || 0)
-    contati[l.item_id] = diff
-    if (Math.abs(diff) < 1e-9) continue
-    batch.update(doc(db, 'inventory_items', l.item_id), { stock: increment(diff) })
+    articoloScrivibileInMano(cur)
+    differenze[l.item_id] = l.diff
+    if (Math.abs(l.diff) < 1e-9) continue
+    batch.update(doc(db, 'inventory_items', l.item_id), { stock: increment(l.diff) })
     batch.set(doc(movementsCol), {
       item_id: l.item_id,
       item_name: cur.name,
-      type: diff > 0 ? 'load' : 'unload',
-      qty: Math.abs(diff),
+      type: l.diff > 0 ? 'load' : 'unload',
+      qty: Math.abs(l.diff),
       unit: cur.unit ?? null,
       reason: 'conta',
       created_at: serverTimestamp(),
@@ -1313,19 +1365,21 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
   batch.update(countRef, {
     status: 'closed',
     closed_at: serverTimestamp(),
-    lines,
-    totals,
+    lines: chiusa.lines,
+    totals: chiusa.totals,
     // Le rimanenze adesso stanno nelle righe: le mappe di lavoro non servono più.
     rimanenze: deleteField(),
     rimanenze_ora: deleteField(),
   })
 
   let prossimo = null
-  if (riapri) {
+  if (riapri && articoli.length > 0) {
     const ref = doc(collection(db, 'stock_counts'))
     // DEP del prossimo = la giacenza dopo l'allineamento: quella di adesso
     // più la differenza appena applicata.
-    const righe = riapri.map((it) => rigaDiInventario(it, (Number(it.stock) || 0) + (contati[it.id] ?? 0)))
+    const righe = articoli.map((it) =>
+      rigaDiInventario(it, (Number(it.stock) || 0) + (differenze[it.id] ?? 0))
+    )
     batch.set(ref, { status: 'open', started_at: serverTimestamp(), lines: righe, totals: null })
     prossimo = {
       id: ref.id,
@@ -1338,7 +1392,7 @@ export async function closeStockCount(id, { lines, totals, align = true, riapri 
   }
 
   bgWrite(() => batch.commit(), 'chiusura inventario')
-  return prossimo
+  return { ...chiusa, prossimo }
 }
 
 export async function fetchStockCounts({ limit = 20 } = {}) {
@@ -5805,6 +5859,9 @@ export const DEFAULT_SETTINGS = {
   // senza, e il prossimo lo si apre a mano quando si vuole (Daniele,
   // 17/09/2026: «così può decidere se aprire a mano o in automatico»).
   inventario_riapre_da_solo: true,
+  // La pagina di prova del controllo del magazzino (REQ-MAG-050): solo
+  // fuori dalla produzione, vedi lib/prova.js.
+  controllo_magazzino_prova: false,
   // LO SCONTRINO D'ACCONTO (REQ-STAMPA-015). Chi versa una parte e se ne va
   // non aveva niente in mano: la stampa era appesa alla CHIUSURA del conto, e
   // un acconto non chiude. Due interruttori, tutti e due spenti di suo — chi

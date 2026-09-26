@@ -5,7 +5,7 @@
 // determinato periodo … e vorrei avere la stessa identica visualizzazione
 // a lista».
 //
-// È la stessa domanda della CONTA (warehouse.js, REQ-MAG-014), fatta però
+// È la stessa domanda dell'INVENTARIO (inventarioInCorso.js, REQ-MAG-046), fatta però
 // su un periodo scelto a mano invece che sul periodo di una conta — e
 // senza girare per il locale a contare le bottiglie. Le due cose non si
 // sostituiscono a vicenda, ed è importante saperlo prima di guardare i
@@ -31,7 +31,7 @@
 // all'unità con cui si conta la giacenza.
 
 import { qtyInStockUnit } from './inventory.js'
-import { qtyValue } from './warehouse.js'
+import { qtyValue, valoreConSegno } from './warehouse.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 // IN CHE COLONNA VA UN MOVIMENTO, secondo il suo motivo. I motivi sono
@@ -66,11 +66,40 @@ export const GRUPPO_MOTIVO = {
 // fa sempre la giacenza di fine periodo — e il numero si vede.
 export const gruppoMovimento = (m) => GRUPPO_MOTIVO[String(m?.reason || '')] || 'rettifica'
 
-const arrotonda = (n, cifre) => {
+export const arrotonda = (n, cifre = 4) => {
   const f = 10 ** cifre
   // Lo zero negativo esiste e si stampa «-0»: quello che non si è mosso
   // deve leggersi zero.
   return (Math.round(n * f) / f) + 0
+}
+
+// UN MOVIMENTO, RIPORTATO A PEZZI: la quantità nell'unità della giacenza,
+// col segno (entrata positiva, uscita negativa), e il gruppo in cui cade.
+// È il passo che fanno sia questo elenco sia l'inventario in corso
+// (inventarioInCorso.js): in un posto solo, perché un segno o una
+// conversione corretti qui valgano per tutti e due. null se il prodotto non
+// c'è più: senza l'articolo non si sa in che unità sia quella quantità, e
+// un numero convertito a caso è peggio di una riga che manca.
+export function movimentoInPezzi(m, item) {
+  if (!item) return null
+  return {
+    q: qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1),
+    gruppo: gruppoMovimento(m),
+  }
+}
+
+// Dove cade un movimento rispetto al periodo: 'prima', 'dentro', 'dopo', o
+// null se non ha una data. Con gli istanti si confronta l'ora esatta; se no
+// la giornata commerciale.
+function collocaMovimento(at, { dal, al, da, a, cutoffHour }) {
+  // `created_at` arriva già come ISO (mapMovement): si confronta così com'è.
+  if (da) {
+    if (!at) return null
+    return at < da ? 'prima' : a && at >= a ? 'dopo' : 'dentro'
+  }
+  const giornata = businessDayKey(at, cutoffHour)
+  if (!giornata) return null
+  return giornata < dal ? 'prima' : al && giornata > al ? 'dopo' : 'dentro'
 }
 
 /**
@@ -88,8 +117,15 @@ const arrotonda = (n, cifre) => {
  * @param items gli articoli di magazzino, con la giacenza di ADESSO.
  * @param dal / al giornate commerciali estreme. `al` mancante vuol dire
  *   «fino a oggi».
+ * @param da / a ISTANTI (ISO), al posto delle giornate: il periodo
+ *   personalizzato delle statistiche si sceglie all'ora (REQ-STAT-003).
+ *   `a` è escluso: «dalle 18 alle 4» non comprende le 4 in punto.
  */
-export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+export function magazzinoNelPeriodo(
+  movimenti,
+  items,
+  { dal, al = null, da = null, a = null, cutoffHour = DEFAULT_CUTOFF_HOUR } = {}
+) {
   const perId = new Map((items || []).map((i) => [i.id, i]))
   const righe = new Map()
   const riga = (item) => {
@@ -103,20 +139,16 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
 
   for (const m of movimenti || []) {
     const item = perId.get(m?.item_id)
-    // Prodotto cancellato dal magazzino: senza l'articolo non si sa in che
-    // unità sia quella quantità, e un numero convertito a caso è peggio di
-    // una riga che manca.
-    if (!item) continue
-    const giornata = businessDayKey(m.created_at, cutoffHour)
-    if (!giornata || giornata < dal) continue
-    // In pezzi, col segno: entrata positiva, uscita negativa.
-    const q = qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1)
+    const mp = movimentoInPezzi(m, item)
+    if (!mp) continue
+    const quando = collocaMovimento(m.created_at, { dal, al, da, a, cutoffHour })
+    if (!quando || quando === 'prima') continue
+    const { q, gruppo } = mp
     const r = riga(item)
-    if (al && giornata > al) {
+    if (quando === 'dopo') {
       r.dopo += q
       continue
     }
-    const gruppo = gruppoMovimento(m)
     if (gruppo === 'acquisto') r.acq += q
     // Il consumo si legge in positivo: quello che è uscito. Un'entrata per
     // storno lo abbassa, che è esattamente quello che è successo.
@@ -125,7 +157,7 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
   }
 
   const out = []
-  const totali = { acq_valore: 0, cons_valore: 0, fine_valore: 0, prodotti: 0 }
+  const totali = { acq_valore: 0, cons_valore: 0, fine_valore: 0, rett_valore: 0, prodotti: 0 }
   for (const r of righe.values()) {
     // UN PRODOTTO CHE NON SI È MOSSO NON È UNA RIGA. Su quattrocento
     // articoli, trecento sono fermi: elencarli tutti a zero vuol dire
@@ -152,8 +184,13 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
       acq_valore: v(qtyValue(r.acq, item)),
       cons_valore: v(qtyValue(r.cons, item)),
       fine_valore: v(qtyValue(fine, item)),
+      // Le rettifiche col loro segno: una differenza in meno è merce che
+      // manca, ed è il numero che il controllo del magazzino (REQ-MAG-050)
+      // mette in cima.
+      rett_valore: v(valoreConSegno(r.rett, item)),
     }
     totali.acq_valore += voce.acq_valore
+    totali.rett_valore += voce.rett_valore
     totali.cons_valore += voce.cons_valore
     totali.fine_valore += voce.fine_valore
     totali.prodotti += 1
@@ -162,10 +199,23 @@ export function magazzinoNelPeriodo(movimenti, items, { dal, al = null, cutoffHo
   totali.acq_valore = arrotonda(totali.acq_valore, 2)
   totali.cons_valore = arrotonda(totali.cons_valore, 2)
   totali.fine_valore = arrotonda(totali.fine_valore, 2)
+  totali.rett_valore = arrotonda(totali.rett_valore, 2)
 
   // IN CIMA QUELLO CHE È COSTATO DI PIÙ, non quello che si è mosso di più:
   // la domanda dietro questo elenco è dove se ne va il denaro, e trenta
   // bottiglie d'acqua non sono la risposta.
   out.sort((a, b) => b.cons_valore - a.cons_valore || b.acq_valore - a.acq_valore || a.name.localeCompare(b.name, 'it'))
   return { righe: out, totali }
+}
+
+// QUANTI GIORNI DURA LA SCORTA al ritmo di un periodo (REQ-MAG-050): quello
+// che è uscito davvero — venduto più quello che manca, cioè inizio più
+// acquisti meno fine — giorno per giorno. È la domanda «quanto devo
+// ordinare?» detta in un numero solo. null dove non si può dire: niente
+// uscito, o niente sullo scaffale.
+export function giorniDiScorta(riga, giorni) {
+  const uscito = riga.dep + riga.acq - riga.fine
+  const alGiorno = uscito / giorni
+  if (!(alGiorno > 0) || !(riga.fine > 0)) return null
+  return Math.floor(riga.fine / alGiorno)
 }

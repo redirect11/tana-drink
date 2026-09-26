@@ -1533,6 +1533,17 @@ function FunzioniPremium({ settings, onSave }) {
           onChange={(v) => onSave({ inventario_riapre_da_solo: v })}
         />
       )}
+      {/* LA PAGINA DI PROVA (REQ-MAG-050) esiste solo nell'ambiente di
+          test e in locale (lib/prova.js): in produzione l'interruttore non
+          compare nemmeno. */}
+      {devToolsEnabled && (
+        <ToggleRow
+          label="Controllo del magazzino (prova)"
+          desc="Mostra in Magazzino una pagina di prova: si conta un prodotto alla volta e il conteggio corregge subito la giacenza; il rapporto mostra acquisti, venduto, differenza e giorni di scorta per periodo. Disponibile solo nell’ambiente di test."
+          checked={settings.controllo_magazzino_prova === true}
+          onChange={(v) => onSave({ controllo_magazzino_prova: v })}
+        />
+      )}
     </div>
   )
 }

@@ -81,7 +81,13 @@ vi.mock('firebase/firestore', () => ({
   getDocFromCache: vi.fn(async () => {
     throw new Error('niente cache')
   }),
-  getDocs: vi.fn(async () => ({ docs: [] })),
+  // La chiusura dell'inventario legge il magazzino intero in una volta
+  // (BUG-112): la collezione degli articoli risponde con quello del test.
+  getDocs: vi.fn(async (ref) =>
+    ref?.__col === 'inventory_items'
+      ? { docs: [{ id: 'art-1', data: () => stato.articolo }] }
+      : { docs: [] }
+  ),
   getDocsFromCache: vi.fn(async () => ({ docs: [] })),
   addDoc: vi.fn(async () => ({ id: 'x' })),
   setDoc: vi.fn(async () => {}),
@@ -142,13 +148,14 @@ const strade = [
   // riga: il gesto ha un altro nome, la regola che deve rispettare è la
   // stessa — con un magazzino ancora da aggiornare non scrive niente.
   ['consegna di righe di un ordine fornitore', () => api.consegnaRigheOrdine('po-1')],
+  // Il conteggio della pagina di prova (REQ-MAG-050) corregge la giacenza
+  // anche lui: stessa porta, stessa regola.
+  ['conteggio del controllo del magazzino', async () => api.registraConteggio(articolo(), 3)],
   [
     'allineamento della conta',
     () =>
       api.closeStockCount('sc-1', {
         lines: [{ item_id: 'art-1', rim: 3 }],
-        totals: {},
-        align: true,
       }),
   ],
 ]
@@ -200,15 +207,14 @@ describe('il carico parte dalla giacenza com’è, anche sotto zero', () => {
     expect(s.patch.stock).toEqual({ __increment: 5 })
   })
 
-  // Lo scarico a mano invece non scava sotto lo zero: lì c'è una persona che
-  // dichiara quanto ha tolto dallo scaffale, e da uno scaffale vuoto non si
-  // toglie niente.
-  it('lo scarico a mano si ferma a zero', async () => {
+  // LO SCARICO A MANO NON C'È (26/09/2026): Flavio non vuole il tasto, e le
+  // correzioni in meno si fanno col contenuto reale. Un numero negativo al
+  // carico è un errore, e non scrive niente.
+  it('un numero negativo non è un carico, e non scrive niente', async () => {
     stato.articolo = { ...nuovo, stock: 2 }
-    expect(api.loadStock(articolo(), -5).stock).toBe(0)
+    expect(() => api.loadStock(articolo(), -5)).toThrow(/maggiore di zero/)
     await giro()
-    const s = stato.scritture.find((w) => w.col === 'inventory_items')
-    expect(s.patch.stock).toEqual({ __increment: -2 })
+    expect(stato.scritture.filter((w) => w.col === 'inventory_items')).toEqual([])
   })
 })
 
