@@ -25,7 +25,7 @@
 // delle due.
 //
 // «QUANTO HO SPESO IN BIBITE» è un'altra domanda — degli ACQUISTI, quello
-// che è entrato dalla porta — e vive in `purchasesByMacro` qui sotto, che
+// che è entrato dalla porta — e vive in `acquistiPerMacro` qui sotto, che
 // legge l'altro lato della stessa macro: i pesi dei PRODOTTI
 // (`pesi_prodotti`). È lì che un prodotto può stare per il 60% in una macro
 // e per il 40% in un'altra, com'è stato chiesto (09/09/2026).
@@ -37,7 +37,9 @@ import { lineCost, orderLines } from './rendiconto.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { discountFactor } from './eta.js'
-import { qtyInStockUnit } from './inventory.js'
+import { valoreConSegno } from './warehouse.js'
+import { movimentoInPezzi, gruppoMovimento, nelPeriodo } from './magazzinoPeriodo.js'
+import { consegneDi } from './confrontoOrdine.js'
 
 export { UNASSIGNED }
 
@@ -119,18 +121,22 @@ export function venditeByMacro(orders, { drinksById, itemsById, macros, saleVat 
 // legge l'altro lato della stessa macro.
 //
 // DUE STRADE PER LA MERCE CHE ENTRA, come nell'inventario (REQ-MAG-046):
-//   · le righe CONSEGNATE degli ordini fornitore, con la quantità davvero
-//     ricevuta e il prezzo del documento (REQ-MAG-029: la consegna è riga
-//     per riga, e una riga può arrivare in parte). Gli ordini di prima, che
-//     avevano lo stato solo sull'ordine intero, contano da «ricevuto»;
-//   · i carichi diretti da Prodotti (movimenti `carico`), valorizzati al
-//     costo del prodotto: lì non c'è un documento col prezzo.
+//   · le CONSEGNE degli ordini fornitore (consegneDi: la quantità davvero
+//     ricevuta, il prezzo del documento, il giorno d'arrivo);
+//   · gli altri movimenti del gruppo «acquisto» (GRUPPO_MOTIVO): il carico
+//     da Prodotti e quello da fattura, valorizzati al costo del prodotto,
+//     netto. Le consegne d'ordine no: hanno già la loro riga, e contarle
+//     anche dal movimento le raddoppierebbe.
 // Prima si contava l'ORDINE ricevuto per quanto era stato ORDINATO, e le
 // consegne parziali e i carichi senza ordine sparivano o si gonfiavano.
 //
-// `dentro(istante)` dice se una consegna o un carico cadono nel periodo
-// guardato; senza, conta tutto.
-export function acquistiPerMacro(purchaseOrders, { macros, movimenti = [], items = [], dentro = () => true } = {}) {
+// `periodo` ({ dal, al } in giornate, o { da, a } in istanti, con
+// cutoffHour) taglia consegne e carichi con la regola di nelPeriodo; senza,
+// conta tutto.
+const GIA_NELLE_CONSEGNE = 'ordine fornitore'
+
+export function acquistiPerMacro(purchaseOrders, { macros, movimenti = [], itemsById = {}, periodo = null } = {}) {
+  const dentro = periodo ? (t) => nelPeriodo(t, periodo) : () => true
   const acc = new Map()
   const aggiungi = (itemId, amount) => {
     if (!(Math.abs(amount) > 0)) return
@@ -139,22 +145,15 @@ export function acquistiPerMacro(purchaseOrders, { macros, movimenti = [], items
     }
   }
   for (const po of purchaseOrders || []) {
-    for (const l of po?.lines || []) {
-      const perRiga = l.stato === 'consegnato'
-      if (!perRiga && po?.status !== 'ricevuto') continue
-      const quando = perRiga ? l.delivered_at : po.received_at
-      if (!dentro(quando)) continue
-      const quanti = Number(l.qty_received ?? l.qty_packages) || 0
-      aggiungi(l.item_id, round2((Number(l.unit_cost) || 0) * quanti))
+    for (const c of consegneDi(po)) {
+      if (dentro(c.at)) aggiungi(c.item_id, round2(c.prezzo * c.qty))
     }
   }
-  const perId = new Map((items || []).map((i) => [i.id, i]))
   for (const m of movimenti || []) {
-    if (m?.reason !== 'carico' || !dentro(m.created_at)) continue
-    const item = perId.get(m.item_id)
-    if (!item) continue
-    const pezzi = qtyInStockUnit(m.qty, m.unit, item) * (m.type === 'load' ? 1 : -1)
-    aggiungi(m.item_id, round2(pezzi * (Number(item.cost) || 0)))
+    if (m?.reason === GIA_NELLE_CONSEGNE || gruppoMovimento(m) !== 'acquisto' || !dentro(m.created_at)) continue
+    const item = itemsById[m.item_id]
+    const mp = movimentoInPezzi(m, item)
+    if (mp) aggiungi(m.item_id, round2(valoreConSegno(mp.q, item, { gross: false })))
   }
   return acc
 }
@@ -170,7 +169,7 @@ export function acquistiPerMacro(purchaseOrders, { macros, movimenti = [], items
 //   venduto   l'incassato delle voci di menù della macro, IVA scorporata
 //             (venditeByMacro, la stessa regola del Bilancio)
 //   generato  venduto − acquisti
-// `orders` sono già i conti del periodo; `dentro` taglia acquisti e carichi.
+// `orders` sono già i conti del periodo; `periodo` taglia acquisti e carichi.
 export function macroNelPeriodo({
   orders,
   purchaseOrders,
@@ -179,25 +178,22 @@ export function macroNelPeriodo({
   drinksById,
   macros,
   saleVat = 0,
-  dentro = () => true,
+  periodo = null,
 }) {
   const itemsById = Object.fromEntries((items || []).map((i) => [i.id, i]))
   const vendite = venditeByMacro(orders, { drinksById, itemsById, macros, saleVat })
-  const acquisti = acquistiPerMacro(purchaseOrders, { macros, movimenti, items, dentro })
+  const acquisti = acquistiPerMacro(purchaseOrders, { macros, movimenti, itemsById, periodo })
   const elenco = [...(macros || [])]
   if (vendite.has(UNASSIGNED) || acquisti.has(UNASSIGNED)) elenco.push({ id: UNASSIGNED, name: 'Non attribuito' })
-  const righe = elenco.map((m) => {
-    const acq = round2(acquisti.get(m.id) || 0)
-    const ven = round2(vendite.get(m.id)?.incasso || 0)
-    return { id: m.id, name: m.name, acquisti: acq, venduto: ven, generato: round2(ven - acq) }
-  })
-  const totale = righe.reduce(
-    (t, r) => ({
-      acquisti: round2(t.acquisti + r.acquisti),
-      venduto: round2(t.venduto + r.venduto),
-      generato: round2(t.generato + r.generato),
-    }),
-    { acquisti: 0, venduto: 0, generato: 0 }
+  const riga = (acq, ven) => ({ acquisti: acq, venduto: ven, generato: round2(ven - acq) })
+  const righe = elenco.map((m) => ({
+    id: m.id,
+    name: m.name,
+    ...riga(acquisti.get(m.id) || 0, round2(vendite.get(m.id)?.incasso || 0)),
+  }))
+  const totale = riga(
+    round2(righe.reduce((s, r) => s + r.acquisti, 0)),
+    round2(righe.reduce((s, r) => s + r.venduto, 0))
   )
   return { righe, totale }
 }

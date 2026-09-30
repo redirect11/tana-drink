@@ -121,6 +121,12 @@ function collocaMovimento(at, { dal, al, da, a, cutoffHour }) {
  *   personalizzato delle statistiche si sceglie all'ora (REQ-STAT-003).
  *   `a` è escluso: «dalle 18 alle 4» non comprende le 4 in punto.
  */
+// Il movimento (o la consegna) cade DENTRO il periodo? La stessa regola di
+// questo elenco, per chi deve tagliare altre cose sullo stesso periodo
+// (gli acquisti per macro, REQ-STAT-004): un confine che cambia, cambia in
+// un posto solo.
+export const nelPeriodo = (at, periodo) => collocaMovimento(at, periodo) === 'dentro'
+
 export function magazzinoNelPeriodo(
   movimenti,
   items,
