@@ -95,9 +95,16 @@ issue da solo.
 - Nomi in italiano dove il dominio è italiano (`conto`, `comanda`,
   `scorte`, `giornata`), in inglese dove lo è il codice attorno.
 - Niente riscritture di massa non richieste, niente rinomini a tappeto.
-- L'interfaccia va spiegata a chi ha in mano un vassoio: parole comuni,
-  nessun gergo tecnico, nessun messaggio d'errore che scarica la colpa
-  addosso a chi legge.
+- **Al banco** l'interfaccia va spiegata a chi ha in mano un vassoio:
+  parole comuni, nessun gergo tecnico, nessun messaggio d'errore che
+  scarica la colpa addosso a chi legge.
+- **Nel gestionale** (magazzino, schede prodotto, carichi, inventario,
+  amministrazione) gli aiuti usano invece il **registro del mestiere**:
+  giacenza, rettifica, listino, scarico frazionato, scorta minima. Li legge
+  il gestore, e le sue parole sono quelle (Flavio, 29/09/2026: «gli help
+  sono scritti in un modo un po' troppo elementare»). Impersonali, senza
+  «se vuoi» né esempi colloquiali. La regola per esteso è in
+  [DESIGN.md](DESIGN.md), guardrail 3.
 - **Ma il tono resta professionale.** Didascalie, descrizioni delle
   impostazioni e messaggi non danno del tu con la pacca sulla spalla, non
   fanno battute e non raccontano aneddoti: dicono cosa fa una cosa e a cosa
