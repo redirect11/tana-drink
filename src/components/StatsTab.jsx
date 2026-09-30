@@ -27,6 +27,7 @@ import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
+import MacroPeriodo from './MacroPeriodo.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -298,6 +299,9 @@ function DailyStats({ sezione = 'serate' }) {
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
     return {
       sel,
+      // I conti del periodo, per chi fa i suoi conti a parte (le macro).
+      ord,
+      drinksById,
       kpi: kpiSummary(ord, sel),
       byHour: revenueByHour(ord, hourRange),
       byDay: revenueByDay(ord, cutoff),
@@ -361,6 +365,7 @@ function DailyStats({ sezione = 'serate' }) {
             al: businessDayKey(serata.closed_at || new Date(), cutoff),
           }}
           cutoff={cutoff}
+          saleVat={settings.sale_vat}
         />
       </div>
     )
@@ -433,6 +438,7 @@ function DailyStats({ sezione = 'serate' }) {
         comandi={comandi}
         intervallo={{ dal: periodo.dal, al: periodo.al, ...istanti }}
         cutoff={cutoff}
+        saleVat={settings.sale_vat}
       />
     </div>
   )
@@ -547,7 +553,7 @@ function ClassificaVenduto({ righe }) {
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
+function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
@@ -679,6 +685,19 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           da={intervallo.da}
           a={intervallo.a}
           cutoffHour={cutoff}
+        />
+      )}
+      {/* Acquisti, venduto e generato per macro (REQ-STAT-004). */}
+      {intervallo?.dal && intervallo?.al && (
+        <MacroPeriodo
+          ordini={view.ord}
+          drinksById={view.drinksById}
+          dal={intervallo.dal}
+          al={intervallo.al}
+          da={intervallo.da}
+          a={intervallo.a}
+          cutoffHour={cutoff}
+          saleVat={saleVat}
         />
       )}
 

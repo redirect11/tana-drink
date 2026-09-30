@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 208 | fatto e coperto dai test |
+| ✅ | 209 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 24 | da fare |
 | 🗑 | 7 | non più valido |
 
-**254 voci** in tutto. **223** descrivono il sistema com'è oggi e
+**255 voci** in tutto. **224** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 3 | — |  |
+| [STAT](#stat) | 4 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -2913,6 +2913,12 @@ Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale perio
 
 **Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
 
+#### REQ-STAT-004 — Statistiche per periodo: acquisti, venduto e generato per macro-categoria
+
+Flavio, vocale del 30/09/2026: «quello che non vedo, che secondo me ancora non l'ho messo, e' la visualizzazione nelle statistiche di quello che c'e' nelle macro-categorie: vedere gli acquisti, il venduto e vedere quanto mi ha generato». E' il rapporto per macro del suo foglio (ACQUISTI, FATTURATO, UTILE) sul periodo scelto nelle statistiche, invece che mese per mese — quello resta REQ-MAG-022, nel Bilancio. Una scheda «Per macro-categoria» dopo «Magazzino nel periodo», che si apre a richiesta (legge ordini fornitore, prodotti, macro e carichi) e segue lo stesso periodo della pagina: giornate intere o, per «Personalizzato», istanti (REQ-STAT-003). Per ogni macro, piu' «Non attribuito» e il totale: · ACQUISTI: le righe d'ordine CONSEGNATE (quantita' ricevuta × prezzo del documento, nella data di consegna; gli ordini di prima di REQ-MAG-029 da «ricevuto») e i carichi diretti da Prodotti al costo del prodotto, netto IVA, spartiti coi pesi dei prodotti; · VENDUTO: l'incassato delle voci di menu' della macro, IVA di vendita scorporata (venditeByMacro, la stessa regola del Bilancio); · GENERATO: venduto − acquisti. I conti non tornano col Bilancio mese per mese ne' devono: la' il costo e' quello di cio' che si e' VENDUTO (le ricette), qui gli acquisti sono cio' che e' ENTRATO nel periodo — la domanda di Flavio. Le macro in produzione sono compilate (verificato il 30/09: 4 macro, 447 prodotti e 405 voci con la loro quota).
+
+**Dove**: `src/components/MacroPeriodo.jsx, src/lib/macroStats.js (acquistiPerMacro, macroNelPeriodo), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/component/MacroPeriodo.test.jsx`, `tests/unit/macroStats.test.js`
+
 ### LIC
 
 #### REQ-LIC-001 — Le funzioni premium si accendono da un posto solo, e di partenza sono spente
@@ -3075,7 +3081,7 @@ DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sotto
 
 IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
 
-SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare.
+SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare. 30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che conta le righe CONSEGNATE per la quantita' ricevuta e nella data di consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la tabella mese per mese del Bilancio.
 
 GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
 
