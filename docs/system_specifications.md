@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 26 settembre 2026.
+> Generato il 30 settembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 207 | fatto e coperto dai test |
+| ✅ | 208 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 23 | da fare |
+| ⬜ | 24 | da fare |
 | 🗑 | 7 | non più valido |
 
-**252 voci** in tutto. **222** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
+**254 voci** in tutto. **223** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 3 | — |  |
 | [LIC](#lic) | 1 | — |  |
@@ -1739,7 +1739,9 @@ COSA RESTA DA ZERO IN SU, e cambia nome per dirlo: `giacenzaPerCarico` diventa `
 
 #### REQ-MAG-046 — L'inventario come il foglio INV: DEP · ACQ · CONS · RIM, con la RIM che si aggiorna da sola
 
-Lo schema l'ha chiuso Flavio il 25/09/2026 sera, dopo tre giorni di prove sui casi veri (vocale delle 21:53): «ordine a fornitore consegnato carica il magazzino e va a finire sugli acquisti durante l'inventario in corso; su prodotti il carico e' solo positivo e va a finire sugli acquisti nell'inventario; il contenuto reale serve per fare le modifiche sia in positivo sia in negativo, e va sulle rimanenze di magazzino nell'inventario, quindi mi modifica sia la rimanenza sia il consumato». E il 24/09: «i dati da visualizzare sono DEP, ACQ, CONS, RIM ed una casella vuota dove vado a confermare o a modificare il valore di RIM». E' il foglio INV che teneva a mano (una scheda per periodo, CONS = DEP + ACQ − RIM, la RIM di una scheda e' il DEP della successiva), con una cosa in piu': la RIM si aggiorna da sola. · DEP: la giacenza all'apertura. Non la sposta niente. · ACQ: ordine consegnato, fattura, carico da Prodotti. · RIM: la giacenza di adesso, che si muove con le vendite e col contenuto reale; accanto la casella per il contato, e un ✓ che conferma la RIM cosi' com'e'. · CONS: DEP + ACQ − RIM, quindi vendite, correzioni e merce mancante insieme — un numero solo, come nel foglio (scelta di Daniele, 24/09). In cima il consumo e il valore delle rimanenze in €; il consumo a settimana (REQ-MAG-024) resta sulla riga.
+Lo schema l'ha chiuso Flavio il 25/09/2026 sera, dopo tre giorni di prove sui casi veri (vocale delle 21:53): «ordine a fornitore consegnato carica il magazzino e va a finire sugli acquisti durante l'inventario in corso; su prodotti il carico e' solo positivo e va a finire sugli acquisti nell'inventario; il contenuto reale serve per fare le modifiche sia in positivo sia in negativo, e va sulle rimanenze di magazzino nell'inventario, quindi mi modifica sia la rimanenza sia il consumato». E il 24/09: «i dati da visualizzare sono DEP, ACQ, CONS, RIM ed una casella vuota dove vado a confermare o a modificare il valore di RIM». E' il foglio INV che teneva a mano (una scheda per periodo, CONS = DEP + ACQ − RIM, la RIM di una scheda e' il DEP della successiva), con una cosa in piu': la RIM si aggiorna da sola. · DEP: la giacenza all'apertura. Non la sposta niente. · ACQ: ordine consegnato, fattura, carico da Prodotti. · RIM: la giacenza di adesso, che si muove con le vendite e col contenuto reale; accanto la casella per il contato, e un ✓ che conferma la RIM cosi' com'e'. · CONS: DEP + ACQ − RIM, quindi vendite, correzioni e merce mancante insieme — un numero solo, come nel foglio (scelta di Daniele, 24/09). In cima il valore delle rimanenze e il consumo in €; il consumo a settimana (REQ-MAG-024) resta sulla riga.
+
+IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato me ne faccio poco, mi serve piu' vedere in grassetto la rimanenza». In grassetto la RIM di ogni riga e il valore delle rimanenze in cima, non piu' il consumo.
 
 LA STRADA FATTA PRIMA, perche' non si rifaccia: il 23/09 Flavio aveva chiesto di separare il venduto dalla differenza, e per un giorno la riga ha detto DEP · ACQ · VENDUTO · ATTESO · DIFFERENZA; il 24 di far ripartire il prodotto dal contenuto reale. Tutte e due le forme sono state abbandonate da lui stesso: «ti sto facendo cambiare mille volte, ma poi mi capitano le situazioni e capisco dopo». Chiusa, la RIM contata diventa il DEP del prossimo inventario (vedi BUG-110, BUG-112).
 
@@ -2713,6 +2715,14 @@ LE CHIAVI NON SI RINOMINANO: sono già scritte sui documenti dei locali e nella 
 
 **Dove**: `src/components/StampaAutomatica.jsx, src/components/SettingsTab.jsx, src/components/PrinterSetup.jsx` · **Lo dimostrano**: `tests/component/StampaAutomatica.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
+#### REQ-UI-026 — Nel gestionale i testi d'aiuto usano il registro tecnico del mestiere
+
+Flavio, vocale del 29/09/2026 guardando la scheda «Modifica prodotto»: «tutti gli help che appaiono sotto sono scritti tutti quanti in un modo un po' troppo elementare. Non si può impostare in generale che tutti gli help siano in un modo un poco più erudito, un poco più tecnico?». E sulla legenda dei Prodotti: «più che "c'è" metterei "presente"». Chi compila schede, carichi e inventari e' il gestore, e i termini giusti sono i suoi: giacenza, rettifica, listino, scarico frazionato, scorta minima, contenuto nominale. I testi diventano impersonali, senza «se vuoi» e senza esempi colloquiali (per esempio «Es. 2 se vuoi l'avviso quando ne restano due» diventa «Scorta minima in pezzi», e la didascalia dice che sotto quella soglia il prodotto risulta in esaurimento e rientra nel riordino suggerito).
+
+FATTO nel Magazzino: scheda del prodotto e suoi riquadri d'aiuto, carico, contenuto reale, didascalia dell'inventario, legenda («presente»). La regola e' scritta in DESIGN.md (guardrail 3): al banco restano le parole comuni, nel gestionale il registro del mestiere. Il resto del gestionale e' REQ-UI-027.
+
+**Dove**: `src/components/InventoryManager.jsx (ItemForm, AiutoProdotto, AiutoPezzo, CaricoForm, RettificaForm), src/components/StockCountPanel.jsx, DESIGN.md` · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -3348,6 +3358,12 @@ HA UN GEMELLO, dal 22/08/2026: REQ-UI-025 dice la stessa cosa per il MOMENTO D'U
 COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impostazioni dentro un lavoro che parla d'altro rende i due cambiamenti impossibili da rileggere separatamente. Le chiavi non si rinominano (sono già scritte sui documenti dei locali): si sposta solo dove si toccano.
 
 **Dove**: `src/components/SettingsTab.jsx, src/components/ThemeSettings.jsx`
+
+#### REQ-UI-027 — Registro tecnico dei testi d'aiuto nel resto del gestionale
+
+Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre sezioni del gestionale (impostazioni, ordini fornitore, scadenzario, cassa, statistiche), secondo la regola di DESIGN.md. Non le schermate del banco, che restano a parole comuni.
+
+**Dove**: `src/components/SettingsTab.jsx, src/components/*Panel.jsx del gestionale`
 
 ### Come si lavora al progetto
 
