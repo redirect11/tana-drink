@@ -1980,6 +1980,41 @@ requirements:
       - tests/component/StatsTab.test.jsx
       - tests/unit/businessDay.test.js
       - tests/unit/magazzinoPeriodo.test.js
+  - id: REQ-STAT-004
+    title: "Statistiche per periodo: acquisti, venduto e generato per macro-categoria"
+    area: "src/components/MacroPeriodo.jsx, src/lib/macroStats.js (acquistiPerMacro, macroNelPeriodo), src/components/StatsTab.jsx"
+    description: >
+      Flavio, vocale del 30/09/2026: «quello che non vedo, che secondo me
+      ancora non l'ho messo, e' la visualizzazione nelle statistiche di
+      quello che c'e' nelle macro-categorie: vedere gli acquisti, il venduto
+      e vedere quanto mi ha generato».
+      E' il rapporto per macro del suo foglio (ACQUISTI, FATTURATO, UTILE)
+      sul periodo scelto nelle statistiche, invece che mese per mese —
+      quello resta REQ-MAG-022, nel Bilancio. Una scheda «Per
+      macro-categoria» dopo «Magazzino nel periodo», che si apre a
+      richiesta (legge ordini fornitore, prodotti, macro e carichi) e segue
+      lo stesso periodo della pagina: giornate intere o, per
+      «Personalizzato», istanti (REQ-STAT-003). Per ogni macro, piu' «Non
+      attribuito» e il totale:
+        · ACQUISTI: le righe d'ordine CONSEGNATE (quantita' ricevuta ×
+          prezzo del documento, nella data di consegna; gli ordini di prima
+          di REQ-MAG-029 da «ricevuto») e i carichi diretti da Prodotti al
+          costo del prodotto, netto IVA, spartiti coi pesi dei prodotti;
+        · VENDUTO: l'incassato delle voci di menu' della macro, IVA di
+          vendita scorporata (venditeByMacro, la stessa regola del
+          Bilancio);
+        · GENERATO: venduto − acquisti.
+      I conti non tornano col Bilancio mese per mese ne' devono: la' il
+      costo e' quello di cio' che si e' VENDUTO (le ricette), qui gli
+      acquisti sono cio' che e' ENTRATO nel periodo — la domanda di Flavio.
+      Le macro in produzione sono compilate (verificato il 30/09: 4 macro,
+      447 prodotti e 405 voci con la loro quota).
+    status: implemented
+    generate_issue: false
+    labels: [statistiche]
+    test_cases:
+      - tests/component/MacroPeriodo.test.jsx
+      - tests/unit/macroStats.test.js
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
@@ -7107,6 +7142,11 @@ requirements:
       per il 60% in una macro e per il 40% nell'altra — e quello che
       nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora
       da fare.
+      30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che
+      conta le righe CONSEGNATE per la quantita' ricevuta e nella data di
+      consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda
+      per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la
+      tabella mese per mese del Bilancio.
       GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li
       raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
       ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA
