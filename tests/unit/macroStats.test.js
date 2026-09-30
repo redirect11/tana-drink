@@ -245,8 +245,28 @@ describe('acquistiPerMacro', () => {
       ],
     }
     expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(60, 2)
-    const fuori = (t) => t >= '2026-09-25'
-    expect(acquistiPerMacro([ordine], { macros, dentro: fuori }).size).toBe(0)
+    const fuori = { dal: '2026-09-25', al: '2026-09-30' }
+    expect(acquistiPerMacro([ordine], { macros, periodo: fuori }).size).toBe(0)
+  })
+
+  // «Pagato» vuol dire consegnato E pagato: la riga resta merce entrata.
+  it('una riga consegnata e poi pagata resta un acquisto', () => {
+    const ordine = {
+      status: 'inviato',
+      lines: [{ item_id: 'gin', unit_cost: 20, qty_packages: 2, stato: 'pagato', delivered_at: '2026-09-20T10:00:00.000Z' }],
+    }
+    expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(40, 2)
+  })
+
+  // Un carico di un prodotto contato a volume vale per bottiglie, non per
+  // millilitri: 700 ml da una bottiglia da 700 a 20 € sono 20 €.
+  it('un carico si valorizza per pezzi, anche su un prodotto a volume', () => {
+    const acc = acquistiPerMacro([], {
+      macros,
+      itemsById: { gin: { id: 'gin', unit: 'ml', package_size: 700, cost: 20 } },
+      movimenti: [{ item_id: 'gin', type: 'load', qty: 700, unit: 'ml', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' }],
+    })
+    expect(acc.get('mm-alc')).toBeCloseTo(20, 2)
   })
 
   // Il carico da Prodotti è merce comprata anche senza ordine (Flavio,
@@ -254,7 +274,7 @@ describe('acquistiPerMacro', () => {
   it('conta anche i carichi diretti, al costo del prodotto', () => {
     const acc = acquistiPerMacro([], {
       macros,
-      items: [{ id: 'gin', unit: 'pz', cost: 20 }],
+      itemsById: { gin: { id: 'gin', unit: 'pz', cost: 20 } },
       movimenti: [
         { item_id: 'gin', type: 'load', qty: 2, unit: 'pz', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' },
         // Le consegne hanno già la loro riga d'ordine: non si contano due volte.

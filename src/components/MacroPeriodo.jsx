@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   fetchInventoryItems,
   fetchMacroCategories,
@@ -6,8 +6,7 @@ import {
   fetchStockMovementsSince,
 } from '../lib/api.js'
 import { macroNelPeriodo } from '../lib/macroStats.js'
-import { businessDayKey } from '../lib/businessDay.js'
-import { shiftDay } from '../lib/ore.js'
+import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 // ── ACQUISTI, VENDUTO E GENERATO PER MACRO-CATEGORIA (REQ-STAT-004) ───
@@ -25,44 +24,20 @@ import { formatPrice } from '../lib/orderStatus.js'
 // o istanti (da/a) per «Personalizzato». I conti arrivano già tagliati
 // (`ordini`); gli acquisti si tagliano qui, sulla data di consegna o del
 // carico.
+// Quello che serve: ordini fornitore, articoli e macro (non dipendono dal
+// periodo) e i movimenti di carico dal primo istante.
+const leggi = (dove) =>
+  Promise.all([fetchPurchaseOrders(), fetchInventoryItems(), fetchMacroCategories(), fetchStockMovementsSince(dove)]).then(
+    ([ordiniFornitore, items, macros, movimenti]) => ({ ordiniFornitore, items, macros, movimenti })
+  )
+
 export default function MacroPeriodo({ ordini, drinksById, dal, al, da = null, a = null, cutoffHour, saleVat = 0 }) {
   const [aperto, setAperto] = useState(false)
-  // Quello che si è letto, e da quando: `{ ordiniFornitore, items, macros, movimenti, dove }`.
-  const [letti, setLetti] = useState(null)
-  const [caricando, setCaricando] = useState(false)
-  const [errore, setErrore] = useState(null)
-
-  // I carichi si leggono dal primo istante del periodo (un giorno di
-  // margine sulle giornate, come in «Magazzino nel periodo»); si rilegge
-  // solo se si guarda più indietro.
-  const dove = da || `${shiftDay(dal, -1)}T00:00:00.000Z`
-  const bastaQuelloCheCe = letti && letti.dove <= dove
-  useEffect(() => {
-    if (!aperto || bastaQuelloCheCe) return undefined
-    let vivo = true
-    setCaricando(true)
-    setErrore(null)
-    Promise.all([fetchPurchaseOrders(), fetchInventoryItems(), fetchMacroCategories(), fetchStockMovementsSince(dove)])
-      .then(([ordiniFornitore, items, macros, movimenti]) => {
-        if (vivo) setLetti({ ordiniFornitore, items, macros, movimenti, dove })
-      })
-      .catch((e) => vivo && setErrore(e.message))
-      .finally(() => vivo && setCaricando(false))
-    return () => {
-      vivo = false
-    }
-  }, [aperto, dove, bastaQuelloCheCe])
+  // A richiesta, e si rilegge solo se si guarda più indietro.
+  const { letti, caricando, errore } = useLetturaDelPeriodo(aperto, { dal, da }, leggi)
 
   const dati = useMemo(() => {
     if (!letti) return null
-    // Una consegna o un carico cadono nel periodo? All'ora se il periodo è
-    // fatto di istanti, alla giornata commerciale se no.
-    const dentro = (t) => {
-      if (!t) return false
-      if (da) return t >= da && (!a || t < a)
-      const g = businessDayKey(t, cutoffHour)
-      return !!g && g >= dal && g <= al
-    }
     return macroNelPeriodo({
       orders: ordini,
       purchaseOrders: letti.ordiniFornitore,
@@ -71,7 +46,7 @@ export default function MacroPeriodo({ ordini, drinksById, dal, al, da = null, a
       drinksById,
       macros: letti.macros,
       saleVat,
-      dentro,
+      periodo: { dal, al, da, a, cutoffHour },
     })
   }, [letti, ordini, drinksById, dal, al, da, a, cutoffHour, saleVat])
 
