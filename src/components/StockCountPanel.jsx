@@ -249,12 +249,15 @@ export default function StockCountPanel() {
               {computed.totals.counted}/{open.lines.length}
             </div>
             <div className="muted small">
-              Consumo: <strong>{formatPrice(computed.totals.cons_value)}</strong>
-              {' · '}Valore rimanenze: {formatPrice(computed.totals.rim_value)}
+              {/* IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato
+                  me ne faccio poco, mi serve più vedere in grassetto la
+                  rimanenza». */}
+              Valore rimanenze: <strong>{formatPrice(computed.totals.rim_value)}</strong>
+              {' · '}Consumo: {formatPrice(computed.totals.cons_value)}
             </div>
             <p className="muted small" style={{ margin: '6px 0 0' }}>
-              RIM è quanto risulta adesso in magazzino. Nella casella si scrive quanto se ne conta
-              davvero, oppure si conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
+              RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si
+              conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
             </p>
           </div>
 
@@ -344,7 +347,7 @@ const RigaInventario = memo(
           <div className="grow">
             <div className="inv-name">{l.name}</div>
             <div className="muted small">
-              DEP {q(l.dep)} · ACQ {q(l.acq)} · CONS <strong>{q(l.cons)}</strong> · RIM {q(l.atteso)}
+              DEP {q(l.dep)} · ACQ {q(l.acq)} · CONS {q(l.cons)} · RIM <strong>{q(l.atteso)}</strong>
               {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
                   cui si decide quanto ordinare. */}
               {l.cons_week != null && ` · ${q(l.cons_week)} a settimana`}

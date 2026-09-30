@@ -1148,7 +1148,8 @@ function ProductsPanel() {
       {!loading && (
         <div className="inv-legenda muted small">
           <span className="inv-legenda-gruppo">
-            <span className="dot dot-ok" aria-hidden /> c’è
+            {/* «Presente», non «c'è» (Flavio, 29/09/2026). */}
+            <span className="dot dot-ok" aria-hidden /> presente
             <span className="dot dot-low" aria-hidden /> in esaurimento
             <span className="dot dot-empty" aria-hidden /> esaurito
           </span>
@@ -1845,7 +1846,8 @@ function RettificaForm({ item, onCancel, onConfirm }) {
         )}
       </div>
       <p className="muted small" style={{ margin: '4px 0 0' }}>
-        Quantità totale in giacenza dopo la conta (sostituisce quella attuale).
+        Giacenza effettiva rilevata: sostituisce quella registrata, e la
+        differenza viene registrata come rettifica.
       </p>
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
@@ -1932,7 +1934,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
         <span>
           Carico a colli
-          <span className="muted small"> — un cartone, una cassa</span>
+          <span className="muted small"> — cartoni o casse da più pezzi</span>
         </span>
         <input
           type="checkbox"
@@ -1963,11 +1965,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 min="0"
                 value={perCollo}
                 onChange={(e) => onCollo(e.target.value)}
-                placeholder="Es. 24"
+                placeholder="24"
               />
             </div>
             <div>
-              <label htmlFor="cf-cartoni">Quanti colli arrivano?</label>
+              <label htmlFor="cf-cartoni">Colli ricevuti</label>
               <input
                 id="cf-cartoni"
                 type="number"
@@ -1975,7 +1977,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
                 min="0"
                 value={cartoni}
                 onChange={(e) => setCartoni(e.target.value)}
-                placeholder="Es. 2"
+                placeholder="2"
               />
             </div>
           </div>
@@ -1987,7 +1989,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
             min="0"
             value={colloTot}
             onChange={(e) => onTot(e.target.value)}
-            placeholder="Prezzo del cartone dal fornitore"
+            placeholder="Prezzo netto del collo da listino"
           />
           {perN > 0 && num(cartoni) > 0 && (
             <div className="muted small" style={{ marginTop: 4 }}>
@@ -2000,7 +2002,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* A colli la quantità la fa il conto: si legge, non si scrive.
           Cambiarla a mano vorrebbe dire caricare un numero che non torna
           con quello che è arrivato. */}
-      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quanto aggiungi?</label>
+      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quantità caricata</label>
       <div className="row" style={{ gap: 6 }}>
         <input
           id="cf-pezzi"
@@ -2042,7 +2044,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       <div className="card" style={{ marginTop: 10, padding: 10 }}>
-        <div className="muted small">💶 Prezzo — aggiorna se il fornitore l'ha cambiato</div>
+        <div className="muted small">💶 Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
         <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
         <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
         {unitN > 0 && (
@@ -2108,31 +2110,32 @@ function AiutoProdotto({ onClose }) {
 
         <h4 style={{ margin: '14px 0 2px' }}>Si conta sempre a pezzi</h4>
         <p className="small" style={{ margin: 0 }}>
-          Il pezzo è quello che si prende in mano: un cubetto, un limone, una
-          bottiglia, un barattolo. La giacenza è in pezzi per tutti, e non si
-          sceglie: così l&apos;inventario si fa contando quello che c&apos;è
-          sullo scaffale.
+          L&apos;unità di giacenza è il pezzo, cioè l&apos;unità fisica di
+          stoccaggio: bottiglia, lattina, barattolo, limone, cubetto. È la
+          stessa per tutti i prodotti, così che l&apos;inventario coincida con
+          il conteggio a scaffale.
         </p>
 
         <h4 style={{ margin: '14px 0 2px' }}>A quanto corrisponde un pezzo</h4>
         <p className="small" style={{ margin: 0 }}>
-          Quanto contiene: una bottiglia 70 cl, un cubetto 8 g, una confezione
-          10 U. Da qui escono il costo al cl e lo scarico di quello che si
-          versa. Si può lasciare vuoto: allora in ricetta si dosa solo a pezzi.
+          Contenuto nominale del pezzo (bottiglia 70 cl, cubetto 8 g,
+          confezione 10 U). Determina il costo per unità di contenuto e lo
+          scarico frazionato delle dosi. Facoltativo: senza contenuto il
+          prodotto si dosa solo a pezzi interi.
         </p>
 
         <h4 style={{ margin: '14px 0 2px' }}>Il collo si dichiara al carico</h4>
         <p className="small" style={{ margin: 0 }}>
-          Quanti pezzi ci sono nella confezione che si compra — 24 birre, 30
-          cubetti, una cassetta di limoni — si scrive quando la merce arriva,
-          col prezzo del cartone: il conto al pezzo lo fa la scheda del carico.
+          Il numero di pezzi per collo (cartone da 24, busta da 30) si indica
+          al momento del carico, insieme al prezzo del collo: il costo
+          unitario viene ricavato dal carico stesso.
         </p>
 
         <h4 style={{ margin: '14px 0 2px' }}>La merce a peso si stima</h4>
         <p className="small" style={{ margin: 0 }}>
-          Comprando a chili si carica a chili, e i pezzi si ricavano dal
-          contenuto: un limone non pesa sempre uguale, quindi «47 pz» è una
-          stima. Va benissimo finché quello che conta davvero è il peso.
+          La merce acquistata a peso si carica a peso; i pezzi derivano dal
+          peso unitario nominale e sono quindi una stima. Il dato di
+          riferimento resta il peso.
         </p>
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
@@ -2164,24 +2167,24 @@ function AiutoPezzo({ onClose }) {
       >
         <h3 style={{ marginTop: 0 }}>A quanto corrisponde un pezzo</h3>
         <p className="small" style={{ marginTop: 0 }}>
-          È <strong>quanto contiene</strong> un pezzo: un pz da 100 cl, un
-          cubetto da 8 g, una confezione da 10 U. Non è quanto ne va in un
-          drink: quello si decide nella ricetta, drink per drink.
+          È il <strong>contenuto nominale</strong> di un pezzo: bottiglia da
+          100 cl, cubetto da 8 g, confezione da 10 U. Non è la dose, che si
+          definisce nella ricetta di ciascun drink.
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Se lo scrivi</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>Con il contenuto indicato</h4>
         <p className="small" style={{ margin: 0 }}>
-          Nelle ricette puoi scegliere l&apos;unità: a <strong>pezzi</strong>
-          (una lattina intera) o nell&apos;unità del contenuto —{' '}
-          <strong>cl</strong>, g, U. Versando 4 cl da un pz da 100 cl il
-          magazzino scala 0,04 pezzi, e si sa quanto costa al cl.
+          In ricetta la dose si esprime a <strong>pezzi</strong> o
+          nell&apos;unità del contenuto (<strong>cl</strong>, g, U). Lo scarico
+          è proporzionale — 4 cl da un pezzo da 100 cl scaricano 0,04 pz — e il
+          costo è calcolato per unità di contenuto.
         </p>
 
-        <h4 style={{ margin: '14px 0 2px' }}>Se lo lasci vuoto</h4>
+        <h4 style={{ margin: '14px 0 2px' }}>Senza contenuto</h4>
         <p className="small" style={{ margin: 0 }}>
-          Nelle ricette si dosa <strong>solo a pezzi</strong>: è il caso della
-          birra che si serve intera. Il costo resta quello del pezzo, e non
-          c&apos;è nessun costo al cl da calcolare.
+          La dose si esprime <strong>solo a pezzi interi</strong> (per esempio
+          la birra servita in bottiglia). Il costo resta quello del pezzo, senza
+          costo per unità di contenuto.
         </p>
 
         <button type="button" className="btn block" style={{ marginTop: 16 }} onClick={onClose}>
@@ -2401,8 +2404,8 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
 
       <label htmlFor="isup">Fornitore</label>
       <p className="muted small" style={{ marginTop: 0 }}>
-        Va nel listino di questo fornitore, col prezzo qui sotto. Gli altri
-        fornitori dello stesso prodotto restano dove sono.
+        Il prezzo indicato aggiorna il listino di questo fornitore. I listini
+        degli altri fornitori del prodotto restano invariati.
       </p>
       {nuovoFornitore != null ? (
         <div className="row" style={{ gap: 8 }}>
@@ -2501,7 +2504,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           className="grow"
           value={form.content_size}
           onChange={set('content_size')}
-          placeholder="Es. 70 per un pz da 70 cl"
+          placeholder="Contenuto nominale, es. 70"
         />
         <select
           value={form.content_unit}
@@ -2516,15 +2519,16 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       </div>
       <p className="muted small" style={{ margin: '2px 0 8px' }}>
         {contenutoPezzo > 0
-          ? 'Da qui escono il costo al cl e lo scarico: 4 cl da un pz da 70 scalano la loro frazione.'
-          : 'Vuoto: in ricetta si dosa solo a pezzi, e non c’è nessun costo al cl da calcolare.'}
+          ? 'Base del costo per unità di contenuto e dello scarico frazionato: 4 cl da un pezzo da 70 cl scaricano 0,057 pz.'
+          : 'Senza contenuto il prodotto si dosa solo a pezzi interi e non ha un costo per unità di contenuto.'}
       </p>
       {/* L'AVVERTENZA ONESTA: chi legge «47 pz» di limoni deve sapere che
           nessuno li ha contati uno per uno. */}
       {aPeso && (
         <p className="muted small" style={{ margin: '-4px 0 8px' }}>
-          ⚖️ Comprato a peso, il conteggio in pezzi è una <strong>stima</strong>:
-          un pezzo non pesa sempre uguale. Quello che conta davvero resta il peso.
+          ⚖️ Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
+          perché il peso unitario non è costante. Il dato di riferimento resta il
+          peso.
         </p>
       )}
 
@@ -2574,7 +2578,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
                 min="0"
                 value={form.open_content}
                 onChange={set('open_content')}
-                placeholder="Es. 40 se una è aperta a metà"
+                placeholder="Contenuto residuo della confezione aperta"
               />
             </>
           )}
@@ -2589,10 +2593,11 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         min="0"
         value={form.low_threshold}
         onChange={set('low_threshold')}
-        placeholder="Es. 2 se vuoi l’avviso quando ne restano due"
+        placeholder="Scorta minima in pezzi"
       />
       <p className="muted small" style={{ margin: '2px 0 8px' }}>
-        Sotto questo livello l’articolo compare fra quelli in esaurimento.
+        Scorta minima: al di sotto il prodotto risulta in esaurimento e
+        rientra nel riordino suggerito.
       </p>
 
       {avviso && (

@@ -1,9 +1,14 @@
 # Cosa è cambiato
 
-## 1.8.1-beta
+## 1.8.2-beta
 
 ### Per chi amministra
 
+- **Nell'inventario è in evidenza la rimanenza**: in grassetto la RIM di
+  ogni prodotto e il valore delle rimanenze in cima, al posto del consumo.
+- **Nel Magazzino i testi d'aiuto usano i termini del mestiere** — scheda
+  del prodotto, carico, contenuto reale, inventario — e nella legenda dei
+  Prodotti «c'è» diventa «presente».
 - **L'inventario è come il foglio INV: DEP · ACQ · CONS · RIM.** DEP è la
   giacenza all'apertura, ACQ la merce entrata (ordini consegnati e carichi
   da Prodotti), RIM quanto c'è adesso — si aggiorna da sola con le vendite
