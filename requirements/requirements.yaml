@@ -11331,6 +11331,46 @@ requirements:
       - tests/component/StampaAutomatica.test.jsx
       - tests/component/SettingsTab.test.jsx
 
+  - id: REQ-UI-026
+    title: "Nel gestionale i testi d'aiuto usano il registro tecnico del mestiere"
+    area: "src/components/InventoryManager.jsx (ItemForm, AiutoProdotto, AiutoPezzo, CaricoForm, RettificaForm), src/components/StockCountPanel.jsx, DESIGN.md"
+    description: >
+      Flavio, vocale del 29/09/2026 guardando la scheda «Modifica prodotto»:
+      «tutti gli help che appaiono sotto sono scritti tutti quanti in un
+      modo un po' troppo elementare. Non si può impostare in generale che
+      tutti gli help siano in un modo un poco più erudito, un poco più
+      tecnico?». E sulla legenda dei Prodotti: «più che "c'è" metterei
+      "presente"».
+      Chi compila schede, carichi e inventari e' il gestore, e i termini
+      giusti sono i suoi: giacenza, rettifica, listino, scarico frazionato,
+      scorta minima, contenuto nominale. I testi diventano impersonali, senza
+      «se vuoi» e senza esempi colloquiali (per esempio «Es. 2 se vuoi
+      l'avviso quando ne restano due» diventa «Scorta minima in pezzi», e la
+      didascalia dice che sotto quella soglia il prodotto risulta in
+      esaurimento e rientra nel riordino suggerito).
+      FATTO nel Magazzino: scheda del prodotto e suoi riquadri d'aiuto,
+      carico, contenuto reale, didascalia dell'inventario, legenda
+      («presente»). La regola e' scritta in DESIGN.md (guardrail 3): al
+      banco restano le parole comuni, nel gestionale il registro del
+      mestiere. Il resto del gestionale e' REQ-UI-027.
+    status: implemented
+    generate_issue: false
+    labels: [ui]
+    test_cases:
+      - tests/component/InventoryManagerCard.test.jsx
+  - id: REQ-UI-027
+    title: "Registro tecnico dei testi d'aiuto nel resto del gestionale"
+    area: "src/components/SettingsTab.jsx, src/components/*Panel.jsx del gestionale"
+    description: >
+      Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre
+      sezioni del gestionale (impostazioni, ordini fornitore, scadenzario,
+      cassa, statistiche), secondo la regola di DESIGN.md. Non le schermate
+      del banco, che restano a parole comuni.
+    status: todo
+    priority: P3
+    generate_issue: true
+    labels: [ui]
+    test_cases: []
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -11758,8 +11798,12 @@ requirements:
         · CONS: DEP + ACQ − RIM, quindi vendite, correzioni e merce
           mancante insieme — un numero solo, come nel foglio (scelta di
           Daniele, 24/09).
-      In cima il consumo e il valore delle rimanenze in €; il consumo a
+      In cima il valore delle rimanenze e il consumo in €; il consumo a
       settimana (REQ-MAG-024) resta sulla riga.
+      IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato me ne
+      faccio poco, mi serve piu' vedere in grassetto la rimanenza». In
+      grassetto la RIM di ogni riga e il valore delle rimanenze in cima, non
+      piu' il consumo.
       LA STRADA FATTA PRIMA, perche' non si rifaccia: il 23/09 Flavio aveva
       chiesto di separare il venduto dalla differenza, e per un giorno la
       riga ha detto DEP · ACQ · VENDUTO · ATTESO · DIFFERENZA; il 24 di far

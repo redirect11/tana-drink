@@ -492,7 +492,7 @@ describe('carico: il collo dietro un interruttore', () => {
     await apriCarico(user)
     expect(screen.getByRole('checkbox', { name: /Carico a colli/ })).not.toBeChecked()
     expect(screen.queryByLabelText(/per collo/)).toBeNull()
-    expect(screen.getByLabelText(/Quanto aggiungi/)).not.toHaveAttribute('readonly')
+    expect(screen.getByLabelText(/Quantità caricata/)).not.toHaveAttribute('readonly')
   })
 
   it('acceso, il collo sta SOPRA e i pezzi si contano da soli', async () => {
@@ -501,10 +501,10 @@ describe('carico: il collo dietro un interruttore', () => {
     await user.click(screen.getByRole('checkbox', { name: /Carico a colli/ }))
 
     const perCollo = screen.getByLabelText(/Pezzi per collo/)
-    const colli = screen.getByLabelText(/Quanti colli arrivano/)
+    const colli = screen.getByLabelText(/Colli ricevuti/)
     // Il riquadro del collo viene prima della quantità, che è l'ordine in cui
     // si guarda il cartone.
-    const pezzi = screen.getByLabelText(/Quanto aggiungi/)
+    const pezzi = screen.getByLabelText(/Quantità caricata/)
     expect(perCollo.compareDocumentPosition(pezzi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     await user.type(perCollo, '24')
@@ -540,7 +540,7 @@ describe('carico e rettifica si scrivono nell’unità che si ha in mano', () =>
     expect([...unita.options].map((o) => o.value)).toEqual(['pz', 'cl'])
 
     await user.selectOptions(unita, 'cl')
-    await user.type(screen.getByLabelText(/Quanto aggiungi/), '250')
+    await user.type(screen.getByLabelText(/Quantità caricata/), '250')
     // Il Campari è una bottiglia da 100 cl: 250 cl sono due pezzi e mezzo, e
     // il numero si legge PRIMA di confermare.
     expect(screen.getByText('2,5 pz')).toBeInTheDocument()
@@ -563,7 +563,7 @@ describe('carico e rettifica si scrivono nell’unità che si ha in mano', () =>
     const { fetchInventoryItems } = await import('../../src/lib/api.js')
     await apriCarico(user)
     fetchInventoryItems.mockClear()
-    await user.type(screen.getByLabelText(/Quanto aggiungi/), '2')
+    await user.type(screen.getByLabelText(/Quantità caricata/), '2')
     await user.click(screen.getByRole('button', { name: /Conferma carico/ }))
     // La finestrella si chiude nell'istante del tocco…
     await waitFor(() => expect(screen.queryByRole('button', { name: /Conferma carico/ })).toBeNull())
@@ -601,14 +601,16 @@ describe('il contenuto di un pezzo, spiegato', () => {
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: '+ Nuovo prodotto' }))
 
-    // A vuoto la didascalia dice cosa succede a lasciarlo vuoto.
-    expect(screen.getByText(/in ricetta si dosa solo a pezzi/)).toBeInTheDocument()
+    // A vuoto la didascalia dice cosa succede a lasciarlo vuoto. Le parole
+    // sono quelle tecniche chieste da Flavio il 29/09/2026 («gli help sono
+    // scritti in un modo un po' troppo elementare»): il senso è lo stesso.
+    expect(screen.getByText(/si dosa solo a pezzi interi/)).toBeInTheDocument()
     await user.type(screen.getByLabelText(/A quanto corrisponde un pezzo/), '70')
-    expect(screen.getByText(/scalano la loro frazione/)).toBeInTheDocument()
+    expect(screen.getByText(/scarico frazionato/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /Come funziona il contenuto di un pezzo/ }))
     const box = await screen.findByRole('dialog', { name: /A quanto corrisponde un pezzo/ })
-    expect(within(box).getByText(/Se lo lasci vuoto/)).toBeInTheDocument()
+    expect(within(box).getByText(/Senza contenuto/)).toBeInTheDocument()
     expect(within(box).getByText(/solo a pezzi/)).toBeInTheDocument()
   })
 })
@@ -721,5 +723,16 @@ describe('il fornitore si aggiunge dalla tendina del prodotto', () => {
     await user.click(screen.getByRole('button', { name: '✕' }))
     expect(createSupplier).not.toHaveBeenCalled()
     expect(screen.getByLabelText('Fornitore')).toBeInTheDocument()
+  })
+})
+
+// ── LA LEGENDA DEI PRODOTTI (REQ-UI-026) ─────────────────────────────
+// Flavio, 29/09/2026: «più che "c'è" metterei "presente"».
+describe('la legenda dei prodotti', () => {
+  it('il pallino verde dice «presente»', async () => {
+    render(<InventoryManager />)
+    await screen.findByText('Campari')
+    expect(document.body.textContent).toMatch(/presente/)
+    expect(document.body.textContent).not.toMatch(/c’è\s*in esaurimento/)
   })
 })

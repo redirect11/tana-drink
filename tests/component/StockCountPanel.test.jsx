@@ -188,6 +188,10 @@ describe('le quattro colonne', () => {
     await screen.findByText(/Inventario in corso/)
     const riga = screen.getByText('Jagermeister').closest('.inv-row').textContent
     expect(riga).toMatch(/DEP 3,2 pz · ACQ 0 pz · CONS 0,4 pz · RIM 2,8 pz/)
+    // In evidenza la rimanenza, non il consumo (Flavio, 29/09/2026: «il
+    // consumato me ne faccio poco»).
+    const riquadro = screen.getByText('Jagermeister').closest('.inv-row')
+    expect([...riquadro.querySelectorAll('strong')].map((s) => s.textContent)).toEqual(['2,8 pz'])
   })
 
   // Il 400 Conigli e l'acqua del 21/09: la rettifica della chiusura
