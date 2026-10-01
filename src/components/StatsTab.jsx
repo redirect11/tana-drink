@@ -27,6 +27,8 @@ import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
+import MacroPeriodo from './MacroPeriodo.jsx'
+import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -150,6 +152,10 @@ function DailyStats({ sezione = 'serate' }) {
     const a = istanteDaOraDiRoma(periodo.alle)
     return da && a && da < a ? { da, a } : null
   }, [personalizzato, periodo.dalle, periodo.alle])
+  // IL PERIODO IN UN OGGETTO SOLO: le giornate (dal/al) e, per
+  // «Personalizzato», gli istanti (da/a). Lo leggono le giornate a cassa
+  // aperta qui e le schede di magazzino e macro qui sotto.
+  const intervallo = useMemo(() => ({ dal: periodo.dal, al: periodo.al, ...istanti }), [periodo.dal, periodo.al, istanti])
   // «Personalizzato» parte da quello che si stava guardando, scritto all'ora.
   const apriPersonalizzato = () =>
     setPeriodo((p) =>
@@ -298,9 +304,22 @@ function DailyStats({ sezione = 'serate' }) {
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
     return {
       sel,
+      // I conti del periodo, per chi fa i suoi conti a parte (le macro).
+      ord,
+      drinksById,
       kpi: kpiSummary(ord, sel),
       byHour: revenueByHour(ord, hourRange),
-      byDay: revenueByDay(ord, cutoff),
+      // Le giornate con la cassa aperta ci sono anche senza conti, a zero
+      // (REQ-STAT-005): una serata a incasso zero è un dato, non un buco.
+      byDay: revenueByDay(ord, cutoff, {
+        // Un periodo personalizzato scritto male non ha giornate.
+        giorniConCassa:
+          serata || (personalizzato && !istanti)
+            ? []
+            : sessions
+                .filter((x) => nelPeriodo(x.opened_at, { ...intervallo, cutoffHour: cutoff }))
+                .map((x) => businessDayKey(x.opened_at, cutoff)),
+      }),
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
       // La classifica INTERA, che è un'altra cosa dai primi dieci a grafico:
@@ -319,7 +338,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, hourRange, dayRange, cutoff, serata])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -361,6 +380,7 @@ function DailyStats({ sezione = 'serate' }) {
             al: businessDayKey(serata.closed_at || new Date(), cutoff),
           }}
           cutoff={cutoff}
+          saleVat={settings.sale_vat}
         />
       </div>
     )
@@ -431,8 +451,9 @@ function DailyStats({ sezione = 'serate' }) {
       <CorpoStatistiche
         view={view}
         comandi={comandi}
-        intervallo={{ dal: periodo.dal, al: periodo.al, ...istanti }}
+        intervallo={intervallo}
         cutoff={cutoff}
+        saleVat={settings.sale_vat}
       />
     </div>
   )
@@ -547,7 +568,7 @@ function ClassificaVenduto({ righe }) {
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
+function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
@@ -582,7 +603,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           data={byHour.buckets.map((b) => ({
             label: b.label,
             value: b.incasso,
-            sub: `${b.ordini} ordini`,
+            sub: `${b.ordini} comande`,
           }))}
           format={fmtShort}
         />
@@ -633,7 +654,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           data={byDayRange.map((s) => ({
             label: `${s.weekday} ${s.label}`,
             value: s.incasso,
-            sub: `${s.ordini} ordini`,
+            sub: `${s.ordini} comande`,
           }))}
           format={fmtShort}
         />
@@ -679,6 +700,19 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           da={intervallo.da}
           a={intervallo.a}
           cutoffHour={cutoff}
+        />
+      )}
+      {/* Acquisti, venduto e generato per macro (REQ-STAT-004). */}
+      {intervallo?.dal && intervallo?.al && (
+        <MacroPeriodo
+          ordini={view.ord}
+          drinksById={view.drinksById}
+          dal={intervallo.dal}
+          al={intervallo.al}
+          da={intervallo.da}
+          a={intervallo.a}
+          cutoffHour={cutoff}
+          saleVat={saleVat}
         />
       )}
 

@@ -3,7 +3,8 @@ import {
   aliquotaDiVendita,
   lineByMacro,
   venditeByMacro,
-  purchasesByMacro,
+  acquistiPerMacro,
+  macroNelPeriodo,
   macroMonthlyReport,
   UNASSIGNED,
 } from '../../src/lib/macroStats.js'
@@ -200,7 +201,7 @@ describe('venditeByMacro', () => {
 // domanda vera, ma è delle fatture, non della tabella del venduto. Ed è
 // qui che un prodotto può stare per il 60% in una macro e per il 40%
 // nell'altra.
-describe('purchasesByMacro', () => {
+describe('acquistiPerMacro', () => {
   const pos = [
     {
       status: 'ricevuto',
@@ -211,24 +212,95 @@ describe('purchasesByMacro', () => {
     },
     { status: 'inviato', lines: [{ item_id: 'gin', unit_cost: 21, qty_packages: 5 }] },
   ]
-  it('somma per macro, coi pesi dei prodotti, solo gli ordini ricevuti', () => {
-    const acc = purchasesByMacro(pos, { macros })
+  // Gli ordini di prima di REQ-MAG-029 avevano lo stato solo sull'ordine.
+  it('somma per macro, coi pesi dei prodotti, solo la merce entrata', () => {
+    const acc = acquistiPerMacro(pos, { macros })
     // 42 di gin + il 40% dei 12 di Schweppes.
     expect(acc.get('mm-alc')).toBeCloseTo(46.8, 2)
     expect(acc.get('mm-bib')).toBeCloseTo(7.2, 2)
   })
 
   it('non si perde niente: la somma delle macro è la spesa ricevuta', () => {
-    const acc = purchasesByMacro(pos, { macros })
+    const acc = acquistiPerMacro(pos, { macros })
     expect([...acc.values()].reduce((s, v) => s + v, 0)).toBeCloseTo(54, 2)
   })
 
   it('un prodotto senza peso in nessuna macro va a «non attribuito»', () => {
-    const acc = purchasesByMacro(
+    const acc = acquistiPerMacro(
       [{ status: 'ricevuto', lines: [{ item_id: 'ghiaccio', unit_cost: 2, qty_packages: 3 }] }],
       { macros }
     )
     expect(acc.get(UNASSIGNED)).toBeCloseTo(6, 2)
+  })
+
+  // DAL 29/08 LA CONSEGNA È RIGA PER RIGA (REQ-MAG-029), e una riga può
+  // arrivare in parte: conta quello che è arrivato, al prezzo del
+  // documento, nel giorno in cui è arrivato.
+  it('conta le righe consegnate per quello che è arrivato, quando è arrivato', () => {
+    const ordine = {
+      status: 'inviato',
+      lines: [
+        { item_id: 'gin', unit_cost: 20, qty_packages: 5, qty_received: 3, stato: 'consegnato', delivered_at: '2026-09-20T10:00:00.000Z' },
+        { item_id: 'gin', unit_cost: 20, qty_packages: 5, stato: 'richiesto' },
+      ],
+    }
+    expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(60, 2)
+    const fuori = { dal: '2026-09-25', al: '2026-09-30' }
+    expect(acquistiPerMacro([ordine], { macros, periodo: fuori }).size).toBe(0)
+  })
+
+  // «Pagato» vuol dire consegnato E pagato: la riga resta merce entrata.
+  it('una riga consegnata e poi pagata resta un acquisto', () => {
+    const ordine = {
+      status: 'inviato',
+      lines: [{ item_id: 'gin', unit_cost: 20, qty_packages: 2, stato: 'pagato', delivered_at: '2026-09-20T10:00:00.000Z' }],
+    }
+    expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(40, 2)
+  })
+
+  // Un carico di un prodotto contato a volume vale per bottiglie, non per
+  // millilitri: 700 ml da una bottiglia da 700 a 20 € sono 20 €.
+  it('un carico si valorizza per pezzi, anche su un prodotto a volume', () => {
+    const acc = acquistiPerMacro([], {
+      macros,
+      itemsById: { gin: { id: 'gin', unit: 'ml', package_size: 700, cost: 20 } },
+      movimenti: [{ item_id: 'gin', type: 'load', qty: 700, unit: 'ml', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' }],
+    })
+    expect(acc.get('mm-alc')).toBeCloseTo(20, 2)
+  })
+
+  // Il carico da Prodotti è merce comprata anche senza ordine (Flavio,
+  // 25/09/2026): entra negli acquisti al costo del prodotto.
+  it('conta anche i carichi diretti, al costo del prodotto', () => {
+    const acc = acquistiPerMacro([], {
+      macros,
+      itemsById: { gin: { id: 'gin', unit: 'pz', cost: 20 } },
+      movimenti: [
+        { item_id: 'gin', type: 'load', qty: 2, unit: 'pz', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' },
+        // Le consegne hanno già la loro riga d'ordine: non si contano due volte.
+        { item_id: 'gin', type: 'load', qty: 5, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-09-20T10:00:00.000Z' },
+      ],
+    })
+    expect(acc.get('mm-alc')).toBeCloseTo(40, 2)
+  })
+})
+
+// Flavio, 30/09/2026: «vedere gli acquisti, il venduto e quanto mi ha
+// generato» per macro, nel periodo delle statistiche (REQ-STAT-004).
+describe('macroNelPeriodo', () => {
+  it('per ogni macro acquisti, venduto e generato = venduto − acquisti', () => {
+    const { righe, totale } = macroNelPeriodo({
+      orders: [{ status: 'pagato', created_at: '2026-09-20T20:00:00Z', order_items: [riga('gintonic', 2, 10)] }],
+      purchaseOrders: [{ status: 'ricevuto', lines: [{ item_id: 'gin', unit_cost: 5, qty_packages: 1 }] }],
+      items: [],
+      drinksById,
+      macros,
+    })
+    const alc = righe.find((r) => r.id === 'mm-alc')
+    expect(alc.acquisti).toBe(5)
+    expect(alc.venduto).toBe(20)
+    expect(alc.generato).toBe(15)
+    expect(totale.generato).toBe(righe.reduce((s, r) => s + r.generato, 0))
   })
 })
 
