@@ -99,8 +99,10 @@ import {
   summaryMethod,
 } from './pagamento.js'
 import { coloreAutomatico, coloreValido } from './coloriConto.js'
-import { hoursBetweenIso } from './ore.js'
+import { hoursBetweenIso, shiftDay } from './ore.js'
+import { MOTIVI_DI_CARICO } from './magazzinoPeriodo.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
@@ -1189,6 +1191,27 @@ export async function fetchStockMovements({ limit = 50 } = {}) {
 export async function fetchStockMovementsSince(iso) {
   const snap = await getDocs(
     query(movementsCol, where('created_at', '>', Timestamp.fromDate(new Date(iso))))
+  )
+  return snap.docs.map(mapMovement)
+}
+
+// I CARICHI DI UN INTERVALLO DI GIORNATE (REQ-MAG-022): carico da Prodotti
+// e da fattura, dal giorno `dal` al giorno `al`. Il Bilancio di quei
+// movimenti usa solo i carichi, e ogni vendita ne scrive uno di scarico per
+// ingrediente: leggere tutto vorrebbe dire scaricare decine di migliaia di
+// scarichi per usarne qualche centinaio. Il filtro sul motivo sta nella
+// query, e vuole l'indice composto (reason, created_at) di
+// firestore.indexes.json.
+// Un giorno di margine per lato, come fetchOrdersBetween: la giornata
+// commerciale scavalca la mezzanotte, e il taglio preciso lo fa chi conta.
+export async function fetchCarichiBetween(fromDayKey, toDayKey) {
+  const snap = await getDocs(
+    query(
+      movementsCol,
+      where('reason', 'in', MOTIVI_DI_CARICO),
+      where('created_at', '>=', Timestamp.fromDate(new Date(`${shiftDay(fromDayKey, -1)}T00:00:00Z`))),
+      where('created_at', '<', Timestamp.fromDate(new Date(`${shiftDay(toDayKey, 2)}T00:00:00Z`)))
+    )
   )
   return snap.docs.map(mapMovement)
 }
@@ -5816,6 +5839,11 @@ export const DEFAULT_SETTINGS = {
   // cui è cominciata. Raggruppa statistiche e fa ripartire il progressivo
   // #N. Non chiude nulla: i conti restano aperti finché non li si chiude.
   business_day_cutoff_hour: DEFAULT_CUTOFF_HOUR,
+  // ORARIO DEL LOCALE (REQ-CASSA-015): quando si lavora, in ore e minuti. Da
+  // qui partono le fasce orarie delle statistiche. Non è il cambio di
+  // giornata qui sopra: un conto battuto dopo la chiusura resta della sera.
+  orario_apertura: ORARIO_PREDEFINITO.apertura,
+  orario_chiusura: ORARIO_PREDEFINITO.chiusura,
   // PREZZO CONSIGLIATO: ricarico sul costo degli ingredienti (di norma
   // ×3, ma dipende dal drink) e passo di arrotondamento del listino.
   // È solo un suggerimento: il prezzo resta sempre modificabile a mano.

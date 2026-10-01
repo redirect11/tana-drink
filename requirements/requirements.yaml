@@ -1774,6 +1774,37 @@ requirements:
       - tests/unit/serate.test.js
       - tests/component/CashSessionsList.test.jsx
 
+  - id: REQ-CASSA-015
+    title: "Giornata di lavoro: orario di apertura e di chiusura, oltre al cambio di giornata"
+    area: "src/components/SettingsTab.jsx, src/lib/api.js (DEFAULT_SETTINGS), src/lib/orario.js, src/components/StatsTab.jsx"
+    description: >
+      Flavio, vocale del 01/10/2026, sulla sezione «Giornata di lavoro»
+      delle impostazioni: «il giorno nuovo comincia alle ore 5, bisogna
+      mettere anche quando finisce […] la giornata di lavoro non è dalle 5
+      fino alle 4.59 del giorno dopo. Devo mettere io un inizio e una fine
+      […] le ore e minuti di apertura e le ore e minuti di chiusura».
+      DUE IMPOSTAZIONI NUOVE, in ore e minuti: `orario_apertura` e
+      `orario_chiusura` (di partenza 18:30 e 03:30, la fascia che le
+      statistiche avevano scritta nel codice). Dicono quando il locale
+      lavora, e le FASCE ORARIE DELLE STATISTICHE partono da lì invece che
+      da un orario fisso; si possono sempre cambiare a mano mentre si
+      guarda.
+      IL CAMBIO DI GIORNATA RESTA, ed è un'altra cosa: è l'ora in cui una
+      giornata finisce e comincia la successiva (numerazione dei conti,
+      statistiche, chiusure). Non coincide con la chiusura apposta: un
+      conto battuto dieci minuti dopo la chiusura appartiene ancora a
+      quella serata, e se il cambio fosse la chiusura finirebbe nel giorno
+      dopo. Nelle impostazioni si chiama «Cambio di giornata», e se cade
+      dentro l'orario di apertura compare un avviso: spezzerebbe una serata
+      in due giornate.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, statistiche, config]
+    test_cases:
+      - tests/unit/orario.test.js
+      - tests/component/SettingsTab.test.jsx
+      - tests/component/StatsTab.test.jsx
+
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
@@ -2013,12 +2044,18 @@ requirements:
       acquisti sono cio' che e' ENTRATO nel periodo — la domanda di Flavio.
       Le macro in produzione sono compilate (verificato il 30/09: 4 macro,
       447 prodotti e 405 voci con la loro quota).
-    status: implemented
+      SUPERATA IL 01/10/2026: la scheda e' stata tolta dalle Statistiche.
+      Flavio, provandola sul test: «macro-categorie dovrebbe avere un link a
+      parte […] bisognerebbe vedere la tabella mia», cioe' il foglio
+      RAPPORTI ACQUISTI di ANALISI DATI, con rapporto fat/acq e incidenza
+      sugli utili. Quella tabella e' REQ-MAG-022, nel Bilancio, con le viste
+      per anno, mese, settimana e giorno; due posti per lo stesso numero non
+      servono (decisione dell'utente, 01/10). Gli acquisti per macro
+      (oggi vociDiAcquisto, con consegneDi) restano e li usa il Bilancio.
+    status: deprecated
     generate_issue: false
     labels: [statistiche]
-    test_cases:
-      - tests/component/MacroPeriodo.test.jsx
-      - tests/unit/macroStats.test.js
+    test_cases: []
   - id: REQ-STAT-005
     title: "Fasce orarie per comanda, sconto diviso in parti uguali, giornate a cassa aperta anche a zero"
     area: "src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx"
@@ -7124,8 +7161,8 @@ requirements:
       - tests/component/StatsTab.test.jsx
 
   - id: REQ-MAG-022
-    title: "Bilancio → Acquisti × Fatturato: gli acquisti per macro, mese per mese"
-    area: "src/lib/macroStats.js purchasesByMacro, src/components/BilancioTab.jsx (nuovo)"
+    title: "Bilancio → Acquisti × Fatturato: il rapporto per macro del foglio, per anno, mese, settimana o giorno"
+    area: "src/lib/acquistiFatturato.js, src/lib/periodiBilancio.js, src/lib/macroStats.js (sommaVendite, vociDiAcquisto, componiTabella), src/lib/magazzinoPeriodo.js (MOTIVI_DI_CARICO), src/components/AcquistiFatturato.jsx, src/components/TabellaMacro.jsx, src/components/BilancioTab.jsx, src/lib/api.js (fetchCarichiBetween), firestore.indexes.json"
     description: >
       COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a
       mano, mese per mese e macro per macro: nessuna formula dice da dove
@@ -7219,11 +7256,72 @@ requirements:
       resta vuota finché gli ordini fornitore non passano davvero dall'app,
       e dello storico 2026 non si ricostruisce niente. Per questo non è
       lavorabile adesso.
-    status: todo
-    generate_issue: true
+      SBLOCCATA E FATTA (01/10/2026). Il vincolo è caduto: il foglio si
+      ferma al 7 agosto, e da lì gli ordini fornitore e i carichi passano
+      dall'app (REQ-MAG-029, REQ-MAG-046). Flavio, vocali del 01/10:
+      «macro-categorie dovrebbe avere un link a parte […] bisognerebbe
+      vedere la tabella mia», «io devo avere sempre davanti il valore degli
+      acquisti e il valore del fatturato […] il totale degli utili generato
+      […] il rapporto fatturato acquisti e l'incidenza della somma utile in
+      percentuale», e la vuole «per l'anno, per il mese che vada a
+      selezionare io e per la settimana […] volendo anche giornaliera».
+      L'utente, lo stesso giorno: nella pagina Bilancio, non nelle
+      Statistiche (REQ-STAT-004 è stata tolta).
+      COM'È FATTA, riga per riga come il foglio (formule verificate su
+      ANALISI DATI.xlsx, foglio RAPPORTI ACQUISTI 2026). Un blocco per macro,
+      più «Non attribuito» se ha importi:
+        · ACQUISTI: la merce entrata (vociDiAcquisto: consegne degli ordini
+          fornitore nella data di consegna, più i carichi diretti),
+          spartita coi pesi dei PRODOTTI;
+        · FATTURATO: l'incassato delle voci di menù della macro, sconto
+          compreso, spartito coi pesi delle VOCI;
+        · UTILE = fatturato − acquisti;
+        · RAPPORTO FAT/ACQ = fatturato ÷ acquisti (il moltiplicatore);
+        · INCIDENZA = utile della macro ÷ somma degli utili delle macro in
+          quella colonna, in percentuale.
+      In fondo il totale di tutte le macro con, al posto dell'incidenza
+      sugli utili, l'INCIDENZA SUL PERIODO: fatturato della colonna ÷
+      fatturato di tutto il periodo mostrato (nel foglio «incidenza anno»).
+      Dove il denominatore non è positivo resta un trattino, come in
+      «Venduto × Incassato».
+      LE QUATTRO VISTE, scelte con un gruppo di gettoni e una freccia per
+      andare avanti e indietro:
+        · ANNO: i dodici mesi;
+        · MESE: le settimane DEL FOGLIO DI FLAVIO, a blocchi di sette
+          giorni dal primo del mese (1–7, 8–14, 15–21, 22–28) più i giorni
+          che restano (29–fine), «le 4 settimane e la settimana incompleta»;
+        · SETTIMANA: da lunedì a domenica, come le chiusure (REQ-CASSA-014);
+        · GIORNO: una giornata sola.
+      Ogni colonna è un intervallo di GIORNATE COMMERCIALI: la nottata che
+      finisce alle tre resta della sera prima, su vendite e acquisti.
+      LORDO E NETTO: si apre AL LORDO, come legge Flavio e come è il foglio,
+      e un interruttore passa al netto (decisione dell'utente, 01/10). Al
+      lordo il fatturato è l'incassato così com'è e gli acquisti portano
+      l'IVA del prodotto; al netto l'incassato è scorporato con l'aliquota
+      della voce o del locale e gli acquisti sono al costo senza IVA.
+      LA STESSA TABELLA DI «VENDUTO × INCASSATO»: le vendite si sommano con
+      lo stesso giro (sommaVendite), le righe per macro, i totali e le
+      incidenze con la stessa funzione (componiTabella), e si disegnano con
+      lo stesso componente (TabellaMacro): cambiano le parole delle righe e
+      da dove arriva il secondo numero (acquisti invece del costo delle
+      ricette). Le colonne delle quattro viste stanno in periodiBilancio.js.
+      LETTURE: i conti e i soli CARICHI del periodo mostrato
+      (fetchOrdersBetween, fetchCarichiBetween): ogni vendita scrive uno
+      scarico per ingrediente, e leggere tutti i movimenti vorrebbe dire
+      decine di migliaia di documenti per usarne poche centinaia. Il filtro
+      sul motivo sta nella query, con l'indice composto (reason,
+      created_at) in firestore.indexes.json. Poi ordini fornitore, prodotti,
+      voci e macro una volta sola; un periodo già visto non si rilegge.
+      `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo
+      REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto
+      e sommaVendite.
+    status: implemented
+    generate_issue: false
     labels: [magazzino, statistiche, fornitori]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/acquistiFatturato.test.js
+      - tests/component/AcquistiFatturato.test.jsx
 
   - id: REQ-STAFF-015
     title: "Il minimo della serata: quanto deve fare stasera, e quanto ha fatto"

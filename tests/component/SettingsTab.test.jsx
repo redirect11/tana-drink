@@ -7,7 +7,7 @@
 // UNA sola alla volta, altrimenti non si è risolto niente.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -34,6 +34,9 @@ const impostazioni = vi.hoisted(() => ({
   modulo_conta_enabled: true,
   modulo_scadenzario_enabled: true,
   licenza: null,
+  business_day_cutoff_hour: 5,
+  orario_apertura: '18:30',
+  orario_chiusura: '03:30',
 }))
 const IMPOSTAZIONI_BASE = { ...impostazioni }
 
@@ -470,5 +473,39 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     expect(interruttore).toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
     expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)
+  })
+})
+
+// L'ORARIO DEL LOCALE (REQ-CASSA-015). Flavio, 01/10/2026: «devo mettere io
+// un inizio e una fine». Apertura e chiusura in ore e minuti, e il cambio
+// di giornata accanto, con un avviso se spezza una serata.
+describe('giornata di lavoro', () => {
+  it('apertura e chiusura in ore e minuti, salvate all’uscita dal campo', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    const apertura = screen.getByLabelText('Apertura')
+    expect(apertura).toHaveValue('18:30')
+    expect(screen.getByLabelText('Chiusura')).toHaveValue('03:30')
+
+    fireEvent.change(apertura, { target: { value: '19:00' } })
+    expect(updateSettings).not.toHaveBeenCalled()
+    fireEvent.blur(apertura)
+    expect(updateSettings).toHaveBeenCalledWith({ orario_apertura: '19:00' })
+  })
+
+  it('avvisa se il cambio di giornata cade dentro l’orario di apertura', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText(/serata verrebbe divisa/)).toBeNull()
+    cleanup()
+
+    impostazioni.business_day_cutoff_hour = 2
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.getByText(/serata verrebbe divisa su due giornate/)).toBeInTheDocument()
   })
 })
