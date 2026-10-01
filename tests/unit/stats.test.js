@@ -389,10 +389,9 @@ describe('le battute di un conto', () => {
   it('lo sconto si divide in parti uguali, e il totale torna con l’incasso del conto', () => {
     const [prima, seconda] = battuteDi(tavolo)
     // 4 € su due comande: 2 € ciascuna, non 8/3 e 4/3 in proporzione.
-    expect(prima.discount_amount).toBe(2)
-    expect(seconda.discount_amount).toBe(2)
-    const netto = battuteDi(tavolo).reduce((s, b) => s + b.total - b.discount_amount, 0)
-    expect(netto).toBe(11) // 15 − 4
+    expect(prima.netto).toBe(8) // 10 − 2
+    expect(seconda.netto).toBe(3) // 5 − 2
+    expect(prima.netto + seconda.netto).toBe(11) // 15 − 4
   })
 
   it('una comanda annullata non è una battuta', () => {
@@ -408,6 +407,16 @@ describe('le battute di un conto', () => {
     const di = (iso) => buckets.find((b) => b.label === ora(iso))
     expect(di(alle21).incasso).toBe(8) // 10 − 2
     expect(di(alle00).incasso).toBe(3) // 5 − 2
+  })
+
+  // Il coperto è nell'incasso del conto, non nel prezzo di un drink: nei
+  // prodotti della fascia la birra vale quanto nella classifica del periodo.
+  it('i prodotti della fascia hanno lo sconto del conto, non il coperto', () => {
+    const conCoperto = { ...tavolo, total: 19, coperto_amount: 4 }
+    const r = hourRangeReport([conCoperto], { from: ora(alle00), to: ora('2026-09-26T23:00:00.000Z') }, {})
+    // Lordo righe 15, sconto 4: il fattore del conto è 11/15. La birra di
+    // mezzanotte (5 €) vale 3,67 €, con o senza coperto.
+    expect(r.prodotti.find((p) => p.name === 'Birra').revenue).toBeCloseTo(3.67, 2)
   })
 
   it('nel venduto della fascia il conto si conta una volta, e solo quello battuto lì', () => {

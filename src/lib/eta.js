@@ -132,7 +132,8 @@ export function aggregateProducts(orders) {
   const byName = new Map()
   for (const o of orders) {
     if (isCancelled(o)) continue
-    const f = discountFactor(o)
+    // Una battuta (stats.js, REQ-STAT-005) porta il fattore del suo conto.
+    const f = o.fattore ?? discountFactor(o)
     for (const i of o.order_items || []) {
       const cur = byName.get(i.name) || { name: i.name, qty: 0, revenue: 0 }
       cur.qty += Number(i.qty) || 0
