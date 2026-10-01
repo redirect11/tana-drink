@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.9.0-beta
+## 1.9.0 — 1 ottobre 2026
+
+Comprende la 1.7.0, che non è uscita da sola.
 
 ### Per chi amministra
 
@@ -12,17 +14,10 @@
   che restano), per settimana (da lunedì a domenica) o per giorno, con le
   frecce per spostarsi. Si apre al lordo dell'IVA, come il foglio; «Netto
   IVA» passa ai valori senza IVA.
-- **Tolta dalle Statistiche la scheda «Per macro-categoria»**: gli stessi
-  numeri, completi, sono nel Bilancio.
 - **Impostazioni → Giornata di lavoro: orario di apertura e di
   chiusura.** In ore e minuti; le fasce orarie delle statistiche partono da
   questo orario. L'ora del cambio di giornata resta a parte («Cambio di
   giornata»), e se cade dentro l'orario di apertura compare un avviso.
-
-## 1.8.3-beta
-
-### Per chi amministra
-
 - **Le fasce orarie contano le comande, non l'apertura del conto.** Un
   tavolo aperto alle 21 che ordina fino all'una distribuisce l'incasso
   sulle ore in cui le comande sono state battute; lo sconto del conto si
@@ -31,11 +26,6 @@
   fascia scelta».
 - **In «Incasso per giornata» compaiono anche le giornate a zero** in cui
   la cassa è stata aperta.
-- **Statistiche per periodo: acquisti, venduto e generato per
-  macro-categoria.** Nuova scheda «Per macro-categoria», da aprire con
-  «Calcola»: per ogni macro gli acquisti (merce consegnata e carichi
-  diretti), il venduto (incassato delle voci di menù) e il margine
-  generato, nello stesso periodo scelto in cima alla pagina.
 - **Nell'inventario è in evidenza la rimanenza**: in grassetto la RIM di
   ogni prodotto e il valore delle rimanenze in cima, al posto del consumo.
 - **Nel Magazzino i testi d'aiuto usano i termini del mestiere** — scheda
@@ -65,7 +55,7 @@
   scorso, o una sola serata dalle 18 alle 4. Lo seguono incassi,
   classifiche e magazzino nel periodo.
 
-## 1.7.0
+## 1.7.0 — uscita con la 1.9.0
 
 ### Per chi sta al banco
 
