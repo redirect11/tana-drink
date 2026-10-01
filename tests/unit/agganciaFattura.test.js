@@ -128,16 +128,46 @@ describe('la fattura si aggancia alla fetta del suo fornitore', () => {
     const dopo = await subito(api.collegaFatturaAFetta('inv-1', { order_id: 'po-1' }))
     // Composto in memoria: la cache risponderebbe col documento di prima, e
     // la schermata mostrerebbe il passato (è stato il difetto di BUG-045).
-    expect(dopo.order_id).toBe('po-1')
+    expect(dopo.order_ids).toEqual(['po-1'])
     expect(dopo.number).toBe('1556')
-    expect(aggiornamenti()[0].patch).toEqual({ order_id: 'po-1' })
+    // Si scrive anche il campo vecchio, col primo della lista: in produzione
+    // gira una versione che legge quello, e toglierlo di colpo le farebbe
+    // sparire i legami.
+    expect(aggiornamenti()[0].patch).toEqual({ order_ids: ['po-1'], order_id: 'po-1' })
   })
 
-  it('e si stacca dalla stessa strada, al contrario', async () => {
-    stato.fattura.order_id = 'po-1'
+  // ── IL DOCUMENTO DEL LUNEDI (19/09/2026) ──────────────────────────
+  // Flavio: «nel weekend faccio un ordine, mi consegnano senza proforma; il
+  // giorno dopo ne faccio un altro, e il lunedi mi fanno un'unica fattura».
+  // Il secondo ordine si AGGIUNGE, non sostituisce il primo.
+  it('un secondo ordine si aggiunge al primo', async () => {
+    stato.fattura.order_ids = ['po-sabato']
+    const dopo = await subito(api.collegaFatturaAFetta('inv-1', { order_id: 'po-1' }))
+    expect(dopo.order_ids).toEqual(['po-sabato', 'po-1'])
+    expect(aggiornamenti()[0].patch.order_ids).toEqual(['po-sabato', 'po-1'])
+  })
+
+  it('e lo stesso ordine due volte non lo raddoppia', async () => {
+    stato.fattura.order_ids = ['po-1']
+    const dopo = await subito(api.collegaFatturaAFetta('inv-1', { order_id: 'po-1' }))
+    expect(dopo.order_ids).toEqual(['po-1'])
+  })
+
+  // Staccandone uno gli altri restano: e la differenza fra «scollega questo»
+  // e «scollega tutto», e da una schermata che ne guarda uno solo toglierli
+  // tutti sarebbe un danno.
+  it('se ne stacca uno e gli altri restano', async () => {
+    stato.fattura.order_ids = ['po-sabato', 'po-1']
+    const dopo = await subito(api.collegaFatturaAFetta('inv-1', { order_id: 'po-1', stacca: true }))
+    expect(dopo.order_ids).toEqual(['po-sabato'])
+    expect(aggiornamenti()[0].patch).toEqual({ order_ids: ['po-sabato'], order_id: 'po-sabato' })
+  })
+
+  it('e si staccano tutti dalla stessa strada, al contrario', async () => {
+    stato.fattura.order_ids = ['po-1', 'po-2']
     const dopo = await subito(api.collegaFatturaAFetta('inv-1', { order_id: null }))
-    expect(dopo.order_id).toBe(null)
-    expect(aggiornamenti()[0].patch).toEqual({ order_id: null })
+    expect(dopo.order_ids).toEqual([])
+    expect(aggiornamenti()[0].patch).toEqual({ order_ids: [], order_id: null })
   })
 })
 
@@ -145,7 +175,7 @@ describe('la guardia sta davanti alla scrittura', () => {
   // Le schermate aperte sono due e i terminali del locale pure: una fetta
   // coperta da un altro terminale un minuto fa non si vede.
   it('una fetta già coperta da un altro documento non si sovrascrive', async () => {
-    stato.altre = [{ id: 'inv-9', supplier_id: 'nova', order_id: 'po-1' }]
+    stato.altre = [{ id: 'inv-9', supplier_id: 'nova', order_ids: ['po-1'] }]
     await expect(subito(api.collegaFatturaAFetta('inv-1', { order_id: 'po-1' }))).rejects.toThrow(
       /ha già un documento/
     )
@@ -172,9 +202,9 @@ describe('la guardia sta davanti alla scrittura', () => {
   // all'ordine sbagliato dev'essere sempre staccabile.
   it('per staccare non serve nessun ordine', async () => {
     stato.ordine = null
-    stato.fattura.order_id = 'po-1'
+    stato.fattura.order_ids = ['po-1']
     await subito(api.collegaFatturaAFetta('inv-1', { order_id: null }))
-    expect(aggiornamenti()[0].patch).toEqual({ order_id: null })
+    expect(aggiornamenti()[0].patch).toEqual({ order_ids: [], order_id: null })
   })
 })
 
@@ -195,7 +225,7 @@ describe('riprendere le righe e agganciare sono una scrittura sola', () => {
   })
 
   it('e la guardia vale anche di qui', async () => {
-    stato.altre = [{ id: 'inv-9', supplier_id: 'nova', order_id: 'po-1' }]
+    stato.altre = [{ id: 'inv-9', supplier_id: 'nova', order_ids: ['po-1'] }]
     const riga = { item_id: 'campari', name: 'Campari', qty_packages: 6, unit_cost: 12.5 }
     await expect(
       subito(api.aggiungiProdottiAFattura('inv-1', { righe: [riga], carica: false, order_id: 'po-1' }))

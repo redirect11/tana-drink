@@ -739,22 +739,6 @@ export function inventoryTotalValue(items, opts) {
 // niente aspetta la rete: quello che si decide prima di chiederlo è QUANTO
 // togliere.
 
-// IL FRENO DELLO SCARICO A MANO: mai più di quello che risulta in giacenza,
-// e da una giacenza già a zero (o negativa) niente.
-//
-// Non vale per la vendita, che sotto zero ci va e deve andarci (BUG-101):
-// lì il meno misura quanto è uscito senza essere stato caricato. Qui invece
-// c'è una persona che dichiara quanto ha tolto dallo scaffale — e da uno
-// scaffale vuoto non si toglie niente, quindi un meno sarebbe solo un numero
-// sbagliato in più.
-export function scaricoPossibile(stock, qty) {
-  const richiesta = Number(qty) || 0
-  if (!(richiesta > 0)) return 0
-  const giacenza = Number(stock) || 0
-  if (!(giacenza > 0)) return 0
-  return Math.min(richiesta, giacenza)
-}
-
 // LA GIACENZA DA ZERO IN SU, per contare OGGETTI e SOLDI: sotto zero non ci
 // sono bottiglie da toccare né un valore in euro («−1 piena più 750 ml
 // nell'aperta», «valore −0,67 €» non vogliono dire niente).

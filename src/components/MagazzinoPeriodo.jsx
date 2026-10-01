@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { fetchInventoryItems, fetchStockMovementsSince } from '../lib/api.js'
 import { magazzinoNelPeriodo } from '../lib/magazzinoPeriodo.js'
 import { formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { shiftDay } from '../lib/ore.js'
+import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
 
 // ── IL MAGAZZINO NEL PERIODO SCELTO (REQ-STAT-002) ───────────────────
 //
@@ -19,32 +19,22 @@ import { shiftDay } from '../lib/ore.js'
 // sono migliaia di documenti. Farlo a ogni apertura delle statistiche
 // vorrebbe dire far pagare a chi guarda l'incasso una lettura che non ha
 // chiesto.
-export default function MagazzinoPeriodo({ dal, al, cutoffHour }) {
-  const [aperto, setAperto] = useState(false)
-  const [dati, setDati] = useState(null)
-  const [caricando, setCaricando] = useState(false)
-  const [errore, setErrore] = useState(null)
+// Quello che serve: i movimenti dal primo istante e gli articoli.
+const leggi = (dove) =>
+  Promise.all([fetchStockMovementsSince(dove), fetchInventoryItems()]).then(([movimenti, items]) => ({
+    movimenti,
+    items,
+  }))
 
-  useEffect(() => {
-    if (!aperto) return undefined
-    let vivo = true
-    setCaricando(true)
-    setErrore(null)
-    // UN GIORNO DI MARGINE: la giornata commerciale comincia alle cinque del
-    // mattino, quindi il suo primo istante sta DOPO la mezzanotte di quella
-    // data — ma la notte precedente appartiene già alla giornata prima. Si
-    // legge largo e si taglia preciso: il conto filtra per giornata.
-    const da = `${shiftDay(dal, -1)}T00:00:00.000Z`
-    Promise.all([fetchStockMovementsSince(da), fetchInventoryItems()])
-      .then(([movimenti, items]) => {
-        if (vivo) setDati(magazzinoNelPeriodo(movimenti, items, { dal, al, cutoffHour }))
-      })
-      .catch((e) => vivo && setErrore(e.message))
-      .finally(() => vivo && setCaricando(false))
-    return () => {
-      vivo = false
-    }
-  }, [aperto, dal, al, cutoffHour])
+export default function MagazzinoPeriodo({ dal, al, da = null, a = null, cutoffHour }) {
+  const [aperto, setAperto] = useState(false)
+  // A richiesta, e si rilegge solo se si guarda più indietro.
+  const { letti, caricando, errore } = useLetturaDelPeriodo(aperto, { dal, da }, leggi)
+
+  const dati = useMemo(
+    () => (letti ? magazzinoNelPeriodo(letti.movimenti, letti.items, { dal, al, da, a, cutoffHour }) : null),
+    [letti, dal, al, da, a, cutoffHour]
+  )
 
   return (
     <div className="card">

@@ -25,8 +25,8 @@
 // delle due.
 //
 // «QUANTO HO SPESO IN BIBITE» è un'altra domanda — degli ACQUISTI, quello
-// che è entrato dalla porta — e vive in `purchasesByMacro` qui sotto, che
-// legge l'altro lato della stessa macro: i pesi dei PRODOTTI
+// che è entrato dalla porta — e vive in `vociDiAcquisto` qui sotto (la usa
+// Bilancio → Acquisti × Fatturato), che legge l'altro lato della stessa macro: i pesi dei PRODOTTI
 // (`pesi_prodotti`). È lì che un prodotto può stare per il 60% in una macro
 // e per il 40% in un'altra, com'è stato chiesto (09/09/2026).
 //
@@ -37,6 +37,10 @@ import { lineCost, orderLines } from './rendiconto.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { discountFactor } from './eta.js'
+import { valoreConSegno } from './warehouse.js'
+import { costWithVat } from './inventory.js'
+import { movimentoInPezzi, MOTIVI_DI_CARICO } from './magazzinoPeriodo.js'
+import { consegneDi } from './confrontoOrdine.js'
 
 export { UNASSIGNED }
 
@@ -60,11 +64,16 @@ const emptyCell = () => ({ incasso: 0, costo: 0 })
 //   factor  → quota di prezzo davvero incassata (1 = nessuno sconto). Lo
 //             sconto abbassa l'incasso e NON il costo: il drink è costato
 //             quello che è costato anche se l'hai regalato.
+//   lordo   → l'INCASSO così com'è, IVA compresa: è come legge il foglio di
+//             Flavio (Bilancio → Acquisti × Fatturato, REQ-MAG-022). Il
+//             costo resta netto: chi vuole un margine al lordo non lo
+//             chiede a questa funzione.
+//   conCosto → false salta il costo della ricetta (resta 0).
 export function lineByMacro(line, drink, itemsById, macros, opts = {}) {
-  const { saleVat = 0, factor = 1 } = opts
-  const lordo = (Number(line?.qty) || 0) * (Number(line?.unit_price) || 0) * (Number(factor) || 0)
-  const incasso = lordo / (1 + aliquotaDiVendita(drink, saleVat) / 100)
-  const { costo } = lineCost(line, drink, itemsById, { gross: false })
+  const { saleVat = 0, factor = 1, lordo = false, conCosto = true } = opts
+  const importo = (Number(line?.qty) || 0) * (Number(line?.unit_price) || 0) * (Number(factor) || 0)
+  const incasso = lordo ? importo : importo / (1 + aliquotaDiVendita(drink, saleVat) / 100)
+  const costo = conCosto ? lineCost(line, drink, itemsById, { gross: false }).costo : 0
   // Una riga libera non ha una voce di catalogo, quindi nessun peso: va
   // tutta al «non attribuito», col suo incasso.
   return ripartisci(macros, 'voci', line?.drink_id, { incasso, costo })
@@ -85,52 +94,69 @@ export function aliquotaDiVendita(drink, saleVat = 0) {
   return Number(saleVat) || 0
 }
 
-// Somma le righe vendute nelle celle di un accumulatore Map → { incasso, costo }.
-// Ci passano tutte e due le letture qui sotto: il totale del periodo e la
-// tabella mese per mese.
-function accumula(acc, chiave, r) {
+// Somma in una cella { incasso, costo } quello che porta `r`: anche un
+// campo solo (Acquisti × Fatturato ci mette il fatturato da una parte e gli
+// acquisti dall'altra).
+export function accumula(acc, chiave, r) {
   const cell = acc.get(chiave) || emptyCell()
-  cell.incasso = round2(cell.incasso + r.incasso)
-  cell.costo = round2(cell.costo + r.costo)
+  cell.incasso = round2(cell.incasso + (r.incasso || 0))
+  cell.costo = round2(cell.costo + (r.costo || 0))
   acc.set(chiave, cell)
   return cell
 }
 
-// Vendite per macro su un insieme di ordini. Salta gli annullati.
-// Ritorna Map macroKey → { incasso, costo }.
-export function venditeByMacro(orders, { drinksById, itemsById, macros, saleVat = 0 }) {
-  const acc = new Map()
+// LE VENDITE NELLE CELLE 'macro|colonna': ogni riga venduta, spartita fra
+// le macro (lineByMacro), nella colonna in cui cade il suo conto. È il giro
+// di tutte e due le tabelle del Bilancio — cambia solo come si sceglie la
+// colonna (`colonnaDi(created_at)`, null = fuori) — così una regola su cosa
+// conta come venduto (annullati, sconti, comande) vale per tutte e due.
+// `conCosto: false` salta il costo della ricetta, a chi non serve.
+export function sommaVendite(cells, orders, colonnaDi, { drinksById, itemsById, macros, saleVat = 0, lordo = false, conCosto = true }) {
   for (const o of orders || []) {
     if (o?.status === ORDER_STATUSES.ANNULLATO) continue
+    const colonna = colonnaDi(o?.created_at)
+    if (!colonna) continue
     const factor = discountFactor(o)
     for (const li of orderLines(o)) {
-      const parti = lineByMacro(li, drinksById?.[li.drink_id], itemsById, macros, { saleVat, factor })
-      for (const r of parti) accumula(acc, r.macro, r)
+      const parti = lineByMacro(li, drinksById?.[li.drink_id], itemsById, macros, { saleVat, factor, lordo, conCosto })
+      for (const r of parti) accumula(cells, `${r.macro}|${colonna}`, r)
     }
   }
-  return acc
+  return cells
 }
 
-// ── ACQUISTI per macro, dal lato dei PRODOTTI ──────────────────────────
-// Dagli ordini fornitori RICEVUTI: per ogni riga, importo netto
-// (unit_cost × qty_packages) spartito fra le macro secondo i pesi del
-// PRODOTTO (`pesi_prodotti`). La quota che nessuna macro reclama → `none`.
+// ── LA MERCE ENTRATA, dal lato dei PRODOTTI ───────────────────────────
+// «Quanto ho speso in bibite»: quello che è ENTRATO DALLA PORTA, che le
+// tabelle spartiscono fra le macro coi pesi del PRODOTTO (`pesi_prodotti`).
 //
-// È l'altra domanda — «quanto ho speso in bibite» — e vive per conto suo:
-// non entra nel mensile per macro, che parla di quello che si è VENDUTO.
-export function purchasesByMacro(purchaseOrders, { macros, onlyReceived = true }) {
-  const acc = new Map()
+// DUE STRADE PER LA MERCE CHE ENTRA, come nell'inventario (REQ-MAG-046):
+//   · le CONSEGNE degli ordini fornitore (consegneDi: la quantità davvero
+//     ricevuta, il prezzo del documento, il giorno d'arrivo);
+//   · i CARICHI (MOTIVI_DI_CARICO): da Prodotti e da fattura, valorizzati
+//     al costo del prodotto. Le consegne d'ordine non passano da qui: hanno
+//     già la loro riga, e contarle anche dal movimento le raddoppierebbe.
+// Prima si contava l'ORDINE ricevuto per quanto era stato ORDINATO, e le
+// consegne parziali e i carichi senza ordine sparivano o si gonfiavano.
+//
+// Una voce per consegna o carico: { item_id, at, amount }. `lordo` aggiunge
+// l'IVA del prodotto: il prezzo del documento e il costo del prodotto sono
+// netti.
+export function vociDiAcquisto(purchaseOrders, { movimenti = [], itemsById = {}, lordo = false } = {}) {
+  const voci = []
   for (const po of purchaseOrders || []) {
-    if (onlyReceived && po?.status !== 'ricevuto') continue
-    for (const l of po?.lines || []) {
-      const amount = round2((Number(l.unit_cost) || 0) * (Number(l.qty_packages) || 0))
-      if (amount <= 0) continue
-      for (const parte of ripartisci(macros, 'prodotti', l.item_id, { amount })) {
-        acc.set(parte.macro, round2((acc.get(parte.macro) || 0) + parte.amount))
-      }
+    for (const c of consegneDi(po)) {
+      const netto = c.prezzo * c.qty
+      const item = itemsById[c.item_id]
+      voci.push({ item_id: c.item_id, at: c.at, amount: round2(lordo ? costWithVat(netto, item?.vat) : netto) })
     }
   }
-  return acc
+  for (const m of movimenti || []) {
+    if (!MOTIVI_DI_CARICO.includes(m?.reason)) continue
+    const item = itemsById[m.item_id]
+    const mp = movimentoInPezzi(m, item)
+    if (mp) voci.push({ item_id: m.item_id, at: m.created_at, amount: round2(valoreConSegno(mp.q, item, { gross: lordo })) })
+  }
+  return voci.filter((v) => Math.abs(v.amount) > 0)
 }
 
 // ── Report MENSILE per macro ───────────────────────────────────────────
@@ -163,11 +189,7 @@ const incidenza = (parte, tutto) =>
 //   months: elenco di 'YYYY-MM' da mostrare (colonne), es. i 12 mesi dell'anno.
 //   macros: [{ id, name, pesi_voci }] — le macro nell'ordine voluto: sono
 //           le righe, e i loro pesi dicono dove va ogni vendita.
-// Ritorna { months, rows, totByMonth, grand }: rows ha una voce per macro
-// (più «Non attribuito» se ci sono importi orfani), ognuna con byMonth e tot.
-// Ogni cella di una macro porta `incidenza` (quota sul margine di quel
-// mese); ogni cella dei totali porta `incidenzaAnno` (quota sull'incassato
-// dell'anno mostrato).
+// Ritorna { rows, totPerColonna, grand } (vedi componiTabella).
 export function macroMonthlyReport({
   orders,
   drinksById,
@@ -178,20 +200,27 @@ export function macroMonthlyReport({
   saleVat = 0,
 }) {
   const monthSet = new Set(months || [])
-  // cells: Map 'macroKey|mese' → { incasso, costo }
-  const cells = new Map()
-
-  for (const o of orders || []) {
-    if (o?.status === ORDER_STATUSES.ANNULLATO) continue
-    const month = (businessDayKey(o?.created_at, cutoffHour) || '').slice(0, 7)
-    if (!monthSet.has(month)) continue
-    const factor = discountFactor(o)
-    for (const li of orderLines(o)) {
-      const parti = lineByMacro(li, drinksById?.[li.drink_id], itemsById, macros, { saleVat, factor })
-      for (const r of parti) accumula(cells, `${r.macro}|${month}`, r)
-    }
+  const meseDi = (at) => {
+    const mese = (businessDayKey(at, cutoffHour) || '').slice(0, 7)
+    return monthSet.has(mese) ? mese : null
   }
+  const cells = sommaVendite(new Map(), orders, meseDi, { drinksById, itemsById, macros, saleVat })
+  return componiTabella(cells, macros, months || [])
+}
 
+// LA TABELLA PER MACRO, dalle celle già sommate: la usano «Venduto ×
+// Incassato» (le colonne sono i mesi, il secondo numero è il costo del
+// venduto) e «Acquisti × Fatturato» (colonne di mesi, settimane o giorni,
+// il secondo numero sono gli acquisti). La forma e le incidenze sono le
+// stesse, e due copie della stessa aritmetica prima o poi divergono.
+//   cells:   Map 'macroKey|colonna' → { incasso, costo }
+//   colonne: le chiavi delle colonne, in ordine
+// Ritorna { rows, totPerColonna, grand }: rows ha una voce per macro (più
+// «Non attribuito» se ci sono importi orfani), ognuna con perColonna e tot.
+// Ogni cella di una macro porta `incidenza` (quota sul margine della
+// colonna); ogni cella dei totali porta `incidenzaPeriodo` (quota
+// sull'incassato di tutto il periodo).
+export function componiTabella(cells, macros, colonne) {
   // Righe: le macro nell'ordine dato, più «Non attribuito» se ha importi.
   const macroRows = [...(macros || [])]
   if ([...cells.keys()].some((k) => k.startsWith(`${UNASSIGNED}|`))) {
@@ -199,28 +228,28 @@ export function macroMonthlyReport({
   }
 
   const rows = macroRows.map((m) => {
-    const byMonth = new Map()
+    const perColonna = new Map()
     const tot = emptyCell()
-    for (const month of months || []) {
-      const c = cells.get(`${m.id}|${month}`) || emptyCell()
-      byMonth.set(month, withDerived(c))
+    for (const colonna of colonne) {
+      const c = cells.get(`${m.id}|${colonna}`) || emptyCell()
+      perColonna.set(colonna, withDerived(c))
       tot.incasso = round2(tot.incasso + c.incasso)
       tot.costo = round2(tot.costo + c.costo)
     }
-    return { id: m.id, name: m.name, byMonth, tot: withDerived(tot) }
+    return { id: m.id, name: m.name, perColonna, tot: withDerived(tot) }
   })
 
   // Totali per colonna (tutte le macro) e totale generale.
-  const totByMonth = new Map()
+  const totPerColonna = new Map()
   const grand = emptyCell()
-  for (const month of months || []) {
+  for (const colonna of colonne) {
     const t = emptyCell()
     for (const r of rows) {
-      const c = r.byMonth.get(month)
+      const c = r.perColonna.get(colonna)
       t.incasso = round2(t.incasso + c.incasso)
       t.costo = round2(t.costo + c.costo)
     }
-    totByMonth.set(month, withDerived(t))
+    totPerColonna.set(colonna, withDerived(t))
     grand.incasso = round2(grand.incasso + t.incasso)
     grand.costo = round2(grand.costo + t.costo)
   }
@@ -229,22 +258,22 @@ export function macroMonthlyReport({
 
   // Secondo giro: le incidenze si possono calcolare solo adesso, perché
   // hanno bisogno del totale della colonna (il margine di tutte le macro in
-  // quel mese) e del totale dell'anno.
+  // quella colonna) e del totale del periodo.
   for (const r of rows) {
-    for (const month of months || []) {
-      const c = r.byMonth.get(month)
-      c.incidenza = incidenza(c.margine, totByMonth.get(month)?.margine)
+    for (const colonna of colonne) {
+      const c = r.perColonna.get(colonna)
+      c.incidenza = incidenza(c.margine, totPerColonna.get(colonna)?.margine)
     }
     r.tot.incidenza = incidenza(r.tot.margine, totale.margine)
   }
-  for (const month of months || []) {
-    const t = totByMonth.get(month)
-    t.incidenzaAnno = incidenza(t.incasso, totale.incasso)
+  for (const colonna of colonne) {
+    const t = totPerColonna.get(colonna)
+    t.incidenzaPeriodo = incidenza(t.incasso, totale.incasso)
   }
-  // L'anno su se stesso fa 100: non è una domanda, ma la colonna TOT deve
+  // Il periodo su se stesso fa 100: non è una domanda, ma la colonna TOT deve
   // pur dire qualcosa, e un vuoto lì sembrerebbe un conto che non è tornato.
-  totale.incidenzaAnno = incidenza(totale.incasso, totale.incasso)
+  totale.incidenzaPeriodo = incidenza(totale.incasso, totale.incasso)
   totale.incidenza = incidenza(totale.margine, totale.margine)
 
-  return { months: months || [], rows, totByMonth, grand: totale }
+  return { rows, totPerColonna, grand: totale }
 }

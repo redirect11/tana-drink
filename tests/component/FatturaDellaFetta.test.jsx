@@ -66,7 +66,7 @@ const FATTURA_NOVA = {
   amount: 81,
   paid: false,
   lines: [],
-  order_id: null,
+  order_ids: [],
 }
 
 const FATTURA_ENOFEL = { ...FATTURA_NOVA, id: 'inv-enofel', supplier_id: 'enofel', supplier_name: 'Enofel', number: '77', amount: 30 }
@@ -104,11 +104,14 @@ vi.mock('../../src/lib/api.js', () => ({
   updateSupplierInvoice: vi.fn(async () => {}),
   deleteSupplierInvoice: vi.fn(async () => {}),
   aggiungiProdottiAFattura: vi.fn(async () => ({})),
-  // Come l'api vera: compone il documento aggiornato senza rileggerlo.
-  collegaFatturaAFetta: vi.fn(async (id, { order_id }) => ({
-    ...stato.fatture.find((f) => f.id === id),
-    order_id: order_id || null,
-  })),
+  // Come l'api vera: compone il documento aggiornato senza rileggerlo, e
+  // conosce i tre gesti — aggiungi, togli questo, togli tutti.
+  collegaFatturaAFetta: vi.fn(async (id, { order_id, stacca = false }) => {
+    const prima = stato.fatture.find((f) => f.id === id)
+    const ids = prima?.order_ids ?? []
+    const dopo = !order_id ? [] : stacca ? ids.filter((x) => x !== order_id) : [...new Set([...ids, order_id])]
+    return { ...prima, order_ids: dopo }
+  }),
 }))
 
 vi.mock('../../src/lib/printer.js', () => ({ printOrdineFornitore: vi.fn(async () => {}) }))
@@ -149,7 +152,7 @@ describe('dall’ordine si vede se la fattura c’è', () => {
   })
 
   it('con la fattura attaccata si legge il documento, e il buco si chiude', async () => {
-    stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
     const user = userEvent.setup()
     await apriOrdine(user, 'Nova')
     expect(await screen.findByText(/Fattura n\. 1556/)).toBeInTheDocument()
@@ -174,15 +177,18 @@ describe('il fornitore fa da guardia, e non si può nemmeno sbagliare', () => {
     expect(tendina.textContent).not.toContain('#1556')
   })
 
-  it('un documento già agganciato altrove non si propone una seconda volta', async () => {
-    stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-vecchio' }]
+  // DAL 19/09/2026 UN DOCUMENTO COPRE PIÙ ORDINI (Flavio: «nel weekend mi
+  // consegnano senza proforma, e il lunedì mi fanno un'unica fattura»),
+  // quindi quello già usato sabato si propone anche per la consegna di
+  // domenica. Prima il tasto restava spento e l'unica strada era scollegare
+  // il primo: cioè scegliere quale dei due ordini raccontare.
+  it('un documento già agganciato altrove si propone lo stesso', async () => {
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-vecchio'] }]
     const user = userEvent.setup()
     await apriOrdine(user, 'Nova')
-    // Non c'è niente da scegliere, quindi il tasto è spento: il modo di
-    // impedirlo è non farlo comparire, non spiegarlo dopo con un errore.
     expect(
       screen.getByRole('button', { name: 'Associa un documento all’ordine di Nova' })
-    ).toBeDisabled()
+    ).toBeEnabled()
   })
 })
 
@@ -196,29 +202,58 @@ describe('si aggancia e si sgancia, dai due lati', () => {
     await user.selectOptions(screen.getByLabelText('Documento'), 'inv-nova')
     await user.click(screen.getByRole('button', { name: 'Collega' }))
 
-    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1' })
+    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1', stacca: false })
     // Niente attesa: l'esito si vede nell'istante in cui si tocca.
     expect(await screen.findByText(/Fattura n\. 1556/)).toBeInTheDocument()
   })
 
   it('e dall’ordine si stacca, che è lo stesso gesto al contrario', async () => {
-    stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
     const user = userEvent.setup()
     await apriOrdine(user, 'Nova')
     await user.click(
       await screen.findByRole('button', { name: 'Scollega il documento dall’ordine di Nova' })
     )
 
-    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: null })
+    // Si stacca QUESTO ordine, non tutti: il documento può coprirne altri,
+    // e una schermata che ne guarda uno non deve toglierli in blocco.
+    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1', stacca: true })
     await waitFor(() => expect(screen.getByText('senza documento')).toBeInTheDocument())
   })
 
   it('dal documento si vede a quale parte di quale ordine si riferisce', async () => {
-    stato.fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
     render(<SupplierInvoicesPanel />)
     // La data dell'ordine, quanti articoli e il netto: l'ordine è di Nova,
     // e il gin di Enofel sta nel suo, che è un altro documento.
     expect(await screen.findByText(/Ordine 2026-08-20 · 1 art\./)).toBeInTheDocument()
+  })
+
+  // ── LA FATTURA DEL LUNEDÌ (19/09/2026) ────────────────────────────
+  // Flavio: «sotto una fattura, sotto un proforma, alla domanda aggiungi
+  // ordine io aggiungo un ordine, e poi dopo ci deve essere aggiungi altro
+  // ordine oppure scollega gli ordini». Nel weekend la merce arriva senza
+  // carta, e il lunedì il fornitore fa un documento solo per tutto.
+  it('un documento che ha già un ordine offre di aggiungerne un altro', async () => {
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
+    render(<SupplierInvoicesPanel />)
+    // Non «Collega»: qui ce n'è già uno, e la parola deve dire che si somma.
+    expect(
+      await screen.findByRole('button', { name: /Aggiungi un altro ordine al documento di Nova/ })
+    ).toBeInTheDocument()
+  })
+
+  it('e ogni ordine collegato ha il suo «Scollega»', async () => {
+    const user = userEvent.setup()
+    stato.fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1', 'po-vecchio'] }]
+    render(<SupplierInvoicesPanel />)
+    const righe = await screen.findAllByRole('button', {
+      name: /Scollega questo ordine dal documento di Nova/,
+    })
+    expect(righe).toHaveLength(2)
+    await user.click(righe[0])
+    // Si toglie QUELLO, non tutti: gli altri ordini restano coperti.
+    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1', stacca: true })
   })
 
   it('dal documento si collega, scegliendo fra gli ordini del suo fornitore', async () => {
@@ -228,7 +263,7 @@ describe('si aggancia e si sgancia, dai due lati', () => {
     await user.selectOptions(screen.getByLabelText('Ordine'), 'po-1')
     await user.click(screen.getByRole('button', { name: 'Collega' }))
 
-    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1' })
+    expect(collegato).toHaveBeenCalledWith('inv-nova', { order_id: 'po-1', stacca: false })
     expect(await screen.findByText(/Ordine 2026-08-20/)).toBeInTheDocument()
   })
 })
@@ -236,7 +271,7 @@ describe('si aggancia e si sgancia, dai due lati', () => {
 describe('un documento senza ordine si vede, e si può isolare', () => {
   // IL SECONDO DEI DUE BUCHI: il documento c'è, l'ordine no.
   it('la riga lo dice, e il filtro tiene solo quelli', async () => {
-    stato.fatture = [{ ...FATTURA_NOVA }, { ...FATTURA_ENOFEL, order_id: 'po-1' }]
+    stato.fatture = [{ ...FATTURA_NOVA }, { ...FATTURA_ENOFEL, order_ids: ['po-1'] }]
     const user = userEvent.setup()
     render(<SupplierInvoicesPanel />)
 

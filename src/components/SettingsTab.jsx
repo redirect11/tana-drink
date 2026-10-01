@@ -37,6 +37,7 @@ import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
+import { cambioDentroOrario } from '../lib/orario.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -488,20 +489,42 @@ export default function SettingsTab({ role = null }) {
       nodo: (
             <div className="card settings-section">
               <h3>Giornata di lavoro</h3>
+              {/* DUE NUMERI DIVERSI, APPOSTA (REQ-CASSA-015). Flavio, 01/10/2026:
+                  «la giornata di lavoro non è dalle 5 fino alle 4.59 del giorno
+                  dopo. Devo mettere io un inizio e una fine». L'orario dice
+                  quando il locale lavora; il cambio di giornata dove finisce un
+                  giorno. Non coincidono perché un conto battuto dopo la chiusura
+                  resta della serata. */}
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                I conti restano aperti finché non li chiudi tu: nessuna “serata”
-                da aprire o chiudere. Qui si dice soltanto <strong>a che ora
-                finisce una giornata e ne comincia un’altra</strong>. Da
-                quell’ora la numerazione degli ordini riparte da 1 e le
-                statistiche cominciano a contare il giorno nuovo.
-              </p>
-              <p className="muted small" style={{ margin: '0 0 8px' }}>
-                Con le 5, un ordine battuto all’una di notte è ancora della
-                serata prima: la nottata resta tutta insieme, invece di
-                spezzarsi a mezzanotte.
+                Orario di apertura e di chiusura del locale. Le fasce orarie
+                delle statistiche partono da questo orario.
               </p>
               <div className="toggle-row">
-                <span>Il giorno nuovo comincia alle (ora)</span>
+                <span>Apertura</span>
+                <OrarioInput
+                  label="Apertura"
+                  value={settings.orario_apertura}
+                  onCommit={(v) => save({ orario_apertura: v })}
+                />
+              </div>
+              <div className="toggle-row">
+                <span>Chiusura</span>
+                <OrarioInput
+                  label="Chiusura"
+                  value={settings.orario_chiusura}
+                  onCommit={(v) => save({ orario_chiusura: v })}
+                />
+              </div>
+              <p className="muted small" style={{ margin: '12px 0 8px' }}>
+                Il <strong>cambio di giornata</strong> è l’ora in cui una
+                giornata finisce e comincia la successiva: da quell’ora la
+                numerazione dei conti riparte da 1 e statistiche e chiusure
+                contano il giorno nuovo. Va dopo la chiusura, così i conti
+                battuti a fine serata restano nella stessa giornata. I conti
+                restano aperti finché non vengono chiusi.
+              </p>
+              <div className="toggle-row">
+                <span>Cambio di giornata (ora)</span>
                 <AmountInput
                   value={settings.business_day_cutoff_hour}
                   min={0}
@@ -510,6 +533,12 @@ export default function SettingsTab({ role = null }) {
                   onCommit={(v) => save({ business_day_cutoff_hour: v })}
                 />
               </div>
+              {cambioDentroOrario(settings.business_day_cutoff_hour, settings) && (
+                <p className="muted small" role="alert" style={{ margin: '8px 0 0' }}>
+                  ⚠️ Il cambio di giornata cade dentro l’orario di apertura: una
+                  serata verrebbe divisa su due giornate.
+                </p>
+              )}
             </div>
       ),
     },
@@ -1482,6 +1511,27 @@ function AmountInput({ value, min, max, step, onCommit }) {
   )
 }
 
+// Un orario in ore e minuti. Si salva all'uscita dal campo, come gli
+// importi: il selettore dell'ora manda un valore a ogni cifra, e ognuno
+// sarebbe una scrittura sulle impostazioni di tutti i terminali.
+function OrarioInput({ label, value, onCommit }) {
+  const [val, setVal] = useState(value ?? '')
+  useEffect(() => {
+    setVal(value ?? '')
+  }, [value])
+  return (
+    <input
+      className="setting-amount"
+      type="time"
+      aria-label={label}
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={() => val && val !== value && onCommit(val)}
+      onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+    />
+  )
+}
+
 // ── LE FUNZIONI PREMIUM ───────────────────────────────────
 // Cosa ha questo locale, e cosa potrebbe avere. Anche quelle che NON ha
 // restano in elenco APPOSTA (decisione dell'utente, 26/08/2026): sparite
@@ -1531,6 +1581,17 @@ function FunzioniPremium({ settings, onSave }) {
           desc="Acceso: alla chiusura, l’inventario successivo parte da sé dalle giacenze appena allineate, e il consumo si legge fra una chiusura e l’altra. Spento: dopo la chiusura non c’è nessun inventario in corso, e il prossimo lo apri tu quando vuoi."
           checked={settings.inventario_riapre_da_solo !== false}
           onChange={(v) => onSave({ inventario_riapre_da_solo: v })}
+        />
+      )}
+      {/* LA PAGINA DI PROVA (REQ-MAG-050) esiste solo nell'ambiente di
+          test e in locale (lib/prova.js): in produzione l'interruttore non
+          compare nemmeno. */}
+      {devToolsEnabled && (
+        <ToggleRow
+          label="Controllo del magazzino (prova)"
+          desc="Mostra in Magazzino una pagina di prova: si conta un prodotto alla volta e il conteggio corregge subito la giacenza; il rapporto mostra acquisti, venduto, differenza e giorni di scorta per periodo. Disponibile solo nell’ambiente di test."
+          checked={settings.controllo_magazzino_prova === true}
+          onChange={(v) => onSave({ controllo_magazzino_prova: v })}
         />
       )}
     </div>

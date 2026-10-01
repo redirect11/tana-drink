@@ -9,6 +9,8 @@ import {
 } from '../lib/api.js'
 import { macroMonthlyReport, UNASSIGNED } from '../lib/macroStats.js'
 import Didascalia from './Didascalia.jsx'
+import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
+import { colonneDelBilancio } from '../lib/periodiBilancio.js'
 
 // BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
 // del menù, quanto è costata la merce che ha venduto, che margine ne resta.
@@ -26,13 +28,14 @@ import Didascalia from './Didascalia.jsx'
 // speso in bibite» — quella è la domanda degli ACQUISTI e vive con le
 // fatture, non in una tabella che parla del venduto.
 
-const MESI = ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC']
-const monthsOfYear = (year) => MESI.map((_, i) => `${year}-${String(i + 1).padStart(2, '0')}`)
-const eur0 = (v) =>
-  `${Math.round(Number(v) || 0).toLocaleString('it-IT', { useGrouping: 'always' })} €`
-// Un'incidenza che non si può calcolare (mese in perdita, anno vuoto) resta
-// un trattino: un numero inventato lì si legge come vero.
-const perc = (v) => (v == null ? '—' : `${String(v).replace('.', ',')}%`)
+// Le righe nell'ordine di questa tabella: prima quello che è entrato in
+// cassa, poi quanto è costato.
+const RIGHE = [
+  { campo: 'incasso', label: 'Incassato', cls: 'r-inc' },
+  { campo: 'costo', label: 'Costo del venduto', cls: 'r-cos' },
+  { campo: 'margine', label: 'Margine', cls: 'r-mar' },
+  { campo: 'rapporto', label: 'Inc/Costo', cls: 'r-rap' },
+]
 
 export default function MacroMonthlyTab() {
   const [year, setYear] = useState(() => new Date().getFullYear())
@@ -66,6 +69,10 @@ export default function MacroMonthlyTab() {
     }
   }, [year, cutoff])
 
+  // I dodici mesi, le stesse colonne della vista per anno di «Acquisti ×
+  // Fatturato».
+  const colonne = useMemo(() => colonneDelBilancio('anno', `${year}-01-01`), [year])
+
   const report = useMemo(() => {
     if (!data) return null
     return macroMonthlyReport({
@@ -73,11 +80,11 @@ export default function MacroMonthlyTab() {
       drinksById: Object.fromEntries(data.drinks.map((d) => [d.id, d])),
       itemsById: Object.fromEntries(data.items.map((i) => [i.id, i])),
       macros: data.macros,
-      months: monthsOfYear(year),
+      months: colonne.map((c) => c.key),
       cutoffHour: cutoff,
       saleVat: settings.sale_vat,
     })
-  }, [data, year, cutoff, settings.sale_vat])
+  }, [data, colonne, cutoff, settings.sale_vat])
 
   if (error) return <div className="banner">Errore: {error}</div>
 
@@ -118,9 +125,9 @@ export default function MacroMonthlyTab() {
       {!loading && report && data.macros.length > 0 && (
         <>
           {report.rows.map((r) => (
-            <MacroBlock key={r.id} row={r} months={report.months} />
+            <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel="Inc/Costo anno" />
           ))}
-          <TotalBlock report={report} />
+          <BloccoTotale report={report} colonne={colonne} righe={RIGHE} incidenzaLabel="Incidenza sull’anno" />
           <SpiegazioneTabella saleVat={settings.sale_vat} />
         </>
       )}
@@ -157,111 +164,6 @@ function SpiegazioneTabella({ saleVat }) {
         merce <strong>entrata dalla porta</strong>, al lordo. Le percentuali
         si somigliano, gli importi no.
       </Didascalia>
-    </div>
-  )
-}
-
-// Un blocco (card) per macro-categoria, con i mesi in colonna.
-function MacroBlock({ row, months }) {
-  return (
-    <div className="card" style={{ marginBottom: 12 }}>
-      <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong>🗂️ {row.name}</strong>
-        <span className="muted small">
-          Inc/Costo anno:{' '}
-          <strong>{row.tot.rapporto != null ? `×${row.tot.rapporto}` : '—'}</strong>
-        </span>
-      </div>
-      <MonthTable
-        months={months}
-        byMonth={row.byMonth}
-        tot={row.tot}
-        ultima={RIGA_INCIDENZA}
-      />
-    </div>
-  )
-}
-
-// Blocco finale con i totali di tutte le macro.
-function TotalBlock({ report }) {
-  return (
-    <div className="card macro-total" style={{ marginBottom: 12 }}>
-      <strong>Σ Totale ({report.rows.length} macro)</strong>
-      <div style={{ marginTop: 6 }}>
-        <MonthTable
-          months={report.months}
-          byMonth={report.totByMonth}
-          tot={report.grand}
-          ultima={RIGA_INCIDENZA_ANNO}
-        />
-      </div>
-    </div>
-  )
-}
-
-// LE DUE INCIDENZE non stanno sulle stesse righe: quella sul margine ha
-// senso per una macro (quanto pesa fra le altre), quella sull'anno solo per
-// i totali (quanto pesa un mese sull'anno). Una riga sola che cambia
-// significato a seconda del blocco sarebbe la stessa parola per due
-// domande diverse.
-const RIGA_INCIDENZA = { label: 'Incidenza', valore: (c) => perc(c.incidenza) }
-const RIGA_INCIDENZA_ANNO = {
-  label: 'Incidenza sull’anno',
-  valore: (c) => perc(c.incidenzaAnno),
-}
-
-// Tabella mesi × metriche (incasso/costo del venduto/margine/rapporto) con
-// colonna TOT, più la riga di incidenza che il blocco le passa.
-function MonthTable({ months, byMonth, tot, ultima = null }) {
-  const cell = (m) => byMonth.get(m) || { incasso: 0, costo: 0, margine: 0, rapporto: null }
-  return (
-    <div className="table-scroll">
-      <table className="macro-tab">
-        <thead>
-          <tr>
-            <th className="rowhead"></th>
-            {months.map((m) => (
-              <th key={m}>{MESI[Number(m.slice(5)) - 1]}</th>
-            ))}
-            <th className="tot">TOT</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="r-inc">
-            <th className="rowhead">Incassato</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).incasso)}</td>)}
-            <td className="tot">{eur0(tot.incasso)}</td>
-          </tr>
-          <tr className="r-cos">
-            <th className="rowhead">Costo del venduto</th>
-            {months.map((m) => <td key={m}>{eur0(cell(m).costo)}</td>)}
-            <td className="tot">{eur0(tot.costo)}</td>
-          </tr>
-          <tr className="r-mar">
-            <th className="rowhead">Margine</th>
-            {months.map((m) => (
-              <td key={m} className={cell(m).margine < 0 ? 'neg' : ''}>{eur0(cell(m).margine)}</td>
-            ))}
-            <td className={`tot ${tot.margine < 0 ? 'neg' : ''}`}>{eur0(tot.margine)}</td>
-          </tr>
-          <tr className="r-rap">
-            <th className="rowhead">Inc/Costo</th>
-            {months.map((m) => (
-              <td key={m}>{cell(m).rapporto != null ? `×${cell(m).rapporto}` : '—'}</td>
-            ))}
-            <td className="tot">{tot.rapporto != null ? `×${tot.rapporto}` : '—'}</td>
-          </tr>
-          {ultima && (
-            <tr className="r-inci">
-              <th className="rowhead">{ultima.label}</th>
-              {months.map((m) => (
-                <td key={m}>{ultima.valore(cell(m))}</td>
-              ))}
-              <td className="tot">{ultima.valore(tot)}</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
     </div>
   )
 }

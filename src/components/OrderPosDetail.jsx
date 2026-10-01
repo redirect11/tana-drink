@@ -20,6 +20,8 @@ import {
   setOrderServiceMode,
   DEFAULT_SETTINGS,
   settingsIniziali,
+  fetchInventoryItems,
+  createCategory,
 } from '../lib/api.js'
 import { useDraft, loadLayout, saveLayout, saveDraft } from '../lib/useDraft.js'
 import { dismissKeyboard } from '../lib/keyboard.js'
@@ -93,6 +95,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
+import DrinkForm from './DrinkForm.jsx'
+import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -268,6 +272,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const [error, setError] = useState(null)
   const [showCustom, setShowCustom] = useState(false)
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
+  // ── LA RICETTA RITOCCATA CHE DIVENTA UNA VOCE DEL MENÙ (REQ-MENU-016) ──
+  // Quello che si ritocca su una riga vale per quel conto e muore lì. Da
+  // «Salva come nuova ricetta» si apre la scheda di un prodotto nuovo — la
+  // stessa del Menù — già compilata con le modifiche appena fatte.
+  const [nuovaRicetta, setNuovaRicetta] = useState(null)
+  // Il magazzino serve solo a questa scheda: si legge quando si apre, non
+  // all'ingresso nel conto, dove non lo guarderebbe nessuno.
+  const [inventario, setInventario] = useState([])
   const [showComande, setShowComande] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [confirmSvuota, setConfirmSvuota] = useState(false)
@@ -1403,6 +1415,38 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const canSplit =
     draft.some((l) => l.qty > 1) ||
     editableComande.some((c) => (c.items || []).some((i) => i.qty > 1))
+  // Da «Salva come nuova ricetta»: si chiude il ritocco della riga e si apre
+  // la scheda del prodotto nuovo con quello che c'era nel form. Il nome
+  // arriva com'è: se il drink si chiamava «Negroni» e lo si è ritoccato, il
+  // prodotto nuovo si chiamerà «Negroni» finché non gli si dà un nome suo —
+  // ed è giusto che a deciderlo sia chi lo salva, non noi.
+  const apriNuovaRicetta = ({ name, price, recipe_items }) => {
+    setEditLine(null)
+    fetchInventoryItems()
+      .then(setInventario)
+      .catch(() => setInventario([]))
+    setNuovaRicetta({
+      name: name || '',
+      description: '',
+      category_id: '',
+      price: price != null ? String(price) : '',
+      sale_vat: '',
+      recipe: '',
+      available: true,
+      image_url: null,
+      recipe_items: recipe_items || [],
+    })
+  }
+
+  // Salvata la ricetta nuova si TORNA ALLA CODA (Daniele, 18/09/2026), e
+  // solo da qui: la stessa scheda aperta dal Menù resta dov'è. Chi salva una
+  // ricetta in mezzo a un conto ha finito quello che era venuto a fare.
+  const salvaNuovaRicetta = async (form) => {
+    await saveDrinkFromForm({ form, inventory: inventario, categories: cats || [] })
+    setNuovaRicetta(null)
+    navigate('/bar')
+  }
+
   const applyEdit = ({ name, price, recipe_items, note }) => {
     const l = editLine
     setEditLine(null)
@@ -3249,7 +3293,25 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           warnNoRecipe={editInitial?.recipe_items.length === 0}
           onCancel={() => setEditLine(null)}
           onAdd={applyEdit}
+          onSaveAsNew={apriNuovaRicetta}
         />
+      )}
+
+      {/* ── La stessa scheda del Menù, già compilata (REQ-MENU-016) ── */}
+      {nuovaRicetta && (
+        <div className="overlay confirm-overlay" onClick={() => setNuovaRicetta(null)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <DrinkForm
+              initial={nuovaRicetta}
+              categories={cats || []}
+              inventory={inventario}
+              saleVatLocale={settings.sale_vat}
+              onCreateCategory={(name) => createCategory({ name, sort_order: (cats || []).length })}
+              onCancel={() => setNuovaRicetta(null)}
+              onSave={salvaNuovaRicetta}
+            />
+          </div>
+        </div>
       )}
 
       {/* ── Modale nome del conto all'uscita di un ordine appena creato ── */}
