@@ -1,5 +1,24 @@
 # Cosa è cambiato
 
+## 1.8.4-beta
+
+### Per chi amministra
+
+- **Bilancio → «Acquisti × Fatturato»: la tabella del foglio di analisi.**
+  Per ogni macro-categoria acquisti, fatturato, utile, rapporto
+  fatturato/acquisti e incidenza sulla somma degli utili; in fondo i
+  totali e l'incidenza di ogni colonna sul periodo. Si guarda per anno (i
+  dodici mesi), per mese (le settimane 1–7, 8–14, 15–21, 22–28 e i giorni
+  che restano), per settimana (da lunedì a domenica) o per giorno, con le
+  frecce per spostarsi. Si apre al lordo dell'IVA, come il foglio; «Netto
+  IVA» passa ai valori senza IVA.
+- **Tolta dalle Statistiche la scheda «Per macro-categoria»**: gli stessi
+  numeri, completi, sono nel Bilancio.
+- **Impostazioni → Giornata di lavoro: orario di apertura e di
+  chiusura.** In ore e minuti; le fasce orarie delle statistiche partono da
+  questo orario. L'ora del cambio di giornata resta a parte («Cambio di
+  giornata»), e se cade dentro l'orario di apertura compare un avviso.
+
 ## 1.8.3-beta
 
 ### Per chi amministra

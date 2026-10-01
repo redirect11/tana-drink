@@ -21,13 +21,12 @@ import {
   prepTimeStats,
   serviceModeSplit,
   extrasBreakdown,
-  DEFAULT_HOUR_RANGE,
 } from '../lib/stats.js'
+import { fasciaDelLocale } from '../lib/orario.js'
 import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
-import MacroPeriodo from './MacroPeriodo.jsx'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
@@ -185,8 +184,19 @@ function DailyStats({ sezione = 'serate' }) {
     })
   // Carica abbastanza giornate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
-  // Range orari configurabili dei grafici.
-  const [hourRange, setHourRange] = useState(DEFAULT_HOUR_RANGE)
+  // Range orari dei grafici: partono dall'orario del locale (REQ-CASSA-015)
+  // finché chi guarda non li cambia a mano. Le impostazioni arrivano dopo
+  // il primo disegno, quindi la fascia si DERIVA invece di copiarla nello
+  // stato all'avvio, quando sono ancora quelle predefinite.
+  // Memorizzata sui due orari: un oggetto nuovo a ogni disegno farebbe
+  // rifare tutti i conti della pagina (`view` dipende da hourRange).
+  const [fasciaScelta, setHourRange] = useState(null)
+  const { orario_apertura: apertura, orario_chiusura: chiusura } = settings
+  const fasciaLocale = useMemo(
+    () => fasciaDelLocale({ orario_apertura: apertura, orario_chiusura: chiusura }),
+    [apertura, chiusura]
+  )
+  const hourRange = fasciaScelta ?? fasciaLocale
   // SERATA (chiusura di cassa): in alternativa alle ultime N giornate si
   // guardano le statistiche di UNA serata, dall'apertura alla chiusura della
   // cassa. È il taglio con cui si ragiona davvero al bancone ("com'è andata
@@ -304,9 +314,6 @@ function DailyStats({ sezione = 'serate' }) {
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
     return {
       sel,
-      // I conti del periodo, per chi fa i suoi conti a parte (le macro).
-      ord,
-      drinksById,
       kpi: kpiSummary(ord, sel),
       byHour: revenueByHour(ord, hourRange),
       // Le giornate con la cassa aperta ci sono anche senza conti, a zero
@@ -380,7 +387,6 @@ function DailyStats({ sezione = 'serate' }) {
             al: businessDayKey(serata.closed_at || new Date(), cutoff),
           }}
           cutoff={cutoff}
-          saleVat={settings.sale_vat}
         />
       </div>
     )
@@ -453,7 +459,6 @@ function DailyStats({ sezione = 'serate' }) {
         comandi={comandi}
         intervallo={intervallo}
         cutoff={cutoff}
-        saleVat={settings.sale_vat}
       />
     </div>
   )
@@ -568,7 +573,7 @@ function ClassificaVenduto({ righe }) {
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
+function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
@@ -700,19 +705,6 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
           da={intervallo.da}
           a={intervallo.a}
           cutoffHour={cutoff}
-        />
-      )}
-      {/* Acquisti, venduto e generato per macro (REQ-STAT-004). */}
-      {intervallo?.dal && intervallo?.al && (
-        <MacroPeriodo
-          ordini={view.ord}
-          drinksById={view.drinksById}
-          dal={intervallo.dal}
-          al={intervallo.al}
-          da={intervallo.da}
-          a={intervallo.a}
-          cutoffHour={cutoff}
-          saleVat={saleVat}
         />
       )}
 

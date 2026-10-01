@@ -3,8 +3,7 @@ import { shiftDay } from '../lib/ore.js'
 
 // ── LA LETTURA DI UNA SCHEDA DELLE STATISTICHE PER PERIODO ────────────
 //
-// «Magazzino nel periodo» e «Per macro-categoria» (REQ-STAT-002, 004) leggono
-// migliaia di documenti, quindi:
+// «Magazzino nel periodo» (REQ-STAT-002) legge migliaia di documenti, quindi:
 //   · SI LEGGE A RICHIESTA (`aperto`): chi guarda l'incasso non paga una
 //     lettura che non ha chiesto;
 //   · SI RILEGGE SOLO SE SI GUARDA PIÙ INDIETRO: ritoccare l'ora di fine o
