@@ -4,6 +4,14 @@
 
 ### Per chi amministra
 
+- **Le fasce orarie contano le comande, non l'apertura del conto.** Un
+  tavolo aperto alle 21 che ordina fino all'una distribuisce l'incasso
+  sulle ore in cui le comande sono state battute; lo sconto del conto si
+  divide in parti uguali fra le sue comande. Vale per «Incasso per fascia
+  oraria», «Venduto nella fascia oraria» e «Incasso per giornata nella
+  fascia scelta».
+- **In «Incasso per giornata» compaiono anche le giornate a zero** in cui
+  la cassa è stata aperta.
 - **Statistiche per periodo: acquisti, venduto e generato per
   macro-categoria.** Nuova scheda «Per macro-categoria», da aprire con
   «Calcola»: per ogni macro gli acquisti (merce consegnata e carichi

@@ -16,6 +16,7 @@ import {
   serviceModeSplit,
   hourRangeReport,
   sessionReport,
+  battuteDi,
 } from '../../src/lib/stats.js'
 
 const orders = [
@@ -351,5 +352,78 @@ describe('statistiche al netto degli sconti', () => {
     expect(e.incasso).toBe(140)
     expect(e.sconti).toBe(10)
     expect(e.lordo).toBe(150)
+  })
+})
+
+// ── LE BATTUTE: LE FASCE ORARIE PER COMANDA (REQ-STAT-005) ───────────
+// Flavio, 30/09/2026: «nelle fasce orarie mi deve segnare quando viene
+// battuta una singola comanda e non quando viene aperto il conto,
+// indipendentemente da quando viene pagato»; e lo sconto «diviso in parti
+// uguali per il numero delle comande, non per il valore della singola
+// comanda». Le ore si ricavano dall'ora LOCALE di istanti noti, così il test
+// vale in qualunque fuso.
+describe('le battute di un conto', () => {
+  const alle21 = '2026-09-26T19:00:00.000Z'
+  const alle00 = '2026-09-26T22:00:00.000Z'
+  const ora = (iso) => `${String(new Date(iso).getHours()).padStart(2, '0')}:00`
+  const birra = (qty) => ({ drink_id: 'b', name: 'Birra', qty, unit_price: 5 })
+  // Un tavolo aperto alle 21 che beve fino a mezzanotte, con 4 € di sconto
+  // sul conto: due comande da 10 € e 5 €.
+  const tavolo = {
+    id: 'o1',
+    status: 'pagato',
+    created_at: alle21,
+    total: 15,
+    discount_amount: 4,
+    comande: [
+      { id: 'c1', status: 'ritirato', created_at: alle21, items: [birra(2)] },
+      { id: 'c2', status: 'ritirato', created_at: alle00, items: [birra(1)] },
+    ],
+    order_items: [birra(3)],
+  }
+
+  it('una battuta per comanda, ognuna con la sua ora', () => {
+    expect(battuteDi(tavolo).map((b) => b.created_at)).toEqual([alle21, alle00])
+  })
+
+  it('lo sconto si divide in parti uguali, e il totale torna con l’incasso del conto', () => {
+    const [prima, seconda] = battuteDi(tavolo)
+    // 4 € su due comande: 2 € ciascuna, non 8/3 e 4/3 in proporzione.
+    expect(prima.discount_amount).toBe(2)
+    expect(seconda.discount_amount).toBe(2)
+    const netto = battuteDi(tavolo).reduce((s, b) => s + b.total - b.discount_amount, 0)
+    expect(netto).toBe(11) // 15 − 4
+  })
+
+  it('una comanda annullata non è una battuta', () => {
+    const conAnnullata = {
+      ...tavolo,
+      comande: [...tavolo.comande, { id: 'c3', status: 'annullato', created_at: alle00, items: [birra(5)] }],
+    }
+    expect(battuteDi(conAnnullata)).toHaveLength(2)
+  })
+
+  it('l’incasso per fascia oraria va all’ora della comanda, non dell’apertura', () => {
+    const { buckets } = revenueByHour([tavolo], { from: ora(alle21), to: ora('2026-09-26T23:00:00.000Z') })
+    const di = (iso) => buckets.find((b) => b.label === ora(iso))
+    expect(di(alle21).incasso).toBe(8) // 10 − 2
+    expect(di(alle00).incasso).toBe(3) // 5 − 2
+  })
+
+  it('nel venduto della fascia il conto si conta una volta, e solo quello battuto lì', () => {
+    const r = hourRangeReport([tavolo], { from: ora(alle00), to: ora('2026-09-26T23:00:00.000Z') }, {})
+    expect(r.nOrdini).toBe(1)
+    expect(r.totale).toBe(3)
+    expect(r.prodotti.find((p) => p.name === 'Birra').qty).toBe(1)
+  })
+})
+
+// Flavio, 30/09/2026: «ho aperto la cassa e l'ho chiusa … in incasso per
+// giornata non la vedo. Se ci sono delle aperture di cassa me lo dovrebbe
+// registrare». Una serata a zero è un dato, non un buco nel grafico.
+describe('le giornate con la cassa aperta', () => {
+  it('compaiono anche senza conti, a zero', () => {
+    const giorni = revenueByDay([], 5, { giorniConCassa: ['2026-09-29'] })
+    expect(giorni.map((g) => [g.id, g.incasso, g.ordini])).toEqual([['2026-09-29', 0, 0]])
   })
 })

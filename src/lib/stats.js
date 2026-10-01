@@ -39,6 +39,59 @@ export function kpiSummary(orders, giorni = []) {
   }
 }
 
+// ── LE BATTUTE DI UN CONTO (REQ-STAT-005) ────────────────────────────
+//
+// Flavio, 30/09/2026: «nelle fasce orarie mi deve segnare quando viene
+// battuta una singola comanda e non quando viene aperto il conto,
+// indipendentemente da quando viene pagato». Un tavolo aperto alle 21 che
+// beve fino all'una finiva tutto nella fascia delle 21: il grafico diceva
+// che si lavora all'apertura dei conti, non quando si serve.
+//
+// Quindi un conto si spezza in BATTUTE, una per comanda non annullata, con
+// la sua ora, le sue righe e il suo incasso. Un conto senza comande (il
+// modello vecchio) è una battuta sola, all'ora del conto.
+//
+// LO SCONTO SI DIVIDE IN PARTI UGUALI fra le comande, non in proporzione al
+// loro valore (Flavio, stesso vocale: «diviso 6, diviso 12, quante ne sono
+// le comande, non in proporzione a quanto costa la singola comanda»). Si
+// divide la differenza fra il lordo delle righe e l'incasso del conto
+// (orderNet), così la somma delle battute torna AL CENTESIMO con l'incasso
+// del conto — anche dove ci sono coperto o servizio. Una comanda piccola su
+// un conto molto scontato può risultare negativa: è la regola chiesta, e il
+// totale resta giusto.
+//
+// Ogni battuta torna nella forma di un conto (`order_items`, `total`,
+// `discount_amount`, `created_at` = l'ora della comanda), così i conti che
+// le statistiche fanno già sugli ordini valgono uguali sulle battute;
+// `conto` è il conto da cui viene (l'oggetto: un conto senza id resta lui).
+const lordoDi = (items) =>
+  (items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price) || 0), 0)
+
+export function battuteDi(o) {
+  const comande = (o?.comande || []).filter(
+    (c) => c && c.status !== ORDER_STATUSES.ANNULLATO && (c.items || []).length > 0
+  )
+  const elenco = comande.length
+    ? comande.map((c) => ({ at: c.created_at || o.created_at, items: c.items }))
+    : [{ at: o?.created_at, items: o?.order_items || [] }]
+  const lordo = elenco.reduce((s, b) => s + lordoDi(b.items), 0)
+  const quota = (lordo - orderNet(o)) / elenco.length
+  return elenco.map((b) => {
+    const lordoB = Math.round(lordoDi(b.items) * 100) / 100
+    return {
+      conto: o,
+      status: o?.status,
+      created_at: b.at,
+      order_items: b.items,
+      total: lordoB,
+      discount_amount: Math.round(quota * 100) / 100,
+    }
+  })
+}
+
+// Le battute di più conti, annullati esclusi.
+const battute = (orders) => valid(orders).flatMap(battuteDi)
+
 // ── Fasce orarie configurabili ────────────────────────────────────────
 // Le fasce sono slot di un'ora allineati all'inizio del range scelto
 // ("da" → "a", anche a cavallo della mezzanotte, es. 18:30 → 03:30).
@@ -89,13 +142,14 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
     ordini: 0,
   }))
 
-  for (const o of valid(orders)) {
+  // Per BATTUTA, non per conto (REQ-STAT-005): `ordini` qui conta le comande.
+  for (const o of battute(orders)) {
     const t = ms(o.created_at)
     if (t == null) continue
     const off = offsetInRange(minuteOfDay(t), fromMin, span)
     if (off == null) continue
     const b = buckets[Math.floor(off / 60)]
-    b.incasso += orderNet(o)
+    b.incasso += o.total - o.discount_amount
     b.ordini += 1
   }
 
@@ -132,11 +186,13 @@ export function sessionReport(orders, session, drinksById) {
 // Ordini che cadono in una FASCIA ORARIA (es. 22:00 → 01:00, anche a cavallo
 // della mezzanotte). Serve a rispondere a "cosa ho venduto fra le 22 e l'una":
 // da qui si passano gli ordini filtrati a topProducts / revenueByCategory.
+// Sono le BATTUTE che cadono nella fascia (REQ-STAT-005): il gin di
+// mezzanotte di un conto aperto alle 21 è venduto a mezzanotte.
 export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
   const fromMin = parseHM(range?.from) ?? parseHM(DEFAULT_HOUR_RANGE.from)
   const toMin = parseHM(range?.to) ?? parseHM(DEFAULT_HOUR_RANGE.to)
   const span = rangeSpan(fromMin, toMin)
-  return valid(orders).filter((o) => {
+  return battute(orders).filter((o) => {
     const t = ms(o.created_at)
     if (t == null) return false
     return offsetInRange(minuteOfDay(t), fromMin, span) != null
@@ -152,7 +208,8 @@ export function hourRangeReport(orders, range, drinksById) {
     0
   )
   return {
-    nOrdini: ord.length,
+    // I CONTI che hanno battuto qualcosa nella fascia, non le battute.
+    nOrdini: new Set(ord.map((o) => o.conto)).size,
     totale: Math.round(totale * 100) / 100,
     prodotti: aggregateProducts(ord), // già ordinati per quantità
     categorie: revenueByCategory(ord, drinksById),
@@ -165,7 +222,8 @@ export function revenueByDayInRange(orders, range, cutoffHour = DEFAULT_CUTOFF_H
   const fromMin = parseHM(range.from) ?? 0
   const toMin = parseHM(range.to) ?? 0
   const span = rangeSpan(fromMin, toMin)
-  const filtered = orders.filter((o) => {
+  // Per battuta, come le fasce (REQ-STAT-005).
+  const filtered = battute(orders).filter((o) => {
     const t = ms(o.created_at)
     return t != null && offsetInRange(minuteOfDay(t), fromMin, span) != null
   })
@@ -175,8 +233,15 @@ export function revenueByDayInRange(orders, range, cutoffHour = DEFAULT_CUTOFF_H
 // ── Trend per giornata commerciale ────────────────────────────────────
 // Niente più "serate": si raggruppa per giornata (con ora di taglio, così
 // la nottata oltre la mezzanotte resta nella giornata in cui è iniziata).
-export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+//
+// LE GIORNATE A CASSA APERTA CI SONO ANCHE A ZERO (REQ-STAT-005). Flavio,
+// 30/09/2026: «ho aperto la cassa e l'ho chiusa, quindi mi ha registrato
+// una cassa a zero, e in incasso per giornata non la vedo … se ci sono
+// delle aperture di cassa me lo dovrebbe registrare». `giorniConCassa` sono
+// le giornate in cui la cassa è stata aperta: senza conti, valgono zero.
+export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR, { giorniConCassa = [] } = {}) {
   const byDay = new Map()
+  for (const k of giorniConCassa) if (k) byDay.set(k, { incasso: 0, ordini: 0 })
   for (const o of valid(orders)) {
     const k = businessDayKey(o.created_at, cutoffHour)
     if (!k) continue
