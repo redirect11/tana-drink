@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import Didascalia from './Didascalia.jsx'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
+import AcquistiFatturato from './AcquistiFatturato.jsx'
 
 // ── BILANCIO: I CONTI DEL LOCALE ─────────────────────────────────────
 // Qui sta quello che Flavio teneva su ANALISI DATI.xlsx: incassi, stipendi,
@@ -62,25 +63,6 @@ function Mesi() {
           incassi, stipendi, spese e il <strong>netto</strong>, cioè quello che
           resta dopo aver pagato tutti. Gli stipendi non si ricopiano da
           nessun foglio: escono dalle ore registrate nell’app.
-        </>
-      }
-    />
-  )
-}
-
-function AcquistiFatturato() {
-  return (
-    <InArrivo
-      titolo="📥 Acquisti × Fatturato"
-      cosa="La tabella degli acquisti sta arrivando."
-      didascalia={
-        <>
-          Quanta merce è entrata dalla porta e quanto ha reso, gruppo per
-          gruppo e mese per mese. <strong>Da sapere prima di guardarla</strong>:
-          si riempie da quando gli ordini fornitore passano dall’app, quindi i
-          primi mesi saranno mezzi vuoti — dello storico non si ricostruisce
-          niente, e un totale basso lì dentro vuol dire «non l’ho ancora
-          scritto», non «non ho comprato».
         </>
       }
     />

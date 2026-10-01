@@ -6,6 +6,7 @@ import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './et
 import { scontoTotale } from './pagamento.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { comandeConRighe, itemsTotal } from './comande.js'
+import { ORARIO_PREDEFINITO, parseHM } from './orario.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 const valid = (orders) => orders.filter((o) => !isCancelled(o))
@@ -101,14 +102,10 @@ const battute = (orders) => valid(orders).flatMap(battuteDi)
 // ("da" → "a", anche a cavallo della mezzanotte, es. 18:30 → 03:30).
 // Le fasce vuote compaiono comunque, a zero.
 
-export const DEFAULT_HOUR_RANGE = { from: '18:30', to: '03:30' }
+export const DEFAULT_HOUR_RANGE = { from: ORARIO_PREDEFINITO.apertura, to: ORARIO_PREDEFINITO.chiusura }
 
-// "HH:MM" → minuti da mezzanotte.
-export function parseHM(s) {
-  const m = String(s || '').match(/^(\d{1,2}):(\d{2})$/)
-  if (!m) return null
-  return Math.min(23, Number(m[1])) * 60 + Math.min(59, Number(m[2]))
-}
+// Il lettore degli orari sta in orario.js; resta esportato anche da qui.
+export { parseHM }
 
 const DAY = 1440
 const fmtHM = (min) => {

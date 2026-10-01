@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 210 | fatto e coperto dai test |
+| ✅ | 211 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 24 | da fare |
-| 🗑 | 7 | non più valido |
+| ⬜ | 23 | da fare |
+| 🗑 | 8 | non più valido |
 
-**256 voci** in tutto. **225** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**257 voci** in tutto. **226** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -47,8 +47,8 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 43 | 7 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Magazzino](#magazzino) | 44 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 13 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 5 | — |  |
+| [STAT](#stat) | 4 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -1111,6 +1111,44 @@ Prodotti e voci del menù si raggruppano in poche macro-categorie (distillati, b
 
 **Dove**: `src/lib/macros.js, src/lib/macroStats.js, src/components/MacroCategoryManager.jsx` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/unit/macroStats.test.js`
 
+#### REQ-MAG-022 — Bilancio → Acquisti × Fatturato: il rapporto per macro del foglio, per anno, mese, settimana o giorno
+
+COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a mano, mese per mese e macro per macro: nessuna formula dice da dove viene.
+
+DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non va inventato. Due indizi, verificati tutti e due, e nessuno dei due torna al centesimo. (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del 2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 / 4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi uguali, gennaio e luglio lontani. Il registro però tiene solo cinque fornitori, e negli ordini ne compaiono una decina. (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità × prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma per macro si può fare a mano. È il modo più plausibile, ma è una ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
+
+QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre «€/pz × 1,22»).
+
+COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA. Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una domanda vera che vive con gli acquisti e non nella tabella del venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui gli acquisti avranno la loro schermata. Quel giorno è questo.
+
+PROPOSTA, poi DECISA il 19/08 (vedi in fondo). Una vista «Acquisti per macro» con le macro di MAGAZZINO per riga e i mesi per colonna, e — dove la macro d'acquisto è agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di quella accanto, che è il confronto che il locale fa a fine mese.
+
+ERANO TRE DOMANDE, E DUE SONO CHIUSE (19/08, dall'utente che riporta Flavio). (1) L'ACQUISTO È L'ORDINE FORNITORE RICEVUTO: la merce conta quando entra dalla porta, non quando arriva la fattura — che in app è un'altra cosa e segue tempi suoi. (2) LORDO E NETTO SI VEDONO TUTTI E DUE: i fogli di Flavio sono al lordo ed è come lui legge da sempre, il resto dell'app ragiona al netto, e obbligare a sceglierne uno vorrebbe dire dare torto a lui o dare torto alle statistiche. Servono tutti e due sulla stessa tabella; quale dei due si apre per primo lo si sceglie provandolo con lui. (3) RESTA APERTA: in quale mese cade un acquisto è REQ-MAG-021 — la quota consumata che migra da un mese all'altro — e questa tabella va pensata insieme a quella.
+
+DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sottosezione «Acquisti × Fatturato», accanto a «Mesi» e «Venduto × Incassato». È la tabella dell'Excel rifatta: per riga le macro d'ACQUISTO, per colonna i mesi, e in ogni cella acquisti, fatturato, utile (fatturato − acquisti), rapporto fat/acq e incidenza sull'utile del mese; in fondo i totali dell'anno e l'incidenza dell'anno.
+
+IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
+
+SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare. 30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che conta le righe CONSEGNATE per la quantita' ricevuta e nella data di consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la tabella mese per mese del Bilancio.
+
+GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
+
+ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
+
+DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque domande sui lotti): finché quello non è deciso un acquisto pesa sul mese in cui è ENTRATO e non su quello in cui si consuma, e la didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella resta vuota finché gli ordini fornitore non passano davvero dall'app, e dello storico 2026 non si ricostruisce niente. Per questo non è lavorabile adesso.
+
+SBLOCCATA E FATTA (01/10/2026). Il vincolo è caduto: il foglio si ferma al 7 agosto, e da lì gli ordini fornitore e i carichi passano dall'app (REQ-MAG-029, REQ-MAG-046). Flavio, vocali del 01/10: «macro-categorie dovrebbe avere un link a parte […] bisognerebbe vedere la tabella mia», «io devo avere sempre davanti il valore degli acquisti e il valore del fatturato […] il totale degli utili generato […] il rapporto fatturato acquisti e l'incidenza della somma utile in percentuale», e la vuole «per l'anno, per il mese che vada a selezionare io e per la settimana […] volendo anche giornaliera». L'utente, lo stesso giorno: nella pagina Bilancio, non nelle Statistiche (REQ-STAT-004 è stata tolta). COM'È FATTA, riga per riga come il foglio (formule verificate su ANALISI DATI.xlsx, foglio RAPPORTI ACQUISTI 2026). Un blocco per macro, più «Non attribuito» se ha importi: · ACQUISTI: la merce entrata (vociDiAcquisto: consegne degli ordini fornitore nella data di consegna, più i carichi diretti), spartita coi pesi dei PRODOTTI; · FATTURATO: l'incassato delle voci di menù della macro, sconto compreso, spartito coi pesi delle VOCI; · UTILE = fatturato − acquisti; · RAPPORTO FAT/ACQ = fatturato ÷ acquisti (il moltiplicatore); · INCIDENZA = utile della macro ÷ somma degli utili delle macro in quella colonna, in percentuale. In fondo il totale di tutte le macro con, al posto dell'incidenza sugli utili, l'INCIDENZA SUL PERIODO: fatturato della colonna ÷ fatturato di tutto il periodo mostrato (nel foglio «incidenza anno»). Dove il denominatore non è positivo resta un trattino, come in «Venduto × Incassato».
+
+LE QUATTRO VISTE, scelte con un gruppo di gettoni e una freccia per andare avanti e indietro: · ANNO: i dodici mesi; · MESE: le settimane DEL FOGLIO DI FLAVIO, a blocchi di sette giorni dal primo del mese (1–7, 8–14, 15–21, 22–28) più i giorni che restano (29–fine), «le 4 settimane e la settimana incompleta»; · SETTIMANA: da lunedì a domenica, come le chiusure (REQ-CASSA-014); · GIORNO: una giornata sola. Ogni colonna è un intervallo di GIORNATE COMMERCIALI: la nottata che finisce alle tre resta della sera prima, su vendite e acquisti.
+
+LORDO E NETTO: si apre AL LORDO, come legge Flavio e come è il foglio, e un interruttore passa al netto (decisione dell'utente, 01/10). Al lordo il fatturato è l'incassato così com'è e gli acquisti portano l'IVA del prodotto; al netto l'incassato è scorporato con l'aliquota della voce o del locale e gli acquisti sono al costo senza IVA.
+
+LA STESSA TABELLA DI «VENDUTO × INCASSATO»: le vendite si sommano con lo stesso giro (sommaVendite), le righe per macro, i totali e le incidenze con la stessa funzione (componiTabella), e si disegnano con lo stesso componente (TabellaMacro): cambiano le parole delle righe e da dove arriva il secondo numero (acquisti invece del costo delle ricette). Le colonne delle quattro viste stanno in periodiBilancio.js.
+
+LETTURE: i conti e i soli CARICHI del periodo mostrato (fetchOrdersBetween, fetchCarichiBetween): ogni vendita scrive uno scarico per ingrediente, e leggere tutti i movimenti vorrebbe dire decine di migliaia di documenti per usarne poche centinaia. Il filtro sul motivo sta nella query, con l'indice composto (reason, created_at) in firestore.indexes.json. Poi ordini fornitore, prodotti, voci e macro una volta sola; un periodo già visto non si rilegge. `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto e sommaVendite.
+
+**Dove**: `src/lib/acquistiFatturato.js, src/lib/periodiBilancio.js, src/lib/macroStats.js (sommaVendite, vociDiAcquisto, componiTabella), src/lib/magazzinoPeriodo.js (MOTIVI_DI_CARICO), src/components/AcquistiFatturato.jsx, src/components/TabellaMacro.jsx, src/components/BilancioTab.jsx, src/lib/api.js (fetchCarichiBetween), firestore.indexes.json` · **Lo dimostrano**: `tests/unit/acquistiFatturato.test.js`, `tests/component/AcquistiFatturato.test.jsx`
+
 #### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
 
 COSA FA IL FOGLIO (INV.xlsx, verificato). Ogni conta è un foglio con l'intervallo nel nome («07-06 01-07») e, per riga: DEP (giacenza iniziale), ACQ (comprato nel periodo), RIM (contato alla fine), CONS = DEP + ACQ − RIM, CONS/w, prezzo netto, prezzo ivato, VALORE € = RIM × prezzo, costo al cl, costo alla porzione (prezzo / (cl × 0,34)).
@@ -1880,6 +1918,16 @@ IL BORDO DELLA NOTTE VALE ANCHE QUI: una serata aperta sabato alle 19:00 e chius
 TUTTO IN LOCALE. Le righe aggregate escono dalle sessioni GIA' in mano — nessuna lettura nuova, nessuna attesa fra il tocco sul gettone e la lista nuova — e i numeri sono quelli CONGELATI nello snapshot della chiusura, che stanno sulla sessione: una settimana di due mesi fa somma quanto ha davvero incassato, non zero perche' i suoi ordini sono fuori dalla finestra scaricata. La logica e' pura (`raggruppaSerate`, `periodoDellaSerata`, `chiaveSettimana`, `chiaveMese`, `etichettaPeriodo` in src/lib/serate.js); il componente disegna e basta.
 
 **Dove**: `src/lib/serate.js, src/components/CashSessionsList.jsx` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/CashSessionsList.test.jsx`
+
+#### REQ-CASSA-015 — Giornata di lavoro: orario di apertura e di chiusura, oltre al cambio di giornata
+
+Flavio, vocale del 01/10/2026, sulla sezione «Giornata di lavoro» delle impostazioni: «il giorno nuovo comincia alle ore 5, bisogna mettere anche quando finisce […] la giornata di lavoro non è dalle 5 fino alle 4.59 del giorno dopo. Devo mettere io un inizio e una fine […] le ore e minuti di apertura e le ore e minuti di chiusura».
+
+DUE IMPOSTAZIONI NUOVE, in ore e minuti: `orario_apertura` e `orario_chiusura` (di partenza 18:30 e 03:30, la fascia che le statistiche avevano scritta nel codice). Dicono quando il locale lavora, e le FASCE ORARIE DELLE STATISTICHE partono da lì invece che da un orario fisso; si possono sempre cambiare a mano mentre si guarda.
+
+IL CAMBIO DI GIORNATA RESTA, ed è un'altra cosa: è l'ora in cui una giornata finisce e comincia la successiva (numerazione dei conti, statistiche, chiusure). Non coincide con la chiusura apposta: un conto battuto dieci minuti dopo la chiusura appartiene ancora a quella serata, e se il cambio fosse la chiusura finirebbe nel giorno dopo. Nelle impostazioni si chiama «Cambio di giornata», e se cade dentro l'orario di apertura compare un avviso: spezzerebbe una serata in due giornate.
+
+**Dove**: `src/components/SettingsTab.jsx, src/lib/api.js (DEFAULT_SETTINGS), src/lib/orario.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/orario.test.js`, `tests/component/SettingsTab.test.jsx`, `tests/component/StatsTab.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
@@ -2913,12 +2961,6 @@ Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale perio
 
 **Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
 
-#### REQ-STAT-004 — Statistiche per periodo: acquisti, venduto e generato per macro-categoria
-
-Flavio, vocale del 30/09/2026: «quello che non vedo, che secondo me ancora non l'ho messo, e' la visualizzazione nelle statistiche di quello che c'e' nelle macro-categorie: vedere gli acquisti, il venduto e vedere quanto mi ha generato». E' il rapporto per macro del suo foglio (ACQUISTI, FATTURATO, UTILE) sul periodo scelto nelle statistiche, invece che mese per mese — quello resta REQ-MAG-022, nel Bilancio. Una scheda «Per macro-categoria» dopo «Magazzino nel periodo», che si apre a richiesta (legge ordini fornitore, prodotti, macro e carichi) e segue lo stesso periodo della pagina: giornate intere o, per «Personalizzato», istanti (REQ-STAT-003). Per ogni macro, piu' «Non attribuito» e il totale: · ACQUISTI: le CONSEGNE degli ordini fornitore (consegneDi, in confrontoOrdine.js: righe consegnate o pagate, quantita' ricevuta × prezzo del documento, nella data di consegna; gli ordini di prima di REQ-MAG-029 alla data di ricezione) e gli altri movimenti del gruppo «acquisto» — carico da Prodotti e da fattura — valorizzati per pezzi al costo del prodotto; netto IVA, spartiti coi pesi dei prodotti, tagliati sul periodo con la stessa regola di «Magazzino nel periodo» (nelPeriodo); · VENDUTO: l'incassato delle voci di menu' della macro, IVA di vendita scorporata (venditeByMacro, la stessa regola del Bilancio); · GENERATO: venduto − acquisti. I conti non tornano col Bilancio mese per mese ne' devono: la' il costo e' quello di cio' che si e' VENDUTO (le ricette), qui gli acquisti sono cio' che e' ENTRATO nel periodo — la domanda di Flavio. Le macro in produzione sono compilate (verificato il 30/09: 4 macro, 447 prodotti e 405 voci con la loro quota).
-
-**Dove**: `src/components/MacroPeriodo.jsx, src/lib/macroStats.js (acquistiPerMacro, macroNelPeriodo), src/lib/confrontoOrdine.js (consegneDi), src/components/useLetturaDelPeriodo.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/component/MacroPeriodo.test.jsx`, `tests/unit/macroStats.test.js`
-
 #### REQ-STAT-005 — Fasce orarie per comanda, sconto diviso in parti uguali, giornate a cassa aperta anche a zero
 
 Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le risposte decise da lui lo stesso giorno. (1) LE FASCE ORARIE PER COMANDA. «Cosa succede quando apro un ordine alle 9 e ti prendi una birra, alle 10 un'altra, alle 11 un'altra, a mezzanotte un'altra? Sta registrando le singole battute o l'apertura dell'ordine?» Registrava l'apertura: tutto l'incasso di un conto finiva nella fascia in cui era stato aperto. La risposta: «nelle fasce orarie mi deve segnare quando viene battuta una singola comanda e non quando viene aperto il conto, indipendentemente da quando viene pagato». Un conto si spezza in BATTUTE (`battuteDi`), una per comanda non annullata, con la sua ora; il modello vecchio senza comande e' una battuta sola. Le seguono «Incasso per fascia oraria» (sotto le barre si leggono le comande), «Venduto nella fascia oraria» (che conta i CONTI che hanno battuto qualcosa lì) e «Incasso per giornata nella fascia scelta». (2) LO SCONTO IN PARTI UGUALI. «Lo sconto va applicato sopra le singole comande all'interno dell'ordine, diviso in parti uguali per il numero delle comande, e non per il valore della singola comanda.» Si divide la differenza fra il lordo delle righe e l'incasso del conto, cosi' la somma delle battute torna al centesimo con l'incasso del conto. Una comanda piccola su un conto molto scontato puo' risultare negativa: e' la regola chiesta, e il totale resta giusto.
@@ -3070,34 +3112,6 @@ SI INCASTRA CON REQ-MAG-015, e le due non si confondono: quella dice a quale MAC
 NON SI LAVORA finché le cinque domande qui sopra non hanno risposta (quale carico si consuma per primo, la merce mai venduta, i mesi passati che cambiano, il perimetro della regola): indovinarle significa scrivere il codice dei lotti — il lavoro grosso — su una regola che poi cambia. E UNA COSA È GIÀ CAMBIATA SOTTO: con REQ-MAG-015 la tabella «Mensile per macro» non mostra più gli acquisti del mese, mostra il COSTO DEL VENDUTO — che per costruzione cade nel mese in cui la merce è stata venduta, che è esattamente quello che questo requisito chiedeva PER QUELLA TABELLA. Il rum comprato il 20 febbraio e servito il 3 marzo pesa già su marzo. Quello che resta scoperto è il resto: il registro delle fatture e la valorizzazione dell'inventario, dove l'acquisto è un fatto con la sua data. Da riportare a chi ha parlato: forse la domanda vera adesso è un'altra, e più piccola.
 
 **Dove**: `src/lib/macroStats.js, src/lib/stats.js, src/components/StatsTab.jsx (vista «Mensile per macro»)`
-
-#### REQ-MAG-022 — Bilancio → Acquisti × Fatturato: gli acquisti per macro, mese per mese
-
-COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a mano, mese per mese e macro per macro: nessuna formula dice da dove viene.
-
-DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non va inventato. Due indizi, verificati tutti e due, e nessuno dei due torna al centesimo. (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del 2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 / 4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi uguali, gennaio e luglio lontani. Il registro però tiene solo cinque fornitori, e negli ordini ne compaiono una decina. (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità × prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma per macro si può fare a mano. È il modo più plausibile, ma è una ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
-
-QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre «€/pz × 1,22»).
-
-COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA. Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una domanda vera che vive con gli acquisti e non nella tabella del venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui gli acquisti avranno la loro schermata. Quel giorno è questo.
-
-PROPOSTA, poi DECISA il 19/08 (vedi in fondo). Una vista «Acquisti per macro» con le macro di MAGAZZINO per riga e i mesi per colonna, e — dove la macro d'acquisto è agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di quella accanto, che è il confronto che il locale fa a fine mese.
-
-ERANO TRE DOMANDE, E DUE SONO CHIUSE (19/08, dall'utente che riporta Flavio). (1) L'ACQUISTO È L'ORDINE FORNITORE RICEVUTO: la merce conta quando entra dalla porta, non quando arriva la fattura — che in app è un'altra cosa e segue tempi suoi. (2) LORDO E NETTO SI VEDONO TUTTI E DUE: i fogli di Flavio sono al lordo ed è come lui legge da sempre, il resto dell'app ragiona al netto, e obbligare a sceglierne uno vorrebbe dire dare torto a lui o dare torto alle statistiche. Servono tutti e due sulla stessa tabella; quale dei due si apre per primo lo si sceglie provandolo con lui. (3) RESTA APERTA: in quale mese cade un acquisto è REQ-MAG-021 — la quota consumata che migra da un mese all'altro — e questa tabella va pensata insieme a quella.
-
-DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sottosezione «Acquisti × Fatturato», accanto a «Mesi» e «Venduto × Incassato». È la tabella dell'Excel rifatta: per riga le macro d'ACQUISTO, per colonna i mesi, e in ogni cella acquisti, fatturato, utile (fatturato − acquisti), rapporto fat/acq e incidenza sull'utile del mese; in fondo i totali dell'anno e l'incidenza dell'anno.
-
-IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
-
-SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare. 30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che conta le righe CONSEGNATE per la quantita' ricevuta e nella data di consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la tabella mese per mese del Bilancio.
-
-GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
-
-ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
-
-DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque domande sui lotti): finché quello non è deciso un acquisto pesa sul mese in cui è ENTRATO e non su quello in cui si consuma, e la didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella resta vuota finché gli ordini fornitore non passano davvero dall'app, e dello storico 2026 non si ricostruisce niente. Per questo non è lavorabile adesso.
-
-**Dove**: `src/lib/macroStats.js purchasesByMacro, src/components/BilancioTab.jsx (nuovo)`
 
 #### REQ-MAG-023 — Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia
 
@@ -3528,6 +3542,7 @@ Voci che descrivevano il sistema e non lo descrivono più. Restano nel
 registro perché cancellarle vorrebbe dire riproporle fra sei mesi come idee
 nuove, ma **non sono specifica**: qui c'è solo il titolo.
 
+- `REQ-STAT-004` — Statistiche per periodo: acquisti, venduto e generato per macro-categoria
 - `REQ-MENU-012` — In carta due tipi di voce: il prodotto e la ricetta
 - `REQ-SUMUP-CONFIG-001` — Le functions SumUp sono no-op se non configurate
 - `REQ-SUMUP-SYNC-001` — Sincronizzazione catalogo SumUp → Firestore drinks

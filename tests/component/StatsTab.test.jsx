@@ -88,7 +88,8 @@ vi.mock('../../src/lib/api.js', () => ({
   ]),
   fetchCashSessions: vi.fn(async () => sessioni),
   subscribeSettings: (cb) => {
-    cb({ business_day_cutoff_hour: 5 })
+    // L'orario del locale (REQ-CASSA-015): da qui partono le fasce orarie.
+    cb({ business_day_cutoff_hour: 5, orario_apertura: '19:00', orario_chiusura: '02:00' })
     return () => {}
   },
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
@@ -251,6 +252,19 @@ describe('Statistiche per periodo', () => {
     expect(screen.getByRole('button', { name: '7 giorni' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /ultima chiusura/i })).toBeNull()
     expect(screen.queryByLabelText(/scegli la serata/i)).toBeNull()
+    m.stop()
+  })
+
+  // LA FASCIA ORARIA PARTE DALL'ORARIO DEL LOCALE (REQ-CASSA-015), non da
+  // un orario scritto nel codice; poi si cambia a mano mentre si guarda.
+  it('la fascia oraria parte dall’orario di apertura e chiusura', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    const dalle = await screen.findAllByLabelText('Dalle')
+    expect(dalle[0]).toHaveValue('19:00')
+    expect(screen.getAllByLabelText('alle')[0]).toHaveValue('02:00')
     m.stop()
   })
 

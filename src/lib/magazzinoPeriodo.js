@@ -64,6 +64,15 @@ export const GRUPPO_MOTIVO = {
 // comprata, chiamarlo «consumo» inventerebbe merce bevuta; lì dentro invece
 // il conto continua a tornare — deposito + acquisti − consumo + rettifiche
 // fa sempre la giacenza di fine periodo — e il numero si vede.
+// I CARICHI: la merce entrata che non viene da una consegna d'ordine (le
+// consegne si contano dalla riga dell'ordine, col prezzo del documento).
+// Sono la parte del gruppo «acquisto» che il Bilancio legge dai movimenti, e
+// la stessa lista filtra la query (fetchCarichiBetween): così si scaricano i
+// carichi e non tutti gli scarichi delle vendite.
+export const MOTIVI_DI_CARICO = Object.keys(GRUPPO_MOTIVO).filter(
+  (r) => GRUPPO_MOTIVO[r] === 'acquisto' && r !== 'ordine fornitore'
+)
+
 export const gruppoMovimento = (m) => GRUPPO_MOTIVO[String(m?.reason || '')] || 'rettifica'
 
 export const arrotonda = (n, cifre = 4) => {
