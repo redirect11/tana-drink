@@ -25,7 +25,7 @@
 // delle due.
 //
 // «QUANTO HO SPESO IN BIBITE» è un'altra domanda — degli ACQUISTI, quello
-// che è entrato dalla porta — e vive in `purchasesByMacro` qui sotto, che
+// che è entrato dalla porta — e vive in `acquistiPerMacro` qui sotto, che
 // legge l'altro lato della stessa macro: i pesi dei PRODOTTI
 // (`pesi_prodotti`). È lì che un prodotto può stare per il 60% in una macro
 // e per il 40% in un'altra, com'è stato chiesto (09/09/2026).
@@ -37,6 +37,9 @@ import { lineCost, orderLines } from './rendiconto.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { discountFactor } from './eta.js'
+import { valoreConSegno } from './warehouse.js'
+import { movimentoInPezzi, gruppoMovimento, nelPeriodo } from './magazzinoPeriodo.js'
+import { consegneDi } from './confrontoOrdine.js'
 
 export { UNASSIGNED }
 
@@ -112,25 +115,87 @@ export function venditeByMacro(orders, { drinksById, itemsById, macros, saleVat 
 }
 
 // ── ACQUISTI per macro, dal lato dei PRODOTTI ──────────────────────────
-// Dagli ordini fornitori RICEVUTI: per ogni riga, importo netto
-// (unit_cost × qty_packages) spartito fra le macro secondo i pesi del
-// PRODOTTO (`pesi_prodotti`). La quota che nessuna macro reclama → `none`.
+// Quello che è ENTRATO DALLA PORTA, al netto IVA, spartito fra le macro
+// secondo i pesi del PRODOTTO (`pesi_prodotti`); la quota che nessuna macro
+// reclama → `none`. È l'altra domanda — «quanto ho speso in bibite» — e
+// legge l'altro lato della stessa macro.
 //
-// È l'altra domanda — «quanto ho speso in bibite» — e vive per conto suo:
-// non entra nel mensile per macro, che parla di quello che si è VENDUTO.
-export function purchasesByMacro(purchaseOrders, { macros, onlyReceived = true }) {
+// DUE STRADE PER LA MERCE CHE ENTRA, come nell'inventario (REQ-MAG-046):
+//   · le CONSEGNE degli ordini fornitore (consegneDi: la quantità davvero
+//     ricevuta, il prezzo del documento, il giorno d'arrivo);
+//   · gli altri movimenti del gruppo «acquisto» (GRUPPO_MOTIVO): il carico
+//     da Prodotti e quello da fattura, valorizzati al costo del prodotto,
+//     netto. Le consegne d'ordine no: hanno già la loro riga, e contarle
+//     anche dal movimento le raddoppierebbe.
+// Prima si contava l'ORDINE ricevuto per quanto era stato ORDINATO, e le
+// consegne parziali e i carichi senza ordine sparivano o si gonfiavano.
+//
+// `periodo` ({ dal, al } in giornate, o { da, a } in istanti, con
+// cutoffHour) taglia consegne e carichi con la regola di nelPeriodo; senza,
+// conta tutto.
+const GIA_NELLE_CONSEGNE = 'ordine fornitore'
+
+export function acquistiPerMacro(purchaseOrders, { macros, movimenti = [], itemsById = {}, periodo = null } = {}) {
+  const dentro = periodo ? (t) => nelPeriodo(t, periodo) : () => true
   const acc = new Map()
-  for (const po of purchaseOrders || []) {
-    if (onlyReceived && po?.status !== 'ricevuto') continue
-    for (const l of po?.lines || []) {
-      const amount = round2((Number(l.unit_cost) || 0) * (Number(l.qty_packages) || 0))
-      if (amount <= 0) continue
-      for (const parte of ripartisci(macros, 'prodotti', l.item_id, { amount })) {
-        acc.set(parte.macro, round2((acc.get(parte.macro) || 0) + parte.amount))
-      }
+  const aggiungi = (itemId, amount) => {
+    if (!(Math.abs(amount) > 0)) return
+    for (const parte of ripartisci(macros, 'prodotti', itemId, { amount })) {
+      acc.set(parte.macro, round2((acc.get(parte.macro) || 0) + parte.amount))
     }
   }
+  for (const po of purchaseOrders || []) {
+    for (const c of consegneDi(po)) {
+      if (dentro(c.at)) aggiungi(c.item_id, round2(c.prezzo * c.qty))
+    }
+  }
+  for (const m of movimenti || []) {
+    if (m?.reason === GIA_NELLE_CONSEGNE || gruppoMovimento(m) !== 'acquisto' || !dentro(m.created_at)) continue
+    const item = itemsById[m.item_id]
+    const mp = movimentoInPezzi(m, item)
+    if (mp) aggiungi(m.item_id, round2(valoreConSegno(mp.q, item, { gross: false })))
+  }
   return acc
+}
+
+// ── ACQUISTI, VENDUTO E GENERATO PER MACRO, IN UN PERIODO (REQ-STAT-004)
+// Flavio, 30/09/2026: «quello che non vedo è la visualizzazione nelle
+// statistiche di quello che c'è nelle macro-categorie: vedere gli acquisti,
+// il venduto e quanto mi ha generato». È il rapporto per macro del suo
+// foglio — ACQUISTI, FATTURATO, UTILE — sul periodo scelto nelle
+// statistiche invece che mese per mese (quello resta REQ-MAG-022, nel
+// Bilancio).
+//   acquisti  quello che è entrato (acquistiPerMacro), netto IVA
+//   venduto   l'incassato delle voci di menù della macro, IVA scorporata
+//             (venditeByMacro, la stessa regola del Bilancio)
+//   generato  venduto − acquisti
+// `orders` sono già i conti del periodo; `periodo` taglia acquisti e carichi.
+export function macroNelPeriodo({
+  orders,
+  purchaseOrders,
+  movimenti = [],
+  items = [],
+  drinksById,
+  macros,
+  saleVat = 0,
+  periodo = null,
+}) {
+  const itemsById = Object.fromEntries((items || []).map((i) => [i.id, i]))
+  const vendite = venditeByMacro(orders, { drinksById, itemsById, macros, saleVat })
+  const acquisti = acquistiPerMacro(purchaseOrders, { macros, movimenti, itemsById, periodo })
+  const elenco = [...(macros || [])]
+  if (vendite.has(UNASSIGNED) || acquisti.has(UNASSIGNED)) elenco.push({ id: UNASSIGNED, name: 'Non attribuito' })
+  const riga = (acq, ven) => ({ acquisti: acq, venduto: ven, generato: round2(ven - acq) })
+  const righe = elenco.map((m) => ({
+    id: m.id,
+    name: m.name,
+    ...riga(acquisti.get(m.id) || 0, round2(vendite.get(m.id)?.incasso || 0)),
+  }))
+  const totale = riga(
+    round2(righe.reduce((s, r) => s + r.acquisti, 0)),
+    round2(righe.reduce((s, r) => s + r.venduto, 0))
+  )
+  return { righe, totale }
 }
 
 // ── Report MENSILE per macro ───────────────────────────────────────────

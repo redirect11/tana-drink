@@ -147,11 +147,15 @@ export function orderIsOpen(order) {
   return order?.status === ORDER_OPEN
 }
 
+// Le comande che contano: non annullate e con almeno una riga. Le usano chi
+// chiede se il conto ha contenuto e chi spezza un conto per comanda (le
+// fasce orarie delle statistiche, REQ-STAT-005).
+export const comandeConRighe = (order) =>
+  (order?.comande || []).filter((c) => c && c.status !== ORDER_STATUSES.ANNULLATO && (c.items || []).length > 0)
+
 // Il conto ha contenuto? (almeno un item in una comanda non annullata)
 export function orderHasContent(order) {
-  return (order?.comande || []).some(
-    (c) => c.status !== ORDER_STATUSES.ANNULLATO && (c.items || []).length > 0
-  )
+  return comandeConRighe(order).length > 0
 }
 
 // Vista iniziale del dettaglio POS: se il conto ha già contenuto si apre

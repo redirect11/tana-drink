@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 30 settembre 2026.
+> Generato il 1 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 208 | fatto e coperto dai test |
+| ✅ | 210 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 24 | da fare |
 | 🗑 | 7 | non più valido |
 
-**254 voci** in tutto. **223** descrivono il sistema com'è oggi e
+**256 voci** in tutto. **225** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 3 | — |  |
+| [STAT](#stat) | 5 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -2913,6 +2913,20 @@ Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale perio
 
 **Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
 
+#### REQ-STAT-004 — Statistiche per periodo: acquisti, venduto e generato per macro-categoria
+
+Flavio, vocale del 30/09/2026: «quello che non vedo, che secondo me ancora non l'ho messo, e' la visualizzazione nelle statistiche di quello che c'e' nelle macro-categorie: vedere gli acquisti, il venduto e vedere quanto mi ha generato». E' il rapporto per macro del suo foglio (ACQUISTI, FATTURATO, UTILE) sul periodo scelto nelle statistiche, invece che mese per mese — quello resta REQ-MAG-022, nel Bilancio. Una scheda «Per macro-categoria» dopo «Magazzino nel periodo», che si apre a richiesta (legge ordini fornitore, prodotti, macro e carichi) e segue lo stesso periodo della pagina: giornate intere o, per «Personalizzato», istanti (REQ-STAT-003). Per ogni macro, piu' «Non attribuito» e il totale: · ACQUISTI: le CONSEGNE degli ordini fornitore (consegneDi, in confrontoOrdine.js: righe consegnate o pagate, quantita' ricevuta × prezzo del documento, nella data di consegna; gli ordini di prima di REQ-MAG-029 alla data di ricezione) e gli altri movimenti del gruppo «acquisto» — carico da Prodotti e da fattura — valorizzati per pezzi al costo del prodotto; netto IVA, spartiti coi pesi dei prodotti, tagliati sul periodo con la stessa regola di «Magazzino nel periodo» (nelPeriodo); · VENDUTO: l'incassato delle voci di menu' della macro, IVA di vendita scorporata (venditeByMacro, la stessa regola del Bilancio); · GENERATO: venduto − acquisti. I conti non tornano col Bilancio mese per mese ne' devono: la' il costo e' quello di cio' che si e' VENDUTO (le ricette), qui gli acquisti sono cio' che e' ENTRATO nel periodo — la domanda di Flavio. Le macro in produzione sono compilate (verificato il 30/09: 4 macro, 447 prodotti e 405 voci con la loro quota).
+
+**Dove**: `src/components/MacroPeriodo.jsx, src/lib/macroStats.js (acquistiPerMacro, macroNelPeriodo), src/lib/confrontoOrdine.js (consegneDi), src/components/useLetturaDelPeriodo.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/component/MacroPeriodo.test.jsx`, `tests/unit/macroStats.test.js`
+
+#### REQ-STAT-005 — Fasce orarie per comanda, sconto diviso in parti uguali, giornate a cassa aperta anche a zero
+
+Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le risposte decise da lui lo stesso giorno. (1) LE FASCE ORARIE PER COMANDA. «Cosa succede quando apro un ordine alle 9 e ti prendi una birra, alle 10 un'altra, alle 11 un'altra, a mezzanotte un'altra? Sta registrando le singole battute o l'apertura dell'ordine?» Registrava l'apertura: tutto l'incasso di un conto finiva nella fascia in cui era stato aperto. La risposta: «nelle fasce orarie mi deve segnare quando viene battuta una singola comanda e non quando viene aperto il conto, indipendentemente da quando viene pagato». Un conto si spezza in BATTUTE (`battuteDi`), una per comanda non annullata, con la sua ora; il modello vecchio senza comande e' una battuta sola. Le seguono «Incasso per fascia oraria» (sotto le barre si leggono le comande), «Venduto nella fascia oraria» (che conta i CONTI che hanno battuto qualcosa lì) e «Incasso per giornata nella fascia scelta». (2) LO SCONTO IN PARTI UGUALI. «Lo sconto va applicato sopra le singole comande all'interno dell'ordine, diviso in parti uguali per il numero delle comande, e non per il valore della singola comanda.» Si divide la differenza fra il lordo delle righe e l'incasso del conto, cosi' la somma delle battute torna al centesimo con l'incasso del conto. Una comanda piccola su un conto molto scontato puo' risultare negativa: e' la regola chiesta, e il totale resta giusto.
+
+UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €.
+
+**Dove**: `src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
+
 ### LIC
 
 #### REQ-LIC-001 — Le funzioni premium si accendono da un posto solo, e di partenza sono spente
@@ -3075,7 +3089,7 @@ DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sotto
 
 IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
 
-SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare.
+SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare. 30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che conta le righe CONSEGNATE per la quantita' ricevuta e nella data di consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la tabella mese per mese del Bilancio.
 
 GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
 

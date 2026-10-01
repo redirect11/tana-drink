@@ -1,9 +1,22 @@
 # Cosa è cambiato
 
-## 1.8.2-beta
+## 1.8.3-beta
 
 ### Per chi amministra
 
+- **Le fasce orarie contano le comande, non l'apertura del conto.** Un
+  tavolo aperto alle 21 che ordina fino all'una distribuisce l'incasso
+  sulle ore in cui le comande sono state battute; lo sconto del conto si
+  divide in parti uguali fra le sue comande. Vale per «Incasso per fascia
+  oraria», «Venduto nella fascia oraria» e «Incasso per giornata nella
+  fascia scelta».
+- **In «Incasso per giornata» compaiono anche le giornate a zero** in cui
+  la cassa è stata aperta.
+- **Statistiche per periodo: acquisti, venduto e generato per
+  macro-categoria.** Nuova scheda «Per macro-categoria», da aprire con
+  «Calcola»: per ogni macro gli acquisti (merce consegnata e carichi
+  diretti), il venduto (incassato delle voci di menù) e il margine
+  generato, nello stesso periodo scelto in cima alla pagina.
 - **Nell'inventario è in evidenza la rimanenza**: in grassetto la RIM di
   ogni prodotto e il valore delle rimanenze in cima, al posto del consumo.
 - **Nel Magazzino i testi d'aiuto usano i termini del mestiere** — scheda
