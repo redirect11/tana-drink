@@ -28,6 +28,7 @@ import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
 import MacroPeriodo from './MacroPeriodo.jsx'
+import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -304,7 +305,15 @@ function DailyStats({ sezione = 'serate' }) {
       drinksById,
       kpi: kpiSummary(ord, sel),
       byHour: revenueByHour(ord, hourRange),
-      byDay: revenueByDay(ord, cutoff),
+      // Le giornate con la cassa aperta ci sono anche senza conti, a zero
+      // (REQ-STAT-005): una serata a incasso zero è un dato, non un buco.
+      byDay: revenueByDay(ord, cutoff, {
+        giorniConCassa: serata
+          ? []
+          : sessions
+              .filter((x) => nelPeriodo(x.opened_at, personalizzato ? { ...istanti, cutoffHour: cutoff } : { dal: periodo.dal, al: periodo.al, cutoffHour: cutoff }))
+              .map((x) => businessDayKey(x.opened_at, cutoff)),
+      }),
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
       // La classifica INTERA, che è un'altra cosa dai primi dieci a grafico:
@@ -323,7 +332,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, hourRange, dayRange, cutoff, serata])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, hourRange, dayRange, cutoff, serata, sessions])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -588,7 +597,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
           data={byHour.buckets.map((b) => ({
             label: b.label,
             value: b.incasso,
-            sub: `${b.ordini} ordini`,
+            sub: `${b.ordini} comande`,
           }))}
           format={fmtShort}
         />
@@ -639,7 +648,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, saleVat }) {
           data={byDayRange.map((s) => ({
             label: `${s.weekday} ${s.label}`,
             value: s.incasso,
-            sub: `${s.ordini} ordini`,
+            sub: `${s.ordini} comande`,
           }))}
           format={fmtShort}
         />
