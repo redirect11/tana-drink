@@ -152,6 +152,10 @@ function DailyStats({ sezione = 'serate' }) {
     const a = istanteDaOraDiRoma(periodo.alle)
     return da && a && da < a ? { da, a } : null
   }, [personalizzato, periodo.dalle, periodo.alle])
+  // IL PERIODO IN UN OGGETTO SOLO: le giornate (dal/al) e, per
+  // «Personalizzato», gli istanti (da/a). Lo leggono le giornate a cassa
+  // aperta qui e le schede di magazzino e macro qui sotto.
+  const intervallo = useMemo(() => ({ dal: periodo.dal, al: periodo.al, ...istanti }), [periodo.dal, periodo.al, istanti])
   // «Personalizzato» parte da quello che si stava guardando, scritto all'ora.
   const apriPersonalizzato = () =>
     setPeriodo((p) =>
@@ -308,11 +312,13 @@ function DailyStats({ sezione = 'serate' }) {
       // Le giornate con la cassa aperta ci sono anche senza conti, a zero
       // (REQ-STAT-005): una serata a incasso zero è un dato, non un buco.
       byDay: revenueByDay(ord, cutoff, {
-        giorniConCassa: serata
-          ? []
-          : sessions
-              .filter((x) => nelPeriodo(x.opened_at, personalizzato ? { ...istanti, cutoffHour: cutoff } : { dal: periodo.dal, al: periodo.al, cutoffHour: cutoff }))
-              .map((x) => businessDayKey(x.opened_at, cutoff)),
+        // Un periodo personalizzato scritto male non ha giornate.
+        giorniConCassa:
+          serata || (personalizzato && !istanti)
+            ? []
+            : sessions
+                .filter((x) => nelPeriodo(x.opened_at, { ...intervallo, cutoffHour: cutoff }))
+                .map((x) => businessDayKey(x.opened_at, cutoff)),
       }),
       byDayRange: revenueByDayInRange(ord, dayRange, cutoff),
       top: topProducts(ord),
@@ -332,7 +338,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, hourRange, dayRange, cutoff, serata, sessions])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -445,7 +451,7 @@ function DailyStats({ sezione = 'serate' }) {
       <CorpoStatistiche
         view={view}
         comandi={comandi}
-        intervallo={{ dal: periodo.dal, al: periodo.al, ...istanti }}
+        intervallo={intervallo}
         cutoff={cutoff}
         saleVat={settings.sale_vat}
       />

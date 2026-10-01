@@ -5,6 +5,7 @@ import { ORDER_STATUSES } from './orderStatus.js'
 import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './eta.js'
 import { scontoTotale } from './pagamento.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
+import { comandeConRighe, itemsTotal } from './comande.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 const valid = (orders) => orders.filter((o) => !isCancelled(o))
@@ -60,34 +61,37 @@ export function kpiSummary(orders, giorni = []) {
 // un conto molto scontato può risultare negativa: è la regola chiesta, e il
 // totale resta giusto.
 //
-// Ogni battuta torna nella forma di un conto (`order_items`, `total`,
-// `discount_amount`, `created_at` = l'ora della comanda), così i conti che
-// le statistiche fanno già sugli ordini valgono uguali sulle battute;
-// `conto` è il conto da cui viene (l'oggetto: un conto senza id resta lui).
-const lordoDi = (items) =>
-  (items || []).reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unit_price) || 0), 0)
-
+// UNA BATTUTA HA DUE NUMERI, perché le domande sono due:
+//   `netto`   i soldi di quella comanda: il suo lordo meno la sua parte, in
+//             parti uguali, di quello che separa il lordo delle righe
+//             dall'incasso del conto (sconto, ma anche coperto e servizio).
+//             Lo usano i grafici in euro, e senza troncare a zero.
+//   `fattore` quanto del listino delle sue righe è incasso: lo stesso del
+//             conto (discountFactor), così prodotti e categorie di una fascia
+//             tornano con la classifica del periodo — il coperto non finisce
+//             nell'incasso di un drink.
+// `created_at` è l'ora della comanda; `conto` il conto da cui viene
+// (l'oggetto: un conto senza id resta lui).
 export function battuteDi(o) {
-  const comande = (o?.comande || []).filter(
-    (c) => c && c.status !== ORDER_STATUSES.ANNULLATO && (c.items || []).length > 0
-  )
-  const elenco = comande.length
+  const comande = comandeConRighe(o)
+  const elenco = (comande.length
     ? comande.map((c) => ({ at: c.created_at || o.created_at, items: c.items }))
     : [{ at: o?.created_at, items: o?.order_items || [] }]
-  const lordo = elenco.reduce((s, b) => s + lordoDi(b.items), 0)
-  const quota = (lordo - orderNet(o)) / elenco.length
-  return elenco.map((b) => {
-    const lordoB = Math.round(lordoDi(b.items) * 100) / 100
-    return {
-      conto: o,
-      status: o?.status,
-      created_at: b.at,
-      order_items: b.items,
-      total: lordoB,
-      discount_amount: Math.round(quota * 100) / 100,
-    }
-  })
+  ).map((b) => ({ ...b, lordo: itemsTotal(b.items) }))
+  const quota = (elenco.reduce((s, b) => s + b.lordo, 0) - orderNet(o)) / elenco.length
+  const fattore = discountFactor(o)
+  return elenco.map((b) => ({
+    conto: o,
+    status: o?.status,
+    created_at: b.at,
+    order_items: b.items,
+    netto: Math.round((b.lordo - quota) * 100) / 100,
+    fattore,
+  }))
 }
+
+// L'incasso di un conto o di una battuta: le battute portano il loro.
+const nettoDi = (o) => o.netto ?? orderNet(o)
 
 // Le battute di più conti, annullati esclusi.
 const battute = (orders) => valid(orders).flatMap(battuteDi)
@@ -149,7 +153,7 @@ export function revenueByHour(orders, range = DEFAULT_HOUR_RANGE) {
     const off = offsetInRange(minuteOfDay(t), fromMin, span)
     if (off == null) continue
     const b = buckets[Math.floor(off / 60)]
-    b.incasso += o.total - o.discount_amount
+    b.incasso += nettoDi(o)
     b.ordini += 1
   }
 
@@ -203,10 +207,7 @@ export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
 // numero di conti, TUTTI i prodotti venduti e le categorie.
 export function hourRangeReport(orders, range, drinksById) {
   const ord = ordersInHourRange(orders, range)
-  const totale = ord.reduce(
-    (s, o) => s + (Number(o.total) || 0) - scontoTotale(o),
-    0
-  )
+  const totale = ord.reduce((s, o) => s + nettoDi(o), 0)
   return {
     // I CONTI che hanno battuto qualcosa nella fascia, non le battute.
     nOrdini: new Set(ord.map((o) => o.conto)).size,
@@ -246,7 +247,7 @@ export function revenueByDay(orders, cutoffHour = DEFAULT_CUTOFF_HOUR, { giorniC
     const k = businessDayKey(o.created_at, cutoffHour)
     if (!k) continue
     const cur = byDay.get(k) || { incasso: 0, ordini: 0 }
-    cur.incasso += orderNet(o)
+    cur.incasso += nettoDi(o)
     cur.ordini += 1
     byDay.set(k, cur)
   }
@@ -278,7 +279,8 @@ export function topProducts(orders, limit = 10) {
 export function revenueByCategory(orders, drinksById) {
   const byCat = new Map()
   for (const o of valid(orders)) {
-    const f = discountFactor(o)
+    // Una battuta porta il fattore del suo conto (REQ-STAT-005).
+    const f = o.fattore ?? discountFactor(o)
     for (const i of o.order_items || []) {
       const cat = drinksById?.[i.drink_id]?.category || 'Altro'
       const cur = byCat.get(cat) || { name: cat, revenue: 0, qty: 0 }

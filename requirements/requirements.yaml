@@ -2045,6 +2045,13 @@ requirements:
       cosi' la somma delle battute torna al centesimo con l'incasso del
       conto. Una comanda piccola su un conto molto scontato puo' risultare
       negativa: e' la regola chiesta, e il totale resta giusto.
+      UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua
+      parte uguale di sconto, coperto e servizio) per i grafici in euro, e
+      `fattore` (quello del conto) per prodotti e categorie, che cosi'
+      tornano con la classifica del periodo e non prendono dentro il
+      coperto. Prima, come finto conto, la battuta passava da orderNet e
+      discountFactor, scritti per i conti veri: il coperto finiva
+      nell'incasso dei drink e i tre grafici troncavano diversamente.
       (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi
       ha registrato una cassa a zero, e in incasso per giornata non la vedo
       … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le
