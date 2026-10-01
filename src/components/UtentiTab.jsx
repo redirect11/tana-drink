@@ -8,7 +8,14 @@ import {
   setStaffDisabled,
   removeStaff,
 } from '../lib/staffApi.js'
-import { createStaffCall, subscribePendingCalls, updateSettings } from '../lib/api.js'
+import {
+  createStaffCall,
+  subscribePendingCalls,
+  updateSettings,
+  subscribeSettings,
+  settingsIniziali,
+} from '../lib/api.js'
+import { associazioniDi, nomeOperatore } from '../lib/operatore.js'
 import {
   RUOLI,
   RUOLI_ASSEGNABILI,
@@ -29,6 +36,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
 const SEZIONI_UTENTI = [
   { id: 'utenze', icona: '👥', label: 'Utenze registrate' },
+  { id: 'cassa', icona: '🟢', label: 'Chi apre la cassa' },
   { id: 'nuovo', icona: '➕', label: 'Nuovo account' },
   { id: 'vip', icona: '🎟', label: 'Buoni VIP' },
 ]
@@ -237,6 +245,8 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
         </div>
       )}
 
+      {admin && sezione === 'cassa' && <ChiApreLaCassa utenti={users} />}
+
       {/* NUOVO ACCOUNT E BUONI VIP SONO SEZIONI, non pannelli a scomparsa in
           cima: aprirli spingeva giù l'elenco delle utenze, che è la cosa per
           cui si viene qui. Stanno nel menu laterale come nelle altre
@@ -439,6 +449,100 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── CHI PUÒ APRIRE LA CASSA, PER OGNI ACCOUNT (REQ-STAFF-016) ────────
+//
+// All'apertura della cassa si sceglie chi sta lavorando fra gli admin: qui
+// si decide QUALI, e la scelta è per ACCOUNT. Daniele, 19/09/2026: «si deve
+// decidere quali sono gli admin, anche perché può essere Vittorio o io a
+// fare il login, e lì sono altre associazioni» — il tablet del banco resta
+// collegato con un account solo, e chi ci lavora dipende da quale.
+//
+// NON SPUNTARE NIENTE VUOL DIRE «TUTTI», e non «nessuno»: il locale che non
+// ha deciso niente continua a vedere tutti gli admin, come prima. Una lista
+// vuota che volesse dire «nessuno» lascerebbe l'account senza nessuno da
+// scegliere, che non è una cosa che qualcuno vuole davvero.
+//
+// L'ACCOUNT STESSO NON SI SPUNTA: c'è sempre, è il suo login. Toglierlo
+// sarebbe l'unico modo di non poter aprire la cassa con nessuno.
+function ChiApreLaCassa({ utenti }) {
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const mappa = impostazioni.admin_associati || {}
+  const admins = useMemo(
+    () =>
+      (utenti ?? [])
+        .filter((u) => isAdmin(u.role) && !u.disabled)
+        .map((u) => ({ uid: u.uid, nome: nomeOperatore(u), email: u.email || '' }))
+        .sort((a, b) => a.nome.localeCompare(b.nome, 'it')),
+    [utenti]
+  )
+
+  const cambia = (uidAccount, uidAltro, dentro) => {
+    const adesso = associazioniDi(mappa, uidAccount)
+    // Da «tutti» si parte da tutti: togliendo il primo, gli altri restano.
+    const base = adesso
+      ? [...adesso]
+      : admins.filter((a) => a.uid !== uidAccount).map((a) => a.uid)
+    const prossima = dentro ? [...new Set([...base, uidAltro])] : base.filter((x) => x !== uidAltro)
+    updateSettings({ admin_associati: { ...mappa, [uidAccount]: prossima } }).catch(() => {})
+  }
+
+  if (admins.length < 2) {
+    return (
+      <div className="card settings-section">
+        <h3>Chi apre la cassa</h3>
+        <p className="muted small" style={{ margin: 0 }}>
+          C’è un solo account admin: all’apertura della cassa non c’è niente da
+          scegliere. La domanda compare da quando ce n’è più d’uno.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card settings-section">
+      <h3>Chi apre la cassa</h3>
+      <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.85rem' }}>
+        All’apertura della cassa si sceglie chi sta lavorando, senza rifare il
+        login. Qui si decide chi può comparire in quell’elenco, <strong>per
+        ogni account</strong>: il tablet resta collegato con un account solo, e
+        da quale dipende chi ci lavora. Se non spunti nessuno, compaiono tutti.
+      </p>
+      {admins.map((account) => {
+        const ammessi = associazioniDi(mappa, account.uid)
+        return (
+          <div key={account.uid} style={{ marginBottom: 14 }}>
+            <div style={{ fontWeight: 600 }}>
+              Col login di {account.nome}{' '}
+              <span className="muted small">{account.email}</span>
+            </div>
+            <div className="chips-row" style={{ marginTop: 6 }}>
+              {admins.map((altro) => {
+                const sempre = altro.uid === account.uid
+                const dentro = sempre || !ammessi || ammessi.has(altro.uid)
+                return (
+                  <button
+                    key={altro.uid}
+                    type="button"
+                    className={`chip${dentro ? ' active' : ''}`}
+                    aria-pressed={dentro}
+                    disabled={sempre}
+                    title={sempre ? 'È il suo account: c’è sempre' : undefined}
+                    onClick={() => cambia(account.uid, altro.uid, !dentro)}
+                  >
+                    {altro.nome}
+                    {sempre ? ' (sempre)' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -55,15 +55,32 @@ export function righeOrdinate(order) {
 // Senza `qty_received` vale la quantità ordinata: è il caso normale — è
 // arrivato quello che si è chiesto — ed è anche come si leggono le consegne
 // registrate prima di questa voce.
+const rigaRicevuta = (l) => ({
+  item_id: l.item_id ?? null,
+  name: l.name ?? '',
+  qty: l.qty_received == null ? num(l.qty_packages) : num(l.qty_received),
+  prezzo: num(l.unit_cost),
+})
+
 export function righeRicevute(order) {
-  return (order?.lines || [])
-    .filter((l) => livelloDi(l) !== 'richiesto')
-    .map((l) => ({
-      item_id: l.item_id ?? null,
-      name: l.name ?? '',
-      qty: l.qty_received == null ? num(l.qty_packages) : num(l.qty_received),
-      prezzo: num(l.unit_cost),
-    }))
+  return (order?.lines || []).filter((l) => livelloDi(l) !== 'richiesto').map(rigaRicevuta)
+}
+
+// LE CONSEGNE DI UN ORDINE, COL LORO GIORNO (REQ-STAT-004): le righe
+// ricevute più QUANDO sono arrivate, che serve a chi conta gli acquisti di
+// un periodo. Dal 29/08 (REQ-MAG-029) la consegna è riga per riga
+// (`delivered_at`, e «pagato» vuol dire consegnato e pagato); gli ordini di
+// prima hanno lo stato solo sull'ordine intero (statoOrdineDi, che traduce
+// il vecchio «ricevuto»), e lì valgono tutte le righe, alla data di
+// ricezione.
+export function consegneDi(order) {
+  const righe = order?.lines || []
+  const arrivate = righe.filter((l) => livelloDi(l) !== 'richiesto')
+  if (arrivate.length > 0) {
+    return arrivate.map((l) => ({ ...rigaRicevuta(l), at: l.delivered_at ?? order?.received_at ?? null }))
+  }
+  if (statoOrdineDi(order) !== 'consegnato') return []
+  return righe.map((l) => ({ ...rigaRicevuta(l), at: order?.received_at ?? null }))
 }
 
 // ── IL FATTURATO ─────────────────────────────────────────────────────

@@ -10,11 +10,17 @@
 // qui si sorvegliano sono quelle che a fine mese costano: che una fattura
 // non finisca sulla merce di un altro fornitore, e che i due buchi — merce
 // arrivata senza documento, documento senza ordine — si contino da soli.
+//
+// DAL 19/09/2026 UN DOCUMENTO COPRE PIÙ ORDINI. Flavio: «nel weekend mi
+// consegnano senza farmi il proforma, e il lunedì mi fanno un'unica
+// fattura». Resta uno-a-uno l'altro verso — una fetta, un documento — che è
+// quello che impedisce di pagare la stessa merce due volte.
 
 import { describe, it, expect } from 'vitest'
 import {
   fatturaDellaFetta,
-  fettaDellaFattura,
+  fetteDellaFattura,
+  elencoOrdini,
   aggancioAmmesso,
   fetteCollegabili,
   fattureCollegabili,
@@ -42,31 +48,58 @@ const ORDINE = {
 const fetta = (supplierId, ordine = ORDINE) =>
   fetteFornitore(ordine, { suppliers: FORNITORI }).find((f) => f.supplier_id === supplierId)
 
-const FATTURA_NOVA = { id: 'inv-nova', supplier_id: 'nova', supplier_name: 'Nova', number: '1556', amount: 81, order_id: null }
-const FATTURA_ENOFEL = { id: 'inv-enofel', supplier_id: 'enofel', supplier_name: 'Enofel', number: '77', amount: 30, order_id: null }
+const FATTURA_NOVA = { id: 'inv-nova', supplier_id: 'nova', supplier_name: 'Nova', number: '1556', amount: 81, order_ids: [] }
+const FATTURA_ENOFEL = { id: 'inv-enofel', supplier_id: 'enofel', supplier_name: 'Enofel', number: '77', amount: 30, order_ids: [] }
 
 describe('la fattura sta sulla fetta, non sull’ordine', () => {
   it('un ordine con due fornitori ha due fatture, una per fetta', () => {
     const fatture = [
-      { ...FATTURA_NOVA, order_id: 'po-1' },
-      { ...FATTURA_ENOFEL, order_id: 'po-1' },
+      { ...FATTURA_NOVA, order_ids: ['po-1'] },
+      { ...FATTURA_ENOFEL, order_ids: ['po-1'] },
     ]
     expect(fatturaDellaFetta(fatture, fetta('nova')).id).toBe('inv-nova')
     expect(fatturaDellaFetta(fatture, fetta('enofel')).id).toBe('inv-enofel')
   })
 
-  it('e dalla fattura si torna alla sua fetta', () => {
-    const f = fettaDellaFattura({ ...FATTURA_NOVA, order_id: 'po-1' }, [ORDINE], { suppliers: FORNITORI })
-    expect(f.supplier_name).toBe('Nova')
+  it('e dalla fattura si torna alle sue fette', () => {
+    const [riga] = fetteDellaFattura({ ...FATTURA_NOVA, order_ids: ['po-1'] }, [ORDINE], { suppliers: FORNITORI })
+    expect(riga.fetta.supplier_name).toBe('Nova')
     // È la fetta, non l'ordine: dentro ci sono solo le righe di Nova.
-    expect(f.lines.map((l) => l.item_id)).toEqual(['campari'])
+    expect(riga.fetta.lines.map((l) => l.item_id)).toEqual(['campari'])
+  })
+
+  // IL DOCUMENTO DEL LUNEDÌ copre il sabato e la domenica: due ordini sotto
+  // la stessa fattura, che è la richiesta di Flavio del 19/09/2026.
+  it('e se copre due ordini, li racconta tutti e due', () => {
+    const domenica = { ...ORDINE, id: 'po-2' }
+    const righe = fetteDellaFattura(
+      { ...FATTURA_NOVA, order_ids: ['po-1', 'po-2'] },
+      [ORDINE, domenica],
+      { suppliers: FORNITORI }
+    )
+    expect(righe.map((r) => r.order_id)).toEqual(['po-1', 'po-2'])
+    expect(righe.every((r) => r.fetta.supplier_id === 'nova')).toBe(true)
   })
 
   // In mano ci sono gli ultimi venticinque ordini: di uno più vecchio si sa
-  // che il legame c'è, non cosa contiene. Chi chiama distingue i due casi.
-  it('un ordine fuori dagli ultimi non fa sparire il legame, torna solo vuota', () => {
-    expect(fettaDellaFattura({ ...FATTURA_NOVA, order_id: 'po-vecchio' }, [ORDINE], { suppliers: FORNITORI })).toBe(null)
-    expect(fettaDellaFattura(FATTURA_NOVA, [ORDINE], { suppliers: FORNITORI })).toBe(null)
+  // che il legame c'è, non cosa contiene. La riga esce col suo id e senza
+  // fetta, invece di sparire.
+  it('un ordine fuori dagli ultimi non fa sparire il legame', () => {
+    const righe = fetteDellaFattura({ ...FATTURA_NOVA, order_ids: ['po-vecchio'] }, [ORDINE], { suppliers: FORNITORI })
+    expect(righe).toEqual([{ order_id: 'po-vecchio', fetta: null }])
+    expect(fetteDellaFattura(FATTURA_NOVA, [ORDINE], { suppliers: FORNITORI })).toEqual([])
+  })
+
+  // I DOCUMENTI SCRITTI PRIMA hanno solo `order_id`: il loro legame deve
+  // continuare a leggersi, se no in scadenzario sparirebbe di colpo.
+  it('un documento vecchio, con un solo order_id, si legge lo stesso', () => {
+    expect(elencoOrdini({ order_id: 'po-1' })).toEqual(['po-1'])
+    expect(elencoOrdini({ order_ids: ['po-1', 'po-2'] })).toEqual(['po-1', 'po-2'])
+    expect(elencoOrdini({})).toEqual([])
+    // Un documento scritto prima ha SOLO `order_id`: niente lista vuota
+    // accanto, che vorrebbe dire un'altra cosa.
+    const vecchio = { id: 'inv-vecchia', supplier_id: 'nova', supplier_name: 'Nova', order_id: 'po-1' }
+    expect(fatturaDellaFetta([vecchio], fetta('nova')).id).toBe('inv-vecchia')
   })
 })
 
@@ -92,10 +125,10 @@ describe('il fornitore fa da guardia', () => {
   })
 })
 
-describe('uno-a-uno, nei due sensi', () => {
+describe('una fetta, un documento; un documento, piu ordini', () => {
   it('una fetta che ha già un documento non ne prende un secondo', () => {
-    const prima = { ...FATTURA_NOVA, order_id: 'po-1' }
-    const seconda = { id: 'inv-2', supplier_id: 'nova', supplier_name: 'Nova', order_id: null }
+    const prima = { ...FATTURA_NOVA, order_ids: ['po-1'] }
+    const seconda = { id: 'inv-2', supplier_id: 'nova', supplier_name: 'Nova', order_ids: [] }
     expect(aggancioAmmesso(seconda, fetta('nova'), { fatture: [prima] })).toMatch(/ha già un documento/)
     // Ma quella che ci sta già non è in conflitto con sé stessa: riscegliere
     // il proprio ordine deve restare possibile, se no non si potrebbero più
@@ -103,12 +136,13 @@ describe('uno-a-uno, nei due sensi', () => {
     expect(aggancioAmmesso(prima, fetta('nova'), { fatture: [prima] })).toBe(null)
   })
 
-  // Il campo è uno solo, quindi riscriverlo staccherebbe in silenzio la
-  // fetta di prima, che tornerebbe scoperta senza che nessuno l'abbia
-  // deciso. Si stacca a mano, e staccare è un gesto che si vede.
-  it('un documento già collegato a un altro ordine si stacca prima', () => {
-    const altrove = { ...FATTURA_NOVA, order_id: 'po-vecchio' }
-    expect(aggancioAmmesso(altrove, fetta('nova'), { fatture: [] })).toMatch(/già collegato/)
+  // L'ALTRO VERSO INVECE SI È APERTO (19/09/2026): un documento che ha già
+  // un ordine ne prende un altro, ed è proprio il caso del lunedì. Prima
+  // questa era la riga che diceva «scollega il primo», cioè: scegli quale
+  // dei due ordini raccontare.
+  it('un documento che ha già un ordine ne prende un altro', () => {
+    const conSabato = { ...FATTURA_NOVA, order_ids: ['po-sabato'] }
+    expect(aggancioAmmesso(conSabato, fetta('nova'), { fatture: [] })).toBe(null)
   })
 })
 
@@ -122,14 +156,24 @@ describe('le candidate le filtra la stessa guardia', () => {
     expect(fette[0].stato).toBe('richiesto')
   })
 
-  it('e alla fetta solo i documenti del suo fornitore, ancora liberi', () => {
-    const fatture = [FATTURA_NOVA, FATTURA_ENOFEL, { id: 'inv-3', supplier_id: 'nova', order_id: 'po-vecchio' }]
-    expect(fattureCollegabili(fatture, fetta('nova')).map((f) => f.id)).toEqual(['inv-nova'])
+  // Alla fetta si propongono i documenti del suo fornitore, ANCHE quelli che
+  // hanno già un altro ordine: è la fattura del lunedì, che il sabato ha già
+  // coperto una consegna.
+  it('e alla fetta i documenti del suo fornitore, anche già usati altrove', () => {
+    const fatture = [FATTURA_NOVA, FATTURA_ENOFEL, { id: 'inv-3', supplier_id: 'nova', order_ids: ['po-vecchio'] }]
+    expect(fattureCollegabili(fatture, fetta('nova')).map((f) => f.id)).toEqual(['inv-nova', 'inv-3'])
+  })
+
+  // Quello che questo documento ha già non si ripropone: sarebbe un tocco
+  // che non fa niente.
+  it('ma non si ripropone un ordine che il documento ha già', () => {
+    const suo = { ...FATTURA_NOVA, order_ids: ['po-1'] }
+    expect(fetteCollegabili(suo, [ORDINE], { suppliers: FORNITORI, fatture: [suo] })).toEqual([])
   })
 
   it('una fetta già coperta non compare più fra le candidate', () => {
-    const fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
-    const seconda = { id: 'inv-2', supplier_id: 'nova', supplier_name: 'Nova', order_id: null }
+    const fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
+    const seconda = { id: 'inv-2', supplier_id: 'nova', supplier_name: 'Nova', order_ids: [] }
     expect(fetteCollegabili(seconda, [ORDINE], { suppliers: FORNITORI, fatture })).toEqual([])
   })
 })
@@ -145,12 +189,12 @@ describe('i due buchi si contano da soli', () => {
   })
 
   it('con la fattura attaccata il buco si chiude', () => {
-    const fatture = [{ ...FATTURA_NOVA, order_id: 'po-1' }]
+    const fatture = [{ ...FATTURA_NOVA, order_ids: ['po-1'] }]
     expect(fetteSenzaFattura([ORDINE], fatture, { suppliers: FORNITORI })).toEqual([])
   })
 
   it('il documento c’è e l’ordine no', () => {
-    const fatture = [FATTURA_NOVA, { ...FATTURA_ENOFEL, order_id: 'po-1' }]
+    const fatture = [FATTURA_NOVA, { ...FATTURA_ENOFEL, order_ids: ['po-1'] }]
     expect(fattureSenzaFetta(fatture).map((f) => f.id)).toEqual(['inv-nova'])
   })
 })

@@ -22,7 +22,7 @@ import '@testing-library/jest-dom/vitest'
 // Quattordici giorni tondi: 1500 ml consumati fanno 750 ml a settimana.
 const APERTA = new Date(Date.now() - 14 * 86400000).toISOString()
 
-const stato = { aperta: null, storico: [], impostazioni: {}, movimenti: [] }
+const stato = { aperta: null, storico: [], impostazioni: {}, movimenti: [], articoli: [], categorie: [] }
 
 vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: (cb) => {
@@ -30,11 +30,17 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   settingsIniziali: () => stato.impostazioni,
-  fetchInventoryItems: vi.fn(async () => []),
+  fetchInventoryItems: vi.fn(async () => stato.articoli),
+  fetchInventoryCategories: vi.fn(async () => stato.categorie),
   getOpenStockCount: vi.fn(async () => stato.aperta),
   startStockCount: vi.fn(),
   salvaRimanenza: vi.fn(),
-  closeStockCount: vi.fn(),
+  // Come la vera: le righe e i totali della chiusura, e il prossimo.
+  closeStockCount: vi.fn(async (_id, { lines }) => ({
+    lines,
+    totals: { cons_value: 0, rim_value: 0, diff_value: 0, counted: 0 },
+    prossimo: null,
+  })),
   fetchStockCounts: vi.fn(async () => stato.storico),
   fetchStockMovementsSince: vi.fn(async () => stato.movimenti),
 }))
@@ -51,6 +57,8 @@ beforeEach(() => {
   stato.storico = []
   stato.impostazioni = {}
   stato.movimenti = []
+  stato.articoli = []
+  stato.categorie = []
 })
 
 describe('l’inventario in corso', () => {
@@ -96,7 +104,7 @@ describe('l’inventario in corso', () => {
   it('chiuso, ne riapre subito un altro dalle giacenze allineate', async () => {
     const api = await import('../../src/lib/api.js')
     const gin = { id: 'a', name: 'Gin Mare', unit: 'pz', package_size: 700, stock: 3, cost: 10, vat: 22 }
-    api.fetchInventoryItems.mockResolvedValue([gin])
+    stato.articoli = [gin]
     stato.aperta = {
       id: 'c1',
       started_at: APERTA,
@@ -112,9 +120,13 @@ describe('l’inventario in corso', () => {
     // fino al 22/09/2026 lo apriva `startStockCount` dopo, con una seconda
     // scrittura e una rilettura delle giacenze — due passi in più che una
     // chiusura interrotta poteva lasciare a metà.
-    expect(api.closeStockCount.mock.calls[0][1].riapri).toEqual([gin])
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(true)
     expect(api.startStockCount).not.toHaveBeenCalled()
-    api.fetchInventoryItems.mockResolvedValue([])
+    // Passa solo quello che si è scritto, con la sua ora: la differenza la
+    // calcola la chiusura, coi dati di quel momento (BUG-112).
+    const [riga] = api.closeStockCount.mock.calls[0][1].lines
+    expect(riga.rim).toBe('3')
+    expect(riga.rim_at).toEqual(expect.any(String))
   })
 
   // Daniele, 17/09/2026: «metti una impostazione per l'apertura automatica,
@@ -123,7 +135,7 @@ describe('l’inventario in corso', () => {
   it('con la riapertura spenta, chiuso resta chiuso', async () => {
     const api = await import('../../src/lib/api.js')
     stato.impostazioni = { inventario_riapre_da_solo: false }
-    api.fetchInventoryItems.mockResolvedValue([{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }])
+    stato.articoli = [{ id: 'a', name: 'Gin Mare', unit: 'pz', stock: 3 }]
     stato.aperta = {
       id: 'c1',
       started_at: APERTA,
@@ -137,9 +149,8 @@ describe('l’inventario in corso', () => {
     expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
     await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
-    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(null)
+    expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(false)
     expect(api.startStockCount).not.toHaveBeenCalled()
-    api.fetchInventoryItems.mockResolvedValue([])
   })
 
   it('e con la riapertura spenta il tasto dice che il prossimo lo apri tu', async () => {
@@ -157,11 +168,35 @@ describe('l’inventario in corso', () => {
   })
 })
 
-// BUG-111, la foto di Flavio del 22/09/2026: «DEP −0,1 · ACQ 0,2» sul 400
-// Conigli, dove lo 0,2 era la rettifica di un inventario. Gli acquisti sono
-// solo merce comprata; la modifica del contenuto reale sposta il DEP.
-describe('DEP e ACQ di un inventario aperto', () => {
-  it('ACQ solo dagli acquisti, e il contenuto reale corretto sposta il DEP', async () => {
+// ── DEP · ACQ · CONS · RIM, COME IL FOGLIO INV (REQ-MAG-046) ────────
+// Lo schema di Flavio del 25/09/2026 sera: l'ordine consegnato e il carico
+// vanno in ACQ; il contenuto reale va sulla RIM, e di conseguenza sul
+// consumo; il DEP non lo sposta niente.
+describe('le quattro colonne', () => {
+  const JAGER = { id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, content_unit: 'ml', stock: 2.8, cost: 13.8, vat: 22 }
+  const aperta = () => ({
+    id: 'c1',
+    started_at: APERTA,
+    lines: [{ item_id: 'jager', name: 'Jagermeister', unit: 'pz', package_size: 1000, cost: 13.8, vat: 22, dep: 3.2, rim: null }],
+  })
+
+  it('il consumo si vede subito, prima ancora di contare', async () => {
+    stato.articoli = [JAGER]
+    stato.aperta = aperta()
+    stato.movimenti = [{ item_id: 'jager', type: 'unload', qty: 400, unit: 'ml', reason: 'ordine', created_at: APERTA }]
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    const riga = screen.getByText('Jagermeister').closest('.inv-row').textContent
+    expect(riga).toMatch(/DEP 3,2 pz · ACQ 0 pz · CONS 0,4 pz · RIM 2,8 pz/)
+    // In evidenza la rimanenza, non il consumo (Flavio, 29/09/2026: «il
+    // consumato me ne faccio poco»).
+    const riquadro = screen.getByText('Jagermeister').closest('.inv-row')
+    expect([...riquadro.querySelectorAll('strong')].map((s) => s.textContent)).toEqual(['2,8 pz'])
+  })
+
+  // Il 400 Conigli e l'acqua del 21/09: la rettifica della chiusura
+  // interrotta, e un contenuto reale, stanno sulla RIM; DEP e ACQ restano.
+  it('il contenuto reale e le rettifiche non toccano DEP e ACQ', async () => {
     stato.aperta = {
       id: 'c1',
       started_at: APERTA,
@@ -170,6 +205,10 @@ describe('DEP e ACQ di un inventario aperto', () => {
         { item_id: 'lete', name: 'Acqua Lete', unit: 'pz', package_size: 500, cost: 0.17, vat: 22, dep: 66, rim: null },
       ],
     }
+    stato.articoli = [
+      { id: 'gin', name: '400 Conigli Gin', unit: 'pz', package_size: 500, stock: 0.1 },
+      { id: 'lete', name: 'Acqua Lete', unit: 'pz', package_size: 500, stock: 33 },
+    ]
     stato.movimenti = [
       { item_id: 'gin', type: 'load', qty: 0.2, unit: 'pz', reason: 'conta' },
       { item_id: 'lete', type: 'unload', qty: 39, unit: 'pz', reason: 'rettifica' },
@@ -178,8 +217,74 @@ describe('DEP e ACQ di un inventario aperto', () => {
     render(<StockCountPanel />)
     await screen.findByText(/Inventario in corso/)
     const riga = (nome) => screen.getByText(nome).closest('.inv-row').textContent
-    expect(riga('400 Conigli Gin')).toMatch(/DEP -0,1 pz · ACQ 0 pz/)
-    expect(riga('Acqua Lete')).toMatch(/DEP 27 pz · ACQ 6 pz/)
+    expect(riga('400 Conigli Gin')).toMatch(/DEP -0,1 pz · ACQ 0 pz · CONS -0,2 pz · RIM 0,1 pz/)
+    expect(riga('Acqua Lete')).toMatch(/DEP 66 pz · ACQ 6 pz · CONS 39 pz · RIM 33 pz/)
+  })
+
+  it('scritto il contato, il consumo lo segue', async () => {
+    stato.articoli = [JAGER]
+    stato.aperta = aperta()
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.type(screen.getByLabelText('Rimanenza di Jagermeister'), '0.9')
+    const riga = screen.getByText('Jagermeister').closest('.inv-row').textContent
+    expect(riga).toMatch(/CONS 2,3 pz/)
+    scritto(/Consumo: 38,72/)
+  })
+
+  // «Una casella vuota dove vado a confermare o a modificare il valore di
+  // RIM» (Flavio, 24/09): la maggior parte dei prodotti torna, e riscriverne
+  // il numero a mano è un'occasione in più per sbagliarlo.
+  it('col ✓ si conferma la RIM così com’è', async () => {
+    const api = await import('../../src/lib/api.js')
+    stato.articoli = [JAGER]
+    stato.aperta = aperta()
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.click(screen.getByRole('button', { name: 'Conferma la rimanenza di Jagermeister' }))
+    expect(screen.getByLabelText('Rimanenza di Jagermeister').value).toBe('2.8')
+    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'jager', '2.8', expect.any(String))
+  })
+})
+
+// ── PER CATEGORIE, COME GLI SCAFFALI (REQ-MAG-047) ──────────────────
+// Flavio, vocale del 21/09/2026: «devo passare da un ripiano a un altro
+// perché sono mischiati … a me serve in ordine alfabetico, ma per
+// categorie». E: «dovrebbero sempre apparire filtri sopra dove posso
+// selezionare se voglio vederli tutti oppure divisi per categoria».
+describe('le categorie', () => {
+  const riga = (id, name) => ({ item_id: id, name, unit: 'pz', package_size: 700, cost: 10, vat: 22, dep: 1, rim: null })
+  beforeEach(() => {
+    // Nell'ordine in cui le dà il magazzino (sort_order): prima gli amari.
+    stato.categorie = [
+      { id: 'amari', name: 'AMARI', sort_order: 0 },
+      { id: 'gin', name: 'GIN', sort_order: 1 },
+    ]
+    stato.articoli = [
+      { id: 'bombay', name: 'Bombay', unit: 'pz', category_id: 'gin', stock: 1 },
+      { id: 'cynar', name: 'Cynar', unit: 'pz', category_id: 'amari', stock: 1 },
+      { id: 'jager', name: 'Jagermeister', unit: 'pz', category_id: 'amari', stock: 1 },
+      { id: 'acqua', name: 'Acqua', unit: 'pz', stock: 1 },
+    ]
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [riga('acqua', 'Acqua'), riga('bombay', 'Bombay'), riga('cynar', 'Cynar'), riga('jager', 'Jagermeister')],
+    }
+  })
+  const nomi = () => [...document.querySelectorAll('.inv-name')].map((n) => n.textContent)
+
+  it('«Tutte» li mette in fila categoria per categoria, in ordine alfabetico', async () => {
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    expect(nomi()).toEqual(['Cynar', 'Jagermeister', 'Bombay', 'Acqua'])
+  })
+
+  it('scelta una categoria, restano solo i suoi prodotti', async () => {
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await userEvent.click(screen.getByRole('button', { name: /GIN/ }))
+    expect(nomi()).toEqual(['Bombay'])
   })
 })
 
@@ -200,7 +305,8 @@ describe('le rimanenze mentre si conta', () => {
     await userEvent.type(campo, '0.9')
     // Uscendo dal campo si salva subito, senza aspettare che il dito si fermi.
     await userEvent.tab()
-    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'a', '0.9')
+    // Con l'ora del conteggio (BUG-112).
+    expect(api.salvaRimanenza).toHaveBeenLastCalledWith('c1', 'a', '0.9', expect.any(String))
   })
 })
 

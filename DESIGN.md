@@ -515,6 +515,14 @@ Otto temi per riga, si tiene il peggiore.
    codice e nel registro, non a schermo (l'utente, 22/08/2026: «per le
    didascalie e le spiegazioni dovresti usare un linguaggio meno
    informale»).
+   **Nel gestionale gli aiuti usano il registro del mestiere** (Flavio,
+   29/09/2026: «tutti gli help che appaiono sotto sono scritti in un modo un
+   po' troppo elementare … un poco più erudito, un poco più tecnico»). Chi
+   compila una scheda prodotto, un carico o un inventario è il gestore, e
+   le parole giuste sono le sue: giacenza, rettifica, listino, scarico
+   frazionato, scorta minima, contenuto nominale. Impersonale, niente «se
+   vuoi», niente esempi colloquiali («se una è aperta a metà»). Al BANCO
+   invece restano le parole comuni: lì legge chi ha un vassoio in mano.
 4. **Niente aspetta la rete**: ogni interazione risponde subito; spinner
    e attese lunghe sono un difetto, non uno stato normale.
 5. **Gli stati degli ordini non cambiano colore** tra un tema e l'altro:

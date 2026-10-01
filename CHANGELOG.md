@@ -1,5 +1,102 @@
 # Cosa è cambiato
 
+## 1.9.0 — 1 ottobre 2026
+
+Comprende la 1.7.0, che non è uscita da sola.
+
+### Per chi amministra
+
+- **Bilancio → «Acquisti × Fatturato»: la tabella del foglio di analisi.**
+  Per ogni macro-categoria acquisti, fatturato, utile, rapporto
+  fatturato/acquisti e incidenza sulla somma degli utili; in fondo i
+  totali e l'incidenza di ogni colonna sul periodo. Si guarda per anno (i
+  dodici mesi), per mese (le settimane 1–7, 8–14, 15–21, 22–28 e i giorni
+  che restano), per settimana (da lunedì a domenica) o per giorno, con le
+  frecce per spostarsi. Si apre al lordo dell'IVA, come il foglio; «Netto
+  IVA» passa ai valori senza IVA.
+- **Impostazioni → Giornata di lavoro: orario di apertura e di
+  chiusura.** In ore e minuti; le fasce orarie delle statistiche partono da
+  questo orario. L'ora del cambio di giornata resta a parte («Cambio di
+  giornata»), e se cade dentro l'orario di apertura compare un avviso.
+- **Le fasce orarie contano le comande, non l'apertura del conto.** Un
+  tavolo aperto alle 21 che ordina fino all'una distribuisce l'incasso
+  sulle ore in cui le comande sono state battute; lo sconto del conto si
+  divide in parti uguali fra le sue comande. Vale per «Incasso per fascia
+  oraria», «Venduto nella fascia oraria» e «Incasso per giornata nella
+  fascia scelta».
+- **In «Incasso per giornata» compaiono anche le giornate a zero** in cui
+  la cassa è stata aperta.
+- **Nell'inventario è in evidenza la rimanenza**: in grassetto la RIM di
+  ogni prodotto e il valore delle rimanenze in cima, al posto del consumo.
+- **Nel Magazzino i testi d'aiuto usano i termini del mestiere** — scheda
+  del prodotto, carico, contenuto reale, inventario — e nella legenda dei
+  Prodotti «c'è» diventa «presente».
+- **L'inventario è come il foglio INV: DEP · ACQ · CONS · RIM.** DEP è la
+  giacenza all'apertura, ACQ la merce entrata (ordini consegnati e carichi
+  da Prodotti), RIM quanto c'è adesso — si aggiorna da sola con le vendite
+  — e CONS = DEP + ACQ − RIM. Accanto a ogni prodotto c'è la casella per
+  il contato, e un ✓ per confermare la RIM così com'è.
+- **Il contenuto reale va sulla RIM e sul consumo**, non più sul DEP: il
+  DEP resta quello dell'apertura.
+- **Si può contare a locale aperto.** Ogni conteggio porta la sua ora, e la
+  chiusura tiene conto di quello che si vende dopo: prima le vendite fatte
+  fra il conteggio e la chiusura sparivano dalle scorte.
+- **L'inventario si scorre per categorie**, con la stessa barra dei
+  Prodotti. «Tutte» mette i prodotti in fila categoria per categoria, e
+  dentro in ordine alfabetico.
+- **Solo nell'ambiente di test: «Controllo del magazzino (prova)».** Una
+  pagina da confrontare con l'Inventario, che si accende dalle Impostazioni:
+  si conta un prodotto alla volta e il conteggio corregge subito la
+  giacenza; il rapporto mostra acquisti, venduto, differenza in euro e
+  giorni di scorta per periodo. In produzione non c'è.
+- **Statistiche per periodo: «Personalizzato», con data e ora.** Accanto a
+  7 · 10 · 20 · 30 · 60 giorni c'è «Personalizzato», dove si scelgono
+  inizio e fine con l'ora: un giorno, novanta, lo stesso mese dell'anno
+  scorso, o una sola serata dalle 18 alle 4. Lo seguono incassi,
+  classifiche e magazzino nel periodo.
+
+## 1.7.0 — uscita con la 1.9.0
+
+### Per chi sta al banco
+
+- **Un documento dello scadenzario può coprire più ordini.** Prima, se un
+  documento era già collegato a un ordine, il secondo veniva rifiutato e
+  l'unica strada era scollegare il primo. Ora sotto il documento c'è
+  l'elenco degli ordini, ognuno col suo «Scollega», e in fondo «Aggiungi un
+  altro ordine». Serve al caso del weekend: la merce arriva senza carta e il
+  lunedì il fornitore fa una fattura sola per tutte le consegne.
+
+- **Nelle statistiche per periodo, la fascia oraria non ha più date sue.**
+  Ne aveva un paio, rimaste da quando il periodo era un contatore di
+  giornate: dicevano la stessa cosa in un altro posto e potevano far vedere
+  «nessuna vendita» mentre il periodo in alto era pieno. Adesso fa fede il
+  periodo scelto in cima, e lì si stringe soltanto l'ora.
+
+- **Una ricetta ritoccata su un conto si può salvare come voce nuova del
+  menù.** Toccando una riga del conto si apre il ritocco degli ingredienti
+  come sempre; sotto «Annulla» e «Salva» c'è ora **«Salva come nuova
+  ricetta»**, che apre la scheda del Menù già compilata con le modifiche
+  appena fatte. Salvata, si torna alla coda degli ordini. La riga del conto
+  non viene toccata: per quella c'è «Salva».
+
+- **Il carico di magazzino si vede subito.** Prima il tasto sembrava non
+  funzionare: la finestrella restava aperta finché la rete non rispondeva, e
+  chi ripremeva si ritrovava un carico per ogni pressione al ricaricamento
+  della pagina. Adesso la giacenza nuova compare nell'istante del tocco e la
+  scrittura parte in sottofondo. Se nei giorni scorsi ti sono rimaste
+  giacenze gonfiate, le riconosci da Magazzino → Movimenti (più carichi
+  identici ravvicinati) e le sistemi con l'inventario.
+
+- **All'apertura della cassa si sceglie chi sta lavorando.** Il tablet resta
+  collegato con un account solo, ma la domanda «Chi apre la cassa?» elenca
+  gli admin del locale: la serata risulta aperta da chi hai scelto e il nome
+  in cima alla barra è il suo. La scelta resta sul tablet, quindi non te la
+  richiede ogni sera, e compare solo se gli admin sono più di uno. Non è un
+  login: la sessione resta quella di chi è collegato, e si sceglie solo fra
+  admin, che hanno già gli stessi permessi. **Chi compare nell'elenco lo
+  decidi tu**, da Utenti e ruoli → «Chi apre la cassa»: una lista per ogni
+  account, perché il tablet resta collegato con uno solo e da quale dipende
+  chi ci lavora. Senza spuntare niente compaiono tutti.
 ## 1.6.1
 
 ### Per chi amministra

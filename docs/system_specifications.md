@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 22 settembre 2026.
+> Generato il 1 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 200 | fatto e coperto dai test |
+| ✅ | 211 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 20 | da fare |
-| 🗑 | 7 | non più valido |
+| ⬜ | 23 | da fare |
+| 🗑 | 8 | non più valido |
 
-**242 voci** in tutto. **215** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**257 voci** in tutto. **226** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -46,21 +46,21 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 11 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 39 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 12 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 44 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 13 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 10 | 1 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 3 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 23 | 1 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 2 | — |  |
+| [STAT](#stat) | 4 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -781,6 +781,24 @@ Chiesto da Flavio il 03/09/2026, con la foto: «l'unica cosa che cambia è che l
 
 **Dove**: `src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-MENU-016 — La ricetta ritoccata su un conto si salva come voce nuova del menù
+
+Daniele, 18/09/2026: «quando modifico una ricetta, un tasto "salva come nuova" deve apparire, da aggiungere ai due gia' presenti. Quando lo clicco mi si apre la schermata, che gia' esiste da qualche parte, di creazione nuova ricetta gia' popolata con le modifiche fatte al drink che ho appena modificato. Quando poi clicco salva in questa schermata torno alla schermata della coda degli ordini».
+
+DA DOVE SI PARTE: dal dettaglio di un conto si tocca una riga e si apre il ritocco per-item (`CustomDrinkForm`, REQ-POS-014) — si cambia il nome, il prezzo, e si sostituiscono o si tolgono gli ingredienti. Quel ritocco vale per QUELLA riga di QUEL conto e muore li'. Se e' venuto bene, rifarlo nel menu' vuol dire ribattere a mano tutti gli ingredienti.
+
+IL TERZO TASTO, «✨ Salva come nuova ricetta», sta SOTTO gli altri due e non accanto: «Annulla» e «Salva» chiudono il gesto su questa riga, questo porta in un'altra schermata — accanto a «Salva» si toccherebbe per sbaglio proprio quando si ha fretta. Compare solo IN MODIFICA e solo se chi apre il form sa dove portare: creando un prodotto libero da zero non c'e' ancora niente da salvare altrove.
+
+QUELLO CHE PASSA SONO LE MODIFICHE, non i valori di partenza: nome, prezzo e ricetta come sono NEL FORM in quel momento. Passare `initial` farebbe nascere il prodotto nuovo identico a quello di catalogo, cioe' senza il ritocco che e' la ragione per cui lo si sta salvando. I due tasti compongono la stessa cosa (`composto()`), se no il prodotto nuovo nascerebbe diverso dal drink appena ritoccato.
+
+LA SCHERMATA E' QUELLA CHE C'E' GIA': `DrinkForm`, la stessa del Menu', aperta sopra il conto e compilata coi dati di partenza. Il magazzino che le serve si legge quando si apre, non all'ingresso nel conto, dove non lo guarderebbe nessuno. Il nome arriva com'era: se il drink si chiamava «Negroni» il prodotto nuovo si chiamera' «Negroni» finche' non gli si da' un nome suo, e a deciderlo e' chi salva.
+
+IL TASTO NON TOCCA LA RIGA DEL CONTO: manda altrove e basta. Il ritocco sulla riga si conferma con «Salva», che e' un gesto suo.
+
+SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito quello che era venuto a fare.
+
+**Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
+
 #### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
 
 RIPENSATO IL 12/09/2026:
@@ -1092,6 +1110,44 @@ CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala cartone →
 Prodotti e voci del menù si raggruppano in poche macro-categorie (distillati, birre, bibite…): servono a leggere consumi, valore e margini per famiglia invece che articolo per articolo, e a capire dove se ne va il denaro. Dal 09/09/2026 il legame è per singolo prodotto o voce, con una percentuale (REQ-MAG-042): prima passava dalla categoria.
 
 **Dove**: `src/lib/macros.js, src/lib/macroStats.js, src/components/MacroCategoryManager.jsx` · **Lo dimostrano**: `tests/unit/macros.test.js`, `tests/unit/macroStats.test.js`
+
+#### REQ-MAG-022 — Bilancio → Acquisti × Fatturato: il rapporto per macro del foglio, per anno, mese, settimana o giorno
+
+COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a mano, mese per mese e macro per macro: nessuna formula dice da dove viene.
+
+DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non va inventato. Due indizi, verificati tutti e due, e nessuno dei due torna al centesimo. (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del 2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 / 4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi uguali, gennaio e luglio lontani. Il registro però tiene solo cinque fornitori, e negli ordini ne compaiono una decina. (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità × prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma per macro si può fare a mano. È il modo più plausibile, ma è una ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
+
+QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre «€/pz × 1,22»).
+
+COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA. Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una domanda vera che vive con gli acquisti e non nella tabella del venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui gli acquisti avranno la loro schermata. Quel giorno è questo.
+
+PROPOSTA, poi DECISA il 19/08 (vedi in fondo). Una vista «Acquisti per macro» con le macro di MAGAZZINO per riga e i mesi per colonna, e — dove la macro d'acquisto è agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di quella accanto, che è il confronto che il locale fa a fine mese.
+
+ERANO TRE DOMANDE, E DUE SONO CHIUSE (19/08, dall'utente che riporta Flavio). (1) L'ACQUISTO È L'ORDINE FORNITORE RICEVUTO: la merce conta quando entra dalla porta, non quando arriva la fattura — che in app è un'altra cosa e segue tempi suoi. (2) LORDO E NETTO SI VEDONO TUTTI E DUE: i fogli di Flavio sono al lordo ed è come lui legge da sempre, il resto dell'app ragiona al netto, e obbligare a sceglierne uno vorrebbe dire dare torto a lui o dare torto alle statistiche. Servono tutti e due sulla stessa tabella; quale dei due si apre per primo lo si sceglie provandolo con lui. (3) RESTA APERTA: in quale mese cade un acquisto è REQ-MAG-021 — la quota consumata che migra da un mese all'altro — e questa tabella va pensata insieme a quella.
+
+DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sottosezione «Acquisti × Fatturato», accanto a «Mesi» e «Venduto × Incassato». È la tabella dell'Excel rifatta: per riga le macro d'ACQUISTO, per colonna i mesi, e in ogni cella acquisti, fatturato, utile (fatturato − acquisti), rapporto fat/acq e incidenza sull'utile del mese; in fondo i totali dell'anno e l'incidenza dell'anno.
+
+IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
+
+SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare. 30/09/2026: `purchasesByMacro` e' diventata `acquistiPerMacro`, che conta le righe CONSEGNATE per la quantita' ricevuta e nella data di consegna (REQ-MAG-029), piu' i carichi diretti; la usa gia' la scheda per periodo delle statistiche (REQ-STAT-004). Qui manca ancora la tabella mese per mese del Bilancio.
+
+GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
+
+ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
+
+DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque domande sui lotti): finché quello non è deciso un acquisto pesa sul mese in cui è ENTRATO e non su quello in cui si consuma, e la didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella resta vuota finché gli ordini fornitore non passano davvero dall'app, e dello storico 2026 non si ricostruisce niente. Per questo non è lavorabile adesso.
+
+SBLOCCATA E FATTA (01/10/2026). Il vincolo è caduto: il foglio si ferma al 7 agosto, e da lì gli ordini fornitore e i carichi passano dall'app (REQ-MAG-029, REQ-MAG-046). Flavio, vocali del 01/10: «macro-categorie dovrebbe avere un link a parte […] bisognerebbe vedere la tabella mia», «io devo avere sempre davanti il valore degli acquisti e il valore del fatturato […] il totale degli utili generato […] il rapporto fatturato acquisti e l'incidenza della somma utile in percentuale», e la vuole «per l'anno, per il mese che vada a selezionare io e per la settimana […] volendo anche giornaliera». L'utente, lo stesso giorno: nella pagina Bilancio, non nelle Statistiche (REQ-STAT-004 è stata tolta). COM'È FATTA, riga per riga come il foglio (formule verificate su ANALISI DATI.xlsx, foglio RAPPORTI ACQUISTI 2026). Un blocco per macro, più «Non attribuito» se ha importi: · ACQUISTI: la merce entrata (vociDiAcquisto: consegne degli ordini fornitore nella data di consegna, più i carichi diretti), spartita coi pesi dei PRODOTTI; · FATTURATO: l'incassato delle voci di menù della macro, sconto compreso, spartito coi pesi delle VOCI; · UTILE = fatturato − acquisti; · RAPPORTO FAT/ACQ = fatturato ÷ acquisti (il moltiplicatore); · INCIDENZA = utile della macro ÷ somma degli utili delle macro in quella colonna, in percentuale. In fondo il totale di tutte le macro con, al posto dell'incidenza sugli utili, l'INCIDENZA SUL PERIODO: fatturato della colonna ÷ fatturato di tutto il periodo mostrato (nel foglio «incidenza anno»). Dove il denominatore non è positivo resta un trattino, come in «Venduto × Incassato».
+
+LE QUATTRO VISTE, scelte con un gruppo di gettoni e una freccia per andare avanti e indietro: · ANNO: i dodici mesi; · MESE: le settimane DEL FOGLIO DI FLAVIO, a blocchi di sette giorni dal primo del mese (1–7, 8–14, 15–21, 22–28) più i giorni che restano (29–fine), «le 4 settimane e la settimana incompleta»; · SETTIMANA: da lunedì a domenica, come le chiusure (REQ-CASSA-014); · GIORNO: una giornata sola. Ogni colonna è un intervallo di GIORNATE COMMERCIALI: la nottata che finisce alle tre resta della sera prima, su vendite e acquisti.
+
+LORDO E NETTO: si apre AL LORDO, come legge Flavio e come è il foglio, e un interruttore passa al netto (decisione dell'utente, 01/10). Al lordo il fatturato è l'incassato così com'è e gli acquisti portano l'IVA del prodotto; al netto l'incassato è scorporato con l'aliquota della voce o del locale e gli acquisti sono al costo senza IVA.
+
+LA STESSA TABELLA DI «VENDUTO × INCASSATO»: le vendite si sommano con lo stesso giro (sommaVendite), le righe per macro, i totali e le incidenze con la stessa funzione (componiTabella), e si disegnano con lo stesso componente (TabellaMacro): cambiano le parole delle righe e da dove arriva il secondo numero (acquisti invece del costo delle ricette). Le colonne delle quattro viste stanno in periodiBilancio.js.
+
+LETTURE: i conti e i soli CARICHI del periodo mostrato (fetchOrdersBetween, fetchCarichiBetween): ogni vendita scrive uno scarico per ingrediente, e leggere tutti i movimenti vorrebbe dire decine di migliaia di documenti per usarne poche centinaia. Il filtro sul motivo sta nella query, con l'indice composto (reason, created_at) in firestore.indexes.json. Poi ordini fornitore, prodotti, voci e macro una volta sola; un periodo già visto non si rilegge. `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto e sommaVendite.
+
+**Dove**: `src/lib/acquistiFatturato.js, src/lib/periodiBilancio.js, src/lib/macroStats.js (sommaVendite, vociDiAcquisto, componiTabella), src/lib/magazzinoPeriodo.js (MOTIVI_DI_CARICO), src/components/AcquistiFatturato.jsx, src/components/TabellaMacro.jsx, src/components/BilancioTab.jsx, src/lib/api.js (fetchCarichiBetween), firestore.indexes.json` · **Lo dimostrano**: `tests/unit/acquistiFatturato.test.js`, `tests/component/AcquistiFatturato.test.jsx`
 
 #### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
 
@@ -1495,6 +1551,16 @@ CADUTA LA CONDIZIONE «SOLO ORDINI GIA' CONSEGNATI» che filtrava gli ordini rip
 
 NON C'E' DENTRO L'ALLEGATO DEL DOCUMENTO (foto/PDF), che REQ-MAG-025 cita nello stesso punto: serve lo Storage e non sono decisi ne' peso ne' formati. Resta li'. ⚠️ AGGIORNAMENTO 27/08/2026 (REQ-MAG-037/038): con un ordine per fornitore la FETTA non esiste piu' come cosa a se', perche' l'ordine ha gia' un fornitore solo. Il legame diventa quindi FATTURA-ORDINE, che e' la forma semplice di quello che questa voce descrive. Restano validi e vanno riusati: la guardia che vieta di agganciare la fattura di un fornitore a un ordine di un altro, l'uno-a-uno impedito per costruzione, e i due buchi che si vedono a colpo d'occhio — ordine senza fattura e fattura senza ordine. E IL GANCIO DIVENTA PORTANTE: senza fattura collegata un ordine non sa se e' stato pagato, perche' «pagato» e' una domanda alla fattura e non un dato dell'ordine (REQ-MAG-038). Da qui due conseguenze su questa voce. La prima: «SULL'ORDINE NON SI SCRIVE NIENTE» vale ancora per i DATI — il legame resta su `order_id`, un campo solo, sulla fattura — ma NON piu' per il diario: collegare, scollegare e generare un documento lasciano una riga nella `storia` dell'ordine, e il rischio dei due scrittori si accetta perche' cio' che si perderebbe e' una riga di diario, non un numero. La seconda: un ordine senza documento non e' «da pagare», e' un ordine di cui non si sa niente — e va detto cosi', invece di darlo per non pagato.
 
+UN DOCUMENTO PUO' COPRIRE PIU' ORDINI (19/09/2026). Flavio, in un vocale: «nello scadenzario si dovrebbe poter aggiungere a un documento piu' di un ordine. In questo momento, se carico un ordine in un documento, mi dice di scollegare l'ordine. Soprattutto nel weekend io faccio un ordine, me lo consegnano, ma non mi fanno il proforma perche' l'azienda e' chiusa e mi fanno semplicemente il piacere di portarmi la roba; il giorno dopo faccio un altro ordine, e il lunedi' mi fanno un unico proforma o un'unica fattura. Quindi sotto una fattura, alla domanda aggiungi ordine, io aggiungo un ordine, e poi dopo ci deve essere aggiungi altro ordine oppure scollega gli ordini».
+
+COSA CAMBIA: il campo diventa una LISTA, `order_ids`. Prima era `order_id`, uno solo, e la regola «questo documento e' gia' collegato a un altro ordine» rifiutava il secondo aggancio: l'unica strada era scollegare il primo, cioe' scegliere quale dei due ordini raccontare — e l'altro tornava a risultare senza documento.
+
+QUELLO CHE RESTA UNO-A-UNO E' L'ALTRO VERSO: una fetta ha al massimo un documento. Due fatture sulla stessa merce vorrebbero dire pagarla due volte, ed e' la riga che `aggancioAmmesso` continua a tenere. A SCHERMO: sotto il documento c'e' l'ELENCO degli ordini collegati, ognuno col suo «Scollega», e in fondo «＋ Aggiungi un altro ordine» — non «Collega», perche' la parola deve dire che si somma invece di sostituire. Dal lato dell'ordine, «Scollega» toglie SOLO quell'ordine: una schermata che ne guarda uno non deve toglierli in blocco.
+
+IL CAMPO VECCHIO RESTA SCRITTO, col primo della lista, e non e' una dimenticanza: in produzione gira una versione che legge `order_id`, e toglierlo di colpo le farebbe sparire i legami sotto le mani. In lettura `elencoOrdini` normalizza i due casi, cosi' i documenti scritti prima continuano a raccontare il loro ordine senza nessuna migrazione. Si potra' smettere di scrivere il campo vecchio quando la 1.7.0 sara' dappertutto.
+
+LA VERIFICA NON PASSA PIU' DA UNA QUERY PER ORDINE: il campo su cui filtrare e' diventato una lista e i documenti vecchi hanno solo quello singolo — una query su uno dei due ne perderebbe meta'. Si chiedono i documenti di QUEL fornitore e si filtra in memoria: sono pochi, ed e' un gesto d'ufficio.
+
 **Dove**: `src/lib/fatture.js, src/lib/api.js, src/components/PurchaseOrdersPanel.jsx, src/components/SupplierInvoicesPanel.jsx` · **Lo dimostrano**: `tests/unit/legameFattura.test.js`, `tests/unit/agganciaFattura.test.js`, `tests/component/FatturaDellaFetta.test.jsx`
 
 #### REQ-MAG-030 — Dalla fattura al magazzino: «Aggiungi prodotti», col prezzo che si decide
@@ -1701,11 +1767,49 @@ NESSUNA MIGRAZIONE dei pesi dalle vecchie categorie: «questo vado a inserirlo i
 
 Flavio, 12/09/2026 (vocale delle 12:46): «quando un prodotto va in negativo e vado ad aggiungere una quantità, la quantità parte comunque da zero. Se ho tre pezzi, ne consumo quattro, va a meno uno; compro cinque pezzi e me ne mette cinque, non quattro: il meno uno non me l'ha calcolato. Non è detto che un prodotto vada realmente in negativo: magari mi è arrivato e non l'ho caricato ancora, lo carico il giorno dopo, e si bilancia col carico». È IL CONTRARIO DI QUELLO DECISO IL 17/08 (BUG-007) e ribadito il 04/09 (BUG-101): allora il carico ripartiva da zero perché «da uno scaffale vuoto non si versa» e una bottiglia caricata su −0,04 doveva contarne una. Flavio guarda il caso di tutti i giorni, non il residuo di arrotondamento: il meno è merce già bevuta e non ancora caricata, e il carico che arriva è quello. Si somma, e il buco si chiude da sé. Il caso −0,04 + 1 = 0,96 resta, ed è accettato: è un centesimo di bottiglia, e per il magazzino conta più il pezzo intero che manca.
 
-DOVE SI SOMMA. Il carico a mano (`loadStock`) parte dalla giacenza com'è; il carico a confezioni (`receiveBottles`) idem, mentre le bottiglie da contare sullo scaffale partono da zero perché sotto zero non ce ne sono; la consegna di un ordine faceva già `increment`, che somma e basta. Lo scarico a mano resta fermo a zero (`scaricoPossibile`): lì una persona dichiara quanto ha tolto, e da uno scaffale vuoto non si toglie niente.
+DOVE SI SOMMA. Il carico a mano (`loadStock`) parte dalla giacenza com'è; il carico a confezioni (`receiveBottles`) idem, mentre le bottiglie da contare sullo scaffale partono da zero perché sotto zero non ce ne sono; la consegna di un ordine faceva già `increment`, che somma e basta.
+
+LO SCARICO A MANO NON C'È PIÙ (26/09/2026): era un ramo di `loadStock` fermato a zero da una regola nostra, senza nessun tasto che lo usasse; Flavio non vuole il tasto (le correzioni in meno si fanno col contenuto reale), quindi `loadStock` accetta solo numeri positivi e `scaricoPossibile` è stato tolto.
 
 COSA RESTA DA ZERO IN SU, e cambia nome per dirlo: `giacenzaPerCarico` diventa `giacenzaNonNegativa`, usata solo per contare OGGETTI (`bottleBreakdown`: «−1 piena più 750 ml nell'aperta» non vuol dire niente) e SOLDI (`unitsInStock`: un magazzino che vale meno di niente non vuol dire niente). Nessuna migrazione: le giacenze restano quelle, cambia solo cosa fa il prossimo carico.
 
 **Dove**: `src/lib/api.js (loadStock, receiveBottles, consegna), src/lib/inventory.js (giacenzaNonNegativa)` · **Lo dimostrano**: `tests/unit/scritturaMagazzino.test.js`, `tests/unit/inventory.test.js`
+
+#### REQ-MAG-046 — L'inventario come il foglio INV: DEP · ACQ · CONS · RIM, con la RIM che si aggiorna da sola
+
+Lo schema l'ha chiuso Flavio il 25/09/2026 sera, dopo tre giorni di prove sui casi veri (vocale delle 21:53): «ordine a fornitore consegnato carica il magazzino e va a finire sugli acquisti durante l'inventario in corso; su prodotti il carico e' solo positivo e va a finire sugli acquisti nell'inventario; il contenuto reale serve per fare le modifiche sia in positivo sia in negativo, e va sulle rimanenze di magazzino nell'inventario, quindi mi modifica sia la rimanenza sia il consumato». E il 24/09: «i dati da visualizzare sono DEP, ACQ, CONS, RIM ed una casella vuota dove vado a confermare o a modificare il valore di RIM». E' il foglio INV che teneva a mano (una scheda per periodo, CONS = DEP + ACQ − RIM, la RIM di una scheda e' il DEP della successiva), con una cosa in piu': la RIM si aggiorna da sola. · DEP: la giacenza all'apertura. Non la sposta niente. · ACQ: ordine consegnato, fattura, carico da Prodotti. · RIM: la giacenza di adesso, che si muove con le vendite e col contenuto reale; accanto la casella per il contato, e un ✓ che conferma la RIM cosi' com'e'. · CONS: DEP + ACQ − RIM, quindi vendite, correzioni e merce mancante insieme — un numero solo, come nel foglio (scelta di Daniele, 24/09). In cima il valore delle rimanenze e il consumo in €; il consumo a settimana (REQ-MAG-024) resta sulla riga.
+
+IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato me ne faccio poco, mi serve piu' vedere in grassetto la rimanenza». In grassetto la RIM di ogni riga e il valore delle rimanenze in cima, non piu' il consumo.
+
+LA STRADA FATTA PRIMA, perche' non si rifaccia: il 23/09 Flavio aveva chiesto di separare il venduto dalla differenza, e per un giorno la riga ha detto DEP · ACQ · VENDUTO · ATTESO · DIFFERENZA; il 24 di far ripartire il prodotto dal contenuto reale. Tutte e due le forme sono state abbandonate da lui stesso: «ti sto facendo cambiare mille volte, ma poi mi capitano le situazioni e capisco dopo». Chiusa, la RIM contata diventa il DEP del prossimo inventario (vedi BUG-110, BUG-112).
+
+**Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-047 — L'inventario si scorre per categorie, come gli scaffali
+
+Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione in filtri di categorie come nei prodotti, perche' cosi' mi e' un po' difficile fare l'inventario visto che devo passare da un ripiano a un altro perche' sono mischiati … a me serve in ordine alfabetico, ma per categorie, perche' le categorie ce l'ho quasi tutte vicine». E: «dovrebbero sempre apparire filtri sopra dove io posso selezionare se voglio vederli tutti oppure divisi per categoria». L'inventario usa la stessa barra delle categorie dei Prodotti (CategoryRail: a sinistra sullo schermo largo, una riga che scorre sul telefono), con i conteggi. «Tutte» mette i prodotti in fila categoria per categoria, nell'ordine delle categorie di magazzino e ognuna col suo titolo, e dentro in ordine alfabetico; scelta una categoria restano solo i suoi. I prodotti senza categoria vanno in fondo.
+
+**Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-049 — Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP
+
+Flavio, 25/09/2026 sera: «il contenuto reale serve per fare le modifiche sia in positivo sia in negativo … va direttamente sia sul magazzino dei prodotti sia sulle rimanenze di magazzino nell'inventario, e quindi mi modifica sia la rimanenza sia il consumato». E' IL CONTRARIO DI BUG-111 (22/09, in produzione con la 1.6.1), dove il contenuto reale corretto durante un inventario spostava il DEP. Adesso il DEP resta quello dell'apertura, l'ACQ resta la merce entrata, e la correzione — col suo segno — si legge nella RIM e quindi nel CONS. Lo stesso per le rettifiche d'inventario finite dentro il periodo, come quelle della chiusura interrotta del 21/09. Nel mezzo, il 24/09, per un giorno il contenuto reale aveva fatto «ripartire» il prodotto (DEP = il numero scritto, ACQ e VENDUTO da zero): e' stato abbandonato il giorno dopo, e non e' mai uscito dalla linea di sviluppo. Il contenuto reale resta com'era in Prodotti: si scrive il numero vero, e l'app registra il carico o lo scarico della differenza. Non accetta numeri negativi: e' quello che c'e' sullo scaffale.
+
+**Dove**: `src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-050 — Controllo del magazzino, pagina di prova: si conta un prodotto alla volta, e il rapporto dice dove si perde
+
+Daniele, 26/09/2026: «implementa come ha detto Flavio, e poi fai una nuova pagina inventario come la faresti tu. Una pagina attivabile, solo per test al momento, in modo da poter vedere la differenza di funzionamento». Nasce dalla domanda di prima: «penso che stia replicando il workflow che faceva sull'Excel, ma non mi e' chiaro cosa gli comunicano i dati alla fine della fiera». L'IDEA. Il foglio INV esisteva perche' Flavio non aveva i dati delle vendite: il consumo si ricavava contando, DEP + ACQ − RIM. Oggi l'app sa cosa si e' venduto e ogni cambio di giacenza e' un movimento col suo motivo: il conteggio non serve piu' a calcolare il consumo, serve a MISURARE quanto l'app si sbaglia. Le domande che contano sono tre — quanto devo ordinare, quanto sto perdendo, quanto vale il magazzino — e la pagina le prende una per una.
+
+CONTA: un prodotto alla volta, quando si vuole, scaffale per scaffale (la stessa barra delle categorie, `perScaffale`). Niente inventario da aprire e chiudere: `registraConteggio` corregge subito la giacenza della differenza (increment, in sottofondo, composto in memoria) e scrive un movimento `conta` anche quando il prodotto torna, perche' e' la traccia che dice «contato il …». Accanto a ogni prodotto, da quando non si conta.
+
+RAPPORTO: per 7, 30 o 90 giorni, Inizio + Acquisti − Venduto ± Differenza = Fine, dagli stessi movimenti e con la stessa tabella motivo → colonna delle statistiche (magazzinoNelPeriodo). In cima acquisti, costo del venduto, DIFFERENZA IN EURO e valore a fine periodo; l'elenco parte da dove la differenza costa di piu', e per ogni prodotto dice quanti giorni dura la scorta al ritmo del periodo.
+
+DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso controllo dei DevTools e della stampante finta (`devToolsEnabled`, dalla build con VITE_APP_ENV) — e solo con l'interruttore «Controllo del magazzino (prova)» in Impostazioni → Funzioni premium, che in produzione non compare nemmeno. Scrive sulle giacenze vere del test: e' una pagina da provare, non una simulazione.
+
+NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
+
+**Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
@@ -1814,6 +1918,16 @@ IL BORDO DELLA NOTTE VALE ANCHE QUI: una serata aperta sabato alle 19:00 e chius
 TUTTO IN LOCALE. Le righe aggregate escono dalle sessioni GIA' in mano — nessuna lettura nuova, nessuna attesa fra il tocco sul gettone e la lista nuova — e i numeri sono quelli CONGELATI nello snapshot della chiusura, che stanno sulla sessione: una settimana di due mesi fa somma quanto ha davvero incassato, non zero perche' i suoi ordini sono fuori dalla finestra scaricata. La logica e' pura (`raggruppaSerate`, `periodoDellaSerata`, `chiaveSettimana`, `chiaveMese`, `etichettaPeriodo` in src/lib/serate.js); il componente disegna e basta.
 
 **Dove**: `src/lib/serate.js, src/components/CashSessionsList.jsx` · **Lo dimostrano**: `tests/unit/serate.test.js`, `tests/component/CashSessionsList.test.jsx`
+
+#### REQ-CASSA-015 — Giornata di lavoro: orario di apertura e di chiusura, oltre al cambio di giornata
+
+Flavio, vocale del 01/10/2026, sulla sezione «Giornata di lavoro» delle impostazioni: «il giorno nuovo comincia alle ore 5, bisogna mettere anche quando finisce […] la giornata di lavoro non è dalle 5 fino alle 4.59 del giorno dopo. Devo mettere io un inizio e una fine […] le ore e minuti di apertura e le ore e minuti di chiusura».
+
+DUE IMPOSTAZIONI NUOVE, in ore e minuti: `orario_apertura` e `orario_chiusura` (di partenza 18:30 e 03:30, la fascia che le statistiche avevano scritta nel codice). Dicono quando il locale lavora, e le FASCE ORARIE DELLE STATISTICHE partono da lì invece che da un orario fisso; si possono sempre cambiare a mano mentre si guarda.
+
+IL CAMBIO DI GIORNATA RESTA, ed è un'altra cosa: è l'ora in cui una giornata finisce e comincia la successiva (numerazione dei conti, statistiche, chiusure). Non coincide con la chiusura apposta: un conto battuto dieci minuti dopo la chiusura appartiene ancora a quella serata, e se il cambio fosse la chiusura finirebbe nel giorno dopo. Nelle impostazioni si chiama «Cambio di giornata», e se cade dentro l'orario di apertura compare un avviso: spezzerebbe una serata in due giornate.
+
+**Dove**: `src/components/SettingsTab.jsx, src/lib/api.js (DEFAULT_SETTINGS), src/lib/orario.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/orario.test.js`, `tests/component/SettingsTab.test.jsx`, `tests/component/StatsTab.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
@@ -2293,6 +2407,30 @@ La home dello staff di sala è la coda ordini, identica a quella del gestionale:
 
 **Dove**: `src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/StaffDrawer.test.jsx`
 
+#### REQ-STAFF-016 — Chi apre la cassa: si sceglie fra gli admin, senza rifare il login
+
+Chiesto da Flavio l'11/09/2026: «l'utenza admin dovrebbe gestire dei sottoutenti della cassa. Flavio e Vittorio sarebbero i due sottoutenti admin. Una volta loggato admin, all'apertura della cassa il sistema dovrebbe chiedere quale sottoutente sta gestendo la cassa … in modo da non dover fare il login ogni volta che l'app viene aperta … ad ogni apertura di cassa dell'admin, gia' con login automatico, verra' chiesto se sta aprendo Flavio o Vittorio».
+
+IL PROBLEMA VERO: il tablet del banco resta collegato con un account solo e non lo si slogga mai — e' quello che tiene in piedi il login automatico — ma a lavorarci sono due persone. Il nome in cima allo schermo e la firma della serata erano di chi aveva fatto il login mesi fa, non di chi c'era.
+
+NON E' UN LOGIN, ed e' la scelta che regge tutto il resto. La sessione di Firebase resta quella dell'admin collegato: qui si sceglie soltanto CHI STA LAVORANDO, che e' un'etichetta e non un permesso. Un login vero senza password vorrebbe dire o tenere in giro le credenziali degli altri, o aprire una strada per entrare in un account altrui: due porte che non si aprono per comodita'. E SI SCEGLIE SOLO FRA ADMIN, il che rende la cosa innocua: chi si sceglie ha esattamente i permessi di chi ha fatto il login, quindi passare dall'uno all'altro non sposta niente di quello che si puo' fare. Un utente disattivato non si sceglie; un admin declassato smette di essere scelto anche sul tablet che se lo ricordava. Se un domani si volessero scegliere anche i bartender, quella sarebbe una decisione di sicurezza vera, da pensare a parte: per questo il filtro sta in un posto solo (`operatoriSelezionabili`).
+
+CHI E' ASSOCIATO A CHI SI DECIDE, E PER ACCOUNT (19/09/2026). All'inizio erano «tutti gli admin del locale», uguale per chiunque facesse il login; Daniele: «si deve decidere quali sono gli admin, anche perche' puo' essere Vittorio o io a fare il login, e li' sono altre associazioni». Il tablet del banco resta collegato con UN account, e chi ci lavora dipende da quale: l'elenco e' quindi una lista PER ACCOUNT, su settings/bar in `admin_associati` (uid di chi fa il login → uid degli admin che puo' scegliere). Sta li' e non su una collezione sua perche' le impostazioni sono gia' in cache: aprire la cassa non aspetta nessuna lettura.
+
+DUE REGOLE CHE NON SI SCAVALCANO. Una lista VUOTA o assente vale «tutti gli admin» e non «nessuno»: il locale che non decide niente non deve accorgersi che la cosa esiste. E CHI E' COLLEGATO C'E' SEMPRE, qualunque cosa dica la lista: e' il suo account, e un elenco che non contiene nemmeno chi lo sta guardando lascerebbe la cassa senza nessuno da scegliere. Le associazioni si sommano al filtro dei ruoli, non lo sostituiscono: un associato declassato resta fuori lo stesso.
+
+SI DECIDE IN UTENTI E RUOLI → «Chi apre la cassa», dove stanno gli account: un blocco per ogni admin, e sotto le pastiglie degli altri da accendere o spegnere. La propria non si spegne.
+
+DOVE SI CHIEDE: all'apertura della cassa, prima del fondo, e SOLO se c'e' piu' di un admin — con uno solo la risposta e' una sola. La scelta resta sul DISPOSITIVO (`tana:operatore`, come l'ultimo ruolo conosciuto di ruoloLocale.js) e si porta dietro CHI ERA COLLEGATO: se al tablet si collega un altro account, la scelta di ieri sera non si eredita, se no si firma la serata col nome di chi non c'e'. L'ELENCO NON PUO' FAR ASPETTARE L'APERTURA: gli admin arrivano da una Cloud Function, lenta, e con la rete del locale che «risulta collegata ma non passa» non arriverebbe mai. Si mostra la cache (`staffFromCache`) e si rinfresca in sottofondo: aprire la cassa e' il primo gesto della serata e non aspetta niente.
+
+COSA CAMBIA A SCHERMO: la serata risulta aperta da chi e' stato scelto (`opened_by`), e il nome in cima alla barra e' il suo.
+
+COSA CAMBIA DAVVERO, OGGI: la sessione di cassa risulta aperta da chi e' stato scelto (`opened_by`) e il nome in cima alla barra e' il suo. NON cambiano l'attribuzione dei conti battuti (`placed_by`), il nome sullo scontrino ne' il badge delle ore, che escono tutti dall'account collegato: rimetterli in riga e' REQ-STAFF-018.
+
+ANCORA DA FARE, e sono due requisiti loro: l'ASPETTO PER PERSONA (REQ-STAFF-017), che e' la seconda meta' della richiesta di Flavio, e L'ATTRIBUZIONE (REQ-STAFF-018). Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
+
+**Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
+
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
 Chiesto dall'utente il 19/08. Chi sta in sala VEDE a che punto sono le preparazioni — gli serve per sapere cosa portare — ma non le comanda: l'unico passo che può segnare è «servito», perché è lui a portare il drink al tavolo. Tutto il resto (prendere in carico, segnare pronto, tornare indietro, dividere una comanda, annullarla) è del banco.
@@ -2625,6 +2763,14 @@ LE CHIAVI NON SI RINOMINANO: sono già scritte sui documenti dei locali e nella 
 
 **Dove**: `src/components/StampaAutomatica.jsx, src/components/SettingsTab.jsx, src/components/PrinterSetup.jsx` · **Lo dimostrano**: `tests/component/StampaAutomatica.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
+#### REQ-UI-026 — Nel gestionale i testi d'aiuto usano il registro tecnico del mestiere
+
+Flavio, vocale del 29/09/2026 guardando la scheda «Modifica prodotto»: «tutti gli help che appaiono sotto sono scritti tutti quanti in un modo un po' troppo elementare. Non si può impostare in generale che tutti gli help siano in un modo un poco più erudito, un poco più tecnico?». E sulla legenda dei Prodotti: «più che "c'è" metterei "presente"». Chi compila schede, carichi e inventari e' il gestore, e i termini giusti sono i suoi: giacenza, rettifica, listino, scarico frazionato, scorta minima, contenuto nominale. I testi diventano impersonali, senza «se vuoi» e senza esempi colloquiali (per esempio «Es. 2 se vuoi l'avviso quando ne restano due» diventa «Scorta minima in pezzi», e la didascalia dice che sotto quella soglia il prodotto risulta in esaurimento e rientra nel riordino suggerito).
+
+FATTO nel Magazzino: scheda del prodotto e suoi riquadri d'aiuto, carico, contenuto reale, didascalia dell'inventario, legenda («presente»). La regola e' scritta in DESIGN.md (guardrail 3): al banco restano le parole comuni, nel gestionale il registro del mestiere. Il resto del gestionale e' REQ-UI-027.
+
+**Dove**: `src/components/InventoryManager.jsx (ItemForm, AiutoProdotto, AiutoPezzo, CaricoForm, RettificaForm), src/components/StockCountPanel.jsx, DESIGN.md` · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -2793,7 +2939,9 @@ LA CASSA ANCORA APERTA C'È, ed è la prima riga, con l'orario che dice «in cor
 
 Chiesto da Flavio il 17/09/2026, in un vocale, guardando Statistiche → Per periodo: «mi appare questo counter dei giorni, che penso significhi 24 da oggi indietro di 24 giorni. Ma qui in realta' mi dovrebbe apparire un inizio periodo, fine periodo … cosi' riesco a vedere realmente la fascia di periodo che mi interessa, cosi' come puo' essere il giugno, cosi' come puo' essere il periodo di Natale, e vedere quindi quanto ho fatturato, quanto ho movimentato invece i prodotti di magazzino». A) IL PERIODO E' UN INTERVALLO DI DATE. Due caselle, «Dal» e «Al», in GIORNATE COMMERCIALI come tutto il resto dell'app: la nottata oltre la mezzanotte appartiene alla giornata in cui e' cominciata. Col contatore di prima giugno non si guardava — si guardavano «gli ultimi 108 giorni», che e' un'altra domanda.
 
-LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti. Le due caselle si chiamano «Dal» e «Al» e non «Dal giorno»/«Al giorno»: quelle sono piu' sotto, nel venduto per fascia oraria, e dicono un'altra cosa — due etichette uguali a schermo si scambiano per la stessa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
+LE PASTIGLIE RESTANO COME SCORCIATOIE e riempiono le due caselle, ma CAMBIANO SENSO e l'etichetta lo dice: «Ultime 7» voleva dire le ultime sette giornate CON ORDINI, quante che fossero indietro nel tempo; adesso e' «7 giorni», cioe' sette giorni di calendario, e un locale chiuso il lunedi' ne trovera' sei lavorati. Due comandi che riempiono la stessa cosa non possono contare in due modi diversi. La didascalia dice sempre l'intervallo per esteso e quante giornate dentro hanno avuto ordini, che e' il numero su cui i conti sono fatti.
+
+UNA COPPIA DI DATE SOLA IN TUTTA LA SCHERMATA (19/09/2026). Il «venduto nella fascia oraria» ne aveva un'altra, nata quando il periodo qui sopra era un contatore di giornate: per chiedere «sabato scorso fra le 22 e l'una» bisognava dirlo li'. Da quando il periodo si sceglie da data a data quelle due caselle dicevano la stessa cosa in un altro posto, e chi le trovava non sapeva quale delle due comandasse: Daniele l'ha visto con una schermata in cui il periodo era impostato in alto e la fascia diceva «nessuna vendita», perche' guardava altrove. Adesso la fascia lavora sugli STESSI conti del resto della schermata e stringe soltanto l'ORA; vale anche in «Per serata», dove i conti sono quelli della cassa aperta e chiusa. B) LA CLASSIFICA DEL VENDUTO. «Anche per poter capire una classifica di quello che piaceva, che me li metti in ordine, in modo tale capisco cosa ho venduto di piu', che cosa credevo di poter vendere e invece alla fine, analizzando i dati, non ho venduto». Tutte le voci battute nel periodo, in elenco, con pezzi e incasso. I grafici che c'erano gia' mostrano i primi dieci: la domanda riguarda anche la CODA, che le barre tagliano via.
 
 SI ORDINA PER PEZZI O PER INCASSO, e sono due classifiche diverse — venti amari da un euro battono quindici negroni a pezzi e perdono a incasso; di suo per pezzi, che e' la domanda di partenza. C) IL MAGAZZINO NEL PERIODO. «Quello che mi serve sapere dal magazzino e' quanto avevo di deposito, quanto ho acquistato, quanto ho consumato in un determinato periodo … e vorrei avere la stessa identica visualizzazione a lista». Un elenco nella forma della lista del magazzino (`inv-list`), coi numeri che si leggono da soli.
 
@@ -2806,6 +2954,20 @@ UN PRODOTTO CHE NON SI E' MOSSO NON E' UNA RIGA: su quattrocento articoli trecen
 SI CALCOLA A RICHIESTA, con un tasto. Gli altri riquadri lavorano sugli ordini gia' in mano; questo legge tutti gli articoli e tutti i movimenti del periodo, che su due mesi sono migliaia di documenti: chi apre le statistiche per guardare l'incasso non deve pagarli. E DICE COSA NON E': il consumo qui e' quello scalato dalle ricette battute, non quello contato sullo scaffale. Quello vero lo da' la CONTA (REQ-MAG-014), e la differenza fra i due e' il calo, l'offerto e la dose scritta larga. Senza quella riga i due numeri si leggono come se dovessero coincidere, e chi li confronta pensa a un difetto. I DUE ELENCHI VALGONO ANCHE PER UNA SERATA: la sottosezione «Per serata» passa gli stessi estremi, quindi «cosa ho consumato sabato» si legge dove si legge il resto della serata.
 
 **Dove**: `src/lib/magazzinoPeriodo.js, src/components/StatsTab.jsx, src/components/MagazzinoPeriodo.jsx, src/lib/api.js (fetchStockMovementsSince)` · **Lo dimostrano**: `tests/unit/magazzinoPeriodo.test.js`, `tests/component/StatsTab.test.jsx`, `tests/component/ElenchiPeriodo.test.jsx`
+
+#### REQ-STAT-003 — Le statistiche per periodo hanno un «Personalizzato» con data e ora di inizio e di fine
+
+Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale periodo personalizzato, e' un periodo personalizzato all'interno dei 7, 10, 20, 30 o 60 giorni. Ma a me potrebbe servire un periodo di 90 giorni oppure di 30 giorni dell'anno scorso. Quindi dovrebbe apparire 7, 10, 20, 30 e 60 giorni e in piu' il tab personalizzato: ci metti tu la data, che puo' essere un giorno, due, dieci oppure tutto un anno». E: «oltre alla data di inizio e fine ci deve essere anche l'orario di inizio e di fine, e' importante perche' la mia giornata e' a cavallo tra due giorni». Le date c'erano gia' (REQ-STAT-002), libere, ma stavano sotto le pastiglie e toccarle ne spegneva una: si leggevano come un ritocco dei 7-60 giorni. Adesso le pastiglie sono 7 · 10 · 20 · 30 · 60 giorni · Personalizzato, e le date compaiono solo nell'ultima, con l'ORA: due campi data e ora, «Inizio» e «Fine» (non «Dalle»/«Alle», che sono gia' le etichette delle fasce orarie piu' sotto). La didascalia dice il periodo per esteso: «Dalle 18:00 di sabato 20/09/2026 alle 04:00 di domenica 21/09/2026: N giornate con ordini». Il periodo personalizzato e' fatto di ISTANTI, all'ora di Roma (ora legale compresa, `istanteDaOraDiRoma`), con la fine esclusa: lo seguono incassi, grafici, classifica e il magazzino nel periodo. Aprendolo si parte da quello che si stava guardando scritto all'ora (le giornate intere diventano «dalle 05:00 del primo giorno alle 05:00 del giorno dopo l'ultimo»), quindi gli stessi numeri. Con la fine prima dell'inizio lo si dice invece di mostrare numeri. Le pastiglie restano a giornate commerciali intere.
+
+**Dove**: `src/components/StatsTab.jsx, src/lib/businessDay.js (istanteDaOraDiRoma), src/lib/magazzinoPeriodo.js` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/businessDay.test.js`, `tests/unit/magazzinoPeriodo.test.js`
+
+#### REQ-STAT-005 — Fasce orarie per comanda, sconto diviso in parti uguali, giornate a cassa aperta anche a zero
+
+Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le risposte decise da lui lo stesso giorno. (1) LE FASCE ORARIE PER COMANDA. «Cosa succede quando apro un ordine alle 9 e ti prendi una birra, alle 10 un'altra, alle 11 un'altra, a mezzanotte un'altra? Sta registrando le singole battute o l'apertura dell'ordine?» Registrava l'apertura: tutto l'incasso di un conto finiva nella fascia in cui era stato aperto. La risposta: «nelle fasce orarie mi deve segnare quando viene battuta una singola comanda e non quando viene aperto il conto, indipendentemente da quando viene pagato». Un conto si spezza in BATTUTE (`battuteDi`), una per comanda non annullata, con la sua ora; il modello vecchio senza comande e' una battuta sola. Le seguono «Incasso per fascia oraria» (sotto le barre si leggono le comande), «Venduto nella fascia oraria» (che conta i CONTI che hanno battuto qualcosa lì) e «Incasso per giornata nella fascia scelta». (2) LO SCONTO IN PARTI UGUALI. «Lo sconto va applicato sopra le singole comande all'interno dell'ordine, diviso in parti uguali per il numero delle comande, e non per il valore della singola comanda.» Si divide la differenza fra il lordo delle righe e l'incasso del conto, cosi' la somma delle battute torna al centesimo con l'incasso del conto. Una comanda piccola su un conto molto scontato puo' risultare negativa: e' la regola chiesta, e il totale resta giusto.
+
+UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €.
+
+**Dove**: `src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
 
 ### LIC
 
@@ -2951,34 +3113,6 @@ NON SI LAVORA finché le cinque domande qui sopra non hanno risposta (quale cari
 
 **Dove**: `src/lib/macroStats.js, src/lib/stats.js, src/components/StatsTab.jsx (vista «Mensile per macro»)`
 
-#### REQ-MAG-022 — Bilancio → Acquisti × Fatturato: gli acquisti per macro, mese per mese
-
-COSA FA IL FOGLIO. La riga ACQUISTI del rapporto per macro è battuta a mano, mese per mese e macro per macro: nessuna formula dice da dove viene.
-
-DA DOVE ARRIVANO QUEI NUMERI NON È DIMOSTRABILE dai file, e non va inventato. Due indizi, verificati tutti e due, e nessuno dei due torna al centesimo. (a) Il registro fatture (FORNITORI REC.xlsx), sommato per mese del 2026, dà 1180 / 1129 / 1680 / 2448 / 4400 / 9081 / 761 da gennaio a luglio, contro gli ACQ TOT del rapporto 1809 / 1063 / 1697 / 2884 / 4526 / 8673 / 2369: stesso ordine di grandezza, marzo e maggio quasi uguali, gennaio e luglio lontani. Il registro però tiene solo cinque fornitori, e negli ordini ne compaiono una decina. (b) GEN ORD REC.xlsx valorizza ogni fattura riga per riga (quantità × prezzo ivato) e ogni riga porta il suo TIPO, quindi da lì una somma per macro si può fare a mano. È il modo più plausibile, ma è una ricostruzione: nel rapporto non c'è nessun collegamento che lo provi.
-
-QUELLO CHE È CERTO: gli ACQUISTI del foglio sono merce ENTRATA dalla porta, al LORDO dell'IVA (nel generatore il prezzo di riga è sempre «€/pz × 1,22»).
-
-COSA HA GIÀ L'APP. `purchasesByMacro` (src/lib/macroStats.js) somma gli ordini fornitore RICEVUTI per macro di MAGAZZINO, al netto IVA. Nessuna schermata la chiama, e non ha il taglio per mese. È rimasta lì apposta: REQ-MAG-015 dice che «quanto ho speso in bibite» è una domanda vera che vive con gli acquisti e non nella tabella del venduto, e che l'aggancio `macro_menu_id` esiste per il giorno in cui gli acquisti avranno la loro schermata. Quel giorno è questo.
-
-PROPOSTA, poi DECISA il 19/08 (vedi in fondo). Una vista «Acquisti per macro» con le macro di MAGAZZINO per riga e i mesi per colonna, e — dove la macro d'acquisto è agganciata a una macro di vendita (`macro_menu_id`) — l'incassato di quella accanto, che è il confronto che il locale fa a fine mese.
-
-ERANO TRE DOMANDE, E DUE SONO CHIUSE (19/08, dall'utente che riporta Flavio). (1) L'ACQUISTO È L'ORDINE FORNITORE RICEVUTO: la merce conta quando entra dalla porta, non quando arriva la fattura — che in app è un'altra cosa e segue tempi suoi. (2) LORDO E NETTO SI VEDONO TUTTI E DUE: i fogli di Flavio sono al lordo ed è come lui legge da sempre, il resto dell'app ragiona al netto, e obbligare a sceglierne uno vorrebbe dire dare torto a lui o dare torto alle statistiche. Servono tutti e due sulla stessa tabella; quale dei due si apre per primo lo si sceglie provandolo con lui. (3) RESTA APERTA: in quale mese cade un acquisto è REQ-MAG-021 — la quota consumata che migra da un mese all'altro — e questa tabella va pensata insieme a quella.
-
-DECISO ANCHE DOVE VIVE (19/08): nella pagina «Bilancio» (REQ-CASSA-010), sottosezione «Acquisti × Fatturato», accanto a «Mesi» e «Venduto × Incassato». È la tabella dell'Excel rifatta: per riga le macro d'ACQUISTO, per colonna i mesi, e in ogni cella acquisti, fatturato, utile (fatturato − acquisti), rapporto fat/acq e incidenza sull'utile del mese; in fondo i totali dell'anno e l'incidenza dell'anno.
-
-IL FATTURATO DI UNA MACRO D'ACQUISTO è l'incassato della macro di VENDITA agganciata con `macro_menu_id`, l'aggancio che REQ-MAG-015 ha tenuto in vita apposta per questo giorno. Dove l'aggancio non c'è, la colonna fatturato resta vuota e si dice perché: uno zero lì dentro si legge come «non ho incassato niente», che è un'altra cosa.
-
-SUPERATO L'AGGANCIO (09/09/2026, REQ-MAG-042): con un elenco solo di macro, il fatturato di una macro è il suo incasso (dai pesi delle voci) e la spesa è la sua spesa (dai pesi dei prodotti), sulla stessa riga senza niente da agganciare. `purchasesByMacro` spartisce già ogni riga d'ordine secondo `pesi_prodotti` — un prodotto al 60/40 va per il 60% in una macro e per il 40% nell'altra — e quello che nessuna macro reclama resta sotto UNASSIGNED. La schermata è ancora da fare.
-
-GLI ACQUISTI SENZA MACRO NON SPARISCONO. `purchasesByMacro` li raccoglie già sotto UNASSIGNED, e adesso quella riga serve davvero:
-
-ALTRO è una categoria di magazzino che resta fuori dalle macro APPOSTA (REQ-UI-022). Va mostrata, non nascosta — un totale che non torna con le fatture non lo guarda più nessuno. E UNA COSA VA DETTA SUBITO: dello storico non si ricostruisce niente. Gli ordini fornitore in app nascono da oggi, i numeri 2026 del foglio non hanno un corrispondente in banca dati. La tabella si riempie da quando gli ordini passano per l'app, e i primi mesi saranno mezzi vuoti: è la verità, e va scritta sulla schermata invece di lasciarla scoprire a chi guarda — nella DIDASCALIA della tabella, che è il posto dove stanno le avvertenze (REQ-CASSA-010). Lì si dicono anche le altre due: cosa vogliono dire utile, rapporto e incidenza in parole da banco, e se i numeri che si stanno guardando sono al lordo o al netto dell'IVA — con due letture commutabili, sapere quale è aperta non è un dettaglio.
-
-DIPENDE DA REQ-CASSA-010 (la pagina che la ospita) e, per come si legge, da REQ-MAG-021 (P3, fermo finché non hanno risposta le cinque domande sui lotti): finché quello non è deciso un acquisto pesa sul mese in cui è ENTRATO e non su quello in cui si consuma, e la didascalia deve dirlo. Ma il vincolo che conta non è codice: la tabella resta vuota finché gli ordini fornitore non passano davvero dall'app, e dello storico 2026 non si ricostruisce niente. Per questo non è lavorabile adesso.
-
-**Dove**: `src/lib/macroStats.js purchasesByMacro, src/components/BilancioTab.jsx (nuovo)`
-
 #### REQ-MAG-023 — Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia
 
 COSA FA IL FOGLIO (GEN ORD REC.xlsx, verificato). Centotrenta fogli, uno per giro d'ordini, coi numeri dei documenti nel nome («1410+1438+AGO+PAD+PIC»). Ogni foglio è il CATALOGO INTERO ricopiato — circa 380 righe — con: articolo, formato in cl, TIPO (la categoria:
@@ -3054,6 +3188,12 @@ DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quel
 NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
+
+#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
+
+Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
+
+**Dove**: `src/components/InventoryManager.jsx (Movimenti)`
 
 ### Cassa di serata e statistiche
 
@@ -3143,6 +3283,36 @@ RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portat
 
 ### Persone: ruoli, utenze, ore
 
+#### REQ-STAFF-017 — L'aspetto e' della persona, non del locale
+
+Chiesto da Flavio l'11/09/2026, nella stessa richiesta dei sottoutenti della cassa (REQ-STAFF-016): «le impostazioni dell'aspetto dovrebbero essere memorizzate per utente: tema, colori, tutto cio' che riguarda l'aspetto. Quando seleziono utente all'apertura cassa e non ho customizzazioni di aspetto, l'aspetto viene ereditato dall'utenza admin loggata. Se l'utente associato cambia le impostazioni d'aspetto, le impostazioni vengono memorizzate solo per quel sottoutente». Con parole sue: «Vittorio vuole lo sfondo nero mentre Flavio vuole lo sfondo bianco», e lavorano sullo stesso tablet.
+
+OGGI L'ASPETTO E' DEL LOCALE: `theme_staff` e `theme_client` stanno su settings/bar e valgono per tutti. Chi cambia il tema lo cambia a chiunque, anche al terminale dell'altro.
+
+COSA SERVE. Le preferenze d'aspetto diventano DELLA PERSONA scelta all'apertura della cassa (REQ-STAFF-016), con EREDITA': la persona che non ha deciso niente vede quello del locale, e solo quando tocca i colori nasce la sua copia. Serve anche la strada per tornare indietro, «rimetti come il locale»: se no la prima prova di un colore resta addosso per sempre.
+
+DUE COSE DA DECIDERE PRIMA DI SCRIVERE. (1) DOVE: una collezione per persona, che pero' va letta prima di disegnare, oppure dentro settings/bar in una mappa per uid, che e' gia' in cache e non fa aspettare niente. La seconda e' la stessa scelta fatta per le associazioni della cassa, e per lo stesso motivo. (2) CHI PUO' SCRIVERLA: la persona scelta non ha una sessione sua - chi e' collegato e' un altro admin - quindi la regola non puo' essere «solo il proprio documento», e va scritta guardando che siano tutti e due admin.
+
+IL TEMA DEL CLIENTE NON C'ENTRA: quello e' del locale e resta li'. Qui si parla solo di come vede il gestionale chi ci lavora.
+
+**Dove**: `src/lib/themes.js, src/App.jsx, src/components/ThemeSettings.jsx, src/lib/api.js`
+
+#### REQ-STAFF-018 — Conti, scontrino e ore li firma chi sta lavorando, non l'account collegato
+
+Nato controllando REQ-STAFF-016 il 19/09/2026, con Daniele: «quando si apre la cassa e l'utente loggato e' Flavio, e la apre Vittorio, che differenze ci sono?». La risposta, guardando il codice, e' che oggi ne cambiano poche: la sessione di cassa risulta aperta da Vittorio e il nome in barra e' il suo, ma tutto il resto resta di Flavio.
+
+COSA RESTA INDIETRO, e sono le tre cose che si guardano davvero. I CONTI BATTUTI: `placed_by` prende nome, email e ruolo dall'account collegato (OrderPosDetail, `placedBy()`), quindi l'iniziale accanto al numero d'ordine, la legenda della coda e lo storico dicono Flavio anche quando a battere e' Vittorio. E' il dato su cui si discute a fine serata: «questo conto chi l'ha aperto?».
+
+LO SCONTRINO: la riga dell'operatore esce da `impostaUtenteStampante`, alimentata dall'account collegato in App.jsx. BUG-088 aveva stabilito che quella riga dice CHI STA STAMPANDO, ed e' proprio quello che adesso sbaglia.
+
+LE ORE: il badge virtuale (`clockIn`) timbra l'entrata dell'account collegato, quindi le ore finiscono sulla persona sbagliata - e da li' esce una paga.
+
+COSA SERVE: chi e' stato scelto all'apertura della cassa diventa la persona che firma, in questi tre punti. Il ruolo resta quello del token (e' un permesso, non un'etichetta): si sostituiscono nome, email e uid.
+
+DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una riga in piu': si tocca il documento degli ORDINI, che e' il cuore della serata, e il badge delle ore, che diventa paga. Vanno decisi anche i casi di bordo: il conto aperto prima di cambiare persona resta firmato com'era, e il turno aperto da `clockIn` va chiuso e riaperto quando cambia chi lavora, oppure no?
+
+**Dove**: `src/components/OrderPosDetail.jsx (placedBy), src/App.jsx (impostaUtenteStampante, clockIn), src/pages/MenuPage.jsx`
+
 #### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
 
 COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un foglio suo, diviso in settimane, e per ogni giorno tre righe:
@@ -3216,6 +3386,12 @@ HA UN GEMELLO, dal 22/08/2026: REQ-UI-025 dice la stessa cosa per il MOMENTO D'U
 COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impostazioni dentro un lavoro che parla d'altro rende i due cambiamenti impossibili da rileggere separatamente. Le chiavi non si rinominano (sono già scritte sui documenti dei locali): si sposta solo dove si toccano.
 
 **Dove**: `src/components/SettingsTab.jsx, src/components/ThemeSettings.jsx`
+
+#### REQ-UI-027 — Registro tecnico dei testi d'aiuto nel resto del gestionale
+
+Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre sezioni del gestionale (impostazioni, ordini fornitore, scadenzario, cassa, statistiche), secondo la regola di DESIGN.md. Non le schermate del banco, che restano a parole comuni.
+
+**Dove**: `src/components/SettingsTab.jsx, src/components/*Panel.jsx del gestionale`
 
 ### Come si lavora al progetto
 
@@ -3366,6 +3542,7 @@ Voci che descrivevano il sistema e non lo descrivono più. Restano nel
 registro perché cancellarle vorrebbe dire riproporle fra sei mesi come idee
 nuove, ma **non sono specifica**: qui c'è solo il titolo.
 
+- `REQ-STAT-004` — Statistiche per periodo: acquisti, venduto e generato per macro-categoria
 - `REQ-MENU-012` — In carta due tipi di voce: il prodotto e la ricetta
 - `REQ-SUMUP-CONFIG-001` — Le functions SumUp sono no-op se non configurate
 - `REQ-SUMUP-SYNC-001` — Sincronizzazione catalogo SumUp → Firestore drinks

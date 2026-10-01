@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchInventoryItems,
+  fetchInventoryCategories,
   getOpenStockCount,
   startStockCount,
   salvaRimanenza,
@@ -11,19 +12,19 @@ import {
   settingsIniziali,
 } from '../lib/api.js'
 import { formatQty } from '../lib/inventory.js'
-import {
-  stockCountCompute,
-  giorniDiConta,
-  consumoSettimanale,
-  movimentiDellInventario,
-  depositoDellaRiga,
-} from '../lib/warehouse.js'
+import { giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
+import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { dataBreve as dataScritta } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import CategoryRail from './CategoryRail.jsx'
+import { perScaffale } from '../lib/scaffali.js'
 
-// L'INVENTARIO periodico, come i fogli INV dell'Excel storico: per ogni
-// prodotto DEP (giacenza all'apertura) + ACQ (carichi nel periodo) − RIM
-// (rimanenza contata) = CONS (consumo), con valori in €.
+// L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
+// DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
+// adesso secondo l'app; accanto c'è la casella dove si scrive il contato, o
+// si conferma la RIM col ✓. Il perché di questa forma, e i giri che ha
+// fatto prima di arrivarci, stanno in lib/inventarioInCorso.js (REQ-MAG-046).
 //
 // SI CHIAMA INVENTARIO, NON «CONTA» (Daniele, 17/09/2026: «conta è
 // fuorviante»). L'id della sezione e del modulo resta `conta`, perché è
@@ -31,19 +32,40 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 // parola a schermo, che è quella che Flavio legge.
 //
 // E CHIUSO UN INVENTARIO NE PARTE SUBITO UN ALTRO. Flavio, 17/09/2026:
-// «quando faccio un inventario, quando faccio un altro inventario, lui mi
-// chiude l'inventario precedente e mi dice: hai fatto l'inventario da TOT
-// a TOT … così vedo in una determinata fascia di inventario quanto ho
-// veramente consumato». Il periodo che gli interessa è quello FRA due
-// conte, non quello fra l'apertura e la chiusura della stessa: se
-// l'inventario si apre e si chiude nello stesso pomeriggio, il consumo del
-// periodo è zero e non dice niente. Quindi la chiusura riapre da sé, con
-// le giacenze appena allineate come deposito di partenza: da lì in poi
-// c'è sempre un inventario in corso, e la storia si legge «dal … al …».
+// «quando faccio un altro inventario, lui mi chiude l'inventario precedente
+// e mi dice: hai fatto l'inventario da TOT a TOT». Il periodo che gli
+// interessa è quello FRA due chiusure, quindi la chiusura riapre da sé, con
+// le giacenze appena allineate come deposito di partenza.
+//
+// DIVISO PER CATEGORIE (REQ-MAG-047). Flavio, vocale del 21/09/2026: «mi è
+// difficile fare l'inventario visto che devo passare da un ripiano a un
+// altro perché sono mischiati … a me serve in ordine alfabetico, ma per
+// categorie, perché le categorie ce l'ho quasi tutte vicine». Si conta
+// girando per gli scaffali, e gli scaffali sono per categoria: la barra è
+// la stessa dei Prodotti, e «Tutte» li mette in fila categoria per
+// categoria, ognuna col suo titolo.
+//
+// SI SCRIVE SUL TELEFONO, CON QUATTROCENTO RIGHE. Quello che non dipende da
+// cosa si batte — lo smistamento dei movimenti, l'ordine delle righe — si
+// calcola una volta sola; a ogni cifra si rifanno i numeri, e si ridisegna
+// solo la riga che è cambiata.
+
+// Le righe con quello che si è scritto a schermo (`modifiche`: item_id →
+// { v, at }), che vince su quello già salvato nell'inventario.
+const conRimanenze = (lines, modifiche) =>
+  lines.map((l) => {
+    const m = modifiche[l.item_id]
+    return m ? { ...l, rim: m.v, rim_at: m.at } : l
+  })
+
 export default function StockCountPanel() {
   const [open, setOpen] = useState(undefined) // undefined=caricamento
   const [history, setHistory] = useState([])
-  const [rims, setRims] = useState({}) // item_id -> valore input
+  const [modifiche, setModifiche] = useState({})
+  const [items, setItems] = useState([])
+  const [categorie, setCategorie] = useState([])
+  const [movimenti, setMovimenti] = useState([])
+  const [categoria, setCategoria] = useState('all')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
@@ -54,50 +76,49 @@ export default function StockCountPanel() {
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   const riapreDaSola = impostazioni.inventario_riapre_da_solo !== false
 
-  // OGNI RIMANENZA SI SALVA MENTRE SI SCRIVE (BUG-110). Il 21/09/2026 i
-  // numeri di un inventario intero stavano solo qui, nello stato della
-  // pagina, e con la chiusura interrotta sono spariti. Si aspetta un attimo
-  // che il dito si fermi — «0», «0.», «0.9» sarebbero tre scritture — e si
-  // salva subito all'uscita dal campo o dalla schermata.
-  const inSospeso = useRef({}) // item_id -> { timer, salva }
-  function salvaSubito(itemId) {
+  // OGNI RIMANENZA SI SALVA MENTRE SI SCRIVE (BUG-110), con la sua ora
+  // (BUG-112). Si aspetta un attimo che il dito si fermi — «0», «0.», «0.9»
+  // sarebbero tre scritture — e si salva subito all'uscita dal campo o
+  // dalla schermata. Le funzioni restano le stesse fra un disegno e l'altro
+  // (l'inventario aperto lo leggono da un ref), così le righe che non
+  // cambiano non si ridisegnano.
+  const contaId = useRef(null)
+  contaId.current = open?.id ?? null
+  const inSospeso = useRef({}) // item_id -> { timer, v, at }
+  const salvaSubito = useCallback((itemId) => {
     const p = inSospeso.current[itemId]
     if (!p) return
     clearTimeout(p.timer)
     delete inSospeso.current[itemId]
-    p.salva()
-  }
-  function scriviRimanenza(itemId, valore) {
-    setRims((r) => ({ ...r, [itemId]: valore }))
-    if (!open) return
-    const contaId = open.id
-    clearTimeout(inSospeso.current[itemId]?.timer)
-    inSospeso.current[itemId] = {
-      salva: () => salvaRimanenza(contaId, itemId, valore),
-      timer: setTimeout(() => salvaSubito(itemId), 600),
-    }
-  }
+    if (contaId.current) salvaRimanenza(contaId.current, itemId, p.v, p.at)
+  }, [])
+  const scriviRimanenza = useCallback(
+    (itemId, v) => {
+      const at = new Date().toISOString()
+      setModifiche((m) => ({ ...m, [itemId]: { v, at } }))
+      clearTimeout(inSospeso.current[itemId]?.timer)
+      inSospeso.current[itemId] = { v, at, timer: setTimeout(() => salvaSubito(itemId), 600) }
+    },
+    [salvaSubito]
+  )
   useEffect(
     () => () => {
       for (const id of Object.keys(inSospeso.current)) salvaSubito(id)
     },
-    []
+    [salvaSubito]
   )
 
   async function load() {
     try {
-      const [oc, hist] = await Promise.all([
+      const [oc, hist, articoli, cats] = await Promise.all([
         getOpenStockCount(),
         fetchStockCounts({ limit: 15 }),
+        fetchInventoryItems().catch(() => []),
+        fetchInventoryCategories().catch(() => []),
       ])
-      // ACQ e rettifiche live: i movimenti dopo l'apertura, ognuno nella
-      // sua colonna (BUG-111 — vedi movimentiDellInventario).
-      if (oc) {
-        const movimenti = await fetchStockMovementsSince(oc.started_at).catch(() => [])
-        const { acq, rett } = movimentiDellInventario(movimenti, oc.lines)
-        oc.lines = oc.lines.map((l) => ({ ...l, acq: acq[l.item_id] || 0, rett: rett[l.item_id] || 0 }))
-        setRims(Object.fromEntries(oc.lines.map((l) => [l.item_id, l.rim ?? ''])))
-      }
+      if (oc) setMovimenti(await fetchStockMovementsSince(oc.started_at).catch(() => []))
+      setItems(articoli)
+      setCategorie(cats)
       setOpen(oc)
       setHistory(hist.filter((c) => c.status === 'closed'))
     } catch (e) {
@@ -110,31 +131,59 @@ export default function StockCountPanel() {
     load()
   }, [])
 
+  // Il passo pesante, fuori dalla battitura: cambia solo coi dati.
+  const raggruppati = useMemo(() => raggruppaMovimenti(movimenti, items), [movimenti, items])
   const computed = useMemo(() => {
     if (!open) return null
-    const lines = open.lines.map((l) => {
-      const v = rims[l.item_id]
-      return { ...l, rim: v == null || v === '' ? null : Number(v) }
-    })
     // La conta è APERTA: il suo periodo finisce adesso e si allunga mentre
-    // la si compila. Il consumo a settimana si divide per i giorni veri,
-    // non per una costante da tenere aggiornata a mano.
-    return stockCountCompute(lines, { dal: open.started_at })
-  }, [open, rims])
+    // la si compila.
+    return righeInventario(conRimanenze(open.lines, modifiche), { raggruppati, items, dal: open.started_at })
+  }, [open, modifiche, raggruppati, items])
+  const rigaDi = useMemo(() => new Map((computed?.lines || []).map((l) => [l.item_id, l])), [computed])
+
+  // ── LE CATEGORIE ────────────────────────────────────────────────────
+  // In fila come gli scaffali (lib/scaffali.js). Dipende solo da nomi e
+  // categorie, non da quello che si scrive.
+  const { voci, gruppi } = useMemo(
+    () => (open ? perScaffale(open.lines, items, categorie) : { voci: [], gruppi: [] }),
+    [open, items, categorie]
+  )
+  const visibili = categoria === 'all' ? gruppi : gruppi.filter((g) => g.key === categoria)
 
   async function start() {
     setBusy(true)
     setError(null)
     try {
-      const items = await fetchInventoryItems()
-      if (items.length === 0) {
+      const articoli = await fetchInventoryItems()
+      if (articoli.length === 0) {
         setError('Nessun prodotto in magazzino: aggiungili prima di aprire l’inventario.')
         return
       }
-      await startStockCount(items)
+      await startStockCount(articoli)
       await load()
     } catch (e) {
       setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // IL NUMERO CHE SI CONFERMA È QUELLO CHE SI APPLICA. I numeri a schermo
+  // sono dell'apertura della pagina; nel frattempo il locale può aver
+  // venduto. Prima di chiedere conferma si rileggono giacenze e movimenti
+  // (dalla cache, se la rete non c'è), così la differenza nel messaggio è
+  // quella che la chiusura scriverà.
+  async function chiediConferma() {
+    if (!open) return
+    setBusy(true)
+    try {
+      const [articoli, mov] = await Promise.all([
+        fetchInventoryItems().catch(() => items),
+        fetchStockMovementsSince(open.started_at).catch(() => movimenti),
+      ])
+      setItems(articoli)
+      setMovimenti(mov)
+      setConfirmClose(true)
     } finally {
       setBusy(false)
     }
@@ -150,25 +199,22 @@ export default function StockCountPanel() {
     for (const p of Object.values(inSospeso.current)) clearTimeout(p.timer)
     inSospeso.current = {}
     try {
-      // Gli articoli servono al prossimo inventario, che nasce nello stesso
-      // pacchetto della chiusura (vedi closeStockCount). È una lettura: senza
-      // rete risponde la cache.
-      const items = riapreDaSola ? await fetchInventoryItems() : null
-      const prossimo = await closeStockCount(open.id, {
-        lines: computed.lines,
-        totals: computed.totals,
-        align: true,
-        riapri: items && items.length > 0 ? items : null,
+      // Le differenze le calcola la chiusura, coi dati di quel momento
+      // (vedi closeStockCount): da qui passa solo quello che si è scritto.
+      const chiusa = await closeStockCount(open.id, {
+        lines: conRimanenze(open.lines, modifiche),
+        riapri: riapreDaSola,
       })
       // L'esito si compone, non si rilegge: la chiusura è partita in
       // sottofondo, e una rilettura adesso troverebbe l'inventario ancora
       // aperto con le giacenze di prima.
       setHistory((h) => [
-        { ...open, status: 'closed', closed_at: new Date().toISOString(), lines: computed.lines, totals: computed.totals },
+        { ...open, status: 'closed', closed_at: new Date().toISOString(), lines: chiusa.lines, totals: chiusa.totals },
         ...h,
       ])
-      setOpen(prossimo)
-      setRims(prossimo ? Object.fromEntries(prossimo.lines.map((l) => [l.item_id, ''])) : {})
+      setOpen(chiusa.prossimo)
+      setMovimenti([])
+      setModifiche({})
     } catch (e) {
       setError(e.message)
     } finally {
@@ -195,59 +241,55 @@ export default function StockCountPanel() {
         </>
       ) : (
         <>
-          <div className="card row between" style={{ alignItems: 'center' }}>
-            <div>
-              <strong>Inventario in corso</strong>
-              <div className="muted small">
-                dal {dataBreve(open.started_at)}
-                {computed.giorni != null && ` · ${giorniScritti(computed.giorni)}`} · contati{' '}
-                {computed.totals.counted}/{open.lines.length}
-              </div>
-              <div className="muted small">
-                Consumo: <strong>{formatPrice(computed.totals.cons_value)}</strong>
-                {' · '}Valore rimanenze: {formatPrice(computed.totals.rim_value)}
-              </div>
+          <div className="card">
+            <strong>Inventario in corso</strong>
+            <div className="muted small">
+              dal {dataBreve(open.started_at)}
+              {computed.giorni != null && ` · ${giorniScritti(computed.giorni)}`} · contati{' '}
+              {computed.totals.counted}/{open.lines.length}
             </div>
+            <div className="muted small">
+              {/* IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato
+                  me ne faccio poco, mi serve più vedere in grassetto la
+                  rimanenza». */}
+              Valore rimanenze: <strong>{formatPrice(computed.totals.rim_value)}</strong>
+              {' · '}Consumo: {formatPrice(computed.totals.cons_value)}
+            </div>
+            <p className="muted small" style={{ margin: '6px 0 0' }}>
+              RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si
+              conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
+            </p>
           </div>
 
-          <div className="inv-list" style={{ marginTop: 8 }}>
-            {computed.lines.map((l) => (
-              <div className="inv-item" key={l.item_id}>
-                <div className="inv-row" style={{ cursor: 'default' }}>
-                  <div className="grow">
-                    <div className="inv-name">{l.name}</div>
-                    <div className="muted small">
-                      DEP {formatQty(depositoDellaRiga(l), l.unit)} · ACQ {formatQty(l.acq, l.unit)}
-                      {l.cons != null && (
-                        <>
-                          {' · '}CONS <strong>{formatQty(l.cons, l.unit)}</strong>
-                          {l.cons_value > 0 && ` (${formatPrice(l.cons_value)})`}
-                          {l.cons_week != null && (
-                            <> · {formatQty(l.cons_week, l.unit)} a settimana</>
-                          )}
-                        </>
-                      )}
-                    </div>
+          <div style={{ marginTop: 8 }}>
+            <CategoryRail items={voci} selected={categoria} onSelect={setCategoria} chiave="inventario-conta">
+              <div className="inv-list">
+                {visibili.map((g) => (
+                  <div key={g.key}>
+                    {categoria === 'all' && (
+                      <div className="muted small" style={{ padding: '10px 4px 4px', fontWeight: 600 }}>
+                        {g.nome}
+                      </div>
+                    )}
+                    {g.ids.map((id) => (
+                      <RigaInventario
+                        key={id}
+                        riga={rigaDi.get(id)}
+                        valore={modifiche[id]?.v ?? rigaDi.get(id)?.rim ?? ''}
+                        onScrivi={scriviRimanenza}
+                        onEsci={salvaSubito}
+                      />
+                    ))}
                   </div>
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    value={rims[l.item_id] ?? ''}
-                    placeholder={`RIM ${l.unit}`}
-                    onChange={(e) => scriviRimanenza(l.item_id, e.target.value)}
-                    onBlur={() => salvaSubito(l.item_id)}
-                    style={{ width: 100, textAlign: 'right' }}
-                  />
-                </div>
+                ))}
               </div>
-            ))}
+            </CategoryRail>
           </div>
 
           <p className="muted small" style={{ margin: '10px 0 6px' }}>
             Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.
           </p>
-          <button className="btn block" onClick={() => setConfirmClose(true)} disabled={busy}>
+          <button className="btn block" onClick={chiediConferma} disabled={busy}>
             ✅ Chiudi l’inventario
           </button>
         </>
@@ -279,7 +321,7 @@ export default function StockCountPanel() {
       {confirmClose && computed && (
         <ConfirmDialog
           title="✅ Chiudere l’inventario?"
-          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati verranno allineate alle rimanenze inserite.\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
+          message={`Prodotti contati: ${computed.totals.counted}/${open.lines.length}.\nLe giacenze dei prodotti contati diventano il numero contato (differenza: ${formatPrice(computed.totals.diff_value)}).\nConsumo del periodo: ${formatPrice(computed.totals.cons_value)}.${riapreDaSola ? '\nNe parte subito uno nuovo, da oggi.' : ''}`}
           confirmLabel="Chiudi l’inventario"
           onCancel={() => setConfirmClose(false)}
           onConfirm={doClose}
@@ -289,8 +331,67 @@ export default function StockCountPanel() {
   )
 }
 
-// La data come la si legge, «17/09/2026», non com'è salvata.
-const dataBreve = (iso) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : '—')
+// «+0,4 pz», «-1,9 pz»: una differenza si legge col suo segno.
+const conSegno = (n, unit) => `${n > 0 ? '+' : ''}${formatQty(n, unit)}`
+
+// Una riga: i numeri del periodo, il campo dove si scrive il contato e il
+// ✓ che conferma la RIM così com'è. Si ridisegna solo se cambia qualcosa che
+// mostra: con quattrocento righe e un telefono in mano, ridisegnarle tutte a
+// ogni cifra si sente.
+const RigaInventario = memo(
+  function RigaInventario({ riga: l, valore, onScrivi, onEsci }) {
+    const q = (n) => formatQty(n, l.unit)
+    return (
+      <div className="inv-item">
+        <div className="inv-row" style={{ cursor: 'default' }}>
+          <div className="grow">
+            <div className="inv-name">{l.name}</div>
+            <div className="muted small">
+              DEP {q(l.dep)} · ACQ {q(l.acq)} · CONS {q(l.cons)} · RIM <strong>{q(l.atteso)}</strong>
+              {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
+                  cui si decide quanto ordinare. */}
+              {l.cons_week != null && ` · ${q(l.cons_week)} a settimana`}
+            </div>
+          </div>
+          <input
+            type="number"
+            step="any"
+            min="0"
+            value={valore}
+            placeholder={`RIM ${l.unit}`}
+            aria-label={`Rimanenza di ${l.name}`}
+            onChange={(e) => onScrivi(l.item_id, e.target.value)}
+            onBlur={() => onEsci(l.item_id)}
+            style={{ width: 90, textAlign: 'right' }}
+          />
+          {/* «Confermare o modificare il valore di RIM» (Flavio, 24/09): la
+              maggior parte dei prodotti torna, e riscriverne il numero a mano
+              è solo un'occasione in più per sbagliarlo. */}
+          <button
+            type="button"
+            className="btn ghost small"
+            aria-label={`Conferma la rimanenza di ${l.name}`}
+            onClick={() => {
+              onScrivi(l.item_id, String(l.atteso))
+              onEsci(l.item_id)
+            }}
+          >
+            ✓
+          </button>
+        </div>
+      </div>
+    )
+  },
+  (a, b) =>
+    a.valore === b.valore &&
+    a.onScrivi === b.onScrivi &&
+    a.onEsci === b.onEsci &&
+    ['name', 'unit', 'dep', 'acq', 'cons', 'atteso', 'cons_week'].every((k) => a.riga[k] === b.riga[k])
+)
+
+
+// La data come la si legge; dove manca, un trattino.
+const dataBreve = (iso) => dataScritta(iso, '—')
 
 // «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
 // settimane, ed è la misura in cui si legge il consumo qui sotto.
@@ -304,7 +405,8 @@ function giorniScritti(giorni) {
 // IL DETTAGLIO DI UN INVENTARIO CHIUSO. Il periodo qui è finito, quindi i
 // giorni sono quelli veri fra apertura e chiusura — e il consumo a
 // settimana si ricalcola da quelli, non da un divisore salvato: gli
-// inventari vecchi non l'hanno mai avuto.
+// inventari vecchi non l'hanno mai avuto. Quelli chiusi dalla 1.8 dicono
+// anche la differenza fra il contato e quello che risultava all'app.
 function DettaglioInventario({ inventario }) {
   const conta = inventario
   const giorni = giorniDiConta(conta.started_at, conta.closed_at)
@@ -326,6 +428,7 @@ function DettaglioInventario({ inventario }) {
             <span className="muted small">{l.name}</span>
             <span className="muted small">
               −{formatQty(l.cons, l.unit)} ({formatPrice(l.cons_value || 0)})
+              {l.diff ? ` · differenza ${conSegno(l.diff, l.unit)}` : ''}
               {giorni != null &&
                 ` · ${formatQty(consumoSettimanale(l.cons, giorni), l.unit)} a settimana`}
             </span>

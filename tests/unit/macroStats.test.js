@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest'
+import { ripartisci } from '../../src/lib/macros.js'
 import {
   aliquotaDiVendita,
   lineByMacro,
-  venditeByMacro,
-  purchasesByMacro,
+  sommaVendite,
+  vociDiAcquisto,
   macroMonthlyReport,
   UNASSIGNED,
 } from '../../src/lib/macroStats.js'
@@ -168,7 +169,14 @@ describe('lineByMacro: una vendita, una macro sola', () => {
   })
 })
 
-describe('venditeByMacro', () => {
+// Il giro delle vendite di tutte e due le tabelle del Bilancio: qui una
+// colonna sola, «tutto».
+const venditeByMacro = (orders, opts) => {
+  const celle = sommaVendite(new Map(), orders, () => 'tutto', opts)
+  return new Map([...celle].map(([k, v]) => [k.split('|')[0], v]))
+}
+
+describe('sommaVendite', () => {
   it('somma incasso e costo su più ordini, ognuno sulla macro del suo drink', () => {
     const orders = [
       { order_items: [riga('gintonic', 1, 8), riga('schweppes-sola', 1, 3)] },
@@ -200,7 +208,19 @@ describe('venditeByMacro', () => {
 // domanda vera, ma è delle fatture, non della tabella del venduto. Ed è
 // qui che un prodotto può stare per il 60% in una macro e per il 40%
 // nell'altra.
-describe('purchasesByMacro', () => {
+// La merce entrata (vociDiAcquisto), spartita come la spartisce il
+// Bilancio: coi pesi dei PRODOTTI.
+const acquistiPerMacro = (pos, { macros, movimenti = [], itemsById = {} }) => {
+  const acc = new Map()
+  for (const v of vociDiAcquisto(pos, { movimenti, itemsById })) {
+    for (const p of ripartisci(macros, 'prodotti', v.item_id, { amount: v.amount })) {
+      acc.set(p.macro, Math.round(((acc.get(p.macro) || 0) + p.amount) * 100) / 100)
+    }
+  }
+  return acc
+}
+
+describe('vociDiAcquisto', () => {
   const pos = [
     {
       status: 'ricevuto',
@@ -211,24 +231,86 @@ describe('purchasesByMacro', () => {
     },
     { status: 'inviato', lines: [{ item_id: 'gin', unit_cost: 21, qty_packages: 5 }] },
   ]
-  it('somma per macro, coi pesi dei prodotti, solo gli ordini ricevuti', () => {
-    const acc = purchasesByMacro(pos, { macros })
+  // Gli ordini di prima di REQ-MAG-029 avevano lo stato solo sull'ordine.
+  it('somma per macro, coi pesi dei prodotti, solo la merce entrata', () => {
+    const acc = acquistiPerMacro(pos, { macros })
     // 42 di gin + il 40% dei 12 di Schweppes.
     expect(acc.get('mm-alc')).toBeCloseTo(46.8, 2)
     expect(acc.get('mm-bib')).toBeCloseTo(7.2, 2)
   })
 
   it('non si perde niente: la somma delle macro è la spesa ricevuta', () => {
-    const acc = purchasesByMacro(pos, { macros })
+    const acc = acquistiPerMacro(pos, { macros })
     expect([...acc.values()].reduce((s, v) => s + v, 0)).toBeCloseTo(54, 2)
   })
 
   it('un prodotto senza peso in nessuna macro va a «non attribuito»', () => {
-    const acc = purchasesByMacro(
+    const acc = acquistiPerMacro(
       [{ status: 'ricevuto', lines: [{ item_id: 'ghiaccio', unit_cost: 2, qty_packages: 3 }] }],
       { macros }
     )
     expect(acc.get(UNASSIGNED)).toBeCloseTo(6, 2)
+  })
+
+  // DAL 29/08 LA CONSEGNA È RIGA PER RIGA (REQ-MAG-029), e una riga può
+  // arrivare in parte: conta quello che è arrivato, al prezzo del
+  // documento, nel giorno in cui è arrivato.
+  it('conta le righe consegnate per quello che è arrivato, quando è arrivato', () => {
+    const ordine = {
+      status: 'inviato',
+      lines: [
+        { item_id: 'gin', unit_cost: 20, qty_packages: 5, qty_received: 3, stato: 'consegnato', delivered_at: '2026-09-20T10:00:00.000Z' },
+        { item_id: 'gin', unit_cost: 20, qty_packages: 5, stato: 'richiesto' },
+      ],
+    }
+    expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(60, 2)
+    // Il giorno è quello della consegna: è lì che il Bilancio la colloca.
+    expect(vociDiAcquisto([ordine])).toEqual([{ item_id: 'gin', at: '2026-09-20T10:00:00.000Z', amount: 60 }])
+  })
+
+  // «Pagato» vuol dire consegnato E pagato: la riga resta merce entrata.
+  it('una riga consegnata e poi pagata resta un acquisto', () => {
+    const ordine = {
+      status: 'inviato',
+      lines: [{ item_id: 'gin', unit_cost: 20, qty_packages: 2, stato: 'pagato', delivered_at: '2026-09-20T10:00:00.000Z' }],
+    }
+    expect(acquistiPerMacro([ordine], { macros }).get('mm-alc')).toBeCloseTo(40, 2)
+  })
+
+  // Un carico di un prodotto contato a volume vale per bottiglie, non per
+  // millilitri: 700 ml da una bottiglia da 700 a 20 € sono 20 €.
+  it('un carico si valorizza per pezzi, anche su un prodotto a volume', () => {
+    const acc = acquistiPerMacro([], {
+      macros,
+      itemsById: { gin: { id: 'gin', unit: 'ml', package_size: 700, cost: 20 } },
+      movimenti: [{ item_id: 'gin', type: 'load', qty: 700, unit: 'ml', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' }],
+    })
+    expect(acc.get('mm-alc')).toBeCloseTo(20, 2)
+  })
+
+  // Al lordo (come legge il foglio di Flavio) l'IVA è quella del prodotto:
+  // il prezzo del documento e il costo del prodotto sono netti.
+  it('al lordo aggiunge l’IVA del prodotto, alle consegne e ai carichi', () => {
+    const items = { gin: { id: 'gin', unit: 'pz', cost: 10, vat: 22 } }
+    const ordine = { status: 'ricevuto', lines: [{ item_id: 'gin', unit_cost: 10, qty_packages: 1 }] }
+    const carico = { item_id: 'gin', type: 'load', qty: 1, unit: 'pz', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' }
+    const voci = vociDiAcquisto([ordine], { movimenti: [carico], itemsById: items, lordo: true })
+    expect(voci.map((v) => v.amount)).toEqual([12.2, 12.2])
+  })
+
+  // Il carico da Prodotti è merce comprata anche senza ordine (Flavio,
+  // 25/09/2026): entra negli acquisti al costo del prodotto.
+  it('conta anche i carichi diretti, al costo del prodotto', () => {
+    const acc = acquistiPerMacro([], {
+      macros,
+      itemsById: { gin: { id: 'gin', unit: 'pz', cost: 20 } },
+      movimenti: [
+        { item_id: 'gin', type: 'load', qty: 2, unit: 'pz', reason: 'carico', created_at: '2026-09-20T10:00:00.000Z' },
+        // Le consegne hanno già la loro riga d'ordine: non si contano due volte.
+        { item_id: 'gin', type: 'load', qty: 5, unit: 'pz', reason: 'ordine fornitore', created_at: '2026-09-20T10:00:00.000Z' },
+      ],
+    })
+    expect(acc.get('mm-alc')).toBeCloseTo(40, 2)
   })
 })
 
@@ -255,28 +337,28 @@ describe('macroMonthlyReport', () => {
 
   it('mette incasso e costo nel mese giusto, sulla macro del drink', () => {
     const alc = rep.rows.find((r) => r.id === 'mm-alc')
-    expect(alc.byMonth.get('2026-07').incasso).toBeCloseTo(8, 2)
-    expect(alc.byMonth.get('2026-07').costo).toBeCloseTo(2, 2)
-    expect(alc.byMonth.get('2026-06').incasso).toBeCloseTo(6, 2)
-    expect(alc.byMonth.get('2026-06').costo).toBeCloseTo(1.8, 2)
+    expect(alc.perColonna.get('2026-07').incasso).toBeCloseTo(8, 2)
+    expect(alc.perColonna.get('2026-07').costo).toBeCloseTo(2, 2)
+    expect(alc.perColonna.get('2026-06').incasso).toBeCloseTo(6, 2)
+    expect(alc.perColonna.get('2026-06').costo).toBeCloseTo(1.8, 2)
   })
 
   it('in «birre e bibite» resta solo quello venduto COME bibita', () => {
     const bib = rep.rows.find((r) => r.id === 'mm-bib')
     // La Schweppes del Gin Tonic non compare qui, né come incasso né come
     // costo: è finita sui distillati insieme al drink che l'ha bevuta.
-    expect(bib.byMonth.get('2026-07').incasso).toBeCloseTo(3, 2)
-    expect(bib.byMonth.get('2026-07').costo).toBeCloseTo(0.5, 2)
-    expect(bib.byMonth.get('2026-06').incasso).toBe(0)
+    expect(bib.perColonna.get('2026-07').incasso).toBeCloseTo(3, 2)
+    expect(bib.perColonna.get('2026-07').costo).toBeCloseTo(0.5, 2)
+    expect(bib.perColonna.get('2026-06').incasso).toBe(0)
   })
 
   it('calcola margine e rapporto per cella', () => {
     const alc = rep.rows.find((r) => r.id === 'mm-alc')
-    const lug = alc.byMonth.get('2026-07')
+    const lug = alc.perColonna.get('2026-07')
     expect(lug.margine).toBeCloseTo(6, 2)
     expect(lug.rapporto).toBeCloseTo(4, 2) // 8 / 2
     // Mese senza niente venduto → rapporto null, non una divisione per zero.
-    expect(rep.rows.find((r) => r.id === 'mm-bib').byMonth.get('2026-06').rapporto).toBeNull()
+    expect(rep.rows.find((r) => r.id === 'mm-bib').perColonna.get('2026-06').rapporto).toBeNull()
   })
 
   it('totali per macro (anno) e generale', () => {
@@ -358,17 +440,17 @@ describe('le due incidenze', () => {
 
   it('quanto pesa una macro sul margine del mese', () => {
     // Luglio: i distillati fanno 6 sugli 8,50 di margine del mese.
-    expect(alc.byMonth.get('2026-07').incidenza).toBeCloseTo(70.6, 1)
-    expect(bib.byMonth.get('2026-07').incidenza).toBeCloseTo(29.4, 1)
+    expect(alc.perColonna.get('2026-07').incidenza).toBeCloseTo(70.6, 1)
+    expect(bib.perColonna.get('2026-07').incidenza).toBeCloseTo(29.4, 1)
     // Giugno ha solo distillati: si prendono tutto.
-    expect(alc.byMonth.get('2026-06').incidenza).toBeCloseTo(100, 1)
-    expect(bib.byMonth.get('2026-06').incidenza).toBe(0)
+    expect(alc.perColonna.get('2026-06').incidenza).toBeCloseTo(100, 1)
+    expect(bib.perColonna.get('2026-06').incidenza).toBe(0)
   })
 
   it('le incidenze di un mese fanno cento', () => {
     // Se non tornano, uno dei due numeri sta guardando un totale diverso.
     for (const mese of ['2026-06', '2026-07']) {
-      const somma = rep.rows.reduce((s, r) => s + (r.byMonth.get(mese).incidenza || 0), 0)
+      const somma = rep.rows.reduce((s, r) => s + (r.perColonna.get(mese).incidenza || 0), 0)
       expect(somma).toBeCloseTo(100, 0)
     }
   })
@@ -381,11 +463,11 @@ describe('le due incidenze', () => {
 
   it('quanto pesa un mese sull’incassato dell’anno', () => {
     // Luglio 11 € su 17 dell'anno, giugno 6 su 17.
-    expect(rep.totByMonth.get('2026-07').incidenzaAnno).toBeCloseTo(64.7, 1)
-    expect(rep.totByMonth.get('2026-06').incidenzaAnno).toBeCloseTo(35.3, 1)
+    expect(rep.totPerColonna.get('2026-07').incidenzaPeriodo).toBeCloseTo(64.7, 1)
+    expect(rep.totPerColonna.get('2026-06').incidenzaPeriodo).toBeCloseTo(35.3, 1)
     // L'anno su se stesso fa cento: un vuoto lì sembrerebbe un conto non
     // tornato.
-    expect(rep.grand.incidenzaAnno).toBeCloseTo(100, 1)
+    expect(rep.grand.incidenzaPeriodo).toBeCloseTo(100, 1)
   })
 
   // UN MESE IN PERDITA non ha una «quota di margine» da spartire: la somma
@@ -406,7 +488,7 @@ describe('le due incidenze', () => {
       macros,
       months: ['2026-07'],
     })
-    const riga07 = inPerdita.rows.find((r) => r.id === 'mm-alc').byMonth.get('2026-07')
+    const riga07 = inPerdita.rows.find((r) => r.id === 'mm-alc').perColonna.get('2026-07')
     expect(riga07.margine).toBeCloseTo(-1, 2)
     expect(riga07.incidenza).toBeNull()
   })
@@ -419,9 +501,9 @@ describe('le due incidenze', () => {
       macros,
       months: ['2026-07'],
     })
-    expect(vuoto.rows[0].byMonth.get('2026-07').incidenza).toBeNull()
-    expect(vuoto.totByMonth.get('2026-07').incidenzaAnno).toBeNull()
-    expect(vuoto.grand.incidenzaAnno).toBeNull()
+    expect(vuoto.rows[0].perColonna.get('2026-07').incidenza).toBeNull()
+    expect(vuoto.totPerColonna.get('2026-07').incidenzaPeriodo).toBeNull()
+    expect(vuoto.grand.incidenzaPeriodo).toBeNull()
   })
 })
 

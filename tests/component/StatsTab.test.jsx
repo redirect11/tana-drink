@@ -88,7 +88,8 @@ vi.mock('../../src/lib/api.js', () => ({
   ]),
   fetchCashSessions: vi.fn(async () => sessioni),
   subscribeSettings: (cb) => {
-    cb({ business_day_cutoff_hour: 5 })
+    // L'orario del locale (REQ-CASSA-015): da qui partono le fasce orarie.
+    cb({ business_day_cutoff_hour: 5, orario_apertura: '19:00', orario_chiusura: '02:00' })
     return () => {}
   },
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
@@ -214,29 +215,56 @@ describe('Statistiche per serata: la lista delle chiusure', () => {
   })
 })
 
+// Il periodo personalizzato si sceglie da «Personalizzato», con data e ora
+// (REQ-STAT-003): prima le date stavano sempre sotto le pastiglie.
+async function personalizzato(dalle, alle) {
+  fireEvent.click(await screen.findByRole('button', { name: 'Personalizzato' }))
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText('Inizio'), { target: { value: dalle } })
+    fireEvent.change(screen.getByLabelText('Fine'), { target: { value: alle } })
+  })
+}
+
 describe('Statistiche per periodo', () => {
   beforeEach(() => vi.clearAllMocks())
 
   // LE PASTIGLIE DELLA SERATA NON CI SONO PIÙ: hanno una sottosezione tutta
   // loro, e tenerne una copia qui sarebbe lo stesso posto raggiunto in due
   // modi che si contraddicono.
-  it('ha le due date, le scorciatoie, e non ha più la tendina delle serate', async () => {
+  it('ha le scorciatoie e «Personalizzato», e non ha più la tendina delle serate', async () => {
     const m = menu()
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     expect(await screen.findByText(paragrafo(/dal \d\d\/\d\d\/\d{4} al \d\d\/\d\d\/\d{4}/i))).toBeTruthy()
-    expect(screen.getByLabelText('Dal')).toBeTruthy()
-    expect(screen.getByLabelText('Al')).toBeTruthy()
-    // Le date della fascia oraria sono un'altra cosa e hanno un'altra
-    // etichetta: due uguali a schermo si scambiano per la stessa.
-    expect(screen.getByLabelText('Dal giorno')).toBeTruthy()
+    // LE DATE SOLO IN «PERSONALIZZATO» (Flavio, 24/09/2026: «dovrebbe
+    // apparire 7, 10, 20, 30, 60 giorni e in più il tab personalizzato»).
+    // Sotto le pastiglie si leggevano come un ritocco di quelle.
+    expect(screen.queryByLabelText('Inizio')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Personalizzato' }))
+    // E UNA COPPIA SOLA IN TUTTA LA SCHERMATA (19/09/2026): il «venduto
+    // nella fascia oraria» ne aveva un'altra, e chi le trovava non sapeva
+    // quale delle due comandasse.
+    expect(screen.getAllByLabelText(/^(Inizio|Fine)$/)).toHaveLength(2)
     // Le pastiglie restano, ma adesso contano GIORNI e non giornate lavorate:
     // riempiono lo stesso intervallo delle due caselle, e due comandi che
     // riempiono la stessa cosa non possono contare in due modi diversi.
     expect(screen.getByRole('button', { name: '7 giorni' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /ultima chiusura/i })).toBeNull()
     expect(screen.queryByLabelText(/scegli la serata/i)).toBeNull()
+    m.stop()
+  })
+
+  // LA FASCIA ORARIA PARTE DALL'ORARIO DEL LOCALE (REQ-CASSA-015), non da
+  // un orario scritto nel codice; poi si cambia a mano mentre si guarda.
+  it('la fascia oraria parte dall’orario di apertura e chiusura', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    const dalle = await screen.findAllByLabelText('Dalle')
+    expect(dalle[0]).toHaveValue('19:00')
+    expect(screen.getAllByLabelText('alle')[0]).toHaveValue('02:00')
     m.stop()
   })
 
@@ -248,13 +276,12 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal giorno')
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-07' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
-    })
+    // Due giornate intere: dalle 05:00 del 07 alle 05:00 del 09.
+    await personalizzato('2026-08-07T05:00', '2026-08-09T05:00')
     expect(
-      await screen.findByText(paragrafo(/dal 07\/08\/2026 al 08\/08\/2026: 2 giornate con ordini su 2/i))
+      await screen.findByText(
+        paragrafo(/dalle 05:00 di venerdì 07\/08\/2026 alle 05:00 di domenica 09\/08\/2026: 2 giornate con ordini/i)
+      )
     ).toBeTruthy()
     // 999 + 150: dentro ci sono tutte e due le serate dei dati di prova.
     expect(kpi('Incasso')).toBe('1.149,00 €')
@@ -268,16 +295,63 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal giorno')
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
-    })
+    await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
     expect(
-      await screen.findByText(paragrafo(/dal 08\/08\/2026 al 08\/08\/2026: 1 giornata con ordini su 1/i))
+      await screen.findByText(
+        paragrafo(/dalle 05:00 di sabato 08\/08\/2026 alle 05:00 di domenica 09\/08\/2026: 1 giornata con ordini/i)
+      )
     ).toBeTruthy()
     // Fuori la serata del 07/08, coi suoi 999 €.
     expect(kpi('Incasso')).toBe('150,00 €')
+    m.stop()
+  })
+
+  // ── L'ORA DI INIZIO E DI FINE (REQ-STAT-003) ──────────────────────
+  // Flavio, 24/09/2026: «oltre alla data di inizio e fine ci deve essere
+  // anche l'orario di inizio e di fine, è importante perché la mia
+  // giornata è a cavallo tra due giorni». Nei dati di prova la serata del
+  // 08/08 ha un conto alle 21:00 (100 €) e uno all'01:30 di notte (50 €).
+  it('con le ore si taglia dentro la serata', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    await personalizzato('2026-08-08T20:00', '2026-08-09T01:00')
+    expect(kpi('Incasso')).toBe('100,00 €')
+    m.stop()
+  })
+
+  it('e si guarda anche solo la notte, oltre la mezzanotte', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    await personalizzato('2026-08-09T00:00', '2026-08-09T05:00')
+    expect(kpi('Incasso')).toBe('50,00 €')
+    m.stop()
+  })
+
+  // Si parte da quello che si stava guardando, scritto all'ora: gli stessi
+  // numeri, e da lì si ritocca.
+  it('«Personalizzato» parte dal periodo che si stava guardando', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    fireEvent.click(await screen.findByRole('button', { name: '7 giorni' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Personalizzato' }))
+    expect(screen.getByLabelText('Inizio').value).toMatch(/T05:00$/)
+    expect(screen.getByLabelText('Fine').value).toMatch(/T05:00$/)
+    m.stop()
+  })
+
+  it('con la fine prima dell’inizio lo dice, invece di mostrare numeri', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    await personalizzato('2026-08-09T05:00', '2026-08-08T05:00')
+    expect(await screen.findByText(/L’ora di fine deve venire dopo quella di inizio/)).toBeTruthy()
     m.stop()
   })
 
@@ -290,11 +364,7 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal')
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
-    })
+    await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
     const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
     // Venti amari battono quindici negroni, a pezzi.
     expect(classifica(lista)).toEqual(['1 Amaro della casa 20 pz 20,00 €', '2 Negroni 15 pz 150,00 €'])
@@ -310,11 +380,7 @@ describe('Statistiche per periodo', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    await screen.findByLabelText('Dal')
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Dal'), { target: { value: '2026-08-08' } })
-      fireEvent.change(screen.getByLabelText('Al'), { target: { value: '2026-08-08' } })
-    })
+    await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
     const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
     await user.click(within(lista).getByRole('button', { name: 'Ordina per incasso' }))
     expect(classifica(lista)).toEqual(['1 Negroni 15 pz 150,00 €', '2 Amaro della casa 20 pz 20,00 €'])

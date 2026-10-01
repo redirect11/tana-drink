@@ -4747,6 +4747,55 @@ bugs:
     test_cases:
       - tests/unit/stampanteCheNonRisponde.test.js
 
+  - id: BUG-109
+    title: "Il carico di magazzino non compariva, e ogni pressione ne accodava uno"
+    area: "src/lib/api.js (loadStock), src/components/InventoryManager.jsx (doCarico)"
+    severity: grave
+    priority: P1
+    description: >
+      Daniele, 18/09/2026: «in Magazzino, se inserisco un carico non viene
+      visualizzato subito, anzi sembra che non ho premuto il tasto di carico;
+      ma poi vado a ricaricare la pagina e mi trovo i carichi per ogni volta
+      che ho cliccato sul tasto Carico».
+      LA CAUSA, ed e' la prima regola del progetto violata per intero: il
+      carico aspettava QUATTRO GIRI DI RETE prima di far vedere qualcosa —
+      una lettura dell'articolo, la scrittura della giacenza, la scrittura
+      del movimento, e una rilettura per tornare il risultato. Le due
+      scritture si risolvono solo con l'ACK DEL SERVER: con la linea del
+      locale che «risulta collegata ma non passa» non tornano mai. Quindi la
+      finestrella del carico restava aperta, la lista non si aggiornava, e
+      non compariva nessun errore: identico a non aver premuto.
+      IL DANNO NON ERA SOLO L'ATTESA. Chi carica ripreme, ed e' la cosa
+      giusta da fare davanti a un tasto che sembra non funzionare: ogni
+      pressione accodava un altro carico. Quando la rete tornava, Firestore
+      li mandava tutti, e al ricaricamento della pagina la giacenza era
+      quella di cinque carichi invece che di uno. Una giacenza gonfiata non
+      si vede: e' un numero plausibile, e resta li' fino all'inventario.
+      LA CURA (18/09/2026). `loadStock` diventa LOCAL-FIRST e prende
+      l'ARTICOLO invece del suo id — quello che serve a scrivere chi chiama
+      ce l'ha gia' in mano, e andarlo a rileggere era la prima delle attese.
+      Compone la giacenza nuova in memoria e la torna SUBITO; le due
+      scritture partono con `bgWrite`, e la giacenza si muove con
+      `increment`, commutativo e sicuro offline. La schermata chiude la
+      finestrella e sostituisce la riga nella lista senza rileggere il
+      magazzino (niente `load()`).
+      IL CONTROLLO DEL TRAVASO RESTA IN api.js, dove BUG-029 l'aveva messo:
+      si fa sull'articolo che arriva, che porta con se' `formaVecchia` e
+      `motivoNonMigrabile` — gli stessi segni che guarda `magazzinoBloccato`.
+      E' anche piu' robusto di prima: una rilettura che non torna non
+      protegge niente.
+      DA GUARDARE IN PRODUZIONE: le giacenze dei prodotti caricati nei
+      giorni scorsi possono essere gonfiate dai carichi ripetuti. Si
+      riconoscono da Magazzino → Movimenti, dove compaiono piu' carichi
+      identici ravvicinati, e si correggono con l'inventario.
+    in_produzione: true
+    status: fixed
+    generate_issue: true
+    labels: [bug, magazzino, offline]
+    test_cases:
+      - tests/unit/scritturaMagazzino.test.js
+      - tests/component/InventoryManagerCard.test.jsx
+
   - id: BUG-107
     title: "Una stampante che sparisce in silenzio non la scopriva nessuno, e i ganci dell'SDK erano sull'oggetto sbagliato"
     area: "src/lib/printer.js (battitoDellaStampante, avviaBattito, getPrinter)"
@@ -4912,3 +4961,41 @@ bugs:
     test_cases:
       - tests/unit/warehouse.test.js
       - tests/component/StockCountPanel.test.jsx
+
+  - id: BUG-112
+    title: "Alla chiusura dell'inventario le vendite fatte dopo il conteggio sparivano"
+    area: "src/lib/api.js (closeStockCount, salvaRimanenza), src/lib/inventarioInCorso.js"
+    severity: grave
+    priority: P1
+    description: >
+      Visto ragionando sul 23/09/2026, dopo BUG-110, e confermato dalla
+      domanda di Daniele: «vuol dire che gli scarica subito la quantita'
+      appena inserisce il dato?» — no: la scriveva solo alla chiusura, ed e'
+      proprio quello il guaio. La chiusura portava la giacenza di ogni
+      prodotto contato AL NUMERO CONTATO. Ma si conta a locale aperto:
+      contate 5 Coca Cola alle 18, vendute 2 fino a mezzanotte (la giacenza
+      scende a 3), chiuso l'inventario a mezzanotte, la giacenza tornava a
+      5. Le vendite fatte fra il conteggio e la chiusura si cancellavano, e
+      la differenza a schermo le contava come merce in piu'.
+      LA CORREZIONE: ogni rimanenza porta la sua ORA (`rimanenze_ora` sul
+      documento dell'inventario, scritta dal dispositivo insieme al numero).
+      La differenza si misura sull'atteso di quel momento: atteso adesso
+      meno quello che si e' mosso dopo il conteggio. E la chiusura non
+      scrive piu' il numero contato: SOMMA la differenza alla giacenza con
+      `increment`, cosi' restano sia le vendite dopo il conteggio sia un
+      drink battuto mentre il pacchetto parte. Le differenze le calcola la
+      CHIUSURA (closeStockCount rilegge giacenze e movimenti e passa da
+      `righeInventario`, lo stesso calcolo del pannello): una strada sola,
+      senza piu' la regola vecchia del numero contato come ripiego. E prima
+      di chiedere conferma il pannello rilegge i dati, cosi' l'importo nel
+      messaggio e' quello che viene applicato.
+      Le rimanenze senza ora — scritte con la 1.6.1, o le 62 sistemate a
+      mano in produzione il 23/09 — valgono come contate adesso: e' il
+      comportamento di prima, ed e' giusto per quelle.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/unit/inventarioInCorso.test.js
+      - tests/unit/chiusuraInventario.test.js
