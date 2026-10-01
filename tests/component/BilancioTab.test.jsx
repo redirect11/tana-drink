@@ -16,12 +16,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
-// La tabella «Venduto × Incassato» ha una prova sua
-// (MacroMonthlyTab.test.jsx): qui si guarda il CONTENITORE — che le tre
+// Le tabelle «Venduto × Incassato» e «Acquisti × Fatturato» hanno una prova
+// loro: qui si guarda il CONTENITORE — che le tre
 // sottosezioni ci siano, che ognuna porti la sua didascalia e che
 // cambiandole cambi quello che si vede.
 vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({
   default: () => <div>TABELLA VENDUTO × INCASSATO</div>,
+}))
+// Anche «Acquisti × Fatturato» ha la sua (AcquistiFatturato.test.jsx).
+vi.mock('../../src/components/AcquistiFatturato.jsx', () => ({
+  default: () => <div>TABELLA ACQUISTI × FATTURATO</div>,
 }))
 
 import BilancioTab from '../../src/components/BilancioTab.jsx'
@@ -61,11 +65,10 @@ describe('la pagina Bilancio', () => {
     // Mesi: il netto spiegato senza dire «netto».
     expect(screen.getByText(/quello che resta dopo aver pagato/i)).toBeInTheDocument()
 
-    // Acquisti × Fatturato: l'avvertenza che pesa di più — dello storico
-    // non si ricostruisce niente, e un totale basso lì dentro non vuol dire
-    // che non si è comprato.
+    // Acquisti × Fatturato (REQ-MAG-022): la tabella c'è, con le sue
+    // didascalie.
     act(() => sotto.scegli('acquisti'))
-    expect(await screen.findByText(/dello storico non si ricostruisce niente/i)).toBeInTheDocument()
+    expect(await screen.findByText('TABELLA ACQUISTI × FATTURATO')).toBeInTheDocument()
 
     // «Venduto × Incassato» la sua didascalia ce l'ha già, e viaggia con la
     // tabella: è lei a spiegare margine, inc/costo e le due incidenze.
@@ -79,7 +82,7 @@ describe('la pagina Bilancio', () => {
     render(<BilancioTab />)
     expect(screen.getByText(/📅 Mesi/)).toBeInTheDocument()
     act(() => sotto.scegli('acquisti'))
-    expect(await screen.findByText(/📥 Acquisti × Fatturato/)).toBeInTheDocument()
+    expect(await screen.findByText('TABELLA ACQUISTI × FATTURATO')).toBeInTheDocument()
     expect(screen.queryByText(/📅 Mesi/)).toBeNull()
     stop()
   })
