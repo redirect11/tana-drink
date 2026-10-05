@@ -1,5 +1,21 @@
 # Cosa è cambiato
 
+## 1.9.1-beta
+
+### Per chi sta al banco
+
+- **Riaprire un conto incassato rimette in magazzino quello che aveva
+  scalato.** Alla nuova chiusura si scala una volta sola, con quello che c'è
+  sul conto in quel momento. Prima la riapertura non rimetteva niente e la
+  nuova chiusura scalava di nuovo: le giacenze scendevano due volte.
+
+### Per chi amministra
+
+- **Inventario: filtro per assortimento** (in assortimento, in linea,
+  premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
+  restano nell'inventario e, senza rimanenza inserita, alla chiusura
+  mantengono la giacenza registrata.
+
 ## 1.9.0 — 1 ottobre 2026
 
 Comprende la 1.7.0, che non è uscita da sola.

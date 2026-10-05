@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 1 ottobre 2026.
+> Generato il 6 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 211 | fatto e coperto dai test |
+| ✅ | 212 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 8 | non più valido |
 
-**257 voci** in tutto. **226** descrivono il sistema com'è oggi e
+**258 voci** in tutto. **227** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 44 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 45 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 13 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -191,13 +191,13 @@ Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un malinteso
 
 RIAPRIRE = COME SE NON FOSSE MAI STATO PAGATO. Gli incassi si tolgono: il conto riaperto è un conto normale, da battere e da incassare, con tutte le righe modificabili. Prima gli incassi restavano attaccati e il conto tornava «ad acconto»: le righe già pagate erano bloccate — e riaprire serve proprio a toccarle — e i soldi restavano nei guadagni della serata di un conto che era di nuovo da incassare, quindi a fine turno lo stesso conto risultava incassato due volte. La cassa legge gli incassi dagli ordini, perciò toglierli dal conto li toglie anche dal flusso di cassa. Non si butta via niente: quello che era entrato resta in `payments_annullati` con l'ora in cui è stato tolto, e il totale compare nella storia del conto («riaperto — tolti 15,50 € dagli incassi»), che è dove lo si va a cercare quando la cassa non torna. Le comande già servite restano servite: tornano da fare solo quelle annullate col conto.
 
-SU UN CONTO RIAPERTO SI TOCCA TUTTO, righe vecchie comprese. Di norma una comanda servita non si modifica più — il drink è stato fatto e portato — ma riaprire serve ESATTAMENTE a rimettere a posto quello che c'è dentro: un giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di prima restano bloccate, il conto riaperto non serve a niente. Le scorte si riallineano con la differenza, come per ogni altra modifica. Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO, che su un conto chiuso o annullato era lì spento a non fare niente.
+SU UN CONTO RIAPERTO SI TOCCA TUTTO, righe vecchie comprese. Di norma una comanda servita non si modifica più — il drink è stato fatto e portato — ma riaprire serve ESATTAMENTE a rimettere a posto quello che c'è dentro: un giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di prima restano bloccate, il conto riaperto non serve a niente. Le scorte si riallineano con la differenza, come per ogni altra modifica. DAL 06/10/2026 (BUG-113) riaprire un conto INCASSATO rimette in magazzino quello che aveva scalato, e le comande tornano da scalare: la nuova chiusura scala una volta, con quello che c'è sul conto. Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO, che su un conto chiuso o annullato era lì spento a non fare niente.
 
 ANNULLANDO, il saldo di un buono usato per pagare torna al beneficiario: il conto non si incassa più, e lasciarlo scalato significherebbe fargli perdere il credito per un conto mai pagato. Le righe restituite si segnano (`restituito_at`), così riaprendo lo stesso conto non tornano una seconda volta — sarebbe credito inventato, l'errore opposto.
 
 IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando lo si usa, non quando i soldi entrano in cassa. Se il conto era stato PAGATO con un buono, riaprendolo quella riga di incasso sparisce come le altre: il saldo torna al beneficiario, altrimenti avrebbe pagato due volte — una col buono che non torna, una quando ripaga il conto. Il buono usato come SCONTO invece resta dov'è: lo sconto è ancora sul conto, quindi qualcuno deve pagarlo, e ri-chiuderlo non lo scala una seconda volta. Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo lì significherebbe uno sconto che nessuno ha pagato e un credito in circolazione che non torna più con i conti. Se nel frattempo il buono è stato speso altrove e il saldo non basta, si addebita quel che c'è e lo sconto si riduce a quella cifra (fino a sparire): meglio un conto che chiede qualche euro in più che un buono in rosso. Su un conto CHIUSO non si tocca niente, perché lì il buono non era mai stato ristornato. Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la storia completa — aperto, chiuso, annullato, riaperto, con chi e perché — sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si ricostruisce da quello che il conto porta già addosso, quindi vale anche per i conti di ieri, senza migrazioni.
 
-**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`
+**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`, `tests/unit/riaperturaMagazzino.test.js`
 
 #### REQ-ORD-010 — Gli annullati hanno una tab loro nella coda
 
@@ -1810,6 +1810,12 @@ DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso controllo dei
 NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
 
 **Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
+
+#### REQ-MAG-051 — Inventario: filtro per assortimento, e i prodotti esclusi chiudono con la giacenza registrata
+
+Flavio, vocale del 05/10/2026, sull'inventario: «qui servirebbe il filtro in assortimento, fuori assortimento, premium e linea […] tutti quelli fuori assortimento io me li elimino, cioè non me lo faccio l'inventario del fuori assortimento […] quando chiudo l'inventario mi deve chiudere la rimanenza con l'ultima rimanenza che ha, che presumibilmente è zero». Nell'inventario in corso c'è lo stesso filtro dei Prodotti — una tendina con le quattro voci di assortimento (FiltroAssortimento), a scelta multipla, col numero di prodotti per voce — accanto alla barra delle categorie. Le righe e le categorie seguono il filtro; il contatore «contati» resta su tutto l'inventario. I PRODOTTI ESCLUSI NON SI PERDONO: restano nell'inventario, solo non si vedono. Chiudendo, un prodotto senza rimanenza scritta non ha differenza e tiene la giacenza registrata, cioè l'ultima rimanenza che ha (per un fuori assortimento, di solito zero): è già la regola della chiusura (closeStockCount salta le righe senza conteggio), e qui la si dice anche a schermo.
+
+**Dove**: `src/components/StockCountPanel.jsx, src/components/FiltroAssortimento.jsx, src/components/Tendina.jsx` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
