@@ -19,6 +19,7 @@
 // Qui c'è solo la regola, pura e provabile: chi scrive è api.js.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { arrotonda, movimentoInPezzi } from './magazzinoPeriodo.js'
 
 export const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 
@@ -27,18 +28,50 @@ export function incassatoSuConto(order) {
   return r2((order?.payments || []).reduce((s, p) => s + (Number(p.amount) || 0), 0))
 }
 
+// UN CONTO INCASSATO CHE SI RIAPRE RIMETTE LE SCORTE (BUG-113); uno
+// annullato no, l'aveva già fatto l'annullo. La regola sta qui, una volta:
+// la usano la patch (le comande tornano «da scalare») e api.js (lo storno).
+// Se le due cose si separassero, si tornerebbe a scalare due volte.
+export const rimetteScorte = (order) => order?.status === ORDER_STATUSES.PAGATO
+
 // Le comande ANNULLATE col conto tornano da fare; quelle già servite
 // restano servite — il drink è stato bevuto davvero.
-export function comandeRiaperte(comande, nowIso) {
-  return (comande || []).map((c) =>
-    c.status === ORDER_STATUSES.ANNULLATO
-      ? {
-          ...c,
-          status: ORDER_STATUSES.RICEVUTO,
-          status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RICEVUTO]: nowIso },
-        }
-      : c
-  )
+//
+// `rimettiScorte` (un conto INCASSATO che si riapre, BUG-113): le scorte
+// che il conto aveva scalato tornano in magazzino, quindi ogni comanda
+// torna «da scalare» — alla nuova chiusura si scala una volta, con quello
+// che c'è sul conto in quel momento. Un conto annullato no: le sue scorte
+// le aveva già rimesse l'annullo, e le comande erano già da scalare.
+export function comandeRiaperte(comande, nowIso, { rimettiScorte = false } = {}) {
+  return (comande || []).map((c) => {
+    const riaperta =
+      c.status === ORDER_STATUSES.ANNULLATO
+        ? {
+            ...c,
+            status: ORDER_STATUSES.RICEVUTO,
+            status_times: { ...(c.status_times || {}), [ORDER_STATUSES.RICEVUTO]: nowIso },
+          }
+        : c
+    return rimettiScorte ? { ...riaperta, inventory_applied: false, inventory_consumption: null } : riaperta
+  })
+}
+
+// QUANTO HA SCALATO UN CONTO, dai suoi movimenti (BUG-113): gli scarichi
+// della chiusura meno quello che riallineamenti e storni hanno già rimesso,
+// riportato a pezzi prodotto per prodotto. Torna quello da rimettere:
+// [{ inventory_item_id, qty, unit }] nell'unità della giacenza.
+// Si legge dai MOVIMENTI e non dal segno sulle comande: i conti chiusi
+// prima di BUG-113 il segno non ce l'hanno, ma i movimenti sì. Un prodotto
+// che non c'è più si salta: senza l'articolo non si sa in che unità sia.
+export function scaricoNetto(movimenti, itemsById) {
+  const netto = new Map()
+  for (const m of movimenti || []) {
+    const mp = movimentoInPezzi(m, itemsById[m.item_id])
+    if (mp) netto.set(m.item_id, (netto.get(m.item_id) || 0) + mp.q)
+  }
+  return [...netto]
+    .map(([id, q]) => ({ inventory_item_id: id, qty: arrotonda(-q), unit: itemsById[id].unit ?? null }))
+    .filter((c) => c.qty > 0)
 }
 
 // La patch da scrivere sull'ordine. `comande` arriva già normalizzata.
@@ -54,7 +87,7 @@ export function patchRipristino(order, { comande, nowIso, motivo = null, chi = n
       ...(Array.isArray(order?.payments_annullati) ? order.payments_annullati : []),
       ...tolti.map((p) => ({ ...p, tolto_at: nowIso })),
     ],
-    comande: comandeRiaperte(comande, nowIso),
+    comande: comandeRiaperte(comande, nowIso, { rimettiScorte: rimetteScorte(order) }),
     riaperture: [
       ...(Array.isArray(order?.riaperture) ? order.riaperture : []),
       {

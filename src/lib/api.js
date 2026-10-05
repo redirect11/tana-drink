@@ -69,7 +69,7 @@ import { prezziDaAllineare } from './confrontoOrdine.js'
 import { cambioModoPermesso, supplementiPerModo } from './consegna.js'
 import { idDispositivo } from './dispositivo.js'
 import { leggiAvvisi, avvisoAttivo, idAvvisoScorta } from './preferenzeNotifiche.js'
-import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti } from './ripristino.js'
+import { patchRipristino, buoniDaRestituire, segnaBuoniRestituiti, scaricoNetto, rimetteScorte } from './ripristino.js'
 import { riaddebitoBuono } from './vouchers.js'
 import {
   ORDER_OPEN,
@@ -2997,11 +2997,7 @@ export const closePaidOrder = perConto(async function closePaidOrder(id) {
   // — di più, con la linea del locale. Il magazzino si allinea subito dopo,
   // per conto suo (vedi scaricaInSottofondo, stessa idea).
   scriviOrdine(ref, data, chiusura, 'chiusura conto')
-  if (chiusura.comande) {
-    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-      .then(notifyLowStock)
-      .catch(() => {})
-  }
+  if (chiusura.comande) scaricaComande(unappliedEntries(id, chiusura.comande))
 })
 
 // PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
@@ -3400,13 +3396,11 @@ export async function payGroupCash({
   // Il magazzino dopo, per conto suo: vedi closePaidOrder. Si scarica solo
   // quello che è davvero risultato servito — cioè niente, se è rimasta
   // roba da preparare.
-  depleteComandeInventory(
+  scaricaComande(
     chiusure.flatMap(({ ref, chiusura }) =>
       chiusura.comande ? unappliedEntries(ref.id, chiusura.comande) : []
     )
   )
-    .then(notifyLowStock)
-    .catch(() => {})
 
   const orderIdsCovered = covered.map((c) => c.ref.id)
   const baseDoc = {
@@ -4202,13 +4196,9 @@ export const registerPayment = perConto(async function registerPayment(id, { amo
     },
     'incasso ordine'
   )
-  if (chiusura?.comande) {
-    // Conto saldato E servito ⇒ le comande mai prese in carico vengono
-    // scaricate a magazzino adesso, in sottofondo.
-    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-      .then(notifyLowStock)
-      .catch(() => {})
-  }
+  // Conto saldato E servito ⇒ le comande mai prese in carico vengono
+  // scaricate a magazzino adesso, in sottofondo.
+  if (chiusura?.comande) scaricaComande(unappliedEntries(id, chiusura.comande))
   return { closed }
 })
 
@@ -4226,11 +4216,7 @@ export const markOrderPaid = perConto(async function markOrderPaid(id, method, {
   const chiusura = conTimbro(chiusuraPagamento(snap.data(), nowIso, { autoServe }), nowIso)
   // Prima il conto, poi il magazzino: vedi closePaidOrder.
   scriviOrdine(ref, snap.data(), { ...chiusura, payment_method: method }, 'pagamento ordine')
-  if (chiusura.comande) {
-    depleteComandeInventory(unappliedEntries(id, chiusura.comande))
-      .then(notifyLowStock)
-      .catch(() => {})
-  }
+  if (chiusura.comande) scaricaComande(unappliedEntries(id, chiusura.comande))
 })
 
 // Avanza lo stato di UNA COMANDA (il ticket di lavorazione). È qui che vive
@@ -4272,6 +4258,12 @@ export const markOrderPaid = perConto(async function markOrderPaid(id, method, {
 // arrivato dalla rilettura, stato compreso. La finestra fra rilettura e
 // scrittura resta di microsecondi, invece che lunga quanto la rete.
 function scriviCampiComanda(ref, comandaId, campi, etichetta) {
+  scriviCampiComande(ref, { [comandaId]: campi }, etichetta)
+}
+
+// Come sopra, per più comande dello stesso conto in un giro solo: una
+// rilettura e una scrittura dell'array, non una per comanda.
+function scriviCampiComande(ref, campiPerComanda, etichetta) {
   // La rilettura sta DENTRO la scrittura in sottofondo, non prima: cosi'
   // fra il leggere e lo scrivere non passa niente, nemmeno il giro di coda
   // che separa le due cose. E se la scrittura viene ritentata, si rilegge
@@ -4280,18 +4272,21 @@ function scriviCampiComanda(ref, comandaId, campi, etichetta) {
   // NEL TURNO DI QUESTO CONTO, come ogni altra mutazione: anche questa
   // riscrive l'array intero, e partire mentre un'aggiunta sta componendo il
   // suo vorrebbe dire cancellarla.
+  // MA IL TURNO NON ASPETTA IL SERVER (BUG-113): si compone, si ricorda e la
+  // scrittura parte; il turno finisce lì. Offline quella scrittura non torna
+  // mai, e un turno appeso fermava ogni gesto dopo su questo conto — la
+  // riapertura, un incasso. La Promise esce in un involucro, se no il turno
+  // la aspetterebbe lo stesso; bgWrite la segue per l'indicatore.
   bgWrite(
     () =>
       inCodaOrdine(ref?.id, async () => {
         const snap = await leggiOrdine(ref)
-        if (!snap.exists()) return
+        if (!snap.exists()) return null
         const cur = snap.data()
-        const comande = normalizeOrderDoc(cur).comande.map((c) =>
-          c.id === comandaId ? { ...c, ...campi } : { ...c }
-        )
+        const comande = normalizeOrderDoc(cur).comande.map((c) => ({ ...c, ...(campiPerComanda[c.id] || {}) }))
         ricordaOrdine(ref?.id, { ...cur, comande }, { comande })
-        await updateDoc(ref, { comande })
-      }),
+        return { scrittura: updateDoc(ref, { comande }) }
+      }).then((esito) => esito?.scrittura),
     etichetta
   )
 }
@@ -4349,20 +4344,7 @@ function scaricaInSottofondo(orderId, comandaId) {
       const norm = normalizeOrderDoc(snap.data())
       const comanda = norm.comande.find((c) => c.id === comandaId)
       if (!comanda || comanda.inventory_applied === true) return
-      // depleteComandeInventory segna sulla copia che le si passa cosa ha
-      // scaricato: si prende quello, e si scrive solo quello.
-      const copia = { ...comanda }
-      const lowStock = await depleteComandeInventory([{ orderId, comanda: copia }])
-      await scriviCampiComanda(
-        ref,
-        comandaId,
-        {
-          inventory_applied: copia.inventory_applied === true,
-          inventory_consumption: copia.inventory_consumption ?? null,
-        },
-        'scarico scorte'
-      )
-      notifyLowStock(lowStock)
+      scaricaComande([{ orderId, comanda }])
     } catch {
       /* si riprende al pagamento */
     }
@@ -4445,18 +4427,7 @@ async function depleteComandeInventory(entries) {
     })
     plans.push({ orderId, comanda, consumption: computeConsumption(items, drinksById) })
   }
-  const itemIds = [...new Set(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))]
-  const itemSnaps = await Promise.all(itemIds.map((id) => leggiDoc(doc(db, 'inventory_items', id))))
-  const itemsById = {}
-  itemSnaps.forEach((sn, idx) => {
-    // ARTICOLO ANCORA NELLA FORMA VECCHIA: si SALTA. Qui si è in sottofondo,
-    // dietro un gesto che deve andare avanti comunque — la comanda è pronta,
-    // il drink è uscito — e fermarlo per un numero vorrebbe dire fermare il
-    // servizio. Scalare su una giacenza scritta in centilitri, invece,
-    // scriverebbe un numero sbagliato: e in magazzino un numero sbagliato
-    // sembra plausibile a chi lo legge.
-    if (sn.exists() && !patchNormalizza(sn.data())) itemsById[itemIds[idx]] = sn.data()
-  })
+  const itemsById = await leggiArticoli(plans.flatMap((p) => p.consumption.map((c) => c.inventory_item_id)))
   // Un movimento per comanda/ingrediente; la giacenza cala una volta per
   // ingrediente con il delta cumulato (increment: sicuro anche offline).
   const delta = {}
@@ -4480,8 +4451,6 @@ async function depleteComandeInventory(entries) {
         created_at: serverTimestamp(),
       }), 'movimento scorta')
     }
-    p.comanda.inventory_applied = true
-    p.comanda.inventory_consumption = p.consumption
   }
   const lowStock = []
   for (const [id, qty] of Object.entries(delta)) {
@@ -4503,7 +4472,52 @@ async function depleteComandeInventory(entries) {
       lowStock.push({ name: cur.name, stock: newStock, unit: cur.unit })
     }
   }
-  return lowStock
+  // COSA HA SCALATO, comanda per comanda: chi chiama ne scrive il segno sul
+  // conto (scaricaComande). Prima lo si annotava sulla comanda ricevuta, che
+  // era una copia in memoria — ed è lì che il segno si perdeva (BUG-113).
+  const scalate = plans.map((p) => ({ orderId: p.orderId, comandaId: p.comanda.id, consumption: p.consumption }))
+  return { lowStock, scalate }
+}
+
+// GLI ARTICOLI DA SCALARE O DA RIMETTERE, per id. Un articolo che non c'è
+// più si salta, e così uno ANCORA NELLA FORMA VECCHIA: qui si è in
+// sottofondo, dietro un gesto che deve andare avanti comunque — la comanda
+// è pronta, il drink è uscito — e fermarlo per un numero vorrebbe dire
+// fermare il servizio. Scalare su una giacenza scritta in centilitri,
+// invece, scriverebbe un numero sbagliato: e in magazzino un numero
+// sbagliato sembra plausibile a chi lo legge.
+async function leggiArticoli(ids) {
+  const unici = [...new Set(ids.filter(Boolean))]
+  const snaps = await Promise.all(unici.map((id) => leggiDoc(doc(db, 'inventory_items', id))))
+  const itemsById = {}
+  snaps.forEach((sn, k) => {
+    if (sn.exists() && !patchNormalizza(sn.data())) itemsById[unici[k]] = { id: unici[k], ...sn.data() }
+  })
+  return itemsById
+}
+
+// LO SCARICO DI UNA CHIUSURA, E IL SEGNO CHE È STATO FATTO (BUG-113).
+// Alla chiusura il segno `inventory_applied` non arrivava mai sul conto, e
+// un conto riaperto e richiuso si scalava due volte. Qui, dopo lo scarico,
+// segno e consumo si scrivono sulle comande, una scrittura per conto, nel
+// suo turno come ogni altra (scriviCampiComande). Tutto in sottofondo: il
+// conto è già chiuso, il magazzino lo segue.
+function scaricaComande(entries) {
+  if (!entries.length) return
+  depleteComandeInventory(entries)
+    .then(({ lowStock, scalate }) => {
+      const perConto = new Map()
+      for (const s of scalate) {
+        const campi = perConto.get(s.orderId) || {}
+        campi[s.comandaId] = { inventory_applied: true, inventory_consumption: s.consumption }
+        perConto.set(s.orderId, campi)
+      }
+      for (const [orderId, campi] of perConto) {
+        scriviCampiComande(doc(db, 'orders', orderId), campi, 'scarico scorte')
+      }
+      notifyLowStock(lowStock)
+    })
+    .catch(() => {})
 }
 
 // LA RETE DI SICUREZZA. Comande di un conto pagato ancora da scaricare a
@@ -5195,18 +5209,15 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
 // Rimette dentro quello che era stato scalato, dallo snapshot del consumo.
 // Con `increment(+qty)`: commutativo, si accoda offline e non litiga con le
 // altre scritture sullo stesso articolo.
-async function stornaScorte(orderId, consumption) {
+// Chi ha già letto gli articoli li passa (`itemsById`), e non si rileggono.
+async function stornaScorte(orderId, consumption, itemsById = null) {
   try {
-    const snaps = await Promise.all(
-      consumption.map((c) => leggiDoc(doc(db, 'inventory_items', c.inventory_item_id)))
-    )
-    for (let idx = 0; idx < consumption.length; idx++) {
-      const c = consumption[idx]
-      const s = snaps[idx]
+    const articoli = itemsById || (await leggiArticoli(consumption.map((c) => c.inventory_item_id)))
+    for (const c of consumption) {
       // Come lo scarico: un articolo ancora nella forma vecchia si salta,
       // che rimetterci dentro pezzi darebbe un numero senza senso.
-      if (!s.exists() || patchNormalizza(s.data())) continue
-      const cur = s.data()
+      const cur = articoli[c.inventory_item_id]
+      if (!cur) continue
       bgWrite(() => updateDoc(doc(db, 'inventory_items', c.inventory_item_id), {
         stock: increment(qtyInStockUnit(c.qty, c.unit, cur)),
       }), 'storno scorta')
@@ -5226,6 +5237,26 @@ async function stornaScorte(orderId, consumption) {
   }
 }
 
+// RIMETTE IN MAGAZZINO QUELLO CHE UN CONTO HA SCALATO (BUG-113), dai suoi
+// movimenti (scaricoNetto). In sottofondo: la riapertura si vede subito, le
+// scorte seguono. Solo i movimenti di PRIMA della riapertura: la nuova
+// chiusura può arrivare mentre questa lettura è ancora in giro, e il suo
+// scarico non va rimesso. Uno scarico ancora in coda su questo dispositivo
+// non ha l'ora del server e resta fuori: è il caso raro di un conto chiuso
+// e riaperto offline, e la conta lo rimette a posto.
+function rimettiScaricoDelConto(orderId, primaDi) {
+  ;(async () => {
+    try {
+      const snap = await getDocs(query(movementsCol, where('order_id', '==', orderId)))
+      const movimenti = snap.docs.map(mapMovement).filter((m) => m.created_at && m.created_at < primaDi)
+      const itemsById = await leggiArticoli(movimenti.map((m) => m.item_id))
+      await stornaScorte(orderId, scaricoNetto(movimenti, itemsById), itemsById)
+    } catch {
+      /* il magazzino si riallinea alla prossima conta */
+    }
+  })()
+}
+
 // RIPRISTINO DI UN CONTO CHIUSO O ANNULLATO. Capita: si chiude un conto sul
 // tavolo sbagliato, si annulla per un malinteso, il cliente torna e ordina
 // ancora sullo stesso conto. Finora l'unica strada era batterlo da capo, e
@@ -5243,6 +5274,9 @@ async function stornaScorte(orderId, consumption) {
 // Sul magazzino: annullando, le scorte erano state rimesse dentro e le
 // comande segnate come non scalate — quindi rifacendole si scalano di nuovo,
 // una volta sola. È giusto così: il drink va rifatto.
+// Riaprendo un conto INCASSATO le scorte tornano in magazzino (BUG-113):
+// chi riapre per errore poi richiude, o batte un conto nuovo, e la nuova
+// chiusura scala quello che c'è sul conto in quel momento — una volta.
 export const restoreOrder = perConto(async function restoreOrder(id, { motivo = null, chi = null } = {}) {
   const orderRef = doc(db, 'orders', id)
   const snap = await leggiOrdine(orderRef)
@@ -5321,6 +5355,7 @@ export const restoreOrder = perConto(async function restoreOrder(id, { motivo = 
     ripristinato_device: idDispositivo(),
   }
   bgWrite(() => updateDoc(orderRef, patchRiapertura), 'ripristino conto')
+  if (rimetteScorte(data)) rimettiScaricoDelConto(id, nowIso)
   // Riaperto: si compone, non si rilegge. Riaprire un conto e vederlo
   // ancora chiuso e' il difetto che questa riga evitava di avere.
   return ordineDopo(id, data, patchRiapertura)

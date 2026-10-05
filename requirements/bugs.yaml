@@ -4999,3 +4999,64 @@ bugs:
     test_cases:
       - tests/unit/inventarioInCorso.test.js
       - tests/unit/chiusuraInventario.test.js
+
+  - id: BUG-113
+    title: "Un conto riaperto e richiuso scalava il magazzino due volte, e riaprendolo le scorte non tornavano"
+    area: "src/lib/api.js (scaricaComande, scriviCampiComanda, restoreOrder, rimettiScaricoDelConto), src/lib/ripristino.js (scaricoNetto, comandeRiaperte)"
+    severity: grave
+    priority: P1
+    description: >
+      Flavio, vocale del 05/10/2026: «se io faccio un conto, lo incasso, mi
+      scala i prodotti. Fatto un errore, lo voglio riaprire: non me li
+      ricarica, perché poi quando lo richiudo me li scarica un'altra volta
+      […] con le giacenze sono andato in negativo, però io vedo che ce n'ho
+      una […] ogni volta che un tavolo lo riapro per errore mi deve anche
+      ricaricare tutto quello che mi ha scaricato».
+      LA CAUSA (verificata sui dati di produzione del 06/10, in sola
+      lettura). Ogni comanda porta il segno `inventory_applied`: «questa è
+      già stata scalata, non rifarlo». Alla chiusura con l'incasso lo
+      scarico parte in sottofondo e il segno lo metteva solo sulla COPIA in
+      memoria: non veniva scritto da nessuna parte. Lo scriveva soltanto lo
+      scarico al «pronto», che nel locale non c'è (la preparazione è
+      spenta). In produzione, da settembre, 964 comande scalate senza il
+      segno e nessuna con il segno; ad agosto il segno arrivava ancora a
+      volte, per caso (la copia in memoria finiva nella scrittura del conto
+      se questa non era ancora partita). Così riaprendo e richiudendo un
+      conto lo scarico ripartiva per intero: 12 conti riaperti dal 20/08,
+      ognuno scalato due volte (es. il conto #29 del 03/10, nove articoli
+      scalati alle 21:49 e di nuovo alle 22:14).
+      E RIAPRIRE NON RIMETTEVA NIENTE: la riapertura di un conto incassato
+      lasciava le scorte scalate, apposta («i drink sono usciti davvero»).
+      Ma chi riapre per errore poi richiude, o batte un conto nuovo: le
+      scorte devono tornare com'erano prima della chiusura sbagliata.
+      LA CORREZIONE.
+      (1) Lo scarico alla chiusura scrive il segno e il consumo sulle
+      comande che ha scalato (scaricaComande: dopo lo scarico,
+      scriviCampiComanda per ognuna, nella coda del conto come ogni altra
+      scrittura). Vale per tutte le strade di incasso: chiusura, incasso,
+      pagamento, pagamento di gruppo.
+      (2) Riaprire un conto INCASSATO rimette in magazzino quello che quel
+      conto ha scalato, e le sue comande tornano «da scalare»: alla nuova
+      chiusura si scalano una volta, con quello che c'è sul conto in quel
+      momento. Quanto rimettere si legge dai MOVIMENTI del conto (scarichi
+      meno riallineamenti e storni, riportati a pezzi: scaricoNetto), non
+      dal segno: così vale anche per i conti chiusi prima di questa
+      correzione, che il segno non ce l'hanno. Si contano solo i movimenti
+      di prima della riapertura, perché la nuova chiusura può arrivare
+      mentre la lettura è ancora in corso. Un conto ANNULLATO e riaperto non
+      cambia: le scorte le aveva già rimesse l'annullo.
+      (3) SENZA RETE IL CONTO NON SI FERMA. Il segno si scrive nel turno
+      del conto (scriviCampiComanda), e quel turno aspettava la risposta del
+      server: offline non torna mai, e ogni gesto dopo sullo stesso conto —
+      la riapertura, un incasso — restava appeso. Prima capitava solo allo
+      scarico al «pronto»; con (1) sarebbe capitato a ogni incasso. Ora il
+      turno compone, ricorda e fa partire la scrittura senza aspettarla.
+      DA FARE A PARTE: le giacenze di produzione portano ancora gli scarichi
+      doppi dei 12 conti; si sistemano con l'inventario o con una
+      correzione mirata, che va decisa e approvata (scrive in produzione).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino, conto]
+    test_cases:
+      - tests/unit/riaperturaMagazzino.test.js

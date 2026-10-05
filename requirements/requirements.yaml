@@ -711,6 +711,9 @@ requirements:
       Se le righe di prima restano bloccate, il conto riaperto non serve a
       niente. Le scorte si riallineano con la differenza, come per ogni
       altra modifica.
+      DAL 06/10/2026 (BUG-113) riaprire un conto INCASSATO rimette in
+      magazzino quello che aveva scalato, e le comande tornano da scalare:
+      la nuova chiusura scala una volta, con quello che c'è sul conto.
       Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
       che su un conto chiuso o annullato era lì spento a non fare niente.
       ANNULLANDO, il saldo di un buono usato per pagare torna al
@@ -743,7 +746,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, difetto-risolto]
-    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js, tests/unit/riaperturaMagazzino.test.js]
 
   - id: REQ-ORD-010
     title: "Gli annullati hanno una tab loro nella coda"
@@ -12118,6 +12121,33 @@ requirements:
     test_cases:
       - tests/unit/controlloMagazzino.test.js
       - tests/component/ControlloMagazzino.test.jsx
+
+  - id: REQ-MAG-051
+    title: "Inventario: filtro per assortimento, e i prodotti esclusi chiudono con la giacenza registrata"
+    area: "src/components/StockCountPanel.jsx, src/components/FiltroAssortimento.jsx, src/components/Tendina.jsx"
+    description: >
+      Flavio, vocale del 05/10/2026, sull'inventario: «qui servirebbe il
+      filtro in assortimento, fuori assortimento, premium e linea […] tutti
+      quelli fuori assortimento io me li elimino, cioè non me lo faccio
+      l'inventario del fuori assortimento […] quando chiudo l'inventario mi
+      deve chiudere la rimanenza con l'ultima rimanenza che ha, che
+      presumibilmente è zero».
+      Nell'inventario in corso c'è lo stesso filtro dei Prodotti — una
+      tendina con le quattro voci di assortimento (FiltroAssortimento), a
+      scelta multipla, col numero di prodotti per voce — accanto alla barra
+      delle categorie. Le righe e le categorie seguono il filtro; il
+      contatore «contati» resta su tutto l'inventario.
+      I PRODOTTI ESCLUSI NON SI PERDONO: restano nell'inventario, solo non
+      si vedono. Chiudendo, un prodotto senza rimanenza scritta non ha
+      differenza e tiene la giacenza registrata, cioè l'ultima rimanenza che
+      ha (per un fuori assortimento, di solito zero): è già la regola della
+      chiusura (closeStockCount salta le righe senza conteggio), e qui la si
+      dice anche a schermo.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, inventario]
+    test_cases:
+      - tests/component/StockCountPanel.test.jsx
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"
