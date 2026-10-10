@@ -26,6 +26,14 @@
   periodo, in «Venduto × Incassato» e in «Acquisti × Fatturato», insieme a
   quelli dell'app: per ogni giornata conta un sistema solo, quello dell'app
   se quel giorno ne ha. Le giacenze non cambiano.
+- **I conti di Tiller anche nello Storico ordini e in «Per serata».** Nello
+  storico, scelto un periodo, compaiono segnati «Tiller» e si leggono in
+  sola lettura; nelle statistiche ogni giornata di Tiller è una serata
+  dell'elenco.
+- **Magazzino: la movimentazione di ogni prodotto.** Dalla scheda del
+  prodotto, «📜 Movimenti»: i totali per tipo (consegne d'ordine, carichi,
+  contenuto reale, chiusure d'inventario, vendite), il venduto mese per
+  mese con quello di Tiller dal 2023, e l'elenco dei movimenti.
 - **Inventario: filtro per assortimento** (in assortimento, in linea,
   premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
   restano nell'inventario e, senza rimanenza inserita, alla chiusura

@@ -16,6 +16,8 @@
 import { businessDayKey, DEFAULT_CUTOFF_HOUR, istanteDaOraDiRoma } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import { normName } from './nameMatch.js'
+import { computeConsumption, qtyInStockUnit } from './inventory.js'
+import { arrotonda } from './magazzinoPeriodo.js'
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 // I numeri di Tiller sono all'italiana: «1.234,50».
@@ -103,6 +105,9 @@ export const chiaveNome = normName
 // e le statistiche di ogni sera non devono pagare una lettura per saperlo.
 export const ULTIMO_GIORNO_TILLER = '2026-08-28'
 
+// Un conto o una serata che viene da Tiller: sola lettura, niente scontrino.
+export const daTiller = (x) => x?.origine === 'tiller'
+
 // UN CONTO STORICO COME UN CONTO DELL'APP: chiuso, pagato, con le righe
 // abbinate alle voci del menù per nome (`perNome`: chiaveNome → drink). Lo
 // sconto è quello che separa il listino dall'incassato, così l'incasso del
@@ -149,11 +154,7 @@ export function unisciVendite(
 ) {
   if (!giornate?.length) return ordiniApp
   const conApp = new Set((ordiniApp || []).map((o) => businessDayKey(o.created_at, cutoffHour)).filter(Boolean))
-  const perNome = new Map()
-  for (const d of drinks || []) {
-    const k = chiaveNome(d.name)
-    if (k && !perNome.has(k)) perNome.set(k, d)
-  }
+  const perNome = perNomeDi(drinks)
   const storici = []
   for (const g of giornate) {
     for (const c of g.conti || []) {
@@ -164,4 +165,90 @@ export function unisciVendite(
     }
   }
   return [...storici, ...(ordiniApp || [])]
+}
+
+// ── I DUE RIASSUNTI CHE SI SCRIVONO CON L'IMPORT ──────────────────────
+// Le giornate di Tiller sono quasi mille documenti, decine di megabyte:
+// non si scaricano tutte per fare un elenco. L'import scrive anche due
+// riassunti leggeri, e le schermate leggono quelli; i conti di una giornata
+// si scaricano solo quando la si apre.
+
+const perNomeDi = (drinks) => {
+  const m = new Map()
+  for (const d of drinks || []) {
+    const k = chiaveNome(d.name)
+    if (k && !m.has(k)) m.set(k, d)
+  }
+  return m
+}
+
+// LE SERATE DI TILLER, per «Statistiche → Per serata»: una per giornata
+// commerciale, col primo conto aperto e l'ultimo chiuso (la finestra in cui
+// il dettaglio li ritrova), l'incassato e quanti conti.
+export function indiceSerate(perGiorno, cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const serate = new Map()
+  for (const conti of perGiorno.values()) {
+    for (const c of conti) {
+      const giorno = c.aperto ? businessDayKey(c.aperto, cutoffHour) : null
+      if (!giorno) continue
+      const s = serate.get(giorno) || { giorno, aperto: c.aperto, chiuso: c.chiuso || c.aperto, incassato: 0, conti: 0 }
+      if (c.aperto < s.aperto) s.aperto = c.aperto
+      const fine = c.chiuso || c.aperto
+      if (fine > s.chiuso) s.chiuso = fine
+      s.incassato = r2(s.incassato + c.righe.reduce((t, x) => t + x.incasso, 0))
+      s.conti += 1
+      serate.set(giorno, s)
+    }
+  }
+  return [...serate.values()].sort((a, b) => a.giorno.localeCompare(b.giorno))
+}
+
+// LE SERATE DI TILLER COME CHIUSURE DI CASSA, per l'elenco di «Per serata».
+// Tiller le chiusure non le ha: la serata è la giornata, dal primo conto
+// all'ultimo, coi numeri dell'indice al posto di quelli della chiusura. Un
+// giorno con una chiusura vera dell'app la tiene lei, come per i conti.
+//   serate:   l'indice ([{ giorno, aperto, chiuso, incassato, conti }])
+//   sessions: le chiusure dell'app
+export function serateDaTiller(serate, sessions = [], cutoffHour = DEFAULT_CUTOFF_HOUR) {
+  const conCassa = new Set((sessions || []).map((s) => businessDayKey(s.opened_at, cutoffHour)).filter(Boolean))
+  return (serate || [])
+    .filter((s) => s.aperto && !conCassa.has(s.giorno))
+    .map((s) => ({
+      id: `tiller:${s.giorno}`,
+      origine: 'tiller',
+      business_day: s.giorno,
+      opened_at: s.aperto,
+      closed_at: s.chiuso || s.aperto,
+      snapshot: { incassato: s.incassato, nPagati: s.conti },
+    }))
+}
+
+// IL VENDUTO DI TILLER PER PRODOTTO DI MAGAZZINO, giorno per giorno, per la
+// movimentazione di un prodotto (REQ-MAG-048). Dalle voci vendute agli
+// ingredienti con le RICETTE DI OGGI (computeConsumption), riportati
+// all'unità della giacenza: è una stima — la ricetta di allora non c'è —
+// e per le bottiglie vendute intere coincide col vero.
+// Torna Map item_id → { giornata: quantità }.
+export function vendutoPerProdotto(perGiorno, { drinks = [], items = [], cutoffHour = DEFAULT_CUTOFF_HOUR } = {}) {
+  const perNome = perNomeDi(drinks)
+  const drinksById = Object.fromEntries((drinks || []).map((d) => [d.id, d]))
+  const itemsById = Object.fromEntries((items || []).map((i) => [i.id, i]))
+  const out = new Map()
+  for (const conti of perGiorno.values()) {
+    for (const c of conti) {
+      const giorno = c.aperto ? businessDayKey(c.aperto, cutoffHour) : null
+      if (!giorno) continue
+      const { order_items } = contoStorico(c, perNome)
+      for (const u of computeConsumption(order_items, drinksById)) {
+        const item = itemsById[u.inventory_item_id]
+        if (!item) continue
+        const q = qtyInStockUnit(u.qty, u.unit, item)
+        if (!(q > 0)) continue
+        const giorni = out.get(item.id) || {}
+        giorni[giorno] = arrotonda((giorni[giorno] || 0) + q)
+        out.set(item.id, giorni)
+      }
+    }
+  }
+  return out
 }

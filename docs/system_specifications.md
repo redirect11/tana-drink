@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 215 | fatto e coperto dai test |
+| ✅ | 216 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 23 | da fare |
+| ⬜ | 22 | da fare |
 | 🗑 | 8 | non più valido |
 
-**261 voci** in tutto. **230** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
+**261 voci** in tutto. **231** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 45 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 46 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 14 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1791,6 +1791,14 @@ Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione
 
 **Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
 
+#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
+
+Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
+
+FATTO (10/10/2026), insieme alle vendite di Tiller («nella movimentazione dal 2024», l'utente il 07/10). Nella scheda di ogni prodotto in Magazzino, «📜 Movimenti» apre la sua movimentazione: · i TOTALI PER TIPO nel periodo (30 giorni, 90, un anno, tutto): consegna ordine fornitore, carico diretto, carico da fattura, contenuto reale, chiusura inventario, vendite dell'app (ordini, modifiche e storni insieme), vendite su Tiller, altre correzioni; tutto nell'unità della giacenza, col segno; · il VENDUTO MESE PER MESE, app e Tiller affiancati; · l'elenco dei movimenti, dal più recente. I movimenti si leggono per prodotto e per il solo periodo scelto (indice composto item_id + created_at): un distillato accumula migliaia di scarichi l'anno. Le vendite di Tiller non sono movimenti — non hanno toccato le giacenze — e vengono dal riassunto che l'import scrive per ogni prodotto, con le RICETTE ATTUALI delle voci vendute: è una stima, e per le bottiglie vendute intere coincide col vero.
+
+**Dove**: `src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)` · **Lo dimostrano**: `tests/unit/movimentiProdotto.test.js`, `tests/component/MovimentiProdotto.test.jsx`
+
 #### REQ-MAG-049 — Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP
 
 Flavio, 25/09/2026 sera: «il contenuto reale serve per fare le modifiche sia in positivo sia in negativo … va direttamente sia sul magazzino dei prodotti sia sulle rimanenze di magazzino nell'inventario, e quindi mi modifica sia la rimanenza sia il consumato». E' IL CONTRARIO DI BUG-111 (22/09, in produzione con la 1.6.1), dove il contenuto reale corretto durante un inventario spostava il DEP. Adesso il DEP resta quello dell'apertura, l'ACQ resta la merce entrata, e la correzione — col suo segno — si legge nella RIM e quindi nel CONS. Lo stesso per le rettifiche d'inventario finite dentro il periodo, come quelle della chiusura interrotta del 21/09. Nel mezzo, il 24/09, per un giorno il contenuto reale aveva fatto «ripartire» il prodotto (DEP = il numero scritto, ACQ e VENDUTO da zero): e' stato abbandonato il giorno dopo, e non e' mai uscito dalla linea di sviluppo. Il contenuto reale resta com'era in Prodotti: si scrive il numero vero, e l'app registra il carico o lo scarico della differenza. Non accetta numeri negativi: e' quello che c'e' sullo scaffale.
@@ -3015,7 +3023,11 @@ COME SI VEDONO. Statistiche per periodo, «Venduto × Incassato» e «Acquisti �
 
 UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma dal 26 al 28 agosto si è tornati a Tiller per qualche sera, e in quei giorni i conti risultano ribattuti nell'app a fine serata (una trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si conterebbero due volte. Regola: per ogni giornata commerciale contano i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
 
-**Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`
+ANCHE NELLE ALTRE SCHERMATE (l'utente, 10/10/2026: «i dati devono essere visibili anche tramite le schermate attuali. I dati vanno integrati in modo organico»): · STORICO ORDINI: scelto un periodo, i conti di Tiller di quei giorni stanno nella lista, segnati «Tiller». Toccandoli si leggono le righe sotto la riga, in sola lettura: non c'è un conto dell'app da aprire, e niente ristampa. Contano fra quelli «dal locale». · STATISTICHE → PER SERATA: ogni giornata di Tiller è una serata dell'elenco, dopo le chiusure dell'app, con la pillola «Tiller»; un giorno con una chiusura vera la tiene lei. Aperta, si leggono i conti di quella giornata soltanto (non si allarga la finestra fino al 2024).
+
+PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti: l'indice delle serate (`vendite_storiche/_indice`, un documento) e il venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026 non si legge niente.
+
+**Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`, `tests/component/OrdersHistory.test.jsx`
 
 ### LIC
 
@@ -3236,12 +3248,6 @@ DA CHIEDERE A FLAVIO prima di implementare, e nel frattempo la regola resta quel
 NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento NON e' piu' automatico — «arrivato» lo segna l'admin, e il bartender sceglie se e quali righe caricare (o «carica tutti»). Questa voce genera l'ordine; il suo ricevimento segue la regola nuova scritta la'.
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
-
-#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
-
-Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
-
-**Dove**: `src/components/InventoryManager.jsx (Movimenti)`
 
 ### Cassa di serata e statistiche
 

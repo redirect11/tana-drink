@@ -16,6 +16,7 @@ import { unisciVendite } from '../lib/venditeStoriche.js'
 import { VISTE, colonneDelBilancio, nomeDelPeriodo, spostaGiorno } from '../lib/periodiBilancio.js'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
+import GruppoChip from './GruppoChip.jsx'
 
 // BILANCIO → ACQUISTI × FATTURATO (REQ-MAG-022): il foglio «RAPPORTI
 // ACQUISTI» di Flavio, per anno, mese, settimana o giorno. Il conto sta in
@@ -157,26 +158,6 @@ export default function AcquistiFatturato() {
           <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
         </>
       )}
-    </div>
-  )
-}
-
-// Una scelta fra poche voci, tutte in vista (`.chip-gruppo`, come i
-// raggruppamenti delle chiusure).
-function GruppoChip({ etichetta, opzioni, valore, scegli }) {
-  return (
-    <div className="chip-gruppo" role="group" aria-label={etichetta}>
-      {opzioni.map((o) => (
-        <button
-          key={o.label}
-          type="button"
-          className={`chip${valore === o.id ? ' active' : ''}`}
-          aria-pressed={valore === o.id}
-          onClick={() => scegli(o.id)}
-        >
-          {o.label}
-        </button>
-      ))}
     </div>
   )
 }

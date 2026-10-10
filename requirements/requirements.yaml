@@ -2143,7 +2143,7 @@ requirements:
       - tests/component/StatsTab.test.jsx
   - id: REQ-STAT-006
     title: "Le vendite di Tiller (giugno 2023 – agosto 2026) nelle statistiche e nel bilancio"
-    area: "src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, firestore.rules"
+    area: "src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules"
     description: >
       Prima dell'app il locale batteva su Tiller (oggi SumUp POS Pro, che
       chiude a fine 2026). Flavio vuole vedere le vendite «dal 2024»;
@@ -2183,11 +2183,30 @@ requirements:
       trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si
       conterebbero due volte. Regola: per ogni giornata commerciale contano
       i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
+      ANCHE NELLE ALTRE SCHERMATE (l'utente, 10/10/2026: «i dati devono
+      essere visibili anche tramite le schermate attuali. I dati vanno
+      integrati in modo organico»):
+        · STORICO ORDINI: scelto un periodo, i conti di Tiller di quei
+          giorni stanno nella lista, segnati «Tiller». Toccandoli si
+          leggono le righe sotto la riga, in sola lettura: non c'è un conto
+          dell'app da aprire, e niente ristampa. Contano fra quelli «dal
+          locale».
+        · STATISTICHE → PER SERATA: ogni giornata di Tiller è una serata
+          dell'elenco, dopo le chiusure dell'app, con la pillola «Tiller»;
+          un giorno con una chiusura vera la tiene lei. Aperta, si leggono
+          i conti di quella giornata soltanto (non si allarga la finestra
+          fino al 2024).
+      PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti:
+      l'indice delle serate (`vendite_storiche/_indice`, un documento) e il
+      venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi
+      REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026
+      non si legge niente.
     status: implemented
     generate_issue: false
     labels: [statistiche, bilancio]
     test_cases:
       - tests/unit/venditeStoriche.test.js
+      - tests/component/OrdersHistory.test.jsx
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
@@ -12139,7 +12158,7 @@ requirements:
       - tests/component/StockCountPanel.test.jsx
   - id: REQ-MAG-048
     title: "Lo storico dei movimenti di un prodotto, diviso per tipo"
-    area: "src/components/InventoryManager.jsx (Movimenti)"
+    area: "src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)"
     description: >
       Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il
       gestionale dovrebbe registrarmi tutte le movimentazioni e
@@ -12152,11 +12171,29 @@ requirements:
       vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un
       prodotto solo, coi movimenti raggruppati per tipo e i totali di
       ciascuno nel periodo.
-    status: todo
-    priority: P2
-    generate_issue: true
+      FATTO (10/10/2026), insieme alle vendite di Tiller («nella
+      movimentazione dal 2024», l'utente il 07/10). Nella scheda di ogni
+      prodotto in Magazzino, «📜 Movimenti» apre la sua movimentazione:
+        · i TOTALI PER TIPO nel periodo (30 giorni, 90, un anno, tutto):
+          consegna ordine fornitore, carico diretto, carico da fattura,
+          contenuto reale, chiusura inventario, vendite dell'app (ordini,
+          modifiche e storni insieme), vendite su Tiller, altre correzioni;
+          tutto nell'unità della giacenza, col segno;
+        · il VENDUTO MESE PER MESE, app e Tiller affiancati;
+        · l'elenco dei movimenti, dal più recente.
+      I movimenti si leggono per prodotto e per il solo periodo scelto
+      (indice composto item_id + created_at): un distillato accumula
+      migliaia di scarichi l'anno. Le vendite di Tiller non sono movimenti — non
+      hanno toccato le giacenze — e vengono dal riassunto che l'import
+      scrive per ogni prodotto, con le RICETTE ATTUALI delle voci vendute:
+      è una stima, e per le bottiglie vendute intere coincide col vero.
+    status: implemented
+    generate_issue: false
     labels: [magazzino]
-    test_cases: []
+    priority: P2
+    test_cases:
+      - tests/unit/movimentiProdotto.test.js
+      - tests/component/MovimentiProdotto.test.jsx
   - id: REQ-MAG-049
     title: "Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP"
     area: "src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)"

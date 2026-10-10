@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOrdersBetween,
   fetchVenditeStoriche,
+  fetchSerateStoriche,
   fetchDrinks,
   fetchCashSessions,
   subscribeSettings,
@@ -24,7 +25,7 @@ import {
   extrasBreakdown,
 } from '../lib/stats.js'
 import { fasciaDelLocale } from '../lib/orario.js'
-import { unisciVendite } from '../lib/venditeStoriche.js'
+import { daTiller, serateDaTiller, unisciVendite } from '../lib/venditeStoriche.js'
 import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
@@ -215,11 +216,40 @@ function DailyStats({ sezione = 'serate' }) {
       vivo = false
     }
   }, [])
+  // LE SERATE DI TILLER (REQ-STAT-006): una per giornata, in fondo
+  // all'elenco dopo le chiusure dell'app. Viene dall'indice scritto
+  // all'import, un documento solo.
+  const [serateTiller, setSerateTiller] = useState([])
+  useEffect(() => {
+    let vivo = true
+    fetchSerateStoriche().then((s) => vivo && setSerateTiller(s))
+    return () => {
+      vivo = false
+    }
+  }, [])
+  const sintetiche = useMemo(() => serateDaTiller(serateTiller, sessions, cutoff), [serateTiller, sessions, cutoff])
+  const tutteLeSerate = useMemo(() => [...sessions, ...sintetiche], [sessions, sintetiche])
   // La serata aperta nel dettaglio esiste solo dentro la sua sottosezione.
   const serata = useMemo(
-    () => (sezione === 'serate' && sessions.find((x) => x.id === sessionId)) || null,
-    [sessions, sessionId, sezione]
+    () => (sezione === 'serate' && tutteLeSerate.find((x) => x.id === sessionId)) || null,
+    [tutteLeSerate, sessionId, sezione]
   )
+  // UNA SERATA DI TILLER SI LEGGE DA SOLA: i suoi conti, e basta. Allargare
+  // la finestra fino al 2024 vorrebbe dire scaricare due anni per una sera.
+  const [contiTiller, setContiTiller] = useState(null) // { id, conti }
+  const diTiller = daTiller(serata)
+  const giornoTiller = diTiller ? serata.business_day : null
+  useEffect(() => {
+    if (!giornoTiller) return undefined
+    let vivo = true
+    const g = giornoTiller
+    fetchVenditeStoriche(g, g, { ricorda: false }).then((giornate) => {
+      if (vivo) setContiTiller({ id: g, conti: unisciVendite([], giornate, { drinks, cutoffHour: cutoff, dal: g, al: g }) })
+    })
+    return () => {
+      vivo = false
+    }
+  }, [giornoTiller, drinks, cutoff])
   // E USCENDO SI DIMENTICA: rientrando si riparte dalla lista. Il dettaglio
   // era stato chiuso apposta, e ritrovarcisi dentro vuol dire non sapere più
   // cosa fa la freccia in cima — se sta chiudendo qualcosa che si era aperto
@@ -229,17 +259,25 @@ function DailyStats({ sezione = 'serate' }) {
   }, [sezione])
   // Le righe dell'elenco: costruite da quello che c'è già in mano — nessuna
   // lettura, nessuna attesa fra il tocco e la lista.
-  const righe = useMemo(() => elencoSerate(sessions, orders), [sessions, orders])
+  // Le serate di Tiller coi numeri dell'indice, senza ripassare i conti:
+  // sono quasi mille, e ognuna scorrerebbe tutti gli ordini in mano.
+  const righe = useMemo(
+    () =>
+      [...elencoSerate(sessions, orders), ...elencoSerate(sintetiche, [])].sort((a, b) =>
+        String(b.session.opened_at).localeCompare(String(a.session.opened_at))
+      ),
+    [sessions, sintetiche, orders]
+  )
   // Una serata vecchia può stare fuori dalla finestra già scaricata: allora
   // si allarga, ed è l'UNICO punto in cui si aspetta qualcosa. Succede
   // aprendo il dettaglio di una serata vecchia, mai scorrendo la lista — che
   // per quelle mostra i numeri congelati alla chiusura (vedi serate.js).
   useEffect(() => {
-    if (!serata) return
+    if (!serata || diTiller) return
     const oggi = businessDayKey(new Date(), cutoff)
     const giorni = Math.ceil((Date.parse(oggi) - Date.parse(businessDayKey(serata.opened_at, cutoff))) / 86400000) + 2
     if (Number.isFinite(giorni) && giorni > loadLimit) setLoadLimit(Math.ceil(giorni / 30) * 30)
-  }, [serata, cutoff, loadLimit])
+  }, [serata, diTiller, cutoff, loadLimit])
   // IL «VENDUTO NELLA FASCIA ORARIA» NON HA PIÙ DATE SUE (19/09/2026). Ne
   // aveva un paio, nate quando il periodo qui sopra era un contatore di
   // giornate e non un intervallo: per chiedere «sabato scorso fra le 22 e
@@ -302,7 +340,12 @@ function DailyStats({ sezione = 'serate' }) {
     if (serata) {
       const da = serata.opened_at
       const a = serata.closed_at || new Date().toISOString()
-      ord = orders.filter((o) => o.created_at >= da && o.created_at <= a)
+      // Quelli di Tiller sono già i conti di quella giornata soltanto.
+      ord = diTiller
+        ? contiTiller?.id === serata.business_day
+          ? contiTiller.conti
+          : []
+        : orders.filter((o) => o.created_at >= da && o.created_at <= a)
     } else if (personalizzato) {
       // All'ora: dentro quello che sta fra i due istanti, la fine esclusa.
       ord = istanti ? orders.filter((o) => o.created_at >= istanti.da && o.created_at < istanti.a) : []
@@ -350,7 +393,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions])
+  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
@@ -381,8 +424,9 @@ function DailyStats({ sezione = 'serate' }) {
           ← Chiusure
         </button>
         <p className="muted small" style={{ margin: '8px 0 12px' }}>
-          Serata del {etichettaSerata(serata)} — dall’apertura alla chiusura della cassa,
-          mezzanotte compresa.
+          {diTiller
+            ? `Giornata del ${etichettaSerata(serata)} battuta su Tiller — dal primo conto all’ultimo.`
+            : `Serata del ${etichettaSerata(serata)} — dall’apertura alla chiusura della cassa, mezzanotte compresa.`}
         </p>
         <CorpoStatistiche
           view={view}
@@ -495,12 +539,17 @@ function ElencoSerate({ righe, onApri }) {
               title={
                 r.inCorso
                   ? 'Cassa ancora aperta: i numeri sono quelli di adesso.'
-                  : r.daSnapshot
-                    ? 'Numeri della chiusura di cassa: gli ordini di questa serata sono troppo vecchi per essere qui.'
-                    : undefined
+                  : daTiller(r.session)
+                    ? 'Giornata battuta su Tiller, prima dell’app.'
+                    : r.daSnapshot
+                      ? 'Numeri della chiusura di cassa: gli ordini di questa serata sono troppo vecchi per essere qui.'
+                      : undefined
               }
             >
-              <span className="inv-row-name">{r.giorno}</span>
+              <span className="inv-row-name">
+                {r.giorno}
+                {daTiller(r.session) && <span className="pill small" style={{ marginLeft: 6 }}>Tiller</span>}
+              </span>
               <span className="muted small inv-row-cat">
                 {r.orario}
                 {r.durata ? ` · ${r.durata}` : ''}
