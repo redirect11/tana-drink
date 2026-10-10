@@ -7,7 +7,8 @@
 // - Price e Cost con virgola decimale NON quotata → occupano due colonne
 
 // CSV state-machine: gestisce virgolette, escape "" e campi multilinea.
-export function parseCsv(text) {
+// `sep`: gli export di Tiller usano il punto e virgola (REQ-STAT-006).
+export function parseCsv(text, sep = ',') {
   const rows = []
   let row = []
   let field = ''
@@ -20,7 +21,7 @@ export function parseCsv(text) {
       } else field += ch
     } else if (ch === '"') {
       inQuotes = true
-    } else if (ch === ',') {
+    } else if (ch === sep) {
       row.push(field); field = ''
     } else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++

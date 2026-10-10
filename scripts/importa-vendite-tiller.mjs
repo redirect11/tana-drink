@@ -18,44 +18,17 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { accessToken, client, aCampi, arg, flag } from './lib-firestore.js'
 import { contiDaRighe } from '../src/lib/venditeStoriche.js'
+import { parseCsv } from '../src/lib/carteImport.js'
 
 const PROGETTO = arg('project', 'tana-drink-test')
 const CARTELLA = arg('cartella', 'registrazioni')
 const APPLICA = flag('apply')
 const COLLEZIONE = 'vendite_storiche'
 
-// CSV di Tiller: campi fra virgolette, separati da «;», virgolette doppie
-// per una virgoletta dentro un campo.
+// CSV di Tiller: lo stesso lettore dell'export prodotti SumUp, col punto e
+// virgola. La prima riga sono le intestazioni.
 function leggiCsv(testo) {
-  const righe = []
-  let campo = ''
-  let riga = []
-  let tra = false
-  for (let i = 0; i < testo.length; i++) {
-    const ch = testo[i]
-    if (tra) {
-      if (ch === '"' && testo[i + 1] === '"') {
-        campo += '"'
-        i++
-      } else if (ch === '"') tra = false
-      else campo += ch
-    } else if (ch === '"') tra = true
-    else if (ch === ';') {
-      riga.push(campo)
-      campo = ''
-    } else if (ch === '\n' || ch === '\r') {
-      if (ch === '\r' && testo[i + 1] === '\n') i++
-      riga.push(campo)
-      if (riga.some((c) => c !== '')) righe.push(riga)
-      riga = []
-      campo = ''
-    } else campo += ch
-  }
-  if (campo || riga.length) {
-    riga.push(campo)
-    righe.push(riga)
-  }
-  const [testa, ...dati] = righe
+  const [testa, ...dati] = parseCsv(testo, ';')
   return dati.map((r) => Object.fromEntries(testa.map((h, k) => [h, r[k] ?? ''])))
 }
 

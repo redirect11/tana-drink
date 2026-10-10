@@ -4252,6 +4252,12 @@ body.drawer-open .status-bell-float { display: none; }
   max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 32px);
   overflow-y: auto;
 }
+/* FINESTRA LARGA (REQ-UI-028): toglie il tetto dei 420px; la larghezza la
+   dice chi la apre. Per lo sconto (tasti più grandi) e la ricetta (righe
+   degli ingredienti che non vanno a capo). */
+.confirm-box.larga {
+  max-width: none;
+}
 
 .btn.danger {
   background: linear-gradient(135deg, #c0392b, #e74c3c);

@@ -271,6 +271,8 @@ export function chiusuraDelConto(o) {
     o?.status_times?.[ORDER_STATUSES.ANNULLATO] ||
     o?.paid_at ||
     o?.tempi_conto?.[ORDER_STATUSES.PAGATO] ||
+    // Chiuso impagato (REQ-CASSA-016): il tavolo si è liberato lì.
+    o?.impagato?.at ||
     null
   )
 }

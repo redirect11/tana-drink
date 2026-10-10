@@ -119,6 +119,7 @@ import {
   allServed,
   comandaDivisibile,
   contoChiuso,
+  impagatoAperto,
   nextComandaStatus,
   statiPrimaComanda,
   statoComandaNuova,
@@ -182,7 +183,8 @@ function orderStripClass(o) {
   if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
     return 'pay-annullato'
   if (o.payment_status === 'pagato') return 'pay-pagato'
-  if (o.payment_status === 'parziale') return 'pay-parziale'
+  // Chiuso impagato (REQ-CASSA-016): la striscia dei soldi che mancano.
+  if (o.payment_status === 'parziale' || impagatoAperto(o)) return 'pay-parziale'
   return 'pay-aperto'
 }
 
@@ -2318,9 +2320,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                 <span className="pill pagato small">💳 Pagato</span>
               )}
-              {o.payment_status === 'parziale' && (
+              {o.payment_status === 'parziale' && !impagatoAperto(o) && (
                 <span className="pill ricevuto small" title={`Incassati ${formatPrice(paidAmount(o))}`}>
                   💳 Acconto
+                </span>
+              )}
+              {impagatoAperto(o) && (
+                <span className="pill ricevuto small" title={o.impagato.nota || 'Chiuso senza incasso'}>
+                  🕗 Impagato
                 </span>
               )}
             </span>

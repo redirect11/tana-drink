@@ -93,6 +93,15 @@ export default function ChiudiCassaBox({ by, onClose }) {
           <strong>{formatPrice(recap.contanteAtteso)}</strong>
         </div>
 
+        {/* CHIUSI IMPAGATI (REQ-CASSA-016): non bloccano la chiusura, ma i
+            soldi mancano e va detto quanto. */}
+        {recap.nImpagati > 0 && (
+          <div className="muted small" style={{ marginTop: 10 }}>
+            🕗 {recap.nImpagati} {recap.nImpagati === 1 ? 'conto chiuso impagato' : 'conti chiusi impagati'}:{' '}
+            {formatPrice(recap.impagatoDaRiscuotere)} da riscuotere.
+          </div>
+        )}
+
         {bloccato ? (
           <div className="banner" style={{ marginTop: 10 }}>
             ⛔ Ci sono <strong>{recap.nAperti} conti non pagati</strong> (

@@ -50,6 +50,9 @@ export default function CustomDrinkForm({
   const [inventory, setInventory] = useState([])
   const [showRecipe, setShowRecipe] = useState(initRows.length > 0 || warnNoRecipe)
   const [search, setSearch] = useState('')
+  // L'ingrediente appena aggiunto: è lui, e solo lui, che prende il cursore
+  // per la quantità (REQ-UI-028).
+  const [appenaAggiunto, setAppenaAggiunto] = useState(null)
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
   // (ruolo staff), il form resta usabile senza la sezione ingredienti.
@@ -84,6 +87,7 @@ export default function CustomDrinkForm({
         unit,
       },
     ])
+    setAppenaAggiunto(inv.id)
     setSearch('')
   }
   function setRow(idx, patch) {
@@ -130,9 +134,12 @@ export default function CustomDrinkForm({
 
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
+      {/* PIÙ LARGA DELLE ALTRE FINESTRE (REQ-UI-028, Flavio 10/10/2026):
+          nome, prezzo, nota e una riga per ingrediente con quantità e unità
+          stavano in 420 px, e le righe andavano a capo. */}
       <form
-        className="confirm-box"
-        style={{ maxHeight: '85vh', overflowY: 'auto' }}
+        className="confirm-box larga"
+        style={{ width: 'min(720px, 96vw)', maxHeight: '85vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
@@ -149,7 +156,10 @@ export default function CustomDrinkForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Es. Consumazione, Gin tonic speciale…"
-          autoFocus
+          // SOLO PER UN PRODOTTO NUOVO, dove il nome va scritto comunque. Su
+          // una riga da ritoccare il nome c'è già, e la tastiera aperta
+          // all'avvio copriva metà della ricetta (REQ-UI-028).
+          autoFocus={!initial}
           required
         />
 
@@ -223,7 +233,7 @@ export default function CustomDrinkForm({
                     onChange={(e) => setRow(idx, { qty: e.target.value })}
                     placeholder="Qta"
                     aria-label={`Quantità ${r.name}`}
-                    autoFocus
+                    autoFocus={r.inventory_item_id === appenaAggiunto}
                     style={{ width: 70 }}
                   />
                   <select
