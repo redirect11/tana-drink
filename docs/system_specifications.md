@@ -2552,11 +2552,11 @@ LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per 
 
 DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
 
-IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js: ore effettive per i giorni passati, turni programmati per quelli a venire; un giorno senza ore non ha minimo).
+IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js: ore effettive per i giorni passati, turni programmati per quelli a venire; un giorno senza ore non ha minimo). L'EXTRA DEL SINGOLO GIORNO c'è (10/10/2026, l'utente: «singolo giorno»): nei mesi dell'app si tocca il minimo di un giorno e si scrive l'extra; il minimo diventa paghe + extra, e la finestra dice di cosa è fatto. Sta in `minimi_extra/{YYYY-MM}` ({ giorni: { giornata: euro } }); lo legge chi vede il Bilancio, lo scrive solo l'admin (firestore.rules, isAdmin). Nei mesi dei fogli il minimo è quello di Flavio e non si tocca.
 
-MANCA l'EXTRA messo dall'admin — il valore del singolo giorno e la serie settimanale stesa sul mese, col giorno che vince sulla serie — e il confronto nella schermata della serata.
+NON C'È, per scelta dell'utente lo stesso giorno, la SERIE settimanale stesa sul mese; e manca il confronto nella schermata della serata.
 
-**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`
+**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`, `tests/component/BilancioMesi.test.jsx`
 
 ### Sicurezza
 

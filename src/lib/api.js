@@ -3236,6 +3236,26 @@ export async function fetchVendutoStoricoProdotto(itemId) {
   }
 }
 
+// L'EXTRA DEL MINIMO DI UN MESE (REQ-STAFF-015): { giornata: euro }. Il
+// minimo di un giorno è il costo del personale più questo; lo scrive l'admin
+// da Bilancio → Mesi. In ascolto: scritto, si vede subito (dalla cache, anche
+// senza rete).
+export function subscribeMinimiExtra(mese, cb, onError) {
+  return onSnapshot(
+    doc(db, 'minimi_extra', mese),
+    (snap) => cb(snap.exists() ? snap.data().giorni || {} : {}),
+    onError ?? (() => {})
+  )
+}
+
+// Scrive l'extra di un giorno; vuoto o zero lo toglie. In sottofondo, come
+// ogni gesto: il numero a schermo arriva dall'ascolto qui sopra.
+export function salvaExtraMinimo(mese, giorno, valore) {
+  const n = Number(valore)
+  const campo = Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : deleteField()
+  bgWrite(() => setDoc(doc(db, 'minimi_extra', mese), { giorni: { [giorno]: campo } }, { merge: true }), 'extra del minimo')
+}
+
 // UN MESE DEI FOGLI DI ANALISI DATI (REQ-CASSA-011): minimo e note giorno
 // per giorno, stipendi e spese del mese. null se il foglio quel mese non
 // c'è (prima di gennaio 2025, dopo luglio 2026).

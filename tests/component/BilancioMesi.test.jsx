@@ -11,10 +11,14 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import { businessDayKey } from '../../src/lib/businessDay.js'
+import { spostaGiorno } from '../../src/lib/periodiBilancio.js'
 
 // Il mese che la schermata apre: quello della giornata commerciale di oggi,
 // come la calcola lei (alle 3 di notte del 1° è ancora il mese prima).
 const MESE = businessDayKey(new Date(), 5).slice(0, 7)
+// Il mese prima: senza foglio, è un mese «dell'app».
+const PRIMA = spostaGiorno('mese', `${MESE}-01`, -1).slice(0, 7)
+const salvato = vi.hoisted(() => ({ chiamate: [] }))
 
 vi.mock('../../src/lib/api.js', () => ({
   settingsIniziali: () => ({ business_day_cutoff_hour: 5, sale_vat: 10 }),
@@ -32,6 +36,11 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribeStaffHoursRange: () => () => {},
   subscribeStaffShiftsRange: () => () => {},
   fetchVenditeStoriche: async () => [],
+  subscribeMinimiExtra: (mese, cb) => {
+    cb(mese === PRIMA ? { [`${PRIMA}-03`]: 400 } : {})
+    return () => {}
+  },
+  salvaExtraMinimo: (...args) => salvato.chiamate.push(args),
   fetchOrdersBetween: vi.fn(async () => [
     { status: 'pagato', created_at: `${MESE}-01T20:00:00.000Z`, total: 400, discount_amount: 0, order_items: [] },
   ]),
@@ -75,5 +84,24 @@ describe('Bilancio → Mesi', () => {
     await screen.findByText('I SETT')
     await user.click(screen.getByRole('button', { name: 'Mese precedente' }))
     expect(api.fetchFoglioMese).toHaveBeenLastCalledWith(expect.not.stringContaining(MESE))
+  })
+
+  // REQ-STAFF-015: nei mesi dell'app il minimo si tocca per scriverne
+  // l'extra; quello dei fogli no.
+  it('nei mesi dell’app si tocca il minimo e si scrive l’extra del giorno', async () => {
+    const user = userEvent.setup()
+    render(<MesiBilancio />)
+    await screen.findByText('I SETT')
+    // Il giorno 1 ha il minimo del foglio: non si tocca.
+    expect(screen.queryByRole('button', { name: /Extra del minimo, \w+ 1$/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Mese precedente' }))
+    const giorno = await screen.findByRole('button', { name: /Extra del minimo, \w+ 3$/ })
+    expect(giorno).toHaveTextContent('400,00')
+    await user.click(giorno)
+    const campo = screen.getByLabelText('Extra (€)')
+    await user.clear(campo)
+    await user.type(campo, '500')
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    expect(salvato.chiamate.at(-1)).toEqual([PRIMA, `${PRIMA}-03`, 500])
   })
 })

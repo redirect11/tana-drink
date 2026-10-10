@@ -34,8 +34,9 @@
   ogni giorno minimo, incassato e differenza, con le note del foglio. Sotto,
   incassi, stipendi, spese, netto, costo del lavoro e prime cost. I fogli da
   gennaio 2025 a luglio 2026 sono importati; nei mesi dell'app il minimo è
-  il costo del personale del giorno, stipendi e spese vengono dalle ore e
-  dai Fornitori.
+  il costo del personale del giorno più l'extra che l'admin scrive toccando
+  il minimo di quel giorno; stipendi e spese vengono dalle ore e dai
+  Fornitori.
 - **Bilancio: «Cosa misura questa tabella»**, a scomparsa in cima a «Mesi»,
   «Venduto × Incassato» e «Acquisti × Fatturato», con la differenza fra le
   ultime due.
