@@ -1199,6 +1199,18 @@ export async function fetchStockMovementsSince(iso) {
   return snap.docs.map(mapMovement)
 }
 
+// I MOVIMENTI DI UN PRODOTTO (REQ-MAG-048) dalla giornata `dal` (null =
+// tutti), dal più recente. Ogni vendita scrive uno scarico per ingrediente:
+// un distillato ne accumula migliaia l'anno, e leggerli tutti per guardarne
+// novanta giorni sarebbe una lettura che cresce ogni mese. Vuole l'indice
+// composto (item_id, created_at) di firestore.indexes.json.
+export async function fetchMovimentiProdotto(itemId, dal = null) {
+  const vincoli = [where('item_id', '==', itemId)]
+  if (dal) vincoli.push(where('created_at', '>=', Timestamp.fromDate(new Date(`${dal}T00:00:00Z`))))
+  const snap = await getDocs(query(movementsCol, ...vincoli, orderBy('created_at', 'desc')))
+  return snap.docs.map(mapMovement)
+}
+
 // I CARICHI DI UN INTERVALLO DI GIORNATE (REQ-MAG-022): carico da Prodotti
 // e da fattura, dal giorno `dal` al giorno `al`. Il Bilancio di quei
 // movimenti usa solo i carichi, e ogni vendita ne scrive uno di scarico per
@@ -3176,8 +3188,10 @@ export async function fetchOrdersBetween(fromDayKey, toDayKey, cutoffHour = DEFA
 // rilegge — le statistiche allargano la finestra a passi di trenta giorni, e
 // ogni passo riscaricava centinaia di giornate. Dopo l'ultimo giorno di
 // Tiller non si legge niente.
+// `ricorda: false` per una lettura piccola (una serata): non deve buttare
+// via la finestra larga che le altre schermate hanno già scaricato.
 let storicoInMano = null // { da, a, giornate }
-export async function fetchVenditeStoriche(fromDayKey, toDayKey) {
+export async function fetchVenditeStoriche(fromDayKey, toDayKey, { ricorda = true } = {}) {
   const da = shiftDay(fromDayKey, -1)
   const a = shiftDay(toDayKey, 1)
   if (da > ULTIMO_GIORNO_TILLER) return []
@@ -3188,10 +3202,37 @@ export async function fetchVenditeStoriche(fromDayKey, toDayKey) {
       query(collection(db, 'vendite_storiche'), where('giorno', '>=', da), where('giorno', '<=', a))
     )
     const giornate = snap.docs.map((d) => ({ giorno: d.data().giorno, conti: d.data().conti || [] }))
-    storicoInMano = { da, a, giornate }
+    if (ricorda) storicoInMano = { da, a, giornate }
     return giornate
   } catch {
     return []
+  }
+}
+
+// LE SERATE DI TILLER (REQ-STAT-006), per «Statistiche → Per serata»: un
+// documento solo, l'indice che l'import scrive accanto alle giornate
+// ([{ giorno, aperto, chiuso, incassato, conti }]). Dati fermi: letto una
+// volta, resta in mano.
+let serateStoriche = null
+export async function fetchSerateStoriche() {
+  if (serateStoriche) return serateStoriche
+  try {
+    const snap = await getDoc(doc(db, 'vendite_storiche', '_indice'))
+    serateStoriche = snap.exists() ? snap.data().serate || [] : []
+  } catch {
+    return []
+  }
+  return serateStoriche
+}
+
+// IL VENDUTO DI TILLER DI UN PRODOTTO DI MAGAZZINO (REQ-MAG-048): { giornata:
+// quantità } nell'unità della giacenza, stimato dalle ricette all'import.
+export async function fetchVendutoStoricoProdotto(itemId) {
+  try {
+    const snap = await getDoc(doc(db, 'vendite_storiche_prodotti', itemId))
+    return snap.exists() ? snap.data().giorni || {} : {}
+  } catch {
+    return {}
   }
 }
 

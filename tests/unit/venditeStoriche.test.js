@@ -6,6 +6,9 @@ import {
   istanteTiller,
   numeroTiller,
   unisciVendite,
+  indiceSerate,
+  serateDaTiller,
+  vendutoPerProdotto,
 } from '../../src/lib/venditeStoriche.js'
 import { orderNet } from '../../src/lib/eta.js'
 
@@ -132,5 +135,52 @@ describe('app e Tiller insieme, un sistema per giornata', () => {
       { dal: '2026-08-01', al: '2026-08-31' }
     )
     expect(tutti.map((o) => o.created_at)).toEqual(['2026-08-01T21:00:00.000Z'])
+  })
+})
+
+// I due riassunti che l'import scrive accanto alle giornate: le schermate
+// leggono quelli, non le quasi mille giornate.
+describe('i riassunti dell’import', () => {
+  const conto = (id, aperto, chiuso, righe) => ({ id, aperto, chiuso, righe })
+  const giorni = new Map([
+    [
+      '2024-06-01',
+      [
+        conto('A', '2024-06-01T19:00:00.000Z', '2024-06-01T19:30:00.000Z', [{ nome: 'CERES', qty: 2, prezzo: 4, sconto: 0, incasso: 8 }]),
+        conto('B', '2024-06-01T22:00:00.000Z', '2024-06-01T23:10:00.000Z', [{ nome: 'GIN TONIC', voce: 'GIN TONIC (VETRO)', qty: 1, prezzo: 6, sconto: 0, incasso: 6 }]),
+      ],
+    ],
+    // L'una di notte del 2 giugno, ora italiana: è ancora la serata del 1°.
+    ['2024-06-02', [conto('C', '2024-06-01T23:00:00.000Z', '2024-06-01T23:20:00.000Z', [{ nome: 'CERES', qty: 1, prezzo: 4, sconto: 0, incasso: 4 }])]],
+  ])
+
+  it('una serata per giornata commerciale, dal primo conto all’ultimo', () => {
+    expect(indiceSerate(giorni)).toEqual([
+      { giorno: '2024-06-01', aperto: '2024-06-01T19:00:00.000Z', chiuso: '2024-06-01T23:20:00.000Z', incassato: 18, conti: 3 },
+    ])
+  })
+
+  // Un giorno con una chiusura vera dell'app la tiene lei.
+  it('le serate di Tiller diventano chiusure, tranne dove c’è già quella dell’app', () => {
+    const serate = indiceSerate(giorni)
+    const [s] = serateDaTiller(serate, [])
+    expect(s).toMatchObject({ id: 'tiller:2024-06-01', origine: 'tiller', snapshot: { incassato: 18, nPagati: 3 } })
+    expect(serateDaTiller(serate, [{ opened_at: '2024-06-01T17:00:00.000Z' }])).toEqual([])
+  })
+
+  // Dalle voci vendute agli ingredienti con le ricette, nell'unità della
+  // giacenza: 3 Ceres a bottiglia e 5 cl di gin da una bottiglia da 70.
+  it('il venduto per prodotto di magazzino, giorno per giorno', () => {
+    const drinks = [
+      { id: 'ceres', name: 'CERES', recipe_items: [{ inventory_item_id: 'b-ceres', unit: 'pz', qty: 1 }] },
+      { id: 'gtv', name: 'GIN TONIC (VETRO)', recipe_items: [{ inventory_item_id: 'gin', unit: 'ml', qty: 50 }] },
+    ]
+    const items = [
+      { id: 'b-ceres', unit: 'pz' },
+      { id: 'gin', unit: 'pz', package_size: 700, content_unit: 'ml' },
+    ]
+    const v = vendutoPerProdotto(giorni, { drinks, items })
+    expect(v.get('b-ceres')).toEqual({ '2024-06-01': 3 })
+    expect(v.get('gin')).toEqual({ '2024-06-01': 0.0714 })
   })
 })

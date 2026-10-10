@@ -282,6 +282,11 @@ service cloud.firestore {
       allow read: if isBartender();
       allow write: if false;
     }
+    // Il venduto di Tiller per prodotto di magazzino: stesso discorso.
+    match /vendite_storiche_prodotti/{itemId} {
+      allow read: if isBartender();
+      allow write: if false;
+    }
 
     // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
     match /stock_counts/{countId} {

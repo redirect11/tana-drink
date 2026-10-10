@@ -136,6 +136,20 @@ export function aValore(v) {
 }
 export const aCampi = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, aValore(v)]))
 
+// E all'inverso: un documento della REST in un oggetto JavaScript.
+export function daValore(v) {
+  if (!v || 'nullValue' in v) return null
+  if ('booleanValue' in v) return v.booleanValue
+  if ('integerValue' in v) return Number(v.integerValue)
+  if ('doubleValue' in v) return v.doubleValue
+  if ('stringValue' in v) return v.stringValue
+  if ('timestampValue' in v) return v.timestampValue
+  if ('arrayValue' in v) return (v.arrayValue.values || []).map(daValore)
+  if ('mapValue' in v) return daCampi(v.mapValue.fields)
+  return null
+}
+export const daCampi = (fields) => Object.fromEntries(Object.entries(fields || {}).map(([k, v]) => [k, daValore(v)]))
+
 // Legge un argomento da riga di comando: --nome valore
 export function arg(nome, fallback = null) {
   const i = process.argv.indexOf(`--${nome}`)

@@ -16,8 +16,8 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { accessToken, client, aCampi, arg, flag } from './lib-firestore.js'
-import { contiDaRighe } from '../src/lib/venditeStoriche.js'
+import { accessToken, client, aCampi, daCampi, idDi, arg, flag } from './lib-firestore.js'
+import { contiDaRighe, indiceSerate, vendutoPerProdotto } from '../src/lib/venditeStoriche.js'
 import { parseCsv } from '../src/lib/carteImport.js'
 
 const PROGETTO = arg('project', 'tana-drink-test')
@@ -66,5 +66,24 @@ const db = client(PROGETTO, await accessToken())
 const scritture = giorni.map((g) =>
   db.scriviDoc(COLLEZIONE, g, aCampi({ giorno: g, fonte: 'tiller', conti: perGiorno.get(g) }))
 )
+
+// I DUE RIASSUNTI (vedi lib/venditeStoriche.js). L'indice delle serate sta
+// nella stessa raccolta, senza `giorno`: le letture per periodo non lo
+// prendono. Il venduto per prodotto usa le ricette e i prodotti del
+// progetto in cui si scrive.
+const serate = indiceSerate(perGiorno)
+scritture.push(db.scriviDoc(COLLEZIONE, '_indice', aCampi({ fonte: 'tiller', serate })))
+const leggi = async (c) => (await db.documenti(c)).map((d) => ({ id: idDi(d), ...daCampi(d.fields) }))
+const [drinks, items] = await Promise.all([leggi('drinks'), leggi('inventory_items')])
+const venduto = vendutoPerProdotto(perGiorno, { drinks, items })
+const PRODOTTI = 'vendite_storiche_prodotti'
+const prima = (await db.documenti(PRODOTTI, { campi: ['__name__'] })).map(idDi)
+for (const [itemId, giorniProdotto] of venduto) {
+  scritture.push(db.scriviDoc(PRODOTTI, itemId, aCampi({ item_id: itemId, fonte: 'tiller', giorni: giorniProdotto })))
+}
+// Un prodotto che non risulta più venduto (ricetta cambiata) non tiene il
+// riassunto di prima.
+for (const id of prima.filter((id) => !venduto.has(id))) scritture.push(db.cancellaDoc(PRODOTTI, id))
+
 await db.commit(scritture)
-console.log(`[tiller] Fatto su "${PROGETTO}": ${scritture.length} giorni scritti in ${COLLEZIONE}.`)
+console.log(`[tiller] Fatto su "${PROGETTO}": ${giorni.length} giorni in ${COLLEZIONE}, ${serate.length} serate nell'indice, ${venduto.size} prodotti in ${PRODOTTI}.`)
