@@ -190,6 +190,13 @@ export default function CashFlow() {
           <strong>{formatPrice(recap.apertoDaIncassare)}</strong>
         </div>
       )}
+      {/* Chiusi impagati (REQ-CASSA-016): non bloccano la cassa, ma mancano. */}
+      {recap.nImpagati > 0 && (
+        <div className="card row between" style={{ alignItems: 'center' }}>
+          <span className="muted">🕗 Da riscuotere · {recap.nImpagati} chiusi impagati</span>
+          <strong>{formatPrice(recap.impagatoDaRiscuotere)}</strong>
+        </div>
+      )}
 
       {/* Andamento per ora */}
       {recap.perOra.length > 0 && (

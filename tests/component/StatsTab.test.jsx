@@ -14,7 +14,7 @@
 // La serata è la finestra di una chiusura di cassa: scavalca la mezzanotte e
 // quindi non coincide con la giornata solare.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor, act, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
@@ -80,8 +80,14 @@ const sessioni = [
   },
 ]
 
+// LO STORICO DI TILLER (REQ-STAT-006): vuoto, tranne dove una prova lo
+// riempie. Sta fuori dal mock perché lo si cambia prova per prova.
+const tiller = vi.hoisted(() => ({ serate: [], giornate: [] }))
+
 vi.mock('../../src/lib/api.js', () => ({
   fetchOrdersBetween: vi.fn(async () => ordini),
+  fetchVenditeStoriche: vi.fn(async () => tiller.giornate),
+  fetchSerateStoriche: vi.fn(async () => tiller.serate),
   fetchDrinks: vi.fn(async () => [
     { id: 'd1', name: 'Negroni', category: 'COCKTAIL' },
     { id: 'd2', name: 'Amaro della casa', category: 'AMARI' },
@@ -422,5 +428,56 @@ describe('Statistiche: la cassa ancora aperta', () => {
     const righe = screen.getAllByRole('button')
     expect(righe[0].textContent).toMatch(/in corso/)
     expect(righe[0].textContent).toMatch(/09\/08/)
+  })
+})
+
+// LE SERATE DI TILLER (REQ-STAT-006). L'utente, 10/10/2026: i dati di
+// Tiller «devono essere visibili anche tramite le schermate attuali». Ogni
+// giornata di Tiller è una serata dell'elenco, dopo le chiusure dell'app.
+describe('Statistiche per serata: le giornate di Tiller', () => {
+  beforeEach(() => {
+    tiller.serate = [
+      { giorno: '2024-06-01', aperto: '2024-06-01T19:00:00.000Z', chiuso: '2024-06-01T23:20:00.000Z', incassato: 18, conti: 2 },
+    ]
+    tiller.giornate = [
+      {
+        giorno: '2024-06-01',
+        conti: [
+          {
+            id: 'T1',
+            aperto: '2024-06-01T19:00:00.000Z',
+            chiuso: '2024-06-01T19:30:00.000Z',
+            righe: [{ nome: 'CERES', qty: 3, prezzo: 4, sconto: 0, incasso: 12 }],
+          },
+          {
+            id: 'T2',
+            aperto: '2024-06-01T22:00:00.000Z',
+            chiuso: '2024-06-01T23:20:00.000Z',
+            righe: [{ nome: 'NEGRONI', qty: 1, prezzo: 6, sconto: 0, incasso: 6 }],
+          },
+        ],
+      },
+    ]
+  })
+  afterEach(() => {
+    tiller.serate = []
+    tiller.giornate = []
+  })
+
+  it('stanno nell’elenco, segnate «Tiller», coi numeri della giornata', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    const riga = (await screen.findByText('Tiller')).closest('button')
+    expect(riga.textContent.replace(/\s+/g, ' ')).toMatch(/2 conti/)
+    expect(riga.textContent).toMatch(/18,00/)
+  })
+
+  it('aperta, mostra le statistiche dei suoi conti', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click((await screen.findByText('Tiller')).closest('button'))
+    expect(await screen.findByText(paragrafo(/battuta su Tiller/i))).toBeTruthy()
+    expect((await screen.findAllByText(/18,00/)).length).toBeGreaterThan(0)
   })
 })

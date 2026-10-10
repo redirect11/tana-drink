@@ -80,6 +80,7 @@ import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
+import MovimentiProdotto from './MovimentiProdotto.jsx'
 import ControlloMagazzino from './ControlloMagazzino.jsx'
 import { controlloMagazzinoVisibile } from '../lib/prova.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -421,6 +422,10 @@ function ProductsPanel() {
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
   const [rettificaFor, setRettificaFor] = useState(null)
+  // Il prodotto di cui si guarda la movimentazione (REQ-MAG-048): una
+  // finestra per la pagina, che il tasto indietro chiude come la scheda.
+  const [movimentiDi, setMovimentiDi] = useState(null)
+  useChiudiConIndietro(!!movimentiDi, () => setMovimentiDi(null))
 
   // QUELLO CHE TI RITROVI A FINE SERATA. I conti ancora aperti hanno già
   // promesso degli ingredienti: si guardano gli ordini e il listino e si
@@ -702,6 +707,11 @@ function ProductsPanel() {
               elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
               prodotto quasi uguale a questo — e a fianco dell'elimina si
               ragiona due volte prima di premere. */}
+          {/* LA MOVIMENTAZIONE DEL PRODOTTO (REQ-MAG-048): si guarda, non si
+              tocca niente — anche col magazzino bloccato. */}
+          <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
+            📜 Movimenti
+          </button>
           <div className="inv-azioni" style={{ marginTop: 6 }}>
             <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
             <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
@@ -946,6 +956,7 @@ function ProductsPanel() {
             }}
           />
         )}
+        {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
         <ItemForm
           initial={editing === 'new' ? null : editing}
           categories={categories}

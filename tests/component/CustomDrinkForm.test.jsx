@@ -5,7 +5,7 @@
 // scarico), ingredienti opzionali cercandoli per nome (niente tendina).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -145,5 +145,41 @@ describe('prodotto libero', () => {
         qty: toBaseQty(5, 'cl'),
       },
     ])
+  })
+})
+
+// REQ-UI-028 (10/10/2026): «non aprire tastiera all'avvio di schermata
+// ricetta». Su un tablet il cursore in una casella apre la tastiera, che
+// copriva metà della ricetta da ritoccare.
+describe('la tastiera all’apertura', () => {
+  const RIGA = {
+    name: 'Mojito',
+    price: 8,
+    recipe_items: [
+      { inventory_item_id: 'rum', name: 'Rum bianco', unit: 'ml', qty: 40 },
+      { inventory_item_id: 'menta', name: 'Menta', unit: 'pz', qty: 1 },
+    ],
+  }
+
+  it('ritoccando una riga nessuna casella prende il cursore', async () => {
+    render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={RIGA} />)
+    await screen.findByLabelText('Quantità Menta')
+    expect(document.activeElement?.tagName).not.toBe('INPUT')
+  })
+
+  // Un prodotto libero nuovo il nome lo deve scrivere comunque.
+  it('per un prodotto libero nuovo il cursore va sul nome', async () => {
+    mount()
+    // Si lascia arrivare l'elenco del magazzino, che il form chiede aprendosi.
+    await act(async () => {})
+    expect(document.activeElement).toBe(screen.getByLabelText(/Nome/))
+  })
+
+  it('il cursore va sulla quantità dell’ingrediente appena aggiunto, non sulle altre', async () => {
+    const user = userEvent.setup()
+    render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={{ ...RIGA, recipe_items: [RIGA.recipe_items[1]] }} />)
+    await user.type(await screen.findByPlaceholderText(/Cerca/), 'rum')
+    await user.click(await screen.findByRole('button', { name: /Rum bianco/ }))
+    expect(document.activeElement).toBe(screen.getByLabelText('Quantità Rum bianco'))
   })
 })

@@ -15,6 +15,8 @@ import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { useResizable } from '../lib/useResizable.js'
 import { allServed } from '../lib/comande.js'
+import { chiudiImpagato } from '../lib/api.js'
+import { patchImpagato } from '../lib/impagato.js'
 import { activeVouchers } from '../lib/vouchers.js'
 import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
@@ -95,7 +97,7 @@ const digitsToEuro = (s) => (parseInt(s || '0', 10) || 0) / 100
 // `resolveOrderId` (opzionale): quando la schermata si apre PRIMA che
 // l'ordine esista sul server (pagamento diretto dal POS), le azioni
 // aspettano qui l'id reale — la UI intanto è già piena e reattiva.
-export default function PaymentScreen({ order: orderProp, settings, onClose, onPaid, onBeforePay, onError, resolveOrderId }) {
+export default function PaymentScreen({ order: orderProp, settings, onClose, onPaid, onBeforePay, onError, resolveOrderId, chi = null }) {
   const online = useOnline()
   // Chiusura per pagamento COMPLETATO (non semplice annulla): chiude e avvisa
   // il chiamante, che può tornare alla coda ordini.
@@ -103,8 +105,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // la registrazione va in background, quindi in questo istante l'ordine non
   // sa ancora com'è stato pagato — e lo scontrino usciva "Contante" anche per
   // una carta di credito. Qui glielo si dice.
-  const closePaid = (incasso = null, { senzaStampa = false } = {}) => {
-    const perStampa = incasso
+  // `impagato` (REQ-CASSA-016): il conto si chiude senza incasso, e lo
+  // scontrino esce con la nota in grande — sempre, anche con l'auto-stampa
+  // spenta: la nota è la ragione per cui si stampa.
+  const closePaid = (incasso = null, { senzaStampa = false, impagato = null } = {}) => {
+    const perStampa = impagato
+      ? { ...order, impagato }
+      : incasso
       ? {
           ...order,
           payments: [
@@ -133,13 +140,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         // conto interno. Non si prende nemmeno la pretesa: se il conto
         // verrà riaperto e riscosso normale, la stampa esce come sempre.
         !senzaStampa &&
-        loadPrinterSettings().autoPrintScontrino &&
+        (impagato || loadPrinterSettings().autoPrintScontrino) &&
         // Il segno sta SUL DATO: un altro terminale l'ha già stampato e qui
         // non esce la seconda copia.
         !scontrinoGiaUscito(order)
       ) {
         if (order.id) {
-          if (incasso ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id)) {
+          if (incasso || impagato ? reclaimReceiptPrint(order.id) : claimReceiptPrint(order.id)) {
             printScontrino(perStampa)
               // Il segno sul conto va scritto A CARTA USCITA: prima vorrebbe
               // dire che una stampa fallita zittisce tutti i terminali.
@@ -184,6 +191,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     onClose()
   }
   const [error, setError] = useState(null)
+  // La finestra dell'impagato, con la nota che si sta scrivendo.
+  const [impagatoAperta, setImpagatoAperta] = useState(false)
+  const [notaImpagato, setNotaImpagato] = useState('')
   // Sconto OTTIMISTICO: applicato subito a schermo, server in background.
   const [optimisticDisc, setOptimisticDisc] = useState(null) // { disc, amount, items }
   const order = useMemo(
@@ -657,6 +667,27 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         onError?.(`Ricevuta d'acconto non stampata: ${e.message}`)
       })
     }
+  }
+
+  // ── CHIUSO IMPAGATO (REQ-CASSA-016) ──────────────────────────────────
+  // Come contante e carta: il conto si chiude SUBITO a schermo e la
+  // scrittura va in sottofondo; se non riesce lo si dice nel dettaglio.
+  const confermaImpagato = () => {
+    const nota = notaImpagato.trim() || null
+    const chiSono = chi?.() ?? null
+    // Lo stesso segno che scrive l'api, per lo scontrino che esce adesso.
+    const { impagato } = patchImpagato(order, { nowIso: new Date().toISOString(), nota, chi: chiSono })
+    ;(async () => {
+      try {
+        await onBeforePay?.()
+        await chiudiImpagato(await orderId(), { nota, chi: chiSono })
+      } catch (e) {
+        setError(e.message)
+        onError?.(`Chiusura impagato non registrata: ${e.message}`)
+      }
+    })()
+    setImpagatoAperta(false)
+    closePaid(null, { impagato })
   }
 
   // ── Sconto dal tastierino della modale ──
@@ -1255,6 +1286,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             )
           })}
 
+          {/* SOTTO CONTANTE, CARTA E SUMUP (REQ-CASSA-016): un modo di chiudere
+              il conto, non un metodo di pagamento — quindi un tasto a parte,
+              che apre la sua finestra invece di diventare il metodo scelto. */}
+          {!closed && due > 0 && (
+            <button type="button" className="payscreen-method" onClick={() => setImpagatoAperta(true)}>
+              🕗 Impagato
+            </button>
+          )}
+
           <div style={{ marginTop: 'auto' }}>
             {!closed && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
@@ -1266,14 +1306,45 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         </div>
       </div>
 
+      {/* ── Modale IMPAGATO (REQ-CASSA-016) ── */}
+      {impagatoAperta && (
+        <div className="overlay confirm-overlay" onClick={() => setImpagatoAperta(false)}>
+          <div className="confirm-box" role="dialog" aria-label="Chiudi impagato" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>🕗 Chiudi impagato</h3>
+            <p className="muted small" style={{ margin: '0 0 10px' }}>
+              Il conto si chiude senza incasso: {formatPrice(due)} restano da riscuotere. Le comande risultano
+              servite. Per incassarlo in seguito si riapre il conto e si riscuote.
+            </p>
+            <label htmlFor="nota-impagato">Note (stampate in grande sullo scontrino)</label>
+            <textarea
+              id="nota-impagato"
+              rows={3}
+              value={notaImpagato}
+              onChange={(e) => setNotaImpagato(e.target.value)}
+              placeholder="Es. paga Mario domani"
+            />
+            <div className="row" style={{ gap: 8, marginTop: 12 }}>
+              <button type="button" className="btn ghost grow" onClick={() => setImpagatoAperta(false)}>
+                Annulla
+              </button>
+              <button type="button" className="btn grow" onClick={confermaImpagato}>
+                Chiudi impagato
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Modale SCONTO: tastierino come quello del pagamento ── */}
       {showDiscount && (
         <div className="overlay confirm-overlay" onClick={() => setShowDiscount(false)}>
           <div
-            className="confirm-box"
+            className="confirm-box larga"
             role="dialog"
             aria-label="Sconto"
-            style={{ width: 'min(320px, 94vw)' }}
+            // Più larga (REQ-UI-028, Flavio 10/10/2026): a 320 px i tasti
+            // del tastierino erano piccoli per un dito, col tablet in mano.
+            style={{ width: 'min(520px, 94vw)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
