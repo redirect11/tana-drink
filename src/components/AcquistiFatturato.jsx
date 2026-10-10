@@ -17,6 +17,7 @@ import { VISTE, colonneDelBilancio, nomeDelPeriodo, spostaGiorno } from '../lib/
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
 import GruppoChip from './GruppoChip.jsx'
+import Soffietto from './Soffietto.jsx'
 
 // BILANCIO → ACQUISTI × FATTURATO (REQ-MAG-022): il foglio «RAPPORTI
 // ACQUISTI» di Flavio, per anno, mese, settimana o giorno. Il conto sta in
@@ -135,6 +136,8 @@ export default function AcquistiFatturato() {
         </button>
       </div>
 
+      <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
+
       {!report && <div className="empty">Calcolo acquisti e fatturato…</div>}
 
       {report && fissi.macros.length === 0 && (
@@ -155,25 +158,35 @@ export default function AcquistiFatturato() {
             righe={RIGHE}
             incidenzaLabel={VISTE.find((v) => v.id === vista).incidenza}
           />
-          <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
         </>
       )}
     </div>
   )
 }
 
-// Le parole della tabella e le sue avvertenze, nel registro del gestionale
-// (DESIGN.md, guardrail 3): le legge il gestore.
+// COSA MISURA LA TABELLA, A SCOMPARSA IN CIMA (REQ-UI-029): la domanda, la
+// differenza con «Venduto × Incassato», le parole e le avvertenze. Nel
+// registro del gestionale (DESIGN.md, guardrail 3): la legge il gestore.
 function Spiegazione({ lordo, saleVat }) {
   return (
-    <div className="card">
+    <Soffietto titolo="Cosa misura questa tabella">
       <Didascalia>
-        <strong>Acquisti</strong>: merce entrata nel periodo — consegne degli ordini fornitore alla data di
-        consegna e carichi diretti — ripartita secondo le quote dei prodotti. <strong>Fatturato</strong>:
-        incassato delle voci di menù della macro, sconti compresi, ripartito secondo le quote delle voci.{' '}
+        <strong>Quanto si spende in merce rispetto a quanto si fattura.</strong> È il foglio «Rapporti acquisti»:
+        per ogni macro-categoria il fatturato del periodo e la merce entrata nello stesso periodo — consegne
+        degli ordini fornitore alla data di consegna e carichi diretti — ripartita secondo le quote dei
+        prodotti. Il fatturato è l’incassato delle voci di menù, sconti compresi, secondo le quote delle voci.
+      </Didascalia>
+      <Didascalia>
+        <strong>Differenza con «Venduto × Incassato».</strong> Qui conta la merce <strong>entrata</strong>,
+        quando entra, venduta o no; là il costo della merce <strong>venduta</strong>, dalle ricette. Trenta casse
+        di birra comprate a giugno per l’estate qui pesano tutte su giugno, che sembra in perdita, e luglio
+        sembra in forte attivo; là pesano solo le birre vendute, mese per mese. Per il margine di ciò che si
+        vende: «Venduto × Incassato». Per quanto esce per comprare: questa.
+      </Didascalia>
+      <Didascalia>
         <strong>Utile</strong>: fatturato − acquisti. <strong>Fat/Acq</strong>: fatturato ÷ acquisti.{' '}
-        <strong>Incidenza</strong>: quota dell’utile della macro sulla somma degli utili della colonna. In fondo,
-        l’incidenza di ogni colonna sul fatturato del periodo.
+        <strong>Incidenza</strong>: quota dell’utile della macro sulla somma degli utili della colonna. In
+        fondo, l’incidenza di ogni colonna sul fatturato del periodo.
       </Didascalia>
       <Didascalia>
         {lordo ? (
@@ -187,10 +200,10 @@ function Spiegazione({ lordo, saleVat }) {
             voce), acquisti al costo senza IVA.
           </>
         )}{' '}
-        Gli acquisti pesano sul periodo in cui la merce è entrata, non su quello in cui si consuma. I dati
-        partono da quando ordini fornitore e carichi sono registrati nell’app: lo storico del foglio non è
-        importato.
+        Gli acquisti ci sono da quando ordini fornitore e carichi passano dall’app (agosto 2026): per gli anni
+        di Tiller c’è il fatturato ma non gli acquisti, e l’utile di quei mesi non è un utile. Lo storico del
+        foglio non è importato.
       </Didascalia>
-    </div>
+    </Soffietto>
   )
 }

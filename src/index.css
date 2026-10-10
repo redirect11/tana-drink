@@ -4259,6 +4259,17 @@ body.drawer-open .status-bell-float { display: none; }
   max-width: none;
 }
 
+/* SPIEGAZIONE A SCOMPARSA in cima a una tabella (REQ-UI-029): chiusa, è
+   una riga sola; aperta, il testo della didascalia. */
+.soffietto summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.soffietto[open] summary {
+  margin-bottom: 4px;
+}
+
 .btn.danger {
   background: linear-gradient(135deg, #c0392b, #e74c3c);
   color: white;

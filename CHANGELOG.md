@@ -30,6 +30,15 @@
   storico, scelto un periodo, compaiono segnati «Tiller» e si leggono in
   sola lettura; nelle statistiche ogni giornata di Tiller è una serata
   dell'elenco.
+- **Bilancio → Mesi.** Il mese come i fogli di analisi: per settimane, e per
+  ogni giorno minimo, incassato e differenza, con le note del foglio. Sotto,
+  incassi, stipendi, spese, netto, costo del lavoro e prime cost. I fogli da
+  gennaio 2025 a luglio 2026 sono importati; nei mesi dell'app il minimo è
+  il costo del personale del giorno, stipendi e spese vengono dalle ore e
+  dai Fornitori.
+- **Bilancio: «Cosa misura questa tabella»**, a scomparsa in cima a «Mesi»,
+  «Venduto × Incassato» e «Acquisti × Fatturato», con la differenza fra le
+  ultime due.
 - **Magazzino: la movimentazione di ogni prodotto.** Dalla scheda del
   prodotto, «📜 Movimenti»: i totali per tipo (consegne d'ordine, carichi,
   contenuto reale, chiusure d'inventario, vendite), il venduto mese per

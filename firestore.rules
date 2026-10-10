@@ -282,6 +282,11 @@ service cloud.firestore {
       allow read: if isBartender();
       allow write: if false;
     }
+    // I fogli mensili di ANALISI DATI (REQ-CASSA-011): stesso discorso.
+    match /mesi_storici/{mese} {
+      allow read: if isBartender();
+      allow write: if false;
+    }
     // Il venduto di Tiller per prodotto di magazzino: stesso discorso.
     match /vendite_storiche_prodotti/{itemId} {
       allow read: if isBartender();

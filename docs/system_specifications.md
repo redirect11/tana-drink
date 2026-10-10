@@ -22,13 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 216 | fatto e coperto dai test |
+| ✅ | 218 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 22 | da fare |
+| 🟡 | 1 | fatto a metà |
+| ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**261 voci** in tutto. **231** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **22** sono lavori
+**262 voci** in tutto. **234** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -48,17 +49,17 @@ come «vero oggi», non come «garantito».
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 46 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 14 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 3 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 12 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 25 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 5 | — |  |
 | [LIC](#lic) | 1 | — |  |
@@ -2029,6 +2030,40 @@ FATTO (19/08). La pagina c'è, con le sue tre sottosezioni nel menu («Mesi», �
 
 **Dove**: `src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)` · **Lo dimostrano**: `tests/component/BilancioTab.test.jsx`, `tests/unit/sezioni.test.js`, `tests/component/StaffDrawer.test.jsx`
 
+#### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
+
+DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per intero in REQ-STAFF-015). Si sceglie il mese; la tabella è divisa per SETTIMANE come il foglio, e ogni giorno porta tre numeri:
+
+MINIMO (quanto doveva fare), INCASSATO (quanto ha fatto), DIFFERENZA.
+
+SOTTO, I TOTALI DEL MESE: incassi, stipendi, spese, netto = incassi − spese − stipendi. Come nel foglio, con una differenza che pesa:
+
+GLI STIPENDI SI CALCOLANO dalle ore già registrate nell'app (REQ-STAFF-006, ore × paga in vigore quel giorno), NON si ricopiano. Nel foglio quel numero viene battuto a mano da RAPP ORE, ed è già capitato che non torni: giugno 26, il foglio ore dà 3335 e ANALISI DATI dice 3500.
+
+DUE RIGHE DI SINTESI che nel foglio non c'erano:
+
+PRIME COST = costo del venduto + costo del lavoro, in percentuale sugli incassi; e COSTO DEL LAVORO %, il solo lavoro sugli incassi. Sono i due numeri con cui si capisce in mezzo secondo se il mese è andato.
+
+DA DOVE ARRIVANO GLI ALTRI PEZZI: il MINIMO dalla formula decisa lo stesso giorno (REQ-STAFF-015 — somma delle paghe di chi lavora quel giorno più un extra a mano); le SPESE da REQ-CASSA-012, e senza quelle il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata di ieri e non fa saltare il giorno dopo.
+
+LE DIDASCALIE NON SONO UN ABBELLIMENTO: prime cost e costo del lavoro sono le due righe che questa tabella aggiunge al foglio, e sono anche le due che nessuno sa leggere senza che gliele si spieghi. Ognuna porta la sua frase, come vuole REQ-CASSA-010 — compresa quella che dice che la merce è quella calcolata dalle ricette e non gli acquisti del mese.
+
+LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è né l'uno né l'altro: il verso lo dicono il segno e i colori di stato (--ok, --warn), che sono fuori tema apposta.
+
+QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08. Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è l'unico dei due che sta in pari con l'incassato dello stesso mese, e finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto la tabella, così chi confronta col foglio sa in partenza perché non torna. Gli acquisti del mese restano dove stanno — la tabella «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non c'entrano.
+
+DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo restano due colonne su tre). Stipendi e costo del venduto invece ci sono già: REQ-STAFF-006 e REQ-MAG-015.
+
+FATTO (10/10/2026, l'utente: «inizia a fare la schermata mesi»). La tabella è come il foglio: il mese per settimane (1–7, 8–14, 15–21, 22–28 e i giorni che restano, le stesse colonne di «Acquisti × Fatturato»), e per ogni giorno minimo, incassato, differenza, con la nota del foglio sopra il giorno (KARAOKE, GIGLI…). Sotto, il mese: incassi, stipendi, spese, netto, differenza dal minimo, costo del lavoro e prime cost. Spiegazione a scomparsa in cima (REQ-UI-029). I FOGLI SONO IMPORTATI: i diciotto fogli mensili (gennaio 2025 – luglio 2026; manca luglio 2025) stanno in `mesi_storici`, uno per mese, coi minimi e le note di ogni giorno e stipendi e spese del mese. Li estrae scripts/estrai-fogli-mensili.py (Python, che legge l'xlsx) e li scrive scripts/importa-fogli-mensili.mjs.
+
+DA DOVE VIENE OGNI NUMERO: l'INCASSATO sono sempre i conti, per giornata commerciale — dell'app e, fino al 28/08/2026, di Tiller — anche nei mesi del foglio, dove la riga REALE era battuta a mano (e non sempre torna coi conti: giugno 2026, 33.288 nel foglio, 35.388 su Tiller). Il MINIMO nei mesi del foglio è il suo; nei mesi dell'app è il costo del personale del giorno (REQ-STAFF-015): ore effettive per i giorni passati, turni programmati per quelli a venire.
+
+STIPENDI e SPESE nei mesi del foglio sono i suoi (le spese lì comprendono la merce); nei mesi dell'app gli stipendi vengono dalle ore registrate e le spese sono merce fatturata più altre spese, dal Riepilogo di Fornitori (REQ-CASSA-012). Accanto al numero si dice da dove viene. Netto = incassi − stipendi − spese; se manca uno dei due non si mostra. Costo del lavoro e prime cost sono sull'incassato AL NETTO dell'IVA, con la merce dalle ricette (REQ-MAG-015).
+
+LA DIFFERENZA SI COLORA coi colori di stato (--ok, --warn), non col rosso.
+
+**Dove**: `src/lib/bilancioMesi.js, src/components/MesiBilancio.jsx, src/components/BilancioTab.jsx, scripts/estrai-fogli-mensili.py, scripts/importa-fogli-mensili.mjs, src/lib/api.js (fetchFoglioMese), src/lib/paghe.js (tariffePer), src/lib/ore.js (normalizeEntries)` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`, `tests/component/BilancioMesi.test.jsx`
+
 ### Stampa
 
 La stampante termica al banco: comande, scontrini, chiusure di cassa.
@@ -2477,6 +2512,52 @@ SE UN GIORNO SERVE DAVVERO, la strada non è una regola più furba: è spostare 
 
 **Dove**: `src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/coda.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/CodaCorsie.test.jsx`
 
+#### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un foglio suo, diviso in settimane, e per ogni giorno tre righe:
+
+MINIMO (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE − MINIMO. In fondo al mese:
+
+STIPENDI, SPESE, INCASSI (somma dei REALE delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la somma degli scarti.
+
+IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600, sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450 €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb 2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che l'etichetta non viene aggiornata insieme ai minimi.
+
+DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha le ore del mese × la paga oraria, e il totale finisce a mano in ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 = 1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620; mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
+
+COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali, €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti, 5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al giorno): il locale ragiona a giornate, non a ore.
+
+QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i minimi dipendono dalle paghe orarie, più un extra che credo decida Flavio» — non è né confermata né smentita dai file: quella relazione non esiste in nessuna cella. Nei fogli il minimo resta un numero scritto a mano, e questo non cambia: cambia da dove lo prende l'app.
+
+DECISO (19/08, dall'utente che riporta Flavio):
+
+LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
+
+COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
+
+1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
+
+2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
+
+CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
+
+COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
+
+DOVE SI VEDE. Il minimo e il confronto con quello che si è fatto stanno nella tabella «Mesi» della pagina Bilancio (REQ-CASSA-011), giorno per giorno: minimo, incassato, differenza. Nella schermata della serata, accanto all'incasso, quanto manca o quanto avanza. L'obiettivo settimanale si somma dai minimi dei sette giorni invece di essere scritto a parte, così non può più restare indietro come l'etichetta «MEDIA 2450 €/w» del foglio.
+
+PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un giorno futuro ha un minimo solo dove i turni sono già programmati. Dove non lo sono il numero non si mostra, invece di mostrarne uno finto: un obiettivo inventato non lo insegue nessuno.
+
+LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese non esiste.
+
+DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
+
+IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js: ore effettive per i giorni passati, turni programmati per quelli a venire; un giorno senza ore non ha minimo).
+
+MANCA l'EXTRA messo dall'admin — il valore del singolo giorno e la serie settimanale stesa sul mese, col giorno che vince sulla serie — e il confronto nella schermata della serata.
+
+**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`
+
 ### Sicurezza
 
 Regole di accesso, App Check, e cosa protegge cosa.
@@ -2813,6 +2894,12 @@ LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome c'è già, e
 
 **Dove**: `src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
 
+#### REQ-UI-029 — Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima
+
+L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto × Incassato» e «Acquisti × Fatturato»: la spiegazione va «a scomparsa nella schermata stessa». In cima a tutte e due le tabelle, chiuso di partenza, «ℹ️ Cosa misura questa tabella» (`<details>`, componente Soffietto). Dentro: la domanda a cui risponde la tabella, la DIFFERENZA con l'altra con un esempio (trenta casse di birra comprate a giugno: in «Acquisti × Fatturato» pesano tutte su giugno, in «Venduto × Incassato» solo per le birre vendute mese per mese), il significato delle righe e l'avvertenza sull'IVA. In «Acquisti × Fatturato» anche quella sugli anni di Tiller, che hanno il fatturato ma non gli acquisti. Le spiegazioni che stavano in fondo alle tabelle sono confluite qui, riscritte nel registro del gestionale: senza il «tu» («quello che hai speso», «se lo confronti»), come vuole DESIGN.md, guardrail 3.
+
+**Dove**: `src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx` · **Lo dimostrano**: `tests/component/MacroMonthlyTab.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -3026,6 +3113,8 @@ UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma dal 26 al 2
 ANCHE NELLE ALTRE SCHERMATE (l'utente, 10/10/2026: «i dati devono essere visibili anche tramite le schermate attuali. I dati vanno integrati in modo organico»): · STORICO ORDINI: scelto un periodo, i conti di Tiller di quei giorni stanno nella lista, segnati «Tiller». Toccandoli si leggono le righe sotto la riga, in sola lettura: non c'è un conto dell'app da aprire, e niente ristampa. Contano fra quelli «dal locale». · STATISTICHE → PER SERATA: ogni giornata di Tiller è una serata dell'elenco, dopo le chiusure dell'app, con la pillola «Tiller»; un giorno con una chiusura vera la tiene lei. Aperta, si leggono i conti di quella giornata soltanto (non si allarga la finestra fino al 2024).
 
 PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti: l'indice delle serate (`vendite_storiche/_indice`, un documento) e il venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026 non si legge niente.
+
+IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup delle raccolte che tocca (se ci sono), estrazione dei fogli mensili, import di Tiller (col venduto per prodotto calcolato su ricette e prodotti della produzione) e dei fogli. Di prova senza --apply, e il progetto si nomina a mano; va lanciato dopo il rilascio, col via libera.
 
 **Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`, `tests/component/OrdersHistory.test.jsx`
 
@@ -3251,32 +3340,6 @@ NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento N
 
 ### Cassa di serata e statistiche
 
-#### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
-
-DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per intero in REQ-STAFF-015). Si sceglie il mese; la tabella è divisa per SETTIMANE come il foglio, e ogni giorno porta tre numeri:
-
-MINIMO (quanto doveva fare), INCASSATO (quanto ha fatto), DIFFERENZA.
-
-SOTTO, I TOTALI DEL MESE: incassi, stipendi, spese, netto = incassi − spese − stipendi. Come nel foglio, con una differenza che pesa:
-
-GLI STIPENDI SI CALCOLANO dalle ore già registrate nell'app (REQ-STAFF-006, ore × paga in vigore quel giorno), NON si ricopiano. Nel foglio quel numero viene battuto a mano da RAPP ORE, ed è già capitato che non torni: giugno 26, il foglio ore dà 3335 e ANALISI DATI dice 3500.
-
-DUE RIGHE DI SINTESI che nel foglio non c'erano:
-
-PRIME COST = costo del venduto + costo del lavoro, in percentuale sugli incassi; e COSTO DEL LAVORO %, il solo lavoro sugli incassi. Sono i due numeri con cui si capisce in mezzo secondo se il mese è andato.
-
-DA DOVE ARRIVANO GLI ALTRI PEZZI: il MINIMO dalla formula decisa lo stesso giorno (REQ-STAFF-015 — somma delle paghe di chi lavora quel giorno più un extra a mano); le SPESE da REQ-CASSA-012, e senza quelle il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata di ieri e non fa saltare il giorno dopo.
-
-LE DIDASCALIE NON SONO UN ABBELLIMENTO: prime cost e costo del lavoro sono le due righe che questa tabella aggiunge al foglio, e sono anche le due che nessuno sa leggere senza che gliele si spieghi. Ognuna porta la sua frase, come vuole REQ-CASSA-010 — compresa quella che dice che la merce è quella calcolata dalle ricette e non gli acquisti del mese.
-
-LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è né l'uno né l'altro: il verso lo dicono il segno e i colori di stato (--ok, --warn), che sono fuori tema apposta.
-
-QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08. Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è l'unico dei due che sta in pari con l'incassato dello stesso mese, e finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto la tabella, così chi confronta col foglio sa in partenza perché non torna. Gli acquisti del mese restano dove stanno — la tabella «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non c'entrano.
-
-DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo restano due colonne su tre). Stipendi e costo del venduto invece ci sono già: REQ-STAFF-006 e REQ-MAG-015.
-
-**Dove**: `src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js`
-
 #### REQ-CASSA-012 — Le spese del mese si scrivono nell'app, non su un foglio a parte
 
 DECISO (19/08, dall'utente che riporta Flavio). Nei fogli mensili le SPESE sono una riga sola, battuta a mano, e senza quel numero il netto del mese non esiste: incassi − spese − stipendi. Serve un posto nell'app dove inserirle, altrimenti la tabella «Mesi» (REQ-CASSA-011) arriva fino a metà strada e poi si torna al foglio. COM'È FATTA UNA SPESA: voci semplici — descrizione, importo, mese. Niente categorie, niente allegati, niente partita doppia: quello che c'è nel foglio e non di più. Il totale del mese finisce nella riga «spese» di Bilancio → Mesi.
@@ -3366,46 +3429,6 @@ COSA SERVE: chi e' stato scelto all'apertura della cassa diventa la persona che 
 DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una riga in piu': si tocca il documento degli ORDINI, che e' il cuore della serata, e il badge delle ore, che diventa paga. Vanno decisi anche i casi di bordo: il conto aperto prima di cambiare persona resta firmato com'era, e il turno aperto da `clockIn` va chiuso e riaperto quando cambia chi lavora, oppure no?
 
 **Dove**: `src/components/OrderPosDetail.jsx (placedBy), src/App.jsx (impostaUtenteStampante, clockIn), src/pages/MenuPage.jsx`
-
-#### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
-
-COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un foglio suo, diviso in settimane, e per ogni giorno tre righe:
-
-MINIMO (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE − MINIMO. In fondo al mese:
-
-STIPENDI, SPESE, INCASSI (somma dei REALE delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la somma degli scarti.
-
-IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600, sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450 €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb 2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che l'etichetta non viene aggiornata insieme ai minimi.
-
-DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha le ore del mese × la paga oraria, e il totale finisce a mano in ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 = 1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620; mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
-
-COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali, €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti, 5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al giorno): il locale ragiona a giornate, non a ore.
-
-QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i minimi dipendono dalle paghe orarie, più un extra che credo decida Flavio» — non è né confermata né smentita dai file: quella relazione non esiste in nessuna cella. Nei fogli il minimo resta un numero scritto a mano, e questo non cambia: cambia da dove lo prende l'app.
-
-DECISO (19/08, dall'utente che riporta Flavio):
-
-LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
-
-COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
-
-1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
-
-2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
-
-CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
-
-COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
-
-DOVE SI VEDE. Il minimo e il confronto con quello che si è fatto stanno nella tabella «Mesi» della pagina Bilancio (REQ-CASSA-011), giorno per giorno: minimo, incassato, differenza. Nella schermata della serata, accanto all'incasso, quanto manca o quanto avanza. L'obiettivo settimanale si somma dai minimi dei sette giorni invece di essere scritto a parte, così non può più restare indietro come l'etichetta «MEDIA 2450 €/w» del foglio.
-
-PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un giorno futuro ha un minimo solo dove i turni sono già programmati. Dove non lo sono il numero non si mostra, invece di mostrarne uno finto: un obiettivo inventato non lo insegue nessuno.
-
-LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese non esiste.
-
-DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
-
-**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx`
 
 ### Sicurezza
 

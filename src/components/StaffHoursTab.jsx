@@ -9,16 +9,16 @@ import {
   subscribeStaffRates,
   saveStaffRates,
 } from '../lib/api.js'
-import { payrollReport, rateAt, upsertRate, removeRate, sortRates } from '../lib/paghe.js'
+import { payrollReport, rateAt, upsertRate, removeRate, sortRates, tariffePer } from '../lib/paghe.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { listStaff } from '../lib/staffApi.js'
 import {
+  normalizeEntries,
   computeHours,
   byDay,
   monthGrid,
   weekDays,
   shiftDay,
-  hhmm,
   effVsPlanned,
   peopleOfDay,
 } from '../lib/ore.js'
@@ -56,40 +56,6 @@ const isoToLocalInput = (iso) => {
 const localInputToIso = (s) => {
   const t = Date.parse(s)
   return Number.isFinite(t) ? new Date(t).toISOString() : null
-}
-
-// Normalizza ore manuali (staff_hours) e timbrature (staff_shifts) in una
-// forma unica per le viste: { source, kind, date, staff_name, hours, open,
-// label, note }.
-function normalizeEntries(hoursRows, shiftRows) {
-  const out = []
-  for (const e of hoursRows || []) {
-    out.push({
-      ...e,
-      source: 'hours',
-      kind: e.kind === 'programmato' ? 'programmato' : 'effettivo',
-      open: false,
-      label:
-        e.start && e.end
-          ? `${e.start}–${e.end}${e.break_minutes > 0 ? ` (pausa ${e.break_minutes}′)` : ''}`
-          : 'ore',
-      note: e.note || '',
-    })
-  }
-  for (const s of shiftRows || []) {
-    out.push({
-      ...s,
-      source: 'shift',
-      kind: 'effettivo',
-      open: !!s.open,
-      hours: Number(s.hours) || 0,
-      label: s.open
-        ? `${hhmm(s.clock_in)} · in corso`
-        : `${hhmm(s.clock_in)}–${hhmm(s.clock_out)}`,
-      note: s.note || 'timbratura',
-    })
-  }
-  return out
 }
 
 // CHI È IN TURNO ADESSO sta in cima alle ore: era in fondo alla cassa,
@@ -162,11 +128,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
   )
   // Tariffe della persona di un turno: per uid, con ricaduta sul nome per
   // i turni registrati prima che ci fosse l'uid.
-  const ratesFor = useMemo(() => {
-    const byUid = new Map(rates.map((r) => [r.id, r.rates || []]))
-    const byName = new Map(rates.map((r) => [r.name, r.rates || []]))
-    return (e) => (e.staff_uid && byUid.get(e.staff_uid)) || byName.get(e.staff_name) || []
-  }, [rates])
+  const ratesFor = useMemo(() => tariffePer(rates), [rates])
 
   // Costo del personale nel periodo: solo ore EFFETTIVE, ciascuna alla
   // tariffa in vigore nel giorno in cui è stata lavorata.
