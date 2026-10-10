@@ -82,6 +82,7 @@ const sessioni = [
 
 vi.mock('../../src/lib/api.js', () => ({
   fetchOrdersBetween: vi.fn(async () => ordini),
+  fetchVenditeStoriche: vi.fn(async () => []),
   fetchDrinks: vi.fn(async () => [
     { id: 'd1', name: 'Negroni', category: 'COCKTAIL' },
     { id: 'd2', name: 'Amaro della casa', category: 'AMARI' },

@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 6 ottobre 2026.
+> Generato il 10 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 212 | fatto e coperto dai test |
+| ✅ | 213 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 8 | non più valido |
 
-**258 voci** in tutto. **227** descrivono il sistema com'è oggi e
+**259 voci** in tutto. **228** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 4 | — |  |
+| [STAT](#stat) | 5 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -2974,6 +2974,20 @@ Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le ris
 UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €.
 
 **Dove**: `src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
+
+#### REQ-STAT-006 — Le vendite di Tiller (giugno 2023 – agosto 2026) nelle statistiche e nel bilancio
+
+Prima dell'app il locale batteva su Tiller (oggi SumUp POS Pro, che chiude a fine 2026). Flavio vuole vedere le vendite «dal 2024»; l'utente, 10/10/2026: «nella cartella registrazioni ci sono alcuni csv che sono le vendite dei prodotti dall'apertura. Si dovrebbero importare intanto nel db di test in modo che siano consultabili […] nel bilancio o cmq nelle statistiche». I DATI. Sei export «rapporto sugli ordini prodotti» di Tiller, dal 01/06/2023 al 28/08/2026: una riga per prodotto venduto, col conto (ID ordine), l'ora di apertura e di chiusura in ora italiana, la quantità, il prezzo di listino, lo sconto e l'incassato della riga («Vendite (IVA incl.)», già scontato). 50.058 righe, 32.884 conti, 435 prodotti. I file si sovrappongono di un giorno ai bordi: un conto che compare in due file si conta una volta. La colonna «Codice del buono regalo» non è un buono: è la VARIANTE scelta su un tasto generico («SHOT 2,50» → «Sambuca») e resta come nota della riga.
+
+DOVE STANNO. Raccolta `vendite_storiche`, un documento per GIORNO di apertura del conto (ora italiana), con dentro i conti e le loro righe: circa 1.100 documenti invece di 50.000, e un periodo si legge per giorni. Si scrivono solo con lo script (scripts/importa-vendite-tiller.mjs, di prova sul test, --apply per scrivere; la produzione va nominata a mano); dall'app si leggono e basta (firestore.rules).
+
+LE GIACENZE NON SI TOCCANO: è merce uscita quando il magazzino non lo teneva l'app. Le vendite storiche non scrivono movimenti né scarichi.
+
+COME SI VEDONO. Statistiche per periodo, «Venduto × Incassato» e «Acquisti × Fatturato» leggono i conti dell'app e quelli storici dello stesso periodo e li uniscono (unisciVendite): ogni conto storico diventa un conto chiuso con le sue righe, l'incasso è la somma delle righe. I prodotti si abbinano alle voci del menù per NOME (senza maiuscole, accenti e apostrofi diversi), così categorie e macro funzionano; quelli senza una voce col loro nome restano col nome e finiscono fra i «non attribuiti».
+
+UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma dal 26 al 28 agosto si è tornati a Tiller per qualche sera, e in quei giorni i conti risultano ribattuti nell'app a fine serata (una trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si conterebbero due volte. Regola: per ogni giornata commerciale contano i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
+
+**Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`
 
 ### LIC
 

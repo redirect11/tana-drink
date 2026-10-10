@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOrdersBetween,
+  fetchVenditeStoriche,
   fetchDrinks,
   fetchCashSessions,
   subscribeSettings,
@@ -23,6 +24,7 @@ import {
   extrasBreakdown,
 } from '../lib/stats.js'
 import { fasciaDelLocale } from '../lib/orario.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
 import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
@@ -263,13 +265,16 @@ function DailyStats({ sezione = 'serate' }) {
     setLoaded(false)
     const oggi = businessDayKey(new Date(), cutoff)
     const from = shiftDay(oggi, -(loadLimit - 1))
+    // Con lo storico di Tiller (REQ-STAT-006): un periodo del 2024 si
+    // guarda come uno di ieri.
     Promise.all([
       fetchOrdersBetween(from, oggi, cutoff),
       fetchDrinks({}).catch(() => []),
+      fetchVenditeStoriche(from, oggi),
     ])
-      .then(([o, d]) => {
+      .then(([o, d, storiche]) => {
         if (!active) return
-        setOrders(o)
+        setOrders(unisciVendite(o, storiche, { drinks: d, cutoffHour: cutoff, dal: from, al: oggi }))
         setDrinks(d)
         setLoaded(true)
       })
