@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 1 ottobre 2026.
+> Generato il 10 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 211 | fatto e coperto dai test |
+| ✅ | 218 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| ⬜ | 23 | da fare |
+| 🟡 | 1 | fatto a metà |
+| ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**257 voci** in tutto. **226** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
+**262 voci** in tutto. **234** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -47,20 +48,20 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 44 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 13 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Magazzino](#magazzino) | 46 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 11 | 3 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 12 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 4 | — |  |
+| [STAT](#stat) | 5 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -191,13 +192,13 @@ Capita di chiudere un conto sul tavolo sbagliato, di annullarlo per un malinteso
 
 RIAPRIRE = COME SE NON FOSSE MAI STATO PAGATO. Gli incassi si tolgono: il conto riaperto è un conto normale, da battere e da incassare, con tutte le righe modificabili. Prima gli incassi restavano attaccati e il conto tornava «ad acconto»: le righe già pagate erano bloccate — e riaprire serve proprio a toccarle — e i soldi restavano nei guadagni della serata di un conto che era di nuovo da incassare, quindi a fine turno lo stesso conto risultava incassato due volte. La cassa legge gli incassi dagli ordini, perciò toglierli dal conto li toglie anche dal flusso di cassa. Non si butta via niente: quello che era entrato resta in `payments_annullati` con l'ora in cui è stato tolto, e il totale compare nella storia del conto («riaperto — tolti 15,50 € dagli incassi»), che è dove lo si va a cercare quando la cassa non torna. Le comande già servite restano servite: tornano da fare solo quelle annullate col conto.
 
-SU UN CONTO RIAPERTO SI TOCCA TUTTO, righe vecchie comprese. Di norma una comanda servita non si modifica più — il drink è stato fatto e portato — ma riaprire serve ESATTAMENTE a rimettere a posto quello che c'è dentro: un giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di prima restano bloccate, il conto riaperto non serve a niente. Le scorte si riallineano con la differenza, come per ogni altra modifica. Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO, che su un conto chiuso o annullato era lì spento a non fare niente.
+SU UN CONTO RIAPERTO SI TOCCA TUTTO, righe vecchie comprese. Di norma una comanda servita non si modifica più — il drink è stato fatto e portato — ma riaprire serve ESATTAMENTE a rimettere a posto quello che c'è dentro: un giro battuto sul tavolo sbagliato, una birra di troppo. Se le righe di prima restano bloccate, il conto riaperto non serve a niente. Le scorte si riallineano con la differenza, come per ogni altra modifica. DAL 06/10/2026 (BUG-113) riaprire un conto INCASSATO rimette in magazzino quello che aveva scalato, e le comande tornano da scalare: la nuova chiusura scala una volta, con quello che c'è sul conto. Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO, che su un conto chiuso o annullato era lì spento a non fare niente.
 
 ANNULLANDO, il saldo di un buono usato per pagare torna al beneficiario: il conto non si incassa più, e lasciarlo scalato significherebbe fargli perdere il credito per un conto mai pagato. Le righe restituite si segnano (`restituito_at`), così riaprendo lo stesso conto non tornano una seconda volta — sarebbe credito inventato, l'errore opposto.
 
 IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando lo si usa, non quando i soldi entrano in cassa. Se il conto era stato PAGATO con un buono, riaprendolo quella riga di incasso sparisce come le altre: il saldo torna al beneficiario, altrimenti avrebbe pagato due volte — una col buono che non torna, una quando ripaga il conto. Il buono usato come SCONTO invece resta dov'è: lo sconto è ancora sul conto, quindi qualcuno deve pagarlo, e ri-chiuderlo non lo scala una seconda volta. Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo lì significherebbe uno sconto che nessuno ha pagato e un credito in circolazione che non torna più con i conti. Se nel frattempo il buono è stato speso altrove e il saldo non basta, si addebita quel che c'è e lo sconto si riduce a quella cifra (fino a sparire): meglio un conto che chiede qualche euro in più che un buono in rosso. Su un conto CHIUSO non si tocca niente, perché lì il buono non era mai stato ristornato. Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la storia completa — aperto, chiuso, annullato, riaperto, con chi e perché — sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si ricostruisce da quello che il conto porta già addosso, quindi vale anche per i conti di ieri, senza migrazioni.
 
-**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`
+**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`, `tests/unit/riaperturaMagazzino.test.js`
 
 #### REQ-ORD-010 — Gli annullati hanno una tab loro nella coda
 
@@ -1791,6 +1792,14 @@ Flavio, vocali del 21/09/2026: «l'unica cosa che mi servirebbe e' una divisione
 
 **Dove**: `src/components/StockCountPanel.jsx (CategoryRail)` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
 
+#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
+
+Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
+
+FATTO (10/10/2026), insieme alle vendite di Tiller («nella movimentazione dal 2024», l'utente il 07/10). Nella scheda di ogni prodotto in Magazzino, «📜 Movimenti» apre la sua movimentazione: · i TOTALI PER TIPO nel periodo (30 giorni, 90, un anno, tutto): consegna ordine fornitore, carico diretto, carico da fattura, contenuto reale, chiusura inventario, vendite dell'app (ordini, modifiche e storni insieme), vendite su Tiller, altre correzioni; tutto nell'unità della giacenza, col segno; · il VENDUTO MESE PER MESE, app e Tiller affiancati; · l'elenco dei movimenti, dal più recente. I movimenti si leggono per prodotto e per il solo periodo scelto (indice composto item_id + created_at): un distillato accumula migliaia di scarichi l'anno. Le vendite di Tiller non sono movimenti — non hanno toccato le giacenze — e vengono dal riassunto che l'import scrive per ogni prodotto, con le RICETTE ATTUALI delle voci vendute: è una stima, e per le bottiglie vendute intere coincide col vero.
+
+**Dove**: `src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)` · **Lo dimostrano**: `tests/unit/movimentiProdotto.test.js`, `tests/component/MovimentiProdotto.test.jsx`
+
 #### REQ-MAG-049 — Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP
 
 Flavio, 25/09/2026 sera: «il contenuto reale serve per fare le modifiche sia in positivo sia in negativo … va direttamente sia sul magazzino dei prodotti sia sulle rimanenze di magazzino nell'inventario, e quindi mi modifica sia la rimanenza sia il consumato». E' IL CONTRARIO DI BUG-111 (22/09, in produzione con la 1.6.1), dove il contenuto reale corretto durante un inventario spostava il DEP. Adesso il DEP resta quello dell'apertura, l'ACQ resta la merce entrata, e la correzione — col suo segno — si legge nella RIM e quindi nel CONS. Lo stesso per le rettifiche d'inventario finite dentro il periodo, come quelle della chiusura interrotta del 21/09. Nel mezzo, il 24/09, per un giorno il contenuto reale aveva fatto «ripartire» il prodotto (DEP = il numero scritto, ACQ e VENDUTO da zero): e' stato abbandonato il giorno dopo, e non e' mai uscito dalla linea di sviluppo. Il contenuto reale resta com'era in Prodotti: si scrive il numero vero, e l'app registra il carico o lo scarico della differenza. Non accetta numeri negativi: e' quello che c'e' sullo scaffale.
@@ -1810,6 +1819,12 @@ DOVE SI VEDE: solo nell'ambiente di test e in locale — lo stesso controllo dei
 NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e Flavio possano confrontare le due forme sui casi veri.
 
 **Dove**: `src/components/ControlloMagazzino.jsx, src/lib/prova.js, src/lib/api.js (registraConteggio), src/lib/magazzinoPeriodo.js (rett_valore, giorniDiScorta), src/lib/scaffali.js, src/lib/warehouse.js (valoreConSegno)` · **Lo dimostrano**: `tests/unit/controlloMagazzino.test.js`, `tests/component/ControlloMagazzino.test.jsx`
+
+#### REQ-MAG-051 — Inventario: filtro per assortimento, e i prodotti esclusi chiudono con la giacenza registrata
+
+Flavio, vocale del 05/10/2026, sull'inventario: «qui servirebbe il filtro in assortimento, fuori assortimento, premium e linea […] tutti quelli fuori assortimento io me li elimino, cioè non me lo faccio l'inventario del fuori assortimento […] quando chiudo l'inventario mi deve chiudere la rimanenza con l'ultima rimanenza che ha, che presumibilmente è zero». Nell'inventario in corso c'è lo stesso filtro dei Prodotti — una tendina con le quattro voci di assortimento (FiltroAssortimento), a scelta multipla, col numero di prodotti per voce — accanto alla barra delle categorie. Le righe e le categorie seguono il filtro; il contatore «contati» resta su tutto l'inventario. I PRODOTTI ESCLUSI NON SI PERDONO: restano nell'inventario, solo non si vedono. Chiudendo, un prodotto senza rimanenza scritta non ha differenza e tiene la giacenza registrata, cioè l'ultima rimanenza che ha (per un fuori assortimento, di solito zero): è già la regola della chiusura (closeStockCount salta le righe senza conteggio), e qui la si dice anche a schermo.
+
+**Dove**: `src/components/StockCountPanel.jsx, src/components/FiltroAssortimento.jsx, src/components/Tendina.jsx` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
@@ -1929,6 +1944,22 @@ IL CAMBIO DI GIORNATA RESTA, ed è un'altra cosa: è l'ora in cui una giornata f
 
 **Dove**: `src/components/SettingsTab.jsx, src/lib/api.js (DEFAULT_SETTINGS), src/lib/orario.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/orario.test.js`, `tests/component/SettingsTab.test.jsx`, `tests/component/StatsTab.test.jsx`
 
+#### REQ-CASSA-016 — Chiudere un conto IMPAGATO: il tavolo si libera, i soldi restano da riscuotere
+
+Richiesta del 10/10/2026, riportata dall'utente: «inserire tasto di chiusura IMPAGATO sotto contante, carta, sumup ed inserire la possibilità di scrivere delle note che appariranno grandi sullo scontrino di chiusura tavolo». Decise lo stesso giorno: è un CREDITO DA RISCUOTERE (non una perdita), e le note stampano in grande sullo scontrino che esce alla chiusura impagata.
+
+IL GESTO. Nella schermata di pagamento, sotto i metodi, il tasto «🕗 Impagato» apre una finestra con l'importo da riscuotere e una casella per le note; «Chiudi impagato» chiude subito a schermo, come contante e carta, e la scrittura va in sottofondo.
+
+COSA DIVENTA IL CONTO. Non è pagato e non è annullato: resta da incassare, col segno `impagato` { at, nota, chi, importo }. Le comande risultano servite e il magazzino si scala come a ogni chiusura (i drink sono usciti). Per la coda è CHIUSO (contoChiuso): esce dalla serata col timbro di chiusura, con la striscia arancione dei soldi che mancano e la pillola «🕗 Impagato».
+
+LA CASSA. Non è un conto aperto, quindi NON blocca la chiusura di cassa; e non è un incasso, perché non ci sono pagamenti. La chiusura di cassa e la pagina della cassa dicono quanti sono e quanto c'è da riscuotere.
+
+LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto del metodo di pagamento «Da riscuotere» con l'importo, poi IMPAGATO e le note in doppia altezza e larghezza, spezzate a parole (24 caratteri per riga).
+
+QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni altro: il pagamento lo chiude, e il segno resta come storia.
+
+**Dove**: `src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/impagato.test.js`, `tests/unit/scontrinoImpagato.test.js`, `tests/component/PaymentScreen.test.jsx`
+
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
 Statistiche per serata: incassi, prodotti più venduti, tempi di preparazione e consegna misurati, preparazione più lunga. I tempi misurati raffinano progressivamente la stima mostrata al cliente.
@@ -1998,6 +2029,40 @@ NON DIPENDE DA NIENTE, ed è il contenitore: finché la pagina non esiste le tre
 FATTO (19/08). La pagina c'è, con le sue tre sottosezioni nel menu («Mesi», «Acquisti × Fatturato», «Venduto × Incassato») e la didascalia di ognuna già scritta: le TABELLE arrivano con le voci loro (REQ-CASSA-011, REQ-MAG-022, REQ-CASSA-009), qui c'è il posto dove andranno e le parole con cui si leggeranno. COM'È RISOLTO IL PERMESSO: le voci del menu portano, dove serve, la funzione di `ruoli.js` che dice chi le vede (`isAdmin` per il Bilancio), e il filtro sta in `lib/sezioni.js` — `vociPerRuolo` per il menu, `sezioneConsentita` per l'indirizzo. Il filtro è uno solo perché il menu non è l'unico che deve saperlo: `?tab=bilancio` si batte a mano, e un bartender che ci arriva finisce sulla coda con l'indirizzo rimesso in pari, senza una schermata che si apre per dirgli «non puoi».
 
 **Dove**: `src/lib/sezioni.js, src/components/StaffDrawer.jsx, src/lib/ruoli.js, src/components/BilancioTab.jsx (nuovo)` · **Lo dimostrano**: `tests/component/BilancioTab.test.jsx`, `tests/unit/sezioni.test.js`, `tests/component/StaffDrawer.test.jsx`
+
+#### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
+
+DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per intero in REQ-STAFF-015). Si sceglie il mese; la tabella è divisa per SETTIMANE come il foglio, e ogni giorno porta tre numeri:
+
+MINIMO (quanto doveva fare), INCASSATO (quanto ha fatto), DIFFERENZA.
+
+SOTTO, I TOTALI DEL MESE: incassi, stipendi, spese, netto = incassi − spese − stipendi. Come nel foglio, con una differenza che pesa:
+
+GLI STIPENDI SI CALCOLANO dalle ore già registrate nell'app (REQ-STAFF-006, ore × paga in vigore quel giorno), NON si ricopiano. Nel foglio quel numero viene battuto a mano da RAPP ORE, ed è già capitato che non torni: giugno 26, il foglio ore dà 3335 e ANALISI DATI dice 3500.
+
+DUE RIGHE DI SINTESI che nel foglio non c'erano:
+
+PRIME COST = costo del venduto + costo del lavoro, in percentuale sugli incassi; e COSTO DEL LAVORO %, il solo lavoro sugli incassi. Sono i due numeri con cui si capisce in mezzo secondo se il mese è andato.
+
+DA DOVE ARRIVANO GLI ALTRI PEZZI: il MINIMO dalla formula decisa lo stesso giorno (REQ-STAFF-015 — somma delle paghe di chi lavora quel giorno più un extra a mano); le SPESE da REQ-CASSA-012, e senza quelle il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata di ieri e non fa saltare il giorno dopo.
+
+LE DIDASCALIE NON SONO UN ABBELLIMENTO: prime cost e costo del lavoro sono le due righe che questa tabella aggiunge al foglio, e sono anche le due che nessuno sa leggere senza che gliele si spieghi. Ognuna porta la sua frase, come vuole REQ-CASSA-010 — compresa quella che dice che la merce è quella calcolata dalle ricette e non gli acquisti del mese.
+
+LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è né l'uno né l'altro: il verso lo dicono il segno e i colori di stato (--ok, --warn), che sono fuori tema apposta.
+
+QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08. Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è l'unico dei due che sta in pari con l'incassato dello stesso mese, e finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto la tabella, così chi confronta col foglio sa in partenza perché non torna. Gli acquisti del mese restano dove stanno — la tabella «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non c'entrano.
+
+DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo restano due colonne su tre). Stipendi e costo del venduto invece ci sono già: REQ-STAFF-006 e REQ-MAG-015.
+
+FATTO (10/10/2026, l'utente: «inizia a fare la schermata mesi»). La tabella è come il foglio: il mese per settimane (1–7, 8–14, 15–21, 22–28 e i giorni che restano, le stesse colonne di «Acquisti × Fatturato»), e per ogni giorno minimo, incassato, differenza, con la nota del foglio sopra il giorno (KARAOKE, GIGLI…). Sotto, il mese: incassi, stipendi, spese, netto, differenza dal minimo, costo del lavoro e prime cost. Spiegazione a scomparsa in cima (REQ-UI-029). I FOGLI SONO IMPORTATI: i diciotto fogli mensili (gennaio 2025 – luglio 2026; manca luglio 2025) stanno in `mesi_storici`, uno per mese, coi minimi e le note di ogni giorno e stipendi e spese del mese. Li estrae scripts/estrai-fogli-mensili.py (Python, che legge l'xlsx) e li scrive scripts/importa-fogli-mensili.mjs.
+
+DA DOVE VIENE OGNI NUMERO: l'INCASSATO sono sempre i conti, per giornata commerciale — dell'app e, fino al 28/08/2026, di Tiller — anche nei mesi del foglio, dove la riga REALE era battuta a mano (e non sempre torna coi conti: giugno 2026, 33.288 nel foglio, 35.388 su Tiller). Il MINIMO nei mesi del foglio è il suo; nei mesi dell'app è il costo del personale del giorno (REQ-STAFF-015): ore effettive per i giorni passati, turni programmati per quelli a venire.
+
+STIPENDI e SPESE nei mesi del foglio sono i suoi (le spese lì comprendono la merce); nei mesi dell'app gli stipendi vengono dalle ore registrate e le spese sono merce fatturata più altre spese, dal Riepilogo di Fornitori (REQ-CASSA-012). Accanto al numero si dice da dove viene. Netto = incassi − stipendi − spese; se manca uno dei due non si mostra. Costo del lavoro e prime cost sono sull'incassato AL NETTO dell'IVA, con la merce dalle ricette (REQ-MAG-015).
+
+LA DIFFERENZA SI COLORA coi colori di stato (--ok, --warn), non col rosso.
+
+**Dove**: `src/lib/bilancioMesi.js, src/components/MesiBilancio.jsx, src/components/BilancioTab.jsx, scripts/estrai-fogli-mensili.py, scripts/importa-fogli-mensili.mjs, src/lib/api.js (fetchFoglioMese), src/lib/paghe.js (tariffePer), src/lib/ore.js (normalizeEntries)` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`, `tests/component/BilancioMesi.test.jsx`
 
 ### Stampa
 
@@ -2447,6 +2512,52 @@ SE UN GIORNO SERVE DAVVERO, la strada non è una regola più furba: è spostare 
 
 **Dove**: `src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/coda.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/CodaCorsie.test.jsx`
 
+#### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un foglio suo, diviso in settimane, e per ogni giorno tre righe:
+
+MINIMO (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE − MINIMO. In fondo al mese:
+
+STIPENDI, SPESE, INCASSI (somma dei REALE delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la somma degli scarti.
+
+IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600, sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450 €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb 2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che l'etichetta non viene aggiornata insieme ai minimi.
+
+DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha le ore del mese × la paga oraria, e il totale finisce a mano in ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 = 1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620; mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
+
+COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali, €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti, 5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al giorno): il locale ragiona a giornate, non a ore.
+
+QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i minimi dipendono dalle paghe orarie, più un extra che credo decida Flavio» — non è né confermata né smentita dai file: quella relazione non esiste in nessuna cella. Nei fogli il minimo resta un numero scritto a mano, e questo non cambia: cambia da dove lo prende l'app.
+
+DECISO (19/08, dall'utente che riporta Flavio):
+
+LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
+
+COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
+
+1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
+
+2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
+
+CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
+
+COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
+
+DOVE SI VEDE. Il minimo e il confronto con quello che si è fatto stanno nella tabella «Mesi» della pagina Bilancio (REQ-CASSA-011), giorno per giorno: minimo, incassato, differenza. Nella schermata della serata, accanto all'incasso, quanto manca o quanto avanza. L'obiettivo settimanale si somma dai minimi dei sette giorni invece di essere scritto a parte, così non può più restare indietro come l'etichetta «MEDIA 2450 €/w» del foglio.
+
+PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un giorno futuro ha un minimo solo dove i turni sono già programmati. Dove non lo sono il numero non si mostra, invece di mostrarne uno finto: un obiettivo inventato non lo insegue nessuno.
+
+LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese non esiste.
+
+DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
+
+IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js: ore effettive per i giorni passati, turni programmati per quelli a venire; un giorno senza ore non ha minimo). L'EXTRA DEL SINGOLO GIORNO c'è (10/10/2026, l'utente: «singolo giorno»): nei mesi dell'app si tocca il minimo di un giorno e si scrive l'extra; il minimo diventa paghe + extra, e la finestra dice di cosa è fatto. Sta in `minimi_extra/{YYYY-MM}` ({ giorni: { giornata: euro } }); lo legge chi vede il Bilancio, lo scrive solo l'admin (firestore.rules, isAdmin). Nei mesi dei fogli il minimo è quello di Flavio e non si tocca.
+
+NON C'È, per scelta dell'utente lo stesso giorno, la SERIE settimanale stesa sul mese; e manca il confronto nella schermata della serata.
+
+**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx` · **Lo dimostrano**: `tests/unit/bilancioMesi.test.js`, `tests/component/BilancioMesi.test.jsx`
+
 ### Sicurezza
 
 Regole di accesso, App Check, e cosa protegge cosa.
@@ -2771,6 +2882,24 @@ FATTO nel Magazzino: scheda del prodotto e suoi riquadri d'aiuto, carico, conten
 
 **Dove**: `src/components/InventoryManager.jsx (ItemForm, AiutoProdotto, AiutoPezzo, CaricoForm, RettificaForm), src/components/StockCountPanel.jsx, DESIGN.md` · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
 
+#### REQ-UI-028 — Sconto e ricetta in finestre più larghe, e la ricetta si apre senza tastiera
+
+Richieste del 10/10/2026, riportate dall'utente: «allargare schermata sconti», «allargare schermata ricetta», «non aprire tastiera all'avvio di schermata ricetta».
+
+LO SCONTO passa da 320 a 520 px (o quasi tutto lo schermo, se è più stretto): i tasti del tastierino crescono con la finestra.
+
+LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720 px: nome, prezzo, nota e le righe degli ingredienti con quantità e unità non vanno più a capo.
+
+LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo per un prodotto libero nuovo, dove il nome va scritto comunque, e sulla quantità solo dell'ingrediente appena aggiunto — prima ogni riga di ingrediente lo chiedeva, e all'apertura vinceva l'ultima.
+
+**Dove**: `src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
+
+#### REQ-UI-029 — Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima
+
+L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto × Incassato» e «Acquisti × Fatturato»: la spiegazione va «a scomparsa nella schermata stessa». In cima a tutte e due le tabelle, chiuso di partenza, «ℹ️ Cosa misura questa tabella» (`<details>`, componente Soffietto). Dentro: la domanda a cui risponde la tabella, la DIFFERENZA con l'altra con un esempio (trenta casse di birra comprate a giugno: in «Acquisti × Fatturato» pesano tutte su giugno, in «Venduto × Incassato» solo per le birre vendute mese per mese), il significato delle righe e l'avvertenza sull'IVA. In «Acquisti × Fatturato» anche quella sugli anni di Tiller, che hanno il fatturato ma non gli acquisti. Le spiegazioni che stavano in fondo alle tabelle sono confluite qui, riscritte nel registro del gestionale: senza il «tu» («quello che hai speso», «se lo confronti»), come vuole DESIGN.md, guardrail 3.
+
+**Dove**: `src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx` · **Lo dimostrano**: `tests/component/MacroMonthlyTab.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -2968,6 +3097,26 @@ Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le ris
 UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €.
 
 **Dove**: `src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
+
+#### REQ-STAT-006 — Le vendite di Tiller (giugno 2023 – agosto 2026) nelle statistiche e nel bilancio
+
+Prima dell'app il locale batteva su Tiller (oggi SumUp POS Pro, che chiude a fine 2026). Flavio vuole vedere le vendite «dal 2024»; l'utente, 10/10/2026: «nella cartella registrazioni ci sono alcuni csv che sono le vendite dei prodotti dall'apertura. Si dovrebbero importare intanto nel db di test in modo che siano consultabili […] nel bilancio o cmq nelle statistiche». I DATI. Sei export «rapporto sugli ordini prodotti» di Tiller, dal 01/06/2023 al 28/08/2026: una riga per prodotto venduto, col conto (ID ordine), l'ora di apertura e di chiusura in ora italiana, la quantità, il prezzo di listino, lo sconto e l'incassato della riga («Vendite (IVA incl.)», già scontato). 50.058 righe, 32.884 conti, 435 prodotti. I file si sovrappongono di un giorno ai bordi: un conto che compare in due file si conta una volta. La colonna «Codice del buono regalo» non è un buono: è la VARIANTE scelta su un tasto generico («SHOT 2,50» → «Sambuca») e resta come nota della riga.
+
+DOVE STANNO. Raccolta `vendite_storiche`, un documento per GIORNO di apertura del conto (ora italiana), con dentro i conti e le loro righe: circa 1.100 documenti invece di 50.000, e un periodo si legge per giorni. Si scrivono solo con lo script (scripts/importa-vendite-tiller.mjs, di prova sul test, --apply per scrivere; la produzione va nominata a mano); dall'app si leggono e basta (firestore.rules).
+
+LE GIACENZE NON SI TOCCANO: è merce uscita quando il magazzino non lo teneva l'app. Le vendite storiche non scrivono movimenti né scarichi.
+
+COME SI VEDONO. Statistiche per periodo, «Venduto × Incassato» e «Acquisti × Fatturato» leggono i conti dell'app e quelli storici dello stesso periodo e li uniscono (unisciVendite): ogni conto storico diventa un conto chiuso con le sue righe, l'incasso è la somma delle righe. I prodotti si abbinano alle voci del menù per NOME (senza maiuscole, accenti e apostrofi diversi), così categorie e macro funzionano; quelli senza una voce col loro nome restano col nome e finiscono fra i «non attribuiti».
+
+UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma dal 26 al 28 agosto si è tornati a Tiller per qualche sera, e in quei giorni i conti risultano ribattuti nell'app a fine serata (una trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si conterebbero due volte. Regola: per ogni giornata commerciale contano i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
+
+ANCHE NELLE ALTRE SCHERMATE (l'utente, 10/10/2026: «i dati devono essere visibili anche tramite le schermate attuali. I dati vanno integrati in modo organico»): · STORICO ORDINI: scelto un periodo, i conti di Tiller di quei giorni stanno nella lista, segnati «Tiller». Toccandoli si leggono le righe sotto la riga, in sola lettura: non c'è un conto dell'app da aprire, e niente ristampa. Contano fra quelli «dal locale». · STATISTICHE → PER SERATA: ogni giornata di Tiller è una serata dell'elenco, dopo le chiusure dell'app, con la pillola «Tiller»; un giorno con una chiusura vera la tiene lei. Aperta, si leggono i conti di quella giornata soltanto (non si allarga la finestra fino al 2024).
+
+PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti: l'indice delle serate (`vendite_storiche/_indice`, un documento) e il venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026 non si legge niente.
+
+IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup delle raccolte che tocca (se ci sono), estrazione dei fogli mensili, import di Tiller (col venduto per prodotto calcolato su ricette e prodotti della produzione) e dei fogli. Di prova senza --apply, e il progetto si nomina a mano; va lanciato dopo il rilascio, col via libera.
+
+**Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`, `tests/component/OrdersHistory.test.jsx`
 
 ### LIC
 
@@ -3189,39 +3338,7 @@ NOTA DEL 20/08, dal giro di decisioni su REQ-MAG-025: il carico al ricevimento N
 
 **Dove**: `src/lib/warehouse.js, src/components/PurchaseOrdersPanel.jsx, src/lib/api.js`
 
-#### REQ-MAG-048 — Lo storico dei movimenti di un prodotto, diviso per tipo
-
-Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestionale dovrebbe registrarmi tutte le movimentazioni e suddividermele in quelle da consegna di ordine a fornitore, carico diretto da prodotti di magazzino, modifica del contenuto reale, rimanenza reale durante la chiusura di un inventario». Oggi Magazzino → Movimenti elenca gli ultimi 50 movimenti di tutto il magazzino, senza filtro per prodotto. I movimenti hanno gia' il motivo che serve (`ordine fornitore`, `carico`, `rettifica`, `conta`, piu' le vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un prodotto solo, coi movimenti raggruppati per tipo e i totali di ciascuno nel periodo.
-
-**Dove**: `src/components/InventoryManager.jsx (Movimenti)`
-
 ### Cassa di serata e statistiche
-
-#### REQ-CASSA-011 — Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno
-
-DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per intero in REQ-STAFF-015). Si sceglie il mese; la tabella è divisa per SETTIMANE come il foglio, e ogni giorno porta tre numeri:
-
-MINIMO (quanto doveva fare), INCASSATO (quanto ha fatto), DIFFERENZA.
-
-SOTTO, I TOTALI DEL MESE: incassi, stipendi, spese, netto = incassi − spese − stipendi. Come nel foglio, con una differenza che pesa:
-
-GLI STIPENDI SI CALCOLANO dalle ore già registrate nell'app (REQ-STAFF-006, ore × paga in vigore quel giorno), NON si ricopiano. Nel foglio quel numero viene battuto a mano da RAPP ORE, ed è già capitato che non torni: giugno 26, il foglio ore dà 3335 e ANALISI DATI dice 3500.
-
-DUE RIGHE DI SINTESI che nel foglio non c'erano:
-
-PRIME COST = costo del venduto + costo del lavoro, in percentuale sugli incassi; e COSTO DEL LAVORO %, il solo lavoro sugli incassi. Sono i due numeri con cui si capisce in mezzo secondo se il mese è andato.
-
-DA DOVE ARRIVANO GLI ALTRI PEZZI: il MINIMO dalla formula decisa lo stesso giorno (REQ-STAFF-015 — somma delle paghe di chi lavora quel giorno più un extra a mano); le SPESE da REQ-CASSA-012, e senza quelle il netto del mese non esiste; l'INCASSATO per GIORNATA COMMERCIALE (REQ-CASSA-005), così la nottata che finisce alle tre resta la serata di ieri e non fa saltare il giorno dopo.
-
-LE DIDASCALIE NON SONO UN ABBELLIMENTO: prime cost e costo del lavoro sono le due righe che questa tabella aggiunge al foglio, e sono anche le due che nessuno sa leggere senza che gliele si spieghi. Ognuna porta la sua frase, come vuole REQ-CASSA-010 — compresa quella che dice che la merce è quella calcolata dalle ricette e non gli acquisti del mese.
-
-LA DIFFERENZA SI COLORA, MA NON DI ROSSO. In questa app il rosso vuol dire annullato o errore (DESIGN.md), e un giorno sotto il minimo non è né l'uno né l'altro: il verso lo dicono il segno e i colori di stato (--ok, --warn), che sono fuori tema apposta.
-
-QUALE COSTO DELLA MERCE ENTRA NELLA PRIME COST: quello CALCOLATO DALLE RICETTE, macro per macro (REQ-MAG-015) — deciso dall'utente il 19/08. Non gli ACQUISTI del mese, che è il numero dei fogli di Flavio: è l'unico dei due che sta in pari con l'incassato dello stesso mese, e finché REQ-MAG-021 non è risolto un mese di acquisti non somiglia nemmeno al mese in cui quella merce è stata venduta. Va scritto sotto la tabella, così chi confronta col foglio sa in partenza perché non torna. Gli acquisti del mese restano dove stanno — la tabella «Acquisti × Fatturato» (REQ-MAG-022) — e con la prime cost non c'entrano.
-
-DIPENDE DA REQ-CASSA-010 (la pagina), da REQ-CASSA-012 (senza le spese il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo restano due colonne su tre). Stipendi e costo del venduto invece ci sono già: REQ-STAFF-006 e REQ-MAG-015.
-
-**Dove**: `src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js`
 
 #### REQ-CASSA-012 — Le spese del mese si scrivono nell'app, non su un foglio a parte
 
@@ -3312,46 +3429,6 @@ COSA SERVE: chi e' stato scelto all'apertura della cassa diventa la persona che 
 DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una riga in piu': si tocca il documento degli ORDINI, che e' il cuore della serata, e il badge delle ore, che diventa paga. Vanno decisi anche i casi di bordo: il conto aperto prima di cambiare persona resta firmato com'era, e il turno aperto da `clockIn` va chiuso e riaperto quando cambia chi lavora, oppure no?
 
 **Dove**: `src/components/OrderPosDetail.jsx (placedBy), src/App.jsx (impostaUtenteStampante, clockIn), src/pages/MenuPage.jsx`
-
-#### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
-
-COSA FANNO I FOGLI (verificato). In ANALISI DATI.xlsx ogni mese ha un foglio suo, diviso in settimane, e per ogni giorno tre righe:
-
-MINIMO (quanto quel giorno deve fare), REALE (quanto ha fatto), RAPP. = REALE − MINIMO. In fondo al mese:
-
-STIPENDI, SPESE, INCASSI (somma dei REALE delle cinque settimane), il netto = INCASSI − SPESE − STIPENDI, e la somma degli scarti.
-
-IL MINIMO NON È CALCOLATO. Tutte le celle MINIMO sono numeri battuti a mano: in nessuno dei diciotto fogli mensili c'è una formula. Cambia per giorno della settimana (gennaio 2026: giovedì 300, venerdì 600, sabato 600, domenica 300, lunedì 100, martedì 100, mercoledì 150) e cambia da mese a mese. Accanto c'è un'etichetta di testo — «MEDIA 2450 €/w» — che è l'obiettivo settimanale: nei mesi vecchi coincide con la somma dei minimi della settimana (feb, mar, apr, set, ott 2025 e feb 2026), nei mesi recenti no (gen, apr, mag, giu, lug 2026), segno che l'etichetta non viene aggiornata insieme ai minimi.
-
-DA DOVE VIENE LA RIGA STIPENDI: da RAPP ORE.xlsx, dove ogni persona ha le ore del mese × la paga oraria, e il totale finisce a mano in ANALISI DATI. Torna in quasi tutti i mesi provati (gen 26 800 + 700 = 1500; dic 25 650 + 750 + 160 = 1560; apr 26 650 + 800 + 170 = 1620; mag 26 850 + 750 + 575 = 2175) e NON torna in giugno 26, dove il foglio ore dà 3335 e ANALISI DATI dice 3500: qualcuno ha arrotondato.
-
-COME SONO FATTE LE ORE E LE PAGHE: una griglia con le ore in riga (dalle 9-10 alle 04-05) e i giorni in colonna, una casella per ogni ora lavorata; in fondo, per persona, giorni = ore / 8, ore totali, €/h, totale = ore × €/h. Le tariffe viste: 6,25 €/h quasi per tutti, 5 €/h per gli extra, in passato 7,50 / 8,75 / 5,625 / 4,375. Sono tutte tariffe GIORNALIERE divise per 8 (50, 40, 60, 70, 45, 35 € al giorno): il locale ragiona a giornate, non a ore.
-
-QUELLO CHE NON C'È, e che non va inventato. Nessun foglio calcola il minimo dalle paghe. L'ipotesi di chi ha chiesto questo lavoro — «i minimi dipendono dalle paghe orarie, più un extra che credo decida Flavio» — non è né confermata né smentita dai file: quella relazione non esiste in nessuna cella. Nei fogli il minimo resta un numero scritto a mano, e questo non cambia: cambia da dove lo prende l'app.
-
-DECISO (19/08, dall'utente che riporta Flavio):
-
-LA FORMULA È QUESTA — minimo del giorno = somma delle paghe di chi lavora quel giorno (ore × €/h, persona per persona) + un EXTRA messo a mano. Non è più un'ipotesi, è la regola con cui il minimo si calcola: la domanda scritta qui sopra è chiusa, e l'ipotesi era quella giusta. Il primo addendo l'app ce l'ha già per intero (REQ-STAFF-006), quindi non si ricopia da nessuna parte — nel foglio invece si ricopia, ed è già capitato che non torni. L'EXTRA:
-
-COME SI METTE, deciso dall'utente il 19/08. «Un valore che può inserire l'admin per ogni giorno, o una serie che può essere impostata su tutte le settimane del mese». Quindi DUE STRADE, e la seconda è quella che si userà quasi sempre:
-
-1) SUL SINGOLO GIORNO — l'admin scrive l'extra di quel giorno, e vince su tutto il resto. È il sabato della festa, la sera dell'evento;
-
-2) UNA SERIE SETTIMANALE stesa su tutto il mese — sette valori, uno per giorno della settimana, che si applicano a tutte le settimane del mese in un colpo. È come ragiona il foglio, dove i minimi cambiano per giorno della settimana e restano uguali di settimana in settimana (gen 26: gio 300, ven 600, sab 600, dom 300, lun 100, mar 100, mer 150).
-
-CHI VINCE: il valore del giorno sulla serie, sempre. Uno si prende la briga di scrivere il singolo giorno solo quando quel giorno è diverso, e se la serie lo sovrascrivesse quel gesto sarebbe inutile. Va scritto dove si calcola, non lasciato all'ordine in cui si leggono i dati. E SOLO L'ADMIN LO TOCCA: è un numero su cui si misura il lavoro di chi sta in sala, e non è roba da turno.
-
-COSA HA GIÀ L'APP: le ore e le paghe per intero, storicizzate (REQ-STAFF-006), e l'incasso per giornata commerciale (REQ-CASSA-005). Manca il minimo, manca il confronto, manca l'obiettivo settimanale, e mancano le spese del mese — che nel foglio sono una riga sola battuta a mano, non un elenco.
-
-DOVE SI VEDE. Il minimo e il confronto con quello che si è fatto stanno nella tabella «Mesi» della pagina Bilancio (REQ-CASSA-011), giorno per giorno: minimo, incassato, differenza. Nella schermata della serata, accanto all'incasso, quanto manca o quanto avanza. L'obiettivo settimanale si somma dai minimi dei sette giorni invece di essere scritto a parte, così non può più restare indietro come l'etichetta «MEDIA 2450 €/w» del foglio.
-
-PROPOSTA (non è una sua parola): siccome il minimo nasce dalle ore, un giorno futuro ha un minimo solo dove i turni sono già programmati. Dove non lo sono il numero non si mostra, invece di mostrarne uno finto: un obiettivo inventato non lo insegue nessuno.
-
-LE SPESE DEL MESE, che nel foglio sono una riga sola battuta a mano, vivono per conto loro in REQ-CASSA-012: senza quelle il netto del mese non esiste.
-
-DIPENDE DA REQ-CASSA-011 per il posto dove il minimo si legge giorno per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già per intero (REQ-STAFF-006).
-
-**Dove**: `src/lib/stats.js, src/components/StatsTab.jsx, src/components/StaffHoursTab.jsx`
 
 ### Sicurezza
 

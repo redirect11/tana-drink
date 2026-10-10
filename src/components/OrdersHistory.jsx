@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { subscribeOrdersHistory, fetchOrdersRange, subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
+import {
+  subscribeOrdersHistory,
+  fetchOrdersRange,
+  fetchVenditeStoriche,
+  subscribeSettings,
+  DEFAULT_SETTINGS,
+} from '../lib/api.js'
+import { daTiller, unisciVendite } from '../lib/venditeStoriche.js'
 import SelettorePeriodo from './SelettorePeriodo.jsx'
 import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
@@ -24,7 +31,8 @@ const FILTRI = [
 // CHI HA APERTO IL CONTO: il locale (banco o sala) o il cliente dal suo
 // telefono. Sono due mestieri diversi e ogni tanto si guarda solo uno dei
 // due — «quanto ci arriva dall'app?», «chi ha battuto questa serata?».
-const dalCliente = (o) => !isPersonale(o?.placed_by?.role)
+// I conti di Tiller (REQ-STAT-006) li batteva il locale.
+const dalCliente = (o) => !daTiller(o) && !isPersonale(o?.placed_by?.role)
 
 const ORIGINI = [
   ['tutte', 'Tutti'],
@@ -74,6 +82,9 @@ export default function OrdersHistory() {
   const [periodo, setPeriodo] = useState({ da: null, a: null, completo: true })
   const [delPeriodo, setDelPeriodo] = useState(null)
   const [cercando, setCercando] = useState(false)
+  // Il conto di Tiller aperto sotto la sua riga: in sola lettura, non c'è
+  // un conto dell'app da aprire.
+  const [apertoTiller, setApertoTiller] = useState(null)
   const [cutoffHour, setCutoffHour] = useState(DEFAULT_SETTINGS.business_day_cutoff_hour)
   useEffect(
     () => subscribeSettings((s) => setCutoffHour(s.business_day_cutoff_hour), () => {}),
@@ -106,8 +117,15 @@ export default function OrdersHistory() {
     if (!periodo.da || !periodo.completo) return
     let vivo = true
     setCercando(true)
-    fetchOrdersRange(periodo.da, periodo.a, cutoffHour)
-      .then((list) => vivo && setDelPeriodo(list))
+    // Con i conti di Tiller del periodo (REQ-STAT-006): un giorno del 2024 si
+    // cerca come uno di ieri. Un sistema per giornata, come nelle statistiche.
+    const al = periodo.a || periodo.da
+    Promise.all([fetchOrdersRange(periodo.da, periodo.a, cutoffHour), fetchVenditeStoriche(periodo.da, al)])
+      .then(([app, storiche]) => {
+        if (!vivo) return
+        const tutti = unisciVendite(app, storiche, { cutoffHour, dal: periodo.da, al })
+        setDelPeriodo(tutti.sort((x, y) => String(y.created_at || '').localeCompare(String(x.created_at || ''))))
+      })
       .catch((e) => vivo && setError(e.message))
       .finally(() => vivo && setCercando(false))
     return () => {
@@ -192,14 +210,18 @@ export default function OrdersHistory() {
         {visibili.map((o) => {
           const st = statoDi(o)
           const acconto = st === 'aperti' && paidAmount(o) > 0
+          const tiller = daTiller(o)
           return (
+            <div key={o.id}>
             <button
-              key={o.id}
               type="button"
               className={`ordhist-row ordhist-${st}`}
-              onClick={() => navigate(`/ordine/${o.id}`)}
+              aria-expanded={tiller ? apertoTiller === o.id : undefined}
+              onClick={() =>
+                tiller ? setApertoTiller((id) => (id === o.id ? null : o.id)) : navigate(`/ordine/${o.id}`)
+              }
             >
-              <span className="ordhist-num">#{o.daily_number ?? '—'}</span>
+              <span className="ordhist-num">{tiller ? 'Tiller' : `#${o.daily_number ?? '—'}`}</span>
               <span className="ordhist-name">
                 {o.customer_name || <span className="muted">senza nome</span>}
                 {o.table_label && <span className="muted small"> · Tavolo {o.table_label}</span>}
@@ -215,8 +237,9 @@ export default function OrdersHistory() {
                 {st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'annullato' : acconto ? 'acconto' : 'aperto'}
               </span>
               {/* Ristampa dello scontrino (anche di conti vecchi): riporta
-                  articoli, sconto, totale reale e come è stato incassato. */}
-              <span
+                  articoli, sconto, totale reale e come è stato incassato.
+                  Non per i conti di Tiller: lo scontrino l'ha fatto Tiller. */}
+              {!tiller && <span
                 role="button"
                 tabIndex={0}
                 className="ordhist-print"
@@ -232,7 +255,7 @@ export default function OrdersHistory() {
                 }}
               >
                 🖨
-              </span>
+              </span>}
               <span className="ordhist-tot">
                 {formatPrice(orderTotal(o))}
                 {scontoTotale(o) > 0 && (
@@ -240,9 +263,34 @@ export default function OrdersHistory() {
                 )}
               </span>
             </button>
+            {tiller && apertoTiller === o.id && <RigheTiller conto={o} />}
+            </div>
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// UN CONTO DI TILLER, IN SOLA LETTURA: le righe com'erano state battute e
+// quando si è chiuso. Non è un conto dell'app: non si riapre, non si
+// modifica, non si ristampa.
+function RigheTiller({ conto }) {
+  return (
+    <div className="card" style={{ margin: '4px 0 8px' }}>
+      <div className="muted small" style={{ marginBottom: 6 }}>
+        Battuto su Tiller · aperto {quando(conto.created_at)}
+        {conto.paid_at ? ` · chiuso ${quando(conto.paid_at)}` : ''}
+      </div>
+      {conto.order_items.map((r, i) => (
+        <div className="row between small" key={i}>
+          <span>
+            {r.qty} × {r.name}
+            {r.note ? <span className="muted"> ({r.note})</span> : null}
+          </span>
+          <span>{formatPrice(r.qty * r.unit_price)}</span>
+        </div>
+      ))}
     </div>
   )
 }

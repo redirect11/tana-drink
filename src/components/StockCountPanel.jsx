@@ -11,7 +11,8 @@ import {
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
-import { formatQty } from '../lib/inventory.js'
+import { assortimentoDi, formatQty } from '../lib/inventory.js'
+import { riassuntoAssortimento, toggleVoce } from '../lib/assortimento.js'
 import { giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
 import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
@@ -19,6 +20,8 @@ import { dataBreve as dataScritta } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import CategoryRail from './CategoryRail.jsx'
 import { perScaffale } from '../lib/scaffali.js'
+import Tendina from './Tendina.jsx'
+import FiltroAssortimento from './FiltroAssortimento.jsx'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -66,6 +69,7 @@ export default function StockCountPanel() {
   const [categorie, setCategorie] = useState([])
   const [movimenti, setMovimenti] = useState([])
   const [categoria, setCategoria] = useState('all')
+  const [assortimenti, setAssortimenti] = useState([]) // vuoto = tutti
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
@@ -144,10 +148,26 @@ export default function StockCountPanel() {
   // ── LE CATEGORIE ────────────────────────────────────────────────────
   // In fila come gli scaffali (lib/scaffali.js). Dipende solo da nomi e
   // categorie, non da quello che si scrive.
-  const { voci, gruppi } = useMemo(
-    () => (open ? perScaffale(open.lines, items, categorie) : { voci: [], gruppi: [] }),
-    [open, items, categorie]
-  )
+  //
+  // E PER ASSORTIMENTO, come i Prodotti (REQ-MAG-051). Flavio, 05/10/2026:
+  // «tutti quelli fuori assortimento io me li elimino, non me lo faccio
+  // l'inventario». Le righe escluse restano nell'inventario e non si
+  // vedono: chiudendo, una riga senza rimanenza tiene la giacenza
+  // registrata (closeStockCount salta chi non ha conteggio).
+  // I prodotti di QUESTO inventario: per filtrare le righe e per i numeri
+  // accanto alle voci del filtro.
+  const articoliDellInventario = useMemo(() => {
+    const inConta = new Set((open?.lines || []).map((l) => l.item_id))
+    return items.filter((i) => inConta.has(i.id))
+  }, [open, items])
+  const { voci, gruppi } = useMemo(() => {
+    if (!open) return { voci: [], gruppi: [] }
+    const scelti = new Set(
+      articoliDellInventario.filter((i) => assortimenti.includes(assortimentoDi(i))).map((i) => i.id)
+    )
+    const righe = assortimenti.length ? open.lines.filter((l) => scelti.has(l.item_id)) : open.lines
+    return perScaffale(righe, items, categorie)
+  }, [open, items, categorie, assortimenti, articoliDellInventario])
   const visibili = categoria === 'all' ? gruppi : gruppi.filter((g) => g.key === categoria)
 
   async function start() {
@@ -260,6 +280,36 @@ export default function StockCountPanel() {
               conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
             </p>
           </div>
+
+          <div className="inv-testa" style={{ marginTop: 8 }}>
+            <Tendina
+              etichetta="Filtra i prodotti"
+              attivo={assortimenti.length > 0}
+              riassunto={`⚗️ ${riassuntoAssortimento(assortimenti)}`}
+            >
+              <FiltroAssortimento
+                items={articoliDellInventario}
+                scelti={assortimenti}
+                onToggle={(k) => setAssortimenti((a) => toggleVoce(a, k))}
+              />
+              {assortimenti.length > 0 && (
+                <button
+                  type="button"
+                  className="btn ghost small block"
+                  style={{ marginTop: 6 }}
+                  onClick={() => setAssortimenti([])}
+                >
+                  ✕ Togli i filtri
+                </button>
+              )}
+            </Tendina>
+          </div>
+          {assortimenti.length > 0 && (
+            <p className="muted small" style={{ margin: '6px 0 0' }}>
+              I prodotti esclusi dal filtro restano nell’inventario: senza rimanenza inserita, alla chiusura
+              mantengono la giacenza registrata.
+            </p>
+          )}
 
           <div style={{ marginTop: 8 }}>
             <CategoryRail items={voci} selected={categoria} onSelect={setCategoria} chiave="inventario-conta">

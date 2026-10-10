@@ -1,6 +1,57 @@
 # Cosa è cambiato
 
-## 1.9.0-beta
+## 1.9.1-beta
+
+### Per chi sta al banco
+
+- **Chiudere un conto impagato.** Nel pagamento, sotto Contante, Carta e
+  SumUp, il tasto «🕗 Impagato» chiude il conto senza incasso: il tavolo
+  si libera, le comande risultano servite e i soldi restano da riscuotere.
+  Si possono scrivere delle note, che escono in grande sullo scontrino.
+  In coda il conto porta l'etichetta «Impagato»; non blocca la chiusura di
+  cassa, che dice quanto resta da riscuotere. Quando il cliente paga, si
+  apre il conto e si riscuote come sempre.
+- **Sconto e ricetta in finestre più larghe**, e ritoccando una riga la
+  tastiera non si apre più da sola.
+
+- **Riaprire un conto incassato rimette in magazzino quello che aveva
+  scalato.** Alla nuova chiusura si scala una volta sola, con quello che c'è
+  sul conto in quel momento. Prima la riapertura non rimetteva niente e la
+  nuova chiusura scalava di nuovo: le giacenze scendevano due volte.
+
+### Per chi amministra
+
+- **Le vendite di Tiller nelle statistiche e nel Bilancio.** I conti battuti
+  su Tiller dal giugno 2023 all'agosto 2026 si vedono nelle statistiche per
+  periodo, in «Venduto × Incassato» e in «Acquisti × Fatturato», insieme a
+  quelli dell'app: per ogni giornata conta un sistema solo, quello dell'app
+  se quel giorno ne ha. Le giacenze non cambiano.
+- **I conti di Tiller anche nello Storico ordini e in «Per serata».** Nello
+  storico, scelto un periodo, compaiono segnati «Tiller» e si leggono in
+  sola lettura; nelle statistiche ogni giornata di Tiller è una serata
+  dell'elenco.
+- **Bilancio → Mesi.** Il mese come i fogli di analisi: per settimane, e per
+  ogni giorno minimo, incassato e differenza, con le note del foglio. Sotto,
+  incassi, stipendi, spese, netto, costo del lavoro e prime cost. I fogli da
+  gennaio 2025 a luglio 2026 sono importati; nei mesi dell'app il minimo è
+  il costo del personale del giorno più l'extra che l'admin scrive toccando
+  il minimo di quel giorno; stipendi e spese vengono dalle ore e dai
+  Fornitori.
+- **Bilancio: «Cosa misura questa tabella»**, a scomparsa in cima a «Mesi»,
+  «Venduto × Incassato» e «Acquisti × Fatturato», con la differenza fra le
+  ultime due.
+- **Magazzino: la movimentazione di ogni prodotto.** Dalla scheda del
+  prodotto, «📜 Movimenti»: i totali per tipo (consegne d'ordine, carichi,
+  contenuto reale, chiusure d'inventario, vendite), il venduto mese per
+  mese con quello di Tiller dal 2023, e l'elenco dei movimenti.
+- **Inventario: filtro per assortimento** (in assortimento, in linea,
+  premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
+  restano nell'inventario e, senza rimanenza inserita, alla chiusura
+  mantengono la giacenza registrata.
+
+## 1.9.0 — 1 ottobre 2026
+
+Comprende la 1.7.0, che non è uscita da sola.
 
 ### Per chi amministra
 
@@ -12,17 +63,10 @@
   che restano), per settimana (da lunedì a domenica) o per giorno, con le
   frecce per spostarsi. Si apre al lordo dell'IVA, come il foglio; «Netto
   IVA» passa ai valori senza IVA.
-- **Tolta dalle Statistiche la scheda «Per macro-categoria»**: gli stessi
-  numeri, completi, sono nel Bilancio.
 - **Impostazioni → Giornata di lavoro: orario di apertura e di
   chiusura.** In ore e minuti; le fasce orarie delle statistiche partono da
   questo orario. L'ora del cambio di giornata resta a parte («Cambio di
   giornata»), e se cade dentro l'orario di apertura compare un avviso.
-
-## 1.8.3-beta
-
-### Per chi amministra
-
 - **Le fasce orarie contano le comande, non l'apertura del conto.** Un
   tavolo aperto alle 21 che ordina fino all'una distribuisce l'incasso
   sulle ore in cui le comande sono state battute; lo sconto del conto si
@@ -31,11 +75,6 @@
   fascia scelta».
 - **In «Incasso per giornata» compaiono anche le giornate a zero** in cui
   la cassa è stata aperta.
-- **Statistiche per periodo: acquisti, venduto e generato per
-  macro-categoria.** Nuova scheda «Per macro-categoria», da aprire con
-  «Calcola»: per ogni macro gli acquisti (merce consegnata e carichi
-  diretti), il venduto (incassato delle voci di menù) e il margine
-  generato, nello stesso periodo scelto in cima alla pagina.
 - **Nell'inventario è in evidenza la rimanenza**: in grassetto la RIM di
   ogni prodotto e il valore delle rimanenze in cima, al posto del consumo.
 - **Nel Magazzino i testi d'aiuto usano i termini del mestiere** — scheda
@@ -65,7 +104,7 @@
   scorso, o una sola serata dalle 18 alle 4. Lo seguono incassi,
   classifiche e magazzino nel periodo.
 
-## 1.7.0
+## 1.7.0 — uscita con la 1.9.0
 
 ### Per chi sta al banco
 

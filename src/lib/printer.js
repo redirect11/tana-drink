@@ -26,7 +26,8 @@ import {
 } from './registroStampe.js'
 import { notify } from './notify.js'
 import { impostaContestoDiagnostica, segnala, TIPO } from './diagnosticaStampante.js'
-import { numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
+import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
+import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import {
@@ -1804,6 +1805,8 @@ export function printScontrino(order, opts = {}) {
     prn.addText(line())
 
     // ── Pagamenti ──
+    // Chiuso impagato (REQ-CASSA-016): cambia i pagamenti e il piede.
+    const impagato = impagatoAperto(order) ? order.impagato : null
     if (cfg.mostra('pagamenti')) {
       prn.addTextStyle(false, false, true, prn.COLOR_1)
       prn.addText('Pagamenti\n')
@@ -1815,11 +1818,16 @@ export function printScontrino(order, opts = {}) {
       // acconti): così su ogni scontrino si legge quanto in contanti e quanto in
       // carta. Altrimenti si usa il metodo di chiusura del conto.
       const incassi = (order.payments || []).filter((p) => Number(p.amount) > 0)
-      if (incassi.length > 0) {
-        for (const p of incassi) {
-          prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
-        }
-      } else {
+      for (const p of incassi) {
+        prn.addText(row(`${nomeMetodo(p.method)} (A)`, `${Number(p.amount).toFixed(2)}€`))
+      }
+      if (impagato) {
+        // Chiuso impagato (REQ-CASSA-016): nessun metodo da dichiarare —
+        // gli acconti già presi sono qui sopra — e quanto manca.
+        prn.addTextStyle(false, false, true, prn.COLOR_1)
+        prn.addText(row('Da riscuotere', `${(Number(impagato.importo) || orderDue(order)).toFixed(2)}€`))
+        prn.addTextStyle(false, false, false, prn.COLOR_1)
+      } else if (incassi.length === 0) {
         prn.addText(row(`${nomeMetodo(order.payment_method)} (A)`, `${total.toFixed(2)}€`))
       }
       // ── E QUANTO RESTA ────────────────────────────────────────────
@@ -1830,11 +1838,26 @@ export function printScontrino(order, opts = {}) {
       // è zero e la riga non compare — è solo il conto ancora aperto che
       // ha qualcosa da dire.
       const residuo = orderDue(order)
-      if (incassi.length > 0 && residuo > 0) {
+      if (!impagato && incassi.length > 0 && residuo > 0) {
         prn.addTextStyle(false, false, true, prn.COLOR_1)
         prn.addText(row('Resta da pagare', `${residuo.toFixed(2)}€`))
         prn.addTextStyle(false, false, false, prn.COLOR_1)
       }
+      prn.addText(line())
+    }
+
+    // ── IMPAGATO E LE SUE NOTE, IN GRANDE (REQ-CASSA-016) ──
+    // Lo scontrino di un conto chiuso senza incasso è il promemoria di chi
+    // deve pagare: si legge da lontano, attaccato alla cassa o in tasca.
+    if (impagato) {
+      prn.addTextAlign(prn.ALIGN_CENTER)
+      prn.addTextSize(2, 2)
+      prn.addTextStyle(false, false, true, prn.COLOR_1)
+      prn.addText('IMPAGATO\n')
+      prn.addTextStyle(false, false, false, prn.COLOR_1)
+      for (const r of aCapo(impagato.nota, COL / 2)) prn.addText(`${r}\n`)
+      prn.addTextSize(1, 1)
+      prn.addTextAlign(prn.ALIGN_LEFT)
       prn.addText(line())
     }
 
