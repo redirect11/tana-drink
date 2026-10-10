@@ -296,6 +296,11 @@ Regole:
   (`min(520px, 94vw)` lo sconto, `min(720px, 96vw)` la ricetta): a 320px i
   tasti erano piccoli per un dito e gli ingredienti andavano a capo
   (REQ-UI-028).
+- **La spiegazione di una tabella sta in cima, a scomparsa** (`Soffietto`,
+  un `<details>` chiuso di partenza): «ℹ️ Cosa misura questa tabella», con
+  la domanda a cui risponde, la differenza con le tabelle vicine e il
+  significato delle righe. Chi la sa leggere non scorre un paragrafo ogni
+  volta; chi no la trova dove se lo chiede (REQ-UI-029).
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo

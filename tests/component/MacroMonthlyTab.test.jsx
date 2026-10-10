@@ -138,12 +138,15 @@ describe('Venduto × Incassato', () => {
     expect(within(mar).getByText('10 €')).toBeInTheDocument() // 14 − 3,80 ≈ 10
   })
 
-  it('sotto la tabella c’è scritto che numeri sono, in parole da banco', async () => {
+  // REQ-UI-029: la spiegazione sta in cima, a scomparsa, e dice anche la
+  // differenza con «Acquisti × Fatturato».
+  it('in cima, a scomparsa, c’è scritto cosa misura e che numeri sono', async () => {
     render(<MacroMonthlyTab />)
-    expect(
-      await screen.findByText(/quante volte rientra quello che hai speso/i)
-    ).toBeInTheDocument()
-    expect(screen.getByText(/quanto pesa questo gruppo sul margine/i)).toBeInTheDocument()
+    const soffietto = (await screen.findByText(/Cosa misura questa tabella/)).closest('details')
+    expect(soffietto).not.toHaveAttribute('open')
+    expect(screen.getByText(/Quanto rende ciò che si vende/)).toBeInTheDocument()
+    expect(screen.getByText(/Differenza con «Acquisti × Fatturato»/)).toBeInTheDocument()
+    expect(screen.getByText(/incassato ÷ costo/i)).toBeInTheDocument()
   })
 
   it('e perché col foglio di Flavio non tornerà mai', async () => {

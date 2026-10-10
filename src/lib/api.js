@@ -3236,6 +3236,18 @@ export async function fetchVendutoStoricoProdotto(itemId) {
   }
 }
 
+// UN MESE DEI FOGLI DI ANALISI DATI (REQ-CASSA-011): minimo e note giorno
+// per giorno, stipendi e spese del mese. null se il foglio quel mese non
+// c'è (prima di gennaio 2025, dopo luglio 2026).
+export async function fetchFoglioMese(mese) {
+  try {
+    const snap = await getDoc(doc(db, 'mesi_storici', mese))
+    return snap.exists() ? snap.data() : null
+  } catch {
+    return null
+  }
+}
+
 // --- GROUPS (contenitori di ordini) ---
 
 function mapGroup(snap) {

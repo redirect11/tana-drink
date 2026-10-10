@@ -96,6 +96,15 @@ export function payrollReport(entries, ratesFor, { onlyKind = 'effettivo' } = {}
   }
 }
 
+// LE TARIFFE DELLA PERSONA DI UN TURNO, dalle schede `staff_rates`: per
+// uid, con ricaduta sul nome per i turni registrati prima che ci fosse
+// l'uid. Torna la funzione che payrollReport vuole come `ratesFor`.
+export function tariffePer(rates) {
+  const byUid = new Map((rates || []).map((r) => [r.id, r.rates || []]))
+  const byName = new Map((rates || []).map((r) => [r.name, r.rates || []]))
+  return (e) => (e.staff_uid && byUid.get(e.staff_uid)) || byName.get(e.staff_name) || []
+}
+
 // Incidenza del costo del personale sull'incasso (%). Null se non c'è
 // incasso: dividere per zero non direbbe nulla di utile.
 export function costoSuIncasso(costo, incasso) {

@@ -183,3 +183,38 @@ export function monthlyTotals(entries) {
     total: Math.round(total * 100) / 100,
   }
 }
+
+// Normalizza ore manuali (staff_hours) e timbrature (staff_shifts) in una
+// forma unica per le viste: { source, kind, date, staff_name, hours, open,
+// label, note }. La usano le Ore e Bilancio → Mesi (REQ-CASSA-011), che
+// dalle stesse voci calcola stipendi e minimo.
+export function normalizeEntries(hoursRows, shiftRows) {
+  const out = []
+  for (const e of hoursRows || []) {
+    out.push({
+      ...e,
+      source: 'hours',
+      kind: e.kind === 'programmato' ? 'programmato' : 'effettivo',
+      open: false,
+      label:
+        e.start && e.end
+          ? `${e.start}–${e.end}${e.break_minutes > 0 ? ` (pausa ${e.break_minutes}′)` : ''}`
+          : 'ore',
+      note: e.note || '',
+    })
+  }
+  for (const s of shiftRows || []) {
+    out.push({
+      ...s,
+      source: 'shift',
+      kind: 'effettivo',
+      open: !!s.open,
+      hours: Number(s.hours) || 0,
+      label: s.open
+        ? `${hhmm(s.clock_in)} · in corso`
+        : `${hhmm(s.clock_in)}–${hhmm(s.clock_out)}`,
+      note: s.note || 'timbratura',
+    })
+  }
+  return out
+}

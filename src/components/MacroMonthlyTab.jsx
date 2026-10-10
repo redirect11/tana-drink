@@ -10,6 +10,7 @@ import {
 } from '../lib/api.js'
 import { macroMonthlyReport, UNASSIGNED } from '../lib/macroStats.js'
 import Didascalia from './Didascalia.jsx'
+import Soffietto from './Soffietto.jsx'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import { colonneDelBilancio } from '../lib/periodiBilancio.js'
 import { unisciVendite } from '../lib/venditeStoriche.js'
@@ -106,14 +107,7 @@ export default function MacroMonthlyTab() {
         <button className="btn ghost small" onClick={() => setYear((y) => y + 1)}>→</button>
       </div>
 
-      <p className="muted small" style={{ margin: '0 0 10px' }}>
-        Ogni voce del menù conta sulla sua macro-categoria{' '}
-        <strong>secondo la quota</strong> che le è data lì: incasso e costo
-        dei suoi ingredienti insieme. Valori
-        al <strong>netto IVA</strong> — l’incasso scorporato al{' '}
-        {settings.sale_vat}% di rivendita (o all’aliquota della voce, dove ne
-        ha una sua), il costo al netto dell’IVA d’acquisto.
-      </p>
+      <SpiegazioneTabella saleVat={settings.sale_vat} />
       {report && report.rows.some((r) => r.id === UNASSIGNED && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
           ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso delle voci
@@ -138,42 +132,45 @@ export default function MacroMonthlyTab() {
             <BloccoMacro key={r.id} row={r} colonne={colonne} righe={RIGHE} rapportoLabel="Inc/Costo anno" />
           ))}
           <BloccoTotale report={report} colonne={colonne} righe={RIGHE} incidenzaLabel="Incidenza sull’anno" />
-          <SpiegazioneTabella saleVat={settings.sale_vat} />
         </>
       )}
     </div>
   )
 }
 
-// COSA VUOL DIRE OGNI RIGA, in parole da banco. Sono quattro parole da
-// contabile — margine, inc/costo, le due incidenze — e senza una frase che
-// le spieghi la tabella la sa leggere solo chi l'ha scritta.
-//
-// E LA DIFFERENZA COL FOGLIO VA DETTA QUI, perché è la prima cosa che si
-// chiede chi mette i due numeri accanto: non torneranno mai identici, e non
-// perché uno dei due sbaglia.
+// COSA MISURA LA TABELLA, A SCOMPARSA IN CIMA (REQ-UI-029). Dentro: la
+// domanda a cui risponde, la DIFFERENZA con «Acquisti × Fatturato» — la
+// prima cosa che si chiede chi mette i due numeri accanto, e l'esempio delle
+// birre comprate a giugno la fa vedere — e le parole delle righe. Nel
+// registro del gestionale (DESIGN.md, guardrail 3).
 function SpiegazioneTabella({ saleVat }) {
   return (
-    <div className="card">
+    <Soffietto titolo="Cosa misura questa tabella">
       <Didascalia>
-        <strong>Margine</strong>: quello che resta dell’incasso dopo aver
-        pagato la merce che è uscita per farlo.{' '}
-        <strong>Inc/Costo</strong>: quante volte rientra quello che hai speso
-        — ×4 vuol dire che ogni euro di merce ne ha incassati quattro.{' '}
-        <strong>Incidenza</strong>: quanto pesa questo gruppo sul margine di
-        tutto il mese — se i quattro gruppi fanno 100, questo quanto ne
-        prende. <strong>Incidenza sull’anno</strong> (in fondo, sui totali):
-        quanto pesa questo mese sull’incassato dell’anno.
+        <strong>Quanto rende ciò che si vende.</strong> Per ogni macro-categoria, l’incassato delle voci di menù
+        e il costo della merce che quelle vendite hanno consumato, calcolato dalle ricette. Ogni voce conta sulla
+        sua macro secondo la quota che ha lì, incasso e costo insieme.
       </Didascalia>
       <Didascalia>
-        <strong>Se lo confronti col foglio non torna, ed è giusto così.</strong>{' '}
-        Qui l’incassato si confronta con il costo della merce{' '}
-        <strong>venduta</strong>, tutti e due al netto dell’IVA (l’incasso
-        scorporato al {saleVat}%, o all’aliquota della singola voce dove ne ha
-        una sua). Il foglio confronta il fatturato con la
-        merce <strong>entrata dalla porta</strong>, al lordo. Le percentuali
-        si somigliano, gli importi no.
+        <strong>Differenza con «Acquisti × Fatturato».</strong> Qui il costo è quello della merce{' '}
+        <strong>venduta</strong> nel mese, non di quella acquistata: un acquisto di scorta non sposta il margine
+        del mese in cui entra. Trenta casse di birra comprate a giugno per l’estate qui pesano solo per le birre
+        vendute, mese per mese; in «Acquisti × Fatturato» pesano tutte su giugno, che sembra in perdita, e luglio
+        sembra in forte attivo. Sui periodi lunghi le due tabelle si avvicinano; sul singolo mese possono essere
+        molto diverse.
       </Didascalia>
-    </div>
+      <Didascalia>
+        <strong>Margine</strong>: incassato − costo del venduto. <strong>Inc/Costo</strong>: incassato ÷ costo
+        del venduto (×4: ogni euro di merce venduta ne ha incassati quattro). <strong>Incidenza</strong>: quota
+        del margine della macro sul margine di tutte le macro del mese. <strong>Incidenza sull’anno</strong> (sui
+        totali): quota dell’incassato del mese sull’incassato dell’anno.
+      </Didascalia>
+      <Didascalia>
+        Valori <strong>al netto dell’IVA</strong>: incassato scorporato al {saleVat}% (o all’aliquota della voce,
+        dove ne ha una sua), costo al netto dell’IVA d’acquisto. Il foglio di analisi confronta invece il
+        fatturato con la merce <strong>entrata dalla porta</strong>, al lordo: i due numeri non tornano, e non
+        devono. Le vendite di Tiller (giugno 2023 – agosto 2026) usano le ricette attuali.
+      </Didascalia>
+    </Soffietto>
   )
 }

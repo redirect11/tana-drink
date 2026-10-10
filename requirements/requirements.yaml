@@ -2201,6 +2201,12 @@ requirements:
       venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi
       REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026
       non si legge niente.
+      IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup
+      delle raccolte che tocca (se ci sono), estrazione dei fogli mensili,
+      import di Tiller (col venduto per prodotto calcolato su ricette e
+      prodotti della produzione) e dei fogli. Di prova senza --apply, e il
+      progetto si nomina a mano; va lanciato dopo il rilascio, col via
+      libera.
     status: implemented
     generate_issue: false
     labels: [statistiche, bilancio]
@@ -7516,11 +7522,21 @@ requirements:
       per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula
       invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già
       per intero (REQ-STAFF-006).
-    status: todo
+      IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di
+      ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi
+      dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di
+      chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js:
+      ore effettive per i giorni passati, turni programmati per quelli a
+      venire; un giorno senza ore non ha minimo). MANCA l'EXTRA messo
+      dall'admin — il valore del singolo giorno e la serie settimanale
+      stesa sul mese, col giorno che vince sulla serie — e il confronto
+      nella schermata della serata.
+    status: partial
     generate_issue: true
     labels: [statistiche, staff, ore, serata]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/bilancioMesi.test.js
 
   - id: REQ-MAG-023
     title: "Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia"
@@ -7732,7 +7748,7 @@ requirements:
 
   - id: REQ-CASSA-011
     title: "Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno"
-    area: "src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js"
+    area: "src/lib/bilancioMesi.js, src/components/MesiBilancio.jsx, src/components/BilancioTab.jsx, scripts/estrai-fogli-mensili.py, scripts/importa-fogli-mensili.mjs, src/lib/api.js (fetchFoglioMese), src/lib/paghe.js (tariffePer), src/lib/ore.js (normalizeEntries)"
     description: >
       DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile
       dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per
@@ -7778,11 +7794,40 @@ requirements:
       il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo
       restano due colonne su tre). Stipendi e costo del venduto invece ci
       sono già: REQ-STAFF-006 e REQ-MAG-015.
-    status: todo
-    generate_issue: true
+      FATTO (10/10/2026, l'utente: «inizia a fare la schermata mesi»).
+      La tabella è come il foglio: il mese per settimane (1–7, 8–14, 15–21,
+      22–28 e i giorni che restano, le stesse colonne di «Acquisti ×
+      Fatturato»), e per ogni giorno minimo, incassato, differenza, con la
+      nota del foglio sopra il giorno (KARAOKE, GIGLI…). Sotto, il mese:
+      incassi, stipendi, spese, netto, differenza dal minimo, costo del
+      lavoro e prime cost. Spiegazione a scomparsa in cima (REQ-UI-029).
+      I FOGLI SONO IMPORTATI: i diciotto fogli mensili (gennaio 2025 –
+      luglio 2026; manca luglio 2025) stanno in `mesi_storici`, uno per
+      mese, coi minimi e le note di ogni giorno e stipendi e spese del
+      mese. Li estrae scripts/estrai-fogli-mensili.py (Python, che legge
+      l'xlsx) e li scrive scripts/importa-fogli-mensili.mjs.
+      DA DOVE VIENE OGNI NUMERO: l'INCASSATO sono sempre i conti, per
+      giornata commerciale — dell'app e, fino al 28/08/2026, di Tiller —
+      anche nei mesi del foglio, dove la riga REALE era battuta a mano (e
+      non sempre torna coi conti: giugno 2026, 33.288 nel foglio, 35.388 su
+      Tiller). Il MINIMO nei mesi del foglio è il suo; nei mesi dell'app è
+      il costo del personale del giorno (REQ-STAFF-015): ore effettive per
+      i giorni passati, turni programmati per quelli a venire. STIPENDI e
+      SPESE nei mesi del foglio sono i suoi (le spese lì comprendono la
+      merce); nei mesi dell'app gli stipendi vengono dalle ore registrate e
+      le spese sono merce fatturata più altre spese, dal Riepilogo di
+      Fornitori (REQ-CASSA-012). Accanto al numero si dice da dove viene.
+      Netto = incassi − stipendi − spese; se manca uno dei due non si
+      mostra. Costo del lavoro e prime cost sono sull'incassato AL NETTO
+      dell'IVA, con la merce dalle ricette (REQ-MAG-015).
+      LA DIFFERENZA SI COLORA coi colori di stato (--ok, --warn), non col
+      rosso.
+    status: implemented
+    generate_issue: false
     labels: [statistiche, serata, staff]
-    priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/bilancioMesi.test.js
+      - tests/component/BilancioMesi.test.jsx
 
   - id: REQ-CASSA-012
     title: "Le spese del mese si scrivono nell'app, non su un foglio a parte"
@@ -11687,6 +11732,30 @@ requirements:
     labels: [ui, pos]
     test_cases:
       - tests/component/CustomDrinkForm.test.jsx
+
+  - id: REQ-UI-029
+    title: "Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima"
+    area: "src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx"
+    description: >
+      L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto ×
+      Incassato» e «Acquisti × Fatturato»: la spiegazione va «a scomparsa
+      nella schermata stessa».
+      In cima a tutte e due le tabelle, chiuso di partenza, «ℹ️ Cosa misura
+      questa tabella» (`<details>`, componente Soffietto). Dentro: la
+      domanda a cui risponde la tabella, la DIFFERENZA con l'altra con un
+      esempio (trenta casse di birra comprate a giugno: in «Acquisti ×
+      Fatturato» pesano tutte su giugno, in «Venduto × Incassato» solo per
+      le birre vendute mese per mese), il significato delle righe e
+      l'avvertenza sull'IVA. In «Acquisti × Fatturato» anche quella sugli
+      anni di Tiller, che hanno il fatturato ma non gli acquisti.
+      Le spiegazioni che stavano in fondo alle tabelle sono confluite qui,
+      riscritte nel registro del gestionale: senza il «tu» («quello che hai
+      speso», «se lo confronti»), come vuole DESIGN.md, guardrail 3.
+    status: implemented
+    generate_issue: false
+    labels: [ui, bilancio]
+    test_cases:
+      - tests/component/MacroMonthlyTab.test.jsx
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

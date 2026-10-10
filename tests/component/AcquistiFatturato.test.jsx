@@ -154,10 +154,14 @@ describe('Acquisti × Fatturato', () => {
     expect(within(fat).getAllByText('40 €').length).toBeGreaterThan(0)
   })
 
-  it('sotto la tabella dice cosa sono i numeri e da dove vengono', async () => {
+  // REQ-UI-029: in cima, a scomparsa, con la differenza da «Venduto ×
+  // Incassato» e l'avvertenza sugli anni di Tiller senza acquisti.
+  it('in cima, a scomparsa, dice cosa misura e da dove vengono i numeri', async () => {
     render(<AcquistiFatturato />)
     await blocco('🗂️ Distillati')
+    expect(screen.getByText(/Cosa misura questa tabella/).closest('details')).not.toHaveAttribute('open')
+    expect(screen.getByText(/Differenza con «Venduto × Incassato»/)).toBeInTheDocument()
     expect(screen.getByText(/al lordo dell’IVA/)).toBeInTheDocument()
-    expect(screen.getByText(/lo storico del foglio non è importato/)).toBeInTheDocument()
+    expect(screen.getByText(/per gli anni di Tiller c’è il fatturato ma non gli acquisti/)).toBeInTheDocument()
   })
 })
