@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOrdersBetween,
+  fetchVenditeStoriche,
   fetchDrinks,
   fetchInventoryItems,
   fetchMacroCategories,
@@ -11,6 +12,7 @@ import { macroMonthlyReport, UNASSIGNED } from '../lib/macroStats.js'
 import Didascalia from './Didascalia.jsx'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import { colonneDelBilancio } from '../lib/periodiBilancio.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
 
 // BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
 // del menù, quanto è costata la merce che ha venduto, che margine ne resta.
@@ -57,9 +59,17 @@ export default function MacroMonthlyTab() {
       // si guarda il lato delle VOCI di ogni macro (pesi_voci).
       fetchInventoryItems().catch(() => []),
       fetchMacroCategories().catch(() => []),
+      // Gli anni di Tiller (REQ-STAT-006).
+      fetchVenditeStoriche(`${year}-01-01`, `${year}-12-31`),
     ])
-      .then(([orders, drinks, items, macros]) => {
+      .then(([app, drinks, items, macros, storiche]) => {
         if (!active) return
+        const orders = unisciVendite(app, storiche, {
+          drinks,
+          cutoffHour: cutoff,
+          dal: `${year}-01-01`,
+          al: `${year}-12-31`,
+        })
         setData({ orders, drinks, items, macros })
         setLoading(false)
       })

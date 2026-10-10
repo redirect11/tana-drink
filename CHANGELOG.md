@@ -11,6 +11,11 @@
 
 ### Per chi amministra
 
+- **Le vendite di Tiller nelle statistiche e nel Bilancio.** I conti battuti
+  su Tiller dal giugno 2023 all'agosto 2026 si vedono nelle statistiche per
+  periodo, in «Venduto × Incassato» e in «Acquisti × Fatturato», insieme a
+  quelli dell'app: per ogni giornata conta un sistema solo, quello dell'app
+  se quel giorno ne ha. Le giacenze non cambiano.
 - **Inventario: filtro per assortimento** (in assortimento, in linea,
   premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
   restano nell'inventario e, senza rimanenza inserita, alla chiusura

@@ -3139,6 +3139,27 @@ export async function fetchOrdersBetween(fromDayKey, toDayKey, cutoffHour = DEFA
   })
 }
 
+// LE VENDITE DI TILLER, prima dell'app (REQ-STAT-006): i giorni di
+// `vendite_storiche` attorno all'intervallo, uno di margine per lato come
+// sopra (la giornata commerciale scavalca la mezzanotte). Il taglio preciso
+// e l'unione coi conti dell'app li fa unisciVendite (lib/venditeStoriche.js).
+// Se la lettura non riesce le schermate vanno avanti coi conti dell'app:
+// lo storico è un di più, non deve fermare le statistiche di ieri sera.
+export async function fetchVenditeStoriche(fromDayKey, toDayKey) {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, 'vendite_storiche'),
+        where('giorno', '>=', shiftDay(fromDayKey, -1)),
+        where('giorno', '<=', shiftDay(toDayKey, 1))
+      )
+    )
+    return snap.docs.map((d) => ({ giorno: d.data().giorno, conti: d.data().conti || [] }))
+  } catch {
+    return []
+  }
+}
+
 // --- GROUPS (contenitori di ordini) ---
 
 function mapGroup(snap) {

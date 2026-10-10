@@ -18,6 +18,7 @@ const ANNO = new Date().getFullYear()
 const api = vi.hoisted(() => ({
   fetchOrdersBetween: vi.fn(),
   fetchCarichiBetween: vi.fn(),
+  fetchVenditeStoriche: vi.fn(),
 }))
 
 vi.mock('../../src/lib/api.js', () => ({
@@ -28,7 +29,8 @@ vi.mock('../../src/lib/api.js', () => ({
   },
   fetchOrdersBetween: api.fetchOrdersBetween,
   fetchCarichiBetween: api.fetchCarichiBetween,
-  fetchDrinks: async () => [{ id: 'gintonic' }],
+  fetchVenditeStoriche: api.fetchVenditeStoriche,
+  fetchDrinks: async () => [{ id: 'gintonic', name: 'Gin Tonic' }],
   fetchInventoryItems: async () => [{ id: 'gin', unit: 'pz', cost: 5, vat: 22 }],
   fetchMacroCategories: async () => [
     { id: 'alc', name: 'Distillati', pesi_voci: { gintonic: 100 }, pesi_prodotti: { gin: 100 } },
@@ -51,6 +53,8 @@ beforeEach(() => {
     { status: 'pagato', created_at: `${ANNO}-07-03T20:00:00.000Z`, order_items: [{ drink_id: 'gintonic', qty: 2, unit_price: 11 }] },
   ])
   api.fetchCarichiBetween.mockImplementation(async () => [])
+  api.fetchVenditeStoriche.mockReset()
+  api.fetchVenditeStoriche.mockImplementation(async () => [])
 })
 
 async function blocco(titolo) {
@@ -126,6 +130,28 @@ describe('Acquisti × Fatturato', () => {
     await user.click(screen.getByRole('button', { name: 'Periodo successivo' }))
     await blocco('🗂️ Distillati')
     expect(api.fetchOrdersBetween).toHaveBeenCalledTimes(2)
+  })
+
+  // REQ-STAT-006: le vendite di Tiller entrano nel fatturato, abbinate alla
+  // voce del menù per nome («GIN TONIC» → Gin Tonic).
+  it('le vendite di Tiller entrano nel fatturato della loro macro', async () => {
+    api.fetchVenditeStoriche.mockImplementation(async () => [
+      {
+        giorno: `${ANNO}-03-10`,
+        conti: [
+          {
+            id: 'T1',
+            aperto: `${ANNO}-03-10T21:00:00.000Z`,
+            chiuso: `${ANNO}-03-10T21:05:00.000Z`,
+            righe: [{ nome: 'GIN TONIC', qty: 3, prezzo: 6, sconto: 0, incasso: 18, nota: null }],
+          },
+        ],
+      },
+    ])
+    render(<AcquistiFatturato />)
+    // 22 € dell'app a luglio + 18 € di Tiller a marzo = 40 € nell'anno.
+    const fat = await riga('🗂️ Distillati', 'Fatturato')
+    expect(within(fat).getAllByText('40 €').length).toBeGreaterThan(0)
   })
 
   it('sotto la tabella dice cosa sono i numeri e da dove vengono', async () => {

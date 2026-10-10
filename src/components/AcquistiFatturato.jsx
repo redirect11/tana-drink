@@ -6,11 +6,13 @@ import {
   fetchMacroCategories,
   fetchPurchaseOrders,
   fetchCarichiBetween,
+  fetchVenditeStoriche,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import { acquistiFatturato } from '../lib/acquistiFatturato.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
 import { VISTE, colonneDelBilancio, nomeDelPeriodo, spostaGiorno } from '../lib/periodiBilancio.js'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
@@ -49,16 +51,17 @@ export default function AcquistiFatturato() {
   const al = colonne[colonne.length - 1].al
 
   // Quello che non dipende dal periodo si legge una volta sola.
-  const [fissi, setFissi] = useState(null) // { drinksById, items, macros, ordiniFornitore }
-  // Conti e carichi del periodo mostrato, con la chiave che dice di quale.
-  const [periodo, setPeriodo] = useState(null) // { chiave, orders, carichi }
+  const [fissi, setFissi] = useState(null) // { drinks, drinksById, items, macros, ordiniFornitore }
+  // Conti, vendite di Tiller (REQ-STAT-006) e carichi del periodo mostrato,
+  // con la chiave che dice di quale.
+  const [periodo, setPeriodo] = useState(null) // { chiave, orders, storiche, carichi }
   const [error, setError] = useState(null)
 
   useEffect(() => {
     let vivo = true
     Promise.all([fetchDrinks({}), fetchInventoryItems(), fetchMacroCategories(), fetchPurchaseOrders()])
       .then(([drinks, items, macros, ordiniFornitore]) => {
-        if (vivo) setFissi({ drinksById: Object.fromEntries(drinks.map((d) => [d.id, d])), items, macros, ordiniFornitore })
+        if (vivo) setFissi({ drinks, drinksById: Object.fromEntries(drinks.map((d) => [d.id, d])), items, macros, ordiniFornitore })
       })
       .catch((e) => vivo && setError(e.message))
     return () => {
@@ -77,9 +80,9 @@ export default function AcquistiFatturato() {
       return undefined
     }
     let vivo = true
-    Promise.all([fetchOrdersBetween(dal, al, cutoff), fetchCarichiBetween(dal, al)])
-      .then(([orders, carichi]) => {
-        const dati = { chiave, orders, carichi }
+    Promise.all([fetchOrdersBetween(dal, al, cutoff), fetchVenditeStoriche(dal, al), fetchCarichiBetween(dal, al)])
+      .then(([orders, storiche, carichi]) => {
+        const dati = { chiave, orders, storiche, carichi }
         giaLetti.current.set(chiave, dati)
         if (vivo) setPeriodo(dati)
       })
@@ -93,7 +96,7 @@ export default function AcquistiFatturato() {
   const report = useMemo(() => {
     if (!pronto) return null
     return acquistiFatturato({
-      orders: periodo.orders,
+      orders: unisciVendite(periodo.orders, periodo.storiche, { drinks: fissi.drinks, cutoffHour: cutoff, dal, al }),
       purchaseOrders: fissi.ordiniFornitore,
       movimenti: periodo.carichi,
       items: fissi.items,
@@ -104,7 +107,7 @@ export default function AcquistiFatturato() {
       saleVat: settings.sale_vat,
       lordo,
     })
-  }, [pronto, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo])
+  }, [pronto, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo, dal, al])
 
   if (error) return <div className="banner">Errore: {error}</div>
 

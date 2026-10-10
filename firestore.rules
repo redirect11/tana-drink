@@ -275,6 +275,14 @@ service cloud.firestore {
       allow read, write: if isBartender();
     }
 
+    // VENDITE STORICHE — i conti di Tiller, prima dell'app (REQ-STAT-006).
+    // Le scrive solo lo script di import (con le credenziali di servizio):
+    // dall'app si leggono per statistiche e bilancio, e basta.
+    match /vendite_storiche/{giorno} {
+      allow read: if isBartender();
+      allow write: if false;
+    }
+
     // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
     match /stock_counts/{countId} {
       allow read, write: if isBartender();

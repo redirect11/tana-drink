@@ -2103,6 +2103,53 @@ requirements:
     test_cases:
       - tests/unit/stats.test.js
       - tests/component/StatsTab.test.jsx
+  - id: REQ-STAT-006
+    title: "Le vendite di Tiller (giugno 2023 – agosto 2026) nelle statistiche e nel bilancio"
+    area: "src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, firestore.rules"
+    description: >
+      Prima dell'app il locale batteva su Tiller (oggi SumUp POS Pro, che
+      chiude a fine 2026). Flavio vuole vedere le vendite «dal 2024»;
+      l'utente, 10/10/2026: «nella cartella registrazioni ci sono alcuni csv
+      che sono le vendite dei prodotti dall'apertura. Si dovrebbero
+      importare intanto nel db di test in modo che siano consultabili […]
+      nel bilancio o cmq nelle statistiche».
+      I DATI. Sei export «rapporto sugli ordini prodotti» di Tiller, dal
+      01/06/2023 al 28/08/2026: una riga per prodotto venduto, col conto
+      (ID ordine), l'ora di apertura e di chiusura in ora italiana, la
+      quantità, il prezzo di listino, lo sconto e l'incassato della riga
+      («Vendite (IVA incl.)», già scontato). 50.058 righe, 32.884 conti,
+      435 prodotti. I file si sovrappongono di un giorno ai bordi: un conto
+      che compare in due file si conta una volta. La colonna «Codice del
+      buono regalo» non è un buono: è la VARIANTE scelta su un tasto
+      generico («SHOT 2,50» → «Sambuca») e resta come nota della riga.
+      DOVE STANNO. Raccolta `vendite_storiche`, un documento per GIORNO di
+      apertura del conto (ora italiana), con dentro i conti e le loro
+      righe: circa 1.100 documenti invece di 50.000, e un periodo si legge
+      per giorni. Si scrivono solo con lo script
+      (scripts/importa-vendite-tiller.mjs, di prova sul test, --apply per
+      scrivere; la produzione va nominata a mano); dall'app si leggono e
+      basta (firestore.rules).
+      LE GIACENZE NON SI TOCCANO: è merce uscita quando il magazzino non lo
+      teneva l'app. Le vendite storiche non scrivono movimenti né scarichi.
+      COME SI VEDONO. Statistiche per periodo, «Venduto × Incassato» e
+      «Acquisti × Fatturato» leggono i conti dell'app e quelli storici
+      dello stesso periodo e li uniscono (unisciVendite): ogni conto
+      storico diventa un conto chiuso con le sue righe, l'incasso è la
+      somma delle righe. I prodotti si abbinano alle voci del menù per
+      NOME (senza maiuscole, accenti e apostrofi diversi), così categorie e
+      macro funzionano; quelli senza una voce col loro nome restano col
+      nome e finiscono fra i «non attribuiti».
+      UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma
+      dal 26 al 28 agosto si è tornati a Tiller per qualche sera, e in
+      quei giorni i conti risultano ribattuti nell'app a fine serata (una
+      trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si
+      conterebbero due volte. Regola: per ogni giornata commerciale contano
+      i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, bilancio]
+    test_cases:
+      - tests/unit/venditeStoriche.test.js
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"

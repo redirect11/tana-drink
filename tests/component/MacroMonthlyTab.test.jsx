@@ -48,6 +48,7 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   fetchOrdersBetween: async () => ordini,
+  fetchVenditeStoriche: async () => [],
   fetchDrinks: async () => [
     {
       id: 'gintonic',

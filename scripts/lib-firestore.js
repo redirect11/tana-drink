@@ -123,6 +123,19 @@ export const clientEmulatore = (dove, progetto = 'demo-tana-drink') =>
 
 export const idDi = (doc) => doc.name.split('/').pop()
 
+// Da un valore JavaScript al formato della REST di Firestore. Gli script
+// che scrivono documenti interi (non un campo o due) non devono comporre a
+// mano mapValue e arrayValue riga per riga.
+export function aValore(v) {
+  if (v === null || v === undefined) return { nullValue: null }
+  if (typeof v === 'boolean') return { booleanValue: v }
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v }
+  if (typeof v === 'string') return { stringValue: v }
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(aValore) } }
+  return { mapValue: { fields: aCampi(v) } }
+}
+export const aCampi = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, aValore(v)]))
+
 // Legge un argomento da riga di comando: --nome valore
 export function arg(nome, fallback = null) {
   const i = process.argv.indexOf(`--${nome}`)
