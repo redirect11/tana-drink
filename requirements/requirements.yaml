@@ -1808,6 +1808,44 @@ requirements:
       - tests/component/SettingsTab.test.jsx
       - tests/component/StatsTab.test.jsx
 
+
+  - id: REQ-CASSA-016
+    title: "Chiudere un conto IMPAGATO: il tavolo si libera, i soldi restano da riscuotere"
+    area: "src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx"
+    description: >
+      Richiesta del 10/10/2026, riportata dall'utente: «inserire tasto di
+      chiusura IMPAGATO sotto contante, carta, sumup ed inserire la
+      possibilità di scrivere delle note che appariranno grandi sullo
+      scontrino di chiusura tavolo». Decise lo stesso giorno: è un CREDITO
+      DA RISCUOTERE (non una perdita), e le note stampano in grande sullo
+      scontrino che esce alla chiusura impagata.
+      IL GESTO. Nella schermata di pagamento, sotto i metodi, il tasto
+      «🕗 Impagato» apre una finestra con l'importo da riscuotere e una
+      casella per le note; «Chiudi impagato» chiude subito a schermo, come
+      contante e carta, e la scrittura va in sottofondo.
+      COSA DIVENTA IL CONTO. Non è pagato e non è annullato: resta da
+      incassare, col segno `impagato` { at, nota, chi, importo }. Le
+      comande risultano servite e il magazzino si scala come a ogni
+      chiusura (i drink sono usciti). Per la coda è CHIUSO (contoChiuso):
+      esce dalla serata col timbro di chiusura, con la striscia arancione
+      dei soldi che mancano e la pillola «🕗 Impagato».
+      LA CASSA. Non è un conto aperto, quindi NON blocca la chiusura di
+      cassa; e non è un incasso, perché non ci sono pagamenti. La chiusura
+      di cassa e la pagina della cassa dicono quanti sono e quanto c'è da
+      riscuotere.
+      LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto
+      del metodo di pagamento «Da riscuotere» con l'importo, poi IMPAGATO e
+      le note in doppia altezza e larghezza, spezzate a parole (24
+      caratteri per riga).
+      QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni
+      altro: il pagamento lo chiude, e il segno resta come storia.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, pagamenti, stampa]
+    test_cases:
+      - tests/unit/impagato.test.js
+      - tests/unit/scontrinoImpagato.test.js
+      - tests/component/PaymentScreen.test.jsx
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
@@ -11607,6 +11645,29 @@ requirements:
     generate_issue: true
     labels: [ui]
     test_cases: []
+
+  - id: REQ-UI-028
+    title: "Sconto e ricetta in finestre più larghe, e la ricetta si apre senza tastiera"
+    area: "src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx"
+    description: >
+      Richieste del 10/10/2026, riportate dall'utente: «allargare schermata
+      sconti», «allargare schermata ricetta», «non aprire tastiera all'avvio
+      di schermata ricetta».
+      LO SCONTO passa da 320 a 520 px (o quasi tutto lo schermo, se è più
+      stretto): i tasti del tastierino crescono con la finestra.
+      LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720
+      px: nome, prezzo, nota e le righe degli ingredienti con quantità e
+      unità non vanno più a capo.
+      LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome
+      c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo
+      per un prodotto libero nuovo, dove il nome va scritto comunque, e
+      sulla quantità solo dell'ingrediente appena aggiunto — prima ogni riga
+      di ingrediente lo chiedeva, e all'apertura vinceva l'ultima.
+    status: implemented
+    generate_issue: false
+    labels: [ui, pos]
+    test_cases:
+      - tests/component/CustomDrinkForm.test.jsx
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

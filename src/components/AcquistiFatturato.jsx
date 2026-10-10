@@ -93,10 +93,16 @@ export default function AcquistiFatturato() {
   }, [chiave, dal, al, cutoff])
 
   const pronto = fissi && periodo?.chiave === chiave
+  // L'unione coi conti di Tiller dipende dal periodo, non da lordo/netto:
+  // passare dall'uno all'altro non la rifà.
+  const ordini = useMemo(
+    () => (pronto ? unisciVendite(periodo.orders, periodo.storiche, { drinks: fissi.drinks, cutoffHour: cutoff, dal, al }) : null),
+    [pronto, periodo, fissi, cutoff, dal, al]
+  )
   const report = useMemo(() => {
     if (!pronto) return null
     return acquistiFatturato({
-      orders: unisciVendite(periodo.orders, periodo.storiche, { drinks: fissi.drinks, cutoffHour: cutoff, dal, al }),
+      orders: ordini,
       purchaseOrders: fissi.ordiniFornitore,
       movimenti: periodo.carichi,
       items: fissi.items,
@@ -107,7 +113,7 @@ export default function AcquistiFatturato() {
       saleVat: settings.sale_vat,
       lordo,
     })
-  }, [pronto, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo, dal, al])
+  }, [pronto, ordini, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo])
 
   if (error) return <div className="banner">Errore: {error}</div>
 

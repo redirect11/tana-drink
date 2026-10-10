@@ -15,6 +15,7 @@
 
 import { businessDayKey, DEFAULT_CUTOFF_HOUR, istanteDaOraDiRoma } from './businessDay.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { normName } from './nameMatch.js'
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
 // I numeri di Tiller sono all'italiana: «1.234,50».
@@ -92,16 +93,15 @@ export function contiDaRighe(righe, abbinamenti = {}) {
   return perGiorno
 }
 
-// IL NOME DI UNA VOCE, per abbinarla: senza maiuscole, accenti, apostrofi
-// diversi («TENNENT’S» e «Tennent's») e spazi doppi.
-export const chiaveNome = (s) =>
-  String(s || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[’‘`´]/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
+// IL NOME DI UNA VOCE, per abbinarla: lo stesso confronto dei listini
+// (normName: senza maiuscole, accenti e punteggiatura — «TENNENT’S» e
+// «Tennent's» sono lo stesso nome).
+export const chiaveNome = normName
+
+// L'ULTIMO GIORNO DI TILLER: dal 28/08/2026 si batte solo sull'app. Un
+// periodo che comincia dopo non ha niente da leggere in `vendite_storiche`,
+// e le statistiche di ogni sera non devono pagare una lettura per saperlo.
+export const ULTIMO_GIORNO_TILLER = '2026-08-28'
 
 // UN CONTO STORICO COME UN CONTO DELL'APP: chiuso, pagato, con le righe
 // abbinate alle voci del menù per nome (`perNome`: chiaveNome → drink). Lo

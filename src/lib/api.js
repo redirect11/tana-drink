@@ -108,6 +108,8 @@ import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
 import { righeInventario } from './inventarioInCorso.js'
+import { patchImpagato } from './impagato.js'
+import { ULTIMO_GIORNO_TILLER } from './venditeStoriche.js'
 import { caricaAllegatoFattura, eliminaAllegato } from './storage.js'
 import {
   inCodaOrdine,
@@ -310,6 +312,8 @@ function mapOrder(snap) {
     // questi.
     tempi_conto: o.status_times ?? {},
     riaperture: (o.riaperture || []).map((r) => ({ ...r, at: toIso(r.at) })),
+    // Chiuso impagato (REQ-CASSA-016): il conto lo porta finché esiste.
+    impagato: o.impagato ?? null,
     cancelled_by: o.cancelled_by ?? null,
     cancelled_persona: o.cancelled_persona ?? null,
     cancelled_device: o.cancelled_device ?? null,
@@ -3000,6 +3004,27 @@ export const closePaidOrder = perConto(async function closePaidOrder(id) {
   if (chiusura.comande) scaricaComande(unappliedEntries(id, chiusura.comande))
 })
 
+// CHIUDE UN CONTO IMPAGATO (REQ-CASSA-016): il tavolo si libera, i soldi si
+// chiedono dopo. Le comande risultano servite e il magazzino si scala come
+// a ogni chiusura; nessun pagamento, quindi nessun incasso in cassa. Il
+// timbro di chiusura serve alla coda per tenerlo in questa serata.
+// Si compone e si torna subito, come ogni gesto al banco: la scrittura va in
+// sottofondo.
+export const chiudiImpagato = perConto(async function chiudiImpagato(id, { nota = null, chi = null } = {}) {
+  const ref = doc(db, 'orders', id)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const data = snap.data()
+  if (data.status === ORDER_STATUSES.PAGATO || data.status === ORDER_STATUSES.ANNULLATO) {
+    throw new Error('Il conto è già chiuso')
+  }
+  const nowIso = new Date().toISOString()
+  const patch = { ...patchImpagato(data, { nowIso, nota, chi }), ...timbroChiusura(nowIso) }
+  scriviOrdine(ref, data, patch, 'chiusura impagato')
+  scaricaComande(unappliedEntries(id, patch.comande))
+  return ordineDopo(id, data, patch)
+})
+
 // PREFERENZE POS condivise (ordine card e preferiti): stanno sul server
 // così l'arrangiamento è lo stesso su tutti i dispositivi del locale. Il
 // client applica SEMPRE prima in locale (localStorage) e scrive qui in
@@ -3145,16 +3170,26 @@ export async function fetchOrdersBetween(fromDayKey, toDayKey, cutoffHour = DEFA
 // e l'unione coi conti dell'app li fa unisciVendite (lib/venditeStoriche.js).
 // Se la lettura non riesce le schermate vanno avanti coi conti dell'app:
 // lo storico è un di più, non deve fermare le statistiche di ieri sera.
+//
+// SONO DATI FERMI: l'import li scrive una volta. Quello che si è letto resta
+// in mano (l'ultimo intervallo) e un periodo dentro quell'intervallo non si
+// rilegge — le statistiche allargano la finestra a passi di trenta giorni, e
+// ogni passo riscaricava centinaia di giornate. Dopo l'ultimo giorno di
+// Tiller non si legge niente.
+let storicoInMano = null // { da, a, giornate }
 export async function fetchVenditeStoriche(fromDayKey, toDayKey) {
+  const da = shiftDay(fromDayKey, -1)
+  const a = shiftDay(toDayKey, 1)
+  if (da > ULTIMO_GIORNO_TILLER) return []
+  const dentro = (g) => g.giorno >= da && g.giorno <= a
+  if (storicoInMano && storicoInMano.da <= da && storicoInMano.a >= a) return storicoInMano.giornate.filter(dentro)
   try {
     const snap = await getDocs(
-      query(
-        collection(db, 'vendite_storiche'),
-        where('giorno', '>=', shiftDay(fromDayKey, -1)),
-        where('giorno', '<=', shiftDay(toDayKey, 1))
-      )
+      query(collection(db, 'vendite_storiche'), where('giorno', '>=', da), where('giorno', '<=', a))
     )
-    return snap.docs.map((d) => ({ giorno: d.data().giorno, conti: d.data().conti || [] }))
+    const giornate = snap.docs.map((d) => ({ giorno: d.data().giorno, conti: d.data().conti || [] }))
+    storicoInMano = { da, a, giornate }
+    return giornate
   } catch {
     return []
   }

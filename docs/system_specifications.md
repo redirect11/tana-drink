@@ -22,12 +22,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 213 | fatto e coperto dai test |
+| ✅ | 215 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | ⬜ | 23 | da fare |
 | 🗑 | 8 | non più valido |
 
-**259 voci** in tutto. **228** descrivono il sistema com'è oggi e
+**261 voci** in tutto. **230** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 45 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 13 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 14 | 2 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 24 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 25 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 5 | — |  |
 | [LIC](#lic) | 1 | — |  |
@@ -1935,6 +1935,22 @@ IL CAMBIO DI GIORNATA RESTA, ed è un'altra cosa: è l'ora in cui una giornata f
 
 **Dove**: `src/components/SettingsTab.jsx, src/lib/api.js (DEFAULT_SETTINGS), src/lib/orario.js, src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/orario.test.js`, `tests/component/SettingsTab.test.jsx`, `tests/component/StatsTab.test.jsx`
 
+#### REQ-CASSA-016 — Chiudere un conto IMPAGATO: il tavolo si libera, i soldi restano da riscuotere
+
+Richiesta del 10/10/2026, riportata dall'utente: «inserire tasto di chiusura IMPAGATO sotto contante, carta, sumup ed inserire la possibilità di scrivere delle note che appariranno grandi sullo scontrino di chiusura tavolo». Decise lo stesso giorno: è un CREDITO DA RISCUOTERE (non una perdita), e le note stampano in grande sullo scontrino che esce alla chiusura impagata.
+
+IL GESTO. Nella schermata di pagamento, sotto i metodi, il tasto «🕗 Impagato» apre una finestra con l'importo da riscuotere e una casella per le note; «Chiudi impagato» chiude subito a schermo, come contante e carta, e la scrittura va in sottofondo.
+
+COSA DIVENTA IL CONTO. Non è pagato e non è annullato: resta da incassare, col segno `impagato` { at, nota, chi, importo }. Le comande risultano servite e il magazzino si scala come a ogni chiusura (i drink sono usciti). Per la coda è CHIUSO (contoChiuso): esce dalla serata col timbro di chiusura, con la striscia arancione dei soldi che mancano e la pillola «🕗 Impagato».
+
+LA CASSA. Non è un conto aperto, quindi NON blocca la chiusura di cassa; e non è un incasso, perché non ci sono pagamenti. La chiusura di cassa e la pagina della cassa dicono quanti sono e quanto c'è da riscuotere.
+
+LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto del metodo di pagamento «Da riscuotere» con l'importo, poi IMPAGATO e le note in doppia altezza e larghezza, spezzate a parole (24 caratteri per riga).
+
+QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni altro: il pagamento lo chiude, e il segno resta come storia.
+
+**Dove**: `src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/impagato.test.js`, `tests/unit/scontrinoImpagato.test.js`, `tests/component/PaymentScreen.test.jsx`
+
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
 Statistiche per serata: incassi, prodotti più venduti, tempi di preparazione e consegna misurati, preparazione più lunga. I tempi misurati raffinano progressivamente la stima mostrata al cliente.
@@ -2776,6 +2792,18 @@ Flavio, vocale del 29/09/2026 guardando la scheda «Modifica prodotto»: «tutti
 FATTO nel Magazzino: scheda del prodotto e suoi riquadri d'aiuto, carico, contenuto reale, didascalia dell'inventario, legenda («presente»). La regola e' scritta in DESIGN.md (guardrail 3): al banco restano le parole comuni, nel gestionale il registro del mestiere. Il resto del gestionale e' REQ-UI-027.
 
 **Dove**: `src/components/InventoryManager.jsx (ItemForm, AiutoProdotto, AiutoPezzo, CaricoForm, RettificaForm), src/components/StockCountPanel.jsx, DESIGN.md` · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
+
+#### REQ-UI-028 — Sconto e ricetta in finestre più larghe, e la ricetta si apre senza tastiera
+
+Richieste del 10/10/2026, riportate dall'utente: «allargare schermata sconti», «allargare schermata ricetta», «non aprire tastiera all'avvio di schermata ricetta».
+
+LO SCONTO passa da 320 a 520 px (o quasi tutto lo schermo, se è più stretto): i tasti del tastierino crescono con la finestra.
+
+LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720 px: nome, prezzo, nota e le righe degli ingredienti con quantità e unità non vanno più a capo.
+
+LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo per un prodotto libero nuovo, dove il nome va scritto comunque, e sulla quantità solo dell'ingrediente appena aggiunto — prima ogni riga di ingrediente lo chiedeva, e all'apertura vinceva l'ultima.
+
+**Dove**: `src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
 
 ### Come si lavora al progetto
 

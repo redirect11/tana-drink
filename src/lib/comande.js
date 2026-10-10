@@ -258,10 +258,17 @@ export function comandeStatuses(comande) {
 // (quali conti hanno ancora ingredienti in ballo). Quando stava scritta in
 // tre posti, il magazzino contava fra gli aperti conti già incassati e
 // dava numeri da paura.
+// UN CONTO CHIUSO IMPAGATO (REQ-CASSA-016): da incassare ancora, ma il
+// tavolo è libero. Vale finché non lo si paga (o lo si annulla).
+export const impagatoAperto = (o) =>
+  !!o?.impagato && o.payment_status !== 'pagato' && o.status !== ORDER_STATUSES.PAGATO && o.status !== ORDER_STATUSES.ANNULLATO
+
 export function contoChiuso(o, { workflowOn = false } = {}) {
   if (!o) return false
   if (o.status === ORDER_STATUSES.ANNULLATO || o.workflow_status === ORDER_STATUSES.ANNULLATO)
     return true
+  // Chiuso impagato: per la coda è chiuso, i soldi si chiedono dopo.
+  if (impagatoAperto(o)) return true
   const pagato =
     o.payment_status === 'pagato' ||
     o.status === ORDER_STATUSES.PAGATO ||

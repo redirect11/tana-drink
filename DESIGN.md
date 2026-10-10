@@ -289,6 +289,13 @@ Regole:
   dodici quadratini da 26px in due file, tre righe che coprivano le azioni
   vere («i colori del conto e della comanda andrebbero messi in una modale
   che si apre con un bottone», l'utente, 20/08/2026).
+- **Le finestre di dialogo sono larghe al più 420px** (`confirm-box`), e
+  bastano per una domanda e due tasti. Dove dentro c'è un **tastierino** o
+  un **elenco di righe** — lo sconto, la ricetta di una riga — si aggiunge
+  `larga`, che toglie il tetto, e la larghezza la dice la schermata
+  (`min(520px, 94vw)` lo sconto, `min(720px, 96vw)` la ricetta): a 320px i
+  tasti erano piccoli per un dito e gli ingredienti andavano a capo
+  (REQ-UI-028).
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo

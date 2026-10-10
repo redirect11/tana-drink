@@ -4,6 +4,16 @@
 
 ### Per chi sta al banco
 
+- **Chiudere un conto impagato.** Nel pagamento, sotto Contante, Carta e
+  SumUp, il tasto «🕗 Impagato» chiude il conto senza incasso: il tavolo
+  si libera, le comande risultano servite e i soldi restano da riscuotere.
+  Si possono scrivere delle note, che escono in grande sullo scontrino.
+  In coda il conto porta l'etichetta «Impagato»; non blocca la chiusura di
+  cassa, che dice quanto resta da riscuotere. Quando il cliente paga, si
+  apre il conto e si riscuote come sempre.
+- **Sconto e ricetta in finestre più larghe**, e ritoccando una riga la
+  tastiera non si apre più da sola.
+
 - **Riaprire un conto incassato rimette in magazzino quello che aveva
   scalato.** Alla nuova chiusura si scala una volta sola, con quello che c'è
   sul conto in quel momento. Prima la riapertura non rimetteva niente e la

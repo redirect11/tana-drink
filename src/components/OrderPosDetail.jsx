@@ -3375,6 +3375,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         <PaymentScreen
           order={ordineDaPagare}
           settings={settings}
+          chi={chiSonoIo}
           onClose={() => {
             setPayOrder(null)
             setShowPayment(false)
