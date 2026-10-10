@@ -10,6 +10,8 @@ import {
   subscribeStaffHoursRange,
   subscribeStaffShiftsRange,
   subscribeStaffRates,
+  subscribeMinimiExtra,
+  salvaExtraMinimo,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
@@ -77,6 +79,11 @@ export default function MesiBilancio() {
   useEffect(() => subscribeStaffRates(setTariffe, () => {}), [])
   useEffect(() => subscribeStaffHoursRange(dal, al, setOre, () => {}), [dal, al])
   useEffect(() => subscribeStaffShiftsRange(dal, al, setTimbrature, () => {}), [dal, al])
+  // L'extra del minimo (REQ-STAFF-015), in ascolto: scritto, si vede subito.
+  const [extra, setExtra] = useState({})
+  useEffect(() => subscribeMinimiExtra(mese, setExtra, () => {}), [mese])
+  // Il giorno di cui si sta scrivendo l'extra.
+  const [inModifica, setInModifica] = useState(null)
 
   // I conti del mese (app e Tiller) e il foglio, se il mese ce l'ha. I mesi
   // già visti restano in mano: avanti e indietro con le frecce non rilegge.
@@ -133,6 +140,7 @@ export default function MesiBilancio() {
       incassi: vendite.incassi,
       foglio: delMese.foglio,
       paghe: paghe.perGiorno,
+      extra,
       stipendi: paghe.busta.oreTotali > 0 ? paghe.busta.totale : null,
       stipendiParziali: paghe.busta.parziale,
       spese: riga ? riga.totale : null,
@@ -140,7 +148,7 @@ export default function MesiBilancio() {
       costoVenduto: vendite.venduto.costo,
       oggi,
     })
-  }, [vendite, paghe, fissi, delMese, mese, oggi])
+  }, [vendite, paghe, extra, fissi, delMese, mese, oggi])
 
   if (errore) return <div className="banner">Errore: {errore}</div>
 
@@ -162,16 +170,26 @@ export default function MesiBilancio() {
       {tabella && (
         <>
           {tabella.settimane.map((s) => (
-            <Settimana key={s.label} settimana={s} />
+            <Settimana key={s.label} settimana={s} onMinimo={setInModifica} />
           ))}
           <Totali totali={tabella.totali} />
         </>
+      )}
+      {inModifica && (
+        <ExtraMinimo
+          giorno={inModifica}
+          onSalva={(valore) => {
+            salvaExtraMinimo(mese, inModifica.giorno, valore)
+            setInModifica(null)
+          }}
+          onChiudi={() => setInModifica(null)}
+        />
       )}
     </div>
   )
 }
 
-function Settimana({ settimana: s }) {
+function Settimana({ settimana: s, onMinimo }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
@@ -200,7 +218,22 @@ function Settimana({ settimana: s }) {
             <tr>
               <th className="rowhead">Minimo</th>
               {s.giorni.map((g) => (
-                <td key={g.giorno}>{euro(g.minimo)}</td>
+                <td key={g.giorno}>
+                  {/* Nei mesi dell'app il minimo si tocca per scriverne
+                      l'extra; quello dei fogli è di Flavio e resta. */}
+                  {g.composizione ? (
+                    <button
+                      type="button"
+                      className="btn ghost small"
+                      aria-label={`Extra del minimo, ${g.nome}`}
+                      onClick={() => onMinimo(g)}
+                    >
+                      {euro(g.minimo)}
+                    </button>
+                  ) : (
+                    euro(g.minimo)
+                  )}
+                </td>
               ))}
               <td className="tot">{euro(s.tot.minimo)}</td>
             </tr>
@@ -265,6 +298,52 @@ function Totali({ totali: t }) {
   )
 }
 
+// L'EXTRA DEL MINIMO DI UN GIORNO (REQ-STAFF-015): il minimo è il costo del
+// personale di quel giorno più questo. Lo scrive l'admin; vuoto o zero lo
+// toglie.
+function ExtraMinimo({ giorno, onSalva, onChiudi }) {
+  const [valore, setValore] = useState(giorno.composizione.extra ? String(giorno.composizione.extra) : '')
+  const extraOra = Number(String(valore).replace(',', '.')) || 0
+  const paghe = giorno.composizione.paghe
+  return (
+    <div className="overlay confirm-overlay" onClick={onChiudi}>
+      <div className="confirm-box" role="dialog" aria-label={`Minimo di ${giorno.nome}`} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginTop: 0 }}>Minimo di {giorno.nome}</h3>
+        <div className="summary-rows">
+          <div className="summary-row">
+            <span className="muted">Paghe del personale</span>
+            <span>{paghe == null ? 'nessuna ora registrata' : formatPrice(paghe)}</span>
+          </div>
+          <div className="summary-row">
+            <span className="muted">Minimo con l’extra</span>
+            <strong>{formatPrice((paghe || 0) + extraOra)}</strong>
+          </div>
+        </div>
+        <label htmlFor="extra-minimo" style={{ display: 'block', marginTop: 10 }}>
+          Extra (€)
+        </label>
+        <input
+          id="extra-minimo"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="10"
+          value={valore}
+          onChange={(e) => setValore(e.target.value)}
+        />
+        <div className="row" style={{ gap: 8, marginTop: 12 }}>
+          <button type="button" className="btn ghost grow" onClick={onChiudi}>
+            Annulla
+          </button>
+          <button type="button" className="btn grow" onClick={() => onSalva(extraOra)}>
+            Salva
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // COSA MISURA LA TABELLA, a scomparsa (REQ-UI-029), nel registro del
 // gestionale. Prime cost e costo del lavoro sono le righe che il foglio non
 // aveva, e che senza una frase non si sanno leggere (REQ-CASSA-011).
@@ -280,8 +359,8 @@ function Spiegazione() {
       <Didascalia>
         <strong>Da dove viene il minimo.</strong> Nei mesi dei fogli (gennaio 2025 – luglio 2026) è quello scritto
         nel foglio. Nei mesi dell’app è il costo del personale di quel giorno — ore effettive per i giorni passati,
-        turni programmati per quelli a venire, alla paga in vigore — senza ancora l’extra deciso dall’admin. Un
-        giorno senza ore registrate non ha minimo.
+        turni programmati per quelli a venire, alla paga in vigore — più l’extra deciso dall’admin, che si scrive
+        toccando il minimo del giorno. Un giorno senza ore e senza extra non ha minimo.
       </Didascalia>
       <Didascalia>
         <strong>Il mese.</strong> Netto = incassi − stipendi − spese. Nei mesi dei fogli stipendi e spese sono

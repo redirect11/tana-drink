@@ -7527,16 +7527,24 @@ requirements:
       dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di
       chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js:
       ore effettive per i giorni passati, turni programmati per quelli a
-      venire; un giorno senza ore non ha minimo). MANCA l'EXTRA messo
-      dall'admin — il valore del singolo giorno e la serie settimanale
-      stesa sul mese, col giorno che vince sulla serie — e il confronto
-      nella schermata della serata.
+      venire; un giorno senza ore non ha minimo).
+      L'EXTRA DEL SINGOLO GIORNO c'è (10/10/2026, l'utente: «singolo
+      giorno»): nei mesi dell'app si tocca il minimo di un giorno e si
+      scrive l'extra; il minimo diventa paghe + extra, e la finestra dice
+      di cosa è fatto. Sta in `minimi_extra/{YYYY-MM}` ({ giorni: {
+      giornata: euro } }); lo legge chi vede il Bilancio, lo scrive solo
+      l'admin (firestore.rules, isAdmin). Nei mesi dei fogli il minimo è
+      quello di Flavio e non si tocca.
+      NON C'È, per scelta dell'utente lo stesso giorno, la SERIE
+      settimanale stesa sul mese; e manca il confronto nella schermata
+      della serata.
     status: partial
     generate_issue: true
     labels: [statistiche, staff, ore, serata]
     priority: P2
     test_cases:
       - tests/unit/bilancioMesi.test.js
+      - tests/component/BilancioMesi.test.jsx
 
   - id: REQ-MAG-023
     title: "Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia"

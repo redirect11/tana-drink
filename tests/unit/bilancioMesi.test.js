@@ -86,6 +86,28 @@ describe('la tabella del mese', () => {
     expect(t.totali).toMatchObject({ stipendi: 75, spese: 300, netto: 25, costoLavoroPct: 7.5, primeCostPct: 32.5 })
   })
 
+  // REQ-STAFF-015: il minimo dell'app è paghe + l'extra dell'admin; dove
+  // c'è il foglio vince il foglio, che ha già il minimo intero.
+  it('il minimo dell’app è paghe più extra; il foglio resta il foglio', () => {
+    const t = tabellaDelMese({
+      mese: '2026-10',
+      paghe: new Map([['2026-10-09', 100]]),
+      extra: { '2026-10-09': 500, '2026-10-10': 200 },
+      oggi: '2026-10-10',
+    })
+    const giorni = t.settimane.flatMap((s) => s.giorni)
+    expect(giorni.find((g) => g.giorno === '2026-10-09')).toMatchObject({ minimo: 600, composizione: { paghe: 100, extra: 500 } })
+    // Un giorno senza ore ma con l'extra ha il minimo dell'extra.
+    expect(giorni.find((g) => g.giorno === '2026-10-10').minimo).toBe(200)
+    const conFoglio = tabellaDelMese({
+      mese: '2026-06',
+      foglio: { giorni: { '2026-06-01': { minimo: 300 } } },
+      extra: { '2026-06-01': 500 },
+      oggi: '2026-10-10',
+    })
+    expect(conFoglio.settimane[0].giorni[0]).toMatchObject({ minimo: 300, composizione: null })
+  })
+
   it('senza stipendi o spese il netto non si inventa', () => {
     const t = tabellaDelMese({ mese: '2026-10', incassi, oggi: '2026-10-10' })
     expect(t.totali.netto).toBeNull()

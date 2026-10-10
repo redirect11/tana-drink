@@ -15,9 +15,9 @@
 //     decideva). Nei mesi dell'app, la regola decisa il 19/08
 //     (REQ-STAFF-015): la somma delle paghe di chi lavora quel giorno — le ore
 //     effettive per i giorni passati, i turni programmati per quelli a venire.
-//     L'extra messo a mano dall'admin non c'è ancora: il minimo dell'app è,
-//     per ora, il solo costo del personale. Un giorno senza ore non ha
-//     minimo: un obiettivo inventato non lo insegue nessuno.
+//     Più l'EXTRA che l'admin scrive per quel giorno (toccando il minimo).
+//     Un giorno senza ore e senza extra non ha minimo: un obiettivo
+//     inventato non lo insegue nessuno.
 //   · STIPENDI e SPESE: nei mesi del foglio, i suoi. Nei mesi dell'app gli
 //     stipendi escono dalle ore registrate (ore × paga in vigore quel
 //     giorno, REQ-STAFF-006) e le spese sono la merce fatturata più le altre
@@ -53,6 +53,7 @@ export function paghePerGiorno(voci, tariffePer, oggi) {
 //   foglio:   il mese del foglio, se c'è ({ giorni: { g: { minimo, nota } },
 //             stipendi, spese })
 //   paghe:    Map giornata → costo del personale (paghePerGiorno)
+//   extra:    { giornata: euro } — l'extra dell'admin (REQ-STAFF-015)
 //   stipendi, spese: i totali dell'app per il mese (si usano dove il foglio
 //             non li ha); `stipendiParziali` se a qualcuno manca la tariffa
 //   incassoNetto, costoVenduto: dal conto per macro, IVA scorporata — per le
@@ -63,6 +64,7 @@ export function tabellaDelMese({
   incassi = new Map(),
   foglio = null,
   paghe = new Map(),
+  extra = {},
   stipendi = null,
   stipendiParziali = false,
   spese = null,
@@ -74,7 +76,12 @@ export function tabellaDelMese({
     const giorni = []
     for (let g = col.dal; g <= col.al; g = shiftDay(g, 1)) {
       const dalFoglio = foglio?.giorni?.[g]
-      const minimo = dalFoglio?.minimo ?? paghe.get(g) ?? null
+      // IL MINIMO DELL'APP È PAGHE + EXTRA (la regola del 19/08). Il foglio,
+      // dove c'è, ha già il minimo intero scritto da Flavio e vince.
+      const pagheG = paghe.get(g) ?? null
+      const extraG = Number(extra?.[g]) || 0
+      const minimo =
+        dalFoglio?.minimo ?? (pagheG == null && !extraG ? null : r2((pagheG || 0) + extraG))
       const incassato = g <= oggi ? r2(incassi.get(g) || 0) : null
       giorni.push({
         giorno: g,
@@ -83,6 +90,9 @@ export function tabellaDelMese({
         incassato,
         differenza: minimo != null && incassato != null ? r2(incassato - minimo) : null,
         nota: dalFoglio?.nota || null,
+        // Di cosa è fatto il minimo, per chi lo tocca: dal foglio, oppure
+        // paghe ed extra.
+        composizione: dalFoglio?.minimo != null ? null : { paghe: pagheG, extra: extraG },
       })
     }
     const somma = (k) => r2(giorni.reduce((s, x) => s + (Number(x[k]) || 0), 0))
