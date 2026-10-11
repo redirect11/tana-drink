@@ -7753,6 +7753,29 @@ a.storico-notifica:hover {
 .periodo-aiuto {
   margin: 8px 0 0;
 }
+/* I GIORNI DI SERVIZIO (REQ-STAT-007): col servizio il verde di stato
+   (fuori tema apposta, come in DESIGN.md), senza un grigio che resta
+   toccabile — e scegliendolo si dice che quel giorno non c'è stato niente. */
+.periodo-giorno.servizio,
+.legenda-servizio {
+  background: color-mix(in srgb, var(--ok) 30%, transparent);
+}
+.periodo-giorno.senza,
+.legenda-senza {
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+  color: var(--muted);
+}
+.legenda-servizio,
+.legenda-senza {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.calendario-servizio {
+  margin-bottom: 8px;
+}
 
 /* «Gli avvisi sono spenti»: una riga in cima, non una finestra modale — al
    banco non si blocca il lavoro per una impostazione. Ritorna finché gli
