@@ -542,6 +542,8 @@ function ElencoSerate({ righe, onApri, oggi, cutoff }) {
     }
     return m
   }, [righe, cutoff])
+  // Per i colori del calendario: le righe in elenco (chiusure e giornate di
+  // Tiller), che è lo stesso insieme di lib/giorniDiServizio.js.
   const servizio = useMemo(() => new Set(perGiorno.keys()), [perGiorno])
   const cerca = (giorno) => {
     setCercato(giorno)

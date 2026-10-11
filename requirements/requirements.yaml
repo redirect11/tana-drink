@@ -2238,11 +2238,23 @@ requirements:
       servizio sabato 1 agosto»), invece di non fare niente.
       L'elenco legge un anno di chiusure (400) invece delle ultime 60: la
       ricerca deve trovare anche la serata di sei mesi fa.
+      UNA GRIGLIA PER TUTTA L'APP (l'utente, stesso giorno: «uniformare
+      anche gli altri calendari dell'app a quello appena creato … e anche
+      con la info sul servizio»). GrigliaMese è il calendario di tutte e
+      tre le schermate che ne aprono uno — le serate delle statistiche, la
+      ricerca per data delle chiusure di cassa, il periodo dello storico
+      ordini — coi giorni di servizio colorati allo stesso modo. I giorni di
+      servizio vengono da lib/giorniDiServizio.js (chiusure dell'app per
+      giornata commerciale più giornate di Tiller), letti una volta e
+      tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle
+      data dei moduli (spesa, fattura, data di nascita) non sono calendari
+      di servizio e restano com'erano.
     status: implemented
     generate_issue: false
     labels: [statistiche, ux]
     test_cases:
       - tests/component/StatsTab.test.jsx
+      - tests/unit/giorniDiServizio.test.js
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
