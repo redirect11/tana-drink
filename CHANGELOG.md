@@ -4,6 +4,10 @@
 
 ### Per chi amministra
 
+- **Nelle fasce orarie delle statistiche l'ora di «alle» è compresa.**
+  Dalle 22 alle 00:00 mostra le 22, le 23 e la mezzanotte; prima la
+  mezzanotte restava fuori.
+
 - **Statistiche → Per serata: la ricerca per data.** Un calendario compatto,
   che si scorre mese per mese e colora in verde i giorni di servizio e in
   grigio gli altri, e una casella per scrivere la data. Scegliendo un

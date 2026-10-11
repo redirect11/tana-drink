@@ -5084,3 +5084,26 @@ bugs:
     test_cases:
       - tests/component/StatsTab.test.jsx
 
+  - id: BUG-115
+    title: "Nelle fasce orarie delle statistiche l'ora di «alle» restava fuori"
+    area: "src/lib/stats.js (rangeSpan)"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 11/10/2026, sulla serata del 01/10: «quando si seleziona la
+      fascia oraria nelle statistiche, dalle e alle devono essere entrambi
+      inclusi … dalle 22 alle 00:00 mostra solo 22 e 23. Deve mostrare anche
+      la mezzanotte inclusa». La fascia era a FINE ESCLUSA: 22:00→00:00
+      erano 120 minuti, due fasce, e l'ora di mezzanotte restava fuori — da
+      «Incasso per fascia oraria», da «Venduto nella fascia oraria» e da
+      «Incasso per giornata nella fascia scelta», che passano tutte da
+      rangeSpan. Ora la fascia arriva alla FINE dell'ora di «alle»: 22→00
+      sono tre fasce, 22→22 è l'ora delle 22 e basta, e l'orario
+      predefinito 18:30→03:30 fa dieci fasce invece di nove.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, statistiche]
+    test_cases:
+      - tests/unit/stats.test.js
+
