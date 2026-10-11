@@ -23,6 +23,8 @@ import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderSta
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import RendicontoSerata from './RendicontoSerata.jsx'
+import CalendarioServizio from './CalendarioServizio.jsx'
+import { giornateConServizio } from '../lib/giorniDiServizio.js'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -106,6 +108,8 @@ export default function CashSessionsList() {
   // I bordi del campo data escono dalle sessioni già in mano: nessuna lettura
   // in più per sapere fin dove ha senso cercare.
   const limiti = useMemo(() => limitiRicercaSerate(sessions), [sessions])
+  // Qui il servizio sono le chiusure in elenco: è di quelle che si cerca.
+  const giorniConCassa = useMemo(() => giornateConServizio(sessions, []), [sessions])
 
   // CERCARE UNA SERATA PORTA ALLA RIGA, NON FILTRA LA LISTA. Filtrando
   // resterebbe una riga sola, e questa lista serve anche a confrontare le
@@ -405,17 +409,18 @@ export default function CashSessionsList() {
               </button>
             ))}
           </div>
+          {/* Lo stesso calendario delle serate nelle statistiche
+              (REQ-STAT-007): i giorni con una chiusura in verde. */}
           <div className="cerca-serata-data">
-            <label className="muted small" htmlFor="cerca-serata-data">
-              Cerca per data
-            </label>
-            <input
+            <CalendarioServizio
               id="cerca-serata-data"
-              type="date"
-              value={giornoCercato}
-              min={limiti.dal || undefined}
-              max={limiti.al || undefined}
-              onChange={(e) => setGiornoCercato(e.target.value)}
+              etichetta="Cerca per data"
+              servizio={giorniConCassa}
+              scelto={giornoCercato}
+              oggi={limiti.al || businessDayKey(new Date())}
+              min={limiti.dal}
+              max={limiti.al}
+              onScegli={setGiornoCercato}
             />
           </div>
         </div>

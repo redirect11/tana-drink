@@ -15,6 +15,9 @@
   grigio gli altri, e una casella per scrivere la data. Scegliendo un
   giorno si apre la sua serata. (Corretto subito dopo: il pannello si
   apriva fuori vista.)
+- **Lo stesso calendario in tutta l'app.** La ricerca per data delle
+  chiusure di cassa e il periodo dello storico ordini hanno la stessa
+  griglia, coi giorni di servizio in verde.
 
 ## 1.9.1-beta
 
