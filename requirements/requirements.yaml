@@ -2213,6 +2213,32 @@ requirements:
     test_cases:
       - tests/unit/venditeStoriche.test.js
       - tests/component/OrdersHistory.test.jsx
+
+  - id: REQ-STAT-007
+    title: "Per serata: la ricerca per data, con un calendario che segna i giorni di servizio"
+    area: "src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css"
+    description: >
+      L'utente, 11/10/2026: «nelle statistiche, la lista per serata,
+      dovrebbe avere una ricerca per data, con un calendario, che ti
+      permette di selezionare il giorno e un box per modificare a mano la
+      data. Il calendario compatto deve poter scorrere i mesi e segnare dei
+      colori su ogni giorno in base a se c'è stato servizio oppure no».
+      In cima all'elenco delle serate: il tasto «📅 Calendario» e la
+      casella «Data». Il calendario è la griglia del selettore dello
+      storico (grigliaMese: lunedì per primo, sei righe fisse), si scorre
+      mese per mese e colora ogni giorno passato: VERDE dove c'è stato
+      servizio — una chiusura di cassa dell'app o una giornata di Tiller —
+      GRIGIO dove no; i giorni a venire sono spenti. La legenda sta sotto.
+      Scegliere un giorno, dal calendario o scrivendolo, apre DIRETTAMENTE
+      la serata di quel giorno; un giorno senza servizio lo dice («Nessun
+      servizio sabato 1 agosto»), invece di non fare niente.
+      L'elenco legge un anno di chiusure (400) invece delle ultime 60: la
+      ricerca deve trovare anche la serata di sei mesi fa.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, ux]
+    test_cases:
+      - tests/component/StatsTab.test.jsx
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"

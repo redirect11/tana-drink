@@ -296,6 +296,10 @@ Regole:
   (`min(520px, 94vw)` lo sconto, `min(720px, 96vw)` la ricetta): a 320px i
   tasti erano piccoli per un dito e gli ingredienti andavano a capo
   (REQ-UI-028).
+- **Il calendario dei giorni di servizio** (`CalendarioServizio`) è la
+  griglia del selettore dello storico con un colore per giorno: il verde di
+  stato (`--ok`) dove c'è stato servizio, un grigio tenue dove no, i giorni
+  a venire spenti; la legenda sta sotto la griglia (REQ-STAT-007).
 - **La spiegazione di una tabella sta in cima, a scomparsa** (`Soffietto`,
   un `<details>` chiuso di partenza): «ℹ️ Cosa misura questa tabella», con
   la domanda a cui risponde, la differenza con le tabelle vicine e il

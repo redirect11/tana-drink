@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 10 ottobre 2026.
+> Generato il 11 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 218 | fatto e coperto dai test |
+| ✅ | 219 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**262 voci** in tutto. **234** descrivono il sistema com'è oggi e
+**263 voci** in tutto. **235** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -61,7 +61,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 5 | — |  |
+| [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -3117,6 +3117,14 @@ PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti: l'indice d
 IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup delle raccolte che tocca (se ci sono), estrazione dei fogli mensili, import di Tiller (col venduto per prodotto calcolato su ricette e prodotti della produzione) e dei fogli. Di prova senza --apply, e il progetto si nomina a mano; va lanciato dopo il rilascio, col via libera.
 
 **Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`, `tests/component/OrdersHistory.test.jsx`
+
+#### REQ-STAT-007 — Per serata: la ricerca per data, con un calendario che segna i giorni di servizio
+
+L'utente, 11/10/2026: «nelle statistiche, la lista per serata, dovrebbe avere una ricerca per data, con un calendario, che ti permette di selezionare il giorno e un box per modificare a mano la data. Il calendario compatto deve poter scorrere i mesi e segnare dei colori su ogni giorno in base a se c'è stato servizio oppure no». In cima all'elenco delle serate: il tasto «📅 Calendario» e la casella «Data». Il calendario è la griglia del selettore dello storico (grigliaMese: lunedì per primo, sei righe fisse), si scorre mese per mese e colora ogni giorno passato:
+
+VERDE dove c'è stato servizio — una chiusura di cassa dell'app o una giornata di Tiller — GRIGIO dove no; i giorni a venire sono spenti. La legenda sta sotto. Scegliere un giorno, dal calendario o scrivendolo, apre DIRETTAMENTE la serata di quel giorno; un giorno senza servizio lo dice («Nessun servizio sabato 1 agosto»), invece di non fare niente. L'elenco legge un anno di chiusure (400) invece delle ultime 60: la ricerca deve trovare anche la serata di sei mesi fa.
+
+**Dove**: `src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`
 
 ### LIC
 
