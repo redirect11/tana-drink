@@ -31,6 +31,8 @@ import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
+import CampoDataOra from './CampoDataOra.jsx'
+import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
@@ -186,6 +188,16 @@ function DailyStats({ sezione = 'serate' }) {
         al: a ? businessDayKey(a, cutoff) : p.al,
       }
     })
+  // I giorni di servizio per i calendari del periodo (REQ-STAT-007), dalla
+  // lib condivisa: letti una volta, tenuti in mano.
+  const [giorniDiServizio, setGiorniDiServizio] = useState(new Set())
+  useEffect(() => {
+    let vivo = true
+    fetchGiorniDiServizio(cutoff).then((g) => vivo && setGiorniDiServizio(g))
+    return () => {
+      vivo = false
+    }
+  }, [cutoff])
   // Carica abbastanza giornate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
   // Range orari dei grafici: partono dall'orario del locale (REQ-CASSA-015)
@@ -467,29 +479,28 @@ function DailyStats({ sezione = 'serate' }) {
       </div>
       {personalizzato ? (
         <>
-          {/* Data E ORA in un campo solo: il telefono apre il suo selettore,
-              e la notte a cavallo di due giorni si scrive com'è. */}
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
-            <span>
-              <label htmlFor="periodo-dalle" className="muted small">Inizio</label>
-              <input
-                id="periodo-dalle"
-                type="datetime-local"
-                value={periodo.dalle}
-                max={periodo.alle}
-                onChange={(e) => scriviOra('dalle', e.target.value)}
-              />
-            </span>
-            <span>
-              <label htmlFor="periodo-alle" className="muted small">Fine</label>
-              <input
-                id="periodo-alle"
-                type="datetime-local"
-                value={periodo.alle}
-                min={periodo.dalle}
-                onChange={(e) => scriviOra('alle', e.target.value)}
-              />
-            </span>
+          {/* Data E ORA in un campo solo — la notte a cavallo di due giorni
+              si scrive com'è — più il calendario dell'app coi giorni di
+              servizio (CampoDataOra, REQ-STAT-007). */}
+          <div className="row" style={{ gap: 8, alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap' }}>
+            <CampoDataOra
+              id="periodo-dalle"
+              label="Inizio"
+              valore={periodo.dalle}
+              max={periodo.alle}
+              oggi={businessDayKey(new Date(), cutoff)}
+              servizio={giorniDiServizio}
+              onChange={(v) => scriviOra('dalle', v)}
+            />
+            <CampoDataOra
+              id="periodo-alle"
+              label="Fine"
+              valore={periodo.alle}
+              min={periodo.dalle}
+              oggi={businessDayKey(new Date(), cutoff)}
+              servizio={giorniDiServizio}
+              onChange={(v) => scriviOra('alle', v)}
+            />
           </div>
           <p className="muted small" style={{ margin: '0 0 12px' }}>
             {istanti ? (

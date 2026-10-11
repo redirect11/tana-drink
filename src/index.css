@@ -7781,6 +7781,11 @@ a.storico-notifica:hover {
   position: relative;
   margin-bottom: 8px;
 }
+/* Stesso ancoraggio per il campo data-e-ora del periodo personalizzato. */
+.campo-data-ora {
+  position: relative;
+  display: inline-block;
+}
 
 /* «Gli avvisi sono spenti»: una riga in cima, non una finestra modale — al
    banco non si blocca il lavoro per una impostazione. Ritorna finché gli
