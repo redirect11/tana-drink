@@ -2248,7 +2248,11 @@ requirements:
       giornata commerciale più giornate di Tiller), letti una volta e
       tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle
       data dei moduli (spesa, fattura, data di nascita) non sono calendari
-      di servizio e restano com'erano.
+      di servizio e restano com'erano. Anche «Inizio» e «Fine» del periodo
+      personalizzato delle statistiche (CampoDataOra): la casella data-e-ora
+      resta, e accanto il tasto apre la stessa griglia — il browser ci
+      apriva il suo selettore («qua vedo ancora il calendario vecchio»);
+      toccato un giorno, l'ora scritta resta.
     status: implemented
     generate_issue: false
     labels: [statistiche, ux]

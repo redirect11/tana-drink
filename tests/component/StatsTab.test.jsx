@@ -546,3 +546,29 @@ describe('i grafici per giornata', () => {
   })
 })
 
+// «Inizio» e «Fine» di «Personalizzato» aprono il calendario dell'app, non
+// quello del browser («qua vedo ancora il calendario vecchio», l'utente,
+// 11/10/2026). Toccato un giorno, l'ora scritta resta.
+describe('Personalizzato: il calendario dell’app su inizio e fine', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('toccato un giorno nella griglia, cambia la data e resta l’ora', async () => {
+    const user = userEvent.setup()
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    fireEvent.click(await screen.findByRole('button', { name: 'Personalizzato' }))
+    const inizio = screen.getByLabelText('Inizio')
+    expect(inizio.value).toMatch(/T05:00$/)
+    await user.click(screen.getByRole('button', { name: 'Calendario per inizio' }))
+    const giorno = inizio.value.slice(0, 10)
+    const primo = `${giorno.slice(0, 7)}-01`
+    const dentroIlMese = screen.queryByRole('button', { name: new RegExp(`^${primo}`) })
+    if (dentroIlMese) await user.click(dentroIlMese)
+    expect(screen.getByLabelText('Inizio').value).toMatch(/T05:00$/)
+    if (dentroIlMese) expect(screen.getByLabelText('Inizio').value.slice(0, 10)).toBe(primo)
+    m.stop()
+  })
+})
+
