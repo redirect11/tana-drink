@@ -1,5 +1,14 @@
 # Cosa è cambiato
 
+## 1.9.2-beta
+
+### Per chi amministra
+
+- **Statistiche → Per serata: la ricerca per data.** Un calendario compatto,
+  che si scorre mese per mese e colora in verde i giorni di servizio e in
+  grigio gli altri, e una casella per scrivere la data. Scegliendo un
+  giorno si apre la sua serata.
+
 ## 1.9.1-beta
 
 ### Per chi sta al banco
