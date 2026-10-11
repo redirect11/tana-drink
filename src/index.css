@@ -7773,7 +7773,12 @@ a.storico-notifica:hover {
   border-radius: 3px;
   vertical-align: middle;
 }
+/* Il pannello del calendario è `position: absolute` (.periodo-pannello) e
+   si ancora al primo antenato posizionato: senza `relative` qui si
+   ancorava alla pagina e finiva fuori vista — «se clicco calendario non
+   succede niente» (l'utente, 11/10/2026). */
 .calendario-servizio {
+  position: relative;
   margin-bottom: 8px;
 }
 

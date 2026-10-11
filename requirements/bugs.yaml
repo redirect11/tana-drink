@@ -5060,3 +5060,27 @@ bugs:
     labels: [bug, magazzino, conto]
     test_cases:
       - tests/unit/riaperturaMagazzino.test.js
+
+  - id: BUG-114
+    title: "Nelle serate, «Calendario» non apriva niente"
+    area: "src/index.css (.calendario-servizio), src/components/CalendarioServizio.jsx"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 11/10/2026, sul test appena pubblicato: «se clicco
+      calendario non succede niente». Il pannello del calendario
+      (`.periodo-pannello`) e' `position: absolute` e si ancora al primo
+      antenato posizionato; nel selettore dello storico quello e'
+      `.periodo` (relative), nel calendario delle serate il contenitore
+      nuovo non lo era. Il pannello si apriva davvero, ma ancorato alla
+      pagina, fuori vista. I test component non lo vedono: happy-dom non
+      calcola gli stili, e il pannello risultava «nel documento». Corretto
+      con `position: relative` sul contenitore; verificato nel browser sul
+      test.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, statistiche, ui]
+    test_cases:
+      - tests/component/StatsTab.test.jsx
+
