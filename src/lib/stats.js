@@ -113,10 +113,16 @@ const fmtHM = (min) => {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
-// Ampiezza del range in minuti, con wrap oltre mezzanotte (0 = giornata intera).
+// Ampiezza del range in minuti, con wrap oltre mezzanotte.
+//
+// «ALLE» È L'ULTIMA ORA COMPRESA (BUG-115). L'utente, 11/10/2026: «dalle e
+// alle devono essere entrambi inclusi … dalle 22 alle 00:00 deve mostrare
+// anche la mezzanotte». Prima la fine era esclusa — 22:00→00:00 erano due
+// fasce, 22 e 23 — e chi scriveva «alle 00:00» voleva dire «fino all'una».
+// Quindi la fascia arriva alla fine dell'ora di «alle», e 22:00→22:00 è
+// l'ora delle 22 e basta (non la giornata intera).
 function rangeSpan(fromMin, toMin) {
-  const span = (toMin - fromMin + DAY) % DAY
-  return span === 0 ? DAY : span
+  return ((toMin - fromMin + DAY) % DAY) + 60
 }
 
 // Minuti-da-mezzanotte (ora locale) di un timestamp ordine.
