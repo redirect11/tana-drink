@@ -441,6 +441,7 @@ function DailyStats({ sezione = 'serate' }) {
             al: businessDayKey(serata.closed_at || new Date(), cutoff),
           }}
           cutoff={cutoff}
+          perGiornata={false}
         />
       </div>
     )
@@ -658,7 +659,11 @@ function ClassificaVenduto({ righe }) {
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
+// TRANNE QUELLO CHE PER UNA SERATA NON DICE NIENTE (`perGiornata`, l'utente
+// l'11/10/2026: «incasso per giornata nelle statistiche per serata è
+// inutile»): i due grafici per giornata e il KPI «incasso / giornata», che
+// con una giornata sola ripetono l'incasso.
+function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = true }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
@@ -670,22 +675,24 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
         <Kpi label="Ordini" value={kpi.ordini} sub={`${kpi.giorni} giornate`} />
         <Kpi label="Scontrino medio" value={formatPrice(kpi.scontrinoMedio)} />
         <Kpi label="Drink venduti" value={kpi.drinkVenduti} sub={`${kpi.drinkPerOrdine.toFixed(1)}/ordine`} />
-        <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />
+        {perGiornata && <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />}
         <Kpi label="Ora di punta" value={byHour.peakLabel ?? '—'} />
         <Kpi label="Attesa media" value={fmtMin(prep.attesaMedia)} />
         <Kpi label="Preparazione media" value={fmtMin(prep.prepMedia)} />
       </div>
 
-      <ChartCard title="📈 Incasso per giornata">
-        <VBars
-          data={byDay.map((s) => ({
-            label: `${s.weekday} ${s.label}`,
-            value: s.incasso,
-            sub: `${s.ordini} ordini`,
-          }))}
-          format={fmtShort}
-        />
-      </ChartCard>
+      {perGiornata && (
+        <ChartCard title="📈 Incasso per giornata">
+          <VBars
+            data={byDay.map((s) => ({
+              label: `${s.weekday} ${s.label}`,
+              value: s.incasso,
+              sub: `${s.ordini} ordini`,
+            }))}
+            format={fmtShort}
+          />
+        </ChartCard>
+      )}
 
       <ChartCard title="🕙 Incasso per fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
@@ -738,17 +745,19 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
         )}
       </ChartCard>
 
-      <ChartCard title="📅 Incasso per giornata nella fascia scelta">
-        <TimeRange value={dayRange} onChange={setDayRange} />
-        <VBars
-          data={byDayRange.map((s) => ({
-            label: `${s.weekday} ${s.label}`,
-            value: s.incasso,
-            sub: `${s.ordini} comande`,
-          }))}
-          format={fmtShort}
-        />
-      </ChartCard>
+      {perGiornata && (
+        <ChartCard title="📅 Incasso per giornata nella fascia scelta">
+          <TimeRange value={dayRange} onChange={setDayRange} />
+          <VBars
+            data={byDayRange.map((s) => ({
+              label: `${s.weekday} ${s.label}`,
+              value: s.incasso,
+              sub: `${s.ordini} comande`,
+            }))}
+            format={fmtShort}
+          />
+        </ChartCard>
+      )}
 
       <ChartCard title="💰 Top prodotti per incasso">
         <HBars data={top.byRevenue.map((p) => ({ label: p.name, value: p.revenue, text: formatPrice(p.revenue) }))} />

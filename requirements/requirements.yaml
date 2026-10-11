@@ -1868,6 +1868,10 @@ requirements:
     title: "Statistiche: prima la serata (lista e dettaglio), poi il periodo"
     area: "src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js"
     description: >
+      11/10/2026 (l'utente: «incasso per giornata nelle statistiche per
+      serata è inutile»): nel dettaglio di una serata non ci sono i due
+      grafici per giornata né il KPI «incasso / giornata» — una serata è
+      una giornata sola, e ripeterebbero l'incasso. Nel periodo restano.
       «Nelle statistiche dovremmo rendere più sofisticata la selezione della
       serata. È la cosa principale che si vuole vedere, il resto dei filtri
       sono secondari. Io metterei una lista con dettaglio: di default la
