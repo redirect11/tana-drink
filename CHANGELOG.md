@@ -4,6 +4,8 @@
 
 ### Per chi amministra
 
+- **Nel dettaglio di una serata non ci sono più i grafici per giornata**
+  (né «incasso / giornata»): con una giornata sola ripetevano l'incasso.
 - **Nelle fasce orarie delle statistiche l'ora di «alle» è compresa.**
   Dalle 22 alle 00:00 mostra le 22, le 23 e la mezzanotte; prima la
   mezzanotte restava fuori.

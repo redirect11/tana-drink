@@ -519,3 +519,30 @@ describe('Statistiche per serata: la ricerca per data', () => {
   })
 })
 
+// L'utente, 11/10/2026: «incasso per giornata nelle statistiche per serata
+// è inutile» — una serata è una giornata sola, e quei grafici ripetono
+// l'incasso. Nel periodo restano.
+describe('i grafici per giornata', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('non ci sono nella serata', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click(rigaSerata(/08\/08/))
+    await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))
+    expect(screen.queryByText(/Incasso per giornata/)).toBeNull()
+    expect(screen.queryByText('Incasso / giornata')).toBeNull()
+    expect(screen.getByText(/Incasso per fascia oraria/)).toBeInTheDocument()
+  })
+
+  it('e ci sono nel periodo', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    expect(await screen.findByText(/📈 Incasso per giornata/)).toBeInTheDocument()
+    m.stop()
+  })
+})
+
