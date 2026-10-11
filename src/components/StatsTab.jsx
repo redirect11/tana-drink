@@ -8,7 +8,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
+import { businessDayKey, businessDayLabel, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
@@ -30,6 +30,7 @@ import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
+import CalendarioServizio from './CalendarioServizio.jsx'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
@@ -209,7 +210,9 @@ function DailyStats({ sezione = 'serate' }) {
   const [sessionId, setSessionId] = useState(null)
   useEffect(() => {
     let vivo = true
-    fetchCashSessions({ limit: 60 })
+    // Un anno di chiusure: la ricerca per data (REQ-STAT-007) deve trovare
+    // anche la serata di sei mesi fa, non solo le ultime sessanta.
+    fetchCashSessions({ limit: 400 })
       .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
       .catch(() => {})
     return () => {
@@ -400,7 +403,9 @@ function DailyStats({ sezione = 'serate' }) {
 
   // A) PER SERATA — l'elenco è la schermata di partenza, il dettaglio si apre
   // toccando una riga.
-  if (sezione === 'serate' && !serata) return <ElencoSerate righe={righe} onApri={setSessionId} />
+  if (sezione === 'serate' && !serata) {
+    return <ElencoSerate righe={righe} onApri={setSessionId} oggi={businessDayKey(new Date(), cutoff)} cutoff={cutoff} />
+  }
 
   if (giorniAttivi.length === 0) {
     return (
@@ -520,12 +525,38 @@ function DailyStats({ sezione = 'serate' }) {
 // I numeri stanno in colonne allineate a destra e si LEGGONO DA SOLI («12
 // conti», «24,00 € medio»): senza intestazione da tenere a mente, e
 // sopravvivono al capo riga sul telefono.
-function ElencoSerate({ righe, onApri }) {
+// La giornata di una riga dell'elenco: quella della serata di Tiller, o
+// quella in cui si è aperta la cassa.
+const giornataDi = (r, cutoff) => r.session?.business_day || businessDayKey(r.session?.opened_at, cutoff)
+
+function ElencoSerate({ righe, onApri, oggi, cutoff }) {
+  // LA RICERCA PER DATA (REQ-STAT-007): un giorno con servizio apre la sua
+  // serata; uno senza lo dice, invece di non fare niente.
+  const [cercato, setCercato] = useState('')
+  const perGiorno = useMemo(() => {
+    const m = new Map()
+    for (const r of righe) {
+      const g = giornataDi(r, cutoff)
+      if (g && !m.has(g)) m.set(g, r.id)
+    }
+    return m
+  }, [righe, cutoff])
+  const servizio = useMemo(() => new Set(perGiorno.keys()), [perGiorno])
+  const cerca = (giorno) => {
+    setCercato(giorno)
+    if (perGiorno.has(giorno)) onApri(perGiorno.get(giorno))
+  }
   if (righe.length === 0) {
     return <div className="empty">Nessuna chiusura di cassa registrata.</div>
   }
   return (
     <div>
+      <CalendarioServizio servizio={servizio} scelto={cercato} oggi={oggi} onScegli={cerca} />
+      {cercato && !perGiorno.has(cercato) && (
+        <p className="muted small" role="status" style={{ margin: '0 0 8px' }}>
+          Nessun servizio {businessDayLabel(cercato)}.
+        </p>
+      )}
       <p className="muted small" style={{ margin: '0 0 8px' }}>
         Tocca una serata per vederne le statistiche.
       </p>

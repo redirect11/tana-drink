@@ -176,7 +176,8 @@ describe('Statistiche per serata: la lista delle chiusure', () => {
   it('si apre sull’elenco, la serata più recente in cima', async () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
-    const righe = screen.getAllByRole('button')
+    // Le righe dell'elenco, non i comandi sopra (il calendario, REQ-STAT-007).
+    const righe = within(document.querySelector('.inv-list')).getAllByRole('button')
     expect(righe[0].textContent).toMatch(/08\/08/)
     expect(righe[1].textContent).toMatch(/07\/08/)
     // Niente statistiche finché non si sceglie: la lista è la schermata.
@@ -425,7 +426,7 @@ describe('Statistiche: la cassa ancora aperta', () => {
     ])
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
-    const righe = screen.getAllByRole('button')
+    const righe = within(document.querySelector('.inv-list')).getAllByRole('button')
     expect(righe[0].textContent).toMatch(/in corso/)
     expect(righe[0].textContent).toMatch(/09\/08/)
   })
@@ -481,3 +482,40 @@ describe('Statistiche per serata: le giornate di Tiller', () => {
     expect((await screen.findAllByText(/18,00/)).length).toBeGreaterThan(0)
   })
 })
+
+// LA RICERCA PER DATA NELLE SERATE (REQ-STAT-007). L'utente, 11/10/2026: un
+// calendario compatto che scorre i mesi e colora i giorni col servizio e
+// senza, più una casella per scrivere la data a mano.
+describe('Statistiche per serata: la ricerca per data', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('scrivendo la data di una serata, si apre quella serata', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-08-08' } })
+    expect(await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))).toBeTruthy()
+  })
+
+  it('un giorno senza servizio lo dice', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-08-01' } })
+    expect(screen.getByRole('status')).toHaveTextContent(/Nessun servizio/)
+  })
+
+  it('il calendario scorre i mesi e colora i giorni col servizio e senza', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click(screen.getByRole('button', { name: /Calendario/ }))
+    for (let i = 0; i < 36 && !screen.queryByText('agosto 2026'); i++) {
+      await user.click(screen.getByRole('button', { name: 'Mese precedente' }))
+    }
+    expect(screen.getByRole('button', { name: '2026-08-08, servizio' })).toHaveClass('servizio')
+    expect(screen.getByRole('button', { name: '2026-08-01, nessun servizio' })).toHaveClass('senza')
+    // Toccare un giorno col servizio apre la sua serata.
+    await user.click(screen.getByRole('button', { name: '2026-08-07, servizio' }))
+    expect(await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))).toBeTruthy()
+  })
+})
+
