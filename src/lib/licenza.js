@@ -51,6 +51,9 @@
 // I MODULI, uno per riga. La chiave `id` è la stessa della sezione che il
 // modulo accende (`conta`, `scadenzario` nel magazzino): così filtrare un
 // elenco di sezioni è una riga sola e non una tabella di corrispondenze.
+// Un modulo che accende ANCHE altre sezioni le elenca in `sezioni` (lo
+// storico inventari sta con l'inventario, REQ-MAG-052): la corrispondenza
+// vive qui, non nelle schermate.
 // `chiave` è il nome del flag D'USO su settings/bar — scritto per esteso e
 // non calcolato, perché è un nome che finisce su documenti veri e chi lo
 // cerca nel codice lo deve trovare.
@@ -59,6 +62,7 @@ export const MODULI_PREMIUM = {
   conta: {
     chiave: 'modulo_conta_enabled',
     incluso: false,
+    sezioni: ['storico'],
     label: 'Inventario di magazzino',
     descrizione:
       'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
@@ -104,7 +108,15 @@ export const chiaveModulo = (id) => MODULI_PREMIUM[id]?.chiave ?? null
 
 // Questo id è una funzione premium? Serve dove si filtra un elenco misto:
 // una voce che non è premium non ha una licenza da controllare.
-export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, id)
+// Il modulo che accende una sezione: se stesso, o quello che la elenca
+// fra le sue `sezioni`.
+export function moduloDiSezione(id) {
+  if (Object.hasOwn(MODULI_PREMIUM, id)) return id
+  const trovato = Object.entries(MODULI_PREMIUM).find(([, m]) => m.sezioni?.includes(id))
+  return trovato ? trovato[0] : id
+}
+
+export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, moduloDiSezione(id))
 
 // PRIMA DOMANDA: il locale ce l'ha? È quello che dirà la licenza.
 //
@@ -143,4 +155,4 @@ export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcc
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci
 // che non sono premium passano sempre.
-export const voceVisibile = (stato, id) => !ePremium(id) || moduloAttivo(stato, id)
+export const voceVisibile = (stato, id) => !ePremium(id) || moduloAttivo(stato, moduloDiSezione(id))

@@ -572,3 +572,33 @@ describe('Personalizzato: il calendario dell’app su inizio e fine', () => {
   })
 })
 
+// «VENDUTO NELLA FASCIA ORARIA» A CATEGORIE APRIBILI. Flavio, 13/10/2026:
+// «mi porta prima le categorie e poi i singoli prodotti, però tutti
+// mischiati … tu metti solo le categorie, poi ci metti la freccina che se
+// voglio si spacchetta e vedo tutti i prodotti del menu all'interno della
+// categoria».
+describe('Venduto nella fascia oraria: le categorie si aprono sui loro prodotti', () => {
+  it('chiuse di partenza, con dentro i prodotti della categoria e basta', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    // La finestra dei dati di prova, come negli altri test del periodo.
+    await personalizzato('2026-08-07T05:00', '2026-08-09T05:00')
+    const titolo = await screen.findByText(/Venduto nella fascia oraria/)
+    const scheda = titolo.closest('.card')
+    const categorie = [...scheda.querySelectorAll('details.fascia-categoria')]
+    // In ordine d'incasso: i Negroni valgono più degli amari.
+    expect(categorie.map((d) => d.querySelector('summary').textContent)).toEqual([
+      expect.stringMatching(/^COCKTAIL/),
+      expect.stringMatching(/^AMARI/),
+    ])
+    expect(categorie.every((d) => !d.open)).toBe(true)
+    // Dentro gli amari c'è solo l'amaro; niente elenco unico «Prodotti venduti».
+    expect(categorie[1].textContent).toMatch(/Amaro della casa/)
+    expect(categorie[1].textContent).not.toMatch(/Negroni/)
+    expect(categorie[0].textContent).toMatch(/Negroni/)
+    expect(within(scheda).queryByText(/Prodotti venduti/)).toBeNull()
+    m.stop()
+  })
+})

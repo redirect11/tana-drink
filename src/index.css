@@ -898,6 +898,24 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
+/* STORICO INVENTARI (REQ-MAG-052): ogni inventario chiuso è un tasto largo
+   quanto la scheda, date a sinistra e valori a destra. */
+.storico-inventario-riga {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 4px;
+  border: none;
+  border-bottom: 1px dashed var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.storico-inventario-riga:last-child { border-bottom: none; }
+
 /* Riga legacy (StockCount/Fatture fornitore): SEMPRE dentro .inv-item. NON
    deve toccare la lista inventario nuova (.inv-list > .inv-row), che è a blocco
    col dettaglio sotto — altrimenti il flex mette il dettaglio di fianco. */
@@ -2565,10 +2583,31 @@ body.fullbleed .bar-content {
   font-size: 1.2rem;
 }
 
-/* Elenco dei prodotti venduti in una fascia oraria: righe compatte scorrevoli. */
+/* Venduto in una fascia oraria: le categorie, ognuna a scomparsa sui suoi
+   prodotti (Flavio, 13/10/2026). La riga della categoria è il riassunto del
+   <details>: freccia a sinistra, nome e pezzi, incasso a destra. */
+.fascia-categoria summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+  cursor: pointer;
+  list-style: none;
+}
+.fascia-categoria summary::-webkit-details-marker { display: none; }
+.fascia-categoria summary::before {
+  content: '▸';
+  flex: none;
+  width: 1em;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.fascia-categoria[open] summary::before { transform: rotate(90deg); }
+.fascia-categoria:last-child summary { border-bottom: none; }
+/* I prodotti della categoria: righe compatte, rientrate sotto la freccia. */
 .fascia-prodotti {
-  max-height: 320px;
-  overflow-y: auto;
+  padding: 2px 0 6px 1.5em;
   font-size: 0.86rem;
 }
 .fascia-riga {

@@ -2,7 +2,7 @@
 // Logica pura senza dipendenze Firestore: testabile in isolamento.
 // Riusa aggregateProducts/ordersFinance da eta.js.
 import { ORDER_STATUSES } from './orderStatus.js'
-import { aggregateProducts, ordersFinance, discountFactor, orderNet } from './eta.js'
+import { aggregateProducts, ordersFinance, discountFactor, orderNet, cent } from './eta.js'
 import { scontoTotale } from './pagamento.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { comandeConRighe, itemsTotal } from './comande.js'
@@ -211,12 +211,15 @@ export function ordersInHourRange(orders, range = DEFAULT_HOUR_RANGE) {
 export function hourRangeReport(orders, range, drinksById) {
   const ord = ordersInHourRange(orders, range)
   const totale = ord.reduce((s, o) => s + nettoDi(o), 0)
+  const categorie = vendutoPerCategoria(ord, drinksById)
   return {
     // I CONTI che hanno battuto qualcosa nella fascia, non le battute.
     nOrdini: new Set(ord.map((o) => o.conto)).size,
     totale: Math.round(totale * 100) / 100,
-    prodotti: aggregateProducts(ord), // già ordinati per quantità
-    categorie: revenueByCategory(ord, drinksById),
+    categorie, // ognuna coi suoi prodotti
+    // L'elenco piatto, dalle stesse somme: lo leggono i test e chi vuole la
+    // classifica della fascia senza le categorie.
+    prodotti: categorie.flatMap((c) => c.prodotti).sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name)),
   }
 }
 
@@ -279,22 +282,48 @@ export function topProducts(orders, limit = 10) {
 
 // ── Incasso per categoria menu ────────────────────────────────────────
 // `revenue` AL NETTO degli sconti, come per i prodotti: vedi discountFactor.
-export function revenueByCategory(orders, drinksById) {
-  const byCat = new Map()
+// IL VENDUTO PER CATEGORIA, CON DENTRO I SUOI PRODOTTI. Flavio, 13/10/2026,
+// guardando «Venduto nella fascia oraria»: «mi porta prima le categorie e
+// poi i singoli prodotti, però tutti mischiati … tu metti solo le
+// categorie, gin e vodka, poi ci metti la freccina che se voglio si
+// spacchetta e vedo tutti i prodotti del menu all'interno della categoria
+// … poi vedo io qual è il best seller della singola categoria». Le
+// categorie in ordine d'incasso; dentro ognuna i prodotti in ordine di
+// pezzi, come la classifica del periodo.
+export function vendutoPerCategoria(orders, drinksById) {
+  // Le righe di ogni battuta smistate per categoria, come battute a sé col
+  // fattore del conto: così i prodotti li aggrega `aggregateProducts`,
+  // la stessa classifica del periodo, e non una copia sua.
+  const perCat = new Map()
   for (const o of valid(orders)) {
-    // Una battuta porta il fattore del suo conto (REQ-STAT-005).
-    const f = o.fattore ?? discountFactor(o)
+    const fattore = o.fattore ?? discountFactor(o)
+    const righe = new Map()
     for (const i of o.order_items || []) {
       const cat = drinksById?.[i.drink_id]?.category || 'Altro'
-      const cur = byCat.get(cat) || { name: cat, revenue: 0, qty: 0 }
-      cur.revenue += (Number(i.qty) || 0) * (Number(i.unit_price) || 0) * f
-      cur.qty += Number(i.qty) || 0
-      byCat.set(cat, cur)
+      if (!righe.has(cat)) righe.set(cat, [])
+      righe.get(cat).push(i)
+    }
+    for (const [cat, order_items] of righe) {
+      if (!perCat.has(cat)) perCat.set(cat, [])
+      perCat.get(cat).push({ fattore, order_items })
     }
   }
-  return [...byCat.values()]
-    .map((x) => ({ ...x, revenue: Math.round(x.revenue * 100) / 100 }))
+  return [...perCat]
+    .map(([name, battute]) => {
+      const prodotti = aggregateProducts(battute)
+      return {
+        name,
+        qty: prodotti.reduce((s, p) => s + p.qty, 0),
+        revenue: cent(prodotti.reduce((s, p) => s + p.revenue, 0)),
+        prodotti,
+      }
+    })
     .sort((a, b) => b.revenue - a.revenue)
+}
+
+// Solo le categorie, per i grafici del periodo.
+export function revenueByCategory(orders, drinksById) {
+  return vendutoPerCategoria(orders, drinksById).map(({ name, revenue, qty }) => ({ name, revenue, qty }))
 }
 
 // ── Consumo ingredienti (qty venduta × ricetta) ───────────────────────
