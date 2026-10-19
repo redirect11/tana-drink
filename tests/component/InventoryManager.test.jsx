@@ -20,6 +20,9 @@ import { useEffect, useState } from 'react'
 vi.mock('../../src/components/StockCountPanel.jsx', () => ({
   default: () => <div>PANNELLO CONTA</div>,
 }))
+vi.mock('../../src/components/StoricoInventari.jsx', () => ({
+  default: () => <div>PANNELLO STORICO</div>,
+}))
 vi.mock('../../src/lib/paginaPiena.js', () => ({ usePaginaPiena: () => {} }))
 vi.mock('../../src/lib/toast.js', () => ({
   toastSuccess: vi.fn(),
@@ -529,6 +532,21 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     await aspettaLista()
     expect(screen.queryByRole('button', { name: /Inventario/ })).toBeNull()
     expect(screen.queryByText('PANNELLO CONTA')).toBeNull()
+    // E con lui lo Storico inventari (REQ-MAG-052): stessa funzione.
+    expect(screen.queryByRole('button', { name: /Storico inventari/ })).toBeNull()
+  })
+
+  it('lo Storico inventari viene con l’inventario, subito dopo di lui', async () => {
+    const user = userEvent.setup()
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    mostra()
+    await aspettaLista()
+    const voci = screen.getAllByRole('button').map((b) => b.textContent)
+    const pos = (re) => voci.findIndex((t) => re.test(t))
+    expect(pos(/Inventario/)).toBeLessThan(pos(/Storico inventari/))
+    expect(pos(/Storico inventari/)).toBeLessThan(pos(/Categorie/))
+    await user.click(screen.getByRole('button', { name: /Storico inventari/ }))
+    expect(screen.getByText('PANNELLO STORICO')).toBeInTheDocument()
   })
 
   it('la licenza che la include la fa comparire, al suo posto, senza toccare il codice', async () => {

@@ -227,6 +227,40 @@ describe('hourRangeReport (venduto in una fascia oraria)', () => {
     expect(r.categorie.length).toBeGreaterThan(0)
   })
 
+  // Flavio, 13/10/2026: «tu metti solo le categorie … poi ci metti la
+  // freccina che se voglio si spacchetta e vedo tutti i prodotti del menu
+  // all'interno della categoria … poi vedo io qual è il best seller della
+  // singola categoria». Ogni categoria porta i suoi prodotti, in ordine di
+  // pezzi, con lo sconto del conto come nella classifica.
+  it('ogni categoria ha dentro i suoi prodotti, in ordine di pezzi', () => {
+    const conSconto = [
+      ...orders,
+      {
+        serata_id: 's3',
+        daily_number: 4,
+        status: 'pagato',
+        total: 43,
+        created_at: iso,
+        status_times: {},
+        order_items: [
+          { drink_id: 'd1', name: 'Negroni', qty: 2, unit_price: 8 },
+          { drink_id: 'd1', name: 'Boulevardier', qty: 3, unit_price: 9 },
+        ],
+      },
+    ]
+    const r = hourRangeReport(conSconto, fascia, drinksById)
+    expect(r.categorie.map((c) => c.name)).toEqual(['AMERICANI', 'BIRRE'])
+    const americani = r.categorie.find((c) => c.name === 'AMERICANI')
+    expect(americani.prodotti.map((p) => [p.name, p.qty])).toEqual([
+      ['Negroni', 4],
+      ['Boulevardier', 3],
+    ])
+    expect(americani.prodotti[0].revenue).toBe(32) // 4 × 8
+    expect(americani.qty).toBe(7)
+    expect(americani.revenue).toBe(59) // 32 + 3 × 9
+    expect(r.categorie.find((c) => c.name === 'BIRRE').prodotti).toEqual([{ name: 'Ceres', qty: 1, revenue: 4 }])
+  })
+
   it('fuori fascia non conta nulla', () => {
     const r = hourRangeReport(orders, { from: due(hh + 6), to: due(hh + 6) }, drinksById)
     expect(r.nOrdini).toBe(0)

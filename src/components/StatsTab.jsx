@@ -731,30 +731,34 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
           </span>
           <strong className="price" style={{ fontSize: '1.3rem' }}>{formatPrice(fascia.totale)}</strong>
         </div>
-        {fascia.prodotti.length === 0 ? (
+        {fascia.categorie.length === 0 ? (
           <p className="muted small">Nessuna vendita in questa fascia.</p>
         ) : (
-          <>
-            <div className="muted small" style={{ margin: '6px 0 4px' }}>Categorie</div>
-            <HBars
-              data={fascia.categorie.map((c) => ({
-                label: `${c.name} (${c.qty})`,
-                value: c.revenue,
-                text: formatPrice(c.revenue),
-              }))}
-            />
-            <div className="muted small" style={{ margin: '10px 0 4px' }}>
-              Prodotti venduti ({fascia.prodotti.length})
-            </div>
-            <div className="fascia-prodotti">
-              {fascia.prodotti.map((p) => (
-                <div className="row between fascia-riga" key={p.name}>
-                  <span className="grow">{p.qty}× {p.name}</span>
-                  <span className="muted">{formatPrice(p.revenue)}</span>
+          // SOLO LE CATEGORIE, E OGNUNA SI APRE SUI SUOI PRODOTTI (Flavio,
+          // 13/10/2026): prima c'erano le barre delle categorie e sotto un
+          // elenco unico di tutti i prodotti, «tutti mischiati». Chiuse di
+          // partenza: la fascia si legge in un colpo d'occhio, e il best
+          // seller di una categoria lo si va a vedere dentro di lei.
+          <div>
+            {fascia.categorie.map((c) => (
+              <details className="fascia-categoria" key={c.name}>
+                <summary>
+                  <span className="grow">
+                    {c.name} <span className="muted small">({c.qty})</span>
+                  </span>
+                  <strong className="price">{formatPrice(c.revenue)}</strong>
+                </summary>
+                <div className="fascia-prodotti">
+                  {c.prodotti.map((p) => (
+                    <div className="row between fascia-riga" key={p.name}>
+                      <span className="grow">{p.qty}× {p.name}</span>
+                      <span className="muted">{formatPrice(p.revenue)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
+              </details>
+            ))}
+          </div>
         )}
       </ChartCard>
 

@@ -177,6 +177,11 @@ function Spiegazione({ lordo, saleVat }) {
         prodotti. Il fatturato è l’incassato delle voci di menù, sconti compresi, secondo le quote delle voci.
       </Didascalia>
       <Didascalia>
+        <strong>La data di un acquisto è quella in cui la merce entra</strong>: il giorno della consegna
+        dell’ordine o del carico, non quello del pagamento. Una fattura pagata a trenta giorni pesa sul mese
+        in cui la merce è arrivata.
+      </Didascalia>
+      <Didascalia>
         <strong>Differenza con «Venduto × Incassato».</strong> Qui conta la merce <strong>entrata</strong>,
         quando entra, venduta o no; là il costo della merce <strong>venduta</strong>, dalle ricette. Trenta casse
         di birra comprate a giugno per l’estate qui pesano tutte su giugno, che sembra in perdita, e luglio

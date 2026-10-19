@@ -124,7 +124,8 @@ export function discountFactor(order) {
   return Math.max(0, 1 - sconto / lordo)
 }
 
-const cent = (n) => Math.round((Number(n) || 0) * 100) / 100
+// Ai centesimi: lo usano anche le statistiche (stats.js).
+export const cent = (n) => Math.round((Number(n) || 0) * 100) / 100
 
 // Vendite per prodotto: [{ name, qty, revenue }] ordinate per quantità.
 // `revenue` è AL NETTO degli sconti applicati al conto.
