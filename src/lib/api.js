@@ -14,6 +14,7 @@ import {
   where,
   orderBy,
   limit as fbLimit,
+  startAfter,
   onSnapshot,
   serverTimestamp,
   increment,
@@ -1434,10 +1435,14 @@ export async function closeStockCount(id, { lines, riapri = false }) {
   return { ...chiusa, prossimo }
 }
 
-export async function fetchStockCounts({ limit = 20 } = {}) {
-  const snap = await getDocs(
-    query(collection(db, 'stock_counts'), orderBy('started_at', 'desc'), fbLimit(limit))
-  )
+// A PAGINE (REQ-MAG-052): un inventario sono quattrocento righe, e lo
+// storico li vuole tutti — ma non tutti insieme. `prima` è lo `started_at`
+// dell'ultimo già in mano: si continua da lì.
+export async function fetchStockCounts({ limit = 20, prima = null } = {}) {
+  const vincoli = [orderBy('started_at', 'desc')]
+  if (prima) vincoli.push(startAfter(Timestamp.fromDate(new Date(prima))))
+  vincoli.push(fbLimit(limit))
+  const snap = await getDocs(query(collection(db, 'stock_counts'), ...vincoli))
   return snap.docs.map(mapStockCount)
 }
 

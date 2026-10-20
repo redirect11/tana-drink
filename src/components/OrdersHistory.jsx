@@ -9,6 +9,7 @@ import {
 } from '../lib/api.js'
 import { daTiller, unisciVendite } from '../lib/venditeStoriche.js'
 import SelettorePeriodo from './SelettorePeriodo.jsx'
+import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
 import { isPersonale } from '../lib/ruoli.js'
@@ -92,6 +93,15 @@ export default function OrdersHistory() {
   )
   const oggi = businessDayKey(new Date(), cutoffHour)
   const navigate = useNavigate()
+  // I giorni di servizio, per colorare il calendario (REQ-STAT-007).
+  const [servizio, setServizio] = useState(new Set())
+  useEffect(() => {
+    let vivo = true
+    fetchGiorniDiServizio(cutoffHour).then((g) => vivo && setServizio(g))
+    return () => {
+      vivo = false
+    }
+  }, [cutoffHour])
 
   // Realtime + LOCAL-FIRST: la lista compare subito (anche offline, dalla
   // cache) e si aggiorna da sola quando cambiano gli ordini.
@@ -167,7 +177,7 @@ export default function OrdersHistory() {
   // ripetuto due volte e una cornice attorno a tutto lo schermo.
   return (
     <div className="storico-ordini">
-      <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} />
+      <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} servizio={servizio} />
 
       <input
         type="search"

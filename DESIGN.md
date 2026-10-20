@@ -296,6 +296,15 @@ Regole:
   (`min(520px, 94vw)` lo sconto, `min(720px, 96vw)` la ricetta): a 320px i
   tasti erano piccoli per un dito e gli ingredienti andavano a capo
   (REQ-UI-028).
+- **Un calendario solo in tutta l'app** (`GrigliaMese`): lunedì per primo,
+  sei righe fisse, le frecce dei mesi, e un colore per giorno — il verde di
+  stato (`--ok`) dove c'è stato servizio, un grigio tenue dove no, i giorni
+  a venire spenti — con la legenda sotto. Lo usano la ricerca per data
+  delle serate e delle chiusure (`CalendarioServizio`: tasto «📅
+  Calendario» più la casella della data) e il periodo dello storico
+  (`SelettorePeriodo`, che sopra aggiunge le scorciatoie e colora l'intervallo
+  scelto). Le caselle data dei moduli — una spesa, una fattura — non sono
+  calendari di servizio e restano campi normali (REQ-STAT-007).
 - **La spiegazione di una tabella sta in cima, a scomparsa** (`Soffietto`,
   un `<details>` chiuso di partenza): «ℹ️ Cosa misura questa tabella», con
   la domanda a cui risponde, la differenza con le tabelle vicine e il

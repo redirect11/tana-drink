@@ -80,6 +80,7 @@ import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
+import StoricoInventari from './StoricoInventari.jsx'
 import MovimentiProdotto from './MovimentiProdotto.jsx'
 import ControlloMagazzino from './ControlloMagazzino.jsx'
 import { controlloMagazzinoVisibile } from '../lib/prova.js'
@@ -190,6 +191,9 @@ const INV_VIEWS = [
   // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
   // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
   ['conta', '📋', 'Inventario'],
+  // Gli inventari chiusi (REQ-MAG-052): si accende con l'inventario
+  // (lib/licenza.js, `sezioni`).
+  ['storico', '🗄️', 'Storico inventari'],
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
   ['movimenti', '📜', 'Movimenti'],
@@ -206,8 +210,8 @@ const INV_VIEWS = [
 export default function InventoryManager() {
   const [sezione, setSezione] = useState('prodotti')
   usePaginaPiena()
-  // DUE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): Conta e Scadenzario
-  // compaiono solo dove il modulo è acceso. Le impostazioni si prendono
+  // ALCUNE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): l'inventario e il
+  // suo storico compaiono solo dove il modulo è acceso. Le impostazioni si prendono
   // dalla cache (`settingsIniziali`) e si aggiornano da sole: nessuna
   // lettura in più e nessuna attesa, se no la barra delle sezioni si
   // disegnerebbe due volte e le voci ballerebbero sotto il dito.
@@ -235,6 +239,7 @@ export default function InventoryManager() {
     <div className="pagina-inventario">
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
+      {view === 'storico' && <StoricoInventari />}
       {view === 'categorie' && <CategoriePanel />}
       {view === 'macro' && <MacroPanel />}
       {view === 'movimenti' && <MovimentiPanel />}

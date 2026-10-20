@@ -358,27 +358,5 @@ describe('le rimanenze mentre si conta', () => {
   })
 })
 
-describe('un inventario già chiuso', () => {
-  it('si riapre e ridice il consumo a settimana coi suoi giorni', async () => {
-    stato.storico = [
-      {
-        id: 'v1',
-        status: 'closed',
-        started_at: '2026-06-07T00:00:00.000Z',
-        closed_at: '2026-06-21T00:00:00.000Z',
-        totals: { cons_value: 15 },
-        lines: [
-          { item_id: 'a', name: 'Gin Mare', unit: 'ml', cons: 1500, cons_value: 15 },
-        ],
-      },
-    ]
-    render(<StockCountPanel />)
-    // Le conte vecchie non hanno mai avuto un consumo settimanale salvato:
-    // si ricalcola dalle date, che invece ce l'hanno sempre avute.
-    // Le date si leggono come si scrivono, «dal 07/06/2026 al 21/06/2026»:
-    // è la frase con cui Flavio descrive l'inventario, «da TOT a TOT».
-    await userEvent.click(await screen.findByText(/dal 07\/06\/2026 al 21\/06\/2026/))
-    await screen.findByText(/Inventario dal 07\/06\/2026 al 21\/06\/2026/)
-    scritto(/75 cl a settimana/)
-  })
-})
+// Gli inventari chiusi si guardano nello Storico inventari (REQ-MAG-052,
+// tests/component/StoricoInventari.test.jsx): qui non ci sono più.
