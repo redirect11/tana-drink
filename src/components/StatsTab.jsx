@@ -8,7 +8,7 @@ import {
   subscribeSettings,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
+import { businessDayKey, businessDayLabel, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
@@ -30,6 +30,9 @@ import { aggregateProducts } from '../lib/eta.js'
 import { elencoSerate, etichettaSerata } from '../lib/serate.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
+import CalendarioServizio from './CalendarioServizio.jsx'
+import CampoDataOra from './CampoDataOra.jsx'
+import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
@@ -185,6 +188,16 @@ function DailyStats({ sezione = 'serate' }) {
         al: a ? businessDayKey(a, cutoff) : p.al,
       }
     })
+  // I giorni di servizio per i calendari del periodo (REQ-STAT-007), dalla
+  // lib condivisa: letti una volta, tenuti in mano.
+  const [giorniDiServizio, setGiorniDiServizio] = useState(new Set())
+  useEffect(() => {
+    let vivo = true
+    fetchGiorniDiServizio(cutoff).then((g) => vivo && setGiorniDiServizio(g))
+    return () => {
+      vivo = false
+    }
+  }, [cutoff])
   // Carica abbastanza giornate da coprire il periodo scelto (min 60).
   const [loadLimit, setLoadLimit] = useState(60)
   // Range orari dei grafici: partono dall'orario del locale (REQ-CASSA-015)
@@ -209,7 +222,9 @@ function DailyStats({ sezione = 'serate' }) {
   const [sessionId, setSessionId] = useState(null)
   useEffect(() => {
     let vivo = true
-    fetchCashSessions({ limit: 60 })
+    // Un anno di chiusure: la ricerca per data (REQ-STAT-007) deve trovare
+    // anche la serata di sei mesi fa, non solo le ultime sessanta.
+    fetchCashSessions({ limit: 400 })
       .then((list) => vivo && setSessions(list.filter((x) => x.opened_at)))
       .catch(() => {})
     return () => {
@@ -400,7 +415,9 @@ function DailyStats({ sezione = 'serate' }) {
 
   // A) PER SERATA — l'elenco è la schermata di partenza, il dettaglio si apre
   // toccando una riga.
-  if (sezione === 'serate' && !serata) return <ElencoSerate righe={righe} onApri={setSessionId} />
+  if (sezione === 'serate' && !serata) {
+    return <ElencoSerate righe={righe} onApri={setSessionId} oggi={businessDayKey(new Date(), cutoff)} cutoff={cutoff} />
+  }
 
   if (giorniAttivi.length === 0) {
     return (
@@ -436,6 +453,7 @@ function DailyStats({ sezione = 'serate' }) {
             al: businessDayKey(serata.closed_at || new Date(), cutoff),
           }}
           cutoff={cutoff}
+          perGiornata={false}
         />
       </div>
     )
@@ -461,29 +479,28 @@ function DailyStats({ sezione = 'serate' }) {
       </div>
       {personalizzato ? (
         <>
-          {/* Data E ORA in un campo solo: il telefono apre il suo selettore,
-              e la notte a cavallo di due giorni si scrive com'è. */}
-          <div className="row" style={{ gap: 8, alignItems: 'flex-end', marginBottom: 6, flexWrap: 'wrap' }}>
-            <span>
-              <label htmlFor="periodo-dalle" className="muted small">Inizio</label>
-              <input
-                id="periodo-dalle"
-                type="datetime-local"
-                value={periodo.dalle}
-                max={periodo.alle}
-                onChange={(e) => scriviOra('dalle', e.target.value)}
-              />
-            </span>
-            <span>
-              <label htmlFor="periodo-alle" className="muted small">Fine</label>
-              <input
-                id="periodo-alle"
-                type="datetime-local"
-                value={periodo.alle}
-                min={periodo.dalle}
-                onChange={(e) => scriviOra('alle', e.target.value)}
-              />
-            </span>
+          {/* Data E ORA in un campo solo — la notte a cavallo di due giorni
+              si scrive com'è — più il calendario dell'app coi giorni di
+              servizio (CampoDataOra, REQ-STAT-007). */}
+          <div className="row" style={{ gap: 8, alignItems: 'flex-start', marginBottom: 6, flexWrap: 'wrap' }}>
+            <CampoDataOra
+              id="periodo-dalle"
+              label="Inizio"
+              valore={periodo.dalle}
+              max={periodo.alle}
+              oggi={businessDayKey(new Date(), cutoff)}
+              servizio={giorniDiServizio}
+              onChange={(v) => scriviOra('dalle', v)}
+            />
+            <CampoDataOra
+              id="periodo-alle"
+              label="Fine"
+              valore={periodo.alle}
+              min={periodo.dalle}
+              oggi={businessDayKey(new Date(), cutoff)}
+              servizio={giorniDiServizio}
+              onChange={(v) => scriviOra('alle', v)}
+            />
           </div>
           <p className="muted small" style={{ margin: '0 0 12px' }}>
             {istanti ? (
@@ -520,12 +537,40 @@ function DailyStats({ sezione = 'serate' }) {
 // I numeri stanno in colonne allineate a destra e si LEGGONO DA SOLI («12
 // conti», «24,00 € medio»): senza intestazione da tenere a mente, e
 // sopravvivono al capo riga sul telefono.
-function ElencoSerate({ righe, onApri }) {
+// La giornata di una riga dell'elenco: quella della serata di Tiller, o
+// quella in cui si è aperta la cassa.
+const giornataDi = (r, cutoff) => r.session?.business_day || businessDayKey(r.session?.opened_at, cutoff)
+
+function ElencoSerate({ righe, onApri, oggi, cutoff }) {
+  // LA RICERCA PER DATA (REQ-STAT-007): un giorno con servizio apre la sua
+  // serata; uno senza lo dice, invece di non fare niente.
+  const [cercato, setCercato] = useState('')
+  const perGiorno = useMemo(() => {
+    const m = new Map()
+    for (const r of righe) {
+      const g = giornataDi(r, cutoff)
+      if (g && !m.has(g)) m.set(g, r.id)
+    }
+    return m
+  }, [righe, cutoff])
+  // Per i colori del calendario: le righe in elenco (chiusure e giornate di
+  // Tiller), che è lo stesso insieme di lib/giorniDiServizio.js.
+  const servizio = useMemo(() => new Set(perGiorno.keys()), [perGiorno])
+  const cerca = (giorno) => {
+    setCercato(giorno)
+    if (perGiorno.has(giorno)) onApri(perGiorno.get(giorno))
+  }
   if (righe.length === 0) {
     return <div className="empty">Nessuna chiusura di cassa registrata.</div>
   }
   return (
     <div>
+      <CalendarioServizio servizio={servizio} scelto={cercato} oggi={oggi} onScegli={cerca} />
+      {cercato && !perGiorno.has(cercato) && (
+        <p className="muted small" role="status" style={{ margin: '0 0 8px' }}>
+          Nessun servizio {businessDayLabel(cercato)}.
+        </p>
+      )}
       <p className="muted small" style={{ margin: '0 0 8px' }}>
         Tocca una serata per vederne le statistiche.
       </p>
@@ -627,7 +672,11 @@ function ClassificaVenduto({ righe }) {
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
 // lo decide chi chiama. I conti non si duplicano: arrivano già fatti in
 // `view`.
-function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
+// TRANNE QUELLO CHE PER UNA SERATA NON DICE NIENTE (`perGiornata`, l'utente
+// l'11/10/2026: «incasso per giornata nelle statistiche per serata è
+// inutile»): i due grafici per giornata e il KPI «incasso / giornata», che
+// con una giornata sola ripetono l'incasso.
+function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = true }) {
   const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
@@ -639,22 +688,24 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
         <Kpi label="Ordini" value={kpi.ordini} sub={`${kpi.giorni} giornate`} />
         <Kpi label="Scontrino medio" value={formatPrice(kpi.scontrinoMedio)} />
         <Kpi label="Drink venduti" value={kpi.drinkVenduti} sub={`${kpi.drinkPerOrdine.toFixed(1)}/ordine`} />
-        <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />
+        {perGiornata && <Kpi label="Incasso / giornata" value={formatPrice(kpi.incassoPerGiorno)} />}
         <Kpi label="Ora di punta" value={byHour.peakLabel ?? '—'} />
         <Kpi label="Attesa media" value={fmtMin(prep.attesaMedia)} />
         <Kpi label="Preparazione media" value={fmtMin(prep.prepMedia)} />
       </div>
 
-      <ChartCard title="📈 Incasso per giornata">
-        <VBars
-          data={byDay.map((s) => ({
-            label: `${s.weekday} ${s.label}`,
-            value: s.incasso,
-            sub: `${s.ordini} ordini`,
-          }))}
-          format={fmtShort}
-        />
-      </ChartCard>
+      {perGiornata && (
+        <ChartCard title="📈 Incasso per giornata">
+          <VBars
+            data={byDay.map((s) => ({
+              label: `${s.weekday} ${s.label}`,
+              value: s.incasso,
+              sub: `${s.ordini} ordini`,
+            }))}
+            format={fmtShort}
+          />
+        </ChartCard>
+      )}
 
       <ChartCard title="🕙 Incasso per fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
@@ -680,44 +731,50 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff }) {
           </span>
           <strong className="price" style={{ fontSize: '1.3rem' }}>{formatPrice(fascia.totale)}</strong>
         </div>
-        {fascia.prodotti.length === 0 ? (
+        {fascia.categorie.length === 0 ? (
           <p className="muted small">Nessuna vendita in questa fascia.</p>
         ) : (
-          <>
-            <div className="muted small" style={{ margin: '6px 0 4px' }}>Categorie</div>
-            <HBars
-              data={fascia.categorie.map((c) => ({
-                label: `${c.name} (${c.qty})`,
-                value: c.revenue,
-                text: formatPrice(c.revenue),
-              }))}
-            />
-            <div className="muted small" style={{ margin: '10px 0 4px' }}>
-              Prodotti venduti ({fascia.prodotti.length})
-            </div>
-            <div className="fascia-prodotti">
-              {fascia.prodotti.map((p) => (
-                <div className="row between fascia-riga" key={p.name}>
-                  <span className="grow">{p.qty}× {p.name}</span>
-                  <span className="muted">{formatPrice(p.revenue)}</span>
+          // SOLO LE CATEGORIE, E OGNUNA SI APRE SUI SUOI PRODOTTI (Flavio,
+          // 13/10/2026): prima c'erano le barre delle categorie e sotto un
+          // elenco unico di tutti i prodotti, «tutti mischiati». Chiuse di
+          // partenza: la fascia si legge in un colpo d'occhio, e il best
+          // seller di una categoria lo si va a vedere dentro di lei.
+          <div>
+            {fascia.categorie.map((c) => (
+              <details className="fascia-categoria" key={c.name}>
+                <summary>
+                  <span className="grow">
+                    {c.name} <span className="muted small">({c.qty})</span>
+                  </span>
+                  <strong className="price">{formatPrice(c.revenue)}</strong>
+                </summary>
+                <div className="fascia-prodotti">
+                  {c.prodotti.map((p) => (
+                    <div className="row between fascia-riga" key={p.name}>
+                      <span className="grow">{p.qty}× {p.name}</span>
+                      <span className="muted">{formatPrice(p.revenue)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
+              </details>
+            ))}
+          </div>
         )}
       </ChartCard>
 
-      <ChartCard title="📅 Incasso per giornata nella fascia scelta">
-        <TimeRange value={dayRange} onChange={setDayRange} />
-        <VBars
-          data={byDayRange.map((s) => ({
-            label: `${s.weekday} ${s.label}`,
-            value: s.incasso,
-            sub: `${s.ordini} comande`,
-          }))}
-          format={fmtShort}
-        />
-      </ChartCard>
+      {perGiornata && (
+        <ChartCard title="📅 Incasso per giornata nella fascia scelta">
+          <TimeRange value={dayRange} onChange={setDayRange} />
+          <VBars
+            data={byDayRange.map((s) => ({
+              label: `${s.weekday} ${s.label}`,
+              value: s.incasso,
+              sub: `${s.ordini} comande`,
+            }))}
+            format={fmtShort}
+          />
+        </ChartCard>
+      )}
 
       <ChartCard title="💰 Top prodotti per incasso">
         <HBars data={top.byRevenue.map((p) => ({ label: p.name, value: p.revenue, text: formatPrice(p.revenue) }))} />

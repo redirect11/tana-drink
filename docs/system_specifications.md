@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 10 ottobre 2026.
+> Generato il 19 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 218 | fatto e coperto dai test |
+| ✅ | 220 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**262 voci** in tutto. **234** descrivono il sistema com'è oggi e
+**264 voci** in tutto. **236** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 46 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -61,7 +61,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 5 | — |  |
+| [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -1148,6 +1148,8 @@ LA STESSA TABELLA DI «VENDUTO × INCASSATO»: le vendite si sommano con lo stes
 
 LETTURE: i conti e i soli CARICHI del periodo mostrato (fetchOrdersBetween, fetchCarichiBetween): ogni vendita scrive uno scarico per ingrediente, e leggere tutti i movimenti vorrebbe dire decine di migliaia di documenti per usarne poche centinaia. Il filtro sul motivo sta nella query, con l'indice composto (reason, created_at) in firestore.indexes.json. Poi ordini fornitore, prodotti, voci e macro una volta sola; un periodo già visto non si rilegge. `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto e sommaVendite.
 
+LA DATA DI UN ACQUISTO E' QUELLA IN CUI LA MERCE ENTRA. Flavio, 13/10/2026: «in acquisti vorrei capire se mette quello che ordino quel mese o quello che pago quel mese … io non pago quasi mai alla consegna, pago quasi sempre almeno a 30 giorni … la data di riferimento deve far riferimento a quando ordino». E' gia' cosi': una consegna vale il giorno d'arrivo (`consegneDi`, `c.at`), un carico il giorno del movimento; il pagamento non c'entra. La spiegazione a scomparsa della tabella (REQ-UI-029) ora lo dice.
+
 **Dove**: `src/lib/acquistiFatturato.js, src/lib/periodiBilancio.js, src/lib/macroStats.js (sommaVendite, vociDiAcquisto, componiTabella), src/lib/magazzinoPeriodo.js (MOTIVI_DI_CARICO), src/components/AcquistiFatturato.jsx, src/components/TabellaMacro.jsx, src/components/BilancioTab.jsx, src/lib/api.js (fetchCarichiBetween), firestore.indexes.json` · **Lo dimostrano**: `tests/unit/acquistiFatturato.test.js`, `tests/component/AcquistiFatturato.test.jsx`
 
 #### REQ-MAG-024 — Il consumo a settimana si divide per le settimane vere
@@ -1164,7 +1166,7 @@ FATTO (19/08). `giorniDiConta` e `consumoSettimanale` (src/lib/warehouse.js) fan
 
 SOTTO UN GIORNO PIENO NON SI DIVIDE: una conta aperta e chiusa in tre ore darebbe un settimanale di otto volte quello vero, e su quel numero si decide quanto ordinare. Il numero non si mostra invece di mostrarne uno finto. E SI ARROTONDA: 1500 / 14 × 7 in virgola mobile fa 749,9999999999999, e chi scrive le quantità non riconosce più i 75 cl tondi — lo stesso consumo finirebbe scritto in due modi diversi in due schermate.
 
-**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`
+**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/component/StockCountPanel.test.jsx`, `tests/component/StoricoInventari.test.jsx`
 
 #### REQ-MAG-035 — Il listino si compila nella scheda del fornitore, non ordinando
 
@@ -1825,6 +1827,16 @@ NON SOSTITUISCE L'INVENTARIO (REQ-MAG-046): gli sta accanto, perche' Daniele e F
 Flavio, vocale del 05/10/2026, sull'inventario: «qui servirebbe il filtro in assortimento, fuori assortimento, premium e linea […] tutti quelli fuori assortimento io me li elimino, cioè non me lo faccio l'inventario del fuori assortimento […] quando chiudo l'inventario mi deve chiudere la rimanenza con l'ultima rimanenza che ha, che presumibilmente è zero». Nell'inventario in corso c'è lo stesso filtro dei Prodotti — una tendina con le quattro voci di assortimento (FiltroAssortimento), a scelta multipla, col numero di prodotti per voce — accanto alla barra delle categorie. Le righe e le categorie seguono il filtro; il contatore «contati» resta su tutto l'inventario. I PRODOTTI ESCLUSI NON SI PERDONO: restano nell'inventario, solo non si vedono. Chiudendo, un prodotto senza rimanenza scritta non ha differenza e tiene la giacenza registrata, cioè l'ultima rimanenza che ha (per un fuori assortimento, di solito zero): è già la regola della chiusura (closeStockCount salta le righe senza conteggio), e qui la si dice anche a schermo.
 
 **Dove**: `src/components/StockCountPanel.jsx, src/components/FiltroAssortimento.jsx, src/components/Tendina.jsx` · **Lo dimostrano**: `tests/component/StockCountPanel.test.jsx`
+
+#### REQ-MAG-052 — Storico inventari: tutti gli inventari chiusi, e uno aperto si legge come quello in corso
+
+Flavio, vocale del 15/10/2026: «nella sezione inventario io dovrei avere la possibilita' di vedere tutti gli inventari vecchi, magari si potrebbe fare un tab che si chiamera' storico inventari, dove una volta che lo premo mi appare la lista degli inventari con la data di apertura e la data di chiusura, e io se voglio ci clicco sopra e lo vedo; ovviamente la casella rimanenze risulta bloccata, quella era la rimanenza che io ho inserito, e mi vado a vedere tutti i consumi che ho fatto in quel periodo, cosi' da capire che tipo di ordine dovro' fare in un particolare periodo».
+
+UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo «Inventario» e con la sua stessa chiave di licenza (modulo `conta`). L'elenco: gli inventari chiusi dal piu' recente, ognuno con «dal … al …», la durata in giorni o settimane, i contati sul totale, il valore delle rimanenze e il consumo. Toccata una riga si apre l'inventario com'era la schermata dell'inventario in corso (REQ-MAG-046): la testata coi totali, le righe per categoria con la barra delle categorie, DEP · ACQ · CONS · RIM, la differenza dove c'e', il consumo a settimana rifatto sui giorni veri fra apertura e chiusura. La casella della rimanenza resta, col contato di allora (vuota dove non si e' contato), ma e' bloccata.
+
+GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe complete (rim_adesso, cons, valori) e totali; quelli di prima solo dep · acq · rim · cons, e i primi neanche i totali: la lettura (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`), non il contato delle 18 (BUG-112), poi il contato, poi l'atteso. Prima gli inventari chiusi stavano in fondo all'inventario in corso, quindici al massimo, e aperti dicevano solo il consumo riga per riga: quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`), la lista per scaffale e la testata sono le stesse dell'inventario in corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra altri» (`fetchStockCounts` con `prima`): un inventario e' un documento da quattrocento righe, e per l'elenco bastano date e totali (`riassuntoInventarioChiuso`). La sezione si accende col modulo dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
+
+**Dove**: `src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)` · **Lo dimostrano**: `tests/unit/inventarioChiuso.test.js`, `tests/component/StoricoInventari.test.jsx`, `tests/unit/licenza.test.js`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
@@ -3052,7 +3064,7 @@ NON ERA QUESTO: era il browser di chi guardava, che mostrava bianche anche altre
 
 #### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
 
-«Nelle statistiche dovremmo rendere più sofisticata la selezione della serata. È la cosa principale che si vuole vedere, il resto dei filtri sono secondari. Io metterei una lista con dettaglio: di default la lista si apre sulle chiusure di cassa, e se ci clicco apre il dettaglio delle statistiche di quella chiusura di cassa. Facciamo due sottosezioni: una per le statistiche così come te le ho descritte, per le chiusure di cassa; una è quella che c'è adesso, che mostra le statistiche in base al filtro e al tempo» (l'utente, 22/08/2026).
+11/10/2026 (l'utente: «incasso per giornata nelle statistiche per serata è inutile»): nel dettaglio di una serata non ci sono i due grafici per giornata né il KPI «incasso / giornata» — una serata è una giornata sola, e ripeterebbero l'incasso. Nel periodo restano. «Nelle statistiche dovremmo rendere più sofisticata la selezione della serata. È la cosa principale che si vuole vedere, il resto dei filtri sono secondari. Io metterei una lista con dettaglio: di default la lista si apre sulle chiusure di cassa, e se ci clicco apre il dettaglio delle statistiche di quella chiusura di cassa. Facciamo due sottosezioni: una per le statistiche così come te le ho descritte, per le chiusure di cassa; una è quella che c'è adesso, che mostra le statistiche in base al filtro e al tempo» (l'utente, 22/08/2026).
 
 DUE SOTTOSEZIONI nel menu laterale — «Per serata» e «Per periodo» — con lo stesso meccanismo di Cassa e Magazzino (docs/navigazione.md): niente riga di pastiglie in pagina, che su una schermata di grafici costa altezza tutto il giorno. A) PER SERATA, ed è quella che si apre di suo. La LISTA delle chiusure di cassa, la più recente in cima, una riga per serata: quando (giorno, apertura→chiusura, durata) e TRE NUMERI incolonnati — incasso, conti, scontrino medio. Il primo è la domanda, gli altri due sono il perché: incasso = conti × scontrino medio, quindi una serata migliore dell'altra lo è perché è entrata più gente o perché ognuno ha speso di più, e sono due cose che si affrontano in modo diverso. Il resto (ora di punta, attese, top prodotti) sta un tocco più in là: in riga sarebbero numeri da leggere uno per uno, e la lista si guarda in una scorsa. La forma è quella della lista del magazzino (`inv-list` / `inv-row`), una famiglia sola di righe per tutto il gestionale.
 
@@ -3094,7 +3106,7 @@ Flavio, vocali del 24/09/2026: «il periodo personalizzato non e' un reale perio
 
 Due domande di Flavio del 30/09/2026 sulla schermata «Per periodo», con le risposte decise da lui lo stesso giorno. (1) LE FASCE ORARIE PER COMANDA. «Cosa succede quando apro un ordine alle 9 e ti prendi una birra, alle 10 un'altra, alle 11 un'altra, a mezzanotte un'altra? Sta registrando le singole battute o l'apertura dell'ordine?» Registrava l'apertura: tutto l'incasso di un conto finiva nella fascia in cui era stato aperto. La risposta: «nelle fasce orarie mi deve segnare quando viene battuta una singola comanda e non quando viene aperto il conto, indipendentemente da quando viene pagato». Un conto si spezza in BATTUTE (`battuteDi`), una per comanda non annullata, con la sua ora; il modello vecchio senza comande e' una battuta sola. Le seguono «Incasso per fascia oraria» (sotto le barre si leggono le comande), «Venduto nella fascia oraria» (che conta i CONTI che hanno battuto qualcosa lì) e «Incasso per giornata nella fascia scelta». (2) LO SCONTO IN PARTI UGUALI. «Lo sconto va applicato sopra le singole comande all'interno dell'ordine, diviso in parti uguali per il numero delle comande, e non per il valore della singola comanda.» Si divide la differenza fra il lordo delle righe e l'incasso del conto, cosi' la somma delle battute torna al centesimo con l'incasso del conto. Una comanda piccola su un conto molto scontato puo' risultare negativa: e' la regola chiesta, e il totale resta giusto.
 
-UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €.
+UNA BATTUTA HA DUE NUMERI: `netto` (i soldi della comanda, con la sua parte uguale di sconto, coperto e servizio) per i grafici in euro, e `fattore` (quello del conto) per prodotti e categorie, che cosi' tornano con la classifica del periodo e non prendono dentro il coperto. Prima, come finto conto, la battuta passava da orderNet e discountFactor, scritti per i conti veri: il coperto finiva nell'incasso dei drink e i tre grafici troncavano diversamente. (3) LE GIORNATE A ZERO. «Ho aperto la cassa e l'ho chiusa, quindi mi ha registrato una cassa a zero, e in incasso per giornata non la vedo … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le giornate in cui la cassa e' stata aperta nel periodo entrano in «Incasso per giornata» anche senza conti, a 0 €. (4) IL VENDUTO NELLA FASCIA A CATEGORIE APRIBILI (Flavio, 13/10/2026, con la foto della schermata): «nel venduto mi porta prima le categorie e poi i singoli prodotti, pero' tutti mischiati … tu metti solo le categorie, gin e vodka, poi ci metti la freccina che se voglio si spacchetta e vedo tutti i prodotti del menu all'interno della categoria … poi vedo io qual e' il best seller della singola categoria». Via le barre delle categorie e l'elenco unico dei prodotti: una riga per categoria (nome, pezzi, incasso), in ordine d'incasso, chiusa di partenza, che si apre sui prodotti venduti di quella categoria in ordine di pezzi (`vendutoPerCategoria`, con lo sconto del conto come la classifica del periodo). Si mostrano i prodotti VENDUTI nella fascia, non tutto il listino della categoria.
 
 **Dove**: `src/lib/stats.js (battuteDi, revenueByHour, ordersInHourRange, hourRangeReport, revenueByDayInRange, revenueByDay), src/components/StatsTab.jsx` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
 
@@ -3117,6 +3129,16 @@ PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti: l'indice d
 IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup delle raccolte che tocca (se ci sono), estrazione dei fogli mensili, import di Tiller (col venduto per prodotto calcolato su ricette e prodotti della produzione) e dei fogli. Di prova senza --apply, e il progetto si nomina a mano; va lanciato dopo il rilascio, col via libera.
 
 **Dove**: `src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/venditeStoriche.test.js`, `tests/component/OrdersHistory.test.jsx`
+
+#### REQ-STAT-007 — Per serata: la ricerca per data, con un calendario che segna i giorni di servizio
+
+L'utente, 11/10/2026: «nelle statistiche, la lista per serata, dovrebbe avere una ricerca per data, con un calendario, che ti permette di selezionare il giorno e un box per modificare a mano la data. Il calendario compatto deve poter scorrere i mesi e segnare dei colori su ogni giorno in base a se c'è stato servizio oppure no». In cima all'elenco delle serate: il tasto «📅 Calendario» e la casella «Data». Il calendario è la griglia del selettore dello storico (grigliaMese: lunedì per primo, sei righe fisse), si scorre mese per mese e colora ogni giorno passato:
+
+VERDE dove c'è stato servizio — una chiusura di cassa dell'app o una giornata di Tiller — GRIGIO dove no; i giorni a venire sono spenti. La legenda sta sotto. Scegliere un giorno, dal calendario o scrivendolo, apre DIRETTAMENTE la serata di quel giorno; un giorno senza servizio lo dice («Nessun servizio sabato 1 agosto»), invece di non fare niente. L'elenco legge un anno di chiusure (400) invece delle ultime 60: la ricerca deve trovare anche la serata di sei mesi fa.
+
+UNA GRIGLIA PER TUTTA L'APP (l'utente, stesso giorno: «uniformare anche gli altri calendari dell'app a quello appena creato … e anche con la info sul servizio»). GrigliaMese è il calendario di tutte e tre le schermate che ne aprono uno — le serate delle statistiche, la ricerca per data delle chiusure di cassa, il periodo dello storico ordini — coi giorni di servizio colorati allo stesso modo. I giorni di servizio vengono da lib/giorniDiServizio.js (chiusure dell'app per giornata commerciale più giornate di Tiller), letti una volta e tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle data dei moduli (spesa, fattura, data di nascita) non sono calendari di servizio e restano com'erano. Anche «Inizio» e «Fine» del periodo personalizzato delle statistiche (CampoDataOra): la casella data-e-ora resta, e accanto il tasto apre la stessa griglia — il browser ci apriva il suo selettore («qua vedo ancora il calendario vecchio»); toccato un giorno, l'ora scritta resta.
+
+**Dove**: `src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/giorniDiServizio.test.js`
 
 ### LIC
 

@@ -1868,6 +1868,10 @@ requirements:
     title: "Statistiche: prima la serata (lista e dettaglio), poi il periodo"
     area: "src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js"
     description: >
+      11/10/2026 (l'utente: «incasso per giornata nelle statistiche per
+      serata è inutile»): nel dettaglio di una serata non ci sono i due
+      grafici per giornata né il KPI «incasso / giornata» — una serata è
+      una giornata sola, e ripeterebbero l'incasso. Nel periodo restano.
       «Nelle statistiche dovremmo rendere più sofisticata la selezione della
       serata. È la cosa principale che si vuole vedere, il resto dei filtri
       sono secondari. Io metterei una lista con dettaglio: di default la
@@ -2135,6 +2139,18 @@ requirements:
       … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le
       giornate in cui la cassa e' stata aperta nel periodo entrano in
       «Incasso per giornata» anche senza conti, a 0 €.
+      (4) IL VENDUTO NELLA FASCIA A CATEGORIE APRIBILI (Flavio, 13/10/2026,
+      con la foto della schermata): «nel venduto mi porta prima le
+      categorie e poi i singoli prodotti, pero' tutti mischiati … tu metti
+      solo le categorie, gin e vodka, poi ci metti la freccina che se
+      voglio si spacchetta e vedo tutti i prodotti del menu all'interno
+      della categoria … poi vedo io qual e' il best seller della singola
+      categoria». Via le barre delle categorie e l'elenco unico dei
+      prodotti: una riga per categoria (nome, pezzi, incasso), in ordine
+      d'incasso, chiusa di partenza, che si apre sui prodotti venduti di
+      quella categoria in ordine di pezzi (`vendutoPerCategoria`, con lo
+      sconto del conto come la classifica del periodo). Si mostrano i
+      prodotti VENDUTI nella fascia, non tutto il listino della categoria.
     status: implemented
     generate_issue: false
     labels: [statistiche]
@@ -2213,6 +2229,48 @@ requirements:
     test_cases:
       - tests/unit/venditeStoriche.test.js
       - tests/component/OrdersHistory.test.jsx
+
+  - id: REQ-STAT-007
+    title: "Per serata: la ricerca per data, con un calendario che segna i giorni di servizio"
+    area: "src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css"
+    description: >
+      L'utente, 11/10/2026: «nelle statistiche, la lista per serata,
+      dovrebbe avere una ricerca per data, con un calendario, che ti
+      permette di selezionare il giorno e un box per modificare a mano la
+      data. Il calendario compatto deve poter scorrere i mesi e segnare dei
+      colori su ogni giorno in base a se c'è stato servizio oppure no».
+      In cima all'elenco delle serate: il tasto «📅 Calendario» e la
+      casella «Data». Il calendario è la griglia del selettore dello
+      storico (grigliaMese: lunedì per primo, sei righe fisse), si scorre
+      mese per mese e colora ogni giorno passato: VERDE dove c'è stato
+      servizio — una chiusura di cassa dell'app o una giornata di Tiller —
+      GRIGIO dove no; i giorni a venire sono spenti. La legenda sta sotto.
+      Scegliere un giorno, dal calendario o scrivendolo, apre DIRETTAMENTE
+      la serata di quel giorno; un giorno senza servizio lo dice («Nessun
+      servizio sabato 1 agosto»), invece di non fare niente.
+      L'elenco legge un anno di chiusure (400) invece delle ultime 60: la
+      ricerca deve trovare anche la serata di sei mesi fa.
+      UNA GRIGLIA PER TUTTA L'APP (l'utente, stesso giorno: «uniformare
+      anche gli altri calendari dell'app a quello appena creato … e anche
+      con la info sul servizio»). GrigliaMese è il calendario di tutte e
+      tre le schermate che ne aprono uno — le serate delle statistiche, la
+      ricerca per data delle chiusure di cassa, il periodo dello storico
+      ordini — coi giorni di servizio colorati allo stesso modo. I giorni di
+      servizio vengono da lib/giorniDiServizio.js (chiusure dell'app per
+      giornata commerciale più giornate di Tiller), letti una volta e
+      tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle
+      data dei moduli (spesa, fattura, data di nascita) non sono calendari
+      di servizio e restano com'erano. Anche «Inizio» e «Fine» del periodo
+      personalizzato delle statistiche (CampoDataOra): la casella data-e-ora
+      resta, e accanto il tasto apre la stessa griglia — il browser ci
+      apriva il suo selettore («qua vedo ancora il calendario vecchio»);
+      toccato un giorno, l'ora scritta resta.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, ux]
+    test_cases:
+      - tests/component/StatsTab.test.jsx
+      - tests/unit/giorniDiServizio.test.js
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
@@ -7428,6 +7486,14 @@ requirements:
       `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo
       REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto
       e sommaVendite.
+      LA DATA DI UN ACQUISTO E' QUELLA IN CUI LA MERCE ENTRA. Flavio,
+      13/10/2026: «in acquisti vorrei capire se mette quello che ordino
+      quel mese o quello che pago quel mese … io non pago quasi mai alla
+      consegna, pago quasi sempre almeno a 30 giorni … la data di
+      riferimento deve far riferimento a quando ordino». E' gia' cosi': una
+      consegna vale il giorno d'arrivo (`consegneDi`, `c.at`), un carico il
+      giorno del movimento; il pagamento non c'entra. La spiegazione a
+      scomparsa della tabella (REQ-UI-029) ora lo dice.
     status: implemented
     generate_issue: false
     labels: [magazzino, statistiche, fornitori]
@@ -7670,6 +7736,7 @@ requirements:
     test_cases:
       - tests/unit/warehouse.test.js
       - tests/component/StockCountPanel.test.jsx
+      - tests/component/StoricoInventari.test.jsx
 
   # ══════════════════════════════════════════════════════════════════════
   #  LE DECISIONI DEL 19/08 — nasce «Bilancio», e quello che le serve.
@@ -12370,6 +12437,52 @@ requirements:
     labels: [magazzino, inventario]
     test_cases:
       - tests/component/StockCountPanel.test.jsx
+  - id: REQ-MAG-052
+    title: "Storico inventari: tutti gli inventari chiusi, e uno aperto si legge come quello in corso"
+    area: "src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)"
+    description: >
+      Flavio, vocale del 15/10/2026: «nella sezione inventario io dovrei
+      avere la possibilita' di vedere tutti gli inventari vecchi, magari si
+      potrebbe fare un tab che si chiamera' storico inventari, dove una
+      volta che lo premo mi appare la lista degli inventari con la data di
+      apertura e la data di chiusura, e io se voglio ci clicco sopra e lo
+      vedo; ovviamente la casella rimanenze risulta bloccata, quella era la
+      rimanenza che io ho inserito, e mi vado a vedere tutti i consumi che
+      ho fatto in quel periodo, cosi' da capire che tipo di ordine dovro'
+      fare in un particolare periodo».
+      UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo
+      «Inventario» e con la sua stessa chiave di licenza (modulo `conta`).
+      L'elenco: gli inventari chiusi dal piu' recente, ognuno con «dal … al
+      …», la durata in giorni o settimane, i contati sul totale, il valore
+      delle rimanenze e il consumo. Toccata una riga si apre l'inventario
+      com'era la schermata dell'inventario in corso (REQ-MAG-046): la
+      testata coi totali, le righe per categoria con la barra delle
+      categorie, DEP · ACQ · CONS · RIM, la differenza dove c'e', il consumo
+      a settimana rifatto sui giorni veri fra apertura e chiusura. La
+      casella della rimanenza resta, col contato di allora (vuota dove non
+      si e' contato), ma e' bloccata.
+      GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno
+      righe complete (rim_adesso, cons, valori) e totali; quelli di prima
+      solo dep · acq · rim · cons, e i primi neanche i totali: la lettura
+      (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto
+      dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`),
+      non il contato delle 18 (BUG-112), poi il contato, poi l'atteso.
+      Prima gli inventari chiusi stavano in fondo all'inventario in corso,
+      quindici al massimo, e aperti dicevano solo il consumo riga per riga:
+      quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`),
+      la lista per scaffale e la testata sono le stesse dell'inventario in
+      corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra
+      altri» (`fetchStockCounts` con `prima`): un inventario e' un documento
+      da quattrocento righe, e per l'elenco bastano date e totali
+      (`riassuntoInventarioChiuso`). La sezione si accende col modulo
+      dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, inventario]
+    test_cases:
+      - tests/unit/inventarioChiuso.test.js
+      - tests/component/StoricoInventari.test.jsx
+      - tests/unit/licenza.test.js
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"

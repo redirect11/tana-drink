@@ -39,7 +39,9 @@
 import { valoreConSegno, giorniDiConta, consumoSettimanale } from './warehouse.js'
 import { arrotonda, movimentoInPezzi } from './magazzinoPeriodo.js'
 
-const contato = (rim) => rim != null && rim !== '' && Number.isFinite(Number(rim))
+// «C'è un numero scritto?» — vale anche per le righe degli inventari
+// chiusi (inventarioChiuso.js).
+export const contato = (rim) => rim != null && rim !== '' && Number.isFinite(Number(rim))
 
 const VALORI = ['cons_value', 'rim_value', 'diff_value']
 
@@ -118,7 +120,13 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
     }
   })
 
-  const totals = { counted: out.filter((l) => l.rim != null).length }
-  for (const k of VALORI) totals[k] = arrotonda(out.reduce((s, l) => s + l[k], 0), 2)
-  return { lines: out, totals, giorni }
+  return { lines: out, totals: totaliDi(out), giorni }
+}
+
+// I totali di un inventario dalle sue righe: quante contate, e i tre
+// valori in euro a due cifre.
+export function totaliDi(lines) {
+  const totals = { counted: lines.filter((l) => l.rim != null).length }
+  for (const k of VALORI) totals[k] = arrotonda(lines.reduce((s, l) => s + (l[k] || 0), 0), 2)
+  return totals
 }

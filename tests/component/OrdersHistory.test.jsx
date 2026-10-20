@@ -35,6 +35,9 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   },
   fetchOrdersRange: vi.fn(async () => []),
+  // Per i colori del calendario (REQ-STAT-007).
+  fetchCashSessions: async () => [],
+  fetchSerateStoriche: async () => [],
   fetchVenditeStoriche: vi.fn(async () => [
     {
       giorno: '2024-06-01',

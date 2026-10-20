@@ -1,5 +1,40 @@
 # Cosa è cambiato
 
+## 1.9.2-beta
+
+### Per chi amministra
+
+- **Magazzino → Storico inventari.** Una sezione nuova con tutti gli
+  inventari chiusi, dal più recente: date di apertura e chiusura, durata,
+  contati, valore delle rimanenze e consumo. Toccandone uno si apre come
+  l'inventario in corso, per categoria, con DEP · ACQ · CONS · RIM e il
+  consumo a settimana; la casella della rimanenza mostra il contato di
+  allora ed è bloccata. L'elenco «Inventari precedenti» in fondo
+  all'inventario in corso non c'è più.
+- **Statistiche → Per periodo: «Venduto nella fascia oraria» a categorie.**
+  Solo le categorie, con pezzi e incasso; ognuna si apre con la freccia
+  sui prodotti venduti in quella categoria, in ordine di pezzi. Prima
+  c'erano le barre delle categorie e, sotto, un elenco unico di tutti i
+  prodotti.
+- **Bilancio → Acquisti × Fatturato:** la spiegazione dice che un acquisto
+  vale il giorno in cui la merce entra (consegna o carico), non quello del
+  pagamento.
+- **Nel dettaglio di una serata non ci sono più i grafici per giornata**
+  (né «incasso / giornata»): con una giornata sola ripetevano l'incasso.
+- **Nelle fasce orarie delle statistiche l'ora di «alle» è compresa.**
+  Dalle 22 alle 00:00 mostra le 22, le 23 e la mezzanotte; prima la
+  mezzanotte restava fuori.
+
+- **Statistiche → Per serata: la ricerca per data.** Un calendario compatto,
+  che si scorre mese per mese e colora in verde i giorni di servizio e in
+  grigio gli altri, e una casella per scrivere la data. Scegliendo un
+  giorno si apre la sua serata. (Corretto subito dopo: il pannello si
+  apriva fuori vista.)
+- **Lo stesso calendario in tutta l'app.** La ricerca per data delle
+  chiusure di cassa, il periodo dello storico ordini e «Inizio»/«Fine» del
+  periodo personalizzato hanno la stessa griglia, coi giorni di servizio in
+  verde.
+
 ## 1.9.1-beta
 
 ### Per chi sta al banco
