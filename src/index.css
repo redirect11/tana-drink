@@ -4291,11 +4291,52 @@ body.drawer-open .status-bell-float { display: none; }
   max-height: calc(100dvh / var(--zoom, 1) - var(--safe-top) - 32px);
   overflow-y: auto;
 }
+/* LA SCHEDA DEL PRODOTTO (CustomDrinkForm, REQ-UI-028 e REQ-MENU-016).
+   Nome e prezzo sulla stessa riga: il nome prende lo spazio, il prezzo è
+   una casella stretta a destra (Daniele, 21/10/2026). */
+.cd-nome-prezzo {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.cd-prezzo {
+  flex: 0 0 110px;
+}
+.cd-prezzo input {
+  width: 100%;
+}
+/* I tasti: Annulla e Salva affiancati; «Salva nuova» sotto, da solo, sullo
+   schermo stretto, e a destra degli altri dove c'è posto. */
+.cd-azioni {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.cd-azioni .cd-salva-nuova {
+  grid-column: 1 / -1;
+}
+@media (min-width: 700px) {
+  .cd-azioni:has(.cd-salva-nuova) {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .cd-azioni .cd-salva-nuova {
+    grid-column: auto;
+  }
+}
+
 /* FINESTRA LARGA (REQ-UI-028): toglie il tetto dei 420px; la larghezza la
-   dice chi la apre. Per lo sconto (tasti più grandi) e la ricetta (righe
-   degli ingredienti che non vanno a capo). */
+   dice chi la apre con `--larga` (sconto 520px, ricetta e movimenti 720px).
+   MISURATA IN CENTIMETRI VERI, non in px CSS (BUG-116): sul tablet del
+   banco l'app gira a zoom 0,7 e «520px» ne rendevano 360 — la finestra
+   allargata il 10/10 Flavio la vedeva «ancora piccola». È lo stesso idioma
+   dei tasti del tastierino (`.paypad-key`) e delle altezze a tutto
+   schermo: diviso per lo zoom, resta largo quanto a zoom 1. Anche il tetto
+   sullo schermo si divide, perché i vw dentro `#root` si scalano come i
+   px. */
 .confirm-box.larga {
   max-width: none;
+  width: calc(min(var(--larga, 520px), 94vw) / var(--zoom, 1));
 }
 
 /* SPIEGAZIONE A SCOMPARSA in cima a una tabella (REQ-UI-029): chiusa, è

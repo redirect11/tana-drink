@@ -11797,6 +11797,12 @@ requirements:
       LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720
       px: nome, prezzo, nota e le righe degli ingredienti con quantità e
       unità non vanno più a capo.
+      LE MISURE SONO FISICHE, divise per lo zoom dell'app (BUG-116,
+      21/10/2026): sul tablet del banco, a zoom 0,7, i 520 e i 720 px CSS
+      rendevano quanto le finestre di prima.
+      NOME E PREZZO SULLA STESSA RIGA (Daniele, 21/10/2026): «metti il
+      prezzo piu' in piccolo a destra del nome della ricetta». Il nome
+      prende lo spazio, il prezzo e' una casella stretta accanto.
       LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome
       c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo
       per un prodotto libero nuovo, dove il nome va scritto comunque, e
@@ -11807,6 +11813,8 @@ requirements:
     labels: [ui, pos]
     test_cases:
       - tests/component/CustomDrinkForm.test.jsx
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/css.test.js
 
   - id: REQ-UI-029
     title: "Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima"
@@ -12037,11 +12045,17 @@ requirements:
       SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal
       Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito
       quello che era venuto a fare.
+      IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo
+      salva nuova e mettila a destra degli altri tasti quando la schermata
+      e' abbastanza larga»). Sta nello stesso gruppo di Annulla e Salva: sullo
+      schermo stretto sotto, da solo, dove non si tocca per sbaglio avendo
+      fretta; dai 700 px di schermo in su a destra degli altri due.
     status: implemented
     generate_issue: false
     labels: [menu, pos]
     test_cases:
       - tests/component/CustomDrinkForm.test.jsx
+      - tests/unit/css.test.js
 
   - id: REQ-MENU-015
     title: "Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta"

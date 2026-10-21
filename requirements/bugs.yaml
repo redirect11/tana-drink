@@ -5106,4 +5106,30 @@ bugs:
     labels: [bug, statistiche]
     test_cases:
       - tests/unit/stats.test.js
-
+  - id: BUG-116
+    title: "Sconto e ricetta allargate, ma sul tablet del banco erano ancora piccole: lo zoom le rimpiccioliva"
+    area: "src/index.css (.confirm-box.larga), src/components/PaymentScreen.jsx, src/components/CustomDrinkForm.jsx, src/components/MovimentiProdotto.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Flavio, 21/10/2026, con due foto del tablet al banco sul test: la
+      finestra dello sconto e quella di «Modifica prodotto» allargate il
+      10/10 (REQ-UI-028) «le vede ancora piccole». Le larghezze erano in px
+      CSS (`min(520px, 94vw)`, `min(720px, 96vw)`), e l'app sul tablet gira
+      con lo zoom a circa 0,7 (ZoomControl, `zoom` su #root): 520 px ne
+      rendevano 360, 720 ne rendevano 500 — cioe' quanto prima
+      dell'allargamento. Era gia' successo coi tasti del tastierino
+      (BUG-075), e la regola e' la stessa: le misure che contano sotto il
+      dito si dividono per lo zoom. Ora `.confirm-box.larga` ha la
+      larghezza `calc(min(var(--larga), 94vw) / var(--zoom, 1))` e le tre
+      finestre dicono solo la loro misura (`--larga`: 520px lo sconto,
+      720px ricetta e movimenti). Sul test e' stata vista; in produzione
+      l'allargamento non era ancora arrivato.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ui, pos]
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/CustomDrinkForm.test.jsx
