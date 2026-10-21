@@ -1,0 +1,72 @@
+name: Regia
+
+# LA REGIA (regia/, docs/flotta.md): il sito del prodotto sul progetto
+# Firebase `drink-regia`. Lint, test e build a ogni push che la tocca;
+# il deploy solo a mano (workflow_dispatch), coi segreti dell'environment
+# GitHub «regia». Non ha niente a che fare coi progetti della Tana.
+on:
+  push:
+    paths:
+      - 'regia/**'
+      - '.github/workflows/regia.yml'
+  pull_request:
+    paths:
+      - 'regia/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: regia
+
+jobs:
+  test:
+    name: Lint, test e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: regia/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    name: Pubblica su drink-regia
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: regia
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: regia/package-lock.json
+      - run: npm ci
+      - name: Build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: |
+          if [ "$VITE_FIREBASE_PROJECT_ID" != "drink-regia" ]; then
+            echo "::error::I segreti dell'environment «regia» puntano a $VITE_FIREBASE_PROJECT_ID, non a drink-regia."
+            exit 1
+          fi
+          npm run build
+      - name: Deploy regole e hosting
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json npx firebase-tools deploy --only firestore,hosting --project drink-regia
+          rm /tmp/sa.json

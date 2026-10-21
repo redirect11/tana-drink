@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// LA REGIA (REQ-FLOTTA-003, REQ-FLOTTA-005): i clienti vedono solo il
+// proprio documento; l'elenco, le istanze e le richieste le governa chi ha
+// il claim admin. La regia non contiene mai i dati operativi dei locali.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autenticato() { return request.auth != null; }
+    function admin() { return autenticato() && request.auth.token.admin == true; }
+    function mio(uid) { return autenticato() && request.auth.uid == uid; }
+
+    // Il titolare: nasce alla registrazione, lo tocca solo lui (o l'admin).
+    // Piano e abbonamento li scrive la regia (Functions/admin), non il
+    // cliente: qui si impedisce che un cliente si assegni un piano da solo.
+    match /clienti/{uid} {
+      allow read: if mio(uid) || admin();
+      allow create: if mio(uid)
+        && request.resource.data.keys().hasOnly(['nome_locale', 'slug', 'email', 'contatto', 'creato_il', 'uid'])
+        && request.resource.data.uid == uid;
+      allow update: if admin()
+        || (mio(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['piano', 'abbonamento', 'uid', 'slug']));
+      allow delete: if admin();
+    }
+
+    // L'istanza di un cliente: la scrive il provisioning (service account) o
+    // l'admin; il titolare la legge.
+    match /istanze/{slug} {
+      allow read: if admin() || (autenticato() && resource.data.uid == request.auth.uid);
+      allow write: if admin();
+    }
+
+    // La richiesta di attivazione: il titolare la crea per il suo slug, una
+    // Function la lavora, l'admin la può rilanciare.
+    match /richieste/{slug} {
+      allow read: if admin() || (autenticato() && resource.data.uid == request.auth.uid);
+      allow create: if autenticato()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.stato == 'in coda';
+      allow update, delete: if admin();
+    }
+  }
+}

@@ -1,0 +1,85 @@
+import { useEffect, useState } from 'react'
+import { osservaCliente, osservaIstanza, osservaRichiesta, chiediAttivazione } from '../lib/db.js'
+import { statoIstanza, statoDetto, puoAttivare, urlDi, progettoDi, STATI } from '../lib/istanze.js'
+import { PIANI, MODULI, prezzoMensile, euro } from '../lib/piani.js'
+
+// LA DASHBOARD DEL TITOLARE (REQ-FLOTTA-004): il suo locale, il piano, lo
+// stato dell'istanza e, quando è attiva, l'indirizzo dell'app.
+export default function Dashboard({ utente }) {
+  const [cliente, setCliente] = useState(undefined)
+  const [istanza, setIstanza] = useState(null)
+  const [richiesta, setRichiesta] = useState(null)
+  const [errore, setErrore] = useState(null)
+
+  useEffect(() => osservaCliente(utente.uid, setCliente), [utente.uid])
+  useEffect(() => {
+    if (!cliente?.slug) return undefined
+    const a = osservaIstanza(cliente.slug, setIstanza)
+    const b = osservaRichiesta(cliente.slug, setRichiesta)
+    return () => {
+      a()
+      b()
+    }
+  }, [cliente?.slug])
+
+  if (cliente === undefined) return <main className="pagina stretta muted">Carico…</main>
+  if (!cliente) return <main className="pagina stretta">Nessun locale registrato per questo account.</main>
+
+  const stato = statoIstanza(istanza, richiesta)
+  const via = puoAttivare(cliente, istanza, richiesta)
+  const piano = cliente.piano ? PIANI[cliente.piano] : null
+
+  const attiva = async () => {
+    setErrore(null)
+    try {
+      await chiediAttivazione(cliente)
+    } catch (e) {
+      setErrore(e.message)
+    }
+  }
+
+  return (
+    <main className="pagina stretta">
+      <section className="card">
+        <h2>{cliente.nome_locale}</h2>
+        <p className="muted small">
+          Identificativo: <code>{cliente.slug}</code> · progetto <code>{progettoDi(cliente.slug)}</code>
+        </p>
+        <h3>Piano</h3>
+        {piano ? (
+          <p>
+            <strong>{piano.nome}</strong> · {euro(prezzoMensile(cliente))} al mese
+            {cliente.moduli?.length > 0 && (
+              <span className="muted"> · moduli: {cliente.moduli.map((id) => MODULI.find((m) => m.id === id)?.nome || id).join(', ')}</span>
+            )}
+            {cliente.terminali > 1 && <span className="muted"> · {cliente.terminali} terminali</span>}
+          </p>
+        ) : (
+          <p className="muted">Nessun piano ancora: l’abbonamento si attiva con noi, ti contattiamo all’email dell’account.</p>
+        )}
+        <h3>Istanza</h3>
+        <p>
+          <strong data-testid="stato-istanza">{statoDetto(stato)}</strong>
+          {istanza?.aggiornata_il && <span className="muted small"> · {new Date(istanza.aggiornata_il).toLocaleString('it-IT')}</span>}
+        </p>
+        {stato === STATI.ATTIVA && (
+          <p>
+            L’app è su <a href={istanza?.url || urlDi(cliente.slug)}>{istanza?.url || urlDi(cliente.slug)}</a>. L’accesso
+            admin è l’email di questo account: la password la imposti al primo accesso con «password dimenticata».
+            {istanza?.versione && <span className="muted small"> Versione {istanza.versione}.</span>}
+          </p>
+        )}
+        {stato === STATI.ERRORE && istanza?.errore && <p className="errore small">{istanza.errore}</p>}
+        {(stato === STATI.DA_ATTIVARE || stato === STATI.ERRORE) && (
+          <>
+            <button className="btn" type="button" disabled={!via.ok} onClick={attiva}>
+              Attiva l’istanza
+            </button>
+            {!via.ok && <p className="muted small">{via.perche}</p>}
+          </>
+        )}
+        {errore && <p className="errore">{errore}</p>}
+      </section>
+    </main>
+  )
+}
