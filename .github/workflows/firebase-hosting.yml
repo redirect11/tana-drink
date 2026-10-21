@@ -66,7 +66,17 @@ jobs:
 
   # DOVE VA QUESTO TAG? Non lo dice il suo nome — un `v1.4.2` può stare su
   # develop mentre matura — lo dice DOVE SI TROVA il commit: se è dentro
-  # `main` è roba di produzione, altrimenti è una prova.
+  # `main` è roba di produzione; se è dentro `develop`, o si sta lanciando a
+  # mano un ramo di rilascio o di hotfix, è il test della Tana.
+  #
+  # TUTTO IL RESTO È «FLOTTA» (REQ-FLOTTA-001, docs/flotta.md): un ramo
+  # `feature/`, un tag su un commit che non sta in nessuno dei rami sopra.
+  # Va sul progetto scritto nella variabile di repository PROGETTO_FLOTTA
+  # (`drink-demo`), e se la variabile non c'è si FERMA: il test della Tana
+  # non si raggiunge mai da un ramo che non è suo. È successo con la
+  # 1.9.x che tre commit finissero sul ramo sbagliato; qui l'errore
+  # equivalente — provare il prodotto nuovo sopra i dati di prova della
+  # Tana — costerebbe una serata di confusione a chi lo sta provando.
   destinazione:
     name: Dove va
     needs: test
@@ -79,14 +89,21 @@ jobs:
           fetch-depth: 0
       - id: scelta
         run: |
-          # `main` non arriva col checkout di un tag: va chiesto a parte.
-          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          # `main` e `develop` non arrivano col checkout di un tag: vanno
+          # chiesti a parte.
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main +refs/heads/develop:refs/remotes/origin/develop
           if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "ambiente=production" >> "$GITHUB_OUTPUT"
-            echo "Il tag ${GITHUB_REF_NAME} è su main → PRODUZIONE (con approvazione)."
-          else
+            echo "${GITHUB_REF_NAME} è su main → PRODUZIONE (con approvazione)."
+          elif git merge-base --is-ancestor "$GITHUB_SHA" origin/develop; then
             echo "ambiente=test" >> "$GITHUB_OUTPUT"
-            echo "Il tag ${GITHUB_REF_NAME} non è su main → ambiente di TEST."
+            echo "${GITHUB_REF_NAME} è su develop → ambiente di TEST della Tana."
+          elif [ "$GITHUB_REF_TYPE" = "branch" ] && [[ "$GITHUB_REF_NAME" =~ ^(release|hotfix)/ ]]; then
+            echo "ambiente=test" >> "$GITHUB_OUTPUT"
+            echo "${GITHUB_REF_NAME} è un ramo di rilascio o di hotfix → ambiente di TEST della Tana."
+          else
+            echo "ambiente=flotta" >> "$GITHUB_OUTPUT"
+            echo "${GITHUB_REF_NAME} non è della Tana → FLOTTA (PROGETTO_FLOTTA)."
           fi
 
   prova:
@@ -110,3 +127,28 @@ jobs:
       progetto: tana-drink
       versione: ${{ github.ref_name }}
     secrets: inherit
+
+  # LA FLOTTA: il prodotto neutro, compilato per il cliente `demo`
+  # (clienti/demo/), sul progetto che dice la variabile. I segreti stanno
+  # nell'environment GitHub «flotta», come per «test» e «production».
+  flotta:
+    name: Flotta
+    needs: destinazione
+    if: needs.destinazione.outputs.ambiente == 'flotta' && vars.PROGETTO_FLOTTA != ''
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ambiente: flotta
+      progetto: ${{ vars.PROGETTO_FLOTTA }}
+      cliente: demo
+      versione: ${{ github.ref_name }}
+    secrets: inherit
+
+  flotta-senza-progetto:
+    name: Flotta (manca PROGETTO_FLOTTA)
+    needs: destinazione
+    if: needs.destinazione.outputs.ambiente == 'flotta' && vars.PROGETTO_FLOTTA == ''
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::${GITHUB_REF_NAME} non è un ramo della Tana e la variabile di repository PROGETTO_FLOTTA non è impostata: niente deploy. Si imposta in Settings → Secrets and variables → Actions → Variables (es. drink-demo), con i segreti nell'environment «flotta»."
+          exit 1

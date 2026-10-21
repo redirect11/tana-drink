@@ -9,13 +9,18 @@ on:
   workflow_call:
     inputs:
       ambiente:
-        description: "Nome dell'environment GitHub (production | test)"
+        description: "Nome dell'environment GitHub (production | test | flotta)"
         required: true
         type: string
       progetto:
         description: 'Progetto Firebase di destinazione'
         required: true
         type: string
+      cliente:
+        description: "Per chi si compila: la cartella clienti/<slug>/ (REQ-VENUE-001). `tana` per i progetti della Tana"
+        required: false
+        type: string
+        default: tana
       versione:
         description: 'Etichetta della versione pubblicata (il tag)'
         required: false
@@ -86,6 +91,8 @@ jobs:
         env:
           # Su Firebase Hosting il sito è servito dalla radice.
           BASE_PATH: /
+          # Il locale per cui si compila (clienti/<slug>/venue.json).
+          CLIENTE: ${{ inputs.cliente }}
           # Ambiente: abilita DevTools + nastro "TEST" fuori dalla produzione.
           VITE_APP_ENV: ${{ inputs.ambiente == 'production' && 'production' || 'test' }}
           # Google Analytics measurement ID per ambiente (pubblico, non segreto).

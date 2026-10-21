@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 21 ottobre 2026.
+> Generato il 22 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 220 | fatto e coperto dai test |
+| ✅ | 229 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 20 | da fare |
+| ⬜ | 23 | da fare |
 | 🗑 | 8 | non più valido |
 
-**264 voci** in tutto. **236** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**276 voci** in tutto. **245** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -63,6 +63,8 @@ come «vero oggi», non come «garantito».
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
+| [VENUE](#venue) | 4 | 1 |  |
+| [FLOTTA](#flotta) | 5 | 2 |  |
 
 ## Cosa fa il sistema
 
@@ -3188,6 +3190,72 @@ SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nell
 
 **Dove**: `src/lib/licenza.js, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/components/FornitoriTab.jsx, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/FornitoriTab.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
+### VENUE
+
+#### REQ-VENUE-001 — L'identità del locale è un dato: clienti/<slug>/venue.json in build, settings/bar (venue_*) a runtime
+
+Decisione dell'utente del 21/10/2026: «cominciamo a implementare la due [replica per cliente + attivazione automatica], senza downtime sulla Tana, su un branch». E' la Fase 0 e la Fase 2.1 del piano (docs/piano-sbrandizzazione.md), fatte insieme perche' una senza l'altra lascia il marchio cablato.
+
+LA BUILD SA PER CHI COMPILA: la variabile `CLIENTE` (slug, default `tana`) fa leggere a Vite `clienti/<slug>/venue.json` — nome, nome corto, slogan, testo «chi siamo», indirizzo, email, ragione sociale, intestazione dello scontrino, social — e lo inietta come `__CLIENTE__`. Con `CLIENTE` non detto la build della Tana e' quella di sempre, byte per byte nei testi.
+
+LE IMPOSTAZIONI VINCONO SULLA BUILD: `settings/bar` ha le chiavi `venue_*` (di partenza vuote in DEFAULT_SETTINGS); `venueDi(settings)` fonde impostazioni e build, impostazione per impostazione. Un locale cambia nome o indirizzo da Impostazioni senza rebuild; la Tana, che non le ha scritte, legge la build. Logica pura in src/lib/venue.js; il plugin di Vite ha il suo test.
+
+**Dove**: `clienti/tana/venue.json, clienti/demo/venue.json, clienti/pluginCliente.js, vite.config.js, src/lib/venue.js, src/lib/useVenue.js, src/lib/api.js (DEFAULT_SETTINGS), src/components/IdentitaLocale.jsx (Impostazioni → Il locale)` · **Lo dimostrano**: `tests/unit/venue.test.js`, `tests/unit/clienteBuild.test.js`, `tests/component/IdentitaLocale.test.jsx`
+
+#### REQ-VENUE-002 — L'app legge il locale da venueDi: nome, barra, landing, menù, drawer, account, utenti
+
+Fase 1.1, 1.4 e 1.5 del piano. Ogni punto dell'inventario del cablato legge da `venueDi(settings)`: il nome dell'app e il manifest (`nomeApp(ruolo, venue)`, `manifestConNome`), il marchio nella barra e nel foglio delle azioni, l'intestazione del drawer del cliente, la landing (titolo, slogan, «chi siamo», contatti), l'hero e il benvenuto del menu', il testo della pagina account, il suggerimento dell'email in Utenti. I social del piede di pagina vengono da `venue_socials` (etichetta e indirizzo; icona per piattaforma conosciuta, generica altrimenti): lista vuota, piede senza social. Per la Tana tutto resta uguale perche' i valori sono quelli della sua build (REQ-VENUE-001).
+
+**Dove**: `src/lib/nomeApp.js, src/App.jsx, src/pages/LandingPage.jsx, src/pages/MenuPage.jsx, src/components/ClientDrawer.jsx, src/pages/AccountPages.jsx, src/components/UtentiTab.jsx` · **Lo dimostrano**: `tests/unit/nomeApp.test.js`, `tests/component/LandingPage.test.jsx`
+
+#### REQ-VENUE-003 — Lo scontrino si intesta dal locale, non da una costante
+
+Fase 1.3 del piano. I default dell'intestazione dello scontrino (nome, indirizzo, citta', piede con la ragione sociale) non sono piu' scritti in printer.js: vengono da `venueDi` — quindi dalla build del cliente, o dalle impostazioni. Chi ha gia' salvato l'intestazione (settings/printer, localStorage) non cambia niente: i default contano solo dove non c'e' un valore salvato.
+
+**Dove**: `src/lib/printer.js (DEFAULT_PRINTER_SETTINGS), src/lib/venue.js` · **Lo dimostrano**: `tests/unit/venue.test.js`
+
+#### REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
+
+Fase 0.2 del piano. Un test cerca `Tana`, `Coniglio`, `latanadelconiglio`, `EFFEVI`, `tana:`/`tana_`/`tana-drink` in src/, functions/, index.html, public/manifest.webmanifest e public/sw.js, fuori dai commenti, e boccia ogni occorrenza non elencata nella whitelist scritta nel test stesso. La whitelist parte con quello che resta cablato e si accorcia a ogni passo: effetto cricchetto, come le soglie di coverage. A whitelist vuota la sbrandizzazione e' dimostrata. I commenti restano liberi: la storia del progetto e' della Tana e si racconta.
+
+**Dove**: `tests/unit/marchio.test.js` · **Lo dimostrano**: `tests/unit/marchio.test.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-001 — La CI del ramo feature/flotta non tocca i progetti della Tana: pubblica solo su PROGETTO_FLOTTA
+
+«Ci serve un modo sicuro per testare senza spaccare niente per la Tana» (l'utente, 21/10/2026). Il job «Dove va» decide l'ambiente dal commit: dentro `main` → produzione; dentro `develop` o lanciato da un ramo `release/`/`hotfix/` → test della Tana;
+
+TUTTO IL RESTO (un ramo `feature/`, un tag su un commit che non sta in nessuno dei rami sopra) → ambiente «flotta», cioe' il progetto scritto nella variabile di repository `PROGETTO_FLOTTA` (`drink-demo`). Se la variabile manca il workflow si ferma con un messaggio, invece di ripiegare sul test della Tana. Un test legge il workflow e verifica che il ramo di test della Tana non sia mai raggiungibile da un ramo feature.
+
+**Dove**: `.github/workflows/firebase-hosting.yml (job «Dove va»), docs/flotta.md` · **Lo dimostrano**: `tests/unit/flottaCi.test.js`
+
+#### REQ-FLOTTA-002 — La regia: il sito del prodotto con i prezzi, in un progetto Firebase suo (drink-regia)
+
+«Ci serve un sito/front page con prices/registrazione/login/ backoffice/dashboard» (l'utente, 21/10/2026). La regia e' una seconda app nello stesso repository, cartella `regia/`, con il suo progetto Firebase (`drink-regia`): non condivide ne' database ne' hosting con le istanze, e non sa niente dei dati dei locali.
+
+LA PRIMA PAGINA: cosa fa il prodotto, i piani con i prezzi (`piani.js`: base, terminale in piu', moduli, completo, attivazione — logica pura, con i prezzi in un posto solo), il tasto per registrarsi. Il nome visibile del prodotto sta in `prodotto.js` e si cambia li'. Testi nel registro del mestiere, senza toni da venditore.
+
+**Dove**: `regia/ (app React + Vite a se', con package.json, firebase.json e test propri), regia/src/lib/piani.js, regia/src/lib/prodotto.js` · **Lo dimostrano**: `regia/tests/piani.test.js`, `regia/tests/Home.test.jsx`
+
+#### REQ-FLOTTA-003 — Registrazione e accesso del titolare: un account Firebase Auth della regia, un documento clienti/{uid}
+
+Il titolare si registra con email e password (Firebase Auth del progetto regia) e nasce `clienti/{uid}` con nome del locale, slug proposto dal nome (`slugDi`: minuscole, senza accenti, trattini; e' il prefisso del progetto dell'istanza, quindi 6-30 caratteri e unico), contatto, data. Le regole Firestore: un cliente legge e scrive solo il suo documento; l'elenco lo legge l'admin.
+
+**Dove**: `regia/src/pages/Registrati.jsx, regia/src/pages/Accedi.jsx, regia/src/lib/clienti.js, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/clienti.test.js`, `regia/tests/Registrati.test.jsx`
+
+#### REQ-FLOTTA-004 — La dashboard del cliente: il suo locale, il piano, lo stato dell'istanza, l'indirizzo dell'app
+
+Dopo l'accesso il titolare vede: il nome e lo slug del locale, il piano scelto, lo stato dell'istanza (`da attivare`, `in coda`, `in corso`, `attiva`, `errore`, con la data dell'ultimo passaggio) e, quando e' attiva, l'indirizzo dell'app e il promemoria dell'accesso admin. Il tasto «Attiva» scrive la richiesta (REQ-FLOTTA-006); senza abbonamento valido (REQ-FLOTTA-007) il tasto spiega cosa manca.
+
+**Dove**: `regia/src/pages/Dashboard.jsx, regia/src/lib/istanze.js` · **Lo dimostrano**: `regia/tests/istanze.test.js`, `regia/tests/Dashboard.test.jsx`
+
+#### REQ-FLOTTA-005 — Il backoffice: l'elenco dei clienti e delle istanze, per chi ha il claim admin
+
+Una pagina protetta dal claim `admin` dell'Auth della regia: tutti i clienti con piano, stato dell'istanza, progetto, versione pubblicata e ultimo passaggio; le richieste in coda o in errore in cima. Da qui si rilancia un'attivazione fallita e si segna un abbonamento pagato a mano (finche' Stripe non c'e', REQ-FLOTTA-007). La regia vede aggregati e stati, mai i dati operativi dei locali.
+
+**Dove**: `regia/src/pages/Backoffice.jsx, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/Backoffice.test.jsx`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -3505,6 +3573,28 @@ Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre sezioni del 
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
+
+### VENUE
+
+#### REQ-VENUE-005 — Spazi tecnici neutri: cache del service worker, chiavi locali e nome del pacchetto senza «tana», con lettura di riserva dalle chiavi vecchie
+
+Fase 2.5 del piano. La cache del service worker e le chiavi localStorage (`tana:`, `tana_`) prendono un prefisso dallo slug del prodotto; chi legge una chiave nuova e non la trova prova quella vecchia, cosi' i dispositivi della Tana non perdono carrello, IP della stampante e preferenze. `package.json` `name` diventa `drink`. Da fare DOPO REQ-VENUE-002: e' la parte con piu' superficie e meno valore visibile, e va provata sui dispositivi veri.
+
+**Dove**: `public/sw.js, src/lib/*.js (localStorage), package.json`
+
+### FLOTTA
+
+#### REQ-FLOTTA-006 — Attivazione automatica di un'istanza: richiesta nella regia → workflow GitHub → Terraform → deploy → licenza → esito
+
+«Come integriamo il discorso di terraform?» (l'utente, 21/10/2026). Il modulo `infra/istanza` crea, dallo slug: il progetto `drink-<slug>` sotto l'account di fatturazione, le API, il progetto Firebase, Firestore (europe-west1), il sito Hosting, la web app e la sua configurazione, Auth. Lo stato di Terraform sta in un bucket GCS della regia, una cartella per istanza. Il workflow `provisiona-istanza.yml` (workflow_dispatch con `slug`) fa `terraform apply`, compila l'app con `CLIENTE=<slug>` (la cartella `clienti/<slug>/` la genera dal documento del cliente), pubblica hosting, functions e regole, scrive `settings/licenza` e `settings/bar.venue_*`, e chiama la regia con l'esito. Nella regia: una Function su `richieste/{slug}` creata lancia il workflow (API GitHub, token nei segreti); una Function https riceve l'esito e aggiorna `istanze/{slug}`. Prerequisiti a mano, documentati in infra/README.md: service account di provisioning, id di fatturazione, token GitHub, quota progetti.
+
+**Dove**: `infra/istanza (Terraform), infra/README.md, .github/workflows/provisiona-istanza.yml, regia/functions/ (lancio del workflow e callback), scripts/licenza-istanza.mjs`
+
+#### REQ-FLOTTA-007 — L'abbonamento: Stripe Checkout nella regia, webhook che aggiorna il cliente, licenza che segue il piano
+
+Il titolare sceglie il piano e paga con Stripe Checkout (chiavi di prova prima). Il webhook `checkout.session.completed` / `invoice.paid` / `customer.subscription.deleted` aggiorna `clienti/{uid}.abbonamento` (piano, stato, scadenza). La licenza dell'istanza (`settings/licenza`) si riscrive da quel documento: i moduli del piano, e basta. Il POS non dipende mai da Stripe per funzionare: senza rete o con un pagamento in ritardo l'istanza lavora, cambia solo cosa dice la dashboard. Prezzi e piani in `piani.js`, da confermare con l'utente prima di pubblicare.
+
+**Dove**: `regia/functions/ (webhook Stripe), regia/src/pages/Dashboard.jsx, regia/src/lib/piani.js`
 
 ## Difetti noti
 
