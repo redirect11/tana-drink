@@ -22,6 +22,9 @@
   invece di `tana`; al primo avvio le chiavi vecchie si copiano sulle
   nuove, quindi sui dispositivi non si perde niente. Il nome del locale
   nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- La registrazione sul sito del prodotto è in quattro passi, con i dati
+  di fatturazione (partita IVA controllata, PEC o SDI), il referente, i
+  consensi e l'email da confermare; «Password dimenticata» in accesso.
 - La regia lancia l'attivazione di un'istanza (workflow
   `provisiona-istanza.yml`, Terraform in `infra/istanza`) e ne riceve
   l'esito; l'abbonamento passa da Stripe Checkout, con il webhook che

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { osservaCliente, osservaIstanza, osservaRichiesta, chiediAttivazione } from '../lib/db.js'
+import { osservaCliente, osservaIstanza, osservaRichiesta, chiediAttivazione, inviaVerificaEmail, rileggiUtente } from '../lib/db.js'
 import { statoIstanza, statoDetto, puoAttivare, urlDi, progettoDi, STATI } from '../lib/istanze.js'
 import { PIANI, MODULI, prezzoMensile, euro } from '../lib/piani.js'
 import SceltaPiano from './SceltaPiano.jsx'
@@ -11,6 +11,7 @@ export default function Dashboard({ utente }) {
   const [istanza, setIstanza] = useState(null)
   const [richiesta, setRichiesta] = useState(null)
   const [errore, setErrore] = useState(null)
+  const [avviso, setAvviso] = useState(null)
 
   useEffect(() => osservaCliente(utente.uid, setCliente), [utente.uid])
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function Dashboard({ utente }) {
   if (!cliente) return <main className="pagina stretta">Nessun locale registrato per questo account.</main>
 
   const stato = statoIstanza(istanza, richiesta)
-  const via = puoAttivare(cliente, istanza, richiesta)
+  const via = puoAttivare(cliente, istanza, richiesta, { emailVerificata: utente.emailVerificata !== false })
   const piano = cliente.piano ? PIANI[cliente.piano] : null
 
   const attiva = async () => {
@@ -39,8 +40,37 @@ export default function Dashboard({ utente }) {
     }
   }
 
+  const rimanda = async () => {
+    setAvviso(null)
+    try {
+      await inviaVerificaEmail()
+      setAvviso('Email inviata di nuovo: controlla anche la posta indesiderata.')
+    } catch (e) {
+      setAvviso(e.message)
+    }
+  }
+  const verificata = async () => {
+    const ok = await rileggiUtente().catch(() => false)
+    setAvviso(ok ? 'Email confermata.' : 'Non risulta ancora confermata: apri il link nel messaggio.')
+  }
+
   return (
     <main className="pagina stretta">
+      {utente.emailVerificata === false && (
+        <section className="card avviso" role="status">
+          <strong>Conferma la tua email.</strong> Ti abbiamo scritto a {utente.email}: apri il link nel messaggio. Senza, l’app non si
+          attiva.
+          <div className="azioni">
+            <button type="button" className="btn ghost small" onClick={rimanda}>
+              Invia di nuovo
+            </button>
+            <button type="button" className="btn ghost small" onClick={verificata}>
+              Ho confermato
+            </button>
+          </div>
+          {avviso && <p className="muted small">{avviso}</p>}
+        </section>
+      )}
       <section className="card">
         <h2>{cliente.nome_locale}</h2>
         <p className="muted small">

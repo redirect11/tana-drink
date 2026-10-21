@@ -37,6 +37,19 @@ table.moduli, table.clienti { width: 100%; border-collapse: collapse; }
 table th, table td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .prezzo-riga { white-space: nowrap; text-align: right; }
 label { display: block; margin-top: 10px; font-size: 0.9rem; color: var(--muted); }
+select, textarea { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+fieldset { border: none; padding: 0; margin: 0; }
+legend { font-weight: 600; margin: 10px 0 4px; }
+.campo { margin-bottom: 4px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 10px; }
+.passi { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 8px; font-size: 0.85rem; color: var(--muted); }
+.passi li { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line); }
+.passi li.corrente { color: var(--text); border-color: var(--accent); }
+.passi li.fatto { color: var(--accent); }
+.card.avviso { border-color: var(--accent); margin-bottom: 12px; }
+input[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--errore); }
+.legale h2 { margin-top: 24px; }
 input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
 .errore { color: var(--errore); }
 .errore-riga td { background: rgba(231, 76, 60, 0.08); }

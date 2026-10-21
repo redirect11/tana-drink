@@ -3248,11 +3248,13 @@ LA PRIMA PAGINA: cosa fa il prodotto, i piani con i prezzi (`piani.js`: base, te
 
 **Dove**: `regia/ (app React + Vite a se', con package.json, firebase.json e test propri), regia/src/lib/piani.js, regia/src/lib/prodotto.js` · **Lo dimostrano**: `regia/tests/piani.test.js`, `regia/tests/Home.test.jsx`
 
-#### REQ-FLOTTA-003 — Registrazione e accesso del titolare: un account Firebase Auth della regia, un documento clienti/{uid}
+#### REQ-FLOTTA-003 — Registrazione e accesso del titolare: account con email verificata, dati del locale, di fatturazione e del referente
 
-Il titolare si registra con email e password (Firebase Auth del progetto regia) e nasce `clienti/{uid}` con nome del locale, slug proposto dal nome (`slugDi`: minuscole, senza accenti, trattini; e' il prefisso del progetto dell'istanza, quindi 6-30 caratteri e unico), contatto, data. Le regole Firestore: un cliente legge e scrive solo il suo documento; l'elenco lo legge l'admin.
+«Per la registrazione servono molti piu' dati. Fai una roba piu' robusta e production grade» (l'utente, 22/10/2026).
 
-**Dove**: `regia/src/pages/Registrati.jsx, regia/src/pages/Accedi.jsx, regia/src/lib/clienti.js, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/clienti.test.js`, `regia/tests/Registrati.test.jsx`
+QUATTRO PASSI, ognuno controllato prima di andare avanti, con l'errore accanto alla casella: (1) account — email, password di almeno 10 caratteri con una cifra, ripetuta; (2) il locale — nome (con l'indirizzo che l'app avra', dallo slug), tipo, indirizzo con CAP, citta' e provincia, telefono, sito facoltativo; (3) fatturazione — ragione sociale, partita IVA con la cifra di controllo, codice fiscale facoltativo (controllato), PEC o codice destinatario SDI per la fattura elettronica, sede legale se diversa dal locale; (4) referente — nome, cognome, ruolo, telefono, e i consensi: termini di servizio e privacy obbligatori (con le due pagine), novita' facoltative. I consensi si salvano con l'istante. L'EMAIL VA CONFERMATA: alla registrazione parte il messaggio di verifica; la dashboard lo ricorda finche' non e' confermata, con «Invia di nuovo» e «Ho confermato»; senza email verificata non si attiva l'istanza (`puoAttivare`, e le regole Firestore lo ripetono sulla richiesta). «Password dimenticata» manda il messaggio di recupero senza dire se l'email esiste. Il documento clienti/{uid} e' a blocchi (schema 2): locale, fatturazione, referente, consensi; `nome_locale` e `slug` restano in cima perche' istanze, richieste e backoffice li leggono da li'. Le regole: un cliente scrive solo il suo documento, con i blocchi attesi, la sua email e una partita IVA di 11 cifre; piano e abbonamento non li tocca. Da rivedere con un consulente prima di vendere: i testi di termini e privacy (regia/src/pages/Legali.jsx) sono una struttura, non un parere legale.
+
+**Dove**: `regia/src/pages/Registrati.jsx, regia/src/pages/Accedi.jsx, regia/src/pages/Legali.jsx, regia/src/lib/clienti.js, regia/src/lib/validazione.js, regia/src/lib/db.js, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/clienti.test.js`, `regia/tests/validazione.test.js`, `regia/tests/Registrati.test.jsx`
 
 #### REQ-FLOTTA-004 — La dashboard del cliente: il suo locale, il piano, lo stato dell'istanza, l'indirizzo dell'app
 

@@ -15,8 +15,13 @@ service cloud.firestore {
     match /clienti/{uid} {
       allow read: if mio(uid) || admin();
       allow create: if mio(uid)
-        && request.resource.data.keys().hasOnly(['nome_locale', 'slug', 'email', 'contatto', 'creato_il', 'uid'])
-        && request.resource.data.uid == uid;
+        && request.resource.data.keys().hasOnly(['uid', 'versione_schema', 'email', 'nome_locale', 'slug', 'locale', 'fatturazione', 'referente', 'consensi', 'creato_il'])
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.slug.matches('^[a-z][a-z0-9-]{4,28}[a-z0-9]$')
+        && request.resource.data.fatturazione.partita_iva.matches('^[0-9]{11}$')
+        && request.resource.data.consensi.termini_il is string
+        && request.resource.data.consensi.privacy_il is string;
       allow update: if admin()
         || (mio(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['piano', 'abbonamento', 'uid', 'slug']));
       allow delete: if admin();
@@ -34,6 +39,7 @@ service cloud.firestore {
     match /richieste/{slug} {
       allow read: if admin() || (autenticato() && resource.data.uid == request.auth.uid);
       allow create: if autenticato()
+        && request.auth.token.email_verified == true
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.stato == 'in coda';
       allow update, delete: if admin();

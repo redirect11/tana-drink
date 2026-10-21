@@ -1,10 +1,11 @@
 'use strict'
 
 // IL CLIENTE (REQ-FLOTTA-003): lo slug dal nome del locale è il prefisso
-// del progetto Firebase dell'istanza, quindi vale la regola dei project id.
+// del progetto Firebase dell'istanza, quindi vale la regola dei project id;
+// il documento nasce a blocchi, con i consensi datati.
 
 import { describe, it, expect } from 'vitest'
-import { slugDi, problemaSlug, nuovoCliente } from '../src/lib/clienti.js'
+import { slugDi, problemaSlug, nuovoCliente, contattoDi } from '../src/lib/clienti.js'
 
 describe('slugDi', () => {
   it('minuscole, senza accenti, trattini', () => {
@@ -31,19 +32,42 @@ describe('problemaSlug', () => {
 })
 
 describe('nuovoCliente', () => {
-  it('nasce con slug, email pulita e data', () => {
-    const c = nuovoCliente({ uid: 'u1', email: ' Mario@Example.IT ', nomeLocale: 'Bar Mario', adesso: new Date('2026-10-22T10:00:00Z') })
-    expect(c).toEqual({
-      uid: 'u1',
-      email: 'mario@example.it',
-      nome_locale: 'Bar Mario',
-      slug: 'bar-mario',
-      contatto: '',
-      creato_il: '2026-10-22T10:00:00.000Z',
-    })
+  const dati = {
+    uid: 'u1',
+    email: ' Mario@Example.IT ',
+    locale: { nome: ' Bar Mario ', tipo: 'bar', via: 'Via Roma 1', cap: '80035', citta: 'Nola', provincia: 'na', telefono: '081 1234567', sito: '' },
+    fatturazione: { ragione_sociale: 'Bar Mario srl', partita_iva: 'IT01234567897', codice_fiscale: '', pec: 'Bar@PEC.it', sdi: '', stessa_sede: true },
+    referente: { nome: 'Mario', cognome: 'Rossi', ruolo: 'titolare', telefono: '', marketing: false },
+    adesso: new Date('2026-10-22T10:00:00Z'),
+  }
+
+  it('nasce a blocchi, con slug, email pulita, sede legale uguale al locale e consensi datati', () => {
+    const c = nuovoCliente(dati)
+    expect(c.versione_schema).toBe(2)
+    expect(c.email).toBe('mario@example.it')
+    expect(c.nome_locale).toBe('Bar Mario')
+    expect(c.slug).toBe('bar-mario')
+    expect(c.locale.indirizzo).toEqual({ via: 'Via Roma 1', cap: '80035', citta: 'Nola', provincia: 'NA' })
+    expect(c.fatturazione.partita_iva).toBe('01234567897')
+    expect(c.fatturazione.pec).toBe('bar@pec.it')
+    expect(c.fatturazione.sede_legale).toEqual(c.locale.indirizzo)
+    expect(c.referente).toEqual({ nome: 'Mario', cognome: 'Rossi', ruolo: 'titolare', telefono: '' })
+    expect(c.consensi).toEqual({ termini_il: '2026-10-22T10:00:00.000Z', privacy_il: '2026-10-22T10:00:00.000Z', marketing: false })
+    expect(c.creato_il).toBe('2026-10-22T10:00:00.000Z')
+  })
+
+  it('con la sede legale diversa la tiene a parte', () => {
+    const c = nuovoCliente({ ...dati, fatturazione: { ...dati.fatturazione, stessa_sede: false, via: 'Via Sede 2', cap: '80100', citta: 'Napoli', provincia: 'na' } })
+    expect(c.fatturazione.sede_legale).toEqual({ via: 'Via Sede 2', cap: '80100', citta: 'Napoli', provincia: 'NA' })
   })
 
   it('con un nome che non dà uno slug valido si ferma', () => {
-    expect(() => nuovoCliente({ uid: 'u1', email: 'a@b.it', nomeLocale: 'Bar' })).toThrow(/corto/)
+    expect(() => nuovoCliente({ ...dati, locale: { ...dati.locale, nome: 'Bar' } })).toThrow(/corto/)
+  })
+
+  it('contattoDi legge il referente, o il contatto dei documenti vecchi', () => {
+    expect(contattoDi(nuovoCliente(dati))).toBe('Mario Rossi')
+    expect(contattoDi({ contatto: 'Giulia' })).toBe('Giulia')
+    expect(contattoDi({})).toBe('')
   })
 })

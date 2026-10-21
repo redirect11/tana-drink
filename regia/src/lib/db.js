@@ -7,6 +7,8 @@ import {
   signOut,
   onAuthStateChanged,
   onIdTokenChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, onSnapshot, collection, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
@@ -28,18 +30,41 @@ export function osservaUtente(cb) {
   return onIdTokenChanged(auth, async (u) => {
     if (!u) return cb(null)
     const t = await u.getIdTokenResult()
-    cb({ uid: u.uid, email: u.email, admin: t.claims.admin === true })
+    cb({ uid: u.uid, email: u.email, emailVerificata: u.emailVerified === true, admin: t.claims.admin === true })
   })
 }
 
 export const osservaAccesso = (cb) => (configurata ? onAuthStateChanged(auth, cb) : (cb(null), () => {}))
 
-export async function registra({ email, password, nomeLocale, contatto }) {
+// La registrazione (REQ-FLOTTA-003): l'account, il documento del cliente
+// con tutti i blocchi, e l'email di verifica. Se l'email non parte la
+// registrazione resta valida: si rimanda dalla dashboard.
+export async function registra({ email, password, locale, fatturazione, referente }) {
   serve()
   const cred = await createUserWithEmailAndPassword(auth, email, password)
-  const cliente = nuovoCliente({ uid: cred.user.uid, email, nomeLocale, contatto })
+  const cliente = nuovoCliente({ uid: cred.user.uid, email, locale, fatturazione, referente })
   await setDoc(doc(db, 'clienti', cred.user.uid), cliente)
+  await sendEmailVerification(cred.user).catch(() => {})
   return cliente
+}
+
+export async function inviaVerificaEmail() {
+  serve()
+  if (auth.currentUser) await sendEmailVerification(auth.currentUser)
+}
+
+// Dopo il clic sul link di verifica il token in mano è vecchio: si rilegge.
+export async function rileggiUtente() {
+  serve()
+  if (!auth.currentUser) return false
+  await auth.currentUser.reload()
+  await auth.currentUser.getIdToken(true)
+  return auth.currentUser.emailVerified === true
+}
+
+export async function recuperaPassword(email) {
+  serve()
+  await sendPasswordResetEmail(auth, String(email || '').trim())
 }
 
 export async function accedi({ email, password }) {

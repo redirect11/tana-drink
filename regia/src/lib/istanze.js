@@ -39,9 +39,10 @@ export const urlDi = (slug) => `https://${slug}.${DOMINIO_ISTANZE}`
 // Si può chiedere l'attivazione? Serve un abbonamento valido (o un piano
 // segnato pagato a mano dall'admin, finché Stripe non c'è) e nessuna
 // attivazione già in viaggio.
-export function puoAttivare(cliente, istanza, richiesta) {
+export function puoAttivare(cliente, istanza, richiesta, { emailVerificata = true } = {}) {
   const stato = statoIstanza(istanza, richiesta)
   if (stato !== STATI.DA_ATTIVARE && stato !== STATI.ERRORE) return { ok: false, perche: statoDetto(stato) }
+  if (!emailVerificata) return { ok: false, perche: 'Prima conferma l’email: trovi il messaggio nella casella con cui ti sei registrato.' }
   if (!cliente?.piano) return { ok: false, perche: 'Serve un piano: scegline uno e completa l’abbonamento.' }
   if (cliente?.abbonamento?.stato && cliente.abbonamento.stato !== 'attivo') {
     return { ok: false, perche: 'L’abbonamento non risulta attivo.' }

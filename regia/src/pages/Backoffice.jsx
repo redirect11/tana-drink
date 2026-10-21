@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { elencoClienti, elencoIstanze, elencoRichieste, segnaPiano, rilanciaAttivazione } from '../lib/db.js'
 import { statoIstanza, statoDetto, STATI, progettoDi } from '../lib/istanze.js'
 import { PIANI, prezzoMensile, euro } from '../lib/piani.js'
+import { contattoDi } from '../lib/clienti.js'
 
 // IL BACKOFFICE (REQ-FLOTTA-005): tutti i clienti con piano, stato
 // dell'istanza, progetto, versione; le richieste in coda o in errore in
@@ -64,7 +65,15 @@ export default function Backoffice() {
                   <strong>{c.nome_locale}</strong>
                   <div className="muted small">{c.slug}</div>
                 </td>
-                <td>{c.email}</td>
+                <td>
+                  {c.email}
+                  {c.fatturazione?.ragione_sociale && (
+                    <div className="muted small">
+                      {c.fatturazione.ragione_sociale} · P.IVA {c.fatturazione.partita_iva}
+                    </div>
+                  )}
+                  {contattoDi(c) && <div className="muted small">{contattoDi(c)}</div>}
+                </td>
                 <td>{c.piano ? `${PIANI[c.piano]?.nome || c.piano} · ${euro(prezzoMensile(c))}` : <span className="muted">—</span>}</td>
                 <td>{statoDetto(stato)}</td>
                 <td>

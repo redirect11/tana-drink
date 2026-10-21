@@ -5,6 +5,7 @@ import Registrati from './pages/Registrati.jsx'
 import Accedi from './pages/Accedi.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Backoffice from './pages/Backoffice.jsx'
+import { Termini, Privacy } from './pages/Legali.jsx'
 import { osservaUtente, esci } from './lib/db.js'
 import { NOME_PRODOTTO } from './lib/prodotto.js'
 
@@ -39,10 +40,14 @@ export default function App() {
           <Route path="/accedi" element={utente ? <Navigate to="/dashboard" replace /> : <Accedi />} />
           <Route path="/dashboard" element={utente ? <Dashboard utente={utente} /> : <Navigate to="/accedi" replace />} />
           <Route path="/backoffice" element={utente?.admin ? <Backoffice /> : <Navigate to="/" replace />} />
+          <Route path="/termini" element={<Termini />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
-      <footer className="piede muted small">{NOME_PRODOTTO} · un’installazione per ogni locale</footer>
+      <footer className="piede muted small">
+        {NOME_PRODOTTO} · un’installazione per ogni locale · <Link to="/termini">Termini</Link> · <Link to="/privacy">Privacy</Link>
+      </footer>
     </div>
   )
 }
