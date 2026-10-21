@@ -8,6 +8,10 @@
   ridotto.** L'allargamento del 10/10 era in pixel e lo zoom dell'app lo
   rimpiccioliva: sul tablet del banco le due finestre erano grandi come
   prima. Ora la misura è fisica, come i tasti del tastierino.
+- **Scheda del prodotto più compatta.** Nome e prezzo sulla stessa riga,
+  col prezzo piccolo a destra. Il tasto «Salva come nuova ricetta» si
+  chiama «Salva nuova» e, sul tablet, sta a destra di Annulla e Salva;
+  sul telefono resta sotto.
 
 ## 1.9.2-beta
 
