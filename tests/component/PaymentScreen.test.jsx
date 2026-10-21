@@ -31,6 +31,7 @@ vi.mock('../../src/lib/api.js', () => ({
   }),
   applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 10 })),
   segnaScontrinoStampato: vi.fn(),
+  chiudiImpagato: vi.fn(() => Promise.resolve({})),
 }))
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
@@ -392,6 +393,19 @@ describe('metodi di pagamento', () => {
 })
 
 describe('sconto: modale con tastierino', () => {
+  // REQ-UI-028 / BUG-116: la finestra chiede 520px FISICI (la regola
+  // `.confirm-box.larga` li divide per lo zoom), non una larghezza in px
+  // che sul tablet a zoom 0,7 diventava 360.
+  it('la finestra è quella larga, da 520px veri', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Sconto' })
+    expect(dialog).toHaveClass('larga')
+    expect(dialog.style.getPropertyValue('--larga')).toBe('520px')
+    expect(dialog.style.width).toBe('')
+  })
+
   it('percentuale: si digita sul tastierino della modale e si applica', async () => {
     const user = userEvent.setup()
     mount(baseOrder())
@@ -1720,5 +1734,33 @@ describe('il tasto «Invia fattura» è una funzione premium', () => {
     expect(tasto).toHaveTextContent('✓')
     await user.click(tasto)
     expect(screen.getByText(/risulta già emessa la fattura n\./)).toBeInTheDocument()
+  })
+})
+
+// REQ-CASSA-016 (10/10/2026): «inserire tasto di chiusura IMPAGATO sotto
+// contante, carta, sumup» con le note «grandi sullo scontrino».
+describe('chiudere impagato', () => {
+  it('il tasto sta coi metodi, e chiude il conto con la nota', async () => {
+    const user = userEvent.setup()
+    const { chiudiImpagato } = await import('../../src/lib/api.js')
+    const { printScontrino } = await import('../../src/lib/printer.js')
+    const onClose = vi.fn()
+    render(<PaymentScreen order={baseOrder()} settings={noReader} onClose={onClose} onBeforePay={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: /Impagato/ }))
+    const finestra = screen.getByRole('dialog', { name: 'Chiudi impagato' })
+    await user.type(within(finestra).getByLabelText(/Note/), 'paga Mario domani')
+    await user.click(within(finestra).getByRole('button', { name: 'Chiudi impagato' }))
+    // Si chiude subito, come contante e carta: la scrittura va in sottofondo.
+    expect(onClose).toHaveBeenCalled()
+    await waitFor(() => expect(chiudiImpagato).toHaveBeenCalledWith('ord1', { nota: 'paga Mario domani', chi: null }))
+    // Lo scontrino esce con la nota, anche con l'auto-stampa spenta.
+    expect(printScontrino).toHaveBeenCalledWith(
+      expect.objectContaining({ impagato: expect.objectContaining({ nota: 'paga Mario domani', importo: 22 }) })
+    )
+  })
+
+  it('un conto senza niente da incassare non ha il tasto', () => {
+    mount(baseOrder({ payments: [{ amount: 22, method: 'banco' }] }))
+    expect(screen.queryByRole('button', { name: /Impagato/ })).toBeNull()
   })
 })

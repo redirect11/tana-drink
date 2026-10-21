@@ -288,6 +288,54 @@ describe('le categorie', () => {
   })
 })
 
+// REQ-MAG-051. Flavio, 05/10/2026: «tutti quelli fuori assortimento io me
+// li elimino, non me lo faccio l'inventario […] quando chiudo mi deve
+// chiudere la rimanenza con l'ultima rimanenza che ha».
+describe('il filtro per assortimento', () => {
+  const riga = (id, name) => ({ item_id: id, name, unit: 'pz', dep: 1, rim: null })
+  beforeEach(() => {
+    stato.articoli = [
+      { id: 'bombay', name: 'Bombay', unit: 'pz', stock: 1, status: 'linea' },
+      { id: 'cynar', name: 'Cynar', unit: 'pz', stock: 1 },
+      { id: 'vecchio', name: 'Gin vecchio', unit: 'pz', stock: 0, status: 'out' },
+    ]
+    stato.aperta = {
+      id: 'c1',
+      started_at: APERTA,
+      lines: [riga('bombay', 'Bombay'), riga('cynar', 'Cynar'), riga('vecchio', 'Gin vecchio')],
+    }
+  })
+  const nomi = () => [...document.querySelectorAll('.inv-name')].map((n) => n.textContent)
+
+  it('scelte le voci, restano solo quei prodotti', async () => {
+    const user = userEvent.setup()
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await user.click(screen.getByRole('button', { name: /⚗️ Assortimento/ }))
+    await user.click(screen.getByRole('button', { name: /In linea/ }))
+    await user.click(screen.getByRole('button', { name: /In assortimento/ }))
+    expect(nomi()).toEqual(['Bombay', 'Cynar'])
+    scritto(/esclusi dal filtro restano nell’inventario/)
+  })
+
+  // Chi non si vede non sparisce: chiudendo, la riga c'è ancora, senza
+  // rimanenza — e la chiusura le lascia la giacenza registrata.
+  it('chiudendo, i prodotti esclusi restano nell’inventario senza rimanenza', async () => {
+    const user = userEvent.setup()
+    const api = await import('../../src/lib/api.js')
+    render(<StockCountPanel />)
+    await screen.findByText(/Inventario in corso/)
+    await user.click(screen.getByRole('button', { name: /⚗️ Assortimento/ }))
+    await user.click(screen.getByRole('button', { name: /In linea/ }))
+    expect(nomi()).toEqual(['Bombay'])
+    await user.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
+    await user.click(await screen.findByRole('button', { name: /^Chiudi/ }))
+    const { lines } = api.closeStockCount.mock.calls.at(-1)[1]
+    expect(lines.map((l) => l.item_id)).toEqual(['bombay', 'cynar', 'vecchio'])
+    expect(lines.find((l) => l.item_id === 'vecchio').rim).toBeNull()
+  })
+})
+
 // BUG-110: il 21/09/2026 i numeri di un inventario intero stavano solo
 // sullo schermo, e con la chiusura interrotta sono spariti.
 describe('le rimanenze mentre si conta', () => {
@@ -310,27 +358,5 @@ describe('le rimanenze mentre si conta', () => {
   })
 })
 
-describe('un inventario già chiuso', () => {
-  it('si riapre e ridice il consumo a settimana coi suoi giorni', async () => {
-    stato.storico = [
-      {
-        id: 'v1',
-        status: 'closed',
-        started_at: '2026-06-07T00:00:00.000Z',
-        closed_at: '2026-06-21T00:00:00.000Z',
-        totals: { cons_value: 15 },
-        lines: [
-          { item_id: 'a', name: 'Gin Mare', unit: 'ml', cons: 1500, cons_value: 15 },
-        ],
-      },
-    ]
-    render(<StockCountPanel />)
-    // Le conte vecchie non hanno mai avuto un consumo settimanale salvato:
-    // si ricalcola dalle date, che invece ce l'hanno sempre avute.
-    // Le date si leggono come si scrivono, «dal 07/06/2026 al 21/06/2026»:
-    // è la frase con cui Flavio descrive l'inventario, «da TOT a TOT».
-    await userEvent.click(await screen.findByText(/dal 07\/06\/2026 al 21\/06\/2026/))
-    await screen.findByText(/Inventario dal 07\/06\/2026 al 21\/06\/2026/)
-    scritto(/75 cl a settimana/)
-  })
-})
+// Gli inventari chiusi si guardano nello Storico inventari (REQ-MAG-052,
+// tests/component/StoricoInventari.test.jsx): qui non ci sono più.

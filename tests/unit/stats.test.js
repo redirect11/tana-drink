@@ -92,15 +92,17 @@ describe('revenueByHour', () => {
     expect(buckets.reduce((s, b) => s + b.ordini, 0)).toBe(2)
     expect(buckets.reduce((s, b) => s + b.incasso, 0)).toBe(28)
     expect(peakLabel).toMatch(/^\d{2}:30$/)
-    // range 18:30 → 03:30 = 9 fasce, sempre presenti (anche vuote)
-    expect(buckets).toHaveLength(9)
+    // range 18:30 → 03:30, l'ora di «alle» compresa = 10 fasce, sempre
+    // presenti (anche vuote)
+    expect(buckets).toHaveLength(10)
     expect(buckets[0].label).toBe('18:30')
     for (const b of buckets) expect(b.label).toMatch(/^\d{2}:30$/)
   })
 
-  it('range personalizzato, anche a cavallo della mezzanotte', () => {
+  // «Alle» è l'ultima ora COMPRESA (BUG-115): 23→01 sono tre fasce.
+  it('range personalizzato, anche a cavallo della mezzanotte, con l’ora di «alle» compresa', () => {
     const { buckets } = revenueByHour(orders, { from: '23:00', to: '01:00' })
-    expect(buckets.map((b) => b.label)).toEqual(['23:00', '00:00'])
+    expect(buckets.map((b) => b.label)).toEqual(['23:00', '00:00', '01:00'])
     // l'ordine delle 22:40 UTC (00:40 locali) cade nella fascia 00:00
     expect(buckets[1].ordini).toBe(1)
     expect(buckets[1].incasso).toBe(8)
@@ -108,10 +110,30 @@ describe('revenueByHour', () => {
   })
 })
 
+// BUG-115. L'utente, 11/10/2026, sulla serata del 01/10: «dalle 22 alle
+// 00:00 mostra solo 22 e 23. Deve mostrare anche la mezzanotte inclusa».
+describe('la fascia comprende l’ora di «alle»', () => {
+  it('dalle 22 alle 00:00 sono tre fasce, e la mezzanotte c’è', () => {
+    const { buckets } = revenueByHour([], { from: '22:00', to: '00:00' })
+    expect(buckets.map((b) => b.label)).toEqual(['22:00', '23:00', '00:00'])
+  })
+  it('dalle 22 alle 22 è l’ora delle 22 e basta', () => {
+    expect(revenueByHour([], { from: '22:00', to: '22:00' }).buckets.map((b) => b.label)).toEqual(['22:00'])
+  })
+  it('una comanda battuta a mezzanotte e un quarto entra in «dalle 22 alle 00»', () => {
+    const iso = '2026-10-01T22:15:00.000Z'
+    const hh = new Date(iso).getHours()
+    const ora = (h) => `${String((h + 24) % 24).padStart(2, '0')}:00`
+    const comanda = { status: 'pagato', total: 6, created_at: iso, order_items: [{ drink_id: 'd1', name: 'Negroni', qty: 1, unit_price: 6 }] }
+    expect(hourRangeReport([comanda], { from: ora(hh - 2), to: ora(hh) }, {}).nOrdini).toBe(1)
+  })
+})
+
 describe('revenueByDayInRange', () => {
   it('conta per giornata solo gli ordini nella fascia', () => {
     // 20:15Z = 22:15 locali → dentro 22:00-23:00; 22:40Z = 00:40 → fuori
-    const t = revenueByDayInRange(orders, { from: '22:00', to: '23:00' })
+    // (la fascia arriva alla fine dell'ora di «alle», BUG-115)
+    const t = revenueByDayInRange(orders, { from: '22:00', to: '22:00' })
     expect(t).toHaveLength(1)
     expect(t[0].incasso).toBe(20)
   })
@@ -181,7 +203,7 @@ describe('hourRangeReport (venduto in una fascia oraria)', () => {
   const iso = '2026-06-05T20:15:00.000Z'
   const hh = new Date(iso).getHours()
   const due = (h) => `${String((h + 24) % 24).padStart(2, '0')}:00`
-  const fascia = { from: due(hh), to: due(hh + 1) }
+  const fascia = { from: due(hh), to: due(hh) }
 
   it('somma solo gli ordini nella fascia, al netto degli sconti, con prodotti e categorie', () => {
     const conSconto = [
@@ -205,8 +227,42 @@ describe('hourRangeReport (venduto in una fascia oraria)', () => {
     expect(r.categorie.length).toBeGreaterThan(0)
   })
 
+  // Flavio, 13/10/2026: «tu metti solo le categorie … poi ci metti la
+  // freccina che se voglio si spacchetta e vedo tutti i prodotti del menu
+  // all'interno della categoria … poi vedo io qual è il best seller della
+  // singola categoria». Ogni categoria porta i suoi prodotti, in ordine di
+  // pezzi, con lo sconto del conto come nella classifica.
+  it('ogni categoria ha dentro i suoi prodotti, in ordine di pezzi', () => {
+    const conSconto = [
+      ...orders,
+      {
+        serata_id: 's3',
+        daily_number: 4,
+        status: 'pagato',
+        total: 43,
+        created_at: iso,
+        status_times: {},
+        order_items: [
+          { drink_id: 'd1', name: 'Negroni', qty: 2, unit_price: 8 },
+          { drink_id: 'd1', name: 'Boulevardier', qty: 3, unit_price: 9 },
+        ],
+      },
+    ]
+    const r = hourRangeReport(conSconto, fascia, drinksById)
+    expect(r.categorie.map((c) => c.name)).toEqual(['AMERICANI', 'BIRRE'])
+    const americani = r.categorie.find((c) => c.name === 'AMERICANI')
+    expect(americani.prodotti.map((p) => [p.name, p.qty])).toEqual([
+      ['Negroni', 4],
+      ['Boulevardier', 3],
+    ])
+    expect(americani.prodotti[0].revenue).toBe(32) // 4 × 8
+    expect(americani.qty).toBe(7)
+    expect(americani.revenue).toBe(59) // 32 + 3 × 9
+    expect(r.categorie.find((c) => c.name === 'BIRRE').prodotti).toEqual([{ name: 'Ceres', qty: 1, revenue: 4 }])
+  })
+
   it('fuori fascia non conta nulla', () => {
-    const r = hourRangeReport(orders, { from: due(hh + 6), to: due(hh + 7) }, drinksById)
+    const r = hourRangeReport(orders, { from: due(hh + 6), to: due(hh + 6) }, drinksById)
     expect(r.nOrdini).toBe(0)
     expect(r.totale).toBe(0)
     expect(r.prodotti).toEqual([])

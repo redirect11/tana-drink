@@ -711,6 +711,9 @@ requirements:
       Se le righe di prima restano bloccate, il conto riaperto non serve a
       niente. Le scorte si riallineano con la differenza, come per ogni
       altra modifica.
+      DAL 06/10/2026 (BUG-113) riaprire un conto INCASSATO rimette in
+      magazzino quello che aveva scalato, e le comande tornano da scalare:
+      la nuova chiusura scala una volta, con quello che c'è sul conto.
       Il tasto per riaprire NON è un tasto in più: è quello del PAGAMENTO,
       che su un conto chiuso o annullato era lì spento a non fare niente.
       ANNULLANDO, il saldo di un buono usato per pagare torna al
@@ -743,7 +746,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, difetto-risolto]
-    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js]
+    test_cases: [tests/unit/storiaOrdine.test.js, tests/component/OrderPosDetail.test.jsx, tests/unit/vouchers.test.js, tests/unit/ripristino.test.js, tests/unit/riaperturaMagazzino.test.js]
 
   - id: REQ-ORD-010
     title: "Gli annullati hanno una tab loro nella coda"
@@ -1805,6 +1808,44 @@ requirements:
       - tests/component/SettingsTab.test.jsx
       - tests/component/StatsTab.test.jsx
 
+
+  - id: REQ-CASSA-016
+    title: "Chiudere un conto IMPAGATO: il tavolo si libera, i soldi restano da riscuotere"
+    area: "src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx"
+    description: >
+      Richiesta del 10/10/2026, riportata dall'utente: «inserire tasto di
+      chiusura IMPAGATO sotto contante, carta, sumup ed inserire la
+      possibilità di scrivere delle note che appariranno grandi sullo
+      scontrino di chiusura tavolo». Decise lo stesso giorno: è un CREDITO
+      DA RISCUOTERE (non una perdita), e le note stampano in grande sullo
+      scontrino che esce alla chiusura impagata.
+      IL GESTO. Nella schermata di pagamento, sotto i metodi, il tasto
+      «🕗 Impagato» apre una finestra con l'importo da riscuotere e una
+      casella per le note; «Chiudi impagato» chiude subito a schermo, come
+      contante e carta, e la scrittura va in sottofondo.
+      COSA DIVENTA IL CONTO. Non è pagato e non è annullato: resta da
+      incassare, col segno `impagato` { at, nota, chi, importo }. Le
+      comande risultano servite e il magazzino si scala come a ogni
+      chiusura (i drink sono usciti). Per la coda è CHIUSO (contoChiuso):
+      esce dalla serata col timbro di chiusura, con la striscia arancione
+      dei soldi che mancano e la pillola «🕗 Impagato».
+      LA CASSA. Non è un conto aperto, quindi NON blocca la chiusura di
+      cassa; e non è un incasso, perché non ci sono pagamenti. La chiusura
+      di cassa e la pagina della cassa dicono quanti sono e quanto c'è da
+      riscuotere.
+      LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto
+      del metodo di pagamento «Da riscuotere» con l'importo, poi IMPAGATO e
+      le note in doppia altezza e larghezza, spezzate a parole (24
+      caratteri per riga).
+      QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni
+      altro: il pagamento lo chiude, e il segno resta come storia.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, pagamenti, stampa]
+    test_cases:
+      - tests/unit/impagato.test.js
+      - tests/unit/scontrinoImpagato.test.js
+      - tests/component/PaymentScreen.test.jsx
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
@@ -1827,6 +1868,10 @@ requirements:
     title: "Statistiche: prima la serata (lista e dettaglio), poi il periodo"
     area: "src/lib/serate.js, src/components/StatsTab.jsx, src/lib/sottosezioni.js"
     description: >
+      11/10/2026 (l'utente: «incasso per giornata nelle statistiche per
+      serata è inutile»): nel dettaglio di una serata non ci sono i due
+      grafici per giornata né il KPI «incasso / giornata» — una serata è
+      una giornata sola, e ripeterebbero l'incasso. Nel periodo restano.
       «Nelle statistiche dovremmo rendere più sofisticata la selezione della
       serata. È la cosa principale che si vuole vedere, il resto dei filtri
       sono secondari. Io metterei una lista con dettaglio: di default la
@@ -2094,12 +2139,138 @@ requirements:
       … se ci sono delle aperture di cassa me lo dovrebbe registrare.» Le
       giornate in cui la cassa e' stata aperta nel periodo entrano in
       «Incasso per giornata» anche senza conti, a 0 €.
+      (4) IL VENDUTO NELLA FASCIA A CATEGORIE APRIBILI (Flavio, 13/10/2026,
+      con la foto della schermata): «nel venduto mi porta prima le
+      categorie e poi i singoli prodotti, pero' tutti mischiati … tu metti
+      solo le categorie, gin e vodka, poi ci metti la freccina che se
+      voglio si spacchetta e vedo tutti i prodotti del menu all'interno
+      della categoria … poi vedo io qual e' il best seller della singola
+      categoria». Via le barre delle categorie e l'elenco unico dei
+      prodotti: una riga per categoria (nome, pezzi, incasso), in ordine
+      d'incasso, chiusa di partenza, che si apre sui prodotti venduti di
+      quella categoria in ordine di pezzi (`vendutoPerCategoria`, con lo
+      sconto del conto come la classifica del periodo). Si mostrano i
+      prodotti VENDUTI nella fascia, non tutto il listino della categoria.
     status: implemented
     generate_issue: false
     labels: [statistiche]
     test_cases:
       - tests/unit/stats.test.js
       - tests/component/StatsTab.test.jsx
+  - id: REQ-STAT-006
+    title: "Le vendite di Tiller (giugno 2023 – agosto 2026) nelle statistiche e nel bilancio"
+    area: "src/lib/venditeStoriche.js, scripts/importa-vendite-tiller.mjs, src/lib/api.js (fetchVenditeStoriche, fetchSerateStoriche), src/components/StatsTab.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx, src/components/OrdersHistory.jsx, firestore.rules"
+    description: >
+      Prima dell'app il locale batteva su Tiller (oggi SumUp POS Pro, che
+      chiude a fine 2026). Flavio vuole vedere le vendite «dal 2024»;
+      l'utente, 10/10/2026: «nella cartella registrazioni ci sono alcuni csv
+      che sono le vendite dei prodotti dall'apertura. Si dovrebbero
+      importare intanto nel db di test in modo che siano consultabili […]
+      nel bilancio o cmq nelle statistiche».
+      I DATI. Sei export «rapporto sugli ordini prodotti» di Tiller, dal
+      01/06/2023 al 28/08/2026: una riga per prodotto venduto, col conto
+      (ID ordine), l'ora di apertura e di chiusura in ora italiana, la
+      quantità, il prezzo di listino, lo sconto e l'incassato della riga
+      («Vendite (IVA incl.)», già scontato). 50.058 righe, 32.884 conti,
+      435 prodotti. I file si sovrappongono di un giorno ai bordi: un conto
+      che compare in due file si conta una volta. La colonna «Codice del
+      buono regalo» non è un buono: è la VARIANTE scelta su un tasto
+      generico («SHOT 2,50» → «Sambuca») e resta come nota della riga.
+      DOVE STANNO. Raccolta `vendite_storiche`, un documento per GIORNO di
+      apertura del conto (ora italiana), con dentro i conti e le loro
+      righe: circa 1.100 documenti invece di 50.000, e un periodo si legge
+      per giorni. Si scrivono solo con lo script
+      (scripts/importa-vendite-tiller.mjs, di prova sul test, --apply per
+      scrivere; la produzione va nominata a mano); dall'app si leggono e
+      basta (firestore.rules).
+      LE GIACENZE NON SI TOCCANO: è merce uscita quando il magazzino non lo
+      teneva l'app. Le vendite storiche non scrivono movimenti né scarichi.
+      COME SI VEDONO. Statistiche per periodo, «Venduto × Incassato» e
+      «Acquisti × Fatturato» leggono i conti dell'app e quelli storici
+      dello stesso periodo e li uniscono (unisciVendite): ogni conto
+      storico diventa un conto chiuso con le sue righe, l'incasso è la
+      somma delle righe. I prodotti si abbinano alle voci del menù per
+      NOME (senza maiuscole, accenti e apostrofi diversi), così categorie e
+      macro funzionano; quelli senza una voce col loro nome restano col
+      nome e finiscono fra i «non attribuiti».
+      UN SISTEMA PER GIORNATA. Il passaggio all'app è dell'08/08/2026, ma
+      dal 26 al 28 agosto si è tornati a Tiller per qualche sera, e in
+      quei giorni i conti risultano ribattuti nell'app a fine serata (una
+      trentina in venti minuti, alle 2:30 e alle 17:20). Sommandoli si
+      conterebbero due volte. Regola: per ogni giornata commerciale contano
+      i conti dell'app se ce ne sono, altrimenti quelli di Tiller.
+      ANCHE NELLE ALTRE SCHERMATE (l'utente, 10/10/2026: «i dati devono
+      essere visibili anche tramite le schermate attuali. I dati vanno
+      integrati in modo organico»):
+        · STORICO ORDINI: scelto un periodo, i conti di Tiller di quei
+          giorni stanno nella lista, segnati «Tiller». Toccandoli si
+          leggono le righe sotto la riga, in sola lettura: non c'è un conto
+          dell'app da aprire, e niente ristampa. Contano fra quelli «dal
+          locale».
+        · STATISTICHE → PER SERATA: ogni giornata di Tiller è una serata
+          dell'elenco, dopo le chiusure dell'app, con la pillola «Tiller»;
+          un giorno con una chiusura vera la tiene lei. Aperta, si leggono
+          i conti di quella giornata soltanto (non si allarga la finestra
+          fino al 2024).
+      PER NON SCARICARE MILLE GIORNATE l'import scrive anche due riassunti:
+      l'indice delle serate (`vendite_storiche/_indice`, un documento) e il
+      venduto per prodotto di magazzino (`vendite_storiche_prodotti`, vedi
+      REQ-MAG-048). Lo storico letto resta in mano, e dopo il 28/08/2026
+      non si legge niente.
+      IN PRODUZIONE si porta con scripts/storico-in-produzione.mjs: backup
+      delle raccolte che tocca (se ci sono), estrazione dei fogli mensili,
+      import di Tiller (col venduto per prodotto calcolato su ricette e
+      prodotti della produzione) e dei fogli. Di prova senza --apply, e il
+      progetto si nomina a mano; va lanciato dopo il rilascio, col via
+      libera.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, bilancio]
+    test_cases:
+      - tests/unit/venditeStoriche.test.js
+      - tests/component/OrdersHistory.test.jsx
+
+  - id: REQ-STAT-007
+    title: "Per serata: la ricerca per data, con un calendario che segna i giorni di servizio"
+    area: "src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css"
+    description: >
+      L'utente, 11/10/2026: «nelle statistiche, la lista per serata,
+      dovrebbe avere una ricerca per data, con un calendario, che ti
+      permette di selezionare il giorno e un box per modificare a mano la
+      data. Il calendario compatto deve poter scorrere i mesi e segnare dei
+      colori su ogni giorno in base a se c'è stato servizio oppure no».
+      In cima all'elenco delle serate: il tasto «📅 Calendario» e la
+      casella «Data». Il calendario è la griglia del selettore dello
+      storico (grigliaMese: lunedì per primo, sei righe fisse), si scorre
+      mese per mese e colora ogni giorno passato: VERDE dove c'è stato
+      servizio — una chiusura di cassa dell'app o una giornata di Tiller —
+      GRIGIO dove no; i giorni a venire sono spenti. La legenda sta sotto.
+      Scegliere un giorno, dal calendario o scrivendolo, apre DIRETTAMENTE
+      la serata di quel giorno; un giorno senza servizio lo dice («Nessun
+      servizio sabato 1 agosto»), invece di non fare niente.
+      L'elenco legge un anno di chiusure (400) invece delle ultime 60: la
+      ricerca deve trovare anche la serata di sei mesi fa.
+      UNA GRIGLIA PER TUTTA L'APP (l'utente, stesso giorno: «uniformare
+      anche gli altri calendari dell'app a quello appena creato … e anche
+      con la info sul servizio»). GrigliaMese è il calendario di tutte e
+      tre le schermate che ne aprono uno — le serate delle statistiche, la
+      ricerca per data delle chiusure di cassa, il periodo dello storico
+      ordini — coi giorni di servizio colorati allo stesso modo. I giorni di
+      servizio vengono da lib/giorniDiServizio.js (chiusure dell'app per
+      giornata commerciale più giornate di Tiller), letti una volta e
+      tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle
+      data dei moduli (spesa, fattura, data di nascita) non sono calendari
+      di servizio e restano com'erano. Anche «Inizio» e «Fine» del periodo
+      personalizzato delle statistiche (CampoDataOra): la casella data-e-ora
+      resta, e accanto il tasto apre la stessa griglia — il browser ci
+      apriva il suo selettore («qua vedo ancora il calendario vecchio»);
+      toccato un giorno, l'ora scritta resta.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, ux]
+    test_cases:
+      - tests/component/StatsTab.test.jsx
+      - tests/unit/giorniDiServizio.test.js
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
@@ -7315,6 +7486,14 @@ requirements:
       `acquistiPerMacro` e `venditeByMacro`, rimaste senza schermata dopo
       REQ-STAT-004, sono state tolte: il loro lavoro lo fanno vociDiAcquisto
       e sommaVendite.
+      LA DATA DI UN ACQUISTO E' QUELLA IN CUI LA MERCE ENTRA. Flavio,
+      13/10/2026: «in acquisti vorrei capire se mette quello che ordino
+      quel mese o quello che pago quel mese … io non pago quasi mai alla
+      consegna, pago quasi sempre almeno a 30 giorni … la data di
+      riferimento deve far riferimento a quando ordino». E' gia' cosi': una
+      consegna vale il giorno d'arrivo (`consegneDi`, `c.at`), un carico il
+      giorno del movimento; il pagamento non c'entra. La spiegazione a
+      scomparsa della tabella (REQ-UI-029) ora lo dice.
     status: implemented
     generate_issue: false
     labels: [magazzino, statistiche, fornitori]
@@ -7409,11 +7588,29 @@ requirements:
       per giorno, e quella a sua volta dalla pagina REQ-CASSA-010. La formula
       invece non aspetta nessuno: è decisa, e ore e paghe l'app le ha già
       per intero (REQ-STAFF-006).
-    status: todo
+      IN PARTE FATTO (10/10/2026). Bilancio → Mesi mostra il minimo di
+      ogni giorno: nei mesi dei fogli quello scritto a mano, nei mesi
+      dell'app il PRIMO ADDENDO della formula, cioè la somma delle paghe di
+      chi lavora quel giorno (paghePerGiorno in src/lib/bilancioMesi.js:
+      ore effettive per i giorni passati, turni programmati per quelli a
+      venire; un giorno senza ore non ha minimo).
+      L'EXTRA DEL SINGOLO GIORNO c'è (10/10/2026, l'utente: «singolo
+      giorno»): nei mesi dell'app si tocca il minimo di un giorno e si
+      scrive l'extra; il minimo diventa paghe + extra, e la finestra dice
+      di cosa è fatto. Sta in `minimi_extra/{YYYY-MM}` ({ giorni: {
+      giornata: euro } }); lo legge chi vede il Bilancio, lo scrive solo
+      l'admin (firestore.rules, isAdmin). Nei mesi dei fogli il minimo è
+      quello di Flavio e non si tocca.
+      NON C'È, per scelta dell'utente lo stesso giorno, la SERIE
+      settimanale stesa sul mese; e manca il confronto nella schermata
+      della serata.
+    status: partial
     generate_issue: true
     labels: [statistiche, staff, ore, serata]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/bilancioMesi.test.js
+      - tests/component/BilancioMesi.test.jsx
 
   - id: REQ-MAG-023
     title: "Quanto ordinare: il foglio guarda la giacenza, l'app guarda una soglia"
@@ -7539,6 +7736,7 @@ requirements:
     test_cases:
       - tests/unit/warehouse.test.js
       - tests/component/StockCountPanel.test.jsx
+      - tests/component/StoricoInventari.test.jsx
 
   # ══════════════════════════════════════════════════════════════════════
   #  LE DECISIONI DEL 19/08 — nasce «Bilancio», e quello che le serve.
@@ -7625,7 +7823,7 @@ requirements:
 
   - id: REQ-CASSA-011
     title: "Bilancio → Mesi: minimo, incassato e differenza, giorno per giorno"
-    area: "src/components/BilancioTab.jsx (nuovo), src/lib/stats.js, src/lib/paghe.js, src/lib/ore.js"
+    area: "src/lib/bilancioMesi.js, src/components/MesiBilancio.jsx, src/components/BilancioTab.jsx, scripts/estrai-fogli-mensili.py, scripts/importa-fogli-mensili.mjs, src/lib/api.js (fetchFoglioMese), src/lib/paghe.js (tariffePer), src/lib/ore.js (normalizeEntries)"
     description: >
       DECISO (19/08, dall'utente che riporta Flavio). È la versione navigabile
       dei fogli mensili di ANALISI DATI (com'erano fatti sta scritto per
@@ -7671,11 +7869,40 @@ requirements:
       il netto del mese non esiste) e da REQ-STAFF-015 (senza il minimo
       restano due colonne su tre). Stipendi e costo del venduto invece ci
       sono già: REQ-STAFF-006 e REQ-MAG-015.
-    status: todo
-    generate_issue: true
+      FATTO (10/10/2026, l'utente: «inizia a fare la schermata mesi»).
+      La tabella è come il foglio: il mese per settimane (1–7, 8–14, 15–21,
+      22–28 e i giorni che restano, le stesse colonne di «Acquisti ×
+      Fatturato»), e per ogni giorno minimo, incassato, differenza, con la
+      nota del foglio sopra il giorno (KARAOKE, GIGLI…). Sotto, il mese:
+      incassi, stipendi, spese, netto, differenza dal minimo, costo del
+      lavoro e prime cost. Spiegazione a scomparsa in cima (REQ-UI-029).
+      I FOGLI SONO IMPORTATI: i diciotto fogli mensili (gennaio 2025 –
+      luglio 2026; manca luglio 2025) stanno in `mesi_storici`, uno per
+      mese, coi minimi e le note di ogni giorno e stipendi e spese del
+      mese. Li estrae scripts/estrai-fogli-mensili.py (Python, che legge
+      l'xlsx) e li scrive scripts/importa-fogli-mensili.mjs.
+      DA DOVE VIENE OGNI NUMERO: l'INCASSATO sono sempre i conti, per
+      giornata commerciale — dell'app e, fino al 28/08/2026, di Tiller —
+      anche nei mesi del foglio, dove la riga REALE era battuta a mano (e
+      non sempre torna coi conti: giugno 2026, 33.288 nel foglio, 35.388 su
+      Tiller). Il MINIMO nei mesi del foglio è il suo; nei mesi dell'app è
+      il costo del personale del giorno (REQ-STAFF-015): ore effettive per
+      i giorni passati, turni programmati per quelli a venire. STIPENDI e
+      SPESE nei mesi del foglio sono i suoi (le spese lì comprendono la
+      merce); nei mesi dell'app gli stipendi vengono dalle ore registrate e
+      le spese sono merce fatturata più altre spese, dal Riepilogo di
+      Fornitori (REQ-CASSA-012). Accanto al numero si dice da dove viene.
+      Netto = incassi − stipendi − spese; se manca uno dei due non si
+      mostra. Costo del lavoro e prime cost sono sull'incassato AL NETTO
+      dell'IVA, con la merce dalle ricette (REQ-MAG-015).
+      LA DIFFERENZA SI COLORA coi colori di stato (--ok, --warn), non col
+      rosso.
+    status: implemented
+    generate_issue: false
     labels: [statistiche, serata, staff]
-    priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/bilancioMesi.test.js
+      - tests/component/BilancioMesi.test.jsx
 
   - id: REQ-CASSA-012
     title: "Le spese del mese si scrivono nell'app, non su un foglio a parte"
@@ -11557,6 +11784,61 @@ requirements:
     generate_issue: true
     labels: [ui]
     test_cases: []
+
+  - id: REQ-UI-028
+    title: "Sconto e ricetta in finestre più larghe, e la ricetta si apre senza tastiera"
+    area: "src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx"
+    description: >
+      Richieste del 10/10/2026, riportate dall'utente: «allargare schermata
+      sconti», «allargare schermata ricetta», «non aprire tastiera all'avvio
+      di schermata ricetta».
+      LO SCONTO passa da 320 a 520 px (o quasi tutto lo schermo, se è più
+      stretto): i tasti del tastierino crescono con la finestra.
+      LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720
+      px: nome, prezzo, nota e le righe degli ingredienti con quantità e
+      unità non vanno più a capo.
+      LE MISURE SONO FISICHE, divise per lo zoom dell'app (BUG-116,
+      21/10/2026): sul tablet del banco, a zoom 0,7, i 520 e i 720 px CSS
+      rendevano quanto le finestre di prima.
+      NOME E PREZZO SULLA STESSA RIGA (Daniele, 21/10/2026): «metti il
+      prezzo piu' in piccolo a destra del nome della ricetta». Il nome
+      prende lo spazio, il prezzo e' una casella stretta accanto.
+      LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome
+      c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo
+      per un prodotto libero nuovo, dove il nome va scritto comunque, e
+      sulla quantità solo dell'ingrediente appena aggiunto — prima ogni riga
+      di ingrediente lo chiedeva, e all'apertura vinceva l'ultima.
+    status: implemented
+    generate_issue: false
+    labels: [ui, pos]
+    test_cases:
+      - tests/component/CustomDrinkForm.test.jsx
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/css.test.js
+
+  - id: REQ-UI-029
+    title: "Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima"
+    area: "src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx"
+    description: >
+      L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto ×
+      Incassato» e «Acquisti × Fatturato»: la spiegazione va «a scomparsa
+      nella schermata stessa».
+      In cima a tutte e due le tabelle, chiuso di partenza, «ℹ️ Cosa misura
+      questa tabella» (`<details>`, componente Soffietto). Dentro: la
+      domanda a cui risponde la tabella, la DIFFERENZA con l'altra con un
+      esempio (trenta casse di birra comprate a giugno: in «Acquisti ×
+      Fatturato» pesano tutte su giugno, in «Venduto × Incassato» solo per
+      le birre vendute mese per mese), il significato delle righe e
+      l'avvertenza sull'IVA. In «Acquisti × Fatturato» anche quella sugli
+      anni di Tiller, che hanno il fatturato ma non gli acquisti.
+      Le spiegazioni che stavano in fondo alle tabelle sono confluite qui,
+      riscritte nel registro del gestionale: senza il «tu» («quello che hai
+      speso», «se lo confronti»), come vuole DESIGN.md, guardrail 3.
+    status: implemented
+    generate_issue: false
+    labels: [ui, bilancio]
+    test_cases:
+      - tests/component/MacroMonthlyTab.test.jsx
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -11763,11 +12045,17 @@ requirements:
       SALVATA, SI TORNA ALLA CODA, e solo da qui: la stessa scheda aperta dal
       Menu' resta dov'e'. Chi salva una ricetta in mezzo a un conto ha finito
       quello che era venuto a fare.
+      IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo
+      salva nuova e mettila a destra degli altri tasti quando la schermata
+      e' abbastanza larga»). Sta nello stesso gruppo di Annulla e Salva: sullo
+      schermo stretto sotto, da solo, dove non si tocca per sbaglio avendo
+      fretta; dai 700 px di schermo in su a destra degli altri due.
     status: implemented
     generate_issue: false
     labels: [menu, pos]
     test_cases:
       - tests/component/CustomDrinkForm.test.jsx
+      - tests/unit/css.test.js
 
   - id: REQ-MENU-015
     title: "Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta"
@@ -12028,7 +12316,7 @@ requirements:
       - tests/component/StockCountPanel.test.jsx
   - id: REQ-MAG-048
     title: "Lo storico dei movimenti di un prodotto, diviso per tipo"
-    area: "src/components/InventoryManager.jsx (Movimenti)"
+    area: "src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)"
     description: >
       Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il
       gestionale dovrebbe registrarmi tutte le movimentazioni e
@@ -12041,11 +12329,29 @@ requirements:
       vendite: `ordine`, `modifica ordine`, `storno`): manca la vista di un
       prodotto solo, coi movimenti raggruppati per tipo e i totali di
       ciascuno nel periodo.
-    status: todo
-    priority: P2
-    generate_issue: true
+      FATTO (10/10/2026), insieme alle vendite di Tiller («nella
+      movimentazione dal 2024», l'utente il 07/10). Nella scheda di ogni
+      prodotto in Magazzino, «📜 Movimenti» apre la sua movimentazione:
+        · i TOTALI PER TIPO nel periodo (30 giorni, 90, un anno, tutto):
+          consegna ordine fornitore, carico diretto, carico da fattura,
+          contenuto reale, chiusura inventario, vendite dell'app (ordini,
+          modifiche e storni insieme), vendite su Tiller, altre correzioni;
+          tutto nell'unità della giacenza, col segno;
+        · il VENDUTO MESE PER MESE, app e Tiller affiancati;
+        · l'elenco dei movimenti, dal più recente.
+      I movimenti si leggono per prodotto e per il solo periodo scelto
+      (indice composto item_id + created_at): un distillato accumula
+      migliaia di scarichi l'anno. Le vendite di Tiller non sono movimenti — non
+      hanno toccato le giacenze — e vengono dal riassunto che l'import
+      scrive per ogni prodotto, con le RICETTE ATTUALI delle voci vendute:
+      è una stima, e per le bottiglie vendute intere coincide col vero.
+    status: implemented
+    generate_issue: false
     labels: [magazzino]
-    test_cases: []
+    priority: P2
+    test_cases:
+      - tests/unit/movimentiProdotto.test.js
+      - tests/component/MovimentiProdotto.test.jsx
   - id: REQ-MAG-049
     title: "Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP"
     area: "src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)"
@@ -12118,6 +12424,79 @@ requirements:
     test_cases:
       - tests/unit/controlloMagazzino.test.js
       - tests/component/ControlloMagazzino.test.jsx
+
+  - id: REQ-MAG-051
+    title: "Inventario: filtro per assortimento, e i prodotti esclusi chiudono con la giacenza registrata"
+    area: "src/components/StockCountPanel.jsx, src/components/FiltroAssortimento.jsx, src/components/Tendina.jsx"
+    description: >
+      Flavio, vocale del 05/10/2026, sull'inventario: «qui servirebbe il
+      filtro in assortimento, fuori assortimento, premium e linea […] tutti
+      quelli fuori assortimento io me li elimino, cioè non me lo faccio
+      l'inventario del fuori assortimento […] quando chiudo l'inventario mi
+      deve chiudere la rimanenza con l'ultima rimanenza che ha, che
+      presumibilmente è zero».
+      Nell'inventario in corso c'è lo stesso filtro dei Prodotti — una
+      tendina con le quattro voci di assortimento (FiltroAssortimento), a
+      scelta multipla, col numero di prodotti per voce — accanto alla barra
+      delle categorie. Le righe e le categorie seguono il filtro; il
+      contatore «contati» resta su tutto l'inventario.
+      I PRODOTTI ESCLUSI NON SI PERDONO: restano nell'inventario, solo non
+      si vedono. Chiudendo, un prodotto senza rimanenza scritta non ha
+      differenza e tiene la giacenza registrata, cioè l'ultima rimanenza che
+      ha (per un fuori assortimento, di solito zero): è già la regola della
+      chiusura (closeStockCount salta le righe senza conteggio), e qui la si
+      dice anche a schermo.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, inventario]
+    test_cases:
+      - tests/component/StockCountPanel.test.jsx
+  - id: REQ-MAG-052
+    title: "Storico inventari: tutti gli inventari chiusi, e uno aperto si legge come quello in corso"
+    area: "src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)"
+    description: >
+      Flavio, vocale del 15/10/2026: «nella sezione inventario io dovrei
+      avere la possibilita' di vedere tutti gli inventari vecchi, magari si
+      potrebbe fare un tab che si chiamera' storico inventari, dove una
+      volta che lo premo mi appare la lista degli inventari con la data di
+      apertura e la data di chiusura, e io se voglio ci clicco sopra e lo
+      vedo; ovviamente la casella rimanenze risulta bloccata, quella era la
+      rimanenza che io ho inserito, e mi vado a vedere tutti i consumi che
+      ho fatto in quel periodo, cosi' da capire che tipo di ordine dovro'
+      fare in un particolare periodo».
+      UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo
+      «Inventario» e con la sua stessa chiave di licenza (modulo `conta`).
+      L'elenco: gli inventari chiusi dal piu' recente, ognuno con «dal … al
+      …», la durata in giorni o settimane, i contati sul totale, il valore
+      delle rimanenze e il consumo. Toccata una riga si apre l'inventario
+      com'era la schermata dell'inventario in corso (REQ-MAG-046): la
+      testata coi totali, le righe per categoria con la barra delle
+      categorie, DEP · ACQ · CONS · RIM, la differenza dove c'e', il consumo
+      a settimana rifatto sui giorni veri fra apertura e chiusura. La
+      casella della rimanenza resta, col contato di allora (vuota dove non
+      si e' contato), ma e' bloccata.
+      GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno
+      righe complete (rim_adesso, cons, valori) e totali; quelli di prima
+      solo dep · acq · rim · cons, e i primi neanche i totali: la lettura
+      (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto
+      dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`),
+      non il contato delle 18 (BUG-112), poi il contato, poi l'atteso.
+      Prima gli inventari chiusi stavano in fondo all'inventario in corso,
+      quindici al massimo, e aperti dicevano solo il consumo riga per riga:
+      quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`),
+      la lista per scaffale e la testata sono le stesse dell'inventario in
+      corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra
+      altri» (`fetchStockCounts` con `prima`): un inventario e' un documento
+      da quattrocento righe, e per l'elenco bastano date e totali
+      (`riassuntoInventarioChiuso`). La sezione si accende col modulo
+      dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, inventario]
+    test_cases:
+      - tests/unit/inventarioChiuso.test.js
+      - tests/component/StoricoInventari.test.jsx
+      - tests/unit/licenza.test.js
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"

@@ -187,7 +187,9 @@ describe('il pagamento non chiude le comande che nessuno ha servito', () => {
     // «pagato» è l'unica cosa che vuol dire «finito».
     await markOrderPaid('ord-1', 'banco', { autoServe: true })
     await respira()
-    const patch = stato.scritture.at(-1).patch
+    // La chiusura, non l'ultima scrittura: dopo, lo scarico scrive sulle
+    // comande il segno che sono state scalate (BUG-113).
+    const patch = stato.scritture.find((s) => s.patch?.status)?.patch
     expect(patch.status).toBe('pagato')
   })
 })

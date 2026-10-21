@@ -4999,3 +4999,137 @@ bugs:
     test_cases:
       - tests/unit/inventarioInCorso.test.js
       - tests/unit/chiusuraInventario.test.js
+
+  - id: BUG-113
+    title: "Un conto riaperto e richiuso scalava il magazzino due volte, e riaprendolo le scorte non tornavano"
+    area: "src/lib/api.js (scaricaComande, scriviCampiComanda, restoreOrder, rimettiScaricoDelConto), src/lib/ripristino.js (scaricoNetto, comandeRiaperte)"
+    severity: grave
+    priority: P1
+    description: >
+      Flavio, vocale del 05/10/2026: «se io faccio un conto, lo incasso, mi
+      scala i prodotti. Fatto un errore, lo voglio riaprire: non me li
+      ricarica, perché poi quando lo richiudo me li scarica un'altra volta
+      […] con le giacenze sono andato in negativo, però io vedo che ce n'ho
+      una […] ogni volta che un tavolo lo riapro per errore mi deve anche
+      ricaricare tutto quello che mi ha scaricato».
+      LA CAUSA (verificata sui dati di produzione del 06/10, in sola
+      lettura). Ogni comanda porta il segno `inventory_applied`: «questa è
+      già stata scalata, non rifarlo». Alla chiusura con l'incasso lo
+      scarico parte in sottofondo e il segno lo metteva solo sulla COPIA in
+      memoria: non veniva scritto da nessuna parte. Lo scriveva soltanto lo
+      scarico al «pronto», che nel locale non c'è (la preparazione è
+      spenta). In produzione, da settembre, 964 comande scalate senza il
+      segno e nessuna con il segno; ad agosto il segno arrivava ancora a
+      volte, per caso (la copia in memoria finiva nella scrittura del conto
+      se questa non era ancora partita). Così riaprendo e richiudendo un
+      conto lo scarico ripartiva per intero: 12 conti riaperti dal 20/08,
+      ognuno scalato due volte (es. il conto #29 del 03/10, nove articoli
+      scalati alle 21:49 e di nuovo alle 22:14).
+      E RIAPRIRE NON RIMETTEVA NIENTE: la riapertura di un conto incassato
+      lasciava le scorte scalate, apposta («i drink sono usciti davvero»).
+      Ma chi riapre per errore poi richiude, o batte un conto nuovo: le
+      scorte devono tornare com'erano prima della chiusura sbagliata.
+      LA CORREZIONE.
+      (1) Lo scarico alla chiusura scrive il segno e il consumo sulle
+      comande che ha scalato (scaricaComande: dopo lo scarico,
+      scriviCampiComanda per ognuna, nella coda del conto come ogni altra
+      scrittura). Vale per tutte le strade di incasso: chiusura, incasso,
+      pagamento, pagamento di gruppo.
+      (2) Riaprire un conto INCASSATO rimette in magazzino quello che quel
+      conto ha scalato, e le sue comande tornano «da scalare»: alla nuova
+      chiusura si scalano una volta, con quello che c'è sul conto in quel
+      momento. Quanto rimettere si legge dai MOVIMENTI del conto (scarichi
+      meno riallineamenti e storni, riportati a pezzi: scaricoNetto), non
+      dal segno: così vale anche per i conti chiusi prima di questa
+      correzione, che il segno non ce l'hanno. Si contano solo i movimenti
+      di prima della riapertura, perché la nuova chiusura può arrivare
+      mentre la lettura è ancora in corso. Un conto ANNULLATO e riaperto non
+      cambia: le scorte le aveva già rimesse l'annullo.
+      (3) SENZA RETE IL CONTO NON SI FERMA. Il segno si scrive nel turno
+      del conto (scriviCampiComanda), e quel turno aspettava la risposta del
+      server: offline non torna mai, e ogni gesto dopo sullo stesso conto —
+      la riapertura, un incasso — restava appeso. Prima capitava solo allo
+      scarico al «pronto»; con (1) sarebbe capitato a ogni incasso. Ora il
+      turno compone, ricorda e fa partire la scrittura senza aspettarla.
+      DA FARE A PARTE: le giacenze di produzione portano ancora gli scarichi
+      doppi dei 12 conti; si sistemano con l'inventario o con una
+      correzione mirata, che va decisa e approvata (scrive in produzione).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, magazzino, conto]
+    test_cases:
+      - tests/unit/riaperturaMagazzino.test.js
+
+  - id: BUG-114
+    title: "Nelle serate, «Calendario» non apriva niente"
+    area: "src/index.css (.calendario-servizio), src/components/CalendarioServizio.jsx"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 11/10/2026, sul test appena pubblicato: «se clicco
+      calendario non succede niente». Il pannello del calendario
+      (`.periodo-pannello`) e' `position: absolute` e si ancora al primo
+      antenato posizionato; nel selettore dello storico quello e'
+      `.periodo` (relative), nel calendario delle serate il contenitore
+      nuovo non lo era. Il pannello si apriva davvero, ma ancorato alla
+      pagina, fuori vista. I test component non lo vedono: happy-dom non
+      calcola gli stili, e il pannello risultava «nel documento». Corretto
+      con `position: relative` sul contenitore; verificato nel browser sul
+      test.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, statistiche, ui]
+    test_cases:
+      - tests/component/StatsTab.test.jsx
+
+  - id: BUG-115
+    title: "Nelle fasce orarie delle statistiche l'ora di «alle» restava fuori"
+    area: "src/lib/stats.js (rangeSpan)"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 11/10/2026, sulla serata del 01/10: «quando si seleziona la
+      fascia oraria nelle statistiche, dalle e alle devono essere entrambi
+      inclusi … dalle 22 alle 00:00 mostra solo 22 e 23. Deve mostrare anche
+      la mezzanotte inclusa». La fascia era a FINE ESCLUSA: 22:00→00:00
+      erano 120 minuti, due fasce, e l'ora di mezzanotte restava fuori — da
+      «Incasso per fascia oraria», da «Venduto nella fascia oraria» e da
+      «Incasso per giornata nella fascia scelta», che passano tutte da
+      rangeSpan. Ora la fascia arriva alla FINE dell'ora di «alle»: 22→00
+      sono tre fasce, 22→22 è l'ora delle 22 e basta, e l'orario
+      predefinito 18:30→03:30 fa dieci fasce invece di nove.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, statistiche]
+    test_cases:
+      - tests/unit/stats.test.js
+  - id: BUG-116
+    title: "Sconto e ricetta allargate, ma sul tablet del banco erano ancora piccole: lo zoom le rimpiccioliva"
+    area: "src/index.css (.confirm-box.larga), src/components/PaymentScreen.jsx, src/components/CustomDrinkForm.jsx, src/components/MovimentiProdotto.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Flavio, 21/10/2026, con due foto del tablet al banco sul test: la
+      finestra dello sconto e quella di «Modifica prodotto» allargate il
+      10/10 (REQ-UI-028) «le vede ancora piccole». Le larghezze erano in px
+      CSS (`min(520px, 94vw)`, `min(720px, 96vw)`), e l'app sul tablet gira
+      con lo zoom a circa 0,7 (ZoomControl, `zoom` su #root): 520 px ne
+      rendevano 360, 720 ne rendevano 500 — cioe' quanto prima
+      dell'allargamento. Era gia' successo coi tasti del tastierino
+      (BUG-075), e la regola e' la stessa: le misure che contano sotto il
+      dito si dividono per lo zoom. Ora `.confirm-box.larga` ha la
+      larghezza `calc(min(var(--larga), 94vw) / var(--zoom, 1))` e le tre
+      finestre dicono solo la loro misura (`--larga`: 520px lo sconto,
+      720px ricetta e movimenti). Sul test e' stata vista; in produzione
+      l'allargamento non era ancora arrivato.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ui, pos]
+    test_cases:
+      - tests/unit/css.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/CustomDrinkForm.test.jsx

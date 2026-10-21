@@ -6,14 +6,18 @@ import {
   fetchMacroCategories,
   fetchPurchaseOrders,
   fetchCarichiBetween,
+  fetchVenditeStoriche,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import { acquistiFatturato } from '../lib/acquistiFatturato.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
 import { VISTE, colonneDelBilancio, nomeDelPeriodo, spostaGiorno } from '../lib/periodiBilancio.js'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import Didascalia from './Didascalia.jsx'
+import GruppoChip from './GruppoChip.jsx'
+import Soffietto from './Soffietto.jsx'
 
 // BILANCIO → ACQUISTI × FATTURATO (REQ-MAG-022): il foglio «RAPPORTI
 // ACQUISTI» di Flavio, per anno, mese, settimana o giorno. Il conto sta in
@@ -49,16 +53,17 @@ export default function AcquistiFatturato() {
   const al = colonne[colonne.length - 1].al
 
   // Quello che non dipende dal periodo si legge una volta sola.
-  const [fissi, setFissi] = useState(null) // { drinksById, items, macros, ordiniFornitore }
-  // Conti e carichi del periodo mostrato, con la chiave che dice di quale.
-  const [periodo, setPeriodo] = useState(null) // { chiave, orders, carichi }
+  const [fissi, setFissi] = useState(null) // { drinks, drinksById, items, macros, ordiniFornitore }
+  // Conti, vendite di Tiller (REQ-STAT-006) e carichi del periodo mostrato,
+  // con la chiave che dice di quale.
+  const [periodo, setPeriodo] = useState(null) // { chiave, orders, storiche, carichi }
   const [error, setError] = useState(null)
 
   useEffect(() => {
     let vivo = true
     Promise.all([fetchDrinks({}), fetchInventoryItems(), fetchMacroCategories(), fetchPurchaseOrders()])
       .then(([drinks, items, macros, ordiniFornitore]) => {
-        if (vivo) setFissi({ drinksById: Object.fromEntries(drinks.map((d) => [d.id, d])), items, macros, ordiniFornitore })
+        if (vivo) setFissi({ drinks, drinksById: Object.fromEntries(drinks.map((d) => [d.id, d])), items, macros, ordiniFornitore })
       })
       .catch((e) => vivo && setError(e.message))
     return () => {
@@ -77,9 +82,9 @@ export default function AcquistiFatturato() {
       return undefined
     }
     let vivo = true
-    Promise.all([fetchOrdersBetween(dal, al, cutoff), fetchCarichiBetween(dal, al)])
-      .then(([orders, carichi]) => {
-        const dati = { chiave, orders, carichi }
+    Promise.all([fetchOrdersBetween(dal, al, cutoff), fetchVenditeStoriche(dal, al), fetchCarichiBetween(dal, al)])
+      .then(([orders, storiche, carichi]) => {
+        const dati = { chiave, orders, storiche, carichi }
         giaLetti.current.set(chiave, dati)
         if (vivo) setPeriodo(dati)
       })
@@ -90,10 +95,16 @@ export default function AcquistiFatturato() {
   }, [chiave, dal, al, cutoff])
 
   const pronto = fissi && periodo?.chiave === chiave
+  // L'unione coi conti di Tiller dipende dal periodo, non da lordo/netto:
+  // passare dall'uno all'altro non la rifà.
+  const ordini = useMemo(
+    () => (pronto ? unisciVendite(periodo.orders, periodo.storiche, { drinks: fissi.drinks, cutoffHour: cutoff, dal, al }) : null),
+    [pronto, periodo, fissi, cutoff, dal, al]
+  )
   const report = useMemo(() => {
     if (!pronto) return null
     return acquistiFatturato({
-      orders: periodo.orders,
+      orders: ordini,
       purchaseOrders: fissi.ordiniFornitore,
       movimenti: periodo.carichi,
       items: fissi.items,
@@ -104,7 +115,7 @@ export default function AcquistiFatturato() {
       saleVat: settings.sale_vat,
       lordo,
     })
-  }, [pronto, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo])
+  }, [pronto, ordini, periodo, fissi, colonne, cutoff, settings.sale_vat, lordo])
 
   if (error) return <div className="banner">Errore: {error}</div>
 
@@ -124,6 +135,8 @@ export default function AcquistiFatturato() {
           →
         </button>
       </div>
+
+      <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
 
       {!report && <div className="empty">Calcolo acquisti e fatturato…</div>}
 
@@ -145,45 +158,40 @@ export default function AcquistiFatturato() {
             righe={RIGHE}
             incidenzaLabel={VISTE.find((v) => v.id === vista).incidenza}
           />
-          <Spiegazione lordo={lordo} saleVat={settings.sale_vat} />
         </>
       )}
     </div>
   )
 }
 
-// Una scelta fra poche voci, tutte in vista (`.chip-gruppo`, come i
-// raggruppamenti delle chiusure).
-function GruppoChip({ etichetta, opzioni, valore, scegli }) {
-  return (
-    <div className="chip-gruppo" role="group" aria-label={etichetta}>
-      {opzioni.map((o) => (
-        <button
-          key={o.label}
-          type="button"
-          className={`chip${valore === o.id ? ' active' : ''}`}
-          aria-pressed={valore === o.id}
-          onClick={() => scegli(o.id)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-// Le parole della tabella e le sue avvertenze, nel registro del gestionale
-// (DESIGN.md, guardrail 3): le legge il gestore.
+// COSA MISURA LA TABELLA, A SCOMPARSA IN CIMA (REQ-UI-029): la domanda, la
+// differenza con «Venduto × Incassato», le parole e le avvertenze. Nel
+// registro del gestionale (DESIGN.md, guardrail 3): la legge il gestore.
 function Spiegazione({ lordo, saleVat }) {
   return (
-    <div className="card">
+    <Soffietto titolo="Cosa misura questa tabella">
       <Didascalia>
-        <strong>Acquisti</strong>: merce entrata nel periodo — consegne degli ordini fornitore alla data di
-        consegna e carichi diretti — ripartita secondo le quote dei prodotti. <strong>Fatturato</strong>:
-        incassato delle voci di menù della macro, sconti compresi, ripartito secondo le quote delle voci.{' '}
+        <strong>Quanto si spende in merce rispetto a quanto si fattura.</strong> È il foglio «Rapporti acquisti»:
+        per ogni macro-categoria il fatturato del periodo e la merce entrata nello stesso periodo — consegne
+        degli ordini fornitore alla data di consegna e carichi diretti — ripartita secondo le quote dei
+        prodotti. Il fatturato è l’incassato delle voci di menù, sconti compresi, secondo le quote delle voci.
+      </Didascalia>
+      <Didascalia>
+        <strong>La data di un acquisto è quella in cui la merce entra</strong>: il giorno della consegna
+        dell’ordine o del carico, non quello del pagamento. Una fattura pagata a trenta giorni pesa sul mese
+        in cui la merce è arrivata.
+      </Didascalia>
+      <Didascalia>
+        <strong>Differenza con «Venduto × Incassato».</strong> Qui conta la merce <strong>entrata</strong>,
+        quando entra, venduta o no; là il costo della merce <strong>venduta</strong>, dalle ricette. Trenta casse
+        di birra comprate a giugno per l’estate qui pesano tutte su giugno, che sembra in perdita, e luglio
+        sembra in forte attivo; là pesano solo le birre vendute, mese per mese. Per il margine di ciò che si
+        vende: «Venduto × Incassato». Per quanto esce per comprare: questa.
+      </Didascalia>
+      <Didascalia>
         <strong>Utile</strong>: fatturato − acquisti. <strong>Fat/Acq</strong>: fatturato ÷ acquisti.{' '}
-        <strong>Incidenza</strong>: quota dell’utile della macro sulla somma degli utili della colonna. In fondo,
-        l’incidenza di ogni colonna sul fatturato del periodo.
+        <strong>Incidenza</strong>: quota dell’utile della macro sulla somma degli utili della colonna. In
+        fondo, l’incidenza di ogni colonna sul fatturato del periodo.
       </Didascalia>
       <Didascalia>
         {lordo ? (
@@ -197,10 +205,10 @@ function Spiegazione({ lordo, saleVat }) {
             voce), acquisti al costo senza IVA.
           </>
         )}{' '}
-        Gli acquisti pesano sul periodo in cui la merce è entrata, non su quello in cui si consuma. I dati
-        partono da quando ordini fornitore e carichi sono registrati nell’app: lo storico del foglio non è
-        importato.
+        Gli acquisti ci sono da quando ordini fornitore e carichi passano dall’app (agosto 2026): per gli anni
+        di Tiller c’è il fatturato ma non gli acquisti, e l’utile di quei mesi non è un utile. Lo storico del
+        foglio non è importato.
       </Didascalia>
-    </div>
+    </Soffietto>
   )
 }

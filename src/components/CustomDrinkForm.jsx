@@ -50,6 +50,9 @@ export default function CustomDrinkForm({
   const [inventory, setInventory] = useState([])
   const [showRecipe, setShowRecipe] = useState(initRows.length > 0 || warnNoRecipe)
   const [search, setSearch] = useState('')
+  // L'ingrediente appena aggiunto: è lui, e solo lui, che prende il cursore
+  // per la quantità (REQ-UI-028).
+  const [appenaAggiunto, setAppenaAggiunto] = useState(null)
 
   // L'inventario è leggibile solo dal bartender: se la lettura fallisce
   // (ruolo staff), il form resta usabile senza la sezione ingredienti.
@@ -84,6 +87,7 @@ export default function CustomDrinkForm({
         unit,
       },
     ])
+    setAppenaAggiunto(inv.id)
     setSearch('')
   }
   function setRow(idx, patch) {
@@ -130,9 +134,12 @@ export default function CustomDrinkForm({
 
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
+      {/* PIÙ LARGA DELLE ALTRE FINESTRE (REQ-UI-028, Flavio 10/10/2026):
+          nome, prezzo, nota e una riga per ingrediente con quantità e unità
+          stavano in 420 px, e le righe andavano a capo. */}
       <form
-        className="confirm-box"
-        style={{ maxHeight: '85vh', overflowY: 'auto' }}
+        className="confirm-box larga"
+        style={{ '--larga': '720px', maxHeight: '85vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
@@ -143,27 +150,38 @@ export default function CustomDrinkForm({
             : 'Nome e prezzo bastano (es. voce non in magazzino). Gli ingredienti servono solo se vuoi lo scarico magazzino.'}
         </p>
 
-        <label htmlFor="cd-name">Nome *</label>
-        <input
-          id="cd-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Es. Consumazione, Gin tonic speciale…"
-          autoFocus
-          required
-        />
-
-        <label htmlFor="cd-price">Prezzo (€) *</label>
-        <input
-          id="cd-price"
-          type="number"
-          step="0.5"
-          min="0"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="Es. 8"
-          required
-        />
+        {/* NOME E PREZZO SULLA STESSA RIGA, il prezzo piccolo a destra
+            (Daniele, 21/10/2026): due campi uno sotto l'altro costavano una
+            riga intera a un numero di tre cifre. */}
+        <div className="cd-nome-prezzo">
+          <div className="grow">
+            <label htmlFor="cd-name">Nome *</label>
+            <input
+              id="cd-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Es. Consumazione, Gin tonic speciale…"
+              // SOLO PER UN PRODOTTO NUOVO, dove il nome va scritto comunque. Su
+              // una riga da ritoccare il nome c'è già, e la tastiera aperta
+              // all'avvio copriva metà della ricetta (REQ-UI-028).
+              autoFocus={!initial}
+              required
+            />
+          </div>
+          <div className="cd-prezzo">
+            <label htmlFor="cd-price">Prezzo (€) *</label>
+            <input
+              id="cd-price"
+              type="number"
+              step="0.5"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Es. 8"
+              required
+            />
+          </div>
+        </div>
 
         <label htmlFor="cd-note">Nota per questa riga</label>
         <input
@@ -223,7 +241,7 @@ export default function CustomDrinkForm({
                     onChange={(e) => setRow(idx, { qty: e.target.value })}
                     placeholder="Qta"
                     aria-label={`Quantità ${r.name}`}
-                    autoFocus
+                    autoFocus={r.inventory_item_id === appenaAggiunto}
                     style={{ width: 70 }}
                   />
                   <select
@@ -270,28 +288,30 @@ export default function CustomDrinkForm({
           </>
         )}
 
-        <div className="grid-2" style={{ marginTop: 14 }}>
+        {/* I TASTI. «Salva nuova» (REQ-MENU-016) porta in un'altra schermata,
+            gli altri due chiudono il gesto su questa riga: sullo schermo
+            stretto sta SOTTO, da solo, dove non si tocca per sbaglio avendo
+            fretta; su quello largo — tablet, scheda da 720px — c'è posto, e
+            sta a destra degli altri (Daniele, 21/10/2026). Lo decide il
+            foglio di stile (`.cd-azioni`). */}
+        <div className="cd-azioni">
           <button type="button" className="btn ghost" onClick={onCancel}>
             Annulla
           </button>
           <button type="submit" className="btn" disabled={!valid}>
             {initial ? 'Salva' : 'Aggiungi'} {priceNum > 0 ? formatPrice(priceNum) : ''}
           </button>
+          {initial && onSaveAsNew && (
+            <button
+              type="button"
+              className="btn ghost cd-salva-nuova"
+              disabled={!valid}
+              onClick={() => onSaveAsNew(composto())}
+            >
+              ✨ Salva nuova
+            </button>
+          )}
         </div>
-        {/* SOTTO E NON ACCANTO: gli altri due chiudono il gesto su questa
-            riga, questo porta in un'altra schermata. Accanto a «Salva» si
-            toccherebbe per sbaglio proprio quando si ha fretta. */}
-        {initial && onSaveAsNew && (
-          <button
-            type="button"
-            className="btn ghost block"
-            style={{ marginTop: 8 }}
-            disabled={!valid}
-            onClick={() => onSaveAsNew(composto())}
-          >
-            ✨ Salva come nuova ricetta
-          </button>
-        )}
       </form>
     </div>
   )

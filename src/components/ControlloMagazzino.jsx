@@ -12,7 +12,7 @@ import { businessDayKey, DEFAULT_CUTOFF_HOUR } from '../lib/businessDay.js'
 import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { perScaffale } from '../lib/scaffali.js'
-import CategoryRail from './CategoryRail.jsx'
+import ListaPerScaffale from './ListaPerScaffale.jsx'
 
 // ── IL CONTROLLO DEL MAGAZZINO, PAGINA DI PROVA (REQ-MAG-050) ─────────
 //
@@ -138,33 +138,26 @@ function Conta({ items, categorie, movimenti, cutoff, onConta }) {
     () => perScaffale(items.map((i) => ({ item_id: i.id, name: i.name })), items, categorie),
     [items, categorie]
   )
-  const visibili = categoria === 'all' ? gruppi : gruppi.filter((g) => g.key === categoria)
 
   return (
-    <CategoryRail items={voci} selected={categoria} onSelect={setCategoria} chiave="controllo-magazzino">
-      <div className="inv-list">
-        {visibili.map((g) => (
-          <div key={g.key}>
-            {categoria === 'all' && (
-              <div className="muted small" style={{ padding: '10px 4px 4px', fontWeight: 600 }}>
-                {g.nome}
-              </div>
-            )}
-            {g.ids.map((id) => {
-              const quando = ultimo.get(id)
-              return (
-                <RigaConta
-                  key={id}
-                  item={perId.get(id)}
-                  contatoIl={quando ? dataBreve(businessDayKey(quando, cutoff)) : null}
-                  onConta={onConta}
-                />
-              )
-            })}
-          </div>
-        ))}
-      </div>
-    </CategoryRail>
+    <ListaPerScaffale
+      voci={voci}
+      gruppi={gruppi}
+      categoria={categoria}
+      onSelect={setCategoria}
+      chiave="controllo-magazzino"
+      riga={(id) => {
+        const quando = ultimo.get(id)
+        return (
+          <RigaConta
+            key={id}
+            item={perId.get(id)}
+            contatoIl={quando ? dataBreve(businessDayKey(quando, cutoff)) : null}
+            onConta={onConta}
+          />
+        )
+      }}
+    />
   )
 }
 

@@ -1,0 +1,14 @@
+{
+  "_nota": "Nome del prodotto su Tiller → nome della voce nel menù dell'app (REQ-STAT-006). Serve a categorie e macro; nelle classifiche resta il nome di Tiller. Dopo una modifica: node scripts/importa-vendite-tiller.mjs --cartella registrazioni --apply. GIN TONIC e GIN LEMON vanno alla voce dello stesso prezzo e della stessa categoria: la scelta fra VETRO e LITRO non cambia categorie né macro.",
+  "GIN TONIC": "GIN TONIC (VETRO)",
+  "GIN LEMON": "GIN LEMON (LITRO)",
+  "CERES CL33": "CERES",
+  "BIRRA MORETTI IPA": "MORETTI IPA",
+  "ESTATHE VETRO": "ESTATHE VETRO PESCA",
+  "ESTATHĖ LIMONE": "ESTATHE VETRO LIMONE",
+  "PROSECCO CALICE": "CALICE PROSECCO",
+  "OLD FASHIONED": "OLD FASHIONED BOURBON",
+  "MANHATTAN": "MANHATTAN BULLEIT RYE",
+  "FEVER TREE": "FEVER TREE MED",
+  "Coca": "COCA COLA VETRO"
+}

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchInventoryItems,
   fetchInventoryCategories,
@@ -6,19 +6,22 @@ import {
   startStockCount,
   salvaRimanenza,
   closeStockCount,
-  fetchStockCounts,
   fetchStockMovementsSince,
   subscribeSettings,
   settingsIniziali,
 } from '../lib/api.js'
-import { formatQty } from '../lib/inventory.js'
-import { giorniDiConta, consumoSettimanale } from '../lib/warehouse.js'
+import { assortimentoDi } from '../lib/inventory.js'
+import { riassuntoAssortimento, toggleVoce } from '../lib/assortimento.js'
 import { raggruppaMovimenti, righeInventario } from '../lib/inventarioInCorso.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { dataBreve as dataScritta } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
-import CategoryRail from './CategoryRail.jsx'
+import ListaPerScaffale from './ListaPerScaffale.jsx'
+import RigaInventario from './RigaInventario.jsx'
+import TestataInventario from './TestataInventario.jsx'
 import { perScaffale } from '../lib/scaffali.js'
+import Tendina from './Tendina.jsx'
+import FiltroAssortimento from './FiltroAssortimento.jsx'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -60,16 +63,15 @@ const conRimanenze = (lines, modifiche) =>
 
 export default function StockCountPanel() {
   const [open, setOpen] = useState(undefined) // undefined=caricamento
-  const [history, setHistory] = useState([])
   const [modifiche, setModifiche] = useState({})
   const [items, setItems] = useState([])
   const [categorie, setCategorie] = useState([])
   const [movimenti, setMovimenti] = useState([])
   const [categoria, setCategoria] = useState('all')
+  const [assortimenti, setAssortimenti] = useState([]) // vuoto = tutti
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
-  const [viewing, setViewing] = useState(null) // conta chiusa in dettaglio
   // Dalla cache, e poi aggiornate da sole: la scelta «riapre da sé o a mano»
   // è del locale (settings/bar), non di questo terminale.
   const [impostazioni, setImpostazioni] = useState(settingsIniziali)
@@ -110,9 +112,8 @@ export default function StockCountPanel() {
 
   async function load() {
     try {
-      const [oc, hist, articoli, cats] = await Promise.all([
+      const [oc, articoli, cats] = await Promise.all([
         getOpenStockCount(),
-        fetchStockCounts({ limit: 15 }),
         fetchInventoryItems().catch(() => []),
         fetchInventoryCategories().catch(() => []),
       ])
@@ -120,7 +121,6 @@ export default function StockCountPanel() {
       setItems(articoli)
       setCategorie(cats)
       setOpen(oc)
-      setHistory(hist.filter((c) => c.status === 'closed'))
     } catch (e) {
       setError(e.message)
       setOpen(null)
@@ -144,11 +144,26 @@ export default function StockCountPanel() {
   // ── LE CATEGORIE ────────────────────────────────────────────────────
   // In fila come gli scaffali (lib/scaffali.js). Dipende solo da nomi e
   // categorie, non da quello che si scrive.
-  const { voci, gruppi } = useMemo(
-    () => (open ? perScaffale(open.lines, items, categorie) : { voci: [], gruppi: [] }),
-    [open, items, categorie]
-  )
-  const visibili = categoria === 'all' ? gruppi : gruppi.filter((g) => g.key === categoria)
+  //
+  // E PER ASSORTIMENTO, come i Prodotti (REQ-MAG-051). Flavio, 05/10/2026:
+  // «tutti quelli fuori assortimento io me li elimino, non me lo faccio
+  // l'inventario». Le righe escluse restano nell'inventario e non si
+  // vedono: chiudendo, una riga senza rimanenza tiene la giacenza
+  // registrata (closeStockCount salta chi non ha conteggio).
+  // I prodotti di QUESTO inventario: per filtrare le righe e per i numeri
+  // accanto alle voci del filtro.
+  const articoliDellInventario = useMemo(() => {
+    const inConta = new Set((open?.lines || []).map((l) => l.item_id))
+    return items.filter((i) => inConta.has(i.id))
+  }, [open, items])
+  const { voci, gruppi } = useMemo(() => {
+    if (!open) return { voci: [], gruppi: [] }
+    const scelti = new Set(
+      articoliDellInventario.filter((i) => assortimenti.includes(assortimentoDi(i))).map((i) => i.id)
+    )
+    const righe = assortimenti.length ? open.lines.filter((l) => scelti.has(l.item_id)) : open.lines
+    return perScaffale(righe, items, categorie)
+  }, [open, items, categorie, assortimenti, articoliDellInventario])
 
   async function start() {
     setBusy(true)
@@ -207,11 +222,8 @@ export default function StockCountPanel() {
       })
       // L'esito si compone, non si rilegge: la chiusura è partita in
       // sottofondo, e una rilettura adesso troverebbe l'inventario ancora
-      // aperto con le giacenze di prima.
-      setHistory((h) => [
-        { ...open, status: 'closed', closed_at: new Date().toISOString(), lines: chiusa.lines, totals: chiusa.totals },
-        ...h,
-      ])
+      // aperto con le giacenze di prima. L'inventario appena chiuso si
+      // ritrova nello Storico inventari (REQ-MAG-052).
       setOpen(chiusa.prossimo)
       setMovimenti([])
       setModifiche({})
@@ -241,49 +253,64 @@ export default function StockCountPanel() {
         </>
       ) : (
         <>
-          <div className="card">
-            <strong>Inventario in corso</strong>
-            <div className="muted small">
-              dal {dataBreve(open.started_at)}
-              {computed.giorni != null && ` · ${giorniScritti(computed.giorni)}`} · contati{' '}
-              {computed.totals.counted}/{open.lines.length}
-            </div>
-            <div className="muted small">
-              {/* IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato
-                  me ne faccio poco, mi serve più vedere in grassetto la
-                  rimanenza». */}
-              Valore rimanenze: <strong>{formatPrice(computed.totals.rim_value)}</strong>
-              {' · '}Consumo: {formatPrice(computed.totals.cons_value)}
-            </div>
-            <p className="muted small" style={{ margin: '6px 0 0' }}>
-              RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si
-              conferma la RIM con ✓. CONS = DEP + ACQ − RIM.
-            </p>
+          <TestataInventario
+            titolo={`Inventario in corso dal ${dataBreve(open.started_at)}`}
+            giorni={computed.giorni}
+            contati={computed.totals.counted}
+            totale={open.lines.length}
+            totals={computed.totals}
+          >
+            RIM: giacenza registrata. Nella casella si inserisce la rimanenza rilevata, oppure si conferma la
+            RIM con ✓. CONS = DEP + ACQ − RIM.
+          </TestataInventario>
+
+          <div className="inv-testa" style={{ marginTop: 8 }}>
+            <Tendina
+              etichetta="Filtra i prodotti"
+              attivo={assortimenti.length > 0}
+              riassunto={`⚗️ ${riassuntoAssortimento(assortimenti)}`}
+            >
+              <FiltroAssortimento
+                items={articoliDellInventario}
+                scelti={assortimenti}
+                onToggle={(k) => setAssortimenti((a) => toggleVoce(a, k))}
+              />
+              {assortimenti.length > 0 && (
+                <button
+                  type="button"
+                  className="btn ghost small block"
+                  style={{ marginTop: 6 }}
+                  onClick={() => setAssortimenti([])}
+                >
+                  ✕ Togli i filtri
+                </button>
+              )}
+            </Tendina>
           </div>
+          {assortimenti.length > 0 && (
+            <p className="muted small" style={{ margin: '6px 0 0' }}>
+              I prodotti esclusi dal filtro restano nell’inventario: senza rimanenza inserita, alla chiusura
+              mantengono la giacenza registrata.
+            </p>
+          )}
 
           <div style={{ marginTop: 8 }}>
-            <CategoryRail items={voci} selected={categoria} onSelect={setCategoria} chiave="inventario-conta">
-              <div className="inv-list">
-                {visibili.map((g) => (
-                  <div key={g.key}>
-                    {categoria === 'all' && (
-                      <div className="muted small" style={{ padding: '10px 4px 4px', fontWeight: 600 }}>
-                        {g.nome}
-                      </div>
-                    )}
-                    {g.ids.map((id) => (
-                      <RigaInventario
-                        key={id}
-                        riga={rigaDi.get(id)}
-                        valore={modifiche[id]?.v ?? rigaDi.get(id)?.rim ?? ''}
-                        onScrivi={scriviRimanenza}
-                        onEsci={salvaSubito}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </CategoryRail>
+            <ListaPerScaffale
+              voci={voci}
+              gruppi={gruppi}
+              categoria={categoria}
+              onSelect={setCategoria}
+              chiave="inventario-conta"
+              riga={(id) => (
+                <RigaInventario
+                  key={id}
+                  riga={rigaDi.get(id)}
+                  valore={modifiche[id]?.v ?? rigaDi.get(id)?.rim ?? ''}
+                  onScrivi={scriviRimanenza}
+                  onEsci={salvaSubito}
+                />
+              )}
+            />
           </div>
 
           <p className="muted small" style={{ margin: '10px 0 6px' }}>
@@ -294,29 +321,6 @@ export default function StockCountPanel() {
           </button>
         </>
       )}
-
-      {history.length > 0 && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <strong>Inventari precedenti</strong>
-          {history.map((c) => (
-            <div
-              className="row between"
-              key={c.id}
-              style={{ marginTop: 6, cursor: 'pointer' }}
-              onClick={() => setViewing(viewing?.id === c.id ? null : c)}
-            >
-              <span className="muted small">
-                dal {dataBreve(c.started_at)} al {dataBreve(c.closed_at)}
-              </span>
-              <span className="muted small">
-                consumo <strong>{formatPrice(c.totals?.cons_value || 0)}</strong>
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {viewing && <DettaglioInventario inventario={viewing} />}
 
       {confirmClose && computed && (
         <ConfirmDialog
@@ -331,109 +335,5 @@ export default function StockCountPanel() {
   )
 }
 
-// «+0,4 pz», «-1,9 pz»: una differenza si legge col suo segno.
-const conSegno = (n, unit) => `${n > 0 ? '+' : ''}${formatQty(n, unit)}`
-
-// Una riga: i numeri del periodo, il campo dove si scrive il contato e il
-// ✓ che conferma la RIM così com'è. Si ridisegna solo se cambia qualcosa che
-// mostra: con quattrocento righe e un telefono in mano, ridisegnarle tutte a
-// ogni cifra si sente.
-const RigaInventario = memo(
-  function RigaInventario({ riga: l, valore, onScrivi, onEsci }) {
-    const q = (n) => formatQty(n, l.unit)
-    return (
-      <div className="inv-item">
-        <div className="inv-row" style={{ cursor: 'default' }}>
-          <div className="grow">
-            <div className="inv-name">{l.name}</div>
-            <div className="muted small">
-              DEP {q(l.dep)} · ACQ {q(l.acq)} · CONS {q(l.cons)} · RIM <strong>{q(l.atteso)}</strong>
-              {/* Il consumo a settimana (REQ-MAG-024) resta: è il numero su
-                  cui si decide quanto ordinare. */}
-              {l.cons_week != null && ` · ${q(l.cons_week)} a settimana`}
-            </div>
-          </div>
-          <input
-            type="number"
-            step="any"
-            min="0"
-            value={valore}
-            placeholder={`RIM ${l.unit}`}
-            aria-label={`Rimanenza di ${l.name}`}
-            onChange={(e) => onScrivi(l.item_id, e.target.value)}
-            onBlur={() => onEsci(l.item_id)}
-            style={{ width: 90, textAlign: 'right' }}
-          />
-          {/* «Confermare o modificare il valore di RIM» (Flavio, 24/09): la
-              maggior parte dei prodotti torna, e riscriverne il numero a mano
-              è solo un'occasione in più per sbagliarlo. */}
-          <button
-            type="button"
-            className="btn ghost small"
-            aria-label={`Conferma la rimanenza di ${l.name}`}
-            onClick={() => {
-              onScrivi(l.item_id, String(l.atteso))
-              onEsci(l.item_id)
-            }}
-          >
-            ✓
-          </button>
-        </div>
-      </div>
-    )
-  },
-  (a, b) =>
-    a.valore === b.valore &&
-    a.onScrivi === b.onScrivi &&
-    a.onEsci === b.onEsci &&
-    ['name', 'unit', 'dep', 'acq', 'cons', 'atteso', 'cons_week'].every((k) => a.riga[k] === b.riga[k])
-)
-
-
 // La data come la si legge; dove manca, un trattino.
 const dataBreve = (iso) => dataScritta(iso, '—')
-
-// «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
-// settimane, ed è la misura in cui si legge il consumo qui sotto.
-function giorniScritti(giorni) {
-  const g = Math.round(giorni)
-  if (g < 14) return `${g} ${g === 1 ? 'giorno' : 'giorni'}`
-  const settimane = Math.round((giorni / 7) * 10) / 10
-  return `${String(settimane).replace('.', ',')} settimane`
-}
-
-// IL DETTAGLIO DI UN INVENTARIO CHIUSO. Il periodo qui è finito, quindi i
-// giorni sono quelli veri fra apertura e chiusura — e il consumo a
-// settimana si ricalcola da quelli, non da un divisore salvato: gli
-// inventari vecchi non l'hanno mai avuto. Quelli chiusi dalla 1.8 dicono
-// anche la differenza fra il contato e quello che risultava all'app.
-function DettaglioInventario({ inventario }) {
-  const conta = inventario
-  const giorni = giorniDiConta(conta.started_at, conta.closed_at)
-  return (
-    <div className="card" style={{ marginTop: 8 }}>
-      <strong>
-        Inventario dal {dataBreve(conta.started_at)} al {dataBreve(conta.closed_at)}
-      </strong>
-      {giorni != null && (
-        <div className="muted small">
-          {giorniScritti(giorni)} di consumo: il «a settimana» qui sotto è
-          diviso per i giorni veri del periodo.
-        </div>
-      )}
-      {(conta.lines || [])
-        .filter((l) => l.cons != null && l.cons !== 0)
-        .map((l) => (
-          <div className="row between" key={l.item_id} style={{ marginTop: 4 }}>
-            <span className="muted small">{l.name}</span>
-            <span className="muted small">
-              −{formatQty(l.cons, l.unit)} ({formatPrice(l.cons_value || 0)})
-              {l.diff ? ` · differenza ${conSegno(l.diff, l.unit)}` : ''}
-              {giorni != null &&
-                ` · ${formatQty(consumoSettimanale(l.cons, giorni), l.unit)} a settimana`}
-            </span>
-          </div>
-        ))}
-    </div>
-  )
-}

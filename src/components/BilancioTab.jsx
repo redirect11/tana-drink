@@ -3,6 +3,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import Didascalia from './Didascalia.jsx'
 import MacroMonthlyTab from './MacroMonthlyTab.jsx'
 import AcquistiFatturato from './AcquistiFatturato.jsx'
+import MesiBilancio from './MesiBilancio.jsx'
 
 // ── BILANCIO: I CONTI DEL LOCALE ─────────────────────────────────────
 // Qui sta quello che Flavio teneva su ANALISI DATI.xlsx: incassi, stipendi,
@@ -35,38 +36,9 @@ export default function BilancioTab() {
   )
 }
 
-// Una sottosezione che c'è nel menu ma non ha ancora la sua tabella. Dice
-// che numero ci sarà — così chi apre il Bilancio sa già cosa aspettarsi —
-// invece di una pagina bianca che sembra rotta.
-function InArrivo({ titolo, cosa, didascalia }) {
-  return (
-    <div className="card">
-      <strong>{titolo}</strong>
-      <div className="empty" style={{ marginTop: 8 }}>
-        {cosa}
-      </div>
-      <Didascalia>{didascalia}</Didascalia>
-    </div>
-  )
-}
-
+// Bilancio → Mesi (REQ-CASSA-011): il mese come i fogli di analisi.
 function Mesi() {
-  return (
-    <InArrivo
-      titolo="📅 Mesi"
-      cosa="La tabella del mese sta arrivando."
-      didascalia={
-        <>
-          Giorno per giorno: il <strong>minimo</strong> (quanto doveva fare il
-          locale quella sera), l’<strong>incassato</strong> (quanto ha fatto
-          davvero) e la differenza fra i due. Sotto, i conti del mese —
-          incassi, stipendi, spese e il <strong>netto</strong>, cioè quello che
-          resta dopo aver pagato tutti. Gli stipendi non si ricopiano da
-          nessun foglio: escono dalle ore registrate nell’app.
-        </>
-      }
-    />
-  )
+  return <MesiBilancio />
 }
 
 // «Venduto × Incassato» è la tabella che stava nelle Statistiche: il
