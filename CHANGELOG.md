@@ -1,54 +1,6 @@
 # Cosa è cambiato
 
-## 1.9.3-beta
-
-### Per chi sta al banco
-
-- **Sconto e «Modifica prodotto» larghe davvero anche col tablet a zoom
-  ridotto.** L'allargamento del 10/10 era in pixel e lo zoom dell'app lo
-  rimpiccioliva: sul tablet del banco le due finestre erano grandi come
-  prima. Ora la misura è fisica, come i tasti del tastierino.
-- **Scheda del prodotto più compatta.** Nome e prezzo sulla stessa riga,
-  col prezzo piccolo a destra. Il tasto «Salva come nuova ricetta» si
-  chiama «Salva nuova» e, sul tablet, sta a destra di Annulla e Salva;
-  sul telefono resta sotto.
-
-## 1.9.2-beta
-
-### Per chi amministra
-
-- **Magazzino → Storico inventari.** Una sezione nuova con tutti gli
-  inventari chiusi, dal più recente: date di apertura e chiusura, durata,
-  contati, valore delle rimanenze e consumo. Toccandone uno si apre come
-  l'inventario in corso, per categoria, con DEP · ACQ · CONS · RIM e il
-  consumo a settimana; la casella della rimanenza mostra il contato di
-  allora ed è bloccata. L'elenco «Inventari precedenti» in fondo
-  all'inventario in corso non c'è più.
-- **Statistiche → Per periodo: «Venduto nella fascia oraria» a categorie.**
-  Solo le categorie, con pezzi e incasso; ognuna si apre con la freccia
-  sui prodotti venduti in quella categoria, in ordine di pezzi. Prima
-  c'erano le barre delle categorie e, sotto, un elenco unico di tutti i
-  prodotti.
-- **Bilancio → Acquisti × Fatturato:** la spiegazione dice che un acquisto
-  vale il giorno in cui la merce entra (consegna o carico), non quello del
-  pagamento.
-- **Nel dettaglio di una serata non ci sono più i grafici per giornata**
-  (né «incasso / giornata»): con una giornata sola ripetevano l'incasso.
-- **Nelle fasce orarie delle statistiche l'ora di «alle» è compresa.**
-  Dalle 22 alle 00:00 mostra le 22, le 23 e la mezzanotte; prima la
-  mezzanotte restava fuori.
-
-- **Statistiche → Per serata: la ricerca per data.** Un calendario compatto,
-  che si scorre mese per mese e colora in verde i giorni di servizio e in
-  grigio gli altri, e una casella per scrivere la data. Scegliendo un
-  giorno si apre la sua serata. (Corretto subito dopo: il pannello si
-  apriva fuori vista.)
-- **Lo stesso calendario in tutta l'app.** La ricerca per data delle
-  chiusure di cassa, il periodo dello storico ordini e «Inizio»/«Fine» del
-  periodo personalizzato hanno la stessa griglia, coi giorni di servizio in
-  verde.
-
-## 1.9.1-beta
+## 1.9.3 — 21 ottobre 2026
 
 ### Per chi sta al banco
 
@@ -59,9 +11,13 @@
   In coda il conto porta l'etichetta «Impagato»; non blocca la chiusura di
   cassa, che dice quanto resta da riscuotere. Quando il cliente paga, si
   apre il conto e si riscuote come sempre.
-- **Sconto e ricetta in finestre più larghe**, e ritoccando una riga la
+- **Sconto e scheda del prodotto in finestre più larghe**, misurate in
+  centimetri veri anche col tablet a zoom ridotto; ritoccando una riga la
   tastiera non si apre più da sola.
-
+- **Scheda del prodotto più compatta.** Nome e prezzo sulla stessa riga,
+  col prezzo piccolo a destra. Il tasto «Salva come nuova ricetta» si
+  chiama «Salva nuova» e, sul tablet, sta a destra di Annulla e Salva;
+  sul telefono resta sotto.
 - **Riaprire un conto incassato rimette in magazzino quello che aveva
   scalato.** Alla nuova chiusura si scala una volta sola, con quello che c'è
   sul conto in quel momento. Prima la riapertura non rimetteva niente e la
@@ -69,6 +25,21 @@
 
 ### Per chi amministra
 
+- **Magazzino → Storico inventari.** Una sezione nuova con tutti gli
+  inventari chiusi, dal più recente: date di apertura e chiusura, durata,
+  contati, valore delle rimanenze e consumo. Toccandone uno si apre come
+  l'inventario in corso, per categoria, con DEP · ACQ · CONS · RIM e il
+  consumo a settimana; la casella della rimanenza mostra il contato di
+  allora ed è bloccata. L'elenco «Inventari precedenti» in fondo
+  all'inventario in corso non c'è più.
+- **Magazzino: la movimentazione di ogni prodotto.** Dalla scheda del
+  prodotto, «📜 Movimenti»: i totali per tipo (consegne d'ordine, carichi,
+  contenuto reale, chiusure d'inventario, vendite), il venduto mese per
+  mese con quello di Tiller dal 2023, e l'elenco dei movimenti.
+- **Inventario: filtro per assortimento** (in assortimento, in linea,
+  premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
+  restano nell'inventario e, senza rimanenza inserita, alla chiusura
+  mantengono la giacenza registrata.
 - **Le vendite di Tiller nelle statistiche e nel Bilancio.** I conti battuti
   su Tiller dal giugno 2023 all'agosto 2026 si vedono nelle statistiche per
   periodo, in «Venduto × Incassato» e in «Acquisti × Fatturato», insieme a
@@ -78,6 +49,24 @@
   storico, scelto un periodo, compaiono segnati «Tiller» e si leggono in
   sola lettura; nelle statistiche ogni giornata di Tiller è una serata
   dell'elenco.
+- **Statistiche → Per serata: la ricerca per data.** Un calendario compatto,
+  che si scorre mese per mese e colora in verde i giorni di servizio e in
+  grigio gli altri, e una casella per scrivere la data. Scegliendo un
+  giorno si apre la sua serata.
+- **Lo stesso calendario in tutta l'app.** La ricerca per data delle
+  chiusure di cassa, il periodo dello storico ordini e «Inizio»/«Fine» del
+  periodo personalizzato hanno la stessa griglia, coi giorni di servizio in
+  verde.
+- **Statistiche → Per periodo: «Venduto nella fascia oraria» a categorie.**
+  Solo le categorie, con pezzi e incasso; ognuna si apre con la freccia
+  sui prodotti venduti in quella categoria, in ordine di pezzi. Prima
+  c'erano le barre delle categorie e, sotto, un elenco unico di tutti i
+  prodotti.
+- **Nelle fasce orarie delle statistiche l'ora di «alle» è compresa.**
+  Dalle 22 alle 00:00 mostra le 22, le 23 e la mezzanotte; prima la
+  mezzanotte restava fuori.
+- **Nel dettaglio di una serata non ci sono più i grafici per giornata**
+  (né «incasso / giornata»): con una giornata sola ripetevano l'incasso.
 - **Bilancio → Mesi.** Il mese come i fogli di analisi: per settimane, e per
   ogni giorno minimo, incassato e differenza, con le note del foglio. Sotto,
   incassi, stipendi, spese, netto, costo del lavoro e prime cost. I fogli da
@@ -87,15 +76,9 @@
   Fornitori.
 - **Bilancio: «Cosa misura questa tabella»**, a scomparsa in cima a «Mesi»,
   «Venduto × Incassato» e «Acquisti × Fatturato», con la differenza fra le
-  ultime due.
-- **Magazzino: la movimentazione di ogni prodotto.** Dalla scheda del
-  prodotto, «📜 Movimenti»: i totali per tipo (consegne d'ordine, carichi,
-  contenuto reale, chiusure d'inventario, vendite), il venduto mese per
-  mese con quello di Tiller dal 2023, e l'elenco dei movimenti.
-- **Inventario: filtro per assortimento** (in assortimento, in linea,
-  premium, fuori assortimento), come nei Prodotti. I prodotti esclusi
-  restano nell'inventario e, senza rimanenza inserita, alla chiusura
-  mantengono la giacenza registrata.
+  ultime due. In «Acquisti × Fatturato» dice anche che un acquisto vale il
+  giorno in cui la merce entra (consegna o carico), non quello del
+  pagamento.
 
 ## 1.9.0 — 1 ottobre 2026
 
