@@ -54,7 +54,7 @@ describe('salva come nuova ricetta', () => {
 
   it('il tasto c’è solo modificando una ricetta', async () => {
     render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} initial={INIZIALE} onSaveAsNew={vi.fn()} />)
-    expect(await screen.findByRole('button', { name: /Salva come nuova ricetta/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Salva nuova/ })).toBeInTheDocument()
   })
 
   // Creando un prodotto libero da zero non c'è ancora niente da salvare
@@ -63,7 +63,7 @@ describe('salva come nuova ricetta', () => {
   it('e non c’è creando un prodotto libero da zero', async () => {
     render(<CustomDrinkForm onCancel={vi.fn()} onAdd={vi.fn()} onSaveAsNew={vi.fn()} />)
     await screen.findByRole('button', { name: /Ingredienti/ })
-    expect(screen.queryByRole('button', { name: /Salva come nuova ricetta/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Salva nuova/ })).toBeNull()
   })
 
   // Senza qualcuno che sappia dove portare, un tasto che non porta da
@@ -73,7 +73,7 @@ describe('salva come nuova ricetta', () => {
     // In modifica gli ingredienti sono già aperti: si aspetta la riga della
     // ricetta, che compare quando il magazzino è arrivato.
     await screen.findByLabelText('Quantità Rum bianco')
-    expect(screen.queryByRole('button', { name: /Salva come nuova ricetta/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Salva nuova/ })).toBeNull()
   })
 
   it('porta con sé le modifiche appena fatte, non il drink di partenza', async () => {
@@ -88,7 +88,7 @@ describe('salva come nuova ricetta', () => {
     const prezzo = screen.getByLabelText('Prezzo (€) *')
     await user.clear(prezzo)
     await user.type(prezzo, '9')
-    await user.click(screen.getByRole('button', { name: /Salva come nuova ricetta/ }))
+    await user.click(screen.getByRole('button', { name: /Salva nuova/ }))
     expect(onSaveAsNew).toHaveBeenCalledWith({
       name: 'Negroni sbagliato',
       price: 9,
@@ -105,7 +105,7 @@ describe('salva come nuova ricetta', () => {
     render(
       <CustomDrinkForm onCancel={vi.fn()} onAdd={onAdd} initial={INIZIALE} onSaveAsNew={vi.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Salva come nuova ricetta/ }))
+    await user.click(screen.getByRole('button', { name: /Salva nuova/ }))
     expect(onAdd).not.toHaveBeenCalled()
   })
 })
@@ -194,5 +194,34 @@ describe('la finestra della ricetta', () => {
     expect(form).toHaveClass('larga')
     expect(form.style.getPropertyValue('--larga')).toBe('720px')
     expect(form.style.width).toBe('')
+  })
+
+  // Daniele, 21/10/2026: «il prezzo più in piccolo a destra del nome della
+  // ricetta». Stessa riga, il prezzo nella sua casella stretta.
+  it('nome e prezzo stanno sulla stessa riga, il prezzo a destra', async () => {
+    mount()
+    await screen.findByRole('button', { name: /Ingredienti/ })
+    const riga = screen.getByLabelText('Nome *').closest('.cd-nome-prezzo')
+    expect(riga).not.toBeNull()
+    expect(riga.querySelector('.cd-prezzo input')).toBe(screen.getByLabelText('Prezzo (€) *'))
+  })
+
+  // «Il tasto salva nuova ricetta chiamalo solo salva nuova e mettila a
+  // destra degli altri tasti quando la schermata è abbastanza larga»: il
+  // tasto sta nello stesso gruppo degli altri, per ultimo; dove va a finire
+  // lo decide il foglio di stile (tests/unit/css.test.js).
+  it('«Salva nuova» è l’ultimo dei tre tasti, nello stesso gruppo', async () => {
+    render(
+      <CustomDrinkForm
+        onCancel={vi.fn()}
+        onAdd={vi.fn()}
+        onSaveAsNew={vi.fn()}
+        initial={{ name: 'Negroni', price: 8, recipe_items: [], note: '' }}
+      />
+    )
+    const nuova = await screen.findByRole('button', { name: '✨ Salva nuova' })
+    const gruppo = nuova.closest('.cd-azioni')
+    const tasti = [...gruppo.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(tasti).toEqual(['Annulla', 'Salva 8,00\u00a0€', '✨ Salva nuova'])
   })
 })
