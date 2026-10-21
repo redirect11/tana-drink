@@ -55,4 +55,6 @@ export function moduliDellaScelta({ piano = 'base', moduli = [] } = {}) {
   return [...new Set([...p.include, ...moduli.filter((id) => MODULI.some((m) => m.id === id))])]
 }
 
-export const euro = (n) => `${Number(n).toLocaleString('it-IT', { minimumFractionDigits: 0 })} €`
+// Il punto delle migliaia a mano: in CI il Node della macchina non ha i
+// dati di lingua italiani e toLocaleString scriveva «1250».
+export const euro = (n) => `${String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`
