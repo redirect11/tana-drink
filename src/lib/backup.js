@@ -141,7 +141,7 @@ export async function importaDatabase(backup, onProgress = () => {}) {
 // Nome del file: progetto e data, così tre backup non si chiamano uguale.
 export function nomeFile(backup) {
   const quando = (backup?.creato_il || new Date().toISOString()).slice(0, 16).replace(/[:T]/g, '-')
-  return `${backup?.progetto || 'tana-drink'}-${quando}.json`
+  return `${backup?.progetto || 'backup'}-${quando}.json`
 }
 
 // Scarica l'oggetto come file JSON (nel browser).

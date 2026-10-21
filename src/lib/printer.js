@@ -77,9 +77,9 @@ const COL = 48
 // no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
 // diverse, e la stampa automatica delle comande la vuole accesa chi sta al
 // banco, non chi passa di lì a battere due conti.
-const SETTINGS_KEY = 'tana_printer_v2'
-const UTENTE_KEY = 'tana_printer_utente'
-const PERSONA_KEY = 'tana_printer_persona'
+const SETTINGS_KEY = 'drink_printer_v2'
+const UTENTE_KEY = 'drink_printer_utente'
+const PERSONA_KEY = 'drink_printer_persona'
 
 // L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
 // Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
@@ -153,7 +153,7 @@ export const DEFAULT_PRINTER_SETTINGS = {
 // Scontrino automatico UNA SOLA VOLTA per conto: la chiusura può passare da
 // più strade (schermata pagamento, coda, incasso di gruppo) e senza questa
 // guardia lo stesso scontrino uscirebbe due volte.
-const PRINTED_KEY = 'tana_printed_receipts'
+const PRINTED_KEY = 'drink_printed_receipts'
 export function claimReceiptPrint(orderId) {
   if (!orderId) return true
   try {
@@ -227,7 +227,7 @@ export function reclaimReceiptPrint(orderId) {
 // aveva già stampato sarebbe rimasto zitto per sempre — e il segno sul dato
 // azzerato da un ALTRO terminale non avrebbe potuto liberargliela. Legata
 // alle righe, invece, la comanda cambiata è un lavoro nuovo e la carta esce.
-const COMANDE_KEY = 'tana_printed_comande'
+const COMANDE_KEY = 'drink_printed_comande'
 
 // Le righe come sono adesso, in poche lettere: cambia una quantità o
 // arriva un drink, cambia la firma.

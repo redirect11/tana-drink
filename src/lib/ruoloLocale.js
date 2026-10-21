@@ -21,7 +21,7 @@ import { isGestore } from './ruoli.js'
 // PORTA L'UTENTE CON SÉ: due persone allo stesso tablet non si prestano il
 // ruolo, e chi si scollega non lascia il suo in eredità a chi entra dopo.
 
-const CHIAVE = 'tana:ruolo'
+const CHIAVE = 'drink:ruolo'
 
 export function ricordaRuolo(uid, ruolo) {
   try {

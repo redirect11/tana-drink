@@ -16,12 +16,12 @@ describe('loadDraft / saveDraft', () => {
     saveDraft('new', [{ line_id: 'a', qty: 1 }])
     expect(loadDraft('new')).toEqual([{ line_id: 'a', qty: 1 }])
     saveDraft('new', [])
-    expect(localStorage.getItem('tana:draft:new')).toBeNull()
+    expect(localStorage.getItem('drink:draft:new')).toBeNull()
     expect(loadDraft('new')).toEqual([])
   })
 
   it('dati corrotti → bozza vuota (nessun crash)', () => {
-    localStorage.setItem('tana:draft:x', '{non-json')
+    localStorage.setItem('drink:draft:x', '{non-json')
     expect(loadDraft('x')).toEqual([])
   })
 })
@@ -31,7 +31,7 @@ describe('loadLayout / saveLayout (ordine visivo di TUTTI gli item)', () => {
     saveLayout('ord-1', ['c:c1:1', 'c:c1:0', 'd:xyz'])
     expect(loadLayout('ord-1')).toEqual(['c:c1:1', 'c:c1:0', 'd:xyz'])
     saveLayout('ord-1', [])
-    expect(localStorage.getItem('tana:layout:ord-1')).toBeNull()
+    expect(localStorage.getItem('drink:layout:ord-1')).toBeNull()
   })
   it('è indipendente dalla bozza (chiavi separate)', () => {
     saveDraft('ord-1', [{ line_id: 'a', qty: 1 }])
@@ -65,7 +65,7 @@ describe('useDraft', () => {
     act(() => result.current[1]([{ line_id: 'a', qty: 1 }]))
     act(() => result.current[2]()) // clearDraft
     expect(result.current[0]).toEqual([])
-    expect(localStorage.getItem('tana:draft:new')).toBeNull()
+    expect(localStorage.getItem('drink:draft:new')).toBeNull()
   })
 
   it('svuotare e smontare subito CANCELLA davvero (conferma + navigazione)', () => {

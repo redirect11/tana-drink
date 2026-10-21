@@ -59,7 +59,7 @@ export default function SettingsTab({ role = null }) {
     try {
       const chiesta = new URLSearchParams(window.location.search).get('sezione')
       if (chiesta) return chiesta
-      return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
+      return localStorage.getItem('drink:impostazioni:sezione') || 'aspetto'
     } catch {
       return 'aspetto'
     }
@@ -67,7 +67,7 @@ export default function SettingsTab({ role = null }) {
   const scegliSezione = (id) => {
     setSezione(id)
     try {
-      localStorage.setItem('tana:impostazioni:sezione', id)
+      localStorage.setItem('drink:impostazioni:sezione', id)
     } catch {
       /* niente memoria: vale per questa volta */
     }

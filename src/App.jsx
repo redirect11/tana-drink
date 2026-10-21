@@ -420,7 +420,7 @@ export default function App() {
             className="topbar-burger"
             aria-label="Menu"
             title="Menu"
-            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+            onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
             ☰
           </button>
@@ -669,7 +669,7 @@ export default function App() {
 function AddToHomeHint() {
   const [dismissed, setDismissed] = useState(() => {
     try {
-      return localStorage.getItem('tana:a2hs') === '1'
+      return localStorage.getItem('drink:a2hs') === '1'
     } catch {
       return false
     }
@@ -689,7 +689,7 @@ function AddToHomeHint() {
   const close = () => {
     setDismissed(true)
     try {
-      localStorage.setItem('tana:a2hs', '1')
+      localStorage.setItem('drink:a2hs', '1')
     } catch {
       /* privata/quota: pazienza */
     }

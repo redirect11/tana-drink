@@ -77,7 +77,7 @@ beforeEach(() => {
   azzeraDiagnostica()
   registro.dimenticaTuttoIlRegistro()
   // Serve la stampante vera: la finta risponde sempre.
-  localStorage.setItem('tana_stampante_finta', 'false')
+  localStorage.setItem('drink_stampante_finta', 'false')
   printer.savePrinterSettings({ ip: '192.168.1.4', port: 8043, https: true })
   printer.disconnectPrinter()
 })

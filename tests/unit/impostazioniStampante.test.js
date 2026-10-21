@@ -37,23 +37,23 @@ describe('le impostazioni della stampante', () => {
     // Il giorno del passaggio a impostazioni per utente, ogni tablet del
     // locale aveva già il suo indirizzo: perderlo vuol dire comande che non
     // escono, la sera stessa.
-    localStorage.setItem('tana_printer_v2', JSON.stringify({ ip: '192.168.1.99' }))
+    localStorage.setItem('drink_printer_v2', JSON.stringify({ ip: '192.168.1.99' }))
     impostaUtenteStampante('nuovo')
     expect(loadPrinterSettings().ip).toBe('192.168.1.99')
   })
 
   it('ma appena salva, la scheda è sua e non tocca quella vecchia', () => {
-    localStorage.setItem('tana_printer_v2', JSON.stringify({ ip: '192.168.1.99' }))
+    localStorage.setItem('drink_printer_v2', JSON.stringify({ ip: '192.168.1.99' }))
     impostaUtenteStampante('nuovo')
     savePrinterSettings({ ip: '192.168.1.10' })
     expect(loadPrinterSettings().ip).toBe('192.168.1.10')
-    expect(JSON.parse(localStorage.getItem('tana_printer_v2')).ip).toBe('192.168.1.99')
+    expect(JSON.parse(localStorage.getItem('drink_printer_v2')).ip).toBe('192.168.1.99')
   })
 
   it('senza nessuno collegato restano quelle del dispositivo', () => {
     savePrinterSettings({ ip: '10.0.0.1' })
     expect(loadPrinterSettings().ip).toBe('10.0.0.1')
-    expect(JSON.parse(localStorage.getItem('tana_printer_v2')).ip).toBe('10.0.0.1')
+    expect(JSON.parse(localStorage.getItem('drink_printer_v2')).ip).toBe('10.0.0.1')
   })
 
   it('si ricorda l’ultima persona anche dopo un ricaricamento', () => {
@@ -62,6 +62,6 @@ describe('le impostazioni della stampante', () => {
     // Ricaricando, Firebase impiega un attimo a dire chi è collegato: senza
     // memoria si leggerebbe la scheda di un altro, e il pallino direbbe
     // «nessuna stampante impostata» per poi cambiare idea.
-    expect(localStorage.getItem('tana_printer_utente')).toBe('banco')
+    expect(localStorage.getItem('drink_printer_utente')).toBe('banco')
   })
 })

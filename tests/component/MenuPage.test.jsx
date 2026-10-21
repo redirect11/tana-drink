@@ -130,7 +130,7 @@ beforeEach(() => {
   stampata.mockClear()
   localStorage.clear()
   // Al primo accesso il menù mostra il benvenuto a tutta pagina.
-  localStorage.setItem('tana_welcome_v1', '1')
+  localStorage.setItem('drink_welcome_v1', '1')
 })
 
 describe('il menù è uno solo, quello del cliente', () => {
@@ -299,14 +299,14 @@ describe('la comanda dell’ordine preso in sala', () => {
 // ritrova quello che ha ordinato.
 describe('gli ordini in cima al menù', () => {
   it('il cliente ritrova il suo', async () => {
-    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = null
     mostra()
     expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
   })
 
   it('chi lavora no: gli ordini stanno in coda', async () => {
-    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = 'bartender'
     mostra()
     await waitFor(() => expect(screen.queryByText(/Ordine #7/)).toBeNull())

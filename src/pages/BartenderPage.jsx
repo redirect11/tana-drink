@@ -675,7 +675,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // serve). Si ricorda, perché è una preferenza di chi lavora.
   const [ordineDesc, setOrdineDesc] = useState(() => {
     try {
-      return localStorage.getItem('tana:coda:desc') === '1'
+      return localStorage.getItem('drink:coda:desc') === '1'
     } catch {
       return false
     }
@@ -683,7 +683,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const cambiaOrdine = () =>
     setOrdineDesc((v) => {
       try {
-        localStorage.setItem('tana:coda:desc', v ? '0' : '1')
+        localStorage.setItem('drink:coda:desc', v ? '0' : '1')
       } catch {
         /* niente memoria: vale per questa sessione */
       }
@@ -2541,7 +2541,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       {/* L'avviso a fumetto, se il locale ha scelto quello: sta SOLO qui,
           nella coda, che è il posto dove gli ordini si aspettano. Toccandolo
           si aprono gli avvisi (la campanella ascolta l'evento). */}
-      <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('tana:apri-avvisi'))} />
+      <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('drink:apri-avvisi'))} />
       {error && <div className="banner">Errore: {error}</div>}
 
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
@@ -2585,7 +2585,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             className="board-burger"
             aria-label="Menu"
             title="Menu"
-            onClick={() => window.dispatchEvent(new Event('tana:toggle-drawer'))}
+            onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
             ☰
           </button>

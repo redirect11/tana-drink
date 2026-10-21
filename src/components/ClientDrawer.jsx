@@ -26,8 +26,8 @@ export default function ClientDrawer({ user, profile, accountsOn = false }) {
   // il tasto non deve sapere quale dei due menu è montato.
   useEffect(() => {
     const h = () => setOpen((o) => !o)
-    window.addEventListener('tana:toggle-drawer', h)
-    return () => window.removeEventListener('tana:toggle-drawer', h)
+    window.addEventListener('drink:toggle-drawer', h)
+    return () => window.removeEventListener('drink:toggle-drawer', h)
   }, [])
 
   // Col menu aperto i tasti dello zoom passano dietro: stanno in basso a

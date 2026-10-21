@@ -526,7 +526,7 @@ describe('la bozza si consuma quando le righe partono', () => {
     await mount()
     await user.click(screen.getByText('Mojito'))
     await waitFor(() => expect(createOrder).toHaveBeenCalledTimes(1), { timeout: 2000 })
-    expect(localStorage.getItem('tana:draft:new')).toBeNull()
+    expect(localStorage.getItem('drink:draft:new')).toBeNull()
   })
 
   it('ma a schermo le righe restano: la pagina non deve sembrare resettata', async () => {
@@ -545,7 +545,7 @@ describe('la bozza si consuma quando le righe partono', () => {
     await mount()
     await user.click(screen.getByText('Mojito'))
     await user.click(screen.getByRole('button', { name: /Pagamento/ }))
-    await waitFor(() => expect(localStorage.getItem('tana:draft:new')).toBeNull())
+    await waitFor(() => expect(localStorage.getItem('drink:draft:new')).toBeNull())
   })
 })
 

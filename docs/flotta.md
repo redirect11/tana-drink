@@ -16,7 +16,7 @@ senza downtime sulla Tana»).
    non è provato.
 2. **I progetti della Tana non si toccano da questo ramo.** `tana-drink` e
    `tana-drink-test` ricevono solo quello che passa da `develop` e `main`.
-   Il ramo `feature/flotta` pubblica, se pubblica, su `drink-demo`.
+   Il ramo `feature/flotta` pubblica, se pubblica, su `drinkpos-demo`.
 3. **Niente fork.** Un solo codice; il locale è configurazione
    (`clienti/<slug>/`), la licenza è un documento, il marchio è un dato.
 
@@ -26,8 +26,16 @@ senza downtime sulla Tana»).
 |---|---|---|
 | `tana-drink`, `tana-drink-test` | la Tana, come oggi | esistono |
 | `drink-regia` | il sito del prodotto: prezzi, registrazione e accesso dei titolari, dashboard del cliente, backoffice; il database dei clienti e delle licenze; le Functions che lanciano l'attivazione | una tantum, a mano o con `infra/regia` |
-| `drink-demo` | la prima istanza, neutra: dove si prova `feature/flotta` e dove si fa vedere il prodotto | una tantum, come un cliente qualsiasi (`infra/istanza` con slug `demo`) |
-| `drink-<slug>` | un'istanza per ogni locale cliente | Terraform, lanciato dalla regia |
+| `drinkpos-demo` | la prima istanza, neutra: dove si prova `feature/flotta` e dove si fa vedere il prodotto | una tantum, come un cliente qualsiasi (`infra/istanza` con slug `demo`) |
+| `drinkpos-<slug>` | un'istanza per ogni locale cliente | Terraform, lanciato dalla regia |
+
+**Creati il 22/10/2026** `drink-regia` e `drinkpos-demo` (l'id `drink-demo`
+era già di qualcun altro: gli id dei progetti Google sono globali, da qui
+il prefisso `drinkpos-` per le istanze), con web app, API di base e
+Firestore in europe-west1, da riga di comando (`scripts/abilita-api.mjs`).
+**A mano, nella console**: Firebase Auth → «Inizia» e il provider Email e
+password (l'API di configurazione risponde solo dopo quel primo clic), e il
+piano Blaze su tutti e due.
 
 Tutti sotto **lo stesso account di fatturazione Blaze**. La quota di progetti
 per account di fatturazione è bassa di partenza: l'aumento si chiede a
@@ -45,7 +53,7 @@ posto solo, `regia/src/lib/prodotto.js`, e si cambia lì.
   l'app con la cartella `clienti/demo/` (nome neutro, logo neutro). Se il
   risultato mostra ancora la Tana da qualche parte, è un difetto, e il
   test-guardia (`tests/unit/marchio.test.js`) lo trova prima.
-- **Online, su `drink-demo`**: «Deploy to Firebase» lanciato a mano sul
+- **Online, su `drinkpos-demo`**: «Deploy to Firebase» lanciato a mano sul
   ramo `feature/flotta`. Il workflow sa che il ramo non è della Tana e
   pubblica sul progetto scritto nella variabile di repository
   `PROGETTO_FLOTTA`; se la variabile non c'è, si ferma e lo dice. Un tag
@@ -98,14 +106,14 @@ repository (nomi esatti in `infra/README.md`):
 - l'id dell'account di fatturazione;
 - un token GitHub con permesso `actions:write`, per la Function che lancia
   il workflow;
-- la variabile `PROGETTO_FLOTTA` = `drink-demo`.
+- la variabile `PROGETTO_FLOTTA` = `drinkpos-demo`.
 
 ## I comandi
 
 ```sh
 npm run dev                      # l'app della Tana, come sempre
 CLIENTE=demo npm run dev         # l'app compilata per il locale neutro
-CLIENTE=demo npm run build       # la build per drink-demo
+CLIENTE=demo npm run build       # la build per drinkpos-demo
 cd regia && npm install && npm run dev   # la regia in locale (senza Firebase: solo vetrina)
 cd regia && npm test             # i test della regia (quelli dell'app: npm test alla radice)
 ```

@@ -57,7 +57,7 @@ describe('la barra delle categorie, stretta', () => {
     const user = userEvent.setup()
     monta(SENZA_SEGNO, 'magazzino')
     await user.click(screen.getByRole('button', { name: /Nascondi le sezioni/ }))
-    expect(localStorage.getItem('tana:barra-stretta:magazzino')).toBe('1')
+    expect(localStorage.getItem('drink:barra-stretta:magazzino')).toBe('1')
     cleanup()
     monta(SENZA_SEGNO, 'altra-pagina')
     expect(screen.getByText('Liquori e Amari')).toBeInTheDocument()

@@ -39,7 +39,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   const [sotto, setSotto] = useState({ voci: [], attiva: null, scegli: null })
   useEffect(() => subscribeSottosezioni(setSotto), [])
   const [gruppiAperti, setGruppiAperti] = useState(
-    () => localStorage.getItem('tana:drawer-gruppi') === '1'
+    () => localStorage.getItem('drink:drawer-gruppi') === '1'
   )
   // ── IL MENU AGGANCIATO ALLA PAGINA ────────────────────────────────
   // Dove la pagina ha delle sezioni sue (Impostazioni, Inventario) e c'è
@@ -55,7 +55,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // dentro la pagina invece di coprirla è come si presenta, non un'altra
   // funzione. La scelta resta anche domani.
   const [agganciato, setAgganciato] = useState(
-    () => localStorage.getItem('tana:drawer-agganciato') !== '0'
+    () => localStorage.getItem('drink:drawer-agganciato') !== '0'
   )
   // Dove il menu può stare dentro la pagina: sezioni proprie da mostrare e
   // schermo abbastanza largo (sul telefono sarebbe mezzo schermo).
@@ -67,7 +67,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
 
   useEffect(() => {
     try {
-      localStorage.setItem('tana:drawer-gruppi', gruppiAperti ? '1' : '0')
+      localStorage.setItem('drink:drawer-gruppi', gruppiAperti ? '1' : '0')
     } catch {
       /* niente memoria: valgono per questa sessione */
     }
@@ -83,8 +83,8 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
       if (agganciabile) setAgganciato((v) => !v)
       else setOpen((o) => !o)
     }
-    window.addEventListener('tana:toggle-drawer', h)
-    return () => window.removeEventListener('tana:toggle-drawer', h)
+    window.addEventListener('drink:toggle-drawer', h)
+    return () => window.removeEventListener('drink:toggle-drawer', h)
   }, [agganciabile])
 
   // Col menu aperto i tasti dello zoom devono passare DIETRO: stanno in
@@ -123,7 +123,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // Cresce tutto insieme, testo compreso: una colonna larga con la scritta
   // piccola in mezzo sembra rotta.
   const [largh, setLargh] = useState(() => {
-    const v = Number(localStorage.getItem('tana:menu-largo'))
+    const v = Number(localStorage.getItem('drink:menu-largo'))
     return v >= MIN_MENU && v <= MAX_MENU ? v : MENU_DEFAULT
   })
   const tiraDaX = useRef(null)
@@ -141,7 +141,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     if (!tiraDaX.current) return
     tiraDaX.current = null
     try {
-      localStorage.setItem('tana:menu-largo', String(largh))
+      localStorage.setItem('drink:menu-largo', String(largh))
     } catch {
       /* niente memoria: la larghezza vale per questa sessione */
     }
@@ -161,7 +161,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
 
   useEffect(() => {
     try {
-      localStorage.setItem('tana:drawer-agganciato', agganciato ? '1' : '0')
+      localStorage.setItem('drink:drawer-agganciato', agganciato ? '1' : '0')
     } catch {
       /* niente memoria: vale per questa volta */
     }
@@ -393,7 +393,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             // occhio è una seccatura.
             setLargh(MENU_DEFAULT)
             try {
-              localStorage.setItem('tana:menu-largo', String(MENU_DEFAULT))
+              localStorage.setItem('drink:menu-largo', String(MENU_DEFAULT))
             } catch {
               /* pazienza */
             }

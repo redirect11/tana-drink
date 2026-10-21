@@ -26,49 +26,14 @@ const MARCHIO = /Tana\b|Coniglio|latanadelconiglio|EFFEVI|\btana[:_-]/g
 
 // QUELLO CHE RESTA, e perché (REQ-VENUE-005 per le chiavi tecniche).
 const WHITELIST = {
-  // Chiavi tecniche `tana:` / `tana_` / `tana-` (localStorage, eventi,
-  // cache del service worker, nome del progetto): REQ-VENUE-005.
-  'src/App.jsx': 3,
-  'src/components/CashSessionsList.jsx': 1,
-  'src/components/CategoryRail.jsx': 1,
-  'src/components/ClientDrawer.jsx': 2,
-  'src/components/OrderPosDetail.jsx': 4,
-  'src/components/RendicontoSerata.jsx': 2,
-  'src/components/SettingsTab.jsx': 2,
-  'src/components/StaffDrawer.jsx': 9,
-  'src/components/StatusBell.jsx': 2,
-  'src/components/ZoomControl.jsx': 1,
-  'src/lib/api.js': 2,
-  'src/lib/avvisiInApp.js': 2,
-  'src/lib/backup.js': 1,
-  'src/lib/cart.js': 2,
-  'src/lib/diagnosticaStampante.js': 1,
-  'src/lib/dispositivo.js': 1,
-  'src/lib/impostazioniLocali.js': 6,
-  'src/lib/notifyStore.js': 1,
-  'src/lib/novita.js': 1,
-  'src/lib/operatore.js': 1,
-  'src/lib/posCatalog.js': 6,
-  'src/lib/preferenzeNotifiche.js': 1,
-  'src/lib/printer.js': 5,
-  'src/lib/progressivi.js': 2,
-  'src/lib/registroStampe.js': 1,
-  'src/lib/ruoloLocale.js': 1,
-  'src/lib/staffApi.js': 1,
-  'src/lib/stampanteFinta.js': 2,
-  'src/lib/useDraft.js': 2,
-  'src/lib/useResizable.js': 2,
-  'src/pages/BartenderPage.jsx': 4,
-  'src/pages/MenuPage.jsx': 2,
-  // Il tema «Tana scuro» resta come alias (piano, Fase 2.6), più le chiavi.
-  'src/lib/themes.js': 4,
   // Il seed di sviluppo coi drink della Tana (piano, Fase 2.4).
   'src/dev/seedData.js': 6,
-  // Il service worker: nome della cache e testo delle notifiche.
-  'public/sw.js': 3,
-  // Le Functions: descrizione del pagamento SumUp e app id (REQ-VENUE-005).
-  'functions/index.js': 1,
-  'functions/lib/payment-service.js': 8,
+  // Il tema predefinito «tana-scuro» nelle impostazioni: un alias (vedi themes.js).
+  'src/lib/api.js': 2,
+  // La migrazione delle chiavi vecchie (REQ-VENUE-005): deve conoscerle.
+  'src/lib/migrazioneChiavi.js': 2,
+  // Il tema «Tana scuro» resta come alias (piano, Fase 2.6).
+  'src/lib/themes.js': 4,
 }
 
 const SCANSIONE = ['src', 'functions/index.js', 'functions/lib', 'index.html', 'public/sw.js', 'clienti/manifest.template.json']

@@ -28,6 +28,10 @@ function err(code, message) {
   return { code, message }
 }
 
+// Il nome del locale nelle descrizioni SumUp (REQ-VENUE-005): lo dà chi
+// costruisce le dipendenze (functions/index.js, da VENUE_NAME).
+const nomeLocale = (deps) => (typeof deps?.venueName === 'function' ? deps.venueName() : 'Il locale')
+
 async function getOrder(db, orderId) {
   if (!orderId) throw err('invalid-argument', 'orderId obbligatorio.')
   const ref = db.collection('orders').doc(orderId)
@@ -76,7 +80,7 @@ async function createCheckout(deps, { orderId } = {}) {
     attempts,
     total: order.total,
     merchantCode: merchantCode(),
-    description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
+    description: `Ordine #${order.daily_number ?? '—'} — ${nomeLocale(deps)}`,
   })
   const created = await paymentsFetch('/v0.1/checkouts', {
     method: 'POST',
@@ -246,7 +250,7 @@ async function readerCheckout(deps, auth, { orderId, amount = null, items = null
 
   const payload = buildReaderCheckoutPayload({
     total: toCharge,
-    description: `Ordine #${order.daily_number ?? '—'} — La Tana del Coniglio`,
+    description: `Ordine #${order.daily_number ?? '—'} — ${nomeLocale(deps)}`,
     returnUrl: webhookUrl(),
     affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
     orderId,
@@ -416,7 +420,7 @@ async function createGroupCheckout(deps, { paymentId } = {}) {
         orderId: paymentId,
         total: payment.amount,
         merchantCode: merchantCode(),
-        description: 'Conto gruppo — La Tana del Coniglio',
+        description: `Conto gruppo — ${nomeLocale(deps)}`,
       })
     ),
   })
@@ -463,7 +467,7 @@ async function groupReaderCheckout(deps, auth, { paymentId } = {}) {
         body: JSON.stringify(
           buildReaderCheckoutPayload({
             total: payment.amount,
-            description: 'Conto gruppo — La Tana del Coniglio',
+            description: `Conto gruppo — ${nomeLocale(deps)}`,
             returnUrl: webhookUrl(),
             affiliate: typeof deps.affiliate === 'function' ? deps.affiliate() : null,
             orderId: paymentId,

@@ -52,7 +52,7 @@ export const COLLEZIONE = 'diagnostica_stampante'
 export const TETTO_EVENTI = 200
 export const FINESTRA_RIPETIZIONI = 60_000
 export const GIORNI_DA_TENERE = 14
-const CHIAVE_DOCUMENTI = 'tana:diagnostica-stampante-documenti'
+const CHIAVE_DOCUMENTI = 'drink:diagnostica-stampante-documenti'
 
 // I tipi di evento, per chi legge il diario.
 export const TIPO = {

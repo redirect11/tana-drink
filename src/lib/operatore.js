@@ -28,7 +28,7 @@
 
 import { isAdmin } from './ruoli.js'
 
-const CHIAVE = 'tana:operatore'
+const CHIAVE = 'drink:operatore'
 
 // Chi disegna il nome in barra deve vederlo cambiare nell'istante in cui si
 // sceglie, senza ricaricare: la scelta si fa all'apertura della cassa, e il

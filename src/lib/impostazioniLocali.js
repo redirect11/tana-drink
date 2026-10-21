@@ -70,7 +70,7 @@ function flagLocale(chiave, { seNonSiSa = false, scriviIlFalso = false } = {}) {
   ]
 }
 
-const CHIAVE = 'tana:impostazioni'
+const CHIAVE = 'drink:impostazioni'
 
 export function ricordaImpostazioni(data) {
   if (!data || typeof data !== 'object') return
@@ -94,7 +94,7 @@ export function impostazioniRicordate(defaults = {}) {
 // impostazioni del bar vorrebbe dire che accendendo una colonna al banco
 // si spegne alla cassa.
 
-const CHIAVE_CORSIE = 'tana:corsie:nascoste'
+const CHIAVE_CORSIE = 'drink:corsie:nascoste'
 
 // Torna null quando su questo terminale non si è ancora scelto niente:
 // quali colonne convenga tenere spente all'inizio è una decisione del
@@ -119,7 +119,7 @@ export function ricordaCorsieNascoste(ids) {
 //
 // Torna null quando non si è scelto niente: decide il ruolo.
 
-const CHIAVE_VISTA = 'tana:corsie:vista'
+const CHIAVE_VISTA = 'drink:corsie:vista'
 
 export function vistaCorsie() {
   const v = leggi(CHIAVE_VISTA, (grezzo) => grezzo, null)
@@ -142,7 +142,7 @@ export function ricordaVistaCorsie(vista) {
 // banco e il telefono di chi gira in sala vogliono cose diverse.
 
 export const [azioniContoRidotte, ricordaAzioniContoRidotte] = flagLocale(
-  'tana:conto:azioni-ridotte'
+  'drink:conto:azioni-ridotte'
 )
 
 // ── IL PRONTO, UNITO O DIVISO, SU QUESTO TERMINALE ───────────────────
@@ -159,7 +159,7 @@ export const [azioniContoRidotte, ricordaAzioniContoRidotte] = flagLocale(
 // Qui lo '0' si scrive davvero (`scriviIlFalso`): «unite» è una scelta, non
 // un'assenza di scelta, e cancellare la chiave la renderebbe indistinguibile
 // dal terminale che non ha mai deciso.
-export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('tana:corsie:pronto-diviso', {
+export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('drink:corsie:pronto-diviso', {
   scriviIlFalso: true,
 })
 
@@ -176,4 +176,4 @@ export const [prontoDiviso, ricordaProntoDiviso] = flagLocale('tana:corsie:pront
 // banco tiene la fila aperta tutta la serata non deve riaprirla a ogni
 // ricarico, e chi non la usa non se la ritrova.
 
-export const [filtriAperti, ricordaFiltriAperti] = flagLocale('tana:coda:filtri-aperti')
+export const [filtriAperti, ricordaFiltriAperti] = flagLocale('drink:coda:filtri-aperti')

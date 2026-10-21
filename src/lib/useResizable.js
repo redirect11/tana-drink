@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 //         determina il verso del trascinamento.
 const load = (key, def) => {
   try {
-    const v = Number(localStorage.getItem(`tana:w:${key}`))
+    const v = Number(localStorage.getItem(`drink:w:${key}`))
     return Number.isFinite(v) && v > 0 ? v : def
   } catch {
     return def
@@ -94,7 +94,7 @@ export function useResizable(key, { def, min = 80, max = 640, side = 'right', ax
 
   useEffect(() => {
     try {
-      localStorage.setItem(`tana:w:${key}`, String(Math.round(width)))
+      localStorage.setItem(`drink:w:${key}`, String(Math.round(width)))
     } catch {
       /* ok */
     }

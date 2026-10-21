@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 229 | fatto e coperto dai test |
+| ✅ | 232 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 23 | da fare |
+| ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**276 voci** in tutto. **245** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **23** sono lavori
+**276 voci** in tutto. **248** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -63,8 +63,8 @@ come «vero oggi», non come «garantito».
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
-| [VENUE](#venue) | 4 | 1 |  |
-| [FLOTTA](#flotta) | 5 | 2 |  |
+| [VENUE](#venue) | 5 | — |  |
+| [FLOTTA](#flotta) | 7 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3220,6 +3220,16 @@ Fase 0.2 del piano. Un test cerca `Tana`, `Coniglio`, `latanadelconiglio`, `EFFE
 
 **Dove**: `tests/unit/marchio.test.js` · **Lo dimostrano**: `tests/unit/marchio.test.js`
 
+#### REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente
+
+Fase 2.5 del piano, fatta il 22/10/2026 su richiesta dell'utente.
+
+LE CHIAVI LOCALI passano da `tana:`/`tana_` a `drink:`/`drink_` in tutta l'app (eventi compresi), e AL PRIMO AVVIO ogni chiave vecchia si copia su quella nuova se la nuova non c'e' ancora, senza cancellare (migraChiaviLocali, chiamata in main.jsx prima di qualunque lettura): i dispositivi della Tana ritrovano carrello, IP della stampante, zoom e preferenze; e un dispositivo che tornasse alla versione prima ritrova le sue. La cache del service worker diventa `drink-v5` (si rinnova da sola) e il titolo di riserva delle notifiche non e' piu' il nome di un locale. `package.json` si chiama `drink`.
+
+LE FUNCTIONS: la descrizione dei pagamenti SumUp e l'app id affiliato vengono da `VENUE_NAME` e `SUMUP_AFFILIATE_APP_ID` in `functions/.env.<progetto>` (per la Tana: .env.tana-drink e .env.tana-drink-test, committati come .env), non dal codice; senza, «Il locale» e nessun app id. Il test-guardia (REQ-VENUE-004) scende a quattro file: il seed di sviluppo, i nomi dei progetti della Tana in api.js, la migrazione stessa e il tema «Tana scuro» tenuto come alias.
+
+**Dove**: `src/lib/migrazioneChiavi.js, src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js` · **Lo dimostrano**: `tests/unit/migrazioneChiavi.test.js`, `tests/unit/marchio.test.js`
+
 ### FLOTTA
 
 #### REQ-FLOTTA-001 — La CI del ramo feature/flotta non tocca i progetti della Tana: pubblica solo su PROGETTO_FLOTTA
@@ -3255,6 +3265,28 @@ Dopo l'accesso il titolare vede: il nome e lo slug del locale, il piano scelto, 
 Una pagina protetta dal claim `admin` dell'Auth della regia: tutti i clienti con piano, stato dell'istanza, progetto, versione pubblicata e ultimo passaggio; le richieste in coda o in errore in cima. Da qui si rilancia un'attivazione fallita e si segna un abbonamento pagato a mano (finche' Stripe non c'e', REQ-FLOTTA-007). La regia vede aggregati e stati, mai i dati operativi dei locali.
 
 **Dove**: `regia/src/pages/Backoffice.jsx, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/Backoffice.test.jsx`
+
+#### REQ-FLOTTA-006 — Attivazione automatica di un'istanza: richiesta nella regia → workflow GitHub → Terraform → deploy → licenza → esito
+
+«Come integriamo il discorso di terraform?» (l'utente, 21/10/2026).
+
+IL FLUSSO: il titolare tocca «Attiva» (REQ-FLOTTA-004) e nasce `richieste/{slug}` in coda; la Function `avviaProvisioning` (o `rilanciaProvisioning`, quando l'admin rilancia) lancia il workflow `provisiona-istanza.yml` con slug, nome, piano, moduli; il workflow fa `terraform apply` in infra/istanza (progetto `drinkpos-<slug>`, API, Firebase, Firestore europe-west1, Hosting, web app, Auth con email e password, ruoli al service account di provisioning), scrive il .env della build dagli output, crea `clienti/<slug>/` se manca (genera-cliente.mjs), compila con CLIENTE=<slug>, pubblica regole, indici, Functions e hosting, scrive `settings/licenza` e il nome del locale (licenza-istanza.mjs), e manda l'esito — sempre, anche in errore — alla Function `esitoProvisioning`, che aggiorna `istanze/{slug}` e la richiesta. La dashboard lo mostra.
+
+SENZA ORGANIZZAZIONE GOOGLE CLOUD (account personale) un service account non crea progetti: il workflow importa nello stato il progetto creato a mano, e se non c'e' lo dice con il comando da dare.
+
+STATO AL 22/10/2026: scritto e provato per parti (la logica delle Functions con i suoi test; i progetti drink-regia e drinkpos-demo creati e preparati con gli script), MAI un'attivazione intera: mancano Blaze, il service account di provisioning, il bucket dello stato, il token GitHub e i segreti (infra/README.md). La prima attivazione vera sara' `demo`, sul progetto gia' creato.
+
+**Dove**: `infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, regia/functions/index.js, regia/functions/lib/provisioning.js, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs` · **Lo dimostrano**: `regia/tests/provisioning.test.js`
+
+#### REQ-FLOTTA-007 — L'abbonamento: Stripe Checkout nella regia, webhook che aggiorna il cliente, licenza che segue il piano
+
+Il titolare sceglie piano, moduli in piu' e terminali nella dashboard (SceltaPiano: il prezzo del mese si aggiorna mentre sceglie), e «Vai al pagamento» chiama la Function `creaCheckout`, che apre una sessione di Checkout di Stripe in modalita' abbonamento mensile — una riga per il piano, una per ogni modulo in piu', una per i terminali oltre quelli inclusi — con uid e scelta nei metadati. Il webhook `stripeWebhook` verifica la firma e aggiorna `clienti/{uid}`: `checkout.session.completed` scrive piano, moduli, terminali e abbonamento attivo; `invoice.paid` conferma; `invoice.payment_failed` mette in sospeso; `customer.subscription.deleted` disdice. Da li' `puoAttivare` (REQ-FLOTTA-004) lascia attivare l'istanza, e la licenza (REQ-FLOTTA-006) accende i moduli del piano. I PREZZI STANNO IN UN POSTO SOLO, regia/piani.json, letto dal sito e dalle Functions: da confermare prima di pubblicare.
+
+IL POS NON DIPENDE DA STRIPE: un pagamento in ritardo cambia cosa dice la dashboard, non quello che l'istanza fa.
+
+STATO AL 22/10/2026: scritto, con la logica provata; le chiavi di Stripe (prima quelle di prova) vanno nei segreti delle Functions della regia (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) e l'indirizzo del webhook va registrato su Stripe. Finche' non ci sono, «Vai al pagamento» spiega che il pagamento online non e' attivo e l'admin segna il piano a mano dal backoffice (REQ-FLOTTA-005).
+
+**Dove**: `regia/piani.json, regia/src/lib/piani.js, regia/src/pages/SceltaPiano.jsx, regia/src/pages/Dashboard.jsx, regia/src/lib/db.js (avviaPagamento), regia/functions/index.js (creaCheckout, stripeWebhook), regia/functions/lib/abbonamento.js` · **Lo dimostrano**: `regia/tests/abbonamento.test.js`, `regia/tests/SceltaPiano.test.jsx`
 
 ## Lavori previsti
 
@@ -3573,28 +3605,6 @@ Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre sezioni del 
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
-
-### VENUE
-
-#### REQ-VENUE-005 — Spazi tecnici neutri: cache del service worker, chiavi locali e nome del pacchetto senza «tana», con lettura di riserva dalle chiavi vecchie
-
-Fase 2.5 del piano. La cache del service worker e le chiavi localStorage (`tana:`, `tana_`) prendono un prefisso dallo slug del prodotto; chi legge una chiave nuova e non la trova prova quella vecchia, cosi' i dispositivi della Tana non perdono carrello, IP della stampante e preferenze. `package.json` `name` diventa `drink`. Da fare DOPO REQ-VENUE-002: e' la parte con piu' superficie e meno valore visibile, e va provata sui dispositivi veri.
-
-**Dove**: `public/sw.js, src/lib/*.js (localStorage), package.json`
-
-### FLOTTA
-
-#### REQ-FLOTTA-006 — Attivazione automatica di un'istanza: richiesta nella regia → workflow GitHub → Terraform → deploy → licenza → esito
-
-«Come integriamo il discorso di terraform?» (l'utente, 21/10/2026). Il modulo `infra/istanza` crea, dallo slug: il progetto `drink-<slug>` sotto l'account di fatturazione, le API, il progetto Firebase, Firestore (europe-west1), il sito Hosting, la web app e la sua configurazione, Auth. Lo stato di Terraform sta in un bucket GCS della regia, una cartella per istanza. Il workflow `provisiona-istanza.yml` (workflow_dispatch con `slug`) fa `terraform apply`, compila l'app con `CLIENTE=<slug>` (la cartella `clienti/<slug>/` la genera dal documento del cliente), pubblica hosting, functions e regole, scrive `settings/licenza` e `settings/bar.venue_*`, e chiama la regia con l'esito. Nella regia: una Function su `richieste/{slug}` creata lancia il workflow (API GitHub, token nei segreti); una Function https riceve l'esito e aggiorna `istanze/{slug}`. Prerequisiti a mano, documentati in infra/README.md: service account di provisioning, id di fatturazione, token GitHub, quota progetti.
-
-**Dove**: `infra/istanza (Terraform), infra/README.md, .github/workflows/provisiona-istanza.yml, regia/functions/ (lancio del workflow e callback), scripts/licenza-istanza.mjs`
-
-#### REQ-FLOTTA-007 — L'abbonamento: Stripe Checkout nella regia, webhook che aggiorna il cliente, licenza che segue il piano
-
-Il titolare sceglie il piano e paga con Stripe Checkout (chiavi di prova prima). Il webhook `checkout.session.completed` / `invoice.paid` / `customer.subscription.deleted` aggiorna `clienti/{uid}.abbonamento` (piano, stato, scadenza). La licenza dell'istanza (`settings/licenza`) si riscrive da quel documento: i moduli del piano, e basta. Il POS non dipende mai da Stripe per funzionare: senza rete o con un pagamento in ritardo l'istanza lavora, cambia solo cosa dice la dashboard. Prezzi e piani in `piani.js`, da confermare con l'utente prima di pubblicare.
-
-**Dove**: `regia/functions/ (webhook Stripe), regia/src/pages/Dashboard.jsx, regia/src/lib/piani.js`
 
 ## Difetti noti
 

@@ -35,8 +35,8 @@ import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
-const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
-const WELCOME_KEY = 'tana_welcome_v1'
+const NOTIF_PROMPT_KEY = 'drink_notif_prompt_v1' // chiave storica
+const WELCOME_KEY = 'drink_welcome_v1'
 
 export default function MenuPage() {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente

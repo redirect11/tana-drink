@@ -18,6 +18,15 @@
   le parole della Tana rimaste nel codice e lascia solo accorciare la lista.
 - La CI del ramo `feature/flotta` pubblica solo sul progetto della flotta,
   mai sul test della Tana. Il disegno sta in `docs/flotta.md`.
+- Le chiavi locali e la cache del service worker hanno il prefisso `drink`
+  invece di `tana`; al primo avvio le chiavi vecchie si copiano sulle
+  nuove, quindi sui dispositivi non si perde niente. Il nome del locale
+  nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- La regia lancia l'attivazione di un'istanza (workflow
+  `provisiona-istanza.yml`, Terraform in `infra/istanza`) e ne riceve
+  l'esito; l'abbonamento passa da Stripe Checkout, con il webhook che
+  aggiorna il cliente. Niente di questo è ancora stato provato per
+  intero: mancano Blaze, i service account e le chiavi.
 
 ## 1.9.3 — 21 ottobre 2026
 

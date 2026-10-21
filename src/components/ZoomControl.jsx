@@ -18,7 +18,7 @@ import { createPortal } from 'react-dom'
 // rimpicciolirebbero insieme alla pagina, proprio mentre servono a chi non
 // ci vede bene.
 
-const CHIAVE = 'tana:zoom'
+const CHIAVE = 'drink:zoom'
 const MIN = 0.7
 const MAX = 1.6
 const PASSO = 0.1
