@@ -38,7 +38,7 @@ beforeEach(() => {
     { uid: 'c', slug: 'bar-nuovo', nome_locale: 'Bar Nuovo', email: 'c@x.it', creato_il: '2026-10-03' },
   ])
   db.elencoIstanze.mockResolvedValue({
-    'bar-attivo': { stato: 'attiva', progetto: 'drink-bar-attivo', versione: 'v1.10.0' },
+    'bar-attivo': { stato: 'attiva', progetto: 'drinkpos-bar-attivo', versione: 'v1.10.0' },
     'bar-rotto': { stato: 'errore', errore: 'quota progetti' },
   })
   db.elencoRichieste.mockResolvedValue({})
@@ -53,7 +53,7 @@ describe('il backoffice', () => {
     expect(nomi[2]).toMatch(/Bar Attivo/)
     const attivo = righe.find((r) => r.textContent.includes('Bar Attivo'))
     expect(attivo).toHaveTextContent('Completo · 69 €')
-    expect(attivo).toHaveTextContent('drink-bar-attivo')
+    expect(attivo).toHaveTextContent('drinkpos-bar-attivo')
     expect(attivo).toHaveTextContent('v1.10.0')
   })
 

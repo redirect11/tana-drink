@@ -51,7 +51,7 @@ describe('la richiesta e i nomi', () => {
   })
 
   it('il progetto e l’indirizzo nascono dallo slug', () => {
-    expect(progettoDi('bar-mario')).toBe('drink-bar-mario')
+    expect(progettoDi('bar-mario')).toBe('drinkpos-bar-mario')
     expect(urlDi('bar-mario')).toMatch(/^https:\/\/bar-mario\./)
   })
 })

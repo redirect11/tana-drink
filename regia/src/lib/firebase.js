@@ -16,6 +16,6 @@ const config = {
 
 export const configurata = Boolean(config.apiKey && config.projectId)
 
-const app = configurata ? (getApps()[0] || initializeApp(config)) : null
+export const app = configurata ? (getApps()[0] || initializeApp(config)) : null
 export const auth = app ? getAuth(app) : null
 export const db = app ? getFirestore(app) : null

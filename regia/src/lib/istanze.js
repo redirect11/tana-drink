@@ -4,7 +4,7 @@
 // con parole piane. Chi li scrive: il titolare (`in coda`, col tasto
 // Attiva), il provisioning (`in corso`, `attiva`, `errore`), l'admin.
 
-import { DOMINIO_ISTANZE, SLUG_PRODOTTO } from './prodotto.js'
+import { DOMINIO_ISTANZE, PREFISSO_PROGETTI } from './prodotto.js'
 
 export const STATI = {
   DA_ATTIVARE: 'da attivare',
@@ -33,7 +33,7 @@ export function statoIstanza(istanza, richiesta) {
 }
 
 // Il progetto e l'indirizzo che l'istanza avrà.
-export const progettoDi = (slug) => `${SLUG_PRODOTTO}-${slug}`
+export const progettoDi = (slug) => `${PREFISSO_PROGETTI}-${slug}`
 export const urlDi = (slug) => `https://${slug}.${DOMINIO_ISTANZE}`
 
 // Si può chiedere l'attivazione? Serve un abbonamento valido (o un piano

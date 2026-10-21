@@ -1,0 +1,30 @@
+{
+  "_nota": "Piani e prezzi del prodotto, in un posto solo (REQ-FLOTTA-002, REQ-FLOTTA-007). Letto dal sito (src/lib/piani.js) e dalle Functions (functions/lib/abbonamento.js). Importi mensili in euro, IVA esclusa. DA CONFERMARE prima di pubblicare.",
+  "moduli": [
+    { "id": "magazzino", "nome": "Magazzino e inventario", "prezzo": 15, "descrizione": "Giacenze, scarico automatico dalle ricette, inventario periodico, ordini ai fornitori." },
+    { "id": "menu_tavoli", "nome": "Menù digitale e tavoli", "prezzo": 12, "descrizione": "Menù con QR al tavolo, ordini dal telefono del cliente, stato dell’ordine." },
+    { "id": "statistiche", "nome": "Statistiche e bilancio", "prezzo": 15, "descrizione": "Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie." },
+    { "id": "staff", "nome": "Personale e ore", "prezzo": 10, "descrizione": "Utenze del personale, ore e paghe, chiamate allo staff." },
+    { "id": "pagamenti", "nome": "Pagamenti con lettore SumUp", "prezzo": 10, "descrizione": "Il conto va al lettore di carte e torna pagato da solo." }
+  ],
+  "piani": {
+    "base": {
+      "id": "base",
+      "nome": "Base",
+      "prezzo": 24,
+      "descrizione": "Cassa, comande, pagamenti in contanti e carta, scontrino sulla stampante, lavoro senza rete. Un terminale.",
+      "include": [],
+      "terminali": 1
+    },
+    "completo": {
+      "id": "completo",
+      "nome": "Completo",
+      "prezzo": 69,
+      "descrizione": "Tutto: cassa e comande, magazzino, menù e tavoli, statistiche e bilancio, personale, SumUp. Due terminali.",
+      "include": ["magazzino", "menu_tavoli", "statistiche", "staff", "pagamenti"],
+      "terminali": 2
+    }
+  },
+  "terminale_in_piu": 12,
+  "attivazione": 250
+}

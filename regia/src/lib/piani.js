@@ -1,41 +1,18 @@
 // ── I PIANI E I PREZZI (REQ-FLOTTA-002) ───────────────────────────────
 //
-// Prezzi in un posto solo, DA CONFERMARE con l'utente prima di pubblicare
-// (stime del 21/10/2026: base 19-29, terminale +10-15, moduli 10-20,
-// completo 59-79, attivazione 150-300). Importi mensili, IVA esclusa.
-//
-// Il piano base è la porta d'ingresso; il margine sta nei moduli, che
-// sono le stesse funzioni premium della licenza (src/lib/licenza.js
-// nell'app): quello che si compra qui è quello che l'istanza accende.
+// I numeri stanno in regia/piani.json, letto anche dalle Functions
+// (abbonamento.js): un posto solo, DA CONFERMARE con l'utente prima di
+// pubblicare. Il piano base è la porta d'ingresso; il margine sta nei
+// moduli, che sono le stesse funzioni premium della licenza
+// (src/lib/licenza.js nell'app): quello che si compra qui è quello che
+// l'istanza accende.
 
-export const MODULI = [
-  { id: 'magazzino', nome: 'Magazzino e inventario', prezzo: 15, descrizione: 'Giacenze, scarico automatico dalle ricette, inventario periodico, ordini ai fornitori.' },
-  { id: 'menu_tavoli', nome: 'Menù digitale e tavoli', prezzo: 12, descrizione: 'Menù con QR al tavolo, ordini dal telefono del cliente, stato dell’ordine.' },
-  { id: 'statistiche', nome: 'Statistiche e bilancio', prezzo: 15, descrizione: 'Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.' },
-  { id: 'staff', nome: 'Personale e ore', prezzo: 10, descrizione: 'Utenze del personale, ore e paghe, chiamate allo staff.' },
-  { id: 'pagamenti', nome: 'Pagamenti con lettore SumUp', prezzo: 10, descrizione: 'Il conto va al lettore di carte e torna pagato da solo.' },
-]
+import listino from '../../piani.json'
 
-export const PIANI = {
-  base: {
-    id: 'base',
-    nome: 'Base',
-    prezzo: 24,
-    descrizione: 'Cassa, comande, pagamenti in contanti e carta, scontrino sulla stampante, lavoro senza rete. Un terminale.',
-    include: [],
-  },
-  completo: {
-    id: 'completo',
-    nome: 'Completo',
-    prezzo: 69,
-    descrizione: 'Tutto: cassa e comande, magazzino, menù e tavoli, statistiche e bilancio, personale, SumUp. Due terminali.',
-    include: MODULI.map((m) => m.id),
-    terminali: 2,
-  },
-}
-
-export const TERMINALE_IN_PIU = 12
-export const ATTIVAZIONE = 250
+export const MODULI = listino.moduli
+export const PIANI = listino.piani
+export const TERMINALE_IN_PIU = listino.terminale_in_piu
+export const ATTIVAZIONE = listino.attivazione
 
 // Quanto costa al mese una scelta: piano, moduli in più, terminali in più.
 //   { piano: 'base'|'completo', moduli: ['magazzino', …], terminali: 1 }

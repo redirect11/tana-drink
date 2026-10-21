@@ -18,7 +18,7 @@ che il locale scrive in Impostazioni vince su quello che sta qui.
 
 ```sh
 CLIENTE=demo npm run dev     # il locale neutro, in locale
-CLIENTE=demo npm run build   # la build per drink-demo
+CLIENTE=demo npm run build   # la build per drinkpos-demo
 ```
 
 Un cliente nuovo: si copia `demo/`, si compila `venue.json`, si mettono i

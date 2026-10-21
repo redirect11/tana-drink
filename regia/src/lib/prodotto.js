@@ -5,6 +5,12 @@
 // l'utente non ne sceglie uno (21/10/2026: il nome non è ancora deciso).
 
 export const SLUG_PRODOTTO = 'drink'
+
+// Il prefisso dei PROGETTI Firebase delle istanze (`drinkpos-<slug>`). Gli
+// id dei progetti Google sono globali: `drink-demo` era già di qualcun
+// altro (22/10/2026), quindi il prefisso è più lungo dello slug del
+// prodotto. La regia è `drink-regia`, creata a parte.
+export const PREFISSO_PROGETTI = 'drinkpos'
 export const NOME_PRODOTTO = 'Drink'
 export const SLOGAN = 'Cassa, comande e magazzino per bar e cocktail bar.'
 export const DESCRIZIONE =

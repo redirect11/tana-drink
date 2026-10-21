@@ -1,0 +1,182 @@
+name: Provisiona istanza
+
+# L'ATTIVAZIONE DI UN'ISTANZA (REQ-FLOTTA-006, docs/flotta.md). Lo lancia la
+# regia (Function avviaProvisioning) con lo slug del locale, o una persona
+# dalla pagina Actions. Fa, nell'ordine:
+#   1. terraform apply in infra/istanza → il progetto drinkpos-<slug> con
+#      Firestore, Hosting, web app, Auth (o lo completa, se l'utente lo ha
+#      creato a mano perché non c'è un'Organizzazione Google Cloud);
+#   2. la cartella clienti/<slug>/ (se manca) e la build CLIENTE=<slug>;
+#   3. il deploy di regole, indici, Functions e hosting sul progetto nuovo;
+#   4. la licenza e il nome del locale nelle impostazioni dell'istanza;
+#   5. l'esito alla regia (sempre, anche se qualcosa è andato storto).
+#
+# Segreti del repository: PROVISIONING_SA_JSON, BILLING_ACCOUNT_ID,
+# PROVISIONING_CALLBACK_SECRET. Variabili: ORG_ID (facoltativa),
+# TFSTATE_BUCKET, REGIA_CALLBACK_URL. Vedi infra/README.md.
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Lo slug del locale (clienti.js: 6-30 caratteri, minuscole, cifre, trattini)'
+        required: true
+        type: string
+      nome_locale:
+        description: 'Il nome del locale, per venue.json e le impostazioni'
+        required: true
+        type: string
+      piano:
+        description: 'base | completo'
+        required: false
+        type: string
+        default: base
+      moduli:
+        description: 'Moduli in più, separati da virgola (magazzino,staff,…)'
+        required: false
+        type: string
+        default: ''
+      uid:
+        description: 'Il titolare nella regia (clienti/{uid})'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provisiona-${{ inputs.slug }}
+  cancel-in-progress: false
+
+env:
+  SLUG: ${{ inputs.slug }}
+  PROGETTO: drinkpos-${{ inputs.slug }}
+
+jobs:
+  provisiona:
+    name: Attiva ${{ inputs.slug }}
+    runs-on: ubuntu-latest
+    environment: flotta
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Slug valido
+        run: |
+          if ! [[ "$SLUG" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; then
+            echo "::error::Slug «$SLUG» non valido."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Credenziali di provisioning
+        env:
+          SA_JSON: ${{ secrets.PROVISIONING_SA_JSON }}
+        run: |
+          if [ -z "$SA_JSON" ]; then echo "::error::Manca il segreto PROVISIONING_SA_JSON (infra/README.md)."; exit 1; fi
+          echo "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+          echo "PROVISIONING_SA_EMAIL=$(node -e "console.log(JSON.parse(process.argv[1]).client_email)" "$SA_JSON")" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.8'
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: infra/istanza
+        run: |
+          if [ -z "${{ vars.TFSTATE_BUCKET }}" ]; then echo "::error::Manca la variabile TFSTATE_BUCKET."; exit 1; fi
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TFSTATE_BUCKET }}" \
+            -backend-config="prefix=istanze/$SLUG"
+
+      # SENZA ORGANIZZAZIONE il service account non può creare progetti: il
+      # progetto lo ha creato l'utente (firebase projects:create) e qui si
+      # importa, una volta, nello stato. Con ORG_ID lo crea Terraform.
+      - name: Importa il progetto se esiste già
+        working-directory: infra/istanza
+        env:
+          TF_VAR_slug: ${{ inputs.slug }}
+          TF_VAR_billing_account: ${{ secrets.BILLING_ACCOUNT_ID }}
+          TF_VAR_org_id: ${{ vars.ORG_ID }}
+          TF_VAR_provisioning_sa_email: ${{ env.PROVISIONING_SA_EMAIL }}
+        run: |
+          if terraform state show google_project.istanza >/dev/null 2>&1; then exit 0; fi
+          if [ -z "${{ vars.ORG_ID }}" ]; then
+            terraform import -input=false google_project.istanza "$PROGETTO" \
+              || { echo "::error::Senza ORG_ID il progetto $PROGETTO va creato prima a mano: npx firebase-tools projects:create $PROGETTO"; exit 1; }
+          fi
+
+      - name: Terraform apply
+        working-directory: infra/istanza
+        env:
+          TF_VAR_slug: ${{ inputs.slug }}
+          TF_VAR_billing_account: ${{ secrets.BILLING_ACCOUNT_ID }}
+          TF_VAR_org_id: ${{ vars.ORG_ID }}
+          TF_VAR_provisioning_sa_email: ${{ env.PROVISIONING_SA_EMAIL }}
+        run: terraform apply -input=false -auto-approve
+
+      - name: Il .env della build dal progetto nuovo
+        working-directory: infra/istanza
+        run: |
+          terraform output -json config_web | node -e '
+            const c = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            require("fs").writeFileSync(process.argv[1], Object.entries(c).map(([k, v]) => `${k}=${v}`).join("\n") + "\n");
+          ' "$GITHUB_WORKSPACE/.env"
+          echo "URL_ISTANZA=$(terraform output -raw url)" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - run: npm ci --prefix functions
+
+      - name: La cartella del cliente
+        run: node scripts/genera-cliente.mjs --slug "$SLUG" --nome "${{ inputs.nome_locale }}"
+
+      - name: Build
+        env:
+          BASE_PATH: /
+          CLIENTE: ${{ inputs.slug }}
+          VITE_APP_ENV: production
+        run: npm run build
+
+      - name: Functions .env del progetto
+        run: |
+          printf 'VENUE_NAME=%s\n' "${{ inputs.nome_locale }}" > "functions/.env.$PROGETTO"
+
+      - name: Deploy regole, indici, Functions e hosting
+        run: |
+          npx firebase-tools deploy --only firestore,storage,functions,hosting --project "$PROGETTO" --force
+
+      - name: Licenza e nome del locale nell'istanza
+        run: |
+          node scripts/licenza-istanza.mjs --project "$PROGETTO" --slug "$SLUG" \
+            --nome "${{ inputs.nome_locale }}" --piano "${{ inputs.piano }}" --moduli "${{ inputs.moduli }}"
+
+      - name: Versione pubblicata
+        run: echo "VERSIONE=v$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+
+      # L'ESITO ALLA REGIA, sempre: anche un fallimento si deve vedere nella
+      # dashboard del titolare, non solo qui.
+      - name: Esito alla regia
+        if: always()
+        env:
+          CALLBACK_URL: ${{ vars.REGIA_CALLBACK_URL }}
+          CALLBACK_SECRET: ${{ secrets.PROVISIONING_CALLBACK_SECRET }}
+        run: |
+          if [ -z "$CALLBACK_URL" ]; then echo "Nessuna REGIA_CALLBACK_URL: esito non inviato."; exit 0; fi
+          if [ "${{ job.status }}" = "success" ]; then STATO=attiva; ERR=""; else STATO=errore; ERR="Workflow ${{ job.status }}: vedi GitHub Actions run ${{ github.run_id }}"; fi
+          node -e '
+            const [url, secret, slug, stato, u, progetto, versione, errore] = process.argv.slice(1);
+            fetch(url, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ slug, stato, url: u || null, progetto, versione: versione || null, errore: errore || null }) })
+              .then((r) => { console.log("regia:", r.status); if (r.status >= 300) process.exit(1); })
+          ' "$CALLBACK_URL" "$CALLBACK_SECRET" "$SLUG" "$STATO" "${URL_ISTANZA:-}" "$PROGETTO" "${VERSIONE:-}" "$ERR"
+
+      - name: Pulizia credenziali
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json" "$GITHUB_WORKSPACE/.env"

@@ -41,5 +41,9 @@ input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--
 .errore { color: var(--errore); }
 .errore-riga td { background: rgba(231, 76, 60, 0.08); }
 .azioni-riga { white-space: nowrap; }
+.scelta-piani { display: grid; gap: 8px; margin: 8px 0; }
+.opzione { display: block; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 4px 0; color: var(--text); font-size: 1rem; cursor: pointer; }
+.opzione.scelta { border-color: var(--accent); }
+.opzione input { width: auto; margin-right: 8px; }
 code { background: rgba(255, 255, 255, 0.06); padding: 1px 5px; border-radius: 5px; }
 .piede { text-align: center; padding: 16px; border-top: 1px solid var(--line); }

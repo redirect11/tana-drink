@@ -9,7 +9,8 @@ import {
   onIdTokenChanged,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, onSnapshot, collection, getDocs, orderBy, query, updateDoc } from 'firebase/firestore'
-import { auth, db, configurata } from './firebase.js'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import { auth, db, configurata, app } from './firebase.js'
 import { nuovoCliente } from './clienti.js'
 import { nuovaRichiesta, STATI } from './istanze.js'
 
@@ -67,6 +68,17 @@ export function osservaRichiesta(slug, cb) {
 export async function chiediAttivazione(cliente) {
   serve()
   await setDoc(doc(db, 'richieste', cliente.slug), nuovaRichiesta(cliente))
+}
+
+// ── abbonamento (REQ-FLOTTA-007) ──
+// La Function crea la sessione di Checkout di Stripe e risponde con l'url:
+// il browser ci va, e al ritorno il webhook ha già aggiornato il cliente.
+export async function avviaPagamento(scelta) {
+  serve()
+  const fn = httpsCallable(getFunctions(app, 'europe-west1'), 'creaCheckout')
+  const { data } = await fn({ ...scelta, ritorno: window.location.origin })
+  if (!data?.url) throw new Error('Il pagamento non è disponibile al momento: scrivici all’email del prodotto.')
+  return data
 }
 
 // ── backoffice ──

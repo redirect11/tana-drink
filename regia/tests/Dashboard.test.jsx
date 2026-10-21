@@ -26,7 +26,7 @@ const db = vi.hoisted(() => ({
   }),
   chiediAttivazione: vi.fn(async () => {}),
 }))
-vi.mock('../src/lib/db.js', () => db)
+vi.mock('../src/lib/db.js', () => ({ ...db, avviaPagamento: vi.fn() }))
 
 import Dashboard from '../src/pages/Dashboard.jsx'
 
@@ -40,7 +40,7 @@ const mostra = () =>
 
 beforeEach(() => {
   vi.clearAllMocks()
-  stato.cliente = { uid: 'u1', slug: 'bar-mario', nome_locale: 'Bar Mario', piano: 'base', moduli: ['staff'], terminali: 2 }
+  stato.cliente = { uid: 'u1', slug: 'bar-mario', nome_locale: 'Bar Mario', piano: 'base', moduli: ['staff'], terminali: 2, abbonamento: { stato: 'attivo' } }
   stato.istanza = null
   stato.richiesta = null
 })
@@ -60,11 +60,12 @@ describe('la dashboard', () => {
     expect(db.chiediAttivazione).toHaveBeenCalledWith(stato.cliente)
   })
 
-  it('senza piano il tasto è spento e dice cosa manca', () => {
-    stato.cliente = { ...stato.cliente, piano: null }
+  it('senza piano il tasto è spento, dice cosa manca, e sotto c’è la scelta del piano', () => {
+    stato.cliente = { ...stato.cliente, piano: null, abbonamento: null }
     mostra()
     expect(screen.getByRole('button', { name: /Attiva l’istanza/ })).toBeDisabled()
     expect(screen.getByText(/Serve un piano/)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Scelta del piano' })).toBeInTheDocument()
   })
 
   it('attiva: l’indirizzo dell’app e la versione', () => {

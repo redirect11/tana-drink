@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { osservaCliente, osservaIstanza, osservaRichiesta, chiediAttivazione } from '../lib/db.js'
 import { statoIstanza, statoDetto, puoAttivare, urlDi, progettoDi, STATI } from '../lib/istanze.js'
 import { PIANI, MODULI, prezzoMensile, euro } from '../lib/piani.js'
+import SceltaPiano from './SceltaPiano.jsx'
 
 // LA DASHBOARD DEL TITOLARE (REQ-FLOTTA-004): il suo locale, il piano, lo
 // stato dell'istanza e, quando è attiva, l'indirizzo dell'app.
@@ -55,7 +56,10 @@ export default function Dashboard({ utente }) {
             {cliente.terminali > 1 && <span className="muted"> · {cliente.terminali} terminali</span>}
           </p>
         ) : (
-          <p className="muted">Nessun piano ancora: l’abbonamento si attiva con noi, ti contattiamo all’email dell’account.</p>
+          <p className="muted">Nessun piano ancora: scegline uno qui sotto.</p>
+        )}
+        {cliente.abbonamento?.stato && cliente.abbonamento.stato !== 'attivo' && (
+          <p className="errore small">Abbonamento {cliente.abbonamento.stato}.</p>
         )}
         <h3>Istanza</h3>
         <p>
@@ -80,6 +84,11 @@ export default function Dashboard({ utente }) {
         )}
         {errore && <p className="errore">{errore}</p>}
       </section>
+      {/* Senza un abbonamento attivo si sceglie (o si rinnova) il piano. */}
+      {cliente.abbonamento?.stato !== 'attivo' && <SceltaPiano cliente={cliente} />}
+      {new URLSearchParams(window.location.search).get('pagamento') === 'ok' && (
+        <p className="muted small">Pagamento ricevuto: l’abbonamento compare qui sopra appena Stripe ce lo conferma, di solito in pochi secondi.</p>
+      )}
     </main>
   )
 }

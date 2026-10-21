@@ -46,8 +46,15 @@ variable "regione" {
   default = "europe-west1"
 }
 
+variable "provisioning_sa_email" {
+  description = "Il service account che fa il deploy dal workflow: riceve i ruoli sul progetto nuovo."
+  type        = string
+  default     = ""
+}
+
 locals {
-  progetto = "drink-${var.slug}"
+  # Il prefisso è quello di regia/src/lib/prodotto.js (PREFISSO_PROGETTI).
+  progetto = "drinkpos-${var.slug}"
   api = [
     "firebase.googleapis.com",
     "firestore.googleapis.com",
@@ -155,6 +162,25 @@ resource "google_project_iam_member" "deploy" {
   project = google_project.istanza.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.deploy.email}"
+}
+
+# Il service account di provisioning amministra il progetto nuovo: è lui
+# che, dal workflow, pubblica regole, Functions e hosting e scrive la
+# licenza (scripts/licenza-istanza.mjs).
+resource "google_project_iam_member" "provisioning" {
+  provider = google-beta
+  for_each = var.provisioning_sa_email == "" ? toset([]) : toset([
+    "roles/firebase.admin",
+    "roles/cloudfunctions.admin",
+    "roles/run.admin",
+    "roles/iam.serviceAccountUser",
+    "roles/serviceusage.serviceUsageConsumer",
+    "roles/storage.admin",
+    "roles/datastore.user",
+  ])
+  project = google_project.istanza.project_id
+  role    = each.value
+  member  = "serviceAccount:${var.provisioning_sa_email}"
 }
 
 # Quello che il workflow mette nel .env della build (VITE_FIREBASE_*).
