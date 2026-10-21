@@ -393,6 +393,19 @@ describe('metodi di pagamento', () => {
 })
 
 describe('sconto: modale con tastierino', () => {
+  // REQ-UI-028 / BUG-116: la finestra chiede 520px FISICI (la regola
+  // `.confirm-box.larga` li divide per lo zoom), non una larghezza in px
+  // che sul tablet a zoom 0,7 diventava 360.
+  it('la finestra è quella larga, da 520px veri', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder())
+    await user.click(screen.getByRole('button', { name: /Sconto/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Sconto' })
+    expect(dialog).toHaveClass('larga')
+    expect(dialog.style.getPropertyValue('--larga')).toBe('520px')
+    expect(dialog.style.width).toBe('')
+  })
+
   it('percentuale: si digita sul tastierino della modale e si applica', async () => {
     const user = userEvent.setup()
     mount(baseOrder())

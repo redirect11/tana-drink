@@ -4292,10 +4292,17 @@ body.drawer-open .status-bell-float { display: none; }
   overflow-y: auto;
 }
 /* FINESTRA LARGA (REQ-UI-028): toglie il tetto dei 420px; la larghezza la
-   dice chi la apre. Per lo sconto (tasti più grandi) e la ricetta (righe
-   degli ingredienti che non vanno a capo). */
+   dice chi la apre con `--larga` (sconto 520px, ricetta e movimenti 720px).
+   MISURATA IN CENTIMETRI VERI, non in px CSS (BUG-116): sul tablet del
+   banco l'app gira a zoom 0,7 e «520px» ne rendevano 360 — la finestra
+   allargata il 10/10 Flavio la vedeva «ancora piccola». È lo stesso idioma
+   dei tasti del tastierino (`.paypad-key`) e delle altezze a tutto
+   schermo: diviso per lo zoom, resta largo quanto a zoom 1. Anche il tetto
+   sullo schermo si divide, perché i vw dentro `#root` si scalano come i
+   px. */
 .confirm-box.larga {
   max-width: none;
+  width: calc(min(var(--larga, 520px), 94vw) / var(--zoom, 1));
 }
 
 /* SPIEGAZIONE A SCOMPARSA in cima a una tabella (REQ-UI-029): chiusa, è

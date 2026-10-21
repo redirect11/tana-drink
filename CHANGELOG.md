@@ -1,5 +1,14 @@
 # Cosa è cambiato
 
+## 1.9.3-beta
+
+### Per chi sta al banco
+
+- **Sconto e «Modifica prodotto» larghe davvero anche col tablet a zoom
+  ridotto.** L'allargamento del 10/10 era in pixel e lo zoom dell'app lo
+  rimpiccioliva: sul tablet del banco le due finestre erano grandi come
+  prima. Ora la misura è fisica, come i tasti del tastierino.
+
 ## 1.9.2-beta
 
 ### Per chi amministra

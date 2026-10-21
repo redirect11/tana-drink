@@ -183,3 +183,16 @@ describe('la tastiera all’apertura', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Quantità Rum bianco'))
   })
 })
+
+// REQ-UI-028 / BUG-116: la scheda chiede 720px FISICI tramite `--larga`;
+// la larghezza in px CSS sul tablet a zoom 0,7 rendeva 500.
+describe('la finestra della ricetta', () => {
+  it('è quella larga, da 720px veri', async () => {
+    mount()
+    await screen.findByRole('button', { name: /Ingredienti/ })
+    const form = document.querySelector('form.confirm-box')
+    expect(form).toHaveClass('larga')
+    expect(form.style.getPropertyValue('--larga')).toBe('720px')
+    expect(form.style.width).toBe('')
+  })
+})

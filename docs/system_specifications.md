@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 19 ottobre 2026.
+> Generato il 21 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -2902,9 +2902,11 @@ LO SCONTO passa da 320 a 520 px (o quasi tutto lo schermo, se è più stretto): 
 
 LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720 px: nome, prezzo, nota e le righe degli ingredienti con quantità e unità non vanno più a capo.
 
+LE MISURE SONO FISICHE, divise per lo zoom dell'app (BUG-116, 21/10/2026): sul tablet del banco, a zoom 0,7, i 520 e i 720 px CSS rendevano quanto le finestre di prima.
+
 LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo per un prodotto libero nuovo, dove il nome va scritto comunque, e sulla quantità solo dell'ingrediente appena aggiunto — prima ogni riga di ingrediente lo chiedeva, e all'apertura vinceva l'ultima.
 
-**Dove**: `src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`
+**Dove**: `src/components/PaymentScreen.jsx (sconto), src/components/CustomDrinkForm.jsx` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-UI-029 — Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima
 

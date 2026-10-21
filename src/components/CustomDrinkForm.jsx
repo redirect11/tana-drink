@@ -139,7 +139,7 @@ export default function CustomDrinkForm({
           stavano in 420 px, e le righe andavano a capo. */}
       <form
         className="confirm-box larga"
-        style={{ width: 'min(720px, 96vw)', maxHeight: '85vh', overflowY: 'auto' }}
+        style={{ '--larga': '720px', maxHeight: '85vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >

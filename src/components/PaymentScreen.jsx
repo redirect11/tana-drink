@@ -1344,7 +1344,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             aria-label="Sconto"
             // Più larga (REQ-UI-028, Flavio 10/10/2026): a 320 px i tasti
             // del tastierino erano piccoli per un dito, col tablet in mano.
-            style={{ width: 'min(520px, 94vw)' }}
+            // La misura è fisica, divisa per lo zoom (BUG-116, index.css).
+            style={{ '--larga': '520px' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
