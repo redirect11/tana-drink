@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { logoutCustomer } from '../lib/customerAuth.js'
 import VersionBadge from './VersionBadge.jsx'
+import { useVenue } from '../lib/useVenue.js'
 
 // MENU LATERALE DEL CLIENTE.
 //
@@ -16,6 +17,7 @@ import VersionBadge from './VersionBadge.jsx'
 // voluto dire condizioni ovunque. Le classi CSS sono le stesse, così il
 // menu si apre e si comporta identico da tutte e due le parti.
 export default function ClientDrawer({ user, profile, accountsOn = false }) {
+  const venue = useVenue()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -54,7 +56,7 @@ export default function ClientDrawer({ user, profile, accountsOn = false }) {
       <nav className={`bar-sidebar${open ? ' open' : ''}`}>
         <div className="brand-mini">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          La Tana del Coniglio
+          {venue.venue_name}
         </div>
 
         <div className={`bar-nav-item${attivo('/menu')}`} onClick={() => vai('/menu')}>

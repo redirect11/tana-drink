@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { venueDi } from '../lib/venue.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -119,6 +120,8 @@ export default function MenuPage() {
   // gruppi aperti + gruppi-cliente recenti.
   const [openGroups, setOpenGroups] = useState([])
   const [recentGroups, setRecentGroups] = useState([])
+  // Il locale (REQ-VENUE-002): hero e benvenuto.
+  const venue = venueDi(settings)
   const groupsActive = !!staff && settings.groups_enabled
   useEffect(() => {
     if (!groupsActive) {
@@ -349,7 +352,7 @@ export default function MenuPage() {
           <img
             className="hero-img"
             src="/cocktail-hero.jpg"
-            alt="La Tana del Coniglio"
+            alt={venue.venue_name}
             onError={(e) => (e.target.style.display = 'none')}
           />
           <div className="hero-overlay">
@@ -358,7 +361,7 @@ export default function MenuPage() {
               src={`${import.meta.env.BASE_URL}logo.png`}
               alt=""
             />
-            <h1 className="hero-title">La Tana del Coniglio</h1>
+            <h1 className="hero-title">{venue.venue_name}</h1>
             <p className="hero-sub">
               {tableLabel
                 ? `Tavolo ${tableLabel}`
@@ -650,7 +653,7 @@ export default function MenuPage() {
               style={{ width: 56, height: 56, borderRadius: '50%', display: 'block', margin: '0 auto 8px' }}
             />
             <h3 style={{ margin: '0 0 4px', textAlign: 'center' }}>
-              Benvenuto alla Tana del Coniglio
+              Benvenuto da {venue.venue_name}
             </h3>
             <p className="muted" style={{ margin: '0 0 14px', textAlign: 'center', fontSize: '0.88rem' }}>
               Ecco come funziona l’ordinazione:

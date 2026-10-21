@@ -3,6 +3,7 @@ import CampoPassword from '../components/CampoPassword.jsx'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
+import { useVenue } from '../lib/useVenue.js'
 import {
   registerCustomer,
   loginCustomer,
@@ -146,6 +147,7 @@ export function AccediPage() {
 
 // ── /registrati ───────────────────────────────────────────────────────
 export function RegistratiPage() {
+  const venue = useVenue()
   const accountsOn = useAccountsEnabled()
   const navigate = useNavigate()
   const [form, setForm] = useState({ nome: '', cognome: '', birthDate: '', email: '', password: '' })
@@ -174,7 +176,7 @@ export function RegistratiPage() {
       <form className="card" onSubmit={submit}>
         <h2 style={{ marginTop: 0 }}>Crea il tuo account</h2>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.9rem' }}>
-          Il tuo conto alla Tana del Coniglio: ordini salvati e profilo personale.
+          Il tuo conto da {venue.venue_name}: ordini salvati e profilo personale.
         </p>
         <div className="grid-2">
           <div>

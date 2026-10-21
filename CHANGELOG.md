@@ -1,5 +1,24 @@
 # Cosa è cambiato
 
+## 1.10.0-beta
+
+### Per chi amministra
+
+- **Impostazioni → Il locale.** Nome, nome corto, slogan, «chi siamo»,
+  città, email, ragione sociale e intestazione dello scontrino, social:
+  l'identità del locale si scrive qui. Una casella vuota lascia il valore
+  predefinito, mostrato in grigio. Prima erano scritti nel codice.
+- **I social nel piede di pagina vengono dalle impostazioni**: con la lista
+  vuota il piede non li mostra.
+
+### Per chi sviluppa
+
+- L'app si compila per un locale (`CLIENTE=<slug>`, cartella
+  `clienti/<slug>/`); senza, è la Tana come sempre. Un test-guardia conta
+  le parole della Tana rimaste nel codice e lascia solo accorciare la lista.
+- La CI del ramo `feature/flotta` pubblica solo sul progetto della flotta,
+  mai sul test della Tana. Il disegno sta in `docs/flotta.md`.
+
 ## 1.9.3 — 21 ottobre 2026
 
 ### Per chi sta al banco
