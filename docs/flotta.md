@@ -6,6 +6,14 @@ cablato stanno in [piano-sbrandizzazione.md](piano-sbrandizzazione.md): qui
 c'è l'attuazione, decisa il 21/10/2026 («cominciamo a implementare la due,
 senza downtime sulla Tana»).
 
+**Dal 22/10/2026 il sito del prodotto ha il suo repository:
+[drink-regia](https://github.com/redirect11/drink-regia)** (prezzi,
+registrazione, dashboard, backoffice, abbonamento, Functions di
+attivazione), nato staccando la cartella `regia/` da qui con la sua storia.
+In questo repository restano l'app dei locali, il marchio come
+configurazione (`clienti/`), Terraform (`infra/`), gli script e il workflow
+di attivazione (`provisiona-istanza.yml`), che la regia lancia.
+
 ## Le tre cose che non si negoziano
 
 1. **La Tana non si accorge di niente.** Ogni commit di questo lavoro
@@ -17,15 +25,17 @@ senza downtime sulla Tana»).
 2. **I progetti della Tana non si toccano da questo ramo.** `tana-drink` e
    `tana-drink-test` ricevono solo quello che passa da `develop` e `main`.
    Il ramo `feature/flotta` pubblica, se pubblica, su `drinkpos-demo`.
-3. **Niente fork.** Un solo codice; il locale è configurazione
-   (`clienti/<slug>/`), la licenza è un documento, il marchio è un dato.
+3. **Niente fork dell'app.** Un solo codice per tutti i locali; il locale è
+   configurazione (`clienti/<slug>/`), la licenza è un documento, il
+   marchio è un dato. Il sito del prodotto è un'altra cosa, e ha il suo
+   repository.
 
 ## I progetti Firebase
 
 | Progetto | Cosa fa | Chi lo crea |
 |---|---|---|
 | `tana-drink`, `tana-drink-test` | la Tana, come oggi | esistono |
-| `drink-regia` | il sito del prodotto: prezzi, registrazione e accesso dei titolari, dashboard del cliente, backoffice; il database dei clienti e delle licenze; le Functions che lanciano l'attivazione | una tantum, a mano o con `infra/regia` |
+| `drink-regia` | il sito del prodotto (repository drink-regia): prezzi, registrazione e accesso dei titolari, dashboard del cliente, backoffice; il database dei clienti e delle licenze; le Functions che lanciano l'attivazione | creato il 22/10/2026 |
 | `drinkpos-demo` | la prima istanza, neutra: dove si prova `feature/flotta` e dove si fa vedere il prodotto | una tantum, come un cliente qualsiasi (`infra/istanza` con slug `demo`) |
 | `drinkpos-<slug>` | un'istanza per ogni locale cliente | Terraform, lanciato dalla regia |
 
@@ -43,7 +53,7 @@ Google dalla console prima del terzo cliente, non dopo.
 
 Lo **slug tecnico del prodotto è `drink`** (prefisso dei progetti, delle
 chiavi locali e della cache). Il **nome visibile** del prodotto sta in un
-posto solo, `regia/src/lib/prodotto.js`, e si cambia lì.
+posto solo, `src/lib/prodotto.js` del repository drink-regia, e si cambia lì.
 
 ## Come si prova senza spaccare niente
 
@@ -114,8 +124,7 @@ repository (nomi esatti in `infra/README.md`):
 npm run dev                      # l'app della Tana, come sempre
 CLIENTE=demo npm run dev         # l'app compilata per il locale neutro
 CLIENTE=demo npm run build       # la build per drinkpos-demo
-cd regia && npm install && npm run dev   # la regia in locale (senza Firebase: solo vetrina)
-cd regia && npm test             # i test della regia (quelli dell'app: npm test alla radice)
+# il sito del prodotto: repository drink-regia (npm install && npm run dev)
 ```
 
 I segreti e le variabili di GitHub che servono alla flotta stanno in

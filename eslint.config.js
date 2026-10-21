@@ -4,8 +4,8 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  // regia/ e infra/ hanno i loro strumenti (regia/eslint.config.js).
-  { ignores: ['dist', 'coverage', 'public/epos-2.27.0.js', 'ePOS_SDK_JavaScript_v*', 'regia/**', 'infra/**'] },
+  // infra/ è Terraform, non JavaScript.
+  { ignores: ['dist', 'coverage', 'public/epos-2.27.0.js', 'ePOS_SDK_JavaScript_v*', 'infra/**'] },
   // App React (browser).
   {
     files: ['src/**/*.{js,jsx}'],

@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 232 | fatto e coperto dai test |
+| ✅ | 227 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**276 voci** in tutto. **248** descrivono il sistema com'è oggi e
+**271 voci** in tutto. **243** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
 | [VENUE](#venue) | 5 | — |  |
-| [FLOTTA](#flotta) | 7 | — |  |
+| [FLOTTA](#flotta) | 2 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3240,37 +3240,9 @@ TUTTO IL RESTO (un ramo `feature/`, un tag su un commit che non sta in nessuno d
 
 **Dove**: `.github/workflows/firebase-hosting.yml (job «Dove va»), docs/flotta.md` · **Lo dimostrano**: `tests/unit/flottaCi.test.js`
 
-#### REQ-FLOTTA-002 — La regia: il sito del prodotto con i prezzi, in un progetto Firebase suo (drink-regia)
-
-«Ci serve un sito/front page con prices/registrazione/login/ backoffice/dashboard» (l'utente, 21/10/2026). La regia e' una seconda app nello stesso repository, cartella `regia/`, con il suo progetto Firebase (`drink-regia`): non condivide ne' database ne' hosting con le istanze, e non sa niente dei dati dei locali.
-
-LA PRIMA PAGINA: cosa fa il prodotto, i piani con i prezzi (`piani.js`: base, terminale in piu', moduli, completo, attivazione — logica pura, con i prezzi in un posto solo), il tasto per registrarsi. Il nome visibile del prodotto sta in `prodotto.js` e si cambia li'. Testi nel registro del mestiere, senza toni da venditore.
-
-**Dove**: `regia/ (app React + Vite a se', con package.json, firebase.json e test propri), regia/src/lib/piani.js, regia/src/lib/prodotto.js` · **Lo dimostrano**: `regia/tests/piani.test.js`, `regia/tests/Home.test.jsx`
-
-#### REQ-FLOTTA-003 — Registrazione e accesso del titolare: account con email verificata, dati del locale, di fatturazione e del referente
-
-«Per la registrazione servono molti piu' dati. Fai una roba piu' robusta e production grade» (l'utente, 22/10/2026).
-
-QUATTRO PASSI, ognuno controllato prima di andare avanti, con l'errore accanto alla casella: (1) account — email, password di almeno 10 caratteri con una cifra, ripetuta; (2) il locale — nome (con l'indirizzo che l'app avra', dallo slug), tipo, indirizzo con CAP, citta' e provincia, telefono, sito facoltativo; (3) fatturazione — ragione sociale, partita IVA con la cifra di controllo, codice fiscale facoltativo (controllato), PEC o codice destinatario SDI per la fattura elettronica, sede legale se diversa dal locale; (4) referente — nome, cognome, ruolo, telefono, e i consensi: termini di servizio e privacy obbligatori (con le due pagine), novita' facoltative. I consensi si salvano con l'istante. L'EMAIL VA CONFERMATA: alla registrazione parte il messaggio di verifica; la dashboard lo ricorda finche' non e' confermata, con «Invia di nuovo» e «Ho confermato»; senza email verificata non si attiva l'istanza (`puoAttivare`, e le regole Firestore lo ripetono sulla richiesta). «Password dimenticata» manda il messaggio di recupero senza dire se l'email esiste. Il documento clienti/{uid} e' a blocchi (schema 2): locale, fatturazione, referente, consensi; `nome_locale` e `slug` restano in cima perche' istanze, richieste e backoffice li leggono da li'. Le regole: un cliente scrive solo il suo documento, con i blocchi attesi, la sua email e una partita IVA di 11 cifre; piano e abbonamento non li tocca. Da rivedere con un consulente prima di vendere: i testi di termini e privacy (regia/src/pages/Legali.jsx) sono una struttura, non un parere legale.
-
-**Dove**: `regia/src/pages/Registrati.jsx, regia/src/pages/Accedi.jsx, regia/src/pages/Legali.jsx, regia/src/lib/clienti.js, regia/src/lib/validazione.js, regia/src/lib/db.js, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/clienti.test.js`, `regia/tests/validazione.test.js`, `regia/tests/Registrati.test.jsx`
-
-#### REQ-FLOTTA-004 — La dashboard del cliente: il suo locale, il piano, lo stato dell'istanza, l'indirizzo dell'app
-
-Dopo l'accesso il titolare vede: il nome e lo slug del locale, il piano scelto, lo stato dell'istanza (`da attivare`, `in coda`, `in corso`, `attiva`, `errore`, con la data dell'ultimo passaggio) e, quando e' attiva, l'indirizzo dell'app e il promemoria dell'accesso admin. Il tasto «Attiva» scrive la richiesta (REQ-FLOTTA-006); senza abbonamento valido (REQ-FLOTTA-007) il tasto spiega cosa manca.
-
-**Dove**: `regia/src/pages/Dashboard.jsx, regia/src/lib/istanze.js` · **Lo dimostrano**: `regia/tests/istanze.test.js`, `regia/tests/Dashboard.test.jsx`
-
-#### REQ-FLOTTA-005 — Il backoffice: l'elenco dei clienti e delle istanze, per chi ha il claim admin
-
-Una pagina protetta dal claim `admin` dell'Auth della regia: tutti i clienti con piano, stato dell'istanza, progetto, versione pubblicata e ultimo passaggio; le richieste in coda o in errore in cima. Da qui si rilancia un'attivazione fallita e si segna un abbonamento pagato a mano (finche' Stripe non c'e', REQ-FLOTTA-007). La regia vede aggregati e stati, mai i dati operativi dei locali.
-
-**Dove**: `regia/src/pages/Backoffice.jsx, regia/firestore.rules` · **Lo dimostrano**: `regia/tests/Backoffice.test.jsx`
-
 #### REQ-FLOTTA-006 — Attivazione automatica di un'istanza: richiesta nella regia → workflow GitHub → Terraform → deploy → licenza → esito
 
-«Come integriamo il discorso di terraform?» (l'utente, 21/10/2026).
+«Come integriamo il discorso di terraform?» (l'utente, 21/10/2026). DAL 22/10 IL SITO DEL PRODOTTO HA IL SUO REPOSITORY (drink-regia): li' stanno le Functions `avviaProvisioning`, `rilanciaProvisioning` ed `esitoProvisioning` coi loro test. Qui resta quello che compila e pubblica l'app: il workflow, Terraform, gli script.
 
 IL FLUSSO: il titolare tocca «Attiva» (REQ-FLOTTA-004) e nasce `richieste/{slug}` in coda; la Function `avviaProvisioning` (o `rilanciaProvisioning`, quando l'admin rilancia) lancia il workflow `provisiona-istanza.yml` con slug, nome, piano, moduli; il workflow fa `terraform apply` in infra/istanza (progetto `drinkpos-<slug>`, API, Firebase, Firestore europe-west1, Hosting, web app, Auth con email e password, ruoli al service account di provisioning), scrive il .env della build dagli output, crea `clienti/<slug>/` se manca (genera-cliente.mjs), compila con CLIENTE=<slug>, pubblica regole, indici, Functions e hosting, scrive `settings/licenza` e il nome del locale (licenza-istanza.mjs), e manda l'esito — sempre, anche in errore — alla Function `esitoProvisioning`, che aggiorna `istanze/{slug}` e la richiesta. La dashboard lo mostra.
 
@@ -3278,17 +3250,7 @@ SENZA ORGANIZZAZIONE GOOGLE CLOUD (account personale) un service account non cre
 
 STATO AL 22/10/2026: scritto e provato per parti (la logica delle Functions con i suoi test; i progetti drink-regia e drinkpos-demo creati e preparati con gli script), MAI un'attivazione intera: mancano Blaze, il service account di provisioning, il bucket dello stato, il token GitHub e i segreti (infra/README.md). La prima attivazione vera sara' `demo`, sul progetto gia' creato.
 
-**Dove**: `infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, regia/functions/index.js, regia/functions/lib/provisioning.js, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs` · **Lo dimostrano**: `regia/tests/provisioning.test.js`
-
-#### REQ-FLOTTA-007 — L'abbonamento: Stripe Checkout nella regia, webhook che aggiorna il cliente, licenza che segue il piano
-
-Il titolare sceglie piano, moduli in piu' e terminali nella dashboard (SceltaPiano: il prezzo del mese si aggiorna mentre sceglie), e «Vai al pagamento» chiama la Function `creaCheckout`, che apre una sessione di Checkout di Stripe in modalita' abbonamento mensile — una riga per il piano, una per ogni modulo in piu', una per i terminali oltre quelli inclusi — con uid e scelta nei metadati. Il webhook `stripeWebhook` verifica la firma e aggiorna `clienti/{uid}`: `checkout.session.completed` scrive piano, moduli, terminali e abbonamento attivo; `invoice.paid` conferma; `invoice.payment_failed` mette in sospeso; `customer.subscription.deleted` disdice. Da li' `puoAttivare` (REQ-FLOTTA-004) lascia attivare l'istanza, e la licenza (REQ-FLOTTA-006) accende i moduli del piano. I PREZZI STANNO IN UN POSTO SOLO, regia/piani.json, letto dal sito e dalle Functions: da confermare prima di pubblicare.
-
-IL POS NON DIPENDE DA STRIPE: un pagamento in ritardo cambia cosa dice la dashboard, non quello che l'istanza fa.
-
-STATO AL 22/10/2026: scritto, con la logica provata; le chiavi di Stripe (prima quelle di prova) vanno nei segreti delle Functions della regia (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) e l'indirizzo del webhook va registrato su Stripe. Finche' non ci sono, «Vai al pagamento» spiega che il pagamento online non e' attivo e l'admin segna il piano a mano dal backoffice (REQ-FLOTTA-005).
-
-**Dove**: `regia/piani.json, regia/src/lib/piani.js, regia/src/pages/SceltaPiano.jsx, regia/src/pages/Dashboard.jsx, regia/src/lib/db.js (avviaPagamento), regia/functions/index.js (creaCheckout, stripeWebhook), regia/functions/lib/abbonamento.js` · **Lo dimostrano**: `regia/tests/abbonamento.test.js`, `regia/tests/SceltaPiano.test.jsx`
+**Dove**: `infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs; le Functions che lanciano il workflow e ricevono l'esito stanno nel repository drink-regia` · **Lo dimostrano**: `tests/unit/provisionaIstanza.test.js`
 
 ## Lavori previsti
 

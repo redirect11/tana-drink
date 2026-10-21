@@ -1808,7 +1808,6 @@ requirements:
       - tests/component/SettingsTab.test.jsx
       - tests/component/StatsTab.test.jsx
 
-
   - id: REQ-CASSA-016
     title: "Chiudere un conto IMPAGATO: il tavolo si libera, i soldi restano da riscuotere"
     area: "src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx"
@@ -4984,8 +4983,10 @@ requirements:
       - tests/component/PaymentScreen.test.jsx
       - tests/component/SettingsTab.test.jsx
   # ══════════════════════════════════════════════════════════════════════
-  #  IL PRODOTTO: il marchio come configurazione, la regia, le istanze
-  #  (docs/flotta.md, docs/piano-sbrandizzazione.md)
+  #  IL PRODOTTO: il marchio come configurazione, la CI della flotta, le
+  #  istanze (docs/flotta.md). Il sito del prodotto — prezzi, registrazione,
+  #  dashboard, backoffice, abbonamento — ha il suo repository, drink-regia,
+  #  col suo registro.
   # ══════════════════════════════════════════════════════════════════════
 
   - id: REQ-VENUE-001
@@ -5123,105 +5124,15 @@ requirements:
     test_cases:
       - tests/unit/flottaCi.test.js
 
-  - id: REQ-FLOTTA-002
-    title: "La regia: il sito del prodotto con i prezzi, in un progetto Firebase suo (drink-regia)"
-    area: "regia/ (app React + Vite a se', con package.json, firebase.json e test propri), regia/src/lib/piani.js, regia/src/lib/prodotto.js"
-    description: >
-      «Ci serve un sito/front page con prices/registrazione/login/
-      backoffice/dashboard» (l'utente, 21/10/2026). La regia e' una
-      seconda app nello stesso repository, cartella `regia/`, con il suo
-      progetto Firebase (`drink-regia`): non condivide ne' database ne'
-      hosting con le istanze, e non sa niente dei dati dei locali.
-      LA PRIMA PAGINA: cosa fa il prodotto, i piani con i prezzi
-      (`piani.js`: base, terminale in piu', moduli, completo, attivazione
-      — logica pura, con i prezzi in un posto solo), il tasto per
-      registrarsi. Il nome visibile del prodotto sta in `prodotto.js` e si
-      cambia li'. Testi nel registro del mestiere, senza toni da venditore.
-    status: implemented
-    generate_issue: false
-    labels: [prodotto, flotta, regia]
-    test_cases:
-      - regia/tests/piani.test.js
-      - regia/tests/Home.test.jsx
-
-  - id: REQ-FLOTTA-003
-    title: "Registrazione e accesso del titolare: account con email verificata, dati del locale, di fatturazione e del referente"
-    area: "regia/src/pages/Registrati.jsx, regia/src/pages/Accedi.jsx, regia/src/pages/Legali.jsx, regia/src/lib/clienti.js, regia/src/lib/validazione.js, regia/src/lib/db.js, regia/firestore.rules"
-    description: >
-      «Per la registrazione servono molti piu' dati. Fai una roba piu'
-      robusta e production grade» (l'utente, 22/10/2026).
-      QUATTRO PASSI, ognuno controllato prima di andare avanti, con
-      l'errore accanto alla casella: (1) account — email, password di
-      almeno 10 caratteri con una cifra, ripetuta; (2) il locale — nome
-      (con l'indirizzo che l'app avra', dallo slug), tipo, indirizzo con
-      CAP, citta' e provincia, telefono, sito facoltativo; (3) fatturazione
-      — ragione sociale, partita IVA con la cifra di controllo, codice
-      fiscale facoltativo (controllato), PEC o codice destinatario SDI per
-      la fattura elettronica, sede legale se diversa dal locale; (4)
-      referente — nome, cognome, ruolo, telefono, e i consensi: termini di
-      servizio e privacy obbligatori (con le due pagine), novita'
-      facoltative. I consensi si salvano con l'istante.
-      L'EMAIL VA CONFERMATA: alla registrazione parte il messaggio di
-      verifica; la dashboard lo ricorda finche' non e' confermata, con
-      «Invia di nuovo» e «Ho confermato»; senza email verificata non si
-      attiva l'istanza (`puoAttivare`, e le regole Firestore lo ripetono
-      sulla richiesta). «Password dimenticata» manda il messaggio di
-      recupero senza dire se l'email esiste.
-      Il documento clienti/{uid} e' a blocchi (schema 2): locale,
-      fatturazione, referente, consensi; `nome_locale` e `slug` restano in
-      cima perche' istanze, richieste e backoffice li leggono da li'. Le
-      regole: un cliente scrive solo il suo documento, con i blocchi
-      attesi, la sua email e una partita IVA di 11 cifre; piano e
-      abbonamento non li tocca.
-      Da rivedere con un consulente prima di vendere: i testi di termini e
-      privacy (regia/src/pages/Legali.jsx) sono una struttura, non un
-      parere legale.
-    status: implemented
-    generate_issue: false
-    labels: [prodotto, flotta, regia]
-    test_cases:
-      - regia/tests/clienti.test.js
-      - regia/tests/validazione.test.js
-      - regia/tests/Registrati.test.jsx
-
-  - id: REQ-FLOTTA-004
-    title: "La dashboard del cliente: il suo locale, il piano, lo stato dell'istanza, l'indirizzo dell'app"
-    area: "regia/src/pages/Dashboard.jsx, regia/src/lib/istanze.js"
-    description: >
-      Dopo l'accesso il titolare vede: il nome e lo slug del locale, il
-      piano scelto, lo stato dell'istanza (`da attivare`, `in coda`, `in
-      corso`, `attiva`, `errore`, con la data dell'ultimo passaggio) e,
-      quando e' attiva, l'indirizzo dell'app e il promemoria dell'accesso
-      admin. Il tasto «Attiva» scrive la richiesta (REQ-FLOTTA-006); senza
-      abbonamento valido (REQ-FLOTTA-007) il tasto spiega cosa manca.
-    status: implemented
-    generate_issue: false
-    labels: [prodotto, flotta, regia]
-    test_cases:
-      - regia/tests/istanze.test.js
-      - regia/tests/Dashboard.test.jsx
-
-  - id: REQ-FLOTTA-005
-    title: "Il backoffice: l'elenco dei clienti e delle istanze, per chi ha il claim admin"
-    area: "regia/src/pages/Backoffice.jsx, regia/firestore.rules"
-    description: >
-      Una pagina protetta dal claim `admin` dell'Auth della regia: tutti i
-      clienti con piano, stato dell'istanza, progetto, versione pubblicata
-      e ultimo passaggio; le richieste in coda o in errore in cima. Da qui
-      si rilancia un'attivazione fallita e si segna un abbonamento pagato a
-      mano (finche' Stripe non c'e', REQ-FLOTTA-007). La regia vede
-      aggregati e stati, mai i dati operativi dei locali.
-    status: implemented
-    generate_issue: false
-    labels: [prodotto, flotta, regia]
-    test_cases:
-      - regia/tests/Backoffice.test.jsx
-
   - id: REQ-FLOTTA-006
     title: "Attivazione automatica di un'istanza: richiesta nella regia → workflow GitHub → Terraform → deploy → licenza → esito"
-    area: "infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, regia/functions/index.js, regia/functions/lib/provisioning.js, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs"
+    area: "infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs; le Functions che lanciano il workflow e ricevono l'esito stanno nel repository drink-regia"
     description: >
       «Come integriamo il discorso di terraform?» (l'utente, 21/10/2026).
+      DAL 22/10 IL SITO DEL PRODOTTO HA IL SUO REPOSITORY (drink-regia):
+      li' stanno le Functions `avviaProvisioning`, `rilanciaProvisioning`
+      ed `esitoProvisioning` coi loro test. Qui resta quello che compila e
+      pubblica l'app: il workflow, Terraform, gli script.
       IL FLUSSO: il titolare tocca «Attiva» (REQ-FLOTTA-004) e nasce
       `richieste/{slug}` in coda; la Function `avviaProvisioning` (o
       `rilanciaProvisioning`, quando l'admin rilancia) lancia il workflow
@@ -5248,41 +5159,7 @@ requirements:
     generate_issue: false
     labels: [prodotto, flotta, infra]
     test_cases:
-      - regia/tests/provisioning.test.js
-
-  - id: REQ-FLOTTA-007
-    title: "L'abbonamento: Stripe Checkout nella regia, webhook che aggiorna il cliente, licenza che segue il piano"
-    area: "regia/piani.json, regia/src/lib/piani.js, regia/src/pages/SceltaPiano.jsx, regia/src/pages/Dashboard.jsx, regia/src/lib/db.js (avviaPagamento), regia/functions/index.js (creaCheckout, stripeWebhook), regia/functions/lib/abbonamento.js"
-    description: >
-      Il titolare sceglie piano, moduli in piu' e terminali nella dashboard
-      (SceltaPiano: il prezzo del mese si aggiorna mentre sceglie), e «Vai
-      al pagamento» chiama la Function `creaCheckout`, che apre una
-      sessione di Checkout di Stripe in modalita' abbonamento mensile — una
-      riga per il piano, una per ogni modulo in piu', una per i terminali
-      oltre quelli inclusi — con uid e scelta nei metadati. Il webhook
-      `stripeWebhook` verifica la firma e aggiorna `clienti/{uid}`:
-      `checkout.session.completed` scrive piano, moduli, terminali e
-      abbonamento attivo; `invoice.paid` conferma; `invoice.payment_failed`
-      mette in sospeso; `customer.subscription.deleted` disdice. Da li'
-      `puoAttivare` (REQ-FLOTTA-004) lascia attivare l'istanza, e la
-      licenza (REQ-FLOTTA-006) accende i moduli del piano.
-      I PREZZI STANNO IN UN POSTO SOLO, regia/piani.json, letto dal sito e
-      dalle Functions: da confermare prima di pubblicare.
-      IL POS NON DIPENDE DA STRIPE: un pagamento in ritardo cambia cosa dice
-      la dashboard, non quello che l'istanza fa.
-      STATO AL 22/10/2026: scritto, con la logica provata; le chiavi di
-      Stripe (prima quelle di prova) vanno nei segreti delle Functions della
-      regia (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`) e l'indirizzo del
-      webhook va registrato su Stripe. Finche' non ci sono, «Vai al
-      pagamento» spiega che il pagamento online non e' attivo e l'admin
-      segna il piano a mano dal backoffice (REQ-FLOTTA-005).
-    status: implemented
-    generate_issue: false
-    labels: [prodotto, flotta, regia]
-    test_cases:
-      - regia/tests/abbonamento.test.js
-      - regia/tests/SceltaPiano.test.jsx
-
+      - tests/unit/provisionaIstanza.test.js
 
   # ══════════════════════════════════════════════════════════════════════
   #  INTERFACCIA: convenzioni che valgono ovunque

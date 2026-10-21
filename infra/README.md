@@ -4,7 +4,7 @@ Due radici (docs/flotta.md, REQ-FLOTTA-006):
 
 | Cartella | Cosa crea | Quando |
 |---|---|---|
-| `regia/` | il progetto `drink-regia` | una volta |
+| (il progetto `drink-regia` è stato creato a mano il 22/10; il sito sta nel repository drink-regia) | | |
 | `istanza/` | un progetto `drinkpos-<slug>` per un locale, completo di Firebase, Firestore, Hosting, web app e Auth | a ogni attivazione, dal workflow `provisiona-istanza.yml` |
 
 Lo stato di Terraform sta in un bucket GCS del progetto regia
