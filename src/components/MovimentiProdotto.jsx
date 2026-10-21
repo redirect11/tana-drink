@@ -51,7 +51,7 @@ export default function MovimentiProdotto({ item, onClose }) {
         className="confirm-box larga"
         role="dialog"
         aria-label={`Movimenti di ${item.name}`}
-        style={{ width: 'min(720px, 96vw)' }}
+        style={{ '--larga': '720px' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>

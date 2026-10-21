@@ -11797,6 +11797,9 @@ requirements:
       LA RICETTA (prodotto libero e modifica di una riga) passa da 420 a 720
       px: nome, prezzo, nota e le righe degli ingredienti con quantità e
       unità non vanno più a capo.
+      LE MISURE SONO FISICHE, divise per lo zoom dell'app (BUG-116,
+      21/10/2026): sul tablet del banco, a zoom 0,7, i 520 e i 720 px CSS
+      rendevano quanto le finestre di prima.
       LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome
       c'è già, e la tastiera copriva la ricetta. Il cursore va sul nome solo
       per un prodotto libero nuovo, dove il nome va scritto comunque, e
@@ -11807,6 +11810,8 @@ requirements:
     labels: [ui, pos]
     test_cases:
       - tests/component/CustomDrinkForm.test.jsx
+      - tests/component/PaymentScreen.test.jsx
+      - tests/unit/css.test.js
 
   - id: REQ-UI-029
     title: "Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima"
