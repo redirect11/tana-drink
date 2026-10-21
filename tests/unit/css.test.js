@@ -1483,6 +1483,28 @@ describe('le finestrelle di conferma stanno nello schermo', () => {
     expect(r, 'il velo non scorre piu’').toMatch(/overflow-y:\s*auto/)
   })
 
+  // BUG-116: sul tablet del banco l'app gira a zoom 0,7 e la finestra
+  // «larga» da 520px ne rendeva 360. La larghezza si divide per lo zoom,
+  // come i tasti del tastierino.
+  it('la finestra larga si misura in centimetri veri, divisa per lo zoom', () => {
+    const r = regola('.confirm-box.larga')
+    expect(r, 'la larghezza e’ tornata in px CSS, che lo zoom rimpicciolisce').toMatch(
+      /width:\s*calc\(\s*min\(var\(--larga,\s*520px\),\s*94vw\)\s*\/\s*var\(--zoom,\s*1\)\s*\)/
+    )
+  })
+
+  // Daniele, 21/10/2026: «Salva nuova» a destra degli altri tasti «quando
+  // la schermata è abbastanza larga», sotto da solo altrimenti.
+  it('«Salva nuova» sta sotto sullo stretto e a destra degli altri dal tablet in su', () => {
+    const testo = css().replace(/\/\*[\s\S]*?\*\//g, '')
+    const base = regola('.cd-azioni .cd-salva-nuova')
+    expect(base, 'sullo stretto il tasto non occupa piu’ la riga da solo').toMatch(/grid-column:\s*1 \/ -1/)
+    const largo = testo.slice(testo.indexOf('@media (min-width: 700px)'))
+    expect(largo, 'manca la variante larga').toMatch(
+      /\.cd-azioni:has\(\.cd-salva-nuova\)\s*\{\s*grid-template-columns:\s*1fr 1fr 1fr/
+    )
+  })
+
   it('la finestrella non e’ mai piu’ alta dello schermo, e dentro scorre lei', () => {
     const r = regola('.confirm-box')
     expect(r, 'la finestrella puo’ tornare piu’ alta dello schermo').toMatch(
