@@ -72,7 +72,7 @@ jobs:
   # TUTTO IL RESTO È «FLOTTA» (REQ-FLOTTA-001, docs/flotta.md): un ramo
   # `feature/`, un tag su un commit che non sta in nessuno dei rami sopra.
   # Va sul progetto scritto nella variabile di repository PROGETTO_FLOTTA
-  # (`drink-demo`), e se la variabile non c'è si FERMA: il test della Tana
+  # (`drinkpos-demo`), e se la variabile non c'è si FERMA: il test della Tana
   # non si raggiunge mai da un ramo che non è suo. È successo con la
   # 1.9.x che tre commit finissero sul ramo sbagliato; qui l'errore
   # equivalente — provare il prodotto nuovo sopra i dati di prova della
@@ -150,5 +150,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "::error::${GITHUB_REF_NAME} non è un ramo della Tana e la variabile di repository PROGETTO_FLOTTA non è impostata: niente deploy. Si imposta in Settings → Secrets and variables → Actions → Variables (es. drink-demo), con i segreti nell'environment «flotta»."
+          echo "::error::${GITHUB_REF_NAME} non è un ramo della Tana e la variabile di repository PROGETTO_FLOTTA non è impostata: niente deploy. Si imposta in Settings → Secrets and variables → Actions → Variables (es. drinkpos-demo), con i segreti nell'environment «flotta»."
           exit 1
