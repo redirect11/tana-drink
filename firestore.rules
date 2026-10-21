@@ -20,6 +20,13 @@ service cloud.firestore {
         && 'role' in request.auth.token
         && request.auth.token.role in ['admin', 'bartender'];
     }
+    // L'admin e basta: i numeri su cui si misura il lavoro di chi sta in
+    // sala (l'extra del minimo, REQ-STAFF-015) non sono roba da turno.
+    function isAdmin() {
+      return isSignedIn()
+        && 'role' in request.auth.token
+        && request.auth.token.role == 'admin';
+    }
     function isStaffMember() {
       return isSignedIn()
         && 'role' in request.auth.token
@@ -273,6 +280,30 @@ service cloud.firestore {
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
       allow read, write: if isBartender();
+    }
+
+    // VENDITE STORICHE — i conti di Tiller, prima dell'app (REQ-STAT-006).
+    // Le scrive solo lo script di import (con le credenziali di servizio):
+    // dall'app si leggono per statistiche e bilancio, e basta.
+    match /vendite_storiche/{giorno} {
+      allow read: if isBartender();
+      allow write: if false;
+    }
+    // L'EXTRA DEL MINIMO, giorno per giorno (REQ-STAFF-015): lo legge chi
+    // vede il Bilancio, lo scrive solo l'admin.
+    match /minimi_extra/{mese} {
+      allow read: if isBartender();
+      allow write: if isAdmin();
+    }
+    // I fogli mensili di ANALISI DATI (REQ-CASSA-011): stesso discorso.
+    match /mesi_storici/{mese} {
+      allow read: if isBartender();
+      allow write: if false;
+    }
+    // Il venduto di Tiller per prodotto di magazzino: stesso discorso.
+    match /vendite_storiche_prodotti/{itemId} {
+      allow read: if isBartender();
+      allow write: if false;
     }
 
     // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).

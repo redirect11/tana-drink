@@ -23,9 +23,13 @@ import '@testing-library/jest-dom/vitest'
 vi.mock('../../src/components/MacroMonthlyTab.jsx', () => ({
   default: () => <div>TABELLA VENDUTO × INCASSATO</div>,
 }))
-// Anche «Acquisti × Fatturato» ha la sua (AcquistiFatturato.test.jsx).
+// Anche «Acquisti × Fatturato» ha la sua (AcquistiFatturato.test.jsx), e
+// «Mesi» pure (BilancioMesi.test.jsx).
 vi.mock('../../src/components/AcquistiFatturato.jsx', () => ({
   default: () => <div>TABELLA ACQUISTI × FATTURATO</div>,
+}))
+vi.mock('../../src/components/MesiBilancio.jsx', () => ({
+  default: () => <div>TABELLA MESI</div>,
 }))
 
 import BilancioTab from '../../src/components/BilancioTab.jsx'
@@ -62,8 +66,8 @@ describe('la pagina Bilancio', () => {
     const stop = ascolta()
     render(<BilancioTab />)
 
-    // Mesi: il netto spiegato senza dire «netto».
-    expect(screen.getByText(/quello che resta dopo aver pagato/i)).toBeInTheDocument()
+    // Mesi (REQ-CASSA-011): la tabella del mese, con la sua spiegazione.
+    expect(screen.getByText('TABELLA MESI')).toBeInTheDocument()
 
     // Acquisti × Fatturato (REQ-MAG-022): la tabella c'è, con le sue
     // didascalie.
@@ -80,21 +84,10 @@ describe('la pagina Bilancio', () => {
   it('cambiando sottosezione cambia quello che si vede', async () => {
     const stop = ascolta()
     render(<BilancioTab />)
-    expect(screen.getByText(/📅 Mesi/)).toBeInTheDocument()
+    expect(screen.getByText('TABELLA MESI')).toBeInTheDocument()
     act(() => sotto.scegli('acquisti'))
     expect(await screen.findByText('TABELLA ACQUISTI × FATTURATO')).toBeInTheDocument()
-    expect(screen.queryByText(/📅 Mesi/)).toBeNull()
-    stop()
-  })
-})
-
-// Una pagina vuota si legge come rotta: finché le tabelle non ci sono, la
-// schermata dice cosa sta arrivando.
-describe('finché le tabelle non ci sono', () => {
-  it('la schermata dice cosa sta arrivando, non resta bianca', () => {
-    const stop = ascolta()
-    render(<BilancioTab />)
-    expect(screen.getByText(/sta arrivando/i)).toBeInTheDocument()
+    expect(screen.queryByText('TABELLA MESI')).toBeNull()
     stop()
   })
 })

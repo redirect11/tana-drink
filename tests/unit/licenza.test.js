@@ -18,6 +18,7 @@ import {
   moduloAttivo,
   moduloIncluso,
   voceVisibile,
+  moduloDiSezione,
 } from '../../src/lib/licenza.js'
 
 // Come sta questa installazione oggi, senza nessuna licenza scritta: lo
@@ -184,5 +185,17 @@ describe('filtrare un elenco di voci', () => {
     expect(voceVisibile({}, 'conta')).toBe(false)
     expect(voceVisibile({}, 'scadenzario')).toBe(true)
     expect(voceVisibile({ modulo_scadenzario_enabled: false }, 'scadenzario')).toBe(false)
+  })
+
+  // Lo storico inventari (REQ-MAG-052) si accende con l'inventario: la
+  // corrispondenza sta nel modulo (`sezioni`), non nella schermata.
+  it('una sezione elencata da un modulo segue quel modulo', () => {
+    expect(moduloDiSezione('storico')).toBe('conta')
+    expect(moduloDiSezione('conta')).toBe('conta')
+    expect(moduloDiSezione('prodotti')).toBe('prodotti')
+    expect(ePremium('storico')).toBe(true)
+    expect(voceVisibile({}, 'storico')).toBe(false)
+    expect(voceVisibile({ licenza: { moduli: { conta: true } } }, 'storico')).toBe(true)
+    expect(voceVisibile({ licenza: { moduli: { conta: true } }, modulo_conta_enabled: false }, 'storico')).toBe(false)
   })
 })

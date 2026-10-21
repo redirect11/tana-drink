@@ -63,6 +63,16 @@ export function consumoSettimanale(cons, giorni) {
   return Math.round((((Number(cons) || 0) / giorni) * 7 + Number.EPSILON) * 100) / 100
 }
 
+// «tre settimane e mezzo» invece di «24,5 giorni»: al banco si ragiona a
+// settimane, ed è la misura in cui si legge il consumo. Lo dicono
+// l'inventario in corso e lo storico (REQ-MAG-052), nello stesso modo.
+export function giorniScritti(giorni) {
+  const g = Math.round(giorni)
+  if (g < 14) return `${g} ${g === 1 ? 'giorno' : 'giorni'}`
+  const settimane = Math.round((giorni / 7) * 10) / 10
+  return `${String(settimane).replace('.', ',')} settimane`
+}
+
 // ── Ordini fornitore (GENERATORE ORDINI) ──────────────────────────────
 
 // Confezioni SUGGERITE per il riordino: se il prodotto è sotto soglia si

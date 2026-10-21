@@ -9,6 +9,7 @@
 // Logica pura (niente Firebase), interamente testabile.
 
 import { orderDue, scontoTotale } from './pagamento.js'
+import { impagatoAperto } from './comande.js'
 import { CASH_METHOD_ORDER } from './orderStatus.js'
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
@@ -36,6 +37,8 @@ export function cashRecap(orders, session, nowIso) {
   let nPagati = 0
   let apertoDaIncassare = 0
   let nAperti = 0
+  let impagatoDaRiscuotere = 0
+  let nImpagati = 0
   let sconti = 0 // sconti applicati ai conti chiusi nella finestra
   // CHI HA INCASSATO. In una serata al banco si alternano in due o tre alla
   // cassa: se il contante non torna, sapere chi ha battuto cosa è la prima
@@ -110,7 +113,15 @@ export function cashRecap(orders, session, nowIso) {
       sconti = round2(sconti + scontoTotale(o))
     }
 
-    if (o?.payment_status !== 'pagato') {
+    // CHIUSO IMPAGATO (REQ-CASSA-016): non è un conto aperto — il tavolo è
+    // libero e la cassa si chiude — ma i soldi mancano, e va detto quanto.
+    if (impagatoAperto(o)) {
+      const due = orderDue(o)
+      if (due > 0) {
+        impagatoDaRiscuotere = round2(impagatoDaRiscuotere + due)
+        nImpagati += 1
+      }
+    } else if (o?.payment_status !== 'pagato') {
       const due = orderDue(o)
       if (due > 0) {
         apertoDaIncassare = round2(apertoDaIncassare + due)
@@ -137,6 +148,8 @@ export function cashRecap(orders, session, nowIso) {
     nPagati,
     apertoDaIncassare,
     nAperti,
+    impagatoDaRiscuotere,
+    nImpagati,
     perOra: perOraArr,
     fondo: round2(session.fondo_cassa || 0),
     // Contante atteso in cassa a fine serata = fondo + incassato in contanti.

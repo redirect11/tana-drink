@@ -1,15 +1,6 @@
 import { useState } from 'react'
-import {
-  grigliaMese,
-  nomeMese,
-  tocca,
-  dentroIlPeriodo,
-  etichettaPeriodo,
-  periodiRapidi,
-  chiaveGiorno,
-} from '../lib/periodo.js'
-
-const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
+import { tocca, dentroIlPeriodo, etichettaPeriodo, periodiRapidi } from '../lib/periodo.js'
+import GrigliaMese from './GrigliaMese.jsx'
 
 // ── IL CALENDARIO DEL PERIODO ────────────────────────────────────────
 //
@@ -19,20 +10,11 @@ const GIORNI = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 //
 // Sopra ci sono le scorciatoie — oggi, ieri, ultimi 7 giorni — perché quasi
 // sempre si cerca lì e aprire un calendario per «oggi» è lavoro inutile.
-// I giorni futuri sono spenti: gli ordini di domani non esistono.
-export default function SelettorePeriodo({ periodo, onChange, oggi }) {
+// La griglia è quella di tutta l'app (GrigliaMese, REQ-STAT-007): i giorni
+// di servizio colorati, i futuri spenti — gli ordini di domani non esistono.
+export default function SelettorePeriodo({ periodo, onChange, oggi, servizio }) {
   const [aperto, setAperto] = useState(false)
   const inizio = periodo?.da || oggi
-  const [mese, setMese] = useState(() => {
-    const [y, m] = inizio.split('-')
-    return { anno: Number(y), mese: Number(m) - 1 }
-  })
-
-  const celle = grigliaMese(mese.anno, mese.mese)
-  const sposta = (n) => {
-    const d = new Date(Date.UTC(mese.anno, mese.mese + n, 1))
-    setMese({ anno: d.getUTCFullYear(), mese: d.getUTCMonth() })
-  }
   const scegli = (giorno) => {
     const next = tocca(periodo, giorno)
     onChange(next)
@@ -80,51 +62,18 @@ export default function SelettorePeriodo({ periodo, onChange, oggi }) {
             ))}
           </div>
 
-          <div className="periodo-testata">
-            <button type="button" className="btn ghost small" onClick={() => sposta(-1)} aria-label="Mese precedente">
-              ‹
-            </button>
-            <strong>{nomeMese(mese.anno, mese.mese)}</strong>
-            <button
-              type="button"
-              className="btn ghost small"
-              onClick={() => sposta(1)}
-              aria-label="Mese successivo"
-              disabled={chiaveGiorno(new Date(Date.UTC(mese.anno, mese.mese + 1, 1))) > oggi}
-            >
-              ›
-            </button>
-          </div>
-
-          <div className="periodo-griglia">
-            {GIORNI.map((g, i) => (
-              <span key={i} className="periodo-intestazione">
-                {g}
-              </span>
-            ))}
-            {celle.map((giorno, i) =>
-              giorno == null ? (
-                <span key={`v${i}`} />
-              ) : (
-                <button
-                  key={giorno}
-                  type="button"
-                  className={`periodo-giorno${
-                    dentroIlPeriodo(giorno, periodo) && periodo?.da ? ' dentro' : ''
-                  }${giorno === periodo?.da || giorno === periodo?.a ? ' estremo' : ''}${
-                    giorno === oggi ? ' oggi' : ''
-                  }`}
-                  disabled={giorno > oggi}
-                  onClick={() => scegli(giorno)}
-                >
-                  {Number(giorno.slice(8))}
-                </button>
-              )
-            )}
-          </div>
-          <p className="muted small periodo-aiuto">
-            Tocca un giorno per vedere quella serata; toccane un altro per arrivare fin lì.
-          </p>
+          <GrigliaMese
+            iniziale={inizio}
+            oggi={oggi}
+            servizio={servizio}
+            classeDi={(giorno) =>
+              `${dentroIlPeriodo(giorno, periodo) && periodo?.da ? ' dentro' : ''}${
+                giorno === periodo?.da || giorno === periodo?.a ? ' estremo' : ''
+              }`
+            }
+            onScegli={scegli}
+            aiuto="tocca un giorno, poi un altro per arrivare fin lì"
+          />
         </div>
       )}
     </div>

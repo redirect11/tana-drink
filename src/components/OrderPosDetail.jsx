@@ -274,7 +274,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const [editLine, setEditLine] = useState(null) // riga bozza in modifica (editor)
   // ── LA RICETTA RITOCCATA CHE DIVENTA UNA VOCE DEL MENÙ (REQ-MENU-016) ──
   // Quello che si ritocca su una riga vale per quel conto e muore lì. Da
-  // «Salva come nuova ricetta» si apre la scheda di un prodotto nuovo — la
+  // «Salva nuova» si apre la scheda di un prodotto nuovo — la
   // stessa del Menù — già compilata con le modifiche appena fatte.
   const [nuovaRicetta, setNuovaRicetta] = useState(null)
   // Il magazzino serve solo a questa scheda: si legge quando si apre, non
@@ -1415,7 +1415,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const canSplit =
     draft.some((l) => l.qty > 1) ||
     editableComande.some((c) => (c.items || []).some((i) => i.qty > 1))
-  // Da «Salva come nuova ricetta»: si chiude il ritocco della riga e si apre
+  // Da «Salva nuova»: si chiude il ritocco della riga e si apre
   // la scheda del prodotto nuovo con quello che c'era nel form. Il nome
   // arriva com'è: se il drink si chiamava «Negroni» e lo si è ritoccato, il
   // prodotto nuovo si chiamerà «Negroni» finché non gli si dà un nome suo —
@@ -3375,6 +3375,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         <PaymentScreen
           order={ordineDaPagare}
           settings={settings}
+          chi={chiSonoIo}
           onClose={() => {
             setPayOrder(null)
             setShowPayment(false)

@@ -289,6 +289,27 @@ Regole:
   dodici quadratini da 26px in due file, tre righe che coprivano le azioni
   vere («i colori del conto e della comanda andrebbero messi in una modale
   che si apre con un bottone», l'utente, 20/08/2026).
+- **Le finestre di dialogo sono larghe al più 420px** (`confirm-box`), e
+  bastano per una domanda e due tasti. Dove dentro c'è un **tastierino** o
+  un **elenco di righe** — lo sconto, la ricetta di una riga — si aggiunge
+  `larga`, che toglie il tetto, e la larghezza la dice la schermata
+  (`min(520px, 94vw)` lo sconto, `min(720px, 96vw)` la ricetta): a 320px i
+  tasti erano piccoli per un dito e gli ingredienti andavano a capo
+  (REQ-UI-028).
+- **Un calendario solo in tutta l'app** (`GrigliaMese`): lunedì per primo,
+  sei righe fisse, le frecce dei mesi, e un colore per giorno — il verde di
+  stato (`--ok`) dove c'è stato servizio, un grigio tenue dove no, i giorni
+  a venire spenti — con la legenda sotto. Lo usano la ricerca per data
+  delle serate e delle chiusure (`CalendarioServizio`: tasto «📅
+  Calendario» più la casella della data) e il periodo dello storico
+  (`SelettorePeriodo`, che sopra aggiunge le scorciatoie e colora l'intervallo
+  scelto). Le caselle data dei moduli — una spesa, una fattura — non sono
+  calendari di servizio e restano campi normali (REQ-STAT-007).
+- **La spiegazione di una tabella sta in cima, a scomparsa** (`Soffietto`,
+  un `<details>` chiuso di partenza): «ℹ️ Cosa misura questa tabella», con
+  la domanda a cui risponde, la differenza con le tabelle vicine e il
+  significato delle righe. Chi la sa leggere non scorre un paragrafo ogni
+  volta; chi no la trova dove se lo chiede (REQ-UI-029).
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo

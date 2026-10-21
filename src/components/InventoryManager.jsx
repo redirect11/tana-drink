@@ -80,6 +80,8 @@ import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import StockCountPanel from './StockCountPanel.jsx'
+import StoricoInventari from './StoricoInventari.jsx'
+import MovimentiProdotto from './MovimentiProdotto.jsx'
 import ControlloMagazzino from './ControlloMagazzino.jsx'
 import { controlloMagazzinoVisibile } from '../lib/prova.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -189,6 +191,9 @@ const INV_VIEWS = [
   // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
   // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
   ['conta', '📋', 'Inventario'],
+  // Gli inventari chiusi (REQ-MAG-052): si accende con l'inventario
+  // (lib/licenza.js, `sezioni`).
+  ['storico', '🗄️', 'Storico inventari'],
   ['categorie', '🏷️', 'Categorie'],
   ['macro', '🗂️', 'Macro-categorie'],
   ['movimenti', '📜', 'Movimenti'],
@@ -205,8 +210,8 @@ const INV_VIEWS = [
 export default function InventoryManager() {
   const [sezione, setSezione] = useState('prodotti')
   usePaginaPiena()
-  // DUE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): Conta e Scadenzario
-  // compaiono solo dove il modulo è acceso. Le impostazioni si prendono
+  // ALCUNE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): l'inventario e il
+  // suo storico compaiono solo dove il modulo è acceso. Le impostazioni si prendono
   // dalla cache (`settingsIniziali`) e si aggiornano da sole: nessuna
   // lettura in più e nessuna attesa, se no la barra delle sezioni si
   // disegnerebbe due volte e le voci ballerebbero sotto il dito.
@@ -234,6 +239,7 @@ export default function InventoryManager() {
     <div className="pagina-inventario">
       {view === 'prodotti' && <ProductsPanel />}
       {view === 'conta' && <StockCountPanel />}
+      {view === 'storico' && <StoricoInventari />}
       {view === 'categorie' && <CategoriePanel />}
       {view === 'macro' && <MacroPanel />}
       {view === 'movimenti' && <MovimentiPanel />}
@@ -421,6 +427,10 @@ function ProductsPanel() {
   const [expandedId, setExpandedId] = useState(null)
   const [caricoFor, setCaricoFor] = useState(null)
   const [rettificaFor, setRettificaFor] = useState(null)
+  // Il prodotto di cui si guarda la movimentazione (REQ-MAG-048): una
+  // finestra per la pagina, che il tasto indietro chiude come la scheda.
+  const [movimentiDi, setMovimentiDi] = useState(null)
+  useChiudiConIndietro(!!movimentiDi, () => setMovimentiDi(null))
 
   // QUELLO CHE TI RITROVI A FINE SERATA. I conti ancora aperti hanno già
   // promesso degli ingredienti: si guardano gli ordini e il listino e si
@@ -702,6 +712,11 @@ function ProductsPanel() {
               elimina. DUPLICA sta in mezzo perché è la via di mezzo — un
               prodotto quasi uguale a questo — e a fianco dell'elimina si
               ragiona due volte prima di premere. */}
+          {/* LA MOVIMENTAZIONE DEL PRODOTTO (REQ-MAG-048): si guarda, non si
+              tocca niente — anche col magazzino bloccato. */}
+          <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
+            📜 Movimenti
+          </button>
           <div className="inv-azioni" style={{ marginTop: 6 }}>
             <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
             <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
@@ -946,6 +961,7 @@ function ProductsPanel() {
             }}
           />
         )}
+        {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
         <ItemForm
           initial={editing === 'new' ? null : editing}
           categories={categories}

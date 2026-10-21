@@ -14,7 +14,7 @@
 // La serata è la finestra di una chiusura di cassa: scavalca la mezzanotte e
 // quindi non coincide con la giornata solare.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor, act, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
@@ -80,8 +80,14 @@ const sessioni = [
   },
 ]
 
+// LO STORICO DI TILLER (REQ-STAT-006): vuoto, tranne dove una prova lo
+// riempie. Sta fuori dal mock perché lo si cambia prova per prova.
+const tiller = vi.hoisted(() => ({ serate: [], giornate: [] }))
+
 vi.mock('../../src/lib/api.js', () => ({
   fetchOrdersBetween: vi.fn(async () => ordini),
+  fetchVenditeStoriche: vi.fn(async () => tiller.giornate),
+  fetchSerateStoriche: vi.fn(async () => tiller.serate),
   fetchDrinks: vi.fn(async () => [
     { id: 'd1', name: 'Negroni', category: 'COCKTAIL' },
     { id: 'd2', name: 'Amaro della casa', category: 'AMARI' },
@@ -170,7 +176,8 @@ describe('Statistiche per serata: la lista delle chiusure', () => {
   it('si apre sull’elenco, la serata più recente in cima', async () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
-    const righe = screen.getAllByRole('button')
+    // Le righe dell'elenco, non i comandi sopra (il calendario, REQ-STAT-007).
+    const righe = within(document.querySelector('.inv-list')).getAllByRole('button')
     expect(righe[0].textContent).toMatch(/08\/08/)
     expect(righe[1].textContent).toMatch(/07\/08/)
     // Niente statistiche finché non si sceglie: la lista è la schermata.
@@ -419,8 +426,179 @@ describe('Statistiche: la cassa ancora aperta', () => {
     ])
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
-    const righe = screen.getAllByRole('button')
+    const righe = within(document.querySelector('.inv-list')).getAllByRole('button')
     expect(righe[0].textContent).toMatch(/in corso/)
     expect(righe[0].textContent).toMatch(/09\/08/)
+  })
+})
+
+// LE SERATE DI TILLER (REQ-STAT-006). L'utente, 10/10/2026: i dati di
+// Tiller «devono essere visibili anche tramite le schermate attuali». Ogni
+// giornata di Tiller è una serata dell'elenco, dopo le chiusure dell'app.
+describe('Statistiche per serata: le giornate di Tiller', () => {
+  beforeEach(() => {
+    tiller.serate = [
+      { giorno: '2024-06-01', aperto: '2024-06-01T19:00:00.000Z', chiuso: '2024-06-01T23:20:00.000Z', incassato: 18, conti: 2 },
+    ]
+    tiller.giornate = [
+      {
+        giorno: '2024-06-01',
+        conti: [
+          {
+            id: 'T1',
+            aperto: '2024-06-01T19:00:00.000Z',
+            chiuso: '2024-06-01T19:30:00.000Z',
+            righe: [{ nome: 'CERES', qty: 3, prezzo: 4, sconto: 0, incasso: 12 }],
+          },
+          {
+            id: 'T2',
+            aperto: '2024-06-01T22:00:00.000Z',
+            chiuso: '2024-06-01T23:20:00.000Z',
+            righe: [{ nome: 'NEGRONI', qty: 1, prezzo: 6, sconto: 0, incasso: 6 }],
+          },
+        ],
+      },
+    ]
+  })
+  afterEach(() => {
+    tiller.serate = []
+    tiller.giornate = []
+  })
+
+  it('stanno nell’elenco, segnate «Tiller», coi numeri della giornata', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    const riga = (await screen.findByText('Tiller')).closest('button')
+    expect(riga.textContent.replace(/\s+/g, ' ')).toMatch(/2 conti/)
+    expect(riga.textContent).toMatch(/18,00/)
+  })
+
+  it('aperta, mostra le statistiche dei suoi conti', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click((await screen.findByText('Tiller')).closest('button'))
+    expect(await screen.findByText(paragrafo(/battuta su Tiller/i))).toBeTruthy()
+    expect((await screen.findAllByText(/18,00/)).length).toBeGreaterThan(0)
+  })
+})
+
+// LA RICERCA PER DATA NELLE SERATE (REQ-STAT-007). L'utente, 11/10/2026: un
+// calendario compatto che scorre i mesi e colora i giorni col servizio e
+// senza, più una casella per scrivere la data a mano.
+describe('Statistiche per serata: la ricerca per data', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('scrivendo la data di una serata, si apre quella serata', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-08-08' } })
+    expect(await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))).toBeTruthy()
+  })
+
+  it('un giorno senza servizio lo dice', async () => {
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-08-01' } })
+    expect(screen.getByRole('status')).toHaveTextContent(/Nessun servizio/)
+  })
+
+  it('il calendario scorre i mesi e colora i giorni col servizio e senza', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click(screen.getByRole('button', { name: /Calendario/ }))
+    for (let i = 0; i < 36 && !screen.queryByText('agosto 2026'); i++) {
+      await user.click(screen.getByRole('button', { name: 'Mese precedente' }))
+    }
+    expect(screen.getByRole('button', { name: '2026-08-08, servizio' })).toHaveClass('servizio')
+    expect(screen.getByRole('button', { name: '2026-08-01, nessun servizio' })).toHaveClass('senza')
+    // Toccare un giorno col servizio apre la sua serata.
+    await user.click(screen.getByRole('button', { name: '2026-08-07, servizio' }))
+    expect(await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))).toBeTruthy()
+  })
+})
+
+// L'utente, 11/10/2026: «incasso per giornata nelle statistiche per serata
+// è inutile» — una serata è una giornata sola, e quei grafici ripetono
+// l'incasso. Nel periodo restano.
+describe('i grafici per giornata', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('non ci sono nella serata', async () => {
+    const user = userEvent.setup()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await user.click(rigaSerata(/08\/08/))
+    await screen.findByText(paragrafo(/dall’apertura alla chiusura della cassa/i))
+    expect(screen.queryByText(/Incasso per giornata/)).toBeNull()
+    expect(screen.queryByText('Incasso / giornata')).toBeNull()
+    expect(screen.getByText(/Incasso per fascia oraria/)).toBeInTheDocument()
+  })
+
+  it('e ci sono nel periodo', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    expect(await screen.findByText(/📈 Incasso per giornata/)).toBeInTheDocument()
+    m.stop()
+  })
+})
+
+// «Inizio» e «Fine» di «Personalizzato» aprono il calendario dell'app, non
+// quello del browser («qua vedo ancora il calendario vecchio», l'utente,
+// 11/10/2026). Toccato un giorno, l'ora scritta resta.
+describe('Personalizzato: il calendario dell’app su inizio e fine', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('toccato un giorno nella griglia, cambia la data e resta l’ora', async () => {
+    const user = userEvent.setup()
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    fireEvent.click(await screen.findByRole('button', { name: 'Personalizzato' }))
+    const inizio = screen.getByLabelText('Inizio')
+    expect(inizio.value).toMatch(/T05:00$/)
+    await user.click(screen.getByRole('button', { name: 'Calendario per inizio' }))
+    const giorno = inizio.value.slice(0, 10)
+    const primo = `${giorno.slice(0, 7)}-01`
+    const dentroIlMese = screen.queryByRole('button', { name: new RegExp(`^${primo}`) })
+    if (dentroIlMese) await user.click(dentroIlMese)
+    expect(screen.getByLabelText('Inizio').value).toMatch(/T05:00$/)
+    if (dentroIlMese) expect(screen.getByLabelText('Inizio').value.slice(0, 10)).toBe(primo)
+    m.stop()
+  })
+})
+
+// «VENDUTO NELLA FASCIA ORARIA» A CATEGORIE APRIBILI. Flavio, 13/10/2026:
+// «mi porta prima le categorie e poi i singoli prodotti, però tutti
+// mischiati … tu metti solo le categorie, poi ci metti la freccina che se
+// voglio si spacchetta e vedo tutti i prodotti del menu all'interno della
+// categoria».
+describe('Venduto nella fascia oraria: le categorie si aprono sui loro prodotti', () => {
+  it('chiuse di partenza, con dentro i prodotti della categoria e basta', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    // La finestra dei dati di prova, come negli altri test del periodo.
+    await personalizzato('2026-08-07T05:00', '2026-08-09T05:00')
+    const titolo = await screen.findByText(/Venduto nella fascia oraria/)
+    const scheda = titolo.closest('.card')
+    const categorie = [...scheda.querySelectorAll('details.fascia-categoria')]
+    // In ordine d'incasso: i Negroni valgono più degli amari.
+    expect(categorie.map((d) => d.querySelector('summary').textContent)).toEqual([
+      expect.stringMatching(/^COCKTAIL/),
+      expect.stringMatching(/^AMARI/),
+    ])
+    expect(categorie.every((d) => !d.open)).toBe(true)
+    // Dentro gli amari c'è solo l'amaro; niente elenco unico «Prodotti venduti».
+    expect(categorie[1].textContent).toMatch(/Amaro della casa/)
+    expect(categorie[1].textContent).not.toMatch(/Negroni/)
+    expect(categorie[0].textContent).toMatch(/Negroni/)
+    expect(within(scheda).queryByText(/Prodotti venduti/)).toBeNull()
+    m.stop()
   })
 })
