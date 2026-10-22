@@ -6,6 +6,13 @@
 //  Senza gcloud e senza console (docs/flotta.md): usa il token del
 //  Firebase CLI e l'API di amministrazione di Identity Platform. Serve
 //  l'API identitytoolkit abilitata (scripts/abilita-api.mjs).
+//
+//  Un progetto nuovo risponde CONFIGURATION_NOT_FOUND finché Auth non è
+//  inizializzata: è il clic «Inizia» della console, che qui si fa con
+//  `identityPlatform:initializeAuth` (l'utente, 22/10/2026: «questo deve
+//  essere già pronto dopo il deploy»). Per le istanze lo fa Terraform
+//  (google_identity_platform_config); questo script serve alla regia e a
+//  qualunque progetto creato a mano.
 // =====================================================================
 import { accessToken, arg } from './lib-firestore.js'
 
@@ -15,17 +22,31 @@ if (!PROGETTO) {
   process.exit(1)
 }
 const token = await accessToken()
-const res = await fetch(
-  `https://identitytoolkit.googleapis.com/admin/v2/projects/${PROGETTO}/config?updateMask=signIn.email`,
-  {
+const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+const BASE = 'https://identitytoolkit.googleapis.com'
+
+async function accendi() {
+  const res = await fetch(`${BASE}/admin/v2/projects/${PROGETTO}/config?updateMask=signIn.email`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: h,
     body: JSON.stringify({ signIn: { email: { enabled: true, passwordRequired: true } } }),
+  })
+  return res.json().catch(() => ({}))
+}
+
+let json = await accendi()
+if (json.error?.message?.includes('CONFIGURATION_NOT_FOUND')) {
+  const init = await fetch(`${BASE}/v2/projects/${PROGETTO}/identityPlatform:initializeAuth`, { method: 'POST', headers: h, body: '{}' })
+  const esito = await init.json().catch(() => ({}))
+  if (esito.error) {
+    console.error(`✖ inizializzazione di Auth: ${esito.error.status || init.status}: ${esito.error.message}`)
+    process.exit(1)
   }
-)
-const json = await res.json().catch(() => ({}))
+  console.log(`[auth] ${PROGETTO}: Auth inizializzata`)
+  json = await accendi()
+}
 if (json.error) {
-  console.error(`✖ ${json.error.status || res.status}: ${json.error.message}`)
+  console.error(`✖ ${json.error.status || ''}: ${json.error.message}`)
   process.exit(1)
 }
 console.log(`[auth] ✓ ${PROGETTO}: accesso con email e password acceso`)
