@@ -15,6 +15,10 @@ dominio, coi suoi dati.
 
 ## 2. I pezzi
 
+I repository sono due, fissi: uno per l'app e uno per il sito. Quello che
+nasce per ogni locale nuovo non è un repository ma un **progetto
+Firebase**, cioè il suo spazio su Google con database, hosting e accessi.
+
 | Pezzo | Dove sta | Progetto Firebase | A cosa serve |
 |---|---|---|---|
 | **L'app** (cassa, comande, magazzino, statistiche) | repository `tana-drink` | uno per locale: `tana-drink` per la Tana, `drinkpos-<locale>` per gli altri | è quello che il locale usa ogni sera |
