@@ -2049,6 +2049,14 @@ requirements:
       del giorno dopo l'ultimo»), quindi gli stessi numeri. Con la fine
       prima dell'inizio lo si dice invece di mostrare numeri. Le pastiglie
       restano a giornate commerciali intere.
+      IL CALCOLO PARTE CON «APPLICA» (Flavio, vocale del 22/10/2026: «se io
+      metto la data di inizio lui mi inizia a caricare la data di inizio
+      fino ad oggi … con un tasto ok che mi avvia poi da li' il calcolo del
+      periodo sarebbe meglio, cosi' ragiona una sola volta quando lo dico
+      io»). Le due ore si scrivono in una bozza: finche' non si tocca
+      «Applica» le statistiche restano quelle del periodo guardato e la
+      didascalia dice di applicare; con la fine prima dell'inizio il tasto
+      e' spento. Le pastiglie dei giorni si applicano da sole, come prima.
     status: implemented
     generate_issue: false
     labels: [statistiche]

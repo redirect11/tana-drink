@@ -223,13 +223,20 @@ describe('Statistiche per serata: la lista delle chiusure', () => {
 })
 
 // Il periodo personalizzato si sceglie da «Personalizzato», con data e ora
-// (REQ-STAT-003): prima le date stavano sempre sotto le pastiglie.
+// (REQ-STAT-003): prima le date stavano sempre sotto le pastiglie. Le due
+// ore si scrivono e poi si tocca «Applica» (Flavio, 22/10/2026).
 async function personalizzato(dalle, alle) {
   fireEvent.click(await screen.findByRole('button', { name: 'Personalizzato' }))
   await act(async () => {
     fireEvent.change(screen.getByLabelText('Inizio'), { target: { value: dalle } })
     fireEvent.change(screen.getByLabelText('Fine'), { target: { value: alle } })
   })
+  const applica = screen.getByRole('button', { name: 'Applica' })
+  if (!applica.disabled) {
+    await act(async () => {
+      fireEvent.click(applica)
+    })
+  }
 }
 
 describe('Statistiche per periodo', () => {
@@ -359,6 +366,37 @@ describe('Statistiche per periodo', () => {
     await m.vai('periodo')
     await personalizzato('2026-08-09T05:00', '2026-08-08T05:00')
     expect(await screen.findByText(/L’ora di fine deve venire dopo quella di inizio/)).toBeTruthy()
+    // E un periodo così non si può nemmeno applicare.
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
+    m.stop()
+  })
+
+  // IL CALCOLO PARTE SOLO CON «APPLICA». Flavio, vocale del 22/10/2026: «se
+  // io metto la data di inizio lui mi inizia a caricare la data di inizio
+  // fino ad oggi … con un tasto ok che mi avvia poi da lì il calcolo del
+  // periodo sarebbe meglio, così ragiona una sola volta quando lo dico io».
+  it('scrivere le ore non ricalcola niente: si ricalcola quando si tocca «Applica»', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    fireEvent.click(await screen.findByRole('button', { name: '7 giorni' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Personalizzato' }))
+    const prima = screen.getByText(paragrafo(/^Dalle .* alle .*: \d+ giornat/)).textContent
+    // Senza niente di scritto non c'è niente da applicare.
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Inizio'), { target: { value: '2026-08-01T05:00' } })
+    })
+    // La didascalia del periodo guardato non è cambiata: dice di applicare.
+    expect(screen.getByText(/Tocca «Applica» per calcolare il periodo scritto/)).toBeTruthy()
+    expect(screen.queryByText(prima)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Applica' })).not.toBeDisabled()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Applica' }))
+    })
+    expect(await screen.findByText(paragrafo(/^Dalle 05:00 di sabato 01\/08\/2026 alle/))).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Applica' })).toBeDisabled()
     m.stop()
   })
 
