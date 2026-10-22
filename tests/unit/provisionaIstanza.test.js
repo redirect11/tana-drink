@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const w = () => readFileSync(join(process.cwd(), '.github/workflows/provisiona-istanza.yml'), 'utf8')
+const a = () => readFileSync(join(process.cwd(), '.github/workflows/aggiorna-istanza.yml'), 'utf8')
 
 describe('provisiona-istanza.yml', () => {
   it('prende gli input che la regia manda (dispatchPayload): slug, nome_locale, piano, moduli, uid', () => {
@@ -48,5 +49,23 @@ describe('provisiona-istanza.yml', () => {
     expect(t).toMatch(/PROGETTO: drinkpos-\$\{\{ inputs\.slug \}\}/)
     expect(t).toMatch(/CLIENTE: \$\{\{ inputs\.slug \}\}/)
     expect(t).not.toMatch(/tana-drink/)
+  })
+})
+
+// REQ-FLOTTA-009: l'app di base è tana-drink; un aggiornamento si porta su
+// un locale con aggiorna-istanza.yml, che non rifà l'infrastruttura.
+describe('aggiorna-istanza.yml', () => {
+  it('prende slug e ref (di norma main), compila per quel cliente e riferisce la versione', () => {
+    const t = a()
+    const inputs = t.slice(t.indexOf('inputs:'), t.indexOf('permissions:'))
+    expect(inputs).toContain('slug:')
+    expect(inputs).toMatch(/ref:[\s\S]*default: main/)
+    expect(t).toMatch(/ref: \$\{\{ inputs\.ref \}\}/)
+    expect(t).toMatch(/CLIENTE: \$\{\{ inputs\.slug \}\}/)
+    expect(t).not.toMatch(/terraform/)
+    expect(t).toMatch(/VERSIONE=v\$\(node -p "require\('\.\/package\.json'\)\.version"\)/)
+    const esito = t.slice(t.indexOf('- name: Esito alla regia'))
+    expect(esito).toMatch(/if: always\(\)/)
+    expect(esito).toMatch(/versione/)
   })
 })

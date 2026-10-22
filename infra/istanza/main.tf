@@ -46,6 +46,12 @@ variable "regione" {
   default = "europe-west1"
 }
 
+variable "regia_sa_email" {
+  description = "Il service account di runtime delle Functions della regia: scrive la licenza (sospensione, chiusura) nell'istanza."
+  type        = string
+  default     = "600871952552-compute@developer.gserviceaccount.com"
+}
+
 variable "provisioning_sa_email" {
   description = "Il service account che fa il deploy dal workflow: riceve i ruoli sul progetto nuovo."
   type        = string
@@ -181,6 +187,16 @@ resource "google_project_iam_member" "provisioning" {
   project = google_project.istanza.project_id
   role    = each.value
   member  = "serviceAccount:${var.provisioning_sa_email}"
+}
+
+# La regia sospende e riattiva l'istanza scrivendo settings/bar.licenza
+# (REQ-FLOTTA-008): le serve di leggere e scrivere Firestore qui.
+resource "google_project_iam_member" "regia" {
+  provider = google-beta
+  count    = var.regia_sa_email == "" ? 0 : 1
+  project  = google_project.istanza.project_id
+  role     = "roles/datastore.user"
+  member   = "serviceAccount:${var.regia_sa_email}"
 }
 
 # Quello che il workflow mette nel .env della build (VITE_FIREBASE_*).

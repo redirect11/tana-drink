@@ -37,6 +37,8 @@ import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
+import { installazioneBloccata } from './lib/licenza.js'
+import InstallazioneSospesa from './components/InstallazioneSospesa.jsx'
 import { socialDelLocale } from './lib/social.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
@@ -282,6 +284,8 @@ export default function App() {
   // disegno.
   const venue = useMemo(() => venueDi(settings), [settings])
   const social = useMemo(() => socialDelLocale(venue), [venue])
+  // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
+  const bloccata = installazioneBloccata(settings)
 
   // IL NOME DELL'APP SEGUE CHI LA USA: il nome del locale per il cliente,
   // col suffisso del ruolo per chi lavora. Vale per la linguetta del
@@ -618,7 +622,8 @@ export default function App() {
           un cerca-persone. */}
       <ChiamataInArrivo ruolo={staffRole} />
 
-      <main>
+      {bloccata && <InstallazioneSospesa licenza={settings.licenza} venue={venue} />}
+      <main hidden={bloccata}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/menu" element={<MenuPage />} />

@@ -1,0 +1,124 @@
+name: Aggiorna istanza
+
+# UN AGGIORNAMENTO DELL'APP ARRIVA A UN LOCALE (REQ-FLOTTA-009). L'app di
+# base è tana-drink: ogni correzione o funzione nuova nasce qui, esce con
+# un tag, e poi si porta sulle installazioni dei locali — tutte o quelle
+# che si decide — con questo workflow. Lo lancia la regia (backoffice:
+# «Aggiorna», «Aggiorna tutte») o una persona dalla pagina Actions:
+#   1. prende la configurazione web del progetto dell'istanza;
+#   2. rigenera la cartella clienti/<slug>/ (non è nel repository: le
+#      impostazioni del locale, che vincono sulla build, stanno nel suo
+#      database) e compila CLIENTE=<slug>;
+#   3. pubblica regole, indici, Functions e hosting;
+#   4. riferisce alla regia la versione pubblicata.
+# Niente Terraform: il progetto esiste già. `ref` dice QUALE versione
+# dell'app: di norma `main` (l'ultimo rilascio), un tag per tornare
+# indietro.
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: 'Lo slug del locale'
+        required: true
+        type: string
+      nome_locale:
+        description: 'Il nome del locale (riserva per venue.json)'
+        required: false
+        type: string
+        default: ''
+      ref:
+        description: 'Ramo o tag dell’app da pubblicare'
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: istanza-${{ inputs.slug }}
+  cancel-in-progress: false
+
+env:
+  SLUG: ${{ inputs.slug }}
+  PROGETTO: drinkpos-${{ inputs.slug }}
+
+jobs:
+  aggiorna:
+    name: Aggiorna ${{ inputs.slug }} a ${{ inputs.ref }}
+    runs-on: ubuntu-latest
+    environment: flotta
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Slug valido
+        run: |
+          if ! [[ "$SLUG" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; then echo "::error::Slug «$SLUG» non valido."; exit 1; fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Credenziali di provisioning
+        env:
+          SA_JSON: ${{ secrets.PROVISIONING_SA_JSON }}
+        run: |
+          if [ -z "$SA_JSON" ]; then echo "::error::Manca il segreto PROVISIONING_SA_JSON (infra/README.md)."; exit 1; fi
+          echo "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - run: npm ci
+      - run: npm ci --prefix functions
+
+      - name: La configurazione web dell'istanza
+        run: |
+          npx firebase-tools apps:sdkconfig web --project "$PROGETTO" --json > "$RUNNER_TEMP/sdk.json"
+          node -e '
+            const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+            const c = j.result?.sdkConfig || j.result || j;
+            if (!c.projectId) { console.error("Config non trovata:", JSON.stringify(j).slice(0, 300)); process.exit(1); }
+            const righe = [["VITE_FIREBASE_API_KEY", c.apiKey], ["VITE_FIREBASE_AUTH_DOMAIN", c.authDomain], ["VITE_FIREBASE_PROJECT_ID", c.projectId], ["VITE_FIREBASE_STORAGE_BUCKET", c.storageBucket || ""], ["VITE_FIREBASE_MESSAGING_SENDER_ID", c.messagingSenderId || ""], ["VITE_FIREBASE_APP_ID", c.appId]];
+            require("fs").writeFileSync(process.argv[2], righe.map(([k, v]) => `${k}=${v}`).join("\n") + "\n");
+          ' "$RUNNER_TEMP/sdk.json" "$GITHUB_WORKSPACE/.env"
+
+      - name: La cartella del cliente
+        run: node scripts/genera-cliente.mjs --slug "$SLUG" --nome "${{ inputs.nome_locale || inputs.slug }}"
+
+      - name: Build
+        env:
+          BASE_PATH: /
+          CLIENTE: ${{ inputs.slug }}
+          VITE_APP_ENV: production
+        run: npm run build
+
+      - name: Functions .env del progetto
+        run: printf 'VENUE_NAME=%s\n' "${{ inputs.nome_locale || inputs.slug }}" > "functions/.env.$PROGETTO"
+
+      - name: Deploy regole, indici, Functions e hosting
+        run: npx firebase-tools deploy --only firestore,storage,functions,hosting --project "$PROGETTO" --force
+
+      - name: Versione pubblicata
+        run: echo "VERSIONE=v$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
+
+      - name: Esito alla regia
+        if: always()
+        env:
+          CALLBACK_URL: ${{ vars.REGIA_CALLBACK_URL }}
+          CALLBACK_SECRET: ${{ secrets.PROVISIONING_CALLBACK_SECRET }}
+        run: |
+          if [ -z "$CALLBACK_URL" ]; then echo "Nessuna REGIA_CALLBACK_URL: esito non inviato."; exit 0; fi
+          if [ "${{ job.status }}" = "success" ]; then STATO=attiva; ERR=""; else STATO=errore; ERR="Aggiornamento ${{ job.status }}: GitHub Actions run ${{ github.run_id }}"; fi
+          node -e '
+            const [url, secret, slug, stato, progetto, versione, errore] = process.argv.slice(1);
+            fetch(url, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ slug, stato, progetto, versione: versione || null, errore: errore || null }) })
+              .then((r) => { console.log("regia:", r.status); if (r.status >= 300) process.exit(1); })
+          ' "$CALLBACK_URL" "$CALLBACK_SECRET" "$SLUG" "$STATO" "$PROGETTO" "${VERSIONE:-}" "$ERR"
+
+      - name: Pulizia credenziali
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json" "$RUNNER_TEMP/sdk.json" "$GITHUB_WORKSPACE/.env"

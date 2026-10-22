@@ -898,6 +898,21 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
+/* L'INSTALLAZIONE SOSPESA O CHIUSA (REQ-FLOTTA-008): una scheda sola in
+   mezzo alla pagina, sopra tutto. */
+.installazione-sospesa {
+  min-height: calc(100dvh / var(--zoom, 1) - var(--safe-top));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.installazione-sospesa .card {
+  max-width: 520px;
+  text-align: center;
+}
+.installazione-sospesa .btn { display: inline-block; margin-top: 10px; }
+
 /* STORICO INVENTARI (REQ-MAG-052): ogni inventario chiuso è un tasto largo
    quanto la scheda, date a sinistra e valori a destra. */
 .storico-inventario-riga {

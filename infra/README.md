@@ -50,19 +50,43 @@ account non può creare progetti: li crea l'utente (`firebase projects:create
 drinkpos-<slug>`), e Terraform li *importa* e li completa. Il workflow lo sa:
 se `ORG_ID` manca, si aspetta che il progetto esista già e lo dice.
 
+## I ruoli del service account di provisioning (a mano, in console)
+
+Il service account `provisioning@drink-regia.iam.gserviceaccount.com`
+esiste e la sua chiave è nel segreto `PROVISIONING_SA_JSON`; i tre ruoli
+che gli servono vanno dati dalla console (lo strumento automatico è stato
+fermato: dare permessi è un gesto che vuole una persona):
+
+1. **Account di fatturazione** → console Google Cloud → Fatturazione →
+   l'account `01FD7B-…` → Gestione account → Aggiungi entità →
+   `provisioning@drink-regia.iam.gserviceaccount.com`, ruolo «Utente account
+   di fatturazione».
+2. **Bucket dello stato** → Cloud Storage → `drink-regia-tfstate` →
+   Autorizzazioni → Concedi accesso → stesso account, ruolo «Amministratore
+   oggetti Storage».
+3. **Ogni progetto di istanza creato a mano** (oggi `drinkpos-demo`) → IAM →
+   Concedi accesso → stesso account, ruolo «Proprietario» (il provisioning
+   amministra l'istanza per intero; Terraform da solo poi dà alla regia il
+   ruolo per scrivere la licenza).
+
 ## Cosa è già stato fatto (22/10/2026)
 
 - `drink-regia` e `drinkpos-demo` creati, web app create, API di base
   abilitate (`scripts/abilita-api.mjs`), Firestore in europe-west1.
-- Variabile `PROGETTO_FLOTTA=drinkpos-demo`; environment `flotta` e
-  `regia` con i sei `VITE_FIREBASE_*` di ciascun progetto.
-- **Mancano**: Blaze sui due progetti; in console Firebase Auth → «Inizia»
-  e provider Email/password (`scripts/abilita-accesso-email.mjs` risponde
-  CONFIGURATION_NOT_FOUND finché non si fa quel clic); il segreto
+- Variabile `PROGETTO_FLOTTA=drinkpos-demo`; environment `flotta` (tana-drink)
+  e `production` (drink-regia) coi `VITE_FIREBASE_*` di ciascun progetto.
+- Blaze (fatturazione) su `drink-regia` e `drinkpos-demo`; le API a
+  pagamento abilitate su tutti e due.
+- Bucket `drink-regia-tfstate` (EU, versioni attive); variabili
+  `TFSTATE_BUCKET`, `REGIA_CALLBACK_URL`; segreti `BILLING_ACCOUNT_ID`,
+  `PROVISIONING_SA_JSON`, `PROVISIONING_CALLBACK_SECRET` (anche nelle
+  Functions della regia); `SUMUP_API_KEY` segnaposto su `drinkpos-demo`.
+- **Mancano**: i tre ruoli qui sopra; in console Firebase Auth → «Inizia»
+  e provider Email/password sui due progetti; il segreto
   `FIREBASE_SERVICE_ACCOUNT` nei due environment (chiave JSON di un
-  service account con `roles/firebase.admin` del progetto, come per la
-  Tana in docs/functions.md); le API a pagamento (Functions, Run, Build)
-  dopo Blaze: `node scripts/abilita-api.mjs --project <id>`.
+  service account con `roles/firebase.admin` del progetto); il token
+  GitHub `GITHUB_DISPATCH_TOKEN` e le chiavi Stripe nelle Functions della
+  regia.
 
 ## Come si prova senza toccare niente
 

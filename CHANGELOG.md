@@ -25,6 +25,13 @@
 - Il sito del prodotto (prezzi, registrazione in quattro passi con dati di
   fatturazione e consensi, dashboard, backoffice, abbonamento con Stripe)
   sta nel repository `drink-regia`, staccato da qui con la sua storia.
+- **Un'installazione si può sospendere o chiudere** dalla regia, per
+  esempio quando il pagamento non arriva: l'app mostra una schermata che
+  lo dice, con il motivo e dove rimettersi in regola; i dati restano, e
+  riattivata si riparte da dove si era.
+- **Gli aggiornamenti ai locali si decidono dal backoffice**: la versione
+  è una sola, quella di tana-drink; «Aggiorna» la porta a un locale,
+  «Aggiorna tutte» a tutti quelli attivi (workflow `aggiorna-istanza.yml`).
 - La regia lancia l'attivazione di un'istanza (workflow
   `provisiona-istanza.yml`, Terraform in `infra/istanza`) e ne riceve
   l'esito; l'abbonamento passa da Stripe Checkout, con il webhook che

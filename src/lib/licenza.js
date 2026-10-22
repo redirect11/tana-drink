@@ -152,6 +152,20 @@ export function moduloAcceso(stato, id) {
 // local-first).
 export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcceso(stato, id)
 
+// ── LO STATO DELL'INSTALLAZIONE (REQ-FLOTTA-008) ──────────────────────
+// `settings/bar.licenza.stato`: lo scrive la regia (il backoffice, o la
+// Function che sospende chi non paga). Senza niente scritto è attiva: la
+// Tana non ha una licenza e lavora come sempre. Sospesa o chiusa, l'app
+// mostra InstallazioneSospesa al posto di tutto; i dati restano.
+export const STATI_LICENZA = Object.freeze({ ATTIVA: 'attiva', SOSPESA: 'sospesa', CHIUSA: 'chiusa' })
+
+export const statoLicenza = (stato) => {
+  const s = stato?.licenza?.stato
+  return s === STATI_LICENZA.SOSPESA || s === STATI_LICENZA.CHIUSA ? s : STATI_LICENZA.ATTIVA
+}
+
+export const installazioneBloccata = (stato) => statoLicenza(stato) !== STATI_LICENZA.ATTIVA
+
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci
 // che non sono premium passano sempre.

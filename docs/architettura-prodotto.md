@@ -115,10 +115,21 @@ verificato) diventa tutta automatica senza cambiare codice.
   test e build a ogni push, deploy solo da un tag su `main` o a mano.
 - Stesso GitFlow nei due repository: lavoro su `release/x.y.z`, pull
   request verso `develop` e `main`, tag per pubblicare.
-- Un rilascio dell'app arriva a **tutti i locali**: il workflow di
-  attivazione pubblica la versione del momento, e per aggiornare le
-  installazioni esistenti si rilancia lo stesso deploy su ciascun progetto
-  (da fare: un workflow «aggiorna la flotta» che li scorre tutti).
+- **Una versione sola, quella di tana-drink** (`package.json`, tag su
+  `main`). La Tana la riceve con la pipeline di sempre. Ogni altro locale
+  mostra nel backoffice la versione che ha, e la riceve quando lo si
+  decide: «Aggiorna» su un locale, «Aggiorna tutte le istanze attive» su
+  tutti; sotto c'è il workflow `aggiorna-istanza.yml`, che compila l'app
+  per quel locale dal ramo o tag scelto e la pubblica. Niente si aggiorna
+  da solo a un push: un bug trovato alla Tana si porta ai clienti quando
+  il rilascio è pronto, e un cliente si può tenere indietro o riportare a
+  un tag precedente.
+- **I servizi premium si comprano dalla dashboard** del titolare: «Cambia
+  piano o moduli» aggiorna l'abbonamento Stripe con conguaglio, e la
+  licenza dell'istanza si riscrive da sola: le funzioni compaiono nell'app
+  entro un minuto. **Si fermano** dalla regia: Sospendi, Riattiva, Chiudi
+  dal backoffice, o la sospensione automatica di chi non paga da più di
+  sette giorni; l'app mostra una schermata che lo dice, i dati restano.
 
 ## 8. Cosa c'è oggi, cosa manca
 
