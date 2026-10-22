@@ -6,7 +6,8 @@
 // compilare un locale a caso.
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { leggiCliente, htmlPerCliente, manifestPerCliente, CLIENTE_PREDEFINITO } from '../../clienti/pluginCliente.js'
 
 describe('leggiCliente', () => {
@@ -21,6 +22,18 @@ describe('leggiCliente', () => {
     const c = leggiCliente('demo')
     expect(JSON.stringify(c.venue)).not.toMatch(/Tana|Coniglio|EFFEVI/)
     expect(c.venue.venue_socials).toEqual([])
+  })
+
+  // Il 22/10/2026 la demo pubblicata aveva ancora il logo della Tana: i file
+  // grafici di public/ sono suoi, e un cliente senza i propri li eredita.
+  // Il cliente neutro li sostituisce tutti (scripts/immagini-neutre.py).
+  it('il cliente demo ha i suoi file grafici, diversi da quelli della Tana', () => {
+    const c = leggiCliente('demo')
+    for (const f of ['logo.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'favicon.svg', 'cocktail-hero.jpg']) {
+      const suo = join(c.pubblica, f)
+      expect(existsSync(suo), `manca clienti/demo/public/${f}`).toBe(true)
+      expect(readFileSync(suo).equals(readFileSync(join('public', f))), `${f} è ancora quello della Tana`).toBe(false)
+    }
   })
 
   it('uno slug sbagliato o una cartella che non c’è fermano la build', () => {

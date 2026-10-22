@@ -22,4 +22,7 @@ CLIENTE=demo npm run build   # la build per drinkpos-demo
 ```
 
 Un cliente nuovo: si copia `demo/`, si compila `venue.json`, si mettono i
-suoi file in `public/`. Il resto lo fa l'attivazione (REQ-FLOTTA-006).
+suoi file in `public/`. Finché non ha i suoi, `python
+scripts/immagini-neutre.py clienti/<slug>/public --colore "#2a6f97"` genera
+logo, icone, favicon e copertina neutri col suo colore: senza, erediterebbe
+quelli della Tana da `public/`. Il resto lo fa l'attivazione (REQ-FLOTTA-006).
