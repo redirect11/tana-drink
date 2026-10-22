@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { venueDi } from '../lib/venue.js'
+import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -311,7 +312,9 @@ export default function MenuPage() {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
-  const menuOnly = settings.menu_only
+  // «Solo menù» per scelta del locale, o perché il modulo degli ordini dal
+  // telefono non è nel piano (REQ-LIC-002).
+  const menuOnly = settings.menu_only || !ordinazioneClientiAttiva(settings)
   // Il servizio è PERPETUO: non esiste più una serata da aprire. A decidere
   // se si può ordinare resta la modalità "solo menù" (l'interruttore del
   // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il

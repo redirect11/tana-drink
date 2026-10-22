@@ -38,8 +38,18 @@ if (!PROGETTO || !SLUG) {
 
 // Dai moduli della regia a quelli dell'app (src/lib/licenza.js: conta,
 // fatture, scadenzario). Il piano completo accende tutto.
-const MAPPA = { magazzino: ['conta'], staff: [], statistiche: [], menu_tavoli: [], pagamenti: [] }
-const TUTTI = ['conta', 'fatture', 'scadenzario']
+// Stessi id nel listino della regia e nell'app (REQ-LIC-002); il magazzino
+// porta con sé i suoi tre moduli di dettaglio.
+const MAPPA = {
+  menu_tavoli: ['menu_tavoli'],
+  ordini_cliente: ['ordini_cliente'],
+  clienti: ['clienti'],
+  magazzino: ['magazzino', 'conta', 'fatture', 'scadenzario'],
+  statistiche: ['statistiche'],
+  staff: ['staff'],
+  sumup: ['sumup'],
+}
+const TUTTI = ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'conta', 'fatture', 'scadenzario', 'statistiche', 'staff', 'sumup']
 const moduliApp = PIANO === 'completo' ? TUTTI : [...new Set(MODULI.flatMap((m) => MAPPA[m] || []))]
 
 initializeApp({ projectId: PROGETTO })

@@ -249,6 +249,17 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
     expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
   })
+
+  // REQ-LIC-002: un locale senza il modulo «ordini dal telefono» ha il menù
+  // che si legge e basta, anche se non ha mai toccato «solo menù».
+  it('senza il modulo degli ordini dal telefono il menù si legge e basta', async () => {
+    ruoloClaim = null
+    mockSettings = { menu_only: false, licenza: { moduli: { menu_tavoli: true, ordini_cliente: false } } }
+    mostra()
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
+    expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
+  })
 })
 
 // ── LA COMANDA DI CHI PRENDE L'ORDINE AL TAVOLO ──────────────────────

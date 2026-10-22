@@ -46,6 +46,23 @@ strati:
 Un test automatico conta le parole «Tana» rimaste nel codice e permette
 solo di farle scendere: oggi restano in quattro file, tutte giustificate.
 
+## 3b. I moduli: cosa è di base e cosa si compra
+
+| | Cosa comprende |
+|---|---|
+| **Di base** | coda ordini, cassa con contanti e carta, scontrino, menù (creazione delle voci), utenti e ruoli, impostazioni |
+| **Menù digitale e tavoli** | il menù sul telefono del cliente, il QR al tavolo, la vista cliente |
+| **Ordini dal telefono del cliente** | il cliente ordina dal menù e segue l'ordine; senza, il menù si legge e basta |
+| **Gestione clienti** | account dei clienti, i loro ordini, i gruppi di conti |
+| **Magazzino e fornitori** | giacenze, scarico dalle ricette, inventario, ordini e fatture dei fornitori |
+| **Statistiche e bilancio** | incassi per serata e periodo, venduto per fascia, bilancio |
+| **Personale e ore** | ore e paghe, chiamate allo staff |
+| **Pagamenti con lettore SumUp** | il conto va al lettore e torna pagato |
+
+Gli id dei moduli sono gli stessi nel listino del sito e nell'app: quello
+che si compra è quello che la licenza accende. La Tana, senza licenza
+scritta, li ha tutti. Prezzi e taglio dei moduli sono da confermare.
+
 ## 4. Come funziona per il titolare di un locale
 
 1. Apre il sito del prodotto e legge piani e prezzi.

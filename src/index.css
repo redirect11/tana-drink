@@ -898,6 +898,11 @@ a.btn.block {
 .inv-item:last-child {
   border-bottom: none;
 }
+/* UNA FUNZIONE NON INCLUSA NEL PIANO (REQ-LIC-002). */
+.funzione-non-inclusa { display: flex; justify-content: center; padding: 32px 16px; }
+.funzione-non-inclusa .card { max-width: 480px; text-align: center; }
+.funzione-non-inclusa .btn { display: inline-block; margin-top: 10px; }
+
 /* L'INSTALLAZIONE SOSPESA O CHIUSA (REQ-FLOTTA-008): una scheda sola in
    mezzo alla pagina, sopra tutto. */
 .installazione-sospesa {

@@ -59,6 +59,58 @@
 // cerca nel codice lo deve trovare.
 // `incluso` è cosa ha QUESTA installazione finché non c'è una licenza vera.
 export const MODULI_PREMIUM = {
+  // ── I MODULI DEL PRODOTTO (REQ-LIC-002, decisione dell'utente del
+  // 22/10/2026): di base un locale crea le voci di menù e gestisce gli
+  // ordini (coda, cassa, scontrino). Tutto il resto è un modulo, con lo
+  // stesso id del listino della regia (piani.json). `incluso: true` è la
+  // riserva di chi non ha una licenza scritta — la Tana — che così tiene
+  // tutto; un locale della flotta ha `licenza.moduli` scritto dalla regia.
+  menu_tavoli: {
+    chiave: 'modulo_menu_tavoli_enabled',
+    incluso: true,
+    sezioni: ['vista-cliente'],
+    label: 'Menù digitale e tavoli',
+    descrizione: 'Il menù sul telefono del cliente, con il QR al tavolo e la vista cliente nel gestionale.',
+  },
+  ordini_cliente: {
+    chiave: 'modulo_ordini_cliente_enabled',
+    incluso: true,
+    label: 'Ordini dal telefono del cliente',
+    descrizione: 'Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.',
+  },
+  clienti: {
+    chiave: 'modulo_clienti_enabled',
+    incluso: true,
+    label: 'Gestione clienti',
+    descrizione: 'Account dei clienti, i loro ordini, i gruppi di conti.',
+  },
+  magazzino: {
+    chiave: 'modulo_magazzino_enabled',
+    incluso: true,
+    sezioni: ['inventario', 'fornitori'],
+    label: 'Magazzino e fornitori',
+    descrizione: 'Giacenze, scarico automatico dalle ricette, ordini e fatture dei fornitori. Inventario e scadenzario sono i suoi moduli.',
+  },
+  statistiche: {
+    chiave: 'modulo_statistiche_enabled',
+    incluso: true,
+    sezioni: ['stats', 'bilancio'],
+    label: 'Statistiche e bilancio',
+    descrizione: 'Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.',
+  },
+  staff: {
+    chiave: 'modulo_staff_enabled',
+    incluso: true,
+    label: 'Personale e ore',
+    descrizione: 'Ore e paghe del personale, chiamate allo staff.',
+  },
+  // `sumup` e non `pagamenti`: la cassa del gestionale ha già quella sezione.
+  sumup: {
+    chiave: 'modulo_sumup_enabled',
+    incluso: true,
+    label: 'Pagamenti con lettore SumUp',
+    descrizione: 'Il conto va al lettore di carte e torna pagato da solo.',
+  },
   conta: {
     chiave: 'modulo_conta_enabled',
     incluso: false,
@@ -165,6 +217,14 @@ export const statoLicenza = (stato) => {
 }
 
 export const installazioneBloccata = (stato) => statoLicenza(stato) !== STATI_LICENZA.ATTIVA
+
+// ── LE DOMANDE CHE FANNO LE SCHERMATE LATO CLIENTE (REQ-LIC-002) ───────
+// Il menù digitale c'è? Il cliente può ordinare da lì? Ha un account?
+export const menuDigitaleAttivo = (stato) => moduloAttivo(stato, 'menu_tavoli')
+export const ordinazioneClientiAttiva = (stato) => moduloAttivo(stato, 'ordini_cliente')
+// Gli account clienti: il modulo, E l'interruttore che il locale aveva già
+// (customer_accounts_enabled).
+export const accountClientiAttivi = (stato) => moduloAttivo(stato, 'clienti') && stato?.customer_accounts_enabled !== false
 
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci

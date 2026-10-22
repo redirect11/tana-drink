@@ -22,11 +22,12 @@ import {
 import PasswordChanger from '../components/PasswordChanger.jsx'
 import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import { isPersonale } from '../lib/ruoli.js'
+import { accountClientiAttivi } from '../lib/licenza.js'
 
 // Hook: gli account clienti sono attivi? (impostazione del bartender)
 function useAccountsEnabled() {
-  const [enabled, setEnabled] = useState(DEFAULT_SETTINGS.customer_accounts_enabled)
-  useEffect(() => subscribeSettings((s) => setEnabled(s.customer_accounts_enabled)), [])
+  const [enabled, setEnabled] = useState(accountClientiAttivi(DEFAULT_SETTINGS))
+  useEffect(() => subscribeSettings((s) => setEnabled(accountClientiAttivi(s))), [])
   return enabled
 }
 

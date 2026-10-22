@@ -37,7 +37,8 @@ import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
-import { installazioneBloccata } from './lib/licenza.js'
+import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi } from './lib/licenza.js'
+import FunzioneNonInclusa from './components/FunzioneNonInclusa.jsx'
 import InstallazioneSospesa from './components/InstallazioneSospesa.jsx'
 import { socialDelLocale } from './lib/social.js'
 import { envLabel } from './dev/devActions.js'
@@ -73,7 +74,8 @@ export default function App() {
     if (!isFirebaseConfigured) return
     return subscribeSettings(setSettings)
   }, [])
-  const accountsOn = settings.customer_accounts_enabled
+  // Gli account clienti: il modulo (REQ-LIC-002) e l'interruttore del locale.
+  const accountsOn = accountClientiAttivi(settings)
 
   // Nuova versione online (la PWA resta aperta per giorni): banner
   // "tocca per aggiornare" invece di aspettare un reload manuale.
@@ -626,7 +628,10 @@ export default function App() {
       <main hidden={bloccata}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/menu" element={<MenuPage />} />
+          <Route
+            path="/menu"
+            element={menuDigitaleAttivo(settings) ? <MenuPage /> : <FunzioneNonInclusa nome="Il menù digitale" licenza={settings.licenza} />}
+          />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           {/* Il dettaglio di una COMANDA: ci si arriva dalla card in

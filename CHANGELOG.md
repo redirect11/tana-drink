@@ -25,6 +25,10 @@
 - Il sito del prodotto (prezzi, registrazione in quattro passi con dati di
   fatturazione e consensi, dashboard, backoffice, abbonamento con Stripe)
   sta nel repository `drink-regia`, staccato da qui con la sua storia.
+- **I moduli del prodotto**: di base menù e ordini; menù digitale, ordini
+  dal telefono del cliente, gestione clienti, magazzino, statistiche,
+  personale e lettore SumUp sono moduli che un locale compra. La Tana li
+  ha tutti. Le voci del gestionale e le pagine del cliente seguono il piano.
 - **Un'installazione si può sospendere o chiudere** dalla regia, per
   esempio quando il pagamento non arriva: l'app mostra una schermata che
   lo dice, con il motivo e dove rimettersi in regola; i dati restano, e

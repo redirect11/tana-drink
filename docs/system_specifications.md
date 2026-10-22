@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 229 | fatto e coperto dai test |
+| ✅ | 230 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**273 voci** in tutto. **245** descrivono il sistema com'è oggi e
+**274 voci** in tutto. **246** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 6 | — |  |
-| [LIC](#lic) | 1 | — |  |
+| [LIC](#lic) | 2 | — |  |
 | [VENUE](#venue) | 5 | — |  |
 | [FLOTTA](#flotta) | 4 | — |  |
 
@@ -3189,6 +3189,18 @@ PER CAMBIARE LA LICENZA (cosa è incluso) ci sono gli strumenti di sviluppo (REQ
 SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nelle loro collezioni (`stock_counts`, fatture fornitore): spegnere un modulo non tocca un documento. Caso spiacevole da sapere: una conta APERTA nel momento in cui il modulo si spegne resta aperta e non allineata — la si ritrova esattamente com'era riaccendendo il modulo, ma finché è spento nessuno la può chiudere. ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la distinzione è teorica; quando i locali saranno tanti il controllo vero va sul SERVER — Cloud Functions e regole Firestore — perché chiunque apra la console del browser può accendersi un modulo da sé. Lo dice anche il piano: «mai fidarsi del solo frontend per una funzione a pagamento».
 
 **Dove**: `src/lib/licenza.js, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/components/FornitoriTab.jsx, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/FornitoriTab.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
+#### REQ-LIC-002 — I moduli del prodotto: di base menù e ordini, il resto si compra
+
+«Dobbiamo decidere le funzioni premium da aggiungere. Ad esempio, il menu, l'ordinazione da app da parte del cliente, gestione clienti, gestione inventario. Di base quello che puo' fare e' creare gli item di menu e la gestione delle ordinazioni» (l'utente, 22/10/2026).
+
+DI BASE: coda ordini, cassa (contanti e carta), scontrino, menù (creazione delle voci), utenti e ruoli, impostazioni. I MODULI, con gli stessi id del listino della regia (piani.json): `menu_tavoli` (il menù digitale sul telefono del cliente, il QR al tavolo, la vista cliente), `ordini_cliente` (il cliente ordina dal menù e segue l'ordine: senza, il menù si legge e basta, come «solo menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di conti: insieme all'interruttore customer_accounts_enabled che il locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta con sé conta, fatture e scadenzario come moduli di dettaglio), `statistiche` (statistiche e bilancio), `staff` (ore e paghe), `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione della cassa). Le voci del gestionale seguono i moduli attraverso `sezioni` (inventario e fornitori → magazzino, stats e bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di un modulo non incluso dice che non fa parte del piano e rimanda alla pagina del prodotto (FunzioneNonInclusa).
+
+LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`; un locale della flotta ha `licenza.moduli` scritto dalla regia (licenza-istanza.mjs alla prima attivazione, poi licenzaSegueIlPiano del repository drink-regia).
+
+DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi (piani.json nella regia); da fare: il lettore SumUp che guarda il modulo `sumup`, e i gruppi di conti che guardano `clienti`.
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM, menuDigitaleAttivo, ordinazioneClientiAttiva, accountClientiAttivi), src/lib/sezioni.js, src/App.jsx, src/pages/MenuPage.jsx, src/pages/AccountPages.jsx, src/components/FunzioneNonInclusa.jsx, scripts/licenza-istanza.mjs` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/FunzioneNonInclusa.test.jsx`, `tests/component/MenuPage.test.jsx`
 
 ### VENUE
 

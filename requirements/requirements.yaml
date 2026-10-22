@@ -4982,6 +4982,47 @@ requirements:
       - tests/component/FornitoriTab.test.jsx
       - tests/component/PaymentScreen.test.jsx
       - tests/component/SettingsTab.test.jsx
+  - id: REQ-LIC-002
+    title: "I moduli del prodotto: di base menù e ordini, il resto si compra"
+    area: "src/lib/licenza.js (MODULI_PREMIUM, menuDigitaleAttivo, ordinazioneClientiAttiva, accountClientiAttivi), src/lib/sezioni.js, src/App.jsx, src/pages/MenuPage.jsx, src/pages/AccountPages.jsx, src/components/FunzioneNonInclusa.jsx, scripts/licenza-istanza.mjs"
+    description: >
+      «Dobbiamo decidere le funzioni premium da aggiungere. Ad esempio, il
+      menu, l'ordinazione da app da parte del cliente, gestione clienti,
+      gestione inventario. Di base quello che puo' fare e' creare gli item
+      di menu e la gestione delle ordinazioni» (l'utente, 22/10/2026).
+      DI BASE: coda ordini, cassa (contanti e carta), scontrino, menù
+      (creazione delle voci), utenti e ruoli, impostazioni.
+      I MODULI, con gli stessi id del listino della regia (piani.json):
+      `menu_tavoli` (il menù digitale sul telefono del cliente, il QR al
+      tavolo, la vista cliente), `ordini_cliente` (il cliente ordina dal
+      menù e segue l'ordine: senza, il menù si legge e basta, come «solo
+      menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di
+      conti: insieme all'interruttore customer_accounts_enabled che il
+      locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta
+      con sé conta, fatture e scadenzario come moduli di dettaglio),
+      `statistiche` (statistiche e bilancio), `staff` (ore e paghe),
+      `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo
+      guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione
+      della cassa). Le voci del gestionale seguono i moduli
+      attraverso `sezioni` (inventario e fornitori → magazzino, stats e
+      bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di
+      un modulo non incluso dice che non fa parte del piano e rimanda alla
+      pagina del prodotto (FunzioneNonInclusa).
+      LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`;
+      un locale della flotta ha `licenza.moduli` scritto dalla regia
+      (licenza-istanza.mjs alla prima attivazione, poi
+      licenzaSegueIlPiano del repository drink-regia).
+      DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi
+      (piani.json nella regia); da fare: il lettore SumUp che guarda il
+      modulo `sumup`, e i gruppi di conti che guardano `clienti`.
+    status: implemented
+    generate_issue: false
+    labels: [licenza, prodotto]
+    test_cases:
+      - tests/unit/licenza.test.js
+      - tests/unit/sezioni.test.js
+      - tests/component/FunzioneNonInclusa.test.jsx
+      - tests/component/MenuPage.test.jsx
   # ══════════════════════════════════════════════════════════════════════
   #  IL PRODOTTO: il marchio come configurazione, la CI della flotta, le
   #  istanze (docs/flotta.md). Il sito del prodotto — prezzi, registrazione,
