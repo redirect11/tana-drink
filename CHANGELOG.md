@@ -1,5 +1,14 @@
 # Cosa è cambiato
 
+## 1.9.4-beta — in lavorazione
+
+### Per chi amministra
+
+- **Statistiche, periodo personalizzato: il calcolo parte con «Applica».**
+  Si scrivono inizio e fine e poi si tocca il tasto: prima ogni ritocco
+  alle date faceva ripartire il calcolo. Con la fine prima dell'inizio il
+  tasto resta spento.
+
 ## 1.9.3 — 21 ottobre 2026
 
 ### Per chi sta al banco
