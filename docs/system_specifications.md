@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 227 | fatto e coperto dai test |
+| ✅ | 229 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 20 | da fare |
 | 🗑 | 8 | non più valido |
 
-**271 voci** in tutto. **243** descrivono il sistema com'è oggi e
+**273 voci** in tutto. **245** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
 | [VENUE](#venue) | 5 | — |  |
-| [FLOTTA](#flotta) | 2 | — |  |
+| [FLOTTA](#flotta) | 4 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3251,6 +3251,28 @@ SENZA ORGANIZZAZIONE GOOGLE CLOUD (account personale) un service account non cre
 STATO AL 22/10/2026: scritto e provato per parti (la logica delle Functions con i suoi test; i progetti drink-regia e drinkpos-demo creati e preparati con gli script), MAI un'attivazione intera: mancano Blaze, il service account di provisioning, il bucket dello stato, il token GitHub e i segreti (infra/README.md). La prima attivazione vera sara' `demo`, sul progetto gia' creato.
 
 **Dove**: `infra/istanza/main.tf, infra/README.md, .github/workflows/provisiona-istanza.yml, scripts/genera-cliente.mjs, scripts/licenza-istanza.mjs, scripts/abilita-api.mjs, scripts/abilita-accesso-email.mjs; le Functions che lanciano il workflow e ricevono l'esito stanno nel repository drink-regia` · **Lo dimostrano**: `tests/unit/provisionaIstanza.test.js`
+
+#### REQ-FLOTTA-008 — Un'istanza si ferma: sospesa quando il pagamento non arriva, chiusa su decisione; i dati restano
+
+«Serve un modo per eliminare/fermare l'app deployata (ad esempio se non arriva il pagamento mensile)» (l'utente, 22/10/2026).
+
+LA LICENZA HA UNO STATO: `settings/bar.licenza.stato` vale `attiva` (o non c'e': la Tana non ha una licenza e lavora come sempre), `sospesa` o `chiusa`, con `motivo`, `dal` e `regia_url`. Lo scrive la regia (repository drink-regia): il backoffice coi tasti Sospendi, Riattiva e Chiudi, oppure da sola — una Function giornaliera sospende chi ha l'abbonamento «in sospeso» da piu' di sette giorni e riattiva quando Stripe conferma il pagamento. Il provisioning scrive la licenza in settings/bar (non in un documento a parte: e' quello che lib/licenza.js legge gia' per i moduli) e Terraform da' al service account della regia il ruolo per scriverci. L'APP SI FERMA E LO DICE: sospesa o chiusa, al posto di tutto compare InstallazioneSospesa — il locale, il motivo, la data, «non e' un guasto, i dati non sono andati persi», e il collegamento alla pagina del prodotto dove il titolare si rimette in regola. Riattivata, si riparte da dove si era: niente viene cancellato dalla sospensione.
+
+LA CHIUSURA VERA e' un passo a parte e a mano, dopo i 30 giorni promessi: `scripts/elimina-istanza.mjs --slug … --apply` cancella il progetto Google, che resta recuperabile dalla console per altri 30 giorni. Senza --apply e' un'anteprima; la demo vuole un flag in piu'.
+
+**Dove**: `src/lib/licenza.js (STATI_LICENZA, installazioneBloccata), src/components/InstallazioneSospesa.jsx, src/App.jsx, scripts/licenza-istanza.mjs, scripts/elimina-istanza.mjs, infra/istanza/main.tf (ruolo della regia)` · **Lo dimostrano**: `tests/component/InstallazioneSospesa.test.jsx`
+
+#### REQ-FLOTTA-009 — La versione e' quella dell'app di base: un rilascio si porta sui locali con aggiorna-istanza.yml
+
+«La versione dovrebbe seguire l'app di base, quindi mi aspetto che tutte le versioni delle app deployate dovrebbero essere allineate all'app base che per ora rimane tana-drink. Tutte le modifiche/bugfix/aggiornamenti sull'app base dovrebbero essere deployate anche su tutti i siti cliente o comunque decidere su quali clienti deployare gli aggiornamenti» (l'utente, 22/10/2026).
+
+COME SI VERSIONA: una versione sola, quella di tana-drink (package.json, tag `vX.Y.Z` su main). La Tana la riceve con la pipeline di sempre; ogni altro locale la riceve con `aggiorna-istanza.yml`, che prende la configurazione web del suo progetto, rigenera la cartella del cliente, compila CLIENTE=<slug> dal `ref` chiesto (di norma `main`; un tag per tornare indietro), pubblica regole, indici, Functions e hosting, e riferisce alla regia la versione pubblicata, che il backoffice mostra per ogni locale. Chi decide quali locali aggiornare e' il backoffice della regia (REQ-FLOTTA-009 di la': «Aggiorna», «Aggiorna tutte le istanze attive»); niente si aggiorna da solo a un push.
+
+APP DI PRODUZIONE («al deploy, le app devono essere taggate come app di produzione», l'utente, 22/10/2026): la build dei locali e' sempre di produzione (VITE_APP_ENV=production: niente strumenti di sviluppo ne' nastro «TEST»), il riferimento atteso e' un rilascio (main o un tag vX.Y.Z; un ramo di lavoro passa con un avviso, finche' la flotta non e' merged), il progetto porta l'etichetta `ambiente=produzione` e l'esito alla regia dice `ambiente` e `ref` pubblicato.
+
+DA FARE DOPO: un aggiornamento automatico opzionale a ogni tag su main per i locali che lo chiedono, e la versione minima richiesta (un locale troppo indietro lo si vede nel backoffice).
+
+**Dove**: `.github/workflows/aggiorna-istanza.yml, package.json (version), scripts/genera-cliente.mjs` · **Lo dimostrano**: `tests/unit/provisionaIstanza.test.js`
 
 ## Lavori previsti
 

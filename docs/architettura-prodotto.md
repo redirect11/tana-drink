@@ -124,6 +124,9 @@ verificato) diventa tutta automatica senza cambiare codice.
   da solo a un push: un bug trovato alla Tana si porta ai clienti quando
   il rilascio è pronto, e un cliente si può tenere indietro o riportare a
   un tag precedente.
+- **Ogni app di un locale è un'app di produzione**: build di produzione,
+  pubblicata da un rilascio (`main` o un tag), con il progetto etichettato
+  `ambiente=produzione`. Le prove si fanno sulla demo e sugli emulatori.
 - **I servizi premium si comprano dalla dashboard** del titolare: «Cambia
   piano o moduli» aggiorna l'abbonamento Stripe con conguaglio, e la
   licenza dell'istanza si riscrive da sola: le funzioni compaiono nell'app

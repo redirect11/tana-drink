@@ -88,6 +88,7 @@ resource "google_project" "istanza" {
   labels = {
     prodotto = "drink"
     slug     = var.slug
+    ambiente = "produzione"
   }
 }
 

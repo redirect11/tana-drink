@@ -40,6 +40,11 @@ on:
         required: false
         type: string
         default: ''
+      ref:
+        description: 'Ramo o tag dell’app da pubblicare (main o vX.Y.Z)'
+        required: false
+        type: string
+        default: main
 
 permissions:
   contents: read
@@ -60,7 +65,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
+
+      # APP DI PRODUZIONE (REQ-FLOTTA-009): un locale riceve solo rilasci —
+      # `main` o un tag `vX.Y.Z` — e la build è di produzione (niente
+      # strumenti di sviluppo, niente nastro «TEST»). Un ramo di lavoro passa
+      # solo con un avviso: serve finché la flotta non è merged.
+      - name: È un rilascio?
+        run: |
+          REF="${{ inputs.ref }}"
+          if [ "$REF" = "main" ] || [[ "$REF" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Rilascio: $REF"
+          else
+            echo "::warning::«$REF» non è un rilascio (main o tag vX.Y.Z): va bene solo per provare."
+          fi
+          echo "AMBIENTE_APP=produzione" >> "$GITHUB_ENV"
 
       - name: Slug valido
         run: |
@@ -167,13 +187,14 @@ jobs:
         env:
           CALLBACK_URL: ${{ vars.REGIA_CALLBACK_URL }}
           CALLBACK_SECRET: ${{ secrets.PROVISIONING_CALLBACK_SECRET }}
+          REF_APP: ${{ inputs.ref }}
         run: |
           if [ -z "$CALLBACK_URL" ]; then echo "Nessuna REGIA_CALLBACK_URL: esito non inviato."; exit 0; fi
           if [ "${{ job.status }}" = "success" ]; then STATO=attiva; ERR=""; else STATO=errore; ERR="Workflow ${{ job.status }}: vedi GitHub Actions run ${{ github.run_id }}"; fi
           node -e '
             const [url, secret, slug, stato, u, progetto, versione, errore] = process.argv.slice(1);
             fetch(url, { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ slug, stato, url: u || null, progetto, versione: versione || null, errore: errore || null }) })
+              body: JSON.stringify({ slug, stato, url: u || null, progetto, versione: versione || null, errore: errore || null, ambiente: "produzione", ref: process.env.REF_APP || null }) })
               .then((r) => { console.log("regia:", r.status); if (r.status >= 300) process.exit(1); })
           ' "$CALLBACK_URL" "$CALLBACK_SECRET" "$SLUG" "$STATO" "${URL_ISTANZA:-}" "$PROGETTO" "${VERSIONE:-}" "$ERR"
 

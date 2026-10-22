@@ -68,4 +68,16 @@ describe('aggiorna-istanza.yml', () => {
     expect(esito).toMatch(/if: always\(\)/)
     expect(esito).toMatch(/versione/)
   })
+
+  // «Al deploy, le app devono essere taggate come app di produzione»
+  // (l'utente, 22/10/2026): build di produzione, rilascio come riferimento,
+  // e l'esito alla regia lo dice.
+  it('è un’app di produzione: build production, ref di rilascio, esito etichettato', () => {
+    for (const t of [a(), w()]) {
+      expect(t).toMatch(/VITE_APP_ENV: production/)
+      expect(t).toMatch(/È un rilascio\?/)
+      expect(t).toMatch(/ambiente: "produzione"/)
+      expect(t).not.toMatch(/VITE_APP_ENV: test/)
+    }
+  })
 })

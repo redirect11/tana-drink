@@ -5212,6 +5212,13 @@ requirements:
       Chi decide quali locali aggiornare e' il backoffice della regia
       (REQ-FLOTTA-009 di la': «Aggiorna», «Aggiorna tutte le istanze
       attive»); niente si aggiorna da solo a un push.
+      APP DI PRODUZIONE («al deploy, le app devono essere taggate come app
+      di produzione», l'utente, 22/10/2026): la build dei locali e' sempre
+      di produzione (VITE_APP_ENV=production: niente strumenti di sviluppo
+      ne' nastro «TEST»), il riferimento atteso e' un rilascio (main o un
+      tag vX.Y.Z; un ramo di lavoro passa con un avviso, finche' la flotta
+      non e' merged), il progetto porta l'etichetta `ambiente=produzione`
+      e l'esito alla regia dice `ambiente` e `ref` pubblicato.
       DA FARE DOPO: un aggiornamento automatico opzionale a ogni tag su
       main per i locali che lo chiedono, e la versione minima richiesta
       (un locale troppo indietro lo si vede nel backoffice).
