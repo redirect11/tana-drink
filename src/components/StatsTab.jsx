@@ -174,20 +174,31 @@ function DailyStats({ sezione = 'serate' }) {
             alle: allOra(shiftDay(p.al, 1), cutoff),
           }
     )
-  // Scritta un'ora, le giornate che la contengono restano al passo: servono
-  // a caricare abbastanza dati e al magazzino del periodo.
-  const scriviOra = (campo, valore) =>
-    valore &&
-    setPeriodo((p) => {
-      const nuovo = { ...p, [campo]: valore }
-      const da = istanteDaOraDiRoma(nuovo.dalle)
-      const a = istanteDaOraDiRoma(nuovo.alle)
-      return {
-        ...nuovo,
-        dal: da ? businessDayKey(da, cutoff) : p.dal,
-        al: a ? businessDayKey(a, cutoff) : p.al,
-      }
-    })
+  // LE DUE ORE SI SCRIVONO IN UNA BOZZA E SI APPLICANO CON UN TASTO. Flavio,
+  // vocale del 22/10/2026: «se io metto la data di inizio lui mi inizia a
+  // caricare la data di inizio fino ad oggi … con un tasto ok che mi avvia
+  // poi da lì il calcolo del periodo sarebbe meglio, così ragiona una sola
+  // volta quando lo dico io». Prima ogni tocco alle caselle ricalcolava, e
+  // scrivere l'inizio voleva dire aspettare un calcolo che non serviva.
+  // `bozza` è null quando coincide con quello che si sta guardando.
+  const [bozza, setBozza] = useState(null)
+  const scritto = bozza || { dalle: periodo.dalle, alle: periodo.alle }
+  const scriviOra = (campo, valore) => valore && setBozza({ ...scritto, [campo]: valore })
+  // La bozza è buona quando la fine viene dopo l'inizio.
+  const bozzaValida = useMemo(() => {
+    const da = istanteDaOraDiRoma(scritto.dalle)
+    const a = istanteDaOraDiRoma(scritto.alle)
+    return Boolean(da && a && da < a)
+  }, [scritto.dalle, scritto.alle])
+  // Applicata, le giornate che contengono le due ore restano al passo:
+  // servono a caricare abbastanza dati e al magazzino del periodo.
+  const applicaBozza = () => {
+    if (!bozza || !bozzaValida) return
+    const da = istanteDaOraDiRoma(bozza.dalle)
+    const a = istanteDaOraDiRoma(bozza.alle)
+    setPeriodo((p) => ({ ...p, ...bozza, dal: businessDayKey(da, cutoff), al: businessDayKey(a, cutoff) }))
+    setBozza(null)
+  }
   // I giorni di servizio per i calendari del periodo (REQ-STAT-007), dalla
   // lib condivisa: letti una volta, tenuti in mano.
   const [giorniDiServizio, setGiorniDiServizio] = useState(new Set())
@@ -468,7 +479,10 @@ function DailyStats({ sezione = 'serate' }) {
           <button
             key={v}
             className={`chip${periodo.preset === v ? ' active' : ''}`}
-            onClick={() => setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))}
+            onClick={() => {
+              setBozza(null)
+              setPeriodo(periodoDaPreset(v, businessDayKey(new Date(), cutoff)))
+            }}
           >
             {v} giorni
           </button>
@@ -486,8 +500,8 @@ function DailyStats({ sezione = 'serate' }) {
             <CampoDataOra
               id="periodo-dalle"
               label="Inizio"
-              valore={periodo.dalle}
-              max={periodo.alle}
+              valore={scritto.dalle}
+              max={scritto.alle}
               oggi={businessDayKey(new Date(), cutoff)}
               servizio={giorniDiServizio}
               onChange={(v) => scriviOra('dalle', v)}
@@ -495,21 +509,26 @@ function DailyStats({ sezione = 'serate' }) {
             <CampoDataOra
               id="periodo-alle"
               label="Fine"
-              valore={periodo.alle}
-              min={periodo.dalle}
+              valore={scritto.alle}
+              min={scritto.dalle}
               oggi={businessDayKey(new Date(), cutoff)}
               servizio={giorniDiServizio}
               onChange={(v) => scriviOra('alle', v)}
             />
+            <button type="button" className="btn small" style={{ alignSelf: 'flex-end' }} onClick={applicaBozza} disabled={!bozza || !bozzaValida}>
+              Applica
+            </button>
           </div>
           <p className="muted small" style={{ margin: '0 0 12px' }}>
-            {istanti ? (
+            {!bozzaValida ? (
+              'L’ora di fine deve venire dopo quella di inizio.'
+            ) : bozza ? (
+              'Tocca «Applica» per calcolare il periodo scritto.'
+            ) : (
               <>
                 Dalle {oraPerEsteso(periodo.dalle)} alle {oraPerEsteso(periodo.alle)}: {view.sel.length}{' '}
                 {view.sel.length === 1 ? 'giornata' : 'giornate'} con ordini.
               </>
-            ) : (
-              'L’ora di fine deve venire dopo quella di inizio.'
             )}
           </p>
         </>
