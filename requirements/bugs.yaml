@@ -5133,3 +5133,37 @@ bugs:
       - tests/unit/css.test.js
       - tests/component/PaymentScreen.test.jsx
       - tests/component/CustomDrinkForm.test.jsx
+  - id: BUG-117
+    title: "«Movimenti» di un prodotto non si apriva o si apriva in ritardo: l'SDK scorreva tutta la cache dei movimenti"
+    area: "src/lib/api.js (fetchMovimentiProdotto, toIso), src/lib/firebaseClient.js (firestoreLite), src/components/MovimentiProdotto.jsx"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 23/10/2026: «la funzione MOVIMENTI di un qualsiasi prodotto
+      non si apre o si apre con ritardo». Non era la query (l'indice
+      composto item_id + created_at c'e', pronto, in test e in produzione,
+      e lato server risponde in meno di un secondo) ne' il numero di
+      movimenti del prodotto: succedeva anche coi prodotti con tre righe.
+      Era la cache su disco del Firestore dell'app: a ogni domanda nuova,
+      prima di andare in rete, l'SDK scorre in IndexedDB TUTTI i documenti
+      della collezione che ha in cache, e inventario, controllo di
+      magazzino e bilancio ne leggono decine di migliaia. Misurato in Chrome
+      headless contro l'emulatore con 25.000 movimenti: a cache vuota
+      0,3 s, a cache piena 1,2-1,4 s, con la CPU rallentata quattro volte
+      1,7-2,9 s, per qualunque prodotto; sul tablet, con disco piu' lento e
+      piu' movimenti, secondi in piu'. Ora la finestra legge col client
+      diretto di Firestore (`firebase/firestore/lite`, caricato la prima
+      volta che serve): stessa app, stesso accesso, niente cache — nelle
+      stesse prove 0,2-0,3 s. Senza rete si ripiega sulla lettura di prima,
+      che risponde con la cache. `toIso` riconosce il Timestamp dal metodo:
+      il client diretto ha una sua classe, e col controllo sulla classe le
+      date restavano oggetti e i movimenti cadevano fuori periodo. Le righe
+      usano un formatter della data solo, invece di uno per riga. Le altre
+      letture grosse dei movimenti (controllo di magazzino, magazzino nel
+      periodo, bilancio) hanno lo stesso costo e restano da valutare.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, prestazioni]
+    test_cases:
+      - tests/unit/movimentiDalServer.test.js
