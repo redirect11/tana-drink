@@ -12360,6 +12360,7 @@ requirements:
     test_cases:
       - tests/unit/movimentiProdotto.test.js
       - tests/component/MovimentiProdotto.test.jsx
+      - tests/unit/movimentiDalServer.test.js
   - id: REQ-MAG-049
     title: "Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP"
     area: "src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)"
