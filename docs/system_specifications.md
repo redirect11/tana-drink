@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 22 ottobre 2026.
+> Generato il 24 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -1802,7 +1802,7 @@ Flavio, 22/09/2026: «se voglio analizzare un prodotto di magazzino il gestional
 
 FATTO (10/10/2026), insieme alle vendite di Tiller («nella movimentazione dal 2024», l'utente il 07/10). Nella scheda di ogni prodotto in Magazzino, «📜 Movimenti» apre la sua movimentazione: · i TOTALI PER TIPO nel periodo (30 giorni, 90, un anno, tutto): consegna ordine fornitore, carico diretto, carico da fattura, contenuto reale, chiusura inventario, vendite dell'app (ordini, modifiche e storni insieme), vendite su Tiller, altre correzioni; tutto nell'unità della giacenza, col segno; · il VENDUTO MESE PER MESE, app e Tiller affiancati; · l'elenco dei movimenti, dal più recente. I movimenti si leggono per prodotto e per il solo periodo scelto (indice composto item_id + created_at): un distillato accumula migliaia di scarichi l'anno. Le vendite di Tiller non sono movimenti — non hanno toccato le giacenze — e vengono dal riassunto che l'import scrive per ogni prodotto, con le RICETTE ATTUALI delle voci vendute: è una stima, e per le bottiglie vendute intere coincide col vero.
 
-**Dove**: `src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)` · **Lo dimostrano**: `tests/unit/movimentiProdotto.test.js`, `tests/component/MovimentiProdotto.test.jsx`
+**Dove**: `src/lib/movimentiProdotto.js, src/components/MovimentiProdotto.jsx, src/components/InventoryManager.jsx, src/lib/api.js (fetchMovimentiProdotto, fetchVendutoStoricoProdotto), src/lib/venditeStoriche.js (vendutoPerProdotto)` · **Lo dimostrano**: `tests/unit/movimentiProdotto.test.js`, `tests/component/MovimentiProdotto.test.jsx`, `tests/unit/movimentiDalServer.test.js`
 
 #### REQ-MAG-049 — Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP
 

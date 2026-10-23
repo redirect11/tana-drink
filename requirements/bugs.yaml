@@ -5133,3 +5133,74 @@ bugs:
       - tests/unit/css.test.js
       - tests/component/PaymentScreen.test.jsx
       - tests/component/CustomDrinkForm.test.jsx
+  - id: BUG-117
+    title: "«Movimenti» di un prodotto non si apriva o si apriva in ritardo: l'SDK scorreva tutta la cache dei movimenti"
+    area: "src/lib/api.js (fetchMovimentiProdotto, toIso), src/lib/firebaseClient.js (firestoreLite), src/components/MovimentiProdotto.jsx"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 23/10/2026: «la funzione MOVIMENTI di un qualsiasi prodotto
+      non si apre o si apre con ritardo». Non era la query (l'indice
+      composto item_id + created_at c'e', pronto, in test e in produzione,
+      e lato server risponde in meno di un secondo) ne' il numero di
+      movimenti del prodotto: succedeva anche coi prodotti con tre righe.
+      Era la cache su disco del Firestore dell'app: a ogni domanda nuova,
+      prima di andare in rete, l'SDK scorre in IndexedDB TUTTI i documenti
+      della collezione che ha in cache, e inventario, controllo di
+      magazzino e bilancio ne leggono decine di migliaia. Misurato in Chrome
+      headless contro l'emulatore con 25.000 movimenti: a cache vuota
+      0,3 s, a cache piena 1,2-1,4 s, con la CPU rallentata quattro volte
+      1,7-2,9 s, per qualunque prodotto; sul tablet, con disco piu' lento e
+      piu' movimenti, secondi in piu'. Ora la finestra legge col client
+      diretto di Firestore (`firebase/firestore/lite`, caricato la prima
+      volta che serve): stessa app, stesso accesso, niente cache — nelle
+      stesse prove 0,2-0,3 s. Senza rete si ripiega sulla lettura di prima,
+      che risponde con la cache. `toIso` riconosce il Timestamp dal metodo:
+      il client diretto ha una sua classe, e col controllo sulla classe le
+      date restavano oggetti e i movimenti cadevano fuori periodo. Le righe
+      usano un formatter della data solo, invece di uno per riga. Le altre
+      letture grosse dei movimenti (controllo di magazzino, magazzino nel
+      periodo, bilancio) hanno lo stesso costo e restano da valutare.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino, prestazioni]
+    test_cases:
+      - tests/unit/movimentiDalServer.test.js
+  - id: BUG-118
+    title: "Le maniglie del conto andavano a scatti, e sul telefono quella del riepilogo bloccava tutto"
+    area: "src/lib/useResizable.js, src/components/OrderPosDetail.jsx, src/index.css"
+    severity: alta
+    priority: P1
+    description: >
+      L'utente, 24/10/2026, con una foto del telefono in produzione: «le
+      maniglie nella schermata dell'ordine sono scattose e nella
+      visualizzazione smartphone la maniglia del riepilogo dell'ordine
+      blocca tutto». Tre cause nello stesso attrezzo (useResizable):
+      (1) ogni movimento del dito diventava uno stato di React, e ogni
+      stato ridisegnava l'intera schermata del conto, griglia dei prodotti
+      compresa, con una scrittura su localStorage a ogni pixel: sul
+      telefono il gesto fermava tutto; (2) il pannello del conto ha una
+      transizione sulla larghezza, quindi mentre si trascinava la colonna
+      si animava DIETRO al dito e arrivava sempre in ritardo; (3) col dito
+      la maniglia si arma tenendo premuto 400 ms, che e' anche il momento
+      in cui Chrome su Android apre il menu della pressione lunga o
+      comincia a selezionare il testo vicino: il gesto si interrompeva e la
+      pagina poteva restare in selezione.
+      Ora, con `dalVivo`, mentre si trascina la misura va dritta nella
+      variabile CSS dell'elemento (--pos-comanda-w, --pos-cats-w e le loro
+      scale, --foot-scale, --pos-comanda-h) una volta per fotogramma, e lo
+      stato (con la memoria per dispositivo) si aggiorna una volta sola,
+      quando si lascia. Con una maniglia presa `.posd-body` ha la classe
+      `trascinando`, che spegne le transizioni. Le maniglie non si
+      selezionano (-webkit-touch-callout, user-select) e il menu della
+      pressione lunga si annulla; se il browser si riprende il dito la
+      presa finisce lì. Verificato coi test, non ancora su un telefono.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, pos, ui]
+    test_cases:
+      - tests/unit/useResizable.test.js
+      - tests/component/OrderPosDetail.test.jsx
+      - tests/unit/css.test.js
