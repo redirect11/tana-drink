@@ -406,17 +406,52 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const draftRef = useRef(draft)
   draftRef.current = draft
 
+  // MENTRE SI TRASCINA UNA MANIGLIA LA MISURA VA DRITTA NELLE VARIABILI CSS
+  // (BUG-118): `dalVivo` scrive sull'elemento, una volta per fotogramma, e
+  // la schermata si ridisegna una volta sola, quando si lascia. Gli elementi
+  // e le scale arrivano da qui sotto attraverso questi riferimenti.
+  const corpoRef = useRef(null)
+  const pannelloRef = useRef(null)
+  const piedeRef = useRef(null)
+  const scaleRef = useRef({})
+  const imposta = (rif, nome, valore) => rif.current?.style.setProperty(nome, valore)
   // Colonne POS ridimensionabili (larghezze ricordate per dispositivo).
-  const catsRz = useResizable('pos-cats', { def: 168, min: 140, max: 340, side: 'right' })
+  const catsRz = useResizable('pos-cats', {
+    def: 168,
+    min: 140,
+    max: 340,
+    side: 'right',
+    dalVivo: (w) => {
+      imposta(corpoRef, '--pos-cats-w', `${w}px`)
+      imposta(corpoRef, '--cats-scale', scaleRef.current.cats?.(w))
+    },
+  })
   // Recenti per la griglia POS: gli ultimi item ordinati (best-effort).
   const [recentIds, setRecentIds] = useState([])
   useEffect(() => {
     fetchRecentDrinkIds(20).then(setRecentIds).catch(() => setRecentIds([]))
   }, [])
-  const comandaRz = useResizable('pos-comanda', { def: 400, min: 260, max: 700, side: 'left' })
+  const comandaRz = useResizable('pos-comanda', {
+    def: 400,
+    min: 260,
+    max: 700,
+    side: 'left',
+    dalVivo: (w) => {
+      imposta(corpoRef, '--pos-comanda-w', `${w}px`)
+      imposta(corpoRef, '--comanda-scale', scaleRef.current.comanda?.(w))
+    },
+  })
   // Scala del footer (totale + conferma/pagamento): la maniglia in cima lo
   // "allunga" e tasti/font crescono insieme. Valore in % (100 = normale).
-  const footRz = useResizable('pos-foot-scale', { def: 100, min: 80, max: 175, axis: 'y', side: 'up', speed: 0.5 })
+  const footRz = useResizable('pos-foot-scale', {
+    def: 100,
+    min: 80,
+    max: 175,
+    axis: 'y',
+    side: 'up',
+    speed: 0.5,
+    dalVivo: (v) => imposta(piedeRef, '--foot-scale', v / 100),
+  })
   // ALTEZZA DEL PANNELLO ORDINE sul telefono (in dvh): con più di tre o
   // quattro righe il conto non ci stava e bisognava scorrere dentro una
   // finestrella. Si tira su la maniglia e si guarda tutto il conto.
@@ -430,6 +465,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     axis: 'y',
     side: 'up',
     speed: 0.13, // pixel → dvh (uno schermo tipico è ~800px: 1dvh ≈ 8px)
+    dalVivo: (v) => imposta(pannelloRef, '--pos-comanda-h', `${v}dvh`),
   })
   // Allargando una colonna ne crescono anche i testi (e viceversa): la scala
   // del font segue la larghezza rispetto alla misura di riposo (def), con un
@@ -446,17 +482,22 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     mq.addEventListener?.('change', h)
     return () => mq.removeEventListener?.('change', h)
   }, [])
-  // Base più grande su tablet/desktop (leggibile su iPad); su smartphone scala
-  // fissa più contenuta (la colonna è comunque al 100%).
-  const catsScale = isPhone ? 0.95 : clampScale(catsRz.width / 150, 1.1, 1.7)
   // Il MINIMO della scala del testo delle righe è configurabile
   // (Impostazioni → Vista ordine): il pavimento fisso a 1.1 per qualcuno
   // era un manifesto — sotto la soglia scelta il testo non scende, per
   // quanto si stringa il pannello.
   const testoMin = clampScale(Number(settings.pos_testo_min) || 1.1, 0.8, 1.4)
-  const comandaScale = isPhone
-    ? Math.min(0.95, testoMin)
-    : clampScale(comandaRz.width / 340, testoMin, 1.7)
+  const scalaComanda = (w) => (isPhone ? Math.min(0.95, testoMin) : clampScale(w / 340, testoMin, 1.7))
+  const comandaScale = scalaComanda(comandaRz.width)
+  // Categorie: base più grande su tablet/desktop (leggibile su iPad); su
+  // smartphone scala fissa più contenuta (la colonna è comunque al 100%).
+  const scalaCats = (w) => (isPhone ? 0.95 : clampScale(w / 150, 1.1, 1.7))
+  const catsScale = scalaCats(catsRz.width)
+  // Le stesse scale, per le maniglie mentre si trascinano.
+  scaleRef.current = { cats: scalaCats, comanda: scalaComanda }
+  // Mentre una maniglia è presa niente transizioni: la colonna che si anima
+  // dietro al dito arriva sempre in ritardo, e si vede a scatti.
+  const trascinando = catsRz.attivo || comandaRz.attivo || footRz.attivo || altezzaRz.attivo
 
   // Pannello ordine in basso (solo smartphone): si RIMPICCIOLISCE quando si
   // lavora sulla griglia (scroll/ricerca/aggiunta) e si riapre toccandolo.
@@ -2250,7 +2291,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
       {/* ── Corpo a 3 colonne: categorie · griglia · ordine ── */}
       <div
-        className="posd-body"
+        ref={corpoRef}
+        className={`posd-body${trascinando ? ' trascinando' : ''}`}
         style={{
           '--pos-cats-w': `${catsRz.width}px`,
           '--pos-comanda-w': `${comandaRz.width}px`,
@@ -2291,6 +2333,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             comprime in una barra (totale + n. item) mentre si lavora sulla
             griglia; un tocco la riapre. ── */}
         <div
+          ref={pannelloRef}
           className={`posd-comanda${panelCollapsed ? ' collapsed' : ''}`}
           style={{ '--pos-comanda-h': `${altezzaRz.width}dvh` }}
         >
@@ -2671,7 +2714,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
           {/* Footer: avanzamento comanda + totale + CONFERMA vicino a PAGAMENTO.
               Ridimensionabile dalla maniglia in cima: font e tasti scalano. */}
-          <div className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
+          <div ref={piedeRef} className="posd-comanda-foot" style={{ '--foot-scale': footRz.width / 100 }}>
             <div className="posd-foot-handle" title="Trascina per ingrandire/rimpicciolire" {...footRz.handleProps} />
             {/* QUELLO CHE SI LEGGE, separato da quello che si preme. Sono
                 numeri: quando l'altezza manca cedono loro e scorrono, mentre
