@@ -2,6 +2,14 @@
 
 ## 1.9.4-beta — in lavorazione
 
+### Per chi sta al banco
+
+- **Le maniglie del conto seguono il dito.** Trascinarle non fa più
+  ridisegnare tutta la schermata a ogni movimento: niente scatti sul
+  tablet, e sul telefono la maniglia del riepilogo non blocca più la
+  pagina. Tenendo premuto per afferrarle non si apre più il menu del
+  browser né la selezione del testo.
+
 ### Per chi amministra
 
 - **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva

@@ -5205,6 +5205,20 @@ body.fullbleed,
 /* Maniglia per l'ALTEZZA del pannello ordine (telefono). Larga tutta la
    riga e con un segno al centro: si prende senza mirare. Si accende quando
    ha preso, perché il dito copre quello che sta toccando. */
+/* LE MANIGLIE NON SI SELEZIONANO (BUG-118): tenendo premuto per armarle,
+   Android apriva il menu della pressione lunga o selezionava il testo
+   vicino, e il gesto si interrompeva. */
+.posd-altezza-handle, .posd-foot-handle, .posd-resize-handle, .payscreen-resize-handle {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Mentre una maniglia è presa, niente transizioni: la colonna che si anima
+   dietro al dito arriva sempre in ritardo, e si vede a scatti (BUG-118). */
+.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats {
+  transition: none;
+}
+
 .posd-altezza-handle {
   flex-shrink: 0;
   height: 20px;

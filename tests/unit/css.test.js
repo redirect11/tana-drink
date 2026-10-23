@@ -1515,3 +1515,23 @@ describe('le finestrelle di conferma stanno nello schermo', () => {
     )
   })
 })
+
+// LE MANIGLIE NON SI SELEZIONANO E NON RINCORRONO IL DITO (BUG-118).
+describe('le maniglie del conto', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`\n${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  it('non si selezionano né aprono il menu della pressione lunga', () => {
+    const r = regola('.posd-altezza-handle, .posd-foot-handle, .posd-resize-handle, .payscreen-resize-handle')
+    expect(r).toMatch(/-webkit-touch-callout:\s*none/)
+    expect(r).toMatch(/user-select:\s*none/)
+  })
+
+  it('mentre se ne tiene una, il conto non si anima', () => {
+    expect(regola('.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats')).toMatch(/transition:\s*none/)
+  })
+})
