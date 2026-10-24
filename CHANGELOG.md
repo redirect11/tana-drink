@@ -12,6 +12,11 @@
 
 ### Per chi amministra
 
+- **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
+  la marginalità mostra Costo, Prezzo, Margine in euro e Ricarico in
+  colonna, e si ordina toccando l'intestazione. Parte divisa per
+  categorie del menù, con margine e ricarico medi di ogni categoria;
+  «Tutto insieme» mette in fila tutto il listino.
 - **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva
   metterci secondi o sembrare non aprirsi, per qualunque prodotto: l'app
   scorreva tutti i movimenti salvati sul dispositivo prima di chiedere

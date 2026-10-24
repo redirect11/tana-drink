@@ -553,6 +553,13 @@ Otto temi per riga, si tiene il peggiore.
 7. **Ogni tema nuovo è un preset in `themes.js`**, mai colori sparsi nei
    componenti: se un colore non passa dalle 7 variabili (o dagli stati),
    è nel posto sbagliato.
+8. **Quello che ha una categoria si legge per categorie** (Flavio,
+   22/10/2026: «sempre sempre sempre dividere qualsiasi cosa in
+   categorie»). Un elenco di voci di menù o di prodotti di magazzino parte
+   diviso per categoria, nell'ordine delle categorie, con la scelta «Tutto
+   insieme» accanto (`GruppoChip`); le colonne con un valore si ordinano
+   toccando l'intestazione (`SortTh`), anche dentro le categorie. Il
+   modello è la marginalità del listino (`MarginList`).
 
 ## Breakpoint
 

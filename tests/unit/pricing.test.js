@@ -11,6 +11,8 @@ import {
   markupOf,
   marginOf,
   marginReport,
+  ordinaMargini,
+  marginiPerCategoria,
   DEFAULT_MARKUP,
 } from '../../src/lib/pricing.js'
 
@@ -175,5 +177,60 @@ describe('marginReport (lista marginalità)', () => {
   it('un obiettivo più alto sposta la soglia', () => {
     const r = marginReport(drinks, itemsById, { markup: 5 })
     expect(r.sotto).toBe(2) // anche il Premium (×4,04) va sotto il ×5
+  })
+})
+
+// LA MARGINALITÀ IN TABELLA (REQ-MENU-002). Flavio, 22/10/2026: «sempre la
+// divisione in categorie», e «la possibilità di metterlo in ordine secondo
+// determinati valori» — ricarico, margine, costo, prezzo.
+describe('marginalità: ordine e categorie', () => {
+  const righe = [
+    { id: 'a', name: 'Spritz', category_id: 'aperitivi', cost: 1.5, price: 6, margin: 4.5, markup: 4 },
+    { id: 'b', name: 'Bjorne', category_id: 'birre', cost: 2.2, price: 4, margin: 1.8, markup: 1.82 },
+    { id: 'c', name: 'Americano', category_id: 'aperitivi', cost: 2, price: 6, margin: 4, markup: 3 },
+    { id: 'd', name: 'Senza costo', category_id: 'birre', cost: 0, price: 5, margin: 5, markup: null },
+    { id: 'e', name: 'Vecchia voce', category: 'Birre', cost: 1, price: 4, margin: 3, markup: 4 },
+    { id: 'f', name: 'Orfana', category_id: 'sparita', cost: 1, price: 2, margin: 1, markup: 2 },
+  ]
+  const categorie = [
+    { id: 'birre', name: 'Birre', sort_order: 2 },
+    { id: 'aperitivi', name: 'Aperitivi', sort_order: 1 },
+  ]
+
+  it('si ordina su ogni colonna, nei due versi', () => {
+    expect(ordinaMargini(righe, { col: 'price', dir: 'desc' }).map((r) => r.id).slice(0, 2)).toEqual(['c', 'a'])
+    expect(ordinaMargini(righe, { col: 'cost', dir: 'asc' })[0].id).toBe('d')
+    expect(ordinaMargini(righe, { col: 'margin', dir: 'desc' })[0].id).toBe('d')
+    expect(ordinaMargini(righe, { col: 'name', dir: 'asc' })[0].name).toBe('Americano')
+  })
+
+  it('un ricarico che manca sta in fondo, in qualunque verso', () => {
+    expect(ordinaMargini(righe, { col: 'markup', dir: 'asc' }).at(-1).id).toBe('d')
+    expect(ordinaMargini(righe, { col: 'markup', dir: 'desc' }).at(-1).id).toBe('d')
+  })
+
+  it('divide per categoria del menù, nel loro ordine, con «Senza categoria» in fondo', () => {
+    const g = marginiPerCategoria(righe, categorie)
+    expect(g.map((x) => x.nome)).toEqual(['Aperitivi', 'Birre', 'Senza categoria'])
+    expect(g[0].righe.map((r) => r.id)).toEqual(['a', 'c'])
+    // La voce che ha solo il nome della categoria ci finisce dentro.
+    expect(g[1].righe.map((r) => r.id)).toEqual(['b', 'd', 'e'])
+    expect(g[2].righe.map((r) => r.id)).toEqual(['f'])
+  })
+
+  it('ogni categoria porta ricarico e margine medi, sulle voci che li hanno', () => {
+    const [aperitivi, birre] = marginiPerCategoria(righe, categorie)
+    expect(aperitivi.ricaricoMedio).toBe(3.5)
+    expect(aperitivi.margineMedio).toBe(4.25)
+    // «Senza costo» non ha ricarico: non conta nella media.
+    expect(birre.ricaricoMedio).toBe(2.91)
+  })
+
+  it('marginReport porta la categoria di ogni voce', () => {
+    const r = marginReport(
+      [{ id: 'gt', name: 'Gin Tonic', price: 4, category_id: 'long', recipe_items: [{ inventory_item_id: 'gin', unit: 'cl', qty: 4 }] }],
+      { gin }
+    )
+    expect(r.righe[0].category_id).toBe('long')
   })
 })

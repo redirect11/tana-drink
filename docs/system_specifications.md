@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 220 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 20 | da fare |
+| ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**264 voci** in tutto. **236** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **20** sono lavori
+**268 voci** in tutto. **236** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 12 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 12 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -58,8 +58,8 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 26 | 2 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | — | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 6 | — |  |
 | [LIC](#lic) | 1 | — |  |
@@ -732,11 +732,13 @@ A /menu si apre sempre la stessa schermata, per chi ordina e per chi lavora: le 
 
 **Dove**: `src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`
 
-#### REQ-MENU-002 — Marginalità del listino
+#### REQ-MENU-002 — Marginalità del listino, in tabella e divisa per categorie
 
 Per ogni drink si vede costo reale, prezzo e margine, con il prezzo consigliato calcolato dal ricarico impostato: serve a capire dove si sta perdendo.
 
-**Dove**: `src/lib/pricing.js, src/components/MarginList.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`
+IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe mettere sempre la divisione in categorie … poter vedere questo confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di metterlo in ordine secondo determinati valori»; il prezzo, «scritto piccolo e sotto il nome», va «tutto in colonna sulla destra come se fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro, prezzo meno costo) e Ricarico (il moltiplicatore); toccando un'intestazione si ordina su quella colonna, ritoccandola si gira il verso; un valore che manca sta sempre in fondo. Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Il prezzo consigliato e gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
+
+**Dove**: `src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/MarginList.test.jsx`
 
 #### REQ-MENU-003 — Import del catalogo da un export SumUp
 
@@ -3252,6 +3254,18 @@ Nella vista «Nuovo ordine dal menù» dello staff si possono inserire NOME e nu
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
+### Menù e catalogo
+
+#### REQ-MENU-017 — Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico
+
+Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo prendo … se io sto a zero, scompare direttamente dal menu». Oggi il menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e quel flag non sa niente delle giacenze: si spegne a mano.
+
+PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta di partenza. Con l'opzione accesa, quando la giacenza di un ingrediente della ricetta scende a zero o sotto, la voce sparisce dal menu' del cliente; quando un carico la riporta sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce resta, perche' la giacenza dell'app puo' sbagliare e il bartender vede la bottiglia. COME: il cliente non legge il magazzino (le regole lo vietano), quindi il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul cambio di giacenza di un prodotto, solo quando attraversa lo zero (non a ogni vendita): poche scritture, e il banco non aspetta niente. L'opzione per voce serve perche' molti ingredienti non hanno una giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per tutti sparirebbero cocktail interi per un numero sbagliato.
+
+DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
+
+**Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
+
 ### Magazzino
 
 #### REQ-MAG-008 — Ricette da riagganciare agli articoli nuovi
@@ -3476,6 +3490,28 @@ Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e 
 
 **Dove**: `functions/, src/components/InvoicesTab.jsx`
 
+#### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
+
+Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel flag la casella disponibile nel menu e lui in automatico mi dovrebbe creare all'interno del menu gia' tutto con la descrizione» («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della bottiglia».
+
+PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
+
+LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
+
+**Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
+
+#### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
+
+Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, quindi qua iniziamo a valutare anche un'opzione di creare un cassetto economico dove noi ogni tanto andiamo a caricare oppure un prelievo diretto dal nostro conto di SumUp».
+
+COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
+
+PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
+
+DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
+
+**Dove**: `functions/, settings, regia (abbonamenti della flotta)`
+
 ### Interfaccia
 
 #### REQ-UI-024 — Le impostazioni che cambiano l'aspetto stanno tutte sotto «Aspetto»
@@ -3499,6 +3535,14 @@ COME SI FA IL TRASLOCO: da solo, in un commit suo. Muovere mezzo pannello impost
 Il seguito di REQ-UI-026: la stessa passata sugli aiuti delle altre sezioni del gestionale (impostazioni, ordini fornitore, scadenzario, cassa, statistiche), secondo la regola di DESIGN.md. Non le schermate del banco, che restano a parole comuni.
 
 **Dove**: `src/components/SettingsTab.jsx, src/components/*Panel.jsx del gestionale`
+
+#### REQ-UI-030 — Ogni elenco di cose che hanno una categoria si legge diviso per categorie
+
+Flavio, vocale del 22/10/2026: «la cosa piu' importante sarebbe sempre sempre sempre dividere qualsiasi cosa in categorie … se c'e' una categoria, ora che sia di prodotti o che sia di items di menu, ci dovrebbe sempre essere la possibilita' di separare in categorie e non di tenere tutto tutto insieme in un'unica vista». E' una regola, ed e' scritta in DESIGN.md (guardrail 8): un elenco di voci di menu' o di prodotti di magazzino parte diviso per categoria, con la scelta «Tutto insieme» accanto; le colonne si ordinano anche dentro le categorie. Fatto per la marginalita' del listino (REQ-MENU-002) e per il venduto nella fascia oraria (REQ-STAT-005).
+
+DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazzino, movimenti, ordini ai fornitori, inventario) e dividere quelle che oggi mescolano, senza riscritture di massa: una schermata per volta, ognuna col suo test.
+
+**Dove**: `DESIGN.md (guardrail 8), tutte le schermate con elenchi`
 
 ### Come si lavora al progetto
 
