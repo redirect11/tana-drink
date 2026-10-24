@@ -3508,6 +3508,8 @@ COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazi
 
 PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
 
+DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
+
 DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
 
 **Dove**: `functions/, settings, regia (abbonamenti della flotta)`
