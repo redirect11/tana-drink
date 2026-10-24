@@ -3699,16 +3699,32 @@ requirements:
     test_cases: [tests/component/MenuPage.test.jsx]
 
   - id: REQ-MENU-002
-    title: "Marginalità del listino"
-    area: "src/lib/pricing.js, src/components/MarginList.jsx"
+    title: "Marginalità del listino, in tabella e divisa per categorie"
+    area: "src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx"
     description: >
       Per ogni drink si vede costo reale, prezzo e margine, con il prezzo
       consigliato calcolato dal ricarico impostato: serve a capire dove si sta
       perdendo.
+      IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe
+      mettere sempre la divisione in categorie … poter vedere questo
+      confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di
+      metterlo in ordine secondo determinati valori»; il prezzo, «scritto
+      piccolo e sotto il nome», va «tutto in colonna sulla destra come se
+      fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro,
+      prezzo meno costo) e Ricarico (il moltiplicatore); toccando
+      un'intestazione si ordina su quella colonna, ritoccandola si gira il
+      verso; un valore che manca sta sempre in fondo. Di partenza la
+      tabella e' divisa per categorie del menu', nel loro ordine, con
+      «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e
+      ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di
+      partenza si vedono tutte le voci, col ricarico piu' basso in cima; i
+      filtri Da rivedere, In linea, Costo incompleto restano. Il prezzo
+      consigliato e gli ingredienti senza costo si leggono sotto il nome.
+      Toccando il nome si apre la voce.
     status: implemented
     generate_issue: false
     labels: [menu, prezzi]
-    test_cases: [tests/unit/pricing.test.js]
+    test_cases: [tests/unit/pricing.test.js, tests/component/MarginList.test.jsx]
 
   - id: REQ-MENU-003
     title: "Import del catalogo da un export SumUp"
@@ -3734,6 +3750,37 @@ requirements:
     generate_issue: false
     labels: [menu, ux]
     test_cases: [tests/unit/categoryColors.test.js]
+
+  - id: REQ-MENU-017
+    title: "Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico"
+    area: "functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx"
+    description: >
+      Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo
+      prendo … se io sto a zero, scompare direttamente dal menu». Oggi il
+      menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e
+      quel flag non sa niente delle giacenze: si spegne a mano.
+      PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e'
+      esaurita», spenta di partenza. Con l'opzione accesa, quando la
+      giacenza di un ingrediente della ricetta scende a zero o sotto, la
+      voce sparisce dal menu' del cliente; quando un carico la riporta
+      sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce
+      resta, perche' la giacenza dell'app puo' sbagliare e il bartender
+      vede la bottiglia.
+      COME: il cliente non legge il magazzino (le regole lo vietano), quindi
+      il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul
+      cambio di giacenza di un prodotto, solo quando attraversa lo zero (non
+      a ogni vendita): poche scritture, e il banco non aspetta niente.
+      L'opzione per voce serve perche' molti ingredienti non hanno una
+      giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per
+      tutti sparirebbero cocktail interi per un numero sbagliato.
+      DA DECIDERE con l'utente: se l'opzione vale per la voce o per il
+      prodotto di magazzino, e se il cliente vede la voce barrata
+      («esaurita») invece che sparita.
+    status: todo
+    generate_issue: true
+    labels: [menu, magazzino, vista-cliente]
+    priority: P2
+    test_cases: []
 
   # ══════════════════════════════════════════════════════════════════════
   #  GRUPPI DI CONTI
@@ -5487,6 +5534,62 @@ requirements:
     status: todo
     generate_issue: true
     labels: [ai, fatture, magazzino]
+    priority: P3
+    test_cases: []
+
+  - id: REQ-AI-002
+    title: "Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI"
+    area: "functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx"
+    description: >
+      Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo
+      metto nel flag la casella disponibile nel menu e lui in automatico mi
+      dovrebbe creare all'interno del menu gia' tutto con la descrizione»
+      («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della
+      bottiglia». PROPOSTA: nella scheda del prodotto di magazzino, «Metti
+      nel menu' del cliente» crea la voce di menu' collegata (ricetta: una
+      dose del prodotto, prezzo da listino col ricarico) e chiede al modello
+      una descrizione breve dal nome e dal produttore. La descrizione e'
+      una PROPOSTA da confermare, non si pubblica da sola: un modello puo'
+      sbagliare provenienza o botaniche, e al cliente arriva come
+      informazione del locale.
+      LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di
+      marchi e rivenditori, e metterle in un menu' commerciale senza diritti
+      e' un rischio; un modello non le «prende», le cercherebbe con un
+      motore di ricerca. La strada pulita e' la foto della bottiglia fatta
+      al banco col telefono, ripulita dal modello (sfondo tolto, luce
+      uniformata). Da decidere con l'utente.
+      Costi e accesso in REQ-AI-003.
+    status: todo
+    generate_issue: true
+    labels: [ai, menu, vista-cliente]
+    priority: P3
+    test_cases: []
+
+  - id: REQ-AI-003
+    title: "L'AI a consumo: chi paga, con quale credito e con quale tetto"
+    area: "functions/, settings, regia (abbonamenti della flotta)"
+    description: >
+      Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a
+      pagamento, quindi qua iniziamo a valutare anche un'opzione di creare
+      un cassetto economico dove noi ogni tanto andiamo a caricare oppure
+      un prelievo diretto dal nostro conto di SumUp».
+      COME STANNO LE COSE: ogni chiamata al modello costa poco (una
+      descrizione, frazioni di centesimo; la lettura di una fattura,
+      qualche centesimo) e la paga chi possiede la chiave del servizio.
+      Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si
+      presta: e' il conto su cui il locale INCASSA, e non ha un modo per
+      farsi addebitare un servizio di terzi.
+      PROPOSTA: un credito AI per installazione, in euro, con un tetto
+      mensile e lo storico dei consumi in Impostazioni; finito il credito,
+      le funzioni AI si fermano e il resto dell'app no. Per i locali della
+      flotta il credito si ricarica dalla regia, con Stripe che gia'
+      gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo
+      ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001,
+      il locale mette la sua chiave e paga direttamente il fornitore.
+      DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
+    status: todo
+    generate_issue: true
+    labels: [ai, licenza, prodotto]
     priority: P3
     test_cases: []
 
@@ -11847,6 +11950,30 @@ requirements:
     labels: [ui, bilancio]
     test_cases:
       - tests/component/MacroMonthlyTab.test.jsx
+  - id: REQ-UI-030
+    title: "Ogni elenco di cose che hanno una categoria si legge diviso per categorie"
+    area: "DESIGN.md (guardrail 8), tutte le schermate con elenchi"
+    description: >
+      Flavio, vocale del 22/10/2026: «la cosa piu' importante sarebbe
+      sempre sempre sempre dividere qualsiasi cosa in categorie … se c'e'
+      una categoria, ora che sia di prodotti o che sia di items di menu, ci
+      dovrebbe sempre essere la possibilita' di separare in categorie e non
+      di tenere tutto tutto insieme in un'unica vista». E' una regola, ed
+      e' scritta in DESIGN.md (guardrail 8): un elenco di voci di menu' o
+      di prodotti di magazzino parte diviso per categoria, con la scelta
+      «Tutto insieme» accanto; le colonne si ordinano anche dentro le
+      categorie. Fatto per la marginalita' del listino (REQ-MENU-002) e per
+      il venduto nella fascia oraria (REQ-STAT-005). DA FARE: passare le
+      altre schermate con elenchi una per una (statistiche, magazzino,
+      movimenti, ordini ai fornitori, inventario) e dividere quelle che
+      oggi mescolano, senza riscritture di massa: una schermata per volta,
+      ognuna col suo test.
+    status: todo
+    generate_issue: true
+    labels: [ui, ux]
+    priority: P2
+    test_cases: []
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -12360,6 +12487,7 @@ requirements:
     test_cases:
       - tests/unit/movimentiProdotto.test.js
       - tests/component/MovimentiProdotto.test.jsx
+      - tests/unit/movimentiDalServer.test.js
   - id: REQ-MAG-049
     title: "Nell'inventario il contenuto reale va sulla RIM e sul consumo, non sul DEP"
     area: "src/lib/inventarioInCorso.js, src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO)"

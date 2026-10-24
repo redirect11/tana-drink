@@ -30,12 +30,22 @@ const load = (key, def) => {
 const PRESSIONE_LUNGA = 400 // ms
 const SCARTO = 10 // px: oltre questo, prima dello scatto, è uno scorrimento
 
-export function useResizable(key, { def, min = 80, max = 640, side = 'right', axis = 'x', speed = 1 } = {}) {
+// MENTRE SI TRASCINA NON SI RIDISEGNA LA SCHERMATA (BUG-118). Con
+// `dalVivo` la misura va dritta dove serve — una variabile CSS, scritta da
+// chi chiama — una volta per fotogramma, e lo stato di React (con la sua
+// scrittura su disco) si aggiorna una volta sola, quando si lascia. Prima
+// ogni pixel di trascinamento ridisegnava l'intera schermata del conto,
+// griglia dei prodotti compresa: «le maniglie sono scattose» e sul
+// telefono «la maniglia del riepilogo dell'ordine blocca tutto» (l'utente,
+// 24/10/2026). Senza `dalVivo` resta com'era: lo stato a ogni movimento.
+export function useResizable(key, { def, min = 80, max = 640, side = 'right', axis = 'x', speed = 1, dalVivo } = {}) {
   const [width, setWidth] = useState(() => load(key, def))
   // `attivo` serve alla maniglia per farsi vedere quando ha preso: senza
   // un segnale, tenere premuto è un gesto al buio.
   const [attivo, setAttivo] = useState(false)
   const drag = useRef(null)
+  const vivo = useRef(dalVivo)
+  vivo.current = dalVivo
 
   const clamp = useCallback((w) => Math.max(min, Math.min(max, w)), [min, max])
 
@@ -81,15 +91,34 @@ export function useResizable(key, { def, min = 80, max = 640, side = 'right', ax
       // 'right'/'down' → in avanti allarga; 'left'/'up' → l'opposto.
       const dir = side === 'left' || side === 'up' ? -1 : 1
       const next = clamp(d0.startW + dir * d * speed)
-      setWidth(next)
+      if (!vivo.current) {
+        setWidth(next)
+        return
+      }
+      // Un dito manda più movimenti per fotogramma di quanti lo schermo ne
+      // disegni: si tiene l'ultimo e lo si applica al fotogramma dopo.
+      d0.valore = next
+      if (!d0.pianificato) {
+        d0.pianificato = true
+        requestAnimationFrame(() => {
+          d0.pianificato = false
+          if (!d0.finito) vivo.current?.(d0.valore)
+        })
+      }
     },
     [clamp, side, axis, speed]
   )
 
   const onPointerUp = useCallback(() => {
-    if (drag.current?.timer) clearTimeout(drag.current.timer)
+    const d0 = drag.current
+    if (d0?.timer) clearTimeout(d0.timer)
     drag.current = null
     setAttivo(false)
+    if (d0 && d0.valore != null) {
+      d0.finito = true
+      vivo.current?.(d0.valore)
+      setWidth(d0.valore)
+    }
   }, [])
 
   useEffect(() => {
@@ -106,6 +135,14 @@ export function useResizable(key, { def, min = 80, max = 640, side = 'right', ax
     onPointerMove,
     onPointerUp,
     onPointerCancel: onPointerUp,
+    // Se il browser si riprende il dito, la presa finisce lì: restare
+    // «attivi» senza più ricevere movimenti era una maniglia accesa e ferma.
+    onLostPointerCapture: onPointerUp,
+    // LA PRESSIONE LUNGA È NOSTRA (BUG-118). Su Android, tenendo premuto,
+    // Chrome apre il suo menu o comincia a selezionare il testo vicino,
+    // proprio quando la maniglia si arma: il gesto si interrompeva e la
+    // pagina restava in selezione.
+    onContextMenu: (e) => e.preventDefault(),
     role: 'separator',
     'aria-orientation': axis === 'y' ? 'horizontal' : 'vertical',
   }

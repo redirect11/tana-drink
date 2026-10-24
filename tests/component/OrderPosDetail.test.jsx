@@ -6,7 +6,7 @@
 // vede e tocca. Firebase/menu/stampante sono mockati.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { MemoryRouter } from '../helpers/router.jsx'
@@ -2573,5 +2573,48 @@ describe('il piede del conto: cosa cede e cosa resta', () => {
     const testa = document.querySelector('.posd-comanda .posd-testa')
     expect(testa, 'la testata della colonna non ha più la sua classe').toBeTruthy()
     expect(testa.getAttribute('style')).toBeNull()
+  })
+})
+
+// LE MANIGLIE DEL CONTO NON RIDISEGNANO LA SCHERMATA (BUG-118). L'utente,
+// 24/10/2026: «le maniglie nella schermata dell'ordine sono scattose» e sul
+// telefono «la maniglia del riepilogo dell'ordine blocca tutto». Mentre si
+// tira, la misura va nella variabile CSS dell'elemento; la colonna non si
+// anima dietro al dito; lasciando, resta.
+describe('le maniglie del conto mentre si trascinano', () => {
+  beforeEach(() => {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })
+    vi.stubGlobal('requestAnimationFrame', (cb) => setTimeout(cb, 0))
+  })
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('la colonna del conto si allarga dal vivo, senza transizione, e la misura resta', async () => {
+    await mount(baseOrder())
+    const corpo = document.querySelector('.posd-body')
+    // La maniglia fra griglia e conto è quella subito prima del pannello:
+    // la prima del corpo è quella delle categorie.
+    const maniglia = document.querySelector('.posd-comanda').previousElementSibling
+    expect(maniglia.className, 'la maniglia fra griglia e conto non c’è').toBe('posd-resize-handle')
+    // Eventi del mouse con le coordinate: i PointerEvent di happy-dom le
+    // perdono, e React legge lo stesso `clientX` da uno o dall'altro.
+    const gesto = (tipo, x) => fireEvent(maniglia, new MouseEvent(tipo, { bubbles: true, clientX: x }))
+    const prima = parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))
+    gesto('pointerdown', 500)
+    expect(corpo.className).toMatch(/trascinando/)
+    gesto('pointermove', 450)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 5))
+    })
+    // Verso sinistra di 50px: la colonna di destra cresce di 50.
+    const attesa = Math.min(700, prima + 50)
+    expect(parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))).toBe(attesa)
+    gesto('pointerup', 450)
+    expect(corpo.className).not.toMatch(/trascinando/)
+    expect(parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))).toBe(attesa)
   })
 })
