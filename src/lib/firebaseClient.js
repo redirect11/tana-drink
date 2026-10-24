@@ -103,6 +103,10 @@ export const functions = getFunctions(app, 'europe-west1')
 export const auth = getAuth(app)
 export const storage = getStorage(app)
 
+// Dove stanno gli emulatori, se ci si collega a loro: serve anche al client
+// diretto qui sotto, che si apre dopo.
+let emulatore = null
+
 // In sviluppo/testing (es. con Docker) ci si può collegare agli emulatori
 // invece che al progetto reale. Attivalo con VITE_USE_FIREBASE_EMULATOR=true.
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
@@ -113,8 +117,38 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   const host = envHost === 'localhost' ? window.location.hostname : envHost
   const port = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT) || 8080
   connectFirestoreEmulator(db, host, port)
+  emulatore = { host, port }
   connectFunctionsEmulator(functions, host, 5001)
   connectAuthEmulator(auth, `http://${host}:9099`)
   connectStorageEmulator(storage, host, 9199)
   console.info(`[Firebase] Connesso agli emulatori su ${host} (Firestore: ${port}, Auth: 9099, Functions: 5001, Storage: 9199)`)
+}
+
+// IL CLIENT DIRETTO, PER LE LETTURE DI CONSULTAZIONE (BUG-117). Il Firestore
+// qui sopra ha la cache su disco, ed è quello che tiene in piedi il banco
+// senza rete. Ma a ogni domanda nuova, PRIMA di andare in rete, scorre in
+// IndexedDB tutti i documenti della collezione che ha in cache: inventario,
+// controllo e bilancio leggono decine di migliaia di movimenti, e aprire i
+// «Movimenti» di un prodotto con tre righe costava secondi sul tablet
+// («non si apre o si apre con ritardo», 23/10/2026). Misurato con 25.000
+// movimenti in cache e la CPU rallentata quattro volte: 1,7-2,9 secondi con
+// la cache, 0,2-0,3 col client diretto, per qualunque prodotto.
+// Il client «lite» va dritto al server, senza cache: stessa app, quindi
+// stesso accesso e stesso App Check. Si carica la prima volta che serve,
+// per non pesare sull'avvio.
+let lite = null
+export function firestoreLite() {
+  if (!lite) {
+    lite = import('firebase/firestore/lite').then((sdk) => {
+      const diretto = sdk.getFirestore(app)
+      if (emulatore) sdk.connectFirestoreEmulator(diretto, emulatore.host, emulatore.port)
+      return { db: diretto, sdk }
+    })
+    // Senza rete il pezzo di codice può non arrivare: non si tiene in mano
+    // un caricamento fallito, la volta dopo si riprova.
+    lite.catch(() => {
+      lite = null
+    })
+  }
+  return lite
 }

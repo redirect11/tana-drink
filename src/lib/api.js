@@ -22,7 +22,7 @@ import {
   writeBatch,
   Timestamp,
 } from 'firebase/firestore'
-import { db, auth } from './firebaseClient.js'
+import { db, auth, firestoreLite } from './firebaseClient.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
   COLLEZIONE as DIAGNOSTICA_STAMPANTE,
@@ -158,9 +158,13 @@ const vouchersCol = collection(db, 'vouchers')
 // --- Helpers ------------------------------------------------------------
 
 // Converte un Timestamp Firestore in stringa ISO (compatibile con created_at).
+// Riconosce il Timestamp dal metodo, non dalla classe: il client diretto
+// (firestoreLite, BUG-117) ha una sua classe Timestamp, e con il controllo
+// sulla classe le sue date restavano oggetti — la finestra dei movimenti
+// non ne avrebbe trovato nessuno nel periodo.
 function toIso(value) {
   if (!value) return null
-  if (value instanceof Timestamp) return value.toDate().toISOString()
+  if (value instanceof Timestamp || typeof value.toDate === 'function') return value.toDate().toISOString()
   return value
 }
 
@@ -1205,11 +1209,29 @@ export async function fetchStockMovementsSince(iso) {
 // un distillato ne accumula migliaia l'anno, e leggerli tutti per guardarne
 // novanta giorni sarebbe una lettura che cresce ogni mese. Vuole l'indice
 // composto (item_id, created_at) di firestore.indexes.json.
+//
+// SI LEGGE DAL SERVER DIRETTO, NON DALLA CACHE (BUG-117): con la cache, a
+// ogni prodotto aperto l'SDK scorreva prima tutti i movimenti salvati sul
+// tablet, e la finestra arrivava dopo secondi anche per un prodotto con tre
+// righe. È una consultazione, non un gesto del banco: la rete serve comunque
+// per avere i numeri di tutti i terminali. Senza rete si ripiega sulla
+// lettura di sempre, che risponde con quello che la cache ha.
 export async function fetchMovimentiProdotto(itemId, dal = null) {
-  const vincoli = [where('item_id', '==', itemId)]
-  if (dal) vincoli.push(where('created_at', '>=', Timestamp.fromDate(new Date(`${dal}T00:00:00Z`))))
-  const snap = await getDocs(query(movementsCol, ...vincoli, orderBy('created_at', 'desc')))
-  return snap.docs.map(mapMovement)
+  const da = dal ? new Date(`${dal}T00:00:00Z`) : null
+  try {
+    const { db: diretto, sdk } = await firestoreLite()
+    const vincoli = [sdk.where('item_id', '==', itemId)]
+    if (da) vincoli.push(sdk.where('created_at', '>=', da))
+    const snap = await sdk.getDocs(
+      sdk.query(sdk.collection(diretto, 'stock_movements'), ...vincoli, sdk.orderBy('created_at', 'desc'))
+    )
+    return snap.docs.map(mapMovement)
+  } catch {
+    const vincoli = [where('item_id', '==', itemId)]
+    if (da) vincoli.push(where('created_at', '>=', Timestamp.fromDate(da)))
+    const snap = await getDocs(query(movementsCol, ...vincoli, orderBy('created_at', 'desc')))
+    return snap.docs.map(mapMovement)
+  }
 }
 
 // I CARICHI DI UN INTERVALLO DI GIORNATE (REQ-MAG-022): carico da Prodotti

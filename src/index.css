@@ -3722,6 +3722,65 @@ body.drawer-open .status-bell-float { display: none; }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+/* LA MARGINALITÀ DEL LISTINO IN TABELLA (REQ-MENU-002): costo, prezzo,
+   margine e ricarico in colonna, divisa per categorie. Più grande della
+   tabella delle macro: il prezzo che prima stava «scritto piccolo» sotto il
+   nome (Flavio, 22/10/2026) qui è un numero da leggere. La voce resta
+   ferma a sinistra quando la tabella scorre sul telefono. */
+.margin-tab {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.margin-tab th,
+.margin-tab td {
+  padding: 6px 8px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.margin-tab .rowhead {
+  text-align: left;
+  white-space: normal;
+  min-width: 9em;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  font-weight: 400;
+}
+.margin-tab thead th {
+  vertical-align: bottom;
+}
+.margin-tab .margin-cat th,
+.margin-tab .margin-cat td {
+  background: var(--bg-2);
+  font-weight: 700;
+  padding-top: 12px;
+}
+.margin-tab .margin-cat-punto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.margin-tab .margin-nome {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: calc(36px / var(--zoom, 1));
+}
+.margin-tab .margin-nome:hover {
+  text-decoration: underline;
+}
+.margin-tab .margin-nota {
+  display: block;
+}
 .macro-tab {
   border-collapse: collapse;
   white-space: nowrap;
@@ -5205,6 +5264,20 @@ body.fullbleed,
 /* Maniglia per l'ALTEZZA del pannello ordine (telefono). Larga tutta la
    riga e con un segno al centro: si prende senza mirare. Si accende quando
    ha preso, perché il dito copre quello che sta toccando. */
+/* LE MANIGLIE NON SI SELEZIONANO (BUG-118): tenendo premuto per armarle,
+   Android apriva il menu della pressione lunga o selezionava il testo
+   vicino, e il gesto si interrompeva. */
+.posd-altezza-handle, .posd-foot-handle, .posd-resize-handle, .payscreen-resize-handle {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Mentre una maniglia è presa, niente transizioni: la colonna che si anima
+   dietro al dito arriva sempre in ritardo, e si vede a scatti (BUG-118). */
+.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats {
+  transition: none;
+}
+
 .posd-altezza-handle {
   flex-shrink: 0;
   height: 20px;

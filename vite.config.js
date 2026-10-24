@@ -116,6 +116,10 @@ export default defineConfig({
         // (le librerie cambiano di rado rispetto al codice dell'app).
         manualChunks(id) {
           if (!id.includes('node_modules')) return
+          // Il client diretto di Firestore (BUG-117) ha un pezzo suo: si
+          // carica solo quando serve, e insieme all'altro peserebbe 138 KB
+          // in più all'avvio di ogni terminale.
+          if (id.includes('/firestore/dist/lite/') || id.includes('/firestore/lite')) return 'firebase-firestore-lite'
           if (id.includes('@firebase/firestore') || id.includes('firebase/firestore')) return 'firebase-firestore'
           if (id.includes('@firebase/auth') || id.includes('firebase/auth')) return 'firebase-auth'
           if (id.includes('@firebase/storage') || id.includes('firebase/storage')) return 'firebase-storage'

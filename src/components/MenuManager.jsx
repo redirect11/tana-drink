@@ -347,6 +347,7 @@ export default function MenuManager() {
         <MarginList
           drinks={drinks}
           inventory={inventory}
+          categories={categories}
           onEdit={(id) => {
             setSezione('catalogo')
             setEditing(drinks.find((d) => d.id === id) || null)
