@@ -3727,6 +3727,36 @@ body.drawer-open .status-bell-float { display: none; }
    tabella delle macro: il prezzo che prima stava «scritto piccolo» sotto il
    nome (Flavio, 22/10/2026) qui è un numero da leggere. La voce resta
    ferma a sinistra quando la tabella scorre sul telefono. */
+/* IL RESTO IN CONTANTI (REQ-PAG-015), sopra il tastierino del pagamento.
+   Una riga sola di tasti che va a capo sugli schermi stretti, e l'esito in
+   grande: si legge con le monete in mano. Non cresce oltre il suo
+   contenuto, per non rubare altezza al tastierino (BUG-075). */
+.resto-box {
+  flex-shrink: 0;
+  margin: 4px 0 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.resto-scelte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.resto-altro {
+  width: 6.5em;
+  min-height: calc(40px / var(--zoom, 1));
+}
+.resto-esito {
+  margin: 6px 0 0;
+  text-align: right;
+  font-size: 1.15rem;
+}
+.resto-esito strong {
+  font-size: 1.5rem;
+}
+
 .margin-tab {
   border-collapse: collapse;
   min-width: 100%;

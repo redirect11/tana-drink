@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 24 ottobre 2026.
+> Generato il 26 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 220 | fatto e coperto dai test |
+| ✅ | 221 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**268 voci** in tutto. **236** descrivono il sistema com'è oggi e
+**269 voci** in tutto. **237** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 13 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
@@ -463,6 +463,12 @@ SUL TELEFONO NON C'E': sotto gli 800px le colonne sono impilate a tutta larghezz
 MISURATO IN CHROME VERO, non a occhio: 96 combinazioni (colonne strette al minimo, a riposo e larghe al massimo x sei finestre x quattro livelli di zoom), leggendo per ogni tasto chi gli finisce sopra con 'elementFromPoint'. Ai due estremi del trascinamento non nasce nessun caso nuovo di tasto coperto — anzi, uno di quelli che c'erano prima sparisce, perche' il tetto in percentuale tiene il tastierino piu' largo di quanto lo tenesse la misura fissa.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/useResizable.js, src/index.css` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/css.test.js`, `tests/unit/useResizable.test.js`
+
+#### REQ-PAG-015 — Quanto dà il cliente e quanto resto dare, coi contanti
+
+L'utente, 26/10/2026: «nella schermata del pagamento del conto deve uscire anche, opzionale attivabile nelle impostazioni, la possibilita' di inserire quanto il cliente da' e deve uscire quanto resto dare». Il resto c'era gia', ma di sbieco: battendo piu' del dovuto la schermata incassava il dovuto e diceva «Resto». Funzionava solo incassando tutto il conto: con alcune righe scelte (7 € su 22) e il cliente che da' 20, battere 20 registrava un acconto da 20. Ora i numeri sono due. Con «Calcolo del resto in contanti» acceso in Impostazioni → Pagamenti (spento di partenza), scegliendo «Contante» compare il riquadro «Il cliente da'»: i tagli probabili (i primi tondi da 5, 10, 20, 50 e 100 € che coprono l'importo: per 23,50 € 25, 30, 50 e 100) e un campo «Altro» per una cifra a mano. Sotto, «Resto da dare» in grande, o «Mancano» se i contanti non bastano. Il resto si calcola su quello che si incassa adesso, anche una parte del conto, e l'importo non cambia; dopo ogni incasso il riquadro si azzera. Con la carta il riquadro non c'e'. Il resto di prima, battuto nel tastierino, resta com'era.
+
+**Dove**: `src/lib/resto.js, src/components/PaymentScreen.jsx (RestoContanti), src/components/SettingsTab.jsx, src/lib/api.js (resto_contanti)` · **Lo dimostrano**: `tests/unit/resto.test.js`
 
 ### La coda del banco
 
