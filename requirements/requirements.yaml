@@ -12116,6 +12116,33 @@ requirements:
       - tests/unit/css.test.js
       - tests/unit/useResizable.test.js
 
+  - id: REQ-PAG-015
+    title: "Quanto dà il cliente e quanto resto dare, coi contanti"
+    area: "src/lib/resto.js, src/components/PaymentScreen.jsx (RestoContanti), src/components/SettingsTab.jsx, src/lib/api.js (resto_contanti)"
+    description: >
+      L'utente, 26/10/2026: «nella schermata del pagamento del conto deve
+      uscire anche, opzionale attivabile nelle impostazioni, la
+      possibilita' di inserire quanto il cliente da' e deve uscire quanto
+      resto dare». Il resto c'era gia', ma di sbieco: battendo piu' del
+      dovuto la schermata incassava il dovuto e diceva «Resto». Funzionava
+      solo incassando tutto il conto: con alcune righe scelte (7 € su 22)
+      e il cliente che da' 20, battere 20 registrava un acconto da 20.
+      Ora i numeri sono due. Con «Calcolo del resto in contanti» acceso in
+      Impostazioni → Pagamenti (spento di partenza), scegliendo
+      «Contante» compare il riquadro «Il cliente da'»: i tagli probabili
+      (i primi tondi da 5, 10, 20, 50 e 100 € che coprono l'importo: per
+      23,50 € 25, 30, 50 e 100) e un campo «Altro» per una cifra a mano.
+      Sotto, «Resto da dare» in grande, o «Mancano» se i contanti non
+      bastano. Il resto si calcola su quello che si incassa adesso, anche
+      una parte del conto, e l'importo non cambia; dopo ogni incasso il
+      riquadro si azzera. Con la carta il riquadro non c'e'. Il resto di
+      prima, battuto nel tastierino, resta com'era.
+    status: implemented
+    generate_issue: false
+    labels: [pagamenti, cassa]
+    test_cases:
+      - tests/unit/resto.test.js
+
   - id: REQ-POS-020
     title: "La ricerca dei prodotti si cancella con un tocco"
     area: "src/components/PosProductPicker.jsx, src/index.css"

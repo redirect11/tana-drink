@@ -4,6 +4,11 @@
 
 ### Per chi sta al banco
 
+- **Il resto in contanti.** Con «Calcolo del resto in contanti» acceso in
+  Impostazioni → Pagamenti, scegliendo «Contante» si indica quanto ha dato
+  il cliente, con i tagli più probabili già pronti o una cifra a mano, e
+  compare il resto da dare. Vale anche quando si incassano solo alcune
+  righe del conto, e l'importo incassato non cambia.
 - **Le maniglie del conto seguono il dito.** Trascinarle non fa più
   ridisegnare tutta la schermata a ogni movimento: niente scatti sul
   tablet, e sul telefono la maniglia del riepilogo non blocca più la

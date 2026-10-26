@@ -262,6 +262,22 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
   const sezioneDi = (testo) =>
     screen.getByText(testo).closest('.settings-section').querySelector('h3').textContent
 
+  // IL RESTO IN CONTANTI (REQ-PAG-015): si accende dove si incassa.
+  it('«Calcolo del resto in contanti» sta in Pagamenti, spento, e si accende', async () => {
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPagamenti(user)
+    expect(sezioneDi('Calcolo del resto in contanti')).toBe('Pagamenti')
+    const interruttore = screen
+      .getByText('Calcolo del resto in contanti')
+      .closest('.toggle-row')
+      .querySelector('input[type="checkbox"]')
+    expect(interruttore).not.toBeChecked()
+    await user.click(interruttore)
+    expect(updateSettings).toHaveBeenCalledWith({ resto_contanti: true })
+  })
+
   it('«incassare e servire insieme» sta accanto al suo gemello, in Pagamenti', async () => {
     const user = userEvent.setup()
     mostra()

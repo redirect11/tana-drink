@@ -1764,3 +1764,61 @@ describe('chiudere impagato', () => {
     expect(screen.queryByRole('button', { name: /Impagato/ })).toBeNull()
   })
 })
+
+// QUANTO DÀ IL CLIENTE E QUANTO RESTO DARE (REQ-PAG-015). L'utente,
+// 26/10/2026: «opzionale attivabile nelle impostazioni, la possibilità di
+// inserire quanto il cliente dà e deve uscire quanto resto dare». Il resto
+// si calcola su quello che si incassa adesso, e non cambia l'importo.
+describe('il resto in contanti', () => {
+  const conResto = { ...noReader, resto_contanti: true }
+
+  it('spento di partenza: il riquadro non c’è', () => {
+    mount(baseOrder())
+    expect(screen.queryByRole('group', { name: 'Contanti ricevuti' })).toBeNull()
+  })
+
+  it('acceso, coi contanti propone i tagli e dice il resto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    // Il conto è 22 €: si propongono 25, 30, 50 e 100.
+    expect(riquadro.getAllByRole('button').map((b) => b.textContent.replace(/\s/g, ' '))).toEqual([
+      '25,00 €',
+      '30,00 €',
+      '50,00 €',
+      '100,00 €',
+    ])
+    await user.click(riquadro.getByRole('button', { name: /50,00/ }))
+    expect(riquadro.getByText(/Resto da dare/)).toHaveTextContent('28,00')
+    // L'importo che si incassa resta il conto.
+    expect(payAmount()).toHaveTextContent('22,00')
+  })
+
+  it('incassando solo alcune righe, il resto è su quelle e non diventa un acconto', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    await user.click(screen.getAllByRole('button', { name: 'Togli Mojito dal pagamento' })[0])
+    await user.click(screen.getByRole('button', { name: 'Togli Gin Tonic dal pagamento' }))
+    expect(payAmount()).toHaveTextContent('7,00')
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    await user.type(riquadro.getByRole('textbox', { name: 'Altro importo ricevuto' }), '20')
+    expect(riquadro.getByText(/Resto da dare/)).toHaveTextContent('13,00')
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', expect.objectContaining({ amount: 7, method: 'banco' }))
+  })
+
+  it('se i contanti non bastano lo dice', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    const riquadro = within(screen.getByRole('group', { name: 'Contanti ricevuti' }))
+    await user.type(riquadro.getByRole('textbox', { name: 'Altro importo ricevuto' }), '20')
+    expect(riquadro.getByText(/Mancano/)).toHaveTextContent('2,00')
+  })
+
+  it('con la carta il riquadro non c’è', async () => {
+    const user = userEvent.setup()
+    mount(baseOrder(), conResto)
+    await user.click(screen.getByRole('button', { name: /Carta di Credito/ }))
+    expect(screen.queryByRole('group', { name: 'Contanti ricevuti' })).toBeNull()
+  })
+})
