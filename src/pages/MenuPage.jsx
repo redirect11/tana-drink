@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
+import { useIncollata } from '../lib/useIncollata.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import {
   subscribeServiceStats,
@@ -49,6 +50,7 @@ export default function MenuPage({ speciali = false }) {
   const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
   // Le illustrazioni hanno il tratto bianco sui temi scuri, scuro sui chiari.
   const fondoChiaro = useFondoChiaro()
+  const [segnapostoCategorie, categorieIncollate] = useIncollata()
   const posizione = useLocation()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [error, setError] = useState(null)
@@ -453,7 +455,7 @@ export default function MenuPage({ speciali = false }) {
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
       {!speciali && !staff && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
-          <div className="row between" style={{ alignItems: 'baseline' }}>
+          <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
               ✨ {settings.special_titolo || 'Special'}
             </h3>
@@ -568,8 +570,9 @@ export default function MenuPage({ speciali = false }) {
         <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
+      {!speciali && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
       {!speciali && categories.length > 1 && (
-        <nav className="cat-nav">
+        <nav className={`cat-nav${categorieIncollate ? ' incollata' : ''}`}>
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
               {cat}

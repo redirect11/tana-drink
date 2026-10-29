@@ -776,11 +776,13 @@ COERENTI COI COLORI DEL MENU' (l'utente, 29/10/2026: «anche il resto del menu d
 
 IL MENU' SPECIAL E' IN GRIGLIA (l'utente, 29/10/2026: «li metterei su due colonne anziche' incolonnati ad uno ad uno»): due card per riga sul telefono, tre dai 700px; ogni card ha disegno, nome, descrizione, prezzo e «Aggiungi» in fondo, allineato con quello delle vicine.
 
+SOTTO IL CAROSELLO, LA FILA DELLE CATEGORIE non ha un fondo suo finche' non si appiccica sotto la barra in alto: li' prende quello della barra, a tutta larghezza (BUG-120, `useIncollata`).
+
 IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve un carosello vero che fa lo slide delle immagini dei drink con nome e descrizione»): disegno, nome, descrizione e prezzo; va avanti da solo ogni cinque secondi, si sfoglia col dito e coi pallini, chi lo tocca lo ferma, e con «riduci movimento» non parte. I SIGNATURE SONO SPECIAL: «Le descrizioni per ora inventale tu per tutti i drink della categoria signature e dovrebbero essere tutti drink speciali». `scripts/special-signature.mjs` segna come speciali le voci della categoria SIGNATURE e scrive descrizione e disegno a chi non li ha. Le descrizioni sono una prima stesura da far rivedere a Flavio: senza ricette in carta, non nominano ingredienti che non si conoscono (un ingrediente sbagliato e' anche un allergene sbagliato). Applicato sul test il 29/10/2026.
 
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
 
-**Dove**: `src/lib/speciali.js, src/lib/illustrazioneDrink.js, src/components/CaroselloSpeciali.jsx, src/pages/MenuPage.jsx (speciali), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), scripts/special-signature.mjs, public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/unit/illustrazioneDrink.test.js`, `tests/component/CaroselloSpeciali.test.jsx`
+**Dove**: `src/lib/speciali.js, src/lib/illustrazioneDrink.js, src/components/CaroselloSpeciali.jsx, src/pages/MenuPage.jsx (speciali), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), scripts/special-signature.mjs, public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/unit/illustrazioneDrink.test.js`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/unit/useIncollata.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

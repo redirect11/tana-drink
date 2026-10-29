@@ -710,6 +710,22 @@ a.btn.block {
 .menu-item h3 {
   margin: 0 0 4px;
 }
+/* UN NOME LUNGO NON SPINGE FUORI «AGGIUNGI» (BUG-120). Una parola sola in
+   maiuscolo («BASILICONIGLIO», «BOULEVARDIER») non va a capo, e la colonna
+   del testo non si stringeva sotto la sua larghezza: sul telefono il tasto
+   usciva dal bordo della card. Ora il testo si stringe, il tasto no, e il
+   nome scende un poco con lo schermo stretto prima di andare a capo. */
+.menu-item .row > .grow {
+  min-width: 0;
+}
+.menu-item .row > .btn,
+.menu-item .row > .qty {
+  flex-shrink: 0;
+}
+.menu-item .grow > h3 {
+  font-size: clamp(0.9rem, 3.8vw, 1.17rem);
+  overflow-wrap: anywhere;
+}
 
 /* ── IL MENÙ SPECIAL (REQ-MENU-018) ──────────────────────────────────
    NEI COLORI DEL MENÙ. La prima versione era un foglio di carta chiara
@@ -720,6 +736,12 @@ a.btn.block {
    fondo (useFondoChiaro). */
 .speciali-carosello {
   margin: 4px 0 14px;
+}
+/* «✨ Special» e «Vedi tutti» staccati dalla slide: a filo del bordo della
+   card sembravano scritti sopra (BUG-120). */
+.speciali-carosello-testa {
+  align-items: baseline;
+  margin-bottom: 10px;
 }
 .speciali-tutti {
   font-size: 0.9rem;
@@ -771,11 +793,16 @@ a.btn.block {
   gap: 6px;
   min-width: 0;
 }
+/* I nomi sono in maiuscolo e lunghi («BASILICONIGLIO»): nella metà destra
+   di una slide su telefono uscivano dalla card, tagliati (BUG-120). Il
+   titolo cresce con lo schermo (4.4vw: «BASILICONIGLIO» intero su un
+   telefono da 390px), e se non basta va a capo. */
 .carosello-testo strong {
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
-  font-size: 1.35rem;
+  font-size: clamp(0.95rem, 4.4vw, 1.35rem);
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 .carosello-descrizione {
   color: var(--muted);
@@ -4457,12 +4484,23 @@ body.drawer-open .status-bell-float { display: none; }
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 8px 0 12px;
+  /* A tutta larghezza, come la barra in alto: esce dal padding di .app. */
+  margin: 0 -16px;
+  padding: 8px 16px 12px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
+  /* FERMA NELLA PAGINA NON HA UN FONDO SUO (BUG-120): una fascia di colore
+     pieno, più stretta dello schermo, staccava sul fondo sfumato della
+     pagina. Il fondo arriva solo quando si appiccica sotto la barra in alto
+     e le card le passano sotto (useIncollata), ed è quello della barra. */
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.cat-nav.incollata {
+  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
 
 .cat-nav::-webkit-scrollbar {
