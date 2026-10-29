@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.9.4-beta — in lavorazione
+## 1.9.5-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti
 
@@ -10,6 +10,23 @@
   stampare sul menù che si porta al tavolo, e mostra solo gli special nei
   colori del menù, con le illustrazioni ad acquerello a tema Alice: tratto
   bianco sui temi scuri, scuro su quelli chiari.
+
+### Per chi amministra
+
+- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
+  scheda, dove si sceglie anche l'illustrazione; resta comunque nella sua
+  categoria. Nella sezione Special si scrivono titolo e sottotitolo del
+  menù (per esempio «Alice nel Paese delle Meraviglie») e si scarica il
+  QR del menù Special.
+- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
+  categoria» c'è la classifica delle categorie per utile: incassato, costo
+  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
+  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
+  il loro utile è più alto del vero.
+- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
+  della scorta, nella tendina «Filtra i prodotti».
+
+## 1.9.4-beta — 29 ottobre 2026, sul test
 
 ### Per chi sta al banco
 
@@ -26,18 +43,6 @@
 
 ### Per chi amministra
 
-- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
-  scheda, dove si sceglie anche l'illustrazione; resta comunque nella sua
-  categoria. Nella sezione Special si scrivono titolo e sottotitolo del
-  menù (per esempio «Alice nel Paese delle Meraviglie») e si scarica il
-  QR del menù Special.
-- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
-  categoria» c'è la classifica delle categorie per utile: incassato, costo
-  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
-  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
-  il loro utile è più alto del vero.
-- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
-  della scorta, nella tendina «Filtra i prodotti».
 - **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
   la marginalità mostra Costo, Vendita, Consigliato, Moltiplicatore e
   Utile in colonna, e si ordina toccando l'intestazione. Parte divisa per
