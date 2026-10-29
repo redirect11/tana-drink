@@ -15,6 +15,8 @@
 //
 // Logica pura, interamente testabile.
 
+import { urlDrink } from './illustrazioneDrink.js'
+
 export const PERCORSO_SPECIALI = '/menu/special'
 
 // Le illustrazioni pronte (public/illustrazioni/alice/, generate da
@@ -42,9 +44,16 @@ export function illustrazioneUrl(id, base = '/', { chiaro = false } = {}) {
     : null
 }
 
-// L'immagine di una voce: la foto, se c'è, vince sull'illustrazione.
-export const immagineVoce = (d, base = '/', opzioni = {}) =>
-  d?.image_url || illustrazioneUrl(d?.illustrazione, base, opzioni)
+// L'immagine di una voce: la foto, se c'è, vince sul disegno. Il disegno
+// è COMPOSTO (bicchiere, colore, decorazione: lib/illustrazioneDrink.js);
+// un id di testo è un disegno della prima versione, a soggetti fissi, che
+// si continua a mostrare finché non lo si cambia.
+export function immagineVoce(d, base = '/', opzioni = {}) {
+  if (d?.image_url) return d.image_url
+  const il = d?.illustrazione
+  if (il && typeof il === 'object') return urlDrink(il, opzioni)
+  return illustrazioneUrl(il, base, opzioni)
+}
 
 // Gli special, in ordine di nome.
 export function drinkSpeciali(drinks) {

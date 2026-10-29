@@ -2,6 +2,7 @@
 // Storage, righe ricetta → recipe_items in unità base, create/update.
 // Condiviso fra il backoffice (MenuManager) e il POS (Organizza → menu
 // prodotto), così la logica di salvataggio è una sola.
+import { sceltaIllustrazione } from './illustrazioneDrink.js'
 import { createDrink, updateDrink } from './api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from './storage.js'
 import { toBaseQty, baseUnit } from './inventory.js'
@@ -63,7 +64,10 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     available: !!form.available,
     image_url: imageUrl,
     speciale: !!form.speciale,
-    illustrazione: form.illustrazione || null,
+    // Il disegno composto, pulito; un id di testo è uno della prima
+    // versione e resta com'è finché non lo si cambia.
+    illustrazione:
+      typeof form.illustrazione === 'string' ? form.illustrazione : sceltaIllustrazione(form.illustrazione),
   }
 
   if (existing && existing.id) await updateDrink(existing.id, payload)
