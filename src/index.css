@@ -3814,6 +3814,13 @@ body.drawer-open .status-bell-float { display: none; }
 .margin-tab .margin-consigliato {
   font-weight: 700;
 }
+/* L'utile per categoria (REQ-STAT-008) usa la stessa tabella, col totale
+   in fondo staccato dalle righe. */
+.utili-tab tfoot th,
+.utili-tab tfoot td {
+  border-top: 2px solid var(--line);
+  font-weight: 700;
+}
 .macro-tab {
   border-collapse: collapse;
   white-space: nowrap;
