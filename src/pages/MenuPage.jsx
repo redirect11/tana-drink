@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
+import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -39,12 +40,14 @@ const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
 
 // `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
-// segnate come speciali, su carta.
+// segnate come speciali, nei colori del menù.
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
   const { drinks, cats, loading } = useMenu()
   const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  // Le illustrazioni hanno il tratto bianco sui temi scuri, scuro sui chiari.
+  const fondoChiaro = useFondoChiaro()
   const posizione = useLocation()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [error, setError] = useState(null)
@@ -435,7 +438,7 @@ export default function MenuPage({ speciali = false }) {
       {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
           strada per il menù completo, con lo stesso tavolo. */}
       {speciali && (
-        <div className="speciali-testata carta">
+        <div className="speciali-testata">
           <h2>{settings.special_titolo || 'Special'}</h2>
           {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
           <Link className="btn ghost small" to={conParametri('/menu', params)}>
@@ -460,11 +463,11 @@ export default function MenuPage({ speciali = false }) {
           {settings.special_sottotitolo && <p className="muted small" style={{ margin: '2px 0 6px' }}>{settings.special_sottotitolo}</p>}
           <div className="speciali-fila">
             {elencoSpeciali.map((d) => {
-              const img = immagineVoce(d, import.meta.env.BASE_URL)
+              const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
               return (
                 <Link
                   key={d.id}
-                  className="speciale-tessera carta"
+                  className="speciale-tessera"
                   to={`${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
                 >
                   {img ? <img src={img} alt="" loading="lazy" /> : <span className="speciale-vuota" aria-hidden="true">✨</span>}
@@ -591,10 +594,10 @@ export default function MenuPage({ speciali = false }) {
           {list.map((d) => {
             const inCart = cart.items.find((i) => i.drink_id === d.id)
             // La foto, o l'illustrazione dello special, o il logo.
-            const img = immagineVoce(d, import.meta.env.BASE_URL)
+            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
             return (
               <div
-                className={`card menu-item${speciali ? ' speciale carta' : ''}`}
+                className={`card menu-item${speciali ? ' speciale' : ''}`}
                 key={d.id}
                 id={speciali ? `speciale-${d.id}` : undefined}
               >
@@ -602,7 +605,7 @@ export default function MenuPage({ speciali = false }) {
                 <div className="row between">
                   {!speciali && (
                     <img
-                      className={`drink-thumb${img ? '' : ' placeholder'}${!d.image_url && d.illustrazione ? ' carta' : ''}`}
+                      className={`drink-thumb${img ? '' : ' placeholder'}`}
                       src={img || `${import.meta.env.BASE_URL}logo.png`}
                       alt={d.name}
                       loading="lazy"

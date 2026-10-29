@@ -3,7 +3,7 @@
 //
 //    node scripts/illustrazioni-alice.mjs
 //
-//  Scrive public/illustrazioni/alice/<id>.svg. Lo stile è quello che
+//  Scrive public/illustrazioni/alice/<id>.svg e <id>-chiaro.svg. Lo stile è quello che
 //  l'utente ha mandato come esempio il 29/10/2026: macchie d'acquerello
 //  morbide che sbordano, qualche schizzo di colore, e sopra un tratto
 //  d'inchiostro sottile e un po' tremolante. I due disegni d'esempio sono
@@ -17,6 +17,14 @@
 //  L'acquerello è un filtro SVG (turbolenza che sposta i bordi, poi una
 //  sfocatura leggera), gli schizzi sono puntini a caso ma ripetibili (un
 //  seme per illustrazione): rilanciato, lo script riscrive gli stessi file.
+//
+//  DUE VERSIONI, PERCHÉ IL MENÙ È SCURO (l'utente, 29/10/2026: «anche il
+//  resto del menu dovrebbe essere coerente con i colori … disegni bianchi
+//  su fondo scuro»). `<id>.svg` ha il tratto bianco e i colori che si
+//  sommano come luce (`screen`), per i temi scuri del cliente, che sono
+//  quelli di partenza; `<id>-chiaro.svg` ha il tratto scuro e i colori che
+//  si sommano come pigmento (`multiply`), per i temi chiari. Lo sfondo è
+//  trasparente in tutte e due: il fondo è quello del menù.
 // =====================================================================
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
@@ -50,8 +58,9 @@ function casuale(seme) {
 
 // Una macchia: la forma con il filtro dell'acquerello, più un cuore più
 // carico dello stesso colore, come quando il pigmento si raccoglie.
+// La fusione dei colori dipende dalla versione: la sceglie `svg()`.
 const macchia = (forma, colore, opacita = 0.55) =>
-  `<g filter="url(#acquerello)" style="mix-blend-mode:multiply">` +
+  `<g filter="url(#acquerello)" style="mix-blend-mode:__FUSIONE__">` +
   `<${forma} fill="${colore}" fill-opacity="${opacita}"/>` +
   `</g>`
 
@@ -68,7 +77,21 @@ function schizzi(r, colore, cx, cy, raggio, quanti) {
   return s
 }
 
-function svg({ seme, macchie, schizzi: gocce, inchiostro, testo = '' }) {
+// Le due versioni: tratto, fusione dei colori e quanto sono carichi.
+const VERSIONI = {
+  // Sul fondo scuro i colori a mezza opacità uscivano spenti, quasi
+  // marroni: lì si caricano di più, perché brillino come un acquerello su
+  // carta nera.
+  scuro: { tratto: '#f4f0e8', fusione: 'screen', carico: 1, forza: 1.5 },
+  chiaro: { tratto: '#1f1b24', fusione: 'multiply', carico: 1, forza: 1 },
+}
+const piuCarico = (testo, forza) =>
+  forza === 1
+    ? testo
+    : testo.replace(/fill-opacity="([\d.]+)"/g, (_, o) => `fill-opacity="${Math.min(0.92, Number(o) * forza).toFixed(2)}"`)
+
+function svg({ seme, macchie, schizzi: gocce, inchiostro, testo = '' }, versione) {
+  const { tratto, fusione, carico, forza } = VERSIONI[versione]
   const r = casuale(seme)
   const puntini = gocce.map(([colore, cx, cy, raggio, quanti]) => schizzi(r, colore, cx, cy, raggio, quanti)).join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
@@ -83,19 +106,21 @@ function svg({ seme, macchie, schizzi: gocce, inchiostro, testo = '' }) {
     <feDisplacementMap in="SourceGraphic" in2="tremito" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </defs>
-${macchie.join('\n')}
-<g>${puntini}</g>
-<g filter="url(#mano)" fill="none" stroke="#1f1b24" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+<g opacity="${carico}">
+${piuCarico(macchie.join('\n'), forza).replaceAll('__FUSIONE__', fusione)}
+<g>${piuCarico(puntini, forza)}</g>
+</g>
+<g filter="url(#mano)" fill="none" stroke="${tratto}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
 ${inchiostro}
 </g>
-${testo}
+${testo.replaceAll('#1f1b24', tratto)}
 </svg>
 `
 }
 
 const ILLUSTRAZIONI = {
   // La bottiglia col cartellino «BEVIMI».
-  bevimi: svg({
+  bevimi: ({
     seme: 11,
     macchie: [
       macchia('ellipse cx="200" cy="225" rx="82" ry="100"', C.lilla),
@@ -116,7 +141,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // La tazza del tè dei matti, col vapore.
-  'tazza-te': svg({
+  'tazza-te': ({
     seme: 23,
     macchie: [
       macchia('circle cx="190" cy="252" r="102"', C.pesca),
@@ -139,7 +164,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // Il cappello del Cappellaio, col cartellino 10/6.
-  cappello: svg({
+  cappello: ({
     seme: 37,
     macchie: [
       macchia('ellipse cx="200" cy="222" rx="96" ry="112"', C.viola, 0.45),
@@ -161,7 +186,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // L'orologio da taschino del Bianconiglio.
-  orologio: svg({
+  orologio: ({
     seme: 41,
     macchie: [
       macchia('circle cx="200" cy="228" r="96"', C.giallo),
@@ -185,7 +210,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // Il fungo del Bruco, con l'erba a ricciolo degli esempi.
-  fungo: svg({
+  fungo: ({
     seme: 53,
     macchie: [
       macchia('ellipse cx="200" cy="176" rx="108" ry="62"', C.rosa),
@@ -208,7 +233,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // Una rosa bianca dipinta di rosso, con le gocce di vernice.
-  rosa: svg({
+  rosa: ({
     seme: 67,
     macchie: [
       macchia('circle cx="204" cy="182" r="72"', C.rosso, 0.55),
@@ -228,7 +253,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // Il sorriso dello Stregatto, con gli occhi.
-  stregatto: svg({
+  stregatto: ({
     seme: 79,
     macchie: [
       macchia('ellipse cx="200" cy="214" rx="122" ry="84"', C.lilla, 0.55),
@@ -249,7 +274,7 @@ const ILLUSTRAZIONI = {
   }),
 
   // Il cuore della Regina, su una carta da gioco.
-  cuori: svg({
+  cuori: ({
     seme: 97,
     macchie: [
       macchia('circle cx="200" cy="212" r="60"', C.rosso, 0.55),
@@ -271,7 +296,8 @@ const ILLUSTRAZIONI = {
 }
 
 mkdirSync(CARTELLA, { recursive: true })
-for (const [id, contenuto] of Object.entries(ILLUSTRAZIONI)) {
-  writeFileSync(path.join(CARTELLA, `${id}.svg`), contenuto)
+for (const [id, disegno] of Object.entries(ILLUSTRAZIONI)) {
+  writeFileSync(path.join(CARTELLA, `${id}.svg`), svg(disegno, 'scuro'))
+  writeFileSync(path.join(CARTELLA, `${id}-chiaro.svg`), svg(disegno, 'chiaro'))
 }
-console.log(`[illustrazioni] ✓ ${Object.keys(ILLUSTRAZIONI).length} file in ${path.relative(process.cwd(), CARTELLA)}`)
+console.log(`[illustrazioni] ✓ ${Object.keys(ILLUSTRAZIONI).length * 2} file in ${path.relative(process.cwd(), CARTELLA)}`)
