@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 221 | fatto e coperto dai test |
+| ✅ | 223 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**269 voci** in tutto. **237** descrivono il sistema com'è oggi e
+**271 voci** in tutto. **239** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 12 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 13 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -61,7 +61,7 @@ come «vero oggi», non come «garantito».
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
-| [STAT](#stat) | 6 | — |  |
+| [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 1 | — |  |
 
 ## Cosa fa il sistema
@@ -760,6 +760,24 @@ Il colore di una categoria è stabile (dipende dall'id, non dal nome) e lo stess
 
 **Dove**: `src/lib/categoryColors.js` · **Lo dimostrano**: `tests/unit/categoryColors.test.js`
 
+#### REQ-MENU-018 — Gli special della casa: un menù loro col suo QR, e un carosello in cima al menù
+
+L'utente, 29/10/2026, per Flavio: «i drink della casa vengano messi in una categoria special. L'idea e' che si porta un menu a tavola con un qr code specifico che apre la pagina menu dove ci sono solo gli special drink. Il qr code ai tavoli invece apre il menu normale dove in alto a tutto ci deve essere un carousel degli special drink che se cliccato ti porta al menu dei drink speciali. I drink speciali devono poter essere indicati nel backoffice del menu». I primi sono a tema Alice nel Paese delle Meraviglie, con «immagini stilizzate» nello stile di due acquerelli mandati come esempio.
+
+UN SEGNO SULLA VOCE, NON UNA CATEGORIA: nella scheda c'e' «Drink speciale» (`speciale`). La voce resta nella sua categoria (un drink della casa e' anche un cocktail, e marginalita', statistiche e POS continuano a contarlo li') e in piu' compare negli Special.
+
+IL MENU' SPECIAL e' `/menu/special` (sotto /menu, cosi' tema, cassetto e anteprima del cliente valgono anche li'): solo gli special, nei colori del menu', col titolo e il sottotitolo scelti dal locale (`special_titolo`, `special_sottotitolo`, di partenza «Special» e vuoto), l'immagine grande, e «← Tutto il menu'». Si ordina come dal menu' normale.
+
+IL CAROSELLO sta in cima al menu' del cliente, solo se ci sono special e solo per i clienti (chi lavora usa il menu' come strumento): una tessera per drink con immagine, nome e prezzo; toccandola si apre il menu' Special su quel drink, e «Vedi tutti» lo apre dall'inizio. Il tavolo e il gruppo del QR passano da un menu' all'altro (`conParametri`).
+
+LE ILLUSTRAZIONI: otto acquerelli in SVG (bottiglia «Bevimi», tazza del te', cappello del Cappellaio col 10/6, orologio del Bianconiglio, fungo del Bruco, rosa dipinta, sorriso dello Stregatto, cuore della Regina), dal libro di Carroll e non dai film, generati da `scripts/illustrazioni-alice.mjs`. Nella scheda, con «Drink speciale» acceso, se ne sceglie una; la foto della voce, se c'e', ha la precedenza. Nel menu' normale l'illustrazione fa anche da miniatura.
+
+COERENTI COI COLORI DEL MENU' (l'utente, 29/10/2026: «anche il resto del menu dovrebbe essere coerente con i colori … disegni bianchi su fondo scuro»). La prima versione era un foglio di carta chiara dentro il menu' scuro; ora le card prendono le variabili del tema e ogni illustrazione ha due versioni: `<id>.svg`, tratto bianco e colori che si sommano come luce, per i temi scuri (quelli di partenza), e `<id>-chiaro.svg`, tratto scuro, per i temi chiari. Quale usare lo dice `data-luma` su <html>, che il tema scrive (useFondoChiaro).
+
+NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
+
+**Dove**: `src/lib/speciali.js, src/pages/MenuPage.jsx (speciali, carosello), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`
+
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
 DECISO (19/08, dall'utente che riporta Flavio). L'IVA ha DUE LATI e vanno tenuti distinti: quella con cui si COMPRA e quella con cui si VENDE. Su tutti e due il valore generale sta nelle Impostazioni, e su tutti e due si deve poter fare l'eccezione sulla singola riga.
@@ -920,7 +938,7 @@ Prodotti, Conta, Categorie, Macro-categorie e Movimenti si scelgono dalla BARRA 
 
 TRE SEZIONI SONO USCITE DI QUI il 26/08/2026 — Ordini, Scadenzario e Fornitori sono passate alla sezione «Fornitori» del gestionale (REQ-MAG-028): il magazzino risponde a «cosa ho sullo scaffale», loro a «con chi lavoro e quanto gli devo».
 
-LA CONTA È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per la Tana non è inclusa: di partenza il magazzino ha QUATTRO sezioni. Restano nello stesso elenco (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua sezione è aperta si torna ai Prodotti. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. GLI «IN ESAURIMENTO»
+LA CONTA È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per la Tana non è inclusa: di partenza il magazzino ha QUATTRO sezioni. Restano nello stesso elenco (`INV_VIEWS`), che si filtra: l'ordine delle sezioni è uno solo, e un secondo elenco prima o poi direbbe un'altra cosa. La vista aperta si ricava dall'elenco filtrato, così se il modulo si spegne mentre la sua sezione è aperta si torna ai Prodotti. In pagina costavano spazio fisso tutto il giorno — due file di tasti più tre pannelli a scomparsa, poi una barra a sinistra (che rubava la colonna ai prodotti), poi una riga di schede — per una scelta che si fa ogni tanto. Sul telefono, dove nella barra non ci sta un elenco, si apre il foglio dal basso: lo stesso gesto di «⋯ Azioni», che al banco si conosce già. La ricerca sta sopra; sotto, una riga sola con due TENDINE (filtri di scorta e assortimento, fornitore), il valore di magazzino, card/lista come due icone e il tasto per un prodotto nuovo. Il tasto di una tendina dice cosa è scelto senza doverla aprire. I filtri (tutti, in scorta, in esaurimento, esauriti, e i quattro di assortimento) stanno su UNA RIGA sola, con scritto che sono filtri: sembravano un riepilogo, si leggevano i numeri senza capire che toccandoli la lista si restringeva. Il valore di magazzino è lì accanto ma non si tocca: è un numero da leggere, non un filtro. «IN SCORTA» È LA DOMANDA CHE MANCAVA (segnalato al banco il 18/08, coi 388 articoli veri sotto gli occhi: «al filtro manca quelli in magazzino»). Si poteva chiedere solo cosa sta finendo e cosa è finito; per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo conteggio come le altre. Le quattro voci stanno nella tendina senza un titolo sopra: la scritta «Come stanno a scorta» e' stata tolta su richiesta dell'utente il 29/10/2026. GLI «IN ESAURIMENTO»
 
 CI STANNO DENTRO: sono in magazzino, solo pochi. «In esaurimento» è una lente più stretta dentro la stessa famiglia, non un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima bottiglia di gin, che è proprio quella che gli serve sapere. Così il conto torna a vista: in scorta più esauriti fa il totale, e chi somma le voci non trova numeri che non tornano.
 
@@ -3161,6 +3179,12 @@ VERDE dove c'è stato servizio — una chiusura di cassa dell'app o una giornata
 UNA GRIGLIA PER TUTTA L'APP (l'utente, stesso giorno: «uniformare anche gli altri calendari dell'app a quello appena creato … e anche con la info sul servizio»). GrigliaMese è il calendario di tutte e tre le schermate che ne aprono uno — le serate delle statistiche, la ricerca per data delle chiusure di cassa, il periodo dello storico ordini — coi giorni di servizio colorati allo stesso modo. I giorni di servizio vengono da lib/giorniDiServizio.js (chiusure dell'app per giornata commerciale più giornate di Tiller), letti una volta e tenuti in mano; nelle chiusure sono le chiusure in elenco. Le caselle data dei moduli (spesa, fattura, data di nascita) non sono calendari di servizio e restano com'erano. Anche «Inizio» e «Fine» del periodo personalizzato delle statistiche (CampoDataOra): la casella data-e-ora resta, e accanto il tasto apre la stessa griglia — il browser ci apriva il suo selettore («qua vedo ancora il calendario vecchio»); toccato un giorno, l'ora scritta resta.
 
 **Dove**: `src/components/CalendarioServizio.jsx, src/components/StatsTab.jsx (ElencoSerate), src/index.css` · **Lo dimostrano**: `tests/component/StatsTab.test.jsx`, `tests/unit/giorniDiServizio.test.js`
+
+#### REQ-STAT-008 — L'utile per categoria: incassato meno costo del venduto, in classifica
+
+Flavio, 29/10/2026: «in STATISTICHE PER PERIODO inserire sotto INCASSO PER CATEGORIA anche un'altra tabella con la classifica degli UTILI PER CATEGORIA dove viene mostrato il risultato dell'Incassato meno il Costo del Venduto (dato che il gestionale ricava dalle ricette degli items di MENU)». Sotto il grafico «Incasso per categoria» c'e' la tabella «Utile per categoria»: Categoria, Incassato, Costo del venduto, Utile, con la posizione in classifica (l'utile piu' alto in cima) e il totale in fondo. Tutte le categorie, non le prime dieci del grafico: in una classifica la coda e' meta' della risposta. L'incassato e' lo stesso del grafico, al netto degli sconti. Il costo di ogni riga venduta viene dalla ricetta valorizzata sul magazzino con `lineCost`, lo stesso conto del rendiconto della serata e del mensile per macro; costi e ricavi IVA compresa, come nel resto dell'app. Le ricette sono quelle di adesso: un drink venduto mesi fa con un'altra ricetta si valuta col costo di oggi. Una categoria con voci senza ricetta, o con un ingrediente senza costo, porta un asterisco e la nota «Costo incompleto»: il suo utile e' piu' alto del vero, e lo si dice. Compare anche nel dettaglio di una serata, perche' i due usano lo stesso corpo delle statistiche.
+
+**Dove**: `src/lib/stats.js (utiliPerCategoria), src/lib/rendiconto.js (lineCost), src/components/StatsTab.jsx (UtiliPerCategoria)` · **Lo dimostrano**: `tests/unit/stats.test.js`, `tests/component/StatsTab.test.jsx`
 
 ### LIC
 

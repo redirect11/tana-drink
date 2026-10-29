@@ -21,6 +21,8 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
+import SpecialManager from './SpecialManager.jsx'
+import { drinkSpeciali } from '../lib/speciali.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
@@ -326,7 +328,23 @@ export default function MenuManager() {
     { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
     { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
+    { id: 'special', icona: '✨', label: `Special (${drinkSpeciali(drinks).length})` },
   ]
+
+  if (sezione === 'special') {
+    return (
+      <div>
+        <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
+        <SpecialManager
+          drinks={drinks}
+          onEdit={(id) => {
+            setSezione('catalogo')
+            setEditing(drinks.find((d) => d.id === id) || null)
+          }}
+        />
+      </div>
+    )
+  }
 
   if (sezione === 'categorie') {
     return (

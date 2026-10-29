@@ -613,6 +613,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/menu" element={<MenuPage />} />
+          {/* IL MENÙ SPECIAL (REQ-MENU-018): sotto /menu, così valgono
+              anche qui tema, cassetto e anteprima del cliente. */}
+          <Route path="/menu/special" element={<MenuPage speciali />} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
