@@ -52,6 +52,7 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     // il fallback ''.trim() il salvataggio con campi vuoti crashava.
     name: (form.name || '').trim(),
     description: (form.description || '').trim() || null,
+    ingredienti: (form.ingredienti || '').trim() || null,
     category_id: form.category_id || null,
     category: catName || null, // denormalizzato per compat/fallback
     recipe: (form.recipe || '').trim() || null,

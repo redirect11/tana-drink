@@ -218,6 +218,35 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(ingredienti).not.toMatch(/\bU\b/)
   })
 
+  // Le ricette vere del test, stampate com'erano, dicevano «Ghiaccio
+  // Hoshizaki · Tempo di Lavorazione» e «Lime Succo Homemade 1kg - 50cl»
+  // (REQ-MENU-019).
+  it('dalla ricetta il cliente non legge ghiaccio, manodopera e formati di confezione', async () => {
+    ruoloClaim = null
+    mockSettings = {}
+    mockDrinks = [
+      {
+        id: 'd6',
+        name: 'Cuba Libre',
+        price: 8,
+        category_id: 'c1',
+        available: true,
+        recipe_items: [
+          { inventory_item_id: 'rum', name: 'Matusalem 7 anni', unit: 'ml', qty: 50 },
+          { inventory_item_id: 'lime', name: 'Lime Succo Homemade 1kg - 50cl', unit: 'ml', qty: 20 },
+          { inventory_item_id: 'cola', name: 'Coca Cola Lattina', unit: 'pz', qty: 1 },
+          { inventory_item_id: 'ghiaccio', name: 'Ghiaccio Hoshizaki', unit: 'g', qty: 320 },
+          { inventory_item_id: 'tempo', name: 'Tempo di Lavorazione', unit: 'g', qty: 1.5 },
+        ],
+      },
+    ]
+    mostra()
+    await screen.findByText('Cuba Libre')
+    expect(document.querySelector('.ingredients')).toHaveTextContent(
+      /^Matusalem 7 anni · Lime Succo Homemade · Coca Cola Lattina$/
+    )
+  })
+
   it('e un drink con un solo ingrediente vero non elenca niente', async () => {
     // La lista si mostra da due ingredienti in su: contano quelli che si
     // vedono, non le righe della ricetta.
@@ -348,6 +377,26 @@ describe('gli special della casa', () => {
     expect(within(carosello).getByText('Alice nel Paese delle Meraviglie')).toBeInTheDocument()
     // Il drink resta anche nella sua categoria.
     expect(screen.getAllByText('Tè dei matti').length).toBeGreaterThan(1)
+  })
+
+  // GLI INGREDIENTI (REQ-MENU-019). L'utente, 29/10/2026: «negli special
+  // devono uscire anche gli ingredienti del drink, e anche nel menu».
+  it('gli ingredienti scritti nella scheda si leggono nel carosello, nel menù e nel menù Special', async () => {
+    ruoloClaim = null
+    mockSettings = { special_titolo: 'Special' }
+    const conIngredienti = { ...SPECIAL, ingredienti: 'Tè nero, gin, miele' }
+    mockDrinks = [...DRINKS, conIngredienti]
+    const { unmount } = mostra('/menu')
+    const carosello = await screen.findByRole('region', { name: 'Special' })
+    expect(within(carosello).getByText('Tè nero · gin · miele')).toBeInTheDocument()
+    // E nella sua categoria, nel menù normale.
+    const nelMenu = [...document.querySelectorAll('.menu-item .ingredients')].map((p) => p.textContent)
+    expect(nelMenu).toContain('Tè nero · gin · miele')
+    unmount()
+
+    mostraSpeciali()
+    await screen.findByText('Tè dei matti')
+    expect(document.getElementById('speciale-s1').querySelector('.ingredients')).toHaveTextContent('Tè nero · gin · miele')
   })
 
   it('senza special il carosello non c’è', async () => {

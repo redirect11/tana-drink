@@ -1,5 +1,21 @@
 # Cosa è cambiato
 
+## 1.9.9-beta — in lavorazione
+
+### Per i clienti
+
+- **Gli ingredienti dei drink nel menù, negli Special e nel carosello.**
+  Sotto la descrizione si leggono gli ingredienti.
+- **Ingredienti puliti.** Dalla ricetta non si leggono più il ghiaccio, il
+  tempo di lavorazione e i formati delle confezioni.
+
+### Per chi amministra
+
+- **Ingredienti in carta.** Nella scheda del drink un campo nuovo, separato
+  da virgole, con quello che legge il cliente. Vuoto, gli ingredienti si
+  ricavano dalla ricetta. Per i Signature, che sul test non hanno ricetta,
+  è l'unico modo di mostrarli.
+
 ## 1.9.8-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti
