@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { immagineVoce } from '../lib/speciali.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 
 // IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del cliente.
 // L'utente, 29/10/2026: «serve un carosello vero che fa lo slide delle
@@ -62,6 +63,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
       <div className="carosello-fila" ref={fila} onScroll={alloScorrere}>
         {voci.map((d, k) => {
           const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro })
+          const ingredienti = ingredientiInCarta(d)
           return (
             <Link
               key={d.id}
@@ -75,6 +77,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
               <span className="carosello-testo">
                 <strong>{d.name}</strong>
                 {d.description && <span className="carosello-descrizione">{d.description}</span>}
+                {ingredienti && <span className="carosello-ingredienti">{ingredienti.join(' · ')}</span>}
                 <span className="price">{formatPrice(d.price)}</span>
               </span>
             </Link>

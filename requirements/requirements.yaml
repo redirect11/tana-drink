@@ -3917,6 +3917,33 @@ requirements:
   #  GRUPPI DI CONTI
   # ══════════════════════════════════════════════════════════════════════
 
+  - id: REQ-MENU-019
+    title: "Gli ingredienti in carta: nel menù, nel menù Special e nel carosello"
+    area: "src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti)"
+    description: >
+      L'utente, 29/10/2026: «negli special devono uscire anche gli
+      ingredienti del drink, e anche nel menu». Il cliente legge gli
+      ingredienti sotto la descrizione: nelle card del menù, in quelle del
+      menù Special e nelle slide del carosello (al massimo due righe).
+      DUE FONTI, IN QUEST'ORDINE. Prima il campo «Ingredienti in carta»
+      della scheda, scritto dal gestore e separato da virgole: si legge
+      com'è, anche con un ingrediente solo. Serve perché la ricetta e' di
+      magazzino, e perche' i Signature sul test non ne hanno: senza il campo
+      per loro non c'e' niente da mostrare. Se il campo e' vuoto, LA RICETTA
+      RIPULITA: fuori la manodopera (in U, o col nome «Lavorazione», perche'
+      nelle ricette vecchie e' ancora in grammi), fuori il ghiaccio, e dal
+      nome si toglie il formato della confezione («Lime Succo Homemade 1kg -
+      50cl» -> «Lime Succo Homemade»); un ingrediente ripetuto si legge una
+      volta, e da ricetta la lista compare da due ingredienti in su. Con
+      `show_ingredient_quantities` le righe da ricetta hanno la dose.
+      Un ingrediente sbagliato in carta e' un allergene sbagliato: le
+      descrizioni inventate dei Signature (REQ-MENU-018) non nominano
+      ingredienti, e nemmeno questo: si riporta solo quello che e' scritto.
+    status: implemented
+    generate_issue: false
+    labels: [menu, vista-cliente]
+    test_cases:
+      - tests/unit/ingredientiCarta.test.js
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
     area: "src/lib/groups.js"

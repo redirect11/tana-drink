@@ -290,6 +290,19 @@ describe('gli special nella gestione del menù', () => {
     expect(form.illustrazione).toEqual({ bicchiere: 'tazza', colore: 'ambra', decorazione: 'agrume' })
   })
 
+  // REQ-MENU-019: gli ingredienti che legge il cliente si scrivono nella
+  // scheda, perché la ricetta è di magazzino e i Signature non ne hanno.
+  it('nella scheda si scrivono gli ingredienti in carta', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    await user.type(await screen.findByLabelText('Nome *'), 'Basiliconiglio')
+    await user.type(screen.getByLabelText('Ingredienti in carta'), 'Gin, basilico, lime')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await waitFor(() => expect(salvaDrink).toHaveBeenCalled())
+    expect(salvaDrink.mock.calls.at(-1)[0].form.ingredienti).toBe('Gin, basilico, lime')
+  })
+
   it('la sezione Special ha titolo, elenco e il QR del menù Special', async () => {
     const user = userEvent.setup()
     render(<MenuManager />)
