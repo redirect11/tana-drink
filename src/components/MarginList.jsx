@@ -30,11 +30,16 @@ const VISTE = [
   { id: 'categorie', label: 'Per categoria' },
   { id: 'tutto', label: 'Tutto insieme' },
 ]
+// LE PAROLE E L'ORDINE SONO QUELLI DI FLAVIO (29/10/2026): «COSTO,
+// VENDITA, CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una
+// tabella». Il consigliato ha una colonna sua: prima stava scritto piccolo
+// sotto il nome, e solo per le voci da rivedere.
 const COLONNE = [
   ['cost', 'Costo'],
-  ['price', 'Prezzo'],
-  ['margin', 'Margine'],
-  ['markup', 'Ricarico'],
+  ['price', 'Vendita'],
+  ['suggested', 'Consigliato'],
+  ['markup', 'Moltiplicatore'],
+  ['margin', 'Utile'],
 ]
 const ricarico = (m) => (m != null ? `×${String(m).replace('.', ',')}` : '—')
 
@@ -141,8 +146,9 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
                     </th>
                     <td />
                     <td />
-                    <td title="Margine medio">{g.margineMedio != null ? formatPrice(g.margineMedio) : ''}</td>
-                    <td title="Ricarico medio">{ricarico(g.ricaricoMedio)}</td>
+                    <td />
+                    <td title="Moltiplicatore medio">{ricarico(g.ricaricoMedio)}</td>
+                    <td title="Utile medio">{g.margineMedio != null ? formatPrice(g.margineMedio) : ''}</td>
                   </tr>
                 )}
                 {g.righe.map((r) => (
@@ -156,20 +162,22 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
                       >
                         {r.name}
                       </button>
-                      {r.stato === 'sotto' && r.suggested != null && (
-                        <span className="muted small margin-nota">consigliato {formatPrice(r.suggested)}</span>
-                      )}
                       {r.missing.length > 0 && (
                         <span className="muted small margin-nota">manca {r.missing.join(', ')}</span>
                       )}
                     </th>
                     <td>{formatPrice(r.cost)}</td>
                     <td>{formatPrice(r.price)}</td>
-                    <td className={r.margin != null && r.margin < 0 ? 'neg' : ''}>
-                      {r.margin != null ? formatPrice(r.margin) : '—'}
+                    {/* In evidenza quando la vendita sta sotto: è il prezzo a
+                        cui portarla. */}
+                    <td className={r.stato === 'sotto' ? 'margin-consigliato' : 'muted'}>
+                      {r.suggested != null ? formatPrice(r.suggested) : '—'}
                     </td>
                     <td className={r.stato === 'sotto' ? 'neg' : ''}>
                       <strong>{ricarico(r.markup)}</strong>
+                    </td>
+                    <td className={r.margin != null && r.margin < 0 ? 'neg' : ''}>
+                      {r.margin != null ? formatPrice(r.margin) : '—'}
                     </td>
                   </tr>
                 ))}

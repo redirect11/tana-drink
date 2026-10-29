@@ -3713,13 +3713,18 @@ requirements:
       fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro,
       prezzo meno costo) e Ricarico (il moltiplicatore); toccando
       un'intestazione si ordina su quella colonna, ritoccandola si gira il
-      verso; un valore che manca sta sempre in fondo. Di partenza la
+      verso; un valore che manca sta sempre in fondo.
+      LE PAROLE DI FLAVIO (29/10/2026): «COSTO, VENDITA, CONSIGLIATO,
+      MOLTIPLICATORE e UTILE incolonnate come una tabella». Le colonne
+      sono quelle, in quell'ordine, e il consigliato ha una colonna sua,
+      in evidenza sulle voci da rivedere (prima stava sotto il nome, solo
+      per quelle). Di partenza la
       tabella e' divisa per categorie del menu', nel loro ordine, con
       «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e
       ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di
       partenza si vedono tutte le voci, col ricarico piu' basso in cima; i
-      filtri Da rivedere, In linea, Costo incompleto restano. Il prezzo
-      consigliato e gli ingredienti senza costo si leggono sotto il nome.
+      filtri Da rivedere, In linea, Costo incompleto restano. Gli
+      ingredienti senza costo si leggono sotto il nome.
       Toccando il nome si apre la voce.
     status: implemented
     generate_issue: false
@@ -12238,9 +12243,19 @@ requirements:
       - tests/unit/css.test.js
 
   - id: REQ-MENU-015
-    title: "Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta"
+    title: "Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine"
     area: "scripts/ghiaccio-nelle-ricette.js, scripts/lib-ghiaccio.js"
     description: >
+      RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6
+      DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte
+      le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di
+      MENU». Le dosi erano a ×2 (200 g dove l'originale diceva 100), e lo
+      0,8 le porta a 160. L'obiettivo di partenza dello script e' ora 1,6
+      (`--a`): rilanciato senza dire altro, non riporta le dosi al doppio.
+      SUL TEST (29/10/2026): il segno era a ×2, riscritte 110 ricette (110
+      righe di ghiaccio), segno a ×1,6. In produzione: da fare, dopo il
+      backup e col via libera; lo script legge il segno sull'articolo e
+      applica quello che manca, qualunque fosse il punto di partenza.
       RIPENSATO IL 12/09/2026: NON PIU' ×1,5 MA ×2. Flavio, per iscritto:
       «moltiplicare ×2 l'ingrediente GHIACCIO HOSHIZAKI in tutte le ricette,
       ho fatto un errore di calcolo quindi va raddoppiato in tutte le
