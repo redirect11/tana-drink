@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { entryUnits } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
-import { ILLUSTRAZIONI, illustrazioneUrl } from '../lib/speciali.js'
+import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
@@ -41,6 +41,18 @@ export default function DrinkForm({
   const [preview, setPreview] = useState(initial.image_url || null)
   // Le illustrazioni nella versione che si legge sul tema del gestionale.
   const fondoChiaro = useFondoChiaro()
+  // Il disegno composto della voce (null se non c'è, o se è uno dei
+  // soggetti fissi della prima versione: cambiandolo diventa composto).
+  const disegno =
+    form.illustrazione && typeof form.illustrazione === 'object' ? sceltaIllustrazione(form.illustrazione) : null
+  const scegliDisegno = (cambio) =>
+    setForm((f) => ({
+      ...f,
+      illustrazione: {
+        ...(sceltaIllustrazione(f.illustrazione) || { bicchiere: 'coppa', colore: 'rosa', decorazione: 'nessuna' }),
+        ...cambio,
+      },
+    }))
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [newCat, setNewCat] = useState('')
@@ -312,32 +324,76 @@ export default function DrinkForm({
       <p className="muted small" style={{ margin: '2px 0 0' }}>
         Compare nel menù Special e nel carosello in cima al menù del cliente, oltre che nella sua categoria.
       </p>
+      {/* IL DISEGNO DEL DRINK (REQ-MENU-018): bicchiere, colore e
+          decorazione, nel segno delle incisioni del libro. L'anteprima è
+          quella che vedrà il cliente. */}
       {form.speciale && (
-        <div className="illustrazioni" role="group" aria-label="Illustrazione">
-          <span className="muted small">Illustrazione, usata quando manca la foto</span>
-          <div className="illustrazioni-griglia">
-            <button
-              type="button"
-              className={`illustrazione-voce${!form.illustrazione ? ' scelta' : ''}`}
-              aria-pressed={!form.illustrazione}
-              onClick={() => setForm((f) => ({ ...f, illustrazione: null }))}
-            >
-              Nessuna
+        <div className="illustrazioni" role="group" aria-label="Disegno del drink">
+          <span className="muted small">Disegno del drink, usato quando manca la foto</span>
+          {!disegno ? (
+            <button type="button" className="btn ghost small block" style={{ marginTop: 4 }} onClick={() => scegliDisegno({})}>
+              Componi un disegno
             </button>
-            {ILLUSTRAZIONI.map((i) => (
+          ) : (
+            <>
+              <img className="illustrazione-anteprima" src={urlDrink(disegno, { chiaro: fondoChiaro })} alt="Anteprima del disegno" />
+              <span className="muted small">Bicchiere</span>
+              <div className="illustrazioni-griglia" role="group" aria-label="Bicchiere">
+                {BICCHIERI.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className={`illustrazione-voce${disegno.bicchiere === b.id ? ' scelta' : ''}`}
+                    aria-pressed={disegno.bicchiere === b.id}
+                    aria-label={b.nome}
+                    title={b.nome}
+                    onClick={() => scegliDisegno({ bicchiere: b.id })}
+                  >
+                    <img src={urlDrink({ ...disegno, bicchiere: b.id, decorazione: 'nessuna' }, { chiaro: fondoChiaro })} alt="" />
+                  </button>
+                ))}
+              </div>
+              <span className="muted small">Colore</span>
+              <div className="colori-drink" role="group" aria-label="Colore">
+                {COLORI.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`colore-drink${disegno.colore === c.id ? ' scelta' : ''}`}
+                    style={{ background: c.hex }}
+                    aria-pressed={disegno.colore === c.id}
+                    aria-label={c.nome}
+                    title={c.nome}
+                    onClick={() => scegliDisegno({ colore: c.id })}
+                  />
+                ))}
+              </div>
+              <span className="muted small">Decorazione</span>
+              <div className="illustrazioni-griglia" role="group" aria-label="Decorazione">
+                {DECORAZIONI.map((x) => (
+                  <button
+                    key={x.id}
+                    type="button"
+                    className={`illustrazione-voce${disegno.decorazione === x.id ? ' scelta' : ''}`}
+                    aria-pressed={disegno.decorazione === x.id}
+                    aria-label={x.nome}
+                    title={x.nome}
+                    onClick={() => scegliDisegno({ decorazione: x.id })}
+                  >
+                    <img src={urlDrink({ ...disegno, decorazione: x.id }, { chiaro: fondoChiaro })} alt="" />
+                  </button>
+                ))}
+              </div>
               <button
-                key={i.id}
                 type="button"
-                className={`illustrazione-voce${form.illustrazione === i.id ? ' scelta' : ''}`}
-                aria-pressed={form.illustrazione === i.id}
-                aria-label={i.nome}
-                title={i.nome}
-                onClick={() => setForm((f) => ({ ...f, illustrazione: i.id }))}
+                className="btn ghost small"
+                style={{ marginTop: 8 }}
+                onClick={() => setForm((f) => ({ ...f, illustrazione: null }))}
               >
-                <img src={illustrazioneUrl(i.id, import.meta.env.BASE_URL, { chiaro: fondoChiaro })} alt="" />
+                Togli il disegno
               </button>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       )}
 

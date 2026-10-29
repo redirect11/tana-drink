@@ -266,21 +266,28 @@ describe('le icone delle sottosezioni', () => {
 // GLI SPECIAL DELLA CASA DAL GESTIONALE (REQ-MENU-018): «I drink speciali
 // devono poter essere indicati nel backoffice del menu».
 describe('gli special nella gestione del menù', () => {
-  it('nella scheda si segna «Drink speciale» e si sceglie l’illustrazione', async () => {
+  // Il disegno si COMPONE: bicchiere, colore, decorazione (l'utente,
+  // 29/10/2026: «le immagini dei drink dovrebbero rappresentare i drink»).
+  it('nella scheda si segna «Drink speciale» e si compone il disegno del drink', async () => {
     const user = userEvent.setup()
     render(<MenuManager />)
     await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
     await user.type(await screen.findByLabelText('Nome *'), 'Tè dei matti')
-    expect(screen.queryByRole('group', { name: 'Illustrazione' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Disegno del drink' })).toBeNull()
     await user.click(screen.getByLabelText('Drink speciale'))
-    const scelta = within(screen.getByRole('group', { name: 'Illustrazione' }))
-    await user.click(scelta.getByRole('button', { name: 'Tazza del tè' }))
-    expect(scelta.getByRole('button', { name: 'Tazza del tè' })).toHaveAttribute('aria-pressed', 'true')
+    const disegno = within(screen.getByRole('group', { name: 'Disegno del drink' }))
+    await user.click(disegno.getByRole('button', { name: 'Componi un disegno' }))
+    await user.click(within(disegno.getByRole('group', { name: 'Bicchiere' })).getByRole('button', { name: 'Tazza' }))
+    await user.click(within(disegno.getByRole('group', { name: 'Colore' })).getByRole('button', { name: 'Ambra' }))
+    await user.click(within(disegno.getByRole('group', { name: 'Decorazione' })).getByRole('button', { name: 'Fetta di agrume' }))
+    expect(within(disegno.getByRole('group', { name: 'Bicchiere' })).getByRole('button', { name: 'Tazza' })).toHaveAttribute('aria-pressed', 'true')
+    // L'anteprima è il disegno vero.
+    expect(disegno.getByRole('img', { name: 'Anteprima del disegno' }).getAttribute('src')).toMatch(/^data:image\/svg\+xml/)
     await user.click(screen.getByRole('button', { name: /^Salva/ }))
     await waitFor(() => expect(salvaDrink).toHaveBeenCalled())
     const { form } = salvaDrink.mock.calls[0][0]
     expect(form.speciale).toBe(true)
-    expect(form.illustrazione).toBe('tazza-te')
+    expect(form.illustrazione).toEqual({ bicchiere: 'tazza', colore: 'ambra', decorazione: 'agrume' })
   })
 
   it('la sezione Special ha titolo, elenco e il QR del menù Special', async () => {

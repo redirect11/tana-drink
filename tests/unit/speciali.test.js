@@ -46,6 +46,16 @@ describe('le immagini', () => {
     expect(immagineVoce({ image_url: 'https://x/foto.jpg', illustrazione: 'rosa' }, '/', { chiaro: true })).toBe('https://x/foto.jpg')
   })
 
+  // Il disegno composto (REQ-MENU-018, 29/10/2026): bicchiere, colore e
+  // decorazione diventano un'immagine generata.
+  it('un disegno composto diventa un’immagine generata, nelle due versioni', () => {
+    const d = { illustrazione: { bicchiere: 'coppa', colore: 'rosso', decorazione: 'cuori' } }
+    const scuro = immagineVoce(d)
+    expect(scuro).toMatch(/^data:image\/svg\+xml/)
+    expect(immagineVoce(d, '/', { chiaro: true })).not.toBe(scuro)
+    expect(immagineVoce({ ...d, image_url: 'https://x/foto.jpg' })).toBe('https://x/foto.jpg')
+  })
+
   it('la foto vince sull’illustrazione', () => {
     expect(immagineVoce({ image_url: 'https://x/foto.jpg', illustrazione: 'rosa' })).toBe('https://x/foto.jpg')
     expect(immagineVoce({ illustrazione: 'rosa' })).toBe('/illustrazioni/alice/rosa.svg')

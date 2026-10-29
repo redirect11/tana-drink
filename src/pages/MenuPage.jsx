@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
+import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -460,23 +461,12 @@ export default function MenuPage({ speciali = false }) {
               Vedi tutti ›
             </Link>
           </div>
-          {settings.special_sottotitolo && <p className="muted small" style={{ margin: '2px 0 6px' }}>{settings.special_sottotitolo}</p>}
-          <div className="speciali-fila">
-            {elencoSpeciali.map((d) => {
-              const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
-              return (
-                <Link
-                  key={d.id}
-                  className="speciale-tessera"
-                  to={`${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
-                >
-                  {img ? <img src={img} alt="" loading="lazy" /> : <span className="speciale-vuota" aria-hidden="true">✨</span>}
-                  <strong>{d.name}</strong>
-                  <span className="price">{formatPrice(d.price)}</span>
-                </Link>
-              )
-            })}
-          </div>
+          {settings.special_sottotitolo && <p className="muted small" style={{ margin: '2px 0 8px' }}>{settings.special_sottotitolo}</p>}
+          <CaroselloSpeciali
+            voci={elencoSpeciali}
+            chiaro={fondoChiaro}
+            link={(d) => `${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
+          />
         </section>
       )}
 
