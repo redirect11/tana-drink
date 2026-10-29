@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.9.7-beta — in lavorazione
+## 1.9.7-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti
 
