@@ -2,6 +2,14 @@
 
 ## 1.9.4-beta — in lavorazione
 
+### Per i clienti
+
+- **Gli Special della casa.** In cima al menù c'è il carosello dei drink
+  speciali: toccandone uno si apre il menù Special, su quel drink e sullo
+  stesso tavolo. Il menù Special ha un suo indirizzo e un suo QR, da
+  stampare sul menù che si porta al tavolo, e mostra solo gli special su
+  carta chiara, con le illustrazioni ad acquerello a tema Alice.
+
 ### Per chi sta al banco
 
 - **Il resto in contanti.** Con «Calcolo del resto in contanti» acceso in
@@ -17,6 +25,11 @@
 
 ### Per chi amministra
 
+- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
+  scheda, dove si sceglie anche l'illustrazione; resta comunque nella sua
+  categoria. Nella sezione Special si scrivono titolo e sottotitolo del
+  menù (per esempio «Alice nel Paese delle Meraviglie») e si scarica il
+  QR del menù Special.
 - **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
   categoria» c'è la classifica delle categorie per utile: incassato, costo
   del venduto ricavato dalle ricette, e utile, col totale in fondo. Le

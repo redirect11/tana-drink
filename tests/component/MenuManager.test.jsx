@@ -54,12 +54,25 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribePosPrefs: vi.fn(() => () => {}),
   savePosColors: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn(() => () => {}),
-  DEFAULT_SETTINGS: { stripe_menu: 'scorte' },
+  updateSettings: vi.fn(() => Promise.resolve()),
+  DEFAULT_SETTINGS: { stripe_menu: 'scorte', special_titolo: 'Special', special_sottotitolo: '' },
   settingsIniziali: () => ({ stripe_menu: 'scorte' }),
 }))
 vi.mock('../../src/lib/storage.js', () => ({
   deleteDrinkImageByUrl: vi.fn(() => Promise.resolve()),
   uploadDrinkImage: vi.fn(() => Promise.resolve('https://esempio/nuova.jpg')),
+}))
+
+// Il QR del menù Special: l'immagine vera la fa la libreria, qui basta
+// sapere che c'è e che punta all'indirizzo giusto.
+const qr = vi.hoisted(() => ({ indirizzi: [] }))
+vi.mock('qrcode', () => ({
+  default: {
+    toDataURL: vi.fn(async (testo) => {
+      qr.indirizzi.push(testo)
+      return 'data:image/png;base64,QR'
+    }),
+  },
 }))
 
 const salvaDrink = vi.fn(() => Promise.resolve())
@@ -247,5 +260,44 @@ describe('le icone delle sottosezioni', () => {
     for (const f of ['MacroCategoryManager.jsx', 'MacroMonthlyTab.jsx']) {
       expect(sorgente(f), f).not.toMatch(NUDA)
     }
+  })
+})
+
+// GLI SPECIAL DELLA CASA DAL GESTIONALE (REQ-MENU-018): «I drink speciali
+// devono poter essere indicati nel backoffice del menu».
+describe('gli special nella gestione del menù', () => {
+  it('nella scheda si segna «Drink speciale» e si sceglie l’illustrazione', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    await user.type(await screen.findByLabelText('Nome *'), 'Tè dei matti')
+    expect(screen.queryByRole('group', { name: 'Illustrazione' })).toBeNull()
+    await user.click(screen.getByLabelText('Drink speciale'))
+    const scelta = within(screen.getByRole('group', { name: 'Illustrazione' }))
+    await user.click(scelta.getByRole('button', { name: 'Tazza del tè' }))
+    expect(scelta.getByRole('button', { name: 'Tazza del tè' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await waitFor(() => expect(salvaDrink).toHaveBeenCalled())
+    const { form } = salvaDrink.mock.calls[0][0]
+    expect(form.speciale).toBe(true)
+    expect(form.illustrazione).toBe('tazza-te')
+  })
+
+  it('la sezione Special ha titolo, elenco e il QR del menù Special', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    const sezioni = []
+    const stop = subscribeSottosezioni((s) => sezioni.push(s))
+    const ultima = () => sezioni[sezioni.length - 1]
+    await waitFor(() => expect(ultima()?.voci?.some((v) => v.id === 'special')).toBe(true))
+    await act(async () => ultima().scegli('special'))
+    expect(await screen.findByRole('heading', { name: /Menù Special/ })).toBeInTheDocument()
+    expect(screen.getByText(/Nessun drink speciale/)).toBeInTheDocument()
+    const immagine = await screen.findByRole('img', { name: 'QR del menù Special' })
+    expect(immagine).toHaveAttribute('src', 'data:image/png;base64,QR')
+    expect(qr.indirizzi.at(-1)).toMatch(/\/menu\/special$/)
+    expect(screen.getByRole('link', { name: 'Scarica il QR' })).toHaveAttribute('download', 'qr-menu-special.png')
+    stop()
   })
 })

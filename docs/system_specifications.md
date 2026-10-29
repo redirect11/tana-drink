@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 222 | fatto e coperto dai test |
+| ✅ | 223 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**270 voci** in tutto. **238** descrivono il sistema com'è oggi e
+**271 voci** in tutto. **239** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 12 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 13 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -759,6 +759,22 @@ Si importa il listino da un CSV di SumUp: prodotti, categorie in ordine di appar
 Il colore di una categoria è stabile (dipende dall'id, non dal nome) e lo stesso nel POS, nel menù e nelle statistiche: una categoria si riconosce a colpo d'occhio ovunque la si incontri.
 
 **Dove**: `src/lib/categoryColors.js` · **Lo dimostrano**: `tests/unit/categoryColors.test.js`
+
+#### REQ-MENU-018 — Gli special della casa: un menù loro col suo QR, e un carosello in cima al menù
+
+L'utente, 29/10/2026, per Flavio: «i drink della casa vengano messi in una categoria special. L'idea e' che si porta un menu a tavola con un qr code specifico che apre la pagina menu dove ci sono solo gli special drink. Il qr code ai tavoli invece apre il menu normale dove in alto a tutto ci deve essere un carousel degli special drink che se cliccato ti porta al menu dei drink speciali. I drink speciali devono poter essere indicati nel backoffice del menu». I primi sono a tema Alice nel Paese delle Meraviglie, con «immagini stilizzate» nello stile di due acquerelli mandati come esempio.
+
+UN SEGNO SULLA VOCE, NON UNA CATEGORIA: nella scheda c'e' «Drink speciale» (`speciale`). La voce resta nella sua categoria (un drink della casa e' anche un cocktail, e marginalita', statistiche e POS continuano a contarlo li') e in piu' compare negli Special.
+
+IL MENU' SPECIAL e' `/menu/special` (sotto /menu, cosi' tema, cassetto e anteprima del cliente valgono anche li'): solo gli special, su «carta» chiara come un menu' stampato, col titolo e il sottotitolo scelti dal locale (`special_titolo`, `special_sottotitolo`, di partenza «Special» e vuoto), l'immagine grande, e «← Tutto il menu'». Si ordina come dal menu' normale.
+
+IL CAROSELLO sta in cima al menu' del cliente, solo se ci sono special e solo per i clienti (chi lavora usa il menu' come strumento): una tessera per drink con immagine, nome e prezzo; toccandola si apre il menu' Special su quel drink, e «Vedi tutti» lo apre dall'inizio. Il tavolo e il gruppo del QR passano da un menu' all'altro (`conParametri`).
+
+LE ILLUSTRAZIONI: otto acquerelli in SVG (bottiglia «Bevimi», tazza del te', cappello del Cappellaio col 10/6, orologio del Bianconiglio, fungo del Bruco, rosa dipinta, sorriso dello Stregatto, cuore della Regina), dal libro di Carroll e non dai film, generati da `scripts/illustrazioni-alice.mjs`. Nella scheda, con «Drink speciale» acceso, se ne sceglie una; la foto della voce, se c'e', ha la precedenza. Nel menu' normale l'illustrazione fa anche da miniatura.
+
+NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
+
+**Dove**: `src/lib/speciali.js, src/pages/MenuPage.jsx (speciali, carosello), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

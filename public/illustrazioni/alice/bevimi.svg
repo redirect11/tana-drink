@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+<defs>
+  <filter id="acquerello" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.017" numOctaves="3" seed="11" result="rumore"/>
+    <feDisplacementMap in="SourceGraphic" in2="rumore" scale="42" xChannelSelector="R" yChannelSelector="G"/>
+    <feGaussianBlur stdDeviation="2.4"/>
+  </filter>
+  <filter id="mano" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="18" result="tremito"/>
+    <feDisplacementMap in="SourceGraphic" in2="tremito" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</defs>
+<g filter="url(#acquerello)" style="mix-blend-mode:multiply"><ellipse cx="200" cy="225" rx="82" ry="100" fill="#c2acea" fill-opacity="0.55"/></g>
+<g filter="url(#acquerello)" style="mix-blend-mode:multiply"><circle cx="262" cy="118" r="46" fill="#f2a3b6" fill-opacity="0.5"/></g>
+<g filter="url(#acquerello)" style="mix-blend-mode:multiply"><ellipse cx="146" cy="300" rx="62" ry="38" fill="#a9c3ea" fill-opacity="0.5"/></g>
+<g><circle cx="82.5" cy="216.4" r="2.7" fill="#8f6fd0" fill-opacity="0.69"/><circle cx="270.1" cy="129.5" r="1.1" fill="#8f6fd0" fill-opacity="0.66"/><circle cx="112.9" cy="155.0" r="2.3" fill="#8f6fd0" fill-opacity="0.79"/><circle cx="87.3" cy="287.0" r="3.0" fill="#8f6fd0" fill-opacity="0.51"/><circle cx="242.7" cy="313.5" r="2.1" fill="#8f6fd0" fill-opacity="0.60"/><circle cx="124.6" cy="182.0" r="2.7" fill="#8f6fd0" fill-opacity="0.68"/><circle cx="76.2" cy="294.6" r="3.4" fill="#8f6fd0" fill-opacity="0.76"/><circle cx="148.5" cy="338.9" r="1.6" fill="#8f6fd0" fill-opacity="0.47"/><circle cx="191.3" cy="73.0" r="1.7" fill="#8f6fd0" fill-opacity="0.51"/><circle cx="195.8" cy="121.3" r="2.6" fill="#8f6fd0" fill-opacity="0.68"/><circle cx="249.7" cy="152.4" r="3.5" fill="#8f6fd0" fill-opacity="0.78"/><circle cx="140.9" cy="277.3" r="1.0" fill="#8f6fd0" fill-opacity="0.79"/><circle cx="82.5" cy="227.0" r="1.7" fill="#8f6fd0" fill-opacity="0.65"/><circle cx="191.7" cy="141.6" r="2.9" fill="#8f6fd0" fill-opacity="0.47"/><circle cx="81.7" cy="268.0" r="3.9" fill="#8f6fd0" fill-opacity="0.62"/><circle cx="98.2" cy="247.0" r="1.0" fill="#8f6fd0" fill-opacity="0.74"/><circle cx="81.5" cy="290.7" r="1.8" fill="#8f6fd0" fill-opacity="0.67"/><circle cx="118.2" cy="340.9" r="1.3" fill="#8f6fd0" fill-opacity="0.50"/><circle cx="114.5" cy="133.7" r="1.2" fill="#8f6fd0" fill-opacity="0.60"/><circle cx="92.8" cy="328.7" r="3.5" fill="#8f6fd0" fill-opacity="0.70"/><circle cx="74.8" cy="303.5" r="2.7" fill="#8f6fd0" fill-opacity="0.62"/><circle cx="158.5" cy="334.0" r="0.8" fill="#8f6fd0" fill-opacity="0.80"/><circle cx="243.2" cy="174.1" r="1.2" fill="#f2a3b6" fill-opacity="0.48"/><circle cx="260.0" cy="53.2" r="2.4" fill="#f2a3b6" fill-opacity="0.49"/><circle cx="198.6" cy="93.0" r="3.6" fill="#f2a3b6" fill-opacity="0.83"/><circle cx="207.1" cy="79.0" r="2.6" fill="#f2a3b6" fill-opacity="0.64"/><circle cx="319.5" cy="156.8" r="2.9" fill="#f2a3b6" fill-opacity="0.85"/><circle cx="250.3" cy="71.8" r="1.2" fill="#f2a3b6" fill-opacity="0.71"/><circle cx="317.6" cy="108.2" r="3.8" fill="#f2a3b6" fill-opacity="0.60"/><circle cx="266.7" cy="48.7" r="1.0" fill="#f2a3b6" fill-opacity="0.56"/><circle cx="229.8" cy="64.2" r="2.8" fill="#f2a3b6" fill-opacity="0.54"/><circle cx="251.0" cy="63.9" r="1.1" fill="#f2a3b6" fill-opacity="0.67"/></g>
+<g filter="url(#mano)" fill="none" stroke="#1f1b24" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+
+<path d="M186 80 Q200 70 214 80 L212 99 L188 99 Z"/>
+<path d="M191 99 L191 132 Q160 152 158 192 L158 300 Q158 318 177 318 L223 318 Q242 318 242 300 L242 192 Q240 152 209 132 L209 99"/>
+<path d="M158 213 L242 219 L238 256 L154 250 Z"/>
+<path d="M200 133 Q186 168 172 214"/>
+<path d="M172 275 Q200 286 228 275"/>
+</g>
+<text x="198" y="241" text-anchor="middle" transform="rotate(4 198 237)" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="15" letter-spacing="1.5" fill="#1f1b24">BEVIMI</text>
+</svg>

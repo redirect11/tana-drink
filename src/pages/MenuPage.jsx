@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -37,10 +38,14 @@ import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
 const WELCOME_KEY = 'tana_welcome_v1'
 
-export default function MenuPage() {
+// `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
+// segnate come speciali, su carta.
+export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
   const { drinks, cats, loading } = useMenu()
+  const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  const posizione = useLocation()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -191,13 +196,16 @@ export default function MenuPage() {
   const [ricerca, setRicerca] = useState('')
   const categories = useMemo(() => {
     const ricercaAttiva = ricerca.trim().toLowerCase()
+    // Nel menù Special si guardano solo gli special, in un gruppo solo.
+    const base = speciali ? elencoSpeciali : drinks
     const visibili = ricercaAttiva
-      ? drinks.filter(
+      ? base.filter(
           (d) =>
             d.name?.toLowerCase().includes(ricercaAttiva) ||
             (d.recipe_items || []).some((r) => r.name?.toLowerCase().includes(ricercaAttiva))
         )
-      : drinks
+      : base
+    if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
     for (const d of visibili) {
@@ -210,7 +218,14 @@ export default function MenuPage() {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats, ricerca])
+  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo])
+
+  // Arrivando dal carosello su un drink, la pagina Special si apre su quello.
+  useEffect(() => {
+    if (!speciali || !posizione.hash) return
+    const el = document.getElementById(decodeURIComponent(posizione.hash.slice(1)))
+    el?.scrollIntoView?.({ block: 'start' })
+  }, [speciali, posizione.hash, categories.length])
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -417,6 +432,51 @@ export default function MenuPage() {
         </div>
       )}
 
+      {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
+          strada per il menù completo, con lo stesso tavolo. */}
+      {speciali && (
+        <div className="speciali-testata carta">
+          <h2>{settings.special_titolo || 'Special'}</h2>
+          {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
+          <Link className="btn ghost small" to={conParametri('/menu', params)}>
+            ← Tutto il menù
+          </Link>
+        </div>
+      )}
+
+      {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
+          cliente: toccando un drink si va al menù Special, su quel drink.
+          Chi lavora non lo vede: per lui il menù è uno strumento. */}
+      {!speciali && !staff && elencoSpeciali.length > 0 && (
+        <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
+          <div className="row between" style={{ alignItems: 'baseline' }}>
+            <h3 className="cat-header" style={{ margin: 0 }}>
+              ✨ {settings.special_titolo || 'Special'}
+            </h3>
+            <Link className="speciali-tutti" to={conParametri(PERCORSO_SPECIALI, params)}>
+              Vedi tutti ›
+            </Link>
+          </div>
+          {settings.special_sottotitolo && <p className="muted small" style={{ margin: '2px 0 6px' }}>{settings.special_sottotitolo}</p>}
+          <div className="speciali-fila">
+            {elencoSpeciali.map((d) => {
+              const img = immagineVoce(d, import.meta.env.BASE_URL)
+              return (
+                <Link
+                  key={d.id}
+                  className="speciale-tessera carta"
+                  to={`${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
+                >
+                  {img ? <img src={img} alt="" loading="lazy" /> : <span className="speciale-vuota" aria-hidden="true">✨</span>}
+                  <strong>{d.name}</strong>
+                  <span className="price">{formatPrice(d.price)}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
       {etaMinutes != null && !menuOnly && (
         <p className="eta-line">
           ⏱ {settings.service_mode === 'tavolo' ? 'Tempo di servizio' : 'Tempo di preparazione'}:
@@ -515,7 +575,7 @@ export default function MenuPage() {
         <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
-      {categories.length > 1 && (
+      {!speciali && categories.length > 1 && (
         <nav className="cat-nav">
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -527,18 +587,27 @@ export default function MenuPage() {
 
       {categories.map(([cat, list]) => (
         <section key={cat}>
-          <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>
+          {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}
           {list.map((d) => {
             const inCart = cart.items.find((i) => i.drink_id === d.id)
+            // La foto, o l'illustrazione dello special, o il logo.
+            const img = immagineVoce(d, import.meta.env.BASE_URL)
             return (
-              <div className="card menu-item" key={d.id}>
+              <div
+                className={`card menu-item${speciali ? ' speciale carta' : ''}`}
+                key={d.id}
+                id={speciali ? `speciale-${d.id}` : undefined}
+              >
+                {speciali && img && <img className="speciale-img" src={img} alt="" loading="lazy" />}
                 <div className="row between">
-                  <img
-                    className={`drink-thumb${d.image_url ? '' : ' placeholder'}`}
-                    src={d.image_url || `${import.meta.env.BASE_URL}logo.png`}
-                    alt={d.name}
-                    loading="lazy"
-                  />
+                  {!speciali && (
+                    <img
+                      className={`drink-thumb${img ? '' : ' placeholder'}${!d.image_url && d.illustrazione ? ' carta' : ''}`}
+                      src={img || `${import.meta.env.BASE_URL}logo.png`}
+                      alt={d.name}
+                      loading="lazy"
+                    />
+                  )}
                   <div className="grow">
                     <h3>{d.name}</h3>
                     {d.description && (
