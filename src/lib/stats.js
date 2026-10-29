@@ -7,6 +7,7 @@ import { scontoTotale } from './pagamento.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { comandeConRighe, itemsTotal } from './comande.js'
 import { ORARIO_PREDEFINITO, parseHM } from './orario.js'
+import { lineCost } from './rendiconto.js'
 
 const isCancelled = (o) => o.status === ORDER_STATUSES.ANNULLATO
 const valid = (orders) => orders.filter((o) => !isCancelled(o))
@@ -324,6 +325,39 @@ export function vendutoPerCategoria(orders, drinksById) {
 // Solo le categorie, per i grafici del periodo.
 export function revenueByCategory(orders, drinksById) {
   return vendutoPerCategoria(orders, drinksById).map(({ name, revenue, qty }) => ({ name, revenue, qty }))
+}
+
+// ── L'utile per categoria ─────────────────────────────────────────────
+// Flavio, 29/10/2026: «sotto INCASSO PER CATEGORIA anche un'altra tabella
+// con la classifica degli UTILI PER CATEGORIA, dove viene mostrato il
+// risultato dell'Incassato meno il Costo del Venduto (dato che il
+// gestionale ricava dalle ricette degli items di MENU)».
+// L'incassato e' quello di «Incasso per categoria», al netto degli sconti:
+// due tabelle una sotto l'altra non possono dire due incassi diversi. Il
+// costo di ogni riga viene dalla ricetta con `lineCost`, lo stesso conto
+// del rendiconto della serata e del mensile per macro, IVA compresa come
+// l'incasso (rendiconto.js, regola 3). Una categoria con anche una sola
+// voce senza ricetta, o con un ingrediente senza costo, e' `parziale`: il
+// suo utile e' per forza ottimistico e va detto.
+// In classifica: l'utile piu' alto in cima.
+export function utiliPerCategoria(orders, drinksById, itemsById) {
+  const costi = new Map()
+  const incomplete = new Set()
+  for (const o of valid(orders)) {
+    for (const i of o.order_items || []) {
+      const drink = drinksById?.[i.drink_id]
+      const cat = drink?.category || 'Altro'
+      const c = lineCost(i, drink, itemsById)
+      costi.set(cat, (costi.get(cat) || 0) + c.costo)
+      if (!c.noto || c.mancanti.length) incomplete.add(cat)
+    }
+  }
+  return vendutoPerCategoria(orders, drinksById)
+    .map(({ name, revenue, qty }) => {
+      const costo = cent(costi.get(name) || 0)
+      return { name, qty, incassato: revenue, costo, utile: cent(revenue - costo), parziale: incomplete.has(name) }
+    })
+    .sort((a, b) => b.utile - a.utile)
 }
 
 // ── Consumo ingredienti (qty venduta × ricetta) ───────────────────────

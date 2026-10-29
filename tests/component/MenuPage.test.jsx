@@ -11,7 +11,7 @@
 // categorie; il cliente invece sfoglia la vetrina, senza barra.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
@@ -310,5 +310,70 @@ describe('gli ordini in cima al menù', () => {
     ruoloClaim = 'bartender'
     mostra()
     await waitFor(() => expect(screen.queryByText(/Ordine #7/)).toBeNull())
+  })
+})
+
+// GLI SPECIAL DELLA CASA (REQ-MENU-018). L'utente, 29/10/2026: il QR ai
+// tavoli apre il menù normale «dove in alto a tutto ci deve essere un
+// carousel degli special drink che se cliccato ti porta al menu dei drink
+// speciali»; il QR del menù a tavola apre la pagina con «solo gli special».
+describe('gli special della casa', () => {
+  const SPECIAL = {
+    id: 's1',
+    name: 'Tè dei matti',
+    price: 9,
+    category_id: 'c1',
+    available: true,
+    speciale: true,
+    illustrazione: 'tazza-te',
+    recipe_items: [],
+  }
+  const mostraSpeciali = (percorso = '/menu/special') =>
+    render(
+      <MemoryRouter initialEntries={[percorso]}>
+        <MenuPage speciali />
+      </MemoryRouter>
+    )
+
+  it('il cliente trova il carosello in cima, e un tocco porta agli Special sullo stesso tavolo', async () => {
+    ruoloClaim = null
+    mockSettings = { special_titolo: 'Special', special_sottotitolo: 'Alice nel Paese delle Meraviglie' }
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostra('/menu?tavolo=5')
+    const carosello = await screen.findByRole('region', { name: 'Special' })
+    const tessera = within(carosello).getByRole('link', { name: /Tè dei matti/ })
+    expect(tessera).toHaveAttribute('href', '/menu/special?tavolo=5#speciale-s1')
+    expect(tessera.querySelector('img')).toHaveAttribute('src', '/illustrazioni/alice/tazza-te.svg')
+    expect(within(carosello).getByRole('link', { name: /Vedi tutti/ })).toHaveAttribute('href', '/menu/special?tavolo=5')
+    expect(within(carosello).getByText('Alice nel Paese delle Meraviglie')).toBeInTheDocument()
+    // Il drink resta anche nella sua categoria.
+    expect(screen.getAllByText('Tè dei matti').length).toBeGreaterThan(1)
+  })
+
+  it('senza special il carosello non c’è', async () => {
+    ruoloClaim = null
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('region', { name: /Special/ })).toBeNull()
+  })
+
+  it('chi lavora non vede il carosello', async () => {
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('region', { name: /Special/ })).toBeNull()
+  })
+
+  it('il menù Special mostra solo gli special, col titolo, e torna al menù sullo stesso tavolo', async () => {
+    ruoloClaim = null
+    mockSettings = { special_titolo: 'Special', special_sottotitolo: 'Alice nel Paese delle Meraviglie' }
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostraSpeciali('/menu/special?tavolo=5')
+    expect(await screen.findByRole('heading', { level: 2, name: 'Special' })).toBeInTheDocument()
+    expect(screen.getByText('Tè dei matti')).toBeInTheDocument()
+    expect(screen.queryByText('Mojito')).toBeNull()
+    expect(screen.getByRole('link', { name: /Tutto il menù/ })).toHaveAttribute('href', '/menu?tavolo=5')
+    const card = document.getElementById('speciale-s1')
+    expect(card.querySelector('.speciale-img')).toHaveAttribute('src', '/illustrazioni/alice/tazza-te.svg')
   })
 })

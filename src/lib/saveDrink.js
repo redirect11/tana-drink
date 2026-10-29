@@ -62,6 +62,8 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
     sale_vat: aliquotaVendita(form.sale_vat),
     available: !!form.available,
     image_url: imageUrl,
+    speciale: !!form.speciale,
+    illustrazione: form.illustrazione || null,
   }
 
   if (existing && existing.id) await updateDrink(existing.id, payload)
