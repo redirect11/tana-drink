@@ -430,7 +430,7 @@ function DailyStats({ sezione = 'serate' }) {
       split: serviceModeSplit(ord),
       extras: extrasBreakdown(ord),
     }
-  }, [loaded, giorniAttivi, orders, drinks, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
+  }, [loaded, giorniAttivi, orders, drinks, prodotti, periodo, personalizzato, istanti, intervallo, hourRange, dayRange, cutoff, serata, sessions, contiTiller, diTiller])
 
   if (error) return <div className="banner">Errore: {error}</div>
   if (!loaded) return <div className="empty">Carico le statistiche…</div>
