@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 24 ottobre 2026.
+> Generato il 29 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 220 | fatto e coperto dai test |
+| ✅ | 221 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**268 voci** in tutto. **236** descrivono il sistema com'è oggi e
+**269 voci** in tutto. **237** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -43,7 +43,7 @@ come «vero oggi», non come «garantito».
 |---|---|---|---|
 | [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
-| [Pagamenti](#pagamenti) | 13 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
+| [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
@@ -464,6 +464,12 @@ MISURATO IN CHROME VERO, non a occhio: 96 combinazioni (colonne strette al minim
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/useResizable.js, src/index.css` · **Lo dimostrano**: `tests/component/PaymentScreen.test.jsx`, `tests/unit/css.test.js`, `tests/unit/useResizable.test.js`
 
+#### REQ-PAG-015 — Quanto dà il cliente e quanto resto dare, coi contanti
+
+L'utente, 26/10/2026: «nella schermata del pagamento del conto deve uscire anche, opzionale attivabile nelle impostazioni, la possibilita' di inserire quanto il cliente da' e deve uscire quanto resto dare». Il resto c'era gia', ma di sbieco: battendo piu' del dovuto la schermata incassava il dovuto e diceva «Resto». Funzionava solo incassando tutto il conto: con alcune righe scelte (7 € su 22) e il cliente che da' 20, battere 20 registrava un acconto da 20. Ora i numeri sono due. Con «Calcolo del resto in contanti» acceso in Impostazioni → Pagamenti (spento di partenza), scegliendo «Contante» compare il riquadro «Il cliente da'»: i tagli probabili (i primi tondi da 5, 10, 20, 50 e 100 € che coprono l'importo: per 23,50 € 25, 30, 50 e 100) e un campo «Altro» per una cifra a mano. Sotto, «Resto da dare» in grande, o «Mancano» se i contanti non bastano. Il resto si calcola su quello che si incassa adesso, anche una parte del conto, e l'importo non cambia; dopo ogni incasso il riquadro si azzera. Con la carta il riquadro non c'e'. Il resto di prima, battuto nel tastierino, resta com'era.
+
+**Dove**: `src/lib/resto.js, src/components/PaymentScreen.jsx (RestoContanti), src/components/SettingsTab.jsx, src/lib/api.js (resto_contanti)` · **Lo dimostrano**: `tests/unit/resto.test.js`
+
 ### La coda del banco
 
 Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine.
@@ -736,7 +742,9 @@ A /menu si apre sempre la stessa schermata, per chi ordina e per chi lavora: le 
 
 Per ogni drink si vede costo reale, prezzo e margine, con il prezzo consigliato calcolato dal ricarico impostato: serve a capire dove si sta perdendo.
 
-IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe mettere sempre la divisione in categorie … poter vedere questo confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di metterlo in ordine secondo determinati valori»; il prezzo, «scritto piccolo e sotto il nome», va «tutto in colonna sulla destra come se fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro, prezzo meno costo) e Ricarico (il moltiplicatore); toccando un'intestazione si ordina su quella colonna, ritoccandola si gira il verso; un valore che manca sta sempre in fondo. Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Il prezzo consigliato e gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
+IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe mettere sempre la divisione in categorie … poter vedere questo confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di metterlo in ordine secondo determinati valori»; il prezzo, «scritto piccolo e sotto il nome», va «tutto in colonna sulla destra come se fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro, prezzo meno costo) e Ricarico (il moltiplicatore); toccando un'intestazione si ordina su quella colonna, ritoccandola si gira il verso; un valore che manca sta sempre in fondo.
+
+LE PAROLE DI FLAVIO (29/10/2026): «COSTO, VENDITA, CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una tabella». Le colonne sono quelle, in quell'ordine, e il consigliato ha una colonna sua, in evidenza sulle voci da rivedere (prima stava sotto il nome, solo per quelle). Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
 
 **Dove**: `src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/MarginList.test.jsx`
 
@@ -804,7 +812,11 @@ IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo salva n
 
 **Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`, `tests/unit/css.test.js`
 
-#### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
+#### REQ-MENU-015 — Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine
+
+RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6 DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di MENU». Le dosi erano a ×2 (200 g dove l'originale diceva 100), e lo 0,8 le porta a 160. L'obiettivo di partenza dello script e' ora 1,6 (`--a`): rilanciato senza dire altro, non riporta le dosi al doppio.
+
+SUL TEST (29/10/2026): il segno era a ×2, riscritte 110 ricette (110 righe di ghiaccio), segno a ×1,6. In produzione: da fare, dopo il backup e col via libera; lo script legge il segno sull'articolo e applica quello che manca, qualunque fosse il punto di partenza.
 
 RIPENSATO IL 12/09/2026:
 
@@ -3507,6 +3519,8 @@ Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, qui
 COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
 
 PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
+
+DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
 
 DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
 

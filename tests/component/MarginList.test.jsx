@@ -48,18 +48,27 @@ const mostra = () =>
 const nomi = () => [...document.querySelectorAll('.margin-nome')].map((b) => b.textContent)
 
 describe('la marginalità del listino', () => {
-  it('è una tabella con costo, prezzo, margine e ricarico in colonna', () => {
+  // Le parole e l'ordine di Flavio, 29/10/2026: «COSTO, VENDITA,
+  // CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una tabella».
+  it('è una tabella con costo, vendita, consigliato, moltiplicatore e utile in colonna', () => {
     mostra()
-    const testa = within(screen.getByRole('table').querySelector('thead'))
-    for (const c of ['Voce', 'Costo', 'Prezzo', 'Margine', 'Ricarico']) {
-      expect(testa.getByRole('button', { name: c })).toBeInTheDocument()
-    }
+    const testa = screen.getByRole('table').querySelector('thead')
+    expect([...testa.querySelectorAll('th')].map((t) => t.textContent.replace(/[▲▼]/g, ''))).toEqual([
+      'Voce',
+      'Costo',
+      'Vendita',
+      'Consigliato',
+      'Moltiplicatore',
+      'Utile',
+    ])
     const riga = screen.getByRole('button', { name: 'Modifica Bjorne' }).closest('tr')
+    // Bjorne costa 2 e si vende a 4: col ×3 il consigliato è 6.
     expect(within(riga).getAllByRole('cell').map((c) => c.textContent.replace(/\s/g, ' '))).toEqual([
       '2,00 €',
       '4,00 €',
-      '2,00 €',
+      '6,00 €',
       '×2',
+      '2,00 €',
     ])
   })
 
@@ -87,18 +96,27 @@ describe('la marginalità del listino', () => {
     const user = userEvent.setup()
     mostra()
     await user.click(screen.getByRole('button', { name: 'Tutto insieme' }))
-    await user.click(screen.getByRole('button', { name: 'Margine' }))
+    await user.click(screen.getByRole('button', { name: 'Utile' }))
     expect(nomi()).toEqual(['Bjorne', 'Ceres', 'Americano', 'Spritz'])
-    await user.click(screen.getByRole('button', { name: 'Margine' }))
+    await user.click(screen.getByRole('button', { name: 'Utile' }))
     expect(nomi()).toEqual(['Spritz', 'Americano', 'Ceres', 'Bjorne'])
-    expect(screen.getByRole('button', { name: 'Margine' }).closest('th')).toHaveAttribute('aria-sort', 'descending')
+    expect(screen.getByRole('button', { name: 'Utile' }).closest('th')).toHaveAttribute('aria-sort', 'descending')
   })
 
-  it('i filtri restano, e il consigliato si legge accanto alla voce da rivedere', async () => {
+  it('i filtri restano, e il consigliato della voce da rivedere è in evidenza', async () => {
     const user = userEvent.setup()
     mostra()
     await user.click(screen.getByRole('button', { name: /Da rivedere/ }))
     expect(nomi()).toEqual(['Bjorne'])
-    expect(screen.getByText(/consigliato 6,00/)).toBeInTheDocument()
+    expect(document.querySelector('.margin-consigliato')).toHaveTextContent('6,00')
+  })
+
+  it('si ordina anche sul consigliato', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: 'Tutto insieme' }))
+    await user.click(screen.getByRole('button', { name: 'Consigliato' }))
+    // Consigliato = costo × 3: Ceres e Spritz 3, Americano e Bjorne 6.
+    expect(nomi()).toEqual(['Ceres', 'Spritz', 'Americano', 'Bjorne'])
   })
 })

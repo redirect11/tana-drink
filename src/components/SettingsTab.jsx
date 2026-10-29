@@ -307,6 +307,14 @@ export default function SettingsTab({ role = null }) {
                   incassa, e chi lo cerca apre Pagamenti — c'era finito
                   accanto a «Riscuoti e servi» per parentela di forma, e
                   l'utente non lo trovava. */}
+              {/* IL RESTO IN CONTANTI (REQ-PAG-015): sta coi tasti
+                  dell'incasso, perché compare dove si incassa. */}
+              <ToggleRow
+                label="Calcolo del resto in contanti"
+                desc="Nella schermata di pagamento, con «Contante», si indica quanto ha dato il cliente e compare il resto da dare. L'importo incassato non cambia."
+                checked={settings.resto_contanti === true}
+                onChange={(v) => save({ resto_contanti: v })}
+              />
               <ToggleRow
                 label="Un tasto per incassare senza stampare"
                 desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
