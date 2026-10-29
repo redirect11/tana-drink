@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { entryUnits } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import { ILLUSTRAZIONI, illustrazioneUrl } from '../lib/speciali.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -293,6 +294,49 @@ export default function DrinkForm({
         />
         <span>Disponibile nel menù</span>
       </label>
+
+      {/* GLI SPECIAL DELLA CASA (REQ-MENU-018): la voce resta nella sua
+          categoria e in più compare negli Special. */}
+      <label className="row" style={{ marginTop: 8 }}>
+        <input
+          type="checkbox"
+          style={{ width: 'auto' }}
+          checked={!!form.speciale}
+          onChange={set('speciale')}
+        />
+        <span>Drink speciale</span>
+      </label>
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Compare nel menù Special e nel carosello in cima al menù del cliente, oltre che nella sua categoria.
+      </p>
+      {form.speciale && (
+        <div className="illustrazioni" role="group" aria-label="Illustrazione">
+          <span className="muted small">Illustrazione, usata quando manca la foto</span>
+          <div className="illustrazioni-griglia">
+            <button
+              type="button"
+              className={`illustrazione-voce${!form.illustrazione ? ' scelta' : ''}`}
+              aria-pressed={!form.illustrazione}
+              onClick={() => setForm((f) => ({ ...f, illustrazione: null }))}
+            >
+              Nessuna
+            </button>
+            {ILLUSTRAZIONI.map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                className={`illustrazione-voce carta${form.illustrazione === i.id ? ' scelta' : ''}`}
+                aria-pressed={form.illustrazione === i.id}
+                aria-label={i.nome}
+                title={i.nome}
+                onClick={() => setForm((f) => ({ ...f, illustrazione: i.id }))}
+              >
+                <img src={illustrazioneUrl(i.id, import.meta.env.BASE_URL)} alt="" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {saveError && (
         <div className="banner" style={{ marginTop: 12 }}>Errore: {saveError}</div>

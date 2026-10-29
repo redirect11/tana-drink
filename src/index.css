@@ -711,6 +711,163 @@ a.btn.block {
   margin: 0 0 4px;
 }
 
+/* ── IL MENÙ SPECIAL (REQ-MENU-018) ──────────────────────────────────
+   LA CARTA. Le illustrazioni sono acquerelli su carta chiara: su un fondo
+   scuro le loro trasparenze sparirebbero. Il menù Special è quindi un
+   foglio di carta dentro l'app, con i suoi due colori — la carta e
+   l'inchiostro — fissi in tutti i temi, come gli stati degli ordini
+   (DESIGN.md, guardrail 5): è il menù stampato che si porta al tavolo. */
+.carta {
+  --carta: #fbf8f3;
+  --carta-inchiostro: #2a2430;
+  --carta-muto: #6b6275;
+  background: var(--carta);
+  color: var(--carta-inchiostro);
+}
+.carta .muted,
+.carta .ingredients {
+  color: var(--carta-muto);
+}
+/* Sulla carta l'inchiostro del tema scuro non si legge: i tasti «fantasma»
+   e i prezzi prendono l'inchiostro della carta (il giallo dell'accento su
+   crema stava sotto 2:1, guardrail 1). */
+.carta {
+  --carta-prezzo: #8a5300;
+}
+.carta .price {
+  color: var(--carta-prezzo);
+}
+.carta .btn.ghost {
+  color: var(--carta-inchiostro);
+  border-color: rgba(42, 36, 48, 0.3);
+  background: transparent;
+}
+.speciali-carosello {
+  margin: 4px 0 14px;
+}
+.speciali-tutti {
+  font-size: 0.9rem;
+}
+.speciali-fila {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 6px 2px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.speciale-tessera {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 14px;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.speciale-tessera img,
+.speciale-vuota {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+}
+.speciale-tessera strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.speciali-testata {
+  border-radius: 16px;
+  padding: 16px;
+  margin: 0 0 12px;
+  text-align: center;
+}
+.speciali-testata h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.8rem;
+}
+.speciali-tema {
+  margin: 4px 0 10px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  color: var(--carta-muto);
+}
+.menu-item.speciale {
+  border: none;
+}
+.menu-item.speciale h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.3rem;
+}
+.speciale-img {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0 auto 6px;
+}
+.illustrazioni {
+  margin-top: 8px;
+}
+.illustrazioni-griglia {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+.illustrazione-voce {
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  padding: 4px;
+  min-height: calc(72px / var(--zoom, 1));
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  background: none;
+  color: inherit;
+}
+.illustrazione-voce.carta {
+  background: var(--carta);
+}
+.illustrazione-voce.scelta {
+  border-color: var(--accent);
+}
+.illustrazione-voce img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  display: block;
+}
+.special-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.qr-special {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.qr-special img {
+  width: 200px;
+  height: 200px;
+  background: #fff;
+  border-radius: 8px;
+}
+
 /* Foto drink */
 .drink-thumb {
   width: 64px;

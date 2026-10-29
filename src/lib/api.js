@@ -186,6 +186,10 @@ function mapDrink(snap) {
     sale_vat: d.sale_vat ?? null,
     available: d.available ?? true,
     image_url: d.image_url ?? null,
+    // GLI SPECIAL DELLA CASA (REQ-MENU-018): il segno, e l'illustrazione
+    // pronta da usare quando la foto manca.
+    speciale: d.speciale === true,
+    illustrazione: d.illustrazione ?? null,
     created_at: toIso(d.created_at),
   }
 }
@@ -6067,6 +6071,10 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // IL MENÙ SPECIAL (REQ-MENU-018): il titolo e il sottotitolo della
+  // pagina e del carosello. Il tema cambia (oggi Alice), la pagina no.
+  special_titolo: 'Special',
+  special_sottotitolo: '',
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
   // suo: chi non lo usa non deve trovarsi un riquadro in più sul tastierino.
