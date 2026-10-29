@@ -1025,7 +1025,9 @@ function ProductsPanel() {
           attivo={statusFilter !== 'all' || assortimenti.length > 0}
           riassunto={riassuntoFiltri}
         >
-          <div className="tendina-titolo">Come stanno a scorta</div>
+          {/* Niente titolo sopra le voci della scorta: «Tutti, In scorta, In
+              esaurimento, Esauriti» si spiegano da sole, e la scritta che
+              c'era andava tolta (l'utente, 29/10/2026). */}
           {[
             ['all', 'Tutti', summary.total],
             // «In scorta» prima delle altre due: è la domanda che ci si fa

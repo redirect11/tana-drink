@@ -93,6 +93,9 @@ vi.mock('../../src/lib/api.js', () => ({
     { id: 'd2', name: 'Amaro della casa', category: 'AMARI' },
   ]),
   fetchCashSessions: vi.fn(async () => sessioni),
+  // Senza prodotti di magazzino il costo del venduto non si conosce: le
+  // categorie dell'utile escono «parziali».
+  fetchInventoryItems: vi.fn(async () => []),
   subscribeSettings: (cb) => {
     // L'orario del locale (REQ-CASSA-015): da qui partono le fasce orarie.
     cb({ business_day_cutoff_hour: 5, orario_apertura: '19:00', orario_chiusura: '02:00' })
@@ -637,6 +640,40 @@ describe('Venduto nella fascia oraria: le categorie si aprono sui loro prodotti'
     expect(categorie[1].textContent).not.toMatch(/Negroni/)
     expect(categorie[0].textContent).toMatch(/Negroni/)
     expect(within(scheda).queryByText(/Prodotti venduti/)).toBeNull()
+    m.stop()
+  })
+})
+
+// L'UTILE PER CATEGORIA SOTTO L'INCASSO PER CATEGORIA (REQ-STAT-008).
+// Flavio, 29/10/2026: «sotto INCASSO PER CATEGORIA anche un'altra tabella
+// con la classifica degli UTILI PER CATEGORIA».
+describe('per periodo: l’utile per categoria', () => {
+  it('è una tabella sotto «Incasso per categoria», con incassato, costo del venduto e utile', async () => {
+    const m = menu()
+    render(<StatsTab />)
+    await screen.findByText(/tocca una serata/i)
+    await m.vai('periodo')
+    // Il periodo degli ordini di prova.
+    await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
+    const titolo = await screen.findByRole('heading', { name: /Utile per categoria/ })
+    const incasso = screen.getByText(/Incasso per categoria/)
+    // Viene dopo, nel documento.
+    expect(incasso.compareDocumentPosition(titolo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const tabella = titolo.closest('.card').querySelector('table')
+    expect([...tabella.querySelectorAll('thead th')].map((t) => t.textContent)).toEqual([
+      'Categoria',
+      'Incassato',
+      'Costo del venduto',
+      'Utile',
+    ])
+    expect(tabella.querySelector('tfoot').textContent).toMatch(/Totale/)
+    // Le categorie degli ordini di prova, in classifica per utile: senza
+    // costi conosciuti l'utile è l'incassato, e i Negroni incassano di più.
+    const righe = [...tabella.querySelectorAll('tbody th')].map((t) => t.textContent.replace(/\s+/g, ' ').trim())
+    expect(righe[0]).toMatch(/^1\s*COCKTAIL/)
+    expect(righe[1]).toMatch(/^2\s*AMARI/)
+    // Senza ricette valorizzate il costo è incompleto, e lo dice.
+    expect(screen.getByText(/Costo incompleto/)).toBeInTheDocument()
     m.stop()
   })
 })

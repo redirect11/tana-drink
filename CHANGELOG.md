@@ -17,6 +17,13 @@
 
 ### Per chi amministra
 
+- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
+  categoria» c'è la classifica delle categorie per utile: incassato, costo
+  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
+  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
+  il loro utile è più alto del vero.
+- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
+  della scorta, nella tendina «Filtra i prodotti».
 - **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
   la marginalità mostra Costo, Vendita, Consigliato, Moltiplicatore e
   Utile in colonna, e si ordina toccando l'intestazione. Parte divisa per

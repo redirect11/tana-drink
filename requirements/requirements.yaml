@@ -2279,6 +2279,38 @@ requirements:
     test_cases:
       - tests/component/StatsTab.test.jsx
       - tests/unit/giorniDiServizio.test.js
+  - id: REQ-STAT-008
+    title: "L'utile per categoria: incassato meno costo del venduto, in classifica"
+    area: "src/lib/stats.js (utiliPerCategoria), src/lib/rendiconto.js (lineCost), src/components/StatsTab.jsx (UtiliPerCategoria)"
+    description: >
+      Flavio, 29/10/2026: «in STATISTICHE PER PERIODO inserire sotto
+      INCASSO PER CATEGORIA anche un'altra tabella con la classifica degli
+      UTILI PER CATEGORIA dove viene mostrato il risultato dell'Incassato
+      meno il Costo del Venduto (dato che il gestionale ricava dalle
+      ricette degli items di MENU)».
+      Sotto il grafico «Incasso per categoria» c'e' la tabella «Utile per
+      categoria»: Categoria, Incassato, Costo del venduto, Utile, con la
+      posizione in classifica (l'utile piu' alto in cima) e il totale in
+      fondo. Tutte le categorie, non le prime dieci del grafico: in una
+      classifica la coda e' meta' della risposta.
+      L'incassato e' lo stesso del grafico, al netto degli sconti. Il costo
+      di ogni riga venduta viene dalla ricetta valorizzata sul magazzino
+      con `lineCost`, lo stesso conto del rendiconto della serata e del
+      mensile per macro; costi e ricavi IVA compresa, come nel resto
+      dell'app. Le ricette sono quelle di adesso: un drink venduto mesi fa
+      con un'altra ricetta si valuta col costo di oggi. Una categoria con
+      voci senza ricetta, o con un ingrediente senza costo, porta un
+      asterisco e la nota «Costo incompleto»: il suo utile e' piu' alto del
+      vero, e lo si dice.
+      Compare anche nel dettaglio di una serata, perche' i due usano lo
+      stesso corpo delle statistiche.
+    status: implemented
+    generate_issue: false
+    labels: [statistiche, prezzi]
+    test_cases:
+      - tests/unit/stats.test.js
+      - tests/component/StatsTab.test.jsx
+
   - id: REQ-MAG-001
     title: "Le quantità si contano in unità base, si mostrano come si parla"
     area: "src/lib/inventory.js"
@@ -2737,7 +2769,9 @@ requirements:
       per vedere cosa c'è davvero sullo scaffale bisognava guardare «Tutti» e
       saltare a occhio due terzi di righe esaurite — 232 su 388. Sta per
       prima delle tre, che è l'ordine in cui ci si fa le domande, e ha il suo
-      conteggio come le altre.
+      conteggio come le altre. Le quattro voci stanno nella tendina senza
+      un titolo sopra: la scritta «Come stanno a scorta» e' stata tolta su
+      richiesta dell'utente il 29/10/2026.
       GLI «IN ESAURIMENTO» CI STANNO DENTRO: sono in magazzino, solo pochi.
       «In esaurimento» è una lente più stretta dentro la stessa famiglia, non
       un'altra famiglia — e chi guarda cosa c'è vuole vedere anche l'ultima

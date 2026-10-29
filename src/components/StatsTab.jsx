@@ -4,6 +4,7 @@ import {
   fetchVenditeStoriche,
   fetchSerateStoriche,
   fetchDrinks,
+  fetchInventoryItems,
   fetchCashSessions,
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -18,6 +19,7 @@ import {
   revenueByDayInRange,
   topProducts,
   revenueByCategory,
+  utiliPerCategoria,
   hourRangeReport,
   ingredientUsage,
   prepTimeStats,
@@ -130,6 +132,9 @@ function DailyStats({ sezione = 'serate' }) {
   const [loaded, setLoaded] = useState(false)
   const [orders, setOrders] = useState([])
   const [drinks, setDrinks] = useState([])
+  // I prodotti di magazzino: il costo del venduto per l'utile per categoria
+  // si ricava dalle ricette valorizzate su questi.
+  const [prodotti, setProdotti] = useState([])
   const [error, setError] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
@@ -335,9 +340,11 @@ function DailyStats({ sezione = 'serate' }) {
       fetchOrdersBetween(from, oggi, cutoff),
       fetchDrinks({}).catch(() => []),
       fetchVenditeStoriche(from, oggi),
+      fetchInventoryItems().catch(() => []),
     ])
-      .then(([o, d, storiche]) => {
+      .then(([o, d, storiche, inv]) => {
         if (!active) return
+        setProdotti(inv)
         setOrders(unisciVendite(o, storiche, { drinks: d, cutoffHour: cutoff, dal: from, al: oggi }))
         setDrinks(d)
         setLoaded(true)
@@ -386,6 +393,7 @@ function DailyStats({ sezione = 'serate' }) {
       ord = orders.filter((o) => selSet.has(businessDayKey(o.created_at, cutoff)))
     }
     const drinksById = Object.fromEntries(drinks.map((d) => [d.id, d]))
+    const itemsById = Object.fromEntries(prodotti.map((p) => [p.id, p]))
     return {
       sel,
       kpi: kpiSummary(ord, sel),
@@ -410,6 +418,9 @@ function DailyStats({ sezione = 'serate' }) {
       // taglia via.
       classifica: aggregateProducts(ord),
       byCategory: revenueByCategory(ord, drinksById).slice(0, 10),
+      // Tutte le categorie, non le prime dieci: è una classifica, e chi sta
+      // in fondo è metà della risposta.
+      utiliCategorie: utiliPerCategoria(ord, drinksById, itemsById),
       // Cosa si è venduto DAVVERO nella fascia scelta (totale, prodotti,
       // categorie), sugli STESSI conti del periodo: qui si stringe l'ora, non
       // le date — quelle le ha già dette chi ha scelto il periodo.
@@ -686,6 +697,77 @@ function ClassificaVenduto({ righe }) {
   )
 }
 
+// L'UTILE PER CATEGORIA, IN CLASSIFICA (REQ-STAT-008): incassato meno
+// costo del venduto, dalle ricette. Una tabella e non un grafico: i tre
+// numeri si leggono insieme, e la differenza fra incassato e utile è
+// proprio quello che si vuole vedere.
+function UtiliPerCategoria({ righe }) {
+  if (righe.length === 0) return null
+  const tot = righe.reduce(
+    (s, r) => ({ incassato: s.incassato + r.incassato, costo: s.costo + r.costo, utile: s.utile + r.utile }),
+    { incassato: 0, costo: 0, utile: 0 }
+  )
+  const parziali = righe.some((r) => r.parziale)
+  return (
+    <div className="card">
+      <h3 className="cat-header" style={{ margin: 0 }}>
+        💶 Utile per categoria
+      </h3>
+      <p className="muted small" style={{ margin: '8px 0 6px' }}>
+        Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.
+      </p>
+      <div className="table-scroll">
+        <table className="margin-tab utili-tab">
+          <thead>
+            <tr>
+              <th className="rowhead">Categoria</th>
+              <th>Incassato</th>
+              <th>Costo del venduto</th>
+              <th>Utile</th>
+            </tr>
+          </thead>
+          <tbody>
+            {righe.map((r, i) => (
+              <tr key={r.name}>
+                <th scope="row" className="rowhead">
+                  <span className="muted small" style={{ marginRight: 6 }}>
+                    {i + 1}
+                  </span>
+                  {r.name}
+                  {r.parziale && <span className="muted small"> *</span>}
+                </th>
+                <td>{formatPrice(r.incassato)}</td>
+                <td>{formatPrice(r.costo)}</td>
+                <td className={r.utile < 0 ? 'neg' : ''}>
+                  <strong>{formatPrice(r.utile)}</strong>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" className="rowhead">
+                Totale
+              </th>
+              <td>{formatPrice(tot.incassato)}</td>
+              <td>{formatPrice(tot.costo)}</td>
+              <td className={tot.utile < 0 ? 'neg' : ''}>
+                <strong>{formatPrice(tot.utile)}</strong>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {parziali && (
+        <p className="muted small" style={{ margin: '6px 0 0' }}>
+          * Costo incompleto: alcune voci non hanno ricetta, o un ingrediente non ha costo. L’utile di quella
+          categoria è più alto del vero.
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ── IL CORPO DELLE STATISTICHE ───────────────────────────────────────
 // Gli stessi grafici per tutte e due le sottosezioni: cambia solo QUALI
 // ordini ci finiscono dentro (una serata, o le ultime N giornate), e quello
@@ -696,7 +778,7 @@ function ClassificaVenduto({ righe }) {
 // inutile»): i due grafici per giornata e il KPI «incasso / giornata», che
 // con una giornata sola ripetono l'incasso.
 function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = true }) {
-  const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, ingredients, prep, split, extras, fascia } =
+  const { kpi, byHour, byDay, byDayRange, top, classifica, byCategory, utiliCategorie, ingredients, prep, split, extras, fascia } =
     view
   const { hourRange, setHourRange, dayRange, setDayRange } = comandi
   return (
@@ -820,6 +902,8 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
           <HBars data={byCategory.map((c) => ({ label: c.name, value: c.revenue, text: formatPrice(c.revenue) }))} />
         </ChartCard>
       )}
+
+      <UtiliPerCategoria righe={utiliCategorie || []} />
 
       {/* ── I DUE ELENCHI DEL PERIODO (REQ-STAT-002) ───────────────────
           Flavio, 17/09/2026: «tutti questi dati mi servirebbero in formato di

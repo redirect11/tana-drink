@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  utiliPerCategoria,
   kpiSummary,
   revenueByHour,
   revenueByDay,
@@ -18,6 +19,7 @@ import {
   sessionReport,
   battuteDi,
 } from '../../src/lib/stats.js'
+import { cent } from '../../src/lib/eta.js'
 
 const orders = [
   {
@@ -490,5 +492,57 @@ describe('le giornate con la cassa aperta', () => {
   it('compaiono anche senza conti, a zero', () => {
     const giorni = revenueByDay([], 5, { giorniConCassa: ['2026-09-29'] })
     expect(giorni.map((g) => [g.id, g.incasso, g.ordini])).toEqual([['2026-09-29', 0, 0]])
+  })
+})
+
+// L'UTILE PER CATEGORIA (REQ-STAT-008). Flavio, 29/10/2026: «la classifica
+// degli UTILI PER CATEGORIA dove viene mostrato il risultato dell'Incassato
+// meno il Costo del Venduto», dalle ricette delle voci di menù.
+describe('utiliPerCategoria', () => {
+  // Un pezzo a 1 €, IVA 0, per fare i conti tondi.
+  const itemsById = { p: { id: 'p', name: 'Pezzo', unit: 'pz', cost: 1, vat: 0 } }
+  const ricetta = (pezzi) => [{ inventory_item_id: 'p', unit: 'pz', qty: pezzi }]
+  const drinksById = {
+    neg: { id: 'neg', name: 'Negroni', category: 'COCKTAIL', recipe_items: ricetta(2) },
+    spr: { id: 'spr', name: 'Spritz', category: 'COCKTAIL', recipe_items: ricetta(1) },
+    bir: { id: 'bir', name: 'Bionda', category: 'BIRRE', recipe_items: ricetta(3) },
+    amaro: { id: 'amaro', name: 'Amaro', category: 'AMARI', recipe_items: [] },
+  }
+  const ordine = (righe, extra = {}) => ({
+    status: 'ritirato',
+    total: righe.reduce((s, r) => s + r.qty * r.unit_price, 0),
+    order_items: righe,
+    ...extra,
+  })
+  const ordini = [
+    ordine([
+      { drink_id: 'neg', name: 'Negroni', qty: 2, unit_price: 8 }, // 16 − 4
+      { drink_id: 'bir', name: 'Bionda', qty: 1, unit_price: 5 }, // 5 − 3
+    ]),
+    ordine([{ drink_id: 'spr', name: 'Spritz', qty: 1, unit_price: 6 }]), // 6 − 1
+    ordine([{ drink_id: 'amaro', name: 'Amaro', qty: 1, unit_price: 4 }]), // senza ricetta
+    ordine([{ drink_id: 'neg', name: 'Negroni', qty: 5, unit_price: 8 }], { status: 'annullato' }),
+  ]
+
+  it('incassato meno costo del venduto, per categoria, in classifica', () => {
+    const u = utiliPerCategoria(ordini, drinksById, itemsById)
+    expect(u.map((r) => [r.name, r.incassato, r.costo, r.utile])).toEqual([
+      ['COCKTAIL', 22, 5, 17],
+      ['AMARI', 4, 0, 4],
+      ['BIRRE', 5, 3, 2],
+    ])
+  })
+
+  it('una categoria con voci senza ricetta è segnata come parziale', () => {
+    const u = utiliPerCategoria(ordini, drinksById, itemsById)
+    expect(u.find((r) => r.name === 'AMARI').parziale).toBe(true)
+    expect(u.find((r) => r.name === 'COCKTAIL').parziale).toBe(false)
+  })
+
+  it('l’incassato è lo stesso di «Incasso per categoria», sconti compresi', () => {
+    const conSconto = [ordine([{ drink_id: 'neg', name: 'Negroni', qty: 2, unit_price: 8 }], { discount_amount: 4, total: 16 })]
+    const [cocktail] = utiliPerCategoria(conSconto, drinksById, itemsById)
+    expect(cocktail.incassato).toBe(revenueByCategory(conSconto, drinksById)[0].revenue)
+    expect(cocktail.utile).toBe(cent(cocktail.incassato - 4))
   })
 })
