@@ -849,6 +849,62 @@ a.btn.block {
   font-style: italic;
   font-size: 1.3rem;
 }
+/* Il menù Special in griglia: due colonne sul telefono, tre dai 700px.
+   Ogni card è una colonna — disegno, nome, descrizione, prezzo — con
+   «Aggiungi» in fondo e largo quanto la card: nella stessa riga le card
+   hanno la stessa altezza e i tasti stanno allineati. */
+.speciali-griglia {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (min-width: 700px) {
+  .speciali-griglia {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.speciali-griglia .menu-item.speciale {
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.speciali-griglia .menu-item.speciale > .row.between {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+/* I nomi sono in maiuscolo e lunghi («BASILICONIGLIO»): su mezzo telefono
+   il titolo cresce con lo schermo, e se non basta va a capo invece di
+   uscire dalla card. */
+.speciali-griglia .menu-item.speciale h3 {
+  font-size: clamp(0.85rem, 3.6vw, 1.05rem);
+  overflow-wrap: anywhere;
+}
+/* Il prezzo scende in fondo, sopra «Aggiungi»: con descrizioni di
+   lunghezza diversa, nella stessa riga prezzi e tasti stanno alla stessa
+   altezza. */
+.speciali-griglia .menu-item.speciale .grow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.speciali-griglia .menu-item.speciale .grow > .price {
+  margin-top: auto;
+}
+.speciali-griglia .menu-item.speciale .grow > p {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+.speciali-griglia .menu-item.speciale .btn.small {
+  width: 100%;
+  margin-top: auto;
+}
+.speciali-griglia .menu-item.speciale .qty {
+  justify-content: center;
+  margin-top: auto;
+}
 .speciale-img {
   display: block;
   width: 100%;

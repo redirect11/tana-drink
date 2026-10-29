@@ -579,7 +579,11 @@ export default function MenuPage({ speciali = false }) {
       )}
 
       {categories.map(([cat, list]) => (
-        <section key={cat}>
+        // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
+        // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
+        // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
+        // «li metterei su due colonne anziché incolonnati ad uno ad uno»).
+        <section key={cat} className={speciali ? 'speciali-griglia' : undefined}>
           {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}
           {list.map((d) => {
             const inCart = cart.items.find((i) => i.drink_id === d.id)

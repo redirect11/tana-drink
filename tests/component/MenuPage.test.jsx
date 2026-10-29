@@ -375,5 +375,7 @@ describe('gli special della casa', () => {
     expect(screen.getByRole('link', { name: /Tutto il menù/ })).toHaveAttribute('href', '/menu?tavolo=5')
     const card = document.getElementById('speciale-s1')
     expect(card.querySelector('.speciale-img')).toHaveAttribute('src', '/illustrazioni/alice/tazza-te.svg')
+    // In griglia, non una per riga (l'utente, 29/10/2026: «su due colonne»).
+    expect(card.parentElement).toHaveClass('speciali-griglia')
   })
 })
