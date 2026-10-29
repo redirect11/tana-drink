@@ -5204,3 +5204,25 @@ bugs:
       - tests/unit/useResizable.test.js
       - tests/component/OrderPosDetail.test.jsx
       - tests/unit/css.test.js
+  - id: BUG-119
+    title: "Col tema chiaro, nella card di una voce fuori menu aperta, i tasti non si leggevano"
+    area: "src/index.css (.menu-card.off .grid-card-actions)"
+    severity: media
+    priority: P2
+    description: >
+      L'utente, 29/10/2026, con una foto della gestione del menu' sul tema
+      chiaro: «con i temi chiari e le cose scure non si leggono i testi».
+      Le voci fuori menu hanno un fondo grigio scuro fisso (chiesto da
+      Flavio il 03/09/2026 perche' si vedessero da lontano), e il testo
+      della card era stato fissato bianco; ma quello che si apre con
+      «Azioni» — la ricetta in breve e i tasti Modifica, Duplica, Rendi
+      disponibile, Elimina — prendeva ancora l'inchiostro del tema, che sui
+      temi chiari e' scuro: scuro su scuro. Ora anche quella parte ha
+      l'inchiostro chiaro del grigio, con qualunque tema. Gli altri fondi
+      scuri fissi del foglio sono i veli dietro le finestre, senza testo.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, ui, menu]
+    test_cases:
+      - tests/unit/css.test.js

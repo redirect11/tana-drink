@@ -1535,3 +1535,24 @@ describe('le maniglie del conto', () => {
     expect(regola('.posd-body.trascinando .posd-comanda, .posd-body.trascinando .posd-cats')).toMatch(/transition:\s*none/)
   })
 })
+
+// LA CARD FUORI MENU SI LEGGE ANCHE APERTA, CON QUALUNQUE TEMA (BUG-119).
+// Il fondo è un grigio scuro fisso: tutto quello che ci sta sopra, anche i
+// tasti che si aprono con «Azioni», deve avere l'inchiostro chiaro suo e
+// non quello del tema, che sui temi chiari è scuro.
+describe('la card fuori menu, aperta', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (nome) => {
+    const i = css.indexOf(`
+${nome} {`)
+    expect(i, `${nome} non c'è più`).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+
+  // Il selettore con `:root[data-luma]` serve a battere le varianti dei
+  // temi chiari dei tasti, che sono più specifiche di `.menu-card.off …`.
+  it('i tasti e le righe della ricetta hanno l’inchiostro chiaro, non quello del tema', () => {
+    expect(regola('.menu-card.off .grid-card-actions .btn, :root[data-luma] .menu-card.off .grid-card-actions .btn')).toMatch(/color:\s*#fff/)
+    expect(regola('.menu-card.off .grid-card-actions .muted')).toMatch(/color:\s*rgba\(255, 255, 255/)
+  })
+})

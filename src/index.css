@@ -3598,6 +3598,26 @@ body.bar-wide .app {
 .menu-card.off .grid-card-toggle {
   color: #fff;
 }
+/* E ANCHE QUELLO CHE SI APRE CON «AZIONI» (BUG-119). Il grigio scuro è lo
+   stesso con tutti i temi, ma i tasti dentro prendevano il testo del tema:
+   sui temi chiari scuro su scuro, e «Modifica» o «Rendi disponibile» non
+   si leggevano (l'utente, 29/10/2026, con una foto: «con i temi chiari e
+   le cose scure non si leggono i testi»). Qui l'inchiostro è quello del
+   grigio, non quello del tema. */
+.menu-card.off .grid-card-actions {
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+.menu-card.off .grid-card-actions .muted {
+  color: rgba(255, 255, 255, 0.78);
+}
+/* Il secondo selettore vince sulle varianti dei temi chiari
+   (`:root[data-luma='light'] .btn.ghost` e `.btn.secondary`), che
+   altrimenti riportano bordi e fondo dei tasti al nero. */
+.menu-card.off .grid-card-actions .btn, :root[data-luma] .menu-card.off .grid-card-actions .btn {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.35);
+}
 /* Striscia sinistra per lo stato scorte (come le card ordini). */
 .admin-card.ass-assortimento { border-left: 4px solid var(--line); }
 .admin-card.ass-linea { border-left: 4px solid #3498db; }
