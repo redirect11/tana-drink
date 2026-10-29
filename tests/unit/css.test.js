@@ -1556,3 +1556,15 @@ ${nome} {`)
     expect(regola('.menu-card.off .grid-card-actions .muted')).toMatch(/color:\s*rgba\(255, 255, 255/)
   })
 })
+
+// IL MENÙ SPECIAL IN GRIGLIA (REQ-MENU-018): due colonne sul telefono, tre
+// sugli schermi larghi.
+describe('il menù Special', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  it('mette le card su due colonne, e su tre dai 700px', () => {
+    const i = css.indexOf('\n.speciali-griglia {')
+    expect(i).toBeGreaterThan(-1)
+    expect(css.slice(i, css.indexOf('}', i))).toMatch(/grid-template-columns:\s*repeat\(2,/)
+    expect(css).toMatch(/@media \(min-width: 700px\) \{\s*\.speciali-griglia \{\s*grid-template-columns:\s*repeat\(3,/)
+  })
+})
