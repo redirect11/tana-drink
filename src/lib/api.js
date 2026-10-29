@@ -6067,6 +6067,10 @@ export const DEFAULT_SETTINGS = {
   riscuoti_e_servi: false,
   // «Riscuoti (senza stampa)» nella schermata di pagamento: spento di suo.
   riscuoti_senza_stampa: false,
+  // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
+  // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
+  // suo: chi non lo usa non deve trovarsi un riquadro in più sul tastierino.
+  resto_contanti: false,
   // CHI PUÒ APRIRE LA CASSA, PER OGNI ACCOUNT (REQ-STAFF-016): una mappa
   // «uid di chi fa il login → uid degli admin che può scegliere». Vuota o
   // assente vuol dire «tutti gli admin», che è il comportamento di partenza:

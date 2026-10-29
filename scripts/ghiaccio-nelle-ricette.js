@@ -1,10 +1,10 @@
 // =====================================================================
-//  IL GHIACCIO NELLE RICETTE SI MOLTIPLICA: ×2 RISPETTO ALLA DOSE SCRITTA.
+//  IL GHIACCIO NELLE RICETTE: ×1,6 RISPETTO ALLA DOSE SCRITTA IN ORIGINE.
 //
 //    node scripts/ghiaccio-nelle-ricette.js                      # ANTEPRIMA
 //    node scripts/ghiaccio-nelle-ricette.js --apply              # scrive
 //    node scripts/ghiaccio-nelle-ricette.js --da 1.5 --apply     # se le dosi sono già a ×1,5 e il segno manca
-//    node scripts/ghiaccio-nelle-ricette.js --a 2                # l'obiettivo (2 se non si dice altro)
+//    node scripts/ghiaccio-nelle-ricette.js --a 1.6              # l'obiettivo (1,6 se non si dice altro)
 //    node scripts/ghiaccio-nelle-ricette.js --ghiaccio <id>      # se di ghiaccio ce n'è più d'uno
 //    node scripts/ghiaccio-nelle-ricette.js --project tana-drink --apply
 //
@@ -13,7 +13,11 @@
 //  raddoppiato in tutte le ricette degli items di menù dove è presente». Il
 //  consumo vero al banco è il doppio di quello scritto: la dose messa un
 //  anno fa era bassa e il magazzino del ghiaccio scendeva meno di quanto
-//  usciva davvero.
+//  usciva davvero. E il 29/10/2026, nella lista di Flavio: «moltiplicare
+//  per 0,8 tutte le quantità di Ghiaccio Hoshizaki nelle ricette». Il ×2
+//  era troppo: 0,8 delle dosi a ×2 fa ×1,6 dell'originale, che è il nuovo
+//  obiettivo di partenza. Rilanciato senza `--a`, lo script non riporta più
+//  le dosi al doppio.
 //
 //  L'OBIETTIVO È SEMPRE RISPETTO ALLA DOSE ORIGINALE. Sull'articolo del
 //  ghiaccio resta un segno, `ricette_fattore`, che dice a quante volte
@@ -35,7 +39,7 @@ import { righeDaRiscrivere, fattoreDaApplicare } from './lib-ghiaccio.js'
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
 const GHIACCIO = arg('ghiaccio')
-const OBIETTIVO = Number(arg('a', '2'))
+const OBIETTIVO = Number(arg('a', '1.6'))
 const DA = arg('da')
 
 const db = client(PROJECT, await accessToken())

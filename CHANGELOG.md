@@ -4,6 +4,11 @@
 
 ### Per chi sta al banco
 
+- **Il resto in contanti.** Con «Calcolo del resto in contanti» acceso in
+  Impostazioni → Pagamenti, scegliendo «Contante» si indica quanto ha dato
+  il cliente, con i tagli più probabili già pronti o una cifra a mano, e
+  compare il resto da dare. Vale anche quando si incassano solo alcune
+  righe del conto, e l'importo incassato non cambia.
 - **Le maniglie del conto seguono il dito.** Trascinarle non fa più
   ridisegnare tutta la schermata a ogni movimento: niente scatti sul
   tablet, e sul telefono la maniglia del riepilogo non blocca più la
@@ -13,10 +18,15 @@
 ### Per chi amministra
 
 - **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
-  la marginalità mostra Costo, Prezzo, Margine in euro e Ricarico in
-  colonna, e si ordina toccando l'intestazione. Parte divisa per
-  categorie del menù, con margine e ricarico medi di ogni categoria;
+  la marginalità mostra Costo, Vendita, Consigliato, Moltiplicatore e
+  Utile in colonna, e si ordina toccando l'intestazione. Parte divisa per
+  categorie del menù, con moltiplicatore e utile medi di ogni categoria;
   «Tutto insieme» mette in fila tutto il listino.
+- **Ghiaccio Hoshizaki nelle ricette: 0,8 delle dosi di prima.** Le dosi
+  di ghiaccio di tutte le voci di menù passano da due volte a 1,6 volte la
+  dose scritta in origine (200 g diventano 160). È un aggiornamento dei
+  dati, fatto con lo script del ghiaccio: sul test è già applicato, in
+  produzione si applica con il rilascio.
 - **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva
   metterci secondi o sembrare non aprirsi, per qualunque prodotto: l'app
   scorreva tutti i movimenti salvati sul dispositivo prima di chiedere

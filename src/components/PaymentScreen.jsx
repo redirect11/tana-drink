@@ -14,6 +14,7 @@ import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { useResizable } from '../lib/useResizable.js'
+import { contantiProbabili, restoDa, leggiImporto } from '../lib/resto.js'
 import { allServed } from '../lib/comande.js'
 import { chiudiImpagato } from '../lib/api.js'
 import { patchImpagato } from '../lib/impagato.js'
@@ -269,6 +270,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     email: '',
   })
   const [readerStarted, setReaderStarted] = useState(false)
+  // QUANTO HA DATO IL CLIENTE, in contanti (REQ-PAG-015). È un numero suo:
+  // non cambia quello che si incassa, serve solo a dire il resto.
+  const [ricevuti, setRicevuti] = useState(null)
+  const [altroRicevuti, setAltroRicevuti] = useState('')
   // Buoni VIP: elenco e beneficiario scelto per il pagamento col buono.
   const [vouchers, setVouchers] = useState([])
   const [voucherId, setVoucherId] = useState('')
@@ -287,6 +292,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     setDisplay(null)
     setAcc(null)
     setOp(null)
+    // I contanti del cliente di prima non valgono per l'incasso dopo.
+    setRicevuti(null)
+    setAltroRicevuti('')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order.id, paymentsCount])
 
@@ -336,6 +344,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
   // un tasto in più qui vale solo se quel caso è la normalità del locale.
   const riscuotiSenzaStampa = settings?.riscuoti_senza_stampa === true
+  // IL RESTO IN CONTANTI (REQ-PAG-015): un'impostazione del locale.
+  const restoAttivo = settings?.resto_contanti === true
   // La fattura di cortesia al cliente: funzione premium (lib/licenza.js).
   const fattureOn = moduloAttivo(settings, 'fatture')
   const due = orderDue(order)
@@ -1103,6 +1113,25 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Resto: <strong>{formatPrice(change)}</strong> (si incassano {formatPrice(toPay)})
             </p>
           )}
+          {/* QUANTO DÀ IL CLIENTE E QUANTO RESTO DARE (REQ-PAG-015). Solo
+              coi contanti e solo se il locale l'ha acceso. Il resto si
+              calcola su quello che si sta incassando adesso — anche una
+              parte del conto — e non tocca l'importo. */}
+          {restoAttivo && method === 'banco' && !closed && toPay > 0 && (
+            <RestoContanti
+              importo={toPay}
+              ricevuti={ricevuti}
+              altro={altroRicevuti}
+              scegli={(v) => {
+                setRicevuti(v)
+                setAltroRicevuti('')
+              }}
+              scrivi={(testo) => {
+                setAltroRicevuti(testo)
+                setRicevuti(leggiImporto(testo))
+              }}
+            />
+          )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
               📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
@@ -1627,6 +1656,50 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// IL RIQUADRO DEL RESTO (REQ-PAG-015): i contanti probabili a portata di
+// dito, una cifra qualsiasi a mano, e sotto il resto da dare — grande,
+// perché si legge con le monete in mano.
+function RestoContanti({ importo, ricevuti, altro, scegli, scrivi }) {
+  const proposte = contantiProbabili(importo)
+  const { resto, mancano } = ricevuti != null ? restoDa(ricevuti, importo) : { resto: 0, mancano: 0 }
+  return (
+    <div className="resto-box" role="group" aria-label="Contanti ricevuti">
+      <div className="resto-scelte">
+        <span className="muted small">Il cliente dà</span>
+        {proposte.map((v) => (
+          <button
+            key={v}
+            type="button"
+            className={`chip${ricevuti === v && !altro ? ' active' : ''}`}
+            aria-pressed={ricevuti === v && !altro}
+            onClick={() => scegli(v)}
+          >
+            {formatPrice(v)}
+          </button>
+        ))}
+        <input
+          className="resto-altro"
+          inputMode="decimal"
+          aria-label="Altro importo ricevuto"
+          placeholder="Altro"
+          value={altro}
+          onChange={(e) => scrivi(e.target.value)}
+        />
+      </div>
+      {ricevuti != null &&
+        (mancano > 0 ? (
+          <p className="resto-esito neg">
+            Mancano <strong>{formatPrice(mancano)}</strong>
+          </p>
+        ) : (
+          <p className="resto-esito">
+            Resto da dare <strong>{formatPrice(resto)}</strong>
+          </p>
+        ))}
     </div>
   )
 }
