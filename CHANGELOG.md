@@ -1,5 +1,13 @@
 # Cosa è cambiato
 
+## 1.9.7-beta — in lavorazione
+
+### Per i clienti
+
+- **Il menù Special su due colonne.** Sul telefono due drink per riga,
+  tre sugli schermi larghi, ognuno col suo disegno, la descrizione e
+  «Aggiungi» in fondo.
+
 ## 1.9.6-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti
