@@ -5226,3 +5226,32 @@ bugs:
     labels: [bug, ui, menu]
     test_cases:
       - tests/unit/css.test.js
+  - id: BUG-120
+    title: "Nel menu' del cliente il nome nel carosello usciva dalla card, e la fila delle categorie aveva un fondo suo"
+    area: "src/index.css (.carosello-testo strong, .speciali-carosello-testa, .cat-nav), src/pages/MenuPage.jsx, src/lib/useIncollata.js"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 29/10/2026, con due foto del menu' sul telefono (1.9.7-beta,
+      sul test): «il titolo esce fuori la card, i testi sopra sono attaccati
+      al carosello. Lo sfondo della lista categorie ha un colore diverso».
+      Tre difetti. Il nome di uno special nella meta' destra della slide
+      («BASILICONIGLIO», in maiuscolo) era piu' largo dello spazio e veniva
+      tagliato dal bordo: ora cresce con lo schermo e, se non basta, va a
+      capo. «Special» e «Vedi tutti» erano a filo della slide: ora ne sono
+      staccati. La fila delle categorie aveva un fondo pieno, piu' stretto
+      dello schermo, che sul fondo sfumato della pagina faceva una fascia
+      di un altro colore: ora, ferma nella pagina, non ha un fondo suo;
+      quando si appiccica sotto la barra in alto prende il fondo della
+      barra, a tutta larghezza, perche' li' le card le scorrono sotto. Per
+      sapere quando e' appiccicata c'e' `useIncollata`. Nella prova e'
+      venuto fuori un quarto difetto della stessa famiglia: nell'elenco
+      normale un nome lungo di una parola sola («BOULEVARDIER») spingeva
+      «Aggiungi» oltre il bordo della card. Ora la colonna del testo si
+      stringe e il tasto no.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, ui, menu]
+    test_cases:
+      - tests/unit/useIncollata.test.jsx

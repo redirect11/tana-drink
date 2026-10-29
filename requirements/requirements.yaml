@@ -3884,6 +3884,9 @@ requirements:
       due colonne anziche' incolonnati ad uno ad uno»): due card per riga
       sul telefono, tre dai 700px; ogni card ha disegno, nome, descrizione,
       prezzo e «Aggiungi» in fondo, allineato con quello delle vicine.
+      SOTTO IL CAROSELLO, LA FILA DELLE CATEGORIE non ha un fondo suo
+      finche' non si appiccica sotto la barra in alto: li' prende quello
+      della barra, a tutta larghezza (BUG-120, `useIncollata`).
       IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve
       un carosello vero che fa lo slide delle immagini dei drink con nome
       e descrizione»): disegno, nome, descrizione e prezzo; va avanti da
@@ -3908,6 +3911,7 @@ requirements:
       - tests/unit/speciali.test.js
       - tests/unit/illustrazioneDrink.test.js
       - tests/component/CaroselloSpeciali.test.jsx
+      - tests/unit/useIncollata.test.jsx
 
   # ══════════════════════════════════════════════════════════════════════
   #  GRUPPI DI CONTI
