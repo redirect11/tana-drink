@@ -1,5 +1,13 @@
 # Cosa è cambiato
 
+## 1.9.6-beta — in lavorazione
+
+### Per chi amministra
+
+- **Le voci fuori menu si leggono anche aperte, col tema chiaro.** Nella
+  gestione del menù, aprendo «Azioni» su una voce non disponibile, i tasti
+  erano scuri sul fondo grigio scuro e non si leggevano.
+
 ## 1.9.5-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti
