@@ -1,5 +1,18 @@
 # Cosa è cambiato
 
+## 1.9.8-beta — in lavorazione
+
+### Per i clienti
+
+- **Il carosello degli Special in ordine.** I nomi lunghi non escono più
+  dalla card, e «Special» con «Vedi tutti» non sta più attaccato alle
+  slide.
+- **I nomi lunghi non spingono fuori «Aggiungi».** Nell'elenco del menù il
+  tasto resta dentro la card anche con un nome di una parola sola.
+- **La fila delle categorie senza fascia.** Ferma nella pagina non ha più
+  un colore suo; prende il fondo della barra in alto solo quando ci si
+  appiccica sotto.
+
 ## 1.9.7-beta — 29 ottobre 2026, sul test
 
 ### Per i clienti

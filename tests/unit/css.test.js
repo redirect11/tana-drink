@@ -1568,3 +1568,40 @@ describe('il menù Special', () => {
     expect(css).toMatch(/@media \(min-width: 700px\) \{\s*\.speciali-griglia \{\s*grid-template-columns:\s*repeat\(3,/)
   })
 })
+
+// BUG-120, l'utente, 29/10/2026, con due foto del menù sul telefono: «il
+// titolo esce fuori la card, i testi sopra sono attaccati al carosello. Lo
+// sfondo della lista categorie ha un colore diverso».
+describe('il carosello e la fila delle categorie (BUG-120)', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il nome nella slide va a capo invece di uscire dalla card', () => {
+    expect(blocco('.carosello-testo strong')).toMatch(/overflow-wrap:\s*anywhere/)
+    expect(blocco('.carosello-testo strong')).toMatch(/font-size:\s*clamp\(/)
+  })
+  it('«Special» e «Vedi tutti» stanno staccati dalla slide', () => {
+    expect(blocco('.speciali-carosello-testa')).toMatch(/margin-bottom:\s*\d+px/)
+  })
+  it('la fila delle categorie non ha un fondo suo finché non si appiccica', () => {
+    expect(blocco('.cat-nav')).toMatch(/background:\s*transparent/)
+    expect(blocco('.cat-nav.incollata')).toMatch(/background:\s*color-mix\(in srgb, var\(--bg-2\)/)
+  })
+})
+
+describe('le voci del menù coi nomi lunghi (BUG-120)', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il testo si stringe e il tasto no: «Aggiungi» resta dentro la card', () => {
+    expect(blocco('.menu-item .row > .grow')).toMatch(/min-width:\s*0/)
+    expect(css).toMatch(/\.menu-item \.row > \.btn,\s*\.menu-item \.row > \.qty \{\s*flex-shrink:\s*0/)
+    expect(blocco('.menu-item .grow > h3')).toMatch(/overflow-wrap:\s*anywhere/)
+  })
+})
