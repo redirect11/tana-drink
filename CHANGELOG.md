@@ -7,8 +7,9 @@
 - **Gli Special della casa.** In cima al menù c'è il carosello dei drink
   speciali: toccandone uno si apre il menù Special, su quel drink e sullo
   stesso tavolo. Il menù Special ha un suo indirizzo e un suo QR, da
-  stampare sul menù che si porta al tavolo, e mostra solo gli special su
-  carta chiara, con le illustrazioni ad acquerello a tema Alice.
+  stampare sul menù che si porta al tavolo, e mostra solo gli special nei
+  colori del menù, con le illustrazioni ad acquerello a tema Alice: tratto
+  bianco sui temi scuri, scuro su quelli chiari.
 
 ### Per chi sta al banco
 

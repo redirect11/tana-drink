@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { entryUnits } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 import { ILLUSTRAZIONI, illustrazioneUrl } from '../lib/speciali.js'
+import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -38,6 +39,8 @@ export default function DrinkForm({
     })),
   }))
   const [preview, setPreview] = useState(initial.image_url || null)
+  // Le illustrazioni nella versione che si legge sul tema del gestionale.
+  const fondoChiaro = useFondoChiaro()
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [newCat, setNewCat] = useState('')
@@ -325,13 +328,13 @@ export default function DrinkForm({
               <button
                 key={i.id}
                 type="button"
-                className={`illustrazione-voce carta${form.illustrazione === i.id ? ' scelta' : ''}`}
+                className={`illustrazione-voce${form.illustrazione === i.id ? ' scelta' : ''}`}
                 aria-pressed={form.illustrazione === i.id}
                 aria-label={i.nome}
                 title={i.nome}
                 onClick={() => setForm((f) => ({ ...f, illustrazione: i.id }))}
               >
-                <img src={illustrazioneUrl(i.id, import.meta.env.BASE_URL)} alt="" />
+                <img src={illustrazioneUrl(i.id, import.meta.env.BASE_URL, { chiaro: fondoChiaro })} alt="" />
               </button>
             ))}
           </div>

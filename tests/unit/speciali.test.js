@@ -38,6 +38,14 @@ describe('le immagini', () => {
     expect(illustrazioneUrl(null)).toBeNull()
   })
 
+  // Tratto bianco sui temi scuri (di partenza), scuro sui chiari: l'utente,
+  // 29/10/2026, «disegni bianchi su fondo scuro».
+  it('sul tema chiaro si usa la versione col tratto scuro', () => {
+    expect(illustrazioneUrl('rosa', '/', { chiaro: true })).toBe('/illustrazioni/alice/rosa-chiaro.svg')
+    expect(immagineVoce({ illustrazione: 'rosa' }, '/', { chiaro: true })).toBe('/illustrazioni/alice/rosa-chiaro.svg')
+    expect(immagineVoce({ image_url: 'https://x/foto.jpg', illustrazione: 'rosa' }, '/', { chiaro: true })).toBe('https://x/foto.jpg')
+  })
+
   it('la foto vince sull’illustrazione', () => {
     expect(immagineVoce({ image_url: 'https://x/foto.jpg', illustrazione: 'rosa' })).toBe('https://x/foto.jpg')
     expect(immagineVoce({ illustrazione: 'rosa' })).toBe('/illustrazioni/alice/rosa.svg')

@@ -766,11 +766,13 @@ L'utente, 29/10/2026, per Flavio: «i drink della casa vengano messi in una cate
 
 UN SEGNO SULLA VOCE, NON UNA CATEGORIA: nella scheda c'e' «Drink speciale» (`speciale`). La voce resta nella sua categoria (un drink della casa e' anche un cocktail, e marginalita', statistiche e POS continuano a contarlo li') e in piu' compare negli Special.
 
-IL MENU' SPECIAL e' `/menu/special` (sotto /menu, cosi' tema, cassetto e anteprima del cliente valgono anche li'): solo gli special, su «carta» chiara come un menu' stampato, col titolo e il sottotitolo scelti dal locale (`special_titolo`, `special_sottotitolo`, di partenza «Special» e vuoto), l'immagine grande, e «← Tutto il menu'». Si ordina come dal menu' normale.
+IL MENU' SPECIAL e' `/menu/special` (sotto /menu, cosi' tema, cassetto e anteprima del cliente valgono anche li'): solo gli special, nei colori del menu', col titolo e il sottotitolo scelti dal locale (`special_titolo`, `special_sottotitolo`, di partenza «Special» e vuoto), l'immagine grande, e «← Tutto il menu'». Si ordina come dal menu' normale.
 
 IL CAROSELLO sta in cima al menu' del cliente, solo se ci sono special e solo per i clienti (chi lavora usa il menu' come strumento): una tessera per drink con immagine, nome e prezzo; toccandola si apre il menu' Special su quel drink, e «Vedi tutti» lo apre dall'inizio. Il tavolo e il gruppo del QR passano da un menu' all'altro (`conParametri`).
 
 LE ILLUSTRAZIONI: otto acquerelli in SVG (bottiglia «Bevimi», tazza del te', cappello del Cappellaio col 10/6, orologio del Bianconiglio, fungo del Bruco, rosa dipinta, sorriso dello Stregatto, cuore della Regina), dal libro di Carroll e non dai film, generati da `scripts/illustrazioni-alice.mjs`. Nella scheda, con «Drink speciale» acceso, se ne sceglie una; la foto della voce, se c'e', ha la precedenza. Nel menu' normale l'illustrazione fa anche da miniatura.
+
+COERENTI COI COLORI DEL MENU' (l'utente, 29/10/2026: «anche il resto del menu dovrebbe essere coerente con i colori … disegni bianchi su fondo scuro»). La prima versione era un foglio di carta chiara dentro il menu' scuro; ora le card prendono le variabili del tema e ogni illustrazione ha due versioni: `<id>.svg`, tratto bianco e colori che si sommano come luce, per i temi scuri (quelli di partenza), e `<id>-chiaro.svg`, tratto scuro, per i temi chiari. Quale usare lo dice `data-luma` su <html>, che il tema scrive (useFondoChiaro).
 
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
 

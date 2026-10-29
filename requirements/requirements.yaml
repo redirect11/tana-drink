@@ -3840,7 +3840,7 @@ requirements:
       continuano a contarlo li') e in piu' compare negli Special.
       IL MENU' SPECIAL e' `/menu/special` (sotto /menu, cosi' tema,
       cassetto e anteprima del cliente valgono anche li'): solo gli
-      special, su «carta» chiara come un menu' stampato, col titolo e il
+      special, nei colori del menu', col titolo e il
       sottotitolo scelti dal locale (`special_titolo`,
       `special_sottotitolo`, di partenza «Special» e vuoto), l'immagine
       grande, e «← Tutto il menu'». Si ordina come dal menu' normale.
@@ -3858,6 +3858,14 @@ requirements:
       speciale» acceso, se ne sceglie una; la foto della voce, se c'e',
       ha la precedenza. Nel menu' normale l'illustrazione fa anche da
       miniatura.
+      COERENTI COI COLORI DEL MENU' (l'utente, 29/10/2026: «anche il resto
+      del menu dovrebbe essere coerente con i colori … disegni bianchi su
+      fondo scuro»). La prima versione era un foglio di carta chiara dentro
+      il menu' scuro; ora le card prendono le variabili del tema e ogni
+      illustrazione ha due versioni: `<id>.svg`, tratto bianco e colori
+      che si sommano come luce, per i temi scuri (quelli di partenza), e
+      `<id>-chiaro.svg`, tratto scuro, per i temi chiari. Quale usare lo
+      dice `data-luma` su <html>, che il tema scrive (useFondoChiaro).
       NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco
       degli special (toccandone uno si apre la scheda) e il QR del menu'
       Special da scaricare e stampare sul menu' che si porta al tavolo. Il

@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { subscribeSettings, updateSettings, DEFAULT_SETTINGS } from '../lib/api.js'
 import { drinkSpeciali, immagineVoce, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 
 // IL MENÙ SPECIAL, DAL GESTIONALE (REQ-MENU-018): il titolo e il
 // sottotitolo della pagina, gli special segnati, e il QR da stampare sul
@@ -26,6 +27,7 @@ export default function SpecialManager({ drinks, onEdit }) {
   }, [indirizzo])
 
   const speciali = drinkSpeciali(drinks)
+  const fondoChiaro = useFondoChiaro()
   const salva = (campo, valore) => updateSettings({ [campo]: valore.trim() }).catch(() => {})
 
   return (
@@ -59,11 +61,11 @@ export default function SpecialManager({ drinks, onEdit }) {
       ) : (
         <div className="inv-list">
           {speciali.map((d) => {
-            const img = immagineVoce(d, import.meta.env.BASE_URL)
+            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
             return (
               <div className="inv-row" key={d.id}>
                 <div className="inv-row-main statica">
-                  {img ? <img className="special-mini carta" src={img} alt="" /> : <span className="special-mini" />}
+                  {img ? <img className="special-mini" src={img} alt="" /> : <span className="special-mini" />}
                   <span className="inv-row-name">{d.name}</span>
                   <span className="muted small inv-row-price">{formatPrice(d.price)}</span>
                   <button type="button" className="btn ghost small" onClick={() => onEdit(d.id)} aria-label={`Modifica ${d.name}`}>

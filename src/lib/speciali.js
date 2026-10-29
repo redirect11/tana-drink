@@ -19,6 +19,10 @@ export const PERCORSO_SPECIALI = '/menu/special'
 
 // Le illustrazioni pronte (public/illustrazioni/alice/, generate da
 // scripts/illustrazioni-alice.mjs): si usano quando la voce non ha una foto.
+// Ognuna in due versioni: `<id>.svg` col tratto bianco per i temi scuri del
+// menù (quelli di partenza), `<id>-chiaro.svg` col tratto scuro per i temi
+// chiari. L'utente, 29/10/2026: «anche il resto del menu dovrebbe essere
+// coerente con i colori … disegni bianchi su fondo scuro».
 export const ILLUSTRAZIONI = [
   { id: 'bevimi', nome: 'Bottiglia «Bevimi»' },
   { id: 'tazza-te', nome: 'Tazza del tè' },
@@ -32,12 +36,15 @@ export const ILLUSTRAZIONI = [
 
 // L'indirizzo di un'illustrazione, o null se l'id non è fra quelle pronte:
 // un id sbagliato non deve diventare un'immagine rotta in carta.
-export function illustrazioneUrl(id, base = '/') {
-  return ILLUSTRAZIONI.some((i) => i.id === id) ? `${base}illustrazioni/alice/${id}.svg` : null
+export function illustrazioneUrl(id, base = '/', { chiaro = false } = {}) {
+  return ILLUSTRAZIONI.some((i) => i.id === id)
+    ? `${base}illustrazioni/alice/${id}${chiaro ? '-chiaro' : ''}.svg`
+    : null
 }
 
 // L'immagine di una voce: la foto, se c'è, vince sull'illustrazione.
-export const immagineVoce = (d, base = '/') => d?.image_url || illustrazioneUrl(d?.illustrazione, base)
+export const immagineVoce = (d, base = '/', opzioni = {}) =>
+  d?.image_url || illustrazioneUrl(d?.illustrazione, base, opzioni)
 
 // Gli special, in ordine di nome.
 export function drinkSpeciali(drinks) {

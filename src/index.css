@@ -712,36 +712,12 @@ a.btn.block {
 }
 
 /* ── IL MENÙ SPECIAL (REQ-MENU-018) ──────────────────────────────────
-   LA CARTA. Le illustrazioni sono acquerelli su carta chiara: su un fondo
-   scuro le loro trasparenze sparirebbero. Il menù Special è quindi un
-   foglio di carta dentro l'app, con i suoi due colori — la carta e
-   l'inchiostro — fissi in tutti i temi, come gli stati degli ordini
-   (DESIGN.md, guardrail 5): è il menù stampato che si porta al tavolo. */
-.carta {
-  --carta: #fbf8f3;
-  --carta-inchiostro: #2a2430;
-  --carta-muto: #6b6275;
-  background: var(--carta);
-  color: var(--carta-inchiostro);
-}
-.carta .muted,
-.carta .ingredients {
-  color: var(--carta-muto);
-}
-/* Sulla carta l'inchiostro del tema scuro non si legge: i tasti «fantasma»
-   e i prezzi prendono l'inchiostro della carta (il giallo dell'accento su
-   crema stava sotto 2:1, guardrail 1). */
-.carta {
-  --carta-prezzo: #8a5300;
-}
-.carta .price {
-  color: var(--carta-prezzo);
-}
-.carta .btn.ghost {
-  color: var(--carta-inchiostro);
-  border-color: rgba(42, 36, 48, 0.3);
-  background: transparent;
-}
+   NEI COLORI DEL MENÙ. La prima versione era un foglio di carta chiara
+   dentro il menù scuro, e stonava: «anche il resto del menu dovrebbe
+   essere coerente con i colori … disegni bianchi su fondo scuro»
+   (l'utente, 29/10/2026). Le card prendono le variabili del tema, e le
+   illustrazioni hanno due versioni, tratto bianco o scuro, scelte dal
+   fondo (useFondoChiaro). */
 .speciali-carosello {
   margin: 4px 0 14px;
 }
@@ -765,6 +741,9 @@ a.btn.block {
   padding: 8px;
   border-radius: 14px;
   text-decoration: none;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 .speciale-tessera img,
@@ -787,6 +766,8 @@ a.btn.block {
   padding: 16px;
   margin: 0 0 12px;
   text-align: center;
+  background: var(--card);
+  border: 1px solid var(--line);
 }
 .speciali-testata h2 {
   margin: 0;
@@ -798,10 +779,7 @@ a.btn.block {
   margin: 4px 0 10px;
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
-  color: var(--carta-muto);
-}
-.menu-item.speciale {
-  border: none;
+  color: var(--muted);
 }
 .menu-item.speciale h3 {
   font-family: Georgia, 'Times New Roman', serif;
@@ -835,9 +813,6 @@ a.btn.block {
   font-size: 0.8rem;
   background: none;
   color: inherit;
-}
-.illustrazione-voce.carta {
-  background: var(--carta);
 }
 .illustrazione-voce.scelta {
   border-color: var(--accent);
