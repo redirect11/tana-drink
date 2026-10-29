@@ -724,42 +724,105 @@ a.btn.block {
 .speciali-tutti {
   font-size: 0.9rem;
 }
-.speciali-fila {
+.carosello {
+  position: relative;
+}
+.carosello-fila {
   display: flex;
-  gap: 10px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 6px 2px 8px;
+  scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
 }
-.speciale-tessera {
-  flex: 0 0 150px;
+.carosello-fila::-webkit-scrollbar {
+  display: none;
+}
+/* UNA SLIDE PER VOLTA, larga quanto il riquadro: il disegno a sinistra e
+   il testo a destra; sotto i 360px il disegno va sopra. */
+.carosello-slide {
+  flex: 0 0 100%;
   scroll-snap-align: start;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px;
-  border-radius: 14px;
-  text-decoration: none;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 44% 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 200px;
+  padding: 14px;
   background: var(--card);
-  color: var(--text);
   border: 1px solid var(--line);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  border-radius: 18px;
+  color: var(--text);
+  text-decoration: none;
 }
-.speciale-tessera img,
-.speciale-vuota {
+.carosello-slide img,
+.carosello-vuota {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
   display: grid;
   place-items: center;
-  font-size: 2rem;
+  font-size: 2.4rem;
 }
-.speciale-tessera strong {
+.carosello-testo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.carosello-testo strong {
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
-  font-size: 1rem;
-  line-height: 1.2;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+.carosello-descrizione {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 360px) {
+  .carosello-slide {
+    grid-template-columns: 1fr;
+  }
+  .carosello-slide img {
+    max-width: 200px;
+    margin: 0 auto;
+  }
+}
+/* I pallini: bersagli larghi, segno piccolo (guardrail 2). */
+.carosello-punti {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.carosello-punti button {
+  width: calc(28px / var(--zoom, 1));
+  height: calc(28px / var(--zoom, 1));
+  padding: 0;
+  border: none;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.carosello-punti button::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: width 0.15s ease, background 0.15s ease;
+}
+.carosello-punti button.attivo::before {
+  width: 20px;
+  background: var(--accent);
 }
 .speciali-testata {
   border-radius: 16px;
@@ -816,6 +879,30 @@ a.btn.block {
 }
 .illustrazione-voce.scelta {
   border-color: var(--accent);
+}
+.illustrazione-anteprima {
+  display: block;
+  width: 180px;
+  aspect-ratio: 1;
+  margin: 6px auto;
+}
+.colori-drink {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 6px;
+}
+.colore-drink {
+  width: calc(36px / var(--zoom, 1));
+  height: calc(36px / var(--zoom, 1));
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  cursor: pointer;
+  padding: 0;
+}
+.colore-drink.scelta {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 .illustrazione-voce img {
   width: 100%;

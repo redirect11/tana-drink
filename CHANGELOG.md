@@ -2,7 +2,23 @@
 
 ## 1.9.6-beta — in lavorazione
 
+### Per i clienti
+
+- **Il carosello degli Special è un carosello vero.** In cima al menù una
+  slide alla volta, con il disegno del drink, il nome, la descrizione e il
+  prezzo: va avanti da sola, si sfoglia col dito e coi pallini.
+- **I disegni rappresentano i drink.** Bicchieri diversi, col colore del
+  drink e la sua decorazione, disegnati col tratteggio delle incisioni
+  originali di Alice.
+
 ### Per chi amministra
+
+- **Il disegno del drink si compone nella scheda.** Con «Drink speciale»
+  acceso si scelgono bicchiere, colore e decorazione, con l'anteprima di
+  come lo vedrà il cliente.
+- **I Signature sono Special.** Sul test tutte le voci della categoria
+  Signature sono segnate come speciali, con una prima descrizione e un
+  disegno: le descrizioni sono da rivedere.
 
 - **Le voci fuori menu si leggono anche aperte, col tema chiaro.** Nella
   gestione del menù, aprendo «Azioni» su una voce non disponibile, i tasti
