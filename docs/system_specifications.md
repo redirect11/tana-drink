@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 26 ottobre 2026.
+> Generato il 29 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -742,7 +742,9 @@ A /menu si apre sempre la stessa schermata, per chi ordina e per chi lavora: le 
 
 Per ogni drink si vede costo reale, prezzo e margine, con il prezzo consigliato calcolato dal ricarico impostato: serve a capire dove si sta perdendo.
 
-IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe mettere sempre la divisione in categorie … poter vedere questo confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di metterlo in ordine secondo determinati valori»; il prezzo, «scritto piccolo e sotto il nome», va «tutto in colonna sulla destra come se fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro, prezzo meno costo) e Ricarico (il moltiplicatore); toccando un'intestazione si ordina su quella colonna, ritoccandola si gira il verso; un valore che manca sta sempre in fondo. Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Il prezzo consigliato e gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
+IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe mettere sempre la divisione in categorie … poter vedere questo confronto, o vederlo cosi' tutto mischiato … anche la possibilita' di metterlo in ordine secondo determinati valori»; il prezzo, «scritto piccolo e sotto il nome», va «tutto in colonna sulla destra come se fosse una tabella»). Colonne Voce, Costo, Prezzo, Margine (in euro, prezzo meno costo) e Ricarico (il moltiplicatore); toccando un'intestazione si ordina su quella colonna, ritoccandola si gira il verso; un valore che manca sta sempre in fondo.
+
+LE PAROLE DI FLAVIO (29/10/2026): «COSTO, VENDITA, CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una tabella». Le colonne sono quelle, in quell'ordine, e il consigliato ha una colonna sua, in evidenza sulle voci da rivedere (prima stava sotto il nome, solo per quelle). Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
 
 **Dove**: `src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/MarginList.test.jsx`
 
@@ -810,7 +812,11 @@ IL TASTO SI CHIAMA «SALVA NUOVA» (Daniele, 21/10/2026: «chiamalo solo salva n
 
 **Dove**: `src/components/CustomDrinkForm.jsx, src/components/OrderPosDetail.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/component/CustomDrinkForm.test.jsx`, `tests/unit/css.test.js`
 
-#### REQ-MENU-015 — Il ghiaccio nelle ricette si moltiplica: due volte la dose scritta
+#### REQ-MENU-015 — Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine
+
+RIPENSATO ANCORA IL 29/10/2026: ×0,8 DELLE DOSI ATTUALI, CIOE' ×1,6 DELL'ORIGINALE. Nella lista di Flavio: «moltiplicare per 0,8 tutte le quantita' di Ghiaccio Hoshizaki nelle ricette degli ITEMS di MENU». Le dosi erano a ×2 (200 g dove l'originale diceva 100), e lo 0,8 le porta a 160. L'obiettivo di partenza dello script e' ora 1,6 (`--a`): rilanciato senza dire altro, non riporta le dosi al doppio.
+
+SUL TEST (29/10/2026): il segno era a ×2, riscritte 110 ricette (110 righe di ghiaccio), segno a ×1,6. In produzione: da fare, dopo il backup e col via libera; lo script legge il segno sull'articolo e applica quello che manca, qualunque fosse il punto di partenza.
 
 RIPENSATO IL 12/09/2026:
 

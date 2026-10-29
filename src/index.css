@@ -3811,6 +3811,9 @@ body.drawer-open .status-bell-float { display: none; }
 .margin-tab .margin-nota {
   display: block;
 }
+.margin-tab .margin-consigliato {
+  font-weight: 700;
+}
 .macro-tab {
   border-collapse: collapse;
   white-space: nowrap;
