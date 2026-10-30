@@ -16,7 +16,7 @@
 // niente — provato al banco, due aggiornamenti di fila e nessun box. La
 // build invece cambia a ogni pubblicazione, ed è già quella che fa comparire
 // «Nuova versione disponibile»: le due cose devono guardare la stessa cosa.
-const CHIAVE_VISTA = 'tana:novita:vista' // ultima BUILD di cui si sono viste le note
+const CHIAVE_VISTA = 'drink:novita:vista' // ultima BUILD di cui si sono viste le note
 
 const leggi = (k) => {
   try {

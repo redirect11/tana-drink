@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 225 | fatto e coperto dai test |
+| ✅ | 234 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**273 voci** in tutto. **241** descrivono il sistema com'è oggi e
+**282 voci** in tutto. **250** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -62,7 +62,9 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 1 | — |  |
+| [LIC](#lic) | 2 | — |  |
+| [VENUE](#venue) | 6 | — |  |
+| [FLOTTA](#flotta) | 2 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3249,6 +3251,84 @@ PER CAMBIARE LA LICENZA (cosa è incluso) ci sono gli strumenti di sviluppo (REQ
 SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nelle loro collezioni (`stock_counts`, fatture fornitore): spegnere un modulo non tocca un documento. Caso spiacevole da sapere: una conta APERTA nel momento in cui il modulo si spegne resta aperta e non allineata — la si ritrova esattamente com'era riaccendendo il modulo, ma finché è spento nessuno la può chiudere. ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la distinzione è teorica; quando i locali saranno tanti il controllo vero va sul SERVER — Cloud Functions e regole Firestore — perché chiunque apra la console del browser può accendersi un modulo da sé. Lo dice anche il piano: «mai fidarsi del solo frontend per una funzione a pagamento».
 
 **Dove**: `src/lib/licenza.js, src/lib/sezioni.js, src/components/InventoryManager.jsx, src/components/FornitoriTab.jsx, src/components/PaymentScreen.jsx, src/components/SettingsTab.jsx, src/components/ToggleRow.jsx, src/components/DevTools.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/InventoryManager.test.jsx`, `tests/component/FornitoriTab.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
+#### REQ-LIC-002 — I moduli del prodotto: di base menù e ordini, il resto si compra
+
+«Dobbiamo decidere le funzioni premium da aggiungere. Ad esempio, il menu, l'ordinazione da app da parte del cliente, gestione clienti, gestione inventario. Di base quello che puo' fare e' creare gli item di menu e la gestione delle ordinazioni» (l'utente, 22/10/2026).
+
+DI BASE: coda ordini, cassa (contanti e carta), scontrino, menù (creazione delle voci), utenti e ruoli, impostazioni. I MODULI, con gli stessi id del listino della regia (piani.json): `menu_tavoli` (il menù digitale sul telefono del cliente, il QR al tavolo, la vista cliente), `ordini_cliente` (il cliente ordina dal menù e segue l'ordine: senza, il menù si legge e basta, come «solo menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di conti: insieme all'interruttore customer_accounts_enabled che il locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta con sé conta, fatture e scadenzario come moduli di dettaglio), `statistiche` (statistiche e bilancio), `staff` (ore e paghe), `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione della cassa). Le voci del gestionale seguono i moduli attraverso `sezioni` (inventario e fornitori → magazzino, stats e bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di un modulo non incluso dice che non fa parte del piano e rimanda alla pagina del prodotto (FunzioneNonInclusa).
+
+LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`; un locale della flotta ha `licenza.moduli` scritto dalla regia (repository drink-regia: all'attivazione, poi licenzaSegueIlPiano).
+
+DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi (piani.json nella regia); da fare: il lettore SumUp che guarda il modulo `sumup`, e i gruppi di conti che guardano `clienti`.
+
+**Dove**: `src/lib/licenza.js (MODULI_PREMIUM, menuDigitaleAttivo, ordinazioneClientiAttiva, accountClientiAttivi), src/lib/sezioni.js, src/App.jsx, src/pages/MenuPage.jsx, src/pages/AccountPages.jsx, src/components/FunzioneNonInclusa.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/FunzioneNonInclusa.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+### VENUE
+
+#### REQ-VENUE-001 — L'identità del locale è un dato: clienti/<slug>/venue.json in build, settings/bar (venue_*) a runtime
+
+Decisione dell'utente del 21/10/2026: «cominciamo a implementare la due [replica per cliente + attivazione automatica], senza downtime sulla Tana, su un branch». E' la Fase 0 e la Fase 2.1 del piano (docs/piano-sbrandizzazione.md), fatte insieme perche' una senza l'altra lascia il marchio cablato.
+
+LA BUILD SA PER CHI COMPILA: la variabile `CLIENTE` (slug, default `tana`) fa leggere a Vite `clienti/<slug>/venue.json` — nome, nome corto, slogan, testo «chi siamo», indirizzo, email, ragione sociale, intestazione dello scontrino, social — e lo inietta come `__CLIENTE__`. Con `CLIENTE` non detto la build della Tana e' quella di sempre, byte per byte nei testi.
+
+LE IMPOSTAZIONI VINCONO SULLA BUILD: `settings/bar` ha le chiavi `venue_*` (di partenza vuote in DEFAULT_SETTINGS); `venueDi(settings)` fonde impostazioni e build, impostazione per impostazione. Un locale cambia nome o indirizzo da Impostazioni senza rebuild; la Tana, che non le ha scritte, legge la build. Logica pura in src/lib/venue.js; il plugin di Vite ha il suo test.
+
+**Dove**: `clienti/tana/venue.json, clienti/demo/venue.json, clienti/pluginCliente.js, vite.config.js, src/lib/venue.js, src/lib/useVenue.js, src/lib/api.js (DEFAULT_SETTINGS), src/components/IdentitaLocale.jsx (Impostazioni → Il locale)` · **Lo dimostrano**: `tests/unit/venue.test.js`, `tests/unit/clienteBuild.test.js`, `tests/component/IdentitaLocale.test.jsx`
+
+#### REQ-VENUE-002 — L'app legge il locale da venueDi: nome, barra, landing, menù, drawer, account, utenti
+
+Fase 1.1, 1.4 e 1.5 del piano. Ogni punto dell'inventario del cablato legge da `venueDi(settings)`: il nome dell'app e il manifest (`nomeApp(ruolo, venue)`, `manifestConNome`), il marchio nella barra e nel foglio delle azioni, l'intestazione del drawer del cliente, la landing (titolo, slogan, «chi siamo», contatti), l'hero e il benvenuto del menu', il testo della pagina account, il suggerimento dell'email in Utenti. I social del piede di pagina vengono da `venue_socials` (etichetta e indirizzo; icona per piattaforma conosciuta, generica altrimenti): lista vuota, piede senza social. Per la Tana tutto resta uguale perche' i valori sono quelli della sua build (REQ-VENUE-001).
+
+LA FRASE COL LOCALE DENTRO («Benvenuto alla Tana del Coniglio», «Il tuo conto alla Tana del Coniglio») non si ricava dal nome: la preposizione la scrive il locale in `venue_presso` (Impostazioni → Il locale), e senza si ripiega su «da <nome>» (pressoIlLocale). Il ramo feature/flotta diceva «Benvenuto da La Tana del Coniglio»: la build della Tana porta la sua frase, e il testo resta quello di sempre (30/10/2026).
+
+**Dove**: `src/lib/nomeApp.js, src/App.jsx, src/pages/LandingPage.jsx, src/pages/MenuPage.jsx, src/components/ClientDrawer.jsx, src/pages/AccountPages.jsx, src/components/UtentiTab.jsx` · **Lo dimostrano**: `tests/unit/nomeApp.test.js`, `tests/component/LandingPage.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-VENUE-003 — Lo scontrino si intesta dal locale, non da una costante
+
+Fase 1.3 del piano. I default dell'intestazione dello scontrino (nome, indirizzo, citta', piede con la ragione sociale) non sono piu' scritti in printer.js: vengono da `venueDi` — quindi dalla build del cliente, o dalle impostazioni. Chi ha gia' salvato l'intestazione (settings/printer, localStorage) non cambia niente: i default contano solo dove non c'e' un valore salvato.
+
+**Dove**: `src/lib/printer.js (DEFAULT_PRINTER_SETTINGS), src/lib/venue.js` · **Lo dimostrano**: `tests/unit/venue.test.js`
+
+#### REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
+
+Fase 0.2 del piano. Un test cerca `Tana`, `Coniglio`, `latanadelconiglio`, `EFFEVI`, `tana:`/`tana_`/`tana-drink` in src/, functions/, index.html, public/manifest.webmanifest e public/sw.js, fuori dai commenti, e boccia ogni occorrenza non elencata nella whitelist scritta nel test stesso. La whitelist parte con quello che resta cablato e si accorcia a ogni passo: effetto cricchetto, come le soglie di coverage. A whitelist vuota la sbrandizzazione e' dimostrata. I commenti restano liberi: la storia del progetto e' della Tana e si racconta.
+
+**Dove**: `tests/unit/marchio.test.js` · **Lo dimostrano**: `tests/unit/marchio.test.js`
+
+#### REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente
+
+Fase 2.5 del piano, fatta il 22/10/2026 su richiesta dell'utente.
+
+LE CHIAVI LOCALI passano da `tana:`/`tana_` a `drink:`/`drink_` in tutta l'app (eventi compresi), e AL PRIMO AVVIO ogni chiave vecchia si copia su quella nuova se la nuova non c'e' ancora, senza cancellare (migraChiaviLocali, chiamata in main.jsx prima di qualunque lettura): i dispositivi della Tana ritrovano carrello, IP della stampante, zoom e preferenze; e un dispositivo che tornasse alla versione prima ritrova le sue. La cache del service worker diventa `drink-v5` (si rinnova da sola) e il titolo di riserva delle notifiche non e' piu' il nome di un locale. Il nome del pacchetto in `package.json` resta `karaoke-drink`: non si vede da nessuna parte, e lo legge .design-sync.
+
+LE FUNCTIONS: la descrizione dei pagamenti SumUp e l'app id affiliato vengono da `VENUE_NAME` e `SUMUP_AFFILIATE_APP_ID` in `functions/.env.<progetto>` (per la Tana: .env.tana-drink e .env.tana-drink-test, committati come .env), non dal codice; senza, «Il locale» e nessun app id. Il test-guardia (REQ-VENUE-004) scende a quattro file: il seed di sviluppo, i nomi dei progetti della Tana in api.js, la migrazione stessa e il tema «Tana scuro» tenuto come alias.
+
+**Dove**: `src/lib/migrazioneChiavi.js, src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js` · **Lo dimostrano**: `tests/unit/migrazioneChiavi.test.js`, `tests/unit/marchio.test.js`
+
+#### REQ-VENUE-006 — La cartella di un cliente nuovo in un comando: genera-cliente.mjs --slug --nome
+
+La regia (drink-regia), attivando o aggiornando un locale, lancia su un checkout dell'app `node scripts/genera-cliente.mjs --slug <slug> --nome <nome>` e poi compila con `CLIENTE=<slug>`: lo script crea `clienti/<slug>/venue.json` col nome del locale (il resto il locale lo scrive da Impostazioni → Il locale, senza rebuild) e copia in `clienti/<slug>/public/` i file grafici neutri del cliente demo, perche' senza un cliente erediterebbe logo e icone della Tana. Se la cartella esiste gia' non la tocca: e' un cliente curato a mano, come la Tana. Uno slug fuori forma ferma lo script prima di scrivere. `scripts/immagini-neutre.py` rigenera i file neutri con un colore. E' un contratto con la regia: argomenti e comportamento non si cambiano senza dirlo la' (docs/flotta.md).
+
+**Dove**: `scripts/genera-cliente.mjs, scripts/immagini-neutre.py, clienti/demo/public/` · **Lo dimostrano**: `tests/unit/generaCliente.test.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-001 — La CI di tana-drink pubblica solo i progetti della Tana, compilati per la Tana; e compila anche il cliente demo
+
+«Ci serve un modo sicuro per testare senza spaccare niente per la Tana» (l'utente, 21/10/2026). Dal 29/10/2026 la flotta sta nella regia (drink-regia): i workflow di attivazione e aggiornamento delle istanze, il Terraform e l'account di provisioning stanno la', con le loro credenziali. Qui restano i due deploy della Tana, `tana-drink` e `tana-drink-test`, che passano a deploy.yml `cliente: tana` (l'input `cliente`, predefinito `tana`, diventa `CLIENTE` della build). Nessuna destinazione della flotta: il ramo `feature/flotta` ne aveva una (`PROGETTO_FLOTTA`, drinkpos-demo), scartata portando la build per cliente in develop il 30/10/2026 — l'istanza dimostrativa e' un'istanza come le altre e la aggiorna la regia. I TEST GUARDANO TUTTI I CLIENTI: la CI compila anche `CLIENTE=demo`, cosi' una modifica pensata per la Tana che rompe la build degli altri si vede prima del rilascio. Un test legge i workflow.
+
+**Dove**: `.github/workflows/firebase-hosting.yml, .github/workflows/deploy.yml (input cliente), .github/workflows/test.yml, docs/flotta.md` · **Lo dimostrano**: `tests/unit/flottaCi.test.js`
+
+#### REQ-FLOTTA-008 — Un'istanza si ferma: sospesa quando il pagamento non arriva, chiusa su decisione; i dati restano
+
+«Serve un modo per eliminare/fermare l'app deployata (ad esempio se non arriva il pagamento mensile)» (l'utente, 22/10/2026).
+
+LA LICENZA HA UNO STATO: `settings/bar.licenza.stato` vale `attiva` (o non c'e': la Tana non ha una licenza e lavora come sempre), `sospesa` o `chiusa`, con `motivo`, `dal` e `regia_url`. Lo scrive la regia (repository drink-regia): il backoffice coi tasti Sospendi, Riattiva e Chiudi, oppure da sola — una Function giornaliera sospende chi ha l'abbonamento «in sospeso» da piu' di sette giorni e riattiva quando Stripe conferma il pagamento. La regia scrive la licenza in settings/bar (non in un documento a parte: e' quello che lib/licenza.js legge gia' per i moduli). L'APP SI FERMA E LO DICE: sospesa o chiusa, al posto di tutto compare InstallazioneSospesa — il locale, il motivo, la data, «non e' un guasto, i dati non sono andati persi», e il collegamento alla pagina del prodotto dove il titolare si rimette in regola. Riattivata, si riparte da dove si era: niente viene cancellato dalla sospensione.
+
+LA CHIUSURA VERA — la cancellazione del progetto Google dopo i 30 giorni promessi — e' un passo a parte e sta nella regia, con gli altri script delle istanze.
+
+**Dove**: `src/lib/licenza.js (STATI_LICENZA, installazioneBloccata), src/components/InstallazioneSospesa.jsx, src/App.jsx` · **Lo dimostrano**: `tests/component/InstallazioneSospesa.test.jsx`
 
 ## Lavori previsti
 

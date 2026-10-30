@@ -32,8 +32,8 @@ import { doc, onSnapshot, setDoc, increment } from 'firebase/firestore'
 import { db } from './firebaseClient.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
-const CHIAVE = 'tana:progressivi'
-const CHIAVE_CASSA = 'tana:cassa-aperta'
+const CHIAVE = 'drink:progressivi'
+const CHIAVE_CASSA = 'drink:cassa-aperta'
 
 // Quello che dice il server (aggiornato dagli ascolti).
 //

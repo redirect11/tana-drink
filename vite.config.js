@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { pluginCliente } from './clienti/pluginCliente.js'
 
 // Su Firebase Hosting il sito è servito dalla radice ("/").
 // Usiamo BrowserRouter lato app, quindi qui serve solo impostare il base path.
@@ -76,6 +77,8 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    // PER CHI SI COMPILA (REQ-VENUE-001): `CLIENTE=<slug>`, default tana.
+    pluginCliente(),
     {
       // IL CHANGELOG VIAGGIA COL DEPLOY. Le note della versione si leggono
       // dentro l'app (Impostazioni → Informazioni): il file sta nella

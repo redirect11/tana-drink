@@ -152,7 +152,7 @@ describe('l’ultimo ruolo noto si legge senza rete', () => {
   })
 
   it('roba illeggibile non fa saltare niente: si aspetta il token', () => {
-    localStorage.setItem('tana:ruolo', '{rotto')
+    localStorage.setItem('drink:ruolo', '{rotto')
     expect(ruoloRicordato('u1')).toBe(null)
     expect(gestoreRicordato('u1')).toBe(false)
   })

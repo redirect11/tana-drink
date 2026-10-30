@@ -128,7 +128,7 @@ import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazio
 // Ultimo progressivo previsto, tenuto in locale: serve solo a mostrare subito
 // il numero giusto invece di un segnaposto che poi cambia. Si scarta se è
 // vecchio, altrimenti a inizio serata si vedrebbe il numero di ieri.
-const CHIAVE_NUMERO = 'tana:prossimoNumero'
+const CHIAVE_NUMERO = 'drink:prossimoNumero'
 const ORE_VALIDE = 8
 
 function numeroPrevistoInCache() {
@@ -151,7 +151,7 @@ function numeroPrevistoInCache() {
 // Qui si tiene il suo id: al ritorno si riprende da lì. Si dimentica
 // uscendo dal conto o quando il conto si chiude — e comunque scade, per
 // non ritrovarsi dentro un conto di ieri.
-const CHIAVE_IN_CORSO = 'tana:pos:conto-in-corso'
+const CHIAVE_IN_CORSO = 'drink:pos:conto-in-corso'
 const ORE_IN_CORSO = 8
 
 function contoInCorso() {
@@ -351,7 +351,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // che conta è il subtotale. La scelta si ricorda sul dispositivo.
   const [mostraCalcoli, setMostraCalcoli] = useState(() => {
     try {
-      return localStorage.getItem('tana:pos:calcoli') === '1'
+      return localStorage.getItem('drink:pos:calcoli') === '1'
     } catch {
       return false
     }
@@ -360,7 +360,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     setMostraCalcoli((v) => {
       const next = !v
       try {
-        localStorage.setItem('tana:pos:calcoli', next ? '1' : '0')
+        localStorage.setItem('drink:pos:calcoli', next ? '1' : '0')
       } catch {
         /* niente memoria: vale per questa sessione */
       }

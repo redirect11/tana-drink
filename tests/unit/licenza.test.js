@@ -19,6 +19,9 @@ import {
   moduloIncluso,
   voceVisibile,
   moduloDiSezione,
+  menuDigitaleAttivo,
+  ordinazioneClientiAttiva,
+  accountClientiAttivi,
 } from '../../src/lib/licenza.js'
 
 // Come sta questa installazione oggi, senza nessuna licenza scritta: lo
@@ -197,5 +200,47 @@ describe('filtrare un elenco di voci', () => {
     expect(voceVisibile({}, 'storico')).toBe(false)
     expect(voceVisibile({ licenza: { moduli: { conta: true } } }, 'storico')).toBe(true)
     expect(voceVisibile({ licenza: { moduli: { conta: true } }, modulo_conta_enabled: false }, 'storico')).toBe(false)
+  })
+})
+
+// I MODULI DEL PRODOTTO (REQ-LIC-002). Decisione dell'utente, 22/10/2026:
+// «di base quello che può fare è creare gli item di menu e la gestione
+// delle ordinazioni»; il resto è premium, con gli id del listino della
+// regia. La Tana non ha una licenza scritta e tiene tutto.
+describe('i moduli del prodotto', () => {
+  it('senza licenza scritta la Tana ha tutto, come prima', () => {
+    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup']) {
+      expect(moduloAttivo({}, id), id).toBe(true)
+    }
+    expect(menuDigitaleAttivo({})).toBe(true)
+    expect(ordinazioneClientiAttiva({})).toBe(true)
+    expect(accountClientiAttivi({})).toBe(true)
+  })
+
+  it('con la licenza del piano base, magazzino, statistiche e staff spariscono dal gestionale', () => {
+    const base = { licenza: { moduli: { menu_tavoli: false, ordini_cliente: false, clienti: false, magazzino: false, statistiche: false, staff: false, sumup: false } } }
+    for (const sezione of ['inventario', 'fornitori', 'stats', 'bilancio', 'vista-cliente']) {
+      expect(voceVisibile(base, sezione), sezione).toBe(false)
+    }
+    // Quello che è di base resta.
+    for (const sezione of ['coda', 'pagamenti', 'menu', 'impostazioni', 'utenti']) {
+      expect(voceVisibile(base, sezione), sezione).toBe(true)
+    }
+    expect(menuDigitaleAttivo(base)).toBe(false)
+    expect(ordinazioneClientiAttiva(base)).toBe(false)
+    expect(accountClientiAttivi(base)).toBe(false)
+  })
+
+  it('gli account clienti vogliono il modulo E l’interruttore del locale', () => {
+    expect(accountClientiAttivi({ licenza: { moduli: { clienti: true } }, customer_accounts_enabled: false })).toBe(false)
+    expect(accountClientiAttivi({ licenza: { moduli: { clienti: true } }, customer_accounts_enabled: true })).toBe(true)
+  })
+
+  it('ogni modulo ha chiave, etichetta e descrizione, e gli id sono quelli del listino', () => {
+    for (const [id, m] of Object.entries(MODULI_PREMIUM)) {
+      expect(m.chiave, id).toBe(`modulo_${id}_enabled`)
+      expect(m.label, id).toBeTruthy()
+      expect(m.descrizione, id).toBeTruthy()
+    }
   })
 })

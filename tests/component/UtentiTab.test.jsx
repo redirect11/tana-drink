@@ -21,6 +21,11 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
   auth: { currentUser: { uid: 'a1', email: 'capo@bar.it', displayName: 'Capo' } },
 }))
 vi.mock('../../src/lib/api.js', () => ({
+  settingsIniziali: () => ({}),
+  subscribeSettings: (cb) => {
+    cb({})
+    return () => {}
+  },
   createStaffCall: vi.fn(() => Promise.resolve()),
   subscribePendingCalls: vi.fn((cb) => {
     cb([])

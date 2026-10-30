@@ -53,7 +53,7 @@ const carta = () => {
 
 // Le impostazioni del locale, come le lascia `subscribeSettings` per chi
 // stampa: nella memoria del terminale, mai da chiedere alla rete.
-const impostazioniDelBar = (dati) => localStorage.setItem('tana:impostazioni', JSON.stringify(dati))
+const impostazioniDelBar = (dati) => localStorage.setItem('drink:impostazioni', JSON.stringify(dati))
 
 const CONTO = {
   id: 'o1',
@@ -89,7 +89,7 @@ describe('l’aliquota dello scontrino viene dalle impostazioni del locale', () 
   // valore resta scritto nella memoria del terminale — non c'è migrazione
   // da far girare — ma non lo legge più nessuno.
   it('un `ivaRate` vecchio rimasto nel browser non conta più niente', async () => {
-    localStorage.setItem('tana_printer_v2', JSON.stringify({ ivaRate: 4 }))
+    localStorage.setItem('drink_printer_v2', JSON.stringify({ ivaRate: 4 }))
     impostazioniDelBar({ sale_vat: 10 })
     expect(await rigaIva()).toBe('IVA 10.0% (A) 2.00€')
   })
@@ -97,7 +97,7 @@ describe('l’aliquota dello scontrino viene dalle impostazioni del locale', () 
   // LO SCONTRINO PRIMA E DOPO, quando i due valori coincidevano: identico.
   // È la prova che nessun locale si sveglia con la carta cambiata.
   it('quando le due aliquote coincidevano, la carta è la stessa', async () => {
-    localStorage.setItem('tana_printer_v2', JSON.stringify({ ivaRate: 10 }))
+    localStorage.setItem('drink_printer_v2', JSON.stringify({ ivaRate: 10 }))
     impostazioniDelBar({ sale_vat: 10 })
     const conVecchia = await rigaIva()
     vi.resetModules()

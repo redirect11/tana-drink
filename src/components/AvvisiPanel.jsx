@@ -16,7 +16,7 @@ import {
 
 // ── QUALI AVVISI VOGLIO ARRIVINO QUI ─────────────────────────────────
 // Sta nel PROFILO e non nelle impostazioni del locale: la scelta è per
-// persona e per dispositivo (`tana:avvisi:<uid>`), non una regola del bar.
+// persona e per dispositivo (`drink:avvisi:<uid>`), non una regola del bar.
 // E soprattutto: le impostazioni le vede solo chi gestisce, mentre chi è in
 // sala — quello a cui serve davvero sapere quando un drink è pronto — non
 // ha quel menu. Lì gli avvisi erano fuori portata proprio per chi li usa.
