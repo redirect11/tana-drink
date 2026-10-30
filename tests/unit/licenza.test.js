@@ -110,8 +110,10 @@ describe('i casi storti: nel dubbio, non lavora', () => {
 describe('il punto di innesto della licenza vera (Fase 3 del piano)', () => {
   // Quando arriverà `settings/licenza`, chi lo collega tocca SOLO
   // `moduloIncluso`: se lo stato porta una licenza, comanda lei.
-  it('la licenza toglie quello che la tabella includeva', () => {
-    const stato = { licenza: { moduli: { conta: true } } }
+  // La licenza della regia ha sempre il piano accanto ai moduli
+  // (drink-regia, functions/lib/licenza.js): è lei la verità per intero.
+  it('la licenza della regia toglie quello che la tabella includeva', () => {
+    const stato = { licenza: { piano: 'base', moduli: { conta: true } } }
     expect(moduloIncluso(stato, 'scadenzario')).toBe(false)
     expect(moduloAttivo(stato, 'scadenzario')).toBe(false)
   })
@@ -122,10 +124,25 @@ describe('il punto di innesto della licenza vera (Fase 3 del piano)', () => {
     expect(moduloAttivo(stato, 'conta')).toBe(true)
   })
 
-  it('una licenza che non nomina il modulo lo tiene fuori, senza ricadere sulla tabella', () => {
-    // Se la licenza c'è, è LEI la verità anche per quello che tace: la
-    // tabella nel codice si riaprirebbe da sola un modulo non venduto.
-    expect(moduloIncluso({ licenza: { moduli: {} } }, 'scadenzario')).toBe(false)
+  it('una licenza della regia che non nomina il modulo lo tiene fuori, senza ricadere sulla tabella', () => {
+    // Se la licenza della regia c'è, è LEI la verità anche per quello che
+    // tace: la tabella nel codice si riaprirebbe da sola un modulo non venduto.
+    expect(moduloIncluso({ licenza: { piano: 'base', moduli: {} } }, 'scadenzario')).toBe(false)
+  })
+
+  // BUG-122, trovato il 30/10/2026 prima del rilascio: la Tana ha una
+  // licenza scritta dagli strumenti di sviluppo, senza piano, con i tre
+  // moduli di allora. Con i sette moduli nuovi della 1.10.0, «il silenzio è
+  // un no» le avrebbe spento menù digitale, clienti, magazzino, statistiche,
+  // personale e SumUp al primo avvio.
+  it('una licenza senza piano (strumenti di sviluppo, la Tana) comanda solo sui moduli che nomina', () => {
+    const tana = { licenza: { moduli: { conta: false, fatture: false, scadenzario: true } } }
+    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup']) {
+      expect(moduloIncluso(tana, id), id).toBe(true)
+    }
+    expect(moduloIncluso(tana, 'scadenzario')).toBe(true)
+    expect(moduloIncluso(tana, 'conta')).toBe(false)
+    expect(moduloIncluso(tana, 'fatture')).toBe(false)
   })
 
   it('la licenza dice cosa il locale HA, non se lo sta usando', () => {
@@ -137,7 +154,7 @@ describe('il punto di innesto della licenza vera (Fase 3 del piano)', () => {
     expect(moduloAttivo(stato, 'conta')).toBe(false)
     // E il verso opposto: l'impostazione accesa su un modulo che la licenza
     // non nomina non lo fa entrare dalla finestra.
-    const altro = { licenza: { moduli: { conta: true } }, modulo_scadenzario_enabled: true }
+    const altro = { licenza: { piano: 'base', moduli: { conta: true } }, modulo_scadenzario_enabled: true }
     expect(moduloAcceso(altro, 'scadenzario')).toBe(true)
     expect(moduloAttivo(altro, 'scadenzario')).toBe(false)
   })

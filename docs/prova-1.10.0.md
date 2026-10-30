@@ -63,6 +63,19 @@ service worker cambia nome, quindi è lì che si vede se qualcosa si perde.
       vederlo nel benvenuto del menù, poi svuotare la casella e controllare
       che torni «alla Tana del Coniglio».
 
+## Tutte le funzioni di prima ci sono (BUG-122)
+
+La Tana ha una licenza scritta dagli strumenti di sviluppo con i tre moduli
+di allora. Controllare che con la 1.10.0 ci siano ancora, e si aprano:
+
+- menù digitale e tavoli, e gli ordini dal telefono del cliente;
+- clienti (account, gruppi di conti);
+- magazzino e fornitori, inventario;
+- statistiche e bilancio;
+- personale e ore;
+- SumUp in cassa e nelle impostazioni;
+- lo scadenzario delle fatture ai fornitori.
+
 ## Niente Free sulla Tana
 
 - [ ] In nessuna schermata (banco, gestionale, menù, scontrino) compaiono
