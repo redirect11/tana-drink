@@ -21,7 +21,8 @@ import { patchImpagato } from '../lib/impagato.js'
 import { activeVouchers } from '../lib/vouchers.js'
 import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
-import { moduloAttivo } from '../lib/licenza.js'
+import { moduloAttivo, sumupDisponibile } from '../lib/licenza.js'
+import { scontiConsentiti } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
 import {
   remainingItems,
@@ -479,6 +480,12 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const methods = [
     { key: 'banco', label: 'Contante', emoji: '💵' },
     { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
+  ]
+  // SENZA FUNCTIONS IL LETTORE NON C'È (REQ-LIC-004): sul profilo leggero
+  // del piano Free nessuno parla coi server di SumUp, e un tasto che non
+  // può funzionare non si mostra. Il conto si chiude a mano, in contanti o
+  // come carta su un POS esterno.
+  if (sumupDisponibile(settings)) methods.push(
     {
       key: 'lettore',
       label: 'SumUp',
@@ -491,7 +498,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         ? '📶 Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
         : 'Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.',
     },
-  ]
+  )
   // Buono come SCONTO (non metodo di pagamento): si applica al totale e si
   // detrae dal saldo del beneficiario, anche parzialmente. Importo proposto:
   // il residuo, mai oltre il saldo o il totale.
@@ -1325,7 +1332,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           )}
 
           <div style={{ marginTop: 'auto' }}>
-            {!closed && (
+            {/* NIENTE SCONTI NEL PIANO FREE (REQ-LIC-003, `limiti.sconti`):
+                il tasto non c'è. Resta solo se il conto ne porta già uno,
+                per poterlo vedere e togliere. */}
+            {!closed && (scontiConsentiti(settings) || (order.discount_amount || 0) > 0) && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
                 {order.discount?.type === 'buono' ? '🎟 Buono' : '🎁 Sconto'}
                 {(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}

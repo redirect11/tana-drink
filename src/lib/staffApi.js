@@ -5,6 +5,7 @@
 import { httpsCallable } from 'firebase/functions'
 import { functions } from './firebaseClient.js'
 import { RUOLI } from './ruoli.js'
+import { senzaFunctions, MESSAGGI_PIANO } from './limiti.js'
 
 const isEmulator = String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID
@@ -21,7 +22,13 @@ async function emulatorRequest(path, body) {
   return json
 }
 
-const call = (data) => httpsCallable(functions, 'staffAdmin')(data).then((r) => r.data)
+// SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) la Function non c'è: non
+// la si chiama per farsi dire «not-found», si dice subito perché. Gli
+// elenchi tornano vuoti (vedi listStaff): c'è solo il titolare.
+const call = (data) =>
+  senzaFunctions()
+    ? Promise.reject(new Error(MESSAGGI_PIANO.staff))
+    : httpsCallable(functions, 'staffAdmin')(data).then((r) => r.data)
 
 // ELENCO STAFF IN CACHE. `listStaff` passa da una Cloud Function: e' lenta e
 // vuole la rete, quindi ogni pannello che la apriva mostrava "Carico lo
@@ -58,6 +65,10 @@ export function preloadStaff() {
 }
 
 export async function listStaff() {
+  if (senzaFunctions()) {
+    ricordaStaff([])
+    return []
+  }
   if (!isEmulator) {
     const users = (await call({ action: 'list' })).users
     ricordaStaff(users)
@@ -72,6 +83,7 @@ export async function listStaff() {
 // nomina i ruoli. Non finisce nella cache dello staff, che serve ad altro
 // (cerca-persone, turni) e non deve gonfiarsi con tutti i clienti.
 export async function listUtenti() {
+  if (senzaFunctions()) return []
   if (!isEmulator) return (await call({ action: 'list', tutti: true })).users
   return utenzeEmulatore()
 }

@@ -6,6 +6,7 @@ import { sceltaIllustrazione } from './illustrazioneDrink.js'
 import { createDrink, updateDrink } from './api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from './storage.js'
 import { toBaseQty, baseUnit } from './inventory.js'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from './limiti.js'
 
 // Righe editabili → recipe_items persistiti (quantità convertite in unità base).
 export function buildRecipeItems(rows, inventory) {
@@ -41,10 +42,27 @@ export function aliquotaVendita(valore) {
 }
 
 // `existing`: il prodotto in modifica (null per crearne uno nuovo).
-export async function saveDrinkFromForm({ form, existing = null, inventory = [], categories = [] }) {
+// `impostazioni` e `prodotti` (quelli già in carta): servono ai limiti del
+// piano (REQ-LIC-003). Senza limiti nella licenza non cambiano niente, e chi
+// non li passa salva come sempre. Il controllo sta QUI, dove si salva, e non
+// solo sul tasto: un prodotto nuovo nasce anche dal POS e da una copia.
+export async function saveDrinkFromForm({
+  form,
+  existing = null,
+  inventory = [],
+  categories = [],
+  impostazioni = null,
+  prodotti = null,
+}) {
+  const nuovo = !(existing && existing.id)
+  if (nuovo && prodotti && !puoCreareProdotto(impostazioni, prodotti.length)) {
+    throw new Error(MESSAGGI_PIANO.prodotti(maxProdotti(impostazioni)))
+  }
   let imageUrl = form.image_url ?? null
   const previousUrl = existing?.image_url ?? null
-  if (form._file) imageUrl = await uploadDrinkImage(form._file)
+  // Sul profilo leggero Storage non c'è: la foto scelta non si carica (il
+  // tasto è già nascosto, questa è la cintura).
+  if (form._file && fotoConsentite(impostazioni)) imageUrl = await uploadDrinkImage(form._file)
 
   const catName = (categories || []).find((c) => c.id === form.category_id)?.name
   const payload = {
@@ -71,7 +89,7 @@ export async function saveDrinkFromForm({ form, existing = null, inventory = [],
       typeof form.illustrazione === 'string' ? form.illustrazione : sceltaIllustrazione(form.illustrazione),
   }
 
-  if (existing && existing.id) await updateDrink(existing.id, payload)
+  if (!nuovo) await updateDrink(existing.id, payload)
   else await createDrink(payload)
 
   if (previousUrl && previousUrl !== imageUrl) deleteDrinkImageByUrl(previousUrl)

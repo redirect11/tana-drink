@@ -1822,3 +1822,34 @@ describe('il resto in contanti', () => {
     expect(screen.queryByRole('group', { name: 'Contanti ricevuti' })).toBeNull()
   })
 })
+
+// IL PIANO FREE ALLA CASSA (REQ-LIC-003, REQ-LIC-004). Niente sconti, omaggi
+// e maggiorazioni (`limiti.sconti: false`), e niente lettore SumUp: sul
+// profilo leggero non ci sono le Functions che parlano coi suoi server, e
+// il conto si chiude a mano, in contanti o come carta su un POS esterno.
+// Senza limiti nella licenza la cassa è quella di sempre.
+describe('la cassa del piano Free', () => {
+  const FREE = {
+    ...withReader,
+    licenza: { piano: 'free', moduli: {}, limiti: { sconti: false, conti_aperti_max: 5 } },
+  }
+
+  it('non ha il tasto dello sconto né SumUp, e si chiude in contanti o con la carta', () => {
+    mount(baseOrder(), FREE)
+    expect(screen.queryByRole('button', { name: /Sconto/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /SumUp/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Contante/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Carta di Credito/ })).toBeInTheDocument()
+  })
+
+  it('uno sconto già sul conto resta visibile, per poterlo togliere', () => {
+    mount(baseOrder({ discount: { type: 'percent', value: 10 }, discount_amount: 2.2 }), FREE)
+    expect(screen.getByRole('button', { name: /Sconto/ })).toBeInTheDocument()
+  })
+
+  it('senza limiti nella licenza ci sono lo sconto e SumUp, come sempre', () => {
+    mount(baseOrder(), withReader)
+    expect(screen.getByRole('button', { name: /Sconto/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /SumUp/ })).toBeInTheDocument()
+  })
+})

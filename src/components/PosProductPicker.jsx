@@ -164,6 +164,8 @@ export default function PosProductPicker({
   // Cosa dice la striscia a sinistra delle tile (vedi lib/strisce.js).
   modoStriscia = MODO_STRISCIA_DEFAULT,
   scorteVerdi = false,
+  // Sul profilo leggero la scheda prodotto non carica foto (REQ-LIC-004).
+  fotoConsentite = true,
 }) {
   const [selectedCat, setSelectedCat] = useState(null)
   const [query, setQuery] = useState('')
@@ -728,6 +730,7 @@ export default function PosProductPicker({
               initial={editDrink}
               categories={cats}
               inventory={inventory}
+              fotoConsentite={fotoConsentite}
               onCreateCategory={async (name) => {
                 const cat = await createCategory({ name, sort_order: cats.length })
                 return cat

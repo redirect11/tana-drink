@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from './firebaseClient.js'
+import { senzaFunctions, MESSAGGI_PIANO } from './limiti.js'
 import {
   LATO_MASSIMO,
   QUALITA,
@@ -8,6 +9,12 @@ import {
   problemaDelFile,
   tipoAllegato,
 } from './allegati.js'
+
+// SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) il bucket non c'è: niente
+// caricamenti (si dice perché) e niente cancellazioni, che andrebbero a
+// bussare a un indirizzo vuoto. I comandi sono già nascosti; questa è la
+// cintura.
+const senzaStorage = senzaFunctions
 
 // Lato massimo (px) e qualità JPEG per il ridimensionamento delle foto drink.
 // Le foto scattate da smartphone pesano spesso diversi MB: le riduciamo prima
@@ -62,6 +69,7 @@ async function downscaleImage(file, { lato = MAX_DIM, qualita = QUALITY } = {}) 
 // Le immagini sono salvate sotto `drinks/` (lette pubblicamente, scritte solo
 // da utenti autenticati — vedi storage.rules).
 export async function uploadDrinkImage(file) {
+  if (senzaStorage()) throw new Error(MESSAGGI_PIANO.foto)
   const processed = await downscaleImage(file)
   const isJpeg = (processed.type || '') === 'image/jpeg'
   const ext = isJpeg ? 'jpg' : (file.name.includes('.') ? file.name.split('.').pop() : 'img')
@@ -76,7 +84,7 @@ export async function uploadDrinkImage(file) {
 // Non solleva eccezioni: l'eliminazione del drink non deve fallire se la foto
 // è già assente o le regole lo impediscono.
 export async function deleteDrinkImageByUrl(url) {
-  if (!url) return
+  if (!url || senzaStorage()) return
   try {
     await deleteObject(ref(storage, url))
   } catch {
@@ -98,6 +106,7 @@ export async function deleteDrinkImageByUrl(url) {
 // con la frase da mostrare quando il file non si può allegare: chi ha
 // toccato deve leggere cosa non va e cosa fare, non un codice di Firebase.
 export async function caricaAllegatoFattura(idFattura, file) {
+  if (senzaStorage()) throw new Error(MESSAGGI_PIANO.allegati)
   const problema = problemaDelFile(file)
   if (problema) throw new Error(problema)
 
@@ -135,7 +144,7 @@ export async function caricaAllegatoFattura(idFattura, file) {
 // eccezioni: la fattura se ne va comunque, e un file già assente non è un
 // motivo per far fallire un'eliminazione.
 export async function eliminaAllegato(path) {
-  if (!path) return
+  if (!path || senzaStorage()) return
   try {
     await deleteObject(ref(storage, path))
   } catch {
