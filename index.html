@@ -15,12 +15,10 @@
          180x180 e OPACA: con la trasparenza iOS riempie di nero e il
          marchio esce con un bordo sporco. -->
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap"
-      rel="stylesheet"
-    />
+    <!-- I CARATTERI NON SI PRENDONO DA GOOGLE (REQ-SIC-004): stanno nel
+         pacchetto dell'app (src/main.jsx, @fontsource) e arrivano dallo
+         stesso indirizzo della pagina. Presi dai server di Google, il telefono
+         del cliente dava a Google il suo indirizzo IP senza consenso. -->
     <meta name="description" content="%VENUE_DESCRIPTION%" />
     <link rel="manifest" href="manifest.webmanifest" />
     <title>%VENUE_NAME%</title>

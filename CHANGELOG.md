@@ -1,5 +1,29 @@
 # Cosa è cambiato
 
+## 1.10.1-beta — in lavorazione
+
+### Per i clienti
+
+- **Uno stile «Notte» per il menù**, da scegliere. Una carta elegante al
+  buio: voci a riga senza riquadri, titoli sottili, l'oro solo sui prezzi.
+- **Gli Special a scorrimento.** Nello stile «Notte» il menù Special è una
+  sequenza di scene a tutto schermo, una per drink: il bicchiere entra
+  scorrendo, il nome arriva lettera per lettera e il fondo prende il colore
+  del drink.
+
+### Per chi amministra
+
+- **Stile del menù.** In Impostazioni ▸ Menù clienti si sceglie fra
+  «Classico», il menù di sempre e predefinito, e «Notte». I colori restano
+  quelli del tema scelto. Il personale vede sempre lo stile classico.
+
+### Privacy e sicurezza
+
+- **I caratteri non arrivano più da Google.** Stanno dentro l'app e si
+  scaricano dallo stesso indirizzo del menù: chi apre il menù non manda più
+  il suo indirizzo a Google. Vale anche per le pagine della privacy e dei
+  cookie.
+
 ## 1.10.0 — 30 ottobre 2026
 
 ### Cosa cambia per la Tana

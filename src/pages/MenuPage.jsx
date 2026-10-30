@@ -6,6 +6,8 @@ import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
+import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
+import { stileMenu } from '../lib/stileMenu.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -60,6 +62,10 @@ export default function MenuPage({ speciali = false }) {
   // aggiorna mentre è aperto, si legge la versione nuova.
   const [apertoId, setApertoId] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  // Le impostazioni partono dai valori di base e arrivano un attimo dopo
+  // (dalla cache). Chi deve decidere in base allo stile del menù aspetta
+  // quelle vere: vedi il dettaglio aperto dal carosello.
+  const [impostazioniArrivate, setImpostazioniArrivate] = useState(false)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
@@ -130,7 +136,10 @@ export default function MenuPage({ speciali = false }) {
   // Impostazioni del bar (modalità solo menù, coperto, servizio, mancia…).
   useEffect(() => {
     if (!isFirebaseConfigured) return
-    return subscribeSettings((s) => setSettings(s))
+    return subscribeSettings((s) => {
+      setSettings(s)
+      setImpostazioniArrivate(true)
+    })
   }, [])
 
   // Gruppi disponibili per l'associazione (solo staff, con gruppi attivi):
@@ -246,11 +255,16 @@ export default function MenuPage({ speciali = false }) {
     const el = document.getElementById(id)
     if (!el) return
     el.scrollIntoView?.({ block: 'start' })
-    if (hashAperto !== posizione.hash && id.startsWith('speciale-')) {
+    // Nello stile «Notte» la scena del drink dice già tutto: ci si porta
+    // lì e basta, senza aprirgli sopra il dettaglio. Lo stile si sa solo
+    // quando arrivano le impostazioni vere: prima, con quelle di base,
+    // avrebbe aperto il dettaglio sopra la scena.
+    if (!impostazioniArrivate) return
+    if (hashAperto !== posizione.hash && id.startsWith('speciale-') && stileMenu(settings) !== 'notte') {
       setHashAperto(posizione.hash)
       setApertoId(id.slice('speciale-'.length))
     }
-  }, [speciali, posizione.hash, categories.length, hashAperto])
+  }, [speciali, posizione.hash, categories.length, hashAperto, settings, impostazioniArrivate])
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -399,8 +413,13 @@ export default function MenuPage({ speciali = false }) {
       })
     : null
 
+  // LO STILE DEL MENÙ (REQ-MENU-021): la forma che il locale ha scelto per
+  // i clienti. Chi lavora vede sempre il classico: per lui è uno strumento.
+  const notte = !staff && stileMenu(settings) === 'notte'
+  const specialNotte = notte && speciali
+
   return (
-    <div className={staff ? 'bar-content' : ''}>
+    <div className={[staff ? 'bar-content' : '', notte ? 'stile-notte' : ''].filter(Boolean).join(' ') || undefined}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
           lavoro: una riga per ricordarlo e per tornare indietro. */}
@@ -413,7 +432,7 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
-      {!staff && (
+      {!staff && !specialNotte && (
         <div className="hero">
           <img
             className="hero-img"
@@ -488,7 +507,7 @@ export default function MenuPage({ speciali = false }) {
 
       {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
           strada per il menù completo, con lo stesso tavolo. */}
-      {speciali && (
+      {speciali && !specialNotte && (
         <div className="speciali-testata">
           <h2>{settings.special_titolo || 'Special'}</h2>
           {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
@@ -505,7 +524,8 @@ export default function MenuPage({ speciali = false }) {
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
-              ✨ {settings.special_titolo || 'Special'}
+              {notte ? '' : '✨ '}
+              {settings.special_titolo || 'Special'}
             </h3>
             <Link className="speciali-tutti" to={conParametri(PERCORSO_SPECIALI, params)}>
               Vedi tutti ›
@@ -629,7 +649,18 @@ export default function MenuPage({ speciali = false }) {
         </nav>
       )}
 
-      {categories.map(([cat, list]) => (
+      {specialNotte && (
+        <SpecialScorrevoli
+          voci={elencoSpeciali}
+          titolo={settings.special_titolo || 'Special'}
+          sottotitolo={settings.special_sottotitolo}
+          linkMenu={conParametri('/menu', params)}
+          chiaro={fondoChiaro}
+          tastiOrdine={tastiOrdine}
+        />
+      )}
+
+      {!specialNotte && categories.map(([cat, list]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
