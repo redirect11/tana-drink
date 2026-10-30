@@ -5276,3 +5276,26 @@ bugs:
     labels: [bug, menu, vista-cliente]
     test_cases:
       - tests/component/MenuPage.test.jsx
+
+  - id: BUG-122
+    title: "Con la 1.10.0 la Tana avrebbe perso menu' digitale, clienti, magazzino, statistiche, personale e SumUp: la licenza degli strumenti di sviluppo taceva sui moduli nuovi"
+    area: "src/lib/licenza.js (moduloIncluso)"
+    severity: alta
+    priority: P0
+    description: >
+      Trovato il 30/10/2026 nella revisione del rilascio 1.10.0, prima di
+      ogni tag: mai uscito. La Tana (test e produzione) ha in
+      settings/bar.licenza solo la voce `moduli`, senza piano, scritta dagli
+      strumenti di sviluppo quando i moduli erano tre (conta, fatture,
+      scadenzario). La 1.10.0 ne aggiunge sette (REQ-LIC-002), e la regola
+      «se la licenza c'e' e' lei la verita', anche per quello che tace» li
+      avrebbe spenti tutti al primo avvio. Ora il silenzio e' un no solo per
+      la licenza della regia, che scrive sempre anche il piano; una licenza
+      senza piano comanda solo sui moduli che nomina, e gli altri tornano
+      alla tabella (incluso). Nessun dato della Tana toccato.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza]
+    test_cases:
+      - tests/unit/licenza.test.js

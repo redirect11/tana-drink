@@ -183,7 +183,16 @@ export function moduloIncluso(stato, id) {
   // LEI la verità, anche per quello che non nomina: ricadere sulla tabella
   // vorrebbe dire riaprirsi da soli un modulo che la licenza non dà.
   const moduli = stato?.licenza?.moduli
-  if (moduli && typeof moduli === 'object') return moduli[id] === true
+  if (moduli && typeof moduli === 'object') {
+    if (Object.hasOwn(moduli, id)) return moduli[id] === true
+    // Il silenzio è un no solo per la licenza della REGIA, che scrive sempre
+    // anche il piano. Una licenza senza piano è quella degli strumenti di
+    // sviluppo (DevTools), scritta quando i moduli erano tre: sulla Tana, con
+    // i moduli nuovi della 1.10.0, il silenzio li avrebbe spenti tutti —
+    // menù digitale, clienti, magazzino, statistiche, personale, SumUp
+    // (BUG-122). Lì un modulo che non nomina torna alla tabella qui sotto.
+    if (stato.licenza.piano) return false
+  }
   // IL PIANO FREE NON HA MODULI (REQ-LIC-003): la regia li scrive tutti
   // spenti, ma se un giorno la voce mancasse un locale Free non deve
   // ritrovarsi con tutto acceso dalla colonna `incluso`, che è la riserva
