@@ -220,3 +220,11 @@ describe('il gestionale segue il piano', () => {
     expect(ids).toContain('fornitori')
   })
 })
+
+// LA STAMPANTE ANCHE ALLA SALA (REQ-STAMPA-020).
+describe('la sala e la stampante', () => {
+  it('la voce c’è nel menu della sala', async () => {
+    const { NAV_SALA } = await import('../../src/lib/sezioni.js')
+    expect(NAV_SALA.map(([id]) => id)).toContain('stampante')
+  })
+})

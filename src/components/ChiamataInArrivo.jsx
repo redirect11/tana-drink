@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
-import { subscribeMyCalls, ackStaffCall } from '../lib/api.js'
+import { subscribeMyCalls, subscribeCallsAlBancone, ackStaffCall } from '../lib/api.js'
 import { notify } from '../lib/notify.js'
+import { isAdmin } from '../lib/ruoli.js'
 
 // ── LA CHIAMATA SI PRESENTA DOVUNQUE SI STIA GUARDANDO ───────────────
 //
@@ -25,8 +26,13 @@ import { notify } from '../lib/notify.js'
 // usano il service worker (public/sw.js) e la Cloud Function.
 const VIBRAZIONE = [500, 200, 500, 200, 900]
 
+// Chi chiama chi: il bancone chiama una persona; la sala chiama il bancone
+// (REQ-STAFF-019), e quella la riceve chi è titolare.
+const titoloDi = (call) => (isAdmin(call?.to_role) ? 'Chiamata dalla sala' : 'Chiamata dal bancone')
+
 export default function ChiamataInArrivo({ ruolo }) {
   const [calls, setCalls] = useState([])
+  const [dallaSala, setDallaSala] = useState([])
   const [errore, setErrore] = useState(null)
   const vibrateTimer = useRef(null)
 
@@ -39,7 +45,14 @@ export default function ChiamataInArrivo({ ruolo }) {
     return subscribeMyCalls(uid, setCalls)
   }, [ruolo])
 
-  const incoming = calls[0] ?? null
+  // Il bancone è il titolare: le chiamate della sala suonano da lui.
+  // Come sopra: si ascolta quando l'accesso c'è davvero.
+  useEffect(() => {
+    if (!isAdmin(ruolo) || !auth.currentUser?.uid) return setDallaSala([])
+    return subscribeCallsAlBancone(setDallaSala)
+  }, [ruolo])
+
+  const incoming = calls[0] ?? dallaSala[0] ?? null
 
   useEffect(() => {
     if (!incoming) {
@@ -59,7 +72,7 @@ export default function ChiamataInArrivo({ ruolo }) {
     }
     // Notifica + vibrazione forte e continua finché non si risponde.
     // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
-    notify('📟 Chiamata dal bancone', incoming.message || 'Rispondi sul telefono.', {
+    notify(`📟 ${titoloDi(incoming)}`, incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
       vibrate: VIBRAZIONE,
       tag: 'staff-call',
       renotify: true,
@@ -87,7 +100,7 @@ export default function ChiamataInArrivo({ ruolo }) {
     <div className="overlay confirm-overlay">
       <div className="confirm-box pager-call">
         <div className="pager-icon">📟</div>
-        <h3 style={{ margin: '8px 0' }}>Chiamata dal bancone</h3>
+        <h3 style={{ margin: '8px 0' }}>{titoloDi(incoming)}</h3>
         {incoming.from_name && (
           <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>
         )}

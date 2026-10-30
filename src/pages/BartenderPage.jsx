@@ -333,8 +333,8 @@ export default function BartenderPage() {
   // — collegamento salvato, indirizzo battuto — si ritrova sulla coda,
   // senza una schermata che si apre per dirgli «non puoi».
   const tabEffettivo = !isGestore(role)
-    ? tab === 'servizio'
-      ? 'servizio'
+    ? tab === 'servizio' || tab === 'stampante'
+      ? tab
       : 'coda'
     : sezioneConsentita(tab, role, impostazioni)
       ? tab
@@ -386,7 +386,7 @@ export default function BartenderPage() {
         {tabEffettivo === 'impostazioni' && <SettingsTab role={role} />}
         {/* La stampante sta nelle Impostazioni: qui resta solo perché i
             vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
-        {tabEffettivo === 'stampante' && <PrinterSetup />}
+        {tabEffettivo === 'stampante' && <PrinterSetup gestore={isGestore(role)} />}
         {tabEffettivo === 'dev' && devToolsEnabled && <DevTools />}
       </div>
     </div>

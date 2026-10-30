@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   decideStaffCallPush,
+  destinatariChiamata,
   decideStaffServePush,
   destinatariPush,
   STAFF_CALL_VIBRATION,
@@ -194,5 +195,34 @@ describe('un drink pronto: nasce il messaggio e c’è chi lo riceve', () => {
     // Un terminale vecchio che non scrive il dispositivo: meglio un avviso
     // in più sul telefono di chi ha già premuto, che un drink che resta lì.
     expect(destinatariPush(terminali, { dispositivoOrigine: null })).toHaveLength(3)
+  })
+})
+
+// LA SALA CHIAMA IL BANCONE (REQ-STAFF-019): nessuna persona, il ruolo.
+describe('la chiamata dalla sala al bancone', () => {
+  const alBancone = { to_uid: null, to_role: 'admin', from_uid: 'sala-1', from_name: 'Ciro', message: null, status: 'pending' }
+
+  it('ha il suo titolo, e dice chi chiama', () => {
+    const msg = decideStaffCallPush(alBancone)
+    expect(msg.title).toBe('📟 Chiamata dalla sala')
+    expect(msg.body).toContain('Ciro')
+    expect(decideStaffCallPush({ ...alBancone, status: 'acked' })).toBeNull()
+  })
+
+  it('suona per chi è titolare, non per gli altri né per chi è disattivato', () => {
+    const utenti = [
+      { uid: 'a1', customClaims: { role: 'admin' } },
+      { uid: 'a2', customClaims: { role: 'admin' }, disabled: true },
+      { uid: 'b1', customClaims: { role: 'bartender' } },
+      { uid: 's1', customClaims: { role: 'staff' } },
+      { uid: 'c1' },
+    ]
+    expect(destinatariChiamata(alBancone, utenti)).toEqual(['a1'])
+  })
+
+  it('una chiamata a una persona resta per quella persona', () => {
+    expect(destinatariChiamata({ to_uid: 'staff-1', status: 'pending' }, [])).toEqual(['staff-1'])
+    expect(destinatariChiamata({ to_uid: null, to_role: 'staff' }, [])).toEqual([])
+    expect(destinatariChiamata(null)).toEqual([])
   })
 })
