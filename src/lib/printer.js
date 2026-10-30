@@ -31,6 +31,17 @@ import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito } from './venue.js'
+import { rigaMarchio } from './limiti.js'
+
+// LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
+// `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
+// è un campo di stampa da spegnere: è una condizione del piano. Senza
+// limiti nella licenza non si stampa niente, e lo scontrino della Tana
+// resta quello di sempre.
+function stampaMarchio(prn, impostazioni) {
+  const riga = rigaMarchio(impostazioni)
+  if (riga) prn.addText(`${riga}\n`)
+}
 import {
   configStampa,
   immagineCaricata,
@@ -1880,6 +1891,7 @@ export function printScontrino(order, opts = {}) {
     if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
+    stampaMarchio(prn, impostazioni)
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
@@ -2039,6 +2051,7 @@ export function printScontrinoAcconto(order, incasso = {}) {
     if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
+    stampaMarchio(prn, impostazioniDelLocale())
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)

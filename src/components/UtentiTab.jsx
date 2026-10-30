@@ -27,6 +27,8 @@ import {
 import ConfirmDialog from './ConfirmDialog.jsx'
 import VipTab from './VipTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -67,9 +69,18 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   const [callTarget, setCallTarget] = useState(null)
   const [callMessage, setCallMessage] = useState('')
 
+  // UN UTENTE SOLO (REQ-LIC-003, `limiti.utenti_max: 1`), o il profilo
+  // leggero senza la Function `staffAdmin` che crea e nomina gli account:
+  // l'app la usa solo il titolare, con l'account della registrazione. La
+  // pagina lo dice invece di chiamare una Function che non c'è.
+  const [impostazioni, setImpostazioni] = useState(settingsIniziali)
+  useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
+  const conStaff = staffConsentito(impostazioni)
+
   useEffect(() => subscribePendingCalls(setPendingCalls), [])
 
   async function reload() {
+    if (!conStaff) return
     try {
       // L'admin vede tutti (clienti compresi): è da lì che nomina. Al
       // bartender la callable nega l'elenco completo, e va bene: gli serve
@@ -88,7 +99,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
   useEffect(() => {
     reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [admin])
+  }, [admin, conStaff])
 
   async function run(fn) {
     setBusy(true)
@@ -145,6 +156,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
     )
   }, [users, cerca])
 
+  if (!conStaff) return <AvvisoPiano messaggio={MESSAGGI_PIANO.staff} impostazioni={impostazioni} />
   if (error && !users) return <div className="banner">Errore: {error}</div>
   if (!users) return <div className="empty">Carico gli utenti…</div>
 

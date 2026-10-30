@@ -1,3 +1,5 @@
+import { pianoFree, profiloLeggero } from './limiti.js'
+
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
 // ai fornitori si attivano all'occorrenza. Sono le prime due di una
@@ -182,6 +184,11 @@ export function moduloIncluso(stato, id) {
   // vorrebbe dire riaprirsi da soli un modulo che la licenza non dà.
   const moduli = stato?.licenza?.moduli
   if (moduli && typeof moduli === 'object') return moduli[id] === true
+  // IL PIANO FREE NON HA MODULI (REQ-LIC-003): la regia li scrive tutti
+  // spenti, ma se un giorno la voce mancasse un locale Free non deve
+  // ritrovarsi con tutto acceso dalla colonna `incluso`, che è la riserva
+  // della Tana. Un modulo in prova sta in `licenza.moduli` e passa di sopra.
+  if (pianoFree(stato)) return false
   return modulo.incluso === true
 }
 
@@ -225,6 +232,23 @@ export const ordinazioneClientiAttiva = (stato) => moduloAttivo(stato, 'ordini_c
 // Gli account clienti: il modulo, E l'interruttore che il locale aveva già
 // (customer_accounts_enabled).
 export const accountClientiAttivi = (stato) => moduloAttivo(stato, 'clienti') && stato?.customer_accounts_enabled !== false
+
+// IL LETTORE SUMUP IN CASSA (REQ-LIC-004). Senza Functions non c'è chi
+// parla coi server di SumUp: sul profilo leggero il metodo non compare e il
+// conto si chiude a mano. Guarda se il modulo è INCLUSO, non l'interruttore
+// d'uso: la cassa della Tana, che non ha licenza, resta quella di sempre.
+export const sumupDisponibile = (stato) => !profiloLeggero(stato) && moduloIncluso(stato, 'sumup')
+
+// IL MODULO IN PROVA (REQ-FLOTTA-016 della regia): `licenza.prove` dice fino
+// a quando, `{ magazzino: '2026-11-13T10:00:00.000Z' }`. In prova il modulo
+// è acceso in `licenza.moduli` come uno comprato; questa è solo la data da
+// mostrare. Null se non è in prova o la data non si legge.
+export function scadenzaProva(stato, id) {
+  const quando = stato?.licenza?.prove?.[id]
+  if (!quando) return null
+  const d = new Date(quando)
+  return Number.isNaN(d.getTime()) ? null : d
+}
 
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci

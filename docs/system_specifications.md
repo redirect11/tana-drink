@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 234 | fatto e coperto dai test |
+| ✅ | 236 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**282 voci** in tutto. **250** descrivono il sistema com'è oggi e
+**284 voci** in tutto. **252** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 2 | — |  |
+| [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 2 | — |  |
 
@@ -3263,6 +3263,32 @@ LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`; un locale d
 DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi (piani.json nella regia); da fare: il lettore SumUp che guarda il modulo `sumup`, e i gruppi di conti che guardano `clienti`.
 
 **Dove**: `src/lib/licenza.js (MODULI_PREMIUM, menuDigitaleAttivo, ordinazioneClientiAttiva, accountClientiAttivi), src/lib/sezioni.js, src/App.jsx, src/pages/MenuPage.jsx, src/pages/AccountPages.jsx, src/components/FunzioneNonInclusa.jsx` · **Lo dimostrano**: `tests/unit/licenza.test.js`, `tests/unit/sezioni.test.js`, `tests/component/FunzioneNonInclusa.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-LIC-003 — I limiti del piano Free: si fanno rispettare solo se la licenza li scrive; senza, nessun limite
+
+La regia ha il piano Free dal 30/10/2026 (REQ-FLOTTA-015 di drink-regia, docs/richieste-tana-drink-free.md) e scrive in `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, marchio: true } per il Free, `null` per i piani a pagamento.
+
+LA REGOLA CHE CONTA:
+
+SENZA `limiti` (assente, null o di forma sbagliata) NESSUN LIMITE, e l'app lavora come prima. E' il caso della Tana e della Tana di test, che una licenza non ce l'hanno; i test lo provano per ogni limite. Anche una singola chiave mancante o illeggibile non limita niente. CON `limiti`: un prodotto nuovo del menu' non nasce oltre prodotti_max (il controllo sta in saveDrinkFromForm, dove passano il gestionale, la copia e la ricetta nuova dal conto; il tasto si spegne e la pagina lo dice; quelli che ci sono restano e si modificano); un conto nuovo non si apre oltre conti_aperti_max conti aperti insieme (si decide all'ingresso della cassa, PosPage, una volta sola: dentro la schermata la bozza non si perde e il conto che nasce non la chiude; il conteggio ascolta la coda solo se il limite c'e'); con sconti: false il tasto dello sconto (sconto, buono, omaggio al 100%) non c'e', se non per togliere uno sconto gia' sul conto; lo storico ordini e le chiusure di cassa mostrano solo gli ultimi storico_giorni giorni, dalla mezzanotte, con i conti ancora aperti sempre visibili e i dati vecchi che restano nel database; con utenti_max: 1 la pagina Utenti dice che l'app la usa solo il titolare e non chiama staffAdmin; con marchio: true lo scontrino (e la ricevuta d'acconto) e il menu' digitale finiscono con «Creato con <nome del prodotto>», nome segnaposto «Drink» in src/lib/prodotto.js. Ogni messaggio porta a `licenza.regia_url` («Vedi i piani»).
+
+CON PIANO 'free' I MODULI SONO SPENTI come per un Base senza moduli: la regia li scrive in `licenza.moduli`, e se la voce mancasse moduloIncluso risponde comunque no; un modulo in prova sta in `licenza.moduli` e funziona, e Impostazioni → Funzioni premium dice «In prova fino al …» da `licenza.prove`.
+
+COSA NON E' COPERTO, E PERCHE': le maggiorazioni nell'app non esistono come funzione (coperto e servizio sono impostazioni del locale e restano); la modifica del prezzo di una riga resta (serve a correggere, e ai prodotti liberi); il menu' del cliente ordina solo col modulo ordini_cliente, spento nel Free, quindi il limite dei conti guarda la cassa.
+
+LE REGOLE DI FIRESTORE NON LI FANNO RISPETTARE, per ora, ed e' una scelta: un numero massimo di documenti (prodotti, conti aperti) le regole non lo sanno contare; lo storico vietato in lettura farebbe fallire per intero le query che oggi chiedono gli ultimi 300 conti; gli sconti si potrebbero negare leggendo settings/bar a ogni scrittura di un conto, ma e' una lettura in piu' su ogni gesto della cassa della Tana e un errore in quella regola fermerebbe il banco. Come per i moduli (REQ-LIC-002), il limite nasconde e non protegge: chi apre la console del browser se lo toglie. Il controllo vero, quando servira', va in una Function della regia o nelle regole con un documento di licenza separato.
+
+**Dove**: `src/lib/limiti.js, src/lib/prodotto.js, src/lib/licenza.js (moduloIncluso col piano free, scadenzaProva), src/components/AvvisoPiano.jsx, src/lib/saveDrink.js, src/components/MenuManager.jsx, src/pages/PosPage.jsx, src/lib/useContiAperti.js, src/components/PaymentScreen.jsx, src/components/OrdersHistory.jsx, src/components/CashSessionsList.jsx, src/components/UtentiTab.jsx, src/lib/printer.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (FunzioniPremium)` · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/prodottiLimite.test.js`, `tests/unit/marchioScontrino.test.js`, `tests/component/ContiApertiLimite.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/OrdersHistory.test.jsx`, `tests/component/CashSessionsList.test.jsx`, `tests/component/UtentiTab.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
+#### REQ-LIC-004 — Il profilo leggero: senza Functions e senza Storage l'app parte, lavora e non li chiama
+
+Un locale Free e' pubblicato col profilo leggero: `firebase deploy --only firestore,hosting`, senza le Functions dell'app ne' il bucket di Storage, che sono quello che costa anche da fermo. L'app lo sa da `licenza.piano === 'free'`, o dalla variabile di build `VITE_PROFILO=leggero` se la regia un giorno pubblicasse leggero un altro piano. I wrapper che non hanno le impostazioni in mano leggono quelle ricordate dall'ultimo ascolto (impostazioniRicordate).
+
+COSA FA: staffAdmin non si chiama (gli elenchi dello staff tornano vuoti, la creazione dice perche'); le Functions di SumUp non si chiamano (rispondono «non disponibile» come sull'emulatore) e il metodo SumUp sparisce dalla cassa, dalla coda e dalle impostazioni: il conto si chiude in contanti o come carta su un POS esterno; Storage non si tocca (la foto del prodotto non si carica e la scheda lo dice; niente cancellazioni; gli allegati delle fatture, che sono del modulo magazzino, rifiutano con una frase).
+
+LE FUNCTIONS CHE L'APP NON CHIAMA: notifyNewOrder, notifyOrderUpdate e notifyStaffCall sono trigger del server, e senza di loro non parte la notifica push; l'app non se ne accorge. La cintura autoAdvancePaid (ritirato + pagato → chiuso) e' doppia: il client chiude da se' il conto pagato e servito (advanceComanda, registerPayment). paymentWebhook serve solo a SumUp. risolviNumeroDuplicato CON UN SOLO TERMINALE NON SERVE: il numero del conto lo assegna il dispositivo, che ricorda l'ultimo dato (lib/progressivi.js), quindi un terminale solo non si da' mai lo stesso numero due volte; il doppione nasce solo da due dispositivi che battono nello stesso istante. Un titolare Free con due dispositivi aperti insieme (telefono e tablet, stesso account) puo' ancora prendersi un doppione, raro, che resta: non cambia i soldi, solo il numero stampato. E' da dire alla regia. Quando il locale compra, la regia toglie i limiti e ripubblica col profilo completo: l'app non fa niente di speciale.
+
+**Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`
 
 ### VENUE
 

@@ -26,6 +26,8 @@ import { drinkSpeciali } from '../lib/speciali.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -136,6 +138,8 @@ export default function MenuManager() {
         existing: editing && editing !== 'new' ? editing : null,
         inventory,
         categories,
+        impostazioni: settings,
+        prodotti: drinks,
       })
       chiudiForm()
       await load()
@@ -310,6 +314,7 @@ export default function MenuManager() {
         categories={categories}
         inventory={inventory}
         saleVatLocale={settings.sale_vat}
+        fotoConsentite={!profiloLeggero(settings)}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}
@@ -318,6 +323,8 @@ export default function MenuManager() {
   }
 
   const searching = search.trim().length > 0
+  // Senza limiti nella licenza si aggiunge sempre, come prima.
+  const puoAggiungere = puoCreareProdotto(settings, drinks.length)
   const availCount = drinks.filter((d) => d.available).length
 
   // LE SOTTOSEZIONI, nel menu laterale come nelle altre pagine. Categorie
@@ -381,6 +388,7 @@ export default function MenuManager() {
 
       <button
         className="btn block"
+        disabled={!puoAggiungere}
         onClick={() => {
           // Da capo: un drink nuovo non eredita la copia rimasta in giro.
           setCopiaDa(null)
@@ -389,6 +397,9 @@ export default function MenuManager() {
       >
         + Aggiungi prodotto
       </button>
+      {/* IL MENÙ PIENO DEL PIANO FREE (REQ-LIC-003): i prodotti che ci sono
+          restano, se ne modificano quanti se ne vuole; non se ne aggiungono. */}
+      {!puoAggiungere && <AvvisoPiano messaggio={MESSAGGI_PIANO.prodotti(maxProdotti(settings))} impostazioni={settings} />}
 
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <div className="empty">Carico il menù…</div>}
@@ -548,6 +559,7 @@ export default function MenuManager() {
                           <button
                             className="btn ghost small block"
                             style={{ marginTop: 6 }}
+                            disabled={!puoAggiungere}
                             onClick={() => duplica(d)}
                           >
                             📋 Duplica

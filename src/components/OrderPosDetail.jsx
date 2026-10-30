@@ -97,6 +97,7 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
+import { profiloLeggero } from '../lib/limiti.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -1483,7 +1484,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // solo da qui: la stessa scheda aperta dal Menù resta dov'è. Chi salva una
   // ricetta in mezzo a un conto ha finito quello che era venuto a fare.
   const salvaNuovaRicetta = async (form) => {
-    await saveDrinkFromForm({ form, inventory: inventario, categories: cats || [] })
+    await saveDrinkFromForm({
+      form,
+      inventory: inventario,
+      categories: cats || [],
+      // I limiti del piano (REQ-LIC-003): una ricetta nuova dal conto è un
+      // prodotto nuovo del menù come un altro.
+      impostazioni: settings,
+      prodotti: drinks || [],
+    })
     setNuovaRicetta(null)
     navigate('/bar')
   }
@@ -2310,6 +2319,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           modoStriscia={settings.stripe_pos}
           scorteVerdi={!!settings.stripe_ok_verde}
+          fotoConsentite={!profiloLeggero(settings)}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {
@@ -3349,6 +3359,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               categories={cats || []}
               inventory={inventario}
               saleVatLocale={settings.sale_vat}
+              fotoConsentite={!profiloLeggero(settings)}
               onCreateCategory={(name) => createCategory({ name, sort_order: (cats || []).length })}
               onCancel={() => setNuovaRicetta(null)}
               onSave={salvaNuovaRicetta}

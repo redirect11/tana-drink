@@ -6,7 +6,7 @@
 // un periodo, i conti di Tiller di quei giorni stanno nella stessa lista,
 // segnati «Tiller» e in sola lettura: non c'è un conto dell'app da aprire.
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
@@ -24,14 +24,15 @@ vi.mock('../../src/components/SelettorePeriodo.jsx', () => ({
   ),
 }))
 
+const filo = vi.hoisted(() => ({ impostazioni: {}, conti: [] }))
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { business_day_cutoff_hour: 5 },
   subscribeSettings: (cb) => {
-    cb({ business_day_cutoff_hour: 5 })
+    cb({ business_day_cutoff_hour: 5, ...filo.impostazioni })
     return () => {}
   },
   subscribeOrdersHistory: (cb) => {
-    cb([])
+    cb(filo.conti)
     return () => {}
   },
   fetchOrdersRange: vi.fn(async () => []),
@@ -80,5 +81,37 @@ describe('storico ordini e conti di Tiller', () => {
     await user.click(screen.getByRole('button', { name: 'SCEGLI 1 GIUGNO 2024' }))
     await screen.findByRole('button', { name: /Tiller/ })
     expect(screen.queryByRole('button', { name: /Dai clienti/ })).toBeNull()
+  })
+})
+
+// LO STORICO DEL PIANO FREE (REQ-LIC-003, `limiti.storico_giorni`): i conti
+// chiusi più vecchi di sette giorni non si vedono — restano nel database —
+// e la pagina lo dice. Un conto ancora APERTO si vede di qualunque giorno:
+// è lavoro da finire, non storico. Senza limiti si vede tutto.
+describe('lo storico del piano Free', () => {
+  const giorniFa = (n) => new Date(Date.now() - n * 86400000).toISOString()
+  beforeEach(() => {
+    filo.conti = [
+      { id: 'r', daily_number: 11, payment_status: 'pagato', status: 'pagato', created_at: giorniFa(2), total: 5 },
+      { id: 'v', daily_number: 22, payment_status: 'pagato', status: 'pagato', created_at: giorniFa(20), total: 5 },
+      { id: 'a', daily_number: 33, payment_status: 'non_richiesto', status: 'aperto', created_at: giorniFa(20), total: 5 },
+    ]
+  })
+
+  it('mostra gli ultimi sette giorni, e i conti ancora aperti', async () => {
+    filo.impostazioni = { licenza: { piano: 'free', limiti: { storico_giorni: 7 } } }
+    render(<OrdersHistory />)
+    expect(await screen.findByText('#11')).toBeInTheDocument()
+    expect(screen.getByText('#33')).toBeInTheDocument()
+    expect(screen.queryByText('#22')).toBeNull()
+    expect(screen.getByText('Nel piano Free lo storico mostra gli ultimi 7 giorni.')).toBeInTheDocument()
+  })
+
+  it('senza limiti nella licenza si vede tutto, come sempre', async () => {
+    filo.impostazioni = {}
+    render(<OrdersHistory />)
+    expect(await screen.findByText('#22')).toBeInTheDocument()
+    expect(screen.getByText('#11')).toBeInTheDocument()
+    expect(screen.queryByText(/Nel piano Free/)).toBeNull()
   })
 })

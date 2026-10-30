@@ -44,6 +44,14 @@
   invece di `tana`; al primo avvio le chiavi vecchie si copiano sulle
   nuove, quindi sui dispositivi non si perde niente. Il nome del locale
   nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- **Il piano Free.** Con `limiti` nella licenza l'app fa rispettare i
+  limiti del piano: prodotti del menù, conti aperti insieme, niente
+  sconti, storico degli ultimi giorni, il solo titolare, la riga «Creato
+  con Drink» in fondo a scontrino e menù digitale; ogni limite lo dice e
+  porta alla pagina dei piani. Col piano `free` l'app lavora anche senza
+  Functions né Storage (profilo leggero): niente SumUp, niente foto,
+  niente account dello staff. Senza `limiti`, come la Tana, non cambia
+  niente.
 - **La flotta sta nella regia** (drink-regia): attivazione, Terraform,
   workflow e script delle istanze non sono più qui. I workflow di questo
   repository pubblicano solo i due progetti della Tana.
