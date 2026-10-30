@@ -4,7 +4,8 @@
 // Tana non perdono carrello, stampante e preferenze: le chiavi vecchie si
 // copiano sulle nuove al primo avvio, una volta sola, senza cancellare.
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { migraChiaviLocali } from '../../src/lib/migrazioneChiavi.js'
 
 function storageFinto(iniziale = {}) {
@@ -42,5 +43,33 @@ describe('migraChiaviLocali', () => {
 
   it('senza storage non si rompe', () => {
     expect(migraChiaviLocali(null)).toBe(0)
+  })
+})
+
+// LA COPIA AVVIENE PRIMA DI OGNI LETTURA. progressivi.js legge i numeri
+// assegnati e la cassa aperta già quando si carica, e gli import di
+// main.jsx girano prima del suo codice: con la chiamata nel corpo di
+// main.jsx, la prima sera dopo l'aggiornamento li avrebbe letti vuoti, la
+// finestra dei due ordini #5 (BUG-074). Trovato nella revisione del
+// 30/10/2026, prima di ogni rilascio.
+describe('il passaggio delle chiavi all’avvio', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('è il primo import di main.jsx', () => {
+    const main = readFileSync(new URL('../../src/main.jsx', import.meta.url), 'utf8')
+    const primo = main.split(/\r?\n/).find((r) => r.startsWith('import '))
+    expect(primo).toBe("import './lib/migrazioneAvvio.js'")
+    expect(main).not.toMatch(/migraChiaviLocali\(/)
+  })
+
+  it('copia le chiavi già quando il modulo si carica', async () => {
+    const s = storageFinto({ 'tana:progressivi': '{"a":5}', 'tana:cassa-aperta': '{"id":"c1"}' })
+    vi.stubGlobal('localStorage', s)
+    await import('../../src/lib/migrazioneAvvio.js')
+    expect(s.getItem('drink:progressivi')).toBe('{"a":5}')
+    expect(s.getItem('drink:cassa-aperta')).toBe('{"id":"c1"}')
   })
 })
