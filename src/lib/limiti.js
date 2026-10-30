@@ -151,4 +151,6 @@ export const MESSAGGI_PIANO = {
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
   allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
   sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
+  // Un piano a pagamento senza il modulo: non è «il piano Free».
+  sumup_modulo: 'I pagamenti con SumUp sono un modulo che il tuo piano non include: si aggiunge dalla regia.',
 }
