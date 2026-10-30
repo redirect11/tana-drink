@@ -1605,3 +1605,33 @@ describe('le voci del menù coi nomi lunghi (BUG-120)', () => {
     expect(blocco('.menu-item .grow > h3')).toMatch(/overflow-wrap:\s*anywhere/)
   })
 })
+
+// LO STILE «NOTTE» (REQ-MENU-021). Sul prototipo lo scorrimento non era
+// fluido (l'utente, 30/10/2026: «lo scroll non è per niente fluido»): il
+// colore sulla sezione intera, sfocature dietro, filtri. Queste regole
+// tengono il motivo per cui ora lo è.
+describe('lo stile «Notte»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => {
+    const i = css.indexOf('\n' + sel + ' {')
+    expect(i, sel).toBeGreaterThan(-1)
+    return css.slice(i, css.indexOf('}', i))
+  }
+  it('il colore della scena sta su un fondale fisso, non sulla sezione', () => {
+    expect(blocco('.notte-fondale')).toMatch(/position:\s*fixed/)
+    expect(blocco('.notte-special')).not.toMatch(/background/)
+  })
+  it('niente sfocature né filtri negli Special a scorrimento', () => {
+    const i = css.indexOf('Gli Special a scorrimento (SpecialScorrevoli)')
+    expect(i).toBeGreaterThan(-1)
+    const parte = css.slice(i)
+    expect(parte).not.toMatch(/backdrop-filter|filter:\s*blur/)
+  })
+  it('senza foto vera, nella carta non si ripete il logo su ogni voce', () => {
+    expect(blocco('.stile-notte .menu-item .drink-thumb.placeholder')).toMatch(/display:\s*none/)
+  })
+  it('i colori vengono dal tema: l’oro è --accent-2', () => {
+    expect(blocco('.stile-notte .menu-item .grow > .price')).toMatch(/var\(--accent-2\)/)
+  })
+})
+

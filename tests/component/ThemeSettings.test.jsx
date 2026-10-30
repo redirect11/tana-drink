@@ -19,7 +19,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
-import ThemeSettings from '../../src/components/ThemeSettings.jsx'
+import ThemeSettings, { StileMenuClienti } from '../../src/components/ThemeSettings.jsx'
 
 let salvato = null
 const onSave = vi.fn((patch) => {
@@ -71,3 +71,23 @@ describe('la striscia delle card della coda, in «Aspetto»', () => {
     expect(salvato).toEqual({ bordo_colore_conto: false })
   })
 })
+
+// LO STILE DEL MENÙ DEI CLIENTI (REQ-MENU-021), in «Menù clienti» accanto ai
+// colori: «ovviamente il tema base lascialo».
+describe('lo stile del menù dei clienti', () => {
+  it('di suo è il classico; scegliendo «Notte» scrive `stile_menu`', async () => {
+    const utente = userEvent.setup()
+    render(<StileMenuClienti settings={{}} onSave={onSave} />)
+    expect(screen.getByRole('button', { name: /Classico/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'false')
+    await utente.click(screen.getByRole('button', { name: /Notte/ }))
+    expect(salvato).toEqual({ stile_menu: 'notte' })
+  })
+
+  it('dice che il personale vede sempre il classico', () => {
+    render(<StileMenuClienti settings={{ stile_menu: 'notte' }} onSave={onSave} />)
+    expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/Il personale vede sempre lo stile classico/)).toBeInTheDocument()
+  })
+})
+
