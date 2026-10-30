@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.9.10-beta — in lavorazione
+## 1.9.10-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti
 
