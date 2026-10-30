@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-do
 import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { useIncollata } from '../lib/useIncollata.js'
+import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import {
   subscribeServiceStats,
@@ -22,7 +23,6 @@ import {
   formatPrice,
   placedByName,
 } from '../lib/orderStatus.js'
-import { formatQty, unitaGenerica } from '../lib/inventory.js'
 import { etaForMode } from '../lib/eta.js'
 import { checkGeofence, geofenceConfigured } from '../lib/geo.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
@@ -615,29 +615,14 @@ export default function MenuPage({ speciali = false }) {
                         {d.description}
                       </p>
                     )}
-                    {/* IN CARTA CI VA QUELLO CHE SI BEVE. Le righe in unità
-                        generiche (il «Tempo di Lavorazione», che sta nella
-                        ricetta per far entrare il lavoro nel costo del drink)
-                        restano fuori: «Tempo di Lavorazione 3 U» non è roba da
-                        far leggere a chi ordina. Con un solo ingrediente la
-                        lista è ridondante (es. shot), e contano quelli che si
-                        vedono. */}
+                    {/* IN CARTA CI VA QUELLO CHE SI BEVE (REQ-MENU-019):
+                        quello scritto nella scheda, o la ricetta senza
+                        manodopera, ghiaccio e formati di confezione. Le
+                        regole stanno in lib/ingredientiCarta.js. */}
                     {(() => {
-                      const ingredienti = (d.recipe_items || []).filter(
-                        (r) => !unitaGenerica(r.unit)
-                      )
-                      if (ingredienti.length <= 1) return null
-                      return (
-                        <p className="ingredients">
-                          {ingredienti
-                            .map((r) =>
-                              settings.show_ingredient_quantities
-                                ? `${r.name} ${formatQty(r.qty, r.unit)}`
-                                : r.name
-                            )
-                            .join(' · ')}
-                        </p>
-                      )
+                      const ingredienti = ingredientiInCarta(d, { quantita: !!settings.show_ingredient_quantities })
+                      if (!ingredienti) return null
+                      return <p className="ingredients">{ingredienti.join(' · ')}</p>
                     })()}
                     <span className="price">{formatPrice(d.price)}</span>
                   </div>

@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 223 | fatto e coperto dai test |
+| ✅ | 224 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**271 voci** in tutto. **239** descrivono il sistema com'è oggi e
+**272 voci** in tutto. **240** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 13 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 14 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -783,6 +783,14 @@ IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve un carosello
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
 
 **Dove**: `src/lib/speciali.js, src/lib/illustrazioneDrink.js, src/components/CaroselloSpeciali.jsx, src/pages/MenuPage.jsx (speciali), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), scripts/special-signature.mjs, public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/unit/illustrazioneDrink.test.js`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/unit/useIncollata.test.jsx`
+
+#### REQ-MENU-019 — Gli ingredienti in carta: nel menù, nel menù Special e nel carosello
+
+L'utente, 29/10/2026: «negli special devono uscire anche gli ingredienti del drink, e anche nel menu». Il cliente legge gli ingredienti sotto la descrizione: nelle card del menù, in quelle del menù Special e nelle slide del carosello (al massimo due righe).
+
+DUE FONTI, IN QUEST'ORDINE. Prima il campo «Ingredienti in carta» della scheda, scritto dal gestore e separato da virgole: si legge com'è, anche con un ingrediente solo. Serve perché la ricetta e' di magazzino, e perche' i Signature sul test non ne hanno: senza il campo per loro non c'e' niente da mostrare. Se il campo e' vuoto, LA RICETTA RIPULITA: fuori la manodopera (in U, o col nome «Lavorazione», perche' nelle ricette vecchie e' ancora in grammi), fuori il ghiaccio, e dal nome si toglie il formato della confezione («Lime Succo Homemade 1kg - 50cl» -> «Lime Succo Homemade»); un ingrediente ripetuto si legge una volta, e da ricetta la lista compare da due ingredienti in su. Con `show_ingredient_quantities` le righe da ricetta hanno la dose. Un ingrediente sbagliato in carta e' un allergene sbagliato: le descrizioni inventate dei Signature (REQ-MENU-018) non nominano ingredienti, e nemmeno questo: si riporta solo quello che e' scritto.
+
+**Dove**: `src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti)` · **Lo dimostrano**: `tests/unit/ingredientiCarta.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

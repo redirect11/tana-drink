@@ -46,6 +46,14 @@ describe('il carosello degli special', () => {
     expect(slide[2].querySelector('img')).toHaveAttribute('src', 'https://esempio/blu.jpg')
   })
 
+  // REQ-MENU-019: anche gli ingredienti, sotto la descrizione.
+  it('sotto la descrizione gli ingredienti, quando ci sono', () => {
+    mostra([{ ...VOCI[0], ingredienti: 'Vodka, lampone, lime' }, VOCI[1]])
+    const slide = document.querySelectorAll('.carosello-slide')
+    expect(slide[0].querySelector('.carosello-ingredienti')).toHaveTextContent('Vodka · lampone · lime')
+    expect(slide[1].querySelector('.carosello-ingredienti')).toBeNull()
+  })
+
   it('va avanti da solo, e dall’ultima torna alla prima', () => {
     mostra()
     expect(corrente()).toBe(0)

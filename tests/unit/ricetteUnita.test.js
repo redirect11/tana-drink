@@ -79,4 +79,13 @@ describe('l’IVA di vendita scritta sulla scheda', () => {
     })
     expect(createDrink.mock.calls[1][0]).toMatchObject({ sale_vat: null })
   })
+
+  // REQ-MENU-019: gli ingredienti in carta si salvano puliti, e vuoti sono
+  // null (la carta torna a leggerli dalla ricetta).
+  it('gli ingredienti in carta si salvano senza spazi in più, e vuoti come null', async () => {
+    await saveDrinkFromForm({ form: { name: 'Basiliconiglio', price: '9', ingredienti: '  Gin, basilico  ', recipe_rows: [] } })
+    expect(createDrink.mock.calls.at(-1)[0]).toMatchObject({ ingredienti: 'Gin, basilico' })
+    await saveDrinkFromForm({ form: { name: 'Negroni', price: '8', ingredienti: '   ', recipe_rows: [] } })
+    expect(createDrink.mock.calls.at(-1)[0]).toMatchObject({ ingredienti: null })
+  })
 })
