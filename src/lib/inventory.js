@@ -89,6 +89,23 @@ export function entryUnits(item) {
   return [...uso, ...proprie.filter((u) => !uso.includes(u))]
 }
 
+// L'UNITÀ DI UNA RIGA DI RICETTA QUANDO SI CAMBIA INGREDIENTE (BUG-124).
+// Flavio, 30/10/2026: «se cambio un ingrediente con un altro mi cambia
+// l'unità di misura da ml a cl senza cambiare la quantità, quindi mi
+// costringe a ricambiare l'unità». Prima la riga ripartiva sempre dalla
+// prima unità del nuovo articolo (cl per i liquidi): «4 ml» di un gin
+// diventava «4 cl» dell'altro, dieci volte tanto, senza che nessuno
+// l'avesse chiesto. Ingrediente, quantità e unità sono tre scelte: se
+// l'unità che c'era vale anche per il nuovo articolo resta com'è, e con
+// lei la quantità; cambia solo se non ha senso (da un liquido a un
+// articolo a pezzi), e allora si parte da quella di inserimento.
+export function unitaDopoCambioIngrediente(item, unitaAttuale) {
+  if (!item) return ''
+  const ammesse = entryUnits(item)
+  if (unitaAttuale && ammesse.includes(unitaAttuale)) return unitaAttuale
+  return ammesse[0] ?? item.unit
+}
+
 // Converte una quantità dall'unità inserita all'unità base dell'item.
 //   cl→ml (×10), L→ml (×1000), kg→g (×1000); ml/g/pz/U invariati.
 // La U passa dal default, ed è esattamente quello che deve fare: non c'è

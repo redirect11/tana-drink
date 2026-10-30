@@ -2321,7 +2321,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [magazzino, difetto-risolto]
-    test_cases: [tests/unit/inventory.test.js, tests/unit/ricetteUnita.test.js]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/ricetteUnita.test.js, tests/component/DrinkFormRicetta.test.jsx]
 
   - id: REQ-MAG-002
     title: "Bottiglie: quante piene, quale aperta, quanto resta"

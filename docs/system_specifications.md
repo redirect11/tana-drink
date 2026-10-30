@@ -892,7 +892,7 @@ Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base.
 
 In magazzino tutto è in unità base (ml, g, pz); la visualizzazione usa l'unità comoda (cl per i liquidi, L oltre il litro, g o kg per i solidi). Chi inserisce sceglie l'unità che preferisce e la conversione è automatica: "4 cl" non deve mai diventare 4 pezzi.
 
-**Dove**: `src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`
+**Dove**: `src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/DrinkFormRicetta.test.jsx`
 
 #### REQ-MAG-002 — Bottiglie: quante piene, quale aperta, quanto resta
 
