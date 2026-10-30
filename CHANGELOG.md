@@ -2,6 +2,15 @@
 
 ## 1.10.2-beta — in lavorazione
 
+### Per chi lavora in sala
+
+- **La stampante anche dal telefono della sala.** Nel menu c'è
+  «Stampante»: indirizzo, prova di stampa e certificato si sistemano da
+  sé, sul proprio telefono, senza chiedere al banco.
+- **Si chiama il bancone.** Nel menu c'è «Chiama il bancone»: al titolare
+  arriva la chiamata a tutto schermo, e finché non risponde il tasto dice
+  che si è in attesa.
+
 ### Per chi amministra
 
 - **Cambiare ingrediente in una ricetta non cambia più l'unità.** Se la

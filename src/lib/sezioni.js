@@ -50,9 +50,18 @@ export const NAV_GESTIONALE = [
 
 // La sala parte dalla STESSA coda del banco; «I miei ordini» non è più una
 // pagina, è il filtro «Miei» dentro la coda.
+// LA STAMPANTE ANCHE ALLA SALA (REQ-STAMPA-020). Flavio, 30/10/2026:
+// «bisogna dare allo staff, cioè ad un account staff, la possibilità di
+// collegarsi alla stampante, perché sta disabilitato». La sala stampa le
+// comande dal suo telefono, ma l'indirizzo, il certificato da accettare e
+// la prova di stampa stavano in una pagina che allo staff non si apriva:
+// se il telefono non la trovava, si poteva solo «dirlo a chi sta al
+// banco». Lo staff vede la parte del collegamento; i dati del locale
+// sulla carta restano dei gestori (PrinterSetup, `gestore`).
 export const NAV_SALA = [
   ['coda', '🧾', 'Coda ordini'],
   ['servizio', '🫱', 'Da servire'],
+  ['stampante', '🖨️', 'Stampante'],
 ]
 
 // Dove sono finite le sezioni che non ci sono più.

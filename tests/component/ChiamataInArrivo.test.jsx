@@ -31,7 +31,14 @@ vi.mock('../../src/lib/api.js', () => ({
     }
   },
   ackStaffCall: (...a) => ackStaffCall(...a),
+  subscribeCallsAlBancone: (cb) => {
+    ascoltaBancone()
+    cb(dallaSala)
+    return () => {}
+  },
 }))
+let dallaSala = []
+const ascoltaBancone = vi.fn()
 vi.mock('../../src/lib/notify.js', () => ({ notify: (...a) => notify(...a) }))
 vi.mock('../../src/lib/firebaseClient.js', () => ({ auth: { currentUser: { uid: 'u1' } } }))
 
@@ -42,6 +49,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   chiamate = []
   emetti = null
+  dallaSala = []
 })
 
 describe('la chiamata dal bancone', () => {
@@ -90,5 +98,24 @@ describe('la chiamata dal bancone', () => {
     expect(ackStaffCall).toHaveBeenCalledWith('c1')
     await act(async () => emetti([]))
     await waitFor(() => expect(screen.queryByText(/Chiamata dal bancone/i)).toBeNull())
+  })
+})
+
+// LA SALA CHIAMA IL BANCONE (REQ-STAFF-019): la chiamata non è per una
+// persona, è per il bancone, cioè per chi è titolare.
+describe('la chiamata dalla sala', () => {
+  it('il titolare la riceve, e dice chi chiama', async () => {
+    dallaSala = [{ id: 's1', to_role: 'admin', from_name: 'Ciro' }]
+    render(<ChiamataInArrivo ruolo="admin" />)
+    expect(await screen.findByText('Chiamata dalla sala')).toBeInTheDocument()
+    expect(screen.getByText(/Ciro/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Rispondo/ }))
+    expect(ackStaffCall).toHaveBeenCalledWith('s1')
+  })
+
+  it('il bartender e la sala non la ascoltano', () => {
+    render(<ChiamataInArrivo ruolo="bartender" />)
+    render(<ChiamataInArrivo ruolo="staff" />)
+    expect(ascoltaBancone).not.toHaveBeenCalled()
   })
 })

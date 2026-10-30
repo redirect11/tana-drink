@@ -45,12 +45,17 @@ describe('il pallino della stampante', () => {
     expect(screen.getByRole('link', { name: /192\.168\.1\.50:8043/ })).toBeInTheDocument()
   })
 
-  it('a chi è in sala non dice di andare nelle impostazioni: non ce le ha', async () => {
+  // A chi è in sala non si dice di andare nelle Impostazioni: non ce le ha.
+  // Prima gli si diceva «Dillo a chi sta al banco», perché la stampante non
+  // la poteva impostare. Dal 30/10/2026 sì (REQ-STAMPA-020, Flavio: «dare
+  // allo staff la possibilità di collegarsi alla stampante»): ha la sua
+  // voce «Stampante» nel menu, e il pallino lo manda lì.
+  it('a chi è in sala dice di impostarla dal suo menu, non dalle impostazioni', async () => {
     impostazioni = { ip: '', port: 8043, stampaSala: 'ip' }
     const user = userEvent.setup()
     render(<PallinoStampante gestore={false} />)
     await user.click(await screen.findByRole('button', { name: /Stampante/ }))
-    expect(screen.getByText(/Dillo a chi sta al banco/)).toBeInTheDocument()
+    expect(screen.getByText(/Impostala dal menu, in Stampante/)).toBeInTheDocument()
     expect(screen.queryByText(/Impostazioni → Stampante/)).toBeNull()
   })
 
