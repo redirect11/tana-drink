@@ -428,3 +428,80 @@ describe('gli special della casa', () => {
     expect(card.parentElement).toHaveClass('speciali-griglia')
   })
 })
+
+// IL DETTAGLIO DEL DRINK (REQ-MENU-020). L'utente, 30/10/2026: «su qualsiasi
+// item di menu premo non si apre un dettaglio o almeno una modal con il
+// dettaglio del drink con immagine, descrizione lunga e ingredienti».
+describe('il dettaglio del drink', () => {
+  const LUNGA =
+    'Il basilico fresco rincorre il Bianconiglio: un drink verde, aromatico e dissetante, da bere prima che sia troppo tardi.'
+  const BASILICO = {
+    id: 's9',
+    name: 'Basiliconiglio',
+    price: 9,
+    category_id: 'c1',
+    available: true,
+    speciale: true,
+    description: LUNGA,
+    ingredienti: 'Gin, basilico fresco, lime',
+    illustrazione: { bicchiere: 'basso', colore: 'verde', decorazione: 'menta' },
+  }
+
+  it('toccando la card si apre, con descrizione intera e ingredienti, e si ordina da lì', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, BASILICO]
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    const card = [...document.querySelectorAll('.menu-item')].find((c) => c.textContent.includes('Basiliconiglio'))
+    await user.click(card.querySelector('.ingredients'))
+    const dialogo = await screen.findByRole('dialog', { name: 'Basiliconiglio' })
+    expect(within(dialogo).getByText(LUNGA)).toBeInTheDocument()
+    expect(within(dialogo).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Gin', 'basilico fresco', 'lime'])
+    await user.click(within(dialogo).getByRole('button', { name: 'Aggiungi' }))
+    // Aggiunto: nel dettaglio compaiono le quantità, come nella card.
+    expect(within(dialogo).getByRole('button', { name: 'Aumenta' })).toBeInTheDocument()
+    await user.click(within(dialogo).getByRole('button', { name: 'Chiudi' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('il nome è un tasto: si apre anche dalla tastiera', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mostra('/menu')
+    await user.click(await screen.findByRole('button', { name: 'Negroni' }))
+    expect(screen.getByRole('dialog', { name: 'Negroni' })).toBeInTheDocument()
+  })
+
+  it('«Aggiungi» nella card aggiunge e basta, senza aprire il dettaglio', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    await user.click(screen.getAllByRole('button', { name: /Aggiungi/ })[0])
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText(/Rivedi ordine/)).toBeInTheDocument()
+  })
+
+  it('a «solo menù» il dettaglio si guarda e basta', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockSettings = { menu_only: true }
+    mostra('/menu')
+    await user.click(await screen.findByRole('button', { name: 'Mojito' }))
+    const dialogo = screen.getByRole('dialog', { name: 'Mojito' })
+    expect(within(dialogo).queryByRole('button', { name: 'Aggiungi' })).toBeNull()
+  })
+
+  it('dal carosello, il menù Special si apre col dettaglio di quel drink', async () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, BASILICO]
+    render(
+      <MemoryRouter initialEntries={['/menu/special#speciale-s9']}>
+        <MenuPage speciali />
+      </MemoryRouter>
+    )
+    expect(await screen.findByRole('dialog', { name: 'Basiliconiglio' })).toBeInTheDocument()
+  })
+})
+

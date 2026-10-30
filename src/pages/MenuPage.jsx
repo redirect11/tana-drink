@@ -5,6 +5,7 @@ import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
+import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -52,6 +53,9 @@ export default function MenuPage({ speciali = false }) {
   const fondoChiaro = useFondoChiaro()
   const [segnapostoCategorie, categorieIncollate] = useIncollata()
   const posizione = useLocation()
+  // Il drink aperto nel dettaglio (REQ-MENU-020), per id: se il menù si
+  // aggiorna mentre è aperto, si legge la versione nuova.
+  const [apertoId, setApertoId] = useState(null)
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
@@ -226,12 +230,22 @@ export default function MenuPage({ speciali = false }) {
       .map((g) => [g.name, g.list])
   }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo])
 
-  // Arrivando dal carosello su un drink, la pagina Special si apre su quello.
+  // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
+  // col suo dettaglio aperto: chi tocca una slide vuole sapere di quel drink
+  // (REQ-MENU-020). Una volta sola per indirizzo: chiuso il dettaglio, non
+  // si riapre quando il menù si aggiorna.
+  const [hashAperto, setHashAperto] = useState(null)
   useEffect(() => {
     if (!speciali || !posizione.hash) return
-    const el = document.getElementById(decodeURIComponent(posizione.hash.slice(1)))
-    el?.scrollIntoView?.({ block: 'start' })
-  }, [speciali, posizione.hash, categories.length])
+    const id = decodeURIComponent(posizione.hash.slice(1))
+    const el = document.getElementById(id)
+    if (!el) return
+    el.scrollIntoView?.({ block: 'start' })
+    if (hashAperto !== posizione.hash && id.startsWith('speciale-')) {
+      setHashAperto(posizione.hash)
+      setApertoId(id.slice('speciale-'.length))
+    }
+  }, [speciali, posizione.hash, categories.length, hashAperto])
 
   // ── Geofence: verificato AL CARICAMENTO del menu (lo staff è esente).
   // Finché la posizione non risulta nel raggio, i controlli per ordinare
@@ -337,6 +351,33 @@ export default function MenuPage({ speciali = false }) {
   // Con geofence attivo si ordina solo a posizione verificata.
   const geoOk = !geoActive || geoGate === 'ok'
   const canOrder = (!menuOnly || !!staff) && geoOk
+
+  // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
+  const tastiOrdine = (d) => {
+    if (!canOrder) return null
+    const inCart = cart.items.find((i) => i.drink_id === d.id)
+    return inCart ? (
+      <div className="qty">
+        <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>
+          −
+        </button>
+        <strong>{inCart.qty}</strong>
+        <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>
+          +
+        </button>
+      </div>
+    ) : (
+      <button className="btn small" onClick={() => cart.add(d)}>
+        Aggiungi
+      </button>
+    )
+  }
+  // Si apre toccando la card ovunque, tranne che sui suoi tasti.
+  const apriDaCard = (d) => (e) => {
+    if (e.target.closest?.('button, a, input, select, textarea, label')) return
+    setApertoId(d.id)
+  }
+  const aperto = apertoId ? drinks.find((x) => x.id === apertoId) || null : null
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
@@ -589,14 +630,17 @@ export default function MenuPage({ speciali = false }) {
         <section key={cat} className={speciali ? 'speciali-griglia' : undefined}>
           {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}
           {list.map((d) => {
-            const inCart = cart.items.find((i) => i.drink_id === d.id)
             // La foto, o l'illustrazione dello special, o il logo.
             const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
             return (
+              // TOCCANDO LA CARD SI APRE IL DETTAGLIO (REQ-MENU-020). Il
+              // tocco sulla card è per il dito; per la tastiera e per chi
+              // legge lo schermo c'è il nome, che è un tasto vero.
               <div
                 className={`card menu-item${speciali ? ' speciale' : ''}`}
                 key={d.id}
                 id={speciali ? `speciale-${d.id}` : undefined}
+                onClick={apriDaCard(d)}
               >
                 {speciali && img && <img className="speciale-img" src={img} alt="" loading="lazy" />}
                 <div className="row between">
@@ -609,12 +653,13 @@ export default function MenuPage({ speciali = false }) {
                     />
                   )}
                   <div className="grow">
-                    <h3>{d.name}</h3>
-                    {d.description && (
-                      <p className="muted" style={{ margin: '0 0 6px' }}>
-                        {d.description}
-                      </p>
-                    )}
+                    <h3>
+                      <button type="button" className="menu-item-nome" onClick={() => setApertoId(d.id)}>
+                        {d.name}
+                      </button>
+                    </h3>
+                    {/* Corta, tre righe: per intero sta nel dettaglio. */}
+                    {d.description && <p className="muted menu-item-descrizione">{d.description}</p>}
                     {/* IN CARTA CI VA QUELLO CHE SI BEVE (REQ-MENU-019):
                         quello scritto nella scheda, o la ricetta senza
                         manodopera, ghiaccio e formati di confezione. Le
@@ -626,29 +671,7 @@ export default function MenuPage({ speciali = false }) {
                     })()}
                     <span className="price">{formatPrice(d.price)}</span>
                   </div>
-                  {canOrder && (
-                    inCart ? (
-                      <div className="qty">
-                        <button
-                          aria-label="Riduci"
-                          onClick={() => cart.setQty(d.id, inCart.qty - 1)}
-                        >
-                          −
-                        </button>
-                        <strong>{inCart.qty}</strong>
-                        <button
-                          aria-label="Aumenta"
-                          onClick={() => cart.setQty(d.id, inCart.qty + 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    ) : (
-                      <button className="btn small" onClick={() => cart.add(d)}>
-                        Aggiungi
-                      </button>
-                    )
-                  )}
+                  {tastiOrdine(d)}
                 </div>
               </div>
             )
@@ -749,6 +772,14 @@ export default function MenuPage({ speciali = false }) {
           </div>
         </div>
       )}
+
+      <DettaglioDrink
+        drink={aperto}
+        chiaro={fondoChiaro}
+        quantita={!!settings.show_ingredient_quantities}
+        azioni={aperto && tastiOrdine(aperto)}
+        onClose={() => setApertoId(null)}
+      />
 
       {showSummary && (
         <OrderSummary
