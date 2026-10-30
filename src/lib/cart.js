@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 
-const CART_KEY = 'tana_cart_v1'
-const ORDERS_KEY = 'tana_my_orders_v1'
+const CART_KEY = 'drink_cart_v1'
+const ORDERS_KEY = 'drink_my_orders_v1'
 
 function read(key, fallback) {
   try {

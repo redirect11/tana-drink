@@ -1,3 +1,7 @@
+// PRIMA DI TUTTO, e come primo import: le chiavi locali col prefisso
+// vecchio si copiano su quello nuovo prima che un altro modulo le legga
+// (lib/migrazioneAvvio.js spiega perché non basta chiamarla qui sotto).
+import './lib/migrazioneAvvio.js'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

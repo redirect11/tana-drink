@@ -52,8 +52,8 @@ export default function StatusBell({ floating = false }) {
       setOpen(true)
       setStorico(false)
     }
-    window.addEventListener('tana:apri-avvisi', apri)
-    return () => window.removeEventListener('tana:apri-avvisi', apri)
+    window.addEventListener('drink:apri-avvisi', apri)
+    return () => window.removeEventListener('drink:apri-avvisi', apri)
   }, [])
 
   // APRIRE NON È LEGGERE. Prima bastava aprire la campanella perché tutto

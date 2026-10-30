@@ -1,6 +1,6 @@
 // Service worker minimale per la PWA.
 // Fornisce un cache di base e gestisce i click sulle notifiche.
-const CACHE = 'tana-drink-v4'
+const CACHE = 'drink-v5'
 
 // IL LOGO STA IN CIMA ALLA LISTA PERCHÉ LA STAMPA LO ASPETTA (BUG-086).
 // `logo.png` è la risorsa più richiesta dell'app — scontrino, preconto,
@@ -209,7 +209,7 @@ self.addEventListener('push', (event) => {
       }
 
       const n = payload.notification || {}
-      await self.registration.showNotification(n.title || 'La Tana del Coniglio', {
+      await self.registration.showNotification(n.title || 'Nuovo avviso', {
         body: n.body || '',
         icon: './logo.png',
         badge: './logo.png',

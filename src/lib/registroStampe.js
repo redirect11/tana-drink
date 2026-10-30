@@ -32,7 +32,7 @@
 
 import { segnala, TIPO } from './diagnosticaStampante.js'
 
-const CHIAVE = 'tana:registro-stampe'
+const CHIAVE = 'drink:registro-stampe'
 
 // Il tetto: vedi il punto 1 qui sopra.
 export const TETTO_VOCI = 50

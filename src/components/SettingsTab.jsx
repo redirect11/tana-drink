@@ -17,6 +17,7 @@ import {
 import { parseCarteCsv, decodeCsvBuffer } from '../lib/carteImport.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ThemeSettings, { TemaMenuClienti } from './ThemeSettings.jsx'
+import IdentitaLocale from './IdentitaLocale.jsx'
 import PrinterSetup from './PrinterSetup.jsx'
 import StampaAutomatica from './StampaAutomatica.jsx'
 import ToggleRow from './ToggleRow.jsx'
@@ -58,7 +59,7 @@ export default function SettingsTab({ role = null }) {
     try {
       const chiesta = new URLSearchParams(window.location.search).get('sezione')
       if (chiesta) return chiesta
-      return localStorage.getItem('tana:impostazioni:sezione') || 'aspetto'
+      return localStorage.getItem('drink:impostazioni:sezione') || 'aspetto'
     } catch {
       return 'aspetto'
     }
@@ -66,7 +67,7 @@ export default function SettingsTab({ role = null }) {
   const scegliSezione = (id) => {
     setSezione(id)
     try {
-      localStorage.setItem('tana:impostazioni:sezione', id)
+      localStorage.setItem('drink:impostazioni:sezione', id)
     } catch {
       /* niente memoria: vale per questa volta */
     }
@@ -99,6 +100,8 @@ export default function SettingsTab({ role = null }) {
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    // L'identità del locale (REQ-VENUE-001): vuota vale la build.
+    { id: 'locale', icona: '🏷️', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
       id: 'vista-ordine',
       icona: '🧾',

@@ -175,7 +175,7 @@ describe('il menu agganciato alla pagina', () => {
     expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('278px')
     // Il testo cresce con la colonna.
     expect(parseFloat(document.querySelector('.bar-sidebar.agganciata').style.fontSize)).toBeGreaterThan(0.85)
-    expect(localStorage.getItem('tana:menu-largo')).toBe('278')
+    expect(localStorage.getItem('drink:menu-largo')).toBe('278')
   })
 
   it('non si può tirare oltre misura: mezza pagina di menu non serve a nessuno', () => {
@@ -188,7 +188,7 @@ describe('il menu agganciato alla pagina', () => {
   })
 
   it('doppio clic sulla maniglia: si torna alla misura di partenza', () => {
-    localStorage.setItem('tana:menu-largo', '300')
+    localStorage.setItem('drink:menu-largo', '300')
     conSezioni()
     expect(document.querySelector('.bar-sidebar.agganciata').style.width).toBe('300px')
     fireEvent.doubleClick(document.querySelector('.bar-sidebar-maniglia'))
@@ -207,7 +207,7 @@ describe('il menu agganciato alla pagina', () => {
   // SI APRE E SI CHIUDE COL ☰, come ovunque: non c'è un secondo tasto per
   // «agganciarlo». A chi lavora interessa che il menu ci sia o non ci sia;
   // che resti dentro la pagina invece di coprirla è come si presenta.
-  const tocca = () => act(() => { window.dispatchEvent(new Event('tana:toggle-drawer')) })
+  const tocca = () => act(() => { window.dispatchEvent(new Event('drink:toggle-drawer')) })
 
   it('il ☰ lo chiude e lo riapre, sempre dentro la pagina', () => {
     conSezioni()

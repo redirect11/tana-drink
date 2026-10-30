@@ -136,7 +136,7 @@ describe('le risorse che l’app non deve andare a cercare', () => {
     const r = rete()
     const sw = avviaSw(r.fetch)
     await sw.install()
-    const dentro = [...sw.cache.get('tana-drink-v4').keys()]
+    const dentro = [...sw.cache.get('drink-v5').keys()]
     expect(dentro).toContain(`${ORIGINE}/logo.png`)
     // E il resto del guscio è rimasto dov'era.
     expect(dentro).toContain(`${ORIGINE}/index.html`)
@@ -165,7 +165,7 @@ describe('la rete che resta appesa', () => {
     // Adesso la rete c'è ma non risponde più: la stampa chiede il logo.
     const bloccata = rete({ appesa: 'logo.png' })
     const sw2 = avviaSw(bloccata.fetch)
-    sw2.cache.set('tana-drink-v4', sw.cache.get('tana-drink-v4'))
+    sw2.cache.set('drink-v5', sw.cache.get('drink-v5'))
 
     const risposta = await entro(sw2.chiedi('./logo.png'))
     expect(vinta).toBe(null) // ha risposto: nessuna attesa infinita
@@ -220,9 +220,10 @@ describe('chi ha la versione vecchia', () => {
     const r = rete()
     const sw = avviaSw(r.fetch)
     // Come il tablet al banco che ha ancora la v3 in memoria.
-    sw.cache.set('tana-drink-v3', new Map([[`${ORIGINE}/index.html`, { ok: true }]]))
+    // La cache col nome vecchio (REQ-VENUE-005: il prefisso non è più della Tana).
+    sw.cache.set('tana-drink-v4', new Map([[`${ORIGINE}/index.html`, { ok: true }]]))
     await sw.install()
     await sw.attiva()
-    expect([...sw.cache.keys()]).toEqual(['tana-drink-v4'])
+    expect([...sw.cache.keys()]).toEqual(['drink-v5'])
   })
 })

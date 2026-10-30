@@ -58,7 +58,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
   // card per scorrerli come nella schermata ordini. La scelta si ricorda.
   const [forma, setForma] = useState(() => {
     try {
-      return localStorage.getItem('tana:rendiconto:forma') === 'card' ? 'card' : 'tabella'
+      return localStorage.getItem('drink:rendiconto:forma') === 'card' ? 'card' : 'tabella'
     } catch {
       return 'tabella'
     }
@@ -66,7 +66,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
   const cambiaForma = (f) => {
     setForma(f)
     try {
-      localStorage.setItem('tana:rendiconto:forma', f)
+      localStorage.setItem('drink:rendiconto:forma', f)
     } catch {
       /* ok */
     }

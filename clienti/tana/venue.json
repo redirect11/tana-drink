@@ -1,0 +1,25 @@
+{
+  "venue_name": "La Tana del Coniglio",
+  "venue_short_name": "La Tana",
+  "venue_presso": "alla Tana del Coniglio",
+  "venue_tagline": "Cocktail bar · Nola",
+  "venue_about": "La Tana del Coniglio è un cocktail bar a Nola: drink d’autore, ingredienti freschi e un’atmosfera speakeasy.",
+  "venue_city": "Nola (NA)",
+  "venue_email": "info@latanadelconiglio.it",
+  "venue_email_domain": "latanadelconiglio.it",
+  "venue_legal_name": "EFFEVI - SRLS",
+  "venue_address": "Corso Tommaso Vitale 87/89",
+  "venue_postal_city": "80035 Nola - Italy",
+  "venue_description": "Ordina i tuoi drink alla Tana del Coniglio",
+  "venue_theme_color": "#0e0e15",
+  "venue_socials": [
+    { "piattaforma": "instagram", "href": "https://www.instagram.com/latanadelconiglio_nola/" },
+    { "piattaforma": "tiktok", "href": "https://www.tiktok.com/@latanadelconiglionola" },
+    { "piattaforma": "facebook", "href": "https://www.facebook.com/people/La-tana-del-coniglio/61558657110329/" },
+    { "piattaforma": "telegram", "href": "https://t.me/+TAnsOyWjRkhiMmRk" },
+    {
+      "piattaforma": "tripadvisor",
+      "href": "https://www.tripadvisor.it/Restaurant_Review-g580205-d27184530-Reviews-La_Tana_Del_Coniglio-Nola_Province_of_Naples_Campania.html"
+    }
+  ]
+}

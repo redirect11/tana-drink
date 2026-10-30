@@ -6,6 +6,8 @@ import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
+import { venueDi, pressoIlLocale } from '../lib/venue.js'
+import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -39,8 +41,8 @@ import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
 
-const NOTIF_PROMPT_KEY = 'tana_notif_prompt_v1' // chiave storica
-const WELCOME_KEY = 'tana_welcome_v1'
+const NOTIF_PROMPT_KEY = 'drink_notif_prompt_v1' // chiave storica
+const WELCOME_KEY = 'drink_welcome_v1'
 
 // `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
 // segnate come speciali, nei colori del menù.
@@ -134,6 +136,8 @@ export default function MenuPage({ speciali = false }) {
   // gruppi aperti + gruppi-cliente recenti.
   const [openGroups, setOpenGroups] = useState([])
   const [recentGroups, setRecentGroups] = useState([])
+  // Il locale (REQ-VENUE-002): hero e benvenuto.
+  const venue = venueDi(settings)
   const groupsActive = !!staff && settings.groups_enabled
   useEffect(() => {
     if (!groupsActive) {
@@ -343,7 +347,9 @@ export default function MenuPage({ speciali = false }) {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
-  const menuOnly = settings.menu_only
+  // «Solo menù» per scelta del locale, o perché il modulo degli ordini dal
+  // telefono non è nel piano (REQ-LIC-002).
+  const menuOnly = settings.menu_only || !ordinazioneClientiAttiva(settings)
   // Il servizio è PERPETUO: non esiste più una serata da aprire. A decidere
   // se si può ordinare resta la modalità "solo menù" (l'interruttore del
   // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
@@ -411,7 +417,7 @@ export default function MenuPage({ speciali = false }) {
           <img
             className="hero-img"
             src="/cocktail-hero.jpg"
-            alt="La Tana del Coniglio"
+            alt={venue.venue_name}
             onError={(e) => (e.target.style.display = 'none')}
           />
           <div className="hero-overlay">
@@ -420,7 +426,7 @@ export default function MenuPage({ speciali = false }) {
               src={`${import.meta.env.BASE_URL}logo.png`}
               alt=""
             />
-            <h1 className="hero-title">La Tana del Coniglio</h1>
+            <h1 className="hero-title">{venue.venue_name}</h1>
             <p className="hero-sub">
               {tableLabel
                 ? `Tavolo ${tableLabel}`
@@ -727,7 +733,7 @@ export default function MenuPage({ speciali = false }) {
               style={{ width: 56, height: 56, borderRadius: '50%', display: 'block', margin: '0 auto 8px' }}
             />
             <h3 style={{ margin: '0 0 4px', textAlign: 'center' }}>
-              Benvenuto alla Tana del Coniglio
+              Benvenuto {pressoIlLocale(venue)}
             </h3>
             <p className="muted" style={{ margin: '0 0 14px', textAlign: 'center', fontSize: '0.88rem' }}>
               Ecco come funziona l’ordinazione:

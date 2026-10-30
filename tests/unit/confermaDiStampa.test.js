@@ -103,12 +103,12 @@ beforeEach(() => {
   vi.resetModules()
   localStorage.clear()
   localStorage.setItem(
-    'tana_printer_v2',
+    'drink_printer_v2',
     JSON.stringify({ ip: '10.0.0.9', port: 8043, https: true })
   )
   // La stampante finta risponde sempre e non si può far tacere: qui serve
   // quella vera, che è il solo modo di decidere SE e QUANDO risponde.
-  localStorage.setItem('tana_stampante_finta', 'false')
+  localStorage.setItem('drink_stampante_finta', 'false')
   rispostaPer = () => OK
   accendiLaStampante()
   // Niente logo: qui non c'è un server che lo serva, e l'errore arriva
