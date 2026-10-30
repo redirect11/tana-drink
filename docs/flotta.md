@@ -111,7 +111,9 @@ raro, resta (il dettaglio è in REQ-LIC-004).
 - **La CI compila anche `CLIENTE=demo`** a ogni push: una modifica
   pensata per la Tana che rompe gli altri si vede prima del rilascio.
 - **Online**, l'istanza dimostrativa `drinkpos-demo` è un'istanza come le
-  altre: la aggiorna la regia, non i workflow di qui.
+  altre: la aggiorna la regia, non i workflow di qui. È pubblica (la apre
+  la prima pagina del prodotto), quindi non usa il database: la modalità
+  demo è in [modalita-demo.md](modalita-demo.md) (REQ-FLOTTA-019).
 
 ## I comandi
 

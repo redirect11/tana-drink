@@ -5667,6 +5667,32 @@ requirements:
   #  INTERFACCIA: convenzioni che valgono ovunque
   # ══════════════════════════════════════════════════════════════════════
 
+  - id: REQ-FLOTTA-019
+    title: "La demo pubblica: dati di prova nella build, niente database, la sessione nel browser"
+    area: "clienti/demo, clienti/pluginCliente.js, src/lib/firebaseClient.js, src/lib/api.js, docs/modalita-demo.md"
+    description: >
+      «Il sito demo che si apre dalla home dovrebbe essere in sola lettura
+      sul backend e la sessione vive solo in locale. Bisogna aggiungere dei
+      dati di test e bisogna renderlo in qualche modo sicuro» e, sulla
+      proposta di una demo decisa dalla build e non da un interruttore,
+      «sì va bene» (l'utente, 30/10/2026). La specifica intera è in
+      docs/modalita-demo.md. In breve: la modalità demo la accende solo la
+      build CLIENTE=demo (una costante di compilazione, mai un'impostazione,
+      un ruolo o un parametro), e il suo codice non entra nelle build dei
+      locali veri. In demo l'app carica un locale inventato (nessun dato
+      della Tana), spegne la rete di Firestore prima di leggere o scrivere,
+      tiene nel browser quello che fa chi prova («Ricomincia da capo»
+      riparte dai dati di prova), finge accesso, Functions, SumUp,
+      notifiche, stampante e licenza, e dice in una fascia che è una demo.
+      La regia (drink-regia, REQ-FLOTTA-019) pubblica la demo solo su
+      drinkpos-demo, col profilo leggero e il database chiuso a tutti:
+      la demo non può contare su niente che stia nel database.
+    status: todo
+    generate_issue: true
+    labels: [prodotto, flotta, sicurezza]
+    priority: P1
+    test_cases: []
+
   - id: REQ-UI-001
     title: "Le sottosezioni di una pagina stanno sotto il titolo"
     area: "src/components/SectionPanels.jsx"

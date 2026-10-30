@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 238 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 24 | da fare |
+| ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**286 voci** in tutto. **254** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**287 voci** in tutto. **254** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 2 | — |  |
+| [FLOTTA](#flotta) | 2 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3733,6 +3733,14 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-019 — La demo pubblica: dati di prova nella build, niente database, la sessione nel browser
+
+«Il sito demo che si apre dalla home dovrebbe essere in sola lettura sul backend e la sessione vive solo in locale. Bisogna aggiungere dei dati di test e bisogna renderlo in qualche modo sicuro» e, sulla proposta di una demo decisa dalla build e non da un interruttore, «sì va bene» (l'utente, 30/10/2026). La specifica intera è in docs/modalita-demo.md. In breve: la modalità demo la accende solo la build CLIENTE=demo (una costante di compilazione, mai un'impostazione, un ruolo o un parametro), e il suo codice non entra nelle build dei locali veri. In demo l'app carica un locale inventato (nessun dato della Tana), spegne la rete di Firestore prima di leggere o scrivere, tiene nel browser quello che fa chi prova («Ricomincia da capo» riparte dai dati di prova), finge accesso, Functions, SumUp, notifiche, stampante e licenza, e dice in una fascia che è una demo. La regia (drink-regia, REQ-FLOTTA-019) pubblica la demo solo su drinkpos-demo, col profilo leggero e il database chiuso a tutti: la demo non può contare su niente che stia nel database.
+
+**Dove**: `clienti/demo, clienti/pluginCliente.js, src/lib/firebaseClient.js, src/lib/api.js, docs/modalita-demo.md`
 
 ## Difetti noti
 
