@@ -9,7 +9,7 @@
 // Logica pura (leggiCliente, htmlPerCliente, manifestPerCliente) separata
 // dal plugin, così si prova senza far partire Vite.
 
-import { existsSync, readFileSync, readdirSync, copyFileSync, mkdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 export const CLIENTE_PREDEFINITO = 'tana'
@@ -27,11 +27,15 @@ export function leggiCliente(slug = process.env.CLIENTE || CLIENTE_PREDEFINITO, 
 
 const scappa = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
 
+// La descrizione la scrive quasi nessuno: un cliente appena generato ha
+// solo il nome, e index.html e manifest devono dire la stessa cosa.
+const descrizione = (venue) => venue.venue_description || venue.venue_tagline || venue.venue_name
+
 // index.html porta dei segnaposto %VENUE_*%: qui diventano il locale.
 export function htmlPerCliente(html, venue) {
   return html
     .replace(/%VENUE_NAME%/g, scappa(venue.venue_name))
-    .replace(/%VENUE_DESCRIPTION%/g, scappa(venue.venue_description || venue.venue_tagline || venue.venue_name))
+    .replace(/%VENUE_DESCRIPTION%/g, scappa(descrizione(venue)))
     .replace(/%VENUE_THEME_COLOR%/g, scappa(venue.venue_theme_color || '#0e0e15'))
 }
 
@@ -44,7 +48,7 @@ export function manifestPerCliente(modello, venue) {
     ...modello,
     name: venue.venue_name,
     short_name: venue.venue_short_name || venue.venue_name,
-    description: venue.venue_description || venue.venue_tagline || venue.venue_name,
+    description: descrizione(venue),
     background_color: venue.venue_theme_color || modello.background_color,
     theme_color: venue.venue_theme_color || modello.theme_color,
   }
@@ -86,7 +90,6 @@ export function pluginCliente({ slug, radice = process.cwd() } = {}) {
     closeBundle() {
       const dist = resolve(radice, 'dist')
       if (!existsSync(dist)) return
-      mkdirSync(dist, { recursive: true })
       for (const nome of sovrascritti()) copyFileSync(join(cliente.pubblica, nome), join(dist, nome))
     },
   }
