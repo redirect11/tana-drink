@@ -3330,7 +3330,7 @@ LE CHIAVI LOCALI passano da `tana:`/`tana_` a `drink:`/`drink_` in tutta l'app (
 
 LE FUNCTIONS: la descrizione dei pagamenti SumUp e l'app id affiliato vengono da `VENUE_NAME` e `SUMUP_AFFILIATE_APP_ID` in `functions/.env.<progetto>` (per la Tana: .env.tana-drink e .env.tana-drink-test, committati come .env), non dal codice; senza, «Il locale» e nessun app id. Il test-guardia (REQ-VENUE-004) scende a quattro file: il seed di sviluppo, i nomi dei progetti della Tana in api.js, la migrazione stessa e il tema «Tana scuro» tenuto come alias.
 
-**Dove**: `src/lib/migrazioneChiavi.js, src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js` · **Lo dimostrano**: `tests/unit/migrazioneChiavi.test.js`, `tests/unit/marchio.test.js`
+**Dove**: `src/lib/migrazioneChiavi.js, src/lib/migrazioneAvvio.js (primo import di main.jsx), src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js` · **Lo dimostrano**: `tests/unit/migrazioneChiavi.test.js`, `tests/unit/marchio.test.js`
 
 #### REQ-VENUE-006 — La cartella di un cliente nuovo in un comando: genera-cliente.mjs --slug --nome
 
