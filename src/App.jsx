@@ -288,6 +288,10 @@ export default function App() {
   const social = useMemo(() => socialDelLocale(venue), [venue])
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
+  // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
+  // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
+  const menuDigitale = menuDigitaleAttivo(settings)
+  const menuNonIncluso = <FunzioneNonInclusa nome="Il menù digitale" licenza={settings.licenza} />
 
   // IL NOME DELL'APP SEGUE CHI LA USA: il nome del locale per il cliente,
   // col suffisso del ruolo per chi lavora. Vale per la linguetta del
@@ -630,17 +634,10 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
               una pagina che lo dice. La Tana ha tutti i moduli. */}
-          <Route
-            path="/menu"
-            element={menuDigitaleAttivo(settings) ? <MenuPage /> : <FunzioneNonInclusa nome="Il menù digitale" licenza={settings.licenza} />}
-          />
+          <Route path="/menu" element={menuDigitale ? <MenuPage /> : menuNonIncluso} />
           {/* IL MENÙ SPECIAL (REQ-MENU-018): sotto /menu, così valgono
-              anche qui tema, cassetto e anteprima del cliente. Segue lo
-              stesso modulo del menù digitale. */}
-          <Route
-            path="/menu/special"
-            element={menuDigitaleAttivo(settings) ? <MenuPage speciali /> : <FunzioneNonInclusa nome="Il menù digitale" licenza={settings.licenza} />}
-          />
+              anche qui tema, cassetto e anteprima del cliente. */}
+          <Route path="/menu/special" element={menuDigitale ? <MenuPage speciali /> : menuNonIncluso} />
           <Route path="/ordini" element={<MyOrdersPage />} />
           <Route path="/ordine/:id" element={<OrderStatusPage />} />
           {/* Il dettaglio di una COMANDA: ci si arriva dalla card in
