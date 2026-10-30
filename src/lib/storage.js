@@ -1,12 +1,6 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { storage } from './firebaseClient.js'
 import { senzaFunctions, MESSAGGI_PIANO } from './limiti.js'
-
-// SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) il bucket non c'è: niente
-// caricamenti (si dice perché) e niente cancellazioni, che andrebbero a
-// bussare a un indirizzo vuoto. I comandi sono già nascosti; questa è la
-// cintura.
-const senzaStorage = senzaFunctions
 import {
   LATO_MASSIMO,
   QUALITA,
@@ -15,6 +9,12 @@ import {
   problemaDelFile,
   tipoAllegato,
 } from './allegati.js'
+
+// SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) il bucket non c'è: niente
+// caricamenti (si dice perché) e niente cancellazioni, che andrebbero a
+// bussare a un indirizzo vuoto. I comandi sono già nascosti; questa è la
+// cintura.
+const senzaStorage = senzaFunctions
 
 // Lato massimo (px) e qualità JPEG per il ridimensionamento delle foto drink.
 // Le foto scattate da smartphone pesano spesso diversi MB: le riduciamo prima

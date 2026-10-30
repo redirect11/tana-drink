@@ -110,6 +110,18 @@ export function dentroStorico(stato, quando, adesso = new Date()) {
   return Number.isNaN(t.getTime()) || t >= da
 }
 
+// Le voci di uno storico (conti, chiusure di cassa) che si vedono: quelle
+// dentro `storico_giorni`, più quelle che `aperta` tiene fuori dal taglio —
+// il lavoro ancora da finire non è storico. Sta qui e non nelle liste
+// perché la regola è una sola: senza limite torna la lista com'è, la stessa.
+export function visibiliNelloStorico(stato, lista, { data, aperta = () => false, adesso = new Date() }) {
+  if (inizioStorico(stato, adesso) == null) return lista
+  return lista.filter((voce) => aperta(voce) || dentroStorico(stato, data(voce), adesso))
+}
+
+// Le foto dei prodotti stanno su Storage, che il profilo leggero non ha.
+export const fotoConsentite = (stato) => !profiloLeggero(stato)
+
 // Si possono creare account dello staff? No se il piano tiene un utente
 // solo (il titolare), e no sul profilo leggero, dove la Function che li
 // crea (`staffAdmin`) non c'è.

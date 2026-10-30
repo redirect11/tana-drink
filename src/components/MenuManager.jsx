@@ -27,7 +27,7 @@ import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
-import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -314,7 +314,7 @@ export default function MenuManager() {
         categories={categories}
         inventory={inventory}
         saleVatLocale={settings.sale_vat}
-        fotoConsentite={!profiloLeggero(settings)}
+        fotoConsentite={fotoConsentite(settings)}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}
