@@ -30,7 +30,7 @@ import {
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
-import { MESSAGGI_PIANO } from '../lib/limiti.js'
+import { MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
@@ -354,9 +354,14 @@ export default function SettingsTab({ role = null }) {
                   dell'incasso si accendono dove si incassa — regge. */}
               {/* SUMUP VUOLE LE FUNCTIONS (REQ-LIC-004): sul profilo leggero
                   del piano Free non ci sono, e gli interruttori di SumUp
-                  lasciano il posto a una riga che lo dice. */}
+                  lasciano il posto a una riga che lo dice. Su un piano a
+                  pagamento senza il modulo la riga dice quello, non «Free». */}
               {!sumupDisponibile(settings) ? (
-                <AvvisoPiano messaggio={MESSAGGI_PIANO.sumup} impostazioni={settings} compatto />
+                <AvvisoPiano
+                  messaggio={profiloLeggero(settings) ? MESSAGGI_PIANO.sumup : MESSAGGI_PIANO.sumup_modulo}
+                  impostazioni={settings}
+                  compatto
+                />
               ) : (
                 <>
                   <ToggleRow
