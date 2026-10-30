@@ -5299,3 +5299,33 @@ bugs:
     labels: [bug, licenza]
     test_cases:
       - tests/unit/licenza.test.js
+  - id: BUG-123
+    title: "Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi"
+    area: "src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019):
+      68 punti dell'app aspettano con `await` la conferma del server di una
+      scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti
+      sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove
+      si lavora con la rete. Ma alcuni stanno dove il local-first è la prima
+      regola, e lì la schermata resterebbe ferma col locale senza linea:
+      nella cassa, applicare un buono (applyVoucherDiscount), scrivere il
+      codice lotteria (setOrderLotteryCode) ed emettere la fattura
+      (createInvoice); nella creazione di un ordine di un cliente con
+      account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine);
+      il rimborso di un buono quando un conto cambia o si annulla
+      (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal
+      cassetto dello staff (createManualGroup); dal POS, la scheda di un
+      prodotto (saveDrinkFromForm), una categoria nuova e «non
+      disponibile» (PosProductPicker). Nella demo non succede: le scritture
+      si confermano dalla cache. Nei locali veri va sistemato un punto alla
+      volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js),
+      e senza mascherare gli errori veri, che è il motivo per cui la
+      conferma locale della demo non va estesa ai locali veri.
+    status: todo
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, local-first, pagamenti]
+    test_cases: []

@@ -1,5 +1,19 @@
 # Cosa è cambiato
 
+## 1.10.2-beta — in lavorazione
+
+### Per la demo pubblica
+
+- **La demo non usa più il database.** Il sito di prova che si apre dalla
+  pagina del prodotto lavora tutto nel browser di chi lo prova, con un
+  locale inventato: menù, magazzino, quattro settimane di serate e la
+  serata di oggi in corso. Quello che si fa resta in quel browser.
+- **Si entra scegliendo il ruolo**: titolare, bartender, sala o cliente.
+  Una fascia in cima dice che è una demo, con «Cambia ruolo» e
+  «Ricomincia da capo».
+- **Nei locali veri non cambia niente**: la demo la decide la build, e il
+  suo codice non entra nel pacchetto degli altri locali.
+
 ## 1.10.1-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti

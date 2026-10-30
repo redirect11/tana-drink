@@ -25,6 +25,10 @@ export function leggiCliente(slug = process.env.CLIENTE || CLIENTE_PREDEFINITO, 
   return { slug, venue, cartella, pubblica: join(cartella, 'public') }
 }
 
+// Il cliente è la demo pubblica? Solo un `true` vero lo dice: una stringa,
+// un 1 o una chiave scritta male non accendono niente.
+export const eDemo = (venue) => venue?.demo === true
+
 const scappa = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
 
 // La descrizione la scrive quasi nessuno: un cliente appena generato ha
@@ -62,7 +66,14 @@ export function pluginCliente({ slug, radice = process.cwd() } = {}) {
   return {
     name: 'cliente',
     config: () => ({
-      define: { __CLIENTE__: JSON.stringify({ slug: cliente.slug, venue: cliente.venue }) },
+      define: {
+        __CLIENTE__: JSON.stringify({ slug: cliente.slug, venue: cliente.venue }),
+        // LA DEMO LA DECIDE LA BUILD (REQ-FLOTTA-019): `"demo": true` in
+        // venue.json, e nient'altro — non un'impostazione, non un ruolo, non
+        // l'indirizzo. È un letterale: nella build di un locale vero vale
+        // `false`, e il codice dietro `if (__DEMO__)` sparisce dal pacchetto.
+        __DEMO__: JSON.stringify(eDemo(cliente.venue)),
+      },
     }),
     transformIndexHtml: (html) => htmlPerCliente(html, cliente.venue),
     // In sviluppo: il manifest e i file del cliente si servono da qui,

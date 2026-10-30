@@ -1,14 +1,9 @@
 import {
   collection,
   doc,
-  addDoc,
-  getDoc,
   getDocs,
   getDocsFromCache,
   getDocFromCache,
-  setDoc,
-  updateDoc,
-  deleteDoc,
   deleteField,
   query,
   where,
@@ -19,9 +14,14 @@ import {
   serverTimestamp,
   increment,
   arrayUnion,
-  writeBatch,
   Timestamp,
 } from 'firebase/firestore'
+// E la lettura di un documento da letture.js: nella demo, a rete spenta,
+// risponde dalla cache invece di andare in errore (REQ-FLOTTA-019).
+import { getDoc } from './letture.js'
+// Le scritture passano da scritture.js: nella demo si confermano dalla
+// cache, perché il server non risponde mai (REQ-FLOTTA-019).
+import { addDoc, setDoc, updateDoc, deleteDoc, writeBatch } from './scritture.js'
 import { db, auth, firestoreLite } from './firebaseClient.js'
 import { VENUE_VUOTO } from './venue.js'
 import { ORDER_STATUSES } from './orderStatus.js'

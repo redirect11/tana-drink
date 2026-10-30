@@ -62,6 +62,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # LA DEMO NON ENTRA NEI LOCALI VERI (REQ-FLOTTA-019): il suo codice
+      # (dati di prova, accesso senza password) sta dietro la costante
+      # `__DEMO__`, e nella build della Tana deve sparire tutto. Si cerca
+      # nel pacchetto appena compilato, prima che la build della demo lo
+      # sovrascriva.
+      - name: La build della Tana non contiene la demo
+        run: node scripts/controlla-build-senza-demo.mjs dist
+
       # L'APP È UNA PER TUTTI I LOCALI (REQ-FLOTTA-001): si compila anche il
       # cliente neutro `demo`, così una modifica pensata per la Tana che
       # rompe la build degli altri si vede qui, prima del rilascio, e non
@@ -70,6 +78,8 @@ jobs:
         run: npm run build
         env:
           CLIENTE: demo
+          # Come la pubblica la regia: la demo è sempre leggera.
+          VITE_PROFILO: leggero
 
       # La copertura solo sulle pull request: in mezzo al lavoro sarebbe
       # tempo in più a ogni push.
