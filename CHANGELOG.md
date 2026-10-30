@@ -1,5 +1,14 @@
 # Cosa è cambiato
 
+## 1.10.2-beta — in lavorazione
+
+### Per chi amministra
+
+- **Cambiare ingrediente in una ricetta non cambia più l'unità.** Se la
+  riga era in ml resta in ml, con la sua quantità; l'unità cambia solo
+  passando a un articolo che non si misura così (da un liquido a uno a
+  pezzi).
+
 ## 1.10.1-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti
