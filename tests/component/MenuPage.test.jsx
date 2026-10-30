@@ -538,3 +538,22 @@ describe('il benvenuto al primo accesso', () => {
     expect(await screen.findByText('Benvenuto al Bar Mario')).toBeInTheDocument()
   })
 })
+
+// LA FIRMA DEL PRODOTTO IN FONDO AL MENÙ DIGITALE (REQ-LIC-003,
+// `limiti.marchio`): solo dove la licenza la chiede.
+describe('la firma del prodotto', () => {
+  it('col marchio nella licenza esce in fondo al menù', async () => {
+    ruoloClaim = null
+    mockSettings = { licenza: { piano: 'free', moduli: { menu_tavoli: true }, limiti: { marchio: true } } }
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(screen.getByText('Creato con Drink')).toBeInTheDocument()
+  })
+
+  it('senza limiti nella licenza non c’è', async () => {
+    ruoloClaim = null
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(screen.queryByText(/Creato con/)).toBeNull()
+  })
+})

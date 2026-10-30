@@ -17,7 +17,7 @@ import '@testing-library/jest-dom/vitest'
 // Il filo per far arrivare alla pagina, mentre è aperta, quello che il
 // server manderebbe: vi.mock viene issato in cima al file, quindi la
 // scatola va creata con vi.hoisted o dentro il mock sarebbe ancora vuota.
-const filo = vi.hoisted(() => ({ consegnaCategorie: null }))
+const filo = vi.hoisted(() => ({ consegnaCategorie: null, impostazioni: {} }))
 
 const DRINKS = [
   {
@@ -56,7 +56,7 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: vi.fn(() => () => {}),
   updateSettings: vi.fn(() => Promise.resolve()),
   DEFAULT_SETTINGS: { stripe_menu: 'scorte', special_titolo: 'Special', special_sottotitolo: '' },
-  settingsIniziali: () => ({ stripe_menu: 'scorte' }),
+  settingsIniziali: () => ({ stripe_menu: 'scorte', ...filo.impostazioni }),
 }))
 vi.mock('../../src/lib/storage.js', () => ({
   deleteDrinkImageByUrl: vi.fn(() => Promise.resolve()),
@@ -86,6 +86,7 @@ import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  filo.impostazioni = {}
 })
 
 // Apre le azioni della card del Mojito e restituisce il riquadro.
@@ -319,5 +320,55 @@ describe('gli special nella gestione del menù', () => {
     expect(qr.indirizzi.at(-1)).toMatch(/\/menu\/special$/)
     expect(screen.getByRole('link', { name: 'Scarica il QR' })).toHaveAttribute('download', 'qr-menu-special.png')
     stop()
+  })
+})
+
+// IL MENÙ DEL PIANO FREE (REQ-LIC-003): oltre `prodotti_max` il tasto per
+// aggiungere si spegne e la pagina dice perché, con la strada per cambiare
+// piano. I prodotti che ci sono restano, e si modificano.
+describe('il limite dei prodotti del piano Free', () => {
+  const free = (max) => ({
+    licenza: { piano: 'free', limiti: { prodotti_max: max }, regia_url: 'https://regia.example/piani' },
+  })
+
+  it('col menù pieno non si aggiunge, e lo si legge', async () => {
+    filo.impostazioni = free(1)
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    expect(screen.getByRole('button', { name: '+ Aggiungi prodotto' })).toBeDisabled()
+    expect(
+      screen.getByText('Nel piano Free il menù ha al massimo 1 prodotto. Per aggiungerne passa a un piano a pagamento.')
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', 'https://regia.example/piani')
+  })
+
+  it('sotto il limite si aggiunge, e il salvataggio porta con sé il limite', async () => {
+    const user = userEvent.setup()
+    filo.impostazioni = free(2)
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    const aggiungi = screen.getByRole('button', { name: '+ Aggiungi prodotto' })
+    expect(aggiungi).toBeEnabled()
+    expect(screen.queryByText(/Nel piano Free/)).toBeNull()
+    await user.click(aggiungi)
+    // Sul profilo leggero del Free Storage non c'è: la foto non si carica,
+    // e la scheda lo dice invece di fallire al salvataggio (REQ-LIC-004).
+    expect(screen.getByText('Le foto dei prodotti sono dei piani a pagamento.')).toBeInTheDocument()
+    expect(document.querySelector('input[type="file"]')).toBeNull()
+    await user.type(screen.getByLabelText('Nome *'), 'Spritz')
+    await user.click(screen.getByRole('button', { name: /Salva/ }))
+    expect(salvaDrink).toHaveBeenCalledWith(
+      expect.objectContaining({ impostazioni: expect.objectContaining(free(2)), prodotti: DRINKS })
+    )
+  })
+
+  it('senza limiti nella licenza non c’è niente da leggere, e la foto si carica', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    expect(screen.getByRole('button', { name: '+ Aggiungi prodotto' })).toBeEnabled()
+    expect(screen.queryByText(/Nel piano Free/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: '+ Aggiungi prodotto' }))
+    expect(document.querySelector('input[type="file"]')).not.toBeNull()
   })
 })

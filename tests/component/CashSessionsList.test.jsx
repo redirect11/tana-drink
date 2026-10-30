@@ -16,7 +16,7 @@
 // E che la serata IN CORSO si riconosca a colpo d'occhio, che è l'unica
 // riga della lista che sta ancora cambiando.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
@@ -437,5 +437,37 @@ describe('la ristampa della chiusura, dalla lista delle serate', () => {
     await user.click(riga.querySelector('button.inv-row-main'))
     await waitFor(() => expect(riga.querySelector('.inv-row-dettaglio')).not.toBe(null))
     expect(riga.querySelector('.inv-row-dettaglio').textContent).not.toMatch(/Ristampa/)
+  })
+})
+
+// LO STORICO DEL PIANO FREE (REQ-LIC-003, `limiti.storico_giorni`): le
+// chiusure più vecchie di N giorni non si vedono (restano nel database), e
+// la lista lo dice. La serata in corso si vede sempre. Le impostazioni sono
+// quelle che il terminale ricorda dall'ultimo ascolto.
+describe('le chiusure nel piano Free', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    vi.useFakeTimers({ now: new Date('2026-08-22T20:00:00.000Z'), toFake: ['Date'] })
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('con un giorno di storico restano la serata in corso e quella di ieri', async () => {
+    localStorage.setItem(
+      'drink:impostazioni',
+      JSON.stringify({ licenza: { piano: 'free', limiti: { storico_giorni: 1 } } })
+    )
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(2)
+    expect(screen.queryByText(/420,00/)).toBeNull()
+    expect(screen.getByText('Nel piano Free lo storico mostra l’ultimo giorno.')).toBeInTheDocument()
+  })
+
+  it('senza limiti nella licenza ci sono tutte', async () => {
+    const { container } = render(<CashSessionsList />)
+    await screen.findByText(/1\.240,50/)
+    expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(sessioni.length)
+    expect(screen.queryByText(/Nel piano Free/)).toBeNull()
   })
 })

@@ -1241,6 +1241,15 @@ a.btn.block {
 .funzione-non-inclusa .card { max-width: 480px; text-align: center; }
 .funzione-non-inclusa .btn { display: inline-block; margin-top: 10px; }
 
+/* UN LIMITE DEL PIANO (REQ-LIC-003): la frase e il collegamento alla regia,
+   come scheda o in una riga sola dentro un elenco. */
+.avviso-piano { margin: 8px 0; }
+.avviso-piano p { margin: 0 0 6px; font-size: 0.9rem; }
+.avviso-piano.compatto { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.avviso-piano.compatto p { margin: 0; flex: 1 1 220px; }
+/* La firma del prodotto in fondo al menù digitale (limiti.marchio). */
+.marchio-prodotto { text-align: center; margin: 18px 0 8px; font-size: 0.8rem; }
+
 /* L'INSTALLAZIONE SOSPESA O CHIUSA (REQ-FLOTTA-008): una scheda sola in
    mezzo alla pagina, sopra tutto. */
 .installazione-sospesa {

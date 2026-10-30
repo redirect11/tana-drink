@@ -25,6 +25,9 @@ import { toastSuccess, toastError } from '../lib/toast.js'
 import RendicontoSerata from './RendicontoSerata.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
 import { giornateConServizio } from '../lib/giorniDiServizio.js'
+import { impostazioniRicordate } from '../lib/impostazioniLocali.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -94,16 +97,29 @@ export default function CashSessionsList() {
     }
   }
 
+  // LO STORICO DEL PIANO FREE (REQ-LIC-003): le chiusure più vecchie di
+  // `storico_giorni` non si mostrano, e restano nel database. Le
+  // impostazioni sono quelle ricordate dall'ultimo ascolto: questa lista non
+  // ne apre uno suo per una regola che, senza limiti, non fa niente.
+  const [impostazioni] = useState(() => impostazioniRicordate({}))
+  const giorniStorico = giorniDiStorico(impostazioni)
+
   useEffect(() => {
     let vivo = true
     fetchCashSessions({ limit: 60 })
-      .then((list) => vivo && setSessions(list))
+      .then(
+        (list) =>
+          vivo &&
+          // La cassa ancora aperta resta: è la serata in corso.
+          setSessions(visibiliNelloStorico(impostazioni, list, { data: (s) => s.opened_at, aperta: (s) => !s.closed_at }))
+      )
       .catch((e) => vivo && setError(e.message))
       .finally(() => vivo && setLoading(false))
     return () => {
       vivo = false
     }
-  }, [])
+    // Le impostazioni ricordate non cambiano mentre la lista è aperta.
+  }, [impostazioni])
 
   // I bordi del campo data escono dalle sessioni già in mano: nessuna lettura
   // in più per sapere fin dove ha senso cercare.
@@ -376,6 +392,9 @@ export default function CashSessionsList() {
 
   return (
     <div>
+      {giorniStorico != null && (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.storico(giorniStorico)} impostazioni={impostazioni} compatto />
+      )}
       {error && <div className="banner">Errore: {error}</div>}
       {loading && <p className="muted small">Carico le chiusure…</p>}
       {!loading && sessions.length === 0 && (

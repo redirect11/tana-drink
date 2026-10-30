@@ -526,3 +526,51 @@ describe('giornata di lavoro', () => {
     expect(screen.getByText(/serata verrebbe divisa su due giornate/)).toBeInTheDocument()
   })
 })
+
+// IL PIANO FREE NELLE IMPOSTAZIONI (REQ-LIC-003, REQ-LIC-004). Sul profilo
+// leggero SumUp non c'è: i suoi interruttori lasciano il posto a una riga
+// che lo dice. Un modulo in prova dice fino a quando (licenza.prove). Senza
+// licenza — la Tana — gli interruttori di SumUp ci sono come sempre.
+describe('il piano Free nelle impostazioni', () => {
+  // Trovato nella revisione del 30/10/2026: un piano a pagamento senza il
+  // modulo leggeva «Nel piano Free…».
+  it('un piano a pagamento senza il modulo SumUp dice che il modulo non è nel piano, non «Free»', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'base', moduli: { sumup: false } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Pagamento online (SumUp)')).toBeNull()
+    expect(screen.getByText(/un modulo che il tuo piano non include/)).toBeInTheDocument()
+    expect(screen.queryByText(/Nel piano Free il conto si chiude/)).toBeNull()
+  })
+
+  it('niente interruttori di SumUp, e il perché', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { marchio: true } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Lettore SumUp Solo')).toBeNull()
+    expect(screen.queryByText('Pagamento online (SumUp)')).toBeNull()
+    expect(screen.getByText(/I pagamenti con SumUp sono dei piani a pagamento\./)).toBeInTheDocument()
+  })
+
+  it('senza licenza gli interruttori di SumUp ci sono', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.getByText('Lettore SumUp Solo')).toBeInTheDocument()
+    expect(screen.queryByText(/piani a pagamento/)).toBeNull()
+  })
+
+  it('un modulo in prova dice fino a quando', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = {
+      piano: 'free',
+      moduli: { magazzino: true },
+      prove: { magazzino: '2026-11-13T10:00:00.000Z' },
+    }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Funzioni premium/ }))
+    expect(screen.getByText(/In prova fino al 13 novembre\./)).toBeInTheDocument()
+  })
+})

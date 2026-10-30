@@ -27,7 +27,11 @@ import {
   moduliPremium,
   moduloAttivo,
   moduloIncluso,
+  scadenzaProva,
+  sumupDisponibile,
 } from '../lib/licenza.js'
+import { MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
@@ -348,41 +352,55 @@ export default function SettingsTab({ role = null }) {
                   stessa sezione, a uno scorrimento di distanza, quindi la
                   lezione di BUG-070 — gli interruttori dei tasti
                   dell'incasso si accendono dove si incassa — regge. */}
-              <ToggleRow
-                label="Pagamento online (SumUp)"
-                desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
-                checked={settings.payments_online_enabled}
-                onChange={(v) => save({ payments_online_enabled: v })}
-              />
-              {settings.payments_online_enabled && (
+              {/* SUMUP VUOLE LE FUNCTIONS (REQ-LIC-004): sul profilo leggero
+                  del piano Free non ci sono, e gli interruttori di SumUp
+                  lasciano il posto a una riga che lo dice. Su un piano a
+                  pagamento senza il modulo la riga dice quello, non «Free». */}
+              {!sumupDisponibile(settings) ? (
+                <AvvisoPiano
+                  messaggio={profiloLeggero(settings) ? MESSAGGI_PIANO.sumup : MESSAGGI_PIANO.sumup_modulo}
+                  impostazioni={settings}
+                  compatto
+                />
+              ) : (
                 <>
                   <ToggleRow
-                    label="Pagamento obbligatorio"
-                    desc="L'ordine entra in coda solo dopo il pagamento online."
-                    checked={settings.payments_online_required}
-                    onChange={(v) => save({ payments_online_required: v })}
+                    label="Pagamento online (SumUp)"
+                    desc="Il cliente può pagare con carta dal suo telefono al momento dell'ordine."
+                    checked={settings.payments_online_enabled}
+                    onChange={(v) => save({ payments_online_enabled: v })}
                   />
-                  {!settings.payments_online_required && (
-                    <ToggleRow
-                      label="Senza pagamento, ritiro al banco"
-                      desc={
-                        settings.service_mode === 'tavolo'
-                          ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
-                          : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
-                      }
-                      checked={settings.banco_required_if_unpaid}
-                      onChange={(v) => save({ banco_required_if_unpaid: v })}
-                    />
+                  {settings.payments_online_enabled && (
+                    <>
+                      <ToggleRow
+                        label="Pagamento obbligatorio"
+                        desc="L'ordine entra in coda solo dopo il pagamento online."
+                        checked={settings.payments_online_required}
+                        onChange={(v) => save({ payments_online_required: v })}
+                      />
+                      {!settings.payments_online_required && (
+                        <ToggleRow
+                          label="Senza pagamento, ritiro al banco"
+                          desc={
+                            settings.service_mode === 'tavolo'
+                              ? 'Con servizio solo al tavolo non si applica: chi non paga online paga allo staff alla consegna.'
+                              : 'Chi sceglie di pagare al bancone deve ritirare al banco (niente servizio al tavolo).'
+                          }
+                          checked={settings.banco_required_if_unpaid}
+                          onChange={(v) => save({ banco_required_if_unpaid: v })}
+                        />
+                      )}
+                    </>
                   )}
+                  <ToggleRow
+                    label="Lettore SumUp Solo"
+                    desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
+                    checked={settings.payments_reader_enabled}
+                    onChange={(v) => save({ payments_reader_enabled: v })}
+                  />
+                  {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
                 </>
               )}
-              <ToggleRow
-                label="Lettore SumUp Solo"
-                desc="Incasso col lettore di carte direttamente dalla coda ordini (Cloud API, lettore in Wi-Fi)."
-                checked={settings.payments_reader_enabled}
-                onChange={(v) => save({ payments_reader_enabled: v })}
-              />
-              {settings.payments_reader_enabled && <ReaderPairing settings={settings} />}
             </div>
       ),
     },
@@ -1566,12 +1584,17 @@ function FunzioniPremium({ settings, onSave }) {
       </p>
       {moduliPremium().map((m) => {
         const incluso = moduloIncluso(settings, m.id)
+        // IN PROVA (licenza.prove, scritta dalla regia): la data in cui la
+        // prova finisce, perché alla scadenza il modulo si spegne da solo.
+        const prova = incluso ? scadenzaProva(settings, m.id) : null
         return (
           <ToggleRow
             key={m.id}
             label={m.label}
             desc={`${m.descrizione} ${
-              incluso
+              prova
+                ? `In prova fino al ${prova.toLocaleDateString('it-IT', { day: 'numeric', month: 'long' })}.`
+                : incluso
                 ? 'Funzione premium, inclusa in questa installazione.'
                 : 'Funzione premium: non inclusa.'
             }`}

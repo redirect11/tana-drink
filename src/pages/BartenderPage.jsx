@@ -131,6 +131,7 @@ import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { businessDayKey, businessDayLabel, businessDayShort } from '../lib/businessDay.js'
 import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
+import { sumupDisponibile } from '../lib/licenza.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
@@ -2062,7 +2063,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     }
     const ns = nextStatus(o.workflow_status)
     const awaiting = attesaPagamento(o, passoDiNascita)
-    const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id
+    // Sul profilo leggero (piano Free) il lettore non c'è (REQ-LIC-004).
+    const readerReady = settings.payments_reader_enabled && settings.sumup_reader_id && sumupDisponibile(settings)
     const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
     // Senza gestione della preparazione l'ordine resta "ricevuto": legare
     // l'incasso agli stati lo renderebbe impossibile.
