@@ -3,6 +3,7 @@ import { entryUnits } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
+import { MESSAGGI_PIANO } from '../lib/limiti.js'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -19,6 +20,9 @@ export default function DrinkForm({
   // quale aliquota si userà lasciando il campo vuoto. Dove non si sa (il
   // POS non legge le impostazioni) si dice «quella del locale» e basta.
   saleVatLocale = null,
+  // Sul profilo leggero (piano Free) Storage non c'è: la foto non si carica,
+  // e il campo lo dice invece di fallire al salvataggio (REQ-LIC-004).
+  fotoConsentite = true,
 }) {
   const itemsById = useMemo(
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
@@ -147,7 +151,11 @@ export default function DrinkForm({
           </button>
         </div>
       )}
-      <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
+      {fotoConsentite ? (
+        <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
+      ) : (
+        <p className="muted small" style={{ margin: '0 0 8px' }}>{MESSAGGI_PIANO.foto}</p>
+      )}
 
       <label htmlFor="category">Categoria</label>
       {addingCat ? (

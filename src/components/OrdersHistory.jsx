@@ -17,6 +17,8 @@ import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/order
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
+import { dentroStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import AvvisoPiano from './AvvisoPiano.jsx'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
@@ -87,10 +89,18 @@ export default function OrdersHistory() {
   // un conto dell'app da aprire.
   const [apertoTiller, setApertoTiller] = useState(null)
   const [cutoffHour, setCutoffHour] = useState(DEFAULT_SETTINGS.business_day_cutoff_hour)
+  // Le impostazioni servono anche al limite dello storico del piano Free
+  // (REQ-LIC-003): senza limiti nella licenza non cambia niente.
+  const [impostazioni, setImpostazioni] = useState(null)
   useEffect(
-    () => subscribeSettings((s) => setCutoffHour(s.business_day_cutoff_hour), () => {}),
+    () =>
+      subscribeSettings((s) => {
+        setCutoffHour(s.business_day_cutoff_hour)
+        setImpostazioni(s)
+      }, () => {}),
     []
   )
+  const giorniStorico = giorniDiStorico(impostazioni)
   const oggi = businessDayKey(new Date(), cutoffHour)
   const navigate = useNavigate()
   // I giorni di servizio, per colorare il calendario (REQ-STAT-007).
@@ -148,10 +158,14 @@ export default function OrdersHistory() {
     if (!periodo.da) setDelPeriodo(null)
   }, [periodo.da])
 
-  const lista = useMemo(
-    () => (periodo.da ? delPeriodo || [] : orders),
-    [periodo.da, delPeriodo, orders]
-  )
+  // LO STORICO DEL PIANO FREE: i conti chiusi e annullati più vecchi di
+  // `storico_giorni` non si mostrano (restano nel database). Quelli ancora
+  // aperti sì, di qualunque giorno: sono lavoro da finire, non storico.
+  const lista = useMemo(() => {
+    const tutti = periodo.da ? delPeriodo || [] : orders
+    if (giorniStorico == null) return tutti
+    return tutti.filter((o) => statoDi(o) === 'aperti' || dentroStorico(impostazioni, o.created_at))
+  }, [periodo.da, delPeriodo, orders, giorniStorico, impostazioni])
   // I clienti ordinano dall'app solo se il locale glielo permette: dove non
   // succede, un filtro sull'origine sarebbe una domanda senza risposta.
   const ciSonoOrdiniCliente = useMemo(() => lista.some(dalCliente), [lista])
@@ -178,6 +192,9 @@ export default function OrdersHistory() {
   return (
     <div className="storico-ordini">
       <SelettorePeriodo periodo={periodo} onChange={setPeriodo} oggi={oggi} servizio={servizio} />
+      {giorniStorico != null && (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.storico(giorniStorico)} impostazioni={impostazioni} compatto />
+      )}
 
       <input
         type="search"

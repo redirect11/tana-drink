@@ -3,11 +3,17 @@
 // fallback e i flussi si simulano dai DevTools).
 import { httpsCallable } from 'firebase/functions'
 import { functions } from './firebaseClient.js'
+import { senzaFunctions } from './limiti.js'
 
 const isEmulator = String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
 
+// SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) le Functions di SumUp non
+// ci sono: si risponde come sull'emulatore, `{ unavailable: true }`, che
+// le schermate sanno già trattare. I tasti sono nascosti comunque.
 const call = (name) => (data) =>
-  httpsCallable(functions, name)(data).then((r) => r.data)
+  senzaFunctions()
+    ? Promise.resolve({ unavailable: true })
+    : httpsCallable(functions, name)(data).then((r) => r.data)
 
 export async function createPaymentCheckout(orderId) {
   if (isEmulator) return { unavailable: true }

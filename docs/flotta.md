@@ -89,6 +89,17 @@ i moduli che non ci sono spengono le voci e le pagine relative
 (`FunzioneNonInclusa`), e `stato: sospesa | chiusa` ferma l'app con una
 schermata che lo dice (`InstallazioneSospesa`); i dati restano.
 
+**Il piano Free** (REQ-LIC-003, REQ-LIC-004). La regia scrive anche
+`licenza.limiti` (`prodotti_max`, `conti_aperti_max`, `sconti`,
+`storico_giorni`, `utenti_max`, `marchio`) per il Free e `null` per i piani
+a pagamento; la logica sta in `src/lib/limiti.js`. Senza `limiti` nessun
+limite: è il caso della Tana. Con `licenza.piano === 'free'` (o
+`VITE_PROFILO=leggero` nella build) l'app lavora col profilo leggero, senza
+Functions né Storage: niente SumUp, niente foto dei prodotti, niente
+account dello staff. Con un solo terminale `risolviNumeroDuplicato` non
+serve; con due dispositivi del titolare aperti insieme un numero doppio,
+raro, resta (il dettaglio è in REQ-LIC-004).
+
 ## Come si prova senza spaccare niente
 
 - **In locale, con gli emulatori** (`npm run emulators` + `npm run dev`):

@@ -8,6 +8,7 @@ import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
+import { rigaMarchio } from '../lib/limiti.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -684,6 +685,10 @@ export default function MenuPage({ speciali = false }) {
           })}
         </section>
       ))}
+
+      {/* LA FIRMA DEL PRODOTTO (REQ-LIC-003, `limiti.marchio`): in fondo al
+          menù, solo se la licenza la chiede. */}
+      {rigaMarchio(settings) && <p className="marchio-prodotto muted">{rigaMarchio(settings)}</p>}
 
       {canOrder && cart.count > 0 && (
         <div className="cartbar">
