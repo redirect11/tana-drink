@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 29 ottobre 2026.
+> Generato il 30 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 224 | fatto e coperto dai test |
+| ✅ | 225 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**272 voci** in tutto. **240** descrivono il sistema com'è oggi e
+**273 voci** in tutto. **241** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 14 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 15 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -790,7 +790,15 @@ L'utente, 29/10/2026: «negli special devono uscire anche gli ingredienti del dr
 
 DUE FONTI, IN QUEST'ORDINE. Prima il campo «Ingredienti in carta» della scheda, scritto dal gestore e separato da virgole: si legge com'è, anche con un ingrediente solo. Serve perché la ricetta e' di magazzino, e perche' i Signature sul test non ne hanno: senza il campo per loro non c'e' niente da mostrare. Se il campo e' vuoto, LA RICETTA RIPULITA: fuori la manodopera (in U, o col nome «Lavorazione», perche' nelle ricette vecchie e' ancora in grammi), fuori il ghiaccio, e dal nome si toglie il formato della confezione («Lime Succo Homemade 1kg - 50cl» -> «Lime Succo Homemade»); un ingrediente ripetuto si legge una volta, e da ricetta la lista compare da due ingredienti in su. Con `show_ingredient_quantities` le righe da ricetta hanno la dose. Un ingrediente sbagliato in carta e' un allergene sbagliato: le descrizioni inventate dei Signature (REQ-MENU-018) non nominano ingredienti, e nemmeno questo: si riporta solo quello che e' scritto.
 
-**Dove**: `src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti)` · **Lo dimostrano**: `tests/unit/ingredientiCarta.test.js`
+INGREDIENTI DI PROVA SUL TEST (l'utente, 30/10/2026: «aggiungili per i signatures su test, ci serve per vedere come viene»): `scripts/ingredienti-prova-signature.mjs` scrive ai Signature del test ingredienti inventati dal nome e dalla descrizione, solo dove il campo e' vuoto. Rifiuta qualunque progetto che non sia tana-drink-test e non ha un'opzione per la produzione: non sono le ricette vere, e quelle le scrive Flavio nella scheda. Applicato sul test il 30/10/2026, dopo backup/test-prima-ingredienti-prova.json.
+
+**Dove**: `src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti), scripts/ingredienti-prova-signature.mjs` · **Lo dimostrano**: `tests/unit/ingredientiCarta.test.js`
+
+#### REQ-MENU-020 — Il dettaglio di un drink: toccandolo nel menù, immagine, descrizione intera e ingredienti
+
+L'utente, 30/10/2026: «su qualsiasi item di menu premo non si apre un dettaglio o almeno una modal con il dettaglio del drink con immagine, descrizione lunga e ingredienti». Toccando una card del menù — nel menù normale e nel menù Special — si apre un dialogo con l'immagine grande (la foto, o il disegno dello special), nome e prezzo, la descrizione per intero e gli ingredienti in carta uno per riga (REQ-MENU-019). Nella card la descrizione si accorcia a tre righe, perche' l'elenco si scorra: per intero sta nel dettaglio. Si apre toccando la card ovunque tranne che sui suoi tasti («Aggiungi» aggiunge e basta); per la tastiera e per chi legge lo schermo il nome del drink e' un tasto vero. Dentro ci sono gli stessi tasti per ordinare della card, se il locale prende ordini: a «solo menù» si guarda e basta. Si chiude con «Chiudi», toccando fuori o con Esc. Arrivando dal carosello su un drink, il menù Special si apre col dettaglio di quel drink, una volta sola per indirizzo. Non e' SchedaDrink, che e' per il banco: dosi della ricetta di magazzino e preparazione.
+
+**Dove**: `src/components/DettaglioDrink.jsx, src/pages/MenuPage.jsx (apertoId, tastiOrdine), src/index.css (.dettaglio-drink, .menu-item-descrizione)` · **Lo dimostrano**: `tests/component/DettaglioDrink.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
