@@ -1,6 +1,23 @@
 # Cosa è cambiato
 
-## 1.9.9-beta — in lavorazione
+## 1.9.10-beta — in lavorazione
+
+### Per i clienti
+
+- **Il dettaglio di un drink.** Toccando un drink nel menù, o nel menù
+  Special, si apre la sua scheda: immagine grande, descrizione intera,
+  ingredienti e «Aggiungi». Toccando una slide del carosello, il menù
+  Special si apre già sul dettaglio di quel drink.
+- **Descrizioni corte nell'elenco.** Nella card la descrizione si ferma a
+  tre righe; per intero è nel dettaglio.
+
+### Sul test
+
+- **Ingredienti di prova sui Signature**, inventati dal nome e dalla
+  descrizione per vedere come escono. Non sono le ricette vere e non vanno
+  in produzione: quelli veri si scrivono nella scheda.
+
+## 1.9.9-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti
 

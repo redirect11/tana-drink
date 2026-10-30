@@ -3919,7 +3919,7 @@ requirements:
 
   - id: REQ-MENU-019
     title: "Gli ingredienti in carta: nel menù, nel menù Special e nel carosello"
-    area: "src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti)"
+    area: "src/lib/ingredientiCarta.js, src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (ingredienti), scripts/ingredienti-prova-signature.mjs"
     description: >
       L'utente, 29/10/2026: «negli special devono uscire anche gli
       ingredienti del drink, e anche nel menu». Il cliente legge gli
@@ -3939,11 +3939,45 @@ requirements:
       Un ingrediente sbagliato in carta e' un allergene sbagliato: le
       descrizioni inventate dei Signature (REQ-MENU-018) non nominano
       ingredienti, e nemmeno questo: si riporta solo quello che e' scritto.
+      INGREDIENTI DI PROVA SUL TEST (l'utente, 30/10/2026: «aggiungili per i
+      signatures su test, ci serve per vedere come viene»):
+      `scripts/ingredienti-prova-signature.mjs` scrive ai Signature del test
+      ingredienti inventati dal nome e dalla descrizione, solo dove il campo
+      e' vuoto. Rifiuta qualunque progetto che non sia tana-drink-test e non
+      ha un'opzione per la produzione: non sono le ricette vere, e quelle le
+      scrive Flavio nella scheda. Applicato sul test il 30/10/2026, dopo
+      backup/test-prima-ingredienti-prova.json.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente]
     test_cases:
       - tests/unit/ingredientiCarta.test.js
+  - id: REQ-MENU-020
+    title: "Il dettaglio di un drink: toccandolo nel menù, immagine, descrizione intera e ingredienti"
+    area: "src/components/DettaglioDrink.jsx, src/pages/MenuPage.jsx (apertoId, tastiOrdine), src/index.css (.dettaglio-drink, .menu-item-descrizione)"
+    description: >
+      L'utente, 30/10/2026: «su qualsiasi item di menu premo non si apre un
+      dettaglio o almeno una modal con il dettaglio del drink con immagine,
+      descrizione lunga e ingredienti». Toccando una card del menù — nel
+      menù normale e nel menù Special — si apre un dialogo con l'immagine
+      grande (la foto, o il disegno dello special), nome e prezzo, la
+      descrizione per intero e gli ingredienti in carta uno per riga
+      (REQ-MENU-019). Nella card la descrizione si accorcia a tre righe,
+      perche' l'elenco si scorra: per intero sta nel dettaglio.
+      Si apre toccando la card ovunque tranne che sui suoi tasti («Aggiungi»
+      aggiunge e basta); per la tastiera e per chi legge lo schermo il nome
+      del drink e' un tasto vero. Dentro ci sono gli stessi tasti per
+      ordinare della card, se il locale prende ordini: a «solo menù» si
+      guarda e basta. Si chiude con «Chiudi», toccando fuori o con Esc.
+      Arrivando dal carosello su un drink, il menù Special si apre col
+      dettaglio di quel drink, una volta sola per indirizzo.
+      Non e' SchedaDrink, che e' per il banco: dosi della ricetta di
+      magazzino e preparazione.
+    status: implemented
+    generate_issue: false
+    labels: [menu, vista-cliente]
+    test_cases:
+      - tests/component/DettaglioDrink.test.jsx
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
     area: "src/lib/groups.js"
