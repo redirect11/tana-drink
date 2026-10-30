@@ -105,6 +105,61 @@ smettere di esserlo. L'utente l'ha approvata così («sì va bene»).
   `cloudfunctions`.
 - La CI compila già `CLIENTE=demo` a ogni push.
 
+## Com'è fatta (30/10/2026)
+
+Stato: **fatta**, nel ramo `feature/modalita-demo`. I pezzi:
+
+| Dove | Cosa |
+|---|---|
+| `clienti/demo/venue.json` | `"demo": true`: l'unico posto che accende la demo |
+| `clienti/pluginCliente.js` | lo trasforma nella costante `__DEMO__`, un letterale (`eDemo`) |
+| `src/lib/firebaseClient.js` | nella demo: app col nome della sessione, rete spenta come prima operazione su Firestore, niente Auth, App Check ed emulatori, niente client diretto |
+| `src/lib/scritture.js`, `confermaLocale.js` | nella demo le scritture si confermano dalla cache |
+| `src/lib/letture.js` | nella demo `getDoc` risponde dalla cache, senza errori finti |
+| `src/demo/sessione.js` | una cache per giornata; «Ricomincia da capo» passa alla successiva |
+| `src/demo/accesso.js` | l'accesso finto: si sceglie il ruolo, i claim sono quelli veri |
+| `src/demo/dati.js`, `bundle.js`, `avvio.js` | i dati di prova, generati nel browser e caricati come bundle prima della prima schermata |
+| `src/demo/PortaDemo.jsx`, `demo.css` | la scelta del ruolo e la fascia |
+| `scripts/controlla-build-senza-demo.mjs` | la CI controlla che il pacchetto della Tana non contenga la demo |
+
+### Le scelte, e perché
+
+- **Il bundle, generato nel browser.** Dei due modi proposti sopra si è
+  scelto il bundle, ma non come file pubblicato: il bundle lo scrive
+  l'app stessa all'avvio (`creaBundle`), con le date relative a oggi. Nella
+  cache i dati arrivano come documenti «del server», non come migliaia di
+  scritture in coda che non partiranno mai. Provato col vero SDK in un
+  test (`tests/unit/bundleDemo.test.js`).
+- **Una cache per sessione, invece di svuotarla.** `clearIndexedDbPersistence`
+  funziona solo prima che Firestore parta, e qui parte appena caricato il
+  modulo. La cache di Firestore prende il nome dell'app Firebase: la demo
+  la apre con `demo-<giornata>-<n>`, e ricominciare vuol dire passare al
+  numero dopo e ricaricare. Le cache vecchie si cancellano dopo.
+- **Le scritture confermate dalla cache, e solo nella demo.** Il punto «da
+  verificare» qui sopra era giusto: con la rete spenta l'app restava
+  ferma in 68 punti, quasi tutti nel gestionale. Invece di toccarli uno per
+  uno, le scritture passano da un modulo solo, che nella demo si risolve
+  appena la scrittura è nella cache. Nei locali veri resta Firestore: la
+  conferma del server serve a vedere un rifiuto vero. I punti dove questo
+  pesa anche nei locali veri, al banco, stanno in BUG-123.
+- **`getDoc` dalla cache.** A rete spenta `getDoc` su un documento che non
+  esiste va in errore («the client is offline») anche quando la cache sa
+  che non c'è; un ascolto invece risponde subito. Nella demo `getDoc` apre
+  un ascolto e prende la prima risposta.
+- **Il profilo leggero, sempre.** La demo non chiama Functions, Storage,
+  SumUp, notifiche, Analytics: le schermate nascondono già quei tasti per i
+  locali Free. La stampante è quella finta, che mostra lo scontrino.
+
+### Come provarla
+
+```sh
+CLIENTE=demo VITE_PROFILO=leggero npm run build && npx vite preview
+```
+
+Non servono emulatori né variabili di Firebase. Provata così in Chrome il
+30/10/2026: l'ordine di un cliente, la coda del titolare, il menù del
+gestionale e «Ricomincia da capo», con zero richieste verso l'esterno.
+
 ## Cosa fa la regia (REQ-FLOTTA-019 di drink-regia)
 
 In `.github/workflows/aggiorna-istanza.yml` della regia:

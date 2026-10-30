@@ -1,7 +1,9 @@
+/* global __DEMO__ */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
@@ -414,6 +416,20 @@ function LoginForm() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // NELLA DEMO NON SI ENTRA CON EMAIL E PASSWORD (REQ-FLOTTA-019): non c'è
+  // Firebase Auth, si sceglie il ruolo. Uscire riporta a quella scelta.
+  if (__DEMO__) {
+    return (
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>Accesso staff</h2>
+        <p className="muted">Nella demo si entra scegliendo un ruolo: titolare, bartender o sala.</p>
+        <button type="button" className="btn" onClick={() => signOut(auth)}>
+          Scegli il ruolo
+        </button>
+      </div>
+    )
   }
 
   return (
