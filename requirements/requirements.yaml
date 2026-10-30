@@ -5372,7 +5372,7 @@ requirements:
 
   - id: REQ-VENUE-005
     title: "Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente"
-    area: "src/lib/migrazioneChiavi.js, src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js"
+    area: "src/lib/migrazioneChiavi.js, src/lib/migrazioneAvvio.js (primo import di main.jsx), src/main.jsx, public/sw.js, package.json, functions/index.js (VENUE_NAME, SUMUP_AFFILIATE_APP_ID), functions/.env.tana-drink, functions/.env.tana-drink-test, functions/lib/payment-service.js"
     description: >
       Fase 2.5 del piano, fatta il 22/10/2026 su richiesta dell'utente.
       LE CHIAVI LOCALI passano da `tana:`/`tana_` a `drink:`/`drink_` in
