@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 236 | fatto e coperto dai test |
+| ✅ | 238 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**284 voci** in tutto. **252** descrivono il sistema com'è oggi e
+**286 voci** in tutto. **254** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 15 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 16 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -55,7 +55,7 @@ come «vero oggi», non come «garantito».
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 12 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 2 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -801,6 +801,16 @@ INGREDIENTI DI PROVA SUL TEST (l'utente, 30/10/2026: «aggiungili per i signatur
 L'utente, 30/10/2026: «su qualsiasi item di menu premo non si apre un dettaglio o almeno una modal con il dettaglio del drink con immagine, descrizione lunga e ingredienti». Toccando una card del menù — nel menù normale e nel menù Special — si apre un dialogo con l'immagine grande (la foto, o il disegno dello special), nome e prezzo, la descrizione per intero e gli ingredienti in carta uno per riga (REQ-MENU-019). Nella card la descrizione si accorcia a tre righe, perche' l'elenco si scorra: per intero sta nel dettaglio. Si apre toccando la card ovunque tranne che sui suoi tasti («Aggiungi» aggiunge e basta); per la tastiera e per chi legge lo schermo il nome del drink e' un tasto vero. Dentro ci sono gli stessi tasti per ordinare della card, se il locale prende ordini: a «solo menù» si guarda e basta. Si chiude con «Chiudi», toccando fuori o con Esc. Arrivando dal carosello su un drink, il menù Special si apre col dettaglio di quel drink, una volta sola per indirizzo. Non e' SchedaDrink, che e' per il banco: dosi della ricetta di magazzino e preparazione.
 
 **Dove**: `src/components/DettaglioDrink.jsx, src/pages/MenuPage.jsx (apertoId, tastiOrdine), src/index.css (.dettaglio-drink, .menu-item-descrizione)` · **Lo dimostrano**: `tests/component/DettaglioDrink.test.jsx`
+
+#### REQ-MENU-021 — Lo stile del menù clienti: «Classico» o «Notte», con gli Special a scorrimento
+
+L'utente, 30/10/2026: «La home deve essere piu' elegante. Dobbiamo definire diversi temi che il titolare puo' scegliere ... al momento sembra troppo giocattoloso», «serve qualcosa di elegante per il menu, non solo per la home», «mi piacciono le animazioni di scroll di Mun rooftop ... per scrollare gli item special» e «ovviamente il tema base lascialo». Dopo un prototipo di prova approvato («e' bella»), e uno scorrimento rifatto perche' «non e' per niente fluido». In Impostazioni > Menu' clienti c'e' «Stile del menu'» (`stile_menu`): «Classico», il menu' di sempre e predefinito, o «Notte». Lo stile e' la forma — impaginazione, caratteri, movimento —; i colori restano quelli del tema del menu' clienti, per tutti e due. Vale solo per i clienti: il personale vede sempre il classico, perche' per lui il menu' e' uno strumento. «NOTTE»
+
+NEL MENU': la foto del locale a tutta larghezza col nome in un carattere alto e sottile; categorie come parole, non gettoni; ogni voce una riga «NOME ...... prezzo» senza riquadro, descrizione e ingredienti sotto; niente logo ripetuto al posto della foto; il carosello degli Special senza scatola. Il dettaglio (REQ-MENU-020) prende gli stessi caratteri. «NOTTE»
+
+NEGLI SPECIAL: il menu' Special diventa una sequenza di scene a tutto schermo, una per drink, ispirata a Mun Rooftop (Roma): scendendo il bicchiere sale e cresce, il nome arriva lettera per lettera, poi descrizione, ingredienti, prezzo e «Aggiungi»; andando avanti il bicchiere vola via; il fondo prende il colore del drink e lo passa alla scena dopo; una scritta scorre di lato; in fondo, tutti gli Special in righe grandi. Arrivando dal carosello ci si porta sulla scena del drink, senza aprire il dettaglio (la scena dice gia' tutto); per deciderlo si aspettano le impostazioni vere, non quelle di base. PERCHE' SCORRA LISCIO: si animano solo trasformazioni e opacita'; i disegni (SVG con filtri di rumore e sfocatura) si disegnano una volta su una tela e si usano come immagini; il colore cambia su un fondale fisso grande quanto lo schermo; niente sfocature dietro; GSAP si carica a parte, solo li', e con «riduci movimento» le scene restano ferme e si leggono lo stesso.
+
+**Dove**: `src/lib/stileMenu.js, src/components/SpecialScorrevoli.jsx, src/lib/useDisegnoRaster.js, src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile-notte), src/index.css (.stile-notte, .notte-*), src/lib/api.js (stile_menu), package.json (gsap)` · **Lo dimostrano**: `tests/component/SpecialScorrevoli.test.jsx`, `tests/unit/stileMenu.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -2645,6 +2655,12 @@ GLI ORDINI SONO IL CASO DELICATO, perché contengono dati personali e insieme de
 In produzione le richieste devono portare un gettone reCAPTCHA valido. Va acceso solo quando i gettoni non validi sono a zero, perché acceso di traverso blocca tutto — anche il menù, che è pubblico. Su test resta spento.
 
 **Dove**: `scripts/appcheck.js, scripts/recaptcha-domini.js` · ⚠️ **Nessun test lo verifica.**
+
+#### REQ-SIC-004 — Caratteri e script dallo stesso indirizzo dell'app: niente richieste a terzi senza consenso
+
+L'utente, 30/10/2026: «i font per questioni sulla privacy ... devono essere sempre dove sta la pagina ... Forse anche gli script». E' cosi': caricare un carattere da fonts.googleapis.com fa mandare a Google l'indirizzo IP di chi apre la pagina, e l'IP e' un dato personale per il GDPR. Il Landgericht Muenchen I (20/01/2022, 3 O 17493/20) ha condannato un sito per questo, notando che i caratteri si possono ospitare in proprio; in Italia MonitoraPA ha diffidato le pubbliche amministrazioni per lo stesso motivo. Ospitati in proprio, non servono consenso ne' voce nella cookie policy. Quindi: i caratteri (Playfair Display, e Italiana e Jost per lo stile «Notte») stanno nel pacchetto dell'app via @fontsource, solo l'alfabeto latino, e arrivano dallo stesso indirizzo della pagina; le pagine statiche della privacy e dei cookie usano il serif del telefono. Gli script pure: le librerie (GSAP compreso) entrano nel pacchetto da npm, e l'SDK della stampante Epson sta in public/. E' anche una regola di sicurezza: uno script preso da un server altrui gira con i permessi dell'app, e se quel server cambia il file cambia l'app. Restano esterni i servizi che fanno il lavoro dell'app e sono gia' nella privacy policy: Firebase e, al banco, SumUp. Un test controlla che le pagine non chiedano caratteri, fogli di stile o script ad altri indirizzi.
+
+**Dove**: `src/main.jsx (@fontsource), index.html, public/privacy-policy.html, public/cookie-policy.html, package.json (gsap, @fontsource)` · **Lo dimostrano**: `tests/unit/risorseEsterne.test.js`
 
 ### Si lavora anche senza rete
 

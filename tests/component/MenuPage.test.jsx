@@ -557,3 +557,62 @@ describe('la firma del prodotto', () => {
     expect(screen.queryByText(/Creato con/)).toBeNull()
   })
 })
+
+// LO STILE «NOTTE» (REQ-MENU-021): la forma che il locale sceglie per i
+// clienti. Chi lavora vede sempre il classico.
+describe('lo stile «Notte»', () => {
+  const SPECIALE = {
+    id: 'n1',
+    name: 'Basiliconiglio',
+    price: 9,
+    category_id: 'c1',
+    available: true,
+    speciale: true,
+    description: 'Il basilico fresco rincorre il Bianconiglio.',
+    illustrazione: { bicchiere: 'basso', colore: 'verde', decorazione: 'menta' },
+  }
+
+  it('il cliente vede il menù nello stile scelto; il personale no', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'notte' }
+    const { container, unmount } = mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-notte')).not.toBeNull()
+    unmount()
+
+    ruoloClaim = 'bartender'
+    const staff = mostra('/menu')
+    await screen.findByText(/Inserimento ordine da/)
+    expect(staff.container.querySelector('.stile-notte')).toBeNull()
+  })
+
+  it('senza scelta resta il classico', async () => {
+    ruoloClaim = null
+    const { container } = mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-notte')).toBeNull()
+  })
+
+  it('il menù Special scorre a scene, e dal carosello ci si porta sulla scena senza aprire il dettaglio', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'notte', special_titolo: 'Special' }
+    mockDrinks = [...DRINKS, SPECIALE]
+    const { container } = render(
+      <MemoryRouter initialEntries={['/menu/special#speciale-n1']}>
+        <MenuPage speciali />
+      </MemoryRouter>
+    )
+    const scena = await waitFor(() => {
+      const s = container.querySelector('.notte-scena')
+      expect(s).not.toBeNull()
+      return s
+    })
+    expect(scena).toHaveAttribute('id', 'speciale-n1')
+    expect(container.querySelector('.speciali-griglia')).toBeNull()
+    // Niente foto d'intestazione: l'apertura degli Special la sostituisce.
+    expect(container.querySelector('.hero')).toBeNull()
+    expect(within(scena).getByRole('button', { name: 'Aggiungi' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+})
+

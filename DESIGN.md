@@ -137,6 +137,10 @@ Regole:
 
 ## Tipografia
 
+- **I caratteri stanno nel pacchetto dell'app** (`@fontsource`, importati in
+  `src/main.jsx`), mai presi da Google o da un altro server: l'indirizzo IP
+  di chi apre il menù è un dato personale (REQ-SIC-004). Solo l'alfabeto
+  latino. Un carattere nuovo si aggiunge allo stesso modo.
 - Corpo: `system-ui` stack — il testo operativo non ha font di fantasia.
 - Titoli (`h1–h3`): serif `Playfair Display` — è la firma del prodotto,
   usata con parsimonia; nel gestionale i titoli sono pochi per scelta
@@ -155,6 +159,27 @@ Regole:
   diverse non bastavano a far vedere la gerarchia quando erano lo stesso
   carattere; ora l'h3 è serif e l'h4 no. Ha la sua regola nel foglio: era
   uno `style` inline (`margin: 16px 0 4px`) ripetuto in mezza SettingsTab.
+
+### Lo stile «Notte» del menù clienti (REQ-MENU-021)
+
+Il menù dei clienti ha due STILI, cioè due forme, che si scelgono in
+Impostazioni ▸ Menù clienti ▸ Stile del menù; i COLORI restano quelli del
+tema del menù clienti, per tutti e due. «Classico» è il predefinito; il
+personale lo vede sempre.
+
+- **«Notte»** è la carta stampata al buio: titoli in `Italiana` (alto,
+  sottile, in maiuscolo con un po' di spaziatura), testo in `Jost` leggero,
+  un solo accento, l'oro dei prezzi (`--accent-2`). Niente riquadri: voci
+  a riga, `NOME ······ prezzo`, filo sottile sotto; niente logo al posto
+  della foto; «Aggiungi» è un filo, non un bottone pieno.
+- **Gli Special** in «Notte» sono scene a tutto schermo che scorrono
+  (`SpecialScorrevoli`, GSAP): il bicchiere sale e cresce, il nome arriva
+  lettera per lettera, il fondo prende il colore del drink.
+- **Regole perché scorra liscio**: si animano solo `transform` e `opacity`;
+  i disegni si usano come immagini già fatte (`useDisegnoRaster`), mai come
+  SVG con filtri mentre si muovono; i colori cambiano su un fondale fisso
+  grande quanto lo schermo; niente `backdrop-filter` né `filter: blur`; con
+  «riduci movimento» tutto resta fermo.
 
 ## Componenti
 

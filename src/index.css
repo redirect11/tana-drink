@@ -9796,3 +9796,499 @@ body.pagina-piena .inv-scheda {
 .comanda-det-dividi {
   margin-top: 12px;
 }
+
+
+/* ── LO STILE «NOTTE» DEL MENÙ CLIENTI (REQ-MENU-021) ─────────────────────
+   L'utente, 30/10/2026: «la home deve essere più elegante ... al momento
+   sembra troppo giocattoloso», e «serve qualcosa di elegante per il menu,
+   non solo per la home». Il classico resta il predefinito; questo si sceglie
+   in Impostazioni ▸ Menù clienti ▸ Stile del menù.
+   È la carta stampata al buio: niente riquadri, righe sottili, titoli in un
+   carattere alto e sottile (Italiana), testo in un geometrico leggero (Jost),
+   un solo accento — l'oro dei prezzi, che è --accent-2 del tema. I COLORI
+   SONO QUELLI DEL TEMA del menù clienti: lo stile cambia la forma.
+   Riferimento: Mùn Rooftop, Roma (munrooftoprome.com) — righe grandi in
+   maiuscolo sottile, scene a tutto schermo per i drink.
+   Si applica solo ai clienti: la classe sta sulla pagina del menù quando
+   chi guarda non è del personale. */
+.stile-notte {
+  --notte-titolo: 'Italiana', 'Didot', 'Bodoni 72', Georgia, serif;
+  --notte-testo: 'Jost', 'Futura', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: var(--notte-testo);
+  font-weight: 300;
+}
+
+/* L'apertura: la foto del locale a tutta larghezza, senza cornice. */
+.stile-notte .hero {
+  margin: 0 -16px 22px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.stile-notte .hero::after {
+  display: none;
+}
+.stile-notte .hero-overlay {
+  min-height: 52svh;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+  padding: 40px 20px 34px;
+  background: linear-gradient(180deg, rgba(10, 10, 18, 0.2), rgba(10, 10, 18, 0.75));
+}
+.stile-notte .hero-logo {
+  width: 54px;
+  height: 54px;
+}
+.stile-notte .hero-title {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 12vw, 5rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.stile-notte .hero-sub {
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+/* I titoli: alti e sottili, in maiuscolo, con un filo dopo. */
+.stile-notte .cat-header {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-style: normal;
+  font-size: clamp(1.9rem, 8.5vw, 3rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.stile-notte .cat-header::after {
+  height: 1px;
+  background: var(--line);
+  opacity: 1;
+}
+
+/* Le categorie: parole, non gettoni. */
+.stile-notte .cat-chip {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  padding: 6px 2px;
+  font-weight: 400;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stile-notte .cat-chip:hover,
+.stile-notte .cat-chip:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+  background: transparent;
+}
+.stile-notte .cat-nav {
+  gap: 22px;
+}
+
+/* La voce: una riga, NOME ....... prezzo, senza riquadro. */
+.stile-notte .menu-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 18px 0;
+}
+.stile-notte .menu-item .drink-thumb.placeholder {
+  /* Il logo ripetuto su ogni voce faceva il menù giocattolo: senza foto
+     vera, niente immagine. */
+  display: none;
+}
+.stile-notte .menu-item .drink-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 4px;
+  border: 0;
+  margin-right: 4px;
+}
+.stile-notte .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+.stile-notte .menu-item .grow > h3 {
+  grid-column: 1;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--notte-testo);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.92rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.stile-notte .menu-item .grow > h3::after {
+  content: '';
+  flex: 1;
+  min-width: 16px;
+  border-bottom: 1px dotted var(--line);
+  transform: translateY(-4px);
+}
+.stile-notte .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--notte-titolo);
+  font-size: 1.25rem;
+  color: var(--accent-2);
+}
+.stile-notte .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.stile-notte .menu-item .menu-item-descrizione {
+  -webkit-line-clamp: 2;
+  font-size: 0.9rem;
+}
+.stile-notte .menu-item .ingredients {
+  font-size: 0.82rem;
+}
+/* «Aggiungi»: un filo, non un bottone pieno. */
+:root .stile-notte .menu-item .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Il carosello degli Special in home: la slide senza scatola. */
+.stile-notte .carosello-slide {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+}
+.stile-notte .carosello-fila {
+  border-radius: 0;
+}
+.stile-notte .carosello-testo strong {
+  font-family: var(--notte-titolo);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.stile-notte .carosello-testo .price {
+  font-family: var(--notte-titolo);
+  color: var(--accent-2);
+  font-size: 1.15rem;
+}
+.stile-notte .carosello-punti button.attivo::before {
+  background: var(--accent-2);
+}
+.stile-notte .speciali-tutti {
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* Il dettaglio: stesso carattere della carta, ingredienti centrati. */
+.stile-notte .dettaglio-drink {
+  text-align: center;
+}
+.stile-notte .dettaglio-drink-testa {
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.stile-notte .dettaglio-drink-testa h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 9vw, 2.6rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.05;
+}
+.stile-notte .dettaglio-drink-testa .price {
+  font-family: var(--notte-titolo);
+  font-size: 1.35rem;
+  color: var(--accent-2);
+}
+.stile-notte .dettaglio-drink-sezione {
+  font-family: var(--notte-testo);
+  font-weight: 400;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stile-notte .dettaglio-drink-ingredienti {
+  list-style: none;
+  padding: 0;
+  font-family: var(--notte-titolo);
+  font-size: 1.2rem;
+}
+
+/* ── Gli Special a scorrimento (SpecialScorrevoli) ────────────────────────
+   PERCHÉ SCORRA LISCIO: si muovono solo trasformazioni e opacità; il colore
+   della scena sta su un fondale fisso grande quanto lo schermo (cambiarlo
+   ridipinge una schermata, non una sezione alta otto); niente filtri e
+   niente sfocature dietro. */
+.notte-special {
+  position: relative;
+  isolation: isolate;
+  margin: 0 -16px;
+}
+.notte-fondale {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: transparent;
+  transition: background-color 0.9s ease;
+  pointer-events: none;
+}
+.notte-apertura {
+  min-height: 86svh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+.notte-stella {
+  display: block;
+  color: var(--accent-2);
+  font-size: 1.6rem;
+  margin-bottom: 14px;
+}
+.notte-apertura h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  margin: 0;
+  font-size: clamp(3.4rem, 18vw, 8.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  will-change: transform, opacity;
+}
+.notte-tema {
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.1rem, 4.6vw, 1.5rem);
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+.notte-torna {
+  display: inline-block;
+  margin-top: 30px;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-2);
+  padding-bottom: 4px;
+}
+.notte-nastro {
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  padding-block: 14px;
+  white-space: nowrap;
+}
+.notte-nastro-riga {
+  display: inline-block;
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.5rem, 7vw, 2.8rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  will-change: transform;
+}
+.notte-scena {
+  height: 170svh;
+  position: relative;
+  scroll-margin-top: 0;
+}
+.notte-palco {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  padding: calc(var(--safe-top) + var(--barra-alta) + 12px) 20px 110px;
+}
+.notte-disegno {
+  width: min(66vw, 320px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  position: relative;
+  will-change: transform;
+}
+.notte-disegno img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.notte-alone {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--tinta, var(--accent-2)) 0%, transparent 68%);
+  opacity: 0.22;
+}
+.notte-testo {
+  text-align: center;
+  max-width: 34rem;
+  display: grid;
+  gap: 8px;
+  will-change: transform, opacity;
+}
+.notte-numero {
+  font-size: 0.68rem;
+  letter-spacing: 0.32em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.notte-nome {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  margin: 0;
+  font-size: clamp(1.9rem, 8.6vw, 4.4rem);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.notte-parola {
+  display: inline-block;
+  white-space: nowrap;
+}
+.notte-lettera {
+  display: inline-block;
+}
+.notte-descrizione {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-wrap: pretty;
+}
+.notte-ingredienti {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.notte-ingredienti span + span::before {
+  content: '✦';
+  color: var(--accent-2);
+  padding-inline: 0.7em;
+  font-size: 0.6rem;
+}
+.notte-prezzo {
+  font-family: var(--notte-titolo);
+  font-size: 1.45rem;
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+}
+.notte-tasti {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+:root .stile-notte .notte-tasti .btn.small {
+  background: var(--text);
+  color: var(--bg);
+  border: 0;
+  box-shadow: none;
+  border-radius: 999px;
+  padding: 11px 26px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.notte-indice {
+  padding: 60px 0 40px;
+}
+.notte-indice h2 {
+  font-family: var(--notte-titolo);
+  font-weight: 400;
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0 0 22px;
+}
+.notte-indice ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.notte-indice a {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+  transition: background-color 0.35s, padding-left 0.35s;
+}
+.notte-indice a:hover,
+.notte-indice a:focus-visible {
+  background: color-mix(in srgb, var(--tinta, var(--accent-2)) 20%, transparent);
+  padding-left: 28px;
+}
+.notte-indice .n {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.notte-indice .t {
+  font-family: var(--notte-titolo);
+  font-size: clamp(1.4rem, 6.6vw, 2.2rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.notte-indice .p {
+  font-family: var(--notte-titolo);
+  color: var(--accent-2);
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+/* «Riduci movimento»: le scene si leggono una sotto l'altra, ferme. */
+@media (prefers-reduced-motion: reduce) {
+  .notte-scena {
+    height: auto;
+  }
+  .notte-palco {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+  .notte-fondale,
+  .notte-indice a {
+    transition: none;
+  }
+}
