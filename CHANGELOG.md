@@ -1,149 +1,23 @@
 # Cosa è cambiato
 
-## 1.9.10-beta — in lavorazione
+## 1.10.0 — 30 ottobre 2026
 
-### Per i clienti
+### Cosa cambia per la Tana
 
-- **Il dettaglio di un drink.** Toccando un drink nel menù, o nel menù
-  Special, si apre la sua scheda: immagine grande, descrizione intera,
-  ingredienti e «Aggiungi». Toccando una slide del carosello, il menù
-  Special si apre già sul dettaglio di quel drink.
-- **Descrizioni corte nell'elenco.** Nella card la descrizione si ferma a
-  tre righe; per intero è nel dettaglio.
-
-### Sul test
-
-- **Ingredienti di prova sui Signature**, inventati dal nome e dalla
-  descrizione per vedere come escono. Non sono le ricette vere e non vanno
-  in produzione: quelli veri si scrivono nella scheda.
-
-### Per chi amministra
-
+- **Al primo avvio l'app riscarica i suoi file, una volta.** Le copie
+  salvate sul dispositivo cambiano nome e si rifanno da capo: il primo
+  avvio dopo l'aggiornamento può metterci qualche secondo in più, i
+  successivi no. Conti, comande e incassi non c'entrano.
+- **Le preferenze restano dove sono.** IP della stampante, zoom, bozze dei
+  conti e preferenze del banco passano da sole ai nomi nuovi al primo
+  avvio: non va reimpostato niente.
 - **Impostazioni → Il locale.** Nome, nome corto, il locale nella frase
   («alla Tana del Coniglio»), slogan, «chi siamo», città, email, ragione
   sociale e intestazione dello scontrino, social: l'identità del locale si
   scrive qui. Una casella vuota lascia il valore predefinito, mostrato in
   grigio. Prima erano scritti nel codice; per la Tana non cambia niente.
-- **I social nel piede di pagina vengono dalle impostazioni**: con la lista
-  vuota il piede non li mostra.
-
-### Per chi sviluppa
-
-- **L'app si compila per un locale** (`CLIENTE=<slug>`, cartella
-  `clienti/<slug>/`); senza, è la Tana come sempre. `node
-  scripts/genera-cliente.mjs --slug <slug> --nome "<nome>"` crea la
-  cartella di un locale nuovo: è quello che lancia la regia. La CI compila
-  anche il cliente neutro `demo`. Un test-guardia conta le parole della
-  Tana rimaste nel codice e lascia solo accorciare la lista.
-- **I moduli del prodotto e la sospensione**: con una licenza scritta dalla
-  regia in `settings/bar.licenza`, menù digitale, ordini dal telefono,
-  clienti, magazzino, statistiche, personale e SumUp seguono il piano, e
-  un'installazione sospesa o chiusa lo dice con una schermata sua. La Tana
-  non ha una licenza scritta: ha tutto, come prima.
-- Le chiavi locali e la cache del service worker hanno il prefisso `drink`
-  invece di `tana`; al primo avvio le chiavi vecchie si copiano sulle
-  nuove, quindi sui dispositivi non si perde niente. Il nome del locale
-  nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
-- **Il piano Free.** Con `limiti` nella licenza l'app fa rispettare i
-  limiti del piano: prodotti del menù, conti aperti insieme, niente
-  sconti, storico degli ultimi giorni, il solo titolare, la riga «Creato
-  con Drink» in fondo a scontrino e menù digitale; ogni limite lo dice e
-  porta alla pagina dei piani. Col piano `free` l'app lavora anche senza
-  Functions né Storage (profilo leggero): niente SumUp, niente foto,
-  niente account dello staff. Senza `limiti`, come la Tana, non cambia
-  niente.
-- **La flotta sta nella regia** (drink-regia): attivazione, Terraform,
-  workflow e script delle istanze non sono più qui. I workflow di questo
-  repository pubblicano solo i due progetti della Tana.
-
-## 1.9.9-beta — 30 ottobre 2026, sul test
-
-### Per i clienti
-
-- **Gli ingredienti dei drink nel menù, negli Special e nel carosello.**
-  Sotto la descrizione si leggono gli ingredienti.
-- **Ingredienti puliti.** Dalla ricetta non si leggono più il ghiaccio, il
-  tempo di lavorazione e i formati delle confezioni.
-
-### Per chi amministra
-
-- **Ingredienti in carta.** Nella scheda del drink un campo nuovo, separato
-  da virgole, con quello che legge il cliente. Vuoto, gli ingredienti si
-  ricavano dalla ricetta. Per i Signature, che sul test non hanno ricetta,
-  è l'unico modo di mostrarli.
-
-## 1.9.8-beta — 29 ottobre 2026, sul test
-
-### Per i clienti
-
-- **Il carosello degli Special in ordine.** I nomi lunghi non escono più
-  dalla card, e «Special» con «Vedi tutti» non sta più attaccato alle
-  slide.
-- **I nomi lunghi non spingono fuori «Aggiungi».** Nell'elenco del menù il
-  tasto resta dentro la card anche con un nome di una parola sola.
-- **La fila delle categorie senza fascia.** Ferma nella pagina non ha più
-  un colore suo; prende il fondo della barra in alto solo quando ci si
-  appiccica sotto.
-
-## 1.9.7-beta — 29 ottobre 2026, sul test
-
-### Per i clienti
-
-- **Il menù Special su due colonne.** Sul telefono due drink per riga,
-  tre sugli schermi larghi, ognuno col suo disegno, la descrizione e
-  «Aggiungi» in fondo.
-
-## 1.9.6-beta — 29 ottobre 2026, sul test
-
-### Per i clienti
-
-- **Il carosello degli Special è un carosello vero.** In cima al menù una
-  slide alla volta, con il disegno del drink, il nome, la descrizione e il
-  prezzo: va avanti da sola, si sfoglia col dito e coi pallini.
-- **I disegni rappresentano i drink.** Bicchieri diversi, col colore del
-  drink e la sua decorazione, disegnati col tratteggio delle incisioni
-  originali di Alice.
-
-### Per chi amministra
-
-- **Il disegno del drink si compone nella scheda.** Con «Drink speciale»
-  acceso si scelgono bicchiere, colore e decorazione, con l'anteprima di
-  come lo vedrà il cliente.
-- **I Signature sono Special.** Sul test tutte le voci della categoria
-  Signature sono segnate come speciali, con una prima descrizione e un
-  disegno: le descrizioni sono da rivedere.
-
-- **Le voci fuori menu si leggono anche aperte, col tema chiaro.** Nella
-  gestione del menù, aprendo «Azioni» su una voce non disponibile, i tasti
-  erano scuri sul fondo grigio scuro e non si leggevano.
-
-## 1.9.5-beta — 29 ottobre 2026, sul test
-
-### Per i clienti
-
-- **Gli Special della casa.** In cima al menù c'è il carosello dei drink
-  speciali: toccandone uno si apre il menù Special, su quel drink e sullo
-  stesso tavolo. Il menù Special ha un suo indirizzo e un suo QR, da
-  stampare sul menù che si porta al tavolo, e mostra solo gli special nei
-  colori del menù, con le illustrazioni ad acquerello a tema Alice: tratto
-  bianco sui temi scuri, scuro su quelli chiari.
-
-### Per chi amministra
-
-- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
-  scheda, dove si sceglie anche l'illustrazione; resta comunque nella sua
-  categoria. Nella sezione Special si scrivono titolo e sottotitolo del
-  menù (per esempio «Alice nel Paese delle Meraviglie») e si scarica il
-  QR del menù Special.
-- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
-  categoria» c'è la classifica delle categorie per utile: incassato, costo
-  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
-  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
-  il loro utile è più alto del vero.
-- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
-  della scorta, nella tendina «Filtra i prodotti».
-
-## 1.9.4-beta — 29 ottobre 2026, sul test
+  I social nel piede di pagina vengono da qui: con la lista vuota il piede
+  non li mostra.
 
 ### Per chi sta al banco
 
@@ -158,26 +32,109 @@
   pagina. Tenendo premuto per afferrarle non si apre più il menu del
   browser né la selezione del testo.
 
+### Per i clienti
+
+- **Gli Special della casa.** In cima al menù c'è il carosello dei drink
+  speciali: una slide alla volta, con il disegno del drink, il nome, la
+  descrizione e il prezzo; va avanti da sola, si sfoglia col dito e coi
+  pallini. Toccandone una si apre il menù Special, su quel drink e sullo
+  stesso tavolo. Il menù Special ha un suo indirizzo e un suo QR, da
+  stampare sul menù che si porta al tavolo, e mostra solo gli special nei
+  colori del menù, su due colonne sul telefono e tre sugli schermi larghi.
+- **I disegni dei drink.** Bicchieri diversi, col colore del drink e la
+  sua decorazione, disegnati col tratteggio delle incisioni originali di
+  Alice; le illustrazioni ad acquerello a tema Alice hanno il tratto
+  bianco sui temi scuri e scuro su quelli chiari.
+- **Il dettaglio di un drink.** Toccando un drink nel menù, o nel menù
+  Special, si apre la sua scheda: immagine grande, descrizione intera,
+  ingredienti e «Aggiungi». Nell'elenco la descrizione si ferma a tre
+  righe.
+- **Gli ingredienti nel menù, negli Special e nel carosello**, sotto la
+  descrizione. Dalla ricetta non si leggono il ghiaccio, il tempo di
+  lavorazione e i formati delle confezioni.
+- **Il menù in ordine con i nomi lunghi.** I nomi lunghi non escono dalla
+  card del carosello e non spingono fuori «Aggiungi»; la fila delle
+  categorie, ferma nella pagina, non ha più una fascia di colore sua.
+
 ### Per chi amministra
 
+- **Menù → Special.** Una voce si segna come «Drink speciale» dalla sua
+  scheda, dove si compone anche il disegno (bicchiere, colore,
+  decorazione) con l'anteprima di come lo vedrà il cliente; resta
+  comunque nella sua categoria. Nella sezione Special si scrivono titolo e
+  sottotitolo del menù (per esempio «Alice nel Paese delle Meraviglie») e
+  si scarica il QR del menù Special.
+- **Ingredienti in carta.** Nella scheda del drink un campo nuovo,
+  separato da virgole, con quello che legge il cliente. Vuoto, gli
+  ingredienti si ricavano dalla ricetta.
 - **Marginalità del listino in tabella, divisa per categorie.** Nel menù,
   la marginalità mostra Costo, Vendita, Consigliato, Moltiplicatore e
   Utile in colonna, e si ordina toccando l'intestazione. Parte divisa per
   categorie del menù, con moltiplicatore e utile medi di ogni categoria;
   «Tutto insieme» mette in fila tutto il listino.
+- **Statistiche per periodo: l'utile per categoria.** Sotto «Incasso per
+  categoria» c'è la classifica delle categorie per utile: incassato, costo
+  del venduto ricavato dalle ricette, e utile, col totale in fondo. Le
+  categorie con voci senza ricetta o ingredienti senza costo sono segnate:
+  il loro utile è più alto del vero.
+- **Statistiche, periodo personalizzato: il calcolo parte con «Applica».**
+  Si scrivono inizio e fine e poi si tocca il tasto: prima ogni ritocco
+  alle date faceva ripartire il calcolo. Con la fine prima dell'inizio il
+  tasto resta spento.
+- **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva
+  metterci secondi o sembrare non aprirsi: l'app scorreva tutti i
+  movimenti salvati sul dispositivo prima di chiedere quelli del prodotto.
+  Ora li chiede direttamente al server.
 - **Ghiaccio Hoshizaki nelle ricette: 0,8 delle dosi di prima.** Le dosi
   di ghiaccio di tutte le voci di menù passano da due volte a 1,6 volte la
   dose scritta in origine (200 g diventano 160). È un aggiornamento dei
   dati, fatto con lo script del ghiaccio: sul test è già applicato, in
   produzione si applica con il rilascio.
-- **«Movimenti» di un prodotto si apre subito.** Prima, sul tablet, poteva
-  metterci secondi o sembrare non aprirsi, per qualunque prodotto: l'app
-  scorreva tutti i movimenti salvati sul dispositivo prima di chiedere
-  quelli del prodotto. Ora li chiede direttamente al server.
-- **Statistiche, periodo personalizzato: il calcolo parte con «Applica».**
-  Si scrivono inizio e fine e poi si tocca il tasto: prima ogni ritocco
-  alle date faceva ripartire il calcolo. Con la fine prima dell'inizio il
-  tasto resta spento.
+- **Le voci fuori menu si leggono anche aperte, col tema chiaro.** Nella
+  gestione del menù, aprendo «Azioni» su una voce non disponibile, i tasti
+  erano scuri sul fondo grigio scuro e non si leggevano.
+- **Magazzino: tolta la scritta «Come stanno a scorta»** sopra i filtri
+  della scorta, nella tendina «Filtra i prodotti».
+
+### Solo sul test
+
+- **I Signature segnati come Special**, con una prima descrizione e un
+  disegno, e **ingredienti di prova** inventati dal nome e dalla
+  descrizione per vedere come escono. Sono dati del test, non le ricette
+  vere, e non vanno in produzione: le descrizioni sono da rivedere e gli
+  ingredienti veri si scrivono nella scheda.
+
+### Per chi sviluppa
+
+- **L'app si compila per un locale** (`CLIENTE=<slug>`, cartella
+  `clienti/<slug>/`); senza, è la Tana come sempre. `node
+  scripts/genera-cliente.mjs --slug <slug> --nome "<nome>"` crea la
+  cartella di un locale nuovo: è quello che lancia la regia. La CI compila
+  anche il cliente neutro `demo`. Un test-guardia conta le parole della
+  Tana rimaste nel codice e lascia solo accorciare la lista.
+- **I moduli del prodotto e la sospensione**: con una licenza scritta dalla
+  regia in `settings/bar.licenza`, menù digitale, ordini dal telefono,
+  clienti, magazzino, statistiche, personale e SumUp seguono il piano, e
+  un'installazione sospesa o chiusa lo dice con una schermata sua. La Tana
+  non ha una licenza scritta: ha tutto, come prima.
+- **Il piano Free.** Con `limiti` nella licenza l'app fa rispettare i
+  limiti del piano: prodotti del menù, conti aperti insieme, niente
+  sconti, storico degli ultimi giorni, il solo titolare, la riga «Creato
+  con Drink» in fondo a scontrino e menù digitale; ogni limite lo dice e
+  porta alla pagina dei piani. Col piano `free` l'app lavora anche senza
+  Functions né Storage (profilo leggero): niente SumUp, niente foto,
+  niente account dello staff. Senza `limiti`, come la Tana, non cambia
+  niente.
+- **Chiavi locali e cache col prefisso `drink`.** Le chiavi di
+  localStorage passano da `tana:`/`tana_` a `drink:`/`drink_`: al primo
+  avvio, prima di ogni altro modulo, le chiavi vecchie si copiano sulle
+  nuove (le vecchie restano, per un eventuale ritorno alla versione
+  prima). La cache del service worker passa da `tana-drink-v4` a
+  `drink-v5`, ed è per questo che il primo avvio riscarica i file. Il nome
+  del locale nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- **La flotta sta nella regia** (drink-regia): attivazione, Terraform,
+  workflow e script delle istanze non sono più qui. I workflow di questo
+  repository pubblicano solo i due progetti della Tana.
 
 ## 1.9.3 — 21 ottobre 2026
 
