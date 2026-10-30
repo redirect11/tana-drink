@@ -225,6 +225,22 @@ export default function DrinkForm({
         Quello che legge il cliente sul menù.
       </p>
 
+      {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
+          magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»
+          — e i Signature non ne hanno: per il cliente si scrivono qui. */}
+      <label htmlFor="ingredienti">Ingredienti in carta</label>
+      <input
+        id="ingredienti"
+        value={form.ingredienti || ''}
+        onChange={set('ingredienti')}
+        placeholder="Gin, basilico, lime, zucchero"
+      />
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto, si
+        ricava dalla ricetta, esclusi ghiaccio, lavorazione e formati di
+        confezione.
+      </p>
+
       {/* COME SI PREPARA, a parole. La ricetta strutturata qui sotto dice
           COSA ci va e quanto — serve al magazzino — ma non dice il gesto:
           shakerato o mescolato, il ghiaccio, l'ordine, il bicchiere. Chi

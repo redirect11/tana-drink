@@ -189,6 +189,8 @@ function mapDrink(snap) {
     // GLI SPECIAL DELLA CASA (REQ-MENU-018): il segno, e l'illustrazione
     // pronta da usare quando la foto manca.
     speciale: d.speciale === true,
+    // Gli ingredienti in carta, scritti a mano (REQ-MENU-019).
+    ingredienti: d.ingredienti ?? null,
     illustrazione: d.illustrazione ?? null,
     created_at: toIso(d.created_at),
   }

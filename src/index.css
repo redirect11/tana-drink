@@ -804,6 +804,18 @@ a.btn.block {
   line-height: 1.15;
   overflow-wrap: anywhere;
 }
+/* Gli ingredienti sotto la descrizione: corsivi e piccoli come nel menù,
+   al massimo due righe (REQ-MENU-019). */
+.carosello-ingredienti {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .carosello-descrizione {
   color: var(--muted);
   font-size: 0.92rem;

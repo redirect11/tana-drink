@@ -5255,3 +5255,24 @@ bugs:
     labels: [bug, ui, menu]
     test_cases:
       - tests/unit/useIncollata.test.jsx
+  - id: BUG-121
+    title: "Nel menu' del cliente gli ingredienti erano gli articoli di magazzino: ghiaccio, manodopera, formati"
+    area: "src/pages/MenuPage.jsx, src/lib/ingredientiCarta.js"
+    severity: media
+    priority: P2
+    description: >
+      Venuto fuori il 29/10/2026 lavorando a REQ-MENU-019, leggendo le
+      ricette del test: la riga degli ingredienti sotto un drink stampava le
+      righe della ricetta cosi' com'erano, cioe' articoli di magazzino. Su
+      108 voci si leggeva, per esempio, «Jim Beam · Limone Succo Homemade 1kg
+      - 50cl · Zucchero Sciroppo Homemade 1kg - 150cl · ... · Ghiaccio
+      Hoshizaki · Tempo di Lavorazione». La manodopera doveva restare fuori
+      (REQ-MAG-012), ma il filtro guardava solo l'unita' U, e nelle ricette
+      vecchie e' ancora in grammi. Ora restano fuori ghiaccio e manodopera
+      (anche per nome), e dal nome si toglie il formato della confezione.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, vista-cliente]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
