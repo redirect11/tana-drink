@@ -130,7 +130,7 @@ beforeEach(() => {
   stampata.mockClear()
   localStorage.clear()
   // Al primo accesso il menù mostra il benvenuto a tutta pagina.
-  localStorage.setItem('tana_welcome_v1', '1')
+  localStorage.setItem('drink_welcome_v1', '1')
 })
 
 describe('il menù è uno solo, quello del cliente', () => {
@@ -278,6 +278,17 @@ describe('il menù è uno solo, quello del cliente', () => {
     expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
     expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
   })
+
+  // REQ-LIC-002: un locale senza il modulo «ordini dal telefono» ha il menù
+  // che si legge e basta, anche se non ha mai toccato «solo menù».
+  it('senza il modulo degli ordini dal telefono il menù si legge e basta', async () => {
+    ruoloClaim = null
+    mockSettings = { menu_only: false, licenza: { moduli: { menu_tavoli: true, ordini_cliente: false } } }
+    mostra()
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
+    expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
+  })
 })
 
 // ── LA COMANDA DI CHI PRENDE L'ORDINE AL TAVOLO ──────────────────────
@@ -328,14 +339,14 @@ describe('la comanda dell’ordine preso in sala', () => {
 // ritrova quello che ha ordinato.
 describe('gli ordini in cima al menù', () => {
   it('il cliente ritrova il suo', async () => {
-    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = null
     mostra()
     expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
   })
 
   it('chi lavora no: gli ordini stanno in coda', async () => {
-    localStorage.setItem('tana_my_orders_v1', JSON.stringify(['o-mio']))
+    localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = 'bartender'
     mostra()
     await waitFor(() => expect(screen.queryByText(/Ordine #7/)).toBeNull())
@@ -505,3 +516,25 @@ describe('il dettaglio del drink', () => {
   })
 })
 
+
+// IL BENVENUTO DELLA TANA È QUELLO DI SEMPRE (REQ-VENUE-002). Diventando un
+// dato, il nome del locale nel benvenuto rischiava di diventare «Benvenuto
+// da La Tana del Coniglio»: la frase col locale dentro la scrive il locale
+// (venue_presso), e la build della Tana porta la sua.
+describe('il benvenuto al primo accesso', () => {
+  it('dice il locale con la sua preposizione', async () => {
+    ruoloClaim = null
+    localStorage.removeItem('drink_welcome_v1')
+    mostra('/menu')
+    expect(await screen.findByText('Benvenuto alla Tana del Coniglio')).toBeInTheDocument()
+  })
+
+  // Il ripiego «da <nome>» per chi non l'ha scritta è in venue.test.js.
+  it('un locale che l’ha scritta nelle impostazioni dice la sua', async () => {
+    ruoloClaim = null
+    mockSettings = { venue_name: 'Bar Mario', venue_presso: 'al Bar Mario' }
+    localStorage.removeItem('drink_welcome_v1')
+    mostra('/menu')
+    expect(await screen.findByText('Benvenuto al Bar Mario')).toBeInTheDocument()
+  })
+})

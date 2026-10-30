@@ -30,6 +30,7 @@ import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } f
 import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
+import { intestazioneScontrino, venueDi, venuePredefinito } from './venue.js'
 import {
   configStampa,
   immagineCaricata,
@@ -76,9 +77,9 @@ const COL = 48
 // no. Di chi ci lavora, perché sullo stesso tablet si alternano persone
 // diverse, e la stampa automatica delle comande la vuole accesa chi sta al
 // banco, non chi passa di lì a battere due conti.
-const SETTINGS_KEY = 'tana_printer_v2'
-const UTENTE_KEY = 'tana_printer_utente'
-const PERSONA_KEY = 'tana_printer_persona'
+const SETTINGS_KEY = 'drink_printer_v2'
+const UTENTE_KEY = 'drink_printer_utente'
+const PERSONA_KEY = 'drink_printer_persona'
 
 // L'ultimo utente lo si ricorda: le impostazioni si leggono anche prima che
 // Firebase abbia finito di riconoscere chi è collegato, e senza memoria per
@@ -143,16 +144,16 @@ export const DEFAULT_PRINTER_SETTINGS = {
   // avere la coda aperta e la stampa automatica accesa. Lo decide il locale,
   // una volta, dal terminale del banco.
   stampaSala: 'ip',
-  businessName: 'La Tana del Coniglio',
-  businessAddress: 'Corso Tommaso Vitale 87/89',
-  businessCity: '80035 Nola - Italy',
-  businessFooter: 'EFFEVI - SRLS',
+  // L'intestazione dello scontrino dal locale della build (REQ-VENUE-003):
+  // le impostazioni del locale, se ci sono, la rimpiazzano in
+  // loadPrinterSettings. Chi l'ha già salvata non cambia niente.
+  ...intestazioneScontrino(venuePredefinito()),
 }
 
 // Scontrino automatico UNA SOLA VOLTA per conto: la chiusura può passare da
 // più strade (schermata pagamento, coda, incasso di gruppo) e senza questa
 // guardia lo stesso scontrino uscirebbe due volte.
-const PRINTED_KEY = 'tana_printed_receipts'
+const PRINTED_KEY = 'drink_printed_receipts'
 export function claimReceiptPrint(orderId) {
   if (!orderId) return true
   try {
@@ -226,7 +227,7 @@ export function reclaimReceiptPrint(orderId) {
 // aveva già stampato sarebbe rimasto zitto per sempre — e il segno sul dato
 // azzerato da un ALTRO terminale non avrebbe potuto liberargliela. Legata
 // alle righe, invece, la comanda cambiata è un lavoro nuovo e la carta esce.
-const COMANDE_KEY = 'tana_printed_comande'
+const COMANDE_KEY = 'drink_printed_comande'
 
 // Le righe come sono adesso, in poche lettere: cambia una quantità o
 // arriva un drink, cambia la firma.
@@ -406,17 +407,20 @@ impostaContestoDiagnostica(() => {
 })
 
 export function loadPrinterSettings() {
+  // I default: quelli fissi più l'intestazione del locale (REQ-VENUE-003),
+  // dalle impostazioni in cache se il locale l'ha scritta, se no dalla build.
+  const base = { ...DEFAULT_PRINTER_SETTINGS, ...intestazioneScontrino(venueDi(impostazioniDelLocale())) }
   try {
     const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
-    if (mie) return { ...DEFAULT_PRINTER_SETTINGS, ...mie }
+    if (mie) return { ...base, ...mie }
     // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
     // del dispositivo. Senza, il giorno del passaggio a impostazioni per
     // utente ogni tablet del locale avrebbe perso l'indirizzo della
     // stampante — e la comanda non esce.
     const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
-    return { ...DEFAULT_PRINTER_SETTINGS, ...(delDispositivo || {}) }
+    return { ...base, ...(delDispositivo || {}) }
   } catch {
-    return { ...DEFAULT_PRINTER_SETTINGS }
+    return base
   }
 }
 
@@ -1001,7 +1005,7 @@ async function getPrinter() {
   // collega a quella vera, ed è il posto dove provarla davvero.
   if (stampanteFintaAttiva()) {
     if (!_printer) {
-      const finta = creaStampanteFinta('La Tana del Coniglio')
+      const finta = creaStampanteFinta(venuePredefinito().venue_name)
       // ANCHE LA FINTA RISPONDE. La catena della diagnostica (BUG-098) —
       // risposta, registro, avviso — si deve poter provare senza andare al
       // banco: la finta risponde come quella vera e sa fingere un guasto.

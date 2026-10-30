@@ -338,7 +338,7 @@ describe('le novità dopo un aggiornamento', () => {
   it('build nuova: il box con le note esce da sé', async () => {
     // Una build già vista diversa da questa: è lo stato di chi riapre l'app
     // dopo un aggiornamento, comunque ci sia arrivato.
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     apri('/menu')
     expect(await screen.findByRole('dialog', { name: 'Novità di questa versione' })).toBeInTheDocument()
     expect(await screen.findByText(/La cosa nuova/)).toBeInTheDocument()
@@ -346,10 +346,10 @@ describe('le novità dopo un aggiornamento', () => {
 
   it('chiuso il box, la build risulta vista e non torna più', async () => {
     const user = userEvent.setup()
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     const { unmount } = apri('/menu')
     await user.click(await screen.findByRole('button', { name: 'Ho capito' }))
-    expect(localStorage.getItem('tana:novita:vista')).not.toBe('build-vecchia')
+    expect(localStorage.getItem('drink:novita:vista')).not.toBe('build-vecchia')
     unmount()
     apri('/menu')
     // Il box non torna, e non torna nemmeno DOPO che la seconda apertura ha
@@ -365,10 +365,10 @@ describe('le novità dopo un aggiornamento', () => {
   // comunque — già letto, perché è appena stato mostrato — così l'aggiornamento
   // si ritrova nello storico della campanella.
   it('resta traccia in campanella, come notifica già letta', async () => {
-    localStorage.setItem('tana:novita:vista', 'build-vecchia')
+    localStorage.setItem('drink:novita:vista', 'build-vecchia')
     apri('/menu')
     await screen.findByRole('dialog', { name: 'Novità di questa versione' })
-    const notifiche = JSON.parse(localStorage.getItem('tana:notifs') || '[]')
+    const notifiche = JSON.parse(localStorage.getItem('drink:notifs') || '[]')
     expect(notifiche[0].title).toMatch(/aggiornata/i)
     expect(notifiche[0].href).toMatch(/tab=impostazioni/)
     expect(notifiche[0].letta).toBe(true)
@@ -378,7 +378,7 @@ describe('le novità dopo un aggiornamento', () => {
     apri('/menu')
     await screen.findByText('PAGINA MENU')
     expect(screen.queryByRole('dialog', { name: 'Novità di questa versione' })).toBeNull()
-    expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+    expect(JSON.parse(localStorage.getItem('drink:notifs') || '[]')).toEqual([])
   })
 })
 

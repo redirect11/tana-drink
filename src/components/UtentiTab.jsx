@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
+import { useVenue } from '../lib/useVenue.js'
 import {
   listStaff,
   listUtenti,
@@ -42,6 +43,7 @@ const SEZIONI_UTENTI = [
 ]
 
 export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
+  const venue = useVenue()
   const admin = isAdmin(role)
   // Tre sezioni come nelle altre pagine; si apre sull'elenco, che è il
   // motivo per cui si viene qui. Chi non è amministratore ha solo quello.
@@ -275,7 +277,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="cameriera@latanadelconiglio.it"
+                placeholder={`cameriera@${venue.venue_email_domain || 'esempio.it'}`}
               />
               <label htmlFor="staff-password">Password (min 6 caratteri)</label>
               <input

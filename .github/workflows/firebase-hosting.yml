@@ -97,6 +97,11 @@ jobs:
     with:
       ambiente: test
       progetto: tana-drink-test
+      # I progetti della Tana si compilano per la Tana (clienti/tana/,
+      # REQ-VENUE-001), e da qui non si compila altro: le istanze degli
+      # altri locali le pubblica la regia (drink-regia), con le sue
+      # credenziali.
+      cliente: tana
       versione: ${{ github.ref_name }}
     secrets: inherit
 
@@ -108,5 +113,6 @@ jobs:
     with:
       ambiente: production
       progetto: tana-drink
+      cliente: tana
       versione: ${{ github.ref_name }}
     secrets: inherit

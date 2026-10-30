@@ -22,7 +22,7 @@
 // chi lavora li va a cercare — non nelle impostazioni del locale, dove
 // nessuno andrebbe a cercare una cosa sua.
 
-const CHIAVE = 'tana:avvisi-stile'
+const CHIAVE = 'drink:avvisi-stile'
 export const STILI_AVVISI = ['toast', 'fumetto']
 
 export function stileAvvisiInApp() {
@@ -57,7 +57,7 @@ export function subscribeStileAvvisi(fn) {
 // Il fumetto: chi lo disegna sta nella coda (FumettoAvvisi), chi lo
 // annuncia è notify.js. In mezzo, un evento — l'unico modo perché una
 // libreria senza React possa parlare a una schermata.
-const EVENTO = 'tana:avviso-fumetto'
+const EVENTO = 'drink:avviso-fumetto'
 
 export function annunciaFumetto(avviso) {
   if (typeof window === 'undefined') return

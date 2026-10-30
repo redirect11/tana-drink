@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // contesto: 'new' in creazione, l'id dell'ordine in modifica. Confermare
 // (o annullare) svuota la bozza di quella chiave.
 
-const storageKey = (k) => `tana:draft:${k}`
+const storageKey = (k) => `drink:draft:${k}`
 
 export function loadDraft(k) {
   try {
@@ -30,7 +30,7 @@ export function saveDraft(k, arr) {
 // ORDINE VISIVO della lista unica (item confermati + bozza), riordinabile a
 // mano: persistito per contesto così il riordino di TUTTI gli item non si
 // perde uscendo dalla schermata. Array di chiavi riga.
-const layoutKey = (k) => `tana:layout:${k}`
+const layoutKey = (k) => `drink:layout:${k}`
 
 export function loadLayout(k) {
   try {

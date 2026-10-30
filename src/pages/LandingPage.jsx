@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useVenue } from '../lib/useVenue.js'
 
 // Box novità Karaoke × Ceres: messo a false per nasconderlo (riattivabile).
 const SHOW_KARAOKE_NEWS = false
@@ -10,6 +11,8 @@ const SHOW_KARAOKE_NEWS = false
 export default function LandingPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  // Il locale (REQ-VENUE-002): titolo, slogan, «chi siamo» e contatti.
+  const venue = useVenue()
 
   useEffect(() => {
     const qs = params.toString()
@@ -24,7 +27,7 @@ export default function LandingPage() {
         <img
           className="hero-img"
           src="/cocktail-hero.jpg"
-          alt="La Tana del Coniglio"
+          alt={venue.venue_name}
           onError={(e) => (e.target.style.display = 'none')}
         />
         <div className="hero-overlay">
@@ -33,9 +36,9 @@ export default function LandingPage() {
               a capo di suo. Di fianco, invece, si leggono insieme. */}
           <div className="hero-testa">
             <img className="hero-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-            <h1 className="hero-title">La Tana del Coniglio</h1>
+            <h1 className="hero-title">{venue.venue_name}</h1>
           </div>
-          <p className="hero-sub">Cocktail bar · Nola</p>
+          {venue.venue_tagline && <p className="hero-sub">{venue.venue_tagline}</p>}
           <Link className="btn" to="/menu" style={{ marginTop: 14, minWidth: 200 }}>
             🍸 Vai al menù
           </Link>
@@ -81,26 +84,33 @@ export default function LandingPage() {
         <Link to="/menu">Menù</Link>
       </nav>
 
-      <section id="chi-siamo" className="card">
-        <h2 style={{ marginTop: 0 }}>Chi siamo</h2>
-        <p className="muted">
-          La Tana del Coniglio è un cocktail bar a Nola: drink d’autore, ingredienti
-          freschi e un’atmosfera speakeasy. {/* TODO: testo definitivo da fornire */}
-        </p>
-      </section>
+      {venue.venue_about && (
+        <section id="chi-siamo" className="card">
+          <h2 style={{ marginTop: 0 }}>Chi siamo</h2>
+          <p className="muted">{venue.venue_about}</p>
+        </section>
+      )}
 
-      <section id="contatti" className="card">
-        <h2 style={{ marginTop: 0 }}>Contatti</h2>
-        <p className="muted" style={{ margin: '0 0 6px' }}>
-          📍 Nola (NA) {/* TODO: indirizzo completo */}
-        </p>
-        <p className="muted" style={{ margin: '0 0 6px' }}>
-          ✉️ <a href="mailto:info@latanadelconiglio.it">info@latanadelconiglio.it</a>
-        </p>
-        <p className="muted" style={{ margin: 0 }}>
-          Seguici sui social (link in fondo alla pagina).
-        </p>
-      </section>
+      {(venue.venue_city || venue.venue_email || venue.venue_socials.length > 0) && (
+        <section id="contatti" className="card">
+          <h2 style={{ marginTop: 0 }}>Contatti</h2>
+          {venue.venue_city && (
+            <p className="muted" style={{ margin: '0 0 6px' }}>
+              📍 {venue.venue_city}
+            </p>
+          )}
+          {venue.venue_email && (
+            <p className="muted" style={{ margin: '0 0 6px' }}>
+              ✉️ <a href={`mailto:${venue.venue_email}`}>{venue.venue_email}</a>
+            </p>
+          )}
+          {venue.venue_socials.length > 0 && (
+            <p className="muted" style={{ margin: 0 }}>
+              Seguici sui social (link in fondo alla pagina).
+            </p>
+          )}
+        </section>
+      )}
 
       <Link className="btn block" to="/menu" style={{ marginTop: 4 }}>
         🍸 Sfoglia il menù e ordina

@@ -5,6 +5,11 @@ import App from './App.jsx'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
+import { migraChiaviLocali } from './lib/migrazioneChiavi.js'
+
+// PRIMA DI TUTTO: le chiavi locali col prefisso vecchio si copiano su
+// quello nuovo (REQ-VENUE-005), e solo dopo qualcuno le legge.
+migraChiaviLocali()
 
 // I NUMERI DEGLI ORDINI SI PRECARICANO. Battere un conto non deve aspettare
 // la rete: quale cassa è aperta e a che punto sono i progressivi si tengono

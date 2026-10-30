@@ -847,7 +847,7 @@ describe('la fila dei filtri sta dietro il tastino ⚗️, nella riga sotto', ()
     await screen.findByText(/In servizio/)
 
     await apriFiltri(utente)
-    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe('1')
+    expect(localStorage.getItem('drink:coda:filtri-aperti')).toBe('1')
 
     vista.unmount()
     montaCoda()
@@ -2083,7 +2083,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // La memoria tiene anche le due spente di serie: il terminale aveva
     // nascosto al-ritiro e basta. Il fantasma va buttato.
     localStorage.setItem(
-      'tana:corsie:nascoste',
+      'drink:corsie:nascoste',
       JSON.stringify(['al-ritiro', 'chiusi', 'annullati', 'corsia-fantasma', 'da-incassare-vecchia'])
     )
     montaCoda()
@@ -2092,7 +2092,7 @@ describe('le corsie del banco: una card per comanda', () => {
     // resta la sola spenta vera — «al-ritiro» — e la memoria è ripulita
     // sul disco
     expect(corsia('al-ritiro')).toBeFalsy()
-    expect(JSON.parse(localStorage.getItem('tana:corsie:nascoste'))).toEqual([
+    expect(JSON.parse(localStorage.getItem('drink:corsie:nascoste'))).toEqual([
       'al-ritiro',
       'chiusi',
       'annullati',
@@ -2860,14 +2860,14 @@ describe('il ☰ della coda', () => {
     const utente = userEvent.setup()
     const aperture = []
     const spia = () => aperture.push(1)
-    window.addEventListener('tana:toggle-drawer', spia)
+    window.addEventListener('drink:toggle-drawer', spia)
     try {
       montaCoda()
       await screen.findByText(/In servizio/)
       await utente.click(screen.getByRole('button', { name: 'Menu' }))
       expect(aperture).toHaveLength(1)
     } finally {
-      window.removeEventListener('tana:toggle-drawer', spia)
+      window.removeEventListener('drink:toggle-drawer', spia)
     }
   })
 })

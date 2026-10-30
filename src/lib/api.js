@@ -23,6 +23,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db, auth, firestoreLite } from './firebaseClient.js'
+import { VENUE_VUOTO } from './venue.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
   COLLEZIONE as DIAGNOSTICA_STAMPANTE,
@@ -6030,6 +6031,10 @@ export async function ackStaffCall(id) {
 // --- SETTINGS ---
 
 export const DEFAULT_SETTINGS = {
+  // L'IDENTITÀ DEL LOCALE (REQ-VENUE-001): vuote di partenza, e vuote
+  // vuol dire «vale la build» (clienti/<slug>/venue.json, lib/venue.js).
+  // Le scrive l'admin da Impostazioni → Il locale.
+  ...VENUE_VUOTO,
   menu_only: false,
   // GIORNATA COMMERCIALE: ora a cui "gira" la giornata. Il locale lavora
   // oltre la mezzanotte, quindi la nottata resta contata nella giornata in
