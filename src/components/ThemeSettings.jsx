@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { STILI_MENU, stileMenu } from '../lib/stileMenu.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -83,15 +84,52 @@ function CardDellaCoda({ settings, onSave }) {
   )
 }
 
-// Il tema del menù dei clienti, da mostrare nella sua sezione.
+// Il tema del menù dei clienti, da mostrare nella sua sezione: prima la
+// forma (lo stile, REQ-MENU-021), poi i colori, che valgono per tutti e due
+// gli stili.
 export function TemaMenuClienti({ settings, onSave }) {
   return (
-    <ThemeEditor
+    <>
+      <StileMenuClienti settings={settings} onSave={onSave} />
+      <ThemeEditor
       title="Colori del menù"
       hint="Come lo vedono i clienti sul telefono. Per provarlo: menu ▸ Vista cliente."
       value={settings.theme_client}
       onSave={(t) => onSave({ theme_client: t })}
-    />
+      />
+    </>
+  )
+}
+
+// LO STILE DEL MENÙ: due risposte con lo stesso peso, affiancate, come per
+// le card della coda. Il classico resta il predefinito; i colori sono quelli
+// sotto, per qualunque stile.
+export function StileMenuClienti({ settings, onSave }) {
+  const attuale = stileMenu(settings)
+  return (
+    <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
+      <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Impaginazione, caratteri e movimento del menù e degli Special per i clienti. I colori sono quelli
+        scelti sotto. Il personale vede sempre lo stile classico.
+      </p>
+      <div className="mode-choice">
+        {STILI_MENU.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`mode-option${attuale === s.id ? ' active' : ''}`}
+            aria-pressed={attuale === s.id}
+            onClick={() => onSave({ stile_menu: s.id })}
+          >
+            <strong>{s.nome}</strong>
+            <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
+              {s.desc}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

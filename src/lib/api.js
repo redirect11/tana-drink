@@ -6081,6 +6081,8 @@ export const DEFAULT_SETTINGS = {
   // IL MENÙ SPECIAL (REQ-MENU-018): il titolo e il sottotitolo della
   // pagina e del carosello. Il tema cambia (oggi Alice), la pagina no.
   special_titolo: 'Special',
+  // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
+  stile_menu: 'classico',
   special_sottotitolo: '',
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
