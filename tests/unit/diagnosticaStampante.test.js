@@ -149,7 +149,7 @@ describe('la pulizia: i vecchi li cancella chi li ha scritti', () => {
     segnala(TIPO.apertura_cassa, '', null, { sessione: 'cs-9' })
     expect(cancellazioni).toEqual([vecchio])
     // E il nuovo resta in memoria per la prossima pulizia.
-    expect(JSON.parse(localStorage.getItem('tana:diagnostica-stampante-documenti')).map((d) => d.id)).toEqual([
+    expect(JSON.parse(localStorage.getItem('drink:diagnostica-stampante-documenti')).map((d) => d.id)).toEqual([
       `cassa-cs-9--${idDispositivo()}`,
     ])
   })

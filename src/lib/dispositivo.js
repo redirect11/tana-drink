@@ -8,7 +8,7 @@
 // L'identificativo nasce alla prima volta e resta in memoria locale. Non
 // identifica una persona: è un numero a caso che vale per questo browser.
 
-const CHIAVE = 'tana:dispositivo'
+const CHIAVE = 'drink:dispositivo'
 
 let memoria = null // se localStorage non è disponibile, vale per la sessione
 

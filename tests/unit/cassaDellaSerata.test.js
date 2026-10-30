@@ -165,7 +165,7 @@ describe('la serata non si dimentica a ogni ricaricamento', () => {
     // stasera dentro la serata di ieri, e la chiusura di ieri non torna più.
     // Vale solo per la giornata commerciale in cui è stata scritta.
     localStorage.setItem(
-      'tana:cassa-aperta',
+      'drink:cassa-aperta',
       JSON.stringify({ id: 'cassa-di-ieri', giorno: '2020-01-01' })
     )
     ilServerSa(oggi(), { last: 2 })

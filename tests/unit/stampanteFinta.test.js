@@ -229,7 +229,7 @@ describe('la stampante finta sa anche rompersi', () => {
     const { impostaGuastoFinto, guastoFinto } = await import('../../src/lib/stampanteFinta.js')
     impostaGuastoFinto('esplodi')
     expect(guastoFinto()).toBe(null)
-    localStorage.setItem('tana_stampante_finta_guasto', 'esplodi')
+    localStorage.setItem('drink_stampante_finta_guasto', 'esplodi')
     expect(guastoFinto()).toBe(null)
   })
 })

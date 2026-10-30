@@ -51,7 +51,7 @@ import { giornateConServizio } from '../lib/giorniDiServizio.js'
 // parla una riga. I conti li fa `raggruppaSerate` (`src/lib/serate.js`) sulle
 // sessioni GIÀ in mano: qui dentro si disegna e basta.
 
-const CHIAVE_RAGGRUPPAMENTO = 'tana:chiusure:raggruppamento'
+const CHIAVE_RAGGRUPPAMENTO = 'drink:chiusure:raggruppamento'
 
 export default function CashSessionsList() {
   const [sessions, setSessions] = useState([])

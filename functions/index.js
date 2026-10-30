@@ -319,7 +319,10 @@ const SUMUP_PAYMENTS_BASE = process.env.SUMUP_PAYMENTS_BASE || 'https://api.sumu
 // Affiliate key: obbligatoria per il checkout sul lettore (Cloud API).
 // Non è un segreto (identifica l'app, non autentica): vive in .env.
 const SUMUP_AFFILIATE_KEY = process.env.SUMUP_AFFILIATE_KEY || ''
-const SUMUP_AFFILIATE_APP_ID = process.env.SUMUP_AFFILIATE_APP_ID || 'it.latanadelconiglio.drink'
+const SUMUP_AFFILIATE_APP_ID = process.env.SUMUP_AFFILIATE_APP_ID || ''
+// IL NOME DEL LOCALE PER LE DESCRIZIONI DEI PAGAMENTI (REQ-VENUE-005): da
+// functions/.env.<progetto> (per la Tana: .env.tana-drink), non dal codice.
+const VENUE_NAME = process.env.VENUE_NAME || 'Il locale'
 
 function paymentDeps() {
   const apiKey = SUMUP_API_KEY.value() || ''
@@ -328,6 +331,7 @@ function paymentDeps() {
     isConfigured: () => Boolean(apiKey && SUMUP_MERCHANT_CODE),
     merchantCode: () => SUMUP_MERCHANT_CODE,
     now: () => new Date().toISOString(),
+    venueName: () => VENUE_NAME,
     webhookUrl: () =>
       `https://${OPTS.region}-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/paymentWebhook`,
     affiliate: () =>

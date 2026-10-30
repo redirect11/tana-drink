@@ -38,7 +38,7 @@ export default function CategoryRail({
   chiave = 'cat',
   scorre = true,
 }) {
-  const memoria = `tana:barra-stretta:${chiave}`
+  const memoria = `drink:barra-stretta:${chiave}`
   const [stretta, setStretta] = useState(() => {
     try {
       return localStorage.getItem(memoria) === '1'

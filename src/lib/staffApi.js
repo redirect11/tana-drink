@@ -28,7 +28,7 @@ const call = (data) => httpsCallable(functions, 'staffAdmin')(data).then((r) => 
 // staff…" per qualche secondo — e offline non arrivava mai. La lista cambia
 // una volta ogni morte di papa: si tiene da parte e la si mostra subito,
 // aggiornandola in sottofondo.
-const CHIAVE_STAFF = 'tana:staff'
+const CHIAVE_STAFF = 'drink:staff'
 let cacheStaff = null
 
 export function staffFromCache() {

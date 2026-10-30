@@ -128,7 +128,7 @@ describe('trascinando dal vivo', () => {
     // Tre movimenti nello stesso fotogramma: si applica l'ultimo, una volta.
     expect(dalVivo).toHaveBeenCalledTimes(1)
     expect(dalVivo).toHaveBeenLastCalledWith(250)
-    expect(localStorage.getItem('tana:w:prova')).toBe('200')
+    expect(localStorage.getItem('drink:w:prova')).toBe('200')
   })
 
   it('lasciando, la misura diventa stato e si ricorda', () => {
@@ -139,7 +139,7 @@ describe('trascinando dal vivo', () => {
     act(() => result.current.handleProps.onPointerUp())
     expect(result.current.width).toBe(280)
     expect(dalVivo).toHaveBeenLastCalledWith(280)
-    expect(localStorage.getItem('tana:w:prova')).toBe('280')
+    expect(localStorage.getItem('drink:w:prova')).toBe('280')
     // Il fotogramma che arriva dopo la fine non rimette niente.
     dalVivo.mockClear()
     act(() => vi.advanceTimersByTime(16))

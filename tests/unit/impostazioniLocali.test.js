@@ -45,7 +45,7 @@ describe('le impostazioni ricordate', () => {
   })
 
   it('roba illeggibile non fa saltare la schermata', () => {
-    localStorage.setItem('tana:impostazioni', '{rotto')
+    localStorage.setItem('drink:impostazioni', '{rotto')
     expect(impostazioniRicordate(DEFAULTS)).toEqual(DEFAULTS)
   })
 
@@ -98,20 +98,20 @@ describe('le preferenze di questo terminale', () => {
     expect(vistaCorsie()).toBe(null)
     expect(azioniContoRidotte()).toBe(false)
     expect(filtriAperti()).toBe(false)
-    expect(localStorage.getItem('tana:coda:filtri-aperti')).toBe(null)
+    expect(localStorage.getItem('drink:coda:filtri-aperti')).toBe(null)
   })
 
   it('«unite» resta scritto: è una scelta, non un silenzio', () => {
     // Il pronto diviso è l'unica che scrive anche il «no»: serve a
     // distinguere chi ha deciso di tenerle unite da chi non ha deciso.
     ricordaProntoDiviso(false)
-    expect(localStorage.getItem('tana:corsie:pronto-diviso')).toBe('0')
+    expect(localStorage.getItem('drink:corsie:pronto-diviso')).toBe('0')
     expect(prontoDiviso()).toBe(false)
   })
 
   it('roba illeggibile non fa saltare niente: decide il default', () => {
-    localStorage.setItem('tana:corsie:nascoste', '{rotto')
-    localStorage.setItem('tana:corsie:vista', 'boh')
+    localStorage.setItem('drink:corsie:nascoste', '{rotto')
+    localStorage.setItem('drink:corsie:vista', 'boh')
     expect(corsieNascoste()).toBe(null)
     expect(vistaCorsie()).toBe(null)
   })

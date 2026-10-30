@@ -29,7 +29,7 @@ const COL = 48 // colonne della testina 80 mm, come la stampante vera
 // impostazioni. La sezione Dev esiste solo in locale e sul test
 // (devToolsEnabled), quindi in produzione questo interruttore non ha una
 // leva da nessuna parte.
-const CHIAVE_FINTA = 'tana_stampante_finta'
+const CHIAVE_FINTA = 'drink_stampante_finta'
 export function stampanteFintaForzata() {
   try {
     return localStorage.getItem(CHIAVE_FINTA)
@@ -62,7 +62,7 @@ export function forzaStampanteFinta(attiva) {
 // NON PUÒ CAPITARE PER SBAGLIO IN PRODUZIONE: lo legge solo la stampante
 // FINTA, che in produzione non si accende, e la leva sta nel pannello Dev,
 // che esiste solo in locale e sul test (devToolsEnabled).
-const CHIAVE_GUASTO = 'tana_stampante_finta_guasto'
+const CHIAVE_GUASTO = 'drink_stampante_finta_guasto'
 export const GUASTI_FINTI = ['carta', 'muta']
 
 export function guastoFinto() {

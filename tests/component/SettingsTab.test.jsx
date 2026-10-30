@@ -385,7 +385,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     // Il registro è professionale: si dice cosa fa e com'è messa, niente
     // toni da venditore (DESIGN.md, guardrail 3).
     expect(screen.getAllByText(/Funzione premium: non inclusa\./).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThan(0)
     expect(screen.queryByText(/sblocca|acquista|scopri/i)).toBeNull()
   })
 
@@ -471,7 +471,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const interruttore = interruttoreDi('Fatture ai fornitori')
     expect(interruttore).not.toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
-    expect(screen.getByText(/Funzione premium, inclusa in questa installazione\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThan(0)
 
     updateSettings.mockClear()
     await user.click(interruttore)
@@ -488,7 +488,8 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     const interruttore = interruttoreDi('Inventario di magazzino')
     expect(interruttore).toBeChecked()
     expect(interruttore).not.toHaveAttribute('aria-disabled')
-    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./)).toHaveLength(2)
+    // Due righe del magazzino più i moduli del prodotto (REQ-LIC-002), tutti inclusi.
+    expect(screen.getAllByText(/Funzione premium, inclusa in questa installazione\./).length).toBeGreaterThanOrEqual(2)
   })
 })
 

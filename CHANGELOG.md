@@ -17,6 +17,37 @@
   descrizione per vedere come escono. Non sono le ricette vere e non vanno
   in produzione: quelli veri si scrivono nella scheda.
 
+### Per chi amministra
+
+- **Impostazioni → Il locale.** Nome, nome corto, il locale nella frase
+  («alla Tana del Coniglio»), slogan, «chi siamo», città, email, ragione
+  sociale e intestazione dello scontrino, social: l'identità del locale si
+  scrive qui. Una casella vuota lascia il valore predefinito, mostrato in
+  grigio. Prima erano scritti nel codice; per la Tana non cambia niente.
+- **I social nel piede di pagina vengono dalle impostazioni**: con la lista
+  vuota il piede non li mostra.
+
+### Per chi sviluppa
+
+- **L'app si compila per un locale** (`CLIENTE=<slug>`, cartella
+  `clienti/<slug>/`); senza, è la Tana come sempre. `node
+  scripts/genera-cliente.mjs --slug <slug> --nome "<nome>"` crea la
+  cartella di un locale nuovo: è quello che lancia la regia. La CI compila
+  anche il cliente neutro `demo`. Un test-guardia conta le parole della
+  Tana rimaste nel codice e lascia solo accorciare la lista.
+- **I moduli del prodotto e la sospensione**: con una licenza scritta dalla
+  regia in `settings/bar.licenza`, menù digitale, ordini dal telefono,
+  clienti, magazzino, statistiche, personale e SumUp seguono il piano, e
+  un'installazione sospesa o chiusa lo dice con una schermata sua. La Tana
+  non ha una licenza scritta: ha tutto, come prima.
+- Le chiavi locali e la cache del service worker hanno il prefisso `drink`
+  invece di `tana`; al primo avvio le chiavi vecchie si copiano sulle
+  nuove, quindi sui dispositivi non si perde niente. Il nome del locale
+  nelle descrizioni SumUp viene da `functions/.env.<progetto>`.
+- **La flotta sta nella regia** (drink-regia): attivazione, Terraform,
+  workflow e script delle istanze non sono più qui. I workflow di questo
+  repository pubblicano solo i due progetti della Tana.
+
 ## 1.9.9-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti

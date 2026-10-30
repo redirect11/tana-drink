@@ -1,5 +1,13 @@
 import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+
+// Nei test l'app è compilata per la Tana (REQ-VENUE-001), come in
+// produzione: i test che leggono «La Tana del Coniglio» leggono la build.
+const clienteTana = {
+  slug: 'tana',
+  venue: JSON.parse(readFileSync(new URL('./clienti/tana/venue.json', import.meta.url), 'utf8')),
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +19,7 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify('test'),
     __GIT_BRANCH__: JSON.stringify('test'),
     __GIT_COMMIT__: JSON.stringify('0000000'),
+    __CLIENTE__: JSON.stringify(clienteTana),
   },
   test: {
     // Default: Node (functions e logica pura). I test COMPONENTE dichiarano

@@ -138,12 +138,12 @@ beforeEach(() => {
   vi.resetModules()
   localStorage.clear()
   localStorage.setItem(
-    'tana_printer_v2',
+    'drink_printer_v2',
     JSON.stringify({ ip: '10.0.0.9', port: 8043, https: true })
   )
   // Serve quella vera: la finta risponde sempre, e qui il punto è proprio
   // decidere se e quando risponde.
-  localStorage.setItem('tana_stampante_finta', 'false')
+  localStorage.setItem('drink_stampante_finta', 'false')
   rispostaPer = () => OK
   accendiLaStampante()
   window.Image = class {

@@ -200,3 +200,23 @@ describe('le voci che il locale non ha', () => {
     expect(ids).not.toContain('fatture')
   })
 })
+
+// REQ-LIC-002: col piano base il gestionale è coda, cassa, menù, utenti e
+// impostazioni; magazzino, fornitori, statistiche e bilancio sono moduli.
+describe('il gestionale segue il piano', () => {
+  const base = { licenza: { moduli: { magazzino: false, statistiche: false, staff: false, menu_tavoli: false, clienti: false, ordini_cliente: false, sumup: false } } }
+
+  it('nel piano base l’admin vede coda, cassa, menù, utenti e impostazioni, non il magazzino né le statistiche', () => {
+    const ids = vociPerRuolo('admin', base).map(([id]) => id)
+    for (const id of ['coda', 'pagamenti', 'menu', 'utenti', 'impostazioni']) expect(ids, id).toContain(id)
+    for (const id of ['inventario', 'fornitori', 'stats', 'bilancio', 'staff', 'vista-cliente']) expect(ids, id).not.toContain(id)
+    expect(sezioneConsentita('inventario', 'admin', base)).toBe(false)
+  })
+
+  it('col magazzino comprato tornano inventario e fornitori', () => {
+    const conMagazzino = { licenza: { moduli: { ...base.licenza.moduli, magazzino: true } } }
+    const ids = vociPerRuolo('admin', conMagazzino).map(([id]) => id)
+    expect(ids).toContain('inventario')
+    expect(ids).toContain('fornitori')
+  })
+})

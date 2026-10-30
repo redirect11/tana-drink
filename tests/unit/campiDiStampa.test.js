@@ -57,7 +57,7 @@ const carta = (n = 0) => {
 
 // Le impostazioni del locale, come le lascia `subscribeSettings` per chi
 // stampa: nella memoria del terminale, mai da chiedere alla rete.
-const impostazioni = (dati) => localStorage.setItem('tana:impostazioni', JSON.stringify(dati))
+const impostazioni = (dati) => localStorage.setItem('drink:impostazioni', JSON.stringify(dati))
 
 const CONTO = {
   id: 'ordine-di-prova',

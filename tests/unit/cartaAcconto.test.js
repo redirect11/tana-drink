@@ -46,7 +46,7 @@ const carta = (n = 0) => {
   return html.match(/<pre>([\s\S]*?)<\/pre>/)?.[1] ?? ''
 }
 
-const impostazioni = (dati) => localStorage.setItem('tana:impostazioni', JSON.stringify(dati))
+const impostazioni = (dati) => localStorage.setItem('drink:impostazioni', JSON.stringify(dati))
 
 const nudo = (t) =>
   t

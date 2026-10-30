@@ -1660,11 +1660,11 @@ describe('subtotale di riga', () => {
   })
 
   it('col calcolo acceso (scelta ricordata sul dispositivo) appare sotto la riga', async () => {
-    localStorage.setItem('tana:pos:calcoli', '1')
+    localStorage.setItem('drink:pos:calcoli', '1')
     await mount(ordineTriplo())
     expect(screen.getByText(/↳ 3 × 7,00/)).toBeInTheDocument()
     expect(screen.getAllByText('21,00 €').length).toBeGreaterThan(0)
-    localStorage.removeItem('tana:pos:calcoli')
+    localStorage.removeItem('drink:pos:calcoli')
   })
 
   it('i supplementi attivi si vedono uno per riga, sotto il Subtotale', async () => {
@@ -1687,7 +1687,7 @@ describe('subtotale di riga', () => {
   })
 
   it('con un pezzo solo il subtotale c’è comunque, il calcolo mai', async () => {
-    localStorage.setItem('tana:pos:calcoli', '1')
+    localStorage.setItem('drink:pos:calcoli', '1')
     await mount(
       baseOrder({
         total: 7,
@@ -1707,7 +1707,7 @@ describe('subtotale di riga', () => {
     // SENZA PREZZO: il subtotale ora c'è sempre.
     expect(document.querySelector('.posd-riga-tot')).not.toBeNull()
     expect(screen.queryByText(/↳ 1 × 7,00/)).toBeNull()
-    localStorage.removeItem('tana:pos:calcoli')
+    localStorage.removeItem('drink:pos:calcoli')
   })
 })
 

@@ -80,7 +80,7 @@ describe('notifiche da leggere e storico', () => {
 describe('notifiche salvate prima', () => {
   it('quelle vecchie non tornano a galla come da leggere', async () => {
     localStorage.setItem(
-      'tana:notifs',
+      'drink:notifs',
       JSON.stringify([{ id: 'vecchia', title: 'Di ieri', body: '', at: 1 }])
     )
     vi.resetModules()
@@ -121,6 +121,6 @@ describe('uscendo, la campanella si svuota davvero', () => {
     expect(snap.archivio).toEqual([])
     expect(snap.unseen).toBe(0)
     // E non torna al prossimo avvio: la memoria del browser è pulita.
-    expect(JSON.parse(localStorage.getItem('tana:notifs') || '[]')).toEqual([])
+    expect(JSON.parse(localStorage.getItem('drink:notifs') || '[]')).toEqual([])
   })
 })
