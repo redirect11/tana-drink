@@ -17,7 +17,7 @@ import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/order
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { dentroStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
@@ -161,11 +161,14 @@ export default function OrdersHistory() {
   // LO STORICO DEL PIANO FREE: i conti chiusi e annullati più vecchi di
   // `storico_giorni` non si mostrano (restano nel database). Quelli ancora
   // aperti sì, di qualunque giorno: sono lavoro da finire, non storico.
-  const lista = useMemo(() => {
-    const tutti = periodo.da ? delPeriodo || [] : orders
-    if (giorniStorico == null) return tutti
-    return tutti.filter((o) => statoDi(o) === 'aperti' || dentroStorico(impostazioni, o.created_at))
-  }, [periodo.da, delPeriodo, orders, giorniStorico, impostazioni])
+  const lista = useMemo(
+    () =>
+      visibiliNelloStorico(impostazioni, periodo.da ? delPeriodo || [] : orders, {
+        data: (o) => o.created_at,
+        aperta: (o) => statoDi(o) === 'aperti',
+      }),
+    [periodo.da, delPeriodo, orders, impostazioni]
+  )
   // I clienti ordinano dall'app solo se il locale glielo permette: dove non
   // succede, un filtro sull'origine sarebbe una domanda senza risposta.
   const ciSonoOrdiniCliente = useMemo(() => lista.some(dalCliente), [lista])

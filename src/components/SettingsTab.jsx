@@ -353,12 +353,11 @@ export default function SettingsTab({ role = null }) {
                   lezione di BUG-070 — gli interruttori dei tasti
                   dell'incasso si accendono dove si incassa — regge. */}
               {/* SUMUP VUOLE LE FUNCTIONS (REQ-LIC-004): sul profilo leggero
-                  del piano Free non ci sono, e i due interruttori lasciano
-                  il posto a una riga che lo dice. */}
-              {!sumupDisponibile(settings) && (
+                  del piano Free non ci sono, e gli interruttori di SumUp
+                  lasciano il posto a una riga che lo dice. */}
+              {!sumupDisponibile(settings) ? (
                 <AvvisoPiano messaggio={MESSAGGI_PIANO.sumup} impostazioni={settings} compatto />
-              )}
-              {sumupDisponibile(settings) && (
+              ) : (
                 <>
                   <ToggleRow
                     label="Pagamento online (SumUp)"

@@ -32,16 +32,6 @@ import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito } from './venue.js'
 import { rigaMarchio } from './limiti.js'
-
-// LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
-// `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
-// è un campo di stampa da spegnere: è una condizione del piano. Senza
-// limiti nella licenza non si stampa niente, e lo scontrino della Tana
-// resta quello di sempre.
-function stampaMarchio(prn, impostazioni) {
-  const riga = rigaMarchio(impostazioni)
-  if (riga) prn.addText(`${riga}\n`)
-}
 import {
   configStampa,
   immagineCaricata,
@@ -61,6 +51,16 @@ import {
   scontiDelConto,
   scontoTotale,
 } from './pagamento.js'
+
+// LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
+// `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
+// è un campo di stampa da spegnere: è una condizione del piano. Senza
+// limiti nella licenza non si stampa niente, e lo scontrino della Tana
+// resta quello di sempre.
+function stampaMarchio(prn, impostazioni) {
+  const riga = rigaMarchio(impostazioni)
+  if (riga) prn.addText(`${riga}\n`)
+}
 
 // ── COSA C'È SULLA CARTA LO DECIDE IL LOCALE ─────────────────────────
 //

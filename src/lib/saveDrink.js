@@ -6,7 +6,7 @@ import { sceltaIllustrazione } from './illustrazioneDrink.js'
 import { createDrink, updateDrink } from './api.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl } from './storage.js'
 import { toBaseQty, baseUnit } from './inventory.js'
-import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, profiloLeggero } from './limiti.js'
+import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from './limiti.js'
 
 // Righe editabili → recipe_items persistiti (quantità convertite in unità base).
 export function buildRecipeItems(rows, inventory) {
@@ -62,7 +62,7 @@ export async function saveDrinkFromForm({
   const previousUrl = existing?.image_url ?? null
   // Sul profilo leggero Storage non c'è: la foto scelta non si carica (il
   // tasto è già nascosto, questa è la cintura).
-  if (form._file && !profiloLeggero(impostazioni)) imageUrl = await uploadDrinkImage(form._file)
+  if (form._file && fotoConsentite(impostazioni)) imageUrl = await uploadDrinkImage(form._file)
 
   const catName = (categories || []).find((c) => c.id === form.category_id)?.name
   const payload = {

@@ -97,7 +97,7 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
-import { profiloLeggero } from '../lib/limiti.js'
+import { fotoConsentite } from '../lib/limiti.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -2319,7 +2319,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           ricercaEvidenzia={settings.pos_search === 'evidenzia'}
           modoStriscia={settings.stripe_pos}
           scorteVerdi={!!settings.stripe_ok_verde}
-          fotoConsentite={!profiloLeggero(settings)}
+          fotoConsentite={fotoConsentite(settings)}
           catsHandleProps={catsRz.handleProps}
           recentIds={recentIds}
           onAdd={(d) => {
@@ -3359,7 +3359,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               categories={cats || []}
               inventory={inventario}
               saleVatLocale={settings.sale_vat}
-              fotoConsentite={!profiloLeggero(settings)}
+              fotoConsentite={fotoConsentite(settings)}
               onCreateCategory={(name) => createCategory({ name, sort_order: (cats || []).length })}
               onCancel={() => setNuovaRicetta(null)}
               onSave={salvaNuovaRicetta}

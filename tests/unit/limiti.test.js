@@ -19,6 +19,8 @@ import {
   scontiConsentiti,
   inizioStorico,
   dentroStorico,
+  visibiliNelloStorico,
+  fotoConsentite,
   staffConsentito,
   rigaMarchio,
   urlRegia,
@@ -67,6 +69,11 @@ describe('senza limiti nella licenza non cambia niente', () => {
       expect(scontiConsentiti(stato)).toBe(true)
       expect(inizioStorico(stato)).toBeNull()
       expect(dentroStorico(stato, '2020-01-01T00:00:00.000Z')).toBe(true)
+      // La lista dello storico torna la STESSA, non una copia filtrata:
+      // chi la memorizza non vede cambiare niente.
+      const storico = [{ quando: '2020-01-01T00:00:00.000Z' }]
+      expect(visibiliNelloStorico(stato, storico, { data: (x) => x.quando })).toBe(storico)
+      expect(fotoConsentite(stato)).toBe(true)
       expect(staffConsentito(stato)).toBe(true)
       expect(rigaMarchio(stato)).toBeNull()
       expect(profiloLeggero(stato)).toBe(false)
@@ -116,6 +123,19 @@ describe('coi limiti del piano Free', () => {
     expect(dentroStorico(FREE, null, adesso)).toBe(true)
     // Un Timestamp di Firestore si legge come una data.
     expect(dentroStorico(FREE, { toDate: () => new Date(2026, 9, 1) }, adesso)).toBe(false)
+  })
+
+  it('una lista dello storico perde le voci vecchie, ma non quelle ancora aperte', () => {
+    const adesso = new Date(2026, 9, 30, 1, 30)
+    const recente = { id: 'r', quando: new Date(2026, 9, 29, 22, 0).toISOString() }
+    const vecchia = { id: 'v', quando: new Date(2026, 9, 1, 22, 0).toISOString() }
+    const vecchiaAperta = { id: 'a', quando: new Date(2026, 9, 1, 22, 0).toISOString(), aperta: true }
+    const visibili = visibiliNelloStorico(FREE, [recente, vecchia, vecchiaAperta], {
+      data: (x) => x.quando,
+      aperta: (x) => x.aperta === true,
+      adesso,
+    })
+    expect(visibili.map((x) => x.id)).toEqual(['r', 'a'])
   })
 
   it('un utente solo: niente account dello staff', () => {
@@ -184,6 +204,7 @@ describe('il profilo leggero', () => {
   it('il piano Free è leggero: niente Functions, niente Storage, niente SumUp', () => {
     expect(pianoFree(FREE)).toBe(true)
     expect(profiloLeggero(FREE)).toBe(true)
+    expect(fotoConsentite(FREE)).toBe(false)
     expect(sumupDisponibile(FREE)).toBe(false)
     expect(staffConsentito(FREE)).toBe(false)
   })

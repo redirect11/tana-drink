@@ -26,7 +26,7 @@ import RendicontoSerata from './RendicontoSerata.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
 import { giornateConServizio } from '../lib/giorniDiServizio.js'
 import { impostazioniRicordate } from '../lib/impostazioniLocali.js'
-import { dentroStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
@@ -110,11 +110,8 @@ export default function CashSessionsList() {
       .then(
         (list) =>
           vivo &&
-          setSessions(
-            giorniStorico == null
-              ? list
-              : list.filter((s) => !s.closed_at || dentroStorico(impostazioni, s.opened_at))
-          )
+          // La cassa ancora aperta resta: è la serata in corso.
+          setSessions(visibiliNelloStorico(impostazioni, list, { data: (s) => s.opened_at, aperta: (s) => !s.closed_at }))
       )
       .catch((e) => vivo && setError(e.message))
       .finally(() => vivo && setLoading(false))
@@ -122,7 +119,7 @@ export default function CashSessionsList() {
       vivo = false
     }
     // Le impostazioni ricordate non cambiano mentre la lista è aperta.
-  }, [giorniStorico, impostazioni])
+  }, [impostazioni])
 
   // I bordi del campo data escono dalle sessioni già in mano: nessuna lettura
   // in più per sapere fin dove ha senso cercare.
