@@ -7,7 +7,10 @@
 - **Aggiornamenti a scelta del titolare.** Quando la regia propone una
   versione nuova, il titolare ne vede prima le novità e sceglie
   «Aggiorna», «Salta questa versione» o «Più tardi». Una versione saltata
-  resta in Impostazioni → Informazioni, con il suo «Aggiorna».
+  resta in Impostazioni → Informazioni, con il suo «Aggiorna». La scelta
+  arriva subito alla regia: con «Aggiorna» l'aggiornamento parte in pochi
+  minuti, e se la scelta non va a buon fine il box dice perché e lascia
+  riprovare.
 - **Quando il piano non comprende gli aggiornamenti**, Informazioni lo
   dice e porta alla pagina dei piani.
 - **Gli avvisi sulle condizioni del servizio** compaiono al titolare una

@@ -246,25 +246,10 @@ service cloud.firestore {
       allow write: if isBartender();
     }
 
-    // LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020): «Aggiorna» o «Salta»
-    // del titolare, sulla versione che la regia gli propone. Sta fuori da
-    // settings/, che scrive ogni bartender: la scelta è del titolare, e la
-    // legge e la scrive solo lui. La regia la legge con le sue credenziali,
-    // che non passano da qui. Quattro campi, nessuno in più: il tag nella
-    // forma di un rilascio, la scelta fra le due, l'ora del server, e chi
-    // scrive dichiarato per quello che è.
-    match /aggiornamenti/{docId} {
-      allow read: if isAdmin() && docId == 'scelta';
-      allow create, update: if isAdmin() && docId == 'scelta'
-        && request.resource.data.keys().hasOnly(['tag', 'scelta', 'il', 'da'])
-        && request.resource.data.keys().hasAll(['tag', 'scelta', 'il', 'da'])
-        && request.resource.data.tag is string
-        && request.resource.data.tag.matches('^v[0-9]+[.][0-9]+[.][0-9]+$')
-        && request.resource.data.scelta in ['aggiorna', 'salta']
-        && request.resource.data.il == request.time
-        && request.resource.data.da == request.auth.uid;
-      allow delete: if false;
-    }
+    // LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) non sta nel database:
+    // dal 31/10/2026 è una chiamata alla regia col token del titolare. Il
+    // documento aggiornamenti/scelta di prima non ha più regole, quindi
+    // nessuno lo legge né lo scrive.
 
     // INVENTORY — solo bartender (non serve al cliente né allo staff).
     match /inventory_items/{itemId} {
