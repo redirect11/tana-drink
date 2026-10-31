@@ -1,0 +1,118 @@
+/* ── LA DEMO (REQ-FLOTTA-019) ────────────────────────────────────────────
+   Questo foglio entra solo nella build della demo: lo importa PortaDemo,
+   che si carica dentro `if (__DEMO__)`. Colori del tema, come il resto. */
+
+/* La fascia sta in cima, fissa, e per farle posto si allarga la «fascia di
+   sistema» (--safe-top): la barra in alto, le barre che si appiccicano e i
+   veli delle finestre se ne scostano già, come fanno con l'ora e la
+   batteria del telefono. */
+body.con-fascia-demo {
+  --altezza-fascia-demo: 36px;
+  --safe-top: calc(env(safe-area-inset-top, 0px) + var(--altezza-fascia-demo));
+}
+@media (display-mode: standalone) {
+  body.con-fascia-demo {
+    --safe-top: calc(max(env(safe-area-inset-top, 0px), 22px) + var(--altezza-fascia-demo));
+  }
+}
+
+.demo-fascia {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  min-height: var(--altezza-fascia-demo, 36px);
+  box-sizing: border-box;
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--accent-2);
+  color: var(--bg);
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+.demo-fascia-testo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.demo-fascia-tasti {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.demo-tasto {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.demo-tasto.forte {
+  background: var(--bg);
+  color: var(--accent-2);
+  border-color: var(--bg);
+}
+.demo-tasto:focus-visible {
+  outline: 2px solid var(--bg);
+  outline-offset: 2px;
+}
+/* Sul telefono la frase intera non ci sta: resta «Demo con dati di prova»,
+   e i tasti dicono la parola che serve. */
+.demo-corto {
+  display: none;
+}
+@media (max-width: 640px) {
+  .demo-fascia-lungo,
+  .demo-fascia-ruolo,
+  .demo-lungo {
+    display: none;
+  }
+  .demo-corto {
+    display: inline;
+  }
+}
+
+.demo-ingresso {
+  max-width: 760px;
+  margin: 28px auto 40px;
+}
+.demo-ingresso h1 {
+  margin: 0 0 8px;
+}
+.demo-ingresso > p {
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+.demo-ruoli {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.demo-ruolo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 16px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--raggio-card, 14px);
+  font: inherit;
+  cursor: pointer;
+}
+.demo-ruolo strong {
+  font-size: 1.05rem;
+}
+.demo-ruolo:hover,
+.demo-ruolo:focus-visible {
+  border-color: var(--accent-2);
+}

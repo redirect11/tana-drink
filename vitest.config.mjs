@@ -20,6 +20,12 @@ export default defineConfig({
     __GIT_BRANCH__: JSON.stringify('test'),
     __GIT_COMMIT__: JSON.stringify('0000000'),
     __CLIENTE__: JSON.stringify(clienteTana),
+    // LA DEMO NEI TEST (REQ-FLOTTA-019). Nella build è un letterale; qui è
+    // un interruttore globale, spento: un test che vuole provare il ramo
+    // della demo lo accende con `accendiDemo()` (tests/helpers/demo.js, che
+    // spiega perché sono due) e ricarica i moduli (vi.resetModules). Tutti
+    // gli altri vedono la build della Tana.
+    __DEMO__: 'globalThis.__DEMO_TEST__',
   },
   test: {
     // Default: Node (functions e logica pura). I test COMPONENTE dichiarano

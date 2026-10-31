@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // Notifiche push FCM (Web Push). Il token del dispositivo viene salvato
 // sull'ordine: una Cloud Function lo usa per notificare il cliente quando
 // il drink è pronto o se l'ordine viene annullato dal bartender.
@@ -14,7 +15,8 @@ const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
 // browser non supportato, ambiente di sviluppo, chiave mancante).
 export async function getPushToken() {
   try {
-    if (!import.meta.env.PROD || !vapidKey) return null
+    // Nella demo niente notifiche: il token si chiederebbe a Google.
+    if (__DEMO__ || !import.meta.env.PROD || !vapidKey) return null
     if (!('Notification' in window) || Notification.permission !== 'granted') return null
     if (!(await isSupported())) return null
     const registration = await navigator.serviceWorker.ready
@@ -41,7 +43,7 @@ export async function getPushToken() {
 //                     è l'unico modo in cui iOS le consente.
 //   'non-attivo'    — sviluppo o chiave VAPID mancante: qui non si prova
 export async function statoPush() {
-  if (!import.meta.env.PROD || !vapidKey) return 'non-attivo'
+  if (__DEMO__ || !import.meta.env.PROD || !vapidKey) return 'non-attivo'
   if (!('Notification' in window)) return 'non-supportato'
   try {
     if (!(await isSupported())) return 'non-supportato'

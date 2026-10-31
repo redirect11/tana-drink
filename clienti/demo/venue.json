@@ -1,4 +1,5 @@
 {
+  "demo": true,
   "venue_name": "Bar Demo",
   "venue_short_name": "Demo",
   "venue_presso": "al Bar Demo",
