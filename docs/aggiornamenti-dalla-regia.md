@@ -4,6 +4,15 @@ REQ-FLOTTA-020. Richiesta della regia (drink-regia, stesso id), 31/10/2026.
 Qui c'è quello che serve **all'app**; il lato regia (interruttori, ondate,
 rinnovi, dashboard) lo fa la regia e qui è raccontato solo per capire.
 
+**Stato: fatto lato app** (31/10/2026, 1.10.3-beta). Dove sta: la logica
+in `src/lib/aggiornamenti.js`, il box in
+`src/components/PropostaAggiornamento.jsx`, la scheda in
+`src/components/InfoTab.jsx`, la scrittura in `src/lib/api.js`
+(`scegliAggiornamento`), le regole in `firestore.rules`. Una differenza da
+quanto scritto sotto: la proposta esce se il tag è **più nuovo**
+dell'installata, non solo diverso (una proposta rimasta indietro
+offrirebbe un ritorno all'indietro). Il punto 6 è scritto in REQ-LIC-003.
+
 ## Cosa ha chiesto l'utente
 
 > «possiamo configurarli in due modi: uno quello attuale, quando arriva un

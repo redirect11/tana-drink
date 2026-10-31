@@ -150,6 +150,9 @@ const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
+// La scelta del titolare sugli aggiornamenti (REQ-FLOTTA-020): un
+// documento suo, fuori da settings/ che scrive ogni bartender.
+const sceltaAggiornamentoDoc = doc(db, 'aggiornamenti', 'scelta')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const cashSessionsCol = collection(db, 'cash_sessions')
@@ -6347,6 +6350,32 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
       newTotal: lordoSelezione(dopo, righe),
     },
     impostazioni().discount_policy
+  )
+}
+
+// ── LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) ───────────────────
+// «Aggiorna» o «Salta» del titolare. In sottofondo come ogni gesto: il box
+// si chiude subito, e la regia legge il documento quando passa (lo legge
+// con le sue credenziali, non serve una Function). Le regole vogliono
+// esattamente questi quattro campi, `il` uguale all'ora del server e `da`
+// uguale a chi scrive.
+export function scegliAggiornamento(tag, scelta) {
+  setDoc(sceltaAggiornamentoDoc, {
+    tag,
+    scelta,
+    il: serverTimestamp(),
+    da: auth.currentUser?.uid ?? null,
+  }).catch((e) => console.error('[aggiornamenti] scelta:', e?.message || e))
+}
+
+// La scelta già fatta, da questo terminale o da un altro: vale la prima
+// che arriva, e il box non la richiede. Solo per il titolare, che è
+// l'unico a poterla leggere.
+export function subscribeSceltaAggiornamento(onChange, onError) {
+  return onSnapshot(
+    sceltaAggiornamentoDoc,
+    (snap) => onChange(snap.exists() ? snap.data() : null),
+    onError ?? (() => {})
   )
 }
 
