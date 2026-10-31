@@ -134,6 +134,14 @@ describe('il box della proposta', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('un locale della regia di test chiama la regia di test', async () => {
+    const TEST = 'https://europe-west1-drink-regia-test.cloudfunctions.net/sceltaDallApp'
+    render(<PropostaAggiornamento settings={aScelta({ scelta_url: TEST })} ruolo="admin" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Aggiorna' }))
+    expect(await screen.findByText('Aggiornamento partito: arriva in pochi minuti.')).toBeInTheDocument()
+    expect(chiamate.map((c) => c.url)).toEqual([TEST])
+  })
+
   it('mentre aspetta la regia i tasti sono spenti, e un secondo tocco non rifà la chiamata', async () => {
     let rispondi
     globalThis.fetch = vi.fn((url, opzioni) => {
@@ -238,6 +246,7 @@ describe('il box della proposta', () => {
       'http://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp',
       'https://europe-west1-drink-regia.cloudfunctions.net.example.com/sceltaDallApp',
       'https://europe-west1-altro.cloudfunctions.net/sceltaDallApp',
+      'https://europe-west1-foo-drink-regia.cloudfunctions.net/sceltaDallApp',
     ]) {
       render(<PropostaAggiornamento settings={aScelta({ scelta_url: altrove })} ruolo="admin" />)
       expect(screen.queryByRole('button', { name: 'Aggiorna' })).toBeNull()

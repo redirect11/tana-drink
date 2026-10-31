@@ -110,14 +110,26 @@ export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
 }
 
 // ── LA CHIAMATA ALLA REGIA ────────────────────────────────────────────
-// Dove la regia vuole la scelta: SOLO sulle sue Functions. La chiamata
-// porta il token del titolare, che per un'ora apre tutto quello che il
-// titolare può fare; e la licenza, finché sta in `settings/bar` (BUG-125),
-// la può riscrivere ogni bartender. Un `scelta_url` messo lì a mano verso
-// un server suo si prenderebbe il token al primo «Aggiorna». Un indirizzo
-// fuori dalla regia vale come nessun indirizzo: si sceglie dall'area
-// clienti. Se la regia sposta la Function, si cambia qui.
-const SCELTA_URL_REGIA = /^https:\/\/[a-z0-9-]+-drink-regia\.cloudfunctions\.net\/[A-Za-z0-9_-]+$/
+// L'indirizzo lo scrive la regia nella licenza (`scelta_url`), e l'app usa
+// quello: le regie sono due, test e produzione, ognuna col suo progetto, e
+// un locale di test deve chiamare la regia di test.
+//
+// Ma prima di mandargli il token si guarda che sia DAVVERO una regia. Il
+// token apre per un'ora tutto quello che il titolare può fare, e la
+// licenza, finché sta in `settings/bar` (BUG-125), la può riscrivere ogni
+// bartender: un `scelta_url` verso un server suo si prenderebbe il token
+// al primo «Aggiorna». Quindi: https, una Function di uno dei PROGETTI
+// della regia, un nome e nient'altro. I progetti sono scritti per intero:
+// un controllo sul solo finale del nome («…-drink-regia») lascerebbe
+// passare un progetto altrui chiamato `foo-drink-regia`, perché il nome
+// del progetto è nell'indirizzo, dopo la regione. Un indirizzo che non
+// passa vale come nessuno: si sceglie dall'area clienti.
+// Quando la licenza non sarà più scrivibile dall'app (BUG-125), questo
+// controllo si può togliere e l'indirizzo lo decide solo la regia.
+const PROGETTI_REGIA = ['drink-regia', 'drink-regia-test']
+const SCELTA_URL_REGIA = new RegExp(
+  String.raw`^https://[a-z]+-[a-z]+[0-9]+-(${PROGETTI_REGIA.join('|')})\.cloudfunctions\.net/[A-Za-z0-9_-]+$`
+)
 
 export function sceltaUrl(stato) {
   const u = aggiornamentiDi(stato)?.scelta_url
