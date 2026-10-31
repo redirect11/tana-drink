@@ -100,6 +100,12 @@ account dello staff. Con un solo terminale `risolviNumeroDuplicato` non
 serve; con due dispositivi del titolare aperti insieme un numero doppio,
 raro, resta (il dettaglio è in REQ-LIC-004).
 
+**Gli aggiornamenti** (REQ-FLOTTA-020). La regia può scrivere anche
+`licenza.aggiornamenti`: in modalità «a scelta» l'app mostra al titolare
+le novità prima di aggiornare, con «Aggiorna» e «Salta», e scrive la
+scelta in `aggiornamenti/scelta`. Senza la voce, tutto come oggi. Il
+contratto è in [aggiornamenti-dalla-regia.md](aggiornamenti-dalla-regia.md).
+
 ## Come si prova senza spaccare niente
 
 - **In locale, con gli emulatori** (`npm run emulators` + `npm run dev`):

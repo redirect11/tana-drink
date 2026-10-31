@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 241 | fatto e coperto dai test |
+| ✅ | 242 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 24 | da fare |
+| ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**289 voci** in tutto. **257** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**291 voci** in tutto. **258** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 3 | — |  |
+| [FLOTTA](#flotta) | 3 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3757,6 +3757,14 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-020 — Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»
+
+«Il secondo dovrebbe invece mostrare prima il changelog con i cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe volere anche saltare l'aggiornamento» e «nei vari piani siano garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026). La specifica intera è in docs/aggiornamenti-dalla-regia.md. In breve: la regia scrive `settings/bar.licenza.aggiornamenti` (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi nel piano, la proposta con le sue note, l'avviso delle condizioni nuove). In modalità a scelta l'app mostra al titolare, prima di aggiornare, le novità della versione proposta con «Aggiorna», «Salta questa versione» e «Più tardi», e scrive la scelta in `aggiornamenti/scelta`, un documento che solo il titolare legge e scrive; la regia la legge e pubblica, o segna saltata. In Informazioni restano la proposta saltata col suo «Aggiorna» e, se il piano non comprende gli aggiornamenti, il perché. L'avviso delle condizioni esce una volta per id. Senza la voce, e in modalità obbligatori, l'app fa quello che fa oggi; la demo la ignora.
+
+**Dove**: `src/App.jsx, src/lib/licenza.js, src/lib/novita.js, src/components/InfoTab.jsx, firestore.rules, docs/aggiornamenti-dalla-regia.md`
 
 ## Difetti noti
 
