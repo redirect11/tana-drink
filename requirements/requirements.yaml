@@ -7567,6 +7567,30 @@ requirements:
       - tests/component/ChiamataInArrivo.test.jsx
       - tests/bdd/notify-staff-call.test.js
       - tests/regole/staffCalls.test.js
+  - id: REQ-STAFF-020
+    title: "La sala corregge le righe di qualunque conto, come il banco"
+    area: "src/components/OrderPosDetail.jsx (confirmedLines, removable), src/lib/ruoli.js (puoGestireComande), firestore.rules (orders)"
+    description: >
+      Flavio, 30/10/2026 (audio, con la foto del conto #34): «lo staff non
+      può modificare l'ordine, infatti non può togliere il Sipsmith più
+      uno, lo posso fare solo io … devono avere la possibilità di
+      modificare qualsiasi ordine». Con REQ-STAFF-014 le righe di una
+      comanda già mandata al banco, per la sala, erano da leggere: il «−»
+      restava spento e un drink sbagliato lo toglieva solo il banco. Ora la
+      sala corregge le righe come il banco e con gli stessi limiti: finché
+      la comanda è da fare o in preparazione, oppure sul conto riaperto;
+      una comanda annullata o già servita resta com'è. Quello che la sala
+      AGGIUNGE continua a nascere come comanda nuova (REQ-STAFF-014).
+      Restano del banco annullare il conto, dividere una comanda, tornare
+      indietro di uno stato e segnare le preparazioni. Le regole del
+      database lo permettevano già: una comanda svuotata resta nell'array
+      (`bartenderUpdateComanda`), quindi il numero delle comande non scende
+      e il conto non diventa «annullato».
+    status: implemented
+    generate_issue: false
+    labels: [staff, sala, comande]
+    test_cases:
+      - tests/component/OrderPosDetail.test.jsx
   - id: REQ-STAFF-014
     title: "La sala serve, non prepara: gli stati delle comande non li tocca"
     area: "src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules"
@@ -7581,6 +7605,8 @@ requirements:
       aggiungere righe, cambiare quantità — e quelle modifiche generano una
       NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca
       le comande esistenti: quelle sono il lavoro di chi versa.
+      (SUPERATO PER LE RIGHE dal 30/10/2026: correggere le righe di una
+      comanda già mandata lo fa anche la sala — REQ-STAFF-020.)
       DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre —
       c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale
       anche lato server (`firestore.rules`): un permesso che esiste solo

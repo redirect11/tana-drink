@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 30 ottobre 2026.
+> Generato il 31 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 240 | fatto e coperto dai test |
+| ✅ | 241 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**288 voci** in tutto. **256** descrivono il sistema com'è oggi e
+**289 voci** in tutto. **257** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -54,7 +54,7 @@ come «vero oggi», non come «garantito».
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 13 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -2588,13 +2588,17 @@ Flavio, 30/10/2026 (audio): «in questo momento lo staff può solo ricevere una 
 
 **Dove**: `src/lib/api.js (chiamaIlBancone, subscribeCallsAlBancone, subscribeMieChiamateAlBancone), src/components/StaffDrawer.jsx (ChiamaIlBancone), src/components/ChiamataInArrivo.jsx, firestore.rules (staff_calls), functions/lib/push-core.js (destinatariChiamata), functions/index.js (notifyStaffCall)` · **Lo dimostrano**: `tests/component/StaffDrawer.test.jsx`, `tests/component/ChiamataInArrivo.test.jsx`, `tests/bdd/notify-staff-call.test.js`, `tests/regole/staffCalls.test.js`
 
+#### REQ-STAFF-020 — La sala corregge le righe di qualunque conto, come il banco
+
+Flavio, 30/10/2026 (audio, con la foto del conto #34): «lo staff non può modificare l'ordine, infatti non può togliere il Sipsmith più uno, lo posso fare solo io … devono avere la possibilità di modificare qualsiasi ordine». Con REQ-STAFF-014 le righe di una comanda già mandata al banco, per la sala, erano da leggere: il «−» restava spento e un drink sbagliato lo toglieva solo il banco. Ora la sala corregge le righe come il banco e con gli stessi limiti: finché la comanda è da fare o in preparazione, oppure sul conto riaperto; una comanda annullata o già servita resta com'è. Quello che la sala AGGIUNGE continua a nascere come comanda nuova (REQ-STAFF-014). Restano del banco annullare il conto, dividere una comanda, tornare indietro di uno stato e segnare le preparazioni. Le regole del database lo permettevano già: una comanda svuotata resta nell'array (`bartenderUpdateComanda`), quindi il numero delle comande non scende e il conto non diventa «annullato».
+
+**Dove**: `src/components/OrderPosDetail.jsx (confirmedLines, removable), src/lib/ruoli.js (puoGestireComande), firestore.rules (orders)` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
 Chiesto dall'utente il 19/08. Chi sta in sala VEDE a che punto sono le preparazioni — gli serve per sapere cosa portare — ma non le comanda: l'unico passo che può segnare è «servito», perché è lui a portare il drink al tavolo. Tutto il resto (prendere in carico, segnare pronto, tornare indietro, dividere una comanda, annullarla) è del banco.
 
-SUGLI ORDINI invece la sala lavora: può aggiornare un conto — aggiungere righe, cambiare quantità — e quelle modifiche generano una NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca le comande esistenti: quelle sono il lavoro di chi versa.
-
-DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre — c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale anche lato server (`firestore.rules`): un permesso che esiste solo nell'interfaccia non è un permesso. FATTO. In `ruoli.js`: `puoSegnare` (alla sala solo «servito»), `puoGestireComande` (tornare indietro, dividere, annullare, riscrivere una comanda già mandata) e `aggiunteInComandaNuova` (quello che la sala aggiunge nasce come comanda a sé, anche col «+» su una riga già confermata). Le due prime sono scritte al contrario — «non è la sala» — apposta: spengono dei tasti mentre il ruolo torna dal server, e spegnerli per un istante al banco vuol dire premere a vuoto.
+SUGLI ORDINI invece la sala lavora: può aggiornare un conto — aggiungere righe, cambiare quantità — e quelle modifiche generano una NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca le comande esistenti: quelle sono il lavoro di chi versa. (SUPERATO PER LE RIGHE dal 30/10/2026: correggere le righe di una comanda già mandata lo fa anche la sala — REQ-STAFF-020.) DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre — c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale anche lato server (`firestore.rules`): un permesso che esiste solo nell'interfaccia non è un permesso. FATTO. In `ruoli.js`: `puoSegnare` (alla sala solo «servito»), `puoGestireComande` (tornare indietro, dividere, annullare, riscrivere una comanda già mandata) e `aggiunteInComandaNuova` (quello che la sala aggiunge nasce come comanda a sé, anche col «+» su una riga già confermata). Le due prime sono scritte al contrario — «non è la sala» — apposta: spengono dei tasti mentre il ruolo torna dal server, e spegnerli per un istante al banco vuol dire premere a vuoto.
 
 LATO SERVER `firestore.rules` nega alla sala le due cose che il database sa vedere da sé: portare un conto ad «annullato» e far scendere il numero delle comande.
 
