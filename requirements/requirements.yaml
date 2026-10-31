@@ -5787,7 +5787,14 @@ requirements:
       ruolo admin, coi quattro campi e nient'altro, e solo quel documento
       della collezione; nessuno lo cancella. Il ritorno al Free di un
       locale che pagava è scritto in REQ-LIC-003.
-    status: implemented
+      CAMBIA (31/10/2026, l'utente: «ste cose in polling si portavano negli
+      anni 90»): la scelta non si scrive più in aggiornamenti/scelta, che la
+      regia leggeva ogni dieci minuti. L'app chiama
+      licenza.aggiornamenti.scelta_url (POST, Authorization: Bearer col token
+      del titolare, corpo { tag, scelta }) e la regia applica subito; il
+      documento, la sua regola e l'ascolto si tolgono. Il contratto è in
+      docs/aggiornamenti-dalla-regia.md.
+    status: partial
     generate_issue: true
     labels: [prodotto, flotta, licenza]
     priority: P2
