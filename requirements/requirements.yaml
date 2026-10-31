@@ -5737,6 +5737,36 @@ requirements:
       - tests/component/PortaDemo.test.jsx
       - tests/unit/avvioApp.test.jsx
 
+  - id: REQ-FLOTTA-021
+    title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
+    area: "src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
+    description: >
+      «Tana-drink è sempre lo stesso ma dove si installa e come si
+      configura è roba di regia» e «possiamo prevedere delle interfacce
+      che implementano le logiche di firebase o altre logiche con altri db
+      e una interfaccia che parla con node o con le functions. Così
+      possiamo riutilizzare tutto anche su cloud puro» (l'utente,
+      31/10/2026, per l'installazione on premise col gestionale intero
+      nel locale). La specifica è in docs/porte-e-adattatori.md. In breve:
+      l'app non importa più Firebase fuori dagli adattatori, e parla con
+      sei porte nostre (configurazione, dati, accesso, file, server,
+      notifiche), che oggi hanno il solo adattatore Firebase. La porta dei
+      dati offre solo quello che l'app usa (nessuna transazione), compresa
+      la differenza fra scrittura presa in carico e arrivata al server. La
+      configurazione si legge all'avvio da un file servito accanto
+      all'app, con le VITE_* della build come riserva. La logica delle
+      Functions diventa funzioni normali, eseguite da un ospite Firebase,
+      e i trigger si dichiarano come dati. Un test-guardia, dei test di
+      contratto sulle porte e i permessi per ruolo scritti uguali per ogni
+      backend tengono il confine. Per chi usa l'app non cambia niente; il
+      secondo adattatore e l'ospite Node vengono dopo il prototipo della
+      regia (drink-regia, REQ-FLOTTA-021).
+    status: todo
+    generate_issue: true
+    labels: [prodotto, flotta]
+    priority: P2
+    test_cases: []
+
   - id: REQ-UI-001
     title: "Le sottosezioni di una pagina stanno sotto il titolo"
     area: "src/components/SectionPanels.jsx"

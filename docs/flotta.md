@@ -100,6 +100,15 @@ account dello staff. Con un solo terminale `risolviNumeroDuplicato` non
 serve; con due dispositivi del titolare aperti insieme un numero doppio,
 raro, resta (il dettaglio è in REQ-LIC-004).
 
+## Le porte e gli adattatori (REQ-FLOTTA-021)
+
+Dal 31/10/2026 i livelli di installazione sono tre: cloud, app e on
+premise, cioè il gestionale intero nel locale col backup sul cloud. Perché
+l'app resti una, parla con delle porte nostre (dati, accesso, file,
+server, notifiche, configurazione), e Firebase diventa un adattatore. Dove
+si installa e come si configura lo decide la regia. La specifica è in
+[porte-e-adattatori.md](porte-e-adattatori.md).
+
 ## Come si prova senza spaccare niente
 
 - **In locale, con gli emulatori** (`npm run emulators` + `npm run dev`):

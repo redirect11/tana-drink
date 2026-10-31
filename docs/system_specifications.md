@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 241 | fatto e coperto dai test |
+| ✅ | 242 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 24 | da fare |
+| ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**289 voci** in tutto. **257** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**291 voci** in tutto. **258** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 3 | — |  |
+| [FLOTTA](#flotta) | 3 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3757,6 +3757,14 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
+
+«Tana-drink è sempre lo stesso ma dove si installa e come si configura è roba di regia» e «possiamo prevedere delle interfacce che implementano le logiche di firebase o altre logiche con altri db e una interfaccia che parla con node o con le functions. Così possiamo riutilizzare tutto anche su cloud puro» (l'utente, 31/10/2026, per l'installazione on premise col gestionale intero nel locale). La specifica è in docs/porte-e-adattatori.md. In breve: l'app non importa più Firebase fuori dagli adattatori, e parla con sei porte nostre (configurazione, dati, accesso, file, server, notifiche), che oggi hanno il solo adattatore Firebase. La porta dei dati offre solo quello che l'app usa (nessuna transazione), compresa la differenza fra scrittura presa in carico e arrivata al server. La configurazione si legge all'avvio da un file servito accanto all'app, con le VITE_* della build come riserva. La logica delle Functions diventa funzioni normali, eseguite da un ospite Firebase, e i trigger si dichiarano come dati. Un test-guardia, dei test di contratto sulle porte e i permessi per ruolo scritti uguali per ogni backend tengono il confine. Per chi usa l'app non cambia niente; il secondo adattatore e l'ospite Node vengono dopo il prototipo della regia (drink-regia, REQ-FLOTTA-021).
+
+**Dove**: `src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md`
 
 ## Difetti noti
 
