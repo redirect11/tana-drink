@@ -22,9 +22,9 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 243 | fatto e coperto dai test |
+| ✅ | 242 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 1 | fatto a metà |
+| 🟡 | 2 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
@@ -3402,11 +3402,15 @@ IL PUNTO DA CONTROLLARE PER PRIMO (l'utente, 30/10/2026: «che, con la rete del 
 
 #### REQ-FLOTTA-020 — Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»
 
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
 «Il secondo dovrebbe invece mostrare prima il changelog con i cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe volere anche saltare l'aggiornamento» e «nei vari piani siano garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026). La specifica intera è in docs/aggiornamenti-dalla-regia.md. In breve: la regia scrive `settings/bar.licenza.aggiornamenti` (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi nel piano, la proposta con le sue note, l'avviso delle condizioni nuove). In modalità a scelta l'app mostra al titolare, prima di aggiornare, le novità della versione proposta con «Aggiorna», «Salta questa versione» e «Più tardi», e scrive la scelta in `aggiornamenti/scelta`, un documento che solo il titolare legge e scrive; la regia la legge e pubblica, o segna saltata. In Informazioni restano la proposta saltata col suo «Aggiorna» e, se il piano non comprende gli aggiornamenti, il perché. L'avviso delle condizioni esce una volta per id. Senza la voce, e in modalità obbligatori, l'app fa quello che fa oggi; la demo la ignora.
 
 FATTO (31/10/2026). La logica pura sta in `src/lib/aggiornamenti.js`; il box (`PropostaAggiornamento`, montato da App) mostra prima l'avviso delle condizioni, poi la proposta, mai sopra il box delle novità né su un'installazione sospesa. La scelta parte in sottofondo (`scegliAggiornamento`, nessuna attesa: il box si chiude al tocco) e torna dall'ascolto di `aggiornamenti/scelta`, che il titolare fa solo in modalità «a scelta»: una scelta per quel tag, da qualunque terminale, chiude il box. «Più tardi» non scrive niente e vale fino alla prossima apertura.
 
 UNA DIFFERENZA DAL DOCUMENTO: la proposta esce se il tag è PIÙ NUOVO dell'installata, non solo diverso (una proposta rimasta indietro offrirebbe un ritorno all'indietro; una beta viene prima del suo rilascio); se l'installata non si legge resta «diversa». Le regole danno `aggiornamenti/scelta` al solo ruolo admin, coi quattro campi e nient'altro, e solo quel documento della collezione; nessuno lo cancella. Il ritorno al Free di un locale che pagava è scritto in REQ-LIC-003.
+
+CAMBIA (31/10/2026, l'utente: «ste cose in polling si portavano negli anni 90»): la scelta non si scrive più in aggiornamenti/scelta, che la regia leggeva ogni dieci minuti. L'app chiama licenza.aggiornamenti.scelta_url (POST, Authorization: Bearer col token del titolare, corpo { tag, scelta }) e la regia applica subito; il documento, la sua regola e l'ascolto si tolgono. Il contratto è in docs/aggiornamenti-dalla-regia.md.
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (scegliAggiornamento, subscribeSceltaAggiornamento), firestore.rules (aggiornamenti/scelta), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
 
