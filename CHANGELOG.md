@@ -1,6 +1,24 @@
 # Cosa è cambiato
 
-## 1.10.1-beta — in lavorazione
+## 1.10.2-beta — in lavorazione
+
+### Per chi lavora in sala
+
+- **La stampante anche dal telefono della sala.** Nel menu c'è
+  «Stampante»: indirizzo, prova di stampa e certificato si sistemano da
+  sé, sul proprio telefono, senza chiedere al banco.
+- **Si chiama il bancone.** Nel menu c'è «Chiama il bancone»: al titolare
+  arriva la chiamata a tutto schermo, e finché non risponde il tasto dice
+  che si è in attesa.
+
+### Per chi amministra
+
+- **Cambiare ingrediente in una ricetta non cambia più l'unità.** Se la
+  riga era in ml resta in ml, con la sua quantità; l'unità cambia solo
+  passando a un articolo che non si misura così (da un liquido a uno a
+  pezzi).
+
+## 1.10.1-beta — 30 ottobre 2026, sul test
 
 ### Per i clienti
 

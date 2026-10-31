@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 238 | fatto e coperto dai test |
+| ✅ | 240 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**286 voci** in tutto. **254** descrivono il sistema com'è oggi e
+**288 voci** in tutto. **256** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **10** difetti noti sono ancora aperti.
@@ -50,11 +50,11 @@ come «vero oggi», non come «garantito».
 | [Menù e catalogo](#menù-e-catalogo) | 16 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 18 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 12 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 13 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -892,7 +892,7 @@ Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base.
 
 In magazzino tutto è in unità base (ml, g, pz); la visualizzazione usa l'unità comoda (cl per i liquidi, L oltre il litro, g o kg per i solidi). Chi inserisce sceglie l'unità che preferisce e la conversione è automatica: "4 cl" non deve mai diventare 4 pezzi.
 
-**Dove**: `src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`
+**Dove**: `src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/DrinkFormRicetta.test.jsx`
 
 #### REQ-MAG-002 — Bottiglie: quante piene, quale aperta, quanto resta
 
@@ -2378,6 +2378,12 @@ SI LEGGE DA CASA con `node scripts/diagnostica-stampante.js --project tana-drink
 
 **Dove**: `src/lib/diagnosticaStampante.js, src/lib/api.js (scriviDiagnosticaStampante, openCashSession), src/lib/printer.js, src/lib/registroStampe.js, src/lib/statoStampante.js, src/lib/cashSession.js, firestore.rules, scripts/diagnostica-stampante.js` · **Lo dimostrano**: `tests/unit/diagnosticaStampante.test.js`, `tests/unit/diagnosticaStampanteSenzaRete.test.js`
 
+#### REQ-STAMPA-020 — La sala si collega da sé alla stampante
+
+Flavio, 30/10/2026 (audio): «bisogna dare allo staff, cioè ad un account staff, la possibilità di collegarsi alla stampante, perché sta disabilitato». La sala stampa le comande dal suo telefono, ma l'indirizzo della stampante, il certificato da accettare e la prova di stampa stavano in una pagina che a un account staff non si apriva: il menu della sala aveva solo «Coda ordini» e «Da servire», e il pallino della stampante diceva «Dillo a chi sta al banco». Ora la sala ha la sua voce «🖨️ Stampante». Vede la parte del COLLEGAMENTO — indirizzo, porta, HTTPS, il certificato da accettare, «Test stampa» — e la salva sul suo telefono soltanto: la configurazione condivisa del locale (settings/printer) e i dati del locale sulla carta restano dei gestori, come dicono le regole del database. Il pallino, a chi è in sala senza stampante, dice di impostarla dal menu.
+
+**Dove**: `src/lib/sezioni.js (NAV_SALA), src/pages/BartenderPage.jsx (tab stampante), src/components/PrinterSetup.jsx (gestore), src/components/PallinoStampante.jsx` · **Lo dimostrano**: `tests/component/PrinterSetupSala.test.jsx`
+
 ### Vista cliente
 
 Quello che vede il cliente: vetrina, menù, stato del suo ordine.
@@ -2575,6 +2581,12 @@ COSA CAMBIA DAVVERO, OGGI: la sessione di cassa risulta aperta da chi e' stato s
 ANCORA DA FARE, e sono due requisiti loro: l'ASPETTO PER PERSONA (REQ-STAFF-017), che e' la seconda meta' della richiesta di Flavio, e L'ATTRIBUZIONE (REQ-STAFF-018). Manca anche il cambio di persona a cassa gia' aperta, per il cambio turno.
 
 **Dove**: `src/lib/operatore.js, src/components/ApriCassaBox.jsx, src/components/UtentiTab.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/operatore.test.js`, `tests/component/ApriCassaBox.test.jsx`
+
+#### REQ-STAFF-019 — La sala chiama il bancone
+
+Flavio, 30/10/2026 (audio): «in questo momento lo staff può solo ricevere una chiamata dal bancone ma non può effettuarla … permettere la chiamata al bancone, quindi ad un account admin». Nel menu della sala c'è «📟 Chiama il bancone»: un tocco e la chiamata parte, in sottofondo (local-first: niente attesa del server); finché il bancone non risponde la voce dice «In attesa del bancone…» e un secondo tocco non ne manda un'altra. La chiamata non è per una persona ma per il bancone, cioè per chi è titolare (`to_role: 'admin'`): ai titolari compare a tutto schermo «📟 Chiamata dalla sala», con chi chiama e «Rispondo», come allo staff la chiamata dal bancone; e la Cloud Function fa vibrare tutti i loro terminali, trovandoli dai claim delle utenze (un account disattivato non suona). Le regole lasciano alla sala SOLO questa chiamata: al bancone, senza destinatario personale, firmata da sé, ancora da rispondere; il cliente non chiama nessuno.
+
+**Dove**: `src/lib/api.js (chiamaIlBancone, subscribeCallsAlBancone, subscribeMieChiamateAlBancone), src/components/StaffDrawer.jsx (ChiamaIlBancone), src/components/ChiamataInArrivo.jsx, firestore.rules (staff_calls), functions/lib/push-core.js (destinatariChiamata), functions/index.js (notifyStaffCall)` · **Lo dimostrano**: `tests/component/StaffDrawer.test.jsx`, `tests/component/ChiamataInArrivo.test.jsx`, `tests/bdd/notify-staff-call.test.js`, `tests/regole/staffCalls.test.js`
 
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
@@ -3124,7 +3136,7 @@ OGNI PROVA È DOPPIA, ed è il punto di questo requisito: che l'abuso sia blocca
 
 STANNO PER CONTO LORO, fuori da `npm test`: senza emulatore acceso non partirebbero e renderebbero rossa la CI per un motivo che non è un difetto. Si lanciano con `npm run test:regole`, dopo aver acceso gli emulatori (vedi docs/ambiente-locale.md). Per la stessa ragione non contano per la copertura: quello che misurano non è codice nostro.
 
-**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`, `tests/regole/orders.test.js`
+**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`, `tests/regole/orders.test.js`, `tests/regole/staffCalls.test.js`
 
 #### REQ-DEV-016 — Quello che dice quali pezzi caricare non si tiene in cache
 

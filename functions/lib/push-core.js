@@ -102,10 +102,24 @@ const STAFF_CALL_VIBRATION = [500, 200, 500, 200, 900]
 // Documento staff_calls appena creato → messaggio push per il membro
 // dello staff chiamato, o null se non c'è nulla da inviare.
 function decideStaffCallPush(call) {
-  if (!call || !call.to_uid) return null
+  if (!call) return null
   if (call.status && call.status !== 'pending') return null
   // Mai l'email del chiamante: al massimo il nome.
   const da = call.from_name || null
+  // LA SALA CHIAMA IL BANCONE (REQ-STAFF-019): nessuna persona, il ruolo.
+  if (call.to_role === 'admin' && !call.to_uid) {
+    return {
+      title: '📟 Chiamata dalla sala',
+      body: call.message
+        ? da
+          ? `${da}: «${call.message}»`
+          : `«${call.message}»`
+        : da
+          ? `${da} ti chiama. Rispondi sul telefono.`
+          : 'Ti chiamano dalla sala. Rispondi sul telefono.',
+    }
+  }
+  if (!call.to_uid) return null
   return {
     title: '📟 Chiamata dal bancone',
     body: call.message
@@ -273,6 +287,7 @@ module.exports = {
   destinatariPush,
   decideOrderPush,
   decideStaffCallPush,
+  destinatariChiamata,
   decideStaffServePush,
   decideNewOrderStaffPush,
   isPayableReceived,
@@ -292,6 +307,17 @@ module.exports = {
 // giro da prima. Un token può comparire due volte — la stessa riga salvata
 // in tutti e due i modi — e mandarlo due volte farebbe vibrare due volte:
 // si tiene una volta sola.
+// A CHI SUONA UNA CHIAMATA (REQ-STAFF-019): a una persona, o — se la fa la
+// sala al bancone — a tutti quelli che sono titolari. `utenti` sono quelli
+// di Firebase Auth ({ uid, customClaims, disabled }): il ruolo sta nei claim,
+// come per le regole del database. Un account disattivato non suona.
+function destinatariChiamata(call, utenti = []) {
+  if (!call) return []
+  if (call.to_uid) return [call.to_uid]
+  if (call.to_role !== 'admin') return []
+  return utenti.filter((u) => !u.disabled && u.customClaims?.role === 'admin').map((u) => u.uid)
+}
+
 function terminaliDi(righe, uid) {
   if (!uid) return []
   const visti = new Set()

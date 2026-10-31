@@ -341,7 +341,17 @@ service cloud.firestore {
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
     match /staff_calls/{callId} {
       allow read: if isStaffMember();
-      allow create, delete: if isBartender();
+      // Il bancone chiama chi vuole. La SALA chiama solo il bancone
+      // (REQ-STAFF-019): una chiamata senza destinatario personale, per chi
+      // è titolare (`to_role: 'admin'`), firmata da chi la fa e ancora da
+      // rispondere. Niente chiamate a nome di un altro, né a una persona.
+      allow create: if isBartender()
+        || (isStaffMember()
+          && request.resource.data.to_role == 'admin'
+          && request.resource.data.to_uid == null
+          && request.resource.data.from_uid == request.auth.uid
+          && request.resource.data.status == 'pending');
+      allow delete: if isBartender();
       allow update: if isStaffMember();
     }
 

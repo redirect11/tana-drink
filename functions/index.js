@@ -21,6 +21,7 @@ const { numeroDaRiassegnare } = require('./lib/numerazione')
 const {
   decideOrderPush,
   decideStaffCallPush,
+  destinatariChiamata,
   decideStaffServePush,
   decideNewOrderStaffPush,
   destinatariPush,
@@ -271,13 +272,23 @@ exports.notifyStaffCall = onDocumentCreated({ ...OPTS, document: 'staff_calls/{c
   // niente e la chiamata non partiva — il telefono di chi veniva cercato
   // non vibrava mai. E chi lavora ha spesso due terminali accesi: la
   // chiamata deve suonare su entrambi, perché non si sa quale ha in mano.
+  // CHI VA CHIAMATO: una persona, o — se la chiamata la fa la sala al
+  // bancone (REQ-STAFF-019) — chi è titolare, letto dai claim delle utenze.
+  let utenti = []
+  if (!call.to_uid && call.to_role === 'admin') {
+    let pagina
+    do {
+      const r = await getAuth().listUsers(1000, pagina)
+      utenti = utenti.concat(r.users)
+      pagina = r.pageToken
+    } while (pagina)
+  }
+  const destinatari = destinatariChiamata(call, utenti)
+  if (destinatari.length === 0) return
+
   const tokensSnap = await db.collection('staff_tokens').get()
-  const suoi = new Set(
-    terminaliDi(
-      tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') })),
-      call.to_uid
-    ).map((r) => r.token)
-  )
+  const righe = tokensSnap.docs.map((d) => ({ id: d.id, uid: d.get('uid'), token: d.get('token') }))
+  const suoi = new Set(destinatari.flatMap((uid) => terminaliDi(righe, uid)).map((r) => r.token))
   const docs = tokensSnap.docs.filter((d) => suoi.has(d.get('token')))
   if (docs.length === 0) return
 
