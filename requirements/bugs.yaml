@@ -5352,4 +5352,50 @@ bugs:
     labels: [bug, menu, magazzino]
     test_cases:
       - tests/component/DrinkFormRicetta.test.jsx
+  - id: BUG-125
+    title: "La licenza di un locale la può riscrivere ogni bartender: sta in settings/, che le regole lasciano scrivere al banco"
+    area: "firestore.rules (settings, licenza), src/lib/api.js (subscribeSettings), src/lib/licenza.js, src/lib/limiti.js, src/lib/aggiornamenti.js, src/components/DevTools.jsx, scripts/licenza-moduli.js"
+    severity: alta
+    priority: P1
+    description: >
+      Visto il 31/10/2026 lavorando agli aggiornamenti a scelta
+      (REQ-FLOTTA-020), e scritto nella tabella dei permessi per ruolo
+      (tests/contratto/permessi.js, REQ-FLOTTA-021). La regia scrive piano,
+      moduli, limiti, sospensione e aggiornamenti di un locale in
+      `settings/bar.licenza`. Ma le regole lasciano scrivere tutto
+      `settings/` a ogni bartender e al titolare, e i limiti dell'app
+      nascondono senza proteggere (REQ-LIC-003). Con un account del banco e
+      la console del browser, un locale col piano Free si scrive
+      `piano: 'pro'`, si toglie i limiti, si accende i moduli a pagamento,
+      si toglie una sospensione o si segna gli aggiornamenti come inclusi.
+      La Tana non è toccata: non ha una licenza scritta e ha tutto.
+      LA CORREZIONE, decisa il 31/10/2026: la licenza va in un documento
+      suo FUORI DA settings/, `licenza/attuale`, con la stessa forma di
+      oggi (lo stesso oggetto che oggi sta in `settings/bar.licenza`). Le
+      regole lo fanno leggere a tutti, come le impostazioni (il menù del
+      cliente dipende dai moduli), e scrivere a NESSUNO: la regia lo
+      scrive con le credenziali di servizio, che le regole non toccano.
+      L'ORDINE CONTA, perché un locale senza licenza ha tutto:
+        1. la regia scrive la licenza in tutti e due i posti, a ogni
+           cambio, e ci copia quelle dei locali che ci sono già;
+        2. solo dopo, il rilascio dell'app: legge `licenza/attuale` e
+           ignora `settings/bar.licenza`, senza ripiego (un ripiego
+           riaprirebbe il buco). Il resto dell'app non cambia: la licenza
+           arriva a chi la usa nello stesso posto di oggi (`licenza`
+           dentro le impostazioni lette). Con l'app: le regole del
+           documento nuovo, gli strumenti di sviluppo (DevTools) e
+           scripts/licenza-moduli.js, che oggi la scrivono in settings/;
+           nella tabella dei permessi una riga nuova, licenza: legge
+           tutti, scrive nessuno, e il commento sulla riga di settings
+           si toglie;
+        3. quando tutti i locali hanno quella versione, la regia smette
+           di scrivere `settings/bar.licenza` e lo cancella.
+      Il commento in api.js che annunciava un documento
+      `settings/licenza` per la «Fase 3» va corretto: dentro settings/
+      avrebbe lo stesso buco.
+    status: todo
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, sicurezza, licenza, flotta]
+    test_cases: []
 
