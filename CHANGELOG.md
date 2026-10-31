@@ -10,6 +10,9 @@
 - **Si chiama il bancone.** Nel menu c'è «Chiama il bancone»: al titolare
   arriva la chiamata a tutto schermo, e finché non risponde il tasto dice
   che si è in attesa.
+- **La sala corregge i conti.** Una riga di una comanda già mandata al
+  banco si toglie o si riduce anche dal telefono della sala, finché il
+  drink non è servito. Annullare un conto resta del banco.
 
 ### Per chi amministra
 

@@ -1088,10 +1088,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             ...base,
             key: chiave,
             qty: unpaidQty,
-            // Alla sala le comande già mandate al banco restano da leggere:
-            // toccarle vuol dire cambiare il lavoro sotto le mani di chi versa.
-            removable:
-              comandaIlLavoro && !comandaAnnullata && (comandaEditable(c) || riaperto),
+            // LE RIGHE LE CORREGGE CHIUNQUE LAVORI AL CONTO (REQ-STAFF-020).
+            // Erano da leggere, per la sala, appena mandate al banco. Flavio,
+            // 30/10/2026: «lo staff non può togliere il Sipsmith più uno, lo
+            // posso fare solo io … devono avere la possibilità di modificare
+            // qualsiasi ordine». La sala ora corregge come il banco, con gli
+            // stessi limiti: finché la comanda è da fare o in preparazione,
+            // o sul conto riaperto. Annullare il conto e comandare la
+            // preparazione restano di chi versa (puoGestireComande).
+            removable: !comandaAnnullata && (comandaEditable(c) || riaperto),
             annullata: comandaAnnullata,
           })
         if (paidHere > 0)
@@ -1099,7 +1104,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       })
     }
     return out
-  }, [effComande, order?.payments, riaperto, contoAnnullato, comandaIlLavoro])
+  }, [effComande, order?.payments, riaperto, contoAnnullato])
 
   const draftLines = useMemo(
     () => bozzaViva.map((l) => ({ ...l, key: `d:${l.line_id}`, source: 'draft', status: 'draft', removable: true })),
