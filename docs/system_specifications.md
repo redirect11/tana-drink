@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **291 voci** in tutto. **259** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -3793,6 +3793,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| 🔴 | [BUG-125](#bug-125--la-licenza-di-un-locale-la-può-riscrivere-ogni-bartender-sta-in-settings-che-le-regole-lasciano-scrivere-al-banco) — La licenza di un locale la può riscrivere ogni bartender: sta in settings/, che le regole lasciano scrivere al banco | alta | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -3913,6 +3914,14 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-125 — La licenza di un locale la può riscrivere ogni bartender: sta in settings/, che le regole lasciano scrivere al banco
+
+Visto il 31/10/2026 lavorando agli aggiornamenti a scelta (REQ-FLOTTA-020), e scritto nella tabella dei permessi per ruolo (tests/contratto/permessi.js, REQ-FLOTTA-021). La regia scrive piano, moduli, limiti, sospensione e aggiornamenti di un locale in `settings/bar.licenza`. Ma le regole lasciano scrivere tutto `settings/` a ogni bartender e al titolare, e i limiti dell'app nascondono senza proteggere (REQ-LIC-003). Con un account del banco e la console del browser, un locale col piano Free si scrive `piano: 'pro'`, si toglie i limiti, si accende i moduli a pagamento, si toglie una sospensione o si segna gli aggiornamenti come inclusi. La Tana non è toccata: non ha una licenza scritta e ha tutto.
+
+LA CORREZIONE, decisa il 31/10/2026: la licenza va in un documento suo FUORI DA settings/, `licenza/attuale`, con la stessa forma di oggi (lo stesso oggetto che oggi sta in `settings/bar.licenza`). Le regole lo fanno leggere a tutti, come le impostazioni (il menù del cliente dipende dai moduli), e scrivere a NESSUNO: la regia lo scrive con le credenziali di servizio, che le regole non toccano. L'ORDINE CONTA, perché un locale senza licenza ha tutto: 1. la regia scrive la licenza in tutti e due i posti, a ogni cambio, e ci copia quelle dei locali che ci sono già; 2. solo dopo, il rilascio dell'app: legge `licenza/attuale` e ignora `settings/bar.licenza`, senza ripiego (un ripiego riaprirebbe il buco). Il resto dell'app non cambia: la licenza arriva a chi la usa nello stesso posto di oggi (`licenza` dentro le impostazioni lette). Con l'app: le regole del documento nuovo, gli strumenti di sviluppo (DevTools) e scripts/licenza-moduli.js, che oggi la scrivono in settings/; nella tabella dei permessi una riga nuova, licenza: legge tutti, scrive nessuno, e il commento sulla riga di settings si toglie; 3. quando tutti i locali hanno quella versione, la regia smette di scrivere `settings/bar.licenza` e lo cancella. Il commento in api.js che annunciava un documento `settings/licenza` per la «Fase 3» va corretto: dentro settings/ avrebbe lo stesso buco.
+
+**Dove**: `firestore.rules (settings, licenza), src/lib/api.js (subscribeSettings), src/lib/licenza.js, src/lib/limiti.js, src/lib/aggiornamenti.js, src/components/DevTools.jsx, scripts/licenza-moduli.js`
 
 ## Non più valido
 
