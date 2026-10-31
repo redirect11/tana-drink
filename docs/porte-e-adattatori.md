@@ -5,6 +5,17 @@ Qui c'è il lavoro **in tana-drink**. L'installazione on premise (immagine,
 backend locale, backup, attivazione) la fa la regia ed è raccontata solo
 per capire.
 
+**A che punto è** (aggiornato a ogni pezzo):
+
+| Pezzo | Stato |
+|---|---|
+| La configurazione letta all'avvio | **fatto** (31/10/2026): `src/porte/configurazione.js`, contratto qui sotto |
+| Il test-guardia | **fatto** (31/10/2026): `tests/unit/confineFirebase.test.js`, 22 file ancora da passare alle porte |
+| La porta dei dati | da fare: è il prossimo pezzo |
+| Accesso, file, server, notifiche | da fare |
+| L'ospite Firebase delle Functions, i trigger come dati | da fare |
+| Test di contratto e permessi per ruolo | da fare, insieme alla porta dei dati |
+
 ## Cosa ha deciso l'utente
 
 > «on premise viene ospitato tutto il gestionale con backup su cloud»
@@ -110,6 +121,53 @@ Quindi:
 - il file non entra nella cache della PWA in modo da restare vecchio: un
   cambio della regia si vede al riavvio;
 - la demo resta decisa dalla build (`__DEMO__`), mai dal file.
+
+### Il contratto, com'è fatto (31/10/2026)
+
+Il file, servito accanto all'app (`<base>/configurazione.json`):
+
+```json
+{
+  "backend": "firebase",
+  "locale": "bar-mario",
+  "firebase": {
+    "apiKey": "…", "authDomain": "…", "projectId": "…",
+    "storageBucket": "…", "messagingSenderId": "…", "appId": "…",
+    "measurementId": "…", "recaptchaSiteKey": "…", "vapidKey": "…"
+  }
+}
+```
+
+- **Obbligatori** `backend`, `firebase.apiKey` e `firebase.projectId`. Il
+  `backend` deve essere uno di quelli che l'app ha: oggi solo `firebase`.
+  Un file con un altro backend, o senza i due campi, **si ignora** (e lo
+  si dice in console). Vale la build. Gli altri campi sono facoltativi;
+  quelli che l'app non conosce non entrano. Il campo `locale` vuoto prende
+  lo slug della build.
+- **Nessuno aspetta il file.** Il client di Firebase nasce sincrono, e un
+  avvio che aspetta la rete al banco è un'app ferma. All'avvio vale
+  l'ultima configurazione letta, salvata nel dispositivo; la prima volta
+  vale la build. Il file si chiede in sottofondo:
+  - se dice una cosa diversa da quella in uso **nei primi 10 secondi**
+    dall'apertura, l'app si ricarica una volta. È la prima accensione di
+    un dispositivo nell'on premise, dove la build non ha backend;
+  - se la risposta arriva più tardi, l'app non si ricarica sotto le mani
+    di chi lavora: la configurazione nuova vale dall'apertura dopo.
+- **Le risposte**:
+  - un 404, o una risposta che non è JSON, vuol dire che il file **non
+    c'è**. L'hosting, per un indirizzo che non esiste, risponde con la
+    pagina dell'app. In quel caso si torna alla build;
+  - un errore del server, o la rete che manca, non dice niente: si tiene
+    quello che si sa;
+  - una build **senza** backend, cioè l'immagine on premise, non
+    dimentica l'ultimo file buono per una risposta storta.
+- **Le cache.** L'hosting lo serve `no-cache`. Il service worker non lo
+  tocca: senza rete la richiesta fallisce invece di rispondere con una
+  copia vecchia.
+- **Chi lo legge**: il client di Firebase (progetto e App Check), le
+  notifiche push (`vapidKey`), Analytics (`measurementId`), il backup
+  (il progetto scritto nel file) e Impostazioni → Informazioni. Gli
+  emulatori restano decisi dalla build.
 
 ## Il server: funzioni normali e due ospiti
 

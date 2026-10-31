@@ -67,6 +67,15 @@
         ]
       },
       {
+        "source": "/configurazione.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "/manifest.webmanifest",
         "headers": [
           {

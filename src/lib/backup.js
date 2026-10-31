@@ -3,6 +3,7 @@ import { collection, getDocs, doc } from 'firebase/firestore'
 // cache, perché il server non risponde mai (REQ-FLOTTA-019).
 import { writeBatch } from './scritture.js'
 import { db } from './firebaseClient.js'
+import { configurazione } from '../porte/configurazione.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -79,7 +80,7 @@ export async function esportaDatabase(onProgress = () => {}) {
   return {
     formato: FORMATO,
     creato_il: new Date().toISOString(),
-    progetto: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? null,
+    progetto: configurazione().firebase.projectId || null,
     documenti,
     collezioni,
   }

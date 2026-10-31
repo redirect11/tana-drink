@@ -5798,7 +5798,7 @@ requirements:
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
-    area: "src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
+    area: "src/porte/configurazione.js, src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
     description: >
       «Tana-drink è sempre lo stesso ma dove si installa e come si
       configura è roba di regia» e «possiamo prevedere delle interfacce
@@ -5820,11 +5820,29 @@ requirements:
       backend tengono il confine. Per chi usa l'app non cambia niente; il
       secondo adattatore e l'ospite Node vengono dopo il prototipo della
       regia (drink-regia, REQ-FLOTTA-021).
-    status: todo
+      A CHE PUNTO (31/10/2026), a pezzi come chiede il documento. FATTA LA
+      CONFIGURAZIONE (`src/porte/configurazione.js`): vince
+      `configurazione.json`, senza vale la build. Nessuno lo aspetta:
+      all'avvio vale l'ultima letta, salvata nel dispositivo, e il file si
+      chiede in sottofondo. Se cambia qualcosa nei primi 10 secondi l'app
+      si ricarica una volta, più tardi vale dall'apertura dopo. Un 404 o
+      una risposta non JSON vogliono dire «non c'è»; rete o server giù non
+      cambiano niente. Una build senza backend tiene l'ultimo file buono.
+      Il service worker non lo tocca, l'hosting lo serve no-cache, la demo
+      lo ignora. Lo leggono il client di Firebase, le notifiche push,
+      Analytics, il backup e le Informazioni. FATTO IL TEST-GUARDIA: fuori
+      dagli adattatori (src/adattatori/, functions/index.js) nessun file
+      nuovo importa Firebase, e l'elenco dei 22 di oggi si può solo
+      accorciare. DA FARE: la porta dei dati (il prossimo pezzo, coi test
+      di contratto e i permessi per ruolo), poi accesso, file, server,
+      notifiche e l'ospite Firebase delle Functions.
+    status: partial
     generate_issue: true
     labels: [prodotto, flotta]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/configurazione.test.js
+      - tests/unit/confineFirebase.test.js
 
   - id: REQ-UI-001
     title: "Le sottosezioni di una pagina stanno sotto il titolo"

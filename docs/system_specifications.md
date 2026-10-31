@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 243 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 1 | fatto a metà |
-| ⬜ | 25 | da fare |
+| 🟡 | 2 | fatto a metà |
+| ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**292 voci** in tutto. **259** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
+**292 voci** in tutto. **260** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 4 | 1 |  |
+| [FLOTTA](#flotta) | 5 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3410,6 +3410,20 @@ UNA DIFFERENZA DAL DOCUMENTO: la proposta esce se il tag è PIÙ NUOVO dell'inst
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (scegliAggiornamento, subscribeSceltaAggiornamento), firestore.rules (aggiornamenti/scelta), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
 
+#### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+«Tana-drink è sempre lo stesso ma dove si installa e come si configura è roba di regia» e «possiamo prevedere delle interfacce che implementano le logiche di firebase o altre logiche con altri db e una interfaccia che parla con node o con le functions. Così possiamo riutilizzare tutto anche su cloud puro» (l'utente, 31/10/2026, per l'installazione on premise col gestionale intero nel locale). La specifica è in docs/porte-e-adattatori.md. In breve: l'app non importa più Firebase fuori dagli adattatori, e parla con sei porte nostre (configurazione, dati, accesso, file, server, notifiche), che oggi hanno il solo adattatore Firebase. La porta dei dati offre solo quello che l'app usa (nessuna transazione), compresa la differenza fra scrittura presa in carico e arrivata al server. La configurazione si legge all'avvio da un file servito accanto all'app, con le VITE_* della build come riserva. La logica delle Functions diventa funzioni normali, eseguite da un ospite Firebase, e i trigger si dichiarano come dati. Un test-guardia, dei test di contratto sulle porte e i permessi per ruolo scritti uguali per ogni backend tengono il confine. Per chi usa l'app non cambia niente; il secondo adattatore e l'ospite Node vengono dopo il prototipo della regia (drink-regia, REQ-FLOTTA-021). A CHE PUNTO (31/10/2026), a pezzi come chiede il documento.
+
+FATTA LA CONFIGURAZIONE (`src/porte/configurazione.js`): vince `configurazione.json`, senza vale la build. Nessuno lo aspetta: all'avvio vale l'ultima letta, salvata nel dispositivo, e il file si chiede in sottofondo. Se cambia qualcosa nei primi 10 secondi l'app si ricarica una volta, più tardi vale dall'apertura dopo. Un 404 o una risposta non JSON vogliono dire «non c'è»; rete o server giù non cambiano niente. Una build senza backend tiene l'ultimo file buono. Il service worker non lo tocca, l'hosting lo serve no-cache, la demo lo ignora. Lo leggono il client di Firebase, le notifiche push, Analytics, il backup e le Informazioni.
+
+FATTO IL TEST-GUARDIA: fuori dagli adattatori (src/adattatori/, functions/index.js) nessun file nuovo importa Firebase, e l'elenco dei 22 di oggi si può solo accorciare.
+
+DA FARE: la porta dei dati (il prossimo pezzo, coi test di contratto e i permessi per ruolo), poi accesso, file, server, notifiche e l'ospite Firebase delle Functions.
+
+**Dove**: `src/porte/configurazione.js, src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md` · **Lo dimostrano**: `tests/unit/configurazione.test.js`, `tests/unit/confineFirebase.test.js`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -3771,14 +3785,6 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
-
-### FLOTTA
-
-#### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
-
-«Tana-drink è sempre lo stesso ma dove si installa e come si configura è roba di regia» e «possiamo prevedere delle interfacce che implementano le logiche di firebase o altre logiche con altri db e una interfaccia che parla con node o con le functions. Così possiamo riutilizzare tutto anche su cloud puro» (l'utente, 31/10/2026, per l'installazione on premise col gestionale intero nel locale). La specifica è in docs/porte-e-adattatori.md. In breve: l'app non importa più Firebase fuori dagli adattatori, e parla con sei porte nostre (configurazione, dati, accesso, file, server, notifiche), che oggi hanno il solo adattatore Firebase. La porta dei dati offre solo quello che l'app usa (nessuna transazione), compresa la differenza fra scrittura presa in carico e arrivata al server. La configurazione si legge all'avvio da un file servito accanto all'app, con le VITE_* della build come riserva. La logica delle Functions diventa funzioni normali, eseguite da un ospite Firebase, e i trigger si dichiarano come dati. Un test-guardia, dei test di contratto sulle porte e i permessi per ruolo scritti uguali per ogni backend tengono il confine. Per chi usa l'app non cambia niente; il secondo adattatore e l'ospite Node vengono dopo il prototipo della regia (drink-regia, REQ-FLOTTA-021).
-
-**Dove**: `src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md`
 
 ## Difetti noti
 
