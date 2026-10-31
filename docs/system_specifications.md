@@ -25,13 +25,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 243 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 24 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**292 voci** in tutto. **260** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**295 voci** in tutto. **260** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 4 | — |  |
+| [LIC](#lic) | 4 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 5 | — |  |
 
@@ -3402,13 +3402,19 @@ IL PUNTO DA CONTROLLARE PER PRIMO (l'utente, 30/10/2026: «che, con la rete del 
 
 #### REQ-FLOTTA-020 — Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»
 
-«Il secondo dovrebbe invece mostrare prima il changelog con i cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe volere anche saltare l'aggiornamento» e «nei vari piani siano garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026). La specifica intera è in docs/aggiornamenti-dalla-regia.md. In breve: la regia scrive `settings/bar.licenza.aggiornamenti` (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi nel piano, la proposta con le sue note, l'avviso delle condizioni nuove). In modalità a scelta l'app mostra al titolare, prima di aggiornare, le novità della versione proposta con «Aggiorna», «Salta questa versione» e «Più tardi», e scrive la scelta in `aggiornamenti/scelta`, un documento che solo il titolare legge e scrive; la regia la legge e pubblica, o segna saltata. In Informazioni restano la proposta saltata col suo «Aggiorna» e, se il piano non comprende gli aggiornamenti, il perché. L'avviso delle condizioni esce una volta per id. Senza la voce, e in modalità obbligatori, l'app fa quello che fa oggi; la demo la ignora.
+«Il secondo dovrebbe invece mostrare prima il changelog con i cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe volere anche saltare l'aggiornamento» e «nei vari piani siano garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026). La specifica intera è in docs/aggiornamenti-dalla-regia.md. In breve: la regia scrive `settings/bar.licenza.aggiornamenti` (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi nel piano, la proposta con le sue note, l'avviso delle condizioni nuove). In modalità a scelta l'app mostra al titolare, prima di aggiornare, le novità della versione proposta con «Aggiorna», «Salta questa versione» e «Più tardi», e manda la scelta alla regia, che pubblica o segna saltata (dal 31/10/2026 con una chiamata, vedi sotto). In Informazioni restano la proposta saltata col suo «Aggiorna» e, se il piano non comprende gli aggiornamenti, il perché. L'avviso delle condizioni esce una volta per id. Senza la voce, e in modalità obbligatori, l'app fa quello che fa oggi; la demo la ignora.
 
 FATTO (31/10/2026). La logica pura sta in `src/lib/aggiornamenti.js`; il box (`PropostaAggiornamento`, montato da App) mostra prima l'avviso delle condizioni, poi la proposta, mai sopra il box delle novità né su un'installazione sospesa. La scelta parte in sottofondo (`scegliAggiornamento`, nessuna attesa: il box si chiude al tocco) e torna dall'ascolto di `aggiornamenti/scelta`, che il titolare fa solo in modalità «a scelta»: una scelta per quel tag, da qualunque terminale, chiude il box. «Più tardi» non scrive niente e vale fino alla prossima apertura.
 
 UNA DIFFERENZA DAL DOCUMENTO: la proposta esce se il tag è PIÙ NUOVO dell'installata, non solo diverso (una proposta rimasta indietro offrirebbe un ritorno all'indietro; una beta viene prima del suo rilascio); se l'installata non si legge resta «diversa». Le regole danno `aggiornamenti/scelta` al solo ruolo admin, coi quattro campi e nient'altro, e solo quel documento della collezione; nessuno lo cancella. Il ritorno al Free di un locale che pagava è scritto in REQ-LIC-003.
 
-**Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (scegliAggiornamento, subscribeSceltaAggiornamento), firestore.rules (aggiornamenti/scelta), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
+CAMBIA (31/10/2026, l'utente: «ste cose in polling si portavano negli anni 90»): la scelta non si scrive più in aggiornamenti/scelta, che la regia leggeva ogni dieci minuti. L'app chiama licenza.aggiornamenti.scelta_url (POST, Authorization: Bearer col token del titolare, corpo { tag, scelta }) e la regia applica subito; il documento, la sua regola e l'ascolto si tolgono. Il contratto è in docs/aggiornamenti-dalla-regia.md.
+
+FATTA LA CHIAMATA (31/10/2026). `inviaSceltaAggiornamento` in api.js chiede il token al titolare e chiama la regia; il box e le Informazioni usano lo stesso hook (`useSceltaAggiornamento`). Qui l'attesa è voluta, ed è l'eccezione al «niente await» del banco: non è un gesto della serata, e la scelta vale solo se la regia l'ha presa. Mentre si aspetta «Aggiorna» e «Salta» sono spenti (un secondo tocco non rifà la chiamata), «Più tardi» no. Con 200 il box si chiude (o dice «Aggiornamento partito»), senza aspettare che la regia riscriva la proposta; con un errore mostra il testo della regia e lascia i tasti; senza rete, o dopo venti secondi senza risposta, dice che la scelta non è partita. Senza `scelta_url` i tasti diventano il rimando all'area clienti. L'indirizzo è quello della licenza: le regie sono due, test e produzione, ognuna col suo progetto, e un locale di test chiama la regia di test.
+
+UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`drink-regia`, `drink-regia-test`, scritti per intero: un controllo sul finale del nome lascerebbe passare un progetto altrui `foo-drink-regia`); un altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si può togliere. Finché la licenza sta in settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url` suo si prenderebbe il token del titolare al primo «Aggiorna». Il documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge né lo scrive, e il test delle regole lo dimostra.
+
+**Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
 
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 
@@ -3422,7 +3428,7 @@ FATTO IL TEST-GUARDIA: fuori dagli adattatori (src/adattatori/, functions/index.
 
 FATTA LA PORTA DEI DATI (`src/porte/dati.js`, adattatore in `src/adattatori/firebase/`): i nomi sono quelli di Firestore, apposta, per non rinominare centinaia di chiamate; il confine è l'elenco, che un test tiene fermo. Il contratto dice cosa restituisce una lettura, e che una scrittura è PRESA IN CARICO all'istante della chiamata (la vedono letture e ascolti successivi, anche senza rete, con l'ora del server a null) e ARRIVATA quando la promessa si risolve; rifiutata, il dispositivo torna a com'era. Il client diretto di BUG-117 è `cercaDalServer`. scritture.js e letture.js sono entrati nell'adattatore; api.js, backup, progressivi e attrezzi di sviluppo non importano più Firebase (l'elenco scende a 16).
 
-FATTI I TEST DI CONTRATTO E I PERMESSI PER RUOLO, sull'emulatore (`npm run test:regole`): la serie della porta (tests/contratto/dati.js) gira sull'adattatore Firebase, la tabella dei permessi (tests/contratto/permessi.js, 29 collezioni più i documenti propri, per cinque ruoli e quattro operazioni) contro firestore.rules.
+FATTI I TEST DI CONTRATTO E I PERMESSI PER RUOLO, sull'emulatore (`npm run test:regole`): la serie della porta (tests/contratto/dati.js) gira sull'adattatore Firebase, la tabella dei permessi (tests/contratto/permessi.js, 30 collezioni più i documenti propri, per cinque ruoli e quattro operazioni) contro firestore.rules.
 
 DA FARE: accesso, file, server, notifiche e l'ospite Firebase delle Functions.
 
@@ -3790,6 +3796,36 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
 
+### LIC
+
+#### REQ-LIC-005 — Il Free è una cassa semplice: si battono le righe e si incassa, senza comande
+
+«Io nella free non metterei le comande [...] Deve essere proprio base, solo per provare» (l'utente, 31/10/2026). Deciso lo stesso giorno:
+
+CASSA SEMPLICE. La regia scrive nei `limiti` del Free la chiave nuova `comande: false`; come per gli sconti, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `comande: false`: si battono le righe e si incassa. Niente coda di preparazione con le colonne e gli stati (in preparazione, pronto, servito), niente stampa della comanda al banco, niente impostazioni della preparazione e della stampa delle comande; lo scontrino resta. I conti aperti si vedono come elenco da incassare. Il modello dati non cambia: un conto resta fatto di comande, che nascono già SERVITE (né «da fare» né «in preparazione»), così il giorno che il locale passa a un piano a pagamento non trova comande appese in coda. Ogni punto dove si incontra il limite lo dice con la frase del piano e porta a `licenza.regia_url` (AvvisoPiano).
+
+DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico resta di 7 giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di toglierlo e ha deciso di tenerlo.
+
+**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx`
+
+#### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
+
+«Servono dei banner che escono di tanto in tanto per far fare l'upgrade, che rimandano a regia» (l'utente, 31/10/2026). Deciso lo stesso giorno:
+
+UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
+
+**Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
+
+#### REQ-LIC-007 — La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia
+
+«Dovrebbe esserci una parte dove si vede la licenza attuale e la sua validità, ma la gestione rimanda sempre a regia» (l'utente, 31/10/2026). Una sottosezione «Licenza» in Impostazioni, al titolare, in sola lettura: il piano; lo stato (attiva, sospesa); la VALIDITÀ, da una voce nuova della licenza `valida_fino` (data ISO, o null per un piano senza scadenza: «Valida fino al 30 novembre 2026» o «Senza scadenza»); i moduli inclusi e quelli in prova con la loro scadenza (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app non si cambia niente. Senza licenza della regia (la Tana) la sottosezione non c'è.
+
+LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda la regia ma entrambe devono essere previste»): il Free può essere senza scadenza o una prova a tempo, e un piano a pagamento ha la sua. Alla scadenza la regia sospende (`stato: 'sospesa'`, che l'app già mostra) o toglie la licenza; l'app la data la mostra soltanto. Una data passata con la licenza ancora attiva si mostra come «Scaduta il …», senza fermare il locale.
+
+DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
+
+**Dove**: `src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js`
+
 ## Difetti noti
 
 I punti in cui il sistema **non fa** quello che c'è scritto sopra. Stanno
@@ -3811,6 +3847,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| 🔴 | [BUG-125](#bug-125--la-licenza-di-un-locale-la-può-riscrivere-ogni-bartender-sta-in-settings-e-senza-licenza-un-locale-ha-tutto) — La licenza di un locale la può riscrivere ogni bartender (sta in settings/), e senza licenza un locale ha tutto | alta | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -3931,6 +3968,16 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-125 — La licenza di un locale la può riscrivere ogni bartender (sta in settings/), e senza licenza un locale ha tutto
+
+Visto il 31/10/2026 lavorando agli aggiornamenti a scelta (REQ-FLOTTA-020), e scritto nella tabella dei permessi per ruolo (tests/contratto/permessi.js, REQ-FLOTTA-021). La regia scrive piano, moduli, limiti, sospensione e aggiornamenti di un locale in `settings/bar.licenza`. Ma le regole lasciano scrivere tutto `settings/` a ogni bartender e al titolare, e i limiti dell'app nascondono senza proteggere (REQ-LIC-003). Con un account del banco e la console del browser, un locale col piano Free si scrive `piano: 'pro'`, si toglie i limiti, si accende i moduli a pagamento, si toglie una sospensione o si segna gli aggiornamenti come inclusi. La Tana non è toccata: non ha una licenza scritta e ha tutto.
+
+LA CORREZIONE, decisa il 31/10/2026: la licenza va in un documento suo FUORI DA settings/, `licenza/attuale`, con la stessa forma di oggi (lo stesso oggetto che oggi sta in `settings/bar.licenza`). Le regole lo fanno leggere a tutti, come le impostazioni (il menù del cliente dipende dai moduli), e scrivere a NESSUNO: la regia lo scrive con le credenziali di servizio, che le regole non toccano. E SENZA LICENZA NON SI HA PIÙ TUTTO (l'utente, 31/10/2026: «nn va bene che senza licenza sia tutto acceso. Dobbiamo cambiare sta cosa»). Deciso lo stesso giorno, fra due strade per ciascuna domanda: - un locale senza `licenza/attuale` vede «Installazione non attivata» al posto dell'app, come una sospesa, coi dati che restano. Scartato il piano Free come ripiego: l'app avrebbe dovuto sapere da sé i limiti del Free, una copia di quelli della regia destinata ad andare fuori passo; - la Tana, che non ha licenza e ha tutto, lo dice la BUILD: una voce in `clienti/tana/venue.json`, decisa alla compilazione, che dal browser non si cambia e non chiede scritture nel database di produzione. Le build dei locali della regia e l'immagine on premise non ce l'hanno. La demo non ha una regia dietro e resta com'è (`__DEMO__`).
+
+ATTENZIONE AL CARICAMENTO: «non attivata» si mostra solo quando il server dice che il documento non c'è. Alla prima apertura senza rete la cache non sa ancora niente, e scambiare «non lo so» per «non c'è» bloccherebbe un locale in regola. Serve che la porta dei dati dica se una risposta viene dal server o dalla cache (oggi il contratto non lo dice: va aggiunto, coi suoi test di contratto). L'ORDINE CONTA ANCORA DI PIÙ, perché un locale senza licenza ora si ferma: 1. la regia scrive la licenza in tutti e due i posti, a ogni cambio, e ci copia quelle dei locali che ci sono già; 2. solo dopo, il rilascio dell'app: legge `licenza/attuale` e ignora `settings/bar.licenza`, senza ripiego (un ripiego riaprirebbe il buco). Il resto dell'app non cambia: la licenza arriva a chi la usa nello stesso posto di oggi (`licenza` dentro le impostazioni lette). Con l'app: le regole del documento nuovo, gli strumenti di sviluppo (DevTools) e scripts/licenza-moduli.js, che oggi la scrivono in settings/; nella tabella dei permessi una riga nuova, licenza: legge tutti, scrive nessuno, e il commento sulla riga di settings si toglie; 3. quando tutti i locali hanno quella versione, la regia smette di scrivere `settings/bar.licenza` e lo cancella. Il commento in api.js che annunciava un documento `settings/licenza` per la «Fase 3» va corretto: dentro settings/ avrebbe lo stesso buco.
+
+**Dove**: `firestore.rules (settings, licenza), src/lib/api.js (subscribeSettings), src/lib/licenza.js, src/lib/limiti.js, src/lib/aggiornamenti.js, src/components/DevTools.jsx, scripts/licenza-moduli.js`
 
 ## Non più valido
 

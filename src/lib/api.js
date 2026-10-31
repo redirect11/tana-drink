@@ -111,6 +111,7 @@ import { MOTIVI_DI_CARICO } from './magazzinoPeriodo.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
+import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -155,9 +156,6 @@ const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
-// La scelta del titolare sugli aggiornamenti (REQ-FLOTTA-020): un
-// documento suo, fuori da settings/ che scrive ogni bartender.
-const sceltaAggiornamentoDoc = doc(db, 'aggiornamenti', 'scelta')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const cashSessionsCol = collection(db, 'cash_sessions')
@@ -6357,29 +6355,35 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
 }
 
 // ── LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) ───────────────────
-// «Aggiorna» o «Salta» del titolare. In sottofondo come ogni gesto: il box
-// si chiude subito, e la regia legge il documento quando passa (lo legge
-// con le sue credenziali, non serve una Function). Le regole vogliono
-// esattamente questi quattro campi, `il` uguale all'ora del server e `da`
-// uguale a chi scrive.
-export function scegliAggiornamento(tag, scelta) {
-  setDoc(sceltaAggiornamentoDoc, {
-    tag,
-    scelta,
-    il: serverTimestamp(),
-    da: auth.currentUser?.uid ?? null,
-  }).catch((e) => console.error('[aggiornamenti] scelta:', e?.message || e))
-}
+// «Aggiorna» o «Salta» del titolare: una chiamata alla regia, col suo token
+// d'accesso (il contratto è in docs/aggiornamenti-dalla-regia.md). Qui
+// l'attesa c'è, ed è voluta: non è un gesto della serata, è una decisione
+// che vale solo se la regia l'ha presa, e il titolare deve sapere se è
+// andata. Il box resta usabile mentre si aspetta, e dopo venti secondi
+// senza risposta si dice che la scelta non è partita: un `fetch` senza
+// rete può restare appeso molto più a lungo.
+export const ATTESA_SCELTA_MS = 20000
 
-// La scelta già fatta, da questo terminale o da un altro: vale la prima
-// che arriva, e il box non la richiede. Solo per il titolare, che è
-// l'unico a poterla leggere.
-export function subscribeSceltaAggiornamento(onChange, onError) {
-  return onSnapshot(
-    sceltaAggiornamentoDoc,
-    (snap) => onChange(snap.exists() ? snap.data() : null),
-    onError ?? (() => {})
-  )
+export async function inviaSceltaAggiornamento(url, tag, scelta) {
+  const ferma = new AbortController()
+  const timer = setTimeout(() => ferma.abort(), ATTESA_SCELTA_MS)
+  try {
+    const token = await auth.currentUser?.getIdToken()
+    if (!token) return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita }
+    const risposta = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag, scelta }),
+      signal: ferma.signal,
+    })
+    const corpo = await risposta.json().catch(() => null)
+    return esitoScelta(risposta.status, corpo)
+  } catch (e) {
+    console.warn('[aggiornamenti] scelta:', e?.message || e)
+    return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.senza_rete }
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export function subscribeSettings(onChange, onError) {
