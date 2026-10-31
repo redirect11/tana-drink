@@ -4,8 +4,8 @@
 //  Permettono di svuotare il database o resettarlo con i dati mock,
 //  direttamente dal pannello "Dev" del gestionale.
 // =====================================================================
-import { collection, doc, addDoc, setDoc, getDocs } from 'firebase/firestore'
-import { db } from '../lib/firebaseClient.js'
+// Anche gli attrezzi di sviluppo passano dalla porta dei dati (REQ-FLOTTA-021).
+import { db, collection, doc, addDoc, setDoc, getDocs, getDoc, updateDoc } from '../porte/dati.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import {
   INV_CATS,
@@ -173,7 +173,6 @@ export async function resetWithMockData(onProgress = () => {}) {
 // non ci sono Cloud Functions, quindi il webhook lo "recitiamo" noi
 // scrivendo da bartender. Replica anche l'auto-chiusura ritirato→pagato.
 export async function simulatePaymentResult(orderId, ok) {
-  const { getDoc, updateDoc } = await import('firebase/firestore')
   const ref = doc(db, 'orders', orderId)
   const snap = await getDoc(ref)
   if (!snap.exists()) throw new Error('Ordine non trovato')
@@ -200,7 +199,6 @@ export async function simulatePaymentResult(orderId, ok) {
 // Simula l'intero incasso sul lettore (senza pairing né Cloud API):
 // marca l'ordine come "in corso sul lettore" e poi applica l'esito.
 export async function simulateReaderPayment(orderId, ok) {
-  const { updateDoc } = await import('firebase/firestore')
   await updateDoc(doc(db, 'orders', orderId), {
     payment_method: 'lettore',
     payment_status: 'in_attesa',

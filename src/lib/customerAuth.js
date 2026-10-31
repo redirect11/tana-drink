@@ -19,14 +19,9 @@ import {
   onAuthStateChanged,
   signOut,
 } from 'firebase/auth'
-import { doc } from 'firebase/firestore'
-// E la lettura di un documento da letture.js: nella demo, a rete spenta,
-// risponde dalla cache invece di andare in errore (REQ-FLOTTA-019).
-import { getDoc } from './letture.js'
-// Le scritture passano da scritture.js: nella demo si confermano dalla
-// cache, perché il server non risponde mai (REQ-FLOTTA-019).
-import { setDoc, deleteDoc } from './scritture.js'
-import { auth, db } from './firebaseClient.js'
+// Il database passa dalla porta dei dati (REQ-FLOTTA-021).
+import { db, doc, getDoc, setDoc, deleteDoc } from '../porte/dati.js'
+import { auth } from './firebaseClient.js'
 import { isPersonale } from './ruoli.js'
 import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'

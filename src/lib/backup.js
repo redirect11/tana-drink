@@ -1,8 +1,6 @@
-import { collection, getDocs, doc } from 'firebase/firestore'
-// Le scritture passano da scritture.js: nella demo si confermano dalla
-// cache, perché il server non risponde mai (REQ-FLOTTA-019).
-import { writeBatch } from './scritture.js'
-import { db } from './firebaseClient.js'
+// Il database passa dalla porta dei dati (REQ-FLOTTA-021).
+import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
+import { configurazione } from '../porte/configurazione.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -79,7 +77,7 @@ export async function esportaDatabase(onProgress = () => {}) {
   return {
     formato: FORMATO,
     creato_il: new Date().toISOString(),
-    progetto: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? null,
+    progetto: configurazione().firebase.projectId || null,
     documenti,
     collezioni,
   }

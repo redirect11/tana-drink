@@ -1,6 +1,11 @@
+// IL DATABASE PASSA DALLA PORTA DEI DATI (REQ-FLOTTA-021): il contratto,
+// compreso cosa vuol dire una scrittura presa in carico e una arrivata, è
+// scritto in src/porte/dati.js. Dietro oggi c'è Firestore.
 import {
+  db,
   collection,
   doc,
+  getDoc,
   getDocs,
   getDocsFromCache,
   getDocFromCache,
@@ -15,14 +20,14 @@ import {
   increment,
   arrayUnion,
   Timestamp,
-} from 'firebase/firestore'
-// E la lettura di un documento da letture.js: nella demo, a rete spenta,
-// risponde dalla cache invece di andare in errore (REQ-FLOTTA-019).
-import { getDoc } from './letture.js'
-// Le scritture passano da scritture.js: nella demo si confermano dalla
-// cache, perché il server non risponde mai (REQ-FLOTTA-019).
-import { addDoc, setDoc, updateDoc, deleteDoc, writeBatch } from './scritture.js'
-import { db, auth, firestoreLite } from './firebaseClient.js'
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  cercaDalServer,
+} from '../porte/dati.js'
+import { auth } from './firebaseClient.js'
 import { VENUE_VUOTO } from './venue.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
@@ -159,14 +164,15 @@ const vouchersCol = collection(db, 'vouchers')
 
 // --- Helpers ------------------------------------------------------------
 
-// Converte un Timestamp Firestore in stringa ISO (compatibile con created_at).
-// Riconosce il Timestamp dal metodo, non dalla classe: il client diretto
-// (firestoreLite, BUG-117) ha una sua classe Timestamp, e con il controllo
+// Converte una data letta dal database in stringa ISO (compatibile con
+// created_at). La riconosce dal metodo, non dalla classe: il client
+// diretto (cercaDalServer, BUG-117) ha una sua classe, e con il controllo
 // sulla classe le sue date restavano oggetti — la finestra dei movimenti
-// non ne avrebbe trovato nessuno nel periodo.
+// non ne avrebbe trovato nessuno nel periodo. Ed è quello che la porta dei
+// dati promette a ogni adattatore: una data letta ha toDate().
 function toIso(value) {
   if (!value) return null
-  if (value instanceof Timestamp || typeof value.toDate === 'function') return value.toDate().toISOString()
+  if (typeof value.toDate === 'function') return value.toDate().toISOString()
   return value
 }
 
@@ -1227,13 +1233,10 @@ export async function fetchStockMovementsSince(iso) {
 export async function fetchMovimentiProdotto(itemId, dal = null) {
   const da = dal ? new Date(`${dal}T00:00:00Z`) : null
   try {
-    const { db: diretto, sdk } = await firestoreLite()
-    const vincoli = [sdk.where('item_id', '==', itemId)]
-    if (da) vincoli.push(sdk.where('created_at', '>=', da))
-    const snap = await sdk.getDocs(
-      sdk.query(sdk.collection(diretto, 'stock_movements'), ...vincoli, sdk.orderBy('created_at', 'desc'))
-    )
-    return snap.docs.map(mapMovement)
+    const dove = [['item_id', '==', itemId]]
+    if (da) dove.push(['created_at', '>=', da])
+    const docs = await cercaDalServer('stock_movements', { dove, ordina: [['created_at', 'desc']] })
+    return docs.map(mapMovement)
   } catch {
     const vincoli = [where('item_id', '==', itemId)]
     if (da) vincoli.push(where('created_at', '>=', Timestamp.fromDate(da)))

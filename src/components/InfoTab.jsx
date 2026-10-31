@@ -15,6 +15,7 @@ import {
   statoProposta,
 } from '../lib/aggiornamenti.js'
 import { isAdmin } from '../lib/ruoli.js'
+import { configurazione } from '../porte/configurazione.js'
 
 // INFORMAZIONI: che versione è, cosa è cambiato, e i dati tecnici che
 // servono quando qualcosa non va.
@@ -45,7 +46,7 @@ export default function InfoTab({ settings = null, role = null }) {
     ['Commit', COMMIT || '—'],
     ['Build', BUILD || '—'],
     ['Ambiente', import.meta.env.VITE_APP_ENV || 'produzione'],
-    ['Progetto', import.meta.env.VITE_FIREBASE_PROJECT_ID || '—'],
+    ['Progetto', configurazione().firebase.projectId || '—'],
   ]
 
   const copia = () =>

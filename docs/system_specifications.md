@@ -24,11 +24,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 243 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 1 | fatto a metà |
+| 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**294 voci** in tutto. **259** descrivono il sistema com'è oggi e
+**295 voci** in tutto. **260** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **12** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 4 | — |  |
+| [FLOTTA](#flotta) | 5 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3415,6 +3415,24 @@ FATTA LA CHIAMATA (31/10/2026). `inviaSceltaAggiornamento` in api.js chiede il t
 UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`drink-regia`, `drink-regia-test`, scritti per intero: un controllo sul finale del nome lascerebbe passare un progetto altrui `foo-drink-regia`); un altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si può togliere. Finché la licenza sta in settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url` suo si prenderebbe il token del titolare al primo «Aggiorna». Il documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge né lo scrive, e il test delle regole lo dimostra.
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
+
+#### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+«Tana-drink è sempre lo stesso ma dove si installa e come si configura è roba di regia» e «possiamo prevedere delle interfacce che implementano le logiche di firebase o altre logiche con altri db e una interfaccia che parla con node o con le functions. Così possiamo riutilizzare tutto anche su cloud puro» (l'utente, 31/10/2026, per l'installazione on premise col gestionale intero nel locale). La specifica è in docs/porte-e-adattatori.md. In breve: l'app non importa più Firebase fuori dagli adattatori, e parla con sei porte nostre (configurazione, dati, accesso, file, server, notifiche), che oggi hanno il solo adattatore Firebase. La porta dei dati offre solo quello che l'app usa (nessuna transazione), compresa la differenza fra scrittura presa in carico e arrivata al server. La configurazione si legge all'avvio da un file servito accanto all'app, con le VITE_* della build come riserva. La logica delle Functions diventa funzioni normali, eseguite da un ospite Firebase, e i trigger si dichiarano come dati. Un test-guardia, dei test di contratto sulle porte e i permessi per ruolo scritti uguali per ogni backend tengono il confine. Per chi usa l'app non cambia niente; il secondo adattatore e l'ospite Node vengono dopo il prototipo della regia (drink-regia, REQ-FLOTTA-021). A CHE PUNTO (31/10/2026), a pezzi come chiede il documento.
+
+FATTA LA CONFIGURAZIONE (`src/porte/configurazione.js`): vince `configurazione.json`, senza vale la build. Nessuno lo aspetta: all'avvio vale l'ultima letta, salvata nel dispositivo, e il file si chiede in sottofondo. Se cambia qualcosa nei primi 10 secondi l'app si ricarica una volta, più tardi vale dall'apertura dopo. Un 404 o una risposta non JSON vogliono dire «non c'è»; rete o server giù non cambiano niente. Una build senza backend tiene l'ultimo file buono. Il service worker non lo tocca, l'hosting lo serve no-cache, la demo lo ignora. Lo leggono il client di Firebase, le notifiche push, Analytics, il backup e le Informazioni.
+
+FATTO IL TEST-GUARDIA: fuori dagli adattatori (src/adattatori/, functions/index.js) nessun file nuovo importa Firebase, e l'elenco dei 22 di oggi si può solo accorciare.
+
+FATTA LA PORTA DEI DATI (`src/porte/dati.js`, adattatore in `src/adattatori/firebase/`): i nomi sono quelli di Firestore, apposta, per non rinominare centinaia di chiamate; il confine è l'elenco, che un test tiene fermo. Il contratto dice cosa restituisce una lettura, e che una scrittura è PRESA IN CARICO all'istante della chiamata (la vedono letture e ascolti successivi, anche senza rete, con l'ora del server a null) e ARRIVATA quando la promessa si risolve; rifiutata, il dispositivo torna a com'era. Il client diretto di BUG-117 è `cercaDalServer`. scritture.js e letture.js sono entrati nell'adattatore; api.js, backup, progressivi e attrezzi di sviluppo non importano più Firebase (l'elenco scende a 16).
+
+FATTI I TEST DI CONTRATTO E I PERMESSI PER RUOLO, sull'emulatore (`npm run test:regole`): la serie della porta (tests/contratto/dati.js) gira sull'adattatore Firebase, la tabella dei permessi (tests/contratto/permessi.js, 30 collezioni più i documenti propri, per cinque ruoli e quattro operazioni) contro firestore.rules.
+
+DA FARE: accesso, file, server, notifiche e l'ospite Firebase delle Functions.
+
+**Dove**: `src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md` · **Lo dimostrano**: `tests/unit/configurazione.test.js`, `tests/unit/confineFirebase.test.js`, `tests/unit/portaDati.test.js`, `tests/regole/contrattoDati.test.js`, `tests/regole/permessi.test.js`
 
 ## Lavori previsti
 
