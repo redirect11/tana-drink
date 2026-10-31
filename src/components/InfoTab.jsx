@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react'
 import { etichettaVersione } from '../lib/versione.js'
 import Changelog from './Changelog.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
-import { useSceltaAggiornamento } from './PropostaAggiornamento.jsx'
-import { scegliAggiornamento } from '../lib/api.js'
+import { SceltaDallAreaClienti, useSceltaAggiornamento } from './PropostaAggiornamento.jsx'
 import {
   MESSAGGI_AGGIORNAMENTI,
   SCELTE,
@@ -91,11 +90,10 @@ export default function InfoTab({ settings = null, role = null }) {
 // aggiornamenti; l'ultimo avviso sulle condizioni. Senza la voce nella
 // licenza (la Tana) la scheda non c'è.
 function Aggiornamenti({ settings, role }) {
-  const scelta = useSceltaAggiornamento(settings, role)
-  const [chiesto, setChiesto] = useState(null)
+  const { url, invio, fatta, scegli } = useSceltaAggiornamento(settings)
   const proposta = propostaAperta(settings, { versione: VERSIONE })
-  const stato =
-    proposta && chiesto === proposta.tag ? 'chiesto' : statoProposta(settings, { ruolo: role, versione: VERSIONE, scelta })
+  const stato = statoProposta(settings, { ruolo: role, versione: VERSIONE, scelta: fatta })
+  const errore = proposta && invio?.tag === proposta.tag ? invio.errore : null
   const motivo = nonInclusi(settings)
   const avviso = isAdmin(role) ? avvisoCondizioni(settings) : null
   if (!stato && !motivo && !avviso) return null
@@ -104,25 +102,35 @@ function Aggiornamenti({ settings, role }) {
     <div className="card settings-section">
       <h3>Aggiornamenti</h3>
       {stato === 'del_titolare' && <p className="muted small">{MESSAGGI_AGGIORNAMENTI.del_titolare}</p>}
-      {(stato === 'da_scegliere' || stato === 'chiesto') && (
+      {(stato === 'da_scegliere' || stato === 'partito') && (
         <>
           <p style={{ margin: '0 0 6px' }}>
             Disponibile la versione <strong>{numeroVersione(proposta.tag)}</strong>.
           </p>
           {proposta.note && <Changelog testo={String(proposta.note)} />}
-          {stato === 'chiesto' ? (
-            <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.chiesto}</p>
-          ) : (
-            <button
-              className="btn small"
-              style={{ marginTop: 8 }}
-              onClick={() => {
-                scegliAggiornamento(proposta.tag, SCELTE.AGGIORNA)
-                setChiesto(proposta.tag)
-              }}
-            >
-              Aggiorna
-            </button>
+          {stato === 'partito' && (
+            <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.partito}</p>
+          )}
+          {stato === 'da_scegliere' && !url && <SceltaDallAreaClienti settings={settings} piccolo />}
+          {stato === 'da_scegliere' && url && (
+            <>
+              {errore && (
+                <p role="alert" className="small" style={{ margin: '8px 0 0' }}>
+                  {errore}
+                </p>
+              )}
+              {invio?.inCorso && (
+                <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.in_corso}</p>
+              )}
+              <button
+                className="btn small"
+                style={{ marginTop: 8 }}
+                disabled={Boolean(invio?.inCorso)}
+                onClick={() => scegli(proposta.tag, SCELTE.AGGIORNA)}
+              >
+                Aggiorna
+              </button>
+            </>
           )}
         </>
       )}

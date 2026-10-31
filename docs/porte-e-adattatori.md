@@ -161,11 +161,12 @@ Il contratto per esteso sta in testa a `src/porte/dati.js`; le prove in
     sull'adattatore Firebase. Le regole sono le più semplici possibili,
     perché si prova la porta e non i permessi;
   - `tests/regole/permessi.test.js` fa girare la tabella
-    `tests/contratto/permessi.js` contro `firestore.rules`: 29 collezioni,
-    più i documenti propri di `customers` e `presenze`, per i cinque ruoli
-    e le quattro operazioni. I casi con condizioni sui campi (ordini,
-    gruppi, chiamate, contatori, la scelta sugli aggiornamenti) restano
-    nei loro test.
+    `tests/contratto/permessi.js` contro `firestore.rules`: 30 collezioni
+    (fra cui `aggiornamenti`, chiusa a tutti da quando la scelta è una
+    chiamata alla regia), più i documenti propri di `customers` e
+    `presenze`, per i cinque ruoli e le quattro operazioni. I casi con
+    condizioni sui campi (ordini, gruppi, chiamate, contatori) restano nei
+    loro test.
   - La CI non le fa girare: vogliono l'emulatore.
 
 ## La configurazione letta all'avvio

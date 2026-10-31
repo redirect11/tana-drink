@@ -8,9 +8,9 @@
 //
 // È la fotografia delle regole al 31/10/2026, non un desiderio: se una
 // regola cambia, cambia anche qui, nello stesso commit, dicendo perché.
-// I casi con condizioni sui campi (ordini, gruppi, chiamate, contatori, la
-// scelta sugli aggiornamenti) hanno le loro prove in tests/regole/: qui ci
-// sono le collezioni dove conta solo chi sei.
+// I casi con condizioni sui campi (ordini, gruppi, chiamate, contatori)
+// hanno le loro prove in tests/regole/: qui ci sono le collezioni dove
+// conta solo chi sei.
 //
 // Non è un file *.test.js: lo usa chi lo fa girare.
 
@@ -73,6 +73,10 @@ export const PERMESSI = [
   { collezione: 'staff_shifts', legge: PERSONALE, crea: PERSONALE, aggiorna: PERSONALE, cancella: BANCO },
   // Il diario della stampante: lo scrive chi stampa, lo legge il banco.
   { collezione: 'diagnostica_stampante', legge: BANCO, scrive: PERSONALE },
+
+  // La scelta sugli aggiornamenti stava qui fino al 31/10/2026; ora è una
+  // chiamata alla regia (REQ-FLOTTA-020), e la collezione è chiusa a tutti.
+  { collezione: 'aggiornamenti', legge: NESSUNO, scrive: NESSUNO },
 ]
 
 export const OPERAZIONI = ['legge', 'crea', 'aggiorna', 'cancella']
