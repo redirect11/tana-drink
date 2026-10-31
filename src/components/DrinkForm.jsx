@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { entryUnits } from '../lib/inventory.js'
+import { entryUnits, unitaDopoCambioIngrediente } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
 import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
@@ -112,11 +112,17 @@ export default function DrinkForm({
   function removeRow(idx) {
     setForm((f) => ({ ...f, recipe_rows: f.recipe_rows.filter((_, i) => i !== idx) }))
   }
+  // CAMBIARE INGREDIENTE NON TOCCA QUANTITÀ E UNITÀ (BUG-124): l'unità
+  // resta quella della riga se vale anche per il nuovo articolo; cambia
+  // solo quando non ha senso (vedi unitaDopoCambioIngrediente).
   function onItemChange(idx, itemId) {
     const inv = inventory.find((i) => i.id === itemId)
-    // unità di inserimento di default per l'item scelto (cl per i volumi, ecc.)
-    const unit = inv ? (entryUnits(inv)[0] ?? inv.unit) : ''
-    setRow(idx, { inventory_item_id: itemId, unit })
+    setForm((f) => ({
+      ...f,
+      recipe_rows: f.recipe_rows.map((r, i) =>
+        i === idx ? { ...r, inventory_item_id: itemId, unit: unitaDopoCambioIngrediente(inv, r.unit) } : r
+      ),
+    }))
   }
 
   async function submit(e) {

@@ -53,9 +53,7 @@ export default function PallinoStampante({ gestore = false }) {
           {stato === 'spenta' && (
             <p>
               Qui non c'è nessuna stampante impostata.{' '}
-              {gestore
-                ? 'Mettila in Impostazioni → Stampante.'
-                : 'Dillo a chi sta al banco.'}
+              {gestore ? 'Mettila in Impostazioni → Stampante.' : 'Impostala dal menu, in Stampante.'}
             </p>
           )}
           {stato === 'ko' && (
