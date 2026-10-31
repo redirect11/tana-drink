@@ -6021,6 +6021,45 @@ export function subscribePendingCalls(onChange, onError) {
 }
 
 // Lo staff risponde alla chiamata.
+// ── LA SALA CHIAMA IL BANCONE (REQ-STAFF-019) ─────────────────────────
+// Flavio, 30/10/2026: «in questo momento lo staff può solo ricevere una
+// chiamata dal bancone ma non può effettuarla … permettere la chiamata al
+// bancone, quindi ad un account admin». La chiamata non è per una persona:
+// è per il bancone, cioè per chi ci lavora da titolare (`to_role: 'admin'`),
+// su tutti i suoi terminali. Le regole lasciano alla sala SOLO questa
+// chiamata, firmata da chi la fa.
+// Parte in sottofondo e il tasto risponde subito: chi chiama ha un vassoio
+// in mano, e offline la conferma del server non arriverebbe mai.
+export function chiamaIlBancone({ from_uid, from_email = null, from_name = null, message = null }) {
+  const ref = doc(staffCallsCol)
+  setDoc(ref, {
+    to_uid: null,
+    to_email: null,
+    to_role: 'admin',
+    from_uid,
+    from_email,
+    from_name,
+    message: message || null,
+    status: 'pending',
+    created_at: serverTimestamp(),
+    acked_at: null,
+  }).catch((e) => console.error('[chiamata] al bancone:', e?.message || e))
+  return ref.id
+}
+
+// Le chiamate al bancone ancora senza risposta: le ascolta chi è titolare.
+export function subscribeCallsAlBancone(onChange, onError) {
+  const q = query(staffCallsCol, where('to_role', '==', 'admin'), where('status', '==', 'pending'))
+  return onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError ?? (() => {}))
+}
+
+// Le MIE chiamate al bancone ancora senza risposta: il tasto della sala
+// dice «in attesa» finché il bancone non risponde, e non si chiama due volte.
+export function subscribeMieChiamateAlBancone(uid, onChange, onError) {
+  const q = query(staffCallsCol, where('from_uid', '==', uid), where('status', '==', 'pending'))
+  return onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError ?? (() => {}))
+}
+
 export async function ackStaffCall(id) {
   await updateDoc(doc(db, 'staff_calls', id), {
     status: 'acked',

@@ -2321,7 +2321,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [magazzino, difetto-risolto]
-    test_cases: [tests/unit/inventory.test.js, tests/unit/ricetteUnita.test.js]
+    test_cases: [tests/unit/inventory.test.js, tests/unit/ricetteUnita.test.js, tests/component/DrinkFormRicetta.test.jsx]
 
   - id: REQ-MAG-002
     title: "Bottiglie: quante piene, quale aperta, quanto resta"
@@ -7610,6 +7610,33 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-STAFF-019
+    title: "La sala chiama il bancone"
+    area: "src/lib/api.js (chiamaIlBancone, subscribeCallsAlBancone, subscribeMieChiamateAlBancone), src/components/StaffDrawer.jsx (ChiamaIlBancone), src/components/ChiamataInArrivo.jsx, firestore.rules (staff_calls), functions/lib/push-core.js (destinatariChiamata), functions/index.js (notifyStaffCall)"
+    description: >
+      Flavio, 30/10/2026 (audio): «in questo momento lo staff può solo
+      ricevere una chiamata dal bancone ma non può effettuarla … permettere
+      la chiamata al bancone, quindi ad un account admin». Nel menu della
+      sala c'è «📟 Chiama il bancone»: un tocco e la chiamata parte, in
+      sottofondo (local-first: niente attesa del server); finché il bancone
+      non risponde la voce dice «In attesa del bancone…» e un secondo tocco
+      non ne manda un'altra. La chiamata non è per una persona ma per il
+      bancone, cioè per chi è titolare (`to_role: 'admin'`): ai titolari
+      compare a tutto schermo «📟 Chiamata dalla sala», con chi chiama e
+      «Rispondo», come allo staff la chiamata dal bancone; e la Cloud
+      Function fa vibrare tutti i loro terminali, trovandoli dai claim
+      delle utenze (un account disattivato non suona). Le regole lasciano
+      alla sala SOLO questa chiamata: al bancone, senza destinatario
+      personale, firmata da sé, ancora da rispondere; il cliente non chiama
+      nessuno.
+    status: implemented
+    generate_issue: false
+    labels: [staff, notifiche]
+    test_cases:
+      - tests/component/StaffDrawer.test.jsx
+      - tests/component/ChiamataInArrivo.test.jsx
+      - tests/bdd/notify-staff-call.test.js
+      - tests/regole/staffCalls.test.js
   - id: REQ-STAFF-014
     title: "La sala serve, non prepara: gli stati delle comande non li tocca"
     area: "src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules"
@@ -11759,6 +11786,7 @@ requirements:
     test_cases:
       - tests/regole/counters.test.js
       - tests/regole/orders.test.js
+      - tests/regole/staffCalls.test.js
 
   - id: REQ-CODA-006
     title: "I conti dei giorni scorsi restano in coda, sotto la loro data"
@@ -13584,6 +13612,28 @@ requirements:
       - tests/unit/diagnosticaStampante.test.js
       - tests/unit/diagnosticaStampanteSenzaRete.test.js
 
+  - id: REQ-STAMPA-020
+    title: "La sala si collega da sé alla stampante"
+    area: "src/lib/sezioni.js (NAV_SALA), src/pages/BartenderPage.jsx (tab stampante), src/components/PrinterSetup.jsx (gestore), src/components/PallinoStampante.jsx"
+    description: >
+      Flavio, 30/10/2026 (audio): «bisogna dare allo staff, cioè ad un
+      account staff, la possibilità di collegarsi alla stampante, perché
+      sta disabilitato». La sala stampa le comande dal suo telefono, ma
+      l'indirizzo della stampante, il certificato da accettare e la prova di
+      stampa stavano in una pagina che a un account staff non si apriva: il
+      menu della sala aveva solo «Coda ordini» e «Da servire», e il pallino
+      della stampante diceva «Dillo a chi sta al banco». Ora la sala ha la
+      sua voce «🖨️ Stampante». Vede la parte del COLLEGAMENTO — indirizzo,
+      porta, HTTPS, il certificato da accettare, «Test stampa» — e la salva
+      sul suo telefono soltanto: la configurazione condivisa del locale
+      (settings/printer) e i dati del locale sulla carta restano dei
+      gestori, come dicono le regole del database. Il pallino, a chi è in
+      sala senza stampante, dice di impostarla dal menu.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, staff]
+    test_cases:
+      - tests/component/PrinterSetupSala.test.jsx
   - id: REQ-DEV-016
     title: "Quello che dice quali pezzi caricare non si tiene in cache"
     area: "firebase.json (hosting.headers)"
