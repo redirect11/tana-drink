@@ -5737,6 +5737,33 @@ requirements:
       - tests/component/PortaDemo.test.jsx
       - tests/unit/avvioApp.test.jsx
 
+  - id: REQ-FLOTTA-020
+    title: "Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»"
+    area: "src/App.jsx, src/lib/licenza.js, src/lib/novita.js, src/components/InfoTab.jsx, firestore.rules, docs/aggiornamenti-dalla-regia.md"
+    description: >
+      «Il secondo dovrebbe invece mostrare prima il changelog con i
+      cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe
+      volere anche saltare l'aggiornamento» e «nei vari piani siano
+      garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026).
+      La specifica intera è in docs/aggiornamenti-dalla-regia.md. In
+      breve: la regia scrive `settings/bar.licenza.aggiornamenti`
+      (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi
+      nel piano, la proposta con le sue note, l'avviso delle condizioni
+      nuove). In modalità a scelta l'app mostra al titolare, prima di
+      aggiornare, le novità della versione proposta con «Aggiorna», «Salta
+      questa versione» e «Più tardi», e scrive la scelta in
+      `aggiornamenti/scelta`, un documento che solo il titolare legge e
+      scrive; la regia la legge e pubblica, o segna saltata. In
+      Informazioni restano la proposta saltata col suo «Aggiorna» e, se
+      il piano non comprende gli aggiornamenti, il perché. L'avviso delle
+      condizioni esce una volta per id. Senza la voce, e in modalità
+      obbligatori, l'app fa quello che fa oggi; la demo la ignora.
+    status: todo
+    generate_issue: true
+    labels: [prodotto, flotta, licenza]
+    priority: P2
+    test_cases: []
+
   - id: REQ-UI-001
     title: "Le sottosezioni di una pagina stanno sotto il titolo"
     area: "src/components/SectionPanels.jsx"
