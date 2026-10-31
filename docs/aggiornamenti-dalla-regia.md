@@ -142,14 +142,21 @@ Content-Type: application/json
 - **Senza `scelta_url`** (una licenza scritta prima di questa versione
   della regia) i bottoni dicono di scegliere dall'area clienti della regia
   (`licenza.regia_url`).
-- **Solo verso la regia.** L'app manda il token solo a un indirizzo
-  `https://<regione>-drink-regia.cloudfunctions.net/<nome>`; qualunque
-  altro `scelta_url` vale come nessuno, e si sceglie dall'area clienti. Il
-  token del titolare apre per un'ora tutto quello che il titolare può
-  fare, e finché la licenza sta in `settings/bar` (BUG-125) la può
-  riscrivere ogni bartender: un indirizzo suo se lo prenderebbe. **Se la
-  regia sposta la Function** (un dominio suo, Cloud Run), l'app va
-  cambiata insieme (`SCELTA_URL_REGIA` in `src/lib/aggiornamenti.js`).
+- **L'indirizzo è quello della licenza**: le regie sono due, ognuna col
+  suo (`https://europe-west1-drink-regia-test.cloudfunctions.net/sceltaDallApp`
+  per i locali della regia di test, `…-drink-regia…` per quelli di
+  produzione), e l'app chiama quello scritto in `scelta_url`. Non c'è un
+  indirizzo di riserva: senza `scelta_url` si sceglie dall'area clienti.
+- **Ma solo verso la regia.** Prima di mandare il token l'app guarda che
+  l'indirizzo sia `https://<regione>-<progetto>.cloudfunctions.net/<nome>`
+  con il progetto fra quelli della regia (`drink-regia`,
+  `drink-regia-test`); un altro vale come nessuno. Il token del titolare
+  apre per un'ora tutto quello che il titolare può fare, e finché la
+  licenza sta in `settings/bar` (BUG-125) la può riscrivere ogni
+  bartender: un indirizzo suo se lo prenderebbe. **Un progetto nuovo
+  della regia, o la Function spostata su un dominio suo**, va aggiunto a
+  `PROGETTI_REGIA` in `src/lib/aggiornamenti.js`. Chiuso BUG-125, il
+  controllo si può togliere e l'indirizzo lo decide solo la regia.
 - **L'attesa massima è di venti secondi**: senza risposta l'app dice che
   la scelta non è partita, e il titolare può riprovare. Una chiamata
   arrivata tardi alla regia e poi ripetuta riceve `409` o `200`: la regia

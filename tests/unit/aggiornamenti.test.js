@@ -142,9 +142,16 @@ describe('le Informazioni', () => {
 describe('la chiamata alla regia', () => {
   const URL_REGIA = 'https://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp'
 
-  it('l’indirizzo della scelta si prende solo se è una Function della regia', () => {
+  it('l’indirizzo è quello scritto dalla regia, di produzione o di test', () => {
+    // Le regie sono due, ognuna col suo progetto: un locale di test chiama
+    // la regia di test, non quella di produzione (che risponderebbe 404).
+    const TEST = 'https://europe-west1-drink-regia-test.cloudfunctions.net/sceltaDallApp'
     expect(sceltaUrl(aScelta({ scelta_url: URL_REGIA }))).toBe(URL_REGIA)
+    expect(sceltaUrl(aScelta({ scelta_url: TEST }))).toBe(TEST)
     expect(sceltaUrl(aScelta({ scelta_url: 'https://us-central1-drink-regia.cloudfunctions.net/scelta_2' }))).not.toBeNull()
+  })
+
+  it('ma il token va solo a una Function dei progetti della regia', () => {
     // Finché la licenza la può riscrivere un bartender (BUG-125), un
     // indirizzo qualunque riceverebbe il token del titolare.
     for (const altro of [
@@ -153,6 +160,11 @@ describe('la chiamata alla regia', () => {
       'https://europe-west1-drink-regia.cloudfunctions.net.example.com/sceltaDallApp',
       'https://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp?rimanda=https://altrove',
       'https://drink-regia.cloudfunctions.net/sceltaDallApp',
+      // Un progetto altrui col nome che finisce come il nostro.
+      'https://europe-west1-foo-drink-regia.cloudfunctions.net/sceltaDallApp',
+      'https://europe-west1-drink-regia-test2.cloudfunctions.net/sceltaDallApp',
+      // Il punto è un punto, non «un carattere qualunque».
+      'https://europe-west1-drink-regiaXcloudfunctions.net/sceltaDallApp',
       42,
     ]) {
       expect(sceltaUrl(aScelta({ scelta_url: altro }))).toBeNull()

@@ -5887,9 +5887,14 @@ requirements:
       riscriva la proposta; con un errore mostra il testo della regia e
       lascia i tasti; senza rete, o dopo venti secondi senza risposta, dice
       che la scelta non è partita. Senza `scelta_url` i tasti diventano il
-      rimando all'area clienti. UNA DIFESA IN PIÙ: il token va solo a una
-      Function della regia (`https://<regione>-drink-regia.cloudfunctions.net/<nome>`);
-      un altro indirizzo vale come nessuno. Finché la licenza sta in
+      rimando all'area clienti. L'indirizzo è quello della licenza: le
+      regie sono due, test e produzione, ognuna col suo progetto, e un
+      locale di test chiama la regia di test. UNA DIFESA IN PIÙ: il token va
+      solo a una Function dei progetti della regia (`drink-regia`,
+      `drink-regia-test`, scritti per intero: un controllo sul finale del
+      nome lascerebbe passare un progetto altrui `foo-drink-regia`); un
+      altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si
+      può togliere. Finché la licenza sta in
       settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url`
       suo si prenderebbe il token del titolare al primo «Aggiorna». Il
       documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge
