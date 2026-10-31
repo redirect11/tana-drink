@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // Gestione utenze dal gestionale. In produzione passa dalla callable
 // `staffAdmin` (Admin SDK: l'elenco lo vede chi gestisce, le nomine solo
 // l'admin). In ambiente emulatore parla direttamente con l'Auth emulator
@@ -7,7 +8,8 @@ import { functions } from './firebaseClient.js'
 import { RUOLI } from './ruoli.js'
 import { senzaFunctions, MESSAGGI_PIANO } from './limiti.js'
 
-const isEmulator = String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
+// Nella demo mai l'emulatore: non si parla con nessun server (REQ-FLOTTA-019).
+const isEmulator = !__DEMO__ && String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID
 const emulatorAuthHost = `http://${window.location.hostname}:9099/identitytoolkit.googleapis.com`
 

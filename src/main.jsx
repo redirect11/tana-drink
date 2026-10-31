@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // PRIMA DI TUTTO, e come primo import: le chiavi locali col prefisso
 // vecchio si copiano su quello nuovo prima che un altro modulo le legga
 // (lib/migrazioneAvvio.js spiega perché non basta chiamarla qui sotto).
@@ -26,11 +27,6 @@ import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
 
-// I NUMERI DEGLI ORDINI SI PRECARICANO. Battere un conto non deve aspettare
-// la rete: quale cassa è aperta e a che punto sono i progressivi si tengono
-// aggiornati da qui in avanti, così alla creazione non si chiede niente a
-// nessuno (vedi lib/progressivi.js).
-avviaProgressivi()
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).
 // Su Firebase Hosting il sito è servito dalla radice ("/"); su GitHub Pages
@@ -55,13 +51,36 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-// Banner informativo cookie (solo cookie tecnici, nessun consenso richiesto).
-initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
+function parti() {
+  // I NUMERI DEGLI ORDINI SI PRECARICANO. Battere un conto non deve
+  // aspettare la rete: quale cassa è aperta e a che punto sono i
+  // progressivi si tengono aggiornati da qui in avanti, così alla creazione
+  // non si chiede niente a nessuno (vedi lib/progressivi.js).
+  avviaProgressivi()
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <BrowserRouter basename={basename}>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
-)
+  // Banner informativo cookie (solo cookie tecnici, nessun consenso
+  // richiesto). Non nella demo: non ha Analytics né altri servizi di terzi,
+  // e quello che salva sta nel browser di chi prova.
+  if (!__DEMO__) initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
+
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <BrowserRouter basename={basename}>
+        <App />
+      </BrowserRouter>
+    </React.StrictMode>
+  )
+}
+
+// LA DEMO (REQ-FLOTTA-019) carica i dati di prova nella cache PRIMA della
+// prima schermata: così nessuna lista parte vuota. La rete del database è
+// già spenta (firebaseClient.js). Il codice dei dati entra con `import()`
+// solo nella build della demo.
+if (__DEMO__) {
+  import('./demo/avvio.js')
+    .then((m) => m.avviaDemo())
+    .catch((e) => console.error('[demo] dati di prova non caricati:', e))
+    .finally(parti)
+} else {
+  parti()
+}

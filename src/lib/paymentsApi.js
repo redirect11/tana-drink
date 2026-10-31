@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // Wrapper delle callable di pagamento. In ambiente emulatore non c'è
 // l'emulatore delle functions: si degrada con grazia (la UI mostra il
 // fallback e i flussi si simulano dai DevTools).
@@ -5,7 +6,8 @@ import { httpsCallable } from 'firebase/functions'
 import { functions } from './firebaseClient.js'
 import { senzaFunctions } from './limiti.js'
 
-const isEmulator = String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
+// Nella demo mai l'emulatore: non si parla con nessun server (REQ-FLOTTA-019).
+const isEmulator = !__DEMO__ && String(import.meta.env.VITE_USE_FIREBASE_EMULATOR) === 'true'
 
 // SUL PROFILO LEGGERO (piano Free, REQ-LIC-004) le Functions di SumUp non
 // ci sono: si risponde come sull'emulatore, `{ unavailable: true }`, che

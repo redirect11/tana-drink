@@ -2294,13 +2294,37 @@ describe('la sala e il conto', () => {
     expect(bartenderUpdateComanda).not.toHaveBeenCalled()
   })
 
-  // Il ruolo arriva dal token, cioè un battito dopo il primo disegno: fino a
-  // lì la schermata resta quella del banco, apposta (vedi ruoli.js).
-  it('le righe già mandate al banco non le toglie', async () => {
+  // LE RIGHE LE CORREGGE ANCHE LA SALA (REQ-STAFF-020). Qui prima si
+  // provava il contrario — «le righe già mandate al banco non le toglie» —
+  // ed era la regola di REQ-STAFF-014. Flavio, 30/10/2026, con la foto del
+  // conto #34: «lo staff non può togliere il Sipsmith più uno, lo posso
+  // fare solo io … devono avere la possibilità di modificare qualsiasi
+  // ordine». Ora la sala corregge come il banco, con i suoi stessi limiti.
+  it('le righe già mandate al banco le corregge, come il banco', async () => {
+    const user = userEvent.setup()
     await inSala()
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled()
+    const meno = screen.getByRole('button', { name: 'Riduci Mojito' })
+    await waitFor(() => expect(meno).toBeEnabled())
+    await user.click(meno)
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())
+    const [orderId, comandaId, { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(orderId).toBe('ord1')
+    expect(comandaId).toBe('c1')
+    expect(items.find((i) => i.drink_id === 'mojito').qty).toBe(1)
+  })
+
+  it('una riga già servita resta com’è, per la sala come per il banco', async () => {
+    await inSala(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1', seq: 1, status: 'ritirato', status_times: {},
+            items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }],
+          },
+        ],
+      })
     )
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeDisabled())
   })
 
   it('non prende in carico: «Segna “In preparazione”» non c’è', async () => {

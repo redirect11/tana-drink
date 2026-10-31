@@ -2,6 +2,18 @@
 
 ## 1.10.2-beta — in lavorazione
 
+### Per la demo pubblica
+
+- **La demo non usa più il database.** Il sito di prova che si apre dalla
+  pagina del prodotto lavora tutto nel browser di chi lo prova, con un
+  locale inventato: menù, magazzino, quattro settimane di serate e la
+  serata di oggi in corso. Quello che si fa resta in quel browser.
+- **Si entra scegliendo il ruolo**: titolare, bartender, sala o cliente.
+  Una fascia in cima dice che è una demo, con «Cambia ruolo» e
+  «Ricomincia da capo».
+- **Nei locali veri non cambia niente**: la demo la decide la build, e il
+  suo codice non entra nel pacchetto degli altri locali.
+
 ### Per chi lavora in sala
 
 - **La stampante anche dal telefono della sala.** Nel menu c'è
@@ -10,6 +22,9 @@
 - **Si chiama il bancone.** Nel menu c'è «Chiama il bancone»: al titolare
   arriva la chiamata a tutto schermo, e finché non risponde il tasto dice
   che si è in attesa.
+- **La sala corregge i conti.** Una riga di una comanda già mandata al
+  banco si toglie o si riduce anche dal telefono della sala, finché il
+  drink non è servito. Annullare un conto resta del banco.
 
 ### Per chi amministra
 

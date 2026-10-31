@@ -158,6 +158,9 @@ service cloud.firestore {
       //   · ANNULLARE il conto: è il lavoro di chi versa che si straccia;
       //   · far SPARIRE una comanda: le sue aggiunte ne fanno nascere una
       //     nuova, e il numero di comande non scende mai.
+      // Correggere le righe di una comanda — togliere un drink, cambiarne
+      // la quantità — la sala lo fa come il banco (REQ-STAFF-020): una
+      // comanda svuotata resta nell'array, e il numero non scende.
       // Il resto — prendere in carico, segnare pronto, tornare indietro,
       // dividere — è il confronto di due array elemento per elemento, e le
       // regole non hanno cicli. Resta validato in app (src/lib/ruoli.js),
