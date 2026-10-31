@@ -1,6 +1,20 @@
 # Cosa è cambiato
 
-## 1.10.2-beta — in lavorazione
+## 1.10.3-beta — in lavorazione
+
+### Per i locali aggiornati dalla regia
+
+- **Aggiornamenti a scelta del titolare.** Quando la regia propone una
+  versione nuova, il titolare ne vede prima le novità e sceglie
+  «Aggiorna», «Salta questa versione» o «Più tardi». Una versione saltata
+  resta in Impostazioni → Informazioni, con il suo «Aggiorna».
+- **Quando il piano non comprende gli aggiornamenti**, Informazioni lo
+  dice e porta alla pagina dei piani.
+- **Gli avvisi sulle condizioni del servizio** compaiono al titolare una
+  volta sola e restano nelle notifiche.
+- **Nella Tana non cambia niente**: gli aggiornamenti arrivano come prima.
+
+## 1.10.2-beta — 31 ottobre 2026, sul test
 
 ### Per la demo pubblica
 

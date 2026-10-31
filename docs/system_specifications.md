@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 242 | fatto e coperto dai test |
+| ✅ | 243 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**291 voci** in tutto. **258** descrivono il sistema com'è oggi e
+**292 voci** in tutto. **259** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 3 | 1 |  |
+| [FLOTTA](#flotta) | 4 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3310,6 +3310,10 @@ COSA NON E' COPERTO, E PERCHE': le maggiorazioni nell'app non esistono come funz
 
 LE REGOLE DI FIRESTORE NON LI FANNO RISPETTARE, per ora, ed e' una scelta: un numero massimo di documenti (prodotti, conti aperti) le regole non lo sanno contare; lo storico vietato in lettura farebbe fallire per intero le query che oggi chiedono gli ultimi 300 conti; gli sconti si potrebbero negare leggendo settings/bar a ogni scrittura di un conto, ma e' una lettura in piu' su ogni gesto della cassa della Tana e un errore in quella regola fermerebbe il banco. Come per i moduli (REQ-LIC-002), il limite nasconde e non protegge: chi apre la console del browser se lo toglie. Il controllo vero, quando servira', va in una Function della regia o nelle regole con un documento di licenza separato.
 
+IL RITORNO AL FREE DI UN LOCALE CHE PAGAVA (REQ-FLOTTA-020, verificato il 31/10/2026): la regia scrive `piano: 'free'` coi limiti su un locale che ne ha gia' di piu'.
+
+NON SI CANCELLA NIENTE: i prodotti in carta restano e si modificano, i conti aperti restano e si chiudono, i dati vecchi restano nel database; i limiti fermano solo il nuovo (prodotto, conto) e lo storico chiuso si vede per storico_giorni. Il profilo leggero fa smettere all'app di CHIAMARE le Functions dal browser (gestione dello staff, lettore SumUp, caricamento delle foto), non le spegne: quelle lato server pubblicate prima restano e girano. Le utenze dello staff gia' create continuano a entrare (i ruoli stanno nei claim, che nessuno toglie); la pagina Utenti e il cerca-persone non le elencano piu', perche' l'elenco passa da staffAdmin. Le foto gia' caricate restano visibili.
+
 **Dove**: `src/lib/limiti.js, src/lib/prodotto.js, src/lib/licenza.js (moduloIncluso col piano free, scadenzaProva), src/components/AvvisoPiano.jsx, src/lib/saveDrink.js, src/components/MenuManager.jsx, src/pages/PosPage.jsx, src/lib/useContiAperti.js, src/components/PaymentScreen.jsx, src/components/OrdersHistory.jsx, src/components/CashSessionsList.jsx, src/components/UtentiTab.jsx, src/lib/printer.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (FunzioniPremium)` · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/prodottiLimite.test.js`, `tests/unit/marchioScontrino.test.js`, `tests/component/ContiApertiLimite.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/component/PaymentScreen.test.jsx`, `tests/component/OrdersHistory.test.jsx`, `tests/component/CashSessionsList.test.jsx`, `tests/component/UtentiTab.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
 #### REQ-LIC-004 — Il profilo leggero: senza Functions e senza Storage l'app parte, lavora e non li chiama
@@ -3395,6 +3399,16 @@ LA CHIUSURA VERA — la cancellazione del progetto Google dopo i 30 giorni prome
 IL PUNTO DA CONTROLLARE PER PRIMO (l'utente, 30/10/2026: «che, con la rete del database spenta, l'app non resti ferma ad aspettare la conferma di una scrittura»). Contati 68 punti in 23 file che aspettano la conferma del server, quasi tutti nel gestionale. Nella demo le scritture passano da src/lib/scritture.js e si considerano fatte appena sono nella cache (confermaLocale.js); `getDoc`, che a rete spenta su un documento inesistente va in errore invece di dire «non c'è», passa da src/lib/letture.js e risponde dalla cache. Nei locali veri le due sono quelle di Firestore, identiche; un test vieta di scavalcarle. Provato in Chrome sulla build della demo: l'ordine di un cliente parte e la pagina dell'ordine si apre in 260 ms, «Rendi non disponibile» nel menù del gestionale si vede in 150 ms, «Ricomincia da capo» torna ai dati di prova, zero richieste verso l'esterno e zero errori. Quello che l'inventario ha trovato fuori dalla demo, al banco, sta in BUG-123.
 
 **Dove**: `clienti/demo, clienti/pluginCliente.js (__DEMO__), src/demo/, src/lib/firebaseClient.js, src/lib/scritture.js, src/lib/letture.js, src/lib/confermaLocale.js, src/main.jsx, src/App.jsx, scripts/controlla-build-senza-demo.mjs, .github/workflows/test.yml, docs/modalita-demo.md` · **Lo dimostrano**: `tests/unit/scrittureDemo.test.js`, `tests/unit/bundleDemo.test.js`, `tests/unit/datiDemo.test.js`, `tests/unit/accessoDemo.test.js`, `tests/unit/firebaseClientDemo.test.js`, `tests/unit/demoSoloNellaBuildDemo.test.js`, `tests/component/PortaDemo.test.jsx`, `tests/unit/avvioApp.test.jsx`
+
+#### REQ-FLOTTA-020 — Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»
+
+«Il secondo dovrebbe invece mostrare prima il changelog con i cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe volere anche saltare l'aggiornamento» e «nei vari piani siano garantiti aggiornamenti fino a che si paga» (l'utente, 31/10/2026). La specifica intera è in docs/aggiornamenti-dalla-regia.md. In breve: la regia scrive `settings/bar.licenza.aggiornamenti` (modalità obbligatori o a scelta, se gli aggiornamenti sono inclusi nel piano, la proposta con le sue note, l'avviso delle condizioni nuove). In modalità a scelta l'app mostra al titolare, prima di aggiornare, le novità della versione proposta con «Aggiorna», «Salta questa versione» e «Più tardi», e scrive la scelta in `aggiornamenti/scelta`, un documento che solo il titolare legge e scrive; la regia la legge e pubblica, o segna saltata. In Informazioni restano la proposta saltata col suo «Aggiorna» e, se il piano non comprende gli aggiornamenti, il perché. L'avviso delle condizioni esce una volta per id. Senza la voce, e in modalità obbligatori, l'app fa quello che fa oggi; la demo la ignora.
+
+FATTO (31/10/2026). La logica pura sta in `src/lib/aggiornamenti.js`; il box (`PropostaAggiornamento`, montato da App) mostra prima l'avviso delle condizioni, poi la proposta, mai sopra il box delle novità né su un'installazione sospesa. La scelta parte in sottofondo (`scegliAggiornamento`, nessuna attesa: il box si chiude al tocco) e torna dall'ascolto di `aggiornamenti/scelta`, che il titolare fa solo in modalità «a scelta»: una scelta per quel tag, da qualunque terminale, chiude il box. «Più tardi» non scrive niente e vale fino alla prossima apertura.
+
+UNA DIFFERENZA DAL DOCUMENTO: la proposta esce se il tag è PIÙ NUOVO dell'installata, non solo diverso (una proposta rimasta indietro offrirebbe un ritorno all'indietro; una beta viene prima del suo rilascio); se l'installata non si legge resta «diversa». Le regole danno `aggiornamenti/scelta` al solo ruolo admin, coi quattro campi e nient'altro, e solo quel documento della collezione; nessuno lo cancella. Il ritorno al Free di un locale che pagava è scritto in REQ-LIC-003.
+
+**Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (scegliAggiornamento, subscribeSceltaAggiornamento), firestore.rules (aggiornamenti/scelta), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
 
 ## Lavori previsti
 
