@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 243 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
-| ⬜ | 24 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**291 voci** in tutto. **259** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
+**294 voci** in tutto. **259** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 4 | — |  |
+| [LIC](#lic) | 4 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 4 | — |  |
 
@@ -3777,6 +3777,36 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
 **Dove**: `vitest.config.mjs, eslint.config.js`
+
+### LIC
+
+#### REQ-LIC-005 — Il Free è una cassa semplice: si battono le righe e si incassa, senza comande
+
+«Io nella free non metterei le comande [...] Deve essere proprio base, solo per provare» (l'utente, 31/10/2026). Deciso lo stesso giorno:
+
+CASSA SEMPLICE. La regia scrive nei `limiti` del Free la chiave nuova `comande: false`; come per gli sconti, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `comande: false`: si battono le righe e si incassa. Niente coda di preparazione con le colonne e gli stati (in preparazione, pronto, servito), niente stampa della comanda al banco, niente impostazioni della preparazione e della stampa delle comande; lo scontrino resta. I conti aperti si vedono come elenco da incassare. Il modello dati non cambia: un conto resta fatto di comande, che nascono già SERVITE (né «da fare» né «in preparazione»), così il giorno che il locale passa a un piano a pagamento non trova comande appese in coda. Ogni punto dove si incontra il limite lo dice con la frase del piano e porta a `licenza.regia_url` (AvvisoPiano).
+
+DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico resta di 7 giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di toglierlo e ha deciso di tenerlo.
+
+**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx`
+
+#### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
+
+«Servono dei banner che escono di tanto in tanto per far fare l'upgrade, che rimandano a regia» (l'utente, 31/10/2026). Deciso lo stesso giorno:
+
+UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
+
+**Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
+
+#### REQ-LIC-007 — La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia
+
+«Dovrebbe esserci una parte dove si vede la licenza attuale e la sua validità, ma la gestione rimanda sempre a regia» (l'utente, 31/10/2026). Una sottosezione «Licenza» in Impostazioni, al titolare, in sola lettura: il piano; lo stato (attiva, sospesa); la VALIDITÀ, da una voce nuova della licenza `valida_fino` (data ISO, o null per un piano senza scadenza: «Valida fino al 30 novembre 2026» o «Senza scadenza»); i moduli inclusi e quelli in prova con la loro scadenza (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app non si cambia niente. Senza licenza della regia (la Tana) la sottosezione non c'è.
+
+LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda la regia ma entrambe devono essere previste»): il Free può essere senza scadenza o una prova a tempo, e un piano a pagamento ha la sua. Alla scadenza la regia sospende (`stato: 'sospesa'`, che l'app già mostra) o toglie la licenza; l'app la data la mostra soltanto. Una data passata con la licenza ancora attiva si mostra come «Scaduta il …», senza fermare il locale.
+
+DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
+
+**Dove**: `src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js`
 
 ## Difetti noti
 
