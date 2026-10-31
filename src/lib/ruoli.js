@@ -93,9 +93,12 @@ export function puoSegnare(role, passo) {
   return isSala(role) ? passo === SERVITO : true
 }
 
-// Tornare indietro di un passo, dividere una comanda in due, annullarla,
-// riscrivere una comanda già mandata: si rimette mano al lavoro di chi sta
-// allo shaker, e lo fa lui.
+// Tornare indietro di un passo, dividere una comanda in due, annullarla:
+// si rimette mano al lavoro di chi sta allo shaker, e lo fa lui.
+// CORREGGERE LE RIGHE NON È PIÙ QUI (REQ-STAFF-020, 30/10/2026): togliere un
+// drink o cambiarne la quantità in una comanda già mandata lo fa anche la
+// sala, coi limiti del banco — Flavio: «devono avere la possibilità di
+// modificare qualsiasi ordine».
 export function puoGestireComande(role) {
   return !isSala(role)
 }

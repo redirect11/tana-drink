@@ -1,4 +1,7 @@
-import { collection, getDocs, doc, writeBatch } from 'firebase/firestore'
+import { collection, getDocs, doc } from 'firebase/firestore'
+// Le scritture passano da scritture.js: nella demo si confermano dalla
+// cache, perché il server non risponde mai (REQ-FLOTTA-019).
+import { writeBatch } from './scritture.js'
 import { db } from './firebaseClient.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────

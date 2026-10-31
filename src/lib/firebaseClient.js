@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 import { initializeApp } from 'firebase/app'
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
@@ -6,10 +7,21 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
   connectFirestoreEmulator,
+  disableNetwork,
 } from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getStorage, connectStorageEmulator } from 'firebase/storage'
+// Solo per la demo (REQ-FLOTTA-019): nella build di un locale vero
+// `__DEMO__` vale false, i rami qui sotto spariscono e questi due moduli con
+// loro. Un controllo della CI lo verifica sul pacchetto della Tana.
+import { nomeSessione } from '../demo/sessione.js'
+import { creaAuthDemo } from '../demo/accesso.js'
+
+// LA DEMO NON PARLA CON NESSUN SERVER (REQ-FLOTTA-019, docs/modalita-demo.md):
+// niente emulatori, niente App Check, rete del database spenta, accesso
+// finto. Lo decide la build (`clienti/demo`), mai qualcosa a runtime.
+const suEmulatore = !__DEMO__ && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -24,9 +36,10 @@ const firebaseConfig = {
 
 // Avvisa chiaramente in console se la configurazione manca, così l'app
 // non fallisce in modo silenzioso quando le variabili non sono impostate.
-export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.projectId
-)
+// La demo non ha bisogno di nessuna configurazione: non parla con nessun
+// progetto, e i dati se li porta da sé (REQ-FLOTTA-019).
+export const isFirebaseConfigured =
+  Boolean(__DEMO__) || Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)
 
 if (!isFirebaseConfigured) {
   console.warn(
@@ -37,6 +50,11 @@ if (!isFirebaseConfigured) {
 
 // Usa valori placeholder così l'inizializzazione non lancia eccezioni quando
 // la configurazione manca (le chiamate falliranno comunque, ma in modo gestito).
+//
+// NELLA DEMO l'app ha il nome della sessione (demo/sessione.js): la cache di
+// Firestore prende quel nome, e «Ricomincia da capo» o una giornata nuova
+// ripartono da una cache vuota invece di doverla svuotare.
+const nomeApp = __DEMO__ ? nomeSessione() : undefined
 export const app = initializeApp({
   apiKey: firebaseConfig.apiKey || 'placeholder-api-key',
   authDomain: firebaseConfig.authDomain || 'placeholder.firebaseapp.com',
@@ -45,15 +63,15 @@ export const app = initializeApp({
   messagingSenderId: firebaseConfig.messagingSenderId || '0',
   appId: firebaseConfig.appId || 'placeholder-app-id',
   ...(firebaseConfig.measurementId ? { measurementId: firebaseConfig.measurementId } : {}),
-})
+}, nomeApp)
 
 // App Check (anti-bot/captcha): reCAPTCHA v3 invisibile. Attivo solo se
 // la chiave è configurata; in sviluppo usa il debug token dell'emulatore.
 const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
-if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+if (suEmulatore) {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
 }
-if (recaptchaKey) {
+if (recaptchaKey && !__DEMO__) {
   try {
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(recaptchaKey),
@@ -81,7 +99,6 @@ if (recaptchaKey) {
 // Solo in locale: in produzione il canale veloce va benissimo, ed è più
 // leggero.
 function makeDb() {
-  const suEmulatore = import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
   const opzioni = suEmulatore ? { experimentalForceLongPolling: true } : {}
   try {
     return initializeFirestore(app, {
@@ -99,8 +116,21 @@ function makeDb() {
 }
 
 export const db = makeDb()
+
+// LA RETE DEL DATABASE SI SPEGNE QUI, NELLA DEMO, PRIMA DI TUTTO. È la
+// prima operazione su Firestore: le letture e le scritture che verranno —
+// anche quelle di un modulo caricato subito dopo — passano dalla coda di
+// Firestore dopo di lei, e trovano la rete già spenta. Da lì l'app lavora
+// sulla sua copia: le query leggono la cache, le scritture restano nel
+// browser e non partono mai (la regia chiude comunque il database della
+// demo a tutti). La rete non si riaccende in nessun punto dell'app.
+if (__DEMO__) {
+  disableNetwork(db).catch((e) => console.error('[demo] rete del database non spenta:', e?.message || e))
+}
+
 export const functions = getFunctions(app, 'europe-west1')
-export const auth = getAuth(app)
+// Nella demo l'accesso è finto: si sceglie il ruolo (demo/accesso.js).
+export const auth = __DEMO__ ? creaAuthDemo() : getAuth(app)
 export const storage = getStorage(app)
 
 // Dove stanno gli emulatori, se ci si collega a loro: serve anche al client
@@ -109,7 +139,8 @@ let emulatore = null
 
 // In sviluppo/testing (es. con Docker) ci si può collegare agli emulatori
 // invece che al progetto reale. Attivalo con VITE_USE_FIREBASE_EMULATOR=true.
-if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
+// Non nella demo, che non si collega a niente.
+if (suEmulatore) {
   // Usa l'hostname da cui è servita la pagina: così l'app funziona anche
   // da altri dispositivi della rete locale (es. http://192.168.1.x:5173),
   // dove "localhost" punterebbe al dispositivo stesso e non agli emulatori.
@@ -138,6 +169,9 @@ if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
 // per non pesare sull'avvio.
 let lite = null
 export function firestoreLite() {
+  // Il client diretto va dritto al server: nella demo non c'è, e chi lo usa
+  // ripiega sulla cache (vedi fetchMovimentiProdotto).
+  if (__DEMO__) return Promise.reject(new Error('Nella demo il database non si raggiunge.'))
   if (!lite) {
     lite = import('firebase/firestore/lite').then((sdk) => {
       const diretto = sdk.getFirestore(app)

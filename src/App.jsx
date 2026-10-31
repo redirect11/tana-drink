@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import LandingPage from './pages/LandingPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
@@ -38,6 +39,20 @@ import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
 import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi } from './lib/licenza.js'
+
+// LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
+// avvolgono le pagine. Si carica con `import()` solo se la build è la demo:
+// in quella di un locale vero `__DEMO__` vale false e qui resta un
+// componente che restituisce le pagine e basta.
+const PortaDemo = __DEMO__ ? lazy(() => import('./demo/PortaDemo.jsx')) : null
+function ConDemo({ children }) {
+  if (!__DEMO__) return children
+  return (
+    <Suspense fallback={null}>
+      <PortaDemo>{children}</PortaDemo>
+    </Suspense>
+  )
+}
 import FunzioneNonInclusa from './components/FunzioneNonInclusa.jsx'
 import InstallazioneSospesa from './components/InstallazioneSospesa.jsx'
 import { socialDelLocale } from './lib/social.js'
@@ -56,7 +71,7 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -630,6 +645,7 @@ export default function App() {
 
       {bloccata && <InstallazioneSospesa licenza={settings.licenza} venue={venue} />}
       <main hidden={bloccata}>
+        <ConDemo>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           {/* IL MENÙ DIGITALE è un modulo (REQ-LIC-002): senza, al suo posto
@@ -652,6 +668,7 @@ export default function App() {
           <Route path="/pos" element={<PosPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ConDemo>
       </main>
 
       <footer className="app-footer">

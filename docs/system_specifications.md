@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 30 ottobre 2026.
+> Generato il 31 ottobre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,16 +22,16 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 240 | fatto e coperto dai test |
+| ✅ | 241 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 1 | fatto a metà |
 | ⬜ | 24 | da fare |
 | 🗑 | 8 | non più valido |
 
-**288 voci** in tutto. **256** descrivono il sistema com'è oggi e
+**289 voci** in tutto. **257** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **24** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **10** difetti noti sono ancora aperti.
+cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -54,7 +54,7 @@ come «vero oggi», non come «garantito».
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
-| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 13 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
+| [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 4 | — |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 2 | — |  |
+| [FLOTTA](#flotta) | 3 | — |  |
 
 ## Cosa fa il sistema
 
@@ -2588,13 +2588,17 @@ Flavio, 30/10/2026 (audio): «in questo momento lo staff può solo ricevere una 
 
 **Dove**: `src/lib/api.js (chiamaIlBancone, subscribeCallsAlBancone, subscribeMieChiamateAlBancone), src/components/StaffDrawer.jsx (ChiamaIlBancone), src/components/ChiamataInArrivo.jsx, firestore.rules (staff_calls), functions/lib/push-core.js (destinatariChiamata), functions/index.js (notifyStaffCall)` · **Lo dimostrano**: `tests/component/StaffDrawer.test.jsx`, `tests/component/ChiamataInArrivo.test.jsx`, `tests/bdd/notify-staff-call.test.js`, `tests/regole/staffCalls.test.js`
 
+#### REQ-STAFF-020 — La sala corregge le righe di qualunque conto, come il banco
+
+Flavio, 30/10/2026 (audio, con la foto del conto #34): «lo staff non può modificare l'ordine, infatti non può togliere il Sipsmith più uno, lo posso fare solo io … devono avere la possibilità di modificare qualsiasi ordine». Con REQ-STAFF-014 le righe di una comanda già mandata al banco, per la sala, erano da leggere: il «−» restava spento e un drink sbagliato lo toglieva solo il banco. Ora la sala corregge le righe come il banco e con gli stessi limiti: finché la comanda è da fare o in preparazione, oppure sul conto riaperto; una comanda annullata o già servita resta com'è. Quello che la sala AGGIUNGE continua a nascere come comanda nuova (REQ-STAFF-014). Restano del banco annullare il conto, dividere una comanda, tornare indietro di uno stato e segnare le preparazioni. Le regole del database lo permettevano già: una comanda svuotata resta nell'array (`bartenderUpdateComanda`), quindi il numero delle comande non scende e il conto non diventa «annullato».
+
+**Dove**: `src/components/OrderPosDetail.jsx (confirmedLines, removable), src/lib/ruoli.js (puoGestireComande), firestore.rules (orders)` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
 Chiesto dall'utente il 19/08. Chi sta in sala VEDE a che punto sono le preparazioni — gli serve per sapere cosa portare — ma non le comanda: l'unico passo che può segnare è «servito», perché è lui a portare il drink al tavolo. Tutto il resto (prendere in carico, segnare pronto, tornare indietro, dividere una comanda, annullarla) è del banco.
 
-SUGLI ORDINI invece la sala lavora: può aggiornare un conto — aggiungere righe, cambiare quantità — e quelle modifiche generano una NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca le comande esistenti: quelle sono il lavoro di chi versa.
-
-DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre — c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale anche lato server (`firestore.rules`): un permesso che esiste solo nell'interfaccia non è un permesso. FATTO. In `ruoli.js`: `puoSegnare` (alla sala solo «servito»), `puoGestireComande` (tornare indietro, dividere, annullare, riscrivere una comanda già mandata) e `aggiunteInComandaNuova` (quello che la sala aggiunge nasce come comanda a sé, anche col «+» su una riga già confermata). Le due prime sono scritte al contrario — «non è la sala» — apposta: spengono dei tasti mentre il ruolo torna dal server, e spegnerli per un istante al banco vuol dire premere a vuoto.
+SUGLI ORDINI invece la sala lavora: può aggiornare un conto — aggiungere righe, cambiare quantità — e quelle modifiche generano una NUOVA comanda, che il banco vedrà arrivare nella sua coda. Non tocca le comande esistenti: quelle sono il lavoro di chi versa. (SUPERATO PER LE RIGHE dal 30/10/2026: correggere le righe di una comanda già mandata lo fa anche la sala — REQ-STAFF-020.) DOVE VA SCRITTA la regola: in `src/lib/ruoli.js`, insieme alle altre — c'è un test che boccia i confronti di ruolo sparsi nel codice. E vale anche lato server (`firestore.rules`): un permesso che esiste solo nell'interfaccia non è un permesso. FATTO. In `ruoli.js`: `puoSegnare` (alla sala solo «servito»), `puoGestireComande` (tornare indietro, dividere, annullare, riscrivere una comanda già mandata) e `aggiunteInComandaNuova` (quello che la sala aggiunge nasce come comanda a sé, anche col «+» su una riga già confermata). Le due prime sono scritte al contrario — «non è la sala» — apposta: spengono dei tasti mentre il ruolo torna dal server, e spegnerli per un istante al banco vuol dire premere a vuoto.
 
 LATO SERVER `firestore.rules` nega alla sala le due cose che il database sa vedere da sé: portare un conto ad «annullato» e far scendere il numero delle comande.
 
@@ -3384,6 +3388,14 @@ LA CHIUSURA VERA — la cancellazione del progetto Google dopo i 30 giorni prome
 
 **Dove**: `src/lib/licenza.js (STATI_LICENZA, installazioneBloccata), src/components/InstallazioneSospesa.jsx, src/App.jsx` · **Lo dimostrano**: `tests/component/InstallazioneSospesa.test.jsx`
 
+#### REQ-FLOTTA-019 — La demo pubblica: dati di prova nella build, niente database, la sessione nel browser
+
+«Il sito demo che si apre dalla home dovrebbe essere in sola lettura sul backend e la sessione vive solo in locale. Bisogna aggiungere dei dati di test e bisogna renderlo in qualche modo sicuro» e, sulla proposta di una demo decisa dalla build e non da un interruttore, «sì va bene» (l'utente, 30/10/2026). La specifica intera è in docs/modalita-demo.md. In breve: la modalità demo la accende solo la build CLIENTE=demo (una costante di compilazione, mai un'impostazione, un ruolo o un parametro), e il suo codice non entra nelle build dei locali veri. In demo l'app carica un locale inventato (nessun dato della Tana), spegne la rete di Firestore prima di leggere o scrivere, tiene nel browser quello che fa chi prova («Ricomincia da capo» riparte dai dati di prova), finge accesso, Functions, SumUp, notifiche, stampante e licenza, e dice in una fascia che è una demo. La regia (drink-regia, REQ-FLOTTA-019) pubblica la demo solo su drinkpos-demo, col profilo leggero e il database chiuso a tutti: la demo non può contare su niente che stia nel database. COM'È FATTA (30/10/2026). `"demo": true` in clienti/demo/venue.json diventa la costante `__DEMO__` (pluginCliente.js), un letterale: nella build di un locale vero vale false, e il codice di src/demo/ sparisce dal pacchetto; la CI lo controlla sul pacchetto della Tana (scripts/controlla-build-senza-demo.mjs) prima della build della demo e prima di ogni deploy. firebaseClient apre l'app col nome della sessione (una cache per giornata, e «Ricomincia da capo» passa alla successiva invece di svuotarla), spegne la rete del database come prima operazione su Firestore, non apre Auth né App Check e non si collega agli emulatori; l'accesso è finto e si sceglie il ruolo (titolare, bartender, sala, cliente). I dati di prova (src/demo/dati.js: menù coi disegni dei drink, magazzino coi costi, fornitori e listini, quattro settimane di serate incassate con la loro cassa, la serata di oggi in corso) si generano nel browser con un seme fisso e date relative a oggi, e si caricano come bundle di Firestore (loadBundle) prima della prima schermata. Nessun dato della Tana: il catalogo è quello inventato del seme di sviluppo, coi quattro nomi del locale resi neutri. Il profilo è sempre leggero (niente Functions, Storage, SumUp, notifiche, Analytics, banner dei cookie); la stampante è quella finta. Una fascia dice che è una demo, con «Cambia ruolo» e «Ricomincia da capo» (che chiede conferma).
+
+IL PUNTO DA CONTROLLARE PER PRIMO (l'utente, 30/10/2026: «che, con la rete del database spenta, l'app non resti ferma ad aspettare la conferma di una scrittura»). Contati 68 punti in 23 file che aspettano la conferma del server, quasi tutti nel gestionale. Nella demo le scritture passano da src/lib/scritture.js e si considerano fatte appena sono nella cache (confermaLocale.js); `getDoc`, che a rete spenta su un documento inesistente va in errore invece di dire «non c'è», passa da src/lib/letture.js e risponde dalla cache. Nei locali veri le due sono quelle di Firestore, identiche; un test vieta di scavalcarle. Provato in Chrome sulla build della demo: l'ordine di un cliente parte e la pagina dell'ordine si apre in 260 ms, «Rendi non disponibile» nel menù del gestionale si vede in 150 ms, «Ricomincia da capo» torna ai dati di prova, zero richieste verso l'esterno e zero errori. Quello che l'inventario ha trovato fuori dalla demo, al banco, sta in BUG-123.
+
+**Dove**: `clienti/demo, clienti/pluginCliente.js (__DEMO__), src/demo/, src/lib/firebaseClient.js, src/lib/scritture.js, src/lib/letture.js, src/lib/confermaLocale.js, src/main.jsx, src/App.jsx, scripts/controlla-build-senza-demo.mjs, .github/workflows/test.yml, docs/modalita-demo.md` · **Lo dimostrano**: `tests/unit/scrittureDemo.test.js`, `tests/unit/bundleDemo.test.js`, `tests/unit/datiDemo.test.js`, `tests/unit/accessoDemo.test.js`, `tests/unit/firebaseClientDemo.test.js`, `tests/unit/demoSoloNellaBuildDemo.test.js`, `tests/component/PortaDemo.test.jsx`, `tests/unit/avvioApp.test.jsx`
+
 ## Lavori previsti
 
 Roba decisa e non ancora scritta. **Non è quello che il sistema fa**: sta
@@ -3766,6 +3778,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-092](#bug-092--app-check-è-inizializzato-sul-client-ma-non-imposto-da-nessuna-parte) — App Check è inizializzato sul client ma non imposto da nessuna parte | grave | P1 |
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
+| 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -3880,6 +3893,12 @@ MITIGATO, NON CHIUSO, e la differenza e' importante: la causa vera non e' ancora
 NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una prova: nessuno ha visto il registro di quella sera. La cura di BUG-102 e' in ogni caso quella che serve, e alla prossima chiusura mancata il registro dira' se era questa.
 
 **Dove**: `src/lib/printer.js (lavoroDiStampa, raccontaLaRisposta), src/lib/registroStampe.js, src/lib/notify.js, src/components/CashFlow.jsx`
+
+#### BUG-123 — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi
+
+Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
+
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
 
 ## Non più valido
 

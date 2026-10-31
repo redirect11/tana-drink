@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // ── LA STAMPANTE FINTA, SOLO IN LOCALE ───────────────────────────────
 //
 // Al banco la stampante è un apparecchio sulla rete del locale: da un
@@ -89,6 +90,8 @@ export function stampanteFintaAttiva(env = import.meta.env) {
   const forzata = stampanteFintaForzata()
   if (forzata === 'true') return true
   if (forzata === 'false') return false
+  // Nella demo non c'è una stampante vera da raggiungere (REQ-FLOTTA-019).
+  if (__DEMO__) return true
   if (env?.VITE_STAMPANTE_FINTA === 'false') return false
   // Forzabile a mano, per provarla dove serve.
   if (env?.VITE_STAMPANTE_FINTA === 'true') return true

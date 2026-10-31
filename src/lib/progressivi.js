@@ -28,7 +28,10 @@
 // scrive con un incremento, che non torna mai indietro, e gli ascolti
 // allineano i dispositivi in un attimo.
 
-import { doc, onSnapshot, setDoc, increment } from 'firebase/firestore'
+import { doc, onSnapshot, increment } from 'firebase/firestore'
+// Le scritture passano da scritture.js: nella demo si confermano dalla
+// cache, perché il server non risponde mai (REQ-FLOTTA-019).
+import { setDoc } from './scritture.js'
 import { db } from './firebaseClient.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 

@@ -110,6 +110,11 @@ jobs:
           VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
         run: npm run build
 
+      # Prima di pubblicare: nel pacchetto del locale non c'è la demo
+      # (REQ-FLOTTA-019). Se ci fosse, il deploy si ferma qui.
+      - name: La build non contiene la demo
+        run: node scripts/controlla-build-senza-demo.mjs dist
+
       # Deploy delle Functions (richiede la Cloud Build API, attiva col piano Blaze).
       - name: Deploy Firebase Functions
         env:
