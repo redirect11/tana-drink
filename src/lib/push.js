@@ -4,12 +4,14 @@
 // il drink è pronto o se l'ordine viene annullato dal bartender.
 //
 // Richiede la chiave VAPID (Firebase Console → Cloud Messaging → Web Push
-// certificates) in VITE_FIREBASE_VAPID_KEY. Solo in produzione: in sviluppo
+// certificates) in VITE_FIREBASE_VAPID_KEY, o in `firebase.vapidKey` di
+// configurazione.json (REQ-FLOTTA-021). Solo in produzione: in sviluppo
 // non c'è emulatore FCM e il service worker non è registrato.
 import { getMessaging, getToken, deleteToken, isSupported } from 'firebase/messaging'
 import { app } from './firebaseClient.js'
+import { configurazione } from '../porte/configurazione.js'
 
-const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
+const vapidKey = configurazione().firebase.vapidKey
 
 // Token push del dispositivo, o null se non disponibile (permessi negati,
 // browser non supportato, ambiente di sviluppo, chiave mancante).

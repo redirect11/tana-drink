@@ -17,22 +17,18 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage'
 // loro. Un controllo della CI lo verifica sul pacchetto della Tana.
 import { nomeSessione } from '../demo/sessione.js'
 import { creaAuthDemo } from '../demo/accesso.js'
+import { configurazione } from '../porte/configurazione.js'
 
 // LA DEMO NON PARLA CON NESSUN SERVER (REQ-FLOTTA-019, docs/modalita-demo.md):
 // niente emulatori, niente App Check, rete del database spenta, accesso
 // finto. Lo decide la build (`clienti/demo`), mai qualcosa a runtime.
 const suEmulatore = !__DEMO__ && import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true'
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  // Google Analytics: attivato solo dietro consenso (vedi lib/analytics.js).
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-}
+// Il progetto lo dice la porta della configurazione (REQ-FLOTTA-021): il
+// file `configurazione.json` scritto dalla regia, o le `VITE_*` della build.
+// Il `measurementId` serve a Google Analytics, attivato solo dietro
+// consenso (vedi lib/analytics.js).
+const firebaseConfig = configurazione().firebase
 
 // Avvisa chiaramente in console se la configurazione manca, così l'app
 // non fallisce in modo silenzioso quando le variabili non sono impostate.
@@ -43,7 +39,7 @@ export const isFirebaseConfigured =
 
 if (!isFirebaseConfigured) {
   console.warn(
-    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti. ' +
+    '[Firebase] Variabili VITE_FIREBASE_API_KEY / VITE_FIREBASE_PROJECT_ID mancanti, e nessun configurazione.json. ' +
       'Copia .env.example in .env e inserisci i valori del tuo progetto.'
   )
 }
@@ -67,7 +63,7 @@ export const app = initializeApp({
 
 // App Check (anti-bot/captcha): reCAPTCHA v3 invisibile. Attivo solo se
 // la chiave è configurata; in sviluppo usa il debug token dell'emulatore.
-const recaptchaKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
+const recaptchaKey = firebaseConfig.recaptchaSiteKey
 if (suEmulatore) {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true
 }

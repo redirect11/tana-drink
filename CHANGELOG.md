@@ -14,6 +14,19 @@
   volta sola e restano nelle notifiche.
 - **Nella Tana non cambia niente**: gli aggiornamenti arrivano come prima.
 
+### Per chi sviluppa
+
+- **Il backend del locale si può scrivere in un file.** La regia può
+  pubblicare accanto all'app un `configurazione.json` con il progetto del
+  locale, e l'app lo segue al posto delle impostazioni della build. È il
+  primo passo per l'installazione nel locale, con un'immagine sola per
+  tutti. Senza il file l'app usa la build, come sempre. L'avvio non lo
+  aspetta mai. Il contratto è in `docs/porte-e-adattatori.md`.
+- **Firebase solo dietro le porte.** Un test impedisce a file nuovi di
+  importare Firebase direttamente. L'elenco dei file che lo fanno ancora
+  si può solo accorciare.
+- **Nella Tana non cambia niente.**
+
 ## 1.10.2-beta — 31 ottobre 2026, sul test
 
 ### Per la demo pubblica
