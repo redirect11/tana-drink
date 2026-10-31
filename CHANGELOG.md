@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.2-beta — in lavorazione
+## 1.10.3-beta — in lavorazione
+
+## 1.10.2-beta — 31 ottobre 2026, sul test
 
 ### Per la demo pubblica
 
