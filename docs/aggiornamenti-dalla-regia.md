@@ -68,9 +68,18 @@ scrive `licenza.piano: 'free'` e i `limiti`, come già oggi per il Free).
 
 ## Il contratto
 
-### Dalla regia all'app: `settings/bar.licenza.aggiornamenti`
+> **Cambiato il 31/10/2026.** La scelta del titolare non va più in un
+> documento che la regia legge ogni dieci minuti: l'app **chiama la
+> regia** col token d'accesso del titolare, e la regia applica subito
+> (l'utente: «ste cose in polling si portavano negli anni 90»). Nella regia
+> la lettura a tempo è già tolta (drink-regia, PR #33); nell'app la
+> chiamata ha preso il posto del documento `aggiornamenti/scelta`, tolto
+> con la sua regola. Il dettaglio è sotto, in «Dall'app alla regia».
 
-Lo scrive solo la regia, come il resto di `licenza`.
+### Dalla regia all'app: `licenza.aggiornamenti`
+
+Lo scrive solo la regia, come il resto della licenza (dal BUG-125 in
+`licenza/attuale`).
 
 ```js
 licenza.aggiornamenti = {
@@ -89,37 +98,74 @@ licenza.aggiornamenti = {
     testo: '…',                 // il testo lo scrive la regia, qui si mostra
     dal: '2026-12-01T00:00:00Z' // da quando valgono le condizioni nuove
   },
+  // dove mandare «Aggiorna» o «Salta» (la Function della regia)
+  scelta_url: 'https://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp',
 }
 ```
 
 **Senza `licenza.aggiornamenti`** (la Tana, le istanze di prima) l'app fa
 esattamente quello che fa oggi. Lo stesso con `modalita: 'obbligatori'`.
 
-### Dall'app alla regia: `aggiornamenti/scelta`
+### Dall'app alla regia: una chiamata
 
-Un documento suo, **non** in `settings/`: `settings/{docId}` si legge da
-chiunque e lo scrive ogni bartender, mentre la scelta è del titolare.
+Quando il titolare tocca «Aggiorna» o «Salta», l'app chiama la regia:
 
-```js
-aggiornamenti/scelta = {
-  tag: 'v1.11.0',               // deve essere quello della proposta
-  scelta: 'aggiorna' | 'salta',
-  il: serverTimestamp(),
-  da: '<uid del titolare>',
-}
+```http
+POST <licenza.aggiornamenti.scelta_url>
+Authorization: Bearer <ID token del titolare>
+Content-Type: application/json
+
+{ "tag": "v1.11.0", "scelta": "aggiorna" }      // oppure "salta"
 ```
 
-Regole: lo legge e lo scrive **solo il titolare** (ruolo `admin` nelle
-regole di oggi); `tag` nella forma `^v\d+\.\d+\.\d+$`, `scelta` una delle
-due, `il == request.time`, `da == request.auth.uid`, nessun altro campo.
-La regia lo legge con le sue credenziali (non passa dalle regole), lo
-confronta con la sua proposta, pubblica o segna saltata, e poi aggiorna
-`licenza.aggiornamenti.proposta`. Una scelta su un tag che non è più
-quello proposto la regia la ignora.
+- **Il token** è quello che Firebase Auth dà già all'app nel progetto del
+  locale (`auth.currentUser.getIdToken()`). Niente chiavi nel browser.
+- **La regia** riconosce il locale dal progetto del token, lo verifica con
+  quel progetto e vuole il ruolo `admin` nei claim, cioè il titolare.
+  Poi applica la scelta e aggiorna `licenza.aggiornamenti.proposta`, che
+  l'app sta già ascoltando: il box sparisce da solo.
+- **Lo fa il browser**, quindi va bene anche per il profilo leggero (il
+  Free), che non ha Functions. La chiamata è aperta a qualunque origine
+  (CORS `*`): il token sta nell'intestazione e non ci sono cookie.
+- **Le risposte**:
+  - `200 { ok: true, scelta }`: fatto. Con «aggiorna» l'aggiornamento è
+    partito;
+  - `400`: corpo sbagliato;
+  - `401`: token mancante o non valido (si rientra);
+  - `403`: non è il titolare;
+  - `404`: il locale non è della regia;
+  - `409`: la proposta non è più quella (un'altra versione, o già scelta
+    dalla dashboard);
+  - `502 { errore }`: l'aggiornamento non è partito, col perché.
 
-Perché la regia va a leggere invece di essere chiamata: il profilo
-leggero non ha Functions, e una chiamata dal browser alla regia avrebbe
-bisogno di una chiave nel browser. Così non serve niente di nuovo.
+  Tutte le risposte non 200 hanno `{ errore }` in italiano, da mostrare.
+- **Senza `scelta_url`** (una licenza scritta prima di questa versione
+  della regia) i bottoni dicono di scegliere dall'area clienti della regia
+  (`licenza.regia_url`).
+- **L'indirizzo è quello della licenza**: le regie sono due, ognuna col
+  suo (`https://europe-west1-drink-regia-test.cloudfunctions.net/sceltaDallApp`
+  per i locali della regia di test, `…-drink-regia…` per quelli di
+  produzione), e l'app chiama quello scritto in `scelta_url`. Non c'è un
+  indirizzo di riserva: senza `scelta_url` si sceglie dall'area clienti.
+- **Ma solo verso la regia.** Prima di mandare il token l'app guarda che
+  l'indirizzo sia `https://<regione>-<progetto>.cloudfunctions.net/<nome>`
+  con il progetto fra quelli della regia (`drink-regia`,
+  `drink-regia-test`); un altro vale come nessuno. Il token del titolare
+  apre per un'ora tutto quello che il titolare può fare, e finché la
+  licenza sta in `settings/bar` (BUG-125) la può riscrivere ogni
+  bartender: un indirizzo suo se lo prenderebbe. **Un progetto nuovo
+  della regia, o la Function spostata su un dominio suo**, va aggiunto a
+  `PROGETTI_REGIA` in `src/lib/aggiornamenti.js`. Chiuso BUG-125, il
+  controllo si può togliere e l'indirizzo lo decide solo la regia.
+- **L'attesa massima è di venti secondi**: senza risposta l'app dice che
+  la scelta non è partita, e il titolare può riprovare. Una chiamata
+  arrivata tardi alla regia e poi ripetuta riceve `409` o `200`: la regia
+  deve accettare due volte la stessa scelta senza danni.
+
+**Cosa si toglie qui**: il documento `aggiornamenti/scelta`, la sua regola
+in `firestore.rules`, la scrittura (`scegliAggiornamento` in `api.js`) e
+l'ascolto (`subscribeSceltaAggiornamento`): lo stato della scelta lo dà
+la proposta nella licenza.
 
 ## Cosa deve fare l'app
 
@@ -129,8 +175,9 @@ bisogno di una chiave nel browser. Così non serve niente di nuovo.
    versione, le `note` col componente `Changelog` di oggi, i tre bottoni.
    Chi non è titolare non vede niente (al massimo, in Informazioni, «c'è
    una versione nuova: la decide il titolare»).
-2. **Dopo «Aggiorna»**: «Aggiornamento chiesto: arriva entro una ventina
-   di minuti». Il resto lo fanno il banner e il box di oggi. Se la scelta
+2. **Dopo «Aggiorna»**: con la risposta 200, «Aggiornamento partito:
+   arriva in pochi minuti». Il resto lo fanno il banner e il box di oggi.
+   Con un errore, il suo testo, e i bottoni restano. Se la scelta
    arriva prima dalla dashboard della regia, la regia cambia la proposta e
    l'app, che ascolta `settings/bar`, toglie il box da sola.
 3. **Impostazioni → Informazioni**: la versione installata, e
@@ -160,9 +207,11 @@ bisogno di una chiave nel browser. Così non serve niente di nuovo.
   inclusi, saltata, tag uguale all'installato, niente `aggiornamenti`);
 - componente: i tre bottoni e cosa scrivono; il box che sparisce quando la
   proposta cambia; l'avviso una volta per id;
-- regole: `aggiornamenti/scelta` scritto dal titolare con i campi giusti;
-  rifiutato a bartender, sala, cliente, anonimo, e con campi in più o
-  valori fuori forma.
+- la chiamata: URL dalla licenza, `Authorization: Bearer` col token del
+  titolare, il corpo giusto; cosa si mostra con 200 e con ogni errore;
+  senza `scelta_url` il rimando all'area clienti;
+- regole: `aggiornamenti/scelta` non c'è più (nessuno lo legge né lo
+  scrive).
 
 ## Lato regia (per capire, non da fare qui)
 

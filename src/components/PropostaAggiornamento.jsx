@@ -1,56 +1,84 @@
 /* global __APP_VERSION__ */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Changelog from './Changelog.jsx'
-import { scegliAggiornamento, subscribeSceltaAggiornamento } from '../lib/api.js'
+import { inviaSceltaAggiornamento } from '../lib/api.js'
 import { recordNotif } from '../lib/notifyStore.js'
-import { isAdmin } from '../lib/ruoli.js'
+import { urlRegia } from '../lib/limiti.js'
 import {
   MESSAGGI_AGGIORNAMENTI,
-  MODALITA,
   SCELTE,
   avvisoDaMostrare,
   avvisoVisto,
   dataAvviso,
-  modalitaAggiornamenti,
   numeroVersione,
   propostaDaMostrare,
+  sceltaUrl,
   segnaAvvisoVisto,
 } from '../lib/aggiornamenti.js'
 
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
 const INFORMAZIONI = '/bar?tab=impostazioni&sezione=informazioni'
 
-// LA SCELTA GIÀ FATTA (REQ-FLOTTA-020), per chi è titolare e solo in
-// modalità «a scelta»: agli altri il documento è chiuso dalle regole, e
-// ascoltarlo vorrebbe dire un errore di permessi a ogni apertura. Arriva
-// dalla cache: la scelta appena scritta da qui si vede subito.
-export function useSceltaAggiornamento(settings, ruolo) {
-  const [scelta, setScelta] = useState(null)
-  const ascolta = isAdmin(ruolo) && modalitaAggiornamenti(settings) === MODALITA.A_SCELTA
-  useEffect(() => {
-    if (!ascolta) {
-      setScelta(null)
-      return undefined
-    }
-    return subscribeSceltaAggiornamento(setScelta)
-  }, [ascolta])
-  return scelta
+// LA SCELTA, MANDATA ALLA REGIA (REQ-FLOTTA-020), per il box e per le
+// Informazioni. `invio` è null, poi { tag, scelta } con `inCorso`, `ok` o
+// `errore` (il testo da mostrare). `fatta` è la scelta che la regia ha
+// accettato: nasconde la proposta finché la regia non la riscrive nella
+// licenza. Senza `url` la scelta non si manda: si fa dall'area clienti.
+export function useSceltaAggiornamento(settings) {
+  const [invio, setInvio] = useState(null)
+  // Un ref e non lo stato: due tocchi prima che React ridisegni vedrebbero
+  // tutti e due «nessun invio in corso», e la regia riceverebbe due scelte.
+  const inCorso = useRef(false)
+  const url = sceltaUrl(settings)
+  const scegli = (tag, scelta) => {
+    if (!url || inCorso.current) return
+    inCorso.current = true
+    setInvio({ tag, scelta, inCorso: true })
+    inviaSceltaAggiornamento(url, tag, scelta).then((esito) => {
+      inCorso.current = false
+      setInvio(esito.ok ? { tag, scelta, ok: true } : { tag, scelta, errore: esito.messaggio })
+    })
+  }
+  const fatta = invio?.ok ? { tag: invio.tag, scelta: invio.scelta } : null
+  return { url, invio, fatta, scegli }
+}
+
+// Il rimando all'area clienti, quando la licenza non dice dove mandare la
+// scelta (una licenza scritta prima della chiamata).
+export function SceltaDallAreaClienti({ settings, piccolo = false }) {
+  const area = urlRegia(settings)
+  return (
+    <>
+      <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.dall_area_clienti}</p>
+      {area && (
+        <a
+          className={`btn${piccolo ? ' small' : ' block'}`}
+          style={{ marginTop: 8 }}
+          href={area}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Apri l’area clienti
+        </a>
+      )}
+    </>
+  )
 }
 
 // I BOX DELLA REGIA, montati da App: prima l'avviso delle condizioni, poi
 // la proposta di aggiornamento. Uno alla volta, e mai sopra il box delle
 // novità (`inPausa`), che è quello di un aggiornamento appena arrivato.
 export default function PropostaAggiornamento({ settings, ruolo, inPausa = false }) {
-  const scelta = useSceltaAggiornamento(settings, ruolo)
+  const { url, invio, fatta, scegli } = useSceltaAggiornamento(settings)
   const [visto, setVisto] = useState(avvisoVisto)
   // «Più tardi»: il box torna alla prossima apertura dell'app, non prima.
   const [rimandata, setRimandata] = useState(null)
-  // Il titolare ha toccato «Aggiorna»: il box resta aperto un momento per
-  // dire cosa succede adesso.
-  const [chiesta, setChiesta] = useState(null)
+  // Dopo «Aggiorna» accettato il box resta aperto per dire cosa succede
+  // adesso, finché il titolare non lo chiude.
+  const [partitoChiuso, setPartitoChiuso] = useState(null)
 
   const avviso = avvisoDaMostrare(settings, { ruolo, visto })
-  const proposta = propostaDaMostrare(settings, { ruolo, versione: VERSIONE, scelta, rimandata })
+  const proposta = propostaDaMostrare(settings, { ruolo, versione: VERSIONE, scelta: fatta, rimandata })
 
   // L'avviso lascia una traccia in campanella, che resta dopo aver chiuso
   // il box. Si segna visto appena si mostra, come le novità: annunciato
@@ -80,11 +108,11 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
     )
   }
 
-  if (chiesta) {
+  if (fatta?.scelta === SCELTE.AGGIORNA && partitoChiuso !== fatta.tag) {
     return (
-      <Box titolo={`Versione ${numeroVersione(chiesta)}`} etichetta="Aggiornamento chiesto">
-        <p style={{ margin: '10px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.chiesto}</p>
-        <button className="btn block" style={{ marginTop: 12 }} onClick={() => setChiesta(null)}>
+      <Box titolo={`Versione ${numeroVersione(fatta.tag)}`} etichetta="Aggiornamento partito">
+        <p style={{ margin: '10px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.partito}</p>
+        <button className="btn block" style={{ marginTop: 12 }} onClick={() => setPartitoChiuso(fatta.tag)}>
           Chiudi
         </button>
       </Box>
@@ -93,10 +121,8 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
 
   if (!proposta) return null
 
-  const scegli = (cosa) => {
-    scegliAggiornamento(proposta.tag, cosa)
-    if (cosa === SCELTE.AGGIORNA) setChiesta(proposta.tag)
-  }
+  const inCorso = Boolean(invio?.inCorso)
+  const errore = invio?.tag === proposta.tag ? invio.errore : null
   return (
     <Box titolo={`Versione ${numeroVersione(proposta.tag)} disponibile`} etichetta="Aggiornamento disponibile">
       <p className="muted small" style={{ margin: '6px 0 0' }}>
@@ -107,13 +133,24 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
       ) : (
         <p className="muted small" style={{ marginTop: 10 }}>Le note di questa versione non sono arrivate.</p>
       )}
+      {!url && <SceltaDallAreaClienti settings={settings} />}
+      {errore && (
+        <p role="alert" style={{ margin: '10px 0 0' }}>
+          {errore}
+        </p>
+      )}
+      {inCorso && <p className="muted small" style={{ margin: '10px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.in_corso}</p>}
       <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
-        <button className="btn block" onClick={() => scegli(SCELTE.AGGIORNA)}>
-          Aggiorna
-        </button>
-        <button className="btn ghost block" onClick={() => scegli(SCELTE.SALTA)}>
-          Salta questa versione
-        </button>
+        {url && (
+          <>
+            <button className="btn block" disabled={inCorso} onClick={() => scegli(proposta.tag, SCELTE.AGGIORNA)}>
+              Aggiorna
+            </button>
+            <button className="btn ghost block" disabled={inCorso} onClick={() => scegli(proposta.tag, SCELTE.SALTA)}>
+              Salta questa versione
+            </button>
+          </>
+        )}
         <button className="btn ghost block" onClick={() => setRimandata(proposta.tag)}>
           Più tardi
         </button>
