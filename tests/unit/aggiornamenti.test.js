@@ -26,6 +26,8 @@ import {
   segnaAvvisoVisto,
   dataAvviso,
   numeroVersione,
+  sceltaUrl,
+  esitoScelta,
 } from '../../src/lib/aggiornamenti.js'
 import { accendiDemo, spegniDemo } from '../helpers/demo.js'
 
@@ -118,8 +120,8 @@ describe('le Informazioni', () => {
     expect(propostaAperta(saltata, titolare)).not.toBeNull()
   })
 
-  it('dopo «Aggiorna»: chiesto, si aspetta la regia', () => {
-    expect(statoProposta(aScelta(), { ...titolare, scelta: { tag: 'v1.11.0', scelta: 'aggiorna' } })).toBe('chiesto')
+  it('dopo «Aggiorna» accettato dalla regia: partito', () => {
+    expect(statoProposta(aScelta(), { ...titolare, scelta: { tag: 'v1.11.0', scelta: 'aggiorna' } })).toBe('partito')
   })
 
   it('a chi non è titolare: la decide il titolare', () => {
@@ -134,6 +136,45 @@ describe('le Informazioni', () => {
     // Solo un `false` scritto toglie gli aggiornamenti.
     expect(nonInclusi(conAggiornamenti({ modalita: 'a_scelta' }))).toBeNull()
     expect(MESSAGGI_AGGIORNAMENTI.non_pagato).toMatch(/non risulta pagato.*piano Free/)
+  })
+})
+
+describe('la chiamata alla regia', () => {
+  const URL_REGIA = 'https://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp'
+
+  it('l’indirizzo della scelta si prende solo se è una Function della regia', () => {
+    expect(sceltaUrl(aScelta({ scelta_url: URL_REGIA }))).toBe(URL_REGIA)
+    expect(sceltaUrl(aScelta({ scelta_url: 'https://us-central1-drink-regia.cloudfunctions.net/scelta_2' }))).not.toBeNull()
+    // Finché la licenza la può riscrivere un bartender (BUG-125), un
+    // indirizzo qualunque riceverebbe il token del titolare.
+    for (const altro of [
+      'https://ruba-token.example/scelta',
+      'http://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp',
+      'https://europe-west1-drink-regia.cloudfunctions.net.example.com/sceltaDallApp',
+      'https://europe-west1-drink-regia.cloudfunctions.net/sceltaDallApp?rimanda=https://altrove',
+      'https://drink-regia.cloudfunctions.net/sceltaDallApp',
+      42,
+    ]) {
+      expect(sceltaUrl(aScelta({ scelta_url: altro }))).toBeNull()
+    }
+  })
+
+  it('senza indirizzo, niente: una licenza di prima della chiamata', () => {
+    expect(sceltaUrl(aScelta())).toBeNull()
+    expect(sceltaUrl({})).toBeNull()
+  })
+
+  it('200 è fatta; ogni altra risposta porta il testo della regia', () => {
+    expect(esitoScelta(200, { ok: true, scelta: 'aggiorna' })).toEqual({ ok: true })
+    for (const status of [400, 401, 403, 404, 409, 502]) {
+      expect(esitoScelta(status, { errore: ' La proposta è cambiata. ' })).toEqual({ ok: false, messaggio: 'La proposta è cambiata.' })
+    }
+  })
+
+  it('una risposta senza testo d’errore ha una frase sua', () => {
+    for (const corpo of [null, {}, { errore: '' }, { errore: 42 }]) {
+      expect(esitoScelta(500, corpo)).toEqual({ ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita })
+    }
   })
 })
 

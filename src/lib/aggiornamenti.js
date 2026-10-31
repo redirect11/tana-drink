@@ -13,11 +13,13 @@
 // pubblica, esce «Nuova versione disponibile», poi le novità. Ogni domanda
 // qui sotto, senza la voce, risponde «niente da mostrare».
 //
-// La scelta del titolare non passa da settings/ (che scrive ogni
-// bartender) ma da `aggiornamenti/scelta`, che legge e scrive solo lui: la
-// regia la va a leggere con le sue credenziali. Così non serve né una
-// Function (il profilo leggero non le ha) né una chiave della regia nel
-// browser.
+// La scelta del titolare è una CHIAMATA alla regia (`aggiornamenti.scelta_url`,
+// col token d'accesso del titolare), che la applica subito. Fino al
+// 31/10/2026 era un documento, `aggiornamenti/scelta`, che la regia leggeva
+// ogni dieci minuti: tolto («ste cose in polling si portavano negli anni
+// 90», l'utente). Il token è quello che Firebase Auth dà già all'app: nel
+// browser non c'è nessuna chiave della regia, e la chiamata la fa il
+// browser, quindi va anche col profilo leggero, che non ha Functions.
 //
 // Logica pura: le impostazioni si passano, già in mano a chi chiama.
 
@@ -26,8 +28,8 @@ import { isAdmin } from './ruoli.js'
 export const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
 
-// La forma del tag che la regia propone e che le regole accettano nella
-// scelta (`^v\d+\.\d+\.\d+$`): una versione di rilascio, mai una beta.
+// La forma del tag che la regia propone e che accetta nella scelta: una
+// versione di rilascio, mai una beta.
 export const FORMA_TAG = /^v\d+\.\d+\.\d+$/
 
 // La voce della licenza, o null. La demo la ignora (REQ-FLOTTA-019): non ha
@@ -79,8 +81,10 @@ export function propostaAperta(stato, { versione } = {}) {
   return piuNuova(p.tag, versione) ? p : null
 }
 
-// LA SCELTA C'È GIÀ? Vale la prima risposta che arriva: quella data da un
-// altro terminale, o dall'area clienti della regia, non si richiede.
+// LA SCELTA C'È GIÀ? Quella appena accettata dalla regia da questo
+// terminale: il box si chiude senza aspettare che la regia riscriva la
+// proposta nella licenza. Una scelta fatta altrove (un altro terminale,
+// l'area clienti) arriva invece come proposta cambiata.
 const giaScelta = (proposta, scelta) => Boolean(proposta && scelta && scelta.tag === proposta.tag)
 
 // IL BOX DELLA PROPOSTA: al titolare, una proposta aperta, non saltata,
@@ -95,14 +99,38 @@ export function propostaDaMostrare(stato, { ruolo, versione, scelta = null, rima
 
 // Cosa dicono le Informazioni della proposta:
 //   'da_scegliere' → «Disponibile la versione X», le note e «Aggiorna»
-//   'chiesto'      → il titolare ha detto «Aggiorna»: si aspetta la regia
+//   'partito'      → il titolare ha detto «Aggiorna» e la regia l'ha preso
 //   'del_titolare' → chi non è titolare: la decide lui
 //   null           → niente da dire
 export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
   const p = propostaAperta(stato, { versione })
   if (!p) return null
   if (!isAdmin(ruolo)) return 'del_titolare'
-  return giaScelta(p, scelta) && scelta.scelta === SCELTE.AGGIORNA ? 'chiesto' : 'da_scegliere'
+  return giaScelta(p, scelta) && scelta.scelta === SCELTE.AGGIORNA ? 'partito' : 'da_scegliere'
+}
+
+// ── LA CHIAMATA ALLA REGIA ────────────────────────────────────────────
+// Dove la regia vuole la scelta: SOLO sulle sue Functions. La chiamata
+// porta il token del titolare, che per un'ora apre tutto quello che il
+// titolare può fare; e la licenza, finché sta in `settings/bar` (BUG-125),
+// la può riscrivere ogni bartender. Un `scelta_url` messo lì a mano verso
+// un server suo si prenderebbe il token al primo «Aggiorna». Un indirizzo
+// fuori dalla regia vale come nessun indirizzo: si sceglie dall'area
+// clienti. Se la regia sposta la Function, si cambia qui.
+const SCELTA_URL_REGIA = /^https:\/\/[a-z0-9-]+-drink-regia\.cloudfunctions\.net\/[A-Za-z0-9_-]+$/
+
+export function sceltaUrl(stato) {
+  const u = aggiornamentiDi(stato)?.scelta_url
+  return typeof u === 'string' && SCELTA_URL_REGIA.test(u) ? u : null
+}
+
+// La risposta della regia, in quello che si mostra. Il testo dell'errore lo
+// scrive la regia, in italiano, e si mostra com'è; se non c'è (una risposta
+// che non è JSON, un proxy in mezzo) si dice una frase nostra.
+export function esitoScelta(status, corpo) {
+  if (status === 200) return { ok: true }
+  const errore = typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null
+  return { ok: false, messaggio: errore || MESSAGGI_AGGIORNAMENTI.non_riuscita }
 }
 
 // ── GLI AGGIORNAMENTI NON INCLUSI ─────────────────────────────────────
@@ -120,8 +148,12 @@ export const MESSAGGI_AGGIORNAMENTI = {
     'Il piano Free non comprende gli aggiornamenti: arrivano solo le correzioni di sicurezza e di compatibilità.',
   non_pagato:
     'L’abbonamento non risulta pagato: il locale lavora con il piano Free e riceve solo le correzioni di sicurezza e di compatibilità.',
-  chiesto: 'Aggiornamento chiesto: arriva entro una ventina di minuti.',
+  partito: 'Aggiornamento partito: arriva in pochi minuti.',
   del_titolare: 'È disponibile una versione nuova: l’aggiornamento lo decide il titolare.',
+  in_corso: 'Invio della scelta…',
+  non_riuscita: 'La scelta non è stata registrata. Riprovare tra qualche minuto.',
+  senza_rete: 'Il servizio degli aggiornamenti non risponde: la scelta non è partita. Riprovare quando la connessione è stabile.',
+  dall_area_clienti: 'La scelta su questa versione si fa dall’area clienti.',
 }
 
 // ── L'AVVISO DELLE CONDIZIONI ─────────────────────────────────────────

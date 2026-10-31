@@ -72,8 +72,8 @@ scrive `licenza.piano: 'free'` e i `limiti`, come già oggi per il Free).
 > documento che la regia legge ogni dieci minuti: l'app **chiama la
 > regia** col token d'accesso del titolare, e la regia applica subito
 > (l'utente: «ste cose in polling si portavano negli anni 90»). Nella regia
-> la lettura a tempo è già tolta (drink-regia, PR #33). Da fare qui: la
-> chiamata al posto del documento `aggiornamenti/scelta`, che si toglie
+> la lettura a tempo è già tolta (drink-regia, PR #33); nell'app la
+> chiamata ha preso il posto del documento `aggiornamenti/scelta`, tolto
 > con la sua regola. Il dettaglio è sotto, in «Dall'app alla regia».
 
 ### Dalla regia all'app: `licenza.aggiornamenti`
@@ -142,6 +142,18 @@ Content-Type: application/json
 - **Senza `scelta_url`** (una licenza scritta prima di questa versione
   della regia) i bottoni dicono di scegliere dall'area clienti della regia
   (`licenza.regia_url`).
+- **Solo verso la regia.** L'app manda il token solo a un indirizzo
+  `https://<regione>-drink-regia.cloudfunctions.net/<nome>`; qualunque
+  altro `scelta_url` vale come nessuno, e si sceglie dall'area clienti. Il
+  token del titolare apre per un'ora tutto quello che il titolare può
+  fare, e finché la licenza sta in `settings/bar` (BUG-125) la può
+  riscrivere ogni bartender: un indirizzo suo se lo prenderebbe. **Se la
+  regia sposta la Function** (un dominio suo, Cloud Run), l'app va
+  cambiata insieme (`SCELTA_URL_REGIA` in `src/lib/aggiornamenti.js`).
+- **L'attesa massima è di venti secondi**: senza risposta l'app dice che
+  la scelta non è partita, e il titolare può riprovare. Una chiamata
+  arrivata tardi alla regia e poi ripetuta riceve `409` o `200`: la regia
+  deve accettare due volte la stessa scelta senza danni.
 
 **Cosa si toglie qui**: il documento `aggiornamenti/scelta`, la sua regola
 in `firestore.rules`, la scrittura (`scegliAggiornamento` in `api.js`) e
