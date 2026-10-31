@@ -1,3 +1,4 @@
+/* global __DEMO__ */
 // ── I LIMITI DEL PIANO FREE, E IL PROFILO LEGGERO (REQ-LIC-003, REQ-LIC-004)
 //
 // La regia (drink-regia) scrive in `settings/bar.licenza`, accanto a
@@ -53,8 +54,11 @@ export const pianoFree = (stato) => stato?.licenza?.piano === PIANO_FREE
 
 const BUILD_LEGGERA = import.meta.env?.VITE_PROFILO === 'leggero'
 
-// Niente Functions e niente Storage su questa installazione.
-export const profiloLeggero = (stato) => BUILD_LEGGERA || pianoFree(stato)
+// Niente Functions e niente Storage su questa installazione. La demo è
+// sempre leggera (REQ-FLOTTA-019): non chiama nessun servizio, e le
+// schermate nascondono i tasti che li userebbero (lettore SumUp, foto,
+// gestione delle utenze) come per un locale Free.
+export const profiloLeggero = (stato) => BUILD_LEGGERA || Boolean(__DEMO__) || pianoFree(stato)
 
 // La stessa domanda per chi non ha le impostazioni in mano (i wrapper delle
 // Functions e di Storage): l'ultima verità nota, ricordata da
