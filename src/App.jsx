@@ -66,6 +66,7 @@ import { subscribeSottosezioni } from './lib/sottosezioni.js'
 import Tendina from './components/Tendina.jsx'
 import { recordNotif } from './lib/notifyStore.js'
 import NovitaDialog from './components/NovitaDialog.jsx'
+import PropostaAggiornamento from './components/PropostaAggiornamento.jsx'
 import { useOnline } from './lib/useOnline.js'
 import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
@@ -417,6 +418,9 @@ export default function App() {
           }}
         />
       )}
+      {/* GLI AGGIORNAMENTI A SCELTA DEL TITOLARE (REQ-FLOTTA-020): senza la
+          voce nella licenza — la Tana — non esce niente. */}
+      <PropostaAggiornamento settings={settings} ruolo={staffRole} inPausa={novitaAperte || bloccata} />
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
       {/* Zoom della pagina: nella PWA a tutto schermo il browser non lo
