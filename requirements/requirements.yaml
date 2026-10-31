@@ -5798,7 +5798,7 @@ requirements:
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
-    area: "src/porte/configurazione.js, src/lib/firebaseClient.js, src/lib/api.js, src/lib/scritture.js, src/lib/letture.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
+    area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"
     description: >
       «Tana-drink è sempre lo stesso ma dove si installa e come si
       configura è roba di regia» e «possiamo prevedere delle interfacce
@@ -5833,9 +5833,24 @@ requirements:
       Analytics, il backup e le Informazioni. FATTO IL TEST-GUARDIA: fuori
       dagli adattatori (src/adattatori/, functions/index.js) nessun file
       nuovo importa Firebase, e l'elenco dei 22 di oggi si può solo
-      accorciare. DA FARE: la porta dei dati (il prossimo pezzo, coi test
-      di contratto e i permessi per ruolo), poi accesso, file, server,
-      notifiche e l'ospite Firebase delle Functions.
+      accorciare. FATTA LA PORTA DEI DATI (`src/porte/dati.js`, adattatore
+      in `src/adattatori/firebase/`): i nomi sono quelli di Firestore,
+      apposta, per non rinominare centinaia di chiamate; il confine è
+      l'elenco, che un test tiene fermo. Il contratto dice cosa
+      restituisce una lettura, e che una scrittura è PRESA IN CARICO
+      all'istante della chiamata (la vedono letture e ascolti successivi,
+      anche senza rete, con l'ora del server a null) e ARRIVATA quando la
+      promessa si risolve; rifiutata, il dispositivo torna a com'era. Il
+      client diretto di BUG-117 è `cercaDalServer`. scritture.js e
+      letture.js sono entrati nell'adattatore; api.js, backup,
+      progressivi e attrezzi di sviluppo non importano più Firebase
+      (l'elenco scende a 16). FATTI I TEST DI CONTRATTO E I PERMESSI PER
+      RUOLO, sull'emulatore (`npm run test:regole`): la serie della porta
+      (tests/contratto/dati.js) gira sull'adattatore Firebase, la tabella
+      dei permessi (tests/contratto/permessi.js, 29 collezioni più i
+      documenti propri, per cinque ruoli e quattro operazioni) contro
+      firestore.rules. DA FARE: accesso, file, server, notifiche e
+      l'ospite Firebase delle Functions.
     status: partial
     generate_issue: true
     labels: [prodotto, flotta]
@@ -5843,6 +5858,9 @@ requirements:
     test_cases:
       - tests/unit/configurazione.test.js
       - tests/unit/confineFirebase.test.js
+      - tests/unit/portaDati.test.js
+      - tests/regole/contrattoDati.test.js
+      - tests/regole/permessi.test.js
 
   - id: REQ-UI-001
     title: "Le sottosezioni di una pagina stanno sotto il titolo"

@@ -10,11 +10,11 @@ per capire.
 | Pezzo | Stato |
 |---|---|
 | La configurazione letta all'avvio | **fatto** (31/10/2026): `src/porte/configurazione.js`, contratto qui sotto |
-| Il test-guardia | **fatto** (31/10/2026): `tests/unit/confineFirebase.test.js`, 22 file ancora da passare alle porte |
-| La porta dei dati | da fare: è il prossimo pezzo |
-| Accesso, file, server, notifiche | da fare |
+| Il test-guardia | **fatto** (31/10/2026): `tests/unit/confineFirebase.test.js`; i file da passare alle porte erano 22, ora 16 |
+| La porta dei dati | **fatta** (31/10/2026): `src/porte/dati.js`, adattatore in `src/adattatori/firebase/`; contratto qui sotto |
+| Test di contratto e permessi per ruolo | **fatti** (31/10/2026): `tests/contratto/`, sull'emulatore con `npm run test:regole` |
+| Accesso, file, server, notifiche | da fare: il prossimo è l'accesso, che tiene ancora dentro 9 dei 16 file |
 | L'ospite Firebase delle Functions, i trigger come dati | da fare |
-| Test di contratto e permessi per ruolo | da fare, insieme alla porta dei dati |
 
 ## Cosa ha deciso l'utente
 
@@ -69,7 +69,10 @@ backend. Si fanno dopo il prototipo della regia, su porte già pronte.
   `getDocs` 43, `onSnapshot` 33, `addDoc` 31, `increment` 27, `deleteDoc` 24,
   `orderBy` 13, `writeBatch` 9, `arrayUnion` 1, `documentId` 1. **Nessuna
   transazione.** È l'elenco da cui nasce la porta dei dati: quello che non
-  c'è qui, nella porta non entra.
+  c'è qui, nella porta non entra. *Rifatto il conto sugli import, al
+  momento di fare la porta: ci sono anche `getDocFromCache`,
+  `getDocsFromCache`, `limit`, `startAfter`, `deleteField`, `Timestamp` e
+  il client diretto (BUG-117); `documentId` invece non si usa più.*
 - **La demo ha già aperto la strada**: le scritture passano da
   `scritture.js` e la lettura di un documento da `letture.js`, e un test
   vieta di scavalcarle.
@@ -105,6 +108,65 @@ cui l'app conta: le scritture in attesa, la conferma locale
 carico» e «la scrittura è arrivata al server» sono due cose distinte, e
 l'app le usa già. Un altro adattatore dovrà fare lo stesso. Nell'on
 premise è più facile, perché il server sta nella rete del locale.
+
+### La porta dei dati, com'è fatta (31/10/2026)
+
+Il contratto per esteso sta in testa a `src/porte/dati.js`; le prove in
+`tests/contratto/dati.js`. In breve:
+
+- **I nomi sono quelli di Firestore**, apposta. Le chiamate in `api.js`
+  sono centinaia, e rinominarle non porterebbe niente. Conta il confine:
+  la porta offre questo elenco e niente di più (`tests/unit/portaDati.test.js`
+  lo tiene fermo), e un altro adattatore deve fare solo questo.
+  - Riferimenti e ricerche: `collection`, `doc`, `query`, `where`,
+    `orderBy`, `limit`, `startAfter`.
+  - Letture: `getDoc`, `getDocs`, `getDocFromCache`, `getDocsFromCache`,
+    `onSnapshot`.
+  - Scritture: `setDoc` (anche con `merge`), `updateDoc`, `addDoc`,
+    `deleteDoc`, `writeBatch`.
+  - Valori speciali: `serverTimestamp`, `increment`, `arrayUnion`,
+    `deleteField`.
+  - Date: `Timestamp.fromDate`, `fromMillis`, `now`.
+  - Fuori dal giro della serata: `cercaDalServer`.
+  - Il database: `db`.
+- **Cosa restituisce.**
+  - Un documento letto ha `id`, `ref`, `exists()` e `data()`. Una ricerca
+    ha `docs`, `empty`, `size` e `forEach`.
+  - Una data letta ha `toDate()` e `toMillis()`, e l'app la riconosce da
+    quelli, non dalla classe.
+  - L'ascolto risponde subito con quello che il dispositivo sa, poi a ogni
+    cambio, e restituisce la funzione per smettere.
+- **Presa in carico e arrivata.** Una scrittura è presa in carico
+  nell'istante della chiamata: letture e ascolti successivi, su quel
+  dispositivo, la vedono già, anche senza rete. Finché il server non
+  conferma, l'ora del server vale `null`. La promessa dice quando la
+  scrittura è arrivata. Se il server la rifiuta, la promessa fallisce e il
+  dispositivo torna a quello che c'era. Il lotto è tutto o niente.
+- **`cercaDalServer(collezione, { dove, ordina })`.** È il client diretto
+  di BUG-117, descritto con dati semplici invece che coi vincoli di
+  Firestore. Senza rete fallisce, e chi chiama ripiega su `getDocs`.
+- **Dove sta Firebase.**
+  - In `src/adattatori/firebase/`: `dati.js` (con i due rami della demo
+    che prima stavano in `scritture.js` e `letture.js`), `diretto.js` e
+    `confermaLocale.js`.
+  - `api.js`, il backup, i progressivi e gli attrezzi di sviluppo non
+    importano più Firebase.
+  - `customerAuth.js` passa dalla porta per i dati, ma resta nell'elenco
+    per l'accesso.
+  - `demo/avvio.js` resta nell'elenco: carica i dati di prova nella cache
+    di Firestore, ed è un pezzo della demo, non della porta.
+- **Le prove sull'emulatore** (`npm run test:regole`, insieme a quelle
+  delle regole):
+  - `tests/regole/contrattoDati.test.js` fa girare la serie della porta
+    sull'adattatore Firebase. Le regole sono le più semplici possibili,
+    perché si prova la porta e non i permessi;
+  - `tests/regole/permessi.test.js` fa girare la tabella
+    `tests/contratto/permessi.js` contro `firestore.rules`: 29 collezioni,
+    più i documenti propri di `customers` e `presenze`, per i cinque ruoli
+    e le quattro operazioni. I casi con condizioni sui campi (ordini,
+    gruppi, chiamate, contatori, la scelta sugli aggiornamenti) restano
+    nei loro test.
+  - La CI non le fa girare: vogliono l'emulatore.
 
 ## La configurazione letta all'avvio
 

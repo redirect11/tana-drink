@@ -28,24 +28,22 @@ const RADICE = process.cwd()
 // trigger e all'onRequest, ed è fatto apposta per conoscere Firebase.
 const ADATTATORI = ['src/adattatori/', 'functions/index.js']
 
-// Chi importa ancora Firebase direttamente, al 31/10/2026 (develop
-// f310f64, l'inventario di docs/porte-e-adattatori.md). Da accorciare.
+// Chi importa ancora Firebase direttamente. Erano 22 al 31/10/2026 (develop
+// f310f64, l'inventario di docs/porte-e-adattatori.md); la porta dei dati
+// ne ha tolti sei (api.js, backup.js, progressivi.js, devActions.js, e
+// scritture.js e letture.js, entrati nell'adattatore). Da accorciare:
+// quelli rimasti usano l'accesso, i file, le Functions e le notifiche, e
+// demo/avvio.js carica i dati di prova nella cache di Firestore.
 const ECCEZIONI = [
   'src/App.jsx',
   'src/components/OrderPosDetail.jsx',
   'src/demo/avvio.js',
-  'src/dev/devActions.js',
   'src/lib/analytics.js',
-  'src/lib/api.js',
-  'src/lib/backup.js',
   'src/lib/customerAuth.js',
   'src/lib/firebaseClient.js',
-  'src/lib/letture.js',
   'src/lib/logout.js',
   'src/lib/paymentsApi.js',
-  'src/lib/progressivi.js',
   'src/lib/push.js',
-  'src/lib/scritture.js',
   'src/lib/staffApi.js',
   'src/lib/storage.js',
   'src/pages/BartenderPage.jsx',
