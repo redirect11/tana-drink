@@ -5834,7 +5834,7 @@ requirements:
 
   - id: REQ-FLOTTA-020
     title: "Gli aggiornamenti a scelta del titolare: prima le novità, poi «Aggiorna» o «Salta»"
-    area: "src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (scegliAggiornamento, subscribeSceltaAggiornamento), firestore.rules (aggiornamenti/scelta), docs/aggiornamenti-dalla-regia.md"
+    area: "src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md"
     description: >
       «Il secondo dovrebbe invece mostrare prima il changelog con i
       cambiamenti e chiedere se si vuole aggiornare. Il titolare potrebbe
@@ -5846,9 +5846,9 @@ requirements:
       nel piano, la proposta con le sue note, l'avviso delle condizioni
       nuove). In modalità a scelta l'app mostra al titolare, prima di
       aggiornare, le novità della versione proposta con «Aggiorna», «Salta
-      questa versione» e «Più tardi», e scrive la scelta in
-      `aggiornamenti/scelta`, un documento che solo il titolare legge e
-      scrive; la regia la legge e pubblica, o segna saltata. In
+      questa versione» e «Più tardi», e manda la scelta alla regia, che
+      pubblica o segna saltata (dal 31/10/2026 con una chiamata, vedi
+      sotto). In
       Informazioni restano la proposta saltata col suo «Aggiorna» e, se
       il piano non comprende gli aggiornamenti, il perché. L'avviso delle
       condizioni esce una volta per id. Senza la voce, e in modalità
@@ -5869,6 +5869,36 @@ requirements:
       ruolo admin, coi quattro campi e nient'altro, e solo quel documento
       della collezione; nessuno lo cancella. Il ritorno al Free di un
       locale che pagava è scritto in REQ-LIC-003.
+      CAMBIA (31/10/2026, l'utente: «ste cose in polling si portavano negli
+      anni 90»): la scelta non si scrive più in aggiornamenti/scelta, che la
+      regia leggeva ogni dieci minuti. L'app chiama
+      licenza.aggiornamenti.scelta_url (POST, Authorization: Bearer col token
+      del titolare, corpo { tag, scelta }) e la regia applica subito; il
+      documento, la sua regola e l'ascolto si tolgono. Il contratto è in
+      docs/aggiornamenti-dalla-regia.md.
+      FATTA LA CHIAMATA (31/10/2026). `inviaSceltaAggiornamento` in api.js
+      chiede il token al titolare e chiama la regia; il box e le
+      Informazioni usano lo stesso hook (`useSceltaAggiornamento`). Qui
+      l'attesa è voluta, ed è l'eccezione al «niente await» del banco: non
+      è un gesto della serata, e la scelta vale solo se la regia l'ha
+      presa. Mentre si aspetta «Aggiorna» e «Salta» sono spenti (un secondo
+      tocco non rifà la chiamata), «Più tardi» no. Con 200 il box si chiude
+      (o dice «Aggiornamento partito»), senza aspettare che la regia
+      riscriva la proposta; con un errore mostra il testo della regia e
+      lascia i tasti; senza rete, o dopo venti secondi senza risposta, dice
+      che la scelta non è partita. Senza `scelta_url` i tasti diventano il
+      rimando all'area clienti. L'indirizzo è quello della licenza: le
+      regie sono due, test e produzione, ognuna col suo progetto, e un
+      locale di test chiama la regia di test. UNA DIFESA IN PIÙ: il token va
+      solo a una Function dei progetti della regia (`drink-regia`,
+      `drink-regia-test`, scritti per intero: un controllo sul finale del
+      nome lascerebbe passare un progetto altrui `foo-drink-regia`); un
+      altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si
+      può togliere. Finché la licenza sta in
+      settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url`
+      suo si prenderebbe il token del titolare al primo «Aggiorna». Il
+      documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge
+      né lo scrive, e il test delle regole lo dimostra.
     status: implemented
     generate_issue: true
     labels: [prodotto, flotta, licenza]
