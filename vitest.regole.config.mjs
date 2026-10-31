@@ -13,7 +13,15 @@ import { defineConfig } from 'vitest/config'
 //
 // Non contano per la copertura: quello che misurano non è codice nostro, è
 // firestore.rules.
+//
+// Qui girano anche i TEST DI CONTRATTO delle porte (REQ-FLOTTA-021): la
+// serie scritta sulla porta dei dati (tests/contratto/dati.js) e la tabella
+// dei permessi per ruolo (tests/contratto/permessi.js), fatte girare
+// sull'adattatore Firebase. Anche loro vogliono l'emulatore.
 export default defineConfig({
+  // L'adattatore dei dati ha un ramo per la demo: qui si prova quello dei
+  // locali veri.
+  define: { __DEMO__: 'false' },
   test: {
     environment: 'node',
     globals: true,

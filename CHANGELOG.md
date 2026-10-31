@@ -25,6 +25,11 @@
 - **Firebase solo dietro le porte.** Un test impedisce a file nuovi di
   importare Firebase direttamente. L'elenco dei file che lo fanno ancora
   si può solo accorciare.
+- **La porta dei dati.** Tutto quello che l'app legge e scrive nel
+  database passa da `src/porte/dati.js`. Dietro c'è Firestore, come
+  prima. Una serie di prove scritte sulla porta, e la tabella di chi può
+  fare cosa per ruolo, girano sull'emulatore e gireranno uguali sul
+  backend dell'installazione nel locale.
 - **Nella Tana non cambia niente.**
 
 ## 1.10.2-beta — 31 ottobre 2026, sul test

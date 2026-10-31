@@ -23,7 +23,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { creaBundle, valore } from '../../src/demo/bundle.js'
-import { letturaDallaCache } from '../../src/lib/letture.js'
+import { letturaDallaCache } from '../../src/adattatori/firebase/dati.js'
 
 const app = initializeApp({ apiKey: 'demo', projectId: 'demo-bundle', appId: 'demo' }, 'bundle-demo')
 const db = initializeFirestore(app, { localCache: memoryLocalCache() })
@@ -73,7 +73,7 @@ describe('il bundle nel vero Firestore, a rete spenta', () => {
   })
 
   // `getDoc` a rete spenta va in errore su un documento che non c'è, anche
-  // se la cache lo sa: è il motivo di letture.js. La lettura della demo
+  // se la cache lo sa: è il motivo della lettura dell'adattatore (adattatori/firebase/dati.js). La lettura della demo
   // risponde dalla cache, per i documenti del bundle e per quelli mai visti.
   it('getDoc a rete spenta va in errore; la lettura della demo dice «non c’è»', async () => {
     await expect(getDoc(doc(db, 'vendite_storiche', '_indice'))).rejects.toThrow(/offline/)
