@@ -5329,3 +5329,27 @@ bugs:
     generate_issue: true
     labels: [bug, local-first, pagamenti]
     test_cases: []
+  - id: BUG-124
+    title: "Nella ricetta di un drink, cambiando ingrediente l'unità passava a cl e la quantità restava"
+    area: "src/components/DrinkForm.jsx (onItemChange), src/lib/inventory.js (unitaDopoCambioIngrediente)"
+    severity: media
+    priority: P2
+    description: >
+      Flavio, 30/10/2026: «rendere indipendente la tendina Ingrediente da
+      quantità ed unità di misura, perché se cambio un ingrediente con un
+      altro mi cambia l'unità di misura da ml a cl senza cambiare la
+      quantità, quindi mi costringe a ricambiare l'unità». Scegliendo un
+      altro ingrediente la riga ripartiva sempre dalla prima unità del
+      nuovo articolo (cl per i liquidi), con la quantità di prima: «40 ml»
+      di gin diventava «40 cl» di vodka, dieci volte tanto. Ora ingrediente,
+      quantità e unità sono indipendenti: se l'unità della riga vale anche
+      per il nuovo articolo resta com'è, e con lei la quantità; cambia solo
+      quando non ha senso (da un liquido a un articolo a pezzi), e allora
+      parte da quella di inserimento.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, magazzino]
+    test_cases:
+      - tests/component/DrinkFormRicetta.test.jsx
+

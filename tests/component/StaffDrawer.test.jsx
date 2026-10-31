@@ -29,7 +29,15 @@ vi.mock('../../src/lib/api.js', () => ({
     return () => {}
   }),
   createManualGroup: vi.fn(),
+  chiamaIlBancone: (...a) => chiamaIlBancone(...a),
+  subscribeMieChiamateAlBancone: (uid, cb) => {
+    emettiMie = cb
+    cb([])
+    return () => {}
+  },
 }))
+const chiamaIlBancone = vi.fn(() => 'chiamata-1')
+let emettiMie = null
 
 import StaffDrawer from '../../src/components/StaffDrawer.jsx'
 import { Sottosezioni } from '../../src/lib/sottosezioni.js'
@@ -96,6 +104,37 @@ describe('menu laterale', () => {
     expect(screen.getByText('Da servire')).toBeInTheDocument()
     expect(screen.queryByText('I miei ordini')).toBeNull()
     expect(screen.getByText('Staff')).toBeInTheDocument() // il suo ruolo, in fondo
+  })
+
+  // REQ-STAMPA-020: la sala si collega da sé alla stampante.
+  it('la sala ha la sua voce «Stampante»; il gestore la trova nelle impostazioni', () => {
+    apri('staff')
+    expect(screen.getByText('Stampante')).toBeInTheDocument()
+  })
+
+  // REQ-STAFF-019. Flavio, 30/10/2026: lo staff «può solo ricevere una
+  // chiamata dal bancone ma non può effettuarla».
+  it('la sala chiama il bancone, e finché non risponde è in attesa', async () => {
+    apri('staff')
+    await userEvent.click(screen.getByText('Chiama il bancone'))
+    expect(chiamaIlBancone).toHaveBeenCalledTimes(1)
+    expect(chiamaIlBancone).toHaveBeenCalledWith(
+      expect.objectContaining({ from_uid: 'a1', from_name: 'Capo Bar', from_email: 'capo@bar.it' })
+    )
+    expect(screen.getByText('In attesa del bancone…')).toBeInTheDocument()
+    // Un secondo tocco non manda un'altra chiamata.
+    await userEvent.click(screen.getByText('In attesa del bancone…'))
+    expect(chiamaIlBancone).toHaveBeenCalledTimes(1)
+    // Il bancone risponde: la voce torna a chiamare.
+    act(() => emettiMie([]))
+    expect(screen.getByText('Chiama il bancone')).toBeInTheDocument()
+  })
+
+  it('al banco la voce non c’è: il bancone è lui', () => {
+    apri('admin')
+    expect(screen.queryByText('Chiama il bancone')).toBeNull()
+    apri('bartender')
+    expect(screen.queryByText('Chiama il bancone')).toBeNull()
   })
 
   it('per la sala «Nuovo ordine» apre il menù, non il POS', async () => {

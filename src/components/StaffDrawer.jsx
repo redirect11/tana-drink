@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isGestore, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
@@ -18,8 +18,11 @@ import {
   subscribeSettings,
   subscribeOpenGroups,
   createManualGroup,
+  chiamaIlBancone,
+  subscribeMieChiamateAlBancone,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import { toastSuccess } from '../lib/toast.js'
 // Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
 import { vociPerRuolo } from '../lib/sezioni.js'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
@@ -291,6 +294,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         >
           <span>✍️</span> {isGestore(role) ? 'Nuovo ordine' : 'Nuovo ordine dal menù'}
         </div>
+        {isSala(role) && <ChiamaIlBancone />}
 
         {showGroups && (
           <div className="drawer-groups">
@@ -404,3 +408,37 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     </>
   )
 }
+
+// ── «CHIAMA IL BANCONE», DALLA SALA (REQ-STAFF-019) ──────────────────
+// Flavio, 30/10/2026: lo staff «può solo ricevere una chiamata dal bancone
+// ma non può effettuarla». Un tocco e la chiamata parte; finché il bancone
+// non risponde la voce dice che si è in attesa, e un secondo tocco non ne
+// manda un'altra.
+function ChiamaIlBancone() {
+  const [inAttesa, setInAttesa] = useState(false)
+  const uid = auth.currentUser?.uid
+  useEffect(() => {
+    if (!uid) return undefined
+    return subscribeMieChiamateAlBancone(uid, (mie) => setInAttesa(mie.length > 0))
+  }, [uid])
+  const chiama = () => {
+    if (inAttesa || !uid) return
+    const u = auth.currentUser
+    chiamaIlBancone({ from_uid: uid, from_email: u?.email ?? null, from_name: u?.displayName ?? null })
+    setInAttesa(true)
+    toastSuccess('📟 Chiamata inviata al bancone')
+  }
+  return (
+    <div
+      className={`bar-nav-item${inAttesa ? ' in-attesa' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-disabled={inAttesa || undefined}
+      onClick={chiama}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && chiama()}
+    >
+      <span>📟</span> {inAttesa ? 'In attesa del bancone…' : 'Chiama il bancone'}
+    </div>
+  )
+}
+
