@@ -5414,6 +5414,14 @@ bugs:
       Il commento in api.js che annunciava un documento
       `settings/licenza` per la «Fase 3» va corretto: dentro settings/
       avrebbe lo stesso buco.
+      A CHE PUNTO È LA REGIA (31/10/2026): sulla regia di TEST il passo 1
+      è pronto (doppia scrittura, `limiti.comande`, `valida_fino`), e la
+      copia è fatta quando «Allinea tutte» dice «Tutti pronti». La regia
+      di PRODUZIONE non ha ancora nessun rilascio: tutto arriva col suo
+      primo, 0.3.0. QUINDI: la versione dell'app con questa correzione può
+      andare sul test appena la regia di test dice «Tutti pronti», ma in
+      produzione solo dopo che la regia di produzione ha la 0.3.0 e la
+      copia fatta. La Tana non è toccata (lo dice la build).
     status: todo
     in_produzione: true
     generate_issue: true

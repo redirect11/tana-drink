@@ -159,8 +159,10 @@ Content-Type: application/json
   controllo si può togliere e l'indirizzo lo decide solo la regia.
 - **L'attesa massima è di venti secondi**: senza risposta l'app dice che
   la scelta non è partita, e il titolare può riprovare. Una chiamata
-  arrivata tardi alla regia e poi ripetuta riceve `409` o `200`: la regia
-  deve accettare due volte la stessa scelta senza danni.
+  arrivata tardi alla regia e poi ripetuta riceve **`409` con `{ errore }`**
+  (confermato dalla regia il 31/10/2026): la seconda scelta uguale non fa
+  danni, e l'app mostra il testo della regia come per ogni errore. Il box
+  sparisce comunque appena la regia riscrive la proposta nella licenza.
 
 **Cosa si toglie qui**: il documento `aggiornamenti/scelta`, la sua regola
 in `firestore.rules`, la scrittura (`scegliAggiornamento` in `api.js`) e
