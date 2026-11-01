@@ -112,6 +112,7 @@ import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDa
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
+import { licenzaEffettiva } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -156,6 +157,9 @@ const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
+// La licenza dell'installazione (BUG-125): fuori da settings/, che lo staff
+// può scrivere. La scrive solo la regia.
+const licenzaDoc = doc(db, 'licenza', 'attuale')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const cashSessionsCol = collection(db, 'cash_sessions')
@@ -6103,9 +6107,9 @@ export const DEFAULT_SETTINGS = {
   workflow_enabled: false,
   // LE FUNZIONI PREMIUM (lib/licenza.js). Questi sono gli interruttori
   // D'USO — «il locale lo sta usando?» — e NON dicono cosa il locale ha
-  // comprato: quella è la licenza, e sta in licenza.js (campo `incluso`)
-  // finché non arriva il documento `settings/licenza` della Fase 3. Un
-  // modulo non incluso resta spento comunque, qualunque cosa dica il flag.
+  // comprato: quello lo dice la licenza (`licenza/attuale` o la build,
+  // BUG-125), e non sta in settings/ apposta, perché settings/ lo scrive lo
+  // staff. Un modulo non incluso resta spento qualunque cosa dica il flag.
   // Accesi di suo, come `workflow_enabled !== false`: quello che il locale
   // ha comprato funziona senza che nessuno lo debba accendere.
   modulo_conta_enabled: true,
@@ -6306,6 +6310,23 @@ export const DEFAULT_SETTINGS = {
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
 
+// LA LICENZA DENTRO LE IMPOSTAZIONI (BUG-125). Le schermate la cercano
+// dove l'hanno sempre trovata, `licenza` nelle impostazioni lette; cambia
+// da dove arriva. Quella scritta in `settings/bar.licenza` si butta: la
+// può riscrivere ogni bartender, e un ripiego lì riaprirebbe il buco. Al
+// suo posto la licenza che vale (lib/licenza.js, licenzaEffettiva).
+// Finché non si sa (prima risposta dalla cache, documento assente, nessuna
+// licenza nella build) resta l'ultima licenza nota su questo dispositivo:
+// meglio quella che un'app che si ferma o perde i moduli per un istante.
+// `licenzaLetta` è l'ultimo { documento, certo } visto da un ascolto.
+let licenzaLetta = null
+
+function conLicenza(dati, letto = licenzaLetta) {
+  const { licenza: _diSettings, ...resto } = dati || {}
+  const licenza = licenzaEffettiva(letto) ?? impostazioniRicordate({}).licenza ?? null
+  return licenza ? { ...resto, licenza } : resto
+}
+
 // I valori con cui disegnare la prima volta, prima che il server risponda:
 // l'ultima risposta ricordata, o i default. Serve dove l'impostazione
 // decide un colore — se no si vede il lampo.
@@ -6321,7 +6342,7 @@ function impostazioni() {
   if (!settingsCache) {
     getDoc(settingsDoc)
       .then((snap) => {
-        if (snap.exists()) settingsCache = snap.data()
+        if (snap.exists()) settingsCache = conLicenza(snap.data())
       })
       .catch(() => {})
   }
@@ -6386,25 +6407,61 @@ export async function inviaSceltaAggiornamento(url, tag, scelta) {
   }
 }
 
+// Due ascolti, uno solo verso chi chiama: le impostazioni del bar e la
+// licenza. Si risponde quando le impostazioni ci sono, e di nuovo a ogni
+// cambio di una delle due.
+// La licenza si ascolta ANCHE quando cambia solo la provenienza della
+// risposta (`includeMetadataChanges`): un documento che non c'è né nella
+// cache né sul server non cambia mai, e senza quell'opzione la conferma
+// del server («non c'è davvero») non arriverebbe.
 export function subscribeSettings(onChange, onError) {
-  return onSnapshot(
+  let dati // undefined finché settings/bar non risponde; null se non c'è
+  let letto = licenzaLetta
+  let impronta = null
+  const errore = onError ?? (() => {})
+  const rispondi = () => {
+    if (dati === undefined) return
+    if (dati === null) return onChange(conLicenza({ ...DEFAULT_SETTINGS }, letto))
+    const data = conLicenza(dati, letto)
+    settingsCache = data
+    // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
+    // invece che coi valori di partenza (vedi impostazioniLocali.js).
+    ricordaImpostazioni(data)
+    const merged = { ...DEFAULT_SETTINGS, ...data }
+    // Retrocompatibilità col vecchio flag booleano della scelta consegna.
+    if (!data.service_mode && data.service_mode_choice_enabled) {
+      merged.service_mode = 'entrambi'
+    }
+    onChange(merged)
+  }
+  const smettiImpostazioni = onSnapshot(
     settingsDoc,
     (snap) => {
-      if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
-      const data = snap.data()
-      settingsCache = data
-      // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
-      // invece che coi valori di partenza (vedi impostazioniLocali.js).
-      ricordaImpostazioni(data)
-      const merged = { ...DEFAULT_SETTINGS, ...data }
-      // Retrocompatibilità col vecchio flag booleano della scelta consegna.
-      if (!data.service_mode && data.service_mode_choice_enabled) {
-        merged.service_mode = 'entrambi'
-      }
-      onChange(merged)
+      dati = snap.exists() ? snap.data() : null
+      rispondi()
     },
-    onError ?? (() => {})
+    errore
   )
+  const smettiLicenza = onSnapshot(
+    licenzaDoc,
+    { includeMetadataChanges: true },
+    (snap) => {
+      const documento = snap.exists() ? snap.data() : null
+      letto = { documento, certo: Boolean(documento) || snap.metadata?.fromCache === false }
+      licenzaLetta = letto
+      // Un cambio della sola provenienza, a licenza uguale, non ridisegna
+      // niente: risponde solo quando cambia quello che si sa.
+      const nuova = JSON.stringify(letto)
+      if (nuova === impronta) return
+      impronta = nuova
+      rispondi()
+    },
+    errore
+  )
+  return () => {
+    smettiImpostazioni()
+    smettiLicenza()
+  }
 }
 
 export async function updateSettings(data) {

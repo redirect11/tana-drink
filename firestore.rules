@@ -246,6 +246,17 @@ service cloud.firestore {
       allow write: if isBartender();
     }
 
+    // LA LICENZA (BUG-125): piano, moduli, limiti, sospensione, aggiornamenti.
+    // La leggono tutti, come le impostazioni (il menù del cliente dipende dai
+    // moduli). Non la scrive NESSUNO dall'app, nemmeno il titolare: la scrive
+    // la regia con le credenziali di servizio, che queste regole non
+    // toccano. Stava in settings/bar.licenza, che ogni bartender può
+    // riscrivere: un locale Free si toglieva i limiti dalla console.
+    match /licenza/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) non sta nel database:
     // dal 31/10/2026 è una chiamata alla regia col token del titolare. Il
     // documento aggiornamenti/scelta di prima non ha più regole, quindi

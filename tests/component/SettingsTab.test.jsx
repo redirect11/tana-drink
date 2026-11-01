@@ -27,13 +27,24 @@ const impostazioni = vi.hoisted(() => ({
   // I MODULI PREMIUM (REQ-LIC-001) come li scrive il documento del bar:
   // qui ci sono solo gli interruttori D'USO, che dicono se il locale li sta
   // usando. Cosa il locale HA lo dice la licenza (licenza.js), e per queste
-  // prove è quella vera: scadenzario incluso, conta no.
+  // prove è scritta qui: scadenzario incluso, conta e fatture ai clienti no.
   // Le chiavi stanno QUI e non solo nella prova che le cambia: l'assign del
   // beforeEach aggiunge, non toglie, e un valore scritto da una prova
   // resterebbe addosso a tutte quelle dopo.
   modulo_conta_enabled: true,
   modulo_scadenzario_enabled: true,
-  licenza: null,
+  licenza: {
+    moduli: {
+      menu_tavoli: true,
+      ordini_cliente: true,
+      clienti: true,
+      magazzino: true,
+      statistiche: true,
+      staff: true,
+      sumup: true,
+      scadenzario: true,
+    },
+  },
   business_day_cutoff_hour: 5,
   orario_apertura: '18:30',
   orario_chiusura: '03:30',

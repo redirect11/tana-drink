@@ -13,7 +13,7 @@ import InstallazioneSospesa from '../../src/components/InstallazioneSospesa.jsx'
 import { installazioneBloccata, statoLicenza, STATI_LICENZA } from '../../src/lib/licenza.js'
 
 describe('la licenza', () => {
-  it('senza niente scritto l’installazione è attiva: la Tana non ha una licenza e lavora', () => {
+  it('senza uno stato scritto l’installazione è attiva', () => {
     expect(statoLicenza({})).toBe(STATI_LICENZA.ATTIVA)
     expect(statoLicenza(null)).toBe(STATI_LICENZA.ATTIVA)
     expect(installazioneBloccata({ licenza: { moduli: { conta: true } } })).toBe(false)
@@ -47,5 +47,15 @@ describe('la schermata', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Installazione chiusa')
     expect(screen.getByText(/30 giorni/)).toBeInTheDocument()
     expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  // BUG-125: nessuna licenza, né della regia né della build, e il server
+  // lo ha confermato. Non è una sospensione: non c'è niente da pagare.
+  it('non attivata: lo dice, senza parlare di abbonamenti', () => {
+    render(<InstallazioneSospesa licenza={{ stato: 'non_attivata' }} venue={{ venue_name: 'Bar Mario' }} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Installazione non attivata')
+    expect(screen.getByRole('alert')).toHaveTextContent(/Bar Mario/)
+    expect(screen.getByText(/si apre da sola/)).toBeInTheDocument()
+    expect(screen.queryByText(/abbonamento/)).toBeNull()
   })
 })

@@ -31,10 +31,12 @@ export const PERMESSI = [
   // Quello che vede il cliente al menù.
   { collezione: 'drinks', legge: TUTTI, scrive: BANCO },
   { collezione: 'categories', legge: TUTTI, scrive: BANCO },
-  // Le impostazioni le scrive ogni bartender: anche `licenza`, che è della
-  // regia. È un difetto noto, da chiudere con un documento di licenza a
-  // parte (vedi REQ-FLOTTA-020): quando succede, questa riga cambia.
+  // Le impostazioni le scrive ogni bartender. Fino a BUG-125 c'era dentro
+  // anche la licenza, che è della regia: ora sta in `licenza`, qui sotto.
   { collezione: 'settings', legge: TUTTI, scrive: BANCO },
+  // La licenza la leggono tutti (il menù del cliente dipende dai moduli) e
+  // dall'app non la scrive nessuno: la regia usa le credenziali di servizio.
+  { collezione: 'licenza', legge: TUTTI, scrive: NESSUNO },
   { collezione: 'service_stats', legge: TUTTI, crea: BANCO, aggiorna: BANCO, cancella: BANCO },
 
   // Il magazzino e i fornitori: solo chi manda avanti il banco.
