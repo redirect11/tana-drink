@@ -30,6 +30,15 @@
   lavora con l'ultima licenza che conosce.
 - **Nella Tana non cambia niente**: la sua licenza è scritta nella build,
   con gli stessi moduli di prima.
+- **Il server fa rispettare la licenza.** Le funzioni che il piano non
+  include non si scrivono nemmeno passando dalla console del browser:
+  magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del
+  personale, bilancio, account dei clienti. Lo stesso vale per gli sconti,
+  dove il piano li esclude, e per gli ordini dal telefono del cliente. I
+  dati già scritti restano leggibili.
+- **Senza il modulo del magazzino le vendite non scalano le giacenze**, e
+  il ripristino di un backup salta le parti dei moduli non inclusi,
+  dicendolo.
 
 ### Per chi sviluppa
 

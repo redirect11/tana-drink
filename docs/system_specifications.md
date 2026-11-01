@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 243 | fatto e coperto dai test |
+| ✅ | 244 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**295 voci** in tutto. **260** descrivono il sistema com'è oggi e
+**296 voci** in tutto. **261** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 4 | 3 |  |
+| [LIC](#lic) | 5 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 5 | — |  |
 
@@ -3329,6 +3329,24 @@ COSA FA: staffAdmin non si chiama (gli elenchi dello staff tornano vuoti, la cre
 LE FUNCTIONS CHE L'APP NON CHIAMA: notifyNewOrder, notifyOrderUpdate e notifyStaffCall sono trigger del server, e senza di loro non parte la notifica push; l'app non se ne accorge. La cintura autoAdvancePaid (ritirato + pagato → chiuso) e' doppia: il client chiude da se' il conto pagato e servito (advanceComanda, registerPayment). paymentWebhook serve solo a SumUp. risolviNumeroDuplicato CON UN SOLO TERMINALE NON SERVE: il numero del conto lo assegna il dispositivo, che ricorda l'ultimo dato (lib/progressivi.js), quindi un terminale solo non si da' mai lo stesso numero due volte; il doppione nasce solo da due dispositivi che battono nello stesso istante. Un titolare Free con due dispositivi aperti insieme (telefono e tablet, stesso account) puo' ancora prendersi un doppione, raro, che resta: non cambia i soldi, solo il numero stampato. E' da dire alla regia. Quando il locale compra, la regia toglie i limiti e ripubblica col profilo completo: l'app non fa niente di speciale.
 
 **Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`
+
+#### REQ-LIC-008 — Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono
+
+«Pure se sbloccano localmente le funzioni premium serve cmq che il server verifichi» (l'utente, 31/10/2026; «ok procedi con il mettere in sicurezza in tal senso»). L'app nasconde quello che la licenza non include, ma chi apre la console del browser scrive lo stesso. Da BUG-125 la licenza sta in `licenza/attuale`, che dall'app non scrive nessuno: ora le regole la LEGGONO e rifiutano.
+
+COSA SI NEGA, solo in SCRITTURA (i dati di un modulo che il locale non ha più restano leggibili, come restano nel database): - le collezioni dei moduli, elencate in COLLEZIONI_DEI_MODULI (magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del personale, bilancio, nascita del profilo cliente); le fatture dei fornitori passano con lo scadenzario O col magazzino, perché la lista degli ordini ai fornitori le genera; - un conto aperto dal telefono del cliente senza `ordini_cliente`; - con `limiti.sconti: false`, uno sconto nuovo o alzato su un ordine. Restano permessi lo sconto che c'era (le righe che cambiano ne ricalcolano l'importo) e lo sconto tolto.
+
+SENZA DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE: è la Tana, la cui licenza sta nella build; un locale della regia il documento ce l'ha sempre.
+
+RESTANO FUORI, apposta, perché l'app le scrive anche senza il modulo (mappa delle scritture del 01/11/2026): le timbrature a ogni accesso del personale e il cerca-persone (modulo `staff`), i gruppi (li governa `groups_enabled`), gli aggiornamenti del cliente sul suo conto (il `push_token` anche sui conti battuti al banco), il profilo cliente già nato (cambiarlo e cancellarlo sono suoi). E lo sconto dentro un incasso (`payments[].sconto`): le regole non scorrono un elenco, e quello si chiude solo con l'incasso fatto dal server. Il lettore SumUp passa dalle Functions, che le regole non vedono. Il numero di prodotti e di conti aperti del Free (REQ-LIC-003) non si conta nelle regole: servirebbero dei contatori, da decidere.
+
+PERCHÉ L'APP NON INCIAMPI nelle regole nuove: - lo scarico del magazzino di una vendita (al «pronto», alla chiusura, al riallineo, allo storno) non parte senza il modulo: prima partiva a ogni vendita appena una ricetta puntava a un articolo, e senza il modulo ogni vendita sarebbe diventata un errore di sincronizzazione al banco. Se la licenza non si sa ancora si scala come prima; - il ripristino di un backup salta le collezioni dei moduli non inclusi e lo dice: un documento rifiutato fermava il ripristino; - `/bar?tab=ore`, il vecchio indirizzo delle ore del personale, segue il modulo `staff` (apriva la schermata a tutti).
+
+QUANTO COSTA: una lettura della licenza per richiesta, e solo dove serve; nello stesso lotto le letture dello stesso documento contano una volta (provato sull'emulatore con 60 documenti). Gli ordini che non toccano lo sconto non la leggono.
+
+DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate.
+
+**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
 
 ### VENUE
 

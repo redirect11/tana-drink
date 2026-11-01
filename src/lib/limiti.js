@@ -24,9 +24,10 @@
 // pubblicasse leggero un piano diverso.
 //
 // ⚠️ COME PER I MODULI (lib/licenza.js), IL LIMITE NASCONDE, NON PROTEGGE:
-// è l'app che non lascia fare, non il server. La licenza non si riscrive
-// più dall'app (BUG-125); che le regole di Firestore facciano rispettare
-// anche i limiti è un lavoro a parte (REQ-LIC-003).
+// è l'app che non lascia fare. La licenza non si riscrive più dall'app
+// (BUG-125), e le regole di Firestore fanno rispettare gli sconti
+// (REQ-LIC-008); i numeri massimi (prodotti, conti aperti) no, perché
+// andrebbero contati sul server.
 //
 // Logica pura: le impostazioni si passano (sono quelle già in mano a chi
 // chiama, dalla cache: niente letture nuove, vedi il local-first).
