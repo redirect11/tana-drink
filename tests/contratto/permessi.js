@@ -10,7 +10,9 @@
 // regola cambia, cambia anche qui, nello stesso commit, dicendo perché.
 // I casi con condizioni sui campi (ordini, gruppi, chiamate, contatori)
 // hanno le loro prove in tests/regole/: qui ci sono le collezioni dove
-// conta solo chi sei.
+// conta solo chi sei. Senza il documento della licenza, come qui, le
+// collezioni dei moduli non hanno limiti; con la licenza le prova
+// tests/regole/licenza.test.js (REQ-LIC-008).
 //
 // Non è un file *.test.js: lo usa chi lo fa girare.
 
