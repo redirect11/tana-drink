@@ -231,6 +231,35 @@ export function contrattoDati(nome, prepara) {
       })
     })
 
+    describe('da dove viene la risposta (BUG-125)', () => {
+      // «Non c'è» e «non lo so ancora» sono la stessa risposta vuota, finché
+      // il server non risponde: la licenza ne ha bisogno per non fermare un
+      // locale in regola aperto senza rete.
+      it('un documento che non c’è: con includeMetadataChanges arriva la conferma del server', async () => {
+        const ref = p.doc(db, nuova(), 'assente')
+        const visti = []
+        const smetti = p.onSnapshot(ref, { includeMetadataChanges: true }, (s) =>
+          visti.push({ c: s.exists(), cache: s.metadata.fromCache })
+        )
+        await quando(() => visti.some((v) => v.cache === false))
+        smetti()
+        expect(visti.every((v) => v.c === false)).toBe(true)
+        expect(visti.at(-1)).toEqual({ c: false, cache: false })
+      })
+
+      it('un documento che c’è: la risposta del server dice fromCache falso, coi dati', async () => {
+        const ref = p.doc(db, nuova(), 'd1')
+        await p.setDoc(ref, { piano: 'base' })
+        let ultimo = null
+        const smetti = p.onSnapshot(ref, { includeMetadataChanges: true }, (s) => {
+          ultimo = { dati: s.data(), cache: s.metadata.fromCache }
+        })
+        await quando(() => ultimo?.cache === false)
+        smetti()
+        expect(ultimo.dati).toEqual({ piano: 'base' })
+      })
+    })
+
     describe('il lotto', () => {
       it('set, update e delete insieme', async () => {
         const col = nuova()

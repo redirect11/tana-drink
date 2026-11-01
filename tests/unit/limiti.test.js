@@ -31,6 +31,7 @@ import {
 } from '../../src/lib/limiti.js'
 import { moduloIncluso, moduloAttivo, sumupDisponibile, scadenzaProva, moduliPremium } from '../../src/lib/licenza.js'
 import { NOME_PRODOTTO } from '../../src/lib/prodotto.js'
+import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
 
 const LIMITI_FREE = {
   prodotti_max: 10,
@@ -80,8 +81,9 @@ describe('senza limiti nella licenza non cambia niente', () => {
     })
   }
 
-  it('la Tana tiene tutti i moduli e il lettore SumUp in cassa, come prima', () => {
-    for (const m of moduliPremium()) expect(moduloIncluso({}, m.id)).toBe(m.incluso === true)
+  it('la Tana tiene i moduli della sua licenza e il lettore SumUp in cassa, come prima', () => {
+    // Senza licenza nelle impostazioni vale quella della build (BUG-125).
+    for (const m of moduliPremium()) expect(moduloIncluso({}, m.id)).toBe(LICENZA_DELLA_BUILD.moduli[m.id] === true)
     expect(sumupDisponibile({})).toBe(true)
     expect(sumupDisponibile(null)).toBe(true)
   })

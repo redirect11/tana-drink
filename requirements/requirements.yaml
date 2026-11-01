@@ -5175,6 +5175,12 @@ requirements:
       stesso posto dove finirà la configurazione per cliente della Fase 2
       (`clienti/<slug>/`). Dalla schermata normale delle impostazioni non è
       modificabile; dagli strumenti di sviluppo sì (REQ-DEV-014).
+      DAL BUG-125 (01/11/2026) la colonna `incluso` non c'è più: era una
+      licenza nascosta nel codice, che a un locale senza documento dava
+      quasi tutto. Cosa è incluso lo dice solo la licenza, il documento
+      `licenza/attuale` della regia o quella della build
+      (`clienti/<slug>/licenza.json`), e dagli strumenti di sviluppo si
+      guarda soltanto.
       L'INTERRUTTORE D'USO è un flag booleano su `settings/bar`, della
       stessa forma di `workflow_enabled`: `modulo_conta_enabled` e
       `modulo_scadenzario_enabled`, in DEFAULT_SETTINGS a `true`. Stessa
@@ -5299,6 +5305,7 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/licenza.test.js
+      - tests/unit/licenzaInstallazione.test.js
       - tests/unit/sezioni.test.js
       - tests/component/InventoryManager.test.jsx
       - tests/component/FornitoriTab.test.jsx
@@ -5330,8 +5337,9 @@ requirements:
       bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di
       un modulo non incluso dice che non fa parte del piano e rimanda alla
       pagina del prodotto (FunzioneNonInclusa).
-      LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`;
-      un locale della flotta ha `licenza.moduli` scritto dalla regia
+      LA TANA TIENE TUTTO: dal BUG-125 con la licenza della sua build
+      (`clienti/tana/licenza.json`), che nomina ogni modulo; un locale
+      della flotta ha `licenza.moduli` scritto dalla regia
       (repository drink-regia: all'attivazione, poi licenzaSegueIlPiano).
       DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi
       (piani.json nella regia); da fare: il lettore SumUp che guarda il
@@ -5736,8 +5744,8 @@ requirements:
     description: >
       «Serve un modo per eliminare/fermare l'app deployata (ad esempio se
       non arriva il pagamento mensile)» (l'utente, 22/10/2026).
-      LA LICENZA HA UNO STATO: `settings/bar.licenza.stato` vale `attiva`
-      (o non c'e': la Tana non ha una licenza e lavora come sempre),
+      LA LICENZA HA UNO STATO: `licenza.stato` (dal BUG-125 nel documento
+      `licenza/attuale`) vale `attiva` (o non c'e'),
       `sospesa` o `chiusa`, con `motivo`, `dal` e `regia_url`. Lo scrive
       la regia (repository drink-regia): il backoffice coi tasti Sospendi,
       Riattiva e Chiudi, oppure da sola — una Function giornaliera sospende
@@ -12015,6 +12023,12 @@ requirements:
       leva non c'è da nessuna parte. Differenza da tenere a mente: la
       stampante finta è del TERMINALE (localStorage), i moduli premium sono
       di TUTTO IL LOCALE (settings/bar).
+      DAL BUG-125 (01/11/2026) «inclusa nella licenza» si GUARDA soltanto:
+      la licenza sta in `licenza/attuale`, che le regole non fanno scrivere
+      a nessuno dall'app, e quello che scriveva questo riquadro lo poteva
+      scrivere ogni bartender dalla console. Per provare un modulo si
+      scrive il documento con scripts/licenza-moduli.js o dalla console
+      dell'emulatore.
     status: implemented
     generate_issue: true
     labels: [dev, stampa]

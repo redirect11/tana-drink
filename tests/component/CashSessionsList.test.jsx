@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
+import { ricordaImpostazioni } from '../../src/lib/impostazioniLocali.js'
 
 const sessioni = [
   // La serata di stasera: aperta, senza snapshot (nasce alla chiusura).
@@ -453,10 +454,7 @@ describe('le chiusure nel piano Free', () => {
   afterEach(() => vi.useRealTimers())
 
   it('con un giorno di storico restano la serata in corso e quella di ieri', async () => {
-    localStorage.setItem(
-      'drink:impostazioni',
-      JSON.stringify({ licenza: { piano: 'free', limiti: { storico_giorni: 1 } } })
-    )
+    ricordaImpostazioni({ licenza: { piano: 'free', limiti: { storico_giorni: 1 } } })
     const { container } = render(<CashSessionsList />)
     await screen.findByText(/1\.240,50/)
     expect(container.querySelectorAll('.inv-list > .inv-row').length).toBe(2)

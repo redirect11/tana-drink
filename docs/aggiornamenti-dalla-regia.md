@@ -152,11 +152,11 @@ Content-Type: application/json
   con il progetto fra quelli della regia (`drink-regia`,
   `drink-regia-test`); un altro vale come nessuno. Il token del titolare
   apre per un'ora tutto quello che il titolare può fare, e finché la
-  licenza sta in `settings/bar` (BUG-125) la può riscrivere ogni
-  bartender: un indirizzo suo se lo prenderebbe. **Un progetto nuovo
+  licenza stava in `settings/bar` la poteva riscrivere ogni bartender: un
+  indirizzo suo se lo sarebbe preso. Chiuso BUG-125 resta come seconda
+  serratura. **Un progetto nuovo
   della regia, o la Function spostata su un dominio suo**, va aggiunto a
-  `PROGETTI_REGIA` in `src/lib/aggiornamenti.js`. Chiuso BUG-125, il
-  controllo si può togliere e l'indirizzo lo decide solo la regia.
+  `PROGETTI_REGIA` in `src/lib/aggiornamenti.js`.
 - **L'attesa massima è di venti secondi**: senza risposta l'app dice che
   la scelta non è partita, e il titolare può riprovare. Una chiamata
   arrivata tardi alla regia e poi ripetuta riceve `409` o `200`: la regia
@@ -228,9 +228,8 @@ la proposta nella licenza.
 
 ## Da sapere, a parte
 
-`settings/{docId}` si scrive da ogni bartender, quindi anche
-`settings/bar.licenza`: oggi un bartender può accendersi da solo i moduli
-a pagamento o togliere una sospensione. Con i piani che decidono anche
-gli aggiornamenti la licenza conta di più. Proposta: un requisito a parte
-perché le regole rifiutino a chiunque una scrittura che cambia `licenza`
-(la regia scrive con le sue credenziali e non ne ha bisogno).
+Fino a BUG-125 la licenza stava in `settings/bar.licenza`, che si scrive
+da ogni bartender: un bartender poteva accendersi da solo i moduli a
+pagamento o togliere una sospensione. Ora sta in `licenza/attuale`, che le
+regole fanno leggere a tutti e scrivere a nessuno: la regia la scrive con
+le sue credenziali.

@@ -121,7 +121,10 @@ Il contratto per esteso sta in testa a `src/porte/dati.js`; le prove in
   - Riferimenti e ricerche: `collection`, `doc`, `query`, `where`,
     `orderBy`, `limit`, `startAfter`.
   - Letture: `getDoc`, `getDocs`, `getDocFromCache`, `getDocsFromCache`,
-    `onSnapshot`.
+    `onSnapshot`. Con `{ includeMetadataChanges: true }` l'ascolto
+    risponde anche quando cambia solo la provenienza, e ogni risposta ha
+    `metadata.fromCache`: serve a distinguere «il documento non c'è» da
+    «non lo so ancora» (la licenza, BUG-125).
   - Scritture: `setDoc` (anche con `merge`), `updateDoc`, `addDoc`,
     `deleteDoc`, `writeBatch`.
   - Valori speciali: `serverTimestamp`, `increment`, `arrayUnion`,

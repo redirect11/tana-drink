@@ -86,8 +86,9 @@ smettere di esserlo. L'utente l'ha approvata così («sì va bene»).
 - **Functions** (callable, SumUp, notifiche push, Storage, stampante):
   in demo rispondono dei finti servizi con esiti di prova, senza chiamate.
 - **Analytics e App Check**: spenti.
-- **La licenza**: in demo tutti i moduli, decisi in locale. Niente
-  `settings/bar.licenza` dal server.
+- **La licenza**: in demo tutti i moduli, decisi in locale e messi in
+  `licenza/attuale` della cache insieme agli altri dati di prova (BUG-125),
+  come per un locale vero. Niente dal server.
 
 ### 6. Si vede che è una demo
 

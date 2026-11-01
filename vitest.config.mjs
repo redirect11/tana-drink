@@ -1,13 +1,13 @@
 import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { leggiCliente } from './clienti/pluginCliente.js'
 
 // Nei test l'app è compilata per la Tana (REQ-VENUE-001), come in
-// produzione: i test che leggono «La Tana del Coniglio» leggono la build.
-const clienteTana = {
-  slug: 'tana',
-  venue: JSON.parse(readFileSync(new URL('./clienti/tana/venue.json', import.meta.url), 'utf8')),
-}
+// produzione: i test che leggono «La Tana del Coniglio» leggono la build,
+// e la licenza è quella della sua build (BUG-125).
+const tana = leggiCliente('tana', fileURLToPath(new URL('.', import.meta.url)))
+const clienteTana = { slug: tana.slug, venue: tana.venue, licenza: tana.licenza }
 
 export default defineConfig({
   plugins: [react()],

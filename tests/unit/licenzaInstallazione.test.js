@@ -1,0 +1,243 @@
+// @vitest-environment happy-dom
+'use strict'
+
+// ── LA LICENZA DELL'INSTALLAZIONE, DA DOVE ARRIVA (BUG-125) ──────────
+//
+// Fino alla 1.10.x la licenza stava in `settings/bar.licenza`, che ogni
+// bartender può riscrivere: con un account del banco e la console del
+// browser un locale Free si toglieva i limiti o una sospensione. Ora sta in
+// `licenza/attuale`, che dall'app non scrive nessuno, e quella in
+// settings/bar si butta. Senza documento vale la licenza della build;
+// senza nessuna delle due l'installazione non è attivata — ma solo quando
+// lo dice il server, perché senza rete «non lo so» e «non c'è» sono la
+// stessa risposta vuota.
+//
+// Come in giroInLocale.test.js: si mocka SOLO Firestore, e `api.js` è
+// quello vero. Gli ascolti rispondono quando il test lo dice, con la
+// provenienza che il test sceglie (cache o server): è il modo per provare
+// il caso cattivo, la prima apertura senza rete.
+
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+const mai = () => new Promise(() => {})
+
+// Gli ascolti aperti, per percorso, e la licenza della build di questa
+// prova (null = una build della regia, che non ne ha una).
+const st = vi.hoisted(() => ({ ascolti: [], build: { licenza: null } }))
+
+vi.mock('../../src/lib/firebaseClient.js', () => ({
+  db: {},
+  auth: { currentUser: { uid: 'u1' } },
+  functions: {},
+  storage: {},
+}))
+
+// La build si sceglie per prova: la Tana ha la sua licenza, un locale della
+// regia no. `licenzaDi` è quella vera, con la build di questa prova.
+vi.mock('../../src/lib/venue.js', async (originale) => {
+  const vero = await originale()
+  return {
+    ...vero,
+    get LICENZA_DELLA_BUILD() {
+      return st.build.licenza
+    },
+    licenzaDi: (stato) => stato?.licenza ?? st.build.licenza,
+  }
+})
+
+vi.mock('firebase/firestore', () => ({
+  collection: () => ({}),
+  doc: (_db, col, id) => ({ path: `${col}/${id}` }),
+  getDoc: vi.fn(() => mai()),
+  getDocFromCache: vi.fn(() => mai()),
+  getDocs: vi.fn(async () => ({ docs: [] })),
+  getDocsFromCache: vi.fn(async () => ({ docs: [] })),
+  addDoc: vi.fn(() => mai()),
+  setDoc: vi.fn(() => mai()),
+  updateDoc: vi.fn(() => mai()),
+  deleteDoc: vi.fn(() => mai()),
+  query: () => ({}),
+  where: () => ({}),
+  orderBy: () => ({}),
+  limit: () => ({}),
+  // Le due forme della porta: (ref, aggiornamento, errore) e
+  // (ref, { includeMetadataChanges }, aggiornamento, errore).
+  onSnapshot: (ref, ...resto) => {
+    const opzioni = typeof resto[0] === 'object' ? resto.shift() : {}
+    const ascolto = { path: ref.path, opzioni, prossimo: resto[0], chiuso: false }
+    st.ascolti.push(ascolto)
+    return () => {
+      ascolto.chiuso = true
+    }
+  },
+  serverTimestamp: () => null,
+  increment: (n) => n,
+  writeBatch: () => ({ update: vi.fn(), set: vi.fn(), commit: () => mai() }),
+  Timestamp: class Timestamp {
+    static fromDate(d) {
+      return d
+    }
+    static fromMillis(m) {
+      return m
+    }
+  },
+}))
+
+// Ricaricati a ogni prova: l'ultima licenza letta sta in memoria nel modulo,
+// e ogni prova è un dispositivo appena aperto.
+let api, installazioneBloccata, moduloIncluso, STATI_LICENZA, pianoFree, impostazioniRicordate
+const carica = async () => {
+  vi.resetModules()
+  api = await import('../../src/lib/api.js')
+  ;({ installazioneBloccata, moduloIncluso, STATI_LICENZA } = await import('../../src/lib/licenza.js'))
+  ;({ pianoFree } = await import('../../src/lib/limiti.js'))
+  ;({ impostazioniRicordate } = await import('../../src/lib/impostazioniLocali.js'))
+}
+
+// Una risposta di Firestore: il documento (o null se non c'è) e da dove viene.
+const risposta = (dati, { daCache = false } = {}) => ({
+  exists: () => dati != null,
+  data: () => dati ?? undefined,
+  metadata: { fromCache: daCache },
+})
+const rispondi = (path, dati, opz) => {
+  for (const a of st.ascolti) if (a.path === path && !a.chiuso) a.prossimo(risposta(dati, opz))
+}
+
+// Quello che un bartender ha scritto in settings/bar dalla console.
+const BAR_MANOMESSO = {
+  workflow_enabled: true,
+  licenza: { piano: 'pro', limiti: null, moduli: { conta: true, fatture: true, sumup: true }, stato: 'attiva' },
+}
+const FREE = { piano: 'free', stato: 'attiva', limiti: { prodotti_max: 10 }, moduli: { sumup: false } }
+const TANA = { moduli: { conta: true, scadenzario: true } }
+
+let visti
+const ascolta = () => api.subscribeSettings((s) => visti.push(s))
+const ultimo = () => visti.at(-1)
+
+beforeEach(async () => {
+  st.ascolti.length = 0
+  st.build.licenza = null
+  visti = []
+  localStorage.clear()
+  await carica()
+})
+
+describe('un locale della regia (la build non ha una licenza)', () => {
+  it('vale il documento della regia, e quella scritta in settings/bar si butta', () => {
+    ascolta()
+    rispondi('settings/bar', BAR_MANOMESSO)
+    rispondi('licenza/attuale', FREE)
+    expect(ultimo().licenza).toEqual(FREE)
+    expect(pianoFree(ultimo())).toBe(true)
+    expect(moduloIncluso(ultimo(), 'fatture')).toBe(false)
+    // Il resto delle impostazioni arriva com'era.
+    expect(ultimo().workflow_enabled).toBe(true)
+  })
+
+  it('la licenza si ascolta anche quando cambia solo la provenienza', () => {
+    ascolta()
+    const licenza = st.ascolti.find((a) => a.path === 'licenza/attuale')
+    expect(licenza.opzioni).toEqual({ includeMetadataChanges: true })
+  })
+
+  it('documento assente dalla cache, prima apertura senza rete: l’app NON si ferma', () => {
+    ascolta()
+    rispondi('settings/bar', BAR_MANOMESSO)
+    rispondi('licenza/attuale', null, { daCache: true })
+    expect(installazioneBloccata(ultimo())).toBe(false)
+    // E nessuna licenza inventata, nemmeno quella di settings/bar: niente
+    // moduli finché non si sa.
+    expect(ultimo().licenza).toBeUndefined()
+    expect(moduloIncluso(ultimo(), 'conta')).toBe(false)
+  })
+
+  it('il server conferma che non c’è: «non attivata»; la regia lo scrive: si riparte', () => {
+    ascolta()
+    rispondi('settings/bar', BAR_MANOMESSO)
+    rispondi('licenza/attuale', null, { daCache: true })
+    rispondi('licenza/attuale', null, { daCache: false })
+    expect(ultimo().licenza).toEqual({ stato: STATI_LICENZA.NON_ATTIVATA })
+    expect(installazioneBloccata(ultimo())).toBe(true)
+    // La licenza manomessa in settings/bar non lo sblocca.
+    expect(moduloIncluso(ultimo(), 'conta')).toBe(false)
+    rispondi('licenza/attuale', FREE)
+    expect(installazioneBloccata(ultimo())).toBe(false)
+    expect(ultimo().licenza).toEqual(FREE)
+  })
+
+  it('un cambio della sola provenienza, a licenza uguale, non ridisegna', () => {
+    ascolta()
+    rispondi('settings/bar', { workflow_enabled: false })
+    rispondi('licenza/attuale', FREE, { daCache: true })
+    const quanti = visti.length
+    rispondi('licenza/attuale', FREE, { daCache: false })
+    expect(visti.length).toBe(quanti)
+  })
+
+  it('si risponde nell’istante della risposta della cache: nessuna attesa', () => {
+    ascolta()
+    rispondi('licenza/attuale', FREE, { daCache: true })
+    // Senza impostazioni non si risponde ancora: chi chiama le aspetta.
+    expect(visti).toHaveLength(0)
+    rispondi('settings/bar', { workflow_enabled: false }, { daCache: true })
+    expect(visti).toHaveLength(1)
+    expect(ultimo().licenza).toEqual(FREE)
+  })
+
+  it('smettere chiude tutti e due gli ascolti', () => {
+    const smetti = ascolta()
+    smetti()
+    expect(st.ascolti.every((a) => a.chiuso)).toBe(true)
+  })
+})
+
+describe('la Tana (la build ha la sua licenza)', () => {
+  beforeEach(() => {
+    st.build.licenza = TANA
+  })
+
+  it('senza documento vale la licenza della build, anche confermato dal server', () => {
+    ascolta()
+    rispondi('settings/bar', BAR_MANOMESSO)
+    rispondi('licenza/attuale', null, { daCache: false })
+    expect(ultimo().licenza).toBe(TANA)
+    expect(installazioneBloccata(ultimo())).toBe(false)
+    // Quello che si è scritto in settings/bar non conta: fatture resta fuori.
+    expect(moduloIncluso(ultimo(), 'fatture')).toBe(false)
+    expect(moduloIncluso(ultimo(), 'conta')).toBe(true)
+  })
+
+  it('e se un giorno la regia le scrive il documento, comanda quello', () => {
+    ascolta()
+    rispondi('settings/bar', {})
+    rispondi('licenza/attuale', FREE)
+    expect(ultimo().licenza).toEqual(FREE)
+  })
+})
+
+describe('l’ultima licenza nota, su questo dispositivo', () => {
+  it('si ricorda a parte, e si usa finché il documento non risponde', async () => {
+    ascolta()
+    rispondi('settings/bar', {})
+    rispondi('licenza/attuale', FREE)
+    expect(impostazioniRicordate({}).licenza).toEqual(FREE)
+
+    // Riapertura senza rete, documento non ancora in cache: resta il Free.
+    await carica()
+    st.ascolti.length = 0
+    visti = []
+    ascolta()
+    rispondi('settings/bar', {}, { daCache: true })
+    expect(ultimo().licenza).toEqual(FREE)
+  })
+
+  it('la licenza vecchia dentro le impostazioni ricordate non si rilegge', () => {
+    // Un dispositivo aggiornato dalla 1.10.x ha in memoria le impostazioni
+    // di settings/bar, licenza manomessa compresa.
+    localStorage.setItem('drink:impostazioni', JSON.stringify(BAR_MANOMESSO))
+    expect(impostazioniRicordate({}).licenza).toBeUndefined()
+    expect(impostazioniRicordate({}).workflow_enabled).toBe(true)
+  })
+})

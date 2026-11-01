@@ -17,6 +17,20 @@
   volta sola e restano nelle notifiche.
 - **Nella Tana non cambia niente**: gli aggiornamenti arrivano come prima.
 
+### Privacy e sicurezza
+
+- **La licenza del locale non si cambia più dall'app.** Piano, moduli,
+  limiti e sospensione stavano nelle impostazioni del locale, che ogni
+  bartender può scrivere. Ora stanno in un documento a parte che dall'app
+  non scrive nessuno: lo scrive la regia.
+- **Senza licenza l'app non si apre.** Un'installazione che non ha una
+  licenza, né della regia né scritta nella sua build, mostra
+  «Installazione non attivata» al posto dell'app, coi dati che restano.
+  Lo dice solo quando il server lo ha confermato: aperta senza rete, l'app
+  lavora con l'ultima licenza che conosce.
+- **Nella Tana non cambia niente**: la sua licenza è scritta nella build,
+  con gli stessi moduli di prima.
+
 ### Per chi sviluppa
 
 - **Il backend del locale si può scrivere in un file.** La regia può
@@ -34,6 +48,11 @@
   fare cosa per ruolo, girano sull'emulatore e gireranno uguali sul
   backend dell'installazione nel locale.
 - **Nella Tana non cambia niente.**
+- **La licenza nella build.** Ogni cliente può avere un
+  `clienti/<slug>/licenza.json`, con la stessa forma del documento della
+  regia: vale dove quel documento non c'è. Gli strumenti di sviluppo la
+  licenza la mostrano e non la scrivono più: si cambia con
+  `scripts/licenza-moduli.js`.
 
 ## 1.10.2-beta — 31 ottobre 2026, sul test
 
