@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.8-beta — in lavorazione
+## 1.10.9-beta — in lavorazione
+
+## 1.10.8-beta — 02/11/2026 (test)
 
 ### Per chi gestisce l'installazione
 
