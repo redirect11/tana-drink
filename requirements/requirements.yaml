@@ -6207,6 +6207,29 @@ requirements:
       - tests/component/PropostaAggiornamento.test.jsx
       - tests/regole/aggiornamenti.test.js
 
+  - id: REQ-FLOTTA-030
+    title: "Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google"
+    area: "l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, docs/passaggio-dalla-regia.md"
+    description: >
+      L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...]
+      risulta loggato sia backoffice sia istanza per quell'utente», «mi
+      serve qualcosa che sia sicuro e robusto», per tutte le istanze. La
+      regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito
+      dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra
+      con signInWithCustomToken. «Area clienti», per il titolare admin,
+      manda alla regia (passaggioVersoRegia) un ID token appena rinnovato
+      e apre l'url della risposta. La regia scrive a ogni deploy, solo
+      dove sono vuoti, i dati del titolare in settings/bar, compresi
+      quattro campi nuovi da mostrare e usare: venue_phone,
+      venue_vat_number, venue_tax_code, venue_legal_address. Il banco
+      entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md;
+      la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+    status: todo
+    generate_issue: false
+    labels: [flotta, regia, sicurezza]
+    priority: P2
+    test_cases: []
+
   - id: REQ-FLOTTA-026
     title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"
     area: "src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md"

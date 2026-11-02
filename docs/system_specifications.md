@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 249 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**301 voci** in tutto. **266** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**302 voci** in tutto. **266** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 8 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 6 | — |  |
+| [FLOTTA](#flotta) | 6 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3917,6 +3917,14 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
+
+### FLOTTA
+
+#### REQ-FLOTTA-030 — Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google
+
+L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+
+**Dove**: `l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, docs/passaggio-dalla-regia.md`
 
 ## Difetti noti
 
