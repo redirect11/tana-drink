@@ -150,8 +150,8 @@ export default function DevTools() {
           console. Ora la licenza sta in `licenza/attuale` e le regole non
           la fanno scrivere a nessuno dall'app: per provare un modulo si
           scrive quel documento con scripts/licenza-moduli.js, o dalla
-          console dell'emulatore. Senza documento vale quella della build
-          (clienti/<slug>/licenza.json).
+          console dell'emulatore. Senza documento l'installazione non è
+          attivata (REQ-LIC-009).
           L'interruttore d'uso, «accesa», resta: è del locale.
           SPEGNERE NASCONDE, NON CANCELLA: conte e fatture già scritte
           restano dove sono e tornano quando il modulo si riaccende. */}

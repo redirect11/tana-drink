@@ -21,6 +21,8 @@
 
 import { readFileSync } from 'node:fs'
 import { initializeTestEnvironment } from '@firebase/rules-unit-testing'
+import { doc, setDoc } from 'firebase/firestore'
+import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
 const REGOLE = readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8')
 
@@ -37,6 +39,25 @@ export async function avviaAmbiente(nomeProgetto) {
     projectId: `regole-${nomeProgetto}`,
     firestore: { host: HOST, port: PORT, rules: REGOLE },
   })
+}
+
+// UNA LICENZA VALIDA, con tutti i moduli: da REQ-LIC-009 senza licenza
+// non si scrive niente, quindi le prove che parlano d'altro (ruoli, campi,
+// contatori) partono da un locale in regola, come sono tutti quelli veri —
+// la Tana compresa, che dal 02/11/2026 ha il suo `licenza/attuale`. Le
+// prove della licenza stessa stanno in licenza.test.js.
+export const LICENZA_VALIDA = Object.freeze({
+  piano: 'completo',
+  stato: 'attiva',
+  moduli: Object.fromEntries(Object.keys(MODULI_PREMIUM).map((id) => [id, true])),
+})
+
+// Database vuoto, con la licenza: quello da cui parte ogni prova.
+export async function azzera(env, licenza = LICENZA_VALIDA) {
+  await env.clearFirestore()
+  if (licenza) {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'licenza/attuale'), licenza))
+  }
 }
 
 // I quattro modi in cui qualcuno bussa a Firestore. Il ruolo sta nel custom

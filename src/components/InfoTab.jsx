@@ -88,7 +88,7 @@ export default function InfoTab({ settings = null, role = null }) {
 // che il box mostra una volta sola: la proposta, anche saltata, col suo
 // «Aggiorna» per chi cambia idea; il perché, se il piano non comprende gli
 // aggiornamenti; l'ultimo avviso sulle condizioni. Senza la voce nella
-// licenza (la Tana, che ha la licenza della build) la scheda non c'è.
+// licenza (la Tana, la cui licenza non ne parla) la scheda non c'è.
 function Aggiornamenti({ settings, role }) {
   const { url, fatta, scegli, inCorso, erroreDi } = useSceltaAggiornamento(settings)
   const proposta = propostaAperta(settings, { versione: VERSIONE })

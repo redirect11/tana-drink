@@ -27,12 +27,10 @@ import {
   statoLicenza,
   STATI_LICENZA,
 } from '../../src/lib/licenza.js'
-import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
+import { LICENZA_TANA } from '../helpers/licenza.js'
 
 // Una licenza con lo scadenzario e senza la conta: le prove partono da qui,
-// scritta, perché senza licenza nelle impostazioni varrebbe quella della
-// build (la Tana), e le prove direbbero com'è messa la Tana invece di
-// cosa fa la regola.
+// scritta, come la scrive la regia in `licenza/attuale`.
 const LIC = { licenza: { moduli: { scadenzario: true } } }
 
 describe('una licenza con lo scadenzario e senza la conta', () => {
@@ -79,15 +77,17 @@ describe('incluso e acceso, le quattro combinazioni', () => {
 })
 
 describe('i casi storti: nel dubbio, non lavora', () => {
-  it('impostazioni non ancora arrivate: vale la licenza della build, senza lampi', () => {
-    // Il primo disegno arriva prima del server. Una sezione che compare per
-    // mezzo secondo e poi sparisce è peggio di una che non c'è: senza
-    // licenza nelle impostazioni vale quella della build (BUG-125), che è
-    // quella che arriverà, e per la Tana lo stato è giusto da subito.
+  it('impostazioni non ancora arrivate: nessun modulo, ma niente si ferma', () => {
+    // Fino a REQ-LIC-009 qui valeva la licenza della build. Ora una licenza
+    // che non si sa ancora non dà moduli (il primo disegno, sui dispositivi
+    // già usati, ha l'ultima licenza ricordata), e non ferma l'app: a
+    // fermarla è solo una licenza che lo dice.
     for (const id of Object.keys(MODULI_PREMIUM)) {
-      expect(moduloIncluso(null, id), id).toBe(LICENZA_DELLA_BUILD.moduli[id] === true)
-      expect(moduloIncluso(undefined, id), id).toBe(LICENZA_DELLA_BUILD.moduli[id] === true)
+      expect(moduloIncluso(null, id), id).toBe(false)
+      expect(moduloIncluso(undefined, id), id).toBe(false)
     }
+    expect(installazioneBloccata(null)).toBe(false)
+    expect(installazioneBloccata({})).toBe(false)
   })
 
   it('la FORMA VECCHIA delle impostazioni non cambia niente', () => {
@@ -170,39 +170,28 @@ describe('la licenza comanda per intero', () => {
   })
 })
 
-// QUALE LICENZA VALE (BUG-125). Una regola sola, uguale per ogni build:
-// il documento della regia, se c'è; se no quella della build; se no
-// l'installazione non è attivata — ma solo quando lo dice il server.
+// QUALE LICENZA VALE (BUG-125, REQ-LIC-009). Il documento `licenza/attuale`,
+// se c'è; se no l'installazione non è attivata — ma solo quando lo dice il
+// server. Fino al 02/11/2026 in mezzo c'era la licenza della build, per la
+// Tana: ora anche la Tana ha il suo documento.
 describe('quale licenza vale', () => {
   const REGIA = { piano: 'base', stato: 'attiva', moduli: { magazzino: true } }
-  const BUILD = { moduli: { scadenzario: true } }
 
-  it('il documento della regia vince sulla licenza della build', () => {
-    expect(licenzaEffettiva({ documento: REGIA, certo: true }, BUILD)).toBe(REGIA)
-    // Anche se viene dalla cache: è la licenza che il dispositivo conosce.
-    expect(licenzaEffettiva({ documento: REGIA, certo: false }, BUILD)).toBe(REGIA)
+  it('il documento, anche se viene dalla cache: è la licenza che il dispositivo conosce', () => {
+    expect(licenzaEffettiva({ documento: REGIA, certo: true })).toBe(REGIA)
+    expect(licenzaEffettiva({ documento: REGIA, certo: false })).toBe(REGIA)
   })
 
-  it('senza documento vale la build, anche prima che il server risponda', () => {
-    expect(licenzaEffettiva({ documento: null, certo: true }, BUILD)).toBe(BUILD)
-    expect(licenzaEffettiva({ documento: null, certo: false }, BUILD)).toBe(BUILD)
-    expect(licenzaEffettiva(null, BUILD)).toBe(BUILD)
-  })
-
-  it('senza nessuna delle due, «non attivata» solo se il server ha confermato', () => {
+  it('senza documento, «non attivata» solo se il server ha confermato', () => {
     // Alla prima apertura senza rete la cache non sa niente: «non lo so»
     // non è «non c'è», e un locale in regola non si ferma.
-    expect(licenzaEffettiva({ documento: null, certo: false }, null)).toBeNull()
-    expect(licenzaEffettiva(null, null)).toBeNull()
-    const nessuna = licenzaEffettiva({ documento: null, certo: true }, null)
+    expect(licenzaEffettiva({ documento: null, certo: false })).toBeNull()
+    expect(licenzaEffettiva(null)).toBeNull()
+    const nessuna = licenzaEffettiva({ documento: null, certo: true })
     expect(nessuna).toEqual({ stato: STATI_LICENZA.NON_ATTIVATA })
     expect(statoLicenza({ licenza: nessuna })).toBe(STATI_LICENZA.NON_ATTIVATA)
     expect(installazioneBloccata({ licenza: nessuna })).toBe(true)
     for (const id of Object.keys(MODULI_PREMIUM)) expect(moduloIncluso({ licenza: nessuna }, id), id).toBe(false)
-  })
-
-  it('di suo legge la licenza della build per cui è compilata (nei test, la Tana)', () => {
-    expect(licenzaEffettiva({ documento: null, certo: true })).toBe(LICENZA_DELLA_BUILD)
   })
 })
 
@@ -265,20 +254,21 @@ describe('filtrare un elenco di voci', () => {
 // I MODULI DEL PRODOTTO (REQ-LIC-002). Decisione dell'utente, 22/10/2026:
 // «di base quello che può fare è creare gli item di menu e la gestione
 // delle ordinazioni»; il resto è premium, con gli id del listino della
-// regia. La Tana tiene quello che aveva, con la licenza della sua build.
+// regia. La Tana tiene quello che aveva, con la sua licenza.
 describe('i moduli del prodotto', () => {
-  // LA LICENZA DELLA TANA (clienti/tana/licenza.json, BUG-125). Prima la
-  // Tana non aveva una licenza della regia: i sette moduli della 1.10.0
-  // venivano dalla colonna `incluso`, inventario e scadenzario da
-  // settings/bar.licenza. Ora tutto sta nella sua build, e questa prova
-  // dice che non ha perso niente.
-  it('la Tana, con la licenza della sua build, ha quello che aveva', () => {
+  // LA LICENZA DELLA TANA. Prima i sette moduli della 1.10.0 venivano
+  // dalla colonna `incluso`, inventario e scadenzario da
+  // settings/bar.licenza; con BUG-125 da un file nella build; da REQ-LIC-009
+  // dal suo `licenza/attuale`, con gli stessi moduli (tests/helpers).
+  it('la Tana, con la sua licenza, ha quello che aveva', () => {
+    const tana = { licenza: LICENZA_TANA }
     for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup', 'conta', 'scadenzario']) {
-      expect(moduloAttivo({}, id), id).toBe(true)
+      expect(moduloAttivo(tana, id), id).toBe(true)
     }
-    expect(menuDigitaleAttivo({})).toBe(true)
-    expect(ordinazioneClientiAttiva({})).toBe(true)
-    expect(accountClientiAttivi({})).toBe(true)
+    expect(moduloAttivo(tana, 'fatture')).toBe(false)
+    expect(menuDigitaleAttivo(tana)).toBe(true)
+    expect(ordinazioneClientiAttiva(tana)).toBe(true)
+    expect(accountClientiAttivi(tana)).toBe(true)
   })
 
   it('con la licenza del piano base, magazzino, statistiche e staff spariscono dal gestionale', () => {

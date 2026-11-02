@@ -62,10 +62,10 @@ solo di farle scendere: oggi restano in quattro file, tutte giustificate.
 | **Pagamenti con lettore SumUp** | il conto va al lettore e torna pagato |
 
 Gli id dei moduli sono gli stessi nel listino del sito e nell'app: quello
-che si compra è quello che la licenza accende. La Tana, che una regia
-dietro non ce l'ha, ha la sua licenza scritta nella build
-(`clienti/tana/licenza.json`). Un'installazione senza nessuna delle due
-mostra «Installazione non attivata». Prezzi e taglio dei moduli sono da confermare.
+che si compra è quello che la licenza accende. Ogni installazione ha la sua
+in `licenza/attuale`, la Tana compresa (REQ-LIC-009): senza, l'app mostra
+«Installazione non attivata» e le regole non fanno scrivere niente; scaduta,
+si ferma o lavora col Free, secondo `alla_scadenza`. Prezzi e taglio dei moduli sono da confermare.
 
 ## 4. Come funziona per il titolare di un locale
 
