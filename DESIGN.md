@@ -189,6 +189,15 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
   descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
   tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
   nell'aria-label.
+- **I moduli nel marketplace** (REQ-LIC-012): la stessa scheda, ma al
+  posto della vetrina del menù una fascia alta 96px con l'icona del modulo
+  e lo stato in una pillola. Lo stato si legge prima dal colore: incluso
+  su una velatura di `--ok`, in prova di `--accent-2`, non incluso
+  neutro — quello che manca non deve sembrare un errore. Sotto, il prezzo
+  «15 € al mese + IVA»; a sinistra «Prova gratis N giorni» (o «Disdici»),
+  a destra «Aggiungi». La disdetta si conferma sulla scheda stessa. Un
+  esito andato bene è un riquadro velato di `--ok`; il banner giallo con
+  la scritta rossa resta per gli errori.
 - **«Giornale»** (REQ-MENU-024): una STRUTTURA sua, non una veste sopra le
   card (MenuGiornale.jsx). Testata col nome del locale in `Playfair`
   800 fra filetti doppi e la riga «Edizione della sera» con la data;

@@ -33,7 +33,7 @@
 import { THEME_PRESETS, THEME_FIELDS, DEFAULT_THEME } from './themes.js'
 import { STILI_MENU, stileProvabile, patchInstalla as installaStile } from './stileMenu.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
-import { PROGETTI_REGIA } from './aggiornamenti.js'
+import { urlFunzioneRegia, leggiDallaRegia } from './funzioniRegia.js'
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,40}$/
 const COLORE = /^#[0-9a-f]{6}$/i
@@ -138,11 +138,8 @@ export const CATALOGO_INIZIALE = [
 // (VITE_REGIA_PROGETTO, solo i due progetti della regia, come la
 // presentazione), e si ricorda: senza rete si vede l'ultimo letto.
 const CHIAVE_CATALOGO = 'drink:catalogo-temi'
-const REGIONE = 'europe-west1'
 
-export function urlCatalogo(progetto = import.meta.env?.VITE_REGIA_PROGETTO) {
-  return PROGETTI_REGIA.includes(progetto) ? `https://${REGIONE}-${progetto}.cloudfunctions.net/catalogoTemi` : null
-}
+export const urlCatalogo = (progetto) => urlFunzioneRegia('catalogoTemi', progetto)
 
 export const catalogoRicordato = () => leggi(CHIAVE_CATALOGO, (s) => leggiCatalogo(JSON.parse(s)), [])
 export const ricordaCatalogo = (temi) => scrivi(CHIAVE_CATALOGO, temi)
@@ -213,23 +210,13 @@ export function patchDisinstallaTema(settings, id) {
 
 // Il catalogo della regia, letto adesso: i temi, o null se non si è letto
 // (senza regia nella build, senza rete, una risposta che non è un
-// catalogo). Venti secondi al massimo; si ricorda quello che arriva.
-const ATTESA_MS = 20000
-export async function scaricaCatalogo(url = urlCatalogo(), prendi = globalThis.fetch) {
-  if (!url || typeof prendi !== 'function') return null
-  const ferma = new AbortController()
-  const timer = setTimeout(() => ferma.abort(), ATTESA_MS)
-  try {
-    const r = await prendi(url, { signal: ferma.signal })
-    if (!r.ok) return null
-    const temi = leggiCatalogo(await r.json())
-    ricordaCatalogo(temi)
-    return temi
-  } catch {
-    return null
-  } finally {
-    clearTimeout(timer)
-  }
+// catalogo). Si ricorda quello che arriva.
+export async function scaricaCatalogo(url = urlCatalogo(), prendi) {
+  const corpo = await leggiDallaRegia(url, prendi)
+  if (corpo === null) return null
+  const temi = leggiCatalogo(corpo)
+  ricordaCatalogo(temi)
+  return temi
 }
 
 // LA PROVA SUL MENÙ: `?vista=cliente&tema=…` (da Aspetto → Marketplace)

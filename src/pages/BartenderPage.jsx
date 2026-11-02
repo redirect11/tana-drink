@@ -386,7 +386,7 @@ export default function BartenderPage() {
         {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
             solo perché i vecchi collegamenti (?tab=vip) funzionino. */}
         {tabEffettivo === 'vip' && <VipTab />}
-        {tabEffettivo === 'marketplace' && <MarketplaceTab />}
+        {tabEffettivo === 'marketplace' && <MarketplaceTab role={role} />}
         {tabEffettivo === 'impostazioni' && <SettingsTab role={role} />}
         {/* La stampante sta nelle Impostazioni: qui resta solo perché i
             vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
