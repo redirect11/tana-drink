@@ -3903,6 +3903,12 @@ requirements:
       degli special (toccandone uno si apre la scheda) e il QR del menu'
       Special da scaricare e stampare sul menu' che si porta al tavolo. Il
       QR dei tavoli resta quello di sempre.
+      IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini
+      stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il
+      disegno stava nella casella della foto, 64 px (52 nello stile
+      «Notte»), ritagliato per riempire il quadrato: ora ha la classe
+      `disegno`, 96 px (88 nello stile «Notte»), intero e senza riquadro.
+      La foto vera resta com'era.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente]

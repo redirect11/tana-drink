@@ -2,6 +2,12 @@
 
 ## 1.10.4-beta — in lavorazione
 
+### Nel menù
+
+- **I disegni dei drink nell'elenco sono più grandi e interi.** Prima
+  stavano nella piccola casella delle foto, ritagliati; ora si vedono per
+  intero, una volta e mezzo più grandi. Le foto restano come prima.
+
 ### Privacy e sicurezza
 
 - **Senza una licenza valida l'app non lavora.** Senza licenza, con la
@@ -22,8 +28,8 @@
   piano, stato, validità, chi gestisce la licenza, quanti moduli premium
   comprende e i limiti del piano. Si consulta soltanto: le modifiche
   passano dalla regia, con il tasto «Gestisci la licenza» dove la
-  licenza lo prevede. Alla Tana compare la licenza scritta
-  nell'installazione, con i suoi moduli.
+  licenza lo prevede. Alla Tana compare la sua licenza, con i suoi
+  moduli.
 - **Il gruppo «Funzioni premium» di Impostazioni si chiama «Licenza»**:
   contiene il riepilogo della licenza e, sotto, le funzioni premium come
   prima.

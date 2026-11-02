@@ -617,3 +617,21 @@ describe('lo stile «Notte»', () => {
   })
 })
 
+
+// IL DISEGNO DEL DRINK È PIÙ GRANDE DELLA FOTO (l'utente, 02/11/2026: «le
+// immagini stilizzate dei drink dovrebbero essere più grandi»). Nella
+// casella da 64 px della foto il disegno al tratto, ritagliato, si leggeva
+// appena: ha una classe sua, che lo fa più grande e intero. La foto vera
+// resta com'era.
+describe('il disegno del drink nell’elenco', () => {
+  it('il disegno ha la casella grande, la foto quella di sempre', async () => {
+    mockDrinks = [
+      { ...DRINKS[0], illustrazione: { bicchiere: 'basso', colore: 'verde', decorazione: 'menta' } },
+      { ...DRINKS[1], image_url: 'https://foto.example/negroni.jpg' },
+    ]
+    mostra()
+    expect(await screen.findByAltText('Mojito')).toHaveClass('drink-thumb', 'disegno')
+    expect(screen.getByAltText('Negroni')).toHaveClass('drink-thumb')
+    expect(screen.getByAltText('Negroni')).not.toHaveClass('disegno')
+  })
+})

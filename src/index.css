@@ -1061,6 +1061,18 @@ a.btn.block {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Il disegno del drink (illustrazioneDrink, quando non c'è una foto): più
+   grande della foto e intero, senza riquadro — è un disegno al tratto, e
+   nella casella da 64 px, ritagliato, non si leggeva. */
+.drink-thumb.disegno {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
 /* Drink senza foto: logo come segnaposto, leggermente attenuato. */
 .drink-thumb.placeholder {
   object-fit: contain;
@@ -9915,6 +9927,12 @@ body.pagina-piena .inv-scheda {
   border-radius: 4px;
   border: 0;
   margin-right: 4px;
+}
+.stile-notte .menu-item .drink-thumb.disegno {
+  width: 88px;
+  height: 88px;
+  border-radius: 0;
+  margin-right: 10px;
 }
 .stile-notte .menu-item .row > .grow {
   display: grid;
