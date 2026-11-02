@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 1 novembre 2026.
+> Generato il 2 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 244 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**296 voci** in tutto. **261** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**297 voci** in tutto. **261** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 5 | 3 |  |
+| [LIC](#lic) | 5 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 5 | — |  |
 
@@ -3346,7 +3346,7 @@ QUANTO COSTA: una lettura della licenza per richiesta, e solo dove serve; nello 
 
 DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate.
 
-**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
+**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`
 
 ### VENUE
 
@@ -3847,6 +3847,12 @@ LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda l
 DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
 
 **Dove**: `src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js`
+
+#### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
+
+L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
+
+**Dove**: `firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md`
 
 ## Difetti noti
 

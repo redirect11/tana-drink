@@ -5623,6 +5623,33 @@ requirements:
     test_cases:
       - tests/regole/licenza.test.js
       - tests/unit/regoleLicenza.test.js
+
+  - id: REQ-LIC-009
+    title: "Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati"
+    area: "firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md"
+    description: >
+      L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe
+      partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già
+      così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe
+      diventare versione free ma senza far perdere i dati al cliente, ma
+      dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati
+      entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia
+      «senza documento non si limita niente» di REQ-LIC-008, per tutti i
+      locali: senza licenza/attuale, con stato sospesa o chiusa, o con
+      valida_fino passata e alla_scadenza 'ferma', le regole negano le
+      scritture (le letture restano, fino alla cancellazione); con
+      alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso,
+      anche senza rete. La licenza porta cancellazione { il, richiedente }:
+      l'app la mostra sopra a tutto, anche da ferma. La Tana riceve
+      licenza/attuale una volta, col via libera dell'utente, prima delle
+      regole nuove; il file di licenza nella build si toglie. Per intero in
+      docs/licenza-valida.md. La regia è pronta (drink-regia
+      REQ-FLOTTA-025, PR #38).
+    status: todo
+    generate_issue: false
+    labels: [licenza, sicurezza, prodotto, privacy]
+    priority: P1
+    test_cases: []
       - tests/unit/scaricoSenzaMagazzino.test.js
       - tests/unit/backup.test.js
       - tests/unit/sezioni.test.js
