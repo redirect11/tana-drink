@@ -118,6 +118,8 @@ const withReader = { ...CON_LICENZA, payments_reader_enabled: true, sumup_reader
 // LA FATTURA AL CLIENTE È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per questa
 // installazione non è inclusa: il tasto c'è solo dove la licenza la dà.
 const conFatture = { ...noReader, licenza: { moduli: { fatture: true } } }
+// E senza: la Tana le ha (piano Completo), un locale con un piano più piccolo no.
+const senzaFatture = { ...noReader, licenza: { moduli: { ...noReader.licenza.moduli, fatture: false } } }
 
 function mount(order, settings = noReader) {
   return render(
@@ -1706,7 +1708,7 @@ describe('le tre colonne del pagamento si trascinano', () => {
 // l'UNICA porta della modale, quindi toglierlo chiude tutto il flusso.
 describe('il tasto «Invia fattura» è una funzione premium', () => {
   it('col modulo non incluso il tasto non c’è, e gli altri due restano', () => {
-    mount(baseOrder())
+    mount(baseOrder(), senzaFatture)
     expect(screen.queryByRole('button', { name: /Invia fattura/ })).toBeNull()
     // Gli altri due della riga non si toccano.
     expect(screen.getByRole('button', { name: /Codice Lotteria/ })).toBeInTheDocument()
@@ -1726,7 +1728,7 @@ describe('il tasto «Invia fattura» è una funzione premium', () => {
     // sull'ordine, e torna a vedersi appena il modulo si riaccende.
     const user = userEvent.setup()
     const conto = { ...baseOrder(), invoice_number: 7 }
-    const spento = mount(conto)
+    const spento = mount(conto, senzaFatture)
     expect(screen.queryByRole('button', { name: /Invia fattura/ })).toBeNull()
     spento.unmount()
 

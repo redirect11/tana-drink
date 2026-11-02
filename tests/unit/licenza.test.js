@@ -265,7 +265,7 @@ describe('i moduli del prodotto', () => {
     for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup', 'conta', 'scadenzario']) {
       expect(moduloAttivo(tana, id), id).toBe(true)
     }
-    expect(moduloAttivo(tana, 'fatture')).toBe(false)
+    expect(moduloAttivo(tana, 'fatture')).toBe(true)
     expect(menuDigitaleAttivo(tana)).toBe(true)
     expect(ordinazioneClientiAttiva(tana)).toBe(true)
     expect(accountClientiAttivi(tana)).toBe(true)

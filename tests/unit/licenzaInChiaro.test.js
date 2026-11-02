@@ -29,7 +29,7 @@ describe('la licenza della Tana', () => {
     const r = riepilogoLicenza(TANA, OGGI)
     const attesi = Object.entries(LICENZA_TANA.moduli).filter(([, v]) => v).map(([id]) => id)
     expect(r.inclusi.map((m) => m.id).sort()).toEqual(attesi.sort())
-    expect(r.esclusi.map((m) => m.id)).toEqual(['fatture'])
+    expect(r.esclusi).toEqual([])
   })
 
   it('senza una licenza nota non c’è niente da riepilogare', () => {

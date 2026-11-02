@@ -5733,6 +5733,10 @@ requirements:
       (oggi ha i ruoli per regole e indici): senza, il passo fallisce e il
       deploy si ferma, che è il fallimento sicuro. Sul test il documento
       c'è già (scritto a mano il 02/11/2026).
+      LA TANA HA IL PIANO COMPLETO, fatture comprese (decisione
+      dell'utente, 02/11/2026): nel file tutti i moduli accesi, e sul test
+      il documento corretto a mano, perché il deploy non lo riscrive.
+      Quando la regia le scriverà la licenza, la calcolerà lei dal piano.
     status: implemented
     generate_issue: false
     labels: [licenza, sicurezza, prodotto, privacy]
