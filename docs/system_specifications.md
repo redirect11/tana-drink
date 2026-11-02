@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 249 | fatto e coperto dai test |
+| ✅ | 250 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**301 voci** in tutto. **266** descrivono il sistema com'è oggi e
+**302 voci** in tutto. **267** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 17 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 18 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -823,6 +823,12 @@ L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora
 GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo): su desktop reggono; sul telefono «Lavagna» e «Déco» spezzavano i nomi dei drink a metà parola («Negroni Sbagliat-o»), perché accanto al prezzo e al tasto la colonna del nome restava di pochi caratteri. Sotto i 520 px il prezzo va sotto il nome, e «Déco» stringe spaziatura e cornice. Il rombo di «Déco» sta accanto al titolo della categoria (sopra diventava un puntino).
 
 **Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
+
+#### REQ-MENU-023 — Il marketplace dei temi in Aspetto: un tema è una tavolozza più uno stile, si installa, si prova e si usa
+
+L'utente, 02/11/2026: «Dobbiamo fare una sezione marketplace per i temi in aspetto. È una pagina che carica tutti i temi disponibili. Serve un posto dove pubblicarne di nuovi e trovare un modo per pubblicarne»; «il tema quindi è composto da tavolozze e stile. Si possono vendere/uppare/scaricare/acquistare temi che miscelano tavolozze e stili. Per ora tutto gratis tra quelli che già abbiamo»; pubblica solo il fornitore, dalla regia; il tema è DESCRITTIVO (una ricetta: una base fra le tavolozze dell'app, qualche colore, uno stile che l'app sa disegnare), non codice, così non può rompere il menù e funziona senza rete. In Impostazioni → Aspetto: i temi del locale e quelli del catalogo — l'iniziale, composto da quello che c'era (Classico, Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta, Inchiostro; Notte solo con la licenza) più quello della regia, letto all'apertura della pagina (`catalogoTemi`, solo dai due progetti della regia) e ricordato sul dispositivo. Ogni scheda ha l'assaggio coi colori e lo stile veri, «Prova sul menù» (`?vista=cliente&tema=…`, solo per chi la apre: App mette i colori, MenuPage lo stile) e «Installa»; installato, il tema ha una copia nelle impostazioni (`temi_installati`) e «Usa» scrive `theme_client`, `stile_menu` (installando lo stile gratis) e `tema_menu`. I colori del gestionale non si toccano. I temi a pagamento non si mostrano finché non c'è «Compra» (REQ-LIC-011). Il contratto per la regia, e quello che deve costruire (catalogo, pagina per pubblicare, stessa validazione), in docs/marketplace-temi.md.
+
+**Dove**: `src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTemi.jsx, src/components/SettingsTab.jsx (riquadro in Aspetto), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTemi.test.jsx`, `tests/component/MenuPage.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

@@ -672,3 +672,16 @@ describe('gli stili gratis sul menù', () => {
     expect(container.querySelector('.stile-notte')).toBeNull()
   })
 })
+
+// IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora apre il
+// proprio menù con lo stile di un tema (i colori li mette App), e la riga
+// in alto dice quale.
+describe('un tema del marketplace in prova sul menù', () => {
+  it('porta il suo stile, e la riga in alto lo dice', async () => {
+    ruoloClaim = 'bartender'
+    const { container } = mostra('/menu?vista=cliente&tema=gazzetta')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-giornale')).not.toBeNull()
+    expect(screen.getByText(/Stai provando il tema «Gazzetta»/)).toBeInTheDocument()
+  })
+})
