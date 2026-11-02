@@ -1,6 +1,13 @@
 # Cosa è cambiato
 
-## 1.10.4-beta — in lavorazione
+## 1.10.5-beta — in lavorazione
+
+### Nel gestionale
+
+- **Alla Tana le fatture ai clienti sono incluse**: la sua licenza è
+  quella del piano Completo, con tutti i moduli.
+
+## 1.10.4-beta — 02/11/2026 (test)
 
 ### Per i locali aggiornati dalla regia
 

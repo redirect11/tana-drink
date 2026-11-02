@@ -20,7 +20,10 @@ describe('il file della licenza iniziale', () => {
   // Tutte le voci del contratto, anche quelle che valgono null (la regia,
   // 02/11/2026): attiva, ogni modulo nominato, senza limiti né scadenza,
   // ferma se un giorno scadesse, senza cancellazioni, con lo slug.
-  it('quello della Tana ha tutte le voci del contratto, e non ha le fatture', () => {
+  // La Tana ha il piano Completo, fatture comprese (decisione dell'utente,
+  // 02/11/2026): ogni modulo acceso. Quando la regia le scriverà la licenza,
+  // la calcolerà lei dal piano.
+  it('quello della Tana ha tutte le voci del contratto, e tutti i moduli', () => {
     const tana = JSON.parse(readFileSync('clienti/tana/licenza-iniziale.json', 'utf8'))
     expect(erroreLicenzaIniziale(tana, ID)).toBeNull()
     expect(Object.keys(tana).sort()).toEqual([...VOCI_DEL_CONTRATTO].sort())
@@ -34,7 +37,7 @@ describe('il file della licenza iniziale', () => {
       slug: 'tana',
       regia_url: null,
     })
-    expect(tana.moduli.fatture).toBe(false)
+    expect(Object.values(tana.moduli).every((v) => v === true)).toBe(true)
   })
 
   const BUONA = {
