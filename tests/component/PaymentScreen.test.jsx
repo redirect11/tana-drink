@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 vi.mock('../../src/lib/api.js', () => ({
   registerPayment: vi.fn(() => Promise.resolve({ closed: false })),
@@ -112,8 +113,8 @@ const conComandaDaServire = () =>
     ],
   })
 
-const noReader = { payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
-const withReader = { payments_reader_enabled: true, sumup_reader_id: 'reader1' }
+const noReader = { ...CON_LICENZA, payments_reader_enabled: false, sumup_reader_id: null, sale_vat: 10 }
+const withReader = { ...CON_LICENZA, payments_reader_enabled: true, sumup_reader_id: 'reader1' }
 // LA FATTURA AL CLIENTE È UNA FUNZIONE PREMIUM (REQ-LIC-001) e per questa
 // installazione non è inclusa: il tasto c'è solo dove la licenza la dà.
 const conFatture = { ...noReader, licenza: { moduli: { fatture: true } } }

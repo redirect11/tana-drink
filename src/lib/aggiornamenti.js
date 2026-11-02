@@ -24,7 +24,7 @@
 // Logica pura: le impostazioni si passano, già in mano a chi chiama.
 
 import { isAdmin } from './ruoli.js'
-import { licenzaDi } from './venue.js'
+import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 
 const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
@@ -128,7 +128,7 @@ export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
 // passare un progetto altrui chiamato `foo-drink-regia`, perché il nome
 // del progetto è nell'indirizzo, dopo la regione. Un indirizzo che non
 // passa vale come nessuno: si sceglie dall'area clienti.
-const PROGETTI_REGIA = ['drink-regia', 'drink-regia-test']
+export const PROGETTI_REGIA = ['drink-regia', 'drink-regia-test']
 const SCELTA_URL_REGIA = new RegExp(
   String.raw`^https://[a-z]+-[a-z]+[0-9]+-(${PROGETTI_REGIA.join('|')})\.cloudfunctions\.net/[A-Za-z0-9_-]+$`
 )

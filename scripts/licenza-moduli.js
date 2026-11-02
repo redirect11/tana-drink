@@ -18,9 +18,10 @@
 //  ATTENZIONE A DUE COSE.
 //  - Un locale della REGIA ha il documento scritto dalla regia, che lo
 //    riscrive al prossimo cambio: lì la licenza si cambia dalla regia.
-//  - Un'installazione SENZA documento lavora con la licenza della build
-//    (`clienti/<slug>/licenza.json`, la Tana). Scriverne uno qui la
-//    sostituisce per intero: da quel momento vale il documento.
+//  - Un'installazione SENZA documento non è attivata, e le regole non le
+//    fanno scrivere niente (REQ-LIC-009). Per la Tana il primo documento
+//    lo crea il deploy da GitHub (scripts/licenza-iniziale.mjs, da
+//    clienti/tana/licenza-iniziale.json); questo script serve a CAMBIARLO.
 //
 //  SI SCRIVE SEMPRE PER INTERO. `moduli` è la verità completa su cosa il
 //  locale ha: un modulo che non nomina non è incluso. Per questo
@@ -57,7 +58,7 @@ const [licenza] = (await db.documenti('licenza')).filter((d) => d.name.endsWith(
 
 const adesso = licenza?.fields?.moduli?.mapValue?.fields || null
 console.log(`[licenza] ${PROJECT}`)
-console.log(`  licenza/attuale: ${licenza ? 'c’è' : 'non c’è (vale la licenza della build, se la build ne ha una)'}`)
+console.log(`  licenza/attuale: ${licenza ? 'c’è' : 'non c’è: l’installazione non è attivata e le regole non fanno scrivere niente'}`)
 if (licenza) {
   for (const id of noti) {
     const m = MODULI_PREMIUM[id]
@@ -73,7 +74,7 @@ if (!INCLUDI.length) {
 
 const moduli = Object.fromEntries(noti.map((id) => [id, { booleanValue: INCLUDI.includes(id) }]))
 console.log(`\n  da scrivere: ${noti.map((id) => `${id}=${INCLUDI.includes(id)}`).join(', ')}`)
-if (!licenza) console.log('  ⚠ il documento non c’è: lo si crea, e da quel momento vale lui e non la licenza della build.')
+if (!licenza) console.log('  ⚠ il documento non c’è: lo si crea, e da quel momento l’installazione è attiva coi moduli scritti.')
 if (!APPLY) {
   console.log('\n[licenza] ANTEPRIMA: nessuna scrittura. Aggiungi --apply per salvare.')
   process.exit(0)

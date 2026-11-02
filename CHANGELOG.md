@@ -1,6 +1,46 @@
 # Cosa è cambiato
 
-## 1.10.3-beta — in lavorazione
+## 1.10.4-beta — in lavorazione
+
+### Per i locali aggiornati dalla regia
+
+- **L'app si presenta alla regia** alla prima apertura di ogni versione
+  nuova, con qualcuno collegato: la regia sa quale versione gira, e se la
+  licenza manca la riscrive.
+
+### Nel menù
+
+- **I disegni dei drink nell'elenco sono più grandi e interi.** Prima
+  stavano nella piccola casella delle foto, ritagliati; ora si vedono per
+  intero, una volta e mezzo più grandi. Le foto restano come prima.
+
+### Privacy e sicurezza
+
+- **Senza una licenza valida l'app non lavora.** Senza licenza, con la
+  licenza sospesa, chiusa o scaduta, il database non accetta più
+  scritture, nemmeno dalla console del browser; i dati restano
+  consultabili. L'app si ferma e dice perché, anche senza rete.
+- **Una licenza che scade verso il Free** lascia lavorare col piano Free,
+  senza perdere niente.
+- **La cancellazione dei dati programmata si vede su ogni schermata** di
+  chi lavora: la data, il backup scaricabile dall'area clienti e cosa
+  fare per evitarla.
+- **La licenza non sta più nella build.** Ogni installazione, la Tana
+  compresa, ha la sua nel database.
+
+### Nel gestionale
+
+- **La licenza si legge in Impostazioni → Licenza.** Il titolare vede
+  piano, stato, validità, chi gestisce la licenza, quanti moduli premium
+  comprende e i limiti del piano. Si consulta soltanto: le modifiche
+  passano dalla regia, con il tasto «Gestisci la licenza» dove la
+  licenza lo prevede. Alla Tana compare la sua licenza, con i suoi
+  moduli.
+- **Il gruppo «Funzioni premium» di Impostazioni si chiama «Licenza»**:
+  contiene il riepilogo della licenza e, sotto, le funzioni premium come
+  prima.
+
+## 1.10.3-beta — 02/11/2026 (test)
 
 ### Per i locali aggiornati dalla regia
 

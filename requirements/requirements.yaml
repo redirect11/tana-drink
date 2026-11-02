@@ -3903,6 +3903,12 @@ requirements:
       degli special (toccandone uno si apre la scheda) e il QR del menu'
       Special da scaricare e stampare sul menu' che si porta al tavolo. Il
       QR dei tavoli resta quello di sempre.
+      IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini
+      stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il
+      disegno stava nella casella della foto, 64 px (52 nello stile
+      «Notte»), ritagliato per riempire il quadrato: ora ha la classe
+      `disegno`, 96 px (88 nello stile «Notte»), intero e senza riquadro.
+      La foto vera resta com'era.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente]
@@ -5534,7 +5540,7 @@ requirements:
 
   - id: REQ-LIC-007
     title: "La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia"
-    area: "src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js"
+    area: "src/components/LicenzaPanel.jsx, src/components/SettingsTab.jsx (gruppo «Licenza»), src/lib/licenza.js (riepilogoLicenza), src/lib/limiti.js (limitiInChiaro)"
     description: >
       «Dovrebbe esserci una parte dove si vede la licenza attuale e la sua
       validità, ma la gestione rimanda sempre a regia» (l'utente,
@@ -5545,8 +5551,27 @@ requirements:
       scadenza»); i moduli inclusi e quelli in prova con la loro scadenza
       (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo
       tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app
-      non si cambia niente. Senza licenza della regia (la Tana) la
-      sottosezione non c'è.
+      non si cambia niente.
+      CORRETTO IL 02/11/2026, dopo BUG-125. Il testo di partenza diceva
+      «senza licenza della regia (la Tana) la sottosezione non c'è»:
+      scritto quando la Tana una licenza non l'aveva, e i suoi moduli
+      stavano nella colonna `incluso` del codice. Con BUG-125 ogni
+      installazione ha una licenza, quella della regia o quella della
+      build (`clienti/<slug>/licenza.json`), e la Tana ha la seconda. E
+      l'utente, guardando la produzione: «serve un posto per mostrare le
+      info di licenza per quel prodotto». Quindi la sottosezione c'è per
+      ogni licenza e mostra quello che porta: per la Tana i moduli, senza
+      piano né scadenza, e «Gestione: licenza scritta nell'installazione»
+      al posto del tasto verso la regia, che c'è solo con `regia_url`.
+      COME È FATTA: un riquadro «Licenza», al solo titolare, nel gruppo di
+      Impostazioni che si chiamava «Funzioni premium» e ora si chiama
+      «Licenza», sopra quel riquadro. Righe: piano (se c'è), stato,
+      validità, chi la gestisce, quanti moduli premium include; poi i
+      limiti del piano in chiaro. I moduli si CONTANO soltanto: l'elenco,
+      con le prove e le loro scadenze, è il riquadro Funzioni premium
+      subito sotto, e ripeterlo metteva gli stessi nomi due volte nella
+      stessa schermata. Una `valida_fino` illeggibile non si mostra
+      (non diventa «senza scadenza»).
       LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa
       riguarda la regia ma entrambe devono essere previste»): il Free può
       essere senza scadenza o una prova a tempo, e un piano a pagamento ha
@@ -5555,11 +5580,19 @@ requirements:
       soltanto. Una data passata con la licenza ancora attiva si mostra
       come «Scaduta il …», senza fermare il locale. DA DIRE ALLA REGIA: la
       voce `valida_fino` su ogni licenza.
-    status: todo
-    generate_issue: true
+      CAMBIATO DA REQ-LIC-009 (02/11/2026): passata `valida_fino` la licenza
+      si ferma («Scaduta» nello stato) o lavora col Free (piano Free, con
+      «Scaduta il …» nella validità), secondo `alla_scadenza`. E la riga
+      «licenza scritta nell'installazione» non c'è più: la licenza della
+      build è tolta, e la Tana ha il suo documento, scritto a mano, senza
+      `regia_url` (quindi senza tasto verso la regia).
+    status: implemented
+    generate_issue: false
     labels: [licenza, prodotto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/licenzaInChiaro.test.js
+      - tests/component/LicenzaPanel.test.jsx
 
   - id: REQ-LIC-008
     title: "Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono"
@@ -5582,6 +5615,8 @@ requirements:
         - con `limiti.sconti: false`, uno sconto nuovo o alzato su un
           ordine. Restano permessi lo sconto che c'era (le righe che
           cambiano ne ricalcolano l'importo) e lo sconto tolto.
+      [ROVESCIATO DA REQ-LIC-009, 02/11/2026: senza documento ora non si
+      scrive niente, per nessuno; il paragrafo qui sotto è la storia.]
       SENZA DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE: è la Tana, la cui
       licenza sta nella build; un locale della regia il documento ce l'ha
       sempre.
@@ -5626,6 +5661,91 @@ requirements:
       - tests/unit/scaricoSenzaMagazzino.test.js
       - tests/unit/backup.test.js
       - tests/unit/sezioni.test.js
+
+  - id: REQ-LIC-009
+    title: "Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati"
+    area: "firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md"
+    description: >
+      L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe
+      partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già
+      così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe
+      diventare versione free ma senza far perdere i dati al cliente, ma
+      dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati
+      entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia
+      «senza documento non si limita niente» di REQ-LIC-008, per tutti i
+      locali: senza licenza/attuale, con stato sospesa o chiusa, o con
+      valida_fino passata e alla_scadenza 'ferma', le regole negano le
+      scritture (le letture restano, fino alla cancellazione); con
+      alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso,
+      anche senza rete. La licenza porta cancellazione { il, richiedente }:
+      l'app la mostra sopra a tutto, anche da ferma. La Tana riceve
+      licenza/attuale una volta, col via libera dell'utente, prima delle
+      regole nuove; il file di licenza nella build si toglie. Per intero in
+      docs/licenza-valida.md. La regia è pronta (drink-regia
+      REQ-FLOTTA-025, PR #38).
+      COME È FATTO (02/11/2026).
+      LE REGOLE: ogni `allow` di scrittura chiede licenzaValida() — il
+      documento c'è, non è sospeso, chiuso o non attivato, e non è
+      scaduto o è scaduto verso il Free; al Free modulo() e
+      scontiConsentiti() dicono no. Restano permesse le letture e le uscite
+      di chi se ne va: il profilo cliente (cambiarlo e cancellarlo), il
+      proprio token delle notifiche, la propria presenza. Un test
+      (regoleLicenza) boccia una regola di scrittura nuova senza
+      licenzaValida(). LA SCADENZA NELLE REGOLE si legge da
+      `valida_fino_ts`, un Timestamp: le regole non leggono una data
+      scritta come testo. DA DIRE ALLA REGIA: scrivere `valida_fino_ts`
+      accanto a `valida_fino`; senza, lato server la licenza non scade (la
+      regia la riscrive comunque alla scadenza). COSTO: ogni richiesta di
+      scrittura legge la licenza una volta (prima solo quelle dei moduli e
+      degli sconti).
+      L'APP: src/lib/licenzaInVigore.js, modulo foglia, dice la licenza in
+      vigore ADESSO a ogni domanda, con l'orologio del dispositivo: passata
+      `valida_fino`, con `alla_scadenza: 'free'` diventa il Free (nessun
+      modulo, LIMITI_FREE, copia di quelli del piano `free` della regia,
+      con un test che la confronta), altrimenti `stato: 'scaduta'`, che
+      ferma l'app come sospesa (InstallazioneSospesa, «Licenza scaduta»).
+      Senza documento confermato dal server: «non attivata», per tutti; la
+      licenza della build (`clienti/<slug>/licenza.json`, `LICENZA_DELLA_BUILD`)
+      è tolta, e un test controlla che nessuna cartella dei clienti abbia
+      quel file. I test che vogliono «un locale con tutto» si scrivono la
+      licenza (tests/helpers/licenza.js, i moduli della Tana).
+      L'AVVISO: AvvisoCancellazione, a chi lavora, in cima a ogni
+      schermata e sopra il locale fermo; testo per `richiedente`, data,
+      backup scaricabile dall'area clienti per 180 giorni, collegamento
+      all'area clienti se la licenza lo porta. Al cliente no.
+      RESTA FUORI, per ora: scaricare i dati dall'app a locale fermo (la
+      schermata ferma tutto, anche l'accesso). Le letture le regole le
+      permettono, e il backup lo dà l'area clienti della regia.
+      L'ORDINE DEL RILASCIO, che non si inverte: prima `licenza/attuale`
+      della Tana, poi regole e app nuove; al contrario la Tana si ferma.
+      LO GARANTISCE IL DEPLOY (l'utente, 02/11/2026: «non possiamo fare in
+      modo che quando deployiamo scriviamo anche la licenza sul db? […]
+      quando deployiamo da github»; «sì»). In deploy.yml, prima delle
+      regole, scripts/licenza-iniziale.mjs crea `licenza/attuale` da
+      `clienti/<cliente>/licenza-iniziale.json` SOLO SE MANCA: se c'è non
+      lo tocca, così un rilascio non riscrive mai una licenza e non può
+      togliere un modulo (per cambiarla resta scripts/licenza-moduli.js).
+      Se non riesce, il deploy si ferma prima delle regole. In produzione
+      passa dalla stessa approvazione manuale del deploy. È l'unico dato
+      che la pipeline scrive, ed è una creazione sola. Il file nomina
+      tutti i moduli, vero o falso, o il deploy si ferma; l'app non lo
+      legge. SERVE roles/datastore.user sul service account del deploy
+      (oggi ha i ruoli per regole e indici): senza, il passo fallisce e il
+      deploy si ferma, che è il fallimento sicuro. Sul test il documento
+      c'è già (scritto a mano il 02/11/2026).
+    status: implemented
+    generate_issue: false
+    labels: [licenza, sicurezza, prodotto, privacy]
+    priority: P1
+    test_cases:
+      - tests/unit/licenzaInVigore.test.js
+      - tests/component/AvvisoCancellazione.test.jsx
+      - tests/component/InstallazioneSospesa.test.jsx
+      - tests/unit/licenzaInstallazione.test.js
+      - tests/regole/licenza.test.js
+      - tests/unit/regoleLicenza.test.js
+      - tests/unit/clienteBuild.test.js
+      - tests/unit/licenzaIniziale.test.js
   # ══════════════════════════════════════════════════════════════════════
   #  IL PRODOTTO: l'app che sa essere qualsiasi locale, il marchio come
   #  configurazione (docs/flotta.md). La flotta — sito del prodotto,
@@ -5981,6 +6101,49 @@ requirements:
       - tests/unit/aggiornamenti.test.js
       - tests/component/PropostaAggiornamento.test.jsx
       - tests/regole/aggiornamenti.test.js
+
+  - id: REQ-FLOTTA-026
+    title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"
+    area: "src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md"
+    description: >
+      L'utente, 02/11/2026: «non deve essere il deploy ad avvisare la regia
+      ma l'istanza del sito stesso in qualche modo. Cioè regia e il sito
+      custom del bar si devono parlare dopo il deploy e si scambiano dati
+      tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di
+      ogni versione, dopo l'accesso, l'app chiama la Function
+      presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo
+      drink-regia o drink-regia-test) col token dell'utente e la versione,
+      solo con qualcuno collegato (niente accessi anonimi). Mai a tempo.
+      La regia segna la versione e, se manca, riscrive la licenza; ma non
+      è l'attivazione: la licenza c'è prima dell'app. Il contratto in docs/presentazione-alla-regia.md; la regia è
+      pronta (drink-regia REQ-FLOTTA-026, PR #40).
+      COME È FATTO (02/11/2026): src/lib/presentazione.js decide QUANDO
+      (presentaSeServe: una volta per versione per dispositivo, segnata in
+      `drink:presentata` solo con un 200; sempre, finché la licenza manca);
+      api.js fa la chiamata (presentaAllaRegia, sullo stesso chiamaRegia
+      della scelta sugli aggiornamenti: token, venti secondi al massimo,
+      nessun errore che risale). L'indirizzo si costruisce da
+      VITE_REGIA_PROGETTO solo per PROGETTI_REGIA (aggiornamenti.js).
+      App.jsx la lancia all'accesso e quando la licenza risulta «non
+      attivata» con qualcuno ancora collegato. Nessun «Riprova» nella
+      schermata (docs/presentazione-alla-regia.md, aggiornato il
+      02/11/2026). deploy.yml compila drink-regia in produzione e
+      drink-regia-test sul test. Per ora la regia risponde
+      `non_dalla_regia` alla Tana e segna solo la versione: la licenza
+      della Tana resta quella creata dal deploy (il ponte, REQ-LIC-009).
+      DA SAPERE: l'app non fa accessi anonimi, quindi la chiamata parte
+      solo con qualcuno collegato. Su un'installazione nuova, senza licenza
+      e senza nessuno collegato, la schermata «non attivata» copre anche
+      l'accesso: lì la licenza deve già esserci (la regia la scrive
+      all'attivazione, prima dell'app).
+    status: implemented
+    generate_issue: false
+    labels: [flotta, licenza, regia]
+    priority: P2
+    test_cases:
+      - tests/unit/presentazione.test.js
+      - tests/unit/presentazioneChiamata.test.js
+      - tests/component/InstallazioneSospesa.test.jsx
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"

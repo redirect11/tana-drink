@@ -5460,6 +5460,9 @@ bugs:
       test solo quando la regia di test ha copiato le licenze («Allinea
       tutte» dice «Tutti pronti»), e in produzione solo dopo la regia di
       produzione 0.3.0 con la stessa copia.
+      DOPO (02/11/2026, REQ-LIC-009): la licenza della build è tolta. Senza
+      `licenza/attuale` l'installazione non è attivata per tutti, e la Tana
+      riceve il suo documento, una volta, prima delle regole nuove.
     status: fixed
     in_produzione: true
     generate_issue: true
