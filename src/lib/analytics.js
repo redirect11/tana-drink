@@ -4,8 +4,9 @@
 // non viene inizializzato e non vengono impostati cookie di statistica.
 import { getAnalytics, setAnalyticsCollectionEnabled, isSupported } from 'firebase/analytics'
 import { app } from './firebaseClient.js'
+import { configurazione } from '../porte/configurazione.js'
 
-const measurementId = import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+const measurementId = configurazione().firebase.measurementId
 let instance = null
 
 // Attiva la raccolta (chiamata quando l'utente accetta la categoria

@@ -68,6 +68,12 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
+  // LA CONFIGURAZIONE NON PASSA DI QUI (REQ-FLOTTA-021). Una copia salvata
+  // risponderebbe, senza rete, con quello che diceva il file l'ultima volta
+  // — o con la pagina dell'app, se allora il file non c'era — e l'app la
+  // prenderebbe per buona. Senza rete deve fallire, così l'app tiene la
+  // configurazione che ha già (porte/configurazione.js).
+  if (url.pathname.endsWith('/configurazione.json')) return
   if (PRIMA_LA_CACHE.test(url.pathname)) {
     event.respondWith(
       caches.match(request).then((inCache) => {
