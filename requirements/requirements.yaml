@@ -5717,9 +5717,22 @@ requirements:
       schermata ferma tutto, anche l'accesso). Le letture le regole le
       permettono, e il backup lo dà l'area clienti della regia.
       L'ORDINE DEL RILASCIO, che non si inverte: prima `licenza/attuale`
-      della Tana (scripts/licenza-moduli.js, sul test da sé, in produzione
-      col via libera dell'utente), poi regole e app nuove. Al contrario la
-      Tana si ferma.
+      della Tana, poi regole e app nuove; al contrario la Tana si ferma.
+      LO GARANTISCE IL DEPLOY (l'utente, 02/11/2026: «non possiamo fare in
+      modo che quando deployiamo scriviamo anche la licenza sul db? […]
+      quando deployiamo da github»; «sì»). In deploy.yml, prima delle
+      regole, scripts/licenza-iniziale.mjs crea `licenza/attuale` da
+      `clienti/<cliente>/licenza-iniziale.json` SOLO SE MANCA: se c'è non
+      lo tocca, così un rilascio non riscrive mai una licenza e non può
+      togliere un modulo (per cambiarla resta scripts/licenza-moduli.js).
+      Se non riesce, il deploy si ferma prima delle regole. In produzione
+      passa dalla stessa approvazione manuale del deploy. È l'unico dato
+      che la pipeline scrive, ed è una creazione sola. Il file nomina
+      tutti i moduli, vero o falso, o il deploy si ferma; l'app non lo
+      legge. SERVE roles/datastore.user sul service account del deploy
+      (oggi ha i ruoli per regole e indici): senza, il passo fallisce e il
+      deploy si ferma, che è il fallimento sicuro. Sul test il documento
+      c'è già (scritto a mano il 02/11/2026).
     status: implemented
     generate_issue: false
     labels: [licenza, sicurezza, prodotto, privacy]
@@ -5732,6 +5745,7 @@ requirements:
       - tests/regole/licenza.test.js
       - tests/unit/regoleLicenza.test.js
       - tests/unit/clienteBuild.test.js
+      - tests/unit/licenzaIniziale.test.js
   # ══════════════════════════════════════════════════════════════════════
   #  IL PRODOTTO: l'app che sa essere qualsiasi locale, il marchio come
   #  configurazione (docs/flotta.md). La flotta — sito del prodotto,

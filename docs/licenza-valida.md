@@ -83,6 +83,15 @@ vedono. Prima di rilasciare le regole nuove:
 - più avanti la scriverà la regia, quando la Tana sarà collegata alla
   regia per la licenza.
 
+**Com'è stato fatto (02/11/2026).** Il documento lo crea il **deploy da
+GitHub**, prima di pubblicare le regole (`scripts/licenza-iniziale.mjs` in
+`.github/workflows/deploy.yml`), da `clienti/tana/licenza-iniziale.json`, e
+solo se manca: se c'è non lo tocca. In produzione passa dalla stessa
+approvazione manuale del deploy; se la scrittura non riesce, il deploy si
+ferma prima delle regole. Su `tana-drink-test` c'è già, scritto a mano.
+Serve `roles/datastore.user` sul service account del deploy. L'app quel file
+non lo legge: la licenza vive solo nel database.
+
 ## Il contratto della licenza, aggiornato
 
 ```

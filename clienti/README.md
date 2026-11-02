@@ -22,6 +22,12 @@ documento l'app mostra «Installazione non attivata» e le regole non fanno
 scrivere niente. Il `licenza.json` che con BUG-125 stava in questa
 cartella non si legge più, e un test controlla che non ce ne sia nessuno.
 
+`licenza-iniziale.json` (facoltativo, oggi solo la Tana) è un'altra cosa:
+lo legge il **deploy da GitHub**, non l'app, e crea `licenza/attuale` se
+manca, prima di pubblicare le regole. Se il documento c'è non lo tocca:
+conta una volta, e la licenza poi si cambia con `scripts/licenza-moduli.js`.
+Nomina tutti i moduli, vero o falso, o il deploy si ferma.
+
 ```sh
 CLIENTE=demo npm run dev     # il locale neutro, in locale
 CLIENTE=demo npm run build   # la build del locale neutro (la CI la fa a ogni push)
