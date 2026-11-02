@@ -1,6 +1,33 @@
 # Cosa è cambiato
 
-## 1.10.7-beta — in lavorazione
+## 1.10.8-beta — in lavorazione
+
+### Nel menù
+
+- **Lo stile «Giornale» è un giornale vero.** Il menù si apre su una
+  testata con la data dell'edizione e un sommario che resta in alto e
+  segue la lettura. Il primo Special è l'articolo di prima pagina, con un
+  titolo grande e la sua illustrazione; gli altri stanno «In breve». Ogni
+  categoria è una sezione, con le voci in colonne.
+- **Le illustrazioni del «Giornale» sono incisioni**: un solo inchiostro,
+  la cornice della lastra, il tratteggio al posto dei colori. Gli altri
+  stili avranno le loro.
+
+### Nel gestionale
+
+- **Il marketplace dei temi è una pagina sua**: la voce «🛍️ Marketplace»
+  del menu laterale, da sfogliare come un catalogo, con Temi, Stili del
+  menù e Installati. Ogni tema si vede su un pezzo del menù vero, si prova
+  sul proprio menù e si installa. In Impostazioni resta la scelta fra
+  quelli già installati.
+- **I moduli si aggiungono dal Marketplace.** Nella nuova sezione
+  «Moduli» ogni modulo mostra se è incluso nella licenza, in prova o non
+  incluso, con il prezzo mensile. Il titolare può provarlo gratis per i
+  giorni previsti, aggiungerlo con il pagamento sulla pagina sicura di
+  Stripe o disdirlo; il modulo compare da solo appena la licenza si
+  aggiorna. Gli altri ruoli vedono la sezione in sola lettura.
+
+## 1.10.7-beta — 02/11/2026 (test)
 
 ### Nel gestionale
 

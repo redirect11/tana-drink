@@ -45,6 +45,12 @@ export const NAV_GESTIONALE = [
   ['staff', '👥', 'Staff'],
   ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
   ['vista-cliente', '👀', 'Vista cliente'],
+  // IL MARKETPLACE DEI TEMI (REQ-MENU-023): una pagina sua, non un
+  // riquadro delle Impostazioni. L'utente, 02/11/2026: «una finestra/pagina
+  // nuova che apro per navigare i temi come se fosse un catalogo». Risponde
+  // a «che aspetto potrebbe avere il mio menù», non a «come è regolato»
+  // (docs/navigazione.md, quando un gruppo diventa una pagina sua).
+  ['marketplace', '🛍️', 'Marketplace'],
   ['impostazioni', '⚙️', 'Impostazioni'],
 ]
 
