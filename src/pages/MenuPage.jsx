@@ -682,9 +682,14 @@ export default function MenuPage({ speciali = false }) {
               >
                 {speciali && img && <img className="speciale-img" src={img} alt="" loading="lazy" />}
                 <div className="row between">
+                  {/* IL DISEGNO PIÙ GRANDE DELLA FOTO, e intero. Nella casella
+                      da 64 px della foto i disegni dei drink si leggevano
+                      appena, ritagliati per riempire il quadrato (l'utente,
+                      02/11/2026: «le immagini stilizzate dei drink
+                      dovrebbero essere più grandi»). */}
                   {!speciali && (
                     <img
-                      className={`drink-thumb${img ? '' : ' placeholder'}`}
+                      className={`drink-thumb${img ? (d.image_url ? '' : ' disegno') : ' placeholder'}`}
                       src={img || `${import.meta.env.BASE_URL}logo.png`}
                       alt={d.name}
                       loading="lazy"
