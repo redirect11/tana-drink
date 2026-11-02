@@ -38,6 +38,7 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
+import { temaInProva, temaComeColori } from './lib/marketplaceTemi.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
 import { licenzaDi } from './lib/licenzaInVigore.js'
@@ -350,10 +351,17 @@ export default function App() {
     location.pathname.startsWith('/menu') &&
     new URLSearchParams(location.search).get('vista') === 'cliente'
   const staffSurface = !!staffRole && !anteprimaCliente
+  // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
+  // proprio menù coi colori di un tema prima di usarlo. Solo lui.
+  const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
   useEffect(() => {
-    const scope = staffSurface ? settings.theme_staff : settings.theme_client
+    const scope = temaProvato
+      ? temaComeColori(temaProvato)
+      : staffSurface
+        ? settings.theme_staff
+        : settings.theme_client
     applyTheme(resolveThemeVars(scope))
-  }, [settings, staffSurface])
+  }, [settings, staffSurface, temaProvato])
 
 
   // IL ☰ C'È OVUNQUE, per tutti: chi è dello staff apre il gestionale, il

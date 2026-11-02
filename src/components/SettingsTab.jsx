@@ -37,6 +37,7 @@ import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
 import LicenzaPanel from './LicenzaPanel.jsx'
+import MarketplaceTemi from './MarketplaceTemi.jsx'
 import { isAdmin } from '../lib/ruoli.js'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
@@ -106,6 +107,14 @@ export default function SettingsTab({ role = null }) {
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    // IL MARKETPLACE DEI TEMI (REQ-MENU-023): un tema è tavolozza più stile
+    // del menù, e sta in Aspetto, accanto ai colori.
+    {
+      id: 'marketplace-temi',
+      icona: '🛍️',
+      label: 'Marketplace dei temi',
+      nodo: <MarketplaceTemi settings={settings} onSave={save} />,
+    },
     // L'identità del locale (REQ-VENUE-001): vuota vale la build.
     { id: 'locale', icona: '🏷️', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
@@ -1170,6 +1179,7 @@ export default function SettingsTab({ role = null }) {
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
     aspetto: 'aspetto',
+    'marketplace-temi': 'aspetto',
     // Tre cose diverse, tre voci: quello che vedono i clienti, la
     // schermata con cui si lavora il listino, e l'importazione del
     // catalogo. Messe insieme, davanti a un interruttore non si capiva a
