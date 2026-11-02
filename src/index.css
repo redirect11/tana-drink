@@ -10373,33 +10373,33 @@ body.pagina-piena .inv-scheda {
 
 /* Le regole comuni dei quattro: caratteri al loro posto, e la voce in riga
    «NOME … prezzo», che è come si legge una carta. */
-:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) {
+:is(.stile-lavagna, .stile-deco, .stile-riviera) {
   font-family: var(--stile-testo);
 }
-:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) :is(.hero-title, .cat-header) {
+:is(.stile-lavagna, .stile-deco, .stile-riviera) :is(.hero-title, .cat-header) {
   font-family: var(--stile-titolo);
   font-style: normal;
   text-wrap: balance;
 }
-:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) .menu-item .grow > h3 {
+:is(.stile-lavagna, .stile-deco, .stile-riviera) .menu-item .grow > h3 {
   font-family: var(--stile-voce);
   margin: 0;
 }
-:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .row > .grow {
+:is(.stile-lavagna, .stile-deco) .menu-item .row > .grow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 12px;
   row-gap: 4px;
   align-items: baseline;
 }
-:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > h3 {
+:is(.stile-lavagna, .stile-deco) .menu-item .grow > h3 {
   grid-column: 1;
 }
-:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > .price {
+:is(.stile-lavagna, .stile-deco) .menu-item .grow > .price {
   grid-column: 2;
   grid-row: 1;
 }
-:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > p {
+:is(.stile-lavagna, .stile-deco) .menu-item .grow > p {
   grid-column: 1 / -1;
   margin: 0;
 }
@@ -10407,16 +10407,16 @@ body.pagina-piena .inv-scheda {
    al tasto «Aggiungi» la colonna del nome restava di pochi caratteri, e in
    «Lavagna» spezzava i nomi a metà parola («Negroni Sbagliat-o»). */
 @media (max-width: 520px) {
-  :is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .row > .grow {
+  :is(.stile-lavagna, .stile-deco) .menu-item .row > .grow {
     grid-template-columns: minmax(0, 1fr);
   }
-  :is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > .price {
+  :is(.stile-lavagna, .stile-deco) .menu-item .grow > .price {
     grid-column: 1;
     grid-row: auto;
   }
 }
 /* Il logo al posto della foto fa il menù giocattolo, in tutti e quattro. */
-:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) .menu-item .drink-thumb.placeholder {
+:is(.stile-lavagna, .stile-deco, .stile-riviera) .menu-item .drink-thumb.placeholder {
   display: none;
 }
 
@@ -10440,7 +10440,7 @@ body.pagina-piena .inv-scheda {
     var(--bg);
 }
 /* La pagina, non l'assaggio: la lavagna arriva ai bordi dello schermo. */
-.stile-lavagna:not(.assaggio-stile) {
+.stile-lavagna:not(.assaggio-stile):not(.vetrina-tema) {
   margin: 0 -16px;
   padding: 0 16px 28px;
   min-height: 100svh;
@@ -10668,98 +10668,9 @@ body.pagina-piena .inv-scheda {
   border-radius: 24px;
 }
 
-/* «GIORNALE»: la carta stampata. Testata con i filetti, titoli grandi in
-   Playfair, testo in serif, voci in colonna senza scatole; sugli schermi
-   larghi le voci si dispongono su due colonne, come un quotidiano. */
-.stile-giornale .hero {
-  border-radius: 0;
-  box-shadow: none;
-}
-.stile-giornale .hero-overlay {
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.stile-giornale .hero-title {
-  font-weight: 800;
-  font-size: clamp(2.4rem, 11vw, 4.6rem);
-  line-height: 1;
-  padding: 8px 0;
-  border-top: 3px double currentColor;
-  border-bottom: 3px double currentColor;
-}
-.stile-giornale .hero-sub {
-  font-style: italic;
-}
-.stile-giornale .cat-header {
-  font-weight: 800;
-  font-size: clamp(1.7rem, 7.5vw, 2.4rem);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  padding-top: 8px;
-  border-top: 4px solid var(--text);
-}
-.stile-giornale .cat-header::after {
-  height: 1px;
-  opacity: 1;
-  background: var(--text);
-}
-.stile-giornale .cat-chip {
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  font-family: var(--stile-voce);
-  font-style: italic;
-}
-.stile-giornale .menu-item {
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  border-radius: 0;
-  box-shadow: none;
-  margin: 0;
-  padding: 14px 0;
-  break-inside: avoid;
-}
-.stile-giornale .menu-item .grow > h3 {
-  font-weight: 700;
-  font-size: 1.2rem;
-}
-.stile-giornale .menu-item .grow > .price {
-  font-family: var(--stile-titolo);
-  font-weight: 700;
-  font-size: 1.15rem;
-}
-.stile-giornale .menu-item .menu-item-descrizione {
-  font-style: italic;
-}
-:root .stile-giornale .menu-item .btn.small {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--text);
-  box-shadow: none;
-  border-radius: 0;
-  font-family: var(--stile-voce);
-}
-@media (min-width: 760px) {
-  .stile-giornale section:has(> .cat-header) {
-    column-count: 2;
-    column-gap: 32px;
-    column-rule: 1px solid var(--line);
-  }
-  .stile-giornale section:has(> .cat-header) > .cat-header {
-    column-span: all;
-  }
-}
-.stile-giornale :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
-  border-radius: 0;
-  border: 1px solid var(--text);
-}
-
-/* ── LA GALLERIA DEGLI STILI, IN IMPOSTAZIONI (REQ-MENU-022) ──────────────
+/* ── GLI STILI INSTALLATI, IN IMPOSTAZIONI (REQ-MENU-022) ─────────────────
    Ogni scheda: l'assaggio dello stile, nome e descrizione, e sotto «Prova
-   sul menù» e il tasto per installare o disinstallare. */
+   sul menù» e «Disinstalla». Il catalogo sta nel Marketplace. */
 .stili-menu {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
@@ -10802,28 +10713,485 @@ body.pagina-piena .inv-scheda {
   color: var(--accent-2);
 }
 
-/* ── IL MARKETPLACE DEI TEMI (REQ-MENU-023) ──────────────────────────────
-   L'assaggio di un tema porta i SUOI colori (le variabili sono scritte
-   sull'elemento, non sulla pagina) e il suo stile: si vede il tema vero
-   senza applicarlo. Sotto, la tavolozza in cinque tessere. */
-.assaggio-tema {
+/* ── LA PAGINA DEL MARKETPLACE (REQ-MENU-023) ────────────────────────────
+   Un catalogo: schede grandi, ognuna con una vetrina — un pezzo del menù
+   vero (categoria e due voci) con le classi del menù, i colori del tema
+   scritti sull'elemento e il suo stile. Sotto, nome, descrizione e tasti,
+   sempre allo stesso posto. */
+.pagina-marketplace h2 {
+  margin: 0 0 4px;
+}
+.griglia-marketplace {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+.scheda-marketplace {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  /* Il rilievo della `.card`: sul tema scuro staccava il riquadro, e senza
+     la scheda sembrava un buco nella pagina. */
+  background: var(--velo-superficie), var(--card);
+  min-width: 0;
+}
+.scheda-marketplace-testo {
+  padding: 12px 14px 0;
+  flex: 1;
+}
+.scheda-marketplace-testo h3 {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-testo p {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px 14px;
+}
+.vetrina-tema {
   background: var(--bg);
   color: var(--text);
-  border-radius: 10px;
-  padding: 8px;
-  margin-bottom: 8px;
+  padding: 12px 12px 4px;
+  height: 230px;
+  overflow: hidden;
+  pointer-events: none;
+  /* Il menù continua: la voce tagliata in fondo sfuma invece di finire a
+     metà prezzo. È una maschera, non un filtro: niente sfocature. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
 }
-.assaggio-tema .assaggio-stile {
-  margin-bottom: 6px;
-  background: var(--card);
+.vetrina-tema .cat-header {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
 }
-.assaggio-tavolozza {
+.vetrina-tema .menu-item {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+}
+
+/* I MODULI (REQ-LIC-012): al posto della vetrina del menù, una fascia con
+   l'icona e lo stato. Lo stato si legge dal colore prima che dalla parola:
+   incluso col verde di `--ok`, in prova con `--accent-2`, non incluso
+   neutro — il catalogo di quello che manca non deve sembrare un errore. */
+.vetrina-modulo {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 96px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--text) 5%, var(--card));
+  border-bottom: 1px solid var(--line);
 }
-.assaggio-tavolozza > span {
+.vetrina-modulo-icona {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+/* Sopra la `.pill` di sempre: solo il bordo e il colore dello stato. */
+.vetrina-modulo-stato {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: normal;
+  text-align: right;
+}
+.vetrina-modulo-incluso {
+  background: color-mix(in srgb, var(--ok) 12%, var(--card));
+}
+.vetrina-modulo-incluso .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--ok) 60%, transparent);
+}
+.vetrina-modulo-prova {
+  background: color-mix(in srgb, var(--accent-2) 14%, var(--card));
+}
+.vetrina-modulo-prova .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent-2) 60%, transparent);
+}
+.avviso-marketplace {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+  background: color-mix(in srgb, var(--ok) 10%, var(--card));
+  font-size: 0.9rem;
+}
+
+/* ── LO STILE «GIORNALE»: LA PRIMA PAGINA (REQ-MENU-024) ─────────────────
+   L'utente, 02/11/2026: «gli stili devono avere anche UX diverse e
+   immagini diverse», «basta che sia figa e fluida la UX». Una struttura sua
+   (MenuGiornale.jsx): testata, sommario agganciato che segue la lettura,
+   prima pagina con l'articolo d'apertura e «In breve», sezioni in colonna.
+   Inchiostro e carta sono i colori del tema (Gazzetta: nero su bianco;
+   Inchiostro: chiaro su scuro); i caratteri quelli dello stile. Si
+   anima solo transform e opacity, e con «riduci movimento» niente. */
+.stile-giornale {
+  --g-titoli: var(--stile-titolo);
+  --g-filetto: color-mix(in srgb, var(--text) 85%, transparent);
+}
+.g-testata {
+  text-align: center;
+  padding: 18px 0 10px;
+  border-bottom: 4px double var(--g-filetto);
+  margin-bottom: 6px;
+}
+.g-edizione {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--g-filetto);
+  border-bottom: 1px solid var(--g-filetto);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.g-nome {
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 11vw, 5.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  margin: 16px 0 6px;
+  text-wrap: balance;
+}
+.g-motto {
+  margin: 0;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* Il sommario: resta sotto la barra mentre si scorre, e dice dove si è. */
+.g-sommario {
+  position: sticky;
+  top: calc(var(--safe-top) + var(--barra-alta));
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 10px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--g-filetto);
+}
+.g-sommario::-webkit-scrollbar {
+  display: none;
+}
+.g-sommario-titolo {
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.g-sommario a {
+  flex-shrink: 0;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.g-sommario a.attiva,
+.g-sommario a:hover {
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+}
+
+/* La prima pagina: l'apertura grande, «In breve» accanto (sotto, sul
+   telefono). */
+.g-prima-pagina {
+  display: grid;
+  gap: 22px;
+  padding: 18px 0 8px;
+  border-bottom: 3px double var(--g-filetto);
+}
+@media (min-width: 860px) {
+  .g-prima-pagina {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+  .g-in-breve {
+    border-left: 1px solid var(--line);
+    padding-left: 24px;
+  }
+}
+.g-occhiello {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+.g-titolo {
+  margin: 0 0 12px;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.g-apertura .g-titolo {
+  font-size: clamp(2.1rem, 8vw, 3.8rem);
+}
+.g-breve .g-titolo {
+  font-size: 1.35rem;
+  margin-bottom: 6px;
+}
+:is(.g-titolo, .g-voce h4) button {
+  all: unset;
+  cursor: pointer;
+}
+:is(.g-titolo, .g-voce h4) button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.g-figura {
+  margin: 0 0 12px;
+}
+.g-figura img {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.g-figura figcaption {
+  margin-top: 6px;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.g-breve {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  column-gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.g-breve > :not(.g-figura) {
+  grid-column: 1;
+}
+.g-breve .g-figura {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  margin: 0;
+}
+.g-rubrica {
+  margin: 0 0 4px;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.9rem;
+  border-bottom: 2px solid var(--g-filetto);
+  padding-bottom: 4px;
+}
+.g-testo {
+  margin: 0 0 6px;
+  line-height: 1.55;
+}
+.g-capolettera::first-letter {
+  float: left;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding: 4px 8px 0 0;
+}
+.g-ingredienti {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--muted);
+}
+.g-chiusa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.g-prezzo {
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.g-apertura .g-prezzo {
+  font-size: 1.5rem;
+}
+
+/* Le sezioni: un filetto nero col nome, le voci in colonna. */
+.g-sezione {
+  margin-top: 30px;
+  scroll-margin-top: calc(var(--safe-top) + var(--barra-alta) + 52px);
+}
+.g-sezione-titolo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 4px;
+  padding: 6px 10px;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.g-sezione-conto {
+  font-family: var(--stile-testo);
+  font-weight: 400;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.8rem;
+}
+.g-colonne {
+  column-gap: 30px;
+  column-rule: 1px solid var(--line);
+}
+@media (min-width: 760px) {
+  .g-colonne {
+    column-count: 2;
+  }
+}
+@media (min-width: 1150px) {
+  .g-colonne {
+    column-count: 3;
+  }
+}
+.g-voce {
+  break-inside: avoid;
+  padding: 12px 0;
+  border-bottom: 1px dotted var(--line);
+}
+.g-voce h4 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  font-size: 1.08rem;
+}
+.g-puntini {
   flex: 1;
-  height: 10px;
-  border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  min-width: 14px;
+  border-bottom: 1px dotted var(--muted);
+  transform: translateY(-4px);
+}
+.g-voce .g-testo {
+  font-style: italic;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.g-voce-tasti {
+  display: flex;
+  justify-content: flex-end;
+}
+:root .g-giornale .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--g-titoli);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+:root .g-giornale .btn.small:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* «Stiamo servendo il numero»: nel giornale non è una card, è
+   l'ultim'ora fra due filetti. */
+.stile-giornale .serving-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  margin: 8px 0;
+  padding: 6px 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--g-filetto);
+  border-bottom: 1px solid var(--g-filetto);
+  border-radius: 0;
+  box-shadow: none;
+  font-style: italic;
+}
+.stile-giornale .serving-box::before {
+  content: 'Ultim’ora';
+  font-style: normal;
+  font-family: var(--g-titoli);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--accent-2);
+}
+.stile-giornale .serving-nums {
+  margin: 0;
+}
+.stile-giornale .serving-num {
+  font-family: var(--g-titoli);
+  font-size: 1.2rem;
+}
+
+/* Nella vetrina del marketplace la testata è in scala. */
+.vetrina-tema .g-testata {
+  padding-top: 0;
+}
+.vetrina-tema .g-nome {
+  font-size: 2.2rem;
+  margin: 8px 0 4px;
+}
+/* Nella scheda stretta la data andava a capo: basta l'edizione. */
+.vetrina-tema .g-edizione {
+  justify-content: center;
+}
+.vetrina-tema .g-edizione span + span {
+  display: none;
+}
+
+/* All'apertura la pagina «si stampa»: testata e prima pagina entrano con
+   un niente di movimento. */
+@media (prefers-reduced-motion: no-preference) {
+  .g-testata,
+  .g-prima-pagina {
+    animation: g-stampa 0.6s ease-out both;
+  }
+  .g-prima-pagina {
+    animation-delay: 0.12s;
+  }
+}
+@keyframes g-stampa {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

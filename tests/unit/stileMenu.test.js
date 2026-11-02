@@ -10,7 +10,6 @@ import {
   STILE_PREDEFINITO,
   stileMenu,
   stiliDisponibili,
-  stiliDaInstallare,
   stileProvabile,
   temiInLicenza,
   patchInstalla,
@@ -51,15 +50,16 @@ describe('lo stile del menù', () => {
 describe('il catalogo degli stili gratis', () => {
   const GRATIS = ['lavagna', 'deco', 'riviera', 'giornale']
 
+  // Il catalogo sono gli stili gratis (il Marketplace, MarketplaceTab.jsx):
+  // gli esclusivi degli altri non ci sono, non si possono prendere.
   it('di partenza sono tutti nel catalogo, e nessuno si applica', () => {
-    expect(stiliDaInstallare({}).map((s) => s.id)).toEqual(GRATIS)
+    expect(STILI_MENU.filter((s) => s.gratis).map((s) => s.id)).toEqual(GRATIS)
     expect(stileMenu({ stile_menu: 'lavagna' })).toBe('classico')
   })
 
-  it('installato, uno stile esce dal catalogo, si sceglie e si applica', () => {
+  it('installato, uno stile si sceglie e si applica', () => {
     const s = { ...patchInstalla({}, 'lavagna'), stile_menu: 'lavagna' }
     expect(s.stili_installati).toEqual(['lavagna'])
-    expect(stiliDaInstallare(s).map((x) => x.id)).toEqual(['deco', 'riviera', 'giornale'])
     expect(stiliDisponibili(s).map((x) => x.id)).toEqual(['classico', 'lavagna'])
     expect(stileMenu(s)).toBe('lavagna')
   })
@@ -72,7 +72,7 @@ describe('il catalogo degli stili gratis', () => {
 
   it('«Notte» non si installa: è della licenza, e non è nel catalogo', () => {
     expect(patchInstalla({}, 'notte')).toBeNull()
-    expect(stiliDaInstallare({}).some((s) => s.id === 'notte')).toBe(false)
+    expect(STILI_MENU.filter((s) => s.gratis).some((s) => s.id === 'notte')).toBe(false)
     expect(stileMenu({ stile_menu: 'notte', stili_installati: ['notte'] })).toBe('classico')
   })
 
