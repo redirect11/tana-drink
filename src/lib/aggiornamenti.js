@@ -26,6 +26,8 @@
 import { isAdmin } from './ruoli.js'
 import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
+// Solo dentro una funzione: funzioniRegia.js legge PROGETTI_REGIA da qui.
+import { erroreDellaRegia } from './funzioniRegia.js'
 
 const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
@@ -143,8 +145,7 @@ export function sceltaUrl(stato) {
 // che non è JSON, un proxy in mezzo) si dice una frase nostra.
 export function esitoScelta(status, corpo) {
   if (status === 200) return { ok: true }
-  const errore = typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null
-  return { ok: false, messaggio: errore || MESSAGGI_AGGIORNAMENTI.non_riuscita }
+  return { ok: false, messaggio: erroreDellaRegia(corpo) || MESSAGGI_AGGIORNAMENTI.non_riuscita }
 }
 
 // ── GLI AGGIORNAMENTI NON INCLUSI ─────────────────────────────────────

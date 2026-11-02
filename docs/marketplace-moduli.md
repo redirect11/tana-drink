@@ -29,7 +29,7 @@ dell'app (`MODULI_PREMIUM` in `src/lib/licenza.js`), con
   (c'è `VITE_REGIA_PROGETTO` nella build **e** `licenza.regia_url`):
   - *Prova gratis N giorni* — modulo non incluso, con `prova_giorni > 0`;
   - *Aggiungi* — modulo non incluso o in prova;
-  - *Disdici* — modulo incluso, con una conferma sulla scheda.
+  - *Disdici* — modulo incluso, con la finestra di conferma.
 
 Un modulo che il listino non porta (oggi `conta`, `fatture`,
 `scadenzario`) si vede, ma «Non acquistabile singolarmente».
@@ -62,7 +62,7 @@ Due Functions, nella regione `europe-west1` del progetto della regia
 
 - `id`: lo stesso di `piani.json` e di `MODULI_PREMIUM`. Un id che l'app
   non conosce si ignora: un modulo nuovo arriva con l'app.
-- `prezzo`: euro al mese, IVA esclusa (l'app scrive «15 € al mese + IVA»).
+- `prezzo`: euro al mese, IVA esclusa (l'app scrive «15,00 € al mese + IVA»).
 - `prova_giorni`: 0 o assente = niente prova.
 - Nome e descrizione li tiene l'app: sono le parole delle sue schermate.
 

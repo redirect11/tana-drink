@@ -33,7 +33,7 @@
 import { THEME_PRESETS, THEME_FIELDS, DEFAULT_THEME } from './themes.js'
 import { STILI_MENU, stileProvabile, patchInstalla as installaStile } from './stileMenu.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
-import { urlFunzioneRegia, leggiDallaRegia } from './funzioniRegia.js'
+import { urlFunzioneRegia, scaricaERicorda } from './funzioniRegia.js'
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,40}$/
 const COLORE = /^#[0-9a-f]{6}$/i
@@ -211,17 +211,17 @@ export function patchDisinstallaTema(settings, id) {
 // Il catalogo della regia, letto adesso: i temi, o null se non si è letto
 // (senza regia nella build, senza rete, una risposta che non è un
 // catalogo). Si ricorda quello che arriva.
-export async function scaricaCatalogo(url = urlCatalogo(), prendi) {
-  const corpo = await leggiDallaRegia(url, prendi)
-  if (corpo === null) return null
-  const temi = leggiCatalogo(corpo)
-  ricordaCatalogo(temi)
-  return temi
-}
+export const scaricaCatalogo = (url = urlCatalogo(), prendi) => scaricaERicorda(url, leggiCatalogo, ricordaCatalogo, prendi)
 
 // LA PROVA SUL MENÙ: `?vista=cliente&tema=…` (da Aspetto → Marketplace)
-// mostra a chi lavora il proprio menù con i colori e lo stile di un tema.
-// La vede solo chi la apre. Null se non c'è un tema in prova.
+// mostra a chi lavora il proprio menù con i colori e lo stile di un tema;
+// `?vista=cliente&stile=…` lo stesso, per uno stile solo. La vede solo chi
+// la apre. L'indirizzo si scrive qui, accanto a chi lo legge: scritto a mano
+// in un componente, un parametro sbagliato apriva il menù senza la prova.
+export const urlProvaMenu = (chiave, id, base = import.meta.env?.BASE_URL || '/') =>
+  `${base}menu?vista=cliente&${chiave}=${encodeURIComponent(id)}`
+
+// Il tema in prova, o null se non ce n'è uno.
 export function temaInProva(settings, search) {
   const p = new URLSearchParams(search || '')
   if (p.get('vista') !== 'cliente') return null

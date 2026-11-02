@@ -51,6 +51,10 @@ const WELCOME_KEY = 'drink_welcome_v1'
 
 // `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
 // segnate come speciali, nei colori del menù.
+// Il menù Special non ha sezioni: lo stesso elenco vuoto a ogni giro, perché
+// il giornale non riosservi le sue sezioni a ogni tocco su «Aggiungi».
+const NESSUNA_CATEGORIA = []
+
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
@@ -435,8 +439,10 @@ export default function MenuPage({ speciali = false }) {
   // prima pagina, sezioni — e le sue immagini, incisioni: non è una veste
   // sopra le card del classico.
   const giornale = stile === 'giornale'
+  // Il segno dei disegni, deciso una volta: lo usano il giornale e il
+  // dettaglio, che devono mostrare lo stesso disegno.
   const segnoDisegni = giornale ? 'incisione' : 'tenniel'
-  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: 'incisione' })
+  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni })
   const specialNotte = notte && speciali
 
   return (
@@ -459,7 +465,21 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
-      {giornale && <TestataGiornale venue={venue} sottotitolo={speciali ? settings.special_titolo || 'Special' : venue.venue_tagline} />}
+      {/* Nel menù Special la testata del giornale fa anche da testata degli
+          Special: il tema della sera e la strada per il menù completo, che
+          senza questa riga sparivano con la testata classica. */}
+      {giornale && (
+        <TestataGiornale venue={venue} sottotitolo={speciali ? settings.special_titolo || 'Special' : venue.venue_tagline}>
+          {speciali && (
+            <>
+              {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
+              <Link className="btn ghost small" to={conParametri('/menu', params)}>
+                ← Tutto il menù
+              </Link>
+            </>
+          )}
+        </TestataGiornale>
+      )}
       {!staff && !specialNotte && !giornale && (
         <div className="hero">
           <img
@@ -690,7 +710,7 @@ export default function MenuPage({ speciali = false }) {
 
       {giornale && (
         <MenuGiornale
-          categorie={speciali ? [] : categories}
+          categorie={speciali ? NESSUNA_CATEGORIA : categories}
           speciali={elencoSpeciali}
           soloSpeciali={speciali}
           immagine={immagineGiornale}

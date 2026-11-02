@@ -744,4 +744,31 @@ describe('lo stile «Giornale»', () => {
     await utente.click(screen.getByRole('button', { name: 'Mojito' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
+
+  // Trovato nel giro di revisione della 1.10.8: nel menù Special il giornale
+  // toglieva la testata classica, e con lei il tema della sera e la strada
+  // per il menù completo. Chi arrivava dal QR degli Special restava chiuso lì.
+  it('nel menù Special la testata porta il tema della sera e «← Tutto il menù»', async () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, ...SPECIALI]
+    mockSettings = {
+      stili_installati: ['giornale'],
+      stile_menu: 'giornale',
+      special_titolo: 'Special',
+      special_sottotitolo: 'Alice nel paese delle meraviglie',
+    }
+    const { container } = render(
+      <MemoryRouter initialEntries={['/menu/special']}>
+        <MenuPage speciali />
+      </MemoryRouter>
+    )
+    const testata = await waitFor(() => {
+      const t = container.querySelector('.g-testata')
+      expect(t).not.toBeNull()
+      return t
+    })
+    expect(within(testata).getByText('Alice nel paese delle meraviglie')).toBeInTheDocument()
+    expect(within(testata).getByRole('link', { name: '← Tutto il menù' })).toHaveAttribute('href', '/menu')
+    expect(screen.queryByRole('navigation', { name: 'Sommario' })).toBeNull()
+  })
 })

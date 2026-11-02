@@ -10668,9 +10668,9 @@ body.pagina-piena .inv-scheda {
   border-radius: 24px;
 }
 
-/* ── LA GALLERIA DEGLI STILI, IN IMPOSTAZIONI (REQ-MENU-022) ──────────────
+/* ── GLI STILI INSTALLATI, IN IMPOSTAZIONI (REQ-MENU-022) ─────────────────
    Ogni scheda: l'assaggio dello stile, nome e descrizione, e sotto «Prova
-   sul menù» e il tasto per installare o disinstallare. */
+   sul menù» e «Disinstalla». Il catalogo sta nel Marketplace. */
 .stili-menu {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
@@ -10713,32 +10713,6 @@ body.pagina-piena .inv-scheda {
   color: var(--accent-2);
 }
 
-/* ── IL MARKETPLACE DEI TEMI (REQ-MENU-023) ──────────────────────────────
-   L'assaggio di un tema porta i SUOI colori (le variabili sono scritte
-   sull'elemento, non sulla pagina) e il suo stile: si vede il tema vero
-   senza applicarlo. Sotto, la tavolozza in cinque tessere. */
-.assaggio-tema {
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-.assaggio-tema .assaggio-stile {
-  margin-bottom: 6px;
-  background: var(--card);
-}
-.assaggio-tavolozza {
-  display: flex;
-  gap: 4px;
-}
-.assaggio-tavolozza > span {
-  flex: 1;
-  height: 10px;
-  border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
-}
-
 /* ── LA PAGINA DEL MARKETPLACE (REQ-MENU-023) ────────────────────────────
    Un catalogo: schede grandi, ognuna con una vetrina — un pezzo del menù
    vero (categoria e due voci) con le classi del menù, i colori del tema
@@ -10759,7 +10733,9 @@ body.pagina-piena .inv-scheda {
   border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
-  background: var(--card);
+  /* Il rilievo della `.card`: sul tema scuro staccava il riquadro, e senza
+     la scheda sembrava un buco nella pagina. */
+  background: var(--velo-superficie), var(--card);
   min-width: 0;
 }
 .scheda-marketplace-testo {
@@ -10819,13 +10795,12 @@ body.pagina-piena .inv-scheda {
   font-size: 2.6rem;
   line-height: 1;
 }
+/* Sopra la `.pill` di sempre: solo il bordo e il colore dello stato. */
 .vetrina-modulo-stato {
-  font-size: 0.78rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--raggio-pill);
+  background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
+  white-space: normal;
   text-align: right;
 }
 .vetrina-modulo-incluso {

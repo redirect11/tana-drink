@@ -18,7 +18,8 @@
 import { MODULI_PREMIUM, moduloIncluso, scadenzaProva } from './licenza.js'
 import { urlRegia } from './limiti.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
-import { urlFunzioneRegia, leggiDallaRegia } from './funzioniRegia.js'
+import { urlFunzioneRegia, scaricaERicorda, erroreDellaRegia } from './funzioniRegia.js'
+import { formatPrice } from './orderStatus.js'
 
 export const urlListino = (progetto) => urlFunzioneRegia('catalogoModuli', progetto)
 export const urlAzioni = (progetto) => urlFunzioneRegia('moduloDallApp', progetto)
@@ -47,13 +48,7 @@ const ricordaListino = (voci) => scrivi(CHIAVE, voci)
 
 // Il listino letto adesso, o null (senza regia nella build, senza rete):
 // allora si mostra l'ultimo letto su questo dispositivo.
-export async function scaricaListino(url = urlListino(), prendi) {
-  const corpo = await leggiDallaRegia(url, prendi)
-  if (corpo === null) return null
-  const voci = leggiListino(corpo)
-  ricordaListino(voci)
-  return voci
-}
+export const scaricaListino = (url = urlListino(), prendi) => scaricaERicorda(url, leggiListino, ricordaListino, prendi)
 
 // SI COMPRA DALL'APP SOLO SE LA LICENZA È DELLA REGIA: c'è una regia nella
 // build E la licenza dice dov'è (`regia_url`). La licenza della Tana è
@@ -74,6 +69,7 @@ export function schedeModuli(settings, listino = []) {
       id,
       nome: m.label,
       descrizione: m.descrizione,
+      icona: m.icona,
       stato: prova ? 'prova' : incluso ? 'incluso' : 'non_incluso',
       prova_fino: prova,
       prezzo: voce?.prezzo ?? null,
@@ -84,11 +80,8 @@ export function schedeModuli(settings, listino = []) {
 }
 
 // Il prezzo come lo scrive il listino della regia (piani.json): mensile, IVA
-// esclusa. «15 € al mese + IVA».
-export const prezzoAlMese = (euro) =>
-  euro === null || euro === undefined
-    ? ''
-    : `${Number(euro).toLocaleString('it-IT', { maximumFractionDigits: 2 })} € al mese + IVA`
+// esclusa. «15,00 € al mese + IVA», coi decimali come ogni prezzo dell'app.
+export const prezzoAlMese = (euro) => (euro === null || euro === undefined ? '' : `${formatPrice(euro)} al mese + IVA`)
 
 // La risposta della regia a un'azione. Con `checkout_url` si va a pagare
 // sulla pagina di Stripe; senza, la licenza è già aggiornata (o lo sarà fra
@@ -98,8 +91,7 @@ export function esitoAzione(status, corpo) {
     const url = typeof corpo.checkout_url === 'string' && /^https:\/\/checkout\.stripe\.com\//.test(corpo.checkout_url)
     return { ok: true, checkout_url: url ? corpo.checkout_url : null, dal: corpo.dal || null }
   }
-  const errore = typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null
-  return { ok: false, status, errore }
+  return { ok: false, status, errore: erroreDellaRegia(corpo) }
 }
 
 // Dove tornare dopo la pagina di Stripe: il marketplace di questo locale,

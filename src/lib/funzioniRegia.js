@@ -14,14 +14,16 @@ export function urlFunzioneRegia(nome, progetto = import.meta.env?.VITE_REGIA_PR
   return PROGETTI_REGIA.includes(progetto) ? `https://${REGIONE}-${progetto}.cloudfunctions.net/${nome}` : null
 }
 
+// Venti secondi al massimo, per ogni chiamata alla regia: un `fetch` senza
+// rete può restare appeso molto più a lungo.
+export const ATTESA_REGIA_MS = 20000
+
 // Una lettura pubblica (cataloghi, listini): il corpo JSON, o null senza
-// indirizzo, senza rete, con una risposta che non è 200. Venti secondi al
-// massimo: un `fetch` senza rete può restare appeso molto più a lungo.
-const ATTESA_MS = 20000
+// indirizzo, senza rete, con una risposta che non è 200.
 export async function leggiDallaRegia(url, prendi = globalThis.fetch) {
   if (!url || typeof prendi !== 'function') return null
   const ferma = new AbortController()
-  const timer = setTimeout(() => ferma.abort(), ATTESA_MS)
+  const timer = setTimeout(() => ferma.abort(), ATTESA_REGIA_MS)
   try {
     const r = await prendi(url, { signal: ferma.signal })
     return r.ok ? await r.json() : null
@@ -31,3 +33,19 @@ export async function leggiDallaRegia(url, prendi = globalThis.fetch) {
     clearTimeout(timer)
   }
 }
+
+// Un catalogo della regia letto adesso e ricordato sul dispositivo: le voci
+// già interpretate, o null se non si è letto (allora chi chiama mostra
+// l'ultimo ricordato). Lo schema dei temi e del listino dei moduli.
+export async function scaricaERicorda(url, interpreta, ricorda, prendi) {
+  const corpo = await leggiDallaRegia(url, prendi)
+  if (corpo === null) return null
+  const voci = interpreta(corpo)
+  ricorda(voci)
+  return voci
+}
+
+// Il testo di un rifiuto, come lo scrive la regia (italiano, da mostrare
+// com'è), o null se non c'è: allora chi chiama dice una frase sua.
+export const erroreDellaRegia = (corpo) =>
+  typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null

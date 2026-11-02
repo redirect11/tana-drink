@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
 import ThemeSettings, { StileMenuClienti } from '../../src/components/ThemeSettings.jsx'
@@ -81,7 +82,7 @@ const CON_NOTTE = { licenza: { moduli: {}, temi: ['notte'] } }
 describe('lo stile del menù dei clienti', () => {
   it('di suo è il classico; scegliendo «Notte» scrive `stile_menu`', async () => {
     const utente = userEvent.setup()
-    render(<StileMenuClienti settings={CON_NOTTE} onSave={onSave} />)
+    render(<MemoryRouter><StileMenuClienti settings={CON_NOTTE} onSave={onSave} /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /Classico/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'false')
     await utente.click(screen.getByRole('button', { name: /Notte/ }))
@@ -89,7 +90,7 @@ describe('lo stile del menù dei clienti', () => {
   })
 
   it('dice che il personale vede sempre il classico', () => {
-    render(<StileMenuClienti settings={{ ...CON_NOTTE, stile_menu: 'notte' }} onSave={onSave} />)
+    render(<MemoryRouter><StileMenuClienti settings={{ ...CON_NOTTE, stile_menu: 'notte' }} onSave={onSave} /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText(/Il personale vede sempre lo stile classico/)).toBeInTheDocument()
   })
@@ -99,7 +100,7 @@ describe('lo stile del menù dei clienti', () => {
   // licenza non si mostra nemmeno, e col solo classico non c'è niente da
   // scegliere.
   it('senza «Notte» nella licenza «Notte» non c’è, né da scegliere né nel catalogo', () => {
-    render(<StileMenuClienti settings={{ licenza: { moduli: {} } }} onSave={onSave} />)
+    render(<MemoryRouter><StileMenuClienti settings={{ licenza: { moduli: {} } }} onSave={onSave} /></MemoryRouter>)
     expect(screen.queryByText('Notte')).toBeNull()
     expect(screen.getByRole('button', { name: /Classico/ })).toBeInTheDocument()
   })
@@ -108,14 +109,14 @@ describe('lo stile del menù dei clienti', () => {
   // marketplace, non qui. Qui si sceglie fra quelli installati, e c'è la
   // strada per il catalogo.
   it('il catalogo non sta qui: c’è la strada per il marketplace', () => {
-    render(<StileMenuClienti settings={{}} onSave={onSave} />)
+    render(<MemoryRouter><StileMenuClienti settings={{}} onSave={onSave} /></MemoryRouter>)
     expect(screen.queryByRole('button', { name: /Installa/ })).toBeNull()
     expect(screen.getByRole('link', { name: 'marketplace' })).toHaveAttribute('href', '/bar?tab=marketplace')
   })
 
   it('uno stile installato si sceglie e si disinstalla', async () => {
     const utente = userEvent.setup()
-    render(<StileMenuClienti settings={{ stili_installati: ['deco'], stile_menu: 'deco' }} onSave={onSave} />)
+    render(<MemoryRouter><StileMenuClienti settings={{ stili_installati: ['deco'], stile_menu: 'deco' }} onSave={onSave} /></MemoryRouter>)
     expect(screen.getByRole('button', { name: /Déco/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.queryByRole('button', { name: 'Installa Déco' })).toBeNull()
     await utente.click(screen.getByRole('button', { name: 'Disinstalla' }))

@@ -25,7 +25,9 @@ const ancora = (cat) => `sez-${encodeURIComponent(cat)}`
 const nessunMovimento = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-export function TestataGiornale({ venue, sottotitolo }) {
+// `children`: quello che sta sotto il motto (nel menù Special, il tema della
+// sera e la strada per il menù completo).
+export function TestataGiornale({ venue, sottotitolo, children }) {
   return (
     <header className="g-testata">
       <p className="g-edizione">
@@ -34,7 +36,90 @@ export function TestataGiornale({ venue, sottotitolo }) {
       </p>
       <h1 className="g-nome">{venue.venue_name}</h1>
       {sottotitolo && <p className="g-motto">{sottotitolo}</p>}
+      {children}
     </header>
+  )
+}
+
+// Una voce di una sezione: «NOME ···· prezzo», la descrizione, gli
+// ingredienti, il tasto. La usa anche la vetrina del Marketplace, perché
+// mostri il giornale che c'è davvero: senza `apri` il nome è testo.
+export function VoceGiornale({ d, apri, tastiOrdine, quantita = false }) {
+  const ingredienti = ingredientiInCarta(d, { quantita })
+  return (
+    <article className="g-voce">
+      <h4>
+        {apri ? (
+          <button type="button" onClick={() => apri(d)}>
+            {d.name}
+          </button>
+        ) : (
+          <span>{d.name}</span>
+        )}
+        <span className="g-puntini" aria-hidden="true" />
+        <span className="g-prezzo">{formatPrice(d.price)}</span>
+      </h4>
+      {d.description && <p className="g-testo">{d.description}</p>}
+      {ingredienti && <p className="g-ingredienti">{ingredienti.join(' · ')}</p>}
+      {tastiOrdine && <div className="g-voce-tasti">{tastiOrdine(d)}</div>}
+    </article>
+  )
+}
+
+// IL SOMMARIO SEGUE LA LETTURA: la sezione evidenziata è quella che si ha
+// sotto gli occhi, non l'ultima toccata. Lo stato sta qui e non nel giornale:
+// stava sopra, e ogni sezione che passava sotto gli occhi ridisegnava tutto
+// il menù, voci e tasti, proprio mentre si scorre.
+// Mentre si scorre verso una sezione toccata, le sezioni attraversate non
+// spostano il segno: arriverebbe a quella giusta passando per tutte.
+function Sommario({ nomi, sezioni }) {
+  const [attiva, setAttiva] = useState(nomi[0] || null)
+  const guidato = useRef(null)
+  // Si riosserva solo se cambiano le sezioni, non a ogni giro della pagina.
+  const chiave = nomi.join('|')
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return undefined
+    const osserva = new IntersectionObserver(
+      (voci) => {
+        const vista = voci.filter((v) => v.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (!vista) return
+        const cat = vista.target.dataset.cat
+        if (guidato.current) {
+          if (cat === guidato.current) guidato.current = null
+          return
+        }
+        setAttiva(cat)
+      },
+      { rootMargin: '-35% 0px -55% 0px' }
+    )
+    for (const el of Object.values(sezioni.current)) if (el) osserva.observe(el)
+    return () => osserva.disconnect()
+  }, [chiave, sezioni])
+
+  const vaiA = (cat) => (e) => {
+    e.preventDefault()
+    setAttiva(cat)
+    const ridotto = nessunMovimento()
+    guidato.current = ridotto ? null : cat
+    sezioni.current[cat]?.scrollIntoView?.({ behavior: ridotto ? 'auto' : 'smooth', block: 'start' })
+  }
+
+  return (
+    <nav className="g-sommario" aria-label="Sommario">
+      <span className="g-sommario-titolo">Sommario</span>
+      {nomi.map((cat) => (
+        <a
+          key={cat}
+          href={`#${ancora(cat)}`}
+          className={attiva === cat ? 'attiva' : undefined}
+          aria-current={attiva === cat ? 'true' : undefined}
+          onClick={vaiA(cat)}
+        >
+          {cat}
+        </a>
+      ))}
+    </nav>
   )
 }
 
@@ -70,49 +155,11 @@ function Articolo({ d, immagine, apri, tastiOrdine, quantita, apertura = false }
 }
 
 export default function MenuGiornale({ categorie, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false }) {
-  const [attiva, setAttiva] = useState(categorie[0]?.[0] || null)
   const sezioni = useRef({})
-
-  // IL SOMMARIO SEGUE LA LETTURA: la sezione evidenziata è quella che si
-  // ha sotto gli occhi, non l'ultima toccata.
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return undefined
-    const osserva = new IntersectionObserver(
-      (voci) => {
-        const vista = voci.filter((v) => v.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-        if (vista) setAttiva(vista.target.dataset.cat)
-      },
-      { rootMargin: '-35% 0px -55% 0px' }
-    )
-    for (const el of Object.values(sezioni.current)) if (el) osserva.observe(el)
-    return () => osserva.disconnect()
-  }, [categorie])
-
-  const vaiA = (cat) => (e) => {
-    e.preventDefault()
-    setAttiva(cat)
-    sezioni.current[cat]?.scrollIntoView?.({ behavior: nessunMovimento() ? 'auto' : 'smooth', block: 'start' })
-  }
-
   const [primo, ...altri] = speciali
   return (
     <div className="g-giornale">
-      {!soloSpeciali && categorie.length > 1 && (
-        <nav className="g-sommario" aria-label="Sommario">
-          <span className="g-sommario-titolo">Sommario</span>
-          {categorie.map(([cat]) => (
-            <a
-              key={cat}
-              href={`#${ancora(cat)}`}
-              className={attiva === cat ? 'attiva' : undefined}
-              aria-current={attiva === cat ? 'true' : undefined}
-              onClick={vaiA(cat)}
-            >
-              {cat}
-            </a>
-          ))}
-        </nav>
-      )}
+      {!soloSpeciali && categorie.length > 1 && <Sommario nomi={categorie.map(([cat]) => cat)} sezioni={sezioni} />}
 
       {primo && (
         <section className="g-prima-pagina" aria-label="Prima pagina">
@@ -144,23 +191,9 @@ export default function MenuGiornale({ categorie, speciali, immagine, apri, tast
               <span className="g-sezione-conto">{list.length === 1 ? '1 voce' : `${list.length} voci`}</span>
             </h3>
             <div className="g-colonne">
-              {list.map((d) => {
-                const ingredienti = ingredientiInCarta(d, { quantita })
-                return (
-                  <article className="g-voce" key={d.id}>
-                    <h4>
-                      <button type="button" onClick={() => apri(d)}>
-                        {d.name}
-                      </button>
-                      <span className="g-puntini" aria-hidden="true" />
-                      <span className="g-prezzo">{formatPrice(d.price)}</span>
-                    </h4>
-                    {d.description && <p className="g-testo">{d.description}</p>}
-                    {ingredienti && <p className="g-ingredienti">{ingredienti.join(' · ')}</p>}
-                    <div className="g-voce-tasti">{tastiOrdine(d)}</div>
-                  </article>
-                )
-              })}
+              {list.map((d) => (
+                <VoceGiornale key={d.id} d={d} apri={apri} tastiOrdine={tastiOrdine} quantita={quantita} />
+              ))}
             </div>
           </section>
         ))}
