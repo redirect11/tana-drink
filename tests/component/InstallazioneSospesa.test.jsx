@@ -42,11 +42,28 @@ describe('la schermata', () => {
     expect(screen.getByText(/non sono andati persi/)).toBeInTheDocument()
   })
 
-  it('chiusa: lo dice, e dice dei 30 giorni', () => {
+  // Prima diceva «30 giorni»; dal REQ-LIC-009 i giorni li decide la regia
+  // (90) e la data vera la dice l'avviso della cancellazione: qui non si
+  // promettono giorni che possono essere sbagliati.
+  it('chiusa: lo dice, e che i dati restano fino alla cancellazione', () => {
     render(<InstallazioneSospesa licenza={{ stato: 'chiusa' }} venue={{ venue_name: 'Bar Mario' }} />)
     expect(screen.getByRole('alert')).toHaveTextContent('Installazione chiusa')
-    expect(screen.getByText(/30 giorni/)).toBeInTheDocument()
+    expect(screen.getByText(/fino alla loro cancellazione/)).toBeInTheDocument()
+    expect(screen.queryByText(/30 giorni/)).toBeNull()
     expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  // REQ-LIC-009: passata `valida_fino` senza il Free, anche senza rete.
+  it('scaduta: lo dice, con la data e dove rinnovarla', () => {
+    render(
+      <InstallazioneSospesa
+        licenza={{ stato: 'scaduta', scaduta_il: '2026-11-30T04:00:00Z', regia_url: 'https://drink-regia.web.app/area' }}
+        venue={{ venue_name: 'Bar Mario' }}
+      />
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('Licenza scaduta')
+    expect(screen.getByRole('alert')).toHaveTextContent(/dal 30\/11\/2026/)
+    expect(screen.getByRole('link', { name: /pagina del prodotto/ })).toHaveAttribute('href', 'https://drink-regia.web.app/area')
   })
 
   // BUG-125: nessuna licenza, né della regia né della build, e il server

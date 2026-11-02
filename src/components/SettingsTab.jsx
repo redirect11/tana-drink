@@ -36,6 +36,8 @@ import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
 import BackupPanel from './BackupPanel.jsx'
 import InfoTab from './InfoTab.jsx'
+import LicenzaPanel from './LicenzaPanel.jsx'
+import { isAdmin } from '../lib/ruoli.js'
 import { pairSumUpReader, unpairSumUpReader } from '../lib/paymentsApi.js'
 import { Link } from 'react-router-dom'
 import { devToolsEnabled } from '../dev/devActions.js'
@@ -1102,6 +1104,11 @@ export default function SettingsTab({ role = null }) {
       label: 'Informazioni',
       nodo: <InfoTab settings={settings} role={role} />,
     },
+    // La licenza la legge il titolare (REQ-LIC-007): è il suo contratto,
+    // e al banco non serve.
+    ...(isAdmin(role)
+      ? [{ id: 'licenza', icona: '📜', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
+      : []),
     {
       id: 'funzioni-premium',
       icona: '🔒',
@@ -1196,6 +1203,7 @@ export default function SettingsTab({ role = null }) {
     'logo-stampe': 'stampante',
     backup: 'sistema',
     informazioni: 'sistema',
+    licenza: 'premium',
     'funzioni-premium': 'premium',
   }
   const GRUPPI = [
@@ -1221,7 +1229,10 @@ export default function SettingsTab({ role = null }) {
     // elenca cinque pacchetti): un gruppo che cresce è meglio di cinque voci
     // sparse. E non sta in «Sistema», che parla di questa installazione
     // (backup, versione): la licenza è del locale, non della macchina.
-    { id: 'premium', icona: '🔒', label: 'Funzioni premium' },
+    // «Licenza», da quando il gruppo ne mostra anche il riepilogo
+    // (REQ-LIC-007): le funzioni premium sono quello che la licenza
+    // comprende, e chi cerca cosa ha comprato cerca la licenza.
+    { id: 'premium', icona: '🔒', label: 'Licenza' },
     { id: 'sistema', icona: '💾', label: 'Sistema' },
   ]
   // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro

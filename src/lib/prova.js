@@ -9,7 +9,7 @@
 // esiste, qualunque cosa ci sia scritto in settings/bar — in produzione ci
 // sono i numeri veri del locale. È lo stesso controllo dei DevTools e della
 // stampante finta (dev/devActions.js), costruito da VITE_APP_ENV. La seconda
-// è l'interruttore (Impostazioni → Funzioni premium).
+// è l'interruttore (Impostazioni → Licenza, tra le funzioni premium).
 
 import { devToolsEnabled } from '../dev/devActions.js'
 
