@@ -2764,7 +2764,7 @@ Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli.
 
 #### REQ-DATI-001 — Backup ed esportazione di tutto il database
 
-Si scarica in un file tutto quello che c'è nel database e lo si rimette da un file. Un file non valido viene rifiutato PRIMA di scrivere; l'import riscrive quello che il file contiene e non cancella il resto; oltre il limite di un lotto si spezza senza perdere righe.
+Si scarica in un file tutto quello che c'è nel database e lo si rimette da un file. Un file non valido viene rifiutato PRIMA di scrivere; l'import riscrive quello che il file contiene e non cancella il resto; oltre il limite di un lotto si spezza senza perdere righe. La licenza non si ripristina (BUG-126): le impostazioni tornano quelle del file ma tengono la licenza che c'è adesso nel database, e la collezione `licenza` non si tocca.
 
 **Dove**: `src/lib/backup.js, src/components/BackupPanel.jsx, scripts/backup-db.js` · **Lo dimostrano**: `tests/unit/backup.test.js`
 
