@@ -6103,11 +6103,33 @@ requirements:
       Mai a tempo. La regia segna la versione e, se manca, scrive la
       licenza. Il contratto in docs/presentazione-alla-regia.md; la regia è
       pronta (drink-regia REQ-FLOTTA-026, PR #40).
-    status: todo
+      COME È FATTO (02/11/2026): src/lib/presentazione.js decide QUANDO
+      (presentaSeServe: una volta per versione per dispositivo, segnata in
+      `drink:presentata` solo con un 200; sempre, finché la licenza manca);
+      api.js fa la chiamata (presentaAllaRegia, sullo stesso chiamaRegia
+      della scelta sugli aggiornamenti: token, venti secondi al massimo,
+      nessun errore che risale). L'indirizzo si costruisce da
+      VITE_REGIA_PROGETTO solo per PROGETTI_REGIA (aggiornamenti.js).
+      App.jsx la lancia all'accesso e quando la licenza risulta «non
+      attivata»; InstallazioneSospesa ha il «Riprova», che dice com'è
+      andata. deploy.yml compila drink-regia in produzione e
+      drink-regia-test sul test. Per ora la regia risponde
+      `non_dalla_regia` alla Tana e segna solo la versione: la licenza
+      della Tana resta quella creata dal deploy (il ponte, REQ-LIC-009).
+      DA SAPERE: l'app non fa accessi anonimi, quindi la chiamata parte
+      solo con qualcuno collegato. Su un'installazione nuova, senza licenza
+      e senza nessuno collegato, la schermata «non attivata» copre anche
+      l'accesso: lì la licenza deve già esserci (la regia la scrive
+      all'attivazione, prima dell'app), e il «Riprova» è per chi una
+      sessione ce l'ha.
+    status: implemented
     generate_issue: false
     labels: [flotta, licenza, regia]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/presentazione.test.js
+      - tests/unit/presentazioneChiamata.test.js
+      - tests/component/InstallazioneSospesa.test.jsx
 
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"

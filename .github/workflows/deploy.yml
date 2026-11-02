@@ -98,6 +98,10 @@ jobs:
           # Google Analytics measurement ID per ambiente (pubblico, non segreto).
           # Attivato in app solo dietro consenso cookie (categoria statistiche).
           VITE_FIREBASE_MEASUREMENT_ID: ${{ inputs.ambiente == 'production' && 'G-3Y4TH7G346' || 'G-FX9GGRW06Y' }}
+          # La regia a cui l'app si presenta (REQ-FLOTTA-026): quella di
+          # produzione per la produzione, quella di test per il test. L'app
+          # accetta solo questi due nomi.
+          VITE_REGIA_PROGETTO: ${{ inputs.ambiente == 'production' && 'drink-regia' || 'drink-regia-test' }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
