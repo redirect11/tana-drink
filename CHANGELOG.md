@@ -1,6 +1,15 @@
 # Cosa è cambiato
 
-## 1.10.8-beta — in lavorazione
+## 1.10.9-beta — in lavorazione
+
+### Nel gestionale
+
+- **Marketplace → Moduli, coi piani gestiti a mano.** Per un locale con il
+  piano pagato fuori dal pagamento online, «Aggiungi» e «Disdici» inviano
+  una richiesta all'assistenza, che attiva o spegne il modulo a pagamento
+  ricevuto; il messaggio lo dice, invece di dare il modulo per aggiunto.
+
+## 1.10.8-beta — 02/11/2026 (test)
 
 ### Per chi gestisce l'installazione
 
