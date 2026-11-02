@@ -10145,17 +10145,34 @@ body.pagina-piena .inv-scheda {
   height: 100svh;
   overflow: hidden;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: center;
   justify-items: center;
   padding: calc(var(--safe-top) + var(--barra-alta) + 12px) 20px 110px;
 }
+/* IL DISEGNO PRENDE TUTTO LO SPAZIO SOPRA IL TESTO. Con una misura fissa
+   (320 px al massimo) su uno schermo grande restava un francobollo in mezzo
+   al vuoto (l'utente, 02/11/2026: «le immagini nel menu special le vedo
+   ancora piccole»). Ora è alto quanto la riga che gli resta, fino a 560 px,
+   e mai più largo dello schermo. */
 .notte-disegno {
-  width: min(66vw, 320px);
+  height: 100%;
+  min-height: 0;
+  max-height: min(88vw, 560px);
   max-width: 100%;
   aspect-ratio: 1;
   position: relative;
   will-change: transform;
+}
+/* Sugli schermi larghi e bassi il testo sotto il disegno ruba proprio
+   l'altezza che manca: il disegno va a sinistra e il testo a destra, e il
+   disegno ha tutta l'altezza dello schermo. */
+@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
+  .notte-palco {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 40px;
+  }
 }
 .notte-disegno img {
   width: 100%;
@@ -10304,6 +10321,12 @@ body.pagina-piena .inv-scheda {
     position: relative;
     height: auto;
     min-height: 100svh;
+  }
+  /* Senza un palco alto quanto lo schermo l'altezza «di tutta la riga» non
+     c'è: il disegno torna a una misura sua. */
+  .notte-disegno {
+    height: auto;
+    width: min(88vw, 560px, 60svh);
   }
   .notte-fondale,
   .notte-indice a {

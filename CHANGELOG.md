@@ -2,6 +2,12 @@
 
 ## 1.10.5-beta — in lavorazione
 
+### Nel menù
+
+- **Negli Special dello stile «Notte» il disegno del drink è molto più
+  grande**: prende tutto lo spazio sopra il testo, e sugli schermi larghi
+  sta di fianco al testo.
+
 ### Nel gestionale
 
 - **Alla Tana le fatture ai clienti sono incluse**: la sua licenza è
