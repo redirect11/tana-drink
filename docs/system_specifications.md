@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 251 | fatto e coperto dai test |
+| ✅ | 253 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**303 voci** in tutto. **268** descrivono il sistema com'è oggi e
+**305 voci** in tutto. **270** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 18 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 19 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 8 | 3 |  |
+| [LIC](#lic) | 9 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 7 | — |  |
 
@@ -824,11 +824,21 @@ GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo): su desktop
 
 **Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
 
-#### REQ-MENU-023 — Il marketplace dei temi in Aspetto: un tema è una tavolozza più uno stile, si installa, si prova e si usa
+#### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
 L'utente, 02/11/2026: «Dobbiamo fare una sezione marketplace per i temi in aspetto. È una pagina che carica tutti i temi disponibili. Serve un posto dove pubblicarne di nuovi e trovare un modo per pubblicarne»; «il tema quindi è composto da tavolozze e stile. Si possono vendere/uppare/scaricare/acquistare temi che miscelano tavolozze e stili. Per ora tutto gratis tra quelli che già abbiamo»; pubblica solo il fornitore, dalla regia; il tema è DESCRITTIVO (una ricetta: una base fra le tavolozze dell'app, qualche colore, uno stile che l'app sa disegnare), non codice, così non può rompere il menù e funziona senza rete. In Impostazioni → Aspetto: i temi del locale e quelli del catalogo — l'iniziale, composto da quello che c'era (Classico, Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta, Inchiostro; Notte solo con la licenza) più quello della regia, letto all'apertura della pagina (`catalogoTemi`, solo dai due progetti della regia) e ricordato sul dispositivo. Ogni scheda ha l'assaggio coi colori e lo stile veri, «Prova sul menù» (`?vista=cliente&tema=…`, solo per chi la apre: App mette i colori, MenuPage lo stile) e «Installa»; installato, il tema ha una copia nelle impostazioni (`temi_installati`) e «Usa» scrive `theme_client`, `stile_menu` (installando lo stile gratis) e `tema_menu`. I colori del gestionale non si toccano. I temi a pagamento non si mostrano finché non c'è «Compra» (REQ-LIC-011). Il contratto per la regia, e quello che deve costruire (catalogo, pagina per pubblicare, stessa validazione), in docs/marketplace-temi.md.
 
-**Dove**: `src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTemi.jsx, src/components/SettingsTab.jsx (riquadro in Aspetto), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTemi.test.jsx`, `tests/component/MenuPage.test.jsx`
+UNA PAGINA SUA (02/11/2026). La prima versione era un riquadro in Impostazioni → Aspetto; l'utente: «ti avevo chiesto una sezione marketplace separata, una finestra/pagina nuova che apro per navigare i temi come se fosse un catalogo e poi li installo sulla mia istanza». Ora è la voce «🛍️ Marketplace» del menu laterale, prima di Impostazioni (docs/navigazione.md: risponde a una domanda diversa), con tre sezioni nel menu a scomparsa: Temi, Stili del menù (gli stili da soli, sui colori del locale) e Installati (dove si disinstalla). Ogni scheda ha una vetrina grande, un pezzo del menù vero scritto con le classi del menù. In Impostazioni restano la scelta fra gli stili installati (Menù clienti) e «Apri il marketplace» (Aspetto); il catalogo degli stili gratis di REQ-MENU-022 si è spostato qui.
+
+**Dove**: `src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-MENU-024 — Lo stile «Giornale» ha una struttura sua e immagini sue: testata, sommario, prima pagina, sezioni, incisioni
+
+L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e immagini diverse da quelle proposte per la tana (drink stilizzati)», e, sulla proposta stile per stile, «sì vanno bene, basta che sia figa e fluida la UX». Si comincia da «Giornale», uno stile alla volta. Non più una veste sopra le card del classico (le sue regole vecchie sono tolte): MenuGiornale disegna una TESTATA (il nome del locale coi filetti, «Edizione della sera» con la data), un SOMMARIO agganciato sotto la barra che segue la lettura (la sezione in vista è segnata, IntersectionObserver) e porta alla sezione scorrendo dolcemente (o di colpo, con «riduci movimento»), una PRIMA PAGINA (il primo Special come apertura: occhiello, titolo grande, incisione con didascalia, capolettera sui testi lunghi, prezzo; gli altri «In breve» a lato o sotto), le SEZIONI (una fascia nera col nome e il numero di voci, le voci in una, due o tre colonne, senza immagini, «NOME ···· prezzo»). «Stiamo servendo il numero» diventa un'ultim'ora fra due filetti. Le immagini sono a INCISIONE: un solo inchiostro, niente acquerello, una cornice da lastra, la puntinatura, il colore del drink reso come tratteggio più o meno fitto; dalle stesse scelte di ogni drink (bicchiere, colore, decorazione), anche nel dettaglio. I gesti sono quelli di sempre (Aggiungi, il carrello, il nome che apre il dettaglio). Nel marketplace la vetrina di «Giornale» è un giornale in miniatura. Guardato a schermo sulla demo, chiaro e scuro, desktop e telefono.
+
+DA FARE, con lo stesso schema: «Lavagna» (gessetto, una lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di cartoline da scorrere).
+
+**Dove**: `src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MarketplaceTab.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -3387,6 +3397,14 @@ L'utente, 02/11/2026: «Dobbiamo fare in modo che lo stile notte sia utilizzabil
 DA DIRE ALLA REGIA (docs/catalogo-temi.md): `temi` in ogni licenza, `[]` se il locale non ne ha; «Notte» mai a un locale che non sia la Tana.
 
 **Dove**: `src/lib/stileMenu.js (inLicenza, temiInLicenza, stiliDisponibili), src/components/ThemeSettings.jsx, src/lib/licenza.js (riepilogoLicenza), src/components/LicenzaPanel.jsx, clienti/tana/licenza-iniziale.json, scripts/lib-licenza-iniziale.js, docs/catalogo-temi.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`
+
+#### REQ-LIC-012 — Il marketplace dei moduli: il titolare prova, aggiunge e disdice i moduli dall'app, al mese
+
+L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il marketplace». Alle domande dello stesso giorno: «al mese, come nel listino», «sì, una prova gratuita», «solo il titolare». Nel Marketplace una quarta sezione, Moduli: una scheda per ogni modulo dell'app con lo stato dalla licenza (incluso, in prova fino al…, non incluso), prezzo mensile IVA esclusa e giorni di prova dal listino della regia (catalogoModuli, letto all'apertura e ricordato per quando la rete manca). I tasti — «Prova gratis N giorni», «Aggiungi», «Disdici» con conferma — li vede solo il titolare (isAdmin), e solo se la licenza è della regia (regia nella build e `regia_url` in licenza): la licenza della Tana, scritta dal deploy, si consulta soltanto. «Aggiungi» porta alla pagina di Stripe Checkout (solo un indirizzo checkout.stripe.com) e la regia riporta il titolare sui Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non scrive niente: la regia riscrive la licenza e l'app la vede cambiare in tempo reale. Un modulo che il listino non vende si vede ma non si compra.
+
+DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e del ritorno, il webhook che accende il modulo dopo il pagamento (docs/marketplace-moduli.md).
+
+**Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
