@@ -57,6 +57,9 @@ vi.mock('../../src/lib/customerAuth.js', () => ({
 const TEMA_STAFF = { preset: 'notte-blu', custom: null }
 const TEMA_CLIENTE = { preset: 'crema', custom: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La presentazione alla regia (REQ-FLOTTA-026) qui non parte: nei test
+  // non c'è VITE_REGIA_PROGETTO, ma l'app la importa comunque.
+  presentaAllaRegia: vi.fn(() => Promise.resolve({ ok: false, status: 0, errore: null })),
   DEFAULT_SETTINGS: {},
   settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {

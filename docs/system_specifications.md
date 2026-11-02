@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 246 | fatto e coperto dai test |
+| ✅ | 247 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 26 | da fare |
 | 🗑 | 8 | non più valido |
 
-**297 voci** in tutto. **263** descrivono il sistema com'è oggi e
+**298 voci** in tutto. **264** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **26** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 7 | 2 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 5 | — |  |
+| [FLOTTA](#flotta) | 6 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3475,6 +3475,16 @@ FATTA LA CHIAMATA (31/10/2026). `inviaSceltaAggiornamento` in api.js chiede il t
 UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`drink-regia`, `drink-regia-test`, scritti per intero: un controllo sul finale del nome lascerebbe passare un progetto altrui `foo-drink-regia`); un altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si può togliere. Finché la licenza sta in settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url` suo si prenderebbe il token del titolare al primo «Aggiorna». Il documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge né lo scrive, e il test delle regole lo dimostra.
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
+
+#### REQ-FLOTTA-026 — L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca
+
+L'utente, 02/11/2026: «non deve essere il deploy ad avvisare la regia ma l'istanza del sito stesso in qualche modo. Cioè regia e il sito custom del bar si devono parlare dopo il deploy e si scambiano dati tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di ogni versione, dopo l'accesso, l'app chiama la Function presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo drink-regia o drink-regia-test) col token dell'utente e la versione; e di nuovo, all'apertura o con «Riprova», finché manca la licenza. Mai a tempo. La regia segna la versione e, se manca, scrive la licenza. Il contratto in docs/presentazione-alla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-026, PR #40).
+
+COME È FATTO (02/11/2026): src/lib/presentazione.js decide QUANDO (presentaSeServe: una volta per versione per dispositivo, segnata in `drink:presentata` solo con un 200; sempre, finché la licenza manca); api.js fa la chiamata (presentaAllaRegia, sullo stesso chiamaRegia della scelta sugli aggiornamenti: token, venti secondi al massimo, nessun errore che risale). L'indirizzo si costruisce da VITE_REGIA_PROGETTO solo per PROGETTI_REGIA (aggiornamenti.js). App.jsx la lancia all'accesso e quando la licenza risulta «non attivata»; InstallazioneSospesa ha il «Riprova», che dice com'è andata. deploy.yml compila drink-regia in produzione e drink-regia-test sul test. Per ora la regia risponde `non_dalla_regia` alla Tana e segna solo la versione: la licenza della Tana resta quella creata dal deploy (il ponte, REQ-LIC-009).
+
+DA SAPERE: l'app non fa accessi anonimi, quindi la chiamata parte solo con qualcuno collegato. Su un'installazione nuova, senza licenza e senza nessuno collegato, la schermata «non attivata» copre anche l'accesso: lì la licenza deve già esserci (la regia la scrive all'attivazione, prima dell'app), e il «Riprova» è per chi una sessione ce l'ha.
+
+**Dove**: `src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md` · **Lo dimostrano**: `tests/unit/presentazione.test.js`, `tests/unit/presentazioneChiamata.test.js`, `tests/component/InstallazioneSospesa.test.jsx`
 
 #### REQ-FLOTTA-021 — Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore
 
