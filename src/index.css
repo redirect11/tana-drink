@@ -10440,7 +10440,7 @@ body.pagina-piena .inv-scheda {
     var(--bg);
 }
 /* La pagina, non l'assaggio: la lavagna arriva ai bordi dello schermo. */
-.stile-lavagna:not(.assaggio-stile) {
+.stile-lavagna:not(.assaggio-stile):not(.vetrina-tema) {
   margin: 0 -16px;
   padding: 0 16px 28px;
   min-height: 100svh;
@@ -10826,4 +10826,66 @@ body.pagina-piena .inv-scheda {
   height: 10px;
   border-radius: 3px;
   border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* ── LA PAGINA DEL MARKETPLACE (REQ-MENU-023) ────────────────────────────
+   Un catalogo: schede grandi, ognuna con una vetrina — un pezzo del menù
+   vero (categoria e due voci) con le classi del menù, i colori del tema
+   scritti sull'elemento e il suo stile. Sotto, nome, descrizione e tasti,
+   sempre allo stesso posto. */
+.pagina-marketplace h2 {
+  margin: 0 0 4px;
+}
+.griglia-marketplace {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+.scheda-marketplace {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--card);
+  min-width: 0;
+}
+.scheda-marketplace-testo {
+  padding: 12px 14px 0;
+  flex: 1;
+}
+.scheda-marketplace-testo h3 {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-testo p {
+  margin: 0 0 4px;
+}
+.scheda-marketplace-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 14px 14px;
+}
+.vetrina-tema {
+  background: var(--bg);
+  color: var(--text);
+  padding: 12px 12px 4px;
+  height: 230px;
+  overflow: hidden;
+  pointer-events: none;
+  /* Il menù continua: la voce tagliata in fondo sfuma invece di finire a
+     metà prezzo. È una maschera, non un filtro: niente sfocature. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+}
+.vetrina-tema .cat-header {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+}
+.vetrina-tema .menu-item {
+  margin: 0 0 8px;
+  padding: 10px 12px;
 }
