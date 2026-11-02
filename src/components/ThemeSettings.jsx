@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { STILI_MENU, stileMenu } from '../lib/stileMenu.js'
+import { stiliDisponibili, stileMenu } from '../lib/stileMenu.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -106,6 +106,9 @@ export function TemaMenuClienti({ settings, onSave }) {
 // sotto, per qualunque stile.
 export function StileMenuClienti({ settings, onSave }) {
   const attuale = stileMenu(settings)
+  const stili = stiliDisponibili(settings)
+  // Con il solo classico non c'è niente da scegliere.
+  if (stili.length < 2) return null
   return (
     <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
       <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
@@ -114,7 +117,7 @@ export function StileMenuClienti({ settings, onSave }) {
         scelti sotto. Il personale vede sempre lo stile classico.
       </p>
       <div className="mode-choice">
-        {STILI_MENU.map((s) => (
+        {stili.map((s) => (
           <button
             key={s.id}
             type="button"
