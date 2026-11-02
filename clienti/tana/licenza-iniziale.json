@@ -1,0 +1,14 @@
+{
+  "moduli": {
+    "menu_tavoli": true,
+    "ordini_cliente": true,
+    "clienti": true,
+    "magazzino": true,
+    "statistiche": true,
+    "staff": true,
+    "sumup": true,
+    "conta": true,
+    "fatture": false,
+    "scadenzario": true
+  }
+}
