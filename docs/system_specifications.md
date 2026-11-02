@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 248 | fatto e coperto dai test |
+| ✅ | 249 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**300 voci** in tutto. **265** descrivono il sistema com'è oggi e
+**301 voci** in tutto. **266** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 16 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 17 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -815,6 +815,12 @@ NEGLI SPECIAL: il menu' Special diventa una sequenza di scene a tutto schermo, u
 IL DISEGNO PIÙ GRANDE (02/11/2026). L'utente: «le immagini nel menu special le vedo ancora piccole». Il disegno aveva una misura fissa, 320 px al massimo: ora prende tutta l'altezza che il testo gli lascia, fino a 560 px; sugli schermi larghi e bassi (dai 900 px, più larghi che alti) il disegno sta a sinistra e il testo a destra. Con «riduci movimento» torna a una misura sua, fino a 560 px.
 
 **Dove**: `src/lib/stileMenu.js, src/components/SpecialScorrevoli.jsx, src/lib/useDisegnoRaster.js, src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile-notte), src/index.css (.stile-notte, .notte-*), src/lib/api.js (stile_menu), package.json (gsap)` · **Lo dimostrano**: `tests/component/SpecialScorrevoli.test.jsx`, `tests/unit/stileMenu.test.js`
+
+#### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
+
+L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli gratis non facciamo partire stripe ovviamente. Facciamo solo installare il tema». Scelti quattro stili: «Lavagna», «Déco», «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico (stesse voci, carosello, griglia degli Special) con caratteri, filetti e impaginazione loro; i colori sono quelli del tema, tranne «Lavagna», che li porta tutti. In Impostazioni → Menù clienti: sopra gli stili del locale, da scegliere; sotto «Altri stili, gratis», con «Installa». Gli installati stanno in `settings/bar.stili_installati` (sono gratis: niente da proteggere); disinstallando quello in uso si torna al classico. Ogni scheda ha un assaggio scritto con lo stile vero e «Prova sul menù», che apre l'anteprima del cliente con lo stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre, e un esclusivo che il locale non ha non si prova. Uno stile scelto ma non installato non si applica. Niente Stripe e niente regia per i gratis.
+
+**Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -3903,6 +3909,10 @@ UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`),
 L'utente, 02/11/2026: «sarebbe bello fare una specie di marketplace per i temi in modo che i gestori possano installarli sulla propria installazione e/o comprarli». La proposta, in docs/catalogo-temi.md: il catalogo sta nella regia accanto al listino dei piani; comprare o installare un tema vuol dire che la regia lo aggiunge a `licenza.temi` (REQ-LIC-010), e l'app lo vede arrivare in tempo reale; nell'app, accanto agli stili del locale, «Altri stili» porta al catalogo nell'area clienti; dall'app non si compra niente. Il codice degli stili sta nell'app, la licenza dice chi li usa; gli esclusivi non compaiono nel catalogo degli altri.
 
 DA DECIDERE con l'utente: cosa si vende (stili del menù, temi di colore), come si paga (una volta o in abbonamento), i gratuiti, l'anteprima, gli esclusivi su misura.
+
+DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non si possono sentire»); gli acquisti sono DENTRO L'APP, non nell'area clienti; i gratis si installano e basta, senza Stripe (fatto: REQ-MENU-022); l'anteprima si fa sul proprio menù (fatta).
+
+RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
 

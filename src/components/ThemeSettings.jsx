@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { stiliDisponibili, stileMenu } from '../lib/stileMenu.js'
+import { stiliDisponibili, stiliDaInstallare, stileMenu, patchInstalla, patchDisinstalla } from '../lib/stileMenu.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -101,14 +101,32 @@ export function TemaMenuClienti({ settings, onSave }) {
   )
 }
 
-// LO STILE DEL MENÙ: due risposte con lo stesso peso, affiancate, come per
-// le card della coda. Il classico resta il predefinito; i colori sono quelli
-// sotto, per qualunque stile.
+// LO STILE DEL MENÙ, E IL CATALOGO DEGLI STILI (REQ-MENU-021, REQ-MENU-022).
+// Sopra gli stili che il locale ha, da scegliere; sotto quelli che può
+// installare, gratis, con un tasto (l'utente, 02/11/2026: «gli acquisti sono
+// in app. E su quelli gratis non facciamo partire stripe ovviamente.
+// Facciamo solo installare il tema»). Ogni stile si può PROVARE sul proprio
+// menù prima di sceglierlo o installarlo: l'anteprima del cliente, con lo
+// stile in prova, la vede solo chi la apre.
+// Ogni scheda ha un assaggio dello stile (nome e prezzo di un drink) scritto
+// con le sue regole: si vede la differenza senza leggere la descrizione.
+function urlProva(id) {
+  return `${import.meta.env.BASE_URL || '/'}menu?vista=cliente&stile=${encodeURIComponent(id)}`
+}
+
+function AssaggioStile({ id }) {
+  return (
+    <span className={`assaggio-stile stile-${id}`} aria-hidden="true">
+      <span className="assaggio-nome">Negroni</span>
+      <span className="assaggio-prezzo">9,00 €</span>
+    </span>
+  )
+}
+
 export function StileMenuClienti({ settings, onSave }) {
   const attuale = stileMenu(settings)
   const stili = stiliDisponibili(settings)
-  // Con il solo classico non c'è niente da scegliere.
-  if (stili.length < 2) return null
+  const daInstallare = stiliDaInstallare(settings)
   return (
     <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
       <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
@@ -116,22 +134,65 @@ export function StileMenuClienti({ settings, onSave }) {
         Impaginazione, caratteri e movimento del menù e degli Special per i clienti. I colori sono quelli
         scelti sotto. Il personale vede sempre lo stile classico.
       </p>
-      <div className="mode-choice">
+      <div className="mode-choice stili-menu">
         {stili.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`mode-option${attuale === s.id ? ' active' : ''}`}
-            aria-pressed={attuale === s.id}
-            onClick={() => onSave({ stile_menu: s.id })}
-          >
-            <strong>{s.nome}</strong>
-            <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
-              {s.desc}
-            </span>
-          </button>
+          <div key={s.id} className={`stile-scheda${attuale === s.id ? ' active' : ''}`}>
+            <button
+              type="button"
+              className={`mode-option${attuale === s.id ? ' active' : ''}`}
+              aria-pressed={attuale === s.id}
+              onClick={() => onSave({ stile_menu: s.id })}
+            >
+              <AssaggioStile id={s.id} />
+              <strong>{s.nome}</strong>
+              <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
+                {s.desc}
+              </span>
+            </button>
+            <div className="stile-azioni">
+              <a className="link-inline small" href={urlProva(s.id)}>
+                Prova sul menù
+              </a>
+              {s.gratis && (
+                <button type="button" className="link-inline small" onClick={() => onSave(patchDisinstalla(settings, s.id))}>
+                  Disinstalla
+                </button>
+              )}
+            </div>
+          </div>
         ))}
       </div>
+
+      {daInstallare.length > 0 && (
+        <>
+          <h4 style={{ margin: '18px 0 4px' }}>Altri stili, gratis</h4>
+          <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+            Si installano senza costi e si possono disinstallare in qualsiasi momento. Installato, uno stile
+            compare tra quelli da scegliere.
+          </p>
+          <div className="mode-choice stili-menu">
+            {daInstallare.map((s) => (
+              <div key={s.id} className="stile-scheda">
+                <div className="mode-option">
+                  <AssaggioStile id={s.id} />
+                  <strong>{s.nome}</strong>
+                  <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
+                    {s.desc}
+                  </span>
+                </div>
+                <div className="stile-azioni">
+                  <a className="link-inline small" href={urlProva(s.id)}>
+                    Prova sul menù
+                  </a>
+                  <button type="button" className="btn small" onClick={() => onSave(patchInstalla(settings, s.id))}>
+                    Installa {s.nome}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

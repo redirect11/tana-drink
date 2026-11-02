@@ -98,9 +98,31 @@ describe('lo stile del menù dei clienti', () => {
   // tana-drink e tana-drink-test. Sono esclusive loro». Senza `temi` nella
   // licenza non si mostra nemmeno, e col solo classico non c'è niente da
   // scegliere.
-  it('senza «Notte» nella licenza la scelta non c’è', () => {
-    const { container } = render(<StileMenuClienti settings={{ licenza: { moduli: {} } }} onSave={onSave} />)
-    expect(container).toBeEmptyDOMElement()
+  it('senza «Notte» nella licenza «Notte» non c’è, né da scegliere né nel catalogo', () => {
+    render(<StileMenuClienti settings={{ licenza: { moduli: {} } }} onSave={onSave} />)
+    expect(screen.queryByText('Notte')).toBeNull()
+    expect(screen.getByRole('button', { name: /Classico/ })).toBeInTheDocument()
+  })
+
+  // REQ-MENU-022: il catalogo degli stili gratis, in app. «Installa» e
+  // basta: niente pagamento. E ogni stile si prova sul proprio menù.
+  it('il catalogo: «Installa» aggiunge lo stile, e «Prova» apre il menù con quello stile', async () => {
+    const utente = userEvent.setup()
+    render(<StileMenuClienti settings={{}} onSave={onSave} />)
+    expect(screen.getByRole('heading', { name: 'Altri stili, gratis' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Installa Lavagna' }))
+    expect(salvato).toEqual({ stili_installati: ['lavagna'] })
+    const prove = screen.getAllByRole('link', { name: 'Prova sul menù' }).map((a) => a.getAttribute('href'))
+    expect(prove).toContain('/menu?vista=cliente&stile=giornale')
+  })
+
+  it('uno stile installato si sceglie e si disinstalla', async () => {
+    const utente = userEvent.setup()
+    render(<StileMenuClienti settings={{ stili_installati: ['deco'], stile_menu: 'deco' }} onSave={onSave} />)
+    expect(screen.getByRole('button', { name: /Déco/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'Installa Déco' })).toBeNull()
+    await utente.click(screen.getByRole('button', { name: 'Disinstalla' }))
+    expect(salvato).toEqual({ stili_installati: [], stile_menu: 'classico' })
   })
 })
 

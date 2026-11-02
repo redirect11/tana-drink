@@ -38,33 +38,39 @@ licenza/attuale = {
 stili in più. **«Notte» non va mai in una licenza che non sia della Tana:**
 è esclusivo suo.
 
-## 2. Da fare: il catalogo dei temi (REQ-LIC-011)
+## 2. Il catalogo dei temi (REQ-MENU-022 fatto, REQ-LIC-011 da fare)
 
-Un posto dove il gestore vede i temi, li prova, e li aggiunge alla sua
-installazione: gratis o a pagamento. La forma che proponiamo:
+Le decisioni dell'utente, 02/11/2026:
 
-- **Il catalogo sta nella regia**, accanto al listino dei piani
-  (`piani.json`): ogni tema ha id, nome, descrizione, anteprima, prezzo (o
-  gratis) e, se è esclusivo, il locale a cui appartiene. Gli esclusivi non
-  si vedono nel catalogo degli altri.
-- **Comprare o installare un tema** vuol dire che la regia lo aggiunge a
-  `temi` nella licenza del locale. L'app lo vede arrivare in tempo reale,
-  come i moduli. Toglierlo funziona allo stesso modo.
-- **Nell'app**, in Impostazioni → Menù clienti, accanto agli stili che il
-  locale ha, un collegamento «Altri stili» porta al catalogo nell'area
-  clienti (`regia_url`). Dall'app non si compra niente.
-- **Il codice degli stili sta nell'app.** Uno stile nuovo arriva con una
-  versione dell'app; la licenza dice solo chi può usarlo. Uno stile
-  esclusivo di un locale resta nel codice di tutti, ma acceso solo per lui.
+> «I temi in abbonamento non si possono sentire. Io per ora metterei un tot
+> di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu.»
+>
+> «Qui gli acquisti sono in app. E su quelli gratis non facciamo partire
+> stripe ovviamente. Facciamo solo installare il tema.»
 
-### Da decidere (con l'utente)
+Quindi:
 
-1. **Cosa si vende:** solo gli stili del menù («Classico», «Notte», i
-   prossimi), o anche i temi di colore (i preset di `themes.js`)?
-2. **Come si paga:** una volta sola, o in abbonamento come i moduli?
-3. **I temi gratuiti** si installano dal catalogo, o sono sempre accesi per
-   tutti come «Classico»?
-4. **L'anteprima:** basta un'immagine nel catalogo, o serve provarlo sul
-   proprio menù prima di comprarlo?
-5. **Gli esclusivi:** si possono comprare (un tema su misura per un
-   locale), o restano un regalo deciso dal fornitore?
+- **Si parla di stili del menù**, non di temi di colore (quelli restano
+  tutti liberi).
+- **Il catalogo sta nell'app**, in Impostazioni → Menù clienti: sopra gli
+  stili che il locale ha, sotto «Altri stili, gratis».
+- **Gli stili gratis si installano e basta**: niente Stripe, niente regia.
+  Quelli installati stanno nelle impostazioni del locale
+  (`settings/bar.stili_installati`); sono gratis, non c'è niente da
+  proteggere. Fatti: «Lavagna», «Déco», «Riviera», «Giornale»
+  (REQ-MENU-022, DESIGN.md).
+- **Ogni stile si prova sul proprio menù** prima di installarlo o
+  sceglierlo: l'anteprima del cliente con lo stile in prova, solo per chi
+  la apre.
+- **Niente abbonamento.** Il giorno che ci sarà uno stile a pagamento: il
+  tasto «Compra» nell'app, un pagamento **una tantum**, e dopo il pagamento
+  la regia scrive lo stile in `licenza.temi`, come oggi per gli esclusivi.
+  È l'unica parte che passa dalla regia, e resta da fare (REQ-LIC-011).
+
+### Alla regia, per quando arriverà il primo stile a pagamento
+
+- Un pagamento una tantum avviato dall'app (non dall'area clienti), con la
+  conferma che torna all'app.
+- Dopo il pagamento, l'id dello stile aggiunto a `licenza.temi`: per
+  sempre, non in abbonamento, e senza toglierlo alle riduzioni di piano.
+- Gli esclusivi (come «Notte») non sono in vendita.
