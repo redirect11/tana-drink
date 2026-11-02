@@ -62,8 +62,10 @@ solo di farle scendere: oggi restano in quattro file, tutte giustificate.
 | **Pagamenti con lettore SumUp** | il conto va al lettore e torna pagato |
 
 Gli id dei moduli sono gli stessi nel listino del sito e nell'app: quello
-che si compra è quello che la licenza accende. La Tana, senza licenza
-scritta, li ha tutti. Prezzi e taglio dei moduli sono da confermare.
+che si compra è quello che la licenza accende. La Tana, che una regia
+dietro non ce l'ha, ha la sua licenza scritta nella build
+(`clienti/tana/licenza.json`). Un'installazione senza nessuna delle due
+mostra «Installazione non attivata». Prezzi e taglio dei moduli sono da confermare.
 
 ## 4. Come funziona per il titolare di un locale
 
@@ -98,8 +100,8 @@ sito (drink-regia)                  GitHub Actions (drink-regia)
 dashboard: «Attiva», indirizzo
 ```
 
-La **licenza** (`settings/bar.licenza` nell'istanza) dice quali moduli sono
-accesi: è il piano comprato tradotto nelle funzioni premium dell'app.
+La **licenza** (il documento `licenza/attuale` nell'istanza, che dall'app
+non scrive nessuno: BUG-125) dice quali moduli sono accesi: è il piano comprato tradotto nelle funzioni premium dell'app.
 L'app non dipende mai da Stripe o dal sito per funzionare: un pagamento
 in ritardo cambia cosa dice la dashboard, non quello che la cassa fa.
 

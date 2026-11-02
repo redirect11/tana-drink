@@ -5,7 +5,7 @@
 // e NESSUNA traccia della Tana — la demo è una pagina pubblica.
 
 import { describe, it, expect } from 'vitest'
-import { datiDemo, catalogo, impostazioniDemo, generatore } from '../../src/demo/dati.js'
+import { datiDemo, catalogo, impostazioniDemo, licenzaDemo, generatore } from '../../src/demo/dati.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 import { businessDayKey } from '../../src/lib/businessDay.js'
 
@@ -49,13 +49,20 @@ describe('i dati di prova', () => {
     expect(di('inventory_items/').length).toBe(articoli.length)
   })
 
-  it('le impostazioni: tutti i moduli, licenza attiva, senza account clienti', () => {
+  it('le impostazioni: senza account clienti, e senza licenza dentro', () => {
     const s = impostazioniDemo()
-    expect(s.licenza.stato).toBe('attiva')
-    expect(Object.keys(s.licenza.moduli).sort()).toEqual(Object.keys(MODULI_PREMIUM).sort())
-    expect(Object.values(s.licenza.moduli).every((v) => v === true)).toBe(true)
     expect(s.customer_accounts_enabled).toBe(false)
+    // La licenza in settings/bar l'app non la legge più (BUG-125).
+    expect(s.licenza).toBeUndefined()
     expect(uno('settings/bar')).toEqual(s)
+  })
+
+  it('la licenza sta dove la cerca ogni installazione: licenza/attuale, tutti i moduli, attiva', () => {
+    const l = uno('licenza/attuale')
+    expect(l).toEqual(licenzaDemo())
+    expect(l.stato).toBe('attiva')
+    expect(Object.keys(l.moduli).sort()).toEqual(Object.keys(MODULI_PREMIUM).sort())
+    expect(Object.values(l.moduli).every((v) => v === true)).toBe(true)
   })
 
   it('lo storico: quattro settimane di serate chiuse, dal mercoledì alla domenica, con la loro cassa', () => {

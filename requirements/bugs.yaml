@@ -5352,4 +5352,124 @@ bugs:
     labels: [bug, menu, magazzino]
     test_cases:
       - tests/component/DrinkFormRicetta.test.jsx
+  - id: BUG-125
+    title: "La licenza di un locale la può riscrivere ogni bartender (sta in settings/), e senza licenza un locale ha tutto"
+    area: "firestore.rules (settings, licenza), src/lib/api.js (subscribeSettings), src/lib/licenza.js, src/lib/limiti.js, src/lib/aggiornamenti.js, src/components/DevTools.jsx, scripts/licenza-moduli.js"
+    severity: alta
+    priority: P1
+    description: >
+      Visto il 31/10/2026 lavorando agli aggiornamenti a scelta
+      (REQ-FLOTTA-020), e scritto nella tabella dei permessi per ruolo
+      (tests/contratto/permessi.js, REQ-FLOTTA-021). La regia scrive piano,
+      moduli, limiti, sospensione e aggiornamenti di un locale in
+      `settings/bar.licenza`. Ma le regole lasciano scrivere tutto
+      `settings/` a ogni bartender e al titolare, e i limiti dell'app
+      nascondono senza proteggere (REQ-LIC-003). Con un account del banco e
+      la console del browser, un locale col piano Free si scrive
+      `piano: 'pro'`, si toglie i limiti, si accende i moduli a pagamento,
+      si toglie una sospensione o si segna gli aggiornamenti come inclusi.
+      La Tana non è toccata: non ha una licenza scritta e ha tutto.
+      LA CORREZIONE, decisa il 31/10/2026: la licenza va in un documento
+      suo FUORI DA settings/, `licenza/attuale`, con la stessa forma di
+      oggi (lo stesso oggetto che oggi sta in `settings/bar.licenza`). Le
+      regole lo fanno leggere a tutti, come le impostazioni (il menù del
+      cliente dipende dai moduli), e scrivere a NESSUNO: la regia lo
+      scrive con le credenziali di servizio, che le regole non toccano.
+      E SENZA LICENZA NON SI HA PIÙ TUTTO (l'utente, 31/10/2026: «nn va
+      bene che senza licenza sia tutto acceso. Dobbiamo cambiare sta
+      cosa»). Deciso lo stesso giorno, fra due strade per ciascuna domanda:
+        - un locale senza `licenza/attuale` vede «Installazione non
+          attivata» al posto dell'app, come una sospesa, coi dati che
+          restano. Scartato il piano Free come ripiego: l'app avrebbe
+          dovuto sapere da sé i limiti del Free, una copia di quelli della
+          regia destinata ad andare fuori passo;
+        - la Tana, che non ha licenza e ha tutto, lo dice la BUILD: una
+          voce in `clienti/tana/venue.json`, decisa alla compilazione,
+          che dal browser non si cambia e non chiede scritture nel
+          database di produzione. Le build dei locali della regia e
+          l'immagine on premise non ce l'hanno. La demo non ha una regia
+          dietro e resta com'è (`__DEMO__`).
+      ATTENZIONE AL CARICAMENTO: «non attivata» si mostra solo quando il
+      server dice che il documento non c'è. Alla prima apertura senza rete
+      la cache non sa ancora niente, e scambiare «non lo so» per «non c'è»
+      bloccherebbe un locale in regola. Serve che la porta dei dati dica
+      se una risposta viene dal server o dalla cache (oggi il contratto
+      non lo dice: va aggiunto, coi suoi test di contratto).
+      L'ORDINE CONTA ANCORA DI PIÙ, perché un locale senza licenza ora si
+      ferma:
+        1. la regia scrive la licenza in tutti e due i posti, a ogni
+           cambio, e ci copia quelle dei locali che ci sono già;
+        2. solo dopo, il rilascio dell'app: legge `licenza/attuale` e
+           ignora `settings/bar.licenza`, senza ripiego (un ripiego
+           riaprirebbe il buco). Il resto dell'app non cambia: la licenza
+           arriva a chi la usa nello stesso posto di oggi (`licenza`
+           dentro le impostazioni lette). Con l'app: le regole del
+           documento nuovo, gli strumenti di sviluppo (DevTools) e
+           scripts/licenza-moduli.js, che oggi la scrivono in settings/;
+           nella tabella dei permessi una riga nuova, licenza: legge
+           tutti, scrive nessuno, e il commento sulla riga di settings
+           si toglie;
+        3. quando tutti i locali hanno quella versione, la regia smette
+           di scrivere `settings/bar.licenza` e lo cancella.
+      Il commento in api.js che annunciava un documento
+      `settings/licenza` per la «Fase 3» va corretto: dentro settings/
+      avrebbe lo stesso buco.
+      A CHE PUNTO È LA REGIA (31/10/2026): sulla regia di TEST il passo 1
+      è pronto (doppia scrittura, `limiti.comande`, `valida_fino`), e la
+      copia è fatta quando «Allinea tutte» dice «Tutti pronti». La regia
+      di PRODUZIONE non ha ancora nessun rilascio: tutto arriva col suo
+      primo, 0.3.0. QUINDI: la versione dell'app con questa correzione può
+      andare sul test appena la regia di test dice «Tutti pronti», ma in
+      produzione solo dopo che la regia di produzione ha la 0.3.0 e la
+      copia fatta. La Tana non è toccata (lo dice la build).
+      LA PARTE DELL'APP, 01/11/2026 (il passo 2 qui sopra).
+        - La licenza della build è un meccanismo UGUALE PER OGNI CLIENTE,
+          non una voce della Tana (l'utente: «basta che sia allineato con
+          l'app generica che viene deployata da regia e che non sia una
+          cosa speciale per la tana»): un file facoltativo
+          `clienti/<slug>/licenza.json`, con la stessa forma del documento,
+          iniettato dalla build in `__CLIENTE__`. Il codice non sa per chi
+          è compilato. Le cartelle che crea la regia non ce l'hanno.
+        - Una regola sola (lib/licenza.js, `licenzaEffettiva`): il
+          documento della regia, se c'è; se no la licenza della build; se
+          no «Installazione non attivata», ma solo quando il server ha
+          confermato che il documento non c'è. Finché non si sa vale
+          l'ultima licenza nota sul dispositivo, ricordata sotto una chiave
+          sua: quella vecchia di settings/bar, rimasta nelle impostazioni
+          ricordate, non si rilegge.
+        - La porta dei dati dice da dove viene una risposta:
+          `onSnapshot(ref, { includeMetadataChanges: true }, …)` e
+          `metadata.fromCache`, con due prove di contratto nuove.
+        - Le regole aprono `licenza/` in lettura a tutti e non la fanno
+          scrivere a nessuno; la tabella dei permessi ha la riga nuova.
+        - La colonna `incluso` della tabella dei moduli non c'è più, e con
+          lei il ripiego di BUG-122: una licenza comanda per intero, e il
+          silenzio è un no.
+        - La demo mette la sua licenza in `licenza/attuale` della sua
+          cache; gli strumenti di sviluppo la mostrano e non la scrivono;
+          scripts/licenza-moduli.js scrive il documento.
+      DA CONFERMARE PRIMA DEL RILASCIO: i moduli scritti in
+      `clienti/tana/licenza.json` sono ricostruiti, non letti dalla
+      produzione (la lettura non è stata possibile da qui). Tutti inclusi
+      tranne `fatture` (Fatture ai clienti): l'inventario e lo scadenzario
+      erano stati accesi a mano in produzione il 17/09/2026, i sette moduli
+      della 1.10.0 venivano dalla colonna `incluso`. Si confronta con
+      `node scripts/licenza-moduli.js --project tana-drink` sulla versione
+      di prima (legge settings/bar e non scrive niente).
+      ATTENZIONE ALL'ORDINE, che resta quello sopra: questa versione va sul
+      test solo quando la regia di test ha copiato le licenze («Allinea
+      tutte» dice «Tutti pronti»), e in produzione solo dopo la regia di
+      produzione 0.3.0 con la stessa copia.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, sicurezza, licenza, flotta]
+    test_cases:
+      - tests/unit/licenzaInstallazione.test.js
+      - tests/unit/licenza.test.js
+      - tests/unit/clienteBuild.test.js
+      - tests/unit/datiDemo.test.js
+      - tests/component/InstallazioneSospesa.test.jsx
+      - tests/regole/permessi.test.js
+      - tests/regole/contrattoDati.test.js
 

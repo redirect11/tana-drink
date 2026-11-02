@@ -40,6 +40,43 @@ service cloud.firestore {
         && request.auth.token.role == 'staff';
     }
 
+    // ── La licenza (REQ-LIC-008) ──────────────────────────────────────
+    // L'app nasconde quello che la licenza non include; qui lo si NEGA, per
+    // chi scrive dalla console del browser. Si controllano le SCRITTURE: i
+    // dati di un modulo che il locale non ha più restano leggibili, come
+    // restano nel database (spegnere nasconde, non cancella).
+    //
+    // SENZA IL DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE. È la Tana, che
+    // ha la sua licenza nella build e non nel database; un locale della
+    // regia il documento ce l'ha sempre (la regia non lo cancella, e
+    // dall'app non lo scrive nessuno), e senza l'app gli mostra
+    // «Installazione non attivata».
+    //
+    // Quale collezione è di quale modulo lo dice src/lib/licenza.js
+    // (COLLEZIONI_DEI_MODULI), e tests/unit/regoleLicenza.test.js controlla
+    // che queste regole dicano la stessa cosa.
+    //
+    // QUANTO COSTA: una lettura della licenza per richiesta. Nello stesso
+    // lotto le letture dello stesso documento contano una volta (provato
+    // sull'emulatore con un lotto di 60 documenti), quindi anche i lotti
+    // grossi del magazzino restano sotto il limite di 20.
+    function licenzaScritta() {
+      return exists(/databases/$(database)/documents/licenza/attuale);
+    }
+    function licenza() {
+      return get(/databases/$(database)/documents/licenza/attuale).data;
+    }
+    // Un modulo che la licenza non nomina non c'è, come nell'app.
+    function modulo(id) {
+      return !licenzaScritta() || licenza().get('moduli', {}).get(id, false) == true;
+    }
+    // Solo un `false` scritto spegne gli sconti (limiti.js, scontiConsentiti).
+    function scontiConsentiti() {
+      return !licenzaScritta()
+        || licenza().get('limiti', null) == null
+        || licenza().limiti.get('sconti', true) != false;
+    }
+
     // DRINKS — lettura pubblica (clienti vedono il menù), scrittura solo bartender.
     match /drinks/{drinkId} {
       allow read: if true;
@@ -140,12 +177,37 @@ service cloud.firestore {
       // push_token, customer_uid e placed_by. Le regole non sanno proiettare
       // campi: per non mostrarli vanno spostati, e quello tocca cinque punti
       // dell'app.
+      // LO SCONTO NON CRESCE (REQ-LIC-008): senza sconti nella licenza non
+      // si mette uno sconto nuovo e non se ne alza uno. Restano permessi,
+      // perché succedono da soli o tolgono: lo sconto che c'era già (le
+      // righe che cambiano ne ricalcolano l'importo), e lo sconto tolto.
+      // NON SI VEDE lo sconto dentro un incasso (`payments[].sconto`): le
+      // regole non scorrono un elenco. Quello si chiude solo con l'incasso
+      // fatto dal server.
+      function scontoNonCresce() {
+        let dopo = request.resource.data.get('discount', null);
+        let prima = resource == null ? null : resource.data.get('discount', null);
+        let importo = request.resource.data.get('discount_amount', 0);
+        // Con uno sconto: lo stesso di prima. Senza: nessun importo, o
+        // l'importo che c'era (un importo da solo è uno sconto travestito).
+        return dopo != null
+          ? dopo == prima
+          : importo == 0 || (resource != null && importo == resource.data.get('discount_amount', 0));
+      }
+      // L'ordine dei due conta: si guarda per primo lo sconto, così
+      // l'ordine che non lo tocca — quasi tutti — non legge la licenza.
+      function scontoAmmesso() {
+        return scontoNonCresce() || scontiConsentiti();
+      }
       allow get: if true;
       allow list: if isStaffMember()
         || (isSignedIn() && resource.data.customer_uid == request.auth.uid)
         || resource.data.comande_statuses.hasAny(['ricevuto', 'in_preparazione'])
         || resource.data.comande_statuses.hasAny(['pronto']);
-      allow create: if isStaffMember() || conteNuovoDaCliente();
+      // L'ordine dal telefono del cliente è un modulo (REQ-LIC-002): senza,
+      // il menù si legge e basta, e qui non se ne crea uno.
+      allow create: if (isStaffMember() && scontoAmmesso())
+        || (conteNuovoDaCliente() && modulo('ordini_cliente'));
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
@@ -168,7 +230,7 @@ service cloud.firestore {
       // lavoro buono quando la cache del terminale è indietro di un battito
       // farebbe più danno del permesso che chiude: al banco vuol dire un
       // ordine che non parte.
-      allow update: if isBartender()
+      allow update: if scontoAmmesso() && (isBartender()
         || (isSala()
             && request.resource.data.status != 'annullato'
             && request.resource.data.get('comande', []).size()
@@ -179,7 +241,7 @@ service cloud.firestore {
                     && resource.data.comande[0].status == 'ricevuto'))
             && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
-                 .affectedKeys().hasAny(paymentKeys().toSet()));
+                 .affectedKeys().hasAny(paymentKeys().toSet())));
       allow delete: if false;
     }
 
@@ -246,14 +308,32 @@ service cloud.firestore {
       allow write: if isBartender();
     }
 
+    // LA LICENZA (BUG-125): piano, moduli, limiti, sospensione, aggiornamenti.
+    // La leggono tutti, come le impostazioni (il menù del cliente dipende dai
+    // moduli). Non la scrive NESSUNO dall'app, nemmeno il titolare: la scrive
+    // la regia con le credenziali di servizio, che queste regole non
+    // toccano. Stava in settings/bar.licenza, che ogni bartender può
+    // riscrivere: un locale Free si toglieva i limiti dalla console.
+    match /licenza/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) non sta nel database:
+    // dal 31/10/2026 è una chiamata alla regia col token del titolare. Il
+    // documento aggiornamenti/scelta di prima non ha più regole, quindi
+    // nessuno lo legge né lo scrive.
+
     // INVENTORY — solo bartender (non serve al cliente né allo staff).
     match /inventory_items/{itemId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // CATEGORIE INVENTARIO — dedicate ai prodotti di magazzino, solo bartender.
     match /inventory_categories/{categoryId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // MACRO-CATEGORIE — raggruppano le categorie per i conti aggregati, solo bartender.
@@ -263,13 +343,15 @@ service cloud.firestore {
 
     // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
     match /suppliers/{supplierId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // LISTINO FORNITORI — il prezzo di un prodotto PRESSO un fornitore
     // (REQ-MAG-029). Sta con i fornitori: un prodotto, più listini.
     match /supplier_prices/{rigaId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // STORICO DEI PREZZI — una riga per ogni variazione di un prezzo di
@@ -277,12 +359,14 @@ service cloud.firestore {
     // listino: chi può cambiare un prezzo può scriverne la variazione, e
     // chi legge il listino deve poter leggere com'è arrivato a quel numero.
     match /supplier_price_history/{variazioneId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // VENDITE STORICHE — i conti di Tiller, prima dell'app (REQ-STAT-006).
@@ -296,7 +380,7 @@ service cloud.firestore {
     // vede il Bilancio, lo scrive solo l'admin.
     match /minimi_extra/{mese} {
       allow read: if isBartender();
-      allow write: if isAdmin();
+      allow write: if isAdmin() && modulo('statistiche');
     }
     // I fogli mensili di ANALISI DATI (REQ-CASSA-011): stesso discorso.
     match /mesi_storici/{mese} {
@@ -311,24 +395,28 @@ service cloud.firestore {
 
     // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
     match /stock_counts/{countId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('conta');
     }
 
     // ORDINI FORNITORE — generatore ordini e storico acquisti.
     match /purchase_orders/{orderId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // MODELLI D'ORDINE — il giro che si rifà uguale (REQ-MAG-039): prodotti,
     // fornitore scelto e quantità, senza prezzi. Stessa mano degli ordini:
     // chi compone un ordine è chi salva e riusa un modello.
     match /purchase_order_templates/{modelloId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // SCADENZARIO FORNITORI — documenti/proforma, pagato, note.
     match /supplier_invoices/{invoiceId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && (modulo('scadenzario') || modulo('magazzino'));
     }
 
     // ALTRE SPESE — quello che esce dal conto e non entra in magazzino
@@ -338,7 +426,8 @@ service cloud.firestore {
     // soldi che escono — un documento contabile non può essere più aperto
     // della fattura che gli sta accanto.
     match /altre_spese/{spesaId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('magazzino');
     }
 
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
@@ -401,7 +490,10 @@ service cloud.firestore {
     // (e il bartender in lettura).
     match /customers/{uid} {
       allow read: if isBartender() || (isSignedIn() && request.auth.uid == uid);
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      // Il profilo nasce solo col modulo dei clienti (REQ-LIC-008); cambiarlo
+      // e cancellarlo restano del cliente, che ha diritto di andarsene.
+      allow create: if isSignedIn() && request.auth.uid == uid && modulo('clienti');
+      allow update, delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     // GROUPS — contenitori di ordini. Lo staff gestisce tutto; il cliente
@@ -433,7 +525,8 @@ service cloud.firestore {
     // Cloud Functions (Admin SDK, per i pagamenti online). Mai dal cliente.
     // RAPP ORE: registro ore dello staff — solo staff autenticato.
     match /staff_hours/{entryId} {
-      allow read, write: if isStaffMember();
+      allow read: if isStaffMember();
+      allow write: if isStaffMember() && modulo('staff');
     }
 
     // PREFERENZE POS (ordine card, preferiti): configurazione del banco,
@@ -445,7 +538,8 @@ service cloud.firestore {
     // PAGHE: tariffa oraria per persona (storicizzata). Dato sensibile:
     // solo il bartender, nemmeno lo staff vede quanto prendono gli altri.
     match /staff_rates/{personId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if isBartender() && modulo('staff');
     }
 
     // BADGE VIRTUALE: timbrature entrata/uscita — lo staff timbra sé
@@ -463,7 +557,8 @@ service cloud.firestore {
 
     // FATTURE di cortesia: solo staff (contengono dati dei clienti).
     match /invoices/{invoiceId} {
-      allow read, write: if isStaffMember();
+      allow read: if isStaffMember();
+      allow write: if isStaffMember() && modulo('fatture');
     }
 
     match /payments/{paymentId} {

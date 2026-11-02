@@ -22,43 +22,50 @@ import {
   menuDigitaleAttivo,
   ordinazioneClientiAttiva,
   accountClientiAttivi,
+  licenzaEffettiva,
+  installazioneBloccata,
+  statoLicenza,
+  STATI_LICENZA,
 } from '../../src/lib/licenza.js'
+import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
 
-// Come sta questa installazione oggi, senza nessuna licenza scritta: lo
-// scadenzario è incluso (l'utente lo ha richiesto il 26/08/2026), la conta
-// no. Le prove partono da qui, come l'app quando le impostazioni sono
-// quelle di sempre.
-describe('cosa ha questa installazione, senza licenza scritta', () => {
+// Una licenza con lo scadenzario e senza la conta: le prove partono da qui,
+// scritta, perché senza licenza nelle impostazioni varrebbe quella della
+// build (la Tana), e le prove direbbero com'è messa la Tana invece di
+// cosa fa la regola.
+const LIC = { licenza: { moduli: { scadenzario: true } } }
+
+describe('una licenza con lo scadenzario e senza la conta', () => {
   it('lo scadenzario è incluso e lavora', () => {
-    expect(moduloIncluso({}, 'scadenzario')).toBe(true)
-    expect(moduloAttivo({}, 'scadenzario')).toBe(true)
+    expect(moduloIncluso(LIC, 'scadenzario')).toBe(true)
+    expect(moduloAttivo(LIC, 'scadenzario')).toBe(true)
   })
 
   it('la conta non è inclusa, e nessun interruttore la accende', () => {
-    expect(moduloIncluso({}, 'conta')).toBe(false)
-    expect(moduloAttivo({}, 'conta')).toBe(false)
+    expect(moduloIncluso(LIC, 'conta')).toBe(false)
+    expect(moduloAttivo(LIC, 'conta')).toBe(false)
     // IL PUNTO DELLA DISTINZIONE: il flag d'uso c'è e dice «acceso», ma il
     // locale la funzione non ce l'ha. Un flag solo non saprebbe dirlo.
-    expect(moduloAcceso({ modulo_conta_enabled: true }, 'conta')).toBe(true)
-    expect(moduloAttivo({ modulo_conta_enabled: true }, 'conta')).toBe(false)
+    expect(moduloAcceso({ ...LIC, modulo_conta_enabled: true }, 'conta')).toBe(true)
+    expect(moduloAttivo({ ...LIC, modulo_conta_enabled: true }, 'conta')).toBe(false)
   })
 })
 
 describe('incluso e acceso, le quattro combinazioni', () => {
   it('incluso e acceso: lavora', () => {
-    expect(moduloAttivo({ modulo_scadenzario_enabled: true }, 'scadenzario')).toBe(true)
+    expect(moduloAttivo({ ...LIC, modulo_scadenzario_enabled: true }, 'scadenzario')).toBe(true)
   })
 
   it('incluso e spento: non lavora, ma non è «non incluso»', () => {
-    const stato = { modulo_scadenzario_enabled: false }
+    const stato = { ...LIC, modulo_scadenzario_enabled: false }
     expect(moduloIncluso(stato, 'scadenzario')).toBe(true)
     expect(moduloAcceso(stato, 'scadenzario')).toBe(false)
     expect(moduloAttivo(stato, 'scadenzario')).toBe(false)
   })
 
   it('non incluso: non lavora comunque, acceso o spento', () => {
-    expect(moduloAttivo({ modulo_conta_enabled: true }, 'conta')).toBe(false)
-    expect(moduloAttivo({ modulo_conta_enabled: false }, 'conta')).toBe(false)
+    expect(moduloAttivo({ ...LIC, modulo_conta_enabled: true }, 'conta')).toBe(false)
+    expect(moduloAttivo({ ...LIC, modulo_conta_enabled: false }, 'conta')).toBe(false)
   })
 
   it('quello che è incluso è acceso di suo: non serve accenderlo a mano', () => {
@@ -72,21 +79,22 @@ describe('incluso e acceso, le quattro combinazioni', () => {
 })
 
 describe('i casi storti: nel dubbio, non lavora', () => {
-  it('impostazioni non ancora arrivate: quello che è incluso lavora, il resto no', () => {
+  it('impostazioni non ancora arrivate: vale la licenza della build, senza lampi', () => {
     // Il primo disegno arriva prima del server. Una sezione che compare per
-    // mezzo secondo e poi sparisce è peggio di una che non c'è: partendo
-    // dalla cache lo stato è già quello giusto, e per un modulo non incluso
-    // la risposta è comunque «no» anche se lo stato è nullo.
-    expect(moduloAttivo(null, 'conta')).toBe(false)
-    expect(moduloAttivo(undefined, 'conta')).toBe(false)
-    expect(moduloAttivo(null, 'scadenzario')).toBe(true)
+    // mezzo secondo e poi sparisce è peggio di una che non c'è: senza
+    // licenza nelle impostazioni vale quella della build (BUG-125), che è
+    // quella che arriverà, e per la Tana lo stato è giusto da subito.
+    for (const id of Object.keys(MODULI_PREMIUM)) {
+      expect(moduloIncluso(null, id), id).toBe(LICENZA_DELLA_BUILD.moduli[id] === true)
+      expect(moduloIncluso(undefined, id), id).toBe(LICENZA_DELLA_BUILD.moduli[id] === true)
+    }
   })
 
   it('la FORMA VECCHIA delle impostazioni non cambia niente', () => {
     // Il documento settings/bar dei locali è stato scritto anni prima di
     // questi campi: quello che non c'è non toglie l'incluso e non accende
     // il non incluso.
-    const vecchio = { workflow_enabled: true, price_markup: 3 }
+    const vecchio = { ...LIC, workflow_enabled: true, price_markup: 3 }
     expect(moduloAttivo(vecchio, 'scadenzario')).toBe(true)
     expect(moduloAttivo(vecchio, 'conta')).toBe(false)
   })
@@ -107,42 +115,44 @@ describe('i casi storti: nel dubbio, non lavora', () => {
   })
 })
 
-describe('il punto di innesto della licenza vera (Fase 3 del piano)', () => {
-  // Quando arriverà `settings/licenza`, chi lo collega tocca SOLO
-  // `moduloIncluso`: se lo stato porta una licenza, comanda lei.
+describe('la licenza comanda per intero', () => {
   // La licenza della regia ha sempre il piano accanto ai moduli
   // (drink-regia, functions/lib/licenza.js): è lei la verità per intero.
-  it('la licenza della regia toglie quello che la tabella includeva', () => {
+  it('quello che la licenza non nomina non c’è', () => {
     const stato = { licenza: { piano: 'base', moduli: { conta: true } } }
     expect(moduloIncluso(stato, 'scadenzario')).toBe(false)
     expect(moduloAttivo(stato, 'scadenzario')).toBe(false)
+    expect(moduloIncluso({ licenza: { piano: 'base', moduli: {} } }, 'scadenzario')).toBe(false)
   })
 
-  it('la licenza dà quello che la tabella non includeva', () => {
+  it('quello che nomina c’è', () => {
     const stato = { licenza: { moduli: { conta: true, scadenzario: true } } }
     expect(moduloIncluso(stato, 'conta')).toBe(true)
     expect(moduloAttivo(stato, 'conta')).toBe(true)
   })
 
-  it('una licenza della regia che non nomina il modulo lo tiene fuori, senza ricadere sulla tabella', () => {
-    // Se la licenza della regia c'è, è LEI la verità anche per quello che
-    // tace: la tabella nel codice si riaprirebbe da sola un modulo non venduto.
-    expect(moduloIncluso({ licenza: { piano: 'base', moduli: {} } }, 'scadenzario')).toBe(false)
+  // CAMBIATO CON BUG-125 (01/11/2026). Fino ad allora una licenza senza
+  // piano comandava solo sui moduli che nominava, e per gli altri tornava
+  // alla colonna `incluso` del codice (BUG-122): era la licenza scritta
+  // dagli strumenti di sviluppo in settings/bar, sulla Tana, coi tre moduli
+  // di allora. Quella licenza ora non si legge più, la colonna non c'è, e
+  // la licenza della Tana sta nella sua build e nomina ogni modulo. Una
+  // regola sola, per ogni licenza: il silenzio è un no.
+  it('anche una licenza senza piano: il silenzio è un no', () => {
+    const vecchia = { licenza: { moduli: { conta: false, fatture: false, scadenzario: true } } }
+    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup']) {
+      expect(moduloIncluso(vecchia, id), id).toBe(false)
+    }
+    expect(moduloIncluso(vecchia, 'scadenzario')).toBe(true)
   })
 
-  // BUG-122, trovato il 30/10/2026 prima del rilascio: la Tana ha una
-  // licenza scritta dagli strumenti di sviluppo, senza piano, con i tre
-  // moduli di allora. Con i sette moduli nuovi della 1.10.0, «il silenzio è
-  // un no» le avrebbe spento menù digitale, clienti, magazzino, statistiche,
-  // personale e SumUp al primo avvio.
-  it('una licenza senza piano (strumenti di sviluppo, la Tana) comanda solo sui moduli che nomina', () => {
-    const tana = { licenza: { moduli: { conta: false, fatture: false, scadenzario: true } } }
-    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup']) {
-      expect(moduloIncluso(tana, id), id).toBe(true)
+  // CAMBIATO CON BUG-125: prima una licenza senza `moduli` tornava alla
+  // tabella, cioè dava quasi tutto. «Nn va bene che senza licenza sia tutto
+  // acceso» (l'utente, 31/10/2026): senza elenco non c'è niente.
+  it('una licenza senza l’elenco dei moduli non ne include nessuno', () => {
+    for (const id of Object.keys(MODULI_PREMIUM)) {
+      expect(moduloIncluso({ licenza: { piano: 'base' } }, id), id).toBe(false)
     }
-    expect(moduloIncluso(tana, 'scadenzario')).toBe(true)
-    expect(moduloIncluso(tana, 'conta')).toBe(false)
-    expect(moduloIncluso(tana, 'fatture')).toBe(false)
   })
 
   it('la licenza dice cosa il locale HA, non se lo sta usando', () => {
@@ -158,11 +168,41 @@ describe('il punto di innesto della licenza vera (Fase 3 del piano)', () => {
     expect(moduloAcceso(altro, 'scadenzario')).toBe(true)
     expect(moduloAttivo(altro, 'scadenzario')).toBe(false)
   })
+})
 
-  it('una licenza senza l’elenco dei moduli non conta: si torna alla tabella', () => {
-    // Un documento a metà (piano scritto, moduli no) non deve spegnere il
-    // locale: è un caso di migrazione, non una decisione commerciale.
-    expect(moduloIncluso({ licenza: { piano: 'base' } }, 'scadenzario')).toBe(true)
+// QUALE LICENZA VALE (BUG-125). Una regola sola, uguale per ogni build:
+// il documento della regia, se c'è; se no quella della build; se no
+// l'installazione non è attivata — ma solo quando lo dice il server.
+describe('quale licenza vale', () => {
+  const REGIA = { piano: 'base', stato: 'attiva', moduli: { magazzino: true } }
+  const BUILD = { moduli: { scadenzario: true } }
+
+  it('il documento della regia vince sulla licenza della build', () => {
+    expect(licenzaEffettiva({ documento: REGIA, certo: true }, BUILD)).toBe(REGIA)
+    // Anche se viene dalla cache: è la licenza che il dispositivo conosce.
+    expect(licenzaEffettiva({ documento: REGIA, certo: false }, BUILD)).toBe(REGIA)
+  })
+
+  it('senza documento vale la build, anche prima che il server risponda', () => {
+    expect(licenzaEffettiva({ documento: null, certo: true }, BUILD)).toBe(BUILD)
+    expect(licenzaEffettiva({ documento: null, certo: false }, BUILD)).toBe(BUILD)
+    expect(licenzaEffettiva(null, BUILD)).toBe(BUILD)
+  })
+
+  it('senza nessuna delle due, «non attivata» solo se il server ha confermato', () => {
+    // Alla prima apertura senza rete la cache non sa niente: «non lo so»
+    // non è «non c'è», e un locale in regola non si ferma.
+    expect(licenzaEffettiva({ documento: null, certo: false }, null)).toBeNull()
+    expect(licenzaEffettiva(null, null)).toBeNull()
+    const nessuna = licenzaEffettiva({ documento: null, certo: true }, null)
+    expect(nessuna).toEqual({ stato: STATI_LICENZA.NON_ATTIVATA })
+    expect(statoLicenza({ licenza: nessuna })).toBe(STATI_LICENZA.NON_ATTIVATA)
+    expect(installazioneBloccata({ licenza: nessuna })).toBe(true)
+    for (const id of Object.keys(MODULI_PREMIUM)) expect(moduloIncluso({ licenza: nessuna }, id), id).toBe(false)
+  })
+
+  it('di suo legge la licenza della build per cui è compilata (nei test, la Tana)', () => {
+    expect(licenzaEffettiva({ documento: null, certo: true })).toBe(LICENZA_DELLA_BUILD)
   })
 })
 
@@ -173,13 +213,15 @@ describe('la tabella dei moduli', () => {
     expect(chiaveModulo('prodotti')).toBeNull()
   })
 
-  it('ogni modulo ha nome, descrizione, una chiave sua e dice se è incluso', () => {
+  it('ogni modulo ha nome, descrizione, una chiave sua, e non dice se è incluso', () => {
+    // Fino a BUG-125 la colonna `incluso` era la licenza di chi non ne
+    // aveva una: una licenza nascosta nel codice. Ora lo dice solo la licenza.
     const chiavi = new Set()
     for (const m of moduliPremium()) {
       expect(m.label).toBeTruthy()
       expect(m.descrizione).toBeTruthy()
       expect(m.chiave).toMatch(/^modulo_.*_enabled$/)
-      expect(typeof m.incluso).toBe('boolean')
+      expect(m).not.toHaveProperty('incluso')
       expect(chiavi.has(m.chiave)).toBe(false)
       chiavi.add(m.chiave)
     }
@@ -202,9 +244,9 @@ describe('filtrare un elenco di voci', () => {
 
   it('una voce premium passa solo se il modulo lavora', () => {
     expect(ePremium('conta')).toBe(true)
-    expect(voceVisibile({}, 'conta')).toBe(false)
-    expect(voceVisibile({}, 'scadenzario')).toBe(true)
-    expect(voceVisibile({ modulo_scadenzario_enabled: false }, 'scadenzario')).toBe(false)
+    expect(voceVisibile(LIC, 'conta')).toBe(false)
+    expect(voceVisibile(LIC, 'scadenzario')).toBe(true)
+    expect(voceVisibile({ ...LIC, modulo_scadenzario_enabled: false }, 'scadenzario')).toBe(false)
   })
 
   // Lo storico inventari (REQ-MAG-052) si accende con l'inventario: la
@@ -214,7 +256,7 @@ describe('filtrare un elenco di voci', () => {
     expect(moduloDiSezione('conta')).toBe('conta')
     expect(moduloDiSezione('prodotti')).toBe('prodotti')
     expect(ePremium('storico')).toBe(true)
-    expect(voceVisibile({}, 'storico')).toBe(false)
+    expect(voceVisibile(LIC, 'storico')).toBe(false)
     expect(voceVisibile({ licenza: { moduli: { conta: true } } }, 'storico')).toBe(true)
     expect(voceVisibile({ licenza: { moduli: { conta: true } }, modulo_conta_enabled: false }, 'storico')).toBe(false)
   })
@@ -223,10 +265,15 @@ describe('filtrare un elenco di voci', () => {
 // I MODULI DEL PRODOTTO (REQ-LIC-002). Decisione dell'utente, 22/10/2026:
 // «di base quello che può fare è creare gli item di menu e la gestione
 // delle ordinazioni»; il resto è premium, con gli id del listino della
-// regia. La Tana non ha una licenza scritta e tiene tutto.
+// regia. La Tana tiene quello che aveva, con la licenza della sua build.
 describe('i moduli del prodotto', () => {
-  it('senza licenza scritta la Tana ha tutto, come prima', () => {
-    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup']) {
+  // LA LICENZA DELLA TANA (clienti/tana/licenza.json, BUG-125). Prima la
+  // Tana non aveva una licenza della regia: i sette moduli della 1.10.0
+  // venivano dalla colonna `incluso`, inventario e scadenzario da
+  // settings/bar.licenza. Ora tutto sta nella sua build, e questa prova
+  // dice che non ha perso niente.
+  it('la Tana, con la licenza della sua build, ha quello che aveva', () => {
+    for (const id of ['menu_tavoli', 'ordini_cliente', 'clienti', 'magazzino', 'statistiche', 'staff', 'sumup', 'conta', 'scadenzario']) {
       expect(moduloAttivo({}, id), id).toBe(true)
     }
     expect(menuDigitaleAttivo({})).toBe(true)

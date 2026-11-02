@@ -113,9 +113,9 @@ const SUPS = [
 
 // Quello che la serata sta facendo, quando serve: cassa aperta, conti in
 // corso, listino. Di suo il locale è chiuso e non c'è niente in ballo.
-// I moduli premium, come sta questa installazione (lib/licenza.js): lo
-// SCADENZARIO è incluso e lavora, la CONTA no. Le prove che vogliono
-// un'altra configurazione se la scrivono, coi campi veri.
+// I moduli premium: senza `licenza` nelle impostazioni vale quella della
+// build della Tana (clienti/tana/licenza.json, BUG-125). Le prove che
+// vogliono un'altra configurazione se la scrivono, coi campi veri.
 const IMPOSTAZIONI_BASE = { price_markup: 3, purchase_vat: 22 }
 const stato = {
   cassa: null,
@@ -527,7 +527,8 @@ describe('la legenda del magazzino', () => {
 // Rimettendo il difetto — cioè togliendo il filtro da INV_VIEWS — la prima
 // prova qui sotto diventa rossa.
 describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
-  it('l\u2019INVENTARIO non c\u2019\u00e8: non \u00e8 incluso in questa installazione', async () => {
+  it('l\u2019INVENTARIO non c\u2019\u00e8 dove la licenza non lo include', async () => {
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, scadenzario: true } } }
     mostra()
     await aspettaLista()
     expect(screen.queryByRole('button', { name: /Inventario/ })).toBeNull()

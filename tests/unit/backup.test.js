@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 'use strict'
 
 // BACKUP DEL DATABASE. Un backup si scopre sbagliato il giorno in cui
@@ -121,6 +122,28 @@ describe('importazione', () => {
     })
     expect(scritti).toBe(1)
     expect(saltate).toEqual(['roba_futura'])
+  })
+
+  // REQ-LIC-008: le regole rifiutano le scritture dei moduli che la licenza
+  // non include, e un documento rifiutato fa fallire il suo blocco e ferma
+  // il ripristino a metà. Quelle collezioni si saltano, e lo si dice.
+  it('le collezioni di un modulo che la licenza non include si saltano, e lo si dice', async () => {
+    const { ricordaImpostazioni } = await import('../../src/lib/impostazioniLocali.js')
+    ricordaImpostazioni({ licenza: { piano: 'free', moduli: { magazzino: false } } })
+    try {
+      const { scritti, fuoriLicenza } = await importaDatabase({
+        formato: 1,
+        collezioni: {
+          orders: { righe: [{ id: 'o1', dati: {} }] },
+          inventory_items: { righe: [{ id: 'gin', dati: { stock: 3 } }] },
+        },
+      })
+      expect(scritti).toBe(1)
+      expect(fuoriLicenza).toEqual(['inventory_items'])
+      expect(scritture.map((w) => w.nome)).toEqual(['orders'])
+    } finally {
+      localStorage.clear()
+    }
   })
 })
 

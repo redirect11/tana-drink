@@ -26,6 +26,7 @@ import '@fontsource/jost/latin-300-italic.css'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
+import { aggiornaConfigurazione } from './porte/configurazione.js'
 
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).
@@ -62,6 +63,12 @@ function parti() {
   // richiesto). Non nella demo: non ha Analytics né altri servizi di terzi,
   // e quello che salva sta nel browser di chi prova.
   if (!__DEMO__) initCookieConsent().catch((e) => console.error('[CookieConsent]', e))
+
+  // LA CONFIGURAZIONE SI RILEGGE IN SOTTOFONDO (REQ-FLOTTA-021): l'app è
+  // già partita con l'ultima che conosce, e nessuno aspetta il file. Se la
+  // regia l'ha cambiata, vale da subito solo nei primi secondi (si ricarica
+  // una volta), altrimenti dall'apertura dopo. La demo non la legge.
+  if (!__DEMO__) aggiornaConfigurazione().catch((e) => console.error('[configurazione]', e))
 
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>

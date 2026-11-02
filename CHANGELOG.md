@@ -1,6 +1,69 @@
 # Cosa è cambiato
 
-## 1.10.2-beta — in lavorazione
+## 1.10.3-beta — in lavorazione
+
+### Per i locali aggiornati dalla regia
+
+- **Aggiornamenti a scelta del titolare.** Quando la regia propone una
+  versione nuova, il titolare ne vede prima le novità e sceglie
+  «Aggiorna», «Salta questa versione» o «Più tardi». Una versione saltata
+  resta in Impostazioni → Informazioni, con il suo «Aggiorna». La scelta
+  arriva subito alla regia: con «Aggiorna» l'aggiornamento parte in pochi
+  minuti, e se la scelta non va a buon fine il box dice perché e lascia
+  riprovare.
+- **Quando il piano non comprende gli aggiornamenti**, Informazioni lo
+  dice e porta alla pagina dei piani.
+- **Gli avvisi sulle condizioni del servizio** compaiono al titolare una
+  volta sola e restano nelle notifiche.
+- **Nella Tana non cambia niente**: gli aggiornamenti arrivano come prima.
+
+### Privacy e sicurezza
+
+- **La licenza del locale non si cambia più dall'app.** Piano, moduli,
+  limiti e sospensione stavano nelle impostazioni del locale, che ogni
+  bartender può scrivere. Ora stanno in un documento a parte che dall'app
+  non scrive nessuno: lo scrive la regia.
+- **Senza licenza l'app non si apre.** Un'installazione che non ha una
+  licenza, né della regia né scritta nella sua build, mostra
+  «Installazione non attivata» al posto dell'app, coi dati che restano.
+  Lo dice solo quando il server lo ha confermato: aperta senza rete, l'app
+  lavora con l'ultima licenza che conosce.
+- **Nella Tana non cambia niente**: la sua licenza è scritta nella build,
+  con gli stessi moduli di prima.
+- **Il server fa rispettare la licenza.** Le funzioni che il piano non
+  include non si scrivono nemmeno passando dalla console del browser:
+  magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del
+  personale, bilancio, account dei clienti. Lo stesso vale per gli sconti,
+  dove il piano li esclude, e per gli ordini dal telefono del cliente. I
+  dati già scritti restano leggibili.
+- **Senza il modulo del magazzino le vendite non scalano le giacenze**, e
+  il ripristino di un backup salta le parti dei moduli non inclusi,
+  dicendolo.
+
+### Per chi sviluppa
+
+- **Il backend del locale si può scrivere in un file.** La regia può
+  pubblicare accanto all'app un `configurazione.json` con il progetto del
+  locale, e l'app lo segue al posto delle impostazioni della build. È il
+  primo passo per l'installazione nel locale, con un'immagine sola per
+  tutti. Senza il file l'app usa la build, come sempre. L'avvio non lo
+  aspetta mai. Il contratto è in `docs/porte-e-adattatori.md`.
+- **Firebase solo dietro le porte.** Un test impedisce a file nuovi di
+  importare Firebase direttamente. L'elenco dei file che lo fanno ancora
+  si può solo accorciare.
+- **La porta dei dati.** Tutto quello che l'app legge e scrive nel
+  database passa da `src/porte/dati.js`. Dietro c'è Firestore, come
+  prima. Una serie di prove scritte sulla porta, e la tabella di chi può
+  fare cosa per ruolo, girano sull'emulatore e gireranno uguali sul
+  backend dell'installazione nel locale.
+- **Nella Tana non cambia niente.**
+- **La licenza nella build.** Ogni cliente può avere un
+  `clienti/<slug>/licenza.json`, con la stessa forma del documento della
+  regia: vale dove quel documento non c'è. Gli strumenti di sviluppo la
+  licenza la mostrano e non la scrivono più: si cambia con
+  `scripts/licenza-moduli.js`.
+
+## 1.10.2-beta — 31 ottobre 2026, sul test
 
 ### Per la demo pubblica
 

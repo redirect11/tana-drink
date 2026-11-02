@@ -1,6 +1,11 @@
+// IL DATABASE PASSA DALLA PORTA DEI DATI (REQ-FLOTTA-021): il contratto,
+// compreso cosa vuol dire una scrittura presa in carico e una arrivata, è
+// scritto in src/porte/dati.js. Dietro oggi c'è Firestore.
 import {
+  db,
   collection,
   doc,
+  getDoc,
   getDocs,
   getDocsFromCache,
   getDocFromCache,
@@ -15,14 +20,14 @@ import {
   increment,
   arrayUnion,
   Timestamp,
-} from 'firebase/firestore'
-// E la lettura di un documento da letture.js: nella demo, a rete spenta,
-// risponde dalla cache invece di andare in errore (REQ-FLOTTA-019).
-import { getDoc } from './letture.js'
-// Le scritture passano da scritture.js: nella demo si confermano dalla
-// cache, perché il server non risponde mai (REQ-FLOTTA-019).
-import { addDoc, setDoc, updateDoc, deleteDoc, writeBatch } from './scritture.js'
-import { db, auth, firestoreLite } from './firebaseClient.js'
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  cercaDalServer,
+} from '../porte/dati.js'
+import { auth } from './firebaseClient.js'
 import { VENUE_VUOTO } from './venue.js'
 import { ORDER_STATUSES } from './orderStatus.js'
 import {
@@ -106,6 +111,8 @@ import { MOTIVI_DI_CARICO } from './magazzinoPeriodo.js'
 import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
+import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
+import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -119,7 +126,7 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
-import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
+import { ricordaImpostazioni, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import {
   cassaCorrente,
   prendiNumero,
@@ -150,6 +157,9 @@ const supplierPriceHistoryCol = collection(db, 'supplier_price_history')
 const orderTemplatesCol = collection(db, 'purchase_order_templates')
 const movementsCol = collection(db, 'stock_movements')
 const settingsDoc = doc(db, 'settings', 'bar')
+// La licenza dell'installazione (BUG-125): fuori da settings/, che lo staff
+// può scrivere. La scrive solo la regia.
+const licenzaDoc = doc(db, 'licenza', 'attuale')
 const groupsCol = collection(db, 'groups')
 const paymentsCol = collection(db, 'payments')
 const cashSessionsCol = collection(db, 'cash_sessions')
@@ -158,14 +168,15 @@ const vouchersCol = collection(db, 'vouchers')
 
 // --- Helpers ------------------------------------------------------------
 
-// Converte un Timestamp Firestore in stringa ISO (compatibile con created_at).
-// Riconosce il Timestamp dal metodo, non dalla classe: il client diretto
-// (firestoreLite, BUG-117) ha una sua classe Timestamp, e con il controllo
+// Converte una data letta dal database in stringa ISO (compatibile con
+// created_at). La riconosce dal metodo, non dalla classe: il client
+// diretto (cercaDalServer, BUG-117) ha una sua classe, e con il controllo
 // sulla classe le sue date restavano oggetti — la finestra dei movimenti
-// non ne avrebbe trovato nessuno nel periodo.
+// non ne avrebbe trovato nessuno nel periodo. Ed è quello che la porta dei
+// dati promette a ogni adattatore: una data letta ha toDate().
 function toIso(value) {
   if (!value) return null
-  if (value instanceof Timestamp || typeof value.toDate === 'function') return value.toDate().toISOString()
+  if (typeof value.toDate === 'function') return value.toDate().toISOString()
   return value
 }
 
@@ -1226,13 +1237,10 @@ export async function fetchStockMovementsSince(iso) {
 export async function fetchMovimentiProdotto(itemId, dal = null) {
   const da = dal ? new Date(`${dal}T00:00:00Z`) : null
   try {
-    const { db: diretto, sdk } = await firestoreLite()
-    const vincoli = [sdk.where('item_id', '==', itemId)]
-    if (da) vincoli.push(sdk.where('created_at', '>=', da))
-    const snap = await sdk.getDocs(
-      sdk.query(sdk.collection(diretto, 'stock_movements'), ...vincoli, sdk.orderBy('created_at', 'desc'))
-    )
-    return snap.docs.map(mapMovement)
+    const dove = [['item_id', '==', itemId]]
+    if (da) dove.push(['created_at', '>=', da])
+    const docs = await cercaDalServer('stock_movements', { dove, ordina: [['created_at', 'desc']] })
+    return docs.map(mapMovement)
   } catch {
     const vincoli = [where('item_id', '==', itemId)]
     if (da) vincoli.push(where('created_at', '>=', Timestamp.fromDate(da)))
@@ -4499,6 +4507,7 @@ export function segnaScontrinoStampato(orderId) {
 }
 
 function scaricaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4519,6 +4528,7 @@ function scaricaInSottofondo(orderId, comandaId) {
 // differenza. Come per lo scarico, la vendita è già scritta: qui si insegue
 // il magazzino, non viceversa.
 function riallineaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4659,6 +4669,21 @@ async function leggiArticoli(ids) {
   return itemsById
 }
 
+// IL MAGAZZINO SI SCALA SOLO DOVE LA LICENZA LO INCLUDE (REQ-LIC-008).
+// Lo scarico di una vendita parte da solo, a ogni «pronto» e a ogni
+// chiusura, appena una ricetta punta a un articolo di magazzino: anche in
+// un locale che il modulo non ce l'ha più (una prova scaduta, un piano
+// più piccolo). Da quando le regole del database rifiutano le scritture
+// sul magazzino senza il modulo, ogni vendita lì diventava un errore di
+// sincronizzazione al banco. Quindi senza il modulo non si scala niente.
+// Si chiede alla stessa tabella delle regole (COLLEZIONI_DEI_MODULI), che
+// guarda l'INCLUSO e non l'interruttore d'uso: chi ha il modulo e l'ha
+// spento ha sempre scalato.
+// Se la licenza non si sa ancora (nessuna, da nessuna parte) si scala come
+// prima e decidono le regole: perdere uno scarico vero è peggio.
+const magazzinoIncluso = () =>
+  scritturaConsentita(settingsCache ?? { licenza: licenzaRicordata() }, 'stock_movements')
+
 // LO SCARICO DI UNA CHIUSURA, E IL SEGNO CHE È STATO FATTO (BUG-113).
 // Alla chiusura il segno `inventory_applied` non arrivava mai sul conto, e
 // un conto riaperto e richiuso si scalava due volte. Qui, dopo lo scarico,
@@ -4666,7 +4691,7 @@ async function leggiArticoli(ids) {
 // suo turno come ogni altra (scriviCampiComande). Tutto in sottofondo: il
 // conto è già chiuso, il magazzino lo segue.
 function scaricaComande(entries) {
-  if (!entries.length) return
+  if (!entries.length || !magazzinoIncluso()) return
   depleteComandeInventory(entries)
     .then(({ lowStock, scalate }) => {
       const perConto = new Map()
@@ -5374,6 +5399,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
 // altre scritture sullo stesso articolo.
 // Chi ha già letto gli articoli li passa (`itemsById`), e non si rileggono.
 async function stornaScorte(orderId, consumption, itemsById = null) {
+  if (!magazzinoIncluso()) return
   try {
     const articoli = itemsById || (await leggiArticoli(consumption.map((c) => c.inventory_item_id)))
     for (const c of consumption) {
@@ -6099,9 +6125,9 @@ export const DEFAULT_SETTINGS = {
   workflow_enabled: false,
   // LE FUNZIONI PREMIUM (lib/licenza.js). Questi sono gli interruttori
   // D'USO — «il locale lo sta usando?» — e NON dicono cosa il locale ha
-  // comprato: quella è la licenza, e sta in licenza.js (campo `incluso`)
-  // finché non arriva il documento `settings/licenza` della Fase 3. Un
-  // modulo non incluso resta spento comunque, qualunque cosa dica il flag.
+  // comprato: quello lo dice la licenza (`licenza/attuale` o la build,
+  // BUG-125), e non sta in settings/ apposta, perché settings/ lo scrive lo
+  // staff. Un modulo non incluso resta spento qualunque cosa dica il flag.
   // Accesi di suo, come `workflow_enabled !== false`: quello che il locale
   // ha comprato funziona senza che nessuno lo debba accendere.
   modulo_conta_enabled: true,
@@ -6302,6 +6328,23 @@ export const DEFAULT_SETTINGS = {
 // legge una volta sola, dalla cache offline se serve.
 let settingsCache = null
 
+// LA LICENZA DENTRO LE IMPOSTAZIONI (BUG-125). Le schermate la cercano
+// dove l'hanno sempre trovata, `licenza` nelle impostazioni lette; cambia
+// da dove arriva. Quella scritta in `settings/bar.licenza` si butta: la
+// può riscrivere ogni bartender, e un ripiego lì riaprirebbe il buco. Al
+// suo posto la licenza che vale (lib/licenza.js, licenzaEffettiva).
+// Finché non si sa (prima risposta dalla cache, documento assente, nessuna
+// licenza nella build) resta l'ultima licenza nota su questo dispositivo:
+// meglio quella che un'app che si ferma o perde i moduli per un istante.
+// `licenzaLetta` è l'ultimo { documento, certo } visto da un ascolto.
+let licenzaLetta = null
+
+function conLicenza(dati, letto = licenzaLetta) {
+  const { licenza: _diSettings, ...resto } = dati || {}
+  const licenza = licenzaEffettiva(letto) ?? licenzaRicordata()
+  return licenza ? { ...resto, licenza } : resto
+}
+
 // I valori con cui disegnare la prima volta, prima che il server risponda:
 // l'ultima risposta ricordata, o i default. Serve dove l'impostazione
 // decide un colore — se no si vede il lampo.
@@ -6317,7 +6360,7 @@ function impostazioni() {
   if (!settingsCache) {
     getDoc(settingsDoc)
       .then((snap) => {
-        if (snap.exists()) settingsCache = snap.data()
+        if (snap.exists()) settingsCache = conLicenza(snap.data())
       })
       .catch(() => {})
   }
@@ -6350,25 +6393,98 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
   )
 }
 
+// ── LA SCELTA SUGLI AGGIORNAMENTI (REQ-FLOTTA-020) ───────────────────
+// «Aggiorna» o «Salta» del titolare: una chiamata alla regia, col suo token
+// d'accesso (il contratto è in docs/aggiornamenti-dalla-regia.md). Qui
+// l'attesa c'è, ed è voluta: non è un gesto della serata, è una decisione
+// che vale solo se la regia l'ha presa, e il titolare deve sapere se è
+// andata. Il box resta usabile mentre si aspetta, e dopo venti secondi
+// senza risposta si dice che la scelta non è partita: un `fetch` senza
+// rete può restare appeso molto più a lungo.
+export const ATTESA_SCELTA_MS = 20000
+
+export async function inviaSceltaAggiornamento(url, tag, scelta) {
+  const ferma = new AbortController()
+  const timer = setTimeout(() => ferma.abort(), ATTESA_SCELTA_MS)
+  try {
+    const token = await auth.currentUser?.getIdToken()
+    if (!token) return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita }
+    const risposta = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag, scelta }),
+      signal: ferma.signal,
+    })
+    const corpo = await risposta.json().catch(() => null)
+    return esitoScelta(risposta.status, corpo)
+  } catch (e) {
+    console.warn('[aggiornamenti] scelta:', e?.message || e)
+    return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.senza_rete }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Due ascolti, uno solo verso chi chiama: le impostazioni del bar e la
+// licenza. Si risponde quando le impostazioni ci sono, e di nuovo a ogni
+// cambio di una delle due.
+// La licenza si ascolta ANCHE quando cambia solo la provenienza della
+// risposta (`includeMetadataChanges`): un documento che non c'è né nella
+// cache né sul server non cambia mai, e senza quell'opzione la conferma
+// del server («non c'è davvero») non arriverebbe.
 export function subscribeSettings(onChange, onError) {
-  return onSnapshot(
+  let dati // undefined finché settings/bar non risponde; null se non c'è
+  let letto = licenzaLetta
+  // L'impronta è della licenza che VALE, non di quello che si è letto: alla
+  // Tana il documento non c'è e `certo` cambia a ogni caduta del wifi, ma
+  // la licenza resta quella della build, e trenta schermate non si devono
+  // ridisegnare per niente.
+  const improntaDi = (l) => JSON.stringify(licenzaEffettiva(l) ?? null)
+  let impronta = letto ? improntaDi(letto) : null
+  const errore = onError ?? (() => {})
+  const rispondi = () => {
+    if (dati === undefined) return
+    if (dati === null) return onChange(conLicenza({ ...DEFAULT_SETTINGS }, letto))
+    const data = conLicenza(dati, letto)
+    settingsCache = data
+    // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
+    // invece che coi valori di partenza (vedi impostazioniLocali.js).
+    ricordaImpostazioni(data)
+    const merged = { ...DEFAULT_SETTINGS, ...data }
+    // Retrocompatibilità col vecchio flag booleano della scelta consegna.
+    if (!data.service_mode && data.service_mode_choice_enabled) {
+      merged.service_mode = 'entrambi'
+    }
+    onChange(merged)
+  }
+  const smettiImpostazioni = onSnapshot(
     settingsDoc,
     (snap) => {
-      if (!snap.exists()) return onChange({ ...DEFAULT_SETTINGS })
-      const data = snap.data()
-      settingsCache = data
-      // Per la PROSSIMA apertura: si disegna con l'ultima verità nota
-      // invece che coi valori di partenza (vedi impostazioniLocali.js).
-      ricordaImpostazioni(data)
-      const merged = { ...DEFAULT_SETTINGS, ...data }
-      // Retrocompatibilità col vecchio flag booleano della scelta consegna.
-      if (!data.service_mode && data.service_mode_choice_enabled) {
-        merged.service_mode = 'entrambi'
-      }
-      onChange(merged)
+      dati = snap.exists() ? snap.data() : null
+      rispondi()
     },
-    onError ?? (() => {})
+    errore
   )
+  const smettiLicenza = onSnapshot(
+    licenzaDoc,
+    { includeMetadataChanges: true },
+    (snap) => {
+      const documento = snap.exists() ? snap.data() : null
+      letto = { documento, certo: Boolean(documento) || snap.metadata?.fromCache === false }
+      licenzaLetta = letto
+      // Un cambio della sola provenienza, a licenza uguale, non ridisegna
+      // niente: risponde solo quando cambia la licenza che vale.
+      const nuova = improntaDi(letto)
+      if (nuova === impronta) return
+      impronta = nuova
+      rispondi()
+    },
+    errore
+  )
+  return () => {
+    smettiImpostazioni()
+    smettiLicenza()
+  }
 }
 
 export async function updateSettings(data) {

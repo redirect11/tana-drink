@@ -2,7 +2,8 @@
 'use strict'
 
 // L'AVVIO DELL'APP (src/main.jsx). Nei locali veri: progressivi, banner dei
-// cookie e prima schermata, subito. Nella DEMO (REQ-FLOTTA-019) prima si
+// cookie, la configurazione riletta in sottofondo (REQ-FLOTTA-021) e prima
+// schermata, subito: nessuno aspetta il file. Nella DEMO (REQ-FLOTTA-019) prima si
 // caricano i dati di prova nella cache — così nessuna lista parte vuota —
 // e solo dopo il resto; e il banner dei cookie non c'è, perché la demo non
 // ha servizi di terzi.
@@ -21,6 +22,13 @@ vi.mock('../../src/lib/cookieConsent.js', () => ({
   initCookieConsent: () => {
     registro.push('cookie')
     return Promise.resolve()
+  },
+}))
+vi.mock('../../src/porte/configurazione.js', () => ({
+  aggiornaConfigurazione: () => {
+    registro.push('configurazione')
+    // Il file non arriva mai: la prima schermata non lo aspetta.
+    return new Promise(() => {})
   },
 }))
 let finisciDati
@@ -50,12 +58,12 @@ beforeEach(() => {
 afterEach(() => spegniDemo())
 
 describe('l’avvio dell’app', () => {
-  it('in un locale vero: progressivi, cookie e prima schermata, subito', async () => {
+  it('in un locale vero: progressivi, cookie, configurazione e prima schermata, subito', async () => {
     await avvia(false)
-    expect(registro).toEqual(['progressivi', 'cookie', 'render'])
+    expect(registro).toEqual(['progressivi', 'cookie', 'configurazione', 'render'])
   })
 
-  it('nella demo: prima i dati di prova, poi il resto, senza il banner dei cookie', async () => {
+  it('nella demo: prima i dati di prova, poi il resto, senza il banner dei cookie né la configurazione', async () => {
     await avvia(true)
     await vi.waitFor(() => expect(registro).toEqual(['dati di prova: inizio']))
     finisciDati()

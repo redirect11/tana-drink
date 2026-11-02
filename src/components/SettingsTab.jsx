@@ -1100,7 +1100,7 @@ export default function SettingsTab({ role = null }) {
       id: 'informazioni',
       icona: 'ℹ️',
       label: 'Informazioni',
-      nodo: <InfoTab />,
+      nodo: <InfoTab settings={settings} role={role} />,
     },
     {
       id: 'funzioni-premium',

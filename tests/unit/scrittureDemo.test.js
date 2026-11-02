@@ -63,7 +63,9 @@ const entroPoco = (p) =>
 async function carica(demo) {
   vi.resetModules()
   accendiDemo(demo)
-  return import('../../src/lib/scritture.js')
+  // Le scritture stanno nell'adattatore Firebase della porta dei dati
+  // (REQ-FLOTTA-021): è lì che la demo le conferma dalla cache.
+  return import('../../src/adattatori/firebase/dati.js')
 }
 
 beforeEach(() => {
@@ -120,7 +122,7 @@ describe('nella build di un locale vero le scritture sono quelle di Firestore', 
   })
 })
 
-describe('nessun modulo scrive (o legge un documento) scavalcando scritture.js e letture.js', () => {
+describe('nessun modulo scrive (o legge un documento) scavalcando l’adattatore dei dati', () => {
   const SRC = join(__dirname, '..', '..', 'src')
   const file = []
   const giro = (d) => {
@@ -132,8 +134,8 @@ describe('nessun modulo scrive (o legge un documento) scavalcando scritture.js e
   }
   giro(SRC)
   // Gli strumenti di sviluppo scrivono sull'emulatore e non entrano nella
-  // demo; scritture.js è il punto di passaggio.
-  const ESENTI = ['lib/scritture.js', 'lib/letture.js', 'dev/']
+  // demo; l'adattatore Firebase è il punto di passaggio.
+  const ESENTI = ['adattatori/firebase/', 'dev/']
   it.each(file.map((p) => relative(SRC, p).replace(/\\/g, '/')).filter((r) => !ESENTI.some((e) => r.startsWith(e))))(
     '%s',
     (rel) => {
@@ -141,7 +143,7 @@ describe('nessun modulo scrive (o legge un documento) scavalcando scritture.js e
       const m = testo.match(/import\s*\{([^}]*)\}\s*from\s*'firebase\/firestore'/g) || []
       const nomi = m.flatMap((x) => x.replace(/^import\s*\{|\}\s*from.*$/g, '').split(',').map((n) => n.trim().split(/\s+as\s+/)[0]))
       // Anche getDoc: a rete spenta, su un documento che non c'è, va in
-      // errore invece di dire «non c'è» — passa da letture.js.
+      // errore invece di dire «non c'è» — passa dall'adattatore.
       const scritture = nomi.filter((n) => ['setDoc', 'updateDoc', 'addDoc', 'deleteDoc', 'writeBatch', 'runTransaction', 'getDoc'].includes(n))
       expect(scritture, `${rel} importa ${scritture.join(', ')} da firebase/firestore`).toEqual([])
     }
