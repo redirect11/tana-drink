@@ -2,6 +2,12 @@
 
 ## 1.10.4-beta — in lavorazione
 
+### Nel menù
+
+- **I disegni dei drink nell'elenco sono più grandi e interi.** Prima
+  stavano nella piccola casella delle foto, ritagliati; ora si vedono per
+  intero, una volta e mezzo più grandi. Le foto restano come prima.
+
 ### Nel gestionale
 
 - **La licenza si legge in Impostazioni → Licenza.** Il titolare vede
