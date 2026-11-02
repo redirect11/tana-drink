@@ -145,6 +145,24 @@ export const rigaMarchio = (stato) => (limitiDi(stato)?.marchio === true ? `Crea
 // Dove il titolare sceglie un piano a pagamento.
 export const urlRegia = (stato) => licenzaDi(stato)?.regia_url || null
 
+// I LIMITI DEL PIANO IN CHIARO, per la sottosezione Licenza (REQ-LIC-007):
+// una riga per limite scritto, nessuna se il piano non ne ha. Le parole
+// sono quelle del gestionale: chi le legge è il titolare.
+export function limitiInChiaro(stato) {
+  const righe = []
+  const prodotti = maxProdotti(stato)
+  const conti = maxContiAperti(stato)
+  const giorni = giorniDiStorico(stato)
+  const utenti = maxUtenti(stato)
+  if (prodotti !== null) righe.push(`Prodotti a listino: al massimo ${prodotti}`)
+  if (conti !== null) righe.push(`Conti aperti contemporaneamente: al massimo ${conti}`)
+  if (giorni !== null) righe.push(`Storico consultabile: ${giorni === 1 ? 'l’ultimo giorno' : `gli ultimi ${giorni} giorni`}`)
+  if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
+  if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
+  if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
+  return righe
+}
+
 // ── COSA SI LEGGE ─────────────────────────────────────────────────────
 // Frasi piane, senza toni da venditore: cosa non si può fare e perché. Il
 // collegamento alla regia lo aggiunge chi le mostra (AvvisoPiano).

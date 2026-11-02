@@ -1,4 +1,4 @@
-import { profiloLeggero } from './limiti.js'
+import { profiloLeggero, limitiInChiaro, urlRegia } from './limiti.js'
 import { LICENZA_DELLA_BUILD, licenzaDi } from './venue.js'
 
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
@@ -307,6 +307,51 @@ export function scadenzaProva(stato, id) {
   if (!quando) return null
   const d = new Date(quando)
   return Number.isNaN(d.getTime()) ? null : d
+}
+
+// ── LA LICENZA IN CHIARO (REQ-LIC-007) ─────────────────────────────────
+// Quello che la sottosezione Licenza mostra al titolare, in sola lettura.
+// Vale per OGNI licenza, quella della regia come quella della build (la
+// Tana): da BUG-125 ogni installazione ne ha una, e un caso «senza
+// licenza» qui non c'è. Le voci che una licenza non porta (la Tana non ha
+// piano né scadenza) restano null, e la schermata non le mostra.
+//
+// `origine` dice chi la gestisce: 'build' quando vale quella scritta
+// nell'installazione, 'regia' altrimenti. Si confronta il contenuto, non
+// il riferimento: la licenza arriva anche dalla memoria del dispositivo.
+//
+// `validita` legge `valida_fino` (data ISO; assente o null = senza
+// scadenza). La scadenza la fa rispettare la regia, sospendendo: qui si
+// mostra soltanto, e una data passata con la licenza ancora attiva si dice
+// «scaduta» senza fermare il locale. Una data illeggibile non diventa
+// «senza scadenza»: non si mostra.
+export function riepilogoLicenza(stato, adesso = new Date()) {
+  const licenza = licenzaDi(stato)
+  if (!licenza || typeof licenza !== 'object') return null
+  const moduli = moduliPremium().map((m) => ({
+    id: m.id,
+    label: m.label,
+    incluso: moduloIncluso(stato, m.id),
+    prova: scadenzaProva(stato, m.id),
+  }))
+  return {
+    piano: typeof licenza.piano === 'string' && licenza.piano.trim() ? licenza.piano.trim() : null,
+    stato: statoLicenza(stato),
+    origine:
+      LICENZA_DELLA_BUILD && JSON.stringify(licenza) === JSON.stringify(LICENZA_DELLA_BUILD) ? 'build' : 'regia',
+    validita: validitaDi(licenza.valida_fino, adesso),
+    inclusi: moduli.filter((m) => m.incluso),
+    esclusi: moduli.filter((m) => !m.incluso),
+    limiti: limitiInChiaro(stato),
+    gestione: urlRegia(stato),
+  }
+}
+
+function validitaDi(validaFino, adesso) {
+  if (validaFino === undefined || validaFino === null || validaFino === '') return { tipo: 'senza' }
+  const data = new Date(validaFino)
+  if (Number.isNaN(data.getTime())) return null
+  return { tipo: data < adesso ? 'scaduta' : 'fino', data }
 }
 
 // Una voce di un elenco (sezioni del magazzino, domani le voci del

@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 244 | fatto e coperto dai test |
+| ✅ | 245 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**297 voci** in tutto. **261** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**297 voci** in tutto. **262** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 5 | 4 |  |
+| [LIC](#lic) | 6 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 5 | — |  |
 
@@ -3330,6 +3330,20 @@ LE FUNCTIONS CHE L'APP NON CHIAMA: notifyNewOrder, notifyOrderUpdate e notifySta
 
 **Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`
 
+#### REQ-LIC-007 — La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia
+
+«Dovrebbe esserci una parte dove si vede la licenza attuale e la sua validità, ma la gestione rimanda sempre a regia» (l'utente, 31/10/2026). Una sottosezione «Licenza» in Impostazioni, al titolare, in sola lettura: il piano; lo stato (attiva, sospesa); la VALIDITÀ, da una voce nuova della licenza `valida_fino` (data ISO, o null per un piano senza scadenza: «Valida fino al 30 novembre 2026» o «Senza scadenza»); i moduli inclusi e quelli in prova con la loro scadenza (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app non si cambia niente.
+
+CORRETTO IL 02/11/2026, dopo BUG-125. Il testo di partenza diceva «senza licenza della regia (la Tana) la sottosezione non c'è»: scritto quando la Tana una licenza non l'aveva, e i suoi moduli stavano nella colonna `incluso` del codice. Con BUG-125 ogni installazione ha una licenza, quella della regia o quella della build (`clienti/<slug>/licenza.json`), e la Tana ha la seconda. E l'utente, guardando la produzione: «serve un posto per mostrare le info di licenza per quel prodotto». Quindi la sottosezione c'è per ogni licenza e mostra quello che porta: per la Tana i moduli, senza piano né scadenza, e «Gestione: licenza scritta nell'installazione» al posto del tasto verso la regia, che c'è solo con `regia_url`.
+
+COME È FATTA: un riquadro «Licenza», al solo titolare, nel gruppo di Impostazioni che si chiamava «Funzioni premium» e ora si chiama «Licenza», sopra quel riquadro. Righe: piano (se c'è), stato, validità, chi la gestisce, quanti moduli premium include; poi i limiti del piano in chiaro. I moduli si CONTANO soltanto: l'elenco, con le prove e le loro scadenze, è il riquadro Funzioni premium subito sotto, e ripeterlo metteva gli stessi nomi due volte nella stessa schermata. Una `valida_fino` illeggibile non si mostra (non diventa «senza scadenza»).
+
+LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda la regia ma entrambe devono essere previste»): il Free può essere senza scadenza o una prova a tempo, e un piano a pagamento ha la sua. Alla scadenza la regia sospende (`stato: 'sospesa'`, che l'app già mostra) o toglie la licenza; l'app la data la mostra soltanto. Una data passata con la licenza ancora attiva si mostra come «Scaduta il …», senza fermare il locale.
+
+DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
+
+**Dove**: `src/components/LicenzaPanel.jsx, src/components/SettingsTab.jsx (gruppo «Licenza»), src/lib/licenza.js (riepilogoLicenza), src/lib/limiti.js (limitiInChiaro)` · **Lo dimostrano**: `tests/unit/licenzaInChiaro.test.js`, `tests/component/LicenzaPanel.test.jsx`
+
 #### REQ-LIC-008 — Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono
 
 «Pure se sbloccano localmente le funzioni premium serve cmq che il server verifichi» (l'utente, 31/10/2026; «ok procedi con il mettere in sicurezza in tal senso»). L'app nasconde quello che la licenza non include, ma chi apre la console del browser scrive lo stesso. Da BUG-125 la licenza sta in `licenza/attuale`, che dall'app non scrive nessuno: ora le regole la LEGGONO e rifiutano.
@@ -3346,7 +3360,7 @@ QUANTO COSTA: una lettura della licenza per richiesta, e solo dove serve; nello 
 
 DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate.
 
-**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`
+**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
 
 ### VENUE
 
@@ -3837,16 +3851,6 @@ DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico r
 UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
 
 **Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
-
-#### REQ-LIC-007 — La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia
-
-«Dovrebbe esserci una parte dove si vede la licenza attuale e la sua validità, ma la gestione rimanda sempre a regia» (l'utente, 31/10/2026). Una sottosezione «Licenza» in Impostazioni, al titolare, in sola lettura: il piano; lo stato (attiva, sospesa); la VALIDITÀ, da una voce nuova della licenza `valida_fino` (data ISO, o null per un piano senza scadenza: «Valida fino al 30 novembre 2026» o «Senza scadenza»); i moduli inclusi e quelli in prova con la loro scadenza (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app non si cambia niente. Senza licenza della regia (la Tana) la sottosezione non c'è.
-
-LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda la regia ma entrambe devono essere previste»): il Free può essere senza scadenza o una prova a tempo, e un piano a pagamento ha la sua. Alla scadenza la regia sospende (`stato: 'sospesa'`, che l'app già mostra) o toglie la licenza; l'app la data la mostra soltanto. Una data passata con la licenza ancora attiva si mostra come «Scaduta il …», senza fermare il locale.
-
-DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
-
-**Dove**: `src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
