@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 251 | fatto e coperto dai test |
+| ✅ | 252 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**303 voci** in tutto. **268** descrivono il sistema com'è oggi e
+**304 voci** in tutto. **269** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 8 | 3 |  |
+| [LIC](#lic) | 9 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 6 | — |  |
 
@@ -3397,6 +3397,14 @@ L'utente, 02/11/2026: «Dobbiamo fare in modo che lo stile notte sia utilizzabil
 DA DIRE ALLA REGIA (docs/catalogo-temi.md): `temi` in ogni licenza, `[]` se il locale non ne ha; «Notte» mai a un locale che non sia la Tana.
 
 **Dove**: `src/lib/stileMenu.js (inLicenza, temiInLicenza, stiliDisponibili), src/components/ThemeSettings.jsx, src/lib/licenza.js (riepilogoLicenza), src/components/LicenzaPanel.jsx, clienti/tana/licenza-iniziale.json, scripts/lib-licenza-iniziale.js, docs/catalogo-temi.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`
+
+#### REQ-LIC-012 — Il marketplace dei moduli: il titolare prova, aggiunge e disdice i moduli dall'app, al mese
+
+L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il marketplace». Alle domande dello stesso giorno: «al mese, come nel listino», «sì, una prova gratuita», «solo il titolare». Nel Marketplace una quarta sezione, Moduli: una scheda per ogni modulo dell'app con lo stato dalla licenza (incluso, in prova fino al…, non incluso), prezzo mensile IVA esclusa e giorni di prova dal listino della regia (catalogoModuli, letto all'apertura e ricordato per quando la rete manca). I tasti — «Prova gratis N giorni», «Aggiungi», «Disdici» con conferma — li vede solo il titolare (isAdmin), e solo se la licenza è della regia (regia nella build e `regia_url` in licenza): la licenza della Tana, scritta dal deploy, si consulta soltanto. «Aggiungi» porta alla pagina di Stripe Checkout (solo un indirizzo checkout.stripe.com) e la regia riporta il titolare sui Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non scrive niente: la regia riscrive la licenza e l'app la vede cambiare in tempo reale. Un modulo che il listino non vende si vede ma non si compra.
+
+DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e del ritorno, il webhook che accende il modulo dopo il pagamento (docs/marketplace-moduli.md).
+
+**Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 

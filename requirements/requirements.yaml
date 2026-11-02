@@ -5823,6 +5823,38 @@ requirements:
       - tests/component/MenuPage.test.jsx
       - tests/component/MarketplaceTab.test.jsx
 
+  - id: REQ-LIC-012
+    title: "Il marketplace dei moduli: il titolare prova, aggiunge e disdice i moduli dall'app, al mese"
+    area: "src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md"
+    description: >
+      L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il
+      marketplace». Alle domande dello stesso giorno: «al mese, come nel
+      listino», «sì, una prova gratuita», «solo il titolare». Nel
+      Marketplace una quarta sezione, Moduli: una scheda per ogni modulo
+      dell'app con lo stato dalla licenza (incluso, in prova fino al…, non
+      incluso), prezzo mensile IVA esclusa e giorni di prova dal listino
+      della regia (catalogoModuli, letto all'apertura e ricordato per
+      quando la rete manca). I tasti — «Prova gratis N giorni», «Aggiungi»,
+      «Disdici» con conferma — li vede solo il titolare (isAdmin), e solo
+      se la licenza è della regia (regia nella build e `regia_url` in
+      licenza): la licenza della Tana, scritta dal deploy, si consulta
+      soltanto. «Aggiungi» porta alla pagina di Stripe Checkout (solo un
+      indirizzo checkout.stripe.com) e la regia riporta il titolare sui
+      Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non
+      scrive niente: la regia riscrive la licenza e l'app la vede cambiare
+      in tempo reale. Un modulo che il listino non vende si vede ma non si
+      compra. DA FARE nella regia: catalogoModuli, moduloDallApp col
+      controllo del titolare e del ritorno, il webhook che accende il
+      modulo dopo il pagamento (docs/marketplace-moduli.md).
+    status: implemented
+    generate_issue: false
+    labels: [licenza, prodotto, regia]
+    priority: P2
+    test_cases:
+      - tests/unit/marketplaceModuli.test.js
+      - tests/unit/azioneModulo.test.js
+      - tests/component/MarketplaceTab.test.jsx
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
