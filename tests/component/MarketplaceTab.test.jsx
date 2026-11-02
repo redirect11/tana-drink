@@ -14,6 +14,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
+import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
 const st = vi.hoisted(() => ({ impostazioni: {}, scritte: [], azioni: [], risposta: null }))
@@ -52,14 +54,26 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
-  history.replaceState(null, '', '/')
 })
 
-function mostra(role = 'admin') {
+// Dove si trova la pagina, letto dal router: è lì che il Marketplace legge
+// la sezione e l'esito del ritorno dal pagamento.
+let posizione
+function Posizione() {
+  posizione = useLocation()
+  return null
+}
+
+function mostra(role = 'admin', indirizzo = '/bar?tab=marketplace') {
   const smetti = subscribeSottosezioni((s) => {
     sottosezioni = s
   })
-  const r = render(<MarketplaceTab role={role} />)
+  const r = render(
+    <MemoryRouter initialEntries={[indirizzo]}>
+      <MarketplaceTab role={role} />
+      <Posizione />
+    </MemoryRouter>
+  )
   return { ...r, smetti }
 }
 const vaiA = (id) => act(() => sottosezioni.scegli(id))
@@ -173,7 +187,7 @@ describe('i moduli', () => {
     conRegia()
     mostra()
     vaiA('moduli')
-    expect(await within(scheda('Gestione clienti')).findByText('6 € al mese + IVA')).toBeInTheDocument()
+    expect(await within(scheda('Gestione clienti')).findByText('6,00 € al mese + IVA')).toBeInTheDocument()
     expect(within(scheda('Magazzino e fornitori')).getByText('Incluso')).toBeInTheDocument()
     expect(within(scheda('Statistiche e bilancio')).getByText('In prova fino al 16 novembre 2026')).toBeInTheDocument()
     expect(within(scheda('Gestione clienti')).getByText('Non incluso')).toBeInTheDocument()
@@ -192,12 +206,7 @@ describe('i moduli', () => {
     conRegia()
     st.risposta = { ok: true, checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_1', dal: null }
     const vai = vi.fn()
-    vi.stubGlobal('location', {
-      origin: 'https://tana.example',
-      search: '',
-      href: 'https://tana.example/bar',
-      assign: vai,
-    })
+    vi.stubGlobal('location', { origin: 'https://tana.example', assign: vai })
     const utente = userEvent.setup()
     mostra()
     vaiA('moduli')
@@ -220,7 +229,7 @@ describe('i moduli', () => {
     vaiA('moduli')
     await utente.click(await screen.findByRole('button', { name: 'Prova Gestione clienti gratis per 7 giorni' }))
     expect(st.azioni.at(-1)).toMatchObject({ modulo: 'clienti', azione: 'prova' })
-    expect(screen.getByRole('status')).toHaveTextContent('Prova di «Gestione clienti» attivata')
+    expect(screen.getByText(/Prova di «Gestione clienti» attivata/)).toBeInTheDocument()
   })
 
   it('la disdetta si conferma, e dice fino a quando il modulo resta', async () => {
@@ -231,9 +240,10 @@ describe('i moduli', () => {
     vaiA('moduli')
     await utente.click(await screen.findByRole('button', { name: 'Disdici Magazzino e fornitori' }))
     expect(st.azioni).toEqual([])
-    await utente.click(screen.getByRole('button', { name: 'Conferma la disdetta di Magazzino e fornitori' }))
+    expect(screen.getByRole('heading', { name: 'Disdire «Magazzino e fornitori»?' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Disdici' }))
     expect(st.azioni.at(-1)).toMatchObject({ modulo: 'magazzino', azione: 'disdici' })
-    expect(screen.getByRole('status')).toHaveTextContent('resta attivo fino al 1 dicembre 2026')
+    expect(screen.getByText(/resta attivo fino al 1 dicembre 2026/)).toBeInTheDocument()
   })
 
   it('un rifiuto della regia si legge col suo testo', async () => {
@@ -243,14 +253,14 @@ describe('i moduli', () => {
     mostra()
     vaiA('moduli')
     await utente.click(await screen.findByRole('button', { name: 'Prova Gestione clienti gratis per 7 giorni' }))
-    expect(screen.getByRole('status')).toHaveTextContent('La prova di questo modulo è già stata usata.')
+    expect(screen.getByText('La prova di questo modulo è già stata usata.')).toBeInTheDocument()
   })
 
   it('chi non è il titolare li vede, ma non li compra', async () => {
     conRegia()
     mostra('bartender')
     vaiA('moduli')
-    expect(await within(scheda('Gestione clienti')).findByText('6 € al mese + IVA')).toBeInTheDocument()
+    expect(await within(scheda('Gestione clienti')).findByText('6,00 € al mese + IVA')).toBeInTheDocument()
     expect(screen.getByText('Moduli e abbonamenti li gestisce il titolare.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^(Aggiungi|Disdici|Prova) / })).toBeNull()
   })
@@ -266,11 +276,10 @@ describe('i moduli', () => {
 
   it("tornando dal pagamento si apre sui moduli, con l'esito, detto una volta sola", async () => {
     conRegia()
-    history.replaceState(null, '', '/bar?tab=marketplace&sezione=moduli&esito=pagato')
-    mostra()
+    mostra('admin', '/bar?tab=marketplace&sezione=moduli&esito=pagato')
     await listinoLetto()
     expect(screen.getByRole('heading', { name: 'Moduli', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Pagamento ricevuto')
-    expect(location.search).toBe('?tab=marketplace&sezione=moduli')
+    expect(screen.getByText(/Pagamento ricevuto/)).toBeInTheDocument()
+    expect(posizione.search).toBe('?tab=marketplace&sezione=moduli')
   })
 })

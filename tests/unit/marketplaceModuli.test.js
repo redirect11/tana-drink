@@ -99,9 +99,10 @@ describe('chi può comprare dall\'app', () => {
 })
 
 describe('le parole', () => {
-  it('il prezzo è mensile, IVA esclusa, come nel listino', () => {
-    expect(prezzoAlMese(15)).toBe('15 € al mese + IVA')
-    expect(prezzoAlMese(7.5)).toBe('7,5 € al mese + IVA')
+  it('il prezzo è mensile, IVA esclusa, come nel listino; scritto come ogni prezzo dell\'app', () => {
+    // formatPrice mette uno spazio che non va a capo prima di «€».
+    expect(prezzoAlMese(15)).toMatch(/^15,00\s€ al mese \+ IVA$/)
+    expect(prezzoAlMese(7.5)).toMatch(/^7,50\s€ al mese \+ IVA$/)
     expect(prezzoAlMese(null)).toBe('')
   })
 })

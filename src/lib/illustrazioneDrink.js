@@ -346,7 +346,7 @@ const VERSIONI = {
 // segno di Tenniel con l'acquerello è l'identità della Tana; ogni stile del
 // menù disegna gli stessi drink (bicchiere, colore, decorazione: nessuno
 // rifà le schede) col suo segno.
-export const SEGNI = ['tenniel', 'incisione']
+const SEGNI = ['tenniel', 'incisione']
 
 export function svgDrink(scelta, { chiaro = false, segno = 'tenniel' } = {}) {
   const s = sceltaIllustrazione(scelta)

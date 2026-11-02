@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { subscribeSettings, updateSettings, settingsIniziali, azioneModulo } from '../lib/api.js'
 import { isAdmin } from '../lib/ruoli.js'
 import { dataAvviso } from '../lib/aggiornamenti.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
-import { TestataGiornale } from './MenuGiornale.jsx'
+import { formatPrice } from '../lib/orderStatus.js'
+import { TestataGiornale, VoceGiornale } from './MenuGiornale.jsx'
+import Caricamento from './Caricamento.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
 import {
   STILI_MENU,
   nomeStile,
@@ -18,6 +22,7 @@ import {
   catalogoRicordato,
   scaricaCatalogo,
   urlCatalogo,
+  urlProvaMenu,
   temiInstallati,
   temaInUso,
   temaComeColori,
@@ -67,17 +72,18 @@ const SEZIONI = [
 
 // La sezione da aprire: quella dell'indirizzo, se esiste. Ci si arriva così
 // tornando dalla pagina di pagamento (`?tab=marketplace&sezione=moduli`).
-const sezioneIniziale = (search) => {
-  const chiesta = new URLSearchParams(search || '').get('sezione')
-  return SEZIONI.some((s) => s.id === chiesta) ? chiesta : 'temi'
-}
+const sezioneDa = (chiesta) => (SEZIONI.some((s) => s.id === chiesta) ? chiesta : 'temi')
 
-const prova = (chiave, id) =>
-  `${import.meta.env.BASE_URL || '/'}menu?vista=cliente&${chiave}=${encodeURIComponent(id)}`
+// Le due voci d'esempio delle vetrine, una volta sola per tutti gli stili.
+const VOCI_ESEMPIO = [
+  { id: 'negroni', name: 'Negroni', description: 'Gin, bitter e vermouth rosso', price: 9 },
+  { id: 'spritz', name: 'Spritz', description: 'Aperitivo, prosecco e soda', price: 7 },
+]
 
 // Un pezzo del menù vero, con le classi del menù: ogni stile lo disegna con
 // le sue regole, come disegna il menù dei clienti. Uno stile con una
-// struttura sua (il «Giornale», REQ-MENU-024) mostra quella.
+// struttura sua (il «Giornale», REQ-MENU-024) mostra quella, coi suoi
+// componenti: la vetrina non può mostrare un giornale che non c'è.
 function Vetrina({ colori, stile }) {
   if (stile === 'giornale') {
     return (
@@ -85,20 +91,10 @@ function Vetrina({ colori, stile }) {
         <TestataGiornale venue={{ venue_name: 'Il Locale' }} />
         <h3 className="g-sezione-titolo">
           <span>Cocktail</span>
-          <span className="g-sezione-conto">2 voci</span>
+          <span className="g-sezione-conto">{VOCI_ESEMPIO.length} voci</span>
         </h3>
-        {[
-          ['Negroni', '9,00 €', 'Gin, bitter e vermouth rosso'],
-          ['Spritz', '7,00 €', 'Aperitivo, prosecco e soda'],
-        ].map(([nome, prezzo, desc]) => (
-          <article className="g-voce" key={nome}>
-            <h4>
-              <span>{nome}</span>
-              <span className="g-puntini" />
-              <span className="g-prezzo">{prezzo}</span>
-            </h4>
-            <p className="g-testo">{desc}</p>
-          </article>
+        {VOCI_ESEMPIO.map((d) => (
+          <VoceGiornale key={d.id} d={d} />
         ))}
       </div>
     )
@@ -106,18 +102,15 @@ function Vetrina({ colori, stile }) {
   return (
     <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
       <h3 className="cat-header">Cocktail</h3>
-      {[
-        ['Negroni', 'Gin, bitter e vermouth rosso', '9,00 €'],
-        ['Spritz', 'Aperitivo, prosecco e soda', '7,00 €'],
-      ].map(([nome, desc, prezzo]) => (
-        <div className="card menu-item" key={nome}>
+      {VOCI_ESEMPIO.map((d) => (
+        <div className="card menu-item" key={d.id}>
           <div className="row between">
             <div className="grow">
               <h3>
-                <span className="menu-item-nome">{nome}</span>
+                <span className="menu-item-nome">{d.name}</span>
               </h3>
-              <p className="muted menu-item-descrizione">{desc}</p>
-              <span className="price">{prezzo}</span>
+              <p className="muted menu-item-descrizione">{d.description}</p>
+              <span className="price">{formatPrice(d.price)}</span>
             </div>
           </div>
         </div>
@@ -140,9 +133,75 @@ function Scheda({ titolo, sottotitolo, descrizione, vetrina, children }) {
   )
 }
 
-const STATI = {
-  carica: 'Aggiornamento del catalogo in corso…',
-  senza_rete: 'Il catalogo della regia non risponde: si vedono i temi già noti a questo dispositivo.',
+// I tasti di un tema o di uno stile: la prova a sinistra, a destra «Usa» o
+// «Installa» (o «In uso»), e nella sezione Installati «Disinstalla».
+// `etichetta` è il nome per chi legge lo schermo («Gazzetta», «lo stile
+// Lavagna»): sui tasti basta il verbo.
+function AzioniCatalogo({ provaHref, etichetta, inUso, installato, disinstallabile, onUsa, onInstalla, onDisinstalla }) {
+  return (
+    <>
+      <a className="link-inline small" href={provaHref}>
+        Prova sul menù
+      </a>
+      {inUso ? (
+        <span className="small">In uso</span>
+      ) : installato ? (
+        <button type="button" className="btn small" aria-label={`Usa ${etichetta}`} onClick={onUsa}>
+          Usa
+        </button>
+      ) : (
+        <button type="button" className="btn small" aria-label={`Installa ${etichetta}`} onClick={onInstalla}>
+          Installa
+        </button>
+      )}
+      {installato && disinstallabile && (
+        <button type="button" className="link-inline small" aria-label={`Disinstalla ${etichetta}`} onClick={onDisinstalla}>
+          Disinstalla
+        </button>
+      )}
+    </>
+  )
+}
+
+// UN CATALOGO DELLA REGIA, letto quando serve la prima volta (`quando` è il
+// suo indirizzo, o null finché non serve) e mai a tempo; nel frattempo, e
+// senza rete, l'ultimo ricordato su questo dispositivo. Vale per i temi e
+// per il listino dei moduli. Si legge una volta per apertura della pagina:
+// tornare su una sezione non lo rilegge.
+function useDallaRegia(quando, ricordato, scarica) {
+  const [dati, setDati] = useState(ricordato)
+  const [stato, setStato] = useState(() => (quando ? 'carica' : null))
+  useEffect(() => {
+    if (!quando) return undefined
+    let vivo = true
+    setStato('carica')
+    scarica(quando).then((voci) => {
+      if (!vivo) return
+      if (voci) setDati(voci)
+      setStato(voci ? null : 'senza_rete')
+    })
+    return () => {
+      vivo = false
+    }
+  }, [quando, scarica])
+  return [dati, stato]
+}
+
+const AVVISI_REGIA = {
+  temi: {
+    carica: 'Aggiornamento del catalogo in corso…',
+    senza_rete: 'Il catalogo della regia non risponde: si vedono i temi già noti a questo dispositivo.',
+  },
+  moduli: {
+    carica: 'Aggiornamento del listino in corso…',
+    senza_rete: 'Il listino della regia non risponde: prezzi e prove sono quelli già noti a questo dispositivo.',
+  },
+}
+
+function AvvisoRegia({ stato, di }) {
+  if (!stato) return null
+  if (stato === 'carica') return <Caricamento piccolo testo={AVVISI_REGIA[di].carica} />
+  return <p className="muted small">{AVVISI_REGIA[di].senza_rete}</p>
 }
 
 // ── I MODULI ──────────────────────────────────────────────────────────
@@ -151,19 +210,6 @@ const STATI = {
 // titolare (decisione dell'utente, 02/11/2026), e solo se la licenza è
 // della regia (acquistiDallApp). Il pagamento si fa sulla pagina di Stripe:
 // l'app ci manda il titolare e la regia lo riporta qui, sui moduli.
-const ICONE_MODULI = {
-  menu_tavoli: '📱',
-  ordini_cliente: '🛎️',
-  clienti: '👥',
-  magazzino: '📦',
-  statistiche: '📊',
-  staff: '🧑‍🍳',
-  sumup: '💳',
-  conta: '📋',
-  fatture: '🧾',
-  scadenzario: '📅',
-}
-
 const ESITI_RITORNO = {
   pagato: { tipo: 'ok', testo: 'Pagamento ricevuto. Il modulo si attiva appena la regia aggiorna la licenza.' },
   annullato: { tipo: 'info', testo: 'Pagamento annullato: nessun addebito e nessuna modifica alla licenza.' },
@@ -178,45 +224,23 @@ function testoErrore(r) {
   return 'Operazione non riuscita. Riprovare tra qualche minuto.'
 }
 
-const statoInChiaro = (m) =>
-  m.stato === 'prova' ? `In prova fino al ${dataAvviso(m.prova_fino)}` : m.stato === 'incluso' ? 'Incluso' : 'Non incluso'
+const STATI_MODULO = {
+  prova: (m) => `In prova fino al ${dataAvviso(m.prova_fino)}`,
+  incluso: () => 'Incluso',
+  non_incluso: () => 'Non incluso',
+}
 
-function SezioneModuli({ settings, role }) {
-  const [listino, setListino] = useState(() => listinoRicordato())
-  const [statoListino, setStatoListino] = useState(() => (urlListino() ? 'carica' : null))
-  const [avviso, setAvviso] = useState(() => ESITI_RITORNO[esitoRitorno(globalThis.location?.search)] || null)
+function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale }) {
+  const [avviso, setAvviso] = useState(() => ESITI_RITORNO[esitoIniziale] || null)
   const [inCorso, setInCorso] = useState(null)
-  const [conferma, setConferma] = useState(null)
-
-  // Il listino si legge quando si aprono i moduli, mai a tempo.
-  useEffect(() => {
-    if (!urlListino()) return undefined
-    let vivo = true
-    scaricaListino().then((voci) => {
-      if (!vivo) return
-      if (voci) setListino(voci)
-      setStatoListino(voci ? null : 'senza_rete')
-    })
-    return () => {
-      vivo = false
-    }
-  }, [])
-
-  // L'esito del ritorno da Stripe si dice una volta: tolto dall'indirizzo,
-  // un ricaricamento della pagina non lo ripete.
-  useEffect(() => {
-    const url = new URL(globalThis.location.href)
-    if (!url.searchParams.has('esito')) return
-    url.searchParams.delete('esito')
-    globalThis.history?.replaceState(globalThis.history.state, '', url)
-  }, [])
+  const [daDisdire, setDaDisdire] = useState(null)
 
   const titolare = isAdmin(role)
   const acquisti = acquistiDallApp(settings)
   const moduli = schedeModuli(settings, listino)
 
   const esegui = async (m, azione) => {
-    setConferma(null)
+    setDaDisdire(null)
     setAvviso(null)
     setInCorso(m.id)
     const r = await azioneModulo(urlAzioni(), m.id, azione, urlRitorno())
@@ -246,26 +270,6 @@ function SezioneModuli({ settings, role }) {
       return m.stato === 'non_incluso' ? <span className="muted small">Non acquistabile singolarmente</span> : null
     }
     const occupato = inCorso !== null
-    if (conferma === m.id) {
-      return (
-        <>
-          <span className="small">Confermare la disdetta?</span>
-          <span className="row" style={{ gap: 8 }}>
-            <button type="button" className="btn ghost small" onClick={() => setConferma(null)}>
-              Annulla
-            </button>
-            <button
-              type="button"
-              className="btn small"
-              aria-label={`Conferma la disdetta di ${m.nome}`}
-              onClick={() => esegui(m, 'disdici')}
-            >
-              Disdici
-            </button>
-          </span>
-        </>
-      )
-    }
     if (m.stato === 'incluso') {
       return (
         <button
@@ -273,7 +277,7 @@ function SezioneModuli({ settings, role }) {
           className="link-inline small"
           aria-label={`Disdici ${m.nome}`}
           disabled={occupato}
-          onClick={() => setConferma(m.id)}
+          onClick={() => setDaDisdire(m)}
         >
           Disdici
         </button>
@@ -319,16 +323,8 @@ function SezioneModuli({ settings, role }) {
           La licenza di questa installazione si gestisce presso chi la amministra: qui si consulta soltanto.
         </p>
       )}
-      {acquisti && !titolare && (
-        <p className="muted small">Moduli e abbonamenti li gestisce il titolare.</p>
-      )}
-      {statoListino && (
-        <p className="muted small">
-          {statoListino === 'carica'
-            ? 'Aggiornamento del listino in corso…'
-            : 'Il listino della regia non risponde: prezzi e prove sono quelli già noti a questo dispositivo.'}
-        </p>
-      )}
+      {acquisti && !titolare && <p className="muted small">Moduli e abbonamenti li gestisce il titolare.</p>}
+      <AvvisoRegia stato={statoListino} di="moduli" />
       {/* Un errore è un avviso (il banner giallo di sempre); un esito andato
           bene no: il giallo con la scritta rossa lo farebbe sembrare un guaio. */}
       {avviso && (
@@ -346,9 +342,9 @@ function SezioneModuli({ settings, role }) {
             vetrina={
               <div className={`vetrina-modulo vetrina-modulo-${m.stato}`}>
                 <span className="vetrina-modulo-icona" aria-hidden="true">
-                  {ICONE_MODULI[m.id]}
+                  {m.icona}
                 </span>
-                <span className="vetrina-modulo-stato">{statoInChiaro(m)}</span>
+                <span className="pill vetrina-modulo-stato">{STATI_MODULO[m.stato](m)}</span>
               </div>
             }
           >
@@ -356,31 +352,52 @@ function SezioneModuli({ settings, role }) {
           </Scheda>
         ))}
       </div>
+
+      {daDisdire && (
+        <ConfirmDialog
+          title={`Disdire «${daDisdire.nome}»?`}
+          message="Il modulo resta attivo fino alla fine del periodo già pagato, poi si spegne. I dati restano."
+          confirmLabel="Disdici"
+          danger
+          onConfirm={() => esegui(daDisdire, 'disdici')}
+          onCancel={() => setDaDisdire(null)}
+        />
+      )}
     </section>
   )
 }
 
 export default function MarketplaceTab({ role = null }) {
+  const [params, setParams] = useSearchParams()
   const [settings, setSettings] = useState(() => settingsIniziali())
   const [errore, setErrore] = useState(null)
-  const [sezione, setSezione] = useState(() => sezioneIniziale(globalThis.location?.search))
-  const [daRegia, setDaRegia] = useState(() => catalogoRicordato())
-  const [stato, setStato] = useState(() => (urlCatalogo() ? 'carica' : null))
+  const [sezione, setSezione] = useState(() => sezioneDa(params.get('sezione')))
+  // L'esito del ritorno da Stripe si legge all'apertura e si dice una volta:
+  // tolto dall'indirizzo, un ricaricamento della pagina non lo ripete.
+  const [esitoIniziale] = useState(() => esitoRitorno(`?${params}`))
+  useEffect(() => {
+    if (!params.has('esito')) return
+    setParams(
+      (p) => {
+        const senza = new URLSearchParams(p)
+        senza.delete('esito')
+        return senza
+      },
+      { replace: true }
+    )
+  }, [params, setParams])
+
+  // Il catalogo dei temi si legge all'apertura; il listino dei moduli la
+  // prima volta che si aprono i moduli.
+  const [moduliAperti, setModuliAperti] = useState(sezione === 'moduli')
+  const scegli = (id) => {
+    setSezione(id)
+    if (id === 'moduli') setModuliAperti(true)
+  }
+  const [daRegia, statoCatalogo] = useDallaRegia(urlCatalogo(), catalogoRicordato, scaricaCatalogo)
+  const [listino, statoListino] = useDallaRegia(moduliAperti ? urlListino() : null, listinoRicordato, scaricaListino)
 
   useEffect(() => subscribeSettings(setSettings, (e) => setErrore(e.message)), [])
-  // Il catalogo della regia si legge quando si apre la pagina, mai a tempo.
-  useEffect(() => {
-    if (!urlCatalogo()) return undefined
-    let vivo = true
-    scaricaCatalogo().then((temi) => {
-      if (!vivo) return
-      if (temi) setDaRegia(temi)
-      setStato(temi ? null : 'senza_rete')
-    })
-    return () => {
-      vivo = false
-    }
-  }, [])
 
   // Come le Impostazioni: si vede subito, la scrittura parte in sottofondo.
   const salva = (patch) => {
@@ -391,107 +408,60 @@ export default function MarketplaceTab({ role = null }) {
   }
 
   const installati = temiInstallati(settings)
+  const stiliDelLocale = stiliInstallati(settings)
   const inUso = temaInUso(settings)
   const stileInUso = stileMenu(settings)
   const coloriDelLocale = settings.theme_client || null
+  const disinstallabile = sezione === 'installati'
 
-  const schedaTema = (t) => {
-    const installato = installati.some((i) => i.id === t.id)
-    return (
-      <Scheda
-        key={t.id}
-        titolo={t.nome}
-        descrizione={t.descrizione}
-        sottotitolo={`Stile «${nomeStile(t.stile)}» · Gratis`}
-        vetrina={<Vetrina colori={temaComeColori(t)} stile={t.stile} />}
-      >
-        <a className="link-inline small" href={prova('tema', t.id)}>
-          Prova sul menù
-        </a>
-        {inUso === t.id ? (
-          <span className="small">In uso</span>
-        ) : installato ? (
-          <button type="button" className="btn small" aria-label={`Usa ${t.nome}`} onClick={() => salva(patchUsaTema(settings, t))}>
-            Usa
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn small"
-            aria-label={`Installa ${t.nome}`}
-            onClick={() => salva(patchInstallaTema(settings, t))}
-          >
-            Installa
-          </button>
-        )}
-        {installato && sezione === 'installati' && (
-          <button
-            type="button"
-            className="link-inline small"
-            aria-label={`Disinstalla ${t.nome}`}
-            onClick={() => salva(patchDisinstallaTema(settings, t.id))}
-          >
-            Disinstalla
-          </button>
-        )}
-      </Scheda>
-    )
-  }
+  const schedaTema = (t) => (
+    <Scheda
+      key={t.id}
+      titolo={t.nome}
+      descrizione={t.descrizione}
+      sottotitolo={`Stile «${nomeStile(t.stile)}» · Gratis`}
+      vetrina={<Vetrina colori={temaComeColori(t)} stile={t.stile} />}
+    >
+      <AzioniCatalogo
+        provaHref={urlProvaMenu('tema', t.id)}
+        etichetta={t.nome}
+        inUso={inUso === t.id}
+        installato={installati.some((i) => i.id === t.id)}
+        disinstallabile={disinstallabile}
+        onUsa={() => salva(patchUsaTema(settings, t))}
+        onInstalla={() => salva(patchInstallaTema(settings, t))}
+        onDisinstalla={() => salva(patchDisinstallaTema(settings, t.id))}
+      />
+    </Scheda>
+  )
 
-  const schedaStile = (s) => {
-    const installato = stiliInstallati(settings).includes(s.id)
-    return (
-      <Scheda
-        key={s.id}
-        titolo={s.nome}
-        descrizione={s.desc}
-        sottotitolo="Sui colori del menù del locale · Gratis"
-        vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} />}
-      >
-        <a className="link-inline small" href={prova('stile', s.id)}>
-          Prova sul menù
-        </a>
-        {stileInUso === s.id ? (
-          <span className="small">In uso</span>
-        ) : installato ? (
-          <button
-            type="button"
-            className="btn small"
-            aria-label={`Usa lo stile ${s.nome}`}
-            onClick={() => salva({ stile_menu: s.id })}
-          >
-            Usa
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="btn small"
-            aria-label={`Installa lo stile ${s.nome}`}
-            onClick={() => salva(patchInstalla(settings, s.id))}
-          >
-            Installa
-          </button>
-        )}
-        {installato && sezione === 'installati' && (
-          <button
-            type="button"
-            className="link-inline small"
-            aria-label={`Disinstalla lo stile ${s.nome}`}
-            onClick={() => salva(patchDisinstalla(settings, s.id))}
-          >
-            Disinstalla
-          </button>
-        )}
-      </Scheda>
-    )
-  }
+  const schedaStile = (s) => (
+    <Scheda
+      key={s.id}
+      titolo={s.nome}
+      descrizione={s.desc}
+      sottotitolo="Sui colori del menù del locale · Gratis"
+      vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} />}
+    >
+      <AzioniCatalogo
+        provaHref={urlProvaMenu('stile', s.id)}
+        etichetta={`lo stile ${s.nome}`}
+        inUso={stileInUso === s.id}
+        installato={stiliDelLocale.includes(s.id)}
+        disinstallabile={disinstallabile}
+        onUsa={() => salva({ stile_menu: s.id })}
+        onInstalla={() => salva(patchInstalla(settings, s.id))}
+        onDisinstalla={() => salva(patchDisinstalla(settings, s.id))}
+      />
+    </Scheda>
+  )
 
   const stiliGratis = STILI_MENU.filter((s) => s.gratis)
-  const stiliDelLocale = STILI_MENU.filter((s) => stiliInstallati(settings).includes(s.id))
+  const stiliInstallatiSchede = STILI_MENU.filter((s) => stiliDelLocale.includes(s.id))
 
   return (
     <div className="pagina-marketplace">
-      <Sottosezioni voci={SEZIONI} attiva={sezione} scegli={setSezione} />
+      <Sottosezioni voci={SEZIONI} attiva={sezione} scegli={scegli} />
       {errore && <div className="banner">Errore: {errore}</div>}
 
       {sezione === 'temi' && (
@@ -501,7 +471,7 @@ export default function MarketplaceTab({ role = null }) {
             Un tema è una tavolozza di colori con uno stile del menù. Vale per il menù dei clienti: i colori del
             gestionale non cambiano.
           </p>
-          {stato && <p className="muted small">{STATI[stato]}</p>}
+          <AvvisoRegia stato={statoCatalogo} di="temi" />
           <div className="griglia-marketplace">{catalogo(settings, daRegia).map(schedaTema)}</div>
         </section>
       )}
@@ -519,20 +489,28 @@ export default function MarketplaceTab({ role = null }) {
       {sezione === 'installati' && (
         <section>
           <h2>Installati</h2>
-          {installati.length === 0 && stiliDelLocale.length === 0 ? (
+          {installati.length === 0 && stiliInstallatiSchede.length === 0 ? (
             <p className="muted">
               Nessun tema né stile installato. Si scelgono in «Temi» e in «Stili del menù».
             </p>
           ) : (
             <div className="griglia-marketplace">
               {installati.map(schedaTema)}
-              {stiliDelLocale.map(schedaStile)}
+              {stiliInstallatiSchede.map(schedaStile)}
             </div>
           )}
         </section>
       )}
 
-      {sezione === 'moduli' && <SezioneModuli settings={settings} role={role} />}
+      {sezione === 'moduli' && (
+        <SezioneModuli
+          settings={settings}
+          role={role}
+          listino={listino}
+          statoListino={statoListino}
+          esitoIniziale={esitoIniziale}
+        />
+      )}
     </div>
   )
 }

@@ -91,10 +91,6 @@ function haStile(settings, s) {
 // Gli stili che questo locale può usare, nell'ordine del catalogo.
 export const stiliDisponibili = (settings) => STILI_MENU.filter((s) => haStile(settings, s))
 
-// Il catalogo: gli stili gratis non ancora installati. Gli esclusivi degli
-// altri non si vedono: non sono una cosa che si può prendere.
-export const stiliDaInstallare = (settings) => STILI_MENU.filter((s) => s.gratis && !haStile(settings, s))
-
 export function stileMenu(settings) {
   const id = settings?.stile_menu
   return stiliDisponibili(settings).some((s) => s.id === id) ? id : STILE_PREDEFINITO

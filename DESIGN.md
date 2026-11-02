@@ -194,8 +194,9 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
   e lo stato in una pillola. Lo stato si legge prima dal colore: incluso
   su una velatura di `--ok`, in prova di `--accent-2`, non incluso
   neutro — quello che manca non deve sembrare un errore. Sotto, il prezzo
-  «15 € al mese + IVA»; a sinistra «Prova gratis N giorni» (o «Disdici»),
-  a destra «Aggiungi». La disdetta si conferma sulla scheda stessa. Un
+  «15,00 € al mese + IVA»; a sinistra «Prova gratis N giorni» (o «Disdici»),
+  a destra «Aggiungi». La disdetta si conferma nella
+  finestra di conferma di sempre (ConfirmDialog). Un
   esito andato bene è un riquadro velato di `--ok`; il banner giallo con
   la scritta rossa resta per gli errori.
 - **«Giornale»** (REQ-MENU-024): una STRUTTURA sua, non una veste sopra le

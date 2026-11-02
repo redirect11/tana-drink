@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { stiliDisponibili, stileMenu, patchDisinstalla } from '../lib/stileMenu.js'
+import { urlProvaMenu } from '../lib/marketplaceTemi.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -101,24 +104,19 @@ export function TemaMenuClienti({ settings, onSave }) {
   )
 }
 
-// LO STILE DEL MENÙ, E IL CATALOGO DEGLI STILI (REQ-MENU-021, REQ-MENU-022).
-// Sopra gli stili che il locale ha, da scegliere; sotto quelli che può
-// installare, gratis, con un tasto (l'utente, 02/11/2026: «gli acquisti sono
-// in app. E su quelli gratis non facciamo partire stripe ovviamente.
-// Facciamo solo installare il tema»). Ogni stile si può PROVARE sul proprio
-// menù prima di sceglierlo o installarlo: l'anteprima del cliente, con lo
-// stile in prova, la vede solo chi la apre.
+// LO STILE DEL MENÙ (REQ-MENU-021, REQ-MENU-022): qui si sceglie fra gli
+// stili che il locale ha; il catalogo, per installarne altri, sta nel
+// Marketplace (REQ-MENU-023). Ogni stile si può PROVARE sul proprio menù
+// prima di sceglierlo: l'anteprima del cliente, con lo stile in prova, la
+// vede solo chi la apre.
 // Ogni scheda ha un assaggio dello stile (nome e prezzo di un drink) scritto
 // con le sue regole: si vede la differenza senza leggere la descrizione.
-function urlProva(id) {
-  return `${import.meta.env.BASE_URL || '/'}menu?vista=cliente&stile=${encodeURIComponent(id)}`
-}
 
 function AssaggioStile({ id }) {
   return (
     <span className={`assaggio-stile stile-${id}`} aria-hidden="true">
       <span className="assaggio-nome">Negroni</span>
-      <span className="assaggio-prezzo">9,00 €</span>
+      <span className="assaggio-prezzo">{formatPrice(9)}</span>
     </span>
   )
 }
@@ -149,7 +147,7 @@ export function StileMenuClienti({ settings, onSave }) {
               </span>
             </button>
             <div className="stile-azioni">
-              <a className="link-inline small" href={urlProva(s.id)}>
+              <a className="link-inline small" href={urlProvaMenu('stile', s.id)}>
                 Prova sul menù
               </a>
               {s.gratis && (
@@ -165,7 +163,11 @@ export function StileMenuClienti({ settings, onSave }) {
       {/* Il catalogo degli stili (e dei temi) sta nella pagina del
           marketplace (REQ-MENU-023): qui si sceglie fra quelli installati. */}
       <p className="muted small" style={{ margin: '10px 0 0' }}>
-        Altri stili e temi, gratis, nel <a className="link-inline" href={`${import.meta.env.BASE_URL || '/'}bar?tab=marketplace`}>marketplace</a>.
+        Altri stili e temi, gratis, nel{' '}
+        <Link className="link-inline" to="/bar?tab=marketplace">
+          marketplace
+        </Link>
+        .
       </p>
     </div>
   )
