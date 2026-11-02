@@ -5534,7 +5534,7 @@ requirements:
 
   - id: REQ-LIC-007
     title: "La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia"
-    area: "src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js"
+    area: "src/components/LicenzaPanel.jsx, src/components/SettingsTab.jsx (gruppo «Licenza»), src/lib/licenza.js (riepilogoLicenza), src/lib/limiti.js (limitiInChiaro)"
     description: >
       «Dovrebbe esserci una parte dove si vede la licenza attuale e la sua
       validità, ma la gestione rimanda sempre a regia» (l'utente,
@@ -5545,8 +5545,27 @@ requirements:
       scadenza»); i moduli inclusi e quelli in prova con la loro scadenza
       (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo
       tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app
-      non si cambia niente. Senza licenza della regia (la Tana) la
-      sottosezione non c'è.
+      non si cambia niente.
+      CORRETTO IL 02/11/2026, dopo BUG-125. Il testo di partenza diceva
+      «senza licenza della regia (la Tana) la sottosezione non c'è»:
+      scritto quando la Tana una licenza non l'aveva, e i suoi moduli
+      stavano nella colonna `incluso` del codice. Con BUG-125 ogni
+      installazione ha una licenza, quella della regia o quella della
+      build (`clienti/<slug>/licenza.json`), e la Tana ha la seconda. E
+      l'utente, guardando la produzione: «serve un posto per mostrare le
+      info di licenza per quel prodotto». Quindi la sottosezione c'è per
+      ogni licenza e mostra quello che porta: per la Tana i moduli, senza
+      piano né scadenza, e «Gestione: licenza scritta nell'installazione»
+      al posto del tasto verso la regia, che c'è solo con `regia_url`.
+      COME È FATTA: un riquadro «Licenza», al solo titolare, nel gruppo di
+      Impostazioni che si chiamava «Funzioni premium» e ora si chiama
+      «Licenza», sopra quel riquadro. Righe: piano (se c'è), stato,
+      validità, chi la gestisce, quanti moduli premium include; poi i
+      limiti del piano in chiaro. I moduli si CONTANO soltanto: l'elenco,
+      con le prove e le loro scadenze, è il riquadro Funzioni premium
+      subito sotto, e ripeterlo metteva gli stessi nomi due volte nella
+      stessa schermata. Una `valida_fino` illeggibile non si mostra
+      (non diventa «senza scadenza»).
       LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa
       riguarda la regia ma entrambe devono essere previste»): il Free può
       essere senza scadenza o una prova a tempo, e un piano a pagamento ha
@@ -5555,11 +5574,13 @@ requirements:
       soltanto. Una data passata con la licenza ancora attiva si mostra
       come «Scaduta il …», senza fermare il locale. DA DIRE ALLA REGIA: la
       voce `valida_fino` su ogni licenza.
-    status: todo
-    generate_issue: true
+    status: implemented
+    generate_issue: false
     labels: [licenza, prodotto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/licenzaInChiaro.test.js
+      - tests/component/LicenzaPanel.test.jsx
 
   - id: REQ-LIC-008
     title: "Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono"
