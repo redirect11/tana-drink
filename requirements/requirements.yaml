@@ -5717,6 +5717,13 @@ requirements:
       e un esclusivo che il locale non ha non si prova. Uno stile scelto ma
       non installato non si applica. Niente Stripe e niente regia per i
       gratis.
+      GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo):
+      su desktop reggono; sul telefono «Lavagna» e «Déco» spezzavano i nomi
+      dei drink a metà parola («Negroni Sbagliat-o»), perché accanto al
+      prezzo e al tasto la colonna del nome restava di pochi caratteri.
+      Sotto i 520 px il prezzo va sotto il nome, e «Déco» stringe
+      spaziatura e cornice. Il rombo di «Déco» sta accanto al titolo
+      della categoria (sopra diventava un puntino).
     status: implemented
     generate_issue: false
     labels: [menu, prodotto]
