@@ -112,7 +112,8 @@ import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDa
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
-import { licenzaEffettiva } from './licenza.js'
+import { licenzaEffettiva, moduloIncluso } from './licenza.js'
+import { licenzaDi } from './venue.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -4527,6 +4528,7 @@ function scaricaInSottofondo(orderId, comandaId) {
 // differenza. Come per lo scarico, la vendita è già scritta: qui si insegue
 // il magazzino, non viceversa.
 function riallineaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4667,6 +4669,22 @@ async function leggiArticoli(ids) {
   return itemsById
 }
 
+// IL MAGAZZINO SI SCALA SOLO DOVE LA LICENZA LO INCLUDE (REQ-LIC-008).
+// Lo scarico di una vendita parte da solo, a ogni «pronto» e a ogni
+// chiusura, appena una ricetta punta a un articolo di magazzino: anche in
+// un locale che il modulo non ce l'ha più (una prova scaduta, un piano
+// più piccolo). Da quando le regole del database rifiutano le scritture
+// sul magazzino senza il modulo, ogni vendita lì diventava un errore di
+// sincronizzazione al banco. Quindi senza il modulo non si scala niente.
+// Si guarda l'INCLUSO, non l'interruttore d'uso: è quello che guardano le
+// regole, e chi ha il modulo e l'ha spento ha sempre scalato.
+// Se la licenza non si sa ancora (nessuna, da nessuna parte) si scala come
+// prima e decidono le regole: perdere uno scarico vero è peggio.
+function magazzinoIncluso() {
+  const stato = settingsCache ? impostazioni() : impostazioniRicordate({})
+  return !licenzaDi(stato) || moduloIncluso(stato, 'magazzino')
+}
+
 // LO SCARICO DI UNA CHIUSURA, E IL SEGNO CHE È STATO FATTO (BUG-113).
 // Alla chiusura il segno `inventory_applied` non arrivava mai sul conto, e
 // un conto riaperto e richiuso si scalava due volte. Qui, dopo lo scarico,
@@ -4674,7 +4692,7 @@ async function leggiArticoli(ids) {
 // suo turno come ogni altra (scriviCampiComande). Tutto in sottofondo: il
 // conto è già chiuso, il magazzino lo segue.
 function scaricaComande(entries) {
-  if (!entries.length) return
+  if (!entries.length || !magazzinoIncluso()) return
   depleteComandeInventory(entries)
     .then(({ lowStock, scalate }) => {
       const perConto = new Map()
@@ -5382,6 +5400,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
 // altre scritture sullo stesso articolo.
 // Chi ha già letto gli articoli li passa (`itemsById`), e non si rileggono.
 async function stornaScorte(orderId, consumption, itemsById = null) {
+  if (!magazzinoIncluso()) return
   try {
     const articoli = itemsById || (await leggiArticoli(consumption.map((c) => c.inventory_item_id)))
     for (const c of consumption) {

@@ -41,7 +41,9 @@ import { LICENZA_DELLA_BUILD, licenzaDi } from './venue.js'
 // ⚠️ IL FLAG NASCONDE, NON PROTEGGE DA SOLO. La licenza non la riscrive più
 // nessuno dall'app (le regole chiudono `licenza/`), ma chi apre la console
 // del browser può sempre far mostrare all'app una sezione: il controllo
-// vero sui dati sta nelle regole di Firestore.
+// vero sui dati sta nelle regole di Firestore, che leggono la licenza e
+// rifiutano le scritture dei moduli non inclusi (REQ-LIC-008,
+// COLLEZIONI_DEI_MODULI qui sotto).
 
 // I MODULI, uno per riga. La chiave `id` è la stessa della sezione che il
 // modulo accende (`conta`, `scadenzario` nel magazzino): così filtrare un
@@ -87,6 +89,9 @@ export const MODULI_PREMIUM = {
   },
   staff: {
     chiave: 'modulo_staff_enabled',
+    // `ore` è il vecchio indirizzo della stessa schermata (/bar?tab=ore):
+    // senza questa riga la apriva anche chi il modulo non ce l'ha.
+    sezioni: ['ore'],
     label: 'Personale e ore',
     descrizione: 'Ore e paghe del personale, chiamate allo staff.',
   },
@@ -122,6 +127,50 @@ export const MODULI_PREMIUM = {
     descrizione:
       'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.',
   },
+}
+
+// ── LE COLLEZIONI DI OGNI MODULO (REQ-LIC-008) ─────────────────────────
+// Dove le regole del database (firestore.rules) rifiutano le SCRITTURE di
+// chi la licenza non ce l'ha: una collezione passa se la licenza include
+// almeno uno dei moduli elencati. Un test (tests/unit/regoleLicenza.test.js)
+// controlla che le regole dicano la stessa cosa di questa tabella.
+// Ci sono solo le collezioni che l'app scrive SOLTANTO dalle schermate del
+// modulo. Restano fuori, apposta:
+//   - le timbrature (staff_shifts) e il cerca-persone (staff_calls): si
+//     scrivono a ogni accesso del personale e dalla coda, anche senza il
+//     modulo del personale;
+//   - i gruppi (groups): li governa l'impostazione dei gruppi, non i clienti;
+//   - gli ordini: lì contano gli sconti e gli ordini dal telefono, e le
+//     regole lo dicono a parte.
+// Le fatture dei fornitori hanno due moduli: lo scadenzario, e il magazzino,
+// perché la lista degli ordini ai fornitori le genera e le segna pagate.
+// Dei clienti si controlla solo la nascita del profilo: modificarlo e
+// cancellarlo restano del cliente, che ha diritto di andarsene.
+export const COLLEZIONI_DEI_MODULI = Object.freeze({
+  inventory_items: ['magazzino'],
+  inventory_categories: ['magazzino'],
+  suppliers: ['magazzino'],
+  supplier_prices: ['magazzino'],
+  supplier_price_history: ['magazzino'],
+  stock_movements: ['magazzino'],
+  purchase_orders: ['magazzino'],
+  purchase_order_templates: ['magazzino'],
+  altre_spese: ['magazzino'],
+  stock_counts: ['conta'],
+  supplier_invoices: ['scadenzario', 'magazzino'],
+  invoices: ['fatture'],
+  staff_hours: ['staff'],
+  staff_rates: ['staff'],
+  minimi_extra: ['statistiche'],
+  customers: ['clienti'],
+})
+
+// Questa collezione si può scrivere, con questa licenza? Le collezioni che
+// non sono di un modulo sempre; senza nessuna licenza nota anche (decidono
+// le regole, che senza documento non limitano).
+export function scritturaConsentita(stato, collezione) {
+  const moduli = COLLEZIONI_DEI_MODULI[collezione]
+  return !moduli || !licenzaDi(stato) || moduli.some((id) => moduloIncluso(stato, id))
 }
 
 // Quello che si legge al tocco dell'interruttore di un modulo NON INCLUSO.

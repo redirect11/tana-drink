@@ -184,6 +184,14 @@ describe('le voci che il locale non ha', () => {
     expect(sezioneConsentita('fatture', 'admin', spenta)).toBe(false)
   })
 
+  // REQ-LIC-008: `/bar?tab=ore` è il vecchio indirizzo delle ore del
+  // personale, e apriva la schermata anche a chi il modulo non ce l'ha. Ora
+  // segue il modulo, come «Personale».
+  it('il vecchio indirizzo delle ore segue il modulo del personale', () => {
+    expect(sezioneConsentita('ore', 'admin', { licenza: { moduli: { staff: false } } })).toBe(false)
+    expect(sezioneConsentita('ore', 'admin', { licenza: { moduli: { staff: true } } })).toBe(true)
+  })
+
   it('il ruolo e la licenza si sommano, non si sostituiscono', () => {
     // «Fornitori» è dell'admin e non è premium; «Fatture» è premium e non è
     // di un ruolo: le due domande restano separate.
