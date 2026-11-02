@@ -6,17 +6,15 @@
 // compilare un locale a caso.
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
 import {
   leggiCliente,
-  licenzaDellaBuild,
+  valoreCliente,
   htmlPerCliente,
   manifestPerCliente,
   CLIENTE_PREDEFINITO,
 } from '../../clienti/pluginCliente.js'
-import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
 describe('leggiCliente', () => {
   it('senza CLIENTE è la Tana', () => {
@@ -50,39 +48,26 @@ describe('leggiCliente', () => {
   })
 })
 
-// LA LICENZA NELLA BUILD (BUG-125): `clienti/<slug>/licenza.json`,
-// facoltativo, uguale per ogni cliente. Conta solo dove la regia non ha
-// scritto la sua (lib/licenza.js); le cartelle che crea la regia non ce
-// l'hanno.
-describe('la licenza scritta nella build', () => {
-  const cartella = () => mkdtempSync(join(tmpdir(), 'cliente-'))
-
-  it('senza il file non c’è: la licenza la scrive la regia', () => {
-    const dove = cartella()
-    expect(licenzaDellaBuild(dove, 'bar-mario')).toBeNull()
-    expect(leggiCliente('demo').licenza).toBeNull()
-    rmSync(dove, { recursive: true })
-  })
-
-  it('un file senza i moduli ferma la build, invece di spegnere tutto in silenzio', () => {
-    const dove = cartella()
-    for (const sbagliato of ['[]', '{}', '{"moduli": []}', '"tutto"']) {
-      writeFileSync(join(dove, 'licenza.json'), sbagliato)
-      expect(() => licenzaDellaBuild(dove, 'bar-mario'), sbagliato).toThrow(/moduli/)
+// LA BUILD NON PORTA PIÙ UNA LICENZA (REQ-LIC-009). Con BUG-125 la Tana
+// aveva la sua in `clienti/tana/licenza.json`; dal 02/11/2026 ogni
+// installazione ha il suo `licenza/attuale`, e senza le regole non fanno
+// scrivere niente: una licenza nella build farebbe lavorare un'app le cui
+// scritture il server rifiuta. Un file rimasto in una cartella non si
+// legge, e qui si controlla che non ce ne sia nessuno che lo faccia
+// credere.
+describe('la build non porta una licenza', () => {
+  it('né la Tana né la demo: l’app riceve slug e locale, e basta', () => {
+    for (const slug of ['tana', 'demo']) {
+      const cliente = leggiCliente(slug)
+      expect(cliente.licenza).toBeUndefined()
+      expect(Object.keys(JSON.parse(valoreCliente(cliente))).sort()).toEqual(['slug', 'venue'])
     }
-    rmSync(dove, { recursive: true })
   })
 
-  // Quella della Tana: ogni modulo NOMINATO, acceso o spento. Il silenzio è
-  // un no, e un modulo nuovo aggiunto al codice senza scriverlo qui
-  // sparirebbe dalla Tana senza che nessuno l'abbia deciso.
-  it('la Tana ha la sua, e nomina ogni modulo che esiste', () => {
-    const { licenza } = leggiCliente('tana')
-    expect(Object.keys(licenza.moduli).sort()).toEqual(Object.keys(MODULI_PREMIUM).sort())
-    for (const v of Object.values(licenza.moduli)) expect(typeof v).toBe('boolean')
-    // Niente limiti e nessuno stato: la Tana lavora come ha sempre fatto.
-    expect(licenza.limiti ?? null).toBeNull()
-    expect(licenza.stato ?? 'attiva').toBe('attiva')
+  it('nessuna cartella dei clienti ha un licenza.json', () => {
+    for (const voce of readdirSync('clienti', { withFileTypes: true })) {
+      if (voce.isDirectory()) expect(existsSync(join('clienti', voce.name, 'licenza.json')), voce.name).toBe(false)
+    }
   })
 })
 

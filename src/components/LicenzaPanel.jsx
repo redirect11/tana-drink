@@ -7,8 +7,7 @@ import { dataAvviso } from '../lib/aggiornamenti.js'
 // e il 02/11, guardando la produzione della Tana: «serve un posto per
 // mostrare le info di licenza». Da qui non si cambia niente: la licenza
 // non la scrive l'app (BUG-125). Il tasto verso la regia c'è solo se la
-// licenza dice dov'è; la licenza scritta nell'installazione lo dice in una
-// riga, perché il titolare sappia che non c'è una pagina da aprire.
+// licenza dice dov'è (quella della Tana, scritta a mano, non lo dice).
 // I moduli qui si CONTANO soltanto: l'elenco, con le prove e le loro
 // scadenze, è il riquadro Funzioni premium subito sotto, nello stesso
 // gruppo. Ripeterlo metteva gli stessi nomi due volte nella stessa
@@ -19,6 +18,7 @@ const STATI = {
   [STATI_LICENZA.SOSPESA]: 'Sospesa',
   [STATI_LICENZA.CHIUSA]: 'Chiusa',
   [STATI_LICENZA.NON_ATTIVATA]: 'Non attivata',
+  [STATI_LICENZA.SCADUTA]: 'Scaduta',
 }
 
 // L'id del listino della regia («free», «pro») con l'iniziale maiuscola:
@@ -39,7 +39,6 @@ export default function LicenzaPanel({ settings }) {
     ['Piano', r.piano ? nomePiano(r.piano) : null],
     ['Stato', STATI[r.stato] ?? r.stato],
     ['Validità', testoValidita(r.validita)],
-    ['Gestione', r.origine === 'build' ? 'Licenza scritta nell’installazione' : 'Regia'],
     ['Moduli premium inclusi', `${r.inclusi.length} su ${r.inclusi.length + r.esclusi.length}`],
   ].filter(([, v]) => v)
 

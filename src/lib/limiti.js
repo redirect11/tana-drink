@@ -35,7 +35,7 @@
 
 import { NOME_PRODOTTO } from './prodotto.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
-import { licenzaDi } from './venue.js'
+import { licenzaDi } from './licenzaInVigore.js'
 
 export const PIANO_FREE = 'free'
 

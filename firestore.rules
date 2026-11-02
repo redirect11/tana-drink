@@ -40,47 +40,72 @@ service cloud.firestore {
         && request.auth.token.role == 'staff';
     }
 
-    // ── La licenza (REQ-LIC-008) ──────────────────────────────────────
-    // L'app nasconde quello che la licenza non include; qui lo si NEGA, per
-    // chi scrive dalla console del browser. Si controllano le SCRITTURE: i
-    // dati di un modulo che il locale non ha più restano leggibili, come
-    // restano nel database (spegnere nasconde, non cancella).
+    // ── La licenza (REQ-LIC-008, REQ-LIC-009) ─────────────────────────
+    // SENZA LICENZA VALIDA NON SI SCRIVE NIENTE (REQ-LIC-009, 02/11/2026).
+    // Fino ad allora valeva il contrario, «senza documento non si limita
+    // niente», per la Tana che aveva la licenza nella build; l'utente: «se
+    // non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o
+    // licenza scaduta». Quindi, per OGNI locale, la Tana compresa (che da
+    // allora ha il suo `licenza/attuale`), ogni scrittura dell'app chiede
+    // licenzaValida():
+    //   · il documento `licenza/attuale` c'è;
+    //   · non è sospesa, chiusa o non attivata;
+    //   · non è scaduta, o è scaduta verso il Free (`alla_scadenza: 'free'`),
+    //     e allora valgono i limiti del Free: nessun modulo, niente sconti.
+    // LE LETTURE RESTANO: il titolare di un locale fermo deve poter vedere
+    // e scaricare i suoi dati fino alla cancellazione. E restano le uscite
+    // di chi se ne va: cancellare il proprio profilo cliente, il proprio
+    // token delle notifiche, la propria presenza.
     //
-    // SENZA IL DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE. È la Tana, che
-    // ha la sua licenza nella build e non nel database; un locale della
-    // regia il documento ce l'ha sempre (la regia non lo cancella, e
-    // dall'app non lo scrive nessuno), e senza l'app gli mostra
-    // «Installazione non attivata».
+    // LA SCADENZA SI LEGGE DA `valida_fino_ts`, un Timestamp: le regole non
+    // sanno leggere una data scritta come testo, e `valida_fino` (ISO) è
+    // per l'app. Senza `valida_fino_ts` la licenza non scade qui: la regia,
+    // alla scadenza, la riscrive comunque (Free o sospesa); questo copre il
+    // tratto in cui non l'ha ancora fatto.
     //
     // Quale collezione è di quale modulo lo dice src/lib/licenza.js
     // (COLLEZIONI_DEI_MODULI), e tests/unit/regoleLicenza.test.js controlla
     // che queste regole dicano la stessa cosa.
     //
-    // QUANTO COSTA: una lettura della licenza per richiesta. Nello stesso
-    // lotto le letture dello stesso documento contano una volta (provato
-    // sull'emulatore con un lotto di 60 documenti), quindi anche i lotti
-    // grossi del magazzino restano sotto il limite di 20.
+    // QUANTO COSTA: una lettura della licenza per ogni richiesta di
+    // scrittura. Nella stessa richiesta (e nello stesso lotto) le letture
+    // dello stesso documento contano una volta: provato sull'emulatore con
+    // un lotto di 60 documenti.
     function licenzaScritta() {
       return exists(/databases/$(database)/documents/licenza/attuale);
     }
     function licenza() {
       return get(/databases/$(database)/documents/licenza/attuale).data;
     }
-    // Un modulo che la licenza non nomina non c'è, come nell'app.
-    function modulo(id) {
-      return !licenzaScritta() || licenza().get('moduli', {}).get(id, false) == true;
+    function scaduta() {
+      let fino = licenza().get('valida_fino_ts', null);
+      return fino is timestamp && request.time >= fino;
     }
-    // Solo un `false` scritto spegne gli sconti (limiti.js, scontiConsentiti).
+    // Scaduta verso il Free: si lavora, coi limiti del Free.
+    function alFree() {
+      return scaduta() && licenza().get('alla_scadenza', 'ferma') == 'free';
+    }
+    function licenzaValida() {
+      return licenzaScritta()
+        && !(licenza().get('stato', 'attiva') in ['sospesa', 'chiusa', 'non_attivata'])
+        && (!scaduta() || alFree());
+    }
+    // Un modulo che la licenza non nomina non c'è, come nell'app; e al Free
+    // non c'è nessun modulo.
+    function modulo(id) {
+      return licenzaValida() && !alFree() && licenza().get('moduli', {}).get(id, false) == true;
+    }
+    // Solo un `false` scritto spegne gli sconti (limiti.js, scontiConsentiti);
+    // al Free gli sconti non ci sono.
     function scontiConsentiti() {
-      return !licenzaScritta()
-        || licenza().get('limiti', null) == null
-        || licenza().limiti.get('sconti', true) != false;
+      return licenzaValida() && !alFree()
+        && (licenza().get('limiti', null) == null || licenza().limiti.get('sconti', true) != false);
     }
 
     // DRINKS — lettura pubblica (clienti vedono il menù), scrittura solo bartender.
     match /drinks/{drinkId} {
       allow read: if true;
-      allow write: if isBartender();
+      allow write: if licenzaValida() && isBartender();
     }
 
     // ORDERS — i clienti creano e leggono; il bartender aggiorna qualsiasi
@@ -206,8 +231,8 @@ service cloud.firestore {
         || resource.data.comande_statuses.hasAny(['pronto']);
       // L'ordine dal telefono del cliente è un modulo (REQ-LIC-002): senza,
       // il menù si legge e basta, e qui non se ne crea uno.
-      allow create: if (isStaffMember() && scontoAmmesso())
-        || (conteNuovoDaCliente() && modulo('ordini_cliente'));
+      allow create: if licenzaValida() && ((isStaffMember() && scontoAmmesso())
+        || (conteNuovoDaCliente() && modulo('ordini_cliente')));
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
@@ -230,7 +255,7 @@ service cloud.firestore {
       // lavoro buono quando la cache del terminale è indietro di un battito
       // farebbe più danno del permesso che chiude: al banco vuol dire un
       // ordine che non parte.
-      allow update: if scontoAmmesso() && (isBartender()
+      allow update: if licenzaValida() && (scontoAmmesso() && (isBartender()
         || (isSala()
             && request.resource.data.status != 'annullato'
             && request.resource.data.get('comande', []).size()
@@ -241,7 +266,7 @@ service cloud.firestore {
                     && resource.data.comande[0].status == 'ricevuto'))
             && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
-                 .affectedKeys().hasAny(paymentKeys().toSet())));
+                 .affectedKeys().hasAny(paymentKeys().toSet()))));
       allow delete: if false;
     }
 
@@ -276,12 +301,12 @@ service cloud.firestore {
       allow read: if true;
       // Il personale fa tutto: apre la cassa (_active_cash), numera le
       // fatture (fatture-AAAA), corregge, importa.
-      allow write: if isStaffMember();
-      allow create: if request.resource.data.keys().hasOnly(['last'])
-        && request.resource.data.last == 1;
-      allow update: if request.resource.data.diff(resource.data)
+      allow write: if licenzaValida() && isStaffMember();
+      allow create: if licenzaValida() && (request.resource.data.keys().hasOnly(['last'])
+        && request.resource.data.last == 1);
+      allow update: if licenzaValida() && (request.resource.data.diff(resource.data)
                          .affectedKeys().hasOnly(['last'])
-        && request.resource.data.last == resource.data.last + 1;
+        && request.resource.data.last == resource.data.last + 1);
     }
 
     // SERVIZIO PERPETUO — niente più "serate". Statistiche tempi (ETA):
@@ -289,23 +314,23 @@ service cloud.firestore {
     // limitata ai campi statistici.
     match /service_stats/{docId} {
       allow read: if true;
-      allow create, delete: if isBartender();
-      allow update: if isBartender()
+      allow create, delete: if licenzaValida() && isBartender();
+      allow update: if licenzaValida() && (isBartender()
         || (isStaffMember()
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['eta_stats', 'prep_stats']));
+                 .hasOnly(['eta_stats', 'prep_stats'])));
     }
 
     // CATEGORIES — lettura pubblica (il menù raggruppa per categoria), scrittura bartender.
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isBartender();
+      allow write: if licenzaValida() && isBartender();
     }
 
     // SETTINGS — lettura pubblica (i clienti vedono la modalità menù, coperto…), scrittura bartender.
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isBartender();
+      allow write: if licenzaValida() && isBartender();
     }
 
     // LA LICENZA (BUG-125): piano, moduli, limiti, sospensione, aggiornamenti.
@@ -327,31 +352,32 @@ service cloud.firestore {
     // INVENTORY — solo bartender (non serve al cliente né allo staff).
     match /inventory_items/{itemId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // CATEGORIE INVENTARIO — dedicate ai prodotti di magazzino, solo bartender.
     match /inventory_categories/{categoryId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // MACRO-CATEGORIE — raggruppano le categorie per i conti aggregati, solo bartender.
     match /macro_categories/{macroId} {
-      allow read, write: if isBartender();
+      allow read: if isBartender();
+      allow write: if licenzaValida() && isBartender();
     }
 
     // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
     match /suppliers/{supplierId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // LISTINO FORNITORI — il prezzo di un prodotto PRESSO un fornitore
     // (REQ-MAG-029). Sta con i fornitori: un prodotto, più listini.
     match /supplier_prices/{rigaId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // STORICO DEI PREZZI — una riga per ogni variazione di un prezzo di
@@ -360,13 +386,13 @@ service cloud.firestore {
     // chi legge il listino deve poter leggere com'è arrivato a quel numero.
     match /supplier_price_history/{variazioneId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // STOCK MOVEMENTS — registro carico/scarico, solo bartender.
     match /stock_movements/{movementId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // VENDITE STORICHE — i conti di Tiller, prima dell'app (REQ-STAT-006).
@@ -380,7 +406,7 @@ service cloud.firestore {
     // vede il Bilancio, lo scrive solo l'admin.
     match /minimi_extra/{mese} {
       allow read: if isBartender();
-      allow write: if isAdmin() && modulo('statistiche');
+      allow write: if licenzaValida() && isAdmin() && modulo('statistiche');
     }
     // I fogli mensili di ANALISI DATI (REQ-CASSA-011): stesso discorso.
     match /mesi_storici/{mese} {
@@ -396,13 +422,13 @@ service cloud.firestore {
     // CONTE DI MAGAZZINO — inventario periodico (dep/acq/rim→consumo).
     match /stock_counts/{countId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('conta');
+      allow write: if licenzaValida() && isBartender() && modulo('conta');
     }
 
     // ORDINI FORNITORE — generatore ordini e storico acquisti.
     match /purchase_orders/{orderId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // MODELLI D'ORDINE — il giro che si rifà uguale (REQ-MAG-039): prodotti,
@@ -410,13 +436,13 @@ service cloud.firestore {
     // chi compone un ordine è chi salva e riusa un modello.
     match /purchase_order_templates/{modelloId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // SCADENZARIO FORNITORI — documenti/proforma, pagato, note.
     match /supplier_invoices/{invoiceId} {
       allow read: if isBartender();
-      allow write: if isBartender() && (modulo('scadenzario') || modulo('magazzino'));
+      allow write: if licenzaValida() && (isBartender() && (modulo('scadenzario') || modulo('magazzino')));
     }
 
     // ALTRE SPESE — quello che esce dal conto e non entra in magazzino
@@ -427,7 +453,7 @@ service cloud.firestore {
     // della fattura che gli sta accanto.
     match /altre_spese/{spesaId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
     }
 
     // STAFF CALLS — cerca-persone: il bartender chiama, lo staff risponde.
@@ -437,14 +463,14 @@ service cloud.firestore {
       // (REQ-STAFF-019): una chiamata senza destinatario personale, per chi
       // è titolare (`to_role: 'admin'`), firmata da chi la fa e ancora da
       // rispondere. Niente chiamate a nome di un altro, né a una persona.
-      allow create: if isBartender()
+      allow create: if licenzaValida() && (isBartender()
         || (isStaffMember()
           && request.resource.data.to_role == 'admin'
           && request.resource.data.to_uid == null
           && request.resource.data.from_uid == request.auth.uid
-          && request.resource.data.status == 'pending');
-      allow delete: if isBartender();
-      allow update: if isStaffMember();
+          && request.resource.data.status == 'pending'));
+      allow delete: if licenzaValida() && isBartender();
+      allow update: if licenzaValida() && isStaffMember();
     }
 
     // STAFF_TOKENS — token push del dispositivo di ciascun membro dello
@@ -459,8 +485,8 @@ service cloud.firestore {
     match /staff_tokens/{docId} {
       allow read: if isStaffMember() &&
         (request.auth.uid == docId || resource.data.uid == request.auth.uid);
-      allow create, update: if isStaffMember() &&
-        request.resource.data.uid == request.auth.uid;
+      allow create, update: if licenzaValida() && (isStaffMember() &&
+        request.resource.data.uid == request.auth.uid);
       allow delete: if isStaffMember() &&
         (request.auth.uid == docId || resource.data.uid == request.auth.uid);
     }
@@ -482,7 +508,7 @@ service cloud.firestore {
     // è un permesso.
     match /presenze/{uid} {
       allow read: if isBartender();
-      allow create, update: if isStaffMember() && request.auth.uid == uid;
+      allow create, update: if licenzaValida() && (isStaffMember() && request.auth.uid == uid);
       allow delete: if isBartender() || (isSignedIn() && request.auth.uid == uid);
     }
 
@@ -492,7 +518,7 @@ service cloud.firestore {
       allow read: if isBartender() || (isSignedIn() && request.auth.uid == uid);
       // Il profilo nasce solo col modulo dei clienti (REQ-LIC-008); cambiarlo
       // e cancellarlo restano del cliente, che ha diritto di andarsene.
-      allow create: if isSignedIn() && request.auth.uid == uid && modulo('clienti');
+      allow create: if licenzaValida() && (isSignedIn() && request.auth.uid == uid && modulo('clienti'));
       allow update, delete: if isSignedIn() && request.auth.uid == uid;
     }
 
@@ -502,14 +528,14 @@ service cloud.firestore {
     match /groups/{groupId} {
       allow read: if isStaffMember()
         || (isSignedIn() && resource.data.customer_uid == request.auth.uid);
-      allow create: if isStaffMember()
+      allow create: if licenzaValida() && (isStaffMember()
         || (isSignedIn()
             && groupId == request.auth.uid
             && request.resource.data.kind == 'customer'
             && request.resource.data.customer_uid == request.auth.uid
             && request.resource.data.parent_group_id == null
-            && request.resource.data.has_child_groups == false);
-      allow update: if isBartender()
+            && request.resource.data.has_child_groups == false));
+      allow update: if licenzaValida() && (isBartender()
         || (isStaffMember()
             && !request.resource.data.diff(resource.data).affectedKeys()
                  .hasAny(['kind', 'customer_uid'].toSet()))
@@ -517,8 +543,8 @@ service cloud.firestore {
             && resource.data.kind == 'customer'
             && resource.data.customer_uid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['name', 'status', 'last_order_at'].toSet()));
-      allow delete: if isBartender();
+                 .hasOnly(['name', 'status', 'last_order_at'].toSet())));
+      allow delete: if licenzaValida() && isBartender();
     }
 
     // PAYMENTS — registro incassi (ledger). Scrivibile dallo staff e dalle
@@ -526,51 +552,53 @@ service cloud.firestore {
     // RAPP ORE: registro ore dello staff — solo staff autenticato.
     match /staff_hours/{entryId} {
       allow read: if isStaffMember();
-      allow write: if isStaffMember() && modulo('staff');
+      allow write: if licenzaValida() && isStaffMember() && modulo('staff');
     }
 
     // PREFERENZE POS (ordine card, preferiti): configurazione del banco,
     // gestita dallo staff. Condivisa fra i dispositivi del locale.
     match /pos_prefs/{docId} {
-      allow read, write: if isStaffMember();
+      allow read: if isStaffMember();
+      allow write: if licenzaValida() && isStaffMember();
     }
 
     // PAGHE: tariffa oraria per persona (storicizzata). Dato sensibile:
     // solo il bartender, nemmeno lo staff vede quanto prendono gli altri.
     match /staff_rates/{personId} {
       allow read: if isBartender();
-      allow write: if isBartender() && modulo('staff');
+      allow write: if licenzaValida() && isBartender() && modulo('staff');
     }
 
     // BADGE VIRTUALE: timbrature entrata/uscita — lo staff timbra sé
     // stesso al login/logout; il bartender può correggere ogni voce.
     match /staff_shifts/{shiftId} {
       allow read: if isStaffMember();
-      allow create, update: if isStaffMember();
-      allow delete: if isBartender();
+      allow create, update: if licenzaValida() && isStaffMember();
+      allow delete: if licenzaValida() && isBartender();
     }
 
     // BUONI VIP: credito ricaricabile — solo staff (contiene i nomi VIP).
     match /vouchers/{voucherId} {
-      allow read, write: if isStaffMember();
+      allow read: if isStaffMember();
+      allow write: if licenzaValida() && isStaffMember();
     }
 
     // FATTURE di cortesia: solo staff (contengono dati dei clienti).
     match /invoices/{invoiceId} {
       allow read: if isStaffMember();
-      allow write: if isStaffMember() && modulo('fatture');
+      allow write: if licenzaValida() && isStaffMember() && modulo('fatture');
     }
 
     match /payments/{paymentId} {
       allow read: if isStaffMember();
-      allow create, update: if isStaffMember();
+      allow create, update: if licenzaValida() && isStaffMember();
       allow delete: if false;
     }
 
     // CASSA: sessioni di apertura/chiusura serata (flusso cassa). Staff.
     match /cash_sessions/{sessionId} {
       allow read: if isStaffMember();
-      allow create, update: if isStaffMember();
+      allow create, update: if licenzaValida() && isStaffMember();
       allow delete: if false;
     }
 
@@ -582,7 +610,7 @@ service cloud.firestore {
     // stampante, versione dell'app, nome di chi era al banco e i guai.
     match /diagnostica_stampante/{docId} {
       allow read: if isBartender();
-      allow create, update, delete: if isStaffMember();
+      allow create, update, delete: if licenzaValida() && isStaffMember();
     }
   }
 }

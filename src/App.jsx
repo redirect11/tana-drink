@@ -37,7 +37,8 @@ import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
-import { venueDi, licenzaDi } from './lib/venue.js'
+import { venueDi } from './lib/venue.js'
+import { licenzaDi } from './lib/licenzaInVigore.js'
 import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi } from './lib/licenza.js'
 
 // LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
@@ -55,6 +56,7 @@ function ConDemo({ children }) {
 }
 import FunzioneNonInclusa from './components/FunzioneNonInclusa.jsx'
 import InstallazioneSospesa from './components/InstallazioneSospesa.jsx'
+import AvvisoCancellazione from './components/AvvisoCancellazione.jsx'
 import { socialDelLocale } from './lib/social.js'
 import { envLabel } from './dev/devActions.js'
 import { openCookiePreferences } from './lib/cookieConsent.js'
@@ -647,6 +649,9 @@ export default function App() {
           un cerca-persone. */}
       <ChiamataInArrivo ruolo={staffRole} />
 
+      {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
+          sul locale fermo. */}
+      <AvvisoCancellazione settings={settings} ruolo={staffRole} />
       {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
       <main hidden={bloccata}>
         <ConDemo>
