@@ -10801,3 +10801,29 @@ body.pagina-piena .inv-scheda {
   font-family: var(--stile-titolo, inherit);
   color: var(--accent-2);
 }
+
+/* ── IL MARKETPLACE DEI TEMI (REQ-MENU-023) ──────────────────────────────
+   L'assaggio di un tema porta i SUOI colori (le variabili sono scritte
+   sull'elemento, non sulla pagina) e il suo stile: si vede il tema vero
+   senza applicarlo. Sotto, la tavolozza in cinque tessere. */
+.assaggio-tema {
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.assaggio-tema .assaggio-stile {
+  margin-bottom: 6px;
+  background: var(--card);
+}
+.assaggio-tavolozza {
+  display: flex;
+  gap: 4px;
+}
+.assaggio-tavolozza > span {
+  flex: 1;
+  height: 10px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+}

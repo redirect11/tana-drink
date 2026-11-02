@@ -180,6 +180,12 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 - **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il
   tendone a strisce sopra l'apertura, voci come cartoline col bordo
   colorato, i disegni dei drink nei cerchi.
+- **Il marketplace dei temi** (REQ-MENU-023, Impostazioni ▸ Aspetto): un
+  TEMA è una tavolozza più uno stile. Ogni scheda ha un assaggio scritto coi
+  colori del tema sull'elemento (non sulla pagina) e nel suo stile, più la
+  tavolozza in cinque tessere; sui tasti basta il verbo («Installa», «Usa»),
+  il nome sta nell'aria-label, così le schede di una riga restano alte
+  uguali.
 - **«Giornale»**: la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.

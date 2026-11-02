@@ -1,6 +1,16 @@
 # Cosa è cambiato
 
-## 1.10.6-beta — in lavorazione
+## 1.10.7-beta — in lavorazione
+
+### Nel gestionale
+
+- **Il marketplace dei temi, in Impostazioni → Aspetto.** Un tema è una
+  tavolozza di colori con uno stile del menù: si prova sul proprio menù, si
+  installa e si usa con un tasto. Per ora sono tutti gratis: Classico,
+  Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta e Inchiostro. I temi
+  nuovi li pubblica il fornitore e compaiono da soli.
+
+## 1.10.6-beta — 02/11/2026 (test)
 
 ### Nel menù
 

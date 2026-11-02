@@ -8,6 +8,7 @@ import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
 import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
+import { temaInProva } from '../lib/marketplaceTemi.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -419,7 +420,10 @@ export default function MenuPage({ speciali = false }) {
   // locale; o, nell'anteprima del cliente aperta da chi lavora, quello in
   // prova (`?stile=…`, da Impostazioni → Menù clienti). La prova la vede
   // solo chi l'ha aperta: i clienti vedono lo stile del locale.
-  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') : null
+  // Un tema in prova dal marketplace (REQ-MENU-023) porta il suo stile; i
+  // colori li mette App.
+  const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
+  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || temaProvato?.stile || null : null
   const stile = staff
     ? 'classico'
     : stileInProva && stileProvabile(settings, stileInProva)
@@ -436,9 +440,11 @@ export default function MenuPage({ speciali = false }) {
       {anteprimaCliente && staffVero && (
         <div className="anteprima-cliente">
           <span>
-            👀 {stileInProva && stile === stileInProva
-              ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
-              : 'Stai guardando il menù come lo vede il cliente.'}
+            👀 {temaProvato
+              ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
+              : stileInProva && stile === stileInProva
+                ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
+                : 'Stai guardando il menù come lo vede il cliente.'}
           </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale
