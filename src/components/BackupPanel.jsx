@@ -62,7 +62,7 @@ export default function BackupPanel({ role = null }) {
     setBusy('import')
     setErrore(null)
     try {
-      const { scritti, saltate, fuoriLicenza = [] } = await importaDatabase(backup, (nome, fatti, tot) =>
+      const { scritti, saltate, fuoriLicenza } = await importaDatabase(backup, (nome, fatti, tot) =>
         setPasso(`${nome}: ${fatti}/${tot}`)
       )
       setEsito(

@@ -112,8 +112,7 @@ import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDa
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
-import { licenzaEffettiva, moduloIncluso } from './licenza.js'
-import { licenzaDi } from './venue.js'
+import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -127,7 +126,7 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
-import { ricordaImpostazioni, impostazioniRicordate } from './impostazioniLocali.js'
+import { ricordaImpostazioni, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import {
   cassaCorrente,
   prendiNumero,
@@ -4508,6 +4507,7 @@ export function segnaScontrinoStampato(orderId) {
 }
 
 function scaricaInSottofondo(orderId, comandaId) {
+  if (!magazzinoIncluso()) return
   ;(async () => {
     try {
       const ref = doc(db, 'orders', orderId)
@@ -4676,14 +4676,13 @@ async function leggiArticoli(ids) {
 // più piccolo). Da quando le regole del database rifiutano le scritture
 // sul magazzino senza il modulo, ogni vendita lì diventava un errore di
 // sincronizzazione al banco. Quindi senza il modulo non si scala niente.
-// Si guarda l'INCLUSO, non l'interruttore d'uso: è quello che guardano le
-// regole, e chi ha il modulo e l'ha spento ha sempre scalato.
+// Si chiede alla stessa tabella delle regole (COLLEZIONI_DEI_MODULI), che
+// guarda l'INCLUSO e non l'interruttore d'uso: chi ha il modulo e l'ha
+// spento ha sempre scalato.
 // Se la licenza non si sa ancora (nessuna, da nessuna parte) si scala come
 // prima e decidono le regole: perdere uno scarico vero è peggio.
-function magazzinoIncluso() {
-  const stato = settingsCache ? impostazioni() : impostazioniRicordate({})
-  return !licenzaDi(stato) || moduloIncluso(stato, 'magazzino')
-}
+const magazzinoIncluso = () =>
+  scritturaConsentita(settingsCache ?? { licenza: licenzaRicordata() }, 'stock_movements')
 
 // LO SCARICO DI UNA CHIUSURA, E IL SEGNO CHE È STATO FATTO (BUG-113).
 // Alla chiusura il segno `inventory_applied` non arrivava mai sul conto, e
@@ -6342,7 +6341,7 @@ let licenzaLetta = null
 
 function conLicenza(dati, letto = licenzaLetta) {
   const { licenza: _diSettings, ...resto } = dati || {}
-  const licenza = licenzaEffettiva(letto) ?? impostazioniRicordate({}).licenza ?? null
+  const licenza = licenzaEffettiva(letto) ?? licenzaRicordata()
   return licenza ? { ...resto, licenza } : resto
 }
 
@@ -6436,7 +6435,12 @@ export async function inviaSceltaAggiornamento(url, tag, scelta) {
 export function subscribeSettings(onChange, onError) {
   let dati // undefined finché settings/bar non risponde; null se non c'è
   let letto = licenzaLetta
-  let impronta = null
+  // L'impronta è della licenza che VALE, non di quello che si è letto: alla
+  // Tana il documento non c'è e `certo` cambia a ogni caduta del wifi, ma
+  // la licenza resta quella della build, e trenta schermate non si devono
+  // ridisegnare per niente.
+  const improntaDi = (l) => JSON.stringify(licenzaEffettiva(l) ?? null)
+  let impronta = letto ? improntaDi(letto) : null
   const errore = onError ?? (() => {})
   const rispondi = () => {
     if (dati === undefined) return
@@ -6469,8 +6473,8 @@ export function subscribeSettings(onChange, onError) {
       letto = { documento, certo: Boolean(documento) || snap.metadata?.fromCache === false }
       licenzaLetta = letto
       // Un cambio della sola provenienza, a licenza uguale, non ridisegna
-      // niente: risponde solo quando cambia quello che si sa.
-      const nuova = JSON.stringify(letto)
+      // niente: risponde solo quando cambia la licenza che vale.
+      const nuova = improntaDi(letto)
       if (nuova === impronta) return
       impronta = nuova
       rispondi()

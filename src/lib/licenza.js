@@ -203,18 +203,13 @@ export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, moduloDiSezione(id
 // PRIMA DOMANDA: il locale ce l'ha? Lo dice la licenza, anche per quello
 // che non nomina: un modulo che `licenza.moduli` non elenca non è incluso.
 // Un id sconosciuto non è incluso: una funzione a pagamento non si regala
-// per una svista di chi chiama.
-//
-// Fino a BUG-125 il silenzio era un no solo per le licenze della regia, e
-// una licenza senza piano (quella scritta dagli strumenti di sviluppo in
-// settings/bar) ricadeva sulla colonna `incluso` (BUG-122). Quella licenza
-// ora non si legge più, e la colonna non c'è.
+// per una svista di chi chiama. (Fino a BUG-125 il silenzio ricadeva sulla
+// colonna `incluso`, che regalava i moduli: non c'è più.)
 export function moduloIncluso(stato, id) {
   if (!Object.hasOwn(MODULI_PREMIUM, id)) return false
   // Il piano Free (REQ-LIC-003) non ha bisogno di un ramo suo: la regia
   // scrive i suoi moduli tutti spenti, e uno in prova lo accende qui.
-  const moduli = licenzaDi(stato)?.moduli
-  return Boolean(moduli && typeof moduli === 'object' && moduli[id] === true)
+  return licenzaDi(stato)?.moduli?.[id] === true
 }
 
 // SECONDA DOMANDA: il locale lo sta usando? È l'interruttore delle

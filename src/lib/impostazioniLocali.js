@@ -27,7 +27,7 @@
 // `interpreta` riceve il testo grezzo; se non c'è niente scritto, o se la
 // memoria non risponde, torna `seNonSiSa` — quale sia lo decide la
 // preferenza, non questo aiuto.
-function leggi(chiave, interpreta, seNonSiSa) {
+export function leggi(chiave, interpreta, seNonSiSa) {
   try {
     const grezzo = localStorage.getItem(chiave)
     return grezzo == null ? seNonSiSa : interpreta(grezzo)
@@ -39,7 +39,7 @@ function leggi(chiave, interpreta, seNonSiSa) {
 
 // `null` cancella la preferenza. Quello che non è testo si serializza qui
 // dentro, dove un JSON impossibile finisce nello stesso catch.
-function scrivi(chiave, valore) {
+export function scrivi(chiave, valore) {
   try {
     if (valore == null) localStorage.removeItem(chiave)
     else localStorage.setItem(chiave, typeof valore === 'string' ? valore : JSON.stringify(valore))
@@ -93,8 +93,15 @@ export function ricordaImpostazioni(data) {
 export function impostazioniRicordate(defaults = {}) {
   const salvate = leggi(CHIAVE, JSON.parse, null)
   const { licenza: _diSettings, ...resto } = salvate && typeof salvate === 'object' ? salvate : {}
+  const licenza = licenzaRicordata()
+  return { ...defaults, ...resto, ...(licenza ? { licenza } : {}) }
+}
+
+// Solo la licenza, per chi non ha bisogno del resto: non si rilegge tutto
+// il blocco delle impostazioni per una voce.
+export function licenzaRicordata() {
   const licenza = leggi(CHIAVE_LICENZA, JSON.parse, null)
-  return { ...defaults, ...resto, ...(licenza && typeof licenza === 'object' ? { licenza } : {}) }
+  return licenza && typeof licenza === 'object' ? licenza : null
 }
 
 // ── LE CORSIE SPENTE SU QUESTO TERMINALE ─────────────────────────────

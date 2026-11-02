@@ -36,6 +36,12 @@ export function leggiCliente(slug = process.env.CLIENTE || CLIENTE_PREDEFINITO, 
 // browser. Null se il file non c'è; un file che non è un oggetto con i
 // `moduli` ferma la build, invece di diventare una licenza vuota che
 // spegnerebbe tutto in silenzio.
+// Quello che l'app riceve come `__CLIENTE__`. Una funzione sola per la
+// build e per i test: una voce aggiunta in un posto e dimenticata
+// nell'altro farebbe girare i test su un'app diversa da quella vera.
+export const valoreCliente = (cliente) =>
+  JSON.stringify({ slug: cliente.slug, venue: cliente.venue, licenza: cliente.licenza })
+
 export function licenzaDellaBuild(cartella, slug = '') {
   const file = join(cartella, 'licenza.json')
   if (!existsSync(file)) return null
@@ -89,7 +95,7 @@ export function pluginCliente({ slug, radice = process.cwd() } = {}) {
     name: 'cliente',
     config: () => ({
       define: {
-        __CLIENTE__: JSON.stringify({ slug: cliente.slug, venue: cliente.venue, licenza: cliente.licenza }),
+        __CLIENTE__: valoreCliente(cliente),
         // LA DEMO LA DECIDE LA BUILD (REQ-FLOTTA-019): `"demo": true` in
         // venue.json, e nient'altro — non un'impostazione, non un ruolo, non
         // l'indirizzo. È un letterale: nella build di un locale vero vale
