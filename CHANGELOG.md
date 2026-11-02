@@ -1,6 +1,20 @@
 # Cosa è cambiato
 
-## 1.10.3-beta — in lavorazione
+## 1.10.4-beta — in lavorazione
+
+### Nel gestionale
+
+- **La licenza si legge in Impostazioni → Licenza.** Il titolare vede
+  piano, stato, validità, chi gestisce la licenza, quanti moduli premium
+  comprende e i limiti del piano. Si consulta soltanto: le modifiche
+  passano dalla regia, con il tasto «Gestisci la licenza» dove la
+  licenza lo prevede. Alla Tana compare la licenza scritta
+  nell'installazione, con i suoi moduli.
+- **Il gruppo «Funzioni premium» di Impostazioni si chiama «Licenza»**:
+  contiene il riepilogo della licenza e, sotto, le funzioni premium come
+  prima.
+
+## 1.10.3-beta — 02/11/2026 (test)
 
 ### Per i locali aggiornati dalla regia
 
