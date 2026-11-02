@@ -1,8 +1,8 @@
 /* global __DEMO__ */
 // ── I LIMITI DEL PIANO FREE, E IL PROFILO LEGGERO (REQ-LIC-003, REQ-LIC-004)
 //
-// La regia (drink-regia) scrive in `settings/bar.licenza`, accanto a
-// `piano` e `moduli`, la voce `limiti`:
+// La regia (drink-regia) scrive nella licenza (`licenza/attuale`, BUG-125),
+// accanto a `piano` e `moduli`, la voce `limiti`:
 //
 //   { prodotti_max: 10, conti_aperti_max: 5, sconti: false,
 //     storico_giorni: 7, utenti_max: 1, marchio: true }
@@ -11,9 +11,9 @@
 //
 // LA REGOLA CHE CONTA: SENZA `limiti`, NESSUN LIMITE. Voce assente, `null`
 // o di forma sbagliata vuol dire che l'app lavora come ha sempre lavorato.
-// È il caso della Tana, che una licenza non ce l'ha, e non deve accorgersi
-// di niente: ogni domanda qui sotto, senza limiti, risponde «sì, come
-// prima». Un limite non è mai il comportamento di partenza. Lo stesso vale
+// È il caso della Tana, la cui licenza (scritta nella sua build) non ha
+// limiti, e non deve accorgersi di niente: ogni domanda qui sotto, senza
+// limiti, risponde «sì, come prima». Un limite non è mai il comportamento di partenza. Lo stesso vale
 // per ogni singola chiave: un `prodotti_max` mancante non limita i prodotti.
 //
 // IL PROFILO LEGGERO. Un locale Free è pubblicato con le sole regole di
@@ -24,20 +24,23 @@
 // pubblicasse leggero un piano diverso.
 //
 // ⚠️ COME PER I MODULI (lib/licenza.js), IL LIMITE NASCONDE, NON PROTEGGE:
-// è l'app che non lascia fare, non il server. Perché per ora basta, e
-// perché le regole di Firestore non ci sono, è scritto in REQ-LIC-003.
+// è l'app che non lascia fare. La licenza non si riscrive più dall'app
+// (BUG-125), e le regole di Firestore fanno rispettare gli sconti
+// (REQ-LIC-008); i numeri massimi (prodotti, conti aperti) no, perché
+// andrebbero contati sul server.
 //
 // Logica pura: le impostazioni si passano (sono quelle già in mano a chi
 // chiama, dalla cache: niente letture nuove, vedi il local-first).
 
 import { NOME_PRODOTTO } from './prodotto.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
+import { licenzaDi } from './venue.js'
 
 export const PIANO_FREE = 'free'
 
 // I limiti scritti nella licenza, o null: null vuol dire «nessun limite».
 export function limitiDi(stato) {
-  const l = stato?.licenza?.limiti
+  const l = licenzaDi(stato)?.limiti
   return l && typeof l === 'object' && !Array.isArray(l) ? l : null
 }
 
@@ -50,7 +53,7 @@ function tetto(stato, chiave) {
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null
 }
 
-export const pianoFree = (stato) => stato?.licenza?.piano === PIANO_FREE
+export const pianoFree = (stato) => licenzaDi(stato)?.piano === PIANO_FREE
 
 const BUILD_LEGGERA = import.meta.env?.VITE_PROFILO === 'leggero'
 
@@ -139,7 +142,7 @@ export function staffConsentito(stato) {
 export const rigaMarchio = (stato) => (limitiDi(stato)?.marchio === true ? `Creato con ${NOME_PRODOTTO}` : null)
 
 // Dove il titolare sceglie un piano a pagamento.
-export const urlRegia = (stato) => stato?.licenza?.regia_url || null
+export const urlRegia = (stato) => licenzaDi(stato)?.regia_url || null
 
 // ── COSA SI LEGGE ─────────────────────────────────────────────────────
 // Frasi piane, senza toni da venditore: cosa non si può fare e perché. Il

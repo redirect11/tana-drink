@@ -72,17 +72,29 @@ function flagLocale(chiave, { seNonSiSa = false, scriviIlFalso = false } = {}) {
 
 const CHIAVE = 'drink:impostazioni'
 
+// LA LICENZA SI RICORDA A PARTE (BUG-125). Fino alla 1.10.x le impostazioni
+// ricordate portavano dentro `licenza` così com'era in settings/bar, che
+// ogni bartender può riscrivere. Ora la licenza che vale la decide
+// subscribeSettings, e si ricorda sotto una chiave sua: quella vecchia,
+// rimasta dentro le impostazioni di un dispositivo aggiornato, non si
+// rilegge mai. Una licenza non nota (`undefined`) non cancella quella
+// ricordata: è l'ultima verità che si ha.
+const CHIAVE_LICENZA = 'drink:licenza'
+
 export function ricordaImpostazioni(data) {
   if (!data || typeof data !== 'object') return
-  scrivi(CHIAVE, data)
+  const { licenza, ...resto } = data
+  scrivi(CHIAVE, resto)
+  if (licenza !== undefined) scrivi(CHIAVE_LICENZA, licenza)
 }
 
 // I valori con cui disegnare la PRIMA volta: i default con sopra l'ultima
 // risposta del server, se la si ricorda.
 export function impostazioniRicordate(defaults = {}) {
   const salvate = leggi(CHIAVE, JSON.parse, null)
-  if (salvate && typeof salvate === 'object') return { ...defaults, ...salvate }
-  return { ...defaults }
+  const { licenza: _diSettings, ...resto } = salvate && typeof salvate === 'object' ? salvate : {}
+  const licenza = leggi(CHIAVE_LICENZA, JSON.parse, null)
+  return { ...defaults, ...resto, ...(licenza && typeof licenza === 'object' ? { licenza } : {}) }
 }
 
 // ── LE CORSIE SPENTE SU QUESTO TERMINALE ─────────────────────────────

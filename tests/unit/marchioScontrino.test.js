@@ -4,11 +4,12 @@
 // LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
 // `limiti.marchio`). Il piano Free porta una riga «Creato con <nome del
 // prodotto>» in fondo allo scontrino; nessun altro piano, e soprattutto non
-// la Tana, che una licenza non ce l'ha. Si guarda la carta: in locale la
+// la Tana, la cui licenza (nella build) di limiti non ne ha. Si guarda la carta: in locale la
 // stampante è finta e ogni lavoro apre il suo facsimile (come in
 // campiDiStampa.test.js, che tiene fermo lo scontrino di sempre).
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { ricordaImpostazioni } from '../../src/lib/impostazioniLocali.js'
 
 let finestre
 
@@ -42,7 +43,8 @@ const ultimaRiga = (testo) =>
     .at(-1)
 
 const carta = (n = 0) => (finestre[n] || []).join('').match(/<pre>([\s\S]*?)<\/pre>/)?.[1] ?? ''
-const impostazioni = (dati) => localStorage.setItem('drink:impostazioni', JSON.stringify(dati))
+// Come le lascia subscribeSettings (la licenza si ricorda a parte, BUG-125).
+const impostazioni = (dati) => ricordaImpostazioni(dati)
 
 const CONTO = {
   id: 'conto-free',

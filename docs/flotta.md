@@ -54,8 +54,8 @@ firebase deploy --only firestore,storage,functions,hosting      # profilo comple
 firebase deploy --only firestore,hosting                        # profilo leggero (Free)
 ```
 
-e poi scrive `settings/bar.licenza` nel Firestore dell'istanza (piano,
-moduli, stato, `regia_url`). Questi comandi e questi nomi sono un
+e poi scrive la licenza nel Firestore dell'istanza, nel documento
+`licenza/attuale` (piano, moduli, stato, `regia_url`; BUG-125). Questi comandi e questi nomi sono un
 contratto: se cambiano qui, si dice là. Un tag `vX.Y.Z` ha `package.json`
 a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
 
@@ -83,8 +83,11 @@ settings/bar (venue_*)  ──────────────────�
 
 ## La licenza (REQ-LIC, REQ-FLOTTA-008)
 
-`settings/bar.licenza` la scrive la regia; la Tana non ce l'ha e lavora
-come sempre (tutti i moduli inclusi, nessuna sospensione). Con la licenza:
+`licenza/attuale` la scrive la regia, e dall'app non la scrive nessuno
+(BUG-125). Senza quel documento vale la licenza della build,
+`clienti/<slug>/licenza.json`: è il caso della Tana, che ha la sua con
+gli stessi moduli di prima e nessuna sospensione. Senza nessuna delle due
+l'app mostra «Installazione non attivata». Con la licenza:
 i moduli che non ci sono spengono le voci e le pagine relative
 (`FunzioneNonInclusa`), e `stato: sospesa | chiusa` ferma l'app con una
 schermata che lo dice (`InstallazioneSospesa`); i dati restano.

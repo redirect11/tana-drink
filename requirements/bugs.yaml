@@ -5422,9 +5422,54 @@ bugs:
       andare sul test appena la regia di test dice «Tutti pronti», ma in
       produzione solo dopo che la regia di produzione ha la 0.3.0 e la
       copia fatta. La Tana non è toccata (lo dice la build).
-    status: todo
+      LA PARTE DELL'APP, 01/11/2026 (il passo 2 qui sopra).
+        - La licenza della build è un meccanismo UGUALE PER OGNI CLIENTE,
+          non una voce della Tana (l'utente: «basta che sia allineato con
+          l'app generica che viene deployata da regia e che non sia una
+          cosa speciale per la tana»): un file facoltativo
+          `clienti/<slug>/licenza.json`, con la stessa forma del documento,
+          iniettato dalla build in `__CLIENTE__`. Il codice non sa per chi
+          è compilato. Le cartelle che crea la regia non ce l'hanno.
+        - Una regola sola (lib/licenza.js, `licenzaEffettiva`): il
+          documento della regia, se c'è; se no la licenza della build; se
+          no «Installazione non attivata», ma solo quando il server ha
+          confermato che il documento non c'è. Finché non si sa vale
+          l'ultima licenza nota sul dispositivo, ricordata sotto una chiave
+          sua: quella vecchia di settings/bar, rimasta nelle impostazioni
+          ricordate, non si rilegge.
+        - La porta dei dati dice da dove viene una risposta:
+          `onSnapshot(ref, { includeMetadataChanges: true }, …)` e
+          `metadata.fromCache`, con due prove di contratto nuove.
+        - Le regole aprono `licenza/` in lettura a tutti e non la fanno
+          scrivere a nessuno; la tabella dei permessi ha la riga nuova.
+        - La colonna `incluso` della tabella dei moduli non c'è più, e con
+          lei il ripiego di BUG-122: una licenza comanda per intero, e il
+          silenzio è un no.
+        - La demo mette la sua licenza in `licenza/attuale` della sua
+          cache; gli strumenti di sviluppo la mostrano e non la scrivono;
+          scripts/licenza-moduli.js scrive il documento.
+      DA CONFERMARE PRIMA DEL RILASCIO: i moduli scritti in
+      `clienti/tana/licenza.json` sono ricostruiti, non letti dalla
+      produzione (la lettura non è stata possibile da qui). Tutti inclusi
+      tranne `fatture` (Fatture ai clienti): l'inventario e lo scadenzario
+      erano stati accesi a mano in produzione il 17/09/2026, i sette moduli
+      della 1.10.0 venivano dalla colonna `incluso`. Si confronta con
+      `node scripts/licenza-moduli.js --project tana-drink` sulla versione
+      di prima (legge settings/bar e non scrive niente).
+      ATTENZIONE ALL'ORDINE, che resta quello sopra: questa versione va sul
+      test solo quando la regia di test ha copiato le licenze («Allinea
+      tutte» dice «Tutti pronti»), e in produzione solo dopo la regia di
+      produzione 0.3.0 con la stessa copia.
+    status: fixed
     in_produzione: true
     generate_issue: true
     labels: [bug, sicurezza, licenza, flotta]
-    test_cases: []
+    test_cases:
+      - tests/unit/licenzaInstallazione.test.js
+      - tests/unit/licenza.test.js
+      - tests/unit/clienteBuild.test.js
+      - tests/unit/datiDemo.test.js
+      - tests/component/InstallazioneSospesa.test.jsx
+      - tests/regole/permessi.test.js
+      - tests/regole/contrattoDati.test.js
 

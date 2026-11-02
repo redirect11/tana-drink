@@ -159,9 +159,8 @@ const FORNITORI = [
 
 // ── LE IMPOSTAZIONI DEL LOCALE DI PROVA ───────────────────────────────
 // Il nome, la città e il resto li porta la build (clienti/demo/venue.json):
-// qui solo il comportamento. Tutti i moduli accesi, decisi qui e non da un
-// server: nella demo la licenza non arriva da nessuna parte. Niente account
-// clienti — la registrazione vuole Firebase Auth, che la demo non ha.
+// qui solo il comportamento. Niente account clienti — la registrazione
+// vuole Firebase Auth, che la demo non ha.
 export function impostazioniDemo() {
   return {
     ...SEED_SETTINGS,
@@ -172,12 +171,19 @@ export function impostazioniDemo() {
     show_serving_board: true,
     special_titolo: 'Special',
     special_sottotitolo: 'I drink della casa',
-    licenza: {
-      piano: 'demo',
-      stato: 'attiva',
-      limiti: null,
-      moduli: Object.fromEntries(Object.keys(MODULI_PREMIUM).map((id) => [id, true])),
-    },
+  }
+}
+
+// LA LICENZA DELLA DEMO: tutti i moduli, decisi qui e non da un server —
+// nella demo una regia non c'è. Sta dove la cerca ogni installazione,
+// `licenza/attuale` (BUG-125), e non in settings/bar, che l'app non guarda
+// più per la licenza: la demo passa dalla stessa strada di un locale vero.
+export function licenzaDemo() {
+  return {
+    piano: 'demo',
+    stato: 'attiva',
+    limiti: null,
+    moduli: Object.fromEntries(Object.keys(MODULI_PREMIUM).map((id) => [id, true])),
   }
 }
 
@@ -230,6 +236,7 @@ export function datiDemo({ adesso = new Date(), seme = SEME, giorniDiStorico = 2
   const metti = (percorso, dati) => documenti.push({ percorso, dati })
 
   metti('settings/bar', impostazioniDemo())
+  metti('licenza/attuale', licenzaDemo())
   for (const c of categorieMagazzino) metti(`inventory_categories/${c.id}`, { name: c.name, sort_order: c.sort_order })
   for (const { id, ...a } of articoli) metti(`inventory_items/${id}`, a)
   for (const c of categorie) metti(`categories/${c.id}`, { name: c.name, sort_order: c.sort_order })

@@ -62,12 +62,15 @@ export default function BackupPanel({ role = null }) {
     setBusy('import')
     setErrore(null)
     try {
-      const { scritti, saltate } = await importaDatabase(backup, (nome, fatti, tot) =>
+      const { scritti, saltate, fuoriLicenza = [] } = await importaDatabase(backup, (nome, fatti, tot) =>
         setPasso(`${nome}: ${fatti}/${tot}`)
       )
       setEsito(
         `✓ Ripristinati ${scritti} documenti.` +
-          (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '')
+          (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '') +
+          (fuoriLicenza.length
+            ? ` Non ripristinate perché di moduli non inclusi nella licenza: ${fuoriLicenza.join(', ')}.`
+            : '')
       )
     } catch (e) {
       setErrore(e.message)
