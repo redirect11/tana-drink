@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.5-beta — in lavorazione
+## 1.10.6-beta — in lavorazione
+
+## 1.10.5-beta — 02/11/2026 (test)
 
 ### Nel menù
 
