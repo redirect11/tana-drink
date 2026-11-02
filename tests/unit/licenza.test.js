@@ -298,3 +298,36 @@ describe('i moduli del prodotto', () => {
     }
   })
 })
+
+// ── IL RIPRISTINO NON RIMETTE LA LICENZA (BUG-126) ────────────────────
+// La regola sta in un posto solo e la usano due ripristini: quello del
+// gestionale (lib/backup.js, dati dell'app) e quello da riga di comando
+// (scripts/ripristina-db.js, campi nel formato nativo di Firestore, con le
+// credenziali di servizio che le regole non fermano).
+describe('conLicenzaAttuale', () => {
+  it('tiene la licenza di adesso e butta quella del file', async () => {
+    const { conLicenzaAttuale } = await import('../../src/lib/licenza.js')
+    expect(conLicenzaAttuale({ a: 1, licenza: { piano: 'pro' } }, { licenza: { piano: 'free' } })).toEqual({
+      a: 1,
+      licenza: { piano: 'free' },
+    })
+    expect(conLicenzaAttuale({ a: 1, licenza: { piano: 'pro' } }, { a: 2 })).toEqual({ a: 1 })
+    expect(conLicenzaAttuale({ a: 1, licenza: { piano: 'pro' } }, undefined)).toEqual({ a: 1 })
+    expect(conLicenzaAttuale(undefined, { licenza: null })).toEqual({ licenza: null })
+  })
+
+  it('il valore di adesso passa così com’è, anche nel formato nativo', async () => {
+    const { conLicenzaAttuale } = await import('../../src/lib/licenza.js')
+    const attuale = { mapValue: { fields: { piano: { stringValue: 'base' } } } }
+    const fuori = conLicenzaAttuale({ venue_name: { stringValue: 'Ieri' }, licenza: { nullValue: null } }, { licenza: attuale })
+    // Lo stesso oggetto, non una copia rifatta: deve risultare identico.
+    expect(fuori.licenza).toBe(attuale)
+  })
+
+  it('lo script di ripristino la usa, e non tocca la collezione della licenza', async () => {
+    const { readFileSync } = await import('node:fs')
+    const script = readFileSync(new URL('../../scripts/ripristina-db.js', import.meta.url), 'utf8')
+    expect(script).toContain('conLicenzaAttuale(d.fields, campiAttuali.get(d.id))')
+    expect(script).toContain('.filter((c) => c !== COLLEZIONE_LICENZA)')
+  })
+})

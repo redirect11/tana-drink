@@ -1,7 +1,7 @@
 // Il database passa dalla porta dei dati (REQ-FLOTTA-021).
 import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
 import { configurazione } from '../porte/configurazione.js'
-import { scritturaConsentita } from './licenza.js'
+import { scritturaConsentita, conLicenzaAttuale, COLLEZIONE_LICENZA } from './licenza.js'
 import { licenzaRicordata } from './impostazioniLocali.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
@@ -129,7 +129,10 @@ export async function importaDatabase(backup, onProgress = () => {}) {
   for (const [nome, c] of Object.entries(backup.collezioni)) {
     const righe = c?.righe || []
     if (!righe.length) continue
-    if (!COLLEZIONI.includes(nome)) {
+    // `licenza/attuale` non è in COLLEZIONI e non ci deve entrare: la scrive
+    // solo la regia. Lo si dice qui perché un domani nessuno la aggiunga
+    // all'elenco «per completezza».
+    if (nome === COLLEZIONE_LICENZA || !COLLEZIONI.includes(nome)) {
       // Roba di una versione più nuova: non la si inventa.
       saltate.push(nome)
       continue
@@ -138,11 +141,19 @@ export async function importaDatabase(backup, onProgress = () => {}) {
       fuoriLicenza.push(nome)
       continue
     }
+    // LA LICENZA NON SI RIPRISTINA (BUG-126): quella del file è di quando è
+    // stato fatto, e rimetterla vorrebbe dire tornare a un piano vecchio.
+    // Le impostazioni prendono la licenza che c'è adesso nel database, letta
+    // qui al momento (e non quella che le schermate hanno in mano, che è di
+    // `licenza/attuale`): un valore diverso, anche di un soffio, le regole lo
+    // leggono come un cambio e rifiutano il lotto.
+    const attuali = nome === 'settings' ? await documentiAttuali(nome) : null
+    const dati = (r) => (attuali ? conLicenzaAttuale(r.dati, attuali.get(r.id)) : r.dati ?? {})
     // A blocchi: writeBatch si ferma a 500 operazioni.
     for (let i = 0; i < righe.length; i += 400) {
       const lotto = writeBatch(db)
       for (const r of righe.slice(i, i + 400)) {
-        lotto.set(doc(db, nome, r.id), r.dati ?? {})
+        lotto.set(doc(db, nome, r.id), dati(r))
       }
       await lotto.commit()
       scritti += Math.min(400, righe.length - i)
@@ -150,6 +161,13 @@ export async function importaDatabase(backup, onProgress = () => {}) {
     }
   }
   return { scritti, saltate, fuoriLicenza }
+}
+
+// I documenti che ci sono adesso, per id. Il ripristino è fuori dal giro
+// di una serata: si aspetta la lettura, come si aspettano i lotti.
+async function documentiAttuali(nome) {
+  const snap = await getDocs(collection(db, nome))
+  return new Map(snap.docs.map((d) => [d.id, d.data()]))
 }
 
 // Nome del file: progetto e data, così tre backup non si chiamano uguale.

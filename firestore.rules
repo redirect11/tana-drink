@@ -328,9 +328,33 @@ service cloud.firestore {
     }
 
     // SETTINGS — lettura pubblica (i clienti vedono la modalità menù, coperto…), scrittura bartender.
+    //
+    // IL CAMPO `licenza` QUI DENTRO NON LO TOCCA NESSUNO DALL'APP (BUG-126,
+    // H2 dell'audit della regia). La licenza vera sta in `licenza/attuale`
+    // (BUG-125), ma finché tutti i locali non hanno l'app che legge solo
+    // quella la regia la scrive anche in `settings/bar.licenza`, dove la
+    // cercano le versioni vecchie — una PWA rimasta in cache su un tablet,
+    // per esempio. Con `write` aperto al banco, un bartender dalla console
+    // si riscriveva lì piano e moduli, e quella versione vecchia gli
+    // credeva. Il resto del documento resta del banco e del titolare, come
+    // prima: temi, orari, stampa, pagamenti sono il loro lavoro.
+    // La regia scrive con le credenziali di servizio e queste regole non la
+    // toccano.
+    //
+    // Il campo deve restare com'è, in OGNI scrittura: né aggiunto, né
+    // cambiato, né tolto (una `set` senza merge che lo omette lo cancella,
+    // e anche quello è un cambio). Un documento nuovo nasce senza; uno che
+    // ha la licenza non si cancella. Il ripristino da backup rimette la
+    // licenza che c'è già (lib/licenza.js, conLicenzaAttuale).
     match /settings/{docId} {
+      function licenzaIntatta() {
+        return resource == null
+          ? !('licenza' in request.resource.data)
+          : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['licenza']);
+      }
       allow read: if true;
-      allow write: if licenzaValida() && isBartender();
+      allow create, update: if licenzaValida() && isBartender() && licenzaIntatta();
+      allow delete: if licenzaValida() && isBartender() && !('licenza' in resource.data);
     }
 
     // LA LICENZA (BUG-125): piano, moduli, limiti, sospensione, aggiornamenti.
