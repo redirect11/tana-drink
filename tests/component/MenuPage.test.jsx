@@ -635,3 +635,40 @@ describe('il disegno del drink nell’elenco', () => {
     expect(screen.getByAltText('Negroni')).not.toHaveClass('disegno')
   })
 })
+
+// GLI STILI GRATIS SUL MENÙ (REQ-MENU-022): installato e scelto, il cliente
+// lo vede; chi lavora lo prova sul proprio menù con `?stile=…`, solo per
+// sé; un esclusivo che il locale non ha non si prova.
+describe('gli stili gratis sul menù', () => {
+  it('installato e scelto, il cliente lo vede', async () => {
+    ruoloClaim = null
+    mockSettings = { stili_installati: ['giornale'], stile_menu: 'giornale' }
+    const { container } = mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-giornale')).not.toBeNull()
+  })
+
+  it('scelto ma non installato, no: resta il classico', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'giornale' }
+    const { container } = mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-giornale')).toBeNull()
+  })
+
+  it('chi lavora prova uno stile sul proprio menù, e la riga in alto lo dice', async () => {
+    ruoloClaim = 'bartender'
+    const { container } = mostra('/menu?vista=cliente&stile=deco')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-deco')).not.toBeNull()
+    expect(screen.getByText(/Stai provando lo stile «Déco»/)).toBeInTheDocument()
+  })
+
+  it('un esclusivo che il locale non ha non si prova', async () => {
+    ruoloClaim = 'bartender'
+    mockSettings = { licenza: { moduli: {} } }
+    const { container } = mostra('/menu?vista=cliente&stile=notte')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-notte')).toBeNull()
+  })
+})
