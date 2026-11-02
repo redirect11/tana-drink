@@ -6,9 +6,8 @@
 // mensile)». La licenza lo dice e l'app si ferma spiegando perché, senza
 // toccare i dati.
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import InstallazioneSospesa from '../../src/components/InstallazioneSospesa.jsx'
 import { installazioneBloccata, statoLicenza, STATI_LICENZA } from '../../src/lib/licenza.js'
@@ -77,33 +76,11 @@ describe('la schermata', () => {
     expect(screen.queryByText(/abbonamento/)).toBeNull()
   })
 
-  // REQ-FLOTTA-026: finché la licenza manca, l'app chiede alla regia di
-  // scriverla, e qui c'è il «Riprova». Se la regia la scrive, arriva dal
-  // listener e la schermata se ne va da sola: qui si dice com'è andata.
-  it('non attivata, con qualcuno collegato: «Riprova» chiede alla regia, e dice com’è andata', async () => {
-    const user = userEvent.setup()
-    const onRiprova = vi.fn(() => Promise.resolve({ ok: true, licenza: 'scritta' }))
-    render(<InstallazioneSospesa licenza={{ stato: 'non_attivata' }} venue={{}} onRiprova={onRiprova} />)
-    await user.click(screen.getByRole('button', { name: 'Riprova' }))
-    expect(onRiprova).toHaveBeenCalledTimes(1)
-    expect(await screen.findByText(/La licenza è stata scritta/)).toBeInTheDocument()
-  })
-
-  it('se la richiesta non arriva lo dice, col testo della regia se c’è', async () => {
-    const user = userEvent.setup()
-    const onRiprova = vi
-      .fn()
-      .mockResolvedValueOnce({ ok: false, status: 0, errore: null })
-      .mockResolvedValueOnce({ ok: false, status: 404, errore: 'La regia non conosce questo progetto' })
-    render(<InstallazioneSospesa licenza={{ stato: 'non_attivata' }} venue={{}} onRiprova={onRiprova} />)
-    await user.click(screen.getByRole('button', { name: 'Riprova' }))
-    expect(await screen.findByText(/riprovare tra poco/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Riprova' }))
-    expect(await screen.findByText('La regia non conosce questo progetto')).toBeInTheDocument()
-  })
-
-  it('senza «Riprova» da chiedere, il tasto non c’è', () => {
+  // REQ-FLOTTA-026: la presentazione alla regia non è l'attivazione, e qui
+  // non ha un tasto (docs/presentazione-alla-regia.md): su un'installazione
+  // nuova nessuno è collegato, e la licenza c'è prima dell'app.
+  it('non attivata: nessun «Riprova»', () => {
     render(<InstallazioneSospesa licenza={{ stato: 'non_attivata' }} venue={{}} />)
-    expect(screen.queryByRole('button', { name: 'Riprova' })).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
   })
 })
