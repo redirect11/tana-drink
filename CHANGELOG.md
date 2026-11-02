@@ -2,6 +2,14 @@
 
 ## 1.10.8-beta — in lavorazione
 
+### Nel gestionale
+
+- **Il marketplace dei temi è una pagina sua**: la voce «🛍️ Marketplace»
+  del menu laterale, da sfogliare come un catalogo, con Temi, Stili del
+  menù e Installati. Ogni tema si vede su un pezzo del menù vero, si prova
+  sul proprio menù e si installa. In Impostazioni resta la scelta fra
+  quelli già installati.
+
 ## 1.10.7-beta — 02/11/2026 (test)
 
 ### Nel gestionale
