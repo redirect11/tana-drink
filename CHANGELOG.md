@@ -2,6 +2,14 @@
 
 ## 1.10.7-beta — in lavorazione
 
+### Per chi gestisce l'installazione
+
+- **Il titolare entra nel suo locale con lo stesso account della regia.**
+  All'attivazione la regia crea l'account del titolare con la sua email e
+  il ruolo di amministratore, senza password: la si imposta dall'email che
+  arriva. Per le installazioni già attive c'è uno script che lo verifica e,
+  su richiesta, lo sistema.
+
 ### Nel gestionale
 
 - **Il marketplace dei temi, in Impostazioni → Aspetto.** Un tema è una

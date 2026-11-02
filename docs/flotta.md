@@ -59,6 +59,30 @@ e poi scrive la licenza nel Firestore dell'istanza, nel documento
 contratto: se cambiano qui, si dice là. Un tag `vX.Y.Z` ha `package.json`
 a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
 
+## Il titolare (REQ-FLOTTA-029)
+
+Quando la regia attiva o aggiorna un locale della flotta, nel progetto del
+locale crea (se manca) l'account del titolare **con lo stesso uid e la
+stessa email che ha nella regia**, già verificato e **senza password**,
+col ruolo `admin` nei custom claims; finché non ha una password Firebase
+gli manda l'email per impostarla. Lo fa `scripts/titolare-istanza.mjs`
+della regia, con le credenziali del suo service account, dopo il deploy.
+Il contratto, da qui: **il ruolo del titolare è il claim `role: 'admin'`**
+(`src/lib/ruoli.js`); se un giorno cambia, si dice alla regia.
+
+L'uid di Firebase Auth non si cambia. Un segnaposto mai usato con un altro
+uid (i locali attivati prima del 02/11/2026) si cancella e si ricrea con
+l'uid giusto; un account già usato resta com'è, con un avviso nel log.
+
+I locali esistenti, come la Tana, i workflow della regia li saltano: hanno
+i loro admin. Per loro c'è `scripts/titolare-locale.mjs`, a mano, con la
+stessa regola (`scripts/lib-titolare.js`, copia di quella della regia):
+
+```sh
+node scripts/titolare-locale.mjs --project tana-drink-test --uid <uid nella regia> --email <email>   # dice cosa farebbe
+node scripts/titolare-locale.mjs --project tana-drink-test --uid <uid> --email <email> --applica
+```
+
 ## Da dove viene il marchio (REQ-VENUE)
 
 ```
