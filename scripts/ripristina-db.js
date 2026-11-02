@@ -20,6 +20,7 @@
 // =====================================================================
 import { readFileSync } from 'node:fs'
 import { accessToken, client, idDi, arg, flag } from './lib-firestore.js'
+import { conLicenzaAttuale, CAMPO_LICENZA, COLLEZIONE_LICENZA } from '../src/lib/licenza.js'
 
 const FILE = arg('file')
 const APPLY = flag('apply')
@@ -59,9 +60,19 @@ if (backup.progetto && backup.progetto !== PROGETTO) {
 console.log(UNISCI ? '  modalità: unisci (non cancella niente)' : '  modalità: ripristino esatto (cancella ciò che non è nel backup)')
 if (SOLO.length) console.log(`  solo: ${SOLO.join(', ')}`)
 
+// LA LICENZA NON SI RIPRISTINA (BUG-126). Questo script scrive con le
+// credenziali di servizio, e le regole non lo fermano: rimettere il
+// `licenza/attuale` di un backup vecchio toglierebbe una sospensione o
+// riporterebbe un piano scaduto, e la licenza è della regia, non del
+// locale. Quindi la collezione non si tocca mai (né riscritta né
+// cancellata), e `settings/bar` tiene il campo `licenza` che ha adesso.
 const collezioni = Object.keys(backup.collezioni)
+  .filter((c) => c !== COLLEZIONE_LICENZA)
   .filter((c) => !SOLO.length || SOLO.includes(c))
   .sort()
+if (backup.collezioni[COLLEZIONE_LICENZA]) {
+  console.log(`  ${COLLEZIONE_LICENZA}: nel file c'è, ma non si ripristina (la scrive la regia)`)
+}
 
 let scritti = 0
 let cancellati = 0
@@ -70,8 +81,15 @@ for (const c of collezioni) {
   const docs = backup.collezioni[c] || []
   const attuali = await db.documenti(c)
   const idsBackup = new Set(docs.map((d) => d.id))
-  const orfani = UNISCI ? [] : attuali.filter((d) => !idsBackup.has(idDi(d)))
-  piano.push({ c, docs, orfani })
+  // Un documento delle impostazioni che porta la licenza non si cancella
+  // nemmeno nel ripristino esatto: con lui se ne andrebbe la licenza.
+  const orfani = UNISCI
+    ? []
+    : attuali.filter((d) => !idsBackup.has(idDi(d)) && !(c === 'settings' && d.fields?.[CAMPO_LICENZA]))
+  const campiAttuali = new Map(attuali.map((d) => [idDi(d), d.fields]))
+  const daScrivere =
+    c === 'settings' ? docs.map((d) => ({ ...d, fields: conLicenzaAttuale(d.fields, campiAttuali.get(d.id)) })) : docs
+  piano.push({ c, docs: daScrivere, orfani })
   scritti += docs.length
   cancellati += orfani.length
   console.log(
