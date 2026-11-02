@@ -685,3 +685,63 @@ describe('un tema del marketplace in prova sul menù', () => {
     expect(screen.getByText(/Stai provando il tema «Gazzetta»/)).toBeInTheDocument()
   })
 })
+
+// LO STILE «GIORNALE» (REQ-MENU-024): una struttura sua, non le card del
+// classico. Testata, sommario, prima pagina col primo Special, «In breve»,
+// le sezioni; immagini a incisione; i gesti di sempre.
+describe('lo stile «Giornale»', () => {
+  const SPECIALI = [
+    { id: 's1', name: 'Bianconiglio', price: 9, category_id: 'c1', available: true, speciale: true, description: 'Il primo', illustrazione: { bicchiere: 'coppa', colore: 'ambra', decorazione: 'agrume' } },
+    { id: 's2', name: 'Cappellaio', price: 10, category_id: 'c1', available: true, speciale: true, description: 'Il secondo' },
+  ]
+  const mostraGiornale = () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, ...SPECIALI]
+    mockSettings = { stili_installati: ['giornale'], stile_menu: 'giornale' }
+    return mostra('/menu')
+  }
+
+  it('è una prima pagina: testata, sommario, apertura, in breve, sezioni; niente card', async () => {
+    const { container } = mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    expect(container.querySelector('.g-testata')).not.toBeNull()
+    expect(screen.getByText('Edizione della sera')).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Sommario' })).getByRole('link', { name: 'Birre' })).toBeInTheDocument()
+    const prima = screen.getByRole('region', { name: 'Prima pagina' })
+    expect(within(prima).getByText('In prima pagina')).toBeInTheDocument()
+    expect(within(prima).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Bianconiglio', 'Cappellaio'])
+    expect(container.querySelector('.g-sezione')).not.toBeNull()
+    expect(container.querySelector('.menu-item')).toBeNull()
+    expect(container.querySelector('.hero')).toBeNull()
+  })
+
+  it('le immagini sono incisioni, non i disegni della Tana', async () => {
+    const { container } = mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    const img = container.querySelector('.g-apertura img')
+    const svg = decodeURIComponent(img.getAttribute('src'))
+    expect(svg).toContain('<rect x="14" y="14" width="372" height="372"')
+    expect(svg).not.toContain('feTurbulence')
+  })
+
+  it('il sommario porta alla sezione e la segna', async () => {
+    const utente = userEvent.setup()
+    mostraGiornale()
+    const sommario = await screen.findByRole('navigation', { name: 'Sommario' })
+    const birre = within(sommario).getByRole('link', { name: 'Birre' })
+    await utente.click(birre)
+    expect(birre).toHaveAttribute('aria-current', 'true')
+    expect(document.getElementById(birre.getAttribute('href').slice(1))).not.toBeNull()
+  })
+
+  it('i gesti di sempre: «Aggiungi», e il nome apre il dettaglio', async () => {
+    const utente = userEvent.setup()
+    mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    const voce = screen.getByRole('button', { name: 'Mojito' }).closest('article')
+    await utente.click(within(voce).getByRole('button', { name: 'Aggiungi' }))
+    expect(within(voce).getByRole('button', { name: 'Aumenta' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Mojito' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+})

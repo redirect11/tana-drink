@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 250 | fatto e coperto dai test |
+| ✅ | 251 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**302 voci** in tutto. **267** descrivono il sistema com'è oggi e
+**303 voci** in tutto. **268** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 18 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 19 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -831,6 +831,14 @@ L'utente, 02/11/2026: «Dobbiamo fare una sezione marketplace per i temi in aspe
 UNA PAGINA SUA (02/11/2026). La prima versione era un riquadro in Impostazioni → Aspetto; l'utente: «ti avevo chiesto una sezione marketplace separata, una finestra/pagina nuova che apro per navigare i temi come se fosse un catalogo e poi li installo sulla mia istanza». Ora è la voce «🛍️ Marketplace» del menu laterale, prima di Impostazioni (docs/navigazione.md: risponde a una domanda diversa), con tre sezioni nel menu a scomparsa: Temi, Stili del menù (gli stili da soli, sui colori del locale) e Installati (dove si disinstalla). Ogni scheda ha una vetrina grande, un pezzo del menù vero scritto con le classi del menù. In Impostazioni restano la scelta fra gli stili installati (Menù clienti) e «Apri il marketplace» (Aspetto); il catalogo degli stili gratis di REQ-MENU-022 si è spostato qui.
 
 **Dove**: `src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-MENU-024 — Lo stile «Giornale» ha una struttura sua e immagini sue: testata, sommario, prima pagina, sezioni, incisioni
+
+L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e immagini diverse da quelle proposte per la tana (drink stilizzati)», e, sulla proposta stile per stile, «sì vanno bene, basta che sia figa e fluida la UX». Si comincia da «Giornale», uno stile alla volta. Non più una veste sopra le card del classico (le sue regole vecchie sono tolte): MenuGiornale disegna una TESTATA (il nome del locale coi filetti, «Edizione della sera» con la data), un SOMMARIO agganciato sotto la barra che segue la lettura (la sezione in vista è segnata, IntersectionObserver) e porta alla sezione scorrendo dolcemente (o di colpo, con «riduci movimento»), una PRIMA PAGINA (il primo Special come apertura: occhiello, titolo grande, incisione con didascalia, capolettera sui testi lunghi, prezzo; gli altri «In breve» a lato o sotto), le SEZIONI (una fascia nera col nome e il numero di voci, le voci in una, due o tre colonne, senza immagini, «NOME ···· prezzo»). «Stiamo servendo il numero» diventa un'ultim'ora fra due filetti. Le immagini sono a INCISIONE: un solo inchiostro, niente acquerello, una cornice da lastra, la puntinatura, il colore del drink reso come tratteggio più o meno fitto; dalle stesse scelte di ogni drink (bicchiere, colore, decorazione), anche nel dettaglio. I gesti sono quelli di sempre (Aggiungi, il carrello, il nome che apre il dettaglio). Nel marketplace la vetrina di «Giornale» è un giornale in miniatura. Guardato a schermo sulla demo, chiaro e scuro, desktop e telefono.
+
+DA FARE, con lo stesso schema: «Lavagna» (gessetto, una lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di cartoline da scorrere).
+
+**Dove**: `src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MarketplaceTab.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

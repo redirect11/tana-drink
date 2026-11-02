@@ -5784,6 +5784,45 @@ requirements:
       - tests/component/MarketplaceTab.test.jsx
       - tests/component/MenuPage.test.jsx
 
+  - id: REQ-MENU-024
+    title: "Lo stile «Giornale» ha una struttura sua e immagini sue: testata, sommario, prima pagina, sezioni, incisioni"
+    area: "src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)"
+    description: >
+      L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e
+      immagini diverse da quelle proposte per la tana (drink stilizzati)»,
+      e, sulla proposta stile per stile, «sì vanno bene, basta che sia figa
+      e fluida la UX». Si comincia da «Giornale», uno stile alla volta. Non
+      più una veste sopra le card del classico (le sue regole vecchie sono
+      tolte): MenuGiornale disegna una TESTATA (il nome del locale coi
+      filetti, «Edizione della sera» con la data), un SOMMARIO agganciato
+      sotto la barra che segue la lettura (la sezione in vista è segnata,
+      IntersectionObserver) e porta alla sezione scorrendo dolcemente (o di
+      colpo, con «riduci movimento»), una PRIMA PAGINA (il primo Special
+      come apertura: occhiello, titolo grande, incisione con didascalia,
+      capolettera sui testi lunghi, prezzo; gli altri «In breve» a lato o
+      sotto), le SEZIONI (una fascia nera col nome e il numero di voci, le
+      voci in una, due o tre colonne, senza immagini, «NOME ···· prezzo»).
+      «Stiamo servendo il numero» diventa un'ultim'ora fra due filetti. Le
+      immagini sono a INCISIONE: un solo inchiostro, niente acquerello, una
+      cornice da lastra, la puntinatura, il colore del drink reso come
+      tratteggio più o meno fitto; dalle stesse scelte di ogni drink
+      (bicchiere, colore, decorazione), anche nel dettaglio. I gesti sono
+      quelli di sempre (Aggiungi, il carrello, il nome che apre il
+      dettaglio). Nel marketplace la vetrina di «Giornale» è un giornale in
+      miniatura. Guardato a schermo sulla demo, chiaro e scuro, desktop e
+      telefono. DA FARE, con lo stesso schema: «Lavagna» (gessetto, una
+      lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice
+      come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di
+      cartoline da scorrere).
+    status: implemented
+    generate_issue: false
+    labels: [menu, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/illustrazioneDrink.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/component/MarketplaceTab.test.jsx
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
