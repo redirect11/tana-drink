@@ -1,4 +1,5 @@
-import { pianoFree, profiloLeggero } from './limiti.js'
+import { profiloLeggero } from './limiti.js'
+import { LICENZA_DELLA_BUILD, licenzaDi } from './venue.js'
 
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
@@ -25,30 +26,24 @@ import { pianoFree, profiloLeggero } from './limiti.js'
 // e sono due schermate diverse, una con l'interruttore bloccato e una con
 // l'interruttore normale.
 //
-// COSA È INCLUSO, OGGI: lo dice `incluso` in questa tabella. Sta nel
-// CODICE apposta, non nelle impostazioni del bar: quello che un locale ha
-// comprato non è una preferenza che si cambia dal pannello — lì si accende
-// e si spegne quello che si ha, non si decide cosa si ha. Finché non esiste
-// il documento della licenza, la licenza di questa installazione è la sua
-// build; è lo stesso posto dove finirà la configurazione per cliente della
-// Fase 2 (`clienti/<slug>/`).
+// COSA È INCLUSO lo dice la LICENZA, e una licenza c'è sempre (BUG-125):
+// il documento `licenza/attuale` che scrive la regia, o, dove una regia
+// non c'è, quella scritta nella build (`clienti/<slug>/licenza.json`).
+// Fino alla 1.10.x qui c'era anche una colonna `incluso`, la riserva di
+// chi la licenza non ce l'aveva: era una licenza nascosta nel codice, che
+// a un locale senza documento dava quasi tutto. Tolta con BUG-125 («nn va
+// bene che senza licenza sia tutto acceso», l'utente, 31/10/2026).
 //
-// COME SI AGGANCERÀ LA LICENZA VERA. La Fase 3 prevede `settings/licenza`
-// (o un campo nel venue) con piano e moduli attivi, estendendo lo schema
-// che c'è già — quello di `workflow_enabled` su settings/bar. Il punto di
-// innesto è uno solo, `moduloIncluso`: se lo stato porta con sé una
-// `licenza` con l'elenco dei moduli, comanda lei e la colonna `incluso`
-// della tabella non si guarda nemmeno. L'interruttore d'uso resta dov'è,
-// perché quello è del locale e non della licenza — un locale che ha
-// comprato lo scadenzario può comunque volerlo spento a gennaio.
-// Gli strumenti di sviluppo scrivono già `licenza.moduli` in quella forma
-// (DevTools.jsx): è la prova generale del documento vero.
+// L'interruttore d'uso resta dov'è, perché quello è del locale e non della
+// licenza: un locale che ha comprato lo scadenzario può comunque volerlo
+// spento a gennaio.
 //
-// ⚠️ IL FLAG NASCONDE, NON PROTEGGE. Oggi c'è un locale solo e la
-// distinzione è teorica; il giorno che i locali sono tanti, il controllo
-// vero va sul server (Cloud Functions e regole Firestore), perché chiunque
-// apra la console del browser può accendersi un modulo da sé. Sta scritto
-// anche nel requisito, così chi arriva dopo non pensa che basti questo.
+// ⚠️ IL FLAG NASCONDE, NON PROTEGGE DA SOLO. La licenza non la riscrive più
+// nessuno dall'app (le regole chiudono `licenza/`), ma chi apre la console
+// del browser può sempre far mostrare all'app una sezione: il controllo
+// vero sui dati sta nelle regole di Firestore, che leggono la licenza e
+// rifiutano le scritture dei moduli non inclusi (REQ-LIC-008,
+// COLLEZIONI_DEI_MODULI qui sotto).
 
 // I MODULI, uno per riga. La chiave `id` è la stessa della sezione che il
 // modulo accende (`conta`, `scadenzario` nel magazzino): così filtrare un
@@ -59,63 +54,55 @@ import { pianoFree, profiloLeggero } from './limiti.js'
 // `chiave` è il nome del flag D'USO su settings/bar — scritto per esteso e
 // non calcolato, perché è un nome che finisce su documenti veri e chi lo
 // cerca nel codice lo deve trovare.
-// `incluso` è cosa ha QUESTA installazione finché non c'è una licenza vera.
 export const MODULI_PREMIUM = {
   // ── I MODULI DEL PRODOTTO (REQ-LIC-002, decisione dell'utente del
   // 22/10/2026): di base un locale crea le voci di menù e gestisce gli
   // ordini (coda, cassa, scontrino). Tutto il resto è un modulo, con lo
-  // stesso id del listino della regia (piani.json). `incluso: true` è la
-  // riserva di chi non ha una licenza scritta — la Tana — che così tiene
-  // tutto; un locale della flotta ha `licenza.moduli` scritto dalla regia.
+  // stesso id del listino della regia (piani.json).
   menu_tavoli: {
     chiave: 'modulo_menu_tavoli_enabled',
-    incluso: true,
     sezioni: ['vista-cliente'],
     label: 'Menù digitale e tavoli',
     descrizione: 'Il menù sul telefono del cliente, con il QR al tavolo e la vista cliente nel gestionale.',
   },
   ordini_cliente: {
     chiave: 'modulo_ordini_cliente_enabled',
-    incluso: true,
     label: 'Ordini dal telefono del cliente',
     descrizione: 'Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.',
   },
   clienti: {
     chiave: 'modulo_clienti_enabled',
-    incluso: true,
     label: 'Gestione clienti',
     descrizione: 'Account dei clienti, i loro ordini, i gruppi di conti.',
   },
   magazzino: {
     chiave: 'modulo_magazzino_enabled',
-    incluso: true,
     sezioni: ['inventario', 'fornitori'],
     label: 'Magazzino e fornitori',
     descrizione: 'Giacenze, scarico automatico dalle ricette, ordini e fatture dei fornitori. Inventario e scadenzario sono i suoi moduli.',
   },
   statistiche: {
     chiave: 'modulo_statistiche_enabled',
-    incluso: true,
     sezioni: ['stats', 'bilancio'],
     label: 'Statistiche e bilancio',
     descrizione: 'Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.',
   },
   staff: {
     chiave: 'modulo_staff_enabled',
-    incluso: true,
+    // `ore` è il vecchio indirizzo della stessa schermata (/bar?tab=ore):
+    // senza questa riga la apriva anche chi il modulo non ce l'ha.
+    sezioni: ['ore'],
     label: 'Personale e ore',
     descrizione: 'Ore e paghe del personale, chiamate allo staff.',
   },
   // `sumup` e non `pagamenti`: la cassa del gestionale ha già quella sezione.
   sumup: {
     chiave: 'modulo_sumup_enabled',
-    incluso: true,
     label: 'Pagamenti con lettore SumUp',
     descrizione: 'Il conto va al lettore di carte e torna pagato da solo.',
   },
   conta: {
     chiave: 'modulo_conta_enabled',
-    incluso: false,
     sezioni: ['storico'],
     label: 'Inventario di magazzino',
     descrizione:
@@ -128,21 +115,62 @@ export const MODULI_PREMIUM = {
     // l'unica cosa che hanno in comune è la parola. Le etichette lo dicono
     // a schermo, perché stanno una sotto l'altra nelle impostazioni.
     chiave: 'modulo_fatture_enabled',
-    incluso: false,
     label: 'Fatture ai clienti',
     descrizione:
       'Fattura di cortesia per il cliente che la chiede: dati di fatturazione, numero progressivo, stampa e invio per email.',
   },
   scadenzario: {
     // Riacceso il 26/08/2026 su richiesta dell'utente: la Tana lo usa
-    // davvero. Resta una funzione premium — cambia che qui è INCLUSA, e
-    // quindi il suo interruttore si tocca.
+    // davvero. Resta una funzione premium, inclusa nella sua licenza.
     chiave: 'modulo_scadenzario_enabled',
-    incluso: true,
     label: 'Fatture ai fornitori',
     descrizione:
       'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.',
   },
+}
+
+// ── LE COLLEZIONI DI OGNI MODULO (REQ-LIC-008) ─────────────────────────
+// Dove le regole del database (firestore.rules) rifiutano le SCRITTURE di
+// chi la licenza non ce l'ha: una collezione passa se la licenza include
+// almeno uno dei moduli elencati. Un test (tests/unit/regoleLicenza.test.js)
+// controlla che le regole dicano la stessa cosa di questa tabella.
+// Ci sono solo le collezioni che l'app scrive SOLTANTO dalle schermate del
+// modulo. Restano fuori, apposta:
+//   - le timbrature (staff_shifts) e il cerca-persone (staff_calls): si
+//     scrivono a ogni accesso del personale e dalla coda, anche senza il
+//     modulo del personale;
+//   - i gruppi (groups): li governa l'impostazione dei gruppi, non i clienti;
+//   - gli ordini: lì contano gli sconti e gli ordini dal telefono, e le
+//     regole lo dicono a parte.
+// Le fatture dei fornitori hanno due moduli: lo scadenzario, e il magazzino,
+// perché la lista degli ordini ai fornitori le genera e le segna pagate.
+// Dei clienti si controlla solo la nascita del profilo: modificarlo e
+// cancellarlo restano del cliente, che ha diritto di andarsene.
+export const COLLEZIONI_DEI_MODULI = Object.freeze({
+  inventory_items: ['magazzino'],
+  inventory_categories: ['magazzino'],
+  suppliers: ['magazzino'],
+  supplier_prices: ['magazzino'],
+  supplier_price_history: ['magazzino'],
+  stock_movements: ['magazzino'],
+  purchase_orders: ['magazzino'],
+  purchase_order_templates: ['magazzino'],
+  altre_spese: ['magazzino'],
+  stock_counts: ['conta'],
+  supplier_invoices: ['scadenzario', 'magazzino'],
+  invoices: ['fatture'],
+  staff_hours: ['staff'],
+  staff_rates: ['staff'],
+  minimi_extra: ['statistiche'],
+  customers: ['clienti'],
+})
+
+// Questa collezione si può scrivere, con questa licenza? Le collezioni che
+// non sono di un modulo sempre; senza nessuna licenza nota anche (decidono
+// le regole, che senza documento non limitano).
+export function scritturaConsentita(stato, collezione) {
+  const moduli = COLLEZIONI_DEI_MODULI[collezione]
+  return !moduli || !licenzaDi(stato) || moduli.some((id) => moduloIncluso(stato, id))
 }
 
 // Quello che si legge al tocco dell'interruttore di un modulo NON INCLUSO.
@@ -172,33 +200,16 @@ export function moduloDiSezione(id) {
 
 export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, moduloDiSezione(id))
 
-// PRIMA DOMANDA: il locale ce l'ha? È quello che dirà la licenza.
-//
+// PRIMA DOMANDA: il locale ce l'ha? Lo dice la licenza, anche per quello
+// che non nomina: un modulo che `licenza.moduli` non elenca non è incluso.
 // Un id sconosciuto non è incluso: una funzione a pagamento non si regala
-// per una svista di chi chiama.
+// per una svista di chi chiama. (Fino a BUG-125 il silenzio ricadeva sulla
+// colonna `incluso`, che regalava i moduli: non c'è più.)
 export function moduloIncluso(stato, id) {
-  const modulo = MODULI_PREMIUM[id]
-  if (!modulo) return false
-  // Il punto di innesto della licenza vera (Fase 3). Se la licenza c'è, è
-  // LEI la verità, anche per quello che non nomina: ricadere sulla tabella
-  // vorrebbe dire riaprirsi da soli un modulo che la licenza non dà.
-  const moduli = stato?.licenza?.moduli
-  if (moduli && typeof moduli === 'object') {
-    if (Object.hasOwn(moduli, id)) return moduli[id] === true
-    // Il silenzio è un no solo per la licenza della REGIA, che scrive sempre
-    // anche il piano. Una licenza senza piano è quella degli strumenti di
-    // sviluppo (DevTools), scritta quando i moduli erano tre: sulla Tana, con
-    // i moduli nuovi della 1.10.0, il silenzio li avrebbe spenti tutti —
-    // menù digitale, clienti, magazzino, statistiche, personale, SumUp
-    // (BUG-122). Lì un modulo che non nomina torna alla tabella qui sotto.
-    if (stato.licenza.piano) return false
-  }
-  // IL PIANO FREE NON HA MODULI (REQ-LIC-003): la regia li scrive tutti
-  // spenti, ma se un giorno la voce mancasse un locale Free non deve
-  // ritrovarsi con tutto acceso dalla colonna `incluso`, che è la riserva
-  // della Tana. Un modulo in prova sta in `licenza.moduli` e passa di sopra.
-  if (pianoFree(stato)) return false
-  return modulo.incluso === true
+  if (!Object.hasOwn(MODULI_PREMIUM, id)) return false
+  // Il piano Free (REQ-LIC-003) non ha bisogno di un ramo suo: la regia
+  // scrive i suoi moduli tutti spenti, e uno in prova lo accende qui.
+  return licenzaDi(stato)?.moduli?.[id] === true
 }
 
 // SECONDA DOMANDA: il locale lo sta usando? È l'interruttore delle
@@ -220,16 +231,55 @@ export function moduloAcceso(stato, id) {
 // local-first).
 export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcceso(stato, id)
 
+// ── QUALE LICENZA VALE (BUG-125) ──────────────────────────────────────
+// Fino alla 1.10.x la licenza stava in `settings/bar.licenza`, che ogni
+// bartender può riscrivere: con un account del banco e la console del
+// browser un locale Free si toglieva i limiti. Ora sta nel documento
+// `licenza/attuale`, che le regole fanno leggere a tutti e scrivere a
+// nessuno (la regia lo scrive con le credenziali di servizio), e
+// `settings/bar.licenza` non si guarda più: un ripiego lì riaprirebbe il
+// buco.
+//
+// UNA REGOLA SOLA, uguale per ogni installazione:
+//   1. c'è il documento della regia → vale quello;
+//   2. non c'è → vale la licenza della BUILD (`clienti/<slug>/licenza.json`):
+//      è il caso della Tana, che una regia dietro non ce l'ha;
+//   3. nessuna delle due → l'installazione non è attivata.
+// Il codice non sa per chi è compilato: guarda solo cosa c'è.
+//
+// «NON C'È» LO DICE SOLO IL SERVER. Alla prima apertura senza rete la cache
+// non sa ancora niente, e scambiare «non lo so» per «non c'è» fermerebbe un
+// locale in regola. Per questo `letto` porta `certo`: falso finché la
+// risposta viene dalla cache. Finché non si sa si torna null, e l'app non
+// si ferma (chi chiama tiene l'ultima licenza nota, impostazioniLocali.js).
+//
+// `letto` è { documento, certo }: il documento della regia (o null) e se
+// l'assenza è confermata dal server. Logica pura: la lettura è in api.js.
+export function licenzaEffettiva(letto, build = LICENZA_DELLA_BUILD) {
+  const documento = letto?.documento
+  if (documento && typeof documento === 'object') return documento
+  if (build) return build
+  return letto?.certo ? { stato: STATI_LICENZA.NON_ATTIVATA } : null
+}
+
 // ── LO STATO DELL'INSTALLAZIONE (REQ-FLOTTA-008) ──────────────────────
-// `settings/bar.licenza.stato`: lo scrive la regia (il backoffice, o la
-// Function che sospende chi non paga). Senza niente scritto è attiva: la
-// Tana non ha una licenza e lavora come sempre. Sospesa o chiusa, l'app
-// mostra InstallazioneSospesa al posto di tutto; i dati restano.
-export const STATI_LICENZA = Object.freeze({ ATTIVA: 'attiva', SOSPESA: 'sospesa', CHIUSA: 'chiusa' })
+// `licenza.stato`: lo scrive la regia (il backoffice, o la Function che
+// sospende chi non paga). Senza niente scritto è attiva. Sospesa, chiusa o
+// non attivata, l'app mostra InstallazioneSospesa al posto di tutto; i dati
+// restano. `non_attivata` non lo scrive la regia: è quello che dice
+// licenzaEffettiva quando una licenza non c'è da nessuna parte.
+export const STATI_LICENZA = Object.freeze({
+  ATTIVA: 'attiva',
+  SOSPESA: 'sospesa',
+  CHIUSA: 'chiusa',
+  NON_ATTIVATA: 'non_attivata',
+})
+
+const BLOCCANTI = [STATI_LICENZA.SOSPESA, STATI_LICENZA.CHIUSA, STATI_LICENZA.NON_ATTIVATA]
 
 export const statoLicenza = (stato) => {
-  const s = stato?.licenza?.stato
-  return s === STATI_LICENZA.SOSPESA || s === STATI_LICENZA.CHIUSA ? s : STATI_LICENZA.ATTIVA
+  const s = licenzaDi(stato)?.stato
+  return BLOCCANTI.includes(s) ? s : STATI_LICENZA.ATTIVA
 }
 
 export const installazioneBloccata = (stato) => statoLicenza(stato) !== STATI_LICENZA.ATTIVA
@@ -245,7 +295,7 @@ export const accountClientiAttivi = (stato) => moduloAttivo(stato, 'clienti') &&
 // IL LETTORE SUMUP IN CASSA (REQ-LIC-004). Senza Functions non c'è chi
 // parla coi server di SumUp: sul profilo leggero il metodo non compare e il
 // conto si chiude a mano. Guarda se il modulo è INCLUSO, non l'interruttore
-// d'uso: la cassa della Tana, che non ha licenza, resta quella di sempre.
+// d'uso.
 export const sumupDisponibile = (stato) => !profiloLeggero(stato) && moduloIncluso(stato, 'sumup')
 
 // IL MODULO IN PROVA (REQ-FLOTTA-016 della regia): `licenza.prove` dice fino
@@ -253,7 +303,7 @@ export const sumupDisponibile = (stato) => !profiloLeggero(stato) && moduloInclu
 // è acceso in `licenza.moduli` come uno comprato; questa è solo la data da
 // mostrare. Null se non è in prova o la data non si legge.
 export function scadenzaProva(stato, id) {
-  const quando = stato?.licenza?.prove?.[id]
+  const quando = licenzaDi(stato)?.prove?.[id]
   if (!quando) return null
   const d = new Date(quando)
   return Number.isNaN(d.getTime()) ? null : d

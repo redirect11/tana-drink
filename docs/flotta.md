@@ -54,8 +54,8 @@ firebase deploy --only firestore,storage,functions,hosting      # profilo comple
 firebase deploy --only firestore,hosting                        # profilo leggero (Free)
 ```
 
-e poi scrive `settings/bar.licenza` nel Firestore dell'istanza (piano,
-moduli, stato, `regia_url`). Questi comandi e questi nomi sono un
+e poi scrive la licenza nel Firestore dell'istanza, nel documento
+`licenza/attuale` (piano, moduli, stato, `regia_url`; BUG-125). Questi comandi e questi nomi sono un
 contratto: se cambiano qui, si dice là. Un tag `vX.Y.Z` ha `package.json`
 a `X.Y.Z`: i rilasci a ondate della regia confrontano le due cose.
 
@@ -83,8 +83,11 @@ settings/bar (venue_*)  ──────────────────�
 
 ## La licenza (REQ-LIC, REQ-FLOTTA-008)
 
-`settings/bar.licenza` la scrive la regia; la Tana non ce l'ha e lavora
-come sempre (tutti i moduli inclusi, nessuna sospensione). Con la licenza:
+`licenza/attuale` la scrive la regia, e dall'app non la scrive nessuno
+(BUG-125). Senza quel documento vale la licenza della build,
+`clienti/<slug>/licenza.json`: è il caso della Tana, che ha la sua con
+gli stessi moduli di prima e nessuna sospensione. Senza nessuna delle due
+l'app mostra «Installazione non attivata». Con la licenza:
 i moduli che non ci sono spengono le voci e le pagine relative
 (`FunzioneNonInclusa`), e `stato: sospesa | chiusa` ferma l'app con una
 schermata che lo dice (`InstallazioneSospesa`); i dati restano.
@@ -99,6 +102,21 @@ Functions né Storage: niente SumUp, niente foto dei prodotti, niente
 account dello staff. Con un solo terminale `risolviNumeroDuplicato` non
 serve; con due dispositivi del titolare aperti insieme un numero doppio,
 raro, resta (il dettaglio è in REQ-LIC-004).
+
+**Gli aggiornamenti** (REQ-FLOTTA-020). La regia può scrivere anche
+`licenza.aggiornamenti`: in modalità «a scelta» l'app mostra al titolare
+le novità prima di aggiornare, con «Aggiorna» e «Salta», e scrive la
+scelta in `aggiornamenti/scelta`. Senza la voce, tutto come oggi. Il
+contratto è in [aggiornamenti-dalla-regia.md](aggiornamenti-dalla-regia.md).
+
+## Le porte e gli adattatori (REQ-FLOTTA-021)
+
+Dal 31/10/2026 i livelli di installazione sono tre: cloud, app e on
+premise, cioè il gestionale intero nel locale col backup sul cloud. Perché
+l'app resti una, parla con delle porte nostre (dati, accesso, file,
+server, notifiche, configurazione), e Firebase diventa un adattatore. Dove
+si installa e come si configura lo decide la regia. La specifica è in
+[porte-e-adattatori.md](porte-e-adattatori.md).
 
 ## Come si prova senza spaccare niente
 

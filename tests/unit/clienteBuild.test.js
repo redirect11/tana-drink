@@ -6,9 +6,17 @@
 // compilare un locale a caso.
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { leggiCliente, htmlPerCliente, manifestPerCliente, CLIENTE_PREDEFINITO } from '../../clienti/pluginCliente.js'
+import { tmpdir } from 'node:os'
+import {
+  leggiCliente,
+  licenzaDellaBuild,
+  htmlPerCliente,
+  manifestPerCliente,
+  CLIENTE_PREDEFINITO,
+} from '../../clienti/pluginCliente.js'
+import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
 describe('leggiCliente', () => {
   it('senza CLIENTE è la Tana', () => {
@@ -39,6 +47,42 @@ describe('leggiCliente', () => {
   it('uno slug sbagliato o una cartella che non c’è fermano la build', () => {
     expect(() => leggiCliente('Tana Due')).toThrow(/non valido/)
     expect(() => leggiCliente('nessuno')).toThrow(/manca/)
+  })
+})
+
+// LA LICENZA NELLA BUILD (BUG-125): `clienti/<slug>/licenza.json`,
+// facoltativo, uguale per ogni cliente. Conta solo dove la regia non ha
+// scritto la sua (lib/licenza.js); le cartelle che crea la regia non ce
+// l'hanno.
+describe('la licenza scritta nella build', () => {
+  const cartella = () => mkdtempSync(join(tmpdir(), 'cliente-'))
+
+  it('senza il file non c’è: la licenza la scrive la regia', () => {
+    const dove = cartella()
+    expect(licenzaDellaBuild(dove, 'bar-mario')).toBeNull()
+    expect(leggiCliente('demo').licenza).toBeNull()
+    rmSync(dove, { recursive: true })
+  })
+
+  it('un file senza i moduli ferma la build, invece di spegnere tutto in silenzio', () => {
+    const dove = cartella()
+    for (const sbagliato of ['[]', '{}', '{"moduli": []}', '"tutto"']) {
+      writeFileSync(join(dove, 'licenza.json'), sbagliato)
+      expect(() => licenzaDellaBuild(dove, 'bar-mario'), sbagliato).toThrow(/moduli/)
+    }
+    rmSync(dove, { recursive: true })
+  })
+
+  // Quella della Tana: ogni modulo NOMINATO, acceso o spento. Il silenzio è
+  // un no, e un modulo nuovo aggiunto al codice senza scriverlo qui
+  // sparirebbe dalla Tana senza che nessuno l'abbia deciso.
+  it('la Tana ha la sua, e nomina ogni modulo che esiste', () => {
+    const { licenza } = leggiCliente('tana')
+    expect(Object.keys(licenza.moduli).sort()).toEqual(Object.keys(MODULI_PREMIUM).sort())
+    for (const v of Object.values(licenza.moduli)) expect(typeof v).toBe('boolean')
+    // Niente limiti e nessuno stato: la Tana lavora come ha sempre fatto.
+    expect(licenza.limiti ?? null).toBeNull()
+    expect(licenza.stato ?? 'attiva').toBe('attiva')
   })
 })
 

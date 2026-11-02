@@ -31,6 +31,7 @@ import {
 } from '../../src/lib/limiti.js'
 import { moduloIncluso, moduloAttivo, sumupDisponibile, scadenzaProva, moduliPremium } from '../../src/lib/licenza.js'
 import { NOME_PRODOTTO } from '../../src/lib/prodotto.js'
+import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
 
 const LIMITI_FREE = {
   prodotti_max: 10,
@@ -80,8 +81,9 @@ describe('senza limiti nella licenza non cambia niente', () => {
     })
   }
 
-  it('la Tana tiene tutti i moduli e il lettore SumUp in cassa, come prima', () => {
-    for (const m of moduliPremium()) expect(moduloIncluso({}, m.id)).toBe(m.incluso === true)
+  it('la Tana tiene i moduli della sua licenza e il lettore SumUp in cassa, come prima', () => {
+    // Senza licenza nelle impostazioni vale quella della build (BUG-125).
+    for (const m of moduliPremium()) expect(moduloIncluso({}, m.id)).toBe(LICENZA_DELLA_BUILD.moduli[m.id] === true)
     expect(sumupDisponibile({})).toBe(true)
     expect(sumupDisponibile(null)).toBe(true)
   })
@@ -218,5 +220,40 @@ describe('il profilo leggero', () => {
   it('un piano a pagamento che non ha comprato SumUp non lo vede', () => {
     expect(sumupDisponibile({ licenza: { piano: 'base', moduli: { sumup: false } } })).toBe(false)
     expect(sumupDisponibile({ licenza: { piano: 'pro', moduli: { sumup: true } } })).toBe(true)
+  })
+})
+
+// IL RITORNO AL FREE DI UN LOCALE CHE PAGAVA (REQ-FLOTTA-020, punto 6 di
+// docs/aggiornamenti-dalla-regia.md). La regia scrive `piano: 'free'` coi
+// limiti su un locale che ha già più prodotti, conti e utenti di quanti il
+// Free ne permetta, e che le Functions le ha pubblicate. NON SI CANCELLA
+// NIENTE: i limiti fermano solo quello che nasce adesso, e quello che c'è
+// resta e si vede.
+describe('il ritorno al Free di un locale che pagava', () => {
+  it('quello che è già oltre il limite resta: si ferma solo il nuovo', () => {
+    // Quaranta prodotti in carta, otto conti aperti.
+    expect(puoCreareProdotto(FREE, 40)).toBe(false)
+    expect(puoAprireConto(FREE, 8)).toBe(false)
+    // I conti aperti si vedono tutti, anche quelli di un mese fa.
+    const adesso = new Date('2026-11-20T22:00:00')
+    const vecchioAperto = { aperto: true, il: new Date('2026-10-20T22:00:00') }
+    const vecchioChiuso = { aperto: false, il: new Date('2026-10-20T22:00:00') }
+    const visti = visibiliNelloStorico(FREE, [vecchioAperto, vecchioChiuso], {
+      data: (v) => v.il,
+      aperta: (v) => v.aperto,
+      adesso,
+    })
+    expect(visti).toEqual([vecchioAperto])
+  })
+
+  it('col profilo leggero l’app smette di CHIAMARE le Functions, non le spegne', () => {
+    // Le Functions pubblicate restano sul server (le notifiche, gli
+    // automatismi lato server girano come prima); l'app non chiama più
+    // quelle che si chiamano dal browser: gestione dello staff, lettore
+    // SumUp, caricamento delle foto. Le foto che ci sono restano.
+    expect(profiloLeggero(FREE)).toBe(true)
+    expect(staffConsentito(FREE)).toBe(false)
+    expect(sumupDisponibile(FREE)).toBe(false)
+    expect(fotoConsentite(FREE)).toBe(false)
   })
 })
