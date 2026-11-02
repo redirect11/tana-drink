@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 245 | fatto e coperto dai test |
+| ✅ | 246 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 26 | da fare |
 | 🗑 | 8 | non più valido |
 
-**297 voci** in tutto. **262** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**297 voci** in tutto. **263** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **26** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 6 | 3 |  |
+| [LIC](#lic) | 7 | 2 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 5 | — |  |
 
@@ -3342,15 +3342,15 @@ LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda l
 
 DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
 
+CAMBIATO DA REQ-LIC-009 (02/11/2026): passata `valida_fino` la licenza si ferma («Scaduta» nello stato) o lavora col Free (piano Free, con «Scaduta il …» nella validità), secondo `alla_scadenza`. E la riga «licenza scritta nell'installazione» non c'è più: la licenza della build è tolta, e la Tana ha il suo documento, scritto a mano, senza `regia_url` (quindi senza tasto verso la regia).
+
 **Dove**: `src/components/LicenzaPanel.jsx, src/components/SettingsTab.jsx (gruppo «Licenza»), src/lib/licenza.js (riepilogoLicenza), src/lib/limiti.js (limitiInChiaro)` · **Lo dimostrano**: `tests/unit/licenzaInChiaro.test.js`, `tests/component/LicenzaPanel.test.jsx`
 
 #### REQ-LIC-008 — Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono
 
 «Pure se sbloccano localmente le funzioni premium serve cmq che il server verifichi» (l'utente, 31/10/2026; «ok procedi con il mettere in sicurezza in tal senso»). L'app nasconde quello che la licenza non include, ma chi apre la console del browser scrive lo stesso. Da BUG-125 la licenza sta in `licenza/attuale`, che dall'app non scrive nessuno: ora le regole la LEGGONO e rifiutano.
 
-COSA SI NEGA, solo in SCRITTURA (i dati di un modulo che il locale non ha più restano leggibili, come restano nel database): - le collezioni dei moduli, elencate in COLLEZIONI_DEI_MODULI (magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del personale, bilancio, nascita del profilo cliente); le fatture dei fornitori passano con lo scadenzario O col magazzino, perché la lista degli ordini ai fornitori le genera; - un conto aperto dal telefono del cliente senza `ordini_cliente`; - con `limiti.sconti: false`, uno sconto nuovo o alzato su un ordine. Restano permessi lo sconto che c'era (le righe che cambiano ne ricalcolano l'importo) e lo sconto tolto.
-
-SENZA DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE: è la Tana, la cui licenza sta nella build; un locale della regia il documento ce l'ha sempre.
+COSA SI NEGA, solo in SCRITTURA (i dati di un modulo che il locale non ha più restano leggibili, come restano nel database): - le collezioni dei moduli, elencate in COLLEZIONI_DEI_MODULI (magazzino, inventario, scadenzario, fatture ai clienti, ore e paghe del personale, bilancio, nascita del profilo cliente); le fatture dei fornitori passano con lo scadenzario O col magazzino, perché la lista degli ordini ai fornitori le genera; - un conto aperto dal telefono del cliente senza `ordini_cliente`; - con `limiti.sconti: false`, uno sconto nuovo o alzato su un ordine. Restano permessi lo sconto che c'era (le righe che cambiano ne ricalcolano l'importo) e lo sconto tolto. [ROVESCIATO DA REQ-LIC-009, 02/11/2026: senza documento ora non si scrive niente, per nessuno; il paragrafo qui sotto è la storia.] SENZA DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE: è la Tana, la cui licenza sta nella build; un locale della regia il documento ce l'ha sempre.
 
 RESTANO FUORI, apposta, perché l'app le scrive anche senza il modulo (mappa delle scritture del 01/11/2026): le timbrature a ogni accesso del personale e il cerca-persone (modulo `staff`), i gruppi (li governa `groups_enabled`), gli aggiornamenti del cliente sul suo conto (il `push_token` anche sui conti battuti al banco), il profilo cliente già nato (cambiarlo e cancellarlo sono suoi). E lo sconto dentro un incasso (`payments[].sconto`): le regole non scorrono un elenco, e quello si chiude solo con l'incasso fatto dal server. Il lettore SumUp passa dalle Functions, che le regole non vedono. Il numero di prodotti e di conti aperti del Free (REQ-LIC-003) non si conta nelle regole: servirebbero dei contatori, da decidere.
 
@@ -3361,6 +3361,24 @@ QUANTO COSTA: una lettura della licenza per richiesta, e solo dove serve; nello 
 DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate.
 
 **Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
+
+#### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
+
+L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
+
+COME È FATTO (02/11/2026).
+
+LE REGOLE: ogni `allow` di scrittura chiede licenzaValida() — il documento c'è, non è sospeso, chiuso o non attivato, e non è scaduto o è scaduto verso il Free; al Free modulo() e scontiConsentiti() dicono no. Restano permesse le letture e le uscite di chi se ne va: il profilo cliente (cambiarlo e cancellarlo), il proprio token delle notifiche, la propria presenza. Un test (regoleLicenza) boccia una regola di scrittura nuova senza licenzaValida().
+
+LA SCADENZA NELLE REGOLE si legge da `valida_fino_ts`, un Timestamp: le regole non leggono una data scritta come testo.
+
+DA DIRE ALLA REGIA: scrivere `valida_fino_ts` accanto a `valida_fino`; senza, lato server la licenza non scade (la regia la riscrive comunque alla scadenza).
+
+COSTO: ogni richiesta di scrittura legge la licenza una volta (prima solo quelle dei moduli e degli sconti). L'APP: src/lib/licenzaInVigore.js, modulo foglia, dice la licenza in vigore ADESSO a ogni domanda, con l'orologio del dispositivo: passata `valida_fino`, con `alla_scadenza: 'free'` diventa il Free (nessun modulo, LIMITI_FREE, copia di quelli del piano `free` della regia, con un test che la confronta), altrimenti `stato: 'scaduta'`, che ferma l'app come sospesa (InstallazioneSospesa, «Licenza scaduta»). Senza documento confermato dal server: «non attivata», per tutti; la licenza della build (`clienti/<slug>/licenza.json`, `LICENZA_DELLA_BUILD`) è tolta, e un test controlla che nessuna cartella dei clienti abbia quel file. I test che vogliono «un locale con tutto» si scrivono la licenza (tests/helpers/licenza.js, i moduli della Tana). L'AVVISO: AvvisoCancellazione, a chi lavora, in cima a ogni schermata e sopra il locale fermo; testo per `richiedente`, data, backup scaricabile dall'area clienti per 180 giorni, collegamento all'area clienti se la licenza lo porta. Al cliente no.
+
+RESTA FUORI, per ora: scaricare i dati dall'app a locale fermo (la schermata ferma tutto, anche l'accesso). Le letture le regole le permettono, e il backup lo dà l'area clienti della regia. L'ORDINE DEL RILASCIO, che non si inverte: prima `licenza/attuale` della Tana (scripts/licenza-moduli.js, sul test da sé, in produzione col via libera dell'utente), poi regole e app nuove. Al contrario la Tana si ferma.
+
+**Dove**: `firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md` · **Lo dimostrano**: `tests/unit/licenzaInVigore.test.js`, `tests/component/AvvisoCancellazione.test.jsx`, `tests/component/InstallazioneSospesa.test.jsx`, `tests/unit/licenzaInstallazione.test.js`, `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/clienteBuild.test.js`
 
 ### VENUE
 
@@ -3851,12 +3869,6 @@ DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico r
 UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
 
 **Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
-
-#### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
-
-L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
-
-**Dove**: `firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md`
 
 ## Difetti noti
 

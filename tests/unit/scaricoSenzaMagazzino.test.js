@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ORDER_STATUSES } from '../../src/lib/orderStatus.js'
 
 const mai = () => new Promise(() => {})
-const st = vi.hoisted(() => ({ ordine: null, articoli: {}, scritture: [], build: { licenza: null } }))
+const st = vi.hoisted(() => ({ ordine: null, articoli: {}, scritture: [] }))
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
@@ -26,18 +26,6 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
   functions: {},
   storage: {},
 }))
-
-// La build di questa prova: senza licenza propria, come un locale della regia.
-vi.mock('../../src/lib/venue.js', async (originale) => {
-  const vero = await originale()
-  return {
-    ...vero,
-    get LICENZA_DELLA_BUILD() {
-      return st.build.licenza
-    },
-    licenzaDi: (stato) => stato?.licenza ?? st.build.licenza,
-  }
-})
 
 const leggi = async (ref) => {
   if (ref?.col === 'inventory_items') {
@@ -133,7 +121,6 @@ beforeEach(() => {
   st.ordine = conto()
   st.articoli = { gin }
   st.scritture = []
-  st.build.licenza = null
 })
 
 describe('lo scarico di una vendita segue la licenza', () => {
@@ -157,9 +144,5 @@ describe('lo scarico di una vendita segue la licenza', () => {
     await scritturaSulGin()
   })
 
-  it('la Tana, con la licenza della sua build, scala', async () => {
-    st.build.licenza = { moduli: { magazzino: true } }
-    await api.advanceComanda('ord-1', 'c1', ORDER_STATUSES.PRONTO)
-    await scritturaSulGin()
-  })
+
 })

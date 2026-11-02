@@ -2,6 +2,20 @@
 
 ## 1.10.4-beta — in lavorazione
 
+### Privacy e sicurezza
+
+- **Senza una licenza valida l'app non lavora.** Senza licenza, con la
+  licenza sospesa, chiusa o scaduta, il database non accetta più
+  scritture, nemmeno dalla console del browser; i dati restano
+  consultabili. L'app si ferma e dice perché, anche senza rete.
+- **Una licenza che scade verso il Free** lascia lavorare col piano Free,
+  senza perdere niente.
+- **La cancellazione dei dati programmata si vede su ogni schermata** di
+  chi lavora: la data, il backup scaricabile dall'area clienti e cosa
+  fare per evitarla.
+- **La licenza non sta più nella build.** Ogni installazione, la Tana
+  compresa, ha la sua nel database.
+
 ### Nel gestionale
 
 - **La licenza si legge in Impostazioni → Licenza.** Il titolare vede

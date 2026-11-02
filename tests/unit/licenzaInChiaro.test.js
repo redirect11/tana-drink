@@ -3,24 +3,21 @@
 // ── LA LICENZA IN CHIARO (REQ-LIC-007) ────────────────────────────────
 //
 // Il riepilogo che la sottosezione Licenza mostra al titolare. Vale per
-// ogni licenza: da BUG-125 ogni installazione ne ha una, e la Tana ha
-// quella scritta nella sua build (nei test l'app è compilata per la
-// Tana). Il requisito, scritto prima di BUG-125, diceva «senza licenza
-// della regia la sottosezione non c'è»: era la Tana, e la Tana una
-// licenza ce l'ha. Per lei si vede quello che la licenza porta — i moduli
-// — e che la gestisce l'installazione, non una regia.
+// ogni licenza, anche per quella della Tana, scritta a mano nel suo
+// `licenza/attuale` (REQ-LIC-009): per lei si vede quello che porta, i
+// moduli, senza piano, scadenza né regia.
 
 import { describe, it, expect } from 'vitest'
 import { riepilogoLicenza } from '../../src/lib/licenza.js'
 import { limitiInChiaro } from '../../src/lib/limiti.js'
-import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
+import { LICENZA_TANA } from '../helpers/licenza.js'
 
 const OGGI = new Date('2026-11-02T12:00:00Z')
+const TANA = { licenza: LICENZA_TANA }
 
-describe('la licenza della build (la Tana)', () => {
-  it('si riepiloga: gestita dall’installazione, senza piano e senza scadenza', () => {
-    const r = riepilogoLicenza({}, OGGI)
-    expect(r.origine).toBe('build')
+describe('la licenza della Tana', () => {
+  it('si riepiloga: senza piano, senza scadenza, senza regia', () => {
+    const r = riepilogoLicenza(TANA, OGGI)
     expect(r.piano).toBeNull()
     expect(r.stato).toBe('attiva')
     expect(r.validita).toEqual({ tipo: 'senza' })
@@ -28,16 +25,15 @@ describe('la licenza della build (la Tana)', () => {
     expect(r.limiti).toEqual([])
   })
 
-  it('i moduli sono quelli del file della build, inclusi ed esclusi', () => {
-    const r = riepilogoLicenza({}, OGGI)
-    const attesi = Object.entries(LICENZA_DELLA_BUILD.moduli).filter(([, v]) => v).map(([id]) => id)
+  it('i moduli sono quelli della sua licenza, inclusi ed esclusi', () => {
+    const r = riepilogoLicenza(TANA, OGGI)
+    const attesi = Object.entries(LICENZA_TANA.moduli).filter(([, v]) => v).map(([id]) => id)
     expect(r.inclusi.map((m) => m.id).sort()).toEqual(attesi.sort())
-    expect(r.esclusi.map((m) => m.id)).toContain('fatture')
+    expect(r.esclusi.map((m) => m.id)).toEqual(['fatture'])
   })
 
-  it('anche arrivata dalla memoria del dispositivo, cioè come copia, è ancora della build', () => {
-    const copia = JSON.parse(JSON.stringify(LICENZA_DELLA_BUILD))
-    expect(riepilogoLicenza({ licenza: copia }, OGGI).origine).toBe('build')
+  it('senza una licenza nota non c’è niente da riepilogare', () => {
+    expect(riepilogoLicenza({}, OGGI)).toBeNull()
   })
 })
 
@@ -53,7 +49,6 @@ describe('una licenza della regia', () => {
 
   it('porta piano, gestione e il collegamento alla regia', () => {
     const r = riepilogoLicenza(regia(), OGGI)
-    expect(r.origine).toBe('regia')
     expect(r.piano).toBe('pro')
     expect(r.gestione).toBe('https://drink-regia.web.app/area')
     expect(r.inclusi.map((m) => m.id).sort()).toEqual(['magazzino', 'statistiche'])

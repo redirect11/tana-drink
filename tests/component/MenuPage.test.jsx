@@ -15,6 +15,7 @@ import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 let mockSettings = {}
 let ruoloClaim = 'bartender'
@@ -22,7 +23,7 @@ let ruoloClaim = 'bartender'
 vi.mock('../../src/lib/api.js', () => ({
   subscribeServiceStats: vi.fn(() => () => {}),
   subscribeSettings: vi.fn((cb) => {
-    cb({ service_mode: 'tavolo', menu_only: false, ...mockSettings })
+    cb({ service_mode: 'tavolo', menu_only: false, ...CON_LICENZA, ...mockSettings })
     return () => {}
   }),
   subscribeOrder: vi.fn((id, cb) => {

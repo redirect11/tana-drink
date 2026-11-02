@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 import { useEffect, useState } from 'react'
 
 // Ogni pannello ha il suo giro: qui basta sapere che la sottosezione giusta
@@ -80,7 +81,7 @@ const mostra = () =>
 
 beforeEach(() => {
   vi.clearAllMocks()
-  stato.impostazioni = {}
+  stato.impostazioni = { ...CON_LICENZA }
 })
 
 // LE SOTTOSEZIONI SONO DIVENTATE CINQUE il 27/08/2026 (REQ-MAG-034): «Altre
@@ -135,7 +136,7 @@ describe('le sottosezioni di Fornitori', () => {
   // scadenzario spento la colonna della merce resta a zero, che è la verità
   // di quel locale e non un pezzo mancante.
   it('le due voci nuove restano anche con lo scadenzario spento', async () => {
-    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    stato.impostazioni = { ...CON_LICENZA, modulo_scadenzario_enabled: false }
     mostra()
     expect(screen.getByRole('button', { name: /Altre spese/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Riepilogo/ })).toBeInTheDocument()
@@ -144,7 +145,7 @@ describe('le sottosezioni di Fornitori', () => {
 
 describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
   it('spento non c’è, e la sezione resta in piedi con le altre due', async () => {
-    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    stato.impostazioni = { ...CON_LICENZA, modulo_scadenzario_enabled: false }
     mostra()
     expect(screen.queryByRole('button', { name: /Scadenzario/ })).toBeNull()
     expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
@@ -161,7 +162,7 @@ describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
     expect(screen.getByText('PANNELLO SCADENZARIO')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({ modulo_scadenzario_enabled: false })
+      stato.avvisaImpostazioni({ ...CON_LICENZA, modulo_scadenzario_enabled: false })
     })
     expect(screen.queryByText('PANNELLO SCADENZARIO')).toBeNull()
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
@@ -169,13 +170,13 @@ describe('lo scadenzario è una funzione premium (REQ-LIC-001)', () => {
 
   it('e se si accende mentre si guardano gli ordini, non sposta nessuno', async () => {
     const user = userEvent.setup()
-    stato.impostazioni = { modulo_scadenzario_enabled: false }
+    stato.impostazioni = { ...CON_LICENZA, modulo_scadenzario_enabled: false }
     mostra()
     await user.click(screen.getByRole('button', { name: /Lista ordini/ }))
     expect(screen.getByText('PANNELLO ORDINI lista')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({})
+      stato.avvisaImpostazioni({ ...CON_LICENZA })
     })
     expect(screen.getByRole('button', { name: /Scadenzario/ })).toBeInTheDocument()
     expect(screen.getByText('PANNELLO ORDINI lista')).toBeInTheDocument()

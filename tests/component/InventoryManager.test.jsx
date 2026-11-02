@@ -113,9 +113,9 @@ const SUPS = [
 
 // Quello che la serata sta facendo, quando serve: cassa aperta, conti in
 // corso, listino. Di suo il locale è chiuso e non c'è niente in ballo.
-// I moduli premium: senza `licenza` nelle impostazioni vale quella della
-// build della Tana (clienti/tana/licenza.json, BUG-125). Le prove che
-// vogliono un'altra configurazione se la scrivono, coi campi veri.
+// I moduli premium: le prove che li vogliono si scrivono la licenza, coi
+// campi veri (da REQ-LIC-009 non c'è più una licenza della build su cui
+// ricadere).
 const IMPOSTAZIONI_BASE = { price_markup: 3, purchase_vat: 22 }
 const stato = {
   cassa: null,

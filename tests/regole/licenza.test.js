@@ -1,4 +1,4 @@
-// ── LE REGOLE FANNO RISPETTARE LA LICENZA (REQ-LIC-008) ───────────────
+// ── LE REGOLE FANNO RISPETTARE LA LICENZA (REQ-LIC-008, REQ-LIC-009) ──
 //
 // L'app nasconde quello che la licenza non include, ma chi apre la console
 // del browser scrive lo stesso. Qui si prova che il server dice di no: i
@@ -6,13 +6,17 @@
 // senza il modulo degli ordini dal telefono un cliente non apre un conto.
 //
 // E LA PROVA DOPPIA, come in tutte le regole: quello che la licenza include
-// passa; senza documento della licenza (la Tana) passa tutto come prima;
-// lo sconto che c'era già e lo sconto tolto passano anche senza sconti,
-// perché succedono da soli o tolgono.
+// passa; lo sconto che c'era già e lo sconto tolto passano anche senza
+// sconti, perché succedono da soli o tolgono.
+//
+// SENZA LICENZA VALIDA NON SI SCRIVE NIENTE (REQ-LIC-009): né senza
+// documento — fino al 02/11/2026 voleva dire «nessun limite», per la Tana —
+// né sospesa, chiusa o scaduta. Scaduta verso il Free si lavora coi limiti
+// del Free. Le letture restano, e restano le uscite di chi se ne va.
 
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
-import { doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, Timestamp } from 'firebase/firestore'
 import { avviaAmbiente, CHI } from './ambiente.js'
 import { COLLEZIONI_DEI_MODULI } from '../../src/lib/licenza.js'
 
@@ -62,16 +66,9 @@ describe('le collezioni dei moduli', () => {
     }
   })
 
-  it('senza il documento della licenza (la Tana) si scrivono come prima', async () => {
-    for (const collezione of Object.keys(COLLEZIONI_DEI_MODULI)) {
-      await assertSucceeds(setDoc(doc(chi(collezione), percorso(collezione)), { n: 1 }))
-    }
-  })
-
   it('i dati di un modulo che non c’è più restano leggibili', async () => {
     await prepara('inventory_items/vecchio', { name: 'Gin', stock: 3 })
     await conLicenza({ piano: 'free', moduli: NESSUNO })
-    const { getDoc } = await import('firebase/firestore')
     await assertSucceeds(getDoc(doc(CHI.admin(env), 'inventory_items/vecchio')))
   })
 
@@ -87,7 +84,6 @@ describe('le collezioni dei moduli', () => {
     await conLicenza({ piano: 'free', moduli: NESSUNO })
     const db = CHI.cliente(env, 'cliente-1')
     await assertSucceeds(updateDoc(doc(db, 'customers/cliente-1'), { nome: 'Giulia R.' }))
-    const { deleteDoc } = await import('firebase/firestore')
     await assertSucceeds(deleteDoc(doc(db, 'customers/cliente-1')))
   })
 
@@ -122,8 +118,7 @@ describe('gli ordini dal telefono del cliente', () => {
     await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/o1'), contoDalMenu()))
   })
 
-  it('col modulo, o senza licenza, sì', async () => {
-    await assertSucceeds(setDoc(doc(CHI.anonimo(env), 'orders/o1'), contoDalMenu()))
+  it('col modulo sì', async () => {
     await conLicenza({ piano: 'pro', moduli: { ordini_cliente: true } })
     await assertSucceeds(setDoc(doc(CHI.anonimo(env), 'orders/o2'), contoDalMenu()))
   })
@@ -166,12 +161,93 @@ describe('gli sconti', () => {
     await assertSucceeds(updateDoc(doc(db, 'orders/o1'), { discount: null, discount_amount: 0 }))
   })
 
-  it('con gli sconti nella licenza, o senza licenza, si mettono', async () => {
+  it('con gli sconti nella licenza si mettono', async () => {
     await prepara('orders/o1', { ...contoDalMenu(), discount: null, discount_amount: 0 })
+    await conLicenza({ piano: 'pro', moduli: TUTTI })
     await assertSucceeds(updateDoc(doc(CHI.admin(env), 'orders/o1'), { discount: SCONTO, discount_amount: 1.8 }))
     await conLicenza({ piano: 'pro', moduli: TUTTI, limiti: null })
     await assertSucceeds(updateDoc(doc(CHI.admin(env), 'orders/o1'), { discount: { type: 'euro', value: 2 }, discount_amount: 2 }))
     await conLicenza({ piano: 'base', moduli: TUTTI, limiti: { prodotti_max: 50 } })
     await assertSucceeds(updateDoc(doc(CHI.admin(env), 'orders/o1'), { discount: { type: 'euro', value: 3 }, discount_amount: 3 }))
+  })
+})
+
+// ── SENZA LICENZA VALIDA (REQ-LIC-009) ────────────────────────────────
+// Le scritture di tutti i giorni — un conto, un drink, le impostazioni,
+// la cassa — che senza una licenza valida non passano più.
+const ieri = () => Timestamp.fromMillis(Date.now() - 24 * 3600 * 1000)
+const domani = () => Timestamp.fromMillis(Date.now() + 24 * 3600 * 1000)
+const COMPLETA = () => ({ piano: 'completo', stato: 'attiva', moduli: TUTTI })
+
+async function scrittureDiOgniGiorno(atteso) {
+  const db = CHI.admin(env)
+  await atteso(setDoc(doc(db, 'orders/nuovo'), { ...contoDalMenu(), placed_by: 'admin-1' }))
+  await atteso(setDoc(doc(db, 'drinks/d1'), { name: 'Negroni', price: 9 }))
+  await atteso(setDoc(doc(db, 'settings/bar'), { venue_name: 'Il locale' }))
+  await atteso(setDoc(doc(CHI.banco(env), 'cash_sessions/s1'), { aperta: true }))
+}
+
+describe('senza una licenza valida non si scrive niente (REQ-LIC-009)', () => {
+  it('senza il documento della licenza: niente, nemmeno alla Tana', async () => {
+    await scrittureDiOgniGiorno(assertFails)
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/o1'), contoDalMenu()))
+  })
+
+  it('con la licenza sospesa, chiusa o non attivata: niente', async () => {
+    for (const stato of ['sospesa', 'chiusa', 'non_attivata']) {
+      await conLicenza({ ...COMPLETA(), stato })
+      await scrittureDiOgniGiorno(assertFails)
+    }
+  })
+
+  it('con la licenza attiva e non scaduta: tutto, come sempre', async () => {
+    await conLicenza({ ...COMPLETA(), valida_fino_ts: domani() })
+    await scrittureDiOgniGiorno(assertSucceeds)
+  })
+
+  it('scaduta, con «ferma» o senza dire cosa fare: niente', async () => {
+    await conLicenza({ ...COMPLETA(), valida_fino_ts: ieri(), alla_scadenza: 'ferma' })
+    await scrittureDiOgniGiorno(assertFails)
+    await conLicenza({ ...COMPLETA(), valida_fino_ts: ieri() })
+    await scrittureDiOgniGiorno(assertFails)
+  })
+
+  it('scaduta verso il Free: si lavora, senza moduli, sconti né ordini dal telefono', async () => {
+    await conLicenza({ ...COMPLETA(), valida_fino_ts: ieri(), alla_scadenza: 'free' })
+    await scrittureDiOgniGiorno(assertSucceeds)
+    const db = CHI.admin(env)
+    await assertFails(setDoc(doc(db, 'inventory_items/d1'), { n: 1 }))
+    await assertFails(
+      setDoc(doc(db, 'orders/scontato'), {
+        ...contoDalMenu(),
+        placed_by: 'admin-1',
+        discount: { type: 'percent', value: 10 },
+        discount_amount: 1.8,
+      })
+    )
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/dal-telefono'), contoDalMenu()))
+  })
+
+  it('una scadenza scritta come testo le regole non la leggono: non scade', async () => {
+    await conLicenza({ ...COMPLETA(), valida_fino_ts: '2020-01-01T00:00:00Z', alla_scadenza: 'ferma' })
+    await scrittureDiOgniGiorno(assertSucceeds)
+  })
+
+  it('i dati restano leggibili, fino alla cancellazione', async () => {
+    await prepara('orders/vecchio', { ...contoDalMenu() })
+    await prepara('inventory_items/gin', { name: 'Gin' })
+    await conLicenza({ ...COMPLETA(), stato: 'sospesa' })
+    await assertSucceeds(getDoc(doc(CHI.admin(env), 'orders/vecchio')))
+    await assertSucceeds(getDoc(doc(CHI.admin(env), 'inventory_items/gin')))
+    await assertSucceeds(getDoc(doc(CHI.anonimo(env), 'licenza/attuale')))
+  })
+
+  it('chi se ne va può: il profilo cliente, il token delle notifiche, la presenza', async () => {
+    await prepara('customers/cliente-1', { nome: 'Giulia' })
+    await prepara('staff_tokens/banco-1', { uid: 'banco-1', token: 't' })
+    await prepara('presenze/banco-1', { dal: 1 })
+    await assertSucceeds(deleteDoc(doc(CHI.cliente(env, 'cliente-1'), 'customers/cliente-1')))
+    await assertSucceeds(deleteDoc(doc(CHI.banco(env), 'staff_tokens/banco-1')))
+    await assertSucceeds(deleteDoc(doc(CHI.banco(env), 'presenze/banco-1')))
   })
 })

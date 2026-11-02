@@ -66,7 +66,35 @@ describe('scritturaConsentita', () => {
     expect(scritturaConsentita({ licenza: { moduli: { magazzino: true } } }, 'supplier_invoices')).toBe(true)
   })
 
-  it('senza licenza nelle impostazioni vale quella della build (nei test, la Tana)', () => {
+  // La licenza che non si sa ancora (prima risposta) non blocca lo scarico
+  // né il ripristino: decidono le regole, che la licenza la leggono sempre.
+  it('con una licenza che non si sa ancora si prova a scrivere: decidono le regole', () => {
     expect(scritturaConsentita({}, 'inventory_items')).toBe(true)
+  })
+})
+
+// ── OGNI SCRITTURA CHIEDE UNA LICENZA VALIDA (REQ-LIC-009) ─────────────
+// Una collezione nuova con le sue regole scritte senza licenzaValida()
+// riaprirebbe le scritture a un locale fermo. Qui ogni `allow` di scrittura
+// deve chiederla, tranne quelle che non si permettono a nessuno (`false`)
+// e le uscite di chi se ne va, scritte qui per nome.
+const USCITE = ['customers:update, delete', 'staff_tokens:delete', 'presenze:delete']
+
+describe('le regole e la licenza valida', () => {
+  it('ogni allow di scrittura chiede licenzaValida(), tranne le uscite', () => {
+    const scoperte = []
+    let collezione = null
+    for (const m of REGOLE.matchAll(/match \/([a-z_]+)\/\{|allow ([a-z, ]+):\s*if ([\s\S]*?);/g)) {
+      if (m[1]) {
+        collezione = m[1]
+        continue
+      }
+      const operazioni = m[2].split(',').map((o) => o.trim())
+      if (!operazioni.some((o) => ['write', 'create', 'update', 'delete'].includes(o))) continue
+      if (m[3].trim() === 'false') continue
+      if (USCITE.includes(`${collezione}:${m[2].trim()}`)) continue
+      if (!m[3].trimStart().startsWith('licenzaValida()')) scoperte.push(`${collezione}: allow ${m[2]}`)
+    }
+    expect(scoperte).toEqual([])
   })
 })

@@ -19,20 +19,6 @@ const BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__ : { slug: 'tana',
 // Lo slug del cliente per cui è stata compilata questa app.
 export const CLIENTE = BUILD.slug
 
-// La licenza scritta nella build (`clienti/<slug>/licenza.json`), o null.
-// Conta solo dove la regia non ha scritto la sua (BUG-125, lib/licenza.js).
-export const LICENZA_DELLA_BUILD = BUILD.licenza ?? null
-
-// LA LICENZA DI QUESTE IMPOSTAZIONI: quella che portano (messa lì da
-// subscribeSettings, che sa quale vale), o, se non ne portano, quella
-// della build. Il secondo caso è il primo istante, prima che le
-// impostazioni arrivino (i valori di partenza non hanno licenza): senza,
-// la Tana perderebbe i moduli per un attimo a ogni apertura, e un cliente
-// vedrebbe «menù non incluso» prima del menù. È la stessa regola di
-// licenzaEffettiva: senza documento della regia, vale la build.
-// Sta qui e non in lib/licenza.js perché la chiedono anche limiti.js e
-// aggiornamenti.js, e licenza.js importa limiti.js.
-export const licenzaDi = (stato) => stato?.licenza ?? LICENZA_DELLA_BUILD
 
 export const VENUE_NEUTRO = Object.freeze({
   venue_name: 'Il locale',
