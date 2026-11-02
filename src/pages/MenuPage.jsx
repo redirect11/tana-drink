@@ -7,7 +7,7 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
-import { stileMenu } from '../lib/stileMenu.js'
+import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -415,17 +415,31 @@ export default function MenuPage({ speciali = false }) {
 
   // LO STILE DEL MENÙ (REQ-MENU-021): la forma che il locale ha scelto per
   // i clienti. Chi lavora vede sempre il classico: per lui è uno strumento.
-  const notte = !staff && stileMenu(settings) === 'notte'
+  // LO STILE DEL MENÙ (REQ-MENU-021, REQ-MENU-022): quello scelto dal
+  // locale; o, nell'anteprima del cliente aperta da chi lavora, quello in
+  // prova (`?stile=…`, da Impostazioni → Menù clienti). La prova la vede
+  // solo chi l'ha aperta: i clienti vedono lo stile del locale.
+  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') : null
+  const stile = staff
+    ? 'classico'
+    : stileInProva && stileProvabile(settings, stileInProva)
+      ? stileInProva
+      : stileMenu(settings)
+  const notte = stile === 'notte'
   const specialNotte = notte && speciali
 
   return (
-    <div className={[staff ? 'bar-content' : '', notte ? 'stile-notte' : ''].filter(Boolean).join(' ') || undefined}>
+    <div className={[staff ? 'bar-content' : '', stile !== 'classico' ? `stile-${stile}` : ''].filter(Boolean).join(' ') || undefined}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
           lavoro: una riga per ricordarlo e per tornare indietro. */}
       {anteprimaCliente && staffVero && (
         <div className="anteprima-cliente">
-          <span>👀 Stai guardando il menù come lo vede il cliente.</span>
+          <span>
+            👀 {stileInProva && stile === stileInProva
+              ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
+              : 'Stai guardando il menù come lo vede il cliente.'}
+          </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale
           </Link>

@@ -1635,3 +1635,33 @@ describe('lo stile «Notte»', () => {
   })
 })
 
+
+// GLI STILI GRATIS DEL MENÙ (REQ-MENU-022).
+describe('gli stili gratis del menù', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const main = readFileSync(join(CARTELLA, 'main.jsx'), 'utf8')
+  // Tutti i blocchi con esattamente quel selettore, uniti.
+  const blocchi = (sel) =>
+    [...css.matchAll(new RegExp(`\n${sel.replace(/[.]/g, '\.')} \{([^}]*)\}`, 'g'))].map((m) => m[1]).join('\n')
+
+  // «Lavagna» porta i suoi colori: se ne ridefinisse solo alcuni, su un tema
+  // chiaro le finestre e il carrello dentro la pagina avrebbero il gesso
+  // chiaro su un fondo chiaro.
+  it('«Lavagna» ridefinisce TUTTI i colori del tema, non solo il testo', () => {
+    const b = blocchi('.stile-lavagna')
+    for (const v of ['--bg', '--bg-2', '--card', '--text', '--muted', '--line', '--accent', '--accent-2', '--btn']) {
+      expect(b, v).toMatch(new RegExp(`${v}:`))
+    }
+  })
+
+  it('ogni stile dichiara i suoi tre caratteri, e quelli scaricati stanno nell’app', () => {
+    for (const id of ['lavagna', 'deco', 'riviera', 'giornale']) {
+      const b = blocchi(`.stile-${id}`)
+      for (const v of ['--stile-titolo', '--stile-voce', '--stile-testo']) expect(b, `${id} ${v}`).toMatch(new RegExp(`${v}:`))
+    }
+    // Dentro l'app, non da Google (REQ-SIC-004).
+    for (const pacchetto of ['@fontsource/caveat', '@fontsource/poiret-one', '@fontsource/dancing-script']) {
+      expect(main).toContain(pacchetto)
+    }
+  })
+})
