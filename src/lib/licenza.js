@@ -376,3 +376,34 @@ export function cancellazioneProgrammata(stato) {
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci
 // che non sono premium passano sempre.
 export const voceVisibile = (stato, id) => !ePremium(id) || moduloAttivo(stato, moduloDiSezione(id))
+
+// ── LA LICENZA RIMASTA IN settings/bar NON LA RISCRIVE NESSUNO (BUG-126) ──
+// Finché tutti i locali non hanno l'app che legge solo `licenza/attuale`
+// (BUG-125, passo 3), la regia continua a scrivere la licenza anche in
+// `settings/bar.licenza`: è il posto dove la cercano le versioni vecchie,
+// e quel contratto non si cambia. Le regole ora non fanno toccare quel
+// campo a nessuno dall'app (firestore.rules, licenzaIntatta). Il
+// ripristino da un backup però riscrive i documenti INTERI, e un backup
+// porta la licenza di quando è stato fatto: rimetterla vorrebbe dire
+// tornare a un piano scaduto, togliersi una sospensione, o — con le regole
+// nuove — vedersi rifiutare tutto il lotto.
+//
+// Quindi un documento che si rimette prende la licenza che c'è ADESSO nel
+// database, e quella del file si butta. Se adesso non ce n'è, non ce ne
+// sarà. Vale per i dati dell'app e per i campi nel formato nativo di
+// Firestore degli script (scripts/ripristina-db.js): si guarda solo la
+// chiave `licenza` in cima, e il valore attuale si copia così com'è, senza
+// convertirlo — deve risultare IDENTICO, se no le regole lo leggono come
+// un cambio.
+export const CAMPO_LICENZA = 'licenza'
+
+export function conLicenzaAttuale(dati, attuali) {
+  const { [CAMPO_LICENZA]: _dalBackup, ...resto } = dati || {}
+  return attuali && Object.hasOwn(attuali, CAMPO_LICENZA)
+    ? { ...resto, [CAMPO_LICENZA]: attuali[CAMPO_LICENZA] }
+    : resto
+}
+
+// La collezione della licenza vera (BUG-125). Nessun ripristino la tocca:
+// la scrive solo la regia, e un backup ne porta una vecchia.
+export const COLLEZIONE_LICENZA = 'licenza'

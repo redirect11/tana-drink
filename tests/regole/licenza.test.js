@@ -14,11 +14,11 @@
 // né sospesa, chiusa o scaduta. Scaduta verso il Free si lavora coi limiti
 // del Free. Le letture restano, e restano le uscite di chi se ne va.
 
-import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, Timestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, writeBatch, Timestamp } from 'firebase/firestore'
 import { avviaAmbiente, CHI } from './ambiente.js'
-import { COLLEZIONI_DEI_MODULI } from '../../src/lib/licenza.js'
+import { COLLEZIONI_DEI_MODULI, conLicenzaAttuale } from '../../src/lib/licenza.js'
 
 let env
 
@@ -249,5 +249,90 @@ describe('senza una licenza valida non si scrive niente (REQ-LIC-009)', () => {
     await assertSucceeds(deleteDoc(doc(CHI.cliente(env, 'cliente-1'), 'customers/cliente-1')))
     await assertSucceeds(deleteDoc(doc(CHI.banco(env), 'staff_tokens/banco-1')))
     await assertSucceeds(deleteDoc(doc(CHI.banco(env), 'presenze/banco-1')))
+  })
+})
+
+// ── LA LICENZA RIMASTA IN settings/bar (BUG-126, H2 dell'audit) ───────
+// La regia la scrive ancora lì per le versioni vecchie dell'app, con le
+// credenziali di servizio. Dall'app quel campo non lo tocca nessuno: né il
+// banco né il titolare, né aggiungendolo, né cambiandolo, né togliendolo.
+// E LA PROVA DOPPIA: tutto il resto delle impostazioni il banco e il
+// titolare lo scrivono come prima — sono temi, orari, stampa, pagamenti.
+describe('settings/bar.licenza non la scrive nessuno dall’app (BUG-126)', () => {
+  // Un locale Base, senza moduli: quello che a togliersi i limiti ci guadagna.
+  const LICENZA_REGIA = () => ({ piano: 'base', stato: 'attiva', moduli: NESSUNO, valida_fino_ts: domani() })
+  const conBar = (extra = {}) => prepara('settings/bar', { venue_name: 'Il locale', licenza: LICENZA_REGIA(), ...extra })
+
+  beforeEach(async () => {
+    await conLicenza(COMPLETA())
+  })
+
+  it('il banco e il titolare non la cambiano, in nessun modo', async () => {
+    await conBar()
+    for (const db of [CHI.banco(env), CHI.admin(env)]) {
+      const bar = doc(db, 'settings/bar')
+      await assertFails(updateDoc(bar, { licenza: { piano: 'completo', stato: 'attiva' } }))
+      await assertFails(updateDoc(bar, { 'licenza.piano': 'completo' }))
+      await assertFails(setDoc(bar, { licenza: { moduli: { magazzino: true } } }, { merge: true }))
+      await assertFails(updateDoc(bar, { licenza: deleteField() }))
+      // Una set senza merge che la omette la cancella: anche quello è un cambio.
+      await assertFails(setDoc(bar, { venue_name: 'Il locale' }))
+      // E il documento che la porta non si cancella.
+      await assertFails(deleteDoc(bar))
+    }
+  })
+
+  it('non la aggiunge chi crea il documento, né chi lo trova senza', async () => {
+    await assertFails(setDoc(doc(CHI.banco(env), 'settings/bar'), { licenza: { piano: 'completo' } }))
+    await prepara('settings/bar', { venue_name: 'Il locale' })
+    await assertFails(updateDoc(doc(CHI.admin(env), 'settings/bar'), { licenza: { piano: 'completo' } }))
+  })
+
+  it('la sala, il cliente e chi non è autenticato non scrivono le impostazioni, come prima', async () => {
+    await conBar()
+    for (const db of [CHI.sala(env), CHI.cliente(env), CHI.anonimo(env)]) {
+      await assertFails(updateDoc(doc(db, 'settings/bar'), { venue_name: 'Altro' }))
+    }
+  })
+
+  it('tutto il resto il banco e il titolare lo scrivono come sempre', async () => {
+    await conBar()
+    for (const db of [CHI.banco(env), CHI.admin(env)]) {
+      const bar = doc(db, 'settings/bar')
+      // updateSettings: setDoc con merge, un campo alla volta.
+      await assertSucceeds(setDoc(bar, { theme: 'notte', orario_chiusura: '03:00' }, { merge: true }))
+      await assertSucceeds(updateDoc(bar, { staff_count: 4, admin_associati: { a: ['b'] } }))
+    }
+    // Un documento nuovo senza licenza nasce, e gli altri documenti di
+    // settings/ si scrivono e si cancellano come prima.
+    await assertSucceeds(setDoc(doc(CHI.banco(env), 'settings/printer'), { ip: '192.168.1.50' }))
+    await assertSucceeds(deleteDoc(doc(CHI.admin(env), 'settings/printer')))
+    await env.clearFirestore()
+    await conLicenza(COMPLETA())
+    await assertSucceeds(setDoc(doc(CHI.admin(env), 'settings/bar'), { venue_name: 'Nuovo' }))
+  })
+
+  // IL RIPRISTINO DAL GESTIONALE (lib/backup.js) scrive i documenti interi.
+  // Il backup porta la licenza di quando è stato fatto, e passata da un
+  // file JSON la scadenza non è più un Timestamp: rimessa così, è un
+  // cambio, e il lotto si ferma. Con la licenza di adesso passa, e le
+  // impostazioni tornano quelle del file.
+  it('il ripristino con la licenza di adesso passa; con quella del file no', async () => {
+    await conBar({ theme: 'giorno' })
+    const db = CHI.admin(env)
+    const dalFile = JSON.parse(
+      JSON.stringify({ venue_name: 'Ieri', theme: 'notte', licenza: { ...LICENZA_REGIA(), piano: 'completo' } })
+    )
+    const tale = writeBatch(db)
+    tale.set(doc(db, 'settings/bar'), dalFile)
+    await assertFails(tale.commit())
+
+    const attuali = (await getDoc(doc(db, 'settings/bar'))).data()
+    const ripristino = writeBatch(db)
+    ripristino.set(doc(db, 'settings/bar'), conLicenzaAttuale(dalFile, attuali))
+    await assertSucceeds(ripristino.commit())
+    const dopo = (await getDoc(doc(db, 'settings/bar'))).data()
+    expect(dopo.theme).toBe('notte')
+    expect(dopo.licenza.piano).toBe('base')
   })
 })
