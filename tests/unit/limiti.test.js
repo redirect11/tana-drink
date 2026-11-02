@@ -31,7 +31,8 @@ import {
 } from '../../src/lib/limiti.js'
 import { moduloIncluso, moduloAttivo, sumupDisponibile, scadenzaProva, moduliPremium } from '../../src/lib/licenza.js'
 import { NOME_PRODOTTO } from '../../src/lib/prodotto.js'
-import { LICENZA_DELLA_BUILD } from '../../src/lib/venue.js'
+import { LICENZA_TANA } from '../helpers/licenza.js'
+import { LIMITI_FREE as LIMITI_FREE_APP } from '../../src/lib/licenzaInVigore.js'
 
 const LIMITI_FREE = {
   prodotti_max: 10,
@@ -82,10 +83,16 @@ describe('senza limiti nella licenza non cambia niente', () => {
   }
 
   it('la Tana tiene i moduli della sua licenza e il lettore SumUp in cassa, come prima', () => {
-    // Senza licenza nelle impostazioni vale quella della build (BUG-125).
-    for (const m of moduliPremium()) expect(moduloIncluso({}, m.id)).toBe(LICENZA_DELLA_BUILD.moduli[m.id] === true)
-    expect(sumupDisponibile({})).toBe(true)
-    expect(sumupDisponibile(null)).toBe(true)
+    const tana = { licenza: LICENZA_TANA }
+    for (const m of moduliPremium()) expect(moduloIncluso(tana, m.id)).toBe(LICENZA_TANA.moduli[m.id] === true)
+    expect(sumupDisponibile(tana)).toBe(true)
+  })
+
+  // I limiti del Free che l'app usa quando una licenza scade verso il Free
+  // e la regia non l'ha ancora riscritta (REQ-LIC-009) sono quelli che la
+  // regia scrive: gli stessi di queste prove.
+  it('la copia dei limiti del Free nell’app è quella della regia', () => {
+    expect({ ...LIMITI_FREE_APP, comande: undefined }).toEqual({ ...LIMITI_FREE, comande: undefined })
   })
 })
 

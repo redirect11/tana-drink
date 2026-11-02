@@ -4,8 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { leggiCliente, valoreCliente } from './clienti/pluginCliente.js'
 
 // Nei test l'app è compilata per la Tana (REQ-VENUE-001), come in
-// produzione: i test che leggono «La Tana del Coniglio» leggono la build,
-// e la licenza è quella della sua build (BUG-125).
+// produzione: i test che leggono «La Tana del Coniglio» leggono la build.
+// La licenza no: da REQ-LIC-009 sta solo in `licenza/attuale`, e ogni test
+// che ne ha bisogno la scrive nelle impostazioni che usa.
 const tana = leggiCliente('tana', fileURLToPath(new URL('.', import.meta.url)))
 
 export default defineConfig({

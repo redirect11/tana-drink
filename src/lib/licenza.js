@@ -1,5 +1,5 @@
 import { profiloLeggero, limitiInChiaro, urlRegia } from './limiti.js'
-import { LICENZA_DELLA_BUILD, licenzaDi } from './venue.js'
+import { licenzaDi, SCADUTA } from './licenzaInVigore.js'
 
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
@@ -26,9 +26,9 @@ import { LICENZA_DELLA_BUILD, licenzaDi } from './venue.js'
 // e sono due schermate diverse, una con l'interruttore bloccato e una con
 // l'interruttore normale.
 //
-// COSA È INCLUSO lo dice la LICENZA, e una licenza c'è sempre (BUG-125):
-// il documento `licenza/attuale` che scrive la regia, o, dove una regia
-// non c'è, quella scritta nella build (`clienti/<slug>/licenza.json`).
+// COSA È INCLUSO lo dice la LICENZA, il documento `licenza/attuale` che
+// scrive la regia (BUG-125); dal REQ-LIC-009 ce l'ha ogni installazione, la
+// Tana compresa, e senza l'installazione non è attivata.
 // Fino alla 1.10.x qui c'era anche una colonna `incluso`, la riserva di
 // chi la licenza non ce l'aveva: era una licenza nascosta nel codice, che
 // a un locale senza documento dava quasi tutto. Tolta con BUG-125 («nn va
@@ -240,12 +240,11 @@ export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcc
 // `settings/bar.licenza` non si guarda più: un ripiego lì riaprirebbe il
 // buco.
 //
-// UNA REGOLA SOLA, uguale per ogni installazione:
-//   1. c'è il documento della regia → vale quello;
-//   2. non c'è → vale la licenza della BUILD (`clienti/<slug>/licenza.json`):
-//      è il caso della Tana, che una regia dietro non ce l'ha;
-//   3. nessuna delle due → l'installazione non è attivata.
-// Il codice non sa per chi è compilato: guarda solo cosa c'è.
+// UNA REGOLA SOLA, uguale per ogni installazione: c'è il documento → vale
+// quello; non c'è → l'installazione non è attivata. Fino al 02/11/2026 in
+// mezzo c'era la licenza scritta nella BUILD, per la Tana; con REQ-LIC-009
+// anche la Tana ha il suo documento, e senza le regole non fanno scrivere
+// niente: un'app che lavorasse lo stesso perderebbe ogni scrittura.
 //
 // «NON C'È» LO DICE SOLO IL SERVER. Alla prima apertura senza rete la cache
 // non sa ancora niente, e scambiare «non lo so» per «non c'è» fermerebbe un
@@ -255,10 +254,9 @@ export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcc
 //
 // `letto` è { documento, certo }: il documento della regia (o null) e se
 // l'assenza è confermata dal server. Logica pura: la lettura è in api.js.
-export function licenzaEffettiva(letto, build = LICENZA_DELLA_BUILD) {
+export function licenzaEffettiva(letto) {
   const documento = letto?.documento
   if (documento && typeof documento === 'object') return documento
-  if (build) return build
   return letto?.certo ? { stato: STATI_LICENZA.NON_ATTIVATA } : null
 }
 
@@ -267,15 +265,18 @@ export function licenzaEffettiva(letto, build = LICENZA_DELLA_BUILD) {
 // sospende chi non paga). Senza niente scritto è attiva. Sospesa, chiusa o
 // non attivata, l'app mostra InstallazioneSospesa al posto di tutto; i dati
 // restano. `non_attivata` non lo scrive la regia: è quello che dice
-// licenzaEffettiva quando una licenza non c'è da nessuna parte.
+// licenzaEffettiva quando una licenza non c'è. E `scaduta` nemmeno: è
+// quello che dice licenzaInVigore passata `valida_fino`, quando la licenza
+// non scade verso il Free (REQ-LIC-009).
 export const STATI_LICENZA = Object.freeze({
   ATTIVA: 'attiva',
   SOSPESA: 'sospesa',
   CHIUSA: 'chiusa',
   NON_ATTIVATA: 'non_attivata',
+  SCADUTA,
 })
 
-const BLOCCANTI = [STATI_LICENZA.SOSPESA, STATI_LICENZA.CHIUSA, STATI_LICENZA.NON_ATTIVATA]
+const BLOCCANTI = [STATI_LICENZA.SOSPESA, STATI_LICENZA.CHIUSA, STATI_LICENZA.NON_ATTIVATA, STATI_LICENZA.SCADUTA]
 
 export const statoLicenza = (stato) => {
   const s = licenzaDi(stato)?.stato
@@ -311,14 +312,9 @@ export function scadenzaProva(stato, id) {
 
 // ── LA LICENZA IN CHIARO (REQ-LIC-007) ─────────────────────────────────
 // Quello che la sottosezione Licenza mostra al titolare, in sola lettura.
-// Vale per OGNI licenza, quella della regia come quella della build (la
-// Tana): da BUG-125 ogni installazione ne ha una, e un caso «senza
-// licenza» qui non c'è. Le voci che una licenza non porta (la Tana non ha
-// piano né scadenza) restano null, e la schermata non le mostra.
-//
-// `origine` dice chi la gestisce: 'build' quando vale quella scritta
-// nell'installazione, 'regia' altrimenti. Si confronta il contenuto, non
-// il riferimento: la licenza arriva anche dalla memoria del dispositivo.
+// Vale per OGNI licenza: le voci che una licenza non porta (quella della
+// Tana, scritta a mano, non ha piano né scadenza) restano null, e la
+// schermata non le mostra.
 //
 // `validita` legge `valida_fino` (data ISO; assente o null = senza
 // scadenza). La scadenza la fa rispettare la regia, sospendendo: qui si
@@ -326,7 +322,7 @@ export function scadenzaProva(stato, id) {
 // «scaduta» senza fermare il locale. Una data illeggibile non diventa
 // «senza scadenza»: non si mostra.
 export function riepilogoLicenza(stato, adesso = new Date()) {
-  const licenza = licenzaDi(stato)
+  const licenza = licenzaDi(stato, adesso)
   if (!licenza || typeof licenza !== 'object') return null
   const moduli = moduliPremium().map((m) => ({
     id: m.id,
@@ -337,8 +333,6 @@ export function riepilogoLicenza(stato, adesso = new Date()) {
   return {
     piano: typeof licenza.piano === 'string' && licenza.piano.trim() ? licenza.piano.trim() : null,
     stato: statoLicenza(stato),
-    origine:
-      LICENZA_DELLA_BUILD && JSON.stringify(licenza) === JSON.stringify(LICENZA_DELLA_BUILD) ? 'build' : 'regia',
     validita: validitaDi(licenza.valida_fino, adesso),
     inclusi: moduli.filter((m) => m.incluso),
     esclusi: moduli.filter((m) => !m.incluso),
@@ -352,6 +346,27 @@ function validitaDi(validaFino, adesso) {
   const data = new Date(validaFino)
   if (Number.isNaN(data.getTime())) return null
   return { tipo: data < adesso ? 'scaduta' : 'fino', data }
+}
+
+// ── LA CANCELLAZIONE DEI DATI PROGRAMMATA (REQ-LIC-009) ────────────────
+// La scrive la regia nella licenza, `cancellazione: { il, richiedente }`:
+//   · 'conservazione' — il locale è fermo per il pagamento: i dati restano
+//     fino a `il` (90 giorni), e riattivare l'abbonamento la annulla;
+//   · 'titolare' — l'ha chiesta il titolare dall'area clienti, che la può
+//     annullare lì;
+//   · 'admin' — l'ha decisa il fornitore.
+// L'utente, 02/11/2026: «dobbiamo cancellare i suoi dati entro un tot e
+// avvisarlo quando stiamo per cancellarli». Si mostra sempre, sopra a
+// tutto, anche sul locale fermo. Null se non c'è, o se la data non si
+// legge: un avviso con una data sbagliata farebbe più danno di nessuno.
+const RICHIEDENTI = ['conservazione', 'titolare', 'admin']
+
+export function cancellazioneProgrammata(stato) {
+  const c = licenzaDi(stato)?.cancellazione
+  if (!c || typeof c !== 'object') return null
+  const il = new Date(c.il)
+  if (!c.il || Number.isNaN(il.getTime())) return null
+  return { il, richiedente: RICHIEDENTI.includes(c.richiedente) ? c.richiedente : 'admin' }
 }
 
 // Una voce di un elenco (sezioni del magazzino, domani le voci del

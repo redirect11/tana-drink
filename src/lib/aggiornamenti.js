@@ -24,7 +24,7 @@
 // Logica pura: le impostazioni si passano, già in mano a chi chiama.
 
 import { isAdmin } from './ruoli.js'
-import { licenzaDi } from './venue.js'
+import { licenzaDi } from './licenzaInVigore.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 
 const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })

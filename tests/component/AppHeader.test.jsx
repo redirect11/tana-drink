@@ -19,6 +19,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 // Chi è collegato: lo decide ogni test prima di montare.
 let ruoloClaim = null
@@ -60,6 +61,7 @@ vi.mock('../../src/lib/api.js', () => ({
   settingsIniziali: () => ({}),
   subscribeSettings: (cb) => {
     cb({
+      ...CON_LICENZA,
       customer_accounts_enabled: true,
       theme_staff: { preset: 'notte-blu', custom: null },
       theme_client: { preset: 'crema', custom: null },

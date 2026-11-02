@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
 const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
@@ -44,7 +45,7 @@ vi.mock('../../src/lib/api.js', () => ({
   setOrderServiceMode: vi.fn(() => Promise.resolve({})),
   preparazioneParziale: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn((cb) => {
-    cb(mockSettings)
+    cb({ ...CON_LICENZA, ...mockSettings })
     return () => {}
   }),
 }))
