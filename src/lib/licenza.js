@@ -1,5 +1,6 @@
 import { profiloLeggero, limitiInChiaro, urlRegia } from './limiti.js'
 import { licenzaDi, SCADUTA } from './licenzaInVigore.js'
+import { STILI_MENU, temiInLicenza } from './stileMenu.js'
 
 // ── LE FUNZIONI PREMIUM: un posto solo che dice se sono accese ────────
 // Decisione dell'utente del 26/08/2026: la conta di magazzino e le fatture
@@ -337,6 +338,8 @@ export function riepilogoLicenza(stato, adesso = new Date()) {
     inclusi: moduli.filter((m) => m.incluso),
     esclusi: moduli.filter((m) => !m.incluso),
     limiti: limitiInChiaro(stato),
+    // Gli stili del menù che la licenza dà (REQ-LIC-010), col loro nome.
+    temi: temiInLicenza(stato).map((id) => STILI_MENU.find((s) => s.id === id)?.nome || id),
     gestione: urlRegia(stato),
   }
 }

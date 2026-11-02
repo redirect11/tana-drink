@@ -36,6 +36,8 @@ describe('il file della licenza iniziale', () => {
       cancellazione: null,
       slug: 'tana',
       regia_url: null,
+      // Lo stile «Notte» del menù è suo (REQ-LIC-010).
+      temi: ['notte'],
     })
     expect(Object.values(tana.moduli).every((v) => v === true)).toBe(true)
   })
@@ -43,6 +45,7 @@ describe('il file della licenza iniziale', () => {
   const BUONA = {
     stato: 'attiva',
     moduli: TUTTI,
+    temi: [],
     limiti: null,
     valida_fino: null,
     valida_fino_ts: null,
@@ -62,6 +65,7 @@ describe('il file della licenza iniziale', () => {
     expect(erroreLicenzaIniziale({ ...BUONA, stato: 'sospesa' }, ID)).toMatch(/attiva/)
     expect(erroreLicenzaIniziale({ ...BUONA, alla_scadenza: 'boh' }, ID)).toMatch(/alla_scadenza/)
     expect(erroreLicenzaIniziale({ ...BUONA, slug: '' }, ID)).toMatch(/slug/)
+    expect(erroreLicenzaIniziale({ ...BUONA, temi: 'notte' }, ID)).toMatch(/temi/)
     const senzaUno = { ...BUONA, moduli: { ...TUTTI } }
     delete senzaUno.moduli.sumup
     expect(erroreLicenzaIniziale(senzaUno, ID)).toMatch(/sumup/)
