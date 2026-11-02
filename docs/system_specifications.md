@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 247 | fatto e coperto dai test |
+| ✅ | 249 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 26 | da fare |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**298 voci** in tutto. **264** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **26** sono lavori
+**301 voci** in tutto. **266** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 16 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 17 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 7 | 2 |  |
+| [LIC](#lic) | 8 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 6 | — |  |
 
@@ -815,6 +815,12 @@ NEGLI SPECIAL: il menu' Special diventa una sequenza di scene a tutto schermo, u
 IL DISEGNO PIÙ GRANDE (02/11/2026). L'utente: «le immagini nel menu special le vedo ancora piccole». Il disegno aveva una misura fissa, 320 px al massimo: ora prende tutta l'altezza che il testo gli lascia, fino a 560 px; sugli schermi larghi e bassi (dai 900 px, più larghi che alti) il disegno sta a sinistra e il testo a destra. Con «riduci movimento» torna a una misura sua, fino a 560 px.
 
 **Dove**: `src/lib/stileMenu.js, src/components/SpecialScorrevoli.jsx, src/lib/useDisegnoRaster.js, src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile-notte), src/index.css (.stile-notte, .notte-*), src/lib/api.js (stile_menu), package.json (gsap)` · **Lo dimostrano**: `tests/component/SpecialScorrevoli.test.jsx`, `tests/unit/stileMenu.test.js`
+
+#### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
+
+L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli gratis non facciamo partire stripe ovviamente. Facciamo solo installare il tema». Scelti quattro stili: «Lavagna», «Déco», «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico (stesse voci, carosello, griglia degli Special) con caratteri, filetti e impaginazione loro; i colori sono quelli del tema, tranne «Lavagna», che li porta tutti. In Impostazioni → Menù clienti: sopra gli stili del locale, da scegliere; sotto «Altri stili, gratis», con «Installa». Gli installati stanno in `settings/bar.stili_installati` (sono gratis: niente da proteggere); disinstallando quello in uso si torna al classico. Ogni scheda ha un assaggio scritto con lo stile vero e «Prova sul menù», che apre l'anteprima del cliente con lo stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre, e un esclusivo che il locale non ha non si prova. Uno stile scelto ma non installato non si applica. Niente Stripe e niente regia per i gratis.
+
+**Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -3366,6 +3372,14 @@ DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le
 
 **Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
 
+#### REQ-LIC-010 — Gli stili del menù nella licenza: «Notte» è della Tana
+
+L'utente, 02/11/2026: «Dobbiamo fare in modo che lo stile notte sia utilizzabile solo da tana-drink e tana-drink-test. Sono esclusive loro». Non un caso speciale per la Tana: uno stile del menù può essere «della licenza» (`inLicenza`), e c'è solo dove la licenza lo nomina in una voce nuova del contratto, `temi` (`['notte']`). Senza, in Impostazioni la scelta non compare, e chi scrive `stile_menu: 'notte'` dalla console vede il classico: la licenza dall'app non la scrive nessuno (BUG-125), quindi l'esclusiva tiene. La Tana ha `temi: ['notte']` nella licenza iniziale (il deploy la crea) e sul test nel suo documento (aggiunto a mano il 02/11/2026). `temi` è voce del contratto: nella licenza iniziale va scritta anche vuota, o il deploy si ferma. Impostazioni → Licenza mostra gli stili della licenza.
+
+DA DIRE ALLA REGIA (docs/catalogo-temi.md): `temi` in ogni licenza, `[]` se il locale non ne ha; «Notte» mai a un locale che non sia la Tana.
+
+**Dove**: `src/lib/stileMenu.js (inLicenza, temiInLicenza, stiliDisponibili), src/components/ThemeSettings.jsx, src/lib/licenza.js (riepilogoLicenza), src/components/LicenzaPanel.jsx, clienti/tana/licenza-iniziale.json, scripts/lib-licenza-iniziale.js, docs/catalogo-temi.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`
+
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
 L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
@@ -3889,6 +3903,18 @@ DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico r
 UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
 
 **Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
+
+#### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
+
+L'utente, 02/11/2026: «sarebbe bello fare una specie di marketplace per i temi in modo che i gestori possano installarli sulla propria installazione e/o comprarli». La proposta, in docs/catalogo-temi.md: il catalogo sta nella regia accanto al listino dei piani; comprare o installare un tema vuol dire che la regia lo aggiunge a `licenza.temi` (REQ-LIC-010), e l'app lo vede arrivare in tempo reale; nell'app, accanto agli stili del locale, «Altri stili» porta al catalogo nell'area clienti; dall'app non si compra niente. Il codice degli stili sta nell'app, la licenza dice chi li usa; gli esclusivi non compaiono nel catalogo degli altri.
+
+DA DECIDERE con l'utente: cosa si vende (stili del menù, temi di colore), come si paga (una volta o in abbonamento), i gratuiti, l'anteprima, gli esclusivi su misura.
+
+DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non si possono sentire»); gli acquisti sono DENTRO L'APP, non nell'area clienti; i gratis si installano e basta, senza Stripe (fatto: REQ-MENU-022); l'anteprima si fa sul proprio menù (fatta).
+
+RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
+
+**Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
 
 ## Difetti noti
 

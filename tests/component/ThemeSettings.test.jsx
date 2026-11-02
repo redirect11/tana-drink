@@ -74,10 +74,14 @@ describe('la striscia delle card della coda, in «Aspetto»', () => {
 
 // LO STILE DEL MENÙ DEI CLIENTI (REQ-MENU-021), in «Menù clienti» accanto ai
 // colori: «ovviamente il tema base lascialo».
+// «Notte» è della licenza (REQ-LIC-010): qui le prove partono da una
+// licenza che lo nomina, come quella della Tana.
+const CON_NOTTE = { licenza: { moduli: {}, temi: ['notte'] } }
+
 describe('lo stile del menù dei clienti', () => {
   it('di suo è il classico; scegliendo «Notte» scrive `stile_menu`', async () => {
     const utente = userEvent.setup()
-    render(<StileMenuClienti settings={{}} onSave={onSave} />)
+    render(<StileMenuClienti settings={CON_NOTTE} onSave={onSave} />)
     expect(screen.getByRole('button', { name: /Classico/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'false')
     await utente.click(screen.getByRole('button', { name: /Notte/ }))
@@ -85,9 +89,40 @@ describe('lo stile del menù dei clienti', () => {
   })
 
   it('dice che il personale vede sempre il classico', () => {
-    render(<StileMenuClienti settings={{ stile_menu: 'notte' }} onSave={onSave} />)
+    render(<StileMenuClienti settings={{ ...CON_NOTTE, stile_menu: 'notte' }} onSave={onSave} />)
     expect(screen.getByRole('button', { name: /Notte/ })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText(/Il personale vede sempre lo stile classico/)).toBeInTheDocument()
+  })
+
+  // L'utente, 02/11/2026: «lo stile notte sia utilizzabile solo da
+  // tana-drink e tana-drink-test. Sono esclusive loro». Senza `temi` nella
+  // licenza non si mostra nemmeno, e col solo classico non c'è niente da
+  // scegliere.
+  it('senza «Notte» nella licenza «Notte» non c’è, né da scegliere né nel catalogo', () => {
+    render(<StileMenuClienti settings={{ licenza: { moduli: {} } }} onSave={onSave} />)
+    expect(screen.queryByText('Notte')).toBeNull()
+    expect(screen.getByRole('button', { name: /Classico/ })).toBeInTheDocument()
+  })
+
+  // REQ-MENU-022: il catalogo degli stili gratis, in app. «Installa» e
+  // basta: niente pagamento. E ogni stile si prova sul proprio menù.
+  it('il catalogo: «Installa» aggiunge lo stile, e «Prova» apre il menù con quello stile', async () => {
+    const utente = userEvent.setup()
+    render(<StileMenuClienti settings={{}} onSave={onSave} />)
+    expect(screen.getByRole('heading', { name: 'Altri stili, gratis' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Installa Lavagna' }))
+    expect(salvato).toEqual({ stili_installati: ['lavagna'] })
+    const prove = screen.getAllByRole('link', { name: 'Prova sul menù' }).map((a) => a.getAttribute('href'))
+    expect(prove).toContain('/menu?vista=cliente&stile=giornale')
+  })
+
+  it('uno stile installato si sceglie e si disinstalla', async () => {
+    const utente = userEvent.setup()
+    render(<StileMenuClienti settings={{ stili_installati: ['deco'], stile_menu: 'deco' }} onSave={onSave} />)
+    expect(screen.getByRole('button', { name: /Déco/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'Installa Déco' })).toBeNull()
+    await utente.click(screen.getByRole('button', { name: 'Disinstalla' }))
+    expect(salvato).toEqual({ stili_installati: [], stile_menu: 'classico' })
   })
 })
 

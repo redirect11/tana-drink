@@ -4,6 +4,16 @@
 
 ### Nel menù
 
+- **Quattro stili del menù nuovi, gratis: «Lavagna», «Déco», «Riviera» e
+  «Giornale».** In Impostazioni → Menù clienti si installano con un tasto
+  e si provano sul proprio menù prima di sceglierli; i clienti continuano
+  a vedere lo stile scelto finché non lo si cambia.
+
+- **Lo stile «Notte» del menù è esclusivo della Tana.** Uno stile può
+  far parte della licenza: dove la licenza non lo comprende, non si può
+  scegliere e il menù resta nello stile classico. Impostazioni → Licenza
+  mostra gli stili inclusi.
+
 - **Negli Special dello stile «Notte» il disegno del drink è molto più
   grande**: prende tutto lo spazio sopra il testo, e sugli schermi larghi
   sta di fianco al testo.

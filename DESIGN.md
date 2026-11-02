@@ -160,12 +160,29 @@ Regole:
   carattere; ora l'h3 è serif e l'h4 no. Ha la sua regola nel foglio: era
   uno `style` inline (`margin: 16px 0 4px`) ripetuto in mezza SettingsTab.
 
-### Lo stile «Notte» del menù clienti (REQ-MENU-021)
+### Gli stili del menù clienti (REQ-MENU-021, REQ-MENU-022)
 
-Il menù dei clienti ha due STILI, cioè due forme, che si scelgono in
+Il menù dei clienti ha più STILI, cioè più forme, che si scelgono in
 Impostazioni ▸ Menù clienti ▸ Stile del menù; i COLORI restano quelli del
-tema del menù clienti, per tutti e due. «Classico» è il predefinito; il
-personale lo vede sempre.
+tema del menù clienti (tranne «Lavagna», sotto). «Classico» è il
+predefinito ed è di tutti; il personale lo vede sempre. «Notte» è della
+licenza (esclusivo della Tana, REQ-LIC-010); gli altri sono nel catalogo
+dell'app, gratis: si installano con un tasto e si provano sul proprio menù
+prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
+`--stile-voce`, `--stile-testo`), tutti dentro l'app (REQ-SIC-004).
+
+- **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
+  in giallo gesso, filetti tratteggiati. È l'unico stile che porta i suoi
+  colori, e li ridefinisce TUTTI (`--bg`, `--card`, `--text`…): con un tema
+  chiaro sotto, il gesso finirebbe su un fondo chiaro.
+- **«Déco»**: anni Venti. `Poiret One` in maiuscolo spaziato, simmetria,
+  filetti doppi e un rombo sopra i titoli, l'oro del tema (`--accent-2`).
+- **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il
+  tendone a strisce sopra l'apertura, voci come cartoline col bordo
+  colorato, i disegni dei drink nei cerchi.
+- **«Giornale»**: la carta stampata. `Playfair Display` per testata e
+  titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
+  760 px le voci di una categoria vanno su due colonne.
 
 - **«Notte»** è la carta stampata al buio: titoli in `Italiana` (alto,
   sottile, in maiuscolo con un po' di spaziatura), testo in `Jost` leggero,
