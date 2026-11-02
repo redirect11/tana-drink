@@ -673,6 +673,27 @@ describe('gli stili gratis sul menù', () => {
   })
 })
 
+// LA VISTA CLIENTE SI GUARDA E BASTA (BUG-127). L'utente, 02/11/2026: «la
+// vista cliente deve solo mostrare il menù come lo vede il cliente». Con
+// «Aggiungi» e carrello, chi lavora mandava un ordine anonimo come un
+// cliente qualunque; per ordinare c'è il menù dello staff.
+describe('la vista cliente', () => {
+  it('mostra il menù del cliente, senza «Aggiungi» né carrello', async () => {
+    ruoloClaim = 'admin'
+    mostra('/menu?vista=cliente')
+    await screen.findByText('Mojito')
+    expect(await screen.findByText(/Da qui non si ordina/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aggiungi' })).toBeNull()
+  })
+
+  it('il menù dello staff, invece, ordina', async () => {
+    ruoloClaim = 'admin'
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect((await screen.findAllByRole('button', { name: 'Aggiungi' })).length).toBeGreaterThan(0)
+  })
+})
+
 // IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora apre il
 // proprio menù con lo stile di un tema (i colori li mette App), e la riga
 // in alto dice quale.

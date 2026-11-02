@@ -4219,8 +4219,11 @@ requirements:
       firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva
       col filtro già acceso. «Da servire» resta come sezione. Le sezioni
       amministrative restano ai gestori: per la sala un tab non suo riporta
-      alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il
-      menù che mostra al tavolo, con la ricerca), non il POS del banco.
+      alla coda. Dal menu laterale la sala apre «Ordina dal menù» (il
+      menù che mostra al tavolo, con la ricerca), non il POS del banco;
+      dal 02/11/2026 (BUG-127) la stessa voce c'è anche per admin e
+      bartender, accanto a «Nuovo ordine» che apre la cassa. La schermata
+      principale di tutto il personale resta la coda.
     status: implemented
     generate_issue: false
     labels: [sala, coda, ruoli]
@@ -4252,7 +4255,7 @@ requirements:
     title: "Nome e tavolo nelle viste d'ordine: staff libero, cliente guidato"
     area: "src/pages/MenuPage.jsx, src/components/OrderSummary.jsx"
     description: >
-      Nella vista «Nuovo ordine dal menù» dello staff si possono inserire
+      Nella vista «Ordina dal menù» dello staff si possono inserire
       NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo
       il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva
       dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON
