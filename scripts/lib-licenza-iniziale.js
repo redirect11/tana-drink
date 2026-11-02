@@ -32,6 +32,7 @@ const oggetto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 export const VOCI_DEL_CONTRATTO = [
   'stato',
   'moduli',
+  'temi',
   'limiti',
   'valida_fino',
   'valida_fino_ts',
@@ -55,6 +56,9 @@ export function erroreLicenzaIniziale(licenza, idModuli) {
   if (licenza.stato !== 'attiva') return '`stato` deve essere «attiva»'
   if (!['ferma', 'free'].includes(licenza.alla_scadenza)) return '`alla_scadenza` deve essere «ferma» o «free»'
   if (typeof licenza.slug !== 'string' || !licenza.slug) return 'manca lo `slug` del locale'
+  if (!Array.isArray(licenza.temi) || licenza.temi.some((t) => typeof t !== 'string')) {
+    return '`temi` deve essere un elenco di nomi (anche vuoto)'
+  }
   if (!oggetto(licenza.moduli)) return 'manca `moduli`'
   const mancanti = idModuli.filter((id) => typeof licenza.moduli[id] !== 'boolean')
   if (mancanti.length) return `\`moduli\` non dice vero o falso per: ${mancanti.join(', ')}`
