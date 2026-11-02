@@ -126,8 +126,10 @@ jobs:
             --project "$TARGET_PROJECT" --force
           rm /tmp/sa.json
 
-      # LA LICENZA PRIMA DELLE REGOLE (REQ-LIC-009). Senza `licenza/attuale`
-      # le regole non fanno scrivere niente: se il documento manca lo si
+      # LA LICENZA PRIMA DELLE REGOLE (REQ-LIC-009). Con le regole che non
+      # partono senza licenza valida, senza `licenza/attuale` un locale non
+      # scrive niente. Il ponte per la Tana finché la regia di produzione
+      # non la prende in carico: se il documento manca lo si
       # crea da clienti/<cliente>/licenza-iniziale.json, se c'è non si
       # tocca. Se non riesce il deploy si ferma QUI, prima delle regole che
       # fermerebbero il locale. Serve roles/datastore.user sul service
@@ -137,7 +139,8 @@ jobs:
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$SA_JSON" > /tmp/sa.json
-          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json             node scripts/licenza-iniziale.mjs --project "$TARGET_PROJECT" --cliente "${{ inputs.cliente }}"
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json \
+            node scripts/licenza-iniziale.mjs --project "$TARGET_PROJECT" --cliente "${{ inputs.cliente }}"
           rm /tmp/sa.json
 
       # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
