@@ -27,6 +27,15 @@
   Stripe o disdirlo; il modulo compare da solo appena la licenza si
   aggiorna. Gli altri ruoli vedono la sezione in sola lettura.
 
+### Privacy e sicurezza
+
+- **La copia della licenza nelle impostazioni non si può più modificare
+  dall'app**, nemmeno dalla console del browser: la scrive solo il
+  fornitore. Il resto delle impostazioni si modifica come prima.
+- **Il ripristino da un backup tiene la licenza attuale**: le impostazioni
+  tornano quelle del file, la licenza no. Vale anche per il ripristino da
+  riga di comando.
+
 ## 1.10.7-beta — 02/11/2026 (test)
 
 ### Nel gestionale
