@@ -9,6 +9,7 @@ import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
 import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
 import { temaInProva } from '../lib/marketplaceTemi.js'
+import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -430,6 +431,12 @@ export default function MenuPage({ speciali = false }) {
       ? stileInProva
       : stileMenu(settings)
   const notte = stile === 'notte'
+  // «GIORNALE» (REQ-MENU-024) ha una struttura sua — testata, sommario,
+  // prima pagina, sezioni — e le sue immagini, incisioni: non è una veste
+  // sopra le card del classico.
+  const giornale = stile === 'giornale'
+  const segnoDisegni = giornale ? 'incisione' : 'tenniel'
+  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: 'incisione' })
   const specialNotte = notte && speciali
 
   return (
@@ -452,7 +459,8 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
-      {!staff && !specialNotte && (
+      {giornale && <TestataGiornale venue={venue} sottotitolo={speciali ? settings.special_titolo || 'Special' : venue.venue_tagline} />}
+      {!staff && !specialNotte && !giornale && (
         <div className="hero">
           <img
             className="hero-img"
@@ -527,7 +535,7 @@ export default function MenuPage({ speciali = false }) {
 
       {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
           strada per il menù completo, con lo stesso tavolo. */}
-      {speciali && !specialNotte && (
+      {speciali && !specialNotte && !giornale && (
         <div className="speciali-testata">
           <h2>{settings.special_titolo || 'Special'}</h2>
           {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
@@ -540,7 +548,7 @@ export default function MenuPage({ speciali = false }) {
       {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
           cliente: toccando un drink si va al menù Special, su quel drink.
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
-      {!speciali && !staff && elencoSpeciali.length > 0 && (
+      {!speciali && !staff && !giornale && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
@@ -658,8 +666,8 @@ export default function MenuPage({ speciali = false }) {
         <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
-      {!speciali && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
-      {!speciali && categories.length > 1 && (
+      {!speciali && !giornale && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
+      {!speciali && !giornale && categories.length > 1 && (
         <nav className={`cat-nav${categorieIncollate ? ' incollata' : ''}`}>
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -680,7 +688,19 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
 
-      {!specialNotte && categories.map(([cat, list]) => (
+      {giornale && (
+        <MenuGiornale
+          categorie={speciali ? [] : categories}
+          speciali={elencoSpeciali}
+          soloSpeciali={speciali}
+          immagine={immagineGiornale}
+          apri={(d) => setApertoId(d.id)}
+          tastiOrdine={tastiOrdine}
+          quantita={!!settings.show_ingredient_quantities}
+        />
+      )}
+
+      {!specialNotte && !giornale && categories.map(([cat, list]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
@@ -843,6 +863,7 @@ export default function MenuPage({ speciali = false }) {
       <DettaglioDrink
         drink={aperto}
         chiaro={fondoChiaro}
+        segno={segnoDisegni}
         quantita={!!settings.show_ingredient_quantities}
         azioni={aperto && tastiOrdine(aperto)}
         onClose={() => setApertoId(null)}

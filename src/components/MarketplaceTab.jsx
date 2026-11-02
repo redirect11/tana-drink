@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { subscribeSettings, updateSettings, settingsIniziali } from '../lib/api.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
+import { TestataGiornale } from './MenuGiornale.jsx'
 import {
   STILI_MENU,
   nomeStile,
@@ -48,8 +49,33 @@ const prova = (chiave, id) =>
   `${import.meta.env.BASE_URL || '/'}menu?vista=cliente&${chiave}=${encodeURIComponent(id)}`
 
 // Un pezzo del menù vero, con le classi del menù: ogni stile lo disegna con
-// le sue regole, come disegna il menù dei clienti.
+// le sue regole, come disegna il menù dei clienti. Uno stile con una
+// struttura sua (il «Giornale», REQ-MENU-024) mostra quella.
 function Vetrina({ colori, stile }) {
+  if (stile === 'giornale') {
+    return (
+      <div className="vetrina-tema stile-giornale" style={resolveThemeVars(colori)} aria-hidden="true">
+        <TestataGiornale venue={{ venue_name: 'Il Locale' }} />
+        <h3 className="g-sezione-titolo">
+          <span>Cocktail</span>
+          <span className="g-sezione-conto">2 voci</span>
+        </h3>
+        {[
+          ['Negroni', '9,00 €', 'Gin, bitter e vermouth rosso'],
+          ['Spritz', '7,00 €', 'Aperitivo, prosecco e soda'],
+        ].map(([nome, prezzo, desc]) => (
+          <article className="g-voce" key={nome}>
+            <h4>
+              <span>{nome}</span>
+              <span className="g-puntini" />
+              <span className="g-prezzo">{prezzo}</span>
+            </h4>
+            <p className="g-testo">{desc}</p>
+          </article>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
       <h3 className="cat-header">Cocktail</h3>
