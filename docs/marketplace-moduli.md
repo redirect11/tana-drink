@@ -17,6 +17,18 @@ E, alle tre domande dello stesso giorno:
 Gli acquisti sono **dentro l'app** (decisione del 02/11 sui temi, che vale
 anche qui): niente rimando all'area clienti per comprare.
 
+E poi, lo stesso giorno, dopo aver visto come lavora la regia:
+
+- **piani online e piani gestiti a mano**: col piano pagato su Stripe il
+  modulo si aggiunge all'abbonamento; col piano gestito a mano (pagato
+  fuori da Stripe, `abbonamento.origine: 'manuale'` nella regia) «arriva
+  una richiesta d'acquisto a me che attivo o disattivo il modulo richiesto
+  se ho ricevuto il pagamento»;
+- **la disdetta**, coi piani online: **a fine periodo**. Il modulo resta
+  acceso fino alla fine del periodo già pagato, poi si spegne; niente
+  conguaglio. Una disdetta toccata per sbaglio non spegne niente in piena
+  serata, e non si attiva un modulo per un giorno pagandone uno.
+
 ## Cosa fa l'app
 
 Nel gestionale, «🛍️ Marketplace» → **Moduli**: una scheda per ogni modulo
@@ -98,17 +110,27 @@ La regia:
    - **`prova`**: accende il modulo in `licenza.moduli` e scrive la
      scadenza in `licenza.prove.<modulo>` (REQ-FLOTTA-016). Una prova sola
      per modulo e per installazione: la seconda → `409` col testo;
-   - **`aggiungi`**: crea una sessione di Stripe Checkout in abbonamento
-     mensile (il prezzo del listino), con `success_url` = `ritorno` +
-     `&esito=pagato` e `cancel_url` = `ritorno` + `&esito=annullato`, e
-     risponde con `checkout_url`. **La licenza si aggiorna dal webhook di
-     Stripe**, non da questa chiamata e non dal ritorno: chi torna con
-     `esito=pagato` non ha dimostrato niente. Un modulo in prova diventa
-     comprato (si toglie da `licenza.prove`);
-   - **`disdici`**: l'abbonamento del modulo finisce alla chiusura del
-     periodo già pagato; la regia risponde con `dal` (la data ISO in cui
-     il modulo si spegne) e spegne il modulo in licenza a quella data. Un
-     modulo compreso nel piano non si disdice da solo → `409` col testo.
+   - **`aggiungi`**, secondo il piano:
+     - *online* (abbonamento Stripe attivo): il modulo si aggiunge alla
+       subscription, come fa `cambiaScelta` nella regia, e la risposta è
+       `{ "ok": true }`. Un modulo in prova diventa comprato. Se la regia
+       vuole far passare dal pagamento, risponde invece con `checkout_url`
+       (Stripe Checkout, `success_url` = `ritorno` + `&esito=pagato`,
+       `cancel_url` = `ritorno` + `&esito=annullato`): **la licenza si
+       aggiorna dal webhook**, mai dal ritorno, perché chi torna con
+       `esito=pagato` non ha dimostrato niente;
+     - *gestito a mano*: la regia registra la richiesta e la fa arrivare
+       all'admin; la risposta è `{ "ok": true, "in_attesa": true }`. Il
+       modulo lo accende l'admin dal backoffice, a pagamento ricevuto;
+     - *Free*: `409` col testo (il Free non accende moduli comprati);
+   - **`disdici`**, secondo il piano:
+     - *online*: il modulo resta fino alla fine del periodo già pagato;
+       la regia risponde con `dal` (la data ISO in cui si spegne) e lo
+       spegne in licenza a quella data;
+     - *gestito a mano*: come l'aggiunta, una richiesta all'admin,
+       `{ "ok": true, "in_attesa": true }`;
+     - un modulo compreso nel piano non si disdice da solo → `409` col
+       testo.
 
 Risposte:
 
@@ -116,11 +138,15 @@ Risposte:
 { "ok": true, "checkout_url": "https://checkout.stripe.com/c/pay/…" }
 { "ok": true }
 { "ok": true, "dal": "2026-12-01" }
+{ "ok": true, "in_attesa": true }
 { "ok": false, "errore": "La prova di questo modulo è già stata usata." }
 ```
 
 - `checkout_url` viene aperto dall'app **solo se** comincia con
   `https://checkout.stripe.com/`; ogni altro indirizzo si ignora.
+- con `in_attesa: true` l'app non dice «aggiunto» ma «richiesta inviata
+  all'assistenza»: il modulo cambia quando l'admin la evade, e l'app lo
+  vede dalla licenza come ogni altro cambio.
 - `errore` è mostrato al titolare così com'è: italiano, impersonale,
   registro del gestionale («La prova di questo modulo è già stata
   usata.», «Il modulo è compreso nel piano: si toglie cambiando piano.»).

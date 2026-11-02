@@ -246,6 +246,24 @@ describe('i moduli', () => {
     expect(screen.getByText(/resta attivo fino al 1 dicembre 2026/)).toBeInTheDocument()
   })
 
+  it('con un piano gestito a mano, aggiunta e disdetta sono richieste all\'assistenza', async () => {
+    // L'utente, 02/11/2026: per i piani pagati fuori da Stripe il modulo lo
+    // attiva o lo spegne lui, a pagamento ricevuto. «Aggiunto» sarebbe falso.
+    conRegia()
+    st.risposta = { ok: true, checkout_url: null, dal: null, in_attesa: true }
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Aggiungi Gestione clienti' }))
+    expect(st.azioni.at(-1)).toMatchObject({ modulo: 'clienti', azione: 'aggiungi' })
+    expect(screen.getByText('Richiesta di «Gestione clienti» inviata all\'assistenza: il modulo si attiva alla conferma del pagamento.')).toBeInTheDocument()
+    expect(screen.queryByText(/aggiunto/)).toBeNull()
+
+    await utente.click(screen.getByRole('button', { name: 'Disdici Magazzino e fornitori' }))
+    await utente.click(screen.getByRole('button', { name: 'Disdici' }))
+    expect(screen.getByText('Richiesta di disdetta di «Magazzino e fornitori» inviata all\'assistenza.')).toBeInTheDocument()
+  })
+
   it('un rifiuto della regia si legge col suo testo', async () => {
     conRegia()
     st.risposta = { ok: false, status: 409, errore: 'La prova di questo modulo è già stata usata.' }
