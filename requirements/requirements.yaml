@@ -5734,6 +5734,29 @@ requirements:
       - tests/component/MenuPage.test.jsx
       - tests/unit/css.test.js
 
+  - id: REQ-MENU-024
+    title: "Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore"
+    area: "src/lib/stileMenu.js (leggiStile, STILI_MENU), src/lib/marketplaceTemi.js (leggiTema, catalogo), src/index.css (il motore), src/main.jsx (i caratteri), docs/stili-a-ricetta.md"
+    description: >
+      L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che
+      abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter
+      caricare anche gli stili», poi «Stile a ricetta» e «una scelta ampia
+      di caratteri dentro l'app». Uno stile a ricetta è la forma del menù
+      come scelta fra valori fissi (caratteri, titoli, intestazione, voce,
+      cornice, angoli, sfondo, colori facoltativi), che l'app disegna con
+      un motore unico, con tutto il CSS dentro di sé: resta una ricetta,
+      non codice, e funziona senza rete. Gli stili arrivano dal catalogo
+      della regia (catalogoTemi → stili), si provano, si installano (con la
+      copia nelle impostazioni) e si usano come quelli gratis; un tema può
+      usarne uno. Dodici caratteri nuovi nella build. Il contratto in
+      docs/stili-a-ricetta.md; la regia è pronta (drink-regia
+      REQ-FLOTTA-034, PR #53).
+    status: todo
+    generate_issue: false
+    labels: [menu, marketplace]
+    priority: P2
+    test_cases: []
+
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
     area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"
