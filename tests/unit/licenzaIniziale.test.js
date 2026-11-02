@@ -10,27 +10,60 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { erroreLicenzaIniziale, scriviSeManca } from '../../scripts/lib-licenza-iniziale.js'
+import { erroreLicenzaIniziale, scriviSeManca, VOCI_DEL_CONTRATTO } from '../../scripts/lib-licenza-iniziale.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
 const ID = Object.keys(MODULI_PREMIUM)
 const TUTTI = Object.fromEntries(ID.map((id) => [id, true]))
 
 describe('il file della licenza iniziale', () => {
-  it('quello della Tana nomina ogni modulo, vero o falso, e non ha le fatture', () => {
+  // Tutte le voci del contratto, anche quelle che valgono null (la regia,
+  // 02/11/2026): attiva, ogni modulo nominato, senza limiti né scadenza,
+  // ferma se un giorno scadesse, senza cancellazioni, con lo slug.
+  it('quello della Tana ha tutte le voci del contratto, e non ha le fatture', () => {
     const tana = JSON.parse(readFileSync('clienti/tana/licenza-iniziale.json', 'utf8'))
     expect(erroreLicenzaIniziale(tana, ID)).toBeNull()
+    expect(Object.keys(tana).sort()).toEqual([...VOCI_DEL_CONTRATTO].sort())
+    expect(tana).toMatchObject({
+      stato: 'attiva',
+      limiti: null,
+      valida_fino: null,
+      valida_fino_ts: null,
+      alla_scadenza: 'ferma',
+      cancellazione: null,
+      slug: 'tana',
+      regia_url: null,
+    })
     expect(tana.moduli.fatture).toBe(false)
   })
 
+  const BUONA = {
+    stato: 'attiva',
+    moduli: TUTTI,
+    limiti: null,
+    valida_fino: null,
+    valida_fino_ts: null,
+    alla_scadenza: 'ferma',
+    cancellazione: null,
+    slug: 'bar-mario',
+    regia_url: null,
+  }
+
   it('un file storto si dice, invece di scrivere una licenza che spegne in silenzio', () => {
+    expect(erroreLicenzaIniziale(BUONA, ID)).toBeNull()
     expect(erroreLicenzaIniziale([], ID)).toMatch(/oggetto/)
-    expect(erroreLicenzaIniziale({}, ID)).toMatch(/moduli/)
-    const senzaUno = { moduli: { ...TUTTI } }
+    expect(erroreLicenzaIniziale({ moduli: TUTTI }, ID)).toMatch(/voci del contratto/)
+    const senzaVoce = { ...BUONA }
+    delete senzaVoce.cancellazione
+    expect(erroreLicenzaIniziale(senzaVoce, ID)).toMatch(/cancellazione/)
+    expect(erroreLicenzaIniziale({ ...BUONA, stato: 'sospesa' }, ID)).toMatch(/attiva/)
+    expect(erroreLicenzaIniziale({ ...BUONA, alla_scadenza: 'boh' }, ID)).toMatch(/alla_scadenza/)
+    expect(erroreLicenzaIniziale({ ...BUONA, slug: '' }, ID)).toMatch(/slug/)
+    const senzaUno = { ...BUONA, moduli: { ...TUTTI } }
     delete senzaUno.moduli.sumup
     expect(erroreLicenzaIniziale(senzaUno, ID)).toMatch(/sumup/)
-    expect(erroreLicenzaIniziale({ moduli: { ...TUTTI, sumup: 'sì' } }, ID)).toMatch(/sumup/)
-    expect(erroreLicenzaIniziale({ moduli: { ...TUTTI, teletrasporto: true } }, ID)).toMatch(/teletrasporto/)
+    expect(erroreLicenzaIniziale({ ...BUONA, moduli: { ...TUTTI, sumup: 'sì' } }, ID)).toMatch(/sumup/)
+    expect(erroreLicenzaIniziale({ ...BUONA, moduli: { ...TUTTI, teletrasporto: true } }, ID)).toMatch(/teletrasporto/)
   })
 })
 

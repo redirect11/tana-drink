@@ -21,6 +21,24 @@
 
 const oggetto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 
+// LE VOCI DEL CONTRATTO (docs/licenza-valida.md), tutte scritte, anche
+// quando valgono null: la regia, 02/11/2026, «il documento deve avere tutte
+// le voci del contratto». Una voce che manca e una che vale null dicono la
+// stessa cosa all'app, ma non a chi legge il documento: scritte tutte, si
+// vede che sono state decise, e quando la regia prenderà la Tana troverà
+// la forma che si aspetta.
+export const VOCI_DEL_CONTRATTO = [
+  'stato',
+  'moduli',
+  'limiti',
+  'valida_fino',
+  'valida_fino_ts',
+  'alla_scadenza',
+  'cancellazione',
+  'slug',
+  'regia_url',
+]
+
 // Il contenuto del file, controllato: un oggetto con `moduli` che nomina
 // TUTTI i moduli che l'app conosce, ognuno vero o falso. Un modulo non
 // nominato vale «non incluso», e in una licenza scritta una volta sola per
@@ -28,6 +46,13 @@ const oggetto = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 // nessuno l'abbia deciso. Torna l'errore da dire, o null se va bene.
 export function erroreLicenzaIniziale(licenza, idModuli) {
   if (!oggetto(licenza)) return 'il file non contiene un oggetto'
+  const assenti = VOCI_DEL_CONTRATTO.filter((v) => !(v in licenza))
+  if (assenti.length) return `mancano voci del contratto: ${assenti.join(', ')}`
+  // È la licenza di partenza di un locale che lavora: attiva, e con una
+  // scadenza che, se un giorno c'è, sa cosa fare.
+  if (licenza.stato !== 'attiva') return '`stato` deve essere «attiva»'
+  if (!['ferma', 'free'].includes(licenza.alla_scadenza)) return '`alla_scadenza` deve essere «ferma» o «free»'
+  if (typeof licenza.slug !== 'string' || !licenza.slug) return 'manca lo `slug` del locale'
   if (!oggetto(licenza.moduli)) return 'manca `moduli`'
   const mancanti = idModuli.filter((id) => typeof licenza.moduli[id] !== 'boolean')
   if (mancanti.length) return `\`moduli\` non dice vero o falso per: ${mancanti.join(', ')}`
