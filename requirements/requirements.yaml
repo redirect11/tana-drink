@@ -5982,6 +5982,27 @@ requirements:
       - tests/component/PropostaAggiornamento.test.jsx
       - tests/regole/aggiornamenti.test.js
 
+  - id: REQ-FLOTTA-026
+    title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"
+    area: "src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md"
+    description: >
+      L'utente, 02/11/2026: «non deve essere il deploy ad avvisare la regia
+      ma l'istanza del sito stesso in qualche modo. Cioè regia e il sito
+      custom del bar si devono parlare dopo il deploy e si scambiano dati
+      tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di
+      ogni versione, dopo l'accesso, l'app chiama la Function
+      presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo
+      drink-regia o drink-regia-test) col token dell'utente e la versione;
+      e di nuovo, all'apertura o con «Riprova», finché manca la licenza.
+      Mai a tempo. La regia segna la versione e, se manca, scrive la
+      licenza. Il contratto in docs/presentazione-alla-regia.md; la regia è
+      pronta (drink-regia REQ-FLOTTA-026, PR #40).
+    status: todo
+    generate_issue: false
+    labels: [flotta, licenza, regia]
+    priority: P2
+    test_cases: []
+
   - id: REQ-FLOTTA-021
     title: "Le porte e gli adattatori: l'app parla con interfacce nostre, Firebase è un adattatore"
     area: "src/porte/configurazione.js, src/porte/dati.js, src/adattatori/firebase/, src/lib/firebaseClient.js, src/lib/api.js, src/lib/storage.js, src/lib/push.js, public/sw.js, functions/index.js, functions/lib/, docs/porte-e-adattatori.md"

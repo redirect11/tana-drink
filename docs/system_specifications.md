@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 1 novembre 2026.
+> Generato il 2 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 244 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**296 voci** in tutto. **261** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**297 voci** in tutto. **261** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 5 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 5 | — |  |
+| [FLOTTA](#flotta) | 5 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -3847,6 +3847,14 @@ LA SCADENZA LA FA RISPETTARE LA REGIA, non l'app (l'utente: «la cosa riguarda l
 DA DIRE ALLA REGIA: la voce `valida_fino` su ogni licenza.
 
 **Dove**: `src/components/LicenzaTab.jsx, src/components/SettingsTab.jsx, src/lib/licenza.js, src/lib/limiti.js`
+
+### FLOTTA
+
+#### REQ-FLOTTA-026 — L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca
+
+L'utente, 02/11/2026: «non deve essere il deploy ad avvisare la regia ma l'istanza del sito stesso in qualche modo. Cioè regia e il sito custom del bar si devono parlare dopo il deploy e si scambiano dati tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di ogni versione, dopo l'accesso, l'app chiama la Function presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo drink-regia o drink-regia-test) col token dell'utente e la versione; e di nuovo, all'apertura o con «Riprova», finché manca la licenza. Mai a tempo. La regia segna la versione e, se manca, scrive la licenza. Il contratto in docs/presentazione-alla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-026, PR #40).
+
+**Dove**: `src/lib/ (la chiamata), la schermata «Installazione non attivata», .github/workflows/deploy.yml (VITE_REGIA_PROGETTO), docs/presentazione-alla-regia.md`
 
 ## Difetti noti
 
