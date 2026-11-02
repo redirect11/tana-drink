@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { STATI_LICENZA } from '../lib/licenza.js'
 
 // L'INSTALLAZIONE SOSPESA O CHIUSA (REQ-FLOTTA-008). L'utente, 22/10/2026:
@@ -36,42 +35,7 @@ const TESTI = {
   },
 }
 
-// IL «RIPROVA» DELLA LICENZA CHE MANCA (REQ-FLOTTA-026): l'app chiede di
-// nuovo alla regia di scriverla. Se la scrive, arriva dal listener che c'è
-// già e questa schermata se ne va da sola: qui si dice solo com'è andata.
-// C'è solo con qualcuno collegato: la regia vuole il token di un utente
-// del locale.
-const ESITI = {
-  scritta: 'La licenza è stata scritta: l’app si apre tra un istante.',
-  presente: 'La licenza c’è: l’app si apre tra un istante.',
-  non_attiva: 'Nella pagina del prodotto l’installazione non risulta ancora attiva.',
-  non_dalla_regia: 'La licenza di questa installazione non è gestita dalla regia.',
-}
-
-function Riprova({ onRiprova }) {
-  const [stato, setStato] = useState(null)
-  const riprova = async () => {
-    setStato({ inCorso: true })
-    const esito = await onRiprova()
-    setStato({ esito })
-  }
-  const esito = stato?.esito
-  const messaggio = !esito
-    ? null
-    : esito.ok
-      ? ESITI[esito.licenza] || ESITI.presente
-      : esito.errore || 'La richiesta non è arrivata: riprovare tra poco.'
-  return (
-    <div style={{ marginTop: 10 }}>
-      <button className="btn" disabled={stato?.inCorso} onClick={riprova}>
-        {stato?.inCorso ? 'Richiesta in corso…' : 'Riprova'}
-      </button>
-      {messaggio && <p className="muted small">{messaggio}</p>}
-    </div>
-  )
-}
-
-export default function InstallazioneSospesa({ licenza, venue, onRiprova }) {
+export default function InstallazioneSospesa({ licenza, venue }) {
   const testo = TESTI[licenza?.stato] || TESTI[STATI_LICENZA.SOSPESA]
   return (
     <main className="installazione-sospesa" role="alert">
@@ -93,7 +57,6 @@ export default function InstallazioneSospesa({ licenza, venue, onRiprova }) {
             Vai alla pagina del prodotto
           </a>
         )}
-        {onRiprova && <Riprova onRiprova={onRiprova} />}
       </div>
     </main>
   )
