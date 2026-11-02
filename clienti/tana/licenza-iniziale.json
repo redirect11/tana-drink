@@ -9,7 +9,7 @@
     "staff": true,
     "sumup": true,
     "conta": true,
-    "fatture": false,
+    "fatture": true,
     "scadenzario": true
   },
   "limiti": null,

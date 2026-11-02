@@ -3384,6 +3384,8 @@ LO GARANTISCE IL DEPLOY (l'utente, 02/11/2026: «non possiamo fare in modo che q
 
 SERVE roles/datastore.user sul service account del deploy (oggi ha i ruoli per regole e indici): senza, il passo fallisce e il deploy si ferma, che è il fallimento sicuro. Sul test il documento c'è già (scritto a mano il 02/11/2026).
 
+LA TANA HA IL PIANO COMPLETO, fatture comprese (decisione dell'utente, 02/11/2026): nel file tutti i moduli accesi, e sul test il documento corretto a mano, perché il deploy non lo riscrive. Quando la regia le scriverà la licenza, la calcolerà lei dal piano.
+
 **Dove**: `firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md` · **Lo dimostrano**: `tests/unit/licenzaInVigore.test.js`, `tests/component/AvvisoCancellazione.test.jsx`, `tests/component/InstallazioneSospesa.test.jsx`, `tests/unit/licenzaInstallazione.test.js`, `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/clienteBuild.test.js`, `tests/unit/licenzaIniziale.test.js`
 
 ### VENUE

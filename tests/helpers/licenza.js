@@ -6,7 +6,8 @@
 // `licenza/attuale`: le impostazioni di un test senza licenza sono quelle
 // di un locale che non si sa ancora cosa abbia, e nessun modulo lavora.
 // I test che parlano d'altro (la barra, il menù, la cassa) partono da qui:
-// i moduli della Tana, tutti tranne le fatture ai clienti.
+// i moduli della Tana, che ha il piano Completo, fatture comprese
+// (decisione dell'utente, 02/11/2026).
 export const LICENZA_TANA = Object.freeze({
   moduli: Object.freeze({
     menu_tavoli: true,
@@ -17,7 +18,7 @@ export const LICENZA_TANA = Object.freeze({
     staff: true,
     sumup: true,
     conta: true,
-    fatture: false,
+    fatture: true,
     scadenzario: true,
   }),
 })
