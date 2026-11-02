@@ -254,7 +254,10 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
       setAvviso({ tipo: 'errore', testo: testoErrore(r) })
       return
     }
-    const testi = {
+    const testi = r.in_attesa ? {
+      aggiungi: `Richiesta di «${m.nome}» inviata all'assistenza: il modulo si attiva alla conferma del pagamento.`,
+      disdici: `Richiesta di disdetta di «${m.nome}» inviata all'assistenza.`,
+    } : {
       prova: `Prova di «${m.nome}» attivata: il modulo compare fra pochi istanti.`,
       aggiungi: `«${m.nome}» aggiunto: il modulo compare fra pochi istanti.`,
       disdici: r.dal
