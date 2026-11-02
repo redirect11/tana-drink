@@ -5110,6 +5110,33 @@ requirements:
   #  LICENZA E FUNZIONI PREMIUM
   # ══════════════════════════════════════════════════════════════════════
 
+  - id: REQ-SIC-005
+    title: "La demo pubblica in sicurezza: lo script dei clienti, niente regia, configurazione finta, informativa per cliente"
+    area: "scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md"
+    description: >
+      Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026.
+      L'utente: «incarica un agente di verificare la sicurezza della demo»,
+      e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il
+      disegno della modalità demo regge (nessuna demo nel pacchetto della
+      Tana, nessuna richiesta verso Firebase, nessun dato personale nei
+      dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo»
+      prima di vedere che esiste, e la demo vecchia (un'app vera) restava
+      online; la demo chiama la regia di produzione (presentazione,
+      catalogo) a ogni apertura; con la configurazione vera e
+      disableNetwork che fallisce in silenzio la rete resterebbe accesa;
+      l'informativa privacy della Tana finisce in ogni build, demo e
+      locali della flotta; nel pacchetto della demo restano nomi, foto e un
+      fornitore della Tana; i link dei social accettano javascript:; la
+      stampante finta non scapa il logo. Il dettaglio, coi file e le righe,
+      in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR
+      #69): configurazione finta, niente indirizzo della regia, CSP con
+      connect-src 'self', Storage chiuso.
+    status: todo
+    generate_issue: true
+    labels: [sicurezza, privacy, demo]
+    priority: P1
+    test_cases: []
+
   - id: REQ-SIC-004
     title: "Caratteri e script dallo stesso indirizzo dell'app: niente richieste a terzi senza consenso"
     area: "src/main.jsx (@fontsource), index.html, public/privacy-policy.html, public/cookie-policy.html, package.json (gsap, @fontsource)"
