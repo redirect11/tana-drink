@@ -11,7 +11,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { assertFails } from '@firebase/rules-unit-testing'
 import { doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore'
-import { avviaAmbiente, CHI } from './ambiente.js'
+import { avviaAmbiente, azzera, CHI } from './ambiente.js'
 
 let env
 
@@ -22,7 +22,7 @@ afterAll(async () => {
   await env?.cleanup()
 })
 beforeEach(async () => {
-  await env.clearFirestore()
+  await azzera(env)
 })
 
 const scelta = (da) => ({ tag: 'v1.11.0', scelta: 'aggiorna', il: serverTimestamp(), da })

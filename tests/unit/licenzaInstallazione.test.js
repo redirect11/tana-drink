@@ -7,10 +7,11 @@
 // bartender può riscrivere: con un account del banco e la console del
 // browser un locale Free si toglieva i limiti o una sospensione. Ora sta in
 // `licenza/attuale`, che dall'app non scrive nessuno, e quella in
-// settings/bar si butta. Senza documento vale la licenza della build;
-// senza nessuna delle due l'installazione non è attivata — ma solo quando
-// lo dice il server, perché senza rete «non lo so» e «non c'è» sono la
-// stessa risposta vuota.
+// settings/bar si butta. Senza documento l'installazione non è attivata —
+// ma solo quando lo dice il server, perché senza rete «non lo so» e «non
+// c'è» sono la stessa risposta vuota. (Fino a REQ-LIC-009, 02/11/2026, in
+// mezzo c'era la licenza della build, per la Tana: ora anche lei ha il suo
+// documento.)
 //
 // Come in giroInLocale.test.js: si mocka SOLO Firestore, e `api.js` è
 // quello vero. Gli ascolti rispondono quando il test lo dice, con la
@@ -21,9 +22,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mai = () => new Promise(() => {})
 
-// Gli ascolti aperti, per percorso, e la licenza della build di questa
-// prova (null = una build della regia, che non ne ha una).
-const st = vi.hoisted(() => ({ ascolti: [], build: { licenza: null } }))
+// Gli ascolti aperti, per percorso.
+const st = vi.hoisted(() => ({ ascolti: [] }))
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   db: {},
@@ -31,19 +31,6 @@ vi.mock('../../src/lib/firebaseClient.js', () => ({
   functions: {},
   storage: {},
 }))
-
-// La build si sceglie per prova: la Tana ha la sua licenza, un locale della
-// regia no. `licenzaDi` è quella vera, con la build di questa prova.
-vi.mock('../../src/lib/venue.js', async (originale) => {
-  const vero = await originale()
-  return {
-    ...vero,
-    get LICENZA_DELLA_BUILD() {
-      return st.build.licenza
-    },
-    licenzaDi: (stato) => stato?.licenza ?? st.build.licenza,
-  }
-})
 
 vi.mock('firebase/firestore', () => ({
   collection: () => ({}),
@@ -85,11 +72,11 @@ vi.mock('firebase/firestore', () => ({
 
 // Ricaricati a ogni prova: l'ultima licenza letta sta in memoria nel modulo,
 // e ogni prova è un dispositivo appena aperto.
-let api, installazioneBloccata, moduloIncluso, STATI_LICENZA, pianoFree, impostazioniRicordate
+let api, installazioneBloccata, moduloIncluso, statoLicenza, STATI_LICENZA, pianoFree, impostazioniRicordate
 const carica = async () => {
   vi.resetModules()
   api = await import('../../src/lib/api.js')
-  ;({ installazioneBloccata, moduloIncluso, STATI_LICENZA } = await import('../../src/lib/licenza.js'))
+  ;({ installazioneBloccata, moduloIncluso, statoLicenza, STATI_LICENZA } = await import('../../src/lib/licenza.js'))
   ;({ pianoFree } = await import('../../src/lib/limiti.js'))
   ;({ impostazioniRicordate } = await import('../../src/lib/impostazioniLocali.js'))
 }
@@ -118,13 +105,12 @@ const ultimo = () => visti.at(-1)
 
 beforeEach(async () => {
   st.ascolti.length = 0
-  st.build.licenza = null
   visti = []
   localStorage.clear()
   await carica()
 })
 
-describe('un locale della regia (la build non ha una licenza)', () => {
+describe('un locale col suo documento della licenza', () => {
   it('vale il documento della regia, e quella scritta in settings/bar si butta', () => {
     ascolta()
     rispondi('settings/bar', BAR_MANOMESSO)
@@ -193,27 +179,50 @@ describe('un locale della regia (la build non ha una licenza)', () => {
   })
 })
 
-describe('la Tana (la build ha la sua licenza)', () => {
-  beforeEach(() => {
-    st.build.licenza = TANA
-  })
-
-  it('senza documento vale la licenza della build, anche confermato dal server', () => {
+// LA TANA È UN LOCALE COME GLI ALTRI (REQ-LIC-009). Con BUG-125 senza
+// documento valeva la licenza della sua build; ora senza documento
+// confermato dal server è «non attivata» come chiunque, e col suo
+// documento lavora coi suoi moduli.
+describe('la Tana, senza più la licenza nella build', () => {
+  it('senza documento, confermato dal server: «non attivata», come chiunque', () => {
     ascolta()
     rispondi('settings/bar', BAR_MANOMESSO)
     rispondi('licenza/attuale', null, { daCache: false })
-    expect(ultimo().licenza).toBe(TANA)
+    expect(ultimo().licenza).toEqual({ stato: STATI_LICENZA.NON_ATTIVATA })
+    expect(installazioneBloccata(ultimo())).toBe(true)
+  })
+
+  it('col suo documento lavora coi suoi moduli, e settings/bar non conta', () => {
+    ascolta()
+    rispondi('settings/bar', BAR_MANOMESSO)
+    rispondi('licenza/attuale', TANA)
+    expect(ultimo().licenza).toEqual(TANA)
     expect(installazioneBloccata(ultimo())).toBe(false)
-    // Quello che si è scritto in settings/bar non conta: fatture resta fuori.
     expect(moduloIncluso(ultimo(), 'fatture')).toBe(false)
     expect(moduloIncluso(ultimo(), 'conta')).toBe(true)
   })
+})
 
-  it('e se un giorno la regia le scrive il documento, comanda quello', () => {
+// LA SCADENZA SENZA RETE (REQ-LIC-009): il documento che il dispositivo ha
+// in cache dice fino a quando vale, e l'orologio del dispositivo basta.
+describe('la licenza scaduta, anche senza rete', () => {
+  const ieri = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+
+  it('con «ferma» l’app si ferma, dalla sola cache', () => {
     ascolta()
     rispondi('settings/bar', {})
-    rispondi('licenza/attuale', FREE)
-    expect(ultimo().licenza).toEqual(FREE)
+    rispondi('licenza/attuale', { ...TANA, valida_fino: ieri, alla_scadenza: 'ferma' }, { daCache: true })
+    expect(installazioneBloccata(ultimo())).toBe(true)
+    expect(statoLicenza(ultimo())).toBe(STATI_LICENZA.SCADUTA)
+  })
+
+  it('con «free» si lavora col Free: nessun modulo, coi limiti del Free', () => {
+    ascolta()
+    rispondi('settings/bar', {})
+    rispondi('licenza/attuale', { ...TANA, valida_fino: ieri, alla_scadenza: 'free' }, { daCache: true })
+    expect(installazioneBloccata(ultimo())).toBe(false)
+    expect(pianoFree(ultimo())).toBe(true)
+    expect(moduloIncluso(ultimo(), 'magazzino')).toBe(false)
   })
 })
 

@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 vi.mock('../../src/lib/firebaseClient.js', () => ({
   auth: { currentUser: { uid: 'a1', email: 'capo@bar.it', displayName: 'Capo Bar' } },
@@ -21,7 +22,7 @@ vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { groups_enabled: false, groups_in_drawer: false },
   settingsIniziali: () => ({ groups_enabled: false, groups_in_drawer: false }),
   subscribeSettings: vi.fn((cb) => {
-    cb({ groups_enabled: true, groups_in_drawer: true })
+    cb({ ...CON_LICENZA, groups_enabled: true, groups_in_drawer: true })
     return () => {}
   }),
   subscribeOpenGroups: vi.fn((cb) => {

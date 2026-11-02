@@ -172,7 +172,9 @@ describe('impostazioni a schede', () => {
       'Gruppi di ordini',
       'Clienti',
       'Stampante',
-      'Funzioni premium',
+      // «Licenza» dal REQ-LIC-007: il gruppo mostra anche il riepilogo
+      // della licenza, e le funzioni premium sono quello che comprende.
+      'Licenza',
       'Sistema',
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(voce) })).toBeInTheDocument()
@@ -378,7 +380,7 @@ describe('gli interruttori dei tasti di incasso stanno in Pagamenti', () => {
 // sotto diventa rossa, perché il tocco non parte nemmeno.
 describe('le funzioni premium (REQ-LIC-001)', () => {
   const apriPremium = async (user) => {
-    await user.click(screen.getByRole('button', { name: /Funzioni premium/ }))
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
   }
   const interruttoreDi = (etichetta) =>
     screen.getByText(etichetta).closest('.toggle-row').querySelector('input[type="checkbox"]')
@@ -581,7 +583,27 @@ describe('il piano Free nelle impostazioni', () => {
       prove: { magazzino: '2026-11-13T10:00:00.000Z' },
     }
     mostra()
-    await user.click(screen.getByRole('button', { name: /Funzioni premium/ }))
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
     expect(screen.getByText(/In prova fino al 13 novembre\./)).toBeInTheDocument()
+  })
+})
+
+// REQ-LIC-007. La licenza si legge nel suo gruppo, accanto alle funzioni
+// premium, e la legge il titolare: al banco non serve.
+describe('la licenza in Impostazioni (REQ-LIC-007)', () => {
+  it('il titolare la trova nel gruppo Licenza, sopra le funzioni premium', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByRole('heading', { name: 'Licenza' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
+  })
+
+  it('il bartender vede le funzioni premium, non la licenza', async () => {
+    const user = userEvent.setup()
+    mostra({ role: 'bartender' })
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.queryByRole('heading', { name: 'Licenza' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Funzioni premium' })).toBeInTheDocument()
   })
 })

@@ -84,10 +84,10 @@ settings/bar (venue_*)  ──────────────────�
 ## La licenza (REQ-LIC, REQ-FLOTTA-008)
 
 `licenza/attuale` la scrive la regia, e dall'app non la scrive nessuno
-(BUG-125). Senza quel documento vale la licenza della build,
-`clienti/<slug>/licenza.json`: è il caso della Tana, che ha la sua con
-gli stessi moduli di prima e nessuna sospensione. Senza nessuna delle due
-l'app mostra «Installazione non attivata». Con la licenza:
+(BUG-125). Ce l'ha ogni installazione, la Tana compresa (REQ-LIC-009,
+docs/licenza-valida.md): senza, l'app mostra «Installazione non attivata»
+e le regole non fanno scrivere niente; scaduta, si ferma o lavora col Free
+(`alla_scadenza`). Con la licenza:
 i moduli che non ci sono spengono le voci e le pagine relative
 (`FunzioneNonInclusa`), e `stato: sospesa | chiusa` ferma l'app con una
 schermata che lo dice (`InstallazioneSospesa`); i dati restano.

@@ -1,4 +1,5 @@
 {
+  "stato": "attiva",
   "moduli": {
     "menu_tavoli": true,
     "ordini_cliente": true,
@@ -10,5 +11,12 @@
     "conta": true,
     "fatture": false,
     "scadenzario": true
-  }
+  },
+  "limiti": null,
+  "valida_fino": null,
+  "valida_fino_ts": null,
+  "alla_scadenza": "ferma",
+  "cancellazione": null,
+  "slug": "tana",
+  "regia_url": null
 }
