@@ -4022,6 +4022,12 @@ requirements:
       fisso grande quanto lo schermo; niente sfocature dietro; GSAP si
       carica a parte, solo li', e con «riduci movimento» le scene restano
       ferme e si leggono lo stesso.
+      IL DISEGNO PIÙ GRANDE (02/11/2026). L'utente: «le immagini nel menu
+      special le vedo ancora piccole». Il disegno aveva una misura fissa,
+      320 px al massimo: ora prende tutta l'altezza che il testo gli lascia,
+      fino a 560 px; sugli schermi larghi e bassi (dai 900 px, più larghi
+      che alti) il disegno sta a sinistra e il testo a destra. Con «riduci
+      movimento» torna a una misura sua, fino a 560 px.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente, ui]
