@@ -6098,10 +6098,10 @@ requirements:
       tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di
       ogni versione, dopo l'accesso, l'app chiama la Function
       presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo
-      drink-regia o drink-regia-test) col token dell'utente e la versione;
-      e di nuovo, all'apertura o con «Riprova», finché manca la licenza.
-      Mai a tempo. La regia segna la versione e, se manca, scrive la
-      licenza. Il contratto in docs/presentazione-alla-regia.md; la regia è
+      drink-regia o drink-regia-test) col token dell'utente e la versione,
+      solo con qualcuno collegato (niente accessi anonimi). Mai a tempo.
+      La regia segna la versione e, se manca, riscrive la licenza; ma non
+      è l'attivazione: la licenza c'è prima dell'app. Il contratto in docs/presentazione-alla-regia.md; la regia è
       pronta (drink-regia REQ-FLOTTA-026, PR #40).
       COME È FATTO (02/11/2026): src/lib/presentazione.js decide QUANDO
       (presentaSeServe: una volta per versione per dispositivo, segnata in
