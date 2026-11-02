@@ -28,11 +28,8 @@
 // scrive con un incremento, che non torna mai indietro, e gli ascolti
 // allineano i dispositivi in un attimo.
 
-import { doc, onSnapshot, increment } from 'firebase/firestore'
-// Le scritture passano da scritture.js: nella demo si confermano dalla
-// cache, perché il server non risponde mai (REQ-FLOTTA-019).
-import { setDoc } from './scritture.js'
-import { db } from './firebaseClient.js'
+// Il database passa dalla porta dei dati (REQ-FLOTTA-021).
+import { db, doc, onSnapshot, increment, setDoc } from '../porte/dati.js'
 import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 
 const CHIAVE = 'drink:progressivi'

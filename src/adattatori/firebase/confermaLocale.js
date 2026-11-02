@@ -19,8 +19,8 @@
 // nessuno che rifiuti) si scrive in console e non si perde in silenzio.
 //
 // SOLO PER LA DEMO: nei locali veri la conferma del server conta — è lì
-// che arriva un permesso negato — e `scritture.js` usa questa funzione solo
-// quando la build è la demo.
+// che arriva un permesso negato — e l'adattatore dei dati (dati.js) usa
+// questa funzione solo quando la build è la demo.
 
 const segnala = (e) => console.warn('[demo] scrittura locale non riuscita:', e?.message || e)
 
