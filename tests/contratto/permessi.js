@@ -10,7 +10,9 @@
 // regola cambia, cambia anche qui, nello stesso commit, dicendo perché.
 // I casi con condizioni sui campi (ordini, gruppi, chiamate, contatori)
 // hanno le loro prove in tests/regole/: qui ci sono le collezioni dove
-// conta solo chi sei.
+// conta solo chi sei. Senza il documento della licenza, come qui, le
+// collezioni dei moduli non hanno limiti; con la licenza le prova
+// tests/regole/licenza.test.js (REQ-LIC-008).
 //
 // Non è un file *.test.js: lo usa chi lo fa girare.
 
@@ -31,10 +33,12 @@ export const PERMESSI = [
   // Quello che vede il cliente al menù.
   { collezione: 'drinks', legge: TUTTI, scrive: BANCO },
   { collezione: 'categories', legge: TUTTI, scrive: BANCO },
-  // Le impostazioni le scrive ogni bartender: anche `licenza`, che è della
-  // regia. È un difetto noto, da chiudere con un documento di licenza a
-  // parte (vedi REQ-FLOTTA-020): quando succede, questa riga cambia.
+  // Le impostazioni le scrive ogni bartender. Fino a BUG-125 c'era dentro
+  // anche la licenza, che è della regia: ora sta in `licenza`, qui sotto.
   { collezione: 'settings', legge: TUTTI, scrive: BANCO },
+  // La licenza la leggono tutti (il menù del cliente dipende dai moduli) e
+  // dall'app non la scrive nessuno: la regia usa le credenziali di servizio.
+  { collezione: 'licenza', legge: TUTTI, scrive: NESSUNO },
   { collezione: 'service_stats', legge: TUTTI, crea: BANCO, aggiorna: BANCO, cancella: BANCO },
 
   // Il magazzino e i fornitori: solo chi manda avanti il banco.

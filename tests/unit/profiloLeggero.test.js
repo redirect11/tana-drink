@@ -36,12 +36,13 @@ vi.mock('firebase/storage', () => ({
 vi.mock('../../src/lib/firebaseClient.js', () => ({ functions: {}, storage: {} }))
 
 import { listStaff, listUtenti, createStaff } from '../../src/lib/staffApi.js'
+import { ricordaImpostazioni } from '../../src/lib/impostazioniLocali.js'
 import { readerCheckout, createPaymentCheckout, pairSumUpReader } from '../../src/lib/paymentsApi.js'
 import { uploadDrinkImage, deleteDrinkImageByUrl, caricaAllegatoFattura, eliminaAllegato } from '../../src/lib/storage.js'
 
 // Le impostazioni come le lascia subscribeSettings nella memoria del
 // terminale: è da lì che i wrapper sanno su che installazione sono.
-const ricorda = (dati) => localStorage.setItem('drink:impostazioni', JSON.stringify(dati))
+const ricorda = (dati) => ricordaImpostazioni(dati)
 const FREE = { licenza: { piano: 'free', moduli: {}, limiti: { utenti_max: 1, marchio: true } } }
 
 // Senza tipo d'immagine: il ridimensionamento nel browser (canvas) qui non
@@ -84,7 +85,7 @@ describe('sul profilo leggero (piano Free)', () => {
   })
 })
 
-describe('la Tana, senza licenza, chiama come sempre', () => {
+describe('la Tana, con la licenza della sua build, chiama come sempre', () => {
   it('staffAdmin e i pagamenti passano dalle Functions', async () => {
     ricorda({ workflow_enabled: true })
     expect(await listStaff()).toEqual([{ uid: 'u1', role: 'staff' }])

@@ -30,6 +30,13 @@
 //   onSnapshot(ref o ricerca, aggiornamento, errore) → smetti(). La prima
 //     risposta arriva subito da quello che il dispositivo sa, le altre a
 //     ogni cambio, anche delle scritture di questo dispositivo
+//   onSnapshot(ref, { includeMetadataChanges: true }, aggiornamento, errore):
+//     lo stesso, e in più risponde quando cambia solo la PROVENIENZA. Ogni
+//     risposta ha `metadata.fromCache`: vero finché il server non l'ha
+//     confermata. Serve a distinguere «il documento non c'è» da «non lo so
+//     ancora», che senza rete sono la stessa risposta vuota (la licenza,
+//     BUG-125): un documento assente dalla cache e dal server non cambia
+//     mai, e senza l'opzione la conferma del server non arriverebbe
 //
 // Scritture
 //   setDoc(ref, dati, { merge }) · updateDoc(ref, patch) — il documento

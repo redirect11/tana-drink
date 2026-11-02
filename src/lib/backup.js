@@ -1,6 +1,8 @@
 // Il database passa dalla porta dei dati (REQ-FLOTTA-021).
 import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
 import { configurazione } from '../porte/configurazione.js'
+import { scritturaConsentita } from './licenza.js'
+import { impostazioniRicordate } from './impostazioniLocali.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -117,12 +119,23 @@ export async function importaDatabase(backup, onProgress = () => {}) {
 
   let scritti = 0
   const saltate = []
+  // LE COLLEZIONI DI UN MODULO CHE LA LICENZA NON INCLUDE non si rimettono
+  // (REQ-LIC-008): le regole le rifiuterebbero, e un documento rifiutato fa
+  // fallire il suo blocco di 400 e ferma tutto il ripristino a metà. Restano
+  // nel file: con il modulo, un ripristino successivo le riporta. La licenza
+  // è l'ultima nota su questo dispositivo, come per il resto dell'app.
+  const stato = impostazioniRicordate({})
+  const fuoriLicenza = []
   for (const [nome, c] of Object.entries(backup.collezioni)) {
     const righe = c?.righe || []
     if (!righe.length) continue
     if (!COLLEZIONI.includes(nome)) {
       // Roba di una versione più nuova: non la si inventa.
       saltate.push(nome)
+      continue
+    }
+    if (!scritturaConsentita(stato, nome)) {
+      fuoriLicenza.push(nome)
       continue
     }
     // A blocchi: writeBatch si ferma a 500 operazioni.
@@ -136,7 +149,7 @@ export async function importaDatabase(backup, onProgress = () => {}) {
       onProgress(nome, Math.min(i + 400, righe.length), righe.length)
     }
   }
-  return { scritti, saltate }
+  return { scritti, saltate, fuoriLicenza }
 }
 
 // Nome del file: progetto e data, così tre backup non si chiamano uguale.

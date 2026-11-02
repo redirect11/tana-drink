@@ -37,7 +37,7 @@ import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
-import { venueDi } from './lib/venue.js'
+import { venueDi, licenzaDi } from './lib/venue.js'
 import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi } from './lib/licenza.js'
 
 // LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
@@ -307,7 +307,7 @@ export default function App() {
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)
-  const menuNonIncluso = <FunzioneNonInclusa nome="Il menù digitale" licenza={settings.licenza} />
+  const menuNonIncluso = <FunzioneNonInclusa nome="Il menù digitale" licenza={licenzaDi(settings)} />
 
   // IL NOME DELL'APP SEGUE CHI LA USA: il nome del locale per il cliente,
   // col suffisso del ruolo per chi lavora. Vale per la linguetta del
@@ -419,7 +419,7 @@ export default function App() {
         />
       )}
       {/* GLI AGGIORNAMENTI A SCELTA DEL TITOLARE (REQ-FLOTTA-020): senza la
-          voce nella licenza — la Tana — non esce niente. */}
+          voce nella licenza — la Tana, la cui licenza è nella build — non esce niente. */}
       <PropostaAggiornamento settings={settings} ruolo={staffRole} inPausa={novitaAperte || bloccata} />
       {/* Notifiche IN APP (sync, ordini da staff/clienti, errori) */}
       <Toasts />
@@ -647,7 +647,7 @@ export default function App() {
           un cerca-persone. */}
       <ChiamataInArrivo ruolo={staffRole} />
 
-      {bloccata && <InstallazioneSospesa licenza={settings.licenza} venue={venue} />}
+      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
       <main hidden={bloccata}>
         <ConDemo>
         <Routes>

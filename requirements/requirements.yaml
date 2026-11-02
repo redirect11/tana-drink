@@ -5175,6 +5175,12 @@ requirements:
       stesso posto dove finirà la configurazione per cliente della Fase 2
       (`clienti/<slug>/`). Dalla schermata normale delle impostazioni non è
       modificabile; dagli strumenti di sviluppo sì (REQ-DEV-014).
+      DAL BUG-125 (01/11/2026) la colonna `incluso` non c'è più: era una
+      licenza nascosta nel codice, che a un locale senza documento dava
+      quasi tutto. Cosa è incluso lo dice solo la licenza, il documento
+      `licenza/attuale` della regia o quella della build
+      (`clienti/<slug>/licenza.json`), e dagli strumenti di sviluppo si
+      guarda soltanto.
       L'INTERRUTTORE D'USO è un flag booleano su `settings/bar`, della
       stessa forma di `workflow_enabled`: `modulo_conta_enabled` e
       `modulo_scadenzario_enabled`, in DEFAULT_SETTINGS a `true`. Stessa
@@ -5299,6 +5305,7 @@ requirements:
     priority: P2
     test_cases:
       - tests/unit/licenza.test.js
+      - tests/unit/licenzaInstallazione.test.js
       - tests/unit/sezioni.test.js
       - tests/component/InventoryManager.test.jsx
       - tests/component/FornitoriTab.test.jsx
@@ -5330,8 +5337,9 @@ requirements:
       bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di
       un modulo non incluso dice che non fa parte del piano e rimanda alla
       pagina del prodotto (FunzioneNonInclusa).
-      LA TANA TIENE TUTTO: senza licenza scritta ogni modulo e' `incluso`;
-      un locale della flotta ha `licenza.moduli` scritto dalla regia
+      LA TANA TIENE TUTTO: dal BUG-125 con la licenza della sua build
+      (`clienti/tana/licenza.json`), che nomina ogni modulo; un locale
+      della flotta ha `licenza.moduli` scritto dalla regia
       (repository drink-regia: all'attivazione, poi licenzaSegueIlPiano).
       DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi
       (piani.json nella regia); da fare: il lettore SumUp che guarda il
@@ -5552,6 +5560,72 @@ requirements:
     labels: [licenza, prodotto]
     priority: P2
     test_cases: []
+
+  - id: REQ-LIC-008
+    title: "Le regole del database fanno rispettare la licenza: moduli, sconti, ordini dal telefono"
+    area: "firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx"
+    description: >
+      «Pure se sbloccano localmente le funzioni premium serve cmq che il
+      server verifichi» (l'utente, 31/10/2026; «ok procedi con il mettere
+      in sicurezza in tal senso»). L'app nasconde quello che la licenza non
+      include, ma chi apre la console del browser scrive lo stesso. Da
+      BUG-125 la licenza sta in `licenza/attuale`, che dall'app non scrive
+      nessuno: ora le regole la LEGGONO e rifiutano.
+      COSA SI NEGA, solo in SCRITTURA (i dati di un modulo che il locale non
+      ha più restano leggibili, come restano nel database):
+        - le collezioni dei moduli, elencate in COLLEZIONI_DEI_MODULI
+          (magazzino, inventario, scadenzario, fatture ai clienti, ore e
+          paghe del personale, bilancio, nascita del profilo cliente); le
+          fatture dei fornitori passano con lo scadenzario O col magazzino,
+          perché la lista degli ordini ai fornitori le genera;
+        - un conto aperto dal telefono del cliente senza `ordini_cliente`;
+        - con `limiti.sconti: false`, uno sconto nuovo o alzato su un
+          ordine. Restano permessi lo sconto che c'era (le righe che
+          cambiano ne ricalcolano l'importo) e lo sconto tolto.
+      SENZA DOCUMENTO DELLA LICENZA NON SI LIMITA NIENTE: è la Tana, la cui
+      licenza sta nella build; un locale della regia il documento ce l'ha
+      sempre.
+      RESTANO FUORI, apposta, perché l'app le scrive anche senza il modulo
+      (mappa delle scritture del 01/11/2026): le timbrature a ogni accesso
+      del personale e il cerca-persone (modulo `staff`), i gruppi (li
+      governa `groups_enabled`), gli aggiornamenti del cliente sul suo
+      conto (il `push_token` anche sui conti battuti al banco), il profilo
+      cliente già nato (cambiarlo e cancellarlo sono suoi). E lo sconto
+      dentro un incasso (`payments[].sconto`): le regole non scorrono un
+      elenco, e quello si chiude solo con l'incasso fatto dal server. Il
+      lettore SumUp passa dalle Functions, che le regole non vedono. Il
+      numero di prodotti e di conti aperti del Free (REQ-LIC-003) non si
+      conta nelle regole: servirebbero dei contatori, da decidere.
+      PERCHÉ L'APP NON INCIAMPI nelle regole nuove:
+        - lo scarico del magazzino di una vendita (al «pronto», alla
+          chiusura, al riallineo, allo storno) non parte senza il modulo:
+          prima partiva a ogni vendita appena una ricetta puntava a un
+          articolo, e senza il modulo ogni vendita sarebbe diventata un
+          errore di sincronizzazione al banco. Se la licenza non si sa
+          ancora si scala come prima;
+        - il ripristino di un backup salta le collezioni dei moduli non
+          inclusi e lo dice: un documento rifiutato fermava il ripristino;
+        - `/bar?tab=ore`, il vecchio indirizzo delle ore del personale,
+          segue il modulo `staff` (apriva la schermata a tutti).
+      QUANTO COSTA: una lettura della licenza per richiesta, e solo dove
+      serve; nello stesso lotto le letture dello stesso documento contano
+      una volta (provato sull'emulatore con 60 documenti). Gli ordini che
+      non toccano lo sconto non la leggono.
+      DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale
+      attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un
+      booleano; i passaggi a un piano più piccolo si fanno fuori
+      dall'orario di servizio, perché le scritture in coda senza rete di un
+      modulo appena tolto vengono rifiutate.
+    status: implemented
+    generate_issue: false
+    labels: [licenza, sicurezza, prodotto]
+    priority: P1
+    test_cases:
+      - tests/regole/licenza.test.js
+      - tests/unit/regoleLicenza.test.js
+      - tests/unit/scaricoSenzaMagazzino.test.js
+      - tests/unit/backup.test.js
+      - tests/unit/sezioni.test.js
   # ══════════════════════════════════════════════════════════════════════
   #  IL PRODOTTO: l'app che sa essere qualsiasi locale, il marchio come
   #  configurazione (docs/flotta.md). La flotta — sito del prodotto,
@@ -5736,8 +5810,8 @@ requirements:
     description: >
       «Serve un modo per eliminare/fermare l'app deployata (ad esempio se
       non arriva il pagamento mensile)» (l'utente, 22/10/2026).
-      LA LICENZA HA UNO STATO: `settings/bar.licenza.stato` vale `attiva`
-      (o non c'e': la Tana non ha una licenza e lavora come sempre),
+      LA LICENZA HA UNO STATO: `licenza.stato` (dal BUG-125 nel documento
+      `licenza/attuale`) vale `attiva` (o non c'e'),
       `sospesa` o `chiusa`, con `motivo`, `dal` e `regia_url`. Lo scrive
       la regia (repository drink-regia): il backoffice coi tasti Sospendi,
       Riattiva e Chiudi, oppure da sola — una Function giornaliera sospende
@@ -12015,6 +12089,12 @@ requirements:
       leva non c'è da nessuna parte. Differenza da tenere a mente: la
       stampante finta è del TERMINALE (localStorage), i moduli premium sono
       di TUTTO IL LOCALE (settings/bar).
+      DAL BUG-125 (01/11/2026) «inclusa nella licenza» si GUARDA soltanto:
+      la licenza sta in `licenza/attuale`, che le regole non fanno scrivere
+      a nessuno dall'app, e quello che scriveva questo riquadro lo poteva
+      scrivere ogni bartender dalla console. Per provare un modulo si
+      scrive il documento con scripts/licenza-moduli.js o dalla console
+      dell'emulatore.
     status: implemented
     generate_issue: true
     labels: [dev, stampa]

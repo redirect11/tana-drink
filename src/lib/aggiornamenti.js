@@ -1,8 +1,8 @@
 /* global __DEMO__ */
 // ── GLI AGGIORNAMENTI DECISI DALLA REGIA (REQ-FLOTTA-020) ─────────────
 //
-// La regia scrive `settings/bar.licenza.aggiornamenti` (il contratto intero
-// è in docs/aggiornamenti-dalla-regia.md):
+// La regia scrive `aggiornamenti` nella licenza (`licenza/attuale`, BUG-125;
+// il contratto intero è in docs/aggiornamenti-dalla-regia.md):
 //
 //   { modalita: 'obbligatori' | 'a_scelta', inclusi, motivo,
 //     proposta: { tag, note, proposta_il, saltata_il }, avviso: { id, testo, dal } }
@@ -24,6 +24,7 @@
 // Logica pura: le impostazioni si passano, già in mano a chi chiama.
 
 import { isAdmin } from './ruoli.js'
+import { licenzaDi } from './venue.js'
 
 export const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
@@ -37,7 +38,7 @@ export const FORMA_TAG = /^v\d+\.\d+\.\d+$/
 // nessuna parte.
 export function aggiornamentiDi(stato) {
   if (__DEMO__) return null
-  const a = stato?.licenza?.aggiornamenti
+  const a = licenzaDi(stato)?.aggiornamenti
   return a && typeof a === 'object' && !Array.isArray(a) ? a : null
 }
 
@@ -115,17 +116,16 @@ export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
 // un locale di test deve chiamare la regia di test.
 //
 // Ma prima di mandargli il token si guarda che sia DAVVERO una regia. Il
-// token apre per un'ora tutto quello che il titolare può fare, e la
-// licenza, finché sta in `settings/bar` (BUG-125), la può riscrivere ogni
-// bartender: un `scelta_url` verso un server suo si prenderebbe il token
-// al primo «Aggiorna». Quindi: https, una Function di uno dei PROGETTI
+// token apre per un'ora tutto quello che il titolare può fare. Finché la
+// licenza stava in `settings/bar` la poteva riscrivere ogni bartender, e un
+// `scelta_url` verso un server suo si sarebbe preso il token al primo
+// «Aggiorna»; da BUG-125 la licenza non si scrive più dall'app, e il
+// controllo resta come seconda serratura, che non costa niente. Quindi: https, una Function di uno dei PROGETTI
 // della regia, un nome e nient'altro. I progetti sono scritti per intero:
 // un controllo sul solo finale del nome («…-drink-regia») lascerebbe
 // passare un progetto altrui chiamato `foo-drink-regia`, perché il nome
 // del progetto è nell'indirizzo, dopo la regione. Un indirizzo che non
 // passa vale come nessuno: si sceglie dall'area clienti.
-// Quando la licenza non sarà più scrivibile dall'app (BUG-125), questo
-// controllo si può togliere e l'indirizzo lo decide solo la regia.
 const PROGETTI_REGIA = ['drink-regia', 'drink-regia-test']
 const SCELTA_URL_REGIA = new RegExp(
   String.raw`^https://[a-z]+-[a-z]+[0-9]+-(${PROGETTI_REGIA.join('|')})\.cloudfunctions\.net/[A-Za-z0-9_-]+$`
