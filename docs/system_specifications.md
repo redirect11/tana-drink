@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 250 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**302 voci** in tutto. **267** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**303 voci** in tutto. **267** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 18 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 18 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -3605,6 +3605,12 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
+
+#### REQ-MENU-024 — Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore
+
+L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter caricare anche gli stili», poi «Stile a ricetta» e «una scelta ampia di caratteri dentro l'app». Uno stile a ricetta è la forma del menù come scelta fra valori fissi (caratteri, titoli, intestazione, voce, cornice, angoli, sfondo, colori facoltativi), che l'app disegna con un motore unico, con tutto il CSS dentro di sé: resta una ricetta, non codice, e funziona senza rete. Gli stili arrivano dal catalogo della regia (catalogoTemi → stili), si provano, si installano (con la copia nelle impostazioni) e si usano come quelli gratis; un tema può usarne uno. Dodici caratteri nuovi nella build. Il contratto in docs/stili-a-ricetta.md; la regia è pronta (drink-regia REQ-FLOTTA-034, PR #53).
+
+**Dove**: `src/lib/stileMenu.js (leggiStile, STILI_MENU), src/lib/marketplaceTemi.js (leggiTema, catalogo), src/index.css (il motore), src/main.jsx (i caratteri), docs/stili-a-ricetta.md`
 
 ### Magazzino
 
