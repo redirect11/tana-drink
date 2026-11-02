@@ -180,12 +180,15 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 - **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il
   tendone a strisce sopra l'apertura, voci come cartoline col bordo
   colorato, i disegni dei drink nei cerchi.
-- **Il marketplace dei temi** (REQ-MENU-023, Impostazioni ▸ Aspetto): un
-  TEMA è una tavolozza più uno stile. Ogni scheda ha un assaggio scritto coi
-  colori del tema sull'elemento (non sulla pagina) e nel suo stile, più la
-  tavolozza in cinque tessere; sui tasti basta il verbo («Installa», «Usa»),
-  il nome sta nell'aria-label, così le schede di una riga restano alte
-  uguali.
+- **Il marketplace dei temi** (REQ-MENU-023): una pagina sua, «🛍️
+  Marketplace» nel menu laterale, con Temi, Stili del menù e Installati.
+  Un TEMA è una tavolozza più uno stile. Ogni scheda è un catalogo: in alto
+  la vetrina, un pezzo del menù vero (categoria e due voci) scritto con le
+  classi del menù, coi colori del tema sull'elemento e nel suo stile, alta
+  230px e sfumata in fondo (una maschera, non un filtro); sotto nome,
+  descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
+  tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
+  nell'aria-label.
 - **«Giornale»**: la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.

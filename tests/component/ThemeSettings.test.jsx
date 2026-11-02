@@ -104,16 +104,13 @@ describe('lo stile del menù dei clienti', () => {
     expect(screen.getByRole('button', { name: /Classico/ })).toBeInTheDocument()
   })
 
-  // REQ-MENU-022: il catalogo degli stili gratis, in app. «Installa» e
-  // basta: niente pagamento. E ogni stile si prova sul proprio menù.
-  it('il catalogo: «Installa» aggiunge lo stile, e «Prova» apre il menù con quello stile', async () => {
-    const utente = userEvent.setup()
+  // REQ-MENU-023: il catalogo degli stili sta nella pagina del
+  // marketplace, non qui. Qui si sceglie fra quelli installati, e c'è la
+  // strada per il catalogo.
+  it('il catalogo non sta qui: c’è la strada per il marketplace', () => {
     render(<StileMenuClienti settings={{}} onSave={onSave} />)
-    expect(screen.getByRole('heading', { name: 'Altri stili, gratis' })).toBeInTheDocument()
-    await utente.click(screen.getByRole('button', { name: 'Installa Lavagna' }))
-    expect(salvato).toEqual({ stili_installati: ['lavagna'] })
-    const prove = screen.getAllByRole('link', { name: 'Prova sul menù' }).map((a) => a.getAttribute('href'))
-    expect(prove).toContain('/menu?vista=cliente&stile=giornale')
+    expect(screen.queryByRole('button', { name: /Installa/ })).toBeNull()
+    expect(screen.getByRole('link', { name: 'marketplace' })).toHaveAttribute('href', '/bar?tab=marketplace')
   })
 
   it('uno stile installato si sceglie e si disinstalla', async () => {

@@ -88,9 +88,11 @@ GET https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/catalogoTemi
 
 ## Nell'app (fatto)
 
-- **Impostazioni → Aspetto → Marketplace dei temi:** i temi del locale e,
-  sotto, quelli del catalogo (l'iniziale più quello della regia), ognuno con
-  un assaggio dei suoi colori e del suo stile, «Prova sul menù» e «Installa».
+- **Una pagina sua: «🛍️ Marketplace»** nel menu laterale, prima di
+  Impostazioni, con tre sezioni: **Temi**, **Stili del menù** (gli stili da
+  soli, sui colori del locale) e **Installati**. Ogni scheda ha una vetrina
+  (un pezzo del menù vero coi colori e lo stile del tema), «Prova sul menù»,
+  «Installa» e «Usa»; negli Installati, «Disinstalla».
 - **Installare** salva una copia del tema nelle impostazioni del locale
   (`temi_installati`).
 - **«Usa»** scrive la tavolozza nei colori del menù dei clienti
@@ -100,3 +102,5 @@ GET https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/catalogoTemi
   (`?vista=cliente&tema=…`), solo per chi la apre.
 - **Il catalogo iniziale**, tutto gratis: Classico, Lavagna, Grand Hotel,
   Riviera, Pastello, Gazzetta, Inchiostro, e Notte per la Tana.
+- In Impostazioni restano la scelta fra gli stili installati e il
+  collegamento «Apri il marketplace».

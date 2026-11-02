@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { stiliDisponibili, stiliDaInstallare, stileMenu, patchInstalla, patchDisinstalla } from '../lib/stileMenu.js'
+import { stiliDisponibili, stileMenu, patchDisinstalla } from '../lib/stileMenu.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -126,7 +126,6 @@ function AssaggioStile({ id }) {
 export function StileMenuClienti({ settings, onSave }) {
   const attuale = stileMenu(settings)
   const stili = stiliDisponibili(settings)
-  const daInstallare = stiliDaInstallare(settings)
   return (
     <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="stile-menu-titolo">
       <h4 id="stile-menu-titolo" style={{ margin: '0 0 4px' }}>Stile del menù</h4>
@@ -163,36 +162,11 @@ export function StileMenuClienti({ settings, onSave }) {
         ))}
       </div>
 
-      {daInstallare.length > 0 && (
-        <>
-          <h4 style={{ margin: '18px 0 4px' }}>Altri stili, gratis</h4>
-          <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-            Si installano senza costi e si possono disinstallare in qualsiasi momento. Installato, uno stile
-            compare tra quelli da scegliere.
-          </p>
-          <div className="mode-choice stili-menu">
-            {daInstallare.map((s) => (
-              <div key={s.id} className="stile-scheda">
-                <div className="mode-option">
-                  <AssaggioStile id={s.id} />
-                  <strong>{s.nome}</strong>
-                  <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
-                    {s.desc}
-                  </span>
-                </div>
-                <div className="stile-azioni">
-                  <a className="link-inline small" href={urlProva(s.id)}>
-                    Prova sul menù
-                  </a>
-                  <button type="button" className="btn small" onClick={() => onSave(patchInstalla(settings, s.id))}>
-                    Installa {s.nome}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {/* Il catalogo degli stili (e dei temi) sta nella pagina del
+          marketplace (REQ-MENU-023): qui si sceglie fra quelli installati. */}
+      <p className="muted small" style={{ margin: '10px 0 0' }}>
+        Altri stili e temi, gratis, nel <a className="link-inline" href={`${import.meta.env.BASE_URL || '/'}bar?tab=marketplace`}>marketplace</a>.
+      </p>
     </div>
   )
 }
