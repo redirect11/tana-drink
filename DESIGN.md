@@ -189,7 +189,20 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
   descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
   tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
   nell'aria-label.
-- **«Giornale»**: la carta stampata. `Playfair Display` per testata e
+- **«Giornale»** (REQ-MENU-024): una STRUTTURA sua, non una veste sopra le
+  card (MenuGiornale.jsx). Testata col nome del locale in `Playfair`
+  800 fra filetti doppi e la riga «Edizione della sera» con la data;
+  sommario agganciato sotto la barra, la sezione in vista sottolineata con
+  `--accent-2`; prima pagina con l'apertura (occhiello, titolo grande,
+  incisione con didascalia, capolettera solo sui testi lunghi) e «In
+  breve»; sezioni come fasce di inchiostro (`--text` di fondo, `--bg` di
+  testo) con le voci in colonne e senza immagini; tasti a filetto, angoli
+  vivi. Le immagini sono INCISIONI (`segno: 'incisione'`): un solo
+  inchiostro, cornice da lastra, nessun acquerello. Si anima solo
+  l'entrata di testata e prima pagina, e lo scorrimento del sommario; con
+  «riduci movimento», niente. Questa voce sotto è la prima versione, a
+  veste, sostituita.
+- **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.
 

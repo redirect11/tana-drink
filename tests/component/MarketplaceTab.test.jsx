@@ -108,3 +108,14 @@ describe('il marketplace', () => {
     expect(screen.getByText(/Nessun tema né stile installato/)).toBeInTheDocument()
   })
 })
+
+// REQ-MENU-024: la vetrina di uno stile con una struttura sua mostra
+// quella — il «Giornale» è una testata con le sezioni, non le card.
+describe('la vetrina del «Giornale»', () => {
+  it('è un giornale in miniatura', () => {
+    const { container } = mostra()
+    const vetrina = container.querySelector('.vetrina-tema.stile-giornale')
+    expect(vetrina.querySelector('.g-testata')).not.toBeNull()
+    expect(vetrina.querySelector('.menu-item')).toBeNull()
+  })
+})
