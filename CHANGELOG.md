@@ -5,9 +5,8 @@
 ### Per i locali aggiornati dalla regia
 
 - **L'app si presenta alla regia** alla prima apertura di ogni versione
-  nuova: la regia sa quale versione gira, e se la licenza manca la scrive.
-- **«Installazione non attivata» ha un tasto «Riprova»**, che chiede di
-  nuovo la licenza alla regia e dice com'è andata.
+  nuova, con qualcuno collegato: la regia sa quale versione gira, e se la
+  licenza manca la riscrive.
 
 ### Nel menù
 

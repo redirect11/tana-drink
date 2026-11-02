@@ -12,8 +12,11 @@
 //   · una volta per versione, dopo l'accesso: se questo dispositivo non ha
 //     ancora presentato questa versione. Dieci tablet fanno dieci chiamate
 //     alla prima apertura, e la regia ne registra una;
-//   · finché manca la licenza: all'apertura della schermata «non attivata»
-//     e col suo «Riprova».
+//   · se la licenza manca e qualcuno è ancora collegato: la regia la
+//     riscrive. NON È L'ATTIVAZIONE: l'app non fa accessi anonimi, e su
+//     un'installazione nuova la schermata «non attivata» copre anche
+//     l'accesso. La licenza c'è prima dell'app (la scrive l'attivazione
+//     della regia, o, per la Tana, il deploy); questo è il caso di riserva.
 // Un errore di rete non blocca niente e non segna niente: si riprova alla
 // prossima apertura. Senza `VITE_REGIA_PROGETTO`, o con un progetto che non
 // è della regia, nessuna chiamata: il token di chi ha fatto l'accesso non
@@ -41,7 +44,7 @@ export const segnaPresentata = (versione) => scrivi(CHIAVE, numero(versione))
 // La risposta della regia. `licenza` è 'scritta', 'presente',
 // 'non_dalla_regia' (la Tana, oggi: segna solo la versione) o 'non_attiva'.
 // Ogni 200 vale come presentata; il resto si riprova alla prossima
-// apertura (o col «Riprova»).
+// apertura.
 export function esitoPresentazione(status, corpo) {
   if (status === 200 && corpo?.ok) return { ok: true, licenza: corpo.licenza ?? null }
   const errore = typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null
@@ -49,9 +52,8 @@ export function esitoPresentazione(status, corpo) {
 }
 
 // UNA PRESENTAZIONE, SE SERVE. `chiama(url, versione)` è la chiamata vera
-// (api.js), che torna l'esito. `licenzaMancante` è la schermata «non
-// attivata»: lì si chiama anche se la versione è già stata presentata,
-// perché è l'unico modo di farsi scrivere la licenza.
+// (api.js), che torna l'esito. Con `licenzaMancante` si chiama anche se la
+// versione è già stata presentata: è il modo di farsela riscrivere.
 // Torna l'esito, o null se non si è chiamato.
 export async function presentaSeServe({ versione, collegato, licenzaMancante = false, chiama, progetto }) {
   const url = urlPresentazione(progetto)

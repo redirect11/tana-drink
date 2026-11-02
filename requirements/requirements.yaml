@@ -6125,8 +6125,9 @@ requirements:
       nessun errore che risale). L'indirizzo si costruisce da
       VITE_REGIA_PROGETTO solo per PROGETTI_REGIA (aggiornamenti.js).
       App.jsx la lancia all'accesso e quando la licenza risulta «non
-      attivata»; InstallazioneSospesa ha il «Riprova», che dice com'è
-      andata. deploy.yml compila drink-regia in produzione e
+      attivata» con qualcuno ancora collegato. Nessun «Riprova» nella
+      schermata (docs/presentazione-alla-regia.md, aggiornato il
+      02/11/2026). deploy.yml compila drink-regia in produzione e
       drink-regia-test sul test. Per ora la regia risponde
       `non_dalla_regia` alla Tana e segna solo la versione: la licenza
       della Tana resta quella creata dal deploy (il ponte, REQ-LIC-009).
@@ -6134,8 +6135,7 @@ requirements:
       solo con qualcuno collegato. Su un'installazione nuova, senza licenza
       e senza nessuno collegato, la schermata «non attivata» copre anche
       l'accesso: lì la licenza deve già esserci (la regia la scrive
-      all'attivazione, prima dell'app), e il «Riprova» è per chi una
-      sessione ce l'ha.
+      all'attivazione, prima dell'app).
     status: implemented
     generate_issue: false
     labels: [flotta, licenza, regia]

@@ -76,7 +76,7 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -309,22 +309,19 @@ export default function App() {
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
   // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
-  // dopo l'accesso, e di nuovo finché la licenza manca. In sottofondo:
-  // nessuno la aspetta, e un errore si riprova alla prossima apertura.
+  // dopo l'accesso, e di nuovo se la licenza manca e qualcuno è ancora
+  // collegato (la regia la riscrive). Non è l'attivazione: la licenza c'è
+  // prima dell'app. In sottofondo: nessuno la aspetta, e un errore si
+  // riprova alla prossima apertura.
   const nonAttivata = statoLicenza(settings) === STATI_LICENZA.NON_ATTIVATA
-  const presenta = useCallback(
-    () =>
-      presentaSeServe({
-        versione: VERSIONE,
-        collegato: Boolean(uidCollegato),
-        licenzaMancante: nonAttivata,
-        chiama: presentaAllaRegia,
-      }),
-    [uidCollegato, nonAttivata]
-  )
   useEffect(() => {
-    presenta()
-  }, [presenta])
+    presentaSeServe({
+      versione: VERSIONE,
+      collegato: Boolean(uidCollegato),
+      licenzaMancante: nonAttivata,
+      chiama: presentaAllaRegia,
+    })
+  }, [uidCollegato, nonAttivata])
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)
@@ -671,13 +668,7 @@ export default function App() {
       {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
           sul locale fermo. */}
       <AvvisoCancellazione settings={settings} ruolo={staffRole} />
-      {bloccata && (
-        <InstallazioneSospesa
-          licenza={licenzaDi(settings)}
-          venue={venue}
-          onRiprova={nonAttivata && uidCollegato ? presenta : undefined}
-        />
-      )}
+      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
       <main hidden={bloccata}>
         <ConDemo>
         <Routes>
