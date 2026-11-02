@@ -2,6 +2,17 @@
 
 ## 1.10.8-beta — in lavorazione
 
+### Nel menù
+
+- **Lo stile «Giornale» è un giornale vero.** Il menù si apre su una
+  testata con la data dell'edizione e un sommario che resta in alto e
+  segue la lettura. Il primo Special è l'articolo di prima pagina, con un
+  titolo grande e la sua illustrazione; gli altri stanno «In breve». Ogni
+  categoria è una sezione, con le voci in colonne.
+- **Le illustrazioni del «Giornale» sono incisioni**: un solo inchiostro,
+  la cornice della lastra, il tratteggio al posto dei colori. Gli altri
+  stili avranno le loro.
+
 ### Nel gestionale
 
 - **Il marketplace dei temi è una pagina sua**: la voce «🛍️ Marketplace»
