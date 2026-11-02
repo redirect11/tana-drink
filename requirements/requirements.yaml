@@ -5735,8 +5735,8 @@ requirements:
       - tests/unit/css.test.js
 
   - id: REQ-MENU-023
-    title: "Il marketplace dei temi in Aspetto: un tema è una tavolozza più uno stile, si installa, si prova e si usa"
-    area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTemi.jsx, src/components/SettingsTab.jsx (riquadro in Aspetto), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"
+    title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
+    area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"
     description: >
       L'utente, 02/11/2026: «Dobbiamo fare una sezione marketplace per i
       temi in aspetto. È una pagina che carica tutti i temi disponibili.
@@ -5762,14 +5762,98 @@ requirements:
       contratto per la regia, e quello che deve costruire (catalogo,
       pagina per pubblicare, stessa validazione), in
       docs/marketplace-temi.md.
+      UNA PAGINA SUA (02/11/2026). La prima versione era un riquadro in
+      Impostazioni → Aspetto; l'utente: «ti avevo chiesto una sezione
+      marketplace separata, una finestra/pagina nuova che apro per navigare
+      i temi come se fosse un catalogo e poi li installo sulla mia
+      istanza». Ora è la voce «🛍️ Marketplace» del menu laterale, prima di
+      Impostazioni (docs/navigazione.md: risponde a una domanda diversa),
+      con tre sezioni nel menu a scomparsa: Temi, Stili del menù (gli stili
+      da soli, sui colori del locale) e Installati (dove si
+      disinstalla). Ogni scheda ha una vetrina grande, un pezzo del menù
+      vero scritto con le classi del menù. In Impostazioni restano la
+      scelta fra gli stili installati (Menù clienti) e «Apri il
+      marketplace» (Aspetto); il catalogo degli stili gratis di
+      REQ-MENU-022 si è spostato qui.
     status: implemented
     generate_issue: false
     labels: [menu, prodotto, regia]
     priority: P2
     test_cases:
       - tests/unit/marketplaceTemi.test.js
-      - tests/component/MarketplaceTemi.test.jsx
+      - tests/component/MarketplaceTab.test.jsx
       - tests/component/MenuPage.test.jsx
+
+  - id: REQ-MENU-024
+    title: "Lo stile «Giornale» ha una struttura sua e immagini sue: testata, sommario, prima pagina, sezioni, incisioni"
+    area: "src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)"
+    description: >
+      L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e
+      immagini diverse da quelle proposte per la tana (drink stilizzati)»,
+      e, sulla proposta stile per stile, «sì vanno bene, basta che sia figa
+      e fluida la UX». Si comincia da «Giornale», uno stile alla volta. Non
+      più una veste sopra le card del classico (le sue regole vecchie sono
+      tolte): MenuGiornale disegna una TESTATA (il nome del locale coi
+      filetti, «Edizione della sera» con la data), un SOMMARIO agganciato
+      sotto la barra che segue la lettura (la sezione in vista è segnata,
+      IntersectionObserver) e porta alla sezione scorrendo dolcemente (o di
+      colpo, con «riduci movimento»), una PRIMA PAGINA (il primo Special
+      come apertura: occhiello, titolo grande, incisione con didascalia,
+      capolettera sui testi lunghi, prezzo; gli altri «In breve» a lato o
+      sotto), le SEZIONI (una fascia nera col nome e il numero di voci, le
+      voci in una, due o tre colonne, senza immagini, «NOME ···· prezzo»).
+      «Stiamo servendo il numero» diventa un'ultim'ora fra due filetti. Le
+      immagini sono a INCISIONE: un solo inchiostro, niente acquerello, una
+      cornice da lastra, la puntinatura, il colore del drink reso come
+      tratteggio più o meno fitto; dalle stesse scelte di ogni drink
+      (bicchiere, colore, decorazione), anche nel dettaglio. I gesti sono
+      quelli di sempre (Aggiungi, il carrello, il nome che apre il
+      dettaglio). Nel marketplace la vetrina di «Giornale» è un giornale in
+      miniatura. Guardato a schermo sulla demo, chiaro e scuro, desktop e
+      telefono. DA FARE, con lo stesso schema: «Lavagna» (gessetto, una
+      lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice
+      come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di
+      cartoline da scorrere).
+    status: implemented
+    generate_issue: false
+    labels: [menu, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/illustrazioneDrink.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/component/MarketplaceTab.test.jsx
+
+  - id: REQ-LIC-012
+    title: "Il marketplace dei moduli: il titolare prova, aggiunge e disdice i moduli dall'app, al mese"
+    area: "src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md"
+    description: >
+      L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il
+      marketplace». Alle domande dello stesso giorno: «al mese, come nel
+      listino», «sì, una prova gratuita», «solo il titolare». Nel
+      Marketplace una quarta sezione, Moduli: una scheda per ogni modulo
+      dell'app con lo stato dalla licenza (incluso, in prova fino al…, non
+      incluso), prezzo mensile IVA esclusa e giorni di prova dal listino
+      della regia (catalogoModuli, letto all'apertura e ricordato per
+      quando la rete manca). I tasti — «Prova gratis N giorni», «Aggiungi»,
+      «Disdici» con conferma — li vede solo il titolare (isAdmin), e solo
+      se la licenza è della regia (regia nella build e `regia_url` in
+      licenza): la licenza della Tana, scritta dal deploy, si consulta
+      soltanto. «Aggiungi» porta alla pagina di Stripe Checkout (solo un
+      indirizzo checkout.stripe.com) e la regia riporta il titolare sui
+      Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non
+      scrive niente: la regia riscrive la licenza e l'app la vede cambiare
+      in tempo reale. Un modulo che il listino non vende si vede ma non si
+      compra. DA FARE nella regia: catalogoModuli, moduloDallApp col
+      controllo del titolare e del ritorno, il webhook che accende il
+      modulo dopo il pagamento (docs/marketplace-moduli.md).
+    status: implemented
+    generate_issue: false
+    labels: [licenza, prodotto, regia]
+    priority: P2
+    test_cases:
+      - tests/unit/marketplaceModuli.test.js
+      - tests/unit/azioneModulo.test.js
+      - tests/component/MarketplaceTab.test.jsx
 
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
