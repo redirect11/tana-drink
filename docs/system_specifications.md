@@ -2582,7 +2582,7 @@ Nella vista menù il personale non vede più i propri ordini attivi in cima: que
 
 #### REQ-STAFF-008 — La sala lavora sulla stessa coda del banco
 
-La home dello staff di sala è la coda ordini, identica a quella del gestionale: quello che vede il banco lo vede anche chi porta i vassoi. Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è il filtro «Miei» della coda, che tiene solo i conti con la propria firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva col filtro già acceso. «Da servire» resta come sezione. Le sezioni amministrative restano ai gestori: per la sala un tab non suo riporta alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il menù che mostra al tavolo, con la ricerca), non il POS del banco.
+La home dello staff di sala è la coda ordini, identica a quella del gestionale: quello che vede il banco lo vede anche chi porta i vassoi. Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è il filtro «Miei» della coda, che tiene solo i conti con la propria firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva col filtro già acceso. «Da servire» resta come sezione. Le sezioni amministrative restano ai gestori: per la sala un tab non suo riporta alla coda. Dal menu laterale la sala apre «Ordina dal menù» (il menù che mostra al tavolo, con la ricerca), non il POS del banco; dal 02/11/2026 (BUG-127) la stessa voce c'è anche per admin e bartender, accanto a «Nuovo ordine» che apre la cassa. La schermata principale di tutto il personale resta la coda.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/StaffDrawer.test.jsx`
 
@@ -3612,7 +3612,7 @@ Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO — almeno uno
 
 #### REQ-TAVOLI-002 — Nome e tavolo nelle viste d'ordine: staff libero, cliente guidato
 
-Nella vista «Nuovo ordine dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
+Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 

@@ -5524,3 +5524,36 @@ bugs:
       - tests/regole/licenza.test.js
       - tests/unit/backup.test.js
       - tests/unit/licenza.test.js
+
+  - id: BUG-127
+    title: "Il tasto «Vista cliente» della coda apriva il menù per gli ordini, e dalla vista cliente vera si poteva ordinare"
+    area: "src/pages/BartenderPage.jsx (scheda «Oggi»), src/pages/MenuPage.jsx (canOrder), src/components/StaffDrawer.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Visto dall'utente il 02/11/2026 sul test: «perché se vado in menù
+      senza la vista cliente il menù mi appare diverso?». Il menù ha due
+      facce: per chi lavora è lo strumento degli ordini al tavolo (tema
+      del gestionale, stile classico, ricerca, gruppi), per il cliente è
+      la vetrina col tema e lo stile del locale; `?vista=cliente` mostra la
+      seconda a chi lavora. Due difetti intorno: nella coda a elenco la
+      scheda «Oggi» aveva un tasto «✍️ Vista cliente» che apriva `/menu`
+      SENZA il parametro, cioè il menù dello staff; e la vista cliente
+      vera aveva «Aggiungi» e carrello, così un admin in anteprima
+      mandava un ordine come un cliente anonimo, senza `placed_by`.
+      LE DECISIONI DELL'UTENTE, lo stesso giorno: «la vista cliente deve
+      solo mostrare il menù come lo vede il cliente. Ordina dal menù esce
+      solo per lo staff o bartender o admin, ma la schermata principale
+      rimane la coda degli ordini». Quindi: nella vista cliente non si
+      ordina (la riga in alto lo dice); il tasto della coda si chiama
+      «📖 Ordina dal menù»; nel ☰ la voce «Ordina dal menù» c'è per tutto
+      il personale, e admin e bartender hanno in più «Nuovo ordine», la
+      cassa. Prima il banco al menù dello staff ci arrivava solo dalla
+      coda a elenco, non da quella a griglia che è la vista di partenza.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, navigazione, menu]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+      - tests/component/StaffDrawer.test.jsx

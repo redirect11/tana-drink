@@ -205,12 +205,16 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     else navigate(id === 'servizio' ? '/bar' : `/bar?tab=${id}`)
   }
 
-  function nuovoOrdine() {
+  // DUE STRADE PER UN ORDINE, una per mano. La CASSA in stile POS è lo
+  // strumento del banco (admin e bartender). Il MENÙ DELLO STAFF è quello
+  // che si mostra al tavolo, con la ricerca: ce l'ha tutto il personale.
+  // L'utente, 02/11/2026: «Ordina dal menù esce solo per lo staff o
+  // bartender o admin, ma la schermata principale rimane la coda degli
+  // ordini». Prima il banco ci arrivava solo da un tasto della coda a
+  // elenco, che per giunta si chiamava «Vista cliente» (BUG-127).
+  function vaiA(percorso) {
     setOpen(false)
-    // Per i gestori la creazione ordine è la CASSA in stile POS (segue il
-    // tema staff). La sala invece ordina DAL MENÙ: lo stesso che mostra al
-    // tavolo, con la ricerca — il POS è lo strumento del banco.
-    navigate(isGestore(role) ? '/pos' : '/menu')
+    navigate(percorso)
   }
 
   // Toccando un gruppo si aprono i SUOI ORDINI nella coda (non si entra
@@ -288,11 +292,16 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
           </div>
         ))}
         <div className="bar-nav-sep" />
+        {isGestore(role) && (
+          <div className="bar-nav-item" onClick={() => vaiA('/pos')}>
+            <span>✍️</span> Nuovo ordine
+          </div>
+        )}
         <div
           className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
-          onClick={nuovoOrdine}
+          onClick={() => vaiA('/menu')}
         >
-          <span>✍️</span> {isGestore(role) ? 'Nuovo ordine' : 'Nuovo ordine dal menù'}
+          <span>📖</span> Ordina dal menù
         </div>
         {isSala(role) && <ChiamaIlBancone />}
 
