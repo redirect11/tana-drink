@@ -6130,6 +6130,34 @@ requirements:
     test_cases:
       - tests/unit/flottaCi.test.js
 
+  - id: REQ-FLOTTA-029
+    title: "Il titolare del locale ha lo stesso account della regia (stesso uid, stessa email), admin, e imposta la password dal link"
+    area: "scripts/lib-titolare.js, scripts/titolare-locale.mjs, docs/flotta.md"
+    description: >
+      M7, 02/11/2026: quando la regia attivava un locale il workflow
+      riceveva l'uid del titolare e non lo usava, e nel locale il titolare
+      non aveva un account: l'avvio si chiudeva a mano. Dalla regia
+      (drink-regia REQ-FLOTTA-029, scripts/titolare-istanza.mjs), a ogni
+      attivazione e aggiornamento di un locale della flotta, nel progetto
+      del locale c'e' l'account con LO STESSO UID e la stessa email del
+      titolare nella regia, col ruolo `admin` nei custom claims (il ruolo
+      dell'app, src/lib/ruoli.js), creato gia' verificato e senza password:
+      la password la imposta lui dall'email di Firebase. E' un contratto
+      con la regia (docs/flotta.md, «Il titolare»): il ruolo del titolare
+      e' `admin` e nient'altro. L'uid di Firebase Auth non si cambia: un
+      segnaposto mai usato con un altro uid si ricrea, un account gia'
+      usato resta com'e' con un avviso. I locali esistenti (la Tana) i
+      workflow della regia li saltano: per loro scripts/titolare-locale.mjs,
+      a mano, con la stessa regola (scripts/lib-titolare.js, copia di
+      functions/lib/titolare.js della regia) e senza --applica non scrive
+      niente. Sulla Tana il risultato atteso e' «resta quello»: l'account di
+      Flavio ha un uid suo e non si cancella.
+    status: implemented
+    generate_issue: false
+    labels: [prodotto, flotta, regia, sicurezza]
+    test_cases:
+      - tests/unit/titolareLocale.test.js
+
   - id: REQ-VENUE-006
     title: "La cartella di un cliente nuovo in un comando: genera-cliente.mjs --slug --nome"
     area: "scripts/genera-cliente.mjs, scripts/immagini-neutre.py, clienti/demo/public/"

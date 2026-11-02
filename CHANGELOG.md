@@ -2,6 +2,14 @@
 
 ## 1.10.8-beta — in lavorazione
 
+### Per chi gestisce l'installazione
+
+- **Il titolare entra nel suo locale con lo stesso account della regia.**
+  All'attivazione la regia crea l'account del titolare con la sua email e
+  il ruolo di amministratore, senza password: la si imposta dall'email che
+  arriva. Per le installazioni già attive c'è uno script che lo verifica e,
+  su richiesta, lo sistema.
+
 ### Nel menù
 
 - **Lo stile «Giornale» è un giornale vero.** Il menù si apre su una
