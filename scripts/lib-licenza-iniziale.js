@@ -13,8 +13,10 @@
 // scripts/licenza-moduli.js, o un domani dalla regia) un rilascio non li
 // deve mai riscrivere, e un rilascio non deve poter togliere un modulo.
 //
-// Non è la licenza della build che c'era con BUG-125: l'app quel file non lo
-// legge, e la licenza vive solo nel database.
+// Non è la licenza della build di BUG-125 (`licenza.json`): questo file
+// l'app non lo legge mai, lo legge solo il deploy, e la licenza che conta
+// è quella nel database. È il ponte per la Tana finché la regia di
+// produzione non la prende in carico; allora il passo nel deploy si toglie.
 //
 // Logica pura: il database lo passa chi chiama (scripts/licenza-iniziale.mjs
 // con firebase-admin, i test con uno finto).
