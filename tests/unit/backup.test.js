@@ -12,6 +12,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Finto Firestore: registra le scritture invece di farle.
 const scritture = []
 const lotti = []
+// Le impostazioni che ci sono nel database: il ripristino le legge per
+// tenere la licenza di adesso (BUG-126). Le prove la cambiano.
+const IMPOSTAZIONI_DI_PARTENZA = { menu_only: false }
+let impostazioniNelDatabase = { bar: IMPOSTAZIONI_DI_PARTENZA }
 vi.mock('firebase/firestore', () => ({
   collection: (_db, nome) => ({ nome }),
   getDocs: vi.fn(async ({ nome }) => ({
@@ -19,7 +23,7 @@ vi.mock('firebase/firestore', () => ({
       nome === 'orders'
         ? [{ id: 'o1', data: () => ({ total: 8 }) }]
         : nome === 'settings'
-          ? [{ id: 'bar', data: () => ({ menu_only: false }) }]
+          ? Object.entries(impostazioniNelDatabase).map(([id, dati]) => ({ id, data: () => dati }))
           : [],
   })),
   doc: (_db, nome, id) => ({ nome, id }),
@@ -49,6 +53,7 @@ import {
 beforeEach(() => {
   scritture.length = 0
   lotti.length = 0
+  impostazioniNelDatabase = { bar: IMPOSTAZIONI_DI_PARTENZA }
 })
 
 const backupFinto = (righe) => ({
@@ -161,5 +166,62 @@ describe('riassunto per l’anteprima', () => {
       { nome: 'suppliers', righe: 1 },
     ])
     expect(totaleRighe(b)).toBe(3)
+  })
+})
+
+// ── IL RIPRISTINO NON RIMETTE LA LICENZA (BUG-126) ────────────────────
+// Il backup è una fotografia di quando è stato fatto, licenza compresa:
+// in settings/bar c'è ancora la copia che la regia scrive per le versioni
+// vecchie dell'app. Rimetterla vorrebbe dire tornare a un piano vecchio o
+// togliersi una sospensione; e con le regole nuove, che quel campo non lo
+// fanno cambiare a nessuno, il lotto delle impostazioni verrebbe rifiutato
+// e il ripristino si fermerebbe a metà. Il resto delle impostazioni invece
+// si rimette com'era nel file: è quello che chi ripristina vuole.
+describe('il ripristino tiene la licenza che c’è adesso', () => {
+  const LICENZA_DI_ADESSO = { piano: 'base', stato: 'sospesa', moduli: { magazzino: false } }
+  const LICENZA_DEL_BACKUP = { piano: 'completo', stato: 'attiva', moduli: { magazzino: true } }
+  const conImpostazioni = (dati) => ({
+    formato: 1,
+    collezioni: { settings: { righe: [{ id: 'bar', dati }] } },
+  })
+
+  it('settings/bar si rimette dal file, ma con la licenza del database', async () => {
+    impostazioniNelDatabase = { bar: { venue_name: 'Oggi', licenza: LICENZA_DI_ADESSO } }
+    await importaDatabase(conImpostazioni({ venue_name: 'Ieri', theme: 'notte', licenza: LICENZA_DEL_BACKUP }))
+    expect(scritture).toHaveLength(1)
+    expect(scritture[0].dati).toEqual({ venue_name: 'Ieri', theme: 'notte', licenza: LICENZA_DI_ADESSO })
+  })
+
+  it('se adesso la licenza lì non c’è, quella del file non entra', async () => {
+    impostazioniNelDatabase = { bar: { venue_name: 'Oggi' } }
+    await importaDatabase(conImpostazioni({ venue_name: 'Ieri', licenza: LICENZA_DEL_BACKUP }))
+    expect(scritture[0].dati).toEqual({ venue_name: 'Ieri' })
+  })
+
+  it('un backup senza licenza non toglie quella che c’è', async () => {
+    impostazioniNelDatabase = { bar: { licenza: LICENZA_DI_ADESSO } }
+    await importaDatabase(conImpostazioni({ venue_name: 'Ieri' }))
+    expect(scritture[0].dati).toEqual({ venue_name: 'Ieri', licenza: LICENZA_DI_ADESSO })
+  })
+
+  it('le altre collezioni si rimettono come sono, senza leggere niente', async () => {
+    const { getDocs } = await import('firebase/firestore')
+    getDocs.mockClear()
+    await importaDatabase(backupFinto([{ id: 'o1', dati: { total: 8, licenza: 'non è roba sua' } }]))
+    expect(scritture[0].dati).toEqual({ total: 8, licenza: 'non è roba sua' })
+    expect(getDocs).not.toHaveBeenCalled()
+  })
+
+  it('la collezione della licenza vera, se un file la porta, si salta', async () => {
+    const { scritti, saltate } = await importaDatabase({
+      formato: 1,
+      collezioni: {
+        orders: { righe: [{ id: 'o1', dati: {} }] },
+        licenza: { righe: [{ id: 'attuale', dati: LICENZA_DEL_BACKUP }] },
+      },
+    })
+    expect(scritti).toBe(1)
+    expect(saltate).toEqual(['licenza'])
+    expect(scritture.map((w) => w.nome)).toEqual(['orders'])
   })
 })

@@ -10,6 +10,15 @@
   Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta e Inchiostro. I temi
   nuovi li pubblica il fornitore e compaiono da soli.
 
+### Privacy e sicurezza
+
+- **La copia della licenza nelle impostazioni non si può più modificare
+  dall'app**, nemmeno dalla console del browser: la scrive solo il
+  fornitore. Il resto delle impostazioni si modifica come prima.
+- **Il ripristino da un backup tiene la licenza attuale**: le impostazioni
+  tornano quelle del file, la licenza no. Vale anche per il ripristino da
+  riga di comando.
+
 ## 1.10.6-beta — 02/11/2026 (test)
 
 ### Nel menù
