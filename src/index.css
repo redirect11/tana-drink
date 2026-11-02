@@ -10403,6 +10403,18 @@ body.pagina-piena .inv-scheda {
   grid-column: 1 / -1;
   margin: 0;
 }
+/* SUL TELEFONO IL PREZZO VA SOTTO IL NOME. Accanto al nome, al prezzo e
+   al tasto «Aggiungi» la colonna del nome restava di pochi caratteri, e in
+   «Lavagna» spezzava i nomi a metà parola («Negroni Sbagliat-o»). */
+@media (max-width: 520px) {
+  :is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .row > .grow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > .price {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
 /* Il logo al posto della foto fa il menù giocattolo, in tutti e quattro. */
 :is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) .menu-item .drink-thumb.placeholder {
   display: none;
@@ -10474,7 +10486,7 @@ body.pagina-piena .inv-scheda {
   border: 0;
 }
 .stile-lavagna .menu-item .grow > h3 {
-  font-size: 1.6rem;
+  font-size: clamp(1.3rem, 5vw, 1.6rem);
   font-weight: 700;
   line-height: 1.1;
 }
@@ -10525,12 +10537,14 @@ body.pagina-piena .inv-scheda {
   text-align: center;
 }
 .stile-deco .cat-header::before {
+  /* Accanto al titolo, non sopra: il titolo è disposto in riga (col
+     filetto dopo), e un blocco lì diventava un puntino a sinistra. */
   content: '◆';
-  display: block;
-  font-size: 0.6rem;
+  font-size: 0.45em;
   color: var(--accent-2);
   letter-spacing: 0;
-  margin-bottom: 6px;
+  align-self: center;
+  margin-right: 0.5em;
 }
 .stile-deco .cat-header::after {
   height: 4px;
@@ -10575,6 +10589,24 @@ body.pagina-piena .inv-scheda {
   font-size: 0.68rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+/* Sul telefono il maiuscolo spaziato, la cornice doppia e il tasto
+   lasciavano al nome una colonna da sei lettere: «NEGRO-NI SBAGLI-ATO».
+   Meno spaziatura, cornice più stretta, e la parola lunga si sillaba. */
+@media (max-width: 520px) {
+  .stile-deco .menu-item {
+    margin: 8px 3px 12px;
+  }
+  .stile-deco .menu-item .grow > h3 {
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+    overflow-wrap: normal;
+    hyphens: auto;
+  }
+  :root .stile-deco .menu-item .btn.small {
+    letter-spacing: 0.08em;
+    padding-inline: 8px;
+  }
 }
 .stile-deco :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
   border-radius: 0;

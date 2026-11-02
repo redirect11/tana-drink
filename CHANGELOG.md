@@ -2,6 +2,11 @@
 
 ## 1.10.6-beta — in lavorazione
 
+### Nel menù
+
+- **Negli stili «Lavagna» e «Déco», sul telefono, i nomi dei drink non si
+  spezzano più a metà parola**: il prezzo va sotto il nome.
+
 ## 1.10.5-beta — 02/11/2026 (test)
 
 ### Nel menù
