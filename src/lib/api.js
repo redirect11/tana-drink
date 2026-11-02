@@ -112,6 +112,7 @@ import { businessDayKey, coverageStart, DEFAULT_CUTOFF_HOUR } from './businessDa
 import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
+import { esitoPresentazione } from './presentazione.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
@@ -6403,25 +6404,50 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
 // rete può restare appeso molto più a lungo.
 export const ATTESA_SCELTA_MS = 20000
 
-export async function inviaSceltaAggiornamento(url, tag, scelta) {
+// Una chiamata alla regia col token di chi ha fatto l'accesso: { status,
+// corpo }, o null senza token. Lancia senza rete o dopo l'attesa massima.
+// La usano la scelta sugli aggiornamenti e la presentazione (REQ-FLOTTA-026).
+async function chiamaRegia(url, dati) {
   const ferma = new AbortController()
   const timer = setTimeout(() => ferma.abort(), ATTESA_SCELTA_MS)
   try {
     const token = await auth.currentUser?.getIdToken()
-    if (!token) return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita }
+    if (!token) return null
     const risposta = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tag, scelta }),
+      body: JSON.stringify(dati),
       signal: ferma.signal,
     })
-    const corpo = await risposta.json().catch(() => null)
-    return esitoScelta(risposta.status, corpo)
+    return { status: risposta.status, corpo: await risposta.json().catch(() => null) }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function inviaSceltaAggiornamento(url, tag, scelta) {
+  try {
+    const r = await chiamaRegia(url, { tag, scelta })
+    if (!r) return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.non_riuscita }
+    return esitoScelta(r.status, r.corpo)
   } catch (e) {
     console.warn('[aggiornamenti] scelta:', e?.message || e)
     return { ok: false, messaggio: MESSAGGI_AGGIORNAMENTI.senza_rete }
-  } finally {
-    clearTimeout(timer)
+  }
+}
+
+// LA PRESENTAZIONE ALLA REGIA (REQ-FLOTTA-026): quando chiamarla lo decide
+// lib/presentazione.js; qui solo la chiamata. Non è un gesto della serata:
+// parte in sottofondo e nessuno la aspetta. Senza rete, o senza risposta,
+// torna un esito non riuscito e si riprova alla prossima apertura.
+export async function presentaAllaRegia(url, versione) {
+  try {
+    const r = await chiamaRegia(url, { versione })
+    if (!r) return { ok: false, status: 401, errore: null }
+    return esitoPresentazione(r.status, r.corpo)
+  } catch (e) {
+    console.warn('[regia] presentazione:', e?.message || e)
+    return { ok: false, status: 0, errore: null }
   }
 }
 
