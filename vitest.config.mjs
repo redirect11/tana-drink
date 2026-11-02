@@ -1,13 +1,12 @@
 import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
-import { leggiCliente } from './clienti/pluginCliente.js'
+import { leggiCliente, valoreCliente } from './clienti/pluginCliente.js'
 
 // Nei test l'app è compilata per la Tana (REQ-VENUE-001), come in
 // produzione: i test che leggono «La Tana del Coniglio» leggono la build,
 // e la licenza è quella della sua build (BUG-125).
 const tana = leggiCliente('tana', fileURLToPath(new URL('.', import.meta.url)))
-const clienteTana = { slug: tana.slug, venue: tana.venue, licenza: tana.licenza }
 
 export default defineConfig({
   plugins: [react()],
@@ -19,7 +18,7 @@ export default defineConfig({
     __BUILD_ID__: JSON.stringify('test'),
     __GIT_BRANCH__: JSON.stringify('test'),
     __GIT_COMMIT__: JSON.stringify('0000000'),
-    __CLIENTE__: JSON.stringify(clienteTana),
+    __CLIENTE__: valoreCliente(tana),
     // LA DEMO NEI TEST (REQ-FLOTTA-019). Nella build è un letterale; qui è
     // un interruttore globale, spento: un test che vuole provare il ramo
     // della demo lo accende con `accendiDemo()` (tests/helpers/demo.js, che

@@ -180,21 +180,24 @@ service cloud.firestore {
       // LO SCONTO NON CRESCE (REQ-LIC-008): senza sconti nella licenza non
       // si mette uno sconto nuovo e non se ne alza uno. Restano permessi,
       // perché succedono da soli o tolgono: lo sconto che c'era già (le
-      // righe che cambiano ne ricalcolano l'importo), e lo sconto tolto. Si
-      // guarda per primo, così l'ordine che non tocca lo sconto — quasi
-      // tutti — non legge la licenza.
+      // righe che cambiano ne ricalcolano l'importo), e lo sconto tolto.
       // NON SI VEDE lo sconto dentro un incasso (`payments[].sconto`): le
       // regole non scorrono un elenco. Quello si chiude solo con l'incasso
       // fatto dal server.
       function scontoNonCresce() {
         let dopo = request.resource.data.get('discount', null);
         let prima = resource == null ? null : resource.data.get('discount', null);
-        return (dopo == null || dopo == prima)
-          && (dopo != null
-              || request.resource.data.get('discount_amount', 0) == 0
-              || (resource != null
-                  && request.resource.data.get('discount_amount', 0)
-                     == resource.data.get('discount_amount', 0)));
+        let importo = request.resource.data.get('discount_amount', 0);
+        // Con uno sconto: lo stesso di prima. Senza: nessun importo, o
+        // l'importo che c'era (un importo da solo è uno sconto travestito).
+        return dopo != null
+          ? dopo == prima
+          : importo == 0 || (resource != null && importo == resource.data.get('discount_amount', 0));
+      }
+      // L'ordine dei due conta: si guarda per primo lo sconto, così
+      // l'ordine che non lo tocca — quasi tutti — non legge la licenza.
+      function scontoAmmesso() {
+        return scontoNonCresce() || scontiConsentiti();
       }
       allow get: if true;
       allow list: if isStaffMember()
@@ -203,7 +206,7 @@ service cloud.firestore {
         || resource.data.comande_statuses.hasAny(['pronto']);
       // L'ordine dal telefono del cliente è un modulo (REQ-LIC-002): senza,
       // il menù si legge e basta, e qui non se ne crea uno.
-      allow create: if (isStaffMember() && (scontoNonCresce() || scontiConsentiti()))
+      allow create: if (isStaffMember() && scontoAmmesso())
         || (conteNuovoDaCliente() && modulo('ordini_cliente'));
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
@@ -227,7 +230,7 @@ service cloud.firestore {
       // lavoro buono quando la cache del terminale è indietro di un battito
       // farebbe più danno del permesso che chiude: al banco vuol dire un
       // ordine che non parte.
-      allow update: if (scontoNonCresce() || scontiConsentiti()) && (isBartender()
+      allow update: if scontoAmmesso() && (isBartender()
         || (isSala()
             && request.resource.data.status != 'annullato'
             && request.resource.data.get('comande', []).size()

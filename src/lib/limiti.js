@@ -13,8 +13,9 @@
 // o di forma sbagliata vuol dire che l'app lavora come ha sempre lavorato.
 // È il caso della Tana, la cui licenza (scritta nella sua build) non ha
 // limiti, e non deve accorgersi di niente: ogni domanda qui sotto, senza
-// limiti, risponde «sì, come prima». Un limite non è mai il comportamento di partenza. Lo stesso vale
-// per ogni singola chiave: un `prodotti_max` mancante non limita i prodotti.
+// limiti, risponde «sì, come prima». Un limite non è mai il comportamento
+// di partenza. Lo stesso vale per ogni singola chiave: un `prodotti_max`
+// mancante non limita i prodotti.
 //
 // IL PROFILO LEGGERO. Un locale Free è pubblicato con le sole regole di
 // Firestore e il sito (`firebase deploy --only firestore,hosting`): niente

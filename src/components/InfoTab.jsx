@@ -90,10 +90,10 @@ export default function InfoTab({ settings = null, role = null }) {
 // aggiornamenti; l'ultimo avviso sulle condizioni. Senza la voce nella
 // licenza (la Tana, che ha la licenza della build) la scheda non c'è.
 function Aggiornamenti({ settings, role }) {
-  const { url, invio, fatta, scegli } = useSceltaAggiornamento(settings)
+  const { url, fatta, scegli, inCorso, erroreDi } = useSceltaAggiornamento(settings)
   const proposta = propostaAperta(settings, { versione: VERSIONE })
   const stato = statoProposta(settings, { ruolo: role, versione: VERSIONE, scelta: fatta })
-  const errore = proposta && invio?.tag === proposta.tag ? invio.errore : null
+  const errore = proposta ? erroreDi(proposta.tag) : null
   const motivo = nonInclusi(settings)
   const avviso = isAdmin(role) ? avvisoCondizioni(settings) : null
   if (!stato && !motivo && !avviso) return null
@@ -119,13 +119,13 @@ function Aggiornamenti({ settings, role }) {
                   {errore}
                 </p>
               )}
-              {invio?.inCorso && (
+              {inCorso && (
                 <p className="muted small" style={{ margin: '8px 0 0' }}>{MESSAGGI_AGGIORNAMENTI.in_corso}</p>
               )}
               <button
                 className="btn small"
                 style={{ marginTop: 8 }}
-                disabled={Boolean(invio?.inCorso)}
+                disabled={inCorso}
                 onClick={() => scegli(proposta.tag, SCELTE.AGGIORNA)}
               >
                 Aggiorna
@@ -135,15 +135,18 @@ function Aggiornamenti({ settings, role }) {
         </>
       )}
       {motivo && <AvvisoPiano compatto messaggio={MESSAGGI_AGGIORNAMENTI[motivo]} impostazioni={settings} />}
-      {avviso && (
-        <div style={{ marginTop: 10 }}>
-          <strong className="small">Condizioni del servizio</strong>
-          <p className="small" style={{ whiteSpace: 'pre-line', margin: '4px 0 0' }}>{avviso.testo}</p>
-          {dataAvviso(avviso.dal) && (
-            <p className="muted small" style={{ margin: '4px 0 0' }}>In vigore dal {dataAvviso(avviso.dal)}.</p>
-          )}
-        </div>
-      )}
+      {avviso && <AvvisoCondizioni avviso={avviso} />}
+    </div>
+  )
+}
+
+function AvvisoCondizioni({ avviso }) {
+  const dal = dataAvviso(avviso.dal)
+  return (
+    <div style={{ marginTop: 10 }}>
+      <strong className="small">Condizioni del servizio</strong>
+      <p className="small" style={{ whiteSpace: 'pre-line', margin: '4px 0 0' }}>{avviso.testo}</p>
+      {dal && <p className="muted small" style={{ margin: '4px 0 0' }}>In vigore dal {dal}.</p>}
     </div>
   )
 }

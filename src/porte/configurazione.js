@@ -33,8 +33,9 @@
 // Firebase: è proprio quello che questa porta deve poter cambiare.
 
 import { CLIENTE } from '../lib/venue.js'
+import { leggi, scrivi } from '../lib/impostazioniLocali.js'
 
-export const FILE_CONFIGURAZIONE = 'configurazione.json'
+const FILE_CONFIGURAZIONE = 'configurazione.json'
 const CHIAVE = 'drink:configurazione'
 
 // Gli adattatori che questa app ha. Un file che chiede un backend diverso
@@ -66,11 +67,10 @@ function normalizza({ backend, locale, firebase = {} }, origine) {
 }
 
 // Quella della build: le `VITE_*`, come sempre.
-export function configurazioneDallaBuild(env = import.meta.env) {
+function configurazioneDallaBuild(env = import.meta.env) {
   return normalizza(
     {
       backend: 'firebase',
-      locale: CLIENTE,
       firebase: {
         apiKey: env.VITE_FIREBASE_API_KEY,
         authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -104,23 +104,9 @@ export const haBackend = (c) => Boolean(c?.firebase?.apiKey && c?.firebase?.proj
 const uguali = (a, b) =>
   JSON.stringify({ ...a, origine: null }) === JSON.stringify({ ...b, origine: null })
 
-function ricordata() {
-  try {
-    const s = localStorage.getItem(CHIAVE)
-    return s ? leggiFile(JSON.parse(s)) : null
-  } catch {
-    return null
-  }
-}
-
-function ricorda(file) {
-  try {
-    if (file) localStorage.setItem(CHIAVE, JSON.stringify(file))
-    else localStorage.removeItem(CHIAVE)
-  } catch {
-    /* senza memoria nel dispositivo vale la build: come prima di questa porta */
-  }
-}
+// Senza memoria nel dispositivo vale la build: come prima di questa porta.
+const ricordata = () => leggi(CHIAVE, (s) => leggiFile(JSON.parse(s)), null)
+const ricorda = (file) => scrivi(CHIAVE, file || null)
 
 const scelta = () => (__DEMO__ ? configurazioneDallaBuild() : ricordata() || configurazioneDallaBuild())
 

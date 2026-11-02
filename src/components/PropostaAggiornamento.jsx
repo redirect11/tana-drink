@@ -28,19 +28,22 @@ export function useSceltaAggiornamento(settings) {
   const [invio, setInvio] = useState(null)
   // Un ref e non lo stato: due tocchi prima che React ridisegni vedrebbero
   // tutti e due «nessun invio in corso», e la regia riceverebbe due scelte.
-  const inCorso = useRef(false)
+  const occupato = useRef(false)
   const url = sceltaUrl(settings)
   const scegli = (tag, scelta) => {
-    if (!url || inCorso.current) return
-    inCorso.current = true
+    if (!url || occupato.current) return
+    occupato.current = true
     setInvio({ tag, scelta, inCorso: true })
     inviaSceltaAggiornamento(url, tag, scelta).then((esito) => {
-      inCorso.current = false
+      occupato.current = false
       setInvio(esito.ok ? { tag, scelta, ok: true } : { tag, scelta, errore: esito.messaggio })
     })
   }
   const fatta = invio?.ok ? { tag: invio.tag, scelta: invio.scelta } : null
-  return { url, invio, fatta, scegli }
+  // L'errore vale solo per la proposta a cui si riferisce: se intanto la
+  // regia ne ha scritta un'altra, quello vecchio non si mostra sulla nuova.
+  const erroreDi = (tag) => (invio?.tag === tag ? invio.errore ?? null : null)
+  return { url, fatta, scegli, inCorso: Boolean(invio?.inCorso), erroreDi }
 }
 
 // Il rimando all'area clienti, quando la licenza non dice dove mandare la
@@ -69,7 +72,7 @@ export function SceltaDallAreaClienti({ settings, piccolo = false }) {
 // la proposta di aggiornamento. Uno alla volta, e mai sopra il box delle
 // novità (`inPausa`), che è quello di un aggiornamento appena arrivato.
 export default function PropostaAggiornamento({ settings, ruolo, inPausa = false }) {
-  const { url, invio, fatta, scegli } = useSceltaAggiornamento(settings)
+  const { url, fatta, scegli, inCorso, erroreDi } = useSceltaAggiornamento(settings)
   const [visto, setVisto] = useState(avvisoVisto)
   // «Più tardi»: il box torna alla prossima apertura dell'app, non prima.
   const [rimandata, setRimandata] = useState(null)
@@ -121,8 +124,7 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
 
   if (!proposta) return null
 
-  const inCorso = Boolean(invio?.inCorso)
-  const errore = invio?.tag === proposta.tag ? invio.errore : null
+  const errore = erroreDi(proposta.tag)
   return (
     <Box titolo={`Versione ${numeroVersione(proposta.tag)} disponibile`} etichetta="Aggiornamento disponibile">
       <p className="muted small" style={{ margin: '6px 0 0' }}>

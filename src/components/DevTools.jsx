@@ -166,7 +166,7 @@ export default function DevTools() {
           <div key={m.id}>
             <ToggleRow
               label={`${m.label} — inclusa nella licenza`}
-              desc={`licenza/attuale · moduli.${m.id}`}
+              desc={`licenza in uso · moduli.${m.id}`}
               checked={moduloIncluso(impostazioni, m.id)}
               disabled
             />

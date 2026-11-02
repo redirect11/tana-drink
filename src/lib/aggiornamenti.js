@@ -25,13 +25,14 @@
 
 import { isAdmin } from './ruoli.js'
 import { licenzaDi } from './venue.js'
+import { leggi, scrivi } from './impostazioniLocali.js'
 
-export const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
+const MODALITA = Object.freeze({ OBBLIGATORI: 'obbligatori', A_SCELTA: 'a_scelta' })
 export const SCELTE = Object.freeze({ AGGIORNA: 'aggiorna', SALTA: 'salta' })
 
 // La forma del tag che la regia propone e che accetta nella scelta: una
 // versione di rilascio, mai una beta.
-export const FORMA_TAG = /^v\d+\.\d+\.\d+$/
+const FORMA_TAG = /^v\d+\.\d+\.\d+$/
 
 // La voce della licenza, o null. La demo la ignora (REQ-FLOTTA-019): non ha
 // una regia dietro, e un box che chiede di aggiornare lì non porterebbe da
@@ -47,7 +48,7 @@ export const modalitaAggiornamenti = (stato) =>
 
 // Gli aggiornamenti sono compresi nel piano? Solo un `false` scritto dice di
 // no: una voce mancante non toglie gli aggiornamenti a nessuno.
-export const aggiornamentiInclusi = (stato) => aggiornamentiDi(stato)?.inclusi !== false
+const aggiornamentiInclusi = (stato) => aggiornamentiDi(stato)?.inclusi !== false
 
 // ── LE VERSIONI ───────────────────────────────────────────────────────
 // `1.11.0-beta` → [1, 11, 0, false]; null se non si legge.
@@ -67,7 +68,7 @@ export function piuNuova(tag, installata) {
   const a = leggiVersione(tag)
   const b = leggiVersione(installata)
   if (!a) return false
-  if (!b) return String(tag).replace(/^v/, '') !== String(installata || '').replace(/^v/, '')
+  if (!b) return numeroVersione(tag) !== numeroVersione(installata)
   for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
   return !a[3] && b[3]
 }
@@ -76,7 +77,7 @@ export function piuNuova(tag, installata) {
 // più nuova dell'installata — saltata o no. Null altrimenti.
 export function propostaAperta(stato, { versione } = {}) {
   const a = aggiornamentiDi(stato)
-  if (!a || modalitaAggiornamenti(stato) !== MODALITA.A_SCELTA || !aggiornamentiInclusi(stato)) return null
+  if (a?.modalita !== MODALITA.A_SCELTA || a.inclusi === false) return null
   const p = a.proposta
   if (!p || typeof p !== 'object' || !FORMA_TAG.test(String(p.tag || ''))) return null
   return piuNuova(p.tag, versione) ? p : null
@@ -120,8 +121,9 @@ export function statoProposta(stato, { ruolo, versione, scelta = null } = {}) {
 // licenza stava in `settings/bar` la poteva riscrivere ogni bartender, e un
 // `scelta_url` verso un server suo si sarebbe preso il token al primo
 // «Aggiorna»; da BUG-125 la licenza non si scrive più dall'app, e il
-// controllo resta come seconda serratura, che non costa niente. Quindi: https, una Function di uno dei PROGETTI
-// della regia, un nome e nient'altro. I progetti sono scritti per intero:
+// controllo resta come seconda serratura, che non costa niente. Quindi:
+// https, una Function di uno dei PROGETTI della regia, un nome e
+// nient'altro. I progetti sono scritti per intero:
 // un controllo sul solo finale del nome («…-drink-regia») lascerebbe
 // passare un progetto altrui chiamato `foo-drink-regia`, perché il nome
 // del progetto è nell'indirizzo, dopo la regione. Un indirizzo che non
@@ -150,7 +152,7 @@ export function esitoScelta(status, corpo) {
 export function nonInclusi(stato) {
   const a = aggiornamentiDi(stato)
   if (!a || aggiornamentiInclusi(stato)) return null
-  return a.motivo === 'non_pagato' ? 'non_pagato' : a.motivo === 'free' ? 'free' : 'piano'
+  return ['non_pagato', 'free'].includes(a.motivo) ? a.motivo : 'piano'
 }
 
 export const MESSAGGI_AGGIORNAMENTI = {
@@ -174,21 +176,10 @@ export const MESSAGGI_AGGIORNAMENTI = {
 // novità (novita.js).
 const CHIAVE_AVVISO = 'drink:aggiornamenti:avviso'
 
-export function avvisoVisto() {
-  try {
-    return localStorage.getItem(CHIAVE_AVVISO)
-  } catch {
-    return null
-  }
-}
-
-export function segnaAvvisoVisto(id) {
-  try {
-    localStorage.setItem(CHIAVE_AVVISO, String(id))
-  } catch {
-    /* senza memoria locale l'avviso torna alla prossima apertura: meglio due volte che mai */
-  }
-}
+// Senza memoria locale l'avviso torna alla prossima apertura: meglio due
+// volte che mai.
+export const avvisoVisto = () => leggi(CHIAVE_AVVISO, (v) => v, null)
+export const segnaAvvisoVisto = (id) => scrivi(CHIAVE_AVVISO, String(id))
 
 // L'avviso valido (id e testo), o null.
 export function avvisoCondizioni(stato) {

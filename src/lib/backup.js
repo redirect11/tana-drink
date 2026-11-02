@@ -2,7 +2,7 @@
 import { db, collection, getDocs, doc, writeBatch } from '../porte/dati.js'
 import { configurazione } from '../porte/configurazione.js'
 import { scritturaConsentita } from './licenza.js'
-import { impostazioniRicordate } from './impostazioniLocali.js'
+import { licenzaRicordata } from './impostazioniLocali.js'
 
 // ── BACKUP E RIPRISTINO DEL DATABASE, dal gestionale ──────────────────
 //
@@ -124,7 +124,7 @@ export async function importaDatabase(backup, onProgress = () => {}) {
   // fallire il suo blocco di 400 e ferma tutto il ripristino a metà. Restano
   // nel file: con il modulo, un ripristino successivo le riporta. La licenza
   // è l'ultima nota su questo dispositivo, come per il resto dell'app.
-  const stato = impostazioniRicordate({})
+  const stato = { licenza: licenzaRicordata() }
   const fuoriLicenza = []
   for (const [nome, c] of Object.entries(backup.collezioni)) {
     const righe = c?.righe || []
