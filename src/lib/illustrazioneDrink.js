@@ -340,9 +340,18 @@ const VERSIONI = {
   chiaro: { tratto: '#1f1b24', fusione: 'multiply', forza: 1 },
 }
 
-export function svgDrink(scelta, { chiaro = false } = {}) {
+// ── I SEGNI: LO STESSO DRINK, DISEGNATO DA MANI DIVERSE (REQ-MENU-024) ──
+// L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e
+// immagini diverse da quelle proposte per la tana (drink stilizzati)». Il
+// segno di Tenniel con l'acquerello è l'identità della Tana; ogni stile del
+// menù disegna gli stessi drink (bicchiere, colore, decorazione: nessuno
+// rifà le schede) col suo segno.
+const SEGNI = ['tenniel', 'incisione']
+
+export function svgDrink(scelta, { chiaro = false, segno = 'tenniel' } = {}) {
   const s = sceltaIllustrazione(scelta)
   if (!s) return null
+  if (segno === 'incisione') return svgIncisione(s, { chiaro })
   const f = FORME[s.bicchiere]
   const colore = COLORI.find((c) => c.id === s.colore).hex
   const { tratto, fusione, forza } = VERSIONI[chiaro ? 'chiaro' : 'scuro']
@@ -396,13 +405,71 @@ ${deco?.testo ? deco.testo.replace('__TRATTO__', tratto) : ''}
 </svg>`
 }
 
+// «INCISIONE» (lo stile «Giornale»): la xilografia di un quotidiano
+// d'altri tempi. Un solo inchiostro, niente acquerello né colore: il
+// colore del drink diventa più o meno NERO, cioè tratteggio più o meno
+// fitto. Una cornice da lastra intorno, una puntinatura di fondo, l'ombra
+// a tratti orizzontali sotto il piede. Il contorno è più pesante di quello
+// di Tenniel: a stampa, la riga sottile si perde.
+const INCHIOSTRO = { scuro: '#eee8da', chiaro: '#1b1814' }
+// Quanto «pesa» un colore, in tratteggio: i chiari quasi niente, i rossi e
+// i bruni molto. Sono le stesse tinte di COLORI.
+const PESO = { limpido: 0.15, giallo: 0.3, pesca: 0.45, azzurro: 0.45, verde: 0.55, rosa: 0.55, lilla: 0.6, ambra: 0.7, rosso: 0.8, viola: 0.85 }
+
+function svgIncisione(s, { chiaro }) {
+  const f = FORME[s.bicchiere]
+  const ink = INCHIOSTRO[chiaro ? 'chiaro' : 'scuro']
+  const peso = PESO[s.colore] ?? 0.5
+  const seme = semeDi(`inc|${s.bicchiere}|${s.colore}|${s.decorazione}`)
+  const r = casuale(seme)
+  const deco = decorazione(s.decorazione, f)
+  // La puntinatura del fondo: fitta al centro, rada ai bordi della lastra.
+  let punti = ''
+  for (let i = 0; i < 260; i++) {
+    const x = 40 + r() * 320
+    const y = 40 + r() * 320
+    const d = Math.hypot(x - 200, y - 230) / 190
+    if (r() > 1 - d * 0.9) continue
+    punti += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.5 + r() * 0.7).toFixed(2)}"/>`
+  }
+  // Il liquido: righe orizzontali, più una diagonale incrociata se il
+  // colore è scuro. La distanza fra le righe dice il colore.
+  const passo = (5.5 - peso * 3).toFixed(1)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+<defs>
+<pattern id="h" width="${passo}" height="${passo}" patternUnits="userSpaceOnUse"><line x1="0" y1="${(passo / 2).toFixed(2)}" x2="${passo}" y2="${(passo / 2).toFixed(2)}" stroke="${ink}" stroke-width="0.9"/></pattern>
+<pattern id="k" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="4" stroke="${ink}" stroke-width="0.9"/></pattern>
+<pattern id="j" width="3.4" height="3.4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="3.4" stroke="${ink}" stroke-width="0.8"/></pattern>
+<clipPath id="c"><path d="${f.corpo}"/></clipPath>
+<clipPath id="l"><path d="${f.liquido}"/></clipPath>
+</defs>
+<rect x="14" y="14" width="372" height="372" fill="none" stroke="${ink}" stroke-width="2.4"/>
+<rect x="22" y="22" width="356" height="356" fill="none" stroke="${ink}" stroke-width="0.8"/>
+<g fill="${ink}" opacity="0.55">${punti}</g>
+<g clip-path="url(#l)"><rect width="400" height="400" fill="url(#h)"/>${peso > 0.5 ? '<rect width="400" height="400" fill="url(#j)" opacity="0.7"/>' : ''}</g>
+<g clip-path="url(#c)"><rect x="${f.ombra}" width="200" height="400" fill="url(#k)"/><rect x="${f.ombra + 22}" width="200" height="400" fill="url(#j)"/></g>
+<g stroke="${ink}" stroke-width="1">${[0, 1, 2, 3, 4].map((i) => `<line x1="${110 + i * 6}" y1="${f.base + 10 + i * 4}" x2="${290 - i * 6}" y2="${f.base + 10 + i * 4}"/>`).join('')}</g>
+<g fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+${f.vetro}
+<path d="${f.riflesso}" stroke-width="1.4"/>
+${f.ghiaccio || ''}
+<g stroke-width="1.8">${f.bolle || ''}</g>
+${deco?.tratto || ''}
+</g>
+${deco?.testo ? deco.testo.replace('__TRATTO__', ink) : ''}
+</svg>`
+}
+
 // Il disegno come indirizzo da mettere in un <img>, tenuto in memoria: la
-// stessa scelta si disegna una volta sola.
+// stessa scelta si disegna una volta sola, per segno.
 const cache = new Map()
-export function urlDrink(scelta, { chiaro = false } = {}) {
+export function urlDrink(scelta, { chiaro = false, segno = 'tenniel' } = {}) {
   const s = sceltaIllustrazione(scelta)
   if (!s) return null
-  const chiave = `${s.bicchiere}|${s.colore}|${s.decorazione}|${chiaro ? 1 : 0}`
-  if (!cache.has(chiave)) cache.set(chiave, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgDrink(s, { chiaro }))}`)
+  const seg = SEGNI.includes(segno) ? segno : 'tenniel'
+  const chiave = `${s.bicchiere}|${s.colore}|${s.decorazione}|${chiaro ? 1 : 0}|${seg}`
+  if (!cache.has(chiave)) {
+    cache.set(chiave, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgDrink(s, { chiaro, segno: seg }))}`)
+  }
   return cache.get(chiave)
 }
