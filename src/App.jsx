@@ -20,7 +20,9 @@ import {
   clockIn,
   subscribePrinterConfig,
   saveStaffToken,
+  presentaAllaRegia,
 } from './lib/api.js'
+import { presentaSeServe } from './lib/presentazione.js'
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
@@ -39,7 +41,7 @@ import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
 import { licenzaDi } from './lib/licenzaInVigore.js'
-import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi } from './lib/licenza.js'
+import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi, statoLicenza, STATI_LICENZA } from './lib/licenza.js'
 
 // LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
 // avvolgono le pagine. Si carica con `import()` solo se la build è la demo:
@@ -74,7 +76,7 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
 const VERSIONE = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : ''
@@ -306,6 +308,23 @@ export default function App() {
   const social = useMemo(() => socialDelLocale(venue), [venue])
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
+  // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
+  // dopo l'accesso, e di nuovo finché la licenza manca. In sottofondo:
+  // nessuno la aspetta, e un errore si riprova alla prossima apertura.
+  const nonAttivata = statoLicenza(settings) === STATI_LICENZA.NON_ATTIVATA
+  const presenta = useCallback(
+    () =>
+      presentaSeServe({
+        versione: VERSIONE,
+        collegato: Boolean(uidCollegato),
+        licenzaMancante: nonAttivata,
+        chiama: presentaAllaRegia,
+      }),
+    [uidCollegato, nonAttivata]
+  )
+  useEffect(() => {
+    presenta()
+  }, [presenta])
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)
@@ -652,7 +671,13 @@ export default function App() {
       {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
           sul locale fermo. */}
       <AvvisoCancellazione settings={settings} ruolo={staffRole} />
-      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
+      {bloccata && (
+        <InstallazioneSospesa
+          licenza={licenzaDi(settings)}
+          venue={venue}
+          onRiprova={nonAttivata && uidCollegato ? presenta : undefined}
+        />
+      )}
       <main hidden={bloccata}>
         <ConDemo>
         <Routes>
