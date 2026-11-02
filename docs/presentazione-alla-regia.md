@@ -11,9 +11,15 @@ della regia è pronta: [drink-regia PR #40](https://github.com/redirect11/drink-
 > attivazione e etc.»
 
 Quindi l'app stessa, quando parte con una versione nuova, dice alla regia
-chi è e che versione ha. La regia le risponde e, se manca, le scrive la
-licenza. Vale da qualunque deploy: dalla regia o dal `deploy.yml` di
-questo repository (la Tana).
+chi è e che versione ha. Vale da qualunque deploy: dalla regia o dal
+`deploy.yml` di questo repository (la Tana).
+
+**Non è l'attivazione** (vostra nota del 02/11/2026): l'app non fa accessi
+anonimi, e su un'installazione nuova senza licenza la schermata «non
+attivata» copre anche l'accesso. La licenza c'è prima dell'app:
+l'attivazione della regia la scrive prima del deploy, e per la Tana la crea
+il vostro deploy (PR #261). Se manca lo stesso e un dispositivo ha ancora
+una sessione aperta, la presentazione la fa riscrivere alla regia.
 
 ## La chiamata
 
@@ -40,7 +46,7 @@ Risposte:
 
 | Codice | Corpo | Cosa vuol dire |
 |---|---|---|
-| 200 | `{ ok: true, licenza: 'scritta' }` | Mancava, la regia l'ha scritta: l'app la vede arrivare in tempo reale e parte |
+| 200 | `{ ok: true, licenza: 'scritta' }` | Mancava, la regia l'ha riscritta: l'app la vede arrivare in tempo reale |
 | 200 | `{ ok: true, licenza: 'presente' }` | C'era già |
 | 200 | `{ ok: true, licenza: 'non_dalla_regia' }` | Un locale con la licenza sua (oggi la Tana): la regia segna solo la versione |
 | 200 | `{ ok: true, licenza: 'non_attiva' }` | Nella regia l'istanza non è ancora attiva, o è chiusa |
@@ -57,9 +63,8 @@ Mai a tempo (l'utente: «ste cose in polling si portavano negli anni 90»).
   diversa dall'ultima presentata da questo dispositivo (basta
   `localStorage`, con try/catch). Dieci tablet fanno dieci chiamate alla
   prima apertura: la regia ne registra una.
-- **Finché manca la licenza**: la schermata «Installazione non attivata»
-  chiama all'apertura e ha un tasto «Riprova». Con `licenza: 'scritta'` la
-  licenza arriva dal listener che c'è già.
+- **Solo con qualcuno collegato**: senza sessione non si chiama (niente
+  accessi anonimi). Nessun tasto «Riprova» nella schermata «non attivata».
 - Un errore di rete non blocca niente: si riprova alla prossima apertura.
 
 ## La Tana
@@ -67,15 +72,15 @@ Mai a tempo (l'utente: «ste cose in polling si portavano negli anni 90»).
 Per ora la Tana risponde `non_dalla_regia`: la regia segna la versione ma
 la licenza resta quella creata dal vostro deploy (PR #261). Quando la regia
 di produzione sarà online e la Tana collegata (il permesso alla regia sui
-due progetti, che dà l'utente, e la licenza dalla regia accesa), la stessa
-chiamata le porterà la licenza della regia, e il passo nel deploy si
-toglierà.
+due progetti, che dà l'utente, e la licenza dalla regia accesa), la regia
+le scriverà la licenza come agli altri locali, prima di ogni suo
+cambiamento, e il passo nel deploy si toglierà. La presentazione resterà
+quello che è: la versione che gira davvero.
 
 ## Da fare qui
 
 - La chiamata, con i tempi qui sopra, e l'indirizzo costruito da
   `VITE_REGIA_PROGETTO` con il controllo su `PROGETTI_REGIA`.
 - `VITE_REGIA_PROGETTO` nel `deploy.yml`.
-- Il tasto «Riprova» nella schermata «Installazione non attivata».
-- I test: la chiamata parte una volta per versione, riparte senza licenza,
-  non parte senza variabile o con un progetto non ammesso.
+- I test: la chiamata parte una volta per versione, solo con una sessione,
+  e non parte senza variabile o con un progetto non ammesso.
