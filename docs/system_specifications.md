@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 250 | fatto e coperto dai test |
+| ✅ | 251 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**302 voci** in tutto. **267** descrivono il sistema com'è oggi e
+**303 voci** in tutto. **268** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 8 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 6 | — |  |
+| [FLOTTA](#flotta) | 7 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3467,6 +3467,12 @@ La regia (drink-regia), attivando o aggiornando un locale, lancia su un checkout
 «Ci serve un modo sicuro per testare senza spaccare niente per la Tana» (l'utente, 21/10/2026). Dal 29/10/2026 la flotta sta nella regia (drink-regia): i workflow di attivazione e aggiornamento delle istanze, il Terraform e l'account di provisioning stanno la', con le loro credenziali. Qui restano i due deploy della Tana, `tana-drink` e `tana-drink-test`, che passano a deploy.yml `cliente: tana` (l'input `cliente`, predefinito `tana`, diventa `CLIENTE` della build). Nessuna destinazione della flotta: il ramo `feature/flotta` ne aveva una (`PROGETTO_FLOTTA`, drinkpos-demo), scartata portando la build per cliente in develop il 30/10/2026 — l'istanza dimostrativa e' un'istanza come le altre e la aggiorna la regia. I TEST GUARDANO TUTTI I CLIENTI: la CI compila anche `CLIENTE=demo`, cosi' una modifica pensata per la Tana che rompe la build degli altri si vede prima del rilascio. Un test legge i workflow.
 
 **Dove**: `.github/workflows/firebase-hosting.yml, .github/workflows/deploy.yml (input cliente), .github/workflows/test.yml, docs/flotta.md` · **Lo dimostrano**: `tests/unit/flottaCi.test.js`
+
+#### REQ-FLOTTA-029 — Il titolare del locale ha lo stesso account della regia (stesso uid, stessa email), admin, e imposta la password dal link
+
+M7, 02/11/2026: quando la regia attivava un locale il workflow riceveva l'uid del titolare e non lo usava, e nel locale il titolare non aveva un account: l'avvio si chiudeva a mano. Dalla regia (drink-regia REQ-FLOTTA-029, scripts/titolare-istanza.mjs), a ogni attivazione e aggiornamento di un locale della flotta, nel progetto del locale c'e' l'account con LO STESSO UID e la stessa email del titolare nella regia, col ruolo `admin` nei custom claims (il ruolo dell'app, src/lib/ruoli.js), creato gia' verificato e senza password: la password la imposta lui dall'email di Firebase. E' un contratto con la regia (docs/flotta.md, «Il titolare»): il ruolo del titolare e' `admin` e nient'altro. L'uid di Firebase Auth non si cambia: un segnaposto mai usato con un altro uid si ricrea, un account gia' usato resta com'e' con un avviso. I locali esistenti (la Tana) i workflow della regia li saltano: per loro scripts/titolare-locale.mjs, a mano, con la stessa regola (scripts/lib-titolare.js, copia di functions/lib/titolare.js della regia) e senza --applica non scrive niente. Sulla Tana il risultato atteso e' «resta quello»: l'account di Flavio ha un uid suo e non si cancella.
+
+**Dove**: `scripts/lib-titolare.js, scripts/titolare-locale.mjs, docs/flotta.md` · **Lo dimostrano**: `tests/unit/titolareLocale.test.js`
 
 #### REQ-FLOTTA-008 — Un'istanza si ferma: sospesa quando il pagamento non arriva, chiusa su decisione; i dati restano
 
