@@ -40,6 +40,7 @@ export default function LicenzaPanel({ settings }) {
     ['Stato', STATI[r.stato] ?? r.stato],
     ['Validità', testoValidita(r.validita)],
     ['Moduli premium inclusi', `${r.inclusi.length} su ${r.inclusi.length + r.esclusi.length}`],
+    ['Stili del menù', r.temi.length ? r.temi.join(', ') : null],
   ].filter(([, v]) => v)
 
   return (

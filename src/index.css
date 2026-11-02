@@ -10333,3 +10333,439 @@ body.pagina-piena .inv-scheda {
     transition: none;
   }
 }
+
+
+/* ── GLI STILI GRATIS DEL MENÙ CLIENTI (REQ-MENU-022) ────────────────────
+   L'utente, 02/11/2026: «per ora metterei un tot di temi gratis, escludiamo
+   lo stile Notte. Parlo di temi per il menu». Quattro vesti sopra il menù
+   classico — stesse voci, stesso carosello, stessa griglia degli Special —
+   che cambiano caratteri, filetti e impaginazione. I COLORI sono quelli del
+   tema del menù clienti, tranne «Lavagna», che senza lavagna non è niente.
+   Ogni stile dichiara i suoi tre caratteri (titolo, nome della voce, testo):
+   li usano le regole comuni qui sotto e l'assaggio nelle Impostazioni, che
+   così si scrive con lo stile vero. I caratteri sono dentro l'app
+   (REQ-SIC-004, src/main.jsx). */
+.stile-notte {
+  --stile-titolo: var(--notte-titolo);
+  --stile-voce: var(--notte-testo);
+  --stile-testo: var(--notte-testo);
+}
+.stile-lavagna {
+  --stile-titolo: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+  --stile-voce: 'Caveat', 'Segoe Print', 'Bradley Hand', cursive;
+  --stile-testo: 'Jost', 'Segoe UI', system-ui, sans-serif;
+}
+.stile-deco {
+  --stile-titolo: 'Poiret One', 'Jost', 'Futura', sans-serif;
+  --stile-voce: 'Poiret One', 'Jost', 'Futura', sans-serif;
+  --stile-testo: 'Jost', 'Futura', 'Segoe UI', sans-serif;
+}
+.stile-riviera {
+  --stile-titolo: 'Dancing Script', 'Brush Script MT', cursive;
+  --stile-voce: 'Jost', 'Segoe UI', sans-serif;
+  --stile-testo: 'Jost', 'Segoe UI', sans-serif;
+}
+.stile-giornale {
+  --stile-titolo: 'Playfair Display', 'Didot', Georgia, serif;
+  --stile-voce: 'Playfair Display', Georgia, serif;
+  --stile-testo: Georgia, 'Times New Roman', 'Noto Serif', serif;
+}
+
+/* Le regole comuni dei quattro: caratteri al loro posto, e la voce in riga
+   «NOME … prezzo», che è come si legge una carta. */
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) {
+  font-family: var(--stile-testo);
+}
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) :is(.hero-title, .cat-header) {
+  font-family: var(--stile-titolo);
+  font-style: normal;
+  text-wrap: balance;
+}
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) .menu-item .grow > h3 {
+  font-family: var(--stile-voce);
+  margin: 0;
+}
+:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > h3 {
+  grid-column: 1;
+}
+:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+}
+:is(.stile-lavagna, .stile-deco, .stile-giornale) .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+/* Il logo al posto della foto fa il menù giocattolo, in tutti e quattro. */
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale) .menu-item .drink-thumb.placeholder {
+  display: none;
+}
+
+/* «LAVAGNA»: gesso su ardesia. Porta i suoi colori, tutti: anche quelli
+   delle finestre e del carrello, che stanno dentro la pagina — con un tema
+   chiaro sotto, il gesso finirebbe su un fondo chiaro. */
+.stile-lavagna {
+  --bg: #24332d;
+  --bg-2: #1d2a25;
+  --card: #2c3d36;
+  --text: #f2eee4;
+  --muted: rgba(242, 238, 228, 0.66);
+  --line: rgba(242, 238, 228, 0.28);
+  --accent: #f3d27a;
+  --accent-2: #f3d27a;
+  --btn: #f3d27a;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.07), transparent 55%),
+    radial-gradient(ellipse at 82% 72%, rgba(255, 255, 255, 0.045), transparent 50%),
+    var(--bg);
+}
+/* La pagina, non l'assaggio: la lavagna arriva ai bordi dello schermo. */
+.stile-lavagna:not(.assaggio-stile) {
+  margin: 0 -16px;
+  padding: 0 16px 28px;
+  min-height: 100svh;
+}
+.stile-lavagna .hero {
+  margin: 0 -16px 18px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.stile-lavagna .hero-title {
+  font-weight: 700;
+  font-size: clamp(2.6rem, 12vw, 4.6rem);
+  line-height: 1;
+}
+.stile-lavagna .cat-header {
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 2.8rem);
+  text-align: center;
+}
+.stile-lavagna .cat-header::after {
+  height: 2px;
+  opacity: 1;
+  background: repeating-linear-gradient(90deg, var(--line) 0 14px, transparent 14px 20px);
+}
+.stile-lavagna .cat-chip {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--text);
+  font-family: var(--stile-voce);
+  font-size: 1.15rem;
+}
+.stile-lavagna .menu-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 14px 0;
+}
+.stile-lavagna .menu-item .drink-thumb {
+  background: transparent;
+  border: 0;
+}
+.stile-lavagna .menu-item .grow > h3 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.stile-lavagna .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+:root .stile-lavagna .menu-item .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1.5px solid var(--text);
+  box-shadow: none;
+  border-radius: 10px 14px 9px 13px;
+  font-family: var(--stile-voce);
+  font-size: 1.1rem;
+  padding: 4px 12px;
+}
+.stile-lavagna :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+/* «DÉCO»: anni Venti. Simmetria, caratteri alti e sottili in maiuscolo,
+   filetti doppi e un rombo nel mezzo, l'oro del tema (--accent-2). */
+.stile-deco .hero {
+  border-radius: 0;
+  box-shadow: none;
+  outline: 1px solid var(--accent-2);
+  outline-offset: -10px;
+}
+.stile-deco .hero-overlay {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.stile-deco .hero-title {
+  font-size: clamp(2.2rem, 10vw, 4rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.stile-deco .cat-header {
+  font-size: clamp(1.5rem, 6.5vw, 2.2rem);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.stile-deco .cat-header::before {
+  content: '◆';
+  display: block;
+  font-size: 0.6rem;
+  color: var(--accent-2);
+  letter-spacing: 0;
+  margin-bottom: 6px;
+}
+.stile-deco .cat-header::after {
+  height: 4px;
+  opacity: 1;
+  background: none;
+  border-top: 1px solid var(--accent-2);
+  border-bottom: 1px solid var(--accent-2);
+}
+.stile-deco .cat-chip {
+  background: transparent;
+  border: 1px solid var(--accent-2);
+  border-radius: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.stile-deco .menu-item {
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid var(--line);
+  outline: 1px solid var(--line);
+  outline-offset: 3px;
+  margin: 10px 4px 16px;
+}
+.stile-deco .menu-item .grow > h3 {
+  font-size: 1.15rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.stile-deco .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-size: 1.2rem;
+  color: var(--accent-2);
+  letter-spacing: 0.06em;
+}
+:root .stile-deco .menu-item .btn.small {
+  background: transparent;
+  color: var(--accent-2);
+  border: 1px solid var(--accent-2);
+  box-shadow: none;
+  border-radius: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.stile-deco :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border-radius: 0;
+  border: 1px solid var(--accent-2);
+}
+
+/* «RIVIERA»: aperitivo all'aperto. Titoli in corsivo, il tendone a strisce
+   sopra l'apertura, le voci come cartoline coi disegni nei cerchi. Righe
+   e cerchi prendono i colori del tema. */
+.stile-riviera .hero {
+  border-radius: 22px;
+  border-top: 14px solid transparent;
+  border-image: repeating-linear-gradient(90deg, var(--accent) 0 22px, var(--bg) 22px 44px) 14;
+}
+.stile-riviera .hero-title {
+  font-weight: 700;
+  font-size: clamp(2.6rem, 12vw, 4.4rem);
+  line-height: 1;
+}
+.stile-riviera .cat-header {
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 2.7rem);
+  color: var(--accent);
+}
+.stile-riviera .cat-header::after {
+  height: 3px;
+  opacity: 1;
+  border-radius: 3px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 10px, transparent 10px 16px);
+}
+.stile-riviera .cat-chip {
+  border-radius: 999px;
+  font-weight: 600;
+}
+.stile-riviera .menu-item {
+  border-radius: 20px;
+  border: 0;
+  border-left: 6px solid var(--accent);
+}
+.stile-riviera .menu-item .drink-thumb.disegno {
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0 62%, transparent 64%);
+  padding: 4px;
+}
+.stile-riviera .menu-item .grow > h3 {
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+.stile-riviera .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-weight: 700;
+  font-size: 1.45rem;
+  color: var(--accent);
+}
+:root .stile-riviera .menu-item .btn.small {
+  border-radius: 999px;
+}
+.stile-riviera :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border-radius: 24px;
+}
+
+/* «GIORNALE»: la carta stampata. Testata con i filetti, titoli grandi in
+   Playfair, testo in serif, voci in colonna senza scatole; sugli schermi
+   larghi le voci si dispongono su due colonne, come un quotidiano. */
+.stile-giornale .hero {
+  border-radius: 0;
+  box-shadow: none;
+}
+.stile-giornale .hero-overlay {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.stile-giornale .hero-title {
+  font-weight: 800;
+  font-size: clamp(2.4rem, 11vw, 4.6rem);
+  line-height: 1;
+  padding: 8px 0;
+  border-top: 3px double currentColor;
+  border-bottom: 3px double currentColor;
+}
+.stile-giornale .hero-sub {
+  font-style: italic;
+}
+.stile-giornale .cat-header {
+  font-weight: 800;
+  font-size: clamp(1.7rem, 7.5vw, 2.4rem);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding-top: 8px;
+  border-top: 4px solid var(--text);
+}
+.stile-giornale .cat-header::after {
+  height: 1px;
+  opacity: 1;
+  background: var(--text);
+}
+.stile-giornale .cat-chip {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  font-family: var(--stile-voce);
+  font-style: italic;
+}
+.stile-giornale .menu-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 14px 0;
+  break-inside: avoid;
+}
+.stile-giornale .menu-item .grow > h3 {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.stile-giornale .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.stile-giornale .menu-item .menu-item-descrizione {
+  font-style: italic;
+}
+:root .stile-giornale .menu-item .btn.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--text);
+  box-shadow: none;
+  border-radius: 0;
+  font-family: var(--stile-voce);
+}
+@media (min-width: 760px) {
+  .stile-giornale section:has(> .cat-header) {
+    column-count: 2;
+    column-gap: 32px;
+    column-rule: 1px solid var(--line);
+  }
+  .stile-giornale section:has(> .cat-header) > .cat-header {
+    column-span: all;
+  }
+}
+.stile-giornale :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border-radius: 0;
+  border: 1px solid var(--text);
+}
+
+/* ── LA GALLERIA DEGLI STILI, IN IMPOSTAZIONI (REQ-MENU-022) ──────────────
+   Ogni scheda: l'assaggio dello stile, nome e descrizione, e sotto «Prova
+   sul menù» e il tasto per installare o disinstallare. */
+.stili-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+}
+.stile-scheda {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.stile-scheda > .mode-option {
+  flex: 1;
+  text-align: left;
+}
+.stile-azioni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.assaggio-stile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  font-family: var(--stile-testo, inherit);
+}
+.assaggio-nome {
+  font-family: var(--stile-voce, inherit);
+  font-size: 1.1rem;
+}
+.assaggio-prezzo {
+  font-family: var(--stile-titolo, inherit);
+  color: var(--accent-2);
+}

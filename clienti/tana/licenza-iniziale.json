@@ -12,6 +12,9 @@
     "fatture": true,
     "scadenzario": true
   },
+  "temi": [
+    "notte"
+  ],
   "limiti": null,
   "valida_fino": null,
   "valida_fino_ts": null,

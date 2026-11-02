@@ -5668,6 +5668,94 @@ requirements:
       - tests/unit/backup.test.js
       - tests/unit/sezioni.test.js
 
+  - id: REQ-LIC-010
+    title: "Gli stili del menù nella licenza: «Notte» è della Tana"
+    area: "src/lib/stileMenu.js (inLicenza, temiInLicenza, stiliDisponibili), src/components/ThemeSettings.jsx, src/lib/licenza.js (riepilogoLicenza), src/components/LicenzaPanel.jsx, clienti/tana/licenza-iniziale.json, scripts/lib-licenza-iniziale.js, docs/catalogo-temi.md"
+    description: >
+      L'utente, 02/11/2026: «Dobbiamo fare in modo che lo stile notte sia
+      utilizzabile solo da tana-drink e tana-drink-test. Sono esclusive
+      loro». Non un caso speciale per la Tana: uno stile del menù può essere
+      «della licenza» (`inLicenza`), e c'è solo dove la licenza lo nomina in
+      una voce nuova del contratto, `temi` (`['notte']`). Senza, in
+      Impostazioni la scelta non compare, e chi scrive `stile_menu: 'notte'`
+      dalla console vede il classico: la licenza dall'app non la scrive
+      nessuno (BUG-125), quindi l'esclusiva tiene. La Tana ha `temi:
+      ['notte']` nella licenza iniziale (il deploy la crea) e sul test nel
+      suo documento (aggiunto a mano il 02/11/2026). `temi` è voce del
+      contratto: nella licenza iniziale va scritta anche vuota, o il deploy
+      si ferma. Impostazioni → Licenza mostra gli stili della licenza.
+      DA DIRE ALLA REGIA (docs/catalogo-temi.md): `temi` in ogni licenza,
+      `[]` se il locale non ne ha; «Notte» mai a un locale che non sia la
+      Tana.
+    status: implemented
+    generate_issue: false
+    labels: [licenza, menu, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/stileMenu.test.js
+      - tests/component/ThemeSettings.test.jsx
+
+  - id: REQ-MENU-022
+    title: "Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù"
+    area: "src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md"
+    description: >
+      L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire.
+      Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte.
+      Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli
+      gratis non facciamo partire stripe ovviamente. Facciamo solo
+      installare il tema». Scelti quattro stili: «Lavagna», «Déco»,
+      «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico
+      (stesse voci, carosello, griglia degli Special) con caratteri,
+      filetti e impaginazione loro; i colori sono quelli del tema, tranne
+      «Lavagna», che li porta tutti. In Impostazioni → Menù clienti: sopra
+      gli stili del locale, da scegliere; sotto «Altri stili, gratis», con
+      «Installa». Gli installati stanno in `settings/bar.stili_installati`
+      (sono gratis: niente da proteggere); disinstallando quello in uso si
+      torna al classico. Ogni scheda ha un assaggio scritto con lo stile
+      vero e «Prova sul menù», che apre l'anteprima del cliente con lo
+      stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre,
+      e un esclusivo che il locale non ha non si prova. Uno stile scelto ma
+      non installato non si applica. Niente Stripe e niente regia per i
+      gratis.
+    status: implemented
+    generate_issue: false
+    labels: [menu, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/stileMenu.test.js
+      - tests/component/ThemeSettings.test.jsx
+      - tests/component/MenuPage.test.jsx
+      - tests/unit/css.test.js
+
+  - id: REQ-LIC-011
+    title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
+    area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
+    description: >
+      L'utente, 02/11/2026: «sarebbe bello fare una specie di marketplace
+      per i temi in modo che i gestori possano installarli sulla propria
+      installazione e/o comprarli». La proposta, in docs/catalogo-temi.md:
+      il catalogo sta nella regia accanto al listino dei piani; comprare o
+      installare un tema vuol dire che la regia lo aggiunge a `licenza.temi`
+      (REQ-LIC-010), e l'app lo vede arrivare in tempo reale; nell'app,
+      accanto agli stili del locale, «Altri stili» porta al catalogo
+      nell'area clienti; dall'app non si compra niente. Il codice degli
+      stili sta nell'app, la licenza dice chi li usa; gli esclusivi non
+      compaiono nel catalogo degli altri. DA DECIDERE con l'utente: cosa si
+      vende (stili del menù, temi di colore), come si paga (una volta o in
+      abbonamento), i gratuiti, l'anteprima, gli esclusivi su misura.
+      DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in
+      abbonamento non si possono sentire»); gli acquisti sono DENTRO
+      L'APP, non nell'area clienti; i gratis si installano e basta, senza
+      Stripe (fatto: REQ-MENU-022); l'anteprima si fa sul proprio menù
+      (fatta). RESTA DA FARE il primo stile a pagamento: «Compra» nell'app,
+      pagamento una tantum, e la regia che scrive lo stile in `licenza.temi`
+      dopo il pagamento.
+    status: todo
+    generate_issue: true
+    labels: [licenza, menu, prodotto, regia]
+    priority: P3
+    test_cases: []
+
   - id: REQ-LIC-009
     title: "Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati"
     area: "firestore.rules, src/lib/licenza.js, la schermata del locale fermo, docs/licenza-valida.md"
