@@ -84,12 +84,18 @@ export function schedeModuli(settings, listino = []) {
 export const prezzoAlMese = (euro) => (euro === null || euro === undefined ? '' : `${formatPrice(euro)} al mese + IVA`)
 
 // La risposta della regia a un'azione. Con `checkout_url` si va a pagare
-// sulla pagina di Stripe; senza, la licenza è già aggiornata (o lo sarà fra
-// un istante). Il testo dell'errore lo scrive la regia, in italiano.
+// sulla pagina di Stripe; con `in_attesa` la regia ha solo preso la
+// richiesta, e il modulo cambia quando l'assistenza la evade; senza nessuno
+// dei due, la licenza è già aggiornata (o lo sarà fra un istante). Il testo
+// dell'errore lo scrive la regia, in italiano.
+// `in_attesa` è dei piani gestiti a mano (pagati fuori da Stripe): l'utente,
+// 02/11/2026, «arriva una richiesta d'acquisto a me che attivo o disattivo
+// il modulo richiesto se ho ricevuto il pagamento». Dire «aggiunto» lì
+// sarebbe una promessa che l'app non può mantenere.
 export function esitoAzione(status, corpo) {
   if (status === 200 && corpo?.ok) {
     const url = typeof corpo.checkout_url === 'string' && /^https:\/\/checkout\.stripe\.com\//.test(corpo.checkout_url)
-    return { ok: true, checkout_url: url ? corpo.checkout_url : null, dal: corpo.dal || null }
+    return { ok: true, checkout_url: url ? corpo.checkout_url : null, dal: corpo.dal || null, in_attesa: corpo.in_attesa === true }
   }
   return { ok: false, status, errore: erroreDellaRegia(corpo) }
 }

@@ -113,10 +113,19 @@ describe('la risposta della regia', () => {
       ok: true,
       checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_1',
       dal: null,
+      in_attesa: false,
     })
     // Un indirizzo che non è di Stripe non si apre: la licenza resta della regia.
     expect(esitoAzione(200, { ok: true, checkout_url: 'https://altro.example/paga' }).checkout_url).toBeNull()
     expect(esitoAzione(200, { ok: true, dal: '2026-12-01' })).toMatchObject({ ok: true, dal: '2026-12-01' })
+  })
+
+  it('con un piano gestito a mano la regia prende solo la richiesta', () => {
+    // L'utente, 02/11/2026: per i piani pagati fuori da Stripe la richiesta
+    // arriva a lui, che attiva o disattiva il modulo a pagamento ricevuto.
+    expect(esitoAzione(200, { ok: true, in_attesa: true })).toMatchObject({ ok: true, in_attesa: true, checkout_url: null })
+    // Solo un `true` vero: un valore qualunque non cambia il messaggio.
+    expect(esitoAzione(200, { ok: true, in_attesa: 'sì' }).in_attesa).toBe(false)
   })
 
   it('un rifiuto porta il testo della regia, se c\'è', () => {

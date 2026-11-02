@@ -70,6 +70,7 @@ describe('azioneModulo', () => {
       ok: true,
       checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_1',
       dal: null,
+      in_attesa: false,
     })
     const [url, opzioni] = fetch.mock.calls[0]
     expect(url).toBe(URL_REGIA)

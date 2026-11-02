@@ -5845,7 +5845,12 @@ requirements:
       Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non
       scrive niente: la regia riscrive la licenza e l'app la vede cambiare
       in tempo reale. Un modulo che il listino non vende si vede ma non si
-      compra. DA FARE nella regia: catalogoModuli, moduloDallApp col
+      compra. Sempre il 02/11: coi piani gestiti a mano (pagati fuori da
+      Stripe) aggiunta e disdetta sono una richiesta all'admin, che accende
+      o spegne il modulo a pagamento ricevuto — la regia risponde
+      `in_attesa` e l'app dice «richiesta inviata all'assistenza», non
+      «aggiunto»; coi piani online la disdetta vale a fine periodo pagato
+      (`dal`). DA FARE nella regia: catalogoModuli, moduloDallApp col
       controllo del titolare e del ritorno, il webhook che accende il
       modulo dopo il pagamento (docs/marketplace-moduli.md).
     status: implemented
