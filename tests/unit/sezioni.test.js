@@ -11,6 +11,7 @@ import {
   vociPerRuolo,
   sezioneConsentita,
 } from '../../src/lib/sezioni.js'
+import { CON_LICENZA as TANA } from '../helpers/licenza.js'
 
 describe('titoloPagina', () => {
   it('nel gestionale porta il nome della sezione, con la sua icona', () => {
@@ -79,16 +80,16 @@ describe('la voce Cassa', () => {
 // che tiene dentro anche il bartender.
 describe('chi vede quali sezioni', () => {
   it('«Bilancio» sta nel menu dell’admin', () => {
-    expect(vociPerRuolo('admin').some(([id]) => id === 'bilancio')).toBe(true)
+    expect(vociPerRuolo('admin', TANA).some(([id]) => id === 'bilancio')).toBe(true)
   })
 
   // SI TOGLIE, non si nasconde dentro la pagina: una pagina che si apre e
   // poi dice «non puoi» si è già fatta vedere.
   it('al bartender la voce non compare proprio', () => {
-    expect(vociPerRuolo('bartender').some(([id]) => id === 'bilancio')).toBe(false)
+    expect(vociPerRuolo('bartender', TANA).some(([id]) => id === 'bilancio')).toBe(false)
     // E il resto del gestionale gli resta tutto: la cassa, il magazzino,
     // le impostazioni.
-    const suoi = vociPerRuolo('bartender').map(([id]) => id)
+    const suoi = vociPerRuolo('bartender', TANA).map(([id]) => id)
     for (const id of ['coda', 'pagamenti', 'inventario', 'menu', 'impostazioni']) {
       expect(suoi, `${id} è del bartender`).toContain(id)
     }
@@ -96,7 +97,7 @@ describe('chi vede quali sezioni', () => {
 
   it('chi non è gestore resta col menu della sala', () => {
     for (const r of ['staff', 'cliente', null, undefined]) {
-      const ids = vociPerRuolo(r).map(([id]) => id)
+      const ids = vociPerRuolo(r, TANA).map(([id]) => id)
       expect(ids).not.toContain('bilancio')
       expect(ids).not.toContain('impostazioni')
     }
@@ -105,18 +106,18 @@ describe('chi vede quali sezioni', () => {
   // Togliere la voce dal menu non basta: `?tab=bilancio` si batte a mano, e
   // un collegamento salvato quando si era admin resta nella cronologia.
   it('l’indirizzo battuto a mano non apre una sezione che non è tua', () => {
-    expect(sezioneConsentita('bilancio', 'admin')).toBe(true)
-    expect(sezioneConsentita('bilancio', 'bartender')).toBe(false)
+    expect(sezioneConsentita('bilancio', 'admin', TANA)).toBe(true)
+    expect(sezioneConsentita('bilancio', 'bartender', TANA)).toBe(false)
   })
 
   it('le sezioni di tutti restano di tutti', () => {
     for (const id of ['coda', 'pagamenti', 'stats', 'inventario']) {
-      expect(sezioneConsentita(id, 'bartender')).toBe(true)
+      expect(sezioneConsentita(id, 'bartender', TANA)).toBe(true)
     }
     // Una sezione che non è nell'elenco (i vecchi indirizzi, `?tab=vip`)
     // non si blocca: non è riservata, è solo fuori dal menu.
-    expect(sezioneConsentita('vip', 'bartender')).toBe(true)
-    expect(sezioneConsentita(null, 'bartender')).toBe(true)
+    expect(sezioneConsentita('vip', 'bartender', TANA)).toBe(true)
+    expect(sezioneConsentita(null, 'bartender', TANA)).toBe(true)
   })
 
   it('e nella barra in alto la pagina ha il suo nome', () => {
@@ -139,19 +140,19 @@ describe('la sezione Fornitori', () => {
   })
 
   it('la vede l’admin, non il bartender', () => {
-    expect(vociPerRuolo('admin').some(([id]) => id === 'fornitori')).toBe(true)
-    expect(vociPerRuolo('bartender').some(([id]) => id === 'fornitori')).toBe(false)
+    expect(vociPerRuolo('admin', TANA).some(([id]) => id === 'fornitori')).toBe(true)
+    expect(vociPerRuolo('bartender', TANA).some(([id]) => id === 'fornitori')).toBe(false)
   })
 
   it('e non ci si entra battendo l’indirizzo a mano', () => {
-    expect(sezioneConsentita('fornitori', 'admin')).toBe(true)
-    expect(sezioneConsentita('fornitori', 'bartender')).toBe(false)
+    expect(sezioneConsentita('fornitori', 'admin', TANA)).toBe(true)
+    expect(sezioneConsentita('fornitori', 'bartender', TANA)).toBe(false)
   })
 
   it('il magazzino invece resta di tutti i gestori', () => {
     // Il trasloco non porta via al banco quello che gli serve: le giacenze
     // restano dov'erano.
-    expect(sezioneConsentita('inventario', 'bartender')).toBe(true)
+    expect(sezioneConsentita('inventario', 'bartender', TANA)).toBe(true)
   })
 })
 
@@ -200,12 +201,15 @@ describe('le voci che il locale non ha', () => {
     expect(sezioneConsentita('fornitori', 'bartender', licenza)).toBe(false)
   })
 
-  it('senza impostazioni passa solo quello che è incluso di suo', () => {
-    // Il primo disegno arriva prima del server: meglio una voce che compare
-    // che una che lampeggia e sparisce.
+  // Fino a REQ-LIC-009 qui valeva la licenza della build (la Tana aveva
+  // tutto di suo). Ora una licenza che non si sa ancora non dà nessun
+  // modulo: il primo disegno, sui dispositivi già usati, ha comunque
+  // l'ultima licenza ricordata (impostazioniLocali.js).
+  it('senza una licenza nota non passa nessuna voce premium', () => {
     const ids = vociPerRuolo('admin').map(([id]) => id)
-    expect(ids).toContain('inventario')
+    expect(ids).not.toContain('inventario')
     expect(ids).not.toContain('fatture')
+    expect(ids).toContain('coda')
   })
 })
 

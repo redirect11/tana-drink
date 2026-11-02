@@ -10,7 +10,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
 import { doc, setDoc } from 'firebase/firestore'
-import { avviaAmbiente, CHI } from './ambiente.js'
+import { avviaAmbiente, azzera, CHI } from './ambiente.js'
 
 let env
 
@@ -21,7 +21,7 @@ afterAll(async () => {
   await env?.cleanup()
 })
 beforeEach(async () => {
-  await env.clearFirestore()
+  await azzera(env)
 })
 
 const alBancone = (from_uid = 'sala-1') => ({

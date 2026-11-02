@@ -10,7 +10,7 @@
 import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest'
 import { assertSucceeds, assertFails } from '@firebase/rules-unit-testing'
 import { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc } from 'firebase/firestore'
-import { avviaAmbiente, CHI } from './ambiente.js'
+import { avviaAmbiente, azzera, CHI } from './ambiente.js'
 import { RUOLI, PERMESSI, OPERAZIONI, PROPRI, chiPuo } from '../contratto/permessi.js'
 
 let env
@@ -22,7 +22,7 @@ afterAll(async () => {
   await env?.cleanup()
 })
 beforeEach(async () => {
-  await env.clearFirestore()
+  await azzera(env)
 })
 
 const uid = (ruolo) => `${ruolo}-1`
@@ -56,7 +56,7 @@ describe.each(PERMESSI)('$collezione', (riga) => {
   it.each(OPERAZIONI)('%s', async (operazione) => {
     const puo = chiPuo(riga, operazione)
     for (const ruolo of RUOLI) {
-      await env.clearFirestore()
+      await azzera(env)
       await atteso(puo.includes(ruolo))(prova(ruolo, operazione, riga.collezione, 'x'))
     }
   })
@@ -67,7 +67,7 @@ describe.each(PROPRI)('$collezione, documenti propri e altrui', (riga) => {
     for (const [di, chi] of [['proprio', riga.proprio], ['altrui', riga.altrui]]) {
       const puo = operazione === 'legge' ? chi.legge : chi[operazione] ?? chi.scrive
       for (const ruolo of RUOLI) {
-        await env.clearFirestore()
+        await azzera(env)
         // Il documento proprio porta l'uid di chi bussa, nell'id e dentro.
         const id = di === 'proprio' ? uid(ruolo) : 'qualcun-altro-1'
         const proprietario = di === 'proprio' ? uid(ruolo) : 'qualcun-altro-1'

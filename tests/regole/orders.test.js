@@ -23,7 +23,7 @@ import {
   doc, setDoc, getDoc, getDocs, collection, query, where,
   documentId, orderBy, limit, Timestamp,
 } from 'firebase/firestore'
-import { avviaAmbiente, CHI } from './ambiente.js'
+import { avviaAmbiente, azzera, CHI } from './ambiente.js'
 
 let env
 
@@ -64,7 +64,7 @@ afterAll(async () => {
   await env?.cleanup()
 })
 beforeEach(async () => {
-  await env.clearFirestore()
+  await azzera(env)
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore()
     await setDoc(doc(db, 'orders/conto-in-coda'), contoDalMenu())

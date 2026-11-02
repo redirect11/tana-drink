@@ -22,36 +22,17 @@ export function leggiCliente(slug = process.env.CLIENTE || CLIENTE_PREDEFINITO, 
   const file = join(cartella, 'venue.json')
   if (!existsSync(file)) throw new Error(`Cliente «${slug}»: manca ${file}. Vedi clienti/README.md.`)
   const venue = JSON.parse(readFileSync(file, 'utf8'))
-  return { slug, venue, licenza: licenzaDellaBuild(cartella, slug), cartella, pubblica: join(cartella, 'public') }
+  return { slug, venue, cartella, pubblica: join(cartella, 'public') }
 }
 
-// LA LICENZA SCRITTA NELLA BUILD (BUG-125): `clienti/<slug>/licenza.json`,
-// facoltativo, con la stessa forma del documento `licenza/attuale` che
-// scrive la regia (piano, moduli, limiti…). Vale per ogni cliente allo
-// stesso modo, e conta solo dove quel documento NON c'è (lib/licenza.js,
-// `licenzaEffettiva`): è la licenza di un'installazione che una regia
-// dietro non ce l'ha. Oggi ce l'ha la Tana; le cartelle che crea la regia
-// no, perché la loro licenza la scrive la regia nel database.
-// Sta nella build apposta: quello che è compilato non si cambia dal
-// browser. Null se il file non c'è; un file che non è un oggetto con i
-// `moduli` ferma la build, invece di diventare una licenza vuota che
-// spegnerebbe tutto in silenzio.
 // Quello che l'app riceve come `__CLIENTE__`. Una funzione sola per la
 // build e per i test: una voce aggiunta in un posto e dimenticata
 // nell'altro farebbe girare i test su un'app diversa da quella vera.
-export const valoreCliente = (cliente) =>
-  JSON.stringify({ slug: cliente.slug, venue: cliente.venue, licenza: cliente.licenza })
-
-export function licenzaDellaBuild(cartella, slug = '') {
-  const file = join(cartella, 'licenza.json')
-  if (!existsSync(file)) return null
-  const licenza = JSON.parse(readFileSync(file, 'utf8'))
-  const oggetto = (v) => v && typeof v === 'object' && !Array.isArray(v)
-  if (!oggetto(licenza) || !oggetto(licenza.moduli)) {
-    throw new Error(`Cliente «${slug}»: ${file} deve essere un oggetto con i \`moduli\`. Vedi clienti/README.md.`)
-  }
-  return licenza
-}
+// LA LICENZA NON C'È PIÙ (REQ-LIC-009): dal 02/11/2026 ogni installazione
+// ha il suo `licenza/attuale`, la Tana compresa, e senza le regole non
+// fanno scrivere niente. Il `licenza.json` nella cartella del cliente,
+// nato con BUG-125 per la Tana, non si legge più.
+export const valoreCliente = (cliente) => JSON.stringify({ slug: cliente.slug, venue: cliente.venue })
 
 // Il cliente è la demo pubblica? Solo un `true` vero lo dice: una stringa,
 // un 1 o una chiave scritta male non accendono niente.
