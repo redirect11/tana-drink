@@ -19,9 +19,9 @@
 //  - Un locale della REGIA ha il documento scritto dalla regia, che lo
 //    riscrive al prossimo cambio: lì la licenza si cambia dalla regia.
 //  - Un'installazione SENZA documento non è attivata, e le regole non le
-//    fanno scrivere niente (REQ-LIC-009): è il caso della Tana prima che
-//    le si scriva il suo, una volta, con questo script — sul test da sé,
-//    sulla produzione col via libera dell'utente.
+//    fanno scrivere niente (REQ-LIC-009). Per la Tana il primo documento
+//    lo crea il deploy da GitHub (scripts/licenza-iniziale.mjs, da
+//    clienti/tana/licenza-iniziale.json); questo script serve a CAMBIARLO.
 //
 //  SI SCRIVE SEMPRE PER INTERO. `moduli` è la verità completa su cosa il
 //  locale ha: un modulo che non nomina non è incluso. Per questo

@@ -126,6 +126,20 @@ jobs:
             --project "$TARGET_PROJECT" --force
           rm /tmp/sa.json
 
+      # LA LICENZA PRIMA DELLE REGOLE (REQ-LIC-009). Senza `licenza/attuale`
+      # le regole non fanno scrivere niente: se il documento manca lo si
+      # crea da clienti/<cliente>/licenza-iniziale.json, se c'è non si
+      # tocca. Se non riesce il deploy si ferma QUI, prima delle regole che
+      # fermerebbero il locale. Serve roles/datastore.user sul service
+      # account (scripts/licenza-iniziale.mjs).
+      - name: Licenza dell'installazione, solo se manca
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$SA_JSON" > /tmp/sa.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json             node scripts/licenza-iniziale.mjs --project "$TARGET_PROJECT" --cliente "${{ inputs.cliente }}"
+          rm /tmp/sa.json
+
       # Deploy di regole Firestore (+ indici da firestore.indexes.json) e
       # regole Storage. Il service account ha i ruoli necessari
       # (firebaserules.admin, datastore.indexAdmin, serviceUsageConsumer).
