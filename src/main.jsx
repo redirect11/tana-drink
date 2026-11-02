@@ -23,6 +23,12 @@ import '@fontsource/jost/latin-300.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
 import '@fontsource/jost/latin-300-italic.css'
+// Gli stili gratis del menù clienti (REQ-MENU-022): «Lavagna», «Déco»,
+// «Riviera». «Giornale» usa Playfair, già qui sopra, e un serif di sistema.
+import '@fontsource/caveat/latin-400.css'
+import '@fontsource/caveat/latin-700.css'
+import '@fontsource/poiret-one/latin-400.css'
+import '@fontsource/dancing-script/latin-700.css'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
