@@ -10801,6 +10801,56 @@ body.pagina-piena .inv-scheda {
   padding: 10px 12px;
 }
 
+/* I MODULI (REQ-LIC-012): al posto della vetrina del menù, una fascia con
+   l'icona e lo stato. Lo stato si legge dal colore prima che dalla parola:
+   incluso col verde di `--ok`, in prova con `--accent-2`, non incluso
+   neutro — il catalogo di quello che manca non deve sembrare un errore. */
+.vetrina-modulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 96px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--text) 5%, var(--card));
+  border-bottom: 1px solid var(--line);
+}
+.vetrina-modulo-icona {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.vetrina-modulo-stato {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--raggio-pill);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  text-align: right;
+}
+.vetrina-modulo-incluso {
+  background: color-mix(in srgb, var(--ok) 12%, var(--card));
+}
+.vetrina-modulo-incluso .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--ok) 60%, transparent);
+}
+.vetrina-modulo-prova {
+  background: color-mix(in srgb, var(--accent-2) 14%, var(--card));
+}
+.vetrina-modulo-prova .vetrina-modulo-stato {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent-2) 60%, transparent);
+}
+.avviso-marketplace {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--ok) 55%, transparent);
+  background: color-mix(in srgb, var(--ok) 10%, var(--card));
+  font-size: 0.9rem;
+}
+
 /* ── LO STILE «GIORNALE»: LA PRIMA PAGINA (REQ-MENU-024) ─────────────────
    L'utente, 02/11/2026: «gli stili devono avere anche UX diverse e
    immagini diverse», «basta che sia figa e fluida la UX». Una struttura sua

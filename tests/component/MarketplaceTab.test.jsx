@@ -7,14 +7,16 @@
 // finestra/pagina nuova che apro per navigare i temi come se fosse un
 // catalogo e poi li installo sulla mia istanza». Una pagina del menu
 // laterale con tre sezioni — Temi, Stili del menù, Installati — e su ogni
-// scheda la vetrina, «Prova sul menù», «Installa» e «Usa».
+// scheda la vetrina, «Prova sul menù», «Installa» e «Usa». E dal 02/11/2026
+// una quarta, i Moduli (REQ-LIC-012): «anche per i moduli aggiuntivi
+// andrebbe fatto il marketplace».
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
-const st = vi.hoisted(() => ({ impostazioni: {}, scritte: [] }))
+const st = vi.hoisted(() => ({ impostazioni: {}, scritte: [], azioni: [], risposta: null }))
 
 vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: (cb) => {
@@ -26,6 +28,10 @@ vi.mock('../../src/lib/api.js', () => ({
     st.scritte.push(patch)
     return Promise.resolve()
   }),
+  azioneModulo: vi.fn((url, modulo, azione, ritorno) => {
+    st.azioni.push({ url, modulo, azione, ritorno })
+    return Promise.resolve(st.risposta)
+  }),
 }))
 
 import MarketplaceTab from '../../src/components/MarketplaceTab.jsx'
@@ -36,24 +42,32 @@ let sottosezioni
 beforeEach(() => {
   st.impostazioni = {}
   st.scritte = []
+  st.azioni = []
+  st.risposta = { ok: true, checkout_url: null, dal: null }
   localStorage.clear()
   sottosezioni = null
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  history.replaceState(null, '', '/')
+})
 
-function mostra() {
+function mostra(role = 'admin') {
   const smetti = subscribeSottosezioni((s) => {
     sottosezioni = s
   })
-  const r = render(<MarketplaceTab />)
+  const r = render(<MarketplaceTab role={role} />)
   return { ...r, smetti }
 }
 const vaiA = (id) => act(() => sottosezioni.scegli(id))
 
 describe('il marketplace', () => {
-  it('è un catalogo: le sezioni Temi, Stili del menù, Installati', () => {
+  it('è un catalogo: le sezioni Temi, Stili del menù, Installati, Moduli', () => {
     mostra()
-    expect(sottosezioni.voci.map((v) => v.label)).toEqual(['Temi', 'Stili del menù', 'Installati'])
+    expect(sottosezioni.voci.map((v) => v.label)).toEqual(['Temi', 'Stili del menù', 'Installati', 'Moduli'])
     expect(screen.getByRole('heading', { name: 'Temi', level: 2 })).toBeInTheDocument()
   })
 
@@ -117,5 +131,146 @@ describe('la vetrina del «Giornale»', () => {
     const vetrina = container.querySelector('.vetrina-tema.stile-giornale')
     expect(vetrina.querySelector('.g-testata')).not.toBeNull()
     expect(vetrina.querySelector('.menu-item')).toBeNull()
+  })
+})
+
+// ── I MODULI (REQ-LIC-012) ────────────────────────────────────────────
+// Al mese come nel listino della regia, con una prova gratuita, e li
+// compra solo il titolare (decisioni dell'utente, 02/11/2026). Lo stato
+// viene dalla licenza, prezzi e prove dal listino; il pagamento sulla
+// pagina di Stripe, e la regia riporta il titolare qui.
+describe('i moduli', () => {
+  const LISTINO = {
+    moduli: [
+      { id: 'magazzino', prezzo: 15, prova_giorni: 14 },
+      { id: 'statistiche', prezzo: 15, prova_giorni: 14 },
+      { id: 'clienti', prezzo: 6, prova_giorni: 7 },
+      { id: 'sumup', prezzo: 10, prova_giorni: 0 },
+    ],
+  }
+  const DELLA_REGIA = {
+    licenza: {
+      stato: 'attiva',
+      piano: 'free',
+      regia_url: 'https://regia.example/area',
+      moduli: { magazzino: true, statistiche: true },
+      prove: { statistiche: '2026-11-16T10:00:00.000Z' },
+    },
+  }
+
+  function conRegia(impostazioni = DELLA_REGIA) {
+    vi.stubEnv('VITE_REGIA_PROGETTO', 'drink-regia-test')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(LISTINO) }))
+    )
+    st.impostazioni = impostazioni
+  }
+  const scheda = (nome) => screen.getByRole('heading', { name: nome }).closest('article')
+  const listinoLetto = () => waitFor(() => expect(screen.queryByText(/Aggiornamento del listino/)).toBeNull())
+
+  it('ogni modulo col suo stato e, dal listino, prezzo e prova', async () => {
+    conRegia()
+    mostra()
+    vaiA('moduli')
+    expect(await within(scheda('Gestione clienti')).findByText('6 € al mese + IVA')).toBeInTheDocument()
+    expect(within(scheda('Magazzino e fornitori')).getByText('Incluso')).toBeInTheDocument()
+    expect(within(scheda('Statistiche e bilancio')).getByText('In prova fino al 16 novembre 2026')).toBeInTheDocument()
+    expect(within(scheda('Gestione clienti')).getByText('Non incluso')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Prova Gestione clienti gratis per 7 giorni' })).toBeInTheDocument()
+    // Senza giorni di prova nel listino, solo l'acquisto.
+    expect(within(scheda('Pagamenti con lettore SumUp')).queryByText(/Prova gratis/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Aggiungi Pagamenti con lettore SumUp' })).toBeInTheDocument()
+    // In prova si può comprare; incluso si può disdire.
+    expect(screen.getByRole('button', { name: 'Aggiungi Statistiche e bilancio' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Disdici Magazzino e fornitori' })).toBeInTheDocument()
+    // Le fatture la regia non le vende da sole.
+    expect(within(scheda('Fatture ai clienti')).getByText('Non acquistabile singolarmente')).toBeInTheDocument()
+  })
+
+  it('«Aggiungi» porta alla pagina di pagamento, col ritorno sui moduli', async () => {
+    conRegia()
+    st.risposta = { ok: true, checkout_url: 'https://checkout.stripe.com/c/pay/cs_test_1', dal: null }
+    const vai = vi.fn()
+    vi.stubGlobal('location', {
+      origin: 'https://tana.example',
+      search: '',
+      href: 'https://tana.example/bar',
+      assign: vai,
+    })
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Aggiungi Gestione clienti' }))
+    expect(st.azioni).toEqual([
+      {
+        url: 'https://europe-west1-drink-regia-test.cloudfunctions.net/moduloDallApp',
+        modulo: 'clienti',
+        azione: 'aggiungi',
+        ritorno: 'https://tana.example/bar?tab=marketplace&sezione=moduli',
+      },
+    ])
+    expect(vai).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1')
+  })
+
+  it('la prova gratuita parte senza pagamento, e lo dice', async () => {
+    conRegia()
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Prova Gestione clienti gratis per 7 giorni' }))
+    expect(st.azioni.at(-1)).toMatchObject({ modulo: 'clienti', azione: 'prova' })
+    expect(screen.getByRole('status')).toHaveTextContent('Prova di «Gestione clienti» attivata')
+  })
+
+  it('la disdetta si conferma, e dice fino a quando il modulo resta', async () => {
+    conRegia()
+    st.risposta = { ok: true, checkout_url: null, dal: '2026-12-01' }
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Disdici Magazzino e fornitori' }))
+    expect(st.azioni).toEqual([])
+    await utente.click(screen.getByRole('button', { name: 'Conferma la disdetta di Magazzino e fornitori' }))
+    expect(st.azioni.at(-1)).toMatchObject({ modulo: 'magazzino', azione: 'disdici' })
+    expect(screen.getByRole('status')).toHaveTextContent('resta attivo fino al 1 dicembre 2026')
+  })
+
+  it('un rifiuto della regia si legge col suo testo', async () => {
+    conRegia()
+    st.risposta = { ok: false, status: 409, errore: 'La prova di questo modulo è già stata usata.' }
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Prova Gestione clienti gratis per 7 giorni' }))
+    expect(screen.getByRole('status')).toHaveTextContent('La prova di questo modulo è già stata usata.')
+  })
+
+  it('chi non è il titolare li vede, ma non li compra', async () => {
+    conRegia()
+    mostra('bartender')
+    vaiA('moduli')
+    expect(await within(scheda('Gestione clienti')).findByText('6 € al mese + IVA')).toBeInTheDocument()
+    expect(screen.getByText('Moduli e abbonamenti li gestisce il titolare.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^(Aggiungi|Disdici|Prova) / })).toBeNull()
+  })
+
+  it('una licenza scritta a mano, come quella della Tana: si consulta soltanto', async () => {
+    conRegia({ licenza: { stato: 'attiva', regia_url: null, moduli: { magazzino: true, clienti: true } } })
+    mostra()
+    vaiA('moduli')
+    await listinoLetto()
+    expect(screen.getByText(/si gestisce presso chi la amministra/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^(Aggiungi|Disdici|Prova) / })).toBeNull()
+  })
+
+  it("tornando dal pagamento si apre sui moduli, con l'esito, detto una volta sola", async () => {
+    conRegia()
+    history.replaceState(null, '', '/bar?tab=marketplace&sezione=moduli&esito=pagato')
+    mostra()
+    await listinoLetto()
+    expect(screen.getByRole('heading', { name: 'Moduli', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Pagamento ricevuto')
+    expect(location.search).toBe('?tab=marketplace&sezione=moduli')
   })
 })

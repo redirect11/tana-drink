@@ -20,6 +20,12 @@
   menù e Installati. Ogni tema si vede su un pezzo del menù vero, si prova
   sul proprio menù e si installa. In Impostazioni resta la scelta fra
   quelli già installati.
+- **I moduli si aggiungono dal Marketplace.** Nella nuova sezione
+  «Moduli» ogni modulo mostra se è incluso nella licenza, in prova o non
+  incluso, con il prezzo mensile. Il titolare può provarlo gratis per i
+  giorni previsti, aggiungerlo con il pagamento sulla pagina sicura di
+  Stripe o disdirlo; il modulo compare da solo appena la licenza si
+  aggiorna. Gli altri ruoli vedono la sezione in sola lettura.
 
 ## 1.10.7-beta — 02/11/2026 (test)
 

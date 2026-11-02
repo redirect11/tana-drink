@@ -113,6 +113,7 @@ import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
 import { esitoPresentazione } from './presentazione.js'
+import { esitoAzione } from './marketplaceModuli.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
@@ -6447,6 +6448,22 @@ export async function presentaAllaRegia(url, versione) {
     return esitoPresentazione(r.status, r.corpo)
   } catch (e) {
     console.warn('[regia] presentazione:', e?.message || e)
+    return { ok: false, status: 0, errore: null }
+  }
+}
+
+// IL MARKETPLACE DEI MODULI (REQ-LIC-012): prova, acquisto, disdetta di un
+// modulo, decisi dal titolare. Come la scelta sugli aggiornamenti, qui
+// l'attesa c'è ed è voluta: è un acquisto, vale solo se la regia l'ha
+// preso, e la licenza la riscrive lei — l'app la vede cambiare in tempo
+// reale. `ritorno` è dove la pagina di pagamento riporta il titolare.
+export async function azioneModulo(url, modulo, azione, ritorno) {
+  try {
+    const r = await chiamaRegia(url, { modulo, azione, ritorno })
+    if (!r) return { ok: false, status: 401, errore: null }
+    return esitoAzione(r.status, r.corpo)
+  } catch (e) {
+    console.warn('[regia] modulo:', e?.message || e)
     return { ok: false, status: 0, errore: null }
   }
 }
