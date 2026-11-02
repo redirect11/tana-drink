@@ -784,6 +784,8 @@ IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve un carosello
 
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
 
+IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il disegno stava nella casella della foto, 64 px (52 nello stile «Notte»), ritagliato per riempire il quadrato: ora ha la classe `disegno`, 96 px (88 nello stile «Notte»), intero e senza riquadro. La foto vera resta com'era.
+
 **Dove**: `src/lib/speciali.js, src/lib/illustrazioneDrink.js, src/components/CaroselloSpeciali.jsx, src/pages/MenuPage.jsx (speciali), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), scripts/special-signature.mjs, public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/unit/illustrazioneDrink.test.js`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/unit/useIncollata.test.jsx`
 
 #### REQ-MENU-019 — Gli ingredienti in carta: nel menù, nel menù Special e nel carosello
