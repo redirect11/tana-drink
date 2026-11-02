@@ -101,6 +101,8 @@ describe('lo script', () => {
 
   it('nessuna password: la imposta il titolare dal link di Firebase', () => {
     expect(script).toContain("requestType: 'PASSWORD_RESET'")
+    // In italiano: la lingua va nell'intestazione, nel corpo non conta.
+    expect(script).toContain("'X-Firebase-Locale': 'it'")
     // Nessun `password:` passato a Firebase in un oggetto (i commenti la nominano).
     expect(script).not.toMatch(/[{,]\s*password:/)
   })

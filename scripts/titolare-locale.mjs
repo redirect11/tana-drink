@@ -37,7 +37,14 @@ if (!PROGETTO || !EMAIL || UID === null) {
 }
 
 const HOST = EMULATOR ? `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099'}/identitytoolkit.googleapis.com` : 'https://identitytoolkit.googleapis.com'
-const h = { Authorization: `Bearer ${EMULATOR ? 'owner' : await accessToken()}`, 'Content-Type': 'application/json' }
+// La lingua delle email di Firebase si chiede con l'intestazione
+// X-Firebase-Locale: un campo `locale` nel corpo l'API lo ignora, e l'email
+// per la password arrivava nella lingua di partenza del progetto.
+const h = {
+  Authorization: `Bearer ${EMULATOR ? 'owner' : await accessToken()}`,
+  'Content-Type': 'application/json',
+  'X-Firebase-Locale': 'it',
+}
 async function chiama(percorso, corpo) {
   const j = await (await fetch(`${HOST}/v1/projects/${PROGETTO}/${percorso}`, { method: 'POST', headers: h, body: JSON.stringify(corpo) })).json()
   if (j.error) throw new Error(`${percorso}: ${j.error.message}`)
@@ -72,7 +79,7 @@ if (cosa.link) {
   // locale, in italiano. Se non parte, il titolare usa «password
   // dimenticata»: non è un motivo per fermarsi.
   try {
-    await chiama('accounts:sendOobCode', { requestType: 'PASSWORD_RESET', email: EMAIL, locale: 'it' })
+    await chiama('accounts:sendOobCode', { requestType: 'PASSWORD_RESET', email: EMAIL })
     console.log(`[titolare] ✓ mandata a ${EMAIL} l’email per impostare la password`)
   } catch (e) {
     console.log(`⚠️  L’email per impostare la password non è partita (${e.message}): il titolare usa «password dimenticata».`)
