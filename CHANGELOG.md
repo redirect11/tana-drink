@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.10-beta — in lavorazione
+## 1.10.11-beta — in lavorazione
+
+## 1.10.10-beta — 03/11/2026 (test)
 
 ### Nel gestionale
 
