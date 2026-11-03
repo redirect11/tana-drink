@@ -1,6 +1,13 @@
 # Cosa è cambiato
 
-## 1.10.10-beta — in lavorazione
+## 1.10.11-beta — in lavorazione
+
+### Nel gestionale
+
+- **Vista cliente**: la riga in alto dice solo che si sta guardando il
+  menù come lo vede il cliente, senza più «Da qui non si ordina».
+
+## 1.10.10-beta — 03/11/2026 (test)
 
 ### Nel gestionale
 
