@@ -138,11 +138,12 @@ describe('menu laterale', () => {
     expect(screen.queryByText('Chiama il bancone')).toBeNull()
   })
 
-  it('per la sala «Nuovo ordine» apre il menù, non il POS', async () => {
+  it('la sala ordina dal menù, e la cassa non la vede', async () => {
     // Il POS è lo strumento del banco: la sala ordina dal menù che sta
     // mostrando al tavolo, con la ricerca.
     apri('staff')
-    await userEvent.click(screen.getByText('Nuovo ordine dal menù'))
+    expect(screen.queryByText('Nuovo ordine')).toBeNull()
+    await userEvent.click(screen.getByText('Ordina dal menù'))
     expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
 
@@ -167,6 +168,15 @@ describe('menu laterale', () => {
     apri('admin')
     await userEvent.click(screen.getByText('Nuovo ordine'))
     expect(screen.getByText('PAGINA POS')).toBeInTheDocument()
+  })
+
+  it('anche il banco ordina dal menù, se vuole (BUG-127)', async () => {
+    // L'utente, 02/11/2026: «Ordina dal menù» c'è per staff, bartender e
+    // admin. Prima il banco ci arrivava solo da un tasto della coda a
+    // elenco, chiamato per sbaglio «Vista cliente».
+    apri('bartender')
+    await userEvent.click(screen.getByText('Ordina dal menù'))
+    expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
 })
 

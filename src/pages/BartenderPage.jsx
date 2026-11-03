@@ -2807,8 +2807,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <Link className="btn" to="/pos" style={{ flex: 1 }}>
               🍸 POS cassa
             </Link>
+            {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
+                quello per gli ordini al tavolo (BUG-127). La vista cliente
+                vera sta nel ☰ ed è solo da guardare. */}
             <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-              ✍️ Vista cliente
+              📖 Ordina dal menù
             </Link>
           </div>
         </>

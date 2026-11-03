@@ -1,6 +1,18 @@
 # Cosa è cambiato
 
-## 1.10.9-beta — in lavorazione
+## 1.10.10-beta — in lavorazione
+
+### Nel gestionale
+
+- **«Vista cliente» mostra il menù e basta.** Si vede com'è per chi
+  ordina, ma senza «Aggiungi» né carrello: per ordinare c'è il menù dello
+  staff.
+- **«Ordina dal menù».** Nel ☰ c'è per tutto il personale; admin e
+  bartender hanno in più «Nuovo ordine», la cassa. Il tasto della coda a
+  elenco che si chiamava «Vista cliente» ma apriva il menù per gli ordini
+  ora si chiama «Ordina dal menù».
+
+## 1.10.9-beta — 02/11/2026 (test)
 
 ### Nel gestionale
 

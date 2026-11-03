@@ -376,8 +376,13 @@ export default function MenuPage({ speciali = false }) {
   // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
   // carrello. Lo staff loggato può inserire ordini manuali comunque.
   // Con geofence attivo si ordina solo a posizione verificata.
+  // E NELLA VISTA CLIENTE NON SI ORDINA (BUG-127). L'utente, 02/11/2026: «la
+  // vista cliente deve solo mostrare il menù come lo vede il cliente».
+  // Con «Aggiungi» e carrello, un admin in anteprima mandava un ordine come
+  // un cliente qualunque: senza `placed_by`, anonimo in coda. Per ordinare
+  // c'è il menù dello staff, senza `?vista=cliente`.
   const geoOk = !geoActive || geoGate === 'ok'
-  const canOrder = (!menuOnly || !!staff) && geoOk
+  const canOrder = !anteprimaCliente && (!menuOnly || !!staff) && geoOk
 
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
@@ -457,7 +462,7 @@ export default function MenuPage({ speciali = false }) {
               ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
               : stileInProva && stile === stileInProva
                 ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
-                : 'Stai guardando il menù come lo vede il cliente.'}
+                : 'Stai guardando il menù come lo vede il cliente. Da qui non si ordina.'}
           </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale
