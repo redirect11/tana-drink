@@ -5545,7 +5545,9 @@ bugs:
       solo mostrare il menù come lo vede il cliente. Ordina dal menù esce
       solo per lo staff o bartender o admin, ma la schermata principale
       rimane la coda degli ordini». Quindi: nella vista cliente non si
-      ordina (la riga in alto lo dice); il tasto della coda si chiama
+      ordina (il 03/11 tolta la frase «Da qui non si ordina» dalla riga
+      in alto: il cliente da quel menù ordina, e confondeva); il tasto
+      della coda si chiama
       «📖 Ordina dal menù»; nel ☰ la voce «Ordina dal menù» c'è per tutto
       il personale, e admin e bartender hanno in più «Nuovo ordine», la
       cassa. Prima il banco al menù dello staff ci arrivava solo dalla
