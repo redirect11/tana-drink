@@ -454,7 +454,10 @@ export default function MenuPage({ speciali = false }) {
     <div className={[staff ? 'bar-content' : '', stile !== 'classico' ? `stile-${stile}` : ''].filter(Boolean).join(' ') || undefined}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
-          lavoro: una riga per ricordarlo e per tornare indietro. */}
+          lavoro: una riga per ricordarlo e per tornare indietro. Niente
+          «da qui non si ordina»: il cliente da questo menù ordina eccome,
+          e la frase confondeva (l'utente, 03/11/2026: «non ha senso»). Che
+          in anteprima manchi «Aggiungi» si vede da sé. */}
       {anteprimaCliente && staffVero && (
         <div className="anteprima-cliente">
           <span>
@@ -462,7 +465,7 @@ export default function MenuPage({ speciali = false }) {
               ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
               : stileInProva && stile === stileInProva
                 ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
-                : 'Stai guardando il menù come lo vede il cliente. Da qui non si ordina.'}
+                : 'Stai guardando il menù come lo vede il cliente.'}
           </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale
