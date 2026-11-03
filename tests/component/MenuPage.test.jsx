@@ -682,7 +682,7 @@ describe('la vista cliente', () => {
     ruoloClaim = 'admin'
     mostra('/menu?vista=cliente')
     await screen.findByText('Mojito')
-    expect(await screen.findByText(/Da qui non si ordina/)).toBeInTheDocument()
+    expect(await screen.findByText(/Stai guardando il menù come lo vede il cliente\.$/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aggiungi' })).toBeNull()
   })
 
