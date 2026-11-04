@@ -2,6 +2,12 @@
 
 ## 1.10.13-beta — in lavorazione
 
+### Magazzino
+
+- «📜 Movimenti» di un prodotto si apre di nuovo: il tasto non faceva
+  niente, perché la finestra compariva solo con la scheda del prodotto in
+  modifica (BUG-128).
+
 ## 1.10.12-beta — 04/11/2026 (test)
 
 ### Nel menù dei clienti
