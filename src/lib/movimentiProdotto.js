@@ -22,6 +22,7 @@ export const TIPI_MOVIMENTO = [
   { id: 'ordine fornitore', label: 'Consegna ordine fornitore' },
   { id: 'carico', label: 'Carico diretto' },
   { id: 'fattura fornitore', label: 'Carico da fattura' },
+  { id: 'reso fornitore', label: 'Reso al fornitore' },
   { id: 'rettifica', label: 'Contenuto reale' },
   { id: 'conta', label: 'Chiusura inventario' },
   { id: 'vendite', label: 'Vendite' },

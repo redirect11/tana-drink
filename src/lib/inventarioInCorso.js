@@ -37,7 +37,7 @@
 // passa `raggruppati`; chi li legge una volta sola passa `movimenti`.
 
 import { valoreConSegno, giorniDiConta, consumoSettimanale } from './warehouse.js'
-import { arrotonda, movimentoInPezzi } from './magazzinoPeriodo.js'
+import { arrotonda, movimentoInPezzi, resoSulDeposito } from './magazzinoPeriodo.js'
 
 // «C'è un numero scritto?» — vale anche per le righe degli inventari
 // chiusi (inventarioChiuso.js).
@@ -93,7 +93,9 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
   const out = (lines || []).map((l) => {
     const g = gruppi.get(l.item_id) || VUOTO
     const item = perId.get(l.item_id)
-    const dep = Number(l.dep) || 0
+    // Il reso che supera gli acquisti del periodo esce dal deposito
+    // (REQ-MAG-053): ACQ non va sotto zero, e il consumo resta quello.
+    const { dep, acq } = resoSulDeposito(Number(l.dep) || 0, g.acq)
     // Quanto c'è adesso secondo l'app: la giacenza del prodotto. Un
     // prodotto che non c'è più non ha movimenti: resta quello di partenza.
     const atteso = item ? Number(item.stock) || 0 : dep
@@ -103,11 +105,11 @@ export function righeInventario(lines, { raggruppati = null, movimenti = [], ite
     // La differenza che la chiusura applica: la stessa cosa detta come
     // contato meno atteso al momento del conteggio.
     const diff = rim == null ? null : rimAdesso - atteso
-    const cons = dep + g.acq - rimAdesso
+    const cons = dep + acq - rimAdesso
     return {
       ...l,
       dep: arrotonda(dep),
-      acq: arrotonda(g.acq),
+      acq: arrotonda(acq),
       atteso: arrotonda(atteso),
       rim,
       rim_adesso: arrotonda(rimAdesso),
