@@ -14235,7 +14235,7 @@ requirements:
       - tests/unit/licenza.test.js
   - id: REQ-MAG-053
     title: "Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo"
-    area: "src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO), src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)"
+    area: "src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)"
     description: >
       Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei
       prodotti di magazzino in negativo, perché adesso dopo circa un mese il
@@ -14251,6 +14251,17 @@ requirements:
       (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il
       consumo non lo vede. Nella movimentazione del prodotto ha la sua riga,
       «Reso al fornitore».
+      SE NEL PERIODO NON CI SONO ACQUISTI, IL RESO ESCE DAL DEPOSITO (Flavio,
+      altri due vocali dello stesso giorno: «da inventario, quando fai carico
+      negativo, va a intervenire sugli acquisti, e se non ci sono gli
+      acquisti sul deposito»; «il carico negativo deve fare il contrario del
+      carico, cioè togliere e restituire i soldi»). ACQ non scende sotto
+      zero, e quello che avanza si toglie da DEP (`resoSulDeposito`), sia
+      nell'inventario sia nel magazzino di un periodo: deposito + acquisti
+      resta lo stesso, quindi il consumo pure. IL CONTENUTO REALE NON SI
+      TOCCA: resta una rettifica, che interviene sui consumi e sulle
+      rimanenze («contenuto reale deve sempre andare a intervenire sui
+      consumi»).
       NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta
       «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o
       quanto contenuto) e dice prima di confermare quanti ne escono e quanto

@@ -141,10 +141,42 @@ describe('nel conto del periodo il reso toglie dagli acquisti, non aggiunge cons
     const uscita = (reason) => [mov('unload', 1, 'pz', reason, '2026-10-30T10:00:00.000Z')]
     const items = [{ ...GIN, stock: 0 }]
     const conReso = righeInventario(riga, { movimenti: uscita('reso fornitore'), items }).lines[0]
-    expect(conReso.acq).toBe(-1)
     expect(conReso.cons).toBe(0)
     const conRettifica = righeInventario(riga, { movimenti: uscita('rettifica'), items }).lines[0]
     expect(conRettifica.cons).toBe(1)
+  })
+
+  // Flavio, 04/11/2026: «da inventario, quando fai carico negativo, va a
+  // intervenire sugli acquisti, e se non ci sono gli acquisti sul deposito».
+  // E il contenuto reale non si tocca: resta sui consumi e sulle rimanenze.
+  it('all’inventario il reso toglie dagli acquisti, e quello che avanza dal deposito', () => {
+    const items = [{ ...GIN, stock: 0 }]
+    const riga = (dep) => [{ item_id: 'gin', dep, rim: 0, rim_at: '2026-10-31T10:00:00.000Z', unit: 'pz', cost: 10, vat: 22 }]
+    // Con gli acquisti nel periodo: due comprate, una resa.
+    const conAcquisti = righeInventario(riga(0), {
+      movimenti: [
+        mov('load', 2, 'pz', 'carico', '2026-10-02T10:00:00.000Z'),
+        mov('unload', 1, 'pz', 'reso fornitore', '2026-10-30T10:00:00.000Z'),
+      ],
+      items,
+    }).lines[0]
+    expect([conAcquisti.dep, conAcquisti.acq, conAcquisti.cons]).toEqual([0, 1, 1])
+    // Senza acquisti: la bottiglia resa esce dal deposito, ACQ resta a zero.
+    const senza = righeInventario(riga(1), {
+      movimenti: [mov('unload', 1, 'pz', 'reso fornitore', '2026-10-30T10:00:00.000Z')],
+      items,
+    }).lines[0]
+    expect([senza.dep, senza.acq, senza.cons]).toEqual([0, 0, 0])
+  })
+
+  it('nel periodo vale la stessa regola: gli acquisti non vanno sotto zero', () => {
+    const r = magazzinoNelPeriodo(
+      [mov('unload', 1, 'pz', 'reso fornitore', '2026-10-30T10:00:00.000Z')],
+      [{ ...GIN, stock: 0 }],
+      PERIODO
+    ).righe.find((x) => x.item_id === 'gin')
+    expect([r.dep, r.acq, r.cons, r.fine]).toEqual([0, 0, 0, 0])
+    expect(r.acq_valore).toBe(0)
   })
 
   // Il Bilancio legge gli acquisti dai movimenti di carico: il reso deve
