@@ -123,3 +123,29 @@ describe('i dati di prova', () => {
     expect(cassaAperta.business_day).toBe(businessDayKey(domani))
   })
 })
+
+// LA CARTA DI SALA DELLA DEMO (REQ-MENU-025): compilata e installata, per
+// far vedere la composizione «Di sala» senza scriverla. Ogni voce deve
+// portare a un drink del catalogo: una voce sganciata al tavolo sparisce, e
+// la demo mostrerebbe una carta più povera di quella scritta.
+describe('la carta di sala della demo', () => {
+  it('ha sezioni e voci, tutte agganciate a un drink che c’è', () => {
+    const sezioni = di('carta_sezioni/')
+    const voci = di('carta_voci/')
+    expect(sezioni.length).toBeGreaterThan(2)
+    expect(voci.length).toBeGreaterThan(10)
+    const drink = new Set(di('drinks/').map((d) => d.percorso.slice('drinks/'.length)))
+    const ids = new Set(sezioni.map((s) => s.percorso.slice('carta_sezioni/'.length)))
+    for (const v of voci) {
+      expect(drink.has(v.dati.drink_id), v.percorso).toBe(true)
+      expect(ids.has(v.dati.sezione_id), v.percorso).toBe(true)
+    }
+    expect(sezioni.some((s) => s.dati.vista === 'snella')).toBe(true)
+  })
+
+  it('è installata ma non in uso: il gesto da far vedere è sceglierla', () => {
+    const imp = uno('settings/bar')
+    expect(imp.composizioni_installate).toEqual(['sala'])
+    expect(imp.composizione_menu).not.toBe('sala')
+  })
+})
