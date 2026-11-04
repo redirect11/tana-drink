@@ -182,8 +182,10 @@ disegno, rimpicciolito, perché le card restino allineate. Il logo del
 locale non fa da segnaposto: ripetuto su ogni voce faceva il menù
 giocattolo.
 
-**La carta dei clienti, in ogni stile** (REQ-MENU-025). Con la carta
-accesa le sezioni sono poche: le schede in alto (`.cat-nav.carta`) sono
+**La composizione «Di sala», in ogni stile** (REQ-MENU-025). Il menù dei
+clienti si veste di tre cose — tavolozza, stile e composizione — e le tre
+si combinano liberamente. Con la composizione «Di sala» le sezioni sono
+poche: le schede in alto (`.cat-nav.carta`) sono
 più grandi, col carattere dello stile, e restano agganciate sotto la barra
 mentre si scorre. Una sezione snella (`.carta-snella`) è un listino: nome
 a sinistra e prezzo a destra sulla stessa riga, senza immagine né testo

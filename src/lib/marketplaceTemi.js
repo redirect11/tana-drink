@@ -7,6 +7,15 @@
 // miscelano tavolozze e stili. Per ora tutto gratis tra quelli che già
 // abbiamo». Li pubblica solo il fornitore, dalla regia.
 //
+// IL TEMA SI CHIAMA «VESTE» (l'utente, 04/11/2026): tavolozza, stile e, da
+// quel giorno, la COMPOSIZIONE del menù (composizioneMenu.js) — «il tema
+// diventa un mix di tavolozza colori, stile e stile carta, dobbiamo
+// trovargli un nuovo nome». A schermo si legge «veste»; nel codice e nelle
+// impostazioni (`temi_installati`, `tema_menu`) resta «tema», perché i
+// locali le hanno già scritte e rinominarle vorrebbe dire travasarle. La
+// composizione è facoltativa: una veste che non la dice lascia quella che
+// il locale ha scelto.
+//
 // UN TEMA È UNA RICETTA, NON CODICE («descrittivo», scelto dall'utente lo
 // stesso giorno): una tavolozza (una delle basi dell'app più, se serve,
 // i sette colori di THEME_FIELDS) e uno degli stili del menù che l'app sa
@@ -15,7 +24,7 @@
 //
 //   { id, nome, descrizione, prezzo: 0,
 //     tavolozza: { base: 'notte-blu', colori: { '--accent': '#d4af37' } },
-//     stile: 'deco' }
+//     stile: 'deco', composizione: 'sala' }   ← composizione facoltativa
 //
 // DA DOVE ARRIVANO: il catalogo iniziale qui sotto, nell'app, composto da
 // quello che c'era già; e quello che la regia pubblica, letto all'apertura
@@ -32,6 +41,7 @@
 
 import { THEME_PRESETS, THEME_FIELDS, DEFAULT_THEME } from './themes.js'
 import { STILI_MENU, stileProvabile, patchInstalla as installaStile } from './stileMenu.js'
+import { COMPOSIZIONI_MENU, composizioneProvabile, patchUsaComposizione } from './composizioneMenu.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 import { urlFunzioneRegia, scaricaERicorda } from './funzioniRegia.js'
 
@@ -53,6 +63,9 @@ export function leggiTema(v) {
   if (!Object.hasOwn(THEME_PRESETS, t.base)) return null
   const stile = STILI_MENU.find((s) => s.id === v.stile)
   if (!stile) return null
+  // Una composizione che l'app non conosce scarta la veste, come uno stile.
+  const composizione = v.composizione == null ? null : COMPOSIZIONI_MENU.find((c) => c.id === v.composizione)
+  if (v.composizione != null && !composizione) return null
   const colori = {}
   for (const [k, c] of Object.entries(t.colori && typeof t.colori === 'object' ? t.colori : {})) {
     if (CHIAVI_COLORE.includes(k) && COLORE.test(String(c))) colori[k] = c
@@ -65,6 +78,7 @@ export function leggiTema(v) {
     prezzo,
     tavolozza: { base: t.base, colori },
     stile: stile.id,
+    ...(composizione ? { composizione: composizione.id } : {}),
   }
 }
 
@@ -157,7 +171,9 @@ export function leggiCatalogo(corpo) {
 export function catalogo(settings, daRegia = []) {
   const perId = new Map(CATALOGO_INIZIALE.map((t) => [t.id, t]))
   for (const t of daRegia) perId.set(t.id, t)
-  return [...perId.values()].filter((t) => t.prezzo === 0 && stileProvabile(settings, t.stile))
+  return [...perId.values()].filter(
+    (t) => t.prezzo === 0 && stileProvabile(settings, t.stile) && (!t.composizione || composizioneProvabile(settings, t.composizione))
+  )
 }
 
 // ── I TEMI DEL LOCALE ────────────────────────────────────────────────
@@ -196,6 +212,7 @@ export function patchUsaTema(settings, tema) {
   }
   const stile = installaStile(settings, tema.stile)
   if (stile) patch.stili_installati = stile.stili_installati
+  if (tema.composizione) Object.assign(patch, patchUsaComposizione(settings, tema.composizione))
   return patch
 }
 

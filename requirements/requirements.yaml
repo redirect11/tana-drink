@@ -4044,8 +4044,8 @@ requirements:
       - tests/component/SpecialScorrevoli.test.jsx
       - tests/unit/stileMenu.test.js
   - id: REQ-MENU-025
-    title: "La carta dei clienti: sezioni e voci sue, agganciate alle voci del gestionale"
-    area: "src/lib/carta.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaCarta), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/CartaManager.jsx, src/components/MenuManager.jsx (Carta clienti, In carta), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
+    title: "La composizione del menù: «Classica» o «Di sala», la carta con sezioni e voci sue agganciate alle voci del gestionale"
+    area: "src/lib/composizioneMenu.js, src/lib/marketplaceTemi.js (composizione della veste), src/components/MarketplaceTab.jsx (Composizioni del menù), src/components/ThemeSettings.jsx (ComposizioneMenuClienti), src/lib/carta.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaCarta), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/CartaManager.jsx, src/components/MenuManager.jsx (Carta clienti, In carta), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
     description: >
       Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti
       sul test: «non metterò tutto quello che ho nel menù gestionale sul
@@ -4061,6 +4061,22 @@ requirements:
       DECISIONI DELL'UTENTE, lo stesso giorno: vale per tutti i locali, non
       solo per la Tana; le descrizioni le scrive prima Claude, poi l'app
       quando ci saranno i servizi AI (REQ-AI-004).
+      LA CARTA È UNA COMPOSIZIONE DEL MENÙ, non un menù a parte. L'utente,
+      ancora il 04/11/2026: «la carta dei clienti è il menù stesso, non è
+      una versione diversa del menù, e rientra nello stile del menù.
+      Possiamo proporre varie carte, dove quella di default è il menù che
+      già c'è. Quindi il tema diventa un mix di tavolozza colori, stile e
+      stile carta». I nomi li ha scelti lui: la VESTE (il tema di prima) è
+      tavolozza + stile + COMPOSIZIONE DEL MENÙ; le composizioni oggi sono
+      «Classica» (il catalogo del gestionale per categorie, di tutti) e «Di
+      sala» (la carta qui sotto, gratis, la parola di Flavio: «menù di
+      sala»). Si scelgono come gli stili: nel marketplace la sezione
+      «Composizioni del menù» (installa, usa, prova sul menù con
+      `?vista=cliente&composizione=…`), in Impostazioni → Menù clienti la
+      scelta fra quelle installate, prima dello stile e dei colori. Una
+      veste può dire la sua composizione (`composizione`, facoltativa):
+      usarla la mette in uso; senza, resta quella del locale. Prima la
+      carta aveva un interruttore suo (`carta_attiva`), tolto.
       LA CARTA è fatta di SEZIONI (nome, ordine, vista «dettagliata» o
       «snella») e di VOCI (nome, descrizione, ingredienti, ordine),
       ognuna agganciata a UNA voce del gestionale, che dà prezzo,
@@ -4069,12 +4085,10 @@ requirements:
       voci non agganciate, o agganciate a una voce spenta o esaurita, al
       tavolo non compaiono; le sezioni rimaste vuote neppure.
       CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora
-      ordina dal menù del gestionale, che conosce. La carta si accende da
-      Menù → Carta clienti («Carta in uso per i clienti», `carta_attiva`):
-      spenta, o accesa ma senza voci, il cliente vede il menù del
-      gestionale per categorie come sempre — il locale che non la compila
-      non si accorge che esiste. `?vista=cliente&carta=prova` la mostra al
-      personale anche spenta, per vederla mentre la si compila.
+      ordina dal menù del gestionale, che conosce. Con «Di sala» in uso ma
+      senza sezioni il cliente vede la classica: chi la installa e non la
+      compila non trova il menù vuoto. Menù → Carta di sala dice se è in
+      uso e la mette in uso con un tasto («Metti in uso «Di sala»»).
       AL TAVOLO: le sezioni sono schede grandi che restano in alto mentre
       si scorre («come se fosse un tab che deve restare sempre fisso
       bloccato in alto»); una sezione SNELLA mostra nome e prezzo su una
@@ -4090,7 +4104,7 @@ requirements:
       nota della riga, che al banco dice cosa preparare («SOUR 7» con nota
       «Gin Fizz»); il cliente nel carrello legge il nome che ha scelto. Due
       voci della carta sulla stessa voce del gestionale sono due righe.
-      NEL GESTIONALE: la sottosezione «📖 Carta clienti» del Menù crea
+      NEL GESTIONALE: la sottosezione «📖 Carta di sala» del Menù crea
       sezioni e voci, con la tendina dell'aggancio divisa per categorie; e
       nelle azioni di ogni voce del catalogo, «In carta» dice quali voci
       della carta ci portano e ne aggancia un'altra (Flavio: «dovrebbe
@@ -4104,8 +4118,11 @@ requirements:
     labels: [menu, vista-cliente, gestionale]
     test_cases:
       - tests/unit/carta.test.js
+      - tests/unit/composizioneMenu.test.js
       - tests/component/MenuPage.test.jsx
       - tests/component/MenuManager.test.jsx
+      - tests/component/MarketplaceTab.test.jsx
+      - tests/component/ThemeSettings.test.jsx
 
   - id: REQ-MENU-026
     title: "I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll"

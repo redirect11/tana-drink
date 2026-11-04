@@ -102,19 +102,21 @@ describe('una voce della carta', () => {
   })
 })
 
+// LA CARTA NON SI ACCENDE: è la composizione «Di sala» del menù, scelta
+// come uno stile (l'utente, 04/11/2026: «la carta dei clienti è il menù
+// stesso, non è una versione diversa del menù»). Prima c'era un
+// interruttore suo, `carta_attiva`; adesso decide la composizione in uso.
 describe('quando la carta si usa', () => {
   const sezioni = CARTA.sezioni
-  it('accesa e con sezioni', () => {
-    expect(cartaInUso({ carta_attiva: true }, sezioni)).toBe(true)
+  it('con la composizione «Di sala» e almeno una sezione', () => {
+    expect(cartaInUso('sala', sezioni)).toBe(true)
   })
-  it('spenta no, tranne nell’anteprima', () => {
-    expect(cartaInUso({ carta_attiva: false }, sezioni)).toBe(false)
-    expect(cartaInUso({}, sezioni)).toBe(false)
-    expect(cartaInUso({}, sezioni, { prova: true })).toBe(true)
+  it('con la classica no', () => {
+    expect(cartaInUso('classica', sezioni)).toBe(false)
   })
-  it('accesa ma vuota no: il cliente vede il menù del gestionale', () => {
-    expect(cartaInUso({ carta_attiva: true }, [])).toBe(false)
-    expect(cartaInUso({ carta_attiva: true }, [], { prova: true })).toBe(false)
+  it('«Di sala» ma vuota no: il cliente vede la classica, non un menù vuoto', () => {
+    expect(cartaInUso('sala', [])).toBe(false)
+    expect(cartaInUso('sala', null)).toBe(false)
   })
 })
 

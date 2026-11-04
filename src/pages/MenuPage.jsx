@@ -25,6 +25,7 @@ import {
 } from '../lib/api.js'
 import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga } from '../lib/cart.js'
 import { cartaInUso, sezioniDellaCarta } from '../lib/carta.js'
+import { composizioneMenu, composizioneProvabile, nomeComposizione } from '../lib/composizioneMenu.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -134,11 +135,18 @@ export default function MenuPage({ speciali = false }) {
   // del personale. Con ?vista=cliente si finge di essere un cliente.
   const anteprimaCliente = params.get('vista') === 'cliente'
   const staff = anteprimaCliente ? null : staffVero
-  // LA CARTA DEI CLIENTI (REQ-MENU-025) è la faccia del cliente: chi lavora
-  // ordina dal menù del gestionale, che conosce. `?carta=prova` la fa
-  // vedere al personale in vista cliente anche spenta, mentre la compila.
-  const usaCarta =
-    !staff && cartaInUso(settings, carta.sezioni, { prova: anteprimaCliente && !!staffVero && params.get('carta') === 'prova' })
+  // LA PROVA DI UNA VESTE (REQ-MENU-023): dal marketplace, chi lavora apre
+  // il proprio menù con i colori, lo stile e la composizione di una veste.
+  // La vede solo chi l'ha aperta; i colori li mette App.
+  const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
+  // LA COMPOSIZIONE DEL MENÙ (REQ-MENU-025): quella del locale, o quella in
+  // prova (`?composizione=…`, o della veste in prova). Chi lavora ordina
+  // sempre dalla classica, il catalogo che conosce.
+  const composizioneInProva =
+    anteprimaCliente && staffVero ? params.get('composizione') || temaProvato?.composizione || null : null
+  const composizione =
+    composizioneInProva && composizioneProvabile(settings, composizioneInProva) ? composizioneInProva : composizioneMenu(settings)
+  const usaCarta = !staff && cartaInUso(composizione, carta.sezioni)
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -469,9 +477,7 @@ export default function MenuPage({ speciali = false }) {
   // locale; o, nell'anteprima del cliente aperta da chi lavora, quello in
   // prova (`?stile=…`, da Impostazioni → Menù clienti). La prova la vede
   // solo chi l'ha aperta: i clienti vedono lo stile del locale.
-  // Un tema in prova dal marketplace (REQ-MENU-023) porta il suo stile; i
-  // colori li mette App.
-  const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
+  // Una veste in prova dal marketplace (REQ-MENU-023) porta il suo stile.
   const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || temaProvato?.stile || null : null
   const stile = staff
     ? 'classico'
@@ -503,10 +509,12 @@ export default function MenuPage({ speciali = false }) {
         <div className="anteprima-cliente">
           <span>
             👀 {temaProvato
-              ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
+              ? `Stai provando la veste «${temaProvato.nome}»: i clienti vedono ancora quella scelta.`
               : stileInProva && stile === stileInProva
                 ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
-                : 'Stai guardando il menù come lo vede il cliente.'}
+                : composizioneInProva && composizione === composizioneInProva
+                  ? `Stai provando la composizione «${nomeComposizione(composizioneInProva)}»: i clienti vedono ancora quella scelta.`
+                  : 'Stai guardando il menù come lo vede il cliente.'}
           </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale

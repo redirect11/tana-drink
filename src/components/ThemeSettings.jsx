@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { stiliDisponibili, stileMenu, patchDisinstalla } from '../lib/stileMenu.js'
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
+import { composizioniDisponibili, composizioneMenu, patchDisinstallaComposizione } from '../lib/composizioneMenu.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
   THEME_FIELDS,
@@ -87,12 +88,13 @@ function CardDellaCoda({ settings, onSave }) {
   )
 }
 
-// Il tema del menù dei clienti, da mostrare nella sua sezione: prima la
-// forma (lo stile, REQ-MENU-021), poi i colori, che valgono per tutti e due
-// gli stili.
+// LA VESTE del menù dei clienti, da mostrare nella sua sezione: prima cosa
+// c'è (la composizione, REQ-MENU-025), poi la forma (lo stile, REQ-MENU-021),
+// poi i colori, che valgono per tutti gli stili.
 export function TemaMenuClienti({ settings, onSave }) {
   return (
     <>
+      <ComposizioneMenuClienti settings={settings} onSave={onSave} />
       <StileMenuClienti settings={settings} onSave={onSave} />
       <ThemeEditor
       title="Colori del menù"
@@ -163,8 +165,63 @@ export function StileMenuClienti({ settings, onSave }) {
       {/* Il catalogo degli stili (e dei temi) sta nella pagina del
           marketplace (REQ-MENU-023): qui si sceglie fra quelli installati. */}
       <p className="muted small" style={{ margin: '10px 0 0' }}>
-        Altri stili e temi, gratis, nel{' '}
+        Altri stili e vesti, gratis, nel{' '}
         <Link className="link-inline" to="/bar?tab=marketplace">
+          marketplace
+        </Link>
+        .
+      </p>
+    </div>
+  )
+}
+
+// LA COMPOSIZIONE DEL MENÙ (REQ-MENU-025): fra quelle che il locale ha,
+// come per lo stile; il catalogo sta nel marketplace. «Di sala» si compila
+// in Menù → Carta di sala: qui lo si dice, perché chi la sceglie senza
+// averla compilata non si chieda perché il menù non cambia.
+export function ComposizioneMenuClienti({ settings, onSave }) {
+  const attuale = composizioneMenu(settings)
+  return (
+    <div style={{ margin: '14px 0 18px' }} role="group" aria-labelledby="composizione-menu-titolo">
+      <h4 id="composizione-menu-titolo" style={{ margin: '0 0 4px' }}>Composizione del menù</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Che cosa contiene il menù dei clienti e come è diviso. Il personale prende gli ordini sempre dal catalogo del
+        gestionale.
+      </p>
+      <div className="mode-choice stili-menu">
+        {composizioniDisponibili(settings).map((c) => (
+          <div key={c.id} className={`stile-scheda${attuale === c.id ? ' active' : ''}`}>
+            <button
+              type="button"
+              className={`mode-option${attuale === c.id ? ' active' : ''}`}
+              aria-pressed={attuale === c.id}
+              onClick={() => onSave({ composizione_menu: c.id })}
+            >
+              <strong>{c.nome}</strong>
+              <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
+                {c.desc}
+              </span>
+            </button>
+            <div className="stile-azioni">
+              <a className="link-inline small" href={urlProvaMenu('composizione', c.id)}>
+                Prova sul menù
+              </a>
+              {c.gratis && (
+                <button
+                  type="button"
+                  className="link-inline small"
+                  onClick={() => onSave(patchDisinstallaComposizione(settings, c.id))}
+                >
+                  Disinstalla
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="muted small" style={{ margin: '10px 0 0' }}>
+        Altre composizioni nel{' '}
+        <Link className="link-inline" to="/bar?tab=marketplace&sezione=composizioni">
           marketplace
         </Link>
         .

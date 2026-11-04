@@ -15,6 +15,13 @@ Per la regia (drink-regia) e per chi lavora qui. 02/11/2026.
 Pubblica **solo il fornitore, dalla regia**. Un tema è **descrittivo**: una
 ricetta, non codice.
 
+**Dal 04/11/2026 a schermo il tema si chiama «veste»** (decisione
+dell'utente) e può portare anche la **composizione del menù**: «il tema
+diventa un mix di tavolozza colori, stile e stile carta». Nel contratto,
+nel codice e nelle impostazioni dei locali i nomi restano quelli di prima
+(`temi`, `temi_installati`, `tema_menu`): rinominarli vorrebbe dire
+travasare quello che i locali hanno già scritto.
+
 ## Che cos'è un tema
 
 ```json
@@ -27,7 +34,8 @@ ricetta, non codice.
     "base": "notte-blu",
     "colori": { "--accent-2": "#d4af37" }
   },
-  "stile": "deco"
+  "stile": "deco",
+  "composizione": "sala"
 }
 ```
 
@@ -49,6 +57,11 @@ ricetta, non codice.
   `giornale`, e `notte`, che però è esclusivo della Tana (va solo in un tema
   per lei). Uno stile nuovo è un lavoro di disegno e arriva con una versione
   dell'app. Un'app più vecchia ignora i temi con uno stile che non conosce.
+- **`composizione`**: facoltativa. Una delle composizioni del menù che
+  l'app conosce (`src/lib/composizioneMenu.js`): `classica` (il catalogo del
+  gestionale per categorie) o `sala` (la carta di sala, REQ-MENU-025). Senza,
+  la veste lascia la composizione che il locale ha scelto. Un'app più
+  vecchia, o una composizione che l'app non conosce, scartano la veste.
 - **`prezzo`**: per ora sempre `0`. L'app non mostra i temi a pagamento
   finché non c'è «Compra» (REQ-LIC-011).
 
@@ -89,15 +102,17 @@ GET https://europe-west1-<VITE_REGIA_PROGETTO>.cloudfunctions.net/catalogoTemi
 ## Nell'app (fatto)
 
 - **Una pagina sua: «🛍️ Marketplace»** nel menu laterale, prima di
-  Impostazioni, con tre sezioni: **Temi**, **Stili del menù** (gli stili da
-  soli, sui colori del locale) e **Installati**. Ogni scheda ha una vetrina
+  Impostazioni, con le sezioni **Vesti**, **Stili del menù** (gli stili da
+  soli, sui colori del locale), **Composizioni del menù**, **Installati** e
+  **Moduli**. Ogni scheda ha una vetrina
   (un pezzo del menù vero coi colori e lo stile del tema), «Prova sul menù»,
   «Installa» e «Usa»; negli Installati, «Disinstalla».
 - **Installare** salva una copia del tema nelle impostazioni del locale
   (`temi_installati`).
 - **«Usa»** scrive la tavolozza nei colori del menù dei clienti
   (`theme_client`) e lo stile in `stile_menu`, installando lo stile se è uno
-  di quelli gratis. I colori del gestionale non cambiano.
+  di quelli gratis; se la veste ha una composizione, la mette in
+  `composizione_menu` e la installa. I colori del gestionale non cambiano.
 - **«Prova sul menù»** apre il menù del cliente con il tema
   (`?vista=cliente&tema=…`), solo per chi la apre.
 - **Il catalogo iniziale**, tutto gratis: Classico, Lavagna, Grand Hotel,

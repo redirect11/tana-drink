@@ -10811,6 +10811,12 @@ body.pagina-piena .inv-scheda {
   margin: 0 0 8px;
   padding: 10px 12px;
 }
+/* Le schede delle sezioni nella vetrina di una composizione: ferme, non
+   incollate in alto come nel menù. */
+.vetrina-tema .cat-nav {
+  position: static;
+  margin: 0 0 10px;
+}
 
 /* I MODULI (REQ-LIC-012): al posto della vetrina del menù, una fascia con
    l'icona e lo stato. Lo stato si legge dal colore prima che dalla parola:
