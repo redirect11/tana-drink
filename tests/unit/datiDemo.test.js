@@ -123,3 +123,27 @@ describe('i dati di prova', () => {
     expect(cassaAperta.business_day).toBe(businessDayKey(domani))
   })
 })
+
+// LA STRUTTURA DEL MENÙ DELLA DEMO (REQ-MENU-025): personalizzata, per far
+// vedere sezioni scelte a mano, categorie rinominate, sezioni snelle e
+// nascoste senza doverle scrivere. Ogni voce deve portare a un drink del
+// catalogo e ogni sezione a una categoria che c'è: una voce senza prodotto
+// al tavolo sparisce, e la demo mostrerebbe meno di quello che è scritto.
+describe('la struttura del menù della demo', () => {
+  it('ha sezioni a mano e per categoria, tutte collegate a quello che c’è', () => {
+    const sezioni = di('carta_sezioni/')
+    const voci = di('carta_voci/')
+    const drink = new Set(di('drinks/').map((d) => d.percorso.slice('drinks/'.length)))
+    const categorie = new Set(di('categories/').map((c) => c.percorso.slice('categories/'.length)))
+    const ids = new Set(sezioni.map((s) => s.percorso.slice('carta_sezioni/'.length)))
+    expect(voci.length).toBeGreaterThan(2)
+    for (const v of voci) {
+      expect(drink.has(v.dati.drink_id), v.percorso).toBe(true)
+      expect(ids.has(v.dati.sezione_id), v.percorso).toBe(true)
+    }
+    for (const s of sezioni.filter((x) => x.dati.categoria_id)) expect(categorie.has(s.dati.categoria_id), s.percorso).toBe(true)
+    expect(sezioni.some((s) => !s.dati.categoria_id)).toBe(true)
+    expect(sezioni.some((s) => s.dati.vista === 'snella')).toBe(true)
+    expect(sezioni.some((s) => s.dati.nascosta)).toBe(true)
+  })
+})

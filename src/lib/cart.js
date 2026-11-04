@@ -20,16 +20,17 @@ function write(key, value) {
   }
 }
 
-// LA CHIAVE DI UNA RIGA: il drink, o — per una voce della carta dei
-// clienti (REQ-MENU-025) — la voce. Due voci della carta possono portare
+// LA CHIAVE DI UNA RIGA: il drink, o — per una voce scelta a mano nel
+// menù dei clienti (REQ-MENU-025) — la voce. Due voci possono portare
 // allo stesso drink del gestionale («Gin Fizz» e «Tom Collins» su
 // «SOUR 7») e restano due righe.
 export const chiaveRiga = (i) => i.riga ?? i.drink_id
 
 // UNA RIGA NUOVA. L'ordine porta il drink del GESTIONALE, col suo nome:
 // è quello che il banco conosce, che scala il magazzino e che finisce
-// nelle statistiche. Se la carta lo chiama in un altro modo, il nome della
-// carta va nella nota della riga, che al banco dice cosa preparare
+// nelle statistiche. Se il menù dei clienti lo chiama in un altro modo (il
+// nome per il cliente della scheda, o quello di una voce scelta a mano),
+// quel nome va nella nota della riga, che al banco dice cosa preparare
 // («SOUR 7 — Gin Fizz»); al cliente, nel carrello, resta il nome che ha
 // scelto.
 export function rigaDelCarrello(drink) {
@@ -40,9 +41,12 @@ export function rigaDelCarrello(drink) {
     qty: 1,
     sumup_product_id: drink.sumup_product_id ?? null,
   }
-  if (!drink.voce_carta) return riga
   const diverso = (drink.name || '').trim().toLowerCase() !== (riga.name || '').trim().toLowerCase()
-  return { ...riga, riga: drink.id, nome_carta: drink.name, ...(diverso ? { note: drink.name } : {}) }
+  return {
+    ...riga,
+    ...(drink.voce_carta ? { riga: drink.id } : {}),
+    ...(diverso ? { nome_carta: drink.name, note: drink.name } : {}),
+  }
 }
 
 // Carrello persistito in localStorage. La scrittura avviene SUBITO,

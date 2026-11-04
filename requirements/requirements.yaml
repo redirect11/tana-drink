@@ -4044,8 +4044,8 @@ requirements:
       - tests/component/SpecialScorrevoli.test.jsx
       - tests/unit/stileMenu.test.js
   - id: REQ-MENU-025
-    title: "La carta dei clienti: sezioni e voci sue, agganciate alle voci del gestionale"
-    area: "src/lib/carta.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaCarta), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/CartaManager.jsx, src/components/MenuManager.jsx (Carta clienti, In carta), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
+    title: "Il menù dei clienti con la struttura personalizzabile: sezioni che seguono una categoria o con voci scelte a mano"
+    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, scriviStruttura, nome_cliente), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaStruttura, perIlCliente), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
     description: >
       Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti
       sul test: «non metterò tutto quello che ho nel menù gestionale sul
@@ -4061,49 +4061,79 @@ requirements:
       DECISIONI DELL'UTENTE, lo stesso giorno: vale per tutti i locali, non
       solo per la Tana; le descrizioni le scrive prima Claude, poi l'app
       quando ci saranno i servizi AI (REQ-AI-004).
-      LA CARTA è fatta di SEZIONI (nome, ordine, vista «dettagliata» o
-      «snella») e di VOCI (nome, descrizione, ingredienti, ordine),
-      ognuna agganciata a UNA voce del gestionale, che dà prezzo,
-      disponibilità e ricetta per il magazzino. L'aggancio è molti a uno:
-      «Gin Fizz» e «Tom Collins» possono portare entrambi a «SOUR 7». Le
-      voci non agganciate, o agganciate a una voce spenta o esaurita, al
-      tavolo non compaiono; le sezioni rimaste vuote neppure.
+      UN MENÙ SOLO. Prima era una «carta» a parte con un interruttore, poi
+      una «composizione del menù» da scegliere nel marketplace accanto allo
+      stile (Classica o «Di sala»). L'utente, ancora il 04/11/2026: è «solo
+      una disposizione degli elementi del menù e come strutturare le varie
+      sezioni»; quindi i due menù si unificano, il tema torna colori +
+      stile, e la STRUTTURA del menù dei clienti si personalizza dal menù
+      stesso. Le sue scelte, fra le alternative proposte:
+      SEZIONI MISTE. Una sezione o SEGUE una categoria del gestionale (ne
+      mostra i prodotti disponibili, compresi quelli aggiunti dopo), o ha
+      le VOCI SCELTE A MANO (Signature, Suggeriti dallo staff). Di suo c'è
+      una sezione per categoria, nell'ordine del gestionale: il locale che
+      non tocca niente vede il menù di sempre. Ogni sezione ha nome
+      (quello della categoria, se non ne ha uno suo), ordine, vista
+      «dettagliata» o «snella», e può essere NASCOSTA. Le categorie che
+      nessuna sezione segue compaiono in fondo, da sole: una categoria
+      nuova non sparisce dal menù senza che nessuno l'abbia deciso. Una
+      sezione che segue una categoria non si elimina (la categoria
+      tornerebbe in fondo): si nasconde.
+      I TESTI SUL PRODOTTO, COL RITOCCO NELLE SEZIONI A MANO. La scheda
+      prodotto ha il «Nome nel menù dei clienti» (`nome_cliente`), oltre
+      alla descrizione e agli ingredienti in carta che c'erano già: valgono
+      ovunque il cliente legga quel prodotto, Special e carosello compresi.
+      Una voce scelta a mano può dire nome, descrizione e ingredienti suoi
+      («Gin Fizz» e «Tom Collins» tutti e due su «SOUR 7»); senza, valgono
+      quelli della scheda. Gli ingredienti di una voce a mano non vengono
+      mai dalla ricetta («non li devi prendere dalla ricetta, vanno messi a
+      mano»): il ritocco, o quelli scritti sulla scheda.
       CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora
-      ordina dal menù del gestionale, che conosce. La carta si accende da
-      Menù → Carta clienti («Carta in uso per i clienti», `carta_attiva`):
-      spenta, o accesa ma senza voci, il cliente vede il menù del
-      gestionale per categorie come sempre — il locale che non la compila
-      non si accorge che esiste. `?vista=cliente&carta=prova` la mostra al
-      personale anche spenta, per vederla mentre la si compila.
-      AL TAVOLO: le sezioni sono schede grandi che restano in alto mentre
-      si scorre («come se fosse un tab che deve restare sempre fisso
-      bloccato in alto»); una sezione SNELLA mostra nome e prezzo su una
-      riga, senza immagine, descrizione e ingredienti (le bibite); una
-      DETTAGLIATA la voce intera. GLI INGREDIENTI in carta sono solo quelli
-      scritti sulla voce, mai presi dalla ricetta («non li devi prendere
-      dalla ricetta, vanno messi a mano»); la descrizione, se la voce non
-      ne ha una, è quella del gestionale, che era già scritta per il
-      cliente (le Signature).
-      L'ORDINE porta la voce del GESTIONALE, col suo nome: è quella che il
-      banco conosce, che scala il magazzino e che conta nelle statistiche.
-      Se la carta la chiama in un altro modo, il nome della carta va nella
-      nota della riga, che al banco dice cosa preparare («SOUR 7» con nota
-      «Gin Fizz»); il cliente nel carrello legge il nome che ha scelto. Due
-      voci della carta sulla stessa voce del gestionale sono due righe.
-      NEL GESTIONALE: la sottosezione «📖 Carta clienti» del Menù crea
-      sezioni e voci, con la tendina dell'aggancio divisa per categorie; e
-      nelle azioni di ogni voce del catalogo, «In carta» dice quali voci
-      della carta ci portano e ne aggancia un'altra (Flavio: «dovrebbe
-      apparire una tendina con tutti gli item dove uno seleziona quello a
-      cui si deve agganciare»). È lo stesso dato, visto dai due lati.
-      I DATI: `carta_sezioni` e `carta_voci`, due collezioni e non un
-      documento solo perché le voci si scrivono una alla volta mentre le
-      si compila. Le legge chiunque apra il menù, le scrive il banco.
+      ordina dal menù del gestionale, coi nomi del banco e per categorie,
+      che conosce. Una voce su un prodotto spento o esaurito non compare;
+      una sezione rimasta vuota neppure. Nascondere una categoria non spegne
+      i suoi prodotti nelle sezioni a mano: le voci-prezzo si nascondono e
+      si ordinano coi nomi della carta.
+      AL TAVOLO: con la struttura personalizzata le sezioni sono schede
+      grandi che restano in alto mentre si scorre («come se fosse un tab
+      che deve restare sempre fisso bloccato in alto»); una sezione SNELLA
+      mostra nome e prezzo su una riga, senza immagine, descrizione e
+      ingredienti (le bibite). Il menù aspetta la struttura prima di
+      mostrarsi, perché il cliente non veda per un istante le categorie del
+      gestionale.
+      L'ORDINE porta il prodotto del GESTIONALE, col suo nome: è quello che
+      il banco conosce, che scala il magazzino e che conta nelle
+      statistiche. Se il cliente lo legge con un altro nome (della scheda o
+      della voce), quel nome va nella nota della riga, che al banco dice
+      cosa preparare («SOUR 7» con nota «Gin Fizz»); nel carrello il
+      cliente legge il nome che ha scelto. Due voci sullo stesso prodotto
+      sono due righe.
+      NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù elenca
+      le sezioni nell'ordine in cui compaiono, con le categorie non ancora
+      toccate in fondo; si aggiungono sezioni a mano (in cima), si
+      rinominano, si riordinano, si nascondono, si fanno snelle; nelle
+      sezioni a mano si aggiungono le voci, col prodotto scelto da una
+      tendina divisa per categorie. Una categoria che nessuna sezione segue
+      non è scritta da nessuna parte: la prima volta che la si tocca, la
+      struttura si scrive tutta in fila, in un pacchetto solo, perché non
+      salti davanti alle altre. Nelle azioni di ogni prodotto del catalogo,
+      «Menù dei clienti» dice in quale sezione compare per categoria e in
+      quali sezioni a mano, e lo aggiunge a un'altra o lo toglie (Flavio:
+      «dovrebbe apparire una tendina con tutti gli item dove uno seleziona
+      quello a cui si deve agganciare»).
+      LA DEMO ha una struttura personalizzata (una sezione a mano, categorie
+      rinominate e riordinate, birre e bollicine snelle, shot nascosti),
+      per farla vedere senza scriverla.
+      I DATI: `carta_sezioni` (con `categoria_id` per quelle che seguono una
+      categoria, e `nascosta`) e `carta_voci`, coi nomi di quando era una
+      carta a parte; due collezioni e non un documento solo perché le voci
+      si scrivono una alla volta. Le legge chiunque apra il menù, le scrive
+      il banco. Sul prodotto, `nome_cliente`.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente, gestionale]
     test_cases:
-      - tests/unit/carta.test.js
+      - tests/unit/strutturaMenu.test.js
       - tests/component/MenuPage.test.jsx
       - tests/component/MenuManager.test.jsx
 
@@ -7138,8 +7168,8 @@ requirements:
     test_cases: []
 
   - id: REQ-AI-004
-    title: "Le descrizioni della carta dei clienti proposte dall'AI, e rivedute dal titolare"
-    area: "functions/ (chiamata al modello, dalla regia), src/components/CartaManager.jsx"
+    title: "Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare"
+    area: "functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx"
     description: >
       Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025)
       «le faremo generare all'intelligenza artificiale, poi alcune verranno
@@ -7150,9 +7180,9 @@ requirements:
       - PRIMA: la prima stesura la scrive Claude, una volta, con uno script
         come quello delle Signature (scripts/special-signature.mjs), sul
         test e poi in produzione col via libera; Flavio la rivede;
-      - POI: nella carta, su ogni voce, «Proponi descrizione» chiede al
-        modello una descrizione dal nome della voce e da quella del
-        gestionale. È una PROPOSTA da confermare: un modello può sbagliare
+      - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei
+        clienti, «Proponi descrizione» chiede al modello una descrizione
+        dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare
         provenienza o botaniche, e al cliente arriva come informazione del
         locale. Costi e credito in REQ-AI-003.
     status: todo
