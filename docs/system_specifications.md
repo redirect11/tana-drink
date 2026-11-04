@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 254 | fatto e coperto dai test |
+| ✅ | 255 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 27 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**306 voci** in tutto. **271** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
+**309 voci** in tutto. **272** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 19 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 20 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -817,6 +817,24 @@ NEGLI SPECIAL: il menu' Special diventa una sequenza di scene a tutto schermo, u
 IL DISEGNO PIÙ GRANDE (02/11/2026). L'utente: «le immagini nel menu special le vedo ancora piccole». Il disegno aveva una misura fissa, 320 px al massimo: ora prende tutta l'altezza che il testo gli lascia, fino a 560 px; sugli schermi larghi e bassi (dai 900 px, più larghi che alti) il disegno sta a sinistra e il testo a destra. Con «riduci movimento» torna a una misura sua, fino a 560 px.
 
 **Dove**: `src/lib/stileMenu.js, src/components/SpecialScorrevoli.jsx, src/lib/useDisegnoRaster.js, src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile-notte), src/index.css (.stile-notte, .notte-*), src/lib/api.js (stile_menu), package.json (gsap)` · **Lo dimostrano**: `tests/component/SpecialScorrevoli.test.jsx`, `tests/unit/stileMenu.test.js`
+
+#### REQ-MENU-025 — La carta dei clienti: sezioni e voci sue, agganciate alle voci del gestionale
+
+Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti sul test: «non metterò tutto quello che ho nel menù gestionale sul menù di sala»; al tavolo si ordinano drink e bibite, non shot, bottiglie, food e tisane; «gin e vodka, che ho insieme nel gestionale solo perché li ho vicini a livello logistico, nel menù vanno separati», e «Distillati» va diviso in whisky, rum, tequila e mezcal; «è come se dovessimo agganciare ogni item del menù gestionale a un item creato ad hoc per il menù vista cliente». Il gestionale è fatto per il banco: voci-prezzo («SOUR 7», «DRINK 8 PREMIUM»), gin tonic chiamati col solo nome del gin, la ricetta con la tonica che finiva fra gli ingredienti in carta.
+
+DECISIONI DELL'UTENTE, lo stesso giorno: vale per tutti i locali, non solo per la Tana; le descrizioni le scrive prima Claude, poi l'app quando ci saranno i servizi AI (REQ-AI-004).
+
+LA CARTA è fatta di SEZIONI (nome, ordine, vista «dettagliata» o «snella») e di VOCI (nome, descrizione, ingredienti, ordine), ognuna agganciata a UNA voce del gestionale, che dà prezzo, disponibilità e ricetta per il magazzino. L'aggancio è molti a uno: «Gin Fizz» e «Tom Collins» possono portare entrambi a «SOUR 7». Le voci non agganciate, o agganciate a una voce spenta o esaurita, al tavolo non compaiono; le sezioni rimaste vuote neppure.
+
+CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora ordina dal menù del gestionale, che conosce. La carta si accende da Menù → Carta clienti («Carta in uso per i clienti», `carta_attiva`): spenta, o accesa ma senza voci, il cliente vede il menù del gestionale per categorie come sempre — il locale che non la compila non si accorge che esiste. `?vista=cliente&carta=prova` la mostra al personale anche spenta, per vederla mentre la si compila.
+
+AL TAVOLO: le sezioni sono schede grandi che restano in alto mentre si scorre («come se fosse un tab che deve restare sempre fisso bloccato in alto»); una sezione SNELLA mostra nome e prezzo su una riga, senza immagine, descrizione e ingredienti (le bibite); una DETTAGLIATA la voce intera.
+
+GLI INGREDIENTI in carta sono solo quelli scritti sulla voce, mai presi dalla ricetta («non li devi prendere dalla ricetta, vanno messi a mano»); la descrizione, se la voce non ne ha una, è quella del gestionale, che era già scritta per il cliente (le Signature). L'ORDINE porta la voce del GESTIONALE, col suo nome: è quella che il banco conosce, che scala il magazzino e che conta nelle statistiche. Se la carta la chiama in un altro modo, il nome della carta va nella nota della riga, che al banco dice cosa preparare («SOUR 7» con nota «Gin Fizz»); il cliente nel carrello legge il nome che ha scelto. Due voci della carta sulla stessa voce del gestionale sono due righe.
+
+NEL GESTIONALE: la sottosezione «📖 Carta clienti» del Menù crea sezioni e voci, con la tendina dell'aggancio divisa per categorie; e nelle azioni di ogni voce del catalogo, «In carta» dice quali voci della carta ci portano e ne aggancia un'altra (Flavio: «dovrebbe apparire una tendina con tutti gli item dove uno seleziona quello a cui si deve agganciare»). È lo stesso dato, visto dai due lati. I DATI: `carta_sezioni` e `carta_voci`, due collezioni e non un documento solo perché le voci si scrivono una alla volta mentre le si compila. Le legge chiunque apra il menù, le scrive il banco.
+
+**Dove**: `src/lib/carta.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaCarta), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/CartaManager.jsx, src/components/MenuManager.jsx (Carta clienti, In carta), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules` · **Lo dimostrano**: `tests/unit/carta.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MenuManager.test.jsx`
 
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
@@ -3640,6 +3658,12 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
 
+#### REQ-MENU-026 — I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll
+
+Flavio, 04/11/2026, guardando le scene degli Special sul test: «a livello di grafica, puramente grafica, come avevo detto: disegno in stile Lewis Carroll dal libro, tecnica acquerello; non è che ci siamo molto», «l'immagine va migliorata»; l'impaginazione delle scene invece va bene. L'utente lo stesso giorno: «i disegni dei drink per la Tana invece vanno fatti più nello stile Lewis Carroll». I disegni di oggi sono composti a codice (bicchiere, colore, decorazione) con un tratto che imita l'incisione e un'acquerellatura fatta di filtri: un disegno generato così non arriva alle tavole di Tenniel. La strada va decisa con l'utente: illustrazioni fatte a mano da un illustratore, immagini generate da un modello e riviste, o le tavole originali di Tenniel (di pubblico dominio) composte coi bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
+
+**Dove**: `src/lib/illustrazioneDrink.js, public/illustrazioni/alice/`
+
 ### Magazzino
 
 #### REQ-MAG-008 — Ricette da riagganciare agli articoli nuovi
@@ -3873,6 +3897,14 @@ PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente�
 LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
+
+#### REQ-AI-004 — Le descrizioni della carta dei clienti proposte dall'AI, e rivedute dal titolare
+
+Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
+
+DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: nella carta, su ogni voce, «Proponi descrizione» chiede al modello una descrizione dal nome della voce e da quella del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
+
+**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/CartaManager.jsx`
 
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 

@@ -17,7 +17,7 @@ import '@testing-library/jest-dom/vitest'
 // Il filo per far arrivare alla pagina, mentre è aperta, quello che il
 // server manderebbe: vi.mock viene issato in cima al file, quindi la
 // scatola va creata con vi.hoisted o dentro il mock sarebbe ancora vuota.
-const filo = vi.hoisted(() => ({ consegnaCategorie: null, impostazioni: {} }))
+const filo = vi.hoisted(() => ({ consegnaCategorie: null, impostazioni: {}, consegnaCarta: null, carta: { sezioni: [], voci: [] } }))
 
 const DRINKS = [
   {
@@ -42,6 +42,19 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchCategories: vi.fn(() => Promise.resolve(CATEGORIE)),
   // La pagina sta in ascolto: qui teniamo il filo per consegnare, a mano,
   // quello che il server manderebbe mentre la pagina è aperta.
+  // La carta dei clienti (REQ-MENU-025): la prova la consegna quando
+  // serve, come le categorie.
+  subscribeCarta: vi.fn((onChange) => {
+    filo.consegnaCarta = onChange
+    onChange(filo.carta)
+    return () => {}
+  }),
+  creaSezioneCarta: vi.fn((s) => ({ id: 'nuova', ...s })),
+  aggiornaSezioneCarta: vi.fn(),
+  eliminaSezioneCarta: vi.fn(),
+  creaVoceCarta: vi.fn((v) => ({ id: 'voce-nuova', ...v })),
+  aggiornaVoceCarta: vi.fn(),
+  eliminaVoceCarta: vi.fn(),
   subscribeCategories: vi.fn((onChange) => {
     filo.consegnaCategorie = onChange
     onChange(CATEGORIE)
@@ -81,6 +94,7 @@ vi.mock('../../src/lib/saveDrink.js', () => ({
 }))
 
 import MenuManager from '../../src/components/MenuManager.jsx'
+import { updateSettings, creaSezioneCarta, creaVoceCarta, aggiornaVoceCarta } from '../../src/lib/api.js'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { CON_LICENZA } from '../helpers/licenza.js'
 
@@ -88,6 +102,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   filo.impostazioni = {}
+  filo.carta = { sezioni: [], voci: [] }
 })
 
 // Apre le azioni della card del Mojito e restituisce il riquadro.
@@ -386,5 +401,86 @@ describe('il limite dei prodotti del piano Free', () => {
     expect(screen.queryByText(/Nel piano Free/)).toBeNull()
     await user.click(screen.getByRole('button', { name: '+ Aggiungi prodotto' }))
     expect(document.querySelector('input[type="file"]')).not.toBeNull()
+  })
+})
+
+// LA CARTA DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025). Flavio, 04/11/2026:
+// «un pannello dove creiamo tutte le voci che vanno nel menù vista
+// cliente», e sulla voce del gestionale «una tendina con tutti gli item,
+// dove uno seleziona quello a cui si deve agganciare».
+describe('la carta dei clienti nel gestionale (REQ-MENU-025)', () => {
+  const CARTA = {
+    sezioni: [
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+      { id: 's-bibite', nome: 'Bibite', ordine: 1, vista: 'snella' },
+    ],
+    voci: [
+      { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'mojito', nome: 'Mojito cubano', descrizione: '', ingredienti: '', ordine: 0 },
+      { id: 'v-libera', sezione_id: 's-cocktail', drink_id: null, nome: 'Daiquiri', descrizione: '', ingredienti: '', ordine: 1 },
+    ],
+  }
+
+  async function apriCarta() {
+    render(<MenuManager />)
+    await screen.findByText('Mojito')
+    const sezioni = []
+    const stop = subscribeSottosezioni((s) => sezioni.push(s))
+    const ultima = () => sezioni[sezioni.length - 1]
+    await waitFor(() => expect(ultima()?.voci?.some((v) => v.id === 'carta')).toBe(true))
+    await act(async () => ultima().scegli('carta'))
+    stop()
+  }
+
+  it('la sottosezione ha l’interruttore, le sezioni e le voci con il loro aggancio', async () => {
+    filo.carta = CARTA
+    await apriCarta()
+    expect(await screen.findByRole('heading', { name: /Carta dei clienti/ })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /Carta in uso/ })).not.toBeChecked()
+    expect(screen.getByRole('link', { name: /Anteprima della carta/ })).toHaveAttribute('href', '/menu?vista=cliente&carta=prova')
+    const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
+    const agganci = within(cocktail).getAllByRole('combobox', { name: 'Voce del gestionale agganciata' })
+    expect(agganci.map((a) => a.value)).toEqual(['mojito', ''])
+    expect(within(cocktail).getByText('Non agganciata: al tavolo non compare.')).toBeInTheDocument()
+    // La sezione snella non chiede descrizione né ingredienti.
+    const bibite = screen.getByRole('region', { name: 'Sezione Bibite' })
+    expect(within(bibite).queryByRole('textbox', { name: 'Descrizione in carta' })).toBeNull()
+  })
+
+  it('si accende, si aggiunge una sezione e una voce, si aggancia', async () => {
+    const user = userEvent.setup()
+    filo.carta = CARTA
+    await apriCarta()
+    await user.click(await screen.findByRole('checkbox', { name: /Carta in uso/ }))
+    expect(updateSettings).toHaveBeenCalledWith({ carta_attiva: true })
+
+    await user.type(screen.getByRole('textbox', { name: 'Nome della nuova sezione' }), 'Gin{Enter}')
+    expect(creaSezioneCarta).toHaveBeenCalledWith({ nome: 'Gin', ordine: 2 })
+
+    const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
+    await user.click(within(cocktail).getByRole('button', { name: '+ Voce' }))
+    expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cocktail', ordine: 2 })
+
+    const [, libera] = within(cocktail).getAllByRole('combobox', { name: 'Voce del gestionale agganciata' })
+    await user.selectOptions(libera, 'mojito')
+    expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-libera', { drink_id: 'mojito' })
+  })
+
+  it('dalla voce del gestionale: si vede dove sta in carta, e la si aggancia a un’altra voce', async () => {
+    const user = userEvent.setup()
+    filo.carta = CARTA
+    render(<MenuManager />)
+    const azioni = await azioniMojito(user)
+    expect(azioni.getByText('Mojito cubano')).toBeInTheDocument()
+    await user.selectOptions(azioni.getByRole('combobox', { name: /Aggancia Mojito/ }), 'v-libera')
+    expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-libera', { drink_id: 'mojito' })
+    await user.click(azioni.getByRole('button', { name: 'Sgancia Mojito cubano' }))
+    expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-mojito', { drink_id: null })
+  })
+
+  it('senza carta, sulla voce del gestionale non compare niente', async () => {
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    const azioni = await azioniMojito(user)
+    expect(azioni.queryByText(/In carta/)).toBeNull()
   })
 })

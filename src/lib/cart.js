@@ -20,6 +20,31 @@ function write(key, value) {
   }
 }
 
+// LA CHIAVE DI UNA RIGA: il drink, o — per una voce della carta dei
+// clienti (REQ-MENU-025) — la voce. Due voci della carta possono portare
+// allo stesso drink del gestionale («Gin Fizz» e «Tom Collins» su
+// «SOUR 7») e restano due righe.
+export const chiaveRiga = (i) => i.riga ?? i.drink_id
+
+// UNA RIGA NUOVA. L'ordine porta il drink del GESTIONALE, col suo nome:
+// è quello che il banco conosce, che scala il magazzino e che finisce
+// nelle statistiche. Se la carta lo chiama in un altro modo, il nome della
+// carta va nella nota della riga, che al banco dice cosa preparare
+// («SOUR 7 — Gin Fizz»); al cliente, nel carrello, resta il nome che ha
+// scelto.
+export function rigaDelCarrello(drink) {
+  const riga = {
+    drink_id: drink.drink_id ?? drink.id,
+    name: drink.nome_gestionale ?? drink.name,
+    price: drink.price,
+    qty: 1,
+    sumup_product_id: drink.sumup_product_id ?? null,
+  }
+  if (!drink.voce_carta) return riga
+  const diverso = (drink.name || '').trim().toLowerCase() !== (riga.name || '').trim().toLowerCase()
+  return { ...riga, riga: drink.id, nome_carta: drink.name, ...(diverso ? { note: drink.name } : {}) }
+}
+
 // Carrello persistito in localStorage. La scrittura avviene SUBITO,
 // prima dell'aggiornamento di stato: se affidata a un useEffect (o
 // all'updater di setState), navigando subito dopo clear() — invio
@@ -39,22 +64,13 @@ export function useCart() {
 
   const add = useCallback((drink) => {
     update((prev) => {
-      const found = prev.find((i) => i.drink_id === drink.id)
+      const found = prev.find((i) => chiaveRiga(i) === drink.id)
       if (found) {
         return prev.map((i) =>
-          i.drink_id === drink.id ? { ...i, qty: i.qty + 1 } : i
+          chiaveRiga(i) === drink.id ? { ...i, qty: i.qty + 1 } : i
         )
       }
-      return [
-        ...prev,
-        {
-          drink_id: drink.id,
-          name: drink.name,
-          price: drink.price,
-          qty: 1,
-          sumup_product_id: drink.sumup_product_id ?? null,
-        },
-      ]
+      return [...prev, rigaDelCarrello(drink)]
     })
   }, [update])
 
@@ -75,10 +91,10 @@ export function useCart() {
     ])
   }, [update])
 
-  const setQty = useCallback((drinkId, qty) => {
+  const setQty = useCallback((chiave, qty) => {
     update((prev) =>
       prev
-        .map((i) => (i.drink_id === drinkId ? { ...i, qty } : i))
+        .map((i) => (chiaveRiga(i) === chiave ? { ...i, qty } : i))
         .filter((i) => i.qty > 0)
     )
   }, [update])

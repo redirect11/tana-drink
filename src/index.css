@@ -4613,6 +4613,43 @@ body.drawer-open .status-bell-float { display: none; }
   color: var(--btn-ink);
 }
 
+/* LE SEZIONI DELLA CARTA DEI CLIENTI (REQ-MENU-025) sono poche: schede
+   grandi, che restano in alto mentre si scorre. Flavio, 04/11/2026: «ne
+   saranno di meno, dovranno essere messe più grandi». Il carattere resta
+   quello dello stile; cambia la misura, in ogni stile. */
+.cat-nav.carta {
+  gap: 10px;
+  padding-block: 10px 14px;
+}
+.cat-nav.carta .cat-chip {
+  font-size: 1.05rem;
+  padding: 10px 20px;
+}
+.stile-notte .cat-nav.carta {
+  gap: 28px;
+}
+.stile-notte .cat-nav.carta .cat-chip {
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  padding: 10px 2px;
+}
+
+/* UNA SEZIONE SNELLA della carta: nome e prezzo su una riga, senza
+   immagine e senza racconto. Le bibite si leggono come un listino. */
+.carta-snella .menu-item {
+  padding-block: 10px;
+}
+.carta-snella .menu-item .grow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.carta-snella .menu-item h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 /* ── Intestazione categoria ──────────────────────────────────── */
 .cat-header {
   font-family: var(--serif);
