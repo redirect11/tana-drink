@@ -140,8 +140,15 @@ Regole di sopravvivenza del modello:
   ordine e **l'id fa da capability token**. Le scritture invece passano
   dai ruoli.
 - I claim si assegnano solo dalla callable `staffAdmin` (o
-  `scripts/set-role.js`); il token dura un'ora, e la UI ne forza il
+  `scripts/set-role.js`), più il titolare di un locale della flotta, che
+  la regia crea admin con lo stesso uid che ha da lei (REQ-FLOTTA-029,
+  [flotta.md](flotta.md)); il token dura un'ora, e la UI ne forza il
   rinnovo in sottofondo per non lavorare con un ruolo vecchio.
+- **La licenza la scrive solo la regia**, con le credenziali di servizio:
+  `licenza/attuale` non è scrivibile dall'app (BUG-125), e la copia che la
+  regia lascia in `settings/bar.licenza` per le versioni vecchie non la
+  tocca nessuno, nemmeno il titolare (BUG-126). Il ripristino da backup
+  tiene la licenza che c'è, non quella del file.
 - **App Check** (reCAPTCHA v3) è attivo in produzione: quando il gettone
   non arriva, Firestore risponde «Missing or insufficient permissions» a
   TUTTO, anche alle collection pubbliche — incidente vero, documentato in

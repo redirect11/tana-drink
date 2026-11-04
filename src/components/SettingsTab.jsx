@@ -106,6 +106,24 @@ export default function SettingsTab({ role = null }) {
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
     { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
+    // laterale: qui, accanto ai colori, solo la strada per arrivarci.
+    {
+      id: 'marketplace-temi',
+      icona: '🛍️',
+      label: 'Marketplace dei temi',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Marketplace dei temi</h3>
+          <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+            Il catalogo dei temi e degli stili del menù dei clienti: si provano sul proprio menù e si installano.
+          </p>
+          <Link className="btn small" to="/bar?tab=marketplace">
+            Apri il marketplace
+          </Link>
+        </div>
+      ),
+    },
     // L'identità del locale (REQ-VENUE-001): vuota vale la build.
     { id: 'locale', icona: '🏷️', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
@@ -1170,6 +1188,7 @@ export default function SettingsTab({ role = null }) {
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
     aspetto: 'aspetto',
+    'marketplace-temi': 'aspetto',
     // Tre cose diverse, tre voci: quello che vedono i clienti, la
     // schermata con cui si lavora il listino, e l'importazione del
     // catalogo. Messe insieme, davanti a un interruttore non si capiva a

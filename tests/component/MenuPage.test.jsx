@@ -672,3 +672,124 @@ describe('gli stili gratis sul menù', () => {
     expect(container.querySelector('.stile-notte')).toBeNull()
   })
 })
+
+// LA VISTA CLIENTE SI GUARDA E BASTA (BUG-127). L'utente, 02/11/2026: «la
+// vista cliente deve solo mostrare il menù come lo vede il cliente». Con
+// «Aggiungi» e carrello, chi lavora mandava un ordine anonimo come un
+// cliente qualunque; per ordinare c'è il menù dello staff.
+describe('la vista cliente', () => {
+  it('mostra il menù del cliente, senza «Aggiungi» né carrello', async () => {
+    ruoloClaim = 'admin'
+    mostra('/menu?vista=cliente')
+    await screen.findByText('Mojito')
+    expect(await screen.findByText(/Stai guardando il menù come lo vede il cliente\.$/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Aggiungi' })).toBeNull()
+  })
+
+  it('il menù dello staff, invece, ordina', async () => {
+    ruoloClaim = 'admin'
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect((await screen.findAllByRole('button', { name: 'Aggiungi' })).length).toBeGreaterThan(0)
+  })
+})
+
+// IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora apre il
+// proprio menù con lo stile di un tema (i colori li mette App), e la riga
+// in alto dice quale.
+describe('un tema del marketplace in prova sul menù', () => {
+  it('porta il suo stile, e la riga in alto lo dice', async () => {
+    ruoloClaim = 'bartender'
+    const { container } = mostra('/menu?vista=cliente&tema=gazzetta')
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-giornale')).not.toBeNull()
+    expect(screen.getByText(/Stai provando il tema «Gazzetta»/)).toBeInTheDocument()
+  })
+})
+
+// LO STILE «GIORNALE» (REQ-MENU-024): una struttura sua, non le card del
+// classico. Testata, sommario, prima pagina col primo Special, «In breve»,
+// le sezioni; immagini a incisione; i gesti di sempre.
+describe('lo stile «Giornale»', () => {
+  const SPECIALI = [
+    { id: 's1', name: 'Bianconiglio', price: 9, category_id: 'c1', available: true, speciale: true, description: 'Il primo', illustrazione: { bicchiere: 'coppa', colore: 'ambra', decorazione: 'agrume' } },
+    { id: 's2', name: 'Cappellaio', price: 10, category_id: 'c1', available: true, speciale: true, description: 'Il secondo' },
+  ]
+  const mostraGiornale = () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, ...SPECIALI]
+    mockSettings = { stili_installati: ['giornale'], stile_menu: 'giornale' }
+    return mostra('/menu')
+  }
+
+  it('è una prima pagina: testata, sommario, apertura, in breve, sezioni; niente card', async () => {
+    const { container } = mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    expect(container.querySelector('.g-testata')).not.toBeNull()
+    expect(screen.getByText('Edizione della sera')).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Sommario' })).getByRole('link', { name: 'Birre' })).toBeInTheDocument()
+    const prima = screen.getByRole('region', { name: 'Prima pagina' })
+    expect(within(prima).getByText('In prima pagina')).toBeInTheDocument()
+    expect(within(prima).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Bianconiglio', 'Cappellaio'])
+    expect(container.querySelector('.g-sezione')).not.toBeNull()
+    expect(container.querySelector('.menu-item')).toBeNull()
+    expect(container.querySelector('.hero')).toBeNull()
+  })
+
+  it('le immagini sono incisioni, non i disegni della Tana', async () => {
+    const { container } = mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    const img = container.querySelector('.g-apertura img')
+    const svg = decodeURIComponent(img.getAttribute('src'))
+    expect(svg).toContain('<rect x="14" y="14" width="372" height="372"')
+    expect(svg).not.toContain('feTurbulence')
+  })
+
+  it('il sommario porta alla sezione e la segna', async () => {
+    const utente = userEvent.setup()
+    mostraGiornale()
+    const sommario = await screen.findByRole('navigation', { name: 'Sommario' })
+    const birre = within(sommario).getByRole('link', { name: 'Birre' })
+    await utente.click(birre)
+    expect(birre).toHaveAttribute('aria-current', 'true')
+    expect(document.getElementById(birre.getAttribute('href').slice(1))).not.toBeNull()
+  })
+
+  it('i gesti di sempre: «Aggiungi», e il nome apre il dettaglio', async () => {
+    const utente = userEvent.setup()
+    mostraGiornale()
+    await screen.findByRole('navigation', { name: 'Sommario' })
+    const voce = screen.getByRole('button', { name: 'Mojito' }).closest('article')
+    await utente.click(within(voce).getByRole('button', { name: 'Aggiungi' }))
+    expect(within(voce).getByRole('button', { name: 'Aumenta' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Mojito' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  // Trovato nel giro di revisione della 1.10.8: nel menù Special il giornale
+  // toglieva la testata classica, e con lei il tema della sera e la strada
+  // per il menù completo. Chi arrivava dal QR degli Special restava chiuso lì.
+  it('nel menù Special la testata porta il tema della sera e «← Tutto il menù»', async () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, ...SPECIALI]
+    mockSettings = {
+      stili_installati: ['giornale'],
+      stile_menu: 'giornale',
+      special_titolo: 'Special',
+      special_sottotitolo: 'Alice nel paese delle meraviglie',
+    }
+    const { container } = render(
+      <MemoryRouter initialEntries={['/menu/special']}>
+        <MenuPage speciali />
+      </MemoryRouter>
+    )
+    const testata = await waitFor(() => {
+      const t = container.querySelector('.g-testata')
+      expect(t).not.toBeNull()
+      return t
+    })
+    expect(within(testata).getByText('Alice nel paese delle meraviglie')).toBeInTheDocument()
+    expect(within(testata).getByRole('link', { name: '← Tutto il menù' })).toHaveAttribute('href', '/menu')
+    expect(screen.queryByRole('navigation', { name: 'Sommario' })).toBeNull()
+  })
+})

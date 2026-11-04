@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 2 novembre 2026.
+> Generato il 4 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 249 | fatto e coperto dai test |
+| ✅ | 253 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**302 voci** in tutto. **266** descrivono il sistema com'è oggi e
+**306 voci** in tutto. **270** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 17 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 19 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -62,9 +62,9 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 8 | 3 |  |
+| [LIC](#lic) | 9 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 6 | 1 |  |
+| [FLOTTA](#flotta) | 7 | 1 |  |
 
 ## Cosa fa il sistema
 
@@ -823,6 +823,22 @@ L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora
 GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo): su desktop reggono; sul telefono «Lavagna» e «Déco» spezzavano i nomi dei drink a metà parola («Negroni Sbagliat-o»), perché accanto al prezzo e al tasto la colonna del nome restava di pochi caratteri. Sotto i 520 px il prezzo va sotto il nome, e «Déco» stringe spaziatura e cornice. Il rombo di «Déco» sta accanto al titolo della categoria (sopra diventava un puntino).
 
 **Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
+
+#### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
+
+L'utente, 02/11/2026: «Dobbiamo fare una sezione marketplace per i temi in aspetto. È una pagina che carica tutti i temi disponibili. Serve un posto dove pubblicarne di nuovi e trovare un modo per pubblicarne»; «il tema quindi è composto da tavolozze e stile. Si possono vendere/uppare/scaricare/acquistare temi che miscelano tavolozze e stili. Per ora tutto gratis tra quelli che già abbiamo»; pubblica solo il fornitore, dalla regia; il tema è DESCRITTIVO (una ricetta: una base fra le tavolozze dell'app, qualche colore, uno stile che l'app sa disegnare), non codice, così non può rompere il menù e funziona senza rete. In Impostazioni → Aspetto: i temi del locale e quelli del catalogo — l'iniziale, composto da quello che c'era (Classico, Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta, Inchiostro; Notte solo con la licenza) più quello della regia, letto all'apertura della pagina (`catalogoTemi`, solo dai due progetti della regia) e ricordato sul dispositivo. Ogni scheda ha l'assaggio coi colori e lo stile veri, «Prova sul menù» (`?vista=cliente&tema=…`, solo per chi la apre: App mette i colori, MenuPage lo stile) e «Installa»; installato, il tema ha una copia nelle impostazioni (`temi_installati`) e «Usa» scrive `theme_client`, `stile_menu` (installando lo stile gratis) e `tema_menu`. I colori del gestionale non si toccano. I temi a pagamento non si mostrano finché non c'è «Compra» (REQ-LIC-011). Il contratto per la regia, e quello che deve costruire (catalogo, pagina per pubblicare, stessa validazione), in docs/marketplace-temi.md.
+
+UNA PAGINA SUA (02/11/2026). La prima versione era un riquadro in Impostazioni → Aspetto; l'utente: «ti avevo chiesto una sezione marketplace separata, una finestra/pagina nuova che apro per navigare i temi come se fosse un catalogo e poi li installo sulla mia istanza». Ora è la voce «🛍️ Marketplace» del menu laterale, prima di Impostazioni (docs/navigazione.md: risponde a una domanda diversa), con tre sezioni nel menu a scomparsa: Temi, Stili del menù (gli stili da soli, sui colori del locale) e Installati (dove si disinstalla). Ogni scheda ha una vetrina grande, un pezzo del menù vero scritto con le classi del menù. In Impostazioni restano la scelta fra gli stili installati (Menù clienti) e «Apri il marketplace» (Aspetto); il catalogo degli stili gratis di REQ-MENU-022 si è spostato qui.
+
+**Dove**: `src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-MENU-024 — Lo stile «Giornale» ha una struttura sua e immagini sue: testata, sommario, prima pagina, sezioni, incisioni
+
+L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e immagini diverse da quelle proposte per la tana (drink stilizzati)», e, sulla proposta stile per stile, «sì vanno bene, basta che sia figa e fluida la UX». Si comincia da «Giornale», uno stile alla volta. Non più una veste sopra le card del classico (le sue regole vecchie sono tolte): MenuGiornale disegna una TESTATA (il nome del locale coi filetti, «Edizione della sera» con la data), un SOMMARIO agganciato sotto la barra che segue la lettura (la sezione in vista è segnata, IntersectionObserver) e porta alla sezione scorrendo dolcemente (o di colpo, con «riduci movimento»), una PRIMA PAGINA (il primo Special come apertura: occhiello, titolo grande, incisione con didascalia, capolettera sui testi lunghi, prezzo; gli altri «In breve» a lato o sotto), le SEZIONI (una fascia nera col nome e il numero di voci, le voci in una, due o tre colonne, senza immagini, «NOME ···· prezzo»). «Stiamo servendo il numero» diventa un'ultim'ora fra due filetti. Le immagini sono a INCISIONE: un solo inchiostro, niente acquerello, una cornice da lastra, la puntinatura, il colore del drink reso come tratteggio più o meno fitto; dalle stesse scelte di ogni drink (bicchiere, colore, decorazione), anche nel dettaglio. I gesti sono quelli di sempre (Aggiungi, il carrello, il nome che apre il dettaglio). Nel marketplace la vetrina di «Giornale» è un giornale in miniatura. Guardato a schermo sulla demo, chiaro e scuro, desktop e telefono.
+
+DA FARE, con lo stesso schema: «Lavagna» (gessetto, una lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di cartoline da scorrere).
+
+**Dove**: `src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MarketplaceTab.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -2566,7 +2582,7 @@ Nella vista menù il personale non vede più i propri ordini attivi in cima: que
 
 #### REQ-STAFF-008 — La sala lavora sulla stessa coda del banco
 
-La home dello staff di sala è la coda ordini, identica a quella del gestionale: quello che vede il banco lo vede anche chi porta i vassoi. Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è il filtro «Miei» della coda, che tiene solo i conti con la propria firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva col filtro già acceso. «Da servire» resta come sezione. Le sezioni amministrative restano ai gestori: per la sala un tab non suo riporta alla coda. Dal menu laterale la sala apre «Nuovo ordine dal menù» (il menù che mostra al tavolo, con la ricerca), non il POS del banco.
+La home dello staff di sala è la coda ordini, identica a quella del gestionale: quello che vede il banco lo vede anche chi porta i vassoi. Prima la sala aveva due pagine sue («Da servire» e «I miei ordini») e non vedeva mai la coda vera. «I miei ordini» non è più una pagina: è il filtro «Miei» della coda, che tiene solo i conti con la propria firma (placed_by) — e il vecchio indirizzo ?tab=miei-ordini ci arriva col filtro già acceso. «Da servire» resta come sezione. Le sezioni amministrative restano ai gestori: per la sala un tab non suo riporta alla coda. Dal menu laterale la sala apre «Ordina dal menù» (il menù che mostra al tavolo, con la ricerca), non il POS del banco; dal 02/11/2026 (BUG-127) la stessa voce c'è anche per admin e bartender, accanto a «Nuovo ordine» che apre la cassa. La schermata principale di tutto il personale resta la coda.
 
 **Dove**: `src/pages/BartenderPage.jsx, src/lib/sezioni.js, src/lib/coda.js` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/component/StaffDrawer.test.jsx`
 
@@ -2748,7 +2764,7 @@ Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli.
 
 #### REQ-DATI-001 — Backup ed esportazione di tutto il database
 
-Si scarica in un file tutto quello che c'è nel database e lo si rimette da un file. Un file non valido viene rifiutato PRIMA di scrivere; l'import riscrive quello che il file contiene e non cancella il resto; oltre il limite di un lotto si spezza senza perdere righe.
+Si scarica in un file tutto quello che c'è nel database e lo si rimette da un file. Un file non valido viene rifiutato PRIMA di scrivere; l'import riscrive quello che il file contiene e non cancella il resto; oltre il limite di un lotto si spezza senza perdere righe. La licenza non si ripristina (BUG-126): le impostazioni tornano quelle del file ma tengono la licenza che c'è adesso nel database, e la collezione `licenza` non si tocca.
 
 **Dove**: `src/lib/backup.js, src/components/BackupPanel.jsx, scripts/backup-db.js` · **Lo dimostrano**: `tests/unit/backup.test.js`
 
@@ -3382,6 +3398,14 @@ DA DIRE ALLA REGIA (docs/catalogo-temi.md): `temi` in ogni licenza, `[]` se il l
 
 **Dove**: `src/lib/stileMenu.js (inLicenza, temiInLicenza, stiliDisponibili), src/components/ThemeSettings.jsx, src/lib/licenza.js (riepilogoLicenza), src/components/LicenzaPanel.jsx, clienti/tana/licenza-iniziale.json, scripts/lib-licenza-iniziale.js, docs/catalogo-temi.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`
 
+#### REQ-LIC-012 — Il marketplace dei moduli: il titolare prova, aggiunge e disdice i moduli dall'app, al mese
+
+L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il marketplace». Alle domande dello stesso giorno: «al mese, come nel listino», «sì, una prova gratuita», «solo il titolare». Nel Marketplace una quarta sezione, Moduli: una scheda per ogni modulo dell'app con lo stato dalla licenza (incluso, in prova fino al…, non incluso), prezzo mensile IVA esclusa e giorni di prova dal listino della regia (catalogoModuli, letto all'apertura e ricordato per quando la rete manca). I tasti — «Prova gratis N giorni», «Aggiungi», «Disdici» con conferma — li vede solo il titolare (isAdmin), e solo se la licenza è della regia (regia nella build e `regia_url` in licenza): la licenza della Tana, scritta dal deploy, si consulta soltanto. «Aggiungi» porta alla pagina di Stripe Checkout (solo un indirizzo checkout.stripe.com) e la regia riporta il titolare sui Moduli con l'esito, detto una volta e tolto dall'indirizzo. L'app non scrive niente: la regia riscrive la licenza e l'app la vede cambiare in tempo reale. Un modulo che il listino non vende si vede ma non si compra. Sempre il 02/11: coi piani gestiti a mano (pagati fuori da Stripe) aggiunta e disdetta sono una richiesta all'admin, che accende o spegne il modulo a pagamento ricevuto — la regia risponde `in_attesa` e l'app dice «richiesta inviata all'assistenza», non «aggiunto»; coi piani online la disdetta vale a fine periodo pagato (`dal`).
+
+DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e del ritorno, il webhook che accende il modulo dopo il pagamento (docs/marketplace-moduli.md).
+
+**Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
+
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
 L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
@@ -3461,6 +3485,12 @@ La regia (drink-regia), attivando o aggiornando un locale, lancia su un checkout
 «Ci serve un modo sicuro per testare senza spaccare niente per la Tana» (l'utente, 21/10/2026). Dal 29/10/2026 la flotta sta nella regia (drink-regia): i workflow di attivazione e aggiornamento delle istanze, il Terraform e l'account di provisioning stanno la', con le loro credenziali. Qui restano i due deploy della Tana, `tana-drink` e `tana-drink-test`, che passano a deploy.yml `cliente: tana` (l'input `cliente`, predefinito `tana`, diventa `CLIENTE` della build). Nessuna destinazione della flotta: il ramo `feature/flotta` ne aveva una (`PROGETTO_FLOTTA`, drinkpos-demo), scartata portando la build per cliente in develop il 30/10/2026 — l'istanza dimostrativa e' un'istanza come le altre e la aggiorna la regia. I TEST GUARDANO TUTTI I CLIENTI: la CI compila anche `CLIENTE=demo`, cosi' una modifica pensata per la Tana che rompe la build degli altri si vede prima del rilascio. Un test legge i workflow.
 
 **Dove**: `.github/workflows/firebase-hosting.yml, .github/workflows/deploy.yml (input cliente), .github/workflows/test.yml, docs/flotta.md` · **Lo dimostrano**: `tests/unit/flottaCi.test.js`
+
+#### REQ-FLOTTA-029 — Il titolare del locale ha lo stesso account della regia (stesso uid, stessa email), admin, e imposta la password dal link
+
+M7, 02/11/2026: quando la regia attivava un locale il workflow riceveva l'uid del titolare e non lo usava, e nel locale il titolare non aveva un account: l'avvio si chiudeva a mano. Dalla regia (drink-regia REQ-FLOTTA-029, scripts/titolare-istanza.mjs), a ogni attivazione e aggiornamento di un locale della flotta, nel progetto del locale c'e' l'account con LO STESSO UID e la stessa email del titolare nella regia, col ruolo `admin` nei custom claims (il ruolo dell'app, src/lib/ruoli.js), creato gia' verificato e senza password: la password la imposta lui dall'email di Firebase. E' un contratto con la regia (docs/flotta.md, «Il titolare»): il ruolo del titolare e' `admin` e nient'altro. L'uid di Firebase Auth non si cambia: un segnaposto mai usato con un altro uid si ricrea, un account gia' usato resta com'e' con un avviso. I locali esistenti (la Tana) i workflow della regia li saltano: per loro scripts/titolare-locale.mjs, a mano, con la stessa regola (scripts/lib-titolare.js, copia di functions/lib/titolare.js della regia) e senza --applica non scrive niente. Sulla Tana il risultato atteso e' «resta quello»: l'account di Flavio ha un uid suo e non si cancella.
+
+**Dove**: `scripts/lib-titolare.js, scripts/titolare-locale.mjs, docs/flotta.md` · **Lo dimostrano**: `tests/unit/titolareLocale.test.js`
 
 #### REQ-FLOTTA-008 — Un'istanza si ferma: sospesa quando il pagamento non arriva, chiusa su decisione; i dati restano
 
@@ -3582,7 +3612,7 @@ Nasce l'anagrafica dei tavoli: un tavolo ha un NOME e/o un NUMERO — almeno uno
 
 #### REQ-TAVOLI-002 — Nome e tavolo nelle viste d'ordine: staff libero, cliente guidato
 
-Nella vista «Nuovo ordine dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
+Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero del tavolo: il nome deve poterci stare (oggi c'è solo il tavolo) e il numero è opzionale. Nella vista cliente: se si arriva dal QR del tavolo (REQ-TAVOLI-001) il tavolo è prepopolato e NON modificabile; senza QR il tavolo non serve, ma il nome sì — è quello che permette al banco di chiamare l'ordine.
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 

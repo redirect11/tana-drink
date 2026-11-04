@@ -19,7 +19,7 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 // `azioni` sono i tasti per ordinare, gli stessi della card: se il locale
 // non prende ordini dal tavolo non ci sono, e il dettaglio si guarda e
 // basta.
-export default function DettaglioDrink({ drink, onClose, chiaro = false, quantita = false, azioni = null }) {
+export default function DettaglioDrink({ drink, onClose, chiaro = false, quantita = false, azioni = null, segno = 'tenniel' }) {
   useEffect(() => {
     if (!drink) return undefined
     const tasto = (e) => {
@@ -30,7 +30,9 @@ export default function DettaglioDrink({ drink, onClose, chiaro = false, quantit
   }, [drink, onClose])
 
   if (!drink) return null
-  const img = immagineVoce(drink, import.meta.env.BASE_URL, { chiaro })
+  // Il disegno col segno dello stile del menù (REQ-MENU-024): nel «Giornale»
+  // un'incisione, come nella pagina da cui si è aperto.
+  const img = immagineVoce(drink, import.meta.env.BASE_URL, { chiaro, segno })
   const ingredienti = ingredientiInCarta(drink, { quantita })
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>

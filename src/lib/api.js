@@ -113,6 +113,8 @@ import { ORARIO_PREDEFINITO } from './orario.js'
 import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
 import { esitoPresentazione } from './presentazione.js'
+import { esitoAzione } from './marketplaceModuli.js'
+import { ATTESA_REGIA_MS } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
@@ -6400,16 +6402,17 @@ function scontoRicalcolato(cur, nuovoTotale, nuoviItems = null) {
 // l'attesa c'è, ed è voluta: non è un gesto della serata, è una decisione
 // che vale solo se la regia l'ha presa, e il titolare deve sapere se è
 // andata. Il box resta usabile mentre si aspetta, e dopo venti secondi
-// senza risposta si dice che la scelta non è partita: un `fetch` senza
-// rete può restare appeso molto più a lungo.
-export const ATTESA_SCELTA_MS = 20000
+// senza risposta si dice che la scelta non è partita (ATTESA_REGIA_MS, la
+// stessa di ogni chiamata alla regia).
+export const ATTESA_SCELTA_MS = ATTESA_REGIA_MS
 
 // Una chiamata alla regia col token di chi ha fatto l'accesso: { status,
 // corpo }, o null senza token. Lancia senza rete o dopo l'attesa massima.
-// La usano la scelta sugli aggiornamenti e la presentazione (REQ-FLOTTA-026).
+// La usano la scelta sugli aggiornamenti, la presentazione (REQ-FLOTTA-026)
+// e i moduli (REQ-LIC-012).
 async function chiamaRegia(url, dati) {
   const ferma = new AbortController()
-  const timer = setTimeout(() => ferma.abort(), ATTESA_SCELTA_MS)
+  const timer = setTimeout(() => ferma.abort(), ATTESA_REGIA_MS)
   try {
     const token = await auth.currentUser?.getIdToken()
     if (!token) return null
@@ -6436,20 +6439,33 @@ export async function inviaSceltaAggiornamento(url, tag, scelta) {
   }
 }
 
+// Una chiamata alla regia letta con `esito(status, corpo)`, senza errori
+// che risalgono: senza accesso { status: 401 }, senza rete { status: 0 }.
+async function chiamaRegiaConEsito(url, dati, esito, etichetta) {
+  try {
+    const r = await chiamaRegia(url, dati)
+    if (!r) return { ok: false, status: 401, errore: null }
+    return esito(r.status, r.corpo)
+  } catch (e) {
+    console.warn(`[regia] ${etichetta}:`, e?.message || e)
+    return { ok: false, status: 0, errore: null }
+  }
+}
+
 // LA PRESENTAZIONE ALLA REGIA (REQ-FLOTTA-026): quando chiamarla lo decide
 // lib/presentazione.js; qui solo la chiamata. Non è un gesto della serata:
 // parte in sottofondo e nessuno la aspetta. Senza rete, o senza risposta,
 // torna un esito non riuscito e si riprova alla prossima apertura.
-export async function presentaAllaRegia(url, versione) {
-  try {
-    const r = await chiamaRegia(url, { versione })
-    if (!r) return { ok: false, status: 401, errore: null }
-    return esitoPresentazione(r.status, r.corpo)
-  } catch (e) {
-    console.warn('[regia] presentazione:', e?.message || e)
-    return { ok: false, status: 0, errore: null }
-  }
-}
+export const presentaAllaRegia = (url, versione) =>
+  chiamaRegiaConEsito(url, { versione }, esitoPresentazione, 'presentazione')
+
+// IL MARKETPLACE DEI MODULI (REQ-LIC-012): prova, acquisto, disdetta di un
+// modulo, decisi dal titolare. Come la scelta sugli aggiornamenti, qui
+// l'attesa c'è ed è voluta: è un acquisto, vale solo se la regia l'ha
+// preso, e la licenza la riscrive lei — l'app la vede cambiare in tempo
+// reale. `ritorno` è dove la pagina di pagamento riporta il titolare.
+export const azioneModulo = (url, modulo, azione, ritorno) =>
+  chiamaRegiaConEsito(url, { modulo, azione, ritorno }, esitoAzione, 'modulo')
 
 // Due ascolti, uno solo verso chi chiama: le impostazioni del bar e la
 // licenza. Si risponde quando le impostazioni ci sono, e di nuovo a ogni

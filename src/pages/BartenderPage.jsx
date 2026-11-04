@@ -149,6 +149,7 @@ import StatsTab from '../components/StatsTab.jsx'
 import BilancioTab from '../components/BilancioTab.jsx'
 import StaffHoursTab from '../components/StaffHoursTab.jsx'
 import UtentiTab from '../components/UtentiTab.jsx'
+import MarketplaceTab from '../components/MarketplaceTab.jsx'
 import VipTab from '../components/VipTab.jsx'
 import ServiceQueue from '../components/ServiceQueue.jsx'
 import StaffCallList from '../components/StaffCallList.jsx'
@@ -385,6 +386,7 @@ export default function BartenderPage() {
         {/* I buoni VIP sono un pannello di "Utenti e ruoli": qui restano
             solo perché i vecchi collegamenti (?tab=vip) funzionino. */}
         {tabEffettivo === 'vip' && <VipTab />}
+        {tabEffettivo === 'marketplace' && <MarketplaceTab role={role} />}
         {tabEffettivo === 'impostazioni' && <SettingsTab role={role} />}
         {/* La stampante sta nelle Impostazioni: qui resta solo perché i
             vecchi collegamenti (?tab=stampante) continuino a funzionare. */}
@@ -2805,8 +2807,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <Link className="btn" to="/pos" style={{ flex: 1 }}>
               🍸 POS cassa
             </Link>
+            {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
+                quello per gli ordini al tavolo (BUG-127). La vista cliente
+                vera sta nel ☰ ed è solo da guardare. */}
             <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-              ✍️ Vista cliente
+              📖 Ordina dal menù
             </Link>
           </div>
         </>

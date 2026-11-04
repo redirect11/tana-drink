@@ -85,3 +85,35 @@ describe('il disegno', () => {
     expect(urlDrink(s, { chiaro: true })).not.toBe(a)
   })
 })
+
+// IL SEGNO A INCISIONE (REQ-MENU-024): lo stesso drink, disegnato per lo
+// stile «Giornale». L'utente, 02/11/2026: «immagini diverse da quelle
+// proposte per la tana». Un solo inchiostro, niente acquerello né colore,
+// una cornice da lastra; il colore del drink diventa tratteggio più fitto.
+describe('il segno a incisione', () => {
+  const s = { bicchiere: 'coppa', colore: 'ambra', decorazione: 'agrume' }
+
+  it('niente acquerello e nessun colore oltre l’inchiostro', () => {
+    const svg = svgDrink(s, { segno: 'incisione' })
+    expect(svg).not.toMatch(/feTurbulence|mix-blend-mode|feGaussianBlur/)
+    const colori = new Set([...svg.matchAll(/(?:fill|stroke)="(#[0-9a-f]{6})"/gi)].map((m) => m[1].toLowerCase()))
+    expect([...colori]).toEqual(['#eee8da'])
+  })
+
+  it('ha la cornice della lastra, e sul fondo chiaro l’inchiostro scuro', () => {
+    const svg = svgDrink(s, { segno: 'incisione', chiaro: true })
+    expect(svg).toMatch(/<rect x="14" y="14" width="372" height="372"/)
+    expect(svg).toContain('#1b1814')
+  })
+
+  it('un drink più scuro è un tratteggio più fitto', () => {
+    const passo = (colore) => Number(/pattern id="h" width="([\d.]+)"/.exec(svgDrink({ ...s, colore }, { segno: 'incisione' }))[1])
+    expect(passo('rosso')).toBeLessThan(passo('giallo'))
+  })
+
+  it('il segno di partenza resta quello di prima, e i due non si confondono nella memoria', () => {
+    expect(svgDrink(s)).toMatch(/feTurbulence/)
+    expect(urlDrink(s, { segno: 'incisione' })).not.toBe(urlDrink(s))
+    expect(urlDrink(s, { segno: 'inventato' })).toBe(urlDrink(s))
+  })
+})

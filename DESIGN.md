@@ -180,7 +180,39 @@ prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 - **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il
   tendone a strisce sopra l'apertura, voci come cartoline col bordo
   colorato, i disegni dei drink nei cerchi.
-- **«Giornale»**: la carta stampata. `Playfair Display` per testata e
+- **Il marketplace dei temi** (REQ-MENU-023): una pagina sua, «🛍️
+  Marketplace» nel menu laterale, con Temi, Stili del menù e Installati.
+  Un TEMA è una tavolozza più uno stile. Ogni scheda è un catalogo: in alto
+  la vetrina, un pezzo del menù vero (categoria e due voci) scritto con le
+  classi del menù, coi colori del tema sull'elemento e nel suo stile, alta
+  230px e sfumata in fondo (una maschera, non un filtro); sotto nome,
+  descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
+  tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
+  nell'aria-label.
+- **I moduli nel marketplace** (REQ-LIC-012): la stessa scheda, ma al
+  posto della vetrina del menù una fascia alta 96px con l'icona del modulo
+  e lo stato in una pillola. Lo stato si legge prima dal colore: incluso
+  su una velatura di `--ok`, in prova di `--accent-2`, non incluso
+  neutro — quello che manca non deve sembrare un errore. Sotto, il prezzo
+  «15,00 € al mese + IVA»; a sinistra «Prova gratis N giorni» (o «Disdici»),
+  a destra «Aggiungi». La disdetta si conferma nella
+  finestra di conferma di sempre (ConfirmDialog). Un
+  esito andato bene è un riquadro velato di `--ok`; il banner giallo con
+  la scritta rossa resta per gli errori.
+- **«Giornale»** (REQ-MENU-024): una STRUTTURA sua, non una veste sopra le
+  card (MenuGiornale.jsx). Testata col nome del locale in `Playfair`
+  800 fra filetti doppi e la riga «Edizione della sera» con la data;
+  sommario agganciato sotto la barra, la sezione in vista sottolineata con
+  `--accent-2`; prima pagina con l'apertura (occhiello, titolo grande,
+  incisione con didascalia, capolettera solo sui testi lunghi) e «In
+  breve»; sezioni come fasce di inchiostro (`--text` di fondo, `--bg` di
+  testo) con le voci in colonne e senza immagini; tasti a filetto, angoli
+  vivi. Le immagini sono INCISIONI (`segno: 'incisione'`): un solo
+  inchiostro, cornice da lastra, nessun acquerello. Si anima solo
+  l'entrata di testata e prima pagina, e lo scorrimento del sommario; con
+  «riduci movimento», niente. Questa voce sotto è la prima versione, a
+  veste, sostituita.
+- **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.
 
