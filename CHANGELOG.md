@@ -4,15 +4,19 @@
 
 ### Menù dei clienti
 
-- La carta dei clienti: un menù per il tavolo con sezioni e voci proprie,
-  separato da quello del gestionale. Ogni voce ha nome, descrizione e
-  ingredienti suoi ed è agganciata a una voce del gestionale, da cui prende
-  prezzo e disponibilità; quello che non è in carta al tavolo non si vede.
-  Le sezioni possono essere dettagliate o snelle (nome e prezzo), e in alto
-  stanno in schede grandi che restano ferme mentre si scorre. Si compila e
-  si accende da Menù → Carta clienti; spenta, il cliente vede il menù di
-  sempre. All'ordine il banco riceve la voce del gestionale, con il nome
-  della carta nella nota (REQ-MENU-025).
+- **La veste del menù**: il tema del menù dei clienti si chiama «veste» ed
+  è fatto di tavolozza, stile e, da adesso, composizione del menù. Nel
+  marketplace la sezione «Temi» diventa «Vesti».
+- **Composizioni del menù**: che cosa contiene il menù dei clienti e come è
+  diviso, da scegliere come uno stile, nel marketplace o in Impostazioni →
+  Menù clienti. «Classica» è il catalogo per categorie di sempre; **«Di
+  sala»** è una carta con sezioni e voci proprie: ogni voce ha nome,
+  descrizione e ingredienti suoi ed è agganciata a una voce del gestionale,
+  da cui prende prezzo e disponibilità. Le sezioni possono essere
+  dettagliate o snelle (nome e prezzo), e in alto stanno in schede grandi
+  che restano ferme mentre si scorre. Si compila in Menù → Carta di sala.
+  All'ordine il banco riceve la voce del gestionale, col nome della carta
+  nella nota (REQ-MENU-025).
 
 ## 1.10.13-beta — 04/11/2026 (test)
 

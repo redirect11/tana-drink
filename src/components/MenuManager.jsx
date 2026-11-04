@@ -344,7 +344,7 @@ export default function MenuManager() {
     { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
     { id: 'special', icona: '✨', label: `Special (${drinkSpeciali(drinks).length})` },
-    { id: 'carta', icona: '📖', label: 'Carta clienti' },
+    { id: 'carta', icona: '📖', label: 'Carta di sala' },
   ]
 
   if (sezione === 'carta') {

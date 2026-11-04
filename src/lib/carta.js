@@ -1,5 +1,8 @@
-// LA CARTA DEI CLIENTI (REQ-MENU-025): il menù che si legge al tavolo,
-// fatto di sezioni e voci SUE, separato dal menù del gestionale.
+// LA CARTA DI SALA (REQ-MENU-025): il menù che si legge al tavolo, fatto
+// di sezioni e voci SUE invece che delle categorie del gestionale. È la
+// composizione «Di sala» del menù (composizioneMenu.js): non un menù a
+// parte, ma un modo di comporre lo stesso menù, che si sceglie come uno
+// stile.
 //
 // Flavio, 04/11/2026: «non metterò tutto quello che ho nel menù gestionale
 // sul menù di sala»; «gin e vodka, che ho insieme nel gestionale solo
@@ -31,7 +34,6 @@ export const vistaCarta = (v) => (v === 'snella' ? 'snella' : 'dettagliata')
 
 // L'anteprima per chi la compila: la vista cliente, con la carta anche
 // spenta (vedi cartaInUso).
-export const PERCORSO_ANTEPRIMA_CARTA = '/menu?vista=cliente&carta=prova'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
 
@@ -94,13 +96,10 @@ export function sezioniDellaCarta(carta, drinks) {
   return out
 }
 
-// LA CARTA SI USA quando il locale l'ha accesa (`carta_attiva`) e c'è
-// almeno una voce da mostrare. Spenta, o accesa ma vuota, il cliente vede
-// il menù di sempre, per categorie del gestionale: il locale che non la
-// compila non deve accorgersi che esiste, e chi la sta compilando la
-// accende quando è pronta. `prova` è l'anteprima del personale
-// (`?carta=prova`), che la mostra anche spenta.
-export function cartaInUso(settings, sezioni, { prova = false } = {}) {
-  if (!sezioni?.length) return false
-  return prova || settings?.carta_attiva === true
+// LA CARTA SI USA quando la composizione del menù è «Di sala» (scelta, o
+// in prova) e c'è almeno una sezione. Scelta ma vuota, il cliente vede la
+// classica: chi la installa e non l'ha ancora compilata non deve trovare
+// il menù vuoto.
+export function cartaInUso(composizione, sezioni) {
+  return composizione === 'sala' && Boolean(sezioni?.length)
 }

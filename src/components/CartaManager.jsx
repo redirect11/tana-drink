@@ -8,7 +8,9 @@ import {
   eliminaVoceCarta,
   updateSettings,
 } from '../lib/api.js'
-import { VISTE_CARTA, ordinaCarta, nomeVoce, PERCORSO_ANTEPRIMA_CARTA } from '../lib/carta.js'
+import { VISTE_CARTA, ordinaCarta, nomeVoce } from '../lib/carta.js'
+import { composizioneMenu, patchUsaComposizione } from '../lib/composizioneMenu.js'
+import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 // LA CARTA DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): le sezioni del menù
@@ -156,7 +158,12 @@ export default function CartaManager({ carta, drinks, categories, settings }) {
       carta.voci.filter((v) => v.sezione_id === sezioneId),
       (v) => nomeVoce(v, perId.get(v.drink_id))
     )
-  const attiva = settings?.carta_attiva === true
+  // LA CARTA NON SI ACCENDE QUI: è la composizione «Di sala» del menù, e
+  // si mette in uso come le altre (composizioneMenu.js), dalle impostazioni
+  // del menù clienti o dal marketplace. Qui si dice se è in uso e, se non
+  // lo è, la si mette in uso con un tasto: è il momento in cui la si è
+  // finita di compilare.
+  const inUso = composizioneMenu(settings) === 'sala'
 
   function aggiungiSezione() {
     if (!nuova.trim()) return
@@ -177,26 +184,37 @@ export default function CartaManager({ carta, drinks, categories, settings }) {
   return (
     <div>
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>📖 Carta dei clienti</h3>
+        <h3 style={{ marginTop: 0 }}>📖 Carta di sala</h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
-          Il menù consultato al tavolo, con sezioni e voci proprie. Ogni voce è agganciata a una voce del gestionale, da
-          cui prende prezzo e disponibilità; le voci non agganciate non compaiono. Con la carta spenta il cliente vede il
-          menù del gestionale, per categorie.
+          Sezioni e voci della composizione «Di sala» del menù dei clienti. Ogni voce è agganciata a una voce del
+          gestionale, da cui prende prezzo e disponibilità; le voci non agganciate non compaiono.
         </p>
-        <label className="row" style={{ gap: 8, alignItems: 'center' }}>
-          <input
-            type="checkbox"
-            checked={attiva}
-            onChange={(e) => updateSettings({ carta_attiva: e.target.checked }).catch(() => {})}
-          />
-          <span>Carta in uso per i clienti</span>
-        </label>
-        {attiva && sezioni.length === 0 && (
-          <p className="muted small" style={{ margin: '6px 0 0' }}>
-            Finché la carta non ha voci, il cliente vede il menù del gestionale.
+        {inUso ? (
+          <p className="small" style={{ margin: 0 }}>
+            Composizione in uso: <strong>Di sala</strong>.
+            {sezioni.length === 0 && ' Finché la carta non ha sezioni, i clienti vedono la composizione classica.'}
           </p>
+        ) : (
+          <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="small">
+              Composizione in uso: <strong>Classica</strong>. La carta di sala non è visibile ai clienti.
+            </span>
+            <button
+              type="button"
+              className="btn small"
+              onClick={() => updateSettings(patchUsaComposizione(settings, 'sala')).catch(() => {})}
+            >
+              Metti in uso «Di sala»
+            </button>
+          </div>
         )}
-        <a className="btn ghost small" style={{ marginTop: 10 }} href={PERCORSO_ANTEPRIMA_CARTA} target="_blank" rel="noreferrer">
+        <a
+          className="btn ghost small"
+          style={{ marginTop: 10 }}
+          href={urlProvaMenu('composizione', 'sala')}
+          target="_blank"
+          rel="noreferrer"
+        >
           👁 Anteprima della carta
         </a>
       </div>
