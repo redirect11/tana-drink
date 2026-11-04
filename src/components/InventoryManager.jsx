@@ -961,7 +961,6 @@ function ProductsPanel() {
             }}
           />
         )}
-        {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
         <ItemForm
           initial={editing === 'new' ? null : editing}
           categories={categories}
@@ -1330,6 +1329,12 @@ function ProductsPanel() {
       )}
 
       </CategoryRail>
+
+      {/* QUI, accanto all'elenco da cui la si apre (BUG-128). Stava nel ramo
+          della scheda in modifica, che col tasto «📜 Movimenti» delle azioni
+          di una riga non è mai aperta: il tasto cambiava lo stato e la
+          finestra non c'era. */}
+      {movimentiDi && <MovimentiProdotto item={movimentiDi} onClose={() => setMovimentiDi(null)} />}
 
     </div>
   )
