@@ -35,6 +35,8 @@ export const STILI_MENU = [
     id: 'notte',
     nome: 'Notte',
     inLicenza: true,
+    // Porta con sé i disegni dei drink (disegniDelLocale).
+    disegni: true,
     desc: 'Carta a righe, senza riquadri, con titoli sottili; gli Special scorrono a tutto schermo, uno per volta.',
   },
   {
@@ -90,6 +92,18 @@ function haStile(settings, s) {
 
 // Gli stili che questo locale può usare, nell'ordine del catalogo.
 export const stiliDisponibili = (settings) => STILI_MENU.filter((s) => haStile(settings, s))
+
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). Le
+// illustrazioni di Alice e i disegni composti (illustrazioneDrink.js) sono
+// nati con lo stile esclusivo della Tana. L'utente, 04/11/2026: «le
+// immagini dei drink che abbiamo fatto sono solo per lo stile Notte che
+// abbiamo fatto in esclusiva per la Tana», e poi «quelli stilizzati per
+// Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile».
+// Quindi vanno col LOCALE, non con lo stile in uso: chi ha Notte nella
+// licenza li vede in ogni stile; gli altri locali in nessuno, e al loro
+// posto c'è il segnaposto (speciali.js). Le foto sono un'altra cosa: le
+// carica chiunque e si vedono in ogni stile.
+export const disegniDelLocale = (settings) => STILI_MENU.some((s) => s.disegni && haStile(settings, s))
 
 export function stileMenu(settings) {
   const id = settings?.stile_menu

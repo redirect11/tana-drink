@@ -802,14 +802,10 @@ a.btn.block {
   color: var(--text);
   text-decoration: none;
 }
-.carosello-slide img,
-.carosello-vuota {
+.carosello-slide img {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
-  display: grid;
-  place-items: center;
-  font-size: 2.4rem;
 }
 .carosello-testo {
   display: flex;
@@ -976,6 +972,14 @@ a.btn.block {
   object-fit: contain;
   margin: 0 auto 6px;
 }
+/* Il bicchiere neutro occupa lo stesso riquadro di un disegno, così le
+   card della griglia e le slide restano allineate, ma più piccolo dentro:
+   a tutta grandezza un'icona sembra un errore. */
+.speciale-img.segnaposto,
+.carosello-slide img.segnaposto {
+  padding: 22%;
+  opacity: 0.75;
+}
 .illustrazioni {
   margin-top: 8px;
 }
@@ -1073,7 +1077,10 @@ a.btn.block {
   border-radius: 0;
 }
 
-/* Drink senza foto: logo come segnaposto, leggermente attenuato. */
+/* Drink senza foto né disegno: il bicchiere neutro (segnapostoDrink),
+   leggermente attenuato. Si vede in ogni stile: le eccezioni di Notte,
+   Lavagna, Déco e Riviera nascondevano il LOGO, che ripetuto su ogni voce
+   faceva il menù giocattolo; il bicchiere no (l'utente, 04/11/2026). */
 .drink-thumb.placeholder {
   object-fit: contain;
   padding: 8px;
@@ -9916,11 +9923,6 @@ body.pagina-piena .inv-scheda {
   margin: 0;
   padding: 18px 0;
 }
-.stile-notte .menu-item .drink-thumb.placeholder {
-  /* Il logo ripetuto su ogni voce faceva il menù giocattolo: senza foto
-     vera, niente immagine. */
-  display: none;
-}
 .stile-notte .menu-item .drink-thumb {
   width: 52px;
   height: 52px;
@@ -10414,10 +10416,6 @@ body.pagina-piena .inv-scheda {
     grid-column: 1;
     grid-row: auto;
   }
-}
-/* Il logo al posto della foto fa il menù giocattolo, in tutti e quattro. */
-:is(.stile-lavagna, .stile-deco, .stile-riviera) .menu-item .drink-thumb.placeholder {
-  display: none;
 }
 
 /* «LAVAGNA»: gesso su ardesia. Porta i suoi colori, tutti: anche quelli

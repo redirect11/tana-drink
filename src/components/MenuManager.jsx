@@ -28,6 +28,7 @@ import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -315,6 +316,7 @@ export default function MenuManager() {
         inventory={inventory}
         saleVatLocale={settings.sale_vat}
         fotoConsentite={fotoConsentite(settings)}
+        disegniConsentiti={disegniDelLocale(settings)}
         onCreateCategory={handleCreateCategory}
         onCancel={chiudiForm}
         onSave={handleSave}

@@ -1,6 +1,18 @@
 # Cosa è cambiato
 
-## 1.10.11-beta — in lavorazione
+## 1.10.12-beta — in lavorazione
+
+### Nel menù dei clienti
+
+- **Senza drink speciali, il menù Special non si apre**: chi lo raggiunge,
+  anche da un QR stampato, arriva al menù completo dello stesso tavolo.
+- **Un bicchiere stilizzato al posto del logo** per i drink senza foto, in
+  tutti gli stili.
+- **I disegni dei drink sono della Tana**: si vedono nei locali che hanno
+  lo stile «Notte», in qualunque stile scelgano. Le foto dei drink si
+  caricano e si vedono ovunque.
+
+## 1.10.11-beta — 03/11/2026 (test)
 
 ### Nel gestionale
 
