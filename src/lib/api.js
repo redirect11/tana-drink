@@ -1073,26 +1073,48 @@ function nonEsistePiu(errore) {
 //
 // LO SCARICO A MANO NON C'È (Flavio, 25-26/09/2026): «carico lo lasciamo
 // com'è, solo in positivo, e va negli acquisti»; le correzioni in meno si
-// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Qui
-// c'era un ramo per i numeri negativi, fermato a zero da una regola nostra
-// che nessuno aveva chiesto, e nessuna schermata lo usava più: un numero
-// negativo adesso è un errore, non un'altra funzione.
+// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Un
+// numero negativo qui è un errore, non un'altra funzione: la merce che
+// torna al fornitore ha la sua, `resoAlFornitore`, qui sotto.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
-  const cur = articoloScrivibileInMano(item)
   const delta = Number(qty)
   if (!(delta > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, delta, reason)
+}
+
+// ── IL RESO AL FORNITORE, cioè IL CARICO IN NEGATIVO (REQ-MAG-053) ───
+// Flavio, 04/11/2026: «il fornitore si è convinto a farsi restituire una
+// bottiglia, e io adesso se faccio contenuto reale da 1 passa a 0: è come se
+// me la porta come se fosse stata consumata. Ho bisogno di fare anche il
+// carico negativo». Il contenuto reale è una RETTIFICA, e nel periodo
+// (magazzinoPeriodo.js) il conto deposito + acquisti − consumo la tratta
+// come merce sparita; il reso invece è un acquisto disfatto. Ha il suo
+// motivo, «reso fornitore», nel gruppo degli acquisti: toglie dagli
+// acquisti del periodo, in pezzi e al costo del prodotto, e il consumo non
+// lo vede. Esce come uno scarico, ed è composto in memoria come il carico.
+export function resoAlFornitore(item, qty) {
+  const delta = Number(qty)
+  if (!(delta > 0)) throw new Error('Il reso si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, -delta, 'reso fornitore')
+}
+
+// Il movimento a mano, nei due versi: la giacenza si sposta con `increment`
+// (commutativo, si accoda offline) e il movimento lo dice col segno nel
+// tipo, la quantità sempre positiva come tutti gli altri.
+function movimentoDiMagazzino(item, delta, reason) {
+  const cur = articoloScrivibileInMano(item)
   const partenza = Number(cur.stock) || 0
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
-    'carico scorta'
+    delta > 0 ? 'carico scorta' : 'reso scorta'
   )
   bgWrite(
     () =>
       addDoc(movementsCol, {
         item_id: cur.id,
         item_name: cur.name,
-        type: 'load',
-        qty: delta,
+        type: delta > 0 ? 'load' : 'unload',
+        qty: Math.abs(delta),
         unit: cur.unit ?? null,
         reason,
         created_at: serverTimestamp(),

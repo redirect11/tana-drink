@@ -5559,3 +5559,28 @@ bugs:
     test_cases:
       - tests/component/MenuPage.test.jsx
       - tests/component/StaffDrawer.test.jsx
+  - id: BUG-128
+    title: "«📜 Movimenti» di un prodotto non si apriva: la finestra era montata solo con la scheda in modifica"
+    area: "src/components/InventoryManager.jsx (movimentiDi)"
+    severity: media
+    priority: P1
+    description: >
+      Flavio, 04/11/2026, sul test con la 1.10.12-beta: «i movimenti dei
+      prodotti, sempre la stessa cosa: ci clicchi sopra e non si apre».
+      Il tasto sta nelle azioni di una riga dell'elenco del Magazzino e
+      impostava `movimentiDi`, ma `<MovimentiProdotto>` era montato dentro
+      il ramo `if (editing)`, quello della scheda in modifica: dall'elenco
+      la finestra non c'era mai. Era cosi' dal primo giorno (REQ-MAG-048,
+      10/10/2026); la prova della finestra la montava da sola e non poteva
+      accorgersene. BUG-117 aveva cercato la causa nella lentezza della
+      cache, che c'era ma non era questa: quella correzione resta valida
+      per i tempi di lettura, una volta aperta la finestra.
+      LA CORREZIONE: la finestra sta nel ritorno principale, accanto
+      all'elenco da cui la si apre, e la prova del Magazzino la apre dal
+      tasto vero.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/component/InventoryManager.test.jsx
