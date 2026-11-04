@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 3 novembre 2026.
+> Generato il 4 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 253 | fatto e coperto dai test |
+| ✅ | 254 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**305 voci** in tutto. **270** descrivono il sistema com'è oggi e
+**306 voci** in tutto. **271** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 9 | 3 |  |
+| [LIC](#lic) | 10 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 7 | — |  |
 
@@ -783,6 +783,8 @@ SOTTO IL CAROSELLO, LA FILA DELLE CATEGORIE non ha un fondo suo finche' non si a
 IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve un carosello vero che fa lo slide delle immagini dei drink con nome e descrizione»): disegno, nome, descrizione e prezzo; va avanti da solo ogni cinque secondi, si sfoglia col dito e coi pallini, chi lo tocca lo ferma, e con «riduci movimento» non parte. I SIGNATURE SONO SPECIAL: «Le descrizioni per ora inventale tu per tutti i drink della categoria signature e dovrebbero essere tutti drink speciali». `scripts/special-signature.mjs` segna come speciali le voci della categoria SIGNATURE e scrive descrizione e disegno a chi non li ha. Le descrizioni sono una prima stesura da far rivedere a Flavio: senza ricette in carta, non nominano ingredienti che non si conoscono (un ingrediente sbagliato e' anche un allergene sbagliato). Applicato sul test il 29/10/2026.
 
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
+
+SENZA SPECIAL, GLI SPECIAL NON SI RAGGIUNGONO (l'utente, 04/11/2026: «se non ci sono drink signature, la sezione special deve essere nascosta e il menu special deve risultare vuoto e non raggiungibile al pubblico»): il carosello già non c'era; ora il cliente che apre `/menu/special` senza drink speciali, per esempio da un QR rimasto stampato, va al menù con lo stesso tavolo (`Navigate`, solo quando si sa che non è personale). Chi lavora resta sulla pagina e legge perché è vuota; in Menù → Special lo dice anche il gestionale. I DISEGNI, dal 04/11/2026, sono del locale che ha «Notte»: REQ-LIC-013.
 
 IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il disegno stava nella casella della foto, 64 px (52 nello stile «Notte»), ritagliato per riempire il quadrato: ora ha la classe `disegno`, 96 px (88 nello stile «Notte»), intero e senza riquadro. La foto vera resta com'era.
 
@@ -3405,6 +3407,16 @@ L'utente, 02/11/2026: «anche per i moduli aggiuntivi andrebbe fatto il marketpl
 DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e del ritorno, il webhook che accende il modulo dopo il pagamento (docs/marketplace-moduli.md).
 
 **Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
+
+#### REQ-LIC-013 — I disegni dei drink sono del locale che ha «Notte»; altrove la foto o un bicchiere neutro
+
+L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono solo per lo stile Notte che abbiamo fatto in esclusiva per la Tana. Dobbiamo prevedere un placeholder per altri stili e per altri locali». E alle domande dello stesso giorno: «quelli stilizzati per Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile»; «chiunque può caricare le immagini dei drink», e tutti gli stili mostrano le foto che il titolare carica; al posto dell'immagine «un bicchiere neutro». I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza dà uno stile che li porta (`disegni: true` nel catalogo: oggi solo «Notte», REQ-LIC-010), in qualunque stile il locale abbia scelto, Giornale compreso con le sue incisioni. Gli altri locali non li vedono in nessuno stile, e nella scheda del drink la composizione del disegno non si offre. `immagineVoce` senza `disegni` restituisce solo la foto: chi chiama e se ne dimentica non regala l'esclusiva.
+
+LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema e stile, e vincono sempre sul disegno.
+
+IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card del menù Special e nelle slide del carosello, in ogni stile. Prima c'era il logo del locale, che Notte, Lavagna, Déco e Riviera nascondevano perché ripetuto su ogni voce faceva il menù giocattolo; col bicchiere quelle eccezioni non servono più. Il Giornale, che non ha un riquadro fisso per l'immagine, e il dettaglio del drink restano senza immagine quando non c'è.
+
+**Dove**: `src/lib/stileMenu.js (disegni, disegniDelLocale), src/lib/speciali.js (immagineVoce, segnapostoDrink), src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/SpecialScorrevoli.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialManager.jsx, src/components/DrinkForm.jsx (disegniConsentiti), src/index.css, DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/unit/speciali.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/component/DettaglioDrink.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/unit/css.test.js`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 

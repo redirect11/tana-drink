@@ -23,13 +23,23 @@ const BASILICO = {
 
 describe('il dettaglio del drink', () => {
   it('immagine, nome, prezzo, descrizione intera e ingredienti uno per riga', () => {
-    render(<DettaglioDrink drink={BASILICO} onClose={vi.fn()} />)
+    render(<DettaglioDrink drink={BASILICO} onClose={vi.fn()} disegni />)
     const dialogo = screen.getByRole('dialog', { name: 'Basiliconiglio' })
     expect(dialogo.querySelector('img').getAttribute('src')).toMatch(/^data:image\/svg\+xml/)
     expect(dialogo).toHaveTextContent('9,00')
     expect(screen.getByText(BASILICO.description)).toBeInTheDocument()
     const righe = screen.getAllByRole('listitem').map((li) => li.textContent)
     expect(righe).toEqual(['Gin', 'basilico fresco', 'lime'])
+  })
+
+  // REQ-LIC-013: i disegni sono del locale che ha «Notte». Gli altri non
+  // li vedono, ma la foto sì.
+  it('senza i disegni del locale il disegno non c’è, la foto sì', () => {
+    const { unmount } = render(<DettaglioDrink drink={BASILICO} onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog').querySelector('img')).toBeNull()
+    unmount()
+    render(<DettaglioDrink drink={{ ...BASILICO, image_url: 'https://esempio/foto.jpg' }} onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog').querySelector('img')).toHaveAttribute('src', 'https://esempio/foto.jpg')
   })
 
   it('la foto, se c’è, vince sul disegno', () => {

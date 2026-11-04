@@ -98,6 +98,7 @@ import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import { fotoConsentite } from '../lib/limiti.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
@@ -3365,6 +3366,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
               inventory={inventario}
               saleVatLocale={settings.sale_vat}
               fotoConsentite={fotoConsentite(settings)}
+              disegniConsentiti={disegniDelLocale(settings)}
               onCreateCategory={(name) => createCategory({ name, sort_order: (cats || []).length })}
               onCancel={() => setNuovaRicetta(null)}
               onSave={salvaNuovaRicetta}

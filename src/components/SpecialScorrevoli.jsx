@@ -27,8 +27,8 @@ import { useDisegnoRaster } from '../lib/useDisegnoRaster.js'
 const TINTE = Object.fromEntries(COLORI.map((c) => [c.id, c.hex]))
 const tintaDi = (d) => TINTE[d.illustrazione?.colore] || null
 
-function Scena({ d, k, totale, chiaro, tasti }) {
-  const img = useDisegnoRaster(immagineVoce(d, import.meta.env.BASE_URL, { chiaro }))
+function Scena({ d, k, totale, chiaro, tasti, disegni }) {
+  const img = useDisegnoRaster(immagineVoce(d, import.meta.env.BASE_URL, { chiaro, disegni }))
   const ingredienti = ingredientiInCarta(d)
   const tinta = tintaDi(d)
   return (
@@ -80,7 +80,7 @@ function Scena({ d, k, totale, chiaro, tasti }) {
   )
 }
 
-export default function SpecialScorrevoli({ voci, titolo, sottotitolo, linkMenu, chiaro = false, tastiOrdine }) {
+export default function SpecialScorrevoli({ voci, titolo, sottotitolo, linkMenu, chiaro = false, tastiOrdine, disegni = false }) {
   const radice = useRef(null)
   const [attiva, setAttiva] = useState(-1)
 
@@ -179,7 +179,7 @@ export default function SpecialScorrevoli({ voci, titolo, sottotitolo, linkMenu,
         <div className="notte-nastro-riga">{frase.repeat(4)}</div>
       </div>
       {voci.map((v, k) => (
-        <Scena key={v.id} d={v} k={k} totale={voci.length} chiaro={chiaro} tasti={tastiOrdine?.(v)} />
+        <Scena key={v.id} d={v} k={k} totale={voci.length} chiaro={chiaro} tasti={tastiOrdine?.(v)} disegni={disegni} />
       ))}
       <nav className="notte-indice" aria-label={`Tutti gli ${titolo}`}>
         <h2>Tutti gli {titolo}</h2>
