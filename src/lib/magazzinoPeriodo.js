@@ -39,7 +39,10 @@ import { businessDayKey, DEFAULT_CUTOFF_HOUR } from './businessDay.js'
 // vive: chi ne aggiunge uno nuovo lo mette qui.
 //
 //   acquisto  — merce entrata dalla porta: carico a mano, consegna di un
-//               ordine, carico da fattura.
+//               ordine, carico da fattura. E quella che dalla porta è
+//               riuscita, il reso al fornitore (REQ-MAG-053): è un acquisto
+//               disfatto, e va a ridurre gli acquisti — come rettifica
+//               sarebbe sembrato merce sparita, che era il guaio di Flavio.
 //   consumo   — quello che le comande hanno tolto. Ci stanno dentro anche
 //               le correzioni di una comanda modificata e gli storni di un
 //               conto annullato: sono la stessa uscita rifatta o disfatta,
@@ -52,6 +55,7 @@ export const GRUPPO_MOTIVO = {
   carico: 'acquisto',
   'ordine fornitore': 'acquisto',
   'fattura fornitore': 'acquisto',
+  'reso fornitore': 'acquisto',
   ordine: 'consumo',
   'modifica ordine': 'consumo',
   storno: 'consumo',
