@@ -31,15 +31,6 @@ import {
   patchDisinstallaTema,
 } from '../lib/marketplaceTemi.js'
 import {
-  COMPOSIZIONI_MENU,
-  nomeComposizione,
-  composizioniInstallate,
-  composizioneMenu,
-  patchInstallaComposizione,
-  patchDisinstallaComposizione,
-  patchUsaComposizione,
-} from '../lib/composizioneMenu.js'
-import {
   schedeModuli,
   listinoRicordato,
   scaricaListino,
@@ -59,12 +50,9 @@ import {
 // navigazione lo dice (docs/navigazione.md): risponde a una domanda diversa
 // — «che aspetto potrebbe avere il mio menù» — da quella delle Impostazioni.
 //
-// Le sezioni, nel menu a scomparsa come per ogni pagina: le VESTI (tavolozza,
-// stile e, se la dicono, composizione), gli STILI da soli (sui colori del
-// locale), le COMPOSIZIONI del menù (cosa c'è e come è diviso, REQ-MENU-025)
-// e quello che il locale ha INSTALLATO. «Veste» è il nome che l'utente ha
-// dato al tema il 04/11/2026; l'id della sezione resta `temi`, che è negli
-// indirizzi già scritti. Ogni scheda è una vetrina: un pezzo del menù vero,
+// Tre sezioni, nel menu a scomparsa come per ogni pagina: i TEMI (tavolozza
+// più stile), gli STILI da soli (sui colori del locale), e quello che il
+// locale ha INSTALLATO. Ogni scheda è una vetrina: un pezzo del menù vero,
 // una categoria e due voci, scritto con le classi del menù e coi colori del
 // tema sull'elemento. Si prova sul menù, si installa, si usa. Per ora tutto
 // gratis; «Compra» arriverà coi temi a pagamento (REQ-LIC-011).
@@ -76,9 +64,8 @@ import {
 // il marketplace».
 
 const SEZIONI = [
-  { id: 'temi', icona: '🎨', label: 'Vesti' },
+  { id: 'temi', icona: '🎨', label: 'Temi' },
   { id: 'stili', icona: '🖋️', label: 'Stili del menù' },
-  { id: 'composizioni', icona: '📖', label: 'Composizioni del menù' },
   { id: 'installati', icona: '✅', label: 'Installati' },
   { id: 'moduli', icona: '🧩', label: 'Moduli' },
 ]
@@ -128,51 +115,6 @@ function Vetrina({ colori, stile }) {
           </div>
         </div>
       ))}
-    </div>
-  )
-}
-
-// LA VETRINA DI UNA COMPOSIZIONE: non la forma ma come è diviso il menù.
-// La classica ha le categorie del gestionale, piccole, e tutto quello che
-// c'è; quella di sala poche sezioni grandi, voci raccontate e la sezione
-// snella delle bevande, nome e prezzo.
-function VetrinaComposizione({ colori, id }) {
-  const voce = (d) => (
-    <div className="card menu-item" key={d.id}>
-      <div className="grow">
-        <h3>
-          <span className="menu-item-nome">{d.name}</span>
-        </h3>
-        {d.description && <p className="muted menu-item-descrizione">{d.description}</p>}
-        <span className="price">{formatPrice(d.price)}</span>
-      </div>
-    </div>
-  )
-  if (id === 'sala') {
-    return (
-      <div className="vetrina-tema" style={resolveThemeVars(colori)} aria-hidden="true">
-        <div className="cat-nav carta">
-          <span className="cat-chip">Signature</span>
-          <span className="cat-chip">Gin</span>
-          <span className="cat-chip">Bevande</span>
-        </div>
-        <h3 className="cat-header">Signature</h3>
-        {voce({ id: 'n', name: 'Negroni sbagliato', description: 'Bitter, vermouth e bollicine.', price: 9 })}
-        <section className="carta-snella">{voce({ id: 'a', name: 'Acqua naturale', price: 1.5 })}</section>
-      </div>
-    )
-  }
-  return (
-    <div className="vetrina-tema" style={resolveThemeVars(colori)} aria-hidden="true">
-      <div className="cat-nav">
-        {['Cocktail', 'Distillati', 'Shot', 'Birre', 'Food'].map((c) => (
-          <span className="cat-chip" key={c}>
-            {c}
-          </span>
-        ))}
-      </div>
-      <h3 className="cat-header">Cocktail</h3>
-      {VOCI_ESEMPIO.map(voce)}
     </div>
   )
 }
@@ -248,7 +190,7 @@ function useDallaRegia(quando, ricordato, scarica) {
 const AVVISI_REGIA = {
   temi: {
     carica: 'Aggiornamento del catalogo in corso…',
-    senza_rete: 'Il catalogo della regia non risponde: si vedono le vesti già note a questo dispositivo.',
+    senza_rete: 'Il catalogo della regia non risponde: si vedono i temi già noti a questo dispositivo.',
   },
   moduli: {
     carica: 'Aggiornamento del listino in corso…',
@@ -480,9 +422,7 @@ export default function MarketplaceTab({ role = null }) {
       key={t.id}
       titolo={t.nome}
       descrizione={t.descrizione}
-      sottotitolo={`Stile «${nomeStile(t.stile)}»${
-        t.composizione ? ` · composizione «${nomeComposizione(t.composizione)}»` : ''
-      } · Gratis`}
+      sottotitolo={`Stile «${nomeStile(t.stile)}» · Gratis`}
       vetrina={<Vetrina colori={temaComeColori(t)} stile={t.stile} />}
     >
       <AzioniCatalogo
@@ -519,32 +459,8 @@ export default function MarketplaceTab({ role = null }) {
     </Scheda>
   )
 
-  const composizioniDelLocale = composizioniInstallate(settings)
-  const composizioneInUso = composizioneMenu(settings)
-  const schedaComposizione = (c) => (
-    <Scheda
-      key={c.id}
-      titolo={c.nome}
-      descrizione={c.desc}
-      sottotitolo="Con lo stile e i colori del menù del locale · Gratis"
-      vetrina={<VetrinaComposizione colori={coloriDelLocale} id={c.id} />}
-    >
-      <AzioniCatalogo
-        provaHref={urlProvaMenu('composizione', c.id)}
-        etichetta={`la composizione ${c.nome}`}
-        inUso={composizioneInUso === c.id}
-        installato={c.sempre || composizioniDelLocale.includes(c.id)}
-        disinstallabile={disinstallabile && !c.sempre}
-        onUsa={() => salva(patchUsaComposizione(settings, c.id))}
-        onInstalla={() => salva(patchInstallaComposizione(settings, c.id))}
-        onDisinstalla={() => salva(patchDisinstallaComposizione(settings, c.id))}
-      />
-    </Scheda>
-  )
-
   const stiliGratis = STILI_MENU.filter((s) => s.gratis)
   const stiliInstallatiSchede = STILI_MENU.filter((s) => stiliDelLocale.includes(s.id))
-  const composizioniInstallateSchede = COMPOSIZIONI_MENU.filter((c) => composizioniDelLocale.includes(c.id))
 
   return (
     <div className="pagina-marketplace">
@@ -553,10 +469,10 @@ export default function MarketplaceTab({ role = null }) {
 
       {sezione === 'temi' && (
         <section>
-          <h2>Vesti</h2>
+          <h2>Temi</h2>
           <p className="muted">
-            Una veste è una tavolozza di colori con uno stile del menù e, quando la indica, una composizione. Vale
-            per il menù dei clienti: i colori del gestionale non cambiano.
+            Un tema è una tavolozza di colori con uno stile del menù. Vale per il menù dei clienti: i colori del
+            gestionale non cambiano.
           </p>
           <AvvisoRegia stato={statoCatalogo} di="temi" />
           <div className="griglia-marketplace">{catalogo(settings, daRegia).map(schedaTema)}</div>
@@ -573,29 +489,17 @@ export default function MarketplaceTab({ role = null }) {
         </section>
       )}
 
-      {sezione === 'composizioni' && (
-        <section>
-          <h2>Composizioni del menù</h2>
-          <p className="muted">
-            Che cosa contiene il menù dei clienti e come è diviso. Lo stile e i colori restano quelli scelti; chi
-            lavora prende gli ordini sempre dal catalogo del gestionale.
-          </p>
-          <div className="griglia-marketplace">{COMPOSIZIONI_MENU.map(schedaComposizione)}</div>
-        </section>
-      )}
-
       {sezione === 'installati' && (
         <section>
           <h2>Installati</h2>
-          {installati.length === 0 && stiliInstallatiSchede.length === 0 && composizioniInstallateSchede.length === 0 ? (
+          {installati.length === 0 && stiliInstallatiSchede.length === 0 ? (
             <p className="muted">
-              Nessuna veste, stile o composizione installata. Si scelgono nelle altre sezioni del marketplace.
+              Nessun tema né stile installato. Si scelgono in «Temi» e in «Stili del menù».
             </p>
           ) : (
             <div className="griglia-marketplace">
               {installati.map(schedaTema)}
               {stiliInstallatiSchede.map(schedaStile)}
-              {composizioniInstallateSchede.map(schedaComposizione)}
             </div>
           )}
         </section>

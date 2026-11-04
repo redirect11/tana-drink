@@ -20,7 +20,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
-import ThemeSettings, { StileMenuClienti, ComposizioneMenuClienti } from '../../src/components/ThemeSettings.jsx'
+import ThemeSettings, { StileMenuClienti } from '../../src/components/ThemeSettings.jsx'
 
 let salvato = null
 const onSave = vi.fn((patch) => {
@@ -124,24 +124,3 @@ describe('lo stile del menù dei clienti', () => {
   })
 })
 
-// LA COMPOSIZIONE DEL MENÙ (REQ-MENU-025), accanto allo stile: si sceglie
-// fra quelle che il locale ha, e il catalogo sta nel marketplace.
-describe('la composizione del menù dei clienti', () => {
-  it('di suo c’è solo la classica, in uso, e la strada per il marketplace', () => {
-    render(<MemoryRouter><ComposizioneMenuClienti settings={{}} onSave={onSave} /></MemoryRouter>)
-    expect(screen.getByRole('button', { name: /Classica/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.queryByRole('button', { name: /Di sala/ })).toBeNull()
-    expect(screen.getByRole('link', { name: 'marketplace' })).toHaveAttribute('href', '/bar?tab=marketplace&sezione=composizioni')
-  })
-
-  it('installata «Di sala», si sceglie e scrive `composizione_menu`', async () => {
-    const utente = userEvent.setup()
-    render(
-      <MemoryRouter>
-        <ComposizioneMenuClienti settings={{ composizioni_installate: ['sala'] }} onSave={onSave} />
-      </MemoryRouter>
-    )
-    await utente.click(screen.getByRole('button', { name: /Di sala/ }))
-    expect(salvato).toEqual({ composizione_menu: 'sala' })
-  })
-})

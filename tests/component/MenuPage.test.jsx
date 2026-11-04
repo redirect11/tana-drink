@@ -711,7 +711,7 @@ describe('un tema del marketplace in prova sul menù', () => {
     const { container } = mostra('/menu?vista=cliente&tema=gazzetta')
     await screen.findByText('Mojito')
     expect(container.querySelector('.stile-giornale')).not.toBeNull()
-    expect(screen.getByText(/Stai provando la veste «Gazzetta»/)).toBeInTheDocument()
+    expect(screen.getByText(/Stai provando il tema «Gazzetta»/)).toBeInTheDocument()
   })
 })
 
@@ -897,13 +897,11 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
       { id: 'v-birra', sezione_id: 's-bibite', drink_id: 'd3', nome: 'Ichnusa', descrizione: 'Non si vede', ordine: 0 },
     ],
   }
-  // La composizione «Di sala» installata e in uso (composizioneMenu.js).
-  const SALA = { composizioni_installate: ['sala'], composizione_menu: 'sala' }
   const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
 
-  it('con «Di sala» in uso, il cliente legge le sezioni e i nomi della carta, e solo quelli', async () => {
+  it('accesa, il cliente legge le sezioni e i nomi della carta, e solo quelli', async () => {
     ruoloClaim = null
-    mockSettings = SALA
+    mockSettings = { carta_attiva: true }
     mockCarta = CARTA
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito cubano')
@@ -919,7 +917,7 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
 
   it('la sezione snella: nome e prezzo, senza immagine né descrizione', async () => {
     ruoloClaim = null
-    mockSettings = SALA
+    mockSettings = { carta_attiva: true }
     mockCarta = CARTA
     mostra()
     await screen.findByText('Mojito cubano')
@@ -930,7 +928,7 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
     expect(screen.queryByText('Non si vede')).toBeNull()
   })
 
-  it('con la composizione classica il cliente vede il catalogo per categorie, come sempre', async () => {
+  it('spenta, il cliente vede il menù del gestionale come sempre', async () => {
     ruoloClaim = null
     mockCarta = CARTA
     mostra()
@@ -938,30 +936,19 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
   })
 
-  it('chi lavora ordina dal menù del gestionale, anche con «Di sala» in uso', async () => {
-    mockSettings = SALA
+  it('chi lavora ordina dal menù del gestionale, anche con la carta accesa', async () => {
+    mockSettings = { carta_attiva: true }
     mockCarta = CARTA
     mostra()
     await screen.findByText(/Inserimento ordine da/)
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
   })
 
-  // Si prova come uno stile: `?composizione=sala`, anche senza averla
-  // installata, e la riga in alto lo dice.
-  it('«Di sala» si prova in vista cliente senza averla in uso', async () => {
+  it('l’anteprima della carta si vede in vista cliente anche spenta', async () => {
     mockCarta = CARTA
-    mostra('/menu?vista=cliente&composizione=sala')
+    mostra('/menu?vista=cliente&carta=prova')
     await screen.findByText('Mojito cubano')
     expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
-    expect(screen.getByText(/Stai provando la composizione «Di sala»/)).toBeInTheDocument()
-  })
-
-  it('«Di sala» in uso ma senza sezioni: il cliente vede la classica, non un menù vuoto', async () => {
-    ruoloClaim = null
-    mockSettings = SALA
-    mostra()
-    await screen.findByText('Negroni')
-    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
   })
 
   // Due voci sulla stessa voce del gestionale sono due righe, e al banco
@@ -969,7 +956,7 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
   it('nel carrello due voci sullo stesso drink restano due righe, col nome della carta in nota', async () => {
     const user = userEvent.setup()
     ruoloClaim = null
-    mockSettings = SALA
+    mockSettings = { carta_attiva: true }
     mockCarta = CARTA
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito cubano')

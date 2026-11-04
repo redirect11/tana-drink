@@ -151,71 +151,6 @@ export function catalogo() {
   return { categorieMagazzino, articoli, categorie, drink }
 }
 
-// ── LA CARTA DI SALA (REQ-MENU-025) ───────────────────────────────────
-// La composizione «Di sala» compilata, per vederla senza scriverla da capo:
-// sezioni pensate per il cliente, voci col loro testo, agganciate ai drink
-// del catalogo qui sopra (il nome è la chiave). Nella demo è installata ma
-// non in uso: si mette in uso da Impostazioni → Menù clienti o dal
-// marketplace, che è proprio il gesto da far vedere.
-const CARTA_SALA = [
-  {
-    nome: 'Signature',
-    voci: [['Casa Spritz'], ['Sour della Casa'], ['Velluto Bianco']],
-  },
-  {
-    nome: 'Grandi classici',
-    voci: [
-      ['Negroni', 'Firenze, 1919: il conte Negroni chiede di rinforzare l’Americano col gin.', 'Gin, bitter, vermouth rosso'],
-      ['Old Fashioned', 'Il cocktail nella sua forma più antica: distillato, zucchero e bitter.', 'Bourbon, zucchero, Angostura, scorza d’arancia'],
-      ['Manhattan', 'New York, fine Ottocento. Morbido e speziato.', 'Rye whiskey, vermouth rosso, Angostura'],
-      ['Daiquiri', 'Cuba, inizio Novecento: tre ingredienti in equilibrio.', 'Rum bianco, lime, zucchero'],
-      ['Margarita', 'Il classico messicano, servito con il bordo di sale.', 'Tequila, triple sec, lime'],
-    ],
-  },
-  {
-    nome: 'Aperitivo',
-    voci: [['Spritz Aperol', null, 'Aperol, prosecco, soda'], ['Negroni Sbagliato', 'Milano, 1972: le bollicine al posto del gin.', 'Bitter, vermouth rosso, prosecco'], ['Hugo', null, 'Sciroppo di sambuco, prosecco, menta, soda']],
-  },
-  {
-    nome: 'Birre e bollicine',
-    vista: 'snella',
-    voci: [['Pils alla Spina 0,4L', 'Pils alla spina'], ['IPA alla Spina 0,4L', 'IPA alla spina'], ['Prosecco al Calice', 'Prosecco']],
-  },
-  {
-    nome: 'Analcolici',
-    vista: 'snella',
-    voci: [['Virgin Mojito'], ['Detox'], ['Sunrise Analcolico']],
-  },
-]
-
-// Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`. Per
-// le voci-prezzo snelle il secondo elemento è il nome in carta; per le
-// altre è la descrizione.
-export function cartaDemo(drink) {
-  const perNome = new Map(drink.map((d) => [d.name, d]))
-  const sezioni = []
-  const voci = []
-  CARTA_SALA.forEach((s, i) => {
-    const sezioneId = `sala-${slug(s.nome)}`
-    sezioni.push({ id: sezioneId, nome: s.nome, ordine: i, vista: s.vista || 'dettagliata' })
-    s.voci.forEach(([nomeDrink, secondo, ingredienti], j) => {
-      const d = perNome.get(nomeDrink)
-      if (!d) return
-      const snella = s.vista === 'snella'
-      voci.push({
-        id: `${sezioneId}-${slug(nomeDrink)}`,
-        sezione_id: sezioneId,
-        drink_id: d.id,
-        nome: snella && secondo ? secondo : nomeDrink,
-        descrizione: snella ? '' : secondo || '',
-        ingredienti: ingredienti || '',
-        ordine: j,
-      })
-    })
-  })
-  return { sezioni, voci }
-}
-
 const FORNITORI = [
   { id: 'forn-bevande', name: 'Bevande Rossi Distribuzione', color: '#2a6f97', famiglie: ['distillati', 'liquori', 'bollicine', 'birre'] },
   { id: 'forn-mixer', name: 'Mixer & Soft Srl', color: '#7a5195', famiglie: ['mixer', 'base'] },
@@ -236,8 +171,6 @@ export function impostazioniDemo() {
     show_serving_board: true,
     special_titolo: 'Special',
     special_sottotitolo: 'I drink della casa',
-    // La carta di sala è compilata (cartaDemo) e installata, non in uso.
-    composizioni_installate: ['sala'],
   }
 }
 
@@ -308,9 +241,6 @@ export function datiDemo({ adesso = new Date(), seme = SEME, giorniDiStorico = 2
   for (const { id, ...a } of articoli) metti(`inventory_items/${id}`, a)
   for (const c of categorie) metti(`categories/${c.id}`, { name: c.name, sort_order: c.sort_order })
   for (const { id, ...d } of drink) metti(`drinks/${id}`, d)
-  const carta = cartaDemo(drink)
-  for (const { id, ...s } of carta.sezioni) metti(`carta_sezioni/${id}`, s)
-  for (const { id, ...v } of carta.voci) metti(`carta_voci/${id}`, v)
 
   // Fornitori e listini: un fornitore per famiglia di articoli.
   for (const f of FORNITORI) metti(`suppliers/${f.id}`, { name: f.name, color: f.color, sort_order: FORNITORI.indexOf(f) })

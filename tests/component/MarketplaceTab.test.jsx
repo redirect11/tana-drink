@@ -79,36 +79,10 @@ function mostra(role = 'admin', indirizzo = '/bar?tab=marketplace') {
 const vaiA = (id) => act(() => sottosezioni.scegli(id))
 
 describe('il marketplace', () => {
-  // Il tema si chiama «veste» dal 04/11/2026 (scelta dell'utente), e la
-  // composizione del menù ha la sua sezione (REQ-MENU-025).
-  it('è un catalogo: Vesti, Stili del menù, Composizioni del menù, Installati, Moduli', () => {
+  it('è un catalogo: le sezioni Temi, Stili del menù, Installati, Moduli', () => {
     mostra()
-    expect(sottosezioni.voci.map((v) => v.label)).toEqual([
-      'Vesti',
-      'Stili del menù',
-      'Composizioni del menù',
-      'Installati',
-      'Moduli',
-    ])
-    expect(screen.getByRole('heading', { name: 'Vesti', level: 2 })).toBeInTheDocument()
-  })
-
-  // LA COMPOSIZIONE DEL MENÙ (REQ-MENU-025): l'utente, 04/11/2026, «facciamo
-  // un metodo di selezione come per il marketplace, dove possiamo
-  // selezionare per ora menù classico e menù nuovo». La classica è di tutti
-  // e in uso di suo; «Di sala» si installa e si usa come uno stile gratis.
-  it('le composizioni: la classica in uso, «Di sala» si installa, si prova e si usa', async () => {
-    const utente = userEvent.setup()
-    mostra()
-    vaiA('composizioni')
-    expect(screen.getByRole('heading', { name: 'Classica' })).toBeInTheDocument()
-    expect(screen.getByText('In uso')).toBeInTheDocument()
-    const prove = screen.getAllByRole('link', { name: 'Prova sul menù' }).map((a) => a.getAttribute('href'))
-    expect(prove).toContain('/menu?vista=cliente&composizione=sala')
-    await utente.click(screen.getByRole('button', { name: 'Installa la composizione Di sala' }))
-    expect(st.scritte.at(-1)).toEqual({ composizioni_installate: ['sala'] })
-    await utente.click(screen.getByRole('button', { name: 'Usa la composizione Di sala' }))
-    expect(st.scritte.at(-1)).toEqual({ composizioni_installate: ['sala'], composizione_menu: 'sala' })
+    expect(sottosezioni.voci.map((v) => v.label)).toEqual(['Temi', 'Stili del menù', 'Installati', 'Moduli'])
+    expect(screen.getByRole('heading', { name: 'Temi', level: 2 })).toBeInTheDocument()
   })
 
   it('ogni tema ha la vetrina, la prova sul menù e «Installa»; «Notte» solo con la licenza', () => {
@@ -159,7 +133,7 @@ describe('il marketplace', () => {
   it('niente installato: lo dice', () => {
     mostra()
     vaiA('installati')
-    expect(screen.getByText(/Nessuna veste, stile o composizione installata/)).toBeInTheDocument()
+    expect(screen.getByText(/Nessun tema né stile installato/)).toBeInTheDocument()
   })
 })
 

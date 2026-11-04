@@ -6267,10 +6267,9 @@ export const DEFAULT_SETTINGS = {
   special_titolo: 'Special',
   // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
   stile_menu: 'classico',
-  // LA COMPOSIZIONE DEL MENÙ (REQ-MENU-025): «classica», il catalogo del
-  // gestionale per categorie, come sempre; «sala» la carta di sala, da
-  // installare (composizioneMenu.js).
-  composizione_menu: 'classica',
+  // LA CARTA DEI CLIENTI (REQ-MENU-025): spenta, il cliente vede il menù
+  // del gestionale per categorie, come sempre. Si accende quando è pronta.
+  carta_attiva: false,
   special_sottotitolo: '',
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
