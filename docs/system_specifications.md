@@ -3954,7 +3954,9 @@ RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tan
 
 L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
 
-**Dove**: `l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, docs/passaggio-dalla-regia.md`
+LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere che Flavio è il titolare, deve poter inviare comunicazioni a lui via email rispetto al prodotto e deve poter effettuare il single sign on con la sua utenza». Gli account restano due, legati dall'email: il passaggio vuole nel locale la stessa email del titolare, verificata, e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è verificata, e con un'opzione esplicita la segna verificata. La 1.10 con questo requisito va su main, perché la regia di produzione legge da lì. L'ordine del giorno del rilascio, coi permessi da dare l'utente, sta in docs/la-tana-nella-regia.md.
+
+**Dove**: `l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md`
 
 ## Difetti noti
 
