@@ -3,10 +3,13 @@
 // riscaricato a ogni mount (niente flash di caricamento). Un refresh
 // forzato della pagina ricrea il modulo e riparte la sottoscrizione.
 import { useEffect, useState } from 'react'
-import { subscribeDrinks, subscribeCategories } from './api.js'
+import { subscribeDrinks, subscribeCategories, subscribeCarta } from './api.js'
 
 let drinks = []
 let cats = []
+// La carta dei clienti (REQ-MENU-025): nella stessa cache, perché la
+// pagina del menù la vuole pronta come le voci.
+let carta = { sezioni: [], voci: [] }
 let loaded = false
 let started = false
 const listeners = new Set()
@@ -31,6 +34,10 @@ function start() {
     cats = c
     emit()
   })
+  subscribeCarta((c) => {
+    carta = c
+    emit()
+  })
 }
 
 // Hook: restituisce { drinks, cats, loading } leggendo dalla cache di
@@ -44,5 +51,5 @@ export function useMenu() {
     listeners.add(l)
     return () => listeners.delete(l)
   }, [])
-  return { drinks, cats, loading: !loaded }
+  return { drinks, cats, carta, loading: !loaded }
 }

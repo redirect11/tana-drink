@@ -41,8 +41,14 @@ export function ingredientiDalCampo(testo) {
 
 // L'elenco da mostrare (stringhe), o null se non c'è niente da dire.
 export function ingredientiInCarta(drink, { quantita = false } = {}) {
+  // UNA VOCE DELLA CARTA DEI CLIENTI (REQ-MENU-025) dice solo quello che
+  // c'è scritto: Flavio, 04/11/2026, «non li devi prendere dalla ricetta,
+  // vanno messi a mano» — la ricetta del gestionale porta la tonica del gin
+  // tonic, e quella di una voce-prezzo («SOUR 7») non è il drink in carta.
+  // In una sezione snella, niente.
+  if (drink?.snella) return null
   const scritti = ingredientiDalCampo(drink?.ingredienti)
-  if (scritti.length) return scritti
+  if (scritti.length || drink?.voce_carta) return scritti.length ? scritti : null
   const visti = new Set()
   const righe = []
   for (const r of drink?.recipe_items || []) {

@@ -51,6 +51,10 @@ const DRINKS = [
   { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
 ]
 let mockDrinks = DRINKS
+// La carta dei clienti (REQ-MENU-025): vuota di suo, come per il locale
+// che non la compila.
+const CARTA_VUOTA = { sezioni: [], voci: [] }
+let mockCarta = CARTA_VUOTA
 
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
@@ -60,6 +64,7 @@ vi.mock('../../src/lib/menuCache.js', () => ({
       { id: 'c2', name: 'Birre', sort_order: 2 },
     ],
     drinks: mockDrinks,
+    carta: mockCarta,
   }),
 }))
 
@@ -128,6 +133,7 @@ const voci = () =>
 beforeEach(() => {
   mockSettings = {}
   mockDrinks = DRINKS
+  mockCarta = CARTA_VUOTA
   ruoloClaim = 'bartender'
   stampaSala = 'ip'
   stampata.mockClear()
@@ -872,5 +878,97 @@ describe('il menù Special senza special', () => {
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito')
     expect(screen.queryByRole('region', { name: 'Special' })).toBeNull()
+  })
+})
+
+// LA CARTA DEI CLIENTI (REQ-MENU-025). Flavio, 04/11/2026, guardando il
+// menù dei clienti sul test: gin e vodka insieme, «Distillati» tutti uniti,
+// shot e food al tavolo. Con la carta accesa il cliente legge le sezioni
+// della carta; chi lavora ordina ancora dal menù del gestionale.
+describe('la carta dei clienti (REQ-MENU-025)', () => {
+  const CARTA = {
+    sezioni: [
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+      { id: 's-bibite', nome: 'Bibite', ordine: 1, vista: 'snella' },
+    ],
+    voci: [
+      { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Mojito cubano', descrizione: 'Dall’Avana.', ingredienti: 'Rum, lime, menta', ordine: 0 },
+      { id: 'v-cuba', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Cuba libre', ordine: 1 },
+      { id: 'v-birra', sezione_id: 's-bibite', drink_id: 'd3', nome: 'Ichnusa', descrizione: 'Non si vede', ordine: 0 },
+    ],
+  }
+  const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
+
+  it('accesa, il cliente legge le sezioni e i nomi della carta, e solo quelli', async () => {
+    ruoloClaim = null
+    mockSettings = { carta_attiva: true }
+    mockCarta = CARTA
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito cubano')
+    expect(sezioniLette()).toEqual(['Cocktail IBA', 'Bibite'])
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+    // Il Negroni non è in carta: al tavolo non c'è.
+    expect(screen.queryByText('Negroni')).toBeNull()
+    expect(screen.getByText('Dall’Avana.')).toBeInTheDocument()
+    expect(screen.getByText('Rum · lime · menta')).toBeInTheDocument()
+    // Le schede delle sezioni sono quelle grandi.
+    expect(document.querySelector('.cat-nav')).toHaveClass('carta')
+  })
+
+  it('la sezione snella: nome e prezzo, senza immagine né descrizione', async () => {
+    ruoloClaim = null
+    mockSettings = { carta_attiva: true }
+    mockCarta = CARTA
+    mostra()
+    await screen.findByText('Mojito cubano')
+    const bibite = document.querySelector('section.carta-snella')
+    expect(bibite).not.toBeNull()
+    expect(within(bibite).getByText('Ichnusa')).toBeInTheDocument()
+    expect(bibite.querySelector('img')).toBeNull()
+    expect(screen.queryByText('Non si vede')).toBeNull()
+  })
+
+  it('spenta, il cliente vede il menù del gestionale come sempre', async () => {
+    ruoloClaim = null
+    mockCarta = CARTA
+    mostra()
+    await screen.findByText('Negroni')
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+  })
+
+  it('chi lavora ordina dal menù del gestionale, anche con la carta accesa', async () => {
+    mockSettings = { carta_attiva: true }
+    mockCarta = CARTA
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+  })
+
+  it('l’anteprima della carta si vede in vista cliente anche spenta', async () => {
+    mockCarta = CARTA
+    mostra('/menu?vista=cliente&carta=prova')
+    await screen.findByText('Mojito cubano')
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+  })
+
+  // Due voci sulla stessa voce del gestionale sono due righe, e al banco
+  // arriva il drink del gestionale con il nome della carta nella nota.
+  it('nel carrello due voci sullo stesso drink restano due righe, col nome della carta in nota', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockSettings = { carta_attiva: true }
+    mockCarta = CARTA
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito cubano')
+    const card = (nome) => screen.getByText(nome).closest('.menu-item')
+    await user.click(within(card('Mojito cubano')).getByRole('button', { name: 'Aggiungi' }))
+    await user.click(within(card('Cuba libre')).getByRole('button', { name: 'Aggiungi' }))
+    const carrello = JSON.parse(localStorage.getItem('drink_cart_v1'))
+    expect(carrello).toEqual([
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', riga: 'v-mojito', nome_carta: 'Mojito cubano', note: 'Mojito cubano', qty: 1 }),
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', riga: 'v-cuba', nome_carta: 'Cuba libre', note: 'Cuba libre', qty: 1 }),
+    ])
+    // Il cliente legge i nomi che ha scelto.
+    expect(document.querySelector('.cartbar').textContent).toContain('Cuba libre')
   })
 })

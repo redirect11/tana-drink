@@ -327,6 +327,18 @@ service cloud.firestore {
       allow write: if licenzaValida() && isBartender();
     }
 
+    // LA CARTA DEI CLIENTI (REQ-MENU-025): sezioni e voci del menù del
+    // tavolo. Le legge chiunque apra il menù, le scrive il banco, come le
+    // voci del gestionale a cui sono agganciate.
+    match /carta_sezioni/{sezioneId} {
+      allow read: if true;
+      allow write: if licenzaValida() && isBartender();
+    }
+    match /carta_voci/{voceId} {
+      allow read: if true;
+      allow write: if licenzaValida() && isBartender();
+    }
+
     // SETTINGS — lettura pubblica (i clienti vedono la modalità menù, coperto…), scrittura bartender.
     //
     // IL CAMPO `licenza` QUI DENTRO NON LO TOCCA NESSUNO DALL'APP (BUG-126,

@@ -116,6 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
+import { ordinaCarta, vistaCarta } from './carta.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -500,6 +501,99 @@ export async function updateCategory(id, patch) {
 
 export async function deleteCategory(id) {
   await deleteDoc(doc(db, 'categories', id))
+}
+
+// --- LA CARTA DEI CLIENTI (REQ-MENU-025) ---
+// Sezioni e voci del menù che si legge al tavolo, separate dal menù del
+// gestionale (la logica sta in lib/carta.js). Due collezioni e non un
+// documento solo: le voci si scrivono una alla volta, mentre le si
+// compila, e un documento unico viaggerebbe intero a ogni descrizione
+// toccata (lo stesso conto di BUG-110). Le scritture partono in
+// sottofondo, con l'identificativo fatto dal terminale: la sottoscrizione
+// le mostra subito, dalla cache.
+
+const cartaSezioniCol = collection(db, 'carta_sezioni')
+const cartaVociCol = collection(db, 'carta_voci')
+
+function mapSezioneCarta(snap) {
+  const s = snap.data() || {}
+  return { id: snap.id, nome: s.nome ?? '', ordine: s.ordine ?? 0, vista: vistaCarta(s.vista) }
+}
+
+function mapVoceCarta(snap) {
+  const v = snap.data() || {}
+  return {
+    id: snap.id,
+    sezione_id: v.sezione_id ?? null,
+    drink_id: v.drink_id ?? null,
+    nome: v.nome ?? '',
+    descrizione: v.descrizione ?? '',
+    ingredienti: v.ingredienti ?? '',
+    ordine: v.ordine ?? 0,
+  }
+}
+
+// La carta intera, { sezioni, voci }, quando sono arrivate tutte e due.
+export function subscribeCarta(onChange, onError) {
+  let sezioni = null
+  let voci = null
+  const emetti = () => sezioni && voci && onChange({ sezioni, voci })
+  const errore = onError ?? (() => {})
+  const via1 = onSnapshot(
+    cartaSezioniCol,
+    (snap) => {
+      sezioni = ordinaCarta(snap.docs.map(mapSezioneCarta))
+      emetti()
+    },
+    errore
+  )
+  const via2 = onSnapshot(
+    cartaVociCol,
+    (snap) => {
+      voci = snap.docs.map(mapVoceCarta)
+      emetti()
+    },
+    errore
+  )
+  return () => {
+    via1()
+    via2()
+  }
+}
+
+export function creaSezioneCarta({ nome, ordine = 0, vista = 'dettagliata' }) {
+  const ref = doc(cartaSezioniCol)
+  const sezione = { nome: String(nome || '').trim(), ordine, vista: vistaCarta(vista) }
+  bgWrite(() => setDoc(ref, { ...sezione, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...sezione }
+}
+
+export function aggiornaSezioneCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_sezioni', id), patch), 'carta')
+}
+
+// Una sezione se ne va con le sue voci, nello stesso pacchetto: voci
+// rimaste senza sezione non si vedrebbero da nessuna parte, nemmeno qui.
+export function eliminaSezioneCarta(id, vociIds = []) {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'carta_sezioni', id))
+  for (const v of vociIds) batch.delete(doc(db, 'carta_voci', v))
+  bgWrite(() => batch.commit(), 'carta')
+}
+
+export function creaVoceCarta({ sezione_id, drink_id = null, nome = '', descrizione = '', ingredienti = '', ordine = 0 }) {
+  const ref = doc(cartaVociCol)
+  const voce = { sezione_id, drink_id, nome: String(nome).trim(), descrizione, ingredienti, ordine }
+  bgWrite(() => setDoc(ref, { ...voce, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...voce }
+}
+
+export function aggiornaVoceCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_voci', id), patch), 'carta')
+}
+
+export function eliminaVoceCarta(id) {
+  bgWrite(() => deleteDoc(doc(db, 'carta_voci', id)), 'carta')
 }
 
 // --- INVENTORY ---
@@ -6151,6 +6245,9 @@ export const DEFAULT_SETTINGS = {
   special_titolo: 'Special',
   // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
   stile_menu: 'classico',
+  // LA CARTA DEI CLIENTI (REQ-MENU-025): spenta, il cliente vede il menù
+  // del gestionale per categorie, come sempre. Si accende quando è pronta.
+  carta_attiva: false,
   special_sottotitolo: '',
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
