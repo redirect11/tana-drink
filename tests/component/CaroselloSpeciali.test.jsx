@@ -11,16 +11,17 @@ import { render, screen, within, act, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 import CaroselloSpeciali from '../../src/components/CaroselloSpeciali.jsx'
+import { segnapostoDrink } from '../../src/lib/speciali.js'
 
 const VOCI = [
   { id: 'a', name: 'Regina di cuori', price: 9, description: 'Rosso come le rose dipinte.', illustrazione: { bicchiere: 'coppa', colore: 'rosso', decorazione: 'cuori' } },
   { id: 'b', name: 'Ora del tè', price: 8, description: 'Sempre le sei.', illustrazione: { bicchiere: 'tazza', colore: 'ambra', decorazione: 'agrume' } },
   { id: 'c', name: 'Blukalif', price: 9, image_url: 'https://esempio/blu.jpg' },
 ]
-const mostra = (voci = VOCI) =>
+const mostra = (voci = VOCI, { disegni = true } = {}) =>
   render(
     <MemoryRouter>
-      <CaroselloSpeciali voci={voci} link={(d) => `/menu/special#speciale-${d.id}`} />
+      <CaroselloSpeciali voci={voci} link={(d) => `/menu/special#speciale-${d.id}`} disegni={disegni} />
     </MemoryRouter>
   )
 const pallini = () => within(screen.getByRole('group', { name: 'Scegli lo special' })).getAllByRole('button')
@@ -44,6 +45,19 @@ describe('il carosello degli special', () => {
     // Il disegno composto, o la foto se c'è.
     expect(slide[0].querySelector('img').getAttribute('src')).toMatch(/^data:image\/svg\+xml/)
     expect(slide[2].querySelector('img')).toHaveAttribute('src', 'https://esempio/blu.jpg')
+  })
+
+  // I DISEGNI SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). L'utente,
+  // 04/11/2026: per gli altri locali «un bicchiere neutro»; le foto invece
+  // si vedono sempre.
+  it('senza i disegni del locale c’è il bicchiere neutro, e la foto resta', () => {
+    mostra(VOCI, { disegni: false })
+    const slide = document.querySelectorAll('.carosello-slide')
+    const img = slide[0].querySelector('img')
+    expect(img).toHaveClass('segnaposto')
+    expect(img.getAttribute('src')).toBe(segnapostoDrink())
+    expect(slide[2].querySelector('img')).toHaveAttribute('src', 'https://esempio/blu.jpg')
+    expect(slide[2].querySelector('img')).not.toHaveClass('segnaposto')
   })
 
   // REQ-MENU-019: anche gli ingredienti, sotto la descrizione.

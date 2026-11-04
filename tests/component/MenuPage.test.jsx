@@ -14,8 +14,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
-import { CON_LICENZA } from '../helpers/licenza.js'
+import { CON_LICENZA, LICENZA_TANA } from '../helpers/licenza.js'
+import { segnapostoDrink } from '../../src/lib/speciali.js'
 
 let mockSettings = {}
 let ruoloClaim = 'bartender'
@@ -791,5 +793,84 @@ describe('lo stile «Giornale»', () => {
     expect(within(testata).getByText('Alice nel paese delle meraviglie')).toBeInTheDocument()
     expect(within(testata).getByRole('link', { name: '← Tutto il menù' })).toHaveAttribute('href', '/menu')
     expect(screen.queryByRole('navigation', { name: 'Sommario' })).toBeNull()
+  })
+})
+
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). L'utente,
+// 04/11/2026: «sono solo per lo stile Notte che abbiamo fatto in esclusiva
+// per la Tana», ma «può riutilizzarli Flavio se cambia stile». Agli altri
+// locali, al posto del disegno, «un bicchiere neutro»; le foto invece le
+// carica chiunque e si vedono in ogni stile.
+describe('i disegni dei drink sono della Tana', () => {
+  const DISEGNATO = { ...DRINKS[0], illustrazione: { bicchiere: 'basso', colore: 'verde', decorazione: 'menta' } }
+  const FOTOGRAFATO = { ...DRINKS[1], image_url: 'https://foto.example/negroni.jpg' }
+  const ALTRO_LOCALE = { licenza: { ...LICENZA_TANA, temi: [] } }
+
+  it('un altro locale vede il bicchiere neutro al posto del disegno, e la foto', async () => {
+    ruoloClaim = null
+    mockSettings = ALTRO_LOCALE
+    mockDrinks = [DISEGNATO, FOTOGRAFATO, DRINKS[2]]
+    mostra()
+    const mojito = await screen.findByAltText('Mojito')
+    expect(mojito).toHaveClass('drink-thumb', 'placeholder')
+    expect(mojito).toHaveAttribute('src', segnapostoDrink())
+    expect(screen.getByAltText('Negroni')).toHaveAttribute('src', 'https://foto.example/negroni.jpg')
+  })
+
+  it('la Tana li vede anche cambiando stile', async () => {
+    ruoloClaim = null
+    mockSettings = { stili_installati: ['lavagna'], stile_menu: 'lavagna' }
+    mockDrinks = [DISEGNATO, FOTOGRAFATO]
+    mostra()
+    expect(await screen.findByAltText('Mojito')).toHaveClass('drink-thumb', 'disegno')
+  })
+
+  it('senza foto né disegno, il bicchiere neutro anche in Notte: niente più logo', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'notte' }
+    mostra()
+    const ichnusa = await screen.findByAltText('Ichnusa')
+    expect(ichnusa).toHaveAttribute('src', segnapostoDrink())
+    expect(ichnusa.getAttribute('src')).not.toMatch(/logo\.png/)
+  })
+})
+
+// GLI SPECIAL SENZA SPECIAL NON SI RAGGIUNGONO (REQ-MENU-018). L'utente,
+// 04/11/2026: senza drink speciali la sezione si nasconde e il menù Special
+// «deve risultare vuoto e non raggiungibile al pubblico». Il QR stampato
+// resta sui tavoli: chi lo inquadra va al menù, con lo stesso tavolo.
+describe('il menù Special senza special', () => {
+  function Dove() {
+    const l = useLocation()
+    return <p>SIAMO SU {l.pathname + l.search}</p>
+  }
+  const apri = (percorso) =>
+    render(
+      <MemoryRouter initialEntries={[percorso]}>
+        <Routes>
+          <Route path="/menu/special" element={<MenuPage speciali />} />
+          <Route path="/menu" element={<Dove />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+  it('il cliente va al menù, sullo stesso tavolo', async () => {
+    ruoloClaim = null
+    apri('/menu/special?tavolo=5')
+    expect(await screen.findByText('SIAMO SU /menu?tavolo=5')).toBeInTheDocument()
+  })
+
+  it('chi lavora resta, e legge perché è vuoto', async () => {
+    ruoloClaim = 'admin'
+    apri('/menu/special?vista=cliente')
+    expect(await screen.findByText(/Nessun drink speciale/)).toBeInTheDocument()
+    expect(screen.queryByText(/SIAMO SU/)).toBeNull()
+  })
+
+  it('il carosello in cima al menù non c’è', async () => {
+    ruoloClaim = null
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('region', { name: 'Special' })).toBeNull()
   })
 })

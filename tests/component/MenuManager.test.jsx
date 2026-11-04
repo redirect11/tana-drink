@@ -82,6 +82,7 @@ vi.mock('../../src/lib/saveDrink.js', () => ({
 
 import MenuManager from '../../src/components/MenuManager.jsx'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
+import { CON_LICENZA } from '../helpers/licenza.js'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -269,7 +270,10 @@ describe('le icone delle sottosezioni', () => {
 describe('gli special nella gestione del menù', () => {
   // Il disegno si COMPONE: bicchiere, colore, decorazione (l'utente,
   // 29/10/2026: «le immagini dei drink dovrebbero rappresentare i drink»).
+  // I disegni sono del locale che ha «Notte» nella licenza (REQ-LIC-013):
+  // la Tana.
   it('nella scheda si segna «Drink speciale» e si compone il disegno del drink', async () => {
+    filo.impostazioni = CON_LICENZA
     const user = userEvent.setup()
     render(<MenuManager />)
     await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
@@ -289,6 +293,18 @@ describe('gli special nella gestione del menù', () => {
     const { form } = salvaDrink.mock.calls[0][0]
     expect(form.speciale).toBe(true)
     expect(form.illustrazione).toEqual({ bicchiere: 'tazza', colore: 'ambra', decorazione: 'agrume' })
+  })
+
+  // L'utente, 04/11/2026: i disegni «sono della Tana»; la foto invece la
+  // carica chiunque, a prescindere da tema e stile.
+  it('senza «Notte» nella licenza il disegno non si compone, la foto si carica', async () => {
+    filo.impostazioni = { licenza: { moduli: {}, temi: [] } }
+    const user = userEvent.setup()
+    render(<MenuManager />)
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    await user.click(screen.getByLabelText('Drink speciale'))
+    expect(screen.queryByRole('group', { name: 'Disegno del drink' })).toBeNull()
+    expect(document.querySelector('input[type="file"]')).not.toBeNull()
   })
 
   // REQ-MENU-019: gli ingredienti che legge il cliente si scrivono nella

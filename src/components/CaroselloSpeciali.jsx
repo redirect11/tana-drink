@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { immagineVoce } from '../lib/speciali.js'
+import { immagineVoce, segnapostoDrink } from '../lib/speciali.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 
@@ -17,7 +17,7 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 // ferma, perché una slide che scappa mentre la si sta leggendo è peggio di
 // una che sta ferma. Con «riduci movimento» del telefono non parte affatto.
 // Toccando una slide si apre il menù Special su quel drink.
-export default function CaroselloSpeciali({ voci, link, chiaro = false, intervallo = 5000 }) {
+export default function CaroselloSpeciali({ voci, link, chiaro = false, intervallo = 5000, disegni = false }) {
   const fila = useRef(null)
   const [attiva, setAttiva] = useState(0)
   const attivaRef = useRef(0)
@@ -62,7 +62,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
     <div className="carosello" onPointerDown={prendi} onWheel={prendi}>
       <div className="carosello-fila" ref={fila} onScroll={alloScorrere}>
         {voci.map((d, k) => {
-          const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro })
+          const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro, disegni })
           const ingredienti = ingredientiInCarta(d)
           return (
             <Link
@@ -73,7 +73,12 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
               aria-hidden={k === attiva ? undefined : 'true'}
               tabIndex={k === attiva ? 0 : -1}
             >
-              {img ? <img src={img} alt="" loading={k === 0 ? 'eager' : 'lazy'} /> : <span className="carosello-vuota" aria-hidden="true">✨</span>}
+              <img
+                className={img ? undefined : 'segnaposto'}
+                src={img || segnapostoDrink({ chiaro })}
+                alt=""
+                loading={k === 0 ? 'eager' : 'lazy'}
+              />
               <span className="carosello-testo">
                 <strong>{d.name}</strong>
                 {d.description && <span className="carosello-descrizione">{d.description}</span>}
