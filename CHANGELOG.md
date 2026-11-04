@@ -1,6 +1,6 @@
 # Cosa è cambiato
 
-## 1.10.13-beta — in lavorazione
+## 1.10.14-beta — in lavorazione
 
 ### Menù dei clienti
 
@@ -14,11 +14,18 @@
   sempre. All'ordine il banco riceve la voce del gestionale, con il nome
   della carta nella nota (REQ-MENU-025).
 
+## 1.10.13-beta — 04/11/2026 (test)
+
 ### Magazzino
 
 - «📜 Movimenti» di un prodotto si apre di nuovo: il tasto non faceva
   niente, perché la finestra compariva solo con la scheda del prodotto in
   modifica (BUG-128).
+- **Reso al fornitore**: nella finestra del carico si sceglie «⬇ Reso al
+  fornitore» per la merce restituita. Esce dalla giacenza e si sottrae dagli
+  acquisti del periodo, al costo del prodotto, o dal deposito se nel periodo
+  non ci sono acquisti; non risulta consumata, come succedeva correggendo il
+  contenuto reale. Il contenuto reale resta com'era (REQ-MAG-053).
 
 ## 1.10.12-beta — 04/11/2026 (test)
 
