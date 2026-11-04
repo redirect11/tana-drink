@@ -4,15 +4,18 @@
 
 ### Menù dei clienti
 
-- La carta dei clienti: un menù per il tavolo con sezioni e voci proprie,
-  separato da quello del gestionale. Ogni voce ha nome, descrizione e
-  ingredienti suoi ed è agganciata a una voce del gestionale, da cui prende
-  prezzo e disponibilità; quello che non è in carta al tavolo non si vede.
-  Le sezioni possono essere dettagliate o snelle (nome e prezzo), e in alto
-  stanno in schede grandi che restano ferme mentre si scorre. Si compila e
-  si accende da Menù → Carta clienti; spenta, il cliente vede il menù di
-  sempre. All'ordine il banco riceve la voce del gestionale, con il nome
-  della carta nella nota (REQ-MENU-025).
+- **La struttura del menù dei clienti si personalizza**, da Menù → Menù
+  dei clienti. Di partenza c'è una sezione per categoria, come sempre; le
+  sezioni si rinominano, si riordinano, si nascondono e si fanno snelle
+  (nome e prezzo). Una sezione può seguire una categoria del gestionale,
+  e mostrarne i prodotti anche quando se ne aggiungono, oppure avere voci
+  scelte a mano (Signature, Suggeriti dallo staff), con nome, descrizione
+  e ingredienti propri. Con la struttura personalizzata le sezioni stanno
+  in schede grandi, ferme in alto mentre si scorre. Il personale ordina
+  sempre dal menù del gestionale, e all'ordine il banco riceve il prodotto
+  del gestionale, col nome letto dal cliente nella nota (REQ-MENU-025).
+- Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
+  legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
 
 ## 1.10.13-beta — 04/11/2026 (test)
 

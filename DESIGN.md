@@ -182,8 +182,9 @@ disegno, rimpicciolito, perché le card restino allineate. Il logo del
 locale non fa da segnaposto: ripetuto su ogni voce faceva il menù
 giocattolo.
 
-**La carta dei clienti, in ogni stile** (REQ-MENU-025). Con la carta
-accesa le sezioni sono poche: le schede in alto (`.cat-nav.carta`) sono
+**La struttura personalizzata del menù, in ogni stile** (REQ-MENU-025).
+Con la struttura personalizzata le sezioni sono poche: le schede in alto
+(`.cat-nav.carta`) sono
 più grandi, col carattere dello stile, e restano agganciate sotto la barra
 mentre si scorre. Una sezione snella (`.carta-snella`) è un listino: nome
 a sinistra e prezzo a destra sulla stessa riga, senza immagine né testo

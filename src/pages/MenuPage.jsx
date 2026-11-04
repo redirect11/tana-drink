@@ -24,7 +24,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga } from '../lib/cart.js'
-import { cartaInUso, sezioniDellaCarta } from '../lib/carta.js'
+import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata } from '../lib/strutturaMenu.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -59,8 +59,7 @@ const NESSUNA_CATEGORIA = []
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
-  const { drinks, cats, carta, loading } = useMenu()
-  const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  const { drinks: drinksDelMenu, cats, carta, loading } = useMenu()
   // Le illustrazioni hanno il tratto bianco sui temi scuri, scuro sui chiari.
   const fondoChiaro = useFondoChiaro()
   const [segnapostoCategorie, categorieIncollate] = useIncollata()
@@ -134,11 +133,12 @@ export default function MenuPage({ speciali = false }) {
   // del personale. Con ?vista=cliente si finge di essere un cliente.
   const anteprimaCliente = params.get('vista') === 'cliente'
   const staff = anteprimaCliente ? null : staffVero
-  // LA CARTA DEI CLIENTI (REQ-MENU-025) è la faccia del cliente: chi lavora
-  // ordina dal menù del gestionale, che conosce. `?carta=prova` la fa
-  // vedere al personale in vista cliente anche spenta, mentre la compila.
-  const usaCarta =
-    !staff && cartaInUso(settings, carta.sezioni, { prova: anteprimaCliente && !!staffVero && params.get('carta') === 'prova' })
+  // IL MENÙ DEI CLIENTI (REQ-MENU-025) ha i nomi per il cliente e la sua
+  // struttura, se il locale l'ha personalizzata. Chi lavora ordina dal menù
+  // del gestionale, coi nomi del banco e per categorie: è quello che conosce.
+  const drinks = useMemo(() => (staff ? drinksDelMenu : drinksDelMenu.map(perIlCliente)), [staff, drinksDelMenu])
+  const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  const usaStruttura = !staff && strutturaPersonalizzata(carta)
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -250,7 +250,7 @@ export default function MenuPage({ speciali = false }) {
         )
       : base
     if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
-    if (usaCarta) return sezioniDellaCarta(carta, drinks)
+    if (usaStruttura) return sezioniDelMenu(carta, drinks, cats)
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
     for (const d of visibili) {
@@ -263,7 +263,7 @@ export default function MenuPage({ speciali = false }) {
     return [...groups.values()]
       .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
       .map((g) => [g.name, g.list])
-  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaCarta, carta])
+  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta])
 
   // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
   // col suo dettaglio aperto: chi tocca una slide vuole sapere di quel drink
@@ -381,13 +381,7 @@ export default function MenuPage({ speciali = false }) {
     }
   }
 
-  // Con una carta compilata, il cliente aspetta le impostazioni prima di
-  // vedere qualcosa: spenta o accesa lo dicono loro, e mostrargli intanto
-  // il menù del gestionale vorrebbe dire fargli vedere shot e voci-prezzo
-  // per un istante.
-  if (loading || (!staff && carta.sezioni.length > 0 && !impostazioniArrivate && isFirebaseConfigured)) {
-    return <div className="empty">Carico il menù…</div>
-  }
+  if (loading) return <div className="empty">Carico il menù…</div>
 
   // GLI SPECIAL SENZA SPECIAL NON ESISTONO, per il cliente. L'utente,
   // 04/11/2026: senza drink speciali «il menù special deve risultare vuoto
@@ -418,8 +412,8 @@ export default function MenuPage({ speciali = false }) {
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
     if (!canOrder) return null
-    // La riga del carrello si riconosce dalla sua chiave: una voce della
-    // carta ha la sua, anche quando due voci portano allo stesso drink.
+    // La riga del carrello si riconosce dalla sua chiave: una voce scelta a
+    // mano ha la sua, anche quando due voci portano allo stesso drink.
     const inCart = cart.items.find((i) => chiaveRiga(i) === d.id)
     return inCart ? (
       <div className="qty">
@@ -442,10 +436,11 @@ export default function MenuPage({ speciali = false }) {
     if (e.target.closest?.('button, a, input, select, textarea, label')) return
     setApertoId(d.id)
   }
-  // Nella carta il dettaglio è quello della VOCE (il suo nome, la sua
-  // descrizione), che ha un id suo: si cerca fra le voci mostrate.
+  // Nella struttura personalizzata il dettaglio è quello della VOCE (il suo
+  // nome, la sua descrizione), che ha un id suo: si cerca fra le voci
+  // mostrate.
   const aperto = apertoId
-    ? (usaCarta && categories.flatMap(([, list]) => list).find((x) => x.id === apertoId)) ||
+    ? (usaStruttura && categories.flatMap(([, list]) => list).find((x) => x.id === apertoId)) ||
       drinks.find((x) => x.id === apertoId) ||
       null
     : null
@@ -744,10 +739,11 @@ export default function MenuPage({ speciali = false }) {
 
       {!speciali && !giornale && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
       {!speciali && !giornale && categories.length > 1 && (
-        // Le sezioni della carta sono poche e grandi, in schede che restano
-        // in alto mentre si scorre (Flavio, 04/11/2026: «come se fosse un
-        // tab che deve restare sempre fisso bloccato in alto»).
-        <nav className={`cat-nav${usaCarta ? ' carta' : ''}${categorieIncollate ? ' incollata' : ''}`}>
+        // Le sezioni di una struttura personalizzata sono poche e grandi, in
+        // schede che restano in alto mentre si scorre (Flavio, 04/11/2026:
+        // «come se fosse un tab che deve restare sempre fisso bloccato in
+        // alto»).
+        <nav className={`cat-nav${usaStruttura ? ' carta' : ''}${categorieIncollate ? ' incollata' : ''}`}>
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
               {cat}
@@ -785,10 +781,10 @@ export default function MenuPage({ speciali = false }) {
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
         // «li metterei su due colonne anziché incolonnati ad uno ad uno»).
-        // UNA SEZIONE SNELLA della carta (REQ-MENU-025) è un elenco di nomi
-        // e prezzi: acqua e Coca-Cola non hanno niente da raccontare.
+        // UNA SEZIONE SNELLA (REQ-MENU-025) è un elenco di nomi e prezzi:
+        // acqua e Coca-Cola non hanno niente da raccontare.
         <section
-          key={cat}
+          key={sezione?.id ?? cat}
           className={speciali ? 'speciali-griglia' : sezione?.vista === 'snella' ? 'carta-snella' : undefined}
         >
           {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}

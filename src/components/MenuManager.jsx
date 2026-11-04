@@ -23,7 +23,7 @@ import { deleteDrinkImageByUrl } from '../lib/storage.js'
 import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
 import SpecialManager from './SpecialManager.jsx'
-import CartaManager, { AgganciCarta } from './CartaManager.jsx'
+import StrutturaMenu, { InStruttura } from './StrutturaMenu.jsx'
 import { drinkSpeciali } from '../lib/speciali.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
@@ -57,8 +57,8 @@ export default function MenuManager() {
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
-  // La carta dei clienti (REQ-MENU-025): la sua sottosezione, e su ogni
-  // voce del catalogo le voci della carta che ci portano.
+  // La struttura del menù dei clienti (REQ-MENU-025): la sua sottosezione,
+  // e su ogni voce del catalogo le sezioni in cui compare.
   const [carta, setCarta] = useState({ sezioni: [], voci: [] })
   useEffect(() => subscribeCarta(setCarta, () => {}), [])
   const [sezione, setSezione] = useState('catalogo') // catalogo | categorie | margini
@@ -344,14 +344,14 @@ export default function MenuManager() {
     { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
     { id: 'margini', icona: '📈', label: 'Marginalità listino' },
     { id: 'special', icona: '✨', label: `Special (${drinkSpeciali(drinks).length})` },
-    { id: 'carta', icona: '📖', label: 'Carta clienti' },
+    { id: 'carta', icona: '📖', label: 'Menù dei clienti' },
   ]
 
   if (sezione === 'carta') {
     return (
       <div>
         <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
-        <CartaManager carta={carta} drinks={drinks} categories={categories} settings={settings} />
+        <StrutturaMenu carta={carta} drinks={drinks} categories={categories} />
       </div>
     )
   }
@@ -571,7 +571,7 @@ export default function MenuManager() {
                               {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
                             </p>
                           )}
-                          <AgganciCarta drink={d} carta={carta} />
+                          <InStruttura drink={d} carta={carta} categories={categories} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
                             ✏️ Modifica
                           </button>

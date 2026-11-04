@@ -7,9 +7,13 @@ import { subscribeDrinks, subscribeCategories, subscribeCarta } from './api.js'
 
 let drinks = []
 let cats = []
-// La carta dei clienti (REQ-MENU-025): nella stessa cache, perché la
-// pagina del menù la vuole pronta come le voci.
+// La struttura del menù dei clienti (REQ-MENU-025): nella stessa cache, e
+// il menù è pronto solo quando c'è anche lei. Senza aspettarla, il cliente
+// di un locale che l'ha personalizzata vedrebbe per un istante le categorie
+// del gestionale, con shot e voci-prezzo.
 let carta = { sezioni: [], voci: [] }
+let voci = false
+let struttura = false
 let loaded = false
 let started = false
 const listeners = new Set()
@@ -25,7 +29,8 @@ function start() {
     { onlyAvailable: true },
     (d) => {
       drinks = d
-      loaded = true
+      voci = true
+      loaded = struttura
       emit()
     },
     () => {} // i listener Firestore ritentano da soli
@@ -34,10 +39,20 @@ function start() {
     cats = c
     emit()
   })
-  subscribeCarta((c) => {
-    carta = c
+  // Se la struttura non si può leggere, il menù si mostra lo stesso, per
+  // categorie: meglio quello che la schermata «Carico il menù…» per sempre.
+  const strutturaArrivata = () => {
+    struttura = true
+    loaded = voci
     emit()
-  })
+  }
+  subscribeCarta(
+    (c) => {
+      carta = c
+      strutturaArrivata()
+    },
+    strutturaArrivata
+  )
 }
 
 // Hook: restituisce { drinks, cats, loading } leggendo dalla cache di

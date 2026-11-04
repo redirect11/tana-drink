@@ -116,7 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
-import { ordinaCarta, vistaCarta } from './carta.js'
+import { ordina, vistaSezione } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -207,6 +207,9 @@ function mapDrink(snap) {
     speciale: d.speciale === true,
     // Gli ingredienti in carta, scritti a mano (REQ-MENU-019).
     ingredienti: d.ingredienti ?? null,
+    // Il nome che legge il cliente, se diverso da quello del banco
+    // (REQ-MENU-025): «Gin Mare» al banco, «Gin Mare tonic» al tavolo.
+    nome_cliente: d.nome_cliente ?? null,
     illustrazione: d.illustrazione ?? null,
     created_at: toIso(d.created_at),
   }
@@ -503,9 +506,10 @@ export async function deleteCategory(id) {
   await deleteDoc(doc(db, 'categories', id))
 }
 
-// --- LA CARTA DEI CLIENTI (REQ-MENU-025) ---
-// Sezioni e voci del menù che si legge al tavolo, separate dal menù del
-// gestionale (la logica sta in lib/carta.js). Due collezioni e non un
+// --- LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ---
+// Le sezioni del menù che si legge al tavolo e le voci di quelle scelte a
+// mano (la logica sta in lib/strutturaMenu.js). Le collezioni hanno il nome
+// di quando era una «carta» a parte. Due collezioni e non un
 // documento solo: le voci si scrivono una alla volta, mentre le si
 // compila, e un documento unico viaggerebbe intero a ogni descrizione
 // toccata (lo stesso conto di BUG-110). Le scritture partono in
@@ -517,7 +521,15 @@ const cartaVociCol = collection(db, 'carta_voci')
 
 function mapSezioneCarta(snap) {
   const s = snap.data() || {}
-  return { id: snap.id, nome: s.nome ?? '', ordine: s.ordine ?? 0, vista: vistaCarta(s.vista) }
+  return {
+    id: snap.id,
+    nome: s.nome ?? '',
+    ordine: s.ordine ?? 0,
+    vista: vistaSezione(s.vista),
+    // La categoria che la sezione segue; null per le voci scelte a mano.
+    categoria_id: s.categoria_id ?? null,
+    nascosta: s.nascosta === true,
+  }
 }
 
 function mapVoceCarta(snap) {
@@ -542,7 +554,7 @@ export function subscribeCarta(onChange, onError) {
   const via1 = onSnapshot(
     cartaSezioniCol,
     (snap) => {
-      sezioni = ordinaCarta(snap.docs.map(mapSezioneCarta))
+      sezioni = ordina(snap.docs.map(mapSezioneCarta))
       emetti()
     },
     errore
@@ -561,11 +573,46 @@ export function subscribeCarta(onChange, onError) {
   }
 }
 
-export function creaSezioneCarta({ nome, ordine = 0, vista = 'dettagliata' }) {
+const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, categoria_id = null, nascosta = false }) => ({
+  nome: String(nome || '').trim(),
+  ordine,
+  vista: vistaSezione(vista),
+  categoria_id: categoria_id || null,
+  nascosta: nascosta === true,
+})
+
+export function creaSezioneCarta(dati) {
   const ref = doc(cartaSezioniCol)
-  const sezione = { nome: String(nome || '').trim(), ordine, vista: vistaCarta(vista) }
+  const sezione = sezioneDaScrivere(dati)
   bgWrite(() => setDoc(ref, { ...sezione, created_at: serverTimestamp() }), 'carta')
   return { id: ref.id, ...sezione }
+}
+
+// LA STRUTTURA RISCRITTA IN FILA, in un pacchetto solo: le righe nell'ordine
+// voluto, quelle ancora senza `id` (le categorie che nessuna sezione seguiva,
+// vedi righeStruttura) diventano sezioni, le altre prendono il loro numero
+// se è cambiato. Così uno spostamento o un ritocco su una categoria non
+// ancora scritta non la fa saltare davanti alle altre. Torna le righe con
+// gli id, composte qui: non si rilegge quello che si è appena scritto.
+export function scriviStruttura(righe) {
+  const batch = writeBatch(db)
+  let scritture = 0
+  const out = (righe || []).map((r, k) => {
+    if (!r.id) {
+      const ref = doc(cartaSezioniCol)
+      const sezione = sezioneDaScrivere({ ...r, ordine: k })
+      batch.set(ref, { ...sezione, created_at: serverTimestamp() })
+      scritture++
+      return { ...r, ...sezione, id: ref.id, chiave: ref.id }
+    }
+    if (Number(r.ordine) !== k) {
+      batch.update(doc(db, 'carta_sezioni', r.id), { ordine: k })
+      scritture++
+    }
+    return { ...r, ordine: k }
+  })
+  if (scritture) bgWrite(() => batch.commit(), 'carta')
+  return out
 }
 
 export function aggiornaSezioneCarta(id, patch) {
@@ -6267,9 +6314,6 @@ export const DEFAULT_SETTINGS = {
   special_titolo: 'Special',
   // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
   stile_menu: 'classico',
-  // LA CARTA DEI CLIENTI (REQ-MENU-025): spenta, il cliente vede il menù
-  // del gestionale per categorie, come sempre. Si accende quando è pronta.
-  carta_attiva: false,
   special_sottotitolo: '',
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di

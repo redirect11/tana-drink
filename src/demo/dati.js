@@ -151,6 +151,65 @@ export function catalogo() {
   return { categorieMagazzino, articoli, categorie, drink }
 }
 
+// ── LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ──────────────────
+// Personalizzata, per far vedere cosa si può fare senza doverla scrivere:
+// in cima una sezione con le voci scelte a mano e raccontate, poi le
+// categorie in un ordine diverso da quello del gestionale, qualcuna col
+// nome cambiato, le bevande snelle e gli shot nascosti (al tavolo non si
+// ordinano). `segue` è la chiave della categoria; senza, le voci sono
+// scelte a mano.
+const STRUTTURA_DEMO = [
+  {
+    nome: 'Suggeriti dallo staff',
+    voci: [
+      ['Negroni', 'Firenze, 1919: il conte Negroni chiede di rinforzare l’Americano col gin.', 'Gin, bitter, vermouth rosso'],
+      ['Old Fashioned', 'Il cocktail nella sua forma più antica: distillato, zucchero e bitter.', 'Bourbon, zucchero, Angostura, scorza d’arancia'],
+      ['Daiquiri', 'Cuba, inizio Novecento: tre ingredienti in equilibrio.', 'Rum bianco, lime, zucchero'],
+    ],
+  },
+  { segue: 'signature' },
+  { segue: 'aperitivi', nome: 'Aperitivo' },
+  { segue: 'classici', nome: 'Grandi classici' },
+  { segue: 'long' },
+  { segue: 'analcolici' },
+  { segue: 'birre', vista: 'snella' },
+  { segue: 'bollicine', vista: 'snella' },
+  { segue: 'shots', nascosta: true },
+]
+
+// Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`.
+export function strutturaDemo(drink, categorie) {
+  const perNome = new Map(drink.map((d) => [d.name, d]))
+  const sezioni = []
+  const voci = []
+  STRUTTURA_DEMO.forEach((s, i) => {
+    const categoria = s.segue ? categorie.find((c) => c.key === s.segue) : null
+    const sezioneId = `sezione-${slug(s.nome || s.segue)}`
+    sezioni.push({
+      id: sezioneId,
+      nome: s.nome || '',
+      ordine: i,
+      vista: s.vista || 'dettagliata',
+      categoria_id: categoria?.id ?? null,
+      nascosta: s.nascosta === true,
+    })
+    ;(s.voci || []).forEach(([nomeDrink, descrizione, ingredienti], j) => {
+      const d = perNome.get(nomeDrink)
+      if (!d) return
+      voci.push({
+        id: `${sezioneId}-${slug(nomeDrink)}`,
+        sezione_id: sezioneId,
+        drink_id: d.id,
+        nome: '',
+        descrizione,
+        ingredienti,
+        ordine: j,
+      })
+    })
+  })
+  return { sezioni, voci }
+}
+
 const FORNITORI = [
   { id: 'forn-bevande', name: 'Bevande Rossi Distribuzione', color: '#2a6f97', famiglie: ['distillati', 'liquori', 'bollicine', 'birre'] },
   { id: 'forn-mixer', name: 'Mixer & Soft Srl', color: '#7a5195', famiglie: ['mixer', 'base'] },
@@ -241,6 +300,9 @@ export function datiDemo({ adesso = new Date(), seme = SEME, giorniDiStorico = 2
   for (const { id, ...a } of articoli) metti(`inventory_items/${id}`, a)
   for (const c of categorie) metti(`categories/${c.id}`, { name: c.name, sort_order: c.sort_order })
   for (const { id, ...d } of drink) metti(`drinks/${id}`, d)
+  const struttura = strutturaDemo(drink, categorie)
+  for (const { id, ...s } of struttura.sezioni) metti(`carta_sezioni/${id}`, s)
+  for (const { id, ...v } of struttura.voci) metti(`carta_voci/${id}`, v)
 
   // Fornitori e listini: un fornitore per famiglia di articoli.
   for (const f of FORNITORI) metti(`suppliers/${f.id}`, { name: f.name, color: f.color, sort_order: FORNITORI.indexOf(f) })

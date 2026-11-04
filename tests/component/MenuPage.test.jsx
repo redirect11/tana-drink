@@ -885,29 +885,34 @@ describe('il menù Special senza special', () => {
 // menù dei clienti sul test: gin e vodka insieme, «Distillati» tutti uniti,
 // shot e food al tavolo. Con la carta accesa il cliente legge le sezioni
 // della carta; chi lavora ordina ancora dal menù del gestionale.
-describe('la carta dei clienti (REQ-MENU-025)', () => {
-  const CARTA = {
+// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025). L'utente, 04/11/2026:
+// un menù solo, con la struttura personalizzabile — sezioni che seguono una
+// categoria, sezioni con le voci scelte a mano, il nome per il cliente
+// sulla scheda prodotto. Chi lavora ordina sempre dal menù del gestionale.
+describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
+  const STRUTTURA = {
     sezioni: [
-      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
-      { id: 's-bibite', nome: 'Bibite', ordine: 1, vista: 'snella' },
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata', categoria_id: null },
+      { id: 's-birre', nome: 'Birre alla spina', ordine: 1, vista: 'snella', categoria_id: 'c2' },
+      // I cocktail del gestionale, per categoria, non si vedono: stanno
+      // nella sezione scelta a mano coi loro nomi.
+      { id: 's-c1', nome: '', ordine: 2, vista: 'dettagliata', categoria_id: 'c1', nascosta: true },
     ],
     voci: [
       { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Mojito cubano', descrizione: 'Dall’Avana.', ingredienti: 'Rum, lime, menta', ordine: 0 },
       { id: 'v-cuba', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Cuba libre', ordine: 1 },
-      { id: 'v-birra', sezione_id: 's-bibite', drink_id: 'd3', nome: 'Ichnusa', descrizione: 'Non si vede', ordine: 0 },
     ],
   }
   const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
 
-  it('accesa, il cliente legge le sezioni e i nomi della carta, e solo quelli', async () => {
+  it('il cliente legge le sezioni della struttura, i loro nomi e solo quello che mostrano', async () => {
     ruoloClaim = null
-    mockSettings = { carta_attiva: true }
-    mockCarta = CARTA
+    mockCarta = STRUTTURA
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito cubano')
-    expect(sezioniLette()).toEqual(['Cocktail IBA', 'Bibite'])
+    expect(sezioniLette()).toEqual(['Cocktail IBA', 'Birre alla spina'])
     expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
-    // Il Negroni non è in carta: al tavolo non c'è.
+    // Il Negroni sta in una categoria nascosta e in nessuna sezione a mano.
     expect(screen.queryByText('Negroni')).toBeNull()
     expect(screen.getByText('Dall’Avana.')).toBeInTheDocument()
     expect(screen.getByText('Rum · lime · menta')).toBeInTheDocument()
@@ -917,47 +922,55 @@ describe('la carta dei clienti (REQ-MENU-025)', () => {
 
   it('la sezione snella: nome e prezzo, senza immagine né descrizione', async () => {
     ruoloClaim = null
-    mockSettings = { carta_attiva: true }
-    mockCarta = CARTA
+    mockDrinks = DRINKS.map((d) => (d.id === 'd3' ? { ...d, description: 'Non si vede' } : d))
+    mockCarta = STRUTTURA
     mostra()
     await screen.findByText('Mojito cubano')
-    const bibite = document.querySelector('section.carta-snella')
-    expect(bibite).not.toBeNull()
-    expect(within(bibite).getByText('Ichnusa')).toBeInTheDocument()
-    expect(bibite.querySelector('img')).toBeNull()
+    const birre = document.querySelector('section.carta-snella')
+    expect(birre).not.toBeNull()
+    expect(within(birre).getByText('Ichnusa')).toBeInTheDocument()
+    expect(birre.querySelector('img')).toBeNull()
     expect(screen.queryByText('Non si vede')).toBeNull()
   })
 
-  it('spenta, il cliente vede il menù del gestionale come sempre', async () => {
+  it('senza struttura personalizzata il cliente vede le categorie, come sempre', async () => {
     ruoloClaim = null
-    mockCarta = CARTA
     mostra()
     await screen.findByText('Negroni')
+    expect(sezioniLette()).toEqual(['Cocktail', 'Birre'])
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(document.querySelector('.cat-nav')).not.toHaveClass('carta')
   })
 
-  it('chi lavora ordina dal menù del gestionale, anche con la carta accesa', async () => {
-    mockSettings = { carta_attiva: true }
-    mockCarta = CARTA
+  it('il nome per il cliente della scheda vale anche senza struttura', async () => {
+    ruoloClaim = null
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mostra()
+    await screen.findByText('Negroni sbagliato')
+    expect(voci()).toEqual(['Mojito', 'Negroni sbagliato', 'Ichnusa'])
+  })
+
+  it('chi lavora ordina dal menù del gestionale, coi nomi del banco e per categorie', async () => {
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mockCarta = STRUTTURA
     mostra()
     await screen.findByText(/Inserimento ordine da/)
     expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
   })
 
-  it('l’anteprima della carta si vede in vista cliente anche spenta', async () => {
-    mockCarta = CARTA
-    mostra('/menu?vista=cliente&carta=prova')
+  it('in vista cliente il personale vede la struttura come il cliente', async () => {
+    mockCarta = STRUTTURA
+    mostra('/menu?vista=cliente')
     await screen.findByText('Mojito cubano')
     expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
   })
 
-  // Due voci sulla stessa voce del gestionale sono due righe, e al banco
-  // arriva il drink del gestionale con il nome della carta nella nota.
-  it('nel carrello due voci sullo stesso drink restano due righe, col nome della carta in nota', async () => {
+  // Due voci sullo stesso prodotto sono due righe, e al banco arriva il
+  // prodotto del gestionale col nome letto dal cliente nella nota.
+  it('nel carrello due voci sullo stesso drink restano due righe, col nome letto in nota', async () => {
     const user = userEvent.setup()
     ruoloClaim = null
-    mockSettings = { carta_attiva: true }
-    mockCarta = CARTA
+    mockCarta = STRUTTURA
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito cubano')
     const card = (nome) => screen.getByText(nome).closest('.menu-item')
