@@ -5476,3 +5476,86 @@ bugs:
       - tests/regole/permessi.test.js
       - tests/regole/contrattoDati.test.js
 
+  - id: BUG-126
+    title: "La copia della licenza in settings/bar la riscrive ancora il banco, e il ripristino da backup la riporta indietro"
+    area: "firestore.rules (settings, licenzaIntatta), src/lib/licenza.js (conLicenzaAttuale), src/lib/backup.js (importaDatabase), scripts/ripristina-db.js"
+    severity: media
+    priority: P1
+    description: >
+      Residuo di H2 dell'audit della regia (docs/audit-sicurezza-privacy.md
+      di drink-regia, 22/10/2026), rivisto il 02/11/2026. BUG-125 ha
+      spostato la licenza che conta in `licenza/attuale`, che dall'app non
+      scrive nessuno, e REQ-LIC-009 fa rispettare sospensione e scadenza
+      dalle regole. Ma fino al passo 3 di BUG-125 la regia continua a
+      scrivere la stessa licenza anche in `settings/bar.licenza`, dove la
+      cercano le versioni vecchie dell'app (una PWA rimasta in cache su un
+      tablet), e le regole lasciavano scrivere tutto `settings/` al banco e
+      al titolare: dalla console del browser un bartender si riscriveva lì
+      piano, moduli e stato, e quella versione vecchia gli credeva.
+      E IL RIPRISTINO. Quello del gestionale (lib/backup.js) riscrive i
+      documenti di `settings` interi, licenza compresa: un backup vecchio
+      riportava la licenza di quando era stato fatto. Quello da riga di
+      comando (scripts/ripristina-db.js), che gira con le credenziali di
+      servizio e le regole non lo fermano, rimetteva in più anche
+      `licenza/attuale` dal file: un ripristino toglieva una sospensione o
+      tornava a un piano scaduto.
+      LA CORREZIONE, senza cambiare né il posto né la forma della licenza
+      (sono il contratto con la regia):
+        - le regole di `settings/` vogliono il campo `licenza` intatto in
+          ogni scrittura dell'app: né aggiunto alla creazione, né cambiato,
+          né tolto (anche da una set senza merge che lo omette); un
+          documento che lo porta non si cancella. Il resto delle
+          impostazioni il banco e il titolare lo scrivono come prima
+          (updateSettings scrive con merge solo i campi che cambia, e
+          nessuna schermata ci mette `licenza`);
+        - i due ripristini rimettono le impostazioni del file con la
+          licenza che c'è ADESSO nel database (conLicenzaAttuale, una
+          regola sola per tutti e due), e non toccano mai la collezione
+          `licenza`; lo script, nel ripristino esatto, non cancella un
+          documento delle impostazioni che porta la licenza.
+      DA RIDISTRIBUIRE: sono regole nuove, quindi valgono su un'istanza
+      solo dopo il deploy delle regole a quell'istanza, col rilascio
+      normale dell'app.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, sicurezza, licenza, flotta]
+    test_cases:
+      - tests/regole/licenza.test.js
+      - tests/unit/backup.test.js
+      - tests/unit/licenza.test.js
+
+  - id: BUG-127
+    title: "Il tasto «Vista cliente» della coda apriva il menù per gli ordini, e dalla vista cliente vera si poteva ordinare"
+    area: "src/pages/BartenderPage.jsx (scheda «Oggi»), src/pages/MenuPage.jsx (canOrder), src/components/StaffDrawer.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Visto dall'utente il 02/11/2026 sul test: «perché se vado in menù
+      senza la vista cliente il menù mi appare diverso?». Il menù ha due
+      facce: per chi lavora è lo strumento degli ordini al tavolo (tema
+      del gestionale, stile classico, ricerca, gruppi), per il cliente è
+      la vetrina col tema e lo stile del locale; `?vista=cliente` mostra la
+      seconda a chi lavora. Due difetti intorno: nella coda a elenco la
+      scheda «Oggi» aveva un tasto «✍️ Vista cliente» che apriva `/menu`
+      SENZA il parametro, cioè il menù dello staff; e la vista cliente
+      vera aveva «Aggiungi» e carrello, così un admin in anteprima
+      mandava un ordine come un cliente anonimo, senza `placed_by`.
+      LE DECISIONI DELL'UTENTE, lo stesso giorno: «la vista cliente deve
+      solo mostrare il menù come lo vede il cliente. Ordina dal menù esce
+      solo per lo staff o bartender o admin, ma la schermata principale
+      rimane la coda degli ordini». Quindi: nella vista cliente non si
+      ordina (il 03/11 tolta la frase «Da qui non si ordina» dalla riga
+      in alto: il cliente da quel menù ordina, e confondeva); il tasto
+      della coda si chiama
+      «📖 Ordina dal menù»; nel ☰ la voce «Ordina dal menù» c'è per tutto
+      il personale, e admin e bartender hanno in più «Nuovo ordine», la
+      cassa. Prima il banco al menù dello staff ci arrivava solo dalla
+      coda a elenco, non da quella a griglia che è la vista di partenza.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, navigazione, menu]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+      - tests/component/StaffDrawer.test.jsx

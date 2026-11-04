@@ -35,6 +35,10 @@ export const PERMESSI = [
   { collezione: 'categories', legge: TUTTI, scrive: BANCO },
   // Le impostazioni le scrive ogni bartender. Fino a BUG-125 c'era dentro
   // anche la licenza, che è della regia: ora sta in `licenza`, qui sotto.
+  // La copia che la regia lascia in settings/bar.licenza per le versioni
+  // vecchie dell'app non si tocca (BUG-126): è un vincolo su un CAMPO, che
+  // questa tabella per collezione non sa dire, e lo prova
+  // tests/regole/licenza.test.js.
   { collezione: 'settings', legge: TUTTI, scrive: BANCO },
   // La licenza la leggono tutti (il menù del cliente dipende dai moduli) e
   // dall'app non la scrive nessuno: la regia usa le credenziali di servizio.

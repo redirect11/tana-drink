@@ -1,6 +1,88 @@
 # Cosa è cambiato
 
-## 1.10.6-beta — in lavorazione
+## 1.10.11-beta — in lavorazione
+
+### Nel gestionale
+
+- **Vista cliente**: la riga in alto dice solo che si sta guardando il
+  menù come lo vede il cliente, senza più «Da qui non si ordina».
+
+## 1.10.10-beta — 03/11/2026 (test)
+
+### Nel gestionale
+
+- **«Vista cliente» mostra il menù e basta.** Si vede com'è per chi
+  ordina, ma senza «Aggiungi» né carrello: per ordinare c'è il menù dello
+  staff.
+- **«Ordina dal menù».** Nel ☰ c'è per tutto il personale; admin e
+  bartender hanno in più «Nuovo ordine», la cassa. Il tasto della coda a
+  elenco che si chiamava «Vista cliente» ma apriva il menù per gli ordini
+  ora si chiama «Ordina dal menù».
+
+## 1.10.9-beta — 02/11/2026 (test)
+
+### Nel gestionale
+
+- **Marketplace → Moduli, coi piani gestiti a mano.** Per un locale con il
+  piano pagato fuori dal pagamento online, «Aggiungi» e «Disdici» inviano
+  una richiesta all'assistenza, che attiva o spegne il modulo a pagamento
+  ricevuto; il messaggio lo dice, invece di dare il modulo per aggiunto.
+
+## 1.10.8-beta — 02/11/2026 (test)
+
+### Per chi gestisce l'installazione
+
+- **Il titolare entra nel suo locale con lo stesso account della regia.**
+  All'attivazione la regia crea l'account del titolare con la sua email e
+  il ruolo di amministratore, senza password: la si imposta dall'email che
+  arriva. Per le installazioni già attive c'è uno script che lo verifica e,
+  su richiesta, lo sistema.
+
+### Nel menù
+
+- **Lo stile «Giornale» è un giornale vero.** Il menù si apre su una
+  testata con la data dell'edizione e un sommario che resta in alto e
+  segue la lettura. Il primo Special è l'articolo di prima pagina, con un
+  titolo grande e la sua illustrazione; gli altri stanno «In breve». Ogni
+  categoria è una sezione, con le voci in colonne.
+- **Le illustrazioni del «Giornale» sono incisioni**: un solo inchiostro,
+  la cornice della lastra, il tratteggio al posto dei colori. Gli altri
+  stili avranno le loro.
+
+### Nel gestionale
+
+- **Il marketplace dei temi è una pagina sua**: la voce «🛍️ Marketplace»
+  del menu laterale, da sfogliare come un catalogo, con Temi, Stili del
+  menù e Installati. Ogni tema si vede su un pezzo del menù vero, si prova
+  sul proprio menù e si installa. In Impostazioni resta la scelta fra
+  quelli già installati.
+- **I moduli si aggiungono dal Marketplace.** Nella nuova sezione
+  «Moduli» ogni modulo mostra se è incluso nella licenza, in prova o non
+  incluso, con il prezzo mensile. Il titolare può provarlo gratis per i
+  giorni previsti, aggiungerlo con il pagamento sulla pagina sicura di
+  Stripe o disdirlo; il modulo compare da solo appena la licenza si
+  aggiorna. Gli altri ruoli vedono la sezione in sola lettura.
+
+### Privacy e sicurezza
+
+- **La copia della licenza nelle impostazioni non si può più modificare
+  dall'app**, nemmeno dalla console del browser: la scrive solo il
+  fornitore. Il resto delle impostazioni si modifica come prima.
+- **Il ripristino da un backup tiene la licenza attuale**: le impostazioni
+  tornano quelle del file, la licenza no. Vale anche per il ripristino da
+  riga di comando.
+
+## 1.10.7-beta — 02/11/2026 (test)
+
+### Nel gestionale
+
+- **Il marketplace dei temi, in Impostazioni → Aspetto.** Un tema è una
+  tavolozza di colori con uno stile del menù: si prova sul proprio menù, si
+  installa e si usa con un tasto. Per ora sono tutti gratis: Classico,
+  Lavagna, Grand Hotel, Riviera, Pastello, Gazzetta e Inchiostro. I temi
+  nuovi li pubblica il fornitore e compaiono da soli.
+
+## 1.10.6-beta — 02/11/2026 (test)
 
 ### Nel menù
 

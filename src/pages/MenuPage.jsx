@@ -8,6 +8,8 @@ import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
 import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
+import { temaInProva } from '../lib/marketplaceTemi.js'
+import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -49,6 +51,10 @@ const WELCOME_KEY = 'drink_welcome_v1'
 
 // `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
 // segnate come speciali, nei colori del menù.
+// Il menù Special non ha sezioni: lo stesso elenco vuoto a ogni giro, perché
+// il giornale non riosservi le sue sezioni a ogni tocco su «Aggiungi».
+const NESSUNA_CATEGORIA = []
+
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
@@ -370,8 +376,13 @@ export default function MenuPage({ speciali = false }) {
   // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
   // carrello. Lo staff loggato può inserire ordini manuali comunque.
   // Con geofence attivo si ordina solo a posizione verificata.
+  // E NELLA VISTA CLIENTE NON SI ORDINA (BUG-127). L'utente, 02/11/2026: «la
+  // vista cliente deve solo mostrare il menù come lo vede il cliente».
+  // Con «Aggiungi» e carrello, un admin in anteprima mandava un ordine come
+  // un cliente qualunque: senza `placed_by`, anonimo in coda. Per ordinare
+  // c'è il menù dello staff, senza `?vista=cliente`.
   const geoOk = !geoActive || geoGate === 'ok'
-  const canOrder = (!menuOnly || !!staff) && geoOk
+  const canOrder = !anteprimaCliente && (!menuOnly || !!staff) && geoOk
 
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
@@ -419,26 +430,42 @@ export default function MenuPage({ speciali = false }) {
   // locale; o, nell'anteprima del cliente aperta da chi lavora, quello in
   // prova (`?stile=…`, da Impostazioni → Menù clienti). La prova la vede
   // solo chi l'ha aperta: i clienti vedono lo stile del locale.
-  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') : null
+  // Un tema in prova dal marketplace (REQ-MENU-023) porta il suo stile; i
+  // colori li mette App.
+  const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
+  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || temaProvato?.stile || null : null
   const stile = staff
     ? 'classico'
     : stileInProva && stileProvabile(settings, stileInProva)
       ? stileInProva
       : stileMenu(settings)
   const notte = stile === 'notte'
+  // «GIORNALE» (REQ-MENU-024) ha una struttura sua — testata, sommario,
+  // prima pagina, sezioni — e le sue immagini, incisioni: non è una veste
+  // sopra le card del classico.
+  const giornale = stile === 'giornale'
+  // Il segno dei disegni, deciso una volta: lo usano il giornale e il
+  // dettaglio, che devono mostrare lo stesso disegno.
+  const segnoDisegni = giornale ? 'incisione' : 'tenniel'
+  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni })
   const specialNotte = notte && speciali
 
   return (
     <div className={[staff ? 'bar-content' : '', stile !== 'classico' ? `stile-${stile}` : ''].filter(Boolean).join(' ') || undefined}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
-          lavoro: una riga per ricordarlo e per tornare indietro. */}
+          lavoro: una riga per ricordarlo e per tornare indietro. Niente
+          «da qui non si ordina»: il cliente da questo menù ordina eccome,
+          e la frase confondeva (l'utente, 03/11/2026: «non ha senso»). Che
+          in anteprima manchi «Aggiungi» si vede da sé. */}
       {anteprimaCliente && staffVero && (
         <div className="anteprima-cliente">
           <span>
-            👀 {stileInProva && stile === stileInProva
-              ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
-              : 'Stai guardando il menù come lo vede il cliente.'}
+            👀 {temaProvato
+              ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
+              : stileInProva && stile === stileInProva
+                ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
+                : 'Stai guardando il menù come lo vede il cliente.'}
           </span>
           <Link className="btn ghost small" to="/bar">
             ← Torna al gestionale
@@ -446,7 +473,22 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
-      {!staff && !specialNotte && (
+      {/* Nel menù Special la testata del giornale fa anche da testata degli
+          Special: il tema della sera e la strada per il menù completo, che
+          senza questa riga sparivano con la testata classica. */}
+      {giornale && (
+        <TestataGiornale venue={venue} sottotitolo={speciali ? settings.special_titolo || 'Special' : venue.venue_tagline}>
+          {speciali && (
+            <>
+              {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
+              <Link className="btn ghost small" to={conParametri('/menu', params)}>
+                ← Tutto il menù
+              </Link>
+            </>
+          )}
+        </TestataGiornale>
+      )}
+      {!staff && !specialNotte && !giornale && (
         <div className="hero">
           <img
             className="hero-img"
@@ -521,7 +563,7 @@ export default function MenuPage({ speciali = false }) {
 
       {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
           strada per il menù completo, con lo stesso tavolo. */}
-      {speciali && !specialNotte && (
+      {speciali && !specialNotte && !giornale && (
         <div className="speciali-testata">
           <h2>{settings.special_titolo || 'Special'}</h2>
           {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
@@ -534,7 +576,7 @@ export default function MenuPage({ speciali = false }) {
       {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
           cliente: toccando un drink si va al menù Special, su quel drink.
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
-      {!speciali && !staff && elencoSpeciali.length > 0 && (
+      {!speciali && !staff && !giornale && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
@@ -652,8 +694,8 @@ export default function MenuPage({ speciali = false }) {
         <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
-      {!speciali && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
-      {!speciali && categories.length > 1 && (
+      {!speciali && !giornale && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
+      {!speciali && !giornale && categories.length > 1 && (
         <nav className={`cat-nav${categorieIncollate ? ' incollata' : ''}`}>
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
@@ -674,7 +716,19 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
 
-      {!specialNotte && categories.map(([cat, list]) => (
+      {giornale && (
+        <MenuGiornale
+          categorie={speciali ? NESSUNA_CATEGORIA : categories}
+          speciali={elencoSpeciali}
+          soloSpeciali={speciali}
+          immagine={immagineGiornale}
+          apri={(d) => setApertoId(d.id)}
+          tastiOrdine={tastiOrdine}
+          quantita={!!settings.show_ingredient_quantities}
+        />
+      )}
+
+      {!specialNotte && !giornale && categories.map(([cat, list]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
@@ -837,6 +891,7 @@ export default function MenuPage({ speciali = false }) {
       <DettaglioDrink
         drink={aperto}
         chiaro={fondoChiaro}
+        segno={segnoDisegni}
         quantita={!!settings.show_ingredient_quantities}
         azioni={aperto && tastiOrdine(aperto)}
         onClose={() => setApertoId(null)}

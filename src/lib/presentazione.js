@@ -24,15 +24,10 @@
 //
 // Logica pura più la memoria del dispositivo; la chiamata vera è in api.js.
 
-import { PROGETTI_REGIA } from './aggiornamenti.js'
+import { urlFunzioneRegia, erroreDellaRegia } from './funzioniRegia.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 
-// La regione delle Functions della regia (il contratto).
-const REGIONE = 'europe-west1'
-
-export function urlPresentazione(progetto = import.meta.env?.VITE_REGIA_PROGETTO) {
-  return PROGETTI_REGIA.includes(progetto) ? `https://${REGIONE}-${progetto}.cloudfunctions.net/presentazione` : null
-}
+export const urlPresentazione = (progetto) => urlFunzioneRegia('presentazione', progetto)
 
 const CHIAVE = 'drink:presentata'
 const numero = (versione) => String(versione || '').replace(/^v/, '')
@@ -47,8 +42,7 @@ export const segnaPresentata = (versione) => scrivi(CHIAVE, numero(versione))
 // apertura.
 export function esitoPresentazione(status, corpo) {
   if (status === 200 && corpo?.ok) return { ok: true, licenza: corpo.licenza ?? null }
-  const errore = typeof corpo?.errore === 'string' && corpo.errore.trim() ? corpo.errore.trim() : null
-  return { ok: false, status, errore }
+  return { ok: false, status, errore: erroreDellaRegia(corpo) }
 }
 
 // UNA PRESENTAZIONE, SE SERVE. `chiama(url, versione)` è la chiamata vera
