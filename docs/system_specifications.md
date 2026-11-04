@@ -1940,11 +1940,15 @@ GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe comple
 
 Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei prodotti di magazzino in negativo, perché adesso dopo circa un mese il fornitore si è convinto a farsi restituire una bottiglia, e io adesso quella bottiglia se faccio contenuto reale da 1 passa a 0: è come se me la porta come se fosse stata consumata. Quindi ho bisogno di fare anche il carico negativo, che io tolgo un prodotto». Il contenuto reale è una RETTIFICA: nell'inventario il consumo è deposito + acquisti − rimanenza, e la bottiglia resa ci finiva dentro come bevuta. Il reso è un ACQUISTO DISFATTO: un movimento in uscita col motivo «reso fornitore», nel gruppo degli acquisti (GRUPPO_MOTIVO). Toglie dagli acquisti del periodo e dell'inventario (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il consumo non lo vede. Nella movimentazione del prodotto ha la sua riga, «Reso al fornitore».
 
+SE NEL PERIODO NON CI SONO ACQUISTI, IL RESO ESCE DAL DEPOSITO (Flavio, altri due vocali dello stesso giorno: «da inventario, quando fai carico negativo, va a intervenire sugli acquisti, e se non ci sono gli acquisti sul deposito»; «il carico negativo deve fare il contrario del carico, cioè togliere e restituire i soldi»). ACQ non scende sotto zero, e quello che avanza si toglie da DEP (`resoSulDeposito`), sia nell'inventario sia nel magazzino di un periodo: deposito + acquisti resta lo stesso, quindi il consumo pure.
+
+IL CONTENUTO REALE NON SI TOCCA: resta una rettifica, che interviene sui consumi e sulle rimanenze («contenuto reale deve sempre andare a intervenire sui consumi»).
+
 NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o quanto contenuto) e dice prima di confermare quanti ne escono e quanto si toglie dagli acquisti, netto; colli e prezzo spariscono, perché si rende quello che c'è al costo che ha. Il carico resta com'era, solo in positivo (25-26/09/2026): un numero negativo al carico è ancora un errore.
 
 COME IL CARICO, SENZA RETE (BUG-109): la giacenza scende con un incremento negativo in sottofondo e la riga si aggiorna nell'istante, senza attese.
 
-**Dove**: `src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO), src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)` · **Lo dimostrano**: `tests/unit/resoFornitore.test.js`, `tests/component/InventoryManagerCard.test.jsx`
+**Dove**: `src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)` · **Lo dimostrano**: `tests/unit/resoFornitore.test.js`, `tests/component/InventoryManagerCard.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 

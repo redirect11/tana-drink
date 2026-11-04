@@ -9,8 +9,9 @@
   modifica (BUG-128).
 - **Reso al fornitore**: nella finestra del carico si sceglie «⬇ Reso al
   fornitore» per la merce restituita. Esce dalla giacenza e si sottrae dagli
-  acquisti del periodo, al costo del prodotto, senza risultare consumata
-  come succedeva correggendo il contenuto reale (REQ-MAG-053).
+  acquisti del periodo, al costo del prodotto, o dal deposito se nel periodo
+  non ci sono acquisti; non risulta consumata, come succedeva correggendo il
+  contenuto reale. Il contenuto reale resta com'era (REQ-MAG-053).
 
 ## 1.10.12-beta — 04/11/2026 (test)
 

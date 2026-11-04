@@ -79,6 +79,17 @@ export const MOTIVI_DI_CARICO = Object.keys(GRUPPO_MOTIVO).filter(
 
 export const gruppoMovimento = (m) => GRUPPO_MOTIVO[String(m?.reason || '')] || 'rettifica'
 
+// IL RESO CHE SUPERA GLI ACQUISTI ESCE DAL DEPOSITO (REQ-MAG-053). Flavio,
+// 04/11/2026: «da inventario, quando fai carico negativo, va a intervenire
+// sugli acquisti, e se non ci sono gli acquisti sul deposito». La bottiglia
+// resa un mese dopo era stata comprata prima del periodo: gli acquisti del
+// periodo non scendono sotto zero, e quello che avanza si toglie dal
+// deposito. La somma deposito + acquisti non cambia, quindi neanche il
+// consumo: cambia solo in che colonna si legge.
+export function resoSulDeposito(dep, acq) {
+  return acq < 0 ? { dep: dep + acq, acq: 0 } : { dep, acq }
+}
+
 export const arrotonda = (n, cifre = 4) => {
   const f = 10 ** cifre
   // Lo zero negativo esiste e si stampa «-0»: quello che non si è mosso
@@ -187,7 +198,7 @@ export function magazzinoNelPeriodo(
     // dopo. Su un periodo che finisce adesso `dopo` è zero e resta la
     // giacenza vera.
     const fine = (Number(item.stock) || 0) - r.dopo
-    const dep = fine - r.acq + r.cons - r.rett
+    const { dep, acq } = resoSulDeposito(fine - r.acq + r.cons - r.rett, r.acq)
     const q = (n) => arrotonda(n, 4)
     const v = (n) => arrotonda(n, 2)
     const voce = {
@@ -195,12 +206,12 @@ export function magazzinoNelPeriodo(
       name: r.name,
       unit: r.unit,
       dep: q(dep),
-      acq: q(r.acq),
+      acq: q(acq),
       cons: q(r.cons),
       rett: q(r.rett),
       fine: q(fine),
       dep_valore: v(qtyValue(dep, item)),
-      acq_valore: v(qtyValue(r.acq, item)),
+      acq_valore: v(qtyValue(acq, item)),
       cons_valore: v(qtyValue(r.cons, item)),
       fine_valore: v(qtyValue(fine, item)),
       // Le rettifiche col loro segno: una differenza in meno è merce che
