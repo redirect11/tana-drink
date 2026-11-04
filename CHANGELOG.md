@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.13-beta — in lavorazione
+## 1.10.14-beta — in lavorazione
+
+## 1.10.13-beta — 04/11/2026 (test)
 
 ### Magazzino
 
