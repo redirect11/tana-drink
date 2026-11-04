@@ -431,13 +431,12 @@ describe('la carta dei clienti nel gestionale (REQ-MENU-025)', () => {
     stop()
   }
 
-  it('la sottosezione dice se è in uso, e ha le sezioni e le voci con il loro aggancio', async () => {
+  it('la sottosezione ha l’interruttore, le sezioni e le voci con il loro aggancio', async () => {
     filo.carta = CARTA
     await apriCarta()
-    expect(await screen.findByRole('heading', { name: /Carta di sala/ })).toBeInTheDocument()
-    // Non è in uso: la composizione del locale è ancora la classica.
-    expect(screen.getByText(/La carta di sala non è visibile ai clienti/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Anteprima della carta/ })).toHaveAttribute('href', '/menu?vista=cliente&composizione=sala')
+    expect(await screen.findByRole('heading', { name: /Carta dei clienti/ })).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /Carta in uso/ })).not.toBeChecked()
+    expect(screen.getByRole('link', { name: /Anteprima della carta/ })).toHaveAttribute('href', '/menu?vista=cliente&carta=prova')
     const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
     const agganci = within(cocktail).getAllByRole('combobox', { name: 'Voce del gestionale agganciata' })
     expect(agganci.map((a) => a.value)).toEqual(['mojito', ''])
@@ -447,14 +446,12 @@ describe('la carta dei clienti nel gestionale (REQ-MENU-025)', () => {
     expect(within(bibite).queryByRole('textbox', { name: 'Descrizione in carta' })).toBeNull()
   })
 
-  it('si mette in uso, si aggiunge una sezione e una voce, si aggancia', async () => {
+  it('si accende, si aggiunge una sezione e una voce, si aggancia', async () => {
     const user = userEvent.setup()
     filo.carta = CARTA
     await apriCarta()
-    // Finita di compilare, la si mette in uso: è la composizione «Di sala»,
-    // installata e scelta in un gesto solo.
-    await user.click(await screen.findByRole('button', { name: 'Metti in uso «Di sala»' }))
-    expect(updateSettings).toHaveBeenCalledWith({ composizioni_installate: ['sala'], composizione_menu: 'sala' })
+    await user.click(await screen.findByRole('checkbox', { name: /Carta in uso/ }))
+    expect(updateSettings).toHaveBeenCalledWith({ carta_attiva: true })
 
     await user.type(screen.getByRole('textbox', { name: 'Nome della nuova sezione' }), 'Gin{Enter}')
     expect(creaSezioneCarta).toHaveBeenCalledWith({ nome: 'Gin', ordine: 2 })

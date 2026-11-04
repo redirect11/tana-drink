@@ -111,13 +111,12 @@ export default function SettingsTab({ role = null }) {
     {
       id: 'marketplace-temi',
       icona: '🛍️',
-      label: 'Marketplace del menù',
+      label: 'Marketplace dei temi',
       nodo: (
         <div className="card settings-section">
-          <h3>Marketplace del menù</h3>
+          <h3>Marketplace dei temi</h3>
           <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-            Il catalogo delle vesti, degli stili e delle composizioni del menù dei clienti: si provano sul proprio
-            menù e si installano.
+            Il catalogo dei temi e degli stili del menù dei clienti: si provano sul proprio menù e si installano.
           </p>
           <Link className="btn small" to="/bar?tab=marketplace">
             Apri il marketplace
