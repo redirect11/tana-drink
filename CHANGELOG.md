@@ -7,6 +7,10 @@
 - «📜 Movimenti» di un prodotto si apre di nuovo: il tasto non faceva
   niente, perché la finestra compariva solo con la scheda del prodotto in
   modifica (BUG-128).
+- **Reso al fornitore**: nella finestra del carico si sceglie «⬇ Reso al
+  fornitore» per la merce restituita. Esce dalla giacenza e si sottrae dagli
+  acquisti del periodo, al costo del prodotto, senza risultare consumata
+  come succedeva correggendo il contenuto reale (REQ-MAG-053).
 
 ## 1.10.12-beta — 04/11/2026 (test)
 

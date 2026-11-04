@@ -14233,6 +14233,40 @@ requirements:
       - tests/unit/inventarioChiuso.test.js
       - tests/component/StoricoInventari.test.jsx
       - tests/unit/licenza.test.js
+  - id: REQ-MAG-053
+    title: "Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo"
+    area: "src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO), src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)"
+    description: >
+      Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei
+      prodotti di magazzino in negativo, perché adesso dopo circa un mese il
+      fornitore si è convinto a farsi restituire una bottiglia, e io adesso
+      quella bottiglia se faccio contenuto reale da 1 passa a 0: è come se
+      me la porta come se fosse stata consumata. Quindi ho bisogno di fare
+      anche il carico negativo, che io tolgo un prodotto».
+      Il contenuto reale è una RETTIFICA: nell'inventario il consumo è
+      deposito + acquisti − rimanenza, e la bottiglia resa ci finiva dentro
+      come bevuta. Il reso è un ACQUISTO DISFATTO: un movimento in uscita
+      col motivo «reso fornitore», nel gruppo degli acquisti
+      (GRUPPO_MOTIVO). Toglie dagli acquisti del periodo e dell'inventario
+      (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il
+      consumo non lo vede. Nella movimentazione del prodotto ha la sua riga,
+      «Reso al fornitore».
+      NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta
+      «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o
+      quanto contenuto) e dice prima di confermare quanti ne escono e quanto
+      si toglie dagli acquisti, netto; colli e prezzo spariscono, perché si
+      rende quello che c'è al costo che ha. Il carico resta com'era, solo in
+      positivo (25-26/09/2026): un numero negativo al carico è ancora un
+      errore.
+      COME IL CARICO, SENZA RETE (BUG-109): la giacenza scende con un
+      incremento negativo in sottofondo e la riga si aggiorna nell'istante,
+      senza attese.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases:
+      - tests/unit/resoFornitore.test.js
+      - tests/component/InventoryManagerCard.test.jsx
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"
