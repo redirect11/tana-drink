@@ -65,6 +65,8 @@ vi.mock('../../src/lib/api.js', () => {
     // promessa. Un finto che risponde con una Promise nasconderebbe proprio
     // il difetto che si sta sorvegliando.
     loadStock: vi.fn((item, qty) => ({ ...item, stock: (Number(item?.stock) || 0) + qty })),
+    // Il reso al fornitore (REQ-MAG-053), allo stesso modo: senza promessa.
+    resoAlFornitore: vi.fn((item, qty) => ({ ...item, stock: (Number(item?.stock) || 0) - qty })),
     receiveBottles: vi.fn(() => Promise.resolve({})),
     adjustStock: vi.fn(() => Promise.resolve({})),
     fetchStockMovements: vi.fn(() => Promise.resolve([])),
@@ -118,7 +120,7 @@ vi.mock('../../src/components/SupplierInvoicesPanel.jsx', () => ({
 }))
 
 import InventoryManager from '../../src/components/InventoryManager.jsx'
-import { createInventoryItem, updateInventoryItem, loadStock, adjustStock, createSupplier, salvaRigaListino } from '../../src/lib/api.js'
+import { createInventoryItem, updateInventoryItem, loadStock, resoAlFornitore, adjustStock, createSupplier, salvaRigaListino } from '../../src/lib/api.js'
 
 // Apre la vista a CARD (il default è la lista) e aspetta il prodotto.
 // Card e lista sono DUE ICONE, e si cercano dalla loro etichetta: sulla linea
@@ -550,6 +552,29 @@ describe('carico e rettifica si scrivono nell’unità che si ha in mano', () =>
     // E prende l'ARTICOLO, non il suo id: quello che serve a scrivere chi
     // chiama ce l'ha già, e rileggerlo era una delle attese di BUG-109.
     expect(loadStock.mock.calls.at(-1)[0]).toMatchObject({ id: 'campari' })
+  })
+
+  // IL RESO AL FORNITORE (REQ-MAG-053). Flavio, 04/11/2026: la bottiglia che
+  // il fornitore si è ripreso, col contenuto reale, risultava consumata. Il
+  // reso è il carico rovesciato: stessa finestrella, senza colli né prezzo,
+  // e dice prima di confermare quanto esce e quanto si toglie dagli acquisti.
+  it('il reso al fornitore toglie i pezzi senza toccare il prezzo', async () => {
+    const user = userEvent.setup()
+    loadStock.mockClear()
+    resoAlFornitore.mockClear()
+    updateInventoryItem.mockClear()
+    await apriCarico(user)
+    await user.click(screen.getByRole('button', { name: /Reso al fornitore/ }))
+    expect(screen.queryByLabelText(/Costo unitario/)).toBeNull()
+    expect(screen.queryByText(/Carico a colli/)).toBeNull()
+    await user.type(screen.getByLabelText(/Quantità resa/), '1')
+    expect(screen.getByText(/acquisti −/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Conferma reso' }))
+    expect(resoAlFornitore).toHaveBeenCalledTimes(1)
+    expect(resoAlFornitore.mock.calls[0][0]).toMatchObject({ id: 'campari' })
+    expect(resoAlFornitore.mock.calls[0][1]).toBe(1)
+    expect(loadStock).not.toHaveBeenCalled()
+    expect(updateInventoryItem).not.toHaveBeenCalled()
   })
 
   // ── IL CARICO SI VEDE SUBITO (BUG-109) ────────────────────────────

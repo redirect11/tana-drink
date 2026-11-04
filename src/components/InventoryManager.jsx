@@ -6,6 +6,7 @@ import {
   updateInventoryItem,
   deleteInventoryItem,
   loadStock,
+  resoAlFornitore,
   adjustStock,
   travasaMagazzinoAPezzi,
   fetchStockMovements,
@@ -75,7 +76,8 @@ import {
 } from '../lib/inventory.js'
 import { cambioAMano, cambioDaAvvisare } from '../lib/statoAssortimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { parseSupplierList } from '../lib/warehouse.js'
+import { parseSupplierList, qtyValue } from '../lib/warehouse.js'
+import GruppoChip from './GruppoChip.jsx'
 import MacroCategoryManager from './MacroCategoryManager.jsx'
 import { useChiudiConIndietro } from '../lib/schermate.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
@@ -876,14 +878,16 @@ function ProductsPanel() {
   // ripremeva, e ogni pressione accodava un carico. Adesso la giacenza si
   // compone in memoria, la riga si aggiorna sul posto e la finestrella si
   // chiude nell'istante del tocco: niente `await`, niente rilettura.
-  function doCarico(item, { count, unit, newCost }) {
+  function doCarico(item, { count, unit, newCost, reso = false }) {
     setError(null)
     try {
       // Quello che si scrive è nell'unità che si ha in mano; in giacenza va
       // in pezzi, con lo stesso conto che fa lo scarico. Gli articoli
       // arrivano qui sempre nella forma nuova (REQ-MAG-018, la lettura
       // tollerante sta in api.js), quindi non c'è nessun altro caso.
-      let dopo = count > 0 ? loadStock(item, qtyInStockUnit(count, unit, item)) : item
+      // Il reso (REQ-MAG-053) è lo stesso gesto nel verso opposto.
+      const muovi = reso ? resoAlFornitore : loadStock
+      let dopo = count > 0 ? muovi(item, qtyInStockUnit(count, unit, item)) : item
       if (newCost != null) {
         dopo = { ...dopo, cost: newCost }
         // Prezzo aggiornato al carico (il fornitore ha cambiato tariffa). Non
@@ -1903,6 +1907,13 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   const [colloTot, setColloTot] = useState('')
   // Quanti cartoni si stanno caricando: i pezzi li riempie lui.
   const [cartoni, setCartoni] = useState('')
+  // IL RESO AL FORNITORE (REQ-MAG-053): il carico in negativo, chiesto da
+  // Flavio il 04/11/2026 per la bottiglia che il fornitore si è ripreso.
+  // Sta qui e non in un tasto suo perché è lo stesso gesto rovesciato —
+  // quanti pezzi, di che prodotto — e il magazzino ha già due tasti per riga.
+  // Col reso spariscono colli e prezzo: si rende quello che c'è, al costo
+  // che ha.
+  const [reso, setReso] = useState(false)
   // IL COLLO E' UN'ECCEZIONE, NON LA REGOLA. Chi carica due bottiglie prese
   // dal fornitore sotto casa non ha nessun cartone da dichiarare, e si
   // trovava tre campi in piu' da capire. Sta dietro un interruttore: da
@@ -1912,7 +1923,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   // A COLLI LA QUANTITÀ NON È UNO STATO: è cartoni × pezzi per collo, e basta.
   // Quando la si teneva scritta a parte bisognava ricordarsi di rifarla a ogni
   // campo toccato — e chi si dimenticava caricava il numero di prima.
-  const quantita = aColli ? String(num(cartoni) * num(perCollo) || '') : count
+  const quantita = aColli && !reso ? String(num(cartoni) * num(perCollo) || '') : count
 
   const onUnit = (v) => {
     setUnitCost(v)
@@ -1937,46 +1948,73 @@ function CaricoForm({ item, onCancel, onConfirm }) {
   // A colli si contano PEZZI, sempre: un cartone ha dentro pezzi, non
   // centilitri. Cambiare unità mentre il conto lo fa il collo darebbe una
   // quantità che non torna con quello che è arrivato.
-  const unitEffettiva = aColli ? 'pz' : unit
+  const unitEffettiva = aColli && !reso ? 'pz' : unit
   const etichettaUnita = UNIT_LABEL[String(unitEffettiva).toLowerCase()] || unitEffettiva
 
   function confirm() {
     const n = num(quantita)
+    if (reso) {
+      if (n > 0) onConfirm({ count: n, unit: unitEffettiva, newCost: null, reso: true })
+      return
+    }
     const newCost = unitCost !== '' && unitN >= 0 && r2(unitN) !== Number(item.cost) ? r2(unitN) : null
     if (!(n > 0) && newCost == null) return
     onConfirm({ count: n, unit: unitEffettiva, newCost })
   }
 
+  // Quanto vale quello che esce col reso: è quanto si toglie dagli acquisti.
+  const pezziResi = reso && num(quantita) > 0 ? qtyInStockUnit(num(quantita), unitEffettiva, item) : 0
+
   return (
     <div style={{ marginTop: 8 }}>
-      {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
-          cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
-          quantità si riempie da sé. Prima i suoi campi stavano in fondo,
-          dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
-          sperando che il conto tornasse. */}
-      <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
-        <span>
-          Carico a colli
-          <span className="muted small"> — cartoni o casse da più pezzi</span>
-        </span>
-        <input
-          type="checkbox"
-          className="toggle"
-          checked={aColli}
-          onChange={(e) => {
-            setAColli(e.target.checked)
-            // Tornando a mano il numero calcolato RESTA scritto, e diventa
-            // modificabile: farlo sparire sotto le dita vorrebbe dire
-            // ricontare i pezzi già contati.
-            if (!e.target.checked) {
-              setCount(quantita)
-              setCartoni('')
-            }
-          }}
-        />
-      </label>
+      <GruppoChip
+        etichetta="Verso del movimento"
+        opzioni={[
+          { id: false, label: '⬆ Carico' },
+          { id: true, label: '⬇ Reso al fornitore' },
+        ]}
+        valore={reso}
+        scegli={setReso}
+        style={{ marginBottom: 8 }}
+      />
+      {reso && (
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Merce restituita al fornitore: esce dalla giacenza e si sottrae dagli acquisti del periodo, al costo del
+          prodotto. Non viene conteggiata come consumo.
+        </p>
+      )}
+      {!reso && (
+        <>
+          {/* IL COLLO STA SOPRA, perché è da lì che si parte: si guarda il
+              cartone, si scrive quanti pezzi ha e quanti ne sono arrivati, e la
+              quantità si riempie da sé. Prima i suoi campi stavano in fondo,
+              dentro il riquadro del prezzo, e i pezzi andavano scritti a mano
+              sperando che il conto tornasse. */}
+          <label className="row between" style={{ alignItems: 'center', gap: 8 }}>
+            <span>
+              Carico a colli
+              <span className="muted small"> — cartoni o casse da più pezzi</span>
+            </span>
+            <input
+              type="checkbox"
+              className="toggle"
+              checked={aColli}
+              onChange={(e) => {
+                setAColli(e.target.checked)
+                // Tornando a mano il numero calcolato RESTA scritto, e diventa
+                // modificabile: farlo sparire sotto le dita vorrebbe dire
+                // ricontare i pezzi già contati.
+                if (!e.target.checked) {
+                  setCount(quantita)
+                  setCartoni('')
+                }
+              }}
+            />
+          </label>
+        </>
+      )}
 
-      {aColli && (
+      {aColli && !reso && (
         <div className="card" style={{ marginTop: 8, padding: 10 }}>
           <div className="grid-2">
             <div>
@@ -2025,7 +2063,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* A colli la quantità la fa il conto: si legge, non si scrive.
           Cambiarla a mano vorrebbe dire caricare un numero che non torna
           con quello che è arrivato. */}
-      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>Quantità caricata</label>
+      <label htmlFor="cf-pezzi" style={{ marginTop: 8 }}>{reso ? 'Quantità resa' : 'Quantità caricata'}</label>
       <div className="row" style={{ gap: 6 }}>
         <input
           id="cf-pezzi"
@@ -2035,11 +2073,11 @@ function CaricoForm({ item, onCancel, onConfirm }) {
           className="grow"
           value={quantita}
           onChange={(e) => setCount(e.target.value)}
-          readOnly={aColli}
-          aria-readonly={aColli}
+          readOnly={aColli && !reso}
+          aria-readonly={aColli && !reso}
           autoFocus={!aColli}
         />
-        {unita.length > 1 && !aColli ? (
+        {unita.length > 1 && !(aColli && !reso) ? (
           <select
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
@@ -2057,7 +2095,18 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* Quanto entra davvero in giacenza, quando non si carica a pezzi:
           la merce a peso si conta in pezzi per stima, e il numero va visto
           PRIMA di confermare. */}
-      {unitEffettiva !== 'pz' && num(quantita) > 0 && (
+      {reso && pezziResi > 0 && (
+        <div className="muted small" style={{ marginTop: 4 }}>
+          Escono <strong>{formatPezzi(pezziResi)} pz</strong>
+          {item.cost != null && (
+            <>
+              {' · acquisti −'}
+              <strong>{formatPrice(qtyValue(pezziResi, item, { gross: false }))}</strong> netti
+            </>
+          )}
+        </div>
+      )}
+      {!reso && unitEffettiva !== 'pz' && num(quantita) > 0 && (
         <div className="muted small" style={{ marginTop: 4 }}>
           In magazzino entrano{' '}
           <strong>{formatPezzi(qtyInStockUnit(num(quantita), unitEffettiva, item))} pz</strong>
@@ -2066,21 +2115,23 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       )}
 
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
-      <div className="card" style={{ marginTop: 10, padding: 10 }}>
-        <div className="muted small">💶 Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
-        <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
-        <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
-        {unitN > 0 && (
-          <div className="muted small" style={{ marginTop: 4 }}>
-            Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
-            {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
-          </div>
-        )}
-      </div>
+      {!reso && (
+        <div className="card" style={{ marginTop: 10, padding: 10 }}>
+          <div className="muted small">💶 Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
+          <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
+          <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
+          {unitN > 0 && (
+            <div className="muted small" style={{ marginTop: 4 }}>
+              Unitario +IVA {formatPrice(costWithVat(unitN, item.vat))}
+              {aColli && perN > 0 && ` · Totale collo +IVA ${formatPrice(costWithVat(unitN * perN, item.vat))}`}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
-        <button className="btn small" onClick={confirm}>Conferma carico</button>
+        <button className="btn small" onClick={confirm}>{reso ? 'Conferma reso' : 'Conferma carico'}</button>
       </div>
     </div>
   )

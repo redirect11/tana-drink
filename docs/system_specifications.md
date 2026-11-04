@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 255 | fatto e coperto dai test |
+| ✅ | 256 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**309 voci** in tutto. **272** descrivono il sistema com'è oggi e
+**310 voci** in tutto. **273** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 20 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1953,6 +1953,20 @@ UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo «Inventario�
 GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe complete (rim_adesso, cons, valori) e totali; quelli di prima solo dep · acq · rim · cons, e i primi neanche i totali: la lettura (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`), non il contato delle 18 (BUG-112), poi il contato, poi l'atteso. Prima gli inventari chiusi stavano in fondo all'inventario in corso, quindici al massimo, e aperti dicevano solo il consumo riga per riga: quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`), la lista per scaffale e la testata sono le stesse dell'inventario in corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra altri» (`fetchStockCounts` con `prima`): un inventario e' un documento da quattrocento righe, e per l'elenco bastano date e totali (`riassuntoInventarioChiuso`). La sezione si accende col modulo dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
 
 **Dove**: `src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)` · **Lo dimostrano**: `tests/unit/inventarioChiuso.test.js`, `tests/component/StoricoInventari.test.jsx`, `tests/unit/licenza.test.js`
+
+#### REQ-MAG-053 — Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo
+
+Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei prodotti di magazzino in negativo, perché adesso dopo circa un mese il fornitore si è convinto a farsi restituire una bottiglia, e io adesso quella bottiglia se faccio contenuto reale da 1 passa a 0: è come se me la porta come se fosse stata consumata. Quindi ho bisogno di fare anche il carico negativo, che io tolgo un prodotto». Il contenuto reale è una RETTIFICA: nell'inventario il consumo è deposito + acquisti − rimanenza, e la bottiglia resa ci finiva dentro come bevuta. Il reso è un ACQUISTO DISFATTO: un movimento in uscita col motivo «reso fornitore», nel gruppo degli acquisti (GRUPPO_MOTIVO). Toglie dagli acquisti del periodo e dell'inventario (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il consumo non lo vede. Nella movimentazione del prodotto ha la sua riga, «Reso al fornitore».
+
+SE NEL PERIODO NON CI SONO ACQUISTI, IL RESO ESCE DAL DEPOSITO (Flavio, altri due vocali dello stesso giorno: «da inventario, quando fai carico negativo, va a intervenire sugli acquisti, e se non ci sono gli acquisti sul deposito»; «il carico negativo deve fare il contrario del carico, cioè togliere e restituire i soldi»). ACQ non scende sotto zero, e quello che avanza si toglie da DEP (`resoSulDeposito`), sia nell'inventario sia nel magazzino di un periodo: deposito + acquisti resta lo stesso, quindi il consumo pure.
+
+IL CONTENUTO REALE NON SI TOCCA: resta una rettifica, che interviene sui consumi e sulle rimanenze («contenuto reale deve sempre andare a intervenire sui consumi»).
+
+NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o quanto contenuto) e dice prima di confermare quanti ne escono e quanto si toglie dagli acquisti, netto; colli e prezzo spariscono, perché si rende quello che c'è al costo che ha. Il carico resta com'era, solo in positivo (25-26/09/2026): un numero negativo al carico è ancora un errore.
+
+COME IL CARICO, SENZA RETE (BUG-109): la giacenza scende con un incremento negativo in sottofondo e la riga si aggiorna nell'istante, senza attese.
+
+**Dove**: `src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)` · **Lo dimostrano**: `tests/unit/resoFornitore.test.js`, `tests/component/InventoryManagerCard.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
