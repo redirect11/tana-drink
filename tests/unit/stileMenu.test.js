@@ -12,6 +12,7 @@ import {
   stiliDisponibili,
   stileProvabile,
   temiInLicenza,
+  disegniDelLocale,
   patchInstalla,
   patchDisinstalla,
 } from '../../src/lib/stileMenu.js'
@@ -41,6 +42,27 @@ describe('lo stile del menù', () => {
     expect(stiliDisponibili({}).map((s) => s.id)).toEqual(['classico'])
     expect(stiliDisponibili({ licenza: { temi: ['notte'] } }).map((s) => s.id)).toEqual(['classico', 'notte'])
     expect(temiInLicenza({ licenza: { temi: ['notte', 3, null] } })).toEqual(['notte'])
+  })
+})
+
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). L'utente,
+// 04/11/2026: «sono solo per lo stile Notte che abbiamo fatto in esclusiva
+// per la Tana», e «può riutilizzarli Flavio se cambia stile». Quindi la
+// licenza decide, non lo stile in uso.
+describe('i disegni dei drink', () => {
+  const TANA = { licenza: { moduli: {}, temi: ['notte'] } }
+
+  it('li ha il locale con «Notte» nella licenza, in qualunque stile', () => {
+    expect(disegniDelLocale(TANA)).toBe(true)
+    expect(disegniDelLocale({ ...TANA, stile_menu: 'giornale', stili_installati: ['giornale'] })).toBe(true)
+    expect(disegniDelLocale({ ...TANA, stile_menu: 'classico' })).toBe(true)
+  })
+
+  it('gli altri locali no: né installando stili gratis né scrivendo «notte» a mano', () => {
+    expect(disegniDelLocale({})).toBe(false)
+    expect(disegniDelLocale(null)).toBe(false)
+    expect(disegniDelLocale({ licenza: { moduli: {}, temi: [] } })).toBe(false)
+    expect(disegniDelLocale({ stile_menu: 'notte', stili_installati: ['notte', 'giornale'] })).toBe(false)
   })
 })
 

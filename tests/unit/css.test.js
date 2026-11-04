@@ -1627,8 +1627,12 @@ describe('lo stile «Notte»', () => {
     const parte = css.slice(i)
     expect(parte).not.toMatch(/backdrop-filter|filter:\s*blur/)
   })
-  it('senza foto vera, nella carta non si ripete il logo su ogni voce', () => {
-    expect(blocco('.stile-notte .menu-item .drink-thumb.placeholder')).toMatch(/display:\s*none/)
+  // Fino al 04/11/2026 qui si nascondeva il segnaposto, perché era il
+  // LOGO, e ripetuto su ogni voce faceva il menù giocattolo. Ora è un
+  // bicchiere neutro (REQ-LIC-013), e l'utente l'ha voluto in ogni stile:
+  // nessuno stile lo nasconde più.
+  it('senza foto né disegno c’è il bicchiere neutro, in ogni stile', () => {
+    expect(css).not.toMatch(/\.drink-thumb\.placeholder\s*\{[^}]*display:\s*none/)
   })
   it('i colori vengono dal tema: l’oro è --accent-2', () => {
     expect(blocco('.stile-notte .menu-item .grow > .price')).toMatch(/var\(--accent-2\)/)

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
-import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
+import { Link, Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { drinkSpeciali, immagineVoce, segnapostoDrink, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
-import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
+import { stileMenu, stileProvabile, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
 import { temaInProva } from '../lib/marketplaceTemi.js'
 import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
@@ -81,13 +81,20 @@ export default function MenuPage({ speciali = false }) {
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
   const [staffVero, setStaffVero] = useState(null) // { email, name, role } | null
+  // Si sa già chi è? Finché no, `staffVero` null non vuol dire «cliente»:
+  // il menù Special vuoto rimanda al menù solo il cliente (REQ-MENU-018).
+  const [chiNoto, setChiNoto] = useState(!isFirebaseConfigured)
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaffVero(null)
+      if (!u) {
+        setStaffVero(null)
+        setChiNoto(true)
+        return
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
@@ -100,6 +107,7 @@ export default function MenuPage({ speciali = false }) {
       } catch {
         setStaffVero(null)
       }
+      setChiNoto(true)
     })
   }, [])
   // Benvenuto al primo accesso: spiega come si ordina, il geofence e
@@ -368,6 +376,16 @@ export default function MenuPage({ speciali = false }) {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
+  // GLI SPECIAL SENZA SPECIAL NON ESISTONO, per il cliente. L'utente,
+  // 04/11/2026: senza drink speciali «il menù special deve risultare vuoto
+  // e non raggiungibile al pubblico». Il QR degli Special resta stampato
+  // sui menù da tavolo anche quando gli special finiscono: chi lo inquadra
+  // va al menù, con lo stesso tavolo, invece che su una pagina vuota. Chi
+  // lavora resta, e legge perché è vuota.
+  if (speciali && elencoSpeciali.length === 0 && chiNoto && !staffVero) {
+    return <Navigate to={conParametri('/menu', params)} replace />
+  }
+
   // «Solo menù» per scelta del locale, o perché il modulo degli ordini dal
   // telefono non è nel piano (REQ-LIC-002).
   const menuOnly = settings.menu_only || !ordinazioneClientiAttiva(settings)
@@ -447,7 +465,9 @@ export default function MenuPage({ speciali = false }) {
   // Il segno dei disegni, deciso una volta: lo usano il giornale e il
   // dettaglio, che devono mostrare lo stesso disegno.
   const segnoDisegni = giornale ? 'incisione' : 'tenniel'
-  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni })
+  // I disegni sono del locale che ha «Notte» (REQ-LIC-013).
+  const disegni = disegniDelLocale(settings)
+  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni, disegni })
   const specialNotte = notte && speciali
 
   return (
@@ -591,9 +611,16 @@ export default function MenuPage({ speciali = false }) {
           <CaroselloSpeciali
             voci={elencoSpeciali}
             chiaro={fondoChiaro}
+            disegni={disegni}
             link={(d) => `${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
           />
         </section>
+      )}
+
+      {/* Il cliente qui non arriva (sopra lo si rimanda al menù): chi lavora
+          sì, e legge perché la pagina è vuota. */}
+      {speciali && elencoSpeciali.length === 0 && (
+        <p className="empty">Nessun drink speciale. Finché non ce ne sono, i clienti che aprono questa pagina vanno al menù completo.</p>
       )}
 
       {etaMinutes != null && !menuOnly && (
@@ -712,6 +739,7 @@ export default function MenuPage({ speciali = false }) {
           sottotitolo={settings.special_sottotitolo}
           linkMenu={conParametri('/menu', params)}
           chiaro={fondoChiaro}
+          disegni={disegni}
           tastiOrdine={tastiOrdine}
         />
       )}
@@ -736,8 +764,8 @@ export default function MenuPage({ speciali = false }) {
         <section key={cat} className={speciali ? 'speciali-griglia' : undefined}>
           {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}
           {list.map((d) => {
-            // La foto, o l'illustrazione dello special, o il logo.
-            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
+            // La foto, o il disegno, o il bicchiere neutro.
+            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, disegni })
             return (
               // TOCCANDO LA CARD SI APRE IL DETTAGLIO (REQ-MENU-020). Il
               // tocco sulla card è per il dito; per la tastiera e per chi
@@ -748,7 +776,14 @@ export default function MenuPage({ speciali = false }) {
                 id={speciali ? `speciale-${d.id}` : undefined}
                 onClick={apriDaCard(d)}
               >
-                {speciali && img && <img className="speciale-img" src={img} alt="" loading="lazy" />}
+                {speciali && (
+                  <img
+                    className={`speciale-img${img ? '' : ' segnaposto'}`}
+                    src={img || segnapostoDrink({ chiaro: fondoChiaro })}
+                    alt=""
+                    loading="lazy"
+                  />
+                )}
                 <div className="row between">
                   {/* IL DISEGNO PIÙ GRANDE DELLA FOTO, e intero. Nella casella
                       da 64 px della foto i disegni dei drink si leggevano
@@ -758,7 +793,7 @@ export default function MenuPage({ speciali = false }) {
                   {!speciali && (
                     <img
                       className={`drink-thumb${img ? (d.image_url ? '' : ' disegno') : ' placeholder'}`}
-                      src={img || `${import.meta.env.BASE_URL}logo.png`}
+                      src={img || segnapostoDrink({ chiaro: fondoChiaro })}
                       alt={d.name}
                       loading="lazy"
                     />
@@ -892,6 +927,7 @@ export default function MenuPage({ speciali = false }) {
         drink={aperto}
         chiaro={fondoChiaro}
         segno={segnoDisegni}
+        disegni={disegni}
         quantita={!!settings.show_ingredient_quantities}
         azioni={aperto && tastiOrdine(aperto)}
         onClose={() => setApertoId(null)}

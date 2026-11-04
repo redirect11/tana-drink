@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { subscribeSettings, updateSettings, DEFAULT_SETTINGS } from '../lib/api.js'
 import { drinkSpeciali, immagineVoce, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 
 // IL MENÙ SPECIAL, DAL GESTIONALE (REQ-MENU-018): il titolo e il
@@ -28,6 +29,7 @@ export default function SpecialManager({ drinks, onEdit }) {
 
   const speciali = drinkSpeciali(drinks)
   const fondoChiaro = useFondoChiaro()
+  const disegni = disegniDelLocale(settings)
   const salva = (campo, valore) => updateSettings({ [campo]: valore.trim() }).catch(() => {})
 
   return (
@@ -57,11 +59,14 @@ export default function SpecialManager({ drinks, onEdit }) {
 
       <h4 style={{ margin: '14px 0 6px' }}>Drink speciali ({speciali.length})</h4>
       {speciali.length === 0 ? (
-        <p className="muted small">Nessun drink speciale: si segnano dalla scheda della voce, con «Drink speciale».</p>
+        <p className="muted small">
+          Nessun drink speciale: si segnano dalla scheda della voce, con «Drink speciale». Finché non ce ne sono, il
+          QR del menù Special porta al menù completo.
+        </p>
       ) : (
         <div className="inv-list">
           {speciali.map((d) => {
-            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
+            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, disegni })
             return (
               <div className="inv-row" key={d.id}>
                 <div className="inv-row-main statica">
