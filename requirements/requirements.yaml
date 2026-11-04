@@ -6368,7 +6368,7 @@ requirements:
 
   - id: REQ-FLOTTA-030
     title: "Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google"
-    area: "l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, docs/passaggio-dalla-regia.md"
+    area: "l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md"
     description: >
       L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...]
       risulta loggato sia backoffice sia istanza per quell'utente», «mi
@@ -6383,6 +6383,16 @@ requirements:
       venue_vat_number, venue_tax_code, venue_legal_address. Il banco
       entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md;
       la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+      LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere
+      che Flavio è il titolare, deve poter inviare comunicazioni a lui via
+      email rispetto al prodotto e deve poter effettuare il single sign on
+      con la sua utenza». Gli account restano due, legati dall'email: il
+      passaggio vuole nel locale la stessa email del titolare, verificata,
+      e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è
+      verificata, e con un'opzione esplicita la segna verificata. La 1.10
+      con questo requisito va su main, perché la regia di produzione legge
+      da lì. L'ordine del giorno del rilascio, coi permessi da dare
+      l'utente, sta in docs/la-tana-nella-regia.md.
     status: todo
     generate_issue: false
     labels: [flotta, regia, sicurezza]
