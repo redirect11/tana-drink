@@ -8,7 +8,9 @@
   la tua app» dall'area clienti della regia fa entrare il titolare nel suo
   locale senza password; dal menù laterale, «Area clienti» lo porta nella
   regia già entrato. Il tasto compare quando la licenza è della regia.
-- **Al banco si entra anche con Google.**
+- **Al banco si entra anche con Google.** Se l'accesso con Google non va
+  (finestra bloccata dal browser, Google non attivo), il personale e i
+  clienti leggono cosa fare, non un errore generico.
 - **Telefono, partita IVA, codice fiscale e sede legale** in Impostazioni →
   Il locale: la regia li riempie dalla registrazione del titolare. La
   partita IVA va sotto la ragione sociale sulle ricevute; i tre dati

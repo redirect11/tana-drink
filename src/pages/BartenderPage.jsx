@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
+import { ERRORI_GOOGLE } from '../lib/erroriAccesso.js'
 import {
   updateOrderStatus,
   markOrderPaid,
@@ -501,11 +502,7 @@ function loginError(code) {
   }
   if (code === 'auth/too-many-requests') return 'Troppi tentativi. Riprova tra qualche minuto.'
   if (code === 'auth/network-request-failed') return 'Errore di rete. Controlla la connessione.'
-  if (code === 'auth/operation-not-allowed') return 'L’accesso con Google non è attivo per questo locale: si entra con email e password.'
-  if (code === 'auth/account-exists-with-different-credential') {
-    return 'Questa email entra con un altro metodo: si usano email e password.'
-  }
-  if (code === 'auth/popup-blocked') return 'Il browser ha bloccato la finestra di Google: va consentita, poi si riprova.'
+  if (ERRORI_GOOGLE[code]) return ERRORI_GOOGLE[code]
   return 'Errore di accesso. Riprova.'
 }
 

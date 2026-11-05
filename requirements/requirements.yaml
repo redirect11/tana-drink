@@ -6628,7 +6628,10 @@ requirements:
       la cui email NON è verificata prende il posto di quell'accesso, e
       la password non vale più; con l'email verificata si collegano.
       Quindi prima si verifica l'email del titolare
-      (titolare-locale.mjs --verifica-email), poi si usa Google.
+      (titolare-locale.mjs --verifica-email), poi si usa Google. Le frasi
+      d'errore dell'accesso con Google sono una lista sola
+      (src/lib/erroriAccesso.js), per il banco e per i clienti: erano
+      finite solo in quella del banco.
     status: implemented
     generate_issue: false
     labels: [flotta, regia, sicurezza]
@@ -6637,6 +6640,7 @@ requirements:
       - tests/unit/passaggioRegia.test.js
       - tests/component/AccessoBanco.test.jsx
       - tests/unit/mailFattura.test.js
+      - tests/unit/erroriAccesso.test.js
 
   - id: REQ-FLOTTA-026
     title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"
