@@ -9,7 +9,9 @@
   - Finché non lo si tocca resta quello di sempre, diviso per le
     categorie della cassa.
   - «Prepopola con le voci della cassa» crea una sezione per categoria,
-    con dentro tutti i suoi prodotti. Da lì sezioni e voci si aggiungono,
+    con dentro tutti i suoi prodotti; su un menù già personalizzato il
+    tasto diventa «Riparti dalle voci della cassa» e, dopo una conferma,
+    sostituisce tutto con una copia nuova. Da lì sezioni e voci si aggiungono,
     si spostano, si rinominano e si nascondono; una sezione può essere
     snella (nome e prezzo).
   - Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende

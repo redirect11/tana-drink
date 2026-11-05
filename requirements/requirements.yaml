@@ -4092,7 +4092,12 @@ requirements:
       solo; per non perderlo, l'editor elenca in cima i prodotti che non
       sono in nessuna voce, ognuno con «Aggiungi a…», e la scheda del
       prodotto dice «non compare». «Torna al menù per categorie» cancella
-      la struttura intera.
+      la struttura intera. Il tasto della copia c'è SEMPRE: su una
+      struttura già scritta diventa «Riparti dalle voci della cassa» e,
+      dopo una conferma, la sostituisce con una copia nuova (l'utente,
+      05/11/2026, che sulla demo già personalizzata non lo trovava: «serve
+      un tasto per prepopolare tutto come se fosse il menu cassa e poi da
+      lì modifico»).
       I TESTI SUL PRODOTTO, COL RITOCCO NELLE SEZIONI A MANO. La scheda
       prodotto ha il «Nome nel menù dei clienti» (`nome_cliente`), oltre
       alla descrizione e agli ingredienti in carta che c'erano già: valgono
