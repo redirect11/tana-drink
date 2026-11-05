@@ -4044,8 +4044,8 @@ requirements:
       - tests/component/SpecialScorrevoli.test.jsx
       - tests/unit/stileMenu.test.js
   - id: REQ-MENU-025
-    title: "Il menù dei clienti con la struttura personalizzabile: sezioni che seguono una categoria o con voci scelte a mano"
-    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, scriviStruttura, nome_cliente), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaStruttura, perIlCliente), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
+    title: "Il menù dei clienti con la struttura libera: si parte dalle voci della cassa, ogni voce collegata a un prodotto della cassa"
+    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaStruttura, perIlCliente), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
     description: >
       Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti
       sul test: «non metterò tutto quello che ho nel menù gestionale sul
@@ -4068,32 +4068,46 @@ requirements:
       sezioni»; quindi i due menù si unificano, il tema torna colori +
       stile, e la STRUTTURA del menù dei clienti si personalizza dal menù
       stesso. Le sue scelte, fra le alternative proposte:
-      SEZIONI MISTE. Una sezione o SEGUE una categoria del gestionale (ne
-      mostra i prodotti disponibili, compresi quelli aggiunti dopo), o ha
-      le VOCI SCELTE A MANO (Signature, Suggeriti dallo staff). Di suo c'è
-      una sezione per categoria, nell'ordine del gestionale: il locale che
-      non tocca niente vede il menù di sempre. Ogni sezione ha nome
-      (quello della categoria, se non ne ha uno suo), ordine, vista
-      «dettagliata» o «snella», e può essere NASCOSTA. Le categorie che
-      nessuna sezione segue compaiono in fondo, da sole: una categoria
-      nuova non sparisce dal menù senza che nessuno l'abbia deciso. Una
-      sezione che segue una categoria non si elimina (la categoria
-      tornerebbe in fondo): si nasconde.
+      LA STRUTTURA È LIBERA. La prima scelta fu di sezioni miste (che
+      seguono una categoria della cassa, o con le voci scelte a mano);
+      l'utente, 05/11/2026, chiedendo come si aggiunge una voce in una
+      sezione per categoria: «vorrei che sia libero … partiamo dal
+      prepopolare il menu con le voci di cassa, poi posso aggiungere le
+      categorie che mi pare, spostare i drink tra le categorie e creare
+      altri drink, ma tutti devono obbligatoriamente essere connessi a un
+      item del menu cassa. Voglio completa flessibilità». Quindi: finché
+      nessuno la tocca (nessuna sezione scritta) il menù dei clienti si
+      divide per le categorie della cassa, come sempre. Per personalizzarlo
+      si parte da una COPIA («Prepopola con le voci della cassa»): una
+      sezione per categoria, col suo nome e nel suo ordine, con dentro
+      tutti i suoi prodotti, spenti compresi (al tavolo non si vedono, e
+      tornano quando si riaccendono); i prodotti senza una categoria che
+      esiste vanno in fondo. Da lì sezioni e voci si aggiungono, si
+      rinominano, si spostano (anche da una sezione all'altra), si
+      tolgono; lo stesso prodotto può stare in più sezioni. Ogni sezione ha
+      nome, ordine, vista «dettagliata» o «snella», e può essere NASCOSTA.
+      OGNI VOCE È COLLEGATA A UN PRODOTTO DELLA CASSA: nasce scegliendo il
+      prodotto, e il prodotto si cambia ma non si toglie. IL PREZZO DELLA
+      LIBERTÀ: un prodotto aggiunto in cassa dopo la copia non entra da
+      solo; per non perderlo, l'editor elenca in cima i prodotti che non
+      sono in nessuna voce, ognuno con «Aggiungi a…», e la scheda del
+      prodotto dice «non compare». «Torna al menù per categorie» cancella
+      la struttura intera.
       I TESTI SUL PRODOTTO, COL RITOCCO NELLE SEZIONI A MANO. La scheda
       prodotto ha il «Nome nel menù dei clienti» (`nome_cliente`), oltre
       alla descrizione e agli ingredienti in carta che c'erano già: valgono
       ovunque il cliente legga quel prodotto, Special e carosello compresi.
-      Una voce scelta a mano può dire nome, descrizione e ingredienti suoi
+      Una voce può dire nome, descrizione e ingredienti suoi
       («Gin Fizz» e «Tom Collins» tutti e due su «SOUR 7»); senza, valgono
-      quelli della scheda. Gli ingredienti di una voce a mano non vengono
+      quelli della scheda. Gli ingredienti di una voce non vengono
       mai dalla ricetta («non li devi prendere dalla ricetta, vanno messi a
       mano»): il ritocco, o quelli scritti sulla scheda.
       CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora
       ordina dal menù del gestionale, coi nomi del banco e per categorie,
       che conosce. Una voce su un prodotto spento o esaurito non compare;
-      una sezione rimasta vuota neppure. Nascondere una categoria non spegne
-      i suoi prodotti nelle sezioni a mano: le voci-prezzo si nascondono e
-      si ordinano coi nomi della carta.
+      una sezione rimasta vuota neppure. Nascondere una sezione non spegne
+      i suoi prodotti nelle altre: le voci-prezzo si nascondono e si
+      ordinano coi nomi della carta.
       AL TAVOLO: con la struttura personalizzata le sezioni sono schede
       grandi che restano in alto mentre si scorre («come se fosse un tab
       che deve restare sempre fisso bloccato in alto»); una sezione SNELLA
@@ -4109,35 +4123,31 @@ requirements:
       cliente legge il nome che ha scelto. Due voci sullo stesso prodotto
       sono due righe.
       NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra
-      il menù COM'È AL TAVOLO, sezione per sezione, con le categorie non
-      ancora toccate in fondo; si aggiungono sezioni a mano (in cima), si
-      rinominano, si riordinano, si nascondono, si fanno snelle. L'utente,
-      05/11/2026, davanti alla prima versione, un modulo di caselle: «come
-      associamo le voci di menu agli item di menu della cassa? La casella
-      con il nome in grigio cos'è? … possiamo renderlo simile a un
-      WYSIWYG». Quindi le card hanno la forma di quelle del menù e i testi
-      si scrivono dove si leggono; ogni campo mostra il testo che legge il
-      cliente e sopra dice DA DOVE VIENE (scheda prodotto, cassa, ricetta,
-      o solo la sezione, con «↺» per tornare alla scheda). Un ritocco
-      svuotato o uguale al testo della scheda torna a ereditare, così una
-      correzione sulla scheda arriva anche lì. Ogni voce a mano ha il suo
-      «🔗 Prodotto della cassa», scelto da una tendina divisa per
-      categorie, e una voce nuova nasce già col prodotto. Nelle sezioni
-      che seguono una categoria i testi sono quelli della scheda e si
-      scrivono sulla scheda (vista subito, scrittura in sottofondo), che
-      si apre anche da lì. Una categoria che nessuna sezione segue
-      non è scritta da nessuna parte: la prima volta che la si tocca, la
-      struttura si scrive tutta in fila, in un pacchetto solo, perché non
-      salti davanti alle altre. Nelle azioni di ogni prodotto del catalogo,
-      «Menù dei clienti» dice in quale sezione compare per categoria e in
-      quali sezioni a mano, e lo aggiunge a un'altra o lo toglie (Flavio:
-      «dovrebbe apparire una tendina con tutti gli item dove uno seleziona
-      quello a cui si deve agganciare»).
-      LA DEMO ha una struttura personalizzata (una sezione a mano, categorie
-      rinominate e riordinate, birre e bollicine snelle, shot nascosti),
-      per farla vedere senza scriverla.
-      I DATI: `carta_sezioni` (con `categoria_id` per quelle che seguono una
-      categoria, e `nascosta`) e `carta_voci`, coi nomi di quando era una
+      il menù COM'È AL TAVOLO, sezione per sezione. L'utente, 05/11/2026,
+      davanti alla prima versione, un modulo di caselle: «come associamo le
+      voci di menu agli item di menu della cassa? La casella con il nome in
+      grigio cos'è? … possiamo renderlo simile a un WYSIWYG». Quindi le
+      card hanno la forma di quelle del menù e i testi si scrivono dove si
+      leggono; ogni campo mostra il testo che legge il cliente e sopra dice
+      DA DOVE VIENE (scheda prodotto, o solo la sezione, con «↺» per
+      tornare alla scheda). Un ritocco svuotato o uguale al testo della
+      scheda torna a ereditare, così una correzione sulla scheda arriva
+      anche lì. Ogni voce ha il suo «🔗 Prodotto della cassa», scelto da una
+      tendina divisa per categorie, «Sposta in…» un'altra sezione, e
+      «Scheda» per aprire la scheda del prodotto, chiusa la quale si torna
+      lì. Una sezione nuova va in cima. Nelle azioni di ogni prodotto del
+      catalogo, «Menù dei clienti» dice in quali sezioni compare (o che non
+      compare), e lo aggiunge a un'altra o lo toglie (Flavio: «dovrebbe
+      apparire una tendina con tutti gli item dove uno seleziona quello a
+      cui si deve agganciare»). La copia e la cancellazione della struttura
+      vanno a pacchetti da 450 scritture, perché Firestore ne accetta 500
+      per pacchetto e il listino di un locale vero le supera.
+      LA DEMO ha una struttura personalizzata, fatta dalla stessa copia di
+      partenza: in cima una sezione nuova con tre voci raccontate, due
+      sezioni rinominate, birre e bollicine snelle, shot nascosti; per
+      farla vedere senza scriverla.
+      I DATI: `carta_sezioni` (nome, ordine, vista, `nascosta`) e
+      `carta_voci` (sezione, prodotto, ritocchi, ordine), coi nomi di quando era una
       carta a parte; due collezioni e non un documento solo perché le voci
       si scrivono una alla volta. Le legge chiunque apra il menù, le scrive
       il banco. Sul prodotto, `nome_cliente`.
