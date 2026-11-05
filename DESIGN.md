@@ -197,7 +197,9 @@ riquadro finché non ci si passa sopra (tratteggio) o non ci si scrive
 (bordo d'accento). Sopra ogni campo, `.wys-etichetta` in maiuscoletto
 minuto dice da dove viene il testo; in `--accent` solo quando vale per la
 sola sezione. Il prodotto della cassa sta nel piede della card, sotto un
-filetto tratteggiato, col 🔗.
+filetto tratteggiato, col 🔗. I prodotti della cassa rimasti fuori dal menù
+dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
+`--warn` (`.struttura-fuori`): sono un lavoro da smaltire, non un errore.
 
 - **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
   in giallo gesso, filetti tratteggiati. È l'unico stile che porta i suoi

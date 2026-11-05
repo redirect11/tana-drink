@@ -4816,6 +4816,41 @@ body.drawer-open .status-bell-float { display: none; }
 .struttura-aggiungi {
   margin-top: 8px;
 }
+.struttura-tasti select {
+  width: auto;
+  max-width: 11rem;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+/* I prodotti della cassa rimasti fuori dal menù dei clienti: un elenco da
+   smaltire, con «Aggiungi a…» su ogni riga. */
+.struttura-fuori {
+  margin-top: 8px;
+  border-left: 3px solid var(--warn);
+}
+.struttura-fuori summary {
+  cursor: pointer;
+}
+.struttura-fuori-riga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-fuori-riga select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+.struttura-avviso-in-linea {
+  color: var(--warn);
+}
+.struttura-fine {
+  margin-top: 24px;
+  text-align: center;
+}
 
 /* ── Intestazione categoria ──────────────────────────────────── */
 .cat-header {

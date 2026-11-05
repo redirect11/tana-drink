@@ -4,27 +4,29 @@
 
 ### Menù dei clienti
 
-- **La struttura del menù dei clienti si personalizza**, da Menù → Menù
-  dei clienti. Di partenza c'è una sezione per categoria, come sempre; le
-  sezioni si rinominano, si riordinano, si nascondono e si fanno snelle
-  (nome e prezzo). Una sezione può seguire una categoria del gestionale,
-  e mostrarne i prodotti anche quando se ne aggiungono, oppure avere voci
-  scelte a mano (Signature, Suggeriti dallo staff), con nome, descrizione
-  e ingredienti propri. Con la struttura personalizzata le sezioni stanno
-  in schede grandi, ferme in alto mentre si scorre. Il personale ordina
-  sempre dal menù del gestionale, e all'ordine il banco riceve il prodotto
-  del gestionale, col nome letto dal cliente nella nota (REQ-MENU-025).
+- **Il menù dei clienti si personalizza liberamente**, da Menù → Menù dei
+  clienti (REQ-MENU-025).
+  - Finché non lo si tocca resta quello di sempre, diviso per le
+    categorie della cassa.
+  - «Prepopola con le voci della cassa» crea una sezione per categoria,
+    con dentro tutti i suoi prodotti. Da lì sezioni e voci si aggiungono,
+    si spostano, si rinominano e si nascondono; una sezione può essere
+    snella (nome e prezzo).
+  - Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende
+    prezzo e disponibilità; lo stesso prodotto può stare in più sezioni.
+  - L'editor ha la forma del menù: i testi si scrivono direttamente nelle
+    card, e sopra ogni campo un'etichetta dice se il testo viene dalla
+    scheda prodotto o vale solo per quella sezione («↺» per tornare alla
+    scheda).
+  - I prodotti della cassa che non sono in nessuna sezione, per esempio
+    quelli aggiunti dopo, sono elencati in cima, con «Aggiungi a…»; sulla
+    scheda del prodotto si legge «non compare».
+  - Con la struttura personalizzata le sezioni stanno in schede grandi,
+    ferme in alto mentre si scorre. Il personale ordina sempre dal menù
+    della cassa, e il banco riceve il prodotto della cassa col nome letto
+    dal cliente nella nota.
 - Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
   legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
-- **Menù → Menù dei clienti si modifica com'è al tavolo**: le card hanno
-  la forma di quelle del menù e i testi si scrivono direttamente.
-  - Sopra ogni campo un'etichetta dice da dove viene il testo: scheda
-    prodotto, cassa, ricetta, o solo quella sezione. Con «↺» si torna al
-    testo della scheda.
-  - Ogni voce mostra il suo «🔗 Prodotto della cassa», da cui prende
-    prezzo e disponibilità; una voce nuova nasce già collegata.
-  - Nelle sezioni che seguono una categoria i testi si scrivono sulla
-    scheda prodotto, che si apre anche da lì (REQ-MENU-025).
 
 ## 1.10.13-beta — 04/11/2026 (test)
 

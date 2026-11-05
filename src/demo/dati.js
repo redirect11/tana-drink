@@ -24,6 +24,7 @@
 import { INV_CATS, INV_ITEMS, DRINK_CATS, DRINKS, SEED_SETTINGS } from '../dev/seedData.js'
 import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { MODULI_PREMIUM } from '../lib/licenza.js'
+import { prepopolazione } from '../lib/strutturaMenu.js'
 
 export const SEME = 20261030
 const MIN = 60 * 1000
@@ -152,60 +153,49 @@ export function catalogo() {
 }
 
 // ── LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ──────────────────
-// Personalizzata, per far vedere cosa si può fare senza doverla scrivere:
-// in cima una sezione con le voci scelte a mano e raccontate, poi le
-// categorie in un ordine diverso da quello del gestionale, qualcuna col
-// nome cambiato, le bevande snelle e gli shot nascosti (al tavolo non si
-// ordinano). `segue` è la chiave della categoria; senza, le voci sono
-// scelte a mano.
-const STRUTTURA_DEMO = [
-  {
-    nome: 'Suggeriti dallo staff',
-    voci: [
-      ['Negroni', 'Firenze, 1919: il conte Negroni chiede di rinforzare l’Americano col gin.', 'Gin, bitter, vermouth rosso'],
-      ['Old Fashioned', 'Il cocktail nella sua forma più antica: distillato, zucchero e bitter.', 'Bourbon, zucchero, Angostura, scorza d’arancia'],
-      ['Daiquiri', 'Cuba, inizio Novecento: tre ingredienti in equilibrio.', 'Rum bianco, lime, zucchero'],
-    ],
-  },
-  { segue: 'signature' },
-  { segue: 'aperitivi', nome: 'Aperitivo' },
-  { segue: 'classici', nome: 'Grandi classici' },
-  { segue: 'long' },
-  { segue: 'analcolici' },
-  { segue: 'birre', vista: 'snella' },
-  { segue: 'bollicine', vista: 'snella' },
-  { segue: 'shots', nascosta: true },
+// Personalizzata, per far vedere cosa si può fare senza doverla scrivere.
+// Si parte dalla stessa copia del tasto «Prepopola con le voci della cassa»
+// (prepopolazione), e poi: in cima una sezione nuova con tre voci prese da
+// altre sezioni e raccontate, due sezioni rinominate, le bevande snelle e
+// gli shot nascosti (al tavolo non si ordinano).
+const SUGGERITI_DEMO = [
+  ['Negroni', 'Firenze, 1919: il conte Negroni chiede di rinforzare l’Americano col gin.', 'Gin, bitter, vermouth rosso'],
+  ['Old Fashioned', 'Il cocktail nella sua forma più antica: distillato, zucchero e bitter.', 'Bourbon, zucchero, Angostura, scorza d’arancia'],
+  ['Daiquiri', 'Cuba, inizio Novecento: tre ingredienti in equilibrio.', 'Rum bianco, lime, zucchero'],
 ]
+const RITOCCHI_DEMO = {
+  aperitivi: { nome: 'Aperitivo' },
+  classici: { nome: 'Grandi classici' },
+  birre: { vista: 'snella' },
+  bollicine: { vista: 'snella' },
+  shots: { nascosta: true },
+}
 
 // Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`.
 export function strutturaDemo(drink, categorie) {
+  const copia = prepopolazione(drink, categorie)
+  const chiaveCat = new Map(categorie.map((c) => [c.id, c.key]))
+  const idDi = new Map()
+  const sezioni = [{ id: 'sezione-suggeriti', nome: 'Suggeriti dallo staff', ordine: 0, vista: 'dettagliata', nascosta: false }]
+  for (const s of copia.sezioni) {
+    const chiave = chiaveCat.get(s.categoria_id) || slug(s.nome)
+    const id = `sezione-${chiave}`
+    idDi.set(s.chiave, id)
+    sezioni.push({ id, nome: s.nome, ordine: s.ordine + 1, vista: s.vista, nascosta: s.nascosta, ...RITOCCHI_DEMO[chiave] })
+  }
+  const voci = copia.voci.map((v) => ({
+    id: `${idDi.get(v.sezione)}-${v.drink_id}`,
+    sezione_id: idDi.get(v.sezione),
+    drink_id: v.drink_id,
+    nome: '',
+    descrizione: '',
+    ingredienti: '',
+    ordine: v.ordine,
+  }))
   const perNome = new Map(drink.map((d) => [d.name, d]))
-  const sezioni = []
-  const voci = []
-  STRUTTURA_DEMO.forEach((s, i) => {
-    const categoria = s.segue ? categorie.find((c) => c.key === s.segue) : null
-    const sezioneId = `sezione-${slug(s.nome || s.segue)}`
-    sezioni.push({
-      id: sezioneId,
-      nome: s.nome || '',
-      ordine: i,
-      vista: s.vista || 'dettagliata',
-      categoria_id: categoria?.id ?? null,
-      nascosta: s.nascosta === true,
-    })
-    ;(s.voci || []).forEach(([nomeDrink, descrizione, ingredienti], j) => {
-      const d = perNome.get(nomeDrink)
-      if (!d) return
-      voci.push({
-        id: `${sezioneId}-${slug(nomeDrink)}`,
-        sezione_id: sezioneId,
-        drink_id: d.id,
-        nome: '',
-        descrizione,
-        ingredienti,
-        ordine: j,
-      })
-    })
+  SUGGERITI_DEMO.forEach(([nome, descrizione, ingredienti], j) => {
+    const d = perNome.get(nome)
+    if (d) voci.push({ id: `sezione-suggeriti-${d.id}`, sezione_id: 'sezione-suggeriti', drink_id: d.id, nome: '', descrizione, ingredienti, ordine: j })
   })
   return { sezioni, voci }
 }

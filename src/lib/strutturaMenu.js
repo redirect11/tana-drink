@@ -9,22 +9,30 @@
 // al tavolo non si ordinano.
 //
 // Prima era una «carta» a parte, poi una «composizione» da scegliere come
-// uno stile. L'utente, ancora il 04/11/2026: è «solo una disposizione degli
-// elementi del menù e come strutturare le varie sezioni», quindi i due
-// menù sono UNO, con la struttura personalizzabile. Le sue scelte:
+// uno stile, poi un menù con sezioni che seguivano una categoria della cassa
+// accanto a sezioni con le voci scelte a mano. L'utente, 05/11/2026: «vorrei
+// che sia libero … partiamo dal prepopolare il menu con le voci di cassa,
+// poi posso aggiungere le categorie che mi pare, spostare i drink tra le
+// categorie e creare altri drink, ma tutti devono obbligatoriamente essere
+// connessi a un item del menu cassa. Voglio completa flessibilità». Quindi:
 //
-// · SEZIONI MISTE. Una sezione o SEGUE una categoria del gestionale (ne
-//   mostra i prodotti disponibili, anche quelli aggiunti dopo), o ha le voci
-//   SCELTE A MANO (Signature, Suggeriti dallo staff). Di suo il menù ha una
-//   sezione per categoria: chi non tocca niente vede il menù di sempre. Le
-//   categorie che nessuna sezione segue compaiono in fondo, così una
-//   categoria nuova non sparisce dal menù senza che nessuno l'abbia deciso.
-// · I TESTI SUL PRODOTTO, col RITOCCO nelle sezioni a mano. Il nome per il
-//   cliente (`nome_cliente`), la descrizione e gli ingredienti in carta
-//   stanno sulla scheda prodotto e valgono ovunque; una voce scelta a mano
-//   può dire i suoi («Gin Fizz» e «Tom Collins» in carta, tutti e due su
-//   «SOUR 7»). Gli ingredienti di una voce a mano non vengono mai dalla
-//   ricetta (ingredientiCarta.js).
+// · FINCHÉ NESSUNO LA TOCCA, il menù dei clienti si divide per le categorie
+//   della cassa, come è sempre stato (nessuna sezione scritta).
+// · PER PERSONALIZZARLO si parte da una copia (`prepopolazione`): una
+//   sezione per categoria, con dentro tutti i suoi prodotti come voci. Da lì
+//   tutto è libero: sezioni nuove, rinominate, nascoste, spostate; voci
+//   spostate da una sezione all'altra, aggiunte, tolte, rinominate; lo
+//   stesso prodotto in più sezioni.
+// · OGNI VOCE È COLLEGATA A UN PRODOTTO DELLA CASSA: da lì prende prezzo e
+//   disponibilità, ed è quello che arriva al banco (cart.js).
+// · I TESTI stanno sulla scheda prodotto (`nome_cliente`, descrizione,
+//   ingredienti in carta) e valgono ovunque; una voce può ritoccarli per la
+//   sua sezione. Gli ingredienti di una voce non vengono mai dalla ricetta
+//   (ingredientiCarta.js).
+//
+// Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo nel
+// menù dei clienti. Per non perderlo, l'editor elenca quelli rimasti fuori
+// (`fuoriDalMenu`).
 //
 // Una sezione ha anche un modo di mostrarsi: «dettagliata» (immagine,
 // descrizione, ingredienti) o «snella» (nome e prezzo: acqua e Coca-Cola
@@ -62,15 +70,18 @@ export function perIlCliente(drink) {
   return { ...drink, name: nome, nome_gestionale: drink.name }
 }
 
-// Il nome che si legge al tavolo per una voce scelta a mano: il suo, o
-// quello del prodotto (già quello per il cliente).
+// Il nome che si legge al tavolo per una voce: il suo, o quello del
+// prodotto (già quello per il cliente).
 export const nomeVoce = (voce, drink) => testo(voce?.nome) || drink?.name || ''
 
-// UNA VOCE SCELTA A MANO, come la vede il menù: il prodotto, con sopra
-// quello che la voce dice di suo. Prende l'`id` della VOCE, perché due voci
-// sullo stesso prodotto sono due righe diverse (chiave, dettaglio,
-// carrello); il prodotto resta in `drink_id`, ed è quello che finisce
-// nell'ordine.
+// Il nome di una sezione. Vuoto non dovrebbe esserlo mai (l'editor non lo
+// lascia svuotare), ma una sezione scritta da uno script può esserlo.
+export const nomeSezione = (sezione) => testo(sezione?.nome) || 'Senza nome'
+
+// UNA VOCE, come la vede il menù: il prodotto, con sopra quello che la voce
+// dice di suo. Prende l'`id` della VOCE, perché due voci sullo stesso
+// prodotto sono due righe diverse (chiave, dettaglio, carrello); il
+// prodotto resta in `drink_id`, ed è quello che finisce nell'ordine.
 export function voceInSezione(voce, drink, vista = 'dettagliata') {
   const snella = vistaSezione(vista) === 'snella'
   return {
@@ -87,53 +98,66 @@ export function voceInSezione(voce, drink, vista = 'dettagliata') {
   }
 }
 
-// Un prodotto di una sezione che segue una categoria: in una snella non si
-// racconta niente.
-const inSezione = (drink, vista) => (vista === 'snella' ? { ...drink, description: null, snella: true } : drink)
-
-// LE RIGHE DELLA STRUTTURA, nell'ordine in cui compaiono: le sezioni
-// scritte, poi le categorie che nessuna sezione segue, nell'ordine del
-// gestionale. Queste ultime non sono scritte da nessuna parte (`id` null):
-// diventano sezioni vere la prima volta che si tocca la struttura
-// (StrutturaMenu.jsx). Una sezione che segue una categoria eliminata
-// resta, senza prodotti, finché qualcuno non la toglie.
-export function righeStruttura(sezioni, cats) {
-  const scritte = ordina(sezioni).map((s) => ({ ...s, chiave: s.id }))
-  const seguite = new Set(scritte.map((s) => s.categoria_id).filter(Boolean))
-  const libere = [...(cats || [])]
-    .filter((c) => !seguite.has(c.id))
-    .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || (a.name || '').localeCompare(b.name || ''))
-    .map((c) => ({
-      id: null,
-      chiave: `categoria:${c.id}`,
-      categoria_id: c.id,
-      nome: '',
-      vista: 'dettagliata',
-      nascosta: false,
-    }))
-  return [...scritte, ...libere]
-}
-
-// Il nome di una sezione: il suo, o quello della categoria che segue.
-export function nomeSezione(riga, cats) {
-  if (testo(riga?.nome)) return testo(riga.nome)
-  const cat = (cats || []).find((c) => c.id === riga?.categoria_id)
-  return cat?.name || 'Senza nome'
-}
-
 // La struttura è PERSONALIZZATA quando c'è almeno una sezione scritta.
 // Senza, il menù si divide per categorie come è sempre stato.
 export const strutturaPersonalizzata = (carta) => Boolean(carta?.sezioni?.length)
+
+// LA COPIA DI PARTENZA: una sezione per categoria della cassa, nel loro
+// ordine e col loro nome, e dentro tutti i prodotti, spenti compresi (al
+// tavolo non si vedono, e tornano da soli quando si riaccendono). I
+// prodotti senza una categoria che esiste ancora vanno in fondo, divisi per
+// il nome di categoria che si portano dietro. Le voci non hanno testi
+// propri: valgono quelli della scheda. `chiave` lega le voci alla loro
+// sezione finché non hanno un id; `categoria_id` dice da quale categoria
+// viene la sezione, e serve solo a chi costruisce (la demo).
+export function prepopolazione(drinks, cats) {
+  const perNome = (a, b) => (a.name || '').localeCompare(b.name || '')
+  const gruppi = [...(cats || [])]
+    .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || perNome(a, b))
+    .map((c) => ({ chiave: `categoria:${c.id}`, categoria_id: c.id, nome: c.name, prodotti: [] }))
+  const perCategoria = new Map(gruppi.map((g) => [g.categoria_id, g]))
+  const orfani = new Map()
+  for (const d of drinks || []) {
+    let g = perCategoria.get(d.category_id)
+    if (!g) {
+      const nome = d.category || 'Altro'
+      if (!orfani.has(nome)) orfani.set(nome, { chiave: `altro:${nome}`, categoria_id: null, nome, prodotti: [] })
+      g = orfani.get(nome)
+    }
+    g.prodotti.push(d)
+  }
+  const pieni = [...gruppi, ...orfani.values()].filter((g) => g.prodotti.length)
+  return {
+    sezioni: pieni.map((g, i) => ({
+      chiave: g.chiave,
+      categoria_id: g.categoria_id,
+      nome: g.nome,
+      ordine: i,
+      vista: 'dettagliata',
+      nascosta: false,
+    })),
+    voci: pieni.flatMap((g) =>
+      g.prodotti.sort(perNome).map((d, j) => ({ sezione: g.chiave, drink_id: d.id, ordine: j }))
+    ),
+  }
+}
+
+// I PRODOTTI DELLA CASSA CHE NON SONO IN NESSUNA VOCE: quelli aggiunti dopo
+// la copia, o tolti da tutte le sezioni. Al tavolo non si vedono, e senza
+// questo elenco nessuno se ne accorgerebbe.
+export function fuoriDalMenu(carta, drinks) {
+  const dentro = new Set((carta?.voci || []).map((v) => v.drink_id))
+  return (drinks || []).filter((d) => !dentro.has(d.id))
+}
 
 // LE SEZIONI DEL MENÙ, nella forma che la pagina sa già disegnare:
 // [nome, voci, { id, vista }]. I `drinks` sono quelli del menù, cioè i soli
 // disponibili e già col nome per il cliente: una voce su un prodotto spento
 // o esaurito sparisce da sola, come nel menù di sempre (REQ-MENU-017), e una
-// sezione rimasta senza voci non si mostra. In fondo, i prodotti senza una
-// categoria che esiste ancora, divisi per il nome che si portano dietro.
-// Niente ricerca: nel menù c'è solo per il personale, che ordina dal
-// gestionale e la struttura non la vede.
-export function sezioniDelMenu(carta, drinks, cats) {
+// sezione rimasta senza voci non si mostra. Niente ricerca: nel menù c'è
+// solo per il personale, che ordina dal gestionale e la struttura non la
+// vede.
+export function sezioniDelMenu(carta, drinks) {
   const perId = new Map((drinks || []).map((d) => [d.id, d]))
   const vociPer = new Map()
   for (const v of carta?.voci || []) {
@@ -142,24 +166,13 @@ export function sezioniDelMenu(carta, drinks, cats) {
     vociPer.get(v.sezione_id).push(v)
   }
   const out = []
-  for (const r of righeStruttura(carta?.sezioni, cats)) {
-    if (r.nascosta) continue
-    const vista = vistaSezione(r.vista)
-    const lista = r.categoria_id
-      ? (drinks || []).filter((d) => d.category_id === r.categoria_id).map((d) => inSezione(d, vista))
-      : ordina(vociPer.get(r.id), (v) => nomeVoce(v, perId.get(v.drink_id))).map((v) =>
-          voceInSezione(v, perId.get(v.drink_id), vista)
-        )
-    if (lista.length) out.push([nomeSezione(r, cats), lista, { id: r.chiave, vista }])
+  for (const s of ordina(carta?.sezioni)) {
+    if (s.nascosta) continue
+    const vista = vistaSezione(s.vista)
+    const lista = ordina(vociPer.get(s.id), (v) => nomeVoce(v, perId.get(v.drink_id))).map((v) =>
+      voceInSezione(v, perId.get(v.drink_id), vista)
+    )
+    if (lista.length) out.push([nomeSezione(s), lista, { id: s.id, vista }])
   }
-  const esistenti = new Set((cats || []).map((c) => c.id))
-  const orfani = new Map()
-  for (const d of drinks || []) {
-    if (esistenti.has(d.category_id)) continue
-    const nome = d.category || 'Altro'
-    if (!orfani.has(nome)) orfani.set(nome, [])
-    orfani.get(nome).push(d)
-  }
-  for (const [nome, lista] of orfani) out.push([nome, lista, { id: `orfani:${nome}`, vista: 'dettagliata' }])
   return out
 }

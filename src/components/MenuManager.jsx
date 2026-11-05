@@ -167,15 +167,6 @@ export default function MenuManager() {
     }
   }
 
-  // I TESTI PER IL CLIENTE RITOCCATI DAL MENÙ DEI CLIENTI (REQ-MENU-025):
-  // nome, descrizione e ingredienti della scheda, scritti dalla card in cui
-  // si leggono. Si vedono subito; la scrittura va in sottofondo, e un
-  // errore si legge nel banner.
-  function ritoccaProdotto(id, patch) {
-    setDrinks((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)))
-    updateDrink(id, patch).catch((e) => setError(e.message))
-  }
-
   // ── DUPLICARE UN DRINK ───────────────────────────────────────────
   //
   // Mezzo listino sono variazioni: lo stesso drink col gin diverso, la
@@ -360,14 +351,12 @@ export default function MenuManager() {
     return (
       <div>
         <Sottosezioni voci={sezioni} attiva={sezione} scegli={setSezione} />
-        {error && <div className="banner">Errore: {error}</div>}
         {/* La scheda aperta da qui torna qui: la sottosezione resta. */}
         <StrutturaMenu
           carta={carta}
           drinks={drinks}
           categories={categories}
           disegni={disegniDelLocale(settings)}
-          onModificaProdotto={ritoccaProdotto}
           onApriScheda={setEditing}
         />
       </div>
@@ -589,7 +578,7 @@ export default function MenuManager() {
                               {d.recipe_items.map((r) => `${r.name} ${formatQty(r.qty, r.unit)}`).join(' · ')}
                             </p>
                           )}
-                          <InStruttura drink={d} carta={carta} categories={categories} />
+                          <InStruttura drink={d} carta={carta} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
                             ✏️ Modifica
                           </button>

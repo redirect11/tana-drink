@@ -526,8 +526,6 @@ function mapSezioneCarta(snap) {
     nome: s.nome ?? '',
     ordine: s.ordine ?? 0,
     vista: vistaSezione(s.vista),
-    // La categoria che la sezione segue; null per le voci scelte a mano.
-    categoria_id: s.categoria_id ?? null,
     nascosta: s.nascosta === true,
   }
 }
@@ -573,11 +571,10 @@ export function subscribeCarta(onChange, onError) {
   }
 }
 
-const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, categoria_id = null, nascosta = false }) => ({
+const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, nascosta = false }) => ({
   nome: String(nome || '').trim(),
   ordine,
   vista: vistaSezione(vista),
-  categoria_id: categoria_id || null,
   nascosta: nascosta === true,
 })
 
@@ -588,31 +585,49 @@ export function creaSezioneCarta(dati) {
   return { id: ref.id, ...sezione }
 }
 
-// LA STRUTTURA RISCRITTA IN FILA, in un pacchetto solo: le righe nell'ordine
-// voluto, quelle ancora senza `id` (le categorie che nessuna sezione seguiva,
-// vedi righeStruttura) diventano sezioni, le altre prendono il loro numero
-// se è cambiato. Così uno spostamento o un ritocco su una categoria non
-// ancora scritta non la fa saltare davanti alle altre. Torna le righe con
-// gli id, composte qui: non si rilegge quello che si è appena scritto.
-export function scriviStruttura(righe) {
-  const batch = writeBatch(db)
-  let scritture = 0
-  const out = (righe || []).map((r, k) => {
-    if (!r.id) {
-      const ref = doc(cartaSezioniCol)
-      const sezione = sezioneDaScrivere({ ...r, ordine: k })
-      batch.set(ref, { ...sezione, created_at: serverTimestamp() })
-      scritture++
-      return { ...r, ...sezione, id: ref.id, chiave: ref.id }
-    }
-    if (Number(r.ordine) !== k) {
-      batch.update(doc(db, 'carta_sezioni', r.id), { ordine: k })
-      scritture++
-    }
-    return { ...r, ordine: k }
+// Le scritture di una struttura intera, a pacchetti: Firestore ne accetta
+// al massimo 500 per pacchetto, e il listino di un locale vero, una voce
+// per prodotto, li supera.
+function inPacchetti(operazioni) {
+  for (let i = 0; i < operazioni.length; i += 450) {
+    const batch = writeBatch(db)
+    for (const op of operazioni.slice(i, i + 450)) op(batch)
+    bgWrite(() => batch.commit(), 'carta')
+  }
+}
+
+// LA COPIA DI PARTENZA (strutturaMenu.js, prepopolazione) scritta tutta:
+// sezioni e voci, con gli id fatti qui. Torna la struttura composta, così
+// chi chiama non rilegge quello che si è appena scritto.
+export function prepopolaStruttura({ sezioni, voci }) {
+  const operazioni = []
+  const idDi = new Map()
+  const scritte = (sezioni || []).map((s) => {
+    const ref = doc(cartaSezioniCol)
+    idDi.set(s.chiave, ref.id)
+    const sezione = sezioneDaScrivere(s)
+    operazioni.push((b) => b.set(ref, { ...sezione, created_at: serverTimestamp() }))
+    return { id: ref.id, ...sezione }
   })
-  if (scritture) bgWrite(() => batch.commit(), 'carta')
-  return out
+  const scritteVoci = (voci || [])
+    .filter((v) => idDi.has(v.sezione))
+    .map((v) => {
+      const ref = doc(cartaVociCol)
+      const voce = { sezione_id: idDi.get(v.sezione), drink_id: v.drink_id, nome: '', descrizione: '', ingredienti: '', ordine: v.ordine }
+      operazioni.push((b) => b.set(ref, { ...voce, created_at: serverTimestamp() }))
+      return { id: ref.id, ...voce }
+    })
+  inPacchetti(operazioni)
+  return { sezioni: scritte, voci: scritteVoci }
+}
+
+// Tutta la struttura via: il menù dei clienti torna a dividersi per le
+// categorie della cassa.
+export function eliminaStruttura({ sezioni, voci }) {
+  inPacchetti([
+    ...(voci || []).map((v) => (b) => b.delete(doc(db, 'carta_voci', v.id))),
+    ...(sezioni || []).map((s) => (b) => b.delete(doc(db, 'carta_sezioni', s.id))),
+  ])
 }
 
 export function aggiornaSezioneCarta(id, patch) {

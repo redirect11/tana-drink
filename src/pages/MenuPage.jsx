@@ -250,7 +250,7 @@ export default function MenuPage({ speciali = false }) {
         )
       : base
     if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
-    if (usaStruttura) return sezioniDelMenu(carta, drinks, cats)
+    if (usaStruttura) return sezioniDelMenu(carta, drinks)
     const byId = new Map(cats.map((c) => [c.id, c]))
     const groups = new Map() // key -> { name, sort, list }
     for (const d of visibili) {

@@ -881,26 +881,24 @@ describe('il menù Special senza special', () => {
   })
 })
 
-// LA CARTA DEI CLIENTI (REQ-MENU-025). Flavio, 04/11/2026, guardando il
-// menù dei clienti sul test: gin e vodka insieme, «Distillati» tutti uniti,
-// shot e food al tavolo. Con la carta accesa il cliente legge le sezioni
-// della carta; chi lavora ordina ancora dal menù del gestionale.
-// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025). L'utente, 04/11/2026:
-// un menù solo, con la struttura personalizzabile — sezioni che seguono una
-// categoria, sezioni con le voci scelte a mano, il nome per il cliente
-// sulla scheda prodotto. Chi lavora ordina sempre dal menù del gestionale.
+// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025). Flavio, 04/11/2026,
+// guardando il menù dei clienti sul test: gin e vodka insieme, «Distillati»
+// tutti uniti, shot e food al tavolo. L'utente, 05/11/2026: si parte dalle
+// voci della cassa e poi tutto è libero, ogni voce collegata a un prodotto
+// della cassa. Chi lavora ordina sempre dal menù del gestionale.
 describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
   const STRUTTURA = {
     sezioni: [
-      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata', categoria_id: null },
-      { id: 's-birre', nome: 'Birre alla spina', ordine: 1, vista: 'snella', categoria_id: 'c2' },
-      // I cocktail del gestionale, per categoria, non si vedono: stanno
-      // nella sezione scelta a mano coi loro nomi.
-      { id: 's-c1', nome: '', ordine: 2, vista: 'dettagliata', categoria_id: 'c1', nascosta: true },
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+      { id: 's-birre', nome: 'Birre alla spina', ordine: 1, vista: 'snella' },
+      { id: 's-banco', nome: 'Dal banco', ordine: 2, vista: 'dettagliata', nascosta: true },
     ],
     voci: [
       { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Mojito cubano', descrizione: 'Dall’Avana.', ingredienti: 'Rum, lime, menta', ordine: 0 },
       { id: 'v-cuba', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Cuba libre', ordine: 1 },
+      { id: 'v-ichnusa', sezione_id: 's-birre', drink_id: 'd3', ordine: 0 },
+      // Il Negroni sta solo in una sezione nascosta.
+      { id: 'v-negroni', sezione_id: 's-banco', drink_id: 'd2', ordine: 0 },
     ],
   }
   const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
@@ -912,7 +910,6 @@ describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
     await screen.findByText('Mojito cubano')
     expect(sezioniLette()).toEqual(['Cocktail IBA', 'Birre alla spina'])
     expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
-    // Il Negroni sta in una categoria nascosta e in nessuna sezione a mano.
     expect(screen.queryByText('Negroni')).toBeNull()
     expect(screen.getByText('Dall’Avana.')).toBeInTheDocument()
     expect(screen.getByText('Rum · lime · menta')).toBeInTheDocument()

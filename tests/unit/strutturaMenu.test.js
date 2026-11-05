@@ -5,14 +5,16 @@
 // uniti, shot, food e tisane al tavolo, la tonica fra gli ingredienti del
 // gin tonic — il gestionale è fatto per il banco, e al tavolo si legge
 // un'altra cosa. L'utente, lo stesso giorno: non una carta a parte, ma lo
-// stesso menù con la struttura personalizzabile. Sezioni che SEGUONO una
-// categoria o con le voci SCELTE A MANO; i testi per il cliente sulla
-// scheda prodotto, col ritocco nelle sezioni a mano.
+// stesso menù con la struttura personalizzabile; e il 05/11/2026: si parte
+// da una copia delle voci della cassa, poi tutto è libero, ma ogni voce è
+// collegata a un prodotto della cassa. I testi per il cliente sulla scheda
+// prodotto, col ritocco nelle sezioni.
 
 import { describe, it, expect } from 'vitest'
 import {
   sezioniDelMenu,
-  righeStruttura,
+  prepopolazione,
+  fuoriDalMenu,
   nomeSezione,
   voceInSezione,
   perIlCliente,
@@ -55,19 +57,23 @@ const DRINKS = [
 
 const STRUTTURA = {
   sezioni: [
-    { id: 'cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata', categoria_id: null },
-    { id: 's-dist', nome: 'Gin selection', ordine: 1, vista: 'dettagliata', categoria_id: 'distillati' },
-    { id: 's-bibite', nome: '', ordine: 2, vista: 'snella', categoria_id: 'bibite' },
-    { id: 's-prezzi', nome: '', ordine: 3, vista: 'dettagliata', categoria_id: 'prezzi', nascosta: true },
-    { id: 'vuota', nome: 'Vuota', ordine: 4, vista: 'dettagliata', categoria_id: null },
+    { id: 'cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+    { id: 's-gin', nome: 'Gin selection', ordine: 1, vista: 'dettagliata' },
+    { id: 's-bibite', nome: 'Bibite', ordine: 2, vista: 'snella' },
+    { id: 's-prezzi', nome: 'Voci prezzo', ordine: 3, vista: 'dettagliata', nascosta: true },
+    { id: 'vuota', nome: 'Vuota', ordine: 4, vista: 'dettagliata' },
+    // Messa in cima dopo: un ordine negativo.
+    { id: 'signature', nome: 'Signature', ordine: -1, vista: 'dettagliata' },
   ],
   voci: [
     { id: 'v-collins', sezione_id: 'cocktail', drink_id: 'sour7', nome: 'Tom Collins', ordine: 1 },
     { id: 'v-fizz', sezione_id: 'cocktail', drink_id: 'sour7', nome: 'Gin Fizz', descrizione: 'Gin, limone, soda.', ordine: 0 },
+    { id: 'v-mare', sezione_id: 's-gin', drink_id: 'mare', ordine: 0 },
+    { id: 'v-mare-sig', sezione_id: 'signature', drink_id: 'mare', nome: 'Il Mare di Flavio', ordine: 0 },
+    { id: 'v-acqua', sezione_id: 's-bibite', drink_id: 'acqua', ordine: 0 },
+    { id: 'v-sour', sezione_id: 's-prezzi', drink_id: 'sour7', ordine: 0 },
     // Su un prodotto che il menù non ha (spento o tolto): non c'è.
     { id: 'v-spenta', sezione_id: 'vuota', drink_id: 'non-ce', nome: 'Spenta', ordine: 0 },
-    // Senza prodotto.
-    { id: 'v-sola', sezione_id: 'cocktail', drink_id: null, nome: 'Da collegare', ordine: 2 },
   ],
 }
 
@@ -77,65 +83,96 @@ describe('il menù di sempre, finché nessuno tocca la struttura', () => {
     expect(strutturaPersonalizzata(null)).toBe(false)
     expect(strutturaPersonalizzata(STRUTTURA)).toBe(true)
   })
+})
 
-  it('le righe sono le categorie del gestionale, nel loro ordine, non ancora scritte', () => {
-    const righe = righeStruttura([], CATS)
-    expect(righe.map((r) => [r.id, r.categoria_id])).toEqual([
-      [null, 'distillati'],
-      [null, 'prezzi'],
-      [null, 'bibite'],
-      [null, 'shot'],
+// LA COPIA DI PARTENZA del tasto «Prepopola con le voci della cassa»: il
+// menù di sempre, scritto come struttura, da sistemare poi a piacere.
+describe('la copia di partenza', () => {
+  const copia = prepopolazione(DRINKS, CATS)
+
+  it('una sezione per categoria, nel loro ordine e col loro nome; i prodotti senza categoria in fondo', () => {
+    expect(copia.sezioni.map((s) => [s.nome, s.ordine, s.vista, s.nascosta])).toEqual([
+      ['Distillati', 0, 'dettagliata', false],
+      ['Voci prezzo', 1, 'dettagliata', false],
+      ['Bibite', 2, 'dettagliata', false],
+      ['Shot', 3, 'dettagliata', false],
+      ['Amari', 4, 'dettagliata', false],
     ])
-    expect(sezioniDelMenu({ sezioni: [], voci: [] }, DRINKS, CATS).map(([n]) => n)).toEqual([
-      'Distillati',
-      'Voci prezzo',
-      'Bibite',
-      'Shot',
-      'Amari',
+  })
+
+  it('ogni prodotto diventa una voce della sua sezione, collegata e senza testi propri', () => {
+    const sezioneDi = new Map(copia.sezioni.map((s) => [s.chiave, s.nome]))
+    expect(copia.voci.map((v) => [sezioneDi.get(v.sezione), v.drink_id])).toEqual([
+      ['Distillati', 'mare'],
+      ['Voci prezzo', 'sour7'],
+      ['Bibite', 'acqua'],
+      ['Shot', 'b52'],
+      ['Amari', 'vecchio'],
     ])
+    expect(copia.voci.every((v) => Object.keys(v).sort().join() === 'drink_id,ordine,sezione')).toBe(true)
+  })
+
+  it('anche i prodotti spenti: al tavolo non si vedono, e tornano quando si riaccendono', () => {
+    const spento = { id: 'spento', name: 'Spento', category_id: 'shot', available: false }
+    expect(prepopolazione([...DRINKS, spento], CATS).voci.some((v) => v.drink_id === 'spento')).toBe(true)
+  })
+
+  it('una categoria senza prodotti non fa una sezione vuota', () => {
+    const senzaShot = prepopolazione(DRINKS.filter((d) => d.category_id !== 'shot'), CATS)
+    expect(senzaShot.sezioni.map((s) => s.nome)).not.toContain('Shot')
   })
 })
 
 describe('la struttura personalizzata', () => {
-  const sezioni = sezioniDelMenu(STRUTTURA, DRINKS, CATS)
+  const sezioni = sezioniDelMenu(STRUTTURA, DRINKS)
 
-  it('le sezioni scritte nel loro ordine, poi le categorie che nessuna segue, poi i prodotti senza categoria', () => {
-    // «Voci prezzo» è nascosta, «Vuota» non ha voci: non si vedono. «Shot»
-    // nessuno l'ha messa in struttura, e compare in fondo da sola.
-    expect(sezioni.map(([n]) => n)).toEqual(['Cocktail IBA', 'Gin selection', 'Bibite', 'Shot', 'Amari'])
+  it('le sezioni nel loro ordine; le nascoste e quelle senza voci visibili non si vedono', () => {
+    expect(sezioni.map(([n]) => n)).toEqual(['Signature', 'Cocktail IBA', 'Gin selection', 'Bibite'])
   })
 
-  it('una sezione che segue una categoria ne mostra i prodotti, anche quelli aggiunti dopo', () => {
-    const nuovo = { id: 'hendricks', name: 'HENDRICKS', category_id: 'distillati', price: 9, available: true }
-    const [, gin] = sezioniDelMenu(STRUTTURA, [...DRINKS, nuovo], CATS)[1]
-    expect(gin.map((d) => d.name)).toEqual(['Gin Mare tonic', 'HENDRICKS'])
+  // Libera: un prodotto che non è in nessuna voce al tavolo non c'è, anche
+  // se la sua categoria esiste (lo shot, e l'amaro senza categoria).
+  it('al tavolo c’è solo quello che è in una voce', () => {
+    const tutti = sezioni.flatMap(([, l]) => l).map((d) => d.drink_id)
+    expect(tutti).not.toContain('b52')
+    expect(tutti).not.toContain('vecchio')
   })
 
-  it('una sezione senza nome suo prende quello della categoria', () => {
-    expect(nomeSezione({ nome: ' ', categoria_id: 'bibite' }, CATS)).toBe('Bibite')
-    expect(nomeSezione({ nome: '', categoria_id: 'sparita' }, CATS)).toBe('Senza nome')
-  })
-
-  it('le voci scelte a mano nel loro ordine, due voci sullo stesso prodotto restano due', () => {
-    const [, cocktail, info] = sezioni[0]
+  it('le voci nel loro ordine; lo stesso prodotto in più voci e più sezioni', () => {
+    const [, cocktail, info] = sezioni[1]
     expect(cocktail.map((v) => [v.id, v.name, v.drink_id, v.price])).toEqual([
       ['v-fizz', 'Gin Fizz', 'sour7', 7],
       ['v-collins', 'Tom Collins', 'sour7', 7],
     ])
     expect(info).toEqual({ id: 'cocktail', vista: 'dettagliata' })
+    expect(sezioni[0][1][0]).toMatchObject({ name: 'Il Mare di Flavio', drink_id: 'mare' })
+    expect(sezioni[2][1][0]).toMatchObject({ name: 'Gin Mare tonic', drink_id: 'mare' })
   })
 
-  // Il prodotto di una voce-prezzo nascosta si ordina lo stesso dalle voci
-  // scelte a mano: nascondere la categoria non spegne il prodotto.
-  it('una categoria nascosta non spegne i suoi prodotti nelle sezioni a mano', () => {
+  // Il prodotto di una sezione nascosta si ordina lo stesso dalle altre.
+  it('una sezione nascosta non spegne i suoi prodotti nelle altre', () => {
     expect(sezioni.flatMap(([, l]) => l).filter((d) => d.drink_id === 'sour7')).toHaveLength(2)
   })
 
   it('una sezione snella non racconta niente', () => {
-    const [, bibite, info] = sezioni[2]
+    const [, bibite, info] = sezioni[3]
     expect(info.vista).toBe('snella')
     expect(bibite[0]).toMatchObject({ name: 'ACQUA NAT', description: null, snella: true })
     expect(ingredientiInCarta(bibite[0])).toBeNull()
+  })
+
+  it('una sezione senza nome si legge «Senza nome»', () => {
+    expect(nomeSezione({ nome: ' ' })).toBe('Senza nome')
+    expect(nomeSezione({ nome: 'Gin' })).toBe('Gin')
+  })
+})
+
+// Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo.
+// Questo elenco è quello che l'editor mostra perché nessuno lo perda.
+describe('i prodotti della cassa rimasti fuori', () => {
+  it('quelli che non sono in nessuna voce', () => {
+    expect(fuoriDalMenu(STRUTTURA, DRINKS).map((d) => d.id)).toEqual(['b52', 'vecchio'])
+    expect(fuoriDalMenu({ sezioni: [], voci: [] }, DRINKS)).toHaveLength(DRINKS.length)
   })
 })
 
@@ -167,13 +204,8 @@ describe('i testi per il cliente', () => {
   })
 })
 
-describe('le righe della struttura, per chi la gestisce', () => {
-  it('le sezioni scritte prima, poi le categorie libere; una categoria seguita non si ripete', () => {
-    const righe = righeStruttura(STRUTTURA.sezioni, CATS)
-    expect(righe.map((r) => r.chiave)).toEqual(['cocktail', 's-dist', 's-bibite', 's-prezzi', 'vuota', 'categoria:shot'])
-  })
-
-  it('l’ordine: il numero scelto, poi il nome', () => {
+describe('l’ordine di sezioni e voci', () => {
+  it('il numero scelto, poi il nome', () => {
     const l = ordina([
       { nome: 'B', ordine: 1 },
       { nome: 'C', ordine: 0 },
@@ -187,7 +219,7 @@ describe('le righe della struttura, per chi la gestisce', () => {
 // magazzino scala la sua ricetta, le statistiche lo contano. Il nome che ha
 // letto il cliente va nella nota, che al banco dice cosa preparare.
 describe('nel carrello', () => {
-  const [, cocktail] = sezioniDelMenu(STRUTTURA, DRINKS, CATS)[0]
+  const [, cocktail] = sezioniDelMenu(STRUTTURA, DRINKS)[1]
 
   it('una voce a mano porta il prodotto e il nome del banco, col nome letto nella nota', () => {
     const r = rigaDelCarrello(cocktail[0])
