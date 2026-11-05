@@ -24,7 +24,7 @@
 import { INV_CATS, INV_ITEMS, DRINK_CATS, DRINKS, SEED_SETTINGS } from '../dev/seedData.js'
 import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { MODULI_PREMIUM } from '../lib/licenza.js'
-import { prepopolazione } from '../lib/strutturaMenu.js'
+import { prepopolazione, materializza, voceDaScrivere } from '../lib/strutturaMenu.js'
 
 export const SEME = 20261030
 const MIN = 60 * 1000
@@ -171,31 +171,22 @@ const RITOCCHI_DEMO = {
   shots: { nascosta: true },
 }
 
-// Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`.
+// Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`, con
+// id fissi: la sezione prende la chiave della sua categoria.
 export function strutturaDemo(drink, categorie) {
+  const chiaveDi = new Map(categorie.map((c) => [c.name, c.key]))
   const copia = prepopolazione(drink, categorie)
-  const chiaveCat = new Map(categorie.map((c) => [c.id, c.key]))
-  const idDi = new Map()
-  const sezioni = [{ id: 'sezione-suggeriti', nome: 'Suggeriti dallo staff', ordine: 0, vista: 'dettagliata', nascosta: false }]
-  for (const s of copia.sezioni) {
-    const chiave = chiaveCat.get(s.categoria_id) || slug(s.nome)
-    const id = `sezione-${chiave}`
-    idDi.set(s.chiave, id)
-    sezioni.push({ id, nome: s.nome, ordine: s.ordine + 1, vista: s.vista, nascosta: s.nascosta, ...RITOCCHI_DEMO[chiave] })
-  }
-  const voci = copia.voci.map((v) => ({
-    id: `${idDi.get(v.sezione)}-${v.drink_id}`,
-    sezione_id: idDi.get(v.sezione),
-    drink_id: v.drink_id,
-    nome: '',
-    descrizione: '',
-    ingredienti: '',
-    ordine: v.ordine,
-  }))
+  copia.sezioni = copia.sezioni.map((s) => ({ ...s, ordine: s.ordine + 1, ...RITOCCHI_DEMO[chiaveDi.get(s.nome)] }))
+  const { sezioni, voci } = materializza(copia, (tipo, x) =>
+    tipo === 'sezione' ? `sezione-${chiaveDi.get(x.nome) || slug(x.nome)}` : `${x.sezione_id}-${x.drink_id}`
+  )
+  sezioni.unshift({ id: 'sezione-suggeriti', nome: 'Suggeriti dallo staff', ordine: 0, vista: 'dettagliata', nascosta: false })
   const perNome = new Map(drink.map((d) => [d.name, d]))
-  SUGGERITI_DEMO.forEach(([nome, descrizione, ingredienti], j) => {
+  SUGGERITI_DEMO.forEach(([nome, descrizione, ingredienti], ordine) => {
     const d = perNome.get(nome)
-    if (d) voci.push({ id: `sezione-suggeriti-${d.id}`, sezione_id: 'sezione-suggeriti', drink_id: d.id, nome: '', descrizione, ingredienti, ordine: j })
+    if (!d) return
+    const voce = voceDaScrivere({ sezione_id: 'sezione-suggeriti', drink_id: d.id, descrizione, ingredienti, ordine })
+    voci.push({ id: `sezione-suggeriti-${d.id}`, ...voce })
   })
   return { sezioni, voci }
 }

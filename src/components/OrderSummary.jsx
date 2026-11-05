@@ -3,7 +3,7 @@ import { ORDER_STATUSES, formatPrice } from '../lib/orderStatus.js'
 import { subscribeQueue, createManualGroup } from '../lib/api.js'
 import { auth } from '../lib/firebaseClient.js'
 import { queueEtaMinutes } from '../lib/eta.js'
-import { chiaveRiga } from '../lib/cart.js'
+import { chiaveRiga, nomeLetto } from '../lib/cart.js'
 import { paymentOptions } from '../lib/payments.js'
 import { clienteSceglie, modoAllaNascita } from '../lib/consegna.js'
 
@@ -297,7 +297,7 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
           {cart.items.map((i) => (
             <div className="summary-row" key={chiaveRiga(i)}>
               <span>
-                {i.nome_carta || i.name} <span className="qty-x">× {i.qty}</span>
+                {nomeLetto(i)} <span className="qty-x">× {i.qty}</span>
               </span>
               <span>{formatPrice(i.qty * i.price)}</span>
             </div>

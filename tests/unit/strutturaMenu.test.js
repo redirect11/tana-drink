@@ -157,7 +157,7 @@ describe('la struttura personalizzata', () => {
   it('una sezione snella non racconta niente', () => {
     const [, bibite, info] = sezioni[3]
     expect(info.vista).toBe('snella')
-    expect(bibite[0]).toMatchObject({ name: 'ACQUA NAT', description: null, snella: true })
+    expect(bibite[0]).toMatchObject({ name: 'ACQUA NAT', description: null, ingredienti: '' })
     expect(ingredientiInCarta(bibite[0])).toBeNull()
   })
 
@@ -184,7 +184,7 @@ describe('i testi per il cliente', () => {
 
   it('una voce a mano può ritoccare nome e descrizione; senza, valgono quelli della scheda', () => {
     const v = voceInSezione({ id: 'v', drink_id: 'mare', nome: '', descrizione: '' }, { ...DRINKS[0], description: 'Dalla scheda' })
-    expect(v).toMatchObject({ name: 'Gin Mare tonic', nome_gestionale: 'MARE', description: 'Dalla scheda', voce_carta: 'v' })
+    expect(v).toMatchObject({ id: 'v', drink_id: 'mare', name: 'Gin Mare tonic', nome_gestionale: 'MARE', description: 'Dalla scheda' })
     expect(nomeVoce({ nome: 'Il Mare di Flavio' }, DRINKS[0])).toBe('Il Mare di Flavio')
   })
 
@@ -221,16 +221,23 @@ describe('l’ordine di sezioni e voci', () => {
 describe('nel carrello', () => {
   const [, cocktail] = sezioniDelMenu(STRUTTURA, DRINKS)[1]
 
-  it('una voce a mano porta il prodotto e il nome del banco, col nome letto nella nota', () => {
+  it('una voce porta il prodotto e il nome del banco, col nome letto nella nota', () => {
     const r = rigaDelCarrello(cocktail[0])
-    expect(r).toMatchObject({ drink_id: 'sour7', name: 'SOUR 7', price: 7, qty: 1, riga: 'v-fizz', nome_carta: 'Gin Fizz', note: 'Gin Fizz' })
-    expect(chiaveRiga(r)).toBe('v-fizz')
+    expect(r).toEqual({ drink_id: 'sour7', name: 'SOUR 7', price: 7, qty: 1, sumup_product_id: null, nome_carta: 'Gin Fizz', note: 'Gin Fizz' })
+  })
+
+  // La chiave è quello che arriva al banco: due nomi sullo stesso prodotto
+  // sono due righe, lo stesso nome da due sezioni (o dal carosello) una.
+  it('la riga si riconosce dal prodotto e dal nome letto', () => {
+    const [fizz, collins] = cocktail.map(rigaDelCarrello)
+    expect(chiaveRiga(fizz)).not.toBe(chiaveRiga(collins))
+    const mareDaSezione = rigaDelCarrello(sezioniDelMenu(STRUTTURA, DRINKS)[2][1][0])
+    expect(chiaveRiga(mareDaSezione)).toBe(chiaveRiga(rigaDelCarrello(DRINKS[0])))
   })
 
   it('anche un prodotto col nome per il cliente porta quello del banco, con la nota', () => {
     const r = rigaDelCarrello(DRINKS[0])
     expect(r).toMatchObject({ drink_id: 'mare', name: 'MARE', nome_carta: 'Gin Mare tonic', note: 'Gin Mare tonic' })
-    expect(chiaveRiga(r)).toBe('mare')
   })
 
   it('senza nota quando i due nomi sono lo stesso', () => {

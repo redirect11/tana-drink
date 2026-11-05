@@ -23,8 +23,8 @@ import {
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga } from '../lib/cart.js'
-import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata } from '../lib/strutturaMenu.js'
+import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
+import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria } from '../lib/strutturaMenu.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -39,7 +39,7 @@ import { getPushToken } from '../lib/push.js'
 import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { useMenu } from '../lib/menuCache.js'
+import { useMenu, useStrutturaMenu } from '../lib/menuCache.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { printComanda, salaStampaDaSe } from '../lib/printer.js'
@@ -59,7 +59,8 @@ const NESSUNA_CATEGORIA = []
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
-  const { drinks: drinksDelMenu, cats, carta, loading } = useMenu()
+  const { drinks: drinksDelMenu, cats, loading: menuInArrivo } = useMenu()
+  const { carta, pronta: strutturaPronta } = useStrutturaMenu()
   // Le illustrazioni hanno il tratto bianco sui temi scuri, scuro sui chiari.
   const fondoChiaro = useFondoChiaro()
   const [segnapostoCategorie, categorieIncollate] = useIncollata()
@@ -139,6 +140,8 @@ export default function MenuPage({ speciali = false }) {
   const drinks = useMemo(() => (staff ? drinksDelMenu : drinksDelMenu.map(perIlCliente)), [staff, drinksDelMenu])
   const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
   const usaStruttura = !staff && strutturaPersonalizzata(carta)
+  // Il cliente aspetta anche la struttura (menuCache.js); chi lavora no.
+  const loading = menuInArrivo || (!staff && !strutturaPronta)
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -251,18 +254,7 @@ export default function MenuPage({ speciali = false }) {
       : base
     if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
     if (usaStruttura) return sezioniDelMenu(carta, drinks)
-    const byId = new Map(cats.map((c) => [c.id, c]))
-    const groups = new Map() // key -> { name, sort, list }
-    for (const d of visibili) {
-      const cat = byId.get(d.category_id)
-      const name = cat?.name || d.category || 'Altro'
-      const sort = cat ? cat.sort_order : 9999
-      if (!groups.has(name)) groups.set(name, { name, sort, list: [] })
-      groups.get(name).list.push(d)
-    }
-    return [...groups.values()]
-      .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
-      .map((g) => [g.name, g.list])
+    return perCategoria(visibili, cats).map((g) => [g.nome, g.prodotti])
   }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta])
 
   // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
@@ -412,16 +404,17 @@ export default function MenuPage({ speciali = false }) {
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
     if (!canOrder) return null
-    // La riga del carrello si riconosce dalla sua chiave: una voce scelta a
-    // mano ha la sua, anche quando due voci portano allo stesso drink.
-    const inCart = cart.items.find((i) => chiaveRiga(i) === d.id)
+    // La riga del carrello si riconosce da quello che arriva al banco (il
+    // drink, e il nome letto dal cliente): cart.js, chiaveRiga.
+    const chiave = chiaveRiga(rigaDelCarrello(d))
+    const inCart = cart.items.find((i) => chiaveRiga(i) === chiave)
     return inCart ? (
       <div className="qty">
-        <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>
+        <button aria-label="Riduci" onClick={() => cart.setQty(chiave, inCart.qty - 1)}>
           −
         </button>
         <strong>{inCart.qty}</strong>
-        <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>
+        <button aria-label="Aumenta" onClick={() => cart.setQty(chiave, inCart.qty + 1)}>
           +
         </button>
       </div>
@@ -436,11 +429,11 @@ export default function MenuPage({ speciali = false }) {
     if (e.target.closest?.('button, a, input, select, textarea, label')) return
     setApertoId(d.id)
   }
-  // Nella struttura personalizzata il dettaglio è quello della VOCE (il suo
-  // nome, la sua descrizione), che ha un id suo: si cerca fra le voci
-  // mostrate.
+  // Il dettaglio è quello di ciò che si è toccato: nella struttura
+  // personalizzata una VOCE (il suo nome, la sua descrizione), che ha un id
+  // suo. Si cerca fra quello che si vede, poi fra i drink (il carosello).
   const aperto = apertoId
-    ? (usaStruttura && categories.flatMap(([, list]) => list).find((x) => x.id === apertoId)) ||
+    ? categories.flatMap(([, list]) => list).find((x) => x.id === apertoId) ||
       drinks.find((x) => x.id === apertoId) ||
       null
     : null
@@ -815,7 +808,7 @@ export default function MenuPage({ speciali = false }) {
                       appena, ritagliati per riempire il quadrato (l'utente,
                       02/11/2026: «le immagini stilizzate dei drink
                       dovrebbero essere più grandi»). */}
-                  {!speciali && !d.snella && (
+                  {!speciali && sezione?.vista !== 'snella' && (
                     <img
                       className={`drink-thumb${img ? (d.image_url ? '' : ' disegno') : ' placeholder'}`}
                       src={img || segnapostoDrink({ chiaro: fondoChiaro })}
@@ -861,7 +854,7 @@ export default function MenuPage({ speciali = false }) {
               {cart.items.map((i) => (
                 <div className="row between" key={chiaveRiga(i)}>
                   <span>
-                    <strong>{i.qty}×</strong> {i.nome_carta || i.name}
+                    <strong>{i.qty}×</strong> {nomeLetto(i)}
                   </span>
                   <span className="muted">{formatPrice(i.qty * Number(i.price || 0))}</span>
                 </div>

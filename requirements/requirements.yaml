@@ -4045,7 +4045,7 @@ requirements:
       - tests/unit/stileMenu.test.js
   - id: REQ-MENU-025
     title: "Il menù dei clienti con la struttura libera: si parte dalle voci della cassa, ogni voce collegata a un prodotto della cassa"
-    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js, src/pages/MenuPage.jsx (usaStruttura, perIlCliente), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/lib/ingredientiCarta.js, src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
+    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js (useStrutturaMenu), src/pages/MenuPage.jsx (usaStruttura, perIlCliente, perCategoria), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
     description: >
       Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti
       sul test: «non metterò tutto quello che ho nel menù gestionale sul
@@ -4117,16 +4117,22 @@ requirements:
       grandi che restano in alto mentre si scorre («come se fosse un tab
       che deve restare sempre fisso bloccato in alto»); una sezione SNELLA
       mostra nome e prezzo su una riga, senza immagine, descrizione e
-      ingredienti (le bibite). Il menù aspetta la struttura prima di
-      mostrarsi, perché il cliente non veda per un istante le categorie del
-      gestionale.
+      ingredienti (le bibite). Il menù del cliente aspetta la struttura
+      prima di mostrarsi, perché il cliente non veda per un istante le
+      categorie del gestionale; la struttura ha una cache sua, che parte
+      solo lì: il conto al banco, che usa la cache del menù, non la ascolta.
+      Una voce esce dalla logica pura già pronta da mostrare (testi,
+      ingredienti, niente ricetta), così le pagine che la disegnano non
+      hanno casi speciali.
       L'ORDINE porta il prodotto del GESTIONALE, col suo nome: è quello che
       il banco conosce, che scala il magazzino e che conta nelle
       statistiche. Se il cliente lo legge con un altro nome (della scheda o
       della voce), quel nome va nella nota della riga, che al banco dice
       cosa preparare («SOUR 7» con nota «Gin Fizz»); nel carrello il
-      cliente legge il nome che ha scelto. Due voci sullo stesso prodotto
-      sono due righe.
+      cliente legge il nome che ha scelto. La riga del carrello si
+      riconosce da quello che arriva al banco, il prodotto e il nome letto:
+      due voci sullo stesso prodotto con due nomi sono due righe, lo stesso
+      Negroni preso da due sezioni è una riga sola.
       NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra
       il menù COM'È AL TAVOLO, sezione per sezione. L'utente, 05/11/2026,
       davanti alla prima versione, un modulo di caselle: «come associamo le
@@ -4137,8 +4143,11 @@ requirements:
       DA DOVE VIENE (scheda prodotto, o solo la sezione, con «↺» per
       tornare alla scheda). Un ritocco svuotato o uguale al testo della
       scheda torna a ereditare, così una correzione sulla scheda arriva
-      anche lì. Ogni voce ha il suo «🔗 Prodotto della cassa», scelto da una
-      tendina divisa per categorie, «Sposta in…» un'altra sezione, e
+      anche lì. Ogni voce ha il suo «🔗 Prodotto della cassa», che si legge
+      e si cambia con «Cambia», da una tendina divisa per categorie (una
+      tendina col listino intero in ogni voce, su un listino vero copiato
+      per intero, erano decine di migliaia di righe da ridisegnare a ogni
+      campo salvato); «Sposta in…» un'altra sezione, e
       «Scheda» per aprire la scheda del prodotto, chiusa la quale si torna
       lì. Una sezione nuova va in cima. Nelle azioni di ogni prodotto del
       catalogo, «Menù dei clienti» dice in quali sezioni compare (o che non
@@ -4146,7 +4155,10 @@ requirements:
       apparire una tendina con tutti gli item dove uno seleziona quello a
       cui si deve agganciare»). La copia e la cancellazione della struttura
       vanno a pacchetti da 450 scritture, perché Firestore ne accetta 500
-      per pacchetto e il listino di un locale vero le supera.
+      per pacchetto e il listino di un locale vero le supera; «Riparti»
+      cancella e riscrive nello stesso giro, e un riordino è un pacchetto
+      solo. Le cancellazioni si confermano col dialogo dell'app: il
+      `confirm` del browser nella PWA installata può non comparire.
       LA DEMO ha una struttura personalizzata, fatta dalla stessa copia di
       partenza: in cima una sezione nuova con tre voci raccontate, due
       sezioni rinominate, birre e bollicine snelle, shot nascosti; per

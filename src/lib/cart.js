@@ -20,16 +20,21 @@ function write(key, value) {
   }
 }
 
-// LA CHIAVE DI UNA RIGA: il drink, o — per una voce scelta a mano nel
-// menù dei clienti (REQ-MENU-025) — la voce. Due voci possono portare
-// allo stesso drink del gestionale («Gin Fizz» e «Tom Collins» su
-// «SOUR 7») e restano due righe.
-export const chiaveRiga = (i) => i.riga ?? i.drink_id
+// LA CHIAVE DI UNA RIGA è quello che arriva al banco: il drink del
+// gestionale e, se il cliente l'ha letto con un altro nome, quel nome
+// (REQ-MENU-025). «Gin Fizz» e «Tom Collins» su «SOUR 7» restano due righe;
+// lo stesso Negroni preso da «Suggeriti dallo staff» e dai «Grandi
+// classici» è una riga sola. Era la voce del menù dei clienti, e lo stesso
+// drink da due sezioni faceva due righe «Negroni × 1».
+export const chiaveRiga = (i) => (i.nome_carta ? `${i.drink_id}·${i.nome_carta}` : i.drink_id)
+
+// Il nome che il cliente legge nel carrello: quello che ha scelto.
+export const nomeLetto = (i) => i.nome_carta || i.name
 
 // UNA RIGA NUOVA. L'ordine porta il drink del GESTIONALE, col suo nome:
 // è quello che il banco conosce, che scala il magazzino e che finisce
 // nelle statistiche. Se il menù dei clienti lo chiama in un altro modo (il
-// nome per il cliente della scheda, o quello di una voce scelta a mano),
+// nome per il cliente della scheda, o quello di una voce del menù),
 // quel nome va nella nota della riga, che al banco dice cosa preparare
 // («SOUR 7 — Gin Fizz»); al cliente, nel carrello, resta il nome che ha
 // scelto.
@@ -42,11 +47,7 @@ export function rigaDelCarrello(drink) {
     sumup_product_id: drink.sumup_product_id ?? null,
   }
   const diverso = (drink.name || '').trim().toLowerCase() !== (riga.name || '').trim().toLowerCase()
-  return {
-    ...riga,
-    ...(drink.voce_carta ? { riga: drink.id } : {}),
-    ...(diverso ? { nome_carta: drink.name, note: drink.name } : {}),
-  }
+  return diverso ? { ...riga, nome_carta: drink.name, note: drink.name } : riga
 }
 
 // Carrello persistito in localStorage. La scrittura avviene SUBITO,
@@ -67,14 +68,16 @@ export function useCart() {
   }, [])
 
   const add = useCallback((drink) => {
+    const nuova = rigaDelCarrello(drink)
+    const chiave = chiaveRiga(nuova)
     update((prev) => {
-      const found = prev.find((i) => chiaveRiga(i) === drink.id)
+      const found = prev.find((i) => chiaveRiga(i) === chiave)
       if (found) {
         return prev.map((i) =>
-          chiaveRiga(i) === drink.id ? { ...i, qty: i.qty + 1 } : i
+          chiaveRiga(i) === chiave ? { ...i, qty: i.qty + 1 } : i
         )
       }
-      return [...prev, rigaDelCarrello(drink)]
+      return [...prev, nuova]
     })
   }, [update])
 

@@ -51,8 +51,8 @@ const DRINKS = [
   { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
 ]
 let mockDrinks = DRINKS
-// La carta dei clienti (REQ-MENU-025): vuota di suo, come per il locale
-// che non la compila.
+// La struttura del menù dei clienti (REQ-MENU-025): vuota di suo, come per
+// il locale che non la personalizza.
 const CARTA_VUOTA = { sezioni: [], voci: [] }
 let mockCarta = CARTA_VUOTA
 
@@ -64,8 +64,8 @@ vi.mock('../../src/lib/menuCache.js', () => ({
       { id: 'c2', name: 'Birre', sort_order: 2 },
     ],
     drinks: mockDrinks,
-    carta: mockCarta,
   }),
+  useStrutturaMenu: () => ({ carta: mockCarta, pronta: true }),
 }))
 
 // L'ordine che questo dispositivo si ricorda (il cliente lo ritrova in cima
@@ -962,21 +962,29 @@ describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
     expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
   })
 
-  // Due voci sullo stesso prodotto sono due righe, e al banco arriva il
-  // prodotto del gestionale col nome letto dal cliente nella nota.
+  // Due voci sullo stesso prodotto con due nomi sono due righe, e al banco
+  // arriva il prodotto del gestionale col nome letto dal cliente nella
+  // nota. Lo stesso prodotto con lo stesso nome, preso da due sezioni, è
+  // una riga sola: al banco è la stessa cosa.
   it('nel carrello due voci sullo stesso drink restano due righe, col nome letto in nota', async () => {
     const user = userEvent.setup()
     ruoloClaim = null
-    mockCarta = STRUTTURA
+    mockCarta = {
+      ...STRUTTURA,
+      sezioni: [...STRUTTURA.sezioni, { id: 's-ancora', nome: 'Ancora', ordine: 3, vista: 'dettagliata' }],
+      voci: [...STRUTTURA.voci, { id: 'v-mojito-2', sezione_id: 's-ancora', drink_id: 'd1', nome: 'Mojito cubano', ordine: 0 }],
+    }
     mostra('/menu?tavolo=5')
-    await screen.findByText('Mojito cubano')
-    const card = (nome) => screen.getByText(nome).closest('.menu-item')
-    await user.click(within(card('Mojito cubano')).getByRole('button', { name: 'Aggiungi' }))
-    await user.click(within(card('Cuba libre')).getByRole('button', { name: 'Aggiungi' }))
+    await screen.findByText('Cuba libre')
+    const [primo, secondo] = screen.getAllByText('Mojito cubano').map((n) => n.closest('.menu-item'))
+    await user.click(within(primo).getByRole('button', { name: 'Aggiungi' }))
+    await user.click(within(screen.getByText('Cuba libre').closest('.menu-item')).getByRole('button', { name: 'Aggiungi' }))
+    // Dall'altra sezione la stessa riga sale di uno.
+    await user.click(within(secondo).getByRole('button', { name: 'Aumenta' }))
     const carrello = JSON.parse(localStorage.getItem('drink_cart_v1'))
     expect(carrello).toEqual([
-      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', riga: 'v-mojito', nome_carta: 'Mojito cubano', note: 'Mojito cubano', qty: 1 }),
-      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', riga: 'v-cuba', nome_carta: 'Cuba libre', note: 'Cuba libre', qty: 1 }),
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Mojito cubano', note: 'Mojito cubano', qty: 2 }),
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Cuba libre', note: 'Cuba libre', qty: 1 }),
     ])
     // Il cliente legge i nomi che ha scelto.
     expect(document.querySelector('.cartbar').textContent).toContain('Cuba libre')

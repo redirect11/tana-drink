@@ -52,6 +52,8 @@ vi.mock('../../src/lib/api.js', () => ({
   creaSezioneCarta: vi.fn((s) => ({ id: 'nuova', ...s })),
   prepopolaStruttura: vi.fn((c) => c),
   eliminaStruttura: vi.fn(),
+  riordinaSezioniCarta: vi.fn(),
+  riordinaVociCarta: vi.fn(),
   aggiornaSezioneCarta: vi.fn(),
   eliminaSezioneCarta: vi.fn(),
   creaVoceCarta: vi.fn((v) => ({ id: 'voce-nuova', ...v })),
@@ -101,6 +103,7 @@ import {
   creaSezioneCarta,
   aggiornaSezioneCarta,
   eliminaSezioneCarta,
+  riordinaSezioniCarta,
   prepopolaStruttura,
   eliminaStruttura,
   creaVoceCarta,
@@ -486,11 +489,11 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
       'Sezione Bibite',
     ])
     const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
-    const [collegata, libera] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
-    expect(collegata).toHaveValue('mojito')
-    expect(libera).toHaveValue('')
-    // Una voce collegata non si scollega: la scelta vuota non c'è.
-    expect(within(collegata).queryByRole('option', { name: /Scegliere/ })).toBeNull()
+    // Il prodotto collegato si legge; la tendina c'è da subito solo per la
+    // voce che un prodotto non ce l'ha.
+    expect(within(cocktail).getByText(/^Mojito · 7,00/, { selector: 'span' })).toBeInTheDocument()
+    const tendine = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
+    expect(tendine.map((t) => t.value)).toEqual([''])
     expect(within(cocktail).getByText(/Nessun prodotto della cassa collegato/)).toBeInTheDocument()
     // Il nome è della sezione, la descrizione viene dalla scheda: il campo
     // mostra il testo che legge il cliente, non un segnaposto.
@@ -516,9 +519,15 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     await user.selectOptions(within(cocktail).getByRole('combobox', { name: 'Aggiungi un prodotto a Cocktail IBA' }), 'mojito')
     expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cocktail', drink_id: 'mojito', ordine: 2 })
 
-    const [, libera] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
+    const [libera] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
     await user.selectOptions(libera, 'mojito')
     expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-libera', { drink_id: 'mojito' })
+
+    // Il prodotto si cambia, ma non si toglie: la scelta vuota non c'è.
+    await user.click(within(cocktail).getByRole('button', { name: 'Cambia il prodotto della cassa di Mojito cubano' }))
+    const [cambia] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
+    expect(cambia).toHaveValue('mojito')
+    expect(within(cambia).queryByRole('option', { name: /Scegliere/ })).toBeNull()
 
     // Si sposta in fondo all'altra sezione, coi suoi ritocchi.
     await user.selectOptions(within(cocktail).getByRole('combobox', { name: 'Sposta Mojito cubano in un’altra sezione' }), 's-bibite')
@@ -551,37 +560,44 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
   // L'utente, 05/11/2026: «serve un tasto per prepopolare tutto come se
   // fosse il menu cassa e poi da lì modifico» — anche su un menù già
   // personalizzato, come quello della demo.
+  // La struttura di prima e la copia nuova vanno nello stesso giro di
+  // scritture: in due giri l'editor passava per il menù vuoto.
   it('su una struttura che c’è già, si riparte dalle voci della cassa dopo una conferma', async () => {
     const user = userEvent.setup()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     filo.carta = STRUTTURA
     await apriStruttura()
     const tasto = await screen.findByRole('button', { name: 'Riparti dalle voci della cassa' })
     await user.click(tasto)
+    await user.click(screen.getByRole('button', { name: 'Annulla' }))
     expect(prepopolaStruttura).not.toHaveBeenCalled()
-    confirm.mockReturnValue(true)
     await user.click(tasto)
-    expect(eliminaStruttura).toHaveBeenCalledWith(STRUTTURA)
-    expect(prepopolaStruttura.mock.calls.at(-1)[0].voci.map((v) => v.drink_id)).toEqual(['mojito'])
-    confirm.mockRestore()
+    await user.click(screen.getByRole('button', { name: 'Riparti' }))
+    const [copia, opzioni] = prepopolaStruttura.mock.calls.at(-1)
+    expect(copia.voci.map((v) => v.drink_id)).toEqual(['mojito'])
+    expect(opzioni).toEqual({ sostituisci: STRUTTURA })
   })
 
+  // Le cancellazioni si confermano col dialogo dell'app, non col
+  // `confirm` del browser, che nella PWA installata può non comparire.
   it('le sezioni si nascondono, si spostano, si eliminano; e tutto torna al menù per categorie', async () => {
     const user = userEvent.setup()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     filo.carta = STRUTTURA
     await apriStruttura()
     const bibite = await screen.findByRole('region', { name: 'Sezione Bibite' })
     await user.click(within(bibite).getByRole('checkbox', { name: 'Nascosta' }))
     expect(aggiornaSezioneCarta).toHaveBeenLastCalledWith('s-bibite', { nascosta: true })
+    // Il riordino va in un pacchetto solo.
     await user.click(within(bibite).getByRole('button', { name: 'Sezione su' }))
-    expect(aggiornaSezioneCarta).toHaveBeenCalledWith('s-bibite', { ordine: 0 })
-    expect(aggiornaSezioneCarta).toHaveBeenCalledWith('s-cocktail', { ordine: 1 })
+    expect(riordinaSezioniCarta).toHaveBeenCalledWith([
+      { id: 's-bibite', ordine: 0 },
+      { id: 's-cocktail', ordine: 1 },
+    ])
     await user.click(within(bibite).getByRole('button', { name: 'Elimina la sezione Bibite' }))
+    await user.click(screen.getByRole('button', { name: 'Elimina' }))
     expect(eliminaSezioneCarta).toHaveBeenCalledWith('s-bibite', [])
     await user.click(screen.getByRole('button', { name: 'Torna al menù per categorie' }))
+    await user.click(screen.getByRole('button', { name: 'Elimina tutto' }))
     expect(eliminaStruttura).toHaveBeenCalledWith(STRUTTURA)
-    confirm.mockRestore()
   })
 
   // Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo

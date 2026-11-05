@@ -4700,9 +4700,6 @@ body.drawer-open .status-bell-float { display: none; }
 .struttura-nota {
   margin: 0 0 8px;
 }
-.struttura-nota:empty {
-  display: none;
-}
 .wys-campo {
   margin: 0 0 4px;
 }
@@ -4804,6 +4801,12 @@ body.drawer-open .status-bell-float { display: none; }
 .struttura-collegamento {
   flex: 1 1 220px;
   min-width: 0;
+}
+.struttura-prodotto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .struttura-collegamento select {
   padding: 6px 10px;

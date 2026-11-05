@@ -6,29 +6,24 @@
 // perché li ho vicini a livello logistico, nel menù vanno separati». Il
 // gestionale è fatto per il banco: voci-prezzo («SOUR 7», «DRINK 8
 // PREMIUM»), gin tonic chiamati col solo nome del gin, shot e bottiglie che
-// al tavolo non si ordinano.
-//
-// Prima era una «carta» a parte, poi una «composizione» da scegliere come
-// uno stile, poi un menù con sezioni che seguivano una categoria della cassa
-// accanto a sezioni con le voci scelte a mano. L'utente, 05/11/2026: «vorrei
-// che sia libero … partiamo dal prepopolare il menu con le voci di cassa,
-// poi posso aggiungere le categorie che mi pare, spostare i drink tra le
-// categorie e creare altri drink, ma tutti devono obbligatoriamente essere
-// connessi a un item del menu cassa. Voglio completa flessibilità». Quindi:
+// al tavolo non si ordinano. L'utente, 05/11/2026: «vorrei che sia libero …
+// partiamo dal prepopolare il menu con le voci di cassa … ma tutti devono
+// obbligatoriamente essere connessi a un item del menu cassa». (Le forme
+// provate prima — una carta a parte, una «composizione» come uno stile,
+// sezioni che seguivano una categoria — stanno nel registro, REQ-MENU-025.)
 //
 // · FINCHÉ NESSUNO LA TOCCA, il menù dei clienti si divide per le categorie
 //   della cassa, come è sempre stato (nessuna sezione scritta).
-// · PER PERSONALIZZARLO si parte da una copia (`prepopolazione`): una
-//   sezione per categoria, con dentro tutti i suoi prodotti come voci. Da lì
-//   tutto è libero: sezioni nuove, rinominate, nascoste, spostate; voci
-//   spostate da una sezione all'altra, aggiunte, tolte, rinominate; lo
-//   stesso prodotto in più sezioni.
+// · PER PERSONALIZZARLO si parte da una copia (`prepopolazione`), che è quel
+//   menù per categorie scritto come struttura. Da lì tutto è libero:
+//   sezioni nuove, rinominate, nascoste, spostate; voci spostate da una
+//   sezione all'altra, aggiunte, tolte, rinominate; lo stesso prodotto in
+//   più sezioni.
 // · OGNI VOCE È COLLEGATA A UN PRODOTTO DELLA CASSA: da lì prende prezzo e
 //   disponibilità, ed è quello che arriva al banco (cart.js).
 // · I TESTI stanno sulla scheda prodotto (`nome_cliente`, descrizione,
 //   ingredienti in carta) e valgono ovunque; una voce può ritoccarli per la
-//   sua sezione. Gli ingredienti di una voce non vengono mai dalla ricetta
-//   (ingredientiCarta.js).
+//   sua sezione.
 //
 // Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo nel
 // menù dei clienti. Per non perderlo, l'editor elenca quelli rimasti fuori
@@ -42,6 +37,8 @@
 // collezioni si chiamano ancora `carta_sezioni` e `carta_voci`), la pagina
 // in MenuPage.jsx, la gestione in StrutturaMenu.jsx.
 
+import { perNome } from './macros.js'
+
 export const VISTE_SEZIONE = [
   { id: 'dettagliata', label: 'Dettagliata' },
   { id: 'snella', label: 'Snella' },
@@ -50,15 +47,46 @@ export const vistaSezione = (v) => (v === 'snella' ? 'snella' : 'dettagliata')
 
 export const PERCORSO_ANTEPRIMA = '/menu?vista=cliente'
 
-const testo = (v) => (typeof v === 'string' ? v.trim() : '')
+export const testo = (v) => (typeof v === 'string' ? v.trim() : '')
 
 // Sezioni e voci si mettono in fila allo stesso modo: l'ordine scelto, poi
 // il nome, così due voci con lo stesso numero non si scambiano di posto a
 // ogni lettura.
 export function ordina(lista, nome = (x) => x.nome) {
   return [...(lista || [])].sort(
-    (a, b) => (Number(a.ordine) || 0) - (Number(b.ordine) || 0) || testo(nome(a)).localeCompare(testo(nome(b)))
+    (a, b) =>
+      (Number(a.ordine) || 0) - (Number(b.ordine) || 0) || perNome({ name: testo(nome(a)) }, { name: testo(nome(b)) })
   )
+}
+
+// SU E GIÙ: si scambia col vicino e si rinumera tutta la lista, perché le
+// voci scritte da uno script, o aggiunte in fretta, possono avere lo stesso
+// numero d'ordine (e le sezioni nuove, messe in cima, uno negativo), e due
+// numeri uguali non si scambiano. Torna solo chi cambia davvero, da
+// scrivere in un pacchetto solo.
+export function riordino(lista, idx, dir) {
+  const j = idx + dir
+  if (j < 0 || j >= lista.length) return []
+  const nuova = [...lista]
+  ;[nuova[idx], nuova[j]] = [nuova[j], nuova[idx]]
+  return nuova.flatMap((x, k) => (Number(x.ordine) === k ? [] : [{ id: x.id, ordine: k }]))
+}
+
+// I PRODOTTI PER CATEGORIA, come li divide il menù di sempre: il nome della
+// categoria, o quello che il prodotto si porta dietro se la sua non c'è
+// più; le categorie nel loro ordine, quelle sparite in fondo. È lo stesso
+// raggruppamento per la pagina, per la copia di partenza e per la tendina
+// dei prodotti: la copia deve venire uguale al menù che il cliente vedeva.
+export function perCategoria(drinks, cats, altro = 'Altro') {
+  const byId = new Map((cats || []).map((c) => [c.id, c]))
+  const gruppi = new Map()
+  for (const d of drinks || []) {
+    const cat = byId.get(d.category_id)
+    const nome = cat?.name || d.category || altro
+    if (!gruppi.has(nome)) gruppi.set(nome, { nome, sort: cat ? cat.sort_order : 9999, prodotti: [] })
+    gruppi.get(nome).prodotti.push(d)
+  }
+  return [...gruppi.values()].sort((a, b) => a.sort - b.sort || perNome({ name: a.nome }, { name: b.nome }))
 }
 
 // IL PRODOTTO COME LO LEGGE IL CLIENTE: col suo nome per il cliente, se ne
@@ -79,22 +107,26 @@ export const nomeVoce = (voce, drink) => testo(voce?.nome) || drink?.name || ''
 export const nomeSezione = (sezione) => testo(sezione?.nome) || 'Senza nome'
 
 // UNA VOCE, come la vede il menù: il prodotto, con sopra quello che la voce
-// dice di suo. Prende l'`id` della VOCE, perché due voci sullo stesso
-// prodotto sono due righe diverse (chiave, dettaglio, carrello); il
+// dice di suo, già pronta da mostrare. Prende l'`id` della VOCE, perché due
+// voci sullo stesso prodotto sono due card diverse (chiave, dettaglio); il
 // prodotto resta in `drink_id`, ed è quello che finisce nell'ordine.
+// Gli ingredienti sono il ritocco o quelli scritti sulla scheda, mai la
+// ricetta (Flavio, 04/11/2026: «non li devi prendere dalla ricetta, vanno
+// messi a mano» — quella del gin tonic porta la tonica, quella di «SOUR 7»
+// non è il drink in carta): senza `recipe_items`, ingredientiCarta.js non
+// ha una ricetta su cui ripiegare. In una sezione snella non si racconta
+// niente.
 export function voceInSezione(voce, drink, vista = 'dettagliata') {
-  const snella = vistaSezione(vista) === 'snella'
+  const snella = vista === 'snella'
   return {
     ...drink,
     id: voce.id,
     drink_id: drink.id,
-    voce_carta: voce.id,
     name: nomeVoce(voce, drink),
     nome_gestionale: drink.nome_gestionale ?? drink.name,
     description: snella ? null : testo(voce.descrizione) || drink.description || null,
-    // Il ritocco, o quelli scritti sulla scheda: dalla ricetta mai.
-    ingredienti: testo(voce.ingredienti) || testo(drink.ingredienti),
-    ...(snella ? { snella: true } : {}),
+    ingredienti: snella ? '' : testo(voce.ingredienti) || testo(drink.ingredienti),
+    recipe_items: [],
   }
 }
 
@@ -102,51 +134,82 @@ export function voceInSezione(voce, drink, vista = 'dettagliata') {
 // Senza, il menù si divide per categorie come è sempre stato.
 export const strutturaPersonalizzata = (carta) => Boolean(carta?.sezioni?.length)
 
-// LA COPIA DI PARTENZA: una sezione per categoria della cassa, nel loro
-// ordine e col loro nome, e dentro tutti i prodotti, spenti compresi (al
-// tavolo non si vedono, e tornano da soli quando si riaccendono). I
-// prodotti senza una categoria che esiste ancora vanno in fondo, divisi per
-// il nome di categoria che si portano dietro. Le voci non hanno testi
-// propri: valgono quelli della scheda. `chiave` lega le voci alla loro
-// sezione finché non hanno un id; `categoria_id` dice da quale categoria
-// viene la sezione, e serve solo a chi costruisce (la demo).
+// LE FORME DEI DOCUMENTI, una volta sola per l'app (api.js) e per la demo.
+export const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, nascosta = false }) => ({
+  nome: String(nome || '').trim(),
+  ordine,
+  vista: vistaSezione(vista),
+  nascosta: nascosta === true,
+})
+export const voceDaScrivere = ({ sezione_id, drink_id, nome = '', descrizione = '', ingredienti = '', ordine = 0 }) => ({
+  sezione_id,
+  drink_id,
+  nome: String(nome || '').trim(),
+  descrizione,
+  ingredienti,
+  ordine,
+})
+
+// LA COPIA DI PARTENZA: il menù per categorie (`perCategoria`) scritto come
+// struttura. Una sezione per gruppo, nel suo ordine e col suo nome, e
+// dentro tutti i prodotti, spenti compresi (al tavolo non si vedono, e
+// tornano da soli quando si riaccendono). Le voci non hanno testi propri:
+// valgono quelli della scheda. `chiave` lega le voci alla loro sezione
+// finché non hanno un id (`materializza`).
 export function prepopolazione(drinks, cats) {
-  const perNome = (a, b) => (a.name || '').localeCompare(b.name || '')
-  const gruppi = [...(cats || [])]
-    .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || perNome(a, b))
-    .map((c) => ({ chiave: `categoria:${c.id}`, categoria_id: c.id, nome: c.name, prodotti: [] }))
-  const perCategoria = new Map(gruppi.map((g) => [g.categoria_id, g]))
-  const orfani = new Map()
-  for (const d of drinks || []) {
-    let g = perCategoria.get(d.category_id)
-    if (!g) {
-      const nome = d.category || 'Altro'
-      if (!orfani.has(nome)) orfani.set(nome, { chiave: `altro:${nome}`, categoria_id: null, nome, prodotti: [] })
-      g = orfani.get(nome)
-    }
-    g.prodotti.push(d)
-  }
-  const pieni = [...gruppi, ...orfani.values()].filter((g) => g.prodotti.length)
+  const gruppi = perCategoria(drinks, cats)
   return {
-    sezioni: pieni.map((g, i) => ({
-      chiave: g.chiave,
-      categoria_id: g.categoria_id,
-      nome: g.nome,
-      ordine: i,
-      vista: 'dettagliata',
-      nascosta: false,
-    })),
-    voci: pieni.flatMap((g) =>
-      g.prodotti.sort(perNome).map((d, j) => ({ sezione: g.chiave, drink_id: d.id, ordine: j }))
-    ),
+    sezioni: gruppi.map((g, i) => ({ chiave: `categoria:${g.nome}`, nome: g.nome, ordine: i, vista: 'dettagliata', nascosta: false })),
+    voci: gruppi.flatMap((g) => g.prodotti.map((d, j) => ({ sezione: `categoria:${g.nome}`, drink_id: d.id, ordine: j }))),
   }
 }
+
+// La copia con gli id, nella forma dei documenti: `nuovoId(tipo, elemento)`
+// li fa (casuali per l'app, fissi per la demo).
+export function materializza({ sezioni, voci }, nuovoId) {
+  const idDi = new Map()
+  const scritte = (sezioni || []).map((s) => {
+    const id = nuovoId('sezione', s)
+    idDi.set(s.chiave, id)
+    return { id, ...sezioneDaScrivere(s) }
+  })
+  const scritteVoci = (voci || [])
+    .filter((v) => idDi.has(v.sezione))
+    .map((v) => {
+      const voce = voceDaScrivere({ ...v, sezione_id: idDi.get(v.sezione) })
+      return { id: nuovoId('voce', voce), ...voce }
+    })
+  return { sezioni: scritte, voci: scritteVoci }
+}
+
+// LE VOCI CHE CONTANO: quelle in una sezione che c'è. Una voce rimasta senza
+// sezione (una cancellazione a metà) non si vede da nessuna parte, e il suo
+// prodotto è fuori dal menù come gli altri.
+export function vociValide(carta) {
+  const sezioni = new Set((carta?.sezioni || []).map((s) => s.id))
+  return (carta?.voci || []).filter((v) => sezioni.has(v.sezione_id))
+}
+
+// Le voci di ogni sezione, in fila: `nome` dice come si chiama una voce,
+// per mettere in fila quelle con lo stesso numero d'ordine.
+export function vociPerSezione(voci, nome = (v) => v.nome) {
+  const per = new Map()
+  for (const v of voci || []) {
+    if (!per.has(v.sezione_id)) per.set(v.sezione_id, [])
+    per.get(v.sezione_id).push(v)
+  }
+  for (const [k, l] of per) per.set(k, ordina(l, nome))
+  return per
+}
+
+// Il numero d'ordine di una voce messa in fondo alla sua sezione.
+export const inFondo = (carta, sezioneId) => (carta?.voci || []).filter((v) => v.sezione_id === sezioneId).length
 
 // I PRODOTTI DELLA CASSA CHE NON SONO IN NESSUNA VOCE: quelli aggiunti dopo
 // la copia, o tolti da tutte le sezioni. Al tavolo non si vedono, e senza
 // questo elenco nessuno se ne accorgerebbe.
 export function fuoriDalMenu(carta, drinks) {
-  const dentro = new Set((carta?.voci || []).map((v) => v.drink_id))
+  const dentro = new Set(vociValide(carta).map((v) => v.drink_id))
   return (drinks || []).filter((d) => !dentro.has(d.id))
 }
 
@@ -159,19 +222,15 @@ export function fuoriDalMenu(carta, drinks) {
 // vede.
 export function sezioniDelMenu(carta, drinks) {
   const perId = new Map((drinks || []).map((d) => [d.id, d]))
-  const vociPer = new Map()
-  for (const v of carta?.voci || []) {
-    if (!perId.has(v.drink_id)) continue
-    if (!vociPer.has(v.sezione_id)) vociPer.set(v.sezione_id, [])
-    vociPer.get(v.sezione_id).push(v)
-  }
+  const vociPer = vociPerSezione(
+    (carta?.voci || []).filter((v) => perId.has(v.drink_id)),
+    (v) => nomeVoce(v, perId.get(v.drink_id))
+  )
   const out = []
   for (const s of ordina(carta?.sezioni)) {
     if (s.nascosta) continue
     const vista = vistaSezione(s.vista)
-    const lista = ordina(vociPer.get(s.id), (v) => nomeVoce(v, perId.get(v.drink_id))).map((v) =>
-      voceInSezione(v, perId.get(v.drink_id), vista)
-    )
+    const lista = (vociPer.get(s.id) || []).map((v) => voceInSezione(v, perId.get(v.drink_id), vista))
     if (lista.length) out.push([nomeSezione(s), lista, { id: s.id, vista }])
   }
   return out

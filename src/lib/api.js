@@ -116,7 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
-import { ordina, vistaSezione } from './strutturaMenu.js'
+import { ordina, vistaSezione, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -507,8 +507,9 @@ export async function deleteCategory(id) {
 }
 
 // --- LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ---
-// Le sezioni del menù che si legge al tavolo e le voci di quelle scelte a
-// mano (la logica sta in lib/strutturaMenu.js). Le collezioni hanno il nome
+// Le sezioni del menù che si legge al tavolo e le loro voci, ognuna
+// collegata a un prodotto della cassa (la logica sta in
+// lib/strutturaMenu.js). Le collezioni hanno il nome
 // di quando era una «carta» a parte. Due collezioni e non un
 // documento solo: le voci si scrivono una alla volta, mentre le si
 // compila, e un documento unico viaggerebbe intero a ogni descrizione
@@ -571,13 +572,6 @@ export function subscribeCarta(onChange, onError) {
   }
 }
 
-const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, nascosta = false }) => ({
-  nome: String(nome || '').trim(),
-  ordine,
-  vista: vistaSezione(vista),
-  nascosta: nascosta === true,
-})
-
 export function creaSezioneCarta(dati) {
   const ref = doc(cartaSezioniCol)
   const sezione = sezioneDaScrivere(dati)
@@ -596,39 +590,40 @@ function inPacchetti(operazioni) {
   }
 }
 
+const cancellazioni = ({ sezioni, voci } = {}) => [
+  ...(voci || []).map((v) => (b) => b.delete(doc(db, 'carta_voci', v.id))),
+  ...(sezioni || []).map((s) => (b) => b.delete(doc(db, 'carta_sezioni', s.id))),
+]
+
 // LA COPIA DI PARTENZA (strutturaMenu.js, prepopolazione) scritta tutta:
-// sezioni e voci, con gli id fatti qui. Torna la struttura composta, così
-// chi chiama non rilegge quello che si è appena scritto.
-export function prepopolaStruttura({ sezioni, voci }) {
-  const operazioni = []
-  const idDi = new Map()
-  const scritte = (sezioni || []).map((s) => {
-    const ref = doc(cartaSezioniCol)
-    idDi.set(s.chiave, ref.id)
-    const sezione = sezioneDaScrivere(s)
-    operazioni.push((b) => b.set(ref, { ...sezione, created_at: serverTimestamp() }))
-    return { id: ref.id, ...sezione }
-  })
-  const scritteVoci = (voci || [])
-    .filter((v) => idDi.has(v.sezione))
-    .map((v) => {
-      const ref = doc(cartaVociCol)
-      const voce = { sezione_id: idDi.get(v.sezione), drink_id: v.drink_id, nome: '', descrizione: '', ingredienti: '', ordine: v.ordine }
-      operazioni.push((b) => b.set(ref, { ...voce, created_at: serverTimestamp() }))
-      return { id: ref.id, ...voce }
-    })
-  inPacchetti(operazioni)
-  return { sezioni: scritte, voci: scritteVoci }
+// sezioni e voci, con gli id fatti qui. Con `sostituisci` la struttura di
+// prima se ne va nello stesso giro di pacchetti («Riparti dalle voci della
+// cassa»): due giri separati facevano passare l'editor per il menù vuoto.
+// Torna la struttura composta, così chi chiama non rilegge quello che si è
+// appena scritto.
+export function prepopolaStruttura(copia, { sostituisci } = {}) {
+  const fatta = materializza(copia, (tipo) => doc(tipo === 'sezione' ? cartaSezioniCol : cartaVociCol).id)
+  inPacchetti([
+    ...cancellazioni(sostituisci),
+    ...fatta.sezioni.map(({ id, ...s }) => (b) => b.set(doc(cartaSezioniCol, id), { ...s, created_at: serverTimestamp() })),
+    ...fatta.voci.map(({ id, ...v }) => (b) => b.set(doc(cartaVociCol, id), { ...v, created_at: serverTimestamp() })),
+  ])
+  return fatta
 }
 
 // Tutta la struttura via: il menù dei clienti torna a dividersi per le
 // categorie della cassa.
-export function eliminaStruttura({ sezioni, voci }) {
-  inPacchetti([
-    ...(voci || []).map((v) => (b) => b.delete(doc(db, 'carta_voci', v.id))),
-    ...(sezioni || []).map((s) => (b) => b.delete(doc(db, 'carta_sezioni', s.id))),
-  ])
+export function eliminaStruttura(carta) {
+  inPacchetti(cancellazioni(carta))
 }
+
+// UN RIORDINO IN UN PACCHETTO SOLO (strutturaMenu.js, riordino): scritti
+// uno per uno, i numeri d'ordine di una sezione lunga facevano una
+// scrittura e un giro di schermo per ognuno.
+const riordina = (collezione) => (cambi) =>
+  inPacchetti((cambi || []).map((c) => (b) => b.update(doc(db, collezione, c.id), { ordine: c.ordine })))
+export const riordinaSezioniCarta = riordina('carta_sezioni')
+export const riordinaVociCarta = riordina('carta_voci')
 
 export function aggiornaSezioneCarta(id, patch) {
   bgWrite(() => updateDoc(doc(db, 'carta_sezioni', id), patch), 'carta')
@@ -637,15 +632,12 @@ export function aggiornaSezioneCarta(id, patch) {
 // Una sezione se ne va con le sue voci, nello stesso pacchetto: voci
 // rimaste senza sezione non si vedrebbero da nessuna parte, nemmeno qui.
 export function eliminaSezioneCarta(id, vociIds = []) {
-  const batch = writeBatch(db)
-  batch.delete(doc(db, 'carta_sezioni', id))
-  for (const v of vociIds) batch.delete(doc(db, 'carta_voci', v))
-  bgWrite(() => batch.commit(), 'carta')
+  eliminaStruttura({ sezioni: [{ id }], voci: vociIds.map((v) => ({ id: v })) })
 }
 
-export function creaVoceCarta({ sezione_id, drink_id = null, nome = '', descrizione = '', ingredienti = '', ordine = 0 }) {
+export function creaVoceCarta(dati) {
   const ref = doc(cartaVociCol)
-  const voce = { sezione_id, drink_id, nome: String(nome).trim(), descrizione, ingredienti, ordine }
+  const voce = voceDaScrivere(dati)
   bgWrite(() => setDoc(ref, { ...voce, created_at: serverTimestamp() }), 'carta')
   return { id: ref.id, ...voce }
 }
