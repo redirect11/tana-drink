@@ -1,6 +1,36 @@
 # Cosa è cambiato
 
-## 1.10.13-beta — in lavorazione
+## 1.10.14-beta — 05/11/2026 (test)
+
+### Menù dei clienti
+
+- **Il menù dei clienti si personalizza liberamente**, da Menù → Menù dei
+  clienti (REQ-MENU-025).
+  - Finché non lo si tocca resta quello di sempre, diviso per le
+    categorie della cassa.
+  - «Prepopola con le voci della cassa» crea una sezione per categoria,
+    con dentro tutti i suoi prodotti; su un menù già personalizzato il
+    tasto diventa «Riparti dalle voci della cassa» e, dopo una conferma,
+    sostituisce tutto con una copia nuova. Da lì sezioni e voci si aggiungono,
+    si spostano, si rinominano e si nascondono; una sezione può essere
+    snella (nome e prezzo).
+  - Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende
+    prezzo e disponibilità; lo stesso prodotto può stare in più sezioni.
+  - L'editor ha la forma del menù: i testi si scrivono direttamente nelle
+    card, e sopra ogni campo un'etichetta dice se il testo viene dalla
+    scheda prodotto o vale solo per quella sezione («↺» per tornare alla
+    scheda).
+  - I prodotti della cassa che non sono in nessuna sezione, per esempio
+    quelli aggiunti dopo, sono elencati in cima, con «Aggiungi a…»; sulla
+    scheda del prodotto si legge «non compare».
+  - Con la struttura personalizzata le sezioni stanno in schede grandi,
+    ferme in alto mentre si scorre. Il personale ordina sempre dal menù
+    della cassa, e il banco riceve il prodotto della cassa col nome letto
+    dal cliente nella nota.
+- Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
+  legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
+
+## 1.10.13-beta — 04/11/2026 (test)
 
 ### Magazzino
 

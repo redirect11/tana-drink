@@ -237,6 +237,22 @@ export default function DrinkForm({
         onUse={(v) => setForm((f) => ({ ...f, price: String(v) }))}
       />
 
+      {/* IL NOME PER IL CLIENTE (REQ-MENU-025). Il gestionale chiama le cose
+          come servono al banco — il gin tonic col solo nome del gin, le
+          voci-prezzo «SOUR 7» —, il cliente legge questo. L'ordine porta
+          comunque il nome del banco. */}
+      <label htmlFor="nome_cliente">Nome nel menù dei clienti</label>
+      <input
+        id="nome_cliente"
+        value={form.nome_cliente || ''}
+        onChange={set('nome_cliente')}
+        placeholder={form.name || ''}
+      />
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Nome mostrato al cliente. Se vuoto, vale il nome della voce; comande e
+        scontrini usano sempre il nome della voce.
+      </p>
+
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
       <p className="muted small" style={{ margin: '2px 0 0' }}>

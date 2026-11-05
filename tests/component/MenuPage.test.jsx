@@ -51,6 +51,10 @@ const DRINKS = [
   { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
 ]
 let mockDrinks = DRINKS
+// La struttura del menù dei clienti (REQ-MENU-025): vuota di suo, come per
+// il locale che non la personalizza.
+const CARTA_VUOTA = { sezioni: [], voci: [] }
+let mockCarta = CARTA_VUOTA
 
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
@@ -61,6 +65,7 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     ],
     drinks: mockDrinks,
   }),
+  useStrutturaMenu: () => ({ carta: mockCarta, pronta: true }),
 }))
 
 // L'ordine che questo dispositivo si ricorda (il cliente lo ritrova in cima
@@ -128,6 +133,7 @@ const voci = () =>
 beforeEach(() => {
   mockSettings = {}
   mockDrinks = DRINKS
+  mockCarta = CARTA_VUOTA
   ruoloClaim = 'bartender'
   stampaSala = 'ip'
   stampata.mockClear()
@@ -872,5 +878,115 @@ describe('il menù Special senza special', () => {
     mostra('/menu?tavolo=5')
     await screen.findByText('Mojito')
     expect(screen.queryByRole('region', { name: 'Special' })).toBeNull()
+  })
+})
+
+// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025). Flavio, 04/11/2026,
+// guardando il menù dei clienti sul test: gin e vodka insieme, «Distillati»
+// tutti uniti, shot e food al tavolo. L'utente, 05/11/2026: si parte dalle
+// voci della cassa e poi tutto è libero, ogni voce collegata a un prodotto
+// della cassa. Chi lavora ordina sempre dal menù del gestionale.
+describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
+  const STRUTTURA = {
+    sezioni: [
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+      { id: 's-birre', nome: 'Birre alla spina', ordine: 1, vista: 'snella' },
+      { id: 's-banco', nome: 'Dal banco', ordine: 2, vista: 'dettagliata', nascosta: true },
+    ],
+    voci: [
+      { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Mojito cubano', descrizione: 'Dall’Avana.', ingredienti: 'Rum, lime, menta', ordine: 0 },
+      { id: 'v-cuba', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Cuba libre', ordine: 1 },
+      { id: 'v-ichnusa', sezione_id: 's-birre', drink_id: 'd3', ordine: 0 },
+      // Il Negroni sta solo in una sezione nascosta.
+      { id: 'v-negroni', sezione_id: 's-banco', drink_id: 'd2', ordine: 0 },
+    ],
+  }
+  const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
+
+  it('il cliente legge le sezioni della struttura, i loro nomi e solo quello che mostrano', async () => {
+    ruoloClaim = null
+    mockCarta = STRUTTURA
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito cubano')
+    expect(sezioniLette()).toEqual(['Cocktail IBA', 'Birre alla spina'])
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+    expect(screen.queryByText('Negroni')).toBeNull()
+    expect(screen.getByText('Dall’Avana.')).toBeInTheDocument()
+    expect(screen.getByText('Rum · lime · menta')).toBeInTheDocument()
+    // Le schede delle sezioni sono quelle grandi.
+    expect(document.querySelector('.cat-nav')).toHaveClass('carta')
+  })
+
+  it('la sezione snella: nome e prezzo, senza immagine né descrizione', async () => {
+    ruoloClaim = null
+    mockDrinks = DRINKS.map((d) => (d.id === 'd3' ? { ...d, description: 'Non si vede' } : d))
+    mockCarta = STRUTTURA
+    mostra()
+    await screen.findByText('Mojito cubano')
+    const birre = document.querySelector('section.carta-snella')
+    expect(birre).not.toBeNull()
+    expect(within(birre).getByText('Ichnusa')).toBeInTheDocument()
+    expect(birre.querySelector('img')).toBeNull()
+    expect(screen.queryByText('Non si vede')).toBeNull()
+  })
+
+  it('senza struttura personalizzata il cliente vede le categorie, come sempre', async () => {
+    ruoloClaim = null
+    mostra()
+    await screen.findByText('Negroni')
+    expect(sezioniLette()).toEqual(['Cocktail', 'Birre'])
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(document.querySelector('.cat-nav')).not.toHaveClass('carta')
+  })
+
+  it('il nome per il cliente della scheda vale anche senza struttura', async () => {
+    ruoloClaim = null
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mostra()
+    await screen.findByText('Negroni sbagliato')
+    expect(voci()).toEqual(['Mojito', 'Negroni sbagliato', 'Ichnusa'])
+  })
+
+  it('chi lavora ordina dal menù del gestionale, coi nomi del banco e per categorie', async () => {
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mockCarta = STRUTTURA
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+  })
+
+  it('in vista cliente il personale vede la struttura come il cliente', async () => {
+    mockCarta = STRUTTURA
+    mostra('/menu?vista=cliente')
+    await screen.findByText('Mojito cubano')
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+  })
+
+  // Due voci sullo stesso prodotto con due nomi sono due righe, e al banco
+  // arriva il prodotto del gestionale col nome letto dal cliente nella
+  // nota. Lo stesso prodotto con lo stesso nome, preso da due sezioni, è
+  // una riga sola: al banco è la stessa cosa.
+  it('nel carrello due voci sullo stesso drink restano due righe, col nome letto in nota', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockCarta = {
+      ...STRUTTURA,
+      sezioni: [...STRUTTURA.sezioni, { id: 's-ancora', nome: 'Ancora', ordine: 3, vista: 'dettagliata' }],
+      voci: [...STRUTTURA.voci, { id: 'v-mojito-2', sezione_id: 's-ancora', drink_id: 'd1', nome: 'Mojito cubano', ordine: 0 }],
+    }
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Cuba libre')
+    const [primo, secondo] = screen.getAllByText('Mojito cubano').map((n) => n.closest('.menu-item'))
+    await user.click(within(primo).getByRole('button', { name: 'Aggiungi' }))
+    await user.click(within(screen.getByText('Cuba libre').closest('.menu-item')).getByRole('button', { name: 'Aggiungi' }))
+    // Dall'altra sezione la stessa riga sale di uno.
+    await user.click(within(secondo).getByRole('button', { name: 'Aumenta' }))
+    const carrello = JSON.parse(localStorage.getItem('drink_cart_v1'))
+    expect(carrello).toEqual([
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Mojito cubano', note: 'Mojito cubano', qty: 2 }),
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Cuba libre', note: 'Cuba libre', qty: 1 }),
+    ])
+    // Il cliente legge i nomi che ha scelto.
+    expect(document.querySelector('.cartbar').textContent).toContain('Cuba libre')
   })
 })
