@@ -45,6 +45,7 @@ vi.mock('../../src/lib/api.js', () => ({
 vi.mock('../../src/lib/printer.js', () => ({
   printFattura: vi.fn(() => Promise.resolve()),
   loadPrinterSettings: vi.fn(() => ({ businessName: 'La Tana' })),
+  datiFiscaliDelLocale: vi.fn(() => ['P.IVA 01234567890']),
 }))
 
 import InvoicesTab from '../../src/components/InvoicesTab.jsx'

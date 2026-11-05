@@ -19,7 +19,8 @@ import { allServed } from '../lib/comande.js'
 import { chiudiImpagato } from '../lib/api.js'
 import { patchImpagato } from '../lib/impagato.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito } from '../lib/printer.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, datiFiscaliDelLocale } from '../lib/printer.js'
+import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupDisponibile } from '../lib/licenza.js'
 import { scontiConsentiti } from '../lib/limiti.js'
@@ -789,33 +790,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     })
 
   // Invio via email: si apre il client di posta con la fattura già scritta.
-  const invoiceMailto = (inv) => {
-    const s = loadPrinterSettings()
-    const righe = (inv.items || [])
-      .map((i) => `${i.qty}x ${i.name} — ${formatPrice(i.qty * i.unit_price)}`)
-      .join('\n')
-    const c = inv.customer || {}
-    const body = [
-      `Fattura di cortesia n. ${inv.number}`,
-      `${s.businessName || ''}`,
-      '',
-      `Intestata a: ${c.denominazione || ''}`,
-      c.piva ? `P.IVA: ${c.piva}` : null,
-      c.cf ? `CF: ${c.cf}` : null,
-      c.indirizzo ? `Indirizzo: ${c.indirizzo}` : null,
-      '',
-      righe,
-      inv.discount_amount > 0 ? `Sconto: −${formatPrice(inv.discount_amount)}` : null,
-      `Totale: ${formatPrice(inv.total)}`,
-      '',
-      'Documento non fiscale — copia di cortesia.',
-    ]
-      .filter((r) => r !== null)
-      .join('\n')
-    return `mailto:${encodeURIComponent(c.email || '')}?subject=${encodeURIComponent(
-      `Fattura di cortesia n. ${inv.number}`
-    )}&body=${encodeURIComponent(body)}`
-  }
+  const invoiceMailto = (inv) =>
+    mailFattura(inv, { nomeLocale: loadPrinterSettings().businessName || '', datiFiscali: datiFiscaliDelLocale() })
 
   const sendInvoiceEmail = (inv) => {
     window.location.href = invoiceMailto(inv)

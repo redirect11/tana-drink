@@ -1,5 +1,6 @@
 // =====================================================================
-//  RIPRISTINA UN DATABASE da un file di backup-db.js.
+//  RIPRISTINA UN DATABASE da un file di backup-db.js, o del backup
+//  dell'app (Impostazioni → Backup).
 //
 //    node scripts/ripristina-db.js --file backup/tana-drink-2026-08-11.json
 //    node scripts/ripristina-db.js --file … --project tana-drink-test --apply
@@ -19,7 +20,7 @@
 //  caso normale, ma va detto ad alta voce.
 // =====================================================================
 import { readFileSync } from 'node:fs'
-import { accessToken, client, idDi, arg, flag } from './lib-firestore.js'
+import { accessToken, client, idDi, arg, flag, documentiDelBackup } from './lib-firestore.js'
 import { conLicenzaAttuale, CAMPO_LICENZA, COLLEZIONE_LICENZA } from '../src/lib/licenza.js'
 
 const FILE = arg('file')
@@ -78,7 +79,7 @@ let scritti = 0
 let cancellati = 0
 const piano = []
 for (const c of collezioni) {
-  const docs = backup.collezioni[c] || []
+  const docs = documentiDelBackup(backup.collezioni[c])
   const attuali = await db.documenti(c)
   const idsBackup = new Set(docs.map((d) => d.id))
   // Un documento delle impostazioni che porta la licenza non si cancella

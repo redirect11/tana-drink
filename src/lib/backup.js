@@ -20,11 +20,22 @@ import { licenzaRicordata } from './impostazioniLocali.js'
 // Le UTENZE non sono qui dentro: vivono in Firebase Auth. I ruoli si
 // rivedono dalla pagina Utenti.
 
-// L'elenco è esplicito perché il client non può chiedere a Firestore quali
-// collezioni esistono (lo può solo l'Admin SDK, cioè gli script). Se un
-// giorno se ne aggiunge una, va aggiunta anche qui: un backup che si
-// dimentica un pezzo è peggio di nessun backup.
+// Gli elenchi sono espliciti perché il client non può chiedere a Firestore
+// quali collezioni esistono (lo può solo l'Admin SDK, cioè gli script). Un
+// backup che si dimentica un pezzo è peggio di nessun backup, e succedeva
+// (BUG-129): undici collezioni nate dopo l'elenco — il menù dei clienti, i
+// listini e lo storico dei prezzi dei fornitori, i modelli d'ordine, le
+// spese extra, i minimi, lo storico delle vendite — non finivano nel file,
+// senza che nessuno lo sapesse; e c'era `serate`, che non è una collezione
+// ma il nome di una schermata delle statistiche. Ora ogni collezione delle
+// regole (firestore.rules) sta in uno dei tre elenchi qui sotto, e un test
+// (tests/unit/backup.test.js) boccia quella che non ci sta.
+
+// Si salvano e si rimettono.
 export const COLLEZIONI = [
+  'altre_spese',
+  'carta_sezioni',
+  'carta_voci',
   'cash_sessions',
   'categories',
   'counters',
@@ -35,11 +46,12 @@ export const COLLEZIONI = [
   'inventory_items',
   'invoices',
   'macro_categories',
+  'minimi_extra',
   'orders',
   'payments',
   'pos_prefs',
+  'purchase_order_templates',
   'purchase_orders',
-  'serate',
   'service_stats',
   'settings',
   'staff_calls',
@@ -50,38 +62,73 @@ export const COLLEZIONI = [
   'stock_counts',
   'stock_movements',
   'supplier_invoices',
+  'supplier_price_history',
+  'supplier_prices',
   'suppliers',
   'vouchers',
 ]
 
+// SOLO NELLA COPIA: lo storico caricato dagli script (le vendite di Tiller,
+// i fogli mensili). Si salva, perché senza una copia non si rifà; ma dalle
+// regole nessuno lo scrive dall'app (`write: if false`), e un documento
+// rifiutato fa fallire il suo blocco e ferma il ripristino a metà. Si
+// rimette con lo script, che legge anche il file dell'app:
+// `node scripts/ripristina-db.js --file <backup> --solo vendite_storiche,… --unisci`.
+export const SOLO_COPIA = ['mesi_storici', 'vendite_storiche', 'vendite_storiche_prodotti']
+
+// FUORI DAL BACKUP, apposta. Il ripristino salta quello che non è negli
+// elenchi qui sopra, quindi queste non si rimettono nemmeno se un file le
+// porta: nessuno le aggiunga «per completezza».
+export const FUORI_DAL_BACKUP = Object.freeze([
+  // La scrive solo la regia, e rimetterla vorrebbe dire tornare a un piano
+  // vecchio (BUG-126).
+  COLLEZIONE_LICENZA,
+  // Chi è collegato adesso: ognuno scrive solo la sua riga, ogni tre
+  // minuti. Una copia di ieri non dice niente, e il titolare non potrebbe
+  // rimettere quella degli altri.
+  'presenze',
+  // Il registro tecnico della stampante, per capire un guasto: non sono
+  // dati del locale.
+  'diagnostica_stampante',
+])
+
 export const FORMATO = 1
 
 // Scarica tutto. `onProgress(collezione, quanti)` per la barra di avanzamento.
+// A gruppi di sei collezioni insieme: una dopo l'altra, trentasei letture
+// si sommavano tempo per tempo davanti alla barra. Il file le tiene
+// nell'ordine degli elenchi.
+const INSIEME = 6
 export async function esportaDatabase(onProgress = () => {}) {
-  const collezioni = {}
-  let documenti = 0
-  for (const nome of COLLEZIONI) {
-    let docs = []
-    try {
-      const snap = await getDocs(collection(db, nome))
-      docs = snap.docs.map((d) => ({ id: d.id, dati: d.data() }))
-    } catch (e) {
-      // Una collezione che non si può leggere non deve far fallire tutto il
-      // backup: si annota e si va avanti.
-      collezioni[nome] = { errore: e.message, righe: [] }
-      onProgress(nome, 0)
-      continue
-    }
-    collezioni[nome] = { righe: docs }
-    documenti += docs.length
-    onProgress(nome, docs.length)
+  const nomi = [...COLLEZIONI, ...SOLO_COPIA]
+  const lette = {}
+  for (let i = 0; i < nomi.length; i += INSIEME) {
+    await Promise.all(
+      nomi.slice(i, i + INSIEME).map(async (nome) => {
+        lette[nome] = await leggiCollezione(nome)
+        onProgress(nome, lette[nome].righe.length)
+      })
+    )
   }
+  const collezioni = Object.fromEntries(nomi.map((n) => [n, lette[n]]))
+  const documenti = nomi.reduce((s, n) => s + lette[n].righe.length, 0)
   return {
     formato: FORMATO,
     creato_il: new Date().toISOString(),
     progetto: configurazione().firebase.projectId || null,
     documenti,
     collezioni,
+  }
+}
+
+async function leggiCollezione(nome) {
+  try {
+    const snap = await getDocs(collection(db, nome))
+    return { righe: snap.docs.map((d) => ({ id: d.id, dati: d.data() })) }
+  } catch (e) {
+    // Una collezione che non si può leggere non deve far fallire tutto il
+    // backup: si annota e si va avanti.
+    return { errore: e.message, righe: [] }
   }
 }
 
@@ -119,6 +166,7 @@ export async function importaDatabase(backup, onProgress = () => {}) {
 
   let scritti = 0
   const saltate = []
+  const soloScript = []
   // LE COLLEZIONI DI UN MODULO CHE LA LICENZA NON INCLUDE non si rimettono
   // (REQ-LIC-008): le regole le rifiuterebbero, e un documento rifiutato fa
   // fallire il suo blocco di 400 e ferma tutto il ripristino a metà. Restano
@@ -129,10 +177,13 @@ export async function importaDatabase(backup, onProgress = () => {}) {
   for (const [nome, c] of Object.entries(backup.collezioni)) {
     const righe = c?.righe || []
     if (!righe.length) continue
-    // `licenza/attuale` non è in COLLEZIONI e non ci deve entrare: la scrive
-    // solo la regia. Lo si dice qui perché un domani nessuno la aggiunga
-    // all'elenco «per completezza».
-    if (nome === COLLEZIONE_LICENZA || !COLLEZIONI.includes(nome)) {
+    if (SOLO_COPIA.includes(nome)) {
+      soloScript.push(nome)
+      continue
+    }
+    // Fuori dagli elenchi (FUORI_DAL_BACKUP, o roba di una versione più
+    // nuova): non si rimette.
+    if (!COLLEZIONI.includes(nome)) {
       // Roba di una versione più nuova: non la si inventa.
       saltate.push(nome)
       continue
@@ -160,7 +211,7 @@ export async function importaDatabase(backup, onProgress = () => {}) {
       onProgress(nome, Math.min(i + 400, righe.length), righe.length)
     }
   }
-  return { scritti, saltate, fuoriLicenza }
+  return { scritti, saltate, fuoriLicenza, soloScript }
 }
 
 // I documenti che ci sono adesso, per id. Il ripristino è fuori dal giro

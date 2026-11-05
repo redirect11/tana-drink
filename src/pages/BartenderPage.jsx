@@ -1,12 +1,15 @@
 /* global __DEMO__ */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth } from '../lib/firebaseClient.js'
+import { ERRORI_GOOGLE } from '../lib/erroriAccesso.js'
 import {
   updateOrderStatus,
   markOrderPaid,
@@ -406,6 +409,9 @@ function LoginForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState(null)
+  // Chi arriva dall'area clienti e non è entrato (REQ-FLOTTA-030): la riga
+  // che dice perché, sopra il modulo di sempre (App.jsx).
+  const avviso = useLocation().state?.avvisoAccesso || null
 
   async function submit(e) {
     e.preventDefault()
@@ -415,6 +421,24 @@ function LoginForm() {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (e) {
       setErr(loginError(e.code))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // AL BANCO ANCHE CON GOOGLE (REQ-FLOTTA-030). L'utente vuole che il
+  // titolare entri anche così; con la stessa email l'account resta quello,
+  // ruolo compreso. Un account Google senza ruolo del personale non entra
+  // nel gestionale: trova «Quest'area è riservata allo staff», come un
+  // cliente. Sui progetti della regia il fornitore Google va acceso dalla
+  // console, una volta per progetto: spento, lo si dice.
+  async function conGoogle() {
+    setLoading(true)
+    setErr(null)
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider())
+    } catch (e) {
+      if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== 'auth/cancelled-popup-request') setErr(loginError(e?.code))
     } finally {
       setLoading(false)
     }
@@ -437,6 +461,11 @@ function LoginForm() {
   return (
     <form className="card" onSubmit={submit}>
       <h2 style={{ marginTop: 0 }}>Accesso staff</h2>
+      {avviso && (
+        <div className="banner" role="status" style={{ marginBottom: 10 }}>
+          {avviso}
+        </div>
+      )}
       <label htmlFor="email">Email</label>
       <input
         id="email"
@@ -460,6 +489,9 @@ function LoginForm() {
       <button className="btn block" style={{ marginTop: 14 }} type="submit" disabled={loading}>
         {loading ? 'Accesso…' : 'Entra'}
       </button>
+      <button className="btn ghost block" style={{ marginTop: 8 }} type="button" onClick={conGoogle} disabled={loading}>
+        Entra con Google
+      </button>
     </form>
   )
 }
@@ -470,6 +502,7 @@ function loginError(code) {
   }
   if (code === 'auth/too-many-requests') return 'Troppi tentativi. Riprova tra qualche minuto.'
   if (code === 'auth/network-request-failed') return 'Errore di rete. Controlla la connessione.'
+  if (ERRORI_GOOGLE[code]) return ERRORI_GOOGLE[code]
   return 'Errore di accesso. Riprova.'
 }
 

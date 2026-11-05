@@ -5584,3 +5584,39 @@ bugs:
     labels: [bug, magazzino]
     test_cases:
       - tests/component/InventoryManager.test.jsx
+  - id: BUG-129
+    title: "Il backup del gestionale non salvava undici collezioni, fra cui il menù dei clienti e lo storico delle vendite"
+    area: "src/lib/backup.js (COLLEZIONI, SOLO_COPIA, FUORI_DAL_BACKUP, importaDatabase), src/components/BackupPanel.jsx"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato il 05/11/2026 controllando cosa toccava la 1.10.14-beta (il
+      menù dei clienti, REQ-MENU-025). Il backup scarica un elenco di
+      collezioni scritto a mano, perché il client non può chiedere a
+      Firestore quali esistono; l'elenco era rimasto indietro, e un backup
+      fatto dall'app non conteneva: `carta_sezioni` e `carta_voci` (la
+      struttura del menù dei clienti), `supplier_prices` e
+      `supplier_price_history` (listini e storico prezzi dei fornitori),
+      `purchase_order_templates` (modelli d'ordine), `altre_spese`,
+      `minimi_extra`, e lo storico caricato dagli script
+      (`vendite_storiche`, `vendite_storiche_prodotti`, `mesi_storici`). In
+      più c'era `serate`, che non è una collezione ma il nome di una
+      schermata delle statistiche: la si leggeva, e le regole la
+      rifiutavano. Nessuno se ne accorgeva, perché il file si scarica
+      senza errori: un backup si scopre incompleto il giorno in cui serve.
+      LA CORREZIONE: tre elenchi espliciti. Le collezioni che si salvano e
+      si rimettono; quelle SOLO NELLA COPIA, lo storico degli script, che
+      le regole non fanno scrivere dall'app (`write: if false`) e che
+      quindi il ripristino dall'app salta e lo dice (si rimette con
+      scripts/ripristina-db.js: un documento rifiutato fermava il
+      ripristino a metà); e quelle FUORI apposta, ognuna col suo perché
+      (`licenza`, scritta solo dalla regia; `presenze`, stato del momento
+      scritto da ognuno per sé; `diagnostica_stampante`, registro tecnico).
+      Un test confronta gli elenchi con le collezioni di firestore.rules:
+      una collezione nuova senza un posto nel backup boccia la build.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, backup]
+    test_cases:
+      - tests/unit/backup.test.js
