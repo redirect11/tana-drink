@@ -190,6 +190,15 @@ mentre si scorre. Una sezione snella (`.carta-snella`) è un listino: nome
 a sinistra e prezzo a destra sulla stessa riga, senza immagine né testo
 sotto.
 
+**L'editor della struttura** (Menù → Menù dei clienti, `.struttura-*`)
+mostra il menù com'è al tavolo: card `.menu-item` con immagine, testi e
+prezzo. I testi sono campi `.wys` che si leggono come testo, senza
+riquadro finché non ci si passa sopra (tratteggio) o non ci si scrive
+(bordo d'accento). Sopra ogni campo, `.wys-etichetta` in maiuscoletto
+minuto dice da dove viene il testo; in `--accent` solo quando vale per la
+sola sezione. Il prodotto della cassa sta nel piede della card, sotto un
+filetto tratteggiato, col 🔗.
+
 - **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
   in giallo gesso, filetti tratteggiati. È l'unico stile che porta i suoi
   colori, e li ridefinisce TUTTI (`--bg`, `--card`, `--text`…): con un tema
