@@ -406,6 +406,25 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
       (v) => nomeVoce(v, perId.get(v.drink_id) && perIlCliente(perId.get(v.drink_id)))
     )
 
+  // LA COPIA DELLE VOCI DELLA CASSA, sempre a portata. Compariva solo
+  // prima della personalizzazione, e su un menù già personalizzato (quello
+  // della demo) non si trovava: l'utente, 05/11/2026, «serve un tasto per
+  // prepopolare tutto come se fosse il menu cassa e poi da lì modifico».
+  // Sopra una struttura che c'è già la sostituisce, e prima lo chiede: i
+  // ritocchi fatti se ne vanno con lei.
+  function prepopola() {
+    if (strutturaPersonalizzata(carta)) {
+      if (
+        !confirm(
+          'Sostituire tutte le sezioni e le voci con una copia del menù della cassa? Sezioni, spostamenti e testi ritoccati andranno persi.'
+        )
+      )
+        return
+      eliminaStruttura(carta)
+    }
+    prepopolaStruttura(prepopolazione(drinks, categories))
+  }
+
   const intestazione = (
     <div className="card">
       <h3 style={{ marginTop: 0 }}>📖 Menù dei clienti</h3>
@@ -438,11 +457,9 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
         </p>
       )}
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        {!strutturaPersonalizzata(carta) && (
-          <button className="btn small" onClick={() => prepopolaStruttura(prepopolazione(drinks, categories))}>
-            Prepopola con le voci della cassa
-          </button>
-        )}
+        <button className={`btn small${strutturaPersonalizzata(carta) ? ' secondary' : ''}`} onClick={prepopola}>
+          {strutturaPersonalizzata(carta) ? 'Riparti dalle voci della cassa' : 'Prepopola con le voci della cassa'}
+        </button>
         <a className="btn ghost small" href={PERCORSO_ANTEPRIMA} target="_blank" rel="noreferrer">
           👁 Anteprima del menù dei clienti
         </a>

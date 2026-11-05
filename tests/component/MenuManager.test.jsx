@@ -548,6 +548,24 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(aggiornaVoceCarta).toHaveBeenLastCalledWith('v-mojito', { nome: '' })
   })
 
+  // L'utente, 05/11/2026: «serve un tasto per prepopolare tutto come se
+  // fosse il menu cassa e poi da lì modifico» — anche su un menù già
+  // personalizzato, come quello della demo.
+  it('su una struttura che c’è già, si riparte dalle voci della cassa dopo una conferma', async () => {
+    const user = userEvent.setup()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    const tasto = await screen.findByRole('button', { name: 'Riparti dalle voci della cassa' })
+    await user.click(tasto)
+    expect(prepopolaStruttura).not.toHaveBeenCalled()
+    confirm.mockReturnValue(true)
+    await user.click(tasto)
+    expect(eliminaStruttura).toHaveBeenCalledWith(STRUTTURA)
+    expect(prepopolaStruttura.mock.calls.at(-1)[0].voci.map((v) => v.drink_id)).toEqual(['mojito'])
+    confirm.mockRestore()
+  })
+
   it('le sezioni si nascondono, si spostano, si eliminano; e tutto torna al menù per categorie', async () => {
     const user = userEvent.setup()
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
