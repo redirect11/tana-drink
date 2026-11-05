@@ -51,6 +51,7 @@ const mostra = (props = {}) =>
         sottotitolo="Alice nel Paese delle Meraviglie"
         linkMenu="/menu?tavolo=5"
         tastiOrdine={(d) => <button className="btn small">Aggiungi {d.name}</button>}
+        disegni
         {...props}
       />
     </MemoryRouter>

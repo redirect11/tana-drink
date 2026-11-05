@@ -14,8 +14,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import '@testing-library/jest-dom/vitest'
-import { CON_LICENZA } from '../helpers/licenza.js'
+import { CON_LICENZA, LICENZA_TANA } from '../helpers/licenza.js'
+import { segnapostoDrink } from '../../src/lib/speciali.js'
 
 let mockSettings = {}
 let ruoloClaim = 'bartender'
@@ -49,6 +51,10 @@ const DRINKS = [
   { id: 'd3', name: 'Ichnusa', price: 4, category_id: 'c2', available: true },
 ]
 let mockDrinks = DRINKS
+// La struttura del menù dei clienti (REQ-MENU-025): vuota di suo, come per
+// il locale che non la personalizza.
+const CARTA_VUOTA = { sezioni: [], voci: [] }
+let mockCarta = CARTA_VUOTA
 
 vi.mock('../../src/lib/menuCache.js', () => ({
   useMenu: () => ({
@@ -59,6 +65,7 @@ vi.mock('../../src/lib/menuCache.js', () => ({
     ],
     drinks: mockDrinks,
   }),
+  useStrutturaMenu: () => ({ carta: mockCarta, pronta: true }),
 }))
 
 // L'ordine che questo dispositivo si ricorda (il cliente lo ritrova in cima
@@ -126,6 +133,7 @@ const voci = () =>
 beforeEach(() => {
   mockSettings = {}
   mockDrinks = DRINKS
+  mockCarta = CARTA_VUOTA
   ruoloClaim = 'bartender'
   stampaSala = 'ip'
   stampata.mockClear()
@@ -791,5 +799,194 @@ describe('lo stile «Giornale»', () => {
     expect(within(testata).getByText('Alice nel paese delle meraviglie')).toBeInTheDocument()
     expect(within(testata).getByRole('link', { name: '← Tutto il menù' })).toHaveAttribute('href', '/menu')
     expect(screen.queryByRole('navigation', { name: 'Sommario' })).toBeNull()
+  })
+})
+
+// I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). L'utente,
+// 04/11/2026: «sono solo per lo stile Notte che abbiamo fatto in esclusiva
+// per la Tana», ma «può riutilizzarli Flavio se cambia stile». Agli altri
+// locali, al posto del disegno, «un bicchiere neutro»; le foto invece le
+// carica chiunque e si vedono in ogni stile.
+describe('i disegni dei drink sono della Tana', () => {
+  const DISEGNATO = { ...DRINKS[0], illustrazione: { bicchiere: 'basso', colore: 'verde', decorazione: 'menta' } }
+  const FOTOGRAFATO = { ...DRINKS[1], image_url: 'https://foto.example/negroni.jpg' }
+  const ALTRO_LOCALE = { licenza: { ...LICENZA_TANA, temi: [] } }
+
+  it('un altro locale vede il bicchiere neutro al posto del disegno, e la foto', async () => {
+    ruoloClaim = null
+    mockSettings = ALTRO_LOCALE
+    mockDrinks = [DISEGNATO, FOTOGRAFATO, DRINKS[2]]
+    mostra()
+    const mojito = await screen.findByAltText('Mojito')
+    expect(mojito).toHaveClass('drink-thumb', 'placeholder')
+    expect(mojito).toHaveAttribute('src', segnapostoDrink())
+    expect(screen.getByAltText('Negroni')).toHaveAttribute('src', 'https://foto.example/negroni.jpg')
+  })
+
+  it('la Tana li vede anche cambiando stile', async () => {
+    ruoloClaim = null
+    mockSettings = { stili_installati: ['lavagna'], stile_menu: 'lavagna' }
+    mockDrinks = [DISEGNATO, FOTOGRAFATO]
+    mostra()
+    expect(await screen.findByAltText('Mojito')).toHaveClass('drink-thumb', 'disegno')
+  })
+
+  it('senza foto né disegno, il bicchiere neutro anche in Notte: niente più logo', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'notte' }
+    mostra()
+    const ichnusa = await screen.findByAltText('Ichnusa')
+    expect(ichnusa).toHaveAttribute('src', segnapostoDrink())
+    expect(ichnusa.getAttribute('src')).not.toMatch(/logo\.png/)
+  })
+})
+
+// GLI SPECIAL SENZA SPECIAL NON SI RAGGIUNGONO (REQ-MENU-018). L'utente,
+// 04/11/2026: senza drink speciali la sezione si nasconde e il menù Special
+// «deve risultare vuoto e non raggiungibile al pubblico». Il QR stampato
+// resta sui tavoli: chi lo inquadra va al menù, con lo stesso tavolo.
+describe('il menù Special senza special', () => {
+  function Dove() {
+    const l = useLocation()
+    return <p>SIAMO SU {l.pathname + l.search}</p>
+  }
+  const apri = (percorso) =>
+    render(
+      <MemoryRouter initialEntries={[percorso]}>
+        <Routes>
+          <Route path="/menu/special" element={<MenuPage speciali />} />
+          <Route path="/menu" element={<Dove />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+  it('il cliente va al menù, sullo stesso tavolo', async () => {
+    ruoloClaim = null
+    apri('/menu/special?tavolo=5')
+    expect(await screen.findByText('SIAMO SU /menu?tavolo=5')).toBeInTheDocument()
+  })
+
+  it('chi lavora resta, e legge perché è vuoto', async () => {
+    ruoloClaim = 'admin'
+    apri('/menu/special?vista=cliente')
+    expect(await screen.findByText(/Nessun drink speciale/)).toBeInTheDocument()
+    expect(screen.queryByText(/SIAMO SU/)).toBeNull()
+  })
+
+  it('il carosello in cima al menù non c’è', async () => {
+    ruoloClaim = null
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('region', { name: 'Special' })).toBeNull()
+  })
+})
+
+// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025). Flavio, 04/11/2026,
+// guardando il menù dei clienti sul test: gin e vodka insieme, «Distillati»
+// tutti uniti, shot e food al tavolo. L'utente, 05/11/2026: si parte dalle
+// voci della cassa e poi tutto è libero, ogni voce collegata a un prodotto
+// della cassa. Chi lavora ordina sempre dal menù del gestionale.
+describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
+  const STRUTTURA = {
+    sezioni: [
+      { id: 's-cocktail', nome: 'Cocktail IBA', ordine: 0, vista: 'dettagliata' },
+      { id: 's-birre', nome: 'Birre alla spina', ordine: 1, vista: 'snella' },
+      { id: 's-banco', nome: 'Dal banco', ordine: 2, vista: 'dettagliata', nascosta: true },
+    ],
+    voci: [
+      { id: 'v-mojito', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Mojito cubano', descrizione: 'Dall’Avana.', ingredienti: 'Rum, lime, menta', ordine: 0 },
+      { id: 'v-cuba', sezione_id: 's-cocktail', drink_id: 'd1', nome: 'Cuba libre', ordine: 1 },
+      { id: 'v-ichnusa', sezione_id: 's-birre', drink_id: 'd3', ordine: 0 },
+      // Il Negroni sta solo in una sezione nascosta.
+      { id: 'v-negroni', sezione_id: 's-banco', drink_id: 'd2', ordine: 0 },
+    ],
+  }
+  const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
+
+  it('il cliente legge le sezioni della struttura, i loro nomi e solo quello che mostrano', async () => {
+    ruoloClaim = null
+    mockCarta = STRUTTURA
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Mojito cubano')
+    expect(sezioniLette()).toEqual(['Cocktail IBA', 'Birre alla spina'])
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+    expect(screen.queryByText('Negroni')).toBeNull()
+    expect(screen.getByText('Dall’Avana.')).toBeInTheDocument()
+    expect(screen.getByText('Rum · lime · menta')).toBeInTheDocument()
+    // Le schede delle sezioni sono quelle grandi.
+    expect(document.querySelector('.cat-nav')).toHaveClass('carta')
+  })
+
+  it('la sezione snella: nome e prezzo, senza immagine né descrizione', async () => {
+    ruoloClaim = null
+    mockDrinks = DRINKS.map((d) => (d.id === 'd3' ? { ...d, description: 'Non si vede' } : d))
+    mockCarta = STRUTTURA
+    mostra()
+    await screen.findByText('Mojito cubano')
+    const birre = document.querySelector('section.carta-snella')
+    expect(birre).not.toBeNull()
+    expect(within(birre).getByText('Ichnusa')).toBeInTheDocument()
+    expect(birre.querySelector('img')).toBeNull()
+    expect(screen.queryByText('Non si vede')).toBeNull()
+  })
+
+  it('senza struttura personalizzata il cliente vede le categorie, come sempre', async () => {
+    ruoloClaim = null
+    mostra()
+    await screen.findByText('Negroni')
+    expect(sezioniLette()).toEqual(['Cocktail', 'Birre'])
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(document.querySelector('.cat-nav')).not.toHaveClass('carta')
+  })
+
+  it('il nome per il cliente della scheda vale anche senza struttura', async () => {
+    ruoloClaim = null
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mostra()
+    await screen.findByText('Negroni sbagliato')
+    expect(voci()).toEqual(['Mojito', 'Negroni sbagliato', 'Ichnusa'])
+  })
+
+  it('chi lavora ordina dal menù del gestionale, coi nomi del banco e per categorie', async () => {
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, nome_cliente: 'Negroni sbagliato' } : d))
+    mockCarta = STRUTTURA
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+  })
+
+  it('in vista cliente il personale vede la struttura come il cliente', async () => {
+    mockCarta = STRUTTURA
+    mostra('/menu?vista=cliente')
+    await screen.findByText('Mojito cubano')
+    expect(voci()).toEqual(['Mojito cubano', 'Cuba libre', 'Ichnusa'])
+  })
+
+  // Due voci sullo stesso prodotto con due nomi sono due righe, e al banco
+  // arriva il prodotto del gestionale col nome letto dal cliente nella
+  // nota. Lo stesso prodotto con lo stesso nome, preso da due sezioni, è
+  // una riga sola: al banco è la stessa cosa.
+  it('nel carrello due voci sullo stesso drink restano due righe, col nome letto in nota', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockCarta = {
+      ...STRUTTURA,
+      sezioni: [...STRUTTURA.sezioni, { id: 's-ancora', nome: 'Ancora', ordine: 3, vista: 'dettagliata' }],
+      voci: [...STRUTTURA.voci, { id: 'v-mojito-2', sezione_id: 's-ancora', drink_id: 'd1', nome: 'Mojito cubano', ordine: 0 }],
+    }
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Cuba libre')
+    const [primo, secondo] = screen.getAllByText('Mojito cubano').map((n) => n.closest('.menu-item'))
+    await user.click(within(primo).getByRole('button', { name: 'Aggiungi' }))
+    await user.click(within(screen.getByText('Cuba libre').closest('.menu-item')).getByRole('button', { name: 'Aggiungi' }))
+    // Dall'altra sezione la stessa riga sale di uno.
+    await user.click(within(secondo).getByRole('button', { name: 'Aumenta' }))
+    const carrello = JSON.parse(localStorage.getItem('drink_cart_v1'))
+    expect(carrello).toEqual([
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Mojito cubano', note: 'Mojito cubano', qty: 2 }),
+      expect.objectContaining({ drink_id: 'd1', name: 'Mojito', nome_carta: 'Cuba libre', note: 'Cuba libre', qty: 1 }),
+    ])
+    // Il cliente legge i nomi che ha scelto.
+    expect(document.querySelector('.cartbar').textContent).toContain('Cuba libre')
   })
 })

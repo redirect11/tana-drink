@@ -71,6 +71,7 @@ export async function saveDrinkFromForm({
     name: (form.name || '').trim(),
     description: (form.description || '').trim() || null,
     ingredienti: (form.ingredienti || '').trim() || null,
+    nome_cliente: (form.nome_cliente || '').trim() || null,
     category_id: form.category_id || null,
     category: catName || null, // denormalizzato per compat/fallback
     recipe: (form.recipe || '').trim() || null,

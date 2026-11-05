@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
-import { drinkSpeciali, immagineVoce, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
+import { Link, Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { drinkSpeciali, immagineVoce, segnapostoDrink, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
-import { stileMenu, stileProvabile, nomeStile } from '../lib/stileMenu.js'
+import { stileMenu, stileProvabile, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
 import { temaInProva } from '../lib/marketplaceTemi.js'
 import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
@@ -23,7 +23,8 @@ import {
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { useCart, rememberOrderId, getMyOrderIds } from '../lib/cart.js'
+import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
+import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria } from '../lib/strutturaMenu.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -38,7 +39,7 @@ import { getPushToken } from '../lib/push.js'
 import { isFirebaseConfigured, auth } from '../lib/firebaseClient.js'
 import { useCustomer } from '../lib/customerAuth.js'
 import { onAuthStateChanged } from 'firebase/auth'
-import { useMenu } from '../lib/menuCache.js'
+import { useMenu, useStrutturaMenu } from '../lib/menuCache.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { printComanda, salaStampaDaSe } from '../lib/printer.js'
@@ -58,8 +59,8 @@ const NESSUNA_CATEGORIA = []
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
-  const { drinks, cats, loading } = useMenu()
-  const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  const { drinks: drinksDelMenu, cats, loading: menuInArrivo } = useMenu()
+  const { carta, pronta: strutturaPronta } = useStrutturaMenu()
   // Le illustrazioni hanno il tratto bianco sui temi scuri, scuro sui chiari.
   const fondoChiaro = useFondoChiaro()
   const [segnapostoCategorie, categorieIncollate] = useIncollata()
@@ -81,13 +82,20 @@ export default function MenuPage({ speciali = false }) {
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
   const [staffVero, setStaffVero] = useState(null) // { email, name, role } | null
+  // Si sa già chi è? Finché no, `staffVero` null non vuol dire «cliente»:
+  // il menù Special vuoto rimanda al menù solo il cliente (REQ-MENU-018).
+  const [chiNoto, setChiNoto] = useState(!isFirebaseConfigured)
   // Account cliente (null per anonimi e staff): ordini legati al profilo.
   const { user: customer, profile: customerProfile } = useCustomer()
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     return onAuthStateChanged(auth, async (u) => {
-      if (!u) return setStaffVero(null)
+      if (!u) {
+        setStaffVero(null)
+        setChiNoto(true)
+        return
+      }
       try {
         const token = await u.getIdTokenResult()
         const role = token.claims.role
@@ -100,6 +108,7 @@ export default function MenuPage({ speciali = false }) {
       } catch {
         setStaffVero(null)
       }
+      setChiNoto(true)
     })
   }, [])
   // Benvenuto al primo accesso: spiega come si ordina, il geofence e
@@ -125,6 +134,14 @@ export default function MenuPage({ speciali = false }) {
   // del personale. Con ?vista=cliente si finge di essere un cliente.
   const anteprimaCliente = params.get('vista') === 'cliente'
   const staff = anteprimaCliente ? null : staffVero
+  // IL MENÙ DEI CLIENTI (REQ-MENU-025) ha i nomi per il cliente e la sua
+  // struttura, se il locale l'ha personalizzata. Chi lavora ordina dal menù
+  // del gestionale, coi nomi del banco e per categorie: è quello che conosce.
+  const drinks = useMemo(() => (staff ? drinksDelMenu : drinksDelMenu.map(perIlCliente)), [staff, drinksDelMenu])
+  const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  const usaStruttura = !staff && strutturaPersonalizzata(carta)
+  // Il cliente aspetta anche la struttura (menuCache.js); chi lavora no.
+  const loading = menuInArrivo || (!staff && !strutturaPronta)
   const cart = useCart()
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
@@ -236,19 +253,9 @@ export default function MenuPage({ speciali = false }) {
         )
       : base
     if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
-    const byId = new Map(cats.map((c) => [c.id, c]))
-    const groups = new Map() // key -> { name, sort, list }
-    for (const d of visibili) {
-      const cat = byId.get(d.category_id)
-      const name = cat?.name || d.category || 'Altro'
-      const sort = cat ? cat.sort_order : 9999
-      if (!groups.has(name)) groups.set(name, { name, sort, list: [] })
-      groups.get(name).list.push(d)
-    }
-    return [...groups.values()]
-      .sort((a, b) => (a.sort - b.sort) || a.name.localeCompare(b.name))
-      .map((g) => [g.name, g.list])
-  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo])
+    if (usaStruttura) return sezioniDelMenu(carta, drinks)
+    return perCategoria(visibili, cats).map((g) => [g.nome, g.prodotti])
+  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta])
 
   // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
   // col suo dettaglio aperto: chi tocca una slide vuole sapere di quel drink
@@ -368,6 +375,16 @@ export default function MenuPage({ speciali = false }) {
 
   if (loading) return <div className="empty">Carico il menù…</div>
 
+  // GLI SPECIAL SENZA SPECIAL NON ESISTONO, per il cliente. L'utente,
+  // 04/11/2026: senza drink speciali «il menù special deve risultare vuoto
+  // e non raggiungibile al pubblico». Il QR degli Special resta stampato
+  // sui menù da tavolo anche quando gli special finiscono: chi lo inquadra
+  // va al menù, con lo stesso tavolo, invece che su una pagina vuota. Chi
+  // lavora resta, e legge perché è vuota.
+  if (speciali && elencoSpeciali.length === 0 && chiNoto && !staffVero) {
+    return <Navigate to={conParametri('/menu', params)} replace />
+  }
+
   // «Solo menù» per scelta del locale, o perché il modulo degli ordini dal
   // telefono non è nel piano (REQ-LIC-002).
   const menuOnly = settings.menu_only || !ordinazioneClientiAttiva(settings)
@@ -387,14 +404,17 @@ export default function MenuPage({ speciali = false }) {
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
     if (!canOrder) return null
-    const inCart = cart.items.find((i) => i.drink_id === d.id)
+    // La riga del carrello si riconosce da quello che arriva al banco (il
+    // drink, e il nome letto dal cliente): cart.js, chiaveRiga.
+    const chiave = chiaveRiga(rigaDelCarrello(d))
+    const inCart = cart.items.find((i) => chiaveRiga(i) === chiave)
     return inCart ? (
       <div className="qty">
-        <button aria-label="Riduci" onClick={() => cart.setQty(d.id, inCart.qty - 1)}>
+        <button aria-label="Riduci" onClick={() => cart.setQty(chiave, inCart.qty - 1)}>
           −
         </button>
         <strong>{inCart.qty}</strong>
-        <button aria-label="Aumenta" onClick={() => cart.setQty(d.id, inCart.qty + 1)}>
+        <button aria-label="Aumenta" onClick={() => cart.setQty(chiave, inCart.qty + 1)}>
           +
         </button>
       </div>
@@ -409,7 +429,14 @@ export default function MenuPage({ speciali = false }) {
     if (e.target.closest?.('button, a, input, select, textarea, label')) return
     setApertoId(d.id)
   }
-  const aperto = apertoId ? drinks.find((x) => x.id === apertoId) || null : null
+  // Il dettaglio è quello di ciò che si è toccato: nella struttura
+  // personalizzata una VOCE (il suo nome, la sua descrizione), che ha un id
+  // suo. Si cerca fra quello che si vede, poi fra i drink (il carosello).
+  const aperto = apertoId
+    ? categories.flatMap(([, list]) => list).find((x) => x.id === apertoId) ||
+      drinks.find((x) => x.id === apertoId) ||
+      null
+    : null
 
   // Tempo stimato mostrato nel menù: per la modalità "entrambi" usa la stima
   // fino al "pronto" (parte comune); il riepilogo ordine poi la adatta alla
@@ -447,7 +474,9 @@ export default function MenuPage({ speciali = false }) {
   // Il segno dei disegni, deciso una volta: lo usano il giornale e il
   // dettaglio, che devono mostrare lo stesso disegno.
   const segnoDisegni = giornale ? 'incisione' : 'tenniel'
-  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni })
+  // I disegni sono del locale che ha «Notte» (REQ-LIC-013).
+  const disegni = disegniDelLocale(settings)
+  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni, disegni })
   const specialNotte = notte && speciali
 
   return (
@@ -591,9 +620,16 @@ export default function MenuPage({ speciali = false }) {
           <CaroselloSpeciali
             voci={elencoSpeciali}
             chiaro={fondoChiaro}
+            disegni={disegni}
             link={(d) => `${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
           />
         </section>
+      )}
+
+      {/* Il cliente qui non arriva (sopra lo si rimanda al menù): chi lavora
+          sì, e legge perché la pagina è vuota. */}
+      {speciali && elencoSpeciali.length === 0 && (
+        <p className="empty">Nessun drink speciale. Finché non ce ne sono, i clienti che aprono questa pagina vanno al menù completo.</p>
       )}
 
       {etaMinutes != null && !menuOnly && (
@@ -696,7 +732,11 @@ export default function MenuPage({ speciali = false }) {
 
       {!speciali && !giornale && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
       {!speciali && !giornale && categories.length > 1 && (
-        <nav className={`cat-nav${categorieIncollate ? ' incollata' : ''}`}>
+        // Le sezioni di una struttura personalizzata sono poche e grandi, in
+        // schede che restano in alto mentre si scorre (Flavio, 04/11/2026:
+        // «come se fosse un tab che deve restare sempre fisso bloccato in
+        // alto»).
+        <nav className={`cat-nav${usaStruttura ? ' carta' : ''}${categorieIncollate ? ' incollata' : ''}`}>
           {categories.map(([cat]) => (
             <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
               {cat}
@@ -712,6 +752,7 @@ export default function MenuPage({ speciali = false }) {
           sottotitolo={settings.special_sottotitolo}
           linkMenu={conParametri('/menu', params)}
           chiaro={fondoChiaro}
+          disegni={disegni}
           tastiOrdine={tastiOrdine}
         />
       )}
@@ -728,16 +769,21 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
 
-      {!specialNotte && !giornale && categories.map(([cat, list]) => (
+      {!specialNotte && !giornale && categories.map(([cat, list, sezione]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:
         // «li metterei su due colonne anziché incolonnati ad uno ad uno»).
-        <section key={cat} className={speciali ? 'speciali-griglia' : undefined}>
+        // UNA SEZIONE SNELLA (REQ-MENU-025) è un elenco di nomi e prezzi:
+        // acqua e Coca-Cola non hanno niente da raccontare.
+        <section
+          key={sezione?.id ?? cat}
+          className={speciali ? 'speciali-griglia' : sezione?.vista === 'snella' ? 'carta-snella' : undefined}
+        >
           {!speciali && <h3 className="cat-header" id={`cat-${encodeURIComponent(cat)}`}>{cat}</h3>}
           {list.map((d) => {
-            // La foto, o l'illustrazione dello special, o il logo.
-            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro })
+            // La foto, o il disegno, o il bicchiere neutro.
+            const img = immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, disegni })
             return (
               // TOCCANDO LA CARD SI APRE IL DETTAGLIO (REQ-MENU-020). Il
               // tocco sulla card è per il dito; per la tastiera e per chi
@@ -748,17 +794,24 @@ export default function MenuPage({ speciali = false }) {
                 id={speciali ? `speciale-${d.id}` : undefined}
                 onClick={apriDaCard(d)}
               >
-                {speciali && img && <img className="speciale-img" src={img} alt="" loading="lazy" />}
+                {speciali && (
+                  <img
+                    className={`speciale-img${img ? '' : ' segnaposto'}`}
+                    src={img || segnapostoDrink({ chiaro: fondoChiaro })}
+                    alt=""
+                    loading="lazy"
+                  />
+                )}
                 <div className="row between">
                   {/* IL DISEGNO PIÙ GRANDE DELLA FOTO, e intero. Nella casella
                       da 64 px della foto i disegni dei drink si leggevano
                       appena, ritagliati per riempire il quadrato (l'utente,
                       02/11/2026: «le immagini stilizzate dei drink
                       dovrebbero essere più grandi»). */}
-                  {!speciali && (
+                  {!speciali && sezione?.vista !== 'snella' && (
                     <img
                       className={`drink-thumb${img ? (d.image_url ? '' : ' disegno') : ' placeholder'}`}
-                      src={img || `${import.meta.env.BASE_URL}logo.png`}
+                      src={img || segnapostoDrink({ chiaro: fondoChiaro })}
                       alt={d.name}
                       loading="lazy"
                     />
@@ -799,9 +852,9 @@ export default function MenuPage({ speciali = false }) {
           <div className="inner">
             <div className="cartbar-items">
               {cart.items.map((i) => (
-                <div className="row between" key={i.drink_id}>
+                <div className="row between" key={chiaveRiga(i)}>
                   <span>
-                    <strong>{i.qty}×</strong> {i.name}
+                    <strong>{i.qty}×</strong> {nomeLetto(i)}
                   </span>
                   <span className="muted">{formatPrice(i.qty * Number(i.price || 0))}</span>
                 </div>
@@ -892,6 +945,7 @@ export default function MenuPage({ speciali = false }) {
         drink={aperto}
         chiaro={fondoChiaro}
         segno={segnoDisegni}
+        disegni={disegni}
         quantita={!!settings.show_ingredient_quantities}
         azioni={aperto && tastiOrdine(aperto)}
         onClose={() => setApertoId(null)}

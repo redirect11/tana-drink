@@ -116,6 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
+import { ordina, vistaSezione, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -206,6 +207,9 @@ function mapDrink(snap) {
     speciale: d.speciale === true,
     // Gli ingredienti in carta, scritti a mano (REQ-MENU-019).
     ingredienti: d.ingredienti ?? null,
+    // Il nome che legge il cliente, se diverso da quello del banco
+    // (REQ-MENU-025): «Gin Mare» al banco, «Gin Mare tonic» al tavolo.
+    nome_cliente: d.nome_cliente ?? null,
     illustrazione: d.illustrazione ?? null,
     created_at: toIso(d.created_at),
   }
@@ -500,6 +504,150 @@ export async function updateCategory(id, patch) {
 
 export async function deleteCategory(id) {
   await deleteDoc(doc(db, 'categories', id))
+}
+
+// --- LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ---
+// Le sezioni del menù che si legge al tavolo e le loro voci, ognuna
+// collegata a un prodotto della cassa (la logica sta in
+// lib/strutturaMenu.js). Le collezioni hanno il nome
+// di quando era una «carta» a parte. Due collezioni e non un
+// documento solo: le voci si scrivono una alla volta, mentre le si
+// compila, e un documento unico viaggerebbe intero a ogni descrizione
+// toccata (lo stesso conto di BUG-110). Le scritture partono in
+// sottofondo, con l'identificativo fatto dal terminale: la sottoscrizione
+// le mostra subito, dalla cache.
+
+const cartaSezioniCol = collection(db, 'carta_sezioni')
+const cartaVociCol = collection(db, 'carta_voci')
+
+function mapSezioneCarta(snap) {
+  const s = snap.data() || {}
+  return {
+    id: snap.id,
+    nome: s.nome ?? '',
+    ordine: s.ordine ?? 0,
+    vista: vistaSezione(s.vista),
+    nascosta: s.nascosta === true,
+  }
+}
+
+function mapVoceCarta(snap) {
+  const v = snap.data() || {}
+  return {
+    id: snap.id,
+    sezione_id: v.sezione_id ?? null,
+    drink_id: v.drink_id ?? null,
+    nome: v.nome ?? '',
+    descrizione: v.descrizione ?? '',
+    ingredienti: v.ingredienti ?? '',
+    ordine: v.ordine ?? 0,
+  }
+}
+
+// La carta intera, { sezioni, voci }, quando sono arrivate tutte e due.
+export function subscribeCarta(onChange, onError) {
+  let sezioni = null
+  let voci = null
+  const emetti = () => sezioni && voci && onChange({ sezioni, voci })
+  const errore = onError ?? (() => {})
+  const via1 = onSnapshot(
+    cartaSezioniCol,
+    (snap) => {
+      sezioni = ordina(snap.docs.map(mapSezioneCarta))
+      emetti()
+    },
+    errore
+  )
+  const via2 = onSnapshot(
+    cartaVociCol,
+    (snap) => {
+      voci = snap.docs.map(mapVoceCarta)
+      emetti()
+    },
+    errore
+  )
+  return () => {
+    via1()
+    via2()
+  }
+}
+
+export function creaSezioneCarta(dati) {
+  const ref = doc(cartaSezioniCol)
+  const sezione = sezioneDaScrivere(dati)
+  bgWrite(() => setDoc(ref, { ...sezione, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...sezione }
+}
+
+// Le scritture di una struttura intera, a pacchetti: Firestore ne accetta
+// al massimo 500 per pacchetto, e il listino di un locale vero, una voce
+// per prodotto, li supera.
+function inPacchetti(operazioni) {
+  for (let i = 0; i < operazioni.length; i += 450) {
+    const batch = writeBatch(db)
+    for (const op of operazioni.slice(i, i + 450)) op(batch)
+    bgWrite(() => batch.commit(), 'carta')
+  }
+}
+
+const cancellazioni = ({ sezioni, voci } = {}) => [
+  ...(voci || []).map((v) => (b) => b.delete(doc(db, 'carta_voci', v.id))),
+  ...(sezioni || []).map((s) => (b) => b.delete(doc(db, 'carta_sezioni', s.id))),
+]
+
+// LA COPIA DI PARTENZA (strutturaMenu.js, prepopolazione) scritta tutta:
+// sezioni e voci, con gli id fatti qui. Con `sostituisci` la struttura di
+// prima se ne va nello stesso giro di pacchetti («Riparti dalle voci della
+// cassa»): due giri separati facevano passare l'editor per il menù vuoto.
+// Torna la struttura composta, così chi chiama non rilegge quello che si è
+// appena scritto.
+export function prepopolaStruttura(copia, { sostituisci } = {}) {
+  const fatta = materializza(copia, (tipo) => doc(tipo === 'sezione' ? cartaSezioniCol : cartaVociCol).id)
+  inPacchetti([
+    ...cancellazioni(sostituisci),
+    ...fatta.sezioni.map(({ id, ...s }) => (b) => b.set(doc(cartaSezioniCol, id), { ...s, created_at: serverTimestamp() })),
+    ...fatta.voci.map(({ id, ...v }) => (b) => b.set(doc(cartaVociCol, id), { ...v, created_at: serverTimestamp() })),
+  ])
+  return fatta
+}
+
+// Tutta la struttura via: il menù dei clienti torna a dividersi per le
+// categorie della cassa.
+export function eliminaStruttura(carta) {
+  inPacchetti(cancellazioni(carta))
+}
+
+// UN RIORDINO IN UN PACCHETTO SOLO (strutturaMenu.js, riordino): scritti
+// uno per uno, i numeri d'ordine di una sezione lunga facevano una
+// scrittura e un giro di schermo per ognuno.
+const riordina = (collezione) => (cambi) =>
+  inPacchetti((cambi || []).map((c) => (b) => b.update(doc(db, collezione, c.id), { ordine: c.ordine })))
+export const riordinaSezioniCarta = riordina('carta_sezioni')
+export const riordinaVociCarta = riordina('carta_voci')
+
+export function aggiornaSezioneCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_sezioni', id), patch), 'carta')
+}
+
+// Una sezione se ne va con le sue voci, nello stesso pacchetto: voci
+// rimaste senza sezione non si vedrebbero da nessuna parte, nemmeno qui.
+export function eliminaSezioneCarta(id, vociIds = []) {
+  eliminaStruttura({ sezioni: [{ id }], voci: vociIds.map((v) => ({ id: v })) })
+}
+
+export function creaVoceCarta(dati) {
+  const ref = doc(cartaVociCol)
+  const voce = voceDaScrivere(dati)
+  bgWrite(() => setDoc(ref, { ...voce, created_at: serverTimestamp() }), 'carta')
+  return { id: ref.id, ...voce }
+}
+
+export function aggiornaVoceCarta(id, patch) {
+  bgWrite(() => updateDoc(doc(db, 'carta_voci', id), patch), 'carta')
+}
+
+export function eliminaVoceCarta(id) {
+  bgWrite(() => deleteDoc(doc(db, 'carta_voci', id)), 'carta')
 }
 
 // --- INVENTORY ---
@@ -1073,26 +1221,48 @@ function nonEsistePiu(errore) {
 //
 // LO SCARICO A MANO NON C'È (Flavio, 25-26/09/2026): «carico lo lasciamo
 // com'è, solo in positivo, e va negli acquisti»; le correzioni in meno si
-// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Qui
-// c'era un ramo per i numeri negativi, fermato a zero da una regola nostra
-// che nessuno aveva chiesto, e nessuna schermata lo usava più: un numero
-// negativo adesso è un errore, non un'altra funzione.
+// fanno col contenuto reale, e il tasto per scaricare non lo vuole. Un
+// numero negativo qui è un errore, non un'altra funzione: la merce che
+// torna al fornitore ha la sua, `resoAlFornitore`, qui sotto.
 export function loadStock(item, qty, { reason = 'carico' } = {}) {
-  const cur = articoloScrivibileInMano(item)
   const delta = Number(qty)
   if (!(delta > 0)) throw new Error('Il carico si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, delta, reason)
+}
+
+// ── IL RESO AL FORNITORE, cioè IL CARICO IN NEGATIVO (REQ-MAG-053) ───
+// Flavio, 04/11/2026: «il fornitore si è convinto a farsi restituire una
+// bottiglia, e io adesso se faccio contenuto reale da 1 passa a 0: è come se
+// me la porta come se fosse stata consumata. Ho bisogno di fare anche il
+// carico negativo». Il contenuto reale è una RETTIFICA, e nel periodo
+// (magazzinoPeriodo.js) il conto deposito + acquisti − consumo la tratta
+// come merce sparita; il reso invece è un acquisto disfatto. Ha il suo
+// motivo, «reso fornitore», nel gruppo degli acquisti: toglie dagli
+// acquisti del periodo, in pezzi e al costo del prodotto, e il consumo non
+// lo vede. Esce come uno scarico, ed è composto in memoria come il carico.
+export function resoAlFornitore(item, qty) {
+  const delta = Number(qty)
+  if (!(delta > 0)) throw new Error('Il reso si fa con un numero maggiore di zero.')
+  return movimentoDiMagazzino(item, -delta, 'reso fornitore')
+}
+
+// Il movimento a mano, nei due versi: la giacenza si sposta con `increment`
+// (commutativo, si accoda offline) e il movimento lo dice col segno nel
+// tipo, la quantità sempre positiva come tutti gli altri.
+function movimentoDiMagazzino(item, delta, reason) {
+  const cur = articoloScrivibileInMano(item)
   const partenza = Number(cur.stock) || 0
   bgWrite(
     () => updateDoc(doc(db, 'inventory_items', cur.id), { stock: increment(delta) }),
-    'carico scorta'
+    delta > 0 ? 'carico scorta' : 'reso scorta'
   )
   bgWrite(
     () =>
       addDoc(movementsCol, {
         item_id: cur.id,
         item_name: cur.name,
-        type: 'load',
-        qty: delta,
+        type: delta > 0 ? 'load' : 'unload',
+        qty: Math.abs(delta),
         unit: cur.unit ?? null,
         reason,
         created_at: serverTimestamp(),
