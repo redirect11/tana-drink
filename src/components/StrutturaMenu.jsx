@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
   creaSezioneCarta,
   aggiornaSezioneCarta,
@@ -18,33 +18,87 @@ import {
   PERCORSO_ANTEPRIMA,
 } from '../lib/strutturaMenu.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
+import { immagineVoce, segnapostoDrink } from '../lib/speciali.js'
+import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 
-// LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): le
-// sezioni del menù del tavolo, nell'ordine in cui compaiono. Una sezione
-// segue una categoria del gestionale o ha le voci scelte a mano; di suo
-// c'è una sezione per categoria, e il menù è quello di sempre. Flavio,
-// 04/11/2026: «un pannello dove creiamo tutte le voci che vanno all'interno
-// del menù vista cliente». Una voce scelta a mano si aggiunge qui o dalla
-// scheda del prodotto (MenuManager, InStruttura): è lo stesso dato visto
-// dai due lati.
+// LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
+// menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
+// stanno. Una sezione segue una categoria del gestionale o ha le voci
+// scelte a mano; di suo c'è una sezione per categoria, e il menù è quello di
+// sempre. Flavio, 04/11/2026: «un pannello dove creiamo tutte le voci che
+// vanno all'interno del menù vista cliente». Una voce scelta a mano si
+// aggiunge qui o dalla scheda del prodotto (MenuManager, InStruttura): è lo
+// stesso dato visto dai due lati.
+//
+// LA PRIMA VERSIONE ERA UN MODULO: una fila di caselle per voce, il nome
+// della sezione vuoto con quello della scheda in grigio come segnaposto,
+// la tendina del prodotto senza una parola. L'utente, 05/11/2026: «non mi è
+// chiaro come funziona … come associamo le voci di menu agli item di menu
+// della cassa? La casella con il nome in grigio cos'è? … possiamo renderlo
+// simile a un WYSIWYG». Ora le card hanno la forma di quelle del menù, ogni
+// campo mostra il testo che legge il cliente e sopra dice da dove viene, e
+// il prodotto della cassa ha la sua riga col 🔗.
 //
 // Le scritture partono in sottofondo (api.js) e la sottoscrizione le
 // mostra subito: niente «Salva», un campo si registra uscendone.
 
-// Un campo che si registra quando lo si lascia. Rinasce (key) quando il
-// valore cambia da fuori — un altro terminale, o il proprio salvataggio
-// tornato dalla cache —, così non resta a mostrare il testo di prima.
-function Campo({ valore, salva, area = false, ...props }) {
+const testo = (v) => (typeof v === 'string' ? v.trim() : '')
+
+// UN TESTO DEL MENÙ, MODIFICABILE DOV'È. Mostra quello che legge il
+// cliente: il testo `proprio`, se c'è, se no quello che eredita (`base`, dalla
+// scheda prodotto o dalla categoria). Lasciato uguale a quello ereditato, o
+// svuotato, non scrive un doppione: torna a ereditare, così una correzione
+// fatta alla fonte arriva anche qui. L'etichetta sopra dice da dove viene
+// il testo, che era proprio la cosa che non si capiva.
+//
+// Rinasce (key) quando il testo cambia da fuori — un altro terminale, o il
+// proprio salvataggio tornato dalla cache —, così non resta a mostrare
+// quello di prima.
+function Testo({ etichetta, origine, ripristina, proprio, base = '', salva, area = false, obbligatorio = false, ritoccato = false, className = '', ...props }) {
+  const id = useId()
   const Tag = area ? 'textarea' : 'input'
+  const mostrato = testo(proprio) || testo(base)
   return (
-    <Tag
-      key={valore}
-      defaultValue={valore}
-      onBlur={(e) => {
-        if (e.target.value.trim() !== (valore || '').trim()) salva(e.target.value.trim())
-      }}
-      {...props}
-    />
+    <div className={`wys-campo ${className}`}>
+      <div className="wys-etichetta">
+        <label htmlFor={id}>{etichetta}</label>
+        {/* L'accento solo su quello che vale per la sola sezione: è la
+            cosa che si perde di vista, e che una correzione sulla scheda
+            non raggiunge. */}
+        {origine && <span className={`wys-origine${ritoccato ? ' proprio' : ''}`}>{origine}</span>}
+        {ripristina}
+      </div>
+      <Tag
+        key={mostrato}
+        id={id}
+        className="wys"
+        defaultValue={mostrato}
+        rows={area ? 2 : undefined}
+        onBlur={(e) => {
+          const v = e.target.value.trim()
+          if (v === mostrato) return
+          // Un nome che non si può lasciare vuoto torna com'era.
+          if (!v && obbligatorio) {
+            e.target.value = mostrato
+            return
+          }
+          if (!v) e.target.value = testo(base)
+          salva(v === testo(base) ? '' : v)
+        }}
+        onKeyDown={area ? undefined : (e) => e.key === 'Enter' && e.currentTarget.blur()}
+        {...props}
+      />
+    </div>
+  )
+}
+
+// Il tasto che toglie un ritocco e torna al testo ereditato.
+function Ripristina({ cosa, verso, onClick }) {
+  return (
+    <button type="button" className="btn ghost small wys-ripristina" aria-label={`Riporta ${cosa} ${verso}`} onClick={onClick}>
+      ↺ {verso}
+    </button>
   )
 }
 
@@ -64,11 +118,11 @@ function opzioniGestionale(drinks, categories) {
     .map((g) => ({ ...g, voci: g.voci.sort((a, b) => (a.name || '').localeCompare(b.name || '')) }))
 }
 
-export function TendinaGestionale({ valore, drinks, categories, onChange, ...props }) {
+export function TendinaGestionale({ valore, drinks, categories, onChange, vuota = '— Nessun prodotto —', ...props }) {
   const gruppi = useMemo(() => opzioniGestionale(drinks, categories), [drinks, categories])
   return (
     <select value={valore || ''} onChange={(e) => onChange(e.target.value || null)} {...props}>
-      <option value="">— Nessun prodotto —</option>
+      <option value="">{vuota}</option>
       {gruppi.map((g) => (
         <optgroup key={g.nome} label={g.nome}>
           {g.voci.map((d) => (
@@ -155,20 +209,215 @@ export function InStruttura({ drink, carta, categories }) {
   )
 }
 
-// La struttura arriva da MenuManager, che la tiene già per le schede dei
-// prodotti: una sottoscrizione sola.
-export default function StrutturaMenu({ carta, drinks, categories }) {
-  const [nuova, setNuova] = useState('')
+// LA CARD, con la forma di quella del menù (MenuPage): immagine, testi,
+// prezzo. In una sezione snella solo nome e prezzo, come al tavolo. Sotto,
+// il «piede» con quello che al tavolo non si vede: il prodotto della cassa e
+// i tasti.
+function Card({ drink, snella, attenuata, avviso, piede, children, immagini }) {
+  const img = drink ? immagineVoce(drink, import.meta.env.BASE_URL, immagini) : null
+  return (
+    <div className={`card menu-item struttura-voce${attenuata ? ' attenuata' : ''}${snella ? ' snella' : ''}`}>
+      <div className="row">
+        {!snella && (
+          <img
+            className={`drink-thumb${img ? (drink.image_url ? '' : ' disegno') : ' placeholder'}`}
+            src={img || segnapostoDrink({ chiaro: immagini.chiaro })}
+            alt=""
+            loading="lazy"
+          />
+        )}
+        <div className="grow">{children}</div>
+        <span className="price">{drink ? formatPrice(drink.price) : '—'}</span>
+      </div>
+      {avviso && <p className="struttura-avviso small">{avviso}</p>}
+      <div className="struttura-piede">{piede}</div>
+    </div>
+  )
+}
 
-  const perId = useMemo(() => new Map((drinks || []).map((d) => [d.id, perIlCliente(d)])), [drinks])
+// UNA VOCE SCELTA A MANO: i testi sono suoi se li ha, se no quelli della
+// scheda del prodotto collegato; il prodotto della cassa dà prezzo,
+// disponibilità e quello che arriva al banco.
+function VoceAMano({ voce, drink, snella, drinks, categories, immagini, primo, ultimo, sposta }) {
+  const cliente = drink ? perIlCliente(drink) : null
+  const ritocco = (campo, cosa) =>
+    testo(voce[campo]) ? (
+      <Ripristina cosa={cosa} verso="come la scheda" onClick={() => aggiornaVoceCarta(voce.id, { [campo]: '' })} />
+    ) : null
+  const origine = (campo) => (testo(voce[campo]) ? 'solo in questa sezione' : drink ? 'dalla scheda prodotto' : '')
+  return (
+    <Card
+      drink={drink}
+      snella={snella}
+      immagini={immagini}
+      attenuata={!drink || !drink.available}
+      avviso={
+        !drink
+          ? 'Nessun prodotto della cassa collegato: la voce non compare al tavolo.'
+          : !drink.available
+            ? 'Prodotto fuori menù: la voce non compare al tavolo.'
+            : null
+      }
+      piede={
+        <>
+          <div className="struttura-collegamento">
+            <span className="wys-etichetta" aria-hidden="true">
+              🔗 Prodotto della cassa
+            </span>
+            <TendinaGestionale
+              valore={voce.drink_id}
+              drinks={drinks}
+              categories={categories}
+              onChange={(id) => aggiornaVoceCarta(voce.id, { drink_id: id })}
+              aria-label="Prodotto della cassa"
+            />
+          </div>
+          <div className="struttura-tasti">
+            <button className="btn ghost small" aria-label="Voce su" disabled={primo} onClick={() => sposta(-1)}>
+              ↑
+            </button>
+            <button className="btn ghost small" aria-label="Voce giù" disabled={ultimo} onClick={() => sposta(1)}>
+              ↓
+            </button>
+            <button
+              className="btn ghost small"
+              aria-label={`Togli ${nomeVoce(voce, cliente)} dalla sezione`}
+              onClick={() => eliminaVoceCarta(voce.id)}
+            >
+              🗑
+            </button>
+          </div>
+        </>
+      }
+    >
+      <Testo
+        etichetta="Nome"
+        origine={origine('nome')}
+        ritoccato={Boolean(testo(voce.nome))}
+        ripristina={ritocco('nome', 'il nome')}
+        proprio={voce.nome}
+        base={cliente?.name}
+        salva={(nome) => aggiornaVoceCarta(voce.id, { nome })}
+        placeholder="Nome letto dal cliente"
+        aria-label="Nome nella sezione"
+        className="wys-nome"
+      />
+      {!snella && (
+        <>
+          <Testo
+            area
+            etichetta="Descrizione"
+            origine={origine('descrizione')}
+            ritoccato={Boolean(testo(voce.descrizione))}
+            ripristina={ritocco('descrizione', 'la descrizione')}
+            proprio={voce.descrizione}
+            base={drink?.description}
+            salva={(descrizione) => aggiornaVoceCarta(voce.id, { descrizione })}
+            placeholder="Provenienza, carattere, servizio"
+            aria-label="Descrizione nella sezione"
+          />
+          {/* Dalla ricetta mai (ingredientiCarta.js): solo il ritocco o
+              quelli scritti sulla scheda. */}
+          <Testo
+            etichetta="Ingredienti"
+            origine={origine('ingredienti')}
+            ritoccato={Boolean(testo(voce.ingredienti))}
+            ripristina={ritocco('ingredienti', 'gli ingredienti')}
+            proprio={voce.ingredienti}
+            base={drink?.ingredienti}
+            salva={(ingredienti) => aggiornaVoceCarta(voce.id, { ingredienti })}
+            placeholder="Separati da virgola"
+            aria-label="Ingredienti nella sezione"
+          />
+        </>
+      )}
+    </Card>
+  )
+}
+
+// UN PRODOTTO DI UNA SEZIONE CHE SEGUE UNA CATEGORIA: i testi sono quelli
+// della scheda e si scrivono lì (`onModifica`), perché valgono ovunque il
+// cliente legga quel prodotto. Il nome per il cliente, se manca, è quello
+// della cassa; gli ingredienti, se mancano, quelli della ricetta.
+function ProdottoDiCategoria({ drink, snella, immagini, onModifica, onApriScheda }) {
+  const ricetta = (ingredientiInCarta({ ...drink, ingredienti: null }) || []).join(', ')
+  const scheda = 'scheda prodotto · vale ovunque'
+  return (
+    <Card
+      drink={drink}
+      snella={snella}
+      immagini={immagini}
+      piede={
+        <>
+          <div className="struttura-collegamento">
+            <span className="wys-etichetta">🔗 Prodotto della cassa</span>
+            <span className="small">{drink.name}</span>
+          </div>
+          <div className="struttura-tasti">
+            <button className="btn ghost small" aria-label={`Apri la scheda di ${drink.name}`} onClick={() => onApriScheda(drink)}>
+              Scheda prodotto
+            </button>
+          </div>
+        </>
+      }
+    >
+      <Testo
+        etichetta="Nome"
+        origine={testo(drink.nome_cliente) ? scheda : 'nome della cassa'}
+        ripristina={
+          testo(drink.nome_cliente) ? (
+            <Ripristina cosa="il nome" verso="come la cassa" onClick={() => onModifica(drink.id, { nome_cliente: null })} />
+          ) : null
+        }
+        proprio={drink.nome_cliente}
+        base={drink.name}
+        salva={(v) => onModifica(drink.id, { nome_cliente: v || null })}
+        aria-label={`Nome per il cliente di ${drink.name}`}
+        className="wys-nome"
+      />
+      {!snella && (
+        <>
+          <Testo
+            area
+            etichetta="Descrizione"
+            origine={testo(drink.description) ? scheda : ''}
+            proprio={drink.description}
+            salva={(v) => onModifica(drink.id, { description: v || null })}
+            placeholder="Nessuna descrizione: provenienza, carattere, servizio"
+            aria-label={`Descrizione di ${drink.name}`}
+          />
+          <Testo
+            etichetta="Ingredienti"
+            origine={testo(drink.ingredienti) ? scheda : ricetta ? 'dalla ricetta' : ''}
+            proprio={drink.ingredienti}
+            base={ricetta}
+            salva={(v) => onModifica(drink.id, { ingredienti: v || null })}
+            placeholder="Separati da virgola"
+            aria-label={`Ingredienti di ${drink.name}`}
+          />
+        </>
+      )}
+    </Card>
+  )
+}
+
+// La struttura arriva da MenuManager, che la tiene già per le schede dei
+// prodotti: una sottoscrizione sola. Anche i prodotti, coi loro testi:
+// `onModificaProdotto` li ritocca, `onApriScheda` apre la scheda intera.
+export default function StrutturaMenu({ carta, drinks, categories, disegni = false, onModificaProdotto, onApriScheda }) {
+  const [nuova, setNuova] = useState('')
+  const chiaro = useFondoChiaro()
+  const immagini = { chiaro, disegni }
+
+  const perId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
   const righe = righeStruttura(carta.sezioni, categories)
   const catPerId = new Map((categories || []).map((c) => [c.id, c]))
   const vociDi = (sezioneId) =>
     ordina(
       carta.voci.filter((v) => v.sezione_id === sezioneId),
-      (v) => nomeVoce(v, perId.get(v.drink_id))
+      (v) => nomeVoce(v, perId.get(v.drink_id) && perIlCliente(perId.get(v.drink_id)))
     )
-  const disponibiliIn = (categoriaId) => (drinks || []).filter((d) => d.category_id === categoriaId && d.available).length
+  const prodottiDi = (categoriaId) => (drinks || []).filter((d) => d.category_id === categoriaId)
 
   // Una sezione nuova va in cima: di solito è la Signature, o quella dei
   // consigli dello staff, e scendere è un tocco su ↓.
@@ -200,7 +449,7 @@ export default function StrutturaMenu({ carta, drinks, categories }) {
     const voci = vociDi(r.id)
     const nome = nomeSezione(r, categories)
     const conVoci = voci.length ? ` e le sue ${voci.length === 1 ? 'voce' : `${voci.length} voci`}` : ''
-    if (!confirm(`Eliminare la sezione «${nome}»${conVoci}? I prodotti del gestionale restano.`)) return
+    if (!confirm(`Eliminare la sezione «${nome}»${conVoci}? I prodotti della cassa restano.`)) return
     eliminaSezioneCarta(
       r.id,
       voci.map((v) => v.id)
@@ -208,33 +457,53 @@ export default function StrutturaMenu({ carta, drinks, categories }) {
   }
 
   return (
-    <div>
+    <div className="struttura-menu">
       <div className="card">
         <h3 style={{ marginTop: 0 }}>📖 Menù dei clienti</h3>
-        <p className="muted small" style={{ margin: '0 0 10px' }}>
-          Le sezioni del menù consultato al tavolo, nell'ordine in cui compaiono. Una sezione segue una categoria del
-          gestionale, e ne mostra i prodotti disponibili, compresi quelli aggiunti in seguito; oppure ha voci scelte a
-          mano, con nome, descrizione e ingredienti propri se diversi da quelli della scheda prodotto. Le categorie non
-          ancora ordinate qui compaiono in fondo. Il personale ordina sempre dal menù del gestionale.
+        <p className="muted small" style={{ margin: '0 0 8px' }}>
+          Il menù consultato al tavolo, nell'ordine in cui compare. I testi si modificano direttamente nelle card; la
+          modifica si registra all'uscita dal campo. Il personale ordina sempre dal menù della cassa.
         </p>
+        <dl className="struttura-legenda small">
+          <dt>Sezione che segue una categoria</dt>
+          <dd>
+            Mostra i prodotti disponibili della categoria, compresi quelli aggiunti in seguito. I testi sono quelli della
+            scheda prodotto e valgono in tutto il menù.
+          </dd>
+          <dt>Sezione con voci scelte a mano</dt>
+          <dd>
+            Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende prezzo e disponibilità; l'ordine arriva al
+            banco con quel prodotto, col nome letto dal cliente nella nota. Nome, descrizione e ingredienti si possono
+            ritoccare per la sola sezione; svuotando il campo si torna al testo della scheda.
+          </dd>
+          <dt>Sopra ogni campo</dt>
+          <dd>Da dove viene il testo: dalla scheda prodotto, dalla cassa, dalla ricetta, o solo da questa sezione.</dd>
+        </dl>
         <a className="btn ghost small" href={PERCORSO_ANTEPRIMA} target="_blank" rel="noreferrer">
           👁 Anteprima del menù dei clienti
         </a>
       </div>
 
       <div className="card" style={{ marginTop: 8 }}>
+        <div className="wys-etichetta">
+          <label htmlFor="struttura-nuova">Nuova sezione con voci scelte a mano</label>
+        </div>
         <div className="row" style={{ gap: 8 }}>
           <input
+            id="struttura-nuova"
             value={nuova}
             onChange={(e) => setNuova(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && aggiungiSezione()}
-            placeholder="Nuova sezione con voci scelte a mano (Signature, Suggeriti dallo staff…)"
+            placeholder="Signature, Suggeriti dallo staff…"
             aria-label="Nome della nuova sezione"
           />
           <button className="btn small" onClick={aggiungiSezione}>
             Aggiungi
           </button>
         </div>
+        <p className="muted small" style={{ margin: '4px 0 0' }}>
+          Si aggiunge in cima al menù.
+        </p>
       </div>
 
       {righe.map((r, idx) => {
@@ -243,26 +512,21 @@ export default function StrutturaMenu({ carta, drinks, categories }) {
         const segue = Boolean(r.categoria_id)
         const categoria = segue ? catPerId.get(r.categoria_id) : null
         const voci = segue ? [] : vociDi(r.id)
+        const prodotti = segue ? prodottiDi(r.categoria_id) : []
+        const visibili = prodotti.filter((d) => d.available)
+        const fuori = prodotti.length - visibili.length
         return (
           <section
-            className="card carta-sezione"
+            className={`struttura-sezione${r.nascosta ? ' nascosta' : ''}`}
             key={r.chiave}
-            style={{ marginTop: 8, opacity: r.nascosta ? 0.6 : 1 }}
             aria-label={`Sezione ${nome}`}
           >
-            <div className="row" style={{ gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-              <Campo
-                valore={r.nome}
-                salva={(valore) => (valore || segue) && modifica(idx, { nome: valore })}
-                placeholder={categoria?.name || 'Nome della sezione'}
-                aria-label="Nome della sezione"
-                style={{ flex: '1 1 180px', fontWeight: 600 }}
-              />
+            <div className="struttura-barra">
+              <span className="chip">{segue ? `Segue la categoria «${categoria?.name || '—'}»` : 'Voci scelte a mano'}</span>
               <select
                 value={r.vista}
                 onChange={(e) => modifica(idx, { vista: e.target.value })}
                 aria-label="Visualizzazione della sezione"
-                style={{ width: 'auto' }}
               >
                 {VISTE_SEZIONE.map((v) => (
                   <option key={v.id} value={v.id}>
@@ -270,14 +534,11 @@ export default function StrutturaMenu({ carta, drinks, categories }) {
                   </option>
                 ))}
               </select>
-              <label className="row small" style={{ gap: 4, alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={r.nascosta}
-                  onChange={(e) => modifica(idx, { nascosta: e.target.checked })}
-                />
+              <label className="struttura-spunta small">
+                <input type="checkbox" checked={r.nascosta} onChange={(e) => modifica(idx, { nascosta: e.target.checked })} />
                 Nascosta
               </label>
+              <span className="grow" />
               <button className="btn ghost small" aria-label="Sezione su" disabled={idx === 0} onClick={() => spostaRiga(idx, -1)}>
                 ↑
               </button>
@@ -297,96 +558,75 @@ export default function StrutturaMenu({ carta, drinks, categories }) {
                 </button>
               )}
             </div>
-            <p className="muted small" style={{ margin: '4px 0 0' }}>
-              {segue
-                ? categoria
-                  ? `Segue la categoria «${categoria.name}» · ${disponibiliIn(r.categoria_id)} prodotti disponibili.`
-                  : 'La categoria seguita non esiste più: la sezione è vuota.'
-                : 'Voci scelte a mano.'}
-            </p>
-            <p className="muted small" style={{ margin: '2px 0 8px' }}>
-              {snella
-                ? 'Snella: nome e prezzo su una riga, senza immagine, descrizione e ingredienti.'
-                : 'Dettagliata: immagine, descrizione e ingredienti.'}
+
+            <Testo
+              etichetta="Titolo della sezione"
+              origine={segue ? (testo(r.nome) ? 'rinominata' : 'nome della categoria') : ''}
+              ritoccato={segue && Boolean(testo(r.nome))}
+              ripristina={
+                segue && testo(r.nome) ? (
+                  <Ripristina cosa="il titolo" verso="come la categoria" onClick={() => modifica(idx, { nome: '' })} />
+                ) : null
+              }
+              proprio={r.nome}
+              base={categoria?.name}
+              obbligatorio={!segue}
+              salva={(valore) => modifica(idx, { nome: valore })}
+              aria-label="Titolo della sezione"
+              className="wys-titolo"
+            />
+            <p className="muted small struttura-nota">
+              {r.nascosta
+                ? 'Nascosta: al tavolo la sezione non compare.'
+                : snella
+                  ? 'Snella: al tavolo nome e prezzo su una riga, senza immagine, descrizione e ingredienti.'
+                  : segue
+                    ? `${visibili.length} prodotti disponibili${fuori ? `; ${fuori} fuori menù non compaiono` : ''}.`
+                    : null}
             </p>
 
-            {voci.map((v, j) => {
-              const drink = perId.get(v.drink_id)
-              return (
-                <div className="carta-voce" key={v.id} style={{ borderTop: '1px solid var(--line)', padding: '8px 0' }}>
-                  <div className="row" style={{ gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Campo
-                      valore={v.nome}
-                      salva={(valore) => aggiornaVoceCarta(v.id, { nome: valore })}
-                      placeholder={drink?.name || 'Nome nella sezione'}
-                      aria-label="Nome nella sezione"
-                      style={{ flex: '1 1 160px' }}
-                    />
-                    <span className="muted small">{drink ? formatPrice(drink.price) : ''}</span>
-                    <button className="btn ghost small" aria-label="Voce su" disabled={j === 0} onClick={() => sposta(voci, j, -1, aggiornaVoceCarta)}>
-                      ↑
-                    </button>
-                    <button
-                      className="btn ghost small"
-                      aria-label="Voce giù"
-                      disabled={j === voci.length - 1}
-                      onClick={() => sposta(voci, j, 1, aggiornaVoceCarta)}
-                    >
-                      ↓
-                    </button>
-                    <button className="btn ghost small" aria-label={`Elimina la voce ${nomeVoce(v, drink)}`} onClick={() => eliminaVoceCarta(v.id)}>
-                      🗑
-                    </button>
-                  </div>
-                  <TendinaGestionale
-                    valore={v.drink_id}
-                    drinks={drinks}
-                    categories={categories}
-                    onChange={(id) => aggiornaVoceCarta(v.id, { drink_id: id })}
-                    aria-label="Prodotto del gestionale"
-                    style={{ marginTop: 6 }}
-                  />
-                  {!drink && (
-                    <p className="muted small" style={{ margin: '4px 0 0' }}>
-                      Nessun prodotto collegato: la voce non compare al tavolo.
-                    </p>
-                  )}
-                  {drink && !drink.available && (
-                    <p className="muted small" style={{ margin: '4px 0 0' }}>
-                      Prodotto fuori menù: la voce non compare al tavolo.
-                    </p>
-                  )}
-                  {!snella && (
-                    <>
-                      <Campo
-                        area
-                        rows={2}
-                        valore={v.descrizione}
-                        salva={(descrizione) => aggiornaVoceCarta(v.id, { descrizione })}
-                        placeholder={drink?.description || 'Descrizione (provenienza, carattere, servizio)'}
-                        aria-label="Descrizione nella sezione"
-                        style={{ marginTop: 6 }}
-                      />
-                      <Campo
-                        valore={v.ingredienti}
-                        salva={(ingredienti) => aggiornaVoceCarta(v.id, { ingredienti })}
-                        placeholder={drink?.ingredienti || 'Ingredienti, separati da virgola'}
-                        aria-label="Ingredienti nella sezione"
-                        style={{ marginTop: 6 }}
-                      />
-                    </>
-                  )}
-                </div>
-              )
-            })}
+            {segue &&
+              visibili.map((d) => (
+                <ProdottoDiCategoria
+                  key={d.id}
+                  drink={d}
+                  snella={snella}
+                  immagini={immagini}
+                  onModifica={onModificaProdotto}
+                  onApriScheda={onApriScheda}
+                />
+              ))}
+            {segue && categoria && !visibili.length && (
+              <p className="muted small">Nessun prodotto disponibile in questa categoria: al tavolo la sezione non compare.</p>
+            )}
+            {segue && !categoria && <p className="muted small">La categoria seguita non esiste più: la sezione è vuota.</p>}
+
+            {voci.map((v, j) => (
+              <VoceAMano
+                key={v.id}
+                voce={v}
+                drink={perId.get(v.drink_id)}
+                snella={snella}
+                drinks={drinks}
+                categories={categories}
+                immagini={immagini}
+                primo={j === 0}
+                ultimo={j === voci.length - 1}
+                sposta={(dir) => sposta(voci, j, dir, aggiornaVoceCarta)}
+              />
+            ))}
+            {/* Una voce nasce già col suo prodotto: una voce senza prodotto
+                al tavolo non compare, e restava lì in attesa senza dirlo. */}
             {!segue && (
-              <button
-                className="btn secondary small"
-                style={{ marginTop: 6 }}
-                onClick={() => creaVoceCarta({ sezione_id: r.id, ordine: voci.length })}
-              >
-                + Voce
-              </button>
+              <TendinaGestionale
+                valore=""
+                drinks={drinks}
+                categories={categories}
+                vuota="+ Aggiungi un prodotto della cassa a questa sezione…"
+                onChange={(drink_id) => drink_id && creaVoceCarta({ sezione_id: r.id, drink_id, ordine: voci.length })}
+                aria-label={`Aggiungi un prodotto a ${nome}`}
+                className="struttura-aggiungi"
+              />
             )}
           </section>
         )

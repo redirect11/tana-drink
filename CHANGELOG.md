@@ -16,6 +16,15 @@
   del gestionale, col nome letto dal cliente nella nota (REQ-MENU-025).
 - Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
   legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
+- **Menù → Menù dei clienti si modifica com'è al tavolo**: le card hanno
+  la forma di quelle del menù e i testi si scrivono direttamente.
+  - Sopra ogni campo un'etichetta dice da dove viene il testo: scheda
+    prodotto, cassa, ricetta, o solo quella sezione. Con «↺» si torna al
+    testo della scheda.
+  - Ogni voce mostra il suo «🔗 Prodotto della cassa», da cui prende
+    prezzo e disponibilità; una voce nuova nasce già collegata.
+  - Nelle sezioni che seguono una categoria i testi si scrivono sulla
+    scheda prodotto, che si apre anche da lì (REQ-MENU-025).
 
 ## 1.10.13-beta — 04/11/2026 (test)
 

@@ -4108,12 +4108,24 @@ requirements:
       cosa preparare («SOUR 7» con nota «Gin Fizz»); nel carrello il
       cliente legge il nome che ha scelto. Due voci sullo stesso prodotto
       sono due righe.
-      NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù elenca
-      le sezioni nell'ordine in cui compaiono, con le categorie non ancora
-      toccate in fondo; si aggiungono sezioni a mano (in cima), si
-      rinominano, si riordinano, si nascondono, si fanno snelle; nelle
-      sezioni a mano si aggiungono le voci, col prodotto scelto da una
-      tendina divisa per categorie. Una categoria che nessuna sezione segue
+      NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra
+      il menù COM'È AL TAVOLO, sezione per sezione, con le categorie non
+      ancora toccate in fondo; si aggiungono sezioni a mano (in cima), si
+      rinominano, si riordinano, si nascondono, si fanno snelle. L'utente,
+      05/11/2026, davanti alla prima versione, un modulo di caselle: «come
+      associamo le voci di menu agli item di menu della cassa? La casella
+      con il nome in grigio cos'è? … possiamo renderlo simile a un
+      WYSIWYG». Quindi le card hanno la forma di quelle del menù e i testi
+      si scrivono dove si leggono; ogni campo mostra il testo che legge il
+      cliente e sopra dice DA DOVE VIENE (scheda prodotto, cassa, ricetta,
+      o solo la sezione, con «↺» per tornare alla scheda). Un ritocco
+      svuotato o uguale al testo della scheda torna a ereditare, così una
+      correzione sulla scheda arriva anche lì. Ogni voce a mano ha il suo
+      «🔗 Prodotto della cassa», scelto da una tendina divisa per
+      categorie, e una voce nuova nasce già col prodotto. Nelle sezioni
+      che seguono una categoria i testi sono quelli della scheda e si
+      scrivono sulla scheda (vista subito, scrittura in sottofondo), che
+      si apre anche da lì. Una categoria che nessuna sezione segue
       non è scritta da nessuna parte: la prima volta che la si tocca, la
       struttura si scrive tutta in fila, in un pacchetto solo, perché non
       salti davanti alle altre. Nelle azioni di ogni prodotto del catalogo,

@@ -4650,6 +4650,173 @@ body.drawer-open .status-bell-float { display: none; }
   font-size: 1rem;
 }
 
+/* ── L'EDITOR DEL MENÙ DEI CLIENTI (REQ-MENU-025) ─────────────────
+   Le card hanno la forma di quelle del menù, e i testi sono campi che si
+   leggono come testo: senza riquadro finché non ci si passa sopra o non
+   ci si scrive. Sopra ogni campo un'etichetta minuta dice da dove viene il
+   testo; quando è proprio della sezione prende il colore d'accento. La
+   prima versione era un modulo di caselle grigie, e il nome «in grigio»
+   (il segnaposto) non si capiva cosa fosse (l'utente, 05/11/2026). */
+.struttura-legenda {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+.struttura-legenda dt {
+  color: var(--text);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.struttura-legenda dd {
+  margin: 2px 0 0;
+}
+.struttura-sezione {
+  margin-top: 22px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-sezione.nascosta > :not(.struttura-barra) {
+  opacity: 0.5;
+}
+.struttura-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-barra select {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.struttura-spunta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.struttura-spunta input {
+  width: auto;
+}
+.struttura-nota {
+  margin: 0 0 8px;
+}
+.struttura-nota:empty {
+  display: none;
+}
+.wys-campo {
+  margin: 0 0 4px;
+}
+.wys-etichetta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wys-etichetta label {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+  font-weight: 600;
+}
+.wys-origine::before {
+  content: '· ';
+}
+.wys-origine.proprio {
+  color: var(--accent);
+}
+.btn.small.wys-ripristina {
+  padding: 1px 6px;
+  min-height: 0;
+  line-height: 1.2;
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Il campo che si legge come testo. `font: inherit` anche perché un
+   textarea, di suo, ha il carattere a larghezza fissa. */
+.wys {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -7px;
+  width: calc(100% + 7px);
+  resize: vertical;
+}
+.wys:hover {
+  border-color: var(--line, rgba(255, 255, 255, 0.18));
+}
+.wys:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+}
+.wys::placeholder {
+  font-style: italic;
+  opacity: 0.6;
+}
+.wys-nome .wys {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.wys-titolo .wys {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+}
+.struttura-voce {
+  cursor: default;
+  margin-top: 8px;
+}
+.struttura-voce .grow {
+  min-width: 0;
+}
+.struttura-voce .row > .price {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-left: 8px;
+}
+.struttura-voce.attenuata > .row {
+  opacity: 0.55;
+}
+.struttura-avviso {
+  margin: 6px 0 0;
+  color: var(--warn);
+}
+.struttura-piede {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-collegamento {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.struttura-collegamento select {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+.struttura-tasti {
+  display: flex;
+  gap: 4px;
+}
+.struttura-aggiungi {
+  margin-top: 8px;
+}
+
 /* ── Intestazione categoria ──────────────────────────────────── */
 .cat-header {
   font-family: var(--serif);

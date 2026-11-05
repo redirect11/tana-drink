@@ -96,6 +96,7 @@ vi.mock('../../src/lib/saveDrink.js', () => ({
 
 import MenuManager from '../../src/components/MenuManager.jsx'
 import {
+  updateDrink,
   creaSezioneCarta,
   aggiornaSezioneCarta,
   scriviStruttura,
@@ -454,7 +455,12 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     stop()
   }
 
-  it('le sezioni scritte, poi la categoria che nessuna segue; le voci a mano col loro prodotto', async () => {
+  // L'utente, 05/11/2026, davanti alla prima versione (un modulo di
+  // caselle): «come associamo le voci di menu agli item di menu della
+  // cassa? La casella con il nome in grigio cos'è?». Ora la card si legge
+  // come al tavolo, sopra ogni campo c'è da dove viene il testo, e il
+  // prodotto della cassa ha la sua riga.
+  it('le sezioni nel loro ordine, le card come al tavolo, e da dove viene ogni testo', async () => {
     filo.carta = STRUTTURA
     await apriStruttura()
     expect(await screen.findByRole('heading', { name: /Menù dei clienti/ })).toBeInTheDocument()
@@ -465,20 +471,34 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
       'Sezione Cocktail',
     ])
     const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
-    const prodotti = within(cocktail).getAllByRole('combobox', { name: 'Prodotto del gestionale' })
-    expect(prodotti.map((a) => a.value)).toEqual(['mojito', ''])
-    expect(within(cocktail).getByText('Nessun prodotto collegato: la voce non compare al tavolo.')).toBeInTheDocument()
+    expect(within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' }).map((a) => a.value)).toEqual([
+      'mojito',
+      '',
+    ])
+    // Il nome è della sezione, la descrizione viene dalla scheda: il campo
+    // mostra il testo che legge il cliente, non un segnaposto.
+    const [nome] = within(cocktail).getAllByRole('textbox', { name: 'Nome nella sezione' })
+    expect(nome).toHaveValue('Mojito cubano')
+    const [descrizione] = within(cocktail).getAllByRole('textbox', { name: 'Descrizione nella sezione' })
+    expect(descrizione).toHaveValue('Rum, lime, menta')
+    expect(within(cocktail).getAllByText('solo in questa sezione').length).toBeGreaterThan(0)
+    expect(within(cocktail).getAllByText('dalla scheda prodotto').length).toBeGreaterThan(0)
+    expect(within(cocktail).getByText(/Nessun prodotto della cassa collegato/)).toBeInTheDocument()
     // La sezione snella non chiede descrizione né ingredienti.
     const bibite = screen.getByRole('region', { name: 'Sezione Bibite' })
     expect(within(bibite).queryByRole('textbox', { name: 'Descrizione nella sezione' })).toBeNull()
-    // La categoria segue da sola: niente voci da scegliere, e non si elimina.
+    // La categoria mostra i suoi prodotti coi testi della scheda; niente
+    // voci da scegliere, e non si elimina.
     const categoria = screen.getByRole('region', { name: 'Sezione Cocktail' })
-    expect(within(categoria).getByText(/Segue la categoria «Cocktail» · 1 prodotti disponibili/)).toBeInTheDocument()
-    expect(within(categoria).queryByRole('button', { name: '+ Voce' })).toBeNull()
+    expect(within(categoria).getByText(/Segue la categoria «Cocktail»/)).toBeInTheDocument()
+    expect(within(categoria).getByText('1 prodotti disponibili.')).toBeInTheDocument()
+    expect(within(categoria).getByRole('textbox', { name: 'Nome per il cliente di Mojito' })).toHaveValue('Mojito')
+    expect(within(categoria).getByText('nome della cassa')).toBeInTheDocument()
+    expect(within(categoria).queryByRole('combobox', { name: /Aggiungi un prodotto/ })).toBeNull()
     expect(within(categoria).queryByRole('button', { name: /Elimina/ })).toBeNull()
   })
 
-  it('una sezione nuova va in cima; si aggiunge una voce e le si dà un prodotto', async () => {
+  it('una sezione nuova va in cima; una voce nasce col suo prodotto, e il prodotto si cambia', async () => {
     const user = userEvent.setup()
     filo.carta = STRUTTURA
     await apriStruttura()
@@ -486,12 +506,52 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(creaSezioneCarta).toHaveBeenCalledWith({ nome: 'Signature', ordine: -1 })
 
     const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
-    await user.click(within(cocktail).getByRole('button', { name: '+ Voce' }))
-    expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cocktail', ordine: 2 })
+    await user.selectOptions(within(cocktail).getByRole('combobox', { name: 'Aggiungi un prodotto a Cocktail IBA' }), 'mojito')
+    expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cocktail', drink_id: 'mojito', ordine: 2 })
 
-    const [, libera] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto del gestionale' })
+    const [, libera] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
     await user.selectOptions(libera, 'mojito')
     expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-libera', { drink_id: 'mojito' })
+  })
+
+  // Un ritocco uguale al testo della scheda non è un ritocco: se si
+  // scrivesse, una correzione fatta poi sulla scheda qui non arriverebbe.
+  it('un ritocco si scrive; svuotato o uguale alla scheda torna alla scheda', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    const cocktail = await screen.findByRole('region', { name: 'Sezione Cocktail IBA' })
+    const [descrizione] = within(cocktail).getAllByRole('textbox', { name: 'Descrizione nella sezione' })
+    await user.clear(descrizione)
+    await user.type(descrizione, 'Solo per la sezione')
+    await user.tab()
+    expect(aggiornaVoceCarta).toHaveBeenLastCalledWith('v-mojito', { descrizione: 'Solo per la sezione' })
+
+    const [nome] = within(cocktail).getAllByRole('textbox', { name: 'Nome nella sezione' })
+    await user.clear(nome)
+    await user.type(nome, 'Mojito{Enter}')
+    expect(aggiornaVoceCarta).toHaveBeenLastCalledWith('v-mojito', { nome: '' })
+
+    const [ripristina] = within(cocktail).getAllByRole('button', { name: 'Riporta il nome come la scheda' })
+    await user.click(ripristina)
+    expect(aggiornaVoceCarta).toHaveBeenLastCalledWith('v-mojito', { nome: '' })
+  })
+
+  it('in una sezione per categoria i testi si scrivono sulla scheda, che si apre da lì', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    const categoria = await screen.findByRole('region', { name: 'Sezione Cocktail' })
+    const nome = within(categoria).getByRole('textbox', { name: 'Nome per il cliente di Mojito' })
+    await user.clear(nome)
+    await user.type(nome, 'Mojito della casa{Enter}')
+    expect(updateDrink).toHaveBeenCalledWith('mojito', { nome_cliente: 'Mojito della casa' })
+    // Si vede subito, senza aspettare la scrittura.
+    await waitFor(() => expect(within(categoria).queryByText('nome della cassa')).toBeNull())
+    expect(within(categoria).getByRole('textbox', { name: 'Nome per il cliente di Mojito' })).toHaveValue('Mojito della casa')
+
+    await user.click(within(categoria).getByRole('button', { name: 'Apri la scheda di Mojito' }))
+    expect(await screen.findByLabelText('Nome *')).toHaveValue('Mojito')
   })
 
   // Una categoria che nessuna sezione segue non è scritta da nessuna parte:
