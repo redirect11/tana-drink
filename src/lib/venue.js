@@ -93,8 +93,10 @@ export function intestazioneScontrino(venue) {
 // I DATI FISCALI DI CHI EMETTE (REQ-FLOTTA-030): la partita IVA e il codice
 // fiscale in una riga (il codice fiscale solo se è diverso: per una società
 // spesso coincide), la sede legale nell'altra. Le righe che ci sono.
+export const partitaIva = (venue) => String(venue?.venue_vat_number || '').trim()
+
 export function righeFiscali(venue) {
-  const piva = String(venue?.venue_vat_number || '').trim()
+  const piva = partitaIva(venue)
   const cf = String(venue?.venue_tax_code || '').trim()
   const sede = String(venue?.venue_legal_address || '').trim()
   const codici = [piva && `P.IVA ${piva}`, cf && cf !== piva && `C.F. ${cf}`].filter(Boolean).join(' · ')

@@ -165,7 +165,7 @@ describe('importazione', () => {
 describe('il backup conosce tutte le collezioni (BUG-129)', () => {
   const regole = readFileSync(join(__dirname, '../../firestore.rules'), 'utf8')
   const nelleRegole = [...regole.matchAll(/^ {4}match \/([a-z_]+)\/\{/gm)].map((m) => m[1])
-  const negliElenchi = [...COLLEZIONI, ...SOLO_COPIA, ...Object.keys(FUORI_DAL_BACKUP)]
+  const negliElenchi = [...COLLEZIONI, ...SOLO_COPIA, ...FUORI_DAL_BACKUP]
 
   it('ogni collezione delle regole è nel backup, o fuori con la sua ragione', () => {
     expect(nelleRegole.length).toBeGreaterThan(30)

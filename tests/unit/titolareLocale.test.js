@@ -120,7 +120,7 @@ describe('l’email verificata del titolare (REQ-FLOTTA-030)', () => {
     const script = readFileSync('scripts/titolare-locale.mjs', 'utf8')
     expect(script).toContain("const VERIFICA_EMAIL = flag('verifica-email')")
     expect(script).toContain('const verificaOra = VERIFICA_EMAIL && cosa.verifica')
-    expect(script.indexOf('if (!APPLICA)')).toBeLessThan(script.indexOf("chiama('accounts:update', { localId: uid, emailVerified: true })"))
+    expect(script.indexOf('if (!APPLICA)')).toBeLessThan(script.indexOf('...(verificaOra ? { emailVerified: true } : {})'))
   })
 })
 

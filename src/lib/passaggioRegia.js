@@ -22,12 +22,13 @@
 // Logica pura: la rete (`prendi`) e l'accesso (`accedi`, `token`) li passa
 // chi chiama, così la prova non ha bisogno di Firebase.
 
-import { urlFunzioneRegia, ATTESA_REGIA_MS, erroreDellaRegia } from './funzioniRegia.js'
+import { urlFunzioneRegia, erroreDellaRegia, postaAllaRegia } from './funzioniRegia.js'
+import { urlRegia } from './limiti.js'
 
-export const CHIAVE_FRAMMENTO = 'accesso-regia'
+const CHIAVE_FRAMMENTO = 'accesso-regia'
 
 export const urlScambio = (progetto) => urlFunzioneRegia('scambiaPassaggio', progetto)
-export const urlVersoRegia = (progetto) => urlFunzioneRegia('passaggioVersoRegia', progetto)
+const urlVersoRegia = (progetto) => urlFunzioneRegia('passaggioVersoRegia', progetto)
 
 // Il codice è una stringa corta di lettere, cifre, «-» e «_»: quello che non
 // lo è non parte verso la regia.
@@ -62,7 +63,6 @@ export function prendiCodiceDallIndirizzo(luogo = globalThis.location, storia = 
 let inAttesa = null
 export function catturaCodiceRegia(luogo, storia) {
   inAttesa = prendiCodiceDallIndirizzo(luogo, storia)
-  return inAttesa
 }
 export const codiceRegiaInAttesa = () => inAttesa !== null
 export function consumaCodiceRegia() {
@@ -85,13 +85,19 @@ export const MESSAGGI_PASSAGGIO = Object.freeze({
   verso_non_riuscito: 'L’area clienti non si è aperta. Si riprova tra poco.',
 })
 
+// Un rifiuto: la frase della regia, se c'è, vince; se no quella per lo
+// status, o quella di ripiego.
+const rifiuto = (status, corpo, perStatus, ripiego) => ({
+  ok: false,
+  messaggio: erroreDellaRegia(corpo) || MESSAGGI_PASSAGGIO[perStatus[status] ?? ripiego],
+})
+
 // La risposta di scambiaPassaggio: { ok, token } o { ok: false, messaggio }.
 // 400 il codice non va, 403 scaduto, già usato o di un altro sito, 503 la
-// regia non può. La frase della regia, se c'è, vince.
+// regia non può.
 export function esitoScambio(status, corpo) {
   if (status === 200 && typeof corpo?.token === 'string' && corpo.token) return { ok: true, token: corpo.token }
-  const chiave = status === 400 ? 'non_valido' : status === 403 ? 'scaduto' : status === 0 ? 'senza_rete' : 'non_disponibile'
-  return { ok: false, messaggio: erroreDellaRegia(corpo) || MESSAGGI_PASSAGGIO[chiave] }
+  return rifiuto(status, corpo, { 400: 'non_valido', 403: 'scaduto', 0: 'senza_rete' }, 'non_disponibile')
 }
 
 // La risposta di passaggioVersoRegia: { ok, url } o { ok: false, messaggio }.
@@ -99,8 +105,12 @@ export function esitoScambio(status, corpo) {
 // e un `javascript:` non deve poter passare.
 export function esitoVersoRegia(status, corpo) {
   if (status === 200 && httpsValido(corpo?.url)) return { ok: true, url: corpo.url }
-  const chiave = status === 403 ? 'non_titolare' : status === 401 ? 'da_rientrare' : status === 404 ? 'non_trovato' : status === 0 ? 'senza_rete' : 'verso_non_riuscito'
-  return { ok: false, messaggio: erroreDellaRegia(corpo) || MESSAGGI_PASSAGGIO[chiave] }
+  return rifiuto(
+    status,
+    corpo,
+    { 401: 'da_rientrare', 403: 'non_titolare', 404: 'non_trovato', 0: 'senza_rete' },
+    'verso_non_riuscito'
+  )
 }
 
 function httpsValido(url) {
@@ -108,26 +118,6 @@ function httpsValido(url) {
     return new URL(url).protocol === 'https:'
   } catch {
     return false
-  }
-}
-
-// Una POST alla regia con un'attesa massima: { status, corpo }, status 0
-// senza rete o dopo l'attesa.
-async function posta(url, { prendi, intestazioni = {}, corpo }) {
-  const ferma = new AbortController()
-  const timer = setTimeout(() => ferma.abort(), ATTESA_REGIA_MS)
-  try {
-    const r = await prendi(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...intestazioni },
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
-      signal: ferma.signal,
-    })
-    return { status: r.status, corpo: await r.json().catch(() => null) }
-  } catch {
-    return { status: 0, corpo: null }
-  } finally {
-    clearTimeout(timer)
   }
 }
 
@@ -139,7 +129,7 @@ export async function entraDallaRegia(codice, { accedi, prendi = globalThis.fetc
   if (!codice) return { ok: false, messaggio: MESSAGGI_PASSAGGIO.non_valido }
   const url = urlScambio(progetto)
   if (!url || typeof prendi !== 'function') return { ok: false, messaggio: MESSAGGI_PASSAGGIO.non_disponibile }
-  const r = await posta(url, { prendi, corpo: { codice } })
+  const r = await postaAllaRegia(url, { prendi, corpo: { codice } })
   const esito = esitoScambio(r.status, r.corpo)
   if (!esito.ok) return esito
   try {
@@ -163,15 +153,15 @@ export async function versoLaRegia({ token, prendi = globalThis.fetch, progetto 
     return { ok: false, messaggio: MESSAGGI_PASSAGGIO.senza_rete }
   }
   if (!idToken) return { ok: false, messaggio: MESSAGGI_PASSAGGIO.da_rientrare }
-  const r = await posta(url, { prendi, intestazioni: { Authorization: `Bearer ${idToken}` } })
+  const r = await postaAllaRegia(url, { prendi, intestazioni: { Authorization: `Bearer ${idToken}` } })
   return esitoVersoRegia(r.status, r.corpo)
 }
 
 // «Area clienti» si mostra al titolare (admin), quando la build conosce la
-// regia e la licenza dice dov'è (`regia_url`): prima che la regia scriva
+// regia e la licenza dice dov'è (`urlRegia`): prima che la regia scriva
 // la licenza della Tana, i tasti verso la regia non ci sono, come gli altri
-// (FunzioneNonInclusa, InstallazioneSospesa). Chi è admin ma non è il
-// titolare lo dice la regia, al tocco: controllarlo qui vorrebbe dire
-// conoscere l'email del titolare, che sta nella regia.
-export const areaClientiVisibile = ({ admin, licenza, progetto }) =>
-  Boolean(admin && licenza?.regia_url && urlVersoRegia(progetto))
+// (FunzioneNonInclusa, InstallazioneSospesa, i moduli dall'app). Chi è
+// admin ma non è il titolare lo dice la regia, al tocco: controllarlo qui
+// vorrebbe dire conoscere l'email del titolare, che sta nella regia.
+export const areaClientiVisibile = ({ admin, settings, progetto }) =>
+  Boolean(admin && urlRegia(settings) && urlVersoRegia(progetto))

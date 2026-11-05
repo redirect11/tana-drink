@@ -6636,6 +6636,7 @@ requirements:
     test_cases:
       - tests/unit/passaggioRegia.test.js
       - tests/component/AccessoBanco.test.jsx
+      - tests/unit/mailFattura.test.js
 
   - id: REQ-FLOTTA-026
     title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"
