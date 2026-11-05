@@ -5,7 +5,7 @@
 // sera. I gruppi occupavano mezzo menu e spingevano fuori le ultime voci,
 // e non c'era modo di vedere a nome di chi si stava battendo.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Routes, Route } from 'react-router-dom'
@@ -13,16 +13,27 @@ import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 import { CON_LICENZA } from '../helpers/licenza.js'
 
+// La licenza delle prove: quella della Tana, o una che dice dov'è la regia.
+const filo = vi.hoisted(() => ({ licenza: null, getIdToken: null }))
+
 vi.mock('../../src/lib/firebaseClient.js', () => ({
-  auth: { currentUser: { uid: 'a1', email: 'capo@bar.it', displayName: 'Capo Bar' } },
+  auth: {
+    currentUser: {
+      uid: 'a1',
+      email: 'capo@bar.it',
+      displayName: 'Capo Bar',
+      getIdToken: (...a) => filo.getIdToken(...a),
+    },
+  },
 }))
 vi.mock('../../src/lib/logout.js', () => ({ logoutStaff: vi.fn() }))
 vi.mock('../../src/dev/devActions.js', () => ({ devToolsEnabled: false }))
+vi.mock('../../src/lib/toast.js', async (orig) => ({ ...(await orig()), toastError: vi.fn() }))
 vi.mock('../../src/lib/api.js', () => ({
   DEFAULT_SETTINGS: { groups_enabled: false, groups_in_drawer: false },
   settingsIniziali: () => ({ groups_enabled: false, groups_in_drawer: false }),
   subscribeSettings: vi.fn((cb) => {
-    cb({ ...CON_LICENZA, groups_enabled: true, groups_in_drawer: true })
+    cb({ ...CON_LICENZA, ...(filo.licenza ? { licenza: filo.licenza } : {}), groups_enabled: true, groups_in_drawer: true })
     return () => {}
   }),
   subscribeOpenGroups: vi.fn((cb) => {
@@ -60,6 +71,8 @@ function apri(role = 'admin') {
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  filo.licenza = null
+  filo.getIdToken = vi.fn(async (rinnova) => (rinnova ? 'token-rinnovato' : 'token-vecchio'))
 })
 
 describe('menu laterale', () => {
@@ -315,5 +328,56 @@ describe('il ☰ flottante del menu laterale', () => {
     expect(document.querySelector('.bar-burger')).toBeNull()
     // il menu resta apribile dall'evento: è lo stesso tasto, altrove
     expect(document.querySelector('.bar-sidebar')).toBeTruthy()
+  })
+})
+
+// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
+// regia già entrato. Il tasto c'è per l'admin quando la build conosce la
+// regia e la licenza dice dov'è; prima che la regia scriva la licenza della
+// Tana, non c'è.
+describe('«Area clienti», verso la regia', () => {
+  const LICENZA_DELLA_REGIA = { ...CON_LICENZA.licenza, regia_url: 'https://regia.example/area' }
+
+  beforeEach(() => vi.stubEnv('VITE_REGIA_PROGETTO', 'drink-regia-test'))
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('senza la regia nella licenza non c’è', () => {
+    apri('admin')
+    expect(screen.queryByText('Area clienti')).toBeNull()
+  })
+
+  it('al bartender non c’è', () => {
+    filo.licenza = LICENZA_DELLA_REGIA
+    apri('bartender')
+    expect(screen.queryByText('Area clienti')).toBeNull()
+  })
+
+  it('al titolare manda il token rinnovato e apre l’area', async () => {
+    const user = userEvent.setup()
+    filo.licenza = LICENZA_DELLA_REGIA
+    const prendi = vi.fn(async () => ({ status: 200, json: async () => ({ url: 'https://regia.example/area?t=1' }) }))
+    vi.stubGlobal('fetch', prendi)
+    const vai = vi.spyOn(window.location, 'assign').mockImplementation(() => {})
+    apri('admin')
+    await user.click(screen.getByText('Area clienti'))
+    await vi.waitFor(() => expect(vai).toHaveBeenCalledWith('https://regia.example/area?t=1'))
+    expect(filo.getIdToken).toHaveBeenCalledWith(true)
+    const [url, opzioni] = prendi.mock.calls[0]
+    expect(url).toBe('https://europe-west1-drink-regia-test.cloudfunctions.net/passaggioVersoRegia')
+    expect(opzioni.headers.Authorization).toBe('Bearer token-rinnovato')
+    vai.mockRestore()
+  })
+
+  it('se la regia dice di no, lo dice in una riga e resta qui', async () => {
+    const user = userEvent.setup()
+    filo.licenza = LICENZA_DELLA_REGIA
+    vi.stubGlobal('fetch', vi.fn(async () => ({ status: 403, json: async () => null })))
+    const { toastError } = await import('../../src/lib/toast.js')
+    apri('admin')
+    await user.click(screen.getByText('Area clienti'))
+    await vi.waitFor(() => expect(toastError).toHaveBeenCalledWith('L’area clienti è riservata al titolare del locale, con la sua email.'))
   })
 })

@@ -2,6 +2,21 @@
 
 ## 1.10.15-beta — in lavorazione
 
+### Regia e titolare
+
+- **Dalla regia all'app, e ritorno, con un clic** (REQ-FLOTTA-030). «Apri
+  la tua app» dall'area clienti della regia fa entrare il titolare nel suo
+  locale senza password; dal menù laterale, «Area clienti» lo porta nella
+  regia già entrato. Il tasto compare quando la licenza è della regia.
+- **Al banco si entra anche con Google.**
+- **Telefono, partita IVA, codice fiscale e sede legale** in Impostazioni →
+  Il locale: la regia li riempie dalla registrazione del titolare. La
+  partita IVA va sotto la ragione sociale sulle ricevute; i tre dati
+  fiscali sulla fattura di cortesia; il telefono nei contatti della pagina
+  iniziale.
+- Lo script del titolare dice se l'email dell'account è verificata, e con
+  `--verifica-email --applica` la segna verificata.
+
 ### Backup
 
 - **Il backup salva tutto il database.** Mancavano undici collezioni: la

@@ -88,7 +88,7 @@ export const CAMPI_SCONTRINO = [
   {
     id: 'ragione_sociale',
     label: 'Ragione sociale in fondo',
-    desc: 'Le parole si cambiano in «Dati del locale», qui sopra.',
+    desc: 'Con la partita IVA, se è scritta in Impostazioni → Il locale. Le parole si cambiano in «Dati del locale», qui sopra.',
     acceso: true,
   },
   {

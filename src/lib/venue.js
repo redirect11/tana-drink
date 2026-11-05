@@ -36,6 +36,13 @@ export const VENUE_NEUTRO = Object.freeze({
   venue_legal_name: '',
   venue_address: '',
   venue_postal_city: '',
+  // I dati che il titolare dà registrandosi nella regia (REQ-FLOTTA-030):
+  // la regia li scrive qui a ogni deploy, solo dove sono vuoti, e il
+  // locale li corregge da Impostazioni → Il locale.
+  venue_phone: '',
+  venue_vat_number: '',
+  venue_tax_code: '',
+  venue_legal_address: '',
   venue_description: '',
   venue_theme_color: '#0e0e15',
   venue_socials: [],
@@ -81,6 +88,17 @@ export function intestazioneScontrino(venue) {
     businessCity: venue.venue_postal_city,
     businessFooter: venue.venue_legal_name,
   }
+}
+
+// I DATI FISCALI DI CHI EMETTE (REQ-FLOTTA-030): la partita IVA e il codice
+// fiscale in una riga (il codice fiscale solo se è diverso: per una società
+// spesso coincide), la sede legale nell'altra. Le righe che ci sono.
+export function righeFiscali(venue) {
+  const piva = String(venue?.venue_vat_number || '').trim()
+  const cf = String(venue?.venue_tax_code || '').trim()
+  const sede = String(venue?.venue_legal_address || '').trim()
+  const codici = [piva && `P.IVA ${piva}`, cf && cf !== piva && `C.F. ${cf}`].filter(Boolean).join(' · ')
+  return [sede && `Sede legale: ${sede}`, codici].filter(Boolean)
 }
 
 // I social come li scrive il locale in Impostazioni: una riga per social,

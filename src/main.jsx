@@ -33,6 +33,11 @@ import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'
 import { aggiornaConfigurazione } from './porte/configurazione.js'
+import { catturaCodiceRegia } from './lib/passaggioRegia.js'
+
+// IL CODICE DELLA REGIA (REQ-FLOTTA-030) si toglie dall'indirizzo prima di
+// tutto il resto: non deve restare in cronologia, né arrivare al router.
+catturaCodiceRegia()
 
 
 // basename per il router: ricavato dalla base di Vite (BASE_URL).

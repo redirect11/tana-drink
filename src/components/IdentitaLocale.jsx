@@ -20,6 +20,12 @@ const CAMPI = [
   ['venue_legal_name', 'Ragione sociale', 'In coda allo scontrino.'],
   ['venue_address', 'Indirizzo', 'In testa allo scontrino.'],
   ['venue_postal_city', 'CAP e città', 'In testa allo scontrino, sotto l’indirizzo.'],
+  // I dati del titolare: li scrive la regia dalla sua registrazione, dove
+  // sono vuoti (REQ-FLOTTA-030), e qui si correggono.
+  ['venue_phone', 'Telefono', 'Nei contatti della pagina iniziale.'],
+  ['venue_vat_number', 'Partita IVA', 'In coda allo scontrino, con la ragione sociale, e sulle fatture di cortesia.'],
+  ['venue_tax_code', 'Codice fiscale', 'Sulle fatture di cortesia, se diverso dalla partita IVA.'],
+  ['venue_legal_address', 'Sede legale', 'Sulle fatture di cortesia, in una riga: via, civico, CAP, città.'],
 ]
 
 export default function IdentitaLocale({ settings, onSave }) {

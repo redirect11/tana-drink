@@ -35,12 +35,30 @@ describe('email e uid del titolare', () => {
 
 describe('il piano per il titolare', () => {
   it('nessun account: si crea con lo STESSO uid della regia, admin, col link per la password', () => {
-    expect(pianoTitolare({ uid: 'U1', email: EMAIL })).toEqual({ azione: 'crea', uid: 'U1', ruolo: { role: 'admin' }, link: true, avvisi: [], daCancellare: null })
+    expect(pianoTitolare({ uid: 'U1', email: EMAIL })).toEqual({
+      azione: 'crea',
+      uid: 'U1',
+      ruolo: { role: 'admin' },
+      link: true,
+      avvisi: [],
+      daCancellare: null,
+      emailVerificata: true,
+      verifica: false,
+    })
   })
 
   it('rilanciato su un titolare già entrato non cambia niente', () => {
-    const u = usato('U1')
-    expect(pianoTitolare({ uid: 'U1', email: EMAIL, perUid: u, perEmail: u })).toEqual({ azione: 'tieni', uid: 'U1', ruolo: null, link: false, avvisi: [], daCancellare: null })
+    const u = usato('U1', { emailVerified: true })
+    expect(pianoTitolare({ uid: 'U1', email: EMAIL, perUid: u, perEmail: u })).toEqual({
+      azione: 'tieni',
+      uid: 'U1',
+      ruolo: null,
+      link: false,
+      avvisi: [],
+      daCancellare: null,
+      emailVerificata: true,
+      verifica: false,
+    })
   })
 
   it('un segnaposto mai usato con un altro uid si ricrea con quello della regia', () => {
@@ -76,11 +94,42 @@ describe('il piano per il titolare', () => {
   })
 })
 
+// REQ-FLOTTA-030: il passaggio fra regia e app accetta solo un account con
+// la stessa email del titolare, VERIFICATA, e ruolo admin. L'account di
+// Flavio alla Tana c'era prima della regia, e la sua email forse non lo è:
+// il piano lo dice, e la si può segnare solo se è proprio quella del
+// titolare — verificare l'email di un altro account darebbe il passaggio a
+// lui.
+describe('l’email verificata del titolare (REQ-FLOTTA-030)', () => {
+  it('la Tana: l’account di Flavio con l’email non verificata si può segnare', () => {
+    const p = pianoTitolare({ uid: 'U1', email: EMAIL, perEmail: usato('FLAVIO') })
+    expect(p).toMatchObject({ azione: 'tieni', uid: 'FLAVIO', emailVerificata: false, verifica: true })
+  })
+
+  it('già verificata: niente da fare', () => {
+    const p = pianoTitolare({ email: EMAIL, perEmail: usato('FLAVIO', { emailVerified: true }) })
+    expect(p).toMatchObject({ emailVerificata: true, verifica: false })
+  })
+
+  it('l’account della regia con un’altra email: non si verifica', () => {
+    const p = pianoTitolare({ uid: 'U1', email: EMAIL, perUid: usato('U1', { email: 'vecchia@example.it' }) })
+    expect(p).toMatchObject({ uid: 'U1', emailVerificata: false, verifica: false })
+  })
+
+  it('lo script la segna solo con --verifica-email, e dopo il controllo di --applica', () => {
+    const script = readFileSync('scripts/titolare-locale.mjs', 'utf8')
+    expect(script).toContain("const VERIFICA_EMAIL = flag('verifica-email')")
+    expect(script).toContain('const verificaOra = VERIFICA_EMAIL && cosa.verifica')
+    expect(script.indexOf('if (!APPLICA)')).toBeLessThan(script.indexOf("chiama('accounts:update', { localId: uid, emailVerified: true })"))
+  })
+})
+
 describe('dall’API REST di Identity Toolkit', () => {
   it('un utente di accounts:lookup diventa la forma dello UserRecord', () => {
-    expect(daRest({ localId: 'U1', email: EMAIL, customAttributes: '{"role":"admin"}', providerUserInfo: [{ providerId: 'password' }], createdAt: '1', lastLoginAt: '2' })).toEqual({
+    expect(daRest({ localId: 'U1', email: EMAIL, emailVerified: true, customAttributes: '{"role":"admin"}', providerUserInfo: [{ providerId: 'password' }], createdAt: '1', lastLoginAt: '2' })).toEqual({
       uid: 'U1',
       email: EMAIL,
+      emailVerified: true,
       customClaims: { role: 'admin' },
       passwordHash: null,
       providerData: [{ providerId: 'password' }],

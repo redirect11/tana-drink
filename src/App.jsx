@@ -13,7 +13,9 @@ import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
 import { ricordaRuolo } from './lib/ruoloLocale.js'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signInWithCustomToken } from 'firebase/auth'
+import { codiceRegiaInAttesa, consumaCodiceRegia, entraDallaRegia } from './lib/passaggioRegia.js'
+import Caricamento from './components/Caricamento.jsx'
 import {
   subscribeSettings,
   DEFAULT_SETTINGS,
@@ -175,6 +177,21 @@ export default function App() {
   // interamente nel viewport.
   const [topbarOpen, setTopbarOpen] = useState(false)
   const navigate = useNavigate()
+
+  // DALLA REGIA, CON UN CLIC (REQ-FLOTTA-030): «Apri la tua app» arriva con
+  // un codice, preso all'avvio (main.jsx). Lo si scambia una volta, e si va
+  // dove va un admin appena entrato; se non va, al login del banco, con la
+  // riga che dice perché. Vale anche con l'installazione non attivata.
+  const [entrandoDallaRegia, setEntrandoDallaRegia] = useState(codiceRegiaInAttesa)
+  useEffect(() => {
+    const codice = consumaCodiceRegia()
+    if (codice === null) return
+    entraDallaRegia(codice, { accedi: (token) => signInWithCustomToken(auth, token) }).then((esito) => {
+      setEntrandoDallaRegia(false)
+      navigate('/bar', { replace: true, state: esito.ok ? null : { avvisoAccesso: esito.messaggio } })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   // Sul telefono la barra tiene il ☰, il logo e due sole azioni: la
   // campanella e i ⋮. Tutto il resto sta nel menu (vedi sotto).
   const telefono = useTelefono()
@@ -404,6 +421,11 @@ export default function App() {
 
   return (
     <div className="app">
+      {entrandoDallaRegia && (
+        <div className="overlay ingresso-regia">
+          <Caricamento testo="Accesso dall’area clienti…" />
+        </div>
+      )}
       {/* Mostra/nascondi la topbar ovunque (utile sulle schermate a tutto
           schermo, dove è nascosta). Da aperta è un overlay, non spinge nulla.
           La campanella (notifiche + sync) sta nella topbar: si richiama da qui. */}
