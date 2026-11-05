@@ -6577,7 +6577,7 @@ requirements:
 
   - id: REQ-FLOTTA-030
     title: "Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google"
-    area: "l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md"
+    area: "src/lib/passaggioRegia.js, src/main.jsx (catturaCodiceRegia), src/App.jsx (l'ingresso dalla regia), src/components/StaffDrawer.jsx (Area clienti), src/pages/BartenderPage.jsx (Entra con Google, l'avviso), src/lib/venue.js (i campi nuovi, righeFiscali), src/components/IdentitaLocale.jsx, src/lib/printer.js (datiFiscaliDelLocale), src/components/InvoicesTab.jsx, src/pages/LandingPage.jsx (il telefono), scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md"
     description: >
       L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...]
       risulta loggato sia backoffice sia istanza per quell'utente», «mi
@@ -6602,11 +6602,40 @@ requirements:
       con questo requisito va su main, perché la regia di produzione legge
       da lì. L'ordine del giorno del rilascio, coi permessi da dare
       l'utente, sta in docs/la-tana-nella-regia.md.
-    status: todo
+      COME È FATTO (05/11/2026, su richiesta dell'utente). IL CODICE si
+      cattura in main.jsx prima del router e si toglie dall'indirizzo
+      (replaceState); App lo consuma una volta sola (React in sviluppo
+      monta due volte, e il secondo scambio troverebbe il codice speso),
+      lo scambia, entra con signInWithCustomToken e va in /bar; se non
+      riesce, va in /bar col login normale e la riga che dice perché.
+      Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti
+      della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e
+      «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la
+      build conosce la regia e la licenza dice dov'è (`regia_url`), come
+      gli altri tasti verso la regia; il token si rinnova al tocco
+      (getIdToken(true)) e si apre solo un indirizzo https. Chi è admin
+      ma non il titolare lo dice la regia, al tocco. I DATI FISCALI
+      (partita IVA, codice fiscale, sede legale) si leggono dal locale al
+      momento della stampa, non dalle impostazioni della stampante, che
+      su un dispositivo si tengono l'intestazione di quando le si è
+      salvate: la partita IVA va sotto la ragione sociale sulle ricevute,
+      tutti e tre sulla fattura di cortesia e nel suo testo per email; il
+      telefono nei contatti della pagina iniziale. AL BANCO CON GOOGLE: un
+      account Google senza ruolo del personale trova «Quest'area è
+      riservata allo staff», come un cliente. ATTENZIONE, da provare sul
+      test: con «un account per email» (l'impostazione di Firebase), un
+      accesso Google con la stessa email di un account email e password
+      la cui email NON è verificata prende il posto di quell'accesso, e
+      la password non vale più; con l'email verificata si collegano.
+      Quindi prima si verifica l'email del titolare
+      (titolare-locale.mjs --verifica-email), poi si usa Google.
+    status: implemented
     generate_issue: false
     labels: [flotta, regia, sicurezza]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/passaggioRegia.test.js
+      - tests/component/AccessoBanco.test.jsx
 
   - id: REQ-FLOTTA-026
     title: "L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca"

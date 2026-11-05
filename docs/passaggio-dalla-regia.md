@@ -2,6 +2,9 @@
 
 Richiesta della regia, 02/11/2026. La parte della regia è pronta:
 [drink-regia PR #49](https://github.com/redirect11/drink-regia/pull/49).
+La parte dell'app è fatta il 05/11/2026 (1.10.15-beta): il codice si legge
+in `src/main.jsx`, la logica è in `src/lib/passaggioRegia.js`, «Area
+clienti» sta nel menù laterale (`StaffDrawer.jsx`).
 
 ## La decisione dell'utente
 
@@ -80,3 +83,11 @@ c'è solo nell'area clienti (`customerAuth.js`). L'utente vuole che il
 titolare possa entrare anche con Google. Con la stessa email Gmail l'account
 resta quello, ruolo compreso (da provare sul test). Sui progetti della regia
 il fornitore Google va acceso: lo decide l'utente, una volta per progetto.
+
+Da provare sul test prima di usarlo con Flavio. Con l'impostazione di
+Firebase «un account per email», un accesso Google con la stessa email di
+un account email e password la cui email **non è verificata** prende il
+posto di quell'accesso: la password non vale più. Con l'email verificata i
+due accessi si collegano. Quindi prima si verifica l'email del titolare
+(`scripts/titolare-locale.mjs --verifica-email --applica`), poi si usa
+Google.

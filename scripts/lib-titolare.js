@@ -20,6 +20,15 @@
 // Auth però non si cambia: un account che c'è con un uid diverso si può
 // solo cancellare e ricreare, e lo si fa SOLO se è un segnaposto mai usato.
 // Un account usato (Flavio alla Tana) resta com'è, con un avviso.
+//
+// L'EMAIL VERIFICATA (REQ-FLOTTA-030). Il passaggio fra regia e app, nei due
+// versi, accetta solo un account del locale con la stessa email del
+// titolare, VERIFICATA, e ruolo admin. Un account nato qui la ha già
+// verificata; uno che c'era (la Tana) forse no. Il piano dice com'è
+// (`emailVerificata`) e se la si può segnare (`verifica`): solo sull'account
+// che resta, e solo se la sua email è proprio quella del titolare —
+// verificare l'email di un altro account vorrebbe dire dare il passaggio a
+// lui. Lo fa lo script solo con un'opzione esplicita (--verifica-email).
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -58,8 +67,8 @@ export function segnaposto(u) {
 }
 
 // Il piano: { azione: 'crea' | 'ricrea' | 'tieni', uid, ruolo, link, avvisi,
-// daCancellare }. Dopo la prima volta dà sempre 'tieni' con ruolo null:
-// rilanciarlo non cambia niente.
+// daCancellare, emailVerificata, verifica }. Dopo la prima volta dà sempre
+// 'tieni' con ruolo null: rilanciarlo non cambia niente.
 export function pianoTitolare({ uid = '', email, perUid = null, perEmail = null }) {
   const avvisi = []
   const tieni = (u) => {
@@ -72,9 +81,21 @@ export function pianoTitolare({ uid = '', email, perUid = null, perEmail = null 
       link: !haPassword(u) && maiEntrato(u) && emailTitolare(u.email) === email,
       avvisi,
       daCancellare: null,
+      emailVerificata: u.emailVerified === true,
+      verifica: u.emailVerified !== true && emailTitolare(u.email) === email,
     }
   }
-  const crea = (daCancellare = null) => ({ azione: daCancellare ? 'ricrea' : 'crea', uid: uid || null, ruolo: { role: 'admin' }, link: true, avvisi, daCancellare })
+  // Un account nato qui ha l'email già verificata (lo script la crea così).
+  const crea = (daCancellare = null) => ({
+    azione: daCancellare ? 'ricrea' : 'crea',
+    uid: uid || null,
+    ruolo: { role: 'admin' },
+    link: true,
+    avvisi,
+    daCancellare,
+    emailVerificata: true,
+    verifica: false,
+  })
 
   if (!uid) {
     if (perEmail) return tieni(perEmail)
@@ -109,6 +130,7 @@ export function daRest(u) {
   return {
     uid: u.localId,
     email: u.email || null,
+    emailVerified: u.emailVerified === true,
     customClaims,
     passwordHash: u.passwordHash || null,
     providerData: (u.providerUserInfo || []).map((p) => ({ providerId: p.providerId })),

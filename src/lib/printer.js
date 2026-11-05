@@ -30,7 +30,7 @@ import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } f
 import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
-import { intestazioneScontrino, venueDi, venuePredefinito } from './venue.js'
+import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali } from './venue.js'
 import { rigaMarchio } from './limiti.js'
 import {
   configStampa,
@@ -76,6 +76,14 @@ function stampaMarchio(prn, impostazioni) {
 // di partenza, che è il comportamento di sempre. Niente da migrare,
 // niente da aspettare.
 const impostazioniDelLocale = () => impostazioniRicordate({})
+
+// I DATI FISCALI SI LEGGONO DAL LOCALE AL MOMENTO DELLA STAMPA, non dalle
+// impostazioni della stampante: quelle, una volta salvate su un
+// dispositivo, si tengono anche l'intestazione di allora, e una partita IVA
+// scritta dopo (dalla regia, o in Impostazioni → Il locale) non
+// arriverebbe mai sulla carta (REQ-FLOTTA-030).
+export const datiFiscaliDelLocale = () => righeFiscali(venueDi(impostazioniDelLocale()))
+const partitaIvaDelLocale = () => String(venueDi(impostazioniDelLocale()).venue_vat_number || '').trim()
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -1888,7 +1896,10 @@ export function printScontrino(order, opts = {}) {
       const shortId = (order.id || '').substring(0, 36)
       prn.addText(`${shortId}\n`)
     }
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) {
+      prn.addText(`${s.businessFooter}\n`)
+      if (partitaIvaDelLocale()) prn.addText(`P.IVA ${partitaIvaDelLocale()}\n`)
+    }
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
     stampaMarchio(prn, impostazioni)
@@ -2048,7 +2059,10 @@ export function printScontrinoAcconto(order, incasso = {}) {
     prn.addText('\n')
 
     if (cfg.mostra('codice_conto')) prn.addText(`${(order.id || '').substring(0, 36)}\n`)
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) {
+      prn.addText(`${s.businessFooter}\n`)
+      if (partitaIvaDelLocale()) prn.addText(`P.IVA ${partitaIvaDelLocale()}\n`)
+    }
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
     stampaMarchio(prn, impostazioniDelLocale())
@@ -2083,7 +2097,10 @@ export function printFattura(invoice) {
     prn.addTextSize(1, 1)
     prn.addTextStyle(false, false, false, prn.COLOR_1)
     prn.addText(`${s.businessAddress}\n`)
-    prn.addText(`${s.businessCity}\n\n`)
+    prn.addText(`${s.businessCity}\n`)
+    // Chi emette: su una fattura, anche di cortesia, ci vogliono.
+    for (const riga of datiFiscaliDelLocale()) prn.addText(`${riga}\n`)
+    prn.addText('\n')
     prn.addTextSize(1, 2)
     prn.addTextStyle(false, false, true, prn.COLOR_1)
     prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)

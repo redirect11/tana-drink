@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 256 | fatto e coperto dai test |
+| ✅ | 257 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**311 voci** in tutto. **273** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**311 voci** in tutto. **274** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 10 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 7 | 1 |  |
+| [FLOTTA](#flotta) | 8 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3576,6 +3576,22 @@ UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`d
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
 
+#### REQ-FLOTTA-030 — Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google
+
+L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+
+LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere che Flavio è il titolare, deve poter inviare comunicazioni a lui via email rispetto al prodotto e deve poter effettuare il single sign on con la sua utenza». Gli account restano due, legati dall'email: il passaggio vuole nel locale la stessa email del titolare, verificata, e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è verificata, e con un'opzione esplicita la segna verificata. La 1.10 con questo requisito va su main, perché la regia di produzione legge da lì. L'ordine del giorno del rilascio, coi permessi da dare l'utente, sta in docs/la-tana-nella-regia.md.
+
+COME È FATTO (05/11/2026, su richiesta dell'utente).
+
+IL CODICE si cattura in main.jsx prima del router e si toglie dall'indirizzo (replaceState); App lo consuma una volta sola (React in sviluppo monta due volte, e il secondo scambio troverebbe il codice speso), lo scambia, entra con signInWithCustomToken e va in /bar; se non riesce, va in /bar col login normale e la riga che dice perché. Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la build conosce la regia e la licenza dice dov'è (`regia_url`), come gli altri tasti verso la regia; il token si rinnova al tocco (getIdToken(true)) e si apre solo un indirizzo https. Chi è admin ma non il titolare lo dice la regia, al tocco. I DATI FISCALI (partita IVA, codice fiscale, sede legale) si leggono dal locale al momento della stampa, non dalle impostazioni della stampante, che su un dispositivo si tengono l'intestazione di quando le si è salvate: la partita IVA va sotto la ragione sociale sulle ricevute, tutti e tre sulla fattura di cortesia e nel suo testo per email; il telefono nei contatti della pagina iniziale.
+
+AL BANCO CON GOOGLE: un account Google senza ruolo del personale trova «Quest'area è riservata allo staff», come un cliente.
+
+ATTENZIONE, da provare sul test: con «un account per email» (l'impostazione di Firebase), un accesso Google con la stessa email di un account email e password la cui email NON è verificata prende il posto di quell'accesso, e la password non vale più; con l'email verificata si collegano. Quindi prima si verifica l'email del titolare (titolare-locale.mjs --verifica-email), poi si usa Google.
+
+**Dove**: `src/lib/passaggioRegia.js, src/main.jsx (catturaCodiceRegia), src/App.jsx (l'ingresso dalla regia), src/components/StaffDrawer.jsx (Area clienti), src/pages/BartenderPage.jsx (Entra con Google, l'avviso), src/lib/venue.js (i campi nuovi, righeFiscali), src/components/IdentitaLocale.jsx, src/lib/printer.js (datiFiscaliDelLocale), src/components/InvoicesTab.jsx, src/pages/LandingPage.jsx (il telefono), scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md` · **Lo dimostrano**: `tests/unit/passaggioRegia.test.js`, `tests/component/AccessoBanco.test.jsx`
+
 #### REQ-FLOTTA-026 — L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca
 
 L'utente, 02/11/2026: «non deve essere il deploy ad avvisare la regia ma l'istanza del sito stesso in qualche modo. Cioè regia e il sito custom del bar si devono parlare dopo il deploy e si scambiano dati tra loro rispetto alle licenze attivazione e etc.» Al primo avvio di ogni versione, dopo l'accesso, l'app chiama la Function presentazione della regia (progetto da VITE_REGIA_PROGETTO, solo drink-regia o drink-regia-test) col token dell'utente e la versione, solo con qualcuno collegato (niente accessi anonimi). Mai a tempo. La regia segna la versione e, se manca, riscrive la licenza; ma non è l'attivazione: la licenza c'è prima dell'app. Il contratto in docs/presentazione-alla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-026, PR #40).
@@ -4011,16 +4027,6 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
-
-### FLOTTA
-
-#### REQ-FLOTTA-030 — Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google
-
-L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
-
-LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere che Flavio è il titolare, deve poter inviare comunicazioni a lui via email rispetto al prodotto e deve poter effettuare il single sign on con la sua utenza». Gli account restano due, legati dall'email: il passaggio vuole nel locale la stessa email del titolare, verificata, e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è verificata, e con un'opzione esplicita la segna verificata. La 1.10 con questo requisito va su main, perché la regia di produzione legge da lì. L'ordine del giorno del rilascio, coi permessi da dare l'utente, sta in docs/la-tana-nella-regia.md.
-
-**Dove**: `l'avvio dell'app (il codice dopo il #), il tasto «Area clienti», src/lib/venue.js (i campi nuovi), Impostazioni → Il locale, src/pages/BartenderPage.jsx, scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md`
 
 ## Difetti noti
 
