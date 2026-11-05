@@ -3,7 +3,7 @@
 // riscaricato a ogni mount (niente flash di caricamento). Un refresh
 // forzato della pagina ricrea il modulo e riparte la sottoscrizione.
 import { useEffect, useState } from 'react'
-import { subscribeDrinks, subscribeCategories } from './api.js'
+import { subscribeDrinks, subscribeCategories, subscribeCarta } from './api.js'
 
 let drinks = []
 let cats = []
@@ -45,4 +45,43 @@ export function useMenu() {
     return () => listeners.delete(l)
   }, [])
   return { drinks, cats, loading: !loaded }
+}
+
+// LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025), in una cache sua che
+// parte solo dove serve: il menù del tavolo. Non nella cache del menù,
+// perché quella la usa anche il conto al banco (OrderPosDetail), che della
+// struttura non sa che farsene: ascolterebbe sezioni e voci, le
+// aspetterebbe al primo caricamento e si ridisegnerebbe a ogni ritocco
+// fatto nell'editor. Il menù del cliente invece la aspetta: senza, in un
+// locale che l'ha personalizzata, il cliente vedrebbe per un istante le
+// categorie del gestionale, con shot e voci-prezzo.
+let carta = { sezioni: [], voci: [] }
+let cartaPronta = false
+let cartaAvviata = false
+const ascoltaCarta = new Set()
+
+function avviaCarta() {
+  if (cartaAvviata) return
+  cartaAvviata = true
+  // Se la struttura non si può leggere, il menù si mostra lo stesso, per
+  // categorie: meglio quello che la schermata «Carico il menù…» per sempre.
+  const arrivata = () => {
+    cartaPronta = true
+    for (const l of ascoltaCarta) l()
+  }
+  subscribeCarta((c) => {
+    carta = c
+    arrivata()
+  }, arrivata)
+}
+
+export function useStrutturaMenu() {
+  const [, force] = useState(0)
+  useEffect(() => {
+    avviaCarta()
+    const l = () => force((n) => n + 1)
+    ascoltaCarta.add(l)
+    return () => ascoltaCarta.delete(l)
+  }, [])
+  return { carta, pronta: cartaPronta }
 }

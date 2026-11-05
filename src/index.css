@@ -802,14 +802,10 @@ a.btn.block {
   color: var(--text);
   text-decoration: none;
 }
-.carosello-slide img,
-.carosello-vuota {
+.carosello-slide img {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
-  display: grid;
-  place-items: center;
-  font-size: 2.4rem;
 }
 .carosello-testo {
   display: flex;
@@ -976,6 +972,14 @@ a.btn.block {
   object-fit: contain;
   margin: 0 auto 6px;
 }
+/* Il bicchiere neutro occupa lo stesso riquadro di un disegno, così le
+   card della griglia e le slide restano allineate, ma più piccolo dentro:
+   a tutta grandezza un'icona sembra un errore. */
+.speciale-img.segnaposto,
+.carosello-slide img.segnaposto {
+  padding: 22%;
+  opacity: 0.75;
+}
 .illustrazioni {
   margin-top: 8px;
 }
@@ -1073,7 +1077,10 @@ a.btn.block {
   border-radius: 0;
 }
 
-/* Drink senza foto: logo come segnaposto, leggermente attenuato. */
+/* Drink senza foto né disegno: il bicchiere neutro (segnapostoDrink),
+   leggermente attenuato. Si vede in ogni stile: le eccezioni di Notte,
+   Lavagna, Déco e Riviera nascondevano il LOGO, che ripetuto su ogni voce
+   faceva il menù giocattolo; il bicchiere no (l'utente, 04/11/2026). */
 .drink-thumb.placeholder {
   object-fit: contain;
   padding: 8px;
@@ -4604,6 +4611,248 @@ body.drawer-open .status-bell-float { display: none; }
   background: var(--btn-bg);
   border-color: transparent;
   color: var(--btn-ink);
+}
+
+/* LE SEZIONI DELLA CARTA DEI CLIENTI (REQ-MENU-025) sono poche: schede
+   grandi, che restano in alto mentre si scorre. Flavio, 04/11/2026: «ne
+   saranno di meno, dovranno essere messe più grandi». Il carattere resta
+   quello dello stile; cambia la misura, in ogni stile. */
+.cat-nav.carta {
+  gap: 10px;
+  padding-block: 10px 14px;
+}
+.cat-nav.carta .cat-chip {
+  font-size: 1.05rem;
+  padding: 10px 20px;
+}
+.stile-notte .cat-nav.carta {
+  gap: 28px;
+}
+.stile-notte .cat-nav.carta .cat-chip {
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  padding: 10px 2px;
+}
+
+/* UNA SEZIONE SNELLA della carta: nome e prezzo su una riga, senza
+   immagine e senza racconto. Le bibite si leggono come un listino. */
+.carta-snella .menu-item {
+  padding-block: 10px;
+}
+.carta-snella .menu-item .grow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.carta-snella .menu-item h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* ── L'EDITOR DEL MENÙ DEI CLIENTI (REQ-MENU-025) ─────────────────
+   Le card hanno la forma di quelle del menù, e i testi sono campi che si
+   leggono come testo: senza riquadro finché non ci si passa sopra o non
+   ci si scrive. Sopra ogni campo un'etichetta minuta dice da dove viene il
+   testo; quando è proprio della sezione prende il colore d'accento. La
+   prima versione era un modulo di caselle grigie, e il nome «in grigio»
+   (il segnaposto) non si capiva cosa fosse (l'utente, 05/11/2026). */
+.struttura-legenda {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+.struttura-legenda dt {
+  color: var(--text);
+  font-weight: 600;
+  margin-top: 6px;
+}
+.struttura-legenda dd {
+  margin: 2px 0 0;
+}
+.struttura-sezione {
+  margin-top: 22px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-sezione.nascosta > :not(.struttura-barra) {
+  opacity: 0.5;
+}
+.struttura-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-barra select {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+.struttura-spunta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.struttura-spunta input {
+  width: auto;
+}
+.struttura-nota {
+  margin: 0 0 8px;
+}
+.wys-campo {
+  margin: 0 0 4px;
+}
+.wys-etichetta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wys-etichetta label {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+  font-weight: 600;
+}
+.wys-origine::before {
+  content: '· ';
+}
+.wys-origine.proprio {
+  color: var(--accent);
+}
+.btn.small.wys-ripristina {
+  padding: 1px 6px;
+  min-height: 0;
+  line-height: 1.2;
+  font-size: 0.68rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Il campo che si legge come testo. `font: inherit` anche perché un
+   textarea, di suo, ha il carattere a larghezza fissa. */
+.wys {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -7px;
+  width: calc(100% + 7px);
+  resize: vertical;
+}
+.wys:hover {
+  border-color: var(--line, rgba(255, 255, 255, 0.18));
+}
+.wys:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+}
+.wys::placeholder {
+  font-style: italic;
+  opacity: 0.6;
+}
+.wys-nome .wys {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.wys-titolo .wys {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+}
+.struttura-voce {
+  cursor: default;
+  margin-top: 8px;
+}
+.struttura-voce .grow {
+  min-width: 0;
+}
+.struttura-voce .row > .price {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-left: 8px;
+}
+.struttura-voce.attenuata > .row {
+  opacity: 0.55;
+}
+.struttura-avviso {
+  margin: 6px 0 0;
+  color: var(--warn);
+}
+.struttura-piede {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-collegamento {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.struttura-prodotto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.struttura-collegamento select {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+.struttura-tasti {
+  display: flex;
+  gap: 4px;
+}
+.struttura-aggiungi {
+  margin-top: 8px;
+}
+.struttura-tasti select {
+  width: auto;
+  max-width: 11rem;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+/* I prodotti della cassa rimasti fuori dal menù dei clienti: un elenco da
+   smaltire, con «Aggiungi a…» su ogni riga. */
+.struttura-fuori {
+  margin-top: 8px;
+  border-left: 3px solid var(--warn);
+}
+.struttura-fuori summary {
+  cursor: pointer;
+}
+.struttura-fuori-riga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.struttura-fuori-riga select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+.struttura-avviso-in-linea {
+  color: var(--warn);
+}
+.struttura-fine {
+  margin-top: 24px;
+  text-align: center;
 }
 
 /* ── Intestazione categoria ──────────────────────────────────── */
@@ -9916,11 +10165,6 @@ body.pagina-piena .inv-scheda {
   margin: 0;
   padding: 18px 0;
 }
-.stile-notte .menu-item .drink-thumb.placeholder {
-  /* Il logo ripetuto su ogni voce faceva il menù giocattolo: senza foto
-     vera, niente immagine. */
-  display: none;
-}
 .stile-notte .menu-item .drink-thumb {
   width: 52px;
   height: 52px;
@@ -10414,10 +10658,6 @@ body.pagina-piena .inv-scheda {
     grid-column: 1;
     grid-row: auto;
   }
-}
-/* Il logo al posto della foto fa il menù giocattolo, in tutti e quattro. */
-:is(.stile-lavagna, .stile-deco, .stile-riviera) .menu-item .drink-thumb.placeholder {
-  display: none;
 }
 
 /* «LAVAGNA»: gesso su ardesia. Porta i suoi colori, tutti: anche quelli

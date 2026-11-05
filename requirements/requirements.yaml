@@ -3903,6 +3903,15 @@ requirements:
       degli special (toccandone uno si apre la scheda) e il QR del menu'
       Special da scaricare e stampare sul menu' che si porta al tavolo. Il
       QR dei tavoli resta quello di sempre.
+      SENZA SPECIAL, GLI SPECIAL NON SI RAGGIUNGONO (l'utente, 04/11/2026:
+      «se non ci sono drink signature, la sezione special deve essere
+      nascosta e il menu special deve risultare vuoto e non raggiungibile
+      al pubblico»): il carosello già non c'era; ora il cliente che apre
+      `/menu/special` senza drink speciali, per esempio da un QR rimasto
+      stampato, va al menù con lo stesso tavolo (`Navigate`, solo quando si
+      sa che non è personale). Chi lavora resta sulla pagina e legge
+      perché è vuota; in Menù → Special lo dice anche il gestionale. I
+      DISEGNI, dal 04/11/2026, sono del locale che ha «Notte»: REQ-LIC-013.
       IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini
       stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il
       disegno stava nella casella della foto, 64 px (52 nello stile
@@ -4034,6 +4043,162 @@ requirements:
     test_cases:
       - tests/component/SpecialScorrevoli.test.jsx
       - tests/unit/stileMenu.test.js
+  - id: REQ-MENU-025
+    title: "Il menù dei clienti con la struttura libera: si parte dalle voci della cassa, ogni voce collegata a un prodotto della cassa"
+    area: "src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js (useStrutturaMenu), src/pages/MenuPage.jsx (usaStruttura, perIlCliente, perCategoria), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules"
+    description: >
+      Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti
+      sul test: «non metterò tutto quello che ho nel menù gestionale sul
+      menù di sala»; al tavolo si ordinano drink e bibite, non shot,
+      bottiglie, food e tisane; «gin e vodka, che ho insieme nel gestionale
+      solo perché li ho vicini a livello logistico, nel menù vanno
+      separati», e «Distillati» va diviso in whisky, rum, tequila e mezcal;
+      «è come se dovessimo agganciare ogni item del menù gestionale a un
+      item creato ad hoc per il menù vista cliente». Il gestionale è fatto
+      per il banco: voci-prezzo («SOUR 7», «DRINK 8 PREMIUM»), gin tonic
+      chiamati col solo nome del gin, la ricetta con la tonica che finiva
+      fra gli ingredienti in carta.
+      DECISIONI DELL'UTENTE, lo stesso giorno: vale per tutti i locali, non
+      solo per la Tana; le descrizioni le scrive prima Claude, poi l'app
+      quando ci saranno i servizi AI (REQ-AI-004).
+      UN MENÙ SOLO. Prima era una «carta» a parte con un interruttore, poi
+      una «composizione del menù» da scegliere nel marketplace accanto allo
+      stile (Classica o «Di sala»). L'utente, ancora il 04/11/2026: è «solo
+      una disposizione degli elementi del menù e come strutturare le varie
+      sezioni»; quindi i due menù si unificano, il tema torna colori +
+      stile, e la STRUTTURA del menù dei clienti si personalizza dal menù
+      stesso. Le sue scelte, fra le alternative proposte:
+      LA STRUTTURA È LIBERA. La prima scelta fu di sezioni miste (che
+      seguono una categoria della cassa, o con le voci scelte a mano);
+      l'utente, 05/11/2026, chiedendo come si aggiunge una voce in una
+      sezione per categoria: «vorrei che sia libero … partiamo dal
+      prepopolare il menu con le voci di cassa, poi posso aggiungere le
+      categorie che mi pare, spostare i drink tra le categorie e creare
+      altri drink, ma tutti devono obbligatoriamente essere connessi a un
+      item del menu cassa. Voglio completa flessibilità». Quindi: finché
+      nessuno la tocca (nessuna sezione scritta) il menù dei clienti si
+      divide per le categorie della cassa, come sempre. Per personalizzarlo
+      si parte da una COPIA («Prepopola con le voci della cassa»): una
+      sezione per categoria, col suo nome e nel suo ordine, con dentro
+      tutti i suoi prodotti, spenti compresi (al tavolo non si vedono, e
+      tornano quando si riaccendono); i prodotti senza una categoria che
+      esiste vanno in fondo. Da lì sezioni e voci si aggiungono, si
+      rinominano, si spostano (anche da una sezione all'altra), si
+      tolgono; lo stesso prodotto può stare in più sezioni. Ogni sezione ha
+      nome, ordine, vista «dettagliata» o «snella», e può essere NASCOSTA.
+      OGNI VOCE È COLLEGATA A UN PRODOTTO DELLA CASSA: nasce scegliendo il
+      prodotto, e il prodotto si cambia ma non si toglie. IL PREZZO DELLA
+      LIBERTÀ: un prodotto aggiunto in cassa dopo la copia non entra da
+      solo; per non perderlo, l'editor elenca in cima i prodotti che non
+      sono in nessuna voce, ognuno con «Aggiungi a…», e la scheda del
+      prodotto dice «non compare». «Torna al menù per categorie» cancella
+      la struttura intera. Il tasto della copia c'è SEMPRE: su una
+      struttura già scritta diventa «Riparti dalle voci della cassa» e,
+      dopo una conferma, la sostituisce con una copia nuova (l'utente,
+      05/11/2026, che sulla demo già personalizzata non lo trovava: «serve
+      un tasto per prepopolare tutto come se fosse il menu cassa e poi da
+      lì modifico»).
+      I TESTI SUL PRODOTTO, COL RITOCCO NELLE SEZIONI A MANO. La scheda
+      prodotto ha il «Nome nel menù dei clienti» (`nome_cliente`), oltre
+      alla descrizione e agli ingredienti in carta che c'erano già: valgono
+      ovunque il cliente legga quel prodotto, Special e carosello compresi.
+      Una voce può dire nome, descrizione e ingredienti suoi
+      («Gin Fizz» e «Tom Collins» tutti e due su «SOUR 7»); senza, valgono
+      quelli della scheda. Gli ingredienti di una voce non vengono
+      mai dalla ricetta («non li devi prendere dalla ricetta, vanno messi a
+      mano»): il ritocco, o quelli scritti sulla scheda.
+      CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora
+      ordina dal menù del gestionale, coi nomi del banco e per categorie,
+      che conosce. Una voce su un prodotto spento o esaurito non compare;
+      una sezione rimasta vuota neppure. Nascondere una sezione non spegne
+      i suoi prodotti nelle altre: le voci-prezzo si nascondono e si
+      ordinano coi nomi della carta.
+      AL TAVOLO: con la struttura personalizzata le sezioni sono schede
+      grandi che restano in alto mentre si scorre («come se fosse un tab
+      che deve restare sempre fisso bloccato in alto»); una sezione SNELLA
+      mostra nome e prezzo su una riga, senza immagine, descrizione e
+      ingredienti (le bibite). Il menù del cliente aspetta la struttura
+      prima di mostrarsi, perché il cliente non veda per un istante le
+      categorie del gestionale; la struttura ha una cache sua, che parte
+      solo lì: il conto al banco, che usa la cache del menù, non la ascolta.
+      Una voce esce dalla logica pura già pronta da mostrare (testi,
+      ingredienti, niente ricetta), così le pagine che la disegnano non
+      hanno casi speciali.
+      L'ORDINE porta il prodotto del GESTIONALE, col suo nome: è quello che
+      il banco conosce, che scala il magazzino e che conta nelle
+      statistiche. Se il cliente lo legge con un altro nome (della scheda o
+      della voce), quel nome va nella nota della riga, che al banco dice
+      cosa preparare («SOUR 7» con nota «Gin Fizz»); nel carrello il
+      cliente legge il nome che ha scelto. La riga del carrello si
+      riconosce da quello che arriva al banco, il prodotto e il nome letto:
+      due voci sullo stesso prodotto con due nomi sono due righe, lo stesso
+      Negroni preso da due sezioni è una riga sola.
+      NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra
+      il menù COM'È AL TAVOLO, sezione per sezione. L'utente, 05/11/2026,
+      davanti alla prima versione, un modulo di caselle: «come associamo le
+      voci di menu agli item di menu della cassa? La casella con il nome in
+      grigio cos'è? … possiamo renderlo simile a un WYSIWYG». Quindi le
+      card hanno la forma di quelle del menù e i testi si scrivono dove si
+      leggono; ogni campo mostra il testo che legge il cliente e sopra dice
+      DA DOVE VIENE (scheda prodotto, o solo la sezione, con «↺» per
+      tornare alla scheda). Un ritocco svuotato o uguale al testo della
+      scheda torna a ereditare, così una correzione sulla scheda arriva
+      anche lì. Ogni voce ha il suo «🔗 Prodotto della cassa», che si legge
+      e si cambia con «Cambia», da una tendina divisa per categorie (una
+      tendina col listino intero in ogni voce, su un listino vero copiato
+      per intero, erano decine di migliaia di righe da ridisegnare a ogni
+      campo salvato); «Sposta in…» un'altra sezione, e
+      «Scheda» per aprire la scheda del prodotto, chiusa la quale si torna
+      lì. Una sezione nuova va in cima. Nelle azioni di ogni prodotto del
+      catalogo, «Menù dei clienti» dice in quali sezioni compare (o che non
+      compare), e lo aggiunge a un'altra o lo toglie (Flavio: «dovrebbe
+      apparire una tendina con tutti gli item dove uno seleziona quello a
+      cui si deve agganciare»). La copia e la cancellazione della struttura
+      vanno a pacchetti da 450 scritture, perché Firestore ne accetta 500
+      per pacchetto e il listino di un locale vero le supera; «Riparti»
+      cancella e riscrive nello stesso giro, e un riordino è un pacchetto
+      solo. Le cancellazioni si confermano col dialogo dell'app: il
+      `confirm` del browser nella PWA installata può non comparire.
+      LA DEMO ha una struttura personalizzata, fatta dalla stessa copia di
+      partenza: in cima una sezione nuova con tre voci raccontate, due
+      sezioni rinominate, birre e bollicine snelle, shot nascosti; per
+      farla vedere senza scriverla.
+      I DATI: `carta_sezioni` (nome, ordine, vista, `nascosta`) e
+      `carta_voci` (sezione, prodotto, ritocchi, ordine), coi nomi di quando era una
+      carta a parte; due collezioni e non un documento solo perché le voci
+      si scrivono una alla volta. Le legge chiunque apra il menù, le scrive
+      il banco. Sul prodotto, `nome_cliente`.
+    status: implemented
+    generate_issue: false
+    labels: [menu, vista-cliente, gestionale]
+    test_cases:
+      - tests/unit/strutturaMenu.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/component/MenuManager.test.jsx
+
+  - id: REQ-MENU-026
+    title: "I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll"
+    area: "src/lib/illustrazioneDrink.js, public/illustrazioni/alice/"
+    description: >
+      Flavio, 04/11/2026, guardando le scene degli Special sul test: «a
+      livello di grafica, puramente grafica, come avevo detto: disegno in
+      stile Lewis Carroll dal libro, tecnica acquerello; non è che ci siamo
+      molto», «l'immagine va migliorata»; l'impaginazione delle scene invece
+      va bene. L'utente lo stesso giorno: «i disegni dei drink per la Tana
+      invece vanno fatti più nello stile Lewis Carroll».
+      I disegni di oggi sono composti a codice (bicchiere, colore,
+      decorazione) con un tratto che imita l'incisione e un'acquerellatura
+      fatta di filtri: un disegno generato così non arriva alle tavole di
+      Tenniel. La strada va decisa con l'utente: illustrazioni fatte a
+      mano da un illustratore, immagini generate da un modello e riviste,
+      o le tavole originali di Tenniel (di pubblico dominio) composte coi
+      bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
+    status: todo
+    generate_issue: true
+    labels: [menu, vista-cliente, design]
+    priority: P2
+    test_cases: []
+
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
     area: "src/lib/groups.js"
@@ -5865,6 +6030,50 @@ requirements:
       - tests/unit/azioneModulo.test.js
       - tests/component/MarketplaceTab.test.jsx
 
+  - id: REQ-LIC-013
+    title: "I disegni dei drink sono del locale che ha «Notte»; altrove la foto o un bicchiere neutro"
+    area: "src/lib/stileMenu.js (disegni, disegniDelLocale), src/lib/speciali.js (immagineVoce, segnapostoDrink), src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/SpecialScorrevoli.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialManager.jsx, src/components/DrinkForm.jsx (disegniConsentiti), src/index.css, DESIGN.md"
+    description: >
+      L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono
+      solo per lo stile Notte che abbiamo fatto in esclusiva per la Tana.
+      Dobbiamo prevedere un placeholder per altri stili e per altri
+      locali». E alle domande dello stesso giorno: «quelli stilizzati per
+      Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile»;
+      «chiunque può caricare le immagini dei drink», e tutti gli stili
+      mostrano le foto che il titolare carica; al posto dell'immagine «un
+      bicchiere neutro».
+      I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni
+      di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza
+      dà uno stile che li porta (`disegni: true` nel catalogo: oggi solo
+      «Notte», REQ-LIC-010), in qualunque stile il locale abbia scelto,
+      Giornale compreso con le sue incisioni. Gli altri locali non li vedono
+      in nessuno stile, e nella scheda del drink la composizione del
+      disegno non si offre. `immagineVoce` senza `disegni` restituisce solo
+      la foto: chi chiama e se ne dimentica non regala l'esclusiva.
+      LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema
+      e stile, e vincono sempre sul disegno.
+      IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un
+      bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due
+      versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card
+      del menù Special e nelle slide del carosello, in ogni stile. Prima
+      c'era il logo del locale, che Notte, Lavagna, Déco e Riviera
+      nascondevano perché ripetuto su ogni voce faceva il menù giocattolo;
+      col bicchiere quelle eccezioni non servono più. Il Giornale, che non
+      ha un riquadro fisso per l'immagine, e il dettaglio del drink restano
+      senza immagine quando non c'è.
+    status: implemented
+    generate_issue: false
+    labels: [licenza, menu, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/stileMenu.test.js
+      - tests/unit/speciali.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/component/CaroselloSpeciali.test.jsx
+      - tests/component/DettaglioDrink.test.jsx
+      - tests/component/MenuManager.test.jsx
+      - tests/unit/css.test.js
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
@@ -7028,6 +7237,30 @@ requirements:
     generate_issue: true
     labels: [ai, menu, vista-cliente]
     priority: P3
+    test_cases: []
+
+  - id: REQ-AI-004
+    title: "Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare"
+    area: "functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx"
+    description: >
+      Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025)
+      «le faremo generare all'intelligenza artificiale, poi alcune verranno
+      eliminate»; una descrizione per i gin (provenienza, carattere), per
+      le birre più particolari, per i cocktail IBA; niente per le bibite.
+      DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando
+      integreremo i servizi AI». Quindi due tempi:
+      - PRIMA: la prima stesura la scrive Claude, una volta, con uno script
+        come quello delle Signature (scripts/special-signature.mjs), sul
+        test e poi in produzione col via libera; Flavio la rivede;
+      - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei
+        clienti, «Proponi descrizione» chiede al modello una descrizione
+        dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare
+        provenienza o botaniche, e al cliente arriva come informazione del
+        locale. Costi e credito in REQ-AI-003.
+    status: todo
+    generate_issue: true
+    labels: [ai, menu, vista-cliente]
+    priority: P2
     test_cases: []
 
   - id: REQ-AI-003
@@ -14213,6 +14446,51 @@ requirements:
       - tests/unit/inventarioChiuso.test.js
       - tests/component/StoricoInventari.test.jsx
       - tests/unit/licenza.test.js
+  - id: REQ-MAG-053
+    title: "Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo"
+    area: "src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)"
+    description: >
+      Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei
+      prodotti di magazzino in negativo, perché adesso dopo circa un mese il
+      fornitore si è convinto a farsi restituire una bottiglia, e io adesso
+      quella bottiglia se faccio contenuto reale da 1 passa a 0: è come se
+      me la porta come se fosse stata consumata. Quindi ho bisogno di fare
+      anche il carico negativo, che io tolgo un prodotto».
+      Il contenuto reale è una RETTIFICA: nell'inventario il consumo è
+      deposito + acquisti − rimanenza, e la bottiglia resa ci finiva dentro
+      come bevuta. Il reso è un ACQUISTO DISFATTO: un movimento in uscita
+      col motivo «reso fornitore», nel gruppo degli acquisti
+      (GRUPPO_MOTIVO). Toglie dagli acquisti del periodo e dell'inventario
+      (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il
+      consumo non lo vede. Nella movimentazione del prodotto ha la sua riga,
+      «Reso al fornitore».
+      SE NEL PERIODO NON CI SONO ACQUISTI, IL RESO ESCE DAL DEPOSITO (Flavio,
+      altri due vocali dello stesso giorno: «da inventario, quando fai carico
+      negativo, va a intervenire sugli acquisti, e se non ci sono gli
+      acquisti sul deposito»; «il carico negativo deve fare il contrario del
+      carico, cioè togliere e restituire i soldi»). ACQ non scende sotto
+      zero, e quello che avanza si toglie da DEP (`resoSulDeposito`), sia
+      nell'inventario sia nel magazzino di un periodo: deposito + acquisti
+      resta lo stesso, quindi il consumo pure. IL CONTENUTO REALE NON SI
+      TOCCA: resta una rettifica, che interviene sui consumi e sulle
+      rimanenze («contenuto reale deve sempre andare a intervenire sui
+      consumi»).
+      NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta
+      «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o
+      quanto contenuto) e dice prima di confermare quanti ne escono e quanto
+      si toglie dagli acquisti, netto; colli e prezzo spariscono, perché si
+      rende quello che c'è al costo che ha. Il carico resta com'era, solo in
+      positivo (25-26/09/2026): un numero negativo al carico è ancora un
+      errore.
+      COME IL CARICO, SENZA RETE (BUG-109): la giacenza scende con un
+      incremento negativo in sottofondo e la riga si aggiorna nell'istante,
+      senza attese.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino]
+    test_cases:
+      - tests/unit/resoFornitore.test.js
+      - tests/component/InventoryManagerCard.test.jsx
   - id: REQ-MAG-044
     title: "Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»"
     area: "src/lib/inventory.js (stockStatus, haGiacenza, unitsInStock, patchNormalizza), src/lib/api.js (scarico, riallineo, storno), src/lib/impegnato.js, src/components/InventoryManager.jsx (scheda prodotto)"

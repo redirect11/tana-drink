@@ -5559,3 +5559,64 @@ bugs:
     test_cases:
       - tests/component/MenuPage.test.jsx
       - tests/component/StaffDrawer.test.jsx
+  - id: BUG-128
+    title: "«📜 Movimenti» di un prodotto non si apriva: la finestra era montata solo con la scheda in modifica"
+    area: "src/components/InventoryManager.jsx (movimentiDi)"
+    severity: media
+    priority: P1
+    description: >
+      Flavio, 04/11/2026, sul test con la 1.10.12-beta: «i movimenti dei
+      prodotti, sempre la stessa cosa: ci clicchi sopra e non si apre».
+      Il tasto sta nelle azioni di una riga dell'elenco del Magazzino e
+      impostava `movimentiDi`, ma `<MovimentiProdotto>` era montato dentro
+      il ramo `if (editing)`, quello della scheda in modifica: dall'elenco
+      la finestra non c'era mai. Era cosi' dal primo giorno (REQ-MAG-048,
+      10/10/2026); la prova della finestra la montava da sola e non poteva
+      accorgersene. BUG-117 aveva cercato la causa nella lentezza della
+      cache, che c'era ma non era questa: quella correzione resta valida
+      per i tempi di lettura, una volta aperta la finestra.
+      LA CORREZIONE: la finestra sta nel ritorno principale, accanto
+      all'elenco da cui la si apre, e la prova del Magazzino la apre dal
+      tasto vero.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, magazzino]
+    test_cases:
+      - tests/component/InventoryManager.test.jsx
+  - id: BUG-129
+    title: "Il backup del gestionale non salvava undici collezioni, fra cui il menù dei clienti e lo storico delle vendite"
+    area: "src/lib/backup.js (COLLEZIONI, SOLO_COPIA, FUORI_DAL_BACKUP, importaDatabase), src/components/BackupPanel.jsx"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato il 05/11/2026 controllando cosa toccava la 1.10.14-beta (il
+      menù dei clienti, REQ-MENU-025). Il backup scarica un elenco di
+      collezioni scritto a mano, perché il client non può chiedere a
+      Firestore quali esistono; l'elenco era rimasto indietro, e un backup
+      fatto dall'app non conteneva: `carta_sezioni` e `carta_voci` (la
+      struttura del menù dei clienti), `supplier_prices` e
+      `supplier_price_history` (listini e storico prezzi dei fornitori),
+      `purchase_order_templates` (modelli d'ordine), `altre_spese`,
+      `minimi_extra`, e lo storico caricato dagli script
+      (`vendite_storiche`, `vendite_storiche_prodotti`, `mesi_storici`). In
+      più c'era `serate`, che non è una collezione ma il nome di una
+      schermata delle statistiche: la si leggeva, e le regole la
+      rifiutavano. Nessuno se ne accorgeva, perché il file si scarica
+      senza errori: un backup si scopre incompleto il giorno in cui serve.
+      LA CORREZIONE: tre elenchi espliciti. Le collezioni che si salvano e
+      si rimettono; quelle SOLO NELLA COPIA, lo storico degli script, che
+      le regole non fanno scrivere dall'app (`write: if false`) e che
+      quindi il ripristino dall'app salta e lo dice (si rimette con
+      scripts/ripristina-db.js: un documento rifiutato fermava il
+      ripristino a metà); e quelle FUORI apposta, ognuna col suo perché
+      (`licenza`, scritta solo dalla regia; `presenze`, stato del momento
+      scritto da ognuno per sé; `diagnostica_stampante`, registro tecnico).
+      Un test confronta gli elenchi con le collezioni di firestore.rules:
+      una collezione nuova senza un posto nel backup boccia la build.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, backup]
+    test_cases:
+      - tests/unit/backup.test.js

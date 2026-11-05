@@ -23,6 +23,10 @@ export default function DrinkForm({
   // Sul profilo leggero (piano Free) Storage non c'è: la foto non si carica,
   // e il campo lo dice invece di fallire al salvataggio (REQ-LIC-004).
   fotoConsentite = true,
+  // I disegni dei drink sono del locale che ha «Notte» (REQ-LIC-013,
+  // disegniDelLocale): agli altri la composizione non si offre, perché in
+  // carta non comparirebbe. La foto invece si carica sempre.
+  disegniConsentiti = false,
 }) {
   const itemsById = useMemo(
     () => Object.fromEntries((inventory || []).map((i) => [i.id, i])),
@@ -233,6 +237,22 @@ export default function DrinkForm({
         onUse={(v) => setForm((f) => ({ ...f, price: String(v) }))}
       />
 
+      {/* IL NOME PER IL CLIENTE (REQ-MENU-025). Il gestionale chiama le cose
+          come servono al banco — il gin tonic col solo nome del gin, le
+          voci-prezzo «SOUR 7» —, il cliente legge questo. L'ordine porta
+          comunque il nome del banco. */}
+      <label htmlFor="nome_cliente">Nome nel menù dei clienti</label>
+      <input
+        id="nome_cliente"
+        value={form.nome_cliente || ''}
+        onChange={set('nome_cliente')}
+        placeholder={form.name || ''}
+      />
+      <p className="muted small" style={{ margin: '2px 0 0' }}>
+        Nome mostrato al cliente. Se vuoto, vale il nome della voce; comande e
+        scontrini usano sempre il nome della voce.
+      </p>
+
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
       <p className="muted small" style={{ margin: '2px 0 0' }}>
@@ -357,7 +377,7 @@ export default function DrinkForm({
       {/* IL DISEGNO DEL DRINK (REQ-MENU-018): bicchiere, colore e
           decorazione, nel segno delle incisioni del libro. L'anteprima è
           quella che vedrà il cliente. */}
-      {form.speciale && (
+      {form.speciale && disegniConsentiti && (
         <div className="illustrazioni" role="group" aria-label="Disegno del drink">
           <span className="muted small">Disegno del drink, usato quando manca la foto</span>
           {!disegno ? (

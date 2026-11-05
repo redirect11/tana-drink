@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 4 novembre 2026.
+> Generato il 5 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 253 | fatto e coperto dai test |
+| ✅ | 256 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**306 voci** in tutto. **270** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**311 voci** in tutto. **273** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,8 +47,8 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 19 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 47 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 20 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -58,11 +58,11 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 9 | 3 |  |
+| [LIC](#lic) | 10 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 7 | 1 |  |
 
@@ -784,6 +784,8 @@ IL CAROSELLO E' UNA SLIDE ALLA VOLTA (l'utente, 29/10/2026: «serve un carosello
 
 NEL GESTIONALE: Menu' → Special, con titolo e sottotitolo, l'elenco degli special (toccandone uno si apre la scheda) e il QR del menu' Special da scaricare e stampare sul menu' che si porta al tavolo. Il QR dei tavoli resta quello di sempre.
 
+SENZA SPECIAL, GLI SPECIAL NON SI RAGGIUNGONO (l'utente, 04/11/2026: «se non ci sono drink signature, la sezione special deve essere nascosta e il menu special deve risultare vuoto e non raggiungibile al pubblico»): il carosello già non c'era; ora il cliente che apre `/menu/special` senza drink speciali, per esempio da un QR rimasto stampato, va al menù con lo stesso tavolo (`Navigate`, solo quando si sa che non è personale). Chi lavora resta sulla pagina e legge perché è vuota; in Menù → Special lo dice anche il gestionale. I DISEGNI, dal 04/11/2026, sono del locale che ha «Notte»: REQ-LIC-013.
+
 IL DISEGNO NELL'ELENCO DEL MENÙ (02/11/2026). L'utente: «le immagini stilizzate dei drink dovrebbero essere più grandi». Nell'elenco il disegno stava nella casella della foto, 64 px (52 nello stile «Notte»), ritagliato per riempire il quadrato: ora ha la classe `disegno`, 96 px (88 nello stile «Notte»), intero e senza riquadro. La foto vera resta com'era.
 
 **Dove**: `src/lib/speciali.js, src/lib/illustrazioneDrink.js, src/components/CaroselloSpeciali.jsx, src/pages/MenuPage.jsx (speciali), src/components/SpecialManager.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js, src/lib/api.js (speciale, illustrazione, special_titolo), src/App.jsx (/menu/special), scripts/special-signature.mjs, public/illustrazioni/alice/, scripts/illustrazioni-alice.mjs` · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/unit/illustrazioneDrink.test.js`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/unit/useIncollata.test.jsx`
@@ -815,6 +817,30 @@ NEGLI SPECIAL: il menu' Special diventa una sequenza di scene a tutto schermo, u
 IL DISEGNO PIÙ GRANDE (02/11/2026). L'utente: «le immagini nel menu special le vedo ancora piccole». Il disegno aveva una misura fissa, 320 px al massimo: ora prende tutta l'altezza che il testo gli lascia, fino a 560 px; sugli schermi larghi e bassi (dai 900 px, più larghi che alti) il disegno sta a sinistra e il testo a destra. Con «riduci movimento» torna a una misura sua, fino a 560 px.
 
 **Dove**: `src/lib/stileMenu.js, src/components/SpecialScorrevoli.jsx, src/lib/useDisegnoRaster.js, src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile-notte), src/index.css (.stile-notte, .notte-*), src/lib/api.js (stile_menu), package.json (gsap)` · **Lo dimostrano**: `tests/component/SpecialScorrevoli.test.jsx`, `tests/unit/stileMenu.test.js`
+
+#### REQ-MENU-025 — Il menù dei clienti con la struttura libera: si parte dalle voci della cassa, ogni voce collegata a un prodotto della cassa
+
+Flavio, vocali e video del 04/11/2026, guardando il menù dei clienti sul test: «non metterò tutto quello che ho nel menù gestionale sul menù di sala»; al tavolo si ordinano drink e bibite, non shot, bottiglie, food e tisane; «gin e vodka, che ho insieme nel gestionale solo perché li ho vicini a livello logistico, nel menù vanno separati», e «Distillati» va diviso in whisky, rum, tequila e mezcal; «è come se dovessimo agganciare ogni item del menù gestionale a un item creato ad hoc per il menù vista cliente». Il gestionale è fatto per il banco: voci-prezzo («SOUR 7», «DRINK 8 PREMIUM»), gin tonic chiamati col solo nome del gin, la ricetta con la tonica che finiva fra gli ingredienti in carta.
+
+DECISIONI DELL'UTENTE, lo stesso giorno: vale per tutti i locali, non solo per la Tana; le descrizioni le scrive prima Claude, poi l'app quando ci saranno i servizi AI (REQ-AI-004).
+
+UN MENÙ SOLO. Prima era una «carta» a parte con un interruttore, poi una «composizione del menù» da scegliere nel marketplace accanto allo stile (Classica o «Di sala»). L'utente, ancora il 04/11/2026: è «solo una disposizione degli elementi del menù e come strutturare le varie sezioni»; quindi i due menù si unificano, il tema torna colori + stile, e la STRUTTURA del menù dei clienti si personalizza dal menù stesso. Le sue scelte, fra le alternative proposte:
+
+LA STRUTTURA È LIBERA. La prima scelta fu di sezioni miste (che seguono una categoria della cassa, o con le voci scelte a mano); l'utente, 05/11/2026, chiedendo come si aggiunge una voce in una sezione per categoria: «vorrei che sia libero … partiamo dal prepopolare il menu con le voci di cassa, poi posso aggiungere le categorie che mi pare, spostare i drink tra le categorie e creare altri drink, ma tutti devono obbligatoriamente essere connessi a un item del menu cassa. Voglio completa flessibilità». Quindi: finché nessuno la tocca (nessuna sezione scritta) il menù dei clienti si divide per le categorie della cassa, come sempre. Per personalizzarlo si parte da una COPIA («Prepopola con le voci della cassa»): una sezione per categoria, col suo nome e nel suo ordine, con dentro tutti i suoi prodotti, spenti compresi (al tavolo non si vedono, e tornano quando si riaccendono); i prodotti senza una categoria che esiste vanno in fondo. Da lì sezioni e voci si aggiungono, si rinominano, si spostano (anche da una sezione all'altra), si tolgono; lo stesso prodotto può stare in più sezioni. Ogni sezione ha nome, ordine, vista «dettagliata» o «snella», e può essere NASCOSTA.
+
+OGNI VOCE È COLLEGATA A UN PRODOTTO DELLA CASSA: nasce scegliendo il prodotto, e il prodotto si cambia ma non si toglie.
+
+IL PREZZO DELLA LIBERTÀ: un prodotto aggiunto in cassa dopo la copia non entra da solo; per non perderlo, l'editor elenca in cima i prodotti che non sono in nessuna voce, ognuno con «Aggiungi a…», e la scheda del prodotto dice «non compare». «Torna al menù per categorie» cancella la struttura intera. Il tasto della copia c'è SEMPRE: su una struttura già scritta diventa «Riparti dalle voci della cassa» e, dopo una conferma, la sostituisce con una copia nuova (l'utente, 05/11/2026, che sulla demo già personalizzata non lo trovava: «serve un tasto per prepopolare tutto come se fosse il menu cassa e poi da lì modifico»). I TESTI SUL PRODOTTO, COL RITOCCO NELLE SEZIONI A MANO. La scheda prodotto ha il «Nome nel menù dei clienti» (`nome_cliente`), oltre alla descrizione e agli ingredienti in carta che c'erano già: valgono ovunque il cliente legga quel prodotto, Special e carosello compresi. Una voce può dire nome, descrizione e ingredienti suoi («Gin Fizz» e «Tom Collins» tutti e due su «SOUR 7»); senza, valgono quelli della scheda. Gli ingredienti di una voce non vengono mai dalla ricetta («non li devi prendere dalla ricetta, vanno messi a mano»): il ritocco, o quelli scritti sulla scheda.
+
+CHI LA VEDE: il cliente, e il personale in vista cliente. Chi lavora ordina dal menù del gestionale, coi nomi del banco e per categorie, che conosce. Una voce su un prodotto spento o esaurito non compare; una sezione rimasta vuota neppure. Nascondere una sezione non spegne i suoi prodotti nelle altre: le voci-prezzo si nascondono e si ordinano coi nomi della carta.
+
+AL TAVOLO: con la struttura personalizzata le sezioni sono schede grandi che restano in alto mentre si scorre («come se fosse un tab che deve restare sempre fisso bloccato in alto»); una sezione SNELLA mostra nome e prezzo su una riga, senza immagine, descrizione e ingredienti (le bibite). Il menù del cliente aspetta la struttura prima di mostrarsi, perché il cliente non veda per un istante le categorie del gestionale; la struttura ha una cache sua, che parte solo lì: il conto al banco, che usa la cache del menù, non la ascolta. Una voce esce dalla logica pura già pronta da mostrare (testi, ingredienti, niente ricetta), così le pagine che la disegnano non hanno casi speciali. L'ORDINE porta il prodotto del GESTIONALE, col suo nome: è quello che il banco conosce, che scala il magazzino e che conta nelle statistiche. Se il cliente lo legge con un altro nome (della scheda o della voce), quel nome va nella nota della riga, che al banco dice cosa preparare («SOUR 7» con nota «Gin Fizz»); nel carrello il cliente legge il nome che ha scelto. La riga del carrello si riconosce da quello che arriva al banco, il prodotto e il nome letto: due voci sullo stesso prodotto con due nomi sono due righe, lo stesso Negroni preso da due sezioni è una riga sola.
+
+NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra il menù COM'È AL TAVOLO, sezione per sezione. L'utente, 05/11/2026, davanti alla prima versione, un modulo di caselle: «come associamo le voci di menu agli item di menu della cassa? La casella con il nome in grigio cos'è? … possiamo renderlo simile a un WYSIWYG». Quindi le card hanno la forma di quelle del menù e i testi si scrivono dove si leggono; ogni campo mostra il testo che legge il cliente e sopra dice DA DOVE VIENE (scheda prodotto, o solo la sezione, con «↺» per tornare alla scheda). Un ritocco svuotato o uguale al testo della scheda torna a ereditare, così una correzione sulla scheda arriva anche lì. Ogni voce ha il suo «🔗 Prodotto della cassa», che si legge e si cambia con «Cambia», da una tendina divisa per categorie (una tendina col listino intero in ogni voce, su un listino vero copiato per intero, erano decine di migliaia di righe da ridisegnare a ogni campo salvato); «Sposta in…» un'altra sezione, e «Scheda» per aprire la scheda del prodotto, chiusa la quale si torna lì. Una sezione nuova va in cima. Nelle azioni di ogni prodotto del catalogo, «Menù dei clienti» dice in quali sezioni compare (o che non compare), e lo aggiunge a un'altra o lo toglie (Flavio: «dovrebbe apparire una tendina con tutti gli item dove uno seleziona quello a cui si deve agganciare»). La copia e la cancellazione della struttura vanno a pacchetti da 450 scritture, perché Firestore ne accetta 500 per pacchetto e il listino di un locale vero le supera; «Riparti» cancella e riscrive nello stesso giro, e un riordino è un pacchetto solo. Le cancellazioni si confermano col dialogo dell'app: il `confirm` del browser nella PWA installata può non comparire.
+
+LA DEMO ha una struttura personalizzata, fatta dalla stessa copia di partenza: in cima una sezione nuova con tre voci raccontate, due sezioni rinominate, birre e bollicine snelle, shot nascosti; per farla vedere senza scriverla. I DATI: `carta_sezioni` (nome, ordine, vista, `nascosta`) e `carta_voci` (sezione, prodotto, ritocchi, ordine), coi nomi di quando era una carta a parte; due collezioni e non un documento solo perché le voci si scrivono una alla volta. Le legge chiunque apra il menù, le scrive il banco. Sul prodotto, `nome_cliente`.
+
+**Dove**: `src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js (useStrutturaMenu), src/pages/MenuPage.jsx (usaStruttura, perIlCliente, perCategoria), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules` · **Lo dimostrano**: `tests/unit/strutturaMenu.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MenuManager.test.jsx`
 
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
@@ -1933,6 +1959,20 @@ UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo «Inventario�
 GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe complete (rim_adesso, cons, valori) e totali; quelli di prima solo dep · acq · rim · cons, e i primi neanche i totali: la lettura (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`), non il contato delle 18 (BUG-112), poi il contato, poi l'atteso. Prima gli inventari chiusi stavano in fondo all'inventario in corso, quindici al massimo, e aperti dicevano solo il consumo riga per riga: quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`), la lista per scaffale e la testata sono le stesse dell'inventario in corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra altri» (`fetchStockCounts` con `prima`): un inventario e' un documento da quattrocento righe, e per l'elenco bastano date e totali (`riassuntoInventarioChiuso`). La sezione si accende col modulo dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
 
 **Dove**: `src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)` · **Lo dimostrano**: `tests/unit/inventarioChiuso.test.js`, `tests/component/StoricoInventari.test.jsx`, `tests/unit/licenza.test.js`
+
+#### REQ-MAG-053 — Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo
+
+Flavio, vocale del 04/11/2026: «bisogna anche attivare il carico dei prodotti di magazzino in negativo, perché adesso dopo circa un mese il fornitore si è convinto a farsi restituire una bottiglia, e io adesso quella bottiglia se faccio contenuto reale da 1 passa a 0: è come se me la porta come se fosse stata consumata. Quindi ho bisogno di fare anche il carico negativo, che io tolgo un prodotto». Il contenuto reale è una RETTIFICA: nell'inventario il consumo è deposito + acquisti − rimanenza, e la bottiglia resa ci finiva dentro come bevuta. Il reso è un ACQUISTO DISFATTO: un movimento in uscita col motivo «reso fornitore», nel gruppo degli acquisti (GRUPPO_MOTIVO). Toglie dagli acquisti del periodo e dell'inventario (la colonna ACQ), in pezzi e al costo del prodotto nel Bilancio, e il consumo non lo vede. Nella movimentazione del prodotto ha la sua riga, «Reso al fornitore».
+
+SE NEL PERIODO NON CI SONO ACQUISTI, IL RESO ESCE DAL DEPOSITO (Flavio, altri due vocali dello stesso giorno: «da inventario, quando fai carico negativo, va a intervenire sugli acquisti, e se non ci sono gli acquisti sul deposito»; «il carico negativo deve fare il contrario del carico, cioè togliere e restituire i soldi»). ACQ non scende sotto zero, e quello che avanza si toglie da DEP (`resoSulDeposito`), sia nell'inventario sia nel magazzino di un periodo: deposito + acquisti resta lo stesso, quindi il consumo pure.
+
+IL CONTENUTO REALE NON SI TOCCA: resta una rettifica, che interviene sui consumi e sulle rimanenze («contenuto reale deve sempre andare a intervenire sui consumi»).
+
+NELLA FINESTRELLA DEL CARICO, non in un tasto suo: in cima la scelta «⬆ Carico · ⬇ Reso al fornitore». Il reso chiede solo quanti pezzi (o quanto contenuto) e dice prima di confermare quanti ne escono e quanto si toglie dagli acquisti, netto; colli e prezzo spariscono, perché si rende quello che c'è al costo che ha. Il carico resta com'era, solo in positivo (25-26/09/2026): un numero negativo al carico è ancora un errore.
+
+COME IL CARICO, SENZA RETE (BUG-109): la giacenza scende con un incremento negativo in sottofondo e la riga si aggiorna nell'istante, senza attese.
+
+**Dove**: `src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)` · **Lo dimostrano**: `tests/unit/resoFornitore.test.js`, `tests/component/InventoryManagerCard.test.jsx`
 
 #### REQ-MAG-044 — Tutto quello che sta in magazzino si scarica: via la casella «È una scorta»
 
@@ -3406,6 +3446,16 @@ DA FARE nella regia: catalogoModuli, moduloDallApp col controllo del titolare e 
 
 **Dove**: `src/components/MarketplaceTab.jsx (sezione Moduli), src/lib/marketplaceModuli.js, src/lib/funzioniRegia.js, src/lib/api.js (azioneModulo), drink-regia (catalogoModuli, moduloDallApp), docs/marketplace-moduli.md` · **Lo dimostrano**: `tests/unit/marketplaceModuli.test.js`, `tests/unit/azioneModulo.test.js`, `tests/component/MarketplaceTab.test.jsx`
 
+#### REQ-LIC-013 — I disegni dei drink sono del locale che ha «Notte»; altrove la foto o un bicchiere neutro
+
+L'utente, 04/11/2026: «le immagini dei drink che abbiamo fatto sono solo per lo stile Notte che abbiamo fatto in esclusiva per la Tana. Dobbiamo prevedere un placeholder per altri stili e per altri locali». E alle domande dello stesso giorno: «quelli stilizzati per Notte sono della Tana, ma può riutilizzarli Flavio se cambia stile»; «chiunque può caricare le immagini dei drink», e tutti gli stili mostrano le foto che il titolare carica; al posto dell'immagine «un bicchiere neutro». I DISEGNI VANNO COL LOCALE, NON CON LO STILE IN USO: le illustrazioni di Alice e i disegni composti (REQ-MENU-018) si vedono dove la licenza dà uno stile che li porta (`disegni: true` nel catalogo: oggi solo «Notte», REQ-LIC-010), in qualunque stile il locale abbia scelto, Giornale compreso con le sue incisioni. Gli altri locali non li vedono in nessuno stile, e nella scheda del drink la composizione del disegno non si offre. `immagineVoce` senza `disegni` restituisce solo la foto: chi chiama e se ne dimentica non regala l'esclusiva.
+
+LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema e stile, e vincono sempre sul disegno.
+
+IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card del menù Special e nelle slide del carosello, in ogni stile. Prima c'era il logo del locale, che Notte, Lavagna, Déco e Riviera nascondevano perché ripetuto su ogni voce faceva il menù giocattolo; col bicchiere quelle eccezioni non servono più. Il Giornale, che non ha un riquadro fisso per l'immagine, e il dettaglio del drink restano senza immagine quando non c'è.
+
+**Dove**: `src/lib/stileMenu.js (disegni, disegniDelLocale), src/lib/speciali.js (immagineVoce, segnapostoDrink), src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/SpecialScorrevoli.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialManager.jsx, src/components/DrinkForm.jsx (disegniConsentiti), src/index.css, DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/unit/speciali.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/component/DettaglioDrink.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/unit/css.test.js`
+
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
 L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
@@ -3627,6 +3677,12 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
+
+#### REQ-MENU-026 — I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll
+
+Flavio, 04/11/2026, guardando le scene degli Special sul test: «a livello di grafica, puramente grafica, come avevo detto: disegno in stile Lewis Carroll dal libro, tecnica acquerello; non è che ci siamo molto», «l'immagine va migliorata»; l'impaginazione delle scene invece va bene. L'utente lo stesso giorno: «i disegni dei drink per la Tana invece vanno fatti più nello stile Lewis Carroll». I disegni di oggi sono composti a codice (bicchiere, colore, decorazione) con un tratto che imita l'incisione e un'acquerellatura fatta di filtri: un disegno generato così non arriva alle tavole di Tenniel. La strada va decisa con l'utente: illustrazioni fatte a mano da un illustratore, immagini generate da un modello e riviste, o le tavole originali di Tenniel (di pubblico dominio) composte coi bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
+
+**Dove**: `src/lib/illustrazioneDrink.js, public/illustrazioni/alice/`
 
 ### Magazzino
 
@@ -3861,6 +3917,14 @@ PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente�
 LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
+
+#### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
+
+Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
+
+DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
+
+**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx`
 
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 

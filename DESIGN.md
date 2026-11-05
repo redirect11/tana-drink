@@ -171,6 +171,36 @@ dell'app, gratis: si installano con un tasto e si provano sul proprio menù
 prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 `--stile-voce`, `--stile-testo`), tutti dentro l'app (REQ-SIC-004).
 
+**Le immagini dei drink, in ogni stile.** La foto caricata dal titolare si
+vede in tutti gli stili, ed è di tutti. I disegni dei drink (illustrazioni
+di Alice e disegni composti) sono del locale che ha «Notte» nella licenza
+(REQ-LIC-013): lui li vede in qualunque stile, gli altri in nessuno. Dove
+non c'è né foto né disegno c'è il segnaposto, un bicchiere al tratto
+neutro e attenuato (`segnapostoDrink`), in ogni stile: nelle card del menù
+Special e nelle slide del carosello sta nello stesso riquadro di un
+disegno, rimpicciolito, perché le card restino allineate. Il logo del
+locale non fa da segnaposto: ripetuto su ogni voce faceva il menù
+giocattolo.
+
+**La struttura personalizzata del menù, in ogni stile** (REQ-MENU-025).
+Con la struttura personalizzata le sezioni sono poche: le schede in alto
+(`.cat-nav.carta`) sono
+più grandi, col carattere dello stile, e restano agganciate sotto la barra
+mentre si scorre. Una sezione snella (`.carta-snella`) è un listino: nome
+a sinistra e prezzo a destra sulla stessa riga, senza immagine né testo
+sotto.
+
+**L'editor della struttura** (Menù → Menù dei clienti, `.struttura-*`)
+mostra il menù com'è al tavolo: card `.menu-item` con immagine, testi e
+prezzo. I testi sono campi `.wys` che si leggono come testo, senza
+riquadro finché non ci si passa sopra (tratteggio) o non ci si scrive
+(bordo d'accento). Sopra ogni campo, `.wys-etichetta` in maiuscoletto
+minuto dice da dove viene il testo; in `--accent` solo quando vale per la
+sola sezione. Il prodotto della cassa sta nel piede della card, sotto un
+filetto tratteggiato, col 🔗. I prodotti della cassa rimasti fuori dal menù
+dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
+`--warn` (`.struttura-fuori`): sono un lavoro da smaltire, non un errore.
+
 - **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
   in giallo gesso, filetti tratteggiati. È l'unico stile che porta i suoi
   colori, e li ridefinisce TUTTI (`--bg`, `--card`, `--text`…): con un tema

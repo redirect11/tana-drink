@@ -1,6 +1,72 @@
 # Cosa è cambiato
 
-## 1.10.11-beta — in lavorazione
+## 1.10.15-beta — in lavorazione
+
+### Backup
+
+- **Il backup salva tutto il database.** Mancavano undici collezioni: la
+  struttura del menù dei clienti, i listini e lo storico prezzi dei
+  fornitori, i modelli d'ordine, le spese extra, i minimi e lo storico
+  delle vendite importato. Lo storico importato è nel file, ma si
+  ripristina dallo script di manutenzione; il ripristino dall'app lo dice
+  (BUG-129).
+
+## 1.10.14-beta — 05/11/2026 (test)
+
+### Menù dei clienti
+
+- **Il menù dei clienti si personalizza liberamente**, da Menù → Menù dei
+  clienti (REQ-MENU-025).
+  - Finché non lo si tocca resta quello di sempre, diviso per le
+    categorie della cassa.
+  - «Prepopola con le voci della cassa» crea una sezione per categoria,
+    con dentro tutti i suoi prodotti; su un menù già personalizzato il
+    tasto diventa «Riparti dalle voci della cassa» e, dopo una conferma,
+    sostituisce tutto con una copia nuova. Da lì sezioni e voci si aggiungono,
+    si spostano, si rinominano e si nascondono; una sezione può essere
+    snella (nome e prezzo).
+  - Ogni voce è collegata a un prodotto della cassa (🔗), da cui prende
+    prezzo e disponibilità; lo stesso prodotto può stare in più sezioni.
+  - L'editor ha la forma del menù: i testi si scrivono direttamente nelle
+    card, e sopra ogni campo un'etichetta dice se il testo viene dalla
+    scheda prodotto o vale solo per quella sezione («↺» per tornare alla
+    scheda).
+  - I prodotti della cassa che non sono in nessuna sezione, per esempio
+    quelli aggiunti dopo, sono elencati in cima, con «Aggiungi a…»; sulla
+    scheda del prodotto si legge «non compare».
+  - Con la struttura personalizzata le sezioni stanno in schede grandi,
+    ferme in alto mentre si scorre. Il personale ordina sempre dal menù
+    della cassa, e il banco riceve il prodotto della cassa col nome letto
+    dal cliente nella nota.
+- Nella scheda prodotto, **«Nome nel menù dei clienti»**: il nome che
+  legge il cliente, quando quello del banco è diverso (REQ-MENU-025).
+
+## 1.10.13-beta — 04/11/2026 (test)
+
+### Magazzino
+
+- «📜 Movimenti» di un prodotto si apre di nuovo: il tasto non faceva
+  niente, perché la finestra compariva solo con la scheda del prodotto in
+  modifica (BUG-128).
+- **Reso al fornitore**: nella finestra del carico si sceglie «⬇ Reso al
+  fornitore» per la merce restituita. Esce dalla giacenza e si sottrae dagli
+  acquisti del periodo, al costo del prodotto, o dal deposito se nel periodo
+  non ci sono acquisti; non risulta consumata, come succedeva correggendo il
+  contenuto reale. Il contenuto reale resta com'era (REQ-MAG-053).
+
+## 1.10.12-beta — 04/11/2026 (test)
+
+### Nel menù dei clienti
+
+- **Senza drink speciali, il menù Special non si apre**: chi lo raggiunge,
+  anche da un QR stampato, arriva al menù completo dello stesso tavolo.
+- **Un bicchiere stilizzato al posto del logo** per i drink senza foto, in
+  tutti gli stili.
+- **I disegni dei drink sono della Tana**: si vedono nei locali che hanno
+  lo stile «Notte», in qualunque stile scelgano. Le foto dei drink si
+  caricano e si vedono ovunque.
+
+## 1.10.11-beta — 03/11/2026 (test)
 
 ### Nel gestionale
 

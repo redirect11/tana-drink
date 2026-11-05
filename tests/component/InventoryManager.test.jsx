@@ -141,6 +141,10 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchSupplierPrices: vi.fn(async () => []),
   salvaRigaListino: vi.fn(async () => ({})),
   fetchStockMovements: vi.fn(async () => []),
+  // La movimentazione di un prodotto (REQ-MAG-048): qui vuota, basta che
+  // la finestra si apra.
+  fetchMovimentiProdotto: vi.fn(async () => []),
+  fetchVendutoStoricoProdotto: vi.fn(async () => null),
   fetchMacroCategories: vi.fn(async () => MACRO_MAG),
   // Le voci del menù servono al pannello delle macro, che le elenca una a una.
   fetchDrinks: vi.fn(async () => [{ id: 'd1', name: 'Negroni' }]),
@@ -225,6 +229,26 @@ beforeEach(() => {
   stato.ordini = []
   stato.drinks = []
   stato.impostazioni = IMPOSTAZIONI_BASE
+})
+
+// «📜 MOVIMENTI» SI APRE DALL'ELENCO (BUG-128). Flavio, 04/11/2026, sul
+// test: «ci clicchi sopra e non si apre». La finestra era montata solo
+// mentre si modifica un prodotto, e il tasto sta nelle azioni di una riga
+// dell'elenco: dal 10/10 non si era mai aperta. La prova della finestra
+// (MovimentiProdotto.test.jsx) la montava da sola, e non lo vedeva.
+describe('i movimenti di un prodotto, dalle sue azioni (BUG-128)', () => {
+  it('il tasto apre la finestra del prodotto, e ✕ la chiude', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await aspettaLista()
+    const riga = screen.getByText('Gin Mare').closest('.inv-row')
+    await user.click(within(riga).getByRole('button', { name: /Gin Mare/ }))
+    await user.click(within(riga).getByRole('button', { name: /Movimenti/ }))
+    const finestra = await screen.findByRole('dialog', { name: 'Movimenti di Gin Mare' })
+    expect(await within(finestra).findByText('Nessun movimento nel periodo.')).toBeInTheDocument()
+    await user.click(within(finestra).getByRole('button', { name: 'Chiudi' }))
+    expect(screen.queryByRole('dialog', { name: 'Movimenti di Gin Mare' })).toBeNull()
+  })
 })
 
 describe('la schermata del magazzino (REQ-MAG-010)', () => {

@@ -24,6 +24,7 @@
 import { INV_CATS, INV_ITEMS, DRINK_CATS, DRINKS, SEED_SETTINGS } from '../dev/seedData.js'
 import { businessDayKey, istanteDaOraDiRoma } from '../lib/businessDay.js'
 import { MODULI_PREMIUM } from '../lib/licenza.js'
+import { prepopolazione, materializza, voceDaScrivere } from '../lib/strutturaMenu.js'
 
 export const SEME = 20261030
 const MIN = 60 * 1000
@@ -151,6 +152,45 @@ export function catalogo() {
   return { categorieMagazzino, articoli, categorie, drink }
 }
 
+// ── LA STRUTTURA DEL MENÙ DEI CLIENTI (REQ-MENU-025) ──────────────────
+// Personalizzata, per far vedere cosa si può fare senza doverla scrivere.
+// Si parte dalla stessa copia del tasto «Prepopola con le voci della cassa»
+// (prepopolazione), e poi: in cima una sezione nuova con tre voci prese da
+// altre sezioni e raccontate, due sezioni rinominate, le bevande snelle e
+// gli shot nascosti (al tavolo non si ordinano).
+const SUGGERITI_DEMO = [
+  ['Negroni', 'Firenze, 1919: il conte Negroni chiede di rinforzare l’Americano col gin.', 'Gin, bitter, vermouth rosso'],
+  ['Old Fashioned', 'Il cocktail nella sua forma più antica: distillato, zucchero e bitter.', 'Bourbon, zucchero, Angostura, scorza d’arancia'],
+  ['Daiquiri', 'Cuba, inizio Novecento: tre ingredienti in equilibrio.', 'Rum bianco, lime, zucchero'],
+]
+const RITOCCHI_DEMO = {
+  aperitivi: { nome: 'Aperitivo' },
+  classici: { nome: 'Grandi classici' },
+  birre: { vista: 'snella' },
+  bollicine: { vista: 'snella' },
+  shots: { nascosta: true },
+}
+
+// Le sezioni e le voci, nella forma di `carta_sezioni` e `carta_voci`, con
+// id fissi: la sezione prende la chiave della sua categoria.
+export function strutturaDemo(drink, categorie) {
+  const chiaveDi = new Map(categorie.map((c) => [c.name, c.key]))
+  const copia = prepopolazione(drink, categorie)
+  copia.sezioni = copia.sezioni.map((s) => ({ ...s, ordine: s.ordine + 1, ...RITOCCHI_DEMO[chiaveDi.get(s.nome)] }))
+  const { sezioni, voci } = materializza(copia, (tipo, x) =>
+    tipo === 'sezione' ? `sezione-${chiaveDi.get(x.nome) || slug(x.nome)}` : `${x.sezione_id}-${x.drink_id}`
+  )
+  sezioni.unshift({ id: 'sezione-suggeriti', nome: 'Suggeriti dallo staff', ordine: 0, vista: 'dettagliata', nascosta: false })
+  const perNome = new Map(drink.map((d) => [d.name, d]))
+  SUGGERITI_DEMO.forEach(([nome, descrizione, ingredienti], ordine) => {
+    const d = perNome.get(nome)
+    if (!d) return
+    const voce = voceDaScrivere({ sezione_id: 'sezione-suggeriti', drink_id: d.id, descrizione, ingredienti, ordine })
+    voci.push({ id: `sezione-suggeriti-${d.id}`, ...voce })
+  })
+  return { sezioni, voci }
+}
+
 const FORNITORI = [
   { id: 'forn-bevande', name: 'Bevande Rossi Distribuzione', color: '#2a6f97', famiglie: ['distillati', 'liquori', 'bollicine', 'birre'] },
   { id: 'forn-mixer', name: 'Mixer & Soft Srl', color: '#7a5195', famiglie: ['mixer', 'base'] },
@@ -241,6 +281,9 @@ export function datiDemo({ adesso = new Date(), seme = SEME, giorniDiStorico = 2
   for (const { id, ...a } of articoli) metti(`inventory_items/${id}`, a)
   for (const c of categorie) metti(`categories/${c.id}`, { name: c.name, sort_order: c.sort_order })
   for (const { id, ...d } of drink) metti(`drinks/${id}`, d)
+  const struttura = strutturaDemo(drink, categorie)
+  for (const { id, ...s } of struttura.sezioni) metti(`carta_sezioni/${id}`, s)
+  for (const { id, ...v } of struttura.voci) metti(`carta_voci/${id}`, v)
 
   // Fornitori e listini: un fornitore per famiglia di articoli.
   for (const f of FORNITORI) metti(`suppliers/${f.id}`, { name: f.name, color: f.color, sort_order: FORNITORI.indexOf(f) })

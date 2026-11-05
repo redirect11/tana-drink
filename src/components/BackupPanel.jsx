@@ -62,7 +62,7 @@ export default function BackupPanel({ role = null }) {
     setBusy('import')
     setErrore(null)
     try {
-      const { scritti, saltate, fuoriLicenza } = await importaDatabase(backup, (nome, fatti, tot) =>
+      const { scritti, saltate, fuoriLicenza, soloScript } = await importaDatabase(backup, (nome, fatti, tot) =>
         setPasso(`${nome}: ${fatti}/${tot}`)
       )
       setEsito(
@@ -70,6 +70,9 @@ export default function BackupPanel({ role = null }) {
           (saltate.length ? ` Saltate (sconosciute a questa versione): ${saltate.join(', ')}.` : '') +
           (fuoriLicenza.length
             ? ` Non ripristinate perché di moduli non inclusi nella licenza: ${fuoriLicenza.join(', ')}.`
+            : '') +
+          (soloScript.length
+            ? ` Lo storico importato (${soloScript.join(', ')}) è nel file ma si ripristina dallo script di manutenzione.`
             : '')
       )
     } catch (e) {
