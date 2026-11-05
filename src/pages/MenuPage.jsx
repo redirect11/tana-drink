@@ -10,7 +10,8 @@ import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
 import { stileMenu, stileInVista, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
 import { testoStile } from '../lib/testiStile.js'
 import { temaInProva } from '../lib/marketplaceTemi.js'
-import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
+import { strutturaDi } from '../components/stiliStrutturati.js'
+import { sezioniPerLoStile } from '../lib/contrattoStile.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
 import { rigaMarchio } from '../lib/limiti.js'
@@ -53,10 +54,6 @@ const WELCOME_KEY = 'drink_welcome_v1'
 
 // `speciali`: la pagina del menù Special (REQ-MENU-018), con le sole voci
 // segnate come speciali, nei colori del menù.
-// Il menù Special non ha sezioni: lo stesso elenco vuoto a ogni giro, perché
-// il giornale non riosservi le sue sezioni a ogni tocco su «Aggiungi».
-const NESSUNA_CATEGORIA = []
-
 export default function MenuPage({ speciali = false }) {
   // Menù dalla cache di modulo: una sola sottoscrizione viva, niente
   // re-fetch a ogni navigazione (solo un refresh forzato ricarica).
@@ -257,6 +254,10 @@ export default function MenuPage({ speciali = false }) {
     if (usaStruttura) return sezioniDelMenu(carta, drinks)
     return perCategoria(visibili, cats).map((g) => [g.nome, g.prodotti])
   }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta])
+  // Le stesse sezioni nella forma del contratto degli stili strutturati
+  // (REQ-MENU-028). Calcolate una volta per elenco: il giornale riosserva le
+  // sue sezioni quando cambiano, e non deve farlo a ogni «Aggiungi».
+  const sezioniDelloStile = useMemo(() => sezioniPerLoStile(categories), [categories])
 
   // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
   // col suo dettaglio aperto: chi tocca una slide vuole sapere di quel drink
@@ -467,13 +468,27 @@ export default function MenuPage({ speciali = false }) {
   // «GIORNALE» (REQ-MENU-024) ha una struttura sua — testata, sommario,
   // prima pagina, sezioni — e le sue immagini, incisioni: non è una veste
   // sopra le card del classico.
-  const giornale = stile === 'giornale'
+  // Lo stesso per ogni stile strutturato (REQ-MENU-028): disegna lui
+  // testata e corpo, col pacchetto del contratto (lib/contrattoStile.js).
+  const struttura = strutturaDi(stile)
   // Il segno dei disegni, deciso una volta: lo usano il giornale e il
   // dettaglio, che devono mostrare lo stesso disegno.
-  const segnoDisegni = giornale ? 'incisione' : 'tenniel'
+  const segnoDisegni = struttura?.segno || 'tenniel'
   // I disegni sono del locale che ha «Notte» (REQ-LIC-013).
   const disegni = disegniDelLocale(settings)
-  const immagineGiornale = (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni, disegni })
+  const perLoStile = struttura && {
+    venue,
+    sezioni: sezioniDelloStile,
+    speciali: elencoSpeciali,
+    soloSpeciali: speciali,
+    special: { titolo: settings.special_titolo || 'Special', sottotitolo: settings.special_sottotitolo || null },
+    linkMenu: conParametri('/menu', params),
+    immagine: (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni, disegni }),
+    apri: (d) => setApertoId(d.id),
+    tastiOrdine,
+    quantita: !!settings.show_ingredient_quantities,
+    testo: (k, diSempre) => testoStile(stile, k, diSempre),
+  }
   const specialNotte = notte && speciali
 
   return (
@@ -499,22 +514,8 @@ export default function MenuPage({ speciali = false }) {
         </div>
       )}
       {/* Hero d'intestazione solo per i clienti: allo staff serve spazio. */}
-      {/* Nel menù Special la testata del giornale fa anche da testata degli
-          Special: il tema della sera e la strada per il menù completo, che
-          senza questa riga sparivano con la testata classica. */}
-      {giornale && (
-        <TestataGiornale venue={venue} sottotitolo={speciali ? settings.special_titolo || 'Special' : venue.venue_tagline}>
-          {speciali && (
-            <>
-              {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
-              <Link className="btn ghost small" to={conParametri('/menu', params)}>
-                ← Tutto il menù
-              </Link>
-            </>
-          )}
-        </TestataGiornale>
-      )}
-      {!staff && !specialNotte && !giornale && (
+      {struttura && <struttura.Testata {...perLoStile} />}
+      {!staff && !specialNotte && !struttura && (
         <div className="hero">
           <img
             className="hero-img"
@@ -589,7 +590,7 @@ export default function MenuPage({ speciali = false }) {
 
       {/* LA TESTATA DEL MENÙ SPECIAL (REQ-MENU-018): titolo, tema, e la
           strada per il menù completo, con lo stesso tavolo. */}
-      {speciali && !specialNotte && !giornale && (
+      {speciali && !specialNotte && !struttura && (
         <div className="speciali-testata">
           <h2>{settings.special_titolo || 'Special'}</h2>
           {settings.special_sottotitolo && <p className="speciali-tema">{settings.special_sottotitolo}</p>}
@@ -602,7 +603,7 @@ export default function MenuPage({ speciali = false }) {
       {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
           cliente: toccando un drink si va al menù Special, su quel drink.
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
-      {!speciali && !staff && !giornale && elencoSpeciali.length > 0 && (
+      {!speciali && !staff && !struttura && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
@@ -729,8 +730,8 @@ export default function MenuPage({ speciali = false }) {
         <div className="empty">Niente nel menù che risponda a «{ricerca.trim()}».</div>
       )}
 
-      {!speciali && !giornale && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
-      {!speciali && !giornale && categories.length > 1 && (
+      {!speciali && !struttura && categories.length > 1 && <div ref={segnapostoCategorie} aria-hidden="true" />}
+      {!speciali && !struttura && categories.length > 1 && (
         // Le sezioni di una struttura personalizzata sono poche e grandi, in
         // schede che restano in alto mentre si scorre (Flavio, 04/11/2026:
         // «come se fosse un tab che deve restare sempre fisso bloccato in
@@ -756,19 +757,9 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
 
-      {giornale && (
-        <MenuGiornale
-          categorie={speciali ? NESSUNA_CATEGORIA : categories}
-          speciali={elencoSpeciali}
-          soloSpeciali={speciali}
-          immagine={immagineGiornale}
-          apri={(d) => setApertoId(d.id)}
-          tastiOrdine={tastiOrdine}
-          quantita={!!settings.show_ingredient_quantities}
-        />
-      )}
+      {struttura && <struttura.Corpo {...perLoStile} />}
 
-      {!specialNotte && !giornale && categories.map(([cat, list, sezione]) => (
+      {!specialNotte && !struttura && categories.map(([cat, list, sezione]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:

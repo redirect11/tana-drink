@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 259 | fatto e coperto dai test |
+| ✅ | 260 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**312 voci** in tutto. **276** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**314 voci** in tutto. **277** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 22 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 23 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -871,6 +871,12 @@ NELLA REGIA: `meraviglie` è nei temi della licenza iniziale della Tana. Perché
 GUARDATO A SCHERMO IL 05/11/2026 (Chrome senza finestra, sulla demo con lo stile acceso solo in locale), telefono e desktop: home, menù, i miei ordini.
 
 **Dove**: `src/lib/stileMenu.js (meraviglie, stileInVista, vestePagine), src/lib/testiStile.js, src/lib/themes.js (tavolozze lavagna e meraviglie), src/lib/marketplaceTemi.js (tema Meraviglie, Lavagna con la sua tavolozza), src/App.jsx (data-stile, StileCliente), src/pages/LandingPage.jsx, src/pages/MenuPage.jsx, src/pages/MyOrdersPage.jsx, src/pages/OrderStatusPage.jsx, src/components/OrderSummary.jsx, src/index.css (.stile-meraviglie, :root[data-stile='meraviglie'], .stile-lavagna), src/main.jsx (IM Fell English), clienti/tana/licenza-iniziale.json` · **Lo dimostrano**: `tests/unit/testiStile.test.js`, `tests/unit/stileMenu.test.js`, `tests/unit/marketplaceTemi.test.js`, `tests/unit/css.test.js`, `tests/component/LandingPage.test.jsx`, `tests/component/OrderStatusPage.test.jsx`, `tests/component/AppHeader.test.jsx`
+
+#### REQ-MENU-028 — Il contratto degli stili strutturati: ogni stile che disegna il menù a modo suo riceve lo stesso pacchetto e promette le stesse cose
+
+L'utente, 05/11/2026, davanti a un'idea di Flavio che non segue i temi di oggi («una roba animata completamente custom che però mostri comunque le voci di menù personalizzate»): per un tema fatto apposta non servono API per altri, serve uno stile nuovo nell'app; prima di farlo, «scrivo il contratto dello stile» — «sì, vai, perché poi aggiungeremo un menù con una nuova struttura». Uno stile STRUTTURATO si aggancia con una riga in stiliStrutturati.js (Testata, Corpo, segno dei disegni) e riceve dal menù lo stesso pacchetto: il locale, le sezioni del menù dei clienti nella forma `{ id, nome, vista, voci }` con le voci personalizzate, gli Special, la pagina Special sì o no, titolo e tema degli Special, la strada per il menù completo, l'immagine nel segno dello stile, «apri il dettaglio», i tasti per ordinare del menù, le quantità degli ingredienti, le frasi dello stile. Promette: ogni voce si vede col prezzo dei dati; ogni voce ha i tasti del menù (carrello e invio restano locali e istantanei); niente letture né scritture; con «riduci movimento» non si muove niente; il nome che apre il dettaglio è un tasto vero. Il resto della pagina (avvisi, ordini in corso, carrello, riepilogo, dettaglio) resta del menù. «Giornale» (REQ-MENU-024) è stato riportato sopra il contratto: la sua testata, che MenuPage componeva a mano per la pagina Special, ora la disegna lui dal pacchetto. «Notte» resta com'è: il suo pezzo strutturato sono solo gli Special a scorrimento. La prova del contratto gira su OGNI stile dell'elenco: uno stile nuovo la eredita.
+
+**Dove**: `src/lib/contrattoStile.js, src/components/stiliStrutturati.js, src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/component/stiliStrutturati.test.jsx`
 
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
@@ -3723,6 +3729,14 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
+
+#### REQ-MENU-029 — IDEA DI FLAVIO: il menù come un mazzo di carte francesi, quattro semi per quattro macro categorie
+
+L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 macro categorie che sono i 4 semi di un mazzo di carte francesi, che escono da un mazzo di carte; quando si clicca una carta si apre il menù di quella macro categoria, scritto sulla carta con quel seme. È un'idea, quindi segnatelo». Una «roba animata completamente custom» che mostri comunque le voci personalizzate del menù dei clienti. È UN'IDEA, non ancora un lavoro: servono da Flavio uno schizzo, un video o un riferimento, e le risposte a: quali sono le quattro macro categorie e quale seme a quale; come escono le carte dal mazzo (all'apertura, a ventaglio, una per volta); come si torna al mazzo dalla carta aperta; dove stanno «Aggiungi» e gli Special; se vale anche fuori dalla Tana.
+
+COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni. Va deciso se si scrivono nella struttura del menù dei clienti (un gruppo per sezione, nell'editor) o solo nello stile. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
+
+**Dove**: `da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)`
 
 ### Magazzino
 

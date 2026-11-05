@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
@@ -17,6 +18,8 @@ import { formatPrice } from '../lib/orderStatus.js'
 // Le immagini sono incisioni (lib/illustrazioneDrink.js, segno
 // «incisione»), non i disegni della Tana. I gesti sono quelli di sempre:
 // «Aggiungi» e il carrello (tastiOrdine), il dettaglio toccando il nome.
+// Testata e corpo ricevono il pacchetto del contratto degli stili
+// strutturati (lib/contrattoStile.js, REQ-MENU-028).
 
 const dataEdizione = (quando = new Date()) =>
   quando.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -25,9 +28,11 @@ const ancora = (cat) => `sez-${encodeURIComponent(cat)}`
 const nessunMovimento = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-// `children`: quello che sta sotto il motto (nel menù Special, il tema della
-// sera e la strada per il menù completo).
-export function TestataGiornale({ venue, sottotitolo, children }) {
+// Nel menù Special la testata fa anche da testata degli Special: il titolo
+// della sera al posto del motto, il tema, e la strada per il menù completo,
+// che senza questa riga sparivano con la testata classica.
+export function TestataGiornale({ venue, soloSpeciali = false, special = {}, linkMenu }) {
+  const motto = soloSpeciali ? special.titolo || 'Special' : venue.venue_tagline
   return (
     <header className="g-testata">
       <p className="g-edizione">
@@ -35,8 +40,17 @@ export function TestataGiornale({ venue, sottotitolo, children }) {
         <span>{dataEdizione()}</span>
       </p>
       <h1 className="g-nome">{venue.venue_name}</h1>
-      {sottotitolo && <p className="g-motto">{sottotitolo}</p>}
-      {children}
+      {motto && <p className="g-motto">{motto}</p>}
+      {soloSpeciali && (
+        <>
+          {special.sottotitolo && <p className="speciali-tema">{special.sottotitolo}</p>}
+          {linkMenu && (
+            <Link className="btn ghost small" to={linkMenu}>
+              ← Tutto il menù
+            </Link>
+          )}
+        </>
+      )}
     </header>
   )
 }
@@ -154,12 +168,12 @@ function Articolo({ d, immagine, apri, tastiOrdine, quantita, apertura = false }
   )
 }
 
-export default function MenuGiornale({ categorie, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false }) {
-  const sezioni = useRef({})
+export default function MenuGiornale({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false }) {
+  const elementi = useRef({})
   const [primo, ...altri] = speciali
   return (
     <div className="g-giornale">
-      {!soloSpeciali && categorie.length > 1 && <Sommario nomi={categorie.map(([cat]) => cat)} sezioni={sezioni} />}
+      {!soloSpeciali && sezioni.length > 1 && <Sommario nomi={sezioni.map((s) => s.nome)} sezioni={elementi} />}
 
       {primo && (
         <section className="g-prima-pagina" aria-label="Prima pagina">
@@ -176,22 +190,22 @@ export default function MenuGiornale({ categorie, speciali, immagine, apri, tast
       )}
 
       {!soloSpeciali &&
-        categorie.map(([cat, list]) => (
+        sezioni.map(({ id, nome, voci }) => (
           <section
-            key={cat}
-            id={ancora(cat)}
-            data-cat={cat}
+            key={id}
+            id={ancora(nome)}
+            data-cat={nome}
             className="g-sezione"
             ref={(el) => {
-              sezioni.current[cat] = el
+              elementi.current[nome] = el
             }}
           >
             <h3 className="g-sezione-titolo">
-              <span>{cat}</span>
-              <span className="g-sezione-conto">{list.length === 1 ? '1 voce' : `${list.length} voci`}</span>
+              <span>{nome}</span>
+              <span className="g-sezione-conto">{voci.length === 1 ? '1 voce' : `${voci.length} voci`}</span>
             </h3>
             <div className="g-colonne">
-              {list.map((d) => (
+              {voci.map((d) => (
                 <VoceGiornale key={d.id} d={d} apri={apri} tastiOrdine={tastiOrdine} quantita={quantita} />
               ))}
             </div>

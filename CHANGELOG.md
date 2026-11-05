@@ -1,6 +1,16 @@
 # Cosa è cambiato
 
-## 1.10.16-beta — in lavorazione
+## 1.10.17-beta — in lavorazione
+
+### Menù
+
+- Gli stili che disegnano il menù a modo loro, come «Giornale», ricevono
+  dal menù tutti gli stessi dati e promettono le stesse cose: ogni voce col
+  suo prezzo, i tasti per ordinare di sempre, niente attese sulla rete
+  (REQ-MENU-028). È la base per gli stili nuovi; per chi ordina non cambia
+  niente.
+
+## 1.10.16-beta — 05/11/2026 (test)
 
 ### Menù
 
