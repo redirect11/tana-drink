@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.15-beta — in lavorazione
+## 1.10.16-beta — in lavorazione
+
+## 1.10.15-beta — 05/11/2026 (test)
 
 ### Regia e titolare
 
