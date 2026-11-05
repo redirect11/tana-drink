@@ -65,6 +65,9 @@ vi.mock('../../src/lib/api.js', () => ({
   subscribeSettings: (cb) => {
     cb({
       ...CON_LICENZA,
+      // Lo stile della Tana che veste tutte le pagine dei clienti
+      // (REQ-MENU-027): nella licenza dei test c'è.
+      stile_menu: 'meraviglie',
       customer_accounts_enabled: true,
       theme_staff: { preset: 'notte-blu', custom: null },
       theme_client: { preset: 'crema', custom: null },
@@ -406,5 +409,31 @@ describe('la campanella e chi non è entrato', () => {
     clienteLoggato = null
     apri('/')
     expect(await screen.findByTestId('campanella')).toBeInTheDocument()
+  })
+})
+
+// LO STILE CHE VESTE LE PAGINE SEGUE CHI GUARDA, come i colori
+// (REQ-MENU-027): «Meraviglie» si scrive sulla radice per il cliente,
+// ovunque vada; a chi lavora il gestionale resta com'è.
+describe('lo stile delle pagine dei clienti segue chi guarda', () => {
+  const stile = () => document.documentElement.dataset.stile
+
+  it('al cliente, sulla home e sui suoi ordini', async () => {
+    apri('/')
+    await waitFor(() => expect(stile()).toBe('meraviglie'))
+  })
+
+  it('a chi lavora no, nemmeno sulle pagine dei clienti', async () => {
+    ruoloClaim = 'admin'
+    apri('/ordini')
+    // Il ruolo arriva dopo il primo giro: si aspetta che lo stile se ne vada.
+    await waitFor(() => expect(stile()).toBeUndefined())
+    expect(screen.getByText('PAGINA MIEI ORDINI')).toBeInTheDocument()
+  })
+
+  it('nella vista cliente sì: è com’è il menù per chi ordina', async () => {
+    ruoloClaim = 'admin'
+    apri('/menu?vista=cliente')
+    await waitFor(() => expect(stile()).toBe('meraviglie'))
   })
 })

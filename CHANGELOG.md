@@ -4,6 +4,18 @@
 
 ### Menù
 
+- **«Meraviglie», lo stile della Tana alla Lewis Carroll** (REQ-MENU-027).
+  Un libro illustrato dell'Ottocento su carta avorio: caratteri da stampa
+  d'epoca, le categorie come capitoli, i semi delle carte, cornici a
+  filetto doppio, il cartellino «Bevimi» sui disegni. Veste anche la home
+  e le altre pagine dei clienti, con titoli e frasi suoi («Benvenuti nel
+  Paese delle Meraviglie», «Il Bianconiglio è in viaggio verso il
+  bancone…»); i tasti e gli stati dell'ordine restano scritti come sempre.
+  Si sceglie dal marketplace, col tema «Meraviglie».
+- **La tavolozza resta libera anche con «Lavagna».** Il tema «Lavagna»
+  propone l'ardesia come tavolozza, che ora si può cambiare come le altre.
+  Chi aveva scelto lo stile Lavagna su un'altra tavolozza lo vede con
+  quei colori: per riavere l'ardesia, «Usa» sul tema «Lavagna».
 - **I disegni dei drink nel segno delle tavole di Tenniel**, le
   illustrazioni originali di *Alice*: il tratteggio segue la forma del
   bicchiere e il contorno ingrossa dal lato in ombra, con l'acquerello
