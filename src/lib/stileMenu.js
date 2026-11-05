@@ -4,8 +4,9 @@
 //
 // Lo stile è la FORMA del menù — impaginazione, caratteri, movimento — e
 // non i colori: quelli restano del tema del menù clienti (themes.js), così
-// i due si combinano. Fa eccezione «Lavagna», che senza la lavagna non è
-// niente: i suoi colori li porta lei.
+// i due si combinano. Uno stile può avere una tavolozza sua (`tavolozza`,
+// «Lavagna» e «Meraviglie»): la propone il tema del marketplace che lo
+// usa, ma resta una tavolozza come le altre, e si cambia (REQ-MENU-027).
 //
 // Vale solo per chi ordina: per chi lavora il menù è uno strumento, e resta
 // quello classico.
@@ -40,10 +41,22 @@ export const STILI_MENU = [
     desc: 'Carta a righe, senza riquadri, con titoli sottili; gli Special scorrono a tutto schermo, uno per volta.',
   },
   {
+    id: 'meraviglie',
+    nome: 'Meraviglie',
+    inLicenza: true,
+    disegni: true,
+    // Veste tutte le pagine dei clienti, non solo il menù, e ha le sue
+    // frasi (testiStile.js).
+    pagine: true,
+    tavolozza: 'meraviglie',
+    desc: 'Un libro illustrato dell’Ottocento: carta avorio, caratteri da stampa d’epoca, capitoli e semi di carte da gioco. Veste anche la home e le altre pagine dei clienti.',
+  },
+  {
     id: 'lavagna',
     nome: 'Lavagna',
     gratis: true,
-    desc: 'La lavagna del bistrot: scritte a mano, righe a gessetto, prezzi allineati a destra. Porta i suoi colori.',
+    tavolozza: 'lavagna',
+    desc: 'La lavagna del bistrot: scritte a mano, righe a gessetto, prezzi allineati a destra.',
   },
   {
     id: 'deco',
@@ -109,6 +122,19 @@ export function stileMenu(settings) {
   const id = settings?.stile_menu
   return stiliDisponibili(settings).some((s) => s.id === id) ? id : STILE_PREDEFINITO
 }
+
+// LO STILE CHE SI VEDE, in una schermata. Chi lavora vede il classico: per
+// lui il menù è uno strumento. Chi prova uno stile dalla vista cliente
+// (`prova`) vede quello, se lo può provare; tutti gli altri lo stile del
+// locale. Una funzione sola per il menù e per l'app (che con lo stesso
+// risultato veste le altre pagine dei clienti), così non si contraddicono.
+export function stileInVista(settings, { lavoro = false, prova = null } = {}) {
+  if (prova && stileProvabile(settings, prova)) return prova
+  return lavoro ? STILE_PREDEFINITO : stileMenu(settings)
+}
+
+// Lo stile veste anche la home, gli ordini e l'accesso, o solo il menù?
+export const vestePagine = (id) => Boolean(perId(id)?.pagine)
 
 // LA PROVA SUL PROPRIO MENÙ: chi lavora apre il menù del cliente con uno
 // stile che ha o che potrebbe installare, solo per sé (`?vista=cliente&

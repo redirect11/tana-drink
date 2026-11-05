@@ -24,8 +24,9 @@ describe('la licenza della Tana', () => {
     expect(screen.getByText('Senza scadenza')).toBeInTheDocument()
     // I moduli si contano: l'elenco è nelle Funzioni premium, sotto.
     expect(screen.getByText('10 su 10')).toBeInTheDocument()
-    // Lo stile «Notte» del menù è suo (REQ-LIC-010).
-    expect(screen.getByText('Notte')).toBeInTheDocument()
+    // Gli stili «Notte» e «Meraviglie» del menù sono suoi (REQ-LIC-010,
+    // REQ-MENU-027).
+    expect(screen.getByText('Notte, Meraviglie')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Gestisci la licenza' })).not.toBeInTheDocument()
     // Senza piano scritto la riga non c'è, invece di un «Piano: —».
     expect(screen.queryByText('Piano')).not.toBeInTheDocument()

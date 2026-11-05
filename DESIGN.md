@@ -160,13 +160,17 @@ Regole:
   carattere; ora l'h3 è serif e l'h4 no. Ha la sua regola nel foglio: era
   uno `style` inline (`margin: 16px 0 4px`) ripetuto in mezza SettingsTab.
 
-### Gli stili del menù clienti (REQ-MENU-021, REQ-MENU-022)
+### Gli stili del menù clienti (REQ-MENU-021, REQ-MENU-022, REQ-MENU-027)
 
 Il menù dei clienti ha più STILI, cioè più forme, che si scelgono in
-Impostazioni ▸ Menù clienti ▸ Stile del menù; i COLORI restano quelli del
-tema del menù clienti (tranne «Lavagna», sotto). «Classico» è il
-predefinito ed è di tutti; il personale lo vede sempre. «Notte» è della
-licenza (esclusivo della Tana, REQ-LIC-010); gli altri sono nel catalogo
+Impostazioni ▸ Menù clienti ▸ Stile del menù; i COLORI restano SEMPRE
+quelli del tema del menù clienti. Uno stile può avere una tavolozza sua
+(«Lavagna», «Meraviglie», in `THEME_PRESETS`): la propone il tema del
+marketplace che lo usa, ma resta una tavolozza come le altre, e si cambia;
+il CSS di uno stile passa solo per le variabili e non scrive mai `--bg`,
+`--card`, `--text`, gli accenti o `--btn`. «Classico» è il
+predefinito ed è di tutti; il personale lo vede sempre. «Notte» e
+«Meraviglie» sono della licenza (esclusivi della Tana, REQ-LIC-010); gli altri sono nel catalogo
 dell'app, gratis: si installano con un tasto e si provano sul proprio menù
 prima di sceglierli. Ogni stile dichiara tre caratteri (`--stile-titolo`,
 `--stile-voce`, `--stile-testo`), tutti dentro l'app (REQ-SIC-004).
@@ -202,9 +206,28 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
 `--warn` (`.struttura-fuori`): sono un lavoro da smaltire, non un errore.
 
 - **«Lavagna»**: gesso su ardesia verde. Titoli e nomi in `Caveat`, prezzi
-  in giallo gesso, filetti tratteggiati. È l'unico stile che porta i suoi
-  colori, e li ridefinisce TUTTI (`--bg`, `--card`, `--text`…): con un tema
-  chiaro sotto, il gesso finirebbe su un fondo chiaro.
+  in giallo gesso, filetti tratteggiati. L'ardesia è la tavolozza
+  «Lavagna» (`#24332d` di fondo, gesso `#f2eee4`, giallo `#f3d27a`); le
+  macchie di gesso sul fondo e le righe sono fatte col colore del testo,
+  così valgono su qualunque tavolozza.
+- **«Meraviglie»** (REQ-MENU-027), esclusivo della Tana: un libro
+  illustrato dell'Ottocento. Titoli, nomi e prezzi in `IM Fell English`,
+  testo in Georgia; le categorie sono capitoli («CAPITOLO III» in
+  maiuscoletto `--accent` sopra il nome, contato dal CSS) con i quattro
+  semi delle carte sotto; voci e riquadri a filetto doppio (`3px double`,
+  `--accent-2` al 55%), angoli quasi vivi, niente ombre; la foto della
+  testata in seppia dentro una cornice doppia chiara, con il titolo sempre
+  chiaro (la foto ha il velo scuro); il cartellino «Bevimi» di sbieco sui
+  disegni, mai sulle foto. La tavolozza «Meraviglie»: avorio `#f3ead6`,
+  inchiostro `#2a1f16`, seppia `#6b5843`, rosso Regina di Cuori `#a8231c`
+  (anche i tasti, piatti), oro antico `#7d5d17`, con le forme di Pico. È
+  l'unico stile che VESTE ANCHE LE ALTRE PAGINE DEI CLIENTI (`pagine:
+  true`): App scrive `data-stile` sulla radice per chi ordina, e le regole
+  `:root[data-stile='meraviglie']` danno caratteri, cornici e testata alla
+  home, agli ordini, allo stato dell'ordine e all'accesso. Ha anche le
+  sue FRASI (testiStile.js): titoli cambiati ed epigrafi in corsivo
+  (`.hero-epigrafe`, `.frase-stile`), ma i tasti e gli stati restano
+  scritti come sempre.
 - **«Déco»**: anni Venti. `Poiret One` in maiuscolo spaziato, simmetria,
   filetti doppi e un rombo sopra i titoli, l'oro del tema (`--accent-2`).
 - **«Riviera»**: aperitivo all'aperto. Titoli in `Dancing Script`, il

@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 258 | fatto e coperto dai test |
+| ✅ | 259 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**311 voci** in tutto. **275** descrivono il sistema com'è oggi e
+**312 voci** in tutto. **276** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 21 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 22 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -852,9 +852,29 @@ SONO SEGNAPOSTO: si aspettano le foto dei drink e i Signature veri che Flavio vu
 
 **Dove**: `src/lib/illustrazioneDrink.js, public/illustrazioni/alice/` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`
 
+#### REQ-MENU-027 — «Meraviglie», lo stile esclusivo della Tana alla Lewis Carroll: veste il menù e tutte le pagine dei clienti, con titoli e frasi suoi; la tavolozza la propone e resta libera
+
+L'utente, 05/11/2026: «è possibile fare un tema solo per la Tana, oltre a quello che già c'è, però tutti in stile Lewis Carroll? Quindi non solo le immagini dei drink ma anche la pagina deve richiamare un po' lo stile e anche i testi». Scelte dell'utente: anche la home pubblica; «titoli e frasi, tasti chiari»; colori suoi, chiari; «palette di colori e stile»; la tavolozza «sempre libera».
+
+LO STILE: `meraviglie`, in licenza come «Notte» (REQ-LIC-010), coi disegni dei drink (REQ-LIC-013, segno di Tenniel, REQ-MENU-026). La pagina di un libro dell'Ottocento:
+
+IM Fell English (i caratteri del vescovo Fell, digitalizzati da Igino Marini, licenza OFL, dentro l'app come gli altri, REQ-SIC-004), le categorie come capitoli numerati dal CSS («Capitolo III»), i quattro semi delle carte come fregio, cornici a filetto doppio, la foto della testata in seppia, il cartellino «Bevimi» appeso ai disegni. Gli Special stanno prima dei capitoli e non contano.
+
+LE PAGINE DEI CLIENTI: uno stile con `pagine: true` veste anche la home, i miei ordini, lo stato dell'ordine e l'accesso. App calcola lo stile in vista con la stessa funzione del menù (`stileInVista`: chi lavora il classico, chi prova quello in prova, i clienti quello del locale) e lo scrive sulla radice (`data-stile`), come i colori: il gestionale non si veste.
+
+LE FRASI (testiStile.js): si cambiano i titoli («Chi abita la tana», «Il tuo cartellino») e si aggiungono frasi (l'epigrafe «Benvenuti nel Paese delle Meraviglie», una riga sotto lo stato dell'ordine: «Il Bianconiglio è in viaggio verso il bancone…»); i tasti e gli stati restano quelli di sempre, e l'annullato non ha frasi. Ogni pagina chiede la sua frase con quella di sempre come ripiego. Frasi nostre, nessuna traduzione del libro citata.
+
+LA TAVOLOZZA: avorio, inchiostro, seppia, il rosso della Regina di Cuori e un oro antico, con le forme «documento» (tasti piatti, niente ombre). Il tema «Meraviglie» del marketplace la propone insieme allo stile; dopo si cambia come ogni tavolozza, e lo stile la rispetta perché passa solo per le variabili. Lo stesso per «Lavagna»: fino alla 1.10.15 scriveva i suoi colori nel CSS, e il tema del menù non contava; ora l'ardesia è la tavolozza «Lavagna», proposta dal suo tema (un locale che aveva lo stile Lavagna su un'altra tavolozza la vede coi colori di quella: si rimette dal marketplace con «Usa»).
+
+NELLA REGIA: `meraviglie` è nei temi della licenza iniziale della Tana. Perché la regia li elenchi e li scriva nella licenza serve la sua REQ-FLOTTA-039 (drink-regia, docs/temi-dei-locali.md): senza, «La licenza la scrive la regia» per la Tana toglierebbe i temi.
+
+GUARDATO A SCHERMO IL 05/11/2026 (Chrome senza finestra, sulla demo con lo stile acceso solo in locale), telefono e desktop: home, menù, i miei ordini.
+
+**Dove**: `src/lib/stileMenu.js (meraviglie, stileInVista, vestePagine), src/lib/testiStile.js, src/lib/themes.js (tavolozze lavagna e meraviglie), src/lib/marketplaceTemi.js (tema Meraviglie, Lavagna con la sua tavolozza), src/App.jsx (data-stile, StileCliente), src/pages/LandingPage.jsx, src/pages/MenuPage.jsx, src/pages/MyOrdersPage.jsx, src/pages/OrderStatusPage.jsx, src/components/OrderSummary.jsx, src/index.css (.stile-meraviglie, :root[data-stile='meraviglie'], .stile-lavagna), src/main.jsx (IM Fell English), clienti/tana/licenza-iniziale.json` · **Lo dimostrano**: `tests/unit/testiStile.test.js`, `tests/unit/stileMenu.test.js`, `tests/unit/marketplaceTemi.test.js`, `tests/unit/css.test.js`, `tests/component/LandingPage.test.jsx`, `tests/component/OrderStatusPage.test.jsx`, `tests/component/AppHeader.test.jsx`
+
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
-L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli gratis non facciamo partire stripe ovviamente. Facciamo solo installare il tema». Scelti quattro stili: «Lavagna», «Déco», «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico (stesse voci, carosello, griglia degli Special) con caratteri, filetti e impaginazione loro; i colori sono quelli del tema, tranne «Lavagna», che li porta tutti. In Impostazioni → Menù clienti: sopra gli stili del locale, da scegliere; sotto «Altri stili, gratis», con «Installa». Gli installati stanno in `settings/bar.stili_installati` (sono gratis: niente da proteggere); disinstallando quello in uso si torna al classico. Ogni scheda ha un assaggio scritto con lo stile vero e «Prova sul menù», che apre l'anteprima del cliente con lo stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre, e un esclusivo che il locale non ha non si prova. Uno stile scelto ma non installato non si applica. Niente Stripe e niente regia per i gratis.
+L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli gratis non facciamo partire stripe ovviamente. Facciamo solo installare il tema». Scelti quattro stili: «Lavagna», «Déco», «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico (stesse voci, carosello, griglia degli Special) con caratteri, filetti e impaginazione loro; i colori sono quelli del tema (fino alla 1.10.15 «Lavagna» li portava tutti; da REQ-MENU-027 la sua ardesia è una tavolozza, proposta dal suo tema e cambiabile). In Impostazioni → Menù clienti: sopra gli stili del locale, da scegliere; sotto «Altri stili, gratis», con «Installa». Gli installati stanno in `settings/bar.stili_installati` (sono gratis: niente da proteggere); disinstallando quello in uso si torna al classico. Ogni scheda ha un assaggio scritto con lo stile vero e «Prova sul menù», che apre l'anteprima del cliente con lo stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre, e un esclusivo che il locale non ha non si prova. Uno stile scelto ma non installato non si applica. Niente Stripe e niente regia per i gratis.
 
 GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo): su desktop reggono; sul telefono «Lavagna» e «Déco» spezzavano i nomi dei drink a metà parola («Negroni Sbagliat-o»), perché accanto al prezzo e al tasto la colonna del nome restava di pochi caratteri. Sotto i 520 px il prezzo va sotto il nome, e «Déco» stringe spaziatura e cornice. Il rombo di «Déco» sta accanto al titolo della categoria (sopra diventava un puntino).
 

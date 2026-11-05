@@ -7,7 +7,8 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
-import { stileMenu, stileProvabile, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
+import { stileMenu, stileInVista, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
+import { testoStile } from '../lib/testiStile.js'
 import { temaInProva } from '../lib/marketplaceTemi.js'
 import MenuGiornale, { TestataGiornale } from '../components/MenuGiornale.jsx'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
@@ -461,11 +462,7 @@ export default function MenuPage({ speciali = false }) {
   // colori li mette App.
   const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
   const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || temaProvato?.stile || null : null
-  const stile = staff
-    ? 'classico'
-    : stileInProva && stileProvabile(settings, stileInProva)
-      ? stileInProva
-      : stileMenu(settings)
+  const stile = stileInVista(settings, { lavoro: Boolean(staff), prova: stileInProva })
   const notte = stile === 'notte'
   // «GIORNALE» (REQ-MENU-024) ha una struttura sua — testata, sommario,
   // prima pagina, sezioni — e le sue immagini, incisioni: non è una veste
@@ -536,8 +533,8 @@ export default function MenuPage({ speciali = false }) {
               {tableLabel
                 ? `Tavolo ${tableLabel}`
                 : menuOnly
-                  ? 'Cocktail Bar · Menù'
-                  : 'Scegli i tuoi drink e invia l’ordine al bancone.'}
+                  ? testoStile(stile, 'menu.sola-lettura', 'Cocktail Bar · Menù')
+                  : testoStile(stile, 'menu.invito', 'Scegli i tuoi drink e invia l’ordine al bancone.')}
             </p>
           </div>
         </div>
@@ -609,7 +606,9 @@ export default function MenuPage({ speciali = false }) {
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
-              {notte ? '' : '✨ '}
+              {/* La ✨ è del classico: sul libro di «Meraviglie» e sulla
+                  carta di «Notte» stona. */}
+              {notte || stile === 'meraviglie' ? '' : '✨ '}
               {settings.special_titolo || 'Special'}
             </h3>
             <Link className="speciali-tutti" to={conParametri(PERCORSO_SPECIALI, params)}>

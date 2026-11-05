@@ -1648,24 +1648,55 @@ describe('gli stili gratis del menù', () => {
   const blocchi = (sel) =>
     [...css.matchAll(new RegExp(`\n${sel.replace(/[.]/g, '\.')} \{([^}]*)\}`, 'g'))].map((m) => m[1]).join('\n')
 
-  // «Lavagna» porta i suoi colori: se ne ridefinisse solo alcuni, su un tema
-  // chiaro le finestre e il carrello dentro la pagina avrebbero il gesso
-  // chiaro su un fondo chiaro.
-  it('«Lavagna» ridefinisce TUTTI i colori del tema, non solo il testo', () => {
-    const b = blocchi('.stile-lavagna')
-    for (const v of ['--bg', '--bg-2', '--card', '--text', '--muted', '--line', '--accent', '--accent-2', '--btn']) {
-      expect(b, v).toMatch(new RegExp(`${v}:`))
+  // LA TAVOLOZZA È SEMPRE LIBERA (REQ-MENU-027). Fino alla 1.10.15
+  // «Lavagna» scriveva i suoi colori nel CSS, tutti, e il tema del menù
+  // scelto sotto non contava. L'utente, 05/11/2026: la tavolozza «sempre
+  // libera» — uno stile la propone, ma si cambia. Quindi nessuno stile
+  // scrive i colori della tavolozza: stanno in themes.js.
+  it('nessuno stile scrive i colori della tavolozza: si cambiano dal tema', () => {
+    for (const sel of ['.stile-lavagna', '.stile-meraviglie', '.stile-deco', '.stile-riviera', '.stile-giornale']) {
+      const b = blocchi(sel)
+      for (const v of ['--bg', '--bg-2', '--card', '--text', '--muted', '--accent', '--accent-2', '--btn']) {
+        expect(b, `${sel} ${v}`).not.toMatch(new RegExp(`(^|[\\s;])${v}:`))
+      }
     }
+    const radice = [...css.matchAll(/\n:root\[data-stile='meraviglie'\] \{([^}]*)\}/g)].map((m) => m[1]).join('\n')
+    expect(radice).not.toMatch(/--(bg|card|text|accent|btn)\b[^:]*:/)
   })
 
   it('ogni stile dichiara i suoi tre caratteri, e quelli scaricati stanno nell’app', () => {
-    for (const id of ['lavagna', 'deco', 'riviera', 'giornale']) {
+    for (const id of ['lavagna', 'deco', 'riviera', 'giornale', 'meraviglie']) {
       const b = blocchi(`.stile-${id}`)
       for (const v of ['--stile-titolo', '--stile-voce', '--stile-testo']) expect(b, `${id} ${v}`).toMatch(new RegExp(`${v}:`))
     }
     // Dentro l'app, non da Google (REQ-SIC-004).
-    for (const pacchetto of ['@fontsource/caveat', '@fontsource/poiret-one', '@fontsource/dancing-script']) {
+    for (const pacchetto of ['@fontsource/caveat', '@fontsource/poiret-one', '@fontsource/dancing-script', '@fontsource/im-fell-english']) {
       expect(main).toContain(pacchetto)
     }
+  })
+})
+
+
+// «MERAVIGLIE» (REQ-MENU-027): il libro illustrato. Le categorie sono
+// capitoli, e veste le pagine dei clienti dalla radice del documento.
+describe('lo stile «Meraviglie»', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const blocco = (sel) => css.match(new RegExp(`\n${sel.replace(/[.[\]()'>:=]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] || ''
+
+  it('le categorie sono capitoli, numerati dal CSS nell’ordine del menù', () => {
+    expect(blocco('.stile-meraviglie')).toMatch(/counter-reset: capitolo/)
+    expect(blocco('.stile-meraviglie .cat-header')).toMatch(/counter-increment: capitolo/)
+    expect(blocco('.stile-meraviglie .cat-header::before')).toMatch(/counter\(capitolo, upper-roman\)/)
+  })
+
+  it('le pagine dei clienti si vestono dalla radice, come i colori', () => {
+    expect(css).toMatch(/:root\[data-stile='meraviglie'\] \.hero \{/)
+    expect(css).toMatch(/:root\[data-stile='meraviglie'\] main \{/)
+  })
+
+  // Sulla foto c'è sempre il velo scuro: con l'inchiostro della tavolozza
+  // il nome del locale sarebbe nero su nero.
+  it('il titolo sulla foto è chiaro con qualunque tavolozza', () => {
+    expect(blocco(":root[data-stile='meraviglie'] .hero-overlay")).toMatch(/color: #fbf6ea/)
   })
 })

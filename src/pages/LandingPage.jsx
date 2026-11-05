@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useVenue } from '../lib/useVenue.js'
+import { useTestoStile } from '../lib/testiStile.js'
 
 // Box novità Karaoke × Ceres: messo a false per nasconderlo (riattivabile).
 const SHOW_KARAOKE_NEWS = false
@@ -13,6 +14,9 @@ export default function LandingPage() {
   const navigate = useNavigate()
   // Il locale (REQ-VENUE-002): titolo, slogan, «chi siamo» e contatti.
   const venue = useVenue()
+  // Le frasi dello stile del locale (REQ-MENU-027), o quelle di sempre.
+  const testo = useTestoStile()
+  const benvenuto = testo('home.benvenuto')
 
   useEffect(() => {
     const qs = params.toString()
@@ -38,6 +42,7 @@ export default function LandingPage() {
             <img className="hero-logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
             <h1 className="hero-title">{venue.venue_name}</h1>
           </div>
+          {benvenuto && <p className="hero-epigrafe">{benvenuto}</p>}
           {venue.venue_tagline && <p className="hero-sub">{venue.venue_tagline}</p>}
           <Link className="btn" to="/menu" style={{ marginTop: 14, minWidth: 200 }}>
             🍸 Vai al menù
@@ -86,14 +91,14 @@ export default function LandingPage() {
 
       {venue.venue_about && (
         <section id="chi-siamo" className="card">
-          <h2 style={{ marginTop: 0 }}>Chi siamo</h2>
+          <h2 style={{ marginTop: 0 }}>{testo('home.chi-siamo', 'Chi siamo')}</h2>
           <p className="muted">{venue.venue_about}</p>
         </section>
       )}
 
       {(venue.venue_city || venue.venue_email || venue.venue_phone || venue.venue_socials.length > 0) && (
         <section id="contatti" className="card">
-          <h2 style={{ marginTop: 0 }}>Contatti</h2>
+          <h2 style={{ marginTop: 0 }}>{testo('home.contatti', 'Contatti')}</h2>
           {venue.venue_city && (
             <p className="muted" style={{ margin: '0 0 6px' }}>
               📍 {venue.venue_city}
