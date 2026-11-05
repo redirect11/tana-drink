@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 257 | fatto e coperto dai test |
+| ✅ | 258 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**311 voci** in tutto. **274** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**311 voci** in tutto. **275** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 20 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 21 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -841,6 +841,16 @@ NEL GESTIONALE: la sottosezione «📖 Menù dei clienti» del Menù mostra il m
 LA DEMO ha una struttura personalizzata, fatta dalla stessa copia di partenza: in cima una sezione nuova con tre voci raccontate, due sezioni rinominate, birre e bollicine snelle, shot nascosti; per farla vedere senza scriverla. I DATI: `carta_sezioni` (nome, ordine, vista, `nascosta`) e `carta_voci` (sezione, prodotto, ritocchi, ordine), coi nomi di quando era una carta a parte; due collezioni e non un documento solo perché le voci si scrivono una alla volta. Le legge chiunque apra il menù, le scrive il banco. Sul prodotto, `nome_cliente`.
 
 **Dove**: `src/lib/strutturaMenu.js, src/lib/api.js (carta_sezioni, carta_voci, subscribeCarta, prepopolaStruttura, eliminaStruttura, nome_cliente), src/lib/menuCache.js (useStrutturaMenu), src/pages/MenuPage.jsx (usaStruttura, perIlCliente, perCategoria), src/lib/cart.js (rigaDelCarrello, chiaveRiga), src/components/StrutturaMenu.jsx, src/components/MenuManager.jsx (Menù dei clienti, InStruttura), src/components/DrinkForm.jsx (Nome nel menù dei clienti), src/lib/saveDrink.js, src/demo/dati.js (strutturaDemo), src/index.css (.cat-nav.carta, .carta-snella), firestore.rules` · **Lo dimostrano**: `tests/unit/strutturaMenu.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MenuManager.test.jsx`
+
+#### REQ-MENU-026 — I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll
+
+Flavio, 04/11/2026, guardando le scene degli Special sul test: «a livello di grafica, puramente grafica, come avevo detto: disegno in stile Lewis Carroll dal libro, tecnica acquerello; non è che ci siamo molto», «l'immagine va migliorata»; l'impaginazione delle scene invece va bene. L'utente lo stesso giorno: «i disegni dei drink per la Tana invece vanno fatti più nello stile Lewis Carroll». I disegni di oggi sono composti a codice (bicchiere, colore, decorazione) con un tratto che imita l'incisione e un'acquerellatura fatta di filtri: un disegno generato così non arriva alle tavole di Tenniel. La strada va decisa con l'utente: illustrazioni fatte a mano da un illustratore, immagini generate da un modello e riviste, o le tavole originali di Tenniel (di pubblico dominio) composte coi bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
+
+FATTO, 04-05/11/2026: rifatto il segno a codice sulle tavole di Tenniel (1865) — il tratteggio segue la forma del vetro (ogni bicchiere è un solido di rotazione: anelli e meridiani), il contorno ingrossa dal lato in ombra e si assottiglia alle punte, la luce è la carta lasciata bianca, l'ombra sotto è di righe orizzontali; le tavole sono in bianco e nero, e l'acquerello steso piatto e un po' fuori dal segno lo aggiungiamo noi. L'utente, 05/11/2026: «sì quelle vanno bene, usa quelle».
+
+SONO SEGNAPOSTO: si aspettano le foto dei drink e i Signature veri che Flavio vuole proporre. In produzione il menù Signature resta spento finché Flavio non decide drink e immagini: lo Special lo accende solo il segno `speciale` sui drink, e scripts/special-signature.mjs in produzione non si lancia.
+
+**Dove**: `src/lib/illustrazioneDrink.js, public/illustrazioni/alice/` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`
 
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
@@ -3693,12 +3703,6 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-026 — I disegni dei drink della Tana nello stile delle illustrazioni del libro di Lewis Carroll
-
-Flavio, 04/11/2026, guardando le scene degli Special sul test: «a livello di grafica, puramente grafica, come avevo detto: disegno in stile Lewis Carroll dal libro, tecnica acquerello; non è che ci siamo molto», «l'immagine va migliorata»; l'impaginazione delle scene invece va bene. L'utente lo stesso giorno: «i disegni dei drink per la Tana invece vanno fatti più nello stile Lewis Carroll». I disegni di oggi sono composti a codice (bicchiere, colore, decorazione) con un tratto che imita l'incisione e un'acquerellatura fatta di filtri: un disegno generato così non arriva alle tavole di Tenniel. La strada va decisa con l'utente: illustrazioni fatte a mano da un illustratore, immagini generate da un modello e riviste, o le tavole originali di Tenniel (di pubblico dominio) composte coi bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
-
-**Dove**: `src/lib/illustrazioneDrink.js, public/illustrazioni/alice/`
 
 ### Magazzino
 
