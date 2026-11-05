@@ -388,6 +388,20 @@ describe('i dati fiscali del locale sulla carta', () => {
     expect(uscito).not.toContain('P.IVA')
   })
 
+  // Il primo salvataggio qualunque delle impostazioni della stampante (qui
+  // l'indirizzo) congelava sul dispositivo anche l'intestazione di quel
+  // momento: una ragione sociale corretta dopo non arrivava più sulla carta.
+  it('salvare la stampante non congela la ragione sociale', async () => {
+    impostazioni({ venue_legal_name: 'Vecchia Srl' })
+    const printer = await import('../../src/lib/printer.js')
+    printer.savePrinterSettings({ ip: '192.168.1.50' })
+    impostazioni({ venue_legal_name: 'Nuova Srl', ...FISCALI })
+    expect(printer.loadPrinterSettings()).toMatchObject({ ip: '192.168.1.50', businessFooter: 'Nuova Srl' })
+    const uscito = await stampaAcconto()
+    expect(uscito).toContain('Nuova Srl')
+    expect(uscito).not.toContain('Vecchia Srl')
+  })
+
   it('la fattura di cortesia dice chi la emette', async () => {
     impostazioni(FISCALI)
     const printer = await import('../../src/lib/printer.js')

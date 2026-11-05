@@ -165,10 +165,10 @@ describe('dall’app alla regia, «Area clienti»', () => {
   // I tasti verso la regia compaiono quando la licenza dice dov'è: prima
   // che la regia scriva quella della Tana, non ci sono.
   it('il tasto c’è per l’admin, con la regia nella build e nella licenza', () => {
-    const licenza = { regia_url: 'https://regia.example' }
-    expect(areaClientiVisibile({ admin: true, licenza, progetto: PROGETTO })).toBe(true)
-    expect(areaClientiVisibile({ admin: false, licenza, progetto: PROGETTO })).toBe(false)
-    expect(areaClientiVisibile({ admin: true, licenza: {}, progetto: PROGETTO })).toBe(false)
-    expect(areaClientiVisibile({ admin: true, licenza, progetto: 'un-altro-progetto' })).toBe(false)
+    const settings = { licenza: { moduli: {}, regia_url: 'https://regia.example' } }
+    expect(areaClientiVisibile({ admin: true, settings, progetto: PROGETTO })).toBe(true)
+    expect(areaClientiVisibile({ admin: false, settings, progetto: PROGETTO })).toBe(false)
+    expect(areaClientiVisibile({ admin: true, settings: { licenza: { moduli: {} } }, progetto: PROGETTO })).toBe(false)
+    expect(areaClientiVisibile({ admin: true, settings, progetto: 'un-altro-progetto' })).toBe(false)
   })
 })

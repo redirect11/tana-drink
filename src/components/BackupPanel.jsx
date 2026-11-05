@@ -72,7 +72,7 @@ export default function BackupPanel({ role = null }) {
             ? ` Non ripristinate perché di moduli non inclusi nella licenza: ${fuoriLicenza.join(', ')}.`
             : '') +
           (soloScript.length
-            ? ` Lo storico importato (${soloScript.join(', ')}) è nel file ma si ripristina dallo script di manutenzione.`
+            ? ` Lo storico importato (${soloScript.join(', ')}) è nel file, e si ripristina con lo script di manutenzione.`
             : '')
       )
     } catch (e) {

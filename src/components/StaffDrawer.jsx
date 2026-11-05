@@ -10,7 +10,6 @@ import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
-import { licenzaDi } from '../lib/licenzaInVigore.js'
 import { areaClientiVisibile, versoLaRegia } from '../lib/passaggioRegia.js'
 import { toastError } from '../lib/toast.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
@@ -381,7 +380,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             </span>
           </span>
         </div>
-        {areaClientiVisibile({ admin: isAdmin(role), licenza: licenzaDi(settings) }) && <AreaClienti />}
+        {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>

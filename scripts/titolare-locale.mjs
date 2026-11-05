@@ -86,12 +86,16 @@ let uid = cosa.uid
 // non li vuole. Se la creazione fallisce, al rilancio si crea da capo.
 if (cosa.daCancellare) await chiama('accounts:delete', { localId: cosa.daCancellare })
 if (cosa.azione !== 'tieni') uid = (await chiama('accounts', { ...(cosa.uid ? { localId: cosa.uid } : {}), email: EMAIL, emailVerified: true })).localId
-if (cosa.ruolo) await chiama('accounts:update', { localId: uid, customAttributes: JSON.stringify(cosa.ruolo) })
-console.log(`[titolare] ✓ ${PROGETTO}: ${uid} è admin`)
-if (verificaOra) {
-  await chiama('accounts:update', { localId: uid, emailVerified: true })
-  console.log(`[titolare] ✓ ${PROGETTO}: l’email ${EMAIL} è segnata verificata`)
+// Ruolo ed email in una scrittura sola: se fallisce, non resta a metà.
+if (cosa.ruolo || verificaOra) {
+  await chiama('accounts:update', {
+    localId: uid,
+    ...(cosa.ruolo ? { customAttributes: JSON.stringify(cosa.ruolo) } : {}),
+    ...(verificaOra ? { emailVerified: true } : {}),
+  })
 }
+console.log(`[titolare] ✓ ${PROGETTO}: ${uid} è admin`)
+if (verificaOra) console.log(`[titolare] ✓ ${PROGETTO}: l’email ${EMAIL} è segnata verificata`)
 
 if (cosa.link) {
   // L'email «imposta la password» la manda Firebase dal progetto del

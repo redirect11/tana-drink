@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { subscribeInvoices, markInvoiceSent } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printFattura, loadPrinterSettings, datiFiscaliDelLocale } from '../lib/printer.js'
+import { mailFattura } from '../lib/mailFattura.js'
 
 // ── Gestore FATTURE di cortesia (gestionale, solo bartender) ───────────
 // Elenco delle fatture emesse dalla schermata Pagamento: numero
@@ -28,34 +29,8 @@ export default function InvoicesTab() {
     )
   }, [invoices, search])
 
-  function mailto(f) {
-    const s = loadPrinterSettings()
-    const righe = (f.items || [])
-      .map((i) => `${i.qty}x ${i.name} — ${formatPrice(i.qty * i.unit_price)}`)
-      .join('\n')
-    const c = f.customer || {}
-    const body = [
-      `Fattura di cortesia n. ${f.number}`,
-      `${s.businessName || ''}`,
-      ...datiFiscaliDelLocale(),
-      '',
-      `Intestata a: ${c.denominazione || ''}`,
-      c.piva ? `P.IVA: ${c.piva}` : null,
-      c.cf ? `CF: ${c.cf}` : null,
-      c.indirizzo ? `Indirizzo: ${c.indirizzo}` : null,
-      '',
-      righe,
-      f.discount_amount > 0 ? `Sconto: −${formatPrice(f.discount_amount)}` : null,
-      `Totale: ${formatPrice(f.total)}`,
-      '',
-      'Documento non fiscale — copia di cortesia.',
-    ]
-      .filter((r) => r !== null)
-      .join('\n')
-    return `mailto:${encodeURIComponent(c.email || '')}?subject=${encodeURIComponent(
-      `Fattura di cortesia n. ${f.number}`
-    )}&body=${encodeURIComponent(body)}`
-  }
+  const mailto = (f) =>
+    mailFattura(f, { nomeLocale: loadPrinterSettings().businessName || '', datiFiscali: datiFiscaliDelLocale() })
 
   function invia(f) {
     window.location.href = mailto(f)

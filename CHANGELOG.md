@@ -12,8 +12,9 @@
 - **Telefono, partita IVA, codice fiscale e sede legale** in Impostazioni →
   Il locale: la regia li riempie dalla registrazione del titolare. La
   partita IVA va sotto la ragione sociale sulle ricevute; i tre dati
-  fiscali sulla fattura di cortesia; il telefono nei contatti della pagina
-  iniziale.
+  fiscali sulla fattura di cortesia, stampata e nella mail; il telefono nei
+  contatti della pagina iniziale. Salvare le impostazioni della stampante
+  non blocca più l'intestazione dello scontrino a quella del momento.
 - Lo script del titolare dice se l'email dell'account è verificata, e con
   `--verifica-email --applica` la segna verificata.
 
