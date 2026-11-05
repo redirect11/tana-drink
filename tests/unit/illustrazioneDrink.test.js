@@ -52,11 +52,20 @@ describe('il disegno', () => {
     }
   })
 
-  it('ha il tratteggio delle incisioni: ombre a linee e liquido a righe', () => {
+  // REQ-MENU-026: Flavio, 04/11/2026, «disegno in stile Lewis Carroll dal
+  // libro, tecnica acquerello; non è che ci siamo molto». Il primo segno
+  // riempiva la sagoma con un retino di righe dritte: da vicino, un disegno
+  // fatto a macchina. Nelle tavole di Tenniel il tratteggio segue la forma
+  // e il contorno ingrossa dal lato in ombra.
+  it('ha il segno delle tavole di Tenniel: righe che seguono la forma, contorno a spessore variabile', () => {
     const svg = svgDrink({ bicchiere: 'coppa', colore: 'rosso', decorazione: 'cuori' })
-    expect(svg).toMatch(/<pattern id="d"/)
-    expect(svg).toMatch(/<pattern id="x"/)
-    expect(svg).toMatch(/fill="url\(#o\)"/)
+    // Il retino di righe dritte non c'è più.
+    expect(svg).not.toMatch(/<pattern id="d"/)
+    // Le righe del liquido sono ritagliate sulla sua forma.
+    expect(svg).toMatch(/<clipPath id="l">/)
+    expect(svg).toMatch(/clip-path="url\(#l\)"/)
+    // Il contorno è una forma piena, non una linea di spessore fisso.
+    expect(svg).toMatch(/<path d="M[^"]+" fill="#f4f0e8"\/>/)
   })
 
   it('il colore del drink è quello scelto', () => {

@@ -4193,11 +4193,85 @@ requirements:
       mano da un illustratore, immagini generate da un modello e riviste,
       o le tavole originali di Tenniel (di pubblico dominio) composte coi
       bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
-    status: todo
-    generate_issue: true
+      FATTO, 04-05/11/2026: rifatto il segno a codice sulle tavole di
+      Tenniel (1865) — il tratteggio segue la forma del vetro (ogni
+      bicchiere è un solido di rotazione: anelli e meridiani), il contorno
+      ingrossa dal lato in ombra e si assottiglia alle punte, la luce è la
+      carta lasciata bianca, l'ombra sotto è di righe orizzontali; le
+      tavole sono in bianco e nero, e l'acquerello steso piatto e un po'
+      fuori dal segno lo aggiungiamo noi. L'utente, 05/11/2026: «sì quelle
+      vanno bene, usa quelle». SONO SEGNAPOSTO: si aspettano le foto dei
+      drink e i Signature veri che Flavio vuole proporre. In produzione il
+      menù Signature resta spento finché Flavio non decide drink e
+      immagini: lo Special lo accende solo il segno `speciale` sui drink, e
+      scripts/special-signature.mjs in produzione non si lancia.
+    status: implemented
+    generate_issue: false
     labels: [menu, vista-cliente, design]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/illustrazioneDrink.test.js
+
+  - id: REQ-MENU-027
+    title: "«Meraviglie», lo stile esclusivo della Tana alla Lewis Carroll: veste il menù e tutte le pagine dei clienti, con titoli e frasi suoi; la tavolozza la propone e resta libera"
+    area: "src/lib/stileMenu.js (meraviglie, stileInVista, vestePagine), src/lib/testiStile.js, src/lib/themes.js (tavolozze lavagna e meraviglie), src/lib/marketplaceTemi.js (tema Meraviglie, Lavagna con la sua tavolozza), src/App.jsx (data-stile, StileCliente), src/pages/LandingPage.jsx, src/pages/MenuPage.jsx, src/pages/MyOrdersPage.jsx, src/pages/OrderStatusPage.jsx, src/components/OrderSummary.jsx, src/index.css (.stile-meraviglie, :root[data-stile='meraviglie'], .stile-lavagna), src/main.jsx (IM Fell English), clienti/tana/licenza-iniziale.json"
+    description: >
+      L'utente, 05/11/2026: «è possibile fare un tema solo per la Tana, oltre
+      a quello che già c'è, però tutti in stile Lewis Carroll? Quindi non
+      solo le immagini dei drink ma anche la pagina deve richiamare un po'
+      lo stile e anche i testi». Scelte dell'utente: anche la home pubblica;
+      «titoli e frasi, tasti chiari»; colori suoi, chiari; «palette di
+      colori e stile»; la tavolozza «sempre libera».
+      LO STILE: `meraviglie`, in licenza come «Notte» (REQ-LIC-010), coi
+      disegni dei drink (REQ-LIC-013, segno di Tenniel, REQ-MENU-026). La
+      pagina di un libro dell'Ottocento: IM Fell English (i caratteri del
+      vescovo Fell, digitalizzati da Igino Marini, licenza OFL, dentro
+      l'app come gli altri, REQ-SIC-004), le categorie come capitoli
+      numerati dal CSS («Capitolo III»), i quattro semi delle carte come
+      fregio, cornici a filetto doppio, la foto della testata in seppia, il
+      cartellino «Bevimi» appeso ai disegni. Gli Special stanno prima dei
+      capitoli e non contano.
+      LE PAGINE DEI CLIENTI: uno stile con `pagine: true` veste anche la
+      home, i miei ordini, lo stato dell'ordine e l'accesso. App calcola lo
+      stile in vista con la stessa funzione del menù (`stileInVista`: chi
+      lavora il classico, chi prova quello in prova, i clienti quello del
+      locale) e lo scrive sulla radice (`data-stile`), come i colori: il
+      gestionale non si veste.
+      LE FRASI (testiStile.js): si cambiano i titoli («Chi abita la tana»,
+      «Il tuo cartellino») e si aggiungono frasi (l'epigrafe «Benvenuti nel
+      Paese delle Meraviglie», una riga sotto lo stato dell'ordine: «Il
+      Bianconiglio è in viaggio verso il bancone…»); i tasti e gli stati
+      restano quelli di sempre, e l'annullato non ha frasi. Ogni pagina
+      chiede la sua frase con quella di sempre come ripiego. Frasi nostre,
+      nessuna traduzione del libro citata.
+      LA TAVOLOZZA: avorio, inchiostro, seppia, il rosso della Regina di
+      Cuori e un oro antico, con le forme «documento» (tasti piatti, niente
+      ombre). Il tema «Meraviglie» del marketplace la propone insieme allo
+      stile; dopo si cambia come ogni tavolozza, e lo stile la rispetta
+      perché passa solo per le variabili. Lo stesso per «Lavagna»: fino alla
+      1.10.15 scriveva i suoi colori nel CSS, e il tema del menù non
+      contava; ora l'ardesia è la tavolozza «Lavagna», proposta dal suo tema
+      (un locale che aveva lo stile Lavagna su un'altra tavolozza la vede
+      coi colori di quella: si rimette dal marketplace con «Usa»).
+      NELLA REGIA: `meraviglie` è nei temi della licenza iniziale della
+      Tana. Perché la regia li elenchi e li scriva nella licenza serve la
+      sua REQ-FLOTTA-039 (drink-regia, docs/temi-dei-locali.md): senza,
+      «La licenza la scrive la regia» per la Tana toglierebbe i temi.
+      GUARDATO A SCHERMO IL 05/11/2026 (Chrome senza finestra, sulla demo
+      con lo stile acceso solo in locale), telefono e desktop: home, menù,
+      i miei ordini.
+    status: implemented
+    generate_issue: false
+    labels: [menu, vista-cliente, design]
+    priority: P2
+    test_cases:
+      - tests/unit/testiStile.test.js
+      - tests/unit/stileMenu.test.js
+      - tests/unit/marketplaceTemi.test.js
+      - tests/unit/css.test.js
+      - tests/component/LandingPage.test.jsx
+      - tests/component/OrderStatusPage.test.jsx
+      - tests/component/AppHeader.test.jsx
 
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
@@ -5876,8 +5950,10 @@ requirements:
       installare il tema». Scelti quattro stili: «Lavagna», «Déco»,
       «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico
       (stesse voci, carosello, griglia degli Special) con caratteri,
-      filetti e impaginazione loro; i colori sono quelli del tema, tranne
-      «Lavagna», che li porta tutti. In Impostazioni → Menù clienti: sopra
+      filetti e impaginazione loro; i colori sono quelli del tema (fino
+      alla 1.10.15 «Lavagna» li portava tutti; da REQ-MENU-027 la sua
+      ardesia è una tavolozza, proposta dal suo tema e cambiabile). In
+      Impostazioni → Menù clienti: sopra
       gli stili del locale, da scegliere; sotto «Altri stili, gratis», con
       «Installa». Gli installati stanno in `settings/bar.stili_installati`
       (sono gratis: niente da proteggere); disinstallando quello in uso si
