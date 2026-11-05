@@ -6,11 +6,13 @@ import { queueEtaMinutes } from '../lib/eta.js'
 import { chiaveRiga, nomeLetto } from '../lib/cart.js'
 import { paymentOptions } from '../lib/payments.js'
 import { clienteSceglie, modoAllaNascita } from '../lib/consegna.js'
+import { useTestoStile } from '../lib/testiStile.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
 // (importo libero) in base alle impostazioni del bar.
 export default function OrderSummary({ cart, settings, serviceStats = {}, tableLabel, staff, customerProfile, sending, groupsActive = false, groups = [], initialGroupId = '', onConfirm, onCancel }) {
+  const testo = useTestoStile()
   const [persons, setPersons] = useState(1)
   const [tip, setTip] = useState('')
   const [note, setNote] = useState('')
@@ -142,7 +144,7 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
       <div className="summary-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="summary-head">
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
-          <h2>Riepilogo ordine</h2>
+          <h2>{staff ? 'Riepilogo ordine' : testo('riepilogo.titolo', 'Riepilogo ordine')}</h2>
           {!staff && tableLabel && <p className="muted" style={{ margin: 0 }}>Tavolo {tableLabel}</p>}
         </div>
 

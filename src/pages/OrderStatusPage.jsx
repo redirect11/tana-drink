@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useTestoStile } from '../lib/testiStile.js'
 import {
   fetchOrder,
   subscribeOrder,
@@ -49,6 +50,9 @@ export default function OrderStatusPage() {
   const [edits, setEdits] = useState(null) // copia editabile degli item (prima della preparazione)
   const [saving, setSaving] = useState(false)
   const navigate = useNavigate()
+  // Le frasi dello stile del locale (REQ-MENU-027): il titolo sopra il
+  // numero e una frase sotto lo stato, che resta scritto com'è.
+  const testo = useTestoStile()
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [ricerca] = useSearchParams()
   // Il conto aperto direttamente sul pagamento: è il tasto «Incassa» delle
@@ -427,9 +431,12 @@ export default function OrderStatusPage() {
         </div>
       ) : (
         <div className="card" style={{ textAlign: 'center' }}>
-          <div className="muted">Il tuo numero</div>
+          <div className="muted">{testo('stato.numero', 'Il tuo numero')}</div>
           <div className="bignum">#{order.daily_number ?? '—'}</div>
           <div style={{ marginTop: 8 }}>{statoPill}</div>
+          {testo(`stato.frase.${order.workflow_status}`) && (
+            <p className="frase-stile">{testo(`stato.frase.${order.workflow_status}`)}</p>
+          )}
           {myEta != null && (
             <p className="muted" style={{ margin: '10px 0 0', fontSize: '0.9rem' }}>
               ⏱ {order.service_mode === 'tavolo' ? 'Ti serviamo in' : 'Pronto in'} ~{myEta} min

@@ -1,7 +1,7 @@
 {
   "name": "karaoke-drink",
   "private": true,
-  "version": "1.10.15-beta",
+  "version": "1.10.16-beta",
   "type": "module",
   "description": "App per la prenotazione dei drink del cocktail bar La Tana del Coniglio",
   "scripts": {
@@ -31,6 +31,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource/caveat": "5.3.0",
     "@fontsource/dancing-script": "5.3.0",
+    "@fontsource/im-fell-english": "5.3.0",
     "@fontsource/italiana": "5.3.0",
     "@fontsource/jost": "5.3.0",
     "@fontsource/playfair-display": "5.3.0",

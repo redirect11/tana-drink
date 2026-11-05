@@ -104,6 +104,12 @@ le fa l'utente, o un agente col suo via libera esplicito.
 
    Da qui la licenza della Tana ha `regia_url`, e l'app mostra i tasti verso
    la regia. Prima la Tana non li mostra, ed è giusto così.
+
+   **Prima di questo passo serve REQ-FLOTTA-039 della regia**
+   (drink-regia, `docs/temi-dei-locali.md`, richiesta del 05/11/2026): la
+   licenza che scrive la regia oggi non ha `temi`, e la Tana perderebbe i
+   suoi stili esclusivi («Notte», «Meraviglie»). Nella scheda della Tana,
+   in regia, vanno scritti i suoi temi.
 7. **Le email** **(utente)**: si crea l'account Resend col dominio
    verificato e si installa l'estensione Trigger Email su `drink-regia`. La
    regia scrive a `clienti/{uid}.email` attraverso la coda `mail`:

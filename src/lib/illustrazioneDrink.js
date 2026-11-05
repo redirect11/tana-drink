@@ -16,12 +16,8 @@
 // IL SEGNO È QUELLO DELLE INCISIONI DI JOHN TENNIEL, le illustrazioni
 // originali del libro (1865, pubblico dominio): l'utente, 29/10/2026,
 // «serve una roba più che sembra un disegno. Il tratto deve essere quello
-// ispirato ai disegni originali del libro di Alice». Quindi le ombre si
-// fanno col TRATTEGGIO — linee parallele sul lato in ombra, incrociate
-// dove è più scuro, fitte e orizzontali nel liquido — il contorno è
-// ripassato due volte come a penna, il riflesso del vetro è una linea
-// sottile lasciata a lato, e sotto il piede c'è l'ombra tratteggiata.
-// L'acquerello resta, leggero, come nelle edizioni colorate a mano.
+// ispirato ai disegni originali del libro di Alice». Come lo si ottiene sta
+// più sotto, in «IL SEGNO DI TENNIEL» (rifatto il 04/11/2026, REQ-MENU-026).
 //
 // DUE VERSIONI DALLO STESSO DISEGNO: tratto bianco e colori che si sommano
 // come luce sui temi scuri del menù (quelli di partenza), tratto scuro e
@@ -236,6 +232,8 @@ function decorazione(id, f) {
         .join(' ')
       return {
         macchia: `<circle cx="${x}" cy="${y}" r="24" fill="${C.giallo}" fill-opacity="0.6"/>`,
+        ombra: [x, y, 24],
+        sagoma: `<circle cx="${x}" cy="${y}" r="24"/>`,
         tratto: `<circle cx="${x}" cy="${y}" r="24"/><circle cx="${x}" cy="${y}" r="19"/><path d="${raggi}"/>`,
       }
     }
@@ -244,6 +242,8 @@ function decorazione(id, f) {
       const y = by - 12
       return {
         macchia: `<circle cx="${x}" cy="${y}" r="15" fill="${C.rosso}" fill-opacity="0.7"/>`,
+        ombra: [x, y, 12, 2.2],
+        sagoma: `<circle cx="${x}" cy="${y}" r="12"/>`,
         tratto: `<circle cx="${x}" cy="${y}" r="12"/><path d="M${x + 3} ${y - 11} Q${x + 10} ${y - 40} ${x + 30} ${y - 52}"/><path d="M${x + 22} ${y - 46} Q${x + 34} ${y - 58} ${x + 42} ${y - 48} Q${x + 32} ${y - 42} ${x + 22} ${y - 46} Z"/>`,
       }
     }
@@ -271,6 +271,8 @@ function decorazione(id, f) {
         .join('')
       return {
         macchia: `<circle cx="${x}" cy="${y}" r="22" fill="${C.rosa}" fill-opacity="0.7"/>`,
+        ombra: [x, y, 21],
+        sagoma: petali,
         tratto: `${petali}<circle cx="${x}" cy="${y}" r="4.5"/>`,
       }
     }
@@ -297,6 +299,8 @@ function decorazione(id, f) {
       const y2 = cy - 58
       return {
         macchia: `<path d="M${x2 - 38} ${y2 + 4} Q${x2} ${y2 - 34} ${x2 + 38} ${y2 + 4} Z" fill="${C.rosa}" fill-opacity="0.7"/>`,
+        ombra: [x2, y2 - 6, 38],
+        sagoma: `<path d="M${x2 - 38} ${y2 + 4} Q${x2} ${y2 - 34} ${x2 + 38} ${y2 + 4} Z"/>`,
         tratto: `<path d="M${dx} ${dy} L${x2} ${y2 - 14}"/><path d="M${x2 - 38} ${y2 + 4} Q${x2} ${y2 - 34} ${x2 + 38} ${y2 + 4} Q${x2 + 19} ${y2 - 4} ${x2} ${y2 + 4} Q${x2 - 19} ${y2 - 4} ${x2 - 38} ${y2 + 4} Z"/><path d="M${x2} ${y2 - 14} L${x2} ${y2 + 4}"/>`,
       }
     }
@@ -352,55 +356,358 @@ export function svgDrink(scelta, { chiaro = false, segno = 'tenniel' } = {}) {
   const s = sceltaIllustrazione(scelta)
   if (!s) return null
   if (segno === 'incisione') return svgIncisione(s, { chiaro })
+  return svgTenniel(s, { chiaro })
+}
+
+// ── IL SEGNO DI TENNIEL (REQ-MENU-026) ─────────────────────────────────
+// Flavio, 04/11/2026, sulle scene degli Special: «disegno in stile Lewis
+// Carroll dal libro, tecnica acquerello; non è che ci siamo molto». Il
+// primo segno metteva dentro la sagoma un retino di righe dritte e faceva
+// tremare il contorno con un filtro: da lontano un'ombra, da vicino un
+// disegno fatto a macchina. Nelle tavole di Tenniel (incise su legno dai
+// fratelli Dalziel, 1865: il «Drink me», le tazze del Cappellaio) il
+// tratteggio SEGUE LA FORMA — sul vetro le righe scendono lungo il
+// bicchiere e girano col bordo — il contorno è più grosso dal lato in
+// ombra e si assottiglia alle punte, la luce è il bianco della carta
+// lasciato com'è, e sotto l'oggetto l'ombra è fatta di righe orizzontali
+// che si perdono nel terreno. Le tavole sono in bianco e nero:
+// l'acquerello lo aggiungiamo noi (l'utente, lo stesso giorno), steso
+// piatto e un po' fuori dal segno, come il colore dato a mano.
+//
+// Per far girare le righe col vetro, ogni bicchiere è un SOLIDO DI
+// ROTAZIONE: il profilo (il raggio a ogni altezza) e `e`, quanto lo si
+// vede dall'alto (lo schiacciamento delle ellissi). Da lì vengono
+// contorni, anelli (le righe che girano) e meridiani (quelle che scendono).
+// La luce viene da sinistra, come nelle tavole.
+const CX = 200
+const n1 = (v) => Math.round(v * 10) / 10
+const linea = (punti) => (punti.length > 1 ? `M${punti.map(([x, y]) => `${n1(x)} ${n1(y)}`).join('L')}` : '')
+
+const SAGOME = {
+  coppa: {
+    profilo: [[150, 80], [162, 79], [176, 75], [190, 66], [202, 52], [211, 36], [217, 18], [219, 0]],
+    e: 0.13,
+    livello: 160,
+    gambo: { da: 219, a: 316, r: 3.5 },
+    piede: { y: 323, r: 52 },
+  },
+  martini: {
+    profilo: [[140, 85], [236, 0]],
+    lineare: true,
+    e: 0.11,
+    livello: 153,
+    gambo: { da: 236, a: 320, r: 3 },
+    piede: { y: 325, r: 50 },
+  },
+  basso: {
+    profilo: [[200, 66], [320, 58]],
+    lineare: true,
+    e: 0.15,
+    fondo: 305,
+    livello: 238,
+    ghiaccio: [[172, 262, 40, -12], [226, 258, 38, 14]],
+  },
+  alto: {
+    profilo: [[118, 50], [322, 44]],
+    lineare: true,
+    e: 0.16,
+    fondo: 306,
+    livello: 150,
+    ghiaccio: [[186, 176, 34, -10], [214, 214, 33, 12], [186, 252, 32, -6]],
+    bolle: [[228, 272, 3], [222, 290, 2.5], [232, 182, 2.5], [174, 292, 3]],
+  },
+  flute: {
+    profilo: [[100, 28], [130, 30], [170, 30], [205, 26], [230, 18], [246, 8], [253, 0]],
+    e: 0.18,
+    livello: 132,
+    gambo: { da: 253, a: 322, r: 2.5 },
+    piede: { y: 327, r: 40 },
+    bolle: [[196, 222, 2.5], [204, 198, 2], [194, 172, 2.5], [206, 152, 2]],
+  },
+  balloon: {
+    profilo: [[120, 58], [140, 64], [165, 71], [190, 74], [210, 72], [230, 64], [245, 52], [256, 34], [262, 14], [263, 0]],
+    e: 0.15,
+    livello: 190,
+    gambo: { da: 263, a: 322, r: 3 },
+    piede: { y: 327, r: 50 },
+    ghiaccio: [[178, 222, 34, -14], [222, 218, 32, 10]],
+  },
+  hurricane: {
+    profilo: [[110, 40], [130, 46], [150, 49], [175, 46], [200, 37], [218, 30], [238, 25], [258, 27], [280, 28], [298, 24], [312, 18]],
+    e: 0.17,
+    fondo: 306,
+    livello: 150,
+    gambo: { da: 312, a: 318, r: 14 },
+    piede: { y: 322, r: 44 },
+    ghiaccio: [[188, 178, 30, -10], [214, 194, 28, 12]],
+  },
+  tazza: {
+    profilo: [[212, 80], [235, 78], [258, 71], [278, 60], [292, 48], [300, 38]],
+    e: 0.2,
+    opaca: true,
+    livello: 222,
+    piattino: { y: 304, r: 122, pozzo: 60 },
+  },
+}
+
+// Il raggio a ogni altezza: una curva morbida che passa per i punti del
+// profilo (o una retta, per i bicchieri a pareti dritte).
+function raggioDi(punti, lineare) {
+  return (y) => {
+    const ult = punti.length - 1
+    if (y <= punti[0][0]) return punti[0][1]
+    if (y >= punti[ult][0]) return punti[ult][1]
+    let i = 0
+    while (punti[i + 1][0] < y) i++
+    const [ya, a] = punti[i]
+    const [yb, b] = punti[i + 1]
+    const t = (y - ya) / (yb - ya)
+    if (lineare) return a + (b - a) * t
+    const p = punti[i - 1] ? punti[i - 1][1] : a
+    const q = punti[i + 2] ? punti[i + 2][1] : b
+    const r = 0.5 * (2 * a + (b - p) * t + (2 * p - 5 * a + 4 * b - q) * t * t + (3 * a - p - 3 * b + q) * t * t * t)
+    return Math.max(0, r)
+  }
+}
+
+// I valori da a a b, a passi di circa `passo`, estremi compresi.
+function passi(a, b, passo) {
+  const n = Math.max(1, Math.ceil(Math.abs(b - a) / passo))
+  return Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n)
+}
+
+// UN TRATTO A PENNA: largo nel mezzo e sottile alle punte, come la riga
+// incisa col bulino. È un poligono pieno e non una linea: una linea di SVG
+// ha la stessa larghezza da un capo all'altro, ed era quello che dava al
+// disegno l'aria della macchina.
+function penna(punti, larghezza, punta = 0.3) {
+  const n = punti.length
+  if (n < 2) return ''
+  const sopra = []
+  const sotto = []
+  for (let i = 0; i < n; i++) {
+    const [xa, ya] = punti[Math.max(0, i - 1)]
+    const [xb, yb] = punti[Math.min(n - 1, i + 1)]
+    const l = Math.hypot(xb - xa, yb - ya) || 1
+    const nx = -(yb - ya) / l
+    const ny = (xb - xa) / l
+    const w = (larghezza * (punta + (1 - punta) * Math.sin((Math.PI * i) / (n - 1)))) / 2
+    sopra.push([punti[i][0] + nx * w, punti[i][1] + ny * w])
+    sotto.push([punti[i][0] - nx * w, punti[i][1] - ny * w])
+  }
+  return `${linea([...sopra, ...sotto.reverse()])}Z`
+}
+
+// Il tratteggio di una piccola forma tonda (una fetta, una ciliegia):
+// righe parallele inclinate sulla metà in basso a destra, quella in ombra.
+function tratteggioTondo(x, y, r, passo = 3.2) {
+  const dir = [0.643, -0.766]
+  const nor = [0.766, 0.643]
+  let d = ''
+  for (let o = r * 0.1; o < r; o += passo) {
+    const m = Math.sqrt(r * r - o * o)
+    const c = [x + nor[0] * o, y + nor[1] * o]
+    d += linea([
+      [c[0] - dir[0] * m, c[1] - dir[1] * m],
+      [c[0] + dir[0] * m, c[1] + dir[1] * m],
+    ])
+  }
+  return d
+}
+
+// Quanto «pesa» un colore, in tratteggio: i chiari quasi niente, i rossi e
+// i bruni molto. Vale per questo segno e per l'incisione.
+const PESO = { limpido: 0.15, giallo: 0.3, pesca: 0.45, azzurro: 0.45, verde: 0.55, rosa: 0.55, lilla: 0.6, ambra: 0.7, rosso: 0.8, viola: 0.85 }
+
+function svgTenniel(s, { chiaro }) {
+  const g = SAGOME[s.bicchiere]
   const f = FORME[s.bicchiere]
   const colore = COLORI.find((c) => c.id === s.colore).hex
+  const peso = PESO[s.colore] ?? 0.5
   const { tratto, fusione, forza } = VERSIONI[chiaro ? 'chiaro' : 'scuro']
   const op = (o) => Math.min(0.92, o * forza).toFixed(2)
   const seme = semeDi(`${s.bicchiere}|${s.colore}|${s.decorazione}`)
   const r = casuale(seme)
   const deco = decorazione(s.decorazione, f)
-  // Una macchia dietro al bicchiere, di un colore vicino a quello del drink
-  // ma spostata: è il «fondo» degli esempi, che non sta nei contorni.
-  const dietro = [C.lilla, C.azzurro, C.rosa, C.pesca][seme % 4]
-  const [cx, cy] = f.cima
-  let puntini = ''
-  for (let i = 0; i < 18; i++) {
-    const ang = r() * Math.PI * 2
-    const dist = 90 + r() * 70
-    const col = i % 3 === 0 ? dietro : colore
-    puntini += `<circle cx="${(200 + Math.cos(ang) * dist).toFixed(1)}" cy="${(225 + Math.sin(ang) * dist * 0.8).toFixed(1)}" r="${(0.8 + r() * 3).toFixed(1)}" fill="${col}" fill-opacity="${op(0.45 + r() * 0.35)}"/>`
+  const { e } = g
+  const R = raggioDi(g.profilo, g.lineare)
+  const y0 = g.profilo[0][0]
+  const y1 = g.profilo[g.profilo.length - 1][0]
+  const rb = R(y1)
+
+  // Un punto sull'anello di raggio rr all'altezza y, a `sin` del giro
+  // (-1 a sinistra, 1 a destra), sul davanti o sul dietro.
+  const sulGiro = (y, rr, sin, davanti = true) => [CX + rr * sin, y + (davanti ? 1 : -1) * e * rr * Math.sqrt(Math.max(0, 1 - sin * sin))]
+  const arco = (y, rr, sa, sb, davanti = true, ee = e) => {
+    const a = Math.asin(sa)
+    const b = Math.asin(sb)
+    return passi(a, b, 4 / Math.max(rr, 1)).map((t) => [CX + rr * Math.sin(t), y + (davanti ? 1 : -1) * ee * rr * Math.cos(t)])
   }
+  const meridiano = (sin, ya, yb, k = 1) => passi(ya, yb, 3).map((y) => sulGiro(y, R(y) * k, sin))
+
+  const contorni = [] // pieni: il segno della penna
+  const fini = [] // il tratteggio, righe sottili
+  const liquidoTratti = [] // il tratteggio del liquido, ritagliato
+  const add = (lista, d) => d && lista.push(d)
+
+  // IL CONTORNO: il bordo (dietro sottile, davanti pieno), i due fianchi
+  // (quello in ombra più grosso), il fondo.
+  add(contorni, penna(arco(y0, R(y0), -1, 1, false), 1.3, 0.5))
+  add(contorni, penna(arco(y0, R(y0), -1, 1), 2.1, 0.5))
+  add(contorni, penna(passi(y0, y1, 3).map((y) => [CX - R(y), y]), 2, 0.5))
+  add(contorni, penna(passi(y0, y1, 3).map((y) => [CX + R(y), y]), 3.2, 0.5))
+  if (rb > 1) add(contorni, penna(arco(y1, rb, -1, 1), 2.8, 0.5))
+  if (g.fondo) add(contorni, penna(arco(g.fondo, R(g.fondo) * 0.94, -0.95, 0.95), 1.3, 0.2))
+
+  // LO STELO E IL PIEDE, e dove l'oggetto tocca il tavolo.
+  let base = rb > 1 ? y1 + e * rb + 3 : y1
+  let largo = Math.max(rb, 30)
+  if (g.gambo) {
+    const { da, a, r: rs } = g.gambo
+    add(contorni, penna([[CX - rs, da], [CX - rs * 0.8, (da + a) / 2], [CX - rs, a]], 1.4, 0.6))
+    add(contorni, penna([[CX + rs, da], [CX + rs * 0.8, (da + a) / 2], [CX + rs, a]], 2.6, 0.6))
+  }
+  if (g.piede) {
+    const { y, r: rp } = g.piede
+    const ep = 0.17
+    add(contorni, penna(arco(y, rp, -1, 1, false, ep), 1.2, 0.4))
+    add(contorni, penna(arco(y, rp, -1, 1, true, ep), 2.6, 0.4))
+    add(contorni, penna(arco(y + 3, rp, -0.97, 0.97, true, ep), 1.3, 0.2))
+    for (const k of [0.5, 0.66, 0.82]) add(fini, linea(arco(y, rp * k, 0.3 + r() * 0.15, 0.97, true, ep)))
+    base = y + ep * rp + 5
+    largo = rp
+  }
+
+  // LA TAZZA, che di vetro non è: il tratteggio la gira tutta a destra,
+  // il tè si vede solo in cima, il piattino sotto.
+  let liquidoForma
+  if (g.opaca) {
+    for (let y = y0 + 6; y < y1 - 1; y += 4) add(fini, linea(arco(y, R(y), 0.3 + r() * 0.2, 0.98)))
+    for (const sin of [0.82, 0.88, 0.93, 0.97]) add(fini, linea(meridiano(sin, y0 + 4 + r() * 10, y1)))
+    const L = g.livello
+    const ri = R(L) * 0.96
+    // L'interno in ombra, a sinistra fra il bordo e il tè.
+    for (let sin = -0.95; sin < -0.3; sin += 0.09) add(fini, linea([sulGiro(y0, R(y0) * 0.97, sin, false), sulGiro(L, ri, sin, false)]))
+    liquidoForma = `${linea([...arco(L, ri, -1, 1, false), ...arco(L, ri, 1, -1)])}Z`
+    const passo = 5.6 - peso * 2.6
+    for (let y = L - e * ri + passo; y < L + e * ri; y += passo) add(liquidoTratti, linea([[CX - ri * (0.15 + (1 - peso) * 0.55), y], [CX + ri, y]]))
+    add(contorni, penna(arco(L, ri, -1, 1, false), 1, 0.3))
+    // Il manico, a doppio filo.
+    const q = (a, b, c) => passi(0, 1, 0.08).map((t) => [0, 1].map((k) => (1 - t) ** 2 * a[k] + 2 * (1 - t) * t * b[k] + t * t * c[k]))
+    add(contorni, penna([...q([280, 228], [326, 226], [318, 257]), ...q([318, 257], [310, 286], [266, 272]).slice(1)], 3, 0.4))
+    add(contorni, penna([...q([280, 238], [314, 236], [308, 257]), ...q([308, 257], [302, 278], [270, 263]).slice(1)], 1.5, 0.4))
+    add(fini, linea(q([312, 244], [318, 257], [309, 272])))
+    // Il piattino.
+    const p = g.piattino
+    const ep = 0.18
+    add(contorni, penna(arco(p.y, p.r, -1, 1, false, ep), 1.2, 0.4))
+    add(contorni, penna(arco(p.y, p.r, -1, 1, true, ep), 2.6, 0.4))
+    add(contorni, penna(arco(p.y + 4, p.r, -0.97, 0.97, true, ep), 1.4, 0.2))
+    add(contorni, penna(arco(p.y - 4, p.pozzo, -0.9, 0.9, true, ep), 1.1, 0.2))
+    for (const k of [0.66, 0.76, 0.86, 0.95]) add(fini, linea(arco(p.y, p.r * k, 0.45 + r() * 0.15, 0.97, true, ep)))
+    for (let y = y1 + 2; y < y1 + 12; y += 2.6) add(fini, linea([[CX + 24 + r() * 6, y], [CX + 70 + r() * 20, y]]))
+    base = p.y + ep * p.r + 6
+    largo = p.r
+  } else {
+    // IL VETRO: bianco, con il riflesso lasciato a sinistra e il bordo in
+    // ombra a destra fatto di poche righe che scendono.
+    const giu = g.fondo ?? y1 - 3
+    add(contorni, penna(meridiano(-0.74, y0 + 10, y0 + (giu - y0) * 0.55), 1.2, 0.1))
+    add(contorni, penna(meridiano(-0.62, y0 + (giu - y0) * 0.62, y0 + (giu - y0) * 0.78), 1, 0.1))
+    for (const sin of [0.84, 0.9, 0.95]) add(fini, linea(meridiano(sin, y0 + 3 + r() * 8, giu - r() * 10)))
+    // e le righe corte che girano sul bordo in ombra, incrociate con quelle
+    // che scendono: è il punto più scuro del vetro.
+    for (let y = y0 + 7; y < g.livello - 2; y += 4.5) add(fini, linea(arco(y, R(y), 0.86 + r() * 0.05, 0.99)))
+
+    // IL LIQUIDO: anelli che girano col bicchiere, tanto più fitti quanto
+    // più il drink è scuro; il lato in luce resta bianco; i drink scuri
+    // hanno il secondo strato incrociato, e a destra una scheggia nera.
+    const L = g.livello
+    const ri = (y) => R(y) * 0.95
+    const fine = g.fondo ?? y1 - 1
+    const fondoLargo = ri(fine) > 1
+    liquidoForma = `${linea([
+      ...arco(L, ri(L), -1, 1, false),
+      ...passi(L, fine, 3).map((y) => [CX + ri(y), y]),
+      ...(fondoLargo ? arco(fine, ri(fine), 1, -1) : []),
+      ...passi(fine, L, 3).map((y) => [CX - ri(y), y]),
+    ])}Z`
+    const passo = 5.6 - peso * 2.6
+    for (let y = L + passo; y < fine + e * ri(fine); y += passo) {
+      const sa = Math.max(-0.95, -0.2 - peso * 0.6 + (r() - 0.5) * 0.2)
+      add(liquidoTratti, linea(arco(y, ri(y), sa, 0.98)))
+    }
+    if (peso > 0.35) {
+      const da = 0.9 - peso * 0.6
+      for (let sin = da; sin < 0.97; sin += 4.5 / ri(L)) add(liquidoTratti, linea(meridiano(sin, L + r() * 10, fine, 0.95)))
+    }
+    add(contorni, penna(meridiano(0.9, L + 4, fine - 4, 0.95), 1.4 + peso * 2.4, 0.1))
+    add(contorni, penna(arco(L, ri(L), -1, 1, false), 1, 0.3))
+    add(contorni, penna(arco(L, ri(L), -1, 1), 1.5, 0.3))
+  }
+
+  // IL GHIACCIO: il cubetto chiaro dentro il liquido scuro, con due righe
+  // nell'angolo in ombra. Toglie il tratteggio del liquido dove sta.
+  const cubetti = (g.ghiaccio || []).map(([x, y, l, ang]) => {
+    const a = (ang * Math.PI) / 180
+    const v = (u, w) => [x + Math.cos(a) * u - Math.sin(a) * w, y + Math.sin(a) * u + Math.cos(a) * w]
+    const h = l / 2
+    const angoli = [v(-h, -h), v(h, -h), v(h, h), v(-h, h)]
+    add(contorni, penna([...angoli, angoli[0]], 1.5, 0.7))
+    for (const k of [0.35, 0.6]) add(fini, linea([v(h - l * k * 0.4, -h * 0.2), v(h - l * k * 0.4, h * 0.8)]))
+    return `${linea(angoli)}Z`
+  })
+  for (const [x, y, rr] of g.bolle || []) add(fini, `M${x - rr} ${y}a${rr} ${rr} 0 1 0 ${2 * rr} 0a${rr} ${rr} 0 1 0 ${-2 * rr} 0`)
+
+  // L'OMBRA SUL TAVOLO: righe orizzontali a destra, la luce viene da
+  // sinistra; e qualche riga di terreno che si perde, come nelle tavole.
+  const ombra = []
+  for (let k = 0; k < 6; k++) {
+    const t = (k + 0.5) / 6
+    const y = base - 3 + k * 2.8
+    const semi = largo * Math.sqrt(1 - (2 * t - 1) ** 2)
+    const xa = CX - largo * 0.5 + semi * 0.2 + r() * 6
+    const xb = Math.min(388, CX + largo * 0.3 + semi * 1.05 + r() * 8)
+    add(ombra, penna(passi(xa, xb, 12).map((x) => [x, y]), 1.3, 0.15))
+  }
+  const terreno = [
+    [CX - largo * 1.5, CX - largo * 0.8, base + 4],
+    [CX - largo * 1.15, CX - largo * 0.55, base + 10],
+    [CX + largo * 1.45, CX + largo * 1.95, base + 7],
+  ]
+  for (const [xa, xb, y] of terreno) {
+    const a = Math.max(12, xa)
+    const b = Math.min(388, xb)
+    if (b - a > 10) add(ombra, penna(passi(a, b, 10).map((x) => [x, y]), 1.1, 0.1))
+  }
+
+  // L'ACQUERELLO: steso piatto, più carico sul bordo dove asciuga, con la
+  // grana della carta, e spostato di un soffio rispetto al segno.
   const acquerello = (dentro) => `<g filter="url(#a)" style="mix-blend-mode:${fusione}">${dentro}</g>`
+  const velo = (d, col, o) => `<path d="${d}" fill="${col}" fill-opacity="${op(o)}" stroke="${col}" stroke-opacity="${op(o * 0.7)}" stroke-width="3"/>`
+  const ombraVelo = `<ellipse cx="${n1(CX + largo * 0.35)}" cy="${n1(base + 4)}" rx="${n1(largo * 0.95)}" ry="9" fill="${C.lilla}" fill-opacity="${op(0.22)}"/>`
   const macchiaDeco = deco?.macchia ? deco.macchia.replace(/(fill|stroke)-opacity="([\d.]+)"/g, (_, k, o) => `${k}-opacity="${op(Number(o))}"`) : ''
+  const tondo = deco?.ombra
+
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" style="isolation:isolate">
 <defs>
-<filter id="a" x="-40%" y="-40%" width="180%" height="180%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="${seme % 997}" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation="2"/></filter>
-<filter id="m" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="${(seme % 991) + 7}" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="2" xChannelSelector="R" yChannelSelector="G"/></filter>
-<pattern id="d" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(38)"><line x1="0" y1="0" x2="0" y2="6" stroke="${tratto}" stroke-width="1"/></pattern>
-<pattern id="x" width="4.5" height="4.5" patternUnits="userSpaceOnUse" patternTransform="rotate(-40)"><line x1="0" y1="0" x2="0" y2="4.5" stroke="${tratto}" stroke-width="0.8"/></pattern>
-<pattern id="o" width="4" height="4" patternUnits="userSpaceOnUse"><line x1="0" y1="2" x2="4" y2="2" stroke="${tratto}" stroke-width="0.6"/></pattern>
-<clipPath id="c"><path d="${f.corpo}"/></clipPath>
-<clipPath id="l"><path d="${f.liquido}"/></clipPath>
+<filter id="a" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="${seme % 997}" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G" result="d"/><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="${(seme % 991) + 3}" result="g"/><feColorMatrix in="g" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 1.25" result="k"/><feComposite in="d" in2="k" operator="in"/></filter>
+<clipPath id="l"><path d="${liquidoForma}"/></clipPath>
+<mask id="g"><rect width="400" height="400" fill="#fff"/>${cubetti.map((d) => `<path d="${d}" fill="#000"/>`).join('')}</mask>
+${tondo ? `<clipPath id="t">${deco.sagoma}</clipPath>` : ''}
 </defs>
-${acquerello(`<ellipse cx="${cx + 18}" cy="${cy + 70}" rx="92" ry="82" fill="${dietro}" fill-opacity="${op(0.18)}"/>`)}
-${acquerello(`<path d="${f.liquido}" fill="${colore}" fill-opacity="${op(0.5)}"/>`)}
+<g transform="translate(-2 1.5)">
+${acquerello(ombraVelo)}
+${acquerello(velo(liquidoForma, colore, 0.58))}
 ${macchiaDeco ? acquerello(macchiaDeco) : ''}
-<g>${puntini}</g>
-<g filter="url(#m)">
-<g clip-path="url(#l)"><rect width="400" height="400" fill="url(#o)" opacity="0.6"/></g>
-<g clip-path="url(#c)"><rect x="${f.ombra}" width="200" height="400" fill="url(#d)" opacity="0.8"/><rect x="${f.ombra + 26}" width="200" height="400" fill="url(#x)" opacity="0.7"/></g>
-<ellipse cx="${cx + 14}" cy="${f.base + 7}" rx="62" ry="8" fill="url(#d)" opacity="0.65"/>
 </g>
-<g filter="url(#m)" fill="none" stroke="${tratto}" stroke-width="1" stroke-linecap="round" opacity="0.55" transform="translate(1.4 0.9)">
-${f.vetro}
+<g fill="none" stroke="${tratto}" stroke-linecap="round" stroke-linejoin="round">
+<path d="${liquidoTratti.join('')}" stroke-width="1" clip-path="url(#l)" mask="url(#g)"/>
+<path d="${fini.join('')}" stroke-width="1"/>
+${tondo ? `<path d="${tratteggioTondo(...tondo)}" stroke-width="1" clip-path="url(#t)"/>` : ''}
+${deco?.tratto ? `<g stroke-width="1.9">${deco.tratto}</g>` : ''}
 </g>
-<g filter="url(#m)" fill="none" stroke="${tratto}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-${f.vetro}
-<path d="${f.riflesso}" stroke-width="1.2" opacity="0.8"/>
-${f.ghiaccio || ''}
-<g stroke-width="1.6">${f.bolle || ''}</g>
-${deco?.tratto || ''}
-</g>
+<path d="${[...contorni, ...ombra].join('')}" fill="${tratto}"/>
 ${deco?.testo ? deco.testo.replace('__TRATTO__', tratto) : ''}
 </svg>`
 }
@@ -412,9 +719,6 @@ ${deco?.testo ? deco.testo.replace('__TRATTO__', tratto) : ''}
 // a tratti orizzontali sotto il piede. Il contorno è più pesante di quello
 // di Tenniel: a stampa, la riga sottile si perde.
 const INCHIOSTRO = { scuro: '#eee8da', chiaro: '#1b1814' }
-// Quanto «pesa» un colore, in tratteggio: i chiari quasi niente, i rossi e
-// i bruni molto. Sono le stesse tinte di COLORI.
-const PESO = { limpido: 0.15, giallo: 0.3, pesca: 0.45, azzurro: 0.45, verde: 0.55, rosa: 0.55, lilla: 0.6, ambra: 0.7, rosso: 0.8, viola: 0.85 }
 
 function svgIncisione(s, { chiaro }) {
   const f = FORME[s.bicchiere]

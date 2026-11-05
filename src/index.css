@@ -1756,6 +1756,20 @@ label {
   font-size: 0.95rem;
 }
 
+/* LE FRASI DI UNO STILE (REQ-MENU-027, testiStile.js): ci sono solo dove
+   lo stile le scrive. Sopra la testata, l'epigrafe; sotto lo stato
+   dell'ordine, una riga in corsivo che non prende il posto dello stato. */
+.hero-epigrafe {
+  color: rgba(255, 255, 255, 0.86);
+  margin: 8px 0 0;
+  font-style: italic;
+}
+.frase-stile {
+  margin: 10px 0 0;
+  font-style: italic;
+  color: var(--muted);
+}
+
 /* ── Box ordine attivo nel menù ──────────────────────────────── */
 a.order-mini {
   display: flex;
@@ -10591,7 +10605,8 @@ body.pagina-piena .inv-scheda {
    lo stile Notte. Parlo di temi per il menu». Quattro vesti sopra il menù
    classico — stesse voci, stesso carosello, stessa griglia degli Special —
    che cambiano caratteri, filetti e impaginazione. I COLORI sono quelli del
-   tema del menù clienti, tranne «Lavagna», che senza lavagna non è niente.
+   tema del menù clienti, anche per «Lavagna»: la sua ardesia è una
+   tavolozza (themes.js), proposta dal tema e cambiabile (REQ-MENU-027).
    Ogni stile dichiara i suoi tre caratteri (titolo, nome della voce, testo):
    li usano le regole comuni qui sotto e l'assaggio nelle Impostazioni, che
    così si scrive con lo stile vero. I caratteri sono dentro l'app
@@ -10622,35 +10637,35 @@ body.pagina-piena .inv-scheda {
   --stile-testo: Georgia, 'Times New Roman', 'Noto Serif', serif;
 }
 
-/* Le regole comuni dei quattro: caratteri al loro posto, e la voce in riga
+/* Le regole comuni: caratteri al loro posto, e la voce in riga
    «NOME … prezzo», che è come si legge una carta. */
-:is(.stile-lavagna, .stile-deco, .stile-riviera) {
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) {
   font-family: var(--stile-testo);
 }
-:is(.stile-lavagna, .stile-deco, .stile-riviera) :is(.hero-title, .cat-header) {
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) :is(.hero-title, .cat-header) {
   font-family: var(--stile-titolo);
   font-style: normal;
   text-wrap: balance;
 }
-:is(.stile-lavagna, .stile-deco, .stile-riviera) .menu-item .grow > h3 {
+:is(.stile-lavagna, .stile-deco, .stile-riviera, .stile-meraviglie) .menu-item .grow > h3 {
   font-family: var(--stile-voce);
   margin: 0;
 }
-:is(.stile-lavagna, .stile-deco) .menu-item .row > .grow {
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .row > .grow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 12px;
   row-gap: 4px;
   align-items: baseline;
 }
-:is(.stile-lavagna, .stile-deco) .menu-item .grow > h3 {
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > h3 {
   grid-column: 1;
 }
-:is(.stile-lavagna, .stile-deco) .menu-item .grow > .price {
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > .price {
   grid-column: 2;
   grid-row: 1;
 }
-:is(.stile-lavagna, .stile-deco) .menu-item .grow > p {
+:is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > p {
   grid-column: 1 / -1;
   margin: 0;
 }
@@ -10658,32 +10673,26 @@ body.pagina-piena .inv-scheda {
    al tasto «Aggiungi» la colonna del nome restava di pochi caratteri, e in
    «Lavagna» spezzava i nomi a metà parola («Negroni Sbagliat-o»). */
 @media (max-width: 520px) {
-  :is(.stile-lavagna, .stile-deco) .menu-item .row > .grow {
+  :is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .row > .grow {
     grid-template-columns: minmax(0, 1fr);
   }
-  :is(.stile-lavagna, .stile-deco) .menu-item .grow > .price {
+  :is(.stile-lavagna, .stile-deco, .stile-meraviglie) .menu-item .grow > .price {
     grid-column: 1;
     grid-row: auto;
   }
 }
 
-/* «LAVAGNA»: gesso su ardesia. Porta i suoi colori, tutti: anche quelli
-   delle finestre e del carrello, che stanno dentro la pagina — con un tema
-   chiaro sotto, il gesso finirebbe su un fondo chiaro. */
+/* «LAVAGNA»: gesso su ardesia. Fino alla 1.10.15 i colori li scriveva
+   qui, tutti, e il tema del menù non contava; ora l'ardesia è la tavolozza
+   «Lavagna» (themes.js), che il tema propone e che si cambia (REQ-MENU-027).
+   Qui restano le righe a gessetto e le macchie di gesso sul fondo, fatte
+   col colore del testo: su qualunque tavolozza sono il suo gesso. */
 .stile-lavagna {
-  --bg: #24332d;
-  --bg-2: #1d2a25;
-  --card: #2c3d36;
-  --text: #f2eee4;
-  --muted: rgba(242, 238, 228, 0.66);
-  --line: rgba(242, 238, 228, 0.28);
-  --accent: #f3d27a;
-  --accent-2: #f3d27a;
-  --btn: #f3d27a;
+  --line: color-mix(in srgb, var(--text) 28%, transparent);
   color: var(--text);
   background:
-    radial-gradient(ellipse at 18% 8%, rgba(255, 255, 255, 0.07), transparent 55%),
-    radial-gradient(ellipse at 82% 72%, rgba(255, 255, 255, 0.045), transparent 50%),
+    radial-gradient(ellipse at 18% 8%, color-mix(in srgb, var(--text) 7%, transparent), transparent 55%),
+    radial-gradient(ellipse at 82% 72%, color-mix(in srgb, var(--text) 4.5%, transparent), transparent 50%),
     var(--bg);
 }
 /* La pagina, non l'assaggio: la lavagna arriva ai bordi dello schermo. */
@@ -10754,7 +10763,7 @@ body.pagina-piena .inv-scheda {
   padding: 4px 12px;
 }
 .stile-lavagna :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
   border: 1px dashed var(--line);
   border-radius: 14px;
 }
@@ -10913,6 +10922,190 @@ body.pagina-piena .inv-scheda {
 }
 .stile-riviera :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
   border-radius: 24px;
+}
+
+/* ── «MERAVIGLIE»: IL LIBRO ILLUSTRATO (REQ-MENU-027) ─────────────────────
+   Lo stile esclusivo della Tana alla Lewis Carroll. L'utente, 05/11/2026:
+   «non solo le immagini dei drink ma anche la pagina deve richiamare un po'
+   lo stile e anche i testi», la home compresa, «titoli e frasi, tasti
+   chiari». La pagina di un libro dell'Ottocento: caratteri da stampa
+   d'epoca, le categorie come capitoli numerati, i semi delle carte della
+   Regina come fregio, cornici a filetto doppio. I COLORI SONO DEL TEMA: la
+   tavolozza «Meraviglie» (themes.js) li propone, ma si cambia, e qui tutto
+   passa per le variabili. I tasti restano quelli del tema, piatti e
+   leggibili: chi ordina deve capire subito che cosa tocca. */
+.stile-meraviglie {
+  --stile-titolo: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --stile-voce: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --stile-testo: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  --m-filetto: color-mix(in srgb, var(--accent-2) 55%, transparent);
+  counter-reset: capitolo;
+}
+/* Le categorie sono capitoli: «Capitolo III» sopra il nome, i quattro semi
+   sotto. Il numero lo conta il CSS, così segue l'ordine del menù da solo. */
+.stile-meraviglie .cat-header {
+  counter-increment: capitolo;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 7vw, 2.3rem);
+  text-align: center;
+  margin-top: 38px;
+}
+.stile-meraviglie .cat-header::before {
+  content: 'Capitolo ' counter(capitolo, upper-roman);
+  font-family: var(--stile-testo);
+  font-style: normal;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.stile-meraviglie .cat-header::after {
+  content: '♠  ♥  ♣  ♦';
+  flex: none;
+  height: auto;
+  background: none;
+  opacity: 1;
+  font-style: normal;
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  color: var(--accent);
+}
+/* Gli Special stanno prima dei capitoli, come il frontespizio: non sono
+   il «Capitolo I», e il menù comincia a contare dalla prima categoria. */
+.stile-meraviglie .speciali-carosello .cat-header {
+  counter-increment: none;
+  align-items: flex-start;
+  margin-top: 0;
+}
+.stile-meraviglie .speciali-carosello .cat-header::before {
+  content: none;
+}
+.stile-meraviglie .cat-chip {
+  background: transparent;
+  border: 1px solid var(--m-filetto);
+  border-radius: 2px;
+  font-family: var(--stile-voce);
+  font-style: italic;
+  font-size: 1rem;
+}
+/* La voce: un riquadro a filetto doppio, come le tavole fuori testo. */
+.stile-meraviglie .menu-item {
+  background: var(--card);
+  border: 3px double var(--m-filetto);
+  border-radius: 2px;
+  box-shadow: none;
+}
+.stile-meraviglie .menu-item .grow > h3 {
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.15;
+}
+.stile-meraviglie .menu-item .grow > .price {
+  font-family: var(--stile-titolo);
+  font-style: italic;
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+.stile-meraviglie .menu-item .ingredients {
+  font-style: italic;
+}
+/* Il cartellino «Bevimi» sul disegno, appeso di sbieco come quello della
+   bottiglia nel libro. Solo sui disegni: su una foto sarebbe una scritta
+   sopra un bicchiere vero. È un'etichetta, non un tasto. */
+.stile-meraviglie .menu-item .row {
+  position: relative;
+}
+.stile-meraviglie .menu-item .drink-thumb.disegno + .grow::before {
+  content: 'Bevimi';
+  position: absolute;
+  top: -4px;
+  left: -6px;
+  transform: rotate(-9deg);
+  padding: 1px 7px;
+  background: var(--card);
+  border: 1px solid var(--m-filetto);
+  border-radius: 2px;
+  font-family: var(--stile-titolo);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--accent);
+  pointer-events: none;
+}
+.stile-meraviglie :is(.carosello-slide, .speciali-griglia .menu-item.speciale) {
+  border: 3px double var(--m-filetto);
+  border-radius: 2px;
+}
+
+/* LE PAGINE DEI CLIENTI, NON SOLO IL MENÙ: la home, gli ordini, lo stato
+   dell'ordine, l'accesso. App scrive lo stile sulla radice (data-stile)
+   solo per chi ordina, come fa coi colori: il gestionale non si veste. */
+:root[data-stile='meraviglie'] {
+  --m-titoli: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  --m-filetto: color-mix(in srgb, var(--accent-2) 55%, transparent);
+}
+:root[data-stile='meraviglie'] main {
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+:root[data-stile='meraviglie'] :is(main h1, main h2, main h3, .brand, .bignum) {
+  font-family: var(--m-titoli);
+  font-weight: 400;
+}
+:root[data-stile='meraviglie'] main .card {
+  border: 3px double var(--m-filetto);
+  box-shadow: none;
+}
+/* La testata: la foto in seppia, come una tavola stampata, dentro una
+   cornice a filetto doppio al posto dell'oro di casa. */
+:root[data-stile='meraviglie'] .hero {
+  border-radius: 2px;
+}
+:root[data-stile='meraviglie'] .hero::after {
+  inset: 8px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  border: 3px double color-mix(in srgb, #fff 70%, transparent);
+  opacity: 1;
+  -webkit-mask: none;
+  mask: none;
+}
+:root[data-stile='meraviglie'] .hero-img {
+  filter: sepia(0.6) brightness(0.55);
+}
+:root[data-stile='meraviglie'] .hero-overlay {
+  padding: 26px;
+  /* La foto ha sempre il velo scuro sopra, con qualunque tavolozza: il
+     titolo è chiaro per forza, anche quando il testo della pagina è
+     inchiostro su avorio. */
+  color: #fbf6ea;
+}
+:root[data-stile='meraviglie'] .hero-title {
+  font-size: clamp(2.2rem, 9vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.05;
+}
+:root[data-stile='meraviglie'] :is(.hero-sub, .hero-epigrafe) {
+  font-family: var(--m-titoli);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+:root[data-stile='meraviglie'] .landing section.card h2 {
+  font-family: var(--m-titoli);
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+:root[data-stile='meraviglie'] .landing-nav a {
+  font-family: var(--m-titoli);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+:root[data-stile='meraviglie'] .frase-stile {
+  font-family: var(--m-titoli);
+  font-size: 1.05rem;
 }
 
 /* ── GLI STILI INSTALLATI, IN IMPOSTAZIONI (REQ-MENU-022) ─────────────────
