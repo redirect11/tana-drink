@@ -6,17 +6,7 @@
 // quella della Tana (vitest.config.mjs), come in produzione.
 
 import { describe, it, expect } from 'vitest'
-import {
-  venueDi,
-  venuePredefinito,
-  intestazioneScontrino,
-  socialDaTesto,
-  socialInTesto,
-  VENUE_VUOTO,
-  CHIAVI_VENUE,
-  CLIENTE,
-  pressoIlLocale,
-} from '../../src/lib/venue.js'
+import { venueDi, venuePredefinito, intestazioneScontrino, socialDaTesto, socialInTesto, VENUE_VUOTO, CHIAVI_VENUE, CLIENTE, pressoIlLocale, righeFiscali } from '../../src/lib/venue.js'
 
 describe('venueDi', () => {
   it('senza impostazioni vale la build: la Tana', () => {
@@ -84,5 +74,28 @@ describe('i social in Impostazioni, una riga per social', () => {
     ])
     expect(socialInTesto(socialDaTesto(testo))).toBe('instagram https://instagram.com/bar\nlink https://bar.example')
     expect(socialDaTesto('')).toEqual([])
+  })
+})
+
+// I DATI DEL TITOLARE (REQ-FLOTTA-030): la regia li scrive dalla sua
+// registrazione, dove sono vuoti; sulle fatture di cortesia ci vogliono
+// partita IVA, codice fiscale e sede legale di chi emette.
+describe('i dati fiscali del locale', () => {
+  it('le chiavi nuove ci sono, vuote di suo', () => {
+    for (const k of ['venue_phone', 'venue_vat_number', 'venue_tax_code', 'venue_legal_address']) {
+      expect(CHIAVI_VENUE).toContain(k)
+      expect(VENUE_VUOTO[k]).toBe('')
+    }
+  })
+
+  it('sede legale in una riga, partita IVA e codice fiscale nell’altra', () => {
+    expect(
+      righeFiscali({ venue_vat_number: '01234567890', venue_tax_code: 'RSSMRA80A01F839X', venue_legal_address: 'Via Roma 1, 80035 Nola (NA)' })
+    ).toEqual(['Sede legale: Via Roma 1, 80035 Nola (NA)', 'P.IVA 01234567890 · C.F. RSSMRA80A01F839X'])
+  })
+
+  it('il codice fiscale uguale alla partita IVA non si ripete; niente righe vuote', () => {
+    expect(righeFiscali({ venue_vat_number: '01234567890', venue_tax_code: '01234567890' })).toEqual(['P.IVA 01234567890'])
+    expect(righeFiscali({})).toEqual([])
   })
 })

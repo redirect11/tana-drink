@@ -365,3 +365,56 @@ describe('il preconto di un conto con due acconti scontati', () => {
     expect(carta()).not.toContain('Resta da pagare')
   })
 })
+
+// LA PARTITA IVA SULLA CARTA (REQ-FLOTTA-030): sotto la ragione sociale
+// sulla ricevuta, e sulla fattura di cortesia coi dati di chi emette. Si
+// legge dal locale al momento della stampa: le impostazioni della
+// stampante salvate su un dispositivo si tengono l'intestazione di allora.
+describe('i dati fiscali del locale sulla carta', () => {
+  const FISCALI = {
+    venue_vat_number: '01234567890',
+    venue_tax_code: 'RSSMRA80A01F839X',
+    venue_legal_address: 'Via Roma 1, 80035 Nola (NA)',
+  }
+
+  it('la ricevuta porta la partita IVA sotto la ragione sociale', async () => {
+    impostazioni(FISCALI)
+    const uscito = await stampaAcconto()
+    expect(uscito).toContain('P.IVA 01234567890')
+  })
+
+  it('senza partita IVA la riga non c’è', async () => {
+    const uscito = await stampaAcconto()
+    expect(uscito).not.toContain('P.IVA')
+  })
+
+  // Il primo salvataggio qualunque delle impostazioni della stampante (qui
+  // l'indirizzo) congelava sul dispositivo anche l'intestazione di quel
+  // momento: una ragione sociale corretta dopo non arrivava più sulla carta.
+  it('salvare la stampante non congela la ragione sociale', async () => {
+    impostazioni({ venue_legal_name: 'Vecchia Srl' })
+    const printer = await import('../../src/lib/printer.js')
+    printer.savePrinterSettings({ ip: '192.168.1.50' })
+    impostazioni({ venue_legal_name: 'Nuova Srl', ...FISCALI })
+    expect(printer.loadPrinterSettings()).toMatchObject({ ip: '192.168.1.50', businessFooter: 'Nuova Srl' })
+    const uscito = await stampaAcconto()
+    expect(uscito).toContain('Nuova Srl')
+    expect(uscito).not.toContain('Vecchia Srl')
+  })
+
+  it('la fattura di cortesia dice chi la emette', async () => {
+    impostazioni(FISCALI)
+    const printer = await import('../../src/lib/printer.js')
+    await printer.printFattura({
+      number: '3/2026',
+      created_at: '2026-08-21T21:00:00.000Z',
+      total: 16,
+      iva_rate: 22,
+      customer: { denominazione: 'Rossi Srl', piva: '09876543210' },
+      items: [{ qty: 2, name: 'Negroni', unit_price: 8 }],
+    })
+    const uscito = carta()
+    expect(uscito).toContain('Sede legale: Via Roma 1, 80035 Nola (NA)')
+    expect(uscito).toContain('P.IVA 01234567890 · C.F. RSSMRA80A01F839X')
+  })
+})

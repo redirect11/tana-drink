@@ -27,6 +27,7 @@ import { getMyOrderIds } from './cart.js'
 import { fetchOrdersByCustomer } from './api.js'
 import { spegniPush } from './push.js'
 import { dimenticaTutto } from './notifyStore.js'
+import { ERRORI_GOOGLE } from './erroriAccesso.js'
 
 const customerDoc = (uid) => doc(db, 'customers', uid)
 
@@ -203,6 +204,7 @@ export function authError(code) {
     'auth/too-many-requests': 'Troppi tentativi: riprova tra qualche minuto.',
     'auth/network-request-failed': 'Errore di rete: controlla la connessione.',
     'auth/popup-closed-by-user': 'Accesso annullato.',
+    ...ERRORI_GOOGLE,
   }
   return map[code] || 'Errore di autenticazione. Riprova.'
 }

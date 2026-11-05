@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 256 | fatto e coperto dai test |
+| ✅ | 257 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**310 voci** in tutto. **273** descrivono il sistema com'è oggi e
+**311 voci** in tutto. **274** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -64,7 +64,7 @@ come «vero oggi», non come «garantito».
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 10 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
-| [FLOTTA](#flotta) | 7 | — |  |
+| [FLOTTA](#flotta) | 8 | — |  |
 
 ## Cosa fa il sistema
 
@@ -3575,6 +3575,22 @@ FATTA LA CHIAMATA (31/10/2026). `inviaSceltaAggiornamento` in api.js chiede il t
 UNA DIFESA IN PIÙ: il token va solo a una Function dei progetti della regia (`drink-regia`, `drink-regia-test`, scritti per intero: un controllo sul finale del nome lascerebbe passare un progetto altrui `foo-drink-regia`); un altro indirizzo vale come nessuno, e chiuso BUG-125 il controllo si può togliere. Finché la licenza sta in settings/bar (BUG-125) la riscrive ogni bartender, e un `scelta_url` suo si prenderebbe il token del titolare al primo «Aggiorna». Il documento `aggiornamenti/scelta` non ha più regole: nessuno lo legge né lo scrive, e il test delle regole lo dimostra.
 
 **Dove**: `src/lib/aggiornamenti.js, src/components/PropostaAggiornamento.jsx, src/components/InfoTab.jsx, src/App.jsx, src/lib/api.js (inviaSceltaAggiornamento), firestore.rules (aggiornamenti/scelta, chiuso), docs/aggiornamenti-dalla-regia.md` · **Lo dimostrano**: `tests/unit/aggiornamenti.test.js`, `tests/component/PropostaAggiornamento.test.jsx`, `tests/regole/aggiornamenti.test.js`
+
+#### REQ-FLOTTA-030 — Il passaggio dalla regia all'app e ritorno con un clic, i dati del titolare nelle impostazioni, il banco con Google
+
+L'utente, 02/11/2026: «Dobbiamo prevedere un single sign-on [...] risulta loggato sia backoffice sia istanza per quell'utente», «mi serve qualcosa che sia sicuro e robusto», per tutte le istanze. La regia apre l'app con #accesso-regia=<codice>: l'app lo toglie subito dall'indirizzo, lo scambia con la regia (scambiaPassaggio) e entra con signInWithCustomToken. «Area clienti», per il titolare admin, manda alla regia (passaggioVersoRegia) un ID token appena rinnovato e apre l'url della risposta. La regia scrive a ogni deploy, solo dove sono vuoti, i dati del titolare in settings/bar, compresi quattro campi nuovi da mostrare e usare: venue_phone, venue_vat_number, venue_tax_code, venue_legal_address. Il banco entra anche con Google. Il contratto in docs/passaggio-dalla-regia.md; la regia è pronta (drink-regia REQ-FLOTTA-030, PR #49).
+
+LA TANA IN PRODUZIONE (04/11/2026). L'utente: la regia «deve sapere che Flavio è il titolare, deve poter inviare comunicazioni a lui via email rispetto al prodotto e deve poter effettuare il single sign on con la sua utenza». Gli account restano due, legati dall'email: il passaggio vuole nel locale la stessa email del titolare, verificata, e il ruolo admin. Quindi titolare-locale.mjs dice anche se l'email è verificata, e con un'opzione esplicita la segna verificata. La 1.10 con questo requisito va su main, perché la regia di produzione legge da lì. L'ordine del giorno del rilascio, coi permessi da dare l'utente, sta in docs/la-tana-nella-regia.md.
+
+COME È FATTO (05/11/2026, su richiesta dell'utente).
+
+IL CODICE si cattura in main.jsx prima del router e si toglie dall'indirizzo (replaceState); App lo consuma una volta sola (React in sviluppo monta due volte, e il secondo scambio troverebbe il codice speso), lo scambia, entra con signInWithCustomToken e va in /bar; se non riesce, va in /bar col login normale e la riga che dice perché. Nessun nuovo tentativo: il codice è già speso. Solo verso i progetti della regia (urlFunzioneRegia), solo codici di lettere, cifre, «-» e «_». «AREA CLIENTI» sta nel menù laterale, per l'admin, quando la build conosce la regia e la licenza dice dov'è (`regia_url`), come gli altri tasti verso la regia; il token si rinnova al tocco (getIdToken(true)) e si apre solo un indirizzo https. Chi è admin ma non il titolare lo dice la regia, al tocco. I DATI FISCALI (partita IVA, codice fiscale, sede legale) si leggono dal locale al momento della stampa, non dalle impostazioni della stampante, che su un dispositivo si tengono l'intestazione di quando le si è salvate: la partita IVA va sotto la ragione sociale sulle ricevute, tutti e tre sulla fattura di cortesia e nel suo testo per email; il telefono nei contatti della pagina iniziale.
+
+AL BANCO CON GOOGLE: un account Google senza ruolo del personale trova «Quest'area è riservata allo staff», come un cliente.
+
+ATTENZIONE, da provare sul test: con «un account per email» (l'impostazione di Firebase), un accesso Google con la stessa email di un account email e password la cui email NON è verificata prende il posto di quell'accesso, e la password non vale più; con l'email verificata si collegano. Quindi prima si verifica l'email del titolare (titolare-locale.mjs --verifica-email), poi si usa Google. Le frasi d'errore dell'accesso con Google sono una lista sola (src/lib/erroriAccesso.js), per il banco e per i clienti: erano finite solo in quella del banco.
+
+**Dove**: `src/lib/passaggioRegia.js, src/main.jsx (catturaCodiceRegia), src/App.jsx (l'ingresso dalla regia), src/components/StaffDrawer.jsx (Area clienti), src/pages/BartenderPage.jsx (Entra con Google, l'avviso), src/lib/venue.js (i campi nuovi, righeFiscali), src/components/IdentitaLocale.jsx, src/lib/printer.js (datiFiscaliDelLocale), src/components/InvoicesTab.jsx, src/pages/LandingPage.jsx (il telefono), scripts/titolare-locale.mjs, scripts/lib-titolare.js, docs/passaggio-dalla-regia.md, docs/la-tana-nella-regia.md` · **Lo dimostrano**: `tests/unit/passaggioRegia.test.js`, `tests/component/AccessoBanco.test.jsx`, `tests/unit/mailFattura.test.js`, `tests/unit/erroriAccesso.test.js`
 
 #### REQ-FLOTTA-026 — L'app si presenta alla regia a ogni versione nuova, e riceve la licenza se manca
 

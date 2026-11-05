@@ -91,7 +91,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      {(venue.venue_city || venue.venue_email || venue.venue_socials.length > 0) && (
+      {(venue.venue_city || venue.venue_email || venue.venue_phone || venue.venue_socials.length > 0) && (
         <section id="contatti" className="card">
           <h2 style={{ marginTop: 0 }}>Contatti</h2>
           {venue.venue_city && (
@@ -102,6 +102,11 @@ export default function LandingPage() {
           {venue.venue_email && (
             <p className="muted" style={{ margin: '0 0 6px' }}>
               ✉️ <a href={`mailto:${venue.venue_email}`}>{venue.venue_email}</a>
+            </p>
+          )}
+          {venue.venue_phone && (
+            <p className="muted" style={{ margin: '0 0 6px' }}>
+              📞 <a href={`tel:${venue.venue_phone.replace(/[^\d+]/g, '')}`}>{venue.venue_phone}</a>
             </p>
           )}
           {venue.venue_socials.length > 0 && (

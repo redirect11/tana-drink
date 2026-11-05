@@ -34,6 +34,29 @@ export async function leggiDallaRegia(url, prendi = globalThis.fetch) {
   }
 }
 
+// UNA POST ALLA REGIA con l'attesa massima: { status, corpo }, con status 0
+// senza rete o dopo l'attesa (e in `errore` il perché, per la console). Una sola, per tutte le chiamate che mandano
+// qualcosa alla regia (il passaggio, REQ-FLOTTA-030; quelle col token del
+// titolare, api.js): erano tre copie dello stesso giro, e una correzione
+// all'attesa o alla lettura del corpo non arrivava alle altre.
+export async function postaAllaRegia(url, { corpo, intestazioni = {}, prendi = globalThis.fetch } = {}) {
+  const ferma = new AbortController()
+  const timer = setTimeout(() => ferma.abort(), ATTESA_REGIA_MS)
+  try {
+    const r = await prendi(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...intestazioni },
+      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      signal: ferma.signal,
+    })
+    return { status: r.status, corpo: await r.json().catch(() => null) }
+  } catch (e) {
+    return { status: 0, corpo: null, errore: e?.message || String(e) }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 // Un catalogo della regia letto adesso e ricordato sul dispositivo: le voci
 // già interpretate, o null se non si è letto (allora chi chiama mostra
 // l'ultimo ricordato). Lo schema dei temi e del listino dei moduli.

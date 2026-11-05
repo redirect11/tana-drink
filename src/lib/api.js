@@ -114,7 +114,7 @@ import { recentDrinkIds } from './posCatalog.js'
 import { MESSAGGI_AGGIORNAMENTI, esitoScelta } from './aggiornamenti.js'
 import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
-import { ATTESA_REGIA_MS } from './funzioniRegia.js'
+import { ATTESA_REGIA_MS, postaAllaRegia } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
 import { ordina, vistaSezione, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
@@ -6581,21 +6581,13 @@ export const ATTESA_SCELTA_MS = ATTESA_REGIA_MS
 // La usano la scelta sugli aggiornamenti, la presentazione (REQ-FLOTTA-026)
 // e i moduli (REQ-LIC-012).
 async function chiamaRegia(url, dati) {
-  const ferma = new AbortController()
-  const timer = setTimeout(() => ferma.abort(), ATTESA_REGIA_MS)
-  try {
-    const token = await auth.currentUser?.getIdToken()
-    if (!token) return null
-    const risposta = await fetch(url, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(dati),
-      signal: ferma.signal,
-    })
-    return { status: risposta.status, corpo: await risposta.json().catch(() => null) }
-  } finally {
-    clearTimeout(timer)
-  }
+  const token = await auth.currentUser?.getIdToken()
+  if (!token) return null
+  const r = await postaAllaRegia(url, { corpo: dati, intestazioni: { Authorization: `Bearer ${token}` } })
+  // Chi chiama distingue «senza rete» da una risposta: lo dice l'eccezione,
+  // col perché vero per la console.
+  if (r.status === 0) throw new Error(r.errore || 'senza risposta')
+  return r
 }
 
 export async function inviaSceltaAggiornamento(url, tag, scelta) {

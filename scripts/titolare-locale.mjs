@@ -6,6 +6,7 @@
 //         --uid <uid nella regia> --email flavio@example.it            # dice cosa farebbe
 //    node scripts/titolare-locale.mjs ... --applica                    # lo fa
 //    node scripts/titolare-locale.mjs ... --emulator --applica         # sull'emulatore
+//    node scripts/titolare-locale.mjs ... --verifica-email --applica   # e segna l'email verificata
 //
 //  Per i locali della flotta lo fa da sola la regia a ogni deploy
 //  (drink-regia, scripts/titolare-istanza.mjs). I locali esistenti, come
@@ -17,6 +18,13 @@
 //  il caso atteso è «resta quello»: Flavio ha già il suo account, usato,
 //  con un uid diverso, e un account usato non si cancella mai.
 //
+//  L'EMAIL VERIFICATA (REQ-FLOTTA-030): lo script dice sempre se l'email
+//  dell'account lo è, perché il passaggio fra regia e app accetta solo
+//  un'email verificata. La segna verificata solo con --verifica-email
+//  insieme ad --applica, e solo se l'email dell'account è quella data: è
+//  un account che chi lancia lo script conosce (Flavio usa quell'email da
+//  sempre), non una scorciatoia da prendere senza saperlo.
+//
 //  Le credenziali sono la sessione del Firebase CLI (`firebase login`),
 //  come scripts/set-role.js: chi lo lancia deve poter amministrare Auth nel
 //  progetto (roles/firebaseauth.admin, o proprietario). Niente password:
@@ -27,12 +35,13 @@ import { emailTitolare, uidTitolare, pianoTitolare, daRest } from './lib-titolar
 
 const EMULATOR = flag('emulator')
 const APPLICA = flag('applica')
+const VERIFICA_EMAIL = flag('verifica-email')
 // Nessun progetto per difetto: la produzione si nomina a mano (CLAUDE.md).
 const PROGETTO = arg('project') || (EMULATOR ? 'demo-tana-drink' : null)
 const EMAIL = emailTitolare(arg('email'))
 const UID = uidTitolare(arg('uid', ''))
 if (!PROGETTO || !EMAIL || UID === null) {
-  console.error('Uso: node scripts/titolare-locale.mjs --project <id> --email <email> [--uid <uid della regia>] [--applica] [--emulator]')
+  console.error('Uso: node scripts/titolare-locale.mjs --project <id> --email <email> [--uid <uid della regia>] [--verifica-email] [--applica] [--emulator]')
   process.exit(1)
 }
 
@@ -61,6 +70,12 @@ const descrizione = {
   tieni: `tenere l’account ${cosa.uid}${cosa.ruolo ? ', e farlo admin' : ' (già admin)'}`,
 }[cosa.azione]
 console.log(`[titolare] ${PROGETTO}: ${APPLICA ? '' : 'farebbe: '}${descrizione}${cosa.link ? '; email per impostare la password' : ''}`)
+const verificaOra = VERIFICA_EMAIL && cosa.verifica
+if (cosa.emailVerificata) console.log(`[titolare] l’email ${EMAIL} è verificata`)
+else if (verificaOra) console.log(`[titolare] ${APPLICA ? '' : 'farebbe: '}segnare verificata l’email ${EMAIL}`)
+else if (cosa.verifica) {
+  console.log(`⚠️  L’email ${EMAIL} NON è verificata: il passaggio fra regia e app non la accetta. Con --verifica-email --applica la si segna verificata.`)
+} else console.log(`⚠️  L’email dell’account ${cosa.uid} non è verificata e non è ${EMAIL}: da qui non si verifica.`)
 if (!APPLICA) {
   console.log('[titolare] Niente scritto: rilancia con --applica per farlo.')
   process.exit(0)
@@ -71,8 +86,16 @@ let uid = cosa.uid
 // non li vuole. Se la creazione fallisce, al rilancio si crea da capo.
 if (cosa.daCancellare) await chiama('accounts:delete', { localId: cosa.daCancellare })
 if (cosa.azione !== 'tieni') uid = (await chiama('accounts', { ...(cosa.uid ? { localId: cosa.uid } : {}), email: EMAIL, emailVerified: true })).localId
-if (cosa.ruolo) await chiama('accounts:update', { localId: uid, customAttributes: JSON.stringify(cosa.ruolo) })
+// Ruolo ed email in una scrittura sola: se fallisce, non resta a metà.
+if (cosa.ruolo || verificaOra) {
+  await chiama('accounts:update', {
+    localId: uid,
+    ...(cosa.ruolo ? { customAttributes: JSON.stringify(cosa.ruolo) } : {}),
+    ...(verificaOra ? { emailVerified: true } : {}),
+  })
+}
 console.log(`[titolare] ✓ ${PROGETTO}: ${uid} è admin`)
+if (verificaOra) console.log(`[titolare] ✓ ${PROGETTO}: l’email ${EMAIL} è segnata verificata`)
 
 if (cosa.link) {
   // L'email «imposta la password» la manda Firebase dal progetto del

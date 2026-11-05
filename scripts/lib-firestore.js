@@ -148,6 +148,14 @@ export function daValore(v) {
   if ('mapValue' in v) return daCampi(v.mapValue.fields)
   return null
 }
+// I documenti di una collezione di un backup, nella forma di backup-db.js
+// ({ id, fields }). Il file del backup dell'app (src/lib/backup.js) ha
+// un'altra forma, { righe: [{ id, dati }] } coi dati in chiaro: si porta a
+// questa, così lo storico che l'app salva ma non può rimettere (SOLO_COPIA)
+// si rimette con scripts/ripristina-db.js (BUG-129).
+export const documentiDelBackup = (collezione) =>
+  Array.isArray(collezione) ? collezione : (collezione?.righe || []).map((r) => ({ id: r.id, fields: aCampi(r.dati || {}) }))
+
 export const daCampi = (fields) => Object.fromEntries(Object.entries(fields || {}).map(([k, v]) => [k, daValore(v)]))
 
 // Legge un argomento da riga di comando: --nome valore

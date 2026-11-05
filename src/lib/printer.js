@@ -30,7 +30,7 @@ import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } f
 import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
-import { intestazioneScontrino, venueDi, venuePredefinito } from './venue.js'
+import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
 import { rigaMarchio } from './limiti.js'
 import {
   configStampa,
@@ -76,6 +76,21 @@ function stampaMarchio(prn, impostazioni) {
 // di partenza, che è il comportamento di sempre. Niente da migrare,
 // niente da aspettare.
 const impostazioniDelLocale = () => impostazioniRicordate({})
+
+// I DATI FISCALI SI LEGGONO DAL LOCALE AL MOMENTO DELLA STAMPA, non dalle
+// impostazioni della stampante: quelle, una volta salvate su un
+// dispositivo, si tengono anche l'intestazione di allora, e una partita IVA
+// scritta dopo (dalla regia, o in Impostazioni → Il locale) non
+// arriverebbe mai sulla carta (REQ-FLOTTA-030).
+export const datiFiscaliDelLocale = () => righeFiscali(venueDi(impostazioniDelLocale()))
+
+// La coda di scontrino e ricevuta d'acconto: la ragione sociale e, sotto,
+// la partita IVA del locale, se c'è.
+function stampaRagioneSociale(prn, s, impostazioni) {
+  prn.addText(`${s.businessFooter}\n`)
+  const piva = partitaIva(venueDi(impostazioni))
+  if (piva) prn.addText(`P.IVA ${piva}\n`)
+}
 
 // Larghezza colonne stamante 80 mm (TM-m30II / TM-m30III): 48 chars std.
 const COL = 48
@@ -417,33 +432,45 @@ impostaContestoDiagnostica(() => {
   }
 })
 
+// Quello che è stato salvato su questo dispositivo: di questa persona, o —
+// PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO — quello del
+// dispositivo. Senza, il giorno del passaggio a impostazioni per utente
+// ogni tablet del locale avrebbe perso l'indirizzo della stampante — e la
+// comanda non esce.
+function salvateQui() {
+  try {
+    return (
+      JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null') ||
+      JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null') ||
+      {}
+    )
+  } catch {
+    return {}
+  }
+}
+
 export function loadPrinterSettings() {
   // I default: quelli fissi più l'intestazione del locale (REQ-VENUE-003),
   // dalle impostazioni in cache se il locale l'ha scritta, se no dalla build.
   const base = { ...DEFAULT_PRINTER_SETTINGS, ...intestazioneScontrino(venueDi(impostazioniDelLocale())) }
-  try {
-    const mie = JSON.parse(localStorage.getItem(chiaveImpostazioni()) || 'null')
-    if (mie) return { ...base, ...mie }
-    // PRIMA VOLTA DI QUESTA PERSONA SU QUESTO DISPOSITIVO: eredita quelle
-    // del dispositivo. Senza, il giorno del passaggio a impostazioni per
-    // utente ogni tablet del locale avrebbe perso l'indirizzo della
-    // stampante — e la comanda non esce.
-    const delDispositivo = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null')
-    return { ...base, ...(delDispositivo || {}) }
-  } catch {
-    return base
-  }
+  return { ...base, ...salvateQui() }
 }
 
+// SI SALVA SOLO QUELLO CHE SI È SCELTO, non i default e l'intestazione
+// presa dal locale. Salvando tutto, il primo salvataggio qualunque (l'IP
+// della stampante, la stampa automatica) congelava sul dispositivo anche
+// nome, indirizzo e ragione sociale di quel momento, e una correzione in
+// Impostazioni → Il locale non arrivava più sulla carta (REQ-FLOTTA-030:
+// la regia scrive i dati del titolare dopo). I dispositivi che li hanno già
+// congelati li tengono finché qualcuno non li cambia in «Dati del locale».
 export function savePrinterSettings(patch) {
-  const current = loadPrinterSettings()
-  const next = { ...current, ...patch }
+  const next = { ...salvateQui(), ...patch }
   try {
     localStorage.setItem(chiaveImpostazioni(), JSON.stringify(next))
   } catch {
     /* storage pieno o negato: si continua con quelle in memoria */
   }
-  return next
+  return loadPrinterSettings()
 }
 
 // ── Connessione ───────────────────────────────────────────────────────────────
@@ -1888,7 +1915,7 @@ export function printScontrino(order, opts = {}) {
       const shortId = (order.id || '').substring(0, 36)
       prn.addText(`${shortId}\n`)
     }
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) stampaRagioneSociale(prn, s, impostazioni)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
     stampaMarchio(prn, impostazioni)
@@ -1932,7 +1959,8 @@ export function printScontrino(order, opts = {}) {
 export function printScontrinoAcconto(order, incasso = {}) {
   return lavoroDiStampa(async (prn) => {
     const s = loadPrinterSettings()
-    const cfg = configStampa(impostazioniDelLocale(), 'acconto')
+    const impostazioni = impostazioniDelLocale()
+    const cfg = configStampa(impostazioni, 'acconto')
     const dopo = contoDopoIncasso(order, incasso)
     const { date, time } = italianDateTime(incasso?.at || new Date().toISOString())
     const versato = round2(incasso?.amount)
@@ -2048,10 +2076,10 @@ export function printScontrinoAcconto(order, incasso = {}) {
     prn.addText('\n')
 
     if (cfg.mostra('codice_conto')) prn.addText(`${(order.id || '').substring(0, 36)}\n`)
-    if (cfg.mostra('ragione_sociale')) prn.addText(`${s.businessFooter}\n`)
+    if (cfg.mostra('ragione_sociale')) stampaRagioneSociale(prn, s, impostazioni)
     const saluto = cfg.parole('riga_cortesia')
     if (saluto) prn.addText(`${saluto}\n`)
-    stampaMarchio(prn, impostazioniDelLocale())
+    stampaMarchio(prn, impostazioni)
 
     prn.addFeedLine(4)
     prn.addCut(prn.CUT_FEED)
@@ -2083,7 +2111,10 @@ export function printFattura(invoice) {
     prn.addTextSize(1, 1)
     prn.addTextStyle(false, false, false, prn.COLOR_1)
     prn.addText(`${s.businessAddress}\n`)
-    prn.addText(`${s.businessCity}\n\n`)
+    prn.addText(`${s.businessCity}\n`)
+    // Chi emette: su una fattura, anche di cortesia, ci vogliono.
+    for (const riga of datiFiscaliDelLocale()) prn.addText(`${riga}\n`)
+    prn.addText('\n')
     prn.addTextSize(1, 2)
     prn.addTextStyle(false, false, true, prn.COLOR_1)
     prn.addText(`FATTURA DI CORTESIA n. ${invoice.number}\n`)

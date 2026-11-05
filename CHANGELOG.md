@@ -1,5 +1,34 @@
 # Cosa è cambiato
 
+## 1.10.15-beta — in lavorazione
+
+### Regia e titolare
+
+- **Dalla regia all'app, e ritorno, con un clic** (REQ-FLOTTA-030). «Apri
+  la tua app» dall'area clienti della regia fa entrare il titolare nel suo
+  locale senza password; dal menù laterale, «Area clienti» lo porta nella
+  regia già entrato. Il tasto compare quando la licenza è della regia.
+- **Al banco si entra anche con Google.** Se l'accesso con Google non va
+  (finestra bloccata dal browser, Google non attivo), il personale e i
+  clienti leggono cosa fare, non un errore generico.
+- **Telefono, partita IVA, codice fiscale e sede legale** in Impostazioni →
+  Il locale: la regia li riempie dalla registrazione del titolare. La
+  partita IVA va sotto la ragione sociale sulle ricevute; i tre dati
+  fiscali sulla fattura di cortesia, stampata e nella mail; il telefono nei
+  contatti della pagina iniziale. Salvare le impostazioni della stampante
+  non blocca più l'intestazione dello scontrino a quella del momento.
+- Lo script del titolare dice se l'email dell'account è verificata, e con
+  `--verifica-email --applica` la segna verificata.
+
+### Backup
+
+- **Il backup salva tutto il database.** Mancavano undici collezioni: la
+  struttura del menù dei clienti, i listini e lo storico prezzi dei
+  fornitori, i modelli d'ordine, le spese extra, i minimi e lo storico
+  delle vendite importato. Lo storico importato è nel file, ma si
+  ripristina dallo script di manutenzione; il ripristino dall'app lo dice
+  (BUG-129).
+
 ## 1.10.14-beta — 05/11/2026 (test)
 
 ### Menù dei clienti

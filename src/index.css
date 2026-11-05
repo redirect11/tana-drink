@@ -4855,6 +4855,13 @@ body.drawer-open .status-bell-float { display: none; }
   text-align: center;
 }
 
+/* L'ingresso dall'area clienti (REQ-FLOTTA-030): un attimo, a tutto
+   schermo, mentre l'app scambia il codice della regia. */
+.overlay.ingresso-regia {
+  align-items: center;
+  background: var(--bg);
+}
+
 /* ── Intestazione categoria ──────────────────────────────────── */
 .cat-header {
   font-family: var(--serif);

@@ -9,7 +9,9 @@ import { useNavigate } from 'react-router-dom'
 import { auth } from '../lib/firebaseClient.js'
 import { logoutStaff } from '../lib/logout.js'
 import { devToolsEnabled } from '../dev/devActions.js'
-import { isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { isAdmin, isGestore, isSala, RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import { areaClientiVisibile, versoLaRegia } from '../lib/passaggioRegia.js'
+import { toastError } from '../lib/toast.js'
 import { useSchermoLargo } from '../lib/useTelefono.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
@@ -378,6 +380,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             </span>
           </span>
         </div>
+        {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
           <span>🚪</span> Esci
         </div>
@@ -451,3 +454,26 @@ function ChiamaIlBancone() {
   )
 }
 
+// «AREA CLIENTI» (REQ-FLOTTA-030): il titolare passa alla sua area nella
+// regia già entrato, col suo account di qui. Il tocco aspetta la regia —
+// è un passaggio di pagina, non un gesto della serata — e se non riesce lo
+// dice in una riga.
+function AreaClienti() {
+  const [inCorso, setInCorso] = useState(false)
+  async function vai() {
+    if (inCorso) return
+    setInCorso(true)
+    const esito = await versoLaRegia({ token: () => auth.currentUser?.getIdToken(true) })
+    if (esito.ok) {
+      window.location.assign(esito.url)
+      return
+    }
+    setInCorso(false)
+    toastError(esito.messaggio)
+  }
+  return (
+    <div className="bar-nav-item" role="button" aria-busy={inCorso} onClick={vai}>
+      <span>🏛️</span> {inCorso ? 'Apro l’area clienti…' : 'Area clienti'}
+    </div>
+  )
+}
