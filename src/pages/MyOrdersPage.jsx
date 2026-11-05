@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fetchOrdersByIds, fetchOrdersByCustomer } from '../lib/api.js'
 import { getMyOrderIds } from '../lib/cart.js'
 import { useCustomer } from '../lib/customerAuth.js'
+import { useTestoStile } from '../lib/testiStile.js'
 import {
   STATUS_LABELS,
   STATUS_EMOJI,
@@ -14,6 +15,7 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { user, loading: authLoading } = useCustomer()
+  const testo = useTestoStile()
 
   useEffect(() => {
     if (authLoading) return
@@ -50,7 +52,7 @@ export default function MyOrdersPage() {
   if (orders.length === 0)
     return (
       <div className="empty">
-        Non hai ancora effettuato ordini da questo dispositivo.
+        {testo('ordini.vuoto', 'Non hai ancora effettuato ordini da questo dispositivo.')}
         <br />
         <Link className="btn block" to="/menu" style={{ marginTop: 16 }}>
           Vai al menù

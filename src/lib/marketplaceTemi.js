@@ -84,7 +84,7 @@ export const CATALOGO_INIZIALE = [
     id: 'lavagna',
     nome: 'Lavagna',
     descrizione: 'La lavagna del bistrot: gesso su ardesia verde, scritte a mano.',
-    tavolozza: { base: DEFAULT_THEME },
+    tavolozza: { base: 'lavagna' },
     stile: 'lavagna',
   },
   {
@@ -128,6 +128,13 @@ export const CATALOGO_INIZIALE = [
     descrizione: 'La carta stampata al buio, con gli Special a tutto schermo. Esclusivo.',
     tavolozza: { base: DEFAULT_THEME },
     stile: 'notte',
+  },
+  {
+    id: 'meraviglie',
+    nome: 'Meraviglie',
+    descrizione: 'Un libro illustrato dell’Ottocento, su carta avorio: capitoli, semi di carte e frasi da Paese delle Meraviglie, dalla home al conto. Esclusivo.',
+    tavolozza: { base: 'meraviglie' },
+    stile: 'meraviglie',
   },
 ]
   .map(leggiTema)

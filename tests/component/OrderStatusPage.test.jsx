@@ -104,6 +104,7 @@ vi.mock('../../src/components/OrderPosDetail.jsx', () => ({
 }))
 
 import OrderStatusPage from '../../src/pages/OrderStatusPage.jsx'
+import { StileCliente } from '../../src/lib/testiStile.js'
 import { updateOrderItems } from '../../src/lib/api.js'
 import { toastSuccess, toastError } from '../../src/lib/toast.js'
 import { notify } from '../../src/lib/notify.js'
@@ -115,10 +116,12 @@ const filo = { aggiorna: null }
 // `query` serve per la VISTA CLIENTE («?cliente=1»): la stessa pagina che
 // chi lavora usa come conto, chiesta apposta nella forma da girare al
 // cliente.
-const apri = (query = '') =>
+const apri = (query = '', stile = null) =>
   render(
     <MemoryRouter initialEntries={[`/ordine/o1${query}`]}>
-      <OrderStatusPage />
+      <StileCliente.Provider value={stile}>
+        <OrderStatusPage />
+      </StileCliente.Provider>
     </MemoryRouter>
   )
 
@@ -365,5 +368,25 @@ describe('il cliente e l’avviso «è pronto»', () => {
     await apriDaCliente({ service_mode: 'banco' })
     expect(screen.queryByRole('button', { name: /Avvisami quando è pronto/ })).toBeNull()
     expect(screen.getByText(/ritira al banco quando il drink è pronto/i)).toBeInTheDocument()
+  })
+})
+
+// LO STATO RESTA SCRITTO COM'È (REQ-MENU-027). Con lo stile «Meraviglie» il
+// cliente legge una frase del libro sotto lo stato, ma lo stato è quello di
+// sempre: a che punto è il suo drink deve capirlo senza indovinelli.
+describe('lo stato dell’ordine con lo stile «Meraviglie»', () => {
+  it('il titolo e una frase cambiano; lo stato no', async () => {
+    ruoloCorrente = undefined
+    apri('', 'meraviglie')
+    expect(await screen.findByText('Il tuo cartellino')).toBeInTheDocument()
+    expect(document.querySelector('.card .pill.ricevuto')).toHaveTextContent('Ordine ricevuto')
+    expect(screen.getByText('Il Bianconiglio è in viaggio verso il bancone…')).toBeInTheDocument()
+  })
+
+  it('senza lo stile, niente frase in più', async () => {
+    ruoloCorrente = undefined
+    apri()
+    expect(await screen.findByText('Il tuo numero')).toBeInTheDocument()
+    expect(document.querySelector('.frase-stile')).toBeNull()
   })
 })

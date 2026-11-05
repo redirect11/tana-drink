@@ -29,6 +29,11 @@ import '@fontsource/caveat/latin-400.css'
 import '@fontsource/caveat/latin-700.css'
 import '@fontsource/poiret-one/latin-400.css'
 import '@fontsource/dancing-script/latin-700.css'
+// Lo stile «Meraviglie» (REQ-MENU-027): i caratteri da stampa di fine
+// Seicento del vescovo Fell, digitalizzati da Igino Marini — quelli che
+// fanno «libro antico».
+import '@fontsource/im-fell-english/latin-400.css'
+import '@fontsource/im-fell-english/latin-400-italic.css'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'

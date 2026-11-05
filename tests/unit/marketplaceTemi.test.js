@@ -25,6 +25,7 @@ import {
   patchUsaTema,
   patchDisinstallaTema,
 } from '../../src/lib/marketplaceTemi.js'
+import { THEME_FIELDS, THEME_PRESETS } from '../../src/lib/themes.js'
 
 beforeEach(() => {
   localStorage.clear()
@@ -76,6 +77,12 @@ describe('il catalogo che si vede', () => {
   it('«Notte» c’è solo dove la licenza lo dà: è della Tana', () => {
     expect(catalogo({}).some((t) => t.id === 'notte')).toBe(false)
     expect(catalogo({ licenza: { temi: ['notte'] } }).some((t) => t.id === 'notte')).toBe(true)
+  })
+
+  it('anche «Meraviglie» (REQ-MENU-027)', () => {
+    expect(catalogo({}).some((t) => t.id === 'meraviglie')).toBe(false)
+    expect(catalogo({ licenza: { temi: ['notte'] } }).some((t) => t.id === 'meraviglie')).toBe(false)
+    expect(catalogo({ licenza: { temi: ['meraviglie'] } }).some((t) => t.id === 'meraviglie')).toBe(true)
   })
 
   it('quello della regia si aggiunge, e con lo stesso id sostituisce l’iniziale', () => {
@@ -151,6 +158,29 @@ describe('installare e usare un tema', () => {
       preset: 'crema',
       custom: null,
     })
+  })
+
+  // LA TAVOLOZZA LA PROPONE IL TEMA, MA RESTA LIBERA (REQ-MENU-027). «Usa»
+  // scrive i colori dello stile in `theme_client`, come per ogni tema; dopo,
+  // chi cambia la tavolozza cambia solo quella, e lo stile resta.
+  it('«Lavagna» e «Meraviglie» propongono la loro tavolozza, che resta una tavolozza come le altre', () => {
+    const t = (id) => CATALOGO_INIZIALE.find((x) => x.id === id)
+    expect(t('lavagna').tavolozza.base).toBe('lavagna')
+    expect(t('meraviglie').tavolozza.base).toBe('meraviglie')
+    const s = { licenza: { temi: ['meraviglie'] } }
+    const usato = { ...s, ...patchUsaTema(s, t('meraviglie')) }
+    expect(usato.theme_client).toEqual({ preset: 'meraviglie', custom: null })
+    expect(usato.stile_menu).toBe('meraviglie')
+    // Nessuno stile in licenza da installare.
+    expect(usato).not.toHaveProperty('stili_installati')
+  })
+
+  // I colori di quelle tavolozze si devono poter modificare dal selettore,
+  // che lavora coi sette esadecimali di THEME_FIELDS.
+  it('le tavolozze degli stili hanno tutti i colori, in esadecimale', () => {
+    for (const id of ['lavagna', 'meraviglie']) {
+      for (const { key } of THEME_FIELDS) expect(THEME_PRESETS[id].vars[key], `${id} ${key}`).toMatch(/^#[0-9a-f]{6}$/i)
+    }
   })
 
   it('disinstallare toglie la copia; quello in uso smette di esserlo', () => {

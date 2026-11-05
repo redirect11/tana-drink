@@ -41,6 +41,8 @@ import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
 import { temaInProva, temaComeColori } from './lib/marketplaceTemi.js'
+import { stileInVista, vestePagine } from './lib/stileMenu.js'
+import { StileCliente } from './lib/testiStile.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
 import { licenzaDi } from './lib/licenzaInVigore.js'
@@ -380,6 +382,22 @@ export default function App() {
     applyTheme(resolveThemeVars(scope))
   }, [settings, staffSurface, temaProvato])
 
+  // LO STILE CHE VESTE LE PAGINE DEI CLIENTI (REQ-MENU-027). Il menù si
+  // veste da sé; uno stile che veste anche le altre pagine («Meraviglie»:
+  // la home, gli ordini, l'accesso) si scrive sulla radice del documento,
+  // come i colori, e le schermate ne leggono le frasi. Segue chi guarda,
+  // come il tema: chi lavora vede il gestionale com'è.
+  const stileCliente = stileInVista(settings, {
+    lavoro: staffSurface,
+    prova: staffRole && anteprimaCliente ? new URLSearchParams(location.search).get('stile') || temaProvato?.stile : null,
+  })
+  const stilePagine = vestePagine(stileCliente) ? stileCliente : null
+  useEffect(() => {
+    const root = document.documentElement
+    if (stilePagine) root.dataset.stile = stilePagine
+    else delete root.dataset.stile
+  }, [stilePagine])
+
 
   // IL ☰ C'È OVUNQUE, per tutti: chi è dello staff apre il gestionale, il
   // cliente il suo (menù, i propri ordini, accesso). Fanno eccezione le due
@@ -700,6 +718,7 @@ export default function App() {
       <AvvisoCancellazione settings={settings} ruolo={staffRole} />
       {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
       <main hidden={bloccata}>
+        <StileCliente.Provider value={stilePagine}>
         <ConDemo>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -724,6 +743,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </ConDemo>
+        </StileCliente.Provider>
       </main>
 
       <footer className="app-footer">

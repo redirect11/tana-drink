@@ -11,6 +11,8 @@ import {
   stileMenu,
   stiliDisponibili,
   stileProvabile,
+  stileInVista,
+  vestePagine,
   temiInLicenza,
   disegniDelLocale,
   patchInstalla,
@@ -107,10 +109,45 @@ describe('il catalogo degli stili gratis', () => {
   })
 
   it('ogni stile ha nome e descrizione da mostrare nelle impostazioni', () => {
-    expect(STILI_MENU.map((s) => s.id)).toEqual(['classico', 'notte', 'lavagna', 'deco', 'riviera', 'giornale'])
+    expect(STILI_MENU.map((s) => s.id)).toEqual(['classico', 'notte', 'meraviglie', 'lavagna', 'deco', 'riviera', 'giornale'])
     for (const s of STILI_MENU) {
       expect(s.nome).toBeTruthy()
       expect(s.desc).toBeTruthy()
     }
+  })
+})
+
+// «MERAVIGLIE» (REQ-MENU-027): l'altro stile esclusivo della Tana, alla
+// Lewis Carroll. Come «Notte» sta nella licenza e porta i disegni; in più
+// veste tutte le pagine dei clienti, non solo il menù.
+describe('lo stile «Meraviglie»', () => {
+  const TANA = { licenza: { moduli: {}, temi: ['notte', 'meraviglie'] } }
+
+  it('è della licenza: non si installa, e senza resta il classico', () => {
+    expect(patchInstalla({}, 'meraviglie')).toBeNull()
+    expect(stileMenu({ stile_menu: 'meraviglie' })).toBe('classico')
+    expect(stileMenu({ ...TANA, stile_menu: 'meraviglie' })).toBe('meraviglie')
+    expect(stileProvabile({}, 'meraviglie')).toBe(false)
+  })
+
+  it('porta i disegni dei drink, come «Notte»', () => {
+    expect(disegniDelLocale({ licenza: { temi: ['meraviglie'] } })).toBe(true)
+  })
+
+  it('veste anche le altre pagine; gli altri stili solo il menù', () => {
+    expect(vestePagine('meraviglie')).toBe(true)
+    for (const id of ['classico', 'notte', 'lavagna', 'giornale', 'inventato', null]) expect(vestePagine(id), id).toBe(false)
+  })
+
+  // Lo stile che si vede lo decide una funzione sola, per il menù e per
+  // l'app che veste le altre pagine: due conti separati avrebbero dato a
+  // chi prova uno stile il menù in uno e la home in un altro.
+  it('lo stile in vista: chi lavora il classico, chi prova quello che prova, i clienti quello del locale', () => {
+    const s = { ...TANA, stile_menu: 'meraviglie' }
+    expect(stileInVista(s)).toBe('meraviglie')
+    expect(stileInVista(s, { lavoro: true })).toBe('classico')
+    expect(stileInVista(s, { prova: 'giornale' })).toBe('giornale')
+    expect(stileInVista({}, { prova: 'meraviglie' })).toBe('classico')
+    expect(stileInVista({ stile_menu: 'notte' }, { prova: 'meraviglie' })).toBe('classico')
   })
 })
