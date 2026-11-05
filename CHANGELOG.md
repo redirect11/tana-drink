@@ -2,6 +2,14 @@
 
 ## 1.10.16-beta — in lavorazione
 
+### Menù
+
+- **I disegni dei drink nel segno delle tavole di Tenniel**, le
+  illustrazioni originali di *Alice*: il tratteggio segue la forma del
+  bicchiere e il contorno ingrossa dal lato in ombra, con l'acquerello
+  steso sopra (REQ-MENU-026). Restano segnaposto finché non arrivano le
+  foto dei drink.
+
 ## 1.10.15-beta — 05/11/2026 (test)
 
 ### Regia e titolare

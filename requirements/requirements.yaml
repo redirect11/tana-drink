@@ -4193,11 +4193,24 @@ requirements:
       mano da un illustratore, immagini generate da un modello e riviste,
       o le tavole originali di Tenniel (di pubblico dominio) composte coi
       bicchieri. Restano esclusiva della Tana (REQ-LIC-013).
-    status: todo
-    generate_issue: true
+      FATTO, 04-05/11/2026: rifatto il segno a codice sulle tavole di
+      Tenniel (1865) — il tratteggio segue la forma del vetro (ogni
+      bicchiere è un solido di rotazione: anelli e meridiani), il contorno
+      ingrossa dal lato in ombra e si assottiglia alle punte, la luce è la
+      carta lasciata bianca, l'ombra sotto è di righe orizzontali; le
+      tavole sono in bianco e nero, e l'acquerello steso piatto e un po'
+      fuori dal segno lo aggiungiamo noi. L'utente, 05/11/2026: «sì quelle
+      vanno bene, usa quelle». SONO SEGNAPOSTO: si aspettano le foto dei
+      drink e i Signature veri che Flavio vuole proporre. In produzione il
+      menù Signature resta spento finché Flavio non decide drink e
+      immagini: lo Special lo accende solo il segno `speciale` sui drink, e
+      scripts/special-signature.mjs in produzione non si lancia.
+    status: implemented
+    generate_issue: false
     labels: [menu, vista-cliente, design]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/illustrazioneDrink.test.js
 
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
