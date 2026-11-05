@@ -2,6 +2,15 @@
 
 ## 1.10.15-beta — in lavorazione
 
+### Backup
+
+- **Il backup salva tutto il database.** Mancavano undici collezioni: la
+  struttura del menù dei clienti, i listini e lo storico prezzi dei
+  fornitori, i modelli d'ordine, le spese extra, i minimi e lo storico
+  delle vendite importato. Lo storico importato è nel file, ma si
+  ripristina dallo script di manutenzione; il ripristino dall'app lo dice
+  (BUG-129).
+
 ## 1.10.14-beta — 05/11/2026 (test)
 
 ### Menù dei clienti

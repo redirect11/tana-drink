@@ -8,6 +8,8 @@
 // quando le righe sono più del limite di un lotto (500).
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 // Finto Firestore: registra le scritture invece di farle.
 const scritture = []
@@ -48,6 +50,8 @@ import {
   totaleRighe,
   nomeFile,
   COLLEZIONI,
+  SOLO_COPIA,
+  FUORI_DAL_BACKUP,
 } from '../../src/lib/backup.js'
 
 beforeEach(() => {
@@ -66,7 +70,7 @@ const backupFinto = (righe) => ({
 describe('esportazione', () => {
   it('gira su tutte le collezioni e conta i documenti', async () => {
     const b = await esportaDatabase()
-    expect(Object.keys(b.collezioni)).toEqual(COLLEZIONI)
+    expect(Object.keys(b.collezioni)).toEqual([...COLLEZIONI, ...SOLO_COPIA])
     expect(b.documenti).toBe(2) // un ordine + settings/bar
     expect(b.collezioni.orders.righe[0]).toEqual({ id: 'o1', dati: { total: 8 } })
   })
@@ -149,6 +153,46 @@ describe('importazione', () => {
     } finally {
       localStorage.clear()
     }
+  })
+})
+
+// BUG-129: undici collezioni nate dopo l'elenco del backup non finivano
+// nel file, e nessuno se n'era accorto (fra queste il menù dei clienti e lo
+// storico delle vendite). L'elenco non si può chiedere a Firestore dal
+// client, quindi lo si confronta con le regole: ogni collezione che le
+// regole conoscono deve stare in uno dei tre elenchi del backup, e ogni
+// collezione degli elenchi deve esistere davvero.
+describe('il backup conosce tutte le collezioni (BUG-129)', () => {
+  const regole = readFileSync(join(__dirname, '../../firestore.rules'), 'utf8')
+  const nelleRegole = [...regole.matchAll(/^ {4}match \/([a-z_]+)\/\{/gm)].map((m) => m[1])
+  const negliElenchi = [...COLLEZIONI, ...SOLO_COPIA, ...Object.keys(FUORI_DAL_BACKUP)]
+
+  it('ogni collezione delle regole è nel backup, o fuori con la sua ragione', () => {
+    expect(nelleRegole.length).toBeGreaterThan(30)
+    expect(nelleRegole.filter((c) => !negliElenchi.includes(c))).toEqual([])
+  })
+
+  it('ogni collezione del backup esiste nelle regole', () => {
+    expect(negliElenchi.filter((c) => !nelleRegole.includes(c))).toEqual([])
+  })
+
+  it('nessuna collezione sta in due elenchi', () => {
+    expect(new Set(negliElenchi).size).toBe(negliElenchi.length)
+  })
+
+  // Lo storico degli script si salva ma non si rimette dall'app: le regole
+  // lo rifiutano, e un documento rifiutato fermerebbe il ripristino a metà.
+  it('lo storico degli script si salva, ma il ripristino dall’app lo salta e lo dice', async () => {
+    const { scritti, soloScript } = await importaDatabase({
+      formato: 1,
+      collezioni: {
+        orders: { righe: [{ id: 'o1', dati: {} }] },
+        vendite_storiche: { righe: [{ id: '2025-01-03', dati: { totale: 900 } }] },
+      },
+    })
+    expect(scritti).toBe(1)
+    expect(soloScript).toEqual(['vendite_storiche'])
+    expect(scritture.map((w) => w.nome)).toEqual(['orders'])
   })
 })
 
