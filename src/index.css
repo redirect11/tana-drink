@@ -126,7 +126,9 @@ a {
   --safe-top: env(safe-area-inset-top, 0px);
   /* Altezza della barra in alto (logo + azioni), senza la fascia di sistema:
      serve a chi si "appiccica" scorrendo — le categorie a sinistra — per
-     fermarsi SOTTO l'intestazione invece che finirci dietro. */
+     fermarsi SOTTO l'intestazione invece che finirci dietro. È una stima:
+     chi si appiccica alla barra usa `--barra-intera`, l'altezza vera che
+     App misura (BUG-130), e questa solo finché la misura non c'è. */
   --barra-alta: 68px;
 }
 @media (display-mode: standalone) {
@@ -4577,7 +4579,10 @@ body.drawer-open .status-bell-float { display: none; }
 /* ── Navigazione categorie (chips scorrevoli) ─────────────────── */
 .cat-nav {
   position: sticky;
-  top: 64px;
+  /* Sotto la barra, all'altezza misurata (BUG-130): a 64 px fissi i primi
+     pixel della fila finivano dietro la barra, che è più alta, e le schede
+     restavano attaccate al suo filo. */
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
   z-index: 5;
   display: flex;
   gap: 8px;
@@ -11316,7 +11321,7 @@ body.pagina-piena .inv-scheda {
 /* Il sommario: resta sotto la barra mentre si scorre, e dice dove si è. */
 .g-sommario {
   position: sticky;
-  top: calc(var(--safe-top) + var(--barra-alta));
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
   z-index: 5;
   display: flex;
   align-items: baseline;
