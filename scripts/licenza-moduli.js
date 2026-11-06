@@ -42,19 +42,16 @@
 //  Default: progetto tana-drink-test. La produzione si nomina a mano, e
 //  prima si fa il backup (`node scripts/backup-db.js --project tana-drink`).
 // =====================================================================
-import { accessToken, client, arg, flag } from './lib-firestore.js'
+import { accessToken, client, arg, flag, aCampi, daValore } from './lib-firestore.js'
 import { MODULI_PREMIUM } from '../src/lib/licenza.js'
 import { STILI_MENU } from '../src/lib/stileMenu.js'
 
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
-const INCLUDI = (arg('includi', '') || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean)
-
+const elenco = (s) => s.split(',').map((x) => x.trim()).filter(Boolean)
+const INCLUDI = elenco(arg('includi', '') || '')
 const TEMI = arg('temi', null)
-const temiNuovi = TEMI === null ? null : TEMI.split(',').map((s) => s.trim()).filter(Boolean)
+const temiNuovi = TEMI === null ? null : elenco(TEMI)
 
 const noti = Object.keys(MODULI_PREMIUM)
 const sconosciuti = INCLUDI.filter((id) => !noti.includes(id))
@@ -84,7 +81,7 @@ if (licenza) {
     const incluso = adesso?.[id]?.booleanValue === true
     console.log(`  ${(incluso ? '✔' : '✖').padEnd(2)} ${id.padEnd(15)} ${m.label.padEnd(30)} ${incluso ? 'incluso' : 'non incluso'}`)
   }
-  const temi = (licenza.fields?.temi?.arrayValue?.values || []).map((v) => v.stringValue)
+  const temi = daValore(licenza.fields?.temi) || []
   console.log(`  temi esclusivi: ${temi.length ? temi.join(', ') : 'nessuno'}`)
 }
 
@@ -93,15 +90,16 @@ if (!INCLUDI.length && temiNuovi === null) {
   process.exit(0)
 }
 
-const fields = {}
+const dati = {}
 if (INCLUDI.length) {
-  fields.moduli = { mapValue: { fields: Object.fromEntries(noti.map((id) => [id, { booleanValue: INCLUDI.includes(id) }])) } }
+  dati.moduli = Object.fromEntries(noti.map((id) => [id, INCLUDI.includes(id)]))
   console.log(`\n  moduli da scrivere: ${noti.map((id) => `${id}=${INCLUDI.includes(id)}`).join(', ')}`)
 }
 if (temiNuovi !== null) {
-  fields.temi = { arrayValue: { values: temiNuovi.map((t) => ({ stringValue: t })) } }
+  dati.temi = temiNuovi
   console.log(`\n  temi da scrivere: ${temiNuovi.length ? temiNuovi.join(', ') : 'nessuno'}`)
 }
+const fields = aCampi(dati)
 if (!licenza) console.log('  ⚠ il documento non c’è: lo si crea, e da quel momento l’installazione è attiva coi moduli scritti.')
 if (!APPLY) {
   console.log('\n[licenza] ANTEPRIMA: nessuna scrittura. Aggiungi --apply per salvare.')

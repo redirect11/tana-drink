@@ -485,10 +485,13 @@ export default function MenuPage({ speciali = false }) {
   const segnoDisegni = struttura?.segno || 'tenniel'
   // I disegni sono del locale che ha «Notte» (REQ-LIC-013).
   const disegni = disegniDelLocale(settings)
-  // Gli Special allo stile: sulla pagina Special sempre; nel menù solo se il
-  // menù Special è acceso e lo stile li disegna lui (uno col `carosello` li
-  // lascia al carosello di sempre).
-  const specialiAlloStile = speciali || (specialAttivo && !struttura?.carosello) ? elencoSpeciali : []
+  // CHI MOSTRA GLI SPECIAL NEL MENÙ, deciso una volta: il carosello di
+  // sempre (il classico, gli stili a veste, uno strutturato col
+  // `carosello`), o lo stile, che li disegna lui («Giornale»). Allo stile
+  // arrivano sulla pagina Special sempre, nel menù solo se tocca a lui e il
+  // menù Special è acceso.
+  const caroselloSpeciali = !struttura || Boolean(struttura.carosello)
+  const specialiAlloStile = speciali || (specialAttivo && !caroselloSpeciali) ? elencoSpeciali : []
   // Su uno stile chiaro di suo (le carte bianche) i disegni col tratto scuro.
   const disegniChiari = struttura?.chiaro || fondoChiaro
   const perLoStile = struttura && {
@@ -650,13 +653,14 @@ export default function MenuPage({ speciali = false }) {
       {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
           cliente: toccando un drink si va al menù Special, su quel drink.
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
-      {!speciali && !staff && (!struttura || struttura.carosello) && specialAttivo && elencoSpeciali.length > 0 && (
+      {!speciali && !staff && caroselloSpeciali && specialAttivo && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
-              {/* La ✨ è del classico: sul libro di «Meraviglie» e sulla
-                  carta di «Notte» stona. */}
-              {notte || stile === 'meraviglie' || stile === 'carte' ? '' : '✨ '}
+              {/* La ✨ è del classico: sul libro di «Meraviglie», sulla
+                  carta di «Notte» e su uno stile con una grafica sua
+                  («Carte») stona. */}
+              {notte || stile === 'meraviglie' || struttura ? '' : '✨ '}
               {settings.special_titolo || 'Special'}
             </h3>
             <Link className="speciali-tutti" to={conParametri(PERCORSO_SPECIALI, params)}>

@@ -11982,7 +11982,7 @@ body.pagina-piena .inv-scheda {
   --k-inchiostro: #1f1b17;
   --k-tenue: #5f564c;
   --k-rosso: #c3122f;
-  --k-nero: #1f1b17;
+  --k-nero: var(--k-inchiostro);
   --k-oro: #9a6b12;
   --k-filo: rgba(31, 27, 23, 0.16);
   --k-scrittura: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
@@ -11996,8 +11996,8 @@ body.pagina-piena .inv-scheda {
   --k-larga: 128px;
   --k-alta: 182px;
   --k-passo: 100px;
-  /* Il mazzo coperto, e lo spazio fra lui e la prima carta: da lì escono. */
-  --k-mazzo-largo: calc(var(--k-larga) + 22px);
+  /* Lo spazio fra il mazzo coperto e la prima carta. */
+  --k-stacco: 22px;
 }
 .stile-carte [data-seme='cuori'],
 .stile-carte [data-seme='quadri'] {
@@ -12075,7 +12075,7 @@ body.pagina-piena .inv-scheda {
   flex: none;
   width: var(--k-larga);
   height: var(--k-alta);
-  margin-right: calc(var(--k-mazzo-largo) - var(--k-larga));
+  margin-right: var(--k-stacco);
   transform: translateY(var(--k-giu));
   pointer-events: none;
 }
@@ -12084,20 +12084,28 @@ body.pagina-piena .inv-scheda {
   inset: 0;
   border-radius: 10px;
   background-color: var(--k-rosso);
-  background-image:
-    repeating-linear-gradient(45deg, rgba(251, 248, 241, 0.32) 0 1.5px, transparent 1.5px 9px),
-    repeating-linear-gradient(-45deg, rgba(251, 248, 241, 0.32) 0 1.5px, transparent 1.5px 9px);
   box-shadow:
     inset 0 0 0 6px var(--k-carta),
-    inset 0 0 0 7px rgba(195, 18, 47, 0.5),
-    0 1px 2px rgba(0, 0, 0, 0.35);
+    inset 0 0 0 7px color-mix(in srgb, var(--k-rosso) 50%, transparent),
+    var(--k-ombra-dorso, 0 1px 2px rgba(0, 0, 0, 0.35));
   transform: translate(calc(var(--d) * -2px), calc(var(--d) * -2px)) rotate(calc((var(--d) - 1.5) * 1.6deg));
 }
+.k-dorso:nth-child(1) {
+  --d: 0;
+}
+.k-dorso:nth-child(2) {
+  --d: 1;
+}
+.k-dorso:nth-child(3) {
+  --d: 2;
+}
+/* Il reticolo solo su quello in cima: degli altri si vede il bordo. */
 .k-dorso:last-child {
-  box-shadow:
-    inset 0 0 0 6px var(--k-carta),
-    inset 0 0 0 7px rgba(195, 18, 47, 0.5),
-    0 10px 22px -10px rgba(0, 0, 0, 0.7);
+  --d: 3;
+  --k-ombra-dorso: 0 10px 22px -10px rgba(0, 0, 0, 0.7);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
 }
 
 /* LE CARTE SCOPERTE: intere, accavallate di un passo. */
@@ -12180,7 +12188,6 @@ body.pagina-piena .inv-scheda {
   align-self: flex-start;
   line-height: 1;
   color: var(--k-tinta);
-  font-family: var(--k-scrittura);
 }
 .k-valore {
   font-family: var(--k-cifre);
@@ -12248,6 +12255,7 @@ body.pagina-piena .inv-scheda {
 }
 .k-aperta-titolo h2 {
   margin: 2px 0 0;
+  /* Il carattere va scritto: titoli e voci hanno quello del tema. */
   font: 400 clamp(1.7rem, 7.5vw, 2.2rem) / 1.08 var(--k-scrittura);
   text-wrap: balance;
 }
@@ -12382,7 +12390,7 @@ body.pagina-piena .inv-scheda {
 @keyframes k-dal-mazzo {
   from {
     opacity: 0;
-    transform: translate(calc(-1 * (var(--k-mazzo-largo) + var(--i, 0) * var(--k-passo))), var(--k-giu)) rotate(-6deg);
+    transform: translate(calc(-1 * (var(--k-larga) + var(--k-stacco) + var(--i, 0) * var(--k-passo))), var(--k-giu)) rotate(-6deg);
   }
 }
 @keyframes k-pescata {
