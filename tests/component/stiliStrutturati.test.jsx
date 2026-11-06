@@ -52,6 +52,10 @@ const mostra = (s, p) =>
   )
 
 describe.each(Object.entries(STILI_STRUTTURATI))('lo stile strutturato «%s»', (id, s) => {
+  // Nel menù gli Special di uno stile col `carosello` li mostra il menù;
+  // allo stile arrivano solo sulla pagina Special (MenuPage).
+  const nelMenu = (extra = {}) => pacchetto({ ...(s.carosello ? { speciali: [] } : {}), ...extra })
+
   it('ha testata, corpo, vetrina e segno dei disegni', () => {
     expect(typeof s.Testata).toBe('function')
     expect(typeof s.Corpo).toBe('function')
@@ -60,8 +64,9 @@ describe.each(Object.entries(STILI_STRUTTURATI))('lo stile strutturato «%s»', 
   })
 
   it('mostra ogni voce col suo nome e col prezzo dei dati', () => {
-    mostra(s, pacchetto())
-    for (const d of [...SEZIONI.flatMap((x) => x.voci), ...SPECIALI]) {
+    const p = nelMenu()
+    mostra(s, p)
+    for (const d of [...SEZIONI.flatMap((x) => x.voci), ...p.speciali]) {
       expect(screen.getAllByText(d.name).length, d.name).toBeGreaterThan(0)
       // Lo spazio prima dell'euro non va a capo; la ricerca per testo lo
       // legge come uno spazio qualunque.
@@ -71,14 +76,24 @@ describe.each(Object.entries(STILI_STRUTTURATI))('lo stile strutturato «%s»', 
   })
 
   it('ogni voce ha i tasti per ordinare del menù', () => {
-    const p = pacchetto()
+    const p = nelMenu()
     mostra(s, p)
     const ordinabili = new Set(p.tastiOrdine.mock.calls.map(([d]) => d.id))
-    for (const d of [...SEZIONI.flatMap((x) => x.voci), ...SPECIALI]) expect(ordinabili.has(d.id), d.name).toBe(true)
+    for (const d of [...SEZIONI.flatMap((x) => x.voci), ...p.speciali]) expect(ordinabili.has(d.id), d.name).toBe(true)
+  })
+
+  it('sulla pagina Special ogni special ha il nome, il prezzo e i tasti', () => {
+    const p = pacchetto({ soloSpeciali: true })
+    mostra(s, p)
+    const ordinabili = new Set(p.tastiOrdine.mock.calls.map(([d]) => d.id))
+    for (const d of SPECIALI) {
+      expect(screen.getAllByText(d.name).length, d.name).toBeGreaterThan(0)
+      expect(ordinabili.has(d.id), d.name).toBe(true)
+    }
   })
 
   it('il nome della voce è un tasto che apre il dettaglio', async () => {
-    const p = pacchetto()
+    const p = nelMenu()
     mostra(s, p)
     await userEvent.setup().click(screen.getAllByRole('button', { name: 'Negroni' })[0])
     expect(p.apri).toHaveBeenCalledWith(expect.objectContaining({ id: 'negroni' }))
