@@ -40,8 +40,9 @@ import { useTelefono } from './lib/useTelefono.js'
 import { useSchermoIntero } from './lib/useSchermoIntero.js'
 import { logoutStaff } from './lib/logout.js'
 import { resolveThemeVars, applyTheme } from './lib/themes.js'
-import { temaInProva, temaComeColori } from './lib/marketplaceTemi.js'
-import { stileInVista, vestePagine } from './lib/stileMenu.js'
+import { temaInProva, temaComeColori, stileDelTema } from './lib/marketplaceTemi.js'
+import { coloriConRicetta } from './lib/stiliRicetta.js'
+import { stileInVista, vestePagine, ricettaDelloStile } from './lib/stileMenu.js'
 import { StileCliente } from './lib/testiStile.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
@@ -399,14 +400,6 @@ export default function App() {
   // E IL TEMA IN PROVA (REQ-MENU-023): dal marketplace, chi lavora vede il
   // proprio menù coi colori di un tema prima di usarlo. Solo lui.
   const temaProvato = staffRole && anteprimaCliente ? temaInProva(settings, location.search) : null
-  useEffect(() => {
-    const scope = temaProvato
-      ? temaComeColori(temaProvato)
-      : staffSurface
-        ? settings.theme_staff
-        : settings.theme_client
-    applyTheme(resolveThemeVars(scope))
-  }, [settings, staffSurface, temaProvato])
 
   // LO STILE CHE VESTE LE PAGINE DEI CLIENTI (REQ-MENU-027). Il menù si
   // veste da sé; uno stile che veste anche le altre pagine («Meraviglie»:
@@ -415,8 +408,23 @@ export default function App() {
   // come il tema: chi lavora vede il gestionale com'è.
   const stileCliente = stileInVista(settings, {
     lavoro: staffSurface,
-    prova: staffRole && anteprimaCliente ? new URLSearchParams(location.search).get('stile') || temaProvato?.stile : null,
+    prova: staffRole && anteprimaCliente ? new URLSearchParams(location.search).get('stile') || stileDelTema(temaProvato) : null,
   })
+  // I colori propri di uno stile a ricetta (REQ-MENU-031) stanno sopra
+  // quelli del tema, come la lavagna: vanno sulla radice coi colori, perché
+  // il fondo della pagina è lì. La ricetta si ricompone a ogni giro: si
+  // guarda il testo dei colori, non l'oggetto.
+  const coloriStile = staffSurface ? '' : JSON.stringify(ricettaDelloStile(settings, stileCliente)?.colori ?? null)
+  useEffect(() => {
+    const scope = temaProvato
+      ? temaComeColori(temaProvato)
+      : staffSurface
+        ? settings.theme_staff
+        : settings.theme_client
+    const colori = coloriStile ? JSON.parse(coloriStile) : null
+    applyTheme(resolveThemeVars(coloriConRicetta(scope, colori && { colori })))
+  }, [settings, staffSurface, temaProvato, coloriStile])
+
   const stilePagine = vestePagine(stileCliente) ? stileCliente : null
   useEffect(() => {
     const root = document.documentElement

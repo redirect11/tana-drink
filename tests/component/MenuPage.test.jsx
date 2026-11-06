@@ -1015,9 +1015,9 @@ describe('l’impaginazione di un tema su misura (REQ-MENU-030)', () => {
     tavolozza: { base: 'tana-scuro' },
     stile: 'classico',
     su_misura: true,
-    ricetta: { versione: 1, impaginazione },
+    ricetta: { versione: 1, caratteri: { titolo: 'inter', voce: 'inter', testo: 'inter' }, impaginazione },
   })
-  const inUso = (impaginazione) => ({ temi_installati: [tema(impaginazione)], tema_menu: 'su-misura-bosco', stile_menu: 'classico' })
+  const inUso = (impaginazione) => ({ temi_installati: [tema(impaginazione)], tema_menu: 'su-misura-bosco', stile_menu: 'su-misura-bosco' })
   const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
   const schede = () => within(screen.getByRole('navigation', { name: 'Pagine del menù' })).getAllByRole('button')
 
@@ -1076,5 +1076,51 @@ describe('l’impaginazione di un tema su misura (REQ-MENU-030)', () => {
     await screen.findByText('Negroni')
     expect(screen.getByText(/Stai provando il tema «Bosco»/)).toBeInTheDocument()
     expect(sezioniLette()).toEqual(['Signature'])
+  })
+})
+
+// IL MOTORE DEGLI STILI A RICETTA (REQ-MENU-031): lo stile del locale
+// arriva come ricetta, e il contenitore del menù la porta scritta negli
+// attributi e nelle variabili dei caratteri, che le regole del motore
+// leggono.
+describe('uno stile a ricetta sul menù', () => {
+  const OSTERIA = {
+    id: 'osteria',
+    nome: 'Osteria',
+    ricetta: {
+      versione: 1,
+      caratteri: { titolo: 'libre-baskerville', voce: 'libre-baskerville', testo: 'georgia' },
+      titoli: { corsivo: true, allineamento: 'centro' },
+      voce: { forma: 'riga', prezzo: 'puntini' },
+      sfondo: 'carta',
+    },
+  }
+
+  it('installato e scelto, il cliente lo vede disegnato dal motore', async () => {
+    ruoloClaim = null
+    mockSettings = { stili_ricetta: [OSTERIA], stile_menu: 'osteria' }
+    const { container } = mostra()
+    await screen.findByText('Mojito')
+    const menu = container.querySelector('.stile-ricetta')
+    expect(menu).not.toBeNull()
+    expect(menu.dataset).toMatchObject({ titoliCorsivo: 'true', titoliAllineamento: 'centro', voceForma: 'riga', vocePrezzo: 'puntini', sfondo: 'carta' })
+    expect(menu.style.getPropertyValue('--stile-titolo')).toMatch(/Libre Baskerville/)
+  })
+
+  it('non installato non si applica; chi lavora lo prova dal catalogo ricordato', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'osteria' }
+    const { container, unmount } = mostra()
+    await screen.findByText('Mojito')
+    expect(container.querySelector('.stile-ricetta')).toBeNull()
+    unmount()
+
+    ruoloClaim = 'bartender'
+    mockSettings = {}
+    localStorage.setItem('drink:catalogo-stili', JSON.stringify([OSTERIA]))
+    const prova = mostra('/menu?vista=cliente&stile=osteria')
+    await screen.findByText('Mojito')
+    expect(prova.container.querySelector('.stile-ricetta')).not.toBeNull()
+    expect(screen.getByText(/Stai provando lo stile «Osteria»/)).toBeInTheDocument()
   })
 })

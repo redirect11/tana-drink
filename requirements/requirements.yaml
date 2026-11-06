@@ -4378,11 +4378,11 @@ requirements:
       vale per i clienti, fuori dalla pagina Special: le schede in alto
       diventano tasti che cambiano pagina; una sezione senza gruppo fa
       pagina da sé.
-      RESTA, col motore degli stili a ricetta (la richiesta sul ramo
-      feature/stili-a-ricetta, ancora da lavorare): il disegno del tema
-      dalla sua ricetta (oggi si disegna col suo `stile`) e le pagine
-      negli stili strutturati come «Giornale», che oggi ricevono il menù
-      intero.
+      Col motore degli stili a ricetta (REQ-MENU-031, stesso giorno) un
+      tema con la ricetta si disegna dalla ricetta, come uno stile col suo
+      id, e l'impaginazione è quella della ricetta dello stile in vista.
+      RESTA: le pagine negli stili strutturati come «Giornale», che
+      ricevono il menù intero (non sono a ricetta).
     status: implemented
     generate_issue: true
     labels: [menu, marketplace, licenza, regia]
@@ -6104,7 +6104,7 @@ requirements:
 
   - id: REQ-MENU-031
     title: "Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore"
-    area: "src/lib/stileMenu.js (leggiStile, STILI_MENU), src/lib/marketplaceTemi.js (leggiTema, catalogo), src/index.css (il motore), src/main.jsx (i caratteri), docs/stili-a-ricetta.md"
+    area: "src/lib/stiliRicetta.js (vocabolario, leggiStile, vesteRicetta), src/lib/stileMenu.js (gli stili a ricetta fra quelli del locale, vesteDelloStile), src/lib/marketplaceTemi.js (leggiTema, catalogo, stileDelTema), src/index.css (il motore, .stile-ricetta), src/main.jsx (i caratteri), src/App.jsx (i colori propri), docs/stili-a-ricetta.md"
     description: >
       L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che
       abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter
@@ -6119,11 +6119,31 @@ requirements:
       usarne uno. Dodici caratteri nuovi nella build. Il contratto in
       docs/stili-a-ricetta.md; la regia è pronta (drink-regia
       REQ-FLOTTA-034, PR #53).
-    status: todo
+      Scritto come REQ-MENU-024 sul ramo feature/stili-a-ricetta, e
+      rinumerato: quell'id l'aveva preso «Giornale».
+      FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva
+      bisogno): il vocabolario in lib/stiliRicetta.js, uguale a quello
+      della regia più `impaginazione` (REQ-MENU-030); `leggiStile` scarta
+      una ricetta con un valore sconosciuto; il motore in index.css legge
+      la ricetta dagli attributi `data-*` del contenitore, e ogni valore ha
+      la sua regola (un test lo controlla); i dodici caratteri in
+      main.jsx, con una scala per le scritture a mano (sulla prova i nomi
+      in Caveat del «Quaderno» si leggevano a fatica); gli stili del
+      catalogo in «Stili del menù», installati con la copia in
+      `stili_ricetta`; un tema del catalogo può usarne uno, e «Usa» lo
+      installa; un tema su misura con la ricetta è uno stile col suo id. I
+      sette stili della regia, provati a schermo sul telefono, si leggono
+      e si disegnano tutti.
+    status: implemented
     generate_issue: false
     labels: [menu, marketplace]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/stiliRicetta.test.js
+      - tests/unit/stileMenu.test.js
+      - tests/unit/marketplaceTemi.test.js
+      - tests/component/MarketplaceTab.test.jsx
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"

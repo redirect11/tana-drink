@@ -131,7 +131,29 @@ Telegramma, Officina, Glicine), in `functions/temi/stili.json` e
 `functions/temi/catalogo.json` della regia. Sono una buona prova del motore:
 insieme usano quasi tutti i valori del vocabolario.
 
-## Da fare qui
+## Cosa c'è nell'app (06/11/2026)
+
+- **`src/lib/stiliRicetta.js`**: `CARATTERI` (con la famiglia CSS, se c'è
+  il peso 700, e una `scala` per le scritture a mano: Caveat, Amatic SC,
+  Dancing Script), `VALORI` (questo vocabolario più `impaginazione`,
+  REQ-MENU-030), `leggiStile` e `leggiRicetta` (un valore sconosciuto
+  scarta, uno mancante prende quello di partenza), `vesteRicetta`.
+- **Il motore** in `src/index.css`, sezione `.stile-ricetta`: la ricetta
+  arriva sul contenitore come attributi `data-titoli-*`, `data-intestazione`,
+  `data-voce-*`, `data-cornice`, `data-angoli`, `data-sfondo` (solo i valori
+  diversi da quello di partenza) e come variabili `--stile-titolo`,
+  `--stile-voce`, `--stile-testo`, `--peso-voce`, `--scala-*`. I colori
+  propri stanno sopra quelli del tema, sulla radice (App).
+- **Dove arrivano**: dal catalogo (`stili`, ricordati sul dispositivo in
+  `drink:catalogo-stili`), in «Stili del menù» del Marketplace; installati
+  con la copia in `settings/bar.stili_ricetta`; un tema del catalogo con
+  uno di questi stili, alla prima «Usa», installa anche lo stile.
+- **Per la regia**: `STILI_DELL_APP` dell'app comprende anche
+  `meraviglie`, che `functions/lib/stili.js` non ha ancora; e il
+  vocabolario della regia non ha ancora `impaginazione` (per i temi su
+  misura, docs/temi-su-misura.md).
+
+## Da fare qui (la richiesta com'era)
 
 - `leggiStile`, gemella di `leggiTema`, con il vocabolario qui sopra.
 - Il motore: le regole CSS per ogni valore, sopra il menù classico, come

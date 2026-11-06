@@ -10956,6 +10956,297 @@ body.pagina-piena .inv-scheda {
   border-radius: 24px;
 }
 
+/* ── IL MOTORE DEGLI STILI A RICETTA (REQ-MENU-031) ──────────────────────
+   Uno stile a ricetta non ha regole sue: è una scelta fra valori fissi
+   (lib/stiliRicetta.js), che arriva sul contenitore del menù come
+   attributi `data-*` e variabili dei caratteri (vesteRicetta). Ogni valore
+   ha qui la sua regola, e un test lo controlla. Il valore di partenza di
+   ogni dimensione non scrive l'attributo: è quello che `.stile-ricetta`
+   disegna da sé. Tutto passa dalle variabili del tema, così una ricetta
+   vale su qualunque tavolozza. */
+.stile-ricetta {
+  --r-angolo: 14px;
+  font-family: var(--stile-testo);
+}
+.stile-ricetta[data-angoli='vivi'] {
+  --r-angolo: 0px;
+}
+.stile-ricetta[data-angoli='tondi'] {
+  --r-angolo: 22px;
+}
+
+/* I caratteri al loro posto. I titoli al peso del carattere: quelli da
+   titolo (Abril, Bebas, Pacifico) sono già pieni, e il grassetto finto li
+   impasta. Il nome della voce al 700 dove il carattere lo ha. */
+.stile-ricetta :is(.hero-title, .cat-header) {
+  font-family: var(--stile-titolo);
+  font-style: normal;
+  font-weight: 400;
+  text-wrap: balance;
+}
+.stile-ricetta .menu-item .grow > h3 {
+  font-family: var(--stile-voce);
+  font-weight: var(--peso-voce, 700);
+  font-size: calc(clamp(0.9rem, 3.8vw, 1.17rem) * var(--scala-voce, 1));
+  margin: 0;
+}
+.stile-ricetta :is(.cat-chip, .menu-item .price) {
+  font-family: var(--stile-voce);
+}
+
+/* I TITOLI. La categoria è una colonna: il nome, e sotto l'intestazione. */
+.stile-ricetta .cat-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: calc(1.35rem * var(--scala-titolo, 1));
+}
+.stile-ricetta[data-titoli-maiuscolo='true'] :is(.hero-title, .cat-header, .cat-chip) {
+  text-transform: uppercase;
+}
+.stile-ricetta[data-titoli-corsivo='true'] :is(.hero-title, .cat-header) {
+  font-style: italic;
+}
+.stile-ricetta[data-titoli-allineamento='centro'] .cat-header {
+  align-items: center;
+  text-align: center;
+}
+.stile-ricetta[data-titoli-dimensione='grande'] .cat-header {
+  font-size: calc(clamp(1.7rem, 7.5vw, 2.3rem) * var(--scala-titolo, 1));
+  line-height: 1.1;
+}
+.stile-ricetta[data-titoli-dimensione='enorme'] .cat-header {
+  font-size: calc(clamp(2.3rem, 11vw, 3.4rem) * var(--scala-titolo, 1));
+  line-height: 1.02;
+}
+.stile-ricetta[data-titoli-spaziatura='stretta'] :is(.hero-title, .cat-header) {
+  letter-spacing: -0.02em;
+}
+.stile-ricetta[data-titoli-spaziatura='larga'] :is(.hero-title, .cat-header) {
+  letter-spacing: 0.16em;
+}
+
+/* L'INTESTAZIONE, sotto il nome della categoria. Di partenza nessuna. */
+.stile-ricetta .cat-header::after {
+  display: none;
+}
+.stile-ricetta[data-intestazione] .cat-header::after {
+  display: block;
+  align-self: stretch;
+  flex: none;
+  height: 1px;
+  border-radius: 0;
+  opacity: 1;
+  background: var(--line);
+}
+.stile-ricetta[data-intestazione='filetto'] .cat-header::after {
+  background: color-mix(in srgb, var(--text) 35%, transparent);
+}
+.stile-ricetta[data-intestazione='doppio-filetto'] .cat-header::after {
+  height: 4px;
+  background: none;
+  border-top: 1px solid var(--accent-2);
+  border-bottom: 1px solid var(--accent-2);
+}
+.stile-ricetta[data-intestazione='tratteggio'] .cat-header::after {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--text) 40%, transparent) 0 12px, transparent 12px 18px);
+}
+.stile-ricetta[data-intestazione='punti'] .cat-header::after {
+  height: 4px;
+  background: radial-gradient(circle, var(--accent-2) 1.5px, transparent 2px) 0 50% / 10px 4px repeat-x;
+}
+.stile-ricetta[data-intestazione='fregio'] .cat-header::after {
+  content: '❦';
+  height: auto;
+  background: none;
+  font-family: Georgia, 'Segoe UI Symbol', serif;
+  font-style: normal;
+  font-size: 0.6em;
+  line-height: 1;
+  color: var(--accent-2);
+}
+
+/* GLI ANGOLI delle voci, delle schede e dell'apertura. */
+.stile-ricetta :is(.menu-item, .carosello-slide, .hero, .cat-chip) {
+  border-radius: var(--r-angolo);
+}
+
+/* LA VOCE. Di partenza la card del menù classico; in riga, come sulla
+   lavagna, senza riquadro; in colonna, in alto l'immagine e i tasti, e
+   sotto il nome e la descrizione a tutta larghezza (con l'immagine dopo il
+   testo, sulla prova del 06/11/2026, restava sola in fondo alla voce). */
+.stile-ricetta:is([data-voce-forma='riga'], [data-voce-forma='colonna']) .menu-item:not(.speciale) {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 12px 0;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) {
+  padding-block: 16px;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) .row {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.stile-ricetta[data-voce-forma='colonna'] .menu-item:not(.speciale) .row > .grow {
+  flex: 1 1 100%;
+  order: 1;
+}
+
+/* IL PREZZO. Di partenza accanto al nome; sotto, dopo la descrizione; coi
+   puntini, una riga di punti fino al prezzo, come una carta stampata. */
+.stile-ricetta .menu-item .row > .grow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: baseline;
+}
+.stile-ricetta .menu-item .grow > h3 {
+  grid-column: 1;
+}
+.stile-ricetta .menu-item .grow > .price {
+  grid-column: 2;
+  grid-row: 1;
+}
+.stile-ricetta .menu-item .grow > p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.stile-ricetta[data-voce-prezzo='sotto'] .menu-item .row > .grow {
+  display: block;
+}
+.stile-ricetta[data-voce-prezzo='sotto'] .menu-item .grow > p {
+  margin: 4px 0 6px;
+}
+.stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4em;
+}
+.stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3::after {
+  content: '';
+  flex: 1;
+  min-width: 1.5em;
+  border-bottom: 2px dotted color-mix(in srgb, var(--text) 40%, transparent);
+}
+/* SUL TELEFONO IL PREZZO VA SOTTO IL NOME, come negli stili dell'app:
+   accanto al nome, al prezzo e ad «Aggiungi» la colonna del nome restava
+   di pochi caratteri e spezzava i nomi a metà parola. I puntini, senza un
+   prezzo a cui arrivare, se ne vanno. */
+@media (max-width: 520px) {
+  .stile-ricetta .menu-item .row > .grow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .stile-ricetta .menu-item .grow > .price {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .stile-ricetta[data-voce-prezzo='puntini'] .menu-item .grow > h3::after {
+    display: none;
+  }
+}
+
+/* IL SEPARATORE fra una voce e l'altra: solo senza riquadro, in riga o in
+   colonna (le card si separano da sé). */
+.stile-ricetta[data-voce-forma][data-voce-separatore='filetto'] .menu-item:not(.speciale) {
+  border-bottom: 1px solid var(--line);
+}
+.stile-ricetta[data-voce-forma][data-voce-separatore='tratteggio'] .menu-item:not(.speciale) {
+  border-bottom: 1px dashed color-mix(in srgb, var(--text) 35%, transparent);
+}
+.stile-ricetta[data-voce-forma][data-voce-separatore='punti'] .menu-item:not(.speciale) {
+  border-bottom: 2px dotted color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+/* L'IMMAGINE della voce: di partenza tonda. */
+.stile-ricetta .menu-item .drink-thumb {
+  border-radius: 50%;
+}
+.stile-ricetta[data-voce-immagine='quadrata'] .menu-item .drink-thumb {
+  border-radius: calc(var(--r-angolo) / 2);
+}
+.stile-ricetta[data-voce-immagine='nascosta'] .menu-item:not(.speciale) .drink-thumb {
+  display: none;
+}
+
+/* LO SFONDO: la tinta del tema, o una trama disegnata col colore del testo
+   sopra quella tinta (mai un'immagine: niente da scaricare). Con una trama
+   o una cornice il menù arriva ai bordi dello schermo, come la lavagna. */
+.stile-ricetta:is([data-sfondo], [data-cornice]):not(.assaggio-stile):not(.vetrina-tema) {
+  position: relative;
+  margin: 0 -16px;
+  padding: 0 16px 28px;
+  min-height: 100svh;
+}
+.stile-ricetta[data-sfondo='grana'] {
+  background:
+    radial-gradient(color-mix(in srgb, var(--text) 7%, transparent) 0.8px, transparent 1.2px) 0 0 / 5px 5px,
+    radial-gradient(color-mix(in srgb, var(--text) 5%, transparent) 0.8px, transparent 1.2px) 2px 3px / 7px 7px,
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='carta'] {
+  background:
+    radial-gradient(ellipse at 25% 10%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 60%),
+    radial-gradient(ellipse at 80% 90%, color-mix(in srgb, var(--text) 5%, transparent), transparent 55%),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='gesso'] {
+  background:
+    radial-gradient(ellipse at 18% 8%, color-mix(in srgb, var(--text) 7%, transparent), transparent 55%),
+    radial-gradient(ellipse at 82% 72%, color-mix(in srgb, var(--text) 4.5%, transparent), transparent 50%),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='righe'] {
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--text) 9%, transparent) 27px 28px),
+    var(--bg);
+}
+.stile-ricetta[data-sfondo='quadretti'] {
+  background:
+    linear-gradient(color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 8%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+    var(--bg);
+}
+
+/* LA CORNICE attorno al menù: disegnata sopra, a mezzo margine dal bordo,
+   così non sposta niente e non si tocca. */
+.stile-ricetta[data-cornice]::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border-radius: var(--r-angolo);
+}
+.stile-ricetta.vetrina-tema[data-cornice] {
+  position: relative;
+}
+.stile-ricetta[data-cornice='sottile']::before {
+  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
+}
+.stile-ricetta[data-cornice='doppia']::before {
+  border: 4px double var(--accent-2);
+}
+.stile-ricetta[data-cornice='angoli']::before {
+  --c: var(--accent-2);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 26px 2px,
+    linear-gradient(var(--c), var(--c)) top left / 2px 26px,
+    linear-gradient(var(--c), var(--c)) top right / 26px 2px,
+    linear-gradient(var(--c), var(--c)) top right / 2px 26px,
+    linear-gradient(var(--c), var(--c)) bottom left / 26px 2px,
+    linear-gradient(var(--c), var(--c)) bottom left / 2px 26px,
+    linear-gradient(var(--c), var(--c)) bottom right / 26px 2px,
+    linear-gradient(var(--c), var(--c)) bottom right / 2px 26px;
+  background-repeat: no-repeat;
+}
+.assaggio-stile.stile-ricetta::before {
+  display: none;
+}
+
 /* ── «MERAVIGLIE»: IL LIBRO ILLUSTRATO (REQ-MENU-027) ─────────────────────
    Lo stile esclusivo della Tana alla Lewis Carroll. L'utente, 05/11/2026:
    «non solo le immagini dei drink ma anche la pagina deve richiamare un po'

@@ -120,14 +120,16 @@ alle installazioni).
   `null`. L'ordine dei gruppi è quello della loro prima sezione: nessun
   secondo ordine da tenere d'accordo col primo. Nell'editor «Menù dei
   clienti» è una casella con le proposte dei gruppi già scritti.
-- **`impaginazione`**: si legge da `ricetta.impaginazione` del tema in
-  prova o in uso, e il tema in uso conta solo finché `stile_menu` è il suo
-  stile. Vale per i clienti (chi lavora ordina dal menù intero) e fuori
-  dalla pagina Special. Le schede in alto diventano tasti che cambiano
-  pagina; una sezione senza gruppo fa pagina da sé.
-- **Ancora no**, perché aspettano il motore degli stili a ricetta: il
-  disegno del tema dalla ricetta (oggi si usa il suo `stile`) e le pagine
-  negli stili strutturati («Giornale» riceve il menù intero).
+- **Con la ricetta il tema si disegna col motore** (REQ-MENU-031): è uno
+  stile a ricetta con l'id del tema, e «Usa» scrive quell'id in
+  `stile_menu`. Una ricetta che l'app non sa disegnare (un valore che non
+  conosce) si scarta, e il tema si disegna col suo `stile`.
+- **`impaginazione`** è quella della ricetta dello stile in vista. Vale
+  per i clienti (chi lavora ordina dal menù intero) e fuori dalla pagina
+  Special. Le schede in alto diventano tasti che cambiano pagina; una
+  sezione senza gruppo fa pagina da sé.
+- **Ancora no**: le pagine negli stili strutturati («Giornale» riceve il
+  menù intero: non è a ricetta).
 
 ## Come si prova
 
