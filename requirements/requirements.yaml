@@ -4403,6 +4403,19 @@ requirements:
       chiusa stima la larghezza della parola più lunga (misuraNome in
       lib/mazzoCarte.js, le maiuscole pesano più delle minuscole) e
       rimpicciolisce la scritta quanto basta.
+      IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero
+      esserci anche le carte girate come da esempio di Flavio: le carte che
+      aprono il menù sono in mezzo a un ventaglio di carte girate»; e
+      «un'animazione più figa: quando clicchi la carta esce fuori dal
+      mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è
+      diventato il ventaglio dello schizzo: una girata intera sotto ogni
+      carta, sfalsata di mezza carta e più in basso, e una girata inclinata
+      a ogni capo, col logo; le carte escono da quella di sinistra.
+      Toccando una carta, una carta sul dorso (con le proporzioni di una
+      carta) esce dall'alto e gira fino a essere di taglio, poi subentra la
+      faccia, cioè la carta aperta, che finisce il giro, e le voci entrano
+      una dopo l'altra. Solo transform e opacity; con «riduci movimento»
+      niente.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
