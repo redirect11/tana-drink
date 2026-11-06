@@ -34,6 +34,35 @@ import '@fontsource/dancing-script/latin-700.css'
 // fanno «libro antico».
 import '@fontsource/im-fell-english/latin-400.css'
 import '@fontsource/im-fell-english/latin-400-italic.css'
+// Gli stili a ricetta (REQ-MENU-031): i caratteri che una ricetta della
+// regia può scegliere (CARATTERI in lib/stiliRicetta.js). Sono tutti qui
+// perché la ricetta arriva dopo la build: un carattere che non fosse nel
+// pacchetto andrebbe chiesto a un servizio esterno, e quello non si fa.
+// Il 400, e il 700 dove esiste, per il nome delle voci; il browser scarica
+// solo quelli che la pagina usa davvero.
+import '@fontsource/cormorant-garamond/latin-400.css'
+import '@fontsource/cormorant-garamond/latin-400-italic.css'
+import '@fontsource/cormorant-garamond/latin-700.css'
+import '@fontsource/libre-baskerville/latin-400.css'
+import '@fontsource/libre-baskerville/latin-400-italic.css'
+import '@fontsource/libre-baskerville/latin-700.css'
+import '@fontsource/dm-serif-display/latin-400.css'
+import '@fontsource/dm-serif-display/latin-400-italic.css'
+import '@fontsource/abril-fatface/latin-400.css'
+import '@fontsource/bebas-neue/latin-400.css'
+import '@fontsource/oswald/latin-400.css'
+import '@fontsource/oswald/latin-700.css'
+import '@fontsource/inter/latin-400.css'
+import '@fontsource/inter/latin-700.css'
+import '@fontsource/space-grotesk/latin-400.css'
+import '@fontsource/space-grotesk/latin-700.css'
+import '@fontsource/josefin-sans/latin-400.css'
+import '@fontsource/josefin-sans/latin-700.css'
+import '@fontsource/pacifico/latin-400.css'
+import '@fontsource/amatic-sc/latin-400.css'
+import '@fontsource/amatic-sc/latin-700.css'
+import '@fontsource/special-elite/latin-400.css'
+import '@fontsource/jost/latin-700.css'
 import './index.css'
 import { initCookieConsent } from './lib/cookieConsent.js'
 import { avviaProgressivi } from './lib/progressivi.js'

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { stiliDisponibili, stileMenu, patchDisinstalla } from '../lib/stileMenu.js'
+import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRicettaInstallati } from '../lib/stileMenu.js'
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import {
@@ -112,9 +112,10 @@ export function TemaMenuClienti({ settings, onSave }) {
 // Ogni scheda ha un assaggio dello stile (nome e prezzo di un drink) scritto
 // con le sue regole: si vede la differenza senza leggere la descrizione.
 
-function AssaggioStile({ id }) {
+function AssaggioStile({ id, settings }) {
+  const veste = vesteDelloStile(settings, id)
   return (
-    <span className={`assaggio-stile stile-${id}`} aria-hidden="true">
+    <span className={`assaggio-stile ${veste.className || 'stile-classico'}`} style={veste.style} aria-hidden="true" {...veste.attributi}>
       <span className="assaggio-nome">Negroni</span>
       <span className="assaggio-prezzo">{formatPrice(9)}</span>
     </span>
@@ -140,7 +141,7 @@ export function StileMenuClienti({ settings, onSave }) {
               aria-pressed={attuale === s.id}
               onClick={() => onSave({ stile_menu: s.id })}
             >
-              <AssaggioStile id={s.id} />
+              <AssaggioStile id={s.id} settings={settings} />
               <strong>{s.nome}</strong>
               <span className="muted small" style={{ display: 'block', fontWeight: 400 }}>
                 {s.desc}
@@ -150,7 +151,7 @@ export function StileMenuClienti({ settings, onSave }) {
               <a className="link-inline small" href={urlProvaMenu('stile', s.id)}>
                 Prova sul menù
               </a>
-              {s.gratis && (
+              {(s.gratis || stiliRicettaInstallati(settings).some((r) => r.id === s.id)) && (
                 <button type="button" className="link-inline small" onClick={() => onSave(patchDisinstalla(settings, s.id))}>
                   Disinstalla
                 </button>

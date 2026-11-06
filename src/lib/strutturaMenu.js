@@ -33,6 +33,14 @@
 // descrizione, ingredienti) o «snella» (nome e prezzo: acqua e Coca-Cola
 // non hanno niente da raccontare), e può essere nascosta.
 //
+// E può stare in un GRUPPO (REQ-MENU-030): un livello sopra le sezioni,
+// «Cocktail», «Distillati», «Cucina», che un menù impaginato per macro
+// categoria mostra una pagina per gruppo (e che servirà ai quattro semi del
+// mazzo di carte di Flavio, REQ-MENU-029). Il gruppo è un nome scritto sulla
+// sezione, non un documento a parte: l'ordine dei gruppi è quello della loro
+// prima sezione, così non c'è un secondo ordine da tenere d'accordo col
+// primo. Senza gruppi non cambia niente.
+//
 // Qui la logica pura; le letture e le scritture stanno in api.js (le
 // collezioni si chiamano ancora `carta_sezioni` e `carta_voci`), la pagina
 // in MenuPage.jsx, la gestione in StrutturaMenu.jsx.
@@ -106,6 +114,15 @@ export const nomeVoce = (voce, drink) => testo(voce?.nome) || drink?.name || ''
 // lascia svuotare), ma una sezione scritta da uno script può esserlo.
 export const nomeSezione = (sezione) => testo(sezione?.nome) || 'Senza nome'
 
+// Il gruppo di una sezione, o null se non ne ha uno.
+export const nomeGruppo = (sezione) => testo(sezione?.gruppo).slice(0, 40) || null
+
+// I gruppi già scritti, nell'ordine della loro prima sezione: sono le
+// proposte della tendina dell'editor.
+export function gruppiScritti(sezioni) {
+  return [...new Set(ordina(sezioni).map(nomeGruppo).filter(Boolean))]
+}
+
 // UNA VOCE, come la vede il menù: il prodotto, con sopra quello che la voce
 // dice di suo, già pronta da mostrare. Prende l'`id` della VOCE, perché due
 // voci sullo stesso prodotto sono due card diverse (chiave, dettaglio); il
@@ -135,11 +152,12 @@ export function voceInSezione(voce, drink, vista = 'dettagliata') {
 export const strutturaPersonalizzata = (carta) => Boolean(carta?.sezioni?.length)
 
 // LE FORME DEI DOCUMENTI, una volta sola per l'app (api.js) e per la demo.
-export const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, nascosta = false }) => ({
+export const sezioneDaScrivere = ({ nome = '', ordine = 0, vista, nascosta = false, gruppo = null }) => ({
   nome: String(nome || '').trim(),
   ordine,
   vista: vistaSezione(vista),
   nascosta: nascosta === true,
+  gruppo: nomeGruppo({ gruppo }),
 })
 export const voceDaScrivere = ({ sezione_id, drink_id, nome = '', descrizione = '', ingredienti = '', ordine = 0 }) => ({
   sezione_id,
@@ -214,7 +232,7 @@ export function fuoriDalMenu(carta, drinks) {
 }
 
 // LE SEZIONI DEL MENÙ, nella forma che la pagina sa già disegnare:
-// [nome, voci, { id, vista }]. I `drinks` sono quelli del menù, cioè i soli
+// [nome, voci, { id, vista, gruppo }]. I `drinks` sono quelli del menù, cioè i soli
 // disponibili e già col nome per il cliente: una voce su un prodotto spento
 // o esaurito sparisce da sola, come nel menù di sempre (REQ-MENU-017), e una
 // sezione rimasta senza voci non si mostra. Niente ricerca: nel menù c'è
@@ -231,7 +249,35 @@ export function sezioniDelMenu(carta, drinks) {
     if (s.nascosta) continue
     const vista = vistaSezione(s.vista)
     const lista = (vociPer.get(s.id) || []).map((v) => voceInSezione(v, perId.get(v.drink_id), vista))
-    if (lista.length) out.push([nomeSezione(s), lista, { id: s.id, vista }])
+    if (lista.length) out.push([nomeSezione(s), lista, { id: s.id, vista, gruppo: nomeGruppo(s) }])
   }
   return out
+}
+
+// ── LE PAGINE DEL MENÙ (REQ-MENU-030) ────────────────────────────────
+// Con l'impaginazione del tema le sezioni del menù (nella forma di
+// `sezioniDelMenu`, o le categorie della cassa) si dividono in pagine:
+// una per sezione, o una per gruppo. Una sezione senza gruppo fa pagina da
+// sé, col suo nome; senza nessun gruppo scritto, una pagina per gruppo vale
+// come una per sezione. Con una pagina sola non c'è niente da sfogliare, e
+// torna null, come per il menù tutto in una pagina.
+export function pagineDelMenu(sezioni, impaginazione) {
+  if (impaginazione !== 'per-categoria' && impaginazione !== 'per-macro-categoria') return null
+  const perGruppo = impaginazione === 'per-macro-categoria'
+  const pagine = []
+  const diGruppo = new Map()
+  for (const s of sezioni || []) {
+    const [nome, , meta] = s
+    const gruppo = perGruppo ? meta?.gruppo : null
+    if (gruppo && diGruppo.has(gruppo)) {
+      diGruppo.get(gruppo).sezioni.push(s)
+      continue
+    }
+    const pagina = gruppo
+      ? { id: `gruppo:${gruppo}`, nome: gruppo, sezioni: [s] }
+      : { id: `sezione:${meta?.id ?? nome}`, nome, sezioni: [s] }
+    if (gruppo) diGruppo.set(gruppo, pagina)
+    pagine.push(pagina)
+  }
+  return pagine.length > 1 ? pagine : null
 }

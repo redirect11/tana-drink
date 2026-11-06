@@ -577,6 +577,36 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(opzioni).toEqual({ sostituisci: STRUTTURA })
   })
 
+  // IL GRUPPO DELLA SEZIONE (REQ-MENU-030): la macro categoria per i menù
+  // impaginati a gruppi. Si sceglie fra quelli scritti o se ne scrive uno
+  // nuovo; svuotato, la sezione non è in nessun gruppo.
+  it('il gruppo di una sezione: le proposte sono quelli già scritti, uno nuovo si scrive lì', async () => {
+    const user = userEvent.setup()
+    filo.carta = {
+      ...STRUTTURA,
+      sezioni: STRUTTURA.sezioni.map((s) => (s.id === 's-cocktail' ? { ...s, gruppo: 'Cocktail' } : s)),
+    }
+    await apriStruttura()
+    const cocktail = await screen.findByRole('region', { name: 'Sezione Cocktail IBA' })
+    const suo = within(cocktail).getByRole('combobox', { name: 'Gruppo della sezione Cocktail IBA' })
+    expect(suo).toHaveValue('Cocktail')
+    const proposte = document.getElementById(suo.getAttribute('list'))
+    expect([...proposte.querySelectorAll('option')].map((o) => o.value)).toEqual(['Cocktail'])
+
+    const bibite = screen.getByRole('region', { name: 'Sezione Bibite' })
+    const gruppo = within(bibite).getByRole('combobox', { name: 'Gruppo della sezione Bibite' })
+    await user.type(gruppo, ' Da bere {Enter}')
+    expect(aggiornaSezioneCarta).toHaveBeenLastCalledWith('s-bibite', { gruppo: 'Da bere' })
+
+    aggiornaSezioneCarta.mockClear()
+    await user.click(suo)
+    await user.tab()
+    expect(aggiornaSezioneCarta).not.toHaveBeenCalled()
+    await user.clear(suo)
+    await user.tab()
+    expect(aggiornaSezioneCarta).toHaveBeenLastCalledWith('s-cocktail', { gruppo: null })
+  })
+
   // Le cancellazioni si confermano col dialogo dell'app, non col
   // `confirm` del browser, che nella PWA installata può non comparire.
   it('le sezioni si nascondono, si spostano, si eliminano; e tutto torna al menù per categorie', async () => {

@@ -22,8 +22,13 @@
 //     esclusivi («Notte» è della Tana: «sono esclusive loro») e, un domani,
 //     quelli comprati. La licenza dall'app non la scrive nessuno (BUG-125),
 //     quindi un `stile_menu` scritto dalla console non li accende.
+//   · `aRicetta` — gli STILI A RICETTA (REQ-MENU-031): non scritti qui ma
+//     arrivati dalla regia, che il motore disegna. Il locale li ha quando li
+//     ha installati (`stili_ricetta`, con la loro copia) o quando ha
+//     installato il tema su misura che li porta.
 // Uno stile che il locale non ha non si applica: resta il classico.
 import { licenzaDi } from './licenzaInVigore.js'
+import { stiliRicettaDelLocale, stiliRicettaProvabili, stiliRicordati, leggiStile, vesteRicetta } from './stiliRicetta.js'
 
 export const STILI_MENU = [
   {
@@ -81,7 +86,24 @@ export const STILI_MENU = [
 export const STILE_PREDEFINITO = 'classico'
 
 const perId = (id) => STILI_MENU.find((s) => s.id === id) || null
-export const nomeStile = (id) => perId(id)?.nome || id
+
+// Uno stile a ricetta nella forma delle voci di STILI_MENU.
+const comeStile = (s) => ({ id: s.id, nome: s.nome, desc: s.descrizione, aRicetta: true, ricetta: s.ricetta })
+
+// Lo stile per id, quelli a ricetta compresi: quelli che il locale può
+// almeno provare (servono le impostazioni per saperlo).
+function stileDi(settings, id) {
+  const scritto = perId(id)
+  if (scritto) return scritto
+  const r = stiliRicettaProvabili(settings).find((s) => s.id === id)
+  return r ? comeStile(r) : null
+}
+
+export const nomeStile = (id, settings = null) => stileDi(settings, id)?.nome || id
+
+// La ricetta dello stile, se è uno stile a ricetta: è quella che il menù
+// disegna, e la sua impaginazione divide il menù in pagine.
+export const ricettaDelloStile = (settings, id) => (perId(id) ? null : stileDi(settings, id)?.ricetta || null)
 
 // I temi che la licenza dà: l'elenco `temi`, o nessuno.
 export function temiInLicenza(settings) {
@@ -98,13 +120,17 @@ export function stiliInstallati(settings) {
 // Il locale ha questo stile?
 function haStile(settings, s) {
   if (s.sempre) return true
+  if (s.aRicetta) return stiliRicettaDelLocale(settings).some((r) => r.id === s.id)
   if (s.gratis) return stiliInstallati(settings).includes(s.id)
   if (s.inLicenza) return temiInLicenza(settings).includes(s.id)
   return false
 }
 
 // Gli stili che questo locale può usare, nell'ordine del catalogo.
-export const stiliDisponibili = (settings) => STILI_MENU.filter((s) => haStile(settings, s))
+export const stiliDisponibili = (settings) => [
+  ...STILI_MENU.filter((s) => haStile(settings, s)),
+  ...stiliRicettaDelLocale(settings).map(comeStile),
+]
 
 // I DISEGNI DEI DRINK SONO DEL LOCALE CHE HA «NOTTE» (REQ-LIC-013). Le
 // illustrazioni di Alice e i disegni composti (illustrazioneDrink.js) sono
@@ -133,27 +159,58 @@ export function stileInVista(settings, { lavoro = false, prova = null } = {}) {
   return lavoro ? STILE_PREDEFINITO : stileMenu(settings)
 }
 
+// LA VESTE DI UNO STILE su un contenitore: la classe dello stile scritto
+// nell'app (`stile-deco`), o il motore con la ricetta (`stile-ricetta`, i
+// suoi attributi e le variabili dei caratteri). La usano il menù, le
+// vetrine del marketplace e l'assaggio nelle impostazioni, così uno stile a
+// ricetta si vede allo stesso modo dappertutto.
+export function vesteDelloStile(settings, id) {
+  const ricetta = ricettaDelloStile(settings, id)
+  if (ricetta) {
+    const { attributi, style } = vesteRicetta(ricetta)
+    return { className: 'stile-ricetta', attributi, style }
+  }
+  return { className: id && id !== STILE_PREDEFINITO ? `stile-${id}` : '', attributi: {}, style: {} }
+}
+
 // Lo stile veste anche la home, gli ordini e l'accesso, o solo il menù?
 export const vestePagine = (id) => Boolean(perId(id)?.pagine)
 
 // LA PROVA SUL PROPRIO MENÙ: chi lavora apre il menù del cliente con uno
 // stile che ha o che potrebbe installare, solo per sé (`?vista=cliente&
 // stile=…`). Un esclusivo che il locale non ha non si prova: non c'è.
+// Uno stile a ricetta si prova se il locale lo ha, se è di un suo tema su
+// misura, o se è nel catalogo ricordato: gratis come gli stili dell'app.
 export function stileProvabile(settings, id) {
-  const s = perId(id)
-  return Boolean(s && (haStile(settings, s) || s.gratis))
+  const s = stileDi(settings, id)
+  return Boolean(s && (s.aRicetta || haStile(settings, s) || s.gratis))
 }
 
 // Installare e disinstallare: la patch delle impostazioni. Disinstallando
 // lo stile in uso si torna al classico, invece di lasciare scritto uno
 // stile che non c'è più.
-export function patchInstalla(settings, id) {
-  if (!perId(id)?.gratis) return null
-  return { stili_installati: [...new Set([...stiliInstallati(settings), id])] }
+// Uno stile a ricetta del catalogo si installa con la sua copia: se la
+// regia lo ritira, resta a chi l'ha. Uno che il locale ha già (anche da un
+// suo tema su misura) non si ricopia.
+export function patchInstalla(settings, id, catalogo = stiliRicordati()) {
+  if (perId(id)?.gratis) return { stili_installati: [...new Set([...stiliInstallati(settings), id])] }
+  if (stiliRicettaDelLocale(settings).some((s) => s.id === id)) return null
+  const dalCatalogo = catalogo.find((s) => s.id === id)
+  if (!dalCatalogo) return null
+  return { stili_ricetta: [...stiliRicettaInstallati(settings), dalCatalogo] }
+}
+
+// Le copie degli stili a ricetta installati dal catalogo (quelli dei temi
+// su misura stanno nel loro tema).
+export function stiliRicettaInstallati(settings) {
+  const v = Array.isArray(settings?.stili_ricetta) ? settings.stili_ricetta : []
+  return v.map(leggiStile).filter(Boolean)
 }
 
 export function patchDisinstalla(settings, id) {
-  const patch = { stili_installati: stiliInstallati(settings).filter((x) => x !== id) }
+  const patch = perId(id)
+    ? { stili_installati: stiliInstallati(settings).filter((x) => x !== id) }
+    : { stili_ricetta: stiliRicettaInstallati(settings).filter((s) => s.id !== id) }
   if (settings?.stile_menu === id) patch.stile_menu = STILE_PREDEFINITO
   return patch
 }

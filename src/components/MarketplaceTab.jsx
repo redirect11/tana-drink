@@ -16,7 +16,11 @@ import {
   stileMenu,
   patchInstalla,
   patchDisinstalla,
+  vesteDelloStile,
+  ricettaDelloStile,
+  stiliRicettaInstallati,
 } from '../lib/stileMenu.js'
+import { stiliRicordati, coloriConRicetta } from '../lib/stiliRicetta.js'
 import {
   catalogo,
   catalogoRicordato,
@@ -24,8 +28,11 @@ import {
   urlCatalogo,
   urlProvaMenu,
   temiInstallati,
+  temiSuMisura,
+  suMisuraRitirati,
   temaInUso,
   temaComeColori,
+  stileDelTema,
   patchInstallaTema,
   patchUsaTema,
   patchDisinstallaTema,
@@ -62,8 +69,14 @@ import {
 // gesto — sfogliare un catalogo e prendere quello che serve — e perché
 // l'utente l'ha chiesta così: «anche per i moduli aggiuntivi andrebbe fatto
 // il marketplace».
+//
+// «I TUOI TEMI» (REQ-MENU-030) sono quelli fatti dalla regia per questo
+// locale, che arrivano con la licenza. La sezione c'è solo se ce n'è almeno
+// uno, in licenza o installato: a un locale che non ne ha, una sezione vuota
+// direbbe soltanto che esiste un servizio a pagamento.
 
 const SEZIONI = [
+  { id: 'tuoi', icona: '⭐', label: 'I tuoi temi' },
   { id: 'temi', icona: '🎨', label: 'Temi' },
   { id: 'stili', icona: '🖋️', label: 'Stili del menù' },
   { id: 'installati', icona: '✅', label: 'Installati' },
@@ -72,7 +85,7 @@ const SEZIONI = [
 
 // La sezione da aprire: quella dell'indirizzo, se esiste. Ci si arriva così
 // tornando dalla pagina di pagamento (`?tab=marketplace&sezione=moduli`).
-const sezioneDa = (chiesta) => (SEZIONI.some((s) => s.id === chiesta) ? chiesta : 'temi')
+const sezioneDa = (chiesta, voci = SEZIONI) => (voci.some((s) => s.id === chiesta) ? chiesta : 'temi')
 
 // Le due voci d'esempio delle vetrine, una volta sola per tutti gli stili.
 const VOCI_ESEMPIO = [
@@ -84,7 +97,9 @@ const VOCI_ESEMPIO = [
 // le sue regole, come disegna il menù dei clienti. Uno stile con una
 // struttura sua (il «Giornale», REQ-MENU-024) mostra quella, coi suoi
 // componenti: la vetrina non può mostrare un giornale che non c'è.
-function Vetrina({ colori, stile }) {
+// Uno stile a ricetta (REQ-MENU-031) si veste col motore, come il menù, e
+// coi suoi colori sopra quelli del tema.
+function Vetrina({ colori, stile, settings }) {
   if (stile === 'giornale') {
     return (
       <div className="vetrina-tema stile-giornale" style={resolveThemeVars(colori)} aria-hidden="true">
@@ -99,8 +114,15 @@ function Vetrina({ colori, stile }) {
       </div>
     )
   }
+  const veste = vesteDelloStile(settings, stile)
+  const tinte = resolveThemeVars(coloriConRicetta(colori, ricettaDelloStile(settings, stile)))
   return (
-    <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
+    <div
+      className={`vetrina-tema ${veste.className || 'stile-classico'}`}
+      style={{ ...tinte, ...veste.style }}
+      aria-hidden="true"
+      {...veste.attributi}
+    >
       <h3 className="cat-header">Cocktail</h3>
       {VOCI_ESEMPIO.map((d) => (
         <div className="card menu-item" key={d.id}>
@@ -411,19 +433,34 @@ export default function MarketplaceTab({ role = null }) {
   }
 
   const installati = temiInstallati(settings)
+  const suMisura = temiSuMisura(settings)
+  const ritirati = suMisuraRitirati(settings)
+  const conTuoi = suMisura.length + ritirati.length > 0
+  const voci = conTuoi ? SEZIONI : SEZIONI.filter((s) => s.id !== 'tuoi')
+  // Arrivati su «I tuoi temi» da un indirizzo, prima che le impostazioni
+  // dicano se ce ne sono: senza, si resta sui temi.
+  const aperta = sezioneDa(sezione, voci)
   const stiliDelLocale = stiliInstallati(settings)
   const inUso = temaInUso(settings)
   const stileInUso = stileMenu(settings)
   const coloriDelLocale = settings.theme_client || null
-  const disinstallabile = sezione === 'installati'
+  const disinstallabile = aperta === 'installati'
+
+  // Un tema su misura ritirato dalla licenza non si reinstalla: disinstallarlo
+  // è definitivo, e la scheda lo dice prima.
+  const ritirato = (t) => ritirati.some((r) => r.id === t.id)
+  const sottotitoloTema = (t) =>
+    t.su_misura
+      ? `Su misura${t.ricetta ? '' : ` · Stile «${nomeStile(t.stile, settings)}»`}${ritirato(t) ? ' · Non più in licenza: una volta disinstallato non si reinstalla' : ''}`
+      : `Stile «${nomeStile(t.stile, settings)}» · Gratis`
 
   const schedaTema = (t) => (
     <Scheda
       key={t.id}
       titolo={t.nome}
       descrizione={t.descrizione}
-      sottotitolo={`Stile «${nomeStile(t.stile)}» · Gratis`}
-      vetrina={<Vetrina colori={temaComeColori(t)} stile={t.stile} />}
+      sottotitolo={sottotitoloTema(t)}
+      vetrina={<Vetrina colori={temaComeColori(t)} stile={stileDelTema(t)} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('tema', t.id)}
@@ -444,13 +481,13 @@ export default function MarketplaceTab({ role = null }) {
       titolo={s.nome}
       descrizione={s.desc}
       sottotitolo="Sui colori del menù del locale · Gratis"
-      vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} />}
+      vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('stile', s.id)}
         etichetta={`lo stile ${s.nome}`}
         inUso={stileInUso === s.id}
-        installato={stiliDelLocale.includes(s.id)}
+        installato={s.aRicetta ? ricettaInstallati.some((r) => r.id === s.id) : stiliDelLocale.includes(s.id)}
         disinstallabile={disinstallabile}
         onUsa={() => salva({ stile_menu: s.id })}
         onInstalla={() => salva(patchInstalla(settings, s.id))}
@@ -459,15 +496,35 @@ export default function MarketplaceTab({ role = null }) {
     </Scheda>
   )
 
-  const stiliGratis = STILI_MENU.filter((s) => s.gratis)
-  const stiliInstallatiSchede = STILI_MENU.filter((s) => stiliDelLocale.includes(s.id))
+  // Gli stili a ricetta del catalogo della regia (REQ-MENU-031), nella
+  // forma delle voci di STILI_MENU: si provano, si installano e si usano
+  // come quelli dell'app. Si rileggono a ogni giro, perché arrivano col
+  // catalogo dei temi.
+  const comeScheda = (r) => ({ id: r.id, nome: r.nome, desc: r.descrizione, aRicetta: true })
+  const ricettaInstallati = stiliRicettaInstallati(settings)
+  const stiliGratis = [...STILI_MENU.filter((s) => s.gratis), ...stiliRicordati().map(comeScheda)]
+  const stiliInstallatiSchede = [
+    ...STILI_MENU.filter((s) => stiliDelLocale.includes(s.id)),
+    ...ricettaInstallati.map(comeScheda),
+  ]
 
   return (
     <div className="pagina-marketplace">
-      <Sottosezioni voci={SEZIONI} attiva={sezione} scegli={scegli} />
+      <Sottosezioni voci={voci} attiva={aperta} scegli={scegli} />
       {errore && <div className="banner">Errore: {errore}</div>}
 
-      {sezione === 'temi' && (
+      {aperta === 'tuoi' && (
+        <section>
+          <h2>I tuoi temi</h2>
+          <p className="muted">
+            Temi realizzati su misura per questo locale e inclusi nella licenza. Si provano, si installano e si usano come
+            quelli del catalogo.
+          </p>
+          <div className="griglia-marketplace">{[...suMisura, ...ritirati].map(schedaTema)}</div>
+        </section>
+      )}
+
+      {aperta === 'temi' && (
         <section>
           <h2>Temi</h2>
           <p className="muted">
@@ -479,7 +536,7 @@ export default function MarketplaceTab({ role = null }) {
         </section>
       )}
 
-      {sezione === 'stili' && (
+      {aperta === 'stili' && (
         <section>
           <h2>Stili del menù</h2>
           <p className="muted">
@@ -489,7 +546,7 @@ export default function MarketplaceTab({ role = null }) {
         </section>
       )}
 
-      {sezione === 'installati' && (
+      {aperta === 'installati' && (
         <section>
           <h2>Installati</h2>
           {installati.length === 0 && stiliInstallatiSchede.length === 0 ? (
@@ -505,7 +562,7 @@ export default function MarketplaceTab({ role = null }) {
         </section>
       )}
 
-      {sezione === 'moduli' && (
+      {aperta === 'moduli' && (
         <SezioneModuli
           settings={settings}
           role={role}
