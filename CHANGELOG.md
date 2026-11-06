@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.20-beta — in lavorazione
+## 1.10.21-beta — in lavorazione
+
+### Menù
+
+- Un locale nuovo che non ha ancora il suo logo, o una sua icona, mostra
+  un logo neutro (un bicchiere su un tondo scuro), mai quello della Tana:
+  anche sul dorso del mazzo di «Carte» (REQ-VENUE-001).
+
+## 1.10.20-beta — 06/11/2026 (test)
 
 ### Menù
 

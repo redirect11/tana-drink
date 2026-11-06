@@ -6381,6 +6381,54 @@ requirements:
       - tests/component/MenuManager.test.jsx
       - tests/unit/css.test.js
 
+  - id: REQ-LIC-014
+    title: "IDEA: i moduli come plugin, e un sistema di plugin con API e SDK, così il gestore (o chi per lui) carica nella sua istanza un plugin suo, a runtime"
+    area: "da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js"
+    description: >
+      L'utente, 06/11/2026: «quanto è complicato fare un sistema a
+      plugin/moduli dove chiunque può creare un plugin e agganciarsi agli
+      hook/api/sdk che forniamo per lo sviluppo? In questo modo possiamo
+      consentire di creare moduli che possono essere innestati a runtime»;
+      «tipo i moduli che adesso sono attivabili a parte a pagamento,
+      potremo trasformarli in plugin? L'idea è che per la propria istanza,
+      il gestore o chi per lui può scrivere e caricare un plugin custom con
+      proprie funzioni. Dobbiamo fare il sistema di plugin e definire api e
+      sdk»; e «se è un grosso sviluppo segnamocelo per dopo». Lo è.
+      DA DOVE SI PARTE. Ci sono già tre forme di estensione, tutte scritte
+      nell'app e compilate con lei: i moduli a pagamento (MODULI_PREMIUM,
+      accesi dalla licenza), gli stili strutturati del menù (un registro
+      con un contratto e una prova che ogni stile eredita, REQ-MENU-028) e
+      le porte coi loro adattatori (REQ-FLOTTA-021). E una forma a runtime
+      senza codice: gli stili a ricetta e i temi della regia, che sono
+      DATI letti e validati (REQ-MENU-031).
+      PERCHÉ È GROSSO. Un plugin a runtime è codice di altri che gira dove
+      si incassano i soldi: va isolato (iframe o worker con un ponte di
+      messaggi, mai lo stesso contesto dell'app, che ha la sessione
+      Firebase), con permessi dichiarati e accettati dal titolare, e le
+      regole di Firestore che lo tengono nel suo recinto; deve rispettare
+      il local-first (niente attese sulla rete in mezzo a un gesto al
+      banco); l'API va tenuta stabile e versionata, perché un plugin scritto
+      oggi deve girare anche con l'app di domani; e servono il
+      caricamento, gli aggiornamenti, la cache della PWA, la revisione e la
+      distribuzione dalla regia.
+      COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti
+      sopra lo stesso SDK che si darà agli altri (punti d'aggancio nominati:
+      una voce nel menù del gestionale, una sezione delle impostazioni, un
+      pannello, un evento come «conto incassato», un campo in più su un
+      prodotto), così l'API la si prova sui nostri; poi i plugin dichiarativi
+      (dati, come le ricette); poi il codice di terzi in sandbox, che può
+      leggere e proporre ma non scrivere conti e pagamenti.
+      DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i
+      gestori sulla propria istanza, chiunque dal marketplace); cosa può
+      toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel
+      browser, nelle Functions, tutti e due); chi lo rivede prima che vada
+      in un locale; se i moduli a pagamento restano in licenza come oggi
+      anche quando diventano plugin.
+    status: todo
+    generate_issue: false
+    labels: [prodotto, licenza, idea]
+    priority: P3
+    test_cases: []
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
@@ -6526,6 +6574,16 @@ requirements:
       cambia nome o indirizzo da Impostazioni senza rebuild; la Tana, che
       non le ha scritte, legge la build.
       Logica pura in src/lib/venue.js; il plugin di Vite ha il suo test.
+      I FILE GRAFICI CHE MANCANO (06/11/2026): i file di public/ sono della
+      Tana, e un locale con la cartella senza un suo file (il logo,
+      un'icona) li ereditava in silenzio. L'utente, per il logo sul dorso
+      del mazzo di «Carte»: se il tema va a un altro gestore «il logo non
+      può essere più quello della Tana», e «serve un logo placeholder
+      generico per i deploy di nuovi locali». Ora un locale che non è la
+      Tana prende il file neutro di clienti/demo/public (un bicchiere su
+      un tondo scuro, senza nomi) dove non ha il suo
+      (pluginCliente.js, fileDelCliente); e i file del cliente vanno
+      nella cartella vera della build anche con `--outDir`.
     status: implemented
     generate_issue: false
     labels: [prodotto, venue]
