@@ -1,6 +1,15 @@
 # Cosa è cambiato
 
-## 1.10.17-beta — in lavorazione
+## 1.10.18-beta — in lavorazione
+
+### Menù
+
+- Le schede delle categorie del menù, quando restano agganciate in alto,
+  non sono più attaccate al filo della barra: si fermano alla sua altezza
+  vera, anche col testo del telefono ingrandito (BUG-130). Lo stesso per il
+  sommario dello stile «Giornale».
+
+## 1.10.17-beta — 05/11/2026 (test)
 
 ### Menù
 

@@ -437,3 +437,12 @@ describe('lo stile delle pagine dei clienti segue chi guarda', () => {
     await waitFor(() => expect(stile()).toBe('meraviglie'))
   })
 })
+
+// L'ALTEZZA VERA DELLA BARRA (BUG-130): l'app la misura e la scrive in
+// `--barra-intera`, a cui si appiccicano le schede delle categorie.
+describe('l’altezza della barra in alto', () => {
+  it('si misura e si scrive sulla radice', async () => {
+    apri('/menu')
+    await waitFor(() => expect(document.documentElement.style.getPropertyValue('--barra-intera')).toMatch(/^\d+px$/))
+  })
+})
