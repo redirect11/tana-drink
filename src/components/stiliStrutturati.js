@@ -5,16 +5,20 @@
 //   · Testata — quello che sta in cima, al posto dell'apertura classica;
 //   · Corpo   — il menù vero e proprio, al posto di carosello, schede e card;
 //   · segno   — il segno dei disegni dei drink (illustrazioneDrink.js), lo
-//               stesso nel corpo e nel dettaglio della voce.
+//               stesso nel corpo e nel dettaglio della voce;
+//   · Vetrina — lo stile in miniatura per la scheda del Marketplace, con
+//               le voci d'esempio che gli passa (`voci`): la vetrina non può
+//               mostrare card che lo stile non ha. Stava nel Marketplace,
+//               un `if` per stile, e per «Carte» ne rifaceva il markup.
 // Uno stile che non è qui è «a veste»: il menù classico, vestito dal CSS.
-import MenuCarte, { TestataCarte } from './MenuCarte.jsx'
-import MenuGiornale, { TestataGiornale } from './MenuGiornale.jsx'
+import MenuCarte, { TestataCarte, VetrinaCarte } from './MenuCarte.jsx'
+import MenuGiornale, { TestataGiornale, VetrinaGiornale } from './MenuGiornale.jsx'
 
 // «Carte» è della Tana, e ne tiene il segno: i disegni di Tenniel, che con
 // le carte da gioco sono a casa loro.
 export const STILI_STRUTTURATI = Object.freeze({
-  giornale: Object.freeze({ Testata: TestataGiornale, Corpo: MenuGiornale, segno: 'incisione' }),
-  carte: Object.freeze({ Testata: TestataCarte, Corpo: MenuCarte, segno: 'tenniel' }),
+  giornale: Object.freeze({ Testata: TestataGiornale, Corpo: MenuGiornale, Vetrina: VetrinaGiornale, segno: 'incisione' }),
+  carte: Object.freeze({ Testata: TestataCarte, Corpo: MenuCarte, Vetrina: VetrinaCarte, segno: 'tenniel' }),
 })
 
 export const strutturaDi = (stile) => STILI_STRUTTURATI[stile] || null
