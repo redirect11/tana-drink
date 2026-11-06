@@ -3928,6 +3928,12 @@ requirements:
       niente carosello, la pagina Special rimanda al menù col suo tavolo
       come quando gli special non ci sono, e i drink speciali restano
       soltanto nella loro sezione.
+      LO SPAZIO FRA LE SLIDE (06/11/2026): «nel carosello le schede sono
+      praticamente attaccate». Le slide, larghe quanto il riquadro, erano
+      affiancate senza spazio e mentre si scorreva sembravano una scheda
+      sola. Ora c'è uno spazio (gap nel CSS), e il passo dei pallini e del
+      pallino che segue lo scorrimento è la larghezza più quello spazio,
+      letto dallo stile (passoDelCarosello).
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente]
