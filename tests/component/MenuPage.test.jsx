@@ -990,3 +990,91 @@ describe('la struttura del menù dei clienti (REQ-MENU-025)', () => {
     expect(document.querySelector('.cartbar').textContent).toContain('Cuba libre')
   })
 })
+
+// L'IMPAGINAZIONE DI UN TEMA SU MISURA (REQ-MENU-030). L'utente, 06/11/2026:
+// «si possa scegliere tra varie strutture di menu (tutto in una pagina, una
+// pagina per categoria o una per macro categoria)». Le schede in alto
+// diventano tasti che cambiano pagina; le macro categorie sono i gruppi
+// scritti sulle sezioni.
+describe('l’impaginazione di un tema su misura (REQ-MENU-030)', () => {
+  const STRUTTURA = {
+    sezioni: [
+      { id: 's-sig', nome: 'Signature', ordine: 0, vista: 'dettagliata', gruppo: 'Cocktail' },
+      { id: 's-iba', nome: 'Cocktail IBA', ordine: 1, vista: 'dettagliata', gruppo: 'Cocktail' },
+      { id: 's-birre', nome: 'Birre', ordine: 2, vista: 'snella' },
+    ],
+    voci: [
+      { id: 'v-negroni', sezione_id: 's-sig', drink_id: 'd2', ordine: 0 },
+      { id: 'v-mojito', sezione_id: 's-iba', drink_id: 'd1', ordine: 0 },
+      { id: 'v-ichnusa', sezione_id: 's-birre', drink_id: 'd3', ordine: 0 },
+    ],
+  }
+  const tema = (impaginazione) => ({
+    id: 'su-misura-bosco',
+    nome: 'Bosco',
+    tavolozza: { base: 'tana-scuro' },
+    stile: 'classico',
+    su_misura: true,
+    ricetta: { versione: 1, impaginazione },
+  })
+  const inUso = (impaginazione) => ({ temi_installati: [tema(impaginazione)], tema_menu: 'su-misura-bosco', stile_menu: 'classico' })
+  const sezioniLette = () => [...document.querySelectorAll('.cat-header')].map((e) => e.textContent)
+  const schede = () => within(screen.getByRole('navigation', { name: 'Pagine del menù' })).getAllByRole('button')
+
+  it('una pagina per sezione: le schede la cambiano', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockCarta = STRUTTURA
+    mockSettings = inUso('per-categoria')
+    mostra('/menu?tavolo=5')
+    await screen.findByText('Negroni')
+    expect(schede().map((b) => b.textContent)).toEqual(['Signature', 'Cocktail IBA', 'Birre'])
+    expect(sezioniLette()).toEqual(['Signature'])
+    expect(screen.queryByText('Mojito')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Birre' }))
+    expect(sezioniLette()).toEqual(['Birre'])
+    expect(screen.getByRole('button', { name: 'Birre' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Signature' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('una pagina per gruppo: le sezioni del gruppo insieme', async () => {
+    const user = userEvent.setup()
+    ruoloClaim = null
+    mockCarta = STRUTTURA
+    mockSettings = inUso('per-macro-categoria')
+    mostra()
+    await screen.findByText('Negroni')
+    expect(schede().map((b) => b.textContent)).toEqual(['Cocktail', 'Birre'])
+    expect(sezioniLette()).toEqual(['Signature', 'Cocktail IBA'])
+    await user.click(screen.getByRole('button', { name: 'Birre' }))
+    expect(voci()).toEqual(['Ichnusa'])
+  })
+
+  it('senza il tema, o con un altro stile scelto dopo, il menù resta in una pagina', async () => {
+    ruoloClaim = null
+    mockCarta = STRUTTURA
+    mockSettings = { ...inUso('per-categoria'), stile_menu: 'deco', stili_installati: ['deco'] }
+    mostra()
+    await screen.findByText('Negroni')
+    expect(sezioniLette()).toEqual(['Signature', 'Cocktail IBA', 'Birre'])
+    expect(screen.queryByRole('navigation', { name: 'Pagine del menù' })).toBeNull()
+  })
+
+  it('chi lavora ordina dal menù intero', async () => {
+    mockCarta = STRUTTURA
+    mockSettings = inUso('per-categoria')
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa'])
+    expect(screen.queryByRole('navigation', { name: 'Pagine del menù' })).toBeNull()
+  })
+
+  it('in prova dal marketplace, prima di installarlo', async () => {
+    mockCarta = STRUTTURA
+    mockSettings = { licenza: { ...LICENZA_TANA, temi_su_misura: [tema('per-categoria')] } }
+    mostra('/menu?vista=cliente&tema=su-misura-bosco')
+    await screen.findByText('Negroni')
+    expect(screen.getByText(/Stai provando il tema «Bosco»/)).toBeInTheDocument()
+    expect(sezioniLette()).toEqual(['Signature'])
+  })
+})

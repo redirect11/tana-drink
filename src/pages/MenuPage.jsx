@@ -9,7 +9,7 @@ import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
 import { stileMenu, stileInVista, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
 import { testoStile } from '../lib/testiStile.js'
-import { temaInProva } from '../lib/marketplaceTemi.js'
+import { temaInProva, impaginazioneInVista } from '../lib/marketplaceTemi.js'
 import { strutturaDi } from '../components/stiliStrutturati.js'
 import { sezioniPerLoStile } from '../lib/contrattoStile.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
@@ -26,7 +26,7 @@ import {
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
 import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
-import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria } from '../lib/strutturaMenu.js'
+import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria, pagineDelMenu } from '../lib/strutturaMenu.js'
 import {
   ORDER_STATUSES,
   STATUS_LABELS,
@@ -239,6 +239,9 @@ export default function MenuPage({ speciali = false }) {
   // La ricerca dello staff riduce il menù alle voci che rispondono, per
   // nome o ingrediente; le categorie rimaste vuote spariscono da sole.
   const [ricerca, setRicerca] = useState('')
+  // La pagina del menù scelta, quando il tema lo divide in pagine
+  // (REQ-MENU-030); null è la prima.
+  const [paginaScelta, setPaginaScelta] = useState(null)
   const categories = useMemo(() => {
     const ricercaAttiva = ricerca.trim().toLowerCase()
     // Nel menù Special si guardano solo gli special, in un gruppo solo.
@@ -491,6 +494,30 @@ export default function MenuPage({ speciali = false }) {
   }
   const specialNotte = notte && speciali
 
+  // ── L'IMPAGINAZIONE DEL TEMA (REQ-MENU-030) ─────────────────────────
+  // Un tema su misura può dividere il menù in pagine: una per sezione, o
+  // una per gruppo di sezioni. Le schede in alto allora cambiano pagina
+  // invece di far scorrere fino alla sezione. Solo per i clienti (chi
+  // lavora ordina dal menù intero) e fuori dalla pagina Special, che è già
+  // una pagina sola. Gli stili strutturati disegnano il loro corpo e
+  // ricevono le sezioni tutte: l'impaginazione la leggerà il motore delle
+  // ricette.
+  const impaginazione = staff || speciali ? 'unica' : impaginazioneInVista(settings, { provato: temaProvato, stile })
+  const pagine = struttura ? null : pagineDelMenu(categories, impaginazione)
+  const pagina = pagine ? pagine.find((p) => p.id === paginaScelta) || pagine[0] : null
+  const sezioniInVista = pagina ? pagina.sezioni : categories
+  // Cambiando pagina con le schede già agganciate in alto, si torna
+  // all'inizio della pagina nuova: restando dov'era, si leggerebbe la nuova
+  // pagina a metà, o il fondo vuoto sotto una pagina più corta.
+  const vaiAPagina = (p) => {
+    setPaginaScelta(p.id)
+    if (!categorieIncollate) return
+    const [primaSezione] = p.sezioni[0]
+    requestAnimationFrame(() =>
+      document.getElementById(`cat-${encodeURIComponent(primaSezione)}`)?.scrollIntoView?.({ block: 'start' })
+    )
+  }
+
   return (
     <div className={[staff ? 'bar-content' : '', stile !== 'classico' ? `stile-${stile}` : ''].filter(Boolean).join(' ') || undefined}>
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
@@ -736,12 +763,27 @@ export default function MenuPage({ speciali = false }) {
         // schede che restano in alto mentre si scorre (Flavio, 04/11/2026:
         // «come se fosse un tab che deve restare sempre fisso bloccato in
         // alto»).
-        <nav className={`cat-nav${usaStruttura ? ' carta' : ''}${categorieIncollate ? ' incollata' : ''}`}>
-          {categories.map(([cat]) => (
-            <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
-              {cat}
-            </a>
-          ))}
+        <nav
+          className={`cat-nav${usaStruttura ? ' carta' : ''}${categorieIncollate ? ' incollata' : ''}`}
+          aria-label={pagine ? 'Pagine del menù' : undefined}
+        >
+          {pagine
+            ? pagine.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="cat-chip"
+                  aria-pressed={p.id === pagina.id}
+                  onClick={() => vaiAPagina(p)}
+                >
+                  {p.nome}
+                </button>
+              ))
+            : categories.map(([cat]) => (
+                <a key={cat} href={`#cat-${encodeURIComponent(cat)}`} className="cat-chip">
+                  {cat}
+                </a>
+              ))}
         </nav>
       )}
 
@@ -759,7 +801,7 @@ export default function MenuPage({ speciali = false }) {
 
       {struttura && <struttura.Corpo {...perLoStile} />}
 
-      {!specialNotte && !struttura && categories.map(([cat, list, sezione]) => (
+      {!specialNotte && !struttura && sezioniInVista.map(([cat, list, sezione]) => (
         // NEL MENÙ SPECIAL LE CARD STANNO IN GRIGLIA, due per riga sul
         // telefono e tre sugli schermi larghi: una per riga, ognuna col suo
         // disegno grande, era una colonna lunghissima (l'utente, 29/10/2026:

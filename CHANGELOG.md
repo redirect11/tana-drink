@@ -8,6 +8,13 @@
   non sono più attaccate al filo della barra: si fermano alla sua altezza
   vera, anche col testo del telefono ingrandito (BUG-130). Lo stesso per il
   sommario dello stile «Giornale».
+- I temi fatti su misura per il locale arrivano con la licenza e si
+  trovano nel Marketplace, in «⭐ I tuoi temi»: si provano, si installano e
+  si usano come gli altri (REQ-MENU-030).
+- Un tema può dividere il menù dei clienti in pagine, una per sezione o
+  una per gruppo di sezioni: le schede in alto cambiano pagina.
+- Nel «Menù dei clienti» ogni sezione può stare in un gruppo (per esempio
+  «Cocktail», «Distillati»), che fa da macro categoria.
 
 ## 1.10.17-beta — 05/11/2026 (test)
 

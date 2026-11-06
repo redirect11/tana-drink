@@ -4632,6 +4632,25 @@ body.drawer-open .status-bell-float { display: none; }
   color: var(--btn-ink);
 }
 
+/* LE SCHEDE CHE CAMBIANO PAGINA (REQ-MENU-030), quando il tema divide il
+   menù in pagine: sono tasti, non collegamenti, e quella aperta resta
+   accesa. `.cat-nav` davanti perché la scheda accesa vinca anche sugli
+   stili che danno alle schede un fondo trasparente. */
+button.cat-chip {
+  font-family: inherit;
+  cursor: pointer;
+}
+.cat-nav .cat-chip[aria-pressed='true'] {
+  background: var(--btn-bg);
+  border-color: transparent;
+  color: var(--btn-ink);
+}
+.stile-notte .cat-nav .cat-chip[aria-pressed='true'] {
+  background: transparent;
+  color: var(--text);
+  border-bottom-color: var(--accent-2);
+}
+
 /* LE SEZIONI DELLA CARTA DEI CLIENTI (REQ-MENU-025) sono poche: schede
    grandi, che restano in alto mentre si scorre. Flavio, 04/11/2026: «ne
    saranno di meno, dovranno essere messe più grandi». Il carattere resta
@@ -4715,6 +4734,14 @@ body.drawer-open .status-bell-float { display: none; }
 }
 .struttura-spunta input {
   width: auto;
+}
+/* Il gruppo della sezione (REQ-MENU-030): una casella corta in barra, alla
+   misura della tendina accanto, non un campo a tutta larghezza. */
+.struttura-gruppo {
+  width: 11em;
+  max-width: 100%;
+  padding: 6px 10px;
+  font-size: 0.85rem;
 }
 .struttura-nota {
   margin: 0 0 8px;

@@ -24,6 +24,10 @@ import {
   patchInstallaTema,
   patchUsaTema,
   patchDisinstallaTema,
+  temiSuMisura,
+  suMisuraRitirati,
+  impaginazioneTema,
+  impaginazioneInVista,
 } from '../../src/lib/marketplaceTemi.js'
 import { THEME_FIELDS, THEME_PRESETS } from '../../src/lib/themes.js'
 
@@ -195,5 +199,88 @@ describe('la prova sul menù', () => {
     expect(temaInProva({}, '?tema=gazzetta')).toBeNull()
     expect(temaInProva({}, '?vista=cliente&tema=inventato')).toBeNull()
     expect(temaInProva({}, '?vista=cliente&tema=notte')).toBeNull()
+  })
+})
+
+// ── I TEMI SU MISURA (REQ-MENU-030) ──────────────────────────────────
+// La regia li fa per un locale solo (dal mockup del titolare, o a mano dal
+// fornitore) e li manda con la licenza, in `temi_su_misura`
+// (docs/temi-su-misura.md). Nessuna chiamata in più: si vedono anche senza
+// rete.
+describe('i temi su misura, dalla licenza', () => {
+  const BOSCO = {
+    id: 'su-misura-mhz3k1a2',
+    nome: 'Bosco',
+    descrizione: 'Verde profondo e oro.',
+    prezzo: 0,
+    tavolozza: { base: 'tana-scuro', colori: { '--bg': '#10201a' } },
+    stile: 'deco',
+    ricetta: { versione: 1, cornice: 'sottile', impaginazione: 'per-categoria' },
+  }
+  const conLicenza = (temi, altro = {}) => ({ licenza: { temi_su_misura: temi }, ...altro })
+
+  it('sono temi come quelli del catalogo, segnati su misura e con la loro ricetta', () => {
+    const [t] = temiSuMisura(conLicenza([BOSCO]))
+    expect(t).toMatchObject({ id: BOSCO.id, nome: 'Bosco', stile: 'deco', su_misura: true, ricetta: BOSCO.ricetta })
+    expect(t.tavolozza).toEqual({ base: 'tana-scuro', colori: { '--bg': '#10201a' } })
+  })
+
+  it('le licenze scritte prima non hanno la voce: nessun tema su misura', () => {
+    expect(temiSuMisura({ licenza: { temi: ['notte'] } })).toEqual([])
+    expect(temiSuMisura({})).toEqual([])
+    expect(temiSuMisura(conLicenza('non è un elenco'))).toEqual([])
+  })
+
+  // Un tema su misura non apre un esclusivo: «Notte» resta di chi l'ha in
+  // licenza, e uno stile sconosciuto non si sa disegnare.
+  it('uno stile esclusivo o sconosciuto lo scarta', () => {
+    const temi = temiSuMisura(conLicenza([{ ...BOSCO, stile: 'notte' }, { ...BOSCO, id: 'altro', stile: 'vaporwave' }, null]))
+    expect(temi).toEqual([])
+  })
+
+  it('installato e poi tolto dalla licenza: resta, ma si sa che non si reinstalla', () => {
+    const copia = temiSuMisura(conLicenza([BOSCO]))[0]
+    const dopo = { licenza: { temi_su_misura: [] }, temi_installati: [copia] }
+    expect(temiInstallati(dopo)[0]).toMatchObject({ id: BOSCO.id, su_misura: true, ricetta: BOSCO.ricetta })
+    expect(suMisuraRitirati(dopo).map((t) => t.id)).toEqual([BOSCO.id])
+    expect(suMisuraRitirati({ ...dopo, licenza: { temi_su_misura: [BOSCO] } })).toEqual([])
+  })
+
+  it('si prova sul menù anche prima di installarlo', () => {
+    expect(temaPerId(conLicenza([BOSCO]), BOSCO.id)?.nome).toBe('Bosco')
+    expect(temaInProva(conLicenza([BOSCO]), `?vista=cliente&tema=${BOSCO.id}`)?.su_misura).toBe(true)
+  })
+})
+
+describe('l’impaginazione del menù', () => {
+  const tema = (impaginazione, stile = 'classico') => ({
+    id: 'bosco',
+    nome: 'Bosco',
+    tavolozza: { base: 'tana-scuro' },
+    stile,
+    su_misura: true,
+    ricetta: { versione: 1, impaginazione },
+  })
+
+  it('i tre valori, e quello di sempre per tutto il resto', () => {
+    expect(impaginazioneTema(tema('per-categoria'))).toBe('per-categoria')
+    expect(impaginazioneTema(tema('per-macro-categoria'))).toBe('per-macro-categoria')
+    expect(impaginazioneTema(tema('a-fisarmonica'))).toBe('unica')
+    expect(impaginazioneTema({ id: 'x', nome: 'X' })).toBe('unica')
+    expect(impaginazioneTema(null)).toBe('unica')
+  })
+
+  it('quella del tema in uso, finché il menù ha ancora il suo stile', () => {
+    const s = { temi_installati: [tema('per-categoria')], tema_menu: 'bosco' }
+    expect(impaginazioneInVista(s, { stile: 'classico' })).toBe('per-categoria')
+    // Scelto dopo uno stile da solo, `tema_menu` resta scritto: ma il menù
+    // non è più quel tema.
+    expect(impaginazioneInVista(s, { stile: 'deco' })).toBe('unica')
+    expect(impaginazioneInVista({}, { stile: 'classico' })).toBe('unica')
+  })
+
+  it('quella del tema in prova, prima di quello in uso', () => {
+    const s = { temi_installati: [tema('per-categoria')], tema_menu: 'bosco' }
+    expect(impaginazioneInVista(s, { provato: tema('per-macro-categoria', 'deco'), stile: 'deco' })).toBe('per-macro-categoria')
   })
 })
