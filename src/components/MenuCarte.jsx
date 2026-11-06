@@ -9,19 +9,23 @@ import { formatPrice } from '../lib/orderStatus.js'
 // L'idea di Flavio, 05/11/2026, e il suo schizzo del 06/11/2026: «na cosa
 // del genere, con le carte che si alzano quando le selezioni»; l'utente:
 // «una cosa ovviamente più figa e moderna con animazioni».
-//   · il MAZZO: ogni sezione è una carta francese, col seme del suo gruppo
-//     e il suo valore (lib/mazzoCarte.js), in fila e accavallate; la parte
-//     bassa sta nel mazzo coperto, come nello schizzo. All'apertura le carte
-//     escono dal mazzo una dopo l'altra;
+//   · il MAZZO: ogni sezione è una carta francese, intera, col seme del
+//     suo gruppo e il suo valore (lib/mazzoCarte.js), in fila e
+//     accavallate; a inizio fila il mazzo coperto, carte intere sul dorso,
+//     da cui le carte escono una dopo l'altra all'apertura. (La prima
+//     versione le teneva per metà dietro una fascia di dorsi: «le carte
+//     devono essere intere, adesso sono tagliate, non sembra un mazzo».)
 //   · la CARTA SCELTA si alza, e sotto si apre in grande, con le voci
 //     scritte sopra: nome, prezzo, descrizione, ingredienti, «Aggiungi»;
-//   · gli SPECIAL sono il Jolly, la prima carta;
+//   · gli SPECIAL nel menù sono del carosello di sempre, in cima
+//     (stiliStrutturati.js, `carosello`); sulla pagina Special sono il
+//     Jolly, una carta sola, già aperta;
 //   · la testa della carta aperta resta agganciata mentre si legge, col
 //     tasto per tornare al mazzo: le sezioni lunghe (i gin, i whisky) non
 //     costringono a risalire a mano.
-// Si apre la prima sezione, non il Jolly: aprendo il menù si deve vedere il
-// menù. Le carte non aperte restano nella pagina, nascoste: ogni voce è a
-// un tocco, e il contratto (contrattoStile.js) le vuole tutte.
+// Si apre la prima sezione. Le carte non aperte restano nella pagina,
+// nascoste: ogni voce è a un tocco, e il contratto (contrattoStile.js) le
+// vuole tutte.
 // Si animano solo transform e opacity, e con «riduci movimento» niente.
 
 // Il Jolly ha un seme suo, così ogni carta si colora dal suo seme senza
@@ -116,15 +120,25 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
     >
       <Indice carta={carta} />
       <span className="k-carta-nome">{carta.nome}</span>
+      <span className="k-pip" aria-hidden="true">
+        {carta.jolly ? '★' : segnoDi(carta.seme)}
+      </span>
     </button>
   )
 }
 
-// La fila delle carte con il mazzo coperto davanti. La usano il menù e la
-// vetrina del Marketplace, che così mostra il mazzo che c'è davvero.
+// La fila: il mazzo coperto, poi le carte. La usano il menù e la vetrina
+// del Marketplace, che così mostra il mazzo che c'è davvero.
+const DORSI = [0, 1, 2, 3]
+
 export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
   return (
     <div className="k-fila">
+      <span className="k-coperto" aria-hidden="true">
+        {DORSI.map((d) => (
+          <span key={d} className="k-dorso" style={{ '--d': d }} />
+        ))}
+      </span>
       {carte.map((c, i) => (
         <CartaChiusa
           key={c.id}
@@ -135,7 +149,6 @@ export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
           tabIndex={tabIndex}
         />
       ))}
-      <span className="k-coperto" aria-hidden="true" />
     </div>
   )
 }
@@ -168,9 +181,9 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
 
   // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
   // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
-  // prima sezione, o il Jolly se sezioni non ce ne sono.
-  const tutte = soloSpeciali ? jolly : [...jolly, ...carte]
-  const aperta = tutte.find((c) => c.id === scelta) || tutte.find((c) => !c.jolly) || tutte[0]
+  // prima.
+  const tutte = soloSpeciali ? jolly : carte
+  const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
   if (!aperta) return null
 
   const scegli = (id) => (e) => {

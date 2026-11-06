@@ -21,9 +21,9 @@ export const LICENZA_TANA = Object.freeze({
     fatture: true,
     scadenzario: true,
   }),
-  // Gli stili «Notte» e «Meraviglie» del menù sono della Tana
-  // (REQ-LIC-010, REQ-MENU-027).
-  temi: Object.freeze(['notte', 'meraviglie']),
+  // Gli stili «Notte», «Meraviglie» e «Carte» del menù sono della Tana
+  // (REQ-LIC-010, REQ-MENU-027, REQ-MENU-029).
+  temi: Object.freeze(['notte', 'meraviglie', 'carte']),
 })
 
 export const CON_LICENZA = Object.freeze({ licenza: LICENZA_TANA })

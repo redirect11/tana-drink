@@ -2,6 +2,18 @@
 
 ## 1.10.20-beta — in lavorazione
 
+### Menù
+
+- Il tema «Carte» rifatto dopo la prima prova: carte intere e più grandi,
+  un mazzo coperto vero da cui escono all'apertura, la scrittura da libro
+  d'epoca alla Lewis Carroll, più grande, e i disegni dei drink che si
+  vedono bene sulle carte bianche. Gli Special non sono più una carta del
+  mazzo (ripetevano Signature): sono il carosello in cima, come negli
+  altri temi (REQ-MENU-029).
+- Il menù Special si accende e si spegne dal suo pannello, con «Menù
+  Special attivo». Acceso, il carosello in cima al menù e la pagina sua;
+  spento, i drink speciali restano nelle loro sezioni (REQ-MENU-018).
+
 ## 1.10.19-beta — 06/11/2026 (test)
 
 ### Menù

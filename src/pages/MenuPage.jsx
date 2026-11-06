@@ -137,6 +137,11 @@ export default function MenuPage({ speciali = false }) {
   // del gestionale, coi nomi del banco e per categorie: è quello che conosce.
   const drinks = useMemo(() => (staff ? drinksDelMenu : drinksDelMenu.map(perIlCliente)), [staff, drinksDelMenu])
   const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
+  // IL MENÙ SPECIAL SI ACCENDE E SI SPEGNE (REQ-MENU-018). Acceso, il
+  // carosello in cima e la pagina sua; spento, i drink speciali restano
+  // soltanto nelle loro sezioni. L'utente, 06/11/2026: «come per gli altri
+  // menù è attivabile o meno». Acceso di partenza: era così per tutti.
+  const specialAttivo = settings.special_attivo !== false
   const usaStruttura = !staff && strutturaPersonalizzata(carta)
   // Il cliente aspetta anche la struttura (menuCache.js); chi lavora no.
   const loading = menuInArrivo || (!staff && !strutturaPronta)
@@ -385,8 +390,9 @@ export default function MenuPage({ speciali = false }) {
   // e non raggiungibile al pubblico». Il QR degli Special resta stampato
   // sui menù da tavolo anche quando gli special finiscono: chi lo inquadra
   // va al menù, con lo stesso tavolo, invece che su una pagina vuota. Chi
-  // lavora resta, e legge perché è vuota.
-  if (speciali && elencoSpeciali.length === 0 && chiNoto && !staffVero) {
+  // lavora resta, e legge perché è vuota. Lo stesso col menù Special
+  // spento.
+  if (speciali && (elencoSpeciali.length === 0 || !specialAttivo) && chiNoto && !staffVero) {
     return <Navigate to={conParametri('/menu', params)} replace />
   }
 
@@ -479,14 +485,20 @@ export default function MenuPage({ speciali = false }) {
   const segnoDisegni = struttura?.segno || 'tenniel'
   // I disegni sono del locale che ha «Notte» (REQ-LIC-013).
   const disegni = disegniDelLocale(settings)
+  // Gli Special allo stile: sulla pagina Special sempre; nel menù solo se il
+  // menù Special è acceso e lo stile li disegna lui (uno col `carosello` li
+  // lascia al carosello di sempre).
+  const specialiAlloStile = speciali || (specialAttivo && !struttura?.carosello) ? elencoSpeciali : []
+  // Su uno stile chiaro di suo (le carte bianche) i disegni col tratto scuro.
+  const disegniChiari = struttura?.chiaro || fondoChiaro
   const perLoStile = struttura && {
     venue,
     sezioni: sezioniDelloStile,
-    speciali: elencoSpeciali,
+    speciali: specialiAlloStile,
     soloSpeciali: speciali,
     special: { titolo: settings.special_titolo || 'Special', sottotitolo: settings.special_sottotitolo || null },
     linkMenu: conParametri('/menu', params),
-    immagine: (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: fondoChiaro, segno: segnoDisegni, disegni }),
+    immagine: (d) => immagineVoce(d, import.meta.env.BASE_URL, { chiaro: disegniChiari, segno: segnoDisegni, disegni }),
     apri: (d) => setApertoId(d.id),
     tastiOrdine,
     quantita: !!settings.show_ingredient_quantities,
@@ -638,13 +650,13 @@ export default function MenuPage({ speciali = false }) {
       {/* IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del
           cliente: toccando un drink si va al menù Special, su quel drink.
           Chi lavora non lo vede: per lui il menù è uno strumento. */}
-      {!speciali && !staff && !struttura && elencoSpeciali.length > 0 && (
+      {!speciali && !staff && (!struttura || struttura.carosello) && specialAttivo && elencoSpeciali.length > 0 && (
         <section className="speciali-carosello" aria-label={settings.special_titolo || 'Special'}>
           <div className="row between speciali-carosello-testa">
             <h3 className="cat-header" style={{ margin: 0 }}>
               {/* La ✨ è del classico: sul libro di «Meraviglie» e sulla
                   carta di «Notte» stona. */}
-              {notte || stile === 'meraviglie' ? '' : '✨ '}
+              {notte || stile === 'meraviglie' || stile === 'carte' ? '' : '✨ '}
               {settings.special_titolo || 'Special'}
             </h3>
             <Link className="speciali-tutti" to={conParametri(PERCORSO_SPECIALI, params)}>
