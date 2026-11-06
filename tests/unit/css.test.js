@@ -1700,3 +1700,24 @@ describe('lo stile «Meraviglie»', () => {
     expect(blocco(":root[data-stile='meraviglie'] .hero-overlay")).toMatch(/color: #fbf6ea/)
   })
 })
+
+
+// CHI SI APPICCICA SOTTO LA BARRA IN ALTO SI FERMA ALLA SUA ALTEZZA VERA
+// (BUG-130). Le schede delle categorie si fermavano a 64 px fissi, la barra
+// sul telefono è più alta: il loro margine sopra finiva dietro la barra, e
+// le schede restavano attaccate al suo filo («troppo attaccate sopra», sul
+// test, 05/11/2026).
+describe('sotto la barra in alto, alla sua altezza misurata', () => {
+  const css = readFileSync(join(CARTELLA, 'index.css'), 'utf8')
+  const regola = (sel) => css.match(new RegExp(`\\n${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] || ''
+
+  it('le schede delle categorie e il sommario del giornale', () => {
+    for (const sel of ['.cat-nav', '.g-sommario']) {
+      expect(regola(sel), sel).toMatch(/top: var\(--barra-intera, calc\(var\(--safe-top\) \+ var\(--barra-alta\)\)\)/)
+    }
+  })
+
+  it('nessuno si appiccica a una misura scritta a mano', () => {
+    expect(regola('.cat-nav')).not.toMatch(/top: \d+px/)
+  })
+})

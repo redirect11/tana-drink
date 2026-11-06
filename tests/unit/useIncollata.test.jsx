@@ -45,6 +45,7 @@ function Barra({ pronta = true }) {
 afterEach(() => {
   osservatori = []
   delete globalThis.IntersectionObserver
+  document.querySelector('.topbar')?.remove()
 })
 
 describe('useIncollata', () => {
@@ -60,6 +61,19 @@ describe('useIncollata', () => {
     expect(getByTestId('barra')).toHaveClass('incollata')
     o.segnala(true, 120)
     expect(getByTestId('barra')).not.toHaveClass('incollata')
+  })
+
+  // LA LINEA È IL FONDO DELLA BARRA VERA (BUG-130): sul telefono la barra
+  // in alto è più alta dei 64 px scritti a mano, e cresce col testo
+  // ingrandito.
+  it('la linea è il fondo della barra in alto, misurato', () => {
+    globalThis.IntersectionObserver = FintoOsservatore
+    const barra = document.createElement('header')
+    barra.className = 'topbar'
+    barra.getBoundingClientRect = () => ({ top: 0, bottom: 79.6 })
+    document.body.appendChild(barra)
+    render(<Barra />)
+    expect(osservatori[0].opzioni.rootMargin).toBe('-81px 0px 0px 0px')
   })
 
   it('se il segnaposto è fuori dal basso la pagina non ci è ancora arrivata: non è appiccicata', () => {
