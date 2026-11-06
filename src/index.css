@@ -11961,30 +11961,43 @@ body.pagina-piena .inv-scheda {
 
 /* ── LO STILE «CARTE»: IL MAZZO (REQ-MENU-029) ────────────────────────────
    L'idea di Flavio e il suo schizzo del 06/11/2026: le sezioni sono carte
-   francesi in fila, accavallate, con la parte bassa nel mazzo coperto; la
-   carta scelta si alza e si apre sotto, in grande (MenuCarte.jsx).
+   francesi in fila, accavallate, e la carta scelta si alza e si apre sotto,
+   in grande (MenuCarte.jsx). A inizio fila il MAZZO COPERTO, carte intere
+   girate sul dorso, da cui le altre escono all'apertura.
+   La prima versione teneva le carte dentro una fascia di dorsi che ne
+   copriva la metà di sotto; l'utente, 06/11/2026: «le carte le vorrei un
+   po' più grandi, il mazzo di carte coperte, le carte devono essere intere,
+   adesso sono tagliate, non sembra un mazzo, i font anche un po' più grandi
+   ma in uno stile Lewis Carroll». Quindi carte intere, più grandi, e la
+   scrittura è IM Fell English (quella di «Meraviglie», da stampa d'epoca).
    Le carte hanno colori loro, non del tema: una carta da gioco è bianca,
    coi semi rossi e neri, su qualunque fondo (nello schizzo, il nero). Il
    tema resta sul fondo della pagina e sui tasti «Aggiungi». Dentro la carta
    aperta le variabili del testo diventano quelle della carta, così i tasti
    del menù (la quantità, i più e i meno) restano leggibili anche quando il
-   tema è scuro. La scrittura è «Special Elite», la macchina da scrivere
-   dello schizzo; le descrizioni, che sono da leggere, restano nel
-   carattere del menù.
+   tema è scuro.
    Si anima solo transform e opacity, e con «riduci movimento» niente. */
 .stile-carte {
   --k-carta: #fbf8f1;
   --k-inchiostro: #1f1b17;
-  --k-tenue: #665d54;
+  --k-tenue: #5f564c;
   --k-rosso: #c3122f;
-  --k-nero: #1f1b17;
+  --k-nero: var(--k-inchiostro);
   --k-oro: #9a6b12;
   --k-filo: rgba(31, 27, 23, 0.16);
-  --k-scrittura: 'Special Elite', 'Courier New', monospace;
+  --k-scrittura: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+  /* Le cifre di IM Fell sono quelle antiche, basse («8,oo»), e il carattere
+     non ha le altre: prezzi e valori delle carte vanno in Playfair, della
+     stessa epoca, con le cifre alte. */
+  --k-cifre: 'Playfair Display', var(--k-scrittura);
   --k-molla: cubic-bezier(0.2, 0.9, 0.25, 1.12);
-  /* Quanto di ogni carta resta scoperto dalla successiva: ci deve stare
-     una parola come «Distillati» senza andare a capo a metà. */
-  --k-passo: 78px;
+  /* Una carta, e quanto ne resta scoperto dalla successiva: ci deve stare
+     il nome di una sezione senza andare a capo a metà parola. */
+  --k-larga: 128px;
+  --k-alta: 182px;
+  --k-passo: 100px;
+  /* Lo spazio fra il mazzo coperto e la prima carta. */
+  --k-stacco: 22px;
 }
 .stile-carte [data-seme='cuori'],
 .stile-carte [data-seme='quadri'] {
@@ -12010,24 +12023,22 @@ body.pagina-piena .inv-scheda {
   margin: 0;
   font-family: var(--k-scrittura);
   font-weight: 400;
-  font-size: clamp(1.7rem, 7.5vw, 2.5rem);
+  font-size: clamp(2rem, 9vw, 2.9rem);
   line-height: 1.05;
-  letter-spacing: 0.02em;
   text-wrap: balance;
 }
 .k-motto {
   margin: 0;
   font-family: var(--k-scrittura);
+  font-style: italic;
+  font-size: 1.1rem;
   color: var(--muted);
 }
 
-/* IL MAZZO. La fila scorre di lato; le carte stanno abbassate, con la parte
-   bassa dietro il mazzo coperto, e la scelta si alza. Le carte stanno tutte
-   DENTRO la fila, anche abbassate: una carta che ne usciva di sotto faceva
-   scorrere la fila in verticale quando la si centrava, e sotto il mazzo
-   compariva il fondo delle carte.
-   La fila è larga quanto le carte, così il mazzo coperto le copre tutte, e
-   con poche carte sta in mezzo. */
+/* LA FILA. Scorre di lato; le carte stanno un poco abbassate e la scelta
+   si alza. Stanno tutte DENTRO la fila, anche abbassate: una carta che ne
+   usciva di sotto faceva scorrere la fila in verticale quando la si
+   centrava. Con poche carte la fila sta in mezzo. */
 .k-mazzo {
   margin: 6px -16px 18px;
   scroll-margin-top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
@@ -12036,7 +12047,10 @@ body.pagina-piena .inv-scheda {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
-  scroll-snap-type: x proximity;
+  /* Niente aggancio dello scorrimento: all'apertura la fila si agganciava
+     al centro della prima carta scoperta, e il mazzo coperto, che sta
+     prima, restava tagliato fuori dallo schermo. La carta toccata la centra
+     già il tocco (MenuCarte.jsx). */
   scrollbar-width: none;
   padding: 0 16px;
 }
@@ -12044,34 +12058,95 @@ body.pagina-piena .inv-scheda {
   display: none;
 }
 .k-fila {
+  --k-giu: 24px;
   position: relative;
   display: flex;
+  align-items: flex-start;
   width: max-content;
-  height: 164px;
+  height: calc(var(--k-alta) + var(--k-giu) + 26px);
   margin: 0 auto;
-  padding: 10px 34px 0 4px;
+  padding: 8px 40px 0 6px;
 }
+
+/* IL MAZZO COPERTO: quattro carte intere sul dorso, una sull'altra, un poco
+   storte, come un mazzo appoggiato sul tavolo. */
+.k-coperto {
+  position: relative;
+  flex: none;
+  width: var(--k-larga);
+  height: var(--k-alta);
+  margin-right: var(--k-stacco);
+  transform: translateY(var(--k-giu));
+  pointer-events: none;
+}
+.k-dorso {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background-color: var(--k-rosso);
+  box-shadow:
+    inset 0 0 0 6px var(--k-carta),
+    inset 0 0 0 7px color-mix(in srgb, var(--k-rosso) 50%, transparent),
+    var(--k-ombra-dorso, 0 1px 2px rgba(0, 0, 0, 0.35));
+  transform: translate(calc(var(--d) * -2px), calc(var(--d) * -2px)) rotate(calc((var(--d) - 1.5) * 1.6deg));
+}
+.k-dorso:nth-child(1) {
+  --d: 0;
+}
+.k-dorso:nth-child(2) {
+  --d: 1;
+}
+.k-dorso:nth-child(3) {
+  --d: 2;
+}
+/* Il reticolo solo su quello in cima: degli altri si vede il bordo. */
+.k-dorso:last-child {
+  --d: 3;
+  --k-ombra-dorso: 0 10px 22px -10px rgba(0, 0, 0, 0.7);
+  background-image:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
+}
+
+/* Il logo del locale in mezzo al dorso in cima, in un anello avorio. */
+.k-dorso-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--k-carta);
+  box-shadow:
+    0 0 0 4px var(--k-carta),
+    0 0 0 5px color-mix(in srgb, var(--k-rosso) 60%, transparent);
+  transform: translate(-50%, -50%);
+}
+
+/* LE CARTE SCOPERTE: intere, accavallate di un passo. */
 .k-carta {
-  --k-giu: 26px;
   position: relative;
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  width: 100px;
-  height: 128px;
-  margin-right: calc(var(--k-passo) - 100px);
-  padding: 8px 9px;
+  gap: 8px;
+  width: var(--k-larga);
+  height: var(--k-alta);
+  margin-right: calc(var(--k-passo) - var(--k-larga));
+  padding: 9px 10px;
   text-align: left;
-  font: 400 0.68rem/1.15 var(--k-scrittura);
+  font: 400 0.95rem/1.15 var(--k-scrittura);
   color: var(--k-inchiostro);
   background: var(--k-carta);
   border: 1px solid var(--k-filo);
-  border-radius: 9px;
-  box-shadow: -5px 0 12px -6px rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+  box-shadow: -6px 0 14px -8px rgba(0, 0, 0, 0.5);
   transform: translateY(var(--k-giu));
-  scroll-snap-align: center;
   cursor: pointer;
+}
+.k-carta:last-child {
+  margin-right: 0;
 }
 /* La carta alzata resta al suo posto nella fila: portata davanti copriva
    l'angolo della successiva, e se ne leggeva mezzo nome.
@@ -12082,7 +12157,7 @@ body.pagina-piena .inv-scheda {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 16px 26px -12px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 18px 30px -14px rgba(0, 0, 0, 0.75);
   opacity: 0;
   pointer-events: none;
 }
@@ -12096,37 +12171,29 @@ body.pagina-piena .inv-scheda {
   outline: 2px solid var(--accent-2);
   outline-offset: 3px;
 }
-.k-carta .k-indice {
-  flex-direction: row;
-  gap: 2px;
-  font-size: 0.95rem;
+.k-carta .k-indice .k-valore {
+  font-size: 1.35rem;
+}
+.k-carta .k-indice .k-seme {
+  font-size: 1.15rem;
 }
 /* Il nome sta nella parte che la carta accanto lascia scoperta, e va a
    capo fra le parole: spezzate a caso («Suggeri ti») non si leggevano. */
 .k-carta-nome {
-  width: calc(var(--k-passo) - 12px);
+  width: calc(var(--k-passo) - 14px);
   overflow-wrap: break-word;
 }
-.k-coperto {
+/* Il seme grande in mezzo, come sulle carte vere: sta nella parte che
+   resta scoperta. */
+.k-pip {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  height: 50px;
-  pointer-events: none;
-  border-radius: 10px 10px 0 0;
-  background-color: var(--k-rosso);
-  /* Il dorso delle carte: il reticolo, e un filo bianco sotto il bordo di
-     ogni carta, come carte coperte una sull'altra. */
-  background-image:
-    repeating-linear-gradient(90deg, var(--k-carta) 0 2px, transparent 2px var(--k-passo)),
-    repeating-linear-gradient(45deg, rgba(251, 248, 241, 0.3) 0 1.5px, transparent 1.5px 8px),
-    repeating-linear-gradient(-45deg, rgba(251, 248, 241, 0.3) 0 1.5px, transparent 1.5px 8px);
-  background-position: 4px 0;
-  box-shadow:
-    inset 0 0 0 4px var(--k-carta),
-    0 -8px 16px -8px rgba(0, 0, 0, 0.55);
+  left: calc(var(--k-passo) / 2 - 4px);
+  bottom: 18px;
+  transform: translateX(-50%);
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--k-tinta);
+  opacity: 0.85;
 }
 
 /* L'ANGOLO: valore sopra seme, nel colore del seme. */
@@ -12134,12 +12201,15 @@ body.pagina-piena .inv-scheda {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
+  align-self: flex-start;
   line-height: 1;
   color: var(--k-tinta);
-  font-family: var(--k-scrittura);
+}
+.k-valore {
+  font-family: var(--k-cifre);
 }
 .k-jolly-scritta {
-  font-size: 0.7em;
+  font-size: 0.62em;
   letter-spacing: 0.08em;
 }
 
@@ -12157,7 +12227,8 @@ body.pagina-piena .inv-scheda {
      fra nome e prezzo diventavano lunghi mezzo metro. */
   max-width: 720px;
   margin: 0 auto 24px;
-  padding: 0 18px 58px;
+  padding: 0 18px 64px;
+  font-family: var(--k-scrittura);
   color: var(--k-inchiostro);
   background: var(--k-carta);
   border-radius: 18px;
@@ -12182,10 +12253,10 @@ body.pagina-piena .inv-scheda {
   border-radius: 18px 18px 0 0;
 }
 .k-aperta .k-indice .k-valore {
-  font-size: 1.45rem;
+  font-size: 1.8rem;
 }
 .k-aperta .k-indice .k-seme {
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 .k-aperta-titolo {
   flex: 1;
@@ -12193,23 +12264,23 @@ body.pagina-piena .inv-scheda {
 }
 .k-gruppo {
   margin: 0;
-  font: 400 0.72rem/1.2 var(--k-scrittura);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.2;
   color: var(--k-tinta);
 }
 .k-aperta-titolo h2 {
   margin: 2px 0 0;
-  font: 400 clamp(1.35rem, 6vw, 1.75rem) / 1.1 var(--k-scrittura);
-  color: var(--k-inchiostro);
+  /* Il carattere va scritto: titoli e voci hanno quello del tema. */
+  font: 400 clamp(1.7rem, 7.5vw, 2.2rem) / 1.08 var(--k-scrittura);
   text-wrap: balance;
 }
 .k-torna {
   flex: none;
   align-self: center;
-  min-height: 36px;
-  padding: 6px 12px;
-  font: 400 0.8rem var(--k-scrittura);
+  min-height: 38px;
+  padding: 6px 14px;
+  font: italic 400 0.98rem var(--k-scrittura);
   color: var(--k-inchiostro);
   background: transparent;
   border: 1px solid var(--k-filo);
@@ -12224,22 +12295,22 @@ body.pagina-piena .inv-scheda {
 }
 
 /* LA VOCE: «NOME ···· prezzo», la descrizione, gli ingredienti, e sotto, a
-   destra, il tasto. L'immagine solo sul Jolly, tonda. */
+   destra, il tasto. L'immagine solo sul Jolly: il disegno intero e grande,
+   senza cerchio. Tondo e piccolo, col tratto chiaro sul bianco, «si vede
+   male, anzi poco, non si capisce l'immagine» (l'utente, 06/11/2026). */
 .k-voce {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 8px 12px;
-  padding: 14px 0;
+  padding: 16px 0;
   border-bottom: 1px dashed var(--k-filo);
 }
 .k-voce-img {
   flex: none;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-2);
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
 }
 .k-voce-testo {
   flex: 1 1 0;
@@ -12250,7 +12321,7 @@ body.pagina-piena .inv-scheda {
   align-items: baseline;
   gap: 8px;
   margin: 0;
-  font: 400 1.05rem/1.25 var(--k-scrittura);
+  font: 400 1.32rem/1.2 var(--k-scrittura);
 }
 .k-voce h3 button {
   padding: 0;
@@ -12274,17 +12345,20 @@ body.pagina-piena .inv-scheda {
 .k-prezzo {
   white-space: nowrap;
   color: var(--k-tinta);
-  font-variant-numeric: tabular-nums;
+  font-family: var(--k-cifre);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .k-descrizione {
   margin: 6px 0 0;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 1.08rem;
+  line-height: 1.4;
   color: var(--k-tenue);
 }
 .k-ingredienti {
   margin: 4px 0 0;
-  font: 400 0.78rem/1.4 var(--k-scrittura);
+  font-style: italic;
+  font-size: 0.98rem;
+  line-height: 1.4;
   color: var(--k-tenue);
 }
 .k-voce-tasti {
@@ -12305,13 +12379,15 @@ body.pagina-piena .inv-scheda {
   padding-top: 4px;
 }
 
-/* Il movimento: le carte escono dal mazzo una dopo l'altra, la scelta si
-   alza con una molla, la carta aperta arriva dall'alto, dal mazzo. */
+/* Il movimento: le carte escono dal mazzo coperto una dopo l'altra (ogni
+   carta parte da dov'è il mazzo, cioè indietro del mazzo e dei passi delle
+   carte prima di lei), la scelta si alza con una molla, la carta aperta
+   arriva dall'alto, dal mazzo. */
 @media (prefers-reduced-motion: no-preference) {
   .k-carta {
     transition: transform 0.34s var(--k-molla);
-    animation: k-dal-mazzo 0.55s var(--k-molla) backwards;
-    animation-delay: calc(var(--i, 0) * 45ms + 80ms);
+    animation: k-dal-mazzo 0.6s var(--k-molla) backwards;
+    animation-delay: calc(var(--i, 0) * 55ms + 120ms);
   }
   .k-carta::after {
     transition: opacity 0.34s;
@@ -12330,7 +12406,7 @@ body.pagina-piena .inv-scheda {
 @keyframes k-dal-mazzo {
   from {
     opacity: 0;
-    transform: translateY(150px);
+    transform: translate(calc(-1 * (var(--k-larga) + var(--k-stacco) + var(--i, 0) * var(--k-passo))), var(--k-giu)) rotate(-6deg);
   }
 }
 @keyframes k-pescata {

@@ -62,7 +62,7 @@ export const STILI_MENU = [
     id: 'carte',
     nome: 'Carte',
     inLicenza: true,
-    desc: 'Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special sono il Jolly.',
+    desc: 'Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special restano nel carosello in cima.',
   },
   {
     id: 'lavagna',

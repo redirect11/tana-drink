@@ -5,6 +5,7 @@ import { drinkSpeciali, immagineVoce, PERCORSO_SPECIALI } from '../lib/speciali.
 import { formatPrice } from '../lib/orderStatus.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
+import ToggleRow from './ToggleRow.jsx'
 
 // IL MENÙ SPECIAL, DAL GESTIONALE (REQ-MENU-018): il titolo e il
 // sottotitolo della pagina, gli special segnati, e il QR da stampare sul
@@ -39,6 +40,13 @@ export default function SpecialManager({ drinks, onEdit }) {
         Le voci segnate come «Drink speciale» nella loro scheda. Il QR qui sotto apre solo il menù Special; il QR
         dei tavoli apre il menù completo, con gli Special in cima.
       </p>
+
+      <ToggleRow
+        label="Menù Special attivo"
+        desc="Carosello degli special in cima al menù dei clienti e pagina dedicata, raggiungibile col QR qui sotto. Disattivato, i drink speciali compaiono soltanto nelle sezioni del menù a cui appartengono."
+        checked={settings.special_attivo !== false}
+        onChange={(v) => updateSettings({ special_attivo: v }).catch(() => {})}
+      />
 
       <label htmlFor="special-titolo">Titolo</label>
       <input

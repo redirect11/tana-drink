@@ -6325,6 +6325,7 @@ export const DEFAULT_SETTINGS = {
   // Lo stile del menù dei clienti (REQ-MENU-021): 'classico' o 'notte'.
   stile_menu: 'classico',
   special_sottotitolo: '',
+  special_attivo: true,
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
   // suo: chi non lo usa non deve trovarsi un riquadro in più sul tastierino.

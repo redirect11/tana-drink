@@ -433,6 +433,44 @@ describe('gli special della casa', () => {
     expect(screen.queryByRole('region', { name: /Special/ })).toBeNull()
   })
 
+  // L'utente, 06/11/2026: il menù Special «come per gli altri menù è
+  // attivabile o meno»; spento, gli special sono una sezione del menù come
+  // le altre.
+  it('col menù Special spento il carosello non c’è, e il drink resta nella sua sezione', async () => {
+    ruoloClaim = null
+    mockSettings = { special_titolo: 'Special', special_attivo: false }
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostra('/menu')
+    await screen.findByText('Mojito')
+    expect(screen.queryByRole('region', { name: 'Special' })).toBeNull()
+    expect(screen.getAllByText('Tè dei matti')).toHaveLength(1)
+  })
+
+  // In «Carte» (REQ-MENU-029) gli Special sono il carosello di sempre, in
+  // cima, coi disegni: nel mazzo il Jolly ripeteva la sezione Signature.
+  it('nello stile «Carte» il carosello c’è, e nel mazzo il Jolly no', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'carte', special_titolo: 'Special' }
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostra('/menu')
+    const carosello = await screen.findByRole('region', { name: 'Special' })
+    expect(within(carosello).getByRole('link', { name: /Tè dei matti/ })).toBeInTheDocument()
+    const mazzo = screen.getByRole('navigation', { name: 'Le carte del menù' })
+    expect(within(mazzo).queryByText('JOLLY')).toBeNull()
+    expect(within(mazzo).getAllByRole('button').length).toBeGreaterThan(0)
+  })
+
+  // Sulle carte bianche il disegno va col tratto scuro: quello per il fondo
+  // scuro della pagina, sul bianco, «si vede male, anzi poco».
+  it('sulla pagina Special in «Carte» i disegni sono quelli per il fondo chiaro', async () => {
+    ruoloClaim = null
+    mockSettings = { stile_menu: 'carte', special_titolo: 'Special' }
+    mockDrinks = [...DRINKS, SPECIAL]
+    mostraSpeciali('/menu/special')
+    await screen.findAllByText('Tè dei matti')
+    expect(document.querySelector('.k-voce-img')).toHaveAttribute('src', '/illustrazioni/alice/tazza-te-chiaro.svg')
+  })
+
   it('il menù Special mostra solo gli special, col titolo, e torna al menù sullo stesso tavolo', async () => {
     ruoloClaim = null
     mockSettings = { special_titolo: 'Special', special_sottotitolo: 'Alice nel Paese delle Meraviglie' }
@@ -862,6 +900,15 @@ describe('il menù Special senza special', () => {
 
   it('il cliente va al menù, sullo stesso tavolo', async () => {
     ruoloClaim = null
+    apri('/menu/special?tavolo=5')
+    expect(await screen.findByText('SIAMO SU /menu?tavolo=5')).toBeInTheDocument()
+  })
+
+  // Lo stesso col menù Special spento: il QR stampato porta al menù.
+  it('col menù Special spento il cliente va al menù, anche se gli special ci sono', async () => {
+    ruoloClaim = null
+    mockSettings = { special_attivo: false }
+    mockDrinks = [...DRINKS, { id: 's1', name: 'Tè dei matti', price: 9, category_id: 'c1', available: true, speciale: true }]
     apri('/menu/special?tavolo=5')
     expect(await screen.findByText('SIAMO SU /menu?tavolo=5')).toBeInTheDocument()
   })
