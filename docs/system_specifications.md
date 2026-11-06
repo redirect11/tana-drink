@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 5 novembre 2026.
+> Generato il 6 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 260 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**314 voci** in tutto. **277** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**315 voci** in tutto. **277** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 23 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 23 | 3 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -3737,6 +3737,12 @@ L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 m
 COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni. Va deciso se si scrivono nella struttura del menù dei clienti (un gruppo per sezione, nell'editor) o solo nello stile. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
 
 **Dove**: `da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)`
+
+#### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
+
+L'utente, 06/11/2026: «caricare un mockup di un tema fatto con Canva e, se il cassetto AI ha dei crediti, creare il tema da agganciare al menu e inserirlo tra i temi custom del gestore del bar»; «la creazione da parte nostra di temi ad hoc su richiesta»; «si possa scegliere tra varie strutture di menu (tutto in una pagina, una pagina per categoria o una per macro categoria)». La regia fa il tema (dal mockup col credito AI, o il fornitore a mano: drink-regia REQ-FLOTTA-040) e lo manda con la licenza, in una voce nuova del contratto, `licenza.temi_su_misura`: temi interi, lo stesso oggetto del catalogo più, se c'è, una ricetta (quella degli stili a ricetta, intera) con la dimensione nuova `impaginazione`. QUI: una sezione «I tuoi temi» nel Marketplace coi temi della licenza (si provano, si installano, si usano; uno che sparisce dalla licenza resta installato ma non si reinstalla); un tema con ricetta si disegna col motore degli stili a ricetta registrando uno stile con l'id del tema, senza motore o senza ricetta con lo stile; `impaginazione` nel motore (`unica`, `per-categoria` con le sezioni a pagine e le schede fisse in alto, `per-macro-categoria`); le macro categorie nella struttura del menù dei clienti (`carta_sezioni.gruppo`, dall'editor; senza gruppi niente cambia). Nessuna chiamata nuova verso la regia. Il contratto in docs/temi-su-misura.md.
+
+**Dove**: `src/lib/marketplaceTemi.js (temi su misura dalla licenza), src/components/MarketplaceTab.jsx («I tuoi temi»), src/lib/stileMenu.js (ricetta con impaginazione), src/lib/strutturaMenu.js (gruppi di sezioni), src/components/StrutturaMenu.jsx, src/pages/MenuPage.jsx, docs/temi-su-misura.md`
 
 ### Magazzino
 
