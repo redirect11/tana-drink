@@ -279,14 +279,17 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   «riduci movimento», niente. Questa voce sotto è la prima versione, a
   veste, sostituita.
 - **«Carte»** (REQ-MENU-029, esclusivo della Tana): una STRUTTURA sua
-  (MenuCarte.jsx), dallo schizzo di Flavio. A inizio fila il mazzo
-  coperto, quattro carte INTERE sul dorso (rosse a reticolo, bordo
-  avorio, e su quella in cima il logo del locale in un anello avorio), un
-  poco storte; poi le sezioni, carte francesi intere di
-  128×182 px accavallate di `--k-passo` (100 px: ci sta il nome della
-  sezione), con l'angolo (valore sopra seme) e il seme grande in mezzo. La
-  carta scelta si alza (e si inclina di 2°), e sotto si apre in grande,
-  larga al più 720 px. Gli Special non sono nel mazzo: sono il carosello
+  (MenuCarte.jsx), dallo schizzo di Flavio. Le sezioni sono carte
+  francesi intere di 128×182 px accavallate di `--k-passo` (100 px: ci sta
+  il nome della sezione; una parola lunga rimpicciolisce la scritta
+  quanto basta), con l'angolo (valore sopra seme) e il seme grande in
+  mezzo, IN MEZZO A UN VENTAGLIO DI CARTE GIRATE: sotto ogni carta una
+  girata intera (rossa a reticolo, bordo avorio), sfalsata di mezza carta
+  e più in basso di `--k-sotto`, un poco storta; a ogni capo una girata
+  inclinata di 11°, col logo del locale in un anello avorio. La carta
+  scelta si alza (e si inclina di 2°), e sotto si apre in grande, larga al
+  più 720 px: una carta sul dorso esce dall'alto e gira fino a essere di
+  taglio, poi la faccia finisce il giro e le voci entrano in fila. Gli Special non sono nel mazzo: sono il carosello
   di sempre, in cima; il Jolly è solo sulla pagina Special. Le carte hanno
   colori LORO, non del tema: avorio `#fbf8f1`, inchiostro, rosso `#c3122f`
   per cuori e quadri, nero per fiori e picche, oro per il Jolly; dentro la
@@ -296,10 +299,11 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   di «Meraviglie», da stampa d'epoca alla Lewis Carroll), grande: nomi
   delle voci 1.32rem, descrizioni 1.08rem, ingredienti in corsivo; prezzi
   e valori delle carte in `Playfair Display`, perché IM Fell ha solo le
-  cifre antiche, basse. Movimento: le carte escono dal mazzo coperto una
-  dopo l'altra, la scelta si alza con una molla, la carta aperta arriva
-  dall'alto; solo `transform` e `opacity` (anche l'ombra della carta
-  alzata è un'opacità); con «riduci movimento», niente.
+  cifre antiche, basse. Movimento: le carte escono una dopo l'altra dalla
+  girata del primo capo, la scelta si alza con una molla, la carta aperta
+  esce girata e si gira (0,8 s), le voci entrano con 55 ms fra l'una e
+  l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
+  è un'opacità); con «riduci movimento», niente.
 - **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.

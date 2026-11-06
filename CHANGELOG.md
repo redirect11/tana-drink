@@ -2,6 +2,13 @@
 
 ## 1.10.23-beta — in lavorazione
 
+### Menù
+
+- Nel tema «Carte» le carte del menù stanno in mezzo a un ventaglio di
+  carte girate, come nello schizzo di Flavio, con il logo del locale sulle
+  due ai capi. Toccando una carta, la carta esce girata, si gira e il menù
+  si scrive voce dopo voce (REQ-MENU-029).
+
 ## 1.10.22-beta — 06/11/2026 (test)
 
 ### Menù
