@@ -12,7 +12,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
-import MenuCarte from '../../src/components/MenuCarte.jsx'
+import MenuCarte, { partenzaDelVolo } from '../../src/components/MenuCarte.jsx'
 
 const voce = (id, name, price) => ({ id, name, price, description: `Descrizione di ${name}`, ingredients: [] })
 const SEZIONI = [
@@ -118,6 +118,27 @@ describe('il mazzo', () => {
     expect(screen.queryByRole('navigation')).toBeNull()
     expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Velluto Bianco' })).toBeVisible()
+  })
+
+  // Il volo parte dalla carta toccata, alla sua misura: «non si vede che
+  // esce dal mazzo» (l'utente, 06/11/2026), quando partiva da un punto
+  // fisso. La carta sarà dove la fila la centra.
+  it('il volo parte dalla carta toccata, dove la fila la centra, alla sua misura', () => {
+    const rect = (left, top, width) => () => ({ left, top, width, height: 0 })
+    const carta = { getBoundingClientRect: rect(500, 120, 128) }
+    const ventaglio = { getBoundingClientRect: rect(0, 100, 390), scrollLeft: 0, scrollWidth: 1500, clientWidth: 390 }
+    const volo = { getBoundingClientRect: rect(16, 400, 358) }
+    // La carta, al centro della fila: 195; il volo ha il centro a 195.
+    expect(partenzaDelVolo(carta, ventaglio, volo)).toEqual({ '--da-x': '0px', '--da-y': '-280px', '--da-scala': '0.358' })
+    // In fondo alla fila non si scorre oltre: resta dov'è.
+    const inFondo = { ...ventaglio, scrollLeft: 1110 }
+    expect(partenzaDelVolo({ getBoundingClientRect: rect(300, 120, 128) }, inFondo, volo)['--da-x']).toBe('169px')
+  })
+
+  it('senza niente da misurare, il volo parte dall’alto', () => {
+    expect(partenzaDelVolo(null, null, null)).toBeNull()
+    mostra()
+    expect(document.querySelector('.k-in-volo').getAttribute('style')).toBeNull()
   })
 
   it('senza sezioni né Special non disegna niente', () => {
