@@ -7,6 +7,8 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { TestataGiornale, VoceGiornale } from './MenuGiornale.jsx'
+import { CartaChiusa, VoceCarta } from './MenuCarte.jsx'
+import { carteDelMazzo } from '../lib/mazzoCarte.js'
 import Caricamento from './Caricamento.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import {
@@ -97,9 +99,34 @@ const VOCI_ESEMPIO = [
 // le sue regole, come disegna il menù dei clienti. Uno stile con una
 // struttura sua (il «Giornale», REQ-MENU-024) mostra quella, coi suoi
 // componenti: la vetrina non può mostrare un giornale che non c'è.
+// Lo stesso per «Carte» (REQ-MENU-029): il mazzo, e la carta dei cocktail
+// aperta. Le carte sono tasti, fuori dal giro della tastiera: la vetrina è
+// un'immagine.
 // Uno stile a ricetta (REQ-MENU-031) si veste col motore, come il menù, e
 // coi suoi colori sopra quelli del tema.
+const MAZZO_ESEMPIO = carteDelMazzo(
+  ['Cocktail', 'Distillati', 'Vini', 'Bevande'].map((nome) => ({ id: nome, nome, gruppo: nome, voci: VOCI_ESEMPIO }))
+)
+
 function Vetrina({ colori, stile, settings }) {
+  if (stile === 'carte') {
+    const [aperta] = MAZZO_ESEMPIO
+    return (
+      <div className="vetrina-tema stile-carte" style={resolveThemeVars(colori)} aria-hidden="true">
+        <div className="k-fila">
+          {MAZZO_ESEMPIO.map((c, i) => (
+            <CartaChiusa key={c.id} carta={c} indice={i} scelta={c === aperta} tabIndex={-1} />
+          ))}
+          <span className="k-coperto" />
+        </div>
+        <section className="k-aperta" data-seme={aperta.seme.id}>
+          {aperta.voci.map((d) => (
+            <VoceCarta key={d.id} d={d} />
+          ))}
+        </section>
+      </div>
+    )
+  }
   if (stile === 'giornale') {
     return (
       <div className="vetrina-tema stile-giornale" style={resolveThemeVars(colori)} aria-hidden="true">

@@ -164,6 +164,14 @@ export const CATALOGO_INIZIALE = [
     tavolozza: { base: 'meraviglie' },
     stile: 'meraviglie',
   },
+  {
+    // Le carte bianche sul fondo scuro dello schizzo di Flavio (REQ-MENU-029).
+    id: 'carte',
+    nome: 'Carte',
+    descrizione: 'Il menù come un mazzo di carte francesi sul fondo scuro: ogni sezione è una carta, e quella scelta si alza e si apre. Esclusivo.',
+    tavolozza: { base: DEFAULT_THEME },
+    stile: 'carte',
+  },
 ]
   .map(leggiTema)
   .filter(Boolean)

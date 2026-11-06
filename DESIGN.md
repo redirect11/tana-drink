@@ -278,6 +278,22 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   l'entrata di testata e prima pagina, e lo scorrimento del sommario; con
   «riduci movimento», niente. Questa voce sotto è la prima versione, a
   veste, sostituita.
+- **«Carte»** (REQ-MENU-029, esclusivo della Tana): una STRUTTURA sua
+  (MenuCarte.jsx), dallo schizzo di Flavio. Le sezioni sono carte francesi
+  in fila, accavallate di `--k-passo` (78 px: ci sta «Distillati» senza
+  andare a capo), con la parte bassa dietro il mazzo coperto (dorsi rossi a
+  reticolo, un filo bianco sotto il bordo di ogni carta). La carta scelta
+  si alza (e si inclina di 2°), e sotto si apre in grande, larga al più
+  720 px. Le carte hanno colori LORO, non del tema: avorio `#fbf8f1`,
+  inchiostro, rosso `#c3122f` per cuori e quadri, nero per fiori e picche,
+  oro per il Jolly; dentro la carta aperta `--text`, `--muted` e `--line`
+  diventano quelli della carta, così i tasti del menù si leggono anche su
+  un tema scuro. Scrittura `Special Elite` (la macchina da scrivere dello
+  schizzo) per nomi, titoli, prezzi e ingredienti; le descrizioni nel
+  carattere del menù. Movimento: le carte escono dal mazzo una dopo
+  l'altra, la scelta si alza con una molla, la carta aperta arriva
+  dall'alto; solo `transform` e `opacity` (anche l'ombra della carta alzata
+  è un'opacità); con «riduci movimento», niente.
 - **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
   760 px le voci di una categoria vanno su due colonne.
