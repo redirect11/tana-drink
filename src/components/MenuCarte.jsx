@@ -194,10 +194,36 @@ export function VetrinaCarte({ voci }) {
   )
 }
 
+// DA DOVE PARTE IL VOLO: dalla carta toccata, alla sua misura, e da dove
+// sarà quando la fila l'avrà centrata (lo scorrimento parte insieme al
+// volo). L'utente, 06/11/2026: «non si vede che esce dal mazzo» — il volo
+// partiva da un punto fisso sopra la carta aperta. Torna le variabili CSS
+// del punto di partenza rispetto al volo, o null se non c'è niente da
+// misurare (la prima carta, aperta senza tocco, parte dall'alto).
+export function partenzaDelVolo(carta, ventaglio, volo) {
+  if (!carta?.getBoundingClientRect || !ventaglio || !volo) return null
+  const c = carta.getBoundingClientRect()
+  const v = ventaglio.getBoundingClientRect()
+  const d = volo.getBoundingClientRect()
+  const larga = Math.min(d.width, 720)
+  if (!c.width || !larga) return null
+  const centro = c.left - v.left + ventaglio.scrollLeft + c.width / 2
+  const corsa = Math.max(0, ventaglio.scrollWidth - ventaglio.clientWidth)
+  const scorso = Math.min(Math.max(centro - ventaglio.clientWidth / 2, 0), corsa)
+  return {
+    '--da-x': `${Math.round(v.left + centro - scorso - (d.left + d.width / 2))}px`,
+    '--da-y': `${Math.round(c.top - d.top)}px`,
+    '--da-scala': (c.width / larga).toFixed(3),
+  }
+}
+
 export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false, special = {} }) {
   const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
   const [scelta, setScelta] = useState(null)
+  const [partenza, setPartenza] = useState(null)
   const mazzo = useRef(null)
+  const ventaglio = useRef(null)
+  const inVolo = useRef(null)
 
   // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
   // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
@@ -211,6 +237,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   if (!aperta) return null
 
   const scegli = (id) => (e) => {
+    setPartenza(partenzaDelVolo(e.currentTarget, ventaglio.current, inVolo.current))
     setScelta(id)
     e.currentTarget.scrollIntoView?.({ behavior: comeScorrere(), block: 'nearest', inline: 'center' })
   }
@@ -220,16 +247,19 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
     <div className="k-tavolo">
       {!soloSpeciali && (
         <nav className="k-mazzo" aria-label="Le carte del menù" ref={mazzo}>
-          <div className="k-ventaglio">
+          <div className="k-ventaglio" ref={ventaglio}>
             <FilaCarte carte={tutte} apertaId={aperta.id} scegli={scegli} />
           </div>
         </nav>
       )}
 
-      {/* La carta in volo: esce dal ventaglio girata e gira fino a metà,
-          poi subentra la faccia (la carta aperta). Con la chiave della
-          carta scelta, a ogni scelta ricomincia. Solo disegno. */}
-      {!soloSpeciali && <span key={aperta.id} className="k-in-volo" aria-hidden="true" />}
+      {/* La carta in volo: esce dal ventaglio, dalla carta toccata, girata,
+          scende crescendo e gira fino a metà; poi subentra la faccia (la
+          carta aperta). Con la chiave della carta scelta, a ogni scelta
+          ricomincia. Solo disegno. */}
+      {!soloSpeciali && (
+        <span key={aperta.id} ref={inVolo} className="k-in-volo" style={partenza || undefined} aria-hidden="true" />
+      )}
 
       {tutte.map((c) => (
         <section

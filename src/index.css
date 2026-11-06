@@ -12442,15 +12442,18 @@ body.pagina-piena .inv-scheda {
     perspective: 1600px;
     perspective-origin: 50% 0;
   }
+  /* I tempi: il viaggio dal ventaglio alla carta aperta più di metà del
+     tutto, che a 0,8 s «non si vede che esce dal mazzo»; poi il giro, poi
+     le voci. */
   .k-in-volo::after {
-    animation: k-dorso-in-volo 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+    animation: k-dorso-in-volo 1.4s linear both;
   }
   .k-aperta {
-    animation: k-faccia 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) backwards;
+    animation: k-faccia 1.4s linear backwards;
   }
   .k-voce {
     animation: k-voce-entra 0.35s ease-out backwards;
-    animation-delay: calc(0.55s + var(--n, 0) * 55ms);
+    animation-delay: calc(1.1s + var(--n, 0) * 55ms);
   }
 }
 @media (prefers-reduced-motion: no-preference) and (hover: hover) {
@@ -12469,19 +12472,30 @@ body.pagina-piena .inv-scheda {
     opacity: 0;
   }
 }
+/* Il volo: parte dalla carta toccata nel ventaglio, alla sua misura
+   (--da-x, --da-y, --da-scala, da partenzaDelVolo; senza, dall'alto),
+   scende crescendo fino al posto della carta aperta, poi gira fino a
+   essere di taglio. Lì subentra la faccia, che finisce il giro. */
 @keyframes k-dorso-in-volo {
   0% {
     opacity: 0;
-    transform: translateY(-140px) scale(0.3) rotateY(180deg);
+    transform: translate(var(--da-x, 0px), var(--da-y, -140px)) scale(var(--da-scala, 0.3)) rotate(-2deg);
+    /* Parte piano, perché si veda che si stacca dalla carta toccata. */
+    animation-timing-function: cubic-bezier(0.5, 0, 0.25, 1);
   }
-  10% {
+  5% {
     opacity: 1;
   }
-  49.9% {
+  58% {
+    opacity: 1;
+    transform: scale(0.92);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  76.9% {
     opacity: 1;
     transform: scale(0.92) rotateY(90deg);
   }
-  50%,
+  77%,
   100% {
     opacity: 0;
     transform: scale(0.92) rotateY(90deg);
@@ -12489,13 +12503,14 @@ body.pagina-piena .inv-scheda {
 }
 @keyframes k-faccia {
   0%,
-  49.9% {
+  76.9% {
     opacity: 0;
-    transform: scale(0.92) rotateY(90deg);
+    transform: scale(0.92) rotateY(-90deg);
   }
-  50% {
+  77% {
     opacity: 1;
-    transform: scale(0.92) rotateY(90deg);
+    transform: scale(0.92) rotateY(-90deg);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.3, 1);
   }
   100% {
     opacity: 1;
