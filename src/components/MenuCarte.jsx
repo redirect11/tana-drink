@@ -105,8 +105,8 @@ export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false }
   )
 }
 
-// Una carta del mazzo, chiusa: l'angolo e il nome. La parte bassa sta nel
-// mazzo coperto, e l'angolo capovolto non si vedrebbe.
+// Una carta del mazzo, chiusa: l'angolo, il nome e il seme grande. L'angolo
+// capovolto no: la carta successiva lo copre.
 export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }) {
   return (
     <button
@@ -121,14 +121,15 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
       <Indice carta={carta} />
       <span className="k-carta-nome">{carta.nome}</span>
       <span className="k-pip" aria-hidden="true">
-        {carta.jolly ? '★' : segnoDi(carta.seme)}
+        {segnoDi(carta.seme)}
       </span>
     </button>
   )
 }
 
-// La fila: il mazzo coperto, poi le carte. La usano il menù e la vetrina
-// del Marketplace, che così mostra il mazzo che c'è davvero.
+// La fila: il mazzo coperto (quattro dorsi, messi storti dal CSS), poi le
+// carte. La usano il menù e la vetrina del Marketplace, che così mostra il
+// mazzo che c'è davvero.
 const DORSI = [0, 1, 2, 3]
 
 export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
@@ -136,7 +137,7 @@ export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
     <div className="k-fila">
       <span className="k-coperto" aria-hidden="true">
         {DORSI.map((d) => (
-          <span key={d} className="k-dorso" style={{ '--d': d }} />
+          <span key={d} className="k-dorso" />
         ))}
       </span>
       {carte.map((c, i) => (
@@ -175,14 +176,17 @@ export function VetrinaCarte({ voci }) {
 
 export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false, special = {} }) {
   const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
-  const jolly = speciali.length > 0 ? [{ id: JOLLY, jolly: true, seme: SEME_JOLLY, nome: special.titolo || 'Special', voci: speciali }] : []
   const [scelta, setScelta] = useState(null)
   const mazzo = useRef(null)
 
   // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
   // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
   // prima.
-  const tutte = soloSpeciali ? jolly : carte
+  const tutte = soloSpeciali
+    ? speciali.length
+      ? [{ id: JOLLY, jolly: true, seme: SEME_JOLLY, nome: special.titolo || 'Special', voci: speciali }]
+      : []
+    : carte
   const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
   if (!aperta) return null
 
