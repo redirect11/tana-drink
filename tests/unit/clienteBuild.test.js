@@ -6,13 +6,15 @@
 // compilare un locale a caso.
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import {
   leggiCliente,
   valoreCliente,
   htmlPerCliente,
   manifestPerCliente,
+  fileDelCliente,
   CLIENTE_PREDEFINITO,
 } from '../../clienti/pluginCliente.js'
 
@@ -45,6 +47,53 @@ describe('leggiCliente', () => {
   it('uno slug sbagliato o una cartella che non c’è fermano la build', () => {
     expect(() => leggiCliente('Tana Due')).toThrow(/non valido/)
     expect(() => leggiCliente('nessuno')).toThrow(/manca/)
+  })
+})
+
+// I FILE DI public/ SONO DELLA TANA. Un locale nuovo che non ha ancora il
+// suo logo (o un'icona) prende quello neutro, mai quello della Tana:
+// l'utente, 06/11/2026, «il logo non può essere più quello della Tana»,
+// «serve un logo placeholder generico per i deploy di nuovi locali». Il
+// logo è anche sul dorso del mazzo di «Carte».
+describe('i file grafici di un locale che non ha i suoi', () => {
+  function radiceDiProva({ suoi = [] } = {}) {
+    const radice = mkdtempSync(join(tmpdir(), 'cliente-'))
+    mkdirSync(join(radice, 'clienti', 'demo', 'public'), { recursive: true })
+    for (const f of ['logo.png', 'favicon.svg']) writeFileSync(join(radice, 'clienti', 'demo', 'public', f), `neutro ${f}`)
+    for (const slug of ['tana', 'bar-mario']) {
+      mkdirSync(join(radice, 'clienti', slug), { recursive: true })
+      writeFileSync(join(radice, 'clienti', slug, 'venue.json'), JSON.stringify({ venue_name: slug }))
+    }
+    if (suoi.length) mkdirSync(join(radice, 'clienti', 'bar-mario', 'public'), { recursive: true })
+    for (const f of suoi) writeFileSync(join(radice, 'clienti', 'bar-mario', 'public', f), `suo ${f}`)
+    return radice
+  }
+  const contenuti = (mappa) => Object.fromEntries([...mappa].map(([nome, file]) => [nome, readFileSync(file, 'utf8')]))
+
+  it('senza nessun file suo, prende tutti quelli neutri', () => {
+    const radice = radiceDiProva()
+    expect(contenuti(fileDelCliente(leggiCliente('bar-mario', radice), radice))).toEqual({
+      'logo.png': 'neutro logo.png',
+      'favicon.svg': 'neutro favicon.svg',
+    })
+  })
+
+  it('col suo logo, tiene il suo, e prende il neutro dove non ha il suo', () => {
+    const radice = radiceDiProva({ suoi: ['logo.png'] })
+    expect(contenuti(fileDelCliente(leggiCliente('bar-mario', radice), radice))).toEqual({
+      'logo.png': 'suo logo.png',
+      'favicon.svg': 'neutro favicon.svg',
+    })
+  })
+
+  it('la Tana non prende niente di neutro: i suoi sono quelli di public/', () => {
+    const radice = radiceDiProva()
+    expect(fileDelCliente(leggiCliente('tana', radice), radice).size).toBe(0)
+  })
+
+  it('il set neutro vero ha il logo, e non è quello della Tana', () => {
+    const neutro = join('clienti', 'demo', 'public', 'logo.png')
+    expect(readFileSync(neutro).equals(readFileSync(join('public', 'logo.png')))).toBe(false)
   })
 })
 
