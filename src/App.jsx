@@ -197,6 +197,32 @@ export default function App() {
   // Sul telefono la barra tiene il ☰, il logo e due sole azioni: la
   // campanella e i ⋮. Tutto il resto sta nel menu (vedi sotto).
   const telefono = useTelefono()
+
+  // L'ALTEZZA VERA DELLA BARRA IN ALTO (BUG-130). Chi si appiccica sotto la
+  // barra scorrendo — le schede delle categorie del menù, il sommario del
+  // giornale — si fermava a una misura scritta a mano (64 px, poi 68), ma
+  // la barra è alta quanto il suo contenuto: il tasto ☰, i margini, il filo,
+  // la fascia di sistema, e cresce col testo ingrandito del telefono. La
+  // differenza finiva dietro la barra, e le schede sembravano incollate
+  // sotto. Ora la si misura, e la misura sta in `--barra-intera`.
+  const barraInAlto = useRef(null)
+  useEffect(() => {
+    const el = barraInAlto.current
+    if (!el) return undefined
+    const radice = document.documentElement
+    const misura = () => radice.style.setProperty('--barra-intera', `${el.offsetHeight}px`)
+    misura()
+    if (typeof ResizeObserver === 'undefined') return () => radice.style.removeProperty('--barra-intera')
+    const oss = new ResizeObserver(misura)
+    // Il bordo intero, non solo l'interno: la fascia di sistema (e la
+    // striscia della demo) allargano la barra dal margine di sopra, e
+    // l'interno resta uguale — guardando solo quello il cambio non arrivava.
+    oss.observe(el, { box: 'border-box' })
+    return () => {
+      oss.disconnect()
+      radice.style.removeProperty('--barra-intera')
+    }
+  }, [])
   const [menuTopbar, setMenuTopbar] = useState(false)
   // "Schermo intero" ha senso solo da browser: con l'app installata le
   // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
@@ -505,7 +531,7 @@ export default function App() {
           <ClientDrawer user={user} profile={profile} accountsOn={accountsOn} />
         )
       )}
-      <header className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
+      <header ref={barraInAlto} className={`topbar${onBackoffice || staffRole ? ' backoffice' : ''}`}>
         {/* Menu laterale A SCOMPARSA ovunque: si apre da qui (il tasto
             flottante `.bar-burger` resta solo nelle schermate a tutto
             schermo, dove la topbar è nascosta — lo accende il CSS, non
