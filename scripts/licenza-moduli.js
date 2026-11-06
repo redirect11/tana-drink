@@ -4,6 +4,7 @@
 //    node scripts/licenza-moduli.js                                   # com'è messo (test)
 //    node scripts/licenza-moduli.js --includi conta,scadenzario --apply
 //    node scripts/licenza-moduli.js --project tana-drink --includi conta,scadenzario --apply
+//    node scripts/licenza-moduli.js --temi notte,meraviglie,carte --apply
 //
 //  Scrive `moduli` nel documento `licenza/attuale` (BUG-125), che è la
 //  licenza dell'installazione: quando c'è, comanda LUI (lib/licenza.js,
@@ -32,11 +33,18 @@
 //  sezione in produzione non c'era. Daniele: «va riattivata anche in
 //  produzione».
 //
+//  I TEMI ESCLUSIVI (`temi`, REQ-LIC-010) si scrivono allo stesso modo, per
+//  intero, con `--temi`: l'elenco nomina tutti gli stili esclusivi del
+//  locale. Nato il 06/11/2026 per «Carte» (REQ-MENU-029): la licenza della
+//  Tana c'era già, e il deploy, che la crea da licenza-iniziale.json, non la
+//  riscrive. Si può dare `--temi` da solo: i moduli non si toccano.
+//
 //  Default: progetto tana-drink-test. La produzione si nomina a mano, e
 //  prima si fa il backup (`node scripts/backup-db.js --project tana-drink`).
 // =====================================================================
 import { accessToken, client, arg, flag } from './lib-firestore.js'
 import { MODULI_PREMIUM } from '../src/lib/licenza.js'
+import { STILI_MENU } from '../src/lib/stileMenu.js'
 
 const PROJECT = arg('project', 'tana-drink-test')
 const APPLY = flag('apply')
@@ -45,10 +53,21 @@ const INCLUDI = (arg('includi', '') || '')
   .map((s) => s.trim())
   .filter(Boolean)
 
+const TEMI = arg('temi', null)
+const temiNuovi = TEMI === null ? null : TEMI.split(',').map((s) => s.trim()).filter(Boolean)
+
 const noti = Object.keys(MODULI_PREMIUM)
 const sconosciuti = INCLUDI.filter((id) => !noti.includes(id))
 if (sconosciuti.length) {
   console.error(`[licenza] moduli sconosciuti: ${sconosciuti.join(', ')}. Quelli che esistono: ${noti.join(', ')}.`)
+  process.exit(1)
+}
+// I temi della licenza sono gli stili esclusivi: uno stile gratis non ci va,
+// e un nome sbagliato non accende niente.
+const esclusivi = STILI_MENU.filter((s) => s.inLicenza).map((s) => s.id)
+const temiSconosciuti = (temiNuovi || []).filter((id) => !esclusivi.includes(id))
+if (temiSconosciuti.length) {
+  console.error(`[licenza] temi sconosciuti: ${temiSconosciuti.join(', ')}. Quelli esclusivi: ${esclusivi.join(', ')}.`)
   process.exit(1)
 }
 
@@ -65,22 +84,32 @@ if (licenza) {
     const incluso = adesso?.[id]?.booleanValue === true
     console.log(`  ${(incluso ? '✔' : '✖').padEnd(2)} ${id.padEnd(15)} ${m.label.padEnd(30)} ${incluso ? 'incluso' : 'non incluso'}`)
   }
+  const temi = (licenza.fields?.temi?.arrayValue?.values || []).map((v) => v.stringValue)
+  console.log(`  temi esclusivi: ${temi.length ? temi.join(', ') : 'nessuno'}`)
 }
 
-if (!INCLUDI.length) {
-  console.log('\n[licenza] Solo lettura. Per scrivere: --includi <id,id,...> --apply')
+if (!INCLUDI.length && temiNuovi === null) {
+  console.log('\n[licenza] Solo lettura. Per scrivere: --includi <id,id,...> e/o --temi <id,id,...>, poi --apply')
   process.exit(0)
 }
 
-const moduli = Object.fromEntries(noti.map((id) => [id, { booleanValue: INCLUDI.includes(id) }]))
-console.log(`\n  da scrivere: ${noti.map((id) => `${id}=${INCLUDI.includes(id)}`).join(', ')}`)
+const fields = {}
+if (INCLUDI.length) {
+  fields.moduli = { mapValue: { fields: Object.fromEntries(noti.map((id) => [id, { booleanValue: INCLUDI.includes(id) }])) } }
+  console.log(`\n  moduli da scrivere: ${noti.map((id) => `${id}=${INCLUDI.includes(id)}`).join(', ')}`)
+}
+if (temiNuovi !== null) {
+  fields.temi = { arrayValue: { values: temiNuovi.map((t) => ({ stringValue: t })) } }
+  console.log(`\n  temi da scrivere: ${temiNuovi.length ? temiNuovi.join(', ') : 'nessuno'}`)
+}
 if (!licenza) console.log('  ⚠ il documento non c’è: lo si crea, e da quel momento l’installazione è attiva coi moduli scritti.')
 if (!APPLY) {
   console.log('\n[licenza] ANTEPRIMA: nessuna scrittura. Aggiungi --apply per salvare.')
   process.exit(0)
 }
 
-// Solo `moduli`, con la maschera: il resto della licenza (piano, limiti,
-// stato, aggiornamenti) non si tocca. Senza documento, lo crea.
-await db.commit([{ update: { name: NOME, fields: { moduli: { mapValue: { fields: moduli } } } }, updateMask: { fieldPaths: ['moduli'] } }])
+// Solo i campi dati (`moduli`, `temi`), con la maschera: il resto della
+// licenza (piano, limiti, stato, aggiornamenti) non si tocca. Senza
+// documento, lo crea.
+await db.commit([{ update: { name: NOME, fields }, updateMask: { fieldPaths: Object.keys(fields) } }])
 console.log(`\n[licenza] ✓ scritta su "${PROJECT}".`)
