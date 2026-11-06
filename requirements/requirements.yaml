@@ -4359,10 +4359,16 @@ requirements:
       aspetta niente. Le carte hanno colori loro (bianche, semi rossi e
       neri), il tema resta sul fondo e sui tasti. Le sezioni del contratto
       portano ora anche il `gruppo`.
-      RESTA, fuori dall'app: la regia deve conoscere lo stile `carte`
-      (`STILI_DELL_APP` in functions/lib/stili.js) e la licenza della Tana
-      nominarlo in `temi`; e Flavio deve dare i gruppi alle sezioni nel
-      «Menù dei clienti», se no ogni sezione ha un seme suo.
+      LA LICENZA (06/11/2026, «fallo tu»): `carte` è nei `temi` di
+      clienti/tana/licenza-iniziale.json, per un'installazione nuova; la
+      licenza che c'è già non la riscrive il deploy, e per cambiarla
+      scripts/licenza-moduli.js ha imparato `--temi` (l'elenco intero, come
+      i moduli; solo gli stili `inLicenza`; i moduli restano com'erano).
+      Scritta così sul test (tana-drink-test: notte, meraviglie, carte); la
+      produzione aspetta il rilascio e il via libera. La regia lo conosce
+      con drink-regia PR #85 (ESCLUSIVI e STILI_DELL_APP).
+      RESTA: Flavio deve dare i gruppi alle sezioni nel «Menù dei
+      clienti», se no ogni sezione ha un seme suo.
     status: implemented
     generate_issue: false
     labels: [menu, vista-cliente, design]

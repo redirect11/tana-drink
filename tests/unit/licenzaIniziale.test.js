@@ -38,7 +38,7 @@ describe('il file della licenza iniziale', () => {
       regia_url: null,
       // Gli stili «Notte» e «Meraviglie» del menù sono suoi (REQ-LIC-010,
       // REQ-MENU-027).
-      temi: ['notte', 'meraviglie'],
+      temi: ['notte', 'meraviglie', 'carte'],
     })
     expect(Object.values(tana.moduli).every((v) => v === true)).toBe(true)
   })
