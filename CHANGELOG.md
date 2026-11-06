@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.25-beta — in lavorazione
+## 1.10.26-beta — in lavorazione
+
+## 1.10.25-beta — 06/11/2026 (test)
 
 ### Menù
 
