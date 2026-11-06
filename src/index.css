@@ -12108,6 +12108,22 @@ body.pagina-piena .inv-scheda {
     repeating-linear-gradient(-45deg, color-mix(in srgb, var(--k-carta) 32%, transparent) 0 1.5px, transparent 1.5px 9px);
 }
 
+/* Il logo del locale in mezzo al dorso in cima, in un anello avorio. */
+.k-dorso-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--k-carta);
+  box-shadow:
+    0 0 0 4px var(--k-carta),
+    0 0 0 5px color-mix(in srgb, var(--k-rosso) 60%, transparent);
+  transform: translate(-50%, -50%);
+}
+
 /* LE CARTE SCOPERTE: intere, accavallate di un passo. */
 .k-carta {
   position: relative;

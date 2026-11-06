@@ -281,7 +281,8 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
 - **«Carte»** (REQ-MENU-029, esclusivo della Tana): una STRUTTURA sua
   (MenuCarte.jsx), dallo schizzo di Flavio. A inizio fila il mazzo
   coperto, quattro carte INTERE sul dorso (rosse a reticolo, bordo
-  avorio), un poco storte; poi le sezioni, carte francesi intere di
+  avorio, e su quella in cima il logo del locale in un anello avorio), un
+  poco storte; poi le sezioni, carte francesi intere di
   128×182 px accavallate di `--k-passo` (100 px: ci sta il nome della
   sezione), con l'angolo (valore sopra seme) e il seme grande in mezzo. La
   carta scelta si alza (e si inclina di 2°), e sotto si apre in grande,
