@@ -130,14 +130,21 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
 // La fila: il mazzo coperto (quattro dorsi, messi storti dal CSS), poi le
 // carte. La usano il menù e la vetrina del Marketplace, che così mostra il
 // mazzo che c'è davvero.
+// Sul dorso in cima il logo del locale, come sulle carte da gioco fatte per
+// un locale. L'utente, 06/11/2026: «dietro il mazzo di carte può andare il
+// logo della Tana del Coniglio?». È il logo della build (public/logo.png,
+// quello della testata dell'app): ogni installazione ha il suo.
 const DORSI = [0, 1, 2, 3]
+const LOGO = `${import.meta.env.BASE_URL}logo.png`
 
 export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
   return (
     <div className="k-fila">
       <span className="k-coperto" aria-hidden="true">
         {DORSI.map((d) => (
-          <span key={d} className="k-dorso" />
+          <span key={d} className="k-dorso">
+            {d === DORSI.length - 1 && <img className="k-dorso-logo" src={LOGO} alt="" />}
+          </span>
         ))}
       </span>
       {carte.map((c, i) => (

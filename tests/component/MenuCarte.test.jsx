@@ -62,6 +62,17 @@ describe('il mazzo', () => {
     expect(document.querySelector('.k-fila').firstElementChild).toBe(coperto)
   })
 
+  // «Dietro il mazzo di carte può andare il logo della Tana del Coniglio?»
+  // (06/11/2026): sul dorso in cima, l'unico che si vede, il logo della
+  // build.
+  it('sul dorso in cima c’è il logo del locale', () => {
+    mostra()
+    const loghi = document.querySelectorAll('.k-coperto .k-dorso-logo')
+    expect(loghi).toHaveLength(1)
+    expect(loghi[0].closest('.k-dorso')).toBe(document.querySelector('.k-coperto .k-dorso:last-child'))
+    expect(loghi[0].getAttribute('src')).toMatch(/logo\.png$/)
+  })
+
   it('all’apertura è alzata e aperta la prima sezione', () => {
     mostra()
     expect(mazzo().getByRole('button', { name: 'Signature' })).toHaveAttribute('aria-pressed', 'true')

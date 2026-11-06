@@ -4395,6 +4395,9 @@ requirements:
       degli stili strutturati), e il Jolly resta sulla pagina Special; i
       disegni sulle carte sono quelli col tratto scuro (`chiaro` nel
       registro), interi e grandi.
+      Sul dorso in cima al mazzo coperto il logo del locale (quello della
+      build, public/logo.png), in un anello avorio: «dietro il mazzo di
+      carte può andare il logo della Tana del Coniglio?».
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
