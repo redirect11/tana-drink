@@ -5620,3 +5620,33 @@ bugs:
     labels: [bug, backup]
     test_cases:
       - tests/unit/backup.test.js
+
+  - id: BUG-130
+    title: "Le schede delle categorie del menù, agganciate in alto, restavano attaccate al filo della barra"
+    area: "src/App.jsx (--barra-intera), src/index.css (.cat-nav, .g-sommario), src/lib/useIncollata.js"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 05/11/2026, sul test col telefono, con lo stile
+      «Meraviglie» e il menù personalizzato: «le categorie del menù sono
+      troppo attaccate sopra, è brutto». La fila delle schede si fermava a
+      64 px dall'alto, scritti a mano, ma la barra in alto è alta quanto il
+      suo contenuto (il tasto ☰ da 44 px, i margini, il filo, la fascia di
+      sistema) e cresce col testo ingrandito del telefono: almeno 69 px. Il
+      margine sopra le schede finiva dietro la barra, e le schede restavano
+      attaccate al suo filo. Lo stesso per il sommario di «Giornale», che
+      usava una seconda stima (68 px), e per il controllo che dà alla fila
+      il fondo pieno quando si appiccica, che guardava ancora i 64 px.
+      Con le schede grandi del menù personalizzato si vedeva di più.
+      LA CORREZIONE: App misura la barra (ResizeObserver) e scrive la sua
+      altezza vera in `--barra-intera`; le schede e il sommario si
+      appiccicano lì, con la stima di prima solo finché la misura non c'è;
+      useIncollata prende come linea il fondo della barra.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, ui]
+    test_cases:
+      - tests/unit/useIncollata.test.jsx
+      - tests/unit/css.test.js
+      - tests/component/AppHeader.test.jsx
