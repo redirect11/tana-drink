@@ -6,6 +6,15 @@
 // file di `clienti/<slug>/public/` sopra quelli di `public/` (logo, icone,
 // foto). Senza CLIENTE è `tana`: la build della Tana è quella di sempre.
 //
+// I FILE DI public/ SONO DELLA TANA. Un altro locale che non ha ancora un
+// suo file (il logo, un'icona) prende quello NEUTRO (`clienti/demo/public`,
+// un bicchiere su un tondo scuro, senza nomi), mai quello della Tana.
+// L'utente, 06/11/2026, per il logo sul dorso del mazzo di «Carte»: se il
+// tema va a un altro gestore «il logo non può essere più quello della
+// Tana», e «serve un logo placeholder generico per i deploy di nuovi
+// locali». Prima un file dimenticato nella cartella del cliente usciva
+// con quello della Tana, in silenzio.
+//
 // Logica pura (leggiCliente, htmlPerCliente, manifestPerCliente) separata
 // dal plugin, così si prova senza far partire Vite.
 
@@ -13,6 +22,9 @@ import { existsSync, readFileSync, readdirSync, copyFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 export const CLIENTE_PREDEFINITO = 'tana'
+
+// Il set neutro: è quello che genera-cliente.mjs copia in un cliente nuovo.
+export const CARTELLA_NEUTRA = ['clienti', 'demo', 'public']
 
 const SLUG_VALIDO = /^[a-z][a-z0-9-]{1,29}$/
 
@@ -67,13 +79,27 @@ export function manifestPerCliente(modello, venue) {
   }
 }
 
+// I file che il cliente mette sopra quelli di public/, nome → percorso: i
+// suoi, e per un locale che non è la Tana quelli neutri dove non ha i suoi.
+export function fileDelCliente(cliente, radice = process.cwd()) {
+  const da = (cartella) => (existsSync(cartella) ? readdirSync(cartella).map((nome) => [nome, join(cartella, nome)]) : [])
+  const neutri = cliente.slug === CLIENTE_PREDEFINITO ? [] : da(resolve(radice, ...CARTELLA_NEUTRA))
+  return new Map([...neutri, ...da(cliente.pubblica)])
+}
+
 export function pluginCliente({ slug, radice = process.cwd() } = {}) {
   const cliente = leggiCliente(slug, radice)
   const modello = JSON.parse(readFileSync(resolve(radice, 'clienti', 'manifest.template.json'), 'utf8'))
   const manifest = () => JSON.stringify(manifestPerCliente(modello, cliente.venue), null, 2)
-  const sovrascritti = () => (existsSync(cliente.pubblica) ? readdirSync(cliente.pubblica) : [])
+  const sovrascritti = () => fileDelCliente(cliente, radice)
+  // La cartella vera della build: con `--outDir` non è dist/, e i file del
+  // cliente finivano in un dist/ rimasto da prima.
+  let uscita = resolve(radice, 'dist')
   return {
     name: 'cliente',
+    configResolved(config) {
+      uscita = resolve(config.root, config.build.outDir)
+    },
     config: () => ({
       define: {
         __CLIENTE__: valoreCliente(cliente),
@@ -95,9 +121,9 @@ export function pluginCliente({ slug, radice = process.cwd() } = {}) {
           res.end(manifest())
           return
         }
-        const nome = percorso.replace(/^\//, '')
-        if (nome && sovrascritti().includes(nome)) {
-          res.end(readFileSync(join(cliente.pubblica, nome)))
+        const file = sovrascritti().get(percorso.replace(/^\//, ''))
+        if (file) {
+          res.end(readFileSync(file))
           return
         }
         next()
@@ -108,9 +134,8 @@ export function pluginCliente({ slug, radice = process.cwd() } = {}) {
     },
     // Dopo che Vite ha copiato public/: i file del cliente vincono.
     closeBundle() {
-      const dist = resolve(radice, 'dist')
-      if (!existsSync(dist)) return
-      for (const nome of sovrascritti()) copyFileSync(join(cliente.pubblica, nome), join(dist, nome))
+      if (!existsSync(uscita)) return
+      for (const [nome, file] of sovrascritti()) copyFileSync(file, join(uscita, nome))
     },
   }
 }
