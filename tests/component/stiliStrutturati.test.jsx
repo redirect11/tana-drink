@@ -52,9 +52,10 @@ const mostra = (s, p) =>
   )
 
 describe.each(Object.entries(STILI_STRUTTURATI))('lo stile strutturato «%s»', (id, s) => {
-  it('ha testata, corpo e segno dei disegni', () => {
+  it('ha testata, corpo, vetrina e segno dei disegni', () => {
     expect(typeof s.Testata).toBe('function')
     expect(typeof s.Corpo).toBe('function')
+    expect(typeof s.Vetrina).toBe('function')
     expect(typeof s.segno).toBe('string')
   })
 

@@ -14,11 +14,12 @@
 // Oltre i quattro gruppi i semi ricominciano; i valori invece continuano
 // nel seme, così due carte non sono mai uguali finché il seme ne ha.
 
+// Il colore del seme lo decide il CSS (`[data-seme]` in index.css).
 export const SEMI = Object.freeze([
-  Object.freeze({ id: 'cuori', simbolo: '♥', rosso: true }),
-  Object.freeze({ id: 'fiori', simbolo: '♣', rosso: false }),
-  Object.freeze({ id: 'quadri', simbolo: '♦', rosso: true }),
-  Object.freeze({ id: 'picche', simbolo: '♠', rosso: false }),
+  Object.freeze({ id: 'cuori', simbolo: '♥' }),
+  Object.freeze({ id: 'fiori', simbolo: '♣' }),
+  Object.freeze({ id: 'quadri', simbolo: '♦' }),
+  Object.freeze({ id: 'picche', simbolo: '♠' }),
 ])
 
 const VALORI = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']

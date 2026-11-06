@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { carteDelMazzo, segnoDi } from '../lib/mazzoCarte.js'
+import { comeScorrere } from '../lib/movimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 // ── LO STILE «CARTE»: IL MENÙ COME UN MAZZO (REQ-MENU-029) ────────────────
@@ -23,10 +24,11 @@ import { formatPrice } from '../lib/orderStatus.js'
 // un tocco, e il contratto (contrattoStile.js) le vuole tutte.
 // Si animano solo transform e opacity, e con «riduci movimento» niente.
 
-const nessunMovimento = () =>
-  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
+// Il Jolly ha un seme suo, così ogni carta si colora dal suo seme senza
+// eccezioni; `segnoDi` non lo legge mai, perché l'angolo del Jolly è la
+// stella (Indice).
 const JOLLY = 'jolly'
+const SEME_JOLLY = Object.freeze({ id: JOLLY })
 
 export function TestataCarte({ venue, soloSpeciali = false, special = {}, linkMenu }) {
   return (
@@ -72,8 +74,10 @@ function Indice({ carta, basso = false }) {
 // Una voce scritta sulla carta: «NOME ···· prezzo», la descrizione, gli
 // ingredienti, il tasto. La usa anche la vetrina del Marketplace: senza
 // `apri` il nome è testo, senza `tastiOrdine` non ci sono tasti.
+// Gli ingredienti si calcolano una volta per voce: il menù si ridisegna a
+// ogni «Aggiungi», e con lui tutte le voci, anche quelle delle carte chiuse.
 export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false }) {
-  const ingredienti = ingredientiInCarta(d, { quantita })
+  const ingredienti = useMemo(() => ingredientiInCarta(d, { quantita }), [d, quantita])
   return (
     <article className="k-voce">
       {img && <img className="k-voce-img" src={img} alt="" loading="lazy" />}
@@ -105,7 +109,7 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
       type="button"
       tabIndex={tabIndex}
       className="k-carta"
-      data-seme={carta.jolly ? JOLLY : carta.seme.id}
+      data-seme={carta.seme.id}
       aria-pressed={scelta}
       style={{ '--i': indice }}
       onClick={onClick}
@@ -116,36 +120,71 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
   )
 }
 
+// La fila delle carte con il mazzo coperto davanti. La usano il menù e la
+// vetrina del Marketplace, che così mostra il mazzo che c'è davvero.
+export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
+  return (
+    <div className="k-fila">
+      {carte.map((c, i) => (
+        <CartaChiusa
+          key={c.id}
+          carta={c}
+          indice={i}
+          scelta={c.id === apertaId}
+          onClick={scegli && scegli(c.id)}
+          tabIndex={tabIndex}
+        />
+      ))}
+      <span className="k-coperto" aria-hidden="true" />
+    </div>
+  )
+}
+
+// LA VETRINA DEL MARKETPLACE (stiliStrutturati.js): il mazzo d'esempio con
+// le voci che le passa il Marketplace, e la prima carta aperta. Le carte
+// sono tasti fuori dal giro della tastiera: la vetrina è un'immagine.
+const GRUPPI_ESEMPIO = ['Cocktail', 'Distillati', 'Vini', 'Bevande']
+
+export function VetrinaCarte({ voci }) {
+  const mazzo = carteDelMazzo(GRUPPI_ESEMPIO.map((nome) => ({ id: nome, nome, gruppo: nome, voci })))
+  const [aperta] = mazzo
+  return (
+    <>
+      <FilaCarte carte={mazzo} apertaId={aperta.id} tabIndex={-1} />
+      <section className="k-aperta" data-seme={aperta.seme.id}>
+        {aperta.voci.map((d) => (
+          <VoceCarta key={d.id} d={d} />
+        ))}
+      </section>
+    </>
+  )
+}
+
 export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false, special = {} }) {
   const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
-  const jolly = speciali.length > 0 ? { id: JOLLY, jolly: true, nome: special.titolo || 'Special', voci: speciali } : null
+  const jolly = speciali.length > 0 ? [{ id: JOLLY, jolly: true, seme: SEME_JOLLY, nome: special.titolo || 'Special', voci: speciali }] : []
   const [scelta, setScelta] = useState(null)
   const mazzo = useRef(null)
 
   // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
   // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
-  // prima sezione.
-  const tutte = soloSpeciali ? (jolly ? [jolly] : []) : [...(jolly ? [jolly] : []), ...carte]
-  const aperta = tutte.find((c) => c.id === scelta) || (soloSpeciali ? jolly : carte[0] || jolly)
+  // prima sezione, o il Jolly se sezioni non ce ne sono.
+  const tutte = soloSpeciali ? jolly : [...jolly, ...carte]
+  const aperta = tutte.find((c) => c.id === scelta) || tutte.find((c) => !c.jolly) || tutte[0]
   if (!aperta) return null
 
   const scegli = (id) => (e) => {
     setScelta(id)
-    e.currentTarget.scrollIntoView?.({ behavior: nessunMovimento() ? 'auto' : 'smooth', block: 'nearest', inline: 'center' })
+    e.currentTarget.scrollIntoView?.({ behavior: comeScorrere(), block: 'nearest', inline: 'center' })
   }
-  const tornaAlMazzo = () => mazzo.current?.scrollIntoView?.({ behavior: nessunMovimento() ? 'auto' : 'smooth', block: 'start' })
+  const tornaAlMazzo = () => mazzo.current?.scrollIntoView?.({ behavior: comeScorrere(), block: 'start' })
 
   return (
     <div className="k-tavolo">
       {!soloSpeciali && (
         <nav className="k-mazzo" aria-label="Le carte del menù" ref={mazzo}>
           <div className="k-ventaglio">
-            <div className="k-fila">
-              {tutte.map((c, i) => (
-                <CartaChiusa key={c.id} carta={c} indice={i} scelta={c.id === aperta.id} onClick={scegli(c.id)} />
-              ))}
-              <span className="k-coperto" aria-hidden="true" />
-            </div>
+            <FilaCarte carte={tutte} apertaId={aperta.id} scegli={scegli} />
           </div>
         </nav>
       )}
@@ -154,23 +193,22 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
         <section
           key={c.id}
           className="k-aperta"
-          data-seme={c.jolly ? JOLLY : c.seme.id}
+          data-seme={c.seme.id}
           hidden={c.id !== aperta.id}
           aria-label={c.nome}
         >
-          {/* Sulla pagina Special il titolo l'ha già detto la testata. */}
-          {!(c.jolly && soloSpeciali) && (
+          {/* Sulla pagina Special il titolo l'ha già detto la testata, e
+              un mazzo a cui tornare non c'è. */}
+          {!soloSpeciali && (
             <header className="k-aperta-testa">
               <Indice carta={c} />
               <div className="k-aperta-titolo">
                 {c.gruppo && <p className="k-gruppo">{c.gruppo}</p>}
                 <h2>{c.nome}</h2>
               </div>
-              {!soloSpeciali && (
-                <button type="button" className="k-torna" onClick={tornaAlMazzo}>
-                  Le carte ↑
-                </button>
-              )}
+              <button type="button" className="k-torna" onClick={tornaAlMazzo}>
+                Le carte ↑
+              </button>
             </header>
           )}
           <div className="k-voci">
