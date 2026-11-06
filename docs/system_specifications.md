@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 263 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**316 voci** in tutto. **280** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**317 voci** in tutto. **280** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 10 | 3 |  |
+| [LIC](#lic) | 10 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -4083,6 +4083,20 @@ DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico r
 UNA VOLTA AL GIORNO. Al titolare di un locale Free (`licenza.piano === 'free'`), alla prima apertura della giornata, un riquadro che dice in una frase piana cosa aggiunge un piano a pagamento, con «Vedi i piani» verso `licenza.regia_url` e un tasto per chiuderlo. Il giorno si ricorda su questo dispositivo, come le novità. Non esce sopra il box delle novità, sopra la proposta di aggiornamento o l'avviso delle condizioni (REQ-FLOTTA-020), né su un'installazione sospesa o non attivata. Non esce senza `regia_url` (non porterebbe da nessuna parte), né nella demo, né ai piani a pagamento, né alla Tana. Resta in più la frase del piano dove si incontra un limite (REQ-LIC-003). Tono professionale, senza toni da venditore (DESIGN.md, guardrail 3).
 
 **Dove**: `src/lib/limiti.js, src/components/InvitoPiano.jsx, src/App.jsx`
+
+#### REQ-LIC-014 — IDEA: i moduli come plugin, e un sistema di plugin con API e SDK, così il gestore (o chi per lui) carica nella sua istanza un plugin suo, a runtime
+
+L'utente, 06/11/2026: «quanto è complicato fare un sistema a plugin/moduli dove chiunque può creare un plugin e agganciarsi agli hook/api/sdk che forniamo per lo sviluppo? In questo modo possiamo consentire di creare moduli che possono essere innestati a runtime»; «tipo i moduli che adesso sono attivabili a parte a pagamento, potremo trasformarli in plugin? L'idea è che per la propria istanza, il gestore o chi per lui può scrivere e caricare un plugin custom con proprie funzioni. Dobbiamo fare il sistema di plugin e definire api e sdk»; e «se è un grosso sviluppo segnamocelo per dopo». Lo è.
+
+DA DOVE SI PARTE. Ci sono già tre forme di estensione, tutte scritte nell'app e compilate con lei: i moduli a pagamento (MODULI_PREMIUM, accesi dalla licenza), gli stili strutturati del menù (un registro con un contratto e una prova che ogni stile eredita, REQ-MENU-028) e le porte coi loro adattatori (REQ-FLOTTA-021). E una forma a runtime senza codice: gli stili a ricetta e i temi della regia, che sono DATI letti e validati (REQ-MENU-031).
+
+PERCHÉ È GROSSO. Un plugin a runtime è codice di altri che gira dove si incassano i soldi: va isolato (iframe o worker con un ponte di messaggi, mai lo stesso contesto dell'app, che ha la sessione Firebase), con permessi dichiarati e accettati dal titolare, e le regole di Firestore che lo tengono nel suo recinto; deve rispettare il local-first (niente attese sulla rete in mezzo a un gesto al banco); l'API va tenuta stabile e versionata, perché un plugin scritto oggi deve girare anche con l'app di domani; e servono il caricamento, gli aggiornamenti, la cache della PWA, la revisione e la distribuzione dalla regia.
+
+COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti sopra lo stesso SDK che si darà agli altri (punti d'aggancio nominati: una voce nel menù del gestionale, una sezione delle impostazioni, un pannello, un evento come «conto incassato», un campo in più su un prodotto), così l'API la si prova sui nostri; poi i plugin dichiarativi (dati, come le ricette); poi il codice di terzi in sandbox, che può leggere e proporre ma non scrivere conti e pagamenti.
+
+DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i gestori sulla propria istanza, chiunque dal marketplace); cosa può toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel browser, nelle Functions, tutti e due); chi lo rivede prima che vada in un locale; se i moduli a pagamento restano in licenza come oggi anche quando diventano plugin.
+
+**Dove**: `da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js`
 
 #### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
 
