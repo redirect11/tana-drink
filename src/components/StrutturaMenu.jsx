@@ -19,6 +19,8 @@ import {
   perCategoria,
   nomeVoce,
   nomeSezione,
+  nomeGruppo,
+  gruppiScritti,
   perIlCliente,
   prepopolazione,
   vociPerSezione,
@@ -409,6 +411,36 @@ function NuovaSezione({ carta }) {
   )
 }
 
+// IL GRUPPO DI UNA SEZIONE (REQ-MENU-030): la macro categoria in cui sta,
+// per i menù impaginati a gruppi. Si sceglie fra quelli già scritti o se ne
+// scrive uno nuovo nella stessa casella (una tendina con le proposte, non
+// un elenco chiuso); vuota, la sezione non è in nessun gruppo. Si registra
+// all'uscita dal campo, come i testi (e come loro riparte da quello scritto
+// quando cambia altrove: `key`).
+// Le proposte stanno in un elenco solo, per tutte le sezioni; l'editor è
+// uno per pagina, e un id fisso basta.
+const ELENCO_GRUPPI = 'struttura-gruppi'
+
+function GruppoSezione({ sezione }) {
+  const scritto = nomeGruppo(sezione) || ''
+  return (
+    <input
+      key={scritto}
+      className="struttura-gruppo"
+      list={ELENCO_GRUPPI}
+      defaultValue={scritto}
+      onBlur={(e) => {
+        const nuovo = nomeGruppo({ gruppo: e.target.value })
+        if ((nuovo || '') !== scritto) aggiornaSezioneCarta(sezione.id, { gruppo: nuovo })
+      }}
+      onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      placeholder="Gruppo"
+      maxLength={40}
+      aria-label={`Gruppo della sezione ${nomeSezione(sezione)}`}
+    />
+  )
+}
+
 // La struttura arriva da MenuManager, che la tiene già per le schede dei
 // prodotti: una sottoscrizione sola. `onApriScheda` apre la scheda intera
 // di un prodotto, e chiusa si torna qui.
@@ -424,6 +456,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
   const perId = useMemo(() => new Map((drinks || []).map((d) => [d.id, d])), [drinks])
   const gruppi = useMemo(() => gruppiCassa(drinks, categories), [drinks, categories])
   const sezioni = useMemo(() => ordina(carta.sezioni), [carta.sezioni])
+  const gruppiProposti = useMemo(() => gruppiScritti(carta.sezioni), [carta.sezioni])
   const vociPer = useMemo(
     () => vociPerSezione(carta.voci, (v) => nomeVoce(v, perId.get(v.drink_id) && perIlCliente(perId.get(v.drink_id)))),
     [carta.voci, perId]
@@ -518,6 +551,11 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
         <>
           <FuoriDalMenu prodotti={fuori} carta={carta} sezioni={sezioni} />
           <NuovaSezione carta={carta} />
+          <datalist id={ELENCO_GRUPPI}>
+            {gruppiProposti.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
 
           {sezioni.map((s, idx) => {
             const nome = nomeSezione(s)
@@ -546,6 +584,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
                     />
                     Nascosta
                   </label>
+                  <GruppoSezione sezione={s} />
                   <span className="grow" />
                   <button
                     className="btn ghost small"

@@ -22,6 +22,9 @@ import {
   ordina,
   nomeVoce,
   vistaSezione,
+  sezioneDaScrivere,
+  gruppiScritti,
+  pagineDelMenu,
 } from '../../src/lib/strutturaMenu.js'
 import { ingredientiInCarta } from '../../src/lib/ingredientiCarta.js'
 import { rigaDelCarrello, chiaveRiga } from '../../src/lib/cart.js'
@@ -144,7 +147,7 @@ describe('la struttura personalizzata', () => {
       ['v-fizz', 'Gin Fizz', 'sour7', 7],
       ['v-collins', 'Tom Collins', 'sour7', 7],
     ])
-    expect(info).toEqual({ id: 'cocktail', vista: 'dettagliata' })
+    expect(info).toEqual({ id: 'cocktail', vista: 'dettagliata', gruppo: null })
     expect(sezioni[0][1][0]).toMatchObject({ name: 'Il Mare di Flavio', drink_id: 'mare' })
     expect(sezioni[2][1][0]).toMatchObject({ name: 'Gin Mare tonic', drink_id: 'mare' })
   })
@@ -249,5 +252,72 @@ describe('nel carrello', () => {
     const r = rigaDelCarrello(DRINKS[1])
     expect(r).toEqual({ drink_id: 'sour7', name: 'SOUR 7', price: 7, qty: 1, sumup_product_id: null })
     expect(chiaveRiga(r)).toBe('sour7')
+  })
+})
+
+// ── I GRUPPI E LE PAGINE (REQ-MENU-030) ──────────────────────────────
+// Un livello sopra le sezioni, per i menù impaginati per macro categoria
+// (e per il mazzo di carte di Flavio, REQ-MENU-029): un nome scritto sulla
+// sezione. Senza gruppi, niente cambia.
+describe('i gruppi delle sezioni', () => {
+  it('un nome sulla sezione, o niente', () => {
+    expect(sezioneDaScrivere({ nome: 'Signature', gruppo: '  Cocktail ' }).gruppo).toBe('Cocktail')
+    expect(sezioneDaScrivere({ nome: 'Bibite' }).gruppo).toBeNull()
+    expect(sezioneDaScrivere({ nome: 'Bibite', gruppo: '   ' }).gruppo).toBeNull()
+  })
+
+  it('le proposte dell’editor: i gruppi scritti, nell’ordine della loro prima sezione', () => {
+    const sezioni = [
+      { id: 'a', nome: 'Birre', ordine: 2, gruppo: 'Da bere' },
+      { id: 'b', nome: 'Signature', ordine: 0, gruppo: 'Cocktail' },
+      { id: 'c', nome: 'IBA', ordine: 1, gruppo: 'Cocktail' },
+      { id: 'd', nome: 'Food', ordine: 3 },
+    ]
+    expect(gruppiScritti(sezioni)).toEqual(['Cocktail', 'Da bere'])
+  })
+
+  it('la pagina del menù si porta dietro il gruppo di ogni sezione', () => {
+    const conGruppo = { ...STRUTTURA, sezioni: STRUTTURA.sezioni.map((s) => ({ ...s, gruppo: s.id === 's-bibite' ? 'Da bere' : null })) }
+    const gruppi = sezioniDelMenu(conGruppo, DRINKS).map(([n, , meta]) => [n, meta.gruppo])
+    expect(gruppi).toContainEqual(['Bibite', 'Da bere'])
+    expect(gruppi).toContainEqual(['Signature', null])
+  })
+})
+
+describe('le pagine del menù', () => {
+  const sez = (nome, gruppo = null) => [nome, [{ id: `v-${nome}` }], { id: `s-${nome}`, vista: 'dettagliata', gruppo }]
+  const SEZIONI = [sez('Signature', 'Cocktail'), sez('IBA', 'Cocktail'), sez('Birre'), sez('Gin', 'Distillati')]
+  const leggi = (pagine) => pagine.map((p) => [p.nome, p.sezioni.map(([n]) => n)])
+
+  it('tutto in una pagina: niente pagine', () => {
+    expect(pagineDelMenu(SEZIONI, 'unica')).toBeNull()
+    expect(pagineDelMenu(SEZIONI, undefined)).toBeNull()
+  })
+
+  it('una pagina per sezione', () => {
+    expect(leggi(pagineDelMenu(SEZIONI, 'per-categoria'))).toEqual([
+      ['Signature', ['Signature']],
+      ['IBA', ['IBA']],
+      ['Birre', ['Birre']],
+      ['Gin', ['Gin']],
+    ])
+  })
+
+  it('una per gruppo, nell’ordine della prima sezione; una sezione senza gruppo fa pagina da sé', () => {
+    expect(leggi(pagineDelMenu(SEZIONI, 'per-macro-categoria'))).toEqual([
+      ['Cocktail', ['Signature', 'IBA']],
+      ['Birre', ['Birre']],
+      ['Distillati', ['Gin']],
+    ])
+  })
+
+  it('senza gruppi scritti, per gruppo vale come per sezione', () => {
+    const senza = SEZIONI.map(([n, l, m]) => [n, l, { ...m, gruppo: null }])
+    expect(leggi(pagineDelMenu(senza, 'per-macro-categoria'))).toEqual(leggi(pagineDelMenu(senza, 'per-categoria')))
+  })
+
+  it('una pagina sola non si sfoglia', () => {
+    expect(pagineDelMenu([sez('Signature', 'Cocktail'), sez('IBA', 'Cocktail')], 'per-macro-categoria')).toBeNull()
+    expect(pagineDelMenu([sez('Signature')], 'per-categoria')).toBeNull()
   })
 })

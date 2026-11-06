@@ -109,6 +109,27 @@ mockup lo carica il titolare dalla regia, non dall'app (il giorno che si
 vorrà offrirlo dal marketplace, la regia apre la richiesta `tema` anche
 alle installazioni).
 
+## Cosa c'è nell'app (06/11/2026)
+
+- **«⭐ I tuoi temi»** nel Marketplace, prima di «Temi», solo se la licenza
+  porta almeno un tema su misura o ne resta uno installato. Un tema con uno
+  stile esclusivo (`notte`, `meraviglie`) o sconosciuto si scarta. La copia
+  installata in `temi_installati` tiene `su_misura: true` e la `ricetta`.
+  Uno ritirato dalla licenza resta installato e in uso, e la scheda dice
+  che, disinstallato, non si reinstalla.
+- **`carta_sezioni.gruppo`**: una stringa (al massimo 40 caratteri) o
+  `null`. L'ordine dei gruppi è quello della loro prima sezione: nessun
+  secondo ordine da tenere d'accordo col primo. Nell'editor «Menù dei
+  clienti» è una casella con le proposte dei gruppi già scritti.
+- **`impaginazione`**: si legge da `ricetta.impaginazione` del tema in
+  prova o in uso, e il tema in uso conta solo finché `stile_menu` è il suo
+  stile. Vale per i clienti (chi lavora ordina dal menù intero) e fuori
+  dalla pagina Special. Le schede in alto diventano tasti che cambiano
+  pagina; una sezione senza gruppo fa pagina da sé.
+- **Ancora no**, perché aspettano il motore degli stili a ricetta: il
+  disegno del tema dalla ricetta (oggi si usa il suo `stile`) e le pagine
+  negli stili strutturati («Giornale» riceve il menù intero).
+
 ## Come si prova
 
 Sul test, con la licenza scritta dalla regia: un tema su misura fatto dalla

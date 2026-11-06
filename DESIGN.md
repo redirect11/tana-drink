@@ -242,6 +242,12 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
   tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
   nell'aria-label.
+- **I temi su misura** (REQ-MENU-030): la sezione «⭐ I tuoi temi», con le
+  stesse schede; il sottotitolo dice «Su misura» al posto del prezzo. Se un
+  tema divide il menù in pagine, le schede delle categorie diventano tasti
+  (`button.cat-chip`, `aria-pressed`) e quella aperta resta accesa coi
+  colori del tasto (`--btn-bg`), in ogni stile; in «Notte», dove le schede
+  sono parole, la si sottolinea con `--accent-2`.
 - **I moduli nel marketplace** (REQ-LIC-012): la stessa scheda, ma al
   posto della vetrina del menù una fascia alta 96px con l'icona del modulo
   e lo stato in una pillola. Lo stato si legge prima dal colore: incluso

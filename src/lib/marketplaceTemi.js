@@ -33,6 +33,7 @@
 import { THEME_PRESETS, THEME_FIELDS, DEFAULT_THEME } from './themes.js'
 import { STILI_MENU, stileProvabile, patchInstalla as installaStile } from './stileMenu.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
+import { licenzaDi } from './licenzaInVigore.js'
 import { urlFunzioneRegia, scaricaERicorda } from './funzioniRegia.js'
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,40}$/
@@ -65,8 +66,25 @@ export function leggiTema(v) {
     prezzo,
     tavolozza: { base: t.base, colori },
     stile: stile.id,
+    // UN TEMA SU MISURA (REQ-MENU-030) si porta dietro la sua ricetta e il
+    // segno di dove viene, anche nella copia installata: la ricetta la
+    // disegnerà il motore degli stili a ricetta, che oggi l'app non ha
+    // ancora, e intanto se ne legge l'impaginazione; il segno serve a dire
+    // che, sparito dalla licenza, non si reinstalla.
+    ...(v.su_misura === true ? { su_misura: true } : {}),
+    ...(v.ricetta && typeof v.ricetta === 'object' && !Array.isArray(v.ricetta) ? { ricetta: v.ricetta } : {}),
   }
 }
+
+// ── L'IMPAGINAZIONE (REQ-MENU-030) ──────────────────────────────────────
+// Come si divide il menù dei clienti: tutto in una pagina, una pagina per
+// sezione, o una per gruppo di sezioni (`carta_sezioni.gruppo`). È una
+// dimensione della ricetta del tema; un valore che l'app non conosce vale
+// come quello di sempre.
+export const IMPAGINAZIONI = ['unica', 'per-categoria', 'per-macro-categoria']
+
+export const impaginazioneTema = (t) =>
+  IMPAGINAZIONI.includes(t?.ricetta?.impaginazione) ? t.ricetta.impaginazione : 'unica'
 
 // IL CATALOGO INIZIALE: quello che si compone con le tavolozze e gli stili
 // che l'app ha già, tutto gratis («per ora tutto gratis tra quelli che già
@@ -167,6 +185,34 @@ export function catalogo(settings, daRegia = []) {
   return [...perId.values()].filter((t) => t.prezzo === 0 && stileProvabile(settings, t.stile))
 }
 
+// ── I TEMI SU MISURA (REQ-MENU-030) ──────────────────────────────────
+// Li fa la regia per un locale solo — dal mockup del titolare col credito
+// AI, o a mano dal fornitore — e arrivano con la licenza, in
+// `licenza.temi_su_misura` (docs/temi-su-misura.md): nessuna chiamata in
+// più, e si vedono anche senza rete. Ogni voce è un tema come quelli del
+// catalogo; lo `stile` è uno di quelli dell'app aperti a tutti, mai un
+// esclusivo: un tema su misura non può dare «Notte» a chi non l'ha in
+// licenza. Le licenze scritte prima del 06/11/2026 non hanno la voce.
+const stileAperto = (id) => {
+  const s = STILI_MENU.find((x) => x.id === id)
+  return Boolean(s && (s.sempre || s.gratis))
+}
+
+export function temiSuMisura(settings) {
+  const v = licenzaDi(settings)?.temi_su_misura
+  if (!Array.isArray(v)) return []
+  return v
+    .map((t) => leggiTema(t && typeof t === 'object' ? { ...t, su_misura: true } : t))
+    .filter((t) => t && stileAperto(t.stile))
+}
+
+// Un tema su misura installato che la licenza non porta più (il titolare
+// l'ha tolto dalla regia): resta installato e in uso, ma non si reinstalla.
+export function suMisuraRitirati(settings) {
+  const inLicenza = new Set(temiSuMisura(settings).map((t) => t.id))
+  return temiInstallati(settings).filter((t) => t.su_misura && !inLicenza.has(t.id))
+}
+
 // ── I TEMI DEL LOCALE ────────────────────────────────────────────────
 export function temiInstallati(settings) {
   const v = Array.isArray(settings?.temi_installati) ? settings.temi_installati : []
@@ -175,10 +221,26 @@ export function temiInstallati(settings) {
 
 export const temaInUso = (settings) => (typeof settings?.tema_menu === 'string' ? settings.tema_menu : null)
 
-// Un tema per id: prima quelli installati (la copia del locale), poi il
-// catalogo. Serve alla prova sul menù.
+// Un tema per id: prima quelli installati (la copia del locale), poi quelli
+// su misura della licenza, poi il catalogo. Serve alla prova sul menù.
 export function temaPerId(settings, id, daRegia = catalogoRicordato()) {
-  return temiInstallati(settings).find((t) => t.id === id) || catalogo(settings, daRegia).find((t) => t.id === id) || null
+  return (
+    temiInstallati(settings).find((t) => t.id === id) ||
+    temiSuMisura(settings).find((t) => t.id === id) ||
+    catalogo(settings, daRegia).find((t) => t.id === id) ||
+    null
+  )
+}
+
+// L'IMPAGINAZIONE DEL MENÙ DEI CLIENTI: quella del tema in prova, o del
+// tema in uso. Il tema in uso conta solo finché lo stile del menù è ancora
+// il suo: scegliendo dopo uno stile da solo, in «Stili del menù», `tema_menu`
+// resta scritto, ma il menù non è più quel tema.
+export function impaginazioneInVista(settings, { provato = null, stile } = {}) {
+  if (provato) return impaginazioneTema(provato)
+  const id = temaInUso(settings)
+  const tema = id ? temiInstallati(settings).find((t) => t.id === id) : null
+  return tema && tema.stile === stile ? impaginazioneTema(tema) : 'unica'
 }
 
 // I colori di un tema, nella forma di `theme_client`.

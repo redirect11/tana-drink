@@ -301,3 +301,56 @@ describe('i moduli', () => {
     expect(posizione.search).toBe('?tab=marketplace&sezione=moduli')
   })
 })
+
+// «I TUOI TEMI» (REQ-MENU-030): i temi fatti dalla regia per questo locale,
+// che arrivano con la licenza (`temi_su_misura`). La sezione c'è solo se ce
+// n'è almeno uno: alla Tana, che non ne ha, non compare.
+describe('i temi su misura', () => {
+  const BOSCO = {
+    id: 'su-misura-bosco',
+    nome: 'Bosco',
+    descrizione: 'Verde profondo e oro.',
+    tavolozza: { base: 'tana-scuro', colori: { '--bg': '#10201a' } },
+    stile: 'deco',
+    ricetta: { versione: 1, impaginazione: 'per-categoria' },
+  }
+
+  it('senza temi su misura la sezione non c’è', () => {
+    st.impostazioni = { licenza: { temi: ['notte'] } }
+    mostra()
+    expect(sottosezioni.voci.map((v) => v.id)).not.toContain('tuoi')
+  })
+
+  it('con la licenza che li porta: si provano, si installano e si usano, con la ricetta nella copia', async () => {
+    const utente = userEvent.setup()
+    st.impostazioni = { licenza: { temi_su_misura: [BOSCO] } }
+    mostra()
+    expect(sottosezioni.voci.map((v) => v.label)).toEqual(['I tuoi temi', 'Temi', 'Stili del menù', 'Installati', 'Moduli'])
+    vaiA('tuoi')
+    expect(screen.getByRole('heading', { name: 'I tuoi temi', level: 2 })).toBeInTheDocument()
+    expect(screen.getByText('Su misura · Stile «Déco»')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Prova sul menù' })).toHaveAttribute('href', '/menu?vista=cliente&tema=su-misura-bosco')
+    await utente.click(screen.getByRole('button', { name: 'Installa Bosco' }))
+    expect(st.scritte.at(-1).temi_installati).toEqual([
+      expect.objectContaining({ id: 'su-misura-bosco', su_misura: true, ricetta: BOSCO.ricetta }),
+    ])
+    await utente.click(screen.getByRole('button', { name: 'Usa Bosco' }))
+    expect(st.scritte.at(-1)).toMatchObject({ stile_menu: 'deco', tema_menu: 'su-misura-bosco', theme_client: { preset: 'tana-scuro' } })
+    // Non sono nel catalogo di tutti.
+    vaiA('temi')
+    expect(screen.queryByRole('heading', { name: 'Bosco' })).toBeNull()
+  })
+
+  it('tolto dalla licenza resta installato e in uso, e la scheda dice che non si reinstalla', () => {
+    st.impostazioni = {
+      licenza: { temi_su_misura: [] },
+      temi_installati: [{ ...BOSCO, su_misura: true }],
+      tema_menu: 'su-misura-bosco',
+    }
+    mostra()
+    vaiA('tuoi')
+    expect(screen.getByRole('heading', { name: 'Bosco' })).toBeInTheDocument()
+    expect(screen.getByText(/Non più in licenza: una volta disinstallato non si reinstalla/)).toBeInTheDocument()
+    expect(screen.getByText('In uso')).toBeInTheDocument()
+  })
+})
