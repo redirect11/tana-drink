@@ -302,9 +302,10 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   e valori delle carte in `Playfair Display`, perché IM Fell ha solo le
   cifre antiche, basse. Movimento: le carte escono una dopo l'altra dalla
   girata del primo capo, la scelta si alza con una molla, la carta aperta
-  esce girata dal ventaglio e si gira (1,4 s: il viaggio più di metà, con
-  una partenza lenta, perché si veda che si stacca dalla carta), le voci
-  entrano con 55 ms fra l'una e l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
+  esce girata dal ventaglio e si gira (1,1 s: il viaggio più di metà, con
+  una partenza lenta, perché si veda che si stacca dalla carta; la
+  prospettiva del giro è della carta, col fulcro sul bordo alto, così il
+  titolo non salta), le voci entrano con 50 ms fra l'una e l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
   è un'opacità); con «riduci movimento», niente.
 - **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
