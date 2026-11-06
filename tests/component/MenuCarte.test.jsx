@@ -51,26 +51,27 @@ describe('il mazzo', () => {
     expect(mazzo().getAllByRole('button').map((b) => b.textContent)).toEqual(['A♥︎Signature♥︎', '2♥︎Grandi classici♥︎', 'A♣︎Gin♣︎'])
   })
 
-  // Il mazzo coperto sono carte intere sul dorso, non una fascia che copre
-  // le altre a metà: «le carte devono essere intere, adesso sono tagliate,
-  // non sembra un mazzo» (l'utente, 06/11/2026).
-  it('a inizio fila il mazzo coperto, quattro carte sul dorso, che chi legge lo schermo salta', () => {
+  // Come nello schizzo di Flavio: «le carte che aprono il menù sono in
+  // mezzo a un ventaglio di carte girate» (l'utente, 06/11/2026). Le
+  // girate sono intere («le carte devono essere intere»): una sotto ogni
+  // carta, e una a ogni capo.
+  it('le carte stanno in mezzo a un ventaglio di girate, che chi legge lo schermo salta', () => {
     mostra()
-    const coperto = document.querySelector('.k-fila > .k-coperto')
-    expect(coperto).toHaveAttribute('aria-hidden', 'true')
-    expect(coperto.querySelectorAll('.k-dorso')).toHaveLength(4)
-    expect(document.querySelector('.k-fila').firstElementChild).toBe(coperto)
+    const fila = document.querySelector('.k-fila')
+    expect(fila.querySelectorAll('.k-dorso-sotto')).toHaveLength(SEZIONI.length)
+    expect(fila.firstElementChild).toHaveClass('k-dorso-primo')
+    expect(fila.lastElementChild).toHaveClass('k-dorso-ultimo')
+    for (const g of fila.querySelectorAll('.k-dorso')) expect(g).toHaveAttribute('aria-hidden', 'true')
   })
 
   // «Dietro il mazzo di carte può andare il logo della Tana del Coniglio?»
-  // (06/11/2026): sul dorso in cima, l'unico che si vede, il logo della
+  // (06/11/2026): sulle due girate ai capi, le più in vista, il logo della
   // build.
-  it('sul dorso in cima c’è il logo del locale', () => {
+  it('sulle girate ai capi c’è il logo del locale', () => {
     mostra()
-    const loghi = document.querySelectorAll('.k-coperto .k-dorso-logo')
-    expect(loghi).toHaveLength(1)
-    expect(loghi[0].closest('.k-dorso')).toBe(document.querySelector('.k-coperto .k-dorso:last-child'))
-    expect(loghi[0].getAttribute('src')).toMatch(/logo\.png$/)
+    const loghi = [...document.querySelectorAll('.k-dorso-logo')]
+    expect(loghi.map((l) => l.closest('.k-dorso').classList.contains('k-dorso-capo'))).toEqual([true, true])
+    for (const l of loghi) expect(l.getAttribute('src')).toMatch(/logo\.png$/)
   })
 
   it('all’apertura è alzata e aperta la prima sezione', () => {
