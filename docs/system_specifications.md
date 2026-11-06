@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 261 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**315 voci** in tutto. **278** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**316 voci** in tutto. **278** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 24 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 24 | 3 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -3747,6 +3747,12 @@ L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 m
 COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni: dal 06/11/2026 ci sono, sono i gruppi della struttura del menù dei clienti (`carta_sezioni.gruppo`, scritti dall'editor, REQ-MENU-030), e il mazzo li riceve come pagine. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
 
 **Dove**: `da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)`
+
+#### REQ-MENU-031 — Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore
+
+L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter caricare anche gli stili», poi «Stile a ricetta» e «una scelta ampia di caratteri dentro l'app». Uno stile a ricetta è la forma del menù come scelta fra valori fissi (caratteri, titoli, intestazione, voce, cornice, angoli, sfondo, colori facoltativi), che l'app disegna con un motore unico, con tutto il CSS dentro di sé: resta una ricetta, non codice, e funziona senza rete. Gli stili arrivano dal catalogo della regia (catalogoTemi → stili), si provano, si installano (con la copia nelle impostazioni) e si usano come quelli gratis; un tema può usarne uno. Dodici caratteri nuovi nella build. Il contratto in docs/stili-a-ricetta.md; la regia è pronta (drink-regia REQ-FLOTTA-034, PR #53).
+
+**Dove**: `src/lib/stileMenu.js (leggiStile, STILI_MENU), src/lib/marketplaceTemi.js (leggiTema, catalogo), src/index.css (il motore), src/main.jsx (i caratteri), docs/stili-a-ricetta.md`
 
 ### Magazzino
 

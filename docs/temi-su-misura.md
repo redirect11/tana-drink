@@ -55,9 +55,8 @@ licenza/attuale = {
   non ne ha; la voce può mancare nelle licenze scritte prima del 06/11/2026
   (vale `[]`).
 - **`ricetta`**, facoltativa: la ricetta di uno stile a ricetta
-  (`docs/stili-a-ricetta.md`, sul ramo `feature/stili-a-ricetta`: la
-  richiesta è ancora da lavorare, e il suo id REQ-MENU-024 va rinumerato
-  perché nel frattempo lo ha preso «Giornale»), **intera**: la regia riempie
+  (`docs/stili-a-ricetta.md`, REQ-MENU-031: scritta come REQ-MENU-024,
+  rinumerata perché quell'id l'aveva già preso «Giornale»), **intera**: la regia riempie
   i valori che la ricetta non diceva, l'app non indovina niente. Con la
   ricetta il tema si disegna col motore; senza motore, o senza ricetta,
   con lo `stile` (uno di quelli dell'app, mai un esclusivo).
