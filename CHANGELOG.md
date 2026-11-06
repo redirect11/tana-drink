@@ -2,6 +2,11 @@
 
 ## 1.10.26-beta — in lavorazione
 
+### Menù
+
+- Nel carosello degli Special le schede hanno uno spazio fra loro: mentre
+  si scorreva sembravano attaccate (REQ-MENU-018).
+
 ## 1.10.25-beta — 06/11/2026 (test)
 
 ### Menù
