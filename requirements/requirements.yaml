@@ -4398,6 +4398,11 @@ requirements:
       Sul dorso in cima al mazzo coperto il logo del locale (quello della
       build, public/logo.png), in un anello avorio: «dietro il mazzo di
       carte può andare il logo della Tana del Coniglio?».
+      Sul test i nomi delle sezioni sono quelli della cassa, in maiuscolo,
+      e «AMERICANI», «DISTILLATI» andavano a capo a metà parola: la carta
+      chiusa stima la larghezza della parola più lunga (misuraNome in
+      lib/mazzoCarte.js, le maiuscole pesano più delle minuscole) e
+      rimpicciolisce la scritta quanto basta.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
