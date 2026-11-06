@@ -1,0 +1,110 @@
+{
+  "_nota": "Gli stili a ricetta del repository (REQ-FLOTTA-034): la FORMA del menù come scelta fra valori fissi, che l'app disegna con il suo motore (docs/stili-a-ricetta.md di tana-drink). Li disegna il fornitore, o un agente con una PR; tests/stili.test.js li controlla; il deploy li pubblica. Vocabolario in functions/lib/stili.js.",
+  "stili": [
+    {
+      "id": "osteria",
+      "nome": "Osteria",
+      "descrizione": "La carta dell’osteria: serif classico, titoli in corsivo al centro, prezzi con i puntini, cornice doppia su carta.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "libre-baskerville", "voce": "libre-baskerville", "testo": "georgia" },
+        "titoli": { "maiuscolo": false, "corsivo": true, "allineamento": "centro", "dimensione": "grande", "spaziatura": "normale" },
+        "intestazione": "fregio",
+        "voce": { "forma": "riga", "prezzo": "puntini", "separatore": "nessuno", "immagine": "nascosta" },
+        "cornice": "doppia",
+        "angoli": "vivi",
+        "sfondo": "carta"
+      }
+    },
+    {
+      "id": "bauhaus",
+      "nome": "Bauhaus",
+      "descrizione": "Geometria e rigore: titoli alti e condensati in maiuscolo, card squadrate con le foto, nessun ornamento.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "bebas-neue", "voce": "space-grotesk", "testo": "inter" },
+        "titoli": { "maiuscolo": true, "corsivo": false, "allineamento": "sinistra", "dimensione": "enorme", "spaziatura": "larga" },
+        "intestazione": "filetto",
+        "voce": { "forma": "card", "prezzo": "accanto", "separatore": "nessuno", "immagine": "quadrata" },
+        "cornice": "nessuna",
+        "angoli": "vivi",
+        "sfondo": "tinta"
+      }
+    },
+    {
+      "id": "tiki",
+      "nome": "Tiki",
+      "descrizione": "Il bar tropicale: titoli in corsivo rotondo, card morbide con le foto nei cerchi, sfondo a righe.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "pacifico", "voce": "josefin-sans", "testo": "josefin-sans" },
+        "titoli": { "maiuscolo": false, "corsivo": false, "allineamento": "centro", "dimensione": "grande", "spaziatura": "normale" },
+        "intestazione": "punti",
+        "voce": { "forma": "card", "prezzo": "sotto", "separatore": "nessuno", "immagine": "tonda" },
+        "cornice": "nessuna",
+        "angoli": "tondi",
+        "sfondo": "righe"
+      }
+    },
+    {
+      "id": "quaderno",
+      "nome": "Quaderno",
+      "descrizione": "Scritto a mano su un quaderno a quadretti: titoli in stampatello, voci in corsivo, righe tratteggiate.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "amatic-sc", "voce": "caveat", "testo": "jost" },
+        "titoli": { "maiuscolo": true, "corsivo": false, "allineamento": "sinistra", "dimensione": "grande", "spaziatura": "normale" },
+        "intestazione": "tratteggio",
+        "voce": { "forma": "riga", "prezzo": "accanto", "separatore": "tratteggio", "immagine": "nascosta" },
+        "cornice": "nessuna",
+        "angoli": "morbidi",
+        "sfondo": "quadretti"
+      }
+    },
+    {
+      "id": "dattilo",
+      "nome": "Dattilo",
+      "descrizione": "Battuto a macchina: un solo carattere da macchina da scrivere, voci in colonna, puntini fino al prezzo.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "special-elite", "voce": "special-elite", "testo": "special-elite" },
+        "titoli": { "maiuscolo": true, "corsivo": false, "allineamento": "sinistra", "dimensione": "normale", "spaziatura": "larga" },
+        "intestazione": "filetto",
+        "voce": { "forma": "colonna", "prezzo": "puntini", "separatore": "punti", "immagine": "nascosta" },
+        "cornice": "sottile",
+        "angoli": "vivi",
+        "sfondo": "carta"
+      }
+    },
+    {
+      "id": "insegna",
+      "nome": "Insegna",
+      "descrizione": "Come l’insegna di un vecchio cinema: titoli enormi al centro, voci condensate in maiuscolo, angoli in cornice.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "abril-fatface", "voce": "oswald", "testo": "inter" },
+        "titoli": { "maiuscolo": false, "corsivo": false, "allineamento": "centro", "dimensione": "enorme", "spaziatura": "stretta" },
+        "intestazione": "doppio-filetto",
+        "voce": { "forma": "riga", "prezzo": "accanto", "separatore": "filetto", "immagine": "nascosta" },
+        "cornice": "angoli",
+        "angoli": "vivi",
+        "sfondo": "grana"
+      }
+    },
+    {
+      "id": "giardino",
+      "nome": "Giardino",
+      "descrizione": "Un aperitivo in giardino: serif leggero in corsivo, foto nei cerchi, voci ariose su fondo appena granulato.",
+      "ricetta": {
+        "versione": 1,
+        "caratteri": { "titolo": "cormorant-garamond", "voce": "cormorant-garamond", "testo": "jost" },
+        "titoli": { "maiuscolo": false, "corsivo": true, "allineamento": "centro", "dimensione": "enorme", "spaziatura": "normale" },
+        "intestazione": "nessuna",
+        "voce": { "forma": "colonna", "prezzo": "sotto", "separatore": "filetto", "immagine": "tonda" },
+        "cornice": "nessuna",
+        "angoli": "tondi",
+        "sfondo": "grana"
+      }
+    }
+  ]
+}

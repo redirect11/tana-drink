@@ -116,7 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS, postaAllaRegia } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
-import { ordina, vistaSezione, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
+import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -528,6 +528,9 @@ function mapSezioneCarta(snap) {
     ordine: s.ordine ?? 0,
     vista: vistaSezione(s.vista),
     nascosta: s.nascosta === true,
+    // Il gruppo (REQ-MENU-030). Ogni campo nuovo della sezione va copiato
+    // qui, se no l'editor lo scrive e il menù non lo vede mai.
+    gruppo: nomeGruppo(s),
   }
 }
 

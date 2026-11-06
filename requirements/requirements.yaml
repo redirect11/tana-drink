@@ -4330,9 +4330,10 @@ requirements:
       (in licenza, come «Notte» e «Meraviglie»), sul contratto di
       REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di
       sempre. In più serve un livello sopra le sezioni: le macro
-      categorie, cioè i quattro semi, ognuno con le sue sezioni. Va
-      deciso se si scrivono nella struttura del menù dei clienti (un
-      gruppo per sezione, nell'editor) o solo nello stile. Animazioni
+      categorie, cioè i quattro semi, ognuno con le sue sezioni: dal
+      06/11/2026 ci sono, sono i gruppi della struttura del menù dei
+      clienti (`carta_sezioni.gruppo`, scritti dall'editor, REQ-MENU-030),
+      e il mazzo li riceve come pagine. Animazioni
       solo su transform e opacity, ferme con «riduci movimento»; il mazzo
       deve reggere su un telefono economico col locale pieno.
     status: todo
@@ -4340,6 +4341,59 @@ requirements:
     labels: [menu, vista-cliente, design, idea]
     priority: P3
     test_cases: []
+
+  - id: REQ-MENU-030
+    title: "I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)"
+    area: "src/lib/marketplaceTemi.js (temiSuMisura, impaginazioneInVista), src/components/MarketplaceTab.jsx («I tuoi temi»), src/lib/strutturaMenu.js (gruppi, pagineDelMenu), src/components/StrutturaMenu.jsx (il gruppo della sezione), src/pages/MenuPage.jsx (le pagine), docs/temi-su-misura.md"
+    description: >
+      L'utente, 06/11/2026: «caricare un mockup di un tema fatto con Canva
+      e, se il cassetto AI ha dei crediti, creare il tema da agganciare al
+      menu e inserirlo tra i temi custom del gestore del bar»; «la
+      creazione da parte nostra di temi ad hoc su richiesta»; «si possa
+      scegliere tra varie strutture di menu (tutto in una pagina, una
+      pagina per categoria o una per macro categoria)». La regia fa il
+      tema (dal mockup col credito AI, o il fornitore a mano: drink-regia
+      REQ-FLOTTA-040) e lo manda con la licenza, in una voce nuova del
+      contratto, `licenza.temi_su_misura`: temi interi, lo stesso oggetto
+      del catalogo più, se c'è, una ricetta (quella degli stili a ricetta,
+      intera) con la dimensione nuova `impaginazione`. QUI: una sezione «I
+      tuoi temi» nel Marketplace coi temi della licenza (si provano, si
+      installano, si usano; uno che sparisce dalla licenza resta installato
+      ma non si reinstalla); un tema con ricetta si disegna col motore
+      degli stili a ricetta registrando uno stile con l'id del tema, senza
+      motore o senza ricetta con lo stile; `impaginazione` nel motore
+      (`unica`, `per-categoria` con le sezioni a pagine e le schede fisse
+      in alto, `per-macro-categoria`); le macro categorie nella struttura
+      del menù dei clienti (`carta_sezioni.gruppo`, dall'editor; senza
+      gruppi niente cambia). Nessuna chiamata nuova verso la regia. Il
+      contratto in docs/temi-su-misura.md.
+      FATTO (06/11/2026): «⭐ I tuoi temi» compare solo se la licenza ne
+      porta (o ne resta uno installato), prima di «Temi»; la copia
+      installata tiene `su_misura` e la ricetta; uno stile esclusivo o
+      sconosciuto scarta il tema. Il gruppo della sezione si scrive
+      nell'editor, con le proposte dei gruppi già scritti; l'ordine dei
+      gruppi è quello della loro prima sezione, così non c'è un secondo
+      ordine da tenere d'accordo. L'impaginazione si legge dalla ricetta
+      del tema in prova o in uso (finché lo stile del menù è il suo) e
+      vale per i clienti, fuori dalla pagina Special: le schede in alto
+      diventano tasti che cambiano pagina; una sezione senza gruppo fa
+      pagina da sé.
+      Col motore degli stili a ricetta (REQ-MENU-031, stesso giorno) un
+      tema con la ricetta si disegna dalla ricetta, come uno stile col suo
+      id, e l'impaginazione è quella della ricetta dello stile in vista.
+      RESTA: le pagine negli stili strutturati come «Giornale», che
+      ricevono il menù intero (non sono a ricetta).
+    status: implemented
+    generate_issue: true
+    labels: [menu, marketplace, licenza, regia]
+    priority: P2
+    test_cases:
+      - tests/unit/marketplaceTemi.test.js
+      - tests/unit/strutturaMenu.test.js
+      - tests/unit/strutturaLetta.test.js
+      - tests/component/MarketplaceTab.test.jsx
+      - tests/component/MenuPage.test.jsx
+      - tests/component/MenuManager.test.jsx
 
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
@@ -6047,6 +6101,49 @@ requirements:
       - tests/component/ThemeSettings.test.jsx
       - tests/component/MenuPage.test.jsx
       - tests/unit/css.test.js
+
+  - id: REQ-MENU-031
+    title: "Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore"
+    area: "src/lib/stiliRicetta.js (vocabolario, leggiStile, vesteRicetta), src/lib/stileMenu.js (gli stili a ricetta fra quelli del locale, vesteDelloStile), src/lib/marketplaceTemi.js (leggiTema, catalogo, stileDelTema), src/index.css (il motore, .stile-ricetta), src/main.jsx (i caratteri), src/App.jsx (i colori propri), docs/stili-a-ricetta.md"
+    description: >
+      L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che
+      abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter
+      caricare anche gli stili», poi «Stile a ricetta» e «una scelta ampia
+      di caratteri dentro l'app». Uno stile a ricetta è la forma del menù
+      come scelta fra valori fissi (caratteri, titoli, intestazione, voce,
+      cornice, angoli, sfondo, colori facoltativi), che l'app disegna con
+      un motore unico, con tutto il CSS dentro di sé: resta una ricetta,
+      non codice, e funziona senza rete. Gli stili arrivano dal catalogo
+      della regia (catalogoTemi → stili), si provano, si installano (con la
+      copia nelle impostazioni) e si usano come quelli gratis; un tema può
+      usarne uno. Dodici caratteri nuovi nella build. Il contratto in
+      docs/stili-a-ricetta.md; la regia è pronta (drink-regia
+      REQ-FLOTTA-034, PR #53).
+      Scritto come REQ-MENU-024 sul ramo feature/stili-a-ricetta, e
+      rinumerato: quell'id l'aveva preso «Giornale».
+      FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva
+      bisogno): il vocabolario in lib/stiliRicetta.js, uguale a quello
+      della regia più `impaginazione` (REQ-MENU-030); `leggiStile` scarta
+      una ricetta con un valore sconosciuto; il motore in index.css legge
+      la ricetta dagli attributi `data-*` del contenitore, e ogni valore ha
+      la sua regola (un test lo controlla); i dodici caratteri in
+      main.jsx, con una scala per le scritture a mano (sulla prova i nomi
+      in Caveat del «Quaderno» si leggevano a fatica); gli stili del
+      catalogo in «Stili del menù», installati con la copia in
+      `stili_ricetta`; un tema del catalogo può usarne uno, e «Usa» lo
+      installa; un tema su misura con la ricetta è uno stile col suo id. I
+      sette stili della regia, provati a schermo sul telefono, si leggono
+      e si disegnano tutti.
+    status: implemented
+    generate_issue: false
+    labels: [menu, marketplace]
+    priority: P2
+    test_cases:
+      - tests/unit/stiliRicetta.test.js
+      - tests/unit/stileMenu.test.js
+      - tests/unit/marketplaceTemi.test.js
+      - tests/component/MarketplaceTab.test.jsx
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"

@@ -24,7 +24,11 @@ import {
   patchInstallaTema,
   patchUsaTema,
   patchDisinstallaTema,
+  temiSuMisura,
+  suMisuraRitirati,
+  stileDelTema,
 } from '../../src/lib/marketplaceTemi.js'
+import { ricordaStili, leggiStiliDelCatalogo } from '../../src/lib/stiliRicetta.js'
 import { THEME_FIELDS, THEME_PRESETS } from '../../src/lib/themes.js'
 
 beforeEach(() => {
@@ -195,5 +199,110 @@ describe('la prova sul menù', () => {
     expect(temaInProva({}, '?tema=gazzetta')).toBeNull()
     expect(temaInProva({}, '?vista=cliente&tema=inventato')).toBeNull()
     expect(temaInProva({}, '?vista=cliente&tema=notte')).toBeNull()
+  })
+})
+
+// ── I TEMI SU MISURA (REQ-MENU-030) ──────────────────────────────────
+// La regia li fa per un locale solo (dal mockup del titolare, o a mano dal
+// fornitore) e li manda con la licenza, in `temi_su_misura`
+// (docs/temi-su-misura.md). Nessuna chiamata in più: si vedono anche senza
+// rete.
+const RICETTA = {
+  versione: 1,
+  caratteri: { titolo: 'libre-baskerville', voce: 'libre-baskerville', testo: 'georgia' },
+  titoli: { maiuscolo: false, corsivo: true, allineamento: 'centro', dimensione: 'grande', spaziatura: 'normale' },
+  intestazione: 'fregio',
+  voce: { forma: 'riga', prezzo: 'puntini', separatore: 'nessuno', immagine: 'nascosta' },
+  cornice: 'doppia',
+  angoli: 'vivi',
+  sfondo: 'carta',
+  impaginazione: 'per-categoria',
+}
+
+describe('i temi su misura, dalla licenza', () => {
+  const BOSCO = {
+    id: 'su-misura-mhz3k1a2',
+    nome: 'Bosco',
+    descrizione: 'Verde profondo e oro.',
+    prezzo: 0,
+    tavolozza: { base: 'tana-scuro', colori: { '--bg': '#10201a' } },
+    stile: 'deco',
+    ricetta: RICETTA,
+  }
+  const conLicenza = (temi, altro = {}) => ({ licenza: { temi_su_misura: temi }, ...altro })
+
+  it('sono temi come quelli del catalogo, segnati su misura e con la loro ricetta', () => {
+    const [t] = temiSuMisura(conLicenza([BOSCO]))
+    expect(t).toMatchObject({ id: BOSCO.id, nome: 'Bosco', stile: 'deco', su_misura: true, ricetta: RICETTA })
+    expect(t.tavolozza).toEqual({ base: 'tana-scuro', colori: { '--bg': '#10201a' } })
+  })
+
+  it('le licenze scritte prima non hanno la voce: nessun tema su misura', () => {
+    expect(temiSuMisura({ licenza: { temi: ['notte'] } })).toEqual([])
+    expect(temiSuMisura({})).toEqual([])
+    expect(temiSuMisura(conLicenza('non è un elenco'))).toEqual([])
+  })
+
+  // Un tema su misura non apre un esclusivo: «Notte» resta di chi l'ha in
+  // licenza, e uno stile sconosciuto non si sa disegnare.
+  it('uno stile esclusivo o sconosciuto lo scarta', () => {
+    const temi = temiSuMisura(conLicenza([{ ...BOSCO, stile: 'notte' }, { ...BOSCO, id: 'altro', stile: 'vaporwave' }, null]))
+    expect(temi).toEqual([])
+  })
+
+  it('installato e poi tolto dalla licenza: resta, ma si sa che non si reinstalla', () => {
+    const copia = temiSuMisura(conLicenza([BOSCO]))[0]
+    const dopo = { licenza: { temi_su_misura: [] }, temi_installati: [copia] }
+    expect(temiInstallati(dopo)[0]).toMatchObject({ id: BOSCO.id, su_misura: true, ricetta: RICETTA })
+    expect(suMisuraRitirati(dopo).map((t) => t.id)).toEqual([BOSCO.id])
+    expect(suMisuraRitirati({ ...dopo, licenza: { temi_su_misura: [BOSCO] } })).toEqual([])
+  })
+
+  it('si prova sul menù anche prima di installarlo', () => {
+    expect(temaPerId(conLicenza([BOSCO]), BOSCO.id)?.nome).toBe('Bosco')
+    expect(temaInProva(conLicenza([BOSCO]), `?vista=cliente&tema=${BOSCO.id}`)?.su_misura).toBe(true)
+  })
+
+  // CON LA RICETTA SI DISEGNA COL MOTORE (REQ-MENU-031): il tema è uno
+  // stile a ricetta col suo stesso id; senza, o con una ricetta che l'app
+  // non sa disegnare, si usa il suo `stile`.
+  it('con la ricetta si disegna col motore, col suo id; senza, col suo stile', () => {
+    const [conRicetta] = temiSuMisura(conLicenza([BOSCO]))
+    expect(stileDelTema(conRicetta)).toBe(BOSCO.id)
+    const [rotta] = temiSuMisura(conLicenza([{ ...BOSCO, ricetta: { ...RICETTA, sfondo: 'marmo' } }]))
+    expect(rotta).not.toHaveProperty('ricetta')
+    expect(stileDelTema(rotta)).toBe('deco')
+    const usato = patchUsaTema(conLicenza([BOSCO]), conRicetta)
+    expect(usato).toMatchObject({ stile_menu: BOSCO.id, tema_menu: BOSCO.id })
+    expect(usato).not.toHaveProperty('stili_ricetta')
+  })
+
+  // La ricetta la portano solo i temi su misura: un tema del catalogo usa
+  // uno stile, eventualmente a ricetta, per id.
+  it('un tema del catalogo non porta una ricetta sua', () => {
+    expect(leggiTema({ ...BOSCO, id: 'catalogo' })).not.toHaveProperty('ricetta')
+  })
+})
+
+// UN TEMA DEL CATALOGO CON UNO STILE A RICETTA (REQ-MENU-031): la regia
+// pubblica stili e temi insieme, e un tema può usare uno stile dello stesso
+// catalogo. Un'app che non conosce lo stile scarta il tema.
+describe('i temi con uno stile a ricetta', () => {
+  const OSTERIA = { id: 'osteria', nome: 'Osteria', ricetta: RICETTA }
+  const TRATTORIA = { id: 'trattoria', nome: 'Trattoria', tavolozza: { base: 'crema' }, stile: 'osteria' }
+
+  it('lo stile dello stesso catalogo lo fa accettare; senza, si scarta', () => {
+    expect(leggiCatalogo({ temi: [TRATTORIA], stili: [OSTERIA] }).map((t) => t.id)).toEqual(['trattoria'])
+    expect(leggiCatalogo({ temi: [TRATTORIA] })).toEqual([])
+  })
+
+  it('«Usa» installa anche lo stile, con la sua copia', () => {
+    ricordaStili(leggiStiliDelCatalogo({ stili: [OSTERIA] }))
+    const [t] = leggiCatalogo({ temi: [TRATTORIA], stili: [OSTERIA] })
+    const usato = patchUsaTema({}, t)
+    expect(usato).toMatchObject({ stile_menu: 'osteria', tema_menu: 'trattoria' })
+    expect(usato.stili_ricetta.map((s) => s.id)).toEqual(['osteria'])
+    // Installato, il tema si legge anche dalle impostazioni.
+    expect(temiInstallati(usato).map((x) => x.id)).toEqual(['trattoria'])
   })
 })

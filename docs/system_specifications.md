@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 5 novembre 2026.
+> Generato il 6 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 260 | fatto e coperto dai test |
+| ✅ | 262 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**314 voci** in tutto. **277** descrivono il sistema com'è oggi e
+**316 voci** in tutto. **279** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 23 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 25 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -878,6 +878,16 @@ L'utente, 05/11/2026, davanti a un'idea di Flavio che non segue i temi di oggi (
 
 **Dove**: `src/lib/contrattoStile.js, src/components/stiliStrutturati.js, src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/component/stiliStrutturati.test.jsx`
 
+#### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
+
+L'utente, 06/11/2026: «caricare un mockup di un tema fatto con Canva e, se il cassetto AI ha dei crediti, creare il tema da agganciare al menu e inserirlo tra i temi custom del gestore del bar»; «la creazione da parte nostra di temi ad hoc su richiesta»; «si possa scegliere tra varie strutture di menu (tutto in una pagina, una pagina per categoria o una per macro categoria)». La regia fa il tema (dal mockup col credito AI, o il fornitore a mano: drink-regia REQ-FLOTTA-040) e lo manda con la licenza, in una voce nuova del contratto, `licenza.temi_su_misura`: temi interi, lo stesso oggetto del catalogo più, se c'è, una ricetta (quella degli stili a ricetta, intera) con la dimensione nuova `impaginazione`. QUI: una sezione «I tuoi temi» nel Marketplace coi temi della licenza (si provano, si installano, si usano; uno che sparisce dalla licenza resta installato ma non si reinstalla); un tema con ricetta si disegna col motore degli stili a ricetta registrando uno stile con l'id del tema, senza motore o senza ricetta con lo stile; `impaginazione` nel motore (`unica`, `per-categoria` con le sezioni a pagine e le schede fisse in alto, `per-macro-categoria`); le macro categorie nella struttura del menù dei clienti (`carta_sezioni.gruppo`, dall'editor; senza gruppi niente cambia). Nessuna chiamata nuova verso la regia. Il contratto in docs/temi-su-misura.md.
+
+FATTO (06/11/2026): «⭐ I tuoi temi» compare solo se la licenza ne porta (o ne resta uno installato), prima di «Temi»; la copia installata tiene `su_misura` e la ricetta; uno stile esclusivo o sconosciuto scarta il tema. Il gruppo della sezione si scrive nell'editor, con le proposte dei gruppi già scritti; l'ordine dei gruppi è quello della loro prima sezione, così non c'è un secondo ordine da tenere d'accordo. L'impaginazione si legge dalla ricetta del tema in prova o in uso (finché lo stile del menù è il suo) e vale per i clienti, fuori dalla pagina Special: le schede in alto diventano tasti che cambiano pagina; una sezione senza gruppo fa pagina da sé. Col motore degli stili a ricetta (REQ-MENU-031, stesso giorno) un tema con la ricetta si disegna dalla ricetta, come uno stile col suo id, e l'impaginazione è quella della ricetta dello stile in vista.
+
+RESTA: le pagine negli stili strutturati come «Giornale», che ricevono il menù intero (non sono a ricetta).
+
+**Dove**: `src/lib/marketplaceTemi.js (temiSuMisura, impaginazioneInVista), src/components/MarketplaceTab.jsx («I tuoi temi»), src/lib/strutturaMenu.js (gruppi, pagineDelMenu), src/components/StrutturaMenu.jsx (il gruppo della sezione), src/pages/MenuPage.jsx (le pagine), docs/temi-su-misura.md` · **Lo dimostrano**: `tests/unit/marketplaceTemi.test.js`, `tests/unit/strutturaMenu.test.js`, `tests/unit/strutturaLetta.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/component/MenuManager.test.jsx`
+
 #### REQ-MENU-022 — Quattro stili del menù gratis, in un catalogo dentro l'app: si installano e si provano sul proprio menù
 
 L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora metterei un tot di temi gratis, escludiamo lo stile Notte. Parlo di temi per il menu»; poi «gli acquisti sono in app. E su quelli gratis non facciamo partire stripe ovviamente. Facciamo solo installare il tema». Scelti quattro stili: «Lavagna», «Déco», «Riviera», «Giornale» (DESIGN.md). Sono vesti sopra il menù classico (stesse voci, carosello, griglia degli Special) con caratteri, filetti e impaginazione loro; i colori sono quelli del tema (fino alla 1.10.15 «Lavagna» li portava tutti; da REQ-MENU-027 la sua ardesia è una tavolozza, proposta dal suo tema e cambiabile). In Impostazioni → Menù clienti: sopra gli stili del locale, da scegliere; sotto «Altri stili, gratis», con «Installa». Gli installati stanno in `settings/bar.stili_installati` (sono gratis: niente da proteggere); disinstallando quello in uso si torna al classico. Ogni scheda ha un assaggio scritto con lo stile vero e «Prova sul menù», che apre l'anteprima del cliente con lo stile in prova (`?vista=cliente&stile=…`): la vede solo chi la apre, e un esclusivo che il locale non ha non si prova. Uno stile scelto ma non installato non si applica. Niente Stripe e niente regia per i gratis.
@@ -885,6 +895,14 @@ L'utente, 02/11/2026: «i temi in abbonamento non si possono sentire. Io per ora
 GUARDATI A SCHERMO IL 02/11/2026 (Chrome senza finestra, sulla demo): su desktop reggono; sul telefono «Lavagna» e «Déco» spezzavano i nomi dei drink a metà parola («Negroni Sbagliat-o»), perché accanto al prezzo e al tasto la colonna del nome restava di pochi caratteri. Sotto i 520 px il prezzo va sotto il nome, e «Déco» stringe spaziatura e cornice. Il rombo di «Déco» sta accanto al titolo della categoria (sopra diventava un puntino).
 
 **Dove**: `src/lib/stileMenu.js (gratis, stiliInstallati, stiliDaInstallare, stileProvabile, patchInstalla, patchDisinstalla), src/components/ThemeSettings.jsx (StileMenuClienti), src/pages/MenuPage.jsx (stile in prova), src/index.css (.stile-lavagna, .stile-deco, .stile-riviera, .stile-giornale, la galleria), src/main.jsx (caratteri), DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/component/ThemeSettings.test.jsx`, `tests/component/MenuPage.test.jsx`, `tests/unit/css.test.js`
+
+#### REQ-MENU-031 — Gli stili a ricetta: la forma del menù arriva dalla regia, e l'app la disegna col suo motore
+
+L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che abbiamo integrato. Creane di nuovi. In qualche modo dobbiamo poter caricare anche gli stili», poi «Stile a ricetta» e «una scelta ampia di caratteri dentro l'app». Uno stile a ricetta è la forma del menù come scelta fra valori fissi (caratteri, titoli, intestazione, voce, cornice, angoli, sfondo, colori facoltativi), che l'app disegna con un motore unico, con tutto il CSS dentro di sé: resta una ricetta, non codice, e funziona senza rete. Gli stili arrivano dal catalogo della regia (catalogoTemi → stili), si provano, si installano (con la copia nelle impostazioni) e si usano come quelli gratis; un tema può usarne uno. Dodici caratteri nuovi nella build. Il contratto in docs/stili-a-ricetta.md; la regia è pronta (drink-regia REQ-FLOTTA-034, PR #53). Scritto come REQ-MENU-024 sul ramo feature/stili-a-ricetta, e rinumerato: quell'id l'aveva preso «Giornale».
+
+FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva bisogno): il vocabolario in lib/stiliRicetta.js, uguale a quello della regia più `impaginazione` (REQ-MENU-030); `leggiStile` scarta una ricetta con un valore sconosciuto; il motore in index.css legge la ricetta dagli attributi `data-*` del contenitore, e ogni valore ha la sua regola (un test lo controlla); i dodici caratteri in main.jsx, con una scala per le scritture a mano (sulla prova i nomi in Caveat del «Quaderno» si leggevano a fatica); gli stili del catalogo in «Stili del menù», installati con la copia in `stili_ricetta`; un tema del catalogo può usarne uno, e «Usa» lo installa; un tema su misura con la ricetta è uno stile col suo id. I sette stili della regia, provati a schermo sul telefono, si leggono e si disegnano tutti.
+
+**Dove**: `src/lib/stiliRicetta.js (vocabolario, leggiStile, vesteRicetta), src/lib/stileMenu.js (gli stili a ricetta fra quelli del locale, vesteDelloStile), src/lib/marketplaceTemi.js (leggiTema, catalogo, stileDelTema), src/index.css (il motore, .stile-ricetta), src/main.jsx (i caratteri), src/App.jsx (i colori propri), docs/stili-a-ricetta.md` · **Lo dimostrano**: `tests/unit/stiliRicetta.test.js`, `tests/unit/stileMenu.test.js`, `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -3734,7 +3752,7 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 
 L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 macro categorie che sono i 4 semi di un mazzo di carte francesi, che escono da un mazzo di carte; quando si clicca una carta si apre il menù di quella macro categoria, scritto sulla carta con quel seme. È un'idea, quindi segnatelo». Una «roba animata completamente custom» che mostri comunque le voci personalizzate del menù dei clienti. È UN'IDEA, non ancora un lavoro: servono da Flavio uno schizzo, un video o un riferimento, e le risposte a: quali sono le quattro macro categorie e quale seme a quale; come escono le carte dal mazzo (all'apertura, a ventaglio, una per volta); come si torna al mazzo dalla carta aperta; dove stanno «Aggiungi» e gli Special; se vale anche fuori dalla Tana.
 
-COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni. Va deciso se si scrivono nella struttura del menù dei clienti (un gruppo per sezione, nell'editor) o solo nello stile. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
+COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni: dal 06/11/2026 ci sono, sono i gruppi della struttura del menù dei clienti (`carta_sezioni.gruppo`, scritti dall'editor, REQ-MENU-030), e il mazzo li riceve come pagine. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
 
 **Dove**: `da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)`
 
