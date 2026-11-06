@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.24-beta — in lavorazione
+## 1.10.25-beta — in lavorazione
+
+### Menù
+
+- Nel tema «Carte» la carta scelta esce e si gira un po' più in fretta, e
+  quando si gira il titolo della sezione non salta più in alto
+  (REQ-MENU-029).
+
+## 1.10.24-beta — 06/11/2026 (test)
 
 ### Menù
 
