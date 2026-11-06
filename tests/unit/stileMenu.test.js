@@ -113,7 +113,7 @@ describe('il catalogo degli stili gratis', () => {
   })
 
   it('ogni stile ha nome e descrizione da mostrare nelle impostazioni', () => {
-    expect(STILI_MENU.map((s) => s.id)).toEqual(['classico', 'notte', 'meraviglie', 'lavagna', 'deco', 'riviera', 'giornale'])
+    expect(STILI_MENU.map((s) => s.id)).toEqual(['classico', 'notte', 'meraviglie', 'carte', 'lavagna', 'deco', 'riviera', 'giornale'])
     for (const s of STILI_MENU) {
       expect(s.nome).toBeTruthy()
       expect(s.desc).toBeTruthy()

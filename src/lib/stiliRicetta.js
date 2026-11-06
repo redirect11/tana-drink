@@ -79,7 +79,7 @@ export const VALORI = {
 }
 
 // Gli stili scritti nell'app: un id di uno stile a ricetta non li copre.
-export const STILI_DELL_APP = ['classico', 'notte', 'meraviglie', 'lavagna', 'deco', 'riviera', 'giornale']
+export const STILI_DELL_APP = ['classico', 'notte', 'meraviglie', 'carte', 'lavagna', 'deco', 'riviera', 'giornale']
 
 const VERSIONE = 1
 const ID = /^[a-z0-9][a-z0-9-]{1,40}$/

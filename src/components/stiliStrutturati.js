@@ -7,10 +7,14 @@
 //   · segno   — il segno dei disegni dei drink (illustrazioneDrink.js), lo
 //               stesso nel corpo e nel dettaglio della voce.
 // Uno stile che non è qui è «a veste»: il menù classico, vestito dal CSS.
+import MenuCarte, { TestataCarte } from './MenuCarte.jsx'
 import MenuGiornale, { TestataGiornale } from './MenuGiornale.jsx'
 
+// «Carte» è della Tana, e ne tiene il segno: i disegni di Tenniel, che con
+// le carte da gioco sono a casa loro.
 export const STILI_STRUTTURATI = Object.freeze({
   giornale: Object.freeze({ Testata: TestataGiornale, Corpo: MenuGiornale, segno: 'incisione' }),
+  carte: Object.freeze({ Testata: TestataCarte, Corpo: MenuCarte, segno: 'tenniel' }),
 })
 
 export const strutturaDi = (stile) => STILI_STRUTTURATI[stile] || null

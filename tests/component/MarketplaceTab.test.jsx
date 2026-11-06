@@ -148,6 +148,27 @@ describe('la vetrina del «Giornale»', () => {
   })
 })
 
+// REQ-MENU-029: «Carte» è della Tana. Chi lo ha in licenza vede il tema, e
+// nella vetrina il mazzo con la prima carta alzata e aperta; gli altri non
+// lo vedono affatto.
+describe('il tema «Carte»', () => {
+  it('senza la licenza non c’è', () => {
+    mostra()
+    expect(screen.queryByRole('button', { name: 'Installa Carte' })).toBeNull()
+  })
+
+  it('con la licenza c’è, e la vetrina è un mazzo con una carta aperta', () => {
+    st.impostazioni = { licenza: { temi: ['carte'] } }
+    const { container } = mostra()
+    expect(screen.getByRole('button', { name: 'Installa Carte' })).toBeInTheDocument()
+    const vetrina = container.querySelector('.vetrina-tema.stile-carte')
+    expect(vetrina.querySelectorAll('.k-carta')).toHaveLength(4)
+    expect(vetrina.querySelector('.k-carta[aria-pressed="true"]')).toHaveTextContent('Cocktail')
+    expect(vetrina.querySelector('.k-aperta')).toHaveTextContent('Negroni')
+    expect(vetrina.querySelector('.menu-item')).toBeNull()
+  })
+})
+
 // ── I MODULI (REQ-LIC-012) ────────────────────────────────────────────
 // Al mese come nel listino della regia, con una prova gratuita, e li
 // compra solo il titolare (decisioni dell'utente, 02/11/2026). Lo stato

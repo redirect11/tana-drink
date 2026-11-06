@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 262 | fatto e coperto dai test |
+| ✅ | 263 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**316 voci** in tutto. **279** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**316 voci** in tutto. **280** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 25 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 26 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -877,6 +877,20 @@ GUARDATO A SCHERMO IL 05/11/2026 (Chrome senza finestra, sulla demo con lo stile
 L'utente, 05/11/2026, davanti a un'idea di Flavio che non segue i temi di oggi («una roba animata completamente custom che però mostri comunque le voci di menù personalizzate»): per un tema fatto apposta non servono API per altri, serve uno stile nuovo nell'app; prima di farlo, «scrivo il contratto dello stile» — «sì, vai, perché poi aggiungeremo un menù con una nuova struttura». Uno stile STRUTTURATO si aggancia con una riga in stiliStrutturati.js (Testata, Corpo, segno dei disegni) e riceve dal menù lo stesso pacchetto: il locale, le sezioni del menù dei clienti nella forma `{ id, nome, vista, voci }` con le voci personalizzate, gli Special, la pagina Special sì o no, titolo e tema degli Special, la strada per il menù completo, l'immagine nel segno dello stile, «apri il dettaglio», i tasti per ordinare del menù, le quantità degli ingredienti, le frasi dello stile. Promette: ogni voce si vede col prezzo dei dati; ogni voce ha i tasti del menù (carrello e invio restano locali e istantanei); niente letture né scritture; con «riduci movimento» non si muove niente; il nome che apre il dettaglio è un tasto vero. Il resto della pagina (avvisi, ordini in corso, carrello, riepilogo, dettaglio) resta del menù. «Giornale» (REQ-MENU-024) è stato riportato sopra il contratto: la sua testata, che MenuPage componeva a mano per la pagina Special, ora la disegna lui dal pacchetto. «Notte» resta com'è: il suo pezzo strutturato sono solo gli Special a scorrimento. La prova del contratto gira su OGNI stile dell'elenco: uno stile nuovo la eredita.
 
 **Dove**: `src/lib/contrattoStile.js, src/components/stiliStrutturati.js, src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/component/stiliStrutturati.test.jsx`
+
+#### REQ-MENU-029 — Lo stile «Carte», l'idea di Flavio: il menù come un mazzo di carte francesi, un seme per macro categoria, e la carta scelta si alza e si apre
+
+L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 macro categorie che sono i 4 semi di un mazzo di carte francesi, che escono da un mazzo di carte; quando si clicca una carta si apre il menù di quella macro categoria, scritto sulla carta con quel seme. È un'idea, quindi segnatelo». Una «roba animata completamente custom» che mostri comunque le voci personalizzate del menù dei clienti. È UN'IDEA, non ancora un lavoro: servono da Flavio uno schizzo, un video o un riferimento, e le risposte a: quali sono le quattro macro categorie e quale seme a quale; come escono le carte dal mazzo (all'apertura, a ventaglio, una per volta); come si torna al mazzo dalla carta aperta; dove stanno «Aggiungi» e gli Special; se vale anche fuori dalla Tana.
+
+COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni: dal 06/11/2026 ci sono, sono i gruppi della struttura del menù dei clienti (`carta_sezioni.gruppo`, scritti dall'editor, REQ-MENU-030), e il mazzo li riceve come pagine. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
+
+LO SCHIZZO, 06/11/2026 (Flavio): «na cosa del genere, con le carte che si alzano quando le selezioni» — una fila di carte accavallate, ognuna col seme e il nome di una SEZIONE (cuori: Signature, Suggeriti dallo staff, Grandi classici, Moderni; fiori: Gin, Whiskey, Tequila e Mezcal, Rum, Distillati e liquori; quadri: Birre, Amari, Vini; picche: Bevande, tisane, food), scritte a macchina, con la parte bassa dietro una fila di dorsi rossi. L'utente: «una cosa ovviamente più figa e moderna con animazioni. Nuovo tema con menù custom».
+
+FATTO (06/11/2026): lo stile strutturato «Carte», esclusivo della Tana (in licenza), e il tema «Carte» (fondo scuro, come lo schizzo). Ogni sezione è una carta; il seme è quello del suo gruppo, nell'ordine dello schizzo (il primo gruppo cuori, poi fiori, quadri, picche; una sezione senza gruppo fa gruppo da sé); il valore va da A in su dentro il seme. Le carte escono dal mazzo coperto all'apertura, una dopo l'altra; la scelta si alza e sotto si apre in grande, con le voci scritte sopra (nome, prezzo, descrizione, ingredienti, «Aggiungi»); la testa della carta aperta resta agganciata col tasto «Le carte ↑». Gli Special sono il Jolly, la prima carta; all'apertura è aperta la prima sezione. Sulla pagina Special c'è solo il Jolly, aperto. Le carte non aperte sono già nella pagina, nascoste: un tocco, e non si aspetta niente. Le carte hanno colori loro (bianche, semi rossi e neri), il tema resta sul fondo e sui tasti. Le sezioni del contratto portano ora anche il `gruppo`.
+
+RESTA, fuori dall'app: la regia deve conoscere lo stile `carte` (`STILI_DELL_APP` in functions/lib/stili.js) e la licenza della Tana nominarlo in `temi`; e Flavio deve dare i gruppi alle sezioni nel «Menù dei clienti», se no ogni sezione ha un seme suo.
+
+**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`
 
 #### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
 
@@ -3747,14 +3761,6 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-029 — IDEA DI FLAVIO: il menù come un mazzo di carte francesi, quattro semi per quattro macro categorie
-
-L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il menù in 4 macro categorie che sono i 4 semi di un mazzo di carte francesi, che escono da un mazzo di carte; quando si clicca una carta si apre il menù di quella macro categoria, scritto sulla carta con quel seme. È un'idea, quindi segnatelo». Una «roba animata completamente custom» che mostri comunque le voci personalizzate del menù dei clienti. È UN'IDEA, non ancora un lavoro: servono da Flavio uno schizzo, un video o un riferimento, e le risposte a: quali sono le quattro macro categorie e quale seme a quale; come escono le carte dal mazzo (all'apertura, a ventaglio, una per volta); come si torna al mazzo dalla carta aperta; dove stanno «Aggiungi» e gli Special; se vale anche fuori dalla Tana.
-
-COME SI FAREBBE: uno stile strutturato nuovo, esclusivo della Tana (in licenza, come «Notte» e «Meraviglie»), sul contratto di REQ-MENU-028, quindi con le voci, i prezzi e i tasti del menù di sempre. In più serve un livello sopra le sezioni: le macro categorie, cioè i quattro semi, ognuno con le sue sezioni: dal 06/11/2026 ci sono, sono i gruppi della struttura del menù dei clienti (`carta_sezioni.gruppo`, scritti dall'editor, REQ-MENU-030), e il mazzo li riceve come pagine. Animazioni solo su transform e opacity, ferme con «riduci movimento»; il mazzo deve reggere su un telefono economico col locale pieno.
-
-**Dove**: `da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)`
 
 ### Magazzino
 
