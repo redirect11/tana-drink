@@ -1,6 +1,15 @@
 # Cosa è cambiato
 
-## 1.10.21-beta — in lavorazione
+## 1.10.22-beta — in lavorazione
+
+### Menù
+
+- Nel tema «Carte» i nomi lunghi delle sezioni, anche in maiuscolo
+  («AMERICANI», «DISTILLATI»), stanno interi sulla carta invece di andare
+  a capo a metà parola: la scritta si rimpicciolisce quanto basta
+  (REQ-MENU-029).
+
+## 1.10.21-beta — 06/11/2026 (test)
 
 ### Menù
 
