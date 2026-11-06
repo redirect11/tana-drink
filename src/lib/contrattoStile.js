@@ -2,7 +2,7 @@
 //
 // Uno stile «a veste» («Lavagna», «Déco», «Meraviglie») cambia caratteri,
 // colori e cornici sopra le card del menù classico. Uno stile STRUTTURATO
-// («Giornale», e domani quello a carte di Flavio, REQ-MENU-029) disegna il
+// («Giornale», e quello a carte di Flavio, REQ-MENU-029) disegna il
 // menù a modo suo: impaginazione, gesti, animazioni. Fino al 05/11/2026
 // «Giornale» era agganciato a MenuPage in cinque punti, coi dati in forme
 // diverse da quelle che usava «Notte»; l'utente, quel giorno, verso uno
@@ -12,10 +12,11 @@
 // CHE COSA RICEVE (le props, uguali per ogni stile e per i suoi due pezzi,
 // la Testata in cima e il Corpo sotto gli avvisi del menù):
 //   · venue          — il locale (venueDi): nome, slogan, contatti;
-//   · sezioni        — [{ id, nome, vista: 'piena'|'snella', voci }], già
-//                      nell'ordine del menù dei clienti, con le voci
+//   · sezioni        — [{ id, nome, vista: 'piena'|'snella', gruppo, voci }],
+//                      già nell'ordine del menù dei clienti, con le voci
 //                      personalizzate (nome in carta, descrizione) e solo
-//                      quelle disponibili;
+//                      quelle disponibili; `gruppo` è la macro categoria
+//                      della struttura (REQ-MENU-030), o null;
 //   · speciali       — le voci Special;
 //   · soloSpeciali   — true sulla pagina /menu/special;
 //   · special        — { titolo, sottotitolo } degli Special della sera;
@@ -49,6 +50,7 @@ export function sezioniPerLoStile(categorie) {
     id: sezione?.id ?? nome,
     nome,
     vista: sezione?.vista === 'snella' ? 'snella' : 'piena',
+    gruppo: sezione?.gruppo || null,
     voci,
   }))
 }

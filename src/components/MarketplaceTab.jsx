@@ -6,7 +6,7 @@ import { dataAvviso } from '../lib/aggiornamenti.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { TestataGiornale, VoceGiornale } from './MenuGiornale.jsx'
+import { strutturaDi } from './stiliStrutturati.js'
 import Caricamento from './Caricamento.jsx'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import {
@@ -95,22 +95,16 @@ const VOCI_ESEMPIO = [
 
 // Un pezzo del menù vero, con le classi del menù: ogni stile lo disegna con
 // le sue regole, come disegna il menù dei clienti. Uno stile con una
-// struttura sua (il «Giornale», REQ-MENU-024) mostra quella, coi suoi
-// componenti: la vetrina non può mostrare un giornale che non c'è.
+// struttura sua («Giornale», «Carte») mostra la sua vetrina, dal registro
+// degli stili strutturati: la vetrina non può mostrare card che non ha.
 // Uno stile a ricetta (REQ-MENU-031) si veste col motore, come il menù, e
 // coi suoi colori sopra quelli del tema.
 function Vetrina({ colori, stile, settings }) {
-  if (stile === 'giornale') {
+  const struttura = strutturaDi(stile)
+  if (struttura) {
     return (
-      <div className="vetrina-tema stile-giornale" style={resolveThemeVars(colori)} aria-hidden="true">
-        <TestataGiornale venue={{ venue_name: 'Il Locale' }} />
-        <h3 className="g-sezione-titolo">
-          <span>Cocktail</span>
-          <span className="g-sezione-conto">{VOCI_ESEMPIO.length} voci</span>
-        </h3>
-        {VOCI_ESEMPIO.map((d) => (
-          <VoceGiornale key={d.id} d={d} />
-        ))}
+      <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
+        <struttura.Vetrina voci={VOCI_ESEMPIO} />
       </div>
     )
   }

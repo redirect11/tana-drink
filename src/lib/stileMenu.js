@@ -57,6 +57,14 @@ export const STILI_MENU = [
     desc: 'Un libro illustrato dell’Ottocento: carta avorio, caratteri da stampa d’epoca, capitoli e semi di carte da gioco. Veste anche la home e le altre pagine dei clienti.',
   },
   {
+    // L'idea di Flavio (REQ-MENU-029): esclusivo della Tana, come «Notte»
+    // e «Meraviglie». Ha una struttura sua (MenuCarte.jsx).
+    id: 'carte',
+    nome: 'Carte',
+    inLicenza: true,
+    desc: 'Il menù come un mazzo di carte francesi: ogni sezione è una carta col seme del suo gruppo, e la carta scelta si alza e si apre. Gli Special sono il Jolly.',
+  },
+  {
     id: 'lavagna',
     nome: 'Lavagna',
     gratis: true,

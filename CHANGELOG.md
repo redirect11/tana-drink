@@ -1,6 +1,15 @@
 # Cosa è cambiato
 
-## 1.10.18-beta — in lavorazione
+## 1.10.19-beta — in lavorazione
+
+### Menù
+
+- Il tema «Carte», l'idea di Flavio per il menù della Tana: le sezioni
+  sono carte da gioco in fila, col seme del loro gruppo; la carta toccata
+  si alza e si apre, con le voci scritte sopra. Gli Special sono il Jolly
+  (REQ-MENU-029).
+
+## 1.10.18-beta — 06/11/2026 (test)
 
 ### Menù
 
