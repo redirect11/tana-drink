@@ -4310,8 +4310,8 @@ requirements:
       - tests/component/stiliStrutturati.test.jsx
 
   - id: REQ-MENU-029
-    title: "IDEA DI FLAVIO: il menù come un mazzo di carte francesi, quattro semi per quattro macro categorie"
-    area: "da fare: uno stile strutturato nuovo (REQ-MENU-028), le macro categorie nella struttura del menù (REQ-MENU-025)"
+    title: "Lo stile «Carte», l'idea di Flavio: il menù come un mazzo di carte francesi, un seme per macro categoria, e la carta scelta si alza e si apre"
+    area: "src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css"
     description: >
       L'utente, 05/11/2026, riportando Flavio: «l'idea è suddividere il
       menù in 4 macro categorie che sono i 4 semi di un mazzo di carte
@@ -4336,11 +4336,40 @@ requirements:
       e il mazzo li riceve come pagine. Animazioni
       solo su transform e opacity, ferme con «riduci movimento»; il mazzo
       deve reggere su un telefono economico col locale pieno.
-    status: todo
+      LO SCHIZZO, 06/11/2026 (Flavio): «na cosa del genere, con le carte
+      che si alzano quando le selezioni» — una fila di carte accavallate,
+      ognuna col seme e il nome di una SEZIONE (cuori: Signature, Suggeriti
+      dallo staff, Grandi classici, Moderni; fiori: Gin, Whiskey, Tequila e
+      Mezcal, Rum, Distillati e liquori; quadri: Birre, Amari, Vini;
+      picche: Bevande, tisane, food), scritte a macchina, con la parte bassa
+      dietro una fila di dorsi rossi. L'utente: «una cosa ovviamente più
+      figa e moderna con animazioni. Nuovo tema con menù custom».
+      FATTO (06/11/2026): lo stile strutturato «Carte», esclusivo della
+      Tana (in licenza), e il tema «Carte» (fondo scuro, come lo schizzo).
+      Ogni sezione è una carta; il seme è quello del suo gruppo, nell'ordine
+      dello schizzo (il primo gruppo cuori, poi fiori, quadri, picche; una
+      sezione senza gruppo fa gruppo da sé); il valore va da A in su dentro
+      il seme. Le carte escono dal mazzo coperto all'apertura, una dopo
+      l'altra; la scelta si alza e sotto si apre in grande, con le voci
+      scritte sopra (nome, prezzo, descrizione, ingredienti, «Aggiungi»);
+      la testa della carta aperta resta agganciata col tasto «Le carte ↑».
+      Gli Special sono il Jolly, la prima carta; all'apertura è aperta la
+      prima sezione. Sulla pagina Special c'è solo il Jolly, aperto. Le
+      carte non aperte sono già nella pagina, nascoste: un tocco, e non si
+      aspetta niente. Le carte hanno colori loro (bianche, semi rossi e
+      neri), il tema resta sul fondo e sui tasti. Le sezioni del contratto
+      portano ora anche il `gruppo`.
+      RESTA, fuori dall'app: la regia deve conoscere lo stile `carte`
+      (`STILI_DELL_APP` in functions/lib/stili.js) e la licenza della Tana
+      nominarlo in `temi`; e Flavio deve dare i gruppi alle sezioni nel
+      «Menù dei clienti», se no ogni sezione ha un seme suo.
+    status: implemented
     generate_issue: false
-    labels: [menu, vista-cliente, design, idea]
+    labels: [menu, vista-cliente, design]
     priority: P3
-    test_cases: []
+    test_cases:
+      - tests/component/MenuCarte.test.jsx
+      - tests/unit/mazzoCarte.test.js
 
   - id: REQ-MENU-030
     title: "I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)"

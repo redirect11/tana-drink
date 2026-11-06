@@ -21,7 +21,7 @@ import {
   ricettaDelloStile,
   vesteDelloStile,
 } from '../../src/lib/stileMenu.js'
-import { leggiStile } from '../../src/lib/stiliRicetta.js'
+import { leggiStile, STILI_DELL_APP } from '../../src/lib/stiliRicetta.js'
 
 describe('lo stile del menù', () => {
   it('il classico è il predefinito', () => {
@@ -113,7 +113,10 @@ describe('il catalogo degli stili gratis', () => {
   })
 
   it('ogni stile ha nome e descrizione da mostrare nelle impostazioni', () => {
-    expect(STILI_MENU.map((s) => s.id)).toEqual(['classico', 'notte', 'meraviglie', 'lavagna', 'deco', 'riviera', 'giornale'])
+    // Gli id riservati agli stili dell'app (stiliRicetta.js) sono questi: uno
+    // stile nuovo dimenticato lì lascerebbe a uno stile a ricetta il suo id.
+    expect(STILI_MENU.map((s) => s.id)).toEqual(STILI_DELL_APP)
+    expect(STILI_DELL_APP).toEqual(['classico', 'notte', 'meraviglie', 'carte', 'lavagna', 'deco', 'riviera', 'giornale'])
     for (const s of STILI_MENU) {
       expect(s.nome).toBeTruthy()
       expect(s.desc).toBeTruthy()

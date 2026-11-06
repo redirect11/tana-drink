@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
+import { nessunMovimento } from '../lib/movimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 // ── LO STILE «GIORNALE»: IL MENÙ COME UNA PRIMA PAGINA (REQ-MENU-024) ──
@@ -25,8 +26,6 @@ const dataEdizione = (quando = new Date()) =>
   quando.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
 const ancora = (cat) => `sez-${encodeURIComponent(cat)}`
-const nessunMovimento = () =>
-  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 // Nel menù Special la testata fa anche da testata degli Special: il titolo
 // della sera al posto del motto, il tema, e la strada per il menù completo,
@@ -77,6 +76,23 @@ export function VoceGiornale({ d, apri, tastiOrdine, quantita = false }) {
       {ingredienti && <p className="g-ingredienti">{ingredienti.join(' · ')}</p>}
       {tastiOrdine && <div className="g-voce-tasti">{tastiOrdine(d)}</div>}
     </article>
+  )
+}
+
+// LA VETRINA DEL MARKETPLACE (stiliStrutturati.js): la testata e una
+// sezione con le voci d'esempio.
+export function VetrinaGiornale({ voci }) {
+  return (
+    <>
+      <TestataGiornale venue={{ venue_name: 'Il Locale' }} />
+      <h3 className="g-sezione-titolo">
+        <span>Cocktail</span>
+        <span className="g-sezione-conto">{voci.length} voci</span>
+      </h3>
+      {voci.map((d) => (
+        <VoceGiornale key={d.id} d={d} />
+      ))}
+    </>
   )
 }
 

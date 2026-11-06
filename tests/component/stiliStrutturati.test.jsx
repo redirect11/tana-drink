@@ -2,7 +2,7 @@
 'use strict'
 
 // IL CONTRATTO DEGLI STILI STRUTTURATI (REQ-MENU-028). Uno stile che
-// disegna il menù a modo suo («Giornale», e domani quello a carte di
+// disegna il menù a modo suo («Giornale», e quello a carte di
 // Flavio) riceve dal menù lo stesso pacchetto e promette le stesse cose: le
 // voci tutte, col prezzo dei dati, coi tasti per ordinare del menù, e
 // niente database. Questa prova gira su OGNI stile dell'elenco: uno stile
@@ -52,9 +52,10 @@ const mostra = (s, p) =>
   )
 
 describe.each(Object.entries(STILI_STRUTTURATI))('lo stile strutturato «%s»', (id, s) => {
-  it('ha testata, corpo e segno dei disegni', () => {
+  it('ha testata, corpo, vetrina e segno dei disegni', () => {
     expect(typeof s.Testata).toBe('function')
     expect(typeof s.Corpo).toBe('function')
+    expect(typeof s.Vetrina).toBe('function')
     expect(typeof s.segno).toBe('string')
   })
 
@@ -121,8 +122,15 @@ describe('le sezioni nella forma del contratto', () => {
   it('nome, voci, vista e un id stabile', () => {
     const voci = [voce('a', 'A', 1)]
     expect(sezioniPerLoStile([['Classici', voci, { id: 'sez-1', vista: 'snella' }], ['Altro', voci]])).toEqual([
-      { id: 'sez-1', nome: 'Classici', vista: 'snella', voci },
-      { id: 'Altro', nome: 'Altro', vista: 'piena', voci },
+      { id: 'sez-1', nome: 'Classici', vista: 'snella', gruppo: null, voci },
+      { id: 'Altro', nome: 'Altro', vista: 'piena', gruppo: null, voci },
     ])
+  })
+
+  // Il gruppo della struttura è la macro categoria: lo stile a carte ne fa
+  // il seme (REQ-MENU-029).
+  it('col gruppo della sezione, se la struttura ne ha uno', () => {
+    const voci = [voce('a', 'A', 1)]
+    expect(sezioniPerLoStile([['Gin', voci, { id: 'sez-2', gruppo: 'Distillati' }]])[0].gruppo).toBe('Distillati')
   })
 })
