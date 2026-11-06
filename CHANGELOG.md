@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.23-beta — in lavorazione
+## 1.10.24-beta — in lavorazione
+
+### Menù
+
+- Nel tema «Carte» la carta scelta ora esce davvero dal ventaglio: parte
+  dalla carta toccata, scende crescendo, poi si gira e si popola, con più
+  calma di prima (REQ-MENU-029).
+
+## 1.10.23-beta — 06/11/2026 (test)
 
 ### Menù
 

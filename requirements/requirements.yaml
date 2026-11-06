@@ -4416,6 +4416,12 @@ requirements:
       faccia, cioè la carta aperta, che finisce il giro, e le voci entrano
       una dopo l'altra. Solo transform e opacity; con «riduci movimento»
       niente.
+      Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si
+      vede bene quando si gira e si popola». Il volo ora parte dalla carta
+      toccata nel ventaglio, alla sua misura e dove la fila la centra
+      (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo
+      per più di metà del tempo; poi gira e si popola come prima. Tutto
+      1,4 s invece di 0,8.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented

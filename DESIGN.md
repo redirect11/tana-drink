@@ -288,7 +288,8 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   e più in basso di `--k-sotto`, un poco storta; a ogni capo una girata
   inclinata di 11°, col logo del locale in un anello avorio. La carta
   scelta si alza (e si inclina di 2°), e sotto si apre in grande, larga al
-  più 720 px: una carta sul dorso esce dall'alto e gira fino a essere di
+  più 720 px: una carta sul dorso parte dalla carta toccata nel
+  ventaglio, alla sua misura, scende crescendo e gira fino a essere di
   taglio, poi la faccia finisce il giro e le voci entrano in fila. Gli Special non sono nel mazzo: sono il carosello
   di sempre, in cima; il Jolly è solo sulla pagina Special. Le carte hanno
   colori LORO, non del tema: avorio `#fbf8f1`, inchiostro, rosso `#c3122f`
@@ -301,8 +302,9 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   e valori delle carte in `Playfair Display`, perché IM Fell ha solo le
   cifre antiche, basse. Movimento: le carte escono una dopo l'altra dalla
   girata del primo capo, la scelta si alza con una molla, la carta aperta
-  esce girata e si gira (0,8 s), le voci entrano con 55 ms fra l'una e
-  l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
+  esce girata dal ventaglio e si gira (1,4 s: il viaggio più di metà, con
+  una partenza lenta, perché si veda che si stacca dalla carta), le voci
+  entrano con 55 ms fra l'una e l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
   è un'opacità); con «riduci movimento», niente.
 - **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai
