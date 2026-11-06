@@ -29,6 +29,18 @@ const VALORI = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'
 // quello della carta.
 export const segnoDi = (seme) => `${seme.simbolo}︎`
 
+// QUANTO È LARGA LA PAROLA PIÙ LUNGA DEL NOME, in em (misura stimata): la
+// carta chiusa rimpicciolisce la scritta quanto basta perché ci stia
+// intera. Sul test i nomi delle sezioni sono quelli della cassa, in
+// maiuscolo («AMERICANI», «DISTILLATI»), e alla misura piena andavano a
+// capo a metà parola («AMERICA NI»), come la prima volta («Suggeri ti»).
+// Una maiuscola occupa molto più di una minuscola: le si stimano diverse.
+const LARGHEZZA = (c) => (/[A-ZÀ-Ý]/.test(c) ? 0.74 : /[a-zß-ÿ]/.test(c) ? 0.5 : 0.4)
+export function misuraNome(nome) {
+  const parole = String(nome || '').split(/\s+/)
+  return Math.max(0, ...parole.map((p) => [...p].reduce((s, c) => s + LARGHEZZA(c), 0)))
+}
+
 // Le sezioni del contratto (contrattoStile.js), ognuna col suo seme e il
 // suo valore, nell'ordine del menù.
 export function carteDelMazzo(sezioni) {

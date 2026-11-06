@@ -8,7 +8,7 @@
 // valore.
 
 import { describe, it, expect } from 'vitest'
-import { carteDelMazzo, segnoDi, SEMI } from '../../src/lib/mazzoCarte.js'
+import { carteDelMazzo, misuraNome, segnoDi, SEMI } from '../../src/lib/mazzoCarte.js'
 
 const sez = (id, gruppo = null) => ({ id, nome: id, vista: 'piena', gruppo, voci: [] })
 const semi = (carte) => carte.map((c) => `${c.valore}${c.seme.simbolo}`)
@@ -52,6 +52,24 @@ describe('il mazzo dalle sezioni del menù', () => {
 
   it('un mazzo vuoto è vuoto', () => {
     expect(carteDelMazzo([])).toEqual([])
+  })
+})
+
+// I nomi della cassa sono in maiuscolo («AMERICANI»), e alla misura piena
+// andavano a capo a metà parola: la carta rimpicciolisce la scritta in
+// base alla parola più lunga, e una maiuscola pesa più di una minuscola.
+describe('la misura del nome sulla carta', () => {
+  it('conta la parola più lunga, non il nome intero', () => {
+    expect(misuraNome('Gin e tonica')).toBe(misuraNome('tonica'))
+  })
+
+  it('in maiuscolo la stessa parola è più larga', () => {
+    expect(misuraNome('DISTILLATI')).toBeGreaterThan(misuraNome('Distillati'))
+  })
+
+  it('un nome vuoto non misura niente', () => {
+    expect(misuraNome('')).toBe(0)
+    expect(misuraNome(null)).toBe(0)
   })
 })
 
