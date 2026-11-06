@@ -4341,6 +4341,37 @@ requirements:
     priority: P3
     test_cases: []
 
+  - id: REQ-MENU-030
+    title: "I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)"
+    area: "src/lib/marketplaceTemi.js (temi su misura dalla licenza), src/components/MarketplaceTab.jsx («I tuoi temi»), src/lib/stileMenu.js (ricetta con impaginazione), src/lib/strutturaMenu.js (gruppi di sezioni), src/components/StrutturaMenu.jsx, src/pages/MenuPage.jsx, docs/temi-su-misura.md"
+    description: >
+      L'utente, 06/11/2026: «caricare un mockup di un tema fatto con Canva
+      e, se il cassetto AI ha dei crediti, creare il tema da agganciare al
+      menu e inserirlo tra i temi custom del gestore del bar»; «la
+      creazione da parte nostra di temi ad hoc su richiesta»; «si possa
+      scegliere tra varie strutture di menu (tutto in una pagina, una
+      pagina per categoria o una per macro categoria)». La regia fa il
+      tema (dal mockup col credito AI, o il fornitore a mano: drink-regia
+      REQ-FLOTTA-040) e lo manda con la licenza, in una voce nuova del
+      contratto, `licenza.temi_su_misura`: temi interi, lo stesso oggetto
+      del catalogo più, se c'è, una ricetta (quella degli stili a ricetta,
+      intera) con la dimensione nuova `impaginazione`. QUI: una sezione «I
+      tuoi temi» nel Marketplace coi temi della licenza (si provano, si
+      installano, si usano; uno che sparisce dalla licenza resta installato
+      ma non si reinstalla); un tema con ricetta si disegna col motore
+      degli stili a ricetta registrando uno stile con l'id del tema, senza
+      motore o senza ricetta con lo stile; `impaginazione` nel motore
+      (`unica`, `per-categoria` con le sezioni a pagine e le schede fisse
+      in alto, `per-macro-categoria`); le macro categorie nella struttura
+      del menù dei clienti (`carta_sezioni.gruppo`, dall'editor; senza
+      gruppi niente cambia). Nessuna chiamata nuova verso la regia. Il
+      contratto in docs/temi-su-misura.md.
+    status: todo
+    generate_issue: true
+    labels: [menu, marketplace, licenza, regia]
+    priority: P2
+    test_cases: []
+
   - id: REQ-GRP-001
     title: "Più conti sotto un gruppo, anche annidati"
     area: "src/lib/groups.js"
