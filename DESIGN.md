@@ -242,6 +242,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   descrizione e, sempre allo stesso posto, «Prova sul menù» a sinistra e il
   tasto a destra. Sui tasti basta il verbo («Installa», «Usa»): il nome sta
   nell'aria-label.
+- **Gli stili a ricetta** (REQ-MENU-031): arrivano dalla regia come
+  scelta fra valori fissi, e li disegna il motore di `.stile-ricetta`
+  (index.css) sopra il menù classico. I colori sono sempre quelli del tema
+  (più i sette propri della ricetta, se li ha); le trame dello sfondo e le
+  cornici sono disegnate col colore del testo e con `--accent-2`, mai
+  immagini. I caratteri sono diciotto, tutti nella build; le scritture a
+  mano hanno una scala, se no vengono minuscole.
 - **I temi su misura** (REQ-MENU-030): la sezione «⭐ I tuoi temi», con le
   stesse schede; il sottotitolo dice «Su misura» al posto del prezzo. Se un
   tema divide il menù in pagine, le schede delle categorie diventano tasti

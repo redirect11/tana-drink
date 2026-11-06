@@ -7,9 +7,9 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import CaroselloSpeciali from '../components/CaroselloSpeciali.jsx'
 import DettaglioDrink from '../components/DettaglioDrink.jsx'
 import SpecialScorrevoli from '../components/SpecialScorrevoli.jsx'
-import { stileMenu, stileInVista, nomeStile, disegniDelLocale } from '../lib/stileMenu.js'
+import { stileMenu, stileInVista, nomeStile, disegniDelLocale, vesteDelloStile, ricettaDelloStile } from '../lib/stileMenu.js'
 import { testoStile } from '../lib/testiStile.js'
-import { temaInProva, impaginazioneInVista } from '../lib/marketplaceTemi.js'
+import { temaInProva, stileDelTema } from '../lib/marketplaceTemi.js'
 import { strutturaDi } from '../components/stiliStrutturati.js'
 import { sezioniPerLoStile } from '../lib/contrattoStile.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
@@ -465,7 +465,7 @@ export default function MenuPage({ speciali = false }) {
   // Un tema in prova dal marketplace (REQ-MENU-023) porta il suo stile; i
   // colori li mette App.
   const temaProvato = anteprimaCliente && staffVero ? temaInProva(settings, posizione.search) : null
-  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || temaProvato?.stile || null : null
+  const stileInProva = anteprimaCliente && staffVero ? params.get('stile') || stileDelTema(temaProvato) : null
   const stile = stileInVista(settings, { lavoro: Boolean(staff), prova: stileInProva })
   const notte = stile === 'notte'
   // «GIORNALE» (REQ-MENU-024) ha una struttura sua — testata, sommario,
@@ -495,14 +495,14 @@ export default function MenuPage({ speciali = false }) {
   const specialNotte = notte && speciali
 
   // ── L'IMPAGINAZIONE DEL TEMA (REQ-MENU-030) ─────────────────────────
-  // Un tema su misura può dividere il menù in pagine: una per sezione, o
-  // una per gruppo di sezioni. Le schede in alto allora cambiano pagina
-  // invece di far scorrere fino alla sezione. Solo per i clienti (chi
-  // lavora ordina dal menù intero) e fuori dalla pagina Special, che è già
-  // una pagina sola. Gli stili strutturati disegnano il loro corpo e
-  // ricevono le sezioni tutte: l'impaginazione la leggerà il motore delle
-  // ricette.
-  const impaginazione = staff || speciali ? 'unica' : impaginazioneInVista(settings, { provato: temaProvato, stile })
+  // Uno stile a ricetta (REQ-MENU-031, e i temi su misura che ne portano
+  // una) può dividere il menù in pagine: una per sezione, o una per gruppo
+  // di sezioni. Le schede in alto allora cambiano pagina invece di far
+  // scorrere fino alla sezione. Solo per i clienti (chi lavora ordina dal
+  // menù intero) e fuori dalla pagina Special, che è già una pagina sola.
+  // Gli stili strutturati disegnano il loro corpo e ricevono le sezioni
+  // tutte: non sono a ricetta.
+  const impaginazione = staff || speciali ? 'unica' : ricettaDelloStile(settings, stile)?.impaginazione || 'unica'
   const pagine = struttura ? null : pagineDelMenu(categories, impaginazione)
   const pagina = pagine ? pagine.find((p) => p.id === paginaScelta) || pagine[0] : null
   const sezioniInVista = pagina ? pagina.sezioni : categories
@@ -518,8 +518,16 @@ export default function MenuPage({ speciali = false }) {
     )
   }
 
+  // La veste dello stile sul contenitore: la sua classe, o il motore delle
+  // ricette coi suoi attributi.
+  const veste = vesteDelloStile(settings, stile)
+
   return (
-    <div className={[staff ? 'bar-content' : '', stile !== 'classico' ? `stile-${stile}` : ''].filter(Boolean).join(' ') || undefined}>
+    <div
+      className={[staff ? 'bar-content' : '', veste.className].filter(Boolean).join(' ') || undefined}
+      style={veste.style}
+      {...veste.attributi}
+    >
       {staff && <StaffDrawer role={staff.role} active="ordine" />}
       {/* In anteprima si vede il menù del cliente, ma si è pur sempre al
           lavoro: una riga per ricordarlo e per tornare indietro. Niente
@@ -532,7 +540,7 @@ export default function MenuPage({ speciali = false }) {
             👀 {temaProvato
               ? `Stai provando il tema «${temaProvato.nome}»: i clienti vedono ancora quello scelto.`
               : stileInProva && stile === stileInProva
-                ? `Stai provando lo stile «${nomeStile(stileInProva)}»: i clienti vedono ancora quello scelto.`
+                ? `Stai provando lo stile «${nomeStile(stileInProva, settings)}»: i clienti vedono ancora quello scelto.`
                 : 'Stai guardando il menù come lo vede il cliente.'}
           </span>
           <Link className="btn ghost small" to="/bar">

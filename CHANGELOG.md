@@ -15,6 +15,9 @@
   una per gruppo di sezioni: le schede in alto cambiano pagina.
 - Nel «Menù dei clienti» ogni sezione può stare in un gruppo (per esempio
   «Cocktail», «Distillati»), che fa da macro categoria.
+- Stili del menù nuovi, pubblicati dalla regia: in «Stili del menù» del
+  Marketplace si provano, si installano e si usano come gli altri. Dodici
+  caratteri in più fra cui scegliere (REQ-MENU-031).
 
 ## 1.10.17-beta — 05/11/2026 (test)
 

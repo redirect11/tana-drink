@@ -17,7 +17,11 @@ import {
   disegniDelLocale,
   patchInstalla,
   patchDisinstalla,
+  nomeStile,
+  ricettaDelloStile,
+  vesteDelloStile,
 } from '../../src/lib/stileMenu.js'
+import { leggiStile } from '../../src/lib/stiliRicetta.js'
 
 describe('lo stile del menù', () => {
   it('il classico è il predefinito', () => {
@@ -149,5 +153,57 @@ describe('lo stile «Meraviglie»', () => {
     expect(stileInVista(s, { prova: 'giornale' })).toBe('giornale')
     expect(stileInVista({}, { prova: 'meraviglie' })).toBe('classico')
     expect(stileInVista({ stile_menu: 'notte' }, { prova: 'meraviglie' })).toBe('classico')
+  })
+})
+
+// GLI STILI A RICETTA (REQ-MENU-031): non scritti qui ma arrivati dalla
+// regia, e disegnati dal motore. Il locale li ha quando li installa (con la
+// loro copia) o quando installa il tema su misura che ne porta uno.
+describe('gli stili a ricetta', () => {
+  const OSTERIA = leggiStile({
+    id: 'osteria',
+    nome: 'Osteria',
+    ricetta: { versione: 1, caratteri: { titolo: 'libre-baskerville', voce: 'libre-baskerville', testo: 'georgia' }, sfondo: 'carta' },
+  })
+
+  it('installato, il locale lo ha e lo usa; non installato resta il classico', () => {
+    const s = { stili_ricetta: [OSTERIA], stile_menu: 'osteria' }
+    expect(stiliDisponibili(s).map((x) => x.id)).toContain('osteria')
+    expect(stileMenu(s)).toBe('osteria')
+    expect(nomeStile('osteria', s)).toBe('Osteria')
+    expect(ricettaDelloStile(s, 'osteria')).toMatchObject({ sfondo: 'carta' })
+    expect(stileMenu({ stile_menu: 'osteria' })).toBe(STILE_PREDEFINITO)
+  })
+
+  it('quello di un tema su misura installato, con l’id del tema', () => {
+    const s = { temi_installati: [{ id: 'su-misura-bosco', nome: 'Bosco', su_misura: true, ricetta: OSTERIA.ricetta }], stile_menu: 'su-misura-bosco' }
+    expect(stileMenu(s)).toBe('su-misura-bosco')
+  })
+
+  it('si installa dal catalogo con la sua copia, e si disinstalla tornando al classico', () => {
+    const patch = patchInstalla({}, 'osteria', [OSTERIA])
+    expect(patch).toEqual({ stili_ricetta: [OSTERIA] })
+    expect(patchInstalla({}, 'inventato', [OSTERIA])).toBeNull()
+    expect(patchInstalla({ stili_ricetta: [OSTERIA] }, 'osteria', [OSTERIA])).toBeNull()
+    expect(patchDisinstalla({ stili_ricetta: [OSTERIA], stile_menu: 'osteria' }, 'osteria')).toEqual({
+      stili_ricetta: [],
+      stile_menu: STILE_PREDEFINITO,
+    })
+  })
+
+  it('si prova se è del locale; uno sconosciuto no', () => {
+    expect(stileProvabile({ stili_ricetta: [OSTERIA] }, 'osteria')).toBe(true)
+    expect(stileProvabile({}, 'osteria')).toBe(false)
+    expect(stileInVista({ stili_ricetta: [OSTERIA] }, { lavoro: true, prova: 'osteria' })).toBe('osteria')
+  })
+
+  // La stessa veste per il menù, le vetrine e l'assaggio.
+  it('la veste: il motore con la ricetta, o la classe dello stile dell’app', () => {
+    const conRicetta = vesteDelloStile({ stili_ricetta: [OSTERIA] }, 'osteria')
+    expect(conRicetta.className).toBe('stile-ricetta')
+    expect(conRicetta.attributi).toEqual({ 'data-sfondo': 'carta' })
+    expect(conRicetta.style['--stile-titolo']).toMatch(/Libre Baskerville/)
+    expect(vesteDelloStile({}, 'deco')).toEqual({ className: 'stile-deco', attributi: {}, style: {} })
+    expect(vesteDelloStile({}, 'classico').className).toBe('')
   })
 })

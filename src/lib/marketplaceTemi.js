@@ -34,6 +34,13 @@ import { THEME_PRESETS, THEME_FIELDS, DEFAULT_THEME } from './themes.js'
 import { STILI_MENU, stileProvabile, patchInstalla as installaStile } from './stileMenu.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
+import {
+  leggiRicetta,
+  leggiStiliDelCatalogo,
+  ricordaStili,
+  stiliRicordati,
+  stiliRicettaProvabili,
+} from './stiliRicetta.js'
 import { urlFunzioneRegia, scaricaERicorda } from './funzioniRegia.js'
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,40}$/
@@ -45,14 +52,17 @@ const stringa = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(
 // il tema da usare, o null se non è un tema che questa app sa disegnare.
 // Uno stile che l'app non conosce (arriverà con una versione dopo) o una
 // base che non c'è lo scartano: meglio non mostrarlo che disegnarlo male.
-export function leggiTema(v) {
+// `stiliNoti` sono gli id degli stili a ricetta che si conoscono (quelli
+// dello stesso catalogo, o del locale): un tema può usarne uno
+// (REQ-MENU-031).
+export function leggiTema(v, stiliNoti = []) {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return null
   const id = typeof v.id === 'string' && SLUG.test(v.id) ? v.id : null
   const nome = stringa(v.nome, 40)
   const t = v.tavolozza
   if (!id || !nome || !t || typeof t !== 'object') return null
   if (!Object.hasOwn(THEME_PRESETS, t.base)) return null
-  const stile = STILI_MENU.find((s) => s.id === v.stile)
+  const stile = STILI_MENU.find((s) => s.id === v.stile) || (stiliNoti.includes(v.stile) ? { id: v.stile } : null)
   if (!stile) return null
   const colori = {}
   for (const [k, c] of Object.entries(t.colori && typeof t.colori === 'object' ? t.colori : {})) {
@@ -66,25 +76,25 @@ export function leggiTema(v) {
     prezzo,
     tavolozza: { base: t.base, colori },
     stile: stile.id,
-    // UN TEMA SU MISURA (REQ-MENU-030) si porta dietro la sua ricetta e il
-    // segno di dove viene, anche nella copia installata: la ricetta la
-    // disegnerà il motore degli stili a ricetta, che oggi l'app non ha
-    // ancora, e intanto se ne legge l'impaginazione; il segno serve a dire
-    // che, sparito dalla licenza, non si reinstalla.
+    // UN TEMA SU MISURA (REQ-MENU-030) si porta dietro il segno di dove
+    // viene, anche nella copia installata (sparito dalla licenza, non si
+    // reinstalla), e la sua ricetta, se ne ha una che quest'app sa
+    // disegnare: allora il menù lo disegna il motore (stileDelTema), e lo
+    // `stile` resta il ripiego.
     ...(v.su_misura === true ? { su_misura: true } : {}),
-    ...(v.ricetta && typeof v.ricetta === 'object' && !Array.isArray(v.ricetta) ? { ricetta: v.ricetta } : {}),
+    ...ricettaSuMisura(v),
   }
 }
 
-// ── L'IMPAGINAZIONE (REQ-MENU-030) ──────────────────────────────────────
-// Come si divide il menù dei clienti: tutto in una pagina, una pagina per
-// sezione, o una per gruppo di sezioni (`carta_sezioni.gruppo`). È una
-// dimensione della ricetta del tema; un valore che l'app non conosce vale
-// come quello di sempre.
-export const IMPAGINAZIONI = ['unica', 'per-categoria', 'per-macro-categoria']
+function ricettaSuMisura(v) {
+  const ricetta = v.su_misura === true ? leggiRicetta(v.ricetta) : null
+  return ricetta ? { ricetta } : {}
+}
 
-export const impaginazioneTema = (t) =>
-  IMPAGINAZIONI.includes(t?.ricetta?.impaginazione) ? t.ricetta.impaginazione : 'unica'
+// LO STILE CON CUI SI DISEGNA UN TEMA: un tema su misura con la sua ricetta
+// è uno stile a ricetta col suo stesso id (stiliRicetta.js); gli altri
+// usano il loro `stile`.
+export const stileDelTema = (t) => (t?.ricetta ? t.id : t?.stile ?? null)
 
 // IL CATALOGO INIZIALE: quello che si compone con le tavolozze e gli stili
 // che l'app ha già, tutto gratis («per ora tutto gratis tra quelli che già
@@ -166,13 +176,16 @@ const CHIAVE_CATALOGO = 'drink:catalogo-temi'
 
 export const urlCatalogo = (progetto) => urlFunzioneRegia('catalogoTemi', progetto)
 
-export const catalogoRicordato = () => leggi(CHIAVE_CATALOGO, (s) => leggiCatalogo(JSON.parse(s)), [])
+const idDi = (stili) => stili.map((s) => s.id)
+export const catalogoRicordato = () =>
+  leggi(CHIAVE_CATALOGO, (s) => leggiCatalogo(JSON.parse(s), stiliRicordati()), [])
 export const ricordaCatalogo = (temi) => scrivi(CHIAVE_CATALOGO, temi)
 
-// La risposta della regia, `{ temi: [...] }`, nei temi da usare.
-export function leggiCatalogo(corpo) {
+// La risposta della regia, `{ temi: [...], stili: [...] }`, nei temi da
+// usare: un tema può usare uno stile a ricetta dello stesso catalogo.
+export function leggiCatalogo(corpo, stili = leggiStiliDelCatalogo(corpo)) {
   const temi = Array.isArray(corpo) ? corpo : Array.isArray(corpo?.temi) ? corpo.temi : []
-  return temi.map(leggiTema).filter(Boolean)
+  return temi.map((t) => leggiTema(t, idDi(stili))).filter(Boolean)
 }
 
 // Il catalogo da mostrare: quello iniziale, con sopra quello della regia
@@ -216,7 +229,8 @@ export function suMisuraRitirati(settings) {
 // ── I TEMI DEL LOCALE ────────────────────────────────────────────────
 export function temiInstallati(settings) {
   const v = Array.isArray(settings?.temi_installati) ? settings.temi_installati : []
-  return v.map(leggiTema).filter(Boolean)
+  const noti = idDi(stiliRicettaProvabili(settings))
+  return v.map((t) => leggiTema(t, noti)).filter(Boolean)
 }
 
 export const temaInUso = (settings) => (typeof settings?.tema_menu === 'string' ? settings.tema_menu : null)
@@ -232,16 +246,6 @@ export function temaPerId(settings, id, daRegia = catalogoRicordato()) {
   )
 }
 
-// L'IMPAGINAZIONE DEL MENÙ DEI CLIENTI: quella del tema in prova, o del
-// tema in uso. Il tema in uso conta solo finché lo stile del menù è ancora
-// il suo: scegliendo dopo uno stile da solo, in «Stili del menù», `tema_menu`
-// resta scritto, ma il menù non è più quel tema.
-export function impaginazioneInVista(settings, { provato = null, stile } = {}) {
-  if (provato) return impaginazioneTema(provato)
-  const id = temaInUso(settings)
-  const tema = id ? temiInstallati(settings).find((t) => t.id === id) : null
-  return tema && tema.stile === stile ? impaginazioneTema(tema) : 'unica'
-}
 
 // I colori di un tema, nella forma di `theme_client`.
 export const temaComeColori = (t) => ({
@@ -255,17 +259,17 @@ export function patchInstallaTema(settings, tema) {
 }
 
 // «Usa»: colori e stile del menù dei clienti, e lo stile installato se è
-// uno di quelli gratis. Installa anche il tema, se non lo era.
+// uno di quelli gratis o uno a ricetta del catalogo (con la sua copia).
+// Installa anche il tema, se non lo era.
 export function patchUsaTema(settings, tema) {
-  const patch = {
+  const stile = stileDelTema(tema)
+  return {
     ...patchInstallaTema(settings, tema),
     theme_client: temaComeColori(tema),
-    stile_menu: tema.stile,
+    stile_menu: stile,
     tema_menu: tema.id,
+    ...(installaStile(settings, stile) || {}),
   }
-  const stile = installaStile(settings, tema.stile)
-  if (stile) patch.stili_installati = stile.stili_installati
-  return patch
 }
 
 // Disinstallare un tema toglie la copia; i colori e lo stile restano quelli
@@ -279,8 +283,14 @@ export function patchDisinstallaTema(settings, id) {
 
 // Il catalogo della regia, letto adesso: i temi, o null se non si è letto
 // (senza regia nella build, senza rete, una risposta che non è un
-// catalogo). Si ricorda quello che arriva.
-export const scaricaCatalogo = (url = urlCatalogo(), prendi) => scaricaERicorda(url, leggiCatalogo, ricordaCatalogo, prendi)
+// catalogo). Si ricorda quello che arriva, gli stili a ricetta a parte:
+// li legge anche il menù, per la prova.
+function interpretaCatalogo(corpo) {
+  const stili = leggiStiliDelCatalogo(corpo)
+  ricordaStili(stili)
+  return leggiCatalogo(corpo, stili)
+}
+export const scaricaCatalogo = (url = urlCatalogo(), prendi) => scaricaERicorda(url, interpretaCatalogo, ricordaCatalogo, prendi)
 
 // LA PROVA SUL MENÙ: `?vista=cliente&tema=…` (da Aspetto → Marketplace)
 // mostra a chi lavora il proprio menù con i colori e lo stile di un tema;

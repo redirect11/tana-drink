@@ -16,7 +16,11 @@ import {
   stileMenu,
   patchInstalla,
   patchDisinstalla,
+  vesteDelloStile,
+  ricettaDelloStile,
+  stiliRicettaInstallati,
 } from '../lib/stileMenu.js'
+import { stiliRicordati, coloriConRicetta } from '../lib/stiliRicetta.js'
 import {
   catalogo,
   catalogoRicordato,
@@ -28,6 +32,7 @@ import {
   suMisuraRitirati,
   temaInUso,
   temaComeColori,
+  stileDelTema,
   patchInstallaTema,
   patchUsaTema,
   patchDisinstallaTema,
@@ -92,7 +97,9 @@ const VOCI_ESEMPIO = [
 // le sue regole, come disegna il menù dei clienti. Uno stile con una
 // struttura sua (il «Giornale», REQ-MENU-024) mostra quella, coi suoi
 // componenti: la vetrina non può mostrare un giornale che non c'è.
-function Vetrina({ colori, stile }) {
+// Uno stile a ricetta (REQ-MENU-031) si veste col motore, come il menù, e
+// coi suoi colori sopra quelli del tema.
+function Vetrina({ colori, stile, settings }) {
   if (stile === 'giornale') {
     return (
       <div className="vetrina-tema stile-giornale" style={resolveThemeVars(colori)} aria-hidden="true">
@@ -107,8 +114,15 @@ function Vetrina({ colori, stile }) {
       </div>
     )
   }
+  const veste = vesteDelloStile(settings, stile)
+  const tinte = resolveThemeVars(coloriConRicetta(colori, ricettaDelloStile(settings, stile)))
   return (
-    <div className={`vetrina-tema stile-${stile}`} style={resolveThemeVars(colori)} aria-hidden="true">
+    <div
+      className={`vetrina-tema ${veste.className || 'stile-classico'}`}
+      style={{ ...tinte, ...veste.style }}
+      aria-hidden="true"
+      {...veste.attributi}
+    >
       <h3 className="cat-header">Cocktail</h3>
       {VOCI_ESEMPIO.map((d) => (
         <div className="card menu-item" key={d.id}>
@@ -437,8 +451,8 @@ export default function MarketplaceTab({ role = null }) {
   const ritirato = (t) => ritirati.some((r) => r.id === t.id)
   const sottotitoloTema = (t) =>
     t.su_misura
-      ? `Su misura · Stile «${nomeStile(t.stile)}»${ritirato(t) ? ' · Non più in licenza: una volta disinstallato non si reinstalla' : ''}`
-      : `Stile «${nomeStile(t.stile)}» · Gratis`
+      ? `Su misura${t.ricetta ? '' : ` · Stile «${nomeStile(t.stile, settings)}»`}${ritirato(t) ? ' · Non più in licenza: una volta disinstallato non si reinstalla' : ''}`
+      : `Stile «${nomeStile(t.stile, settings)}» · Gratis`
 
   const schedaTema = (t) => (
     <Scheda
@@ -446,7 +460,7 @@ export default function MarketplaceTab({ role = null }) {
       titolo={t.nome}
       descrizione={t.descrizione}
       sottotitolo={sottotitoloTema(t)}
-      vetrina={<Vetrina colori={temaComeColori(t)} stile={t.stile} />}
+      vetrina={<Vetrina colori={temaComeColori(t)} stile={stileDelTema(t)} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('tema', t.id)}
@@ -467,13 +481,13 @@ export default function MarketplaceTab({ role = null }) {
       titolo={s.nome}
       descrizione={s.desc}
       sottotitolo="Sui colori del menù del locale · Gratis"
-      vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} />}
+      vetrina={<Vetrina colori={coloriDelLocale} stile={s.id} settings={settings} />}
     >
       <AzioniCatalogo
         provaHref={urlProvaMenu('stile', s.id)}
         etichetta={`lo stile ${s.nome}`}
         inUso={stileInUso === s.id}
-        installato={stiliDelLocale.includes(s.id)}
+        installato={s.aRicetta ? ricettaInstallati.some((r) => r.id === s.id) : stiliDelLocale.includes(s.id)}
         disinstallabile={disinstallabile}
         onUsa={() => salva({ stile_menu: s.id })}
         onInstalla={() => salva(patchInstalla(settings, s.id))}
@@ -482,8 +496,17 @@ export default function MarketplaceTab({ role = null }) {
     </Scheda>
   )
 
-  const stiliGratis = STILI_MENU.filter((s) => s.gratis)
-  const stiliInstallatiSchede = STILI_MENU.filter((s) => stiliDelLocale.includes(s.id))
+  // Gli stili a ricetta del catalogo della regia (REQ-MENU-031), nella
+  // forma delle voci di STILI_MENU: si provano, si installano e si usano
+  // come quelli dell'app. Si rileggono a ogni giro, perché arrivano col
+  // catalogo dei temi.
+  const comeScheda = (r) => ({ id: r.id, nome: r.nome, desc: r.descrizione, aRicetta: true })
+  const ricettaInstallati = stiliRicettaInstallati(settings)
+  const stiliGratis = [...STILI_MENU.filter((s) => s.gratis), ...stiliRicordati().map(comeScheda)]
+  const stiliInstallatiSchede = [
+    ...STILI_MENU.filter((s) => stiliDelLocale.includes(s.id)),
+    ...ricettaInstallati.map(comeScheda),
+  ]
 
   return (
     <div className="pagina-marketplace">

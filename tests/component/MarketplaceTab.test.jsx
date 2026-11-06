@@ -312,7 +312,12 @@ describe('i temi su misura', () => {
     descrizione: 'Verde profondo e oro.',
     tavolozza: { base: 'tana-scuro', colori: { '--bg': '#10201a' } },
     stile: 'deco',
-    ricetta: { versione: 1, impaginazione: 'per-categoria' },
+    ricetta: {
+      versione: 1,
+      caratteri: { titolo: 'abril-fatface', voce: 'oswald', testo: 'inter' },
+      intestazione: 'doppio-filetto',
+      impaginazione: 'per-categoria',
+    },
   }
 
   it('senza temi su misura la sezione non c’è', () => {
@@ -328,14 +333,16 @@ describe('i temi su misura', () => {
     expect(sottosezioni.voci.map((v) => v.label)).toEqual(['I tuoi temi', 'Temi', 'Stili del menù', 'Installati', 'Moduli'])
     vaiA('tuoi')
     expect(screen.getByRole('heading', { name: 'I tuoi temi', level: 2 })).toBeInTheDocument()
-    expect(screen.getByText('Su misura · Stile «Déco»')).toBeInTheDocument()
+    // Con la ricetta si disegna col motore: niente «Stile …» da dire.
+    expect(screen.getByText('Su misura')).toBeInTheDocument()
+    expect(document.querySelector('.vetrina-tema.stile-ricetta[data-intestazione="doppio-filetto"]')).not.toBeNull()
     expect(screen.getByRole('link', { name: 'Prova sul menù' })).toHaveAttribute('href', '/menu?vista=cliente&tema=su-misura-bosco')
     await utente.click(screen.getByRole('button', { name: 'Installa Bosco' }))
     expect(st.scritte.at(-1).temi_installati).toEqual([
-      expect.objectContaining({ id: 'su-misura-bosco', su_misura: true, ricetta: BOSCO.ricetta }),
+      expect.objectContaining({ id: 'su-misura-bosco', su_misura: true, ricetta: expect.objectContaining(BOSCO.ricetta) }),
     ])
     await utente.click(screen.getByRole('button', { name: 'Usa Bosco' }))
-    expect(st.scritte.at(-1)).toMatchObject({ stile_menu: 'deco', tema_menu: 'su-misura-bosco', theme_client: { preset: 'tana-scuro' } })
+    expect(st.scritte.at(-1)).toMatchObject({ stile_menu: 'su-misura-bosco', tema_menu: 'su-misura-bosco', theme_client: { preset: 'tana-scuro' } })
     // Non sono nel catalogo di tutti.
     vaiA('temi')
     expect(screen.queryByRole('heading', { name: 'Bosco' })).toBeNull()
@@ -352,5 +359,45 @@ describe('i temi su misura', () => {
     expect(screen.getByRole('heading', { name: 'Bosco' })).toBeInTheDocument()
     expect(screen.getByText(/Non più in licenza: una volta disinstallato non si reinstalla/)).toBeInTheDocument()
     expect(screen.getByText('In uso')).toBeInTheDocument()
+  })
+})
+
+// GLI STILI A RICETTA DEL CATALOGO (REQ-MENU-031): arrivano dalla regia col
+// catalogo dei temi, si ricordano sul dispositivo, e in «Stili del menù»
+// si provano, si installano (con la loro copia) e si usano come quelli
+// dell'app. La vetrina li disegna col motore.
+describe('gli stili a ricetta', () => {
+  const OSTERIA = {
+    id: 'osteria',
+    nome: 'Osteria',
+    descrizione: 'La carta dell’osteria.',
+    ricetta: { versione: 1, caratteri: { titolo: 'libre-baskerville', voce: 'libre-baskerville', testo: 'georgia' }, voce: { forma: 'riga' } },
+  }
+
+  it('dal catalogo ricordato: si provano, si installano con la copia, si usano e si disinstallano', async () => {
+    const utente = userEvent.setup()
+    localStorage.setItem('drink:catalogo-stili', JSON.stringify([OSTERIA]))
+    const { unmount } = mostra()
+    vaiA('stili')
+    expect(screen.getByRole('heading', { name: 'Osteria' })).toBeInTheDocument()
+    expect(document.querySelector('.vetrina-tema.stile-ricetta[data-voce-forma="riga"]')).not.toBeNull()
+    expect(screen.getAllByRole('link', { name: 'Prova sul menù' }).map((a) => a.getAttribute('href'))).toContain(
+      '/menu?vista=cliente&stile=osteria'
+    )
+    await utente.click(screen.getByRole('button', { name: 'Installa lo stile Osteria' }))
+    const installato = st.scritte.at(-1)
+    expect(installato.stili_ricetta).toEqual([expect.objectContaining({ id: 'osteria', ricetta: expect.objectContaining({ versione: 1 }) })])
+    await utente.click(screen.getByRole('button', { name: 'Usa lo stile Osteria' }))
+    expect(st.scritte.at(-1)).toEqual({ stile_menu: 'osteria' })
+    unmount()
+
+    // Ritirato dalla regia, resta a chi l'ha: la copia basta.
+    localStorage.clear()
+    st.impostazioni = { stili_ricetta: installato.stili_ricetta, stile_menu: 'osteria' }
+    mostra()
+    vaiA('installati')
+    expect(screen.getByRole('heading', { name: 'Osteria' })).toBeInTheDocument()
+    await utente.click(screen.getByRole('button', { name: 'Disinstalla lo stile Osteria' }))
+    expect(st.scritte.at(-1)).toEqual({ stili_ricetta: [], stile_menu: 'classico' })
   })
 })
