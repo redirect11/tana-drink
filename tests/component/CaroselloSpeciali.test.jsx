@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, within, act, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
-import CaroselloSpeciali from '../../src/components/CaroselloSpeciali.jsx'
+import CaroselloSpeciali, { passoDelCarosello } from '../../src/components/CaroselloSpeciali.jsx'
 import { segnapostoDrink } from '../../src/lib/speciali.js'
 
 const VOCI = [
@@ -95,5 +95,18 @@ describe('il carosello degli special', () => {
   it('con un solo special niente pallini', () => {
     mostra([VOCI[0]])
     expect(screen.queryByRole('group', { name: 'Scegli lo special' })).toBeNull()
+  })
+
+  // Le slide hanno uno spazio fra loro («nel carosello le schede sono
+  // praticamente attaccate», 06/11/2026): il passo è la larghezza più lo
+  // spazio, se no i pallini portano sempre un po' più indietro.
+  it('il passo è una slide più lo spazio fra le slide', () => {
+    const el = document.createElement('div')
+    el.style.columnGap = '14px'
+    Object.defineProperty(el, 'clientWidth', { value: 300 })
+    document.body.appendChild(el)
+    expect(passoDelCarosello(el)).toBe(314)
+    el.style.columnGap = ''
+    expect(passoDelCarosello(el)).toBe(300)
   })
 })
