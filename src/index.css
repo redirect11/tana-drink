@@ -777,6 +777,10 @@ a.btn.block {
 }
 .carosello-fila {
   display: flex;
+  /* Uno spazio fra una slide e l'altra: attaccate, mentre si scorreva
+     sembravano una scheda sola. Il passo dei pallini lo legge da qui
+     (passoDelCarosello). */
+  gap: 14px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;

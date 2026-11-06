@@ -17,6 +17,15 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 // ferma, perché una slide che scappa mentre la si sta leggendo è peggio di
 // una che sta ferma. Con «riduci movimento» del telefono non parte affatto.
 // Toccando una slide si apre il menù Special su quel drink.
+// IL PASSO: una slide più lo spazio fra le slide, letto dallo stile. Le
+// slide si toccavano mentre si scorreva (l'utente, 06/11/2026: «nel
+// carosello le schede sono praticamente attaccate»); con uno spazio, un
+// passo di sola larghezza si fermava sempre più indietro.
+export function passoDelCarosello(el) {
+  const spazio = parseFloat(getComputedStyle(el).columnGap) || 0
+  return el.clientWidth + spazio
+}
+
 export default function CaroselloSpeciali({ voci, link, chiaro = false, intervallo = 5000, disegni = false }) {
   const fila = useRef(null)
   const [attiva, setAttiva] = useState(0)
@@ -27,7 +36,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
   const vai = (n) => {
     const k = ((n % voci.length) + voci.length) % voci.length
     const el = fila.current
-    el?.scrollTo?.({ left: k * el.clientWidth, behavior: 'smooth' })
+    if (el) el.scrollTo?.({ left: k * passoDelCarosello(el), behavior: 'smooth' })
     // Subito, non al prossimo disegno: due passi ravvicinati ripartivano
     // dalla slide di prima.
     attivaRef.current = k
@@ -50,7 +59,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
   const alloScorrere = () => {
     const el = fila.current
     if (!el || !el.clientWidth) return
-    const k = Math.round(el.scrollLeft / el.clientWidth)
+    const k = Math.round(el.scrollLeft / passoDelCarosello(el))
     if (k !== attivaRef.current && k >= 0 && k < voci.length) setAttiva(k)
   }
   const prendi = () => {
