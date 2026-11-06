@@ -12182,6 +12182,9 @@ body.pagina-piena .inv-scheda {
 .k-carta-nome {
   width: calc(var(--k-passo) - 14px);
   overflow-wrap: break-word;
+  /* La parola più lunga ci deve stare intera (misuraNome): la scritta si
+     rimpicciolisce quanto serve, e mai sopra la misura della carta. */
+  font-size: min(0.95rem, calc((var(--k-passo) - 16px) / var(--k-parola, 1)));
 }
 /* Il seme grande in mezzo, come sulle carte vere: sta nella parte che
    resta scoperta. */

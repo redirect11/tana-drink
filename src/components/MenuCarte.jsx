@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
-import { carteDelMazzo, segnoDi } from '../lib/mazzoCarte.js'
+import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
 import { comeScorrere } from '../lib/movimento.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
@@ -119,7 +119,9 @@ export function CartaChiusa({ carta, indice, scelta = false, onClick, tabIndex }
       onClick={onClick}
     >
       <Indice carta={carta} />
-      <span className="k-carta-nome">{carta.nome}</span>
+      <span className="k-carta-nome" style={{ '--k-parola': misuraNome(carta.nome) || 1 }}>
+        {carta.nome}
+      </span>
       <span className="k-pip" aria-hidden="true">
         {segnoDi(carta.seme)}
       </span>
