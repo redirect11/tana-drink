@@ -4421,7 +4421,13 @@ requirements:
       toccata nel ventaglio, alla sua misura e dove la fila la centra
       (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo
       per più di metà del tempo; poi gira e si popola come prima. Tutto
-      1,4 s invece di 0,8.
+      1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo
+      della sezione rimbalza in alto non appena si gira la carta». 1,1 s;
+      e la prospettiva del giro è della carta, col fulcro sul suo bordo
+      alto, non della pagina: quella della pagina, centrata sopra il
+      ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato),
+      e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente,
+      mentre la carta cresce.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
