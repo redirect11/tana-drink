@@ -38,7 +38,9 @@ Un cliente nuovo: `node scripts/genera-cliente.mjs --slug <slug> --nome
 che lancia la regia, REQ-VENUE-006); oppure si copia `demo/`, si compila
 `venue.json`, si mettono i suoi file in `public/`. Finché non ha i suoi, `python
 scripts/immagini-neutre.py clienti/<slug>/public --colore "#2a6f97"` genera
-logo, icone, favicon e copertina neutri col suo colore: senza, erediterebbe
-quelli della Tana da `public/`. Attivazione, deploy e aggiornamento delle istanze stanno nella regia
+logo, icone, favicon e copertina neutri col suo colore. Un file che manca
+non è mai quello della Tana: la build di un locale che non è la Tana
+prende quello neutro di `demo/public/` (un bicchiere su un tondo scuro,
+senza nomi). Vale anche per il logo sul dorso del mazzo di «Carte». Attivazione, deploy e aggiornamento delle istanze stanno nella regia
 (repository drink-regia), non qui. Le cartelle dei clienti che crea la regia
 restano sul suo checkout: in questo repository stanno solo `tana` e `demo`.

@@ -6526,6 +6526,16 @@ requirements:
       cambia nome o indirizzo da Impostazioni senza rebuild; la Tana, che
       non le ha scritte, legge la build.
       Logica pura in src/lib/venue.js; il plugin di Vite ha il suo test.
+      I FILE GRAFICI CHE MANCANO (06/11/2026): i file di public/ sono della
+      Tana, e un locale con la cartella senza un suo file (il logo,
+      un'icona) li ereditava in silenzio. L'utente, per il logo sul dorso
+      del mazzo di «Carte»: se il tema va a un altro gestore «il logo non
+      può essere più quello della Tana», e «serve un logo placeholder
+      generico per i deploy di nuovi locali». Ora un locale che non è la
+      Tana prende il file neutro di clienti/demo/public (un bicchiere su
+      un tondo scuro, senza nomi) dove non ha il suo
+      (pluginCliente.js, fileDelCliente); e i file del cliente vanno
+      nella cartella vera della build anche con `--outDir`.
     status: implemented
     generate_issue: false
     labels: [prodotto, venue]
