@@ -24,8 +24,10 @@ const SPECIALI = [voce('velluto', 'Velluto Bianco', 9)]
 
 function mostra(extra = {}) {
   const p = {
+    // Nel menù gli Special sono del carosello (MenuPage): allo stile
+    // arrivano solo sulla pagina Special.
     sezioni: SEZIONI,
-    speciali: SPECIALI,
+    speciali: [],
     immagine: () => null,
     apri: vi.fn(),
     tastiOrdine: (d) => <button type="button">Aggiungi {d.name}</button>,
@@ -44,17 +46,22 @@ const mazzo = () => within(screen.getByRole('navigation', { name: 'Le carte del 
 const aperta = () => screen.getAllByRole('region').find((r) => !r.hidden)
 
 describe('il mazzo', () => {
-  it('una carta per sezione, nell’ordine del menù, col Jolly degli Special per primo', () => {
+  it('una carta per sezione, nell’ordine del menù: angolo, nome e seme grande', () => {
     mostra()
-    expect(mazzo().getAllByRole('button').map((b) => b.textContent)).toEqual([
-      '★JOLLYSpecial della sera',
-      'A♥︎Signature',
-      '2♥︎Grandi classici',
-      'A♣︎Gin',
-    ])
+    expect(mazzo().getAllByRole('button').map((b) => b.textContent)).toEqual(['A♥︎Signature♥︎', '2♥︎Grandi classici♥︎', 'A♣︎Gin♣︎'])
   })
 
-  // Aprendo il menù si vede il menù: la prima sezione, non gli Special.
+  // Il mazzo coperto sono carte intere sul dorso, non una fascia che copre
+  // le altre a metà: «le carte devono essere intere, adesso sono tagliate,
+  // non sembra un mazzo» (l'utente, 06/11/2026).
+  it('a inizio fila il mazzo coperto, quattro carte sul dorso, che chi legge lo schermo salta', () => {
+    mostra()
+    const coperto = document.querySelector('.k-fila > .k-coperto')
+    expect(coperto).toHaveAttribute('aria-hidden', 'true')
+    expect(coperto.querySelectorAll('.k-dorso')).toHaveLength(4)
+    expect(document.querySelector('.k-fila').firstElementChild).toBe(coperto)
+  })
+
   it('all’apertura è alzata e aperta la prima sezione', () => {
     mostra()
     expect(mazzo().getByRole('button', { name: 'Signature' })).toHaveAttribute('aria-pressed', 'true')
@@ -72,17 +79,10 @@ describe('il mazzo', () => {
     expect(screen.queryByRole('button', { name: 'Tana' })).toBeNull()
   })
 
-  it('il Jolly apre gli Special', async () => {
-    mostra()
-    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Special della sera' }))
-    expect(aperta()).toHaveAccessibleName('Special della sera')
-    expect(within(aperta()).getByRole('button', { name: 'Aggiungi Velluto Bianco' })).toBeInTheDocument()
-  })
-
   // Le carte chiuse restano nella pagina: un tocco, e non si aspetta niente.
   it('le carte chiuse ci sono già, nascoste', () => {
     mostra()
-    expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(4)
+    expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(3)
     expect(screen.getByText('Negroni')).not.toBeVisible()
   })
 
@@ -101,14 +101,8 @@ describe('il mazzo', () => {
     expect(nav.scrollIntoView).toHaveBeenCalled()
   })
 
-  it('senza Special il Jolly non c’è', () => {
-    mostra({ speciali: [] })
-    expect(mazzo().queryByRole('button', { name: 'Special della sera' })).toBeNull()
-    expect(mazzo().getAllByRole('button')).toHaveLength(3)
-  })
-
   it('sulla pagina Special: solo il Jolly, aperto, senza mazzo', () => {
-    mostra({ soloSpeciali: true })
+    mostra({ soloSpeciali: true, speciali: SPECIALI })
     expect(screen.queryByRole('navigation')).toBeNull()
     expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Velluto Bianco' })).toBeVisible()
