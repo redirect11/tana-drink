@@ -296,7 +296,22 @@ describe('il menù è uno solo, quello del cliente', () => {
     mostra()
     await screen.findByText('Mojito')
     expect(screen.queryByRole('button', { name: /Aggiungi/ })).toBeNull()
-    expect(screen.getByText(/Rivolgersi allo staff per ordinare/)).toBeInTheDocument()
+    // BUG-135: non è una sospensione, in quel locale dal telefono non si
+    // ordina proprio.
+    expect(screen.getByText(/per ordinare rivolgersi allo staff/)).toBeInTheDocument()
+    expect(screen.queryByText(/momentaneamente sospese/)).toBeNull()
+  })
+
+  // BUG-135: il modulo è del cliente. Lo staff dal menù ordina sempre, e
+  // senza il modulo perdeva il prodotto libero e la riga di chi inserisce.
+  it('senza il modulo degli ordini dal telefono lo staff ordina come sempre', async () => {
+    ruoloClaim = 'bartender'
+    mockSettings = { menu_only: false, licenza: { moduli: { menu_tavoli: true, ordini_cliente: false } } }
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(screen.getAllByRole('button', { name: /Aggiungi/ }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /Prodotto libero/ })).toBeInTheDocument()
+    expect(screen.queryByText(/Rivolgersi allo staff/i)).toBeNull()
   })
 })
 

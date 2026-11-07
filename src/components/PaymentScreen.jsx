@@ -22,7 +22,7 @@ import { activeVouchers } from '../lib/vouchers.js'
 import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, datiFiscaliDelLocale } from '../lib/printer.js'
 import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
-import { moduloAttivo, sumupDisponibile } from '../lib/licenza.js'
+import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
 import { scontiConsentiti } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
 import {
@@ -486,7 +486,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // del piano Free nessuno parla coi server di SumUp, e un tasto che non
   // può funzionare non si mostra. Il conto si chiude a mano, in contanti o
   // come carta su un POS esterno.
-  if (sumupDisponibile(settings)) methods.push(
+  if (sumupAttivo(settings)) methods.push(
     {
       key: 'lettore',
       label: 'SumUp',
