@@ -225,7 +225,7 @@ describe('che cosa vende questo fornitore, e a quanto', () => {
     await screen.findByText('Campari')
 
     await user.click(screen.getByLabelText('Dettagli di Campari'))
-    await user.click(await screen.findByText('🗑 Togli dal listino'))
+    await user.click(await screen.findByText('Togli dal listino'))
 
     expect(eliminaRigaListino).toHaveBeenCalledWith('nova', 'campari')
     await waitFor(() => expect(screen.queryByText('Campari')).toBeNull())

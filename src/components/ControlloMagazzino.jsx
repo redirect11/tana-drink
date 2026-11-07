@@ -13,6 +13,7 @@ import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { perScaffale } from '../lib/scaffali.js'
 import ListaPerScaffale from './ListaPerScaffale.jsx'
+import Icona from './Icona.jsx'
 
 // ── IL CONTROLLO DEL MAGAZZINO, PAGINA DI PROVA (REQ-MAG-050) ─────────
 //
@@ -96,7 +97,7 @@ export default function ControlloMagazzino() {
   return (
     <div>
       <div className="card">
-        <strong>🧪 Controllo del magazzino — prova</strong>
+        <strong><Icona nome="prova" gruppo="tasti" /> Controllo del magazzino — prova</strong>
         <p className="muted small" style={{ margin: '6px 0 0' }}>
           Una vista diversa dall’Inventario, da confrontare. Si conta un prodotto alla volta, quando
           si vuole: il conteggio corregge subito la giacenza e resta nei movimenti. Il rapporto dice,

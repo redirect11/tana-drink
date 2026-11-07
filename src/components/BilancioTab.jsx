@@ -19,9 +19,9 @@ import MesiBilancio from './MesiBilancio.jsx'
 // contenuto (docs/navigazione.md): su una schermata fatta di tabelle una
 // riga in più costa altezza tutto il giorno.
 const SEZIONI_BILANCIO = [
-  { id: 'mesi', icona: '📅', label: 'Mesi' },
-  { id: 'acquisti', icona: '📥', label: 'Acquisti × Fatturato' },
-  { id: 'venduto', icona: '🗂️', label: 'Venduto × Incassato' },
+  { id: 'mesi', icona: 'calendario', label: 'Mesi' },
+  { id: 'acquisti', icona: 'acquisti', label: 'Acquisti × Fatturato' },
+  { id: 'venduto', icona: 'raggruppa', label: 'Venduto × Incassato' },
 ]
 
 export default function BilancioTab() {

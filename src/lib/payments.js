@@ -12,6 +12,7 @@
 // vincolo del banco non si applica (deciso dal proprietario).
 
 import { sumupAttivo } from './licenza.js'
+import { conEmoji } from './icone.js'
 
 // IL MODULO, NON SOLO L'IMPOSTAZIONE (BUG-133). `payments_online_enabled`
 // resta scritto anche quando il modulo SumUp va via o si spegne: con
@@ -33,7 +34,7 @@ export function paymentOptions(settings = {}) {
     // Si può scegliere di pagare dopo (al banco o allo staff al tavolo).
     allowCounter: !required,
     counterForcesBanco,
-    counterLabel: tavoloOnly ? '💶 Paga allo staff alla consegna' : '💶 Paga al bancone',
+    counterLabel: conEmoji('contanti', tavoloOnly ? 'Paga allo staff alla consegna' : 'Paga al bancone'),
   }
 }
 

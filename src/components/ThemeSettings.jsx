@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRicettaInstallati } from '../lib/stileMenu.js'
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
+import { TemaIcone } from '../lib/temaIcone.js'
+import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -29,7 +32,7 @@ import {
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
-      <h3>🎨 Aspetto</h3>
+      <h3><Icona nome="temi" /> Aspetto</h3>
       <ThemeEditor
         title="Gestionale — quello che vedi ora"
         hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
@@ -39,6 +42,81 @@ export default function ThemeSettings({ settings, onSave }) {
         onSave={(t) => onSave({ theme_staff: t })}
       />
       <CardDellaCoda settings={settings} onSave={onSave} />
+      <IconeDelGestionale settings={settings} onSave={onSave} />
+    </div>
+  )
+}
+
+// ── LE ICONE DEL GESTIONALE (REQ-UI-031) ──────────────────────────────
+//
+// Flavio, 07/11/2026: le emoji colorate «danno un senso un po' troppo a
+// pazziella»; nei programmi professionali le icone sono silhouette
+// monocrome. «Silhouette» è il tema di partenza (decisione dell'utente);
+// «Emoji» rimette quelle di prima. UN TEMA PER GRUPPO (decisione
+// dell'utente, 07/11/2026): navigazione, tasti e stati, segnali e messaggi
+// si scelgono a parte. Ogni scelta mostra cinque icone del suo gruppo nel
+// suo tema, così si vede cosa si sceglie prima di sceglierlo.
+const ICONE_DI_PROVA = {
+  navigazione: ['coda', 'cassa', 'magazzino', 'staff', 'impostazioni'],
+  tasti: ['modifica', 'elimina', 'aggiungi', 'stampa', 'contanti'],
+  segnali: ['avviso', 'fatto', 'attesa', 'licenza', 'cerca'],
+}
+const DESCRIZIONE_GRUPPO = {
+  navigazione: 'Menu laterale, sezioni e sottosezioni, barra in alto, moduli.',
+  tasti: 'Tasti, titoli delle sezioni, metodi di pagamento, stati dei conti.',
+  segnali: 'Avvisi e conferme nei testi, messaggi, campi di ricerca.',
+}
+
+function IconeDelGestionale({ settings, onSave }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Il disegno delle icone del gestionale, gruppo per gruppo. Le pagine dei clienti seguono lo stile del
+        loro menù. I segnali di stato restano colorati in entrambi i casi.
+      </p>
+      {Object.entries(GRUPPI_ICONE).map(([gruppo, g]) => (
+        <SceltaIcone
+          key={gruppo}
+          gruppo={gruppo}
+          label={g.label}
+          tema={temaIconeDi(settings, gruppo)}
+          scegli={(id) => onSave({ [g.chiave]: id })}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SceltaIcone({ gruppo, label, tema, scegli }) {
+  const opzione = (id, nome) => (
+    <button
+      type="button"
+      className={`mode-option${tema === id ? ' active' : ''}`}
+      aria-pressed={tema === id}
+      aria-label={`${label}: ${nome}`}
+      onClick={() => scegli(id)}
+    >
+      <TemaIcone.Provider value={{ [gruppo]: id }}>
+        <span className="icone-prova" aria-hidden="true">
+          {ICONE_DI_PROVA[gruppo].map((n) => (
+            <Icona key={n} nome={n} gruppo={gruppo} />
+          ))}
+        </span>
+      </TemaIcone.Provider>{' '}
+      {nome}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
+      <div className="muted" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+        {DESCRIZIONE_GRUPPO[gruppo]}
+      </div>
+      <div className="mode-choice">
+        {opzione('silhouette', 'Silhouette')}
+        {opzione('emoji', 'Emoji')}
+      </div>
     </div>
   )
 }
@@ -74,13 +152,13 @@ function CardDellaCoda({ settings, onSave }) {
           className={`mode-option${colore ? '' : ' active'}`}
           onClick={() => onSave({ bordo_colore_conto: false })}
         >
-          💳 Com&apos;è messo il conto
+          <Icona nome="carta" gruppo="tasti" />{' '}Com&apos;è messo il conto
         </button>
         <button
           className={`mode-option${colore ? ' active' : ''}`}
           onClick={() => onSave({ bordo_colore_conto: true })}
         >
-          🎨 Il colore del conto
+          <Icona nome="temi" gruppo="tasti" /> Il colore del conto
         </button>
       </div>
     </div>
@@ -246,7 +324,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>
-          🎛 Personalizza colori
+          <Icona nome="regola" gruppo="tasti" /> Personalizza colori
         </button>
       ) : (
         <div style={{ marginTop: 8 }}>
@@ -270,7 +348,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
               ↩︎ Ripristina preset
             </button>
             <button className="btn small" onClick={saveCustom}>
-              💾 Salva tema
+              <Icona nome="salva" gruppo="tasti" /> Salva tema
             </button>
           </div>
         </div>

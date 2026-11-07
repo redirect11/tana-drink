@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { tocca, dentroIlPeriodo, etichettaPeriodo, periodiRapidi } from '../lib/periodo.js'
 import GrigliaMese from './GrigliaMese.jsx'
+import Icona from './Icona.jsx'
 
 // ── IL CALENDARIO DEL PERIODO ────────────────────────────────────────
 //
@@ -31,7 +32,7 @@ export default function SelettorePeriodo({ periodo, onChange, oggi, servizio }) 
         onClick={() => setAperto((v) => !v)}
         aria-expanded={aperto}
       >
-        📅 {etichettaPeriodo(periodo, oggi)}
+        <Icona nome="calendario" gruppo="tasti" />{' '}{etichettaPeriodo(periodo, oggi)}
       </button>
       {periodo?.da && (
         <button

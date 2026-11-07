@@ -1,3 +1,4 @@
+import Icona from './Icona.jsx'
 // UNA SPIEGAZIONE A SCOMPARSA, in cima a una tabella (REQ-UI-029). L'utente,
 // 10/10/2026: la spiegazione di «Venduto × Incassato» e di «Acquisti ×
 // Fatturato» va «a scomparsa nella schermata stessa». Chiusa di partenza:
@@ -8,7 +9,7 @@
 export default function Soffietto({ titolo, children }) {
   return (
     <details className="card soffietto">
-      <summary>ℹ️ {titolo}</summary>
+      <summary><Icona nome="informazioni" gruppo="segnali" /> {titolo}</summary>
       <div className="soffietto-corpo">{children}</div>
     </details>
   )

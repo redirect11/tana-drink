@@ -1,4 +1,5 @@
 import { MODI_CONSEGNA, cambioModoPermesso } from '../lib/consegna.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // ── COME LO PRENDE: SERVIZIO O RITIRO ────────────────────────────────
 //
@@ -65,7 +66,7 @@ export default function ScegliConsegna({
               onCambia?.(valore)
             }}
           >
-            {etichetta}
+            <ConIcona testo={etichetta} />
           </button>
         ))}
       </div>

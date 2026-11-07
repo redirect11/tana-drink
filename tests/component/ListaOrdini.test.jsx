@@ -248,7 +248,7 @@ describe('il documento: si associa, si genera, o non c’è', () => {
       doc_type: 'Nessun documento',
       paid: true,
     })
-    expect(await screen.findByText('✅ pagato')).toBeInTheDocument()
+    expect(await screen.findByText('pagato')).toBeInTheDocument()
   })
 })
 
@@ -266,7 +266,7 @@ describe('«pagato» si scrive sulla fattura, mai sull’ordine', () => {
     await lista()
     await user.click(screen.getByRole('button', { name: 'Segna pagato il documento di Nova' }))
     expect(pagata).toHaveBeenCalledWith(expect.objectContaining({ id: 'inv-1' }), true)
-    expect(await screen.findByText('✅ pagato')).toBeInTheDocument()
+    expect(await screen.findByText('pagato')).toBeInTheDocument()
   })
 })
 

@@ -274,8 +274,8 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     await aspettaLista()
     expect(screen.getByPlaceholderText(/Cerca prodotto/)).toBeInTheDocument()
     // Le tendine sono CHIUSE: il tasto dice cosa è scelto, le voci no.
-    expect(screen.getByRole('button', { name: /⚗️ Filtra/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /🏭 Fornitore/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Filtra/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Fornitore/ })).toBeInTheDocument()
     expect(screen.queryByText('In esaurimento')).toBeNull()
     // Il valore di magazzino è un numero da leggere, non un filtro.
     const valore = screen.getByText('Valore magazzino')
@@ -301,7 +301,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     await user.click(screen.getByRole('button', { name: /Esauriti/ }))
     expect(screen.getByText('Vodka Vecchia')).toBeInTheDocument()
     expect(screen.queryByText('Gin Mare')).toBeNull()
@@ -316,7 +316,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     const voce = screen.getByRole('button', { name: /In scorta/ })
     // Il conteggio c'è come sulle altre voci: Gin Mare, Rum, Ichnusa e il
     // Mezcal nato da una consegna (REQ-MAG-032) — una scheda da completare è
@@ -333,7 +333,7 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /⚗️ Filtra/ }))
+    await user.click(screen.getByRole('button', { name: /Filtra/ }))
     await user.click(screen.getByRole('button', { name: /In linea/ }))
     await user.click(screen.getByRole('button', { name: /Premium/ }))
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
@@ -346,13 +346,13 @@ describe('la schermata del magazzino (REQ-MAG-010)', () => {
     const user = userEvent.setup()
     mostra()
     await aspettaLista()
-    await user.click(screen.getByRole('button', { name: /🏭 Fornitore/ }))
+    await user.click(screen.getByRole('button', { name: /Fornitore/ }))
     await user.click(screen.getByRole('button', { name: 'NOVA' }))
     expect(screen.getByText('Gin Mare')).toBeInTheDocument()
     expect(screen.getByText('Ichnusa')).toBeInTheDocument()
     expect(screen.queryByText('Rum Diplomatico')).toBeNull()
     // Scelto il fornitore, il tasto lo dice senza doversi riaprire.
-    expect(screen.getByRole('button', { name: /🏭 NOVA/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /NOVA/ })).toBeInTheDocument()
   })
 
   it('«+ Nuovo prodotto» apre il modulo con Salva e Annulla', async () => {

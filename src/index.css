@@ -12532,3 +12532,37 @@ body.pagina-piena .inv-scheda {
     transform: translateY(10px);
   }
 }
+
+/* ── LE ICONE DEL GESTIONALE (REQ-UI-031) ─────────────────────────────────
+   «Silhouette»: i disegni di Lucide prendono il colore e la misura del
+   testo attorno, quindi qui c'è solo l'allineamento con la riga. I pallini
+   degli stati restano colorati in ogni tema, con gli inchiostri di stato
+   (DESIGN.md, Profondità): sono un colore, non un disegno. */
+.icona {
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+/* Un'icona accesa, piena invece che a tratto: la stella dei preferiti. */
+.icona.icona-piena {
+  fill: currentColor;
+}
+.icona-pallino {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  vertical-align: 0.02em;
+  background: var(--muted);
+}
+.icona-pallino-verde { background: var(--testo-verde); }
+.icona-pallino-ambra { background: var(--testo-ambra); }
+.icona-pallino-rosso { background: var(--testo-rosso); }
+.icona-pallino-spento { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+/* Le cinque icone di prova accanto a ogni tema, in Aspetto. */
+.icone-prova {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-right: 6px;
+}

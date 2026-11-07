@@ -168,7 +168,7 @@ export default function ComandaPage() {
     segna(stato)
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
       comandeLocali.scarta(order.id)
-      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
     })
   }
 
@@ -190,7 +190,7 @@ export default function ComandaPage() {
     preparazioneParziale(order.id, comanda.id, scelte).catch((e) => {
       comandeLocali.scarta(order.id)
       setDivisa(null)
-      showToast(`⚠️ Divisione non riuscita: ${e.message}`, { kind: 'error' })
+      showToast(`Divisione non riuscita: ${e.message}`, { kind: 'error' })
     })
   }
 
@@ -204,7 +204,7 @@ export default function ComandaPage() {
       senzaSupplementi={!settings.coperto_enabled && !settings.service_charge_enabled}
       onCambiaConsegna={(modo) =>
         setOrderServiceMode(order.id, modo).catch((e) =>
-          showToast(`⚠️ Modo non cambiato: ${e.message}`, { kind: 'error' })
+          showToast(`Modo non cambiato: ${e.message}`, { kind: 'error' })
         )
       }
       onAvanza={porta}
@@ -215,7 +215,7 @@ export default function ComandaPage() {
       dividiSubito={cerca.get('dividi') === '1'}
       onStampa={() =>
         printComanda(order, comanda).catch((e) =>
-          showToast(`⚠️ Stampa non riuscita: ${e.message}`, { kind: 'error' })
+          showToast(`Stampa non riuscita: ${e.message}`, { kind: 'error' })
         )
       }
     />

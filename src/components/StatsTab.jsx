@@ -36,6 +36,7 @@ import CalendarioServizio from './CalendarioServizio.jsx'
 import CampoDataOra from './CampoDataOra.jsx'
 import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
+import Icona from './Icona.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -111,8 +112,8 @@ const oraPerEsteso = (locale) => {
 // Incassato, ed è per quello che le sottosezioni erano sparite — una sola
 // voce spuntata da sé nel menu è una scelta che non è una scelta.)
 const SEZIONI = [
-  { id: 'serate', icona: '📒', label: 'Per serata' },
-  { id: 'periodo', icona: '📈', label: 'Per periodo' },
+  { id: 'serate', icona: 'registro', label: 'Per serata' },
+  { id: 'periodo', icona: 'andamento', label: 'Per periodo' },
 ]
 
 export default function StatsTab() {
@@ -669,7 +670,7 @@ function ClassificaVenduto({ righe }) {
     <div className="card">
       <div className="row between" style={{ alignItems: 'center' }}>
         <h3 className="cat-header" style={{ margin: 0 }}>
-          🏆 Classifica del venduto
+          <Icona nome="classifica" gruppo="tasti" /> Classifica del venduto
         </h3>
         <button type="button" className="btn ghost small" onClick={() => setPerIncasso((v) => !v)}>
           {perIncasso ? 'Ordina per pezzi' : 'Ordina per incasso'}
@@ -711,7 +712,7 @@ function UtiliPerCategoria({ righe }) {
   return (
     <div className="card">
       <h3 className="cat-header" style={{ margin: 0 }}>
-        💶 Utile per categoria
+        <Icona nome="contanti" gruppo="tasti" /> Utile per categoria
       </h3>
       <p className="muted small" style={{ margin: '8px 0 6px' }}>
         Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.
@@ -796,7 +797,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       </div>
 
       {perGiornata && (
-        <ChartCard title="📈 Incasso per giornata">
+        <ChartCard icona="andamento" title="Incasso per giornata">
           <VBars
             data={byDay.map((s) => ({
               label: `${s.weekday} ${s.label}`,
@@ -808,7 +809,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
         </ChartCard>
       )}
 
-      <ChartCard title="🕙 Incasso per fascia oraria">
+      <ChartCard icona="orario" title="Incasso per fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
         <VBars
           data={byHour.buckets.map((b) => ({
@@ -824,7 +825,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
           i prodotti e le categorie. Risponde a "fra le 22 e l'una cosa vendo?" */}
       {/* Le date non ci sono più: fa fede il periodo scelto in cima
           (19/09/2026). Qui si stringe soltanto l'ora. */}
-      <ChartCard title="🧾 Venduto nella fascia oraria">
+      <ChartCard icona="coda" title="Venduto nella fascia oraria">
         <TimeRange value={hourRange} onChange={setHourRange} />
         <div className="row between" style={{ alignItems: 'baseline', margin: '8px 0' }}>
           <span className="muted small">
@@ -864,7 +865,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       </ChartCard>
 
       {perGiornata && (
-        <ChartCard title="📅 Incasso per giornata nella fascia scelta">
+        <ChartCard icona="calendario" title="Incasso per giornata nella fascia scelta">
           <TimeRange value={dayRange} onChange={setDayRange} />
           <VBars
             data={byDayRange.map((s) => ({
@@ -877,16 +878,16 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
         </ChartCard>
       )}
 
-      <ChartCard title="💰 Top prodotti per incasso">
+      <ChartCard icona="incasso" title="Top prodotti per incasso">
         <HBars data={top.byRevenue.map((p) => ({ label: p.name, value: p.revenue, text: formatPrice(p.revenue) }))} />
       </ChartCard>
 
-      <ChartCard title="🔥 Prodotti più richiesti">
+      <ChartCard icona="richiesti" title="Prodotti più richiesti">
         <HBars data={top.byQty.map((p) => ({ label: p.name, value: p.qty, text: `${p.qty} pz` }))} />
       </ChartCard>
 
       {ingredients.length > 0 && (
-        <ChartCard title="🧪 Ingredienti più usati">
+        <ChartCard icona="prova" title="Ingredienti più usati">
           <HBars
             data={ingredients.map((u) => ({
               label: u.name,
@@ -898,7 +899,7 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
       )}
 
       {byCategory.length > 0 && (
-        <ChartCard title="🗂 Incasso per categoria">
+        <ChartCard icona="raggruppa" title="Incasso per categoria">
           <HBars data={byCategory.map((c) => ({ label: c.name, value: c.revenue, text: formatPrice(c.revenue) }))} />
         </ChartCard>
       )}
@@ -935,11 +936,11 @@ function CorpoStatistiche({ view, comandi, intervallo, cutoff, perGiornata = tru
             <Row k="Sconti concessi (già dedotti)" v={`−${formatPrice(extras.sconti)}`} />
           )}
           <Row
-            k="🍸 Al tavolo"
+            k={<><Icona nome="menu" gruppo="tasti" /> Al tavolo</>}
             v={`${split.tavolo.ordini} ordini · ${formatPrice(split.tavolo.incasso)}`}
           />
           <Row
-            k="🚶 Al banco"
+            k={<><Icona nome="a-piedi" gruppo="tasti" /> Al banco</>}
             v={`${split.banco.ordini} ordini · ${formatPrice(split.banco.incasso)}`}
           />
           {prep.prepMax && (
@@ -987,10 +988,13 @@ function Kpi({ label, value, sub }) {
   )
 }
 
-function ChartCard({ title, children }) {
+function ChartCard({ icona, title, children }) {
   return (
     <div className="card">
-      <h3 className="cat-header" style={{ marginTop: 0 }}>{title}</h3>
+      <h3 className="cat-header" style={{ marginTop: 0 }}>
+        {icona && <><Icona nome={icona} gruppo="tasti" />{' '}</>}
+        {title}
+      </h3>
       {children}
     </div>
   )

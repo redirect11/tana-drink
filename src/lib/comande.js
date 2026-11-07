@@ -20,6 +20,7 @@
 // può essere ancora in preparazione — e le due cose vanno dette insieme.
 
 import { ORDER_STATUSES } from './orderStatus.js'
+import { conEmoji } from './icone.js'
 import { mergeLines } from './orderLines.js'
 
 // Stati dell'ORDINE (conto).
@@ -620,11 +621,11 @@ export function firmaLavoro(comande) {
 // perché una comanda è ancora in preparazione. Il gruppo «Pagati» dice la
 // prima cosa, i gruppi del servizio la seconda.
 export const SERVIZIO_ETICHETTA = {
-  [ORDER_STATUSES.RICEVUTO]: '🧾 Da fare',
-  [ORDER_STATUSES.IN_PREPARAZIONE]: '🍹 In preparazione',
-  [ORDER_STATUSES.PRONTO]: '🔔 Pronto',
-  [ORDER_STATUSES.RITIRATO]: '✅ Servito',
-  [ORDER_STATUSES.ANNULLATO]: '✖️ Annullato',
+  [ORDER_STATUSES.RICEVUTO]: conEmoji('coda', 'Da fare'),
+  [ORDER_STATUSES.IN_PREPARAZIONE]: conEmoji('in-preparazione', 'In preparazione'),
+  [ORDER_STATUSES.PRONTO]: conEmoji('pronto', 'Pronto'),
+  [ORDER_STATUSES.RITIRATO]: conEmoji('fatto', 'Servito'),
+  [ORDER_STATUSES.ANNULLATO]: conEmoji('annullato', 'Annullato'),
 }
 
 // A quale gruppo appartiene una riga del conto. Le righe della BOZZA — non
@@ -653,7 +654,7 @@ export function gruppiDelConto(righe, { conServizio = true } = {}) {
 }
 
 export function titoloGruppo(gruppo) {
-  if (gruppo === 'pagati') return '💳 Pagati'
+  if (gruppo === 'pagati') return conEmoji('carta', 'Pagati')
   return SERVIZIO_ETICHETTA[gruppo] || null
 }
 
@@ -735,9 +736,9 @@ export const MOTIVO_ANNULLO = {
 }
 
 export const ETICHETTA_ANNULLO = {
-  [MOTIVO_ANNULLO.DIVISIONE]: '✂️ Divisa',
-  [MOTIVO_ANNULLO.CONTO]: '✖️ Conto annullato',
-  [MOTIVO_ANNULLO.MANO]: '✖️ Annullata',
+  [MOTIVO_ANNULLO.DIVISIONE]: conEmoji('dividi', 'Divisa'),
+  [MOTIVO_ANNULLO.CONTO]: conEmoji('annullato', 'Conto annullato'),
+  [MOTIVO_ANNULLO.MANO]: conEmoji('annullato', 'Annullata'),
 }
 
 export function motivoAnnullo(comanda, order) {

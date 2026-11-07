@@ -250,7 +250,7 @@ describe('la vista del banco', () => {
     const suoi = [
       ...titolo.nextElementSibling.nextElementSibling.querySelectorAll('button'),
     ]
-    expect(suoi.map((b) => b.textContent)).toEqual(['🚦 Corsie di stato'])
+    expect(suoi.map((b) => b.textContent.trim())).toEqual(['Corsie di stato'])
     expect(suoi[0]).toHaveClass('active')
     expect(suoi[0]).toBeEnabled()
   })

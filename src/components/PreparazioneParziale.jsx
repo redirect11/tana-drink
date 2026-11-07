@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { dividiComanda } from '../lib/comande.js'
+import Icona from './Icona.jsx'
 
 // ── QUANTI NE PREPARI ADESSO ─────────────────────────────────────────
 //
@@ -41,7 +42,7 @@ export default function PreparazioneParziale({ comanda, onAnnulla, onConferma })
       {righe.map((i, idx) => (
         <div className="row between comanda-parziale-riga" key={i.line_id ?? `${i.drink_id}-${idx}`}>
           <span className="small">
-            {i.custom ? '✨ ' : ''}
+            {i.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}
             {i.name} <span className="muted">di {i.qty}</span>
           </span>
           <span className="row" style={{ gap: 6, alignItems: 'center' }}>
