@@ -13,7 +13,7 @@ import {
   Tag, Ticket, Timer, Trash2, TrendingUp, TriangleAlert, Trophy, Upload, User, UserCog, Users,
   UtensilsCrossed, Wallet, Wifi, WifiOff, Wine, Wrench, X,
 } from 'lucide-react'
-import { VOCABOLARIO, nomeIcona, TEMA_ICONE_DI_PARTENZA } from '../lib/icone.js'
+import { VOCABOLARIO, nomeIcona, TEMA_ICONE_DI_PARTENZA, GRUPPO_DI_PARTENZA } from '../lib/icone.js'
 
 // ── UN'ICONA DEL GESTIONALE, NEL TEMA DEL LOCALE (REQ-UI-031) ──────────
 //
@@ -52,10 +52,13 @@ const DISEGNI = {
   UtensilsCrossed, Wallet, Wifi, WifiOff, Wine, Wrench, X,
 }
 
-export const TemaIcone = createContext(TEMA_ICONE_DI_PARTENZA)
+// Il contesto porta il tema di OGNI gruppo ({ navigazione, tasti,
+// segnali }, lib/icone.js): ogni icona dice di che gruppo è, e la
+// navigazione è quello di partenza.
+export const TemaIcone = createContext({})
 
-export default function Icona({ nome, size = '1.1em', className = '' }) {
-  const tema = useContext(TemaIcone)
+export default function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em', className = '' }) {
+  const tema = useContext(TemaIcone)?.[gruppo] ?? TEMA_ICONE_DI_PARTENZA
   const chiave = nomeIcona(nome)
   if (!chiave) return nome ? <span aria-hidden="true">{nome}</span> : null
   const voce = VOCABOLARIO[chiave]

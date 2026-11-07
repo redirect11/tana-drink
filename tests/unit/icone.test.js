@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import * as Lucide from 'lucide-react'
-import { VOCABOLARIO, nomeIcona, temaIconeDi, TEMI_ICONE } from '../../src/lib/icone.js'
+import { VOCABOLARIO, nomeIcona, temaIconeDi, temiIconeDi, TEMI_ICONE, GRUPPI_ICONE, TUTTE_EMOJI } from '../../src/lib/icone.js'
 import { NAV_GESTIONALE, NAV_SALA, titoloPagina } from '../../src/lib/sezioni.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
@@ -53,16 +53,27 @@ describe('il vocabolario', () => {
   })
 })
 
-describe('il tema del locale', () => {
-  it('di partenza è Silhouette', () => {
-    expect(temaIconeDi({})).toBe('silhouette')
+// UN TEMA PER GRUPPO: l'utente, 07/11/2026, «il selettore del tema deve
+// essere separato» per navigazione, tasti e stati, segnali e messaggi.
+describe('il tema del locale, gruppo per gruppo', () => {
+  it('i gruppi sono tre, ognuno con la sua chiave', () => {
+    expect(Object.keys(GRUPPI_ICONE)).toEqual(['navigazione', 'tasti', 'segnali'])
+    expect(new Set(Object.values(GRUPPI_ICONE).map((g) => g.chiave)).size).toBe(3)
+  })
+
+  it('di partenza tutti Silhouette', () => {
+    expect(temiIconeDi({})).toEqual({ navigazione: 'silhouette', tasti: 'silhouette', segnali: 'silhouette' })
     expect(temaIconeDi(null)).toBe('silhouette')
   })
 
-  it('si sceglie fra i due, e un valore sconosciuto vale quello di partenza', () => {
+  it('ogni gruppo si sceglie per conto suo, e un valore sconosciuto vale quello di partenza', () => {
     expect(TEMI_ICONE).toEqual(['silhouette', 'emoji'])
-    expect(temaIconeDi({ tema_icone: 'emoji' })).toBe('emoji')
-    expect(temaIconeDi({ tema_icone: 'neon' })).toBe('silhouette')
+    const s = { tema_icone_tasti: 'emoji', tema_icone_segnali: 'neon' }
+    expect(temiIconeDi(s)).toEqual({ navigazione: 'silhouette', tasti: 'emoji', segnali: 'silhouette' })
+  })
+
+  it('chi non è dello staff le vede tutte emoji', () => {
+    expect(TUTTE_EMOJI).toEqual({ navigazione: 'emoji', tasti: 'emoji', segnali: 'emoji' })
   })
 })
 

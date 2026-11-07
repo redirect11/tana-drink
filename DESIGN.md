@@ -328,7 +328,8 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
 ## Componenti
 
 - **Le icone del gestionale** (REQ-UI-031) hanno un tema, scelto in
-  Aspetto: **Silhouette** (di partenza) disegna Lucide a tratto,
+  Aspetto per ognuno dei tre gruppi (Navigazione; Tasti e stati; Segnali e
+  messaggi): **Silhouette** (di partenza) disegna Lucide a tratto,
   monocromo, nel colore del testo attorno e alla sua misura; **Emoji**
   rimette le emoji. Un'icona si chiede per NOME (`<Icona nome="cassa" />`,
   vocabolario in `src/lib/icone.js`), mai scrivendo l'emoji nella

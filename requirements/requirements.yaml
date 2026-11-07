@@ -14250,6 +14250,11 @@ requirements:
       tema di partenza per tutti, «Emoji» rimette quelle di prima
       (Impostazioni → Aspetto → «Le icone del gestionale»); vale solo per il
       gestionale: le pagine del cliente hanno lo stile del loro menù.
+      UN TEMA PER GRUPPO (l'utente, 07/11/2026: «il selettore del tema deve
+      essere separato» per le tre fasi): Navigazione, Tasti e stati, Segnali
+      e messaggi si scelgono ognuno per conto suo (tema_icone_navigazione,
+      tema_icone_tasti, tema_icone_segnali), e ogni <Icona> dice di che
+      gruppo è.
       COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina»,
       «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno;
       <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji»
