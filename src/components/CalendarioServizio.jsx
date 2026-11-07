@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import GrigliaMese from './GrigliaMese.jsx'
+import GrigliaMese from './GrigliaMese.jsx'
+import Icona from './Icona.jsx'
 
 // ── LA RICERCA PER DATA (REQ-STAT-007) ─────────────────────────────────
 //
@@ -23,7 +24,7 @@ export default function CalendarioServizio({ servizio, scelto, oggi, onScegli, e
           aria-expanded={aperto}
           onClick={() => setAperto((v) => !v)}
         >
-          📅 Calendario
+          <Icona nome="calendario" gruppo="tasti" /> Calendario
         </button>
         <label className="muted small" htmlFor={id}>
           {etichetta}

@@ -13,7 +13,8 @@ import Didascalia from './Didascalia.jsx'
 import Soffietto from './Soffietto.jsx'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import { colonneDelBilancio } from '../lib/periodiBilancio.js'
-import { unisciVendite } from '../lib/venditeStoriche.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
+import Icona from './Icona.jsx'
 
 // BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci
 // del menù, quanto è costata la merce che ha venduto, che margine ne resta.
@@ -110,7 +111,7 @@ export default function MacroMonthlyTab() {
       <SpiegazioneTabella saleVat={settings.sale_vat} />
       {report && report.rows.some((r) => r.id === UNASSIGNED && r.tot.incasso > 0) && (
         <p className="muted small" style={{ margin: '-4px 0 10px' }}>
-          ℹ️ In <strong>“Non attribuito”</strong> finisce l’incasso delle voci
+          <Icona nome="informazioni" gruppo="segnali" /> In <strong>“Non attribuito”</strong> finisce l’incasso delle voci
           che nessuna macro reclama per intero: dai loro la quota in{' '}
           <strong>Magazzino → Macro-categorie</strong> e si sposta al posto suo.
         </p>

@@ -107,9 +107,9 @@ describe('Venduto × Incassato', () => {
   it('dice quanto pesa una macro sul margine del mese', async () => {
     render(<MacroMonthlyTab />)
     // Luglio: distillati 6 € di margine, bibite 2,50 — su 8,50 del mese.
-    const alc = await riga('🗂️ Alcolici e distillati', 'Incidenza')
+    const alc = await riga('Alcolici e distillati', 'Incidenza')
     expect(within(alc).getByText('70,6%')).toBeInTheDocument()
-    const bib = await riga('🗂️ Birre e bibite', 'Incidenza')
+    const bib = await riga('Birre e bibite', 'Incidenza')
     expect(within(bib).getByText('29,4%')).toBeInTheDocument()
   })
 
@@ -125,16 +125,16 @@ describe('Venduto × Incassato', () => {
   // stessa parola per un'altra domanda.
   it('le due incidenze non stanno sulla stessa riga', async () => {
     render(<MacroMonthlyTab />)
-    const card = await blocco('🗂️ Birre e bibite')
+    const card = await blocco('Birre e bibite')
     expect(cerca(card, 'Incidenza sull’anno')).toBeUndefined()
     expect(cerca(card, 'Incidenza')).toBeTruthy()
   })
 
   it('quello che calcolava prima non è cambiato', async () => {
     render(<MacroMonthlyTab />)
-    const inc = await riga('🗂️ Alcolici e distillati', 'Incassato')
+    const inc = await riga('Alcolici e distillati', 'Incassato')
     expect(within(inc).getByText('14 €')).toBeInTheDocument() // 8 + 6, colonna TOT
-    const mar = await riga('🗂️ Alcolici e distillati', 'Margine')
+    const mar = await riga('Alcolici e distillati', 'Margine')
     expect(within(mar).getByText('10 €')).toBeInTheDocument() // 14 − 3,80 ≈ 10
   })
 

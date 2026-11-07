@@ -21,7 +21,8 @@ import RigaInventario from './RigaInventario.jsx'
 import TestataInventario from './TestataInventario.jsx'
 import { perScaffale } from '../lib/scaffali.js'
 import Tendina from './Tendina.jsx'
-import FiltroAssortimento from './FiltroAssortimento.jsx'
+import FiltroAssortimento from './FiltroAssortimento.jsx'
+import Icona from './Icona.jsx'
 
 // L'INVENTARIO periodico, come il foglio INV di Flavio: per ogni prodotto
 // DEP · ACQ · CONS · RIM, con CONS = DEP + ACQ − RIM. La RIM è quanto c'è
@@ -243,7 +244,7 @@ export default function StockCountPanel() {
       {!open ? (
         <>
           <button className="btn block" onClick={start} disabled={busy}>
-            ▶️ Apri l’inventario
+            <Icona nome="avvia" gruppo="tasti" /> Apri l’inventario
           </button>
           <p className="muted small" style={{ margin: '8px 0 0' }}>
             {riapreDaSola
@@ -317,7 +318,7 @@ export default function StockCountPanel() {
             Le rimanenze si salvano mentre le scrivi: si può smettere e riprendere più tardi.
           </p>
           <button className="btn block" onClick={chiediConferma} disabled={busy}>
-            ✅ Chiudi l’inventario
+            <Icona nome="fatto" gruppo="segnali" /> Chiudi l’inventario
           </button>
         </>
       )}

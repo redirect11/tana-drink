@@ -96,6 +96,7 @@ import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
+import Icona from './Icona.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -122,16 +123,16 @@ const GESTIONE_LABEL = { pz: 'pezzi', g: 'peso', ml: 'liquidi', U: 'unità gener
 // scorrendo la lista, senza doverlo aprire.
 function SegnoSchedaDaCompletare({ item }) {
   if (!item?.scheda_da_completare) return null
-  return <span className="badge-segno" title="Scheda da completare">✏️</span>
+  return <span className="badge-segno" title="Scheda da completare"><Icona nome="modifica" gruppo="tasti" /></span>
 }
 
 function SegnoAssortimento({ item }) {
   const a = assortimentoDi(item)
   if (a === 'out') return <span className="badge-empty">OUT</span>
-  if (a === 'premium') return <span className="badge-segno" title="Premium">👑</span>
+  if (a === 'premium') return <span className="badge-segno" title="Premium"><Icona nome="premium" gruppo="tasti" /></span>
   // La bottiglia: ora è libera, perché la colonna scorte non la usa più per
   // contare le bottiglie rimaste (scrive "3 bott.").
-  if (a === 'linea') return <span className="badge-segno" title="In linea">🍾</span>
+  if (a === 'linea') return <span className="badge-segno" title="In linea"><Icona nome="in-linea" gruppo="tasti" /></span>
   return null
 }
 
@@ -662,7 +663,7 @@ function ProductsPanel() {
         {it.cost != null && (
           <>
             <div className="inv-info-row">
-              <dt>💶 Costo</dt>
+              <dt><Icona nome="contanti" gruppo="tasti" /> Costo</dt>
               <dd>
                 {formatPrice(it.cost)}/pz <span className="muted">(+IVA {formatPrice(costWithVat(it.cost, it.vat))})</span>
                 {' · valore '}<strong>{formatPrice(stockValue(it))}</strong>
@@ -696,7 +697,7 @@ function ProductsPanel() {
           ) : (
             <>
               <button className="btn small block" style={{ marginTop: 8 }} onClick={() => setCaricoFor(it.id)}>
-                ⬆ Carico
+                <Icona nome="importa" gruppo="tasti" /> Carico
               </button>
               <button
                 className="btn secondary small block"
@@ -717,12 +718,12 @@ function ProductsPanel() {
           {/* LA MOVIMENTAZIONE DEL PRODOTTO (REQ-MAG-048): si guarda, non si
               tocca niente — anche col magazzino bloccato. */}
           <button className="btn ghost small block" style={{ marginTop: 6 }} onClick={() => setMovimentiDi(it)}>
-            📜 Movimenti
+            <Icona nome="movimenti" gruppo="tasti" /> Movimenti
           </button>
           <div className="inv-azioni" style={{ marginTop: 6 }}>
-            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}>✏️ Modifica</button>
+            <button className="btn ghost small" disabled={!modificabile(it)} onClick={() => setEditing(it)}><Icona nome="modifica" gruppo="tasti" /> Modifica</button>
             <button className="btn ghost small" disabled={bloccato} onClick={() => duplica(it)}>⧉ Duplica</button>
-            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}>🗑 Elimina</button>
+            <button className="btn ghost small" disabled={bloccato} onClick={() => remove(it)}><Icona nome="elimina" gruppo="tasti" /> Elimina</button>
           </div>
         </>
       )}
@@ -1399,8 +1400,8 @@ function InvCategoryManager({ categories, onChange }) {
           <span className="row" style={{ gap: 4 }}>
             <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
             <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-            <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-            <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+            <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+            <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
           </span>
         </div>
       ))}
@@ -1558,12 +1559,12 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
                   aria-label={`Listino di ${s.name}`}
                   onClick={() => onListino(s.id)}
                 >
-                  📋 Listino
+                  <Icona nome="elenco" gruppo="tasti" /> Listino
                 </button>
               )}
-              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}>📧</button>
-              <button className="btn ghost small" onClick={() => rename(s)}>✏️</button>
-              <button className="btn ghost small" onClick={() => remove(s)}>🗑</button>
+              <button className="btn ghost small" title="Email per gli ordini" onClick={() => setEmail(s)}><Icona nome="email" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => rename(s)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(s)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {tavolozzaPer === s.id && (
@@ -1771,7 +1772,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
 
       {passo === 'fatto' && (
         <RiquadroTravaso titolo="Aggiornamento del magazzino">
-          <h3 style={{ marginTop: 0 }}>✅ Magazzino aggiornato</h3>
+          <h3 style={{ marginTop: 0 }}><Icona nome="fatto" gruppo="segnali" /> Magazzino aggiornato</h3>
           <p className="small" style={{ margin: 0 }}>
             {esito?.travasati ?? avanzamento.totale} prodotti si contano a
             pezzi. Carico, conta e prodotti nuovi sono di nuovo a posto.
@@ -2117,7 +2118,7 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       {/* Prezzo: unitario ↔ totale collo (per confrontare col fornitore) */}
       {!reso && (
         <div className="card" style={{ marginTop: 10, padding: 10 }}>
-          <div className="muted small">💶 Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
+          <div className="muted small"><Icona nome="contanti" gruppo="tasti" /> Prezzo d’acquisto — da aggiornare solo se il listino è variato</div>
           <label htmlFor="cf-unit" style={{ marginTop: 6 }}>Costo unitario (€, netto)</label>
           <input id="cf-unit" type="number" step="any" min="0" value={unitCost} onChange={(e) => onUnit(e.target.value)} />
           {unitN > 0 && (
@@ -2522,7 +2523,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           {(suppliers || []).map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-          {onCreateSupplier && <option value="__new__">➕ Nuovo fornitore…</option>}
+          {onCreateSupplier && <option value="__new__">+ Nuovo fornitore…</option>}
         </select>
       )}
 
@@ -2600,7 +2601,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           nessuno li ha contati uno per uno. */}
       {aPeso && (
         <p className="muted small" style={{ margin: '-4px 0 8px' }}>
-          ⚖️ Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
+          <Icona nome="bilancio" gruppo="tasti" /> Acquistato a peso: la giacenza in pezzi è una <strong>stima</strong>,
           perché il peso unitario non è costante. Il dato di riferimento resta il
           peso.
         </p>

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
 import { subscribeMyCalls, subscribeCallsAlBancone, ackStaffCall } from '../lib/api.js'
 import { notify } from '../lib/notify.js'
-import { isAdmin } from '../lib/ruoli.js'
+import { isAdmin } from '../lib/ruoli.js'
+import Icona from './Icona.jsx'
 
 // ── LA CHIAMATA SI PRESENTA DOVUNQUE SI STIA GUARDANDO ───────────────
 //
@@ -99,7 +100,7 @@ export default function ChiamataInArrivo({ ruolo }) {
   return (
     <div className="overlay confirm-overlay">
       <div className="confirm-box pager-call">
-        <div className="pager-icon">📟</div>
+        <div className="pager-icon"><Icona nome="lettore" gruppo="tasti" /></div>
         <h3 style={{ margin: '8px 0' }}>{titoloDi(incoming)}</h3>
         {incoming.from_name && (
           <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>

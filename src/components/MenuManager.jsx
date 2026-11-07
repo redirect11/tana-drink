@@ -30,7 +30,8 @@ import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
-import { disegniDelLocale } from '../lib/stileMenu.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
+import Icona from './Icona.jsx'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -580,7 +581,7 @@ export default function MenuManager() {
                           )}
                           <InStruttura drink={d} carta={carta} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
-                            ✏️ Modifica
+                            <Icona nome="modifica" gruppo="tasti" /> Modifica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -588,7 +589,7 @@ export default function MenuManager() {
                             disabled={!puoAggiungere}
                             onClick={() => duplica(d)}
                           >
-                            📋 Duplica
+                            <Icona nome="elenco" gruppo="tasti" /> Duplica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -602,7 +603,7 @@ export default function MenuManager() {
                             style={{ marginTop: 6 }}
                             onClick={() => handleDelete(d)}
                           >
-                            🗑 Elimina
+                            <Icona nome="elimina" gruppo="tasti" /> Elimina
                           </button>
                         </div>
                       )}
@@ -697,8 +698,8 @@ function CategoryManager({ categories }) {
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
               <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-              <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+              <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {/* Icona (set di emoji) + colore per la categoria */}

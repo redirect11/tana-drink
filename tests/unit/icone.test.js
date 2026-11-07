@@ -108,7 +108,7 @@ describe('la navigazione parla il vocabolario', () => {
 // stile del loro menù, decisione dell'utente); le stampe; le icone delle
 // categorie, che sceglie il locale; i nomi delle tavolozze; i semi dello
 // stile «Carte». I commenti non contano.
-const MASSIMO = 527
+const MASSIMO = 283
 
 const FUORI = new Set([
   'src/lib/icone.js',

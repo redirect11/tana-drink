@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 
 // Dialog di annullamento ordine lato bartender: scelta della frase mostrata
 // al cliente, motivazione facoltativa e notifica opzionale.
@@ -70,7 +71,7 @@ export default function CancelOrderDialog({
         />
 
         <div className="toggle-row" style={{ borderBottom: 'none' }}>
-          <span>🔔 Notifica il cliente</span>
+          <span><Icona nome="notifiche" gruppo="tasti" /> Notifica il cliente</span>
           <input
             type="checkbox"
             className="toggle"

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listStaff } from '../lib/staffApi.js'
-import { subscribeStaffShiftsRange, clockIn, clockOut, updateStaffShift } from '../lib/api.js'
+import { subscribeStaffShiftsRange, clockIn, clockOut, updateStaffShift } from '../lib/api.js'
+import Icona from './Icona.jsx'
 
 // Pannello TIMBRATURE nella cassa: il bartender (Flavio/Vittorio) all'apertura
 // e alla chiusura può timbrare entrata/uscita anche PER I DIPENDENTI e
@@ -81,11 +82,11 @@ export default function StaffBadgePanel() {
 
   return (
     <div className="card" style={{ marginTop: 12 }}>
-      <strong>🕒 Timbrature staff</strong>
+      <strong><Icona nome="orario" gruppo="tasti" /> Timbrature staff</strong>
       <div className="muted small" style={{ margin: '2px 0 8px' }}>
         Timbra entrata/uscita anche per i dipendenti · {dentro} in servizio
       </div>
-      {err && <div className="banner" style={{ marginBottom: 8 }}>⚠️ {err}</div>}
+      {err && <div className="banner" style={{ marginBottom: 8 }}><Icona nome="avviso" gruppo="segnali" /> {err}</div>}
       {membri.length === 0 && <p className="muted small">Nessun membro dello staff registrato.</p>}
       {membri.map((m) => {
         const open = openByUid.get(m.uid)
@@ -120,7 +121,7 @@ export default function StaffBadgePanel() {
                       setEditTime(fmtTime(open.clock_in))
                     }}
                   >
-                    ✎ ora
+                    <Icona nome="scrivi" gruppo="tasti" /> ora
                   </button>
                 ))}
               <button

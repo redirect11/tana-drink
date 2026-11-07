@@ -18,7 +18,8 @@ import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
-import AvvisoPiano from './AvvisoPiano.jsx'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import Icona from './Icona.jsx'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
@@ -284,12 +285,12 @@ export default function OrdersHistory() {
                   if (e.key === 'Enter') e.currentTarget.click()
                 }}
               >
-                🖨
+                <Icona nome="stampa" gruppo="tasti" />
               </span>}
               <span className="ordhist-tot">
                 {formatPrice(orderTotal(o))}
                 {scontoTotale(o) > 0 && (
-                  <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
+                  <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(scontoTotale(o))}</span>
                 )}
               </span>
             </button>

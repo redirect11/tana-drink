@@ -143,12 +143,12 @@ describe('il bollo dell’acconto è lo stesso di qua e di là', () => {
 
   it('sulla card del conto', () => {
     render(<CorsieStato corsie={corsieConti(conAcconto)} />)
-    expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
+    expect(screen.getByText('Acconto')).toBeInTheDocument()
   })
 
   it('e sulla card della comanda', () => {
     render(<CorsieComande corsie={corsieComande(conAcconto)} />)
-    expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
+    expect(screen.getByText('Acconto')).toBeInTheDocument()
   })
 })
 

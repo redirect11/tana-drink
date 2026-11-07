@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, baseUnit, entryUnits } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import PriceSuggestion from './PriceSuggestion.jsx'
+import PriceSuggestion from './PriceSuggestion.jsx'
+import Icona from './Icona.jsx'
 
 // PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
@@ -216,7 +217,7 @@ export default function CustomDrinkForm({
 
             {warnNoRecipe && (
               <div className="banner" style={{ margin: '6px 0' }}>
-                ⚠️ Questo prodotto non ha ingredienti configurati: forse non sono
+                <Icona nome="avviso" gruppo="segnali" /> Questo prodotto non ha ingredienti configurati: forse non sono
                 mai stati inseriti nella sua scheda del Menù. Senza ingredienti
                 non c’è scarico di magazzino. Quelli che aggiungi qui valgono
                 solo per questa riga.
@@ -308,7 +309,7 @@ export default function CustomDrinkForm({
               disabled={!valid}
               onClick={() => onSaveAsNew(composto())}
             >
-              ✨ Salva nuova
+              <Icona nome="special" gruppo="tasti" /> Salva nuova
             </button>
           )}
         </div>

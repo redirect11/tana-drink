@@ -3,7 +3,8 @@ import { statoPush, getPushToken } from '../lib/push.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import { saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
-import { auth } from '../lib/firebaseClient.js'
+import { auth } from '../lib/firebaseClient.js'
+import Icona from './Icona.jsx'
 
 // ── «GLI AVVISI SONO SPENTI SU QUESTO DISPOSITIVO» ───────────────────
 //
@@ -57,7 +58,7 @@ export default function AvvisiSpenti({ ruolo }) {
   return (
     <div className="banner avvisi-spenti">
       <div>
-        <strong>🔕 Gli avvisi sono spenti su questo dispositivo.</strong>
+        <strong><Icona nome="notifiche-spente" gruppo="segnali" /> Gli avvisi sono spenti su questo dispositivo.</strong>
         <div className="small">
           {stato === 'negato'
             ? 'Il browser li ha bloccati: si riaccendono dalle sue impostazioni, alla voce Notifiche per questo sito.'

@@ -114,7 +114,7 @@ describe('l’inventario in corso', () => {
     await screen.findByText(/Inventario in corso/)
     await userEvent.type(screen.getByPlaceholderText(/RIM/), '3')
     await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Chiudi l’inventario' })).at(-1))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
     // IL NUOVO NASCE DENTRO LA CHIUSURA, nello stesso pacchetto (BUG-110):
     // fino al 22/09/2026 lo apriva `startStockCount` dopo, con una seconda
@@ -147,7 +147,7 @@ describe('l’inventario in corso', () => {
     await userEvent.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
     // La conferma non promette un inventario nuovo che non partirà.
     expect(document.body.textContent).not.toMatch(/Ne parte subito uno nuovo/)
-    await userEvent.click(await screen.findByRole('button', { name: 'Chiudi l’inventario' }))
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Chiudi l’inventario' })).at(-1))
     expect(api.closeStockCount).toHaveBeenCalledTimes(1)
     expect(api.closeStockCount.mock.calls[0][1].riapri).toBe(false)
     expect(api.startStockCount).not.toHaveBeenCalled()
@@ -329,7 +329,7 @@ describe('il filtro per assortimento', () => {
     await user.click(screen.getByRole('button', { name: /In linea/ }))
     expect(nomi()).toEqual(['Bombay'])
     await user.click(screen.getByRole('button', { name: /Chiudi l’inventario/ }))
-    await user.click(await screen.findByRole('button', { name: /^Chiudi/ }))
+    await user.click((await screen.findAllByRole('button', { name: /^Chiudi/ })).at(-1))
     const { lines } = api.closeStockCount.mock.calls.at(-1)[1]
     expect(lines.map((l) => l.item_id)).toEqual(['bombay', 'cynar', 'vecchio'])
     expect(lines.find((l) => l.item_id === 'vecchio').rim).toBeNull()

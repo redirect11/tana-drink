@@ -11,7 +11,8 @@ import {
 import { getPushToken } from '../lib/push.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
-import { ensureNotificationPermission } from '../lib/notify.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
+import Icona from './Icona.jsx'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
 // tasto per segnarli come serviti. Nessun'altra funzione del gestionale.
@@ -97,7 +98,7 @@ export default function ServiceQueue() {
   return (
     <div>
       <div className="card">
-        <strong>🫱 Servizio ai tavoli</strong>
+        <strong><Icona nome="servizio" gruppo="tasti" /> Servizio ai tavoli</strong>
         <div className="muted">
           {`${daServire.length} da servire`}
         </div>
@@ -107,7 +108,7 @@ export default function ServiceQueue() {
             la strada lunga: si scorre una carta fatta per chi ordina,
             invece della griglia fatta per chi batte. */}
         <Link className="btn block" style={{ marginTop: 12 }} to="/pos">
-          ➕ Aggiungi ordine
+          <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi ordine
         </Link>
       </div>
 
@@ -115,7 +116,7 @@ export default function ServiceQueue() {
 
       {mance > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
-          <span className="muted">💶 Mance di oggi</span>
+          <span className="muted"><Icona nome="contanti" gruppo="tasti" /> Mance di oggi</span>
           <span>
             <strong className="price">{formatPrice(mance)}</strong>{' '}
             <span className="muted small">
@@ -126,7 +127,7 @@ export default function ServiceQueue() {
       )}
 
       {daServire.length === 0 && (
-        <div className="empty">Nessun drink pronto da servire. 🎉</div>
+        <div className="empty">Nessun drink pronto da servire. <Icona nome="festa" gruppo="tasti" /></div>
       )}
 
       {daServire.map((o) => (
@@ -158,7 +159,7 @@ export default function ServiceQueue() {
               ✍️ Inserito da {placedByName(o.placed_by)}
             </p>
           )}
-          {o.note && <div className="order-note">📝 {o.note}</div>}
+          {o.note && <div className="order-note"><Icona nome="note" gruppo="tasti" /> {o.note}</div>}
           <button
             className="btn block"
             disabled={busyId === o.id}

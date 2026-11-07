@@ -413,7 +413,7 @@ describe('Statistiche per periodo', () => {
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
-    const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
+    const lista = (await screen.findByText('Classifica del venduto')).closest('.card')
     // Venti amari battono quindici negroni, a pezzi.
     expect(classifica(lista)).toEqual(['1 Amaro della casa 20 pz 20,00 €', '2 Negroni 15 pz 150,00 €'])
     m.stop()
@@ -429,7 +429,7 @@ describe('Statistiche per periodo', () => {
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
     await personalizzato('2026-08-08T05:00', '2026-08-09T05:00')
-    const lista = (await screen.findByText('🏆 Classifica del venduto')).closest('.card')
+    const lista = (await screen.findByText('Classifica del venduto')).closest('.card')
     await user.click(within(lista).getByRole('button', { name: 'Ordina per incasso' }))
     expect(classifica(lista)).toEqual(['1 Negroni 15 pz 150,00 €', '2 Amaro della casa 20 pz 20,00 €'])
     m.stop()

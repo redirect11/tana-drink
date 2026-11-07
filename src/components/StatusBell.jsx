@@ -16,7 +16,8 @@ import { statoPush, getPushToken } from '../lib/push.js'
 import { staffTokenRegistrato, saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { auth } from '../lib/firebaseClient.js'
-import { ensureNotificationPermission } from '../lib/notify.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
+import Icona from './Icona.jsx'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
 // pallino animato, lo STATO DELLA SINCRONIZZAZIONE local-first (idle / in
@@ -102,7 +103,7 @@ export default function StatusBell({ floating = false }) {
         title="Notifiche e sincronizzazione"
         aria-label={`Notifiche${notifs.unseen ? ` (${notifs.unseen} nuove)` : ''}`}
       >
-        🔔
+        <Icona nome="notifiche" gruppo="tasti" />
         {badge && <span className="status-bell-badge">{badge}</span>}
       </button>
 
@@ -114,12 +115,12 @@ export default function StatusBell({ floating = false }) {
                 fermata la catena. */}
             {push === 'ok' && (
               <div className="status-bell-sync ok">
-                🔔 Gli avvisi arrivano su questo terminale.
+                <Icona nome="notifiche" gruppo="tasti" /> Gli avvisi arrivano su questo terminale.
               </div>
             )}
             {push === 'non-attivo' && (
               <div className="status-bell-sync err">
-                🔕 Su questo ambiente gli avvisi di sistema non sono
+                <Icona nome="notifiche-spente" gruppo="segnali" /> Su questo ambiente gli avvisi di sistema non sono
                 configurati (manca la chiave delle notifiche). Con l&apos;app
                 aperta gli ordini si vedono comunque nella coda.
               </div>
@@ -128,7 +129,7 @@ export default function StatusBell({ floating = false }) {
               <div className="status-bell-sync err">
                 {push === 'da-permettere' && (
                   <>
-                    <div>🔕 Su questo dispositivo gli avvisi sono spenti.</div>
+                    <div><Icona nome="notifiche-spente" gruppo="segnali" /> Su questo dispositivo gli avvisi sono spenti.</div>
                     <button
                       className="btn small"
                       style={{ marginTop: 8 }}
@@ -137,14 +138,14 @@ export default function StatusBell({ floating = false }) {
                         setPush(await statoPush())
                       }}
                     >
-                      🔔 Attiva gli avvisi qui
+                      <Icona nome="notifiche" gruppo="tasti" /> Attiva gli avvisi qui
                     </button>
                   </>
                 )}
                 {push === 'da-registrare' && (
                   <>
                     <div>
-                      🔕 Questo terminale non risulta fra quelli avvisati: gli
+                      <Icona nome="notifiche-spente" gruppo="segnali" /> Questo terminale non risulta fra quelli avvisati: gli
                       ordini degli altri non gli arrivano.
                     </div>
                     <button
@@ -159,20 +160,20 @@ export default function StatusBell({ floating = false }) {
                         setPush(await statoPush())
                       }}
                     >
-                      🔔 Registra questo terminale
+                      <Icona nome="notifiche" gruppo="tasti" /> Registra questo terminale
                     </button>
                   </>
                 )}
                 {push === 'negato' && (
                   <div>
-                    🔕 Gli avvisi sono stati bloccati per questo sito: si
+                    <Icona nome="notifiche-spente" gruppo="segnali" /> Gli avvisi sono stati bloccati per questo sito: si
                     riattivano dalle impostazioni del telefono o del browser,
                     da qui non si può più chiedere.
                   </div>
                 )}
                 {push === 'non-supportato' && (
                   <div>
-                    🔕 Qui gli avvisi di sistema non arrivano. Su iPhone e
+                    <Icona nome="notifiche-spente" gruppo="segnali" /> Qui gli avvisi di sistema non arrivano. Su iPhone e
                     iPad succede finché l&apos;app non è <strong>installata
                     sulla schermata Home</strong>: è l&apos;unico modo in cui
                     iOS li consente. Con l&apos;app aperta gli ordini si
@@ -208,7 +209,7 @@ export default function StatusBell({ floating = false }) {
                   )}
                   {sync.definitiveCount > 0 && (
                     <button className="btn ghost small" onClick={scartaFalliteDefinitive}>
-                      ✖️ Scarta quelle perse
+                      <Icona nome="chiudi" gruppo="tasti" /> Scarta quelle perse
                     </button>
                   )}
                 </div>
@@ -280,7 +281,7 @@ export default function StatusBell({ floating = false }) {
               {storico ? (
                 notifs.archivio.length > 0 && (
                   <button className="btn ghost small grow" onClick={svuotaArchivio}>
-                    🧹 Svuota storico
+                    <Icona nome="pulisci" gruppo="tasti" /> Svuota storico
                   </button>
                 )
               ) : (

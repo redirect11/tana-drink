@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { storiaOrdine, quando } from '../lib/storiaOrdine.js'
+import { storiaOrdine, quando } from '../lib/storiaOrdine.js'
+import Icona from './Icona.jsx'
 
 // ── LA STORIA DEL CONTO, e il suo RIPRISTINO ─────────────────────────
 // Due pannelli che vanno insieme: uno racconta cos'è successo al conto,
@@ -26,7 +27,7 @@ export function StoriaOrdineDialog({ order, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>🕘 Storia del conto</h3>
+          <h3 style={{ margin: 0 }}><Icona nome="orario" gruppo="tasti" /> Storia del conto</h3>
           <button className="btn ghost small" onClick={onClose}>✕</button>
         </div>
         {eventi.length === 0 ? (
@@ -73,7 +74,7 @@ export function RipristinaOrdineDialog({ order, onConferma, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>♻️ Rimettere in corso il conto?</h3>
+          <h3 style={{ margin: 0 }}><Icona nome="riapri" gruppo="tasti" /> Rimettere in corso il conto?</h3>
           <button className="btn ghost small" onClick={onClose}>✕</button>
         </div>
         <p className="muted small" style={{ margin: '10px 0 0' }}>
@@ -111,7 +112,7 @@ export function RipristinaOrdineDialog({ order, onConferma, onClose }) {
               onConferma(motivo.trim() || null)
             }}
           >
-            ♻️ Riapri
+            <Icona nome="riapri" gruppo="tasti" /> Riapri
           </button>
         </div>
       </div>

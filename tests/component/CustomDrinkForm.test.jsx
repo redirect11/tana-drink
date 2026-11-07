@@ -219,9 +219,9 @@ describe('la finestra della ricetta', () => {
         initial={{ name: 'Negroni', price: 8, recipe_items: [], note: '' }}
       />
     )
-    const nuova = await screen.findByRole('button', { name: '✨ Salva nuova' })
+    const nuova = await screen.findByRole('button', { name: 'Salva nuova' })
     const gruppo = nuova.closest('.cd-azioni')
     const tasti = [...gruppo.querySelectorAll('button')].map((b) => b.textContent.trim())
-    expect(tasti).toEqual(['Annulla', 'Salva 8,00\u00a0€', '✨ Salva nuova'])
+    expect(tasti).toEqual(['Annulla', 'Salva 8,00\u00a0€', 'Salva nuova'])
   })
 })

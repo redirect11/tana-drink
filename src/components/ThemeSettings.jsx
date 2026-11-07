@@ -157,7 +157,7 @@ function CardDellaCoda({ settings, onSave }) {
           className={`mode-option${colore ? ' active' : ''}`}
           onClick={() => onSave({ bordo_colore_conto: true })}
         >
-          🎨 Il colore del conto
+          <Icona nome="temi" gruppo="tasti" /> Il colore del conto
         </button>
       </div>
     </div>
@@ -323,7 +323,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
 
       {!customizing ? (
         <button className="btn ghost small" onClick={startCustomize}>
-          🎛 Personalizza colori
+          <Icona nome="regola" gruppo="tasti" /> Personalizza colori
         </button>
       ) : (
         <div style={{ marginTop: 8 }}>
@@ -347,7 +347,7 @@ function ThemeEditor({ title, hint, value, onSave, livePreview = false }) {
               ↩︎ Ripristina preset
             </button>
             <button className="btn small" onClick={saveCustom}>
-              💾 Salva tema
+              <Icona nome="salva" gruppo="tasti" /> Salva tema
             </button>
           </div>
         </div>

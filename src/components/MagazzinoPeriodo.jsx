@@ -3,7 +3,8 @@ import { fetchInventoryItems, fetchStockMovementsSince } from '../lib/api.js'
 import { magazzinoNelPeriodo } from '../lib/magazzinoPeriodo.js'
 import { formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
+import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
+import Icona from './Icona.jsx'
 
 // ── IL MAGAZZINO NEL PERIODO SCELTO (REQ-STAT-002) ───────────────────
 //
@@ -40,7 +41,7 @@ export default function MagazzinoPeriodo({ dal, al, da = null, a = null, cutoffH
     <div className="card">
       <div className="row between" style={{ alignItems: 'center' }}>
         <h3 className="cat-header" style={{ margin: 0 }}>
-          📦 Magazzino nel periodo
+          <Icona nome="magazzino" gruppo="tasti" /> Magazzino nel periodo
         </h3>
         <button
           type="button"

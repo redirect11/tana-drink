@@ -5,7 +5,8 @@ import { drinkSpeciali, immagineVoce, PERCORSO_SPECIALI } from '../lib/speciali.
 import { formatPrice } from '../lib/orderStatus.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
-import ToggleRow from './ToggleRow.jsx'
+import ToggleRow from './ToggleRow.jsx'
+import Icona from './Icona.jsx'
 
 // IL MENÙ SPECIAL, DAL GESTIONALE (REQ-MENU-018): il titolo e il
 // sottotitolo della pagina, gli special segnati, e il QR da stampare sul
@@ -35,7 +36,7 @@ export default function SpecialManager({ drinks, onEdit }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0 }}>✨ Menù Special</h3>
+      <h3 style={{ marginTop: 0 }}><Icona nome="special" gruppo="tasti" /> Menù Special</h3>
       <p className="muted small" style={{ margin: '0 0 10px' }}>
         Le voci segnate come «Drink speciale» nella loro scheda. Il QR qui sotto apre solo il menù Special; il QR
         dei tavoli apre il menù completo, con gli Special in cima.
@@ -82,7 +83,7 @@ export default function SpecialManager({ drinks, onEdit }) {
                   <span className="inv-row-name">{d.name}</span>
                   <span className="muted small inv-row-price">{formatPrice(d.price)}</span>
                   <button type="button" className="btn ghost small" onClick={() => onEdit(d.id)} aria-label={`Modifica ${d.name}`}>
-                    ✏️
+                    <Icona nome="modifica" gruppo="tasti" />
                   </button>
                 </div>
               </div>

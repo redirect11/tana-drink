@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { formatPrice } from '../lib/orderStatus.js'
 import { paidAmount } from '../lib/pagamento.js'
 import { destinazioneConto } from '../lib/coda.js'
-import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
+import { COLORI_CONTO, coloreDelConto } from '../lib/coloriConto.js'
+import Icona from './Icona.jsx'
 
 // ── QUELLO CHE LE DUE LAVAGNE A CORSIE HANNO IN COMUNE ───────────────
 //
@@ -240,7 +241,7 @@ export function BolloAcconto({ order }) {
   if (order?.payment_status !== 'parziale') return null
   return (
     <span className="pill acconto small" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-      💳 Acconto
+      <Icona nome="carta" gruppo="tasti" /> Acconto
     </span>
   )
 }

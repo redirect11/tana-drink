@@ -19,7 +19,8 @@ import {
   tappeComanda,
 } from '../lib/comande.js'
 import PreparazioneParziale from './PreparazioneParziale.jsx'
-import ScegliConsegna from './ScegliConsegna.jsx'
+import ScegliConsegna from './ScegliConsegna.jsx'
+import Icona from './Icona.jsx'
 
 // ── IL DETTAGLIO DI UNA COMANDA ──────────────────────────────────────
 //
@@ -109,10 +110,10 @@ export default function ComandaDetail({
               quello che poi porta il conto al tavolo. */}
           {order.payment_status === 'parziale' && (
             <span className="pill acconto" title={`Già incassati ${formatPrice(paidAmount(order))}`}>
-              💳 Acconto
+              <Icona nome="carta" gruppo="tasti" /> Acconto
             </span>
           )}
-          {order.payment_status === 'pagato' && <span className="pill pagato">💶 Pagato</span>}
+          {order.payment_status === 'pagato' && <span className="pill pagato"><Icona nome="contanti" gruppo="tasti" /> Pagato</span>}
           <span className="muted small comanda-det-eta">
             {daQuanto(comanda.created_at || order.created_at)}
           </span>
@@ -125,7 +126,7 @@ export default function ComandaDetail({
       <div className="steps comanda-det-passi">
         {tappeComanda(comanda).map((t) => (
           <div className={`step${t.fatta ? ' done' : ''}${t.adesso ? ' active' : ''}`} key={t.stato}>
-            {STATUS_EMOJI[t.stato]}
+            <Icona nome={STATUS_EMOJI[t.stato]} gruppo="tasti" />
             <br />
             {statoAlBanco(t.stato, order.service_mode)}
             <br />
@@ -218,7 +219,7 @@ export default function ComandaDetail({
               className="btn ghost small block comanda-det-dividi"
               onClick={() => setDividendo(true)}
             >
-              ✂️ Preparazione parziale
+              <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
             </button>
           ))}
         {/* ── SERVIZIO O RITIRO ──────────────────────────────
@@ -244,7 +245,7 @@ export default function ComandaDetail({
           </div>
         )}
         <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
-          🖨 Ristampa la comanda
+          <Icona nome="stampa" gruppo="tasti" /> Ristampa la comanda
         </button>
       </div>
       </div>

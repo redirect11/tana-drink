@@ -28,7 +28,8 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import VipTab from './VipTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
-import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
+import Icona from './Icona.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -177,7 +178,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       <div className="row" style={{ gap: 6 }}>
         {RUOLI.includes(u.role) && u.uid !== myUid && !u.disabled && (
           pendingCalls.some((c) => c.to_uid === u.uid) ? (
-            <span className="pill in_preparazione">📟 In chiamata…</span>
+            <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
           ) : (
             <button
               className="btn small"
@@ -185,7 +186,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
               title="Chiama (cerca-persone)"
               onClick={() => setCallTarget(u)}
             >
-              📟
+              <Icona nome="lettore" gruppo="tasti" />
             </button>
           )
         )}
@@ -200,7 +201,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setCambioRuolo(u)
               }}
             >
-              🎚 Ruolo
+              <Icona nome="ruolo" gruppo="tasti" /> Ruolo
             </button>
             <button
               className="btn ghost small"
@@ -232,7 +233,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 })
               }
             >
-              🗑
+              <Icona nome="elimina" gruppo="tasti" />
             </button>
           </>
         )}
@@ -442,7 +443,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {callTarget && (
         <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.name || callTarget.email}</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="lettore" gruppo="tasti" /> Chiama {callTarget.name || callTarget.email}</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Il dispositivo vibrerà con insistenza finché non risponde.
             </p>
@@ -457,7 +458,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 Annulla
               </button>
               <button className="btn grow" onClick={sendCall}>
-                📟 Chiama
+                <Icona nome="lettore" gruppo="tasti" /> Chiama
               </button>
             </div>
           </div>

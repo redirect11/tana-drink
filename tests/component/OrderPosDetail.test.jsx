@@ -1948,7 +1948,7 @@ describe('la riga modificata a mano resta modificata', () => {
     const prezzo = await screen.findByLabelText(/Prezzo/)
     await user.clear(prezzo)
     await user.type(prezzo, '12')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await user.click(screen.getByRole('button', { name: /^Salva \d/ }))
     unmount()
 
     await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled())

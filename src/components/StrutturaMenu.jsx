@@ -33,7 +33,8 @@ import { perNome } from '../lib/macros.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { immagineVoce, segnapostoDrink } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
-import ConfirmDialog from './ConfirmDialog.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
+import Icona from './Icona.jsx'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -278,7 +279,7 @@ function Voce({ voce, drink, snella, gruppi, sezioni, immagini, primo, ultimo, s
       piede={
         <>
           <div className="struttura-collegamento">
-            <span className="wys-etichetta">🔗 Prodotto della cassa</span>
+            <span className="wys-etichetta"><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</span>
             {drink && !cambia ? (
               <div className="struttura-prodotto">
                 <span className="small">
@@ -323,7 +324,7 @@ function Voce({ voce, drink, snella, gruppi, sezioni, immagini, primo, ultimo, s
               ↓
             </button>
             <button className="btn ghost small" aria-label={`Togli ${nome} dalla sezione`} onClick={() => eliminaVoceCarta(voce.id)}>
-              🗑
+              <Icona nome="elimina" gruppo="tasti" />
             </button>
           </div>
         </>
@@ -507,7 +508,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
   return (
     <div className="struttura-menu">
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>📖 Menù dei clienti</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="ordina-dal-menu" gruppo="tasti" /> Menù dei clienti</h3>
         {personalizzata ? (
           <>
             <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -516,7 +517,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
               dal campo. Il personale ordina sempre dal menù della cassa.
             </p>
             <dl className="struttura-legenda small">
-              <dt>🔗 Prodotto della cassa</dt>
+              <dt><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</dt>
               <dd>
                 Ogni voce è collegata a un prodotto della cassa, da cui prende prezzo e disponibilità; l'ordine arriva al
                 banco con quel prodotto, col nome letto dal cliente nella nota. Lo stesso prodotto può stare in più
@@ -542,7 +543,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
             {personalizzata ? 'Riparti dalle voci della cassa' : 'Prepopola con le voci della cassa'}
           </button>
           <a className="btn ghost small" href={PERCORSO_ANTEPRIMA} target="_blank" rel="noreferrer">
-            👁 Anteprima del menù dei clienti
+            <Icona nome="mostra" gruppo="tasti" /> Anteprima del menù dei clienti
           </a>
         </div>
       </div>
@@ -603,7 +604,7 @@ export default function StrutturaMenu({ carta, drinks, categories, disegni = fal
                     ↓
                   </button>
                   <button className="btn ghost small" aria-label={`Elimina la sezione ${nome}`} onClick={() => eliminaSezione(s)}>
-                    🗑
+                    <Icona nome="elimina" gruppo="tasti" />
                   </button>
                 </div>
 

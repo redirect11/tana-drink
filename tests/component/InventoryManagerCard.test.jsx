@@ -443,7 +443,7 @@ describe('la casella «è una scorta» non c’è più', () => {
     render(<InventoryManager />)
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: /Tempo di Lavorazione/ }))
-    await user.click(screen.getByRole('button', { name: '✏️ Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
     expect(screen.queryByRole('checkbox', { name: /È una scorta/ })).toBeNull()
     expect(screen.getByLabelText(/Soglia di avviso/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Salva' }))
@@ -461,7 +461,7 @@ describe('un prodotto storico si legge già a pezzi', () => {
     render(<InventoryManager />)
     await screen.findByText('Campari')
     await user.click(screen.getByRole('button', { name: new RegExp(nome) }))
-    await user.click(screen.getByRole('button', { name: '✏️ Modifica' }))
+    await user.click(screen.getByRole('button', { name: 'Modifica' }))
   }
 
   it('chi era già a pezzi non cambia niente, e rilegge il suo contenuto', async () => {

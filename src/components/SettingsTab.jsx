@@ -46,7 +46,8 @@ import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
-import { cambioDentroOrario } from '../lib/orario.js'
+import { cambioDentroOrario } from '../lib/orario.js'
+import Icona from './Icona.jsx'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -463,7 +464,7 @@ export default function SettingsTab({ role = null }) {
                         e quanto resta da pagare.
                       </li>
                       <li>
-                        Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                        Da lì aggiungi un ordine col tasto <Icona nome="nuovo-ordine" gruppo="tasti" />: si apre il POS e l’ordine
                         nasce già dentro il gruppo.
                       </li>
                       <li>
@@ -586,7 +587,7 @@ export default function SettingsTab({ role = null }) {
               </div>
               {cambioDentroOrario(settings.business_day_cutoff_hour, settings) && (
                 <p className="muted small" role="alert" style={{ margin: '8px 0 0' }}>
-                  ⚠️ Il cambio di giornata cade dentro l’orario di apertura: una
+                  <Icona nome="avviso" gruppo="segnali" /> Il cambio di giornata cade dentro l’orario di apertura: una
                   serata verrebbe divisa su due giornate.
                 </p>
               )}
@@ -1052,11 +1053,11 @@ export default function SettingsTab({ role = null }) {
                       )
                     }}
                   >
-                    📍 Usa la mia posizione attuale
+                    <Icona nome="posizione" gruppo="tasti" /> Usa la mia posizione attuale
                   </button>
                   {settings.venue_lat == null && (
                     <p className="muted small" style={{ margin: '8px 0 0' }}>
-                      ⚠️ Senza coordinate il controllo non è attivo.
+                      <Icona nome="avviso" gruppo="segnali" /> Senza coordinate il controllo non è attivo.
                     </p>
                   )}
                 </>
@@ -1074,7 +1075,7 @@ export default function SettingsTab({ role = null }) {
       // l'indicazione, perché chi li cercava li cercava qui.
       nodo: (
         <div className="card settings-section">
-          <h3>🔔 Notifiche</h3>
+          <h3><Icona nome="notifiche" gruppo="tasti" /> Notifiche</h3>
           <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
             Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
             il tablet della cassa e il telefono in sala vogliono cose diverse,
@@ -1082,7 +1083,7 @@ export default function SettingsTab({ role = null }) {
             insieme allo storico di quelli arrivati qui.
           </p>
           <Link className="btn small" to="/profilo-staff">
-            👤 Vai al mio profilo
+            <Icona nome="profilo" gruppo="tasti" /> Vai al mio profilo
           </Link>
 
         </div>
@@ -1445,7 +1446,7 @@ function ReaderPairing({ settings }) {
       {settings.sumup_reader_id ? (
         <div className="toggle-row">
           <div>
-            <div>📟 {settings.sumup_reader_name || 'Lettore SumUp'}</div>
+            <div><Icona nome="lettore" gruppo="tasti" /> {settings.sumup_reader_name || 'Lettore SumUp'}</div>
             <div className="desc">Lettore associato e pronto all&apos;incasso.</div>
           </div>
           <button className="btn ghost small" disabled={busy} onClick={() => setConfirmUnpair(true)}>

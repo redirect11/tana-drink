@@ -1,5 +1,6 @@
 import { ASSORTIMENTI, assortimentoDi } from '../lib/inventory.js'
-import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
+import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
+import Icona from './Icona.jsx'
 
 // ── IL FILTRO PER ASSORTIMENTO, UNO SOLO PER DUE SCHERMATE ───────────
 //
@@ -17,9 +18,9 @@ import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
 // è lì che si impara cosa vuol dire il bollino, senza una legenda a parte.
 // I nomi in parole e le spiegazioni stanno in `lib/assortimento.js`.
 const ASSORTIMENTO_LABEL = {
-  assortimento: <>📦 In assortimento</>,
-  linea: <>🍾 In linea</>,
-  premium: <>👑 Premium</>,
+  assortimento: <><Icona nome="magazzino" gruppo="tasti" /> In assortimento</>,
+  linea: <><Icona nome="in-linea" gruppo="tasti" /> In linea</>,
+  premium: <><Icona nome="premium" gruppo="tasti" /> Premium</>,
   out: (
     <>
       <span className="badge-empty">OUT</span> Fuori assortimento
