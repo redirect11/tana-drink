@@ -8,7 +8,8 @@
   misura, al posto delle emoji colorate: per ora il menu laterale, le
   sezioni e le sottosezioni, la barra in alto e i moduli del Marketplace.
   In Impostazioni → Aspetto → «Le icone del gestionale» si possono
-  rimettere le emoji (REQ-UI-031).
+  rimettere le emoji, a parte per navigazione, tasti e stati, segnali e
+  messaggi (REQ-UI-031).
 
 ### Moduli
 

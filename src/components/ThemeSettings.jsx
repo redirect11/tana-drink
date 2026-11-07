@@ -4,7 +4,7 @@ import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRi
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import Icona, { TemaIcone } from './Icona.jsx'
-import { temaIconeDi } from '../lib/icone.js'
+import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -51,23 +51,55 @@ export default function ThemeSettings({ settings, onSave }) {
 // Flavio, 07/11/2026: le emoji colorate «danno un senso un po' troppo a
 // pazziella»; nei programmi professionali le icone sono silhouette
 // monocrome. «Silhouette» è il tema di partenza (decisione dell'utente);
-// «Emoji» rimette quelle di prima. Ogni scelta mostra le stesse cinque
-// icone nel suo tema, così si vede cosa si sceglie prima di sceglierlo.
-const ICONE_DI_PROVA = ['coda', 'cassa', 'magazzino', 'stampa', 'impostazioni']
+// «Emoji» rimette quelle di prima. UN TEMA PER GRUPPO (decisione
+// dell'utente, 07/11/2026): navigazione, tasti e stati, segnali e messaggi
+// si scelgono a parte. Ogni scelta mostra cinque icone del suo gruppo nel
+// suo tema, così si vede cosa si sceglie prima di sceglierlo.
+const ICONE_DI_PROVA = {
+  navigazione: ['coda', 'cassa', 'magazzino', 'staff', 'impostazioni'],
+  tasti: ['modifica', 'elimina', 'aggiungi', 'stampa', 'contanti'],
+  segnali: ['avviso', 'fatto', 'attesa', 'licenza', 'cerca'],
+}
+const DESCRIZIONE_GRUPPO = {
+  navigazione: 'Menu laterale, sezioni e sottosezioni, barra in alto, moduli.',
+  tasti: 'Tasti, titoli delle sezioni, metodi di pagamento, stati dei conti.',
+  segnali: 'Avvisi e conferme nei testi, messaggi, campi di ricerca.',
+}
 
 function IconeDelGestionale({ settings, onSave }) {
-  const tema = temaIconeDi(settings)
-  const scelta = (id, nome) => (
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Il disegno delle icone del gestionale, gruppo per gruppo. Le pagine dei clienti seguono lo stile del
+        loro menù. I segnali di stato restano colorati in entrambi i casi.
+      </p>
+      {Object.entries(GRUPPI_ICONE).map(([gruppo, g]) => (
+        <SceltaIcone
+          key={gruppo}
+          gruppo={gruppo}
+          label={g.label}
+          tema={temaIconeDi(settings, gruppo)}
+          scegli={(id) => onSave({ [g.chiave]: id })}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SceltaIcone({ gruppo, label, tema, scegli }) {
+  const opzione = (id, nome) => (
     <button
       type="button"
       className={`mode-option${tema === id ? ' active' : ''}`}
       aria-pressed={tema === id}
-      onClick={() => onSave({ tema_icone: id })}
+      aria-label={`${label}: ${nome}`}
+      onClick={() => scegli(id)}
     >
-      <TemaIcone.Provider value={id}>
+      <TemaIcone.Provider value={{ [gruppo]: id }}>
         <span className="icone-prova" aria-hidden="true">
-          {ICONE_DI_PROVA.map((n) => (
-            <Icona key={n} nome={n} />
+          {ICONE_DI_PROVA[gruppo].map((n) => (
+            <Icona key={n} nome={n} gruppo={gruppo} />
           ))}
         </span>
       </TemaIcone.Provider>{' '}
@@ -75,15 +107,14 @@ function IconeDelGestionale({ settings, onSave }) {
     </button>
   )
   return (
-    <div style={{ marginTop: 18 }}>
-      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
-      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
-        Il disegno delle icone di menu, sezioni e tasti del gestionale. Le pagine dei clienti seguono lo
-        stile del loro menù. I segnali di stato restano colorati in entrambi i casi.
-      </p>
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
+      <div className="muted" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+        {DESCRIZIONE_GRUPPO[gruppo]}
+      </div>
       <div className="mode-choice">
-        {scelta('silhouette', 'Silhouette')}
-        {scelta('emoji', 'Emoji')}
+        {opzione('silhouette', 'Silhouette')}
+        {opzione('emoji', 'Emoji')}
       </div>
     </div>
   )

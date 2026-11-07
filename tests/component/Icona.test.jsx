@@ -14,7 +14,9 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import Icona, { TemaIcone } from '../../src/components/Icona.jsx'
 
-const nelTema = (tema, nodo) => render(<TemaIcone.Provider value={tema}>{nodo}</TemaIcone.Provider>)
+// Il contesto porta il tema di ogni gruppo; le prove dicono quello della
+// navigazione, che è il gruppo di partenza di <Icona>.
+const nelTema = (tema, nodo) => render(<TemaIcone.Provider value={{ navigazione: tema }}>{nodo}</TemaIcone.Provider>)
 
 describe('<Icona>', () => {
   it('in Silhouette è un disegno a tratto, del colore del testo, e nascosto ai lettori di schermo', () => {
@@ -57,13 +59,31 @@ describe('<Icona>', () => {
   })
 })
 
+describe('i gruppi', () => {
+  it('ogni icona segue il tema del suo gruppo, non degli altri', () => {
+    const { container } = render(
+      <TemaIcone.Provider value={{ navigazione: 'silhouette', tasti: 'emoji' }}>
+        <Icona nome="cassa" />
+        <Icona nome="elimina" gruppo="tasti" />
+      </TemaIcone.Provider>
+    )
+    expect(container.querySelectorAll('svg')).toHaveLength(1)
+    expect(container.textContent).toBe('🗑')
+  })
+})
+
 describe('la scelta in Aspetto', () => {
-  it('di partenza è Silhouette, e toccando Emoji si salva', async () => {
+  // L'utente, 07/11/2026: un selettore per gruppo.
+  it('un selettore per gruppo, di partenza Silhouette; ognuno salva la sua chiave', async () => {
     const { default: ThemeSettings } = await import('../../src/components/ThemeSettings.jsx')
     const onSave = vi.fn()
     render(<ThemeSettings settings={{ theme_staff: { preset: 'tana-scuro' } }} onSave={onSave} />)
-    expect(screen.getByRole('button', { name: /Silhouette/ })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(screen.getByRole('button', { name: /Emoji/ }))
-    expect(onSave).toHaveBeenCalledWith({ tema_icone: 'emoji' })
+    for (const gruppo of ['Navigazione', 'Tasti e stati', 'Segnali e messaggi']) {
+      expect(screen.getByRole('button', { name: `${gruppo}: Silhouette` })).toHaveAttribute('aria-pressed', 'true')
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Tasti e stati: Emoji' }))
+    expect(onSave).toHaveBeenCalledWith({ tema_icone_tasti: 'emoji' })
+    await userEvent.click(screen.getByRole('button', { name: 'Segnali e messaggi: Emoji' }))
+    expect(onSave).toHaveBeenCalledWith({ tema_icone_segnali: 'emoji' })
   })
 })

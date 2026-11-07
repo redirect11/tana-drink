@@ -171,10 +171,36 @@ export const VOCABOLARIO = Object.freeze({
 export const TEMI_ICONE = Object.freeze(['silhouette', 'emoji'])
 export const TEMA_ICONE_DI_PARTENZA = 'silhouette'
 
-// Il tema delle icone del locale: quello scritto, se è uno dei due, se no
-// quello di partenza.
-export const temaIconeDi = (settings) =>
-  TEMI_ICONE.includes(settings?.tema_icone) ? settings.tema_icone : TEMA_ICONE_DI_PARTENZA
+// TRE GRUPPI, OGNUNO COL SUO TEMA (decisione dell'utente, 07/11/2026: «il
+// selettore del tema deve essere separato» per ogni fase). Si sceglie a
+// parte per:
+//   navigazione — menu laterale, sezioni e sottosezioni, barra, foglio del
+//                 telefono, moduli del Marketplace;
+//   tasti       — tasti, titoli di sezione, metodi di pagamento, stati dei
+//                 conti;
+//   segnali     — gli avvisi nei testi, i messaggi, i campi di ricerca.
+// Ogni gruppo ha la sua chiave su settings/bar.
+export const GRUPPI_ICONE = Object.freeze({
+  navigazione: { chiave: 'tema_icone_navigazione', label: 'Navigazione' },
+  tasti: { chiave: 'tema_icone_tasti', label: 'Tasti e stati' },
+  segnali: { chiave: 'tema_icone_segnali', label: 'Segnali e messaggi' },
+})
+export const GRUPPO_DI_PARTENZA = 'navigazione'
+
+// Il tema di un gruppo: quello scritto, se è uno dei due, se no quello di
+// partenza.
+export function temaIconeDi(settings, gruppo = GRUPPO_DI_PARTENZA) {
+  const scritto = settings?.[GRUPPI_ICONE[gruppo]?.chiave]
+  return TEMI_ICONE.includes(scritto) ? scritto : TEMA_ICONE_DI_PARTENZA
+}
+
+// I temi di tutti i gruppi, come li vuole il contesto di <Icona>.
+export const temiIconeDi = (settings) =>
+  Object.fromEntries(Object.keys(GRUPPI_ICONE).map((g) => [g, temaIconeDi(settings, g)]))
+
+// Tutti i gruppi con le emoji: chi non è dello staff (le pagine del
+// cliente hanno lo stile del loro menù).
+export const TUTTE_EMOJI = Object.freeze(Object.fromEntries(Object.keys(GRUPPI_ICONE).map((g) => [g, 'emoji'])))
 
 const senzaVariante = (s) => String(s || '').replace(/[︎️]/g, '')
 

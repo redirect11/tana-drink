@@ -83,7 +83,7 @@ import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
 import Icona, { TemaIcone } from './components/Icona.jsx'
-import { temaIconeDi } from './lib/icone.js'
+import { temiIconeDi, TUTTE_EMOJI } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
@@ -478,7 +478,7 @@ export default function App() {
     // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
     // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
     // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
-    <TemaIcone.Provider value={staffRole ? temaIconeDi(settings) : 'emoji'}>
+    <TemaIcone.Provider value={staffRole ? temiIconeDi(settings) : TUTTE_EMOJI}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">
