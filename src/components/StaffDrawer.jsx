@@ -445,7 +445,7 @@ function ChiamaIlBancone() {
     const u = auth.currentUser
     chiamaIlBancone({ from_uid: uid, from_email: u?.email ?? null, from_name: u?.displayName ?? null })
     setInAttesa(true)
-    toastSuccess('📟 Chiamata inviata al bancone')
+    toastSuccess('Chiamata inviata al bancone', { icona: 'chiama-bancone' })
   }
   return (
     <div

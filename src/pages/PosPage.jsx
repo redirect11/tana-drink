@@ -6,7 +6,7 @@ import Caricamento from '../components/Caricamento.jsx'
 import AvvisoPiano from '../components/AvvisoPiano.jsx'
 import { subscribeSettings, settingsIniziali } from '../lib/api.js'
 import { maxContiAperti, puoAprireConto, MESSAGGI_PIANO } from '../lib/limiti.js'
-import { useContiAperti } from '../lib/useContiAperti.js'
+import { useContiAperti } from '../lib/useContiAperti.js'
 import Icona from '../components/Icona.jsx'
 
 // ── POS cassa: CREAZIONE di un ordine nuovo ────────────────────────────────

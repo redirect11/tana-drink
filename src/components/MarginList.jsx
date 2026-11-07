@@ -4,7 +4,7 @@ import { marginReport, ordinaMargini, marginiPerCategoria } from '../lib/pricing
 import { formatPrice } from '../lib/orderStatus.js'
 import { catColor } from '../lib/categoryColors.js'
 import SortTh from './SortTh.jsx'
-import GruppoChip from './GruppoChip.jsx'
+import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 
 // MARGINALITÀ DEL LISTINO: per ogni drink con ricetta, quanto costa

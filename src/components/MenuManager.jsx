@@ -30,8 +30,9 @@ import { saveDrinkFromForm } from '../lib/saveDrink.js'
 import CategoryRail from './CategoryRail.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
-import { disegniDelLocale } from '../lib/stileMenu.js'
+import { disegniDelLocale } from '../lib/stileMenu.js'
 import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -54,6 +55,7 @@ const EMPTY = {
 }
 
 export default function MenuManager() {
+  const testoConIcona = useTestoConIcona()
   // Cosa dice la striscia delle schede: lo sceglie il locale, in
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(settingsIniziali)
@@ -435,7 +437,7 @@ export default function MenuManager() {
           <input
             type="search"
             className="menu-search"
-            placeholder="🔍 Cerca drink, ingrediente, categoria…"
+            placeholder={testoConIcona('cerca', 'Cerca drink, ingrediente, categoria…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ marginTop: 10 }}

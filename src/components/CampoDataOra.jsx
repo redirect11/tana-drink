@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import GrigliaMese from './GrigliaMese.jsx'
+import GrigliaMese from './GrigliaMese.jsx'
 import Icona from './Icona.jsx'
 
 // ── DATA E ORA, COL CALENDARIO DELL'APP (REQ-STAT-007) ─────────────────

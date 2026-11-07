@@ -342,8 +342,8 @@ describe('aggiunte: la nuova comanda è gestita internamente', () => {
         ],
       })
     )
-    expect(screen.getByRole('button', { name: /🔗 Unisci/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /⑃ Separa/ })).toBeNull()
+    expect(screen.getByRole('button', { name: /Unisci/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Separa' })).toBeNull()
 
     // ANCHE NEL ⋯ LA VOCE È UNA SOLA, e dice la stessa cosa del tasto:
     // erano due righe di menu con una sempre spenta. Qui c'è da unire,
@@ -832,7 +832,7 @@ describe('tasti sempre presenti, spenti se non servono', () => {
 
   it('e si accende quando l’azione diventa possibile', async () => {
     await mount(baseOrder()) // 2 Mojito su una riga → si possono separare
-    expect(screen.getByRole('button', { name: /⑃ Separa/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Separa' })).toBeEnabled()
   })
 
   it('Comande c’è sempre: sul conto aperto è attivo', async () => {
@@ -2116,7 +2116,7 @@ describe('preparazione parziale di una comanda', () => {
 // deve vedere cosa è al banco e cosa è già uscito.
 describe('le righe del conto dicono a che punto sono', () => {
   const titoli = () =>
-    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent)
+    [...document.querySelectorAll('.posd-gruppo')].map((n) => n.textContent.trim())
 
   it('con una comanda sola non c’è nessun titolo: sarebbe un titolo per dire una cosa sola', async () => {
     await mount(baseOrder())
@@ -2199,7 +2199,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         })
       )
       // un titolo solo, quello dei pagati: nessun passo del servizio
-      expect(titoli()).toEqual(['💳 Pagati'])
+      expect(titoli()).toEqual(['Pagati'])
       // e sta in fondo: le righe ancora da pagare vengono prima
       const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')]
       expect(righe.at(-1).className).toContain('draft-line')
@@ -2224,7 +2224,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         ],
       })
     )
-    expect(titoli()).toEqual(['🍹 In preparazione', '🔔 Pronto'])
+    expect(titoli()).toEqual(['In preparazione', 'Pronto'])
     // e le righe stanno sotto il titolo giusto, in ordine di lavorazione
     const righe = [...document.querySelectorAll('.posd-gruppo, .draft-line')].map((n) =>
       n.textContent.replace(/\s+/g, ' ').trim()
@@ -2256,7 +2256,7 @@ describe('le righe del conto dicono a che punto sono', () => {
         ],
       })
     )
-    expect(titoli()).toEqual(['🍹 In preparazione', '💳 Pagati'])
+    expect(titoli()).toEqual(['In preparazione', 'Pagati'])
   })
 })
 
@@ -2534,7 +2534,9 @@ describe('lo stato della lavorazione sta nella barra in alto', () => {
       expect(pastiglia().textContent).toMatch(/Da fare/)
       expect(document.querySelector('.posd-aperto')).toBeNull()
       const conto = barra().querySelector('.posd-conto-stato')
-      expect(conto.textContent.trim()).toBe('🟢')
+      // Il solo segno: il pallino verde, che resta colorato in ogni tema.
+      expect(conto.querySelector('.icona-pallino-verde')).not.toBeNull()
+      expect(conto.textContent.trim()).toBe('')
       expect(conto.getAttribute('title')).toBe('Stato del conto: Conto aperto')
     })
 

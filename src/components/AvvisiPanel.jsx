@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
-import ToggleRow from './ToggleRow.jsx'
+import ToggleRow from './ToggleRow.jsx'
 import Icona from './Icona.jsx'
 import {
   avvisiPerRuolo,
@@ -56,15 +56,15 @@ export default function AvvisiPanel({ gestore }) {
       <h4>Dove compaiono, ad app aperta</h4>
       <div className="mode-choice">
         {[
-          ['toast', '🔔 In alto, ovunque'],
-          ['fumetto', '💬 Dalla campanella, solo in coda'],
-        ].map(([value, label]) => (
+          ['toast', 'notifiche', 'In alto, ovunque'],
+          ['fumetto', 'fumetto', 'Dalla campanella, solo in coda'],
+        ].map(([value, icona, label]) => (
           <button
             key={value}
             className={`mode-option${stile === value ? ' active' : ''}`}
             onClick={() => setStile(scegliStileAvvisi(value))}
           >
-            {label}
+            <Icona nome={icona} gruppo="tasti" /> {label}
           </button>
         ))}
       </div>

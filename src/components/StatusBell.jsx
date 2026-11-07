@@ -16,7 +16,7 @@ import { statoPush, getPushToken } from '../lib/push.js'
 import { staffTokenRegistrato, saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { auth } from '../lib/firebaseClient.js'
-import { ensureNotificationPermission } from '../lib/notify.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
 import Icona from './Icona.jsx'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
@@ -187,7 +187,7 @@ export default function StatusBell({ floating = false }) {
             {sync.phase === 'error' ? (
               <div className="status-bell-sync err">
                 <div>
-                  ⚠️ <strong>{sync.failedCount}</strong> modifica{sync.failedCount === 1 ? '' : 'e'} non sincronizzat{sync.failedCount === 1 ? 'a' : 'e'}
+                  <Icona nome="avviso" gruppo="segnali" />{' '}<strong>{sync.failedCount}</strong> modifica{sync.failedCount === 1 ? '' : 'e'} non sincronizzat{sync.failedCount === 1 ? 'a' : 'e'}
                   {sync.lastError ? <span className="muted"> · {sync.lastError}</span> : null}
                 </div>
                 {/* QUELLE CHE NON PASSERANNO. Un documento cancellato o un
@@ -276,7 +276,7 @@ export default function StatusBell({ floating = false }) {
                 className="btn ghost small grow"
                 onClick={() => setStorico((v) => !v)}
               >
-                {storico ? '← Da leggere' : `📜 Storico${notifs.archivio.length ? ` (${notifs.archivio.length})` : ''}`}
+                {storico ? '← Da leggere' : <><Icona nome="movimenti" gruppo="tasti" /> Storico{notifs.archivio.length ? ` (${notifs.archivio.length})` : ''}</>}
               </button>
               {storico ? (
                 notifs.archivio.length > 0 && (

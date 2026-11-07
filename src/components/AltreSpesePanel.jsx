@@ -5,7 +5,7 @@ import {
   aggiornaAltraSpesa,
   eliminaAltraSpesa,
 } from '../lib/api.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
 import {
   totaleSpesa,
@@ -195,7 +195,7 @@ export default function AltreSpesePanel() {
                   }
                   onClick={() => cambiaComprata(s)}
                 >
-                  {s.bought ? '✅ comprata' : '🛒 da comprare'}
+                  {s.bought ? <><Icona nome="fatto" gruppo="tasti" /> comprata</> : <><Icona nome="carrello" gruppo="tasti" /> da comprare</>}
                 </button>
               </div>
               <button

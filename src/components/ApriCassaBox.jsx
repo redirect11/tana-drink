@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { openCashSession, settingsIniziali, subscribeSettings } from '../lib/api.js'
 import { toastError } from '../lib/toast.js'
-import { listStaff, staffFromCache } from '../lib/staffApi.js'
+import { listStaff, staffFromCache } from '../lib/staffApi.js'
 import Icona from './Icona.jsx'
 import {
   operatoreCorrente,

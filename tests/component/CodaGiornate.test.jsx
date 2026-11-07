@@ -236,7 +236,7 @@ describe('la riga che separa le giornate', () => {
   it('fra i conti IN CORSO dice che sono rimasti da chiudere', async () => {
     montaCoda()
     await screen.findByText('#11')
-    expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
+    expect(separatori()).toEqual(['Da chiudere · ieri'])
   })
 
   it('coi soli CHIUSI dice «Chiusi», non «Da chiudere»', async () => {
@@ -245,7 +245,7 @@ describe('la riga che separa le giornate', () => {
     await screen.findByText('#11')
     await soloStato(utente, /Chiusi/)
     expect(await screen.findByText('#12')).toBeInTheDocument()
-    expect(separatori()).toEqual(['💶 Chiusi · ieri'])
+    expect(separatori()).toEqual(['Chiusi · ieri'])
   })
 
   it('coi soli ANNULLATI dice «Annullati»', async () => {
@@ -254,7 +254,7 @@ describe('la riga che separa le giornate', () => {
     await screen.findByText('#11')
     await soloStato(utente, /Annullati/)
     expect(await screen.findByText('#13')).toBeInTheDocument()
-    expect(separatori()).toEqual(['✖️ Annullati · ieri'])
+    expect(separatori()).toEqual(['Annullati · ieri'])
   })
 
   it('e la riga cambia con lo stato, senza mai mescolarli', async () => {
@@ -268,11 +268,11 @@ describe('la riga che separa le giornate', () => {
     await screen.findByText('#11')
     await soloStato(utente, /Chiusi/)
     expect(await screen.findByText('#12')).toBeInTheDocument()
-    expect(separatori()).toEqual(['💶 Chiusi · ieri'])
+    expect(separatori()).toEqual(['Chiusi · ieri'])
 
     await utente.click(screen.getByRole('button', { name: 'Aperti' }))
     await screen.findByText('#11')
-    expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
+    expect(separatori()).toEqual(['Da chiudere · ieri'])
   })
 })
 
@@ -319,7 +319,7 @@ describe('un conto con la data monca', () => {
     ]
     montaCoda()
     await screen.findByText('#99')
-    expect(separatori()).toEqual(['⏳ Da chiudere · ieri'])
+    expect(separatori()).toEqual(['Da chiudere · ieri'])
   })
 })
 

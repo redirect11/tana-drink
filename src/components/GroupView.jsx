@@ -32,9 +32,9 @@ import {
   splitAmounts,
   canNest,
 } from '../lib/groups.js'
-import { formatPrice, STATUS_EMOJI, statoAlBanco } from '../lib/orderStatus.js'
+import { formatPrice, statoAlBanco, STATUS_ICONA } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
-import { sumupAttivo } from '../lib/licenza.js'
+import { sumupAttivo } from '../lib/licenza.js'
 import Icona from './Icona.jsx'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
@@ -221,7 +221,7 @@ export default function GroupView({ groupId, onClose }) {
         setSumupMsg('Lettore non disponibile su questo ambiente.')
         return
       }
-      setSumupMsg('📟 In corso sul lettore: carta del cliente sul Solo.')
+      setSumupMsg('In corso sul lettore: carta del cliente sul Solo.')
     } catch (e) {
       setError(e.message)
     } finally {
@@ -286,7 +286,7 @@ export default function GroupView({ groupId, onClose }) {
                 #{o.daily_number ?? '—'} {o.customer_name ? `· ${o.customer_name}` : ''}{' '}
                 {workflowOn && (
                   <span className="muted small">
-                    <Icona nome={STATUS_EMOJI[o.workflow_status]} gruppo="tasti" /> {statoAlBanco(o.workflow_status, o.service_mode)}
+                    <Icona nome={STATUS_ICONA[o.workflow_status]} gruppo="tasti" /> {statoAlBanco(o.workflow_status, o.service_mode)}
                   </span>
                 )}
               </span>
@@ -371,14 +371,14 @@ export default function GroupView({ groupId, onClose }) {
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'banco')}
                     >
-                      💶 {splitN} quote
+                      <Icona nome="contanti" gruppo="tasti" />{' '}{splitN} quote
                     </button>
                     <button
                       className="btn"
                       disabled={paying}
                       onClick={() => pay(ids, { count: splitN }, 'carta')}
                     >
-                      💳 {splitN} quote
+                      <Icona nome="carta" gruppo="tasti" />{' '}{splitN} quote
                     </button>
                   </div>
                 </div>
@@ -477,7 +477,8 @@ export default function GroupView({ groupId, onClose }) {
 
       {confirm === 'close' && (
         <ConfirmDialog
-          title="📁 Chiudere il gruppo?"
+          icona="cartella"
+          title="Chiudere il gruppo?"
           message={`“${node.group.name}” verrà archiviato e sparirà dai gruppi aperti.${
             s.remaining > 0 ? ` Attenzione: restano ${formatPrice(s.remaining)} da incassare.` : ''
           } Gli ordini restano dove sono.`}
@@ -492,7 +493,8 @@ export default function GroupView({ groupId, onClose }) {
       )}
       {confirm === 'delete' && (
         <ConfirmDialog
-          title="🗑 Eliminare il gruppo?"
+          icona="elimina"
+          title="Eliminare il gruppo?"
           message={`“${node.group.name}” verrà eliminato. Gli ordini${
             aggregated.length ? ` (${aggregated.length})` : ''
           } restano ma senza etichetta di gruppo${

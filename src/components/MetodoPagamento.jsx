@@ -14,3 +14,13 @@ export default function MetodoPagamento({ metodo }) {
     </>
   )
 }
+
+// Più metodi sullo stesso conto (un conto diviso): uno dopo l'altro, col «+».
+export function MetodiPagamento({ metodi }) {
+  return (metodi || []).map((m, i) => (
+    <span key={m}>
+      {i > 0 && ' + '}
+      <MetodoPagamento metodo={m} />
+    </span>
+  ))
+}

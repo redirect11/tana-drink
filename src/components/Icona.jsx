@@ -1,6 +1,5 @@
-import { createContext, useContext } from 'react'
 import {
-  Archive, BadgePlus, Ban, Banknote, Bell, BellOff, BellRing, BookOpen, Calculator, Calendar,
+  Archive, ArrowDown, ArrowUp, BadgePlus, Ban, Banknote, Bell, BellOff, BellRing, BookOpen, Calculator, Calendar,
   CalendarDays, ChartColumn, ChefHat, Circle, CircleCheck, CircleHelp, CircleX, ClipboardList,
   Clock, Coins, Columns3, ConciergeBell, CreditCard, Crown, Divide, Download, Eraser, Eye, EyeOff,
   Factory, FileText, Flame, FlaskConical, Folder, Funnel, Gift, GlassWater, Globe, Hand, HandHeart,
@@ -9,11 +8,12 @@ import {
   Minimize, Nfc, NotebookText, OctagonX, Package, Palette, Paperclip, PartyPopper, Pause, PenTool,
   Pencil, PersonStanding, Play, Plus, Printer, Puzzle, ReceiptText, RefreshCw, RotateCcw, Save,
   Scale, Scissors, ScrollText, Search, Settings, ShoppingBag, ShoppingCart, SlidersHorizontal,
-  SlidersVertical, Smartphone, SmartphoneNfc, Sparkles, SquareCheck, SquarePen, Star, StickyNote,
+  SlidersVertical, Smartphone, SmartphoneNfc, Sparkles, Split, SquareCheck, SquarePen, Star, StickyNote,
   Tag, Ticket, Timer, Trash2, TrendingUp, TriangleAlert, Trophy, Upload, User, UserCog, Users,
   UtensilsCrossed, Wallet, Wifi, WifiOff, Wine, Wrench, X,
 } from 'lucide-react'
-import { VOCABOLARIO, nomeIcona, TEMA_ICONE_DI_PARTENZA, GRUPPO_DI_PARTENZA } from '../lib/icone.js'
+import { VOCABOLARIO, nomeIcona, dividiIcona, GRUPPO_DI_PARTENZA } from '../lib/icone.js'
+import { useTemaIcone } from '../lib/temaIcone.js'
 
 // ── UN'ICONA DEL GESTIONALE, NEL TEMA DEL LOCALE (REQ-UI-031) ──────────
 //
@@ -38,7 +38,7 @@ import { VOCABOLARIO, nomeIcona, TEMA_ICONE_DI_PARTENZA, GRUPPO_DI_PARTENZA } fr
 // bundle. Una prova (tests/unit/icone.test.js) controlla che ci siano
 // tutti quelli del vocabolario.
 const DISEGNI = {
-  Archive, BadgePlus, Ban, Banknote, Bell, BellOff, BellRing, BookOpen, Calculator, Calendar,
+  Archive, ArrowDown, ArrowUp, BadgePlus, Ban, Banknote, Bell, BellOff, BellRing, BookOpen, Calculator, Calendar,
   CalendarDays, ChartColumn, ChefHat, Circle, CircleCheck, CircleHelp, CircleX, ClipboardList,
   Clock, Coins, Columns3, ConciergeBell, CreditCard, Crown, Divide, Download, Eraser, Eye, EyeOff,
   Factory, FileText, Flame, FlaskConical, Folder, Funnel, Gift, GlassWater, Globe, Hand, HandHeart,
@@ -47,18 +47,13 @@ const DISEGNI = {
   Minimize, Nfc, NotebookText, OctagonX, Package, Palette, Paperclip, PartyPopper, Pause, PenTool,
   Pencil, PersonStanding, Play, Plus, Printer, Puzzle, ReceiptText, RefreshCw, RotateCcw, Save,
   Scale, Scissors, ScrollText, Search, Settings, ShoppingBag, ShoppingCart, SlidersHorizontal,
-  SlidersVertical, Smartphone, SmartphoneNfc, Sparkles, SquareCheck, SquarePen, Star, StickyNote,
+  SlidersVertical, Smartphone, SmartphoneNfc, Sparkles, Split, SquareCheck, SquarePen, Star, StickyNote,
   Tag, Ticket, Timer, Trash2, TrendingUp, TriangleAlert, Trophy, Upload, User, UserCog, Users,
   UtensilsCrossed, Wallet, Wifi, WifiOff, Wine, Wrench, X,
 }
 
-// Il contesto porta il tema di OGNI gruppo ({ navigazione, tasti,
-// segnali }, lib/icone.js): ogni icona dice di che gruppo è, e la
-// navigazione è quello di partenza.
-export const TemaIcone = createContext({})
-
 export default function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em', className = '' }) {
-  const tema = useContext(TemaIcone)?.[gruppo] ?? TEMA_ICONE_DI_PARTENZA
+  const tema = useTemaIcone(gruppo)
   const chiave = nomeIcona(nome)
   if (!chiave) return nome ? <span aria-hidden="true">{nome}</span> : null
   const voce = VOCABOLARIO[chiave]
@@ -72,5 +67,16 @@ export default function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em
   return <Disegno aria-hidden="true" className={`icona ${className}`.trim()} size={size} strokeWidth={2} />
 }
 
-// Per chi ha in mano un elenco di disegni e vuole sapere se c'è tutto.
-export const disegniDisponibili = () => Object.keys(DISEGNI)
+// UN'ETICHETTA CHE ARRIVA COME TESTO, con l'emoji davanti («🧾 Da fare»,
+// lib/icone.js conEmoji): l'icona si disegna nel tema, il resto è testo.
+// Un testo senza un'emoji conosciuta in testa esce com'è. Con `nome`
+// l'icona è quella, e `testo` è tutto testo.
+export function ConIcona({ testo, nome, gruppo = 'tasti' }) {
+  const diviso = nome ? { nome, resto: testo } : dividiIcona(testo)
+  if (!diviso) return testo ?? null
+  return (
+    <>
+      <Icona nome={diviso.nome} gruppo={gruppo} /> {diviso.resto}
+    </>
+  )
+}

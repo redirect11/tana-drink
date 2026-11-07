@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import GrigliaMese from './GrigliaMese.jsx'
+import GrigliaMese from './GrigliaMese.jsx'
 import Icona from './Icona.jsx'
 
 // ── LA RICERCA PER DATA (REQ-STAT-007) ─────────────────────────────────

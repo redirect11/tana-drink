@@ -142,7 +142,7 @@ export default function CashFlow() {
       {recap.nUltimaOra > 0 && (
         <div className="card row between" style={{ alignItems: 'center' }}>
           <span className="muted">
-            ⏱ Nell'ultima ora · {recap.nUltimaOra} incass{recap.nUltimaOra === 1 ? 'o' : 'i'}
+            <Icona nome="tempo" gruppo="tasti" /> Nell'ultima ora · {recap.nUltimaOra} incass{recap.nUltimaOra === 1 ? 'o' : 'i'}
           </span>
           <strong>{formatPrice(recap.ultimaOra)}</strong>
         </div>
@@ -294,7 +294,7 @@ function ChiudiCassa({ session, recap, by }) {
       </div>
       {bloccato ? (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⛔ Non puoi chiudere la cassa: ci sono <strong>{recap.nAperti} conti non pagati</strong>
+          <Icona nome="fermo" gruppo="segnali" /> Non puoi chiudere la cassa: ci sono <strong>{recap.nAperti} conti non pagati</strong>
           {' '}({formatPrice(recap.apertoDaIncassare)} da incassare). Incassali prima di chiudere.
         </div>
       ) : (

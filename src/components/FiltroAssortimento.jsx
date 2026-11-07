@@ -1,5 +1,5 @@
 import { ASSORTIMENTI, assortimentoDi } from '../lib/inventory.js'
-import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
+import { ASSORTIMENTO_TITOLO } from '../lib/assortimento.js'
 import Icona from './Icona.jsx'
 
 // ── IL FILTRO PER ASSORTIMENTO, UNO SOLO PER DUE SCHERMATE ───────────

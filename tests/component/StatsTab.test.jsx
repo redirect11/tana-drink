@@ -582,7 +582,7 @@ describe('i grafici per giornata', () => {
     render(<StatsTab />)
     await screen.findByText(/tocca una serata/i)
     await m.vai('periodo')
-    expect(await screen.findByText(/📈 Incasso per giornata/)).toBeInTheDocument()
+    expect(await screen.findByText('Incasso per giornata')).toBeInTheDocument()
     m.stop()
   })
 })

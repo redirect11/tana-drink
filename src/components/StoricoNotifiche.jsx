@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { subscribeNotifs, segnaLetta, svuotaArchivio } from '../lib/notifyStore.js'
+import { subscribeNotifs, segnaLetta, svuotaArchivio } from '../lib/notifyStore.js'
 import Icona from './Icona.jsx'
 
 // ── LO STORICO DELLE NOTIFICHE, ANCHE NELLE IMPOSTAZIONI ─────────────

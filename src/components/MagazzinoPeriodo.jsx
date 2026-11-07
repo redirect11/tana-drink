@@ -3,7 +3,7 @@ import { fetchInventoryItems, fetchStockMovementsSince } from '../lib/api.js'
 import { magazzinoNelPeriodo } from '../lib/magazzinoPeriodo.js'
 import { formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
+import { useLetturaDelPeriodo } from './useLetturaDelPeriodo.js'
 import Icona from './Icona.jsx'
 
 // ── IL MAGAZZINO NEL PERIODO SCELTO (REQ-STAT-002) ───────────────────

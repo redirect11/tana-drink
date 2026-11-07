@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRicettaInstallati } from '../lib/stileMenu.js'
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import Icona, { TemaIcone } from './Icona.jsx'
+import Icona from './Icona.jsx'
+import { TemaIcone } from '../lib/temaIcone.js'
 import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
 import {
   THEME_FIELDS,
@@ -151,7 +152,7 @@ function CardDellaCoda({ settings, onSave }) {
           className={`mode-option${colore ? '' : ' active'}`}
           onClick={() => onSave({ bordo_colore_conto: false })}
         >
-          💳 Com&apos;è messo il conto
+          <Icona nome="carta" gruppo="tasti" />{' '}Com&apos;è messo il conto
         </button>
         <button
           className={`mode-option${colore ? ' active' : ''}`}

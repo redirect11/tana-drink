@@ -4,6 +4,8 @@ import Changelog from './Changelog.jsx'
 import { inviaSceltaAggiornamento } from '../lib/api.js'
 import { recordNotif } from '../lib/notifyStore.js'
 import { urlRegia } from '../lib/limiti.js'
+import Icona from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 import {
   MESSAGGI_AGGIORNAMENTI,
   SCELTE,
@@ -89,7 +91,7 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
   const idAvviso = avviso && !inPausa ? avviso.id : null
   useEffect(() => {
     if (!idAvviso) return
-    recordNotif('📄 Condizioni del servizio aggiornate', 'Tocca per rileggere l’avviso', {
+    recordNotif(conEmoji('fatture', 'Condizioni del servizio aggiornate'), 'Tocca per rileggere l’avviso', {
       href: INFORMAZIONI,
       letta: true,
     })
@@ -101,7 +103,7 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
   if (avviso) {
     const dal = dataAvviso(avviso.dal)
     return (
-      <Box titolo="📄 Condizioni del servizio" etichetta="Avviso sulle condizioni del servizio">
+      <Box icona="fatture" titolo="Condizioni del servizio" etichetta="Avviso sulle condizioni del servizio">
         <p style={{ whiteSpace: 'pre-line', margin: '10px 0 0' }}>{avviso.testo}</p>
         {dal && <p className="muted small" style={{ margin: '8px 0 0' }}>In vigore dal {dal}.</p>}
         <button className="btn block" style={{ marginTop: 12 }} onClick={() => setVisto(String(avviso.id))}>
@@ -163,7 +165,7 @@ export default function PropostaAggiornamento({ settings, ruolo, inPausa = false
 
 // La stessa cornice del box delle novità (NovitaDialog). Senza chiusura
 // toccando fuori: chiudere vuol dire «Più tardi», e va detto col tasto.
-function Box({ titolo, etichetta, children }) {
+function Box({ icona, titolo, etichetta, children }) {
   return (
     <div className="overlay confirm-overlay">
       <div
@@ -172,7 +174,10 @@ function Box({ titolo, etichetta, children }) {
         aria-label={etichetta}
         style={{ width: 'min(520px, 94vw)', maxHeight: '82vh', overflowY: 'auto' }}
       >
-        <h3 style={{ margin: 0 }}>{titolo}</h3>
+        <h3 style={{ margin: 0 }}>
+          {icona && <><Icona nome={icona} gruppo="segnali" />{' '}</>}
+          {titolo}
+        </h3>
         {children}
       </div>
     </div>

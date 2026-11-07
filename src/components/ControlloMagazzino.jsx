@@ -12,7 +12,7 @@ import { businessDayKey, DEFAULT_CUTOFF_HOUR } from '../lib/businessDay.js'
 import { shiftDay, dataBreve } from '../lib/ore.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { perScaffale } from '../lib/scaffali.js'
-import ListaPerScaffale from './ListaPerScaffale.jsx'
+import ListaPerScaffale from './ListaPerScaffale.jsx'
 import Icona from './Icona.jsx'
 
 // ── IL CONTROLLO DEL MAGAZZINO, PAGINA DI PROVA (REQ-MAG-050) ─────────

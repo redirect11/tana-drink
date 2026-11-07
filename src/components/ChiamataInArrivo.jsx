@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { auth } from '../lib/firebaseClient.js'
 import { subscribeMyCalls, subscribeCallsAlBancone, ackStaffCall } from '../lib/api.js'
 import { notify } from '../lib/notify.js'
-import { isAdmin } from '../lib/ruoli.js'
+import { isAdmin } from '../lib/ruoli.js'
 import Icona from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // ── LA CHIAMATA SI PRESENTA DOVUNQUE SI STIA GUARDANDO ───────────────
 //
@@ -73,7 +74,7 @@ export default function ChiamataInArrivo({ ruolo }) {
     }
     // Notifica + vibrazione forte e continua finché non si risponde.
     // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
-    notify(`📟 ${titoloDi(incoming)}`, incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
+    notify(conEmoji('chiama-bancone', titoloDi(incoming)), incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
       vibrate: VIBRAZIONE,
       tag: 'staff-call',
       renotify: true,

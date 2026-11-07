@@ -8,8 +8,8 @@ import {
   clockIn,
   clockOut,
 } from '../lib/api.js'
-import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
-import Icona from './Icona.jsx'
+import { RUOLO_ETICHETTA } from '../lib/ruoli.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // Cerca-persone direttamente nella coda del bartender: elenco del
 // personale con tasto di chiamata per ciascuno. Cliccando 📟 si apre
@@ -118,7 +118,7 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
               {/* Sotto il nome: ruolo e, se è in servizio, da che ora. È la
                   prima cosa che si vuole sapere di chi si sta per chiamare. */}
               <div className="desc">
-                {RUOLO_ETICHETTA[u.role] ?? u.role}
+                <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
                 {/* "dentro/fuori" si leggeva come "dentro o fuori dal locale":
                     qui si parla di TURNO, cioè di chi ha timbrato. */}
                 {turnoAperto(u.uid)
@@ -135,7 +135,7 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
                 title={turnoAperto(u.uid) ? 'Timbra l’uscita' : 'Timbra l’entrata'}
                 onClick={() => timbra(u)}
               >
-                🕒 {turnoAperto(u.uid) ? 'Uscita' : 'Entrata'}
+                <Icona nome="orario" gruppo="tasti" />{' '}{turnoAperto(u.uid) ? 'Uscita' : 'Entrata'}
               </button>
               {pending.some((c) => c.to_uid === u.uid) ? (
                 <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
@@ -171,7 +171,7 @@ export default function StaffCallList({ mostraSeVuoto = false }) {
                 disabled={busy}
                 onClick={() => chiama(u)}
               >
-                {busy ? 'Chiamo…' : '📟 Invia chiamata'}
+                {busy ? 'Chiamo…' : <><Icona nome="chiama-bancone" gruppo="tasti" /> Invia chiamata</>}
               </button>
             </div>
           )}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CANCEL_PHRASES } from '../lib/orderStatus.js'
+import { CANCEL_PHRASES } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
 
 // Dialog di annullamento ordine lato bartender: scelta della frase mostrata
@@ -22,12 +22,12 @@ export default function CancelOrderDialog({
   const [notifyClient, setNotifyClient] = useState(true)
 
   const titles = {
-    ordine: `✖️ Annullare l'ordine #${order.daily_number}?`,
-    preparazione: `✖️ Annullare la preparazione di #${order.daily_number}?`,
+    ordine: `Annullare l'ordine #${order.daily_number}?`,
+    preparazione: `Annullare la preparazione di #${order.daily_number}?`,
     non_ritirato:
       order.service_mode === 'tavolo'
-        ? `🚫 Segnare #${order.daily_number} come non servito?`
-        : `🚫 Segnare #${order.daily_number} come non ritirato?`,
+        ? `Segnare #${order.daily_number} come non servito?`
+        : `Segnare #${order.daily_number} come non ritirato?`,
   }
 
   const hints = {
@@ -39,7 +39,10 @@ export default function CancelOrderDialog({
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>{titles[kind] ?? titles.ordine}</h3>
+        <h3 style={{ marginTop: 0 }}>
+          <Icona nome={kind === 'non_ritirato' ? 'vietato' : 'annullato'} gruppo="segnali" />{' '}
+          {titles[kind] ?? titles.ordine}
+        </h3>
         <p className="muted" style={{ marginTop: 0 }}>{hints[kind] ?? ''}</p>
 
         <p className="muted small" style={{ margin: '12px 0 6px' }}>

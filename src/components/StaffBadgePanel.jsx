@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listStaff } from '../lib/staffApi.js'
-import { subscribeStaffShiftsRange, clockIn, clockOut, updateStaffShift } from '../lib/api.js'
+import { subscribeStaffShiftsRange, clockIn, clockOut, updateStaffShift } from '../lib/api.js'
 import Icona from './Icona.jsx'
 
 // Pannello TIMBRATURE nella cassa: il bartender (Flavio/Vittorio) all'apertura

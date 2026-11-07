@@ -8,6 +8,7 @@ import {
   tastoAcconto,
 } from '../lib/scontrinoAcconto.js'
 import ToggleRow from './ToggleRow.jsx'
+import Icona from './Icona.jsx'
 
 // ── QUANDO PARTE LA CARTA DA SÉ (REQ-UI-025) ─────────────────────────
 //
@@ -94,14 +95,14 @@ export default function StampaAutomatica({ settings, save }) {
             className={`mode-option${prn.stampaSala !== 'rimbalzo' ? ' active' : ''}`}
             onClick={() => cambia({ stampaSala: 'ip' })}
           >
-            📱 La stampa il telefono
+            <Icona nome="telefono" gruppo="tasti" /> La stampa il telefono
           </button>
           <button
             type="button"
             className={`mode-option${prn.stampaSala === 'rimbalzo' ? ' active' : ''}`}
             onClick={() => cambia({ stampaSala: 'rimbalzo' })}
           >
-            🖨️ La stampa il banco
+            <Icona nome="stampante" gruppo="tasti" /> La stampa il banco
           </button>
         </div>
         <p className="muted" style={{ fontSize: '0.8rem', margin: '8px 0 0' }}>
@@ -114,7 +115,7 @@ export default function StampaAutomatica({ settings, save }) {
             automatica vuol dire: non stampa nessuno. È successo. */}
         {prn.stampaSala === 'rimbalzo' && !prn.autoPrintComanda && (
           <div className="banner" style={{ marginTop: 8 }}>
-            ⚠️ La stampa automatica della comanda è <strong>spenta</strong>: così
+            <Icona nome="avviso" gruppo="segnali" /> La stampa automatica della comanda è <strong>spenta</strong>: così
             le comande della sala non le stampa nessuno. Accendila qui sopra.
           </div>
         )}

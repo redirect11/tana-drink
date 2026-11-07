@@ -5,7 +5,7 @@ import { drinkSpeciali, immagineVoce, PERCORSO_SPECIALI } from '../lib/speciali.
 import { formatPrice } from '../lib/orderStatus.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
-import ToggleRow from './ToggleRow.jsx'
+import ToggleRow from './ToggleRow.jsx'
 import Icona from './Icona.jsx'
 
 // IL MENÙ SPECIAL, DAL GESTIONALE (REQ-MENU-018): il titolo e il

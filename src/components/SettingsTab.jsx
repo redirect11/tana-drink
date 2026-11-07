@@ -46,8 +46,9 @@ import { devToolsEnabled } from '../dev/devActions.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
-import { cambioDentroOrario } from '../lib/orario.js'
-import Icona from './Icona.jsx'
+import { cambioDentroOrario } from '../lib/orario.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -149,8 +150,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.pos_add_top}
                 opzioni={[
-                  [false, '⬇ In fondo (scorre)'],
-                  [true, '⬆ In cima'],
+                  [false, conEmoji('giu', 'In fondo (scorre)')],
+                  [true, conEmoji('su', 'In cima')],
                 ]}
                 onScegli={(v) => save({ pos_add_top: v })}
               />
@@ -193,8 +194,8 @@ export default function SettingsTab({ role = null }) {
                 valore={settings.category_display || 'dot'}
                 opzioni={[
                   ['dot', '● Pallino + nome'],
-                  ['icon_text', '🍸 Icona + nome'],
-                  ['icon', '🍸 Solo icona (senza nome)'],
+                  ['icon_text', conEmoji('menu', 'Icona + nome')],
+                  ['icon', conEmoji('menu', 'Solo icona (senza nome)')],
                 ]}
                 onScegli={(v) => save({ category_display: v })}
               />
@@ -213,8 +214,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.pos_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la griglia'],
-                  ['evidenzia', '💡 Accendi il prodotto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la griglia')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il prodotto e portami lì')],
                 ]}
                 onScegli={(v) => save({ pos_search: v })}
               />
@@ -244,8 +245,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.stripe_ok_verde}
                 opzioni={[
-                  [false, '⚪ Grigio'],
-                  [true, '🟢 Verde'],
+                  [false, conEmoji('spento', 'Grigio')],
+                  [true, conEmoji('verde', 'Verde')],
                 ]}
                 onScegli={(v) => save({ stripe_ok_verde: v })}
               />
@@ -268,10 +269,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={mondoConsegna(settings)}
                 opzioni={[
-                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  ['tavolo', conEmoji('menu', 'Solo servizio'), 'Si porta tutto al tavolo.'],
                   [
                     'entrambi',
-                    '🤝 Ritiro e servizio',
+                    conEmoji('in-coppia', 'Ritiro e servizio'),
                     'Chi si siede si fa servire, chi ha fretta ritira al banco.',
                   ],
                 ]}
@@ -472,7 +473,7 @@ export default function SettingsTab({ role = null }) {
                       </li>
                     </ol>
                     Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
-                    tutti gli altri, con l’etichetta 👥 del gruppo.
+                    tutti gli altri, con l’etichetta <Icona nome="staff" gruppo="tasti" /> del gruppo.
                     Un gruppo può contenere altri gruppi (es. “Compleanno” con
                     “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
                     diretti, si ordina nei figli.
@@ -526,7 +527,7 @@ export default function SettingsTab({ role = null }) {
               )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
-                  ✅ {esitoReset === 0
+                  <Icona nome="fatto" gruppo="segnali" />{' '}{esitoReset === 0
                     ? 'Nessun conto aperto da riportare indietro.'
                     : `${esitoReset} conti aperti riportati a “ricevuto”.`}
                 </div>
@@ -710,17 +711,17 @@ export default function SettingsTab({ role = null }) {
                 {[
                   [
                     'tetto',
-                    '🔒 Tetto al totale',
+                    conEmoji('licenza', 'Tetto al totale'),
                     'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
                   ],
                   [
                     'proporzione',
-                    '⚖️ Mantieni la proporzione',
+                    conEmoji('bilancio', 'Mantieni la proporzione'),
                     'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
                   ],
                   [
                     'avviso',
-                    '⚠️ Avvisa e basta',
+                    conEmoji('avviso', 'Avvisa e basta'),
                     'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
                   ],
                 ].map(([value, titolo, testo]) => (
@@ -870,8 +871,8 @@ export default function SettingsTab({ role = null }) {
           <SceltaModo
             valore={!!settings.stripe_menu_ok_verde}
             opzioni={[
-              [false, '⚪ Grigio'],
-              [true, '🟢 Verde'],
+              [false, conEmoji('spento', 'Grigio')],
+              [true, conEmoji('verde', 'Verde')],
             ]}
             onScegli={(v) => save({ stripe_menu_ok_verde: v })}
           />
@@ -896,10 +897,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_view}
                 opzioni={[
-                  ['griglia', '🔲 Griglia (schermo intero)'],
-                  ['corsie', '🚦 Corsie di stato'],
-                  ['tabs', '🗂 Schede per stato'],
-                  ['lista', '📋 Lista unica'],
+                  ['griglia', conEmoji('griglia', 'Griglia (schermo intero)')],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato')],
+                  ['tabs', conEmoji('raggruppa', 'Schede per stato')],
+                  ['lista', conEmoji('elenco', 'Lista unica')],
                 ]}
                 onScegli={(v) => save({ queue_view: v })}
               />
@@ -929,7 +930,7 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.bartender_view || 'corsie'}
                 opzioni={[
-                  ['corsie', '🚦 Corsie di stato', undefined, settings.workflow_enabled === false],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, settings.workflow_enabled === false],
                 ]}
                 onScegli={(v) => save({ bartender_view: v })}
               />
@@ -959,8 +960,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la coda'],
-                  ['evidenzia', '💡 Accendi il conto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la coda')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il conto e portami lì')],
                 ]}
                 onScegli={(v) => save({ queue_search: v })}
               />
@@ -1384,7 +1385,8 @@ function CatalogImport() {
 
       {parsed && (
         <ConfirmDialog
-          title="📦 Importare il catalogo?"
+          icona="magazzino"
+          title="Importare il catalogo?"
           message={
             `${parsed.products.length} prodotti in ${parsed.categories.length} categorie:\n` +
             parsed.categories.join(', ') +
@@ -1470,7 +1472,7 @@ function ReaderPairing({ settings }) {
                 )
               }
             >
-              🧪 Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
+              <Icona nome="prova" gruppo="tasti" />{' '}Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
             </button>
           )}
           <div className="row" style={{ gap: 8 }}>
@@ -1487,7 +1489,7 @@ function ReaderPairing({ settings }) {
               onClick={associa}
               style={{ flexShrink: 0 }}
             >
-              {busy ? 'Associo…' : '🔗 Associa'}
+              {busy ? 'Associo…' : <><Icona nome="unisci" gruppo="tasti" /> Associa</>}
             </button>
           </div>
         </>
@@ -1532,7 +1534,7 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
           title={spiegazione}
           onClick={() => onScegli(id)}
         >
-          {etichetta}
+          <ConIcona testo={etichetta} />
         </button>
       ))}
     </div>

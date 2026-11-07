@@ -9,7 +9,7 @@ import {
 import { cashRecap } from '../lib/cassa.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { toastError, toastSuccess } from '../lib/toast.js'
+import { toastError, toastSuccess } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 
 // ── CHIUDERE LA CASSA, DA DOVE CI SI TROVA ───────────────────────────
@@ -98,14 +98,14 @@ export default function ChiudiCassaBox({ by, onClose }) {
             soldi mancano e va detto quanto. */}
         {recap.nImpagati > 0 && (
           <div className="muted small" style={{ marginTop: 10 }}>
-            🕗 {recap.nImpagati} {recap.nImpagati === 1 ? 'conto chiuso impagato' : 'conti chiusi impagati'}:{' '}
+            <Icona nome="orario" gruppo="tasti" />{' '}{recap.nImpagati} {recap.nImpagati === 1 ? 'conto chiuso impagato' : 'conti chiusi impagati'}:{' '}
             {formatPrice(recap.impagatoDaRiscuotere)} da riscuotere.
           </div>
         )}
 
         {bloccato ? (
           <div className="banner" style={{ marginTop: 10 }}>
-            ⛔ Ci sono <strong>{recap.nAperti} conti non pagati</strong> (
+            <Icona nome="fermo" gruppo="segnali" />{' '}Ci sono <strong>{recap.nAperti} conti non pagati</strong> (
             {formatPrice(recap.apertoDaIncassare)} da incassare). Incassali prima di chiudere.
           </div>
         ) : (
@@ -125,7 +125,7 @@ export default function ChiudiCassaBox({ by, onClose }) {
             {diff != null && (
               <p className={`small${diff === 0 ? ' muted' : ''}`} style={{ margin: '4px 0 0' }}>
                 {diff === 0
-                  ? '✅ Il conto torna.'
+                  ? <><Icona nome="fatto" gruppo="segnali" /> Il conto torna.</>
                   : diff > 0
                     ? `In cassa ci sono ${formatPrice(diff)} in più dell'atteso.`
                     : `Mancano ${formatPrice(Math.abs(diff))} rispetto all'atteso.`}

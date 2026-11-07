@@ -24,7 +24,7 @@ import {
 } from '../lib/ore.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
-import { Sottosezioni } from '../lib/sottosezioni.js'
+import { Sottosezioni } from '../lib/sottosezioni.js'
 import Icona from './Icona.jsx'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
@@ -236,10 +236,10 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           <strong>Totale periodo</strong>
           <span className="row" style={{ gap: 10 }}>
             <span title="Ore effettive (timbrature + correzioni)">
-              ✅ <strong>{totals.effettivo} h</strong>
+              <Icona nome="fatto" gruppo="segnali" />{' '}<strong>{totals.effettivo} h</strong>
             </span>
             <span className="muted" title="Ore programmate (turni pianificati)">
-              📅 {totals.programmato} h
+              <Icona nome="calendario" gruppo="tasti" />{' '}{totals.programmato} h
             </span>
           </span>
         </div>
@@ -258,7 +258,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
         </div>
         {payroll.parziale && (
           <div className="muted small">
-            ⚠️ Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
+            <Icona nome="avviso" gruppo="segnali" />{' '}Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
           </div>
         )}
         {perPerson.length === 0 && (
@@ -325,7 +325,8 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
 
       {confirmDel && (
         <ConfirmDialog
-          title="🗑 Eliminare la voce?"
+          icona="elimina"
+          title="Eliminare la voce?"
           message={`${confirmDel.staff_name} · ${confirmDel.date} · ${confirmDel.hours} h`}
           confirmLabel="Elimina"
           danger
@@ -414,10 +415,10 @@ function DayPeople({ entries }) {
           <strong>{p.name}</strong>
           <span className="day-person-cols">
             <span title="Programmato">
-              📅 {p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
+              <Icona nome="calendario" gruppo="tasti" />{' '}{p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
             </span>
             <span title="Effettivo" className={p.effettivo.hours ? '' : 'muted'}>
-              ✅ {p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
+              <Icona nome="fatto" gruppo="segnali" />{' '}{p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
             </span>
           </span>
         </div>
@@ -500,11 +501,11 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
     <form onSubmit={submit} style={{ marginTop: 8 }}>
       <div className="chips-row" style={{ margin: '0 0 2px' }}>
         {[
-          ['programmato', '📅 Programmato'],
-          ['effettivo', '✅ Effettivo'],
-        ].map(([k, label]) => (
+          ['programmato', 'calendario', 'Programmato'],
+          ['effettivo', 'fatto', 'Effettivo'],
+        ].map(([k, icona, label]) => (
           <button type="button" key={k} className={`chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>
-            {label}
+            <Icona nome={icona} gruppo="tasti" /> {label}
           </button>
         ))}
       </div>
@@ -737,7 +738,7 @@ function PagheManager({ membri, rates, onSave }) {
 
       {orfane.length > 0 && (
         <p className="muted small" style={{ marginTop: 10 }}>
-          ⚠️ Tariffe di account non più presenti: {orfane.map((r) => r.name || r.id).join(', ')}.
+          <Icona nome="avviso" gruppo="segnali" />{' '}Tariffe di account non più presenti: {orfane.map((r) => r.name || r.id).join(', ')}.
         </p>
       )}
     </div>

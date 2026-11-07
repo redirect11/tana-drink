@@ -131,6 +131,7 @@ import {
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
 import { ricordaImpostazioni, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
+import { conEmoji } from './icone.js'
 import {
   cassaCorrente,
   prendiNumero,
@@ -4907,7 +4908,7 @@ function notifyLowStock(lowStock) {
     const finito = it.stock <= 0
     if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
     notify(
-      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      conEmoji('avviso', `Scorta ${finito ? 'esaurita' : 'in esaurimento'}`),
       `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
     )
   }

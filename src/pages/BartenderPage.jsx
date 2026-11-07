@@ -40,6 +40,7 @@ import {
   AVVISO_RIPRISTINO,
   placedByName,
   placedByLetter,
+  STATUS_ICONA,
 } from '../lib/orderStatus.js'
 import {
   bucketByStatus,
@@ -177,8 +178,10 @@ import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { preloadStaff } from '../lib/staffApi.js'
-import { useCashSession } from '../lib/cashSession.js'
-import Icona from '../components/Icona.jsx'
+import { useCashSession } from '../lib/cashSession.js'
+import Icona, { ConIcona } from '../components/Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { conEmoji } from '../lib/icone.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -543,6 +546,7 @@ function PortaInVista({ id }) {
 }
 
 function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
+  const testoConIcona = useTestoConIcona()
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -932,7 +936,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             const prev = knownComande.current.get(o.id)
             const n = (o.comande || []).length
             if (prev != null && n > prev && o.status === 'aperto') {
-              showToast(`➕ Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`)
+              showToast(`Aggiunta all'ordine #${o.daily_number ?? '—'}${o.customer_name ? ` (${o.customer_name})` : ''}`, {
+                icona: 'aggiungi',
+              })
             }
           }
           // AVANZAMENTI FATTI ALTROVE. Chi sta in sala deve sapere che un
@@ -1033,7 +1039,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // attiva da sé, ed è la stessa che si è appena mossa qui.
     updateOrderStatus(order.id, ns).catch((e) => {
       setError(e.message)
-      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
       // Non è passata: si torna a quello che dice il server, che è l'unica
       // cosa vera.
       comandeLocali.scarta(order.id)
@@ -1064,7 +1070,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     )
     advanceComanda(order.id, comanda.id, ns).catch((e) => {
       setError(e.message)
-      showToast(`⚠️ Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(`Avanzamento non riuscito: ${e.message}`, { kind: 'error' })
       comandeLocali.scarta(order.id)
     })
   }
@@ -1079,7 +1085,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // snapshot; in errore arriva il toast.
     cancelOrder(order.id, { by: 'bartender', kind, phrase, message, notify }).catch((e) => {
       setError(e.message)
-      showToast(`⚠️ Annullo non riuscito: ${e.message}`, { kind: 'error' })
+      showToast(`Annullo non riuscito: ${e.message}`, { kind: 'error' })
     })
   }
 
@@ -1204,7 +1210,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const separatoreGiornata = (day, filtro) =>
     day === oggiKey ? null : (
       <div className="day-sep">
-        {intestazioneGiornata(filtro, businessDayLabel(day, new Date(), cutoffHour))}
+        <ConIcona testo={intestazioneGiornata(filtro, businessDayLabel(day, new Date(), cutoffHour))} gruppo="segnali" />
       </div>
     )
 
@@ -1563,7 +1569,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       title={corsieBanco ? 'Torna ai conti' : 'Guarda le comande al banco'}
       aria-label={corsieBanco ? 'Ordini' : 'Comande'}
     >
-      {corsieBanco ? '🧾' : '🍸'}
+      <Icona nome={corsieBanco ? 'coda' : 'menu'} gruppo="tasti" />
     </button>
   ) : null
 
@@ -1607,7 +1613,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     autori.length > 0 ? (
       <Tendina
         etichetta="Chi ha aperto il conto"
-        riassunto={`✍️ ${riassuntoStaff}`}
+        riassunto={conEmoji('nuovo-ordine', riassuntoStaff)}
         attivo={staffFiltra}
         largo={240}
       >
@@ -1626,7 +1632,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 aria-pressed={autoriAccesi.includes(v.chiave)}
               >
                 <span>
-                  {v.chiave === AUTORE_CLIENTE ? '🌐 ' : ''}
+                  {v.chiave === AUTORE_CLIENTE && <><Icona nome="mondo" gruppo="tasti" />{' '}</>}
                   {v.nome}
                   {v.chiave === emailMia && <span className="muted small"> · sei tu</span>}
                 </span>
@@ -1712,7 +1718,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       title={verso.nome}
       aria-label={verso.nome}
     >
-      {verso.icona}
+      <Icona nome={verso.icona} gruppo="tasti" />
     </button>
   )
 
@@ -1793,7 +1799,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           : 'Nascondi i conti rimasti aperti dai giorni scorsi'
       }
     >
-      📅 Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
+      <Icona nome="calendario" gruppo="tasti" />{' '}Solo oggi{arretrati.length ? ` (${arretrati.length})` : ''}
     </button>
   )
 
@@ -1807,7 +1813,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       onClick={() => cambiaCorsia(c.id)}
       aria-pressed={!nascoste.includes(c.id)}
     >
-      {c.titolo}
+      <ConIcona testo={c.titolo} />
     </button>
   )
 
@@ -1914,7 +1920,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                       : `Dividi «${nomiServizio.daServire}» in «${meta1}» e «${meta2}»`
                   }
                 >
-                  <span aria-hidden>{diviso ? '🔗' : '✂️'}</span>
+                  <Icona nome={diviso ? 'unisci' : 'dividi'} gruppo="tasti" />
                 </button>
               </div>
             ) : (
@@ -1967,7 +1973,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               onClick={() => setStato(k)}
               aria-pressed={stato === k}
             >
-              {label}
+              <ConIcona testo={label} />
             </button>
           )
           if (k !== 'chiusi' || stato !== 'chiusi' || !workflowOn) return chip
@@ -2030,8 +2036,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const avvisoRicerca =
     ricercaEvidenzia && q && !idAcceso
       ? altroveNonInVista
-        ? `🔍 «${search.trim()}» sta in un'altra scheda.`
-        : `🔍 Nessun conto per «${search.trim()}».`
+        ? conEmoji('cerca', `«${search.trim()}» sta in un'altra scheda.`)
+        : conEmoji('cerca', `Nessun conto per «${search.trim()}».`)
       : null
 
   async function incassaSuLettore(o) {
@@ -2207,8 +2213,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           // taceva sui conti già stampati una volta.
           <div className="grid-2" style={{ marginTop: 8 }}>
             {[
-              ['banco', '💶 Contanti'],
-              ['carta', '💳 Carta'],
+              ['banco', conEmoji('contanti', 'Contanti')],
+              ['carta', conEmoji('carta', 'Carta')],
             ].map(([metodo, etichetta]) => (
               <button
                 key={metodo}
@@ -2253,7 +2259,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   }
                 }}
               >
-                {etichetta}
+                <ConIcona testo={etichetta} />
               </button>
             ))}
           </div>
@@ -2299,7 +2305,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'non_ritirato' })}
           >
-            🚫 {o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
+            <Icona nome="vietato" gruppo="segnali" />{' '}{o.service_mode === 'tavolo' ? 'Non servito' : 'Non ritirato'}
           </button>
         )}
         {/* IL COLORE DEL CONTO, A MANO. Sempre disponibile, che i colori
@@ -2350,7 +2356,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
             {workflowOn && (
               <span className={`pill ${o.workflow_status}`}>
-                <Icona nome={STATUS_EMOJI[o.workflow_status]} gruppo="tasti" />{' '}
+                <Icona nome={STATUS_ICONA[o.workflow_status]} gruppo="tasti" />{' '}
                 {statoAlBanco(o.workflow_status, o.service_mode)}
               </span>
             )}
@@ -2437,8 +2443,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <span className="bignum">#{o.daily_number ?? '…'} <OrderBy order={o} /></span>
             <span className={`pill ${isError ? '' : o.workflow_status}`}>
               {isError
-                ? '⚠️ Errore invio'
-                : `${STATUS_EMOJI[o.workflow_status]} ${statoAlBanco(o.workflow_status, o.service_mode)}`}
+                ? <ConIcona nome="avviso" testo="Errore invio" gruppo="segnali" />
+                : <ConIcona nome={STATUS_ICONA[o.workflow_status]} testo={statoAlBanco(o.workflow_status, o.service_mode)} />}
             </span>
           </div>
           <div className="grid-card-sub">
@@ -2504,12 +2510,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 {/* Stato pagamento */}
                 {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
                   <span className="pill pagato" style={{ marginLeft: 6 }}>
-                    💳 Pagato{o.payment_method === 'online' ? ' online' : ''}
+                    <Icona nome="carta" gruppo="tasti" />{' '}Pagato{o.payment_method === 'online' ? ' online' : ''}
                   </span>
                 )}
                 {o.payment_status === 'parziale' && (
                   <span className="pill ricevuto" style={{ marginLeft: 6 }}>
-                    💳 Parziale · incassati {formatPrice(paidAmount(o))}
+                    <Icona nome="carta" gruppo="tasti" />{' '}Parziale · incassati {formatPrice(paidAmount(o))}
                   </span>
                 )}
                 {awaiting && (
@@ -2530,7 +2536,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               </div>
               {workflowOn && (
                 <span className={`pill ${o.workflow_status}`}>
-                  <Icona nome={STATUS_EMOJI[o.workflow_status]} gruppo="tasti" />{' '}
+                  <Icona nome={STATUS_ICONA[o.workflow_status]} gruppo="tasti" />{' '}
                   {statoAlBanco(o.workflow_status, o.service_mode)}
                 </span>
               )}
@@ -2552,7 +2558,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             </div>
             {o.placed_by && (
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                ✍️ Ordine manuale inserito da <strong>{placedByName(o.placed_by)}</strong> ({o.placed_by.role})
+                <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}Ordine manuale inserito da <strong>{placedByName(o.placed_by)}</strong> ({o.placed_by.role})
               </p>
             )}
             {o.note && (
@@ -2563,7 +2569,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               const m = minutesBetween(o.status_times?.in_preparazione, o.status_times?.pronto)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
-                  ⏱ Preparato in {m} min
+                  <Icona nome="tempo" gruppo="tasti" />{' '}Preparato in {m} min
                 </p>
               )
             })()}
@@ -2571,7 +2577,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               const m = minutesBetween(o.status_times?.pronto, o.status_times?.ritirato)
               return m != null && (
                 <p className="muted small" style={{ margin: '0 0 8px' }}>
-                  ⏱ Servito in {m} min
+                  <Icona nome="tempo" gruppo="tasti" />{' '}Servito in {m} min
                 </p>
               )
             })()}
@@ -2601,7 +2607,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
-          🔴 <strong>Cassa chiusa</strong> —{' '}
+          <Icona nome="rosso" gruppo="segnali" />{' '}<strong>Cassa chiusa</strong> —{' '}
           {gestore ? 'per battere ordini apri prima la cassa.' : 'per battere ordini la deve aprire il banco.'}{' '}
           {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
               tornare indietro sono tre passaggi per una cosa che ne vale uno.
@@ -2658,7 +2664,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <input
               type="search"
               className="menu-search board-search"
-              placeholder="🔍 Cerca numero, cliente, tavolo, drink…"
+              placeholder={testoConIcona('cerca', 'Cerca numero, cliente, tavolo, drink…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -2751,7 +2757,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                         return v.id === 'apri-cassa' ? setApriCassa(true) : setChiudiCassa(true)
                       }}
                     >
-                      {v.icon} {v.label}
+                      <Icona nome={v.icon} gruppo="tasti" /> {v.label}
                     </button>
                     {/* Solo quando è spento: a cassa chiudibile la riga
                         direbbe «conta il contante», che è quello che il
@@ -2793,7 +2799,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* Cercando con l'evidenziazione la coda non cambia: se non si
                 trova niente, senza scritta non succede proprio nulla e si
                 resta a chiedersi se abbia capito. */}
-            {avvisoRicerca && <span className="muted">{avvisoRicerca}</span>}
+            {avvisoRicerca && <span className="muted"><ConIcona testo={avvisoRicerca} gruppo="segnali" /></span>}
             {(vociLegenda.length > 0 || legenda.hasClient) && (
               <div className="order-legend">
                 {vociLegenda.map((v) => (
@@ -2858,7 +2864,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         voci={[
           {
             id: 'pannelli',
-            icon: '📟',
+            icon: 'chiama-bancone',
             label: showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi',
             hint: 'Il cerca-persone e i gruppi aperti',
             onClick: () => setShowPanels((v) => !v),
@@ -2946,7 +2952,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <input
               type="search"
               className="menu-search"
-              placeholder="🔍 Cerca per numero, cliente, tavolo, drink…"
+              placeholder={testoConIcona('cerca', 'Cerca per numero, cliente, tavolo, drink…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -2955,7 +2961,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           </div>
           {avvisoRicerca && (
             <p className="muted small" style={{ margin: '-4px 0 8px' }}>
-              {avvisoRicerca}
+              <ConIcona testo={avvisoRicerca} gruppo="segnali" />
             </p>
           )}
           {/* STESSA FILA DELLE LAVAGNE: qui i chip sono pochi — gli stati
@@ -2977,7 +2983,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           {/* Avvisi (es. comanda non stampata) dagli invii in background */}
           {pend.banners.map((b) => (
             <div className="banner" key={b.id} onClick={() => dismissBanner(b.id)} style={{ cursor: 'pointer' }}>
-              🖨 {b.msg} <span className="muted">(tocca per chiudere)</span>
+              <Icona nome="stampa" gruppo="tasti" />{' '}{b.msg} <span className="muted">(tocca per chiudere)</span>
             </div>
           ))}
           {/* I FILTRI NON SONO PIÙ QUI: stanno sotto la riga dei conteggi,
@@ -3044,14 +3050,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   })),
                   comandaIlLavoro && comandaDivisibile(c) && {
                     id: 'dividi',
-                    icon: '✂️',
+                    icon: 'dividi',
                     label: 'Preparazione parziale',
                     hint: 'Ne preparo una parte adesso, il resto dopo',
                     onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
                   },
                   {
                     id: 'ristampa',
-                    icon: '🖨',
+                    icon: 'stampa',
                     label: 'Ristampa la comanda',
                     hint: 'Se il foglio si è perso o è illeggibile',
                     onClick: () =>
@@ -3179,7 +3185,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 className={`tab ${statusTab === s ? 'active' : ''}`}
                 onClick={() => setStatusTab(s)}
               >
-                <Icona nome={STATUS_EMOJI[s]} gruppo="tasti" /> {statoAlBanco(s)} ({(buckets[s] || []).length})
+                <Icona nome={STATUS_ICONA[s]} gruppo="tasti" /> {statoAlBanco(s)} ({(buckets[s] || []).length})
               </div>
             ))}
           </div>

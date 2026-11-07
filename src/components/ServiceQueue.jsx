@@ -11,7 +11,7 @@ import {
 import { getPushToken } from '../lib/push.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { ORDER_STATUSES, formatPrice, placedByName } from '../lib/orderStatus.js'
-import { ensureNotificationPermission } from '../lib/notify.js'
+import { ensureNotificationPermission } from '../lib/notify.js'
 import Icona from './Icona.jsx'
 
 // Vista cameriera: SOLO gli ordini pronti da servire ai tavoli, con il
@@ -156,7 +156,7 @@ export default function ServiceQueue() {
           </div>
           {o.placed_by && (
             <p className="muted small" style={{ margin: '0 0 8px' }}>
-              ✍️ Inserito da {placedByName(o.placed_by)}
+              <Icona nome="nuovo-ordine" gruppo="tasti" />{' '}Inserito da {placedByName(o.placed_by)}
             </p>
           )}
           {o.note && <div className="order-note"><Icona nome="note" gruppo="tasti" /> {o.note}</div>}

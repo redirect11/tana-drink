@@ -31,7 +31,7 @@ import {
   elencoOrdini,
 } from '../lib/fatture.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { giornoEOra } from '../lib/ore.js'
+import { giornoEOra } from '../lib/ore.js'
 import Icona from './Icona.jsx'
 
 // ── LISTA ORDINI (REQ-MAG-038) ───────────────────────────────────────
@@ -284,7 +284,7 @@ function RigaOrdine({
               }
               onClick={() => onPagata?.(fattura, !pagato)}
             >
-              {pagato ? '✅ pagato' : '⏳ da pagare'}
+              {pagato ? <><Icona nome="fatto" gruppo="tasti" /> pagato</> : <><Icona nome="attesa" gruppo="tasti" /> da pagare</>}
             </button>
           ) : (
             // IL BUCO SI SEGNALA SOLO DOVE C'È (REQ-MAG-031): la merce è

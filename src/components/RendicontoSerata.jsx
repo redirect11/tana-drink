@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import CategoryRail from './CategoryRail.jsx'
-import { formatPrice, paymentMethodLabel, cashMethodKeys } from '../lib/orderStatus.js'
-import Icona from './Icona.jsx'
+import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
+import { MetodiPagamento } from './MetodoPagamento.jsx'
 import {
   rendicontoOrdini,
   rendicontoProdotti,
@@ -48,9 +49,9 @@ const pct = (v) => (v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`)
 
 // Come è stato incassato un conto — e se non lo è stato, perché.
 const comePagato = (c) => {
-  if (c.metodi.length) return c.metodi.map(paymentMethodLabel).join(' + ')
-  if (c.omaggio) return '🎁 offerto'
-  if (c.daIncassare) return '🟡 da incassare'
+  if (c.metodi.length) return <MetodiPagamento metodi={c.metodi} />
+  if (c.omaggio) return <><Icona nome="sconto" gruppo="tasti" /> offerto</>
+  if (c.daIncassare) return <><Icona nome="giallo" gruppo="tasti" /> da incassare</>
   return '—'
 }
 

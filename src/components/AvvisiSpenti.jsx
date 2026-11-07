@@ -3,7 +3,7 @@ import { statoPush, getPushToken } from '../lib/push.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
 import { saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
-import { auth } from '../lib/firebaseClient.js'
+import { auth } from '../lib/firebaseClient.js'
 import Icona from './Icona.jsx'
 
 // ── «GLI AVVISI SONO SPENTI SU QUESTO DISPOSITIVO» ───────────────────

@@ -1,4 +1,4 @@
-import { placedByName, placedByLetter } from '../lib/orderStatus.js'
+import { placedByName, placedByLetter } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
 
 // CHI HA BATTUTO IL CONTO, in un segno solo accanto al numero: l'iniziale

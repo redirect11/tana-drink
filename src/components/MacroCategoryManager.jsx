@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
-import Icona from './Icona.jsx'
+import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 import {
   createMacroCategory,
   updateMacroCategory,
@@ -116,7 +117,7 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
             {isAperta && (
               <div className="macro-pesi">
                 <ColonnaPesi
-                  titolo="📦 Prodotti del magazzino"
+                  titolo={conEmoji('magazzino', 'Prodotti del magazzino')}
                   cerca="Cerca fra i prodotti"
                   lato="prodotti"
                   elementi={prodotti}
@@ -125,7 +126,7 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
                   onPeso={scriviPeso}
                 />
                 <ColonnaPesi
-                  titolo="🍸 Voci del menù"
+                  titolo={conEmoji('menu', 'Voci del menù')}
                   cerca="Cerca fra le voci"
                   lato="voci"
                   elementi={voci}
@@ -168,7 +169,7 @@ function ColonnaPesi({ titolo, cerca, lato, elementi, macro, macros, onPeso }) {
   return (
     <div className="macro-colonna">
       <div className="row between" style={{ alignItems: 'center', gap: 6 }}>
-        <strong className="small">{titolo}</strong>
+        <strong className="small"><ConIcona testo={titolo} /></strong>
         <label className="row small muted" style={{ gap: 4, alignItems: 'center' }}>
           <input type="checkbox" checked={soloLiberi} onChange={(e) => setSoloLiberi(e.target.checked)} />
           Solo senza macro

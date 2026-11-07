@@ -5,7 +5,7 @@ import { subscribeOpenGroups, createManualGroup } from '../lib/api.js'
 import { buildGroupTree, groupTotal, groupSettlement } from '../lib/groups.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import GroupView from './GroupView.jsx'
-import { IconGruppo, IconPersona } from './Icons.jsx'
+import { IconGruppo, IconPersona } from './Icons.jsx'
 import Icona from './Icona.jsx'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi aperti con

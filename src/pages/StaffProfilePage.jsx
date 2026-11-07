@@ -7,8 +7,8 @@ import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
 import { RUOLO_ETICHETTA, isPersonale, isGestore } from '../lib/ruoli.js'
 import AvvisiPanel from '../components/AvvisiPanel.jsx'
-import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
-import Icona from '../components/Icona.jsx'
+import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
+import Icona, { ConIcona } from '../components/Icona.jsx'
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -68,12 +68,12 @@ export default function StaffProfilePage() {
     <div>
       <div className="card">
         <h2 style={{ marginTop: 0 }}>
-          {RUOLO_ETICHETTA[role]?.split(' ')[0] ?? '🫱'} Il mio profilo
+          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'servizio'} gruppo="tasti" /> Il mio profilo
         </h2>
         <div className="summary-rows" style={{ margin: '0 0 12px' }}>
           <div className="summary-row">
             <span className="muted">Ruolo</span>
-            <span>{RUOLO_ETICHETTA[role] ?? role}</span>
+            <span><ConIcona testo={RUOLO_ETICHETTA[role] ?? role} /></span>
           </div>
           <div className="summary-row">
             <span className="muted">Email</span>

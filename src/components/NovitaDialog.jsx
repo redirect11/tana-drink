@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Changelog from './Changelog.jsx'
-import { sezioneChangelog } from '../lib/novita.js'
+import { sezioneChangelog } from '../lib/novita.js'
 import Icona from './Icona.jsx'
 
 // ── COSA È CAMBIATO, subito dopo un aggiornamento ────────────────────

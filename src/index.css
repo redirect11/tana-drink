@@ -12542,6 +12542,10 @@ body.pagina-piena .inv-scheda {
   flex-shrink: 0;
   vertical-align: -0.15em;
 }
+/* Un'icona accesa, piena invece che a tratto: la stella dei preferiti. */
+.icona.icona-piena {
+  fill: currentColor;
+}
 .icona-pallino {
   display: inline-block;
   flex-shrink: 0;

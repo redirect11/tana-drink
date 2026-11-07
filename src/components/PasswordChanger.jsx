@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import CampoPassword from './CampoPassword.jsx'
-import { changePassword, authError } from '../lib/customerAuth.js'
+import { changePassword, authError } from '../lib/customerAuth.js'
 import Icona from './Icona.jsx'
 
 // Form di cambio password riutilizzabile (clienti e staff). Richiede la

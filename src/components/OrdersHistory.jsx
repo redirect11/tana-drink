@@ -13,13 +13,16 @@ import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
 import Caricamento from './Caricamento.jsx'
 import { businessDayKey } from '../lib/businessDay.js'
 import { isPersonale } from '../lib/ruoli.js'
-import { formatPrice, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
+import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
-import AvvisoPiano from './AvvisoPiano.jsx'
-import Icona from './Icona.jsx'
+import AvvisoPiano from './AvvisoPiano.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { conEmoji } from '../lib/icone.js'
+import { MetodiPagamento } from './MetodoPagamento.jsx'
 
 // STORICO ORDINI (nel Flusso cassa): la lista CRONOLOGICA di tutti i conti —
 // aperti, chiusi, annullati — col nome se gliene è stato dato uno, altrimenti
@@ -40,8 +43,8 @@ const dalCliente = (o) => !daTiller(o) && !isPersonale(o?.placed_by?.role)
 
 const ORIGINI = [
   ['tutte', 'Tutti'],
-  ['locale', '🍸 Dal locale'],
-  ['clienti', '📱 Dai clienti'],
+  ['locale', conEmoji('menu', 'Dal locale')],
+  ['clienti', conEmoji('telefono', 'Dai clienti')],
 ]
 
 const statoDi = (o) => {
@@ -56,7 +59,7 @@ const metodoDi = (o) => {
   const metodi = [...new Set((o.payments || []).map((p) => p.method).filter(Boolean))]
   if (metodi.length === 0 && o.payment_method) metodi.push(o.payment_method)
   if (metodi.length === 0) return null
-  return metodi.map((m) => PAYMENT_METHOD_LABELS[m] || m).join(' + ')
+  return metodi
 }
 
 const quando = (iso) => {
@@ -75,6 +78,7 @@ const quando = (iso) => {
 }
 
 export default function OrdersHistory() {
+  const testoConIcona = useTestoConIcona()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -204,7 +208,7 @@ export default function OrdersHistory() {
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="🔍 Cerca numero, nome, tavolo…"
+        placeholder={testoConIcona('cerca', 'Cerca numero, nome, tavolo…')}
       />
       <div className="chips-row" style={{ margin: '8px 0' }}>
         {FILTRI.map(([id, label]) => (
@@ -225,7 +229,7 @@ export default function OrdersHistory() {
               className={`chip ${origine === id ? 'active' : ''}`}
               onClick={() => setOrigine(id)}
             >
-              {label}
+              <ConIcona testo={label} />
             </button>
           ))}
         </div>
@@ -261,7 +265,7 @@ export default function OrdersHistory() {
                 {quando(o.created_at)}
                 {/* Come è stato incassato: serve per i conti di fine serata. */}
                 {st === 'chiusi' && metodoDi(o) && (
-                  <span className="ordhist-pay"> · {metodoDi(o)}</span>
+                  <span className="ordhist-pay"> · <MetodiPagamento metodi={metodoDi(o)} /></span>
                 )}
               </span>
               <span className={`pill small ordhist-state ${st === 'chiusi' ? 'pagato' : st === 'annullati' ? 'ritirato' : 'ricevuto'}`}>

@@ -112,6 +112,7 @@ export const VOCABOLARIO = Object.freeze({
   stampa: { emoji: '🖨', disegno: 'Printer' },
   chiudi: { emoji: '✖️', disegno: 'X' },
   unisci: { emoji: '🔗', disegno: 'Link' },
+  separa: { emoji: '⑃', disegno: 'Split' },
   sconto: { emoji: '🎁', disegno: 'Gift' },
   email: { emoji: '📧', disegno: 'Mail' },
   riapri: { emoji: '♻️', disegno: 'RotateCcw' },
@@ -134,6 +135,10 @@ export const VOCABOLARIO = Object.freeze({
   regola: { emoji: '🎛', disegno: 'SlidersHorizontal' },
   ruolo: { emoji: '🎚', disegno: 'SlidersVertical' },
   scrivi: { emoji: '✎', disegno: 'Pencil' },
+  // Le frecce della direzione (in cima / in fondo, carico / reso): le
+  // frecce semplici e non ⬆️ ⬇️, che sono già importa ed esporta.
+  su: { emoji: '↑', disegno: 'ArrowUp' },
+  giu: { emoji: '↓', disegno: 'ArrowDown' },
 
   // ── I segnali ──
   avviso: { emoji: '⚠️', disegno: 'TriangleAlert' },
@@ -232,4 +237,38 @@ export function nomeIcona(x) {
   if (!x) return null
   if (Object.hasOwn(VOCABOLARIO, x)) return x
   return DA_EMOJI.get(senzaVariante(String(x).trim())) ?? null
+}
+
+// L'emoji di un nome, per chi scrive TESTO e non disegna: le stampe, le
+// notifiche del telefono, le etichette che leggono anche le pagine del
+// cliente. Le emoji stanno scritte una volta sola, qui.
+export const emojiDi = (nome) => VOCABOLARIO[nomeIcona(nome)]?.emoji ?? ''
+
+// UN'ETICHETTA CON L'ICONA DAVANTI, come dato: «🧾 Da fare». Chi la mostra
+// nel gestionale la passa a <ConIcona> (components/Icona.jsx), che riconosce
+// l'emoji in testa e la disegna nel tema; chi la scrive come testo (una
+// stampa, una pagina del cliente) la usa così. Attenzione ai nomi che
+// condividono l'emoji con un altro (cassa e contanti, lista e
+// menu_laterale): tornando dall'emoji vince il più comune.
+export const conEmoji = (nome, testo) => `${emojiDi(nome)} ${testo}`
+
+// Un'icona dentro un testo — un segnaposto, una voce di tendina, il titolo
+// di una notifica: lì un disegno non entra. In «Emoji» l'emoji davanti,
+// come prima; in «Silhouette» la sola parola: un'emoji colorata accanto a
+// icone monocrome è proprio quello che Flavio chiedeva di togliere.
+export function testoConIcona(tema, nome, testo) {
+  const e = tema === 'emoji' ? emojiDi(nome) : ''
+  return e ? `${e} ${testo}` : testo
+}
+
+// Un testo che comincia con un'emoji conosciuta: { nome, resto }; se no
+// null. Per i messaggi che arrivano già scritti con l'emoji davanti (le
+// notifiche a comparsa delle pagine del cliente, o di una schermata non
+// ancora passata al vocabolario): l'icona va nel tema, il testo resta.
+const IN_TESTA = /^([^\p{L}\p{N}\s]+)\s+/u
+export function dividiIcona(testo) {
+  if (typeof testo !== 'string') return null
+  const m = testo.match(IN_TESTA)
+  const nome = m && nomeIcona(m[1])
+  return nome ? { nome, resto: testo.slice(m[0].length) } : null
 }

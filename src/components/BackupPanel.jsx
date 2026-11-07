@@ -10,6 +10,7 @@ import {
 } from '../lib/backup.js'
 import { isAdmin } from '../lib/ruoli.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
+import Icona from './Icona.jsx'
 
 // BACKUP E RIPRISTINO dal gestionale. Scarica tutto il database in un file
 // e lo rimette da un file. Serve prima di ogni operazione grossa (importi,
@@ -94,7 +95,7 @@ export default function BackupPanel({ role = null }) {
 
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <button className="btn grow" onClick={esporta} disabled={!!busy}>
-          {busy === 'export' ? 'Scarico…' : '⬇️ Esporta tutto'}
+          {busy === 'export' ? 'Scarico…' : <><Icona nome="esporta" gruppo="tasti" /> Esporta tutto</>}
         </button>
         {admin && (
           <>
@@ -103,7 +104,7 @@ export default function BackupPanel({ role = null }) {
               onClick={() => fileRef.current?.click()}
               disabled={!!busy}
             >
-              {busy === 'import' ? 'Ripristino…' : '⬆️ Ripristina da file'}
+              {busy === 'import' ? 'Ripristino…' : <><Icona nome="importa" gruppo="tasti" /> Ripristina da file</>}
             </button>
             <input
               ref={fileRef}

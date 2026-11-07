@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { subscribeSettings, DEFAULT_SETTINGS } from '../lib/api.js'
 import { recipeCost, suggestedPrice, markupOf, marginOf } from '../lib/pricing.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 
 // «Quanto mi costa, a quanto lo vendo»: riquadro condiviso dal PRODOTTO
 // LIBERO del POS e dall'EDITOR DEL DRINK a menù, così il conto è lo stesso
@@ -75,7 +76,7 @@ export default function PriceSuggestion({ rows, itemsById, price, onUse }) {
 
       {missing.length > 0 && (
         <div className="muted small" style={{ marginTop: 6 }}>
-          ⚠️ Stima parziale: manca il costo al dettaglio di {missing.join(', ')}.
+          <Icona nome="avviso" gruppo="segnali" />{' '}Stima parziale: manca il costo al dettaglio di {missing.join(', ')}.
           Impostalo in Magazzino per avere il prezzo reale.
         </div>
       )}

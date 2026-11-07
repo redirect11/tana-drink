@@ -96,13 +96,15 @@ import { ASSORTIMENTO_NOME, toggleVoce } from '../lib/assortimento.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import { useSottosezioni } from '../lib/sottosezioni.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
-import Icona from './Icona.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
+import { conEmoji } from '../lib/icone.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
-  { value: 'linea', label: '🍾 In linea' },
-  { value: 'premium', label: '👑 Premium' },
-  { value: 'out', label: '🚫 Fuori assortimento' },
+  { value: 'linea', label: 'In linea', icona: 'in-linea' },
+  { value: 'premium', label: 'Premium', icona: 'premium' },
+  { value: 'out', label: 'Fuori assortimento', icona: 'vietato' },
 ]
 
 const STATUS_LABEL = { ok: '', low: 'in esaurimento', empty: 'esaurito' }
@@ -314,7 +316,7 @@ function MovimentiPanel() {
       {movements.map((m) => (
         <div className="row between" key={m.id}>
           <span className="muted small">
-            {m.type === 'load' ? '⬆' : '⬇'} {m.item_name} · {m.reason}
+            <Icona nome={m.type === 'load' ? 'su' : 'giu'} gruppo="tasti" /> {m.item_name} · {m.reason}
           </span>
           <span className="muted small">
             {m.type === 'load' ? '+' : '−'}
@@ -394,6 +396,7 @@ function PrevisioneCard({ item, impegnato }) {
 }
 
 function ProductsPanel() {
+  const testoConIcona = useTestoConIcona()
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -587,7 +590,7 @@ function ProductsPanel() {
           dire annullato (DESIGN.md). */}
       {it.scheda_da_completare && (
         <p className="badge-low" style={{ display: 'block', margin: '0 0 8px' }}>
-          ✏️ Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
+          <Icona nome="modifica" gruppo="segnali" /> Scheda da completare: manca {mancaNellaScheda(it).join(', ')}.
           {!it.category_id &&
             ' Finché manca la categoria, quello che si spende per questo prodotto resta fuori dai conti degli acquisti.'}
         </p>
@@ -691,8 +694,8 @@ function ProductsPanel() {
           {bloccato ? (
             <p className="muted small" style={{ margin: '8px 0 0' }}>
               {daSistemare.has(it.id)
-                ? '✏️ Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo.'
-                : '🔒 Carico e conta tornano appena il magazzino è aggiornato.'}
+                ? <ConIcona nome="modifica" testo="Questo prodotto va sistemato: aprilo e scrivi a quanto corrisponde un pezzo." gruppo="segnali" />
+                : <ConIcona nome="licenza" testo="Carico e conta tornano appena il magazzino è aggiornato." gruppo="segnali" />}
             </p>
           ) : (
             <>
@@ -992,10 +995,10 @@ function ProductsPanel() {
     .filter(Boolean)
   const riassuntoFiltri =
     sceltiOra.length === 0
-      ? '⚗️ Filtra'
+      ? conEmoji('filtra', 'Filtra')
       : sceltiOra.length === 1
-        ? `⚗️ ${sceltiOra[0]}`
-        : `⚗️ ${sceltiOra.length} filtri`
+        ? conEmoji('filtra', sceltiOra[0])
+        : conEmoji('filtra', `${sceltiOra.length} filtri`)
 
   return (
     <div className="inv-panel">
@@ -1020,7 +1023,7 @@ function ProductsPanel() {
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="🔍 Cerca prodotto…"
+        placeholder={testoConIcona('cerca', 'Cerca prodotto…')}
       />
 
       <div className="inv-testa">
@@ -1072,8 +1075,8 @@ function ProductsPanel() {
             attivo={supplierFilter !== 'all'}
             riassunto={
               supplierFilter === 'all'
-                ? '🏭 Fornitore'
-                : `🏭 ${suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore'}`
+                ? conEmoji('fornitori', 'Fornitore')
+                : conEmoji('fornitori', suppliers.find((x) => x.id === supplierFilter)?.name || 'Fornitore')
             }
           >
             {(chiudi) => (
@@ -1109,7 +1112,7 @@ function ProductsPanel() {
         {/* Un numero senza nome non vuol dire niente: si legge «6.823,82 €»
             e ci si chiede di cosa. */}
         <span className="inv-valore" title="Somma del costo di tutto quello che c'è in magazzino">
-          💶 <span className="inv-valore-eti">Valore magazzino</span>{' '}
+          <Icona nome="contanti" gruppo="tasti" /> <span className="inv-valore-eti">Valore magazzino</span>{' '}
           <strong>{formatPrice(totalValue)}</strong>
         </span>
 
@@ -1119,8 +1122,8 @@ function ProductsPanel() {
             È una scelta che si fa una volta e resta. */}
         <div className="inv-vista" role="group" aria-label="Come mostrare i prodotti">
           {[
-            ['card', '▦', 'A card'],
-            ['lista', '☰', 'A lista'],
+            ['card', 'griglia', 'A card'],
+            ['lista', 'lista', 'A lista'],
           ].map(([k, icona, titolo]) => (
             <button
               key={k}
@@ -1131,7 +1134,7 @@ function ProductsPanel() {
               aria-label={titolo}
               aria-pressed={invView === k}
             >
-              {icona}
+              <Icona nome={icona} gruppo="tasti" />
             </button>
           ))}
         </div>
@@ -1519,7 +1522,7 @@ function SupplierManager({ suppliers, onChange, onListino = null }) {
         style={{ marginTop: 8 }}
         onClick={() => setShowImport((v) => !v)}
       >
-        📥 Importa elenco (incolla, uno per riga)
+        <Icona nome="acquisti" gruppo="tasti" /> Importa elenco (incolla, uno per riga)
       </button>
       {showImport && (
         <div style={{ marginTop: 6 }}>
@@ -1690,7 +1693,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           {daSistemare.length > 0 ? (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                ⚠️ Da sistemare prima ({daSistemare.length})
+                <Icona nome="avviso" gruppo="segnali" /> Da sistemare prima ({daSistemare.length})
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
                 Di questi non si sa a quanto corrisponde un pezzo, e nessuno
@@ -1708,7 +1711,7 @@ function PannelloTravaso({ travaso, passo, avanzamento, esito, onProva, onChiudi
           ) : (
             <>
               <h4 style={{ margin: '14px 0 2px' }}>
-                ✅ Si aggiornano {daMigrare.length} prodotti
+                <Icona nome="fatto" gruppo="segnali" /> Si aggiornano {daMigrare.length} prodotti
               </h4>
               <p className="small" style={{ margin: '0 0 6px' }}>
                 Le giacenze passano a pezzi: quello che oggi si legge sullo
@@ -1971,8 +1974,8 @@ function CaricoForm({ item, onCancel, onConfirm }) {
       <GruppoChip
         etichetta="Verso del movimento"
         opzioni={[
-          { id: false, label: '⬆ Carico' },
-          { id: true, label: '⬇ Reso al fornitore' },
+          { id: false, label: conEmoji('su', 'Carico') },
+          { id: true, label: conEmoji('giu', 'Reso al fornitore') },
         ]}
         valore={reso}
         scegli={setReso}
@@ -2271,6 +2274,7 @@ function AiutoPezzo({ onClose }) {
 }
 
 function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
+  const testoConIcona = useTestoConIcona()
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
   // ancora scritto a litri o a «U»: a rimetterlo in riga è la lettura
@@ -2530,7 +2534,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       <label htmlFor="istatus">Stato</label>
       <select id="istatus" value={form.status} onChange={set('status')}>
         {STATUS_ITEM.map((s) => (
-          <option key={s.value} value={s.value}>{s.label}</option>
+          <option key={s.value} value={s.value}>{s.icona ? testoConIcona(s.icona, s.label) : s.label}</option>
         ))}
       </select>
 
@@ -2613,7 +2617,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           prima di salvarlo per sempre. */}
       {motivoDaSistemare && (
         <div className="banner" style={{ marginTop: 8 }}>
-          ⚠️ Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
+          <Icona nome="avviso" gruppo="segnali" /> Questo prodotto <strong>blocca l&apos;aggiornamento</strong> del
           magazzino: {motivoDaSistemare}.
           {daConvertire && (
             <>

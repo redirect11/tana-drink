@@ -14262,11 +14262,12 @@ requirements:
       testo attorno (currentColor, em), quindi un tasto e un titolo hanno
       icone della stessa taglia. I pallini degli stati restano colorati in
       entrambi i temi, con gli inchiostri di stato di DESIGN.md.
-      LE SCHERMATE PASSANO UNA ALLA VOLTA. <Icona> accetta anche le emoji di
-      prima e le riporta al loro nome, così si vedono già nel tema; un
-      cricchetto (tests/unit/icone.test.js) conta le emoji ancora scritte a
-      mano nel gestionale, che possono solo calare. L'inventario del
-      07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale.
+      LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le
+      emoji di prima e le riporta al loro nome; un cricchetto
+      (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel
+      gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto.
+      L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577
+      nel gestionale.
       FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la
       navigazione — menu laterale, voci del gestionale e della sala,
       sottosezioni di tutte le pagine, il foglio del telefono, la barra, i
@@ -14277,9 +14278,19 @@ requirements:
       (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il
       loro nome (aria-label), che prima era l'emoji; dentro un <option>
       un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è
-      sceso da 527 a 283. DA FARE: fase 3, le icone dentro le stringhe —
-      messaggi, conferme, segnaposto dei campi di ricerca, etichette nei
-      ternari.
+      sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo
+      «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del
+      loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno
+      `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la
+      lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un
+      segnaposto un disegno non entra), e così le voci delle tendine. Le
+      etichette che stanno nei dati — stati, ruoli, metodi di pagamento,
+      intestazioni della coda — prendono l'emoji dal vocabolario
+      (conEmoji), così stampe, notifiche del telefono e pagine del cliente
+      leggono le stesse di sempre; nel gestionale <ConIcona> riconosce
+      l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le
+      notifiche del telefono (sono testo del sistema) e l'avviso dei cookie
+      (lo legge il cliente).
     status: implemented
     generate_issue: false
     labels: [ui, design]

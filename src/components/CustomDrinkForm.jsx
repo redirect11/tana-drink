@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, baseUnit, entryUnits } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import PriceSuggestion from './PriceSuggestion.jsx'
+import PriceSuggestion from './PriceSuggestion.jsx'
 import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 
 // PRODOTTO LIBERO: voce fuori catalogo battuta al volo (stile "custom
 // amount/item" dei POS SumUp). Bastano nome e prezzo — lo scarico
@@ -35,6 +36,7 @@ export default function CustomDrinkForm({
   warnNoRecipe = false,
   onSaveAsNew = null,
 }) {
+  const testoConIcona = useTestoConIcona()
   const initRows = (initial?.recipe_items || []).map((r) => ({
     inventory_item_id: r.inventory_item_id || '',
     name: r.name || '',
@@ -144,7 +146,7 @@ export default function CustomDrinkForm({
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
       >
-        <h3 style={{ marginTop: 0 }}>{initial ? '✏️ Modifica prodotto' : '🏷 Prodotto libero'}</h3>
+        <h3 style={{ marginTop: 0 }}>{initial ? <><Icona nome="modifica" gruppo="tasti" /> Modifica prodotto</> : <><Icona nome="categorie" gruppo="tasti" /> Prodotto libero</>}</h3>
         <p className="muted small" style={{ margin: '0 0 10px' }}>
           {initial
             ? 'Modifica nome, prezzo e ingredienti solo per questa riga: diventa una voce a sé e non si unisce più con gli originali.'
@@ -266,7 +268,7 @@ export default function CustomDrinkForm({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Cerca ingrediente…"
+              placeholder={testoConIcona('cerca', 'Cerca ingrediente…')}
               style={{ marginTop: 6 }}
             />
             {matches.length > 0 && (

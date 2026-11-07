@@ -1,3 +1,5 @@
+import { conEmoji } from './icone.js'
+
 // ── SERVIZIO O RITIRO ────────────────────────────────────────────────
 //
 // Un conto è servito al tavolo o ritirato al banco. I DUE MODI ESISTONO
@@ -21,8 +23,8 @@
 // sul locale.
 
 export const MODI_CONSEGNA = [
-  ['tavolo', '🍸 Servizio'],
-  ['banco', '🚶 Ritiro'],
+  ['tavolo', conEmoji('menu', 'Servizio')],
+  ['banco', conEmoji('a-piedi', 'Ritiro')],
 ]
 
 // ── I DUE MONDI ─────────────────────────────────────────

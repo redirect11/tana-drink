@@ -8,15 +8,30 @@
 // partenza, «Emoji» per chi le vuole, solo nel gestionale.
 //
 // Qui il vocabolario (i nomi, e per ognuno un'emoji e un disegno), la
-// lettura del tema, e il CRICCHETTO: le emoji sparse nelle schermate del
-// gestionale possono solo calare, una schermata alla volta, finché non
-// passano tutte da <Icona>.
+// lettura del tema, le icone dentro i testi, e il DIVIETO: nelle schermate
+// del gestionale non si scrivono emoji a mano, si chiede un nome.
+// L'utente, 07/11/2026: «il selettore del tema deve essere separato» per
+// le icone della fase 1 (navigazione), della 2 (tasti e stati) e della 3
+// (segnali e messaggi: avvisi, notifiche, campi di ricerca).
 
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import * as Lucide from 'lucide-react'
-import { VOCABOLARIO, nomeIcona, temaIconeDi, temiIconeDi, TEMI_ICONE, GRUPPI_ICONE, TUTTE_EMOJI } from '../../src/lib/icone.js'
+import {
+  VOCABOLARIO,
+  nomeIcona,
+  temaIconeDi,
+  temiIconeDi,
+  TEMI_ICONE,
+  GRUPPI_ICONE,
+  TUTTE_EMOJI,
+  emojiDi,
+  conEmoji,
+  testoConIcona,
+  dividiIcona,
+} from '../../src/lib/icone.js'
+import { STATUS_ICONA, STATUS_EMOJI, PAYMENT_METHOD_LABELS } from '../../src/lib/orderStatus.js'
 import { NAV_GESTIONALE, NAV_SALA, titoloPagina } from '../../src/lib/sezioni.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
 
@@ -50,6 +65,48 @@ describe('il vocabolario', () => {
     expect(nomeIcona('cassa')).toBe('cassa')
     expect(nomeIcona('Magazzino')).toBeNull()
     expect(nomeIcona('')).toBeNull()
+  })
+})
+
+// LE ICONE DENTRO UN TESTO (fase 3). Un segnaposto, una voce di tendina,
+// una notifica del telefono non possono contenere un disegno: lì l'emoji
+// c'è solo nel tema «Emoji». Le etichette che stanno nei dati («🧾 Da
+// fare») prendono l'emoji dal vocabolario, e chi le mostra nel gestionale
+// la riconosce in testa e la disegna nel tema.
+describe('le icone dentro i testi', () => {
+  it('in Emoji l’emoji davanti, in Silhouette la sola parola', () => {
+    expect(testoConIcona('emoji', 'cerca', 'Cerca prodotto…')).toBe('🔍 Cerca prodotto…')
+    expect(testoConIcona('silhouette', 'cerca', 'Cerca prodotto…')).toBe('Cerca prodotto…')
+    // Un nome che non c'è non lascia uno spazio vuoto davanti.
+    expect(testoConIcona('emoji', 'inesistente', 'Testo')).toBe('Testo')
+  })
+
+  it('un’etichetta scritta coi dati torna nome e testo, senza perdere il nome', () => {
+    for (const nome of ['coda', 'contanti', 'carta', 'fatto', 'attesa', 'su', 'giu', 'separa', 'premium', 'menu']) {
+      expect(dividiIcona(conEmoji(nome, 'Testo')), nome).toEqual({ nome, resto: 'Testo' })
+    }
+  })
+
+  it('un testo senza un’icona in testa non si divide', () => {
+    expect(dividiIcona('Cassa chiusa')).toBeNull()
+    expect(dividiIcona('menu del giorno')).toBeNull()
+    expect(dividiIcona('— nessuno')).toBeNull()
+    expect(dividiIcona(42)).toBeNull()
+  })
+
+  it('le emoji delle etichette sono quelle di sempre: le leggono anche le stampe e il cliente', () => {
+    expect(STATUS_EMOJI).toEqual({
+      aperto: '🟢',
+      ricevuto: '🧾',
+      in_preparazione: '🍹',
+      pronto: '🔔',
+      ritirato: '✅',
+      pagato: '💶',
+      annullato: '✖️',
+    })
+    expect(PAYMENT_METHOD_LABELS.banco).toBe('💶 Contante')
+    expect(PAYMENT_METHOD_LABELS.misto).toBe('💶+💳 Misto')
+    for (const nome of Object.values(STATUS_ICONA)) expect(emojiDi(nome), nome).toBeTruthy()
   })
 })
 
@@ -97,18 +154,19 @@ describe('la navigazione parla il vocabolario', () => {
   })
 })
 
-// ── IL CRICCHETTO ────────────────────────────────────────────────────────
+// ── IL DIVIETO ───────────────────────────────────────────────────────────
 //
-// Le emoji ancora scritte a mano nelle schermate del gestionale. Il numero
-// può solo scendere: chi ne toglie, abbassa MASSIMO nello stesso commit
-// (come le soglie della coverage). Una schermata nuova con le emoji fa
-// diventare rossa questa prova: le icone passano da <Icona>.
+// Nelle schermate del gestionale non si scrivono emoji a mano. Era un
+// cricchetto (527 alla fase 1, 283 alla 2) ed è arrivato a zero con la
+// fase 3: un'emoji nuova qui fa diventare rossa la prova. Un'icona si
+// chiede per nome — <Icona nome="…">, `icona=` su conferme e notifiche,
+// conEmoji('…', testo) nei dati, useTestoConIcona nei segnaposti.
 //
 // Restano fuori, apposta: il vocabolario stesso; le pagine del cliente (lo
-// stile del loro menù, decisione dell'utente); le stampe; le icone delle
-// categorie, che sceglie il locale; i nomi delle tavolozze; i semi dello
-// stile «Carte». I commenti non contano.
-const MASSIMO = 283
+// stile del loro menù, decisione dell'utente) e l'avviso dei cookie, che è
+// suo; le stampe; le icone delle categorie, che sceglie il locale; i nomi
+// delle tavolozze; i semi dello stile «Carte». I commenti non contano.
+const MASSIMO = 0
 
 const FUORI = new Set([
   'src/lib/icone.js',
@@ -127,6 +185,7 @@ const FUORI = new Set([
   'src/components/MenuCarte.jsx',
   'src/components/MenuGiornale.jsx',
   'src/components/DettaglioDrink.jsx',
+  'src/lib/cookieConsent.js',
 ])
 const EMOJI = /\p{Extended_Pictographic}/gu
 const SEGNI = new Set(['©', '®', '™', '↩', '↪', '↔', '↕'])
@@ -144,7 +203,7 @@ function emojiNelGestionale() {
   const trovate = []
   for (const p of sorgenti(join(radice, 'src'))) {
     const rel = relative(radice, p).replaceAll('\\', '/')
-    if (FUORI.has(rel) || /printer|stampa|scontrino/i.test(rel) || rel.startsWith('src/demo/')) continue
+    if (FUORI.has(rel) || /^src\/lib\/.*(printer|stampa|scontrino|stampante)/i.test(rel) || rel.startsWith('src/demo/')) continue
     const testo = readFileSync(p, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
     testo.split(/\r?\n/).forEach((riga, i) => {
       const codice = riga.replace(/(^|[^:'"`\\])\/\/.*$/, '$1')
@@ -154,13 +213,13 @@ function emojiNelGestionale() {
   return trovate
 }
 
-describe('il cricchetto delle emoji nel gestionale', () => {
-  it(`ne restano al massimo ${MASSIMO}, e possono solo calare`, () => {
+describe('nessuna emoji scritta a mano nel gestionale', () => {
+  it('nemmeno una', () => {
     const trovate = emojiNelGestionale()
     expect(
       trovate.length,
       `Emoji scritte a mano nel gestionale: ${trovate.length} (massimo ${MASSIMO}). Usa <Icona nome="…"> ` +
-        '(src/components/Icona.jsx) invece dell’emoji. Se ne hai tolte, abbassa MASSIMO.'
+        '(src/components/Icona.jsx) invece dell’emoji.\n' + trovate.join('\n')
     ).toBeLessThanOrEqual(MASSIMO)
   })
 })

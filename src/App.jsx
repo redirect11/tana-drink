@@ -82,8 +82,9 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
-import Icona, { TemaIcone } from './components/Icona.jsx'
-import { temiIconeDi, TUTTE_EMOJI } from './lib/icone.js'
+import Icona from './components/Icona.jsx'
+import { TemaIcone } from './lib/temaIcone.js'
+import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
@@ -131,7 +132,7 @@ export default function App() {
       // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
       // notifica nasce già letta — è appena stata mostrata.
       recordNotif(
-        '🎉 L’app è stata aggiornata',
+        conEmoji('festa', 'L’app è stata aggiornata'),
         'Tocca per rivedere cosa è cambiato',
         { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
       )
@@ -254,7 +255,7 @@ export default function App() {
     if (!online) wasOffline.current = true
     else if (wasOffline.current) {
       wasOffline.current = false
-      toastSuccess('✅ Di nuovo online — sincronizzo le modifiche')
+      toastSuccess('Di nuovo online — sincronizzo le modifiche')
     }
   }, [online])
 
@@ -651,7 +652,7 @@ export default function App() {
               )}
               {user ? (
                 <Link className="btn ghost small" to="/profilo">
-                  👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+                  <Icona nome="profilo" gruppo="tasti" />{' '}Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>
               ) : accountsOn ? (
                 <Link className="btn ghost small" to="/accedi">Accedi</Link>
@@ -675,7 +676,7 @@ export default function App() {
           )}
           {user ? (
             <Link className="btn ghost small" to="/profilo">
-              👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+              <Icona nome="profilo" gruppo="tasti" />{' '}{profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
             </Link>
           ) : accountsOn ? (
             <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> Accedi</Link>
@@ -737,7 +738,7 @@ export default function App() {
 
       {!isFirebaseConfigured && (
         <div className="banner">
-          ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
+          <Icona nome="avviso" gruppo="segnali" />{' '}Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
           <code>VITE_FIREBASE_PROJECT_ID</code> (vedi <code>.env.example</code> e{' '}
           <code>firestore.rules</code>).
         </div>
@@ -883,7 +884,7 @@ function FullscreenButton() {
       title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
       aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
     >
-      {attivo ? '🡼' : '⛶'}
+      <Icona nome={attivo ? 'esci-schermo-intero' : 'schermo-intero'} gruppo="tasti" />
     </button>
   )
 }

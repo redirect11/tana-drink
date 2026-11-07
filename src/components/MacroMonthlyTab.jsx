@@ -13,7 +13,7 @@ import Didascalia from './Didascalia.jsx'
 import Soffietto from './Soffietto.jsx'
 import { BloccoMacro, BloccoTotale } from './TabellaMacro.jsx'
 import { colonneDelBilancio } from '../lib/periodiBilancio.js'
-import { unisciVendite } from '../lib/venditeStoriche.js'
+import { unisciVendite } from '../lib/venditeStoriche.js'
 import Icona from './Icona.jsx'
 
 // BILANCIO → VENDUTO × INCASSATO: quanto ha incassato ogni gruppo di voci

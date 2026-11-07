@@ -36,10 +36,9 @@ import {
   ORDER_STATUSES,
   STATUS_LABELS,
   statoAlBanco,
-  STATUS_EMOJI,
   formatPrice,
   placedByName,
-  paymentMethodLabel,
+  STATUS_ICONA,
 } from '../lib/orderStatus.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { modoAllaNascita } from '../lib/consegna.js'
@@ -104,8 +103,10 @@ import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
 import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
-import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
-import Icona from './Icona.jsx'
+import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { emojiDi } from '../lib/icone.js'
+import MetodoPagamento from './MetodoPagamento.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -1214,7 +1215,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     ctx.font = `500 ${px}px system-ui, -apple-system, "Segoe UI", sans-serif`
     let maxW = 0
     for (const l of orderedLines) {
-      const w = ctx.measureText(`⠿ ${l.custom ? '✨ ' : ''}${l.name}  · ${formatPrice(l.unit_price)}`).width
+      const w = ctx.measureText(`⠿ ${l.custom ? `${emojiDi('special')} ` : ''}${l.name}  · ${formatPrice(l.unit_price)}`).width
       if (w > maxW) maxW = w
     }
     // overhead: padding lista + controlli quantità
@@ -2205,7 +2206,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           const parziale = order.payment_status === 'parziale'
           const aperto = order.status === ORDER_OPEN
           const cls = aperto && paid ? 'pagato' : order.status
-          const emoji = aperto && paid ? '💳' : STATUS_EMOJI[order.status]
+          const emoji = <Icona nome={aperto && paid ? 'carta' : STATUS_ICONA[order.status]} gruppo="tasti" />
           const label =
             aperto && paid
               ? 'Pagato'
@@ -2275,7 +2276,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             className={`pill ${active.status} posd-stato`}
             title={`Stato della lavorazione: ${statoAlBanco(active.status, order.service_mode)}`}
           >
-            <Icona nome={STATUS_EMOJI[active.status]} gruppo="tasti" /> {statoAlBanco(active.status, order.service_mode)}
+            <Icona nome={STATUS_ICONA[active.status]} gruppo="tasti" /> {statoAlBanco(active.status, order.service_mode)}
           </span>
         )}
         {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
@@ -2296,7 +2297,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
         if (!r) return null
         return (
           <div className="riaperto-nota" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
-            ♻️ <strong>Conto riaperto</strong> il {quando(r.at)}
+            <Icona nome="riapri" gruppo="tasti" />{' '}<strong>Conto riaperto</strong> il {quando(r.at)}
             {r.chi ? ` da ${r.chi}` : ''}
             {r.motivo ? <> — « {r.motivo} »</> : ''}
           </div>
@@ -2372,7 +2373,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             >
               <span style={{ minWidth: 0 }}>
                 <span className="muted">
-                  🧾 {confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
+                  <Icona nome="coda" gruppo="tasti" />{' '}{confirmedLines.reduce((s, l) => s + l.qty, 0) + draftCount} item — tocca per aprire
                 </span>
                 <span className="posd-collapsed-tot" style={{ display: 'block' }}>
                   {formatPrice(confirmedTotal + draftTotal + extras)}
@@ -2477,7 +2478,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                           : 'Niente da unire o separare'
                     }
                   >
-                    {canMerge ? '🔗 Unisci' : '⑃ Separa'}
+                    {canMerge ? <><Icona nome="unisci" gruppo="tasti" /> Unisci</> : <><Icona nome="separa" gruppo="tasti" /> Separa</>}
                   </button>
                 )}
                 {/* NASCONDI I PAGATI sta qui, in riga con gli altri: da
@@ -2494,7 +2495,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         : 'Lascia in lista solo quello che resta da pagare'
                     }
                   >
-                    {hidePaid ? `💳 Mostra pagati (${paidCount})` : `💳 Nascondi pagati (${paidCount})`}
+                    <Icona nome="carta" gruppo="tasti" /> {hidePaid ? `Mostra pagati (${paidCount})` : `Nascondi pagati (${paidCount})`}
                   </button>
                 )}
                 <button
@@ -2557,7 +2558,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             )}
             {groupIsContainer && (
               <div className="banner" style={{ margin: '4px 0' }}>
-                👥 “{group.name}” contiene altri gruppi: non può avere ordini
+                <Icona nome="staff" gruppo="tasti" />{' '}“{group.name}” contiene altri gruppi: non può avere ordini
                 diretti. Scegli uno dei suoi sottogruppi.
               </div>
             )}
@@ -2634,7 +2635,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 // quel riquadro è una fila.
                 <Fragment key={l.key}>
                   {titolo && (
-                    <div className="posd-gruppo muted small">{titolo}</div>
+                    <div className="posd-gruppo muted small"><ConIcona testo={titolo} /></div>
                   )}
                   <RigaOrdinabile id={l.key} attiva={organizzaLista} bloccata={isPaid || closed}>
                   <div
@@ -2665,7 +2666,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                            {l.custom ? '✨ ' : ''}{l.name}
+                            {l.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{l.name}
                           </span>
                         </span>
                         {/* IL CALCOLO A RICHIESTA (⋯ → «Mostra i calcoli»).
@@ -2831,7 +2832,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                                 copre solo chi le sceglie nella schermata di
                                 pagamento. */}
                             {i.cosa ? 'Pagate' : 'Acconto'}
-                            {i.metodo ? ` · ${paymentMethodLabel(i.metodo)}` : ''}
+                            {i.metodo && <> · <MetodoPagamento metodo={i.metodo} /></>}
                             {i.quando ? ` · ${apertoIl(i.quando)}` : ''}
                           </span>
                           <span>−{formatPrice(i.importo)}</span>
@@ -2841,7 +2842,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         )}
                         {i.sconto && (
                           <div className="muted small posd-incasso-cosa">
-                            🎁 {i.sconto.etichetta} −{formatPrice(i.sconto.importo)}
+                            <Icona nome="sconto" gruppo="tasti" />{' '}{i.sconto.etichetta} −{formatPrice(i.sconto.importo)}
                           </div>
                         )}
                       </div>
@@ -2947,7 +2948,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     aria-label="Riapri conto"
                     title="Il conto torna fra quelli aperti"
                   >
-                    ♻️{!soloIcone && ' Riapri conto'}
+                    <Icona nome="riapri" gruppo="tasti" />
+                    {!soloIcone && ' Riapri conto'}
                   </button>
                 ) : (
                   <button
@@ -3004,7 +3006,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'dati',
-            icon: '👤',
+            icon: 'profilo',
             label: 'Dati conto',
             hint: 'Nome, tavolo, note',
             onClick: () => setShowInfo(true),
@@ -3016,7 +3018,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           // e allora non compare.
           workflowOn && {
             id: 'cliente',
-            icon: '📲',
+            icon: 'invio-telefono',
             label: 'Mostra al cliente',
             hint: "Il QR per seguire l'ordine dal suo telefono",
             disabled: isNew,
@@ -3024,7 +3026,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'storia',
-            icon: '🕘',
+            icon: 'orario',
             label: 'Storia del conto',
             hint: 'Aperto, chiuso, annullato, riaperto',
             disabled: isNew,
@@ -3038,7 +3040,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           // ordine. (Qui siamo in un array: i commenti sono `//`, non JSX.)
           ((canMerge || canSplit) && {
             id: 'unisci-separa',
-            icon: canMerge ? '🔗' : '⑃',
+            icon: canMerge ? 'unisci' : 'separa',
             label: canMerge ? 'Unisci le righe uguali' : 'Separa le quantità',
             hint: canMerge
               ? 'Le stesse voci tornano una riga sola'
@@ -3047,7 +3049,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           }),
           {
             id: 'svuota',
-            icon: '🧹',
+            icon: 'pulisci',
             label: 'Svuota il conto',
             hint: 'Toglie tutte le righe: chiede conferma',
             disabled: !(righeDaSvuotare > 0) || closed,
@@ -3055,7 +3057,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           },
           {
             id: 'calcoli',
-            icon: '🧮',
+            icon: 'calcola',
             label: mostraCalcoli ? 'Nascondi i calcoli delle righe' : 'Mostra i calcoli delle righe',
             hint: 'Sotto ogni riga, «2 × 5,00 €», come le note',
             onClick: toggleCalcoli,
@@ -3140,10 +3142,10 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     {(workflowOn || annullataPerDivisione(c)) && (
                       <span className={`pill ${c.status}`} style={{ fontSize: '0.7rem' }}>
                         {annullataPerDivisione(c) ? (
-                          '✂️ Divisa'
+                          <ConIcona nome="dividi" testo="Divisa" />
                         ) : (
                           <>
-                            <Icona nome={STATUS_EMOJI[c.status]} gruppo="tasti" />{' '}
+                            <Icona nome={STATUS_ICONA[c.status]} gruppo="tasti" />{' '}
                             {statoAlBanco(c.status, order.service_mode)}
                           </>
                         )}
@@ -3153,7 +3155,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   {(c.items || []).map((i, idx) => (
                     <div className="row between" key={idx} style={{ marginTop: 4 }}>
                       <span className="muted small">
-                        {i.qty}× {i.custom ? '✨ ' : ''}{i.name}
+                        {i.qty}× {i.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{i.name}
                       </span>
                       <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
                     </div>
@@ -3312,7 +3314,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 style={{ marginTop: 12 }}
                 onClick={chiudiInfo}
               >
-                {isNew ? 'OK' : '💾 Salva dati conto'}
+                {isNew ? 'OK' : <><Icona nome="salva" gruppo="tasti" /> Salva dati conto</>}
               </button>
             )}
           </div>
@@ -3542,7 +3544,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
       {confirmSvuota && (
         <ConfirmDialog
-          title="🧹 Svuotare il conto?"
+          icona="pulisci"
+          title="Svuotare il conto?"
           message={`Le ${righeDaSvuotare} righe battute finora vengono tolte. Il conto resta aperto, vuoto.`}
           confirmLabel="Svuota"
           cancelLabel="Indietro"
@@ -3557,7 +3560,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
 
       {confirmCancel && (
         <ConfirmDialog
-          title="✖️ Annullare l'ordine?"
+          icona="annullato"
+          title="Annullare l'ordine?"
           message={
             isNew
               ? 'Le righe battute finora vengono buttate e si torna alla coda. Il conto non è ancora stato aperto.'

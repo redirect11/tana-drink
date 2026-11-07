@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ConIcona } from './Icona.jsx'
 
 // ── MENU A TENDINA ───────────────────────────────────────────────────
 // Un tasto che apre un pannello. Serve dove le scelte sono tante e stanno
@@ -44,7 +45,7 @@ export default function Tendina({
         onClick={() => setAperta((v) => !v)}
         title={etichetta}
       >
-        {riassunto || etichetta} <span aria-hidden className="tendina-freccia">▾</span>
+        <ConIcona testo={riassunto || etichetta} /> <span aria-hidden className="tendina-freccia">▾</span>
       </button>
       {aperta && (
         <div className="tendina-pannello" style={{ width: largo }} role="dialog" aria-label={etichetta}>

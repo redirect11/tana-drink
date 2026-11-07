@@ -16,7 +16,7 @@ import {
 import { contenutoDelPezzo, formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { ETICHETTA_ORIGINE, origineDi, storicoDiCoppia } from '../lib/storicoPrezzi.js'
-import { toastError } from '../lib/toast.js'
+import { toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 
 // ── IL LISTINO DI UN FORNITORE (REQ-MAG-035) ─────────────────────────

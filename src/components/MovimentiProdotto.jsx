@@ -5,7 +5,7 @@ import { shiftDay } from '../lib/ore.js'
 import { businessDayKey } from '../lib/businessDay.js'
 import { MESI_CORTI } from '../lib/periodo.js'
 import { etichettaTipo, riepilogoMovimenti } from '../lib/movimentiProdotto.js'
-import GruppoChip from './GruppoChip.jsx'
+import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 
 // LA MOVIMENTAZIONE DI UN PRODOTTO (REQ-MAG-048), dalla sua scheda in

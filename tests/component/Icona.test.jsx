@@ -9,10 +9,11 @@
 // del tema in Impostazioni → Aspetto.
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
-import Icona, { TemaIcone } from '../../src/components/Icona.jsx'
+import Icona from '../../src/components/Icona.jsx'
+import { TemaIcone } from '../../src/lib/temaIcone.js'
 
 // Il contesto porta il tema di ogni gruppo; le prove dicono quello della
 // navigazione, che è il gruppo di partenza di <Icona>.
@@ -85,5 +86,96 @@ describe('la scelta in Aspetto', () => {
     expect(onSave).toHaveBeenCalledWith({ tema_icone_tasti: 'emoji' })
     await userEvent.click(screen.getByRole('button', { name: 'Segnali e messaggi: Emoji' }))
     expect(onSave).toHaveBeenCalledWith({ tema_icone_segnali: 'emoji' })
+  })
+})
+
+// ── FASE 3: I SEGNALI E I MESSAGGI ───────────────────────────────────────
+// Le notifiche a comparsa, le etichette che arrivano come testo, i campi
+// di ricerca: seguono il tema «Segnali e messaggi», separato dagli altri.
+describe('le etichette che arrivano come testo', () => {
+  it('l’emoji in testa si disegna nel tema, il resto resta testo', async () => {
+    const { ConIcona } = await import('../../src/components/Icona.jsx')
+    const { container } = render(
+      <TemaIcone.Provider value={{ tasti: 'silhouette' }}>
+        <ConIcona testo="🧾 Da fare" />
+      </TemaIcone.Provider>
+    )
+    expect(container.querySelector('svg')).not.toBeNull()
+    expect(container.textContent).toBe(' Da fare')
+  })
+
+  it('in Emoji torna com’era', async () => {
+    const { ConIcona } = await import('../../src/components/Icona.jsx')
+    const { container } = render(
+      <TemaIcone.Provider value={{ tasti: 'emoji' }}>
+        <ConIcona testo="🧾 Da fare" />
+      </TemaIcone.Provider>
+    )
+    expect(container.textContent).toBe('🧾 Da fare')
+  })
+
+  it('un testo senza icona esce com’è', async () => {
+    const { ConIcona } = await import('../../src/components/Icona.jsx')
+    const { container } = render(<ConIcona testo="Aperti" />)
+    expect(container.textContent).toBe('Aperti')
+  })
+})
+
+describe('le notifiche a comparsa', () => {
+  // Le notifiche vivono in un deposito del modulo, che resta fra una prova
+  // e l'altra: con lo stesso id ognuna prende il posto della precedente.
+  async function mostra(tema, messaggio, opzioni = {}) {
+    const { default: Toasts } = await import('../../src/components/Toasts.jsx')
+    const { showToast } = await import('../../src/lib/toast.js')
+    const vista = render(
+      <TemaIcone.Provider value={{ segnali: tema }}>
+        <Toasts />
+      </TemaIcone.Provider>
+    )
+    act(() => {
+      showToast(messaggio, { id: 'prova', ...opzioni })
+    })
+    return vista
+  }
+
+  it('l’icona del tipo, nel tema dei segnali', async () => {
+    const { container, unmount } = await mostra('silhouette', 'Avanzamento non riuscito', { kind: 'error' })
+    expect(container.querySelector('.toast svg')).not.toBeNull()
+    expect(container.querySelector('.toast').textContent).toBe('Avanzamento non riuscito')
+    unmount()
+  })
+
+  it('l’icona chiesta, se quella del tipo non basta', async () => {
+    const { container, unmount } = await mostra('emoji', 'Chiamata inviata al bancone', { icona: 'chiama-bancone' })
+    expect(container.querySelector('.toast').textContent).toBe('📟Chiamata inviata al bancone')
+    unmount()
+  })
+
+  it('un messaggio scritto con l’emoji davanti non la mostra due volte', async () => {
+    const { container, unmount } = await mostra('silhouette', '⚠️ Stampa non riuscita', { kind: 'error' })
+    expect(container.querySelector('.toast').textContent).toBe('Stampa non riuscita')
+    expect(container.querySelectorAll('.toast svg')).toHaveLength(1)
+    unmount()
+  })
+})
+
+describe('i campi di ricerca', () => {
+  // La lente nel testo di prova solo in «Emoji»: un disegno, dentro un
+  // segnaposto, non entra.
+  it('seguono il tema dei segnali', async () => {
+    const { useTestoConIcona } = await import('../../src/lib/temaIcone.js')
+    function Campo() {
+      const testoConIcona = useTestoConIcona()
+      return <input placeholder={testoConIcona('cerca', 'Cerca prodotto…')} />
+    }
+    for (const [tema, atteso] of [['emoji', '🔍 Cerca prodotto…'], ['silhouette', 'Cerca prodotto…']]) {
+      const { unmount } = render(
+        <TemaIcone.Provider value={{ segnali: tema }}>
+          <Campo />
+        </TemaIcone.Provider>
+      )
+      expect(screen.getByRole('textbox')).toHaveAttribute('placeholder', atteso)
+      unmount()
+    }
   })
 })

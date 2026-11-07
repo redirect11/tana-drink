@@ -28,8 +28,8 @@ import ConfirmDialog from './ConfirmDialog.jsx'
 import VipTab from './VipTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
-import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
-import Icona from './Icona.jsx'
+import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -171,7 +171,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
           {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>sospeso</span>}
         </div>
         <div className="desc">
-          {RUOLO_ETICHETTA[u.role] ?? u.role}
+          <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
           {u.name && u.email ? ` · ${u.email}` : ''}
         </div>
       </div>
@@ -217,7 +217,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 })
               }
             >
-              {u.disabled ? '▶' : '⏸'}
+              <Icona nome={u.disabled ? 'avvia' : 'pausa'} gruppo="tasti" />
             </button>
             <button
               className="btn ghost small"
@@ -227,7 +227,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setConfirm({
                   title: `Eliminare ${u.email}?`,
                   message:
-                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa ⏸ Sospendi.',
+                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa Sospendi.',
                   danger: true,
                   run: () => run(() => removeStaff(u.uid)),
                 })
@@ -311,7 +311,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                     className={`mode-option${nuovoRuolo === value ? ' active' : ''}`}
                     onClick={() => setNuovoRuolo(value)}
                   >
-                    {RUOLO_ETICHETTA[value]}
+                    <ConIcona testo={RUOLO_ETICHETTA[value]} />
                   </button>
                 ))}
               </div>
@@ -319,7 +319,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 {RUOLO_DESCRIZIONE[nuovoRuolo]}
               </p>
               <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>
-                {busy ? 'Creo…' : '➕ Crea account'}
+                {busy ? 'Creo…' : <><Icona nome="aggiungi" gruppo="tasti" /> Crea account</>}
               </button>
             </form>
           )}
@@ -385,7 +385,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   className={`mode-option${ruoloScelto === value ? ' active' : ''}`}
                   onClick={() => setRuoloScelto(value)}
                 >
-                  {RUOLO_ETICHETTA[value]}
+                  <ConIcona testo={RUOLO_ETICHETTA[value]} />
                 </button>
               ))}
             </div>

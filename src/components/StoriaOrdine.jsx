@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { storiaOrdine, quando } from '../lib/storiaOrdine.js'
-import Icona from './Icona.jsx'
+import { storiaOrdine, quando } from '../lib/storiaOrdine.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // ── LA STORIA DEL CONTO, e il suo RIPRISTINO ─────────────────────────
 // Due pannelli che vanno insieme: uno racconta cos'è successo al conto,
@@ -9,10 +9,10 @@ import Icona from './Icona.jsx'
 // nello stesso modo.
 
 const SEGNO = {
-  aperto: '🟢',
-  chiuso: '💶',
-  annullato: '✖️',
-  riaperto: '♻️',
+  aperto: 'verde',
+  chiuso: 'contanti',
+  annullato: 'annullato',
+  riaperto: 'riapri',
 }
 
 export function StoriaOrdineDialog({ order, onClose }) {
@@ -38,14 +38,14 @@ export function StoriaOrdineDialog({ order, onClose }) {
           <ul className="storia-lista">
             {eventi.map((e, i) => (
               <li key={i} className={`storia-riga storia-${e.tipo}`}>
-                <span className="storia-segno" aria-hidden>{SEGNO[e.tipo] || '•'}</span>
+                <span className="storia-segno" aria-hidden>{SEGNO[e.tipo] ? <Icona nome={SEGNO[e.tipo]} gruppo="tasti" /> : '•'}</span>
                 <div className="grow">
                   <div className="row between" style={{ gap: 8, alignItems: 'baseline' }}>
                     <strong>{e.titolo}</strong>
                     <span className="muted small" style={{ whiteSpace: 'nowrap' }}>{quando(e.at)}</span>
                   </div>
                   {e.chi && <div className="muted small">di {e.chi}</div>}
-                  {e.dettaglio && <div className="storia-motivo">« {e.dettaglio} »</div>}
+                  {e.dettaglio && <div className="storia-motivo">« <ConIcona testo={e.dettaglio} /> »</div>}
                 </div>
               </li>
             ))}
