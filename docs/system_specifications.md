@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **319 voci** in tutto. **282** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **12** difetti noti sono ancora aperti.
+cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -3514,9 +3514,9 @@ PERCHÉ L'APP NON INCIAMPI nelle regole nuove: - lo scarico del magazzino di una
 
 QUANTO COSTA: una lettura della licenza per richiesta, e solo dove serve; nello stesso lotto le letture dello stesso documento contano una volta (provato sull'emulatore con 60 documenti). Gli ordini che non toccano lo sconto non la leggono.
 
-DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate.
+DA DIRE ALLA REGIA: `licenza/attuale` non si cancella mai a un locale attivo (le regole leggerebbero «nessun limite»); `limiti.sconti` è un booleano; i passaggi a un piano più piccolo si fanno fuori dall'orario di servizio, perché le scritture in coda senza rete di un modulo appena tolto vengono rifiutate. E LE FUNCTIONS (BUG-134, 07/11/2026): girano coi permessi dell'amministratore e le regole non le fermano, quindi quelle di un modulo leggono la licenza da sé (functions/lib/licenza-core.js, la stessa domanda di `modulo()`). Oggi sono i pagamenti SumUp: dove un pagamento parte, senza il modulo, failed-precondition.
 
-**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`
+**Dove**: `firestore.rules (modulo, scontiConsentiti, scontoNonCresce), src/lib/licenza.js (COLLEZIONI_DEI_MODULI, scritturaConsentita, sezione `ore`), src/lib/api.js (magazzinoIncluso), src/lib/backup.js, src/components/BackupPanel.jsx` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/unit/regoleLicenza.test.js`, `tests/unit/scaricoSenzaMagazzino.test.js`, `tests/unit/backup.test.js`, `tests/unit/sezioni.test.js`, `tests/bdd/licenza-functions.test.js`
 
 #### REQ-LIC-010 — Gli stili del menù nella licenza: «Notte» è della Tana
 
@@ -4155,7 +4155,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
-| 🔴 | [BUG-134](#bug-134--le-cloud-functions-non-guardano-la-licenza-i-pagamenti-sumup-e-le-chiamate-allo-staff-partono-con-qualsiasi-piano) — Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano | alta | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4276,12 +4275,6 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
-
-#### BUG-134 — Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano
-
-Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il controllo vero dei moduli sta nelle regole di Firestore (REQ-LIC-008); l'app nasconde. Le Functions girano con i permessi dell'amministratore e le regole non le fermano, ma nessuna legge `licenza/attuale`: le chiamate di SumUp (cassa, lettore, gruppi) partono anche dove il modulo non c'è, chiamandole a mano. Da fare: le Functions dei moduli leggono la licenza e rispondono «non incluso» (failed-precondition).
-
-**Dove**: `functions/index.js, functions/lib/`
 
 ## Non più valido
 
