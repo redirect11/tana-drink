@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.27-beta — in lavorazione
+## 1.10.28-beta — in lavorazione
+
+### Moduli
+
+- I pagamenti SumUp controllano la licenza anche sul server: senza il
+  modulo, un checkout, l'associazione del lettore o un incasso chiamati a
+  mano vengono rifiutati (BUG-134).
+
+## 1.10.27-beta — 07/11/2026 (test)
 
 ### Moduli
 
@@ -24,9 +32,6 @@
   cliente non legge più «ordinazioni momentaneamente sospese» (BUG-135).
 - La descrizione del modulo Personale non promette più le chiamate allo
   staff, che sono di base (BUG-136).
-- I pagamenti SumUp controllano la licenza anche sul server: senza il
-  modulo, un checkout, l'associazione del lettore o un incasso chiamati a
-  mano vengono rifiutati (BUG-134).
 
 ## 1.10.26-beta — 06/11/2026 (test)
 
