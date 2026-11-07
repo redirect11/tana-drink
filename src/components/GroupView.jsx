@@ -34,6 +34,7 @@ import {
 } from '../lib/groups.js'
 import { formatPrice, STATUS_EMOJI, statoAlBanco } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
+import { sumupAttivo } from '../lib/licenza.js'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
@@ -320,12 +321,19 @@ export default function GroupView({ groupId, onClose }) {
                 >
                   ➗ Dividi
                 </button>
-                <button className="btn secondary" disabled={paying} onClick={payOnline}>
-                  💳 Online
-                </button>
-                <button className="btn secondary" disabled={paying} onClick={payReader}>
-                  📟 Lettore
-                </button>
+                {/* SOLO CON SUMUP (BUG-133): c'erano con qualsiasi
+                    licenza, e su un piano senza il modulo chiamavano le
+                    Functions lo stesso. */}
+                {sumupAttivo(impostazioni) && (
+                  <>
+                    <button className="btn secondary" disabled={paying} onClick={payOnline}>
+                      💳 Online
+                    </button>
+                    <button className="btn secondary" disabled={paying} onClick={payReader}>
+                      📟 Lettore
+                    </button>
+                  </>
+                )}
               </div>
               {sumupMsg && (
                 <p className="muted small" style={{ marginTop: 8 }}>{sumupMsg}</p>

@@ -330,7 +330,7 @@ function MovimentiPanel() {
 // ci resta `SupplierManager`, che è il modulo vero e non ha altri clienti:
 // spostare seicento righe per una voce di menu avrebbe reso illeggibile il
 // diff di un trasloco che di suo è una riga.
-export function FornitoriPanel() {
+export function FornitoriPanel({ conListino = true }) {
   const [suppliers, setSuppliers] = useState([])
   // IL LISTINO È IL DETTAGLIO DELLA RIGA, non una sottosezione in più
   // (docs/navigazione.md): si apre da un fornitore, si chiude e si torna
@@ -346,7 +346,7 @@ export function FornitoriPanel() {
     return <ListinoFornitore fornitore={aperto} onIndietro={() => setListinoPer(null)} />
   }
   return (
-    <SupplierManager suppliers={suppliers} onChange={ricarica} onListino={setListinoPer} />
+    <SupplierManager suppliers={suppliers} onChange={ricarica} onListino={conListino ? setListinoPer : null} />
   )
 }
 

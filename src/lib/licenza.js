@@ -58,6 +58,11 @@ import { STILI_MENU, temiInLicenza } from './stileMenu.js'
 // `icona` è quella della scheda del modulo nel Marketplace (REQ-LIC-012):
 // qui, e non in una tabella del componente, perché un modulo nuovo non
 // resti senza. Dove il modulo ha una voce nel menu laterale è la stessa.
+// Una sezione può stare in `sezioni` di PIÙ moduli, e allora si vede con
+// uno qualunque dei due (Fornitori: magazzino o fatture ai fornitori,
+// REQ-LIC-015).
+// `richiede` sono i moduli senza i quali questo non sta in piedi
+// (REQ-LIC-015): attivo vuol dire incluso, acceso E con la sua base attiva.
 export const MODULI_PREMIUM = {
   // ── I MODULI DEL PRODOTTO (REQ-LIC-002, decisione dell'utente del
   // 22/10/2026): di base un locale crea le voci di menù e gestisce gli
@@ -72,6 +77,9 @@ export const MODULI_PREMIUM = {
   },
   ordini_cliente: {
     chiave: 'modulo_ordini_cliente_enabled',
+    // Il cliente ordina DAL menù digitale: senza, non ha una pagina da cui
+    // farlo (decisione dell'utente, 07/11/2026).
+    richiede: ['menu_tavoli'],
     icona: '🛎️',
     label: 'Ordini dal telefono del cliente',
     descrizione: 'Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.',
@@ -84,10 +92,14 @@ export const MODULI_PREMIUM = {
   },
   magazzino: {
     chiave: 'modulo_magazzino_enabled',
-    sezioni: ['inventario', 'fornitori'],
+    // Dentro Fornitori sono del magazzino gli ordini, le altre spese e i
+    // listini: la sezione la apre anche lo scadenzario da solo, e lì
+    // queste parti non hanno i dati che servono (le regole ne rifiutano le
+    // scritture).
+    sezioni: ['inventario', 'fornitori', 'nuovo-ordine', 'lista-ordini', 'spese', 'listino'],
     icona: '📦',
     label: 'Magazzino e fornitori',
-    descrizione: 'Giacenze, scarico automatico dalle ricette, ordini e fatture dei fornitori. Inventario e scadenzario sono i suoi moduli.',
+    descrizione: 'Giacenze, scarico automatico dalle ricette, ordini ai fornitori e altre spese. L’inventario è un suo modulo.',
   },
   statistiche: {
     chiave: 'modulo_statistiche_enabled',
@@ -103,7 +115,9 @@ export const MODULI_PREMIUM = {
     sezioni: ['ore'],
     icona: '🧑‍🍳',
     label: 'Personale e ore',
-    descrizione: 'Ore e paghe del personale, chiamate allo staff.',
+    // Non «chiamate allo staff» (BUG-136): il cerca-persone e le timbrature
+    // funzionano anche senza il modulo, apposta (COLLEZIONI_DEI_MODULI).
+    descrizione: 'Ore lavorate, turni e paghe del personale.',
   },
   // `sumup` e non `pagamenti`: la cassa del gestionale ha già quella sezione.
   sumup: {
@@ -115,6 +129,9 @@ export const MODULI_PREMIUM = {
   conta: {
     chiave: 'modulo_conta_enabled',
     sezioni: ['storico'],
+    // L'inventario conta le giacenze del magazzino e chiudendolo le
+    // riallinea: senza magazzino non c'è niente da contare.
+    richiede: ['magazzino'],
     icona: '📋',
     label: 'Inventario di magazzino',
     descrizione:
@@ -136,6 +153,10 @@ export const MODULI_PREMIUM = {
     // Riacceso il 26/08/2026 su richiesta dell'utente: la Tana lo usa
     // davvero. Resta una funzione premium, inclusa nella sua licenza.
     chiave: 'modulo_scadenzario_enabled',
+    // AUTONOMO (REQ-LIC-015, decisione dell'utente del 07/11/2026): apre la
+    // sezione Fornitori anche senza il magazzino, con l'anagrafica e lo
+    // scadenzario.
+    sezioni: ['fornitori'],
     icona: '📅',
     label: 'Fatture ai fornitori',
     descrizione:
@@ -163,7 +184,8 @@ export const MODULI_PREMIUM = {
 export const COLLEZIONI_DEI_MODULI = Object.freeze({
   inventory_items: ['magazzino'],
   inventory_categories: ['magazzino'],
-  suppliers: ['magazzino'],
+  // L'anagrafica serve anche alle fatture ai fornitori (REQ-LIC-015).
+  suppliers: ['magazzino', 'scadenzario'],
   supplier_prices: ['magazzino'],
   supplier_price_history: ['magazzino'],
   stock_movements: ['magazzino'],
@@ -202,17 +224,22 @@ export const moduliPremium = () =>
 // scrivere) il documento del locale. Null se l'id non è di un modulo.
 export const chiaveModulo = (id) => MODULI_PREMIUM[id]?.chiave ?? null
 
-// Questo id è una funzione premium? Serve dove si filtra un elenco misto:
-// una voce che non è premium non ha una licenza da controllare.
-// Il modulo che accende una sezione: se stesso, o quello che la elenca
-// fra le sue `sezioni`.
-export function moduloDiSezione(id) {
-  if (Object.hasOwn(MODULI_PREMIUM, id)) return id
-  const trovato = Object.entries(MODULI_PREMIUM).find(([, m]) => m.sezioni?.includes(id))
-  return trovato ? trovato[0] : id
+// I moduli che accendono una sezione: se stessa, se è un modulo, e quelli
+// che la elencano fra le loro `sezioni`. Vuoto se la sezione non è di
+// nessun modulo.
+export function moduliDiSezione(id) {
+  const di = Object.entries(MODULI_PREMIUM)
+    .filter(([, m]) => m.sezioni?.includes(id))
+    .map(([mod]) => mod)
+  return Object.hasOwn(MODULI_PREMIUM, id) ? [id, ...di] : di
 }
 
-export const ePremium = (id) => Object.hasOwn(MODULI_PREMIUM, moduloDiSezione(id))
+// Questo id è una funzione premium? Serve dove si filtra un elenco misto:
+// una voce che non è premium non ha una licenza da controllare.
+export const ePremium = (id) => moduliDiSezione(id).length > 0
+
+// I moduli che questo richiede, come li scrive la tabella.
+export const richiesteDi = (id) => MODULI_PREMIUM[id]?.richiede ?? []
 
 // PRIMA DOMANDA: il locale ce l'ha? Lo dice la licenza, anche per quello
 // che non nomina: un modulo che `licenza.moduli` non elenca non è incluso.
@@ -243,7 +270,27 @@ export function moduloAcceso(stato, id) {
 // `stato` sono le impostazioni del bar già in mano a chi chiama
 // (settings/bar, dalla cache: nessuna lettura nuova, vedi CLAUDE.md sul
 // local-first).
-export const moduloAttivo = (stato, id) => moduloIncluso(stato, id) && moduloAcceso(stato, id)
+//
+// E LA SUA BASE (REQ-LIC-015): un modulo che ne richiede un altro lavora
+// solo se lavora anche quello. L'inventario incluso con il magazzino spento
+// non ha niente da contare, e non si accende.
+export const moduloAttivo = (stato, id) =>
+  moduloIncluso(stato, id) && moduloAcceso(stato, id) && richiesteDi(id).every((r) => moduloAttivo(stato, r))
+
+// Le basi che mancano a un modulo per lavorare: quelle non attive. Serve
+// alle schermate per dire PERCHÉ un modulo incluso non lavora.
+export const basiMancanti = (stato, id) => richiesteDi(id).filter((r) => !moduloAttivo(stato, r))
+
+// I moduli che richiedono questo: si spengono con lui. Serve a chi lo
+// disdice, per sapere cosa perde insieme.
+export const dipendentiDi = (id) =>
+  Object.entries(MODULI_PREMIUM)
+    .filter(([, m]) => m.richiede?.includes(id))
+    .map(([dip]) => dip)
+
+// «Richiede «Magazzino e fornitori».» — la frase per una lista di basi.
+export const fraseRichiede = (ids) =>
+  ids.length ? `Richiede ${ids.map((r) => `«${MODULI_PREMIUM[r]?.label ?? r}»`).join(' e ')}.` : ''
 
 // ── QUALE LICENZA VALE (BUG-125) ──────────────────────────────────────
 // Fino alla 1.10.x la licenza stava in `settings/bar.licenza`, che ogni
@@ -309,9 +356,17 @@ export const accountClientiAttivi = (stato) => moduloAttivo(stato, 'clienti') &&
 
 // IL LETTORE SUMUP IN CASSA (REQ-LIC-004). Senza Functions non c'è chi
 // parla coi server di SumUp: sul profilo leggero il metodo non compare e il
-// conto si chiude a mano. Guarda se il modulo è INCLUSO, non l'interruttore
-// d'uso.
+// conto si chiude a mano. `sumupDisponibile` guarda se il modulo è
+// INCLUSO: è la domanda delle impostazioni, che lo configurano anche
+// mentre è spento.
 export const sumupDisponibile = (stato) => !profiloLeggero(stato) && moduloIncluso(stato, 'sumup')
+
+// SI PAGA CON SUMUP? (BUG-133) Incluso, ACCESO e non sul profilo leggero.
+// È la domanda di tutti i posti dove si paga: la cassa, il lettore in
+// coda, i gruppi di conti, il pagamento online del cliente. Fino a BUG-133
+// guardavano solo l'inclusione (o niente), e l'interruttore del modulo non
+// spegneva nulla.
+export const sumupAttivo = (stato) => sumupDisponibile(stato) && moduloAttivo(stato, 'sumup')
 
 // IL MODULO IN PROVA (REQ-FLOTTA-016 della regia): `licenza.prove` dice fino
 // a quando, `{ magazzino: '2026-11-13T10:00:00.000Z' }`. In prova il modulo
@@ -388,7 +443,8 @@ export function cancellazioneProgrammata(stato) {
 // Una voce di un elenco (sezioni del magazzino, domani le voci del
 // gestionale) si può mostrare? È la riga che serve a chi filtra: le voci
 // che non sono premium passano sempre.
-export const voceVisibile = (stato, id) => !ePremium(id) || moduloAttivo(stato, moduloDiSezione(id))
+// Con più moduli, ne basta uno (REQ-LIC-015).
+export const voceVisibile = (stato, id) => !ePremium(id) || moduliDiSezione(id).some((m) => moduloAttivo(stato, m))
 
 // ── LA LICENZA RIMASTA IN settings/bar NON LA RISCRIVE NESSUNO (BUG-126) ──
 // Finché tutti i locali non hanno l'app che legge solo `licenza/attuale`

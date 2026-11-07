@@ -563,7 +563,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
 
   it('lo Storico inventari viene con l’inventario, subito dopo di lui', async () => {
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     const voci = screen.getAllByRole('button').map((b) => b.textContent)
@@ -579,7 +579,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     // E la voce torna DOVE STAVA, fra Prodotti e Categorie: l'elenco delle
     // sezioni \u00e8 uno solo, filtrato.
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     const voci = screen
@@ -596,7 +596,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
   it('inclusa ma spenta a mano: non c\u2019\u00e8', async () => {
     stato.impostazioni = {
       ...IMPOSTAZIONI_BASE,
-      licenza: { moduli: { conta: true } },
+      licenza: { moduli: { magazzino: true, conta: true } },
       modulo_conta_enabled: false,
     }
     mostra()
@@ -615,7 +615,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
 
     await act(async () => {
-      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } })
+      stato.avvisaImpostazioni({ ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } })
     })
     expect(screen.getByRole('button', { name: /Inventario/ })).toBeInTheDocument()
     expect(screen.getByText('Ancora nessun movimento.')).toBeInTheDocument()
@@ -623,7 +623,7 @@ describe('le sezioni premium del magazzino (REQ-LIC-001)', () => {
 
   it('e se a spegnersi \u00e8 la sezione che si sta guardando, si torna ai Prodotti', async () => {
     const user = userEvent.setup()
-    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { conta: true } } }
+    stato.impostazioni = { ...IMPOSTAZIONI_BASE, licenza: { moduli: { magazzino: true, conta: true } } }
     mostra()
     await aspettaLista()
     await user.click(screen.getByRole('button', { name: /Inventario/ }))
