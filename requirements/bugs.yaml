@@ -5731,13 +5731,23 @@ bugs:
       l'app nasconde. Le Functions girano con i permessi dell'amministratore
       e le regole non le fermano, ma nessuna legge `licenza/attuale`: le
       chiamate di SumUp (cassa, lettore, gruppi) partono anche dove il
-      modulo non c'è, chiamandole a mano. Da fare: le Functions dei moduli
-      leggono la licenza e rispondono «non incluso» (failed-precondition).
-    status: todo
-    in_produzione: true
+      modulo non c'è, chiamandole a mano. In produzione (1.9.3) le licenze
+      non ci sono ancora: il difetto è della 1.10.
+      LA CORREZIONE: functions/lib/licenza-core.js fa la stessa domanda di
+      `modulo()` delle regole (licenza scritta, non sospesa né chiusa, non
+      scaduta, il modulo nominato) leggendo `licenza/attuale`; i cinque
+      punti dove un pagamento PARTE (checkout online, associazione del
+      lettore, incasso sul lettore, checkout e lettore di un gruppo)
+      rispondono failed-precondition senza chiamare SumUp. Leggere l'esito,
+      fermare il lettore, dissociarlo e i webhook restano possibili: un
+      pagamento partito prima che il modulo andasse via si deve chiudere.
+      Le chiamate allo staff restano fuori: sono di base (BUG-136).
+    status: fixed
+    in_produzione: false
     generate_issue: true
     labels: [bug, licenza, functions, sicurezza]
-    test_cases: []
+    test_cases:
+      - tests/bdd/licenza-functions.test.js
 
   - id: BUG-135
     title: "Senza il modulo degli ordini dal telefono lo staff perdeva «Prodotto libero» nel menù, e il cliente leggeva «ordinazioni momentaneamente sospese»"
