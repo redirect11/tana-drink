@@ -62,14 +62,14 @@ const localInputToIso = (s) => {
 // dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
 // dal flusso di cassa, che con le ore non c'entra niente.
 const SEZIONI_STAFF = [
-  { id: 'calendario', icona: '📅', label: 'Calendario' },
+  { id: 'calendario', icona: 'calendario', label: 'Calendario' },
   // LE TIMBRATURE HANNO LA LORO VOCE. Sono la cosa che si tocca all'inizio
   // e alla fine del turno — «chi c'è adesso» — e stavano in cima al
   // calendario: per battere l'ingresso di chi arriva bisognava passare
   // dalla schermata dei turni, che con quel gesto non c'entra.
-  { id: 'timbrature', icona: '⏱', label: 'Timbrature' },
-  { id: 'turno', icona: '➕', label: 'Nuovo turno' },
-  { id: 'paghe', icona: '💶', label: 'Paghe orarie' },
+  { id: 'timbrature', icona: 'tempo', label: 'Timbrature' },
+  { id: 'turno', icona: 'aggiungi', label: 'Nuovo turno' },
+  { id: 'paghe', icona: 'paghe', label: 'Paghe orarie' },
 ]
 
 export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'calendario' }) {

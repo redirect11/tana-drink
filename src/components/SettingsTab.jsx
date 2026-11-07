@@ -107,12 +107,12 @@ export default function SettingsTab({ role = null }) {
   // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
     // laterale: qui, accanto ai colori, solo la strada per arrivarci.
     {
       id: 'marketplace-temi',
-      icona: '🛍️',
+      icona: 'marketplace',
       label: 'Marketplace dei temi',
       nodo: (
         <div className="card settings-section">
@@ -127,10 +127,10 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     // L'identità del locale (REQ-VENUE-001): vuota vale la build.
-    { id: 'locale', icona: '🏷️', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
+    { id: 'locale', icona: 'categorie', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
       id: 'vista-ordine',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Vista ordine',
       nodo: (
             <div className="card settings-section">
@@ -253,7 +253,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'consegna',
-      icona: '🛎',
+      icona: 'campanello',
       label: 'Consegna ordine',
       nodo: (
             <div className="card settings-section">
@@ -327,7 +327,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'pagamenti',
-      icona: '💳',
+      icona: 'carta',
       label: 'Pagamenti',
       nodo: (
             <div className="card settings-section">
@@ -428,13 +428,13 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'stampa-automatica',
-      icona: '🖨️',
+      icona: 'stampante',
       label: 'Stampa automatica',
       nodo: <StampaAutomatica settings={settings} save={save} />,
     },
     {
       id: 'gruppi',
-      icona: '👥',
+      icona: 'staff',
       label: 'Gruppi di ordini',
       nodo: (
             <div className="card settings-section">
@@ -495,7 +495,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'preparazione',
-      icona: '🍸',
+      icona: 'menu',
       label: 'Gestione preparazione',
       nodo: (
             <div className="card settings-section">
@@ -535,7 +535,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'giornata',
-      icona: '📅',
+      icona: 'calendario',
       label: 'Giornata di lavoro',
       nodo: (
             <div className="card settings-section">
@@ -595,7 +595,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'prezzo',
-      icona: '🏷',
+      icona: 'categorie',
       label: 'Prezzo consigliato',
       nodo: (
             <div className="card settings-section">
@@ -664,7 +664,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'tempi',
-      icona: '⏱',
+      icona: 'tempo',
       label: 'Tempi di servizio',
       nodo: (
             <div className="card settings-section">
@@ -692,7 +692,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'sconto',
-      icona: '✂️',
+      icona: 'dividi',
       label: 'Sconto e righe del conto',
       nodo: (
             <div className="card settings-section">
@@ -739,7 +739,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coperto',
-      icona: '🍽',
+      icona: 'tavolo',
       label: 'Coperto',
       nodo: (
             <div className="card settings-section">
@@ -766,7 +766,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'servizio-mancia',
-      icona: '🙌',
+      icona: 'ritiro-e-servizio',
       label: 'Servizio e mancia',
       nodo: (
             <div className="card settings-section">
@@ -812,7 +812,7 @@ export default function SettingsTab({ role = null }) {
       // capiva se parlasse del menù dei clienti o della schermata con cui
       // si modifica il listino.
       id: 'menu-clienti',
-      icona: '📖',
+      icona: 'ordina-dal-menu',
       label: 'Menù clienti',
       nodo: (
         <div className="card settings-section">
@@ -846,7 +846,7 @@ export default function SettingsTab({ role = null }) {
       // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
       // impostazioni non c'entrano niente con quello che vede il cliente.
       id: 'gestione-menu',
-      icona: '🍹',
+      icona: 'gestione-menu',
       label: 'Gestione menù',
       nodo: (
         <div className="card settings-section">
@@ -879,7 +879,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coda',
-      icona: '📋',
+      icona: 'elenco',
       label: 'Coda ordini',
       nodo: (
             <div className="card settings-section">
@@ -966,10 +966,10 @@ export default function SettingsTab({ role = null }) {
             </div>
       ),
     },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
     {
       id: 'account-clienti',
-      icona: '🙋',
+      icona: 'clienti',
       label: 'Account clienti',
       nodo: (
             <div className="card settings-section">
@@ -985,7 +985,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'posizione',
-      icona: '📍',
+      icona: 'posizione',
       label: 'Posizione locale',
       nodo: (
             <div className="card settings-section">
@@ -1066,7 +1066,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'notifiche',
-      icona: '🔔',
+      icona: 'notifiche',
       label: 'Notifiche',
       // CARTELLO, non una seconda casa. Gli avvisi sono scelti per persona
       // e per dispositivo, quindi stanno nel profilo — dove ci arriva
@@ -1088,56 +1088,56 @@ export default function SettingsTab({ role = null }) {
         </div>
       ),
     },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
+    { id: 'stampante', icona: 'stampante', label: 'Stampante', nodo: <PrinterSetup /> },
     // I CAMPI DELLA CARTA STANNO COL RESTO DELLA STAMPANTE. Sono
     // impostazioni del LOCALE (settings/bar) e non del terminale, ma chi
     // le cerca le cerca dove sta la stampante: nella barra sono un gruppo
     // solo, e questi riquadri vengono sotto a quello della connessione.
     {
       id: 'campi-scontrino',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dello scontrino',
       nodo: <CampiStampa quale="scontrino" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-comanda',
-      icona: '📝',
+      icona: 'note',
       label: 'Campi della comanda',
       nodo: <CampiStampa quale="comanda" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-acconto',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dell’acconto',
       nodo: <CampiStampa quale="acconto" settings={settings} onSave={save} />,
     },
     {
       id: 'logo-stampe',
-      icona: '🖼',
+      icona: 'immagine',
       label: 'Logo sulle stampe',
       nodo: <LogoStampe settings={settings} onSave={save} role={role} />,
     },
-    { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
+    { id: 'backup', icona: 'salva', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
       id: 'informazioni',
-      icona: 'ℹ️',
+      icona: 'informazioni',
       label: 'Informazioni',
       nodo: <InfoTab settings={settings} role={role} />,
     },
     // La licenza la legge il titolare (REQ-LIC-007): è il suo contratto,
     // e al banco non serve.
     ...(isAdmin(role)
-      ? [{ id: 'licenza', icona: '📜', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
+      ? [{ id: 'licenza', icona: 'licenza', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
       : []),
     {
       id: 'funzioni-premium',
-      icona: '🔒',
+      icona: 'licenza',
       label: 'Funzioni premium',
       nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
     {
       id: 'annullamenti',
-      icona: '✖️',
+      icona: 'chiudi',
       label: 'Annullamenti',
       nodo: (
             <div className="card settings-section">
@@ -1228,17 +1228,17 @@ export default function SettingsTab({ role = null }) {
     'funzioni-premium': 'premium',
   }
   const GRUPPI = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
-    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
-    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
-    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
-    { id: 'servizio', icona: '🛎', label: 'Servizio' },
-    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
-    { id: 'prezzi', icona: '🏷️', label: 'Prezzi e supplementi' },
-    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
-    { id: 'clienti', icona: '🙋', label: 'Clienti' },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto' },
+    { id: 'menu-clienti', icona: 'ordina-dal-menu', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: 'gestione-menu', label: 'Gestione menù' },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti' },
+    { id: 'banco', icona: 'coda', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: 'campanello', label: 'Servizio' },
+    { id: 'cassa', icona: 'cassa', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: 'categorie', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: 'staff', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: 'clienti', label: 'Clienti' },
+    { id: 'stampante', icona: 'stampante', label: 'Stampante' },
     // UN GRUPPO SUO, e non una voce infilata nei gruppi delle schermate che
     // le funzioni accendono. La regola del momento d'uso (REQ-UI-025) dice
     // di raggruppare per «quando lo cerco»: qui il momento è «cosa ha questo
@@ -1253,8 +1253,8 @@ export default function SettingsTab({ role = null }) {
     // «Licenza», da quando il gruppo ne mostra anche il riepilogo
     // (REQ-LIC-007): le funzioni premium sono quello che la licenza
     // comprende, e chi cerca cosa ha comprato cerca la licenza.
-    { id: 'premium', icona: '🔒', label: 'Licenza' },
-    { id: 'sistema', icona: '💾', label: 'Sistema' },
+    { id: 'premium', icona: 'licenza', label: 'Licenza' },
+    { id: 'sistema', icona: 'salva', label: 'Sistema' },
   ]
   // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
   // porta al gruppo che lo contiene.

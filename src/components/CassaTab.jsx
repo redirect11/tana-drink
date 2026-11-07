@@ -16,9 +16,9 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 // alle altre: si apre sul flusso, che è la schermata della serata in
 // corso.
 const SEZIONI = [
-  { id: 'flusso', icona: '💶', label: 'Flusso' },
-  { id: 'ordini', icona: '📋', label: 'Storico ordini' },
-  { id: 'chiusure', icona: '📒', label: 'Chiusure' },
+  { id: 'flusso', icona: 'cassa', label: 'Flusso' },
+  { id: 'ordini', icona: 'elenco', label: 'Storico ordini' },
+  { id: 'chiusure', icona: 'registro', label: 'Chiusure' },
 ]
 
 export default function CassaTab({ sezioneIniziale = 'flusso' }) {

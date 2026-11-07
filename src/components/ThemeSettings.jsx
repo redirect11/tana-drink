@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { stiliDisponibili, stileMenu, patchDisinstalla, vesteDelloStile, stiliRicettaInstallati } from '../lib/stileMenu.js'
 import { urlProvaMenu } from '../lib/marketplaceTemi.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import Icona, { TemaIcone } from './Icona.jsx'
+import { temaIconeDi } from '../lib/icone.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -29,7 +31,7 @@ import {
 export default function ThemeSettings({ settings, onSave }) {
   return (
     <div className="card settings-section">
-      <h3>🎨 Aspetto</h3>
+      <h3><Icona nome="temi" /> Aspetto</h3>
       <ThemeEditor
         title="Gestionale — quello che vedi ora"
         hint="I colori di chi lavora: coda, cassa, impostazioni, profilo."
@@ -39,6 +41,50 @@ export default function ThemeSettings({ settings, onSave }) {
         onSave={(t) => onSave({ theme_staff: t })}
       />
       <CardDellaCoda settings={settings} onSave={onSave} />
+      <IconeDelGestionale settings={settings} onSave={onSave} />
+    </div>
+  )
+}
+
+// ── LE ICONE DEL GESTIONALE (REQ-UI-031) ──────────────────────────────
+//
+// Flavio, 07/11/2026: le emoji colorate «danno un senso un po' troppo a
+// pazziella»; nei programmi professionali le icone sono silhouette
+// monocrome. «Silhouette» è il tema di partenza (decisione dell'utente);
+// «Emoji» rimette quelle di prima. Ogni scelta mostra le stesse cinque
+// icone nel suo tema, così si vede cosa si sceglie prima di sceglierlo.
+const ICONE_DI_PROVA = ['coda', 'cassa', 'magazzino', 'stampa', 'impostazioni']
+
+function IconeDelGestionale({ settings, onSave }) {
+  const tema = temaIconeDi(settings)
+  const scelta = (id, nome) => (
+    <button
+      type="button"
+      className={`mode-option${tema === id ? ' active' : ''}`}
+      aria-pressed={tema === id}
+      onClick={() => onSave({ tema_icone: id })}
+    >
+      <TemaIcone.Provider value={id}>
+        <span className="icone-prova" aria-hidden="true">
+          {ICONE_DI_PROVA.map((n) => (
+            <Icona key={n} nome={n} />
+          ))}
+        </span>
+      </TemaIcone.Provider>{' '}
+      {nome}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Le icone del gestionale</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Il disegno delle icone di menu, sezioni e tasti del gestionale. Le pagine dei clienti seguono lo
+        stile del loro menù. I segnali di stato restano colorati in entrambi i casi.
+      </p>
+      <div className="mode-choice">
+        {scelta('silhouette', 'Silhouette')}
+        {scelta('emoji', 'Emoji')}
+      </div>
     </div>
   )
 }

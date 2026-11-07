@@ -14231,6 +14231,51 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-UI-031
+    title: "Le icone del gestionale hanno un tema: «Silhouette», monocrome e tutte della stessa misura, o «Emoji» come prima"
+    area: "src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react"
+    description: >
+      Flavio, vocale del 07/11/2026: «tutte le icone andrebbero cambiate,
+      andrebbero snellite e andrebbero messe le silhouette». Le emoji
+      colorate «sono le emoticon di WhatsApp» e danno al programma un senso
+      «un po' troppo a pazziella»; nei programmi con cui ha lavorato le icone
+      erano monocrome, «in un solo colore», o non c'erano. Ci sono anche di
+      dimensioni diverse («Utenti e ruoli» ne ha tre). Che l'icona somigli
+      poco alla voce non importa: «tanto alla fine leggi il nome». Il colore
+      resta dove dice qualcosa: il verde, il giallo e il rosso degli stati, e
+      le categorie colorate dal locale.
+      DECISIONI DELL'UTENTE (07/11/2026): le icone hanno dei TEMI; i disegni
+      del tema «Silhouette» sono di Lucide (open source, licenza ISC, a
+      tratto e coerenti fra loro, importati uno per uno); «Silhouette» è il
+      tema di partenza per tutti, «Emoji» rimette quelle di prima
+      (Impostazioni → Aspetto → «Le icone del gestionale»); vale solo per il
+      gestionale: le pagine del cliente hanno lo stile del loro menù.
+      COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina»,
+      «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno;
+      <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji»
+      per chi non è dello staff). I disegni prendono colore e misura del
+      testo attorno (currentColor, em), quindi un tasto e un titolo hanno
+      icone della stessa taglia. I pallini degli stati restano colorati in
+      entrambi i temi, con gli inchiostri di stato di DESIGN.md.
+      LE SCHERMATE PASSANO UNA ALLA VOLTA. <Icona> accetta anche le emoji di
+      prima e le riporta al loro nome, così si vedono già nel tema; un
+      cricchetto (tests/unit/icone.test.js) conta le emoji ancora scritte a
+      mano nel gestionale, che possono solo calare. L'inventario del
+      07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale.
+      FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la
+      navigazione — menu laterale, voci del gestionale e della sala,
+      sottosezioni di tutte le pagine, il foglio del telefono, la barra, i
+      moduli del Marketplace. DA FARE: fase 2, tasti, titoli di sezione,
+      metodi di pagamento e stati; fase 3, i segnali nei testi, i messaggi e
+      i campi di ricerca.
+    status: implemented
+    generate_issue: false
+    labels: [ui, design]
+    priority: P2
+    test_cases:
+      - tests/unit/icone.test.js
+      - tests/component/Icona.test.jsx
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"

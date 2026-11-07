@@ -82,6 +82,8 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
+import Icona, { TemaIcone } from './components/Icona.jsx'
+import { temaIconeDi } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
@@ -472,6 +474,11 @@ export default function App() {
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
 
   return (
+    // IL TEMA DELLE ICONE (REQ-UI-031) vale per il gestionale: la barra,
+    // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
+    // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
+    // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
+    <TemaIcone.Provider value={staffRole ? temaIconeDi(settings) : 'emoji'}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">
@@ -551,7 +558,7 @@ export default function App() {
             title="Menu"
             onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
-            ☰
+            <Icona nome="menu_laterale" />
           </button>
         )}
         {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
@@ -591,7 +598,7 @@ export default function App() {
             uguale sul telefono e sul computer. */}
         {pagina && (
           <span className="topbar-pagina">
-            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            <span aria-hidden>·</span> <Icona nome={(sezioneAttiva?.icona) || pagina.icona} />{' '}
             {(sezioneAttiva?.label) || pagina.titolo}
           </span>
         )}
@@ -687,42 +694,42 @@ export default function App() {
 
           {
             id: 'profilo',
-            icon: '⚙️',
+            icon: 'profilo',
             label: 'Il mio profilo',
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
           !isSala(staffRole) && {
             id: 'pos',
-            icon: '🍸',
+            icon: 'nuovo-ordine',
             label: 'POS — nuovo ordine',
             onClick: () => navigate('/pos'),
           },
           // Senza il menù digitale non c'è un menù da guardare (BUG-132).
           !isSala(staffRole) && menuDigitale && {
             id: 'vista-cliente',
-            icon: '👀',
+            icon: 'vista-cliente',
             label: 'Vista cliente',
             hint: 'Il menù come lo vede chi ordina',
             onClick: () => navigate('/menu?vista=cliente'),
           },
           isSala(staffRole) && {
             id: 'servizio',
-            icon: '🧾',
+            icon: 'coda',
             label: 'Torna alla coda',
             hint: 'La coda ordini, la stessa del banco',
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {
             id: 'schermo',
-            icon: schermoIntero.attivo ? '🡼' : '⛶',
+            icon: schermoIntero.attivo ? 'esci-schermo-intero' : 'schermo-intero',
             label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
             hint: schermoIntero.attivo
               ? null
               : 'Meglio ancora: installa l’app dalla schermata iniziale',
             onClick: schermoIntero.alterna,
           },
-          { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+          { id: 'esci', icon: 'esci', label: 'Esci', danger: true, onClick: () => logoutStaff() },
         ]}
       />
 
@@ -802,6 +809,7 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </TemaIcone.Provider>
   )
 }
 

@@ -2,6 +2,14 @@
 
 ## 1.10.28-beta — in lavorazione
 
+### Aspetto
+
+- Le icone del gestionale sono silhouette monocrome, tutte della stessa
+  misura, al posto delle emoji colorate: per ora il menu laterale, le
+  sezioni e le sottosezioni, la barra in alto e i moduli del Marketplace.
+  In Impostazioni → Aspetto → «Le icone del gestionale» si possono
+  rimettere le emoji (REQ-UI-031).
+
 ### Moduli
 
 - I pagamenti SumUp controllano la licenza anche sul server: senza il

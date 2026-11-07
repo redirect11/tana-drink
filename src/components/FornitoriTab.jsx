@@ -37,20 +37,20 @@ import RiepilogoFornitoriPanel from './RiepilogoFornitoriPanel.jsx'
 // righe di catalogo, e per ordinare bisognava passare accanto a tutti gli
 // ordini già fatti. Sono due lavori diversi e si fanno in momenti diversi.
 const SEZIONI = [
-  { id: 'anagrafica', icona: '🏭', label: 'Gestione fornitori' },
-  { id: 'nuovo-ordine', icona: '🛒', label: 'Nuovo ordine' },
-  { id: 'lista-ordini', icona: '📋', label: 'Lista ordini' },
+  { id: 'anagrafica', icona: 'fornitori', label: 'Gestione fornitori' },
+  { id: 'nuovo-ordine', icona: 'carrello', label: 'Nuovo ordine' },
+  { id: 'lista-ordini', icona: 'elenco', label: 'Lista ordini' },
   // Funzione premium (REQ-LIC-001): dove il modulo non lavora, la voce non
   // c'è. Le altre due restano, quindi la sezione non resta mai vuota.
-  { id: 'scadenzario', icona: '📄', label: 'Scadenzario' },
+  { id: 'scadenzario', icona: 'calendario', label: 'Scadenzario' },
   // ALTRE SPESE E RIEPILOGO (REQ-MAG-034, ritagliati da REQ-MAG-025). Non
   // se ne inventa un modulo: il riepilogo mette insieme quello che c'è. Le
   // altre spese stanno col magazzino come gli ordini (lib/licenza.js,
   // `sezioni`): le regole ne vogliono il modulo, e la sezione Fornitori la
   // apre anche lo scadenzario da solo (REQ-LIC-015), dove restano
   // l'anagrafica, lo scadenzario e il riepilogo.
-  { id: 'spese', icona: '🧾', label: 'Altre spese' },
-  { id: 'riepilogo', icona: '📊', label: 'Riepilogo' },
+  { id: 'spese', icona: 'coda', label: 'Altre spese' },
+  { id: 'riepilogo', icona: 'statistiche', label: 'Riepilogo' },
 ]
 
 export default function FornitoriTab({ sezioneIniziale = 'anagrafica' }) {

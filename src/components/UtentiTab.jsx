@@ -38,10 +38,10 @@ import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
 // Il bartender vede gli elenchi e può chiamare col cerca-persone, ma non
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
 const SEZIONI_UTENTI = [
-  { id: 'utenze', icona: '👥', label: 'Utenze registrate' },
-  { id: 'cassa', icona: '🟢', label: 'Chi apre la cassa' },
-  { id: 'nuovo', icona: '➕', label: 'Nuovo account' },
-  { id: 'vip', icona: '🎟', label: 'Buoni VIP' },
+  { id: 'utenze', icona: 'staff', label: 'Utenze registrate' },
+  { id: 'cassa', icona: 'cassa', label: 'Chi apre la cassa' },
+  { id: 'nuovo', icona: 'aggiungi', label: 'Nuovo account' },
+  { id: 'vip', icona: 'buono', label: 'Buoni VIP' },
 ]
 
 export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {

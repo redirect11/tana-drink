@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { subscribeSettings, updateSettings, settingsIniziali, azioneModulo } from '../lib/api.js'
 import { isAdmin } from '../lib/ruoli.js'
 import { MODULI_PREMIUM, fraseRichiede } from '../lib/licenza.js'
+import Icona from './Icona.jsx'
 import { dataAvviso } from '../lib/aggiornamenti.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
@@ -77,11 +78,11 @@ import {
 // direbbe soltanto che esiste un servizio a pagamento.
 
 const SEZIONI = [
-  { id: 'tuoi', icona: '⭐', label: 'I tuoi temi' },
-  { id: 'temi', icona: '🎨', label: 'Temi' },
-  { id: 'stili', icona: '🖋️', label: 'Stili del menù' },
-  { id: 'installati', icona: '✅', label: 'Installati' },
-  { id: 'moduli', icona: '🧩', label: 'Moduli' },
+  { id: 'tuoi', icona: 'preferito', label: 'I tuoi temi' },
+  { id: 'temi', icona: 'temi', label: 'Temi' },
+  { id: 'stili', icona: 'stili', label: 'Stili del menù' },
+  { id: 'installati', icona: 'fatto', label: 'Installati' },
+  { id: 'moduli', icona: 'moduli', label: 'Moduli' },
 ]
 
 // La sezione da aprire: quella dell'indirizzo, se esiste. Ci si arriva così
@@ -367,7 +368,7 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
             vetrina={
               <div className={`vetrina-modulo vetrina-modulo-${m.stato}`}>
                 <span className="vetrina-modulo-icona" aria-hidden="true">
-                  {m.icona}
+                  <Icona nome={m.icona} />
                 </span>
                 <span className="pill vetrina-modulo-stato">{STATI_MODULO[m.stato](m)}</span>
               </div>

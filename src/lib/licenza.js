@@ -55,7 +55,8 @@ import { STILI_MENU, temiInLicenza } from './stileMenu.js'
 // `chiave` è il nome del flag D'USO su settings/bar — scritto per esteso e
 // non calcolato, perché è un nome che finisce su documenti veri e chi lo
 // cerca nel codice lo deve trovare.
-// `icona` è quella della scheda del modulo nel Marketplace (REQ-LIC-012):
+// `icona` è quella della scheda del modulo nel Marketplace (REQ-LIC-012),
+// un nome del vocabolario delle icone (lib/icone.js, REQ-UI-031):
 // qui, e non in una tabella del componente, perché un modulo nuovo non
 // resti senza. Dove il modulo ha una voce nel menu laterale è la stessa.
 // Una sezione può stare in `sezioni` di PIÙ moduli, e allora si vede con
@@ -71,7 +72,7 @@ export const MODULI_PREMIUM = {
   menu_tavoli: {
     chiave: 'modulo_menu_tavoli_enabled',
     sezioni: ['vista-cliente'],
-    icona: '📱',
+    icona: 'telefono',
     label: 'Menù digitale e tavoli',
     descrizione: 'Il menù sul telefono del cliente, con il QR al tavolo e la vista cliente nel gestionale.',
   },
@@ -80,13 +81,13 @@ export const MODULI_PREMIUM = {
     // Il cliente ordina DAL menù digitale: senza, non ha una pagina da cui
     // farlo (decisione dell'utente, 07/11/2026).
     richiede: ['menu_tavoli'],
-    icona: '🛎️',
+    icona: 'campanello',
     label: 'Ordini dal telefono del cliente',
     descrizione: 'Il cliente ordina dal menù digitale e segue lo stato dell’ordine; senza, il menù si legge e basta.',
   },
   clienti: {
     chiave: 'modulo_clienti_enabled',
-    icona: '👥',
+    icona: 'staff',
     label: 'Gestione clienti',
     descrizione: 'Account dei clienti, i loro ordini, i gruppi di conti.',
   },
@@ -97,14 +98,14 @@ export const MODULI_PREMIUM = {
     // queste parti non hanno i dati che servono (le regole ne rifiutano le
     // scritture).
     sezioni: ['inventario', 'fornitori', 'nuovo-ordine', 'lista-ordini', 'spese', 'listino'],
-    icona: '📦',
+    icona: 'magazzino',
     label: 'Magazzino e fornitori',
     descrizione: 'Giacenze, scarico automatico dalle ricette, ordini ai fornitori e altre spese. L’inventario è un suo modulo.',
   },
   statistiche: {
     chiave: 'modulo_statistiche_enabled',
     sezioni: ['stats', 'bilancio'],
-    icona: '📊',
+    icona: 'statistiche',
     label: 'Statistiche e bilancio',
     descrizione: 'Incassi per serata e periodo, venduto per fascia oraria, bilancio per macro-categorie.',
   },
@@ -113,7 +114,7 @@ export const MODULI_PREMIUM = {
     // `ore` è il vecchio indirizzo della stessa schermata (/bar?tab=ore):
     // senza questa riga la apriva anche chi il modulo non ce l'ha.
     sezioni: ['ore'],
-    icona: '🧑‍🍳',
+    icona: 'cuoco',
     label: 'Personale e ore',
     // Non «chiamate allo staff» (BUG-136): il cerca-persone e le timbrature
     // funzionano anche senza il modulo, apposta (COLLEZIONI_DEI_MODULI).
@@ -122,7 +123,7 @@ export const MODULI_PREMIUM = {
   // `sumup` e non `pagamenti`: la cassa del gestionale ha già quella sezione.
   sumup: {
     chiave: 'modulo_sumup_enabled',
-    icona: '💳',
+    icona: 'carta',
     label: 'Pagamenti con lettore SumUp',
     descrizione: 'Il conto va al lettore di carte e torna pagato da solo.',
   },
@@ -132,7 +133,7 @@ export const MODULI_PREMIUM = {
     // L'inventario conta le giacenze del magazzino e chiudendolo le
     // riallinea: senza magazzino non c'è niente da contare.
     richiede: ['magazzino'],
-    icona: '📋',
+    icona: 'elenco',
     label: 'Inventario di magazzino',
     descrizione:
       'Inventario periodico: si contano le rimanenze, l’app calcola il consumo del periodo e allinea le giacenze.',
@@ -144,7 +145,7 @@ export const MODULI_PREMIUM = {
     // l'unica cosa che hanno in comune è la parola. Le etichette lo dicono
     // a schermo, perché stanno una sotto l'altra nelle impostazioni.
     chiave: 'modulo_fatture_enabled',
-    icona: '📄',
+    icona: 'fatture',
     label: 'Fatture ai clienti',
     descrizione:
       'Fattura di cortesia per il cliente che la chiede: dati di fatturazione, numero progressivo, stampa e invio per email.',
@@ -157,7 +158,7 @@ export const MODULI_PREMIUM = {
     // sezione Fornitori anche senza il magazzino, con l'anagrafica e lo
     // scadenzario.
     sezioni: ['fornitori'],
-    icona: '📅',
+    icona: 'calendario',
     label: 'Fatture ai fornitori',
     descrizione:
       'Registro delle fatture di acquisto con importi, scadenze e stato dei pagamenti.',

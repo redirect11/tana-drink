@@ -189,19 +189,19 @@ function UnitPrice({ item, markup }) {
 // ma si vede solo dove il modulo lavora. L'elenco non si sdoppia apposta —
 // l'ordine delle sezioni è uno solo.
 const INV_VIEWS = [
-  ['prodotti', '📦', 'Prodotti'],
+  ['prodotti', 'magazzino', 'Prodotti'],
   // «Inventario», non «Conta»: Daniele, 17/09/2026, «conta è fuorviante».
   // L'id resta `conta` perché è la chiave del modulo sui documenti veri.
-  ['conta', '📋', 'Inventario'],
+  ['conta', 'elenco', 'Inventario'],
   // Gli inventari chiusi (REQ-MAG-052): si accende con l'inventario
   // (lib/licenza.js, `sezioni`).
-  ['storico', '🗄️', 'Storico inventari'],
-  ['categorie', '🏷️', 'Categorie'],
-  ['macro', '🗂️', 'Macro-categorie'],
-  ['movimenti', '📜', 'Movimenti'],
+  ['storico', 'archivio', 'Storico inventari'],
+  ['categorie', 'categorie', 'Categorie'],
+  ['macro', 'raggruppa', 'Macro-categorie'],
+  ['movimenti', 'movimenti', 'Movimenti'],
   // La pagina di prova (REQ-MAG-050): solo fuori dalla produzione e solo
   // se accesa, vedi lib/prova.js.
-  ['controllo', '🧪', 'Controllo (prova)'],
+  ['controllo', 'prova', 'Controllo (prova)'],
 ]
 
 // LE SEZIONI DEL MAGAZZINO STANNO NELLA BARRA IN ALTO. Le ho provate in due
