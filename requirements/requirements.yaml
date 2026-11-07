@@ -6125,6 +6125,11 @@ requirements:
       booleano; i passaggi a un piano più piccolo si fanno fuori
       dall'orario di servizio, perché le scritture in coda senza rete di un
       modulo appena tolto vengono rifiutate.
+      E LE FUNCTIONS (BUG-134, 07/11/2026): girano coi permessi
+      dell'amministratore e le regole non le fermano, quindi quelle di un
+      modulo leggono la licenza da sé (functions/lib/licenza-core.js, la
+      stessa domanda di `modulo()`). Oggi sono i pagamenti SumUp: dove un
+      pagamento parte, senza il modulo, failed-precondition.
     status: implemented
     generate_issue: false
     labels: [licenza, sicurezza, prodotto]
@@ -6135,6 +6140,7 @@ requirements:
       - tests/unit/scaricoSenzaMagazzino.test.js
       - tests/unit/backup.test.js
       - tests/unit/sezioni.test.js
+      - tests/bdd/licenza-functions.test.js
 
   - id: REQ-LIC-010
     title: "Gli stili del menù nella licenza: «Notte» è della Tana"

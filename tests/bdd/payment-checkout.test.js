@@ -14,6 +14,9 @@ const NOW = '2026-06-12T22:00:00.000Z'
 
 function makeDeps({ configured = true, seed = {}, responses = {} } = {}) {
   const { db, store } = createFakeFirestore(seed)
+  // Un locale col modulo SumUp (BUG-134): le Functions dei pagamenti lo
+  // chiedono alla licenza. Chi prova il rifiuto ne scrive un'altra.
+  if (!store.licenza) store.licenza = { attuale: { stato: 'attiva', moduli: { sumup: true } } }
   // responses: { 'GET /v0.1/checkouts/ck1': {...}, 'POST /v0.1/checkouts': {...} }
   const paymentsFetch = vi.fn(async (path, options = {}) => {
     const key = `${options.method || 'GET'} ${path}`
