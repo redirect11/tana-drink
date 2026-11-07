@@ -4,6 +4,8 @@ import { subscribeInvoices, markInvoiceSent } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printFattura, loadPrinterSettings, datiFiscaliDelLocale } from '../lib/printer.js'
 import { mailFattura } from '../lib/mailFattura.js'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 
 // ── Gestore FATTURE di cortesia (gestionale, solo bartender) ───────────
 // Elenco delle fatture emesse dalla schermata Pagamento: numero
@@ -11,6 +13,7 @@ import { mailFattura } from '../lib/mailFattura.js'
 // e si ristampano.
 
 export default function InvoicesTab() {
+  const testoConIcona = useTestoConIcona()
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -48,7 +51,7 @@ export default function InvoicesTab() {
 
       <input
         type="search"
-        placeholder="🔍 Cerca per numero, cliente, P.IVA, email…"
+        placeholder={testoConIcona('cerca', 'Cerca per numero, cliente, P.IVA, email…')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         style={{ width: '100%', marginBottom: 10 }}
@@ -76,18 +79,18 @@ export default function InvoicesTab() {
           </div>
           {f.sent_at && (
             <div className="muted small">
-              📧 Inviata{f.sent_to ? ` a ${f.sent_to}` : ''} il {String(f.sent_at).slice(0, 10)}
+              <Icona nome="email" gruppo="tasti" />{' '}Inviata{f.sent_to ? ` a ${f.sent_to}` : ''} il {String(f.sent_at).slice(0, 10)}
             </div>
           )}
           <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
             <button className="btn ghost small" onClick={() => invia(f)}>
-              📧 Invia via email
+              <Icona nome="email" gruppo="tasti" /> Invia via email
             </button>
             <button
               className="btn ghost small"
               onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
             >
-              🖨 Stampa
+              <Icona nome="stampa" gruppo="tasti" /> Stampa
             </button>
           </div>
         </div>

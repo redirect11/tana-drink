@@ -23,6 +23,7 @@ import {
 } from '../lib/licenza.js'
 import ToggleRow from './ToggleRow.jsx'
 import { runImport } from '../dev/importExcel.js'
+import Icona from './Icona.jsx'
 
 // Opzioni sviluppatore: visibili SOLO in ambiente emulatore (Docker locale
 // o ambiente di test). Permettono di svuotare il db o resettarlo coi mock.
@@ -83,7 +84,7 @@ export default function DevTools() {
   return (
     <div>
       <div className="banner">
-        🛠 Strumenti di sviluppo — visibili solo in ambiente di sviluppo
+        <Icona nome="sviluppo" gruppo="tasti" /> Strumenti di sviluppo — visibili solo in ambiente di sviluppo
         (emulatore locale) e di test, mai in produzione.
       </div>
 
@@ -95,7 +96,7 @@ export default function DevTools() {
           (localStorage): chi prova da casa accende, il tablet del banco
           non ne sa niente. */}
       <div className="card settings-section">
-        <strong>🖨 Stampante simulata</strong>
+        <strong><Icona nome="stampa" gruppo="tasti" /> Stampante simulata</strong>
         <p className="muted small" style={{ margin: '4px 0 8px' }}>
           Le stampe escono come facsimile a schermo invece che sulla
           stampante vera. Vale solo per questo dispositivo.
@@ -200,7 +201,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '🔄 Reset con dati mock?',
+                icona: 'aggiorna',
+                title: 'Reset con dati mock?',
                 message:
                   'Tutti i dati attuali verranno cancellati e sostituiti con i dati di esempio.',
                 run: () => run(resetWithMockData),
@@ -223,7 +225,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '📊 Generare lo storico?',
+                icona: 'statistiche',
+                title: 'Generare lo storico?',
                 message: 'Verranno aggiunte 12 giornate passate con ordini mock (i dati esistenti restano).',
                 run: () =>
                   run(async (progress) => {
@@ -249,7 +252,8 @@ export default function DevTools() {
             disabled={busy}
             onClick={() =>
               setConfirm({
-                title: '🧹 Svuotare il database?',
+                icona: 'pulisci',
+                title: 'Svuotare il database?',
                 message: 'Tutti i dati verranno cancellati. Operazione irreversibile.',
                 danger: true,
                 run: () =>
@@ -267,7 +271,7 @@ export default function DevTools() {
       )}
 
       <div className="card settings-section">
-        <h3>📥 Import storico da Excel (JSON)</h3>
+        <h3><Icona nome="acquisti" gruppo="tasti" /> Import storico da Excel (JSON)</h3>
         <p className="muted small">
           Carica il file <code>import-tana.json</code> (estratto dagli Excel:
           fornitori, scadenzario, catalogo inventario, ore staff). Idempotente:
@@ -331,7 +335,7 @@ export default function DevTools() {
         {unpaid.length > 0 && (
           <>
             <p className="muted small" style={{ margin: '12px 0 4px' }}>
-              📟 Simulazione lettore (ordini non pagati pronti/ritirati):
+              <Icona nome="lettore" gruppo="tasti" />{' '}Simulazione lettore (ordini non pagati pronti/ritirati):
             </p>
             {unpaid.map((o) => (
               <div className="toggle-row" key={o.id}>
@@ -344,7 +348,7 @@ export default function DevTools() {
                     className="btn small"
                     onClick={() => simulateReaderPayment(o.id, true).catch((e) => setError(e.message))}
                   >
-                    📟 ✓ Carta OK
+                    <Icona nome="lettore" gruppo="tasti" /> ✓ Carta OK
                   </button>
                   <button
                     className="btn ghost small"
@@ -371,6 +375,7 @@ export default function DevTools() {
 
       {confirm && (
         <ConfirmDialog
+          icona={confirm.icona}
           title={confirm.title}
           message={confirm.message}
           confirmLabel="Procedi"

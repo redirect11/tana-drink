@@ -40,6 +40,8 @@ import ModelliOrdine from './ModelliOrdine.jsx'
 import Tendina from './Tendina.jsx'
 import FiltroAssortimento from './FiltroAssortimento.jsx'
 import { riassuntoAssortimento, toggleVoce } from '../lib/assortimento.js'
+import Icona from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // ── NUOVO ORDINE: UNA TABELLA SOLA, E L'ORDINE DI FIANCO (REQ-MAG-036) ─
 //
@@ -332,7 +334,7 @@ export default function NuovoOrdinePanel({
           <Tendina
             etichetta="Filtra per assortimento"
             attivo={assortimenti.length > 0}
-            riassunto={`⚗️ ${riassuntoAssortimento(assortimenti)}`}
+            riassunto={conEmoji('filtra', riassuntoAssortimento(assortimenti))}
           >
             <FiltroAssortimento items={items} scelti={assortimenti} onToggle={toggleAssortimento} />
             {assortimenti.length > 0 && (
@@ -356,7 +358,7 @@ export default function NuovoOrdinePanel({
             disabled={daSpuntare.size === 0}
             title="Spunta i prodotti esauriti o sotto la soglia di riordino, e quelli in assortimento senza un ordine"
           >
-            ☑ Spunta quello che manca ({daSpuntare.size})
+            <Icona nome="spunta" gruppo="tasti" />{' '}Spunta quello che manca ({daSpuntare.size})
           </button>
         </span>
       </div>

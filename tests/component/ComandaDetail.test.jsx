@@ -321,7 +321,7 @@ describe('il dettaglio di una comanda', () => {
     monta()
     await screen.findByText(/Cosa c’è da fare/)
     expect(screen.queryByRole('button', { name: 'Pronto' })).not.toBeInTheDocument()
-    expect(screen.getByText('💶 Pagato')).toBeInTheDocument()
+    expect(screen.getByText('Pagato')).toBeInTheDocument()
   })
 
   it('l’acconto si vede anche da qui', async () => {
@@ -330,7 +330,7 @@ describe('il dettaglio di una comanda', () => {
     ordine = conto({ payment_status: 'parziale', payments: [{ amount: 10 }] })
     monta()
     await screen.findByText(/Cosa c’è da fare/)
-    expect(screen.getByText('💳 Acconto')).toBeInTheDocument()
+    expect(screen.getByText('Acconto')).toBeInTheDocument()
   })
 
   // ── DIVIDERE DA QUI ────────────────────────────────────

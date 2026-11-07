@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import CategoryRail from './CategoryRail.jsx'
-import { formatPrice, paymentMethodLabel, cashMethodKeys } from '../lib/orderStatus.js'
+import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
+import MetodoPagamento from './MetodoPagamento.jsx'
+import { MetodiPagamento } from './MetodoPagamento.jsx'
 import {
   rendicontoOrdini,
   rendicontoProdotti,
@@ -46,9 +49,9 @@ const pct = (v) => (v == null ? '—' : `${v.toFixed(1).replace('.', ',')}%`)
 
 // Come è stato incassato un conto — e se non lo è stato, perché.
 const comePagato = (c) => {
-  if (c.metodi.length) return c.metodi.map(paymentMethodLabel).join(' + ')
-  if (c.omaggio) return '🎁 offerto'
-  if (c.daIncassare) return '🟡 da incassare'
+  if (c.metodi.length) return <MetodiPagamento metodi={c.metodi} />
+  if (c.omaggio) return <><Icona nome="sconto" gruppo="tasti" /> offerto</>
+  if (c.daIncassare) return <><Icona nome="giallo" gruppo="tasti" /> da incassare</>
   return '—'
 }
 
@@ -151,7 +154,7 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
             .filter((k) => byMethod[k] > 0)
             .map((k) => (
               <span className="chip" key={k}>
-                {paymentMethodLabel(k)} {formatPrice(byMethod[k])}
+                <MetodoPagamento metodo={k} /> {formatPrice(byMethod[k])}
               </span>
             ))}
         </div>
@@ -170,14 +173,14 @@ export default function RendicontoSerata({ session, orders, drinksById, itemsByI
           className={`tab${vista === 'conti' ? ' active' : ''}`}
           onClick={() => setVista('conti')}
         >
-          📋 Conti
+          <Icona nome="elenco" gruppo="tasti" /> Conti
         </button>
         <button
           type="button"
           className={`tab${vista === 'prodotti' ? ' active' : ''}`}
           onClick={() => setVista('prodotti')}
         >
-          📊 Cumulativo vendite
+          <Icona nome="statistiche" gruppo="tasti" /> Cumulativo vendite
         </button>
       </div>
 
@@ -369,7 +372,7 @@ function CardConto({ conto, aperto, onToggle }) {
         <span className="rend-card-cifre">
           <strong className="price">{formatPrice(conto.netto)}</strong>
           {conto.sconto > 0 && (
-            <span className="sconto-badge"> 🎁 −{formatPrice(conto.sconto)}</span>
+            <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(conto.sconto)}</span>
           )}
           <span className={`muted small${conto.guadagno < 0 ? ' neg' : ''}`}>
             guadagno {formatPrice(conto.guadagno)}

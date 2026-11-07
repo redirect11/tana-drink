@@ -18,6 +18,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { giornoEOra } from '../lib/ore.js'
 import { descriviMovimento, storiaDi } from '../lib/statiOrdine.js'
 import { contenutoDelPezzo, formatQty, magazzinoBloccato } from '../lib/inventory.js'
+import Icona, { ConIcona } from './Icona.jsx'
 import {
   invoiceTotals,
   eNotaDiCredito,
@@ -383,7 +384,7 @@ export default function SupplierInvoicesPanel() {
                   style={{ marginTop: 4 }}
                   onClick={() => togglePaid(inv)}
                 >
-                  {etichettaSaldo(inv)}
+                  <ConIcona testo={etichettaSaldo(inv)} />
                 </button>
               </div>
               <button
@@ -394,9 +395,9 @@ export default function SupplierInvoicesPanel() {
                   setModificaPer(inv.id)
                 }}
               >
-                ✏️
+                <Icona nome="modifica" gruppo="tasti" />
               </button>
-              <button className="btn ghost small" onClick={() => remove(inv)}>🗑</button>
+              <button className="btn ghost small" onClick={() => remove(inv)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </div>
             )}
 
@@ -433,7 +434,7 @@ export default function SupplierInvoicesPanel() {
               style={{ marginTop: 6 }}
               onClick={() => setProdottiPer(inv)}
             >
-              ➕ Aggiungi prodotti
+              <Icona nome="aggiungi" gruppo="tasti" /> Aggiungi prodotti
             </button>
             {/* COSA È STATO CORRETTO (REQ-MAG-041): una modifica su un
                 documento già pagato è legittima, ma è il gesto che a fine
@@ -523,7 +524,7 @@ function LegameConLOrdine({ fattura, ordini, suppliers, onCollega, onScollega })
           aria-label={`Collega a un ordine il documento di ${quale}`}
           onClick={onCollega}
         >
-          🔗 Collega a un ordine
+          <Icona nome="unisci" gruppo="tasti" /> Collega a un ordine
         </button>
       </div>
     )
@@ -587,7 +588,7 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
       {allegato ? (
         <>
           <span className="muted small grow" style={{ minWidth: 0 }}>
-            📎 {allegato.name} · {pesoLeggibile(allegato.size)}
+            <Icona nome="allegato" gruppo="tasti" />{' '}{allegato.name} · {pesoLeggibile(allegato.size)}
           </span>
           {/* UN LINK E NON UN TASTO: sul telefono apre la foto o il PDF con
               quello che la persona usa già per guardarli, e funziona anche
@@ -631,7 +632,7 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
             aria-label={`Allega il documento di ${quale}`}
             onClick={onAllega}
           >
-            📎 Allega
+            <Icona nome="allegato" gruppo="tasti" /> Allega
           </button>
         </>
       ) : (
@@ -642,7 +643,7 @@ function AllegatoDelDocumento({ fattura, caricando, onAllega, onTogli }) {
             aria-label={`Allega il documento di ${quale}`}
             onClick={onAllega}
           >
-            📎 Allega foto o PDF, fino a {pesoLeggibile(PESO_MASSIMO)}
+            <Icona nome="allegato" gruppo="tasti" />{' '}Allega foto o PDF, fino a {pesoLeggibile(PESO_MASSIMO)}
           </button>
         </>
       )}
@@ -664,7 +665,7 @@ function DialogoOrdine({ fattura, ordini, fatture, suppliers, onCancel, onConfir
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>🔗 Collega a un ordine</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="unisci" gruppo="tasti" /> Collega a un ordine</h3>
         <p className="muted">
           Il documento si collega alla parte dell’ordine di {nome}: un ordine
           può contenere più fornitori, e ognuno rilascia la sua fattura.
@@ -984,7 +985,7 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginTop: 0 }}>
-          ➕ Prodotti di {fattura.supplier_name || 'questo fornitore'}
+          <Icona nome="aggiungi" gruppo="tasti" />{' '}Prodotti di {fattura.supplier_name || 'questo fornitore'}
           {fattura.number ? ` #${fattura.number}` : ''}
         </h3>
         <p className="muted">

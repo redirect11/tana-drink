@@ -2,6 +2,18 @@
 
 ## 1.10.29-beta — in lavorazione
 
+### Aspetto
+
+- Le icone del gestionale sono silhouette monocrome, tutte della stessa
+  misura, al posto delle emoji colorate: il menu laterale, le sezioni e le
+  sottosezioni, la barra in alto, i moduli del Marketplace, i tasti, i
+  titoli delle sezioni, gli stati dei conti, i metodi di pagamento nei
+  riepiloghi di cassa, le notifiche a comparsa, le conferme e gli avvisi.
+  Nei campi di ricerca la lente compare solo col tema Emoji.
+  In Impostazioni → Aspetto → «Le icone del gestionale» si possono
+  rimettere le emoji, a parte per navigazione, tasti e stati, segnali e
+  messaggi (REQ-UI-031).
+
 ## 1.10.28-beta — 07/11/2026 (test)
 
 ### Moduli

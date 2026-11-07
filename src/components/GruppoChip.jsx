@@ -1,3 +1,5 @@
+import Icona, { ConIcona } from './Icona.jsx'
+
 // UNA SCELTA FRA POCHE VOCI, TUTTE IN VISTA (`.chip-gruppo`, come i
 // raggruppamenti delle chiusure): il periodo di una tabella, lordo o netto.
 // Non una tendina — con tre o quattro voci bisognerebbe aprirla per sapere
@@ -14,7 +16,7 @@ export default function GruppoChip({ etichetta, opzioni, valore, scegli, style }
           aria-pressed={valore === o.id}
           onClick={() => scegli(o.id)}
         >
-          {o.label}
+          <ConIcona testo={o.label} />
         </button>
       ))}
     </div>

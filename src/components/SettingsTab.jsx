@@ -47,6 +47,8 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { cambioDentroOrario } from '../lib/orario.js'
+import Icona, { ConIcona } from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -107,12 +109,12 @@ export default function SettingsTab({ role = null }) {
   // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
   const sezioni = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
     // laterale: qui, accanto ai colori, solo la strada per arrivarci.
     {
       id: 'marketplace-temi',
-      icona: '🛍️',
+      icona: 'marketplace',
       label: 'Marketplace dei temi',
       nodo: (
         <div className="card settings-section">
@@ -127,10 +129,10 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     // L'identità del locale (REQ-VENUE-001): vuota vale la build.
-    { id: 'locale', icona: '🏷️', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
+    { id: 'locale', icona: 'categorie', label: 'Il locale', nodo: <IdentitaLocale settings={settings} onSave={save} /> },
     {
       id: 'vista-ordine',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Vista ordine',
       nodo: (
             <div className="card settings-section">
@@ -148,8 +150,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.pos_add_top}
                 opzioni={[
-                  [false, '⬇ In fondo (scorre)'],
-                  [true, '⬆ In cima'],
+                  [false, conEmoji('giu', 'In fondo (scorre)')],
+                  [true, conEmoji('su', 'In cima')],
                 ]}
                 onScegli={(v) => save({ pos_add_top: v })}
               />
@@ -192,8 +194,8 @@ export default function SettingsTab({ role = null }) {
                 valore={settings.category_display || 'dot'}
                 opzioni={[
                   ['dot', '● Pallino + nome'],
-                  ['icon_text', '🍸 Icona + nome'],
-                  ['icon', '🍸 Solo icona (senza nome)'],
+                  ['icon_text', conEmoji('menu', 'Icona + nome')],
+                  ['icon', conEmoji('menu', 'Solo icona (senza nome)')],
                 ]}
                 onScegli={(v) => save({ category_display: v })}
               />
@@ -212,8 +214,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.pos_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la griglia'],
-                  ['evidenzia', '💡 Accendi il prodotto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la griglia')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il prodotto e portami lì')],
                 ]}
                 onScegli={(v) => save({ pos_search: v })}
               />
@@ -243,8 +245,8 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={!!settings.stripe_ok_verde}
                 opzioni={[
-                  [false, '⚪ Grigio'],
-                  [true, '🟢 Verde'],
+                  [false, conEmoji('spento', 'Grigio')],
+                  [true, conEmoji('verde', 'Verde')],
                 ]}
                 onScegli={(v) => save({ stripe_ok_verde: v })}
               />
@@ -253,7 +255,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'consegna',
-      icona: '🛎',
+      icona: 'campanello',
       label: 'Consegna ordine',
       nodo: (
             <div className="card settings-section">
@@ -267,10 +269,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={mondoConsegna(settings)}
                 opzioni={[
-                  ['tavolo', '🍸 Solo servizio', 'Si porta tutto al tavolo.'],
+                  ['tavolo', conEmoji('menu', 'Solo servizio'), 'Si porta tutto al tavolo.'],
                   [
                     'entrambi',
-                    '🤝 Ritiro e servizio',
+                    conEmoji('in-coppia', 'Ritiro e servizio'),
                     'Chi si siede si fa servire, chi ha fretta ritira al banco.',
                   ],
                 ]}
@@ -327,7 +329,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'pagamenti',
-      icona: '💳',
+      icona: 'carta',
       label: 'Pagamenti',
       nodo: (
             <div className="card settings-section">
@@ -428,13 +430,13 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'stampa-automatica',
-      icona: '🖨️',
+      icona: 'stampante',
       label: 'Stampa automatica',
       nodo: <StampaAutomatica settings={settings} save={save} />,
     },
     {
       id: 'gruppi',
-      icona: '👥',
+      icona: 'staff',
       label: 'Gruppi di ordini',
       nodo: (
             <div className="card settings-section">
@@ -463,7 +465,7 @@ export default function SettingsTab({ role = null }) {
                         e quanto resta da pagare.
                       </li>
                       <li>
-                        Da lì aggiungi un ordine col tasto ✍️: si apre il POS e l’ordine
+                        Da lì aggiungi un ordine col tasto <Icona nome="nuovo-ordine" gruppo="tasti" />: si apre il POS e l’ordine
                         nasce già dentro il gruppo.
                       </li>
                       <li>
@@ -471,7 +473,7 @@ export default function SettingsTab({ role = null }) {
                       </li>
                     </ol>
                     Gli ordini di un gruppo restano <strong>visibili nella coda</strong> come
-                    tutti gli altri, con l’etichetta 👥 del gruppo.
+                    tutti gli altri, con l’etichetta <Icona nome="staff" gruppo="tasti" /> del gruppo.
                     Un gruppo può contenere altri gruppi (es. “Compleanno” con
                     “Tavolo A” e “Tavolo B”): chi contiene sottogruppi non ha ordini
                     diretti, si ordina nei figli.
@@ -495,7 +497,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'preparazione',
-      icona: '🍸',
+      icona: 'menu',
       label: 'Gestione preparazione',
       nodo: (
             <div className="card settings-section">
@@ -525,7 +527,7 @@ export default function SettingsTab({ role = null }) {
               )}
               {esitoReset != null && (
                 <div className="muted small" style={{ marginTop: 6 }}>
-                  ✅ {esitoReset === 0
+                  <Icona nome="fatto" gruppo="segnali" />{' '}{esitoReset === 0
                     ? 'Nessun conto aperto da riportare indietro.'
                     : `${esitoReset} conti aperti riportati a “ricevuto”.`}
                 </div>
@@ -535,7 +537,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'giornata',
-      icona: '📅',
+      icona: 'calendario',
       label: 'Giornata di lavoro',
       nodo: (
             <div className="card settings-section">
@@ -586,7 +588,7 @@ export default function SettingsTab({ role = null }) {
               </div>
               {cambioDentroOrario(settings.business_day_cutoff_hour, settings) && (
                 <p className="muted small" role="alert" style={{ margin: '8px 0 0' }}>
-                  ⚠️ Il cambio di giornata cade dentro l’orario di apertura: una
+                  <Icona nome="avviso" gruppo="segnali" /> Il cambio di giornata cade dentro l’orario di apertura: una
                   serata verrebbe divisa su due giornate.
                 </p>
               )}
@@ -595,7 +597,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'prezzo',
-      icona: '🏷',
+      icona: 'categorie',
       label: 'Prezzo consigliato',
       nodo: (
             <div className="card settings-section">
@@ -664,7 +666,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'tempi',
-      icona: '⏱',
+      icona: 'tempo',
       label: 'Tempi di servizio',
       nodo: (
             <div className="card settings-section">
@@ -692,7 +694,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'sconto',
-      icona: '✂️',
+      icona: 'dividi',
       label: 'Sconto e righe del conto',
       nodo: (
             <div className="card settings-section">
@@ -709,17 +711,17 @@ export default function SettingsTab({ role = null }) {
                 {[
                   [
                     'tetto',
-                    '🔒 Tetto al totale',
+                    conEmoji('licenza', 'Tetto al totale'),
                     'Lo sconto resta quello che hai scelto finché ci sta dentro. Se togliendo righe il conto scende sotto lo sconto, lo sconto si accorcia fino al totale e il conto diventa offerto: non va mai in negativo. Esempio: conto 20 €, sconto 5 € → togli 8 € di roba → conto 12 €, sconto ancora 5 €, da pagare 7 €. Togli altri 10 € → conto 2 €, lo sconto si accorcia a 2 € e non si paga nulla.',
                   ],
                   [
                     'proporzione',
-                    '⚖️ Mantieni la proporzione',
+                    conEmoji('bilancio', 'Mantieni la proporzione'),
                     'Lo sconto vale sempre la stessa quota del conto: togliendo righe cala insieme al conto, aggiungendone cresce. Esempio: conto 20 €, sconto 5 € (il 25%) → togli 8 € di roba → conto 12 €, sconto 3 €, da pagare 9 €. Da preferire se lo sconto è un "quanto gli faccio di sconto in percentuale" più che una cifra promessa.',
                   ],
                   [
                     'avviso',
-                    '⚠️ Avvisa e basta',
+                    conEmoji('avviso', 'Avvisa e basta'),
                     'L’app non tocca lo sconto che hai messo. Se supera il totale del conto lo segnala in rosso e blocca l’incasso finché non lo correggi a mano. Da scegliere se lo sconto è una cifra concordata col cliente e nessuno, a parte te, deve poterla cambiare.',
                   ],
                 ].map(([value, titolo, testo]) => (
@@ -739,7 +741,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coperto',
-      icona: '🍽',
+      icona: 'tavolo',
       label: 'Coperto',
       nodo: (
             <div className="card settings-section">
@@ -766,7 +768,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'servizio-mancia',
-      icona: '🙌',
+      icona: 'ritiro-e-servizio',
       label: 'Servizio e mancia',
       nodo: (
             <div className="card settings-section">
@@ -812,7 +814,7 @@ export default function SettingsTab({ role = null }) {
       // capiva se parlasse del menù dei clienti o della schermata con cui
       // si modifica il listino.
       id: 'menu-clienti',
-      icona: '📖',
+      icona: 'ordina-dal-menu',
       label: 'Menù clienti',
       nodo: (
         <div className="card settings-section">
@@ -846,7 +848,7 @@ export default function SettingsTab({ role = null }) {
       // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
       // impostazioni non c'entrano niente con quello che vede il cliente.
       id: 'gestione-menu',
-      icona: '🍹',
+      icona: 'gestione-menu',
       label: 'Gestione menù',
       nodo: (
         <div className="card settings-section">
@@ -869,8 +871,8 @@ export default function SettingsTab({ role = null }) {
           <SceltaModo
             valore={!!settings.stripe_menu_ok_verde}
             opzioni={[
-              [false, '⚪ Grigio'],
-              [true, '🟢 Verde'],
+              [false, conEmoji('spento', 'Grigio')],
+              [true, conEmoji('verde', 'Verde')],
             ]}
             onScegli={(v) => save({ stripe_menu_ok_verde: v })}
           />
@@ -879,7 +881,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'coda',
-      icona: '📋',
+      icona: 'elenco',
       label: 'Coda ordini',
       nodo: (
             <div className="card settings-section">
@@ -895,10 +897,10 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_view}
                 opzioni={[
-                  ['griglia', '🔲 Griglia (schermo intero)'],
-                  ['corsie', '🚦 Corsie di stato'],
-                  ['tabs', '🗂 Schede per stato'],
-                  ['lista', '📋 Lista unica'],
+                  ['griglia', conEmoji('griglia', 'Griglia (schermo intero)')],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato')],
+                  ['tabs', conEmoji('raggruppa', 'Schede per stato')],
+                  ['lista', conEmoji('elenco', 'Lista unica')],
                 ]}
                 onScegli={(v) => save({ queue_view: v })}
               />
@@ -928,7 +930,7 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.bartender_view || 'corsie'}
                 opzioni={[
-                  ['corsie', '🚦 Corsie di stato', undefined, settings.workflow_enabled === false],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, settings.workflow_enabled === false],
                 ]}
                 onScegli={(v) => save({ bartender_view: v })}
               />
@@ -958,18 +960,18 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.queue_search || 'filtra'}
                 opzioni={[
-                  ['filtra', '🔍 Filtra la coda'],
-                  ['evidenzia', '💡 Accendi il conto e portami lì'],
+                  ['filtra', conEmoji('cerca', 'Filtra la coda')],
+                  ['evidenzia', conEmoji('evidenzia', 'Accendi il conto e portami lì')],
                 ]}
                 onScegli={(v) => save({ queue_search: v })}
               />
             </div>
       ),
     },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti', nodo: <CatalogImport /> },
     {
       id: 'account-clienti',
-      icona: '🙋',
+      icona: 'clienti',
       label: 'Account clienti',
       nodo: (
             <div className="card settings-section">
@@ -985,7 +987,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'posizione',
-      icona: '📍',
+      icona: 'posizione',
       label: 'Posizione locale',
       nodo: (
             <div className="card settings-section">
@@ -1052,11 +1054,11 @@ export default function SettingsTab({ role = null }) {
                       )
                     }}
                   >
-                    📍 Usa la mia posizione attuale
+                    <Icona nome="posizione" gruppo="tasti" /> Usa la mia posizione attuale
                   </button>
                   {settings.venue_lat == null && (
                     <p className="muted small" style={{ margin: '8px 0 0' }}>
-                      ⚠️ Senza coordinate il controllo non è attivo.
+                      <Icona nome="avviso" gruppo="segnali" /> Senza coordinate il controllo non è attivo.
                     </p>
                   )}
                 </>
@@ -1066,7 +1068,7 @@ export default function SettingsTab({ role = null }) {
     },
     {
       id: 'notifiche',
-      icona: '🔔',
+      icona: 'notifiche',
       label: 'Notifiche',
       // CARTELLO, non una seconda casa. Gli avvisi sono scelti per persona
       // e per dispositivo, quindi stanno nel profilo — dove ci arriva
@@ -1074,7 +1076,7 @@ export default function SettingsTab({ role = null }) {
       // l'indicazione, perché chi li cercava li cercava qui.
       nodo: (
         <div className="card settings-section">
-          <h3>🔔 Notifiche</h3>
+          <h3><Icona nome="notifiche" gruppo="tasti" /> Notifiche</h3>
           <p className="muted" style={{ margin: '0 0 12px', fontSize: '0.9rem' }}>
             Gli avvisi sono una scelta <strong>tua e di questo dispositivo</strong> —
             il tablet della cassa e il telefono in sala vogliono cose diverse,
@@ -1082,62 +1084,62 @@ export default function SettingsTab({ role = null }) {
             insieme allo storico di quelli arrivati qui.
           </p>
           <Link className="btn small" to="/profilo-staff">
-            👤 Vai al mio profilo
+            <Icona nome="profilo" gruppo="tasti" /> Vai al mio profilo
           </Link>
 
         </div>
       ),
     },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante', nodo: <PrinterSetup /> },
+    { id: 'stampante', icona: 'stampante', label: 'Stampante', nodo: <PrinterSetup /> },
     // I CAMPI DELLA CARTA STANNO COL RESTO DELLA STAMPANTE. Sono
     // impostazioni del LOCALE (settings/bar) e non del terminale, ma chi
     // le cerca le cerca dove sta la stampante: nella barra sono un gruppo
     // solo, e questi riquadri vengono sotto a quello della connessione.
     {
       id: 'campi-scontrino',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dello scontrino',
       nodo: <CampiStampa quale="scontrino" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-comanda',
-      icona: '📝',
+      icona: 'note',
       label: 'Campi della comanda',
       nodo: <CampiStampa quale="comanda" settings={settings} onSave={save} />,
     },
     {
       id: 'campi-acconto',
-      icona: '🧾',
+      icona: 'coda',
       label: 'Campi dell’acconto',
       nodo: <CampiStampa quale="acconto" settings={settings} onSave={save} />,
     },
     {
       id: 'logo-stampe',
-      icona: '🖼',
+      icona: 'immagine',
       label: 'Logo sulle stampe',
       nodo: <LogoStampe settings={settings} onSave={save} role={role} />,
     },
-    { id: 'backup', icona: '💾', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
+    { id: 'backup', icona: 'salva', label: 'Backup e ripristino', nodo: <BackupPanel role={role} /> },
     {
       id: 'informazioni',
-      icona: 'ℹ️',
+      icona: 'informazioni',
       label: 'Informazioni',
       nodo: <InfoTab settings={settings} role={role} />,
     },
     // La licenza la legge il titolare (REQ-LIC-007): è il suo contratto,
     // e al banco non serve.
     ...(isAdmin(role)
-      ? [{ id: 'licenza', icona: '📜', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
+      ? [{ id: 'licenza', icona: 'licenza', label: 'Licenza', nodo: <LicenzaPanel settings={settings} /> }]
       : []),
     {
       id: 'funzioni-premium',
-      icona: '🔒',
+      icona: 'licenza',
       label: 'Funzioni premium',
       nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
     {
       id: 'annullamenti',
-      icona: '✖️',
+      icona: 'chiudi',
       label: 'Annullamenti',
       nodo: (
             <div className="card settings-section">
@@ -1228,17 +1230,17 @@ export default function SettingsTab({ role = null }) {
     'funzioni-premium': 'premium',
   }
   const GRUPPI = [
-    { id: 'aspetto', icona: '🎨', label: 'Aspetto' },
-    { id: 'menu-clienti', icona: '📖', label: 'Menù clienti' },
-    { id: 'gestione-menu', icona: '🍹', label: 'Gestione menù' },
-    { id: 'catalogo', icona: '📥', label: 'Catalogo prodotti' },
-    { id: 'banco', icona: '🧾', label: 'Banco: coda e ordine' },
-    { id: 'servizio', icona: '🛎', label: 'Servizio' },
-    { id: 'cassa', icona: '💳', label: 'Cassa e giornata' },
-    { id: 'prezzi', icona: '🏷️', label: 'Prezzi e supplementi' },
-    { id: 'gruppi', icona: '👥', label: 'Gruppi di ordini' },
-    { id: 'clienti', icona: '🙋', label: 'Clienti' },
-    { id: 'stampante', icona: '🖨️', label: 'Stampante' },
+    { id: 'aspetto', icona: 'temi', label: 'Aspetto' },
+    { id: 'menu-clienti', icona: 'ordina-dal-menu', label: 'Menù clienti' },
+    { id: 'gestione-menu', icona: 'gestione-menu', label: 'Gestione menù' },
+    { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti' },
+    { id: 'banco', icona: 'coda', label: 'Banco: coda e ordine' },
+    { id: 'servizio', icona: 'campanello', label: 'Servizio' },
+    { id: 'cassa', icona: 'cassa', label: 'Cassa e giornata' },
+    { id: 'prezzi', icona: 'categorie', label: 'Prezzi e supplementi' },
+    { id: 'gruppi', icona: 'staff', label: 'Gruppi di ordini' },
+    { id: 'clienti', icona: 'clienti', label: 'Clienti' },
+    { id: 'stampante', icona: 'stampante', label: 'Stampante' },
     // UN GRUPPO SUO, e non una voce infilata nei gruppi delle schermate che
     // le funzioni accendono. La regola del momento d'uso (REQ-UI-025) dice
     // di raggruppare per «quando lo cerco»: qui il momento è «cosa ha questo
@@ -1253,8 +1255,8 @@ export default function SettingsTab({ role = null }) {
     // «Licenza», da quando il gruppo ne mostra anche il riepilogo
     // (REQ-LIC-007): le funzioni premium sono quello che la licenza
     // comprende, e chi cerca cosa ha comprato cerca la licenza.
-    { id: 'premium', icona: '🔒', label: 'Licenza' },
-    { id: 'sistema', icona: '💾', label: 'Sistema' },
+    { id: 'premium', icona: 'licenza', label: 'Licenza' },
+    { id: 'sistema', icona: 'salva', label: 'Sistema' },
   ]
   // Compat coi collegamenti vecchi (?sezione=coperto): l'id di un riquadro
   // porta al gruppo che lo contiene.
@@ -1383,7 +1385,8 @@ function CatalogImport() {
 
       {parsed && (
         <ConfirmDialog
-          title="📦 Importare il catalogo?"
+          icona="magazzino"
+          title="Importare il catalogo?"
           message={
             `${parsed.products.length} prodotti in ${parsed.categories.length} categorie:\n` +
             parsed.categories.join(', ') +
@@ -1445,7 +1448,7 @@ function ReaderPairing({ settings }) {
       {settings.sumup_reader_id ? (
         <div className="toggle-row">
           <div>
-            <div>📟 {settings.sumup_reader_name || 'Lettore SumUp'}</div>
+            <div><Icona nome="lettore" gruppo="tasti" /> {settings.sumup_reader_name || 'Lettore SumUp'}</div>
             <div className="desc">Lettore associato e pronto all&apos;incasso.</div>
           </div>
           <button className="btn ghost small" disabled={busy} onClick={() => setConfirmUnpair(true)}>
@@ -1469,7 +1472,7 @@ function ReaderPairing({ settings }) {
                 )
               }
             >
-              🧪 Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
+              <Icona nome="prova" gruppo="tasti" />{' '}Usa un lettore SIMULATO (solo test): l&apos;esito arriva da solo dopo 2,5s
             </button>
           )}
           <div className="row" style={{ gap: 8 }}>
@@ -1486,7 +1489,7 @@ function ReaderPairing({ settings }) {
               onClick={associa}
               style={{ flexShrink: 0 }}
             >
-              {busy ? 'Associo…' : '🔗 Associa'}
+              {busy ? 'Associo…' : <><Icona nome="unisci" gruppo="tasti" /> Associa</>}
             </button>
           </div>
         </>
@@ -1531,7 +1534,7 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
           title={spiegazione}
           onClick={() => onScegli(id)}
         >
-          {etichetta}
+          <ConIcona testo={etichetta} />
         </button>
       ))}
     </div>

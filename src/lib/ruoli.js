@@ -1,3 +1,5 @@
+import { conEmoji } from './icone.js'
+
 // ── RUOLI ────────────────────────────────────────────────────────────
 // Il ruolo vive nei custom claims di Firebase Auth (`token.claims.role`),
 // non in Firestore: così le regole del database possono fidarsene senza
@@ -22,10 +24,10 @@ export const RUOLI = ['admin', 'bartender', 'staff']
 export const RUOLI_ASSEGNABILI = [...RUOLI, 'cliente']
 
 export const RUOLO_ETICHETTA = {
-  admin: '👑 Admin',
-  bartender: '🍸 Bartender',
-  staff: '🫱 Staff',
-  cliente: '🙋 Cliente',
+  admin: conEmoji('premium', 'Admin'),
+  bartender: conEmoji('menu', 'Bartender'),
+  staff: conEmoji('servizio', 'Staff'),
+  cliente: conEmoji('clienti', 'Cliente'),
 }
 
 export const RUOLO_DESCRIZIONE = {

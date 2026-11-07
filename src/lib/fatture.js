@@ -19,6 +19,7 @@ import { purchaseOrderTotals } from './warehouse.js'
 import { righeDiProdotto, livelloDi, fetteFornitore } from './listini.js'
 import { eBozza } from './statiOrdine.js'
 import { formatPrice } from './orderStatus.js'
+import { conEmoji } from './icone.js'
 
 // ── I TIPI DI DOCUMENTO ──────────────────────────────────────────────
 //
@@ -457,6 +458,6 @@ export function modificaAmmessa(prima, dopo) {
 // casi, che è quello che serve: il documento è chiuso quando quei soldi sono
 // tornati indietro, comunque siano tornati.
 export function etichettaSaldo(fattura) {
-  if (eNotaDiCredito(fattura)) return fattura?.paid ? '✅ scalata' : '⏳ da scalare'
-  return fattura?.paid ? '✅ pagato' : '⏳ da pagare'
+  if (eNotaDiCredito(fattura)) return fattura?.paid ? conEmoji('fatto', 'scalata') : conEmoji('attesa', 'da scalare')
+  return fattura?.paid ? conEmoji('fatto', 'pagato') : conEmoji('attesa', 'da pagare')
 }

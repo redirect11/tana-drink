@@ -31,6 +31,8 @@ import CategoryRail from './CategoryRail.jsx'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '../lib/limiti.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
+import Icona from './Icona.jsx'
+import { useTestoConIcona } from '../lib/temaIcone.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -53,6 +55,7 @@ const EMPTY = {
 }
 
 export default function MenuManager() {
+  const testoConIcona = useTestoConIcona()
   // Cosa dice la striscia delle schede: lo sceglie il locale, in
   // Impostazioni → Vista ordine (vedi lib/strisce.js).
   const [settings, setSettings] = useState(settingsIniziali)
@@ -340,11 +343,11 @@ export default function MenuManager() {
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
-    { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
-    { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
-    { id: 'margini', icona: '📈', label: 'Marginalità listino' },
-    { id: 'special', icona: '✨', label: `Special (${drinkSpeciali(drinks).length})` },
-    { id: 'carta', icona: '📖', label: 'Menù dei clienti' },
+    { id: 'catalogo', icona: 'menu', label: 'Modifica menù' },
+    { id: 'categorie', icona: 'categorie', label: `Categorie (${categories.length})` },
+    { id: 'margini', icona: 'andamento', label: 'Marginalità listino' },
+    { id: 'special', icona: 'special', label: `Special (${drinkSpeciali(drinks).length})` },
+    { id: 'carta', icona: 'ordina-dal-menu', label: 'Menù dei clienti' },
   ]
 
   if (sezione === 'carta') {
@@ -434,7 +437,7 @@ export default function MenuManager() {
           <input
             type="search"
             className="menu-search"
-            placeholder="🔍 Cerca drink, ingrediente, categoria…"
+            placeholder={testoConIcona('cerca', 'Cerca drink, ingrediente, categoria…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ marginTop: 10 }}
@@ -580,7 +583,7 @@ export default function MenuManager() {
                           )}
                           <InStruttura drink={d} carta={carta} />
                           <button className="btn secondary small block" onClick={() => setEditing(d)}>
-                            ✏️ Modifica
+                            <Icona nome="modifica" gruppo="tasti" /> Modifica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -588,7 +591,7 @@ export default function MenuManager() {
                             disabled={!puoAggiungere}
                             onClick={() => duplica(d)}
                           >
-                            📋 Duplica
+                            <Icona nome="elenco" gruppo="tasti" /> Duplica
                           </button>
                           <button
                             className="btn ghost small block"
@@ -602,7 +605,7 @@ export default function MenuManager() {
                             style={{ marginTop: 6 }}
                             onClick={() => handleDelete(d)}
                           >
-                            🗑 Elimina
+                            <Icona nome="elimina" gruppo="tasti" /> Elimina
                           </button>
                         </div>
                       )}
@@ -697,8 +700,8 @@ function CategoryManager({ categories }) {
             <span className="row" style={{ gap: 4 }}>
               <button className="btn ghost small" onClick={() => move(idx, -1)} disabled={idx === 0}>↑</button>
               <button className="btn ghost small" onClick={() => move(idx, 1)} disabled={idx === categories.length - 1}>↓</button>
-              <button className="btn ghost small" onClick={() => rename(c)}>✏️</button>
-              <button className="btn ghost small" onClick={() => remove(c)}>🗑</button>
+              <button className="btn ghost small" onClick={() => rename(c)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+              <button className="btn ghost small" onClick={() => remove(c)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             </span>
           </div>
           {/* Icona (set di emoji) + colore per la categoria */}

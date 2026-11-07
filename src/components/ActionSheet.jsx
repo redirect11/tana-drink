@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import Icona from './Icona.jsx'
 
 // MENU DELLE AZIONI, dal basso. Su uno schermo da telefono i tasti
 // secondari — unisci, gruppi, dati del conto, annulla — occupavano più
@@ -50,7 +51,7 @@ export default function ActionSheet({ open, onClose, titolo = 'Azioni', voci = [
                 v.onClick?.()
               }}
             >
-              <span className="action-sheet-ic">{v.icon}</span>
+              <span className="action-sheet-ic"><Icona nome={v.icon} /></span>
               <span className="action-sheet-testo">
                 <span>{v.label}</span>
                 {v.hint && <span className="muted small">{v.hint}</span>}

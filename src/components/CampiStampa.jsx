@@ -13,6 +13,7 @@ import {
 } from '../lib/campiStampa.js'
 import { printAnteprima } from '../lib/printer.js'
 import { isAdmin } from '../lib/ruoli.js'
+import Icona from './Icona.jsx'
 
 // ── COSA C'È SULLO SCONTRINO, E COSA C'È SULLA COMANDA ───────────────
 //
@@ -120,7 +121,7 @@ export default function CampiStampa({ quale, settings, onSave }) {
         onClick={prova}
         disabled={stampando}
       >
-        {stampando ? 'Stampo…' : '🖨 Prova di stampa'}
+        {stampando ? 'Stampo…' : <><Icona nome="stampa" gruppo="tasti" /> Prova di stampa</>}
       </button>
       <p className="muted" style={{ fontSize: '0.8rem', margin: '6px 0 0' }}>
         Stampa un {quale === 'comanda' ? 'ticket' : 'conto'} finto con i campi che hai scelto.
@@ -261,7 +262,7 @@ export function LogoStampe({ settings, onSave, role = null }) {
                   disabled={lavorando}
                   onClick={() => fileRef.current?.click()}
                 >
-                  {lavorando ? 'Guardo l’immagine…' : '🖼 Carica un’immagine'}
+                  {lavorando ? 'Guardo l’immagine…' : <><Icona nome="immagine" gruppo="tasti" /> Carica un’immagine</>}
                 </button>
                 {immagine && (
                   <button
@@ -289,7 +290,7 @@ export function LogoStampe({ settings, onSave, role = null }) {
             className={problema.grave ? 'banner' : 'muted'}
             style={{ marginTop: 10, fontSize: '0.9rem' }}
           >
-            {problema.grave ? '⚠️ ' : ''}
+            {problema.grave && <><Icona nome="avviso" gruppo="segnali" />{' '}</>}
             {problema.testo}
             {problema.grave && ' Il logo è rimasto quello di prima.'}
           </div>

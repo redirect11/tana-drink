@@ -11,7 +11,7 @@ import {
   segnaScontrinoStampato,
 } from '../lib/api.js'
 import { readerCheckout } from '../lib/paymentsApi.js'
-import { formatPrice, PAYMENT_METHOD_LABELS } from '../lib/orderStatus.js'
+import { formatPrice } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
 import { useResizable } from '../lib/useResizable.js'
 import { contantiProbabili, restoDa, leggiImporto } from '../lib/resto.js'
@@ -25,6 +25,8 @@ import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
 import { scontiConsentiti } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
+import Icona from './Icona.jsx'
+import MetodoPagamento from './MetodoPagamento.jsx'
 import {
   remainingItems,
   paidAmount,
@@ -479,8 +481,8 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // far aspettare il cassiere davanti a una transazione che non partirà.
   const senzaRete = !online
   const methods = [
-    { key: 'banco', label: 'Contante', emoji: '💵' },
-    { key: 'carta', label: 'Carta di Credito', emoji: '💳' },
+    { key: 'banco', label: 'Contante', icona: 'paghe' },
+    { key: 'carta', label: 'Carta di Credito', icona: 'carta' },
   ]
   // SENZA FUNCTIONS IL LETTORE NON C'È (REQ-LIC-004): sul profilo leggero
   // del piano Free nessuno parla coi server di SumUp, e un tasto che non
@@ -490,13 +492,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     {
       key: 'lettore',
       label: 'SumUp',
-      emoji: '📟',
+      icona: 'lettore',
       disabled: !readerReady || senzaRete,
       // Niente sottotitolo sul tasto: il motivo si legge SOLO se lo si tocca.
       // Scritto lì sotto stava sempre in mezzo, mangiava una riga a una
       // schermata che ne ha poche, e chi incassa non lo leggeva comunque.
       motivo: senzaRete
-        ? '📶 Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
+        ? 'Senza rete il lettore SumUp non può autorizzare: incassa e registra come Carta di Credito.'
         : 'Il lettore SumUp non è ancora configurato: si attiva in Impostazioni → Pagamenti.',
     },
   )
@@ -829,7 +831,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             era in mezzo alle righe dei drink, dove sembrava una voce del
             conto. Qui sta dove si guarda per sapere di chi è il conto. */}
         <h3 style={{ margin: 0 }}>
-          💳 Pagamento · #{order.daily_number ?? '—'}
+          <Icona nome="carta" gruppo="tasti" />{' '}Pagamento · #{order.daily_number ?? '—'}
           {dove && <span className="muted"> · {dove}</span>}
         </h3>
         <button className="btn ghost small" onClick={onClose}>✕ Chiudi</button>
@@ -860,7 +862,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               <div className="payscreen-comandi">
                 {remaining.some((r) => r.qty > 1) && (
                   <button className="btn ghost small" onClick={() => setSeparati((v) => !v)}>
-                    {separati ? '🔗 Unisci uguali' : '≣ Separa uguali'}
+                    {separati ? <><Icona nome="unisci" gruppo="tasti" /> Unisci uguali</> : <><Icona nome="separa" gruppo="tasti" /> Separa uguali</>}
                   </button>
                 )}
                 {/* UN TASTO SOLO CHE CAMBIA SCRITTA, come i suoi vicini. Dice
@@ -905,7 +907,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             onClick={() => tocca(r, 'etichetta', i)}
                             disabled={closed}
                           >
-                            {r.custom ? '✨ ' : ''}{r.name}
+                            {r.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{r.name}
                             <span className="muted small"> · 1× {formatPrice(r.unit_price)}</span>
                           </button>
                           <span className="qty">
@@ -958,7 +960,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                     onClick={() => tocca(r, 'etichetta')}
                     disabled={closed}
                   >
-                    {r.custom ? '✨ ' : ''}{r.name}
+                    {r.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{r.name}
                     <span className="muted small"> · {r.qty}× {formatPrice(r.unit_price)}</span>
                   </button>
                   <span className="qty">
@@ -985,7 +987,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                             righe le copre solo chi le sceglie qui a
                             sinistra. */}
                         {p.cosa ? 'Pagate' : 'Acconto'}
-                        {p.metodo ? ` · ${PAYMENT_METHOD_LABELS[p.metodo] || p.metodo}` : ''}
+                        {p.metodo && <> · <MetodoPagamento metodo={p.metodo} /></>}
                         {p.quando ? ` · ${String(p.quando).slice(11, 16)}` : ''}
                       </span>
                       <span>{formatPrice(p.importo)}</span>
@@ -1000,7 +1002,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                         hanno fatto quattordici euro invece di sedici. */}
                     {p.sconto && (
                       <div className="muted small" style={{ paddingLeft: 10, opacity: 0.8 }}>
-                        🎁 {p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
+                        <Icona nome="sconto" gruppo="tasti" />{' '}{p.sconto.etichetta} −{formatPrice(p.sconto.importo)}
                       </div>
                     )}
                   </div>
@@ -1117,10 +1119,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
           )}
           {readerStarted && order.payment_status === 'in_attesa' && (
             <p className="muted small" style={{ margin: '2px 0 0', flexShrink: 0 }}>
-              📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
+              <Icona nome="lettore" gruppo="tasti" />{' '}Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
             </p>
           )}
-          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}>✅ Conto pagato e chiuso.</p>}
+          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}><Icona nome="fatto" gruppo="segnali" /> Conto pagato e chiuso.</p>}
 
           <div className="paypad" role="group" aria-label="Tastierino importo">
             <button className="paypad-key danger" onClick={clear}>C</button>
@@ -1254,17 +1256,17 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               giorno che il modulo si riaccende. */}
           <div style={{ display: 'flex', gap: 6, marginTop: 8, flexShrink: 0 }}>
             <button className="btn ghost small grow" onClick={() => setShowLottery(true)}>
-              🎟 Codice Lotteria{order.lottery_code ? ' ✓' : ''}
+              <Icona nome="buono" gruppo="tasti" />{' '}Codice Lotteria{order.lottery_code ? ' ✓' : ''}
             </button>
             <button
               className="btn ghost small grow"
               onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
             >
-              🖨 Preconto
+              <Icona nome="stampa" gruppo="tasti" /> Preconto
             </button>
             {fattureOn && (
               <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
-                📧 Invia fattura{order.invoice_number ? ' ✓' : ''}
+                <Icona nome="email" gruppo="tasti" />{' '}Invia fattura{order.invoice_number ? ' ✓' : ''}
               </button>
             )}
           </div>
@@ -1290,7 +1292,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 disabled={closed || (m.disabled && !m.motivo)}
                 onClick={() => (spento ? toastError(m.motivo) : setMethod(m.key))}
               >
-                {m.emoji} {m.label}
+                <Icona nome={m.icona} gruppo="tasti" /> {m.label}
                 {m.key === 'lettore' && readerReady && settings.sumup_reader_name ? (
                   <span className="muted small"> ({settings.sumup_reader_name})</span>
                 ) : null}
@@ -1303,7 +1305,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               che apre la sua finestra invece di diventare il metodo scelto. */}
           {!closed && due > 0 && (
             <button type="button" className="payscreen-method" onClick={() => setImpagatoAperta(true)}>
-              🕗 Impagato
+              <Icona nome="orario" gruppo="tasti" /> Impagato
             </button>
           )}
 
@@ -1313,7 +1315,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 per poterlo vedere e togliere. */}
             {!closed && (scontiConsentiti(settings) || (order.discount_amount || 0) > 0) && (
               <button className="btn ghost small block" onClick={() => setShowDiscount(true)}>
-                {order.discount?.type === 'buono' ? '🎟 Buono' : '🎁 Sconto'}
+                {order.discount?.type === 'buono' ? <><Icona nome="buono" gruppo="tasti" /> Buono</> : <><Icona nome="sconto" gruppo="tasti" /> Sconto</>}
                 {(order.discount_amount || 0) > 0 ? ` (−${formatPrice(order.discount_amount)})` : ''}
               </button>
             )}
@@ -1325,7 +1327,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       {impagatoAperta && (
         <div className="overlay confirm-overlay" onClick={() => setImpagatoAperta(false)}>
           <div className="confirm-box" role="dialog" aria-label="Chiudi impagato" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>🕗 Chiudi impagato</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="orario" gruppo="tasti" /> Chiudi impagato</h3>
             <p className="muted small" style={{ margin: '0 0 10px' }}>
               Il conto si chiude senza incasso: {formatPrice(due)} restano da riscuotere. Le comande risultano
               servite. Per incassarlo in seguito si riapre il conto e si riscuote.
@@ -1364,7 +1366,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎁 Sconto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="sconto" gruppo="tasti" /> Sconto</h3>
               <button className="btn ghost small" onClick={() => setShowDiscount(false)}>✕</button>
             </div>
 
@@ -1391,12 +1393,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 className={`btn small grow ${discType === 'buono' ? '' : 'ghost'}`}
                 disabled={vipList.length === 0}
                 title={vipList.length === 0 ? 'Nessun buono con saldo' : 'Sconto col buono'}
+                aria-label="Buono"
                 onClick={() => {
                   setDiscType('buono')
                   setDiscDigits('')
                 }}
               >
-                🎟
+                <Icona nome="buono" gruppo="tasti" />
               </button>
             </div>
 
@@ -1404,7 +1407,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 al suo saldo e si applica al totale come uno sconto. */}
             {discType === 'buono' && (
               <div style={{ marginTop: 10 }}>
-                <label htmlFor="disc-voucher">🎟 Buono di</label>
+                <label htmlFor="disc-voucher"><Icona nome="buono" gruppo="tasti" /> Buono di</label>
                 <select
                   id="disc-voucher"
                   value={voucherId}
@@ -1508,7 +1511,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎟 Codice Lotteria</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="buono" gruppo="tasti" /> Codice Lotteria</h3>
               <button className="btn ghost small" onClick={() => setShowLottery(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
@@ -1541,14 +1544,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>📧 Fattura di cortesia</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="email" gruppo="tasti" /> Fattura di cortesia</h3>
               <button className="btn ghost small" onClick={() => setShowInvoice(false)}>✕</button>
             </div>
 
             {invoice ? (
               <>
                 <p style={{ margin: '10px 0 4px' }}>
-                  ✅ Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
+                  <Icona nome="fatto" gruppo="segnali" />{' '}Emessa la fattura <strong>n. {invoice.number}</strong> ·{' '}
                   {formatPrice(invoice.total)}
                 </p>
                 <p className="muted small" style={{ margin: '0 0 10px' }}>
@@ -1556,21 +1559,21 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   gestionale, tab Fatture.
                 </p>
                 <button className="btn block" onClick={() => sendInvoiceEmail(invoice)}>
-                  📧 Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
+                  <Icona nome="email" gruppo="tasti" />{' '}Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
                 </button>
                 <button
                   className="btn secondary block"
                   style={{ marginTop: 6 }}
                   onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
                 >
-                  🖨 Stampa fattura
+                  <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
                 </button>
               </>
             ) : (
               <>
                 {order.invoice_number && (
                   <p className="muted small" style={{ margin: '8px 0 0' }}>
-                    ⚠️ Per questo conto risulta già emessa la fattura n.{' '}
+                    <Icona nome="avviso" gruppo="segnali" />{' '}Per questo conto risulta già emessa la fattura n.{' '}
                     {order.invoice_number} (vedi tab Fatture).
                   </p>
                 )}

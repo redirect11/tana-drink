@@ -25,6 +25,7 @@ import {
 import ConfirmDialog from './ConfirmDialog.jsx'
 import StaffBadgePanel from './StaffBadgePanel.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
+import Icona from './Icona.jsx'
 
 // RAPP ORE + BADGE VIRTUALE: registro ore dello staff con vista calendario
 // giornaliera, settimanale e mensile. Distingue le ore EFFETTIVE (badge:
@@ -62,14 +63,14 @@ const localInputToIso = (s) => {
 // dove ci si va per i soldi — e per timbrare l'ingresso bisognava passare
 // dal flusso di cassa, che con le ore non c'entra niente.
 const SEZIONI_STAFF = [
-  { id: 'calendario', icona: '📅', label: 'Calendario' },
+  { id: 'calendario', icona: 'calendario', label: 'Calendario' },
   // LE TIMBRATURE HANNO LA LORO VOCE. Sono la cosa che si tocca all'inizio
   // e alla fine del turno — «chi c'è adesso» — e stavano in cima al
   // calendario: per battere l'ingresso di chi arriva bisognava passare
   // dalla schermata dei turni, che con quel gesto non c'entra.
-  { id: 'timbrature', icona: '⏱', label: 'Timbrature' },
-  { id: 'turno', icona: '➕', label: 'Nuovo turno' },
-  { id: 'paghe', icona: '💶', label: 'Paghe orarie' },
+  { id: 'timbrature', icona: 'tempo', label: 'Timbrature' },
+  { id: 'turno', icona: 'aggiungi', label: 'Nuovo turno' },
+  { id: 'paghe', icona: 'paghe', label: 'Paghe orarie' },
 ]
 
 export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'calendario' }) {
@@ -222,7 +223,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           <DayView date={cursor} data={days.get(cursor)} {...rowActions} />
           {membri.length > 0 && (
             <div className="card" style={{ marginTop: 8 }}>
-              <strong className="small">➕ Assegna a questo giorno</strong>
+              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> Assegna a questo giorno</strong>
               <ShiftForm membri={membri} fixedDate={cursor} onAdd={addTurno} />
             </div>
           )}
@@ -235,10 +236,10 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
           <strong>Totale periodo</strong>
           <span className="row" style={{ gap: 10 }}>
             <span title="Ore effettive (timbrature + correzioni)">
-              ✅ <strong>{totals.effettivo} h</strong>
+              <Icona nome="fatto" gruppo="segnali" />{' '}<strong>{totals.effettivo} h</strong>
             </span>
             <span className="muted" title="Ore programmate (turni pianificati)">
-              📅 {totals.programmato} h
+              <Icona nome="calendario" gruppo="tasti" />{' '}{totals.programmato} h
             </span>
           </span>
         </div>
@@ -257,7 +258,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
         </div>
         {payroll.parziale && (
           <div className="muted small">
-            ⚠️ Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
+            <Icona nome="avviso" gruppo="segnali" />{' '}Parziale: manca la tariffa oraria di {payroll.senzaTariffa.join(', ')}.
           </div>
         )}
         {perPerson.length === 0 && (
@@ -299,7 +300,7 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
             <DayPeople entries={days.get(dayDetail)?.entries} />
             <DayView date={dayDetail} data={days.get(dayDetail)} {...rowActions} />
             <div style={{ marginTop: 10, borderTop: '1px solid var(--line)', paddingTop: 10 }}>
-              <strong className="small">➕ Assegna a questo giorno</strong>
+              <strong className="small"><Icona nome="aggiungi" gruppo="tasti" /> Assegna a questo giorno</strong>
               {membri.length === 0 ? (
                 <p className="muted small" style={{ margin: '4px 0 0' }}>Nessun membro dello staff: aggiungilo nella scheda “Membri”.</p>
               ) : (
@@ -324,7 +325,8 @@ export default function StaffHoursTab({ embedded = false, sezioneIniziale = 'cal
 
       {confirmDel && (
         <ConfirmDialog
-          title="🗑 Eliminare la voce?"
+          icona="elimina"
+          title="Eliminare la voce?"
           message={`${confirmDel.staff_name} · ${confirmDel.date} · ${confirmDel.hours} h`}
           confirmLabel="Elimina"
           danger
@@ -413,10 +415,10 @@ function DayPeople({ entries }) {
           <strong>{p.name}</strong>
           <span className="day-person-cols">
             <span title="Programmato">
-              📅 {p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
+              <Icona nome="calendario" gruppo="tasti" />{' '}{p.programmato.ranges.join(', ') || (p.programmato.hours ? `${p.programmato.hours} h` : '—')}
             </span>
             <span title="Effettivo" className={p.effettivo.hours ? '' : 'muted'}>
-              ✅ {p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
+              <Icona nome="fatto" gruppo="segnali" />{' '}{p.effettivo.ranges.join(', ') || (p.effettivo.hours ? `${p.effettivo.hours} h` : '—')}
             </span>
           </span>
         </div>
@@ -499,11 +501,11 @@ function ShiftForm({ membri, fixedDate = null, onAdd }) {
     <form onSubmit={submit} style={{ marginTop: 8 }}>
       <div className="chips-row" style={{ margin: '0 0 2px' }}>
         {[
-          ['programmato', '📅 Programmato'],
-          ['effettivo', '✅ Effettivo'],
-        ].map(([k, label]) => (
+          ['programmato', 'calendario', 'Programmato'],
+          ['effettivo', 'fatto', 'Effettivo'],
+        ].map(([k, icona, label]) => (
           <button type="button" key={k} className={`chip ${kind === k ? 'active' : ''}`} onClick={() => setKind(k)}>
-            {label}
+            <Icona nome={icona} gruppo="tasti" /> {label}
           </button>
         ))}
       </div>
@@ -579,9 +581,9 @@ function ShiftRow({ e, onDelete, onEditShift }) {
     <div className="row between" style={{ alignItems: 'center', marginTop: 6 }}>
       <span className="grow" style={{ fontSize: '0.9rem' }}>
         <strong>{e.staff_name}</strong>{' '}
-        {e.kind === 'programmato' && <span className="pill small">📅 prog.</span>}
-        {isShift && !e.open && <span className="pill small">🕓 badge</span>}
-        {e.open && <span className="pill small live">🟢 in corso</span>}{' '}
+        {e.kind === 'programmato' && <span className="pill small"><Icona nome="calendario" gruppo="tasti" /> prog.</span>}
+        {isShift && !e.open && <span className="pill small"><Icona nome="orario" gruppo="tasti" /> badge</span>}
+        {e.open && <span className="pill small live"><Icona nome="verde" gruppo="tasti" /> in corso</span>}{' '}
         <span className="muted small">
           {e.label}
           {e.note && e.note !== 'timbratura' ? ` · ${e.note}` : ''}
@@ -590,9 +592,9 @@ function ShiftRow({ e, onDelete, onEditShift }) {
       <span className="row" style={{ gap: 6, alignItems: 'center' }}>
         <strong>{e.open ? '—' : `${e.hours} h`}</strong>
         {isShift && (
-          <button className="btn ghost small" aria-label={`Correggi timbratura ${e.staff_name}`} onClick={() => onEditShift(e)}>✏️</button>
+          <button className="btn ghost small" aria-label={`Correggi timbratura ${e.staff_name}`} onClick={() => onEditShift(e)}><Icona nome="modifica" gruppo="tasti" /></button>
         )}
-        <button className="btn ghost small" aria-label={`Elimina voce ${e.staff_name}`} onClick={() => onDelete(e)}>🗑</button>
+        <button className="btn ghost small" aria-label={`Elimina voce ${e.staff_name}`} onClick={() => onDelete(e)}><Icona nome="elimina" gruppo="tasti" /></button>
       </span>
     </div>
   )
@@ -610,7 +612,7 @@ function ShiftEditDialog({ shift, onClose, onSave }) {
     <div className="overlay confirm-overlay" onClick={onClose}>
       <div className="confirm-box" style={{ width: 'min(420px, 94vw)' }} onClick={(e) => e.stopPropagation()}>
         <div className="row between" style={{ alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>✏️ Correggi timbratura</h3>
+          <h3 style={{ margin: 0 }}><Icona nome="modifica" gruppo="tasti" /> Correggi timbratura</h3>
           <button className="btn ghost small" onClick={onClose}>✕</button>
         </div>
         <p className="muted small" style={{ marginTop: 4 }}>{shift.staff_name}</p>
@@ -660,7 +662,7 @@ function PagheManager({ membri, rates, onSave }) {
 
   return (
     <div className="card" style={{ marginTop: 8 }}>
-      <strong>💶 Paghe orarie</strong>
+      <strong><Icona nome="contanti" gruppo="tasti" /> Paghe orarie</strong>
       <p className="muted small" style={{ margin: '4px 0 8px' }}>
         La tariffa vale <strong>dalla data indicata in poi</strong>. Un aumento
         non cambia i turni già lavorati: restano pagati alla tariffa di allora.
@@ -726,7 +728,7 @@ function PagheManager({ membri, rates, onSave }) {
                   aria-label={`Rimuovi tariffa ${m.label} dal ${r.from}`}
                   onClick={() => onSave({ uid: m.uid, name: m.label }, removeRate(m.rates, r.from))}
                 >
-                  🗑
+                  <Icona nome="elimina" gruppo="tasti" />
                 </button>
               </span>
             </div>
@@ -736,7 +738,7 @@ function PagheManager({ membri, rates, onSave }) {
 
       {orfane.length > 0 && (
         <p className="muted small" style={{ marginTop: 10 }}>
-          ⚠️ Tariffe di account non più presenti: {orfane.map((r) => r.name || r.id).join(', ')}.
+          <Icona nome="avviso" gruppo="segnali" />{' '}Tariffe di account non più presenti: {orfane.map((r) => r.name || r.id).join(', ')}.
         </p>
       )}
     </div>

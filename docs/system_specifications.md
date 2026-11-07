@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 265 | fatto e coperto dai test |
+| ✅ | 266 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**319 voci** in tutto. **282** descrivono il sistema com'è oggi e
+**320 voci** in tutto. **283** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -59,7 +59,7 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Interfaccia](#interfaccia) | 27 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 16 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
@@ -3151,6 +3151,18 @@ LA TASTIERA NON SI APRE ALL'AVVIO di una riga da ritoccare: il nome c'è già, e
 L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto × Incassato» e «Acquisti × Fatturato»: la spiegazione va «a scomparsa nella schermata stessa». In cima a tutte e due le tabelle, chiuso di partenza, «ℹ️ Cosa misura questa tabella» (`<details>`, componente Soffietto). Dentro: la domanda a cui risponde la tabella, la DIFFERENZA con l'altra con un esempio (trenta casse di birra comprate a giugno: in «Acquisti × Fatturato» pesano tutte su giugno, in «Venduto × Incassato» solo per le birre vendute mese per mese), il significato delle righe e l'avvertenza sull'IVA. In «Acquisti × Fatturato» anche quella sugli anni di Tiller, che hanno il fatturato ma non gli acquisti. Le spiegazioni che stavano in fondo alle tabelle sono confluite qui, riscritte nel registro del gestionale: senza il «tu» («quello che hai speso», «se lo confronti»), come vuole DESIGN.md, guardrail 3.
 
 **Dove**: `src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx` · **Lo dimostrano**: `tests/component/MacroMonthlyTab.test.jsx`
+
+#### REQ-UI-031 — Le icone del gestionale hanno un tema: «Silhouette», monocrome e tutte della stessa misura, o «Emoji» come prima
+
+Flavio, vocale del 07/11/2026: «tutte le icone andrebbero cambiate, andrebbero snellite e andrebbero messe le silhouette». Le emoji colorate «sono le emoticon di WhatsApp» e danno al programma un senso «un po' troppo a pazziella»; nei programmi con cui ha lavorato le icone erano monocrome, «in un solo colore», o non c'erano. Ci sono anche di dimensioni diverse («Utenti e ruoli» ne ha tre). Che l'icona somigli poco alla voce non importa: «tanto alla fine leggi il nome». Il colore resta dove dice qualcosa: il verde, il giallo e il rosso degli stati, e le categorie colorate dal locale.
+
+DECISIONI DELL'UTENTE (07/11/2026): le icone hanno dei TEMI; i disegni del tema «Silhouette» sono di Lucide (open source, licenza ISC, a tratto e coerenti fra loro, importati uno per uno); «Silhouette» è il tema di partenza per tutti, «Emoji» rimette quelle di prima (Impostazioni → Aspetto → «Le icone del gestionale»); vale solo per il gestionale: le pagine del cliente hanno lo stile del loro menù.
+
+UN TEMA PER GRUPPO (l'utente, 07/11/2026: «il selettore del tema deve essere separato» per le tre fasi): Navigazione, Tasti e stati, Segnali e messaggi si scelgono ognuno per conto suo (tema_icone_navigazione, tema_icone_tasti, tema_icone_segnali), e ogni <Icona> dice di che gruppo è. COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina», «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno; <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji» per chi non è dello staff). I disegni prendono colore e misura del testo attorno (currentColor, em), quindi un tasto e un titolo hanno icone della stessa taglia. I pallini degli stati restano colorati in entrambi i temi, con gli inchiostri di stato di DESIGN.md.
+
+LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le emoji di prima e le riporta al loro nome; un cricchetto (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto. L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale. FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la navigazione — menu laterale, voci del gestionale e della sala, sottosezioni di tutte le pagine, il foglio del telefono, la barra, i moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei conti, i metodi di pagamento nei riepiloghi di cassa (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il loro nome (aria-label), che prima era l'emoji; dentro un <option> un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un segnaposto un disegno non entra), e così le voci delle tendine. Le etichette che stanno nei dati — stati, ruoli, metodi di pagamento, intestazioni della coda — prendono l'emoji dal vocabolario (conEmoji), così stampe, notifiche del telefono e pagine del cliente leggono le stesse di sempre; nel gestionale <ConIcona> riconosce l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le notifiche del telefono (sono testo del sistema) e l'avviso dei cookie (lo legge il cliente).
+
+**Dove**: `src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react` · **Lo dimostrano**: `tests/unit/icone.test.js`, `tests/component/Icona.test.jsx`
 
 ### Come si lavora al progetto
 
