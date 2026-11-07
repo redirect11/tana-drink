@@ -11,7 +11,8 @@ import {
   TastoCorsia,
 } from './Corsia.jsx'
 import { coloreCardConto } from '../lib/coloriConto.js'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import Icona from './Icona.jsx'
 import {
   DndContext,
   DragOverlay,
@@ -329,7 +330,7 @@ export default function CorsieComande({
                               }}
                               title={`Apri il conto #${s.numero ?? ''}`}
                             >
-                              🧾 Conto
+                              <Icona nome="coda" gruppo="tasti" /> Conto
                             </button>
                           )}
                           {/* IL ⋯ DELLA COMANDA. Riportarla a uno stato di

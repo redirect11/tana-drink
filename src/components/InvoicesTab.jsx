@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { subscribeInvoices, markInvoiceSent } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printFattura, loadPrinterSettings, datiFiscaliDelLocale } from '../lib/printer.js'
-import { mailFattura } from '../lib/mailFattura.js'
+import { mailFattura } from '../lib/mailFattura.js'
+import Icona from './Icona.jsx'
 
 // ── Gestore FATTURE di cortesia (gestionale, solo bartender) ───────────
 // Elenco delle fatture emesse dalla schermata Pagamento: numero
@@ -81,13 +82,13 @@ export default function InvoicesTab() {
           )}
           <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
             <button className="btn ghost small" onClick={() => invia(f)}>
-              📧 Invia via email
+              <Icona nome="email" gruppo="tasti" /> Invia via email
             </button>
             <button
               className="btn ghost small"
               onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
             >
-              🖨 Stampa
+              <Icona nome="stampa" gruppo="tasti" /> Stampa
             </button>
           </div>
         </div>

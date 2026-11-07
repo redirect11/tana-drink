@@ -35,7 +35,8 @@ import MagazzinoPeriodo from './MagazzinoPeriodo.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
 import CampoDataOra from './CampoDataOra.jsx'
 import { fetchGiorniDiServizio } from '../lib/giorniDiServizio.js'
-import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
+import { nelPeriodo } from '../lib/magazzinoPeriodo.js'
+import Icona from './Icona.jsx'
 
 const fmtMin = (m) => (m == null ? '—' : `${Math.round(m * 10) / 10} min`)
 // Prezzo compatto per le etichette dei grafici (niente centesimi).
@@ -669,7 +670,7 @@ function ClassificaVenduto({ righe }) {
     <div className="card">
       <div className="row between" style={{ alignItems: 'center' }}>
         <h3 className="cat-header" style={{ margin: 0 }}>
-          🏆 Classifica del venduto
+          <Icona nome="classifica" gruppo="tasti" /> Classifica del venduto
         </h3>
         <button type="button" className="btn ghost small" onClick={() => setPerIncasso((v) => !v)}>
           {perIncasso ? 'Ordina per pezzi' : 'Ordina per incasso'}
@@ -711,7 +712,7 @@ function UtiliPerCategoria({ righe }) {
   return (
     <div className="card">
       <h3 className="cat-header" style={{ margin: 0 }}>
-        💶 Utile per categoria
+        <Icona nome="contanti" gruppo="tasti" /> Utile per categoria
       </h3>
       <p className="muted small" style={{ margin: '8px 0 6px' }}>
         Incassato meno il costo del venduto, ricavato dalle ricette delle voci di menù. Importi IVA compresa.

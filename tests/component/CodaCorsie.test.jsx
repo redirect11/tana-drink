@@ -547,7 +547,10 @@ describe('le corsie di chi guarda la serata (admin)', () => {
 
     await utente.click(screen.getByRole('button', { name: /Ordini/ }))
     await waitFor(() => expect(document.querySelector('.order-grid')).toBeTruthy())
-    expect(screen.queryByText('Da fare')).not.toBeInTheDocument()
+    // Le corsie non ci sono più. «Da fare» resta sui bollini di stato delle
+    // card, che dall'icona a tema (REQ-UI-031) si leggono senza emoji davanti:
+    // si guarda la testata della corsia, non la parola.
+    expect(document.querySelector('.corsia-testa')).toBe(null)
   })
 
   // È SALITO IN TESTATA, ED È DIVENTATO UN'ICONA. Era una pastiglia in
@@ -2227,7 +2230,7 @@ describe('le corsie del banco: una card per comanda', () => {
     await screen.findByText('Da fare')
 
     const daFare = corsia('da-fare')
-    expect(within(daFare).getByText('💳 Acconto')).toBeInTheDocument()
+    expect(within(daFare).getByText('Acconto')).toBeInTheDocument()
     expect(daFare.querySelector('.corsia-card')).toHaveClass('acconto')
   })
 

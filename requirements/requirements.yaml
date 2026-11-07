@@ -14270,9 +14270,16 @@ requirements:
       FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la
       navigazione — menu laterale, voci del gestionale e della sala,
       sottosezioni di tutte le pagine, il foglio del telefono, la barra, i
-      moduli del Marketplace. DA FARE: fase 2, tasti, titoli di sezione,
-      metodi di pagamento e stati; fase 3, i segnali nei testi, i messaggi e
-      i campi di ricerca.
+      moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo
+      dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e
+      messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei
+      conti, i metodi di pagamento nei riepiloghi di cassa
+      (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il
+      loro nome (aria-label), che prima era l'emoji; dentro un <option>
+      un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è
+      sceso da 527 a 283. DA FARE: fase 3, le icone dentro le stringhe —
+      messaggi, conferme, segnaposto dei campi di ricerca, etichette nei
+      ternari.
     status: implemented
     generate_issue: false
     labels: [ui, design]

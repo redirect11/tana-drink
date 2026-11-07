@@ -19,7 +19,7 @@ import {
   RAGGRUPPAMENTI,
   ETICHETTA_RAGGRUPPAMENTO,
 } from '../lib/serate.js'
-import { formatPrice, cashMethodKeys, paymentMethodLabel } from '../lib/orderStatus.js'
+import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import RendicontoSerata from './RendicontoSerata.jsx'
@@ -28,6 +28,8 @@ import { giornateConServizio } from '../lib/giorniDiServizio.js'
 import { impostazioniRicordate } from '../lib/impostazioniLocali.js'
 import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
+import Icona from './Icona.jsx'
+import MetodoPagamento from './MetodoPagamento.jsx'
 
 // STORICO DELLE CHIUSURE DI CASSA: una riga per serata, dall'apertura alla
 // chiusura. Aprendo una riga il riepilogo (incassi per metodo, sconti, contante
@@ -297,14 +299,14 @@ export default function CashSessionsList() {
                 incassa con un metodo nuovo, compare da solo. */}
             {cashMethodKeys(snap.byMethod).map((k) => (
               <div className="row between muted small" key={k}>
-                <span>{paymentMethodLabel(k)}</span>
+                <span><MetodoPagamento metodo={k} /></span>
                 <span>{formatPrice(snap.byMethod?.[k] ?? 0)}</span>
               </div>
             ))}
             {/* Sempre in elenco, anche a zero: "quanto ho lasciato sul
                 tavolo stasera" è una domanda che si fa ogni sera. */}
             <div className="row between muted small">
-              <span>🎁 Sconti concessi</span>
+              <span><Icona nome="sconto" gruppo="tasti" /> Sconti concessi</span>
               <span>{(snap.sconti ?? 0) > 0 ? `−${formatPrice(snap.sconti)}` : formatPrice(0)}</span>
             </div>
             <div className="row between muted small">
@@ -348,7 +350,7 @@ export default function CashSessionsList() {
                     })
                   }
                 >
-                  📊 Apri il rendiconto — conti, prodotti e guadagno
+                  <Icona nome="statistiche" gruppo="tasti" /> Apri il rendiconto — conti, prodotti e guadagno
                 </button>
               </div>
             )}
@@ -366,7 +368,7 @@ export default function CashSessionsList() {
                     .catch((e) => toastError(`Stampa: ${e.message}`))
                 }
               >
-                🖨 Ristampa chiusura
+                <Icona nome="stampa" gruppo="tasti" /> Ristampa chiusura
               </button>
             )}
           </div>

@@ -24,7 +24,8 @@ import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
 import { scontiConsentiti } from '../lib/limiti.js'
-import { showToast, toastError } from '../lib/toast.js'
+import { showToast, toastError } from '../lib/toast.js'
+import Icona from './Icona.jsx'
 import {
   remainingItems,
   paidAmount,
@@ -1120,7 +1121,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               📟 Transazione avviata sul lettore: il conto si aggiorna da solo all'esito.
             </p>
           )}
-          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}>✅ Conto pagato e chiuso.</p>}
+          {closed && <p style={{ margin: '2px 0 0', flexShrink: 0 }}><Icona nome="fatto" gruppo="segnali" /> Conto pagato e chiuso.</p>}
 
           <div className="paypad" role="group" aria-label="Tastierino importo">
             <button className="paypad-key danger" onClick={clear}>C</button>
@@ -1260,7 +1261,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               className="btn ghost small grow"
               onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
             >
-              🖨 Preconto
+              <Icona nome="stampa" gruppo="tasti" /> Preconto
             </button>
             {fattureOn && (
               <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
@@ -1303,7 +1304,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               che apre la sua finestra invece di diventare il metodo scelto. */}
           {!closed && due > 0 && (
             <button type="button" className="payscreen-method" onClick={() => setImpagatoAperta(true)}>
-              🕗 Impagato
+              <Icona nome="orario" gruppo="tasti" /> Impagato
             </button>
           )}
 
@@ -1325,7 +1326,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       {impagatoAperta && (
         <div className="overlay confirm-overlay" onClick={() => setImpagatoAperta(false)}>
           <div className="confirm-box" role="dialog" aria-label="Chiudi impagato" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>🕗 Chiudi impagato</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="orario" gruppo="tasti" /> Chiudi impagato</h3>
             <p className="muted small" style={{ margin: '0 0 10px' }}>
               Il conto si chiude senza incasso: {formatPrice(due)} restano da riscuotere. Le comande risultano
               servite. Per incassarlo in seguito si riapre il conto e si riscuote.
@@ -1364,7 +1365,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎁 Sconto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="sconto" gruppo="tasti" /> Sconto</h3>
               <button className="btn ghost small" onClick={() => setShowDiscount(false)}>✕</button>
             </div>
 
@@ -1391,12 +1392,13 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 className={`btn small grow ${discType === 'buono' ? '' : 'ghost'}`}
                 disabled={vipList.length === 0}
                 title={vipList.length === 0 ? 'Nessun buono con saldo' : 'Sconto col buono'}
+                aria-label="Buono"
                 onClick={() => {
                   setDiscType('buono')
                   setDiscDigits('')
                 }}
               >
-                🎟
+                <Icona nome="buono" gruppo="tasti" />
               </button>
             </div>
 
@@ -1404,7 +1406,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 al suo saldo e si applica al totale come uno sconto. */}
             {discType === 'buono' && (
               <div style={{ marginTop: 10 }}>
-                <label htmlFor="disc-voucher">🎟 Buono di</label>
+                <label htmlFor="disc-voucher"><Icona nome="buono" gruppo="tasti" /> Buono di</label>
                 <select
                   id="disc-voucher"
                   value={voucherId}
@@ -1508,7 +1510,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>🎟 Codice Lotteria</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="buono" gruppo="tasti" /> Codice Lotteria</h3>
               <button className="btn ghost small" onClick={() => setShowLottery(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>
@@ -1541,7 +1543,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>📧 Fattura di cortesia</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="email" gruppo="tasti" /> Fattura di cortesia</h3>
               <button className="btn ghost small" onClick={() => setShowInvoice(false)}>✕</button>
             </div>
 
@@ -1563,7 +1565,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   style={{ marginTop: 6 }}
                   onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
                 >
-                  🖨 Stampa fattura
+                  <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
                 </button>
               </>
             ) : (

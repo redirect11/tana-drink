@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { subscribeVouchers, createVoucher, topUpVoucher, deleteVoucher } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { totalOutstanding, expiryLabel, isVoucherExpired } from '../lib/vouchers.js'
-import ConfirmDialog from './ConfirmDialog.jsx'
+import ConfirmDialog from './ConfirmDialog.jsx'
+import Icona from './Icona.jsx'
 
 const EXPIRY_OPTS = [
   ['none', 'Nessuna'],
@@ -71,7 +72,7 @@ export default function VipTab({ embedded = false }) {
 
   return (
     <div>
-      {!embedded && <h2>🎟 Buoni VIP</h2>}
+      {!embedded && <h2><Icona nome="buono" gruppo="tasti" /> Buoni VIP</h2>}
       {error && <div className="banner">Errore: {error}</div>}
 
       <div className="chip" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, cursor: 'default' }}>
@@ -157,10 +158,10 @@ export default function VipTab({ embedded = false }) {
               onChange={(e) => setTopUp((t) => ({ ...t, [v.id]: e.target.value }))}
               style={{ width: 110 }}
             />
-            <button className="btn small" onClick={() => ricarica(v)}>⬆ Ricarica</button>
+            <button className="btn small" onClick={() => ricarica(v)}><Icona nome="importa" gruppo="tasti" /> Ricarica</button>
             <span className="grow" />
             {Number(v.balance) === 0 && (
-              <button className="btn ghost small" onClick={() => setConfirmDel(v)}>🗑</button>
+              <button className="btn ghost small" onClick={() => setConfirmDel(v)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
             )}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import GrigliaMese from './GrigliaMese.jsx'
+import GrigliaMese from './GrigliaMese.jsx'
+import Icona from './Icona.jsx'
 
 // ── DATA E ORA, COL CALENDARIO DELL'APP (REQ-STAT-007) ─────────────────
 //
@@ -36,7 +37,7 @@ export default function CampoDataOra({ id, label, valore, oggi, servizio, min, m
           aria-expanded={aperto}
           onClick={() => setAperto((v) => !v)}
         >
-          📅
+          <Icona nome="calendario" gruppo="tasti" />
         </button>
       </span>
       {aperto && (

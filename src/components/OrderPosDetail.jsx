@@ -104,7 +104,8 @@ import ActionSheet from './ActionSheet.jsx'
 import { StoriaOrdineDialog, RipristinaOrdineDialog } from './StoriaOrdine.jsx'
 import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js'
 import PaymentScreen from './PaymentScreen.jsx'
-import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
+import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
+import Icona from './Icona.jsx'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -2240,7 +2241,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           )
         })()}
         {!isNew && order.placed_by && (
-          <span className="muted small posd-autore">✍️ {placedByName(order.placed_by)}</span>
+          <span className="muted small posd-autore"><Icona nome="nuovo-ordine" gruppo="tasti" /> {placedByName(order.placed_by)}</span>
         )}
         {/* Progressivo assoluto di sistema: id interno che non riparte mai
             (il #N in grande invece riparte ogni giornata). */}
@@ -2274,7 +2275,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             className={`pill ${active.status} posd-stato`}
             title={`Stato della lavorazione: ${statoAlBanco(active.status, order.service_mode)}`}
           >
-            {STATUS_EMOJI[active.status]} {statoAlBanco(active.status, order.service_mode)}
+            <Icona nome={STATUS_EMOJI[active.status]} gruppo="tasti" /> {statoAlBanco(active.status, order.service_mode)}
           </span>
         )}
         {/* ZOOM sul telefono: qui, in fondo alla testata. Flottante
@@ -2511,20 +2512,20 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     facciano due cose diverse. */}
             </div>
             {!isNew && order.table_label && (
-              <div className="muted small">🍽 Tavolo {order.table_label}</div>
+              <div className="muted small"><Icona nome="tavolo" gruppo="tasti" /> Tavolo {order.table_label}</div>
             )}
             {/* Conto di gruppo. In CREAZIONE si sceglie qui (se i gruppi
                 sono attivi): si deve poter associare l'ordine anche senza
                 essere arrivati dal gruppo. In MODIFICA si mostra e basta. */}
             {!isNew && order.group_name_snapshot && (
               <div className="muted small" style={{ marginTop: 2 }}>
-                <span className="pill small">👥 {order.group_name_snapshot}</span>
+                <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {order.group_name_snapshot}</span>
               </div>
             )}
             {groupsOn && (
               <div className="row between posd-gruppo-row" style={{ alignItems: 'center', marginTop: 2 }}>
                 {group && !groupIsContainer ? (
-                  <span className="pill small">👥 {group.name}</span>
+                  <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {group.name}</span>
                 ) : (
                   <span className="muted small">Nessun gruppo</span>
                 )}
@@ -2537,7 +2538,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     aria-label={group ? 'Cambia gruppo' : 'Associa a gruppo'}
                     title={group ? 'Cambia gruppo' : 'Associa a gruppo'}
                   >
-                    👥
+                    <Icona nome="staff" gruppo="tasti" />
                   </button>
                   {/* La ✕ toglie il conto dal gruppo: senza un gruppo non
                       vuol dire niente, quindi non c'è. */}
@@ -2568,7 +2569,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {!azioniRidotte && (
               <div className="posd-azioni-fisse">
                 <button className="btn ghost small block" onClick={() => setShowInfo(true)}>
-                  👤 Dati conto
+                  <Icona nome="profilo" gruppo="tasti" /> Dati conto
                 </button>
                 <button
                   className="btn ghost small block"
@@ -2885,7 +2886,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                   onClick={() => setShowRipristino(true)}
                   title="Il conto torna fra quelli aperti"
                 >
-                  ♻️ Riapri conto
+                  <Icona nome="riapri" gruppo="tasti" /> Riapri conto
                 </button>
               ) : (
                 <button
@@ -3142,7 +3143,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                           '✂️ Divisa'
                         ) : (
                           <>
-                            {STATUS_EMOJI[c.status]}{' '}
+                            <Icona nome={STATUS_EMOJI[c.status]} gruppo="tasti" />{' '}
                             {statoAlBanco(c.status, order.service_mode)}
                           </>
                         )}
@@ -3197,7 +3198,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                         style={{ marginTop: 6 }}
                         onClick={() => setParziale(c.id)}
                       >
-                        ✂️ Preparazione parziale
+                        <Icona nome="dividi" gruppo="tasti" /> Preparazione parziale
                       </button>
                     )
                   )}
@@ -3252,7 +3253,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👤 Dati conto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Dati conto</h3>
               <button className="btn ghost small" onClick={chiudiInfo}>✕</button>
             </div>
             <label htmlFor="pd-name" style={{ display: 'block', marginTop: 10 }}>Nome</label>
@@ -3395,7 +3396,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             }}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👤 Nome del conto</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="profilo" gruppo="tasti" /> Nome del conto</h3>
               <button
                 type="button"
                 className="btn ghost small"
@@ -3497,7 +3498,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row between" style={{ alignItems: 'center' }}>
-              <h3 style={{ margin: 0 }}>👥 Conto di gruppo</h3>
+              <h3 style={{ margin: 0 }}><Icona nome="staff" gruppo="tasti" /> Conto di gruppo</h3>
               <button className="btn ghost small" onClick={() => setPickGroup(false)}>✕</button>
             </div>
             <p className="muted small" style={{ margin: '8px 0' }}>

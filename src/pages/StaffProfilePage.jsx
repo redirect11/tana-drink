@@ -7,7 +7,8 @@ import { updateDisplayName } from '../lib/customerAuth.js'
 import PasswordChanger from '../components/PasswordChanger.jsx'
 import { RUOLO_ETICHETTA, isPersonale, isGestore } from '../lib/ruoli.js'
 import AvvisiPanel from '../components/AvvisiPanel.jsx'
-import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
+import StoricoNotifiche from '../components/StoricoNotifiche.jsx'
+import Icona from '../components/Icona.jsx'
 
 // Profilo dello staff/bartender registrato: modifica del nome
 // visualizzato (usato in «Ciao, …» e nell'attribuzione degli ordini) e
@@ -42,7 +43,7 @@ export default function StaffProfilePage() {
   if (!user || !role) {
     return (
       <div className="empty">
-        🔒 Quest’area è riservata allo staff.
+        <Icona nome="licenza" gruppo="segnali" /> Quest’area è riservata allo staff.
         <br />
         <Link className="btn block" style={{ marginTop: 14 }} to="/bar">Accesso staff</Link>
       </div>

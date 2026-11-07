@@ -6,7 +6,8 @@ import Caricamento from '../components/Caricamento.jsx'
 import AvvisoPiano from '../components/AvvisoPiano.jsx'
 import { subscribeSettings, settingsIniziali } from '../lib/api.js'
 import { maxContiAperti, puoAprireConto, MESSAGGI_PIANO } from '../lib/limiti.js'
-import { useContiAperti } from '../lib/useContiAperti.js'
+import { useContiAperti } from '../lib/useContiAperti.js'
+import Icona from '../components/Icona.jsx'
 
 // ── POS cassa: CREAZIONE di un ordine nuovo ────────────────────────────────
 // Stessa identica schermata della modifica: un solo componente
@@ -47,14 +48,14 @@ export default function PosPage() {
   if (!open) {
     return (
       <div className="card" style={{ marginTop: 16, textAlign: 'center' }}>
-        <h3 style={{ marginTop: 0 }}>🔴 Cassa chiusa</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="rosso" gruppo="tasti" /> Cassa chiusa</h3>
         <p className="muted" style={{ margin: '8px 0 14px' }}>
           Per battere ordini bisogna prima <strong>aprire la cassa</strong>: il
           progressivo degli ordini e gli incassi della serata seguono la
           sessione di cassa.
         </p>
         <Link className="btn block" to="/bar?tab=pagamenti">
-          🟢 Vai ad aprire la cassa
+          <Icona nome="verde" gruppo="tasti" /> Vai ad aprire la cassa
         </Link>
         <Link className="btn ghost small block" style={{ marginTop: 8 }} to="/bar">
           ← Torna agli ordini

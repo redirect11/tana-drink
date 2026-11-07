@@ -506,7 +506,7 @@ export default function App() {
       )}
       {!online && (
         <div className="offline-ribbon">
-          📴 Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
+          <Icona nome="rete-assente" gruppo="segnali" /> Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
         </div>
       )}
       {updateReady && (
@@ -514,7 +514,7 @@ export default function App() {
           className="update-banner"
           onClick={() => window.location.reload()}
         >
-          🔄 Nuova versione disponibile — tocca per aggiornare
+          <Icona nome="aggiorna" gruppo="tasti" /> Nuova versione disponibile — tocca per aggiornare
         </button>
       )}
       {novitaAperte && (
@@ -669,16 +669,16 @@ export default function App() {
           spostando quello che c'è sotto proprio mentre lo si tocca. */}
       {telefono && !staffRole && !onBackoffice && (
         <div className="barra-cliente">
-          <Link className="btn ghost small" to="/menu">🍸 Menù</Link>
+          <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
           {hasOrders && (
-            <Link className="btn ghost small" to="/ordini">🧾 I miei ordini</Link>
+            <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> I miei ordini</Link>
           )}
           {user ? (
             <Link className="btn ghost small" to="/profilo">
               👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
             </Link>
           ) : accountsOn ? (
-            <Link className="btn ghost small" to="/accedi">🔑 Accedi</Link>
+            <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> Accedi</Link>
           ) : null}
         </div>
       )}

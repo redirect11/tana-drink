@@ -185,7 +185,7 @@ export default function DrinkForm({
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
-          <option value="__new__">➕ Nuova categoria…</option>
+          <option value="__new__">+ Nuova categoria…</option>
         </select>
       )}
 

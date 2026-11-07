@@ -5,7 +5,8 @@ import { subscribeOpenGroups, createManualGroup } from '../lib/api.js'
 import { buildGroupTree, groupTotal, groupSettlement } from '../lib/groups.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import GroupView from './GroupView.jsx'
-import { IconGruppo, IconPersona } from './Icons.jsx'
+import { IconGruppo, IconPersona } from './Icons.jsx'
+import Icona from './Icona.jsx'
 
 // Pannello a scomparsa nella coda: panoramica dei gruppi aperti con
 // totale e stato del conto, creazione rapida e avvio ordine per gruppo.
@@ -35,7 +36,7 @@ export default function GroupsPanel({ orders, role }) {
   return (
     <div className="card groups-panel">
       <div className="row between" style={{ cursor: 'pointer' }} onClick={() => setOpen((v) => !v)}>
-        <strong>👥 Gruppi ({roots.length})</strong>
+        <strong><Icona nome="staff" gruppo="tasti" /> Gruppi ({roots.length})</strong>
         <span className="muted">{open ? '▾' : '▸'}</span>
       </div>
 
@@ -72,8 +73,11 @@ export default function GroupsPanel({ orders, role }) {
                     <button
                       className="btn ghost small"
                       onClick={() => navigate(`/pos?group=${node.group.id}`)}
+                      // Il tasto è solo un'icona (REQ-UI-031): il nome sta qui.
+                      aria-label="Nuovo ordine nel gruppo"
+                      title="Nuovo ordine nel gruppo"
                     >
-                      ✍️
+                      <Icona nome="nuovo-ordine" gruppo="tasti" />
                     </button>
                   )}
                 </div>

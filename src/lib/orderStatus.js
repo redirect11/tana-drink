@@ -156,6 +156,23 @@ export function paymentMethodLabel(method) {
   return PAYMENT_METHOD_LABELS[method] || `❓ ${method || 'non indicato'}`
 }
 
+// IL METODO A SCHERMO, DIVISO IN ICONA E NOME (REQ-UI-031): l'icona la
+// disegna il tema del gestionale (components/MetodoPagamento.jsx), il nome
+// resta quello di sempre. Le etichette con l'emoji qui sopra restano per
+// chi scrive testo semplice (un messaggio, un'esportazione).
+export const PAYMENT_METHOD_ICONA = {
+  online: 'carta',
+  lettore: 'lettore',
+  banco: 'contanti',
+  carta: 'carta',
+  buono: 'buono',
+  misto: 'contanti',
+}
+
+export function paymentMethodNome(method) {
+  return (PAYMENT_METHOD_LABELS[method] || '').replace(/^\S+\s/, '') || method || 'non indicato'
+}
+
 // Metodi da mostrare in un riepilogo: i noti sempre (anche a zero, così le
 // righe non ballano da una serata all'altra), più gli altri effettivamente
 // presenti.

@@ -177,7 +177,8 @@ import DevTools from '../components/DevTools.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import { devToolsEnabled } from '../dev/devActions.js'
 import { preloadStaff } from '../lib/staffApi.js'
-import { useCashSession } from '../lib/cashSession.js'
+import { useCashSession } from '../lib/cashSession.js'
+import Icona from '../components/Icona.jsx'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -314,7 +315,7 @@ export default function BartenderPage() {
   if (role === 'cliente') {
     return (
       <div className="empty">
-        🔒 Quest’area è riservata allo staff.
+        <Icona nome="licenza" gruppo="segnali" /> Quest’area è riservata allo staff.
         <br />
         {/* Anche da qui si esce dalla porta giusta: il signOut secco
             lasciava la timbratura aperta e questo terminale nella rubrica
@@ -1114,7 +1115,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 style={{ marginTop: 8 }}
                 onClick={() => window.location.reload()}
               >
-                🔄 Ricarica
+                <Icona nome="aggiorna" gruppo="tasti" /> Ricarica
               </button>
             </>
           )}
@@ -2101,13 +2102,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             className="btn ghost small"
             onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
           >
-            🧾 Scontrino
+            <Icona nome="coda" gruppo="tasti" /> Scontrino
           </button>
           <button
             className="btn ghost small"
             onClick={() => setRipristinoTarget(o)}
           >
-            ♻️ Riapri conto
+            <Icona nome="riapri" gruppo="tasti" /> Riapri conto
           </button>
         </div>
       )
@@ -2173,10 +2174,10 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         {readerPending ? (
           <div style={{ marginTop: 8 }}>
             <p className="muted small" style={{ margin: '0 0 6px', textAlign: 'center' }}>
-              📟 In corso sul lettore… carta del cliente sul Solo.
+              <Icona nome="lettore" gruppo="tasti" /> In corso sul lettore… carta del cliente sul Solo.
             </p>
             <button className="btn ghost small block" onClick={() => annullaSuLettore(o)}>
-              ✖️ Annulla sul lettore
+              <Icona nome="chiudi" gruppo="tasti" /> Annulla sul lettore
             </button>
           </div>
         ) : (
@@ -2188,7 +2189,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               title={canCollect ? undefined : 'Conto già chiuso o non ancora incassabile'}
               onClick={() => incassaSuLettore(o)}
             >
-              📟 Incassa sul lettore
+              <Icona nome="lettore" gruppo="tasti" /> Incassa sul lettore
             </button>
           )
         )}
@@ -2262,13 +2263,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             className="btn ghost small"
             onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
           >
-            🖨 Comanda
+            <Icona nome="stampa" gruppo="tasti" /> Comanda
           </button>
           <button
             className="btn ghost small"
             onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
           >
-            🧾 Scontrino
+            <Icona nome="coda" gruppo="tasti" /> Scontrino
           </button>
         </div>
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
@@ -2278,7 +2279,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'ordine' })}
           >
-            ✖️ Annulla ordine
+            <Icona nome="chiudi" gruppo="tasti" /> Annulla ordine
           </button>
         )}
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
@@ -2288,7 +2289,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             style={{ marginTop: 8 }}
             onClick={() => setCancelTarget({ order: o, kind: 'preparazione' })}
           >
-            ✖️ Annulla preparazione
+            <Icona nome="chiudi" gruppo="tasti" /> Annulla preparazione
           </button>
         )}
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
@@ -2349,7 +2350,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
             {workflowOn && (
               <span className={`pill ${o.workflow_status}`}>
-                {STATUS_EMOJI[o.workflow_status]}{' '}
+                <Icona nome={STATUS_EMOJI[o.workflow_status]} gruppo="tasti" />{' '}
                 {statoAlBanco(o.workflow_status, o.service_mode)}
               </span>
             )}
@@ -2361,26 +2362,26 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           <div className="grid-card-name">{o.customer_name || ' '}</div>
           <div className="grid-card-sub row between" style={{ gap: 6 }}>
             <span className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.table_label && <span className="muted">🍽 Tavolo {o.table_label}</span>}
+              {o.table_label && <span className="muted"><Icona nome="tavolo" gruppo="tasti" /> Tavolo {o.table_label}</span>}
               {o.note && <span className="muted">{o.table_label ? ' · ' : ''}{o.note}</span>}
             </span>
             {/* Pagamento allineato a DESTRA, fra il badge di stato (sopra) e
                 il prezzo (sotto). Il gruppo, se c'è, gli sta accanto. */}
             <span className="row" style={{ gap: 4, flexShrink: 0 }}>
               {o.group_name_snapshot && (
-                <span className="pill small">👥 {o.group_name_snapshot}</span>
+                <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {o.group_name_snapshot}</span>
               )}
               {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
-                <span className="pill pagato small">💳 Pagato</span>
+                <span className="pill pagato small"><Icona nome="carta" gruppo="tasti" /> Pagato</span>
               )}
               {o.payment_status === 'parziale' && !impagatoAperto(o) && (
                 <span className="pill ricevuto small" title={`Incassati ${formatPrice(paidAmount(o))}`}>
-                  💳 Acconto
+                  <Icona nome="carta" gruppo="tasti" /> Acconto
                 </span>
               )}
               {impagatoAperto(o) && (
                 <span className="pill ricevuto small" title={o.impagato.nota || 'Chiuso senza incasso'}>
-                  🕗 Impagato
+                  <Icona nome="orario" gruppo="tasti" /> Impagato
                 </span>
               )}
             </span>
@@ -2390,7 +2391,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               {count} prodott{count === 1 ? 'o' : 'i'} · {apertoLabel(o)}
               {/* Sconto applicato: si vede, e il totale è già quello scontato. */}
               {scontoTotale(o) > 0 && (
-                <span className="sconto-badge"> 🎁 −{formatPrice(scontoTotale(o))}</span>
+                <span className="sconto-badge"> <Icona nome="sconto" gruppo="tasti" /> −{formatPrice(scontoTotale(o))}</span>
               )}
             </span>
             {/* Un conto ANNULLATO non ha incassato niente: il totale si mostra
@@ -2491,14 +2492,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   <span className="muted">· Tavolo {o.table_label}</span>
                 )}{' '}
                 {o.group_name_snapshot && (
-                  <span className="pill small">👥 {o.group_name_snapshot}</span>
+                  <span className="pill small"><Icona nome="staff" gruppo="tasti" /> {o.group_name_snapshot}</span>
                 )}{' '}
-                <span className="muted small">📅 {apertoLabel(o)}</span>
+                <span className="muted small"><Icona nome="calendario" gruppo="tasti" /> {apertoLabel(o)}</span>
                 {o.service_mode === 'banco' && (
-                  <span className="pill" style={{ marginLeft: 6 }}>🚶 Ritiro al banco</span>
+                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="a-piedi" gruppo="tasti" /> Ritiro al banco</span>
                 )}
                 {o.service_mode === 'tavolo' && (
-                  <span className="pill" style={{ marginLeft: 6 }}>🍸 Al tavolo</span>
+                  <span className="pill" style={{ marginLeft: 6 }}><Icona nome="menu" gruppo="tasti" /> Al tavolo</span>
                 )}
                 {/* Stato pagamento */}
                 {o.payment_status === 'pagato' && o.workflow_status !== ORDER_STATUSES.PAGATO && (
@@ -2513,23 +2514,23 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 )}
                 {awaiting && (
                   <span className="pill ricevuto" style={{ marginLeft: 6 }}>
-                    ⏳ In attesa di pagamento
+                    <Icona nome="attesa" gruppo="segnali" /> In attesa di pagamento
                   </span>
                 )}
                 {o.payment_status === 'fallito' && (
                   <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
-                    ❌ Pagamento fallito
+                    <Icona nome="errore" gruppo="segnali" /> Pagamento fallito
                   </span>
                 )}
                 {o.payment_after_cancel && (
                   <span className="pill" style={{ marginLeft: 6, background: 'rgba(231,76,60,0.25)', color: '#ffb3a7' }}>
-                    ⚠️ Pagato dopo annullo
+                    <Icona nome="avviso" gruppo="segnali" /> Pagato dopo annullo
                   </span>
                 )}
               </div>
               {workflowOn && (
                 <span className={`pill ${o.workflow_status}`}>
-                  {STATUS_EMOJI[o.workflow_status]}{' '}
+                  <Icona nome={STATUS_EMOJI[o.workflow_status]} gruppo="tasti" />{' '}
                   {statoAlBanco(o.workflow_status, o.service_mode)}
                 </span>
               )}
@@ -2555,7 +2556,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               </p>
             )}
             {o.note && (
-              <div className="order-note">📝 {o.note}</div>
+              <div className="order-note"><Icona nome="note" gruppo="tasti" /> {o.note}</div>
             )}
             {/* Tempi effettivi: preparazione sui "pronti", servizio sui serviti al tavolo. */}
             {o.workflow_status === ORDER_STATUSES.PRONTO && (() => {
@@ -2576,7 +2577,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             })()}
             {awaiting && (
               <p className="muted small" style={{ margin: '0 0 8px' }}>
-                ⏳ Entra in coda al pagamento: non preparare.
+                <Icona nome="attesa" gruppo="segnali" /> Entra in coda al pagamento: non preparare.
               </p>
             )}
             {orderActions(o)}
@@ -2613,7 +2614,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               style={{ marginLeft: 8 }}
               onClick={() => setApriCassa(true)}
             >
-              🟢 Apri cassa
+              <Icona nome="verde" gruppo="tasti" /> Apri cassa
             </button>
           )}
         </div>
@@ -2640,7 +2641,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             title="Menu"
             onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
-            ☰
+            <Icona nome="menu_laterale" gruppo="tasti" />
           </button>
           <div className="board-title">
             <strong>In servizio</strong>
@@ -2692,7 +2693,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 aria-label={showPanels ? 'Nascondi i pannelli' : 'Chiamate staff e gruppi'}
                 aria-pressed={showPanels}
               >
-                📟
+                <Icona nome="lettore" gruppo="tasti" />
               </button>
             )}
             {/* IL CAMBIO VISTA RESTA QUASSÙ ANCHE SUL TELEFONO, accanto al
@@ -2806,7 +2807,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   </span>
                 ))}
                 {legenda.hasClient && (
-                  <span><span className="order-by client">🌐</span> Cliente</span>
+                  <span><span className="order-by client"><Icona nome="mondo" gruppo="tasti" /></span> Cliente</span>
                 )}
               </div>
             )}
@@ -2838,13 +2839,13 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
             <Link className="btn" to="/pos" style={{ flex: 1 }}>
-              🍸 POS cassa
+              <Icona nome="menu" gruppo="tasti" /> POS cassa
             </Link>
             {/* Si chiamava «Vista cliente» ma apriva il menù dello staff,
                 quello per gli ordini al tavolo (BUG-127). La vista cliente
                 vera sta nel ☰ ed è solo da guardare. */}
             <Link className="btn ghost" to="/menu" style={{ flex: 1 }}>
-              📖 Ordina dal menù
+              <Icona nome="ordina-dal-menu" gruppo="tasti" /> Ordina dal menù
             </Link>
           </div>
         </>
@@ -2921,7 +2922,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             pannelli: showPanels,
           }) === 'cartello' && (
             <div className="card" style={{ marginTop: 8 }}>
-              <strong>👥 Gruppi</strong>
+              <strong><Icona nome="staff" gruppo="tasti" /> Gruppi</strong>
               <p className="muted small" style={{ margin: '6px 0 0' }}>
                 I gruppi non si mostrano in coda: si accendono in
                 Impostazioni → Gruppi.
@@ -3178,7 +3179,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 className={`tab ${statusTab === s ? 'active' : ''}`}
                 onClick={() => setStatusTab(s)}
               >
-                {STATUS_EMOJI[s]} {statoAlBanco(s)} ({(buckets[s] || []).length})
+                <Icona nome={STATUS_EMOJI[s]} gruppo="tasti" /> {statoAlBanco(s)} ({(buckets[s] || []).length})
               </div>
             ))}
           </div>

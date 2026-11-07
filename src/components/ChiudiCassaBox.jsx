@@ -9,7 +9,8 @@ import {
 import { cashRecap } from '../lib/cassa.js'
 import { printChiusuraCassa } from '../lib/printer.js'
 import { formatPrice } from '../lib/orderStatus.js'
-import { toastError, toastSuccess } from '../lib/toast.js'
+import { toastError, toastSuccess } from '../lib/toast.js'
+import Icona from './Icona.jsx'
 
 // ── CHIUDERE LA CASSA, DA DOVE CI SI TROVA ───────────────────────────
 //
@@ -74,7 +75,7 @@ export default function ChiudiCassaBox({ by, onClose }) {
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>🔴 Chiudere la cassa?</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="rosso" gruppo="tasti" /> Chiudere la cassa?</h3>
         <div className="row between">
           <span className="muted small">Incassato serata</span>
           <strong>{formatPrice(recap.incassato)}</strong>

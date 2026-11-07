@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
+import { conteggioPesi, ordinaMacro, perNome, pesiAltrove, pesoAmmesso, pesoDi } from '../lib/macros.js'
+import Icona from './Icona.jsx'
 import {
   createMacroCategory,
   updateMacroCategory,
@@ -100,7 +101,7 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
                 aria-expanded={isAperta}
                 onClick={() => setAperta(isAperta ? null : m.id)}
               >
-                <strong>🗂️ {m.name}</strong>
+                <strong><Icona nome="raggruppa" gruppo="tasti" /> {m.name}</strong>
                 <span className="muted small">
                   {conta.prodotti} prodotti · {conta.voci} voci
                 </span>
@@ -108,8 +109,8 @@ export default function MacroCategoryManager({ macros, prodotti, voci }) {
               <span className="row" style={{ gap: 4 }}>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, -1)} disabled={idx === 0}>↑</button>
                 <button className="btn ghost small" onClick={() => moveMacro(idx, 1)} disabled={idx === elenco.length - 1}>↓</button>
-                <button className="btn ghost small" onClick={() => renameMacro(m)}>✏️</button>
-                <button className="btn ghost small" onClick={() => removeMacro(m)}>🗑</button>
+                <button className="btn ghost small" onClick={() => renameMacro(m)} aria-label="Rinomina" title="Rinomina"><Icona nome="modifica" gruppo="tasti" /></button>
+                <button className="btn ghost small" onClick={() => removeMacro(m)} aria-label="Elimina" title="Elimina"><Icona nome="elimina" gruppo="tasti" /></button>
               </span>
             </div>
             {isAperta && (

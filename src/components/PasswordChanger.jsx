@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CampoPassword from './CampoPassword.jsx'
-import { changePassword, authError } from '../lib/customerAuth.js'
+import { changePassword, authError } from '../lib/customerAuth.js'
+import Icona from './Icona.jsx'
 
 // Form di cambio password riutilizzabile (clienti e staff). Richiede la
 // password attuale per la ri-autenticazione imposta da Firebase.
@@ -34,7 +35,7 @@ export default function PasswordChanger() {
 
   return (
     <form className="card settings-section" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>🔑 Cambia password</h3>
+      <h3 style={{ marginTop: 0 }}><Icona nome="accedi" gruppo="tasti" /> Cambia password</h3>
       <label htmlFor="pw-cur">Password attuale</label>
       <CampoPassword id="pw-cur" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
       <label htmlFor="pw-new">Nuova password</label>
