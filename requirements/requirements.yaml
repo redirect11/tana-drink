@@ -5808,7 +5808,10 @@ requirements:
       menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di
       conti: insieme all'interruttore customer_accounts_enabled che il
       locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta
-      con sé conta, fatture e scadenzario come moduli di dettaglio),
+      con sé `conta`, l'inventario), `fatture` (ai clienti) e `scadenzario`
+      (ai fornitori), vendute a parte dal 07/11/2026 (drink-regia
+      REQ-FLOTTA-044, che mette anche il menu' digitale nei piani Base e
+      Completo),
       `statistiche` (statistiche e bilancio), `staff` (ore e paghe),
       `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo
       guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione
