@@ -28,6 +28,7 @@ import { toastSuccess } from '../lib/toast.js'
 // Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
 import { vociPerRuolo } from '../lib/sezioni.js'
 import { menuDigitaleAttivo } from '../lib/licenza.js'
+import Icona from './Icona.jsx'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
@@ -194,7 +195,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
   // installazione (le funzioni premium, REQ-LIC-001). Il filtro sta dove
   // sta l'elenco, e le impostazioni gliele passa chi le ha già in mano.
   const base = vociPerRuolo(role, settings)
-  const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', '🛠', 'Dev']] : base
+  const items = isGestore(role) && devToolsEnabled ? [...base, ['dev', 'sviluppo', 'Dev']] : base
 
   function go(id) {
     setOpen(false)
@@ -243,7 +244,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
     <>
       {flottante && (
         <button className="bar-burger" aria-label="Menu" onClick={() => setOpen(true)}>
-          ☰
+          <Icona nome="menu_laterale" />
         </button>
       )}
       <div className={`bar-nav-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
@@ -272,7 +273,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
               className={`bar-nav-item${active === id ? ' active' : ''}`}
               onClick={() => go(id)}
             >
-              <span>{icon}</span> {label}
+              <Icona nome={icon} /> {label}
             </div>
             {active === id && sotto.voci.length > 0 && (
               <div className="bar-nav-sotto">
@@ -287,7 +288,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
                       setOpen(false)
                     }}
                   >
-                    <span>{v.icona}</span> {v.label}
+                    <Icona nome={v.icona} /> {v.label}
                   </div>
                 ))}
               </div>
@@ -297,7 +298,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         <div className="bar-nav-sep" />
         {isGestore(role) && (
           <div className="bar-nav-item" onClick={() => vaiA('/pos')}>
-            <span>✍️</span> Nuovo ordine
+            <Icona nome="nuovo-ordine" /> Nuovo ordine
           </div>
         )}
         {/* SEGUE IL MENÙ DIGITALE (BUG-132, decisione dell'utente del
@@ -308,7 +309,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
             onClick={() => vaiA('/menu')}
           >
-            <span>📖</span> Ordina dal menù
+            <Icona nome="ordina-dal-menu" /> Ordina dal menù
           </div>
         )}
         {isSala(role) && <ChiamaIlBancone />}
@@ -378,7 +379,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             navigate('/profilo-staff')
           }}
         >
-          <span>{RUOLO_ETICHETTA[role]?.split(' ')[0] ?? '🙋'}</span>
+          <Icona nome={RUOLO_ETICHETTA[role]?.split(' ')[0] ?? 'clienti'} />
           <span className="drawer-io-testo">
             <span className="drawer-io-nome">{nomeUtente}</span>
             <span className="drawer-io-ruolo">
@@ -388,7 +389,7 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
         </div>
         {areaClientiVisibile({ admin: isAdmin(role), settings }) && <AreaClienti />}
         <div className="bar-nav-item" onClick={() => logoutStaff()}>
-          <span>🚪</span> Esci
+          <Icona nome="esci" /> Esci
         </div>
         {/* Ramo e commit del deploy: con più branch che passano a turno
             sullo stesso ambiente di test, serve sapere cosa si sta
@@ -455,7 +456,7 @@ function ChiamaIlBancone() {
       onClick={chiama}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && chiama()}
     >
-      <span>📟</span> {inAttesa ? 'In attesa del bancone…' : 'Chiama il bancone'}
+      <Icona nome="chiama-bancone" /> {inAttesa ? 'In attesa del bancone…' : 'Chiama il bancone'}
     </div>
   )
 }
@@ -479,7 +480,7 @@ function AreaClienti() {
   }
   return (
     <div className="bar-nav-item" role="button" aria-busy={inCorso} onClick={vai}>
-      <span>🏛️</span> {inCorso ? 'Apro l’area clienti…' : 'Area clienti'}
+      <Icona nome="area-clienti" /> {inCorso ? 'Apro l’area clienti…' : 'Area clienti'}
     </div>
   )
 }

@@ -340,11 +340,11 @@ export default function MenuManager() {
   // aprivano spingendo giù la griglia, e chi voleva solo guardare i
   // margini si portava dietro tutto il listino sotto.
   const sezioni = [
-    { id: 'catalogo', icona: '🍸', label: 'Modifica menù' },
-    { id: 'categorie', icona: '🏷️', label: `Categorie (${categories.length})` },
-    { id: 'margini', icona: '📈', label: 'Marginalità listino' },
-    { id: 'special', icona: '✨', label: `Special (${drinkSpeciali(drinks).length})` },
-    { id: 'carta', icona: '📖', label: 'Menù dei clienti' },
+    { id: 'catalogo', icona: 'menu', label: 'Modifica menù' },
+    { id: 'categorie', icona: 'categorie', label: `Categorie (${categories.length})` },
+    { id: 'margini', icona: 'andamento', label: 'Marginalità listino' },
+    { id: 'special', icona: 'special', label: `Special (${drinkSpeciali(drinks).length})` },
+    { id: 'carta', icona: 'ordina-dal-menu', label: 'Menù dei clienti' },
   ]
 
   if (sezione === 'carta') {

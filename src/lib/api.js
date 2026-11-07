@@ -6495,6 +6495,10 @@ export const DEFAULT_SETTINGS = {
   // Temi: preset + eventuali override colore, separati per gestionale
   // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
   theme_staff: { preset: 'tana-scuro', custom: null },
+  // Le icone del gestionale (REQ-UI-031): «silhouette», monocrome, di
+  // partenza per tutti (decisione dell'utente, 07/11/2026); «emoji» rimette
+  // quelle di prima. Le pagine del cliente non le guardano.
+  tema_icone: 'silhouette',
   theme_client: { preset: 'tana-scuro', custom: null },
 }
 

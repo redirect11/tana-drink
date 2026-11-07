@@ -111,8 +111,8 @@ const oraPerEsteso = (locale) => {
 // Incassato, ed è per quello che le sottosezioni erano sparite — una sola
 // voce spuntata da sé nel menu è una scelta che non è una scelta.)
 const SEZIONI = [
-  { id: 'serate', icona: '📒', label: 'Per serata' },
-  { id: 'periodo', icona: '📈', label: 'Per periodo' },
+  { id: 'serate', icona: 'registro', label: 'Per serata' },
+  { id: 'periodo', icona: 'andamento', label: 'Per periodo' },
 ]
 
 export default function StatsTab() {
