@@ -6465,6 +6465,46 @@ requirements:
     labels: [prodotto, licenza, idea]
     priority: P3
     test_cases: []
+  - id: REQ-LIC-015
+    title: "I moduli che ne richiedono un altro lo dicono: l'inventario vuole il magazzino, gli ordini dal telefono il menù digitale; le fatture ai fornitori stanno in piedi da sole"
+    area: "src/lib/licenza.js (richiede, moduliDiSezione), src/lib/marketplaceModuli.js, src/components/MarketplaceTab.jsx, src/components/SettingsTab.jsx, src/components/FornitoriTab.jsx, firestore.rules"
+    description: >
+      Trovato col giro della matrice dei moduli (REQ-DEV-017, 07/11/2026):
+      tre moduli, presi da soli, non servivano a niente. L'inventario sta
+      dentro il magazzino e la sua chiusura scrive giacenze e movimenti, che
+      sono del magazzino; le fatture ai fornitori stavano nella sezione
+      Fornitori, che è del magazzino; gli ordini dal telefono senza il menù
+      digitale non hanno una pagina da cui ordinare. Nessuno dei tre lo
+      diceva, e il Marketplace li vendeva da soli.
+      DECISIONE DELL'UTENTE (07/11/2026), la via di mezzo fra le tre
+      proposte: le fatture ai fornitori diventano AUTONOME; l'inventario
+      DIPENDE dal magazzino; gli ordini dal telefono DIPENDONO dal menù
+      digitale, «perché senza menù il cliente non ha dove ordinare».
+      COME. In MODULI_PREMIUM un modulo dichiara `richiede`; un modulo
+      attivo è incluso, acceso E con tutto quello che richiede attivo.
+      Nelle impostazioni il modulo incluso ma senza la base dice quale
+      manca; nel Marketplace non si prova e non si aggiunge finché la base
+      non c'è («Richiede …»), e la disdetta della base avvisa di quello che
+      si spegne con lei. Le regole rifiutano l'ordine di un cliente senza
+      il menù digitale.
+      LE FATTURE AI FORNITORI DA SOLE. La sezione Fornitori si apre con il
+      magazzino O con lo scadenzario (una sezione può essere di più
+      moduli, `sezioni` di ognuno): con il solo scadenzario dentro ci sono
+      l'anagrafica dei fornitori e lo scadenzario, e le regole lasciano
+      scrivere i fornitori anche a lui. Ordini, altre spese e listini
+      restano del magazzino. La sezione resta dov'è, sotto Fornitori, come
+      deciso dall'utente il 26/08/2026: con il magazzino non cambia niente.
+    status: implemented
+    generate_issue: false
+    labels: [licenza, moduli]
+    priority: P1
+    test_cases:
+      - tests/unit/dipendenzeModuli.test.js
+      - tests/component/FornitoriTab.test.jsx
+      - tests/component/MarketplaceTab.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/regoleLicenza.test.js
+      - tests/regole/licenza.test.js
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
@@ -15190,4 +15230,37 @@ requirements:
     generate_issue: false
     labels: [dev, pwa]
     test_cases: [tests/unit/cachePubblicazione.test.js]
+
+  - id: REQ-DEV-017
+    title: "La matrice dei moduli: ogni modulo premium provato da solo, in coppia con ogni altro, tutti e nessuno"
+    area: "tests/helpers/combinazioni.js, tests/unit/matriceModuli.test.js, tests/regole/matriceModuli.test.js, src/lib/licenza.js"
+    description: >
+      L'utente, 07/11/2026: «dovremmo irrobustire il testing […] testare che
+      i moduli premium presi singolarmente e in combinazione con altri
+      funzionino e facciano quello per cui sono stati pensati». Primo pezzo
+      del piano (gli altri: i casi d'uso della serata come scenari interi, i
+      casi limite, gli end-to-end con Playwright e gli emulatori su ogni PR,
+      le prove delle regole nella CI).
+      LE LICENZE. Dieci moduli fanno 1024 licenze; i difetti nascono fra due
+      moduli, quindi si provano: nessun modulo, tutti, ognuno da solo e le
+      righe a coppie, in cui ogni coppia compare accesa-accesa,
+      spenta-spenta e nei due modi misti (20 licenze, generate e
+      controllate da un test, non scritte a mano).
+      COSA SI CONTROLLA PER OGNI LICENZA, da una tabella sola delle
+      PROMESSE di ogni modulo: le voci del gestionale e le sottosezioni che
+      compaiono (e un indirizzo battuto a mano che non apre quello che non
+      c'è), le pagine del cliente, le collezioni che si possono scrivere, le
+      dipendenze (REQ-LIC-015). Le stesse licenze passano sulle regole vere,
+      nell'emulatore. Un modulo nuovo che non entra nella tabella fa
+      diventare rossa la prova.
+      Il primo giro ha trovato BUG-131…BUG-136 e le dipendenze di
+      REQ-LIC-015.
+    status: implemented
+    generate_issue: false
+    labels: [dev, test, licenza]
+    priority: P1
+    test_cases:
+      - tests/unit/matriceModuli.test.js
+      - tests/regole/matriceModuli.test.js
+      - tests/component/GroupView.test.jsx
 

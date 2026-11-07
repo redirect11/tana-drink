@@ -698,7 +698,8 @@ export default function App() {
             label: 'POS — nuovo ordine',
             onClick: () => navigate('/pos'),
           },
-          !isSala(staffRole) && {
+          // Senza il menù digitale non c'è un menù da guardare (BUG-132).
+          !isSala(staffRole) && menuDigitale && {
             id: 'vista-cliente',
             icon: '👀',
             label: 'Vista cliente',

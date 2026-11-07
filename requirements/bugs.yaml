@@ -5650,3 +5650,133 @@ bugs:
       - tests/unit/useIncollata.test.jsx
       - tests/unit/css.test.js
       - tests/component/AppHeader.test.jsx
+
+  - id: BUG-131
+    title: "Il vecchio indirizzo della Cassa (?tab=storico) passava dal modulo Inventario: senza, il collegamento portava alla coda"
+    area: "src/lib/sezioni.js (sezioneConsentita, VECCHI_INDIRIZZI), src/lib/licenza.js"
+    severity: media
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. `storico`
+      è due cose: il vecchio indirizzo della Cassa sulla lista ordini, che
+      sta nei collegamenti salvati, e la sottosezione «Storico inventari»
+      del magazzino, che è del modulo Inventario. Il controllo delle
+      sezioni guardava il nome e non dove porta: senza l'Inventario,
+      `?tab=storico` era «una funzione che il locale non ha», l'indirizzo
+      veniva ripulito e si finiva sulla coda.
+      LA CORREZIONE: il vecchio indirizzo si traduce prima del controllo,
+      e si controlla la sezione a cui porta (la Cassa, che è di base).
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, navigazione]
+    test_cases:
+      - tests/unit/sezioni.test.js
+      - tests/unit/matriceModuli.test.js
+
+  - id: BUG-132
+    title: "«Ordina dal menù» e «Vista cliente» dello staff restavano senza il Menù digitale e aprivano «il menù digitale non è attivo»"
+    area: "src/components/StaffDrawer.jsx, src/App.jsx (ActionSheet della vista cliente)"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Senza il
+      modulo Menù digitale e tavoli, nel menu laterale dello staff
+      restavano «Ordina dal menù» e, sul telefono, la voce «Vista cliente»:
+      tutte e due portano a /menu, che senza il modulo mostra una pagina che
+      lo dice. DECISIONE DELL'UTENTE (07/11/2026): «segue il modulo». Senza
+      il Menù digitale le due voci non ci sono; per ordinare resta «Nuovo
+      ordine» della cassa.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, navigazione]
+    test_cases:
+      - tests/component/StaffDrawer.test.jsx
+
+  - id: BUG-133
+    title: "SumUp: l'interruttore del modulo non spegneva niente, e i gruppi di conti e il pagamento online del cliente non guardavano il modulo"
+    area: "src/lib/licenza.js (sumupAttivo), src/lib/payments.js, src/components/GroupView.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Tre buchi
+      dello stesso modulo. (1) L'interruttore «Pagamenti con lettore SumUp»
+      nelle impostazioni non lo leggeva nessuno: spento, il lettore restava
+      in cassa e in coda. (2) Nei gruppi di conti i tasti «💳 Online» e
+      «📟 Lettore» c'erano con qualsiasi licenza. (3) Il pagamento online
+      del cliente dipendeva solo da `payments_online_enabled`, che resta
+      scritto anche quando il modulo va via: con «pagamento obbligatorio»
+      acceso, gli ordini nascevano in attesa di un pagamento che non si
+      poteva fare e restavano fuori dalla coda.
+      LA CORREZIONE: una domanda sola, `sumupAttivo` (incluso, acceso, e
+      non sul profilo leggero), per tutti i posti dove si paga con SumUp.
+      Le impostazioni di SumUp si configurano finché il modulo è incluso.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, pagamenti]
+    test_cases:
+      - tests/unit/payments.test.js
+      - tests/component/GroupView.test.jsx
+
+  - id: BUG-134
+    title: "Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano"
+    area: "functions/index.js, functions/lib/"
+    severity: alta
+    priority: P1
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il
+      controllo vero dei moduli sta nelle regole di Firestore (REQ-LIC-008);
+      l'app nasconde. Le Functions girano con i permessi dell'amministratore
+      e le regole non le fermano, ma nessuna legge `licenza/attuale`: le
+      chiamate di SumUp (cassa, lettore, gruppi) partono anche dove il
+      modulo non c'è, chiamandole a mano. Da fare: le Functions dei moduli
+      leggono la licenza e rispondono «non incluso» (failed-precondition).
+    status: todo
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, licenza, functions, sicurezza]
+    test_cases: []
+
+  - id: BUG-135
+    title: "Senza il modulo degli ordini dal telefono lo staff perdeva «Prodotto libero» nel menù, e il cliente leggeva «ordinazioni momentaneamente sospese»"
+    area: "src/pages/MenuPage.jsx"
+    severity: bassa
+    priority: P2
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. La
+      modalità «solo menù» valeva per tutti, staff compreso, anche quando
+      nasceva dal piano (il modulo Ordini dal telefono non incluso) e non
+      da una scelta del locale: lo staff, che dal menù ordina sempre,
+      perdeva il prodotto libero e la riga «Inserimento ordine da». E il
+      cliente leggeva «momentaneamente sospese», che non è vero: in quel
+      locale dal telefono non si ordina proprio.
+      LA CORREZIONE: il modulo che manca vale solo per il cliente; la
+      scelta del locale («solo menù») per tutti, come prima. Al cliente
+      il banner dice che il menù si consulta e che per ordinare c'è lo staff.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, menu]
+    test_cases:
+      - tests/component/MenuPage.test.jsx
+
+  - id: BUG-136
+    title: "La descrizione del modulo Personale prometteva le chiamate allo staff, che funzionano anche senza"
+    area: "src/lib/licenza.js (MODULI_PREMIUM.staff)"
+    severity: bassa
+    priority: P3
+    description: >
+      Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il
+      cerca-persone e le timbrature restano fuori dal modulo apposta (si
+      usano a ogni accesso e dalla coda, COLLEZIONI_DEI_MODULI), ma la
+      descrizione mostrata nel Marketplace e nelle impostazioni diceva
+      «Ore e paghe del personale, chiamate allo staff». Chi lo compra per le
+      chiamate le aveva già. Ora dice solo quello che il modulo aggiunge.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, licenza, testi]
+    test_cases:
+      - tests/unit/matriceModuli.test.js

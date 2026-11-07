@@ -71,6 +71,15 @@ describe('la voce Cassa', () => {
     // `?tab=storico` sta nei collegamenti salvati e nei messaggi.
     expect(titoloPagina('/bar', '?tab=storico').titolo).toBe('Cassa')
   })
+
+  // BUG-131: `storico` è anche la sottosezione «Storico inventari», del
+  // modulo Inventario. Senza quel modulo il collegamento alla Cassa si
+  // apriva lo stesso? No: finiva sulla coda.
+  it('il vecchio indirizzo si apre anche senza il modulo Inventario', () => {
+    const senzaInventario = { licenza: { moduli: { magazzino: true } } }
+    expect(sezioneConsentita('storico', 'admin', senzaInventario)).toBe(true)
+    expect(sezioneConsentita('storico', 'bartender', { licenza: { moduli: {} } })).toBe(true)
+  })
 })
 
 // ── IL BILANCIO È DELL'ADMIN ─────────────────────────────────────────

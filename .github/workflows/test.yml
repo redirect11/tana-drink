@@ -94,3 +94,46 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 14
+
+  # LE REGOLE DI FIRESTORE, SULL'EMULATORE (REQ-DEV-017). Sono l'unica
+  # barriera vera fra i dati del locale e chi apre la console del browser:
+  # i moduli della licenza, i ruoli, i campi che il cliente non tocca. Le
+  # prove c'erano (tests/regole/) ma vogliono l'emulatore, e fino al
+  # 07/11/2026 non giravano qui: un errore nelle regole passava il cancello.
+  # Ora girano su ogni pull request, con la matrice dei moduli dentro.
+  # Un job a parte: ha bisogno di Java e dell'emulatore, e non rallenta
+  # lint, test e build.
+  regole:
+    name: Regole Firestore (emulatore)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # L'emulatore di Firestore gira su Java (21, come in locale:
+      # docs/ambiente-locale.md).
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # La stessa versione di firebase-tools che si usa in locale, fissata:
+      # un emulatore nuovo che cambia comportamento non deve far diventare
+      # rossa una PR che non c'entra.
+      - name: Prove delle regole
+        run: >
+          npx --yes firebase-tools@15.26.0 emulators:exec
+          --project demo-tana-drink --only firestore --config firebase.collaudo.json
+          "npm run test:regole"

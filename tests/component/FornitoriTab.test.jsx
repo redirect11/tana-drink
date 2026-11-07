@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react'
 // Ogni pannello ha il suo giro: qui basta sapere che la sottosezione giusta
 // monta il pannello giusto.
 vi.mock('../../src/components/InventoryManager.jsx', () => ({
-  FornitoriPanel: () => <div>PANNELLO ANAGRAFICA</div>,
+  FornitoriPanel: ({ conListino = true }) => <div>PANNELLO ANAGRAFICA{conListino ? '' : ' SENZA LISTINO'}</div>,
   default: () => <div>MAGAZZINO</div>,
 }))
 // DA REQ-MAG-038 IL PANNELLO È LO STESSO PER DUE SOTTOSEZIONI: dice quale
@@ -131,8 +131,8 @@ describe('le sottosezioni di Fornitori', () => {
     expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
   })
 
-  // Non sono premium e non se ne è inventato un modulo: le altre spese si
-  // scrivono a mano, e il riepilogo mette insieme quello che c'è — con lo
+  // Non dipendono dallo scadenzario: le altre spese stanno col magazzino
+  // (REQ-LIC-015), e il riepilogo mette insieme quello che c'è — con lo
   // scadenzario spento la colonna della merce resta a zero, che è la verità
   // di quel locale e non un pezzo mancante.
   it('le due voci nuove restano anche con lo scadenzario spento', async () => {
@@ -140,6 +140,37 @@ describe('le sottosezioni di Fornitori', () => {
     mostra()
     expect(screen.getByRole('button', { name: /Altre spese/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Riepilogo/ })).toBeInTheDocument()
+  })
+})
+
+// LE FATTURE AI FORNITORI DA SOLE (REQ-LIC-015, decisione dell'utente del
+// 07/11/2026). La sezione la apre anche lo scadenzario senza il magazzino:
+// dentro restano l'anagrafica (un documento si intesta a un fornitore), lo
+// scadenzario e il riepilogo. Ordini, altre spese e listini sono del
+// magazzino: le regole ne rifiuterebbero le scritture.
+describe('le fatture ai fornitori senza il magazzino (REQ-LIC-015)', () => {
+  const SOLO_SCADENZARIO = { licenza: { moduli: { scadenzario: true } } }
+
+  it('ci sono anagrafica, scadenzario e riepilogo, e niente del magazzino', async () => {
+    stato.impostazioni = SOLO_SCADENZARIO
+    mostra()
+    expect(screen.getByRole('button', { name: /Gestione fornitori/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Scadenzario/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Riepilogo/ })).toBeInTheDocument()
+    for (const nome of [/Nuovo ordine/, /Lista ordini/, /Altre spese/]) {
+      expect(screen.queryByRole('button', { name: nome })).toBeNull()
+    }
+  })
+
+  it('l’anagrafica non apre il listino, che è del magazzino', async () => {
+    stato.impostazioni = SOLO_SCADENZARIO
+    mostra()
+    expect(screen.getByText('PANNELLO ANAGRAFICA SENZA LISTINO')).toBeInTheDocument()
+  })
+
+  it('con il magazzino il listino c’è', async () => {
+    mostra()
+    expect(screen.getByText('PANNELLO ANAGRAFICA')).toBeInTheDocument()
   })
 })
 

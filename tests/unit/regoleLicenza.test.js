@@ -37,12 +37,13 @@ describe('le regole e COLLEZIONI_DEI_MODULI', () => {
     }
   })
 
+  // Gli ordini dal telefono vogliono anche il menù digitale (REQ-LIC-015).
   it('nessun’altra collezione chiede un modulo, tranne gli ordini dal telefono', () => {
     // `databases` è il blocco che le contiene tutte.
     const tutte = [...REGOLE.matchAll(/match \/([a-z_]+)\/\{/g)].map((m) => m[1]).filter((c) => c !== 'databases')
     for (const collezione of tutte) {
       if (collezione in COLLEZIONI_DEI_MODULI) continue
-      const attesi = collezione === 'orders' ? ['ordini_cliente'] : []
+      const attesi = collezione === 'orders' ? ['menu_tavoli', 'ordini_cliente'] : []
       expect(moduliNelBlocco(blocco(collezione)), collezione).toEqual(attesi)
     }
   })

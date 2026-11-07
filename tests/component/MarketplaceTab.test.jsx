@@ -181,6 +181,8 @@ describe('i moduli', () => {
       { id: 'statistiche', prezzo: 15, prova_giorni: 14 },
       { id: 'clienti', prezzo: 6, prova_giorni: 7 },
       { id: 'sumup', prezzo: 10, prova_giorni: 0 },
+      { id: 'ordini_cliente', prezzo: 8, prova_giorni: 0 },
+      { id: 'conta', prezzo: 5, prova_giorni: 0 },
     ],
   }
   const DELLA_REGIA = {
@@ -283,6 +285,30 @@ describe('i moduli', () => {
     await utente.click(screen.getByRole('button', { name: 'Disdici Magazzino e fornitori' }))
     await utente.click(screen.getByRole('button', { name: 'Disdici' }))
     expect(screen.getByText('Richiesta di disdetta di «Magazzino e fornitori» inviata all\'assistenza.')).toBeInTheDocument()
+  })
+
+  // REQ-LIC-015: un modulo senza la sua base non si vende. Gli ordini dal
+  // telefono senza il menù digitale non hanno una pagina da cui ordinare.
+  it('un modulo senza la sua base dice quale serve, e non si compra', async () => {
+    conRegia()
+    mostra()
+    vaiA('moduli')
+    const ordini = await screen.findByRole('heading', { name: 'Ordini dal telefono del cliente' })
+    await listinoLetto()
+    const card = ordini.closest('article')
+    expect(within(card).getByText('Richiede «Menù digitale e tavoli».')).toBeInTheDocument()
+    expect(within(card).queryByRole('button')).toBeNull()
+    // L'inventario, col magazzino incluso, si compra.
+    expect(screen.getByRole('button', { name: 'Aggiungi Inventario di magazzino' })).toBeInTheDocument()
+  })
+
+  it('la disdetta di una base dice cosa si spegne con lei', async () => {
+    conRegia({ licenza: { ...DELLA_REGIA.licenza, moduli: { magazzino: true, conta: true } } })
+    const utente = userEvent.setup()
+    mostra()
+    vaiA('moduli')
+    await utente.click(await screen.findByRole('button', { name: 'Disdici Magazzino e fornitori' }))
+    expect(screen.getByText(/Si spengono anche «Inventario di magazzino», che lo richiedono/)).toBeInTheDocument()
   })
 
   it('un rifiuto della regia si legge col suo testo', async () => {

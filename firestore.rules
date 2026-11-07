@@ -230,9 +230,11 @@ service cloud.firestore {
         || resource.data.comande_statuses.hasAny(['ricevuto', 'in_preparazione'])
         || resource.data.comande_statuses.hasAny(['pronto']);
       // L'ordine dal telefono del cliente è un modulo (REQ-LIC-002): senza,
-      // il menù si legge e basta, e qui non se ne crea uno.
+      // il menù si legge e basta, e qui non se ne crea uno. E il cliente
+      // ordina DAL menù digitale (REQ-LIC-015): senza quello, l'ordine non
+      // ha da dove arrivare, e chi lo scrive a mano non passa.
       allow create: if licenzaValida() && ((isStaffMember() && scontoAmmesso())
-        || (conteNuovoDaCliente() && modulo('ordini_cliente')));
+        || (conteNuovoDaCliente() && modulo('menu_tavoli') && modulo('ordini_cliente')));
       // Modello conto/comande: il flusso di lavorazione vive sulle comande
       // (array nel doc), quindi le transizioni fini sono validate in app.
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
@@ -403,10 +405,13 @@ service cloud.firestore {
       allow write: if licenzaValida() && isBartender();
     }
 
-    // FORNITORI — anagrafica fornitori di magazzino, solo bartender.
+    // FORNITORI — anagrafica fornitori, solo bartender. Anche delle fatture
+    // ai fornitori, che stanno in piedi senza il magazzino (REQ-LIC-015): un
+    // documento si intesta a un fornitore, e senza magazzino non c'era modo
+    // di crearne uno.
     match /suppliers/{supplierId} {
       allow read: if isBartender();
-      allow write: if licenzaValida() && isBartender() && modulo('magazzino');
+      allow write: if licenzaValida() && isBartender() && (modulo('magazzino') || modulo('scadenzario'));
     }
 
     // LISTINO FORNITORI — il prezzo di un prodotto PRESSO un fornitore

@@ -397,8 +397,12 @@ export default function MenuPage({ speciali = false }) {
   }
 
   // «Solo menù» per scelta del locale, o perché il modulo degli ordini dal
-  // telefono non è nel piano (REQ-LIC-002).
-  const menuOnly = settings.menu_only || !ordinazioneClientiAttiva(settings)
+  // telefono non è nel piano (REQ-LIC-002). Il modulo è del CLIENTE
+  // (BUG-135): lo staff dal menù ordina sempre, e senza il modulo perdeva
+  // il prodotto libero e la riga di chi inserisce. La scelta del locale
+  // vale per tutti, come prima.
+  const ordiniDalTelefono = ordinazioneClientiAttiva(settings)
+  const menuOnly = settings.menu_only || (!staff && !ordiniDalTelefono)
   // Il servizio è PERPETUO: non esiste più una serata da aprire. A decidere
   // se si può ordinare resta la modalità "solo menù" (l'interruttore del
   // servizio): a servizio chiuso spariscono i pulsanti "Aggiungi" e il
@@ -631,10 +635,14 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
 
+      {/* Due frasi diverse (BUG-135): «sospese» è vero solo quando il
+          locale ha spento le ordinazioni; dove il piano non le ha, dal
+          telefono non si ordina proprio. */}
       {menuOnly && !staff && (
         <div className="banner">
-          📖 Solo consultazione: le ordinazioni sono momentaneamente sospese.
-          Rivolgersi allo staff per ordinare.
+          {settings.menu_only
+            ? '📖 Solo consultazione: le ordinazioni sono momentaneamente sospese. Rivolgersi allo staff per ordinare.'
+            : '📖 Il menù si consulta da qui: per ordinare rivolgersi allo staff.'}
         </div>
       )}
 

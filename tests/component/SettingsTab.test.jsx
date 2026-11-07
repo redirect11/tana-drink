@@ -435,11 +435,35 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
     stop()
   })
 
+  // REQ-LIC-015: l'inventario richiede il magazzino. Incluso senza la sua
+  // base non lavora, e l'interruttore lo dice invece di accendersi per
+  // finta.
+  it('quella INCLUSA ma senza la sua base dice quale manca, e non si accende', async () => {
+    impostazioni.licenza = { moduli: { conta: true } }
+    const { subscribeToasts, dismissToast } = await import('../../src/lib/toast.js')
+    let visti = []
+    const stop = subscribeToasts((t) => {
+      visti = t
+    })
+    const user = userEvent.setup()
+    const { updateSettings } = await import('../../src/lib/api.js')
+    mostra()
+    await apriPremium(user)
+    expect(screen.getByText(/Richiede «Magazzino e fornitori»\./)).toBeInTheDocument()
+    updateSettings.mockClear()
+    await user.click(interruttoreDi('Inventario di magazzino'))
+    expect(visti.some((t) => /Si attiva quando è attivo anche quello/.test(t.message))).toBe(true)
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(interruttoreDi('Inventario di magazzino')).not.toBeChecked()
+    visti.forEach((t) => dismissToast(t.id))
+    stop()
+  })
+
   // L'INVENTARIO HA UNA SCELTA SUA, sotto il suo interruttore e solo quando
   // c'è: riaprire da sé alla chiusura, o lasciar fare a mano (Daniele,
   // 17/09/2026). Di suo riapre.
   it('l’inventario incluso porta con sé la scelta «riapre da sé», accesa di suo', async () => {
-    impostazioni.licenza = { moduli: { conta: true, fatture: false, scadenzario: true } }
+    impostazioni.licenza = { moduli: { magazzino: true, conta: true, fatture: false, scadenzario: true } }
     const user = userEvent.setup()
     const { updateSettings } = await import('../../src/lib/api.js')
     mostra()
@@ -494,7 +518,7 @@ describe('le funzioni premium (REQ-LIC-001)', () => {
   it('la licenza che include la conta le sblocca l’interruttore', async () => {
     // Il punto di innesto della Fase 3, visto dalla schermata: cambia il
     // DATO, e la riga passa da bloccata a normale senza toccare il codice.
-    impostazioni.licenza = { moduli: { conta: true, scadenzario: true } }
+    impostazioni.licenza = { moduli: { magazzino: true, conta: true, scadenzario: true } }
     const user = userEvent.setup()
     mostra()
     await apriPremium(user)

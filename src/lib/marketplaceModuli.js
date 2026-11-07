@@ -15,7 +15,7 @@
 //
 // Logica pura più la memoria del dispositivo; le chiamate sono in api.js.
 
-import { MODULI_PREMIUM, moduloIncluso, scadenzaProva } from './licenza.js'
+import { MODULI_PREMIUM, moduloIncluso, scadenzaProva, richiesteDi, dipendentiDi } from './licenza.js'
 import { urlRegia } from './limiti.js'
 import { leggi, scrivi } from './impostazioniLocali.js'
 import { urlFunzioneRegia, scaricaERicorda, erroreDellaRegia } from './funzioniRegia.js'
@@ -66,6 +66,11 @@ export function schedeModuli(settings, listino = []) {
     const incluso = moduloIncluso(settings, id)
     const prova = incluso ? scadenzaProva(settings, id) : null
     return {
+      // LE DIPENDENZE (REQ-LIC-015). `richiede`: le basi che la licenza non
+      // ha, senza le quali il modulo non si prova e non si aggiunge.
+      // `con_lui`: i moduli inclusi che si spengono se si disdice questo.
+      richiede: richiesteDi(id).filter((r) => !moduloIncluso(settings, r)),
+      con_lui: dipendentiDi(id).filter((d) => moduloIncluso(settings, d)),
       id,
       nome: m.label,
       descrizione: m.descrizione,

@@ -153,6 +153,36 @@ Risposte:
   Senza `errore`, l'app dice un messaggio suo per `401`/`403`, per la
   rete assente e per il resto.
 
+## I moduli che ne richiedono un altro (REQ-LIC-015)
+
+Decisione dell'utente del 07/11/2026. Alcuni moduli da soli non stanno
+in piedi:
+
+| Modulo | Richiede | Perché |
+|---|---|---|
+| `conta` (Inventario di magazzino) | `magazzino` | conta le giacenze del magazzino, e chiudendo le riallinea |
+| `ordini_cliente` (Ordini dal telefono) | `menu_tavoli` | il cliente ordina dal menù digitale: senza, non ha una pagina da cui farlo |
+
+Le fatture ai fornitori (`scadenzario`) invece sono **autonome**: aprono
+la sezione Fornitori anche senza il magazzino.
+
+Cosa fa l'app (`richiede` in `MODULI_PREMIUM`): un modulo senza la sua
+base nella licenza non si prova e non si aggiunge («Richiede …» al posto
+dei tasti); incluso senza la base non lavora, e le impostazioni lo
+dicono; la disdetta di una base avvisa dei moduli che si spengono con
+lei.
+
+**Cosa serve dalla regia**, perché l'app non è l'unica porta:
+
+- `moduloDallApp` con `prova` o `aggiungi` su un modulo la cui base non è
+  nella licenza → `409` col testo («Richiede il modulo Magazzino e
+  fornitori.»);
+- la disdetta di una base non spegne da sola i moduli che la richiedono:
+  restano in licenza e in fattura, ma non lavorano. Va deciso con
+  l'utente se disdirli insieme;
+- il backoffice e i piani (`piani.json`) non dovrebbero comporre una
+  licenza con un modulo senza la sua base.
+
 ## Fuori da qui, per ora
 
 - Cambiare **piano** (Free → Pro) dall'app: resta dalla regia.
