@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { subscribeSettings, updateSettings, settingsIniziali, azioneModulo } from '../lib/api.js'
 import { isAdmin } from '../lib/ruoli.js'
+import { MODULI_PREMIUM, fraseRichiede } from '../lib/licenza.js'
 import { dataAvviso } from '../lib/aggiornamenti.js'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import { resolveThemeVars } from '../lib/themes.js'
@@ -289,6 +290,11 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
       return m.stato === 'non_incluso' ? <span className="muted small">Non acquistabile singolarmente</span> : null
     }
     const occupato = inCorso !== null
+    // Senza la sua base non si vende (REQ-LIC-015): l'inventario senza il
+    // magazzino non avrebbe niente da contare.
+    if (m.stato === 'non_incluso' && m.richiede.length > 0) {
+      return <span className="muted small">{fraseRichiede(m.richiede)}</span>
+    }
     if (m.stato === 'incluso') {
       return (
         <button
@@ -375,7 +381,11 @@ function SezioneModuli({ settings, role, listino, statoListino, esitoIniziale })
       {daDisdire && (
         <ConfirmDialog
           title={`Disdire «${daDisdire.nome}»?`}
-          message="Il modulo resta attivo fino alla fine del periodo già pagato, poi si spegne. I dati restano."
+          message={`Il modulo resta attivo fino alla fine del periodo già pagato, poi si spegne. I dati restano.${
+            daDisdire.con_lui.length
+              ? ` Si spengono anche ${daDisdire.con_lui.map((d) => `«${MODULI_PREMIUM[d].label}»`).join(' e ')}, che lo richiedono.`
+              : ''
+          }`}
           confirmLabel="Disdici"
           danger
           onConfirm={() => esegui(daDisdire, 'disdici')}

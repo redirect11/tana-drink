@@ -27,6 +27,7 @@ import {
 import { toastSuccess } from '../lib/toast.js'
 // Le voci stanno in un posto solo: le stesse fanno il titolo nella barra.
 import { vociPerRuolo } from '../lib/sezioni.js'
+import { menuDigitaleAttivo } from '../lib/licenza.js'
 import { subscribeSottosezioni } from '../lib/sottosezioni.js'
 
 // Menu laterale dello staff: usato nel gestionale (onSelect cambia tab)
@@ -299,12 +300,17 @@ export default function StaffDrawer({ role, active = null, onSelect = null, flot
             <span>✍️</span> Nuovo ordine
           </div>
         )}
-        <div
-          className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
-          onClick={() => vaiA('/menu')}
-        >
-          <span>📖</span> Ordina dal menù
-        </div>
+        {/* SEGUE IL MENÙ DIGITALE (BUG-132, decisione dell'utente del
+            07/11/2026): senza il modulo /menu dice che il menù non è
+            attivo, e la voce portava lì. Per ordinare resta «Nuovo ordine». */}
+        {menuDigitaleAttivo(settings) && (
+          <div
+            className={`bar-nav-item${active === 'ordine' ? ' active' : ''}`}
+            onClick={() => vaiA('/menu')}
+          >
+            <span>📖</span> Ordina dal menù
+          </div>
+        )}
         {isSala(role) && <ChiamaIlBancone />}
 
         {showGroups && (

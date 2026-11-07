@@ -27,6 +27,8 @@ import {
   moduliPremium,
   moduloAttivo,
   moduloIncluso,
+  basiMancanti,
+  fraseRichiede,
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
@@ -1617,6 +1619,10 @@ function FunzioniPremium({ settings, onSave }) {
         // IN PROVA (licenza.prove, scritta dalla regia): la data in cui la
         // prova finisce, perché alla scadenza il modulo si spegne da solo.
         const prova = incluso ? scadenzaProva(settings, m.id) : null
+        // INCLUSO MA SENZA LA SUA BASE (REQ-LIC-015): l'inventario senza il
+        // magazzino non lavora. L'interruttore lo dice invece di accendersi
+        // per finta.
+        const richiede = incluso ? fraseRichiede(basiMancanti(settings, m.id)) : ''
         return (
           <ToggleRow
             key={m.id}
@@ -1627,9 +1633,9 @@ function FunzioniPremium({ settings, onSave }) {
                 : incluso
                 ? 'Funzione premium, inclusa in questa installazione.'
                 : 'Funzione premium: non inclusa.'
-            }`}
+            }${richiede ? ` ${richiede}` : ''}`}
             checked={moduloAttivo(settings, m.id)}
-            motivo={incluso ? undefined : MOTIVO_PREMIUM}
+            motivo={!incluso ? MOTIVO_PREMIUM : richiede ? `${richiede} Si attiva quando è attivo anche quello.` : undefined}
             onChange={(v) => onSave({ [chiaveModulo(m.id)]: v })}
           />
         )

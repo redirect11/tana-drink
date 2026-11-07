@@ -18,7 +18,7 @@ import {
   moduloAttivo,
   moduloIncluso,
   voceVisibile,
-  moduloDiSezione,
+  moduliDiSezione,
   menuDigitaleAttivo,
   ordinazioneClientiAttiva,
   accountClientiAttivi,
@@ -126,7 +126,7 @@ describe('la licenza comanda per intero', () => {
   })
 
   it('quello che nomina c’è', () => {
-    const stato = { licenza: { moduli: { conta: true, scadenzario: true } } }
+    const stato = { licenza: { moduli: { magazzino: true, conta: true, scadenzario: true } } }
     expect(moduloIncluso(stato, 'conta')).toBe(true)
     expect(moduloAttivo(stato, 'conta')).toBe(true)
   })
@@ -240,14 +240,25 @@ describe('filtrare un elenco di voci', () => {
 
   // Lo storico inventari (REQ-MAG-052) si accende con l'inventario: la
   // corrispondenza sta nel modulo (`sezioni`), non nella schermata.
+  // L'inventario vuole il magazzino (REQ-LIC-015): qui c'è sempre.
   it('una sezione elencata da un modulo segue quel modulo', () => {
-    expect(moduloDiSezione('storico')).toBe('conta')
-    expect(moduloDiSezione('conta')).toBe('conta')
-    expect(moduloDiSezione('prodotti')).toBe('prodotti')
+    const conInventario = { licenza: { moduli: { magazzino: true, conta: true } } }
+    expect(moduliDiSezione('storico')).toEqual(['conta'])
+    expect(moduliDiSezione('conta')).toEqual(['conta'])
+    expect(moduliDiSezione('prodotti')).toEqual([])
     expect(ePremium('storico')).toBe(true)
     expect(voceVisibile(LIC, 'storico')).toBe(false)
-    expect(voceVisibile({ licenza: { moduli: { conta: true } } }, 'storico')).toBe(true)
-    expect(voceVisibile({ licenza: { moduli: { conta: true } }, modulo_conta_enabled: false }, 'storico')).toBe(false)
+    expect(voceVisibile(conInventario, 'storico')).toBe(true)
+    expect(voceVisibile({ ...conInventario, modulo_conta_enabled: false }, 'storico')).toBe(false)
+  })
+
+  // REQ-LIC-015: Fornitori è del magazzino E delle fatture ai fornitori, e
+  // si apre con uno qualunque dei due.
+  it('una sezione di due moduli si vede con uno qualunque dei due', () => {
+    expect(moduliDiSezione('fornitori')).toEqual(['magazzino', 'scadenzario'])
+    expect(voceVisibile({ licenza: { moduli: { scadenzario: true } } }, 'fornitori')).toBe(true)
+    expect(voceVisibile({ licenza: { moduli: { magazzino: true } } }, 'fornitori')).toBe(true)
+    expect(voceVisibile({ licenza: { moduli: {} } }, 'fornitori')).toBe(false)
   })
 })
 

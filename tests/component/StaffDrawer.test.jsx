@@ -191,6 +191,16 @@ describe('menu laterale', () => {
     await userEvent.click(screen.getByText('Ordina dal menù'))
     expect(screen.getByText('PAGINA MENU')).toBeInTheDocument()
   })
+
+  // BUG-132: senza il modulo del menù digitale /menu dice che il menù non
+  // è attivo, e la voce portava lì. L'utente, 07/11/2026: «segue il
+  // modulo». Per ordinare resta «Nuovo ordine».
+  it('senza il menù digitale «Ordina dal menù» non c’è', async () => {
+    filo.licenza = { moduli: { ...CON_LICENZA.licenza.moduli, menu_tavoli: false } }
+    apri('admin')
+    expect(screen.queryByText('Ordina dal menù')).toBeNull()
+    expect(screen.getByText('Nuovo ordine')).toBeInTheDocument()
+  })
 })
 
 // ── IL MENU AGGANCIATO ALLA PAGINA ───────────────────────────────────

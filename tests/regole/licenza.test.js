@@ -118,9 +118,16 @@ describe('gli ordini dal telefono del cliente', () => {
     await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/o1'), contoDalMenu()))
   })
 
-  it('col modulo sì', async () => {
-    await conLicenza({ piano: 'pro', moduli: { ordini_cliente: true } })
+  it('col modulo e il menù digitale sì', async () => {
+    await conLicenza({ piano: 'pro', moduli: { menu_tavoli: true, ordini_cliente: true } })
     await assertSucceeds(setDoc(doc(CHI.anonimo(env), 'orders/o2'), contoDalMenu()))
+  })
+
+  // REQ-LIC-015: il cliente ordina DAL menù digitale. Senza, l'ordine non ha
+  // da dove arrivare, e chi lo scrive a mano non passa.
+  it('col modulo ma senza il menù digitale no', async () => {
+    await conLicenza({ piano: 'pro', moduli: { ordini_cliente: true } })
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/o3'), contoDalMenu()))
   })
 
   it('il personale apre conti anche senza il modulo: è la cassa, che c’è in ogni piano', async () => {

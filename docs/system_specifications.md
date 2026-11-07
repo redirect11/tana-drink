@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 6 novembre 2026.
+> Generato il 7 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,16 +22,16 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 263 | fatto e coperto dai test |
+| ✅ | 265 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 2 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**317 voci** in tutto. **280** descrivono il sistema com'è oggi e
+**319 voci** in tutto. **282** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -60,9 +60,9 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 15 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 16 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 10 | 4 |  |
+| [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -3302,6 +3302,16 @@ NON ERA QUESTO: era il browser di chi guardava, che mostrava bianche anche altre
 
 **Dove**: `firebase.json (hosting.headers)` · **Lo dimostrano**: `tests/unit/cachePubblicazione.test.js`
 
+#### REQ-DEV-017 — La matrice dei moduli: ogni modulo premium provato da solo, in coppia con ogni altro, tutti e nessuno
+
+L'utente, 07/11/2026: «dovremmo irrobustire il testing […] testare che i moduli premium presi singolarmente e in combinazione con altri funzionino e facciano quello per cui sono stati pensati». Primo pezzo del piano (gli altri: i casi d'uso della serata come scenari interi, i casi limite, gli end-to-end con Playwright e gli emulatori su ogni PR, le prove delle regole nella CI).
+
+LE LICENZE. Dieci moduli fanno 1024 licenze; i difetti nascono fra due moduli, quindi si provano: nessun modulo, tutti, ognuno da solo e le righe a coppie, in cui ogni coppia compare accesa-accesa, spenta-spenta e nei due modi misti (20 licenze, generate e controllate da un test, non scritte a mano).
+
+COSA SI CONTROLLA PER OGNI LICENZA, da una tabella sola delle PROMESSE di ogni modulo: le voci del gestionale e le sottosezioni che compaiono (e un indirizzo battuto a mano che non apre quello che non c'è), le pagine del cliente, le collezioni che si possono scrivere, le dipendenze (REQ-LIC-015). Le stesse licenze passano sulle regole vere, nell'emulatore. Un modulo nuovo che non entra nella tabella fa diventare rossa la prova. Il primo giro ha trovato BUG-131…BUG-136 e le dipendenze di REQ-LIC-015.
+
+**Dove**: `tests/helpers/combinazioni.js, tests/unit/matriceModuli.test.js, tests/regole/matriceModuli.test.js, src/lib/licenza.js` · **Lo dimostrano**: `tests/unit/matriceModuli.test.js`, `tests/regole/matriceModuli.test.js`, `tests/component/GroupView.test.jsx`
+
 ### STAT
 
 #### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
@@ -3533,6 +3543,16 @@ LE FOTO SONO DI TUTTI: si caricano dalla scheda a prescindere da tema e stile, e
 IL SEGNAPOSTO: dove una voce non ha né foto né disegno c'è un bicchiere al tratto, neutro e attenuato (`segnapostoDrink`, in due versioni per i fondi scuri e chiari), nell'elenco del menù, nelle card del menù Special e nelle slide del carosello, in ogni stile. Prima c'era il logo del locale, che Notte, Lavagna, Déco e Riviera nascondevano perché ripetuto su ogni voce faceva il menù giocattolo; col bicchiere quelle eccezioni non servono più. Il Giornale, che non ha un riquadro fisso per l'immagine, e il dettaglio del drink restano senza immagine quando non c'è.
 
 **Dove**: `src/lib/stileMenu.js (disegni, disegniDelLocale), src/lib/speciali.js (immagineVoce, segnapostoDrink), src/pages/MenuPage.jsx, src/components/CaroselloSpeciali.jsx, src/components/SpecialScorrevoli.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialManager.jsx, src/components/DrinkForm.jsx (disegniConsentiti), src/index.css, DESIGN.md` · **Lo dimostrano**: `tests/unit/stileMenu.test.js`, `tests/unit/speciali.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/CaroselloSpeciali.test.jsx`, `tests/component/DettaglioDrink.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/unit/css.test.js`
+
+#### REQ-LIC-015 — I moduli che ne richiedono un altro lo dicono: l'inventario vuole il magazzino, gli ordini dal telefono il menù digitale; le fatture ai fornitori stanno in piedi da sole
+
+Trovato col giro della matrice dei moduli (REQ-DEV-017, 07/11/2026): tre moduli, presi da soli, non servivano a niente. L'inventario sta dentro il magazzino e la sua chiusura scrive giacenze e movimenti, che sono del magazzino; le fatture ai fornitori stavano nella sezione Fornitori, che è del magazzino; gli ordini dal telefono senza il menù digitale non hanno una pagina da cui ordinare. Nessuno dei tre lo diceva, e il Marketplace li vendeva da soli.
+
+DECISIONE DELL'UTENTE (07/11/2026), la via di mezzo fra le tre proposte: le fatture ai fornitori diventano AUTONOME; l'inventario DIPENDE dal magazzino; gli ordini dal telefono DIPENDONO dal menù digitale, «perché senza menù il cliente non ha dove ordinare». COME. In MODULI_PREMIUM un modulo dichiara `richiede`; un modulo attivo è incluso, acceso E con tutto quello che richiede attivo. Nelle impostazioni il modulo incluso ma senza la base dice quale manca; nel Marketplace non si prova e non si aggiunge finché la base non c'è («Richiede …»), e la disdetta della base avvisa di quello che si spegne con lei. Le regole rifiutano l'ordine di un cliente senza il menù digitale.
+
+LE FATTURE AI FORNITORI DA SOLE. La sezione Fornitori si apre con il magazzino O con lo scadenzario (una sezione può essere di più moduli, `sezioni` di ognuno): con il solo scadenzario dentro ci sono l'anagrafica dei fornitori e lo scadenzario, e le regole lasciano scrivere i fornitori anche a lui. Ordini, altre spese e listini restano del magazzino. La sezione resta dov'è, sotto Fornitori, come deciso dall'utente il 26/08/2026: con il magazzino non cambia niente.
+
+**Dove**: `src/lib/licenza.js (richiede, moduliDiSezione), src/lib/marketplaceModuli.js, src/components/MarketplaceTab.jsx, src/components/SettingsTab.jsx, src/components/FornitoriTab.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/dipendenzeModuli.test.js`, `tests/component/FornitoriTab.test.jsx`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/regoleLicenza.test.js`, `tests/regole/licenza.test.js`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
@@ -4135,6 +4155,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| 🔴 | [BUG-134](#bug-134--le-cloud-functions-non-guardano-la-licenza-i-pagamenti-sumup-e-le-chiamate-allo-staff-partono-con-qualsiasi-piano) — Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano | alta | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4255,6 +4276,12 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-134 — Le Cloud Functions non guardano la licenza: i pagamenti SumUp e le chiamate allo staff partono con qualsiasi piano
+
+Trovato dalla matrice dei moduli (REQ-DEV-017), 07/11/2026. Il controllo vero dei moduli sta nelle regole di Firestore (REQ-LIC-008); l'app nasconde. Le Functions girano con i permessi dell'amministratore e le regole non le fermano, ma nessuna legge `licenza/attuale`: le chiamate di SumUp (cassa, lettore, gruppi) partono anche dove il modulo non c'è, chiamandole a mano. Da fare: le Functions dei moduli leggono la licenza e rispondono «non incluso» (failed-precondition).
+
+**Dove**: `functions/index.js, functions/lib/`
 
 ## Non più valido
 

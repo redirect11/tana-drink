@@ -2,6 +2,29 @@
 
 ## 1.10.27-beta — in lavorazione
 
+### Moduli
+
+- Ogni modulo è provato da solo, in coppia con ogni altro, tutti e
+  nessuno, anche sulle regole del database (REQ-DEV-017). Le prove delle
+  regole girano su ogni pull request.
+- L'inventario richiede il magazzino e gli ordini dal telefono richiedono
+  il menù digitale: nel Marketplace un modulo senza la sua base dice quale
+  serve, nelle impostazioni dice perché non lavora, e la disdetta di una
+  base avvisa di cosa si spegne con lei (REQ-LIC-015).
+- Le fatture ai fornitori funzionano anche senza il magazzino: la sezione
+  Fornitori si apre con l'anagrafica e lo scadenzario (REQ-LIC-015).
+- Il vecchio indirizzo della Cassa (`?tab=storico`) si apre anche senza il
+  modulo Inventario (BUG-131).
+- Senza il menù digitale lo staff non vede più «Ordina dal menù» e «Vista
+  cliente», che portavano a una pagina spenta (BUG-132).
+- SumUp: l'interruttore del modulo spegne davvero il lettore e il
+  pagamento online, e i gruppi di conti mostrano «Online» e «Lettore» solo
+  col modulo (BUG-133).
+- Senza gli ordini dal telefono lo staff ordina dal menù come sempre, e il
+  cliente non legge più «ordinazioni momentaneamente sospese» (BUG-135).
+- La descrizione del modulo Personale non promette più le chiamate allo
+  staff, che sono di base (BUG-136).
+
 ## 1.10.26-beta — 06/11/2026 (test)
 
 ### Menù

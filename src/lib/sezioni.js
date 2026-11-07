@@ -129,6 +129,11 @@ export function vociPerRuolo(role, impostazioni = null) {
 // voce dal menu non basta: `?tab=bilancio` battuto a mano, o un
 // collegamento salvato quando si era admin, ci arriverebbero lo stesso.
 export function sezioneConsentita(id, role, impostazioni = null) {
+  // UN VECCHIO INDIRIZZO SI CONTROLLA PER DOVE PORTA (BUG-131): `storico` è
+  // la Cassa, che è di base, ma è anche il nome della sottosezione «Storico
+  // inventari», che è del modulo Inventario. Controllato col suo nome, senza
+  // l'inventario il collegamento salvato alla Cassa finiva sulla coda.
+  id = VECCHI_INDIRIZZI[id] || id
   const voce = NAV_GESTIONALE.find(([v]) => v === id)
   if (voce?.[3] && !voce[3](role)) return false
   // E una funzione che il locale non ha non si apre nemmeno a chi avrebbe
