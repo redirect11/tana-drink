@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.28-beta — in lavorazione
+## 1.10.29-beta — in lavorazione
+
+## 1.10.28-beta — 07/11/2026 (test)
 
 ### Moduli
 
