@@ -8,6 +8,8 @@ dist-ssr
 # Ambiente locale con gli emulatori: valori finti di un progetto "demo-*"
 # che gira offline. Sta nel repo apposta, così chi arriva avvia e basta.
 !.env.locale
+# Lo stesso per i test di sistema (playwright.config.mjs).
+!.env.sistema
 # Config (vuota) delle Functions: serve in CI per il deploy non-interattivo.
 # NON contiene segreti (i valori reali SumUp vanno nei secret Firebase).
 !functions/.env
@@ -27,6 +29,12 @@ firebase-debug.log
 
 # Test coverage
 coverage
+
+# Test di sistema: la build per gli emulatori e quello che Playwright lascia
+# quando un test fallisce (tracce, catture). Si rigenerano a ogni giro.
+dist-sistema
+test-results/
+playwright-report/
 
 # Logs
 npm-debug.log*

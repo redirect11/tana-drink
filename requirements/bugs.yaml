@@ -5790,3 +5790,30 @@ bugs:
     labels: [bug, licenza, testi]
     test_cases:
       - tests/unit/matriceModuli.test.js
+
+  - id: BUG-137
+    title: "Su un dispositivo appena entrato, se la rete cade prima del primo conto, la griglia dei prodotti è vuota"
+    area: "src/lib/menuCache.js (precaricaMenu), src/pages/BartenderPage.jsx (OrderQueue)"
+    severity: grave
+    priority: P1
+    description: >
+      Trovato dal primo test di sistema del modello a V
+      (tests/sistema/serataSenzaRete.spec.js), 08/11/2026. Il catalogo dei
+      prodotti arrivava solo aprendo il primo conto: la sottoscrizione di
+      lib/menuCache.js partiva da useMenu, cioè dalla schermata del conto.
+      Un tablet nuovo, un telefono della sala appena entrato o un browser
+      con la cache svuotata, se la rete cadeva prima del primo conto,
+      aprivano il conto con «Nessun prodotto in questa categoria» e non
+      battevano niente finché la rete non tornava. I test di unità e di
+      integrazione non potevano vederlo: provano il conto con un catalogo
+      già in mano.
+      ORA il catalogo si precarica dalla coda (precaricaMenu), appena chi
+      lavora entra nel gestionale; ai clienti non costa niente, perché la
+      coda la vede solo il personale.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, offline, pos]
+    requisiti: [REQ-OFFLINE-006]
+    test_cases:
+      - tests/sistema/serataSenzaRete.spec.js

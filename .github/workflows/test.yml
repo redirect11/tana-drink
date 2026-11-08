@@ -137,3 +137,53 @@ jobs:
           npx --yes firebase-tools@15.26.0 emulators:exec
           --project demo-tana-drink --only firestore --config firebase.collaudo.json
           "npm run test:regole"
+
+  # I TEST DI SISTEMA (REQ-DEV-018, fase 2 del modello a V): l'app
+  # COMPILATA in un Chromium vero, con Auth e Firestore emulati e le regole
+  # vere. Provano i requisiti sull'app intera — il primo è il giro di una
+  # serata con la rete staccata, che al primo giro ha trovato BUG-137, un
+  # difetto che i test di unità e di integrazione non potevano vedere.
+  # Un job a parte, come le regole: vuole Java, l'emulatore e un browser.
+  sistema:
+    name: Sistema (Playwright)
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # In locale si usa il Chrome installato; qui il Chromium di Playwright,
+      # della stessa versione del pacchetto.
+      - name: Browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Test di sistema
+        run: npm run test:sistema
+
+      # Quando un test fallisce, la traccia dice cosa ha visto il browser
+      # passo per passo: senza, un rosso in CI si indovina.
+      - name: Rapporto dei test di sistema
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapporto-sistema
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

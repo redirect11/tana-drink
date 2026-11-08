@@ -9,6 +9,15 @@
   si verifica al banco, e ogni test dichiara il livello a cui verifica
   (unità, integrazione, sistema, accettazione). La specifica di sistema ha
   i capitoli dei bisogni e dell'architettura (REQ-DEV-018).
+- I test di sistema: l'app compilata, in un browser vero, con il database
+  emulato. Il primo ripete il giro di una serata con la rete staccata e
+  gira su ogni pull request (REQ-DEV-018).
+
+### Senza rete
+
+- Su un tablet o un telefono appena entrato, se la rete cade prima di aprire
+  il primo conto, i prodotti ci sono: il catalogo si carica già dalla coda
+  ordini. Prima il conto si apriva vuoto (BUG-137).
 
 ### Aspetto
 
