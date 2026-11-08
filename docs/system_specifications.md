@@ -74,7 +74,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*) | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 1 |
+| Sistema | la specifica (REQ-*), sull'app intera | 4 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 159 |
 | Unità | il progetto di dettaglio: un modulo da solo | 164 |
 
@@ -335,7 +335,7 @@ UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta: «è arri
 
 LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js): un avviso annuncia un FATTO e non porta il nome della colonna in cui il conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che non possono importarsi a vicenda — la coda, la push del server e il service worker — e il titolo dev'essere IDENTICO nei tre, perché la notifica dell'app e quella del server portano lo stesso `tag` e il sistema le fonde in una.
 
-**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
+**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`, `tests/sistema/comandaAlBanco.spec.js`
 
 #### REQ-ORD-022 — Lo staff che tocca un conto entra nel conto, non nella pagina del cliente
 
@@ -2195,7 +2195,7 @@ La serata appartiene al proprio giorno anche dopo la mezzanotte, fino all'ora di
 
 La cassa si apre con un fondo e si chiude con il riepilogo della serata: incassato per metodo e per ora, conti chiusi, conti ancora da incassare. Senza cassa aperta non si battono ordini. E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession` non restituisce niente da aspettare, la scrittura parte in sottofondo e lo scontrino di chiusura parte per conto suo — se la stampante non risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la risposta della stampante (REQ-STAMPA-016): il lavoro si chiude sull'invio, l'esito arriva dopo e si legge nel registro delle stampe. Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
 
-**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`, `tests/sistema/cassaAlCentesimo.spec.js`
 
 #### REQ-CASSA-007 — Il flusso cassa serve DURANTE la serata, non solo alla chiusura
 
@@ -2763,7 +2763,7 @@ Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende.
 
 L'admin fa tutto quello che fa il bartender e in più nomina i ruoli; il bartender ha il gestionale completo; lo staff di sala lavora sulla stessa coda del banco e vede cosa c'è da servire, senza le sezioni amministrative; il cliente il menù e i propri ordini. Il ruolo vive nei claim del token e le regole del database guardano quello.
 
-**Dove**: `src/lib/ruoli.js, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`
+**Dove**: `src/lib/ruoli.js, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`, `tests/sistema/ruoli.spec.js`
 
 #### REQ-STAFF-002 — I confronti sui ruoli si fanno in un posto solo
 
@@ -3443,7 +3443,7 @@ L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di sviluppo a V», 
 
 IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in tests/unit un test che sostituisce Firestore (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice vero contro un Firestore finto; e il test stesso può dichiararlo con `// @livello <nome>` quando la cartella, scelta prima della V, non dice il vero.
 
-UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137. Poi la cassa che torna al centesimo (REQ-CASSA-002: contanti, carta e un impagato, la chiusura col contato, i numeri nel database), la comanda della sala che arriva al banco su un altro browser (REQ-ORD-009) e quello che ogni ruolo vede del gestionale (REQ-STAFF-001).
 
 FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni; i test di accettazione dagli scenari della serata; il cancello che chiede la V intera prima del merge in develop.
 

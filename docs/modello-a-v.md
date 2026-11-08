@@ -152,11 +152,17 @@ node scripts/requisiti.mjs --documento  # la specifica, coi capitoli dei bisogni
 1. **I gradini nel registro** — fatto (08/11/2026). Bisogni e componenti di
    partenza, livello di ogni test, regole per le voci nuove, specifica coi
    capitoli nuovi.
-2. **I test di sistema** — avviata (08/11/2026). L'infrastruttura e il
-   primo test, il giro di una serata senza rete
+2. **I test di sistema** — avviata (08/11/2026). L'infrastruttura e i
+   primi test: il giro di una serata senza rete
    ([`serataSenzaRete.spec.js`](../tests/sistema/serataSenzaRete.spec.js)),
-   che al primo giro ha trovato BUG-137. Restano i test di sistema degli
-   altri requisiti dei bisogni.
+   che al primo giro ha trovato BUG-137; la cassa che torna al centesimo
+   ([`cassaAlCentesimo.spec.js`](../tests/sistema/cassaAlCentesimo.spec.js));
+   la comanda dalla sala al banco su due browser
+   ([`comandaAlBanco.spec.js`](../tests/sistema/comandaAlBanco.spec.js));
+   quello che ogni ruolo vede ([`ruoli.spec.js`](../tests/sistema/ruoli.spec.js)).
+   Restano gli altri bisogni (bozza, magazzino, cliente al tavolo, carta,
+   correzioni) e, per i ruoli, gli stati di preparazione che la sala non
+   tocca (REQ-STAFF-014), dalla vista a corsie della coda.
 3. **I test di accettazione.** Gli scenari della serata scritti dai criteri
    `accettazione:` dei bisogni, in `tests/accettazione/`, leggibili da chi
    lavora al banco.
