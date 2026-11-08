@@ -51,3 +51,19 @@ export async function tornaAllaCoda(page) {
 }
 
 export const cardDeiConti = (page) => page.locator('.order-card')
+
+// Un conto battuto e chiuso in un colpo, dal conto stesso: i drink, poi
+// Pagamento e il metodo. `Impagato` chiude senza incasso (REQ-CASSA-016).
+export async function contoChiuso(page, drink, metodo, totale) {
+  await nuovoOrdine(page)
+  for (const d of drink) await batti(page, d)
+  await page.getByRole('button', { name: new RegExp(`Pagamento · ${totale}`) }).click()
+  if (metodo === 'Impagato') {
+    await page.getByRole('button', { name: /Impagato/ }).click()
+    await page.getByRole('dialog', { name: 'Chiudi impagato' }).getByRole('button', { name: 'Chiudi impagato' }).click()
+  } else {
+    await page.getByRole('button', { name: metodo }).click()
+    await page.getByRole('button', { name: `Riscuotere · ${totale}` }).click()
+  }
+  await expect(page.getByText(/0 aperti/)).toBeVisible()
+}

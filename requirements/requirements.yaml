@@ -948,7 +948,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ordini, notifiche]
-    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js, tests/component/AvvisiRipristino.test.jsx, tests/unit/paroleDegliAvvisi.test.js]
+    test_cases: [tests/unit/dispositivo.test.js, tests/unit/notifyStore.test.js, tests/unit/preferenzeNotifiche.test.js, tests/component/AvvisiRipristino.test.jsx, tests/unit/paroleDegliAvvisi.test.js, tests/sistema/comandaAlBanco.spec.js]
 
   # ══════════════════════════════════════════════════════════════════════
   #  CASSA / POS — come si batte un ordine
@@ -1487,6 +1487,7 @@ requirements:
     test_cases:
       - tests/unit/cassa.test.js
       - tests/unit/chiusuraCassaSenzaRete.test.js
+      - tests/sistema/cassaAlCentesimo.spec.js
 
   - id: REQ-CASSA-007
     title: "Il flusso cassa serve DURANTE la serata, non solo alla chiusura"
@@ -4560,7 +4561,7 @@ requirements:
     status: implemented
     generate_issue: false
     labels: [ruoli, sicurezza]
-    test_cases: [tests/unit/ruoli.test.js, tests/unit/utenze.test.js]
+    test_cases: [tests/unit/ruoli.test.js, tests/unit/utenze.test.js, tests/sistema/ruoli.spec.js]
 
   - id: REQ-STAFF-002
     title: "I confronti sui ruoli si fanno in un posto solo"
@@ -15381,7 +15382,11 @@ requirements:
       da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del
       banco in tests/sistema/banco.mjs. In CI girano su ogni pull request,
       nel job «Sistema (Playwright)». Il primo è il giro della serata senza
-      rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+      rete (REQ-OFFLINE-006), che ha trovato BUG-137. Poi la cassa che
+      torna al centesimo (REQ-CASSA-002: contanti, carta e un impagato, la
+      chiusura col contato, i numeri nel database), la comanda della sala
+      che arriva al banco su un altro browser (REQ-ORD-009) e quello che
+      ogni ruolo vede del gestionale (REQ-STAFF-001).
       FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni;
       i test di accettazione dagli scenari della serata; il cancello che
       chiede la V intera prima del merge in develop.

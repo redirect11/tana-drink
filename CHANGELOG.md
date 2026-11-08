@@ -1,5 +1,14 @@
 # Cosa è cambiato
 
+## next — in lavorazione
+
+### Metodo
+
+- Altri tre test di sistema: la chiusura di cassa con contanti, carta e un
+  conto impagato; il conto battuto in sala che compare al banco su un altro
+  dispositivo; quello che sala, bartender e cliente vedono del gestionale
+  (REQ-DEV-018).
+
 ## 1.10.29-beta — 08/11/2026 (test)
 
 ### Metodo
