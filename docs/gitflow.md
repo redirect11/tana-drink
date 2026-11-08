@@ -137,7 +137,11 @@ Prima di aprire la PR si passa il cancello, tutto quanto:
    registro bug (`BUG-*` in `requirements/bugs.yaml`), aggiornati nello
    stesso giro, coi **test citati** nei `test_cases`. Il test dei
    requisiti verifica il legame; `node scripts/requisiti.mjs` dice a che
-   punto siamo.
+   punto siamo. **E la richiesta ha la sua V** ([modello-a-v.md](modello-a-v.md)):
+   il requisito sta fra i `requisiti` di un bisogno (`UR-*` in
+   `requirements/bisogni.yaml`), un difetto dice quale requisito tradisce,
+   e i test coprono i livelli che la richiesta tocca — unità sul modulo,
+   integrazione se tocca un componente di `requirements/architettura.yaml`.
 2. **Lint, test, build**: `npm run lint` pulito (attenzione: qui il lint
    può uscire con codice 1 senza stampare nulla — si guarda l'esito, non
    l'output), `npm test` verde, `npm run build` che compila.

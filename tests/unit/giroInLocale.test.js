@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// @livello integrazione: il codice vero con un Firestore finto (docs/modello-a-v.md)
 'use strict'
 
 // ── IL GIRO DI UNA SERATA, SENZA RETE ────────────────────────────────

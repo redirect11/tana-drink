@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi, indicizzaPerId } from '../../scripts/lib-requisiti.mjs'
+import { caricaBisogni, caricaArchitettura } from '../../scripts/lib-modello-v.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -232,8 +233,12 @@ describe('le issue che esistono gia’ si riallineano', () => {
 })
 
 describe('requisiti e test si tengono per mano', () => {
+  // Col modello a V (REQ-DEV-018) un test può appartenere anche a un
+  // bisogno (l'accettazione) o a un componente (l'integrazione): citato lì,
+  // non è un orfano.
   const citati = new Set(
-    requisiti.flatMap((r) => r.test_cases).filter((t) => t.includes('/'))
+    [...requisiti, ...caricaBisogni(), ...caricaArchitettura()]
+      .flatMap((r) => r.test_cases).filter((t) => t.includes('/'))
   )
 
   it('ogni test citato da un requisito esiste davvero', () => {

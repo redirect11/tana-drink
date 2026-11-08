@@ -24,9 +24,12 @@ import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { caricaRequisiti, FILE_BUGS } from './lib-requisiti.mjs'
 import { copertura, SEGNO, NOME, costruisciSpecifica } from './lib-specifica.mjs'
+import { caricaBisogni, caricaArchitettura, statoDellaV, LIVELLI } from './lib-modello-v.mjs'
 
 const DOCUMENTO = process.argv.includes('--documento')
 const requisiti = caricaRequisiti()
+const bisogni = caricaBisogni()
+const architettura = caricaArchitettura()
 
 const conteggi = {}
 for (const r of requisiti) {
@@ -49,6 +52,13 @@ if (!DOCUMENTO) {
     console.log('\n  Da fare:')
     for (const r of daFare) console.log(`   · ${r.id.padEnd(20)} ${r.title}`)
   }
+  // La V (REQ-DEV-018): quanti test a ogni livello, e quanto del registro
+  // sta già attaccato ai bisogni del locale.
+  const v = statoDellaV({ requisiti, bisogni, architettura })
+  console.log('\n  Il modello a V:')
+  for (const l of LIVELLI) console.log(`   · ${l.nome.padEnd(13)} ${String(v.test[l.id]).padStart(4)} file  — ${l.verifica}`)
+  console.log(`   ${v.bisogni} bisogni (${v.bisogniAccettati} con l'accettazione), ` +
+    `${v.requisitiConBisogno}/${v.requisiti} requisiti collegati a un bisogno, ${v.componenti} componenti`)
   console.log('\n  --documento per scrivere docs/system_specifications.md\n')
   process.exit(0)
 }
@@ -65,7 +75,7 @@ try {
 
 const file = 'docs/system_specifications.md'
 if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true })
-writeFileSync(file, costruisciSpecifica(requisiti, { bug }))
+writeFileSync(file, costruisciSpecifica(requisiti, { bug, bisogni, architettura }))
 
 const quanti = (stato) => requisiti.filter((r) => copertura(r) === stato).length
 console.log(
