@@ -99,6 +99,7 @@ import { usePaginaPiena } from '../lib/paginaPiena.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
+import AiutoCampo from './AiutoCampo.jsx'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -1876,10 +1877,10 @@ function RettificaForm({ item, onCancel, onConfirm }) {
           <span className="chip" style={{ cursor: 'default' }}>{unit}</span>
         )}
       </div>
-      <p className="muted small" style={{ margin: '4px 0 0' }}>
-        Giacenza effettiva rilevata: sostituisce quella registrata, e la
-        differenza viene registrata come rettifica.
-      </p>
+      <AiutoCampo style={{ margin: '4px 0 0' }}>
+        Giacenza effettiva rilevata. Sostituisce quella a sistema; la
+        differenza è contabilizzata come rettifica.
+      </AiutoCampo>
       <div className="grid-2" style={{ marginTop: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Annulla</button>
         <button className="btn small" onClick={confirm}>Salva contenuto</button>
@@ -2482,10 +2483,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       </select>
 
       <label htmlFor="isup">Fornitore</label>
-      <p className="muted small" style={{ marginTop: 0 }}>
-        Il prezzo indicato aggiorna il listino di questo fornitore. I listini
-        degli altri fornitori del prodotto restano invariati.
-      </p>
+      <AiutoCampo style={{ margin: '0 0 4px' }}>
+        Il prezzo indicato aggiorna il listino di questo fornitore; i listini
+        degli altri fornitori restano invariati.
+      </AiutoCampo>
       {nuovoFornitore != null ? (
         <div className="row" style={{ gap: 8 }}>
           <input
@@ -2596,11 +2597,11 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
           ))}
         </select>
       </div>
-      <p className="muted small" style={{ margin: '2px 0 8px' }}>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
         {contenutoPezzo > 0
-          ? 'Base del costo per unità di contenuto e dello scarico frazionato: 4 cl da un pezzo da 70 cl scaricano 0,057 pz.'
+          ? 'Base del costo per unità di contenuto e dello scarico frazionato (4 cl da un pezzo da 70 cl scaricano 0,057 pz).'
           : 'Senza contenuto il prodotto si dosa solo a pezzi interi e non ha un costo per unità di contenuto.'}
-      </p>
+      </AiutoCampo>
       {/* L'AVVERTENZA ONESTA: chi legge «47 pz» di limoni deve sapere che
           nessuno li ha contati uno per uno. */}
       {aPeso && (
@@ -2674,10 +2675,10 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         onChange={set('low_threshold')}
         placeholder="Scorta minima in pezzi"
       />
-      <p className="muted small" style={{ margin: '2px 0 8px' }}>
-        Scorta minima: al di sotto il prodotto risulta in esaurimento e
-        rientra nel riordino suggerito.
-      </p>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Sotto questa soglia il prodotto risulta in esaurimento e rientra nel
+        riordino suggerito.
+      </AiutoCampo>
 
       {avviso && (
         <div className="banner" role="alert" style={{ marginTop: 8 }}>

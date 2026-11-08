@@ -687,7 +687,7 @@ export function voceCassa({
       id: 'apri-cassa',
       icon: 'verde',
       label: 'Apri cassa',
-      hint: 'Senza cassa aperta non si battono ordini.',
+      hint: 'Senza cassa aperta gli ordini si battono ma non si incassano.',
       disabled: false,
     }
   }

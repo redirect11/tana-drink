@@ -4,6 +4,7 @@ import PriceSuggestion from './PriceSuggestion.jsx'
 import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { MESSAGGI_PIANO } from '../lib/limiti.js'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -221,12 +222,11 @@ export default function DrinkForm({
           />
         </div>
       </div>
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Lasciala vuota e vale quella del locale
-        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Si compila solo
-        dove fa eccezione — una bottiglia intera non si rivende come un drink
-        al banco.
-      </p>
+      <AiutoCampo>
+        Se vuota si applica l’IVA del locale
+        {saleVatLocale != null ? ` (${saleVatLocale}%)` : ''}. Va indicata solo
+        per le eccezioni, come le bottiglie vendute intere.
+      </AiutoCampo>
 
       {/* Costo reale della ricetta, prezzo consigliato e guadagno: si
           aggiorna man mano che si compongono gli ingredienti qui sotto. */}
@@ -248,16 +248,14 @@ export default function DrinkForm({
         onChange={set('nome_cliente')}
         placeholder={form.name || ''}
       />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Nome mostrato al cliente. Se vuoto, vale il nome della voce; comande e
-        scontrini usano sempre il nome della voce.
-      </p>
+      <AiutoCampo>
+        Nome della voce nel menù dei clienti. Se vuoto si usa il nome della
+        voce; comande e scontrini riportano sempre il nome della voce.
+      </AiutoCampo>
 
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Quello che legge il cliente sul menù.
-      </p>
+      <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
 
       {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
           magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»
@@ -269,11 +267,10 @@ export default function DrinkForm({
         onChange={set('ingredienti')}
         placeholder="Gin, basilico, lime, zucchero"
       />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto, si
-        ricava dalla ricetta, esclusi ghiaccio, lavorazione e formati di
-        confezione.
-      </p>
+      <AiutoCampo>
+        Elenco mostrato al cliente nel menù, separato da virgole. Se vuoto si
+        ricava dalla ricetta, esclusi ghiaccio, lavorazioni e confezioni.
+      </AiutoCampo>
 
       {/* COME SI PREPARA, a parole. La ricetta strutturata qui sotto dice
           COSA ci va e quanto — serve al magazzino — ma non dice il gesto:
@@ -290,9 +287,7 @@ export default function DrinkForm({
         onChange={set('recipe')}
         placeholder="Es. Shakerare con ghiaccio, filtrare in coppetta, scorza di limone."
       />
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Lo legge chi sta al banco, dalla ⓘ sulla scheda del prodotto.
-      </p>
+      <AiutoCampo>Consultabile al banco dal tasto ⓘ della scheda del prodotto.</AiutoCampo>
 
       {/* Ricetta strutturata: ingredienti collegati all'inventario (usata per
           lo scarico automatico e per mostrare gli ingredienti nel menù). */}
@@ -371,9 +366,10 @@ export default function DrinkForm({
         />
         <span>Drink speciale</span>
       </label>
-      <p className="muted small" style={{ margin: '2px 0 0' }}>
-        Compare nel menù Special e nel carosello in cima al menù del cliente, oltre che nella sua categoria.
-      </p>
+      <AiutoCampo>
+        Compare nel menù Special e nel carosello in cima al menù del cliente,
+        oltre che nella sua categoria.
+      </AiutoCampo>
       {/* IL DISEGNO DEL DRINK (REQ-MENU-018): bicchiere, colore e
           decorazione, nel segno delle incisioni del libro. L'anteprima è
           quella che vedrà il cliente. */}

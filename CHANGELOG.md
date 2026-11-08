@@ -8,6 +8,38 @@
   conto impagato; il conto battuto in sala che compare al banco su un altro
   dispositivo; quello che sala, bartender e cliente vedono del gestionale
   (REQ-DEV-018).
+- Un test di sistema per la cassa chiusa: il conto si batte e arriva al
+  server, e riscuotere resta spento (REQ-CASSA-017).
+
+### Banco
+
+- Gli ordini si battono anche a cassa chiusa; riscuotere, acconto e
+  impagato restano spenti finché la cassa non è aperta, e lo si legge sopra
+  i tasti. Anche i tasti Contanti e Carta delle card sono spenti
+  (REQ-CASSA-017).
+- Accanto a ogni riga del conto c'è l'iniziale di chi l'ha battuta, nel suo
+  colore: lo stesso colore della persona sulla card, nella legenda e in
+  alto. Il quadratino di chi ha aperto il conto resta sulla card
+  (REQ-ORD-023).
+- Gli avvisi della campanella, dello storico e del fumetto disegnano la
+  loro icona nel tema scelto: niente più emoji colorate fra le icone
+  monocrome (REQ-UI-031).
+
+### Stampa
+
+- Stampa automatica: per la comanda e per lo scontrino si sceglie se
+  devono uscire per i gesti del banco, della sala o di tutti e due — per
+  esempio lo scontrino solo per le riscossioni del banco e la comanda solo
+  per gli ordini presi in sala (REQ-STAMPA-021).
+
+### Gestionale
+
+- Marginalità listino: le categorie a sinistra, per guardarne una sola; i
+  filtri contano dentro la categoria scelta (REQ-MENU-032). Sul PC le
+  intestazioni stanno sopra i loro numeri (BUG-138).
+- Gli aiuti sotto i campi delle schede sono nascosti di partenza e si
+  riaccendono da Impostazioni → Aspetto → «Aiuti sotto i campi»; i testi
+  sono riscritti in frasi piane (REQ-UI-032).
 
 ## 1.10.29-beta — 08/11/2026 (test)
 

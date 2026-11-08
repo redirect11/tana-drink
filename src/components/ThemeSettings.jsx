@@ -6,6 +6,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
 import { TemaIcone } from '../lib/temaIcone.js'
 import { temaIconeDi, GRUPPI_ICONE } from '../lib/icone.js'
+import { CHIAVE_AIUTI_CAMPI, aiutiCampiAccesi } from '../lib/aiutiCampi.js'
 import {
   THEME_FIELDS,
   THEME_PRESETS,
@@ -43,6 +44,41 @@ export default function ThemeSettings({ settings, onSave }) {
       />
       <CardDellaCoda settings={settings} onSave={onSave} />
       <IconeDelGestionale settings={settings} onSave={onSave} />
+      <AiutiDelleSchede settings={settings} onSave={onSave} />
+    </div>
+  )
+}
+
+// ── GLI AIUTI SOTTO I CAMPI (REQ-UI-032) ─────────────────────────────
+//
+// Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi
+// compilabili o almeno permettere di abilitarli/disabilitarli». Sta in
+// Aspetto per la regola dell'utente del 20/08/2026: come si vede una cosa,
+// di qualunque sezione, si decide qui. Due tasti come per le card della
+// coda: le due risposte hanno lo stesso peso.
+function AiutiDelleSchede({ settings, onSave }) {
+  const accesi = aiutiCampiAccesi(settings)
+  const opzione = (valore, nome) => (
+    <button
+      type="button"
+      className={`mode-option${accesi === valore ? ' active' : ''}`}
+      aria-pressed={accesi === valore}
+      onClick={() => onSave({ [CHIAVE_AIUTI_CAMPI]: valore })}
+    >
+      {nome}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h4 style={{ margin: '0 0 4px' }}>Aiuti sotto i campi</h4>
+      <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
+        Le righe di spiegazione sotto i campi delle schede: drink, prodotti di magazzino, listini, documenti
+        dei fornitori. Valgono per tutti i terminali del locale.
+      </p>
+      <div className="mode-choice" role="group" aria-label="Aiuti sotto i campi">
+        {opzione(false, 'Nascosti')}
+        {opzione(true, 'Visibili')}
+      </div>
     </div>
   )
 }

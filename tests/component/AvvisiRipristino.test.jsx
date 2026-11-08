@@ -202,7 +202,7 @@ describe('annulla e ripristina: un avviso solo', () => {
     // il cambio di stato. Due di questi raccontavano lo stesso ritorno.
     expect(avvisi()).toEqual([
       '✖️ Annullato | Ordine #5',
-      '↩️ Conto ripristinato | Ordine #5',
+      '♻️ Conto ripristinato | Ordine #5',
     ])
   })
 
@@ -225,7 +225,7 @@ describe('annulla e ripristina: un avviso solo', () => {
     await act(async () => mandaOrdini([tornato]))
     expect(avvisi()).toEqual([
       '✖️ Annullato | Ordine #5',
-      '↩️ Conto ripristinato | Ordine #5',
+      '♻️ Conto ripristinato | Ordine #5',
     ])
   })
 

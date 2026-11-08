@@ -29,6 +29,7 @@ import { impostaContestoDiagnostica, segnala, TIPO } from './diagnosticaStampant
 import { impagatoAperto, numeroComanda, pezziDellaComanda, righeDellaComanda } from './comande.js'
 import { aCapo } from './impagato.js'
 import { battutoDaQui } from './dispositivo.js'
+import { isGestore } from './ruoli.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
 import { rigaMarchio } from './limiti.js'
@@ -163,7 +164,11 @@ export const DEFAULT_PRINTER_SETTINGS = {
   port: 8043,       // 8043 = HTTPS (WSS), 8008 = HTTP (WS)
   https: true,      // false → HTTP, solo se l'app è servita in HTTP
   autoPrintComanda: false,  // stampa automatica comanda all'arrivo dell'ordine
-  autoPrintScontrino: false, // stampa automatica scontrino al "pronto"
+  autoPrintScontrino: false, // stampa automatica scontrino alla riscossione
+  // DA DOVE deve venire il gesto perché la stampa automatica parta
+  // (REQ-STAMPA-021): 'tutti', 'banco' o 'sala'. Vedi stampaDa più sotto.
+  autoPrintComandaDa: 'tutti',
+  autoPrintScontrinoDa: 'tutti',
   // CHI STAMPA LE COMANDE PRESE IN SALA: 'ip' = il telefono della sala parla
   // da sé con la stampante (ha l'IP: la configurazione arriva dal server);
   // 'rimbalzo' = la sala non stampa e la comanda esce al banco, che deve
@@ -371,9 +376,42 @@ export function lavoroAnnullato(order, comanda = null) {
   )
 }
 
+// ── DAL BANCO O DALLA SALA (REQ-STAMPA-021) ─────────────────────────
+//
+// Richiesta dell'08/11/2026: «differenziare se le operazioni provengono da
+// cassa o da sala (esempio: stampa solo riscossione da banco e stampa in
+// automatico la comanda se presa da sala)». Al banco la comanda di quello
+// che si prepara da sé non serve — il bartender ce l'ha davanti —, quella
+// presa al tavolo sì; lo scontrino lo vuole chi incassa alla cassa, non il
+// telefono che chiude un conto in sala.
+//
+// L'ORIGINE È IL RUOLO DI CHI HA FATTO IL GESTO: banco = chi gestisce
+// (admin, bartender), sala = la sala e i clienti dal loro telefono. Per una
+// comanda è chi ne ha battuto le righe (la firma della riga, REQ-ORD-023),
+// e per le comande di prima chi ha aperto il conto; per lo scontrino è chi
+// sta incassando.
+export const ORIGINI_STAMPA = Object.freeze([
+  { id: 'tutti', label: 'Banco e sala' },
+  { id: 'banco', label: 'Solo dal banco' },
+  { id: 'sala', label: 'Solo dalla sala' },
+])
+export const origineDelRuolo = (role) => (isGestore(role) ? 'banco' : 'sala')
+export function stampaDa(da, role) {
+  return !da || da === 'tutti' || da === origineDelRuolo(role)
+}
+export function ruoloDellaComanda(order, comanda) {
+  const firmata = (comanda?.items || []).find((i) => i?.added_by?.role)
+  return firmata ? firmata.added_by.role : (order?.placed_by?.role ?? null)
+}
+// Lo scontrino automatico di una riscossione fatta da `role`.
+export function scontrinoAutomatico(role, impostazioni = loadPrinterSettings()) {
+  return impostazioni?.autoPrintScontrino === true && stampaDa(impostazioni.autoPrintScontrinoDa, role)
+}
+
 export function comandeDaStampare(order, opzioni = {}) {
   if (!order || lavoroAnnullato(order)) return []
   if (!stampaQuestoTerminale(order, opzioni)) return []
+  const da = (opzioni.impostazioni || loadPrinterSettings()).autoPrintComandaDa
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
   // LIMONCELLO da solo visto al banco — stampato a metà battuta, mentre chi
   // stava al POS aveva ancora il vassoio da riempire. Il ticket esce quando
@@ -384,6 +422,7 @@ export function comandeDaStampare(order, opzioni = {}) {
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
     // dire che qualcuno l'ha lavorata senza carta, e stamparla ora è tardi.
     if (c.status !== 'ricevuto' && c.status !== 'in_preparazione') return false
+    if (!stampaDa(da, ruoloDellaComanda(order, c))) return false
     return !c.auto_print_at
   })
 }

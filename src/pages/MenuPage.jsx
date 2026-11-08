@@ -44,7 +44,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 import { useMenu, useStrutturaMenu } from '../lib/menuCache.js'
 import { isGestore, isPersonale } from '../lib/ruoli.js'
 import { idDispositivo } from '../lib/dispositivo.js'
-import { printComanda, salaStampaDaSe } from '../lib/printer.js'
+import { printComanda, salaStampaDaSe, stampaDa, loadPrinterSettings } from '../lib/printer.js'
 import OrderSummary from '../components/OrderSummary.jsx'
 import StaffDrawer from '../components/StaffDrawer.jsx'
 import CustomDrinkForm from '../components/CustomDrinkForm.jsx'
@@ -368,7 +368,9 @@ export default function MenuPage({ speciali = false }) {
       // il locale non abbia scelto di farla uscire al banco ('rimbalzo').
       // La stampa non si aspetta: se fallisce lo dice il pallino nella coda,
       // e l'ordine è comunque salvato.
-      if (staff && salaStampaDaSe()) {
+      // E solo se il locale vuole in automatico le comande della sala: con
+      // «Solo dal banco» non le stampa nessuno da sé (REQ-STAMPA-021).
+      if (staff && salaStampaDaSe() && stampaDa(loadPrinterSettings().autoPrintComandaDa, staff.role)) {
         printComanda(order, order.comande?.at(-1) ?? null).catch((e) =>
           console.warn('[printer] comanda sala:', e.message)
         )

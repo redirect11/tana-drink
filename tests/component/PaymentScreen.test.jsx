@@ -12,6 +12,11 @@ import '@testing-library/jest-dom/vitest'
 import { CON_LICENZA } from '../helpers/licenza.js'
 
 vi.mock('../../src/lib/api.js', () => ({
+  // La cassa della serata è aperta: il pagamento lo chiede (REQ-CASSA-017).
+  subscribeOpenCashSession: (cb) => {
+    cb({ id: 'cassa-test', status: 'open' })
+    return () => {}
+  },
   registerPayment: vi.fn(() => Promise.resolve({ closed: false })),
   markOrderPaid: vi.fn(() => Promise.resolve()),
   setOrderDiscount: vi.fn(() => Promise.resolve()),
@@ -37,11 +42,17 @@ vi.mock('../../src/lib/api.js', () => ({
 vi.mock('../../src/lib/paymentsApi.js', () => ({
   readerCheckout: vi.fn(() => Promise.resolve({})),
 }))
-vi.mock('../../src/lib/printer.js', () => ({
+vi.mock('../../src/lib/printer.js', async (originale) => {
+  const vero = await originale()
+  const loadPrinterSettings = vi.fn(() => ({ businessName: 'La Tana' }))
+  return {
   printScontrino: vi.fn(() => Promise.resolve()),
   printScontrinoAcconto: vi.fn(() => Promise.resolve()),
   printFattura: vi.fn(() => Promise.resolve()),
-  loadPrinterSettings: vi.fn(() => ({ businessName: 'La Tana' })),
+  loadPrinterSettings,
+  // La regola «da dove» è quella vera, sulle impostazioni finte del
+  // terminale (REQ-STAMPA-021).
+  scontrinoAutomatico: (role) => vero.scontrinoAutomatico(role, loadPrinterSettings()),
   // L'ALIQUOTA È UNA SOLA, quella del locale (BUG-084): non sta più fra le
   // impostazioni della stampante. Qui il finto legge `sale_vat` come il vero.
   aliquotaScontrino: (impostazioni) => Number(impostazioni?.sale_vat ?? 10),
@@ -50,7 +61,8 @@ vi.mock('../../src/lib/printer.js', () => ({
   reclaimReceiptPrint: vi.fn(() => true),
   releaseReceiptPrint: vi.fn(),
   scontrinoGiaUscito: vi.fn(() => false),
-}))
+  }
+})
 vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn(), toastError: vi.fn() }))
 
 import PaymentScreen from '../../src/components/PaymentScreen.jsx'
