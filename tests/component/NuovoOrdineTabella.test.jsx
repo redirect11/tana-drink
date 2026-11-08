@@ -39,9 +39,6 @@ const LISTINI = [
 const stato = { articoli: [CAMPARI, GIN, RUM, AMARO], listini: LISTINI, ordini: [], fatture: [] }
 
 vi.mock('../../src/lib/api.js', () => ({
-  // Il catalogo che la coda precarica (BUG-137): qui non serve, e resta vuoto.
-  subscribeDrinks: () => () => {},
-  subscribeCategories: () => () => {},
   fetchInventoryItems: vi.fn(async () => stato.articoli),
   fetchSuppliers: vi.fn(async () => [NOVA, ENOFEL]),
   fetchSupplierPrices: vi.fn(async () => stato.listini),

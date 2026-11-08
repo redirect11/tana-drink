@@ -16,8 +16,8 @@
 ### Senza rete
 
 - Su un tablet o un telefono appena entrato, se la rete cade prima di aprire
-  il primo conto, i prodotti ci sono: il catalogo si carica già dalla coda
-  ordini. Prima il conto si apriva vuoto (BUG-137).
+  il primo conto, i prodotti ci sono: il catalogo si carica appena chi
+  lavora entra. Prima il conto si apriva vuoto (BUG-137).
 
 ### Aspetto
 

@@ -42,14 +42,18 @@ Le due regole che reggono la V:
 
 ## Il livello di un test
 
-Lo dice la cartella. Quando la cartella non dice il vero — molti file in
-`tests/unit` sono nati prima della V e mettono insieme `api.js` con un
-Firestore finto, che è integrazione — il test lo dichiara in testa, come
-già fa con l'ambiente:
+Lo dice la cartella. Ma quasi cinquanta file di `tests/unit` sono nati
+prima della V e mettono insieme il codice vero (`api.js`, `progressivi.js`…)
+con un Firestore finto: è integrazione. Si riconoscono da soli, da quello
+che fanno: in `tests/unit`, un test con `vi.mock('firebase/firestore')` è di
+integrazione.
+
+Per gli altri casi in cui la cartella non dice il vero, il test lo dichiara
+in testa, come già fa con l'ambiente, e la dichiarazione vince:
 
 ```js
 // @vitest-environment happy-dom
-// @livello integrazione: il codice vero con un Firestore finto (docs/modello-a-v.md)
+// @livello integrazione: perché, in una riga
 ```
 
 I livelli sono `unita`, `integrazione`, `sistema`, `accettazione`. I file

@@ -168,8 +168,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Il browser e i jar degli emulatori non cambiano da una PR all'altra:
+      # si tengono, invece di riscaricarli ogni volta. La chiave segue le
+      # versioni (package-lock per Playwright, firebase-tools fissato in
+      # package.json per gli emulatori).
+      - name: Cache del browser e degli emulatori
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/firebase/emulators
+          key: sistema-${{ runner.os }}-${{ hashFiles('package-lock.json', 'package.json') }}
+
       # In locale si usa il Chrome installato; qui il Chromium di Playwright,
-      # della stessa versione del pacchetto.
+      # della stessa versione del pacchetto. Con la cache piena scarica solo
+      # le librerie di sistema.
       - name: Browser
         run: npx playwright install --with-deps chromium
 

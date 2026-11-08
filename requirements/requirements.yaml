@@ -15363,9 +15363,12 @@ requirements:
       requirements/architettura.yaml) coi test di integrazione; il progetto
       di dettaglio, cioè il modulo, coi test di unità.
       IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component
-      e tests/bdd e tests/regole, tests/sistema, tests/accettazione), oppure
-      il test stesso con `// @livello <nome>` quando la cartella, scelta
-      prima della V, non dice il vero.
+      e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in
+      tests/unit un test che sostituisce Firestore
+      (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice
+      vero contro un Firestore finto; e il test stesso può dichiararlo con
+      `// @livello <nome>` quando la cartella, scelta prima della V, non dice
+      il vero.
       UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a
       un bisogno, e un difetto nato dopo dice quale requisito tradisce
       (`requisiti`). Le voci di prima si collegano a mano a mano, con un

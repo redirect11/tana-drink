@@ -100,8 +100,9 @@ risale coi test di ogni livello. Per intero in
   (`tests/sistema/*.spec.js`, Playwright: `npm run test:sistema`).
 - **Componenti** (`ARC-*`, [requirements/architettura.yaml](requirements/architettura.yaml))
   → test di **integrazione** (`tests/component/`, `tests/bdd/`, `tests/regole/`).
-- **Moduli** → test di **unità** (`tests/unit/`). Un test in una cartella che
-  non dice il vero lo dichiara: `// @livello integrazione`.
+- **Moduli** → test di **unità** (`tests/unit/`). In `tests/unit` un test che
+  sostituisce Firestore (`vi.mock('firebase/firestore')`) conta come
+  integrazione; per gli altri casi il test lo dichiara: `// @livello integrazione`.
 
 Un requisito **nuovo** sta fra i `requisiti` di un bisogno, e un difetto
 nuovo dice quale requisito tradisce (`requisiti:`): altrimenti la suite è

@@ -6,6 +6,7 @@
 // i test restano leggibili come una sequenza di gesti.
 import { test as base, expect } from '@playwright/test'
 import semina from './semina.mjs'
+import { SEED_UTENTI } from '../../src/dev/seedData.js'
 
 // OGNI TEST PARTE DA UN DATABASE PULITO. I test condividono lo stesso
 // emulatore: un giro che apre la cassa la lascerebbe aperta al prossimo, che
@@ -17,13 +18,14 @@ export const test = base.extend({
 })
 export { expect }
 
-// Le utenze le crea scripts/seed.js (SEED_UTENTI in src/dev/seedData.js).
-export const PASSWORD = 'collaudo123'
-
+// Le utenze le crea scripts/seed.js da SEED_UTENTI: la password si prende da
+// lì, così cambiando il seme i test non restano chiusi fuori.
 export async function entra(page, email) {
+  const utenza = SEED_UTENTI.find((u) => u.email === email)
+  if (!utenza) throw new Error(`[sistema] ${email} non è fra le utenze del seme (src/dev/seedData.js)`)
   await page.goto('/bar')
   await page.getByLabel('Email').fill(email)
-  await page.locator('#password').fill(PASSWORD)
+  await page.locator('#password').fill(utenza.password)
   await page.getByRole('button', { name: 'Entra', exact: true }).click()
 }
 

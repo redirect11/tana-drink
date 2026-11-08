@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import CategoryRail from './CategoryRail.jsx'
 import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
 import Icona from './Icona.jsx'
-import MetodoPagamento from './MetodoPagamento.jsx'
-import { MetodiPagamento } from './MetodoPagamento.jsx'
+import MetodoPagamento, { MetodiPagamento } from './MetodoPagamento.jsx'
 import {
   rendicontoOrdini,
   rendicontoProdotti,

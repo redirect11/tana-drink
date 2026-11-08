@@ -17,12 +17,11 @@
 // bisogno. Senza questo test la V resta un disegno in un documento.
 
 import { describe, it, expect } from 'vitest'
-import { readdirSync, statSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { caricaRequisiti, parseRequirementsYaml, FILE_BUGS } from '../../scripts/lib-requisiti.mjs'
 import {
   caricaBisogni, caricaArchitettura, livelloDelTest, natoPrimaDellaV,
-  bisogniPerRequisito, vDellaVoce, statoDellaV, NOMI_LIVELLI,
+  bisogniPerRequisito, statoDellaV, fileDiTest,
 } from '../../scripts/lib-modello-v.mjs'
 import { costruisciSpecifica } from '../../scripts/lib-specifica.mjs'
 
@@ -39,15 +38,6 @@ const servePer = bisogniPerRequisito(bisogni)
 // questo numero.
 const MASSIMO_SENZA_BISOGNO = 242
 
-function fileDiTest(dir = 'tests', out = []) {
-  for (const nome of readdirSync(dir)) {
-    const p = join(dir, nome)
-    if (statSync(p).isDirectory()) fileDiTest(p, out)
-    else if (/\.(test|spec)\.jsx?$/.test(nome)) out.push(p.replace(/\\/g, '/'))
-  }
-  return out
-}
-
 describe('il livello di un test', () => {
   it('di regola lo dice la cartella', () => {
     expect(livelloDelTest('tests/unit/x.test.js', '')).toBe('unita')
@@ -60,12 +50,19 @@ describe('il livello di un test', () => {
   })
 
   // giroInLocale sta in tests/unit da prima della V, ma mette insieme
-  // api.js con un Firestore che non risponde: è integrazione. Spostarlo
-  // vorrebbe dire riscrivere i percorsi nel registro.
-  it('ma il test può dichiararlo da sé, e vince la dichiarazione', () => {
+  // api.js con un Firestore che non risponde: è integrazione, come gli
+  // altri quasi cinquanta che fanno lo stesso. Spostarli vorrebbe dire
+  // riscrivere i percorsi nel registro: si riconoscono da quello che fanno.
+  it('in tests/unit, chi sostituisce Firestore è un test di integrazione', () => {
+    expect(livelloDelTest('tests/unit/giro.test.js', "vi.mock('firebase/firestore', () => ({}))\n")).toBe('integrazione')
+    expect(livelloDelTest('tests/unit/giroInLocale.test.js')).toBe('integrazione')
+    // Fuori da tests/unit la cartella dice già il vero.
+    expect(livelloDelTest('tests/sistema/x.spec.js', "vi.mock('firebase/firestore')\n")).toBe('sistema')
+  })
+
+  it('e un test può dichiararlo da sé, e vince la dichiarazione', () => {
     const testo = '// @vitest-environment happy-dom\n// @livello integrazione: il codice vero\n'
     expect(livelloDelTest('tests/unit/giro.test.js', testo)).toBe('integrazione')
-    expect(livelloDelTest('tests/unit/giroInLocale.test.js')).toBe('integrazione')
     // Una parola che non è un livello non cambia niente.
     expect(livelloDelTest('tests/unit/x.test.js', '// @livello importante\n')).toBe('unita')
   })
@@ -190,7 +187,7 @@ describe('la V di una voce, letta', () => {
     test_cases:
       - tests/accettazione/conto.test.js
 `)
-  const livello = (t) => livelloDelTest(t, '')
+  // I percorsi qui sotto non esistono: il livello lo dice la sola cartella.
 
   it('il lettore porta il criterio di accettazione e i requisiti, in tutte e due le forme', () => {
     expect(finti[0].accettazione).toBe('Si batte un conto e si guarda il totale.')
@@ -206,25 +203,22 @@ describe('la V di una voce, letta', () => {
     expect(multi[0].status).toBe('todo')
   })
 
-  it('conta i test per livello, e l’accettazione la prende dal bisogno', () => {
-    const req = { id: 'REQ-POS-900', test_cases: ['tests/unit/a.test.js', 'tests/component/B.test.jsx', 'tests/sistema/c.spec.js'] }
-    const v = vDellaVoce(req, { bisogni: finti, livello })
-    expect(v.bisogni).toEqual(['UR-900'])
-    expect(v.livelli).toEqual({ accettazione: 1, sistema: 1, integrazione: 1, unita: 1 })
-    expect(Object.keys(v.livelli)).toEqual(NOMI_LIVELLI)
+  it('da un requisito si risale ai bisogni che lo citano', () => {
+    expect(bisogniPerRequisito(finti).get('REQ-POS-900')).toEqual([finti[0]])
+    expect(bisogniPerRequisito(finti).has('REQ-POS-901')).toBe(false)
   })
 
-  it('il colpo d’occhio conta ogni file una volta sola', () => {
-    const req = { id: 'REQ-POS-900', status: 'implemented', test_cases: ['tests/unit/a.test.js'] }
+  it('il colpo d’occhio conta ogni file una volta sola, al suo livello', () => {
+    const req = { id: 'REQ-POS-900', status: 'implemented', test_cases: ['tests/unit/a.test.js', 'tests/component/B.test.jsx', 'tests/sistema/c.spec.js'] }
     const altro = { id: 'REQ-POS-901', status: 'implemented', test_cases: ['tests/unit/a.test.js'] }
-    const s = statoDellaV({ requisiti: [req, altro], bisogni: finti, architettura: [], livello })
+    const s = statoDellaV({ requisiti: [req, altro], bisogni: finti, architettura: [] })
     expect(s).toMatchObject({ bisogni: 1, bisogniAccettati: 1, requisiti: 2, requisitiConBisogno: 1 })
-    expect(s.test).toEqual({ accettazione: 1, sistema: 0, integrazione: 0, unita: 1 })
+    expect(s.test).toEqual({ accettazione: 1, sistema: 1, integrazione: 1, unita: 1 })
   })
 
   it('la specifica racconta i bisogni, li collega ai requisiti, e i requisiti ai bisogni', () => {
     const req = { id: 'REQ-POS-900', title: 'Il totale si compone', area: 'src/lib/x.js', description: 'Una descrizione.', status: 'implemented', test_cases: ['tests/unit/a.test.js'], labels: [] }
-    const doc = costruisciSpecifica([req], { bisogni: finti, livello, data: new Date(2026, 10, 8) })
+    const doc = costruisciSpecifica([req], { bisogni: finti, data: new Date(2026, 10, 8) })
     expect(doc).toContain('## I bisogni del locale')
     expect(doc).toContain('#### UR-900 — Il conto giusto')
     expect(doc).toContain('**Come si accetta**: Si batte un conto e si guarda il totale.')
@@ -232,6 +226,6 @@ describe('la V di una voce, letta', () => {
     expect(doc).toContain('**Serve**: [UR-900](#ur-900--il-conto-giusto)')
     expect(doc).toContain('### Le prove, livello per livello')
     // Senza bisogni il registro non è ancora nella V: niente capitolo vuoto.
-    expect(costruisciSpecifica([req], { livello })).not.toContain('I bisogni del locale')
+    expect(costruisciSpecifica([req])).not.toContain('I bisogni del locale')
   })
 })

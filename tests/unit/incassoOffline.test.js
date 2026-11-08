@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-// @livello integrazione: il codice vero con un Firestore finto (docs/modello-a-v.md)
 'use strict'
 
 // INCASSARE DEVE FUNZIONARE ANCHE SENZA RETE — contanti o carta.
