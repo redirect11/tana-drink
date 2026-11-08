@@ -5822,3 +5822,27 @@ bugs:
     requisiti: [REQ-OFFLINE-006]
     test_cases:
       - tests/sistema/serataSenzaRete.spec.js
+
+  - id: BUG-138
+    title: "Marginalità listino: sul PC le intestazioni non stanno sopra i loro numeri"
+    area: "src/index.css (.margin-tab th .inv-th), src/components/SortTh.jsx"
+    severity: minore
+    priority: P2
+    description: >
+      Segnalato l'08/11/2026: «in MENU - MARGINALITA LISTINO i dati non sono
+      incolonnati alle voci in alto quando si visualizzano da pc».
+      L'intestazione che ordina (SortTh) è un pulsante nato per le tabelle a
+      griglia del magazzino, dove la cella è lui; dentro un <th> della
+      tabella dei margini restava largo quanto la sua etichetta e si
+      appoggiava a sinistra, mentre i numeri sotto stanno a destra. Sul
+      telefono le colonne sono strette e non si notava; sul PC la tabella si
+      allarga a tutta la pagina e «Costo» finiva mezza colonna lontano dal
+      suo numero. ORA il pulsante occupa tutta la cella e l'etichetta va a
+      destra come i numeri.
+    status: fixed
+    in_produzione: true
+    generate_issue: true
+    labels: [bug, menu, ui]
+    requisiti: [REQ-MENU-002]
+    test_cases:
+      - tests/component/MarginList.test.jsx

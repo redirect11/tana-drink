@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
-import { useCashSession } from '../lib/cashSession.js'
 import Caricamento from '../components/Caricamento.jsx'
 import AvvisoPiano from '../components/AvvisoPiano.jsx'
 import { subscribeSettings, settingsIniziali } from '../lib/api.js'
 import { maxContiAperti, puoAprireConto, MESSAGGI_PIANO } from '../lib/limiti.js'
 import { useContiAperti } from '../lib/useContiAperti.js'
-import Icona from '../components/Icona.jsx'
 
 // ── POS cassa: CREAZIONE di un ordine nuovo ────────────────────────────────
 // Stessa identica schermata della modifica: un solo componente
 // (OrderPosDetail) che senza `order` lavora in creazione. Vedi lì la logica.
 //
-// SENZA CASSA APERTA non si battono ordini: la numerazione e gli incassi
-// seguono la sessione di cassa, quindi si parte da lì.
+// A CASSA CHIUSA SI BATTE LO STESSO (REQ-CASSA-017): il conto nasce, si
+// numera sulla giornata (REQ-ORD-016) e le comande partono; quello che
+// aspetta la cassa è l'incasso, e lo spegne il pagamento (PaymentScreen).
+// Prima qui c'era un cartello «Cassa chiusa» al posto del conto.
 //
 // I CONTI APERTI DEL PIANO FREE (REQ-LIC-003): con `conti_aperti_max` nella
 // licenza, oltre quel numero di conti aperti insieme non se ne apre un
@@ -24,14 +24,13 @@ import Icona from '../components/Icona.jsx'
 // conto appena nato, che fa salire il numero, non deve chiudere la porta a
 // chi lo sta battendo. Senza limiti nella licenza non si conta niente.
 export default function PosPage() {
-  const { open, loading } = useCashSession()
   const [impostazioni, setImpostazioni] = useState(settingsIniziali)
   useEffect(() => subscribeSettings(setImpostazioni, () => {}), [])
   const max = maxContiAperti(impostazioni)
   const aperti = useContiAperti(impostazioni)
   const [pieno, setPieno] = useState(null)
   useEffect(() => {
-    if (pieno !== null || loading || !open) return
+    if (pieno !== null) return
     // Senza limite la schermata si apre subito, e da lì in poi resta: se
     // le impostazioni fresche portassero un limite a conto già in mano, non
     // si toglie la schermata da sotto le dita di chi sta battendo.
@@ -41,30 +40,9 @@ export default function PosPage() {
     }
     if (aperti == null) return
     setPieno(!puoAprireConto(impostazioni, aperti))
-  }, [pieno, loading, open, max, aperti, impostazioni])
+  }, [pieno, max, aperti, impostazioni])
 
-  if (loading) return <Caricamento testo="Apro la cassa…" />
-
-  if (!open) {
-    return (
-      <div className="card" style={{ marginTop: 16, textAlign: 'center' }}>
-        <h3 style={{ marginTop: 0 }}><Icona nome="rosso" gruppo="tasti" /> Cassa chiusa</h3>
-        <p className="muted" style={{ margin: '8px 0 14px' }}>
-          Per battere ordini bisogna prima <strong>aprire la cassa</strong>: il
-          progressivo degli ordini e gli incassi della serata seguono la
-          sessione di cassa.
-        </p>
-        <Link className="btn block" to="/bar?tab=pagamenti">
-          <Icona nome="verde" gruppo="tasti" /> Vai ad aprire la cassa
-        </Link>
-        <Link className="btn ghost small block" style={{ marginTop: 8 }} to="/bar">
-          ← Torna agli ordini
-        </Link>
-      </div>
-    )
-  }
-
-  if (pieno === null && max != null) return <Caricamento testo="Apro la cassa…" />
+  if (pieno === null && max != null) return <Caricamento testo="Apro il conto…" />
   if (pieno) {
     return (
       <div style={{ marginTop: 16 }}>

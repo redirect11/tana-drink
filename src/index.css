@@ -2892,6 +2892,23 @@ body.fullbleed .bar-content {
 .order-by.client {
   background: rgba(150, 150, 150, 0.22);
 }
+/* Accanto al nome di una riga del conto (REQ-ORD-023): il segno non si
+   stringe quando il nome è lungo, è il nome a perdere lettere. */
+/* Da dove deve venire il gesto perché la stampa automatica parta
+   (REQ-STAMPA-021): sotto l'interruttore che riguarda, la parola e i gettoni
+   sulla stessa riga, che va a capo sul telefono. */
+.stampa-da {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 2px 0 10px;
+}
+.riga-autore {
+  flex-shrink: 0;
+  margin-right: 6px;
+  font-size: 0.9em;
+}
 .order-legend {
   display: flex;
   flex-wrap: wrap;
@@ -4148,11 +4165,6 @@ body.drawer-open .status-bell-float { display: none; }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-/* LA MARGINALITÀ DEL LISTINO IN TABELLA (REQ-MENU-002): costo, prezzo,
-   margine e ricarico in colonna, divisa per categorie. Più grande della
-   tabella delle macro: il prezzo che prima stava «scritto piccolo» sotto il
-   nome (Flavio, 22/10/2026) qui è un numero da leggere. La voce resta
-   ferma a sinistra quando la tabella scorre sul telefono. */
 /* IL RESTO IN CONTANTI (REQ-PAG-015), sopra il tastierino del pagamento.
    Una riga sola di tasti che va a capo sugli schermi stretti, e l'esito in
    grande: si legge con le monete in mano. Non cresce oltre il suo
@@ -4183,6 +4195,11 @@ body.drawer-open .status-bell-float { display: none; }
   font-size: 1.5rem;
 }
 
+/* LA MARGINALITÀ DEL LISTINO IN TABELLA (REQ-MENU-002): costo, prezzo,
+   margine e ricarico in colonna, divisa per categorie. Più grande della
+   tabella delle macro: il prezzo che prima stava «scritto piccolo» sotto il
+   nome (Flavio, 22/10/2026) qui è un numero da leggere. La voce resta
+   ferma a sinistra quando la tabella scorre sul telefono. */
 .margin-tab {
   border-collapse: collapse;
   min-width: 100%;
@@ -4207,6 +4224,15 @@ body.drawer-open .status-bell-float { display: none; }
 }
 .margin-tab thead th {
   vertical-align: bottom;
+}
+/* L'INTESTAZIONE OCCUPA TUTTA LA CELLA (BUG-138). SortTh è un pulsante
+   nato per le tabelle a griglia del magazzino, dove la cella è lui; dentro
+   un <th> restava largo quanto la sua etichetta e si appoggiava a sinistra,
+   mentre i numeri sotto stanno a destra. Sul telefono le colonne sono
+   strette e non si notava; sul PC la tabella si allarga a tutta la pagina e
+   «Costo» finiva sopra il nulla, col suo numero mezza colonna più in là. */
+.margin-tab th .inv-th {
+  width: 100%;
 }
 .margin-tab .margin-cat th,
 .margin-tab .margin-cat td {

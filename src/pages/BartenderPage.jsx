@@ -142,7 +142,7 @@ import { ensureNotificationPermission, notify } from '../lib/notify.js'
 import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
-import { printComanda, printScontrino, loadPrinterSettings, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
+import { printComanda, printScontrino, loadPrinterSettings, scontrinoAutomatico, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -164,6 +164,7 @@ import { legendaConPresenze, BATTITO_PRESENZA_MS } from '../lib/presenza.js'
 import CorsieStato from '../components/CorsieStato.jsx'
 import CorsieComande from '../components/CorsieComande.jsx'
 import OrderBy from '../components/OrderBy.jsx'
+import { colorePersona } from '../lib/colorePersona.js'
 import FumettoAvvisi from '../components/FumettoAvvisi.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
 import ApriCassaBox from '../components/ApriCassaBox.jsx'
@@ -754,7 +755,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   useEffect(() => subscribeSettings((s) => setSettings(s)), [])
   useEffect(() => subscribePending(setPend), [])
-  // Senza cassa aperta non si battono ordini: il «+» è spento e in cima
+  // Senza cassa aperta si batte ma non si incassa (REQ-CASSA-017): in cima
   // compare l'avviso con la scorciatoia per aprirla.
   // ATTENZIONE ALLA FORMA: `open` è un BOOLEANO, la cassa vera sta in
   // `session`. Leggendo `cassaAperta?.id` da un booleano viene `undefined`,
@@ -2126,9 +2127,14 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     const readerPending = o.payment_method === 'lettore' && o.payment_status === 'in_attesa'
     // Senza gestione della preparazione l'ordine resta "ricevuto": legare
     // l'incasso agli stati lo renderebbe impossibile.
+    // A cassa chiusa si batte ma non si incassa (REQ-CASSA-017): i tasti
+    // restano al loro posto, spenti, col perché nel titolo.
+    const cassaChiusa = !cassaLoading && !cassaAperta
     const canCollect =
+      !cassaChiusa &&
       o.payment_status !== 'pagato' &&
       (!workflowOn || [ORDER_STATUSES.PRONTO, ORDER_STATUSES.RITIRATO].includes(o.workflow_status))
+    const perchéNonIncassa = cassaChiusa ? 'Cassa chiusa: per incassare va aperta la cassa' : null
     return (
       <>
         {/* Coi tasti che compaiono e spariscono, quello che cercavi non è più
@@ -2192,7 +2198,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               className="btn secondary block"
               style={{ marginTop: o.workflow_status === ORDER_STATUSES.PRONTO ? 8 : 0 }}
               disabled={!canCollect}
-              title={canCollect ? undefined : 'Conto già chiuso o non ancora incassabile'}
+              title={canCollect ? undefined : perchéNonIncassa || 'Conto già chiuso o non ancora incassabile'}
               onClick={() => incassaSuLettore(o)}
             >
               <Icona nome="lettore" gruppo="tasti" /> Incassa sul lettore
@@ -2220,7 +2226,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                 key={metodo}
                 className="btn"
                 disabled={readerPending || !canCollect}
-                title={canCollect ? undefined : 'Conto già chiuso'}
+                title={canCollect ? undefined : perchéNonIncassa || 'Conto già chiuso'}
                 onClick={() => {
                   markOrderPaid(o.id, metodo, { autoServe: !workflowOn }).catch((e) =>
                     setError(e.message)
@@ -2230,7 +2236,8 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   // incassato adesso e il metodo appena scelto.
                   try {
                     if (
-                      loadPrinterSettings().autoPrintScontrino &&
+                      // Chi incassa dalla coda è chi la guarda (REQ-STAMPA-021).
+                      scontrinoAutomatico(ruolo, loadPrinterSettings()) &&
                       // Un altro terminale l'ha già stampato: il segno sta sul
                       // conto, non nella memoria di questo browser (BUG-055).
                       !scontrinoGiaUscito(o) &&
@@ -2604,11 +2611,12 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
       <FumettoAvvisi onApri={() => window.dispatchEvent(new Event('drink:apri-avvisi'))} />
       {error && <div className="banner">Errore: {error}</div>}
 
-      {/* Cassa chiusa: non si battono ordini finché non la si apre. */}
+      {/* Cassa chiusa: gli ordini si battono, gli incassi aspettano che la
+          si apra (REQ-CASSA-017). */}
       {!cassaLoading && !cassaAperta && (
         <div className="banner cassa-chiusa-banner">
           <Icona nome="rosso" gruppo="segnali" />{' '}<strong>Cassa chiusa</strong> —{' '}
-          {gestore ? 'per battere ordini apri prima la cassa.' : 'per battere ordini la deve aprire il banco.'}{' '}
+          {gestore ? 'gli ordini si battono, per incassare va aperta la cassa.' : 'gli ordini si battono, per incassare la deve aprire il banco.'}{' '}
           {/* Si apre da qui: mandare al flusso di cassa per premere un tasto e
               tornare indietro sono tre passaggi per una cosa che ne vale uno.
               La sala invece legge e basta: aprirla non è cosa sua, e un tasto
@@ -2768,16 +2776,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                   </span>
                 )
               })()}
-            {cassaAperta || cassaLoading ? (
-              <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
-            ) : (
-              <button
-                className="btn board-add"
-                disabled
-                aria-label="Nuovo ordine (apri prima la cassa)"
-                title="Apri la cassa per battere ordini"
-              />
-            )}
+            <Link className="btn board-add" to="/pos" aria-label="Nuovo ordine" title="Nuovo ordine" />
           </div>
           {/* SECONDA RIGA: conteggi e legenda degli autori. Stavano dentro
               il titolo, e il titolo diventava alto due o tre righe: la
@@ -2804,7 +2803,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
               <div className="order-legend">
                 {vociLegenda.map((v) => (
                   <span key={v.lettera} className={v.soloOnline ? 'legenda-online' : undefined}>
-                    <span className="order-by staff">{v.lettera}</span> {v.nome}
+                    {/* Col colore della persona, lo stesso delle card e
+                        delle righe del conto (REQ-ORD-023). */}
+                    <span className="order-by staff" style={{ background: colorePersona(v.nome) }}>{v.lettera}</span> {v.nome}
                     {/* «SEI TU» è metà del motivo per cui la cosa è stata
                         chiesta: chi si collega deve sapere con che lettera
                         si riconoscerà sulle card, prima di battere il primo

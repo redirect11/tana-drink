@@ -13,13 +13,14 @@ import {
 import { readerCheckout } from '../lib/paymentsApi.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { useOnline } from '../lib/useOnline.js'
+import { useCashSession } from '../lib/cashSession.js'
 import { useResizable } from '../lib/useResizable.js'
 import { contantiProbabili, restoDa, leggiImporto } from '../lib/resto.js'
 import { allServed } from '../lib/comande.js'
 import { chiudiImpagato } from '../lib/api.js'
 import { patchImpagato } from '../lib/impagato.js'
 import { activeVouchers } from '../lib/vouchers.js'
-import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, datiFiscaliDelLocale } from '../lib/printer.js'
+import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSettings, scontrinoAutomatico, aliquotaScontrino, claimReceiptPrint, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, datiFiscaliDelLocale } from '../lib/printer.js'
 import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
@@ -145,7 +146,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         // conto interno. Non si prende nemmeno la pretesa: se il conto
         // verrà riaperto e riscosso normale, la stampa esce come sempre.
         !senzaStampa &&
-        (impagato || loadPrinterSettings().autoPrintScontrino) &&
+        // Da chi sta incassando dipende anche se esce da sola: c'è chi la
+        // vuole solo alla cassa del banco (REQ-STAMPA-021).
+        (impagato || scontrinoAutomatico(chi?.()?.role, loadPrinterSettings())) &&
         // Il segno sta SUL DATO: un altro terminale l'ha già stampato e qui
         // non esce la seconda copia.
         !scontrinoGiaUscito(order)
@@ -360,6 +363,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const scontoFuoriMisura = scontoEccessivo(order)
   const served = allServed(order)
   const closed = order.payment_status === 'pagato'
+  // A CASSA CHIUSA SI BATTE MA NON SI INCASSA (REQ-CASSA-017). Un incasso
+  // senza sessione non finisce in nessuna chiusura: la sera dopo il
+  // contante contato non torna con niente. I tasti che chiudono soldi —
+  // riscuotere, acconto, impagato — restano al loro posto ma spenti, col
+  // motivo scritto sopra; il preconto e lo sconto restano. Finché la
+  // sessione non è arrivata dalla cache non si spegne niente: «chiusa» va
+  // detto quando lo si sa, non al primo istante.
+  const { open: cassaAperta, loading: cassaInArrivo } = useCashSession()
+  const cassaChiusa = !cassaAperta && !cassaInArrivo
   // LE DUE VIE ALTERNATIVE SI DECIDONO QUI, non nel JSX: la riga che le
   // ospita esiste solo se ce n'è almeno una, altrimenti sotto il tasto
   // grande resterebbe un contenitore vuoto con la sua aria.
@@ -578,6 +590,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // «Riscuoti» e «Riscuoti e servi» sono lo stesso incasso: cambia solo se
   // le comande risultano servite — e quindi se il conto si chiude adesso.
   const riscuoti = ({ servi = false, senzaStampa = false, conAcconto = false } = {}) => {
+    if (cassaChiusa) return
     const autoServe = autoServeBase || servi
     const items = !manual && splitting ? selection : null
     // ── LO SCONTO SI CONSUMA QUI ──────────────────────────────────────
@@ -679,7 +692,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
         chiude: willClose,
         senzaStampa,
         colTasto: conAcconto,
-        autoStampa: loadPrinterSettings().autoPrintScontrino,
+        autoStampa: scontrinoAutomatico(chi?.()?.role, loadPrinterSettings()),
       })
     ) {
       printScontrinoAcconto(order, { amount: toPay, method, items, sconto }).catch((e) => {
@@ -693,6 +706,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // Come contante e carta: il conto si chiude SUBITO a schermo e la
   // scrittura va in sottofondo; se non riesce lo si dice nel dettaglio.
   const confermaImpagato = () => {
+    if (cassaChiusa) return
     const nota = notaImpagato.trim() || null
     const chiSono = chi?.() ?? null
     // Lo stesso segno che scrive l'api, per lo scontrino che esce adesso.
@@ -1170,6 +1184,11 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               Quando quel tasto è spento nelle impostazioni resta solo questo
               `title`: è l'unico posto dov'era, e serviva un posto che non
               rubasse una riga. */}
+          {!closed && cassaChiusa && (
+            <div className="banner payscreen-cassa-chiusa" role="status">
+              <Icona nome="rosso" gruppo="segnali" /> Cassa chiusa: per incassare va aperta la cassa.
+            </div>
+          )}
           {!closed && (
             <button
               className="btn block payscreen-collect"
@@ -1178,7 +1197,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                   ? `Comande non ancora servite: il conto resta aperto anche dopo l'incasso${riscuotiEServi ? ', a meno di «Riscuoti e servi»' : ''}.`
                   : undefined
               }
-              disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+              disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
               onClick={() => riscuoti()}
             >
               {due <= 0 ? 'Chiudi conto · 0,00 €' : `Riscuotere · ${formatPrice(toPay)}`}
@@ -1200,7 +1219,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {mostraSenzaStampa && (
                 <button
                   className="btn ghost payscreen-collect-muto"
-                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || !(toPay > 0)}
                   onClick={() => riscuoti({ senzaStampa: true })}
                 >
                   Riscuoti (senza stampa) · {formatPrice(toPay)}
@@ -1220,7 +1239,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 <button
                   className={`btn ghost payscreen-collect-acconto${chiudeOra ? ' spento' : ''}`}
                   aria-disabled={chiudeOra || undefined}
-                  disabled={saving || scontoFuoriMisura || !(toPay > 0)}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || !(toPay > 0)}
                   onClick={() =>
                     chiudeOra
                       ? showToast(
@@ -1238,7 +1257,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               {mostraEServi && (
                 <button
                   className="btn ghost payscreen-collect-servi"
-                  disabled={saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
+                  disabled={cassaChiusa || saving || scontoFuoriMisura || (due > 0 && !(toPay > 0))}
                   onClick={() => riscuoti({ servi: true })}
                 >
                   Riscuoti e servi · chiude il conto
@@ -1304,7 +1323,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
               il conto, non un metodo di pagamento — quindi un tasto a parte,
               che apre la sua finestra invece di diventare il metodo scelto. */}
           {!closed && due > 0 && (
-            <button type="button" className="payscreen-method" onClick={() => setImpagatoAperta(true)}>
+            <button type="button" className="payscreen-method" disabled={cassaChiusa} onClick={() => setImpagatoAperta(true)}>
               <Icona nome="orario" gruppo="tasti" /> Impagato
             </button>
           )}
