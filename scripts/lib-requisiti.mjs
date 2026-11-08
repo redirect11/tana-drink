@@ -14,74 +14,98 @@ import { fileURLToPath } from 'node:url'
 // Parses only the subset of YAML used in requirements.yaml.
 // For a production system, replace with `js-yaml` (npm install js-yaml).
 
+// I BLOCCHI DI TESTO (`chiave: >`) e GLI ELENCHI che il parser conosce. Erano
+// uno per tipo — `description` e `test_cases` — finché il modello a V
+// (REQ-DEV-018) non ha portato i bisogni del locale, che hanno anche il
+// criterio di accettazione scritto in prosa e l'elenco dei requisiti che li
+// realizzano: stessa forma, chiavi diverse.
+const BLOCCHI = ['description', 'accettazione']
+const ELENCHI = ['test_cases', 'requisiti']
+
 export function parseRequirementsYaml(text) {
   const lines = text.split('\n')
   const requirements = []
   let current = null
-  let inDescription = false
-  let descriptionLines = []
-  let inTestCases = false
+  let blocco = null
+  let righeBlocco = []
+  let lista = null
+
+  const chiudiBlocco = () => {
+    if (blocco && righeBlocco.length > 0) current[blocco] = righeBlocco.join(' ').trim()
+    blocco = null
+    righeBlocco = []
+  }
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]
     const line = raw.trimEnd()
 
     // Skip comments and empty lines outside of description blocks
-    if (!inDescription && (line.startsWith('#') || line.trim() === '')) continue
+    if (!blocco && (line.startsWith('#') || line.trim() === '')) continue
 
     // Start of a new requirement entry
     if (line.match(/^  - id:/)) {
       if (current) {
-        if (inDescription) {
-          current.description = descriptionLines.join(' ').trim()
-          inDescription = false
-          descriptionLines = []
-        }
+        chiudiBlocco()
         requirements.push(current)
       }
-      inTestCases = false
-      current = { id: '', title: '', area: '', description: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], in_produzione: null, severity: null, priority: null }
+      lista = null
+      current = { id: '', title: '', area: '', description: '', accettazione: '', status: 'todo', generate_issue: false, labels: [], test_cases: [], requisiti: [], in_produzione: null, severity: null, priority: null }
       current.id = line.replace(/^  - id:\s*/, '').trim()
       continue
     }
 
     if (!current) continue
 
-    // Finish multi-line description if we hit a non-indented field
-    if (inDescription) {
-      // Le righe di continuazione del blocco '>' sono indentate più in profondità
-      // della chiave (almeno 6 spazi). Qualsiasi altra cosa chiude la descrizione.
+    // Le righe di continuazione del blocco '>' sono indentate più in profondità
+    // della chiave (almeno 6 spazi). Qualsiasi altra cosa chiude il blocco.
+    if (blocco) {
       if (line.match(/^\s{6,}\S/)) {
-        descriptionLines.push(line.trim())
+        righeBlocco.push(line.trim())
         continue
-      } else {
-        if (descriptionLines.length > 0) {
-          current.description = descriptionLines.join(' ').trim()
-        }
-        inDescription = false
-        descriptionLines = []
       }
+      chiudiBlocco()
     }
 
-    // ELENCO DEI TEST SU PIÙ RIGHE. In YAML una lista si scrive anche
-    // così, e con quattro file citati è l'unico modo leggibile:
+    // ELENCO SU PIÙ RIGHE. In YAML una lista si scrive anche così, e con
+    // quattro file citati è l'unico modo leggibile:
     //   test_cases:
     //     - tests/unit/x.test.js
     // Prima si leggeva solo la forma [a, b]: le righe col trattino non
     // davano errore, sparivano — e il requisito risultava senza prove
     // pur avendole scritte lì sotto.
-    if (inTestCases) {
+    if (lista) {
       const voce = line.match(/^\s+- (.+)/)
       if (voce) {
-        current.test_cases.push(voce[1].trim())
+        current[lista].push(voce[1].trim())
         continue
       }
-      inTestCases = false
+      lista = null
     }
 
     const fieldMatch = line.match(/^    ([a-z_]+):[ ]?(.*)/)
     if (!fieldMatch) continue
     const [, key, value] = fieldMatch
+
+    if (BLOCCHI.includes(key)) {
+      if (value.trim() === '>') {
+        blocco = key
+        righeBlocco = []
+      } else {
+        current[key] = value.replace(/^["']|["']$/g, '')
+      }
+      continue
+    }
+    if (ELENCHI.includes(key)) {
+      const inLinea = value.match(/\[([^\]]*)\]/)
+      if (inLinea) {
+        current[key] = inLinea[1].split(',').map((t) => t.trim()).filter(Boolean)
+      } else if (value.trim() === '') {
+        current[key] = []
+        lista = key
+      }
+      continue
+    }
 
     switch (key) {
       case 'title':
@@ -89,14 +113,6 @@ export function parseRequirementsYaml(text) {
         break
       case 'area':
         current.area = value.replace(/^["']|["']$/g, '')
-        break
-      case 'description':
-        if (value.trim() === '>') {
-          inDescription = true
-          descriptionLines = []
-        } else {
-          current.description = value.replace(/^["']|["']$/g, '')
-        }
         break
       case 'status':
         current.status = value.trim()
@@ -127,21 +143,11 @@ export function parseRequirementsYaml(text) {
         }
         break
       }
-      case 'test_cases': {
-        const tcMatch = value.match(/\[([^\]]*)\]/)
-        if (tcMatch) {
-          current.test_cases = tcMatch[1].split(',').map((t) => t.trim()).filter(Boolean)
-        } else if (value.trim() === '') {
-          current.test_cases = []
-          inTestCases = true
-        }
-        break
-      }
     }
   }
 
   if (current) {
-    if (inDescription) current.description = descriptionLines.join(' ').trim()
+    chiudiBlocco()
     requirements.push(current)
   }
 

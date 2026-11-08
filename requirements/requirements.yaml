@@ -15341,3 +15341,38 @@ requirements:
       - tests/regole/matriceModuli.test.js
       - tests/component/GroupView.test.jsx
 
+
+  - id: REQ-DEV-018
+    title: "Il modello a V: ogni richiesta scende dal bisogno del locale al codice, e risale coi test di ogni livello"
+    area: "requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md"
+    description: >
+      L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di
+      sviluppo a V», «per avere più qualità e meno regressioni al banco», con
+      «una V per richiesta». I test c'erano già, ma non dicevano cosa
+      verificano, e nessun registro diceva quale bisogno del locale un
+      requisito serve.
+      I QUATTRO GRADINI e i loro specchi: i bisogni del locale (UR-*, in
+      requirements/bisogni.yaml, ognuno col criterio di accettazione scritto
+      in prosa) si provano coi test di accettazione; la specifica (REQ-*) coi
+      test di sistema sull'app intera; l'architettura (ARC-*, in
+      requirements/architettura.yaml) coi test di integrazione; il progetto
+      di dettaglio, cioè il modulo, coi test di unità.
+      IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component
+      e tests/bdd e tests/regole, tests/sistema, tests/accettazione), oppure
+      il test stesso con `// @livello <nome>` quando la cartella, scelta
+      prima della V, non dice il vero.
+      UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a
+      un bisogno, e un difetto nato dopo dice quale requisito tradisce
+      (`requisiti`). Le voci di prima si collegano a mano a mano, con un
+      cricchetto che può solo scendere. La specifica di sistema ha i
+      capitoli dei bisogni e dell'architettura, e la tabella delle prove
+      livello per livello.
+      FASI SUCCESSIVE: i test di sistema con Playwright sull'app compilata e
+      gli emulatori; i test di accettazione dagli scenari della serata; il
+      cancello che chiede la V intera prima del merge in develop.
+    status: partial
+    generate_issue: false
+    labels: [dev, metodo]
+    priority: P1
+    test_cases:
+      - tests/unit/modelloAV.test.js

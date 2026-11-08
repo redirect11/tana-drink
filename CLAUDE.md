@@ -83,6 +83,27 @@ sono la mappa di cosa esiste; i difetti veri stanno nel registro
 issue GitHub, idempotenti; un bug `fixed` nel registro **chiude** la sua
 issue da solo.
 
+### Il modello a V: una V per richiesta
+
+Dall'08/11/2026 ogni richiesta scende dal **bisogno del locale** al codice e
+risale coi test di ogni livello. Per intero in
+[docs/modello-a-v.md](docs/modello-a-v.md); il secco:
+
+- **Bisogni** (`UR-*`, [requirements/bisogni.yaml](requirements/bisogni.yaml)),
+  ognuno con il criterio `accettazione:` → test di **accettazione**
+  (`tests/accettazione/`).
+- **Requisiti** (`REQ-*`) → test di **sistema** sull'app intera
+  (`tests/sistema/`).
+- **Componenti** (`ARC-*`, [requirements/architettura.yaml](requirements/architettura.yaml))
+  → test di **integrazione** (`tests/component/`, `tests/bdd/`, `tests/regole/`).
+- **Moduli** → test di **unità** (`tests/unit/`). Un test in una cartella che
+  non dice il vero lo dichiara: `// @livello integrazione`.
+
+Un requisito **nuovo** sta fra i `requisiti` di un bisogno, e un difetto
+nuovo dice quale requisito tradisce (`requisiti:`): altrimenti la suite è
+rossa. La correzione di un difetto porta un test **al livello che se l'era
+lasciato sfuggire**.
+
 ## Come si scrive qui
 
 - **L'interfaccia segue [DESIGN.md](DESIGN.md)**: tema, palette con ruoli,
@@ -276,5 +297,6 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | l'avviso del certificato della stampante | [docs/certificato-stampante.md](docs/certificato-stampante.md) |
 | altre stampanti, app nativa, installazione on premise | [docs/stampanti-e-livelli.md](docs/stampanti-e-livelli.md) |
 | il prodotto per altri locali: architettura e funzionamento | [docs/architettura-prodotto.md](docs/architettura-prodotto.md) |
+| aprire una richiesta, scrivere un requisito, correggere un difetto | [docs/modello-a-v.md](docs/modello-a-v.md) |
 | capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |

@@ -2,6 +2,14 @@
 
 ## 1.10.29-beta — in lavorazione
 
+### Metodo
+
+- Lo sviluppo segue il modello a V, una richiesta alla volta: ogni
+  requisito nuovo è collegato a un bisogno del locale, che dice anche come
+  si verifica al banco, e ogni test dichiara il livello a cui verifica
+  (unità, integrazione, sistema, accettazione). La specifica di sistema ha
+  i capitoli dei bisogni e dell'architettura (REQ-DEV-018).
+
 ### Aspetto
 
 - Le icone del gestionale sono silhouette monocrome, tutte della stessa

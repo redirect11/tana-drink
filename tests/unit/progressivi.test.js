@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+// @livello integrazione: il codice vero con un Firestore finto (docs/modello-a-v.md)
 'use strict'
 
 // I NUMERI DEGLI ORDINI, SENZA ASPETTARE NESSUNO. Prima di scrivere un
