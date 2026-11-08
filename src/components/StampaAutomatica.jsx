@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { loadPrinterSettings, savePrinterSettings } from '../lib/printer.js'
+import { loadPrinterSettings, savePrinterSettings, ORIGINI_STAMPA } from '../lib/printer.js'
 import { savePrinterConfig } from '../lib/api.js'
 import {
   CHIAVE_ACCONTO_SEMPRE,
@@ -8,6 +8,7 @@ import {
   tastoAcconto,
 } from '../lib/scontrinoAcconto.js'
 import ToggleRow from './ToggleRow.jsx'
+import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 
 // ── QUANDO PARTE LA CARTA DA SÉ (REQ-UI-025) ─────────────────────────
@@ -69,6 +70,19 @@ export default function StampaAutomatica({ settings, save }) {
         checked={prn.autoPrintComanda === true}
         onChange={(v) => cambia({ autoPrintComanda: v })}
       />
+      {/* DA DOVE (REQ-STAMPA-021): sotto l'interruttore che riguarda, e solo
+          se è acceso — una scelta su una stampa spenta non decide niente. */}
+      {prn.autoPrintComanda === true && (
+        <div className="stampa-da">
+          <span className="muted small">Comande prese</span>
+          <GruppoChip
+            etichetta="Comande prese"
+            opzioni={ORIGINI_STAMPA}
+            valore={prn.autoPrintComandaDa || 'tutti'}
+            scegli={(v) => cambia({ autoPrintComandaDa: v })}
+          />
+        </div>
+      )}
 
       {/* Diceva «quando l'ordine è pronto», ma la stampa da tempo parte alla
           CHIUSURA: l'etichetta descriveva il comportamento di due versioni fa. */}
@@ -78,6 +92,21 @@ export default function StampaAutomatica({ settings, save }) {
         checked={prn.autoPrintScontrino === true}
         onChange={(v) => cambia({ autoPrintScontrino: v })}
       />
+      {prn.autoPrintScontrino === true && (
+        <div className="stampa-da">
+          <span className="muted small">Riscossioni fatte</span>
+          <GruppoChip
+            etichetta="Riscossioni fatte"
+            opzioni={ORIGINI_STAMPA}
+            valore={prn.autoPrintScontrinoDa || 'tutti'}
+            scegli={(v) => cambia({ autoPrintScontrinoDa: v })}
+          />
+        </div>
+      )}
+      <p className="muted" style={{ margin: '0 0 8px', fontSize: '0.8rem' }}>
+        Banco: admin e bartender. Sala: il personale di sala e gli ordini dal
+        menù dei clienti.
+      </p>
 
       {/* CHI STAMPA LE COMANDE PRESE IN SALA sta qui e non fra le cose della
           macchina: è la stessa domanda degli interruttori qui sopra — la
@@ -117,6 +146,14 @@ export default function StampaAutomatica({ settings, save }) {
           <div className="banner" style={{ marginTop: 8 }}>
             <Icona nome="avviso" gruppo="segnali" /> La stampa automatica della comanda è <strong>spenta</strong>: così
             le comande della sala non le stampa nessuno. Accendila qui sopra.
+          </div>
+        )}
+        {/* Lo stesso buco per un'altra strada: la stampa è accesa, ma solo
+            per le comande del banco (REQ-STAMPA-021). */}
+        {prn.stampaSala === 'rimbalzo' && prn.autoPrintComanda && prn.autoPrintComandaDa === 'banco' && (
+          <div className="banner" style={{ marginTop: 8 }}>
+            <Icona nome="avviso" gruppo="segnali" /> La comanda automatica è impostata <strong>solo dal banco</strong>: così
+            le comande della sala non le stampa nessuno.
           </div>
         )}
       </div>

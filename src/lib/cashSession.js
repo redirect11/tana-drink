@@ -2,9 +2,11 @@
 // sottoscrizione viva per tutta l'app (come menuCache), così ogni schermata
 // sa se la cassa è aperta senza aprirne una propria.
 //
-// Regola del locale: senza cassa aperta NON si lavora — non si battono nuovi
-// ordini. Gli ordini già aperti restano gestibili (si devono poter incassare
-// e chiudere anche a cassa chiusa).
+// Regola del locale (REQ-CASSA-017, 08/11/2026): senza cassa aperta gli
+// ordini si battono — la serata a volte comincia prima che qualcuno conti
+// il fondo — ma NON si incassa: un incasso senza sessione non finisce in
+// nessuna chiusura. Prima era il contrario (niente ordini, incassi sì), e al
+// banco si restava fermi col cliente davanti per aprire la cassa.
 import { useEffect, useState } from 'react'
 import { subscribeOpenCashSession } from './api.js'
 import { impostaSessioneDiagnostica } from './diagnosticaStampante.js'

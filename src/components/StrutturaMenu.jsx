@@ -35,6 +35,7 @@ import { immagineVoce, segnapostoDrink } from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -405,9 +406,7 @@ function NuovaSezione({ carta }) {
           Aggiungi
         </button>
       </div>
-      <p className="muted small" style={{ margin: '4px 0 0' }}>
-        Si aggiunge in cima al menù.
-      </p>
+      <AiutoCampo style={{ margin: '4px 0 0' }}>Si aggiunge in cima al menù.</AiutoCampo>
     </div>
   )
 }

@@ -494,6 +494,14 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   la domanda a cui risponde, la differenza con le tabelle vicine e il
   significato delle righe. Chi la sa leggere non scorre un paragrafo ogni
   volta; chi no la trova dove se lo chiede (REQ-UI-029).
+- **Ogni persona ha il suo colore** (REQ-ORD-023): il quadratino con
+  l'iniziale di chi ha aperto un conto o battuto una riga non è più
+  dell'accento per tutti, ma di una delle otto tinte di
+  `src/lib/colorePersona.js` (rosa, azzurro, viola, arancio, petrolio,
+  ocra, indaco, prugna), scelta dal nome. Tinte scure abbastanza da reggere
+  la lettera bianca nei due temi; il rosso e il verde puri restano agli
+  stati. Lo stesso colore sulla card, nella legenda della coda, nella barra
+  in alto e accanto a ogni riga del conto.
 - **Il colore del conto prende il fondo della card.** Un conto può avere un
   colore suo (campo `colore` sul documento, tavolozza delle categorie):
   serve a riconoscere che tre comande finite in tre colonne diverse sono lo

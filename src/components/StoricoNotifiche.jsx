@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { subscribeNotifs, segnaLetta, svuotaArchivio } from '../lib/notifyStore.js'
-import Icona from './Icona.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // ── LO STORICO DELLE NOTIFICHE, ANCHE NELLE IMPOSTAZIONI ─────────────
 // Stava solo dietro la campanella, dentro un pannello che si chiude al
@@ -59,7 +59,7 @@ export default function StoricoNotifiche() {
                 onClick={() => segnaLetta(n.id)}
               >
                 <span className="grow">
-                  <strong>{n.title}</strong>
+                  <strong><ConIcona testo={n.title} gruppo="segnali" /></strong>
                   {n.body && <span className="muted small"> · {n.body}</span>}
                 </span>
                 <span className="muted small">{quando(n.at)}</span>
@@ -67,7 +67,7 @@ export default function StoricoNotifiche() {
             ) : (
               <div key={n.id} className={`storico-notifica${n.letta ? ' letta' : ''}`}>
                 <span className="grow">
-                  <strong>{n.title}</strong>
+                  <strong><ConIcona testo={n.title} gruppo="segnali" /></strong>
                   {n.body && <span className="muted small"> · {n.body}</span>}
                 </span>
                 <span className="muted small">{quando(n.at)}</span>

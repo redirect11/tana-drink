@@ -1473,7 +1473,8 @@ requirements:
     description: >
       La cassa si apre con un fondo e si chiude con il riepilogo della serata:
       incassato per metodo e per ora, conti chiusi, conti ancora da incassare.
-      Senza cassa aperta non si battono ordini.
+      Senza cassa aperta gli ordini si battono ma non si incassa
+      (REQ-CASSA-017, dall'08/11/2026; prima non si battevano).
       E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession`
       non restituisce niente da aspettare, la scrittura parte in sottofondo
       e lo scontrino di chiusura parte per conto suo — se la stampante non
@@ -1846,6 +1847,36 @@ requirements:
       - tests/unit/impagato.test.js
       - tests/unit/scontrinoImpagato.test.js
       - tests/component/PaymentScreen.test.jsx
+
+  - id: REQ-CASSA-017
+    title: "A cassa chiusa gli ordini si battono, ma non si incassa"
+    area: "src/pages/PosPage.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx (tasti rapidi, avviso), src/lib/coda.js (voceCassa), src/lib/cashSession.js"
+    description: >
+      Richiesta dell'08/11/2026: «permettere di creare ordini anche da
+      cassa chiusa ma rendere i tasti RISCUOTERE e similari non
+      selezionabili». Prima era il contrario: senza cassa aperta il POS
+      mostrava il cartello «Cassa chiusa» al posto del conto, e col
+      cliente davanti si andava ad aprire la cassa per battere un drink;
+      gli incassi invece passavano, e finivano fuori da ogni chiusura.
+      ORA il conto si batte (nasce numerato sulla giornata, REQ-ORD-016) e
+      le comande partono; nel pagamento Riscuotere, Riscuoti senza stampa,
+      Acconto con scontrino, Riscuoti e servi e Impagato restano al loro
+      posto ma spenti, con scritto sopra «Cassa chiusa: per incassare va
+      aperta la cassa.»; il preconto e lo sconto restano. Sulle card della
+      coda i tasti Contanti, Carta e Incassa sul lettore sono spenti col
+      perché nel titolo. Il «+» della lavagna è sempre attivo e l'avviso in
+      cima alla coda dice che gli ordini si battono e per incassare va
+      aperta la cassa. Aprendo la cassa i tasti si riaccendono senza
+      uscire dal conto. Finché la sessione non è arrivata dalla cache non
+      si spegne niente.
+    status: implemented
+    generate_issue: false
+    labels: [cassa, pos, pagamenti]
+    test_cases:
+      - tests/component/PosPage.test.jsx
+      - tests/component/CodaCorsie.test.jsx
+      - tests/sistema/cassaChiusa.spec.js
+
   - id: REQ-CASSA-005
     title: "Statistiche per serata, con tempi e margini"
     area: "src/lib/stats.js, src/lib/eta.js, src/components/StatsTab.jsx"
@@ -6257,6 +6288,28 @@ requirements:
       - tests/component/MarketplaceTab.test.jsx
       - tests/component/MenuPage.test.jsx
 
+  - id: REQ-MENU-032
+    title: "Marginalità del listino: le categorie a sinistra, per vederne una sola"
+    area: "src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)"
+    description: >
+      Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le
+      categorie sul lato sx in modo da poterle filtrare». La tabella era
+      divisa per categorie ma mostrava sempre tutto il listino: per
+      lavorare sui prezzi di una famiglia sola si scorreva cercandola.
+      Ora a sinistra c'è la barra delle categorie del Menù e del POS
+      (CategoryRail), con «Tutte» in cima e il numero di voci per
+      categoria; toccandone una la tabella mostra solo quella, e i filtri
+      Da rivedere, In linea e Costo incompleto contano e filtrano dentro la
+      categoria scelta. Una voce sta sotto la stessa categoria nella barra e
+      nella tabella: la regola è una sola (marginiPerCategoria, per id o per
+      nome sulle voci vecchie). Sul telefono la barra diventa la riga che
+      scorre, come altrove.
+    status: implemented
+    generate_issue: false
+    labels: [menu, ui]
+    test_cases:
+      - tests/component/MarginList.test.jsx
+
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
     area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"
@@ -9244,6 +9297,38 @@ requirements:
     generate_issue: true
     labels: [ordini, staff, clienti]
     test_cases: [tests/component/OrderStatusPage.test.jsx, tests/component/OrderPosDetail.test.jsx]
+
+  - id: REQ-ORD-023
+    title: "Accanto a ogni riga del conto l'iniziale di chi l'ha battuta, nel suo colore"
+    area: "src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx"
+    description: >
+      Richiesta dell'08/11/2026: «manca iniziale di chi ha caricato un item
+      su un ordine vicino all'item (esempio: vicino ogni item su un ordine
+      se caricato da FLAVIO appare la F nel quadrato rosa e se caricato da
+      ALEX appare A nel quadrato azzurro), ovviamente lasciando il quadrato
+      di chi ha creato l'ordine nella pagina generale».
+      LA FIRMA: ogni riga porta `added_by` {name, email, role}. La mette il
+      conto quando la riga lascia la bozza o entra dritta in una comanda da
+      fare (firmaRiga: chi la manda è chi l'ha battuta, la bozza è di quel
+      terminale); api.js la porta fino al documento in ogni scrittura delle
+      righe — creazione, comanda aggiunta, modifica — così una riga
+      corretta dal banco resta di chi l'aveva battuta, e il conto
+      restituito la ha già, anche senza rete. Le righe di prima e quelle
+      del cliente restano senza firma e senza segno.
+      IL COLORE è della persona e viene dal nome (lib/colorePersona.js):
+      lo stesso sulla card della coda, nella legenda, nel quadratino in
+      alto e su ogni riga, su ogni terminale, senza configurarlo. Il seme
+      del calcolo è scelto perché Flavio esca rosa e Alex azzurro, come
+      nella richiesta. Il quadratino di chi ha aperto il conto resta sulla
+      card. NON ANCORA: la finestra del conto nella coda, che legge le
+      righe sommate per drink, e il dettaglio della comanda.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pos, staff]
+    test_cases:
+      - tests/unit/autoreDellaRiga.test.js
+      - tests/unit/colorePersona.test.js
+      - tests/component/OrderPosDetail.test.jsx
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
@@ -14300,6 +14385,12 @@ requirements:
       l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le
       notifiche del telefono (sono testo del sistema) e l'avviso dei cookie
       (lo legge il cliente).
+      I TITOLI DEGLI AVVISI (08/11/2026, dopo «mancano icone stilizzate
+      monocrome»): campanella, storico e fumetto stampavano il titolo così
+      com'era scritto, con l'emoji colorata davanti («🆕 Nuovo ordine»);
+      ora l'icona si disegna nel tema (ConIcona) e il resto resta testo. Il
+      «Conto ripristinato» usa «riapri» del vocabolario invece della
+      freccia ↩️, che il vocabolario non conosceva.
     status: implemented
     generate_issue: false
     labels: [ui, design]
@@ -14307,6 +14398,35 @@ requirements:
     test_cases:
       - tests/unit/icone.test.js
       - tests/component/Icona.test.jsx
+      - tests/component/FumettoAvvisi.test.jsx
+
+  - id: REQ-UI-032
+    title: "Gli aiuti sotto i campi delle schede si nascondono, e i testi sono riscritti"
+    area: "src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx"
+    description: >
+      Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi
+      compilabili o almeno permettere di abilitarli/disabilitarli ma
+      sicuramente correggere la sintassi». In una scheda lunga la riga
+      d'aiuto di un campo finisce sopra l'etichetta del successivo, e a chi
+      la compila tutti i giorni ripete cose che sa.
+      Gli aiuti dei campi passano da un componente solo (AiutoCampo) e di
+      partenza sono NASCOSTI; si riaccendono da Impostazioni → Aspetto →
+      «Aiuti sotto i campi» (Nascosti / Visibili, `aiuti_campi` sulle
+      impostazioni del locale, per tutti i terminali). Gli avvisi che
+      dipendono da quello che si è scritto (un errore, un dato mancante, un
+      blocco) non sono aiuti e restano sempre.
+      I TESTI sono riscritti in frasi piane e impersonali, nel registro del
+      gestionale (DESIGN.md, guardrail 3): per esempio «Lasciala vuota e
+      vale quella del locale (10%). Si compila solo dove fa eccezione — una
+      bottiglia intera non si rivende come un drink al banco» diventa «Se
+      vuota si applica l'IVA del locale (10%). Va indicata solo per le
+      eccezioni, come le bottiglie vendute intere».
+    status: implemented
+    generate_issue: false
+    labels: [ui]
+    test_cases:
+      - tests/component/AiutiCampi.test.jsx
+      - tests/component/MenuManager.test.jsx
 
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
@@ -15273,6 +15393,34 @@ requirements:
     labels: [stampa, staff]
     test_cases:
       - tests/component/PrinterSetupSala.test.jsx
+
+  - id: REQ-STAMPA-021
+    title: "La stampa automatica sceglie da dove deve venire il gesto: banco, sala o tutti e due"
+    area: "src/lib/printer.js (stampaDa, ruoloDellaComanda, scontrinoAutomatico, comandeDaStampare), src/components/StampaAutomatica.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/pages/MenuPage.jsx"
+    description: >
+      Richiesta dell'08/11/2026: «in IMPOSTAZIONI - CASSA E GIORNATA -
+      STAMPA AUTOMATICA differenziare se le operazioni provengono da cassa
+      o da sala (esempio: stampa solo riscossione da banco e stampa in
+      automatico la comanda se presa da sala)».
+      Sotto ognuna delle due stampe automatiche del terminale, quando è
+      accesa, si sceglie «Banco e sala», «Solo dal banco» o «Solo dalla
+      sala» (`autoPrintComandaDa`, `autoPrintScontrinoDa`, di partenza
+      «tutti», come prima). L'origine è il ruolo di chi ha fatto il gesto:
+      banco = admin e bartender, sala = la sala e i clienti dal menù. Per
+      una comanda conta chi ne ha battuto le righe (la firma, REQ-ORD-023),
+      e per le comande di prima chi ha aperto il conto; per lo scontrino
+      chi sta incassando. La regola vale per la comanda automatica della
+      coda, per quella che il telefono della sala stampa da sé, per lo
+      scontrino della schermata di pagamento e per quello dei tasti rapidi
+      della coda. Con «la stampa il banco» e le comande solo dal banco lo si
+      dice: quelle della sala non le stamperebbe nessuno.
+    status: implemented
+    generate_issue: false
+    labels: [stampa, staff]
+    test_cases:
+      - tests/unit/stampaDaBancoOSala.test.js
+      - tests/component/StampaAutomatica.test.jsx
+
   - id: REQ-DEV-016
     title: "Quello che dice quali pezzi caricare non si tiene in cache"
     area: "firebase.json (hosting.headers)"

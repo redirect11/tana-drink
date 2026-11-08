@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ascoltaFumetto } from '../lib/avvisiInApp.js'
+import { ConIcona } from './Icona.jsx'
 
 // ── IL FUMETTO DELLA CAMPANELLA ──────────────────────────────────────
 //
@@ -46,7 +47,7 @@ export default function FumettoAvvisi({ onApri }) {
       }}
       aria-live="polite"
     >
-      <strong>{avviso.title}</strong>
+      <strong><ConIcona testo={avviso.title} gruppo="segnali" /></strong>
       {avviso.body && <span className="fumetto-avviso-corpo">{avviso.body}</span>}
     </button>
   )

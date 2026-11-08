@@ -111,9 +111,14 @@ vi.mock('../../src/components/StaffDrawer.jsx', () => ({ default: () => null }))
 // l'ordine preso al tavolo chiede la sua comanda, e a chi.
 let stampaSala = 'ip'
 const stampata = vi.fn(() => Promise.resolve())
-vi.mock('../../src/lib/printer.js', () => ({
+let mockComandaDa = 'tutti'
+vi.mock('../../src/lib/printer.js', async (originale) => ({
   printComanda: (...a) => stampata(...a),
   salaStampaDaSe: () => stampaSala !== 'rimbalzo',
+  // Da dove deve venire la comanda per uscire da sola (REQ-STAMPA-021):
+  // la regola vera, sulle impostazioni del terminale.
+  stampaDa: (await originale()).stampaDa,
+  loadPrinterSettings: () => ({ autoPrintComandaDa: mockComandaDa }),
 }))
 
 import MenuPage from '../../src/pages/MenuPage.jsx'

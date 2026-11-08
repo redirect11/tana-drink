@@ -45,6 +45,7 @@ import {
   fattureSenzaAllegato,
   pesoLeggibile,
 } from '../lib/allegati.js'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
 // Poche righe per volta e non sessanta come nella schermata degli ordini,
@@ -1004,11 +1005,11 @@ function DialogoProdotti({ fattura, items, listini, ordini, fatture, suppliers, 
                 </option>
               ))}
             </select>
-            <p className="muted small">
+            <AiutoCampo style={{ margin: '4px 0 0' }}>
               {ordineScelto
-                ? 'Il documento resta collegato alla parte di quest’ordine che è di questo fornitore.'
-                : 'Le righe si copiano dall’ordine e il documento gli resta collegato.'}
-            </p>
+                ? 'Il documento resta collegato alla parte dell’ordine che riguarda questo fornitore.'
+                : 'Le righe si copiano dall’ordine e il documento vi resta collegato.'}
+            </AiutoCampo>
           </>
         )}
 
