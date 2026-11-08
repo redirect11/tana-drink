@@ -27,6 +27,7 @@ import {
   segnaComandaStampata,
   segnaScontrinoStampato,
 } from '../lib/api.js'
+import { precaricaMenu } from '../lib/menuCache.js'
 import { getPushToken } from '../lib/push.js'
 import { logoutStaff } from '../lib/logout.js'
 import {
@@ -556,6 +557,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // andata a buon fine.
   const [chiusiQui, setChiusiQui] = useState([])
   useEffect(() => subscribeNascosti(setChiusiQui), [])
+  // Il catalogo dev'essere in memoria prima del primo conto, rete o non
+  // rete (BUG-137, lib/menuCache.js).
+  useEffect(() => { precaricaMenu() }, [])
   // QUALE STATO È IN CODA. UNO SOLO: «riportiamo aperti, chiusi e
   // annullati come mutuamente esclusivi» (l'utente, 20/08/2026, dopo
   // averli provati combinabili). Sopra la coda si chiede una cosa per

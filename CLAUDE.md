@@ -52,7 +52,11 @@ npm run lint             # deve essere pulito (può uscire 1 SENZA stampare: gua
 npm test                 # deve essere verde (990+ test)
 npm run build            # deve compilare
 npm run test:coverage    # deve passare le soglie (vitest.config.mjs)
+npm run test:sistema     # i test di sistema: app compilata + emulatori (Java 21)
 ```
+
+`test:sistema` è obbligatorio quando si toccano coda, conto, pagamento o
+cassa; in CI gira comunque su ogni pull request.
 
 Per il **merge in `develop`** c'è un cancello in più, descritto per
 intero in [docs/gitflow.md](docs/gitflow.md): requisiti e registro bug
@@ -93,7 +97,7 @@ risale coi test di ogni livello. Per intero in
   ognuno con il criterio `accettazione:` → test di **accettazione**
   (`tests/accettazione/`).
 - **Requisiti** (`REQ-*`) → test di **sistema** sull'app intera
-  (`tests/sistema/`).
+  (`tests/sistema/*.spec.js`, Playwright: `npm run test:sistema`).
 - **Componenti** (`ARC-*`, [requirements/architettura.yaml](requirements/architettura.yaml))
   → test di **integrazione** (`tests/component/`, `tests/bdd/`, `tests/regole/`).
 - **Moduli** → test di **unità** (`tests/unit/`). Un test in una cartella che

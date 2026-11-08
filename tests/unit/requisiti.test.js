@@ -25,7 +25,9 @@ function fileDiTest(dir = 'tests', out = []) {
   for (const nome of readdirSync(dir)) {
     const p = join(dir, nome)
     if (statSync(p).isDirectory()) fileDiTest(p, out)
-    else if (/\.test\.jsx?$/.test(nome)) out.push(p.replace(/\\/g, '/'))
+    // `.spec.js` sono i test di sistema di Playwright (tests/sistema/): anche
+    // loro appartengono a un requisito.
+    else if (/\.(test|spec)\.jsx?$/.test(nome)) out.push(p.replace(/\\/g, '/'))
   }
   return out
 }

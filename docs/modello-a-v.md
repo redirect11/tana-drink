@@ -106,6 +106,36 @@ dire fermare il lavoro per settimane. Per questo:
   `modelloAV.test.js`: è un cricchetto, si abbassa a ogni collegamento e
   non si alza mai.
 
+## I test di sistema
+
+```sh
+npm run test:sistema
+```
+
+Compila l'app con [`.env.sistema`](../.env.sistema), accende Auth e
+Firestore emulati con le regole vere (`firebase emulators:exec`, la stessa
+versione fissata della CI) e la guida con Playwright in un browser vero: in
+locale il Chrome installato, in CI il Chromium di Playwright. Serve Java 21,
+come per gli emulatori ([ambiente-locale.md](ambiente-locale.md)).
+
+- **Ogni test parte da un database pulito**: Auth e Firestore si svuotano e
+  si seminano come per lo sviluppo, più la licenza della Tana
+  ([`tests/sistema/semina.mjs`](../tests/sistema/semina.mjs)).
+- **I gesti del banco** (entrare, aprire la cassa, battere un drink,
+  tornare in coda) stanno in
+  [`tests/sistema/banco.mjs`](../tests/sistema/banco.mjs): i test si
+  leggono come una sequenza di gesti, e un'etichetta che cambia si
+  aggiorna in un posto solo. I test si importano da lì, non da
+  `@playwright/test`.
+- **La rete si stacca dal browser** (`context.setOffline(true)`): ogni cosa
+  che si vede dopo è la prova che il gesto ha avuto effetto in locale.
+- **Il risultato si controlla anche nel database**, con l'SDK di
+  amministrazione sull'emulatore: a schermo giusto e al server sbagliato è
+  comunque un conto sbagliato.
+- In CI girano su ogni pull request (job «Sistema (Playwright)»); se uno
+  fallisce, la traccia passo per passo si scarica dall'artefatto
+  `rapporto-sistema`.
+
 ## A che punto siamo
 
 ```sh
@@ -118,9 +148,11 @@ node scripts/requisiti.mjs --documento  # la specifica, coi capitoli dei bisogni
 1. **I gradini nel registro** — fatto (08/11/2026). Bisogni e componenti di
    partenza, livello di ogni test, regole per le voci nuove, specifica coi
    capitoli nuovi.
-2. **I test di sistema.** Playwright sull'app compilata con gli emulatori,
-   in `tests/sistema/`, a partire dal giro di una serata, anche senza rete;
-   in CI su ogni pull request.
+2. **I test di sistema** — avviata (08/11/2026). L'infrastruttura e il
+   primo test, il giro di una serata senza rete
+   ([`serataSenzaRete.spec.js`](../tests/sistema/serataSenzaRete.spec.js)),
+   che al primo giro ha trovato BUG-137. Restano i test di sistema degli
+   altri requisiti dei bisogni.
 3. **I test di accettazione.** Gli scenari della serata scritti dai criteri
    `accettazione:` dei bisogni, in `tests/accettazione/`, leggibili da chi
    lavora al banco.

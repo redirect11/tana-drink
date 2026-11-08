@@ -13160,11 +13160,16 @@ requirements:
       qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta
       solo nella documentazione non ferma nessuno — questa e' tornata tre
       volte.
+      E SULL'APP INTERA (REQ-DEV-018, dal 08/11/2026): il test di sistema
+      tests/sistema/serataSenzaRete.spec.js ripete il giro sull'app
+      compilata, in un browser vero con la rete staccata, e controlla che al
+      ritorno della rete il conto arrivi al server pagato e una volta sola.
+      Al primo giro ha trovato BUG-137.
     status: implemented
     generate_issue: true
     labels: [metodo, offline, ordini]
     priority: P1
-    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js]
+    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js, tests/sistema/serataSenzaRete.spec.js]
 
   - id: REQ-OFFLINE-007
     title: "Il guscio dell'app e il logo non si aspettano dalla rete"
@@ -15344,7 +15349,7 @@ requirements:
 
   - id: REQ-DEV-018
     title: "Il modello a V: ogni richiesta scende dal bisogno del locale al codice, e risale coi test di ogni livello"
-    area: "requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md"
+    area: "requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md, playwright.config.mjs, tests/sistema/, .github/workflows/test.yml"
     description: >
       L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di
       sviluppo a V», «per avere più qualità e meno regressioni al banco», con
@@ -15367,9 +15372,16 @@ requirements:
       cricchetto che può solo scendere. La specifica di sistema ha i
       capitoli dei bisogni e dell'architettura, e la tabella delle prove
       livello per livello.
-      FASI SUCCESSIVE: i test di sistema con Playwright sull'app compilata e
-      gli emulatori; i test di accettazione dagli scenari della serata; il
-      cancello che chiede la V intera prima del merge in develop.
+      I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata
+      con .env.sistema, Auth e Firestore emulati con le regole vere
+      (`npm run test:sistema`, playwright.config.mjs), il database seminato
+      da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del
+      banco in tests/sistema/banco.mjs. In CI girano su ogni pull request,
+      nel job «Sistema (Playwright)». Il primo è il giro della serata senza
+      rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+      FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni;
+      i test di accettazione dagli scenari della serata; il cancello che
+      chiede la V intera prima del merge in develop.
     status: partial
     generate_issue: false
     labels: [dev, metodo]
