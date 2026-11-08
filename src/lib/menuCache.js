@@ -47,12 +47,12 @@ export function useMenu() {
   return { drinks, cats, loading: !loaded }
 }
 
-// IL CATALOGO SI PRECARICA DALLA CODA (BUG-137). La sottoscrizione partiva
-// solo aprendo il primo conto: su un dispositivo appena entrato, se la rete
-// cadeva prima, il conto si apriva con la griglia vuota e non si batteva
-// niente. L'ha trovato il primo test di sistema
-// (tests/sistema/serataSenzaRete.spec.js). Parte dalla coda e non
-// dall'avvio dell'app perché il catalogo serve a chi batte i conti: a un
+// IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137, App.jsx).
+// La sottoscrizione partiva solo aprendo il primo conto: su un dispositivo
+// appena entrato, se la rete cadeva prima, il conto si apriva con la griglia
+// vuota e non si batteva niente. L'ha trovato il primo test di sistema
+// (tests/sistema/serataSenzaRete.spec.js). Parte col ruolo del personale e
+// non all'avvio dell'app perché il catalogo serve a chi batte i conti: a un
 // cliente che segue il suo ordine costerebbe letture inutili.
 export function precaricaMenu() {
   start()

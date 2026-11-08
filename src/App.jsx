@@ -25,6 +25,7 @@ import {
   presentaAllaRegia,
 } from './lib/api.js'
 import { presentaSeServe } from './lib/presentazione.js'
+import { precaricaMenu } from './lib/menuCache.js'
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
@@ -262,6 +263,13 @@ export default function App() {
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
+  // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
+  // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
+  // l'ascolto del login: lì un errore finirebbe nel catch che toglie il ruolo.
+  useEffect(() => {
+    if (staffRole) precaricaMenu()
+  }, [staffRole])
   const [staffName, setStaffName] = useState('')
   // CHI STA LAVORANDO A QUESTO TERMINALE (REQ-STAFF-016): può non essere
   // chi ha fatto il login — al tablet del banco si collega un account solo
@@ -356,6 +364,17 @@ export default function App() {
   // disegno.
   const venue = useMemo(() => venueDi(settings), [settings])
   const social = useMemo(() => socialDelLocale(venue), [venue])
+  // Il tema delle icone, ricalcolato solo quando cambia davvero: è il
+  // valore del contesto che leggono centinaia di <Icona> (memo), e un
+  // oggetto nuovo a ogni render le ridisegnerebbe tutte.
+  const temaIconeNav = settings.tema_icone_navigazione
+  const temaIconeTasti = settings.tema_icone_tasti
+  const temaIconeSegnali = settings.tema_icone_segnali
+  const temaIcone = useMemo(
+    () => (staffRole ? temiIconeDi(settings) : TUTTE_EMOJI),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [staffRole, temaIconeNav, temaIconeTasti, temaIconeSegnali]
+  )
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
   // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
@@ -479,7 +498,7 @@ export default function App() {
     // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
     // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
     // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
-    <TemaIcone.Provider value={staffRole ? temiIconeDi(settings) : TUTTE_EMOJI}>
+    <TemaIcone.Provider value={temaIcone}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">

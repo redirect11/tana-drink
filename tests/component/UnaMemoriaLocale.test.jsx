@@ -62,9 +62,6 @@ vi.mock('firebase/auth', () => ({
 }))
 
 vi.mock('../../src/lib/api.js', () => ({
-  // Il catalogo che la coda precarica (BUG-137): qui non serve, e resta vuoto.
-  subscribeDrinks: () => () => {},
-  subscribeCategories: () => () => {},
   // La coda dice «ci sono» e guarda chi c'è (legenda con le presenze):
   // qui non serve a niente, ma senza queste due la pagina non si monta.
   segnalaPresenza: () => {},

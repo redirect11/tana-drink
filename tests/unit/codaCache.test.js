@@ -1,5 +1,4 @@
 // @vitest-environment happy-dom
-// @livello integrazione: il codice vero con un Firestore finto (docs/modello-a-v.md)
 'use strict'
 
 // LA CODA PARTE DALLA CACHE, POI SI ALLINEA AL SERVER.

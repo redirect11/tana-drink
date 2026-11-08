@@ -156,12 +156,6 @@ export const PAYMENT_METHOD_LABELS = {
 // dove appare e con che etichetta — contato lo è comunque, da subito.
 export const CASH_METHOD_ORDER = ['banco', 'carta', 'lettore', 'online', 'buono']
 
-// Etichetta di un metodo mai visto prima: meglio il codice grezzo in chiaro
-// che farlo sparire in un altro secchio.
-export function paymentMethodLabel(method) {
-  return PAYMENT_METHOD_LABELS[method] || conEmoji('domanda', method || 'non indicato')
-}
-
 // IL METODO A SCHERMO, DIVISO IN ICONA E NOME (REQ-UI-031): l'icona la
 // disegna il tema del gestionale (components/MetodoPagamento.jsx), il nome
 // resta quello di sempre. Le etichette con l'emoji qui sopra restano per

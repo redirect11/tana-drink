@@ -24,7 +24,6 @@ export default defineConfig({
   // Un browser alla volta: i test condividono lo stesso database emulato,
   // e due giri in parallelo si pesterebbero i conti.
   workers: 1,
-  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
@@ -35,7 +34,6 @@ export default defineConfig({
     // In locale il Chrome installato: niente browser da scaricare. In CI
     // quello di Playwright, installato dal workflow.
     channel: process.env.CI ? undefined : 'chrome',
-    headless: true,
     locale: 'it-IT',
     timezoneId: 'Europe/Rome',
     // Un tablet al banco, in orizzontale.

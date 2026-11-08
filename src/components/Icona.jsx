@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import {
   Archive, ArrowDown, ArrowUp, BadgePlus, Ban, Banknote, Bell, BellOff, BellRing, BookOpen, Calculator, Calendar,
   CalendarDays, ChartColumn, ChefHat, Circle, CircleCheck, CircleHelp, CircleX, ClipboardList,
@@ -52,7 +53,9 @@ const DISEGNI = {
   UtensilsCrossed, Wallet, Wifi, WifiOff, Wine, Wrench, X,
 }
 
-export default function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em', className = '' }) {
+// Memo: le props sono stringhe, e la coda con quaranta conti ne disegna
+// centinaia a ogni snapshot e a ogni tasto nella ricerca.
+function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em', className = '' }) {
   const tema = useTemaIcone(gruppo)
   const chiave = nomeIcona(nome)
   if (!chiave) return nome ? <span aria-hidden="true">{nome}</span> : null
@@ -66,6 +69,8 @@ export default function Icona({ nome, gruppo = GRUPPO_DI_PARTENZA, size = '1.1em
   const Disegno = DISEGNI[voce.disegno]
   return <Disegno aria-hidden="true" className={`icona ${className}`.trim()} size={size} strokeWidth={2} />
 }
+
+export default memo(Icona)
 
 // UN'ETICHETTA CHE ARRIVA COME TESTO, con l'emoji davanti («🧾 Da fare»,
 // lib/icone.js conEmoji): l'icona si disegna nel tema, il resto è testo.

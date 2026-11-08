@@ -65,7 +65,9 @@ test('un conto si batte, si aggiorna e si incassa a rete staccata, e arriva al s
   await expect.poll(async () => {
     const conti = (await db.collection('orders').get()).docs.map((d) => d.data())
     // Nel documento le righe stanno in `items`: `order_items` è il nome che
-    // l'app dà loro dopo averle lette (api.js).
+    // l'app dà loro dopo averle lette (api.js). Le somme si fanno qui, a
+    // mano, apposta: con paidAmount di src/lib/pagamento.js il test
+    // controllerebbe l'app con l'app.
     return conti.map((o) => ({
       pagato: o.payment_status,
       righe: (o.items || []).reduce((n, r) => n + (Number(r.qty) || 0), 0),

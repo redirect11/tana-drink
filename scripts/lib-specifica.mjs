@@ -30,7 +30,7 @@
 //  187 requisiti veri — vedi tests/unit/specifica.test.js.
 // =====================================================================
 
-import { LIVELLI, livelloDelTest, bisogniPerRequisito, statoDellaV } from './lib-modello-v.mjs'
+import { LIVELLI, bisogniPerRequisito, statoDellaV } from './lib-modello-v.mjs'
 
 // Stato di copertura di una voce del registro.
 export function copertura(r) {
@@ -177,10 +177,9 @@ const FATTO = ['coperto', 'scoperto', 'parziale']
  * @param bug        le voci di bugs.yaml (solo le aperte finiscono dentro)
  * @param bisogni    le voci di bisogni.yaml, il gradino sopra la specifica
  * @param architettura  le voci di architettura.yaml, il gradino sotto
- * @param livello    a che livello sta un test, per la tabella della V
  * @param data       quando è stato generato — passabile per poterlo provare
  */
-export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], architettura = [], livello = livelloDelTest, data = new Date() } = {}) {
+export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], architettura = [], data = new Date() } = {}) {
   const righe = []
   const scrivi = (...r) => righe.push(...r, '')
   const servePer = bisogniPerRequisito(bisogni)
@@ -191,7 +190,9 @@ export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], archite
     const r = perId.get(id)
     return r && copertura(r) !== 'deprecato' ? `[${id}](#${ancora(`${id} — ${r.title}`)})` : `\`${id}\``
   }
-  const collegaBisogno = (b) => `[${b.id}](#${ancora(`${b.id} — ${b.title}`)})`
+  // Il collegamento a una voce che ha il suo titolo «#### ID — titolo»:
+  // bisogni, difetti.
+  const collegaVoce = (v) => `[${v.id}](#${ancora(`${v.id} — ${v.title}`)})`
 
   const conteggi = {}
   for (const r of requisiti) {
@@ -277,7 +278,7 @@ export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], archite
   // Senza bisogni il registro non è ancora nel modello a V, e la tabella
   // direbbe solo zeri: non si scrive.
   if (bisogni.length) {
-    const v = statoDellaV({ requisiti, bisogni, architettura, livello })
+    const v = statoDellaV({ requisiti, bisogni, architettura })
     scrivi('### Le prove, livello per livello')
     scrivi(
       'Il progetto segue il modello a V ([docs/modello-a-v.md](modello-a-v.md)): ogni',
@@ -305,7 +306,7 @@ export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], archite
     const meta = [`**Dove**: \`${r.area}\``]
     const serve = servePer.get(r.id)
     if (serve) {
-      meta.push(`**Serve**: ${serve.map((id) => collegaBisogno(bisogni.find((b) => b.id === id))).join(', ')}`)
+      meta.push(`**Serve**: ${serve.map(collegaVoce).join(', ')}`)
     }
     // Un difetto dice quale requisito tradisce: è da lì che si risale a
     // quale livello di test se l'era lasciato sfuggire.
@@ -394,8 +395,7 @@ export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], archite
     righe.push('| | Cosa non va | Quanto fa male | Quando |', '|---|---|---|---|')
     for (const b of bugAperti) {
       const dove = b.in_produzione === true ? '🔴' : b.in_produzione === false ? '·' : '?'
-      const link = `[${b.id}](#${ancora(`${b.id} — ${b.title}`)})`
-      righe.push(`| ${dove} | ${link} — ${b.title} | ${b.severity ?? '—'} | ${b.priority ?? '—'} |`)
+      righe.push(`| ${dove} | ${collegaVoce(b)} — ${b.title} | ${b.severity ?? '—'} | ${b.priority ?? '—'} |`)
     }
     righe.push('')
     scrivi('🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.')

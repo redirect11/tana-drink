@@ -13,24 +13,14 @@
 // fra sei mesi.
 
 import { describe, it, expect } from 'vitest'
-import { readdirSync, statSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi, indicizzaPerId } from '../../scripts/lib-requisiti.mjs'
-import { caricaBisogni, caricaArchitettura } from '../../scripts/lib-modello-v.mjs'
+// I file di test, compresi i `.spec.js` di sistema: l'elenco è uno solo,
+// condiviso col test del modello a V.
+import { caricaBisogni, caricaArchitettura, fileDiTest } from '../../scripts/lib-modello-v.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
-
-function fileDiTest(dir = 'tests', out = []) {
-  for (const nome of readdirSync(dir)) {
-    const p = join(dir, nome)
-    if (statSync(p).isDirectory()) fileDiTest(p, out)
-    // `.spec.js` sono i test di sistema di Playwright (tests/sistema/): anche
-    // loro appartengono a un requisito.
-    else if (/\.(test|spec)\.jsx?$/.test(nome)) out.push(p.replace(/\\/g, '/'))
-  }
-  return out
-}
 
 describe('il file dei requisiti è scritto bene', () => {
   it('ce ne sono, e ognuno ha id, titolo, area e descrizione', () => {

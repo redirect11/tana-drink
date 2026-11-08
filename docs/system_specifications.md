@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*) | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 1 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 117 |
-| Unità | il progetto di dettaglio: un modulo da solo | 206 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 159 |
+| Unità | il progetto di dettaglio: un modulo da solo | 164 |
 
 **11** bisogni del locale, **0** con un test di accettazione.
 **71** requisiti su 313 sono collegati a un bisogno;
@@ -3441,7 +3441,7 @@ COSA SI CONTROLLA PER OGNI LICENZA, da una tabella sola delle PROMESSE di ogni m
 
 L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di sviluppo a V», «per avere più qualità e meno regressioni al banco», con «una V per richiesta». I test c'erano già, ma non dicevano cosa verificano, e nessun registro diceva quale bisogno del locale un requisito serve. I QUATTRO GRADINI e i loro specchi: i bisogni del locale (UR-*, in requirements/bisogni.yaml, ognuno col criterio di accettazione scritto in prosa) si provano coi test di accettazione; la specifica (REQ-*) coi test di sistema sull'app intera; l'architettura (ARC-*, in requirements/architettura.yaml) coi test di integrazione; il progetto di dettaglio, cioè il modulo, coi test di unità.
 
-IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component e tests/bdd e tests/regole, tests/sistema, tests/accettazione), oppure il test stesso con `// @livello <nome>` quando la cartella, scelta prima della V, non dice il vero.
+IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in tests/unit un test che sostituisce Firestore (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice vero contro un Firestore finto; e il test stesso può dichiararlo con `// @livello <nome>` quando la cartella, scelta prima della V, non dice il vero.
 
 UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137.
 
