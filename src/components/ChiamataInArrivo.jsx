@@ -3,6 +3,8 @@ import { auth } from '../lib/firebaseClient.js'
 import { subscribeMyCalls, subscribeCallsAlBancone, ackStaffCall } from '../lib/api.js'
 import { notify } from '../lib/notify.js'
 import { isAdmin } from '../lib/ruoli.js'
+import Icona from './Icona.jsx'
+import { conEmoji } from '../lib/icone.js'
 
 // ── LA CHIAMATA SI PRESENTA DOVUNQUE SI STIA GUARDANDO ───────────────
 //
@@ -72,7 +74,7 @@ export default function ChiamataInArrivo({ ruolo }) {
     }
     // Notifica + vibrazione forte e continua finché non si risponde.
     // Stesso tag della push FCM: se arrivano entrambe, una sola notifica.
-    notify(`📟 ${titoloDi(incoming)}`, incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
+    notify(conEmoji('chiama-bancone', titoloDi(incoming)), incoming.message || (incoming.from_name ? `${incoming.from_name} ti chiama.` : 'Rispondi sul telefono.'), {
       vibrate: VIBRAZIONE,
       tag: 'staff-call',
       renotify: true,
@@ -99,7 +101,7 @@ export default function ChiamataInArrivo({ ruolo }) {
   return (
     <div className="overlay confirm-overlay">
       <div className="confirm-box pager-call">
-        <div className="pager-icon">📟</div>
+        <div className="pager-icon"><Icona nome="lettore" gruppo="tasti" /></div>
         <h3 style={{ margin: '8px 0' }}>{titoloDi(incoming)}</h3>
         {incoming.from_name && (
           <p className="muted" style={{ margin: 0 }}>da {incoming.from_name}</p>

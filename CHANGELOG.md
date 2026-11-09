@@ -1,6 +1,37 @@
 # Cosa è cambiato
 
-## 1.10.28-beta — in lavorazione
+## 1.10.29-beta — 08/11/2026 (test)
+
+### Metodo
+
+- Lo sviluppo segue il modello a V, una richiesta alla volta: ogni
+  requisito nuovo è collegato a un bisogno del locale, che dice anche come
+  si verifica al banco, e ogni test dichiara il livello a cui verifica
+  (unità, integrazione, sistema, accettazione). La specifica di sistema ha
+  i capitoli dei bisogni e dell'architettura (REQ-DEV-018).
+- I test di sistema: l'app compilata, in un browser vero, con il database
+  emulato. Il primo ripete il giro di una serata con la rete staccata e
+  gira su ogni pull request (REQ-DEV-018).
+
+### Senza rete
+
+- Su un tablet o un telefono appena entrato, se la rete cade prima di aprire
+  il primo conto, i prodotti ci sono: il catalogo si carica appena chi
+  lavora entra. Prima il conto si apriva vuoto (BUG-137).
+
+### Aspetto
+
+- Le icone del gestionale sono silhouette monocrome, tutte della stessa
+  misura, al posto delle emoji colorate: il menu laterale, le sezioni e le
+  sottosezioni, la barra in alto, i moduli del Marketplace, i tasti, i
+  titoli delle sezioni, gli stati dei conti, i metodi di pagamento nei
+  riepiloghi di cassa, le notifiche a comparsa, le conferme e gli avvisi.
+  Nei campi di ricerca la lente compare solo col tema Emoji.
+  In Impostazioni → Aspetto → «Le icone del gestionale» si possono
+  rimettere le emoji, a parte per navigazione, tasti e stati, segnali e
+  messaggi (REQ-UI-031).
+
+## 1.10.28-beta — 07/11/2026 (test)
 
 ### Moduli
 

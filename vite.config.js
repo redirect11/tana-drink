@@ -129,6 +129,10 @@ export default defineConfig({
           if (id.includes('@firebase/functions') || id.includes('firebase/functions')) return 'firebase-functions'
           if (id.includes('firebase') || id.includes('@firebase')) return 'firebase-core'
           if (id.includes('react-router') || id.includes('@remix-run')) return 'router'
+          // I disegni delle icone (REQ-UI-031) in un pezzo loro: con
+          // `includes('react')` sotto finivano nel pacchetto di React, che
+          // cambiava a ogni icona aggiunta e si riscaricava su ogni terminale.
+          if (id.includes('lucide-react')) return 'icone'
           if (id.includes('react') || id.includes('scheduler')) return 'react'
           return 'vendor'
         },

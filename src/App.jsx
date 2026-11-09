@@ -25,6 +25,7 @@ import {
   presentaAllaRegia,
 } from './lib/api.js'
 import { presentaSeServe } from './lib/presentazione.js'
+import { precaricaMenu } from './lib/menuCache.js'
 import { getPushToken } from './lib/push.js'
 import { idDispositivo } from './lib/dispositivo.js'
 import { savePrinterSettings, impostaUtenteStampante } from './lib/printer.js'
@@ -82,6 +83,9 @@ import { toastSuccess } from './lib/toast.js'
 import Toasts from './components/Toasts.jsx'
 import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
+import Icona from './components/Icona.jsx'
+import { TemaIcone } from './lib/temaIcone.js'
+import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
 /* global __APP_VERSION__, __BUILD_ID__ */
@@ -129,7 +133,7 @@ export default function App() {
       // traccia anche dopo aver chiuso il box. Se il box esce adesso, la
       // notifica nasce già letta — è appena stata mostrata.
       recordNotif(
-        '🎉 L’app è stata aggiornata',
+        conEmoji('festa', 'L’app è stata aggiornata'),
         'Tocca per rivedere cosa è cambiato',
         { href: '/bar?tab=impostazioni&sezione=informazioni', letta: cosa === 'box' }
       )
@@ -252,13 +256,20 @@ export default function App() {
     if (!online) wasOffline.current = true
     else if (wasOffline.current) {
       wasOffline.current = false
-      toastSuccess('✅ Di nuovo online — sincronizzo le modifiche')
+      toastSuccess('Di nuovo online — sincronizzo le modifiche')
     }
   }, [online])
 
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
+  // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
+  // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
+  // l'ascolto del login: lì un errore finirebbe nel catch che toglie il ruolo.
+  useEffect(() => {
+    if (staffRole) precaricaMenu()
+  }, [staffRole])
   const [staffName, setStaffName] = useState('')
   // CHI STA LAVORANDO A QUESTO TERMINALE (REQ-STAFF-016): può non essere
   // chi ha fatto il login — al tablet del banco si collega un account solo
@@ -353,6 +364,17 @@ export default function App() {
   // disegno.
   const venue = useMemo(() => venueDi(settings), [settings])
   const social = useMemo(() => socialDelLocale(venue), [venue])
+  // Il tema delle icone, ricalcolato solo quando cambia davvero: è il
+  // valore del contesto che leggono centinaia di <Icona> (memo), e un
+  // oggetto nuovo a ogni render le ridisegnerebbe tutte.
+  const temaIconeNav = settings.tema_icone_navigazione
+  const temaIconeTasti = settings.tema_icone_tasti
+  const temaIconeSegnali = settings.tema_icone_segnali
+  const temaIcone = useMemo(
+    () => (staffRole ? temiIconeDi(settings) : TUTTE_EMOJI),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [staffRole, temaIconeNav, temaIconeTasti, temaIconeSegnali]
+  )
   // Sospesa o chiusa dalla regia (REQ-FLOTTA-008): si ferma e lo dice.
   const bloccata = installazioneBloccata(settings)
   // L'APP SI PRESENTA ALLA REGIA (REQ-FLOTTA-026): una volta per versione,
@@ -472,6 +494,11 @@ export default function App() {
     (location.pathname.startsWith('/menu') && !!staffRole && !anteprimaCliente)
 
   return (
+    // IL TEMA DELLE ICONE (REQ-UI-031) vale per il gestionale: la barra,
+    // il menu laterale, le pagine. Chi non è dello staff (il cliente, anche
+    // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
+    // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
+    <TemaIcone.Provider value={temaIcone}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">
@@ -499,7 +526,7 @@ export default function App() {
       )}
       {!online && (
         <div className="offline-ribbon">
-          📴 Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
+          <Icona nome="rete-assente" gruppo="segnali" /> Offline — puoi continuare a lavorare, tutto si sincronizza al ritorno della connessione
         </div>
       )}
       {updateReady && (
@@ -507,7 +534,7 @@ export default function App() {
           className="update-banner"
           onClick={() => window.location.reload()}
         >
-          🔄 Nuova versione disponibile — tocca per aggiornare
+          <Icona nome="aggiorna" gruppo="tasti" /> Nuova versione disponibile — tocca per aggiornare
         </button>
       )}
       {novitaAperte && (
@@ -551,7 +578,7 @@ export default function App() {
             title="Menu"
             onClick={() => window.dispatchEvent(new Event('drink:toggle-drawer'))}
           >
-            ☰
+            <Icona nome="menu_laterale" />
           </button>
         )}
         {/* INDIETRO, NELLA BARRA. Nelle sezioni del gestionale stava dentro
@@ -591,7 +618,7 @@ export default function App() {
             uguale sul telefono e sul computer. */}
         {pagina && (
           <span className="topbar-pagina">
-            <span aria-hidden>·</span> {(sezioneAttiva?.icona) || pagina.icona}{' '}
+            <span aria-hidden>·</span> <Icona nome={(sezioneAttiva?.icona) || pagina.icona} />{' '}
             {(sezioneAttiva?.label) || pagina.titolo}
           </span>
         )}
@@ -644,7 +671,7 @@ export default function App() {
               )}
               {user ? (
                 <Link className="btn ghost small" to="/profilo">
-                  👤 Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+                  <Icona nome="profilo" gruppo="tasti" />{' '}Ciao, {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
                 </Link>
               ) : accountsOn ? (
                 <Link className="btn ghost small" to="/accedi">Accedi</Link>
@@ -662,16 +689,16 @@ export default function App() {
           spostando quello che c'è sotto proprio mentre lo si tocca. */}
       {telefono && !staffRole && !onBackoffice && (
         <div className="barra-cliente">
-          <Link className="btn ghost small" to="/menu">🍸 Menù</Link>
+          <Link className="btn ghost small" to="/menu"><Icona nome="menu" gruppo="tasti" /> Menù</Link>
           {hasOrders && (
-            <Link className="btn ghost small" to="/ordini">🧾 I miei ordini</Link>
+            <Link className="btn ghost small" to="/ordini"><Icona nome="coda" gruppo="tasti" /> I miei ordini</Link>
           )}
           {user ? (
             <Link className="btn ghost small" to="/profilo">
-              👤 {profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
+              <Icona nome="profilo" gruppo="tasti" />{' '}{profile?.nome || user.displayName?.split(' ')[0] || 'Profilo'}
             </Link>
           ) : accountsOn ? (
-            <Link className="btn ghost small" to="/accedi">🔑 Accedi</Link>
+            <Link className="btn ghost small" to="/accedi"><Icona nome="accedi" gruppo="tasti" /> Accedi</Link>
           ) : null}
         </div>
       )}
@@ -687,42 +714,42 @@ export default function App() {
 
           {
             id: 'profilo',
-            icon: '⚙️',
+            icon: 'profilo',
             label: 'Il mio profilo',
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
           !isSala(staffRole) && {
             id: 'pos',
-            icon: '🍸',
+            icon: 'nuovo-ordine',
             label: 'POS — nuovo ordine',
             onClick: () => navigate('/pos'),
           },
           // Senza il menù digitale non c'è un menù da guardare (BUG-132).
           !isSala(staffRole) && menuDigitale && {
             id: 'vista-cliente',
-            icon: '👀',
+            icon: 'vista-cliente',
             label: 'Vista cliente',
             hint: 'Il menù come lo vede chi ordina',
             onClick: () => navigate('/menu?vista=cliente'),
           },
           isSala(staffRole) && {
             id: 'servizio',
-            icon: '🧾',
+            icon: 'coda',
             label: 'Torna alla coda',
             hint: 'La coda ordini, la stessa del banco',
             onClick: () => navigate('/bar'),
           },
           schermoIntero.disponibile && {
             id: 'schermo',
-            icon: schermoIntero.attivo ? '🡼' : '⛶',
+            icon: schermoIntero.attivo ? 'esci-schermo-intero' : 'schermo-intero',
             label: schermoIntero.attivo ? 'Esci da schermo intero' : 'Schermo intero',
             hint: schermoIntero.attivo
               ? null
               : 'Meglio ancora: installa l’app dalla schermata iniziale',
             onClick: schermoIntero.alterna,
           },
-          { id: 'esci', icon: '🚪', label: 'Esci', danger: true, onClick: () => logoutStaff() },
+          { id: 'esci', icon: 'esci', label: 'Esci', danger: true, onClick: () => logoutStaff() },
         ]}
       />
 
@@ -730,7 +757,7 @@ export default function App() {
 
       {!isFirebaseConfigured && (
         <div className="banner">
-          ⚠️ Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
+          <Icona nome="avviso" gruppo="segnali" />{' '}Firebase non è configurato. Imposta <code>VITE_FIREBASE_API_KEY</code> e{' '}
           <code>VITE_FIREBASE_PROJECT_ID</code> (vedi <code>.env.example</code> e{' '}
           <code>firestore.rules</code>).
         </div>
@@ -802,6 +829,7 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </TemaIcone.Provider>
   )
 }
 
@@ -875,7 +903,7 @@ function FullscreenButton() {
       title={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
       aria-label={attivo ? 'Esci da schermo intero' : 'Schermo intero'}
     >
-      {attivo ? '🡼' : '⛶'}
+      <Icona nome={attivo ? 'esci-schermo-intero' : 'schermo-intero'} gruppo="tasti" />
     </button>
   )
 }

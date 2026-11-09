@@ -27,9 +27,11 @@ export function dismissToast(id) {
 
 // Mostra un toast e ritorna l'id (per aggiornarlo, es. sync → success).
 // duration 0 = resta finché non viene aggiornato/chiuso (sync, errori seri).
-export function showToast(message, { kind = 'info', duration = 4000, id = null } = {}) {
+// `icona`: un nome del vocabolario (lib/icone.js), se quella del tipo non
+// dice abbastanza (un'aggiunta al conto, una chiamata partita).
+export function showToast(message, { kind = 'info', duration = 4000, id = null, icona = null } = {}) {
   const tid = id ?? `t${++seq}`
-  const t = { id: tid, message, kind }
+  const t = { id: tid, message, kind, icona }
   const exists = toasts.some((x) => x.id === tid)
   toasts = exists ? toasts.map((x) => (x.id === tid ? t : x)) : [...toasts, t]
   clearTimeout(timers.get(tid))

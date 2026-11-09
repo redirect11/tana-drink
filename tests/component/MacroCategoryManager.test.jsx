@@ -138,7 +138,7 @@ describe('l’elenco delle macro', () => {
     const user = userEvent.setup()
     const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true)
     monta()
-    await user.click(screen.getAllByRole('button', { name: '🗑' })[0])
+    await user.click(screen.getAllByRole('button', { name: 'Elimina' })[0])
     expect(conferma.mock.calls[0][0]).toMatch(/Prodotti e voci restano/)
     expect(screen.queryByRole('button', { name: /Distillati/ })).toBeNull()
     expect(stato.scritture).toEqual([{ tipo: 'delete', col: 'macro_categories', id: 'm1' }])
@@ -148,8 +148,8 @@ describe('l’elenco delle macro', () => {
     const user = userEvent.setup()
     monta()
     await user.click(screen.getAllByRole('button', { name: '↓' })[0])
-    const nomi = [...document.querySelectorAll('.macro-apri strong')].map((n) => n.textContent)
-    expect(nomi).toEqual(['🗂️ Bibite', '🗂️ Distillati'])
+    const nomi = [...document.querySelectorAll('.macro-apri strong')].map((n) => n.textContent.trim())
+    expect(nomi).toEqual(['Bibite', 'Distillati'])
     expect(stato.scritture.map((s) => [s.id, s.patch])).toEqual([
       ['m1', { sort_order: 1 }],
       ['m2', { sort_order: 0 }],

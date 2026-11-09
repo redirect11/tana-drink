@@ -375,7 +375,7 @@ describe('metodi di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
     const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
-    expect(modal.getByRole('button', { name: '🎟' })).toBeDisabled()
+    expect(modal.getByRole('button', { name: 'Buono' })).toBeDisabled()
     // niente più metodo di pagamento "Buono VIP"
     expect(screen.queryByRole('button', { name: /Buono VIP/ })).not.toBeInTheDocument()
   })
@@ -386,7 +386,7 @@ describe('metodi di pagamento', () => {
     mount(baseOrder())
     await user.click(screen.getByRole('button', { name: /Sconto/ }))
     const modal = within(screen.getByRole('dialog', { name: 'Sconto' }))
-    await user.click(modal.getByRole('button', { name: '🎟' }))
+    await user.click(modal.getByRole('button', { name: 'Buono' }))
     await user.selectOptions(modal.getByLabelText(/Buono di/), 'v1')
     // saldo 10 < dovuto 22 → si applicano 10 di sconto attingendo al buono
     expect(modal.getByText(/Dal buono: −10,00 €/)).toBeInTheDocument()

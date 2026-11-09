@@ -82,6 +82,9 @@ vi.mock('../../src/lib/api.js', () => ({
   },
   createManualGroup: vi.fn(),
   clockIn: vi.fn(async () => {}),
+  // Il catalogo che l'app precarica all'ingresso del personale (BUG-137).
+  subscribeDrinks: () => () => {},
+  subscribeCategories: () => () => {},
   subscribePrinterConfig: () => () => {},
 }))
 

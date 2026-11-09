@@ -29,6 +29,7 @@ import VipTab from './VipTab.jsx'
 import { Sottosezioni } from '../lib/sottosezioni.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // GESTIONE UTENTI. Due elenchi in uno: il personale (admin/bartender/staff)
 // e i clienti registrati dal sito. La nomina dei ruoli è dell'admin: da qui
@@ -38,10 +39,10 @@ import { staffConsentito, MESSAGGI_PIANO } from '../lib/limiti.js'
 // Il bartender vede gli elenchi e può chiamare col cerca-persone, ma non
 // tocca i ruoli: dare le chiavi del locale è dell'amministratore.
 const SEZIONI_UTENTI = [
-  { id: 'utenze', icona: '👥', label: 'Utenze registrate' },
-  { id: 'cassa', icona: '🟢', label: 'Chi apre la cassa' },
-  { id: 'nuovo', icona: '➕', label: 'Nuovo account' },
-  { id: 'vip', icona: '🎟', label: 'Buoni VIP' },
+  { id: 'utenze', icona: 'staff', label: 'Utenze registrate' },
+  { id: 'cassa', icona: 'cassa', label: 'Chi apre la cassa' },
+  { id: 'nuovo', icona: 'aggiungi', label: 'Nuovo account' },
+  { id: 'vip', icona: 'buono', label: 'Buoni VIP' },
 ]
 
 export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
@@ -170,14 +171,14 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
           {u.disabled && <span className="pill annullato" style={{ marginLeft: 6 }}>sospeso</span>}
         </div>
         <div className="desc">
-          {RUOLO_ETICHETTA[u.role] ?? u.role}
+          <ConIcona testo={RUOLO_ETICHETTA[u.role] ?? u.role} />
           {u.name && u.email ? ` · ${u.email}` : ''}
         </div>
       </div>
       <div className="row" style={{ gap: 6 }}>
         {RUOLI.includes(u.role) && u.uid !== myUid && !u.disabled && (
           pendingCalls.some((c) => c.to_uid === u.uid) ? (
-            <span className="pill in_preparazione">📟 In chiamata…</span>
+            <span className="pill in_preparazione"><Icona nome="lettore" gruppo="tasti" /> In chiamata…</span>
           ) : (
             <button
               className="btn small"
@@ -185,7 +186,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
               title="Chiama (cerca-persone)"
               onClick={() => setCallTarget(u)}
             >
-              📟
+              <Icona nome="lettore" gruppo="tasti" />
             </button>
           )
         )}
@@ -200,7 +201,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setCambioRuolo(u)
               }}
             >
-              🎚 Ruolo
+              <Icona nome="ruolo" gruppo="tasti" /> Ruolo
             </button>
             <button
               className="btn ghost small"
@@ -216,7 +217,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 })
               }
             >
-              {u.disabled ? '▶' : '⏸'}
+              <Icona nome={u.disabled ? 'avvia' : 'pausa'} gruppo="tasti" />
             </button>
             <button
               className="btn ghost small"
@@ -226,13 +227,13 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 setConfirm({
                   title: `Eliminare ${u.email}?`,
                   message:
-                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa ⏸ Sospendi.',
+                    'Operazione irreversibile: l’account sparisce. Se serve solo togliergli l’accesso, usa Sospendi.',
                   danger: true,
                   run: () => run(() => removeStaff(u.uid)),
                 })
               }
             >
-              🗑
+              <Icona nome="elimina" gruppo="tasti" />
             </button>
           </>
         )}
@@ -310,7 +311,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                     className={`mode-option${nuovoRuolo === value ? ' active' : ''}`}
                     onClick={() => setNuovoRuolo(value)}
                   >
-                    {RUOLO_ETICHETTA[value]}
+                    <ConIcona testo={RUOLO_ETICHETTA[value]} />
                   </button>
                 ))}
               </div>
@@ -318,7 +319,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 {RUOLO_DESCRIZIONE[nuovoRuolo]}
               </p>
               <button className="btn block" style={{ marginTop: 12 }} type="submit" disabled={busy}>
-                {busy ? 'Creo…' : '➕ Crea account'}
+                {busy ? 'Creo…' : <><Icona nome="aggiungi" gruppo="tasti" /> Crea account</>}
               </button>
             </form>
           )}
@@ -384,7 +385,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                   className={`mode-option${ruoloScelto === value ? ' active' : ''}`}
                   onClick={() => setRuoloScelto(value)}
                 >
-                  {RUOLO_ETICHETTA[value]}
+                  <ConIcona testo={RUOLO_ETICHETTA[value]} />
                 </button>
               ))}
             </div>
@@ -442,7 +443,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
       {callTarget && (
         <div className="overlay confirm-overlay" onClick={() => setCallTarget(null)}>
           <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>📟 Chiama {callTarget.name || callTarget.email}</h3>
+            <h3 style={{ marginTop: 0 }}><Icona nome="lettore" gruppo="tasti" /> Chiama {callTarget.name || callTarget.email}</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               Il dispositivo vibrerà con insistenza finché non risponde.
             </p>
@@ -457,7 +458,7 @@ export default function UtentiTab({ role = null, sezioneIniziale = 'utenze' }) {
                 Annulla
               </button>
               <button className="btn grow" onClick={sendCall}>
-                📟 Chiama
+                <Icona nome="lettore" gruppo="tasti" /> Chiama
               </button>
             </div>
           </div>

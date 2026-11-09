@@ -6,6 +6,7 @@ import {
   eliminaAltraSpesa,
 } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 import {
   totaleSpesa,
   spesaComprata,
@@ -194,7 +195,7 @@ export default function AltreSpesePanel() {
                   }
                   onClick={() => cambiaComprata(s)}
                 >
-                  {s.bought ? '✅ comprata' : '🛒 da comprare'}
+                  {s.bought ? <><Icona nome="fatto" gruppo="tasti" /> comprata</> : <><Icona nome="carrello" gruppo="tasti" /> da comprare</>}
                 </button>
               </div>
               <button
@@ -202,14 +203,14 @@ export default function AltreSpesePanel() {
                 aria-label={`Modifica «${s.name}»`}
                 onClick={() => setModulo(s)}
               >
-                ✏️
+                <Icona nome="modifica" gruppo="tasti" />
               </button>
               <button
                 className="btn ghost small"
                 aria-label={`Elimina «${s.name}»`}
                 onClick={() => elimina(s)}
               >
-                🗑
+                <Icona nome="elimina" gruppo="tasti" />
               </button>
             </div>
           </div>

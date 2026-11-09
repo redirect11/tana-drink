@@ -327,6 +327,21 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
 
 ## Componenti
 
+- **Le icone del gestionale** (REQ-UI-031) hanno un tema, scelto in
+  Aspetto per ognuno dei tre gruppi (Navigazione; Tasti e stati; Segnali e
+  messaggi): **Silhouette** (di partenza) disegna Lucide a tratto,
+  monocromo, nel colore del testo attorno e alla sua misura; **Emoji**
+  rimette le emoji. Un'icona si chiede per NOME (`<Icona nome="cassa" />`,
+  vocabolario in `src/lib/icone.js`), mai scrivendo l'emoji nella
+  schermata: una prova lo vieta. Dove serve un testo e non un disegno — un
+  segnaposto, una voce di tendina — `useTestoConIcona` mette l'emoji solo
+  nel tema Emoji; le etichette nei dati si scrivono con `conEmoji` e si
+  mostrano con `<ConIcona>`; conferme e notifiche a comparsa prendono
+  `icona`. Il colore resta solo dove dice
+  qualcosa — i pallini degli stati (`--testo-verde`, `--testo-ambra`,
+  `--testo-rosso`) e le categorie colorate dal locale. Accanto all'icona
+  c'è sempre la parola: l'icona è decorativa (`aria-hidden`). Le pagine del
+  cliente non le usano: hanno lo stile del loro menù.
 - **Bottoni** (`.btn`): gradiente derivato da `--accent-2` (135°, dal
   tono chiaro al tono scuro), testo scuro, raggio 12px, `min-height`
   generoso. Varianti: `secondary` (velo chiaro su card) e `ghost`

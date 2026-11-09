@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { openCashSession, settingsIniziali, subscribeSettings } from '../lib/api.js'
 import { toastError } from '../lib/toast.js'
 import { listStaff, staffFromCache } from '../lib/staffApi.js'
+import Icona from './Icona.jsx'
 import {
   operatoreCorrente,
   operatoriSelezionabili,
@@ -82,7 +83,7 @@ export default function ApriCassaBox({ cutoffHour, by, onClose }) {
   return (
     <div className="overlay confirm-overlay" onClick={onClose}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>🟢 Apri la cassa</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="verde" gruppo="tasti" /> Apri la cassa</h3>
         <p className="muted small" style={{ marginTop: 0 }}>
           Da qui in poi gli incassi della serata si contano da soli, fino alla
           chiusura.

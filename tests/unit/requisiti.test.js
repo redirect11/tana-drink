@@ -13,21 +13,14 @@
 // fra sei mesi.
 
 import { describe, it, expect } from 'vitest'
-import { readdirSync, statSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, riconciliaEtichette, corpoGenerato, IN_TEST, prossimoStato, deveNascere, famigliaDi, indicizzaPerId } from '../../scripts/lib-requisiti.mjs'
+// I file di test, compresi i `.spec.js` di sistema: l'elenco è uno solo,
+// condiviso col test del modello a V.
+import { caricaBisogni, caricaArchitettura, fileDiTest } from '../../scripts/lib-modello-v.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
-
-function fileDiTest(dir = 'tests', out = []) {
-  for (const nome of readdirSync(dir)) {
-    const p = join(dir, nome)
-    if (statSync(p).isDirectory()) fileDiTest(p, out)
-    else if (/\.test\.jsx?$/.test(nome)) out.push(p.replace(/\\/g, '/'))
-  }
-  return out
-}
 
 describe('il file dei requisiti è scritto bene', () => {
   it('ce ne sono, e ognuno ha id, titolo, area e descrizione', () => {
@@ -232,8 +225,12 @@ describe('le issue che esistono gia’ si riallineano', () => {
 })
 
 describe('requisiti e test si tengono per mano', () => {
+  // Col modello a V (REQ-DEV-018) un test può appartenere anche a un
+  // bisogno (l'accettazione) o a un componente (l'integrazione): citato lì,
+  // non è un orfano.
   const citati = new Set(
-    requisiti.flatMap((r) => r.test_cases).filter((t) => t.includes('/'))
+    [...requisiti, ...caricaBisogni(), ...caricaArchitettura()]
+      .flatMap((r) => r.test_cases).filter((t) => t.includes('/'))
   )
 
   it('ogni test citato da un requisito esiste davvero', () => {

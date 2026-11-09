@@ -1,0 +1,148 @@
+# requirements/architettura.yaml
+#
+# I PEZZI DELL'APP, come li mette alla prova il modello a V (REQ-DEV-018,
+# docs/modello-a-v.md): il terzo gradino, quello dell'architettura.
+#
+# Un componente è un meccanismo su cui poggiano molti requisiti — la cache,
+# le scritture in sottofondo, le regole del database — e ha una promessa
+# che vale per tutti. La sua prova è il TEST DI INTEGRAZIONE: il pezzo
+# messo insieme a quelli con cui lavora davvero (api.js con un Firestore
+# che non risponde, le regole con l'emulatore, le Functions con un SumUp
+# finto), non preso da solo.
+#
+# Il racconto di ogni componente, col perché, sta in docs/architettura.md;
+# qui c'è la promessa in una frase e i test che la tengono.
+#
+# Formato:
+#   id:          ARC-NNN, stabile
+#   title:       la promessa del componente
+#   area:        i file che lo fanno
+#   description: cosa garantisce e cosa si rompe se manca
+#   test_cases:  i test di INTEGRAZIONE che lo provano (tests/component,
+#                tests/bdd, tests/regole, o un test che dichiara
+#                `// @livello integrazione`)
+
+architettura:
+
+  - id: ARC-001
+    title: "Le schermate leggono dalla cache, e la rete arriva dopo"
+    area: "src/lib/firebaseClient.js, src/lib/api.js (ascolti onSnapshot)"
+    description: >
+      La persistenza offline di Firestore tiene i dati in locale; le
+      schermate partono da lì e si aggiornano con gli ascolti. Nessuna
+      lettura al server nel percorso di un gesto: con una rete collegata che
+      non passa, l'SDK aspetterebbe il server e la coda resterebbe sullo
+      spinner.
+    test_cases:
+      - tests/unit/codaCache.test.js
+      - tests/unit/lettureSuUnGesto.test.js
+
+  - id: ARC-002
+    title: "Le scritture partono in sottofondo, e nessun gesto le aspetta"
+    area: "src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)"
+    description: >
+      Una scrittura Firestore offline non torna mai: un await prima di
+      mostrare l'esito è l'app bloccata col locale pieno. Le scritture
+      partono e basta, l'indicatore dice come stanno andando, e il risultato
+      di un gesto si compone in memoria dal documento di partenza più la
+      patch, invece di rileggerlo (BUG-045).
+    test_cases:
+      - tests/unit/giroInLocale.test.js
+      - tests/unit/incassoOffline.test.js
+      - tests/unit/chiusuraCassaSenzaRete.test.js
+
+  - id: ARC-003
+    title: "Quello che questo terminale ha appena fatto si vede subito, in un posto solo"
+    area: "src/lib/pendingOrders.js, src/lib/comandeLocali.js, src/lib/ordiniNascosti.js"
+    description: >
+      Il conto appena battuto, la comanda appena avanzata, il conto appena
+      chiuso: una memoria locale li mostra finché il server non racconta la
+      stessa cosa, e si pulisce per firma, mai subito dopo la scrittura. Con
+      due memorie diverse le viste della coda si contraddicevano (BUG-028).
+    test_cases:
+      - tests/component/UnaMemoriaLocale.test.jsx
+      - tests/component/CodaCorsie.test.jsx
+
+  - id: ARC-004
+    title: "Il numero del conto si assegna senza chiedere al server"
+    area: "src/lib/progressivi.js, functions/lib/numerazione.js"
+    description: >
+      I contatori si tengono in memoria con tre ascolti, e il prossimo numero
+      è il più alto fra quello del server e l'ultimo assegnato qui. Prima si
+      leggeva il server a ogni ordine, e due creazioni ravvicinate facevano
+      due conti con lo stesso numero.
+    test_cases:
+      - tests/unit/progressivi.test.js
+      - tests/bdd/numerazione.test.js
+
+  - id: ARC-005
+    title: "La bozza del conto si salva in modo sincrono, fuori da React"
+    area: "src/lib/useDraft.js"
+    description: >
+      Le righe non confermate si salvano fuori dagli updater di stato: alla
+      conferma si svuota e si naviga via nello stesso giro, il componente si
+      smonta, e React scarterebbe l'updater lasciando la bozza piena.
+    test_cases:
+      - tests/component/PosPage.test.jsx
+      - tests/component/OrderPosDetail.test.jsx
+
+  - id: ARC-006
+    title: "Il database fa rispettare i ruoli da sé"
+    area: "firestore.rules, src/lib/ruoli.js"
+    description: >
+      Le regole guardano il ruolo nei custom claims, e ogni regola ha una
+      prova doppia: chi deve passare passa, chi non deve viene respinto
+      (REQ-DEV-015). L'interfaccia nasconde, il database impedisce.
+    test_cases:
+      - tests/regole/permessi.test.js
+      - tests/regole/orders.test.js
+      - tests/regole/counters.test.js
+      - tests/regole/staffCalls.test.js
+      - tests/regole/contrattoDati.test.js
+
+  - id: ARC-007
+    title: "La licenza la scrive solo la regia, e le regole la fanno valere"
+    area: "firestore.rules (licenza/attuale), src/lib/licenza.js, functions/lib/licenza-core.js"
+    description: >
+      I moduli a pagamento si accendono da licenza/attuale, che l'app non può
+      scrivere. Le regole del database e le Functions leggono la stessa
+      licenza, così un modulo spento resta spento anche fuori dall'interfaccia.
+    test_cases:
+      - tests/regole/licenza.test.js
+      - tests/regole/matriceModuli.test.js
+      - tests/bdd/licenza-functions.test.js
+
+  - id: ARC-008
+    title: "I pagamenti con carta passano dalle Functions, con le credenziali al sicuro"
+    area: "functions/lib/payment-core.js, functions/lib/payment-service.js"
+    description: >
+      La chiave di SumUp sta nei segreti delle Functions e non arriva mai al
+      telefono. Il conto si segna pagato solo quando SumUp conferma, e un
+      rifiuto lo lascia da incassare.
+    test_cases:
+      - tests/bdd/payment-reader.test.js
+      - tests/bdd/payment-checkout.test.js
+      - tests/bdd/payment-group.test.js
+
+  - id: ARC-009
+    title: "Le notifiche partono dal server, e arrivano a chi servono"
+    area: "functions/lib/push-core.js, src/lib/push.js, src/lib/notify.js"
+    description: >
+      Un ordine nuovo avvisa il banco, un drink pronto avvisa il cliente e chi
+      lo porta, una chiamata avvisa il collega. Le Functions scelgono i
+      destinatari; l'app tiene il registro locale di quelle ricevute.
+    test_cases:
+      - tests/bdd/notify-order.test.js
+      - tests/bdd/notify-staff-call.test.js
+
+  - id: ARC-010
+    title: "La stampante racconta com'è andata, e non trattiene il lavoro"
+    area: "src/lib/printer.js, src/lib/statoStampante.js, src/lib/registroStampe.js"
+    description: >
+      La stampa parte e la risposta della stampante è diagnostica: dice se la
+      carta è uscita, non blocca il gesto che l'ha chiesta. Lo stato si vede
+      prima di averne bisogno e ogni stampa resta nel registro.
+    test_cases:
+      - tests/component/PallinoStampante.test.jsx
+      - tests/component/RegistroStampe.test.jsx
+      - tests/component/PrinterSetupSala.test.jsx

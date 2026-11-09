@@ -1,7 +1,7 @@
 {
   "name": "karaoke-drink",
   "private": true,
-  "version": "1.10.28-beta",
+  "version": "1.10.29-beta",
   "type": "module",
   "description": "App per la prenotazione dei drink del cocktail bar La Tana del Coniglio",
   "scripts": {
@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:regole": "vitest run --config vitest.regole.config.mjs",
+    "test:sistema": "npx --yes firebase-tools@15.26.0 emulators:exec --project demo-tana-drink --only auth,firestore --config firebase.collaudo.json \"npx playwright test\"",
     "test:coverage": "vitest run --coverage",
     "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",
@@ -50,6 +51,7 @@
     "@fontsource/special-elite": "5.3.0",
     "firebase": "^12.14.0",
     "gsap": "3.12.5",
+    "lucide-react": "1.61.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -59,6 +61,7 @@
   "devDependencies": {
     "@eslint/js": "^9.11.1",
     "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "1.64.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

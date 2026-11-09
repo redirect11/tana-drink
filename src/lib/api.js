@@ -131,6 +131,7 @@ import {
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
 import { ricordaImpostazioni, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
+import { conEmoji } from './icone.js'
 import {
   cassaCorrente,
   prendiNumero,
@@ -4907,7 +4908,7 @@ function notifyLowStock(lowStock) {
     const finito = it.stock <= 0
     if (!avvisoAttivo(preferenze, idAvvisoScorta(finito ? 'empty' : 'low'))) continue
     notify(
-      `⚠️ Scorta ${finito ? 'esaurita' : 'in esaurimento'}`,
+      conEmoji('avviso', `Scorta ${finito ? 'esaurita' : 'in esaurimento'}`),
       `${it.name}: rimasti ${formatQty(it.stock, it.unit)}`
     )
   }
@@ -6495,6 +6496,13 @@ export const DEFAULT_SETTINGS = {
   // Temi: preset + eventuali override colore, separati per gestionale
   // (staff/bartender) e vista cliente. Vedi src/lib/themes.js.
   theme_staff: { preset: 'tana-scuro', custom: null },
+  // Le icone del gestionale (REQ-UI-031), un tema per gruppo (lib/icone.js):
+  // «silhouette», monocrome, di partenza per tutti (decisione dell'utente,
+  // 07/11/2026); «emoji» rimette quelle di prima. Le pagine del cliente non
+  // le guardano.
+  tema_icone_navigazione: 'silhouette',
+  tema_icone_tasti: 'silhouette',
+  tema_icone_segnali: 'silhouette',
   theme_client: { preset: 'tana-scuro', custom: null },
 }
 

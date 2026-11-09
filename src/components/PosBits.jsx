@@ -1,5 +1,6 @@
 import { formatPrice } from '../lib/orderStatus.js'
 import { qtyBtnStyle } from '../lib/posStyles.js'
+import Icona from './Icona.jsx'
 
 // Mattoni condivisi dell'interfaccia POS (griglia prodotti stile SumUp):
 // usati sia dalla cassa (PosPage, nuovo ordine) sia dal dettaglio ordine
@@ -103,7 +104,7 @@ export function DrinkTile({
             zIndex: 2,
           }}
         >
-          {favorite ? '★' : '☆'}
+          <Icona nome="preferito" gruppo="tasti" className={favorite ? 'icona-piena' : ''} />
         </button>
       )}
 

@@ -1,0 +1,277 @@
+# requirements/bisogni.yaml
+#
+# I BISOGNI DEL LOCALE: il gradino più alto del modello a V (REQ-DEV-018,
+# docs/modello-a-v.md).
+#
+# Un bisogno dice cosa serve a chi lavora o a chi ordina, nelle parole del
+# locale e senza parlare di come l'app lo fa. Il «come» sta nei requisiti
+# (requirements.yaml), che il bisogno elenca in `requisiti`; la prova che il
+# bisogno è soddisfatto è il TEST DI ACCETTAZIONE, che gira sull'app intera
+# e ripete il gesto come lo farebbe Flavio al banco.
+#
+# Formato:
+#   id:           UR-NNN, stabile
+#   title:        il bisogno, in una frase
+#   area:         chi lo vive (Banco, Sala, Cliente, Gestore)
+#   description:  cosa serve e perché; da dove viene, se c'è una data
+#   accettazione: COME SI ACCETTA, in prosa: il giro che chi lavora farebbe
+#                 per dire «sì, è così». Si scrive insieme al bisogno, prima
+#                 del codice: è il piano del test di accettazione.
+#   requisiti:    i REQ-* che lo realizzano (il legame si scrive solo qui;
+#                 da un requisito ai suoi bisogni si risale da sé)
+#   test_cases:   i test di accettazione automatici (tests/accettazione/),
+#                 quando ci sono
+#
+# Le voci di partenza (08/11/2026) vengono dalle regole del mestiere in
+# CLAUDE.md, che sono i guai già visti al banco. I requisiti nati prima
+# della V si collegano a mano a mano; quelli nuovi nascono collegati.
+
+bisogni:
+
+  - id: UR-001
+    title: "Un conto si batte e si incassa anche con la rete staccata"
+    area: "Banco, Sala"
+    description: >
+      La rete del locale va e viene, e col locale pieno non si può aspettare
+      che torni. Aprire un conto, aggiungere righe, mandare le comande e
+      incassare devono funzionare senza connessione, con l'esito visibile
+      nell'istante del gesto; la sincronizzazione arriva dopo, da sola. È la
+      prima regola del progetto (CLAUDE.md, «Il local-first»).
+    accettazione: >
+      Con la cassa aperta si stacca la rete. Si batte un conto di tre drink,
+      si manda la comanda, se ne aggiunge un quarto e si incassa in
+      contanti. A ogni passo la card in coda mostra subito righe e totale
+      giusti, senza attese. Si riattacca la rete: dopo la sincronizzazione
+      gli altri terminali vedono lo stesso conto, incassato, una volta sola.
+    requisiti:
+      - REQ-ORD-016
+      - REQ-POS-001
+      - REQ-POS-002
+      - REQ-POS-005
+      - REQ-OFFLINE-001
+      - REQ-OFFLINE-002
+      - REQ-OFFLINE-003
+      - REQ-OFFLINE-006
+      - REQ-OFFLINE-007
+      - REQ-PAG-001
+    test_cases: []
+
+  - id: UR-002
+    title: "Quello che si vede a schermo è il conto vero"
+    area: "Banco, Sala"
+    description: >
+      Un totale che non corrisponde alle righe è un conto sbagliato portato
+      al tavolo. Righe, supplementi, sconti e quanto resta da incassare
+      devono essere giusti in ogni momento, anche subito dopo una modifica,
+      e un'aggiunta non deve riaprire quello che è già stato servito.
+    accettazione: >
+      Si apre un conto con coperto, si aggiungono due drink, si applica uno
+      sconto del 10% e si incassa una parte in carta. Il tasto Pagamento
+      dice ogni volta quanto resta; la card in coda, il conto e il preconto
+      riportano le stesse cifre, al centesimo. Si aggiunge un drink dopo che
+      i primi sono stati serviti: i serviti restano serviti.
+    requisiti:
+      - REQ-POS-014
+      - REQ-POS-016
+      - REQ-PAG-002
+      - REQ-PAG-003
+      - REQ-PAG-013
+      - REQ-ORD-003
+      - REQ-ORD-004
+      - REQ-PAG-010
+    test_cases: []
+
+  - id: UR-003
+    title: "Niente di quello che si sta battendo va perso"
+    area: "Banco, Sala"
+    description: >
+      Chi batte un conto viene interrotto di continuo: si cambia schermata,
+      si risponde a un cliente, il telefono si blocca, la pagina si
+      ricarica. Le righe non ancora confermate devono ritrovarsi dove le si
+      era lasciate.
+    accettazione: >
+      Si mettono tre righe in un conto nuovo senza confermarlo, si torna
+      alla coda e si ricarica la pagina. Riaprendo il nuovo ordine le tre
+      righe ci sono. Lo stesso in modifica di un conto esistente. Dopo la
+      conferma la bozza è vuota.
+    requisiti:
+      - REQ-POS-003
+      - REQ-POS-004
+    test_cases: []
+
+  - id: UR-004
+    title: "La comanda arriva a chi deve preparare"
+    area: "Banco, Sala"
+    description: >
+      Un drink battuto e mai preparato è un cliente che aspetta per niente.
+      La comanda deve arrivare al banco, a schermo e su carta, da qualunque
+      terminale la si mandi, e chi la manda deve sapere prima se la
+      stampante la farà uscire.
+    accettazione: >
+      Dalla sala si batte un conto e si manda la comanda. Al banco compare in
+      coda, nella colonna giusta, con le note delle righe leggibili, ed esce
+      una volta sola dalla stampante del banco. Con la stampante spenta il
+      pallino lo dice prima dell'invio, e la comanda resta comunque in coda.
+    requisiti:
+      - REQ-ORD-001
+      - REQ-ORD-009
+      - REQ-CODA-001
+      - REQ-CODA-002
+      - REQ-CODA-003
+      - REQ-STAMPA-001
+      - REQ-STAMPA-002
+      - REQ-STAMPA-006
+      - REQ-STAMPA-007
+      - REQ-STAMPA-012
+      - REQ-STAMPA-013
+      - REQ-NOTIF-002
+    test_cases: []
+
+  - id: UR-005
+    title: "La cassa della serata torna al centesimo"
+    area: "Banco, Gestore"
+    description: >
+      A fine serata il conteggio dei contanti deve corrispondere a quello che
+      dice l'app, e la carta non deve mai finire nei contanti. La serata
+      finisce dopo mezzanotte, e i conti impagati restano da riscuotere senza
+      sparire.
+    accettazione: >
+      Si apre la cassa con un fondo, si incassano conti in contanti (col
+      resto), in carta e con un buono VIP, e se ne chiude uno impagato. Dopo
+      mezzanotte si chiude la cassa: la chiusura stampata riporta ogni metodo
+      separato, il contante atteso è fondo più contanti incassati, e
+      l'impagato compare fra quelli da riscuotere.
+    requisiti:
+      - REQ-CASSA-001
+      - REQ-CASSA-002
+      - REQ-CASSA-003
+      - REQ-CASSA-004
+      - REQ-CASSA-006
+      - REQ-CASSA-016
+      - REQ-STAMPA-004
+      - REQ-PAG-006
+      - REQ-PAG-015
+    test_cases: []
+
+  - id: UR-006
+    title: "Il magazzino scala quello che è stato venduto davvero"
+    area: "Banco, Gestore"
+    description: >
+      Le giacenze servono a sapere cosa ordinare: se scalano male, si
+      ordina male. Un drink fatto scala la ricetta con cui è stato fatto,
+      anche se la ricetta cambia dopo; un conto annullato restituisce le
+      scorte; le quantità sono in unità base, e «4 cl» non diventa mai 4
+      pezzi.
+    accettazione: >
+      Si annota la giacenza di un gin, si vende un drink che ne usa 4 cl e
+      lo si porta a «pronto»: la giacenza scende di 40 ml. Si cambia la
+      ricetta: il drink già fatto non cambia lo scarico. Si annulla un
+      secondo conto con lo stesso drink: le scorte tornano.
+    requisiti:
+      - REQ-MAG-001
+      - REQ-MAG-003
+      - REQ-MAG-004
+      - REQ-MAG-005
+      - REQ-MAG-046
+      - REQ-ORD-005
+    test_cases: []
+
+  - id: UR-007
+    title: "Ognuno fa quello che il suo ruolo consente"
+    area: "Banco, Sala, Gestore"
+    description: >
+      Il personale di sala serve e corregge i conti, ma non cambia gli stati
+      di preparazione; il bilancio e le impostazioni del locale li vede solo
+      l'admin; il cliente vede il suo ordine e basta. Le regole valgono anche
+      sul database, non solo a schermo.
+    accettazione: >
+      Si entra come sala, come bartender, come admin e come cliente. Ognuno
+      vede solo le sezioni del suo ruolo; la sala non sposta una comanda da
+      «in preparazione» a «pronto»; un cliente che prova a scrivere un
+      ordine non suo viene respinto dal database.
+    requisiti:
+      - REQ-STAFF-001
+      - REQ-STAFF-002
+      - REQ-STAFF-004
+      - REQ-STAFF-014
+      - REQ-STAFF-020
+      - REQ-SIC-001
+      - REQ-DEV-015
+    test_cases: []
+
+  - id: UR-008
+    title: "Il cliente ordina dal telefono e sa quando il drink è pronto"
+    area: "Cliente"
+    description: >
+      Con gli ordini dal telefono il cliente non deve chiedere a nessuno a
+      che punto è: dal QR del tavolo apre il menù, ordina, vede una stima
+      onesta dell'attesa e viene avvisato quando il drink è pronto.
+    accettazione: >
+      Dal QR di un tavolo si apre il menù, si ordinano due drink e si resta
+      sulla pagina dell'ordine. Il banco lo vede arrivare. Quando il banco lo
+      porta a «pronto», la pagina del cliente lo dice senza ricaricare.
+    requisiti:
+      - REQ-CLI-001
+      - REQ-CLI-002
+      - REQ-CLI-003
+      - REQ-CLI-006
+      - REQ-NOTIF-001
+    test_cases: []
+
+  - id: UR-009
+    title: "Si paga con la carta, al lettore o con un link"
+    area: "Banco, Cliente"
+    description: >
+      Il pagamento con carta deve chiudere il conto solo quando il lettore o
+      il link dicono che è andato a buon fine, e un pagamento rifiutato deve
+      lasciare il conto da incassare.
+    accettazione: >
+      Si incassa un conto col lettore SumUp: a pagamento riuscito il conto
+      risulta pagato in carta. Si ripete con un pagamento rifiutato: il conto
+      resta aperto con lo stesso importo da incassare. Lo stesso col link di
+      pagamento.
+    requisiti:
+      - REQ-PAG-004
+      - REQ-PAG-005
+    test_cases: []
+
+  - id: UR-010
+    title: "Un conto si corregge anche dopo averlo mandato"
+    area: "Banco, Sala"
+    description: >
+      Si sbaglia un drink, il cliente cambia idea, un conto chiuso va
+      riaperto. Chi ha preso l'ordine deve poterlo modificare, e un conto
+      chiuso o annullato deve poter tornare in corso senza perdere niente.
+    accettazione: >
+      Si modifica un conto già mandato togliendo una riga e aggiungendone
+      un'altra: il salvataggio lo dice e riporta indietro. Si chiude il
+      conto e lo si rimette in corso: righe, comande e pagamenti sono quelli
+      di prima.
+    requisiti:
+      - REQ-ORD-008
+      - REQ-ORD-018
+      - REQ-ORD-019
+    test_cases: []
+
+  - id: UR-011
+    title: "Quello che funzionava ieri funziona anche stasera"
+    area: "Gestore"
+    description: >
+      Ogni versione nuova va sul tablet del banco la sera stessa. Una
+      correzione non deve rompere quello che già funzionava, e chi lavora
+      deve sapere quale versione ha davanti. È il motivo del modello a V
+      (l'utente, 08/11/2026: «più qualità e meno regressioni al banco»).
+    accettazione: >
+      Prima di ogni merge in develop la richiesta ha la sua V completa: il
+      bisogno, il requisito, e i test di ogni livello che la riguardano,
+      verdi in CI. Una richiesta senza bisogno o senza prove non passa il
+      cancello.
+    requisiti:
+      - REQ-DEV-001
+      - REQ-DEV-002
+      - REQ-DEV-004
+      - REQ-DEV-005
+      - REQ-DEV-012
+      - REQ-DEV-017
+      - REQ-DEV-018
+    test_cases: []
