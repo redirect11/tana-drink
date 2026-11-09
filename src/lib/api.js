@@ -6454,6 +6454,10 @@ export const DEFAULT_SETTINGS = {
   // sono lo stesso tavolo. Il colore a mano si può dare comunque, acceso
   // o spento che sia questo (vedi lib/coloriConto.js).
   conti_colorati: false,
+  // L'iniziale di chi ha caricato ogni riga, e con lei il «+» e il «−»
+  // solo a chi l'ha caricata (REQ-ORD-023, REQ-ORD-024). Accesa: la
+  // chiedeva la Tana, e un locale dove non serve la spegne.
+  firma_righe: true,
   // COSA DICE LA STRISCIA a sinistra della card, in tutte le viste della
   // coda: di suo lo STATO — a che punto sta il lavoro e com'è messo il
   // pagamento — che è com'è sempre stato e resta il default. Acceso,

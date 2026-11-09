@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 271 | fatto e coperto dai test |
+| ✅ | 272 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 3 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**326 voci** in tutto. **289** descrivono il sistema com'è oggi e
+**327 voci** in tutto. **290** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -41,7 +41,7 @@ come «vero oggi», non come «garantito».
 
 | Area | Fatto | Previsto | Di cosa parla |
 |---|---|---|---|
-| [Ordini e comande](#ordini-e-comande) | 19 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
+| [Ordini e comande](#ordini-e-comande) | 20 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
@@ -74,12 +74,12 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*) | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 10 |
+| Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
-| Unità | il progetto di dettaglio: un modulo da solo | 166 |
+| Unità | il progetto di dettaglio: un modulo da solo | 167 |
 
 **13** bisogni del locale, **0** con un test di accettazione.
-**77** requisiti su 318 sono collegati a un bisogno;
+**78** requisiti su 319 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -183,7 +183,7 @@ In una serata piena allo stesso conto lavorano in due o tre: chi l'ha aperto al 
 
 **Come si accetta**: Flavio apre un conto al banco e batte un Negroni; Alex, dal telefono della sala, ci aggiunge uno Spritz. Riaprendo il conto, accanto al Negroni c'è la F rosa e accanto allo Spritz la A azzurra; sulla card della coda resta la F di chi l'ha aperto. Lo stesso col telefono senza rete.
 
-**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-023](#req-ord-023--accanto-a-ogni-riga-del-conto-liniziale-di-chi-lha-battuta-nel-suo-colore) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-023](#req-ord-023--accanto-a-ogni-riga-del-conto-liniziale-di-chi-lha-battuta-nel-suo-colore), [REQ-ORD-024](#req-ord-024--il--e-il--di-una-riga-li-usa-solo-chi-lha-caricata-se-liniziale-è-accesa) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-013 — Il gestionale si legge e si compila senza fatica
 
@@ -369,9 +369,15 @@ LA FIRMA: ogni riga porta `added_by` {name, email, role}. La mette il conto quan
 
 IL COLORE è della persona e viene dal nome (lib/colorePersona.js): lo stesso sulla card della coda, nella legenda, nel quadratino in alto e su ogni riga, su ogni terminale, senza configurarlo. Il seme del calcolo è scelto perché Flavio esca rosa e Alex azzurro, come nella richiesta. Il quadratino di chi ha aperto il conto resta sulla card.
 
-NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda.
+NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda. DAL 09/11/2026 È UN'OPZIONE (Impostazioni, «Chi ha caricato la riga», `firma_righe`, accesa di partenza): spenta, le iniziali non si vedono, ma chi ha battuto la riga si registra lo stesso, e riaccendendo si vede anche sulle righe di quando era spenta. Con lei va il blocco del «+» e del «−» (REQ-ORD-024).
 
 **Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/sistema/chiHaBattuto.spec.js`
+
+#### REQ-ORD-024 — Il «+» e il «−» di una riga li usa solo chi l'ha caricata, se l'iniziale è accesa
+
+Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni item all'interno di un ordine viene disabilitata la funzione del +1, +2, +3 […] se Alex da fuori vuole aggiungere una Tennent's non può fare +1, deve caricarla lui, perché altrimenti che mette lì? Due Tennent's, una caricata da me e una caricata da lui?». L'utente: il «−» segue la stessa regola; l'admin non fa eccezione («l'iniziale segnata poi che ne sappiamo chi ha caricato effettivamente»); la regola vale solo se l'iniziale è accesa nelle impostazioni. Sul conto, su una riga firmata da un altro, il «+» e il «−» sono spenti, e il «+» dice «Caricato da …: per aggiungerne, toccare il prodotto». Chi ne vuole un altro lo batte dalla griglia e fa una riga sua. Il confronto è sull'email dell'account, il nome solo se manca. Le righe senza iniziale (del cliente dal menù, e quelle battute prima della 1.10.30) restano a tutti: di chi siano non si sa. La bozza è sempre di chi la sta battendo. Con l'iniziale spenta i tasti sono di tutti, come prima: un tasto spento senza un motivo a schermo sarebbe un tasto rotto.
+
+**Dove**: `src/lib/comande.js (rigaDiAltri, firmaRigheAccesa), src/components/OrderPosDetail.jsx (altruiPerMe), src/components/SettingsTab.jsx, src/lib/api.js (firma_righe)` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/rigaDiAltri.test.js`, `tests/sistema/piuSoloSulleProprie.spec.js`
 
 ### Cassa e POS
 
@@ -1035,7 +1041,7 @@ LA LICENZA (06/11/2026, «fallo tu»): `carte` è nei `temi` di clienti/tana/lic
 
 LA SECONDA VERSIONE (06/11/2026), dopo averlo visto sul test. L'utente: «le carte le vorrei un po' più grandi, il mazzo di carte coperte, le carte devono essere intere, adesso sono tagliate, non sembra un mazzo, i font anche un po' più grandi ma in uno stile Lewis Carroll»; «hai messo special e signature ma sono la stessa cosa»; e le immagini dei drink sulla carta «si vedono male, anzi poco». Quindi: carte intere e più grandi (128×182, passo 100); a inizio fila il mazzo coperto, quattro carte intere sul dorso, da cui le carte escono all'apertura; il seme grande in mezzo a ogni carta; la scrittura è IM Fell English (quella di «Meraviglie»), più grande, con prezzi e valori in Playfair, che ha le cifre alte; niente Jolly nel mazzo: gli Special sono il carosello di sempre in cima (`carosello` nel registro degli stili strutturati), e il Jolly resta sulla pagina Special; i disegni sulle carte sono quelli col tratto scuro (`chiaro` nel registro), interi e grandi. Sul dorso in cima al mazzo coperto il logo del locale (quello della build, public/logo.png), in un anello avorio: «dietro il mazzo di carte può andare il logo della Tana del Coniglio?». Sul test i nomi delle sezioni sono quelli della cassa, in maiuscolo, e «AMERICANI», «DISTILLATI» andavano a capo a metà parola: la carta chiusa stima la larghezza della parola più lunga (misuraNome in lib/mazzoCarte.js, le maiuscole pesano più delle minuscole) e rimpicciolisce la scritta quanto basta.
 
-IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci anche le carte girate come da esempio di Flavio: le carte che aprono il menù sono in mezzo a un ventaglio di carte girate»; e «un'animazione più figa: quando clicchi la carta esce fuori dal mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è diventato il ventaglio dello schizzo: una girata intera sotto ogni carta, sfalsata di mezza carta e più in basso, e una girata inclinata a ogni capo, col logo; le carte escono da quella di sinistra. Toccando una carta, una carta sul dorso (con le proporzioni di una carta) esce dall'alto e gira fino a essere di taglio, poi subentra la faccia, cioè la carta aperta, che finisce il giro, e le voci entrano una dopo l'altra. Solo transform e opacity; con «riduci movimento» niente. Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si vede bene quando si gira e si popola». Il volo ora parte dalla carta toccata nel ventaglio, alla sua misura e dove la fila la centra (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo per più di metà del tempo; poi gira e si popola come prima. Tutto 1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo della sezione rimbalza in alto non appena si gira la carta». 1,1 s; e la prospettiva del giro è della carta, col fulcro sul suo bordo alto, non della pagina: quella della pagina, centrata sopra il ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato), e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente, mentre la carta cresce. Flavio, 08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto che riporta alle carte». Il mazzo resta agganciato sotto la barra mentre si legge, col fondo delle schede agganciate solo quando si aggancia (come BUG-120); il tasto «Le carte ↑» e la testa agganciata della carta aperta non ci sono più. Scegliendo una carta dal mazzo agganciato la pagina torna all'inizio della carta nuova, che altrimenti si leggerebbe a metà. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js).
+IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci anche le carte girate come da esempio di Flavio: le carte che aprono il menù sono in mezzo a un ventaglio di carte girate»; e «un'animazione più figa: quando clicchi la carta esce fuori dal mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è diventato il ventaglio dello schizzo: una girata intera sotto ogni carta, sfalsata di mezza carta e più in basso, e una girata inclinata a ogni capo, col logo; le carte escono da quella di sinistra. Toccando una carta, una carta sul dorso (con le proporzioni di una carta) esce dall'alto e gira fino a essere di taglio, poi subentra la faccia, cioè la carta aperta, che finisce il giro, e le voci entrano una dopo l'altra. Solo transform e opacity; con «riduci movimento» niente. Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si vede bene quando si gira e si popola». Il volo ora parte dalla carta toccata nel ventaglio, alla sua misura e dove la fila la centra (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo per più di metà del tempo; poi gira e si popola come prima. Tutto 1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo della sezione rimbalza in alto non appena si gira la carta». 1,1 s; e la prospettiva del giro è della carta, col fulcro sul suo bordo alto, non della pagina: quella della pagina, centrata sopra il ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato), e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente, mentre la carta cresce. Flavio, 08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto che riporta alle carte». Il mazzo resta agganciato sotto la barra mentre si legge, con un fondo pieno solo quando si aggancia (come BUG-120; senza sfocatura, che sul telefono costa mentre le carte si animano); il tasto «Le carte ↑» e la testa agganciata della carta aperta non ci sono più. Scegliendo una carta dal mazzo agganciato la pagina torna all'inizio della carta nuova, che altrimenti si leggerebbe a metà. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js).
 
 RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con le categorie nuove di Flavio.
 

@@ -295,6 +295,7 @@ bisogni:
       senza rete.
     requisiti:
       - REQ-ORD-023
+      - REQ-ORD-024
     test_cases: []
 
   - id: UR-013

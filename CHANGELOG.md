@@ -35,6 +35,13 @@
 
 ### Banco
 
+- Sul conto, il + e il − di una riga li usa solo chi l'ha caricata: chi ne
+  vuole un altro tocca il prodotto e fa una riga sua, così l'iniziale
+  accanto alla riga resta vera. Vale anche per l'admin; le righe senza
+  iniziale restano di tutti (REQ-ORD-024).
+- L'iniziale di chi ha caricato ogni riga si accende e si spegne dalle
+  impostazioni («Chi ha caricato la riga», accesa di partenza); con lei si
+  spegne anche la regola del + e del − (REQ-ORD-023).
 - Gli ordini si battono anche a cassa chiusa; riscuotere, acconto e
   impagato restano spenti finché la cassa non è aperta, e lo si legge sopra
   i tasti. Anche i tasti Contanti e Carta delle card sono spenti

@@ -4468,8 +4468,9 @@ requirements:
       mentre la carta cresce.
       Flavio, 08/11/2026: «mantenere le carte bloccate in alto e rimuovere
       il tasto che riporta alle carte». Il mazzo resta agganciato sotto la
-      barra mentre si legge, col fondo delle schede agganciate solo quando
-      si aggancia (come BUG-120); il tasto «Le carte ↑» e la testa
+      barra mentre si legge, con un fondo pieno solo quando si aggancia
+      (come BUG-120; senza sfocatura, che sul telefono costa mentre le
+      carte si animano); il tasto «Le carte ↑» e la testa
       agganciata della carta aperta non ci sono più. Scegliendo una carta
       dal mazzo agganciato la pagina torna all'inizio della carta nuova,
       che altrimenti si leggerebbe a metà. Provato su un telefono in un
@@ -9332,6 +9333,11 @@ requirements:
       nella richiesta. Il quadratino di chi ha aperto il conto resta sulla
       card. NON ANCORA: la finestra del conto nella coda, che legge le
       righe sommate per drink, e il dettaglio della comanda.
+      DAL 09/11/2026 È UN'OPZIONE (Impostazioni, «Chi ha caricato la
+      riga», `firma_righe`, accesa di partenza): spenta, le iniziali non si
+      vedono, ma chi ha battuto la riga si registra lo stesso, e
+      riaccendendo si vede anche sulle righe di quando era spenta. Con lei
+      va il blocco del «+» e del «−» (REQ-ORD-024).
     status: implemented
     generate_issue: false
     labels: [ordini, pos, staff]
@@ -9340,6 +9346,34 @@ requirements:
       - tests/unit/colorePersona.test.js
       - tests/component/OrderPosDetail.test.jsx
       - tests/sistema/chiHaBattuto.spec.js
+
+  - id: REQ-ORD-024
+    title: "Il «+» e il «−» di una riga li usa solo chi l'ha caricata, se l'iniziale è accesa"
+    area: "src/lib/comande.js (rigaDiAltri, firmaRigheAccesa), src/components/OrderPosDetail.jsx (altruiPerMe), src/components/SettingsTab.jsx, src/lib/api.js (firma_righe)"
+    description: >
+      Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni
+      item all'interno di un ordine viene disabilitata la funzione del +1,
+      +2, +3 […] se Alex da fuori vuole aggiungere una Tennent's non può
+      fare +1, deve caricarla lui, perché altrimenti che mette lì? Due
+      Tennent's, una caricata da me e una caricata da lui?». L'utente: il
+      «−» segue la stessa regola; l'admin non fa eccezione («l'iniziale
+      segnata poi che ne sappiamo chi ha caricato effettivamente»); la
+      regola vale solo se l'iniziale è accesa nelle impostazioni.
+      Sul conto, su una riga firmata da un altro, il «+» e il «−» sono
+      spenti, e il «+» dice «Caricato da …: per aggiungerne, toccare il
+      prodotto». Chi ne vuole un altro lo batte dalla griglia e fa una riga
+      sua. Il confronto è sull'email dell'account, il nome solo se manca.
+      Le righe senza iniziale (del cliente dal menù, e quelle battute prima
+      della 1.10.30) restano a tutti: di chi siano non si sa. La bozza è
+      sempre di chi la sta battendo. Con l'iniziale spenta i tasti sono di
+      tutti, come prima: un tasto spento senza un motivo a schermo sarebbe
+      un tasto rotto.
+    status: implemented
+    generate_issue: false
+    labels: [ordini, pos, staff]
+    test_cases:
+      - tests/unit/rigaDiAltri.test.js
+      - tests/sistema/piuSoloSulleProprie.spec.js
 
   - id: REQ-STAMPA-011
     title: "Il logo sugli scontrini si sceglie: quale, e su quali stampe"
