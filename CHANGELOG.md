@@ -2,6 +2,12 @@
 
 ## 1.10.30-beta — in lavorazione
 
+### Menù dei clienti
+
+- Nello stile «Carte» il mazzo resta in alto mentre si scorre il menù, e
+  il tasto «Le carte ↑» non c'è più. Scegliendo un'altra carta si riparte
+  dall'inizio della sua sezione (REQ-MENU-029).
+
 ### Metodo
 
 - Altri tre test di sistema: la chiusura di cassa con contanti, carta e un

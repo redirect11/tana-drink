@@ -7,8 +7,8 @@
 // voce col suo prezzo, i tasti del menù, niente database — lo prova
 // stiliStrutturati.test.jsx; qui i gesti del mazzo.
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
@@ -105,17 +105,71 @@ describe('il mazzo', () => {
     expect(aperta()).toHaveAttribute('data-seme', 'fiori')
   })
 
-  it('dalla carta aperta si torna al mazzo', async () => {
+  // IL MAZZO RESTA AGGANCIATO IN ALTO (Flavio, 08/11/2026: «mantenere le
+  // carte bloccate in alto e rimuovere il tasto che riporta alle carte»).
+  // L'aggancio è CSS (position: sticky) e qui non si vede: lo prova chi
+  // misura la pagina in un browser. Qui: il tasto non c'è più, il mazzo sa
+  // quando è agganciato, e scegliendo una carta da agganciato si torna
+  // all'inizio della carta nuova invece di leggerla a metà.
+  it('il tasto per tornare alle carte non c’è più: il mazzo resta in alto', () => {
     mostra()
+    expect(screen.queryByRole('button', { name: /Le carte/ })).toBeNull()
+    expect(within(aperta()).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tana', 'Aggiungi Tana'])
+  })
+})
+
+describe('il mazzo agganciato in alto', () => {
+  // L'osservatore del browser che dice se il segnaposto del mazzo è
+  // passato sotto la barra (useIncollata): qui lo si fa scattare a mano.
+  let scatta
+  class OsservatoreFinto {
+    constructor(cb) {
+      scatta = (sopra) => cb([{ isIntersecting: !sopra, boundingClientRect: { top: sopra ? -400 : 300 } }])
+    }
+    observe() {}
+    disconnect() {}
+  }
+  afterEach(() => vi.unstubAllGlobals())
+
+  function mostraAgganciabile() {
+    vi.stubGlobal('IntersectionObserver', OsservatoreFinto)
+    mostra()
+    const segnaposto = document.querySelector('.k-mazzo-segnaposto')
+    segnaposto.scrollIntoView = vi.fn()
+    return segnaposto
+  }
+
+  it('agganciato prende il suo fondo, fermo nella pagina no', () => {
+    mostraAgganciabile()
     const nav = screen.getByRole('navigation', { name: 'Le carte del menù' })
-    nav.scrollIntoView = vi.fn()
-    await userEvent.setup().click(within(aperta()).getByRole('button', { name: 'Le carte ↑' }))
-    expect(nav.scrollIntoView).toHaveBeenCalled()
+    expect(nav).not.toHaveClass('incollata')
+    act(() => scatta(true))
+    expect(nav).toHaveClass('incollata')
+    act(() => scatta(false))
+    expect(nav).not.toHaveClass('incollata')
   })
 
+  it('agganciato, una carta scelta si legge dall’inizio', async () => {
+    const segnaposto = mostraAgganciabile()
+    act(() => scatta(true))
+    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Gin' }))
+    expect(segnaposto.scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+    expect(within(aperta()).getByRole('heading', { name: 'Gin' })).toBeInTheDocument()
+  })
+
+  it('fermo nella pagina, scegliere una carta non sposta la pagina', async () => {
+    const segnaposto = mostraAgganciabile()
+    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Gin' }))
+    expect(segnaposto.scrollIntoView).not.toHaveBeenCalled()
+  })
+
+})
+
+describe('le altre pagine', () => {
   it('sulla pagina Special: solo il Jolly, aperto, senza mazzo', () => {
     mostra({ soloSpeciali: true, speciali: SPECIALI })
     expect(screen.queryByRole('navigation')).toBeNull()
+    expect(document.querySelector('.k-mazzo-segnaposto')).toBeNull()
     expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Velluto Bianco' })).toBeVisible()
   })
