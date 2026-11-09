@@ -298,10 +298,12 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | qualunque interfaccia | [DESIGN.md](DESIGN.md) e [docs/navigazione.md](docs/navigazione.md) |
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
+| i test end-to-end dei casi d'uso e il loro ambiente generato | [docs/ambiente-e2e.md](docs/ambiente-e2e.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
 | l'avviso del certificato della stampante | [docs/certificato-stampante.md](docs/certificato-stampante.md) |
 | altre stampanti, app nativa, installazione on premise | [docs/stampanti-e-livelli.md](docs/stampanti-e-livelli.md) |
 | il prodotto per altri locali: architettura e funzionamento | [docs/architettura-prodotto.md](docs/architettura-prodotto.md) |
 | aprire una richiesta, scrivere un requisito, correggere un difetto | [docs/modello-a-v.md](docs/modello-a-v.md) |
 | capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| capire cosa fa CHI USA l'app, un obiettivo intero alla volta | [docs/specifica-prodotto.md](docs/specifica-prodotto.md), i casi d'uso — generata da [requirements/casi-uso.yaml](requirements/casi-uso.yaml); domande aperte in [docs/casi-uso-domande.md](docs/casi-uso-domande.md) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |

@@ -4,9 +4,9 @@
 // Test di COMPONENTE della cassa (PosPage): layout identico al dettaglio
 // ordine, conferma con modale nome e pagamento diretto.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { StrictMode } from 'react'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from '../helpers/router.jsx'
 
@@ -18,6 +18,15 @@ vi.mock('react-router-dom', async (orig) => {
   return { ...vera, useNavigate: () => navigateSpy }
 })
 import '@testing-library/jest-dom/vitest'
+
+const CASSA_APERTA = { id: 'cash1', status: 'open', opened_at: '2026-08-08T18:00:00.000Z' }
+const mockCassa = { sessione: CASSA_APERTA, ascolta: null }
+// La sessione è condivisa per modulo (lib/cashSession.js): cambiandola si
+// avvisa anche chi la sta già ascoltando.
+const cassaDiTurno = (sessione) => {
+  mockCassa.sessione = sessione
+  if (mockCassa.ascolta) act(() => mockCassa.ascolta(sessione))
+}
 
 vi.mock('../../src/lib/api.js', () => ({
   createOrder: vi.fn(() =>
@@ -80,9 +89,11 @@ vi.mock('../../src/lib/api.js', () => ({
   markInvoiceSent: vi.fn(() => Promise.resolve()),
   subscribeVouchers: vi.fn((cb) => { cb([]); return () => {} }),
   applyVoucherDiscount: vi.fn(() => Promise.resolve({ redeemed: 0 })),
-  // Senza cassa aperta il POS non fa battere ordini: qui la cassa è aperta.
+  // Di solito la cassa è aperta; i test della cassa chiusa la chiudono con
+  // `cassaDiTurno` (REQ-CASSA-017).
   subscribeOpenCashSession: vi.fn((cb) => {
-    cb({ id: 'cash1', status: 'open', opened_at: '2026-08-08T18:00:00.000Z' })
+    mockCassa.ascolta = cb
+    cb(mockCassa.sessione)
     return () => {}
   }),
 }))
@@ -795,5 +806,45 @@ describe('battere ancora dopo aver chiuso il pagamento (server già risposto)', 
     expect(within(pagamento).getByText(/Gin Tonic/)).toBeInTheDocument()
     // E il conto è UNO: il secondo giro non ne apre un altro.
     expect(createOrder).toHaveBeenCalledTimes(1)
+  })
+})
+
+// A CASSA CHIUSA SI BATTE, MA NON SI INCASSA (REQ-CASSA-017). Richiesta
+// dell'08/11/2026: «permettere di creare ordini anche da cassa chiusa ma
+// rendere i tasti RISCUOTERE e similari non selezionabili». Prima al posto
+// del conto c'era il cartello «Cassa chiusa», e col cliente davanti si
+// andava ad aprire la cassa per battere un drink.
+describe('a cassa chiusa', () => {
+  beforeEach(() => cassaDiTurno(null))
+  afterEach(() => cassaDiTurno(CASSA_APERTA))
+
+  it('il conto si batte: niente cartello, la griglia c’è e il conto nasce', async () => {
+    const user = userEvent.setup()
+    await mount()
+    expect(screen.queryByText('Cassa chiusa')).toBeNull()
+    await user.click(screen.getByText('Mojito'))
+    await waitFor(() => expect(createOrder).toHaveBeenCalled())
+  })
+
+  it('il pagamento si apre, ma riscuotere e impagato sono spenti, e lo si dice', async () => {
+    const user = userEvent.setup()
+    await mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    const pagamento = screen.getByRole('dialog', { name: 'Pagamento' })
+    expect(within(pagamento).getByRole('status')).toHaveTextContent('Cassa chiusa: per incassare va aperta la cassa.')
+    expect(within(pagamento).getByRole('button', { name: /Riscuotere/ })).toBeDisabled()
+    expect(within(pagamento).getByRole('button', { name: /Impagato/ })).toBeDisabled()
+  })
+
+  it('aprendo la cassa i tasti si riaccendono, senza uscire dal conto', async () => {
+    const user = userEvent.setup()
+    await mount()
+    await user.click(screen.getByText('Mojito'))
+    await user.click(screen.getByRole('button', { name: /Pagamento/ }))
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeDisabled()
+    cassaDiTurno(CASSA_APERTA)
+    expect(screen.getByRole('button', { name: /Riscuotere/ })).toBeEnabled()
+    expect(screen.queryByText(/per incassare va aperta la cassa/)).toBeNull()
   })
 })

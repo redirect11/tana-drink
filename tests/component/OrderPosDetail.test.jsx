@@ -16,6 +16,11 @@ import { CON_LICENZA } from '../helpers/licenza.js'
 // ── Mock dei moduli con dipendenze Firebase/hardware ──
 const mockSettings = { payments_reader_enabled: false, sumup_reader_id: null }
 vi.mock('../../src/lib/api.js', () => ({
+  // La cassa della serata è aperta: il pagamento lo chiede (REQ-CASSA-017).
+  subscribeOpenCashSession: (cb) => {
+    cb({ id: 'cassa-test', status: 'open' })
+    return () => {}
+  },
   advanceComanda: vi.fn(() => Promise.resolve()),
   addComanda: vi.fn(() => Promise.resolve({ comande: [] })),
   chiudiCreazione: vi.fn(),
@@ -2643,5 +2648,142 @@ describe('le maniglie del conto mentre si trascinano', () => {
     gesto('pointerup', 450)
     expect(corpo.className).not.toMatch(/trascinando/)
     expect(parseFloat(corpo.style.getPropertyValue('--pos-comanda-w'))).toBe(attesa)
+  })
+})
+
+// CHI HA BATTUTO OGNI RIGA (REQ-ORD-023). Richiesta dell'08/11/2026: accanto
+// a ogni riga l'iniziale di chi l'ha caricata, nel suo colore («F nel
+// quadrato rosa … A nel quadrato azzurro»); il quadratino di chi ha aperto
+// il conto resta sulla card della coda.
+describe('l’iniziale di chi ha battuto ogni riga', () => {
+  const FLAVIO = { name: 'Flavio', email: 'flavio@tana.it', role: 'admin' }
+  const ALEX = { name: 'Alex', email: 'alex@tana.it', role: 'staff' }
+  const autori = () =>
+    [...document.querySelectorAll('.riga-autore .order-by')].map((s) => [s.textContent, s.title, s.style.background])
+
+  it('ogni riga mostra l’iniziale e il colore di chi l’ha battuta', async () => {
+    await mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ritirato',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1, added_by: ALEX },
+            ],
+          },
+        ],
+      })
+    )
+    const visti = autori()
+    expect(visti.map(([l, t]) => [l, t])).toEqual([
+      ['F', 'Aggiunto da Flavio'],
+      ['A', 'Aggiunto da Alex'],
+    ])
+    // Due persone, due colori: rosa e azzurro.
+    expect(visti[0][2]).not.toBe(visti[1][2])
+  })
+
+  it('una riga di prima, senza firma, non inventa nessuno', async () => {
+    await mount(baseOrder())
+    expect(autori()).toEqual([])
+  })
+
+  it('la riga che parte da questo conto porta la firma di chi lo sta usando', async () => {
+    const user = userEvent.setup()
+    await mount(
+      baseOrder({
+        comande: [
+          { id: 'c1', seq: 1, status: 'ritirato', status_times: {}, items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 2 }] },
+        ],
+      })
+    )
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(addComanda).toHaveBeenCalled())
+    const [, items] = addComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').added_by).toEqual({
+      name: 'Chi lavora',
+      email: 'chi@tana.local',
+      role: 'bartender',
+    })
+  })
+
+  it('anche quando entra dritta in una comanda ancora da fare', async () => {
+    const user = userEvent.setup()
+    await mount(baseOrder())
+    await user.click(screen.getAllByText('Gin Tonic')[0])
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const [, , { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').added_by?.name).toBe('Chi lavora')
+    // La riga che c'era resta com'era: non la si firma a nome di chi corregge.
+    expect(items.find((i) => i.drink_id === 'mojito')).not.toHaveProperty('added_by')
+  })
+
+  // REQ-ORD-024, Flavio 09/11/2026: il «+» e il «−» li usa solo chi ha
+  // caricato la riga; gli altri battono il prodotto e fanno una riga loro.
+  it('sulla riga di un altro il + e il − sono spenti; sulla propria e su quella senza iniziale no', async () => {
+    const user = userEvent.setup()
+    const IO = { name: 'Chi lavora', email: 'chi@tana.local', role: 'bartender' }
+    await mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ricevuto',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1, added_by: IO },
+              { drink_id: 'spritz', name: 'Spritz', unit_price: 6, qty: 1 },
+            ],
+          },
+        ],
+      })
+    )
+    const tasto = (azione, nome) => screen.getByRole('button', { name: `${azione} ${nome}` })
+    expect(tasto('Aumenta', 'Mojito')).toBeDisabled()
+    expect(tasto('Riduci', 'Mojito')).toBeDisabled()
+    expect(tasto('Aumenta', 'Mojito')).toHaveAttribute('title', 'Caricato da Flavio: per aggiungerne, toccare il prodotto')
+    for (const nome of ['Gin Tonic', 'Spritz']) {
+      expect(tasto('Aumenta', nome)).toBeEnabled()
+      expect(tasto('Riduci', nome)).toBeEnabled()
+    }
+    // Sulla propria il + aumenta quella riga, e la Mojito di Flavio resta sua.
+    await user.click(tasto('Aumenta', 'Gin Tonic'))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const [, , { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').qty).toBe(2)
+    expect(items.find((i) => i.drink_id === 'mojito')).toMatchObject({ qty: 1, added_by: FLAVIO })
+  })
+
+  // L'utente, 09/11/2026: la regola vale solo con l'iniziale accesa nelle
+  // impostazioni. Spenta, nessuno vede di chi è una riga, e un tasto spento
+  // senza motivo a schermo sarebbe un tasto rotto.
+  it('con l’iniziale spenta nelle impostazioni: niente iniziali, e il + e il − sono di tutti', async () => {
+    mockSettings.firma_righe = false
+    try {
+      await mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1',
+              seq: 1,
+              status: 'ricevuto',
+              status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO }],
+            },
+          ],
+        })
+      )
+      expect(autori()).toEqual([])
+      expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeEnabled()
+    } finally {
+      delete mockSettings.firma_righe
+    }
   })
 })

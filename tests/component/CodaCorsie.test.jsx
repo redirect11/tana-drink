@@ -34,6 +34,9 @@ import '@testing-library/jest-dom/vitest'
 
 // Dove si va toccando una card: la spia dice se si apre il conto giusto.
 const navigateSpy = vi.fn()
+const CASSA_APERTA = { id: 'cassa-1', status: 'open', opened_at: '2026-08-16T18:00:00.000Z' }
+const mockCassa = { sessione: CASSA_APERTA, ascolta: null }
+
 vi.mock('react-router-dom', async (orig) => {
   const vera = await orig()
   return { ...vera, useNavigate: () => navigateSpy }
@@ -92,8 +95,11 @@ vi.mock('../../src/lib/api.js', () => ({
     cb(ordini)
     return () => {}
   },
+  // Aperta, salvo le prove della cassa chiusa (REQ-CASSA-017), che la
+  // chiudono con `cassaDiTurno`.
   subscribeOpenCashSession: (cb) => {
-    cb({ id: 'cassa-1', status: 'open', opened_at: '2026-08-16T18:00:00.000Z' })
+    mockCassa.ascolta = cb
+    cb(mockCassa.sessione)
     return () => {}
   },
   updateOrderStatus: vi.fn(() => Promise.resolve()),
@@ -149,10 +155,12 @@ vi.mock('../../src/lib/notify.js', () => ({
   notify: vi.fn(),
 }))
 vi.mock('../../src/lib/beep.js', () => ({ beep: vi.fn(), installAudioUnlock: vi.fn() }))
-vi.mock('../../src/lib/printer.js', () => ({
+vi.mock('../../src/lib/printer.js', async (originale) => ({
   printComanda: vi.fn(async () => {}),
   printScontrino: vi.fn(async () => {}),
   loadPrinterSettings: vi.fn(() => ({})),
+  // Logica pura: quella vera (REQ-STAMPA-021).
+  scontrinoAutomatico: (await originale()).scontrinoAutomatico,
   claimReceiptPrint: vi.fn(() => false),
   reclaimReceiptPrint: vi.fn(() => false),
   releaseReceiptPrint: vi.fn(),
@@ -2873,5 +2881,34 @@ describe('il ☰ della coda', () => {
     } finally {
       window.removeEventListener('drink:toggle-drawer', spia)
     }
+  })
+})
+
+// A CASSA CHIUSA SI BATTE, MA NON SI INCASSA (REQ-CASSA-017): anche i tasti
+// rapidi della card restano al loro posto, spenti, col perché nel titolo.
+describe('la chiusura rapida dalla card, a cassa chiusa', () => {
+  const cassaDiTurno = (sessione) => {
+    mockCassa.sessione = sessione
+    if (mockCassa.ascolta) act(() => mockCassa.ascolta(sessione))
+  }
+  afterEach(() => cassaDiTurno(CASSA_APERTA))
+
+  it('Contanti e Carta sono spenti, e dicono perché', async () => {
+    const utente = userEvent.setup()
+    ruolo = 'admin'
+    impostazioni = { ...impostazioni, queue_view: 'griglia' }
+    cassaDiTurno(null)
+    montaCoda()
+    await screen.findByText(/In servizio/)
+    cassaDiTurno(null)
+
+    const card = document.querySelector('.grid-card')
+    await utente.click(within(card).getByRole('button', { name: /Azioni|⋯/ }))
+    for (const nome of [/Contanti/, /Carta/]) {
+      const tasto = screen.getByRole('button', { name: nome })
+      expect(tasto).toBeDisabled()
+      expect(tasto).toHaveAttribute('title', 'Cassa chiusa: per incassare va aperta la cassa')
+    }
+    expect(markOrderPaid).not.toHaveBeenCalled()
   })
 })

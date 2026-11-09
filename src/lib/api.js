@@ -4086,6 +4086,7 @@ async function creaOrdine({
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
   // Modello conto/comande: l'ordine nasce `aperto` con la COMANDA 1, che
   // porta lo stato di lavorazione (il POS la crea già in preparazione).
@@ -4468,6 +4469,17 @@ export const setOrderDiscount = perConto(async function setOrderDiscount(
 // CHI STA INCASSANDO, per il rendiconto: in una serata si alternano in due
 // o tre alla cassa, e se il contante non torna è la prima domanda che ci si
 // fa. Si scrive sul pagamento, che è la riga a cui la domanda si riferisce.
+// CHI HA BATTUTO LA RIGA (REQ-ORD-023). La firma la mette il conto
+// (OrderPosDetail, firmaRiga), che sa il ruolo; qui la si porta fino al
+// documento in ogni scrittura delle righe — creazione, comanda aggiunta,
+// modifica — così una riga corretta dal banco resta di chi l'aveva battuta.
+// Una riga senza firma (il cliente, i conti di prima) resta senza.
+function autoreDellaRiga(i) {
+  const a = i?.added_by
+  if (!a) return {}
+  return { added_by: { name: a.name ?? null, email: a.email ?? null, role: a.role ?? null } }
+}
+
 function chiIncassa() {
   const u = auth.currentUser
   if (!u) return null
@@ -5137,6 +5149,7 @@ export const updateOrderItems = perConto(async function updateOrderItems(id, ite
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
   // Come per la modifica dal banco: il ticket già uscito va ristampato
   // completo (qui la comanda è per forza una sola e ancora «da fare»).
@@ -5279,6 +5292,7 @@ export const addComanda = perConto(async function addComanda(orderId, items, { n
       ...(i.line_id ? { line_id: i.line_id } : {}),
       ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
       ...(i.note ? { note: i.note } : {}),
+      ...autoreDellaRiga(i),
     })),
     // In che passo nasce lo dice il locale, e lo dice in un posto solo
     // (statoComandaNuova). L'ora del «ricevuto» c'è comunque: la comanda è
@@ -5426,6 +5440,7 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
     ...(i.line_id ? { line_id: i.line_id } : {}),
     ...(i.custom ? { custom: true, recipe_items: i.recipe_items ?? [] } : {}),
     ...(i.note ? { note: i.note } : {}),
+    ...autoreDellaRiga(i),
   }))
 
   const snap = await leggiOrdine(ref)
@@ -6439,6 +6454,10 @@ export const DEFAULT_SETTINGS = {
   // sono lo stesso tavolo. Il colore a mano si può dare comunque, acceso
   // o spento che sia questo (vedi lib/coloriConto.js).
   conti_colorati: false,
+  // L'iniziale di chi ha caricato ogni riga, e con lei il «+» e il «−»
+  // solo a chi l'ha caricata (REQ-ORD-023, REQ-ORD-024). Accesa: la
+  // chiedeva la Tana, e un locale dove non serve la spegne.
+  firma_righe: true,
   // COSA DICE LA STRISCIA a sinistra della card, in tutte le viste della
   // coda: di suo lo STATO — a che punto sta il lavoro e com'è messo il
   // pagamento — che è com'è sempre stato e resta il default. Acceso,

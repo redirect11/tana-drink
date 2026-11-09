@@ -18,6 +18,7 @@ import { caricaRequisiti, parseRequirementsYaml, etichetteClassificazione, ricon
 // I file di test, compresi i `.spec.js` di sistema: l'elenco è uno solo,
 // condiviso col test del modello a V.
 import { caricaBisogni, caricaArchitettura, fileDiTest } from '../../scripts/lib-modello-v.mjs'
+import { caricaCasiUso } from '../../scripts/lib-casi-uso.mjs'
 
 const requisiti = caricaRequisiti()
 const STATI = ['implemented', 'partial', 'todo', 'deprecated']
@@ -227,9 +228,10 @@ describe('le issue che esistono gia’ si riallineano', () => {
 describe('requisiti e test si tengono per mano', () => {
   // Col modello a V (REQ-DEV-018) un test può appartenere anche a un
   // bisogno (l'accettazione) o a un componente (l'integrazione): citato lì,
-  // non è un orfano.
+  // non è un orfano. E un test end-to-end appartiene al suo caso d'uso
+  // (REQ-DEV-019).
   const citati = new Set(
-    [...requisiti, ...caricaBisogni(), ...caricaArchitettura()]
+    [...requisiti, ...caricaBisogni(), ...caricaArchitettura(), ...caricaCasiUso()]
       .flatMap((r) => r.test_cases).filter((t) => t.includes('/'))
   )
 

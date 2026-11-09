@@ -12,6 +12,7 @@ import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
 import { isPersonale, isSala } from './lib/ruoli.js'
+import { colorePersona } from './lib/colorePersona.js'
 import { ricordaRuolo } from './lib/ruoloLocale.js'
 import { onAuthStateChanged, signInWithCustomToken } from 'firebase/auth'
 import { codiceRegiaInAttesa, consumaCodiceRegia, entraDallaRegia } from './lib/passaggioRegia.js'
@@ -85,6 +86,7 @@ import ZoomControl from './components/ZoomControl.jsx'
 import { zoomDove } from './lib/zoomDove.js'
 import Icona from './components/Icona.jsx'
 import { TemaIcone } from './lib/temaIcone.js'
+import { AiutiCampi, aiutiCampiAccesi } from './lib/aiutiCampi.js'
 import { temiIconeDi, TUTTE_EMOJI, conEmoji } from './lib/icone.js'
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
 
@@ -499,6 +501,8 @@ export default function App() {
     // sulla barra di «I miei ordini») resta con le emoji di sempre: le sue
     // pagine hanno lo stile del loro menù (decisione dell'utente, 07/11/2026).
     <TemaIcone.Provider value={temaIcone}>
+    {/* Gli aiuti sotto i campi delle schede: di partenza nascosti (REQ-UI-032). */}
+    <AiutiCampi.Provider value={aiutiCampiAccesi(settings)}>
     <div className="app">
       {entrandoDallaRegia && (
         <div className="overlay ingresso-regia">
@@ -658,7 +662,9 @@ export default function App() {
                quadratino è la stessa che marca gli ordini aperti da questa
                persona, così si riconosce a colpo d'occhio chi sta battendo. */
             <Link className="topbar-io" to="/profilo-staff" title="Il mio profilo">
-              <span className="order-by staff">{(nomeInBarra || '?')[0].toUpperCase()}</span>
+              <span className="order-by staff" style={{ background: colorePersona(nomeInBarra) ?? undefined }}>
+                {(nomeInBarra || '?')[0].toUpperCase()}
+              </span>
               <span className="topbar-io-nome">{nomeInBarra}</span>
             </Link>
           ) : telefono ? null : (
@@ -829,6 +835,7 @@ export default function App() {
         </button>
       </footer>
     </div>
+    </AiutiCampi.Provider>
     </TemaIcone.Provider>
   )
 }

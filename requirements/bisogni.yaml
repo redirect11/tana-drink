@@ -124,6 +124,7 @@ bisogni:
       - REQ-STAMPA-007
       - REQ-STAMPA-012
       - REQ-STAMPA-013
+      - REQ-STAMPA-021
       - REQ-NOTIF-002
     test_cases: []
 
@@ -148,6 +149,7 @@ bisogni:
       - REQ-CASSA-004
       - REQ-CASSA-006
       - REQ-CASSA-016
+      - REQ-CASSA-017
       - REQ-STAMPA-004
       - REQ-PAG-006
       - REQ-PAG-015
@@ -274,4 +276,46 @@ bisogni:
       - REQ-DEV-012
       - REQ-DEV-017
       - REQ-DEV-018
+      - REQ-DEV-019
+    test_cases: []
+
+  - id: UR-012
+    title: "Su un conto si vede chi ha battuto cosa"
+    area: "Banco, Sala"
+    description: >
+      In una serata piena allo stesso conto lavorano in due o tre: chi l'ha
+      aperto al banco, chi aggiunge un giro dal tavolo. Quando una riga è
+      sbagliata o va spiegata al cliente, la prima domanda è chi l'ha
+      battuta (richiesta dell'08/11/2026: l'iniziale di chi ha caricato
+      ogni riga, «F nel quadrato rosa», «A nel quadrato azzurro»).
+    accettazione: >
+      Flavio apre un conto al banco e batte un Negroni; Alex, dal telefono
+      della sala, ci aggiunge uno Spritz. Riaprendo il conto, accanto al
+      Negroni c'è la F rosa e accanto allo Spritz la A azzurra; sulla card
+      della coda resta la F di chi l'ha aperto. Lo stesso col telefono
+      senza rete.
+    requisiti:
+      - REQ-ORD-023
+      - REQ-ORD-024
+    test_cases: []
+
+  - id: UR-013
+    title: "Il gestionale si legge e si compila senza fatica"
+    area: "Gestore"
+    description: >
+      Listino, schede, magazzino e impostazioni si usano tutti i giorni da
+      chi li conosce. Devono mostrare i numeri incolonnati, permettere di
+      guardare una parte sola (una categoria) e non ingombrare le schede con
+      spiegazioni che chi le compila sa già (richieste dell'08/11/2026 sulla
+      marginalità del listino e sugli aiuti dei campi).
+    accettazione: >
+      Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua
+      intestazione; toccando «Birre» a sinistra restano solo le birre, con
+      i filtri che contano lì dentro. Aprendo la scheda di un drink non ci
+      sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i
+      campi» in Aspetto tornano, scritti in frasi piane.
+    requisiti:
+      - REQ-MENU-002
+      - REQ-MENU-032
+      - REQ-UI-032
     test_cases: []

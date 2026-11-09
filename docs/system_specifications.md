@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 8 novembre 2026.
+> Generato il 9 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 266 | fatto e coperto dai test |
+| ✅ | 272 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 3 | fatto a metà |
+| 🟡 | 4 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**321 voci** in tutto. **284** descrivono il sistema com'è oggi e
+**328 voci** in tutto. **291** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -41,16 +41,16 @@ come «vero oggi», non come «garantito».
 
 | Area | Fatto | Previsto | Di cosa parla |
 |---|---|---|---|
-| [Ordini e comande](#ordini-e-comande) | 18 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
+| [Ordini e comande](#ordini-e-comande) | 20 | 1 | Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al banco. |
 | [Cassa e POS](#cassa-e-pos) | 18 | 2 | La schermata più usata della serata: si compone un conto, si corregge, si chiude. |
 | [Pagamenti](#pagamenti) | 14 | 1 | Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati. |
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 26 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 27 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
-| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 15 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
-| [Stampa](#stampa) | 19 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
+| [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
+| [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
@@ -59,8 +59,8 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 27 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 17 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 18 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -73,13 +73,13 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 
 | Livello | Cosa verifica | File di test |
 |---|---|---|
-| Accettazione | i bisogni del locale (UR-*) | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 1 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 159 |
-| Unità | il progetto di dettaglio: un modulo da solo | 164 |
+| Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
+| Sistema | la specifica (REQ-*), sull'app intera | 11 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
+| Unità | il progetto di dettaglio: un modulo da solo | 169 |
 
-**11** bisogni del locale, **0** con un test di accettazione.
-**71** requisiti su 313 sono collegati a un bisogno;
+**13** bisogni del locale, **0** con un test di accettazione.
+**79** requisiti su 320 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -119,7 +119,7 @@ Un drink battuto e mai preparato è un cliente che aspetta per niente. La comand
 
 **Come si accetta**: Dalla sala si batte un conto e si manda la comanda. Al banco compare in coda, nella colonna giusta, con le note delle righe leggibili, ed esce una volta sola dalla stampante del banco. Con la stampante spenta il pallino lo dice prima dell'invio, e la comanda resta comunque in coda.
 
-**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-001](#req-ord-001--un-conto-aperto-contiene-più-comande-ciascuna-col-suo-stato), [REQ-ORD-009](#req-ord-009--un-ordine-battuto-altrove-si-vede-su-tutti-gli-altri-terminali), [REQ-CODA-001](#req-coda-001--la-coda-a-corsie-di-stato-una-colonna-per-passo-un-tasto-per-card), [REQ-CODA-002](#req-coda-002--il-dettaglio-di-una-comanda-cosa-devo-fare-adesso-e-per-chi), [REQ-CODA-003](#req-coda-003--la-nota-di-una-riga-si-legge-in-ogni-coda-a-schermo), [REQ-STAMPA-001](#req-stampa-001--comanda-al-banco-e-scontrino-al-cliente), [REQ-STAMPA-002](#req-stampa-002--la-stampante-non-deve-smettere-di-funzionare-a-metà-serata), [REQ-STAMPA-006](#req-stampa-006--lo-staff-di-sala-stampa-le-comande-degli-ordini-che-prende), [REQ-STAMPA-007](#req-stampa-007--un-pallino-dice-se-la-comanda-uscirà-prima-di-averne-bisogno), [REQ-STAMPA-012](#req-stampa-012--più-comande-dello-stesso-conto-si-stampano-insieme), [REQ-STAMPA-013](#req-stampa-013--la-comanda-automatica-la-stampa-solo-il-terminale-che-ha-inserito-lordine), [REQ-NOTIF-002](#req-notif-002--il-banco-sa-quando-arriva-un-ordine-nuovo) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-001](#req-ord-001--un-conto-aperto-contiene-più-comande-ciascuna-col-suo-stato), [REQ-ORD-009](#req-ord-009--un-ordine-battuto-altrove-si-vede-su-tutti-gli-altri-terminali), [REQ-CODA-001](#req-coda-001--la-coda-a-corsie-di-stato-una-colonna-per-passo-un-tasto-per-card), [REQ-CODA-002](#req-coda-002--il-dettaglio-di-una-comanda-cosa-devo-fare-adesso-e-per-chi), [REQ-CODA-003](#req-coda-003--la-nota-di-una-riga-si-legge-in-ogni-coda-a-schermo), [REQ-STAMPA-001](#req-stampa-001--comanda-al-banco-e-scontrino-al-cliente), [REQ-STAMPA-002](#req-stampa-002--la-stampante-non-deve-smettere-di-funzionare-a-metà-serata), [REQ-STAMPA-006](#req-stampa-006--lo-staff-di-sala-stampa-le-comande-degli-ordini-che-prende), [REQ-STAMPA-007](#req-stampa-007--un-pallino-dice-se-la-comanda-uscirà-prima-di-averne-bisogno), [REQ-STAMPA-012](#req-stampa-012--più-comande-dello-stesso-conto-si-stampano-insieme), [REQ-STAMPA-013](#req-stampa-013--la-comanda-automatica-la-stampa-solo-il-terminale-che-ha-inserito-lordine), [REQ-STAMPA-021](#req-stampa-021--la-stampa-automatica-sceglie-da-dove-deve-venire-il-gesto-banco-sala-o-tutti-e-due), [REQ-NOTIF-002](#req-notif-002--il-banco-sa-quando-arriva-un-ordine-nuovo) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-005 — La cassa della serata torna al centesimo
 
@@ -127,7 +127,7 @@ A fine serata il conteggio dei contanti deve corrispondere a quello che dice l'a
 
 **Come si accetta**: Si apre la cassa con un fondo, si incassano conti in contanti (col resto), in carta e con un buono VIP, e se ne chiude uno impagato. Dopo mezzanotte si chiude la cassa: la chiusura stampata riporta ogni metodo separato, il contante atteso è fondo più contanti incassati, e l'impagato compare fra quelli da riscuotere.
 
-**Chi**: Banco, Gestore · **Lo realizzano**: [REQ-CASSA-001](#req-cassa-001--la-giornata-di-lavoro-finisce-dopo-la-mezzanotte), [REQ-CASSA-002](#req-cassa-002--apertura-e-chiusura-cassa-con-fondo-e-conteggio), [REQ-CASSA-003](#req-cassa-003--la-carta-non-finisce-mai-nei-contanti), [REQ-CASSA-004](#req-cassa-004--rendiconto-della-serata-ordini-e-prodotti-venduti), [REQ-CASSA-006](#req-cassa-006--la-cassa-è-una-sola-flusso-lista-ordini-chiusure), [REQ-CASSA-016](#req-cassa-016--chiudere-un-conto-impagato-il-tavolo-si-libera-i-soldi-restano-da-riscuotere), [REQ-STAMPA-004](#req-stampa-004--chiusura-di-cassa-stampata-con-tutti-i-metodi), [REQ-PAG-006](#req-pag-006--buoni-vip-credito-prepagato-intestato-a-una-persona), [REQ-PAG-015](#req-pag-015--quanto-dà-il-cliente-e-quanto-resto-dare-coi-contanti) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Banco, Gestore · **Lo realizzano**: [REQ-CASSA-001](#req-cassa-001--la-giornata-di-lavoro-finisce-dopo-la-mezzanotte), [REQ-CASSA-002](#req-cassa-002--apertura-e-chiusura-cassa-con-fondo-e-conteggio), [REQ-CASSA-003](#req-cassa-003--la-carta-non-finisce-mai-nei-contanti), [REQ-CASSA-004](#req-cassa-004--rendiconto-della-serata-ordini-e-prodotti-venduti), [REQ-CASSA-006](#req-cassa-006--la-cassa-è-una-sola-flusso-lista-ordini-chiusure), [REQ-CASSA-016](#req-cassa-016--chiudere-un-conto-impagato-il-tavolo-si-libera-i-soldi-restano-da-riscuotere), [REQ-CASSA-017](#req-cassa-017--a-cassa-chiusa-gli-ordini-si-battono-ma-non-si-incassa), [REQ-STAMPA-004](#req-stampa-004--chiusura-di-cassa-stampata-con-tutti-i-metodi), [REQ-PAG-006](#req-pag-006--buoni-vip-credito-prepagato-intestato-a-una-persona), [REQ-PAG-015](#req-pag-015--quanto-dà-il-cliente-e-quanto-resto-dare-coi-contanti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-006 — Il magazzino scala quello che è stato venduto davvero
 
@@ -175,7 +175,23 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-012 — Su un conto si vede chi ha battuto cosa
+
+In una serata piena allo stesso conto lavorano in due o tre: chi l'ha aperto al banco, chi aggiunge un giro dal tavolo. Quando una riga è sbagliata o va spiegata al cliente, la prima domanda è chi l'ha battuta (richiesta dell'08/11/2026: l'iniziale di chi ha caricato ogni riga, «F nel quadrato rosa», «A nel quadrato azzurro»).
+
+**Come si accetta**: Flavio apre un conto al banco e batte un Negroni; Alex, dal telefono della sala, ci aggiunge uno Spritz. Riaprendo il conto, accanto al Negroni c'è la F rosa e accanto allo Spritz la A azzurra; sulla card della coda resta la F di chi l'ha aperto. Lo stesso col telefono senza rete.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-023](#req-ord-023--accanto-a-ogni-riga-del-conto-liniziale-di-chi-lha-battuta-nel-suo-colore), [REQ-ORD-024](#req-ord-024--il--e-il--di-una-riga-li-usa-solo-chi-lha-caricata-se-liniziale-è-accesa) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-013 — Il gestionale si legge e si compila senza fatica
+
+Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li conosce. Devono mostrare i numeri incolonnati, permettere di guardare una parte sola (una categoria) e non ingombrare le schede con spiegazioni che chi le compila sa già (richieste dell'08/11/2026 sulla marginalità del listino e sugli aiuti dei campi).
+
+**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -335,7 +351,7 @@ UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta: «è arri
 
 LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js): un avviso annuncia un FATTO e non porta il nome della colonna in cui il conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che non possono importarsi a vicenda — la coda, la push del server e il service worker — e il titolo dev'essere IDENTICO nei tre, perché la notifica dell'app e quella del server portano lo stesso `tag` e il sistema le fonde in una.
 
-**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
+**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`, `tests/sistema/comandaAlBanco.spec.js`
 
 #### REQ-ORD-022 — Lo staff che tocca un conto entra nel conto, non nella pagina del cliente
 
@@ -344,6 +360,24 @@ Chiesto dall'utente il 19/08. Con gli stati del servizio accesi, lo staff che to
 FATTO: chi è personale (admin, banco e sala) che apre `/ordine/:id` entra nel conto; con `?cliente=1` la stessa pagina torna quella da girare al cliente — senza «Il tuo numero», col QR e con «✏️ Modifica» che riporta al conto. Ci si arriva dal ⋯ del conto, voce «Mostra al cliente», che senza gli stati del servizio non compare (non ci sarebbe niente da seguire).
 
 **Dove**: `src/pages/OrderStatusPage.jsx, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`, `tests/component/OrderPosDetail.test.jsx`
+
+#### REQ-ORD-023 — Accanto a ogni riga del conto l'iniziale di chi l'ha battuta, nel suo colore
+
+Richiesta dell'08/11/2026: «manca iniziale di chi ha caricato un item su un ordine vicino all'item (esempio: vicino ogni item su un ordine se caricato da FLAVIO appare la F nel quadrato rosa e se caricato da ALEX appare A nel quadrato azzurro), ovviamente lasciando il quadrato di chi ha creato l'ordine nella pagina generale».
+
+LA FIRMA: ogni riga porta `added_by` {name, email, role}. La mette il conto quando la riga lascia la bozza o entra dritta in una comanda da fare (firmaRiga: chi la manda è chi l'ha battuta, la bozza è di quel terminale); api.js la porta fino al documento in ogni scrittura delle righe — creazione, comanda aggiunta, modifica — così una riga corretta dal banco resta di chi l'aveva battuta, e il conto restituito la ha già, anche senza rete. Le righe di prima e quelle del cliente restano senza firma e senza segno.
+
+IL COLORE è della persona e viene dal nome (lib/colorePersona.js): lo stesso sulla card della coda, nella legenda, nel quadratino in alto e su ogni riga, su ogni terminale, senza configurarlo. Il seme del calcolo è scelto perché Flavio esca rosa e Alex azzurro, come nella richiesta. Il quadratino di chi ha aperto il conto resta sulla card.
+
+NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda. DAL 09/11/2026 È UN'OPZIONE (Impostazioni, «Chi ha caricato la riga», `firma_righe`, accesa di partenza): spenta, le iniziali non si vedono, ma chi ha battuto la riga si registra lo stesso, e riaccendendo si vede anche sulle righe di quando era spenta. Con lei va il blocco del «+» e del «−» (REQ-ORD-024).
+
+**Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/sistema/chiHaBattuto.spec.js`
+
+#### REQ-ORD-024 — Il «+» e il «−» di una riga li usa solo chi l'ha caricata, se l'iniziale è accesa
+
+Flavio, 09/11/2026: «ora che è stata aggiunta l'icona vicino a ogni item all'interno di un ordine viene disabilitata la funzione del +1, +2, +3 […] se Alex da fuori vuole aggiungere una Tennent's non può fare +1, deve caricarla lui, perché altrimenti che mette lì? Due Tennent's, una caricata da me e una caricata da lui?». L'utente: il «−» segue la stessa regola; l'admin non fa eccezione («l'iniziale segnata poi che ne sappiamo chi ha caricato effettivamente»); la regola vale solo se l'iniziale è accesa nelle impostazioni. Sul conto, su una riga firmata da un altro, il «+» e il «−» sono spenti, e il «+» dice «Caricato da …: per aggiungerne, toccare il prodotto». Chi ne vuole un altro lo batte dalla griglia e fa una riga sua. Il confronto è sull'email dell'account, il nome solo se manca. Le righe senza iniziale (del cliente dal menù, e quelle battute prima della 1.10.30) restano a tutti: di chi siano non si sa. La bozza è sempre di chi la sta battendo. Con l'iniziale spenta i tasti sono di tutti, come prima: un tasto spento senza un motivo a schermo sarebbe un tasto rotto.
+
+**Dove**: `src/lib/comande.js (rigaDiAltri, firmaRigheAccesa), src/components/OrderPosDetail.jsx (altruiPerMe), src/components/SettingsTab.jsx, src/lib/api.js (firma_righe)` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/rigaDiAltri.test.js`, `tests/sistema/piuSoloSulleProprie.spec.js`
 
 ### Cassa e POS
 
@@ -859,7 +893,7 @@ IN TABELLA E PER CATEGORIE (Flavio, vocale del 22/10/2026: «bisognerebbe metter
 
 LE PAROLE DI FLAVIO (29/10/2026): «COSTO, VENDITA, CONSIGLIATO, MOLTIPLICATORE e UTILE incolonnate come una tabella». Le colonne sono quelle, in quell'ordine, e il consigliato ha una colonna sua, in evidenza sulle voci da rivedere (prima stava sotto il nome, solo per quelle). Di partenza la tabella e' divisa per categorie del menu', nel loro ordine, con «Senza categoria» in fondo e, sulla riga di ogni categoria, margine e ricarico medi; «Tutto insieme» mette in fila tutto il listino. Di partenza si vedono tutte le voci, col ricarico piu' basso in cima; i filtri Da rivedere, In linea, Costo incompleto restano. Gli ingredienti senza costo si leggono sotto il nome. Toccando il nome si apre la voce.
 
-**Dove**: `src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/MarginList.test.jsx`
+**Dove**: `src/lib/pricing.js (marginReport, ordinaMargini, marginiPerCategoria), src/components/MarginList.jsx, src/components/SortTh.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/MarginList.test.jsx`
 
 #### REQ-MENU-003 — Import del catalogo da un export SumUp
 
@@ -1007,11 +1041,11 @@ LA LICENZA (06/11/2026, «fallo tu»): `carte` è nei `temi` di clienti/tana/lic
 
 LA SECONDA VERSIONE (06/11/2026), dopo averlo visto sul test. L'utente: «le carte le vorrei un po' più grandi, il mazzo di carte coperte, le carte devono essere intere, adesso sono tagliate, non sembra un mazzo, i font anche un po' più grandi ma in uno stile Lewis Carroll»; «hai messo special e signature ma sono la stessa cosa»; e le immagini dei drink sulla carta «si vedono male, anzi poco». Quindi: carte intere e più grandi (128×182, passo 100); a inizio fila il mazzo coperto, quattro carte intere sul dorso, da cui le carte escono all'apertura; il seme grande in mezzo a ogni carta; la scrittura è IM Fell English (quella di «Meraviglie»), più grande, con prezzi e valori in Playfair, che ha le cifre alte; niente Jolly nel mazzo: gli Special sono il carosello di sempre in cima (`carosello` nel registro degli stili strutturati), e il Jolly resta sulla pagina Special; i disegni sulle carte sono quelli col tratto scuro (`chiaro` nel registro), interi e grandi. Sul dorso in cima al mazzo coperto il logo del locale (quello della build, public/logo.png), in un anello avorio: «dietro il mazzo di carte può andare il logo della Tana del Coniglio?». Sul test i nomi delle sezioni sono quelli della cassa, in maiuscolo, e «AMERICANI», «DISTILLATI» andavano a capo a metà parola: la carta chiusa stima la larghezza della parola più lunga (misuraNome in lib/mazzoCarte.js, le maiuscole pesano più delle minuscole) e rimpicciolisce la scritta quanto basta.
 
-IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci anche le carte girate come da esempio di Flavio: le carte che aprono il menù sono in mezzo a un ventaglio di carte girate»; e «un'animazione più figa: quando clicchi la carta esce fuori dal mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è diventato il ventaglio dello schizzo: una girata intera sotto ogni carta, sfalsata di mezza carta e più in basso, e una girata inclinata a ogni capo, col logo; le carte escono da quella di sinistra. Toccando una carta, una carta sul dorso (con le proporzioni di una carta) esce dall'alto e gira fino a essere di taglio, poi subentra la faccia, cioè la carta aperta, che finisce il giro, e le voci entrano una dopo l'altra. Solo transform e opacity; con «riduci movimento» niente. Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si vede bene quando si gira e si popola». Il volo ora parte dalla carta toccata nel ventaglio, alla sua misura e dove la fila la centra (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo per più di metà del tempo; poi gira e si popola come prima. Tutto 1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo della sezione rimbalza in alto non appena si gira la carta». 1,1 s; e la prospettiva del giro è della carta, col fulcro sul suo bordo alto, non della pagina: quella della pagina, centrata sopra il ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato), e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente, mentre la carta cresce.
+IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci anche le carte girate come da esempio di Flavio: le carte che aprono il menù sono in mezzo a un ventaglio di carte girate»; e «un'animazione più figa: quando clicchi la carta esce fuori dal mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è diventato il ventaglio dello schizzo: una girata intera sotto ogni carta, sfalsata di mezza carta e più in basso, e una girata inclinata a ogni capo, col logo; le carte escono da quella di sinistra. Toccando una carta, una carta sul dorso (con le proporzioni di una carta) esce dall'alto e gira fino a essere di taglio, poi subentra la faccia, cioè la carta aperta, che finisce il giro, e le voci entrano una dopo l'altra. Solo transform e opacity; con «riduci movimento» niente. Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si vede bene quando si gira e si popola». Il volo ora parte dalla carta toccata nel ventaglio, alla sua misura e dove la fila la centra (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo per più di metà del tempo; poi gira e si popola come prima. Tutto 1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo della sezione rimbalza in alto non appena si gira la carta». 1,1 s; e la prospettiva del giro è della carta, col fulcro sul suo bordo alto, non della pagina: quella della pagina, centrata sopra il ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato), e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente, mentre la carta cresce. Flavio, 08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto che riporta alle carte». Il mazzo resta agganciato sotto la barra mentre si legge, con un fondo pieno solo quando si aggancia (come BUG-120; senza sfocatura, che sul telefono costa mentre le carte si animano); il tasto «Le carte ↑» e la testa agganciata della carta aperta non ci sono più. Scegliendo una carta dal mazzo agganciato la pagina torna all'inizio della carta nuova, che altrimenti si leggerebbe a metà. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js).
 
 RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con le categorie nuove di Flavio.
 
-**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`
+**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`, `tests/sistema/carteAgganciate.spec.js`
 
 #### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
 
@@ -1038,6 +1072,12 @@ L'utente, 02/11/2026: «anche gli stili, non limitarti a quelli che abbiamo inte
 FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva bisogno): il vocabolario in lib/stiliRicetta.js, uguale a quello della regia più `impaginazione` (REQ-MENU-030); `leggiStile` scarta una ricetta con un valore sconosciuto; il motore in index.css legge la ricetta dagli attributi `data-*` del contenitore, e ogni valore ha la sua regola (un test lo controlla); i dodici caratteri in main.jsx, con una scala per le scritture a mano (sulla prova i nomi in Caveat del «Quaderno» si leggevano a fatica); gli stili del catalogo in «Stili del menù», installati con la copia in `stili_ricetta`; un tema del catalogo può usarne uno, e «Usa» lo installa; un tema su misura con la ricetta è uno stile col suo id. I sette stili della regia, provati a schermo sul telefono, si leggono e si disegnano tutti.
 
 **Dove**: `src/lib/stiliRicetta.js (vocabolario, leggiStile, vesteRicetta), src/lib/stileMenu.js (gli stili a ricetta fra quelli del locale, vesteDelloStile), src/lib/marketplaceTemi.js (leggiTema, catalogo, stileDelTema), src/index.css (il motore, .stile-ricetta), src/main.jsx (i caratteri), src/App.jsx (i colori propri), docs/stili-a-ricetta.md` · **Lo dimostrano**: `tests/unit/stiliRicetta.test.js`, `tests/unit/stileMenu.test.js`, `tests/unit/marketplaceTemi.test.js`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/MenuPage.test.jsx`
+
+#### REQ-MENU-032 — Marginalità del listino: le categorie a sinistra, per vederne una sola
+
+Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie sul lato sx in modo da poterle filtrare». La tabella era divisa per categorie ma mostrava sempre tutto il listino: per lavorare sui prezzi di una famiglia sola si scorreva cercandola. Ora a sinistra c'è la barra delle categorie del Menù e del POS (CategoryRail), con «Tutte» in cima e il numero di voci per categoria; toccandone una la tabella mostra solo quella, e i filtri Da rivedere, In linea e Costo incompleto contano e filtrano dentro la categoria scelta. Una voce sta sotto la stessa categoria nella barra e nella tabella: la regola è una sola (marginiPerCategoria, per id o per nome sulle voci vecchie). Sul telefono la barra diventa la riga che scorre, come altrove.
+
+**Dove**: `src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarginList.test.jsx`, `tests/sistema/marginalita.spec.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -2193,9 +2233,9 @@ La serata appartiene al proprio giorno anche dopo la mezzanotte, fino all'ora di
 
 #### REQ-CASSA-002 — Apertura e chiusura cassa, con fondo e conteggio
 
-La cassa si apre con un fondo e si chiude con il riepilogo della serata: incassato per metodo e per ora, conti chiusi, conti ancora da incassare. Senza cassa aperta non si battono ordini. E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession` non restituisce niente da aspettare, la scrittura parte in sottofondo e lo scontrino di chiusura parte per conto suo — se la stampante non risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la risposta della stampante (REQ-STAMPA-016): il lavoro si chiude sull'invio, l'esito arriva dopo e si legge nel registro delle stampe. Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
+La cassa si apre con un fondo e si chiude con il riepilogo della serata: incassato per metodo e per ora, conti chiusi, conti ancora da incassare. Senza cassa aperta gli ordini si battono ma non si incassa (REQ-CASSA-017, dall'08/11/2026; prima non si battevano). E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession` non restituisce niente da aspettare, la scrittura parte in sottofondo e lo scontrino di chiusura parte per conto suo — se la stampante non risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la risposta della stampante (REQ-STAMPA-016): il lavoro si chiude sull'invio, l'esito arriva dopo e si legge nel registro delle stampe. Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
 
-**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`, `tests/sistema/cassaAlCentesimo.spec.js`
 
 #### REQ-CASSA-007 — Il flusso cassa serve DURANTE la serata, non solo alla chiusura
 
@@ -2296,6 +2336,12 @@ LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto del metodo di
 QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni altro: il pagamento lo chiude, e il segno resta come storia.
 
 **Dove**: `src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/impagato.test.js`, `tests/unit/scontrinoImpagato.test.js`, `tests/component/PaymentScreen.test.jsx`
+
+#### REQ-CASSA-017 — A cassa chiusa gli ordini si battono, ma non si incassa
+
+Richiesta dell'08/11/2026: «permettere di creare ordini anche da cassa chiusa ma rendere i tasti RISCUOTERE e similari non selezionabili». Prima era il contrario: senza cassa aperta il POS mostrava il cartello «Cassa chiusa» al posto del conto, e col cliente davanti si andava ad aprire la cassa per battere un drink; gli incassi invece passavano, e finivano fuori da ogni chiusura. ORA il conto si batte (nasce numerato sulla giornata, REQ-ORD-016) e le comande partono; nel pagamento Riscuotere, Riscuoti senza stampa, Acconto con scontrino, Riscuoti e servi e Impagato restano al loro posto ma spenti, con scritto sopra «Cassa chiusa: per incassare va aperta la cassa.»; il preconto e lo sconto restano. Sulle card della coda i tasti Contanti, Carta e Incassa sul lettore sono spenti col perché nel titolo. Il «+» della lavagna è sempre attivo e l'avviso in cima alla coda dice che gli ordini si battono e per incassare va aperta la cassa. Aprendo la cassa i tasti si riaccendono senza uscire dal conto. Finché la sessione non è arrivata dalla cache non si spegne niente.
+
+**Dove**: `src/pages/PosPage.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx (tasti rapidi, avviso), src/lib/coda.js (voceCassa), src/lib/cashSession.js` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/component/PosPage.test.jsx`, `tests/component/CodaCorsie.test.jsx`, `tests/sistema/cassaChiusa.spec.js`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
@@ -2641,6 +2687,12 @@ Flavio, 30/10/2026 (audio): «bisogna dare allo staff, cioè ad un account staff
 
 **Dove**: `src/lib/sezioni.js (NAV_SALA), src/pages/BartenderPage.jsx (tab stampante), src/components/PrinterSetup.jsx (gestore), src/components/PallinoStampante.jsx` · **Lo dimostrano**: `tests/component/PrinterSetupSala.test.jsx`
 
+#### REQ-STAMPA-021 — La stampa automatica sceglie da dove deve venire il gesto: banco, sala o tutti e due
+
+Richiesta dell'08/11/2026: «in IMPOSTAZIONI - CASSA E GIORNATA - STAMPA AUTOMATICA differenziare se le operazioni provengono da cassa o da sala (esempio: stampa solo riscossione da banco e stampa in automatico la comanda se presa da sala)». Sotto ognuna delle due stampe automatiche del terminale, quando è accesa, si sceglie «Banco e sala», «Solo dal banco» o «Solo dalla sala» (`autoPrintComandaDa`, `autoPrintScontrinoDa`, di partenza «tutti», come prima). L'origine è il ruolo di chi ha fatto il gesto: banco = admin e bartender, sala = la sala e i clienti dal menù. Per una comanda conta chi ne ha battuto le righe (la firma, REQ-ORD-023), e per le comande di prima chi ha aperto il conto; per lo scontrino chi sta incassando. La regola vale per la comanda automatica della coda, per quella che il telefono della sala stampa da sé, per lo scontrino della schermata di pagamento e per quello dei tasti rapidi della coda. Con «la stampa il banco» e le comande solo dal banco lo si dice: quelle della sala non le stamperebbe nessuno.
+
+**Dove**: `src/lib/printer.js (stampaDa, ruoloDellaComanda, scontrinoAutomatico, comandeDaStampare), src/components/StampaAutomatica.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/pages/MenuPage.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/stampaDaBancoOSala.test.js`, `tests/component/StampaAutomatica.test.jsx`, `tests/sistema/stampaDaBancoOSala.spec.js`
+
 ### Vista cliente
 
 Quello che vede il cliente: vetrina, menù, stato del suo ordine.
@@ -2763,7 +2815,7 @@ Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende.
 
 L'admin fa tutto quello che fa il bartender e in più nomina i ruoli; il bartender ha il gestionale completo; lo staff di sala lavora sulla stessa coda del banco e vede cosa c'è da servire, senza le sezioni amministrative; il cliente il menù e i propri ordini. Il ruolo vive nei claim del token e le regole del database guardano quello.
 
-**Dove**: `src/lib/ruoli.js, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`
+**Dove**: `src/lib/ruoli.js, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`, `tests/sistema/ruoli.spec.js`
 
 #### REQ-STAFF-002 — I confronti sui ruoli si fanno in un posto solo
 
@@ -3271,9 +3323,15 @@ DECISIONI DELL'UTENTE (07/11/2026): le icone hanno dei TEMI; i disegni del tema 
 
 UN TEMA PER GRUPPO (l'utente, 07/11/2026: «il selettore del tema deve essere separato» per le tre fasi): Navigazione, Tasti e stati, Segnali e messaggi si scelgono ognuno per conto suo (tema_icone_navigazione, tema_icone_tasti, tema_icone_segnali), e ogni <Icona> dice di che gruppo è. COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina», «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno; <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji» per chi non è dello staff). I disegni prendono colore e misura del testo attorno (currentColor, em), quindi un tasto e un titolo hanno icone della stessa taglia. I pallini degli stati restano colorati in entrambi i temi, con gli inchiostri di stato di DESIGN.md.
 
-LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le emoji di prima e le riporta al loro nome; un cricchetto (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto. L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale. FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la navigazione — menu laterale, voci del gestionale e della sala, sottosezioni di tutte le pagine, il foglio del telefono, la barra, i moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei conti, i metodi di pagamento nei riepiloghi di cassa (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il loro nome (aria-label), che prima era l'emoji; dentro un <option> un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un segnaposto un disegno non entra), e così le voci delle tendine. Le etichette che stanno nei dati — stati, ruoli, metodi di pagamento, intestazioni della coda — prendono l'emoji dal vocabolario (conEmoji), così stampe, notifiche del telefono e pagine del cliente leggono le stesse di sempre; nel gestionale <ConIcona> riconosce l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le notifiche del telefono (sono testo del sistema) e l'avviso dei cookie (lo legge il cliente).
+LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le emoji di prima e le riporta al loro nome; un cricchetto (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto. L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale. FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la navigazione — menu laterale, voci del gestionale e della sala, sottosezioni di tutte le pagine, il foglio del telefono, la barra, i moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei conti, i metodi di pagamento nei riepiloghi di cassa (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il loro nome (aria-label), che prima era l'emoji; dentro un <option> un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un segnaposto un disegno non entra), e così le voci delle tendine. Le etichette che stanno nei dati — stati, ruoli, metodi di pagamento, intestazioni della coda — prendono l'emoji dal vocabolario (conEmoji), così stampe, notifiche del telefono e pagine del cliente leggono le stesse di sempre; nel gestionale <ConIcona> riconosce l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le notifiche del telefono (sono testo del sistema) e l'avviso dei cookie (lo legge il cliente). I TITOLI DEGLI AVVISI (08/11/2026, dopo «mancano icone stilizzate monocrome»): campanella, storico e fumetto stampavano il titolo così com'era scritto, con l'emoji colorata davanti («🆕 Nuovo ordine»); ora l'icona si disegna nel tema (ConIcona) e il resto resta testo. Il «Conto ripristinato» usa «riapri» del vocabolario invece della freccia ↩️, che il vocabolario non conosceva.
 
-**Dove**: `src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react` · **Lo dimostrano**: `tests/unit/icone.test.js`, `tests/component/Icona.test.jsx`
+**Dove**: `src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react` · **Lo dimostrano**: `tests/unit/icone.test.js`, `tests/component/Icona.test.jsx`, `tests/component/FumettoAvvisi.test.jsx`
+
+#### REQ-UI-032 — Gli aiuti sotto i campi delle schede si nascondono, e i testi sono riscritti
+
+Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi compilabili o almeno permettere di abilitarli/disabilitarli ma sicuramente correggere la sintassi». In una scheda lunga la riga d'aiuto di un campo finisce sopra l'etichetta del successivo, e a chi la compila tutti i giorni ripete cose che sa. Gli aiuti dei campi passano da un componente solo (AiutoCampo) e di partenza sono NASCOSTI; si riaccendono da Impostazioni → Aspetto → «Aiuti sotto i campi» (Nascosti / Visibili, `aiuti_campi` sulle impostazioni del locale, per tutti i terminali). Gli avvisi che dipendono da quello che si è scritto (un errore, un dato mancante, un blocco) non sono aiuti e restano sempre. I TESTI sono riscritti in frasi piane e impersonali, nel registro del gestionale (DESIGN.md, guardrail 3): per esempio «Lasciala vuota e vale quella del locale (10%). Si compila solo dove fa eccezione — una bottiglia intera non si rivende come un drink al banco» diventa «Se vuota si applica l'IVA del locale (10%). Va indicata solo per le eccezioni, come le bottiglie vendute intere».
+
+**Dove**: `src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/AiutiCampi.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/sistema/aiutiCampi.spec.js`
 
 ### Come si lavora al progetto
 
@@ -3443,11 +3501,21 @@ L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di sviluppo a V», 
 
 IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in tests/unit un test che sostituisce Firestore (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice vero contro un Firestore finto; e il test stesso può dichiararlo con `// @livello <nome>` quando la cartella, scelta prima della V, non dice il vero.
 
-UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137. Poi la cassa che torna al centesimo (REQ-CASSA-002: contanti, carta e un impagato, la chiusura col contato, i numeri nel database), la comanda della sala che arriva al banco su un altro browser (REQ-ORD-009) e quello che ogni ruolo vede del gestionale (REQ-STAFF-001).
 
 FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni; i test di accettazione dagli scenari della serata; il cancello che chiede la V intera prima del merge in develop.
 
 **Dove**: `requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md, playwright.config.mjs, tests/sistema/, .github/workflows/test.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/modelloAV.test.js`
+
+#### REQ-DEV-019 — La specifica del prodotto per casi d'uso, e ogni caso d'uso provato end-to-end come lo farebbe il cliente
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+L'utente, 09/11/2026: «non abbiamo una specifica vera del prodotto. Sulla base di quella, vanno testati i casi d'uso direttamente nel browser su un ambiente di test», «in pratica vanno testati come se fosse il cliente. Poi il cliente valida successivamente». I requisiti dicono cosa fa l'app un comportamento alla volta e i test di sistema ne provano uno alla volta: nessuno dei due dice quali sono le cose che banco, sala, cliente e gestore fanno davvero, dall'inizio alla fine.
+
+IL REGISTRO DEI CASI D'USO (requirements/casi-uso.yaml, UC-<ZONA>-NNN): per ogni obiettivo di chi usa l'app, chi lo fa, da dove parte, i passi osservabili nel browser, l'esito, le varianti (quando/allora: rete staccata, cassa chiusa, ruolo che non può…), come si prova (browser, browser con stampante o SumUp finti, a mano), i bisogni che serve, i requisiti fatti che mette in gioco e quelli previsti. Da lì si genera docs/specifica-prodotto.md (`node scripts/casi-uso.mjs --documento`), che si legge senza sapere di codice. Un test controlla i legami: requisiti e bisogni esistenti, i fatti fra i requisiti, i todo fra i previsti, i test citati esistenti. I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi soli gesti di chi lavora, più browser insieme quando il caso d'uso lo chiede, con le Functions sotto: in locale e su ogni pull request con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test, testiamo, eliminiamo»), con il Terraform dell'istanza della regia. `tana-drink-test` resta al cliente, per la validazione. L'AMBIENTE GENERATO (l'utente, 09/11/2026: «facciamo la prima»): un progetto di prova fisso, `drinkpos-prova-e2e`, generato una volta dal Terraform dell'istanza, sempre vuoto. A ogni tag e a mano (.github/workflows/e2e.yml) ci si pubblicano regole, Functions e app su un canale d'anteprima che scade, i test seminano il database prima di ognuno, e alla fine si cancellano sempre dati, utenze, canale e Functions. Un progetto nuovo per giro no: senza Organizzazione Google un service account non crea progetti, la fatturazione ne regge cinque, e un progetto eliminato resta trenta giorni col nome bruciato. Le guardie (scripts/lib-ambiente-e2e.mjs e il workflow) accettano solo `drinkpos-prova-…` con la chiave di quel progetto; le utenze di prova hanno la password del segreto E2E_PASSWORD, non quella del seme. In locale gli stessi test girano sugli emulatori completi (`npm run test:e2e`). Preparazione una tantum in docs/ambiente-e2e.md. FASI: la bozza del registro (09/11/2026, da far rivedere al gestore); l'ambiente e i primi test (UC-CASSA-001, UC-BANCO-001); gli altri casi d'uso, dopo la revisione.
+
+**Dove**: `requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md, tests/e2e/, playwright.e2e.config.mjs, scripts/lib-ambiente-e2e.mjs, scripts/ambiente-e2e.mjs, .github/workflows/e2e.yml, docs/ambiente-e2e.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/casiUso.test.js`, `tests/unit/ambienteE2e.test.js`
 
 ### STAT
 
@@ -4287,7 +4355,7 @@ La persistenza offline di Firestore tiene i dati in locale; le schermate partono
 
 Una scrittura Firestore offline non torna mai: un await prima di mostrare l'esito è l'app bloccata col locale pieno. Le scritture partono e basta, l'indicatore dice come stanno andando, e il risultato di un gesto si compone in memoria dal documento di partenza più la patch, invece di rileggerlo (BUG-045).
 
-**Dove**: `src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+**Dove**: `src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`, `tests/unit/autoreDellaRiga.test.js`
 
 #### ARC-003 — Quello che questo terminale ha appena fatto si vede subito, in un posto solo
 

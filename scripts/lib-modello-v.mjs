@@ -32,7 +32,9 @@ export const FILE_ARCHITETTURA = join(RADICE, 'requirements', 'architettura.yaml
 // documento e nel riepilogo, perché «integrazione» da solo non dice niente
 // a chi legge.
 export const LIVELLI = [
-  { id: 'accettazione', nome: 'Accettazione', verifica: 'i bisogni del locale (UR-*)', cartelle: ['tests/accettazione/'] },
+  // L'accettazione si fa coi test end-to-end dei casi d'uso (REQ-DEV-019):
+  // il criterio di un bisogno si soddisfa coi casi d'uso che lo servono.
+  { id: 'accettazione', nome: 'Accettazione', verifica: "i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end", cartelle: ['tests/accettazione/', 'tests/e2e/'] },
   { id: 'sistema', nome: 'Sistema', verifica: "la specifica (REQ-*), sull'app intera", cartelle: ['tests/sistema/'] },
   { id: 'integrazione', nome: 'Integrazione', verifica: "l'architettura (ARC-*): i pezzi messi insieme", cartelle: ['tests/component/', 'tests/bdd/', 'tests/regole/'] },
   { id: 'unita', nome: 'Unità', verifica: 'il progetto di dettaglio: un modulo da solo', cartelle: ['tests/unit/'] },

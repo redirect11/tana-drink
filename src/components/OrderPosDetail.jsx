@@ -61,6 +61,8 @@ import {
   gruppiDelConto,
   titoloGruppo,
   ORDER_OPEN,
+  rigaDiAltri,
+  firmaRigheAccesa,
 } from '../lib/comande.js'
 import { paidAmount, dettaglioIncassi, scontoTotale } from '../lib/pagamento.js'
 import { aggiunteInComandaNuova, isPersonale, puoGestireComande, puoSegnare } from '../lib/ruoli.js'
@@ -105,6 +107,7 @@ import { ripristinabile, ultimaRiapertura, quando } from '../lib/storiaOrdine.js
 import PaymentScreen from './PaymentScreen.jsx'
 import { azioniContoRidotte, ricordaAzioniContoRidotte } from '../lib/impostazioniLocali.js'
 import Icona, { ConIcona } from './Icona.jsx'
+import OrderBy from './OrderBy.jsx'
 import { emojiDi } from '../lib/icone.js'
 import MetodoPagamento from './MetodoPagamento.jsx'
 
@@ -1079,6 +1082,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           custom: it.custom,
           recipe_items: it.recipe_items,
           note: it.note || null,
+          added_by: it.added_by || null,
         }
         const paidHere = it.drink_id ? Math.min(it.qty, remainingPaid[it.drink_id] || 0) : 0
         if (it.drink_id) remainingPaid[it.drink_id] -= paidHere
@@ -1322,7 +1326,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // si possono personalizzare e annotare separatamente). Per aumentare la
     // quantità di una riga esistente si usa il + su quella riga.
     const cur = target.items || []
-    const items = [...cur, item]
+    // Entra dritta nella comanda, senza passare dalla bozza: la firma si
+    // mette qui (REQ-ORD-023).
+    const items = [...cur, firmaRiga(item)]
     const scrollIdx = items.length - 1
     segnaModifica(target.id, items, 500)
     scrollToLine(`c:${target.id}:${scrollIdx}`)
@@ -1382,16 +1388,24 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     segnaModifica(comandaId, items)
   }
 
-  // − su una qualsiasi riga della lista, secondo lo stato.
+  // La riga è di un altro, per chi sta usando il conto? Solo con l'iniziale
+  // accesa; la bozza è sempre di questo terminale. «Io» è chi firma le
+  // righe (firmaRiga): lo stesso confronto da tutte e due le parti.
+  const altruiPerMe = (l) =>
+    firmaRigheAccesa(settings) && l.source !== 'draft' && rigaDiAltri(l, staffRef.current)
+
+  // − su una qualsiasi riga della lista, secondo lo stato. Su una riga
+  // caricata da un altro no (REQ-ORD-024): i tasti sono spenti, e il
+  // controllo qui copre chi ci arriva per un'altra strada.
   const minusRow = (l) => {
-    if (closed) return
+    if (closed || altruiPerMe(l)) return
     if (l.source === 'draft') setDraftLineQty(l.line_id, l.qty - 1)
     else if (l.removable) reduceComandaLine(l.comandaId, l.itemIndex)
   }
   // + su una riga del conto: aumenta la quantità di QUELLA riga. È il gesto
   // opposto al tocco sulla griglia, che invece aggiunge una riga nuova.
   const plusRow = (l) => {
-    if (closed || l.paid) return
+    if (closed || l.paid || altruiPerMe(l)) return
     if (l.source === 'draft') {
       setDraftLineQty(l.line_id, l.qty + 1)
       return
@@ -1562,8 +1576,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // confermato. Senza, la chiave React cambiava (d:… → c:…), il nodo veniva
   // ricreato e l'item appena aggiunto rifaceva il suo effetto di comparsa —
   // il "piccolo relayout" che si vedeva a ogni primo drink.
+  // CHI HA BATTUTO LA RIGA (REQ-ORD-023): la firma si mette quando la riga
+  // lascia la bozza — la bozza è di questo terminale, e chi la manda è chi
+  // l'ha battuta. Una riga già firmata (rimessa in bozza da un invio non
+  // riuscito) tiene la sua firma. Nome, email e ruolo, come `placed_by`
+  // senza il dispositivo: alla riga serve sapere chi, non da dove.
+  const firmaRiga = (l) => {
+    const io = staffRef.current
+    if (l.added_by || !io) return l
+    return { ...l, added_by: { name: io.name || null, email: io.email || null, role: io.role || null } }
+  }
   const draftToItems = (righe = draft) =>
-    righe.map((l) => ({
+    righe.map(firmaRiga).map((l) => ({
       drink_id: l.drink_id,
       name: l.name,
       price: l.unit_price,
@@ -1572,6 +1596,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
       ...(l.custom ? { custom: true } : {}),
       ...(l.recipe_items ? { recipe_items: l.recipe_items } : {}),
       ...(l.note ? { note: l.note } : {}),
+      ...(l.added_by ? { added_by: l.added_by } : {}),
     }))
 
   // DA QUALE TERMINALE. Serve a non avvisare chi l'ordine l'ha appena
@@ -1610,7 +1635,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     // La bozza DEPURATA delle righe che una comanda porta già: un cassetto
     // rimasto sporco (crash, corse alla nascita del conto) non deve battere
     // due volte le stesse righe. `clearDraft` sotto pulisce comunque tutto.
-    const additions = bozzaVivaRef.current
+    const additions = bozzaVivaRef.current?.map(firmaRiga)
     if (!additions || additions.length === 0) {
       if (draftRef.current.length > 0) clearDraft()
       return
@@ -2611,7 +2636,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {orderedLines.map((l, idx) => {
               const isDraft = l.source === 'draft'
               const isPaid = !!l.paid
-              const canMinus = !closed && !isPaid && (isDraft || l.removable)
+              // Una riga firmata da un altro si aumenta e si riduce solo da
+              // lui (REQ-ORD-024). `staff` e non il ref: quando si scopre
+              // chi sta usando il conto, i tasti si ridisegnano.
+              const altrui = firmaRigheAccesa(settings) && !isDraft && rigaDiAltri(l, staff)
+              const canMinus = !closed && !isPaid && !altrui && (isDraft || l.removable)
               // A CHE PUNTO È QUESTA RIGA. Gli stati del servizio stanno sulle
               // COMANDE, non sul conto: con una comanda sola tutti i drink
               // sono nello stesso passo e non c'è niente da intestare — un
@@ -2665,6 +2694,14 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     >
                       <span style={{ minWidth: 0, overflow: 'hidden' }}>
                         <span style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+                          {/* Chi l'ha battuta, col suo colore (REQ-ORD-023).
+                              Le righe in bozza non ce l'hanno ancora: sono
+                              di chi sta guardando, e si firmano all'invio. */}
+                          {l.added_by && firmaRigheAccesa(settings) && (
+                            <span className="riga-autore">
+                              <OrderBy persona={l.added_by} titolo="Aggiunto" />
+                            </span>
+                          )}
                           <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                             {l.custom && <><Icona nome="special" gruppo="tasti" />{' '}</>}{l.name}
                           </span>
@@ -2715,9 +2752,23 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       >
                         {/* Etichette col nome: nella lista ci sono molte righe,
                             e i +/- della griglia hanno un altro significato. */}
-                        <button aria-label={`Riduci ${l.name}`} onClick={() => minusRow(l)} disabled={!canMinus}>−</button>
+                        <button
+                          aria-label={`Riduci ${l.name}`}
+                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}` : undefined}
+                          onClick={() => minusRow(l)}
+                          disabled={!canMinus}
+                        >
+                          −
+                        </button>
                         <strong>{l.qty}</strong>
-                        <button aria-label={`Aumenta ${l.name}`} onClick={() => plusRow(l)} disabled={closed || isPaid}>+</button>
+                        <button
+                          aria-label={`Aumenta ${l.name}`}
+                          title={altrui ? `Caricato da ${l.added_by.name || 'un altro'}: per aggiungerne, toccare il prodotto` : undefined}
+                          onClick={() => plusRow(l)}
+                          disabled={closed || isPaid || altrui}
+                        >
+                          +
+                        </button>
                       </span>
                     </span>
                   </div>

@@ -1,8 +1,9 @@
-import { Fragment, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
 import { comeScorrere } from '../lib/movimento.js'
+import { useIncollata } from '../lib/useIncollata.js'
 import { formatPrice } from '../lib/orderStatus.js'
 
 // ── LO STILE «CARTE»: IL MENÙ COME UN MAZZO (REQ-MENU-029) ────────────────
@@ -27,9 +28,14 @@ import { formatPrice } from '../lib/orderStatus.js'
 //   · gli SPECIAL nel menù sono del carosello di sempre, in cima
 //     (stiliStrutturati.js, `carosello`); sulla pagina Special sono il
 //     Jolly, una carta sola, già aperta;
-//   · la testa della carta aperta resta agganciata mentre si legge, col
-//     tasto per tornare al mazzo: le sezioni lunghe (i gin, i whisky) non
-//     costringono a risalire a mano.
+//   · il MAZZO RESTA AGGANCIATO IN ALTO mentre si legge (Flavio,
+//     08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto
+//     che riporta alle carte»): le sezioni lunghe (i gin, i whisky) non
+//     costringono a risalire a mano. Prima restava agganciata la testa
+//     della carta aperta, col tasto «Le carte ↑»; con il mazzo sempre lì il
+//     tasto non serve, e due fasce agganciate una sopra l'altra si
+//     mangiavano lo schermo del telefono. Quale sezione è aperta lo dice la
+//     carta alzata nel mazzo.
 // Si apre la prima sezione. Le carte non aperte restano nella pagina,
 // nascoste: ogni voce è a un tocco, e il contratto (contrattoStile.js) le
 // vuole tutte.
@@ -221,9 +227,19 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
   const [scelta, setScelta] = useState(null)
   const [partenza, setPartenza] = useState(null)
-  const mazzo = useRef(null)
   const ventaglio = useRef(null)
   const inVolo = useRef(null)
+  // Il segnaposto sta dove il mazzo starebbe fermo nella pagina: dice se il
+  // mazzo si è agganciato (useIncollata), ed è il punto a cui si torna.
+  const [osserva, incollato] = useIncollata()
+  const segnaposto = useRef(null)
+  const alSegnaposto = useCallback(
+    (el) => {
+      segnaposto.current = el
+      osserva(el)
+    },
+    [osserva]
+  )
 
   // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
   // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
@@ -236,17 +252,23 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
   if (!aperta) return null
 
+  // CON IL MAZZO AGGANCIATO si sceglie una carta da metà di un'altra: la
+  // pagina resterebbe a quell'altezza, e la carta nuova si leggerebbe a
+  // metà (o, più corta, si vedrebbe il fondo vuoto). Si torna all'inizio,
+  // con il mazzo in alto e la carta subito sotto. Di colpo e PRIMA di
+  // misurare il volo: il volo parte da dove la carta aperta sarà.
   const scegli = (id) => (e) => {
+    if (incollato) segnaposto.current?.scrollIntoView?.({ block: 'start' })
     setPartenza(partenzaDelVolo(e.currentTarget, ventaglio.current, inVolo.current))
     setScelta(id)
     e.currentTarget.scrollIntoView?.({ behavior: comeScorrere(), block: 'nearest', inline: 'center' })
   }
-  const tornaAlMazzo = () => mazzo.current?.scrollIntoView?.({ behavior: comeScorrere(), block: 'start' })
 
   return (
     <div className="k-tavolo">
+      {!soloSpeciali && <div className="k-mazzo-segnaposto" ref={alSegnaposto} aria-hidden="true" />}
       {!soloSpeciali && (
-        <nav className="k-mazzo" aria-label="Le carte del menù" ref={mazzo}>
+        <nav className={incollato ? 'k-mazzo incollata' : 'k-mazzo'} aria-label="Le carte del menù">
           <div className="k-ventaglio" ref={ventaglio}>
             <FilaCarte carte={tutte} apertaId={aperta.id} scegli={scegli} />
           </div>
@@ -269,8 +291,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
           hidden={c.id !== aperta.id}
           aria-label={c.nome}
         >
-          {/* Sulla pagina Special il titolo l'ha già detto la testata, e
-              un mazzo a cui tornare non c'è. */}
+          {/* Sulla pagina Special il titolo l'ha già detto la testata. */}
           {!soloSpeciali && (
             <header className="k-aperta-testa">
               <Indice carta={c} />
@@ -278,9 +299,6 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
                 {c.gruppo && <p className="k-gruppo">{c.gruppo}</p>}
                 <h2>{c.nome}</h2>
               </div>
-              <button type="button" className="k-torna" onClick={tornaAlMazzo}>
-                Le carte ↑
-              </button>
             </header>
           )}
           <div className="k-voci">

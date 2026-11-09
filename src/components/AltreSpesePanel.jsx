@@ -14,6 +14,7 @@ import {
   speseSenzaPrezzo,
   speseSenzaData,
 } from '../lib/spese.js'
+import AiutoCampo from './AiutoCampo.jsx'
 
 // ── ALTRE SPESE (REQ-MAG-034) ────────────────────────────────────────
 //
@@ -315,7 +316,7 @@ function SpesaForm({ spesa, onCancel, onSave }) {
         <>
           <label htmlFor="sp-data">Data dell’acquisto</label>
           <input id="sp-data" type="date" value={form.bought_at} onChange={set('bought_at')} />
-          <p className="muted small">Decide su quale mese pesa questa spesa.</p>
+          <AiutoCampo style={{ margin: '4px 0 0' }}>Determina il mese a cui è imputata la spesa.</AiutoCampo>
         </>
       )}
 

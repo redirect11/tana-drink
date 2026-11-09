@@ -88,3 +88,5 @@ ds-bundle/
 # Esportazioni degli emulatori (`firebase emulators:export`): fotografie del
 # database di prova, a volte mezzo giga. Restano sul computer di chi le fa.
 firebase-export-*/
+dist-e2e
+rapporto-e2e

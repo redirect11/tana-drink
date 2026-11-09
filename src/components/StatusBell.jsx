@@ -17,7 +17,7 @@ import { staffTokenRegistrato, saveStaffToken } from '../lib/api.js'
 import { idDispositivo } from '../lib/dispositivo.js'
 import { auth } from '../lib/firebaseClient.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
-import Icona from './Icona.jsx'
+import Icona, { ConIcona } from './Icona.jsx'
 
 // Campanella unica in topbar: mostra lo storico delle notifiche e, con un
 // pallino animato, lo STATO DELLA SINCRONIZZAZIONE local-first (idle / in
@@ -227,7 +227,7 @@ export default function StatusBell({ floating = false }) {
               const lista = storico ? notifs.archivio : notifs.items
               const riga = (n) => (
                 <>
-                  <div><strong>{n.title}</strong></div>
+                  <div><strong><ConIcona testo={n.title} gruppo="segnali" /></strong></div>
                   {n.body && <div className="muted small">{n.body}</div>}
                   <div className="muted" style={{ fontSize: '0.64rem', marginTop: 2 }}>{fmtTime(n.at)}</div>
                 </>

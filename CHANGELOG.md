@@ -1,5 +1,97 @@
 # Cosa è cambiato
 
+## 1.10.30-beta — in lavorazione
+
+### Sicurezza
+
+- Dipendenze aggiornate entro le versioni già ammesse (`npm audit fix`),
+  nell'app e nelle Functions: nelle Functions spariscono l'avviso critico
+  e i quattro alti (proxy-addr, body-parser, busboy, form-data); Firebase
+  passa da 12.14 a 12.19. Restano gli avvisi che chiedono un salto di
+  versione maggiore: gli strumenti di sviluppo vanno con l'aggiornamento
+  coordinato di vite e vitest, a parte.
+
+### Menù dei clienti
+
+- Nello stile «Carte» il mazzo resta in alto mentre si scorre il menù, e
+  il tasto «Le carte ↑» non c'è più. Scegliendo un'altra carta si riparte
+  dall'inizio della sua sezione (REQ-MENU-029).
+
+### Metodo
+
+- Altri tre test di sistema: la chiusura di cassa con contanti, carta e un
+  conto impagato; il conto battuto in sala che compare al banco su un altro
+  dispositivo; quello che sala, bartender e cliente vedono del gestionale
+  (REQ-DEV-018).
+- Test di sistema per le richieste dal banco: la firma di chi ha battuto
+  ogni riga, vista da un altro terminale (REQ-ORD-023); le colonne della
+  Marginalità misurate in un browser alla larghezza di un PC, che senza la
+  correzione di BUG-138 fallisce, e il filtro per categoria (REQ-MENU-032);
+  gli aiuti sotto i campi accesi da Aspetto e ritrovati su un altro
+  terminale (REQ-UI-032); la stampa automatica scelta per banco o sala, con
+  l'avviso quando le comande della sala non le stamperebbe nessuno
+  (REQ-STAMPA-021).
+- La specifica del prodotto per casi d'uso: 63 obiettivi di chi usa
+  l'app — banco, sala, cliente, gestore, admin — coi passi, l'esito, le
+  varianti e il modo in cui si provano, in docs/specifica-prodotto.md
+  (generata da requirements/casi-uso.yaml). È una bozza da rivedere col
+  gestore; da lì nasceranno i test end-to-end, uno per caso d'uso
+  (REQ-DEV-019).
+- I test end-to-end dei casi d'uso: in locale sugli emulatori completi,
+  Functions comprese (`npm run test:e2e`), e a ogni tag su un ambiente
+  generato per il giro — un progetto Firebase di prova su cui si
+  pubblicano regole, Functions e app, si fanno girare i test e poi si
+  cancella tutto. Il sito di test resta al gestore, per validare. I primi
+  due: l'apertura della cassa dopo aver già battuto un conto e il conto al
+  banco con la comanda (REQ-DEV-019).
+- Gli interruttori delle impostazioni hanno un nome per i lettori di
+  schermo: prima venivano letti come «casella di controllo» e basta.
+
+### Impostazioni
+
+- Il riquadro «Il locale» (nome, contatti, intestazione dello scontrino,
+  dati del titolare) ha di nuovo la sua voce nel sottomenu: c'era, ma non
+  si apriva da nessuna parte (BUG-139).
+- Un test di sistema per la cassa chiusa: il conto si batte e arriva al
+  server, e riscuotere resta spento (REQ-CASSA-017).
+
+### Banco
+
+- Sul conto, il + e il − di una riga li usa solo chi l'ha caricata: chi ne
+  vuole un altro tocca il prodotto e fa una riga sua, così l'iniziale
+  accanto alla riga resta vera. Vale anche per l'admin; le righe senza
+  iniziale restano di tutti (REQ-ORD-024).
+- L'iniziale di chi ha caricato ogni riga si accende e si spegne dalle
+  impostazioni («Chi ha caricato la riga», accesa di partenza); con lei si
+  spegne anche la regola del + e del − (REQ-ORD-023).
+- Gli ordini si battono anche a cassa chiusa; riscuotere, acconto e
+  impagato restano spenti finché la cassa non è aperta, e lo si legge sopra
+  i tasti. Anche i tasti Contanti e Carta delle card sono spenti
+  (REQ-CASSA-017).
+- Accanto a ogni riga del conto c'è l'iniziale di chi l'ha battuta, nel suo
+  colore: lo stesso colore della persona sulla card, nella legenda e in
+  alto. Il quadratino di chi ha aperto il conto resta sulla card
+  (REQ-ORD-023).
+- Gli avvisi della campanella, dello storico e del fumetto disegnano la
+  loro icona nel tema scelto: niente più emoji colorate fra le icone
+  monocrome (REQ-UI-031).
+
+### Stampa
+
+- Stampa automatica: per la comanda e per lo scontrino si sceglie se
+  devono uscire per i gesti del banco, della sala o di tutti e due — per
+  esempio lo scontrino solo per le riscossioni del banco e la comanda solo
+  per gli ordini presi in sala (REQ-STAMPA-021).
+
+### Gestionale
+
+- Marginalità listino: le categorie a sinistra, per guardarne una sola; i
+  filtri contano dentro la categoria scelta (REQ-MENU-032). Sul PC le
+  intestazioni stanno sopra i loro numeri (BUG-138).
+- Gli aiuti sotto i campi delle schede sono nascosti di partenza e si
+  riaccendono da Impostazioni → Aspetto → «Aiuti sotto i campi»; i testi
+  sono riscritti in frasi piane (REQ-UI-032).
+
 ## 1.10.29-beta — 08/11/2026 (test)
 
 ### Metodo

@@ -98,6 +98,7 @@ vi.mock('../../src/lib/saveDrink.js', () => ({
 }))
 
 import MenuManager from '../../src/components/MenuManager.jsx'
+import { AiutiCampi } from '../../src/lib/aiutiCampi.js'
 import {
   updateDrink,
   creaSezioneCarta,
@@ -235,7 +236,8 @@ describe('l’IVA di vendita nella scheda del prodotto', () => {
     const campo = await screen.findByLabelText(/IVA vendita/)
     // Parte VUOTO: chi non ha eccezioni da scrivere non compila niente.
     expect(campo).toHaveValue(null)
-    expect(screen.getByText(/vale quella del locale/i)).toBeInTheDocument()
+    // L'aiuto riscritto il 08/11/2026 (REQ-UI-032): stessa regola, frase piana.
+    expect(screen.getByText(/si applica l’IVA del locale/i)).toBeInTheDocument()
   })
 
   it('quello che si scrive lì finisce nel prodotto salvato', async () => {
@@ -674,5 +676,38 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     render(<MenuManager />)
     const azioni = await azioniMojito(user)
     expect(azioni.queryByText(/Menù dei clienti:/)).toBeNull()
+  })
+})
+
+// GLI AIUTI SOTTO I CAMPI SI SPENGONO (REQ-UI-032). Richiesta dell'08/11/2026:
+// «rimuovere gli aiuti sopra tutti i campi compilabili o almeno permettere
+// di abilitarli/disabilitarli». Nell'app di partenza sono nascosti; il
+// campo resta, la riga che lo spiega no.
+describe('la scheda del prodotto con gli aiuti nascosti', () => {
+  it('i campi ci sono, le righe d’aiuto no', async () => {
+    const user = userEvent.setup()
+    render(
+      <AiutiCampi.Provider value={false}>
+        <MenuManager />
+      </AiutiCampi.Provider>
+    )
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    expect(await screen.findByLabelText(/IVA vendita/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Nome nel menù dei clienti')).toBeInTheDocument()
+    expect(screen.queryByText(/si applica l’IVA del locale/i)).toBeNull()
+    expect(screen.queryByText(/Nome della voce nel menù dei clienti/)).toBeNull()
+    expect(document.querySelectorAll('.aiuto-campo')).toHaveLength(0)
+  })
+
+  it('accesi, gli aiuti tornano', async () => {
+    const user = userEvent.setup()
+    render(
+      <AiutiCampi.Provider value={true}>
+        <MenuManager />
+      </AiutiCampi.Provider>
+    )
+    await user.click(await screen.findByRole('button', { name: /Aggiungi prodotto/ }))
+    await screen.findByLabelText(/IVA vendita/)
+    expect(document.querySelectorAll('.aiuto-campo').length).toBeGreaterThan(3)
   })
 })

@@ -11,6 +11,8 @@ import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 import FumettoAvvisi from '../../src/components/FumettoAvvisi.jsx'
 import { annunciaFumetto } from '../../src/lib/avvisiInApp.js'
+import { TemaIcone } from '../../src/lib/temaIcone.js'
+import { AVVISO_NUOVO_ORDINE, AVVISO_RIPRISTINO } from '../../src/lib/orderStatus.js'
 
 beforeEach(() => cleanup())
 afterEach(() => vi.useRealTimers())
@@ -52,5 +54,35 @@ describe('il fumetto degli avvisi', () => {
     // di stato come un altro, e va dichiarato.
     await act(() => vi.advanceTimersByTimeAsync(9000))
     expect(screen.queryByText('Nuovo ordine #9')).toBeNull()
+  })
+})
+
+// IL TITOLO DI UN AVVISO NEL TEMA DELLE ICONE (REQ-UI-031). I titoli
+// arrivano scritti con l'emoji davanti («🆕 Nuovo ordine»): stampati così,
+// nel tema monocromo erano l'unica emoji colorata rimasta fra campanella,
+// storico e fumetto. L'icona va disegnata nel tema, il resto resta testo.
+describe('il titolo dell’avviso segue il tema delle icone', () => {
+  const nelTema = (tema) =>
+    render(
+      <TemaIcone.Provider value={{ segnali: tema }}>
+        <FumettoAvvisi />
+      </TemaIcone.Provider>
+    )
+
+  for (const avviso of [AVVISO_NUOVO_ORDINE, AVVISO_RIPRISTINO]) {
+    it(`«${avviso.titolo}» in silhouette: il disegno, senza l’emoji`, async () => {
+      nelTema('silhouette')
+      act(() => annunciaFumetto({ title: avviso.titolo }))
+      const titolo = (await screen.findByRole('button')).querySelector('strong')
+      expect(titolo.querySelector('svg')).not.toBeNull()
+      expect(titolo.textContent).not.toMatch(/\p{Extended_Pictographic}/u)
+    })
+  }
+
+  it('in «Emoji» l’emoji resta', async () => {
+    nelTema('emoji')
+    act(() => annunciaFumetto({ title: AVVISO_RIPRISTINO.titolo }))
+    const titolo = (await screen.findByRole('button')).querySelector('strong')
+    expect(titolo.textContent).toMatch(/♻️/)
   })
 })

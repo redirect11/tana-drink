@@ -948,6 +948,21 @@ export default function SettingsTab({ role = null }) {
                 onChange={(v) => save({ conti_colorati: v })}
               />
 
+              {/* CHI HA CARICATO LA RIGA (REQ-ORD-023, REQ-ORD-024). Le due
+                  cose vanno insieme: il blocco del «+» e del «−» si regge
+                  sull'iniziale, e senza l'iniziale a schermo nessuno
+                  capirebbe perché un tasto è spento (l'utente, 09/11/2026:
+                  «le regole funzionano solo se la firma è attiva»). Chi ha
+                  battuto la riga si registra comunque: riaccendendo, si vede
+                  anche sulle righe di quando era spento. */}
+              <h4>Chi ha caricato la riga</h4>
+              <ToggleRow
+                label="Iniziale di chi ha caricato ogni riga"
+                desc="Accanto a ogni riga del conto, l'iniziale di chi l'ha caricata, nel suo colore. Con l'iniziale accesa la quantità di una riga la cambia solo chi l'ha caricata: gli altri aggiungono dal prodotto, su una riga propria. Le righe senza iniziale (quelle dei clienti dal menù) restano modificabili da tutti."
+                checked={settings.firma_righe !== false}
+                onChange={(v) => save({ firma_righe: v })}
+              />
+
               <h4>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}
@@ -1191,6 +1206,11 @@ export default function SettingsTab({ role = null }) {
   // l'impostazione, non per la storia di come è nata: con ventitré voci
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
+    // Il riquadro c'era dalla build per cliente (REQ-VENUE-001), ma qui non
+    // aveva un gruppo: un riquadro senza gruppo non compare da nessuna
+    // parte, e nome, contatti e intestazione dello scontrino non si
+    // potevano correggere (BUG-139). Il test dei gruppi ora lo cerca.
+    locale: 'locale',
     aspetto: 'aspetto',
     'marketplace-temi': 'aspetto',
     // Tre cose diverse, tre voci: quello che vedono i clienti, la
@@ -1231,6 +1251,7 @@ export default function SettingsTab({ role = null }) {
   }
   const GRUPPI = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto' },
+    { id: 'locale', icona: 'categorie', label: 'Il locale' },
     { id: 'menu-clienti', icona: 'ordina-dal-menu', label: 'Menù clienti' },
     { id: 'gestione-menu', icona: 'gestione-menu', label: 'Gestione menù' },
     { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti' },

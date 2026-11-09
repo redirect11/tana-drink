@@ -104,7 +104,11 @@ export const AVVISO_NUOVO_ORDINE = {
 // UN CONTO CHE TORNA IN CODA NON È UN ORDINE NUOVO. È un conto che il banco
 // aveva già visto, annullato, e che qualcuno ha rimesso in piedi: chiamarlo
 // «nuovo» manda a cercare un ordine che non è mai arrivato.
-export const AVVISO_RIPRISTINO = { titolo: '↩️ Conto ripristinato' }
+//
+// L'icona è «riapri» del vocabolario: con la freccia ↩️, che il vocabolario
+// non conosce, nel tema monocromo la campanella e il fumetto mostravano
+// l'unica emoji colorata rimasta (REQ-UI-031).
+export const AVVISO_RIPRISTINO = { titolo: conEmoji('riapri', 'Conto ripristinato') }
 
 // L'icona di ogni stato, come nome del vocabolario (lib/icone.js): il
 // gestionale la disegna nel tema (<Icona nome={STATUS_ICONA[s]} />); chi

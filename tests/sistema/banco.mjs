@@ -15,17 +15,33 @@ import { SEED_UTENTI } from '../../src/dev/seedData.js'
 // @playwright/test.
 export const test = base.extend({
   databasePulito: [async ({}, usa) => { await semina(); await usa() }, { auto: true }],
+  // UN ALTRO TERMINALE: un browser a sé (contesto, sessione e cache suoi),
+  // come il telefono della sala accanto al tablet del banco. Si chiude
+  // alla fine del test: aperti e lasciati lì si sommavano da un test
+  // all'altro, e a metà giro la macchina rallentava fino a far scadere i
+  // test più lunghi (visto il 09/11/2026: 15 minuti invece di 3).
+  altroTerminale: async ({ browser }, usa) => {
+    const aperti = []
+    await usa(async () => {
+      const contesto = await browser.newContext()
+      aperti.push(contesto)
+      return contesto.newPage()
+    })
+    for (const c of aperti) await c.close()
+  },
 })
 export { expect }
 
 // Le utenze le crea scripts/seed.js da SEED_UTENTI: la password si prende da
-// lì, così cambiando il seme i test non restano chiusi fuori.
+// lì, così cambiando il seme i test non restano chiusi fuori. Sull'ambiente
+// e2e, che è un progetto vero, la password è quella del segreto
+// E2E_PASSWORD (scripts/lib-ambiente-e2e.mjs).
 export async function entra(page, email) {
   const utenza = SEED_UTENTI.find((u) => u.email === email)
   if (!utenza) throw new Error(`[sistema] ${email} non è fra le utenze del seme (src/dev/seedData.js)`)
   await page.goto('/bar')
   await page.getByLabel('Email').fill(email)
-  await page.locator('#password').fill(utenza.password)
+  await page.locator('#password').fill(process.env.E2E_PROGETTO && !process.env.FIRESTORE_EMULATOR_HOST ? process.env.E2E_PASSWORD : utenza.password)
   await page.getByRole('button', { name: 'Entra', exact: true }).click()
 }
 
@@ -51,3 +67,56 @@ export async function tornaAllaCoda(page) {
 }
 
 export const cardDeiConti = (page) => page.locator('.order-card')
+
+// Un conto battuto e chiuso in un colpo, dal conto stesso: i drink, poi
+// Pagamento e il metodo. `Impagato` chiude senza incasso (REQ-CASSA-016).
+export async function contoChiuso(page, drink, metodo, totale) {
+  await nuovoOrdine(page)
+  for (const d of drink) await batti(page, d)
+  await page.getByRole('button', { name: new RegExp(`Pagamento · ${totale}`) }).click()
+  if (metodo === 'Impagato') {
+    await page.getByRole('button', { name: /Impagato/ }).click()
+    await page.getByRole('dialog', { name: 'Chiudi impagato' }).getByRole('button', { name: 'Chiudi impagato' }).click()
+  } else {
+    await page.getByRole('button', { name: metodo }).click()
+    await page.getByRole('button', { name: `Riscuotere · ${totale}` }).click()
+  }
+  await expect(page.getByText(/0 aperti/)).toBeVisible()
+}
+
+// UNA SEZIONE DEL GESTIONALE dal menu laterale. Sul tablet il menu sta
+// fuori dallo schermo finché non si tocca «Menu»: c'è nella pagina, ma un
+// dito non lo raggiunge, e nemmeno Playwright. Appena entrati il tasto c'è
+// già ma l'app sta ancora montando la coda, e un tocco in quell'istante va
+// perso: si ritocca finché il menu non è aperto davvero.
+// Quello dentro lo schermo: sulla coda la barra in alto è ritirata, e il
+// suo tasto resta nella pagina ma sopra il bordo.
+async function tastoMenu(page) {
+  const tasti = page.getByRole('button', { name: 'Menu', exact: true })
+  for (const t of await tasti.all()) {
+    const box = await t.boundingBox().catch(() => null)
+    if (box && box.y >= 0 && box.width > 0) return t
+  }
+  return tasti.first()
+}
+
+async function apriMenu(page) {
+  // Aperto, o agganciato alla pagina (le pagine con sezioni proprie, su
+  // uno schermo largo). I tasti «Menu» sono più d'uno — in barra, sulla
+  // coda, flottante — e se ne vede uno per schermata.
+  const aperto = page.locator('nav.bar-sidebar.open, nav.bar-sidebar.agganciata')
+  await expect(async () => {
+    if (!(await aperto.isVisible())) await tastoMenu(page).then((t) => t.click({ timeout: 2000 }))
+    await expect(aperto).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 20_000 })
+}
+
+export async function vaiA(page, voce, sottosezione) {
+  const nelMenu = (testo) => page.locator('nav.bar-sidebar').getByText(testo, { exact: true })
+  await apriMenu(page)
+  await nelMenu(voce).click()
+  if (!sottosezione) return
+  // Le sottosezioni compaiono nel menu quando la pagina è aperta.
+  await apriMenu(page)
+  await nelMenu(sottosezione).click()
+}
