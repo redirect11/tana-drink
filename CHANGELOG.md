@@ -2,6 +2,13 @@
 
 ## 1.10.30-beta — in lavorazione
 
+### Piano gratuito
+
+- Il prodotto ha il suo nome: la riga in fondo allo scontrino e al menù
+  digitale dei locali col piano gratuito dice «Creato con Lime -
+  SmartOrders» invece di «Creato con Drink». Alla Tana non compare: la sua
+  licenza non porta la firma.
+
 ### Sicurezza
 
 - Dipendenze aggiornate entro le versioni già ammesse (`npm audit fix`),
