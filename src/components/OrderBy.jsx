@@ -1,4 +1,5 @@
 import { placedByName, placedByLetter } from '../lib/orderStatus.js'
+import Icona from './Icona.jsx'
 
 // CHI HA BATTUTO IL CONTO, in un segno solo accanto al numero: l'iniziale
 // del dipendente, oppure il mondo se l'ordine è arrivato dall'app del
@@ -13,7 +14,7 @@ export default function OrderBy({ order }) {
     </span>
   ) : (
     <span className="order-by client" title="Aperto dal cliente (app)">
-      🌐
+      <Icona nome="mondo" gruppo="tasti" />
     </span>
   )
 }

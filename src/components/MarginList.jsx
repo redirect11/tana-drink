@@ -5,6 +5,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import { catColor } from '../lib/categoryColors.js'
 import SortTh from './SortTh.jsx'
 import GruppoChip from './GruppoChip.jsx'
+import Icona from './Icona.jsx'
 
 // MARGINALITÀ DEL LISTINO: per ogni drink con ricetta, quanto costa
 // davvero, a quanto è venduto e che ricarico ne esce. Serve a trovare le
@@ -93,7 +94,7 @@ export default function MarginList({ drinks, inventory, categories = [], onEdit 
   return (
     <div className="card" style={{ marginTop: 8 }}>
       <div className="row between" style={{ alignItems: 'baseline' }}>
-        <strong>📊 Marginalità</strong>
+        <strong><Icona nome="statistiche" gruppo="tasti" /> Marginalità</strong>
         <span className="muted small">obiettivo {ricarico(settings.price_markup)}</span>
       </div>
       <p className="muted small" style={{ margin: '4px 0 8px' }}>

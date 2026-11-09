@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 7 novembre 2026.
+> Generato il 8 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 265 | fatto e coperto dai test |
+| ✅ | 266 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 2 | fatto a metà |
+| 🟡 | 3 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**319 voci** in tutto. **282** descrivono il sistema com'è oggi e
+**321 voci** in tutto. **284** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -59,12 +59,123 @@ come «vero oggi», non come «garantito».
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
-| [Interfaccia](#interfaccia) | 26 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 16 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Interfaccia](#interfaccia) | 27 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 17 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
+
+### Le prove, livello per livello
+
+Il progetto segue il modello a V ([docs/modello-a-v.md](modello-a-v.md)): ogni
+gradino che descrive il sistema ha un livello di test che lo mette alla prova.
+
+| Livello | Cosa verifica | File di test |
+|---|---|---|
+| Accettazione | i bisogni del locale (UR-*) | 0 |
+| Sistema | la specifica (REQ-*), sull'app intera | 1 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 159 |
+| Unità | il progetto di dettaglio: un modulo da solo | 164 |
+
+**11** bisogni del locale, **0** con un test di accettazione.
+**71** requisiti su 313 sono collegati a un bisogno;
+**10** componenti dell'architettura hanno le loro prove di integrazione.
+
+## I bisogni del locale
+
+Il gradino più alto della V: cosa serve a chi lavora e a chi ordina, senza
+dire come l'app lo fa. Ogni bisogno dice **come si accetta** — il giro che
+chi sta al banco farebbe per dire «sì, è così» — e quali requisiti lo
+realizzano. Stanno in `requirements/bisogni.yaml`.
+
+#### UR-001 — Un conto si batte e si incassa anche con la rete staccata
+
+La rete del locale va e viene, e col locale pieno non si può aspettare che torni. Aprire un conto, aggiungere righe, mandare le comande e incassare devono funzionare senza connessione, con l'esito visibile nell'istante del gesto; la sincronizzazione arriva dopo, da sola. È la prima regola del progetto (CLAUDE.md, «Il local-first»).
+
+**Come si accetta**: Con la cassa aperta si stacca la rete. Si batte un conto di tre drink, si manda la comanda, se ne aggiunge un quarto e si incassa in contanti. A ogni passo la card in coda mostra subito righe e totale giusti, senza attese. Si riattacca la rete: dopo la sincronizzazione gli altri terminali vedono lo stesso conto, incassato, una volta sola.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-016](#req-ord-016--battere-un-conto-non-aspetta-la-rete-e-non-ne-nascono-due), [REQ-POS-001](#req-pos-001--lordine-nasce-al-primo-prodotto-senza-cambiare-schermata), [REQ-POS-002](#req-pos-002--niente-si-perde-mentre-lordine-sta-nascendo), [REQ-POS-005](#req-pos-005--le-modifiche-sono-istantanee-a-schermo-sincronizzate-dopo), [REQ-OFFLINE-001](#req-offline-001--nessuna-schermata-aspetta-il-server), [REQ-OFFLINE-002](#req-offline-002--la-coda-si-apre-subito-dalla-cache), [REQ-OFFLINE-003](#req-offline-003--si-vede-quando-si-è-offline), [REQ-OFFLINE-006](#req-offline-006--il-giro-di-una-serata-funziona-a-rete-staccata-e-i-test-lo-dimostrano), [REQ-OFFLINE-007](#req-offline-007--il-guscio-dellapp-e-il-logo-non-si-aspettano-dalla-rete), [REQ-PAG-001](#req-pag-001--incasso-in-contanti-carta-o-acconto-anche-senza-rete) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-002 — Quello che si vede a schermo è il conto vero
+
+Un totale che non corrisponde alle righe è un conto sbagliato portato al tavolo. Righe, supplementi, sconti e quanto resta da incassare devono essere giusti in ogni momento, anche subito dopo una modifica, e un'aggiunta non deve riaprire quello che è già stato servito.
+
+**Come si accetta**: Si apre un conto con coperto, si aggiungono due drink, si applica uno sconto del 10% e si incassa una parte in carta. Il tasto Pagamento dice ogni volta quanto resta; la card in coda, il conto e il preconto riportano le stesse cifre, al centesimo. Si aggiunge un drink dopo che i primi sono stati serviti: i serviti restano serviti.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-014](#req-pos-014--la-riga-del-conto-dice-quanto-fa-il-calcolo-è-a-richiesta), [REQ-POS-016](#req-pos-016--i-supplementi-del-conto-in-chiaro-subtotale-voci-totale), [REQ-PAG-002](#req-pag-002--il-tasto-pagamento-dice-quanto-resta-da-incassare), [REQ-PAG-003](#req-pag-003--sconto-sul-conto-con-tre-strategie-a-scelta), [REQ-PAG-013](#req-pag-013--lo-sconto-cade-sui-prodotti-che-si-stanno-riscuotendo-e-gli-sconti-si-accumulano), [REQ-ORD-003](#req-ord-003--aggiungere-a-un-conto-non-riapre-quello-che-è-già-stato-servito), [REQ-ORD-004](#req-ord-004--un-conto-rimasto-senza-righe-si-annulla-da-solo), [REQ-PAG-010](#req-pag-010--si-vede-che-cosa-è-stato-pagato-e-cosa-copre) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-003 — Niente di quello che si sta battendo va perso
+
+Chi batte un conto viene interrotto di continuo: si cambia schermata, si risponde a un cliente, il telefono si blocca, la pagina si ricarica. Le righe non ancora confermate devono ritrovarsi dove le si era lasciate.
+
+**Come si accetta**: Si mettono tre righe in un conto nuovo senza confermarlo, si torna alla coda e si ricarica la pagina. Riaprendo il nuovo ordine le tre righe ci sono. Lo stesso in modifica di un conto esistente. Dopo la conferma la bozza è vuota.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-POS-003](#req-pos-003--la-bozza-non-si-perde-uscendo-dalla-schermata), [REQ-POS-004](#req-pos-004--un-ricaricamento-non-fa-perdere-il-conto-in-corso) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-004 — La comanda arriva a chi deve preparare
+
+Un drink battuto e mai preparato è un cliente che aspetta per niente. La comanda deve arrivare al banco, a schermo e su carta, da qualunque terminale la si mandi, e chi la manda deve sapere prima se la stampante la farà uscire.
+
+**Come si accetta**: Dalla sala si batte un conto e si manda la comanda. Al banco compare in coda, nella colonna giusta, con le note delle righe leggibili, ed esce una volta sola dalla stampante del banco. Con la stampante spenta il pallino lo dice prima dell'invio, e la comanda resta comunque in coda.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-001](#req-ord-001--un-conto-aperto-contiene-più-comande-ciascuna-col-suo-stato), [REQ-ORD-009](#req-ord-009--un-ordine-battuto-altrove-si-vede-su-tutti-gli-altri-terminali), [REQ-CODA-001](#req-coda-001--la-coda-a-corsie-di-stato-una-colonna-per-passo-un-tasto-per-card), [REQ-CODA-002](#req-coda-002--il-dettaglio-di-una-comanda-cosa-devo-fare-adesso-e-per-chi), [REQ-CODA-003](#req-coda-003--la-nota-di-una-riga-si-legge-in-ogni-coda-a-schermo), [REQ-STAMPA-001](#req-stampa-001--comanda-al-banco-e-scontrino-al-cliente), [REQ-STAMPA-002](#req-stampa-002--la-stampante-non-deve-smettere-di-funzionare-a-metà-serata), [REQ-STAMPA-006](#req-stampa-006--lo-staff-di-sala-stampa-le-comande-degli-ordini-che-prende), [REQ-STAMPA-007](#req-stampa-007--un-pallino-dice-se-la-comanda-uscirà-prima-di-averne-bisogno), [REQ-STAMPA-012](#req-stampa-012--più-comande-dello-stesso-conto-si-stampano-insieme), [REQ-STAMPA-013](#req-stampa-013--la-comanda-automatica-la-stampa-solo-il-terminale-che-ha-inserito-lordine), [REQ-NOTIF-002](#req-notif-002--il-banco-sa-quando-arriva-un-ordine-nuovo) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-005 — La cassa della serata torna al centesimo
+
+A fine serata il conteggio dei contanti deve corrispondere a quello che dice l'app, e la carta non deve mai finire nei contanti. La serata finisce dopo mezzanotte, e i conti impagati restano da riscuotere senza sparire.
+
+**Come si accetta**: Si apre la cassa con un fondo, si incassano conti in contanti (col resto), in carta e con un buono VIP, e se ne chiude uno impagato. Dopo mezzanotte si chiude la cassa: la chiusura stampata riporta ogni metodo separato, il contante atteso è fondo più contanti incassati, e l'impagato compare fra quelli da riscuotere.
+
+**Chi**: Banco, Gestore · **Lo realizzano**: [REQ-CASSA-001](#req-cassa-001--la-giornata-di-lavoro-finisce-dopo-la-mezzanotte), [REQ-CASSA-002](#req-cassa-002--apertura-e-chiusura-cassa-con-fondo-e-conteggio), [REQ-CASSA-003](#req-cassa-003--la-carta-non-finisce-mai-nei-contanti), [REQ-CASSA-004](#req-cassa-004--rendiconto-della-serata-ordini-e-prodotti-venduti), [REQ-CASSA-006](#req-cassa-006--la-cassa-è-una-sola-flusso-lista-ordini-chiusure), [REQ-CASSA-016](#req-cassa-016--chiudere-un-conto-impagato-il-tavolo-si-libera-i-soldi-restano-da-riscuotere), [REQ-STAMPA-004](#req-stampa-004--chiusura-di-cassa-stampata-con-tutti-i-metodi), [REQ-PAG-006](#req-pag-006--buoni-vip-credito-prepagato-intestato-a-una-persona), [REQ-PAG-015](#req-pag-015--quanto-dà-il-cliente-e-quanto-resto-dare-coi-contanti) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-006 — Il magazzino scala quello che è stato venduto davvero
+
+Le giacenze servono a sapere cosa ordinare: se scalano male, si ordina male. Un drink fatto scala la ricetta con cui è stato fatto, anche se la ricetta cambia dopo; un conto annullato restituisce le scorte; le quantità sono in unità base, e «4 cl» non diventa mai 4 pezzi.
+
+**Come si accetta**: Si annota la giacenza di un gin, si vende un drink che ne usa 4 cl e lo si porta a «pronto»: la giacenza scende di 40 ml. Si cambia la ricetta: il drink già fatto non cambia lo scarico. Si annulla un secondo conto con lo stesso drink: le scorte tornano.
+
+**Chi**: Banco, Gestore · **Lo realizzano**: [REQ-MAG-001](#req-mag-001--le-quantità-si-contano-in-unità-base-si-mostrano-come-si-parla), [REQ-MAG-003](#req-mag-003--le-scorte-si-scalano-quando-il-drink-è-pronto), [REQ-MAG-004](#req-mag-004--modificare-un-ordine-già-scalato-riallinea-le-scorte-alla-differenza), [REQ-MAG-005](#req-mag-005--inventario-fisico-conta-differenze-valorizzazione), [REQ-MAG-046](#req-mag-046--linventario-come-il-foglio-inv-dep--acq--cons--rim-con-la-rim-che-si-aggiorna-da-sola), [REQ-ORD-005](#req-ord-005--annullando-un-conto-le-scorte-tornano-a-magazzino) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-007 — Ognuno fa quello che il suo ruolo consente
+
+Il personale di sala serve e corregge i conti, ma non cambia gli stati di preparazione; il bilancio e le impostazioni del locale li vede solo l'admin; il cliente vede il suo ordine e basta. Le regole valgono anche sul database, non solo a schermo.
+
+**Come si accetta**: Si entra come sala, come bartender, come admin e come cliente. Ognuno vede solo le sezioni del suo ruolo; la sala non sposta una comanda da «in preparazione» a «pronto»; un cliente che prova a scrivere un ordine non suo viene respinto dal database.
+
+**Chi**: Banco, Sala, Gestore · **Lo realizzano**: [REQ-STAFF-001](#req-staff-001--quattro-ruoli-admin-bartender-staff-cliente), [REQ-STAFF-002](#req-staff-002--i-confronti-sui-ruoli-si-fanno-in-un-posto-solo), [REQ-STAFF-004](#req-staff-004--il-ruolo-si-aggiorna-da-solo-senza-aspettare-la-scadenza), [REQ-STAFF-014](#req-staff-014--la-sala-serve-non-prepara-gli-stati-delle-comande-non-li-tocca), [REQ-STAFF-020](#req-staff-020--la-sala-corregge-le-righe-di-qualunque-conto-come-il-banco), [REQ-SIC-001](#req-sic-001--le-regole-del-database-seguono-i-ruoli), [REQ-DEV-015](#req-dev-015--le-regole-firestore-hanno-delle-prove-e-ogni-prova-è-doppia) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-008 — Il cliente ordina dal telefono e sa quando il drink è pronto
+
+Con gli ordini dal telefono il cliente non deve chiedere a nessuno a che punto è: dal QR del tavolo apre il menù, ordina, vede una stima onesta dell'attesa e viene avvisato quando il drink è pronto.
+
+**Come si accetta**: Dal QR di un tavolo si apre il menù, si ordinano due drink e si resta sulla pagina dell'ordine. Il banco lo vede arrivare. Quando il banco lo porta a «pronto», la pagina del cliente lo dice senza ricaricare.
+
+**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-009 — Si paga con la carta, al lettore o con un link
+
+Il pagamento con carta deve chiudere il conto solo quando il lettore o il link dicono che è andato a buon fine, e un pagamento rifiutato deve lasciare il conto da incassare.
+
+**Come si accetta**: Si incassa un conto col lettore SumUp: a pagamento riuscito il conto risulta pagato in carta. Si ripete con un pagamento rifiutato: il conto resta aperto con lo stesso importo da incassare. Lo stesso col link di pagamento.
+
+**Chi**: Banco, Cliente · **Lo realizzano**: [REQ-PAG-004](#req-pag-004--lettore-sumup-pairing-e-incasso-con-carta), [REQ-PAG-005](#req-pag-005--pagamento-online-con-link-o-qr) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-010 — Un conto si corregge anche dopo averlo mandato
+
+Si sbaglia un drink, il cliente cambia idea, un conto chiuso va riaperto. Chi ha preso l'ordine deve poterlo modificare, e un conto chiuso o annullato deve poter tornare in corso senza perdere niente.
+
+**Come si accetta**: Si modifica un conto già mandato togliendo una riga e aggiungendone un'altra: il salvataggio lo dice e riporta indietro. Si chiude il conto e lo si rimette in corso: righe, comande e pagamenti sono quelli di prima.
+
+**Chi**: Banco, Sala · **Lo realizzano**: [REQ-ORD-008](#req-ord-008--un-conto-chiuso-o-annullato-si-può-rimettere-in-corso), [REQ-ORD-018](#req-ord-018--salvare-le-modifiche-a-un-ordine-lo-dice-e-riporta-indietro), [REQ-ORD-019](#req-ord-019--chi-ha-preso-lordine-lo-modifica-davvero-anche-aggiungendo) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-011 — Quello che funzionava ieri funziona anche stasera
+
+Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non deve rompere quello che già funzionava, e chi lavora deve sapere quale versione ha davanti. È il motivo del modello a V (l'utente, 08/11/2026: «più qualità e meno regressioni al banco»).
+
+**Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -80,7 +191,7 @@ Il conto e le sue comande: come nascono, come cambiano stato, come arrivano al b
 
 Un ordine è un CONTO che resta aperto (aperto/pagato/annullato) e contiene una o più comande. La lavorazione (ricevuto, in preparazione, pronto, ritirato) vive sulla singola comanda: un tavolo può avere un giro già servito e uno ancora al banco. La comanda attiva è quella al passo più indietro; a parità di passo vince la più vecchia.
 
-**Dove**: `src/lib/comande.js, src/lib/api.js, src/components/OrderPosDetail.jsx, src/index.css` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/lib/comande.js, src/lib/api.js, src/components/OrderPosDetail.jsx, src/index.css` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/unit/orderStatus.test.js`, `tests/unit/orderLines.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-002 — Gli ordini vecchi continuano a funzionare
 
@@ -92,19 +203,19 @@ Gli ordini scritti prima del modello a comande hanno solo `items` e uno stato di
 
 Gli aumenti confluiscono nella comanda ancora modificabile (ricevuta o in preparazione); se non ce n'è, nasce una comanda nuova. Le diminuzioni scalano solo da comande modificabili: quello che è già pronto o servito non si tocca, perché il drink è stato fatto davvero.
 
-**Dove**: `src/lib/comande.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/lib/comande.js, src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-004 — Un conto rimasto senza righe si annulla da solo
 
 Togliendo tutte le righe di un conto appena aperto, il conto viene annullato e si torna alla coda: un conto vuoto in lista è solo un ingombro. Non succede se qualcosa è già stato incassato — lì il conto esiste davvero e va chiuso a mano.
 
-**Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-005 — Annullando un conto le scorte tornano a magazzino
 
 L'annullo rimette in magazzino quello che le comande avevano scalato, usando lo snapshot di consumo salvato al momento dello scarico e non ricalcolando la ricetta, che intanto può essere cambiata. Fa eccezione l'annullo per "non ritirato": lì il drink è stato preparato e il prodotto è consumato.
 
-**Dove**: `src/lib/api.js cancelOrder` · **Lo dimostrano**: `tests/unit/warehouse.test.js`
+**Dove**: `src/lib/api.js cancelOrder` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/warehouse.test.js`
 
 #### REQ-ORD-006 — Chiudendo un conto sparisce subito dalla coda
 
@@ -128,13 +239,13 @@ Con gli stati del servizio, incassare non chiude il conto: si paga anche in anti
 
 Nel dettaglio di un ordine, la sala poteva solo cambiare le QUANTITÀ di quello che c'era già: chi aveva preso l'ordine e si sentiva dire «aggiungi anche una birra» doveva battere un secondo conto. «Modifica ordine · aggiungi prodotti» apre la schermata del conto: la stessa del banco, quella vera, con la griglia dei prodotti. Niente versione ridotta — chi prende un ordine al tavolo ci fa le stesse cose, e un tasto spento in una schermata e acceso nell'altra è solo una cosa che non si capisce. Aprire e chiudere la CASSA resta invece del banco (REQ-CASSA-008): quella è la serata, non il conto. «Salva modifiche» resta dov'è: correggere una quantità e aggiungere un drink sono due gesti diversi, e chi fa il primo non deve passare per una schermata intera. E c'è «Pagamento», che apre la stessa schermata già sul pagamento: al tavolo si incassa lì, e senza quel tasto bisognava tornare in coda, riaprire il conto dal banco e incassare da lì — col cliente che aspetta col portafogli in mano. Su un conto già saldato o annullato non compare. Al cliente niente di tutto questo: dal suo telefono modifica le quantità del proprio ordine finché è ricevuto, e basta.
 
-**Dove**: `src/pages/OrderStatusPage.jsx, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
+**Dove**: `src/pages/OrderStatusPage.jsx, src/components/OrderPosDetail.jsx` · **Serve**: [UR-010](#ur-010--un-conto-si-corregge-anche-dopo-averlo-mandato) · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
 
 #### REQ-ORD-018 — Salvare le modifiche a un ordine lo dice, e riporta indietro
 
 Nel dettaglio ordine della vista staff, «Salva modifiche» tornava «Salva modifiche» e basta: identico a prima di premerlo. Chi aveva cambiato una quantità restava lì a chiedersi se fosse andata, e spesso ripremeva. Ora la conferma si vede e si torna alla coda — da dove si è arrivati, e dove il conto si rilegge aggiornato. In errore invece si resta, e il motivo si dice anche col toast: l'avviso in fondo alla pagina, su un conto lungo, sta fuori schermo — chi ha premuto vede il tasto tornare com'era e crede che non sia successo niente.
 
-**Dove**: `src/pages/OrderStatusPage.jsx` · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
+**Dove**: `src/pages/OrderStatusPage.jsx` · **Serve**: [UR-010](#ur-010--un-conto-si-corregge-anche-dopo-averlo-mandato) · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
 
 #### REQ-ORD-017 — Il QR per il cliente c'è solo se c'è qualcosa da seguire
 
@@ -186,7 +297,7 @@ DUE GESTI RAVVICINATI SULLO STESSO CONTO NON SI CANCELLANO PIÙ (BUG-056, lib/mu
 
 LA FILA DA SOLA NON BASTA, ed è il pezzo meno ovvio: il turno finisce quando la scrittura è PARTITA — local-first, non si aspetta niente — non quando la cache l'ha applicata, e fra le due cose passa un giro. Quindi ogni mutazione RICORDA il conto come l'ha appena composto, e la mutazione dopo legge quello finché la cache non ha recuperato. Come si capisce che ha recuperato: si guarda se i campi scritti sono tornati indietro uguali — nessun timer che indovina. Un tempo massimo c'è, ma è solo la rete di sicurezza per la scrittura che in cache non arriverà mai. Il limite, dichiarato: finché il ricordo è vivo, una modifica di un ALTRO terminale sugli stessi campi si perde — è la finestra fra la scrittura e la cache, millisecondi, ed è lo stesso «l'ultimo che scrive vince» che c'era già, ristretto invece che allargato.
 
-**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/unit/cassaDellaSerata.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/ComandaSenzaAttesa.test.jsx`, `tests/unit/comande.test.js`, `tests/unit/mutazioniInFila.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/lib/progressivi.js, src/lib/api.js, src/components/OrderPosDetail.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/unit/cassaDellaSerata.test.js`, `tests/bdd/numerazione.test.js`, `tests/component/PosPage.test.jsx`, `tests/unit/sync.test.js`, `tests/unit/scritturaComande.test.js`, `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/ComandaSenzaAttesa.test.jsx`, `tests/unit/comande.test.js`, `tests/unit/mutazioniInFila.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-ORD-008 — Un conto chiuso o annullato si può rimettere in corso
 
@@ -200,7 +311,7 @@ ANNULLANDO, il saldo di un buono usato per pagare torna al beneficiario: il cont
 
 IL BUONO NON SI PAGA DUE VOLTE. Il saldo di un buono si scala quando lo si usa, non quando i soldi entrano in cassa. Se il conto era stato PAGATO con un buono, riaprendolo quella riga di incasso sparisce come le altre: il saldo torna al beneficiario, altrimenti avrebbe pagato due volte — una col buono che non torna, una quando ripaga il conto. Il buono usato come SCONTO invece resta dov'è: lo sconto è ancora sul conto, quindi qualcuno deve pagarlo, e ri-chiuderlo non lo scala una seconda volta. Se il conto annullato era stato scontato con un BUONO VIP, riaprendolo il saldo si ri-addebita: annullando era tornato al beneficiario, e lasciarlo lì significherebbe uno sconto che nessuno ha pagato e un credito in circolazione che non torna più con i conti. Se nel frattempo il buono è stato speso altrove e il saldo non basta, si addebita quel che c'è e lo sconto si riduce a quella cifra (fino a sparire): meglio un conto che chiede qualche euro in più che un buono in rosso. Su un conto CHIUSO non si tocca niente, perché lì il buono non era mai stato ristornato. Il motivo si legge DENTRO il conto riaperto, senza doverlo cercare, e la storia completa — aperto, chiuso, annullato, riaperto, con chi e perché — sta dietro i ⋯ del conto, sia nella coda sia nel dettaglio. La storia si ricostruisce da quello che il conto porta già addosso, quindi vale anche per i conti di ieri, senza migrazioni.
 
-**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`, `tests/unit/riaperturaMagazzino.test.js`
+**Dove**: `src/lib/storiaOrdine.js, src/lib/api.js, src/components/StoriaOrdine.jsx` · **Serve**: [UR-010](#ur-010--un-conto-si-corregge-anche-dopo-averlo-mandato) · **Lo dimostrano**: `tests/unit/storiaOrdine.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/unit/vouchers.test.js`, `tests/unit/ripristino.test.js`, `tests/unit/riaperturaMagazzino.test.js`
 
 #### REQ-ORD-010 — Gli annullati hanno una tab loro nella coda
 
@@ -224,7 +335,7 @@ UN FATTO, UN AVVISO. Di un conto la coda dice una cosa sola per volta: «è arri
 
 LE PAROLE DI UN AVVISO STANNO IN UN POSTO SOLO (src/lib/orderStatus.js): un avviso annuncia un FATTO e non porta il nome della colonna in cui il conto atterra. L'annuncio di un ordine nuovo lo scrivono tre posti che non possono importarsi a vicenda — la coda, la push del server e il service worker — e il titolo dev'essere IDENTICO nei tre, perché la notifica dell'app e quella del server portano lo stesso `tag` e il sistema le fonde in una.
 
-**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
+**Dove**: `src/lib/dispositivo.js, src/pages/BartenderPage.jsx, src/lib/notifyStore.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/dispositivo.test.js`, `tests/unit/notifyStore.test.js`, `tests/unit/preferenzeNotifiche.test.js`, `tests/component/AvvisiRipristino.test.jsx`, `tests/unit/paroleDegliAvvisi.test.js`
 
 #### REQ-ORD-022 — Lo staff che tocca un conto entra nel conto, non nella pagina del cliente
 
@@ -242,31 +353,31 @@ La schermata più usata della serata: si compone un conto, si corregge, si chiud
 
 Toccando il primo prodotto il conto viene creato in place: niente navigazione, niente ricaricamento, la schermata resta quella e da lì si continua come in modifica. Il nome del cliente si chiede all'uscita, una volta sola.
 
-**Dove**: `src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx` · **Lo dimostrano**: `tests/component/PosPage.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/component/PosPage.test.jsx`
 
 #### REQ-POS-002 — Niente si perde mentre l'ordine sta nascendo
 
 La creazione dura qualche decimo di secondo e in quei decimi al banco si continua a battere: le righe aggiunte nel frattempo devono finire nello stesso conto, senza sparire e senza far nascere un secondo conto. La bozza cambia chiave quando il conto nasce, e le righe rimaste vanno passate alla chiave nuova. Nemmeno il PAGAMENTO si perde: premendo Pagamento mentre la creazione è ancora in volo, la schermata deve restare aperta anche quando il server risponde e il conto smette di essere "nuovo" — prima si chiudeva da sola e bisognava ripremere Pagamento, col cliente davanti.
 
-**Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-POS-003 — La bozza non si perde uscendo dalla schermata
 
 Le righe non ancora confermate restano in memoria locale per contesto: uscendo e rientrando si riprende da dove si era. Vale anche per l'ordine visivo delle righe, riordinabile a mano.
 
-**Dove**: `src/lib/useDraft.js` · **Lo dimostrano**: `tests/unit/useDraft.test.js`
+**Dove**: `src/lib/useDraft.js` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · **Lo dimostrano**: `tests/unit/useDraft.test.js`
 
 #### REQ-POS-004 — Un ricaricamento non fa perdere il conto in corso
 
 In creazione il conto nasce senza cambiare pagina: dopo un ricaricamento l'app non saprebbe più su quale conto stava lavorando e ne aprirebbe un altro, lasciando il primo in coda con dentro la roba già battuta. L'id del conto viene ricordato e ripreso al rientro, se è ancora aperto; si dimentica uscendo, alla chiusura, o dopo otto ore.
 
-**Dove**: `src/components/OrderPosDetail.jsx` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-003](#ur-003--niente-di-quello-che-si-sta-battendo-va-perso) · ⚠️ **Nessun test lo verifica.**
 
 #### REQ-POS-005 — Le modifiche sono istantanee a schermo, sincronizzate dopo
 
 Aggiunte e diminuzioni compaiono subito e partono in sottofondo: nessuna schermata aspetta il server. Se la scrittura fallisce lo dice un avviso, ma il lavoro al banco non si ferma mai.
 
-**Dove**: `src/components/OrderPosDetail.jsx, src/lib/sync.js` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`, `tests/unit/incassoOffline.test.js`, `tests/unit/pendingOrders.test.js`
+**Dove**: `src/components/OrderPosDetail.jsx, src/lib/sync.js` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`, `tests/unit/incassoOffline.test.js`, `tests/unit/pendingOrders.test.js`
 
 #### REQ-POS-006 — Prodotto libero: una voce che non è a menù
 
@@ -332,7 +443,7 @@ Cercando un prodotto nella griglia del POS (creazione e modifica ordine) si sceg
 
 Ogni riga del conto mostra nome e SUBTOTALE (quantità × prezzo, già fatto), anche con un pezzo solo. Il calcolo per esteso — «2 × 5,00 €» — non sta più accanto al nome, dov'era rumore su ogni riga: si accende dal menù ⋯ del conto («Mostra i calcoli delle righe»), compare sotto l'item come le note, e se una riga ha nota e calcolo stanno su due righe distinte. La scelta si ricorda sul dispositivo. Il ⋯ per questo è visibile a tutte le taglie, non solo su telefono. E la dimensione del testo delle righe ha un MINIMO configurabile (Impostazioni → Vista ordine): il testo segue la larghezza del pannello ma sotto la soglia scelta non scende — il pavimento fisso di prima per qualcuno era un manifesto.
 
-**Dove**: `src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx, src/components/SettingsTab.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-POS-015 — Unisci e Separa sono un tasto solo
 
@@ -346,7 +457,7 @@ Nel riepilogo del conto prima c'era una riga cumulativa («Coperto/servizio/manc
 
 SUBTOTALE in evidenza (il conto nudo, in grassetto, appena più grande delle voci), sotto le voci attive una per riga in piccolo — Coperto, Servizio, Mancia, solo quelle maggiori di zero — e in fondo il TOTALE grande che somma tutto. Le righe sono strette: il blocco non deve crescere in altezza. Sul telefono il dettaglio parte chiuso e si apre toccando il Subtotale.
 
-**Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-POS-020 — La ricerca dei prodotti si cancella con un tocco
 
@@ -362,43 +473,43 @@ Come si incassa: contanti, carta, SumUp, pagamenti parziali e separati.
 
 In fondo al conto c'era una riga sola: «Sconto e acconti già incassati −15,00 €». Quindici euro di che? Uno sconto, un acconto, con che metodo, per quali righe? Al banco, davanti al cliente che chiede, quella riga non risponde a niente. Ora sono righe distinte: lo sconto per conto suo, e ogni incasso col suo metodo e la sua ora. E si dice cosa copre. Un importo battuto a mano — «30 €» — NON copre nessuna riga: sono soldi lasciati sul conto, e si chiama ACCONTO. Chi paga scegliendo le righe copre esattamente quelle, e sotto l'incasso si leggono («2× Daiquiri · 1× Birra»). Non c'è una riga di istruzioni sopra le righe: a dire da dove viene il numero ci pensa l'etichetta sopra l'importo — «RIGHE SCELTE» o «IMPORTO A MANO» — che si legge nel momento in cui serve. Attribuire delle righe a un importo battuto a mano vorrebbe dire inventarselo: se servono attribuite, si scelgono nella schermata di pagamento — che è esattamente a cosa serve la selezione a sinistra.
 
-**Dove**: `src/lib/pagamento.js, src/components/OrderPosDetail.jsx, src/components/PaymentScreen.jsx` · **Lo dimostrano**: `tests/unit/pagamento.test.js`
+**Dove**: `src/lib/pagamento.js, src/components/OrderPosDetail.jsx, src/components/PaymentScreen.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/unit/pagamento.test.js`
 
 #### REQ-PAG-001 — Incasso in contanti, carta o acconto, anche senza rete
 
 Il conto si chiude subito a schermo e la scrittura va in coda: contanti, carta e acconti non aspettano il server. Un conto già pagato viene rifiutato subito, non dopo un timeout di rete. Il metodo scelto resta scritto sull'incasso: serve alla chiusura di cassa e allo scontrino.
 
-**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Lo dimostrano**: `tests/unit/incassoOffline.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamento.test.js`, `tests/unit/payments.test.js`, `tests/unit/payment-core.test.js`
+**Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/incassoOffline.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/pagamento.test.js`, `tests/unit/payments.test.js`, `tests/unit/payment-core.test.js`
 
 #### REQ-PAG-002 — Il tasto Pagamento dice quanto resta da incassare
 
 Sul tasto è scritta la cifra da incassare al netto di sconti e acconti già presi, e resta scritta anche dopo che l'ordine è stato creato. A conto saldato la cifra sparisce, perché non c'è più niente da incassare.
 
-**Dove**: `src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-PAG-003 — Sconto sul conto, con tre strategie a scelta
 
 Lo sconto si applica dal tastierino e si può impostare come tetto al totale, come proporzione sulle righe o come semplice avviso; la strategia si sceglie nelle impostazioni (default: tetto al totale). Le statistiche e il rendiconto devono sempre scorporare lo sconto, mai mostrare il prezzo di listino come venduto. Il tastierino dello sconto ha le cifre nell'ordine di sempre (7 8 9 / 4 5 6 / 1 2 3 / C 0 ←), su tre colonne: si batte a memoria. E un conto scontato si chiude come chiuso: quanto resta da incassare lo sa la schermata che ha il conto davanti, non una rilettura che può arrivare prima dello sconto (BUG-046). DAL 20/08/2026 lo sconto non cade più sul totale del conto ma sulle righe che si stanno riscuotendo, e se ne può fare più d'uno: la regola completa sta in REQ-PAG-013, che questo requisito presuppone. Le tre strategie restano quelle, applicate al lordo della selezione invece che al totale.
 
-**Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
+**Dove**: `src/lib/pricing.js, src/components/SettingsTab.jsx` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/unit/pricing.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/contoScontatoSiChiude.test.js`
 
 #### REQ-PAG-004 — Lettore SumUp: pairing e incasso con carta
 
 Il lettore si associa con un codice di pairing (riservato a chi sta al banco); da lì si incassa con carta direttamente dall'app. Il webhook verifica l'esito tramite la Transactions API prima di segnare il conto pagato. Nella schermata di pagamento SumUp resta sempre in lista: se il lettore non è configurato — o manca la rete — il tasto è spento a vedersi ma si può toccare, e al tocco dice il perché e dove si rimedia. Il motivo non sta scritto sotto al tasto: occupava una riga in una schermata che ne ha poche, e chi incassa non lo leggeva comunque.
 
-**Dove**: `functions/lib/payment-service.js, src/lib/paymentsApi.js` · **Lo dimostrano**: `tests/bdd/payment-reader.test.js`, `tests/component/PaymentScreen.test.jsx`
+**Dove**: `functions/lib/payment-service.js, src/lib/paymentsApi.js` · **Serve**: [UR-009](#ur-009--si-paga-con-la-carta-al-lettore-o-con-un-link) · **Lo dimostrano**: `tests/bdd/payment-reader.test.js`, `tests/component/PaymentScreen.test.jsx`
 
 #### REQ-PAG-005 — Pagamento online con link o QR
 
 Si può creare un checkout online per un conto e verificarne lo stato; il webhook salda il conto quando il pagamento arriva. Vale anche per i conti di gruppo, dove il pagamento chiude tutti gli ordini del gruppo.
 
-**Dove**: `functions/lib/payment-service.js` · **Lo dimostrano**: `tests/bdd/payment-checkout.test.js`, `tests/bdd/payment-group.test.js`
+**Dove**: `functions/lib/payment-service.js` · **Serve**: [UR-009](#ur-009--si-paga-con-la-carta-al-lettore-o-con-un-link) · **Lo dimostrano**: `tests/bdd/payment-checkout.test.js`, `tests/bdd/payment-group.test.js`
 
 #### REQ-PAG-006 — Buoni VIP: credito prepagato intestato a una persona
 
 Un buono ha un saldo che si consuma sui conti; si vede quanto credito è in circolazione e i buoni scaduti non sono spendibili. Annullando un conto che ha usato un buono, il credito torna al beneficiario.
 
-**Dove**: `src/lib/vouchers.js, src/components/VipTab.jsx` · **Lo dimostrano**: `tests/unit/vouchers.test.js`
+**Dove**: `src/lib/vouchers.js, src/components/VipTab.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/vouchers.test.js`
 
 #### REQ-PAG-007 — Codice lotteria e fattura di cortesia
 
@@ -452,7 +563,7 @@ IL BUONO è uno sconto come gli altri: cade sulle righe che si stanno riscuotend
 
 CHI SOMMAVA UN NUMERO ADESSO NE SOMMA UNA LISTA: cassa, statistiche, rendiconto, scontrino, fattura, badge della coda e dello storico passano tutti per `scontoTotale()`, che è consumati + in preparazione. E BUG-046 SI RISOLVE ALLA RADICE: lo sconto viaggia insieme all'importo dentro `registerPayment` (e dentro `readerCheckout` per il lettore SumUp), quindi un gesto è una scrittura sola e il residuo si calcola giusto anche su un documento vecchio di un istante. Il parametro `chiude` resta: quanto è dovuto lo sa comunque la schermata, non la rilettura.
 
-**Dove**: `src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js` · **Lo dimostrano**: `tests/unit/scontiAccumulati.test.js`, `tests/unit/contoScontatoSiChiude.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/campiDiStampa.test.js`
+**Dove**: `src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js` · **Serve**: [UR-002](#ur-002--quello-che-si-vede-a-schermo-è-il-conto-vero) · **Lo dimostrano**: `tests/unit/scontiAccumulati.test.js`, `tests/unit/contoScontatoSiChiude.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/unit/campiDiStampa.test.js`
 
 #### REQ-PAG-014 — Le tre colonne del pagamento si trascinano, e la misura resta su quel terminale
 
@@ -470,7 +581,7 @@ MISURATO IN CHROME VERO, non a occhio: 96 combinazioni (colonne strette al minim
 
 L'utente, 26/10/2026: «nella schermata del pagamento del conto deve uscire anche, opzionale attivabile nelle impostazioni, la possibilita' di inserire quanto il cliente da' e deve uscire quanto resto dare». Il resto c'era gia', ma di sbieco: battendo piu' del dovuto la schermata incassava il dovuto e diceva «Resto». Funzionava solo incassando tutto il conto: con alcune righe scelte (7 € su 22) e il cliente che da' 20, battere 20 registrava un acconto da 20. Ora i numeri sono due. Con «Calcolo del resto in contanti» acceso in Impostazioni → Pagamenti (spento di partenza), scegliendo «Contante» compare il riquadro «Il cliente da'»: i tagli probabili (i primi tondi da 5, 10, 20, 50 e 100 € che coprono l'importo: per 23,50 € 25, 30, 50 e 100) e un campo «Altro» per una cifra a mano. Sotto, «Resto da dare» in grande, o «Mancano» se i contanti non bastano. Il resto si calcola su quello che si incassa adesso, anche una parte del conto, e l'importo non cambia; dopo ogni incasso il riquadro si azzera. Con la carta il riquadro non c'e'. Il resto di prima, battuto nel tastierino, resta com'era.
 
-**Dove**: `src/lib/resto.js, src/components/PaymentScreen.jsx (RestoContanti), src/components/SettingsTab.jsx, src/lib/api.js (resto_contanti)` · **Lo dimostrano**: `tests/unit/resto.test.js`
+**Dove**: `src/lib/resto.js, src/components/PaymentScreen.jsx (RestoContanti), src/components/SettingsTab.jsx, src/lib/api.js (resto_contanti)` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/resto.test.js`
 
 ### La coda del banco
 
@@ -480,19 +591,19 @@ Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ord
 
 Quarta vista della coda ordini, si sceglie in Impostazioni → Coda ordini accanto a griglia, schede e lista. Gli ordini aperti stanno in quattro colonne — «Da fare» (ricevuto), «Al banco» (in preparazione), «Al ritiro» (pronto), «Da incassare» (consegnato e non saldato) — con in testa il conteggio, il totale della colonna e un filo del colore dello stato; ogni colonna scorre per conto suo, così le altre tre restano sott'occhio. Sulla card c'è UN tasto solo, quello che manda l'ordine al passo dopo: «Lo preparo io», «È pronto», «Consegnato», «Incassa». Sono le stesse azioni della griglia — l'avanzamento è updateOrderStatus, e «Incassa» apre il pagamento del conto, quello vero con sconto, conto diviso, contanti, carta e lettore: una vista è un modo di guardare, non un secondo modo di lavorare. Toccando la card (non il tasto) si apre il conto. Ricerca e filtro «Miei» valgono qui come nelle altre viste e filtrano dentro tutte le corsie insieme; le colonne restano tutte e quattro anche svuotate, perché la loro posizione si impara a memoria. Due casi che al banco costano un drink: il conto PAGATO ma non ancora consegnato resta in «Al ritiro» con il bollo «Pagato» invece del tempo (sparire vorrebbe dire dimenticarsi di servirlo), e «Da incassare» mostra la cifra al posto delle righe, perché lì la domanda è una sola. Con gli stati di servizio SPENTI i quattro passi non esistono e le corsie diventano le tre della griglia — in corso, chiusi, annullati — con le stesse etichette e le stesse regole (schedeCoda, passaFiltroCoda), e sui conti in corso resta l'incasso; quello che è già chiuso non ha tasti. Quello che esce dalla coda a fine cassa esce anche dalle corsie: la lista è la stessa (ordiniInCoda). Un conto appena battuto al POS compare in cima alla prima corsia già mentre parte verso il server: chi non lo vede lo ribatte.
 
-**Dove**: `src/lib/coda.js, src/lib/comande.js, src/lib/ruoli.js, src/lib/impostazioniLocali.js, src/components/CorsieStato.jsx, src/components/CorsieComande.jsx, src/components/RigheCorsia.jsx, src/components/OrderPosDetail.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx` · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/comande.test.js`, `tests/unit/ruoli.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/SettingsTab.test.jsx`
+**Dove**: `src/lib/coda.js, src/lib/comande.js, src/lib/ruoli.js, src/lib/impostazioniLocali.js, src/components/CorsieStato.jsx, src/components/CorsieComande.jsx, src/components/RigheCorsia.jsx, src/components/OrderPosDetail.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/coda.test.js`, `tests/unit/comande.test.js`, `tests/unit/ruoli.test.js`, `tests/component/CodaCorsie.test.jsx`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/SettingsTab.test.jsx`
 
 #### REQ-CODA-002 — Il dettaglio di una comanda: cosa devo fare adesso, e per chi
 
 Schermata di una singola COMANDA, all'indirizzo /ordine/:id/comanda/:comandaId. Ci si arriva toccando la card nella vista del banco (REQ-CODA-001). È fatta come il dettaglio del conto ma risponde a un'altra domanda: quella del conto è della cassa — quanto fa, chi paga, cosa aggiungo — questa è del banco: cosa devo fare adesso, per chi, da quanto sta lì. Per questo sono due schermate e non una: riusare quella del conto avrebbe voluto dire portarsi dietro la griglia dei prodotti, lo sconto e il pagamento su un ticket, che sono tutte cose del conto. Quello che è di tutte e due sta già in comune: il flusso in lib/comande.js, i nomi degli stati in lib/orderStatus.js, la destinazione in lib/coda.js.
 
-**Dove**: `src/pages/ComandaPage.jsx, src/components/ComandaDetail.jsx, src/lib/comande.js, src/components/CorsieComande.jsx, src/App.jsx` · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/component/ComandaDetail.test.jsx`
+**Dove**: `src/pages/ComandaPage.jsx, src/components/ComandaDetail.jsx, src/lib/comande.js, src/components/CorsieComande.jsx, src/App.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/comande.test.js`, `tests/component/ComandaDetail.test.jsx`
 
 #### REQ-CODA-003 — La nota di una riga si legge in ogni coda a schermo
 
 «Senza ghiaccio», «per Anna»: la nota della SINGOLA RIGA dice come si prepara quel drink e a chi va consegnato, ed è una cosa diversa dalla nota del CONTO — che vale per tutte le righe e resta in fondo alla card. Dovunque si veda l'elenco dei prodotti a schermo — la coda del gestionale, la coda di sala, le viste a corsie, il dettaglio della comanda — la nota compare sotto la sua riga, non a fianco: accanto al nome veniva tagliata dal prezzo allineato a destra, e «senza ghi…» non dice niente a chi prepara. La griglia compatta è l'eccezione voluta: non elenca i prodotti, mostra solo quanti sono. Nasce da BUG-005: la nota si vedeva solo dentro il conto e sulla comanda stampata, e chi lavora guardando lo schermo invece della stampante non la leggeva mai.
 
-**Dove**: `src/pages/BartenderPage.jsx, src/components/ServiceQueue.jsx, src/components/RigheCorsia.jsx, src/components/ComandaDetail.jsx, src/index.css` · **Lo dimostrano**: `tests/component/NoteRigheCoda.test.jsx`, `tests/component/ComandaDetail.test.jsx`
+**Dove**: `src/pages/BartenderPage.jsx, src/components/ServiceQueue.jsx, src/components/RigheCorsia.jsx, src/components/ComandaDetail.jsx, src/index.css` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/component/NoteRigheCoda.test.jsx`, `tests/component/ComandaDetail.test.jsx`
 
 #### REQ-CODA-004 — Sul telefono le corsie si impilano, non si stringono
 
@@ -1024,7 +1135,7 @@ Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base.
 
 In magazzino tutto è in unità base (ml, g, pz); la visualizzazione usa l'unità comoda (cl per i liquidi, L oltre il litro, g o kg per i solidi). Chi inserisce sceglie l'unità che preferisce e la conversione è automatica: "4 cl" non deve mai diventare 4 pezzi.
 
-**Dove**: `src/lib/inventory.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/DrinkFormRicetta.test.jsx`
+**Dove**: `src/lib/inventory.js` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/ricetteUnita.test.js`, `tests/component/DrinkFormRicetta.test.jsx`
 
 #### REQ-MAG-002 — Bottiglie: quante piene, quale aperta, quanto resta
 
@@ -1062,7 +1173,7 @@ RIPENSATO IL 12/09/2026:
 
 IL CARICO NON RIPARTE PIU' DA ZERO (REQ-MAG-045). Flavio: «se ho tre pezzi, ne consumo quattro, va a meno uno, e compro cinque pezzi: non me ne mette quattro, me ne mette cinque». Il meno, al banco, e' quasi sempre merce gia' bevuta e non ancora caricata, e il carico che arriva e' proprio quello: si somma e chiude il buco. Le due cose «da zero in su» — soldi e bottiglie da toccare — restano.
 
-**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`, `tests/unit/magazzinoSottoZero.test.js`
+**Dove**: `src/lib/inventory.js computeConsumption, src/lib/comande.js, src/lib/api.js` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/comande.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/impegnato.test.js`, `tests/unit/salaEMagazzino.test.js`, `tests/unit/magazzinoSottoZero.test.js`
 
 #### REQ-MAG-004 — Modificare un ordine già scalato riallinea le scorte alla differenza
 
@@ -1070,7 +1181,7 @@ Cambiando le righe di una comanda già scaricata si scala o si restituisce solo 
 
 NEI DUE VERSI DAVVERO (BUG-101). La differenza si applica com'è: in più si scala, in meno TORNA in giacenza. Il freno che teneva il magazzino sopra lo zero stava anche qui, e non toglieva soltanto il meno — un drink tolto da una comanda già scalata porta una differenza negativa, cioè merce che torna sullo scaffale, e veniva azzerata insieme al resto: il movimento diceva «carico», la giacenza non si muoveva di un millilitro, e il magazzino restava indietro di un drink per sempre. A mangiarsela era `qtyInStockUnit`, che davanti a un numero negativo rispondeva zero: adesso converte conservando il segno. Qui NON si riparte da zero come fa un carico merce: questo non è un rifornimento, è la stessa uscita annullata, e deve rimettere il meno dov'era.
 
-**Dove**: `src/lib/warehouse.js consumptionDiff` · **Lo dimostrano**: `tests/unit/warehouse.test.js`
+**Dove**: `src/lib/warehouse.js consumptionDiff` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/warehouse.test.js`
 
 #### REQ-MAG-005 — Inventario fisico: conta, differenze, valorizzazione
 
@@ -1084,7 +1195,7 @@ LA CHIUSURA E' UN PACCHETTO SOLO (BUG-110, 22/09/2026): giacenze, movimenti di r
 
 ACQ CONTA SOLO GLI ACQUISTI (BUG-111): carico diretto, consegna di un ordine fornitore, fattura fornitore; una modifica del contenuto reale durante l'inventario sposta il DEP, non l'ACQ.
 
-**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/unit/chiusuraInventario.test.js`
+**Dove**: `src/lib/warehouse.js stockCountCompute, src/components/InventoryManager.jsx` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/warehouse.test.js`, `tests/unit/chiusuraInventario.test.js`
 
 #### REQ-MAG-006 — Ordini ai fornitori e fatture d'acquisto
 
@@ -1986,7 +2097,7 @@ IN EVIDENZA LA RIMANENZA (Flavio, 29/09/2026): «il consumato me ne faccio poco,
 
 LA STRADA FATTA PRIMA, perche' non si rifaccia: il 23/09 Flavio aveva chiesto di separare il venduto dalla differenza, e per un giorno la riga ha detto DEP · ACQ · VENDUTO · ATTESO · DIFFERENZA; il 24 di far ripartire il prodotto dal contenuto reale. Tutte e due le forme sono state abbandonate da lui stesso: «ti sto facendo cambiare mille volte, ma poi mi capitano le situazioni e capisco dopo». Chiusa, la RIM contata diventa il DEP del prossimo inventario (vedi BUG-110, BUG-112).
 
-**Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
+**Dove**: `src/lib/inventarioInCorso.js (righeInventario), src/components/StockCountPanel.jsx` · **Serve**: [UR-006](#ur-006--il-magazzino-scala-quello-che-è-stato-venduto-davvero) · **Lo dimostrano**: `tests/unit/inventarioInCorso.test.js`, `tests/component/StockCountPanel.test.jsx`
 
 #### REQ-MAG-047 — L'inventario si scorre per categorie, come gli scaffali
 
@@ -2078,13 +2189,13 @@ La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale.
 
 La serata appartiene al proprio giorno anche dopo la mezzanotte, fino all'ora di taglio configurata: un drink servito all'una di notte è della serata precedente. L'ora di taglio è un'impostazione (0 = giorno solare).
 
-**Dove**: `src/lib/businessDay.js` · **Lo dimostrano**: `tests/unit/businessDay.test.js`
+**Dove**: `src/lib/businessDay.js` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/businessDay.test.js`
 
 #### REQ-CASSA-002 — Apertura e chiusura cassa, con fondo e conteggio
 
 La cassa si apre con un fondo e si chiude con il riepilogo della serata: incassato per metodo e per ora, conti chiusi, conti ancora da incassare. Senza cassa aperta non si battono ordini. E LA CHIUSURA E' LOCAL-FIRST come tutto il resto: `closeCashSession` non restituisce niente da aspettare, la scrittura parte in sottofondo e lo scontrino di chiusura parte per conto suo — se la stampante non risponde, la cassa resta comunque chiusa. E la stampa NON aspetta la risposta della stampante (REQ-STAMPA-016): il lavoro si chiude sull'invio, l'esito arriva dopo e si legge nel registro delle stampe. Chi chiude cassa col locale pieno non sta fermo davanti a una testina.
 
-**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+**Dove**: `src/lib/cassa.js, src/components/CashFlow.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
 
 #### REQ-CASSA-007 — Il flusso cassa serve DURANTE la serata, non solo alla chiusura
 
@@ -2104,13 +2215,13 @@ SONO DEL BANCO: alla sala non compaiono affatto — né nel menu né come tasto 
 
 Il contante atteso in cassa conta solo il contante. Ogni metodo è contato col suo nome, anche uno mai visto prima, e i metodi noti compaiono sempre, pure a zero. Le chiusure vecchie senza metodo indicato restano contate come contanti.
 
-**Dove**: `src/lib/cassa.js` · **Lo dimostrano**: `tests/unit/cassa.test.js`
+**Dove**: `src/lib/cassa.js` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/cassa.test.js`
 
 #### REQ-CASSA-004 — Rendiconto della serata: ordini e prodotti venduti
 
 Il rendiconto mostra gli ordini (in lista o in tabella, apribili nel dettaglio) e il cumulativo per prodotto e categoria, con sconto e guadagno per ordine. I prezzi sono quelli VENDUTI, al netto degli sconti, non il listino.
 
-**Dove**: `src/lib/rendiconto.js, src/components/RendicontoSerata.jsx` · **Lo dimostrano**: `tests/unit/rendiconto.test.js`
+**Dove**: `src/lib/rendiconto.js, src/components/RendicontoSerata.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/rendiconto.test.js`
 
 #### REQ-CASSA-006 — La cassa è una sola: flusso, lista ordini, chiusure
 
@@ -2124,7 +2235,7 @@ LA SERATA IN CORSO SI RICONOSCE SENZA LEGGERE, e con due segni non uno: la pasti
 
 NIENTE RIQUADRO ATTORNO ALLA LISTA (22/08/2026): «togli il box, lascia solo la lista, e aggiungi un selettore di data per cercare una chiusura cassa». La `.card` che avvolgeva l'elenco non lo separava da niente — e' l'unica cosa della sottosezione — e su una schermata fatta di righe si mangiava margine a destra e a sinistra. Col riquadro se ne va anche il TITOLO «📒 Chiusure di cassa»: il titolo di una pagina sta nella barra in alto, che quando si e' qui dice gia' «Chiusure» (src/lib/sezioni.js), e ripeterlo dieci pixel piu' sotto costa una riga senza aggiungere niente. E se ne va la didascalia «Una riga per serata, dall'apertura alla chiusura. Tocca per il venduto.»: descriveva quello che la riga ha gia' scritto sopra, ed era il tono confidenziale da cui ci si e' allontanati lo stesso giorno (DESIGN.md, guardrail 3). Resta la lista, esattamente come nelle statistiche (StatsTab.jsx → «📒 Per serata», dove un riquadro non c'e' mai stato): sono lo stesso elenco e devono leggersi allo stesso modo. La ricerca per data che si e' aggiunta sopra la lista sta in REQ-CASSA-013.
 
-**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Lo dimostrano**: `tests/unit/sezioni.test.js`, `tests/component/CashSessionsList.test.jsx`
+**Dove**: `src/components/CassaTab.jsx, src/lib/sezioni.js` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/sezioni.test.js`, `tests/component/CashSessionsList.test.jsx`
 
 #### REQ-CASSA-013 — Cercare una chiusura per data: porta alla serata, non filtra
 
@@ -2184,7 +2295,7 @@ LO SCONTRINO esce sempre, anche con l'auto-stampa spenta: al posto del metodo di
 
 QUANDO IL CLIENTE PAGA si apre il conto e si riscuote come ogni altro: il pagamento lo chiude, e il segno resta come storia.
 
-**Dove**: `src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/impagato.test.js`, `tests/unit/scontrinoImpagato.test.js`, `tests/component/PaymentScreen.test.jsx`
+**Dove**: `src/lib/impagato.js, src/lib/comande.js (impagatoAperto, contoChiuso), src/lib/api.js (chiudiImpagato), src/components/PaymentScreen.jsx, src/lib/printer.js (printScontrino), src/lib/cassa.js, src/lib/coda.js, src/pages/BartenderPage.jsx` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/unit/impagato.test.js`, `tests/unit/scontrinoImpagato.test.js`, `tests/component/PaymentScreen.test.jsx`
 
 #### REQ-CASSA-005 — Statistiche per serata, con tempi e margini
 
@@ -2308,13 +2419,13 @@ VUOL DIRE: al gesto della riscossione CHE CHIUDE IL CONTO. Una riscossione parzi
 
 SULLA COMANDA LE VOCI SONO SEMPRE ACCORPATE (BUG-083, 22/08/2026), e non «come stanno sul conto». Al POS «Unisci / Separa uguali» serve ai SOLDI — dividere il conto fra chi paga cosa — mentre chi prepara conta PEZZI: quattro righe «1 JEFFERSON» si contano peggio di una «4 JEFFERSON». La regola è una funzione pura, `righeDellaComanda` in lib/comande.js, e la attraversano tutte le stampe del banco perché il punto in cui si accorpa è UNO, dentro `printComanda`. La chiave è quella del POS (`lineSignature`): stesso drink, stesso prezzo, stessa ricetta e STESSA NOTA — una nota è lavoro diverso, e il prezzo tiene separati due prodotti liberi battuti con lo stesso nome a cifre diverse. Sui soldi non cambia niente: scontrino e schermata di pagamento restano come sono. E UNA STAMPA NON PUÒ RESTARE APPESA (BUG-086, 24/08/2026). La carta che non esce è un guaio; una stampa che non finisce MAI è un guaio peggiore: la pretesa dello scontrino si prende PRIMA di stampare e torna libera solo nel `catch` di chi l'ha chiesta — e una promessa che non si chiude né bene né male quel `catch` non lo fa partire mai. Quel conto non stampa più, nemmeno riaperto, nemmeno dalla coda, e a schermo non compare niente. Quindi ogni lavoro di stampa ha un tempo massimo suo, QUINDICI SECONDI: scaduti, la promessa rifiuta, la pretesa torna libera, il messaggio arriva a schermo e la coda delle stampe riparte. Il lavoro abbandonato, se poi arriva in fondo, scrive nel vuoto: una seconda copia non esce. E UN DOCUMENTO STORTO NON SI MANGIA IL TICKET: una riga senza nome esce come «(senza nome)» e una senza prezzo come «0.00€», ma la carta esce. Prima `item.name.toUpperCase()` faceva saltare la comanda a metà, e l'auto-stampa ci riprovava a ogni snapshot senza farla uscire mai.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`, `tests/unit/stampaCheNonSiChiude.test.js`
+**Dove**: `src/lib/printer.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/logoScontrino.test.js`, `tests/unit/scontrinoSegnato.test.js`, `tests/unit/comandaAccorpata.test.js`, `tests/unit/aliquotaIva.test.js`, `tests/unit/stampaCheNonSiChiude.test.js`
 
 #### REQ-STAMPA-002 — La stampante non deve smettere di funzionare a metà serata
 
 La connessione alla stampante viene tenuta viva e ricontrollata quando l'app torna in primo piano: non si deve uscire dal programma per farla ripartire.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`, `tests/unit/scontrinoUnaVolta.test.js`, `tests/unit/stampaComande.test.js`
+**Dove**: `src/lib/printer.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/ristampaScontrino.test.js`, `tests/unit/scontrinoUnaVolta.test.js`, `tests/unit/stampaComande.test.js`
 
 #### REQ-STAMPA-005 — Sullo scontrino il metodo si legge per esteso
 
@@ -2326,7 +2437,7 @@ Sullo scontrino e sulla chiusura di cassa i metodi di pagamento si scrivono per 
 
 Lo scontrino di chiusura riporta gli incassi divisi per metodo di pagamento, elencando quelli davvero usati e non un elenco fisso.
 
-**Dove**: `src/lib/printer.js` · **Lo dimostrano**: `tests/component/ChiusuraCassaStampa.test.jsx`, `tests/unit/scontrinoChiusura.test.js`
+**Dove**: `src/lib/printer.js` · **Serve**: [UR-005](#ur-005--la-cassa-della-serata-torna-al-centesimo) · **Lo dimostrano**: `tests/component/ChiusuraCassaStampa.test.jsx`, `tests/unit/scontrinoChiusura.test.js`
 
 #### REQ-STAMPA-016 — La risposta della stampante e' DIAGNOSTICA: racconta, non trattiene
 
@@ -2372,13 +2483,13 @@ SOLO IN LOCALE, e questo è il punto: sull'ambiente di TEST resta la stampante v
 
 Chi è in sala prende ordini dal menù, e la comanda di quell'ordine deve uscire. Prima non usciva niente: si sperava che al banco qualcuno tenesse aperta la coda con la stampa automatica accesa: se quella schermata non era aperta, l'ordine restava solo a schermo. L'IP il telefono ce l'ha già — la configurazione della stampante è condivisa e ogni dispositivo la riceve dal server (subscribePrinterConfig in App.jsx) — quindi a mancare era solo l'ordine di stampare. Ora l'ordine preso in sala stampa la sua comanda dal telefono che l'ha preso, salvo che il locale abbia scelto il rimbalzo (REQ-STAMPA-008). La stampa non si aspetta: l'ordine è salvato comunque, e se la stampa non parte lo dice il pallino nella coda (REQ-STAMPA-007). Resta da fare una volta, su ogni telefono, l'accettazione del certificato della stampante: è REQ-STAMPA-003.
 
-**Dove**: `src/pages/MenuPage.jsx, src/lib/printer.js` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`
+**Dove**: `src/pages/MenuPage.jsx, src/lib/printer.js` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`
 
 #### REQ-STAMPA-007 — Un pallino dice se la comanda uscirà, prima di averne bisogno
 
 Nella coda ordini, per chiunque la guardi — banco e sala — un pallino dice se la stampante risponde: verde esce, rosso adesso non uscirebbe, bianco qui non c'è nessuna stampante impostata. Non è una stampa di prova: è la stessa stretta di mano che farebbe la comanda, senza carta. Si controlla ogni mezzo minuto finché qualcuno lo guarda e appena si torna sull'app — è lì che si scopre caduta l'eccezione del certificato, non a metà servizio. Toccandolo si legge il motivo e la strada per rimetterlo a posto; a chi è in sala non si dice di andare nelle impostazioni, che non ha. Una stretta di mano sola anche se a chiederla sono in tre: la stampante ne regge poche.
 
-**Dove**: `src/lib/statoStampante.js, src/components/PallinoStampante.jsx, src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/statoStampante.test.js`, `tests/component/PallinoStampante.test.jsx`
+**Dove**: `src/lib/statoStampante.js, src/components/PallinoStampante.jsx, src/pages/BartenderPage.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/statoStampante.test.js`, `tests/component/PallinoStampante.test.jsx`
 
 #### REQ-STAMPA-010 — Le impostazioni della stampante sono del dispositivo e di chi ci lavora
 
@@ -2470,7 +2581,7 @@ IL CONFINE, che l'utente ha sottolineato («ma sempre dello stesso ordine!»): u
 
 LE ANNULLATE RESTANO FUORI da tutte e due: è lavoro buttato, e ristamparlo rimetterebbe al banco un ticket da non preparare. Le SERVITE invece escono: si ristampa per rifare il giro, non per mandare al banco solo quello che manca.
 
-**Dove**: `src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/stampaSerializzata.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/lib/printer.js (printComande, comandeStampabili), src/components/OrderPosDetail.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/stampaSerializzata.test.js`, `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-STAMPA-013 — La comanda automatica la stampa solo il terminale che ha inserito l'ordine
 
@@ -2482,7 +2593,7 @@ NON E' BUG-050 AL CONTRARIO PER SBAGLIO, e va detto perche' la somiglianza ingan
 
 ASSUNZIONE — DICHIARATA, NON CONFERMATA (comunicata all'utente il 20/08): gli ordini dei CLIENTI dal telefono non hanno un terminale che li ha inseriti (`placed_by` vuoto), e qualcuno la carta la deve far uscire. Quelli restano come oggi: li stampa qualunque terminale con l'interruttore acceso — il banco, di fatto — col segno sul dato a evitare i doppioni. Se l'assunzione cade, cade con una riga sola (stampaQuestoTerminale). L'INCASTRO COL RIMBALZO (REQ-STAMPA-008), che la regola avrebbe spento: li' il locale ha scelto che le comande della sala escono AL BANCO, e il telefono che prende l'ordine non stampa affatto (MenuPage). Col rimbalzo acceso questa regola quindi NON si applica: stampa chi ha l'interruttore, come prima. Se no non stamperebbe nessuno. L'INCASTRO CON LA SESSIONE DI CREAZIONE (BUG-057): mentre si compone il conto la stampante tace (`in_creazione`); si esce, la coda vede la comanda, e la carta esce li'. Il giro «batto → esco → stampa QUI, non sul tablet accanto» e' provato per intero. E CHI ANNULLA NON STAMPA MAI (BUG-071): «se alla creazione di un ordine lo annullo anche, la comanda non deve uscire se e' abilitata la stampa automatica» (l'utente, 21/08/2026). L'annullo chiude anche la sessione di creazione, nello STESSO patch dello stato: senza, l'uscita dalla schermata toglieva il segno prima che l'annullo arrivasse, e in quel buco la coda vedeva un conto composto, aperto e da stampare. La domanda «questo lavoro e' annullato?» sta in una funzione pura sola (`lavoroAnnullato`) e la fanno tutti e due i posti che stampano: chi sceglie e chi mette l'inchiostro — il tasto «Comanda» a mano su un conto annullato faceva uscire l'aggregato di tutto il conto.
 
-**Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/comandaAnnullata.test.js`
+**Dove**: `src/lib/printer.js (stampaQuestoTerminale, comandeDaStampare), src/pages/BartenderPage.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/stampaComande.test.js`, `tests/unit/comandaAnnullata.test.js`
 
 #### REQ-STAMPA-018 — Se la stampante è viva lo dice lei, sul canale delle stampe
 
@@ -2538,19 +2649,19 @@ Quello che vede il cliente: vetrina, menù, stato del suo ordine.
 
 Dal menù il cliente compone e invia l'ordine, poi vede lo stato della sua comanda con la stima di attesa; può modificarlo o annullarlo finché non entra in preparazione.
 
-**Dove**: `src/pages/MenuPage.jsx, src/pages/OrderStatusPage.jsx` · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
+**Dove**: `src/pages/MenuPage.jsx, src/pages/OrderStatusPage.jsx` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
 
 #### REQ-CLI-002 — Chi apre un ordine vede la schermata giusta
 
 Admin e bartender aprono il dettaglio in stile POS, per lavorarci; staff di sala e clienti vedono lo stato. Con l'arrivo del ruolo admin questo controllo era rimasto indietro e chi stava al banco si trovava la schermata del cliente.
 
-**Dove**: `src/pages/OrderStatusPage.jsx` · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
+**Dove**: `src/pages/OrderStatusPage.jsx` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
 
 #### REQ-CLI-003 — Stima di attesa onesta
 
 La stima parte da un tempo base configurato e si raffina con i tempi realmente misurati; tiene conto di quanti ordini ci sono davanti e se il servizio è al tavolo o al banco.
 
-**Dove**: `src/lib/eta.js` · **Lo dimostrano**: `tests/unit/eta.test.js`
+**Dove**: `src/lib/eta.js` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/unit/eta.test.js`
 
 #### REQ-CLI-004 — Ordinare solo se si è nel locale (facoltativo)
 
@@ -2592,7 +2703,7 @@ IL TABELLONE «stiamo servendo» resta la terza strada, per chi ha ordinato al b
 
 DEPLOY DELLE CLOUD FUNCTIONS NON AUTORIZZATO. Il punto 1 vive in functions/ e resta INEFFICACE in produzione finché non si deploya: fino ad allora l'avviso continua a partire sul passaggio di stato, cioè come prima — nessuna regressione, ma il doppio squillo resta possibile. Stesso caso di BUG-036, mergiato da giorni e ancora senza effetto in produzione per lo stesso motivo. I punti 2, 3 e 4 sono lato sito e vanno in produzione col normale rilascio.
 
-**Dove**: `src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx` · **Lo dimostrano**: `tests/unit/push-comande.test.js`, `tests/component/OrderStatusPage.test.jsx`
+**Dove**: `src/lib/push-core.js, functions/index.js, src/pages/OrderStatusPage.jsx, src/pages/MenuPage.jsx` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/unit/push-comande.test.js`, `tests/component/OrderStatusPage.test.jsx`
 
 ### Notifiche
 
@@ -2602,13 +2713,13 @@ Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare.
 
 Quando una comanda passa a pronto, al cliente arriva una notifica; idem quando il suo ordine viene annullato, con la frase scelta da chi lo annulla.
 
-**Dove**: `functions/lib/push-core.js decideOrderPush` · **Lo dimostrano**: `tests/bdd/notify-order.test.js`
+**Dove**: `functions/lib/push-core.js decideOrderPush` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/bdd/notify-order.test.js`
 
 #### REQ-NOTIF-002 — Il banco sa quando arriva un ordine nuovo
 
 Un ordine nuovo — o un'aggiunta a un conto esistente — avvisa il banco. Avvisa quello che prima non c'era: si guardano QUALI comande sono da fare («ricevuto» o «in preparazione»), non quante. Un ordine battuto al POS nasce già in preparazione — chi lo batte sta facendo il drink — e guardando i soli «ricevuto» non risultava mai nuovo in coda: al banco non arrivava niente. Contarle non basterebbe: col cliente che ordina e gli stati accesi, «ricevuto» e «in preparazione» sono due momenti diversi — arriva l'ordine, poi qualcuno lo prende in mano — e un totale che non cambia non distingue «è avanzata quella di prima» da «ne è arrivata una nuova». Con gli identificativi, l'arrivo avvisa e l'avanzamento no: quella comanda il banco la conosce già, ed è il banco stesso ad averla presa in mano. Un conto fermo in attesa del pagamento obbligatorio entra in coda quando è saldato: lì è nuovo per il banco anche se le comande sono le stesse. A restare senza avviso è SOLO il dispositivo da cui è partito: sa già di averlo mandato. Non si guarda il ruolo: prima si buttava via l'avviso di ogni ordine battuto da un admin o da un bartender, dando per scontato che chi ha quel ruolo stia al banco — e chi gira ai tavoli col telefono, con un account da gestore, non faceva squillare niente a nessuno. I token push sono UNO PER DISPOSITIVO (`staff_tokens/<device>`), non per persona: prima lo stesso account su tablet e telefono si sovrascriveva la riga a vicenda e l'avviso arrivava solo all'ultimo che aveva aperto il gestionale — al banco, il tablet muto. Se lo stesso token compare due volte (la riga vecchia intestata alla persona e quella nuova al dispositivo) si avvisa una volta sola. Chi lavora può vedere se su QUESTO schermo gli avvisi arrivano: aprendo la campanella lo dice, e dove serve offre di attivarli. Su iPhone e iPad la push di sistema esiste solo con l'app installata sulla schermata Home, e questo va detto invece di lasciare pensare a un guasto. Il terminale viaggia con l'ordine (`placed_by.device`) e col token push del dispositivo; chi si è registrato prima che il dispositivo venisse segnato viene avvisato lo stesso — un avviso in più si chiude, uno in meno è un drink che non parte.
 
-**Dove**: `functions/lib/push-core.js decideNewOrderStaffPush` · **Lo dimostrano**: `tests/bdd/notify-order.test.js`, `tests/unit/push-comande.test.js`
+**Dove**: `functions/lib/push-core.js decideNewOrderStaffPush` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/bdd/notify-order.test.js`, `tests/unit/push-comande.test.js`
 
 #### REQ-NOTIF-003 — Un drink pronto avvisa chi lo deve portare
 
@@ -2652,13 +2763,13 @@ Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende.
 
 L'admin fa tutto quello che fa il bartender e in più nomina i ruoli; il bartender ha il gestionale completo; lo staff di sala lavora sulla stessa coda del banco e vede cosa c'è da servire, senza le sezioni amministrative; il cliente il menù e i propri ordini. Il ruolo vive nei claim del token e le regole del database guardano quello.
 
-**Dove**: `src/lib/ruoli.js, firestore.rules` · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`
+**Dove**: `src/lib/ruoli.js, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/utenze.test.js`
 
 #### REQ-STAFF-002 — I confronti sui ruoli si fanno in un posto solo
 
 Nessun confronto diretto tipo `role === 'bartender'` sparso per il codice: si passa dalle funzioni di ruoli.js. Aggiungendo "admin" erano rimasti indietro cinque confronti e l'admin si vedeva la schermata del cliente. Un test scandaglia il codice e boccia i confronti diretti.
 
-**Dove**: `src/lib/ruoli.js` · **Lo dimostrano**: `tests/unit/ruoli.test.js`
+**Dove**: `src/lib/ruoli.js` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`
 
 #### REQ-STAFF-003 — Pagina utenti: nominare i ruoli senza riga di comando
 
@@ -2670,7 +2781,7 @@ L'admin vede il personale e i clienti registrati dal sito, e da lì assegna i ru
 
 Il ruolo vive dentro il token, che dura un'ora: chi era collegato quando gli è cambiato il ruolo continuava a girare col vecchio, con permessi negati sparsi in giro. Il gestionale mostra subito quello che ha in tasca e in sottofondo ne chiede sempre uno fresco.
 
-**Dove**: `src/pages/BartenderPage.jsx` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `src/pages/BartenderPage.jsx` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · ⚠️ **Nessun test lo verifica.**
 
 #### REQ-STAFF-005 — Registrazione cliente e account personali
 
@@ -2738,7 +2849,7 @@ Flavio, 30/10/2026 (audio): «in questo momento lo staff può solo ricevere una 
 
 Flavio, 30/10/2026 (audio, con la foto del conto #34): «lo staff non può modificare l'ordine, infatti non può togliere il Sipsmith più uno, lo posso fare solo io … devono avere la possibilità di modificare qualsiasi ordine». Con REQ-STAFF-014 le righe di una comanda già mandata al banco, per la sala, erano da leggere: il «−» restava spento e un drink sbagliato lo toglieva solo il banco. Ora la sala corregge le righe come il banco e con gli stessi limiti: finché la comanda è da fare o in preparazione, oppure sul conto riaperto; una comanda annullata o già servita resta com'è. Quello che la sala AGGIUNGE continua a nascere come comanda nuova (REQ-STAFF-014). Restano del banco annullare il conto, dividere una comanda, tornare indietro di uno stato e segnare le preparazioni. Le regole del database lo permettevano già: una comanda svuotata resta nell'array (`bartenderUpdateComanda`), quindi il numero delle comande non scende e il conto non diventa «annullato».
 
-**Dove**: `src/components/OrderPosDetail.jsx (confirmedLines, removable), src/lib/ruoli.js (puoGestireComande), firestore.rules (orders)` · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx (confirmedLines, removable), src/lib/ruoli.js (puoGestireComande), firestore.rules (orders)` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/component/OrderPosDetail.test.jsx`
 
 #### REQ-STAFF-014 — La sala serve, non prepara: gli stati delle comande non li tocca
 
@@ -2752,7 +2863,7 @@ PERCHÉ LÌ CI SI FERMA, e non è pigrizia — questa è la parte che altrimenti
 
 SE UN GIORNO SERVE DAVVERO, la strada non è una regola più furba: è spostare l'avanzamento di stato dietro una Cloud Function (Admin SDK), che legge il documento fresco e applica la sola transizione consentita a chi chiama. Avvertenza: un deploy delle Functions lo autorizza l'utente, non noi. (BUG-040 sembrava chiedere la stessa medicina e invece no: quello si è curato spostando il MOMENTO dello scarico, non aggiungendo una macchina — vedi REQ-MAG-003.) Le regole si compilano con l'emulatore Firestore (`firebase emulators:exec --only firestore`): non c'è un test automatico che le esegua, `@firebase/rules-unit-testing` non è fra le dipendenze e non è stato aggiunto per questo.
 
-**Dove**: `src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/coda.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/CodaCorsie.test.jsx`
+**Dove**: `src/lib/ruoli.js, src/pages/BartenderPage.jsx, src/components/ComandaDetail.jsx, src/components/OrderPosDetail.jsx, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/ruoli.test.js`, `tests/unit/coda.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/component/CodaCorsie.test.jsx`
 
 #### REQ-STAFF-015 — Il minimo della serata: quanto deve fare stasera, e quanto ha fatto
 
@@ -2810,7 +2921,7 @@ Menù e impostazioni sono a lettura libera (servono al cliente); cassa, magazzin
 
 GLI ORDINI SONO IL CASO DELICATO, perché contengono dati personali e insieme devono restare raggiungibili da un cliente che non si è registrato. Le due cose stanno insieme separando i due mestieri che Firestore chiama entrambi «lettura»: UN conto di cui si conosce l'id si legge sempre — l'id è il lasciapassare, ed è così che funziona il link del proprio conto — mentre ELENCARNE tanti passa solo dove la domanda si dimostra sicura da sé: il personale, il cliente registrato sui conti del suo account, e le due liste del tabellone del menù. Da qui scende una cosa nel client: «i miei ordini» del cliente non registrato chiede i conti salvati sul telefono uno per id, non con una lista (BUG-093).
 
-**Dove**: `firestore.rules` · **Lo dimostrano**: `tests/unit/utenze.test.js`, `tests/unit/mieiOrdiniPerId.test.js`
+**Dove**: `firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/unit/utenze.test.js`, `tests/unit/mieiOrdiniPerId.test.js`
 
 #### REQ-SIC-002 — App Check protegge la produzione senza chiudere fuori il locale
 
@@ -2832,19 +2943,19 @@ Cosa continua a funzionare quando la rete non c’è, e come lo si vede.
 
 Tutte le scritture partono in sottofondo con lo stato di avanzamento visibile: in corso, sincronizzato, errore. In errore si può ripetere l'ultima modifica o tutte. Con la rete che va e viene il servizio non si ferma.
 
-**Dove**: `src/lib/sync.js` · **Lo dimostrano**: `tests/unit/incassoOffline.test.js`, `tests/unit/toast.test.js`
+**Dove**: `src/lib/sync.js` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/incassoOffline.test.js`, `tests/unit/toast.test.js`
 
 #### REQ-OFFLINE-002 — La coda si apre subito, dalla cache
 
 Gli ordini compaiono dalla copia locale senza aspettare il server, e vengono allineati appena il server risponde; il dato del server non viene ricoperto da una cache che arriva tardi. Senza cache non si inventa niente: si aspetta.
 
-**Dove**: `src/lib/api.js subscribeActiveOrders` · **Lo dimostrano**: `tests/unit/codaCache.test.js`
+**Dove**: `src/lib/api.js subscribeActiveOrders` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/codaCache.test.js`
 
 #### REQ-OFFLINE-003 — Si vede quando si è offline
 
 Un nastro avvisa che si è senza rete e che si può continuare a lavorare; la campanella mostra lo stato della sincronizzazione solo quando ha qualcosa da dire.
 
-**Dove**: `src/App.jsx, src/components/StatusBell.jsx` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `src/App.jsx, src/components/StatusBell.jsx` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · ⚠️ **Nessun test lo verifica.**
 
 #### REQ-OFFLINE-004 — L'app avvisa quando c'è una versione nuova
 
@@ -2862,9 +2973,9 @@ COSA VUOL DIRE, in concreto: tutto il giro con la CASSA APERTA deve funzionare c
 
 LE QUATTRO REGOLE che ne scendono: 1) niente `await` prima di mostrare l'esito di un gesto — un `await` su una scrittura Firestore offline non torna mai;
 
-2) NON SI RILEGGE QUELLO CHE SI E' APPENA SCRITTO, si compone: la scrittura parte in sottofondo, quindi la rilettura prende la versione di prima. Si monta il risultato in memoria (`ordineDopo`) dal documento di partenza piu' la patch mandata; 3) se un dato serve e non c'e', si PRECARICA (progressivi.js), non lo si chiede in mezzo a un gesto; 4) le scritture partono in sottofondo (`bgWrite`), con l'indicatore di sincronizzazione a dire come sta andando. I TEST LO DEVONO DIMOSTRARE, non darlo per buono. Chi tocca queste schermate scrive un test che gira SENZA RETE: si mocka `firebase/firestore` in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda con quello che c'era prima — che e' quello che fa davvero una cache mentre la scrittura e' in coda. NON si mocka `src/lib/api.js`: si proverebbe il mock invece del codice. Il modello da copiare e' tests/unit/giroInLocale.test.js. I test con la rete che risponde si fanno IN PIU', non al posto di quelli. E C'E' UNA GUARDIA NEL CODICE: un test legge api.js e boccia qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta solo nella documentazione non ferma nessuno — questa e' tornata tre volte.
+2) NON SI RILEGGE QUELLO CHE SI E' APPENA SCRITTO, si compone: la scrittura parte in sottofondo, quindi la rilettura prende la versione di prima. Si monta il risultato in memoria (`ordineDopo`) dal documento di partenza piu' la patch mandata; 3) se un dato serve e non c'e', si PRECARICA (progressivi.js), non lo si chiede in mezzo a un gesto; 4) le scritture partono in sottofondo (`bgWrite`), con l'indicatore di sincronizzazione a dire come sta andando. I TEST LO DEVONO DIMOSTRARE, non darlo per buono. Chi tocca queste schermate scrive un test che gira SENZA RETE: si mocka `firebase/firestore` in modo che ogni scrittura resti appesa per sempre e ogni lettura risponda con quello che c'era prima — che e' quello che fa davvero una cache mentre la scrittura e' in coda. NON si mocka `src/lib/api.js`: si proverebbe il mock invece del codice. Il modello da copiare e' tests/unit/giroInLocale.test.js. I test con la rete che risponde si fanno IN PIU', non al posto di quelli. E C'E' UNA GUARDIA NEL CODICE: un test legge api.js e boccia qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta solo nella documentazione non ferma nessuno — questa e' tornata tre volte. E SULL'APP INTERA (REQ-DEV-018, dal 08/11/2026): il test di sistema tests/sistema/serataSenzaRete.spec.js ripete il giro sull'app compilata, in un browser vero con la rete staccata, e controlla che al ritorno della rete il conto arrivi al server pagato e una volta sola. Al primo giro ha trovato BUG-137.
 
-**Dove**: `src/lib/api.js, src/lib/sync.js, tests/unit/giroInLocale.test.js, CLAUDE.md` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/codaRicordo.test.js`
+**Dove**: `src/lib/api.js, src/lib/sync.js, tests/unit/giroInLocale.test.js, CLAUDE.md` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/scritturaComande.test.js`, `tests/unit/codaRicordo.test.js`, `tests/sistema/serataSenzaRete.spec.js`
 
 #### REQ-OFFLINE-007 — Il guscio dell'app e il logo non si aspettano dalla rete
 
@@ -2874,7 +2985,7 @@ PER IL LOGO SI GUARDA PRIMA LA CACHE, e questa e' la parte che conta. Tutto il r
 
 QUANDO LA LISTA CAMBIA, CAMBIA IL NOME DELLA CACHE (v3 → v4). Il service worker nuovo si installa, `skipWaiting` lo fa partire subito e `activate` butta le cache vecchie: chi ha l'app aperta con la versione di prima non perde niente, perche' quello che stava nella cache vecchia sta anche nella nuova. E se una risorsa della lista manca, l'installazione non si pianta: `addAll` e' tutto-o-niente, il suo errore si ingoia e le richieste passano dalla rete come prima.
 
-**Dove**: `public/sw.js` · **Lo dimostrano**: `tests/unit/serviceWorkerCache.test.js`
+**Dove**: `public/sw.js` · **Serve**: [UR-001](#ur-001--un-conto-si-batte-e-si-incassa-anche-con-la-rete-staccata) · **Lo dimostrano**: `tests/unit/serviceWorkerCache.test.js`
 
 ### Dati e ambienti
 
@@ -3152,6 +3263,18 @@ L'utente, 10/10/2026, dopo aver chiesto la differenza fra «Venduto × Incassato
 
 **Dove**: `src/components/Soffietto.jsx, src/components/MacroMonthlyTab.jsx, src/components/AcquistiFatturato.jsx` · **Lo dimostrano**: `tests/component/MacroMonthlyTab.test.jsx`
 
+#### REQ-UI-031 — Le icone del gestionale hanno un tema: «Silhouette», monocrome e tutte della stessa misura, o «Emoji» come prima
+
+Flavio, vocale del 07/11/2026: «tutte le icone andrebbero cambiate, andrebbero snellite e andrebbero messe le silhouette». Le emoji colorate «sono le emoticon di WhatsApp» e danno al programma un senso «un po' troppo a pazziella»; nei programmi con cui ha lavorato le icone erano monocrome, «in un solo colore», o non c'erano. Ci sono anche di dimensioni diverse («Utenti e ruoli» ne ha tre). Che l'icona somigli poco alla voce non importa: «tanto alla fine leggi il nome». Il colore resta dove dice qualcosa: il verde, il giallo e il rosso degli stati, e le categorie colorate dal locale.
+
+DECISIONI DELL'UTENTE (07/11/2026): le icone hanno dei TEMI; i disegni del tema «Silhouette» sono di Lucide (open source, licenza ISC, a tratto e coerenti fra loro, importati uno per uno); «Silhouette» è il tema di partenza per tutti, «Emoji» rimette quelle di prima (Impostazioni → Aspetto → «Le icone del gestionale»); vale solo per il gestionale: le pagine del cliente hanno lo stile del loro menù.
+
+UN TEMA PER GRUPPO (l'utente, 07/11/2026: «il selettore del tema deve essere separato» per le tre fasi): Navigazione, Tasti e stati, Segnali e messaggi si scelgono ognuno per conto suo (tema_icone_navigazione, tema_icone_tasti, tema_icone_segnali), e ogni <Icona> dice di che gruppo è. COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina», «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno; <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji» per chi non è dello staff). I disegni prendono colore e misura del testo attorno (currentColor, em), quindi un tasto e un titolo hanno icone della stessa taglia. I pallini degli stati restano colorati in entrambi i temi, con gli inchiostri di stato di DESIGN.md.
+
+LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le emoji di prima e le riporta al loro nome; un cricchetto (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto. L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577 nel gestionale. FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la navigazione — menu laterale, voci del gestionale e della sala, sottosezioni di tutte le pagine, il foglio del telefono, la barra, i moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei conti, i metodi di pagamento nei riepiloghi di cassa (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il loro nome (aria-label), che prima era l'emoji; dentro un <option> un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un segnaposto un disegno non entra), e così le voci delle tendine. Le etichette che stanno nei dati — stati, ruoli, metodi di pagamento, intestazioni della coda — prendono l'emoji dal vocabolario (conEmoji), così stampe, notifiche del telefono e pagine del cliente leggono le stesse di sempre; nel gestionale <ConIcona> riconosce l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le notifiche del telefono (sono testo del sistema) e l'avviso dei cookie (lo legge il cliente).
+
+**Dove**: `src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react` · **Lo dimostrano**: `tests/unit/icone.test.js`, `tests/component/Icona.test.jsx`
+
 ### Come si lavora al progetto
 
 Non è comportamento dell’app: è il metodo con cui la si costruisce.
@@ -3160,13 +3283,13 @@ Non è comportamento dell’app: è il metodo con cui la si costruisce.
 
 Questo elenco dice cosa fa l'app; i test dicono cosa fa davvero. Un test controlla che le due cose non si stacchino: ogni file di test dev'essere citato da almeno un requisito, ogni test citato deve esistere, gli identificativi non si ripetono e non si apre un'issue per qualcosa di già fatto. Chi aggiunge un test senza dire a quale requisito appartiene se ne accorge subito, non fra sei mesi.
 
-**Dove**: `requirements/requirements.yaml, tests/unit/requisiti.test.js` · **Lo dimostrano**: `tests/unit/requisiti.test.js`
+**Dove**: `requirements/requirements.yaml, tests/unit/requisiti.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/requisiti.test.js`
 
 #### REQ-DEV-002 — Si sa sempre quale versione si sta guardando
 
 In fondo al menu laterale c'è la versione: in produzione il solo numero, altrove numero, ramo e commit — perché sull'unico ambiente di test passano a turno develop e i branch in lavorazione, e "l'ho provato e non andava" senza sapere cosa era pubblicato non vuol dire niente. Si tocca e si copia.
 
-**Dove**: `src/lib/versione.js, src/components/VersionBadge.jsx, vite.config.js` · **Lo dimostrano**: `tests/unit/versione.test.js`
+**Dove**: `src/lib/versione.js, src/components/VersionBadge.jsx, vite.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/versione.test.js`
 
 #### REQ-DEV-003 — Changelog delle versioni, leggibile anche dall'app
 
@@ -3178,7 +3301,7 @@ Ogni versione rilasciata ha le sue note in CHANGELOG.md, e le stesse note si leg
 
 Il merge in develop passa un cancello, descritto in docs/gitflow.md: requisiti e registro bug aggiornati coi test citati; lint, test e build; la COVERAGE sopra le soglie di vitest.config.mjs — un cricchetto tarato appena sotto il misurato, che si alza quando la copertura cresce e non si abbassa mai per far passare un merge (npm run test:coverage fallisce da solo, e con lui la CI delle pull request); e un giro di refactoring sul diff (riuso, complessità, commenti sul perché) prima di chiedere il merge.
 
-**Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · ⚠️ **Nessun test lo verifica.**
+**Dove**: `docs/gitflow.md, vitest.config.mjs, .github/workflows/test.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · ⚠️ **Nessun test lo verifica.**
 
 #### REQ-DEV-006 — Le due lavagne a corsie sono lo stesso componente scritto due volte
 
@@ -3244,7 +3367,7 @@ OGNI COMPORTAMENTO CITA I TEST CHE LO DIMOSTRANO, e chi non ne ha lo dichiara. E
 
 RESTA GENERATO, ed e' l'unica cosa che lo tiene vivo: scritto a mano tornerebbe vecchio in una settimana, e la prova e' come stava prima. La resa vive in un modulo suo (`lib-specifica.mjs`) perche' cosi' si prova con un registro finto di sette voci, invece che coi 187 veri — un test che legge il registro vero prova il registro, non il documento.
 
-**Dove**: `scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/system_specifications.md` · **Lo dimostrano**: `tests/unit/specifica.test.js`
+**Dove**: `scripts/lib-specifica.mjs, scripts/requisiti.mjs, docs/system_specifications.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/specifica.test.js`
 
 #### REQ-DEV-013 — Una voce scartata si chiude dicendo che non la faremo, e resta scritta
 
@@ -3288,7 +3411,7 @@ OGNI PROVA È DOPPIA, ed è il punto di questo requisito: che l'abuso sia blocca
 
 STANNO PER CONTO LORO, fuori da `npm test`: senza emulatore acceso non partirebbero e renderebbero rossa la CI per un motivo che non è un difetto. Si lanciano con `npm run test:regole`, dopo aver acceso gli emulatori (vedi docs/ambiente-locale.md). Per la stessa ragione non contano per la copertura: quello che misurano non è codice nostro.
 
-**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Lo dimostrano**: `tests/regole/counters.test.js`, `tests/regole/orders.test.js`, `tests/regole/staffCalls.test.js`
+**Dove**: `tests/regole/, vitest.regole.config.mjs, firestore.rules` · **Serve**: [UR-007](#ur-007--ognuno-fa-quello-che-il-suo-ruolo-consente) · **Lo dimostrano**: `tests/regole/counters.test.js`, `tests/regole/orders.test.js`, `tests/regole/staffCalls.test.js`
 
 #### REQ-DEV-016 — Quello che dice quali pezzi caricare non si tiene in cache
 
@@ -3310,7 +3433,21 @@ LE LICENZE. Dieci moduli fanno 1024 licenze; i difetti nascono fra due moduli, q
 
 COSA SI CONTROLLA PER OGNI LICENZA, da una tabella sola delle PROMESSE di ogni modulo: le voci del gestionale e le sottosezioni che compaiono (e un indirizzo battuto a mano che non apre quello che non c'è), le pagine del cliente, le collezioni che si possono scrivere, le dipendenze (REQ-LIC-015). Le stesse licenze passano sulle regole vere, nell'emulatore. Un modulo nuovo che non entra nella tabella fa diventare rossa la prova. Il primo giro ha trovato BUG-131…BUG-136 e le dipendenze di REQ-LIC-015.
 
-**Dove**: `tests/helpers/combinazioni.js, tests/unit/matriceModuli.test.js, tests/regole/matriceModuli.test.js, src/lib/licenza.js` · **Lo dimostrano**: `tests/unit/matriceModuli.test.js`, `tests/regole/matriceModuli.test.js`, `tests/component/GroupView.test.jsx`
+**Dove**: `tests/helpers/combinazioni.js, tests/unit/matriceModuli.test.js, tests/regole/matriceModuli.test.js, src/lib/licenza.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/matriceModuli.test.js`, `tests/regole/matriceModuli.test.js`, `tests/component/GroupView.test.jsx`
+
+#### REQ-DEV-018 — Il modello a V: ogni richiesta scende dal bisogno del locale al codice, e risale coi test di ogni livello
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di sviluppo a V», «per avere più qualità e meno regressioni al banco», con «una V per richiesta». I test c'erano già, ma non dicevano cosa verificano, e nessun registro diceva quale bisogno del locale un requisito serve. I QUATTRO GRADINI e i loro specchi: i bisogni del locale (UR-*, in requirements/bisogni.yaml, ognuno col criterio di accettazione scritto in prosa) si provano coi test di accettazione; la specifica (REQ-*) coi test di sistema sull'app intera; l'architettura (ARC-*, in requirements/architettura.yaml) coi test di integrazione; il progetto di dettaglio, cioè il modulo, coi test di unità.
+
+IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in tests/unit un test che sostituisce Firestore (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice vero contro un Firestore finto; e il test stesso può dichiararlo con `// @livello <nome>` quando la cartella, scelta prima della V, non dice il vero.
+
+UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisogno, e un difetto nato dopo dice quale requisito tradisce (`requisiti`). Le voci di prima si collegano a mano a mano, con un cricchetto che può solo scendere. La specifica di sistema ha i capitoli dei bisogni e dell'architettura, e la tabella delle prove livello per livello. I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata con .env.sistema, Auth e Firestore emulati con le regole vere (`npm run test:sistema`, playwright.config.mjs), il database seminato da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del banco in tests/sistema/banco.mjs. In CI girano su ogni pull request, nel job «Sistema (Playwright)». Il primo è il giro della serata senza rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+
+FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni; i test di accettazione dagli scenari della serata; il cancello che chiede la V intera prima del merge in develop.
+
+**Dove**: `requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md, playwright.config.mjs, tests/sistema/, .github/workflows/test.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/modelloAV.test.js`
 
 ### STAT
 
@@ -3448,7 +3585,7 @@ SPEGNERE NASCONDE, NON CANCELLA. Le conte e le fatture già scritte restano nell
 
 «Dobbiamo decidere le funzioni premium da aggiungere. Ad esempio, il menu, l'ordinazione da app da parte del cliente, gestione clienti, gestione inventario. Di base quello che puo' fare e' creare gli item di menu e la gestione delle ordinazioni» (l'utente, 22/10/2026).
 
-DI BASE: coda ordini, cassa (contanti e carta), scontrino, menù (creazione delle voci), utenti e ruoli, impostazioni. I MODULI, con gli stessi id del listino della regia (piani.json): `menu_tavoli` (il menù digitale sul telefono del cliente, il QR al tavolo, la vista cliente), `ordini_cliente` (il cliente ordina dal menù e segue l'ordine: senza, il menù si legge e basta, come «solo menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di conti: insieme all'interruttore customer_accounts_enabled che il locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta con sé conta, fatture e scadenzario come moduli di dettaglio), `statistiche` (statistiche e bilancio), `staff` (ore e paghe), `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione della cassa). Le voci del gestionale seguono i moduli attraverso `sezioni` (inventario e fornitori → magazzino, stats e bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di un modulo non incluso dice che non fa parte del piano e rimanda alla pagina del prodotto (FunzioneNonInclusa).
+DI BASE: coda ordini, cassa (contanti e carta), scontrino, menù (creazione delle voci), utenti e ruoli, impostazioni. I MODULI, con gli stessi id del listino della regia (piani.json): `menu_tavoli` (il menù digitale sul telefono del cliente, il QR al tavolo, la vista cliente), `ordini_cliente` (il cliente ordina dal menù e segue l'ordine: senza, il menù si legge e basta, come «solo menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di conti: insieme all'interruttore customer_accounts_enabled che il locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta con sé `conta`, l'inventario), `fatture` (ai clienti) e `scadenzario` (ai fornitori), vendute a parte dal 07/11/2026 (drink-regia REQ-FLOTTA-044, che mette anche il menu' digitale nei piani Base e Completo), `statistiche` (statistiche e bilancio), `staff` (ore e paghe), `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione della cassa). Le voci del gestionale seguono i moduli attraverso `sezioni` (inventario e fornitori → magazzino, stats e bilancio → statistiche, vista-cliente → menu_tavoli); una pagina di un modulo non incluso dice che non fa parte del piano e rimanda alla pagina del prodotto (FunzioneNonInclusa).
 
 LA TANA TIENE TUTTO: dal BUG-125 con la licenza della sua build (`clienti/tana/licenza.json`), che nomina ogni modulo; un locale della flotta ha `licenza.moduli` scritto dalla regia (repository drink-regia: all'attivazione, poi licenzaSegueIlPiano).
 
@@ -4086,7 +4223,7 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
 
-**Dove**: `vitest.config.mjs, eslint.config.js`
+**Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 
@@ -4133,6 +4270,72 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
+
+## L'architettura e le sue prove
+
+Il gradino sotto la specifica: i meccanismi su cui poggiano molti requisiti
+insieme, ognuno con la sua promessa e i test di integrazione che la tengono.
+Il racconto per intero, col perché, sta in [docs/architettura.md](architettura.md).
+
+#### ARC-001 — Le schermate leggono dalla cache, e la rete arriva dopo
+
+La persistenza offline di Firestore tiene i dati in locale; le schermate partono da lì e si aggiornano con gli ascolti. Nessuna lettura al server nel percorso di un gesto: con una rete collegata che non passa, l'SDK aspetterebbe il server e la coda resterebbe sullo spinner.
+
+**Dove**: `src/lib/firebaseClient.js, src/lib/api.js (ascolti onSnapshot)` · **Lo dimostrano**: `tests/unit/codaCache.test.js`, `tests/unit/lettureSuUnGesto.test.js`
+
+#### ARC-002 — Le scritture partono in sottofondo, e nessun gesto le aspetta
+
+Una scrittura Firestore offline non torna mai: un await prima di mostrare l'esito è l'app bloccata col locale pieno. Le scritture partono e basta, l'indicatore dice come stanno andando, e il risultato di un gesto si compone in memoria dal documento di partenza più la patch, invece di rileggerlo (BUG-045).
+
+**Dove**: `src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+
+#### ARC-003 — Quello che questo terminale ha appena fatto si vede subito, in un posto solo
+
+Il conto appena battuto, la comanda appena avanzata, il conto appena chiuso: una memoria locale li mostra finché il server non racconta la stessa cosa, e si pulisce per firma, mai subito dopo la scrittura. Con due memorie diverse le viste della coda si contraddicevano (BUG-028).
+
+**Dove**: `src/lib/pendingOrders.js, src/lib/comandeLocali.js, src/lib/ordiniNascosti.js` · **Lo dimostrano**: `tests/component/UnaMemoriaLocale.test.jsx`, `tests/component/CodaCorsie.test.jsx`
+
+#### ARC-004 — Il numero del conto si assegna senza chiedere al server
+
+I contatori si tengono in memoria con tre ascolti, e il prossimo numero è il più alto fra quello del server e l'ultimo assegnato qui. Prima si leggeva il server a ogni ordine, e due creazioni ravvicinate facevano due conti con lo stesso numero.
+
+**Dove**: `src/lib/progressivi.js, functions/lib/numerazione.js` · **Lo dimostrano**: `tests/unit/progressivi.test.js`, `tests/bdd/numerazione.test.js`
+
+#### ARC-005 — La bozza del conto si salva in modo sincrono, fuori da React
+
+Le righe non confermate si salvano fuori dagli updater di stato: alla conferma si svuota e si naviga via nello stesso giro, il componente si smonta, e React scarterebbe l'updater lasciando la bozza piena.
+
+**Dove**: `src/lib/useDraft.js` · **Lo dimostrano**: `tests/component/PosPage.test.jsx`, `tests/component/OrderPosDetail.test.jsx`
+
+#### ARC-006 — Il database fa rispettare i ruoli da sé
+
+Le regole guardano il ruolo nei custom claims, e ogni regola ha una prova doppia: chi deve passare passa, chi non deve viene respinto (REQ-DEV-015). L'interfaccia nasconde, il database impedisce.
+
+**Dove**: `firestore.rules, src/lib/ruoli.js` · **Lo dimostrano**: `tests/regole/permessi.test.js`, `tests/regole/orders.test.js`, `tests/regole/counters.test.js`, `tests/regole/staffCalls.test.js`, `tests/regole/contrattoDati.test.js`
+
+#### ARC-007 — La licenza la scrive solo la regia, e le regole la fanno valere
+
+I moduli a pagamento si accendono da licenza/attuale, che l'app non può scrivere. Le regole del database e le Functions leggono la stessa licenza, così un modulo spento resta spento anche fuori dall'interfaccia.
+
+**Dove**: `firestore.rules (licenza/attuale), src/lib/licenza.js, functions/lib/licenza-core.js` · **Lo dimostrano**: `tests/regole/licenza.test.js`, `tests/regole/matriceModuli.test.js`, `tests/bdd/licenza-functions.test.js`
+
+#### ARC-008 — I pagamenti con carta passano dalle Functions, con le credenziali al sicuro
+
+La chiave di SumUp sta nei segreti delle Functions e non arriva mai al telefono. Il conto si segna pagato solo quando SumUp conferma, e un rifiuto lo lascia da incassare.
+
+**Dove**: `functions/lib/payment-core.js, functions/lib/payment-service.js` · **Lo dimostrano**: `tests/bdd/payment-reader.test.js`, `tests/bdd/payment-checkout.test.js`, `tests/bdd/payment-group.test.js`
+
+#### ARC-009 — Le notifiche partono dal server, e arrivano a chi servono
+
+Un ordine nuovo avvisa il banco, un drink pronto avvisa il cliente e chi lo porta, una chiamata avvisa il collega. Le Functions scelgono i destinatari; l'app tiene il registro locale di quelle ricevute.
+
+**Dove**: `functions/lib/push-core.js, src/lib/push.js, src/lib/notify.js` · **Lo dimostrano**: `tests/bdd/notify-order.test.js`, `tests/bdd/notify-staff-call.test.js`
+
+#### ARC-010 — La stampante racconta com'è andata, e non trattiene il lavoro
+
+La stampa parte e la risposta della stampante è diagnostica: dice se la carta è uscita, non blocca il gesto che l'ha chiesta. Lo stato si vede prima di averne bisogno e ogni stampa resta nel registro.
+
+**Dove**: `src/lib/printer.js, src/lib/statoStampante.js, src/lib/registroStampe.js` · **Lo dimostrano**: `tests/component/PallinoStampante.test.jsx`, `tests/component/RegistroStampe.test.jsx`, `tests/component/PrinterSetupSala.test.jsx`
 
 ## Difetti noti
 

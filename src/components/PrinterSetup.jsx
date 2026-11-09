@@ -13,6 +13,7 @@ import {
   svuotaRegistro,
 } from '../lib/registroStampe.js'
 import { savePrinterConfig } from '../lib/api.js'
+import Icona from './Icona.jsx'
 
 // Salva le impostazioni stampante sia in locale (uso immediato/offline) sia
 // su server (così l'IP non si perde quando iPad/Safari svuota il localStorage).
@@ -159,7 +160,7 @@ export default function PrinterSetup({ gestore = true }) {
           location.protocol === 'https:' &&
           Number(form.port) === 8008 && (
             <div className="banner" style={{ marginTop: 8 }}>
-              ⚠️ L'app è in HTTPS: con la porta <strong>8008</strong> il browser
+              <Icona nome="avviso" gruppo="segnali" /> L'app è in HTTPS: con la porta <strong>8008</strong> il browser
               blocca la connessione e la stampa va in timeout. Usa la{' '}
               <strong>8043</strong> con SSL/TLS abilitato sulla stampante.
             </div>
@@ -260,7 +261,7 @@ export default function PrinterSetup({ gestore = true }) {
           onClick={handleTest}
           disabled={testing || !form.ip}
         >
-          {testing ? 'Test…' : '🖨 Test stampa'}
+          {testing ? 'Test…' : <><Icona nome="stampa" gruppo="tasti" /> Test stampa</>}
         </button>
         <button type="submit" className="btn">
           {saved ? '✓ Salvato' : 'Salva'}

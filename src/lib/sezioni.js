@@ -12,25 +12,25 @@ import { voceVisibile } from './licenza.js'
 // testo («solo admin») avrebbe rimesso il confronto sul ruolo qui dentro,
 // che è la cosa che ruoli.js esiste per evitare.
 export const NAV_GESTIONALE = [
-  ['coda', '🧾', 'Coda ordini'],
+  ['coda', 'coda', 'Coda ordini'],
   // La cassa è una sola: dentro ci sono flusso, lista ordini e chiusure
   // (vedi CassaTab). «Lista ordini» aveva una voce sua qui accanto, come
   // se fosse un altro mestiere.
-  ['pagamenti', '💶', 'Cassa'],
+  ['pagamenti', 'cassa', 'Cassa'],
   // FATTURE AI CLIENTI: funzione premium (REQ-LIC-001), non inclusa per la
   // Tana. Il filtro non è qui accanto al ruolo perché non è una domanda sul
   // ruolo: la voce c'è o non c'è per tutto il locale, e a deciderlo sono le
   // impostazioni — vedi `vociPerRuolo`.
-  ['fatture', '📄', 'Fatture'],
-  ['stats', '📊', 'Statistiche'],
+  ['fatture', 'fatture', 'Fatture'],
+  ['stats', 'statistiche', 'Statistiche'],
   // BILANCIO: i conti del locale — incassi, stipendi, spese, netto del
   // mese. Li guarda chi il locale lo paga, non chi ci lavora: è la prima
   // voce che non basta essere gestori per vedere. Si TOGLIE dal menu, non
   // si nasconde dentro la pagina — una pagina che si apre e poi dice «non
   // puoi» si è già fatta vedere.
-  ['bilancio', '⚖️', 'Bilancio', isAdmin],
-  ['menu', '🍸', 'Menù'],
-  ['inventario', '📦', 'Magazzino'],
+  ['bilancio', 'bilancio', 'Bilancio', isAdmin],
+  ['menu', 'menu', 'Menù'],
+  ['inventario', 'magazzino', 'Magazzino'],
   // FORNITORI: chi ci vende, cosa gli abbiamo ordinato, cosa gli dobbiamo
   // (anagrafica, ordini, scadenzario). Chiesta dall'utente il 26/08/2026:
   // stavano nel magazzino, che però risponde a «cosa ho sullo scaffale»,
@@ -41,17 +41,17 @@ export const NAV_GESTIONALE = [
   // magazzino li vedeva ogni gestore, ma per contiguità, non per una
   // scelta. Chi lavora al banco non perde niente di quello che gli serve:
   // un fornitore nuovo si crea ancora dalla tendina del modulo prodotto.
-  ['fornitori', '🏭', 'Fornitori', isAdmin],
-  ['staff', '👥', 'Staff'],
-  ['utenti', '🧑‍🤝‍🧑', 'Utenti e ruoli'],
-  ['vista-cliente', '👀', 'Vista cliente'],
+  ['fornitori', 'fornitori', 'Fornitori', isAdmin],
+  ['staff', 'staff', 'Staff'],
+  ['utenti', 'utenti', 'Utenti e ruoli'],
+  ['vista-cliente', 'vista-cliente', 'Vista cliente'],
   // IL MARKETPLACE DEI TEMI (REQ-MENU-023): una pagina sua, non un
   // riquadro delle Impostazioni. L'utente, 02/11/2026: «una finestra/pagina
   // nuova che apro per navigare i temi come se fosse un catalogo». Risponde
   // a «che aspetto potrebbe avere il mio menù», non a «come è regolato»
   // (docs/navigazione.md, quando un gruppo diventa una pagina sua).
-  ['marketplace', '🛍️', 'Marketplace'],
-  ['impostazioni', '⚙️', 'Impostazioni'],
+  ['marketplace', 'marketplace', 'Marketplace'],
+  ['impostazioni', 'impostazioni', 'Impostazioni'],
 ]
 
 // La sala parte dalla STESSA coda del banco; «I miei ordini» non è più una
@@ -65,9 +65,9 @@ export const NAV_GESTIONALE = [
 // banco». Lo staff vede la parte del collegamento; i dati del locale
 // sulla carta restano dei gestori (PrinterSetup, `gestore`).
 export const NAV_SALA = [
-  ['coda', '🧾', 'Coda ordini'],
-  ['servizio', '🫱', 'Da servire'],
-  ['stampante', '🖨️', 'Stampante'],
+  ['coda', 'coda', 'Coda ordini'],
+  ['servizio', 'servizio', 'Da servire'],
+  ['stampante', 'stampante', 'Stampante'],
 ]
 
 // Dove sono finite le sezioni che non ci sono più.
@@ -75,11 +75,11 @@ const VECCHI_INDIRIZZI = { storico: 'pagamenti' }
 
 // Le pagine fuori dal gestionale che hanno comunque una testata visibile.
 const FUORI = [
-  ['/profilo-staff', '👤', 'Il mio profilo'],
-  ['/profilo', '👤', 'Il mio profilo'],
-  ['/ordini', '🧾', 'I miei ordini'],
-  ['/accedi', '🔑', 'Accesso'],
-  ['/registrati', '✍️', 'Registrazione'],
+  ['/profilo-staff', 'profilo', 'Il mio profilo'],
+  ['/profilo', 'profilo', 'Il mio profilo'],
+  ['/ordini', 'miei-ordini', 'I miei ordini'],
+  ['/accedi', 'accedi', 'Accesso'],
+  ['/registrati', 'nuovo-ordine', 'Registrazione'],
 ]
 
 // IL TITOLO STA NELLA BARRA, non dentro la pagina: una riga di titolo in

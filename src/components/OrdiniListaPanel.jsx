@@ -32,6 +32,7 @@ import {
 } from '../lib/fatture.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { giornoEOra } from '../lib/ore.js'
+import Icona from './Icona.jsx'
 
 // ── LISTA ORDINI (REQ-MAG-038) ───────────────────────────────────────
 //
@@ -283,7 +284,7 @@ function RigaOrdine({
               }
               onClick={() => onPagata?.(fattura, !pagato)}
             >
-              {pagato ? '✅ pagato' : '⏳ da pagare'}
+              {pagato ? <><Icona nome="fatto" gruppo="tasti" /> pagato</> : <><Icona nome="attesa" gruppo="tasti" /> da pagare</>}
             </button>
           ) : (
             // IL BUCO SI SEGNALA SOLO DOVE C'È (REQ-MAG-031): la merce è
@@ -312,7 +313,7 @@ function RigaOrdine({
                   : undefined
               }
             >
-              📦 Consegnato
+              <Icona nome="magazzino" gruppo="tasti" /> Consegnato
             </button>
           )}
           {stato === 'consegnato' && !chiuso && (
@@ -331,7 +332,7 @@ function RigaOrdine({
             title={`Invia a ${nome}`}
             onClick={() => onEmail?.(capo)}
           >
-            📧
+            <Icona nome="email" gruppo="tasti" />
           </button>
           <button
             className="btn ghost small"
@@ -339,7 +340,7 @@ function RigaOrdine({
             title="Copia il testo"
             onClick={() => onCopia?.(capo)}
           >
-            📋
+            <Icona nome="elenco" gruppo="tasti" />
           </button>
           <button
             className="btn ghost small"
@@ -347,10 +348,10 @@ function RigaOrdine({
             title="Stampa"
             onClick={() => onStampa?.(capo)}
           >
-            🖨
+            <Icona nome="stampa" gruppo="tasti" />
           </button>
           <button className="btn ghost small" title="Elimina l’ordine" onClick={onElimina}>
-            🗑
+            <Icona nome="elimina" gruppo="tasti" />
           </button>
         </span>
       </div>
@@ -421,7 +422,7 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
             aria-label={`Scollega il documento dall’ordine di ${nome}`}
             onClick={() => onScollega?.(fattura)}
           >
-            🔗✕ Scollega
+            <Icona nome="unisci" gruppo="tasti" />✕ Scollega
           </button>
         </div>
         {fatturaGenerata(fattura) && (
@@ -447,7 +448,7 @@ function IlDocumento({ ordine, fattura, fatture, onCollega, onScollega, onGenera
           aria-label={`Associa un documento all’ordine di ${nome}`}
           onClick={onCollega}
         >
-          🧾 Associa un documento
+          <Icona nome="coda" gruppo="tasti" /> Associa un documento
         </button>
         <button
           className="btn secondary small"
@@ -714,7 +715,7 @@ function DialogoFattura({ ordine, fatture, onCancel, onConfirm }) {
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>🧾 Il documento di {nome}</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="coda" gruppo="tasti" /> Il documento di {nome}</h3>
         <p className="muted">
           Si collega un documento di {nome} a questo ordine: quello che ha
           mandato lui, per la merce che ha portato lui.
@@ -813,7 +814,7 @@ function DialogoConsegna({ ordine, suppliers, onCancel, onConfirm }) {
   return (
     <div className="overlay confirm-overlay" onClick={onCancel}>
       <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>📦 Merce arrivata da {nome}?</h3>
+        <h3 style={{ marginTop: 0 }}><Icona nome="magazzino" gruppo="tasti" /> Merce arrivata da {nome}?</h3>
         <p className="muted">
           Correggi i pezzi con quelli che sono arrivati davvero: il magazzino
           si carica su quelli. Togli la spunta a quello che non è arrivato

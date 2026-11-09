@@ -30,6 +30,8 @@
 //  187 requisiti veri — vedi tests/unit/specifica.test.js.
 // =====================================================================
 
+import { LIVELLI, bisogniPerRequisito, statoDellaV } from './lib-modello-v.mjs'
+
 // Stato di copertura di una voce del registro.
 export function copertura(r) {
   if (r.status === 'deprecated') return 'deprecato'
@@ -173,11 +175,24 @@ const FATTO = ['coperto', 'scoperto', 'parziale']
  *
  * @param requisiti  le voci di requirements.yaml
  * @param bug        le voci di bugs.yaml (solo le aperte finiscono dentro)
+ * @param bisogni    le voci di bisogni.yaml, il gradino sopra la specifica
+ * @param architettura  le voci di architettura.yaml, il gradino sotto
  * @param data       quando è stato generato — passabile per poterlo provare
  */
-export function costruisciSpecifica(requisiti, { bug = [], data = new Date() } = {}) {
+export function costruisciSpecifica(requisiti, { bug = [], bisogni = [], architettura = [], data = new Date() } = {}) {
   const righe = []
   const scrivi = (...r) => righe.push(...r, '')
+  const servePer = bisogniPerRequisito(bisogni)
+  const perId = new Map(requisiti.map((r) => [r.id, r]))
+  // Un requisito ha un'ancora solo se ha un capitolo dove atterrare: i
+  // deprecati stanno in fondo col solo titolo.
+  const collegaRequisito = (id) => {
+    const r = perId.get(id)
+    return r && copertura(r) !== 'deprecato' ? `[${id}](#${ancora(`${id} — ${r.title}`)})` : `\`${id}\``
+  }
+  // Il collegamento a una voce che ha il suo titolo «#### ID — titolo»:
+  // bisogni, difetti.
+  const collegaVoce = (v) => `[${v.id}](#${ancora(`${v.id} — ${v.title}`)})`
 
   const conteggi = {}
   for (const r of requisiti) {
@@ -259,6 +274,26 @@ export function costruisciSpecifica(requisiti, { bug = [], data = new Date() } =
   }
   righe.push('')
 
+  // ── La V ───────────────────────────────────────────────────────────
+  // Senza bisogni il registro non è ancora nel modello a V, e la tabella
+  // direbbe solo zeri: non si scrive.
+  if (bisogni.length) {
+    const v = statoDellaV({ requisiti, bisogni, architettura })
+    scrivi('### Le prove, livello per livello')
+    scrivi(
+      'Il progetto segue il modello a V ([docs/modello-a-v.md](modello-a-v.md)): ogni',
+      'gradino che descrive il sistema ha un livello di test che lo mette alla prova.'
+    )
+    righe.push('| Livello | Cosa verifica | File di test |', '|---|---|---|')
+    for (const l of LIVELLI) righe.push(`| ${l.nome} | ${l.verifica} | ${v.test[l.id]} |`)
+    righe.push('')
+    scrivi(
+      `**${v.bisogni}** bisogni del locale, **${v.bisogniAccettati}** con un test di accettazione.`,
+      `**${v.requisitiConBisogno}** requisiti su ${v.requisiti} sono collegati a un bisogno;`,
+      `**${v.componenti}** componenti dell'architettura hanno le loro prove di integrazione.`
+    )
+  }
+
   // Una voce, per intero. `prove` a false per i lavori previsti e per i
   // difetti: un test che dimostri una cosa non ancora scritta non
   // esiste, e ripeterlo a ogni voce sarebbe solo rumore.
@@ -269,12 +304,40 @@ export function costruisciSpecifica(requisiti, { bug = [], data = new Date() } =
     }
     for (const p of inParagrafi(r.description)) scrivi(p)
     const meta = [`**Dove**: \`${r.area}\``]
+    const serve = servePer.get(r.id)
+    if (serve) {
+      meta.push(`**Serve**: ${serve.map(collegaVoce).join(', ')}`)
+    }
+    // Un difetto dice quale requisito tradisce: è da lì che si risale a
+    // quale livello di test se l'era lasciato sfuggire.
+    if (r.requisiti?.length) meta.push(`**Tradisce**: ${r.requisiti.map(collegaRequisito).join(', ')}`)
     if (prove) {
       meta.push(r.test_cases.length
         ? `**Lo dimostrano**: ${r.test_cases.map((t) => `\`${t}\``).join(', ')}`
         : `${SEGNO.scoperto.trim()} **Nessun test lo verifica.**`)
     }
     scrivi(meta.join(' · '))
+  }
+
+  // ── I bisogni del locale ───────────────────────────────────────────
+  if (bisogni.length) {
+    scrivi('## I bisogni del locale')
+    scrivi(
+      'Il gradino più alto della V: cosa serve a chi lavora e a chi ordina, senza',
+      'dire come l\'app lo fa. Ogni bisogno dice **come si accetta** — il giro che',
+      'chi sta al banco farebbe per dire «sì, è così» — e quali requisiti lo',
+      'realizzano. Stanno in `requirements/bisogni.yaml`.'
+    )
+    for (const b of bisogni) {
+      scrivi(`#### ${b.id} — ${b.title}`)
+      for (const p of inParagrafi(b.description)) scrivi(p)
+      if (b.accettazione) scrivi(`**Come si accetta**: ${b.accettazione}`)
+      const meta = [`**Chi**: ${b.area}`, `**Lo realizzano**: ${b.requisiti.map(collegaRequisito).join(', ')}`]
+      meta.push(b.test_cases.length
+        ? `**Lo accettano**: ${b.test_cases.map((t) => `\`${t}\``).join(', ')}`
+        : `${SEGNO.scoperto.trim()} **Nessun test di accettazione, ancora.**`)
+      scrivi(meta.join(' · '))
+    }
   }
 
   // ── Cosa fa il sistema ─────────────────────────────────────────────
@@ -308,6 +371,17 @@ export function costruisciSpecifica(requisiti, { bug = [], data = new Date() } =
     }
   }
 
+  // ── L'architettura ─────────────────────────────────────────────────
+  if (architettura.length) {
+    scrivi("## L'architettura e le sue prove")
+    scrivi(
+      'Il gradino sotto la specifica: i meccanismi su cui poggiano molti requisiti',
+      'insieme, ognuno con la sua promessa e i test di integrazione che la tengono.',
+      'Il racconto per intero, col perché, sta in [docs/architettura.md](architettura.md).'
+    )
+    for (const a of architettura) voce(a)
+  }
+
   // ── Difetti noti ───────────────────────────────────────────────────
   if (bugAperti.length) {
     scrivi('## Difetti noti')
@@ -321,8 +395,7 @@ export function costruisciSpecifica(requisiti, { bug = [], data = new Date() } =
     righe.push('| | Cosa non va | Quanto fa male | Quando |', '|---|---|---|---|')
     for (const b of bugAperti) {
       const dove = b.in_produzione === true ? '🔴' : b.in_produzione === false ? '·' : '?'
-      const link = `[${b.id}](#${ancora(`${b.id} — ${b.title}`)})`
-      righe.push(`| ${dove} | ${link} — ${b.title} | ${b.severity ?? '—'} | ${b.priority ?? '—'} |`)
+      righe.push(`| ${dove} | ${collegaVoce(b)} — ${b.title} | ${b.severity ?? '—'} | ${b.priority ?? '—'} |`)
     }
     righe.push('')
     scrivi('🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.')

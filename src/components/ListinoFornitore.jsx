@@ -17,6 +17,7 @@ import { contenutoDelPezzo, formatQty } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { ETICHETTA_ORIGINE, origineDi, storicoDiCoppia } from '../lib/storicoPrezzi.js'
 import { toastError } from '../lib/toast.js'
+import Icona from './Icona.jsx'
 
 // ── IL LISTINO DI UN FORNITORE (REQ-MAG-035) ─────────────────────────
 //
@@ -472,7 +473,7 @@ export default function ListinoFornitore({ fornitore, onIndietro }) {
                       style={{ marginTop: 8 }}
                       onClick={() => togli(riga, nome)}
                     >
-                      🗑 Togli dal listino
+                      <Icona nome="elimina" gruppo="tasti" /> Togli dal listino
                     </button>
                   </div>
                 )}

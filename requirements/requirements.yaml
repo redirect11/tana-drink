@@ -5808,7 +5808,10 @@ requirements:
       menù»), `clienti` (account dei clienti, i loro ordini, i gruppi di
       conti: insieme all'interruttore customer_accounts_enabled che il
       locale aveva già), `magazzino` (giacenze, scarico, fornitori; porta
-      con sé conta, fatture e scadenzario come moduli di dettaglio),
+      con sé `conta`, l'inventario), `fatture` (ai clienti) e `scadenzario`
+      (ai fornitori), vendute a parte dal 07/11/2026 (drink-regia
+      REQ-FLOTTA-044, che mette anche il menu' digitale nei piani Base e
+      Completo),
       `statistiche` (statistiche e bilancio), `staff` (ore e paghe),
       `sumup` (lettore SumUp: per ora dichiarato, il tasto in cassa non lo
       guarda ancora; non si chiama `pagamenti` perche' e' gia' la sezione
@@ -13157,11 +13160,16 @@ requirements:
       qualunque `return mapOrder(await leggiOrdine(...))`. Una regola scritta
       solo nella documentazione non ferma nessuno — questa e' tornata tre
       volte.
+      E SULL'APP INTERA (REQ-DEV-018, dal 08/11/2026): il test di sistema
+      tests/sistema/serataSenzaRete.spec.js ripete il giro sull'app
+      compilata, in un browser vero con la rete staccata, e controlla che al
+      ritorno della rete il conto arrivi al server pagato e una volta sola.
+      Al primo giro ha trovato BUG-137.
     status: implemented
     generate_issue: true
     labels: [metodo, offline, ordini]
     priority: P1
-    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js]
+    test_cases: [tests/unit/giroInLocale.test.js, tests/unit/incassoOffline.test.js, tests/unit/scritturaComande.test.js, tests/unit/codaRicordo.test.js, tests/sistema/serataSenzaRete.spec.js]
 
   - id: REQ-OFFLINE-007
     title: "Il guscio dell'app e il logo non si aspettano dalla rete"
@@ -14231,6 +14239,74 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-UI-031
+    title: "Le icone del gestionale hanno un tema: «Silhouette», monocrome e tutte della stessa misura, o «Emoji» come prima"
+    area: "src/lib/icone.js (vocabolario), src/components/Icona.jsx, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx (TemaIcone), lucide-react"
+    description: >
+      Flavio, vocale del 07/11/2026: «tutte le icone andrebbero cambiate,
+      andrebbero snellite e andrebbero messe le silhouette». Le emoji
+      colorate «sono le emoticon di WhatsApp» e danno al programma un senso
+      «un po' troppo a pazziella»; nei programmi con cui ha lavorato le icone
+      erano monocrome, «in un solo colore», o non c'erano. Ci sono anche di
+      dimensioni diverse («Utenti e ruoli» ne ha tre). Che l'icona somigli
+      poco alla voce non importa: «tanto alla fine leggi il nome». Il colore
+      resta dove dice qualcosa: il verde, il giallo e il rosso degli stati, e
+      le categorie colorate dal locale.
+      DECISIONI DELL'UTENTE (07/11/2026): le icone hanno dei TEMI; i disegni
+      del tema «Silhouette» sono di Lucide (open source, licenza ISC, a
+      tratto e coerenti fra loro, importati uno per uno); «Silhouette» è il
+      tema di partenza per tutti, «Emoji» rimette quelle di prima
+      (Impostazioni → Aspetto → «Le icone del gestionale»); vale solo per il
+      gestionale: le pagine del cliente hanno lo stile del loro menù.
+      UN TEMA PER GRUPPO (l'utente, 07/11/2026: «il selettore del tema deve
+      essere separato» per le tre fasi): Navigazione, Tasti e stati, Segnali
+      e messaggi si scelgono ognuno per conto suo (tema_icone_navigazione,
+      tema_icone_tasti, tema_icone_segnali), e ogni <Icona> dice di che
+      gruppo è.
+      COME. Un'icona è un NOME (lib/icone.js: «cassa», «elimina»,
+      «contanti»), e per ogni nome il vocabolario dà un'emoji e un disegno;
+      <Icona nome> sceglie dal tema (TemaIcone, alla radice di App, «emoji»
+      per chi non è dello staff). I disegni prendono colore e misura del
+      testo attorno (currentColor, em), quindi un tasto e un titolo hanno
+      icone della stessa taglia. I pallini degli stati restano colorati in
+      entrambi i temi, con gli inchiostri di stato di DESIGN.md.
+      LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le
+      emoji di prima e le riporta al loro nome; un cricchetto
+      (tests/unit/icone.test.js) contava le emoji ancora scritte a mano nel
+      gestionale, e con la fase 3 è arrivato a zero: oggi è un divieto.
+      L'inventario del 07/11/2026: 802 emoji (165 diverse, 103 file), 577
+      nel gestionale.
+      FASE 1 (fatta): il vocabolario, il tema, la scelta in Aspetto; la
+      navigazione — menu laterale, voci del gestionale e della sala,
+      sottosezioni di tutte le pagine, il foglio del telefono, la barra, i
+      moduli del Marketplace. FASE 2 (fatta): le icone scritte nel testo
+      dei tasti e dei titoli (244, gruppo «Tasti e stati», o «Segnali e
+      messaggi» per avvisi, conferme, attese e lucchetti), gli stati dei
+      conti, i metodi di pagamento nei riepiloghi di cassa
+      (components/MetodoPagamento.jsx). I tasti fatti di sola icona hanno il
+      loro nome (aria-label), che prima era l'emoji; dentro un <option>
+      un'icona non può stare, e lì c'è il «+» del testo. Il cricchetto è
+      sceso da 527 a 283. FASE 3 (fatta): le icone dentro i testi, gruppo
+      «Segnali e messaggi». Le notifiche a comparsa disegnano l'icona del
+      loro tipo, o quella chiesta (`icona`), nel tema; le conferme hanno
+      `icona=` davanti al titolo; i segnaposto dei campi di ricerca hanno la
+      lente solo in «Emoji» (useTestoConIcona, lib/temaIcone.js: in un
+      segnaposto un disegno non entra), e così le voci delle tendine. Le
+      etichette che stanno nei dati — stati, ruoli, metodi di pagamento,
+      intestazioni della coda — prendono l'emoji dal vocabolario
+      (conEmoji), così stampe, notifiche del telefono e pagine del cliente
+      leggono le stesse di sempre; nel gestionale <ConIcona> riconosce
+      l'emoji in testa e la disegna nel tema. Restano emoji, apposta, le
+      notifiche del telefono (sono testo del sistema) e l'avviso dei cookie
+      (lo legge il cliente).
+    status: implemented
+    generate_issue: false
+    labels: [ui, design]
+    priority: P2
+    test_cases:
+      - tests/unit/icone.test.js
+      - tests/component/Icona.test.jsx
+
   - id: REQ-PAG-013
     title: "Lo sconto cade sui prodotti che si stanno riscuotendo, e gli sconti si accumulano"
     area: "src/lib/pagamento.js, src/components/PaymentScreen.jsx, src/lib/api.js, src/lib/printer.js, functions/lib/payment-core.js"
@@ -15270,3 +15346,48 @@ requirements:
       - tests/regole/matriceModuli.test.js
       - tests/component/GroupView.test.jsx
 
+
+  - id: REQ-DEV-018
+    title: "Il modello a V: ogni richiesta scende dal bisogno del locale al codice, e risale coi test di ogni livello"
+    area: "requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md, playwright.config.mjs, tests/sistema/, .github/workflows/test.yml"
+    description: >
+      L'utente, 08/11/2026: «iniziamo la migrazione ad un modello di
+      sviluppo a V», «per avere più qualità e meno regressioni al banco», con
+      «una V per richiesta». I test c'erano già, ma non dicevano cosa
+      verificano, e nessun registro diceva quale bisogno del locale un
+      requisito serve.
+      I QUATTRO GRADINI e i loro specchi: i bisogni del locale (UR-*, in
+      requirements/bisogni.yaml, ognuno col criterio di accettazione scritto
+      in prosa) si provano coi test di accettazione; la specifica (REQ-*) coi
+      test di sistema sull'app intera; l'architettura (ARC-*, in
+      requirements/architettura.yaml) coi test di integrazione; il progetto
+      di dettaglio, cioè il modulo, coi test di unità.
+      IL LIVELLO DI UN TEST lo dice la cartella (tests/unit, tests/component
+      e tests/bdd e tests/regole, tests/sistema, tests/accettazione); in
+      tests/unit un test che sostituisce Firestore
+      (`vi.mock('firebase/firestore')`) è integrazione, perché prova il codice
+      vero contro un Firestore finto; e il test stesso può dichiararlo con
+      `// @livello <nome>` quando la cartella, scelta prima della V, non dice
+      il vero.
+      UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a
+      un bisogno, e un difetto nato dopo dice quale requisito tradisce
+      (`requisiti`). Le voci di prima si collegano a mano a mano, con un
+      cricchetto che può solo scendere. La specifica di sistema ha i
+      capitoli dei bisogni e dell'architettura, e la tabella delle prove
+      livello per livello.
+      I TEST DI SISTEMA (fase 2, 08/11/2026): Playwright sull'app compilata
+      con .env.sistema, Auth e Firestore emulati con le regole vere
+      (`npm run test:sistema`, playwright.config.mjs), il database seminato
+      da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del
+      banco in tests/sistema/banco.mjs. In CI girano su ogni pull request,
+      nel job «Sistema (Playwright)». Il primo è il giro della serata senza
+      rete (REQ-OFFLINE-006), che ha trovato BUG-137.
+      FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni;
+      i test di accettazione dagli scenari della serata; il cancello che
+      chiede la V intera prima del merge in develop.
+    status: partial
+    generate_issue: false
+    labels: [dev, metodo]
+    priority: P1
+    test_cases:
+      - tests/unit/modelloAV.test.js

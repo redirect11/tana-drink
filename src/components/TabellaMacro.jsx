@@ -1,3 +1,4 @@
+import Icona from './Icona.jsx'
 // LA TABELLA PER MACRO DEL BILANCIO: un blocco per macro e uno coi totali,
 // le colonne del periodo e una colonna TOT. La disegnano «Venduto ×
 // Incassato» e «Acquisti × Fatturato» (REQ-MAG-022), che hanno la stessa
@@ -23,7 +24,7 @@ export function BloccoMacro({ row, colonne, righe, rapportoLabel }) {
   return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div className="row between" style={{ alignItems: 'baseline', marginBottom: 6 }}>
-        <strong>🗂️ {row.name}</strong>
+        <strong><Icona nome="raggruppa" gruppo="tasti" /> {row.name}</strong>
         <span className="muted small">
           {rapportoLabel}: <strong>{rapporto(row.tot.rapporto)}</strong>
         </span>

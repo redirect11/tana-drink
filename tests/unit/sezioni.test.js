@@ -5,6 +5,7 @@
 // al banco quella riga si vede.
 
 import { describe, it, expect } from 'vitest'
+import { VOCABOLARIO } from '../../src/lib/icone.js'
 import {
   titoloPagina,
   NAV_GESTIONALE,
@@ -16,7 +17,7 @@ import { CON_LICENZA as TANA } from '../helpers/licenza.js'
 describe('titoloPagina', () => {
   it('nel gestionale porta il nome della sezione, con la sua icona', () => {
     expect(titoloPagina('/bar', '?tab=impostazioni')).toEqual({
-      icona: '⚙️',
+      icona: 'impostazioni',
       titolo: 'Impostazioni',
     })
     // Il tab si chiama ancora `inventario` (cambiarlo vorrebbe dire
@@ -44,8 +45,12 @@ describe('titoloPagina', () => {
 
   // Le voci del menu laterale e i titoli sono lo stesso elenco: tenendone
   // due, prima o poi uno dice «Lista ordini» e l'altro «Storico».
+  // L'icona è un NOME del vocabolario (REQ-UI-031): il disegno lo sceglie il
+  // tema del locale. Un nome che il vocabolario non conosce uscirebbe come
+  // testo, accanto alla voce.
   it('ogni voce del menu ha icona e nome', () => {
     for (const [id, icona, nome] of NAV_GESTIONALE) {
+      expect(Object.hasOwn(VOCABOLARIO, icona), `icona fuori dal vocabolario per ${id}: ${icona}`).toBe(true)
       expect(id, 'id mancante').toBeTruthy()
       expect(icona, `icona mancante per ${id}`).toBeTruthy()
       expect(nome, `nome mancante per ${id}`).toBeTruthy()
@@ -143,7 +148,7 @@ describe('la sezione Fornitori', () => {
   it('è una voce del menu, con la sua icona e il suo nome nella barra', () => {
     expect(NAV_GESTIONALE.some(([id]) => id === 'fornitori')).toBe(true)
     expect(titoloPagina('/bar', '?tab=fornitori')).toEqual({
-      icona: '🏭',
+      icona: 'fornitori',
       titolo: 'Fornitori',
     })
   })

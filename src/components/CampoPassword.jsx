@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Icona from './Icona.jsx'
 
 // ── LA PASSWORD, CON L'OCCHIO PER GUARDARLA ──────────────────────────
 //
@@ -32,7 +33,7 @@ export default function CampoPassword({ id, value, onChange, autoComplete, ...re
         // da password a «entra», non da un interruttore in mezzo.
         tabIndex={-1}
       >
-        {visibile ? '🙈' : '👁'}
+        <Icona nome={visibile ? 'nascondi' : 'mostra'} gruppo="tasti" />
       </button>
     </div>
   )

@@ -731,7 +731,7 @@ describe('il pagamento mentre il server tace (BUG-017)', () => {
     const prezzo = await screen.findByLabelText(/Prezzo/)
     await user.clear(prezzo)
     await user.type(prezzo, '12')
-    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+    await user.click(screen.getByRole('button', { name: /^Salva \d/ }))
     // Via subito, senza aspettare la risposta.
     unmount()
 
