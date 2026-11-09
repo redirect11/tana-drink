@@ -1191,6 +1191,11 @@ export default function SettingsTab({ role = null }) {
   // l'impostazione, non per la storia di come è nata: con ventitré voci
   // l'elenco era più lungo delle impostazioni.
   const GRUPPO_DI = {
+    // Il riquadro c'era dalla build per cliente (REQ-VENUE-001), ma qui non
+    // aveva un gruppo: un riquadro senza gruppo non compare da nessuna
+    // parte, e nome, contatti e intestazione dello scontrino non si
+    // potevano correggere (BUG-139). Il test dei gruppi ora lo cerca.
+    locale: 'locale',
     aspetto: 'aspetto',
     'marketplace-temi': 'aspetto',
     // Tre cose diverse, tre voci: quello che vedono i clienti, la
@@ -1231,6 +1236,7 @@ export default function SettingsTab({ role = null }) {
   }
   const GRUPPI = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto' },
+    { id: 'locale', icona: 'categorie', label: 'Il locale' },
     { id: 'menu-clienti', icona: 'ordina-dal-menu', label: 'Menù clienti' },
     { id: 'gestione-menu', icona: 'gestione-menu', label: 'Gestione menù' },
     { id: 'catalogo', icona: 'acquisti', label: 'Catalogo prodotti' },

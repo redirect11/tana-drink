@@ -5826,7 +5826,7 @@ bugs:
   - id: BUG-138
     title: "Marginalità listino: sul PC le intestazioni non stanno sopra i loro numeri"
     area: "src/index.css (.margin-tab th .inv-th), src/components/SortTh.jsx"
-    severity: minore
+    severity: lieve
     priority: P2
     description: >
       Segnalato l'08/11/2026: «in MENU - MARGINALITA LISTINO i dati non sono
@@ -5846,3 +5846,29 @@ bugs:
     requisiti: [REQ-MENU-002]
     test_cases:
       - tests/component/MarginList.test.jsx
+      - tests/sistema/marginalita.spec.js
+
+  - id: BUG-139
+    title: "Impostazioni: il riquadro «Il locale» non si apre da nessun gruppo"
+    area: "src/components/SettingsTab.jsx (GRUPPO_DI, GRUPPI)"
+    severity: media
+    priority: P1
+    description: >
+      Trovato il 09/11/2026 scrivendo i casi d'uso dell'amministrazione
+      (UC-IMP), leggendo il codice. Con la build per cliente (REQ-VENUE-001)
+      le impostazioni hanno un riquadro «Il locale» — nome, contatti,
+      intestazione dello scontrino, dati del titolare — ma la tabella che
+      assegna i riquadri ai gruppi del sottomenu non lo nominava, e un
+      riquadro senza gruppo non compare da nessuna parte. Quei dati, che il
+      registro dice «si correggono qui», non si potevano correggere. Nessun
+      test se ne accorgeva: quello dei gruppi elencava i riquadri attesi a
+      mano, e questo non c'era. ORA il riquadro ha il suo gruppo, «Il
+      locale», e il test dei gruppi lo cerca. Non è in produzione: il
+      riquadro è nato dopo la 1.9.3.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, impostazioni]
+    requisiti: [REQ-VENUE-001]
+    test_cases:
+      - tests/component/SettingsTab.test.jsx

@@ -67,3 +67,40 @@ export async function contoChiuso(page, drink, metodo, totale) {
   }
   await expect(page.getByText(/0 aperti/)).toBeVisible()
 }
+
+// UNA SEZIONE DEL GESTIONALE dal menu laterale. Sul tablet il menu sta
+// fuori dallo schermo finché non si tocca «Menu»: c'è nella pagina, ma un
+// dito non lo raggiunge, e nemmeno Playwright. Appena entrati il tasto c'è
+// già ma l'app sta ancora montando la coda, e un tocco in quell'istante va
+// perso: si ritocca finché il menu non è aperto davvero.
+// Quello dentro lo schermo: sulla coda la barra in alto è ritirata, e il
+// suo tasto resta nella pagina ma sopra il bordo.
+async function tastoMenu(page) {
+  const tasti = page.getByRole('button', { name: 'Menu', exact: true })
+  for (const t of await tasti.all()) {
+    const box = await t.boundingBox().catch(() => null)
+    if (box && box.y >= 0 && box.width > 0) return t
+  }
+  return tasti.first()
+}
+
+async function apriMenu(page) {
+  // Aperto, o agganciato alla pagina (le pagine con sezioni proprie, su
+  // uno schermo largo). I tasti «Menu» sono più d'uno — in barra, sulla
+  // coda, flottante — e se ne vede uno per schermata.
+  const aperto = page.locator('nav.bar-sidebar.open, nav.bar-sidebar.agganciata')
+  await expect(async () => {
+    if (!(await aperto.isVisible())) await tastoMenu(page).then((t) => t.click({ timeout: 2000 }))
+    await expect(aperto).toBeVisible({ timeout: 1000 })
+  }).toPass({ timeout: 20_000 })
+}
+
+export async function vaiA(page, voce, sottosezione) {
+  const nelMenu = (testo) => page.locator('nav.bar-sidebar').getByText(testo, { exact: true })
+  await apriMenu(page)
+  await nelMenu(voce).click()
+  if (!sottosezione) return
+  // Le sottosezioni compaiono nel menu quando la pagina è aperta.
+  await apriMenu(page)
+  await nelMenu(sottosezione).click()
+}
