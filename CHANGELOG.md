@@ -2,6 +2,15 @@
 
 ## 1.10.30-beta — in lavorazione
 
+### Sicurezza
+
+- Dipendenze aggiornate entro le versioni già ammesse (`npm audit fix`),
+  nell'app e nelle Functions: nelle Functions spariscono l'avviso critico
+  e i quattro alti (proxy-addr, body-parser, busboy, form-data); Firebase
+  passa da 12.14 a 12.19. Restano gli avvisi che chiedono un salto di
+  versione maggiore: gli strumenti di sviluppo vanno con l'aggiornamento
+  coordinato di vite e vitest, a parte.
+
 ### Menù dei clienti
 
 - Nello stile «Carte» il mazzo resta in alto mentre si scorre il menù, e
