@@ -16,6 +16,12 @@
   terminale (REQ-UI-032); la stampa automatica scelta per banco o sala, con
   l'avviso quando le comande della sala non le stamperebbe nessuno
   (REQ-STAMPA-021).
+- La specifica del prodotto per casi d'uso: 63 obiettivi di chi usa
+  l'app — banco, sala, cliente, gestore, admin — coi passi, l'esito, le
+  varianti e il modo in cui si provano, in docs/specifica-prodotto.md
+  (generata da requirements/casi-uso.yaml). È una bozza da rivedere col
+  gestore; da lì nasceranno i test end-to-end, uno per caso d'uso
+  (REQ-DEV-019).
 - Gli interruttori delle impostazioni hanno un nome per i lettori di
   schermo: prima venivano letti come «casella di controllo» e basta.
 

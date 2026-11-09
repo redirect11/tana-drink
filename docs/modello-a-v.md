@@ -14,7 +14,8 @@ Il requisito che lo descrive è REQ-DEV-018; il test che lo fa rispettare è
 ## I gradini e i loro specchi
 
 ```
-Bisogni del locale ─────────────────── Test di accettazione
+Bisogni del locale ─────────────────── Validazione del cliente
+  Casi d'uso ─────────────────────── Test end-to-end (accettazione)
   Specifica di sistema ──────────── Test di sistema
     Architettura ───────────── Test di integrazione
       Progetto di dettaglio ─ Test di unità
@@ -24,6 +25,7 @@ Bisogni del locale ─────────────────── Tes
 | Gradino | Dove si scrive | Si prova con | Dove stanno i test |
 |---|---|---|---|
 | **Bisogno** (`UR-*`): cosa serve a chi lavora o a chi ordina, senza dire come | [`requirements/bisogni.yaml`](../requirements/bisogni.yaml) | **accettazione**: il giro come lo farebbe chi sta al banco, sull'app intera | `tests/accettazione/` |
+| **Caso d'uso** (`UC-*`): un obiettivo intero di chi usa l'app, coi passi, l'esito e le varianti | [`requirements/casi-uso.yaml`](../requirements/casi-uso.yaml), letto in [specifica-prodotto.md](specifica-prodotto.md) | **end-to-end**: nel browser, coi soli gesti di chi lavora, con le Functions sotto, su un ambiente di prova generato e poi eliminato | `tests/e2e/` |
 | **Requisito** (`REQ-*`): cosa fa l'app, un comportamento alla volta | [`requirements/requirements.yaml`](../requirements/requirements.yaml) | **sistema**: il comportamento sull'app compilata, con gli emulatori | `tests/sistema/` |
 | **Componente** (`ARC-*`): un meccanismo su cui poggiano molti requisiti | [`requirements/architettura.yaml`](../requirements/architettura.yaml), racconto in [architettura.md](architettura.md) | **integrazione**: il pezzo insieme a quelli con cui lavora davvero | `tests/component/`, `tests/bdd/`, `tests/regole/` |
 | **Modulo**: il progetto di dettaglio, cioè il file e il commento che ne spiega il perché | `src/lib/`, `functions/lib/` | **unità**: il modulo da solo | `tests/unit/` |
@@ -163,8 +165,24 @@ node scripts/requisiti.mjs --documento  # la specifica, coi capitoli dei bisogni
    Restano gli altri bisogni (bozza, magazzino, cliente al tavolo, carta,
    correzioni) e, per i ruoli, gli stati di preparazione che la sala non
    tocca (REQ-STAFF-014), dalla vista a corsie della coda.
-3. **I test di accettazione.** Gli scenari della serata scritti dai criteri
-   `accettazione:` dei bisogni, in `tests/accettazione/`, leggibili da chi
-   lavora al banco.
+3. **I casi d'uso e i test end-to-end** (REQ-DEV-019) — avviata
+   (09/11/2026). L'utente: «non abbiamo una specifica vera del prodotto»;
+   «vanno testati come se fosse il cliente. Poi il cliente valida». Il
+   registro [`casi-uso.yaml`](../requirements/casi-uso.yaml) è la
+   specifica del prodotto: un caso d'uso per obiettivo di chi usa l'app,
+   col modo in cui si prova. Da lì:
+   - **la bozza** del registro, da far rivedere al gestore prima di
+     scriverci sopra i test (se la lista è sbagliata, i test provano la
+     cosa sbagliata);
+   - **i test e2e** in `tests/e2e/`, uno per caso d'uso, sugli emulatori
+     completi (Auth, Firestore, Storage, **Functions**, Hosting), in
+     locale e su ogni pull request;
+   - **l'ambiente generato**: per un rilascio si crea un ambiente di
+     prova col Terraform dell'istanza (drink-regia, `infra/istanza`), ci
+     si pubblica l'app, si fanno girare i test e2e e lo si elimina.
+     `tana-drink-test` resta al cliente, per la validazione.
+   I test di accettazione dei criteri `accettazione:` dei bisogni
+   diventano questi: il criterio di un bisogno si soddisfa coi casi d'uso
+   che lo servono.
 4. **Il cancello.** In [gitflow.md](gitflow.md) e nella CI, una richiesta
    entra in `develop` solo con la sua V completa.
