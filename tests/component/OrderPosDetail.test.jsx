@@ -2721,4 +2721,69 @@ describe('l’iniziale di chi ha battuto ogni riga', () => {
     // La riga che c'era resta com'era: non la si firma a nome di chi corregge.
     expect(items.find((i) => i.drink_id === 'mojito')).not.toHaveProperty('added_by')
   })
+
+  // REQ-ORD-024, Flavio 09/11/2026: il «+» e il «−» li usa solo chi ha
+  // caricato la riga; gli altri battono il prodotto e fanno una riga loro.
+  it('sulla riga di un altro il + e il − sono spenti; sulla propria e su quella senza iniziale no', async () => {
+    const user = userEvent.setup()
+    const IO = { name: 'Chi lavora', email: 'chi@tana.local', role: 'bartender' }
+    await mount(
+      baseOrder({
+        comande: [
+          {
+            id: 'c1',
+            seq: 1,
+            status: 'ricevuto',
+            status_times: {},
+            items: [
+              { drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO },
+              { drink_id: 'gin', name: 'Gin Tonic', unit_price: 8, qty: 1, added_by: IO },
+              { drink_id: 'spritz', name: 'Spritz', unit_price: 6, qty: 1 },
+            ],
+          },
+        ],
+      })
+    )
+    const tasto = (azione, nome) => screen.getByRole('button', { name: `${azione} ${nome}` })
+    expect(tasto('Aumenta', 'Mojito')).toBeDisabled()
+    expect(tasto('Riduci', 'Mojito')).toBeDisabled()
+    expect(tasto('Aumenta', 'Mojito')).toHaveAttribute('title', 'Caricato da Flavio: per aggiungerne, toccare il prodotto')
+    for (const nome of ['Gin Tonic', 'Spritz']) {
+      expect(tasto('Aumenta', nome)).toBeEnabled()
+      expect(tasto('Riduci', nome)).toBeEnabled()
+    }
+    // Sulla propria il + aumenta quella riga, e la Mojito di Flavio resta sua.
+    await user.click(tasto('Aumenta', 'Gin Tonic'))
+    await waitFor(() => expect(bartenderUpdateComanda).toHaveBeenCalled(), { timeout: 3000 })
+    const [, , { items }] = bartenderUpdateComanda.mock.calls.at(-1)
+    expect(items.find((i) => i.drink_id === 'gin').qty).toBe(2)
+    expect(items.find((i) => i.drink_id === 'mojito')).toMatchObject({ qty: 1, added_by: FLAVIO })
+  })
+
+  // L'utente, 09/11/2026: la regola vale solo con l'iniziale accesa nelle
+  // impostazioni. Spenta, nessuno vede di chi è una riga, e un tasto spento
+  // senza motivo a schermo sarebbe un tasto rotto.
+  it('con l’iniziale spenta nelle impostazioni: niente iniziali, e il + e il − sono di tutti', async () => {
+    mockSettings.firma_righe = false
+    try {
+      await mount(
+        baseOrder({
+          comande: [
+            {
+              id: 'c1',
+              seq: 1,
+              status: 'ricevuto',
+              status_times: {},
+              items: [{ drink_id: 'mojito', name: 'Mojito', unit_price: 7, qty: 1, added_by: FLAVIO }],
+            },
+          ],
+        })
+      )
+      expect(autori()).toEqual([])
+      expect(screen.getByRole('button', { name: 'Aumenta Mojito' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Riduci Mojito' })).toBeEnabled()
+    } finally {
+      delete mockSettings.firma_righe
+    }
+  })
 })

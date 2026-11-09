@@ -948,6 +948,21 @@ export default function SettingsTab({ role = null }) {
                 onChange={(v) => save({ conti_colorati: v })}
               />
 
+              {/* CHI HA CARICATO LA RIGA (REQ-ORD-023, REQ-ORD-024). Le due
+                  cose vanno insieme: il blocco del «+» e del «−» si regge
+                  sull'iniziale, e senza l'iniziale a schermo nessuno
+                  capirebbe perché un tasto è spento (l'utente, 09/11/2026:
+                  «le regole funzionano solo se la firma è attiva»). Chi ha
+                  battuto la riga si registra comunque: riaccendendo, si vede
+                  anche sulle righe di quando era spento. */}
+              <h4>Chi ha caricato la riga</h4>
+              <ToggleRow
+                label="Iniziale di chi ha caricato ogni riga"
+                desc="Accanto a ogni riga del conto, l'iniziale di chi l'ha caricata, nel suo colore. Con l'iniziale accesa la quantità di una riga la cambia solo chi l'ha caricata: gli altri aggiungono dal prodotto, su una riga propria. Le righe senza iniziale (quelle dei clienti dal menù) restano modificabili da tutti."
+                checked={settings.firma_righe !== false}
+                onChange={(v) => save({ firma_righe: v })}
+              />
+
               <h4>La ricerca</h4>
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Cercando un numero, un nome, un tavolo o un drink: si può{' '}
