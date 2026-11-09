@@ -15,17 +15,33 @@ import { SEED_UTENTI } from '../../src/dev/seedData.js'
 // @playwright/test.
 export const test = base.extend({
   databasePulito: [async ({}, usa) => { await semina(); await usa() }, { auto: true }],
+  // UN ALTRO TERMINALE: un browser a sé (contesto, sessione e cache suoi),
+  // come il telefono della sala accanto al tablet del banco. Si chiude
+  // alla fine del test: aperti e lasciati lì si sommavano da un test
+  // all'altro, e a metà giro la macchina rallentava fino a far scadere i
+  // test più lunghi (visto il 09/11/2026: 15 minuti invece di 3).
+  altroTerminale: async ({ browser }, usa) => {
+    const aperti = []
+    await usa(async () => {
+      const contesto = await browser.newContext()
+      aperti.push(contesto)
+      return contesto.newPage()
+    })
+    for (const c of aperti) await c.close()
+  },
 })
 export { expect }
 
 // Le utenze le crea scripts/seed.js da SEED_UTENTI: la password si prende da
-// lì, così cambiando il seme i test non restano chiusi fuori.
+// lì, così cambiando il seme i test non restano chiusi fuori. Sull'ambiente
+// e2e, che è un progetto vero, la password è quella del segreto
+// E2E_PASSWORD (scripts/lib-ambiente-e2e.mjs).
 export async function entra(page, email) {
   const utenza = SEED_UTENTI.find((u) => u.email === email)
   if (!utenza) throw new Error(`[sistema] ${email} non è fra le utenze del seme (src/dev/seedData.js)`)
   await page.goto('/bar')
   await page.getByLabel('Email').fill(email)
-  await page.locator('#password').fill(utenza.password)
+  await page.locator('#password').fill(process.env.E2E_PROGETTO && !process.env.FIRESTORE_EMULATOR_HOST ? process.env.E2E_PASSWORD : utenza.password)
   await page.getByRole('button', { name: 'Entra', exact: true }).click()
 }
 

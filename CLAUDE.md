@@ -298,6 +298,7 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | qualunque interfaccia | [DESIGN.md](DESIGN.md) e [docs/navigazione.md](docs/navigazione.md) |
 | branch, merge, rilasci, cancello di qualità | [docs/gitflow.md](docs/gitflow.md) |
 | provare in locale | [docs/ambiente-locale.md](docs/ambiente-locale.md) |
+| i test end-to-end dei casi d'uso e il loro ambiente generato | [docs/ambiente-e2e.md](docs/ambiente-e2e.md) |
 | Cloud Functions / SumUp | [docs/functions.md](docs/functions.md) |
 | l'avviso del certificato della stampante | [docs/certificato-stampante.md](docs/certificato-stampante.md) |
 | altre stampanti, app nativa, installazione on premise | [docs/stampanti-e-livelli.md](docs/stampanti-e-livelli.md) |

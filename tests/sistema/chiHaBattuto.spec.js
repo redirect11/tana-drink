@@ -11,7 +11,7 @@ import { test, expect, entra, apriCassa, nuovoOrdine, batti, tornaAllaCoda, card
 const riga = (page, drink) => page.locator('.draft-line').filter({ hasText: drink })
 const firma = (page, drink, chi) => riga(page, drink).locator(`.riga-autore [title="Aggiunto da ${chi}"]`)
 
-test('ogni riga porta la firma di chi l’ha battuta, anche sull’altro terminale', async ({ page: banco, browser }) => {
+test('ogni riga porta la firma di chi l’ha battuta, anche sull’altro terminale', async ({ page: banco, altroTerminale }) => {
   await entra(banco, 'bartender@tana.local')
   await apriCassa(banco, 0)
   await nuovoOrdine(banco)
@@ -21,7 +21,7 @@ test('ogni riga porta la firma di chi l’ha battuta, anche sull’altro termina
   await tornaAllaCoda(banco)
 
   // La sala apre lo stesso conto dal suo terminale e ci aggiunge un drink.
-  const sala = await (await browser.newContext()).newPage()
+  const sala = await altroTerminale()
   await entra(sala, 'sala@tana.local')
   await expect(cardDeiConti(sala)).toHaveCount(1)
   await cardDeiConti(sala).first().locator('.grid-card-main').click()

@@ -28,7 +28,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**327 voci** in tutto. **290** descrivono il sistema com'è oggi e
+**328 voci** in tutto. **291** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -73,13 +73,13 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 
 | Livello | Cosa verifica | File di test |
 |---|---|---|
-| Accettazione | i bisogni del locale (UR-*) | 0 |
+| Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
-| Unità | il progetto di dettaglio: un modulo da solo | 167 |
+| Unità | il progetto di dettaglio: un modulo da solo | 169 |
 
 **13** bisogni del locale, **0** con un test di accettazione.
-**78** requisiti su 319 sono collegati a un bisogno;
+**79** requisiti su 320 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -3513,9 +3513,9 @@ FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni; i test di 
 
 L'utente, 09/11/2026: «non abbiamo una specifica vera del prodotto. Sulla base di quella, vanno testati i casi d'uso direttamente nel browser su un ambiente di test», «in pratica vanno testati come se fosse il cliente. Poi il cliente valida successivamente». I requisiti dicono cosa fa l'app un comportamento alla volta e i test di sistema ne provano uno alla volta: nessuno dei due dice quali sono le cose che banco, sala, cliente e gestore fanno davvero, dall'inizio alla fine.
 
-IL REGISTRO DEI CASI D'USO (requirements/casi-uso.yaml, UC-<ZONA>-NNN): per ogni obiettivo di chi usa l'app, chi lo fa, da dove parte, i passi osservabili nel browser, l'esito, le varianti (quando/allora: rete staccata, cassa chiusa, ruolo che non può…), come si prova (browser, browser con stampante o SumUp finti, a mano), i bisogni che serve, i requisiti fatti che mette in gioco e quelli previsti. Da lì si genera docs/specifica-prodotto.md (`node scripts/casi-uso.mjs --documento`), che si legge senza sapere di codice. Un test controlla i legami: requisiti e bisogni esistenti, i fatti fra i requisiti, i todo fra i previsti, i test citati esistenti. I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi soli gesti di chi lavora, più browser insieme quando il caso d'uso lo chiede, con le Functions sotto: in locale e su ogni pull request con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test, testiamo, eliminiamo»), con il Terraform dell'istanza della regia. `tana-drink-test` resta al cliente, per la validazione. FASI: la bozza del registro (09/11/2026, da far rivedere al gestore); i test e2e sugli emulatori completi; l'ambiente generato e la sua CI.
+IL REGISTRO DEI CASI D'USO (requirements/casi-uso.yaml, UC-<ZONA>-NNN): per ogni obiettivo di chi usa l'app, chi lo fa, da dove parte, i passi osservabili nel browser, l'esito, le varianti (quando/allora: rete staccata, cassa chiusa, ruolo che non può…), come si prova (browser, browser con stampante o SumUp finti, a mano), i bisogni che serve, i requisiti fatti che mette in gioco e quelli previsti. Da lì si genera docs/specifica-prodotto.md (`node scripts/casi-uso.mjs --documento`), che si legge senza sapere di codice. Un test controlla i legami: requisiti e bisogni esistenti, i fatti fra i requisiti, i todo fra i previsti, i test citati esistenti. I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi soli gesti di chi lavora, più browser insieme quando il caso d'uso lo chiede, con le Functions sotto: in locale e su ogni pull request con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test, testiamo, eliminiamo»), con il Terraform dell'istanza della regia. `tana-drink-test` resta al cliente, per la validazione. L'AMBIENTE GENERATO (l'utente, 09/11/2026: «facciamo la prima»): un progetto di prova fisso, `drinkpos-prova-e2e`, generato una volta dal Terraform dell'istanza, sempre vuoto. A ogni tag e a mano (.github/workflows/e2e.yml) ci si pubblicano regole, Functions e app su un canale d'anteprima che scade, i test seminano il database prima di ognuno, e alla fine si cancellano sempre dati, utenze, canale e Functions. Un progetto nuovo per giro no: senza Organizzazione Google un service account non crea progetti, la fatturazione ne regge cinque, e un progetto eliminato resta trenta giorni col nome bruciato. Le guardie (scripts/lib-ambiente-e2e.mjs e il workflow) accettano solo `drinkpos-prova-…` con la chiave di quel progetto; le utenze di prova hanno la password del segreto E2E_PASSWORD, non quella del seme. In locale gli stessi test girano sugli emulatori completi (`npm run test:e2e`). Preparazione una tantum in docs/ambiente-e2e.md. FASI: la bozza del registro (09/11/2026, da far rivedere al gestore); l'ambiente e i primi test (UC-CASSA-001, UC-BANCO-001); gli altri casi d'uso, dopo la revisione.
 
-**Dove**: `requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/casiUso.test.js`
+**Dove**: `requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md, tests/e2e/, playwright.e2e.config.mjs, scripts/lib-ambiente-e2e.mjs, scripts/ambiente-e2e.mjs, .github/workflows/e2e.yml, docs/ambiente-e2e.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/casiUso.test.js`, `tests/unit/ambienteE2e.test.js`
 
 ### STAT
 

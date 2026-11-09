@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', 'dist-sistema', 'coverage', 'test-results', 'playwright-report', 'public/epos-2.27.0.js', 'ePOS_SDK_JavaScript_v*'] },
+  { ignores: ['dist', 'dist-sistema', 'dist-e2e', 'coverage', 'test-results', 'playwright-report', 'rapporto-e2e', 'public/epos-2.27.0.js', 'ePOS_SDK_JavaScript_v*'] },
   // App React (browser).
   {
     files: ['src/**/*.{js,jsx}'],
