@@ -1,5 +1,7 @@
 # Cosa è cambiato
 
+## 1.10.30-beta — in lavorazione
+
 ## 1.10.29-beta — 08/11/2026 (test)
 
 ### Metodo
