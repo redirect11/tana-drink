@@ -50,6 +50,7 @@ architettura:
       - tests/unit/giroInLocale.test.js
       - tests/unit/incassoOffline.test.js
       - tests/unit/chiusuraCassaSenzaRete.test.js
+      - tests/unit/autoreDellaRiga.test.js
 
   - id: ARC-003
     title: "Quello che questo terminale ha appena fatto si vede subito, in un posto solo"

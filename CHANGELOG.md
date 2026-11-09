@@ -8,6 +8,22 @@
   conto impagato; il conto battuto in sala che compare al banco su un altro
   dispositivo; quello che sala, bartender e cliente vedono del gestionale
   (REQ-DEV-018).
+- Test di sistema per le richieste dal banco: la firma di chi ha battuto
+  ogni riga, vista da un altro terminale (REQ-ORD-023); le colonne della
+  Marginalità misurate in un browser alla larghezza di un PC, che senza la
+  correzione di BUG-138 fallisce, e il filtro per categoria (REQ-MENU-032);
+  gli aiuti sotto i campi accesi da Aspetto e ritrovati su un altro
+  terminale (REQ-UI-032); la stampa automatica scelta per banco o sala, con
+  l'avviso quando le comande della sala non le stamperebbe nessuno
+  (REQ-STAMPA-021).
+- Gli interruttori delle impostazioni hanno un nome per i lettori di
+  schermo: prima venivano letti come «casella di controllo» e basta.
+
+### Impostazioni
+
+- Il riquadro «Il locale» (nome, contatti, intestazione dello scontrino,
+  dati del titolare) ha di nuovo la sua voce nel sottomenu: c'era, ma non
+  si apriva da nessuna parte (BUG-139).
 - Un test di sistema per la cassa chiusa: il conto si batte e arriva al
   server, e riscuotere resta spento (REQ-CASSA-017).
 

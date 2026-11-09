@@ -31,8 +31,12 @@ export default function ToggleRow({
         <div>{label}</div>
         {desc && <div className="desc">{desc}</div>}
       </div>
+      {/* Il nome dell'interruttore è l'etichetta accanto: senza, un lettore
+          di schermo dice solo «casella di controllo», e un test nel browser
+          non ha modo di dire QUALE interruttore toccare. */}
       <input
         type="checkbox"
+        aria-label={typeof label === 'string' ? label : undefined}
         className={`toggle${spento ? ' spento' : ''}`}
         checked={!!checked}
         disabled={disabled && !spento}

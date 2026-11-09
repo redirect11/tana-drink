@@ -162,6 +162,7 @@ describe('impostazioni a schede', () => {
     mostra()
     for (const voce of [
       'Aspetto',
+      'Il locale',
       'Menù clienti',
       'Gestione menù',
       'Catalogo prodotti',
@@ -187,6 +188,9 @@ describe('impostazioni a schede', () => {
     const user = userEvent.setup()
     mostra()
     const attese = [
+      // BUG-139: il riquadro dell'identità del locale non aveva un gruppo, e
+      // non si apriva da nessuna parte.
+      ['Il locale', [/^Il locale$/]],
       ['Menù clienti', [/Menù clienti/]],
       ['Gestione menù', [/Gestione menù/]],
       ['Catalogo prodotti', [/Catalogo/]],

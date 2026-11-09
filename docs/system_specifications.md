@@ -74,7 +74,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Livello | Cosa verifica | File di test |
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*) | 0 |
-| Sistema | la specifica (REQ-*), sull'app intera | 5 |
+| Sistema | la specifica (REQ-*), sull'app intera | 9 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
 | Unità | il progetto di dettaglio: un modulo da solo | 166 |
 
@@ -371,7 +371,7 @@ IL COLORE è della persona e viene dal nome (lib/colorePersona.js): lo stesso su
 
 NON ANCORA: la finestra del conto nella coda, che legge le righe sommate per drink, e il dettaglio della comanda.
 
-**Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`
+**Dove**: `src/components/OrderPosDetail.jsx (firmaRiga), src/lib/api.js (autoreDellaRiga), src/components/OrderBy.jsx, src/lib/colorePersona.js, src/pages/BartenderPage.jsx (legenda), src/App.jsx` · **Serve**: [UR-012](#ur-012--su-un-conto-si-vede-chi-ha-battuto-cosa) · **Lo dimostrano**: `tests/unit/autoreDellaRiga.test.js`, `tests/unit/colorePersona.test.js`, `tests/component/OrderPosDetail.test.jsx`, `tests/sistema/chiHaBattuto.spec.js`
 
 ### Cassa e POS
 
@@ -1071,7 +1071,7 @@ FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva bisogno): il vocabo
 
 Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie sul lato sx in modo da poterle filtrare». La tabella era divisa per categorie ma mostrava sempre tutto il listino: per lavorare sui prezzi di una famiglia sola si scorreva cercandola. Ora a sinistra c'è la barra delle categorie del Menù e del POS (CategoryRail), con «Tutte» in cima e il numero di voci per categoria; toccandone una la tabella mostra solo quella, e i filtri Da rivedere, In linea e Costo incompleto contano e filtrano dentro la categoria scelta. Una voce sta sotto la stessa categoria nella barra e nella tabella: la regola è una sola (marginiPerCategoria, per id o per nome sulle voci vecchie). Sul telefono la barra diventa la riga che scorre, come altrove.
 
-**Dove**: `src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarginList.test.jsx`
+**Dove**: `src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarginList.test.jsx`, `tests/sistema/marginalita.spec.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -2685,7 +2685,7 @@ Flavio, 30/10/2026 (audio): «bisogna dare allo staff, cioè ad un account staff
 
 Richiesta dell'08/11/2026: «in IMPOSTAZIONI - CASSA E GIORNATA - STAMPA AUTOMATICA differenziare se le operazioni provengono da cassa o da sala (esempio: stampa solo riscossione da banco e stampa in automatico la comanda se presa da sala)». Sotto ognuna delle due stampe automatiche del terminale, quando è accesa, si sceglie «Banco e sala», «Solo dal banco» o «Solo dalla sala» (`autoPrintComandaDa`, `autoPrintScontrinoDa`, di partenza «tutti», come prima). L'origine è il ruolo di chi ha fatto il gesto: banco = admin e bartender, sala = la sala e i clienti dal menù. Per una comanda conta chi ne ha battuto le righe (la firma, REQ-ORD-023), e per le comande di prima chi ha aperto il conto; per lo scontrino chi sta incassando. La regola vale per la comanda automatica della coda, per quella che il telefono della sala stampa da sé, per lo scontrino della schermata di pagamento e per quello dei tasti rapidi della coda. Con «la stampa il banco» e le comande solo dal banco lo si dice: quelle della sala non le stamperebbe nessuno.
 
-**Dove**: `src/lib/printer.js (stampaDa, ruoloDellaComanda, scontrinoAutomatico, comandeDaStampare), src/components/StampaAutomatica.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/pages/MenuPage.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/stampaDaBancoOSala.test.js`, `tests/component/StampaAutomatica.test.jsx`
+**Dove**: `src/lib/printer.js (stampaDa, ruoloDellaComanda, scontrinoAutomatico, comandeDaStampare), src/components/StampaAutomatica.jsx, src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/pages/MenuPage.jsx` · **Serve**: [UR-004](#ur-004--la-comanda-arriva-a-chi-deve-preparare) · **Lo dimostrano**: `tests/unit/stampaDaBancoOSala.test.js`, `tests/component/StampaAutomatica.test.jsx`, `tests/sistema/stampaDaBancoOSala.spec.js`
 
 ### Vista cliente
 
@@ -3325,7 +3325,7 @@ LE SCHERMATE SONO PASSATE UNA ALLA VOLTA. <Icona> accetta anche le emoji di prim
 
 Richiesta dell'08/11/2026: «rimuovere gli aiuti sopra tutti i campi compilabili o almeno permettere di abilitarli/disabilitarli ma sicuramente correggere la sintassi». In una scheda lunga la riga d'aiuto di un campo finisce sopra l'etichetta del successivo, e a chi la compila tutti i giorni ripete cose che sa. Gli aiuti dei campi passano da un componente solo (AiutoCampo) e di partenza sono NASCOSTI; si riaccendono da Impostazioni → Aspetto → «Aiuti sotto i campi» (Nascosti / Visibili, `aiuti_campi` sulle impostazioni del locale, per tutti i terminali). Gli avvisi che dipendono da quello che si è scritto (un errore, un dato mancante, un blocco) non sono aiuti e restano sempre. I TESTI sono riscritti in frasi piane e impersonali, nel registro del gestionale (DESIGN.md, guardrail 3): per esempio «Lasciala vuota e vale quella del locale (10%). Si compila solo dove fa eccezione — una bottiglia intera non si rivende come un drink al banco» diventa «Se vuota si applica l'IVA del locale (10%). Va indicata solo per le eccezioni, come le bottiglie vendute intere».
 
-**Dove**: `src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/AiutiCampi.test.jsx`, `tests/component/MenuManager.test.jsx`
+**Dove**: `src/components/AiutoCampo.jsx, src/lib/aiutiCampi.js, src/components/ThemeSettings.jsx (Aspetto), src/App.jsx, src/components/DrinkForm.jsx, src/components/InventoryManager.jsx, src/components/ListinoFornitore.jsx, src/components/AltreSpesePanel.jsx, src/components/StrutturaMenu.jsx, src/components/SupplierInvoicesPanel.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/AiutiCampi.test.jsx`, `tests/component/MenuManager.test.jsx`, `tests/sistema/aiutiCampi.spec.js`
 
 ### Come si lavora al progetto
 
@@ -4339,7 +4339,7 @@ La persistenza offline di Firestore tiene i dati in locale; le schermate partono
 
 Una scrittura Firestore offline non torna mai: un await prima di mostrare l'esito è l'app bloccata col locale pieno. Le scritture partono e basta, l'indicatore dice come stanno andando, e il risultato di un gesto si compone in memoria dal documento di partenza più la patch, invece di rileggerlo (BUG-045).
 
-**Dove**: `src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`
+**Dove**: `src/lib/sync.js (bgWrite), src/lib/api.js (ordineDopo)` · **Lo dimostrano**: `tests/unit/giroInLocale.test.js`, `tests/unit/incassoOffline.test.js`, `tests/unit/chiusuraCassaSenzaRete.test.js`, `tests/unit/autoreDellaRiga.test.js`
 
 #### ARC-003 — Quello che questo terminale ha appena fatto si vede subito, in un posto solo
 
