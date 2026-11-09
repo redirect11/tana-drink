@@ -136,12 +136,16 @@ describe('l’elenco delle macro', () => {
 
   it('cancellandone una, si dice cosa succede a prodotti e voci, e sparisce subito', async () => {
     const user = userEvent.setup()
-    const conferma = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // Con vitest 4 l'ambiente happy-dom non mette `confirm` sul globale:
+    // vi.spyOn non avrebbe niente da spiare, quindi lo si mette a mano.
+    const conferma = vi.fn(() => true)
+    vi.stubGlobal('confirm', conferma)
     monta()
     await user.click(screen.getAllByRole('button', { name: 'Elimina' })[0])
     expect(conferma.mock.calls[0][0]).toMatch(/Prodotti e voci restano/)
     expect(screen.queryByRole('button', { name: /Distillati/ })).toBeNull()
     expect(stato.scritture).toEqual([{ tipo: 'delete', col: 'macro_categories', id: 'm1' }])
+    vi.unstubAllGlobals()
   })
 
   it('spostandone una, l’ordine cambia subito', async () => {

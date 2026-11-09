@@ -5886,6 +5886,10 @@ requirements:
       `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10,
       conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1,
       marchio: true } per il Free, `null` per i piani a pagamento.
+      La firma è «Creato con Lime - SmartOrders»: il nome del prodotto
+      deciso il 09/11/2026 (prima «Drink», segnaposto), in
+      src/lib/prodotto.js. La Tana non la vede: la sua licenza non ha
+      limiti.
       LA REGOLA CHE CONTA: SENZA `limiti` (assente, null o di forma
       sbagliata) NESSUN LIMITE, e l'app lavora come prima. E' il caso della
       Tana e della Tana di test, che una licenza non ce l'hanno; i test lo
@@ -8093,6 +8097,11 @@ requirements:
       max-depth, dimensione delle funzioni): prima come avvisi per vedere
       dove siamo, poi come errori — i numeri esatti si decidono guardando
       il misurato, non a tavolino.
+      Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è
+      cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le
+      soglie che cadevano sono state ritarate una volta sola, un punto
+      sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami,
+      funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte.
     status: todo
     generate_issue: true
     labels: [metodo, qualita]

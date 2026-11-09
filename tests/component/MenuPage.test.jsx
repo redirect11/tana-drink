@@ -614,7 +614,7 @@ describe('la firma del prodotto', () => {
     mockSettings = { licenza: { piano: 'free', moduli: { menu_tavoli: true }, limiti: { marchio: true } } }
     mostra('/menu')
     await screen.findByText('Mojito')
-    expect(screen.getByText('Creato con Drink')).toBeInTheDocument()
+    expect(screen.getByText('Creato con Lime - SmartOrders')).toBeInTheDocument()
   })
 
   it('senza limiti nella licenza non c’è', async () => {

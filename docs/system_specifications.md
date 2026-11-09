@@ -3663,7 +3663,7 @@ DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi (piani.json nella re
 
 #### REQ-LIC-003 — I limiti del piano Free: si fanno rispettare solo se la licenza li scrive; senza, nessun limite
 
-La regia ha il piano Free dal 30/10/2026 (REQ-FLOTTA-015 di drink-regia, docs/richieste-tana-drink-free.md) e scrive in `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, marchio: true } per il Free, `null` per i piani a pagamento.
+La regia ha il piano Free dal 30/10/2026 (REQ-FLOTTA-015 di drink-regia, docs/richieste-tana-drink-free.md) e scrive in `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, marchio: true } per il Free, `null` per i piani a pagamento. La firma è «Creato con Lime - SmartOrders»: il nome del prodotto deciso il 09/11/2026 (prima «Drink», segnaposto), in src/lib/prodotto.js. La Tana non la vede: la sua licenza non ha limiti.
 
 LA REGOLA CHE CONTA:
 
@@ -4289,7 +4289,7 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 #### REQ-DEV-005 — Alzare il cricchetto della coverage, e standard di complessità nel lint
 
-Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino.
+Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte.
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
