@@ -24,7 +24,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 272 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 3 | fatto a metà |
+| 🟡 | 4 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 17 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 18 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -3506,6 +3506,16 @@ UNA V PER RICHIESTA: un requisito nato dopo l'08/11/2026 è collegato a un bisog
 FASI SUCCESSIVE: i test di sistema degli altri requisiti dei bisogni; i test di accettazione dagli scenari della serata; il cancello che chiede la V intera prima del merge in develop.
 
 **Dove**: `requirements/bisogni.yaml, requirements/architettura.yaml, scripts/lib-modello-v.mjs, scripts/lib-requisiti.mjs, scripts/lib-specifica.mjs, docs/modello-a-v.md, playwright.config.mjs, tests/sistema/, .github/workflows/test.yml` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/modelloAV.test.js`
+
+#### REQ-DEV-019 — La specifica del prodotto per casi d'uso, e ogni caso d'uso provato end-to-end come lo farebbe il cliente
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+L'utente, 09/11/2026: «non abbiamo una specifica vera del prodotto. Sulla base di quella, vanno testati i casi d'uso direttamente nel browser su un ambiente di test», «in pratica vanno testati come se fosse il cliente. Poi il cliente valida successivamente». I requisiti dicono cosa fa l'app un comportamento alla volta e i test di sistema ne provano uno alla volta: nessuno dei due dice quali sono le cose che banco, sala, cliente e gestore fanno davvero, dall'inizio alla fine.
+
+IL REGISTRO DEI CASI D'USO (requirements/casi-uso.yaml, UC-<ZONA>-NNN): per ogni obiettivo di chi usa l'app, chi lo fa, da dove parte, i passi osservabili nel browser, l'esito, le varianti (quando/allora: rete staccata, cassa chiusa, ruolo che non può…), come si prova (browser, browser con stampante o SumUp finti, a mano), i bisogni che serve, i requisiti fatti che mette in gioco e quelli previsti. Da lì si genera docs/specifica-prodotto.md (`node scripts/casi-uso.mjs --documento`), che si legge senza sapere di codice. Un test controlla i legami: requisiti e bisogni esistenti, i fatti fra i requisiti, i todo fra i previsti, i test citati esistenti. I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi soli gesti di chi lavora, più browser insieme quando il caso d'uso lo chiede, con le Functions sotto: in locale e su ogni pull request con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test, testiamo, eliminiamo»), con il Terraform dell'istanza della regia. `tana-drink-test` resta al cliente, per la validazione. FASI: la bozza del registro (09/11/2026, da far rivedere al gestore); i test e2e sugli emulatori completi; l'ambiente generato e la sua CI.
+
+**Dove**: `requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/casiUso.test.js`
 
 ### STAT
 
