@@ -9,18 +9,18 @@ fine. Ogni caso d'uso si prova con un test end-to-end nel browser, fatto
 come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
-**63 casi d'uso** in 15 gruppi, 0 con il test end-to-end.
+**63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
 39 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
 - **La cassa della serata**
-  - [UC-CASSA-001 — Si apre la cassa a inizio serata, anche dopo aver già battuto i primi conti](#uc-cassa-001)
+  - [UC-CASSA-001 — Si apre la cassa a inizio serata, anche dopo aver già battuto i primi conti](#uc-cassa-001) ✅
   - [UC-CASSA-002 — A metà serata si controlla quanto deve esserci in cassa](#uc-cassa-002)
   - [UC-CASSA-003 — Si chiude la cassa a fine serata e il contante torna al centesimo](#uc-cassa-003)
   - [UC-CASSA-004 — Il gestore rivede com'è andata una serata, una settimana o un mese](#uc-cassa-004)
 - **Il conto al banco**
-  - [UC-BANCO-001 — Si batte un conto al banco e si manda la comanda](#uc-banco-001)
+  - [UC-BANCO-001 — Si batte un conto al banco e si manda la comanda](#uc-banco-001) ✅
   - [UC-BANCO-002 — Interrotti a metà battuta, il conto si ritrova com'era](#uc-banco-002)
   - [UC-BANCO-003 — Si aggiunge un giro a un conto aperto, anche da un altro terminale](#uc-banco-003)
   - [UC-BANCO-004 — Dalla coda si trova subito il conto che serve](#uc-banco-004)
@@ -123,7 +123,7 @@ l'occasione; il gestore lo valida poi sul sito di test.
 
 - Bisogni: UR-005 (La cassa della serata torna al centesimo); UR-007 (Ognuno fa quello che il suo ruolo consente)
 - Requisiti: REQ-CASSA-002, REQ-CASSA-008, REQ-CASSA-017, REQ-ORD-007, REQ-ORD-016
-- Test e2e: da scrivere
+- Test e2e: `tests/e2e/apriCassa.spec.js`
 
 <a id="uc-cassa-002"></a>
 ### UC-CASSA-002 — A metà serata si controlla quanto deve esserci in cassa
@@ -226,7 +226,7 @@ l'occasione; il gestore lo valida poi sul sito di test.
 **Si parte da.** Cassa aperta. Entrato come bartender (Marzia), sulla Coda ordini, con la stampante finta impostata sul terminale e la stampa automatica delle comande spenta. Il pallino della stampante in coda è verde. Nel menù ci sono Negroni (8,00 €) e Spritz Aperol (6,00 €).
 
 1. Tocca «Nuovo ordine»: si apre la griglia dei prodotti divisa per categoria, con i preferiti e i recenti.
-2. Tocca Negroni due volte: il conto nasce al primo tocco senza cambiare schermata, e la riga dice 2 × Negroni con il subtotale 16,00 €.
+2. Tocca Negroni due volte: il conto nasce al primo tocco senza cambiare schermata. Ogni tocco dalla griglia è una riga a sé, da personalizzare e annotare separatamente: due righe Negroni, la tessera segna 2 e il tasto dice «Pagamento · 16,00 €».
 3. Scrive «spri» nella ricerca e tocca Spritz Aperol: la riga si aggiunge e la ricerca si svuota da sola.
 4. Tocca la riga Spritz Aperol, in «Nota per questa riga» scrive «senza ghiaccio» e tocca «Salva»: la nota compare sotto la riga.
 5. Legge il riepilogo: «Subtotale» 22,00 € e in fondo il totale; il tasto dice «Pagamento · 22,00 €». Accanto alle righe c'è il quadratino con l'iniziale di chi le ha battute (title «Aggiunto da …»).
@@ -253,7 +253,7 @@ l'occasione; il gestore lo valida poi sul sito di test.
 - Bisogni: UR-001 (Un conto si batte e si incassa anche con la rete staccata); UR-002 (Quello che si vede a schermo è il conto vero); UR-004 (La comanda arriva a chi deve preparare); UR-012 (Su un conto si vede chi ha battuto cosa)
 - Requisiti: REQ-POS-001, REQ-POS-005, REQ-POS-006, REQ-POS-007, REQ-POS-008, REQ-POS-011, REQ-POS-012, REQ-POS-013, REQ-POS-014, REQ-POS-016, REQ-POS-019, REQ-POS-020, REQ-ORD-001, REQ-ORD-009, REQ-ORD-016, REQ-ORD-017, REQ-ORD-020, REQ-ORD-022, REQ-ORD-023, REQ-STAMPA-001, REQ-STAMPA-007, REQ-STAMPA-013, REQ-OFFLINE-001
 - Previsti, non ancora fatti: REQ-POS-017, REQ-POS-018, REQ-TAVOLI-002
-- Test e2e: da scrivere
+- Test e2e: `tests/e2e/contoAlBanco.spec.js`
 
 <a id="uc-banco-002"></a>
 ### UC-BANCO-002 — Interrotti a metà battuta, il conto si ritrova com'era

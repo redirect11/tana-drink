@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:regole": "vitest run --config vitest.regole.config.mjs",
     "test:sistema": "npx --yes firebase-tools@15.26.0 emulators:exec --project demo-tana-drink --only auth,firestore --config firebase.collaudo.json \"npx playwright test\"",
+    "test:e2e": "node scripts/test-e2e.mjs",
     "test:coverage": "vitest run --coverage",
     "requirements:issues": "node scripts/generate-issues.mjs",
     "seed": "node scripts/seed.js",

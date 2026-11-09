@@ -15594,7 +15594,7 @@ requirements:
 
   - id: REQ-DEV-019
     title: "La specifica del prodotto per casi d'uso, e ogni caso d'uso provato end-to-end come lo farebbe il cliente"
-    area: "requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md"
+    area: "requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md, tests/e2e/, playwright.e2e.config.mjs, scripts/lib-ambiente-e2e.mjs, scripts/ambiente-e2e.mjs, .github/workflows/e2e.yml, docs/ambiente-e2e.md"
     description: >
       L'utente, 09/11/2026: «non abbiamo una specifica vera del prodotto.
       Sulla base di quella, vanno testati i casi d'uso direttamente nel
@@ -15620,11 +15620,27 @@ requirements:
       per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test,
       testiamo, eliminiamo»), con il Terraform dell'istanza della regia.
       `tana-drink-test` resta al cliente, per la validazione.
+      L'AMBIENTE GENERATO (l'utente, 09/11/2026: «facciamo la prima»): un
+      progetto di prova fisso, `drinkpos-prova-e2e`, generato una volta dal
+      Terraform dell'istanza, sempre vuoto. A ogni tag e a mano
+      (.github/workflows/e2e.yml) ci si pubblicano regole, Functions e app
+      su un canale d'anteprima che scade, i test seminano il database prima
+      di ognuno, e alla fine si cancellano sempre dati, utenze, canale e
+      Functions. Un progetto nuovo per giro no: senza Organizzazione Google
+      un service account non crea progetti, la fatturazione ne regge
+      cinque, e un progetto eliminato resta trenta giorni col nome bruciato.
+      Le guardie (scripts/lib-ambiente-e2e.mjs e il workflow) accettano solo
+      `drinkpos-prova-…` con la chiave di quel progetto; le utenze di prova
+      hanno la password del segreto E2E_PASSWORD, non quella del seme. In
+      locale gli stessi test girano sugli emulatori completi (`npm run
+      test:e2e`). Preparazione una tantum in docs/ambiente-e2e.md.
       FASI: la bozza del registro (09/11/2026, da far rivedere al gestore);
-      i test e2e sugli emulatori completi; l'ambiente generato e la sua CI.
+      l'ambiente e i primi test (UC-CASSA-001, UC-BANCO-001); gli altri
+      casi d'uso, dopo la revisione.
     status: partial
     generate_issue: false
     labels: [dev, metodo]
     priority: P1
     test_cases:
       - tests/unit/casiUso.test.js
+      - tests/unit/ambienteE2e.test.js

@@ -7,12 +7,12 @@
 // non una memoria condivisa.
 import { test, expect, entra, apriCassa, nuovoOrdine, batti, tornaAllaCoda, cardDeiConti } from './banco.mjs'
 
-test('il conto battuto in sala compare al banco, con chi l’ha aperto e il totale', async ({ page: banco, browser }) => {
+test('il conto battuto in sala compare al banco, con chi l’ha aperto e il totale', async ({ page: banco, altroTerminale }) => {
   await entra(banco, 'bartender@tana.local')
   await apriCassa(banco, 0)
   await expect(cardDeiConti(banco)).toHaveCount(0)
 
-  const sala = await (await browser.newContext()).newPage()
+  const sala = await altroTerminale()
   await entra(sala, 'sala@tana.local')
   await nuovoOrdine(sala)
   await batti(sala, 'Negroni')

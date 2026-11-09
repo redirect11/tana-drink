@@ -7,8 +7,10 @@
 //  impostazioni e un'utenza per ruolo), più la licenza della Tana, senza la
 //  quale l'app non parte (REQ-LIC-009).
 //
-//  Gira solo sull'emulatore: senza FIRESTORE_EMULATOR_HOST si ferma prima
-//  di toccare qualunque cosa.
+//  Gira sull'emulatore (test di sistema, e2e in locale) oppure, per i test
+//  end-to-end, sul progetto di prova indicato da E2E_PROGETTO
+//  (scripts/lib-ambiente-e2e.mjs, che rifiuta qualunque altro progetto).
+//  Senza nessuno dei due si ferma prima di toccare qualunque cosa.
 // =====================================================================
 import { readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -16,6 +18,11 @@ import { initializeApp, getApps } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { scriviSeManca, erroreLicenzaIniziale } from '../../scripts/lib-licenza-iniziale.js'
 import { MODULI_PREMIUM } from '../../src/lib/licenza.js'
+import { databaseE2e, svuotaE2e, seminaE2e } from '../../scripts/lib-ambiente-e2e.mjs'
+
+// Sull'ambiente e2e, non sull'emulatore: lo dice E2E_PROGETTO, e solo se
+// l'emulatore non c'è (in locale i test e2e girano sugli emulatori).
+const suE2e = () => !process.env.FIRESTORE_EMULATOR_HOST && !!process.env.E2E_PROGETTO
 
 export const PROGETTO = 'demo-tana-drink'
 
@@ -33,12 +40,18 @@ async function svuota(url) {
 }
 
 export function database() {
+  if (suE2e()) return databaseE2e(process.env.E2E_PROGETTO)
   host('FIRESTORE_EMULATOR_HOST')
   if (!getApps().length) initializeApp({ projectId: PROGETTO })
   return getFirestore()
 }
 
 export default async function semina() {
+  if (suE2e()) {
+    await svuotaE2e(process.env.E2E_PROGETTO)
+    await seminaE2e(process.env.E2E_PROGETTO)
+    return
+  }
   const firestore = host('FIRESTORE_EMULATOR_HOST')
   const auth = host('FIREBASE_AUTH_EMULATOR_HOST')
   await Promise.all([

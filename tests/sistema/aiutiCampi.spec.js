@@ -13,7 +13,7 @@ const apriSchedaNuovoProdotto = async (page) => {
   await expect(page.getByLabel(/IVA vendita/)).toBeVisible()
 }
 
-test('nascosti di partenza, accesi da Aspetto, ritrovati da un altro terminale', async ({ page, browser }) => {
+test('nascosti di partenza, accesi da Aspetto, ritrovati da un altro terminale', async ({ page, altroTerminale }) => {
   await entra(page, 'banco@tana.local')
   await apriSchedaNuovoProdotto(page)
   await expect(page.locator('.aiuto-campo')).toHaveCount(0)
@@ -23,7 +23,7 @@ test('nascosti di partenza, accesi da Aspetto, ritrovati da un altro terminale',
   await scelta.getByRole('button', { name: 'Visibili' }).click()
   await expect(scelta.getByRole('button', { name: 'Visibili' })).toHaveAttribute('aria-pressed', 'true')
 
-  const altro = await (await browser.newContext()).newPage()
+  const altro = await altroTerminale()
   await entra(altro, 'bartender@tana.local')
   await apriSchedaNuovoProdotto(altro)
   await expect(altro.locator('.aiuto-campo').first()).toBeVisible()
