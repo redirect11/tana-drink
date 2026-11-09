@@ -60,6 +60,10 @@ describe('il workflow dell\'ambiente generato', () => {
     expect(wf.slice(wf.indexOf('- name: Via la chiave'))).toMatch(/if: always\(\)[\s\S]*rm -f "\$RUNNER_TEMP\/sa.json"/)
   })
 
+  it("la stampante è finta: sul progetto di prova non c'è un banco da raggiungere", () => {
+    expect(wf).toMatch(/VITE_STAMPANTE_FINTA: 'true'/)
+  })
+
   it('ogni comando va sul progetto di prova, mai su tana-drink-test, che resta al cliente', () => {
     const progetti = [...wf.matchAll(/--project\s+(\S+)/g)].map((m) => m[1])
     expect(progetti.length).toBeGreaterThan(4)

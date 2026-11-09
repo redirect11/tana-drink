@@ -63,10 +63,17 @@ crea progetti.
 
    ```sh
    npx firebase-tools projects:create drinkpos-prova-e2e
-   # collegare il SECONDO account di fatturazione, quello delle prove
+   # collegarlo all'account di fatturazione 2, quello delle prove
    node scripts/ruoli-provisioning.mjs --sa provisioning@drink-regia.iam.gserviceaccount.com \
      --progetto drinkpos-prova-e2e          # dal repo drink-regia
    ```
+
+   L'account 2 ha la quota di partenza di Google, 5 progetti: il
+   09/11/2026 era pieno e il collegamento è stato rifiutato («Cloud billing
+   quota exceeded»). Si è liberato un posto spostando `forme-demo-065381`
+   sull'account 1, quello con la quota portata a 20. Il progetto e2e deve
+   stare sull'account 2: il Terraform della regia di test lo riporta lì a
+   ogni apply.
 
 2. **Generarlo col Terraform**: in drink-regia, Actions → «Provisiona
    istanza» sull'environment della regia di test, con questi valori:
@@ -84,7 +91,22 @@ crea progetti.
    Pubblica anche un'app e una licenza: il primo giro e2e le spazza via,
    ed è giusto così.
 
-3. **La chiave del service account di deploy**:
+3. **I ruoli del service account di deploy, e la chiave.** Il Terraform
+   gli dà i sei ruoli che bastano a pubblicare un'istanza. Il giro e2e
+   chiede in più solo di leggere i segreti delle Functions (il primo giro
+   si è fermato su `secretmanager.secrets.get`): `secretmanager.viewer`,
+   non `admin`, perché l'accesso del runtime al segreto lo ha già dato il
+   provisioning. **Mai proprietario**: l'audit di sicurezza del 09/11/2026
+   (drink-regia, punto 1) boccia proprio «un elenco più stretto si rompe a
+   ogni risorsa nuova». Un proprietario, anche su un progetto vuoto, accende
+   servizi a spese dell'account 2, crea chiavi e cambia l'IAM. Se un giro
+   chiede un permesso nuovo, si dà quel ruolo e si scrive qui.
+
+   Dopo il provisioning anche `provisioning@drink-regia` perde il ruolo di
+   proprietario su questo progetto: il giro e2e non lo usa, e gli restano
+   i sette ruoli che il Terraform gli dichiara.
+
+   Poi la chiave:
 
    ```sh
    gcloud iam service-accounts keys create e2e-sa.json \
@@ -97,9 +119,17 @@ crea progetti.
      file poi si cancella);
    - segreto `E2E_PASSWORD` = una password di almeno 12 caratteri, solo
      per le utenze di prova.
+   - **rami e tag di deploy** limitati: tag `v*` (solo l'admin li crea,
+     ruleset) e ramo `main`. Senza limiti la chiave la legge qualunque
+     workflow su qualunque ramo che dichiari `environment: e2e`, compresi
+     i rami che `claude.yml` committa dai commenti (audit, punto 23).
 
 5. **Il primo giro**: Actions → «End-to-end (ambiente generato)» → Run
-   workflow.
+   workflow. GitHub lancia a mano solo i workflow che stanno già sul ramo
+   principale: finché `e2e.yml` non è su `main` il giro parte da un tag, o
+   da un ramo usa e getta che aggiunge `branches:` al trigger `push`
+   (così è stato fatto il primo, su `prova/e2e`: aperto nell'environment
+   per quel giro, poi tolto insieme al ramo).
 
 ## In locale
 
