@@ -8093,6 +8093,11 @@ requirements:
       max-depth, dimensione delle funzioni): prima come avvisi per vedere
       dove siamo, poi come errori — i numeri esatti si decidono guardando
       il misurato, non a tavolino.
+      Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è
+      cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le
+      soglie che cadevano sono state ritarate una volta sola, un punto
+      sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami,
+      funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte.
     status: todo
     generate_issue: true
     labels: [metodo, qualita]

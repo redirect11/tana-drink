@@ -63,10 +63,18 @@ export default defineConfig({
       // passare un merge. Le pagine partono basse perché così stanno
       // (19,8% stmts): la soglia non certifica qualità, impedisce di
       // peggiorare — alzarla è REQ-DEV-005.
+      //
+      // IL METRO CAMBIATO (09/11/2026). Con vitest 4 la coverage v8 conta
+      // righe e rami sull'AST, e sullo stesso codice con gli stessi test i
+      // numeri scendono: functions/lib da 94,8 a 85,9% di istruzioni, i rami
+      // di src/components da 82,2 a 69,8%. Le quattro soglie che cadevano
+      // sono state ritarate una volta sola, un punto sotto la misura nuova
+      // (decisione dell'utente); non è una copertura peggiorata, e da qui il
+      // cricchetto riparte.
       thresholds: {
-        'functions/lib/**/*.js': { statements: 92, branches: 76, functions: 88, lines: 92 },
+        'functions/lib/**/*.js': { statements: 84, branches: 74, functions: 88, lines: 90 },
         'src/lib/**': { statements: 64, branches: 74, functions: 62, lines: 64 },
-        'src/components/**': { statements: 40, branches: 72, functions: 43, lines: 40 },
+        'src/components/**': { statements: 40, branches: 68, functions: 43, lines: 40 },
         'src/pages/**': { statements: 17, branches: 52, functions: 16, lines: 17 },
         // src/ alla radice: App.jsx e main.jsx (misurato 72,8 / 65,9 / 31,6).
         'src/*.{js,jsx}': { statements: 70, branches: 63, functions: 28, lines: 70 },
