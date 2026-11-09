@@ -96,6 +96,11 @@ jobs:
           CLIENTE: tana
           VITE_APP_ENV: test
           VITE_REGIA_PROGETTO: drink-regia-test
+          # La stampante del banco non c'è: sugli emulatori la finta si
+          # accende da sola, su un progetto vero va chiesta. Senza, «Invia
+          # comanda» finisce in «Imposta l'IP della stampante» (primo giro,
+          # 09/11/2026) e il caso d'uso si ferma su una cosa che non prova.
+          VITE_STAMPANTE_FINTA: 'true'
         run: npm run build
 
       # Regole e indici, regole di Storage e Functions: lo stesso deploy del
