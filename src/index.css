@@ -12070,10 +12070,27 @@ body.pagina-piena .inv-scheda {
 /* LA FILA. Scorre di lato; le carte stanno un poco abbassate e la scelta
    si alza. Stanno tutte DENTRO la fila, anche abbassate: una carta che ne
    usciva di sotto faceva scorrere la fila in verticale quando la si
-   centrava. Con poche carte la fila sta in mezzo. */
-.k-mazzo {
-  margin: 6px -16px 18px;
+   centrava. Con poche carte la fila sta in mezzo.
+   IL MAZZO RESTA AGGANCIATO sotto la barra mentre si legge (Flavio,
+   08/11/2026). Come le schede delle categorie (BUG-120): fermo nella
+   pagina non ha un fondo suo, che staccherebbe sul fondo del tema; il fondo
+   arriva quando si aggancia e la carta aperta gli passa sotto. Sta sopra
+   la carta aperta (z-index), che sotto non deve spuntare. */
+.k-mazzo-segnaposto {
   scroll-margin-top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
+}
+.k-mazzo {
+  position: sticky;
+  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
+  z-index: 3;
+  margin: 6px -16px 18px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.k-mazzo.incollata {
+  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
 }
 .k-ventaglio {
   overflow-x: auto;
@@ -12300,12 +12317,9 @@ body.pagina-piena .inv-scheda {
     0 26px 50px -26px rgba(0, 0, 0, 0.75);
   transform-origin: 50% 0;
 }
-/* La testa resta agganciata sotto la barra mentre si legge, col tasto per
-   tornare al mazzo. */
+/* La testa della carta aperta scorre con la carta: agganciato resta il
+   mazzo, sopra (e due fasce agganciate si mangiavano il telefono). */
 .k-aperta-testa {
-  position: sticky;
-  top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
-  z-index: 2;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -12337,18 +12351,6 @@ body.pagina-piena .inv-scheda {
   /* Il carattere va scritto: titoli e voci hanno quello del tema. */
   font: 400 clamp(1.7rem, 7.5vw, 2.2rem) / 1.08 var(--k-scrittura);
   text-wrap: balance;
-}
-.k-torna {
-  flex: none;
-  align-self: center;
-  min-height: 38px;
-  padding: 6px 14px;
-  font: italic 400 0.98rem var(--k-scrittura);
-  color: var(--k-inchiostro);
-  background: transparent;
-  border: 1px solid var(--k-filo);
-  border-radius: 999px;
-  cursor: pointer;
 }
 .k-aperta > .k-indice-basso {
   position: absolute;
