@@ -33,6 +33,15 @@ un difetto.
    non si blocchi.
 5. **Comanda doppia.** Con la stampa automatica accesa, «Invia comanda»
    mentre il conto sta nascendo e poi l'uscita dal conto fanno due copie?
+6. **Le righe del conto sommate o no, a seconda della rete.** Nel
+   documento del conto (`items`) due Negroni battuti di fila diventano
+   `2×Negroni` se il secondo arriva come aggiunta a un conto già nato, ma
+   restano due righe `1×Negroni` se il conto nasce dopo, con tutte le righe
+   insieme (`createOrder` le scrive una per tocco, `aggregateItems` le somma
+   solo alle aggiunte). Visto il 09/11/2026: sugli emulatori il primo caso,
+   sul progetto e2e vero il secondo. Totale, conteggio e scontrino accorpato
+   (BUG-083) tornano uguali; da verificare chi legge `items` riga per riga
+   (statistiche, esportazioni, magazzino).
 
 ## Comportamenti da confermare
 

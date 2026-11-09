@@ -51,16 +51,23 @@ test('UC-BANCO-001: il conto nasce al primo tocco, porta la nota e arriva in cod
   await expect(card).toContainText('22,00 €')
   await expect(card).toContainText('3 prodotti')
 
-  // Nel documento del conto le righe uguali senza nota si sommano (le
-  // righe una per tocco restano nelle comande e a schermo): due Negroni
-  // diventano 2×, lo Spritz con la nota resta a sé.
+  // Nel documento del conto ci sono due Negroni e uno Spritz con la sua
+  // nota. Si contano le quantità per prodotto, non le righe: se le righe
+  // uguali siano già sommate dipende da quando il conto è nato rispetto
+  // all'ultimo tocco. Sugli emulatori nasce subito e il resto arriva come
+  // aggiunta (2×Negroni); sul progetto vero la numerazione passa dalla rete
+  // e il conto nasce con tutte e tre le righe (1×Negroni, 1×Negroni). Per il
+  // cliente è lo stesso conto (docs/casi-uso-domande.md, punto 6).
   const db = database()
   await expect.poll(async () => {
     const conti = (await db.collection('orders').get()).docs.map((d) => d.data())
     return conti.map((o) => ({
       nome: o.customer_name,
       numero: typeof o.daily_number,
-      righe: (o.items || []).map((r) => `${r.qty}×${r.name}${r.note ? ` (${r.note})` : ''}`).sort(),
+      righe: Object.entries((o.items || []).reduce((tot, r) => {
+        const chi = `${r.name}${r.note ? ` (${r.note})` : ''}`
+        return { ...tot, [chi]: (tot[chi] || 0) + r.qty }
+      }, {})).map(([chi, qty]) => `${qty}×${chi}`).sort(),
     }))
   }, { timeout: 20_000 }).toEqual([{ nome: 'Giulia', numero: 'number', righe: ['1×Spritz Aperol (senza ghiaccio)', '2×Negroni'] }])
 })
