@@ -10,6 +10,11 @@
   passa da 12.14 a 12.19. Restano gli avvisi che chiedono un salto di
   versione maggiore: gli strumenti di sviluppo vanno con l'aggiornamento
   coordinato di vite e vitest, a parte.
+- Strumenti di sviluppo: vite 5 → 7, vitest 2 → 4, con la coverage dello
+  stesso giro. Spariscono i tre avvisi critici (da 26 a 16, nessuno
+  critico). Con vitest 4 la coverage conta righe e rami in modo nuovo e
+  sullo stesso codice dà numeri più bassi: le quattro soglie che cadevano
+  sono state ritarate una volta, un punto sotto la misura nuova.
 
 ### Menù dei clienti
 
