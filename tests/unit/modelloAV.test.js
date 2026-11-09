@@ -46,6 +46,7 @@ describe('il livello di un test', () => {
     expect(livelloDelTest('tests/regole/x.test.js', '')).toBe('integrazione')
     expect(livelloDelTest('tests/sistema/serata.spec.js', '')).toBe('sistema')
     expect(livelloDelTest('tests/accettazione/serata.test.js', '')).toBe('accettazione')
+    expect(livelloDelTest('tests/e2e/apriCassa.spec.js', '')).toBe('accettazione')
     expect(livelloDelTest('tests\\unit\\x.test.js', '')).toBe('unita')
   })
 

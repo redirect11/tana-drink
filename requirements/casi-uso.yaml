@@ -97,7 +97,8 @@ casi_uso:
       - REQ-ORD-007
       - REQ-ORD-016
     previsti: []
-    test_cases: []
+    test_cases:
+      - tests/e2e/apriCassa.spec.js
 
   - id: UC-CASSA-002
     title: "A metà serata si controlla quanto deve esserci in cassa"
@@ -294,7 +295,9 @@ casi_uso:
       - "Tocca «Nuovo ordine»: si apre la griglia dei prodotti divisa per
         categoria, con i preferiti e i recenti."
       - "Tocca Negroni due volte: il conto nasce al primo tocco senza cambiare
-        schermata, e la riga dice 2 × Negroni con il subtotale 16,00 €."
+        schermata. Ogni tocco dalla griglia è una riga a sé, da personalizzare
+        e annotare separatamente: due righe Negroni, la tessera segna 2 e il
+        tasto dice «Pagamento · 16,00 €»."
       - "Scrive «spri» nella ricerca e tocca Spritz Aperol: la riga si
         aggiunge e la ricerca si svuota da sola."
       - "Tocca la riga Spritz Aperol, in «Nota per questa riga» scrive «senza
@@ -386,7 +389,8 @@ casi_uso:
       - REQ-STAMPA-013
       - REQ-OFFLINE-001
     previsti: [REQ-POS-017, REQ-POS-018, REQ-TAVOLI-002]
-    test_cases: []
+    test_cases:
+      - tests/e2e/contoAlBanco.spec.js
 
   - id: UC-BANCO-002
     title: "Interrotti a metà battuta, il conto si ritrova com'era"

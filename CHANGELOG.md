@@ -22,6 +22,13 @@
   (generata da requirements/casi-uso.yaml). È una bozza da rivedere col
   gestore; da lì nasceranno i test end-to-end, uno per caso d'uso
   (REQ-DEV-019).
+- I test end-to-end dei casi d'uso: in locale sugli emulatori completi,
+  Functions comprese (`npm run test:e2e`), e a ogni tag su un ambiente
+  generato per il giro — un progetto Firebase di prova su cui si
+  pubblicano regole, Functions e app, si fanno girare i test e poi si
+  cancella tutto. Il sito di test resta al gestore, per validare. I primi
+  due: l'apertura della cassa dopo aver già battuto un conto e il conto al
+  banco con la comanda (REQ-DEV-019).
 - Gli interruttori delle impostazioni hanno un nome per i lettori di
   schermo: prima venivano letti come «casella di controllo» e basta.
 

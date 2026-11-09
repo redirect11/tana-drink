@@ -177,10 +177,13 @@ node scripts/requisiti.mjs --documento  # la specifica, coi capitoli dei bisogni
    - **i test e2e** in `tests/e2e/`, uno per caso d'uso, sugli emulatori
      completi (Auth, Firestore, Storage, **Functions**, Hosting), in
      locale e su ogni pull request;
-   - **l'ambiente generato**: per un rilascio si crea un ambiente di
-     prova col Terraform dell'istanza (drink-regia, `infra/istanza`), ci
-     si pubblica l'app, si fanno girare i test e2e e lo si elimina.
-     `tana-drink-test` resta al cliente, per la validazione.
+   - **l'ambiente generato**: un progetto di prova fisso,
+     `drinkpos-prova-e2e`, generato una volta dal Terraform dell'istanza
+     (drink-regia, `infra/istanza`) e sempre vuoto; a ogni tag ci si
+     pubblicano regole, Functions e app su un canale d'anteprima, si fanno
+     girare i test e2e e si cancella tutto. `tana-drink-test` resta al
+     cliente, per la validazione. Come funziona e come si prepara:
+     [ambiente-e2e.md](ambiente-e2e.md).
    I test di accettazione dei criteri `accettazione:` dei bisogni
    diventano questi: il criterio di un bisogno si soddisfa coi casi d'uso
    che lo servono.
