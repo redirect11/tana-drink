@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-39 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+40 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2099,6 +2099,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-DEV-011 — Ripetizioni che si tolgono in mezz'ora, tutte insieme
 - REQ-DEV-012 — docs/system_specifications.md e' la specifica di sistema, e si genera
 - REQ-UI-021 — Tre nomi per lo stesso passo del servizio
+- REQ-ORD-024 — Il «+» e il «−» di una riga li usa solo chi l'ha caricata, se l'iniziale è accesa
 - REQ-UI-022 — Le categorie senza macro si vedono a colpo d'occhio, in magazzino e nel menù
 - REQ-DEV-013 — Una voce scartata si chiude dicendo che non la faremo, e resta scritta
 - REQ-UI-023 — La card della comanda si legge da lontano: numero e nome grandi, meno righe
