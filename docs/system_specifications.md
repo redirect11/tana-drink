@@ -3663,7 +3663,7 @@ DA CONFERMARE con l'utente: il taglio dei moduli e i prezzi (piani.json nella re
 
 #### REQ-LIC-003 — I limiti del piano Free: si fanno rispettare solo se la licenza li scrive; senza, nessun limite
 
-La regia ha il piano Free dal 30/10/2026 (REQ-FLOTTA-015 di drink-regia, docs/richieste-tana-drink-free.md) e scrive in `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, marchio: true } per il Free, `null` per i piani a pagamento.
+La regia ha il piano Free dal 30/10/2026 (REQ-FLOTTA-015 di drink-regia, docs/richieste-tana-drink-free.md) e scrive in `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10, conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1, marchio: true } per il Free, `null` per i piani a pagamento. La firma è «Creato con Lime - SmartOrders»: il nome del prodotto deciso il 09/11/2026 (prima «Drink», segnaposto), in src/lib/prodotto.js. La Tana non la vede: la sua licenza non ha limiti.
 
 LA REGOLA CHE CONTA:
 

@@ -5886,6 +5886,10 @@ requirements:
       `settings/bar.licenza` la voce `limiti` = { prodotti_max: 10,
       conti_aperti_max: 5, sconti: false, storico_giorni: 7, utenti_max: 1,
       marchio: true } per il Free, `null` per i piani a pagamento.
+      La firma è «Creato con Lime - SmartOrders»: il nome del prodotto
+      deciso il 09/11/2026 (prima «Drink», segnaposto), in
+      src/lib/prodotto.js. La Tana non la vede: la sua licenza non ha
+      limiti.
       LA REGOLA CHE CONTA: SENZA `limiti` (assente, null o di forma
       sbagliata) NESSUN LIMITE, e l'app lavora come prima. E' il caso della
       Tana e della Tana di test, che una licenza non ce l'hanno; i test lo

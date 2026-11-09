@@ -154,8 +154,8 @@ describe('coi limiti del piano Free', () => {
   })
 
   it('la firma del prodotto in fondo, col nome scritto in un posto solo', () => {
-    expect(NOME_PRODOTTO).toBe('Drink')
-    expect(rigaMarchio(FREE)).toBe('Creato con Drink')
+    expect(NOME_PRODOTTO).toBe('Lime - SmartOrders')
+    expect(rigaMarchio(FREE)).toBe('Creato con Lime - SmartOrders')
     expect(rigaMarchio({ licenza: { limiti: { marchio: false } } })).toBeNull()
   })
 

@@ -69,13 +69,13 @@ describe('la firma del prodotto', () => {
   it('nel piano Free esce in fondo allo scontrino', async () => {
     impostazioni({ licenza: { piano: 'free', limiti: { marchio: true } } })
     const testo = await stampa()
-    expect(ultimaRiga(testo)).toBe('Creato con Drink')
+    expect(ultimaRiga(testo)).toBe('Creato con Lime - SmartOrders')
   })
 
   it('e in fondo alla ricevuta d’acconto', async () => {
     impostazioni({ licenza: { piano: 'free', limiti: { marchio: true } } })
     const testo = await stampa('acconto')
-    expect(ultimaRiga(testo)).toBe('Creato con Drink')
+    expect(ultimaRiga(testo)).toBe('Creato con Lime - SmartOrders')
   })
 
   it('senza limiti nella licenza non c’è: lo scontrino della Tana è quello di sempre', async () => {
