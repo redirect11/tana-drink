@@ -12075,7 +12075,10 @@ body.pagina-piena .inv-scheda {
    08/11/2026). Come le schede delle categorie (BUG-120): fermo nella
    pagina non ha un fondo suo, che staccherebbe sul fondo del tema; il fondo
    arriva quando si aggancia e la carta aperta gli passa sotto. Sta sopra
-   la carta aperta (z-index), che sotto non deve spuntare. */
+   la carta aperta (z-index), che sotto non deve spuntare. Il fondo è
+   pieno, senza la sfocatura delle schede: sopra una pagina che scorre
+   mentre le carte si animano, sul telefono la sfocatura costa (come per
+   gli Special a scorrimento di «Notte»). */
 .k-mazzo-segnaposto {
   scroll-margin-top: var(--barra-intera, calc(var(--safe-top) + var(--barra-alta)));
 }
@@ -12088,8 +12091,7 @@ body.pagina-piena .inv-scheda {
   transition: background 0.15s ease;
 }
 .k-mazzo.incollata {
-  background: color-mix(in srgb, var(--bg-2) 90%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg-2) 97%, transparent);
   border-bottom: 1px solid var(--line);
 }
 .k-ventaglio {

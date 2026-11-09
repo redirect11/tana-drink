@@ -291,8 +291,8 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   più 720 px: una carta sul dorso parte dalla carta toccata nel
   ventaglio, alla sua misura, scende crescendo e gira fino a essere di
   taglio, poi la faccia finisce il giro e le voci entrano in fila. Il
-  mazzo resta agganciato sotto la barra mentre si legge, col fondo delle
-  schede agganciate solo da agganciato; nessun tasto per tornarci (Flavio,
+  mazzo resta agganciato sotto la barra mentre si legge, con un fondo
+  pieno (senza sfocatura) solo da agganciato; nessun tasto per tornarci (Flavio,
   08/11/2026). Gli Special non sono nel mazzo: sono il carosello
   di sempre, in cima; il Jolly è solo sulla pagina Special. Le carte hanno
   colori LORO, non del tema: avorio `#fbf8f1`, inchiostro, rosso `#c3122f`
