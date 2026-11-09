@@ -304,4 +304,5 @@ scarta l'updater e la cancellazione non avviene. Si salva in modo sincrono.
 | il prodotto per altri locali: architettura e funzionamento | [docs/architettura-prodotto.md](docs/architettura-prodotto.md) |
 | aprire una richiesta, scrivere un requisito, correggere un difetto | [docs/modello-a-v.md](docs/modello-a-v.md) |
 | capire cosa fa (o non fa) l'app | [docs/system_specifications.md](docs/system_specifications.md), la specifica — o i registri da cui nasce, [requirements/requirements.yaml](requirements/requirements.yaml) + [requirements/bugs.yaml](requirements/bugs.yaml) |
+| capire cosa fa CHI USA l'app, un obiettivo intero alla volta | [docs/specifica-prodotto.md](docs/specifica-prodotto.md), i casi d'uso — generata da [requirements/casi-uso.yaml](requirements/casi-uso.yaml); domande aperte in [docs/casi-uso-domande.md](docs/casi-uso-domande.md) |
 | ragionare sul futuro del prodotto (federazione, white-label) | [docs/piano-sbrandizzazione.md](docs/piano-sbrandizzazione.md) |
