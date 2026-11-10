@@ -6,7 +6,8 @@
 // quella della Tana (vitest.config.mjs), come in produzione.
 
 import { describe, it, expect } from 'vitest'
-import { venueDi, venuePredefinito, intestazioneScontrino, socialDaTesto, socialInTesto, VENUE_VUOTO, CHIAVI_VENUE, CLIENTE, pressoIlLocale, righeFiscali } from '../../src/lib/venue.js'
+import { NOME_PRODOTTO } from '../../src/lib/prodotto.js'
+import { VENUE_NEUTRO, venueDi, venuePredefinito, intestazioneScontrino, socialDaTesto, socialInTesto, VENUE_VUOTO, CHIAVI_VENUE, CLIENTE, pressoIlLocale, righeFiscali } from '../../src/lib/venue.js'
 
 describe('venueDi', () => {
   it('senza impostazioni vale la build: la Tana', () => {
@@ -31,6 +32,15 @@ describe('venueDi', () => {
     expect(v.venue_name).toBe('La Tana del Coniglio')
     expect(v.venue_email).toBe('info@latanadelconiglio.it')
     expect(v.venue_socials.length).toBeGreaterThan(0)
+  })
+
+  // Un locale senza nome, né nella build né nelle impostazioni, si chiama
+  // come il prodotto: è un segnaposto, e non il nome di un altro locale.
+  it('la riserva neutra porta il nome del prodotto', () => {
+    expect(VENUE_NEUTRO.venue_name).toBe(NOME_PRODOTTO)
+    expect(VENUE_NEUTRO.venue_name).toBe('Lime - SmartOrders')
+    expect(VENUE_NEUTRO.venue_short_name).toBe('Lime')
+    expect(JSON.stringify(VENUE_NEUTRO)).not.toMatch(/Tana/)
   })
 
   it('DEFAULT_SETTINGS parte con tutte le chiavi vuote', () => {

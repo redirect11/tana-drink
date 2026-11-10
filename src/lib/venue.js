@@ -10,9 +10,14 @@
 //      scrive da Impostazioni cambia nome e indirizzo senza rebuild.
 // Sotto a tutti e due una riserva NEUTRA, senza nessuna parola della Tana:
 // è quello che si vede se qualcuno compila senza cartella e senza
-// impostazioni, e non deve essere un altro locale.
+// impostazioni, e non deve essere un altro locale. Il NOME di riserva è
+// quello del prodotto (l'utente, 09/11/2026: in tana-drink il nome del
+// prodotto si vede solo come segnaposto, se il locale un nome non ce l'ha;
+// prima era «Il locale»). La Tana ha il suo nome nella build e non lo vede.
 //
 // Logica pura: niente Firebase, niente React.
+
+import { NOME_PRODOTTO, NOME_CORTO_PRODOTTO } from './prodotto.js'
 
 const BUILD = typeof __CLIENTE__ !== 'undefined' ? __CLIENTE__ : { slug: 'tana', venue: {} }
 
@@ -21,8 +26,8 @@ export const CLIENTE = BUILD.slug
 
 
 export const VENUE_NEUTRO = Object.freeze({
-  venue_name: 'Il locale',
-  venue_short_name: 'Locale',
+  venue_name: NOME_PRODOTTO,
+  venue_short_name: NOME_CORTO_PRODOTTO,
   // «Al locale», con la preposizione giusta: «alla Tana del Coniglio», «al
   // Bar Mario». L'italiano non si ricava dal nome — «da La Tana del
   // Coniglio» non lo direbbe nessuno — quindi lo scrive il locale; vuoto,
