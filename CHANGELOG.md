@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.32-beta — in lavorazione
+## 1.10.33-beta — in lavorazione
+
+## 1.10.32-beta — 10/11/2026 (test)
 
 ### Gestionale
 
