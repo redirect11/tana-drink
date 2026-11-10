@@ -316,13 +316,15 @@ bisogni:
       campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin
       alla ricetta del Negroni la riga parte in ml, come le altre; in
       Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il
-      ricarico diventa ×5 (vocali del 09/11/2026).
+      ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold
+      Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026).
     requisiti:
       - REQ-MENU-002
       - REQ-MENU-032
       - REQ-UI-032
       - REQ-MAG-054
       - REQ-MENU-033
+      - REQ-MENU-034
     test_cases: []
 
   - id: UR-014

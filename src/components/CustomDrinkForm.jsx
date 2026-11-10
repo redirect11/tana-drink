@@ -3,6 +3,7 @@ import { fetchInventoryItems } from '../lib/api.js'
 import { toBaseQty, baseUnit, entryUnits } from '../lib/inventory.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import CostoRiga from './CostoRiga.jsx'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 
@@ -257,6 +258,7 @@ export default function CustomDrinkForm({
                       <option key={u} value={u}>{u}</option>
                     ))}
                   </select>
+                  <CostoRiga row={r} item={itemsById[r.inventory_item_id]} name={r.name} />
                   <button type="button" className="btn ghost small" onClick={() => removeRow(idx)}>✕</button>
                 </div>
               )

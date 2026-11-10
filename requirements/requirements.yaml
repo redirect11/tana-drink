@@ -6374,6 +6374,26 @@ requirements:
     test_cases:
       - tests/unit/drinkCost.test.js
 
+  - id: REQ-MENU-034
+    title: "Ogni riga della ricetta mostra quanto costa"
+    area: "src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx"
+    description: >
+      Flavio, 10/11/2026, con la foto del Gold Rush modificato al POS: il
+      riquadro dava il prezzo reale della ricetta (1,72 €) ma non quanto
+      pesa ciascun ingrediente («jim beam 60 ml 1,14 €»). Nel prodotto
+      modificato al POS e nella scheda del drink a menù ogni riga di
+      ricetta mostra, dopo quantità e unità, il suo costo al dettaglio:
+      quantità × costo dell'articolo nell'unità scritta, IVA inclusa, con
+      lo stesso calcolo del prezzo reale, così le righe sommate fanno il
+      totale. Senza quantità la riga non mostra niente; con un articolo
+      senza costo in magazzino mostra un trattino, e il riquadro del prezzo
+      dice già quale manca.
+    status: implemented
+    generate_issue: false
+    labels: [menu, magazzino]
+    test_cases:
+      - tests/component/costoRigheRicetta.test.jsx
+
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
     area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"

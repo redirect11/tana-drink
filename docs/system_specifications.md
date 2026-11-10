@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 274 | fatto e coperto dai test |
+| ✅ | 275 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**331 voci** in tutto. **293** descrivono il sistema com'è oggi e
+**332 voci** in tutto. **294** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 28 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 29 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 162 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 163 |
 | Unità | il progetto di dettaglio: un modulo da solo | 170 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**82** requisiti su 323 sono collegati a un bisogno;
+**83** requisiti su 324 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -189,9 +189,9 @@ In una serata piena allo stesso conto lavorano in due o tre: chi l'ha aperto al 
 
 Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li conosce. Devono mostrare i numeri incolonnati, permettere di guardare una parte sola (una categoria) e non ingombrare le schede con spiegazioni che chi le compila sa già (richieste dell'08/11/2026 sulla marginalità del listino e sugli aiuti dei campi).
 
-**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026).
+**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026).
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -1092,6 +1092,12 @@ Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie 
 Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei miei prodotti ma adesso si ragiona a quanto deve essere il food cost, il drink cost», «vuoi fare il P3 allora il 33%, vuoi fare il P5 allora il 20%»; un bar di lusso non lavora a ×3. In Impostazioni → Prezzo consigliato, sotto «Ricarico sul costo (×)», c'è «Drink cost (% sul prezzo)»: l'incidenza del costo degli ingredienti sul prezzo di vendita. I due campi sono lo stesso valore scritto in due modi: si salva solo il ricarico (`price_markup`), il drink cost è il suo inverso (100 ÷ ricarico, al decimo), e scrivendo il 20% si salva ×5. Il prezzo consigliato, la marginalità del listino e i loro obiettivi non cambiano: leggono il ricarico come prima.
 
 **Dove**: `src/lib/pricing.js (drinkCostDi, ricaricoDaDrinkCost), src/components/SettingsTab.jsx (Prezzo consigliato)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/drinkCost.test.js`
+
+#### REQ-MENU-034 — Ogni riga della ricetta mostra quanto costa
+
+Flavio, 10/11/2026, con la foto del Gold Rush modificato al POS: il riquadro dava il prezzo reale della ricetta (1,72 €) ma non quanto pesa ciascun ingrediente («jim beam 60 ml 1,14 €»). Nel prodotto modificato al POS e nella scheda del drink a menù ogni riga di ricetta mostra, dopo quantità e unità, il suo costo al dettaglio: quantità × costo dell'articolo nell'unità scritta, IVA inclusa, con lo stesso calcolo del prezzo reale, così le righe sommate fanno il totale. Senza quantità la riga non mostra niente; con un articolo senza costo in magazzino mostra un trattino, e il riquadro del prezzo dice già quale manca.
+
+**Dove**: `src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/costoRigheRicetta.test.jsx`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 

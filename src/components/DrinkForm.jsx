@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { entryUnits, unitaDopoCambioIngrediente } from '../lib/inventory.js'
 import PriceSuggestion from './PriceSuggestion.jsx'
+import CostoRiga from './CostoRiga.jsx'
 import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '../lib/illustrazioneDrink.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { MESSAGGI_PIANO } from '../lib/limiti.js'
@@ -302,7 +303,7 @@ export default function DrinkForm({
         const inv = inventory.find((i) => i.id === r.inventory_item_id)
         const units = inv ? entryUnits(inv) : []
         return (
-          <div className="row" style={{ gap: 6, marginTop: 6 }} key={idx}>
+          <div className="row" style={{ gap: 6, marginTop: 6, alignItems: 'center' }} key={idx}>
             <select
               value={r.inventory_item_id}
               onChange={(e) => onItemChange(idx, e.target.value)}
@@ -331,6 +332,7 @@ export default function DrinkForm({
                 <option key={u} value={u}>{u}</option>
               ))}
             </select>
+            <CostoRiga row={r} item={inv} name={inv?.name} />
             <button type="button" className="btn ghost small" onClick={() => removeRow(idx)}>✕</button>
           </div>
         )

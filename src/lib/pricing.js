@@ -23,17 +23,27 @@ export function recipeCost(rows, itemsById, { gross = true } = {}) {
   let cost = 0
   const missing = []
   for (const r of rows || []) {
-    const qty = Number(r?.qty) || 0
-    if (qty <= 0) continue
-    const item = itemsById?.[r.inventory_item_id]
-    const per = item ? costPerUnit(item, r.unit, { gross }) : null
-    if (per == null) {
+    if (!((Number(r?.qty) || 0) > 0)) continue
+    const c = costoRiga(r, itemsById?.[r.inventory_item_id], { gross })
+    if (c == null) {
       missing.push(r?.name || r?.inventory_item_id || '?')
       continue
     }
-    cost += per * qty
+    cost += c
   }
   return { cost: Math.round(cost * 10000) / 10000, missing }
+}
+
+// COSTO DI UNA SOLA RIGA DI RICETTA (REQ-MENU-034): qty × costo al
+// dettaglio nell'unità scritta. Flavio, 10/11/2026, guardando il Gold Rush:
+// il totale da solo non dice QUALE ingrediente pesa (60 ml di Jim Beam sono
+// 1,14 €, il ghiaccio pochi centesimi). Null quando la quantità manca o il
+// costo dell'articolo non si conosce: «non lo so», non «zero».
+export function costoRiga(row, item, { gross = true } = {}) {
+  const qty = Number(row?.qty) || 0
+  if (!(qty > 0) || !item) return null
+  const per = costPerUnit(item, row.unit, { gross })
+  return per == null ? null : per * qty
 }
 
 // Arrotondamento "da listino": per eccesso al passo scelto (0,50 €).
