@@ -359,7 +359,6 @@ export default function MenuManager() {
           carta={carta}
           drinks={drinks}
           categories={categories}
-          disegni={disegniDelLocale(settings)}
           onApriScheda={setEditing}
         />
       </div>

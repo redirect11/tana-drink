@@ -318,6 +318,10 @@ bisogni:
       Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il
       ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold
       Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026).
+      Nel menù dei clienti copiato dalla cassa le sezioni sono le
+      categorie, chiuse in un indice; i gin selezionati in «Distillati»
+      passano insieme in «Gin», e i prodotti senza categoria stanno in
+      «Non categorizzati».
     requisiti:
       - REQ-MENU-002
       - REQ-MENU-032
@@ -325,6 +329,7 @@ bisogni:
       - REQ-MAG-054
       - REQ-MENU-033
       - REQ-MENU-034
+      - REQ-MENU-035
     test_cases: []
 
   - id: UR-014

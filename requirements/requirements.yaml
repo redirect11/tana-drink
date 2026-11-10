@@ -6374,6 +6374,39 @@ requirements:
     test_cases:
       - tests/unit/drinkCost.test.js
 
+  - id: REQ-MENU-035
+    title: "L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme"
+    area: "src/components/StrutturaMenu.jsx (RigaVoce), src/lib/strutturaMenu.js (NON_CATEGORIZZATI, spostamentoInBlocco, voceTrovata), src/lib/api.js (spostaVociCarta), src/index.css"
+    description: >
+      L'utente, 10/11/2026, davanti alla copia del listino della Tana
+      nell'editor (centinaia di card con immagine e tre caselle ciascuna):
+      «dovresti anche già suddividerli per le categorie … con la
+      possibilità di spostare gli item di menu tra le categorie. Quelli
+      fuori categoria li mettiamo in una categoria non categorizzati»;
+      «deve essere una vista più compatta e maneggevole, così è un casino».
+      La copia dalle voci della cassa fa una sezione per categoria, e i
+      prodotti senza categoria vanno in «Non categorizzati», in fondo.
+      Le sezioni partono chiuse: una riga ciascuna col nome, il numero di
+      voci e se è nascosta, snella o in un gruppo, con ↑ ↓; aperta, mostra
+      la sua barra, il titolo e le voci. Ogni voce è una riga della lista
+      lunga di sempre (DESIGN.md): casella di selezione, nome letto al
+      tavolo con accanto quello della cassa quando è diverso, prezzo,
+      «Sposta in…», ↑ ↓ e «togli»; i testi e il prodotto collegato si
+      aprono sotto la riga, una voce alla volta, e la voce senza prodotto
+      ha il dettaglio sempre aperto. Più voci selezionate (anche «Seleziona
+      tutte» di una sezione) si spostano insieme in fondo a un'altra
+      sezione, nell'ordine in cui stavano, in un pacchetto solo; la
+      sezione d'arrivo si apre. Una ricerca trova le voci col nome letto
+      al tavolo o con quello della cassa, senza badare ad accenti e
+      maiuscole, e apre le sole sezioni che ne hanno. I comandi della
+      lista (ricerca, apri e chiudi tutte, voci selezionate) restano in
+      vista mentre si scorre.
+    status: implemented
+    generate_issue: false
+    labels: [menu, clienti]
+    test_cases:
+      - tests/unit/strutturaCompatta.test.js
+
   - id: REQ-MENU-034
     title: "Ogni riga della ricetta mostra quanto costa"
     area: "src/lib/pricing.js (costoRiga), src/components/CostoRiga.jsx, CustomDrinkForm.jsx, DrinkForm.jsx"

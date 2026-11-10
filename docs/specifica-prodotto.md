@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-43 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+44 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2082,6 +2082,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-SIC-002 — App Check protegge la produzione senza chiudere fuori il locale
 - REQ-SIC-004 — Caratteri e script dallo stesso indirizzo dell'app: niente richieste a terzi senza consenso
 - REQ-MENU-033 — Il ricarico del prezzo consigliato si imposta anche come drink cost
+- REQ-MENU-035 — L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme
 - REQ-MENU-034 — Ogni riga della ricetta mostra quanto costa
 - REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
 - REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente

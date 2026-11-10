@@ -623,11 +623,14 @@ export function eliminaStruttura(carta) {
 
 // UN RIORDINO IN UN PACCHETTO SOLO (strutturaMenu.js, riordino): scritti
 // uno per uno, i numeri d'ordine di una sezione lunga facevano una
-// scrittura e un giro di schermo per ognuno.
-const riordina = (collezione) => (cambi) =>
-  inPacchetti((cambi || []).map((c) => (b) => b.update(doc(db, collezione, c.id), { ordine: c.ordine })))
-export const riordinaSezioniCarta = riordina('carta_sezioni')
-export const riordinaVociCarta = riordina('carta_voci')
+// scrittura e un giro di schermo per ognuno. Lo stesso per lo spostamento
+// di più voci in un'altra sezione (spostamentoInBlocco): ogni cambio porta
+// l'id e i campi da scrivere.
+const inBlocco = (collezione) => (cambi) =>
+  inPacchetti((cambi || []).map(({ id, ...campi }) => (b) => b.update(doc(db, collezione, id), campi)))
+export const riordinaSezioniCarta = inBlocco('carta_sezioni')
+export const riordinaVociCarta = inBlocco('carta_voci')
+export const spostaVociCarta = inBlocco('carta_voci')
 
 export function aggiornaSezioneCarta(id, patch) {
   bgWrite(() => updateDoc(doc(db, 'carta_sezioni', id), patch), 'carta')

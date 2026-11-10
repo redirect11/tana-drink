@@ -2,6 +2,16 @@
 
 ## 1.10.32-beta — in lavorazione
 
+### Gestionale
+
+- Il menù dei clienti si compone in una vista compatta: le sezioni sono un
+  elenco che si apre una alla volta, ogni voce è una riga con nome, prezzo,
+  «Sposta in…» e i tasti per ordinarla, e i testi si aprono sotto la riga.
+  Più voci selezionate si spostano insieme in un'altra sezione, e una
+  ricerca trova le voci per nome.
+- Copiando il menù dalla cassa, i prodotti senza categoria finiscono nella
+  sezione «Non categorizzati».
+
 ## 1.10.31-beta — 10/11/2026 (test)
 
 ### Prodotto

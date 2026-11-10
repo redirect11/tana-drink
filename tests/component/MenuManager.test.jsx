@@ -54,6 +54,7 @@ vi.mock('../../src/lib/api.js', () => ({
   eliminaStruttura: vi.fn(),
   riordinaSezioniCarta: vi.fn(),
   riordinaVociCarta: vi.fn(),
+  spostaVociCarta: vi.fn(),
   aggiornaSezioneCarta: vi.fn(),
   eliminaSezioneCarta: vi.fn(),
   creaVoceCarta: vi.fn((v) => ({ id: 'voce-nuova', ...v })),
@@ -110,6 +111,7 @@ import {
   creaVoceCarta,
   aggiornaVoceCarta,
   eliminaVoceCarta,
+  spostaVociCarta,
 } from '../../src/lib/api.js'
 import { subscribeSottosezioni } from '../../src/lib/sottosezioni.js'
 import { CON_LICENZA } from '../helpers/licenza.js'
@@ -466,6 +468,14 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     stop()
   }
 
+  // LA VISTA COMPATTA (REQ-MENU-035): le sezioni partono chiuse, e si
+  // aprono per lavorarci.
+  async function apriSezione(user, nome) {
+    const sezione = await screen.findByRole('region', { name: `Sezione ${nome}` })
+    await user.click(within(sezione).getByRole('button', { name: `Apri la sezione ${nome}` }))
+    return sezione
+  }
+
   it('senza struttura il menù è per categorie, e si parte dalla copia delle voci della cassa', async () => {
     const user = userEvent.setup()
     await apriStruttura()
@@ -477,12 +487,13 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(copia.voci).toEqual([{ sezione: copia.sezioni[0].chiave, drink_id: 'mojito', ordine: 0 }])
   })
 
-  // L'utente, 05/11/2026, davanti alla prima versione (un modulo di
-  // caselle): «come associamo le voci di menu agli item di menu della
-  // cassa? La casella con il nome in grigio cos'è?». Ora la card si legge
-  // come al tavolo, sopra ogni campo c'è da dove viene il testo, e il
-  // prodotto della cassa ha la sua riga.
-  it('le sezioni nel loro ordine, le card come al tavolo, e da dove viene ogni testo', async () => {
+  // L'utente, 10/11/2026, davanti a centinaia di card: «deve essere una
+  // vista più compatta e maneggevole». Chiuse, le sezioni sono un indice
+  // col numero delle voci; aperte, una riga per voce. I testi si aprono
+  // sotto la riga, e sopra ogni campo c'è da dove viene il testo (l'utente,
+  // 05/11/2026: «la casella con il nome in grigio cos'è?»).
+  it('le sezioni sono un indice chiuso; aperte, una riga per voce, che si apre sui suoi testi', async () => {
+    const user = userEvent.setup()
     filo.carta = STRUTTURA
     await apriStruttura()
     expect(screen.getByRole('link', { name: /Anteprima del menù dei clienti/ })).toHaveAttribute('href', '/menu?vista=cliente')
@@ -490,11 +501,25 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
       'Sezione Cocktail IBA',
       'Sezione Bibite',
     ])
-    const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
-    // Il prodotto collegato si legge; la tendina c'è da subito solo per la
-    // voce che un prodotto non ce l'ha.
+    const chiusa = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
+    expect(within(chiusa).getByText('2 voci')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Sezione Bibite' })).getByText('0 voci · snella')).toBeInTheDocument()
+    expect(within(chiusa).queryByRole('textbox')).toBeNull()
+
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
+    // La riga: il nome letto al tavolo, quello della cassa accanto, il prezzo.
+    const riga = within(cocktail).getByRole('button', { name: 'Apri Mojito cubano' })
+    expect(within(riga).getByText('Mojito')).toBeInTheDocument()
+    expect(within(cocktail).getByText(/^7,00/)).toBeInTheDocument()
+    // La voce senza prodotto ha il dettaglio aperto da subito, con la tendina.
+    expect(within(cocktail).getByText('senza prodotto')).toBeInTheDocument()
+    let tendine = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
+    expect(tendine.map((t) => t.value)).toEqual([''])
+    await user.click(riga)
+    // Il prodotto collegato si legge; la tendina resta solo per la voce che
+    // un prodotto non ce l'ha.
     expect(within(cocktail).getByText(/^Mojito · 7,00/, { selector: 'span' })).toBeInTheDocument()
-    const tendine = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
+    tendine = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
     expect(tendine.map((t) => t.value)).toEqual([''])
     expect(within(cocktail).getByText(/Nessun prodotto della cassa collegato/)).toBeInTheDocument()
     // Il nome è della sezione, la descrizione viene dalla scheda: il campo
@@ -505,9 +530,9 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(descrizione).toHaveValue('Rum, lime, menta')
     expect(within(cocktail).getAllByText('solo in questa sezione').length).toBeGreaterThan(0)
     expect(within(cocktail).getAllByText('dalla scheda prodotto').length).toBeGreaterThan(0)
-    // La sezione snella non chiede descrizione né ingredienti.
-    const bibite = screen.getByRole('region', { name: 'Sezione Bibite' })
-    expect(within(bibite).queryByRole('textbox', { name: 'Descrizione nella sezione' })).toBeNull()
+    // Una voce sola aperta alla volta: richiusa, i testi se ne vanno.
+    await user.click(within(cocktail).getByRole('button', { name: 'Chiudi Mojito cubano' }))
+    expect(within(cocktail).getAllByRole('textbox', { name: 'Nome nella sezione' })).toHaveLength(1)
   })
 
   it('una sezione nuova va in cima; una voce nasce col suo prodotto, cambia prodotto e cambia sezione', async () => {
@@ -517,7 +542,7 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     await user.type(await screen.findByRole('textbox', { name: 'Nome della nuova sezione' }), 'Signature{Enter}')
     expect(creaSezioneCarta).toHaveBeenCalledWith({ nome: 'Signature', ordine: -1 })
 
-    const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
     await user.selectOptions(within(cocktail).getByRole('combobox', { name: 'Aggiungi un prodotto a Cocktail IBA' }), 'mojito')
     expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cocktail', drink_id: 'mojito', ordine: 2 })
 
@@ -526,6 +551,7 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(aggiornaVoceCarta).toHaveBeenCalledWith('v-libera', { drink_id: 'mojito' })
 
     // Il prodotto si cambia, ma non si toglie: la scelta vuota non c'è.
+    await user.click(within(cocktail).getByRole('button', { name: 'Apri Mojito cubano' }))
     await user.click(within(cocktail).getByRole('button', { name: 'Cambia il prodotto della cassa di Mojito cubano' }))
     const [cambia] = within(cocktail).getAllByRole('combobox', { name: 'Prodotto della cassa' })
     expect(cambia).toHaveValue('mojito')
@@ -542,7 +568,8 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     const user = userEvent.setup()
     filo.carta = STRUTTURA
     await apriStruttura()
-    const cocktail = await screen.findByRole('region', { name: 'Sezione Cocktail IBA' })
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
+    await user.click(within(cocktail).getByRole('button', { name: 'Apri Mojito cubano' }))
     const [descrizione] = within(cocktail).getAllByRole('textbox', { name: 'Descrizione nella sezione' })
     await user.clear(descrizione)
     await user.type(descrizione, 'Solo per la sezione')
@@ -589,13 +616,13 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
       sezioni: STRUTTURA.sezioni.map((s) => (s.id === 's-cocktail' ? { ...s, gruppo: 'Cocktail' } : s)),
     }
     await apriStruttura()
-    const cocktail = await screen.findByRole('region', { name: 'Sezione Cocktail IBA' })
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
     const suo = within(cocktail).getByRole('combobox', { name: 'Gruppo della sezione Cocktail IBA' })
     expect(suo).toHaveValue('Cocktail')
     const proposte = document.getElementById(suo.getAttribute('list'))
     expect([...proposte.querySelectorAll('option')].map((o) => o.value)).toEqual(['Cocktail'])
 
-    const bibite = screen.getByRole('region', { name: 'Sezione Bibite' })
+    const bibite = await apriSezione(user, 'Bibite')
     const gruppo = within(bibite).getByRole('combobox', { name: 'Gruppo della sezione Bibite' })
     await user.type(gruppo, ' Da bere {Enter}')
     expect(aggiornaSezioneCarta).toHaveBeenLastCalledWith('s-bibite', { gruppo: 'Da bere' })
@@ -615,7 +642,7 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     const user = userEvent.setup()
     filo.carta = STRUTTURA
     await apriStruttura()
-    const bibite = await screen.findByRole('region', { name: 'Sezione Bibite' })
+    const bibite = await apriSezione(user, 'Bibite')
     await user.click(within(bibite).getByRole('checkbox', { name: 'Nascosta' }))
     expect(aggiornaSezioneCarta).toHaveBeenLastCalledWith('s-bibite', { nascosta: true })
     // Il riordino va in un pacchetto solo.
@@ -630,6 +657,50 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     await user.click(screen.getByRole('button', { name: 'Torna al menù per categorie' }))
     await user.click(screen.getByRole('button', { name: 'Elimina tutto' }))
     expect(eliminaStruttura).toHaveBeenCalledWith(STRUTTURA)
+  })
+
+  // «Con la possibilità di spostare gli item di menu tra le categorie»
+  // (l'utente, 10/11/2026): una per una dalla riga, o selezionate e
+  // spostate insieme, in un pacchetto solo.
+  it('le voci selezionate si spostano insieme in un’altra sezione', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
+    await user.click(within(cocktail).getByRole('button', { name: 'Seleziona tutte' }))
+    const scelte = screen.getByRole('group', { name: 'Voci selezionate' })
+    expect(within(scelte).getByText('2 voci selezionate')).toBeInTheDocument()
+    await user.click(within(cocktail).getByRole('checkbox', { name: 'Seleziona Daiquiri' }))
+    expect(within(scelte).getByText('1 voce selezionata')).toBeInTheDocument()
+
+    await user.selectOptions(within(scelte).getByRole('combobox', { name: 'Sposta le voci selezionate in un’altra sezione' }), 's-bibite')
+    expect(spostaVociCarta).toHaveBeenCalledWith([{ id: 'v-mojito', sezione_id: 's-bibite', ordine: 0 }])
+    // La scelta si svuota e la sezione d'arrivo si apre.
+    expect(screen.queryByRole('group', { name: 'Voci selezionate' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Chiudi la sezione Bibite' })).toBeInTheDocument()
+  })
+
+  it('la ricerca apre le sezioni sulle voci trovate, e tutte le sezioni si aprono e si chiudono insieme', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    await user.click(await screen.findByRole('button', { name: 'Apri tutte' }))
+    expect(screen.getByRole('button', { name: 'Chiudi la sezione Bibite' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Chiudi tutte' }))
+    expect(screen.getByRole('button', { name: 'Apri la sezione Cocktail IBA' })).toBeInTheDocument()
+
+    const cerca = screen.getByRole('searchbox', { name: 'Cerca una voce nel menù dei clienti' })
+    await user.type(cerca, 'cubano')
+    expect(screen.getAllByRole('region', { name: /^Sezione / }).map((r) => r.getAttribute('aria-label'))).toEqual([
+      'Sezione Cocktail IBA',
+    ])
+    const cocktail = screen.getByRole('region', { name: 'Sezione Cocktail IBA' })
+    expect(within(cocktail).getByRole('button', { name: 'Apri Mojito cubano' })).toBeInTheDocument()
+    expect(within(cocktail).queryByRole('checkbox', { name: 'Seleziona Daiquiri' })).toBeNull()
+
+    await user.clear(cerca)
+    await user.type(cerca, 'negroni')
+    expect(screen.getByText('Nessuna voce trovata per «negroni».')).toBeInTheDocument()
   })
 
   // Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo
@@ -647,7 +718,9 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     const user = userEvent.setup()
     filo.carta = STRUTTURA
     await apriStruttura()
-    await user.click(await screen.findByRole('button', { name: 'Apri la scheda di Mojito' }))
+    const cocktail = await apriSezione(user, 'Cocktail IBA')
+    await user.click(within(cocktail).getByRole('button', { name: 'Apri Mojito cubano' }))
+    await user.click(within(cocktail).getByRole('button', { name: 'Apri la scheda di Mojito' }))
     expect(await screen.findByLabelText('Nome *')).toHaveValue('Mojito')
   })
 
