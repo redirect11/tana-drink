@@ -16,6 +16,8 @@
 - In Impostazioni → Prezzo consigliato il ricarico si imposta anche come
   drink cost, la percentuale del prezzo che va negli ingredienti: ×3 è il
   33,3%, ×5 il 20%. I due campi sono lo stesso valore.
+- Nella ricetta, sia al POS sia nella scheda del drink, ogni ingrediente
+  mostra il suo costo accanto alla quantità: 60 ml di Jim Beam, 1,14 €.
 
 ## 1.10.30-beta — 10/11/2026 (test)
 
