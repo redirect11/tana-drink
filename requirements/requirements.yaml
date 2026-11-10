@@ -6787,6 +6787,11 @@ requirements:
       un tondo scuro, senza nomi) dove non ha il suo
       (pluginCliente.js, fileDelCliente); e i file del cliente vanno
       nella cartella vera della build anche con `--outDir`.
+      IL NOME DI RISERVA È QUELLO DEL PRODOTTO (09/11/2026): un locale
+      senza nome nella build e nelle impostazioni si chiama «Lime -
+      SmartOrders» (nome corto «Lime»), da src/lib/prodotto.js; prima era
+      «Il locale». In tana-drink il nome del prodotto compare solo così,
+      come segnaposto, oltre alla firma del piano Free (REQ-LIC-003).
     status: implemented
     generate_issue: false
     labels: [prodotto, venue]

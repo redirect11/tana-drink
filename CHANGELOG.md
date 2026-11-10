@@ -2,6 +2,12 @@
 
 ## 1.10.31-beta — in lavorazione
 
+### Prodotto
+
+- Un locale che non ha ancora scritto il suo nome si chiama «Lime -
+  SmartOrders» invece di «Il locale». Alla Tana non cambia niente: il nome
+  è nella sua build.
+
 ### Gestionale
 
 - Nella ricetta di un drink, un ingrediente liquido aggiunto parte in
