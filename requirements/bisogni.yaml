@@ -321,7 +321,8 @@ bisogni:
       Nel menù dei clienti copiato dalla cassa le sezioni sono le
       categorie, chiuse in un indice; i gin selezionati in «Distillati»
       passano insieme in «Gin», e i prodotti senza categoria stanno in
-      «Non categorizzati».
+      «Non categorizzati». Un drink che in cassa non c'è si crea dalla
+      sua sezione, e appena salvato è lì.
     requisiti:
       - REQ-MENU-002
       - REQ-MENU-032
@@ -330,6 +331,7 @@ bisogni:
       - REQ-MENU-033
       - REQ-MENU-034
       - REQ-MENU-035
+      - REQ-MENU-036
     test_cases: []
 
   - id: UR-014

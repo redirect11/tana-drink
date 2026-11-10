@@ -13,6 +13,7 @@ import {
   savePosColors,
   subscribeSettings,
   subscribeCarta,
+  creaVoceCarta,
   DEFAULT_SETTINGS,
   settingsIniziali,
 } from '../lib/api.js'
@@ -24,6 +25,7 @@ import { formatQty, stockStatus } from '../lib/inventory.js'
 import MarginList from './MarginList.jsx'
 import SpecialManager from './SpecialManager.jsx'
 import StrutturaMenu, { InStruttura } from './StrutturaMenu.jsx'
+import { inFondo, categoriaDellaSezione } from '../lib/strutturaMenu.js'
 import { drinkSpeciali } from '../lib/speciali.js'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
@@ -74,6 +76,11 @@ export default function MenuManager() {
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
   const [copiaDa, setCopiaDa] = useState(null) // il drink duplicato, prima di salvarlo
+  // UN PRODOTTO NUOVO DAL MENÙ DEI CLIENTI (REQ-MENU-036): la sezione in cui
+  // entrerà come voce appena salvato. E la sezione da riaprire tornando
+  // all'editor, che chiudendosi per la scheda le dimenticava tutte.
+  const [nuovoIn, setNuovoIn] = useState(null) // { sezioneId, category_id }
+  const [riapri, setRiapri] = useState(null)
   // Filtri della lista (catalogo grande: ricerca + categoria + disponibilità).
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('all') // 'all' | 'none' | categoryId
@@ -143,7 +150,7 @@ export default function MenuManager() {
   async function handleSave(form) {
     setError(null)
     try {
-      await saveDrinkFromForm({
+      const salvato = await saveDrinkFromForm({
         form,
         existing: editing && editing !== 'new' ? editing : null,
         inventory,
@@ -151,6 +158,12 @@ export default function MenuManager() {
         impostazioni: settings,
         prodotti: drinks,
       })
+      // Nato dal menù dei clienti: entra come voce in fondo alla sezione
+      // da cui lo si è chiesto, senza passare dall'elenco dei prodotti
+      // rimasti fuori.
+      if (nuovoIn && editing === 'new' && salvato?.id) {
+        creaVoceCarta({ sezione_id: nuovoIn.sezioneId, drink_id: salvato.id, ordine: inFondo(carta, nuovoIn.sezioneId) })
+      }
       chiudiForm()
       await load()
     } catch (e) {
@@ -198,6 +211,15 @@ export default function MenuManager() {
   function chiudiForm() {
     setEditing(null)
     setCopiaDa(null)
+    setNuovoIn(null)
+  }
+
+  // Dal menù dei clienti: la scheda vuota, con la categoria che porta il
+  // nome della sezione se ce n'è una («Gin» → la categoria Gin).
+  function nuovoProdottoIn(s) {
+    setNuovoIn({ sezioneId: s.id, category_id: categoriaDellaSezione(s, categories)?.id || '' })
+    setRiapri(s.id)
+    setEditing('new')
   }
 
   async function handleDelete(d) {
@@ -320,7 +342,7 @@ export default function MenuManager() {
   if (editing) {
     return (
       <DrinkForm
-        initial={editing === 'new' ? copiaDa || EMPTY : editing}
+        initial={editing === 'new' ? copiaDa || (nuovoIn ? { ...EMPTY, category_id: nuovoIn.category_id } : EMPTY) : editing}
         categories={categories}
         inventory={inventory}
         saleVatLocale={settings.sale_vat}
@@ -359,7 +381,12 @@ export default function MenuManager() {
           carta={carta}
           drinks={drinks}
           categories={categories}
-          onApriScheda={setEditing}
+          riapri={riapri}
+          onApriScheda={(drink, sezioneId) => {
+            setRiapri(sezioneId)
+            setEditing(drink)
+          }}
+          onNuovoProdotto={nuovoProdottoIn}
         />
       </div>
     )

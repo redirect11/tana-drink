@@ -9,7 +9,13 @@
 // categoria, lo spostamento di più voci insieme, la ricerca.
 
 import { describe, it, expect } from 'vitest'
-import { prepopolazione, spostamentoInBlocco, voceTrovata, NON_CATEGORIZZATI } from '../../src/lib/strutturaMenu.js'
+import {
+  prepopolazione,
+  spostamentoInBlocco,
+  voceTrovata,
+  categoriaDellaSezione,
+  NON_CATEGORIZZATI,
+} from '../../src/lib/strutturaMenu.js'
 
 const CATS = [
   { id: 'gin', name: 'Gin', sort_order: 1 },
@@ -93,5 +99,20 @@ describe('la ricerca nell’editor', () => {
 
   it('una ricerca vuota trova tutto, anche una voce senza prodotto', () => {
     expect(voceTrovata({ nome: '' }, null, '  ')).toBe(true)
+  })
+})
+
+// Il prodotto nuovo creato da una sezione (REQ-MENU-036) parte con la
+// categoria che ne porta il nome: le sezioni nascono dalle categorie.
+describe('la categoria di un prodotto nuovo creato da una sezione', () => {
+  it('quella col nome della sezione, senza badare a maiuscole e accenti', () => {
+    expect(categoriaDellaSezione({ nome: 'GIN' }, CATS)).toEqual(CATS[0])
+    expect(categoriaDellaSezione({ nome: 'Caffè' }, [{ id: 'k', name: 'Caffe' }])).toEqual({ id: 'k', name: 'Caffe' })
+  })
+
+  it('nessuna, se non ce n’è una con quel nome', () => {
+    expect(categoriaDellaSezione({ nome: 'Signature' }, CATS)).toBeNull()
+    expect(categoriaDellaSezione({ nome: NON_CATEGORIZZATI }, CATS)).toBeNull()
+    expect(categoriaDellaSezione({ nome: 'Gin' }, undefined)).toBeNull()
   })
 })

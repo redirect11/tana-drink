@@ -703,6 +703,44 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     expect(screen.getByText('Nessuna voce trovata per «negroni».')).toBeInTheDocument()
   })
 
+  // UN PRODOTTO CHE IN CASSA NON C'È (REQ-MENU-036). L'utente, 10/11/2026:
+  // «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se
+  // non esiste un item cassa, si può creare anche da lì». La scheda nuova
+  // parte con la categoria che porta il nome della sezione; salvato, il
+  // prodotto entra in fondo alla sezione, e si torna con la sezione aperta.
+  it('dalla sezione si crea un prodotto della cassa che entra subito come voce', async () => {
+    const user = userEvent.setup()
+    filo.carta = {
+      sezioni: [...STRUTTURA.sezioni, { id: 's-cat', nome: 'cocktail', ordine: 2, vista: 'dettagliata', nascosta: false }],
+      voci: STRUTTURA.voci,
+    }
+    salvaDrink.mockResolvedValueOnce({ id: 'nuovo-drink', name: 'Paloma' })
+    await apriStruttura()
+    const sezione = await apriSezione(user, 'cocktail')
+    await user.click(within(sezione).getByRole('button', { name: 'Nuovo prodotto della cassa in cocktail' }))
+    expect(await screen.findByLabelText('Nome *')).toHaveValue('')
+    expect(screen.getByLabelText('Categoria')).toHaveValue('c1')
+    await user.type(screen.getByLabelText('Nome *'), 'Paloma')
+    await user.type(screen.getByLabelText(/Prezzo/), '9')
+    await user.click(screen.getByRole('button', { name: /^Salva/ }))
+
+    await waitFor(() => expect(creaVoceCarta).toHaveBeenCalledWith({ sezione_id: 's-cat', drink_id: 'nuovo-drink', ordine: 0 }))
+    expect(salvaDrink.mock.calls[0][0].existing).toBe(null)
+    expect(await screen.findByRole('button', { name: 'Chiudi la sezione cocktail' })).toBeInTheDocument()
+  })
+
+  it('una sezione senza categoria omonima apre la scheda senza categoria; annullando non nasce niente', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    await apriStruttura()
+    const bibite = await apriSezione(user, 'Bibite')
+    await user.click(within(bibite).getByRole('button', { name: 'Nuovo prodotto della cassa in Bibite' }))
+    expect(await screen.findByLabelText('Categoria')).toHaveValue('')
+    await user.click(screen.getByRole('button', { name: 'Annulla' }))
+    expect(creaVoceCarta).not.toHaveBeenCalled()
+    expect(await screen.findByRole('button', { name: 'Chiudi la sezione Bibite' })).toBeInTheDocument()
+  })
+
   // Il prezzo della libertà: un prodotto nuovo in cassa non entra da solo
   // nel menù dei clienti. L'editor lo dice, e lo fa aggiungere.
   it('i prodotti della cassa rimasti fuori si vedono, e si aggiungono a una sezione', async () => {

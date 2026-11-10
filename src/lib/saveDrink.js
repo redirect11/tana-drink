@@ -90,9 +90,13 @@ export async function saveDrinkFromForm({
       typeof form.illustrazione === 'string' ? form.illustrazione : sceltaIllustrazione(form.illustrazione),
   }
 
-  if (!nuovo) await updateDrink(existing.id, payload)
-  else await createDrink(payload)
+  // L'id torna con quello che si è salvato: chi crea un prodotto per
+  // metterlo subito da qualche parte (una sezione del menù dei clienti,
+  // REQ-MENU-036) non deve andarlo a cercare per nome.
+  let id = existing?.id ?? null
+  if (nuovo) id = (await createDrink(payload))?.id ?? null
+  else await updateDrink(existing.id, payload)
 
   if (previousUrl && previousUrl !== imageUrl) deleteDrinkImageByUrl(previousUrl)
-  return payload
+  return { ...payload, id }
 }

@@ -6374,6 +6374,30 @@ requirements:
     test_cases:
       - tests/unit/drinkCost.test.js
 
+  - id: REQ-MENU-036
+    title: "Dal menù dei clienti si crea un prodotto della cassa che non c'è, e diventa subito una voce della sezione"
+    area: "src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)"
+    description: >
+      L'utente, 10/11/2026: «dobbiamo agevolare questo workflow
+      direttamente dal menu clienti. Se non esiste un item cassa, si può
+      creare anche da lì». Prima una voce si faceva solo scegliendo un
+      prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in
+      Modifica menù, tornare al menù dei clienti e ripescarlo fra i
+      prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto
+      della cassa»: apre la scheda del prodotto, la stessa del catalogo,
+      con la categoria che porta il nome della sezione se ce n'è una
+      (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in
+      cassa ed entra come voce in fondo a quella sezione; annullando non
+      nasce niente. Tornando dalla scheda, nuova o aperta da una voce,
+      l'editor riapre la sezione da cui si era partiti, invece di
+      ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti,
+      come per ogni prodotto nuovo.
+    status: implemented
+    generate_issue: false
+    labels: [menu, clienti]
+    test_cases:
+      - tests/unit/salvataggioConId.test.js
+
   - id: REQ-MENU-035
     title: "L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme"
     area: "src/components/StrutturaMenu.jsx (RigaVoce), src/lib/strutturaMenu.js (NON_CATEGORIZZATI, spostamentoInBlocco, voceTrovata), src/lib/api.js (spostaVociCarta), src/index.css"

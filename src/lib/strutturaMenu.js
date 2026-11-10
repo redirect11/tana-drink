@@ -230,6 +230,16 @@ export function vociPerSezione(voci, nome = (v) => v.nome) {
 // Il numero d'ordine di una voce messa in fondo alla sua sezione.
 export const inFondo = (carta, sezioneId) => (carta?.voci || []).filter((v) => v.sezione_id === sezioneId).length
 
+// LA CATEGORIA DELLA CASSA CHE PORTA IL NOME DELLA SEZIONE, per il
+// prodotto nuovo creato dall'editor (REQ-MENU-036): le sezioni nascono
+// dalle categorie (prepopolazione), e un prodotto nuovo in «Gin» va quasi
+// sempre nella categoria Gin. Il confronto ignora maiuscole e accenti;
+// senza una categoria con quel nome, nessuna.
+export function categoriaDellaSezione(sezione, categories) {
+  const nome = normName(nomeSezione(sezione))
+  return (categories || []).find((c) => normName(c.name) === nome) || null
+}
+
 // PIÙ VOCI SPOSTATE INSIEME in una sezione (REQ-MENU-035): vanno in fondo,
 // nell'ordine in cui stavano nel menù, così un blocco di gin portato via
 // dai «Distillati» arriva nella sezione nuova nella fila di prima. Quelle

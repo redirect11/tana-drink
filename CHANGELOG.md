@@ -11,6 +11,9 @@
   ricerca trova le voci per nome.
 - Copiando il menù dalla cassa, i prodotti senza categoria finiscono nella
   sezione «Non categorizzati».
+- Dal menù dei clienti si crea un prodotto che in cassa non c'è ancora:
+  «+ Nuovo prodotto della cassa» in una sezione apre la scheda del
+  prodotto, e salvato entra subito in quella sezione.
 
 ## 1.10.31-beta — 10/11/2026 (test)
 

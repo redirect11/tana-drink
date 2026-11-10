@@ -315,7 +315,7 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
                 <button className="btn ghost small" aria-label={`Cambia il prodotto della cassa di ${nome}`} onClick={() => setCambia(true)}>
                   Cambia
                 </button>
-                <button className="btn ghost small" aria-label={`Apri la scheda di ${drink.name}`} onClick={() => onApriScheda?.(drink)}>
+                <button className="btn ghost small" aria-label={`Apri la scheda di ${drink.name}`} onClick={() => onApriScheda?.(drink, voce.sezione_id)}>
                   Scheda
                 </button>
               </div>
@@ -443,8 +443,9 @@ function alterna(set, id) {
 
 // La struttura arriva da MenuManager, che la tiene già per le schede dei
 // prodotti: una sottoscrizione sola. `onApriScheda` apre la scheda intera
-// di un prodotto, e chiusa si torna qui.
-export default function StrutturaMenu({ carta, drinks, categories, onApriScheda }) {
+// di un prodotto e `onNuovoProdotto` quella di un prodotto nuovo per una
+// sezione; chiusa la scheda si torna qui, con `riapri` già aperta.
+export default function StrutturaMenu({ carta, drinks, categories, onApriScheda, onNuovoProdotto, riapri = null }) {
   // Le cancellazioni grosse si confermano col dialogo dell'app: il
   // `confirm` del browser, nella PWA installata, può essere bloccato senza
   // dire niente (ConfirmDialog.jsx).
@@ -452,7 +453,7 @@ export default function StrutturaMenu({ carta, drinks, categories, onApriScheda 
   // LA VISTA COMPATTA (REQ-MENU-035): le sezioni partono chiuse, una riga
   // ciascuna col numero di voci, come un indice; se ne aprono una o più per
   // lavorarci. Delle voci se ne apre una alla volta, sotto la sua riga.
-  const [aperte, setAperte] = useState(() => new Set())
+  const [aperte, setAperte] = useState(() => new Set(riapri ? [riapri] : []))
   const [voceAperta, setVoceAperta] = useState(null)
   const [scelte, setScelte] = useState(() => new Set())
   const [cerca, setCerca] = useState('')
@@ -761,15 +762,28 @@ export default function StrutturaMenu({ carta, drinks, categories, onApriScheda 
                       </div>
                     )}
                     {/* Una voce nasce già col suo prodotto: senza, al tavolo non
-                        compare, e restava lì in attesa senza dirlo. */}
-                    <TendinaCassa
-                      valore=""
-                      gruppi={gruppi}
-                      vuota="+ Aggiungi un prodotto della cassa a questa sezione…"
-                      onChange={(drink_id) => creaVoceCarta({ sezione_id: s.id, drink_id, ordine: tutte.length })}
-                      aria-label={`Aggiungi un prodotto a ${nome}`}
-                      className="struttura-aggiungi"
-                    />
+                        compare, e restava lì in attesa senza dirlo. Se il
+                        prodotto in cassa non c'è ancora, lo si crea da qui
+                        (REQ-MENU-036): l'utente, 10/11/2026, «se non esiste
+                        un item cassa, si può creare anche da lì». */}
+                    <div className="struttura-aggiungi">
+                      <TendinaCassa
+                        valore=""
+                        gruppi={gruppi}
+                        vuota="+ Aggiungi un prodotto della cassa a questa sezione…"
+                        onChange={(drink_id) => creaVoceCarta({ sezione_id: s.id, drink_id, ordine: tutte.length })}
+                        aria-label={`Aggiungi un prodotto a ${nome}`}
+                      />
+                      {onNuovoProdotto && (
+                        <button
+                          className="btn ghost small"
+                          aria-label={`Nuovo prodotto della cassa in ${nome}`}
+                          onClick={() => onNuovoProdotto(s)}
+                        >
+                          + Nuovo prodotto della cassa
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </section>

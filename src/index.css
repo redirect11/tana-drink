@@ -4975,7 +4975,19 @@ button.cat-chip {
   gap: 4px;
 }
 .struttura-aggiungi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+.struttura-aggiungi select {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.struttura-aggiungi .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .struttura-tasti select {
   width: auto;
