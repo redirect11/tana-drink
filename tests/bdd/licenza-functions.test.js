@@ -13,7 +13,7 @@
 // chiudere un pagamento già partito resti possibile.
 
 import { describe, it, expect, vi } from 'vitest'
-import { moduloInLicenza, richiediModulo } from '../../functions/lib/licenza-core.js'
+import { createRequire } from 'node:module'
 import {
   createCheckout,
   verifyCheckoutStatus,
@@ -25,6 +25,13 @@ import {
   groupReaderCheckout,
 } from '../../functions/lib/payment-service.js'
 import { createFakeFirestore } from '../helpers/fakeFirestore.js'
+
+// Col require nativo, come lo carica payment-service.js nelle Functions: due
+// versioni dello stesso file, una passata da Vite e una no, rendono la
+// coverage instabile da un giro all'altro (lo stesso guaio di payment-core,
+// visto il 10/11/2026 su una PR bocciata senza motivo).
+const require = createRequire(import.meta.url)
+const { moduloInLicenza, richiediModulo } = require('../../functions/lib/licenza-core.js')
 
 const ADESSO = Date.parse('2026-11-07T21:00:00.000Z')
 const IERI = new Date('2026-11-06T21:00:00.000Z')
@@ -43,6 +50,15 @@ describe('la domanda: il modulo è nella licenza, adesso?', () => {
     expect(moduloInLicenza(null, 'sumup', ADESSO)).toBe(false)
     expect(moduloInLicenza({ stato: 'attiva', moduli: {} }, 'sumup', ADESSO)).toBe(false)
     expect(moduloInLicenza({ stato: 'attiva', moduli: { sumup: false } }, 'sumup', ADESSO)).toBe(false)
+  })
+
+  // La scadenza arriva come Timestamp, Date o stringa ISO, a seconda di chi
+  // l'ha scritta (la regia, uno script, la console). Una stringa che non è
+  // una data non diventa una scadenza: la licenza vale come se non l'avesse.
+  it('la scadenza scritta come testo si legge, e il testo che non è una data non scade', () => {
+    expect(moduloInLicenza(con({ valida_fino_ts: IERI.toISOString() }), 'sumup', ADESSO)).toBe(false)
+    expect(moduloInLicenza(con({ valida_fino_ts: DOMANI.toISOString() }), 'sumup', ADESSO)).toBe(true)
+    expect(moduloInLicenza(con({ valida_fino_ts: 'mai' }), 'sumup', ADESSO)).toBe(true)
   })
 
   // Come le regole: sospesa, chiusa o non attivata non lavora.

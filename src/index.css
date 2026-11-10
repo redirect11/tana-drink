@@ -4738,11 +4738,11 @@ button.cat-chip {
   margin: 2px 0 0;
 }
 .struttura-sezione {
-  margin-top: 22px;
-  padding-top: 10px;
   border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
 }
-.struttura-sezione.nascosta > :not(.struttura-barra) {
+/* Una sezione nascosta si riconosce già dall'indice, chiusa. */
+.struttura-sezione.nascosta .struttura-apri strong,
+.struttura-sezione.nascosta .struttura-corpo > :not(.struttura-barra) {
   opacity: 0.5;
 }
 .struttura-barra {
@@ -4845,37 +4845,119 @@ button.cat-chip {
   font-weight: 700;
   font-style: italic;
 }
-.struttura-voce {
-  cursor: default;
-  margin-top: 8px;
+/* LA VISTA COMPATTA (REQ-MENU-035). L'utente, 10/11/2026, davanti a
+   centinaia di card: «deve essere una vista più compatta e maneggevole».
+   La sezione è una riga che si apre; dentro, le voci sono righe della lista
+   lunga di sempre (inv-list, DESIGN.md), col dettaglio sotto la riga. La
+   striscia a sinistra dice la voce che al tavolo non si vede. */
+.struttura-testa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.struttura-voce .grow {
+.struttura-apri {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
+  min-height: var(--riga-lista);
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.struttura-voce .row > .price {
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-left: 8px;
+.struttura-apri:disabled {
+  cursor: default;
 }
-.struttura-voce.attenuata > .row {
-  opacity: 0.55;
+.struttura-freccia {
+  width: 1em;
+  color: var(--muted);
 }
-.struttura-avviso {
-  margin: 6px 0 0;
-  color: var(--warn);
+.struttura-corpo {
+  padding: 4px 0 8px;
 }
-.struttura-piede {
+.struttura-comandi {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
   gap: 8px;
   margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--line, rgba(255, 255, 255, 0.1));
+  padding: 8px 0;
+  background: var(--bg);
+  /* Il contenitore che scorre ha un margine sopra: senza questa ombra
+     piena, fra la barra in alto e questi comandi si vedevano passare le
+     righe. */
+  box-shadow: 0 -24px 0 var(--bg);
+}
+.struttura-comandi > .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.struttura-cerca {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.struttura-scelte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+}
+.struttura-scelte select {
+  width: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+.struttura-riga.da-guardare {
+  border-left-color: var(--warn);
+}
+.struttura-riga-main {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.struttura-riga-main > input[type='checkbox'] {
+  width: auto;
+  flex: 0 0 auto;
+}
+.struttura-riga-nome {
+  display: flex;
+  flex: 1 1 160px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.struttura-riga-nome:disabled {
+  cursor: default;
+}
+.struttura-riga-nome .inv-row-name {
+  flex-shrink: 1;
+}
+.struttura-riga .struttura-tasti {
+  margin-left: auto;
+}
+.struttura-avviso {
+  margin: 0 0 6px;
+  color: var(--warn);
 }
 .struttura-collegamento {
-  flex: 1 1 220px;
+  margin-top: 6px;
   min-width: 0;
 }
 .struttura-prodotto {
@@ -4893,7 +4975,19 @@ button.cat-chip {
   gap: 4px;
 }
 .struttura-aggiungi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+.struttura-aggiungi select {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.struttura-aggiungi .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .struttura-tasti select {
   width: auto;

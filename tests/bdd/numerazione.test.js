@@ -70,4 +70,22 @@ describe('due conti con lo stesso numero', () => {
   it('senza numero non c’è niente da risolvere', () => {
     expect(numeroDaRiassegnare({ id: 'x', created_at: 1 }, [banco])).toBe(null)
   })
+
+  // Un orario che non si legge vale come nessun orario: il conto passa per
+  // ultimo, non vince la disputa per un dato sporco.
+  it('un orario illeggibile passa per ultimo, come uno che manca', () => {
+    const sporco = { id: 'sporco', created_at: 'ieri sera', daily_number: 15 }
+    expect(numeroDaRiassegnare(sporco, [banco, sporco])).toBe(16)
+  })
+
+  it('senza la lista degli altri conti non c’è nessuno da cui difendersi', () => {
+    expect(numeroDaRiassegnare(sala, null)).toBe(null)
+  })
+
+  // Nella cassa può esserci un conto senza numero (del cliente, appena
+  // arrivato): per il «più alto» conta zero, non rompe il conto.
+  it('un conto senza numero fra gli altri non sposta il primo libero', () => {
+    const senzaNumero = { id: 'cliente', created_at: 1100 }
+    expect(numeroDaRiassegnare(sala, [banco, sala, senzaNumero])).toBe(16)
+  })
 })

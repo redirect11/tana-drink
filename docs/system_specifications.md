@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 275 | fatto e coperto dai test |
+| ✅ | 277 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**332 voci** in tutto. **294** descrivono il sistema com'è oggi e
+**334 voci** in tutto. **296** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 29 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 31 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -76,10 +76,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 163 |
-| Unità | il progetto di dettaglio: un modulo da solo | 170 |
+| Unità | il progetto di dettaglio: un modulo da solo | 172 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**83** requisiti su 324 sono collegati a un bisogno;
+**85** requisiti su 326 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -189,9 +189,9 @@ In una serata piena allo stesso conto lavorano in due o tre: chi l'ha aperto al 
 
 Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li conosce. Devono mostrare i numeri incolonnati, permettere di guardare una parte sola (una categoria) e non ingombrare le schede con spiegazioni che chi le compila sa già (richieste dell'08/11/2026 sulla marginalità del listino e sugli aiuti dei campi).
 
-**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026).
+**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -1092,6 +1092,18 @@ Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie 
 Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei miei prodotti ma adesso si ragiona a quanto deve essere il food cost, il drink cost», «vuoi fare il P3 allora il 33%, vuoi fare il P5 allora il 20%»; un bar di lusso non lavora a ×3. In Impostazioni → Prezzo consigliato, sotto «Ricarico sul costo (×)», c'è «Drink cost (% sul prezzo)»: l'incidenza del costo degli ingredienti sul prezzo di vendita. I due campi sono lo stesso valore scritto in due modi: si salva solo il ricarico (`price_markup`), il drink cost è il suo inverso (100 ÷ ricarico, al decimo), e scrivendo il 20% si salva ×5. Il prezzo consigliato, la marginalità del listino e i loro obiettivi non cambiano: leggono il ricarico come prima.
 
 **Dove**: `src/lib/pricing.js (drinkCostDi, ricaricoDaDrinkCost), src/components/SettingsTab.jsx (Prezzo consigliato)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/drinkCost.test.js`
+
+#### REQ-MENU-036 — Dal menù dei clienti si crea un prodotto della cassa che non c'è, e diventa subito una voce della sezione
+
+L'utente, 10/11/2026: «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se non esiste un item cassa, si può creare anche da lì». Prima una voce si faceva solo scegliendo un prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in Modifica menù, tornare al menù dei clienti e ripescarlo fra i prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto della cassa»: apre la scheda del prodotto, la stessa del catalogo, con la categoria che porta il nome della sezione se ce n'è una (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in cassa ed entra come voce in fondo a quella sezione; annullando non nasce niente. Tornando dalla scheda, nuova o aperta da una voce, l'editor riapre la sezione da cui si era partiti, invece di ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti, come per ogni prodotto nuovo.
+
+**Dove**: `src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/salvataggioConId.test.js`
+
+#### REQ-MENU-035 — L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme
+
+L'utente, 10/11/2026, davanti alla copia del listino della Tana nell'editor (centinaia di card con immagine e tre caselle ciascuna): «dovresti anche già suddividerli per le categorie … con la possibilità di spostare gli item di menu tra le categorie. Quelli fuori categoria li mettiamo in una categoria non categorizzati»; «deve essere una vista più compatta e maneggevole, così è un casino». La copia dalle voci della cassa fa una sezione per categoria, e i prodotti senza categoria vanno in «Non categorizzati», in fondo. Le sezioni partono chiuse: una riga ciascuna col nome, il numero di voci e se è nascosta, snella o in un gruppo, con ↑ ↓; aperta, mostra la sua barra, il titolo e le voci. Ogni voce è una riga della lista lunga di sempre (DESIGN.md): casella di selezione, nome letto al tavolo con accanto quello della cassa quando è diverso, prezzo, «Sposta in…», ↑ ↓ e «togli»; i testi e il prodotto collegato si aprono sotto la riga, una voce alla volta, e la voce senza prodotto ha il dettaglio sempre aperto. Più voci selezionate (anche «Seleziona tutte» di una sezione) si spostano insieme in fondo a un'altra sezione, nell'ordine in cui stavano, in un pacchetto solo; la sezione d'arrivo si apre. Una ricerca trova le voci col nome letto al tavolo o con quello della cassa, senza badare ad accenti e maiuscole, e apre le sole sezioni che ne hanno. I comandi della lista (ricerca, apri e chiudi tutte, voci selezionate) restano in vista mentre si scorre.
+
+**Dove**: `src/components/StrutturaMenu.jsx (RigaVoce), src/lib/strutturaMenu.js (NON_CATEGORIZZATI, spostamentoInBlocco, voceTrovata), src/lib/api.js (spostaVociCarta), src/index.css` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/strutturaCompatta.test.js`
 
 #### REQ-MENU-034 — Ogni riga della ricetta mostra quanto costa
 
@@ -4323,7 +4335,7 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 
 #### REQ-DEV-005 — Alzare il cricchetto della coverage, e standard di complessità nel lint
 
-Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte.
+Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte. Il 10/11/2026 i rami di functions/lib salgono a 79 (misurati 80,25%): prima erano misurati male e oscillavano sullo stesso codice (BUG-140).
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 

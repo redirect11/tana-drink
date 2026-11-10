@@ -46,6 +46,7 @@
 // in MenuPage.jsx, la gestione in StrutturaMenu.jsx.
 
 import { perNome } from './macros.js'
+import { normName } from './nameMatch.js'
 
 export const VISTE_SEZIONE = [
   { id: 'dettagliata', label: 'Dettagliata' },
@@ -56,6 +57,12 @@ export const vistaSezione = (v) => (v === 'snella' ? 'snella' : 'dettagliata')
 export const PERCORSO_ANTEPRIMA = '/menu?vista=cliente'
 
 export const testo = (v) => (typeof v === 'string' ? v.trim() : '')
+
+// I prodotti della cassa senza categoria, nella copia di partenza e nella
+// tendina dei prodotti: una sezione col suo nome, in fondo, da smistare
+// (l'utente, 10/11/2026: «quelli fuori categoria li mettiamo in una
+// categoria non categorizzati»).
+export const NON_CATEGORIZZATI = 'Non categorizzati'
 
 // Sezioni e voci si mettono in fila allo stesso modo: l'ordine scelto, poi
 // il nome, così due voci con lo stesso numero non si scambiano di posto a
@@ -175,7 +182,7 @@ export const voceDaScrivere = ({ sezione_id, drink_id, nome = '', descrizione = 
 // valgono quelli della scheda. `chiave` lega le voci alla loro sezione
 // finché non hanno un id (`materializza`).
 export function prepopolazione(drinks, cats) {
-  const gruppi = perCategoria(drinks, cats)
+  const gruppi = perCategoria(drinks, cats, NON_CATEGORIZZATI)
   return {
     sezioni: gruppi.map((g, i) => ({ chiave: `categoria:${g.nome}`, nome: g.nome, ordine: i, vista: 'dettagliata', nascosta: false })),
     voci: gruppi.flatMap((g) => g.prodotti.map((d, j) => ({ sezione: `categoria:${g.nome}`, drink_id: d.id, ordine: j }))),
@@ -222,6 +229,40 @@ export function vociPerSezione(voci, nome = (v) => v.nome) {
 
 // Il numero d'ordine di una voce messa in fondo alla sua sezione.
 export const inFondo = (carta, sezioneId) => (carta?.voci || []).filter((v) => v.sezione_id === sezioneId).length
+
+// LA CATEGORIA DELLA CASSA CHE PORTA IL NOME DELLA SEZIONE, per il
+// prodotto nuovo creato dall'editor (REQ-MENU-036): le sezioni nascono
+// dalle categorie (prepopolazione), e un prodotto nuovo in «Gin» va quasi
+// sempre nella categoria Gin. Il confronto ignora maiuscole e accenti;
+// senza una categoria con quel nome, nessuna.
+export function categoriaDellaSezione(sezione, categories) {
+  const nome = normName(nomeSezione(sezione))
+  return (categories || []).find((c) => normName(c.name) === nome) || null
+}
+
+// PIÙ VOCI SPOSTATE INSIEME in una sezione (REQ-MENU-035): vanno in fondo,
+// nell'ordine in cui stavano nel menù, così un blocco di gin portato via
+// dai «Distillati» arriva nella sezione nuova nella fila di prima. Quelle
+// già lì e gli id che non ci sono più non si toccano. Torna i cambi da
+// scrivere in un pacchetto solo.
+export function spostamentoInBlocco(carta, ids, sezioneId) {
+  const scelte = new Set(ids)
+  const per = vociPerSezione(carta?.voci)
+  const base = inFondo(carta, sezioneId)
+  return ordina(carta?.sezioni)
+    .filter((s) => s.id !== sezioneId)
+    .flatMap((s) => (per.get(s.id) || []).filter((v) => scelte.has(v.id)))
+    .map((v, k) => ({ id: v.id, sezione_id: sezioneId, ordine: base + k }))
+}
+
+// LA RICERCA NELL'EDITOR: una voce si trova col nome che legge il cliente
+// o con quello della cassa, senza badare a maiuscole, accenti e
+// punteggiatura (normName, lo stesso confronto del listino fornitori).
+export function voceTrovata(voce, drink, cerca) {
+  const q = normName(cerca)
+  if (!q) return true
+  return [testo(voce?.nome), drink?.nome_cliente, drink?.name].some((n) => normName(n).includes(q))
+}
 
 // I PRODOTTI DELLA CASSA CHE NON SONO IN NESSUNA VOCE: quelli aggiunti dopo
 // la copia, o tolti da tutte le sezioni. Al tavolo non si vedono, e senza
