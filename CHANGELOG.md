@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.31-beta — in lavorazione
+## 1.10.32-beta — in lavorazione
+
+## 1.10.31-beta — 10/11/2026 (test)
 
 ### Prodotto
 
