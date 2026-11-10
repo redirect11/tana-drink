@@ -52,6 +52,15 @@ describe('la domanda: il modulo è nella licenza, adesso?', () => {
     expect(moduloInLicenza({ stato: 'attiva', moduli: { sumup: false } }, 'sumup', ADESSO)).toBe(false)
   })
 
+  // La scadenza arriva come Timestamp, Date o stringa ISO, a seconda di chi
+  // l'ha scritta (la regia, uno script, la console). Una stringa che non è
+  // una data non diventa una scadenza: la licenza vale come se non l'avesse.
+  it('la scadenza scritta come testo si legge, e il testo che non è una data non scade', () => {
+    expect(moduloInLicenza(con({ valida_fino_ts: IERI.toISOString() }), 'sumup', ADESSO)).toBe(false)
+    expect(moduloInLicenza(con({ valida_fino_ts: DOMANI.toISOString() }), 'sumup', ADESSO)).toBe(true)
+    expect(moduloInLicenza(con({ valida_fino_ts: 'mai' }), 'sumup', ADESSO)).toBe(true)
+  })
+
   // Come le regole: sospesa, chiusa o non attivata non lavora.
   it('no con la licenza sospesa, chiusa o non attivata', () => {
     for (const stato of ['sospesa', 'chiusa', 'non_attivata']) {

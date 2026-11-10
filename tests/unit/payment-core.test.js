@@ -21,6 +21,8 @@ const {
   decideAutoAdvance,
   parseReaderWebhookBody,
   parseCheckoutWebhookBody,
+  groupOrderPaidPatch,
+  isServed,
 } = require('../../functions/lib/payment-core.js')
 
 const NOW = '2026-06-12T22:00:00.000Z'
@@ -69,6 +71,13 @@ describe('buildReaderCheckoutPayload', () => {
       foreign_transaction_id: 'o9',
     })
   })
+
+  // Un incasso dal lettore senza conto (importo libero): la chiave c'è, il
+  // legame con l'ordine no.
+  it('con affiliate key ma senza ordine: niente foreign_transaction_id', () => {
+    const p = buildReaderCheckoutPayload({ total: 5, returnUrl: 'https://x/wh', affiliate: { app_id: 'a', key: 'k' } })
+    expect(p.affiliate).toEqual({ app_id: 'a', key: 'k' })
+  })
 })
 
 describe('mapping stati SumUp', () => {
@@ -82,6 +91,12 @@ describe('mapping stati SumUp', () => {
     expect(mapTransactionStatus('SUCCESSFUL')).toBe('pagato')
     expect(mapTransactionStatus('FAILED')).toBe('fallito')
     expect(mapTransactionStatus('CANCELLED')).toBe('fallito')
+  })
+  // Una transazione ancora in corso (o uno stato che SumUp aggiungerà) non
+  // è né pagata né fallita: si aspetta, il conto resta com'è.
+  it('transazione in corso o sconosciuta: si aspetta', () => {
+    expect(mapTransactionStatus('PENDING')).toBe('in_attesa')
+    expect(mapTransactionStatus(undefined)).toBe('in_attesa')
   })
 })
 
@@ -232,7 +247,72 @@ describe('decidePaymentPatch: incassi PARZIALI sul lettore (split)', () => {
   })
 })
 
+// I casi del lettore che al banco capitano davvero, anche se di rado.
+describe('decidePaymentPatch: il saldo dal lettore nei casi di confine', () => {
+  const conto = { total: 10, payments: [], sumup_pending_amount: 10 }
+
+  it('il codice della transazione resta sul conto, saldato tutto o in un colpo', () => {
+    expect(decidePaymentPatch(conto, { status: 'pagato', transactionId: 'tx9', now: NOW }).sumup_transaction_id).toBe('tx9')
+    expect(decidePaymentPatch({ status: 'ritirato' }, { status: 'pagato', now: NOW }).sumup_transaction_id).toBeUndefined()
+  })
+
+  // Il conto è stato annullato mentre la carta era sul lettore: i soldi
+  // sono entrati, il conto non si riapre. Si segnala per il rimborso.
+  it('saldo arrivato su un conto annullato nel frattempo: segnalato, non riaperto', () => {
+    const patch = decidePaymentPatch({ ...conto, status: 'annullato' }, { status: 'pagato', now: NOW })
+    expect(patch.payment_after_cancel).toBe(true)
+    expect(patch.status).toBeUndefined()
+    expect(patch.payment_status).toBe('pagato')
+  })
+
+  // I conti di prima delle comande non hanno righe da segnare servite.
+  it('saldo di un conto senza comande (modello vecchio): si chiude e basta', () => {
+    const patch = decidePaymentPatch({ ...conto, status: 'ricevuto' }, { status: 'pagato', now: NOW })
+    expect(patch.status).toBe('pagato')
+    expect(patch.comande).toBeUndefined()
+  })
+})
+
+// Un pagamento di GRUPPO salda più conti insieme: ognuno riceve la sua patch.
+describe('groupOrderPaidPatch', () => {
+  const opts = { method: 'lettore', paymentId: 'pg1', now: NOW }
+
+  it('un conto che non c’è, già pagato o annullato si salta', () => {
+    expect(groupOrderPaidPatch(null, opts)).toBeNull()
+    expect(groupOrderPaidPatch({ payment_status: 'pagato' }, opts)).toBeNull()
+    expect(groupOrderPaidPatch({ status: 'annullato' }, opts)).toBeNull()
+  })
+
+  it('un conto ancora da servire si segna pagato ma resta aperto', () => {
+    expect(groupOrderPaidPatch({ status: 'ricevuto' }, opts)).toEqual({
+      payment_status: 'pagato', payment_method: 'lettore', paid_at: NOW, payment_id: 'pg1',
+    })
+  })
+
+  it('un conto già servito si chiude; senza metodo vale «online»', () => {
+    const patch = groupOrderPaidPatch({ status: 'ritirato' }, { paymentId: 'pg1', now: NOW })
+    expect(patch.status).toBe('pagato')
+    expect(patch['status_times.pagato']).toBe(NOW)
+    expect(patch.payment_method).toBe('online')
+  })
+})
+
+describe('isServed', () => {
+  it('nessun conto non è servito', () => {
+    expect(isServed(null)).toBe(false)
+  })
+})
+
 describe('decideAutoAdvance', () => {
+  // Il documento cancellato arriva come «dopo» vuoto: niente da chiudere.
+  it('niente da fare su un conto cancellato, già chiuso o annullato', () => {
+    const servito = { status: 'ritirato', payment_status: 'pagato' }
+    expect(decideAutoAdvance(servito, null)).toBeNull()
+    expect(decideAutoAdvance(servito, { ...servito, status: 'pagato' })).toBeNull()
+    expect(decideAutoAdvance(servito, { ...servito, status: 'annullato' })).toBeNull()
+    expect(decideAutoAdvance(null, servito)).toBe('pagato')
+  })
+
   it('scatta quando ritirato+pagato diventa vero', () => {
     expect(
       decideAutoAdvance(
