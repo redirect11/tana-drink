@@ -53,6 +53,22 @@ export function suggestedPrice(cost, { markup = DEFAULT_MARKUP, step = DEFAULT_R
   return roundPrice(c * m, step)
 }
 
+// IL RICARICO DETTO AL CONTRARIO: IL DRINK COST (REQ-MENU-033).
+// Flavio, 09/11/2026: «adesso si ragiona a quanto deve essere il food
+// cost, il drink cost di quello che io vado a vendere», ma «matematicamente
+// è la stessa cosa». ×3 vuol dire che gli ingredienti sono un terzo del
+// prezzo, il 33,3%; ×5 il 20%. Si salva una cosa sola, il ricarico: il
+// drink cost è un altro modo di scriverlo, e i due non possono discordare.
+export function drinkCostDi(markup) {
+  const m = Number(markup)
+  return m > 0 ? Math.round((100 / m) * 10) / 10 : null
+}
+
+export function ricaricoDaDrinkCost(percento) {
+  const p = Number(percento)
+  return p > 0 ? Math.round((100 / p) * 100) / 100 : null
+}
+
 // Ricarico effettivo di un prezzo rispetto al costo (es. 2.8 = ×2,8):
 // serve a mostrare al bartender dove si sta posizionando davvero.
 export function markupOf(price, cost) {

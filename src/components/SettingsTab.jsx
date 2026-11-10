@@ -47,6 +47,7 @@ import { Sottosezioni } from '../lib/sottosezioni.js'
 import { MODI_STRISCIA, MODO_STRISCIA_DEFAULT } from '../lib/strisce.js'
 import { usePaginaPiena } from '../lib/paginaPiena.js'
 import { cambioDentroOrario } from '../lib/orario.js'
+import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
 
@@ -608,15 +609,30 @@ export default function SettingsTab({ role = null }) {
                 dettaglio degli ingredienti (dal listino di magazzino) e propone un{' '}
                 <strong>prezzo consigliato</strong> moltiplicandolo per il ricarico.
                 È solo un suggerimento: il prezzo resta sempre modificabile.
+                Il ricarico si imposta come moltiplicatore o come drink cost,
+                l’incidenza del costo sul prezzo di vendita: ×3 corrisponde al
+                33,3%, ×5 al 20%.
               </p>
               <div className="toggle-row">
                 <span>Ricarico sul costo (×)</span>
                 <AmountInput
+                  label="Ricarico sul costo"
                   value={settings.price_markup}
                   min={1}
                   max={20}
                   step={0.5}
                   onCommit={(v) => save({ price_markup: v })}
+                />
+              </div>
+              <div className="toggle-row">
+                <span>Drink cost (% sul prezzo)</span>
+                <AmountInput
+                  label="Drink cost"
+                  value={drinkCostDi(settings.price_markup)}
+                  min={5}
+                  max={100}
+                  step={0.1}
+                  onCommit={(v) => save({ price_markup: ricaricoDaDrinkCost(v) })}
                 />
               </div>
               <div className="toggle-row">
@@ -1564,7 +1580,7 @@ function SceltaModo({ valore, opzioni, onScegli, colonne }) {
 
 // Input numerico che salva solo al blur/invio, per non scrivere su Firestore
 // ad ogni tasto premuto.
-function AmountInput({ value, min, max, step, onCommit }) {
+function AmountInput({ value, min, max, step, onCommit, label }) {
   const [val, setVal] = useState(String(value ?? ''))
 
   useEffect(() => {
@@ -1585,6 +1601,7 @@ function AmountInput({ value, min, max, step, onCommit }) {
       className="setting-amount"
       type="number"
       inputMode="decimal"
+      aria-label={label}
       min={min}
       max={max}
       step={step}

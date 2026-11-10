@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 9 novembre 2026.
+> Generato il 10 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 272 | fatto e coperto dai test |
+| ✅ | 274 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**328 voci** in tutto. **291** descrivono il sistema com'è oggi e
+**330 voci** in tutto. **293** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,8 +47,8 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 27 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 28 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
-| Unità | il progetto di dettaglio: un modulo da solo | 169 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 162 |
+| Unità | il progetto di dettaglio: un modulo da solo | 170 |
 
 **13** bisogni del locale, **0** con un test di accettazione.
-**79** requisiti su 320 sono collegati a un bisogno;
+**81** requisiti su 322 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -1078,6 +1078,12 @@ FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva bisogno): il vocabo
 Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie sul lato sx in modo da poterle filtrare». La tabella era divisa per categorie ma mostrava sempre tutto il listino: per lavorare sui prezzi di una famiglia sola si scorreva cercandola. Ora a sinistra c'è la barra delle categorie del Menù e del POS (CategoryRail), con «Tutte» in cima e il numero di voci per categoria; toccandone una la tabella mostra solo quella, e i filtri Da rivedere, In linea e Costo incompleto contano e filtrano dentro la categoria scelta. Una voce sta sotto la stessa categoria nella barra e nella tabella: la regola è una sola (marginiPerCategoria, per id o per nome sulle voci vecchie). Sul telefono la barra diventa la riga che scorre, come altrove.
 
 **Dove**: `src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarginList.test.jsx`, `tests/sistema/marginalita.spec.js`
+
+#### REQ-MENU-033 — Il ricarico del prezzo consigliato si imposta anche come drink cost
+
+Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei miei prodotti ma adesso si ragiona a quanto deve essere il food cost, il drink cost», «vuoi fare il P3 allora il 33%, vuoi fare il P5 allora il 20%»; un bar di lusso non lavora a ×3. In Impostazioni → Prezzo consigliato, sotto «Ricarico sul costo (×)», c'è «Drink cost (% sul prezzo)»: l'incidenza del costo degli ingredienti sul prezzo di vendita. I due campi sono lo stesso valore scritto in due modi: si salva solo il ricarico (`price_markup`), il drink cost è il suo inverso (100 ÷ ricarico, al decimo), e scrivendo il 20% si salva ×5. Il prezzo consigliato, la marginalità del listino e i loro obiettivi non cambiano: leggono il ricarico come prima.
+
+**Dove**: `src/lib/pricing.js (drinkCostDi, ricaricoDaDrinkCost), src/components/SettingsTab.jsx (Prezzo consigliato)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/drinkCost.test.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -2188,6 +2194,12 @@ UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo «Inventario�
 GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe complete (rim_adesso, cons, valori) e totali; quelli di prima solo dep · acq · rim · cons, e i primi neanche i totali: la lettura (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`), non il contato delle 18 (BUG-112), poi il contato, poi l'atteso. Prima gli inventari chiusi stavano in fondo all'inventario in corso, quindici al massimo, e aperti dicevano solo il consumo riga per riga: quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`), la lista per scaffale e la testata sono le stesse dell'inventario in corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra altri» (`fetchStockCounts` con `prima`): un inventario e' un documento da quattrocento righe, e per l'elenco bastano date e totali (`riassuntoInventarioChiuso`). La sezione si accende col modulo dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
 
 **Dove**: `src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)` · **Lo dimostrano**: `tests/unit/inventarioChiuso.test.js`, `tests/component/StoricoInventari.test.jsx`, `tests/unit/licenza.test.js`
+
+#### REQ-MAG-054 — Un ingrediente nuovo in ricetta parte in millilitri
+
+Flavio, vocale del 09/11/2026: aprendo il Negroni, gin, Campari e vermut sono in millilitri, ma un ingrediente aggiunto usciva in cl; «nella velocità» si scrive il numero pensando in millilitri e la riga vale dieci volte tanto. «Facciamo uscire in automatico in default sempre millilitri, poi se uno se lo vuole modificare se lo modifica.» Per un liquido la prima unità di dosaggio è ora il ml, poi il cl: vale per la riga aggiunta nella scheda del drink, per l'ingrediente del prodotto libero e per una riga che passa da un articolo a pezzi a un liquido. Il cl resta fra le scelte; una riga già scritta in cl resta in cl (BUG-124); i solidi partono dal grammo e un articolo che si dosa solo a pezzi resta a pezzi.
+
+**Dove**: `src/lib/inventory.js (ENTRY_UNITS, entryUnits, unitaDopoCambioIngrediente), src/components/DrinkForm.jsx, src/components/CustomDrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/ricettaInMillilitri.test.jsx`
 
 #### REQ-MAG-053 — Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo
 

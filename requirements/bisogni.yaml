@@ -318,4 +318,6 @@ bisogni:
       - REQ-MENU-002
       - REQ-MENU-032
       - REQ-UI-032
+      - REQ-MAG-054
+      - REQ-MENU-033
     test_cases: []

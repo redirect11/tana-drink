@@ -28,8 +28,10 @@ export const BASE_UNITS = ['ml', 'g', 'pz', UNITA_GENERICA]
 // Sono le unità "piccole" con cui si dosa un drink (mai L/kg in una ricetta):
 // liquidi in cl/ml, solidi in g/mg. Devono restare un sottoinsieme di quelle
 // gestite da costPerUnit, altrimenti il costo dell'ingrediente andrebbe perso.
+// Il ml viene prima del cl (REQ-MAG-054): un ingrediente nuovo in ricetta
+// parte in millilitri, come le ricette che il locale già scrive.
 export const ENTRY_UNITS = {
-  ml: ['cl', 'ml'],
+  ml: ['ml', 'cl'],
   g: ['g', 'mg'],
   pz: ['pz'],
   // Il generico non ha sottomultipli: si dosa a unità.
@@ -75,15 +77,16 @@ export function resaUso(item) {
 // pezzo offriva soltanto "pz" e per 4 cl di gin bisognava scrivere 0,057
 // pezzi — un numero che non vuol dire niente per chi prepara.
 //
-// Il cl viene per primo: nelle ricette è il caso normale. Il pezzo resta,
-// perché una Coca in un drink si mette intera.
+// La prima è quella con cui parte un ingrediente nuovo: per i liquidi il
+// ml, che è come il locale scrive le ricette (REQ-MAG-054; fino al 09/11
+// era il cl). Il pezzo resta, perché una Coca in un drink si mette intera.
 export function entryUnits(item) {
   const unit = item?.unit || 'pz'
   const proprie = unit !== 'pz' ? (ENTRY_UNITS[unit] ?? [unit]) : ['pz']
   const r = resaUso(item)
   if (!r || r.base === unit) return proprie
   // Le unità d'uso vengono PRIMA: nelle ricette sono il caso normale (si
-  // dosano 4 cl di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
+  // dosano 40 ml di gin, non 0,057 bottiglie). Quella d'acquisto resta, che
   // una Coca in un drink si mette intera.
   const uso = ENTRY_UNITS[r.base] ?? [r.base]
   return [...uso, ...proprie.filter((u) => !uso.includes(u))]

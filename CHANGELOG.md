@@ -2,6 +2,15 @@
 
 ## 1.10.31-beta — in lavorazione
 
+### Gestionale
+
+- Nella ricetta di un drink, un ingrediente liquido aggiunto parte in
+  millilitri invece che in cl, come le righe già scritte. Il cl resta fra
+  le scelte.
+- In Impostazioni → Prezzo consigliato il ricarico si imposta anche come
+  drink cost, la percentuale del prezzo che va negli ingredienti: ×3 è il
+  33,3%, ×5 il 20%. I due campi sono lo stesso valore.
+
 ## 1.10.30-beta — 10/11/2026 (test)
 
 ### Piano gratuito
