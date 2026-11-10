@@ -8176,6 +8176,8 @@ requirements:
       soglie che cadevano sono state ritarate una volta sola, un punto
       sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami,
       funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte.
+      Il 10/11/2026 i rami di functions/lib salgono a 79 (misurati 80,25%):
+      prima erano misurati male e oscillavano sullo stesso codice (BUG-140).
     status: todo
     generate_issue: true
     labels: [metodo, qualita]

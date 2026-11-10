@@ -5872,3 +5872,35 @@ bugs:
     requisiti: [REQ-VENUE-001]
     test_cases:
       - tests/component/SettingsTab.test.jsx
+
+  - id: BUG-140
+    title: "La coverage di functions/lib cambia da un giro all'altro sullo stesso codice, e boccia le PR a caso"
+    area: "tests/unit/payment-core.test.js, tests/unit/push-comande.test.js, tests/bdd/licenza-functions.test.js"
+    severity: media
+    priority: P1
+    description: >
+      Visto il 10/11/2026 sulla PR #320: il primo giro della CI è caduto con
+      i rami di functions/lib al 71,07%, sotto la soglia del 74%; il giro
+      dopo, con le Functions identiche, era al 75,58%. Il rapporto della CI
+      mostrava un file solo diverso, payment-core.js (68 o 97 rami su 133),
+      e i conteggi per riga rimescolati, non coperti o scoperti. La causa:
+      payment-core.js e licenza-core.js li caricavano in due modi. I test
+      unitari li importavano passando da Vite, payment-service.js li prende
+      col require nativo di Node; V8 vede due versioni dello stesso file
+      con posizioni diverse, e la coverage le fonde in un ordine che
+      dipende da quale test finisce prima. Messi insieme, i test coprivano
+      MENO del test unitario da solo (66 rami contro 104). ORA quei test li
+      caricano col require nativo, come le Functions: la misura è la stessa
+      in ogni ordine (118 rami su 133) e nessuna PR cade più per un numero
+      che non dipende dal codice. Un test che importa un modulo di
+      functions/lib che un altro modulo carica con require deve fare lo
+      stesso.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, sviluppo, test]
+    requisiti: [REQ-DEV-005]
+    test_cases:
+      - tests/unit/payment-core.test.js
+      - tests/unit/push-comande.test.js
+      - tests/bdd/licenza-functions.test.js

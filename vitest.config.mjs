@@ -71,8 +71,13 @@ export default defineConfig({
       // sono state ritarate una volta sola, un punto sotto la misura nuova
       // (decisione dell'utente); non è una copertura peggiorata, e da qui il
       // cricchetto riparte.
+      //
+      // I rami di functions/lib salgono a 79 il 10/11/2026 (BUG-140): erano
+      // misurati male, perché payment-core e licenza-core arrivavano in due
+      // versioni (da Vite e dal require nativo) e il numero oscillava fra 71
+      // e 76 sullo stesso codice. Misurati giusti sono all'80,25%.
       thresholds: {
-        'functions/lib/**/*.js': { statements: 84, branches: 74, functions: 88, lines: 90 },
+        'functions/lib/**/*.js': { statements: 84, branches: 79, functions: 88, lines: 90 },
         'src/lib/**': { statements: 64, branches: 74, functions: 62, lines: 64 },
         'src/components/**': { statements: 40, branches: 68, functions: 43, lines: 40 },
         'src/pages/**': { statements: 17, branches: 52, functions: 16, lines: 17 },

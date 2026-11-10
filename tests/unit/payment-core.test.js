@@ -3,7 +3,15 @@
 // Unit test della logica pura dei pagamenti (functions/lib/payment-core.js).
 
 import { describe, it, expect } from 'vitest'
-import {
+import { createRequire } from 'node:module'
+
+// Col require nativo, come lo carica payment-service.js nelle Functions. Se
+// lo si importa passando da Vite, V8 vede due versioni dello stesso file con
+// posizioni diverse e la coverage le fonde in un ordine che cambia da un giro
+// all'altro: il 10/11/2026 i rami di functions/lib passavano da 75,6 a 71,1%
+// sullo stesso codice, e una PR è stata bocciata senza motivo.
+const require = createRequire(import.meta.url)
+const {
   eurosToCents,
   buildCheckoutPayload,
   buildReaderCheckoutPayload,
@@ -13,7 +21,7 @@ import {
   decideAutoAdvance,
   parseReaderWebhookBody,
   parseCheckoutWebhookBody,
-} from '../../functions/lib/payment-core.js'
+} = require('../../functions/lib/payment-core.js')
 
 const NOW = '2026-06-12T22:00:00.000Z'
 
