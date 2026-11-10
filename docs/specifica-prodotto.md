@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-40 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+42 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2081,6 +2081,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-DATI-002 — Travaso e ripristino da riga di comando
 - REQ-SIC-002 — App Check protegge la produzione senza chiudere fuori il locale
 - REQ-SIC-004 — Caratteri e script dallo stesso indirizzo dell'app: niente richieste a terzi senza consenso
+- REQ-MENU-033 — Il ricarico del prezzo consigliato si imposta anche come drink cost
 - REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
 - REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente
 - REQ-FLOTTA-001 — La CI di tana-drink pubblica solo i progetti della Tana, compilati per la Tana; e compila anche il cliente demo
@@ -2108,6 +2109,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-UI-028 — Sconto e ricetta in finestre più larghe, e la ricetta si apre senza tastiera
 - REQ-UI-029 — Bilancio: cosa misura ogni tabella, in una spiegazione a scomparsa in cima
 - REQ-MENU-015 — Il ghiaccio nelle ricette: 1,6 volte la dose scritta in origine
+- REQ-MAG-054 — Un ingrediente nuovo in ricetta parte in millilitri
 - REQ-STAMPA-019 — La stampante lascia un diario sul server: una serata, un documento
 - REQ-DEV-016 — Quello che dice quali pezzi caricare non si tiene in cache
 - REQ-DEV-017 — La matrice dei moduli: ogni modulo premium provato da solo, in coppia con ogni altro, tutti e nessuno

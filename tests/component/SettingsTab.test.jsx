@@ -568,6 +568,26 @@ describe('giornata di lavoro', () => {
   })
 })
 
+// IL RICARICO ANCHE COME DRINK COST (REQ-MENU-033). I due campi scrivono
+// lo stesso valore, il ricarico: scritto il 20% di drink cost, si salva ×5.
+describe('prezzo consigliato: ricarico e drink cost', () => {
+  it('×3 si legge anche come 33,3%; scritto il 20%, si salva il ricarico ×5', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    impostazioni.price_markup = 3
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Prezzi e supplementi/ }))
+    expect(screen.getByLabelText('Ricarico sul costo')).toHaveValue(3)
+    const drinkCost = screen.getByLabelText('Drink cost')
+    expect(drinkCost).toHaveValue(33.3)
+
+    fireEvent.change(drinkCost, { target: { value: '20' } })
+    fireEvent.blur(drinkCost)
+    expect(updateSettings).toHaveBeenCalledWith({ price_markup: 5 })
+  })
+})
+
 // IL PIANO FREE NELLE IMPOSTAZIONI (REQ-LIC-003, REQ-LIC-004). Sul profilo
 // leggero SumUp non c'è: i suoi interruttori lasciano il posto a una riga
 // che lo dice. Un modulo in prova dice fino a quando (licenza.prove). Senza

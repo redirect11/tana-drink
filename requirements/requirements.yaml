@@ -6325,6 +6325,28 @@ requirements:
       - tests/component/MarginList.test.jsx
       - tests/sistema/marginalita.spec.js
 
+  - id: REQ-MENU-033
+    title: "Il ricarico del prezzo consigliato si imposta anche come drink cost"
+    area: "src/lib/pricing.js (drinkCostDi, ricaricoDaDrinkCost), src/components/SettingsTab.jsx (Prezzo consigliato)"
+    description: >
+      Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il
+      costo dei miei prodotti ma adesso si ragiona a quanto deve essere il
+      food cost, il drink cost», «vuoi fare il P3 allora il 33%, vuoi fare
+      il P5 allora il 20%»; un bar di lusso non lavora a ×3. In
+      Impostazioni → Prezzo consigliato, sotto «Ricarico sul costo (×)»,
+      c'è «Drink cost (% sul prezzo)»: l'incidenza del costo degli
+      ingredienti sul prezzo di vendita. I due campi sono lo stesso valore
+      scritto in due modi: si salva solo il ricarico (`price_markup`), il
+      drink cost è il suo inverso (100 ÷ ricarico, al decimo), e scrivendo
+      il 20% si salva ×5. Il prezzo consigliato, la marginalità del
+      listino e i loro obiettivi non cambiano: leggono il ricarico come
+      prima.
+    status: implemented
+    generate_issue: false
+    labels: [menu, impostazioni]
+    test_cases:
+      - tests/unit/drinkCost.test.js
+
   - id: REQ-MENU-023
     title: "Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa"
     area: "src/lib/marketplaceTemi.js (leggiTema, CATALOGO_INIZIALE, catalogo, scaricaCatalogo, temaInProva, patchUsaTema), src/components/MarketplaceTab.jsx (la pagina), src/lib/sezioni.js (la voce «Marketplace»), src/components/SettingsTab.jsx e ThemeSettings.jsx (i rimandi), src/App.jsx (colori del tema in prova), src/pages/MenuPage.jsx (stile del tema in prova), docs/marketplace-temi.md"
@@ -15179,6 +15201,27 @@ requirements:
       - tests/unit/inventarioChiuso.test.js
       - tests/component/StoricoInventari.test.jsx
       - tests/unit/licenza.test.js
+  - id: REQ-MAG-054
+    title: "Un ingrediente nuovo in ricetta parte in millilitri"
+    area: "src/lib/inventory.js (ENTRY_UNITS, entryUnits, unitaDopoCambioIngrediente), src/components/DrinkForm.jsx, src/components/CustomDrinkForm.jsx"
+    description: >
+      Flavio, vocale del 09/11/2026: aprendo il Negroni, gin, Campari e
+      vermut sono in millilitri, ma un ingrediente aggiunto usciva in cl;
+      «nella velocità» si scrive il numero pensando in millilitri e la riga
+      vale dieci volte tanto. «Facciamo uscire in automatico in default
+      sempre millilitri, poi se uno se lo vuole modificare se lo modifica.»
+      Per un liquido la prima unità di dosaggio è ora il ml, poi il cl:
+      vale per la riga aggiunta nella scheda del drink, per l'ingrediente
+      del prodotto libero e per una riga che passa da un articolo a pezzi
+      a un liquido. Il cl resta fra le scelte; una riga già scritta in cl
+      resta in cl (BUG-124); i solidi partono dal grammo e un articolo che
+      si dosa solo a pezzi resta a pezzi.
+    status: implemented
+    generate_issue: false
+    labels: [magazzino, ricette]
+    test_cases:
+      - tests/component/ricettaInMillilitri.test.jsx
+
   - id: REQ-MAG-053
     title: "Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo"
     area: "src/lib/api.js (resoAlFornitore, movimentoDiMagazzino), src/lib/magazzinoPeriodo.js (GRUPPO_MOTIVO, resoSulDeposito), src/lib/inventarioInCorso.js, src/lib/movimentiProdotto.js (TIPI_MOVIMENTO), src/components/InventoryManager.jsx (CaricoForm, doCarico)"

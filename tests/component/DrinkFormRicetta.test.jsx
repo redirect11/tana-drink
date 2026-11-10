@@ -26,7 +26,7 @@ describe('l’unità quando si cambia ingrediente', () => {
   it('cambia solo quando non ha senso, e allora parte da quella di inserimento', () => {
     expect(unitaDopoCambioIngrediente(LIME, 'ml')).toBe('pz')
     expect(unitaDopoCambioIngrediente(ZUCCHERO, 'cl')).toBe('g')
-    expect(unitaDopoCambioIngrediente(GIN, '')).toBe('cl')
+    expect(unitaDopoCambioIngrediente(GIN, '')).toBe('ml')
   })
   it('senza articolo, nessuna unità', () => {
     expect(unitaDopoCambioIngrediente(undefined, 'ml')).toBe('')
