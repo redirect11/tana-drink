@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 9 novembre 2026.
+> Generato il 10 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 272 | fatto e coperto dai test |
+| ✅ | 274 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**328 voci** in tutto. **291** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**331 voci** in tutto. **293** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,15 +47,15 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 27 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 48 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 28 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
-| [Sicurezza](#sicurezza) | 3 | 1 | Regole di accesso, App Check, e cosa protegge cosa. |
+| [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 161 |
-| Unità | il progetto di dettaglio: un modulo da solo | 169 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 162 |
+| Unità | il progetto di dettaglio: un modulo da solo | 170 |
 
-**13** bisogni del locale, **0** con un test di accettazione.
-**79** requisiti su 320 sono collegati a un bisogno;
+**14** bisogni del locale, **0** con un test di accettazione.
+**82** requisiti su 323 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -189,9 +189,17 @@ In una serata piena allo stesso conto lavorano in due o tre: chi l'ha aperto al 
 
 Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li conosce. Devono mostrare i numeri incolonnati, permettere di guardare una parte sola (una categoria) e non ingombrare le schede con spiegazioni che chi le compila sa già (richieste dell'08/11/2026 sulla marginalità del listino e sugli aiuti dei campi).
 
-**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane.
+**Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026).
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
+
+La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non deve contenere nomi, foto o fornitori della Tana, non deve parlare con i servizi veri (la regia, Firebase) e non deve lasciare aperta una strada verso di loro. Richiesta della regia dopo la revisione di sicurezza del 02/11/2026.
+
+**Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -1078,6 +1086,12 @@ FATTO (06/11/2026, sul ramo dei temi su misura, che ne aveva bisogno): il vocabo
 Richiesta dell'08/11/2026: «in MENU - MARGINALITA LISTINO mettere le categorie sul lato sx in modo da poterle filtrare». La tabella era divisa per categorie ma mostrava sempre tutto il listino: per lavorare sui prezzi di una famiglia sola si scorreva cercandola. Ora a sinistra c'è la barra delle categorie del Menù e del POS (CategoryRail), con «Tutte» in cima e il numero di voci per categoria; toccandone una la tabella mostra solo quella, e i filtri Da rivedere, In linea e Costo incompleto contano e filtrano dentro la categoria scelta. Una voce sta sotto la stessa categoria nella barra e nella tabella: la regola è una sola (marginiPerCategoria, per id o per nome sulle voci vecchie). Sul telefono la barra diventa la riga che scorre, come altrove.
 
 **Dove**: `src/components/MarginList.jsx (CategoryRail), src/lib/pricing.js (marginiPerCategoria)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/MarginList.test.jsx`, `tests/sistema/marginalita.spec.js`
+
+#### REQ-MENU-033 — Il ricarico del prezzo consigliato si imposta anche come drink cost
+
+Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei miei prodotti ma adesso si ragiona a quanto deve essere il food cost, il drink cost», «vuoi fare il P3 allora il 33%, vuoi fare il P5 allora il 20%»; un bar di lusso non lavora a ×3. In Impostazioni → Prezzo consigliato, sotto «Ricarico sul costo (×)», c'è «Drink cost (% sul prezzo)»: l'incidenza del costo degli ingredienti sul prezzo di vendita. I due campi sono lo stesso valore scritto in due modi: si salva solo il ricarico (`price_markup`), il drink cost è il suo inverso (100 ÷ ricarico, al decimo), e scrivendo il 20% si salva ×5. Il prezzo consigliato, la marginalità del listino e i loro obiettivi non cambiano: leggono il ricarico come prima.
+
+**Dove**: `src/lib/pricing.js (drinkCostDi, ricaricoDaDrinkCost), src/components/SettingsTab.jsx (Prezzo consigliato)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/drinkCost.test.js`
 
 #### REQ-MENU-023 — Il marketplace dei temi, una pagina sua: un tema è una tavolozza più uno stile, si sfoglia, si prova, si installa e si usa
 
@@ -2188,6 +2202,12 @@ UNA SOTTOSEZIONE DEL MAGAZZINO, «Storico inventari», subito dopo «Inventario�
 GLI INVENTARI VECCHI SI APRONO TUTTI. Quelli chiusi dalla 1.8 hanno righe complete (rim_adesso, cons, valori) e totali; quelli di prima solo dep · acq · rim · cons, e i primi neanche i totali: la lettura (`righeInventarioChiuso`) prende quello che c'e' e ricava il resto dalle righe. La RIM mostrata e' quella alla chiusura (`rim_adesso`), non il contato delle 18 (BUG-112), poi il contato, poi l'atteso. Prima gli inventari chiusi stavano in fondo all'inventario in corso, quindici al massimo, e aperti dicevano solo il consumo riga per riga: quell'elenco non c'e' piu'. La riga (RigaInventario, con `soloLettura`), la lista per scaffale e la testata sono le stesse dell'inventario in corso, non copie. L'elenco si carica A PAGINE di venti con «Mostra altri» (`fetchStockCounts` con `prima`): un inventario e' un documento da quattrocento righe, e per l'elenco bastano date e totali (`riassuntoInventarioChiuso`). La sezione si accende col modulo dell'inventario: la corrispondenza sta in lib/licenza.js (`sezioni`).
 
 **Dove**: `src/components/StoricoInventari.jsx, src/lib/inventarioChiuso.js, src/lib/api.js (fetchStockCounts a pagine), src/lib/licenza.js (sezioni, moduloDiSezione), src/components/InventoryManager.jsx (INV_VIEWS), src/components/RigaInventario.jsx, src/components/ListaPerScaffale.jsx, src/components/TestataInventario.jsx, src/lib/warehouse.js (giorniScritti)` · **Lo dimostrano**: `tests/unit/inventarioChiuso.test.js`, `tests/component/StoricoInventari.test.jsx`, `tests/unit/licenza.test.js`
+
+#### REQ-MAG-054 — Un ingrediente nuovo in ricetta parte in millilitri
+
+Flavio, vocale del 09/11/2026: aprendo il Negroni, gin, Campari e vermut sono in millilitri, ma un ingrediente aggiunto usciva in cl; «nella velocità» si scrive il numero pensando in millilitri e la riga vale dieci volte tanto. «Facciamo uscire in automatico in default sempre millilitri, poi se uno se lo vuole modificare se lo modifica.» Per un liquido la prima unità di dosaggio è ora il ml, poi il cl: vale per la riga aggiunta nella scheda del drink, per l'ingrediente del prodotto libero e per una riga che passa da un articolo a pezzi a un liquido. Il cl resta fra le scelte; una riga già scritta in cl resta in cl (BUG-124); i solidi partono dal grammo e un articolo che si dosa solo a pezzi resta a pezzi.
+
+**Dove**: `src/lib/inventory.js (ENTRY_UNITS, entryUnits, unitaDopoCambioIngrediente), src/components/DrinkForm.jsx, src/components/CustomDrinkForm.jsx` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/ricettaInMillilitri.test.jsx`
 
 #### REQ-MAG-053 — Il reso al fornitore: il carico in negativo, che toglie dagli acquisti e non dal consumo
 
@@ -3793,6 +3813,8 @@ LA BUILD SA PER CHI COMPILA: la variabile `CLIENTE` (slug, default `tana`) fa le
 
 LE IMPOSTAZIONI VINCONO SULLA BUILD: `settings/bar` ha le chiavi `venue_*` (di partenza vuote in DEFAULT_SETTINGS); `venueDi(settings)` fonde impostazioni e build, impostazione per impostazione. Un locale cambia nome o indirizzo da Impostazioni senza rebuild; la Tana, che non le ha scritte, legge la build. Logica pura in src/lib/venue.js; il plugin di Vite ha il suo test. I FILE GRAFICI CHE MANCANO (06/11/2026): i file di public/ sono della Tana, e un locale con la cartella senza un suo file (il logo, un'icona) li ereditava in silenzio. L'utente, per il logo sul dorso del mazzo di «Carte»: se il tema va a un altro gestore «il logo non può essere più quello della Tana», e «serve un logo placeholder generico per i deploy di nuovi locali». Ora un locale che non è la Tana prende il file neutro di clienti/demo/public (un bicchiere su un tondo scuro, senza nomi) dove non ha il suo (pluginCliente.js, fileDelCliente); e i file del cliente vanno nella cartella vera della build anche con `--outDir`.
 
+IL NOME DI RISERVA È QUELLO DEL PRODOTTO (09/11/2026): un locale senza nome nella build e nelle impostazioni si chiama «Lime - SmartOrders» (nome corto «Lime»), da src/lib/prodotto.js; prima era «Il locale». In tana-drink il nome del prodotto compare solo così, come segnaposto, oltre alla firma del piano Free (REQ-LIC-003).
+
 **Dove**: `clienti/tana/venue.json, clienti/demo/venue.json, clienti/pluginCliente.js, vite.config.js, src/lib/venue.js, src/lib/useVenue.js, src/lib/api.js (DEFAULT_SETTINGS), src/components/IdentitaLocale.jsx (Impostazioni → Il locale)` · **Lo dimostrano**: `tests/unit/venue.test.js`, `tests/unit/clienteBuild.test.js`, `tests/component/IdentitaLocale.test.jsx`
 
 #### REQ-VENUE-002 — L'app legge il locale da venueDi: nome, barra, landing, menù, drawer, account, utenti
@@ -4212,6 +4234,12 @@ DA PENSARE CON CALMA, ed e' il motivo per cui e' un requisito a parte e non una 
 Oggi test gira senza App Check e con la chiave reCAPTCHA della produzione, che per il suo dominio non è valida. Se un giorno serve protezione anche lì: chiave dedicata, segreto registrato nel progetto di test e valore nella GitHub Environment "test".
 
 **Dove**: `infrastruttura`
+
+#### REQ-SIC-005 — La demo pubblica in sicurezza: lo script dei clienti, niente regia, configurazione finta, informativa per cliente
+
+Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «incarica un agente di verificare la sicurezza della demo», e letti i risultati, «dobbiamo risolvere anche tutte queste cose». Il disegno della modalità demo regge (nessuna demo nel pacchetto della Tana, nessuna richiesta verso Firebase, nessun dato personale nei dati di prova), ma: genera-cliente.mjs rifiuta la cartella «demo» prima di vedere che esiste, e la demo vecchia (un'app vera) restava online; la demo chiama la regia di produzione (presentazione, catalogo) a ogni apertura; con la configurazione vera e disableNetwork che fallisce in silenzio la rete resterebbe accesa; l'informativa privacy della Tana finisce in ogni build, demo e locali della flotta; nel pacchetto della demo restano nomi, foto e un fornitore della Tana; i link dei social accettano javascript:; la stampante finta non scapa il logo. Il dettaglio, coi file e le righe, in docs/sicurezza-demo.md. La regia ha già messo la sua difesa (PR #69): configurazione finta, niente indirizzo della regia, CSP con connect-src 'self', Storage chiuso.
+
+**Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 
 ### Intelligenza artificiale
 

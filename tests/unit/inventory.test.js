@@ -565,8 +565,8 @@ describe('unità con cui si dosa un ingrediente', () => {
   const sciroppo = { unit: 'ml', package_size: 700 }
   const sale = { unit: 'pz', package_size: 500, content_unit: 'g' }
 
-  it('bottiglia contata a pezzi: si dosa in cl, e il cl viene per primo', () => {
-    expect(entryUnits(gin)).toEqual(['cl', 'ml', 'pz'])
+  it('bottiglia contata a pezzi: si dosa in ml o cl, e il ml viene per primo (REQ-MAG-054)', () => {
+    expect(entryUnits(gin)).toEqual(['ml', 'cl', 'pz'])
   })
 
   it('il pezzo resta: una Coca in un drink si mette intera', () => {
@@ -578,7 +578,7 @@ describe('unità con cui si dosa un ingrediente', () => {
   })
 
   it('articolo a volume: come prima', () => {
-    expect(entryUnits(sciroppo)).toEqual(['cl', 'ml'])
+    expect(entryUnits(sciroppo)).toEqual(['ml', 'cl'])
   })
 
   it('e i solidi in grammi', () => {
@@ -1003,9 +1003,9 @@ describe('la resa: dal chilo di limoni ai cl di succo', () => {
     expect(resaUso(limoni)).toEqual({ base: 'ml', per: 0.5 })
   })
 
-  it('in ricetta si dosa in cl, non in grammi di limone', () => {
+  it('in ricetta si dosa in ml o cl, non in grammi di limone', () => {
     expect(entryUnits(limoni)).toContain('cl')
-    expect(entryUnits(limoni)[0]).toBe('cl') // il caso normale viene per primo
+    expect(entryUnits(limoni)[0]).toBe('ml') // il caso normale viene per primo (REQ-MAG-054)
   })
 
   it('4 cl di succo scalano 80 g di limoni', () => {
@@ -1045,7 +1045,7 @@ describe('la resa: dal chilo di limoni ai cl di succo', () => {
 describe('cosa si può scrivere in ricetta, secondo il contenuto', () => {
   it('col contenuto scritto: pezzo o unità del contenuto', () => {
     const gin = { unit: 'pz', package_size: 1000, content_unit: 'ml' }
-    expect(entryUnits(gin)).toEqual(['cl', 'ml', 'pz'])
+    expect(entryUnits(gin)).toEqual(['ml', 'cl', 'pz'])
   })
 
   it('senza contenuto: solo a pezzi', () => {
@@ -1054,10 +1054,10 @@ describe('cosa si può scrivere in ricetta, secondo il contenuto', () => {
   })
 
   it('e le unità d’uso vengono per prime: è il caso normale', () => {
-    // Comprato al chilo e usato in cl: nella ricetta si scrive 4 cl, non
+    // Comprato al chilo e usato in ml: nella ricetta si scrive 40 ml, non
     // 0,08 chili.
     const limoni = { unit: 'g', resa: 0.5, resa_unit: 'ml' }
-    expect(entryUnits(limoni)[0]).toBe('cl')
+    expect(entryUnits(limoni)[0]).toBe('ml')
     expect(entryUnits(limoni)).toContain('g')
   })
 })

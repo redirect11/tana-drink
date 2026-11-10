@@ -313,9 +313,32 @@ bisogni:
       intestazione; toccando «Birre» a sinistra restano solo le birre, con
       i filtri che contano lì dentro. Aprendo la scheda di un drink non ci
       sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i
-      campi» in Aspetto tornano, scritti in frasi piane.
+      campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin
+      alla ricetta del Negroni la riga parte in ml, come le altre; in
+      Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il
+      ricarico diventa ×5 (vocali del 09/11/2026).
     requisiti:
       - REQ-MENU-002
       - REQ-MENU-032
       - REQ-UI-032
+      - REQ-MAG-054
+      - REQ-MENU-033
+    test_cases: []
+
+  - id: UR-014
+    title: "La demo che si mostra a un locale nuovo non espone niente di un locale vero"
+    area: "Gestore"
+    description: >
+      La demo pubblica si fa provare a chi ancora non è cliente, senza
+      account. Non deve contenere nomi, foto o fornitori della Tana, non
+      deve parlare con i servizi veri (la regia, Firebase) e non deve
+      lasciare aperta una strada verso di loro. Richiesta della regia dopo
+      la revisione di sicurezza del 02/11/2026.
+    accettazione: >
+      Aperta la demo da un browser qualunque, nella pagina non c'è niente
+      della Tana (nomi, foto, fornitori, informativa privacy) e nessuna
+      richiesta parte verso la regia o verso Firebase; un link social
+      scritto con «javascript:» non diventa un link.
+    requisiti:
+      - REQ-SIC-005
     test_cases: []

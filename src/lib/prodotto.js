@@ -13,3 +13,7 @@
 // prodotto, che compare solo dove la licenza la chiede (REQ-LIC-003,
 // `limiti.marchio`).
 export const NOME_PRODOTTO = 'Lime - SmartOrders'
+
+// Il nome sotto l'icona dell'app installata, dove il nome intero non ci
+// sta: è il nome corto di ripiego di un locale che non ne ha uno suo.
+export const NOME_CORTO_PRODOTTO = 'Lime'
