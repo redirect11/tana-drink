@@ -2,6 +2,12 @@
 
 ## 1.10.38-beta — in lavorazione
 
+### Correzioni
+
+- Stile «Carte»: scelta una carta dopo aver scorso fino in fondo quella di
+  prima, la sezione nuova si apre dall'inizio anche sui telefoni dove
+  restava in fondo.
+
 ## 1.10.37-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

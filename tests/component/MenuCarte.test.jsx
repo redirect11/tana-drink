@@ -210,6 +210,54 @@ describe('il mazzo agganciato in alto', () => {
     expect(segnaposto.scrollIntoView).not.toHaveBeenCalled()
   })
 
+  // LA CARTA NUOVA PARTE DALL'INIZIO ANCHE SUL TELEFONO DI FLAVIO (BUG-144,
+  // vocale dell'11/11/2026: «sto su Gin… passo ai whisky: la carta mi parte
+  // da giù. Io vedo l'ultimo whisky e devo risalire»). In Chrome non si
+  // riproduce, e il test di sistema passava: il difetto è del suo browser.
+  // Si tolgono i due punti fragili.
+  //
+  // 1. Per centrare la carta toccata nella fila NON si chiama più
+  //    `scrollIntoView` sulla carta: quella chiamata muove tutti i
+  //    contenitori che scorrono, pagina compresa, e un browser che la
+  //    calcola prima di aver applicato il ritorno all'inizio riporta la
+  //    pagina dov'era. Si scorre solo la fila, di lato.
+  it('la carta toccata si centra scorrendo solo la fila, mai la pagina', async () => {
+    mostraAgganciabile()
+    const ventaglio = document.querySelector('.k-ventaglio')
+    ventaglio.scrollTo = vi.fn()
+    const gin = mazzo().getByRole('button', { name: 'Gin' })
+    gin.scrollIntoView = vi.fn()
+    // La carta sta a 500 nella fila, larga 128; la fila mostra 390 dei suoi 1500.
+    const rect = (left, top, width) => () => ({ left, top, width, height: 0 })
+    gin.getBoundingClientRect = rect(500, 120, 128)
+    ventaglio.getBoundingClientRect = rect(0, 100, 390)
+    Object.defineProperties(ventaglio, { scrollWidth: { value: 1500 }, clientWidth: { value: 390 } })
+    await userEvent.setup().click(gin)
+    expect(gin.scrollIntoView).not.toHaveBeenCalled()
+    // Il suo centro (564) a metà di quello che si vede (195): 369.
+    expect(ventaglio.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ left: 369 }))
+    expect(ventaglio.scrollTo.mock.calls[0][0]).not.toHaveProperty('top')
+  })
+
+  // 2. Si torna all'inizio anche se l'osservatore del browser non ha ancora
+  //    detto che il mazzo è agganciato: lo si misura al momento del tocco.
+  it('si torna all’inizio anche quando l’osservatore non ha ancora scattato', async () => {
+    const segnaposto = mostraAgganciabile()
+    // La pagina è scesa: il segnaposto è 400 px sopra lo schermo.
+    segnaposto.getBoundingClientRect = () => ({ top: -400, left: 0, width: 0, height: 0 })
+    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Gin' }))
+    expect(segnaposto.scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
+  })
+
+  // E lo si ripete dopo che la carta nuova è stata disegnata: se nel
+  // frattempo il browser ha rimesso la pagina dov'era, torna su.
+  it('il ritorno all’inizio si ripete a carta nuova disegnata', async () => {
+    const segnaposto = mostraAgganciabile()
+    act(() => scatta(true))
+    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Gin' }))
+    expect(segnaposto.scrollIntoView.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+
 })
 
 // LA CARTA DEGLI SPECIAL È UNA SOLA (l'utente, 11/11/2026: «la carta che si
