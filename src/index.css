@@ -12585,10 +12585,27 @@ body.pagina-piena .inv-scheda {
     transform: translateY(calc(var(--k-giu) - 8px));
   }
 }
+/* Ferme al loro inizio finché i caratteri non sono arrivati (BUG-141,
+   MenuCarte.jsx): un ventaglio partito col carattere di riserva cambiava
+   scritta a metà volo, e il titolo che cambiava carattere spostava il
+   mazzo. */
+.k-aspetta .k-carta,
+.k-aspetta .k-dorso,
+.k-aspetta .k-in-volo::after,
+.k-aspetta .k-aperta,
+.k-aspetta .k-voce {
+  animation-play-state: paused;
+}
+/* La carta è piena già al primo quinto del volo: trasparente per tutto il
+   tragitto, sopra le altre lasciava leggere le scritte di quelle sotto, e il
+   ventaglio sfarfallava (BUG-141). Il movimento resta quello di prima. */
 @keyframes k-dal-mazzo {
   from {
     opacity: 0;
     transform: translate(calc(-1 * (var(--k-capo) + var(--i, 0) * var(--k-passo))), var(--k-giu)) rotate(-6deg);
+  }
+  20% {
+    opacity: 1;
   }
 }
 @keyframes k-compare {

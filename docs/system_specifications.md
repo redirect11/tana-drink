@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 10 novembre 2026.
+> Generato il 11 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **334 voci** in tutto. **296** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 163 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 164 |
 | Unità | il progetto di dettaglio: un modulo da solo | 172 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
@@ -1053,7 +1053,7 @@ IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci
 
 RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con le categorie nuove di Flavio.
 
-**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`, `tests/sistema/carteAgganciate.spec.js`
+**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`, `tests/sistema/carteAgganciate.spec.js`, `tests/component/carteAspettanoICaratteri.test.jsx`
 
 #### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
 
@@ -4472,6 +4472,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| · | [BUG-142](#bug-142--al-primo-caricamento-il-menù-dei-clienti-dice-per-un-attimo-il-menù-digitale-non-è-attivo) — Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo» | media | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4592,6 +4593,12 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-142 — Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo»
+
+Visto l'11/11/2026 registrando il caricamento del menù dei clienti del test da un browser senza cache: per circa un secondo la pagina mostra «Il menù digitale non è attivo — Questa funzione non fa parte del piano di questo locale», poi «Carico il menù…» e il menù. App.jsx parte con le impostazioni di base (DEFAULT_SETTINGS), che non hanno una licenza: finché la licenza vera non arriva, menuDigitaleAttivo risponde «no» e la rotta /menu mostra la pagina della funzione non inclusa. Un cliente al tavolo, col telefono appena connesso, legge che il menù non c'è. Da fare: finché la licenza non è arrivata, «Carico il menù…», e la pagina della funzione non inclusa solo quando la licenza dice davvero di no.
+
+**Dove**: `src/App.jsx (menuDigitale, settings iniziali), src/components/FunzioneNonInclusa.jsx` · **Tradisce**: [REQ-LIC-002](#req-lic-002--i-moduli-del-prodotto-di-base-menù-e-ordini-il-resto-si-compra)
 
 ## Non più valido
 
