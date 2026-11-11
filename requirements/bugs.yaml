@@ -5990,3 +5990,39 @@ bugs:
     requisiti: [REQ-MENU-029]
     test_cases:
       - tests/component/MenuCarte.test.jsx
+
+  - id: BUG-144
+    title: "Stile «Carte»: dopo aver scorso una sezione fino in fondo, la carta scelta dopo si apre dalla fine invece che dall'inizio"
+    area: "src/components/MenuCarte.jsx (scegli, tornaAllInizio, centraNelVentaglio)"
+    severity: media
+    priority: P1
+    description: >
+      Flavio, vocale dell'11/11/2026 (21:58), dal menù del test (1.10.37):
+      «quando tu vai sul menù e selezioni una carta, scorri, arrivi alla
+      fine. Quando selezioni un'altra carta, la carta ti parte dalla fine.
+      Invece dovrebbe partire dall'inizio. Sto su Gin… passo ai whisky: la
+      carta mi parte da giù. Io vedo l'ultimo whisky e devo risalire.
+      Andrebbe fatto che si riporta all'inizio della carta».
+      È il comportamento che REQ-MENU-029 promette dal 09/11 («scegliendo
+      una carta dal mazzo agganciato la pagina torna all'inizio della carta
+      nuova»), e che il test di sistema carteAgganciate.spec.js prova: ma lo
+      prova in Chromium. L'11/11 NON SI RIPRODUCE in Chrome senza finestra
+      sulla demo compilata, né a 390 né a 1100 px: la carta nuova parte
+      dall'inizio. Il difetto quindi è del dispositivo di Flavio, con ogni
+      probabilità Safari su iPhone, che non si è potuto provare.
+      DUE PUNTI FRAGILI nel codice, che la correzione toglie [ipotesi: non
+      provata sul dispositivo]:
+      1. dopo aver riportato la pagina all'inizio, per centrare la carta
+         toccata nella fila si chiamava `scrollIntoView` sulla carta, con
+         scorrimento morbido: quella chiamata riguarda TUTTI i contenitori
+         che scorrono, pagina compresa, e un browser che la calcola prima di
+         aver applicato il primo spostamento riporta la pagina dov'era;
+      2. la pagina tornava all'inizio solo se l'osservatore del browser
+         aveva già detto che il mazzo è agganciato (`incollato`): dove
+         l'osservatore tarda o non scatta, non si tornava affatto.
+    status: todo
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases: []
