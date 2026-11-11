@@ -50,6 +50,7 @@ import { cambioDentroOrario } from '../lib/orario.js'
 import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
+import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -856,6 +857,7 @@ export default function SettingsTab({ role = null }) {
             checked={settings.show_serving_board}
             onChange={(v) => save({ show_serving_board: v })}
           />
+          <FormatoPrezziMenu settings={settings} onSave={save} />
           <TemaMenuClienti settings={settings} onSave={save} />
         </div>
       ),

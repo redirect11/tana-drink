@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { immagineVoce, segnapostoDrink } from '../lib/speciali.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { usePrezzoMenu } from '../lib/prezzoMenu.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 
 // IL CAROSELLO DEGLI SPECIAL (REQ-MENU-018), in cima al menù del cliente.
@@ -32,6 +32,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
   const attivaRef = useRef(0)
   attivaRef.current = attiva
   const toccato = useRef(false)
+  const prezzo = usePrezzoMenu()
 
   const vai = (n) => {
     const k = ((n % voci.length) + voci.length) % voci.length
@@ -92,7 +93,7 @@ export default function CaroselloSpeciali({ voci, link, chiaro = false, interval
                 <strong>{d.name}</strong>
                 {d.description && <span className="carosello-descrizione">{d.description}</span>}
                 {ingredienti && <span className="carosello-ingredienti">{ingredienti.join(' · ')}</span>}
-                <span className="price">{formatPrice(d.price)}</span>
+                <span className="price">{prezzo(d.price)}</span>
               </span>
             </Link>
           )

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatPrice } from '../lib/orderStatus.js'
+import { usePrezzoMenu } from '../lib/prezzoMenu.js'
 import { immagineVoce } from '../lib/speciali.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { COLORI } from '../lib/illustrazioneDrink.js'
@@ -28,6 +28,7 @@ const TINTE = Object.fromEntries(COLORI.map((c) => [c.id, c.hex]))
 const tintaDi = (d) => TINTE[d.illustrazione?.colore] || null
 
 function Scena({ d, k, totale, chiaro, tasti, disegni }) {
+  const prezzo = usePrezzoMenu()
   const img = useDisegnoRaster(immagineVoce(d, import.meta.env.BASE_URL, { chiaro, disegni }))
   const ingredienti = ingredientiInCarta(d)
   const tinta = tintaDi(d)
@@ -72,7 +73,7 @@ function Scena({ d, k, totale, chiaro, tasti, disegni }) {
               ))}
             </p>
           )}
-          <div className="notte-prezzo">{formatPrice(d.price)}</div>
+          <div className="notte-prezzo">{prezzo(d.price)}</div>
           {tasti && <div className="notte-tasti">{tasti}</div>}
         </div>
       </div>
@@ -82,6 +83,7 @@ function Scena({ d, k, totale, chiaro, tasti, disegni }) {
 
 export default function SpecialScorrevoli({ voci, titolo, sottotitolo, linkMenu, chiaro = false, tastiOrdine, disegni = false }) {
   const radice = useRef(null)
+  const prezzo = usePrezzoMenu()
   const [attiva, setAttiva] = useState(-1)
 
   // La scena al centro dello schermo dà il colore al fondale.
@@ -189,7 +191,7 @@ export default function SpecialScorrevoli({ voci, titolo, sottotitolo, linkMenu,
               <a href={`#speciale-${v.id}`} style={tintaDi(v) ? { '--tinta': tintaDi(v) } : undefined}>
                 <span className="n">{String(k + 1).padStart(2, '0')}</span>
                 <span className="t">{v.name}</span>
-                <span className="p">{formatPrice(v.price)}</span>
+                <span className="p">{prezzo(v.price)}</span>
               </a>
             </li>
           ))}
