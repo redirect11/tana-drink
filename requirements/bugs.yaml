@@ -5935,7 +5935,7 @@ bugs:
 
   - id: BUG-142
     title: "Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo»"
-    area: "src/App.jsx (menuDigitale, settings iniziali), src/components/FunzioneNonInclusa.jsx"
+    area: "src/App.jsx (menuNonIncluso), src/lib/licenza.js (licenzaNota), src/components/FunzioneNonInclusa.jsx"
     severity: media
     priority: P1
     description: >
@@ -5947,12 +5947,46 @@ bugs:
       una licenza: finché la licenza vera non arriva, menuDigitaleAttivo
       risponde «no» e la rotta /menu mostra la pagina della funzione non
       inclusa. Un cliente al tavolo, col telefono appena connesso, legge che
-      il menù non c'è. Da fare: finché la licenza non è arrivata, «Carico il
-      menù…», e la pagina della funzione non inclusa solo quando la licenza
-      dice davvero di no.
-    status: todo
+      il menù non c'è. ORA la rotta chiede prima se la licenza si sa già
+      (licenzaNota, src/lib/licenza.js): finché non è arrivata mostra
+      «Carico il menù…», la stessa attesa di MenuPage, e la pagina della
+      funzione non inclusa solo quando la licenza dice davvero di no.
+    status: fixed
     in_produzione: false
     generate_issue: true
     labels: [bug, menu, clienti, licenza]
     requisiti: [REQ-LIC-002]
-    test_cases: []
+    test_cases:
+      - tests/component/menuAspettaLaLicenza.test.jsx
+
+  - id: BUG-143
+    title: "Stile «Carte»: all'apertura le carte arrivano dal nulla e troppo in fretta, e sembrano sfarfallare"
+    area: "src/index.css (k-dal-centro, k-si-gira, k-dorso-su, k-apertura), src/components/MenuCarte.jsx (FilaCarte, classiTavolo)"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 11/11/2026, dopo la correzione di BUG-141 sul test: «il
+      flickering c'è ancora ma credo di aver capito, è l'animazione delle
+      carte che vengono aperte a ventaglio che è troppo veloce e sembra che
+      le carte flickerano… in questo momento sembra che le carte arrivino
+      dal nulla e troppo velocemente. Fai come il croupier che apre le
+      carte a ventaglio dal mazzo a partire dal centro, si sposta verso
+      sinistra sugli schermi piccoli e poi si girano tutte le carte, sempre
+      con animazione». Le carte uscivano già scoperte dal capo di sinistra,
+      comparendo dal trasparente, in 0,6 s e sfalsate di 55 ms: otto carte
+      scritte in corsa una sull'altra. ORA il mazzo sta 0,3 s chiuso al
+      centro dello schermo, a carte coperte (le carte hanno un dorso, e le
+      girate partono con loro); si stende a ventaglio in 1 s, ogni carta
+      fino al suo posto, quindi sul telefono verso sinistra, dove la fila
+      comincia; poi le carte si girano una dopo l'altra (0,5 s l'una, 60
+      ms di scarto). La prima carta, che si apre da sola, aspetta che il
+      mazzo abbia quasi finito di girarsi; una carta scelta si apre subito
+      come prima. Guardato fotogramma per fotogramma sulla demo compilata,
+      a 390 e a 1100 px.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/MenuCarte.test.jsx

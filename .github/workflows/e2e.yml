@@ -115,7 +115,13 @@ jobs:
           echo "E2E_URL=$url" >> "$GITHUB_ENV"
           echo "Canale: $url"
 
-      - run: npx playwright install --with-deps chromium
+      # Le librerie di sistema solo se il browser non parte: vedi il passo
+      # «Browser» di test.yml (apt irraggiungibile, 11/11/2026).
+      - name: Browser
+        run: |
+          npx playwright install chromium
+          node -e "import('@playwright/test').then(async ({ chromium }) => (await chromium.launch()).close())" \
+            || npx playwright install-deps chromium
 
       - name: I casi d'uso
         env:

@@ -91,6 +91,31 @@ describe('il mazzo', () => {
     expect(screen.queryByRole('button', { name: 'Tana' })).toBeNull()
   })
 
+  // IL MAZZO SI APRE COME LO APRE UN CROUPIER (BUG-143, l'utente,
+  // 11/11/2026: «sembra che le carte arrivino dal nulla e troppo
+  // velocemente… apri il ventaglio e poi gira tutte le carte»): chiuso al
+  // centro e coperto, si stende, poi le carte si girano. Il movimento è del
+  // foglio di stile; qui quello che gli serve dalla pagina: quante carte ci
+  // sono (per sapere dov'è il centro della fila) e il posto di ognuna.
+  it('la fila dice quante carte ha, e ogni carta il suo posto', () => {
+    mostra()
+    const fila = document.querySelector('.k-fila')
+    expect(fila.style.getPropertyValue('--n')).toBe(String(SEZIONI.length))
+    expect([...fila.querySelectorAll('.k-carta')].map((c) => c.style.getPropertyValue('--i'))).toEqual(['0', '1', '2'])
+    expect([...fila.querySelectorAll('.k-dorso-sotto')].map((c) => c.style.getPropertyValue('--i'))).toEqual(['0', '1', '2'])
+  })
+
+  // La prima carta si apre da sola, e aspetta che il mazzo si sia girato:
+  // `k-apertura` c'è finché non se ne sceglie una. Scelta una carta, quella
+  // si apre subito.
+  it('la prima carta aspetta il mazzo; una carta scelta no', async () => {
+    mostra()
+    const tavolo = document.querySelector('.k-tavolo')
+    expect(tavolo).toHaveClass('k-apertura')
+    await userEvent.setup().click(mazzo().getByRole('button', { name: 'Gin' }))
+    expect(tavolo).not.toHaveClass('k-apertura')
+  })
+
   // Le carte chiuse restano nella pagina: un tocco, e non si aspetta niente.
   it('le carte chiuse ci sono già, nascoste', () => {
     mostra()
@@ -170,6 +195,8 @@ describe('le altre pagine', () => {
     mostra({ soloSpeciali: true, speciali: SPECIALI })
     expect(screen.queryByRole('navigation')).toBeNull()
     expect(document.querySelector('.k-mazzo-segnaposto')).toBeNull()
+    // Senza mazzo non c'è niente da aspettare: il Jolly si apre subito.
+    expect(document.querySelector('.k-tavolo')).not.toHaveClass('k-apertura')
     expect(screen.getAllByRole('region', { hidden: true })).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'Velluto Bianco' })).toBeVisible()
   })

@@ -4475,6 +4475,14 @@ requirements:
       dal mazzo agganciato la pagina torna all'inizio della carta nuova,
       che altrimenti si leggerebbe a metà. Provato su un telefono in un
       browser vero (tests/sistema/carteAgganciate.spec.js).
+      L'APERTURA DEL MAZZO (BUG-143, l'utente, 11/11/2026): «apri il
+      ventaglio e poi gira tutte le carte… come il croupier che apre le
+      carte a ventaglio dal mazzo a partire dal centro, si sposta verso
+      sinistra sugli schermi piccoli e poi si girano tutte le carte». Il
+      mazzo sta un attimo chiuso al centro, a carte coperte; si stende a
+      ventaglio in un secondo, ogni carta fino al suo posto; poi le carte
+      si girano, una dopo l'altra; la prima carta si apre quando il mazzo
+      ha quasi finito di girarsi. Con «riduci movimento» niente.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
@@ -5905,6 +5913,7 @@ requirements:
       - tests/unit/sezioni.test.js
       - tests/component/FunzioneNonInclusa.test.jsx
       - tests/component/MenuPage.test.jsx
+      - tests/component/menuAspettaLaLicenza.test.jsx
   - id: REQ-LIC-003
     title: "I limiti del piano Free: si fanno rispettare solo se la licenza li scrive; senza, nessun limite"
     area: "src/lib/limiti.js, src/lib/prodotto.js, src/lib/licenza.js (moduloIncluso col piano free, scadenzaProva), src/components/AvvisoPiano.jsx, src/lib/saveDrink.js, src/components/MenuManager.jsx, src/pages/PosPage.jsx, src/lib/useContiAperti.js, src/components/PaymentScreen.jsx, src/components/OrdersHistory.jsx, src/components/CashSessionsList.jsx, src/components/UtentiTab.jsx, src/lib/printer.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (FunzioniPremium)"

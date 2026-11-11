@@ -49,7 +49,14 @@ import { StileCliente } from './lib/testiStile.js'
 import { applicaNomeApp } from './lib/nomeApp.js'
 import { venueDi } from './lib/venue.js'
 import { licenzaDi } from './lib/licenzaInVigore.js'
-import { installazioneBloccata, menuDigitaleAttivo, accountClientiAttivi, statoLicenza, STATI_LICENZA } from './lib/licenza.js'
+import {
+  installazioneBloccata,
+  licenzaNota,
+  menuDigitaleAttivo,
+  accountClientiAttivi,
+  statoLicenza,
+  STATI_LICENZA,
+} from './lib/licenza.js'
 
 // LA DEMO PUBBLICA (REQ-FLOTTA-019): la scelta del ruolo e la fascia «Demo»
 // avvolgono le pagine. Si carica con `import()` solo se la build è la demo:
@@ -396,7 +403,15 @@ export default function App() {
   // Il menù digitale è un modulo (REQ-LIC-002), e le sue due pagine (/menu e
   // /menu/special) lo seguono insieme: senza, la stessa pagina che lo dice.
   const menuDigitale = menuDigitaleAttivo(settings)
-  const menuNonIncluso = <FunzioneNonInclusa nome="Il menù digitale" licenza={licenzaDi(settings)} />
+  // FINCHÉ LA LICENZA NON È ARRIVATA NON SI DICE CHE IL MENÙ MANCA (BUG-142):
+  // alla prima apertura, per un secondo, il cliente al tavolo leggeva «Il
+  // menù digitale non è attivo» e poi vedeva il menù. Intanto la stessa
+  // attesa che mostra MenuPage mentre carica.
+  const menuNonIncluso = licenzaNota(settings) ? (
+    <FunzioneNonInclusa nome="Il menù digitale" licenza={licenzaDi(settings)} />
+  ) : (
+    <div className="empty">Carico il menù…</div>
+  )
 
   // IL NOME DELL'APP SEGUE CHI LA USA: il nome del locale per il cliente,
   // col suffisso del ruolo per chi lavora. Vale per la linguetta del

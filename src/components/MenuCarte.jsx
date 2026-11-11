@@ -15,8 +15,9 @@ import { caratteriDi, attendiCaratteri } from '../lib/caratteriPronti.js'
 //     suo gruppo e il suo valore (lib/mazzoCarte.js), in fila e
 //     accavallate, IN MEZZO A UN VENTAGLIO DI CARTE GIRATE: sotto ogni
 //     carta una girata, sfalsata e un poco più in basso, e ai due capi una
-//     girata inclinata (FilaCarte). All'apertura le carte escono da quella
-//     di sinistra. (La prima versione le teneva per metà dietro una fascia
+//     girata inclinata (FilaCarte). All'apertura il mazzo si apre come lo
+//     apre un croupier: chiuso al centro e coperto, si stende a ventaglio,
+//     poi le carte si girano (index.css, k-dal-centro). (La prima versione le teneva per metà dietro una fascia
 //     di dorsi: «le carte devono essere intere, adesso sono tagliate, non
 //     sembra un mazzo»; la seconda le girate le metteva in un mazzo a
 //     parte: «le carte che aprono il menù sono in mezzo a un ventaglio di
@@ -168,7 +169,7 @@ function GirataInCapo({ lato }) {
 
 export function FilaCarte({ carte, apertaId, scegli, tabIndex }) {
   return (
-    <div className="k-fila">
+    <div className="k-fila" style={{ '--n': carte.length }}>
       <GirataInCapo lato="primo" />
       {carte.map((c, i) => (
         <Fragment key={c.id}>
@@ -230,7 +231,7 @@ const TESTI_ANIMATI = '.k-testata .k-nome, .k-testata .k-motto, .k-carta-nome, .
 
 // IL VENTAGLIO PARTE COI CARATTERI GIUSTI (BUG-141): finché quelli dei testi
 // animati non sono arrivati, il tavolo resta in attesa (`k-aspetta` ferma le
-// animazioni al loro inizio, cioè a carte invisibili); poi parte tutto
+// animazioni al loro inizio, cioè a mazzo chiuso e coperto); poi parte tutto
 // insieme. Senza `document.fonts` (un browser vecchio, i test) non si
 // aspetta niente.
 function useCaratteriPronti() {
@@ -276,6 +277,12 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
     : carte
   const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
   if (!aperta) return null
+  // `k-apertura`: finché non si sceglie una carta, quella aperta è la prima
+  // e arriva quando il mazzo ha quasi finito di girarsi (index.css). Sulla
+  // pagina Special il mazzo non c'è, e non si aspetta niente.
+  const classiTavolo = ['k-tavolo', !caratteriPronti && 'k-aspetta', !soloSpeciali && scelta === null && 'k-apertura']
+    .filter(Boolean)
+    .join(' ')
 
   // CON IL MAZZO AGGANCIATO si sceglie una carta da metà di un'altra: la
   // pagina resterebbe a quell'altezza, e la carta nuova si leggerebbe a
@@ -290,7 +297,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   }
 
   return (
-    <div className={caratteriPronti ? 'k-tavolo' : 'k-tavolo k-aspetta'}>
+    <div className={classiTavolo}>
       {!soloSpeciali && <div className="k-mazzo-segnaposto" ref={alSegnaposto} aria-hidden="true" />}
       {!soloSpeciali && (
         <nav className={incollato ? 'k-mazzo incollata' : 'k-mazzo'} aria-label="Le carte del menù">

@@ -1,6 +1,17 @@
 # Cosa è cambiato
 
-## 1.10.33-beta — in lavorazione
+## 1.10.34-beta — in lavorazione
+
+### Menù dei clienti
+
+- Alla prima apertura su un telefono il menù non mostra più per un istante
+  «Il menù digitale non è attivo»: finché le informazioni del locale non
+  sono arrivate si legge «Carico il menù…».
+- Stile «Carte»: all'apertura il mazzo parte chiuso al centro, a carte
+  coperte, si stende a ventaglio e poi le carte si girano una dopo
+  l'altra. L'apertura è più lenta di prima.
+
+## 1.10.33-beta — 11/11/2026 (test)
 
 ### Menù dei clienti
 
