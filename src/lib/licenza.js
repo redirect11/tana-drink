@@ -347,6 +347,13 @@ export const statoLicenza = (stato) => {
 
 export const installazioneBloccata = (stato) => statoLicenza(stato) !== STATI_LICENZA.ATTIVA
 
+// LA LICENZA SI SA GIÀ? (BUG-142) Alla prima apertura su un dispositivo le
+// impostazioni partono senza licenza, e per un istante «non incluso» e «non
+// lo so ancora» si somigliano: chi deve dire a schermo che una funzione
+// manca chiede prima questo, e intanto aspetta. Una licenza non attivata
+// (confermata dal server) è una risposta, non un'attesa.
+export const licenzaNota = (stato) => licenzaDi(stato) != null
+
 // ── LE DOMANDE CHE FANNO LE SCHERMATE LATO CLIENTE (REQ-LIC-002) ───────
 // Il menù digitale c'è? Il cliente può ordinare da lì? Ha un account?
 export const menuDigitaleAttivo = (stato) => moduloAttivo(stato, 'menu_tavoli')

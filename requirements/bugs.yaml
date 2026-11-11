@@ -5935,7 +5935,7 @@ bugs:
 
   - id: BUG-142
     title: "Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo»"
-    area: "src/App.jsx (menuDigitale, settings iniziali), src/components/FunzioneNonInclusa.jsx"
+    area: "src/App.jsx (menuNonIncluso), src/lib/licenza.js (licenzaNota), src/components/FunzioneNonInclusa.jsx"
     severity: media
     priority: P1
     description: >
@@ -5947,12 +5947,14 @@ bugs:
       una licenza: finché la licenza vera non arriva, menuDigitaleAttivo
       risponde «no» e la rotta /menu mostra la pagina della funzione non
       inclusa. Un cliente al tavolo, col telefono appena connesso, legge che
-      il menù non c'è. Da fare: finché la licenza non è arrivata, «Carico il
-      menù…», e la pagina della funzione non inclusa solo quando la licenza
-      dice davvero di no.
-    status: todo
+      il menù non c'è. ORA la rotta chiede prima se la licenza si sa già
+      (licenzaNota, src/lib/licenza.js): finché non è arrivata mostra
+      «Carico il menù…», la stessa attesa di MenuPage, e la pagina della
+      funzione non inclusa solo quando la licenza dice davvero di no.
+    status: fixed
     in_produzione: false
     generate_issue: true
     labels: [bug, menu, clienti, licenza]
     requisiti: [REQ-LIC-002]
-    test_cases: []
+    test_cases:
+      - tests/component/menuAspettaLaLicenza.test.jsx

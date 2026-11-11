@@ -2,6 +2,12 @@
 
 ## 1.10.34-beta — in lavorazione
 
+### Menù dei clienti
+
+- Alla prima apertura su un telefono il menù non mostra più per un istante
+  «Il menù digitale non è attivo»: finché le informazioni del locale non
+  sono arrivate si legge «Carico il menù…».
+
 ## 1.10.33-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

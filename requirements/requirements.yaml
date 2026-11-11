@@ -5905,6 +5905,7 @@ requirements:
       - tests/unit/sezioni.test.js
       - tests/component/FunzioneNonInclusa.test.jsx
       - tests/component/MenuPage.test.jsx
+      - tests/component/menuAspettaLaLicenza.test.jsx
   - id: REQ-LIC-003
     title: "I limiti del piano Free: si fanno rispettare solo se la licenza li scrive; senza, nessun limite"
     area: "src/lib/limiti.js, src/lib/prodotto.js, src/lib/licenza.js (moduloIncluso col piano free, scadenzaProva), src/components/AvvisoPiano.jsx, src/lib/saveDrink.js, src/components/MenuManager.jsx, src/pages/PosPage.jsx, src/lib/useContiAperti.js, src/components/PaymentScreen.jsx, src/components/OrdersHistory.jsx, src/components/CashSessionsList.jsx, src/components/UtentiTab.jsx, src/lib/printer.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (FunzioniPremium)"
