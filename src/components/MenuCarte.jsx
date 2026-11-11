@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
@@ -218,21 +218,45 @@ export function VetrinaCarte({ voci }) {
 // partiva da un punto fisso sopra la carta aperta. Torna le variabili CSS
 // del punto di partenza rispetto al volo, o null se non c'è niente da
 // misurare (la prima carta, aperta senza tocco, parte dall'alto).
-export function partenzaDelVolo(carta, ventaglio, volo) {
-  if (!carta?.getBoundingClientRect || !ventaglio || !volo) return null
+// DI QUANTO SCORRE LA FILA PER CENTRARE UNA CARTA, e dove sta il suo centro
+// (nelle misure della fila). Serve a due cose che devono dire la stessa
+// cosa: da dove parte il volo (partenzaDelVolo) e lo scorrimento vero
+// (centraNelVentaglio). Null se non c'è niente da misurare.
+// SUL TELEFONO IL MAZZO AGGANCIATO È RIMPICCIOLITO (REQ-MENU-029,
+// index.css): `k` è di quanto (1 quando non lo è). Lo scorrimento della fila
+// si conta nelle sue misure, che non sanno di essere rimpicciolite.
+function doveNellaFila(carta, ventaglio) {
+  if (!carta?.getBoundingClientRect || !ventaglio?.getBoundingClientRect) return null
   const c = carta.getBoundingClientRect()
   const v = ventaglio.getBoundingClientRect()
-  const d = volo.getBoundingClientRect()
-  const larga = Math.min(d.width, 720)
-  if (!c.width || !larga) return null
-  // SUL TELEFONO IL MAZZO AGGANCIATO È RIMPICCIOLITO (REQ-MENU-029,
-  // index.css): `k` è di quanto (1 quando non lo è). Lo scorrimento della
-  // fila si conta nelle sue misure, che non sanno di essere rimpicciolite;
-  // il punto di partenza è a schermo, dove la carta si vede.
+  if (!c.width) return null
   const k = ventaglio.offsetWidth ? v.width / ventaglio.offsetWidth || 1 : 1
   const centro = (c.left - v.left + c.width / 2) / k + ventaglio.scrollLeft
   const corsa = Math.max(0, ventaglio.scrollWidth - ventaglio.clientWidth)
   const scorso = Math.min(Math.max(centro - ventaglio.clientWidth / 2, 0), corsa)
+  return { c, v, k, centro, scorso }
+}
+
+// LA CARTA TOCCATA SI CENTRA SCORRENDO SOLO LA FILA, DI LATO (BUG-144). Prima
+// si chiamava `scrollIntoView` sulla carta: comodo, ma quella chiamata muove
+// TUTTI i contenitori che scorrono, pagina compresa. Subito prima la pagina
+// era stata riportata all'inizio della carta nuova: su un browser che
+// calcola lo scorrimento morbido prima di aver applicato quello spostamento,
+// la pagina tornava dov'era, in fondo (Flavio, 11/11/2026: «la carta mi
+// parte da giù… vedo l'ultimo whisky e devo risalire»).
+export function centraNelVentaglio(carta, ventaglio) {
+  const dove = doveNellaFila(carta, ventaglio)
+  if (dove) ventaglio.scrollTo?.({ left: Math.round(dove.scorso), behavior: comeScorrere() })
+}
+
+export function partenzaDelVolo(carta, ventaglio, volo) {
+  const dove = volo ? doveNellaFila(carta, ventaglio) : null
+  if (!dove) return null
+  const { c, v, k, centro, scorso } = dove
+  const d = volo.getBoundingClientRect()
+  const larga = Math.min(d.width, 720)
+  if (!larga) return null
+  // Il punto di partenza è a schermo, dove la carta si vede.
   return {
     '--da-x': `${Math.round(v.left + (centro - scorso) * k - (d.left + d.width / 2))}px`,
     '--da-y': `${Math.round(c.top - d.top)}px`,
@@ -320,6 +344,43 @@ export default function MenuCarte({
   // aggiorna può toglierla), o la prima.
   const tutte = soloSpeciali ? cartePagina : carte
   const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
+
+  // TORNARE ALL'INIZIO DELLA CARTA NUOVA (REQ-MENU-029, BUG-144). Si torna se
+  // la pagina è scesa oltre il mazzo, e lo si MISURA al momento del tocco:
+  // l'osservatore (`incollato`) lo dice un attimo dopo, e dove tarda o non
+  // scatta la carta nuova si apriva alla stessa altezza di quella di prima,
+  // cioè in fondo. Sul telefono il mazzo agganciato è rimpicciolito e lascia
+  // vuoto, sotto di sé, il posto che occupava da grande: la pagina scende
+  // ancora di quel tanto, così la carta comincia subito sotto il mazzo.
+  // In un ref, perché la richiama anche l'effetto qui sotto, a carta
+  // disegnata, e deve leggere l'`incollato` di adesso.
+  const tornaAllInizio = useRef(() => {})
+  tornaAllInizio.current = () => {
+    const s = segnaposto.current
+    const v = ventaglio.current
+    if (!s) return
+    const mazzo = v?.closest?.('.k-mazzo')
+    const linea = mazzo ? parseFloat(getComputedStyle(mazzo).top) || 0 : 0
+    const sceso = (s.getBoundingClientRect?.().top ?? 0) < linea - 1
+    if (!incollato && !sceso) return
+    s.scrollIntoView?.({ block: 'start' })
+    const vuoto = v?.getBoundingClientRect ? v.offsetHeight - v.getBoundingClientRect().height : 0
+    if (vuoto > 1) window.scrollBy?.(0, vuoto)
+  }
+  // E LO SI RIPETE A CARTA NUOVA DISEGNATA, e ancora un attimo dopo: il
+  // difetto di Flavio non si riproduce in Chrome, quindi non si sa in quale
+  // istante il suo browser rimette la pagina dov'era. Ripetere non costa: a
+  // pagina già al posto giusto lo spostamento è zero. Il secondo giro è un
+  // ritardo, non un'animazione: non muove niente da sé.
+  const daRiportare = useRef(false)
+  useLayoutEffect(() => {
+    if (!daRiportare.current) return undefined
+    daRiportare.current = false
+    tornaAllInizio.current()
+    const dopo = setTimeout(() => tornaAllInizio.current(), 80)
+    return () => clearTimeout(dopo)
+  }, [scelta])
+
   if (!aperta) return null
   // `k-apertura`: finché non si sceglie una carta, quella aperta è la prima
   // e arriva quando il mazzo ha quasi finito di girarsi (index.css). Sulla
@@ -332,20 +393,15 @@ export default function MenuCarte({
   // pagina resterebbe a quell'altezza, e la carta nuova si leggerebbe a
   // metà (o, più corta, si vedrebbe il fondo vuoto). Si torna all'inizio,
   // con il mazzo in alto e la carta subito sotto. Di colpo e PRIMA di
-  // misurare il volo: il volo parte da dove la carta aperta sarà.
-  // Sul telefono il mazzo agganciato è rimpicciolito e lascia vuoto, sotto
-  // di sé, il posto che occupava da grande: la pagina scende ancora di quel
-  // tanto, così la carta nuova comincia subito sotto il mazzo piccolo.
+  // misurare il volo: il volo parte da dove la carta aperta sarà. Poi la
+  // fila scorre di lato per centrare la carta toccata, e la pagina no.
   const scegli = (id) => (e) => {
-    if (incollato) {
-      segnaposto.current?.scrollIntoView?.({ block: 'start' })
-      const v = ventaglio.current
-      const vuoto = v ? v.offsetHeight - v.getBoundingClientRect().height : 0
-      if (vuoto > 1) window.scrollBy?.(0, vuoto)
-    }
-    setPartenza(partenzaDelVolo(e.currentTarget, ventaglio.current, inVolo.current))
+    const carta = e.currentTarget
+    tornaAllInizio.current()
+    setPartenza(partenzaDelVolo(carta, ventaglio.current, inVolo.current))
     setScelta(id)
-    e.currentTarget.scrollIntoView?.({ behavior: comeScorrere(), block: 'nearest', inline: 'center' })
+    daRiportare.current = true
+    centraNelVentaglio(carta, ventaglio.current)
   }
 
   return (

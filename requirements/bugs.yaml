@@ -6020,9 +6020,16 @@ bugs:
       2. la pagina tornava all'inizio solo se l'osservatore del browser
          aveva già detto che il mazzo è agganciato (`incollato`): dove
          l'osservatore tarda o non scatta, non si tornava affatto.
-    status: todo
+      ORA la carta toccata si centra scorrendo solo la fila, di lato
+      (`centraNelVentaglio`); che la pagina sia scesa oltre il mazzo si
+      misura al momento del tocco; e il ritorno all'inizio si ripete a
+      carta nuova disegnata e ancora un attimo dopo. In Chromium il
+      comportamento è quello di prima (test di sistema verdi). RESTA DA
+      PROVARE sul telefono di Flavio: è lui a dire se è corretto.
+    status: fixed
     in_produzione: false
     generate_issue: true
     labels: [bug, menu, clienti]
     requisiti: [REQ-MENU-029]
-    test_cases: []
+    test_cases:
+      - tests/component/MenuCarte.test.jsx

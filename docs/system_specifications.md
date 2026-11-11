@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **337 voci** in tutto. **299** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **12** difetti noti sono ancora aperti.
+cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -4508,7 +4508,6 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
-| · | [BUG-144](#bug-144--stile-carte-dopo-aver-scorso-una-sezione-fino-in-fondo-la-carta-scelta-dopo-si-apre-dalla-fine-invece-che-dallinizio) — Stile «Carte»: dopo aver scorso una sezione fino in fondo, la carta scelta dopo si apre dalla fine invece che dall'inizio | media | P1 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4629,14 +4628,6 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
-
-#### BUG-144 — Stile «Carte»: dopo aver scorso una sezione fino in fondo, la carta scelta dopo si apre dalla fine invece che dall'inizio
-
-Flavio, vocale dell'11/11/2026 (21:58), dal menù del test (1.10.37): «quando tu vai sul menù e selezioni una carta, scorri, arrivi alla fine. Quando selezioni un'altra carta, la carta ti parte dalla fine. Invece dovrebbe partire dall'inizio. Sto su Gin… passo ai whisky: la carta mi parte da giù. Io vedo l'ultimo whisky e devo risalire. Andrebbe fatto che si riporta all'inizio della carta». È il comportamento che REQ-MENU-029 promette dal 09/11 («scegliendo una carta dal mazzo agganciato la pagina torna all'inizio della carta nuova»), e che il test di sistema carteAgganciate.spec.js prova: ma lo prova in Chromium. L'11/11 NON SI RIPRODUCE in Chrome senza finestra sulla demo compilata, né a 390 né a 1100 px: la carta nuova parte dall'inizio. Il difetto quindi è del dispositivo di Flavio, con ogni probabilità Safari su iPhone, che non si è potuto provare.
-
-DUE PUNTI FRAGILI nel codice, che la correzione toglie [ipotesi: non provata sul dispositivo]: 1. dopo aver riportato la pagina all'inizio, per centrare la carta toccata nella fila si chiamava `scrollIntoView` sulla carta, con scorrimento morbido: quella chiamata riguarda TUTTI i contenitori che scorrono, pagina compresa, e un browser che la calcola prima di aver applicato il primo spostamento riporta la pagina dov'era; 2. la pagina tornava all'inizio solo se l'osservatore del browser aveva già detto che il mazzo è agganciato (`incollato`): dove l'osservatore tarda o non scatta, non si tornava affatto.
-
-**Dove**: `src/components/MenuCarte.jsx (scegli, tornaAllInizio, centraNelVentaglio)` · **Tradisce**: [REQ-MENU-029](#req-menu-029--lo-stile-carte-lidea-di-flavio-il-menù-come-un-mazzo-di-carte-francesi-un-seme-per-macro-categoria-e-la-carta-scelta-si-alza-e-si-apre)
 
 ## Non più valido
 
