@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 279 | fatto e coperto dai test |
+| ✅ | 280 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**336 voci** in tutto. **298** descrivono il sistema com'è oggi e
+**337 voci** in tutto. **299** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 18 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 19 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -76,10 +76,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 166 |
-| Unità | il progetto di dettaglio: un modulo da solo | 173 |
+| Unità | il progetto di dettaglio: un modulo da solo | 174 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**87** requisiti su 328 sono collegati a un bisogno;
+**88** requisiti su 329 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-il-ruolo-di-pm-in-cima-a-claudemd-agentsmd-e-sei-sub-agenti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -3578,6 +3578,18 @@ L'utente, 09/11/2026: «non abbiamo una specifica vera del prodotto. Sulla base 
 IL REGISTRO DEI CASI D'USO (requirements/casi-uso.yaml, UC-<ZONA>-NNN): per ogni obiettivo di chi usa l'app, chi lo fa, da dove parte, i passi osservabili nel browser, l'esito, le varianti (quando/allora: rete staccata, cassa chiusa, ruolo che non può…), come si prova (browser, browser con stampante o SumUp finti, a mano), i bisogni che serve, i requisiti fatti che mette in gioco e quelli previsti. Da lì si genera docs/specifica-prodotto.md (`node scripts/casi-uso.mjs --documento`), che si legge senza sapere di codice. Un test controlla i legami: requisiti e bisogni esistenti, i fatti fra i requisiti, i todo fra i previsti, i test citati esistenti. I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi soli gesti di chi lavora, più browser insieme quando il caso d'uso lo chiede, con le Functions sotto: in locale e su ogni pull request con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test, testiamo, eliminiamo»), con il Terraform dell'istanza della regia. `tana-drink-test` resta al cliente, per la validazione. L'AMBIENTE GENERATO (l'utente, 09/11/2026: «facciamo la prima»): un progetto di prova fisso, `drinkpos-prova-e2e`, generato una volta dal Terraform dell'istanza, sempre vuoto. A ogni tag e a mano (.github/workflows/e2e.yml) ci si pubblicano regole, Functions e app su un canale d'anteprima che scade, i test seminano il database prima di ognuno, e alla fine si cancellano sempre dati, utenze, canale e Functions. Un progetto nuovo per giro no: senza Organizzazione Google un service account non crea progetti, la fatturazione ne regge cinque, e un progetto eliminato resta trenta giorni col nome bruciato. Le guardie (scripts/lib-ambiente-e2e.mjs e il workflow) accettano solo `drinkpos-prova-…` con la chiave di quel progetto; le utenze di prova hanno la password del segreto E2E_PASSWORD, non quella del seme. In locale gli stessi test girano sugli emulatori completi (`npm run test:e2e`). Preparazione una tantum in docs/ambiente-e2e.md. FASI: la bozza del registro (09/11/2026, da far rivedere al gestore); l'ambiente e i primi test (UC-CASSA-001, UC-BANCO-001); gli altri casi d'uso, dopo la revisione.
 
 **Dove**: `requirements/casi-uso.yaml, scripts/lib-casi-uso.mjs, scripts/casi-uso.mjs, docs/specifica-prodotto.md, docs/modello-a-v.md, tests/e2e/, playwright.e2e.config.mjs, scripts/lib-ambiente-e2e.mjs, scripts/ambiente-e2e.mjs, .github/workflows/e2e.yml, docs/ambiente-e2e.md` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/casiUso.test.js`, `tests/unit/ambienteE2e.test.js`
+
+#### REQ-DEV-020 — La squadra di Stonebit: il ruolo di PM in cima a CLAUDE.md, AGENTS.md e sei sub-agenti
+
+Richiesta del CEO-agente di Stonebit per conto di Daniele, consegnata da Daniele in chat l'11/11/2026 (file «squadra-tana-drink.md», poi «istruzioni aggiornate» con una seconda versione, che vale): il repo fa parte di Stonebit e una sessione aperta qui lavora come PM di Lime (app del locale), con un Tech Lead e una squadra di sub-agenti. La prima versione faceva della sessione principale il Tech Lead, con quattro agenti: è superata. Daniele, lo stesso giorno: «considera che il processo è sempre lo stesso, passare per gli issues e poi implementare, e i requisiti sono la bibbia».
+
+COSA SI METTE NEL REPO, col testo del messaggio preso alla lettera: la sezione «Stonebit — chi sei e come lavori qui» in cima a CLAUDE.md, subito dopo il titolo, senza togliere niente di quello che c'è; AGENTS.md nella radice, che rimanda a CLAUDE.md; sei agenti nuovi in .claude/agents/ (pm, tech-lead, frontend-developer, backend-developer, stampa-developer, revisore). I quattro agenti che c'erano (requisiti-dal-banco, rilascio-hotfix, allinea-registro, classifica-registro) restano validi e non si modificano.
+
+CRITERIO DI ACCETTAZIONE: la sezione è la prima dopo il titolo e il resto di CLAUDE.md è identico a prima; AGENTS.md esiste e nomina CLAUDE.md e .claude/agents/; ogni agente nuovo ha `name` uguale al nome del file e una `description`; gli agenti vecchi sono identici a quelli della linea di rilascio.
+
+LE CONTRADDIZIONI fra la sezione nuova e le regole del repo non si risolvono qui: si elencano nella pull request, e le decide Daniele.
+
+**Dove**: `CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), AGENTS.md, .claude/agents/ (pm, tech-lead, frontend-developer, backend-developer, stampa-developer, revisore)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/squadraStonebit.test.js`
 
 ### STAT
 

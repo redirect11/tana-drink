@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-47 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+48 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2118,3 +2118,4 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-STAMPA-019 — La stampante lascia un diario sul server: una serata, un documento
 - REQ-DEV-016 — Quello che dice quali pezzi caricare non si tiene in cache
 - REQ-DEV-017 — La matrice dei moduli: ogni modulo premium provato da solo, in coppia con ogni altro, tutti e nessuno
+- REQ-DEV-020 — La squadra di Stonebit: il ruolo di PM in cima a CLAUDE.md, AGENTS.md e sei sub-agenti
