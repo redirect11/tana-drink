@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 277 | fatto e coperto dai test |
+| ✅ | 278 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**334 voci** in tutto. **296** descrivono il sistema com'è oggi e
+**335 voci** in tutto. **297** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -51,7 +51,7 @@ come «vero oggi», non come «garantito».
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 6 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 7 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 165 |
-| Unità | il progetto di dettaglio: un modulo da solo | 172 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 166 |
+| Unità | il progetto di dettaglio: un modulo da solo | 173 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**85** requisiti su 326 sono collegati a un bisogno;
+**86** requisiti su 327 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -151,7 +151,7 @@ Con gli ordini dal telefono il cliente non deve chiedere a nessuno a che punto �
 
 **Come si accetta**: Dal QR di un tavolo si apre il menù, si ordinano due drink e si resta sulla pagina dell'ordine. Il banco lo vede arrivare. Quando il banco lo porta a «pronto», la pagina del cliente lo dice senza ricaricare.
 
-**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Cliente · **Lo realizzano**: [REQ-CLI-001](#req-cli-001--il-cliente-ordina-dal-telefono-e-segue-il-suo-ordine), [REQ-CLI-007](#req-cli-007--gli-ordini-del-cliente-stanno-in-i-miei-ordini-non-in-mezzo-al-menù), [REQ-CLI-002](#req-cli-002--chi-apre-un-ordine-vede-la-schermata-giusta), [REQ-CLI-003](#req-cli-003--stima-di-attesa-onesta), [REQ-CLI-006](#req-cli-006--il-cliente-sa-che-il-suo-drink-è-pronto-da-ritirare), [REQ-NOTIF-001](#req-notif-001--il-cliente-sa-quando-il-suo-drink-è-pronto) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-009 — Si paga con la carta, al lettore o con un link
 
@@ -1051,11 +1051,13 @@ LA SECONDA VERSIONE (06/11/2026), dopo averlo visto sul test. L'utente: «le car
 
 IL VENTAGLIO E LA CARTA CHE SI GIRA (06/11/2026). L'utente: «dovrebbero esserci anche le carte girate come da esempio di Flavio: le carte che aprono il menù sono in mezzo a un ventaglio di carte girate»; e «un'animazione più figa: quando clicchi la carta esce fuori dal mazzo, si gira e si popola il menù». Il mazzo a pila a inizio fila è diventato il ventaglio dello schizzo: una girata intera sotto ogni carta, sfalsata di mezza carta e più in basso, e una girata inclinata a ogni capo, col logo; le carte escono da quella di sinistra. Toccando una carta, una carta sul dorso (con le proporzioni di una carta) esce dall'alto e gira fino a essere di taglio, poi subentra la faccia, cioè la carta aperta, che finisce il giro, e le voci entrano una dopo l'altra. Solo transform e opacity; con «riduci movimento» niente. Visto sul test: «troppo veloce, non si vede che esce dal mazzo; si vede bene quando si gira e si popola». Il volo ora parte dalla carta toccata nel ventaglio, alla sua misura e dove la fila la centra (partenzaDelVolo in MenuCarte.jsx), parte piano e scende crescendo per più di metà del tempo; poi gira e si popola come prima. Tutto 1,4 s invece di 0,8. Poi: «leggermente più veloce», e «il titolo della sezione rimbalza in alto non appena si gira la carta». 1,1 s; e la prospettiva del giro è della carta, col fulcro sul suo bordo alto, non della pagina: quella della pagina, centrata sopra il ventaglio, a metà giro tirava su il bordo alto di 28 px (misurato), e il titolo saliva e ricadeva. Ora si sposta di 6 px, dolcemente, mentre la carta cresce. Flavio, 08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto che riporta alle carte». Il mazzo resta agganciato sotto la barra mentre si legge, con un fondo pieno solo quando si aggancia (come BUG-120; senza sfocatura, che sul telefono costa mentre le carte si animano); il tasto «Le carte ↑» e la testa agganciata della carta aperta non ci sono più. Scegliendo una carta dal mazzo agganciato la pagina torna all'inizio della carta nuova, che altrimenti si leggerebbe a metà. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js). L'APERTURA DEL MAZZO (BUG-143, l'utente, 11/11/2026): «apri il ventaglio e poi gira tutte le carte… come il croupier che apre le carte a ventaglio dal mazzo a partire dal centro, si sposta verso sinistra sugli schermi piccoli e poi si girano tutte le carte». Il mazzo sta un attimo chiuso al centro, a carte coperte; si stende a ventaglio in un secondo, ogni carta fino al suo posto; poi le carte si girano, una dopo l'altra; la prima carta si apre quando il mazzo ha quasi finito di girarsi. Con «riduci movimento» niente.
 
-SUL TELEFONO IL MAZZO AGGANCIATO SI RIMPICCIOLISCE (l'utente, 11/11/2026: «sui dispositivi con schermo piccolo le carte dovrebbero essere leggermente più piccole o rimpicciolirsi quando scorriamo una pagina del menù, che altrimenti prende metà dello schermo»). Fino a 640 px di larghezza, agganciato sotto la barra il mazzo si disegna al 62% (le carte da 182 a 113 px di altezza); fermo nella pagina resta a carte intere. Si rimpicciolisce il disegno e non il posto che occupa (transform): cambiando l'altezza vera il testo salterebbe all'aggancio e il mazzo potrebbe agganciarsi e sganciarsi a ripetizione. Scelta una carta dal mazzo piccolo, la carta nuova comincia subito sotto di lui e il volo parte dalla carta piccola. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js).
+SUL TELEFONO IL MAZZO AGGANCIATO SI RIMPICCIOLISCE (l'utente, 11/11/2026: «sui dispositivi con schermo piccolo le carte dovrebbero essere leggermente più piccole o rimpicciolirsi quando scorriamo una pagina del menù, che altrimenti prende metà dello schermo»). Fino a 640 px di larghezza, agganciato sotto la barra il mazzo si disegna al 62% (le carte da 182 a 113 px di altezza); fermo nella pagina resta a carte intere. Si rimpicciolisce il disegno e non il posto che occupa (transform): cambiando l'altezza vera il testo salterebbe all'aggancio e il mazzo potrebbe agganciarsi e sganciarsi a ripetizione. Scelta una carta dal mazzo piccolo, la carta nuova comincia subito sotto di lui e il volo parte dalla carta piccola. Provato su un telefono in un browser vero (tests/sistema/carteAgganciate.spec.js). I DISEGNI IN OGNI CARTA, E IL CAROSELLO VESTITO DA CARTA (l'utente, 11/11/2026: «la carta dei Signature continua a non avere i disegni accanto ai drink… Signature e special sono trattati diversamente? Dovrebbero essere la stessa cosa»; «il carosello nel tema di Alice dovrebbe essere più in tema»). Il disegno o la foto accanto alla voce c'era solo sul Jolly della pagina Special: gli stessi drink, aperti dalla carta della loro sezione, restavano senza. Ora c'è in ogni carta che racconta i suoi drink (non nelle sezioni «snelle»); chi non ha né foto né disegno resta senza. E le slide del carosello degli Special sono carte avorio col Jolly negli angoli, nel carattere del mazzo, coi disegni a tratto scuro.
+
+LE CARTE SONO VECCHIE (l'utente, 11/11/2026: «il retro delle carte dovrebbe essere disegnato in stile Lewis Carroll, un po' più rovinato, magari qualche carta un po' rovinata. Parlo sia del retro che avanti»; «non rovinarle tutte uguali»; «anche il titolo deve essere coerente… la filigrana dietro al menù mi sembra troppo evidente»; «si vedono gli stacchi dei tile»). Il dorso è un'incisione: tratteggio incrociato tirato a mano, doppia cornice, un ovale coi quattro semi, e l'inchiostro che manca dove la carta è consumata. La faccia ha macchie d'umido e spigoli scuriti. Quattro dorsi e quattro facce, dalla carta quasi nuova a quella molto consumata, più due pieghe e un angolo piegato che toccano solo ad alcune carte. La carta aperta e il carosello hanno la stessa carta, più leggera perché sopra ci si legge, senza giunte visibili, e il titolo della sezione non ha più un fondo suo. Sono immagini pronte (public/stili/carte/, generate da scripts/carte-consumate/): coi filtri calcolati dal browser il menù andava a scatti.
 
 RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con le categorie nuove di Flavio.
 
-**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`, `tests/sistema/carteAgganciate.spec.js`, `tests/component/carteAspettanoICaratteri.test.jsx`
+**Dove**: `src/components/MenuCarte.jsx, src/lib/mazzoCarte.js, src/components/stiliStrutturati.js, src/lib/stileMenu.js (lo stile esclusivo), src/lib/marketplaceTemi.js (il tema), src/lib/contrattoStile.js (il gruppo delle sezioni), src/components/MarketplaceTab.jsx (la vetrina), src/index.css` · **Lo dimostrano**: `tests/component/MenuCarte.test.jsx`, `tests/unit/mazzoCarte.test.js`, `tests/sistema/carteAgganciate.spec.js`, `tests/component/carteAspettanoICaratteri.test.jsx`, `tests/unit/carteConsumate.test.js`
 
 #### REQ-MENU-030 — I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)
 
@@ -2743,6 +2745,14 @@ Dal menù il cliente compone e invia l'ordine, poi vede lo stato della sua coman
 
 **Dove**: `src/pages/MenuPage.jsx, src/pages/OrderStatusPage.jsx` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/component/OrderStatusPage.test.jsx`
 
+#### REQ-CLI-007 — Gli ordini del cliente stanno in «I miei ordini», non in mezzo al menù
+
+L'utente, 11/11/2026: «gli ordini non dovrebbero apparire nel menù. Dovrebbero stare in una sezione a parte della vista cliente, tipo i tuoi ordini, come bottone sopra l'header». Fino alla 1.10.35 il cliente trovava in cima al menù un riquadro per ogni suo ordine in corso, che spingeva giù le voci. Ora il menù mostra solo il menù. Gli ordini stanno nella pagina «I miei ordini», a cui porta il tasto in cima alla pagina (nella barra sul computer, nella riga sotto la barra sul telefono), che c'è quando il cliente ha almeno un ordine. Lì gli ordini ancora in corso si aggiornano da soli, come facevano nel menù: una lista letta una volta sola direbbe «In preparazione» di un drink già pronto.
+
+RESTA NEL MENÙ il tabellone «stiamo servendo / pronto al ritiro»: è un'impostazione del locale e serve anche a chi ha ordinato a voce al banco, che non ha ordini sul telefono e quindi non ha il tasto (REQ-CLI-006). Da decidere con l'utente se spostarlo.
+
+**Dove**: `src/pages/MyOrdersPage.jsx, src/pages/MenuPage.jsx, src/App.jsx (il tasto «I miei ordini»)` · **Serve**: [UR-008](#ur-008--il-cliente-ordina-dal-telefono-e-sa-quando-il-drink-è-pronto) · **Lo dimostrano**: `tests/component/mieiOrdini.test.jsx`, `tests/component/MenuPage.test.jsx`
+
 #### REQ-CLI-002 — Chi apre un ordine vede la schermata giusta
 
 Admin e bartender aprono il dettaglio in stile POS, per lavorarci; staff di sala e clienti vedono lo stato. Con l'arrivo del ruolo admin questo controllo era rimasto indietro e chi stava al banco si trovava la schermata del cliente.
@@ -2897,7 +2907,7 @@ LA CHIAMATA SI PRESENTA DOVUNQUE si stia guardando — coda, conto, cassa — e 
 
 #### REQ-STAFF-013 — Per chi lavora, la vista menù serve a battere un ordine
 
-Nella vista menù il personale non vede più i propri ordini attivi in cima: quella schermata, per chi lavora, serve a UNA cosa — prendere un ordine dalla carta com'è fatta per il cliente. Gli ordini stanno in coda, che è un'altra pagina, e vederli anche qui mescolava due mestieri. Al cliente invece restano: è l'unico posto dove ritrova quello che ha ordinato. E in «Da servire» il tasto è «Aggiungi ordine», e porta dove porta il «+» della coda: la schermata del conto, con la griglia. Prima mandava al menù — la vista del cliente — che per prendere un ordine al tavolo è la strada lunga: si scorre una carta fatta per chi ordina, invece della griglia fatta per chi batte.
+Nella vista menù il personale non vede più i propri ordini attivi in cima: quella schermata, per chi lavora, serve a UNA cosa — prendere un ordine dalla carta com'è fatta per il cliente. Gli ordini stanno in coda, che è un'altra pagina, e vederli anche qui mescolava due mestieri. Al cliente restavano, fino alla 1.10.35; dall'11/11/2026 non li vede più nemmeno lui, e li ritrova in «I miei ordini» (REQ-CLI-007). E in «Da servire» il tasto è «Aggiungi ordine», e porta dove porta il «+» della coda: la schermata del conto, con la griglia. Prima mandava al menù — la vista del cliente — che per prendere un ordine al tavolo è la strada lunga: si scorre una carta fatta per chi ordina, invece della griglia fatta per chi batte.
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/ServiceQueue.jsx` · **Lo dimostrano**: `tests/component/MenuPage.test.jsx`
 

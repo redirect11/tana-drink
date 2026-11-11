@@ -362,19 +362,23 @@ describe('la comanda dell’ordine preso in sala', () => {
   })
 })
 
-// LA VISTA MENÙ, PER CHI LAVORA, SERVE A UNA COSA: battere un ordine. La
-// coda è un'altra pagina — vedersi in mezzo i propri ordini attivi
-// mescolava due mestieri. Al cliente invece servono: è l'unico posto dove
-// ritrova quello che ha ordinato.
-describe('gli ordini in cima al menù', () => {
-  it('il cliente ritrova il suo', async () => {
+// NEL MENÙ GLI ORDINI NON CI STANNO, PER NESSUNO. Per chi lavora la coda è
+// un'altra pagina, e vedersi in mezzo i propri ordini attivi mescolava due
+// mestieri. Al cliente fino alla 1.10.35 restavano, in cima alle voci;
+// l'utente, 11/11/2026: «gli ordini non dovrebbero apparire nel menù.
+// Dovrebbero stare in una sezione a parte della vista cliente, tipo i tuoi
+// ordini». Ora li ritrova in «I miei ordini» (mieiOrdini.test.jsx), dal
+// tasto in cima alla pagina.
+describe('nel menù gli ordini non ci stanno', () => {
+  it('il cliente non trova il suo ordine fra le voci', async () => {
     localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = null
     mostra()
-    expect(await screen.findByText(/Ordine #7/)).toBeInTheDocument()
+    expect(await screen.findByText('Mojito')).toBeInTheDocument()
+    expect(screen.queryByText(/Ordine #7/)).toBeNull()
   })
 
-  it('chi lavora no: gli ordini stanno in coda', async () => {
+  it('chi lavora nemmeno: gli ordini stanno in coda', async () => {
     localStorage.setItem('drink_my_orders_v1', JSON.stringify(['o-mio']))
     ruoloClaim = 'bartender'
     mostra()

@@ -284,7 +284,7 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   il nome della sezione; una parola lunga rimpicciolisce la scritta
   quanto basta), con l'angolo (valore sopra seme) e il seme grande in
   mezzo, IN MEZZO A UN VENTAGLIO DI CARTE GIRATE: sotto ogni carta una
-  girata intera (rossa a reticolo, bordo avorio), sfalsata di mezza carta
+  girata intera (rossa, incisa a tratteggio incrociato, bordo avorio), sfalsata di mezza carta
   e più in basso di `--k-sotto`, un poco storta; a ogni capo una girata
   inclinata di 11°, col logo del locale in un anello avorio. La carta
   scelta si alza (e si inclina di 2°), e sotto si apre in grande, larga al
@@ -293,8 +293,19 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   taglio, poi la faccia finisce il giro e le voci entrano in fila. Il
   mazzo resta agganciato sotto la barra mentre si legge, con un fondo
   pieno (senza sfocatura) solo da agganciato; nessun tasto per tornarci (Flavio,
-  08/11/2026). Gli Special non sono nel mazzo: sono il carosello
-  di sempre, in cima; il Jolly è solo sulla pagina Special. Le carte hanno
+  08/11/2026); sul telefono (fino a 640 px) agganciato si disegna al 62%,
+  con `transform`, senza cambiare il posto che occupa. Gli Special non sono
+  nel mazzo: sono il carosello, in cima, con le slide vestite da carta
+  avorio col Jolly negli angoli; il Jolly come carta aperta è solo sulla
+  pagina Special. Il disegno o la foto accanto alla voce c'è in ogni carta
+  aperta, tranne nelle sezioni «snelle». LE CARTE SONO VECCHIE (11/11/2026):
+  dorso inciso con l'inchiostro consumato, faccia macchiata e con gli
+  spigoli scuriti, quattro dorsi e quattro facce più due pieghe e un
+  angolo piegato distribuiti con passi diversi, perché non siano rovinate
+  tutte uguali; la carta aperta e il carosello hanno la stessa carta, più
+  leggera, e il titolo della sezione non ha un fondo suo. Sono immagini
+  pronte (`public/stili/carte/`, da `scripts/carte-consumate/`): mai filtri
+  SVG calcolati dal browser, che fanno andare il menù a scatti. Le carte hanno
   colori LORO, non del tema: avorio `#fbf8f1`, inchiostro, rosso `#c3122f`
   per cuori e quadri, nero per fiori e picche, oro per il Jolly; dentro la
   carta aperta `--text`, `--muted` e `--line` diventano quelli della carta,
@@ -303,12 +314,14 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   di «Meraviglie», da stampa d'epoca alla Lewis Carroll), grande: nomi
   delle voci 1.32rem, descrizioni 1.08rem, ingredienti in corsivo; prezzi
   e valori delle carte in `Playfair Display`, perché IM Fell ha solo le
-  cifre antiche, basse. Movimento: le carte escono una dopo l'altra dalla
-  girata del primo capo, la scelta si alza con una molla, la carta aperta
+  cifre antiche, basse. Movimento: all'apertura il mazzo sta 0,3 s chiuso
+  al centro a carte coperte, si stende a ventaglio in 1 s, poi le carte si
+  girano una dopo l'altra (0,5 s l'una, 60 ms di scarto) e la prima si
+  apre quando il mazzo ha quasi finito; la scelta si alza con una molla, la carta aperta
   esce girata dal ventaglio e si gira (1,1 s: il viaggio più di metà, con
   una partenza lenta, perché si veda che si stacca dalla carta; la
   prospettiva del giro è della carta, col fulcro sul bordo alto, così il
-  titolo non salta), le voci entrano con 50 ms fra l'una e l'altra; solo `transform` e `opacity` (anche l'ombra della carta alzata
+  titolo non salta), le voci entrano con 50 ms fra l'una e l'altra; solo `transform` (con `translate` e `scale`) e `opacity` (anche l'ombra della carta alzata
   è un'opacità); con «riduci movimento», niente.
 - **«Giornale»** (prima versione): la carta stampata. `Playfair Display` per testata e
   titoli, testo in serif di sistema, filetti pieni, voci senza scatole; dai

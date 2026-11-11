@@ -4495,6 +4495,33 @@ requirements:
       carta dal mazzo piccolo, la carta nuova comincia subito sotto di lui
       e il volo parte dalla carta piccola. Provato su un telefono in un
       browser vero (tests/sistema/carteAgganciate.spec.js).
+      I DISEGNI IN OGNI CARTA, E IL CAROSELLO VESTITO DA CARTA (l'utente,
+      11/11/2026: «la carta dei Signature continua a non avere i disegni
+      accanto ai drink… Signature e special sono trattati diversamente?
+      Dovrebbero essere la stessa cosa»; «il carosello nel tema di Alice
+      dovrebbe essere più in tema»). Il disegno o la foto accanto alla voce
+      c'era solo sul Jolly della pagina Special: gli stessi drink, aperti
+      dalla carta della loro sezione, restavano senza. Ora c'è in ogni
+      carta che racconta i suoi drink (non nelle sezioni «snelle»); chi non
+      ha né foto né disegno resta senza. E le slide del carosello degli
+      Special sono carte avorio col Jolly negli angoli, nel carattere del
+      mazzo, coi disegni a tratto scuro.
+      LE CARTE SONO VECCHIE (l'utente, 11/11/2026: «il retro delle carte
+      dovrebbe essere disegnato in stile Lewis Carroll, un po' più
+      rovinato, magari qualche carta un po' rovinata. Parlo sia del retro
+      che avanti»; «non rovinarle tutte uguali»; «anche il titolo deve
+      essere coerente… la filigrana dietro al menù mi sembra troppo
+      evidente»; «si vedono gli stacchi dei tile»). Il dorso è
+      un'incisione: tratteggio incrociato tirato a mano, doppia cornice, un
+      ovale coi quattro semi, e l'inchiostro che manca dove la carta è
+      consumata. La faccia ha macchie d'umido e spigoli scuriti. Quattro
+      dorsi e quattro facce, dalla carta quasi nuova a quella molto
+      consumata, più due pieghe e un angolo piegato che toccano solo ad
+      alcune carte. La carta aperta e il carosello hanno la stessa carta,
+      più leggera perché sopra ci si legge, senza giunte visibili, e il
+      titolo della sezione non ha più un fondo suo. Sono immagini pronte
+      (public/stili/carte/, generate da scripts/carte-consumate/): coi
+      filtri calcolati dal browser il menù andava a scatti.
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented
@@ -4506,6 +4533,7 @@ requirements:
       - tests/unit/mazzoCarte.test.js
       - tests/sistema/carteAgganciate.spec.js
       - tests/component/carteAspettanoICaratteri.test.jsx
+      - tests/unit/carteConsumate.test.js
 
   - id: REQ-MENU-030
     title: "I temi su misura dalla regia: «I tuoi temi» nel marketplace, la ricetta col motore, e la struttura del menù (una pagina, per categoria, per macro categoria)"
@@ -4721,8 +4749,9 @@ requirements:
       cima: quella schermata, per chi lavora, serve a UNA cosa — prendere un
       ordine dalla carta com'è fatta per il cliente. Gli ordini stanno in
       coda, che è un'altra pagina, e vederli anche qui mescolava due
-      mestieri. Al cliente invece restano: è l'unico posto dove ritrova
-      quello che ha ordinato.
+      mestieri. Al cliente restavano, fino alla 1.10.35; dall'11/11/2026
+      non li vede più nemmeno lui, e li ritrova in «I miei ordini»
+      (REQ-CLI-007).
       E in «Da servire» il tasto è «Aggiungi ordine», e porta dove porta il
       «+» della coda: la schermata del conto, con la griglia. Prima mandava
       al menù — la vista del cliente — che per prendere un ordine al tavolo
@@ -4808,6 +4837,32 @@ requirements:
     generate_issue: false
     labels: [clienti]
     test_cases: [tests/component/OrderStatusPage.test.jsx]
+
+  - id: REQ-CLI-007
+    title: "Gli ordini del cliente stanno in «I miei ordini», non in mezzo al menù"
+    area: "src/pages/MyOrdersPage.jsx, src/pages/MenuPage.jsx, src/App.jsx (il tasto «I miei ordini»)"
+    description: >
+      L'utente, 11/11/2026: «gli ordini non dovrebbero apparire nel menù.
+      Dovrebbero stare in una sezione a parte della vista cliente, tipo i
+      tuoi ordini, come bottone sopra l'header». Fino alla 1.10.35 il
+      cliente trovava in cima al menù un riquadro per ogni suo ordine in
+      corso, che spingeva giù le voci. Ora il menù mostra solo il menù. Gli
+      ordini stanno nella pagina «I miei ordini», a cui porta il tasto in
+      cima alla pagina (nella barra sul computer, nella riga sotto la barra
+      sul telefono), che c'è quando il cliente ha almeno un ordine. Lì gli
+      ordini ancora in corso si aggiornano da soli, come facevano nel menù:
+      una lista letta una volta sola direbbe «In preparazione» di un drink
+      già pronto.
+      RESTA NEL MENÙ il tabellone «stiamo servendo / pronto al ritiro»: è
+      un'impostazione del locale e serve anche a chi ha ordinato a voce al
+      banco, che non ha ordini sul telefono e quindi non ha il tasto
+      (REQ-CLI-006). Da decidere con l'utente se spostarlo.
+    status: implemented
+    generate_issue: false
+    labels: [clienti, menu]
+    test_cases:
+      - tests/component/mieiOrdini.test.jsx
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-CLI-002
     title: "Chi apre un ordine vede la schermata giusta"

@@ -1,6 +1,21 @@
 # Cosa è cambiato
 
-## 1.10.35-beta — in lavorazione
+## 1.10.36-beta — in lavorazione
+
+### Menù dei clienti
+
+- Gli ordini in corso del cliente non compaiono più in cima al menù:
+  stanno nella pagina «I miei ordini», raggiungibile dal tasto in alto, e
+  lì il loro stato si aggiorna da solo.
+- Stile «Carte»: il disegno o la foto compare accanto alla voce in ogni
+  carta, non solo nella pagina Special.
+- Stile «Carte»: il carosello degli Special ha l'aspetto di una carta da
+  gioco, come il resto del menù.
+- Stile «Carte»: le carte hanno l'aspetto di un mazzo vecchio. Il dorso è
+  disegnato come un'incisione, la carta è macchiata e consumata, e ogni
+  carta è rovinata in modo diverso dalle altre.
+
+## 1.10.35-beta — 11/11/2026 (test)
 
 ### Menù dei clienti
 
