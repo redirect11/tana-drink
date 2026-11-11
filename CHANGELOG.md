@@ -2,6 +2,12 @@
 
 ## 1.10.35-beta — in lavorazione
 
+### Menù dei clienti
+
+- Stile «Carte»: sul telefono, mentre si scorre una sezione, il mazzo in
+  alto si rimpicciolisce e lascia più schermo alle voci. In cima alla
+  pagina torna a carte intere.
+
 ## 1.10.34-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

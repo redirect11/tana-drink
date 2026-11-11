@@ -4483,6 +4483,18 @@ requirements:
       ventaglio in un secondo, ogni carta fino al suo posto; poi le carte
       si girano, una dopo l'altra; la prima carta si apre quando il mazzo
       ha quasi finito di girarsi. Con «riduci movimento» niente.
+      SUL TELEFONO IL MAZZO AGGANCIATO SI RIMPICCIOLISCE (l'utente,
+      11/11/2026: «sui dispositivi con schermo piccolo le carte dovrebbero
+      essere leggermente più piccole o rimpicciolirsi quando scorriamo una
+      pagina del menù, che altrimenti prende metà dello schermo»). Fino a
+      640 px di larghezza, agganciato sotto la barra il mazzo si disegna al
+      62% (le carte da 182 a 113 px di altezza); fermo nella pagina resta a
+      carte intere. Si rimpicciolisce il disegno e non il posto che occupa
+      (transform): cambiando l'altezza vera il testo salterebbe all'aggancio
+      e il mazzo potrebbe agganciarsi e sganciarsi a ripetizione. Scelta una
+      carta dal mazzo piccolo, la carta nuova comincia subito sotto di lui
+      e il volo parte dalla carta piccola. Provato su un telefono in un
+      browser vero (tests/sistema/carteAgganciate.spec.js).
       RESTA: in produzione il «Menù dei clienti» coi gruppi, da fare con
       le categorie nuove di Flavio.
     status: implemented

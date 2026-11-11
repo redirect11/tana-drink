@@ -66,12 +66,39 @@ test('dal mazzo agganciato, la carta scelta si legge dal suo inizio', async ({ p
   await expect(altra).toHaveAttribute('aria-pressed', 'true')
 
   // La testa della carta nuova sta subito sotto il mazzo, non sopra lo
-  // schermo: la si legge dall'inizio.
+  // schermo: la si legge dall'inizio. Il mazzo si misura dal ventaglio, che
+  // sul telefono è rimpicciolito: il posto che occupava da grande resta,
+  // vuoto, e la carta nuova non deve cominciare lì sotto.
   const testa = page.locator('section.k-aperta:not([hidden]) .k-aperta-testa')
   await expect(async () => {
-    const m = await mazzo.boundingBox()
+    const m = await page.locator('.k-ventaglio').boundingBox()
     const t = await testa.boundingBox()
     expect(t.y).toBeGreaterThanOrEqual(m.y + m.height - 2)
     expect(t.y).toBeLessThan(m.y + m.height + 60)
   }).toPass()
+})
+
+// «Sui dispositivi con schermo piccolo le carte dovrebbero… rimpicciolirsi
+// quando scorriamo una pagina del menù, che altrimenti prende metà dello
+// schermo» (l'utente, 11/11/2026). Fermo nella pagina il mazzo è a carte
+// intere; agganciato si rimpicciolisce, e la pagina non si sposta di lato.
+test('sul telefono il mazzo agganciato si rimpicciolisce, e fermo torna grande', async ({ page }) => {
+  const mazzo = await apriMenuACarte(page)
+  await apriLaPiuLunga(page, mazzo)
+  const carta = mazzo.getByRole('button').first()
+  const altaDi = async () => (await carta.boundingBox()).height
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(mazzo).not.toHaveClass(/incollata/)
+  await expect.poll(altaDi).toBeGreaterThan(175)
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect(mazzo).toHaveClass(/incollata/)
+  await expect.poll(altaDi).toBeLessThan(125)
+  // Rimpicciolito non allarga la pagina: niente scorrimento di lato.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await expect(mazzo).not.toHaveClass(/incollata/)
+  await expect.poll(altaDi).toBeGreaterThan(175)
 })
