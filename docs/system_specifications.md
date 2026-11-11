@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 279 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**336 voci** in tutto. **298** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**337 voci** in tutto. **298** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 18 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 18 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 173 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**87** requisiti su 328 sono collegati a un bisogno;
+**88** requisiti su 329 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-il-ruolo-di-tech-lead-in-cima-a-claudemd-agentsmd-e-quattro-sub-agenti) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -4362,6 +4362,18 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte. Il 10/11/2026 i rami di functions/lib salgono a 79 (misurati 80,25%): prima erano misurati male e oscillavano sullo stesso codice (BUG-140).
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+
+#### REQ-DEV-020 — La squadra di Stonebit: il ruolo di Tech Lead in cima a CLAUDE.md, AGENTS.md e quattro sub-agenti
+
+Richiesta del CEO-agente di Stonebit per conto di Daniele, consegnata da Daniele in chat l'11/11/2026 (file «squadra-tana-drink.md»): il repo fa parte di Stonebit e la sessione principale lavora come Tech Lead di Lime SmartOrders, a capo di una squadra di sub-agenti. Daniele, lo stesso giorno: «considera che il processo è sempre lo stesso, passare per gli issues e poi implementare, e i requisiti sono la bibbia».
+
+COSA SI METTE NEL REPO, col testo del messaggio preso alla lettera: la sezione «Stonebit — chi sei e come lavori qui» in cima a CLAUDE.md, subito dopo il titolo, senza togliere niente di quello che c'è; AGENTS.md nella radice, che rimanda a CLAUDE.md; quattro agenti nuovi in .claude/agents/ (frontend-developer, backend-developer, stampa-developer, revisore). I quattro agenti che c'erano (requisiti-dal-banco, rilascio-hotfix, allinea-registro, classifica-registro) restano validi e non si modificano.
+
+CRITERIO DI ACCETTAZIONE: la sezione è la prima dopo il titolo e il resto di CLAUDE.md è identico a prima; AGENTS.md esiste e nomina CLAUDE.md e .claude/agents/; ogni agente nuovo ha `name` uguale al nome del file e una `description`; gli agenti vecchi sono identici a quelli della linea di rilascio.
+
+LE CONTRADDIZIONI fra la sezione nuova e le regole del repo non si risolvono qui: si elencano nella pull request, e le decide Daniele.
+
+**Dove**: `CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), AGENTS.md, .claude/agents/ (frontend-developer, backend-developer, stampa-developer, revisore)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 
