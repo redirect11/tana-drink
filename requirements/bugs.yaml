@@ -5958,3 +5958,35 @@ bugs:
     requisiti: [REQ-LIC-002]
     test_cases:
       - tests/component/menuAspettaLaLicenza.test.jsx
+
+  - id: BUG-143
+    title: "Stile «Carte»: all'apertura le carte arrivano dal nulla e troppo in fretta, e sembrano sfarfallare"
+    area: "src/index.css (k-dal-centro, k-si-gira, k-dorso-su, k-apertura), src/components/MenuCarte.jsx (FilaCarte, classiTavolo)"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 11/11/2026, dopo la correzione di BUG-141 sul test: «il
+      flickering c'è ancora ma credo di aver capito, è l'animazione delle
+      carte che vengono aperte a ventaglio che è troppo veloce e sembra che
+      le carte flickerano… in questo momento sembra che le carte arrivino
+      dal nulla e troppo velocemente. Fai come il croupier che apre le
+      carte a ventaglio dal mazzo a partire dal centro, si sposta verso
+      sinistra sugli schermi piccoli e poi si girano tutte le carte, sempre
+      con animazione». Le carte uscivano già scoperte dal capo di sinistra,
+      comparendo dal trasparente, in 0,6 s e sfalsate di 55 ms: otto carte
+      scritte in corsa una sull'altra. ORA il mazzo sta 0,3 s chiuso al
+      centro dello schermo, a carte coperte (le carte hanno un dorso, e le
+      girate partono con loro); si stende a ventaglio in 1 s, ogni carta
+      fino al suo posto, quindi sul telefono verso sinistra, dove la fila
+      comincia; poi le carte si girano una dopo l'altra (0,5 s l'una, 60
+      ms di scarto). La prima carta, che si apre da sola, aspetta che il
+      mazzo abbia quasi finito di girarsi; una carta scelta si apre subito
+      come prima. Guardato fotogramma per fotogramma sulla demo compilata,
+      a 390 e a 1100 px.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/MenuCarte.test.jsx
