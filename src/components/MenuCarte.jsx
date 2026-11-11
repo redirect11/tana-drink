@@ -1,10 +1,11 @@
-import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
 import { comeScorrere } from '../lib/movimento.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { caratteriDi, attendiCaratteri } from '../lib/caratteriPronti.js'
 
 // ── LO STILE «CARTE»: IL MENÙ COME UN MAZZO (REQ-MENU-029) ────────────────
 // L'idea di Flavio, 05/11/2026, e il suo schizzo del 06/11/2026: «na cosa
@@ -223,12 +224,36 @@ export function partenzaDelVolo(carta, ventaglio, volo) {
   }
 }
 
+// I testi che si muovono all'apertura, o che spostano il mazzo se cambiano
+// carattere: il titolo sopra, le carte, la carta aperta.
+const TESTI_ANIMATI = '.k-testata .k-nome, .k-testata .k-motto, .k-carta-nome, .k-indice, .k-pip, .k-aperta-titolo, .k-voce h3'
+
+// IL VENTAGLIO PARTE COI CARATTERI GIUSTI (BUG-141): finché quelli dei testi
+// animati non sono arrivati, il tavolo resta in attesa (`k-aspetta` ferma le
+// animazioni al loro inizio, cioè a carte invisibili); poi parte tutto
+// insieme. Senza `document.fonts` (un browser vecchio, i test) non si
+// aspetta niente.
+function useCaratteriPronti() {
+  const [pronti, setPronti] = useState(() => typeof document === 'undefined' || !document.fonts)
+  useEffect(() => {
+    if (pronti) return
+    let vivo = true
+    const descrizioni = caratteriDi(document.querySelectorAll(TESTI_ANIMATI))
+    attendiCaratteri(document.fonts, descrizioni).then(() => vivo && setPronti(true))
+    return () => {
+      vivo = false
+    }
+  }, [pronti])
+  return pronti
+}
+
 export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false, special = {} }) {
   const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
   const [scelta, setScelta] = useState(null)
   const [partenza, setPartenza] = useState(null)
   const ventaglio = useRef(null)
   const inVolo = useRef(null)
+  const caratteriPronti = useCaratteriPronti()
   // Il segnaposto sta dove il mazzo starebbe fermo nella pagina: dice se il
   // mazzo si è agganciato (useIncollata), ed è il punto a cui si torna.
   const [osserva, incollato] = useIncollata()
@@ -265,7 +290,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   }
 
   return (
-    <div className="k-tavolo">
+    <div className={caratteriPronti ? 'k-tavolo' : 'k-tavolo k-aspetta'}>
       {!soloSpeciali && <div className="k-mazzo-segnaposto" ref={alSegnaposto} aria-hidden="true" />}
       {!soloSpeciali && (
         <nav className={incollato ? 'k-mazzo incollata' : 'k-mazzo'} aria-label="Le carte del menù">

@@ -1,6 +1,14 @@
 # Cosa è cambiato
 
-## 1.10.32-beta — in lavorazione
+## 1.10.33-beta — in lavorazione
+
+### Menù dei clienti
+
+- Stile «Carte»: all'apertura della pagina le carte si aprono a ventaglio
+  senza sfarfallare. L'animazione parte quando i caratteri del mazzo sono
+  pronti, e le carte non sono più trasparenti mentre si accavallano.
+
+## 1.10.32-beta — 10/11/2026 (test)
 
 ### Gestionale
 

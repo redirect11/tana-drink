@@ -5904,3 +5904,55 @@ bugs:
       - tests/unit/payment-core.test.js
       - tests/unit/push-comande.test.js
       - tests/bdd/licenza-functions.test.js
+
+  - id: BUG-141
+    title: "Stile «Carte»: le carte sfarfallano quando si aprono a ventaglio al caricamento del menù"
+    area: "src/components/MenuCarte.jsx (useCaratteriPronti), src/lib/caratteriPronti.js, src/index.css (k-aspetta, k-dal-mazzo)"
+    severity: bassa
+    priority: P2
+    description: >
+      L'utente, 11/11/2026: «nell'animazione del tema delle carte, le carte
+      sfarfallano un po' quando si aprono a ventaglio quando si carica la
+      pagina». Registrato fotogramma per fotogramma il caricamento del menù
+      a carte del test: le carte comparivano e partivano subito, e il loro
+      carattere a macchina (IM Fell English) arrivava 100-400 ms dopo, a
+      metà volo. La scritta passava dal carattere di riserva a quello vero,
+      cambiava larghezza e andava a capo altrove, e il titolo del locale,
+      cambiando carattere, saliva di un paio di pixel portandosi dietro il
+      mazzo. In più le carte restavano trasparenti per tutto il volo, e
+      accavallate lasciavano leggere le scritte di quelle sotto. ORA il
+      tavolo aspetta i caratteri dei testi animati (titolo, carte, carta
+      aperta) con le animazioni ferme al loro inizio, a carte invisibili, e
+      parte quando sono arrivati, o comunque dopo 1,5 s; e la carta è piena
+      già al primo quinto del volo. Il movimento è quello di prima.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti]
+    requisiti: [REQ-MENU-029]
+    test_cases:
+      - tests/component/carteAspettanoICaratteri.test.jsx
+
+  - id: BUG-142
+    title: "Al primo caricamento il menù dei clienti dice per un attimo «Il menù digitale non è attivo»"
+    area: "src/App.jsx (menuDigitale, settings iniziali), src/components/FunzioneNonInclusa.jsx"
+    severity: media
+    priority: P1
+    description: >
+      Visto l'11/11/2026 registrando il caricamento del menù dei clienti del
+      test da un browser senza cache: per circa un secondo la pagina mostra
+      «Il menù digitale non è attivo — Questa funzione non fa parte del
+      piano di questo locale», poi «Carico il menù…» e il menù. App.jsx
+      parte con le impostazioni di base (DEFAULT_SETTINGS), che non hanno
+      una licenza: finché la licenza vera non arriva, menuDigitaleAttivo
+      risponde «no» e la rotta /menu mostra la pagina della funzione non
+      inclusa. Un cliente al tavolo, col telefono appena connesso, legge che
+      il menù non c'è. Da fare: finché la licenza non è arrivata, «Carico il
+      menù…», e la pagina della funzione non inclusa solo quando la licenza
+      dice davvero di no.
+    status: todo
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, menu, clienti, licenza]
+    requisiti: [REQ-LIC-002]
+    test_cases: []
