@@ -15931,22 +15931,25 @@ requirements:
       - tests/unit/ambienteE2e.test.js
 
   - id: REQ-DEV-020
-    title: "La squadra di Stonebit: il ruolo di Tech Lead in cima a CLAUDE.md, AGENTS.md e quattro sub-agenti"
-    area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), AGENTS.md, .claude/agents/ (frontend-developer, backend-developer, stampa-developer, revisore)"
+    title: "La squadra di Stonebit: il ruolo di PM in cima a CLAUDE.md, AGENTS.md e sei sub-agenti"
+    area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), AGENTS.md, .claude/agents/ (pm, tech-lead, frontend-developer, backend-developer, stampa-developer, revisore)"
     description: >
       Richiesta del CEO-agente di Stonebit per conto di Daniele, consegnata
-      da Daniele in chat l'11/11/2026 (file «squadra-tana-drink.md»): il
-      repo fa parte di Stonebit e la sessione principale lavora come Tech
-      Lead di Lime SmartOrders, a capo di una squadra di sub-agenti. Daniele,
-      lo stesso giorno: «considera che il processo è sempre lo stesso,
-      passare per gli issues e poi implementare, e i requisiti sono la
-      bibbia».
+      da Daniele in chat l'11/11/2026 (file «squadra-tana-drink.md», poi
+      «istruzioni aggiornate» con una seconda versione, che vale): il repo
+      fa parte di Stonebit e una sessione aperta qui lavora come PM di Lime
+      (app del locale), con un Tech Lead e una squadra di sub-agenti. La
+      prima versione faceva della sessione principale il Tech Lead, con
+      quattro agenti: è superata. Daniele, lo stesso giorno: «considera che
+      il processo è sempre lo stesso, passare per gli issues e poi
+      implementare, e i requisiti sono la bibbia».
       COSA SI METTE NEL REPO, col testo del messaggio preso alla lettera:
       la sezione «Stonebit — chi sei e come lavori qui» in cima a
       CLAUDE.md, subito dopo il titolo, senza togliere niente di quello che
-      c'è; AGENTS.md nella radice, che rimanda a CLAUDE.md; quattro agenti
-      nuovi in .claude/agents/ (frontend-developer, backend-developer,
-      stampa-developer, revisore). I quattro agenti che c'erano
+      c'è; AGENTS.md nella radice, che rimanda a CLAUDE.md; sei agenti
+      nuovi in .claude/agents/ (pm, tech-lead, frontend-developer,
+      backend-developer, stampa-developer, revisore). I quattro agenti che
+      c'erano
       (requisiti-dal-banco, rilascio-hotfix, allinea-registro,
       classifica-registro) restano validi e non si modificano.
       CRITERIO DI ACCETTAZIONE: la sezione è la prima dopo il titolo e il
@@ -15956,8 +15959,9 @@ requirements:
       quelli della linea di rilascio.
       LE CONTRADDIZIONI fra la sezione nuova e le regole del repo non si
       risolvono qui: si elencano nella pull request, e le decide Daniele.
-    status: todo
+    status: implemented
     generate_issue: true
     labels: [dev, metodo]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/unit/squadraStonebit.test.js
