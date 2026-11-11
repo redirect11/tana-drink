@@ -367,18 +367,19 @@ export default function MenuCarte({
     const vuoto = v?.getBoundingClientRect ? v.offsetHeight - v.getBoundingClientRect().height : 0
     if (vuoto > 1) window.scrollBy?.(0, vuoto)
   }
-  // E LO SI RIPETE A CARTA NUOVA DISEGNATA, e ancora un attimo dopo: il
+  // E LO SI RIPETE A CARTA NUOVA DISEGNATA, nello stesso giro del disegno: il
   // difetto di Flavio non si riproduce in Chrome, quindi non si sa in quale
-  // istante il suo browser rimette la pagina dov'era. Ripetere non costa: a
-  // pagina già al posto giusto lo spostamento è zero. Il secondo giro è un
-  // ritardo, non un'animazione: non muove niente da sé.
+  // istante il suo browser rimette la pagina dov'era. Ripetere qui non
+  // costa: a pagina già al posto giusto lo spostamento è zero.
+  // NON LO SI RIPETE PIÙ TARDI, CON UN RITARDO: provato (80 ms), e il test
+  // di sistema l'ha bocciato. Chi tocca una carta e scorre subito si vedeva
+  // riportare la pagina in cima: un rimedio peggiore del difetto.
   const daRiportare = useRef(false)
   useLayoutEffect(() => {
     if (!daRiportare.current) return undefined
     daRiportare.current = false
     tornaAllInizio.current()
-    const dopo = setTimeout(() => tornaAllInizio.current(), 80)
-    return () => clearTimeout(dopo)
+    return undefined
   }, [scelta])
 
   if (!aperta) return null

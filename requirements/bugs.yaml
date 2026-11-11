@@ -6023,7 +6023,9 @@ bugs:
       ORA la carta toccata si centra scorrendo solo la fila, di lato
       (`centraNelVentaglio`); che la pagina sia scesa oltre il mazzo si
       misura al momento del tocco; e il ritorno all'inizio si ripete a
-      carta nuova disegnata e ancora un attimo dopo. In Chromium il
+      carta nuova disegnata (non più tardi: un terzo giro dopo 80 ms
+      riportava in cima chi scorreva subito dopo il tocco, e il test di
+      sistema l'ha bocciato). In Chromium il
       comportamento è quello di prima (test di sistema verdi). RESTA DA
       PROVARE sul telefono di Flavio: è lui a dire se è corretto.
     status: fixed
