@@ -216,6 +216,20 @@ describe('le altre pagine', () => {
     expect(partenzaDelVolo({ getBoundingClientRect: rect(300, 120, 128) }, inFondo, volo)['--da-x']).toBe('169px')
   })
 
+  // Sul telefono il mazzo agganciato è rimpicciolito (REQ-MENU-029,
+  // 11/11/2026), e resta piccolo anche dopo il tocco: il volo parte dalla
+  // carta piccola, dov'è a schermo, e la fila la centra contando nelle sue
+  // misure, che sono quelle del mazzo intero.
+  it('dal mazzo rimpicciolito il volo parte dalla carta piccola', () => {
+    const rect = (left, top, width) => () => ({ left, top, width, height: 0 })
+    // A metà grandezza: lo schermo (390) mostra 780 della fila.
+    const carta = { getBoundingClientRect: rect(250, 110, 64) }
+    const ventaglio = { getBoundingClientRect: rect(0, 100, 390), offsetWidth: 780, scrollLeft: 0, scrollWidth: 1500, clientWidth: 780 }
+    const volo = { getBoundingClientRect: rect(16, 400, 358) }
+    // La fila scorre fino a portarla al centro, 195, dove sta il volo.
+    expect(partenzaDelVolo(carta, ventaglio, volo)).toEqual({ '--da-x': '0px', '--da-y': '-290px', '--da-scala': '0.179' })
+  })
+
   it('senza niente da misurare, il volo parte dall’alto', () => {
     expect(partenzaDelVolo(null, null, null)).toBeNull()
     mostra()

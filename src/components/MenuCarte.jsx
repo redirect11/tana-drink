@@ -215,11 +215,16 @@ export function partenzaDelVolo(carta, ventaglio, volo) {
   const d = volo.getBoundingClientRect()
   const larga = Math.min(d.width, 720)
   if (!c.width || !larga) return null
-  const centro = c.left - v.left + ventaglio.scrollLeft + c.width / 2
+  // SUL TELEFONO IL MAZZO AGGANCIATO È RIMPICCIOLITO (REQ-MENU-029,
+  // index.css): `k` è di quanto (1 quando non lo è). Lo scorrimento della
+  // fila si conta nelle sue misure, che non sanno di essere rimpicciolite;
+  // il punto di partenza è a schermo, dove la carta si vede.
+  const k = ventaglio.offsetWidth ? v.width / ventaglio.offsetWidth || 1 : 1
+  const centro = (c.left - v.left + c.width / 2) / k + ventaglio.scrollLeft
   const corsa = Math.max(0, ventaglio.scrollWidth - ventaglio.clientWidth)
   const scorso = Math.min(Math.max(centro - ventaglio.clientWidth / 2, 0), corsa)
   return {
-    '--da-x': `${Math.round(v.left + centro - scorso - (d.left + d.width / 2))}px`,
+    '--da-x': `${Math.round(v.left + (centro - scorso) * k - (d.left + d.width / 2))}px`,
     '--da-y': `${Math.round(c.top - d.top)}px`,
     '--da-scala': (c.width / larga).toFixed(3),
   }
@@ -289,8 +294,16 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
   // metà (o, più corta, si vedrebbe il fondo vuoto). Si torna all'inizio,
   // con il mazzo in alto e la carta subito sotto. Di colpo e PRIMA di
   // misurare il volo: il volo parte da dove la carta aperta sarà.
+  // Sul telefono il mazzo agganciato è rimpicciolito e lascia vuoto, sotto
+  // di sé, il posto che occupava da grande: la pagina scende ancora di quel
+  // tanto, così la carta nuova comincia subito sotto il mazzo piccolo.
   const scegli = (id) => (e) => {
-    if (incollato) segnaposto.current?.scrollIntoView?.({ block: 'start' })
+    if (incollato) {
+      segnaposto.current?.scrollIntoView?.({ block: 'start' })
+      const v = ventaglio.current
+      const vuoto = v ? v.offsetHeight - v.getBoundingClientRect().height : 0
+      if (vuoto > 1) window.scrollBy?.(0, vuoto)
+    }
     setPartenza(partenzaDelVolo(e.currentTarget, ventaglio.current, inVolo.current))
     setScelta(id)
     e.currentTarget.scrollIntoView?.({ behavior: comeScorrere(), block: 'nearest', inline: 'center' })

@@ -12202,6 +12202,56 @@ body.pagina-piena .inv-scheda {
 .k-ventaglio::-webkit-scrollbar {
   display: none;
 }
+/* SUL TELEFONO IL MAZZO AGGANCIATO SI RIMPICCIOLISCE (REQ-MENU-029, l'utente,
+   11/11/2026: «altrimenti prende metà dello schermo»): a carte intere,
+   agganciato sotto la barra, lasciava alla sezione che si legge meno di
+   metà dello schermo. Fermo nella pagina resta grande.
+   SI RIMPICCIOLISCE IL DISEGNO, NON IL POSTO CHE OCCUPA: `transform` non
+   sposta niente nella pagina. Cambiando l'altezza vera, il testo sotto
+   salirebbe di colpo nell'istante dell'aggancio, e il browser, che tiene
+   fermo quello che si sta leggendo, potrebbe riportare la pagina indietro
+   e sganciare il mazzo: aggancia, sgancia, aggancia. Il posto resta, vuoto
+   e trasparente (i tocchi lo attraversano), e il fondo pieno copre solo la
+   parte dove il mazzo si vede. */
+@media (max-width: 640px) {
+  .k-mazzo {
+    --k-stretta: 0.62;
+    --k-alta-stretta: calc((var(--k-alta) + var(--k-sotto) + 56px) * var(--k-stretta));
+  }
+  .k-mazzo .k-ventaglio {
+    transform-origin: top left;
+  }
+  /* `overflow-x: clip`: mentre si rimpicciolisce il ventaglio è già largo
+     per la misura finale ma non ancora stretto, e per un quinto di secondo
+     allargherebbe la pagina di lato. */
+  .k-mazzo.incollata {
+    background: none;
+    border-bottom: 0;
+    pointer-events: none;
+    overflow-x: clip;
+  }
+  .k-mazzo.incollata::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--k-alta-stretta);
+    background: color-mix(in srgb, var(--bg-2) 97%, transparent);
+    border-bottom: 1px solid var(--line);
+  }
+  /* Larga quanto serve perché, rimpicciolita, arrivi ancora ai due bordi
+     dello schermo: la fila scorre come prima. */
+  .k-mazzo.incollata .k-ventaglio {
+    position: relative;
+    width: calc(100% / var(--k-stretta));
+    transform: scale(var(--k-stretta));
+    pointer-events: auto;
+  }
+}
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .k-mazzo .k-ventaglio {
+    transition: transform 0.22s ease;
+  }
+}
 /* IL CENTRO DELLO SCHERMO, VISTO DALLA FILA: sul telefono la fila è più
    larga dello schermo e comincia da sinistra, quindi il centro è a metà del
    ventaglio (50cqw) e non a metà della fila. È il punto da cui il mazzo si
