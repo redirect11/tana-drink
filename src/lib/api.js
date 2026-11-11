@@ -6345,6 +6345,10 @@ export const DEFAULT_SETTINGS = {
   stile_menu: 'classico',
   special_sottotitolo: '',
   special_attivo: true,
+  // Le sezioni fatte solo di Special (i Signature) anche fra le sezioni del
+  // menù. Spento di partenza (l'utente, 11/11/2026): si aprono dal carosello
+  // e dal QR del menù Special. Vale solo col menù Special attivo.
+  special_nel_menu: false,
   // IL RESTO IN CONTANTI (REQ-PAG-015): nella schermata di pagamento, con
   // «Contante», si dice quanto dà il cliente e compare il resto. Spento di
   // suo: chi non lo usa non deve trovarsi un riquadro in più sul tastierino.

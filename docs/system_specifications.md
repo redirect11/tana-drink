@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 278 | fatto e coperto dai test |
+| ✅ | 279 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**335 voci** in tutto. **297** descrivono il sistema com'è oggi e
+**336 voci** in tutto. **298** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 31 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 32 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 173 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**86** requisiti su 327 sono collegati a un bisogno;
+**87** requisiti su 328 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -1102,6 +1102,18 @@ Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei
 L'utente, 10/11/2026: «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se non esiste un item cassa, si può creare anche da lì». Prima una voce si faceva solo scegliendo un prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in Modifica menù, tornare al menù dei clienti e ripescarlo fra i prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto della cassa»: apre la scheda del prodotto, la stessa del catalogo, con la categoria che porta il nome della sezione se ce n'è una (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in cassa ed entra come voce in fondo a quella sezione; annullando non nasce niente. Tornando dalla scheda, nuova o aperta da una voce, l'editor riapre la sezione da cui si era partiti, invece di ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti, come per ogni prodotto nuovo.
 
 **Dove**: `src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/salvataggioConId.test.js`
+
+#### REQ-MENU-037 — Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta
+
+L'utente, 11/11/2026: «la carta che si vede quando si entra dal carosello dovrebbe essere la stessa che c'è nel menù. E andrebbe impaginata meglio. Metti anche una opzione per togliere la carta degli special dal mazzo di carte e aprirla solo da carosello e QR code»; e poi: «di default metti che il menù signature/special si vede solo se clicchi sul carosello o con il QR code».
+
+UNA SEZIONE FATTA SOLO DI DRINK SPECIALI (i Signature della Tana) è «la carta degli Special». Di partenza NON compare fra le sezioni del menù dei clienti: è già nel carosello in cima, e si apre da lì o dal QR del menù Special. L'interruttore «Special anche fra le sezioni del menù» (Menù → Special, impostazione `special_nel_menu`, spenta di partenza) la rimette fra le altre. Vale per ogni stile del menù, non solo per «Carte». Tre limiti: solo col menù Special attivo (senza carosello non ci sarebbe strada per arrivarci, e l'interruttore non si offre); solo per il cliente (chi lavora dal menù batte ordini e trova tutto); e se toglierle lascerebbe il menù vuoto, restano. Una sezione mista, con uno Special in mezzo ad altri drink, non si tocca.
+
+NELLO STILE «CARTE» la pagina Special mostra la carta del menù: stessa testa, stesso seme e valore (dati sul menù intero, così togliere la carta dal mazzo non cambia il valore alle altre), stessi testi e stesso ordine. Prima era un Jolly rifatto a parte, coi drink in ordine di nome e senza testa. Gli Special che non stanno in una sezione di soli Special restano su un Jolly, in fondo. Chi arriva da una slide del carosello trova il suo drink per indirizzo. L'IMPAGINAZIONE: la voce col disegno è su due colonne, il disegno in una colonna stretta (72 px sul telefono, 96 oltre i 560), nome, prezzo e descrizione nell'altra, i tasti per ordinare sotto il testo a destra. In fila, un disegno da 104 px mandava a capo i nomi e staccava il prezzo.
+
+ATTENZIONE AL RILASCIO: il valore di partenza cambia quello che i clienti vedono in ogni locale che ha una categoria di soli Special.
+
+**Dove**: `src/lib/speciali.js (soloSpecial, senzaSoliSpecial), src/pages/MenuPage.jsx (specialFuoriDalMenu, menuIntero), src/components/SpecialManager.jsx (l'interruttore), src/components/MenuCarte.jsx (cartePagina), src/lib/contrattoStile.js, src/lib/api.js (special_nel_menu)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/speciali.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/SpecialManager.test.jsx`, `tests/component/MenuCarte.test.jsx`
 
 #### REQ-MENU-035 — L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme
 

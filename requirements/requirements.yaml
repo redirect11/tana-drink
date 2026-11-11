@@ -6475,6 +6475,51 @@ requirements:
     test_cases:
       - tests/unit/salvataggioConId.test.js
 
+  - id: REQ-MENU-037
+    title: "Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta"
+    area: "src/lib/speciali.js (soloSpecial, senzaSoliSpecial), src/pages/MenuPage.jsx (specialFuoriDalMenu, menuIntero), src/components/SpecialManager.jsx (l'interruttore), src/components/MenuCarte.jsx (cartePagina), src/lib/contrattoStile.js, src/lib/api.js (special_nel_menu)"
+    description: >
+      L'utente, 11/11/2026: «la carta che si vede quando si entra dal
+      carosello dovrebbe essere la stessa che c'è nel menù. E andrebbe
+      impaginata meglio. Metti anche una opzione per togliere la carta degli
+      special dal mazzo di carte e aprirla solo da carosello e QR code»; e
+      poi: «di default metti che il menù signature/special si vede solo se
+      clicchi sul carosello o con il QR code».
+      UNA SEZIONE FATTA SOLO DI DRINK SPECIALI (i Signature della Tana) è «la
+      carta degli Special». Di partenza NON compare fra le sezioni del menù
+      dei clienti: è già nel carosello in cima, e si apre da lì o dal QR del
+      menù Special. L'interruttore «Special anche fra le sezioni del menù»
+      (Menù → Special, impostazione `special_nel_menu`, spenta di partenza)
+      la rimette fra le altre. Vale per ogni stile del menù, non solo per
+      «Carte». Tre limiti: solo col menù Special attivo (senza carosello non
+      ci sarebbe strada per arrivarci, e l'interruttore non si offre); solo
+      per il cliente (chi lavora dal menù batte ordini e trova tutto); e se
+      toglierle lascerebbe il menù vuoto, restano. Una sezione mista, con uno
+      Special in mezzo ad altri drink, non si tocca.
+      NELLO STILE «CARTE» la pagina Special mostra la carta del menù: stessa
+      testa, stesso seme e valore (dati sul menù intero, così togliere la
+      carta dal mazzo non cambia il valore alle altre), stessi testi e
+      stesso ordine. Prima era un Jolly rifatto a parte, coi drink in ordine
+      di nome e senza testa. Gli Special che non stanno in una sezione di
+      soli Special restano su un Jolly, in fondo. Chi arriva da una slide
+      del carosello trova il suo drink per indirizzo.
+      L'IMPAGINAZIONE: la voce col disegno è su due colonne, il disegno in
+      una colonna stretta (72 px sul telefono, 96 oltre i 560), nome, prezzo
+      e descrizione nell'altra, i tasti per ordinare sotto il testo a
+      destra. In fila, un disegno da 104 px mandava a capo i nomi e staccava
+      il prezzo.
+      ATTENZIONE AL RILASCIO: il valore di partenza cambia quello che i
+      clienti vedono in ogni locale che ha una categoria di soli Special.
+    status: implemented
+    generate_issue: false
+    labels: [menu, vista-cliente]
+    priority: P2
+    test_cases:
+      - tests/unit/speciali.test.js
+      - tests/component/MenuPage.test.jsx
+      - tests/component/SpecialManager.test.jsx
+      - tests/component/MenuCarte.test.jsx
+
   - id: REQ-MENU-035
     title: "L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme"
     area: "src/components/StrutturaMenu.jsx (RigaVoce), src/lib/strutturaMenu.js (NON_CATEGORIZZATI, spostamentoInBlocco, voceTrovata), src/lib/api.js (spostaVociCarta), src/index.css"

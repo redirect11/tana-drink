@@ -12558,6 +12558,40 @@ body.pagina-piena .inv-scheda {
   height: 104px;
   object-fit: contain;
 }
+/* LA VOCE COL DISEGNO, SU DUE COLONNE (l'utente, 11/11/2026: «andrebbe
+   impaginata meglio»). In fila col testo, un disegno da 104 px si mangiava
+   un terzo del telefono: il nome andava a capo, il prezzo si staccava e il
+   tasto per ordinare scendeva sotto il disegno, a sinistra. Ora il disegno
+   ha una colonna stretta sua, centrato sull'altezza del testo; nome, prezzo
+   e descrizione stanno nell'altra, e i tasti sotto il testo, a destra. */
+.k-voce-illustrata {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+}
+.k-voce-illustrata .k-voce-img {
+  grid-row: 1 / span 2;
+  width: 72px;
+  height: 88px;
+}
+.k-voce-illustrata .k-voce-testo,
+.k-voce-illustrata .k-voce-tasti {
+  grid-column: 2;
+}
+.k-voce-illustrata .k-voce-tasti {
+  justify-self: end;
+}
+@media (min-width: 560px) {
+  .k-voce-illustrata {
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: 20px;
+  }
+  .k-voce-illustrata .k-voce-img {
+    width: 96px;
+    height: 112px;
+  }
+}
 .k-voce-testo {
   flex: 1 1 0;
   min-width: 0;
@@ -12719,6 +12753,13 @@ body.pagina-piena .inv-scheda {
 .stile-carte .k-in-volo::after {
   background-image: var(--k-dorso-b);
   background-size: 100% 100%;
+}
+/* LA CARTA IN VOLO È GRANDE quanto la carta aperta (fino a 720 px): con
+   l'immagine dei dorsi piccoli, da 256 px, si vedeva sgranata e sfocata
+   (l'utente, 11/11/2026: «i dorsi delle carte quando si zummano per mostrare
+   il menù sono molto blurry e pixelosi»). Ha un'immagine sua, a 720 px. */
+.stile-carte .k-in-volo::after {
+  background-image: url('/stili/carte/dorso-grande.webp');
 }
 .stile-carte .k-dorso-sotto:nth-of-type(4n + 1),
 .stile-carte .k-carta:nth-of-type(4n + 2)::before {

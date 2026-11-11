@@ -48,6 +48,14 @@ export default function SpecialManager({ drinks, onEdit }) {
         checked={settings.special_attivo !== false}
         onChange={(v) => updateSettings({ special_attivo: v }).catch(() => {})}
       />
+      {settings.special_attivo !== false && (
+        <ToggleRow
+          label="Special anche fra le sezioni del menù"
+          desc="Le sezioni composte soltanto da drink speciali compaiono anche nel menù dei clienti. Disattivato, si aprono dal carosello e dal QR del menù Special."
+          checked={settings.special_nel_menu === true}
+          onChange={(v) => updateSettings({ special_nel_menu: v }).catch(() => {})}
+        />
+      )}
 
       <label htmlFor="special-titolo">Titolo</label>
       <input

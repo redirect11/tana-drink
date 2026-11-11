@@ -36,8 +36,11 @@ await cmd('Page.enable')
 await cmd('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } })
 for (const f of readdirSync(dentro).filter((x) => x.endsWith('.svg'))) {
   const nome = f.replace('.svg', '')
-  // Le carte piccole al doppio della loro misura; la mattonella grande a 380x540.
-  const [w, h] = nome === 'carta-grande' ? [380, 540] : [256, 364]
+  // Le carte piccole al doppio della loro misura; la mattonella grande a
+  // 380x540; il dorso della carta in volo, che arriva a tutta la larghezza
+  // del telefono, a 720 (con quello piccolo era sgranato).
+  const MISURE = { 'carta-grande': [380, 540], 'dorso-grande': [720, 1024] }
+  const [w, h] = MISURE[nome] || [256, 364]
   const svg = readFileSync(join(dentro, f), 'utf8')
   const html = `<html><body style="margin:0;background:transparent"><img style="display:block;width:${w}px;height:${h}px" src="data:image/svg+xml,${encodeURIComponent(svg)}"></body></html>`
   await cmd('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: false })

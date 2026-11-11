@@ -96,3 +96,33 @@ describe('da un menù all’altro', () => {
     expect(conParametri('/menu', new URLSearchParams(''))).toBe('/menu')
   })
 })
+
+// LA CARTA DEGLI SPECIAL (REQ-MENU-037): una sezione fatta solo di drink
+// speciali, che di partenza sta fuori dalle sezioni del menù e si apre dal
+// carosello e dal QR.
+describe('le sezioni di soli Special', () => {
+  const s = (id) => ({ id, speciale: true })
+  const n = (id) => ({ id })
+
+  it('è di soli Special la sezione con almeno una voce, tutte speciali', async () => {
+    const { soloSpecial } = await import('../../src/lib/speciali.js')
+    expect(soloSpecial([s('a'), s('b')])).toBe(true)
+    expect(soloSpecial([s('a'), n('b')])).toBe(false)
+    // Vuota non è «di soli Special»: non c'è niente da aprire dal carosello.
+    expect(soloSpecial([])).toBe(false)
+    expect(soloSpecial(null)).toBe(false)
+  })
+
+  it('il menù le lascia fuori, tenendo le altre nel loro ordine', async () => {
+    const { senzaSoliSpecial } = await import('../../src/lib/speciali.js')
+    const menu = [['Signature', [s('a')]], ['Classici', [n('b'), s('c')]], ['Birre', [n('d')]]]
+    expect(senzaSoliSpecial(menu).map(([nome]) => nome)).toEqual(['Classici', 'Birre'])
+  })
+
+  // Un locale che ha solo Special non può restare con il menù vuoto.
+  it('se resterebbe vuoto, il menù resta com’è', async () => {
+    const { senzaSoliSpecial } = await import('../../src/lib/speciali.js')
+    const menu = [['Signature', [s('a')]]]
+    expect(senzaSoliSpecial(menu)).toBe(menu)
+  })
+})

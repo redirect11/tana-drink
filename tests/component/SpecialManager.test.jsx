@@ -34,7 +34,8 @@ beforeEach(() => {
   st.scritte = []
 })
 
-const interruttore = () => screen.getByRole('checkbox')
+const interruttore = () => screen.getByRole('checkbox', { name: 'Menù Special attivo' })
+const nelMenu = () => screen.queryByRole('checkbox', { name: 'Special anche fra le sezioni del menù' })
 // Il QR si fa dopo il primo disegno: si aspetta che ci sia.
 async function mostra() {
   render(<SpecialManager drinks={[]} onEdit={() => {}} />)
@@ -58,5 +59,30 @@ describe('l’interruttore del menù Special', () => {
     st.impostazioni = { special_attivo: false }
     await mostra()
     expect(interruttore()).not.toBeChecked()
+  })
+})
+
+// GLI SPECIAL FUORI DAL MENÙ (REQ-MENU-037). L'utente, 11/11/2026: «metti
+// anche una opzione per togliere la carta degli special dal mazzo di carte
+// e aprirla solo da carosello e QR code», e «di default metti che il menù
+// signature/special si vede solo se clicchi sul carosello o con il QR code».
+describe('gli Special anche fra le sezioni del menù', () => {
+  it('di partenza è spento: i Signature si aprono dal carosello e dal QR', async () => {
+    await mostra()
+    expect(nelMenu()).not.toBeChecked()
+  })
+
+  it('acceso, lo scrive nelle impostazioni del locale', async () => {
+    await mostra()
+    await userEvent.setup().click(nelMenu())
+    expect(st.scritte).toContainEqual({ special_nel_menu: true })
+  })
+
+  // Senza carosello non ci sarebbe strada per arrivare agli Special: col
+  // menù Special spento restano nel menù, e la scelta non si offre.
+  it('col menù Special spento la scelta non c’è', async () => {
+    st.impostazioni = { special_attivo: false }
+    await mostra()
+    expect(nelMenu()).toBeNull()
   })
 })

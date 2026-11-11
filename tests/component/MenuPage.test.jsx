@@ -1195,3 +1195,59 @@ describe('uno stile a ricetta sul menù', () => {
     expect(screen.getByText(/Stai provando lo stile «Osteria»/)).toBeInTheDocument()
   })
 })
+
+// LE SEZIONI DI SOLI SPECIAL FUORI DAL MENÙ (REQ-MENU-037). L'utente,
+// 11/11/2026: «di default metti che il menù signature/special si vede solo
+// se clicchi sul carosello o con il QR code», con un'opzione per rimetterli
+// fra le sezioni. Una sezione fatta solo di drink speciali (i Signature) è
+// già nel carosello in cima: ripeterla più sotto, fra le sezioni, era la
+// stessa cosa due volte.
+describe('gli Special fuori dalle sezioni del menù', () => {
+  // «Birre» diventa una sezione di soli Special.
+  const CON_SIGNATURE = [
+    { id: 'd1', name: 'Mojito', price: 7, category_id: 'c1', available: true },
+    { id: 'd2', name: 'Negroni', price: 8, category_id: 'c1', available: true },
+    { id: 's9', name: 'Regina', price: 10, category_id: 'c2', available: true, speciale: true },
+  ]
+
+  it('di partenza il cliente non trova la sezione fra le altre: c’è il carosello', async () => {
+    ruoloClaim = null
+    mockDrinks = CON_SIGNATURE
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Negroni']))
+    expect(screen.getByRole('link', { name: 'Regina' })).toHaveClass('carosello-slide')
+  })
+
+  it('con l’opzione accesa la sezione torna fra le altre', async () => {
+    ruoloClaim = null
+    mockDrinks = CON_SIGNATURE
+    mockSettings = { special_nel_menu: true }
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Negroni', 'Regina']))
+  })
+
+  // Senza carosello non ci sarebbe strada per arrivarci.
+  it('col menù Special spento la sezione resta nel menù', async () => {
+    ruoloClaim = null
+    mockDrinks = CON_SIGNATURE
+    mockSettings = { special_attivo: false }
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Negroni', 'Regina']))
+  })
+
+  // Chi lavora dal menù batte ordini: deve trovarci tutto.
+  it('chi lavora la trova sempre', async () => {
+    ruoloClaim = 'bartender'
+    mockDrinks = CON_SIGNATURE
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Negroni', 'Regina']))
+  })
+
+  // Uno Special in mezzo agli altri non fa sparire la sua sezione.
+  it('una sezione mista resta intera', async () => {
+    ruoloClaim = null
+    mockDrinks = [...DRINKS, { id: 's9', name: 'Regina', price: 10, category_id: 'c1', available: true, speciale: true }]
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(expect.arrayContaining(['Mojito', 'Negroni', 'Regina', 'Ichnusa'])))
+  })
+})

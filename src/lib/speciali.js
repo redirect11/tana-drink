@@ -85,6 +85,22 @@ export function drinkSpeciali(drinks) {
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'it'))
 }
 
+// UNA SEZIONE FATTA SOLO DI SPECIAL (i «Signature» della Tana): è «la carta
+// degli Special». L'utente, 11/11/2026: «Signature e special… dovrebbero
+// essere la stessa cosa». È la stessa sezione che si apre dal carosello e
+// dal QR del menù Special, e che il locale può tenere fuori dal menù.
+export const soloSpecial = (voci) => Array.isArray(voci) && voci.length > 0 && voci.every((v) => v?.speciale === true)
+
+// IL MENÙ SENZA LE SEZIONI DI SOLI SPECIAL (`special_nel_menu`, spento di
+// partenza: «di default il menù signature/special si vede solo se clicchi
+// sul carosello o con il QR code»). Le sezioni sono `[nome, voci, sezione]`,
+// come le prepara MenuPage. Se toglierle lascerebbe il menù vuoto, restano:
+// un menù di soli Special non può sparire.
+export function senzaSoliSpecial(sezioni) {
+  const resto = sezioni.filter(([, voci]) => !soloSpecial(voci))
+  return resto.length ? resto : sezioni
+}
+
 // Da un menù all'altro passano il tavolo e il gruppo del QR (e l'anteprima
 // del cliente): chi ordina dagli Special ordina dallo stesso tavolo.
 const DA_PORTARE = ['tavolo', 'table', 'group', 'vista']
