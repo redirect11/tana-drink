@@ -214,6 +214,7 @@ bisogni:
       porta a «pronto», la pagina del cliente lo dice senza ricaricare.
     requisiti:
       - REQ-CLI-001
+      - REQ-CLI-007
       - REQ-CLI-002
       - REQ-CLI-003
       - REQ-CLI-006

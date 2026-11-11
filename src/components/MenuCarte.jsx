@@ -28,8 +28,15 @@ import { caratteriDi, attendiCaratteri } from '../lib/caratteriPronti.js'
 //     dal mazzo, si gira e si popola il menù»). Le voci: nome, prezzo,
 //     descrizione, ingredienti, «Aggiungi»;
 //   · gli SPECIAL nel menù sono del carosello di sempre, in cima
-//     (stiliStrutturati.js, `carosello`); sulla pagina Special sono il
-//     Jolly, una carta sola, già aperta;
+//     (stiliStrutturati.js, `carosello`), vestito da carta (index.css);
+//     sulla pagina Special sono il Jolly, una carta sola, già aperta;
+//   · IL DISEGNO O LA FOTO ACCANTO ALLA VOCE c'è in ogni carta che
+//     racconta i suoi drink, non solo sul Jolly (l'utente, 11/11/2026: «la
+//     carta dei Signature continua a non avere i disegni accanto ai drink…
+//     è la stessa carta che si apre dal carosello»): aperti dal carosello i
+//     Signature avevano il disegno, aperti dal mazzo no. Una sezione
+//     «snella» (nome e prezzo) resta senza. Chi non ha né foto né disegno
+//     non ha niente: nessun segnaposto;
 //   · il MAZZO RESTA AGGANCIATO IN ALTO mentre si legge (Flavio,
 //     08/11/2026: «mantenere le carte bloccate in alto e rimuovere il tasto
 //     che riporta alle carte»): le sezioni lunghe (i gin, i whisky) non
@@ -352,7 +359,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
                 key={d.id}
                 d={d}
                 ordine={n}
-                img={c.jolly ? immagine(d) : null}
+                img={c.jolly || c.vista !== 'snella' ? immagine(d) : null}
                 apri={apri}
                 tastiOrdine={tastiOrdine}
                 quantita={quantita}

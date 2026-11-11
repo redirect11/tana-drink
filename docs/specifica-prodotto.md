@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-45 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+46 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2077,6 +2077,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-MENU-028 — Il contratto degli stili strutturati: ogni stile che disegna il menù a modo suo riceve lo stesso pacchetto e promette le stesse cose
 - REQ-STAFF-002 — I confronti sui ruoli si fanno in un posto solo
 - REQ-STAFF-005 — Registrazione cliente e account personali
+- REQ-CLI-007 — Gli ordini del cliente stanno in «I miei ordini», non in mezzo al menù
 - REQ-STAMPA-009 — In locale la stampante è di carta finta
 - REQ-DATI-002 — Travaso e ripristino da riga di comando
 - REQ-SIC-002 — App Check protegge la produzione senza chiudere fuori il locale

@@ -18,22 +18,15 @@ import { rigaMarchio } from '../lib/limiti.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
-  subscribeOrder,
   subscribeReadyOrders,
   subscribeOpenGroups,
   subscribeRecentGroups,
   createOrder,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
-import { useCart, rememberOrderId, getMyOrderIds, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
+import { useCart, rememberOrderId, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
 import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria, pagineDelMenu } from '../lib/strutturaMenu.js'
-import {
-  ORDER_STATUSES,
-  STATUS_LABELS,
-  STATUS_EMOJI,
-  formatPrice,
-  placedByName,
-} from '../lib/orderStatus.js'
+import { formatPrice, placedByName } from '../lib/orderStatus.js'
 import { etaForMode } from '../lib/eta.js'
 import { checkGeofence, geofenceConfigured } from '../lib/geo.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
@@ -75,7 +68,6 @@ export default function MenuPage({ speciali = false }) {
   const [sending, setSending] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [showCustomDrink, setShowCustomDrink] = useState(false)
-  const [myOrders, setMyOrders] = useState([])
   const [readyOrders, setReadyOrders] = useState([])
   // Staff loggato (bartender/cameriera): gli ordini fatti da qui vengono
   // marcati come manuali con chi li ha inseriti.
@@ -190,9 +182,6 @@ export default function MenuPage({ speciali = false }) {
     return subscribeRecentGroups(setRecentGroups, () => {})
   }, [groupsActive])
 
-  // Ordini attivi di questo dispositivo: mostrati come box cliccabili in
-  // cima al menù, aggiornati in tempo reale.
-
   // Tabellone "stiamo servendo / pronti al ritiro" (se attivo in impostazioni).
   const servingBoard = settings.show_serving_board && !settings.menu_only
   useEffect(() => {
@@ -202,38 +191,6 @@ export default function MenuPage({ speciali = false }) {
     }
     return subscribeReadyOrders(setReadyOrders)
   }, [servingBoard])
-  useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setMyOrders([])
-      return
-    }
-    const ACTIVE = [
-      ORDER_STATUSES.RICEVUTO,
-      ORDER_STATUSES.IN_PREPARAZIONE,
-      ORDER_STATUSES.PRONTO,
-    ]
-    // Gli id più recenti sono in testa; bastano i primi 10.
-    const ids = getMyOrderIds().slice(0, 10)
-    const unsubs = ids.map((id) =>
-      subscribeOrder(
-        id,
-        (o) => {
-          setMyOrders((prev) => {
-            const others = prev.filter((p) => p.id !== id)
-            const isActive = o && ACTIVE.includes(o.workflow_status)
-            const next = isActive ? [...others, o] : others
-            next.sort((a, b) => (b.daily_number || 0) - (a.daily_number || 0))
-            return next
-          })
-        },
-        () => {}
-      )
-    )
-    return () => {
-      unsubs.forEach((u) => u())
-      setMyOrders([])
-    }
-  }, [])
 
   // IL MENÙ È UNO SOLO, quello che vede il cliente. C'è stata una seconda
   // schermata per lo staff — catalogo a due colonne con la ricerca — nata per
@@ -678,9 +635,12 @@ export default function MenuPage({ speciali = false }) {
             </Link>
           </div>
           {settings.special_sottotitolo && <p className="muted small" style={{ margin: '2px 0 8px' }}>{settings.special_sottotitolo}</p>}
+          {/* Su uno stile che disegna il carosello su un fondo chiaro suo
+              («Carte»: la slide è una carta avorio) i disegni hanno il
+              tratto scuro anche col tema scuro. */}
           <CaroselloSpeciali
             voci={elencoSpeciali}
-            chiaro={fondoChiaro}
+            chiaro={disegniChiari}
             disegni={disegni}
             link={(d) => `${conParametri(PERCORSO_SPECIALI, params)}#speciale-${d.id}`}
           />
@@ -757,29 +717,13 @@ export default function MenuPage({ speciali = false }) {
 
       {error && <div className="banner">Errore: {error}</div>}
 
-      {/* GLI ORDINI QUI NON CI STANNO, per chi lavora. Questa schermata, per
-          il personale, serve a UNA cosa: battere un ordine dalla vista del
-          menù. La coda è un'altra pagina, e vederci in mezzo i propri
-          ordini attivi confondeva due mestieri — al cliente invece servono,
-          perché è l'unico posto dove ritrova quello che ha ordinato. */}
-      {!staff &&
-        myOrders.map((o) => (
-        <Link key={o.id} to={`/ordine/${o.id}`} className="card order-mini row between">
-          <div>
-            <div>
-              <strong>Ordine #{o.daily_number ?? '—'}</strong>{' '}
-              <span className="muted">
-                · {(o.order_items || []).reduce((s, i) => s + i.qty, 0)} drink ·{' '}
-                <span className="price">{formatPrice(o.total)}</span>
-              </span>
-            </div>
-            <span className={`pill ${o.workflow_status}`} style={{ marginTop: 6 }}>
-              {STATUS_EMOJI[o.workflow_status]} {STATUS_LABELS[o.workflow_status]}
-            </span>
-          </div>
-          <span className="order-mini-chev">›</span>
-        </Link>
-        ))}
+      {/* GLI ORDINI QUI NON CI STANNO, per nessuno (l'utente, 11/11/2026:
+          «gli ordini non dovrebbero apparire nel menù. Dovrebbero stare in
+          una sezione a parte della vista cliente, tipo i tuoi ordini»). Fino
+          alla 1.10.35 il cliente trovava qui, sopra le voci, un riquadro per
+          ogni suo ordine in corso: spingevano giù il menù, che è quello che
+          si viene a leggere. Stanno in «I miei ordini» (MyOrdersPage), a
+          cui porta il tasto in cima alla pagina (App.jsx). */}
 
       {drinks.length === 0 && !error && (
         <div className="empty">

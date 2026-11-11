@@ -116,6 +116,26 @@ describe('il mazzo', () => {
     expect(tavolo).not.toHaveClass('k-apertura')
   })
 
+  // IL DISEGNO ACCANTO ALLA VOCE, IN OGNI CARTA (l'utente, 11/11/2026: «la
+  // carta dei Signature continua a non avere i disegni accanto ai drink… è
+  // la stessa carta che si apre dal carosello. Signature e special sono
+  // trattati diversamente? Dovrebbero essere la stessa cosa»). Il disegno
+  // c'era solo sul Jolly della pagina Special: gli stessi drink, aperti dal
+  // mazzo, restavano senza.
+  it('la voce che ha un disegno lo mostra anche nella carta della sua sezione', () => {
+    mostra({ immagine: (d) => (d.id === 'tana' ? '/disegni/tana.svg' : null) })
+    const img = aperta().querySelector('.k-voce-img')
+    expect(img).toHaveAttribute('src', '/disegni/tana.svg')
+    // È un ornamento: il nome lo dice già la voce.
+    expect(img).toHaveAttribute('alt', '')
+  })
+
+  it('chi non ha né foto né disegno resta senza, e una sezione snella non ne mostra', () => {
+    const snelle = SEZIONI.map((s) => ({ ...s, vista: 'snella' }))
+    mostra({ sezioni: snelle, immagine: () => '/disegni/tana.svg' })
+    expect(document.querySelector('.k-voce-img')).toBeNull()
+  })
+
   // Le carte chiuse restano nella pagina: un tocco, e non si aspetta niente.
   it('le carte chiuse ci sono già, nascoste', () => {
     mostra()

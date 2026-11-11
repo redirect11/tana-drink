@@ -12503,7 +12503,10 @@ body.pagina-piena .inv-scheda {
   gap: 12px;
   margin: 0 -18px;
   padding: 14px 18px 12px;
-  background: var(--k-carta);
+  /* Senza un fondo suo: è la stessa carta del resto, macchie comprese. Con
+     l'avorio pulito il titolo sembrava un'etichetta nuova incollata su una
+     carta vecchia (l'utente, 11/11/2026: «anche il titolo deve essere
+     coerente»). */
   border-bottom: 1px solid var(--k-filo);
   border-radius: 18px 18px 0 0;
 }
@@ -12608,6 +12611,171 @@ body.pagina-piena .inv-scheda {
   flex-basis: 100%;
   display: flex;
   justify-content: flex-end;
+}
+
+/* IL CAROSELLO DEGLI SPECIAL È UNA CARTA ANCHE LUI (l'utente, 11/11/2026:
+   «il carosello nel tema di Alice dovrebbe essere più in tema, no?»). Era
+   la scheda scura del menù classico, sopra un mazzo di carte avorio. Ora
+   ogni slide è un Jolly: carta avorio, la stella negli angoli (quello in
+   basso capovolto, come su una carta), il nome nel carattere del mazzo e il
+   prezzo nel rosso dei semi. I disegni arrivano col tratto scuro
+   (MenuPage.jsx, `disegniChiari`). */
+.stile-carte .carosello-fila {
+  border-radius: 12px;
+}
+.stile-carte .carosello-slide {
+  --text: var(--k-inchiostro);
+  --muted: var(--k-tenue);
+  position: relative;
+  padding: 30px 18px;
+  font-family: var(--k-scrittura);
+  color: var(--k-inchiostro);
+  background: var(--k-carta);
+  border: 1px solid var(--k-filo);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 5px var(--k-carta),
+    inset 0 0 0 6px color-mix(in srgb, var(--k-oro) 45%, transparent);
+}
+.stile-carte .carosello-slide::before,
+.stile-carte .carosello-slide::after {
+  content: '★';
+  position: absolute;
+  font: 1.15rem/1 var(--k-cifre);
+  color: var(--k-oro);
+}
+.stile-carte .carosello-slide::before {
+  top: 12px;
+  left: 14px;
+}
+.stile-carte .carosello-slide::after {
+  right: 14px;
+  bottom: 12px;
+  transform: rotate(180deg);
+}
+.stile-carte .carosello-testo strong {
+  font-family: var(--k-scrittura);
+  font-style: normal;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 5.4vw, 1.6rem);
+}
+.stile-carte .carosello-descrizione {
+  font-size: 0.98rem;
+}
+.stile-carte .carosello-testo .price {
+  font-family: var(--k-cifre);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--k-rosso);
+}
+.stile-carte .carosello-punti button.attivo::before {
+  background: var(--k-rosso);
+}
+.stile-carte .speciali-carosello .cat-header {
+  font-family: var(--k-scrittura);
+  font-weight: 400;
+}
+
+/* LE CARTE SONO VECCHIE, E DISEGNATE COME NEL LIBRO (l'utente, 11/11/2026:
+   «il retro delle carte dovrebbe essere disegnato in stile Lewis Carroll,
+   un po' più rovinato, magari qualche carta un po' rovinata. Parlo sia del
+   retro che avanti»; e poi: «non rovinarle tutte uguali»). Prima il dorso
+   era un reticolo netto, da mazzo nuovo, e la faccia un avorio pulito.
+   IL DORSO è un'incisione: tratteggio incrociato tirato a mano (le righe
+   tremano), doppia cornice e un ovale coi quattro semi, con l'inchiostro che
+   manca dove la carta si è consumata. LA FACCIA ha le macchie d'umido e
+   gli spigoli scuriti di una carta maneggiata.
+   NON SONO ROVINATE TUTTE UGUALI: quattro dorsi e quattro facce, dalla
+   carta quasi nuova a quella che ne ha viste tante, e tre segni (due
+   pieghe e un angolo piegato) che toccano solo ad alcune. Dorso, faccia e
+   segno girano con passi diversi (4, 4 e 5 o 7), così la stessa
+   combinazione non torna per un bel pezzo di mazzo.
+   Dorsi e facce sono IMMAGINI GIÀ PRONTE (public/stili/carte/*.webp), non
+   disegni calcolati dal telefono: nascono dagli SVG con filtri di rumore
+   di scripts/carte-consumate/ (li trasforma rasterizza.mjs, lì accanto), e
+   lasciati nel foglio il browser li ricalcolava per ogni carta e la pagina
+   si muoveva a scatti. Il rosso e l'avorio sono dentro le immagini, uguali
+   a `--k-rosso` e `--k-carta` un poco invecchiati. Le pieghe sono due
+   righe, e restano scritte qui.
+   Solo fondi fermi: niente di questo si anima. */
+.stile-carte {
+  --k-dorso-a: url('/stili/carte/dorso-a.webp');
+  --k-dorso-b: url('/stili/carte/dorso-b.webp');
+  --k-dorso-c: url('/stili/carte/dorso-c.webp');
+  --k-dorso-d: url('/stili/carte/dorso-d.webp');
+  --k-carta-a: url('/stili/carte/carta-a.webp');
+  --k-carta-b: url('/stili/carte/carta-b.webp');
+  --k-carta-c: url('/stili/carte/carta-c.webp');
+  --k-carta-d: url('/stili/carte/carta-d.webp');
+  --k-carta-grande: url('/stili/carte/carta-grande.webp');
+  --k-piega-angoli: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M-4 150 L46 186' stroke='%235a3c14' stroke-width='.7' opacity='0.4' fill='none'/%3E%3Cpath d='M-4 151.2 L46 187.2' stroke='%23fff' stroke-width='.6' opacity='0.7' fill='none'/%3E%3Cpath d='M92 -3 L131 26' stroke='%235a3c14' stroke-width='.7' opacity='0.3' fill='none'/%3E%3Cpath d='M92 -1.8 L131 27.2' stroke='%23fff' stroke-width='.6' opacity='0.6' fill='none'/%3E%3C/svg%3E");
+  --k-piega-mezzo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M-3 96 L131 88' stroke='%235a3c14' stroke-width='.7' opacity='0.28' fill='none'/%3E%3Cpath d='M-3 97.2 L131 89.2' stroke='%23fff' stroke-width='.6' opacity='0.5800000000000001' fill='none'/%3E%3C/svg%3E");
+  --k-angolo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 182' preserveAspectRatio='none'%3E%3Cpath d='M100 186 L131 150' stroke='%235a3c14' stroke-width='.7' opacity='0.45' fill='none'/%3E%3Cpath d='M100 187.2 L131 151.2' stroke='%23fff' stroke-width='.6' opacity='0.75' fill='none'/%3E%3C/svg%3E");
+}
+/* (I selettori sono scritti per esteso: dentro `:is()` uno pseudo-elemento
+   non vale, e la regola salterebbe in silenzio.) */
+.stile-carte .k-dorso,
+.stile-carte .k-carta::before,
+.stile-carte .k-in-volo::after {
+  background-image: var(--k-dorso-b);
+  background-size: 100% 100%;
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 1),
+.stile-carte .k-carta:nth-of-type(4n + 2)::before {
+  background-image: var(--k-dorso-a);
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 2),
+.stile-carte .k-carta:nth-of-type(4n + 3)::before {
+  background-image: var(--k-dorso-d);
+}
+.stile-carte .k-dorso-sotto:nth-of-type(4n + 3),
+.stile-carte .k-carta:nth-of-type(4n)::before,
+.stile-carte .k-dorso-ultimo {
+  background-image: var(--k-dorso-c);
+}
+.stile-carte .k-carta {
+  --k-faccia: var(--k-carta-b);
+  --k-segno: none;
+  background-image: var(--k-segno), var(--k-faccia);
+  background-size: 100% 100%;
+}
+.stile-carte .k-carta:nth-of-type(4n + 1) {
+  --k-faccia: var(--k-carta-a);
+}
+.stile-carte .k-carta:nth-of-type(4n + 3) {
+  --k-faccia: var(--k-carta-d);
+}
+.stile-carte .k-carta:nth-of-type(4n) {
+  --k-faccia: var(--k-carta-c);
+}
+.stile-carte .k-carta:nth-of-type(5n + 3) {
+  --k-segno: var(--k-piega-angoli);
+}
+.stile-carte .k-carta:nth-of-type(7n + 5) {
+  --k-segno: var(--k-piega-mezzo);
+}
+.stile-carte .k-carta:nth-of-type(7n + 2) {
+  --k-segno: var(--k-angolo);
+}
+/* Gli spigoli non sono tutti uguali: una carta maneggiata li ha chi più chi
+   meno arrotondati. */
+.stile-carte .k-carta:nth-of-type(3n + 1) {
+  border-radius: 9px 12px 10px 13px / 12px 9px 13px 10px;
+}
+.stile-carte .k-carta:nth-of-type(3n + 2) {
+  border-radius: 12px 9px 13px 9px / 10px 12px 9px 13px;
+}
+.stile-carte .k-carta:nth-of-type(3n) {
+  border-radius: 10px 14px 8px 11px / 9px 11px 12px 14px;
+}
+/* La carta aperta e le slide degli Special sono grandi: la carta invecchiata
+   fa da fondo a mattonelle, disegnata apposta perché la giunta non si veda
+   (a misura della carta le macchie diventerebbero laghi), e più leggera
+   che sulle carte piccole: dietro al menù si legge (l'utente, 11/11/2026:
+   «la filigrana dietro al menù mi sembra troppo evidente»). */
+.stile-carte :is(.k-aperta, .carosello-slide) {
+  background-image: var(--k-carta-grande);
+  background-size: 380px 540px;
 }
 
 /* Nella vetrina del marketplace il mazzo sta in alto, e sotto si vede
