@@ -4,7 +4,7 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
 import { comeScorrere } from '../lib/movimento.js'
 import { useIncollata } from '../lib/useIncollata.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { usePrezzoMenu } from '../lib/prezzoMenu.js'
 import { soloSpecial } from '../lib/speciali.js'
 import { caratteriDi, attendiCaratteri } from '../lib/caratteriPronti.js'
 
@@ -108,6 +108,7 @@ function Indice({ carta, basso = false }) {
 // `ancora` è l'indirizzo a cui arriva chi tocca una slide del carosello.
 export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false, ordine = 0, ancora }) {
   const ingredienti = useMemo(() => ingredientiInCarta(d, { quantita }), [d, quantita])
+  const prezzo = usePrezzoMenu()
   return (
     <article id={ancora} className={img ? 'k-voce k-voce-illustrata' : 'k-voce'} style={{ '--n': Math.min(ordine, 12) }}>
       {img && <img className="k-voce-img" src={img} alt="" loading="lazy" />}
@@ -121,7 +122,7 @@ export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false, 
             <span>{d.name}</span>
           )}
           <span className="k-puntini" aria-hidden="true" />
-          <span className="k-prezzo">{formatPrice(d.price)}</span>
+          <span className="k-prezzo">{prezzo(d.price)}</span>
         </h3>
         {d.description && <p className="k-descrizione">{d.description}</p>}
         {ingredienti && <p className="k-ingredienti">{ingredienti.join(' · ')}</p>}

@@ -6475,6 +6475,48 @@ requirements:
     test_cases:
       - tests/unit/salvataggioConId.test.js
 
+  - id: REQ-MENU-038
+    title: "Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili"
+    area: "src/lib/prezzoMenu.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (Menù clienti), src/components/MenuCarte.jsx, src/components/CaroselloSpeciali.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialScorrevoli.jsx, src/components/MenuGiornale.jsx, src/lib/api.js (formato_prezzi_menu)"
+    description: >
+      Flavio, vocale dell'11/11/2026 (21:13): «una cosa importante che si
+      deve fare è togliere il simbolo dell'euro dal menù dei clienti. Ci deve
+      stare solo ed esclusivamente il numero. Non ci deve stare neanche
+      0,00. Cioè è 8 euro, 8. 3,50 euro, 3,5. Il menù non deve portare il
+      simbolo dell'euro e la virgola con il doppio decimale come se fosse
+      una valuta». Daniele, lo stesso giorno: «io metterei configurabile
+      cosa si vede nel menù e renderei default questa impostazione che dice
+      Flavio».
+      IL FORMATO DEI PREZZI DEL MENÙ È UN'IMPOSTAZIONE del locale
+      (Impostazioni → Menù clienti, `formato_prezzi_menu`), con tre scelte
+      (Daniele, 11/11/2026, alla domanda se bastano: «basta»):
+      «numero» — 8 e 3,5, il valore di partenza; «numero con i centesimi» —
+      8 e 3,50; «valuta» — 8,00 € e 3,50 €, com'era prima.
+      CRITERI DI ACCETTAZIONE:
+      1. In Impostazioni → Menù clienti c'è la scelta del formato dei
+         prezzi, e di partenza è «numero».
+      2. Con «numero»: 8,00 € si legge «8», 3,50 € si legge «3,5», 3,25 € si
+         legge «3,25» (Daniele: «va bene»). Mai il simbolo dell'euro.
+      3. Il formato vale in tutto quello che si legge del menù, in ogni
+         stile: voci, carte, carosello degli Special, dettaglio del drink,
+         pagina Special, «Giornale», «Notte».
+      4. Carrello, riepilogo dell'ordine e pagina dell'ordine restano con
+         l'importo intero in euro: lì il cliente sta per pagare (Daniele:
+         «sì ok»). Cassa, conti, scontrini, statistiche e gestionale non
+         cambiano.
+      ATTENZIONE AL RILASCIO: essendo il valore di partenza, ogni locale
+      vedrà i prezzi del menù senza «€» senza averlo chiesto. DA VERIFICARE
+      con chi segue la parte legale: se un listino al pubblico senza
+      l'indicazione della valuta sia sempre in regola.
+    status: implemented
+    generate_issue: true
+    labels: [menu, vista-cliente, impostazioni]
+    priority: P1
+    test_cases:
+      - tests/unit/prezzoMenu.test.js
+      - tests/component/prezziDelMenu.test.jsx
+      - tests/component/MenuPage.test.jsx
+
   - id: REQ-MENU-037
     title: "Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta"
     area: "src/lib/speciali.js (soloSpecial, senzaSoliSpecial), src/pages/MenuPage.jsx (specialFuoriDalMenu, menuIntero), src/components/SpecialManager.jsx (l'interruttore), src/components/MenuCarte.jsx (cartePagina), src/lib/contrattoStile.js, src/lib/api.js (special_nel_menu)"

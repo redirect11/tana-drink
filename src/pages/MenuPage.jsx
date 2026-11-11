@@ -34,6 +34,7 @@ import {
 import { useCart, rememberOrderId, chiaveRiga, rigaDelCarrello, nomeLetto } from '../lib/cart.js'
 import { perIlCliente, sezioniDelMenu, strutturaPersonalizzata, perCategoria, pagineDelMenu } from '../lib/strutturaMenu.js'
 import { formatPrice, placedByName } from '../lib/orderStatus.js'
+import { PrezzoMenu, formatoPrezziMenu, prezzoInMenu } from '../lib/prezzoMenu.js'
 import { etaForMode } from '../lib/eta.js'
 import { checkGeofence, geofenceConfigured } from '../lib/geo.js'
 import { ensureNotificationPermission } from '../lib/notify.js'
@@ -142,6 +143,12 @@ export default function MenuPage({ speciali = false }) {
   // menù è attivabile o meno». Acceso di partenza: era così per tutti.
   const specialAttivo = settings.special_attivo !== false
   const usaStruttura = !staff && strutturaPersonalizzata(carta)
+  // IL FORMATO DEI PREZZI DEL MENÙ (REQ-MENU-038): lo sceglie il locale, e
+  // vale per tutto quello che qui sotto si legge del menù, in ogni stile.
+  // Il carrello e il riepilogo, più giù, restano con `formatPrice`: lì il
+  // cliente sta per pagare, e l'importo va per intero.
+  const formatoPrezzi = formatoPrezziMenu(settings)
+  const prezzo = useMemo(() => (valore) => prezzoInMenu(valore, formatoPrezzi), [formatoPrezzi])
   // LE SEZIONI DI SOLI SPECIAL FUORI DAL MENÙ (REQ-MENU-037): di partenza i
   // Signature si aprono dal carosello e dal QR, e fra le sezioni non ci
   // sono. Solo col menù Special attivo (senza carosello non ci sarebbe
@@ -523,6 +530,7 @@ export default function MenuPage({ speciali = false }) {
   const veste = vesteDelloStile(settings, stile)
 
   return (
+    <PrezzoMenu.Provider value={prezzo}>
     <div
       className={[staff ? 'bar-content' : '', veste.className].filter(Boolean).join(' ') || undefined}
       style={veste.style}
@@ -865,7 +873,7 @@ export default function MenuPage({ speciali = false }) {
                       if (!ingredienti) return null
                       return <p className="ingredients">{ingredienti.join(' · ')}</p>
                     })()}
-                    <span className="price">{formatPrice(d.price)}</span>
+                    <span className="price">{prezzo(d.price)}</span>
                   </div>
                   {tastiOrdine(d)}
                 </div>
@@ -1000,6 +1008,7 @@ export default function MenuPage({ speciali = false }) {
         />
       )}
     </div>
+    </PrezzoMenu.Provider>
   )
 }
 

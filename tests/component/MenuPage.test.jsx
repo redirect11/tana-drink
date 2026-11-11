@@ -1251,3 +1251,36 @@ describe('gli Special fuori dalle sezioni del menù', () => {
     await waitFor(() => expect(voci()).toEqual(expect.arrayContaining(['Mojito', 'Negroni', 'Regina', 'Ichnusa'])))
   })
 })
+
+// I PREZZI DEL MENÙ SENZA EURO, IL CARRELLO CON (REQ-MENU-038). Flavio,
+// 11/11/2026: «togliere il simbolo dell'euro dal menù dei clienti… 8 euro,
+// 8». Daniele: è un'impostazione, quella di Flavio di partenza; e alla
+// domanda sul carrello e sull'ordine, dove il cliente sta per pagare: lì
+// l'importo resta in euro («sì ok»).
+describe('i prezzi nel menù dei clienti', () => {
+  const prezzi = () => [...document.querySelectorAll('.menu-item .price')].map((e) => e.textContent.replace(/ /g, ' '))
+
+  it('di partenza le voci portano il numero, senza euro e senza ,00', async () => {
+    ruoloClaim = null
+    mostra()
+    await waitFor(() => expect(prezzi()).toEqual(['7', '8', '4']))
+  })
+
+  it('con «valuta» nelle impostazioni tornano gli importi in euro', async () => {
+    ruoloClaim = null
+    mockSettings = { formato_prezzi_menu: 'valuta' }
+    mostra()
+    await waitFor(() => expect(prezzi()).toEqual(['7,00 €', '8,00 €', '4,00 €']))
+  })
+
+  it('il carrello resta in euro: lì si sta per pagare', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    await user.click(screen.getAllByRole('button', { name: /Aggiungi/ })[0])
+    const carrello = document.querySelector('.cartbar')
+    expect(carrello.textContent).toMatch(/7,00\s€/)
+    // E la voce, nel menù sopra, resta un numero.
+    expect(prezzi()[0]).toBe('7')
+  })
+})
