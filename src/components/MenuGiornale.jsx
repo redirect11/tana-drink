@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 import { nessunMovimento } from '../lib/movimento.js'
-import { formatPrice } from '../lib/orderStatus.js'
+import { usePrezzoMenu } from '../lib/prezzoMenu.js'
 
 // ── LO STILE «GIORNALE»: IL MENÙ COME UNA PRIMA PAGINA (REQ-MENU-024) ──
 // L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e
@@ -58,6 +58,7 @@ export function TestataGiornale({ venue, soloSpeciali = false, special = {}, lin
 // ingredienti, il tasto. La usa anche la vetrina del Marketplace, perché
 // mostri il giornale che c'è davvero: senza `apri` il nome è testo.
 export function VoceGiornale({ d, apri, tastiOrdine, quantita = false }) {
+  const prezzo = usePrezzoMenu()
   const ingredienti = ingredientiInCarta(d, { quantita })
   return (
     <article className="g-voce">
@@ -70,7 +71,7 @@ export function VoceGiornale({ d, apri, tastiOrdine, quantita = false }) {
           <span>{d.name}</span>
         )}
         <span className="g-puntini" aria-hidden="true" />
-        <span className="g-prezzo">{formatPrice(d.price)}</span>
+        <span className="g-prezzo">{prezzo(d.price)}</span>
       </h4>
       {d.description && <p className="g-testo">{d.description}</p>}
       {ingredienti && <p className="g-ingredienti">{ingredienti.join(' · ')}</p>}
@@ -154,6 +155,7 @@ function Sommario({ nomi, sezioni }) {
 }
 
 function Articolo({ d, immagine, apri, tastiOrdine, quantita, apertura = false }) {
+  const prezzo = usePrezzoMenu()
   const img = immagine(d)
   const ingredienti = ingredientiInCarta(d, { quantita })
   return (
@@ -177,7 +179,7 @@ function Articolo({ d, immagine, apri, tastiOrdine, quantita, apertura = false }
       )}
       {ingredienti && <p className="g-ingredienti">Si compone di: {ingredienti.join(', ')}.</p>}
       <div className="g-chiusa">
-        <span className="g-prezzo">{formatPrice(d.price)}</span>
+        <span className="g-prezzo">{prezzo(d.price)}</span>
         {tastiOrdine(d)}
       </div>
     </article>

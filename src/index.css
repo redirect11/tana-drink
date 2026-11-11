@@ -11569,6 +11569,23 @@ body.pagina-piena .inv-scheda {
   gap: 6px;
   min-width: 0;
 }
+/* LA SCELTA DEL FORMATO DEI PREZZI DEL MENÙ (REQ-MENU-038, Impostazioni →
+   Menù clienti): tre tasti, ognuno col suo esempio sotto il nome. */
+.formato-prezzi {
+  margin-top: 14px;
+}
+.formato-prezzi-titolo {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+.formato-prezzi-esempio {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .stile-scheda > .mode-option {
   flex: 1;
   text-align: left;

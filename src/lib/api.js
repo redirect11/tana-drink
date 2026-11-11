@@ -6420,6 +6420,11 @@ export const DEFAULT_SETTINGS = {
   cancel_phrase_default: 'bancone',
   // Tabellone "stiamo servendo / pronti al ritiro" nel menù cliente.
   show_serving_board: true,
+  // Come si leggono i prezzi nel menù dei clienti (REQ-MENU-038): 'numero'
+  // (8 · 3,5, il valore di partenza: Flavio, 11/11/2026, «solo ed
+  // esclusivamente il numero»), 'centesimi' (8 · 3,50) o 'valuta'
+  // (8,00 € · 3,50 €). Vedi lib/prezzoMenu.js.
+  formato_prezzi_menu: 'numero',
   // Account clienti: se disattivato, login/registrazione clienti nascosti
   // (lo staff continua ad accedere da /bar).
   customer_accounts_enabled: true,

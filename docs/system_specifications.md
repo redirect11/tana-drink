@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 280 | fatto e coperto dai test |
+| ✅ | 281 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 31 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**338 voci** in tutto. **299** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**338 voci** in tutto. **300** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 32 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 33 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 166 |
-| Unità | il progetto di dettaglio: un modulo da solo | 174 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 167 |
+| Unità | il progetto di dettaglio: un modulo da solo | 175 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
 **89** requisiti su 330 sono collegati a un bisogno;
@@ -1102,6 +1102,20 @@ Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei
 L'utente, 10/11/2026: «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se non esiste un item cassa, si può creare anche da lì». Prima una voce si faceva solo scegliendo un prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in Modifica menù, tornare al menù dei clienti e ripescarlo fra i prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto della cassa»: apre la scheda del prodotto, la stessa del catalogo, con la categoria che porta il nome della sezione se ce n'è una (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in cassa ed entra come voce in fondo a quella sezione; annullando non nasce niente. Tornando dalla scheda, nuova o aperta da una voce, l'editor riapre la sezione da cui si era partiti, invece di ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti, come per ogni prodotto nuovo.
 
 **Dove**: `src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/salvataggioConId.test.js`
+
+#### REQ-MENU-038 — Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili
+
+Flavio, vocale dell'11/11/2026 (21:13): «una cosa importante che si deve fare è togliere il simbolo dell'euro dal menù dei clienti. Ci deve stare solo ed esclusivamente il numero. Non ci deve stare neanche 0,00. Cioè è 8 euro, 8. 3,50 euro, 3,5. Il menù non deve portare il simbolo dell'euro e la virgola con il doppio decimale come se fosse una valuta». Daniele, lo stesso giorno: «io metterei configurabile cosa si vede nel menù e renderei default questa impostazione che dice Flavio».
+
+IL FORMATO DEI PREZZI DEL MENÙ È UN'IMPOSTAZIONE del locale (Impostazioni → Menù clienti, `formato_prezzi_menu`), con tre scelte (Daniele, 11/11/2026, alla domanda se bastano: «basta»): «numero» — 8 e 3,5, il valore di partenza; «numero con i centesimi» — 8 e 3,50; «valuta» — 8,00 € e 3,50 €, com'era prima.
+
+CRITERI DI ACCETTAZIONE: 1. In Impostazioni → Menù clienti c'è la scelta del formato dei prezzi, e di partenza è «numero». 2. Con «numero»: 8,00 € si legge «8», 3,50 € si legge «3,5», 3,25 € si legge «3,25» (Daniele: «va bene»). Mai il simbolo dell'euro. 3. Il formato vale in tutto quello che si legge del menù, in ogni stile: voci, carte, carosello degli Special, dettaglio del drink, pagina Special, «Giornale», «Notte». 4. Carrello, riepilogo dell'ordine e pagina dell'ordine restano con l'importo intero in euro: lì il cliente sta per pagare (Daniele: «sì ok»). Cassa, conti, scontrini, statistiche e gestionale non cambiano.
+
+ATTENZIONE AL RILASCIO: essendo il valore di partenza, ogni locale vedrà i prezzi del menù senza «€» senza averlo chiesto.
+
+DA VERIFICARE con chi segue la parte legale: se un listino al pubblico senza l'indicazione della valuta sia sempre in regola.
+
+**Dove**: `src/lib/prezzoMenu.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (Menù clienti), src/components/MenuCarte.jsx, src/components/CaroselloSpeciali.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialScorrevoli.jsx, src/components/MenuGiornale.jsx, src/lib/api.js (formato_prezzi_menu)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/prezzoMenu.test.js`, `tests/component/prezziDelMenu.test.jsx`, `tests/component/MenuPage.test.jsx`
 
 #### REQ-MENU-037 — Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta
 
@@ -4072,20 +4086,6 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-038 — Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili
-
-Flavio, vocale dell'11/11/2026 (21:13): «una cosa importante che si deve fare è togliere il simbolo dell'euro dal menù dei clienti. Ci deve stare solo ed esclusivamente il numero. Non ci deve stare neanche 0,00. Cioè è 8 euro, 8. 3,50 euro, 3,5. Il menù non deve portare il simbolo dell'euro e la virgola con il doppio decimale come se fosse una valuta». Daniele, lo stesso giorno: «io metterei configurabile cosa si vede nel menù e renderei default questa impostazione che dice Flavio».
-
-IL FORMATO DEI PREZZI DEL MENÙ È UN'IMPOSTAZIONE del locale (Impostazioni → Menù clienti, `formato_prezzi_menu`), con tre scelte (Daniele, 11/11/2026, alla domanda se bastano: «basta»): «numero» — 8 e 3,5, il valore di partenza; «numero con i centesimi» — 8 e 3,50; «valuta» — 8,00 € e 3,50 €, com'era prima.
-
-CRITERI DI ACCETTAZIONE: 1. In Impostazioni → Menù clienti c'è la scelta del formato dei prezzi, e di partenza è «numero». 2. Con «numero»: 8,00 € si legge «8», 3,50 € si legge «3,5», 3,25 € si legge «3,25» (Daniele: «va bene»). Mai il simbolo dell'euro. 3. Il formato vale in tutto quello che si legge del menù, in ogni stile: voci, carte, carosello degli Special, dettaglio del drink, pagina Special, «Giornale», «Notte». 4. Carrello, riepilogo dell'ordine e pagina dell'ordine restano con l'importo intero in euro: lì il cliente sta per pagare (Daniele: «sì ok»). Cassa, conti, scontrini, statistiche e gestionale non cambiano.
-
-ATTENZIONE AL RILASCIO: essendo il valore di partenza, ogni locale vedrà i prezzi del menù senza «€» senza averlo chiesto.
-
-DA VERIFICARE con chi segue la parte legale: se un listino al pubblico senza l'indicazione della valuta sia sempre in regola.
-
-**Dove**: `src/lib/prezzoMenu.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (Menù clienti), src/components/MenuCarte.jsx, src/components/CaroselloSpeciali.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialScorrevoli.jsx, src/components/MenuGiornale.jsx, src/lib/api.js (formato_prezzi_menu)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Magazzino
 

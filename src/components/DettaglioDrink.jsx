@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { formatPrice } from '../lib/orderStatus.js'
+import { usePrezzoMenu } from '../lib/prezzoMenu.js'
 import { immagineVoce } from '../lib/speciali.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 
@@ -20,6 +20,7 @@ import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
 // non prende ordini dal tavolo non ci sono, e il dettaglio si guarda e
 // basta.
 export default function DettaglioDrink({ drink, onClose, chiaro = false, quantita = false, azioni = null, segno = 'tenniel', disegni = false }) {
+  const prezzo = usePrezzoMenu()
   useEffect(() => {
     if (!drink) return undefined
     const tasto = (e) => {
@@ -46,7 +47,7 @@ export default function DettaglioDrink({ drink, onClose, chiaro = false, quantit
         {img && <img className="dettaglio-drink-img" src={img} alt="" />}
         <div className="row between dettaglio-drink-testa">
           <h2>{drink.name}</h2>
-          <strong className="price">{formatPrice(drink.price)}</strong>
+          <strong className="price">{prezzo(drink.price)}</strong>
         </div>
         {drink.description && <p className="dettaglio-drink-descrizione">{drink.description}</p>}
         {ingredienti && (

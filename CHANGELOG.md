@@ -2,6 +2,14 @@
 
 ## 1.10.38-beta — in lavorazione
 
+### Menù dei clienti
+
+- I prezzi nel menù dei clienti si leggono come numeri, senza il simbolo
+  dell'euro e senza decimali inutili: «8» e «3,5». Il formato si sceglie in
+  Impostazioni → Menù clienti, fra «Numero», «Numero con i centesimi» e
+  «Importo in euro». Carrello, ordine, conti e scontrini riportano sempre
+  l'importo in euro.
+
 ## 1.10.37-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

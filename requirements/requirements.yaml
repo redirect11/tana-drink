@@ -6508,11 +6508,14 @@ requirements:
       vedrà i prezzi del menù senza «€» senza averlo chiesto. DA VERIFICARE
       con chi segue la parte legale: se un listino al pubblico senza
       l'indicazione della valuta sia sempre in regola.
-    status: todo
+    status: implemented
     generate_issue: true
     labels: [menu, vista-cliente, impostazioni]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/unit/prezzoMenu.test.js
+      - tests/component/prezziDelMenu.test.jsx
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-MENU-037
     title: "Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta"
