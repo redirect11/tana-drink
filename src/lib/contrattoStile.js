@@ -17,6 +17,12 @@
 //                      personalizzate (nome in carta, descrizione) e solo
 //                      quelle disponibili; `gruppo` è la macro categoria
 //                      della struttura (REQ-MENU-030), o null;
+//   · menuIntero     — le stesse sezioni, ma TUTTE: anche quelle di soli
+//                      Special che il locale tiene fuori dal menù
+//                      (`special_nel_menu`), e anche sulla pagina Special,
+//                      dove `sezioni` porta solo gli Special. Serve allo
+//                      stile che vuole mostrare la sezione degli Special
+//                      com'è nel menù («Carte»: la stessa carta);
 //   · speciali       — le voci Special;
 //   · soloSpeciali   — true sulla pagina /menu/special;
 //   · special        — { titolo, sottotitolo } degli Special della sera;

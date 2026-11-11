@@ -126,6 +126,8 @@ describe('il mazzo', () => {
     mostra({ immagine: (d) => (d.id === 'tana' ? '/disegni/tana.svg' : null) })
     const img = aperta().querySelector('.k-voce-img')
     expect(img).toHaveAttribute('src', '/disegni/tana.svg')
+    // Col disegno la voce è impaginata su due colonne (index.css).
+    expect(img.closest('.k-voce')).toHaveClass('k-voce-illustrata')
     // È un ornamento: il nome lo dice già la voce.
     expect(img).toHaveAttribute('alt', '')
   })
@@ -208,6 +210,63 @@ describe('il mazzo agganciato in alto', () => {
     expect(segnaposto.scrollIntoView).not.toHaveBeenCalled()
   })
 
+})
+
+// LA CARTA DEGLI SPECIAL È UNA SOLA (l'utente, 11/11/2026: «la carta che si
+// vede quando si entra dal carosello dovrebbe essere la stessa che c'è nel
+// menù»; «metti anche una opzione per togliere la carta degli special dal
+// mazzo di carte e aprirla solo da carosello e QR code»). Una sezione fatta
+// solo di Special è la carta degli Special: sulla pagina Special si vede lei,
+// con la sua testa e i suoi testi, e non un Jolly rifatto a parte.
+describe('la carta degli Special', () => {
+  const special = (id, name, price, extra = {}) => ({ ...voce(id, name, price), speciale: true, drink_id: `drink-${id}`, ...extra })
+  const SIGNATURE = { id: 'sig', nome: 'Signature', vista: 'piena', gruppo: 'Cocktail', voci: [special('regina', 'Regin di Cuori', 10)] }
+  const CLASSICI = { id: 'cl', nome: 'Grandi classici', vista: 'piena', gruppo: 'Cocktail', voci: [voce('negroni', 'Negroni', 8)] }
+  const GIN = { id: 'gin', nome: 'Gin', vista: 'piena', gruppo: 'Distillati', voci: [voce('hendricks', 'Hendrick’s', 9)] }
+  const INTERO = [SIGNATURE, CLASSICI, GIN]
+  // Come arrivano dal catalogo: il drink, col suo id.
+  const DRINK_SPECIAL = [{ ...voce('drink-regina', 'REGIN DI CUORI', 10), speciale: true }]
+
+  it('sulla pagina Special si apre la carta del menù: stessa testa, stesso seme, stessi testi', () => {
+    mostra({ soloSpeciali: true, sezioni: [], menuIntero: INTERO, speciali: DRINK_SPECIAL })
+    const carta = screen.getByRole('region', { name: 'Signature' })
+    expect(carta).toBeVisible()
+    expect(within(carta).getByRole('heading', { name: 'Signature' })).toBeInTheDocument()
+    // Il nome in carta, non quello della scheda.
+    expect(within(carta).getByRole('button', { name: 'Regin di Cuori' })).toBeInTheDocument()
+    // L'asso di cuori del mazzo, non il Jolly.
+    expect(carta).toHaveAttribute('data-seme', 'cuori')
+    expect(screen.queryByText('JOLLY')).toBeNull()
+    // E le altre sezioni lì non ci sono.
+    expect(screen.queryByRole('region', { name: 'Gin', hidden: true })).toBeNull()
+  })
+
+  it('chi arriva da una slide del carosello trova il suo drink per indirizzo', () => {
+    mostra({ soloSpeciali: true, sezioni: [], menuIntero: INTERO, speciali: DRINK_SPECIAL })
+    expect(document.getElementById('speciale-drink-regina')).toHaveTextContent('Regin di Cuori')
+  })
+
+  // Uno Special in mezzo a una sezione di classici non ha una carta sua:
+  // resta sul Jolly, sotto le carte del menù.
+  it('uno Special che sta in una sezione mista resta sul Jolly', () => {
+    const sparso = { ...voce('drink-sparso', 'Sparso', 9), speciale: true }
+    mostra({ soloSpeciali: true, sezioni: [], menuIntero: INTERO, speciali: [...DRINK_SPECIAL, sparso] })
+    const regioni = screen.getAllByRole('region')
+    expect(regioni.map((r) => r.getAttribute('aria-label'))).toEqual(['Signature', 'Special della sera'])
+    expect(within(regioni[1]).getByRole('button', { name: 'Sparso' })).toBeInTheDocument()
+    expect(within(regioni[1]).queryByRole('button', { name: 'REGIN DI CUORI' })).toBeNull()
+  })
+
+  it('tenuta fuori dal mazzo, la carta non è fra quelle del menù, e le altre tengono il loro valore', () => {
+    mostra({ sezioni: [CLASSICI, GIN], menuIntero: INTERO })
+    expect(mazzo().getAllByRole('button').map((b) => b.textContent)).toEqual(['2♥︎Grandi classici♥︎', 'A♣︎Gin♣︎'])
+    expect(screen.queryByRole('region', { name: 'Signature', hidden: true })).toBeNull()
+  })
+
+  it('lasciata nel mazzo, è la prima carta come sempre', () => {
+    mostra({ sezioni: INTERO, menuIntero: INTERO })
+    expect(mazzo().getAllByRole('button')[0]).toHaveTextContent('Signature')
+  })
 })
 
 describe('le altre pagine', () => {

@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
-import { drinkSpeciali, immagineVoce, segnapostoDrink, conParametri, PERCORSO_SPECIALI } from '../lib/speciali.js'
+import {
+  drinkSpeciali,
+  immagineVoce,
+  segnapostoDrink,
+  conParametri,
+  senzaSoliSpecial,
+  PERCORSO_SPECIALI,
+} from '../lib/speciali.js'
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { ingredientiInCarta } from '../lib/ingredientiCarta.js'
@@ -135,6 +142,12 @@ export default function MenuPage({ speciali = false }) {
   // menù è attivabile o meno». Acceso di partenza: era così per tutti.
   const specialAttivo = settings.special_attivo !== false
   const usaStruttura = !staff && strutturaPersonalizzata(carta)
+  // LE SEZIONI DI SOLI SPECIAL FUORI DAL MENÙ (REQ-MENU-037): di partenza i
+  // Signature si aprono dal carosello e dal QR, e fra le sezioni non ci
+  // sono. Solo col menù Special attivo (senza carosello non ci sarebbe
+  // strada per arrivarci) e solo per il cliente: chi lavora dal menù batte
+  // ordini, e deve trovarci tutto.
+  const specialFuoriDalMenu = !staff && specialAttivo && settings.special_nel_menu !== true
   // Il cliente aspetta anche la struttura (menuCache.js); chi lavora no.
   const loading = menuInArrivo || (!staff && !strutturaPronta)
   const cart = useCart()
@@ -216,13 +229,21 @@ export default function MenuPage({ speciali = false }) {
         )
       : base
     if (speciali) return visibili.length ? [[settings.special_titolo || 'Special', visibili]] : []
-    if (usaStruttura) return sezioniDelMenu(carta, drinks)
-    return perCategoria(visibili, cats).map((g) => [g.nome, g.prodotti])
-  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta])
+    const sezioni = usaStruttura ? sezioniDelMenu(carta, drinks) : perCategoria(visibili, cats).map((g) => [g.nome, g.prodotti])
+    return specialFuoriDalMenu ? senzaSoliSpecial(sezioni) : sezioni
+  }, [drinks, cats, ricerca, speciali, elencoSpeciali, settings.special_titolo, usaStruttura, carta, specialFuoriDalMenu])
   // Le stesse sezioni nella forma del contratto degli stili strutturati
   // (REQ-MENU-028). Calcolate una volta per elenco: il giornale riosserva le
   // sue sezioni quando cambiano, e non deve farlo a ogni «Aggiungi».
   const sezioniDelloStile = useMemo(() => sezioniPerLoStile(categories), [categories])
+  // Il menù intero, per lo stile che mostra la sezione degli Special com'è
+  // nel menù anche quando il locale la tiene fuori, e anche sulla pagina
+  // Special (contrattoStile.js, `menuIntero`).
+  const menuIntero = useMemo(
+    () =>
+      sezioniPerLoStile(usaStruttura ? sezioniDelMenu(carta, drinks) : perCategoria(drinks, cats).map((g) => [g.nome, g.prodotti])),
+    [usaStruttura, carta, drinks, cats]
+  )
 
   // Arrivando dal carosello su un drink, la pagina Special si apre su quello,
   // col suo dettaglio aperto: chi tocca una slide vuole sapere di quel drink
@@ -460,6 +481,7 @@ export default function MenuPage({ speciali = false }) {
   const perLoStile = struttura && {
     venue,
     sezioni: sezioniDelloStile,
+    menuIntero,
     speciali: specialiAlloStile,
     soloSpeciali: speciali,
     special: { titolo: settings.special_titolo || 'Special', sottotitolo: settings.special_sottotitolo || null },

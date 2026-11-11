@@ -5,6 +5,7 @@ import { carteDelMazzo, misuraNome, segnoDi } from '../lib/mazzoCarte.js'
 import { comeScorrere } from '../lib/movimento.js'
 import { useIncollata } from '../lib/useIncollata.js'
 import { formatPrice } from '../lib/orderStatus.js'
+import { soloSpecial } from '../lib/speciali.js'
 import { caratteriDi, attendiCaratteri } from '../lib/caratteriPronti.js'
 
 // ── LO STILE «CARTE»: IL MENÙ COME UN MAZZO (REQ-MENU-029) ────────────────
@@ -103,10 +104,12 @@ function Indice({ carta, basso = false }) {
 // Gli ingredienti si calcolano una volta per voce: il menù si ridisegna a
 // ogni «Aggiungi», e con lui tutte le voci, anche quelle delle carte chiuse.
 // `ordine` mette in fila l'entrata delle voci, quando la carta si gira.
-export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false, ordine = 0 }) {
+// Con il disegno la voce è su due colonne (`k-voce-illustrata`, index.css).
+// `ancora` è l'indirizzo a cui arriva chi tocca una slide del carosello.
+export function VoceCarta({ d, img = null, apri, tastiOrdine, quantita = false, ordine = 0, ancora }) {
   const ingredienti = useMemo(() => ingredientiInCarta(d, { quantita }), [d, quantita])
   return (
-    <article className="k-voce" style={{ '--n': Math.min(ordine, 12) }}>
+    <article id={ancora} className={img ? 'k-voce k-voce-illustrata' : 'k-voce'} style={{ '--n': Math.min(ordine, 12) }}>
       {img && <img className="k-voce-img" src={img} alt="" loading="lazy" />}
       <div className="k-voce-testo">
         <h3>
@@ -260,8 +263,41 @@ function useCaratteriPronti() {
   return pronti
 }
 
-export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdine, quantita = false, soloSpeciali = false, special = {} }) {
-  const carte = useMemo(() => carteDelMazzo(sezioni), [sezioni])
+export default function MenuCarte({
+  sezioni,
+  menuIntero = null,
+  speciali,
+  immagine,
+  apri,
+  tastiOrdine,
+  quantita = false,
+  soloSpeciali = false,
+  special = {},
+}) {
+  // SEME E VALORE SI DANNO SUL MENÙ INTERO, poi restano in vista le carte
+  // che il menù mostra: la carta degli Special che il locale tiene fuori dal
+  // mazzo (`special_nel_menu`) è la stessa carta, con lo stesso seme, quando
+  // la si apre dal carosello; e toglierla non cambia il valore alle altre.
+  const tutteLeCarte = useMemo(() => carteDelMazzo(menuIntero || sezioni), [menuIntero, sezioni])
+  const carte = useMemo(() => {
+    if (!menuIntero) return tutteLeCarte
+    const inVista = new Set(sezioni.map((s) => s.id))
+    return tutteLeCarte.filter((c) => inVista.has(c.id))
+  }, [tutteLeCarte, menuIntero, sezioni])
+  // LA PAGINA SPECIAL MOSTRA LA CARTA DEL MENÙ (l'utente, 11/11/2026: «la
+  // carta che si vede quando si entra dal carosello dovrebbe essere la
+  // stessa che c'è nel menù»): le sezioni fatte solo di Special, con la loro
+  // testa, i loro testi e il loro ordine. Prima c'era sempre un Jolly a
+  // parte, coi drink in ordine di nome e senza testa. Gli Special che non
+  // stanno in una sezione così (uno Special in mezzo ai classici) restano
+  // sul Jolly, in fondo; senza `menuIntero` c'è solo il Jolly, come prima.
+  const cartePagina = useMemo(() => {
+    const delMenu = menuIntero ? tutteLeCarte.filter((c) => soloSpecial(c.voci)) : []
+    const giaInCarta = new Set(delMenu.flatMap((c) => c.voci.map((v) => v.drink_id ?? v.id)))
+    const fuori = speciali.filter((d) => !giaInCarta.has(d.id))
+    const jolly = fuori.length ? [{ id: JOLLY, jolly: true, seme: SEME_JOLLY, nome: special.titolo || 'Special', voci: fuori }] : []
+    return [...delMenu, ...jolly]
+  }, [menuIntero, tutteLeCarte, speciali, special.titolo])
   const [scelta, setScelta] = useState(null)
   const [partenza, setPartenza] = useState(null)
   const ventaglio = useRef(null)
@@ -279,14 +315,10 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
     [osserva]
   )
 
-  // Sulla pagina Special c'è solo il Jolly, già aperto. Altrimenti la carta
-  // scelta, se c'è ancora (un menù che si aggiorna può toglierla), o la
-  // prima.
-  const tutte = soloSpeciali
-    ? speciali.length
-      ? [{ id: JOLLY, jolly: true, seme: SEME_JOLLY, nome: special.titolo || 'Special', voci: speciali }]
-      : []
-    : carte
+  // Sulla pagina Special le carte degli Special, tutte aperte (il mazzo lì
+  // non c'è). Altrimenti la carta scelta, se c'è ancora (un menù che si
+  // aggiorna può toglierla), o la prima.
+  const tutte = soloSpeciali ? cartePagina : carte
   const aperta = tutte.find((c) => c.id === scelta) || tutte[0]
   if (!aperta) return null
   // `k-apertura`: finché non si sceglie una carta, quella aperta è la prima
@@ -340,11 +372,13 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
           key={c.id}
           className="k-aperta"
           data-seme={c.seme.id}
-          hidden={c.id !== aperta.id}
+          hidden={!soloSpeciali && c.id !== aperta.id}
           aria-label={c.nome}
         >
-          {/* Sulla pagina Special il titolo l'ha già detto la testata. */}
-          {!soloSpeciali && (
+          {/* Il Jolly non ha testa: sulla pagina Special il titolo l'ha già
+              detto la testata. Una carta del menù la sua testa la porta
+              ovunque: è la stessa carta. */}
+          {!c.jolly && (
             <header className="k-aperta-testa">
               <Indice carta={c} />
               <div className="k-aperta-titolo">
@@ -360,6 +394,7 @@ export default function MenuCarte({ sezioni, speciali, immagine, apri, tastiOrdi
                 d={d}
                 ordine={n}
                 img={c.jolly || c.vista !== 'snella' ? immagine(d) : null}
+                ancora={soloSpeciali ? `speciale-${d.drink_id ?? d.id}` : undefined}
                 apri={apri}
                 tastiOrdine={tastiOrdine}
                 quantita={quantita}

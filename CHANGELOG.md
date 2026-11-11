@@ -2,6 +2,17 @@
 
 ## 1.10.37-beta — in lavorazione
 
+### Menù dei clienti
+
+- Le sezioni composte soltanto da drink speciali non compaiono più fra le
+  sezioni del menù: si aprono dal carosello e dal QR del menù Special.
+  L'opzione «Special anche fra le sezioni del menù», in Menù → Special,
+  le rimette fra le altre.
+- Stile «Carte»: dal carosello e dal QR si apre la stessa carta del menù,
+  con il suo titolo e i suoi testi.
+- Stile «Carte»: le voci con il disegno sono impaginate su due colonne; i
+  nomi non vanno più a capo per far posto al disegno.
+
 ## 1.10.36-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

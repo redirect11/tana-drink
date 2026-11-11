@@ -296,9 +296,13 @@ dei clienti stanno in cima, in un riquadro richiudibile col filo sinistro in
   08/11/2026); sul telefono (fino a 640 px) agganciato si disegna al 62%,
   con `transform`, senza cambiare il posto che occupa. Gli Special non sono
   nel mazzo: sono il carosello, in cima, con le slide vestite da carta
-  avorio col Jolly negli angoli; il Jolly come carta aperta è solo sulla
-  pagina Special. Il disegno o la foto accanto alla voce c'è in ogni carta
-  aperta, tranne nelle sezioni «snelle». LE CARTE SONO VECCHIE (11/11/2026):
+  avorio col Jolly negli angoli. La sezione fatta solo di Special (i
+  Signature) di partenza non è nel mazzo (REQ-MENU-037): si apre dal
+  carosello e dal QR, e sulla pagina Special è LA STESSA CARTA del menù,
+  con la sua testa, il suo seme e i suoi testi; il Jolly resta per gli
+  Special sparsi in altre sezioni. Il disegno o la foto accanto alla voce
+  c'è in ogni carta aperta, tranne nelle sezioni «snelle», in una colonna
+  stretta sua (72 px sul telefono, 96 oltre i 560), col testo nell'altra. LE CARTE SONO VECCHIE (11/11/2026):
   dorso inciso con l'inchiostro consumato, faccia macchiata e con gli
   spigoli scuriti, quattro dorsi e quattro facce più due pieghe e un
   angolo piegato distribuiti con passi diversi, perché non siano rovinate
