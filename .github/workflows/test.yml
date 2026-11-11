@@ -181,10 +181,21 @@ jobs:
           key: sistema-${{ runner.os }}-${{ hashFiles('package-lock.json', 'package.json') }}
 
       # In locale si usa il Chrome installato; qui il Chromium di Playwright,
-      # della stessa versione del pacchetto. Con la cache piena scarica solo
-      # le librerie di sistema.
+      # della stessa versione del pacchetto.
+      # LE LIBRERIE DI SISTEMA SI INSTALLANO SOLO SE IL BROWSER NON PARTE.
+      # Prima c'era `--with-deps`, che a ogni giro chiede ad apt una decina
+      # di pacchetti (quasi tutti caratteri): l'11/11/2026 i server di
+      # Ubuntu non si risolvevano dalle macchine di GitHub («Temporary
+      # failure resolving 'security.ubuntu.com'») e il job è fallito tre
+      # volte di fila dopo dieci minuti di tentativi, senza che un solo test
+      # fosse partito. Le macchine `ubuntu-latest` hanno già Chrome, quindi
+      # le librerie che servono a Chromium: si prova ad avviarlo, e apt si
+      # chiama solo se non parte.
       - name: Browser
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          node -e "import('@playwright/test').then(async ({ chromium }) => (await chromium.launch()).close())" \
+            || npx playwright install-deps chromium
 
       - name: Test di sistema
         run: npm run test:sistema
