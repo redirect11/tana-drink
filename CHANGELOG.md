@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.36-beta — in lavorazione
+## 1.10.37-beta — in lavorazione
+
+## 1.10.36-beta — 11/11/2026 (test)
 
 ### Menù dei clienti
 
