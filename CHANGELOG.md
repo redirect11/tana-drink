@@ -4,6 +4,10 @@
 
 ### Gestionale
 
+- Scheda del prodotto: «Proponi una descrizione con l'AI» scrive una proposta
+  di descrizione, da usare, scartare o richiedere di nuovo. Usa il credito AI
+  del locale, gestito dalla regia; senza credito il resto della scheda
+  funziona come sempre.
 - Scheda del prodotto: scelta una foto, si ritaglia prima di caricarla, in una
   cornice quadrata. Si sposta trascinandola e si ingrandisce o rimpicciolisce
   col cursore, con la rotella o con due dita, così tutte le foto del menù

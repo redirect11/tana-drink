@@ -8249,11 +8249,39 @@ requirements:
       - fino ad allora, per la Tana vale la sua chiave con un tetto
         mensile presso il fornitore, se serve prima.
       DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
-    status: todo
+      LA PARTE DELLA REGIA È FATTA E PUBBLICATA SUL TEST (messaggio della
+      sessione della regia consegnato da Daniele il 12/11/2026; contratto in
+      drink-regia, docs/handover.md §7, «Cassetto AI»): la Function
+      `richiestaAI` della regia accetta due richieste, `descrizione` (per
+      REQ-AI-002/004) e `fattura` (per REQ-AI-001), con l'intestazione
+      `Authorization: Bearer <slug>.<segreto>`, e risponde 200 con la
+      proposta, il costo e il credito; 402 (credito, tetto, spento,
+      senza-cassetto: si ferma solo l'AI); 422 (risultato non usabile, il
+      costo resta); 401; 400; 503.
+      LA PARTE DELL'APP (12/11/2026): la Function `richiestaAI` del locale
+      (functions/lib/ai-service.js) la chiama per lo staff di gestione e
+      solo lei, mai il browser; controlla la richiesta (solo i due tipi e i
+      loro campi, le misure dei file) prima di spenderci un viaggio, e
+      traduce le risposte in un `codice`. La Chiave AI del locale è il
+      segreto `REGIA_AI_KEY`; col segnaposto `non-configurato` l'AI resta
+      spenta. Quale regia lo dice `REGIA_PROGETTO` in
+      functions/.env.<progetto>. Primo uso, per provare il collegamento:
+      «Proponi una descrizione con l'AI» nella scheda del prodotto, con la
+      proposta da usare, scartare o richiedere (DescrizioneAI.jsx).
+      RESTA: l'uso della fattura (REQ-AI-001), il credito mostrato in
+      Impostazioni, e i pacchetti e il prezzo.
+      PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni
+      progetto in cui si pubblicano le Functions (tana-drink-test,
+      tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza,
+      Firebase non pubblica nessuna Function. Nei locali della regia lo
+      crea la regia (SEGRETI_APP), che deve anche scrivere `REGIA_PROGETTO`.
+    status: partial
     generate_issue: true
     labels: [ai, licenza, prodotto]
     priority: P3
-    test_cases: []
+    test_cases:
+      - tests/bdd/richiesta-ai.test.js
+      - tests/component/descrizioneAI.test.jsx
 
   - id: REQ-MAG-009
     title: "Macro-categorie: il magazzino letto per famiglie"

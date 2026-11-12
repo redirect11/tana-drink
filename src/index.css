@@ -11578,6 +11578,18 @@ body.pagina-piena .inv-scheda {
   gap: 6px;
   min-width: 0;
 }
+/* LA DESCRIZIONE PROPOSTA DALL'AI (REQ-AI-003, DescrizioneAI.jsx): la proposta
+   sta in un riquadro a sé sotto il campo, perché si legga come una proposta
+   da accettare e non come il testo già scritto. */
+.descrizione-ai {
+  margin: 6px 0 12px;
+}
+.descrizione-ai-proposta {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+}
 /* IL RITAGLIO DELLA FOTO DI UN PRODOTTO (REQ-MENU-039, RitaglioFoto.jsx): la
    cornice quadrata a scacchi chiari, dove la foto si trascina e si
    ingrandisce. `touch-action: none` perché il dito che trascina la foto non

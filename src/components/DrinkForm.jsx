@@ -7,6 +7,7 @@ import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { MESSAGGI_PIANO } from '../lib/limiti.js'
 import AiutoCampo from './AiutoCampo.jsx'
 import RitaglioFoto from './RitaglioFoto.jsx'
+import DescrizioneAI from './DescrizioneAI.jsx'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -281,6 +282,12 @@ export default function DrinkForm({
       <label htmlFor="description">Descrizione</label>
       <input id="description" value={form.description} onChange={set('description')} />
       <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
+      <DescrizioneAI
+        nome={form.name || ''}
+        categoria={categories.find((c) => c.id === form.category_id)?.name}
+        attuale={form.description}
+        onUsa={(testo) => setForm((f) => ({ ...f, description: testo }))}
+      />
 
       {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
           magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»

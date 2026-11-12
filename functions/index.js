@@ -28,6 +28,7 @@ const {
   terminaliDi,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
+const { richiestaAI: richiestaAIsvc } = require('./lib/ai-service')
 const {
   createCheckout,
   verifyCheckoutStatus,
@@ -63,6 +64,52 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
     throw new HttpsError('internal', e?.message || 'Errore interno.')
   }
 })
+
+// ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────
+// La chiave del modello sta solo nella regia, che controlla il credito del
+// locale. Qui c'è la «Chiave AI» del locale verso la regia (`<slug>.<segreto>`,
+// creata dall'admin nel backoffice della regia), un segreto come quello di
+// SumUp:
+//   firebase functions:secrets:set REGIA_AI_KEY
+// Il segreto deve ESISTERE prima del deploy, anche col segnaposto
+// `non-configurato` (che tiene l'AI spenta): senza, Firebase non pubblica
+// nessuna Function. La regia lo crea così nei suoi locali (SEGRETI_APP).
+// Quale regia: `REGIA_PROGETTO` in functions/.env.<progetto> (drink-regia in
+// produzione, drink-regia-test sul test). La logica è in lib/ai-service.js.
+const REGIA_AI_KEY = defineSecret('REGIA_AI_KEY')
+const REGIA_PROGETTO = process.env.REGIA_PROGETTO || 'drink-regia'
+
+exports.richiestaAI = onCall(
+  // Una fattura in PDF arriva a 20 MB e la regia può metterci un po' a
+  // leggerla: tempo e memoria in più rispetto alle altre.
+  { ...OPTS, secrets: [REGIA_AI_KEY], timeoutSeconds: 120, memory: '512MiB' },
+  async (request) => {
+    try {
+      return await richiestaAIsvc(
+        {
+          chiave: () => REGIA_AI_KEY.value() || '',
+          progettoRegia: () => REGIA_PROGETTO,
+          invia: async (url, opzioni) => {
+            const res = await fetch(url, opzioni)
+            const testo = await res.text()
+            let corpo = null
+            try {
+              corpo = testo ? JSON.parse(testo) : null
+            } catch {
+              corpo = null
+            }
+            return { status: res.status, corpo }
+          },
+        },
+        request.auth,
+        request.data
+      )
+    } catch (e) {
+      if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
+      throw new HttpsError('internal', e?.message || 'Errore interno.')
+    }
+  }
+)
 
 // ── Notifiche push al cliente (FCM) ───────────────────────────────────────────
 // Quando un ordine passa a "pronto" (drink pronto) o ad "annullato" da parte

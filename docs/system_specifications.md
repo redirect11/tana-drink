@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 4 | fatto a metà |
-| ⬜ | 32 | da fare |
+| 🟡 | 5 | fatto a metà |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**344 voci** in tutto. **304** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
+**344 voci** in tutto. **305** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 6 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 1 | 5 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 168 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 170 |
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
@@ -3139,6 +3139,34 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 **Dove**: `scripts/specchia-db.js, scripts/ripristina-db.js, scripts/migra-in-produzione.js` · ⚠️ **Nessun test lo verifica.**
 
+### Intelligenza artificiale
+
+Dove l’intelligenza artificiale entra nel lavoro del locale.
+
+#### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, quindi qua iniziamo a valutare anche un'opzione di creare un cassetto economico dove noi ogni tanto andiamo a caricare oppure un prelievo diretto dal nostro conto di SumUp».
+
+COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
+
+PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
+
+DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
+
+DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
+
+LA PARTE DELLA REGIA È FATTA E PUBBLICATA SUL TEST (messaggio della sessione della regia consegnato da Daniele il 12/11/2026; contratto in drink-regia, docs/handover.md §7, «Cassetto AI»): la Function `richiestaAI` della regia accetta due richieste, `descrizione` (per REQ-AI-002/004) e `fattura` (per REQ-AI-001), con l'intestazione `Authorization: Bearer <slug>.<segreto>`, e risponde 200 con la proposta, il costo e il credito; 402 (credito, tetto, spento, senza-cassetto: si ferma solo l'AI); 422 (risultato non usabile, il costo resta); 401; 400; 503.
+
+LA PARTE DELL'APP (12/11/2026): la Function `richiestaAI` del locale (functions/lib/ai-service.js) la chiama per lo staff di gestione e solo lei, mai il browser; controlla la richiesta (solo i due tipi e i loro campi, le misure dei file) prima di spenderci un viaggio, e traduce le risposte in un `codice`. La Chiave AI del locale è il segreto `REGIA_AI_KEY`; col segnaposto `non-configurato` l'AI resta spenta. Quale regia lo dice `REGIA_PROGETTO` in functions/.env.<progetto>. Primo uso, per provare il collegamento: «Proponi una descrizione con l'AI» nella scheda del prodotto, con la proposta da usare, scartare o richiedere (DescrizioneAI.jsx).
+
+RESTA: l'uso della fattura (REQ-AI-001), il credito mostrato in Impostazioni, e i pacchetti e il prezzo.
+
+PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni progetto in cui si pubblicano le Functions (tana-drink-test, tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza, Firebase non pubblica nessuna Function. Nei locali della regia lo crea la regia (SEGRETI_APP), che deve anche scrivere `REGIA_PROGETTO`.
+
+**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`, `tests/component/descrizioneAI.test.jsx`
+
 ### Interfaccia
 
 Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie.
@@ -4404,20 +4432,6 @@ LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senz
 DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
 
 **Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
-
-#### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
-
-Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, quindi qua iniziamo a valutare anche un'opzione di creare un cassetto economico dove noi ogni tanto andiamo a caricare oppure un prelievo diretto dal nostro conto di SumUp».
-
-COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
-
-PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
-
-DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
-
-DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
-
-**Dove**: `functions/, settings, regia (abbonamenti della flotta)`
 
 ### Interfaccia
 
