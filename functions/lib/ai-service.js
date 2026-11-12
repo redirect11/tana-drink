@@ -50,6 +50,8 @@ const pesoDelBase64 = (s) => Math.floor((String(s).length * 3) / 4)
 const CAMPI = {
   descrizione: ['tipo', 'nome', 'produttore', 'categoria', 'note'],
   fattura: ['tipo', 'file', 'media_type'],
+  // Il credito senza chiamare il modello (drink-regia #217): gratis.
+  credito: ['tipo'],
 }
 
 const testo = (v) => typeof v === 'string' && v.trim().length > 0
@@ -60,6 +62,7 @@ function validaRichiesta(r) {
   if (!r || typeof r !== 'object' || !Object.hasOwn(CAMPI, r.tipo)) return 'Il tipo di richiesta non è fra quelli che la regia accetta.'
   const estranei = Object.keys(r).filter((k) => !CAMPI[r.tipo].includes(k))
   if (estranei.length) return `Campi non previsti: ${estranei.join(', ')}.`
+  if (r.tipo === 'credito') return null
   if (r.tipo === 'descrizione') {
     // Almeno due caratteri, come chiede la regia: con uno solo risponderebbe 400.
     if (!testo(r.nome) || r.nome.trim().length < 2) return 'Per una descrizione serve il nome del prodotto.'
@@ -86,13 +89,28 @@ const destinatarioGettone = (progetto) => `regia-ai:${progetto}`
 const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
 // La risposta della regia, tradotta. `codice`:
-//   credito | tetto | spento | senza-cassetto  (402: si ferma solo l'AI)
+//   credito | tetto | spento | senza-cassetto | piano  (402: si ferma solo
+//     l'AI; «piano» è il Free, che l'AI non ce l'ha, REQ-LIC-017)
 //   non-usabile  (422: il modello non ha dato niente, e il costo resta)
 //   non-riconosciuto  (401: la regia non riconosce questo locale)
 //   richiesta    (400: un errore nostro)
 //   riprova      (503, rete, o una risposta che non si capisce)
 function interpreta({ status, corpo }, tipoChiesto) {
   const c = corpo && typeof corpo === 'object' ? corpo : {}
+  if (status === 200 && tipoChiesto === 'credito') {
+    // Il credito non ha `risultato`: i numeri stanno in cima. `attivo` vuol
+    // dire «una richiesta AI può partire adesso»; `motivo` dice perché no.
+    if (c.ok !== true || c.tipo !== 'credito' || numero(c.credito_eur) == null) return { ok: false, codice: 'riprova' }
+    return {
+      ok: true,
+      tipo: 'credito',
+      credito_eur: numero(c.credito_eur),
+      tetto_mensile_eur: numero(c.tetto_mensile_eur),
+      speso_mese_eur: numero(c.speso_mese_eur),
+      attivo: c.attivo === true,
+      motivo: ['credito', 'tetto'].includes(c.motivo) ? c.motivo : null,
+    }
+  }
   if (status === 200) {
     if (c.ok !== true || !c.risultato || typeof c.risultato !== 'object') return { ok: false, codice: 'riprova' }
     // La risposta dev'essere per quello che si è chiesto.
@@ -100,7 +118,7 @@ function interpreta({ status, corpo }, tipoChiesto) {
     return { ok: true, tipo: c.tipo, risultato: c.risultato, costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
   }
   if (status === 402) {
-    const noti = ['credito', 'tetto', 'spento', 'senza-cassetto']
+    const noti = ['credito', 'tetto', 'spento', 'senza-cassetto', 'piano']
     return { ok: false, codice: noti.includes(c.codice) ? c.codice : 'credito', credito_eur: numero(c.credito_eur) }
   }
   if (status === 422) return { ok: false, codice: 'non-usabile', costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }

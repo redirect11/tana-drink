@@ -19,7 +19,12 @@ const chiamata = vi.fn()
 // La porta delle funzioni del locale (src/porte/funzioni.js), finta.
 vi.mock('../../src/porte/funzioni.js', () => ({ chiamaFunzione: (_nome, dati) => chiamata(dati) }))
 let leggero = false
-vi.mock('../../src/lib/limiti.js', () => ({ senzaFunctions: () => leggero }))
+let conAI = true
+vi.mock('../../src/lib/limiti.js', async (originale) => ({
+  ...(await originale()),
+  senzaFunctions: () => leggero,
+  aiNelPiano: () => conAI,
+}))
 
 import DescrizioneAI from '../../src/components/DescrizioneAI.jsx'
 import { chiediAI } from '../../src/lib/aiApi.js'
@@ -27,6 +32,7 @@ import { chiediAI } from '../../src/lib/aiApi.js'
 beforeEach(() => {
   chiamata.mockReset()
   leggero = false
+  conAI = true
 })
 
 const mostra = (props = {}) => {
@@ -123,6 +129,14 @@ describe('quando l’AI si ferma', () => {
     mostra()
     await chiedi()
     expect(await screen.findByRole('status')).toHaveTextContent('Si può riprovare')
+  })
+
+  // REQ-LIC-017: il Free non ha l'AI (`ai: false` nella licenza). Il blocco
+  // vero è nella regia; qui il tasto non c'è.
+  it('nel piano senza AI il tasto non c’è', () => {
+    conAI = false
+    mostra()
+    expect(screen.queryByRole('button', { name: 'Proponi una descrizione con l’AI' })).toBeNull()
   })
 
   // Sul piano Free le Functions non ci sono: il tasto non compare, invece di

@@ -11,11 +11,11 @@
 // spenta, si ferma solo l'AI: il resto della scheda lavora come sempre.
 // Serve la rete: è un attrezzo del gestionale, non del banco.
 import { chiamaFunzione } from '../porte/funzioni.js'
-import { senzaFunctions } from './limiti.js'
+import { senzaFunctions, aiNelPiano, MESSAGGI_PIANO } from './limiti.js'
 
 // C'è una strada per l'AI? Sul profilo leggero le Functions non ci sono, e
 // nella demo non si parla con nessun server.
-export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions()
+export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions() && aiNelPiano()
 
 // Cosa dire per ogni `codice` della Function. Registro del gestionale:
 // piano, senza dare la colpa a chi legge.
@@ -30,6 +30,8 @@ export const MESSAGGI_AI = {
   'non-usabile': "L'AI non ha dato una risposta utilizzabile. Si può riprovare.",
   richiesta: "La richiesta all'AI non è andata a buon fine.",
   riprova: "L'AI non risponde in questo momento. Si può riprovare.",
+  // Il Free, se mai ci si arriva: i tasti lì non ci sono (REQ-LIC-017).
+  piano: MESSAGGI_PIANO.ai,
 }
 
 export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprova
@@ -81,3 +83,8 @@ export function fileInBase64(blob) {
     lettore.readAsDataURL(blob)
   })
 }
+
+// Il credito del locale, senza chiamare il modello (REQ-AI-003): gratis.
+// Torna { ok: true, credito_eur, tetto_mensile_eur, speso_mese_eur,
+// attivo, motivo } o { ok: false, codice } come ogni altra richiesta.
+export const leggiCreditoAI = () => chiediAI({ tipo: 'credito' })

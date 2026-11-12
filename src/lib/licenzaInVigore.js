@@ -38,6 +38,8 @@ export const LIMITI_FREE = Object.freeze({
   comande: false,
   // Dal 12/11/2026 (REQ-LIC-016, drink-regia #206): il Free non stampa.
   stampa: false,
+  // Dal 13/11/2026 (REQ-LIC-017): il Free non ha l'AI.
+  ai: false,
 })
 
 export const SCADUTA = 'scaduta'

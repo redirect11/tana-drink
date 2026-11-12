@@ -175,3 +175,39 @@ describe('Feature: senza la regia giusta, o senza il gettone', () => {
     }
   })
 })
+
+// IL CREDITO, SENZA CHIAMARE IL MODELLO (REQ-AI-003, drink-regia #217):
+// gratis, per mostrarlo in Impostazioni e nascondere l'AI quando è ferma.
+describe('Feature: il credito del locale', () => {
+  const chiediCredito = (risposta) => {
+    const { deps: d, invia } = deps({ risposta })
+    return { esito: richiestaAI(d, GESTORE, { tipo: 'credito' }), invia }
+  }
+
+  it('si chiede col solo tipo, e nient’altro', async () => {
+    const { esito, invia } = chiediCredito({ status: 200, corpo: { ok: true, tipo: 'credito', credito_eur: 4.5, tetto_mensile_eur: 20, speso_mese_eur: 1.2, attivo: true, motivo: null } })
+    expect(await esito).toEqual({ ok: true, tipo: 'credito', credito_eur: 4.5, tetto_mensile_eur: 20, speso_mese_eur: 1.2, attivo: true, motivo: null })
+    expect(JSON.parse(invia.mock.calls[0][1].body)).toEqual({ tipo: 'credito' })
+    expect(validaRichiesta({ tipo: 'credito', nome: 'x' })).toMatch(/nome/)
+  })
+
+  // `attivo` è «una richiesta può partire adesso», e `motivo` dice perché no.
+  it('fermo per credito o per tetto lo dice; un motivo sconosciuto no', async () => {
+    const base = { ok: true, tipo: 'credito', credito_eur: 0, tetto_mensile_eur: 20, speso_mese_eur: 3 }
+    expect(await chiediCredito({ status: 200, corpo: { ...base, attivo: false, motivo: 'credito' } }).esito).toMatchObject({ attivo: false, motivo: 'credito' })
+    expect(await chiediCredito({ status: 200, corpo: { ...base, attivo: false, motivo: 'boh' } }).esito).toMatchObject({ attivo: false, motivo: null })
+  })
+
+  it('una risposta senza il credito non si spaccia per buona', async () => {
+    expect(await chiediCredito({ status: 200, corpo: { ok: true, tipo: 'credito' } }).esito).toEqual({ ok: false, codice: 'riprova' })
+    expect(await chiediCredito({ status: 200, corpo: { ok: true, tipo: 'descrizione', credito_eur: 1 } }).esito).toEqual({ ok: false, codice: 'riprova' })
+  })
+})
+
+// REQ-LIC-017: il Free non ha l'AI, e la regia lo dice con un codice suo.
+describe('Feature: il piano senza AI', () => {
+  it('402 «piano» arriva com’è', async () => {
+    const { deps: d } = deps({ risposta: { status: 402, corpo: { codice: 'piano' } } })
+    expect(await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Negroni' })).toEqual({ ok: false, codice: 'piano', credito_eur: null })
+  })
+})

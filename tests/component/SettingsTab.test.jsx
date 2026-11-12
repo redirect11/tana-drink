@@ -73,6 +73,9 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
 vi.mock('../../src/components/PrinterSetup.jsx', () => ({
   default: () => <div>PANNELLO STAMPANTE</div>,
 }))
+vi.mock('../../src/components/CreditoAI.jsx', () => ({
+  default: () => <div>PANNELLO CREDITO AI</div>,
+}))
 vi.mock('../../src/components/BackupPanel.jsx', () => ({
   default: () => <div>PANNELLO BACKUP</div>,
 }))
@@ -652,6 +655,20 @@ describe('il piano Free nelle impostazioni', () => {
     await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
     expect(screen.queryByText('Stampa la comanda all’arrivo dell’ordine')).toBeNull()
     expect(screen.getByText('Stampa lo scontrino alla riscossione del conto')).toBeInTheDocument()
+  })
+
+  // REQ-AI-003 e REQ-LIC-017: il credito AI sta con la licenza, e nel Free
+  // senza AI non c'è.
+  it('il credito AI sta nel gruppo Licenza, e senza AI nel piano no', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByText('PANNELLO CREDITO AI')).toBeInTheDocument()
+    cleanup()
+    localStorage.setItem('drink:licenza', JSON.stringify({ piano: 'free', moduli: {}, limiti: { ai: false } }))
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.queryByText('PANNELLO CREDITO AI')).toBeNull()
   })
 
   it('un modulo in prova dice fino a quando', async () => {

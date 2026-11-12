@@ -9,6 +9,14 @@
   prodotti del magazzino, da rivedere prima di registrare. Il documento
   letto si allega da sé; il carico a magazzino si accende a mano. Usa il
   credito AI del locale.
+- Impostazioni → Licenza: il riquadro «Credito AI» mostra il credito
+  disponibile, quanto si è speso nel mese e il tetto, e perché le funzioni AI
+  sono ferme quando lo sono.
+
+### Licenza
+
+- Piano Free: le funzioni AI non sono comprese. I tasti AI e il credito non
+  compaiono.
 
 ## 1.10.40-beta — 12/11/2026 (test)
 

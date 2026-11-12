@@ -51,6 +51,8 @@ import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
 import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
+import CreditoAI from './CreditoAI.jsx'
+import { aiRaggiungibile } from '../lib/aiApi.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -1191,6 +1193,9 @@ export default function SettingsTab({ role = null }) {
       label: 'Funzioni premium',
       nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
+    // IL CREDITO AI (REQ-AI-003) sta con la licenza: è quello che il locale
+    // ha comprato. Solo dove l'AI arriva (non nel Free, REQ-LIC-017).
+    ...(aiRaggiungibile() ? [{ id: 'credito-ai', icona: 'licenza', label: 'Credito AI', nodo: <CreditoAI /> }] : []),
     {
       id: 'annullamenti',
       icona: 'chiudi',
@@ -1290,6 +1295,7 @@ export default function SettingsTab({ role = null }) {
     informazioni: 'sistema',
     licenza: 'premium',
     'funzioni-premium': 'premium',
+    'credito-ai': 'premium',
   }
   const GRUPPI = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto' },

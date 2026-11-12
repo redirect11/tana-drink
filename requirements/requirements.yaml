@@ -7011,11 +7011,20 @@ requirements:
       Per conoscenza (Daniele, 13/11/2026): il credito non scade, nessun
       piano a pagamento include credito, il costo si calcola col cambio BCE
       del giorno.
-    status: todo
+      FATTO (13/11/2026): `aiConsentita`/`aiNelPiano` in lib/limiti.js;
+      `aiRaggiungibile` (aiApi.js) la chiede, quindi spariscono «Proponi una
+      descrizione», «Leggi con l'AI» e il riquadro del credito; il codice
+      «piano» della regia ha la sua frase; `ai: false` nella copia dei
+      limiti del Free.
+    status: implemented
     generate_issue: true
     labels: [licenza, ai, prodotto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/limiti.test.js
+      - tests/bdd/richiesta-ai.test.js
+      - tests/component/descrizioneAI.test.jsx
+      - tests/component/SettingsTab.test.jsx
 
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
@@ -8465,13 +8474,16 @@ requirements:
       (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo`
       è null, «credito» o «tetto». Senza cassetto o col cassetto spento il
       402 di sempre. Si chiede all'apertura delle Impostazioni (e della
-      chat, REQ-AI-006): DA FARE in Impostazioni → Licenza, un riquadro
-      «Credito AI».
+      chat, REQ-AI-006). FATTO (13/11/2026): la Function accetta
+      `{ tipo: 'credito' }` e ne traduce la risposta; in Impostazioni →
+      Licenza il riquadro «Credito AI» (CreditoAI.jsx) mostra disponibile,
+      speso nel mese e tetto, e perché l'AI è ferma.
     status: partial
     generate_issue: true
     labels: [ai, licenza, prodotto]
     priority: P3
     test_cases:
+      - tests/component/creditoAI.test.jsx
       - tests/bdd/richiesta-ai.test.js
 
   - id: REQ-MAG-009
