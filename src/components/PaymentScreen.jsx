@@ -24,7 +24,7 @@ import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSetting
 import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
-import { scontiConsentiti, stampaNelPiano } from '../lib/limiti.js'
+import { scontiConsentiti, stampaNelPiano, servizioAttivo } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
@@ -346,7 +346,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   const paid = paidAmount(order)
   // Incassare non vuol dire aver consegnato: seguendo la preparazione il
   // conto resta aperto finché le comande non sono servite.
-  const autoServeBase = settings?.workflow_enabled === false
+  const autoServeBase = !servizioAttivo(settings)
   // Il tasto in più lo decide il locale (Impostazioni → Gestione
   // preparazione): serve dove si consegna e si incassa nello stesso gesto.
   const riscuotiEServi = settings?.riscuoti_e_servi === true

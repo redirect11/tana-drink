@@ -358,6 +358,19 @@ describe('metodi di pagamento', () => {
     )
   })
 
+  // REQ-LIC-005: nel piano senza comande il servizio è spento anche con
+  // l'interruttore acceso. Si incassa e si serve tutto insieme — è lì che le
+  // comande risultano servite e il magazzino si scala — e il tasto in più
+  // non c'è.
+  it('piano senza comande: incassare serve già tutto, come col servizio spento', async () => {
+    const user = userEvent.setup()
+    const free = { ...noReader, workflow_enabled: true, riscuoti_e_servi: true, licenza: { piano: 'free', moduli: {}, limiti: { comande: false } } }
+    mount(conComandaDaServire(), free)
+    expect(screen.queryByRole('button', { name: /Riscuoti e servi/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: /Riscuotere/ }))
+    expect(registerPayment).toHaveBeenCalledWith('ord1', expect.objectContaining({ autoServe: true }))
+  })
+
   it('senza gli stati del servizio il tasto in più non serve', () => {
     // Lì incassare serve già tutto: due tasti direbbero la stessa cosa.
     mount(conComandaDaServire(), { ...noReader, workflow_enabled: false, riscuoti_e_servi: true })

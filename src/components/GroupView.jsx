@@ -36,6 +36,7 @@ import { formatPrice, statoAlBanco, STATUS_ICONA } from '../lib/orderStatus.js'
 import { IconGruppo, IconPersona } from './Icons.jsx'
 import { sumupAttivo } from '../lib/licenza.js'
 import Icona from './Icona.jsx'
+import { servizioAttivo } from '../lib/limiti.js'
 
 // Vista di un gruppo (modale) con drill-down ricorsivo: per un contenitore
 // mostra "composto da" + ordini aggregati; cliccando un sottogruppo si
@@ -45,7 +46,7 @@ export default function GroupView({ groupId, onClose }) {
   // segue la preparazione quel bollo parla di una cosa che lì non si fa.
   const [impostazioni, setImpostazioni] = useState(DEFAULT_SETTINGS)
   useEffect(() => subscribeSettings(setImpostazioni), [])
-  const workflowOn = impostazioni.workflow_enabled !== false
+  const workflowOn = servizioAttivo(impostazioni)
   const [groups, setGroups] = useState([])
   const [recent, setRecent] = useState([])
   const [orders, setOrders] = useState([])

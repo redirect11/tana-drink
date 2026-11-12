@@ -32,7 +32,7 @@ import {
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
-import { MESSAGGI_PIANO, profiloLeggero, stampaNelPiano } from '../lib/limiti.js'
+import { MESSAGGI_PIANO, profiloLeggero, stampaNelPiano, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
@@ -369,7 +369,7 @@ export default function SettingsTab({ role = null }) {
                   se si seguono i passi del servizio. Col servizio spento
                   il tasto non comparirebbe comunque, e un interruttore che
                   non fa niente è peggio di uno assente. */}
-              {settings.workflow_enabled !== false && (
+              {servizioAttivo(settings) && (
                 <ToggleRow
                   label="Un tasto per incassare e servire insieme"
                   desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
@@ -524,7 +524,7 @@ export default function SettingsTab({ role = null }) {
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
                   (statoComandaNuova in lib/comande.js). */}
-              {settings.workflow_enabled !== false && (
+              {servizioAttivo(settings) && (
                 <ToggleRow
                   label="Le comande nascono già in preparazione"
                   desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
@@ -939,7 +939,7 @@ export default function SettingsTab({ role = null }) {
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
                 <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
-                {settings.workflow_enabled !== false ? (
+                {servizioAttivo(settings) ? (
                   <> Si apre da sé a chi ha il ruolo bartender.</>
                 ) : (
                   <>
@@ -953,7 +953,7 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.bartender_view || 'corsie'}
                 opzioni={[
-                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, settings.workflow_enabled === false],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, !servizioAttivo(settings)],
                 ]}
                 onScegli={(v) => save({ bartender_view: v })}
               />
@@ -1224,15 +1224,22 @@ export default function SettingsTab({ role = null }) {
     },
   ]
   const SOLO_CON_STAMPA = new Set(['stampa-automatica', 'campi-scontrino', 'campi-comanda', 'campi-acconto', 'logo-stampe'])
-  const sezioni = stampaOn
-    ? tutteLeSezioni
-    : tutteLeSezioni
-        .filter((s) => !SOLO_CON_STAMPA.has(s.id))
-        .map((s) =>
-          s.id === 'stampante'
-            ? { ...s, nodo: <AvvisoPiano messaggio={MESSAGGI_PIANO.stampa} impostazioni={settings} /> }
-            : s
-        )
+  // Nel piano senza comande (REQ-LIC-005) la preparazione lascia il posto
+  // alla frase del piano, e se ne vanno tempi di servizio e campi della
+  // comanda: senza stati non c'è niente da regolare.
+  const comandeOn = comandeConsentite(settings)
+  const SOLO_CON_COMANDE = new Set(['tempi', 'campi-comanda'])
+  const sezioni = tutteLeSezioni
+    .filter((s) => (stampaOn || !SOLO_CON_STAMPA.has(s.id)) && (comandeOn || !SOLO_CON_COMANDE.has(s.id)))
+    .map((s) => {
+      if (!stampaOn && s.id === 'stampante') {
+        return { ...s, nodo: <AvvisoPiano messaggio={MESSAGGI_PIANO.stampa} impostazioni={settings} /> }
+      }
+      if (!comandeOn && s.id === 'preparazione') {
+        return { ...s, nodo: <AvvisoPiano messaggio={MESSAGGI_PIANO.comande} impostazioni={settings} /> }
+      }
+      return s
+    })
 
   // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
   // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»

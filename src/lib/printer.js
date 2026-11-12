@@ -32,7 +32,7 @@ import { battutoDaQui } from './dispositivo.js'
 import { isGestore } from './ruoli.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
-import { rigaMarchio, stampaNelPiano, MESSAGGI_PIANO } from './limiti.js'
+import { rigaMarchio, stampaNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from './limiti.js'
 import {
   configStampa,
   immagineCaricata,
@@ -419,7 +419,7 @@ export function scontrinoAutomatico(role, impostazioni = loadPrinterSettings()) 
 }
 
 export function comandeDaStampare(order, opzioni = {}) {
-  if (!order || lavoroAnnullato(order) || !stampaNelPiano()) return []
+  if (!order || lavoroAnnullato(order) || !stampaComandeNelPiano()) return []
   if (!stampaQuestoTerminale(order, opzioni)) return []
   const da = (opzioni.impostazioni || loadPrinterSettings()).autoPrintComandaDa
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
@@ -1520,6 +1520,11 @@ export function printComanda(order, comanda = null) {
   // (BUG-052). Un conto annullato non ha carta da far uscire, nemmeno dal
   // tasto a mano, nemmeno da un chiamante scritto domani.
   if (lavoroAnnullato(order, comandaDelTicket(order, comanda))) return Promise.resolve()
+  // Nel piano senza comande (REQ-LIC-005) la comanda non si stampa, anche
+  // se lo scontrino sì: lo dice la frase del piano che manca.
+  if (!stampaComandeNelPiano()) {
+    return Promise.reject(new Error(stampaNelPiano() ? MESSAGGI_PIANO.comande : STAMPA_FUORI_PIANO))
+  }
   return lavoroDiStampa(async (prn) => {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()

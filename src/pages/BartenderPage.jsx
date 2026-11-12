@@ -143,7 +143,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { printComanda, printScontrino, loadPrinterSettings, scontrinoAutomatico, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
-import { stampaNelPiano } from '../lib/limiti.js'
+import { stampaNelPiano, servizioAttivo, stampaComandeNelPiano } from '../lib/limiti.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -551,7 +551,9 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const testoConIcona = useTestoConIcona()
   // Nel piano senza stampa (REQ-LIC-016) spariscono i tasti di stampa e il
   // pallino della stampante: non c'è niente da stampare né da controllare.
+  // Senza comande (REQ-LIC-005) se ne va solo la carta della comanda.
   const stampaOn = stampaNelPiano()
+  const stampaComandeOn = stampaComandeNelPiano()
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -768,7 +770,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const { session: cassaAperta, loading: cassaLoading } = useCashSession()
 
   // Gestione preparazione: se spenta spariscono stati e avanzamenti.
-  const workflowOn = settings.workflow_enabled !== false
+  const workflowOn = servizioAttivo(settings)
   // COSA DICE LA STRISCIA a sinistra della card: di suo lo stato (com'è
   // sempre stato), oppure il colore del conto se il locale l'ha scelto.
   // Chi decide è lib/coloriConto.js: qui si legge solo l'impostazione, che
@@ -2278,13 +2280,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           </div>
         )}
         {stampaOn && (
-          <div className="grid-2" style={{ marginTop: 8 }}>
-            <button
-              className="btn ghost small"
-              onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
-            >
-              <Icona nome="stampa" gruppo="tasti" /> Comanda
-            </button>
+          <div className={stampaComandeOn ? 'grid-2' : undefined} style={{ marginTop: 8 }}>
+            {stampaComandeOn && (
+              <button
+                className="btn ghost small"
+                onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <Icona nome="stampa" gruppo="tasti" /> Comanda
+              </button>
+            )}
             <button
               className="btn ghost small"
               onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
@@ -3064,7 +3068,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     hint: 'Ne preparo una parte adesso, il resto dopo',
                     onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
                   },
-                  stampaOn && {
+                  stampaComandeOn && {
                     id: 'ristampa',
                     icon: 'stampa',
                     label: 'Ristampa la comanda',

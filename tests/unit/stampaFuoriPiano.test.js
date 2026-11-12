@@ -15,7 +15,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ricordaImpostazioni } from '../../src/lib/impostazioniLocali.js'
-import { stampaNelPiano, MESSAGGI_PIANO } from '../../src/lib/limiti.js'
+import { stampaNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from '../../src/lib/limiti.js'
 import {
   printScontrino,
   printComanda,
@@ -94,6 +94,23 @@ describe('senza la voce, come sempre', () => {
   it('un Free di prima, senza `stampa`, stampa anche lui', async () => {
     ricordaImpostazioni({ licenza: { piano: 'free', moduli: {}, limiti: { prodotti_max: 10 } } })
     expect(scontrinoAutomatico('admin', { autoPrintScontrino: true, autoPrintScontrinoDa: 'tutti' })).toBe(true)
+    await printScontrino(CONTO)
+    expect(finestre).toBe(1)
+  })
+})
+
+// REQ-LIC-005: senza comande nel piano la comanda non esce, lo scontrino
+// sì (se la stampa c'è). Il Free le toglie tutte e due; questa prova tiene
+// le due voci separate, come le scrive la regia.
+describe('il piano senza comande, con la stampa', () => {
+  beforeEach(() => ricordaImpostazioni({ licenza: { piano: 'free', moduli: {}, limiti: { comande: false } } }))
+
+  it('la comanda non esce, e lo dice; lo scontrino sì', async () => {
+    expect(stampaNelPiano()).toBe(true)
+    expect(stampaComandeNelPiano()).toBe(false)
+    await expect(printComanda(CONTO, CONTO.comande[0])).rejects.toThrow(MESSAGGI_PIANO.comande)
+    expect(comandeDaStampare(CONTO, { daQui: () => true, impostazioni: { autoPrintComanda: true } })).toEqual([])
+    expect(finestre).toBe(0)
     await printScontrino(CONTO)
     expect(finestre).toBe(1)
   })

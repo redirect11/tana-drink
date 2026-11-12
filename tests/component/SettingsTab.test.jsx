@@ -641,6 +641,22 @@ describe('il piano Free nelle impostazioni', () => {
     expect(screen.queryByText('Un tasto per incassare senza stampare')).toBeNull()
   })
 
+  // REQ-LIC-005: senza comande nel piano, al posto della preparazione la
+  // frase del piano; tempi di servizio e stampa automatica della comanda
+  // non ci sono. Lo scontrino automatico sì.
+  it('senza comande nel piano, al posto della preparazione c’è la frase del piano', async () => {
+    const user = userEvent.setup()
+    impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { comande: false } }
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Servizio$/ }))
+    expect(screen.queryByText('Segui la preparazione degli ordini')).toBeNull()
+    expect(screen.queryByRole('heading', { name: /Tempi di servizio/ })).toBeNull()
+    expect(screen.getByText(/^Nel piano Free la cassa è semplice/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
+    expect(screen.queryByText('Stampa la comanda all’arrivo dell’ordine')).toBeNull()
+    expect(screen.getByText('Stampa lo scontrino alla riscossione del conto')).toBeInTheDocument()
+  })
+
   it('un modulo in prova dice fino a quando', async () => {
     const user = userEvent.setup()
     impostazioni.licenza = {

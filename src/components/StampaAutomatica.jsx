@@ -8,6 +8,7 @@ import {
   tastoAcconto,
 } from '../lib/scontrinoAcconto.js'
 import ToggleRow from './ToggleRow.jsx'
+import { comandeConsentite } from '../lib/limiti.js'
 import GruppoChip from './GruppoChip.jsx'
 import Icona from './Icona.jsx'
 
@@ -35,6 +36,8 @@ import Icona from './Icona.jsx'
 // una cosa al banco e stupirsi che in sala non sia cambiato niente.
 export default function StampaAutomatica({ settings, save }) {
   const [prn, setPrn] = useState(() => loadPrinterSettings())
+  // Nel piano senza comande (REQ-LIC-005) resta solo lo scontrino.
+  const comandeOn = comandeConsentite(settings)
 
   // LOCAL-FIRST, come ogni altra cosa qui: si scrive subito nella memoria
   // del terminale (che è chi legge queste impostazioni al momento di
@@ -64,15 +67,17 @@ export default function StampaAutomatica({ settings, save }) {
         passa a battere due conti.
       </p>
 
-      <ToggleRow
-        label="Stampa la comanda all’arrivo dell’ordine"
-        desc="Appena un ordine entra in coda il ticket esce al banco, senza premere «Comanda»."
-        checked={prn.autoPrintComanda === true}
-        onChange={(v) => cambia({ autoPrintComanda: v })}
-      />
+      {comandeOn && (
+        <ToggleRow
+          label="Stampa la comanda all’arrivo dell’ordine"
+          desc="Appena un ordine entra in coda il ticket esce al banco, senza premere «Comanda»."
+          checked={prn.autoPrintComanda === true}
+          onChange={(v) => cambia({ autoPrintComanda: v })}
+        />
+      )}
       {/* DA DOVE (REQ-STAMPA-021): sotto l'interruttore che riguarda, e solo
           se è acceso — una scelta su una stampa spenta non decide niente. */}
-      {prn.autoPrintComanda === true && (
+      {comandeOn && prn.autoPrintComanda === true && (
         <div className="stampa-da">
           <span className="muted small">Comande prese</span>
           <GruppoChip
@@ -113,6 +118,7 @@ export default function StampaAutomatica({ settings, save }) {
           comanda esce da sé, e da dove — e l'avviso qui sotto guarda proprio
           l'interruttore della comanda. Separarli vorrebbe dire un avviso che
           parla di un interruttore che non è in pagina. */}
+      {comandeOn && (
       <div style={{ marginTop: 14 }}>
         <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Comande prese in sala</div>
         {/* La sala l'IP ce l'ha (la configurazione arriva a tutti i dispositivi
@@ -157,6 +163,7 @@ export default function StampaAutomatica({ settings, save }) {
           </div>
         )}
       </div>
+      )}
 
       {/* ── Quello che vale per tutti ── */}
       <h4 style={{ margin: '22px 0 2px' }}>Per tutto il locale</h4>

@@ -106,6 +106,30 @@ export const stampaConsentita = (stato) => limitiDi(stato)?.stampa !== false
 // schermate: tasti e cancello rispondono sempre allo stesso modo.
 export const stampaNelPiano = () => stampaConsentita(impostazioniRicordate({}))
 
+// IL FREE È UNA CASSA SEMPLICE (REQ-LIC-005, l'utente 31/10/2026: «nella
+// free non metterei le comande»). Con `comande: false` non c'è il ciclo
+// del servizio: niente stati, coda di preparazione, tempi, stima ai
+// clienti, né stampa della comanda. Solo un `false` scritto lo spegne.
+export const comandeConsentite = (stato) => limitiDi(stato)?.comande !== false
+
+// IL SERVIZIO È ACCESO? Una domanda sola, al posto di `workflow_enabled`
+// letto in giro: l'interruttore del locale («Segui la preparazione»), a
+// meno che il piano non comprenda le comande. Così il Free passa dalla
+// strada che esisteva già e che è collaudata, quella del servizio spento:
+// le comande restano modificabili fino all'incasso, lì risultano servite
+// e lì si scala il magazzino. Non nascono già servite, come diceva la
+// prima stesura: una comanda servita blocca le sue quantità
+// (lockedQtyByItem), e in una cassa semplice una riga battuta per
+// sbaglio non si potrebbe più togliere.
+export const servizioAttivo = (stato) => stato?.workflow_enabled !== false && comandeConsentite(stato)
+
+// La stampa della comanda: serve la stampa, e servono le comande. Lo
+// scontrino segue solo la prima (stampaNelPiano).
+export const stampaComandeNelPiano = () => {
+  const stato = impostazioniRicordate({})
+  return stampaConsentita(stato) && comandeConsentite(stato)
+}
+
 // Da quando si vede lo storico (vendite, conti chiusi), o null se si vede
 // tutto. Si parte dalla MEZZANOTTE di N giorni fa, non da adesso meno N×24
 // ore: un locale lavora oltre la mezzanotte, e tagliare una serata a metà
@@ -171,6 +195,7 @@ export function limitiInChiaro(stato) {
   if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
   if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
   if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
+  if (!comandeConsentite(stato)) righe.push('Comande e stati del servizio non compresi: cassa semplice')
   if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
   return righe
 }
@@ -188,6 +213,7 @@ export const MESSAGGI_PIANO = {
   staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
   stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
+  comande: 'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.',
   allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
   sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
   // Un piano a pagamento senza il modulo: non è «il piano Free».

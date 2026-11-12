@@ -98,7 +98,7 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
-import { fotoConsentite, stampaNelPiano } from '../lib/limiti.js'
+import { fotoConsentite, stampaComandeNelPiano, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
@@ -337,11 +337,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // Il locale segue la preparazione? Sta qui in alto perché lo chiedono in
   // due punti lontani fra loro: come si raggruppano le righe (qui sotto) e
   // quali tasti di avanzamento esistono (più giù).
-  const workflowOn = settings.workflow_enabled !== false
-  // Nel piano senza stampa (REQ-LIC-016) «Invia comanda» non ha niente da
-  // fare — manda la carta al banco, e il conto c'è già — e spariscono i
-  // tasti che ristampano le comande.
-  const stampaOn = stampaNelPiano()
+  const workflowOn = servizioAttivo(settings)
+  // Nel piano senza stampa (REQ-LIC-016) o senza comande (REQ-LIC-005)
+  // «Invia comanda» non ha niente da fare — manda la carta al banco, e il
+  // conto c'è già — e spariscono i tasti che ristampano le comande.
+  const stampaOn = stampaComandeNelPiano()
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -1037,6 +1037,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // qui: non in creazione (lì è una comanda sola per definizione) e non
   // alla sala, che manda sempre un ticket nuovo.
   const sceltaAggiunte =
+    comandeConsentite(settings) &&
     !isNew &&
     !inCreazione &&
     !workflowOn &&
