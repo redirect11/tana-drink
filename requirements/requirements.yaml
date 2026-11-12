@@ -7211,6 +7211,30 @@ requirements:
     test_cases:
       - tests/unit/generaCliente.test.js
 
+  - id: REQ-VENUE-007
+    title: "Il tipo di locale arriva dalla regia: genera-cliente.mjs accetta --tipo-locale e risponde a --sa"
+    area: "scripts/genera-cliente.mjs, tests/unit/generaCliente.test.js, docs/tipo-locale.md"
+    description: >
+      Decisione di Daniele del 05/11/2026: un prodotto solo, lancio sui
+      bar, in futuro anche ristoranti e pizzerie, a partire dai testi.
+      Perché un giorno l'app parli il linguaggio del suo locale, deve
+      sapere che tipo di locale è. Oggi la regia lo chiede alla
+      registrazione e lo salva, ma non lo passa a genera-cliente.mjs
+      (REQ-VENUE-006). Richiesta scritta dalla sessione di drink-regia il
+      12/11/2026, su decisione di Daniele («ok con il punto 1»); la
+      specifica intera è in docs/tipo-locale.md. In breve: `--sa
+      tipo-locale` esce con 0 senza scrivere e stampa i valori accettati
+      (oggi solo `bar`), così la regia sa se può mandarlo; `--tipo-locale
+      <valore>` lo scrive in venue.json; un valore sconosciuto ferma lo
+      script prima di scrivere; senza l'argomento tutto resta come oggi.
+      Nessun cambiamento visibile: l'app non usa ancora il campo.
+      E' un contratto con la regia, come REQ-VENUE-006.
+    status: todo
+    generate_issue: true
+    labels: [prodotto, venue, flotta]
+    priority: P2
+    test_cases: []
+
   - id: REQ-FLOTTA-008
     title: "Un'istanza si ferma: sospesa quando il pagamento non arriva, chiusa su decisione; i dati restano"
     area: "src/lib/licenza.js (STATI_LICENZA, installazioneBloccata), src/components/InstallazioneSospesa.jsx, src/App.jsx"

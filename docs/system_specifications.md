@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 282 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**339 voci** in tutto. **301** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**340 voci** in tutto. **301** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
@@ -63,7 +63,7 @@ come «vero oggi», non come «garantito».
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 20 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
-| [VENUE](#venue) | 6 | — |  |
+| [VENUE](#venue) | 6 | 1 |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
 ### Le prove, livello per livello
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 175 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**90** requisiti su 331 sono collegati a un bisogno;
+**90** requisiti su 332 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -4444,6 +4444,14 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
+
+### VENUE
+
+#### REQ-VENUE-007 — Il tipo di locale arriva dalla regia: genera-cliente.mjs accetta --tipo-locale e risponde a --sa
+
+Decisione di Daniele del 05/11/2026: un prodotto solo, lancio sui bar, in futuro anche ristoranti e pizzerie, a partire dai testi. Perché un giorno l'app parli il linguaggio del suo locale, deve sapere che tipo di locale è. Oggi la regia lo chiede alla registrazione e lo salva, ma non lo passa a genera-cliente.mjs (REQ-VENUE-006). Richiesta scritta dalla sessione di drink-regia il 12/11/2026, su decisione di Daniele («ok con il punto 1»); la specifica intera è in docs/tipo-locale.md. In breve: `--sa tipo-locale` esce con 0 senza scrivere e stampa i valori accettati (oggi solo `bar`), così la regia sa se può mandarlo; `--tipo-locale <valore>` lo scrive in venue.json; un valore sconosciuto ferma lo script prima di scrivere; senza l'argomento tutto resta come oggi. Nessun cambiamento visibile: l'app non usa ancora il campo. E' un contratto con la regia, come REQ-VENUE-006.
+
+**Dove**: `scripts/genera-cliente.mjs, tests/unit/generaCliente.test.js, docs/tipo-locale.md`
 
 ## L'architettura e le sue prove
 

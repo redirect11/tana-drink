@@ -103,7 +103,9 @@ settings/bar (venue_*)  ──────────────────�
   (`tests/unit/marchio.test.js`), che si può solo accorciare.
 - In questo repository le cartelle dei clienti sono due, `tana` e `demo`
   (il locale neutro). Quelle degli altri locali le crea la regia sul suo
-  checkout, con `genera-cliente.mjs`.
+  checkout, con `genera-cliente.mjs`. Da fare: il tipo di locale, che la
+  regia passerà con `--tipo-locale` dopo averlo chiesto con `--sa`
+  ([tipo-locale.md](tipo-locale.md), REQ-VENUE-007).
 
 ## La licenza (REQ-LIC, REQ-FLOTTA-008)
 
