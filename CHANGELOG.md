@@ -1,6 +1,8 @@
 # Cosa è cambiato
 
-## 1.10.40-beta — in lavorazione
+## 1.10.41-beta — in lavorazione
+
+## 1.10.40-beta — 12/11/2026 (test)
 
 ### Licenza
 
