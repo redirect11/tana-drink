@@ -31,7 +31,7 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 **339 voci** in tutto. **301** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
-cosa che l'app fa; **11** difetti noti sono ancora aperti.
+cosa che l'app fa; **12** difetti noti sono ancora aperti.
 
 Le voci ⚠️ sono la parte scomoda: funzionano, ma **nessun test le tiene**.
 Sono quelle che si rompono senza che nessuno se ne accorga, e vanno lette
@@ -4532,6 +4532,7 @@ della correzione è il test citato nel requisito della sua area.
 | 🔴 | [BUG-097](#bug-097--il-conto-si-apre-senza-sapere-chi-lo-guarda-per-un-attimo-il-banco-vede-la-schermata-della-sala) — Il conto si apre senza sapere chi lo guarda: per un attimo il banco vede la schermata della sala | media | P2 |
 | · | [BUG-098](#bug-098--lo-scontrino-di-chiusura-cassa-spesso-non-esce-e-nessuno-se-ne-accorge) — Lo scontrino di chiusura cassa spesso non esce, e nessuno se ne accorge | media | P2 |
 | 🔴 | [BUG-123](#bug-123--al-banco-alcuni-gesti-aspettano-la-conferma-del-server-a-rete-spenta-restano-fermi) — Al banco alcuni gesti aspettano la conferma del server: a rete spenta restano fermi | media | P2 |
+| · | [BUG-145](#bug-145--i-documenti-promettono-una-ci-che-non-cè-test-a-ogni-push-e-test-di-sistema-su-ogni-pull-request) — I documenti promettono una CI che non c'è: test a ogni push e test di sistema su ogni pull request | media | P2 |
 
 🔴 succede **in produzione**, cioè al banco. `·` no. `?` non si sa ancora.
 
@@ -4652,6 +4653,14 @@ NON SI CHIUDE LO STESSO. E' un'ipotesi che regge su tutti i fatti noti, non una 
 Trovato il 30/10/2026 facendo l'inventario per la demo (REQ-FLOTTA-019): 68 punti dell'app aspettano con `await` la conferma del server di una scrittura, e a rete spenta quella conferma non arriva mai. Quasi tutti sono nel gestionale (magazzino, menù, fornitori, impostazioni), dove si lavora con la rete. Ma alcuni stanno dove il local-first è la prima regola, e lì la schermata resterebbe ferma col locale senza linea: nella cassa, applicare un buono (applyVoucherDiscount), scrivere il codice lotteria (setOrderLotteryCode) ed emettere la fattura (createInvoice); nella creazione di un ordine di un cliente con account, il gruppo-cliente (ensureCustomerGroup dentro creaOrdine); il rimborso di un buono quando un conto cambia o si annulla (refundVoucher); un gruppo nuovo dal riepilogo dell'ordine e dal cassetto dello staff (createManualGroup); dal POS, la scheda di un prodotto (saveDrinkFromForm), una categoria nuova e «non disponibile» (PosProductPicker). Nella demo non succede: le scritture si confermano dalla cache. Nei locali veri va sistemato un punto alla volta, col modello dei test senza rete (tests/unit/giroInLocale.test.js), e senza mascherare gli errori veri, che è il motivo per cui la conferma locale della demo non va estesa ai locali veri.
 
 **Dove**: `src/components/PaymentScreen.jsx, src/lib/api.js (creaOrdine, refundVoucher), src/components/OrderSummary.jsx, src/components/StaffDrawer.jsx, src/components/OrderPosDetail.jsx, src/components/PosProductPicker.jsx`
+
+#### BUG-145 — I documenti promettono una CI che non c'è: test a ogni push e test di sistema su ogni pull request
+
+Trovato dal revisore il 12/11/2026, rileggendo REQ-DEV-021, e prima ancora sulle PR #330 e #332 dell'11/11, dove i test di sistema risultavano «saltati». I documenti dicono tre cose che la CI non fa: 1. CLAUDE.md, «Prima di una PR»: `test:sistema` «in CI gira comunque su ogni pull request»; lo stesso in docs/modello-a-v.md e nelle descrizioni di REQ-DEV-018 e REQ-DEV-019. In test.yml il lavoro parte solo sulle pull request verso `develop` e `main`: su quelle verso la release i test di sistema e delle regole non girano. 2. CLAUDE.md, «Come si lavora: GitFlow», e docs/gitflow.md, «Il deploy»: «un push fa girare lint, test e build», «su qualunque ramo». test.yml esclude i push sui rami `release/**`, che sono il posto di lavoro di ogni giorno: lì un push non fa girare niente. 3. docs/gitflow.md non descrive i tag `-beta` su `develop`, che sono il modo in cui ogni versione arriva sul test; e in «Il ramo di rilascio» dice ancora che «ogni push lo pubblica su test». Chi si fida dei documenti crede coperto dalla CI un lavoro che non lo è: sulla #332 un test di sistema rotto è arrivato fino alla pull request, e l'ha fermato solo un giro fatto a mano. Daniele, 12/11/2026, alla domanda se correggere i documenti o la CI: «no correggi, deve continuare a funzionare come è ora… cioè correggi i documenti».
+
+LA CI NON SI TOCCA: si scrive com'è.
+
+**Dove**: `CLAUDE.md, docs/gitflow.md, docs/modello-a-v.md, requirements/requirements.yaml (REQ-DEV-018, REQ-DEV-019), .github/workflows/test.yml (solo letto)` · **Tradisce**: [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello)
 
 ## Non più valido
 
