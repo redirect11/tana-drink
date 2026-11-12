@@ -2507,6 +2507,13 @@ casi_uso:
       righe e il legame con l'ordine di Nova; l'ordine è chiuso; la
       merce è stata caricata una volta sola, alla consegna.
     varianti:
+      - quando: "Il documento si fa leggere all'AI: «Leggi con l'AI» con la foto
+          o il PDF della fattura"
+        allora: "Compare la proposta: fornitore riconosciuto, numero, data,
+          importo e righe abbinate ai prodotti, coi punti da verificare e il
+          costo della lettura. Si corregge, «Registra il documento» la
+          registra con le righe spuntate e il file letto allegato; il carico
+          a magazzino resta spento finché non lo si accende."
       - quando: "La fattura arriva senza un ordine: «Aggiungi prodotti» con la
           ricerca, casella «Carica la merce a magazzino» accesa"
         allora: "Il tasto dice «Aggiungi e carica»: la merce entra in giacenza con
@@ -2538,7 +2545,8 @@ casi_uso:
       - REQ-MAG-033
       - REQ-MAG-038
       - REQ-MAG-041
-    previsti: [REQ-AI-001, REQ-AI-003]
+      - REQ-AI-001
+    previsti: [REQ-AI-003]
     test_cases: []
 
   - id: UC-MAG-009

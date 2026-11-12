@@ -8185,11 +8185,28 @@ requirements:
       va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che
       la legge col modello di Stonebit e scala il credito; le righe tornano
       come PROPOSTA da rivedere prima di registrare.
-    status: todo
+      FATTO (12/11/2026): in Fornitori → documenti, accanto a «Nuovo
+      documento», «Leggi con l'AI» (solo dove l'AI arriva: non nel Free né
+      nella demo). La foto si riduce come un allegato (sotto i 5 MB), il PDF
+      si manda com'è (fino a 20 MB). La proposta (lib/fatturaAI.js) ha il
+      fornitore dell'archivio riconosciuto per nome (forme sociali e
+      punteggiatura non contano; se due vanno bene non sceglie), numero,
+      data, importo e le righe abbinate ai prodotti del magazzino: prima
+      per CODICE sul listino di quel fornitore, poi per NOME (tutte le
+      parole del prodotto nella riga, vince il più preciso, a pari merito
+      niente); costo dopo lo sconto di riga. Le righe riconosciute partono
+      spuntate, le altre da abbinare. «Registra il documento» lo crea come
+      Fattura, aggiunge le righe spuntate (carico a magazzino SPENTO di
+      partenza: le quantità di una fattura sono spesso in cartoni) e allega
+      il file letto; un allegato non riuscito non annulla la registrazione.
+      Costo della lettura e credito rimasto in vista.
+    status: implemented
     generate_issue: true
     labels: [ai, fatture, magazzino]
     priority: P3
-    test_cases: []
+    test_cases:
+      - tests/unit/fatturaAI.test.js
+      - tests/component/fatturaDaAI.test.jsx
 
   - id: REQ-AI-002
     title: "Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI"

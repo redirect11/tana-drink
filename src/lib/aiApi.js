@@ -56,3 +56,28 @@ export async function chiediAI(richiesta, chiama = (dati) => chiamaFunzione('ric
     return { ok: false, codice: 'riprova' }
   }
 }
+
+// ── IL FILE DI UNA FATTURA (REQ-AI-001) ───────────────────────────────
+// I formati e i pesi che il cassetto accetta, in MB del file vero: gli
+// stessi della Function (functions/lib/ai-service.js) e della regia. Si
+// controllano qui, prima di spedire: un file rifiutato dopo il viaggio è
+// un'attesa per niente.
+export const FORMATI_FATTURA = { 'application/pdf': 20, 'image/jpeg': 5, 'image/png': 5, 'image/webp': 5, 'image/gif': 5 }
+
+export function problemaFileFattura(file) {
+  const mb = FORMATI_FATTURA[file?.type]
+  if (!mb) return 'Il documento deve essere una foto (JPEG, PNG, WEBP o GIF) o un PDF.'
+  if (file.size > mb * 1024 * 1024) return `Il documento supera i ${mb} MB accettati per la lettura.`
+  return null
+}
+
+// Il contenuto in base64, senza il prefisso «data:…;base64,» che la
+// Function rifiuta.
+export function fileInBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const lettore = new FileReader()
+    lettore.onload = () => resolve(String(lettore.result).replace(/^data:[^,]*,/, ''))
+    lettore.onerror = () => reject(lettore.error || new Error('Il documento non si legge.'))
+    lettore.readAsDataURL(blob)
+  })
+}

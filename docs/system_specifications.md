@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 287 | fatto e coperto dai test |
+| ✅ | 288 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**345 voci** in tutto. **308** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**345 voci** in tutto. **309** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 3 | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 171 |
-| Unità | il progetto di dettaglio: un modulo da solo | 177 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 172 |
+| Unità | il progetto di dettaglio: un modulo da solo | 178 |
 
 **15** bisogni del locale, **0** con un test di accettazione.
 **97** requisiti su 337 sono collegati a un bisogno;
@@ -3151,6 +3151,18 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 Dove l’intelligenza artificiale entra nel lavoro del locale.
 
+#### REQ-AI-001 — Scansione delle fatture d'acquisto con l'AI
+
+Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
+
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no.
+
+TUTTO DALLA REGIA (Daniele, 24/10 e 12/11/2026): niente scelta del servizio né chiave propria nelle impostazioni del locale. La fattura va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che la legge col modello di Stonebit e scala il credito; le righe tornano come PROPOSTA da rivedere prima di registrare.
+
+FATTO (12/11/2026): in Fornitori → documenti, accanto a «Nuovo documento», «Leggi con l'AI» (solo dove l'AI arriva: non nel Free né nella demo). La foto si riduce come un allegato (sotto i 5 MB), il PDF si manda com'è (fino a 20 MB). La proposta (lib/fatturaAI.js) ha il fornitore dell'archivio riconosciuto per nome (forme sociali e punteggiatura non contano; se due vanno bene non sceglie), numero, data, importo e le righe abbinate ai prodotti del magazzino: prima per CODICE sul listino di quel fornitore, poi per NOME (tutte le parole del prodotto nella riga, vince il più preciso, a pari merito niente); costo dopo lo sconto di riga. Le righe riconosciute partono spuntate, le altre da abbinare. «Registra il documento» lo crea come Fattura, aggiunge le righe spuntate (carico a magazzino SPENTO di partenza: le quantità di una fattura sono spesso in cartoni) e allega il file letto; un allegato non riuscito non annulla la registrazione. Costo della lettura e credito rimasto in vista.
+
+**Dove**: `functions/, src/components/InvoicesTab.jsx` · **Lo dimostrano**: `tests/unit/fatturaAI.test.js`, `tests/component/fatturaDaAI.test.jsx`
+
 #### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -4440,16 +4452,6 @@ Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «inca
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 
 ### Intelligenza artificiale
-
-#### REQ-AI-001 — Scansione delle fatture d'acquisto con l'AI
-
-Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
-
-LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no.
-
-TUTTO DALLA REGIA (Daniele, 24/10 e 12/11/2026): niente scelta del servizio né chiave propria nelle impostazioni del locale. La fattura va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che la legge col modello di Stonebit e scala il credito; le righe tornano come PROPOSTA da rivedere prima di registrare.
-
-**Dove**: `functions/, src/components/InvoicesTab.jsx`
 
 #### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
 

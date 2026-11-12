@@ -2,6 +2,14 @@
 
 ## 1.10.41-beta — in lavorazione
 
+### Gestionale
+
+- Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
+  fattura e propone fornitore, numero, data, importo e righe abbinate ai
+  prodotti del magazzino, da rivedere prima di registrare. Il documento
+  letto si allega da sé; il carico a magazzino si accende a mano. Usa il
+  credito AI del locale.
+
 ## 1.10.40-beta — 12/11/2026 (test)
 
 ### Licenza

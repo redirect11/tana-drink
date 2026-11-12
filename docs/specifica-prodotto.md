@@ -1330,6 +1330,7 @@ l'occasione; il gestore lo valida poi sul sito di test.
 
 **Varianti**
 
+- *Il documento si fa leggere all'AI: «Leggi con l'AI» con la foto o il PDF della fattura* — Compare la proposta: fornitore riconosciuto, numero, data, importo e righe abbinate ai prodotti, coi punti da verificare e il costo della lettura. Si corregge, «Registra il documento» la registra con le righe spuntate e il file letto allegato; il carico a magazzino resta spento finché non lo si accende.
 - *La fattura arriva senza un ordine: «Aggiungi prodotti» con la ricerca, casella «Carica la merce a magazzino» accesa* — Il tasto dice «Aggiungi e carica»: la merce entra in giacenza con un movimento «Carico da fattura». Spenta la casella il tasto dice «Aggiungi senza caricare» e le giacenze non cambiano.
 - *Fra le righe della fattura un prezzo è diverso da quello in archivio* — Compare «Aggiorna il prezzo: in archivio … → …», spento di partenza; acceso aggiorna listino e costo del prodotto, mai il prezzo di vendita del menù.
 - *Dalla Lista ordini si usa «Genera dall’ordine»* — Nasce un documento coi prezzi dell'ordine, segnato «Generata dall’ordine».
@@ -1337,8 +1338,8 @@ l'occasione; il gestore lo valida poi sul sito di test.
 - *Ordinato, ricevuto e fatturato non tornano* — «Chiudi» è spento e dice perché; la differenza di prezzo si legge col segno e da lì si allinea il listino.
 - *Il caricamento dell'allegato non riesce* — Lo dice, e il documento resta com'era.
 
-- Requisiti: REQ-MAG-025, REQ-MAG-028, REQ-MAG-029, REQ-MAG-030, REQ-MAG-031, REQ-MAG-033, REQ-MAG-038, REQ-MAG-041
-- Previsti, non ancora fatti: REQ-AI-001, REQ-AI-003
+- Requisiti: REQ-MAG-025, REQ-MAG-028, REQ-MAG-029, REQ-MAG-030, REQ-MAG-031, REQ-MAG-033, REQ-MAG-038, REQ-MAG-041, REQ-AI-001
+- Previsti, non ancora fatti: REQ-AI-003
 - Test e2e: da scrivere
 
 <a id="uc-mag-009"></a>
