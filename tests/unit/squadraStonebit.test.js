@@ -5,6 +5,12 @@
 // sezione spostata in fondo a CLAUDE.md, un agente col nome sbagliato che
 // nessuno riesce più a chiamare, un agente vecchio ritoccato per sbaglio.
 // Qui si controlla che i pezzi ci siano e siano al loro posto.
+//
+// E CHE NON TORNINO LE REGOLE SBAGLIATE (REQ-DEV-021). La prima stesura era
+// scritta da fuori e in otto punti contraddiceva il repo; Daniele,
+// 11/11/2026: «continua come hai sempre fatto». Dove le due si contraddicono
+// valgono le regole del repo, e una prossima versione delle istruzioni non
+// deve rimettere le frasi di prima senza che nessuno se ne accorga.
 
 import { describe, it, expect } from 'vitest'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -26,17 +32,65 @@ function testata(testo) {
 }
 
 describe('CLAUDE.md', () => {
-  it('la sezione di Stonebit è la prima dopo il titolo', () => {
+  const sezione = claude.slice(claude.indexOf('## Stonebit — chi sei e come lavori qui'), claude.indexOf('\n## La lingua\n'))
+
+  // La presentazione del repo resta il primo testo del file: messa la
+  // sezione subito dopo il titolo, «App di cassa e gestione…» finiva sotto
+  // «Fine di ogni sessione» e si leggeva come parte di quella.
+  it('prima la presentazione del repo, poi la sezione di Stonebit, poi le altre', () => {
     const titoli = claude.split('\n').filter((r) => /^#{1,2} /.test(r))
     expect(titoli[0]).toMatch(/^# Tana Drink/)
     expect(titoli[1]).toBe('## Stonebit — chi sei e come lavori qui')
+    expect(titoli[2]).toBe('## La lingua')
+    const presentazione = claude.indexOf('App di cassa e gestione per **La Tana del Coniglio**')
+    expect(presentazione).toBeGreaterThan(0)
+    expect(presentazione).toBeLessThan(claude.indexOf('## Stonebit'))
   })
 
-  it('dice chi decide e cosa la squadra non fa', () => {
-    expect(claude).toContain('### Regola zero: decide Daniele')
-    expect(claude).toContain('Merge, tag e deploy li fa Daniele')
-    expect(claude).toContain('### Ruolo di default')
-    expect(claude).toContain('mai licenze open source')
+  it('si apre dicendo che sulle regole del repo vince il repo', () => {
+    const primaRiga = sezione.split('\n').filter((r) => r.trim())[1]
+    expect(primaRiga).toContain('valgono le regole di questo repo')
+    expect(sezione).toContain('vincono loro (Daniele, 11/11/2026)')
+  })
+
+  it('dice chi decide', () => {
+    expect(sezione).toContain('### Regola zero: decide Daniele')
+    expect(sezione).toContain('### Ruolo di default')
+    expect(sezione).toContain('mai licenze open source')
+  })
+
+  // I punti dove la prima stesura contraddiceva il repo.
+  it('non dice più che ogni lavoro va su un ramo feature, né che i tag li mette solo Daniele', () => {
+    expect(sezione).not.toContain('Ogni lavoro su un ramo `feature/…`')
+    expect(sezione).toContain('Il lavoro normale va su `release/x.y.z`')
+    expect(sezione).not.toContain('Merge, tag e deploy li fa Daniele')
+    expect(sezione).toMatch(/tag `-beta`[^.]*quando Daniele lo chiede/)
+  })
+
+  it('il numero di versione cambia sulla release, e nel codice i nomi restano in inglese dove lo è il codice', () => {
+    expect(sezione).toContain('subito dopo l’uscita')
+    expect(sezione).not.toContain('Tutto in italiano: codice')
+    expect(sezione).toContain('in inglese dove lo è il codice attorno')
+  })
+
+  it('è il requisito a citare i suoi test', () => {
+    expect(sezione).not.toContain('ogni test cita il\nsuo requisito')
+    expect(sezione).toContain('`test_cases`')
+  })
+
+  // Il processo deciso da Daniele l'11/11/2026.
+  it('il processo: storia sempre, revisore sempre, squadra solo per i lavori grossi', () => {
+    expect(sezione).toContain('product owner')
+    expect(sezione).toContain('**Storia sempre**')
+    expect(sezione).toContain('**Revisore sempre**')
+    expect(sezione).toContain('solo per i lavori grossi o divisibili')
+    expect(sezione).not.toContain('Proponi a Daniele il piano della sessione prima di modificare codice')
+  })
+
+  // Il passo che si salta facilmente: lo script crea le issue solo per le
+  // voci ancora da fare.
+  it('la voce va spinta da fare prima dell’implementazione', () => {
+    expect(sezione).toMatch(/`todo`[^.]*prima dell’implementazione/)
   })
 
   // «Non togliere niente di quello che c'è già»: le regole del repo restano
@@ -76,6 +130,28 @@ describe('la squadra in .claude/agents', () => {
     expect(t).not.toBeNull()
     expect(t.name).toBe(nome)
     expect(t.description.length).toBeGreaterThan(30)
+  })
+
+  it('gli agenti non ripetono le regole sbagliate', () => {
+    for (const nome of NUOVI) {
+      const t = leggi('.claude', 'agents', `${nome}.md`)
+      expect(t, nome).not.toContain('dizionario dei testi')
+      expect(t, nome).not.toContain('NON FISCALE')
+      expect(t, nome).not.toMatch(/Lavori su un ramo `feature\/…` \(o `hotfix\/…`\)/)
+      expect(t, nome).not.toContain('con il requisito citato;')
+    }
+  })
+
+  it('PM e tech lead ricordano la voce da fare prima del codice', () => {
+    for (const nome of ['pm', 'tech-lead']) expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('`todo`')
+  })
+
+  // Sulle PR verso la release la CI non fa girare i test delle regole né
+  // quelli di sistema: li lancia il revisore, e lo scrive.
+  it('il revisore lancia a mano i test che la CI non fa girare', () => {
+    const t = leggi('.claude', 'agents', 'revisore.md')
+    expect(t).toContain('npm run test:regole')
+    expect(t).toContain('npm run test:sistema')
   })
 
   it('nessuno della squadra fa merge, tag o deploy; PM e revisore non scrivono codice', () => {

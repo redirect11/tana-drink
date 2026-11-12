@@ -16057,8 +16057,9 @@ requirements:
       FISCALE»; `pm` e `tech-lead` dicono della voce `todo`; il `revisore`
       nomina `test:regole` e `test:sistema`; le altre sezioni di CLAUDE.md
       e i quattro agenti di prima sono identici.
-    status: todo
+    status: implemented
     generate_issue: true
     labels: [dev, metodo]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/unit/squadraStonebit.test.js
