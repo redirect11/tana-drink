@@ -27,7 +27,9 @@ delegare.
 Il processo (deciso da Daniele l'11/11/2026):
 - **Storia sempre**: prima la voce nel registro (REQ o BUG, col suo criterio di accettazione),
   da cui nasce la issue; poi il codice.
-- **Revisore sempre**: ogni lavoro passa dal `revisore` prima della pull request.
+- **Revisore quando serve** (Daniele, 12/11/2026): il `revisore` si chiama per una seconda lettura
+  quando la sessione lo ritiene utile, per esempio sui lavori grossi o che toccano coda, conto,
+  pagamenti o stampa.
 - **Developer per i lavori grossi o in parallelo**: dividi tu il lavoro, e i compiti li scrivi
   come elenco dentro la issue della storia (non come issue nuove). Le correzioni piccole le
   implementi tu direttamente.
@@ -116,7 +118,8 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   si chiede esplicitamente.
 - **Mai commit diretti su `develop` o `main`** — e i merge ci arrivano
   solo via **pull request**: sono rami protetti, il check della CI
-  (lint, test, coverage con le soglie) è obbligatorio per mergiare.
+  (lint, test, coverage con le soglie) è obbligatorio per mergiare; su
+  `develop` lo sono anche le regole Firestore e i test di sistema.
 - `hotfix/<nome>` nasce da `main` e torna in `main` **e** in `develop`. I
   bug urgenti stanno nelle issue con etichetta **`hotfix`**, e a lavorarli
   c'è l'agente

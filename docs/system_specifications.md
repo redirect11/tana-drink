@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 283 | fatto e coperto dai test |
+| ✅ | 284 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 31 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**341 voci** in tutto. **302** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**341 voci** in tutto. **303** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 21 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -3633,6 +3633,20 @@ CRITERIO DI ACCETTAZIONE: «Ruolo di default» dice che la sessione è il tech l
 
 **Dove**: `CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui», «Ruolo di default»), .claude/agents/ (pm, tech-lead tolto, frontend-developer, backend-developer, stampa-developer, revisore)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/squadraStonebit.test.js`
 
+#### REQ-DEV-023 — Il merge in develop aspetta anche le regole Firestore e i test di sistema; il revisore si chiama quando serve
+
+Due decisioni di Daniele del 12/11/2026, in chat, sulle domande della PR #340. 1.
+
+IL CANCELLO DEL MERGE. Fino ad oggi per mergiare in `develop` era obbligatorio un solo check, «Lint, test e build»: «Regole Firestore (emulatore)» e «Sistema (Playwright)» giravano sulla pull request, ma rossi non bloccavano niente. Daniele: «rendere obbligatori per il merge anche le regole Firestore e i test di sistema… procedi».
+
+SOLO SU `develop`, per ora: su `main` la CI è ancora quella della 1.9.3, che quei due job non li ha. Un ramo hotfix nasce da `main` e porta quella CI: con i due check obbligatori su `main` la sua pull request aspetterebbe per sempre due risultati che non arrivano. Su `main` si aggiungono quando la 1.10 ci arriva. 2.
+
+IL REVISORE. L'11/11 Daniele aveva deciso «revisore sempre, prima di ogni PR»; il CEO-agente di Stonebit scriveva «quando la sessione lo ritiene utile». Daniele, 12/11: «quando serve». La sezione Stonebit di CLAUDE.md lo dice così.
+
+CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop` non si può mergiare finché «Lint, test e build», «Regole Firestore (emulatore)» e «Sistema (Playwright)» non sono verdi; su `main` resta obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md lo dicono; la sezione Stonebit dice «revisore quando serve» e non più «sempre».
+
+**Dove**: `GitHub, ruleset del ramo develop (impostazione del repository); docs/gitflow.md, CLAUDE.md, tests/unit/ciComeScritta.test.js, tests/unit/squadraStonebit.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/ciComeScritta.test.js`, `tests/unit/squadraStonebit.test.js`
+
 ### STAT
 
 #### REQ-STAT-001 — Statistiche: prima la serata (lista e dettaglio), poi il periodo
@@ -4416,20 +4430,6 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte. Il 10/11/2026 i rami di functions/lib salgono a 79 (misurati 80,25%): prima erano misurati male e oscillavano sullo stesso codice (BUG-140).
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
-
-#### REQ-DEV-023 — Il merge in develop aspetta anche le regole Firestore e i test di sistema; il revisore si chiama quando serve
-
-Due decisioni di Daniele del 12/11/2026, in chat, sulle domande della PR #340. 1.
-
-IL CANCELLO DEL MERGE. Fino ad oggi per mergiare in `develop` era obbligatorio un solo check, «Lint, test e build»: «Regole Firestore (emulatore)» e «Sistema (Playwright)» giravano sulla pull request, ma rossi non bloccavano niente. Daniele: «rendere obbligatori per il merge anche le regole Firestore e i test di sistema… procedi».
-
-SOLO SU `develop`, per ora: su `main` la CI è ancora quella della 1.9.3, che quei due job non li ha. Un ramo hotfix nasce da `main` e porta quella CI: con i due check obbligatori su `main` la sua pull request aspetterebbe per sempre due risultati che non arrivano. Su `main` si aggiungono quando la 1.10 ci arriva. 2.
-
-IL REVISORE. L'11/11 Daniele aveva deciso «revisore sempre, prima di ogni PR»; il CEO-agente di Stonebit scriveva «quando la sessione lo ritiene utile». Daniele, 12/11: «quando serve». La sezione Stonebit di CLAUDE.md lo dice così.
-
-CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop` non si può mergiare finché «Lint, test e build», «Regole Firestore (emulatore)» e «Sistema (Playwright)» non sono verdi; su `main` resta obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md lo dicono; la sezione Stonebit dice «revisore quando serve» e non più «sempre».
-
-**Dove**: `GitHub, ruleset del ramo develop (impostazione del repository); docs/gitflow.md, CLAUDE.md, tests/unit/ciComeScritta.test.js, tests/unit/squadraStonebit.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 

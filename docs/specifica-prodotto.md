@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-51 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+52 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2122,3 +2122,4 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-DEV-020 — La squadra di Stonebit: una sezione in CLAUDE.md, AGENTS.md e i sub-agenti (ruoli SUPERATI da REQ-DEV-022)
 - REQ-DEV-021 — La sezione Stonebit e gli agenti corretti: dove contraddicono il repo valgono le regole del repo, e il processo è storia, revisore, squadra solo per i lavori grossi
 - REQ-DEV-022 — I ruoli: la sessione sul repo è il tech lead e lavora come sempre, il PM è un controllo sui requisiti, e l'agente tech-lead si toglie
+- REQ-DEV-023 — Il merge in develop aspetta anche le regole Firestore e i test di sistema; il revisore si chiama quando serve

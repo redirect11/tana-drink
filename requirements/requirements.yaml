@@ -16145,8 +16145,10 @@ requirements:
       obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md
       lo dicono; la sezione Stonebit dice «revisore quando serve» e non più
       «sempre».
-    status: todo
+    status: implemented
     generate_issue: true
     labels: [dev, metodo, ci]
     priority: P1
-    test_cases: []
+    test_cases:
+      - tests/unit/ciComeScritta.test.js
+      - tests/unit/squadraStonebit.test.js
