@@ -6976,6 +6976,13 @@ requirements:
       automatica e «Riscuoti (senza stampa)»: al posto della stampante la
       frase del piano. `stampa: false` anche nella copia dei limiti del Free
       dell'app (licenzaInVigore.js).
+      DOPO IL /simplify (12/11/2026): le schermate che hanno le impostazioni
+      chiedono a `stampaConsentita(settings)`; `stampaNelPiano` resta per
+      printer.js e per chi non le ascolta, e legge solo la licenza ricordata
+      (non tutto il blocco, che porta anche il logo delle stampe). La
+      licenza si ricorda anche quando settings/bar non c'è. La voce
+      «Stampante» (e «Da servire» senza comande) segue il piano anche nel
+      menu della sala e negli indirizzi battuti a mano (lib/sezioni.js).
     status: implemented
     generate_issue: true
     labels: [licenza, prodotto]
@@ -6983,6 +6990,8 @@ requirements:
     test_cases:
       - tests/unit/limiti.test.js
       - tests/unit/stampaFuoriPiano.test.js
+      - tests/unit/sezioni.test.js
+      - tests/unit/impostazioniLocali.test.js
       - tests/component/SettingsTab.test.jsx
 
   - id: REQ-LIC-011

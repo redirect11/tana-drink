@@ -130,7 +130,7 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
-import { ricordaImpostazioni, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
+import { ricordaImpostazioni, ricordaLicenza, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { conEmoji } from './icone.js'
 import {
   cassaCorrente,
@@ -6691,7 +6691,14 @@ export function subscribeSettings(onChange, onError) {
   const errore = onError ?? (() => {})
   const rispondi = () => {
     if (dati === undefined) return
-    if (dati === null) return onChange(conLicenza({ ...DEFAULT_SETTINGS }, letto))
+    if (dati === null) {
+      // Senza settings/bar la licenza vale lo stesso, e la stampa la legge
+      // dalla memoria: si ricorda anche qui, o tasti e cancello direbbero
+      // due cose diverse (REQ-LIC-016).
+      const vuote = conLicenza({ ...DEFAULT_SETTINGS }, letto)
+      ricordaLicenza(vuote.licenza)
+      return onChange(vuote)
+    }
     const data = conLicenza(dati, letto)
     settingsCache = data
     // Per la PROSSIMA apertura: si disegna con l'ultima verità nota

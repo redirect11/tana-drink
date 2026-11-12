@@ -10,7 +10,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
-import { ricordaImpostazioni } from '../../src/lib/impostazioniLocali.js'
 
 // LE IMPOSTAZIONI FINTE, in un oggetto che le prove possono ritoccare:
 // alcune sezioni cambiano forma a seconda di come è messo il locale (col
@@ -625,12 +624,10 @@ describe('il piano Free nelle impostazioni', () => {
   })
 
   // REQ-LIC-016: senza stampa nel piano, al posto della stampante la frase
-  // del piano, e spariscono le altre sezioni della carta. La licenza si
-  // ricorda come fa subscribeSettings, perché la stampa la legge da lì.
+  // del piano, e spariscono le altre sezioni della carta.
   it('senza stampa nel piano, al posto della stampante c’è la frase del piano', async () => {
     const user = userEvent.setup()
     impostazioni.licenza = { piano: 'free', moduli: {}, limiti: { stampa: false } }
-    ricordaImpostazioni({ licenza: impostazioni.licenza })
     mostra()
     await user.click(screen.getByRole('button', { name: /Stampante/ }))
     expect(screen.queryByText('PANNELLO STAMPANTE')).toBeNull()

@@ -143,7 +143,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { printComanda, printScontrino, loadPrinterSettings, scontrinoAutomatico, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
-import { stampaNelPiano, servizioAttivo, stampaComandeNelPiano } from '../lib/limiti.js'
+import { stampaConsentita, servizioAttivo, stampaComandeConsentita } from '../lib/limiti.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -549,11 +549,6 @@ function PortaInVista({ id }) {
 
 function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const testoConIcona = useTestoConIcona()
-  // Nel piano senza stampa (REQ-LIC-016) spariscono i tasti di stampa e il
-  // pallino della stampante: non c'è niente da stampare né da controllare.
-  // Senza comande (REQ-LIC-005) se ne va solo la carta della comanda.
-  const stampaOn = stampaNelPiano()
-  const stampaComandeOn = stampaComandeNelPiano()
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -771,6 +766,11 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
 
   // Gestione preparazione: se spenta spariscono stati e avanzamenti.
   const workflowOn = servizioAttivo(settings)
+  // Nel piano senza stampa (REQ-LIC-016) spariscono i tasti di stampa e il
+  // pallino della stampante: non c'è niente da stampare né da controllare.
+  // Senza comande (REQ-LIC-005) se ne va solo la carta della comanda.
+  const stampaOn = stampaConsentita(settings)
+  const stampaComandeOn = stampaComandeConsentita(settings)
   // COSA DICE LA STRISCIA a sinistra della card: di suo lo stato (com'è
   // sempre stato), oppure il colore del conto se il locale l'ha scelto.
   // Chi decide è lib/coloriConto.js: qui si legge solo l'impostazione, che
@@ -2110,7 +2110,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // o riaprire il conto quando ci si accorge di un errore.
     if (isChiuso(o) || annullato(o)) {
       return (
-        <div className={stampaOn ? 'grid-2' : undefined} style={{ marginTop: 8 }}>
+        <div className="grid-2" style={{ marginTop: 8 }}>
           {stampaOn && (
             <button
               className="btn ghost small"
@@ -2280,7 +2280,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
           </div>
         )}
         {stampaOn && (
-          <div className={stampaComandeOn ? 'grid-2' : undefined} style={{ marginTop: 8 }}>
+          <div className="grid-2" style={{ marginTop: 8 }}>
             {stampaComandeOn && (
               <button
                 className="btn ghost small"

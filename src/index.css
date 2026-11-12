@@ -1609,6 +1609,11 @@ label {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* Un tasto che il piano o il ruolo toglie lascia la riga con un figlio
+   solo: prende tutta la larghezza invece di restare a metà. */
+.grid-2 > :only-child {
+  grid-column: 1 / -1;
+}
 
 .app-footer {
   text-align: center;
@@ -7876,8 +7881,11 @@ body:has(.overlay) .zoom-control {
   /* minmax(0, 1fr) e non 1fr: una colonna "1fr" non scende MAI sotto la
      larghezza del suo contenuto, quindi ingrandendo i tasti dalla maniglia
      la riga sfondava e "Annulla" finiva mezzo fuori schermo. Così invece
-     le tre colonne restano uguali e si stringono davvero. */
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+     le tre colonne restano uguali e si stringono davvero. Le colonne
+     sono quanti i tasti: nel piano senza stampa «Invia» non c'è, e gli
+     altri due si dividono la riga. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 8px;
   /* Non si stringe col piede (BUG-077): sul telefono è l'ultima riga e
      sotto non c'è altro che possa cedere al posto suo. */

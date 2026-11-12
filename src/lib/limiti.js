@@ -34,7 +34,7 @@
 // chiama, dalla cache: niente letture nuove, vedi il local-first).
 
 import { NOME_PRODOTTO } from './prodotto.js'
-import { impostazioniRicordate } from './impostazioniLocali.js'
+import { impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
 
 export const PIANO_FREE = 'free'
@@ -100,11 +100,14 @@ export const scontiConsentiti = (stato) => limitiDi(stato)?.sconti !== false
 // spegne: la Tana e i piani a pagamento non hanno la voce.
 export const stampaConsentita = (stato) => limitiDi(stato)?.stampa !== false
 
-// La stessa domanda per chi non ha le impostazioni in mano: la stampa, che
-// non aspetta la rete, e le schermate che ne mostrano i tasti. Si legge la
-// licenza ricordata, che subscribeSettings riscrive PRIMA di avvisare le
-// schermate: tasti e cancello rispondono sempre allo stesso modo.
-export const stampaNelPiano = () => stampaConsentita(impostazioniRicordate({}))
+// La stessa domanda per chi NON ha le impostazioni in mano: la stampa, che
+// non aspetta la rete (printer.js), e i pochi pannelli che non ascoltano le
+// impostazioni. Le schermate che le hanno chiedono a `stampaConsentita`.
+// Si legge solo la licenza ricordata, non tutto il blocco delle
+// impostazioni: lì dentro c'è anche il logo delle stampe, fino a 150 KB, e
+// questa domanda si fa a ogni foglio e in più di una lista.
+const licenzaInMemoria = () => ({ licenza: licenzaRicordata() })
+export const stampaNelPiano = () => stampaConsentita(licenzaInMemoria())
 
 // IL FREE È UNA CASSA SEMPLICE (REQ-LIC-005, l'utente 31/10/2026: «nella
 // free non metterei le comande»). Con `comande: false` non c'è il ciclo
@@ -124,11 +127,10 @@ export const comandeConsentite = (stato) => limitiDi(stato)?.comande !== false
 export const servizioAttivo = (stato) => stato?.workflow_enabled !== false && comandeConsentite(stato)
 
 // La stampa della comanda: serve la stampa, e servono le comande. Lo
-// scontrino segue solo la prima (stampaNelPiano).
-export const stampaComandeNelPiano = () => {
-  const stato = impostazioniRicordate({})
-  return stampaConsentita(stato) && comandeConsentite(stato)
-}
+// scontrino segue solo la prima.
+export const stampaComandeConsentita = (stato) => stampaConsentita(stato) && comandeConsentite(stato)
+export const comandeNelPiano = () => comandeConsentite(licenzaInMemoria())
+export const stampaComandeNelPiano = () => stampaComandeConsentita(licenzaInMemoria())
 
 // Da quando si vede lo storico (vendite, conti chiusi), o null se si vede
 // tutto. Si parte dalla MEZZANOTTE di N giorni fa, non da adesso meno N×24

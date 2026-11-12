@@ -85,6 +85,13 @@ export function ricordaImpostazioni(data) {
   if (!data || typeof data !== 'object') return
   const { licenza, ...resto } = data
   scrivi(CHIAVE, resto)
+  ricordaLicenza(licenza)
+}
+
+// Solo la licenza: serve anche quando settings/bar non c'è ancora (un
+// locale appena installato), perché la stampa la legge da qui
+// (limiti.js, stampaNelPiano) e deve dire quello che dicono le schermate.
+export function ricordaLicenza(licenza) {
   if (licenza !== undefined) scrivi(CHIAVE_LICENZA, licenza)
 }
 

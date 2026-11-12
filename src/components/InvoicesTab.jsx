@@ -14,6 +14,8 @@ import { useTestoConIcona } from '../lib/temaIcone.js'
 // e si ristampano.
 
 export default function InvoicesTab() {
+  // Nel piano senza stampa (REQ-LIC-016) la fattura si manda, non si stampa.
+  const stampaOn = stampaNelPiano()
   const testoConIcona = useTestoConIcona()
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState(null)
@@ -83,11 +85,11 @@ export default function InvoicesTab() {
               <Icona nome="email" gruppo="tasti" />{' '}Inviata{f.sent_to ? ` a ${f.sent_to}` : ''} il {String(f.sent_at).slice(0, 10)}
             </div>
           )}
-          <div className={stampaNelPiano() ? 'grid-2' : undefined} style={{ marginTop: 8, gap: 6 }}>
+          <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
             <button className="btn ghost small" onClick={() => invia(f)}>
               <Icona nome="email" gruppo="tasti" /> Invia via email
             </button>
-            {stampaNelPiano() && (
+            {stampaOn && (
               <button
                 className="btn ghost small"
                 onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}

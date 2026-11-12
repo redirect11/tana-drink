@@ -32,7 +32,7 @@ import { battutoDaQui } from './dispositivo.js'
 import { isGestore } from './ruoli.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
-import { rigaMarchio, stampaNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from './limiti.js'
+import { rigaMarchio, stampaNelPiano, comandeNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from './limiti.js'
 import {
   configStampa,
   immagineCaricata,
@@ -86,7 +86,6 @@ const impostazioniDelLocale = () => impostazioniRicordate({})
 // e gli automatismi (scontrino dopo l'incasso, comande al banco) la fanno
 // prima di decidere, così non nasce un errore a ogni conto.
 // La domanda sta in lib/limiti.js, con le altre del piano.
-const STAMPA_FUORI_PIANO = MESSAGGI_PIANO.stampa
 
 // I DATI FISCALI SI LEGGONO DAL LOCALE AL MOMENTO DELLA STAMPA, non dalle
 // impostazioni della stampante: quelle, una volta salvate su un
@@ -1052,7 +1051,7 @@ function avviaBattito() {
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
   // Senza stampa nel piano non si cerca nessuna stampante.
-  if (!stampaNelPiano()) return { ok: false, motivo: STAMPA_FUORI_PIANO }
+  if (!stampaNelPiano()) return { ok: false, motivo: MESSAGGI_PIANO.stampa }
   // Con la stampante finta non c'è niente da scaldare: risponde sempre.
   if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
@@ -1366,7 +1365,7 @@ const etichettaConto = (che, order) =>
 function lavoroDiStampa(componi, che = 'Stampa') {
   // Fuori dal piano non si apre nemmeno un lavoro nel registro: non è una
   // stampa non riuscita, è una stampa che non c'è.
-  if (!stampaNelPiano()) return Promise.reject(new Error(STAMPA_FUORI_PIANO))
+  if (!stampaNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.stampa))
   const idLavoro = lavoroInCoda(che)
   let scaduto = false
   const mio = _codaStampa.then(async () => {
@@ -1521,10 +1520,8 @@ export function printComanda(order, comanda = null) {
   // tasto a mano, nemmeno da un chiamante scritto domani.
   if (lavoroAnnullato(order, comandaDelTicket(order, comanda))) return Promise.resolve()
   // Nel piano senza comande (REQ-LIC-005) la comanda non si stampa, anche
-  // se lo scontrino sì: lo dice la frase del piano che manca.
-  if (!stampaComandeNelPiano()) {
-    return Promise.reject(new Error(stampaNelPiano() ? MESSAGGI_PIANO.comande : STAMPA_FUORI_PIANO))
-  }
+  // se lo scontrino sì. La stampa in sé la controlla lavoroDiStampa.
+  if (!comandeNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.comande))
   return lavoroDiStampa(async (prn) => {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()

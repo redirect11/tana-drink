@@ -21,7 +21,7 @@ import { strutturaDi } from '../components/stiliStrutturati.js'
 import { sezioniPerLoStile } from '../lib/contrattoStile.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
-import { rigaMarchio, stampaComandeNelPiano, servizioAttivo } from '../lib/limiti.js'
+import { rigaMarchio, stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -355,7 +355,7 @@ export default function MenuPage({ speciali = false }) {
       // e l'ordine è comunque salvato.
       // E solo se il locale vuole in automatico le comande della sala: con
       // «Solo dal banco» non le stampa nessuno da sé (REQ-STAMPA-021).
-      if (staff && stampaComandeNelPiano() && salaStampaDaSe() && stampaDa(loadPrinterSettings().autoPrintComandaDa, staff.role)) {
+      if (staff && stampaComandeConsentita(settings) && salaStampaDaSe() && stampaDa(loadPrinterSettings().autoPrintComandaDa, staff.role)) {
         printComanda(order, order.comande?.at(-1) ?? null).catch((e) =>
           console.warn('[printer] comanda sala:', e.message)
         )

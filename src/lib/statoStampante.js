@@ -16,7 +16,6 @@
 
 import { useEffect, useState } from 'react'
 import { loadPrinterSettings, preparaStampante } from './printer.js'
-import { stampaNelPiano, MESSAGGI_PIANO } from './limiti.js'
 import { segnala, TIPO } from './diagnosticaStampante.js'
 
 const OGNI = 30000
@@ -50,12 +49,6 @@ export function statoStampante() {
 export function controllaStampante() {
   if (_inCorso) return _inCorso
   _inCorso = (async () => {
-    // Fuori dal piano non si chiede niente a nessuno, e non è un guasto:
-    // niente rosso e niente riga nel diario della stampante (REQ-LIC-016).
-    if (!stampaNelPiano()) {
-      annuncia({ stato: 'spenta', motivo: MESSAGGI_PIANO.stampa })
-      return _stato
-    }
     if (!loadPrinterSettings().ip) {
       annuncia({ stato: 'spenta', motivo: 'Stampante non configurata' })
       return _stato

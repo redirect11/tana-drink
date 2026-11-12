@@ -98,7 +98,7 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
-import { fotoConsentite, stampaComandeNelPiano, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
+import { fotoConsentite, stampaComandeConsentita, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
@@ -341,7 +341,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // Nel piano senza stampa (REQ-LIC-016) o senza comande (REQ-LIC-005)
   // «Invia comanda» non ha niente da fare — manda la carta al banco, e il
   // conto c'è già — e spariscono i tasti che ristampano le comande.
-  const stampaOn = stampaComandeNelPiano()
+  const stampaComandeOn = stampaComandeConsentita(settings)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -2933,8 +2933,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
             {/* LA RIGA CHE NON CEDE MAI. «Invia comanda» e «Pagamento» sono i
                 due gesti della serata: restano dove sono, alla stessa
                 altezza, qualunque sia la finestra e qualunque lo zoom. */}
-            <div className="grid-2" style={stampaOn ? undefined : { gridTemplateColumns: '1fr' }}>
-              {stampaOn && (
+            <div className="grid-2">
+              {stampaComandeOn && (
                 <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
                   <IconPrinter /> Invia comanda
                 </button>
@@ -2988,11 +2988,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 si manda al banco, si incassa, si annulla. Tutto il resto
                 sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
-              <div
-                className="posd-foot-telefono"
-                style={stampaOn ? undefined : { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}
-              >
-                {stampaOn && (
+              <div className="posd-foot-telefono">
+                {stampaComandeOn && (
                   <button
                     className="btn ghost"
                     disabled={!conRighe}
@@ -3157,7 +3154,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 di carta — perché è quello che chi stampa deve sapere prima
                 di toccare, non come si chiama la funzione dentro.
                 Compaiono solo quando le comande sono davvero più d'una. */}
-            {stampaOn && stampabili.length > 1 && (
+            {stampaComandeOn && stampabili.length > 1 && (
               <div className="grid-2" style={{ marginTop: 10, gap: 6 }}>
                 <button
                   className="btn ghost small"
@@ -3223,8 +3220,8 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                       <span className="muted small">{formatPrice(i.qty * i.unit_price)}</span>
                     </div>
                   ))}
-                  <div className="grid-2" style={{ marginTop: 8, gap: 6, ...(stampaOn ? {} : { gridTemplateColumns: '1fr' }) }}>
-                    {stampaOn && (
+                  <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
+                    {stampaComandeOn && (
                       <button
                         className="btn ghost small"
                         aria-label={`Stampa comanda ${c.seq}`}

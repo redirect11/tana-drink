@@ -23,7 +23,7 @@ import { isGestore } from '../lib/ruoli.js'
 import { gestoreRicordato, ricordaRuolo } from '../lib/ruoloLocale.js'
 import { showToast } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
-import { stampaComandeNelPiano, servizioAttivo } from '../lib/limiti.js'
+import { stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import Caricamento from '../components/Caricamento.jsx'
 import ComandaDetail from '../components/ComandaDetail.jsx'
 
@@ -216,7 +216,7 @@ export default function ComandaPage() {
       dividiSubito={cerca.get('dividi') === '1'}
       // Nel piano senza stampa il tasto non c'è (REQ-LIC-016).
       onStampa={
-        stampaComandeNelPiano()
+        stampaComandeConsentita(settings)
           ? () =>
               printComanda(order, comanda).catch((e) =>
                 showToast(`Stampa non riuscita: ${e.message}`, { kind: 'error' })

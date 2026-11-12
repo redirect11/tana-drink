@@ -24,7 +24,7 @@ import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSetting
 import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
-import { scontiConsentiti, stampaNelPiano, servizioAttivo } from '../lib/limiti.js'
+import { scontiConsentiti, stampaConsentita, servizioAttivo } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
@@ -114,6 +114,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // `impagato` (REQ-CASSA-016): il conto si chiude senza incasso, e lo
   // scontrino esce con la nota in grande — sempre, anche con l'auto-stampa
   // spenta: la nota è la ragione per cui si stampa.
+  // Nel piano senza stampa (REQ-LIC-016) non esce niente, nemmeno per
+  // l'impagato, e non ci sono preconto, fattura o carta da tacere.
+  const stampaOn = stampaConsentita(settings)
   const closePaid = (incasso = null, { senzaStampa = false, impagato = null } = {}) => {
     const perStampa = impagato
       ? { ...order, impagato }
@@ -141,9 +144,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // d'ufficio) vale la pretesa normale: una copia e basta.
       if (
         order.daily_number != null &&
-        // Nel piano senza stampa non esce niente, nemmeno per l'impagato
-        // (REQ-LIC-016).
-        stampaNelPiano() &&
+        stampaOn &&
         // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
         // carta non serve — cliente che rifiuta lo scontrino di cortesia,
         // conto interno. Non si prende nemmeno la pretesa: se il conto
@@ -353,9 +354,6 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // «Riscuoti (senza stampa)»: acceso dalle impostazioni del locale. Serve
   // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
   // un tasto in più qui vale solo se quel caso è la normalità del locale.
-  // Nel piano senza stampa (REQ-LIC-016) non c'è carta da tacere, né
-  // preconto o fattura da stampare.
-  const stampaOn = stampaNelPiano()
   const riscuotiSenzaStampa = stampaOn && settings?.riscuoti_senza_stampa === true
   // IL RESTO IN CONTANTI (REQ-PAG-015): un'impostazione del locale.
   const restoAttivo = settings?.resto_contanti === true
@@ -693,7 +691,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // la carta non esce lo si dice, e basta — l'incasso è registrato lo
     // stesso, e ristampare un acconto è un gesto, non un guaio.
     else if (
-      stampaNelPiano() &&
+      stampaOn &&
       accontoDaStampare({
         settings,
         chiude: willClose,

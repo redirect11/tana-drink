@@ -64,7 +64,7 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
     return subscribeQueue((q) => setQueueLen(q.length))
   }, [settings.eta_enabled, servizio])
 
-  const etaMinutes = settings.eta_enabled && servizioAttivo(settings)
+  const etaMinutes = settings.eta_enabled && servizio
     ? queueEtaMinutes({
         status: ORDER_STATUSES.RICEVUTO,
         position: queueLen,
