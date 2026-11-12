@@ -36,6 +36,8 @@ export const LIMITI_FREE = Object.freeze({
   utenti_max: 1,
   marchio: true,
   comande: false,
+  // Dal 12/11/2026 (REQ-LIC-016, drink-regia #206): il Free non stampa.
+  stampa: false,
 })
 
 export const SCADUTA = 'scaduta'

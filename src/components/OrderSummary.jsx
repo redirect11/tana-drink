@@ -7,6 +7,7 @@ import { chiaveRiga, nomeLetto } from '../lib/cart.js'
 import { paymentOptions } from '../lib/payments.js'
 import { clienteSceglie, modoAllaNascita } from '../lib/consegna.js'
 import { useTestoStile } from '../lib/testiStile.js'
+import { servizioAttivo } from '../lib/limiti.js'
 
 // Riepilogo ordine in stile scontrino, mostrato prima della conferma.
 // Calcola coperto (per persona), costo di servizio (percentuale) o mancia
@@ -57,12 +58,13 @@ export default function OrderSummary({ cart, settings, serviceStats = {}, tableL
   // Coda attiva: il nuovo ordine andrà dopo tutti gli ordini in corso, quindi
   // la stima personale tiene conto di quanti ce ne sono davanti.
   const [queueLen, setQueueLen] = useState(0)
+  const servizio = servizioAttivo(settings)
   useEffect(() => {
-    if (!settings.eta_enabled || settings.workflow_enabled === false) return
+    if (!settings.eta_enabled || !servizio) return
     return subscribeQueue((q) => setQueueLen(q.length))
-  }, [settings.eta_enabled, settings.workflow_enabled])
+  }, [settings.eta_enabled, servizio])
 
-  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
+  const etaMinutes = settings.eta_enabled && servizio
     ? queueEtaMinutes({
         status: ORDER_STATUSES.RICEVUTO,
         position: queueLen,

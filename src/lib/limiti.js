@@ -5,7 +5,7 @@
 // accanto a `piano` e `moduli`, la voce `limiti`:
 //
 //   { prodotti_max: 10, conti_aperti_max: 5, sconti: false,
-//     storico_giorni: 7, utenti_max: 1, marchio: true }
+//     storico_giorni: 7, utenti_max: 1, marchio: true, stampa: false }
 //
 // per il piano Free, e `null` per i piani a pagamento.
 //
@@ -34,7 +34,7 @@
 // chiama, dalla cache: niente letture nuove, vedi il local-first).
 
 import { NOME_PRODOTTO } from './prodotto.js'
-import { impostazioniRicordate } from './impostazioniLocali.js'
+import { impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { licenzaDi } from './licenzaInVigore.js'
 
 export const PIANO_FREE = 'free'
@@ -94,6 +94,43 @@ export function puoAprireConto(stato, aperti) {
 // Sconti, omaggi e maggiorazioni sul conto. Solo un `false` scritto li
 // spegne.
 export const scontiConsentiti = (stato) => limitiDi(stato)?.sconti !== false
+
+// La stampa, tutta: comande, scontrini, chiusure, fatture (REQ-LIC-016,
+// Daniele 12/11/2026: «il Free è senza stampa»). Solo un `false` scritto la
+// spegne: la Tana e i piani a pagamento non hanno la voce.
+export const stampaConsentita = (stato) => limitiDi(stato)?.stampa !== false
+
+// La stessa domanda per chi NON ha le impostazioni in mano: la stampa, che
+// non aspetta la rete (printer.js), e i pochi pannelli che non ascoltano le
+// impostazioni. Le schermate che le hanno chiedono a `stampaConsentita`.
+// Si legge solo la licenza ricordata, non tutto il blocco delle
+// impostazioni: lì dentro c'è anche il logo delle stampe, fino a 150 KB, e
+// questa domanda si fa a ogni foglio e in più di una lista.
+const licenzaInMemoria = () => ({ licenza: licenzaRicordata() })
+export const stampaNelPiano = () => stampaConsentita(licenzaInMemoria())
+
+// IL FREE È UNA CASSA SEMPLICE (REQ-LIC-005, l'utente 31/10/2026: «nella
+// free non metterei le comande»). Con `comande: false` non c'è il ciclo
+// del servizio: niente stati, coda di preparazione, tempi, stima ai
+// clienti, né stampa della comanda. Solo un `false` scritto lo spegne.
+export const comandeConsentite = (stato) => limitiDi(stato)?.comande !== false
+
+// IL SERVIZIO È ACCESO? Una domanda sola, al posto di `workflow_enabled`
+// letto in giro: l'interruttore del locale («Segui la preparazione»), a
+// meno che il piano non comprenda le comande. Così il Free passa dalla
+// strada che esisteva già e che è collaudata, quella del servizio spento:
+// le comande restano modificabili fino all'incasso, lì risultano servite
+// e lì si scala il magazzino. Non nascono già servite, come diceva la
+// prima stesura: una comanda servita blocca le sue quantità
+// (lockedQtyByItem), e in una cassa semplice una riga battuta per
+// sbaglio non si potrebbe più togliere.
+export const servizioAttivo = (stato) => stato?.workflow_enabled !== false && comandeConsentite(stato)
+
+// La stampa della comanda: serve la stampa, e servono le comande. Lo
+// scontrino segue solo la prima.
+export const stampaComandeConsentita = (stato) => stampaConsentita(stato) && comandeConsentite(stato)
+export const comandeNelPiano = () => comandeConsentite(licenzaInMemoria())
+export const stampaComandeNelPiano = () => stampaComandeConsentita(licenzaInMemoria())
 
 // Da quando si vede lo storico (vendite, conti chiusi), o null se si vede
 // tutto. Si parte dalla MEZZANOTTE di N giorni fa, non da adesso meno N×24
@@ -159,6 +196,8 @@ export function limitiInChiaro(stato) {
   if (giorni !== null) righe.push(`Storico consultabile: ${giorni === 1 ? 'l’ultimo giorno' : `gli ultimi ${giorni} giorni`}`)
   if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
   if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
+  if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
+  if (!comandeConsentite(stato)) righe.push('Comande e stati del servizio non compresi: cassa semplice')
   if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
   return righe
 }
@@ -175,6 +214,8 @@ export const MESSAGGI_PIANO = {
   storico: (n) => `Nel piano Free lo storico mostra ${n === 1 ? 'l’ultimo giorno' : `gli ultimi ${n} giorni`}.`,
   staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
+  stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
+  comande: 'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.',
   allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
   sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
   // Un piano a pagamento senza il modulo: non è «il piano Free».

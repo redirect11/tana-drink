@@ -98,7 +98,7 @@ import CustomDrinkForm from './CustomDrinkForm.jsx'
 import SchedaDrink from './SchedaDrink.jsx'
 import DrinkForm from './DrinkForm.jsx'
 import { saveDrinkFromForm } from '../lib/saveDrink.js'
-import { fotoConsentite } from '../lib/limiti.js'
+import { fotoConsentite, stampaComandeConsentita, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import ActionSheet from './ActionSheet.jsx'
@@ -337,7 +337,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // Il locale segue la preparazione? Sta qui in alto perché lo chiedono in
   // due punti lontani fra loro: come si raggruppano le righe (qui sotto) e
   // quali tasti di avanzamento esistono (più giù).
-  const workflowOn = settings.workflow_enabled !== false
+  const workflowOn = servizioAttivo(settings)
+  // Nel piano senza stampa (REQ-LIC-016) o senza comande (REQ-LIC-005)
+  // «Invia comanda» non ha niente da fare — manda la carta al banco, e il
+  // conto c'è già — e spariscono i tasti che ristampano le comande.
+  const stampaComandeOn = stampaComandeConsentita(settings)
   useEffect(() => subscribeSettings(setSettings, () => {}), [])
 
   // CONTO DI GRUPPO (solo in creazione): si arriva qui da /pos?group=<id>
@@ -1033,6 +1037,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   // qui: non in creazione (lì è una comanda sola per definizione) e non
   // alla sala, che manda sempre un ticket nuovo.
   const sceltaAggiunte =
+    comandeConsentite(settings) &&
     !isNew &&
     !inCreazione &&
     !workflowOn &&
@@ -2929,9 +2934,11 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 due gesti della serata: restano dove sono, alla stessa
                 altezza, qualunque sia la finestra e qualunque lo zoom. */}
             <div className="grid-2">
-              <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
-                <IconPrinter /> Invia comanda
-              </button>
+              {stampaComandeOn && (
+                <button className="btn ghost small" disabled={!conRighe} onClick={inviaComanda}>
+                  <IconPrinter /> Invia comanda
+                </button>
+              )}
               {daRiaprire ? (
                 <button
                   className="btn small posd-riapri"
@@ -2982,16 +2989,18 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 sta dietro i ⋯ in alto, dove non intralcia. */}
             {telefono && (
               <div className="posd-foot-telefono">
-                <button
-                  className="btn ghost"
-                  disabled={!conRighe}
-                  onClick={inviaComanda}
-                  aria-label="Invia"
-                  title="Invia la comanda al banco"
-                >
-                  <IconPrinter />
-                  {!soloIcone && ' Invia'}
-                </button>
+                {stampaComandeOn && (
+                  <button
+                    className="btn ghost"
+                    disabled={!conRighe}
+                    onClick={inviaComanda}
+                    aria-label="Invia"
+                    title="Invia la comanda al banco"
+                  >
+                    <IconPrinter />
+                    {!soloIcone && ' Invia'}
+                  </button>
+                )}
                 {daRiaprire ? (
                   <button
                     className="btn"
@@ -3145,7 +3154,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                 di carta — perché è quello che chi stampa deve sapere prima
                 di toccare, non come si chiama la funzione dentro.
                 Compaiono solo quando le comande sono davvero più d'una. */}
-            {stampabili.length > 1 && (
+            {stampaComandeOn && stampabili.length > 1 && (
               <div className="grid-2" style={{ marginTop: 10, gap: 6 }}>
                 <button
                   className="btn ghost small"
@@ -3212,13 +3221,15 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
                     </div>
                   ))}
                   <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
-                    <button
-                      className="btn ghost small"
-                      aria-label={`Stampa comanda ${c.seq}`}
-                      onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
-                    >
-                      <IconPrinter /> Stampa
-                    </button>
+                    {stampaComandeOn && (
+                      <button
+                        className="btn ghost small"
+                        aria-label={`Stampa comanda ${c.seq}`}
+                        onClick={() => printComanda(order, c).catch((e) => setError(`Stampa: ${e.message}`))}
+                      >
+                        <IconPrinter /> Stampa
+                      </button>
+                    )}
                     {ns && workflowOn && !closed && puoSegnare(ruolo, ns) ? (
                       <button className="btn small" onClick={() => advance(c.id, ns)}>
                         Segna “{statoAlBanco(ns, order.service_mode)}”

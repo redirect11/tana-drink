@@ -3542,6 +3542,17 @@ casi_uso:
     varianti:
       - quando: "Sul conto c'era già uno sconto prima del passaggio a Free"
         allora: "Il tasto dello sconto resta visibile, per poterlo togliere."
+      - quando: "La licenza del Free scrive anche `comande: false`"
+        allora: "La cassa è semplice: niente stati del servizio né coda di
+          preparazione, i conti aperti si vedono come elenco da incassare e
+          all'incasso tutto risulta servito. In «Impostazioni» → «Servizio»,
+          al posto della preparazione, si legge «Nel piano Free la cassa è
+          semplice: …» con «Vedi i piani»."
+      - quando: "La licenza del Free scrive anche `stampa: false` (dal 12/11/2026)"
+        allora: "Dalla stampante non esce niente e non c'è nessun tasto di stampa;
+          in «Impostazioni» → «Stampante» si legge «La stampa di comande e
+          scontrini è dei piani a pagamento.» con «Vedi i piani». Il conto si
+          incassa e la cassa si chiude come sempre."
       - quando: "Si crea un prodotto con la foto"
         allora: "La scheda dice «Le foto dei prodotti sono dei piani a pagamento.» e
           non offre il caricamento."
@@ -3553,8 +3564,8 @@ casi_uso:
           memoria."
     si_prova: browser
     bisogni: []
-    requisiti: [REQ-LIC-003, REQ-LIC-004, REQ-LIC-007]
-    previsti: [REQ-LIC-005, REQ-LIC-006]
+    requisiti: [REQ-LIC-003, REQ-LIC-004, REQ-LIC-005, REQ-LIC-007, REQ-LIC-016]
+    previsti: [REQ-LIC-006]
     test_cases: []
 
   - id: UC-LIC-004

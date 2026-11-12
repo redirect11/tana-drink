@@ -100,6 +100,7 @@ import Icona, { ConIcona } from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
 import AiutoCampo from './AiutoCampo.jsx'
+import { servizioAttivo } from '../lib/limiti.js'
 
 const STATUS_ITEM = [
   { value: 'assortimento', label: 'In assortimento' },
@@ -448,7 +449,7 @@ function ProductsPanel() {
   // Con gli stati del servizio un conto pagato ma non servito è ancora
   // aperto, e i suoi ingredienti sono ancora in ballo; senza, il pagamento
   // chiude e il magazzino è già stato scalato.
-  const [workflowOn, setWorkflowOn] = useState(DEFAULT_SETTINGS.workflow_enabled !== false)
+  const [workflowOn, setWorkflowOn] = useState(servizioAttivo(DEFAULT_SETTINGS))
   const [ordiniVivi, setOrdiniVivi] = useState([])
   const [drinksById, setDrinksById] = useState({})
   useEffect(() => subscribeActiveOrders(setOrdiniVivi, () => {}), [])
@@ -480,7 +481,7 @@ function ProductsPanel() {
   useEffect(
     () =>
       subscribeSettings((s) => {
-        setWorkflowOn(s.workflow_enabled !== false)
+        setWorkflowOn(servizioAttivo(s))
         setMarkup(s.price_markup)
         setPurchaseVat(s.purchase_vat ?? DEFAULT_SETTINGS.purchase_vat)
       }, () => {}),

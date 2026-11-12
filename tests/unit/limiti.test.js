@@ -17,6 +17,10 @@ import {
   puoCreareProdotto,
   puoAprireConto,
   scontiConsentiti,
+  stampaConsentita,
+  comandeConsentite,
+  servizioAttivo,
+  limitiInChiaro,
   inizioStorico,
   dentroStorico,
   visibiliNelloStorico,
@@ -91,8 +95,12 @@ describe('senza limiti nella licenza non cambia niente', () => {
   // I limiti del Free che l'app usa quando una licenza scade verso il Free
   // e la regia non l'ha ancora riscritta (REQ-LIC-009) sono quelli che la
   // regia scrive: gli stessi di queste prove.
+  // `comande` e `stampa` qui sono a parte: le prove di questo file usano
+  // un Free di prima, senza le due voci, per dimostrare che senza voce non
+  // cambia niente. Che il Free di oggi non stampi lo si dice qui.
   it('la copia dei limiti del Free nell’app è quella della regia', () => {
-    expect({ ...LIMITI_FREE_APP, comande: undefined }).toEqual({ ...LIMITI_FREE, comande: undefined })
+    expect({ ...LIMITI_FREE_APP, comande: undefined, stampa: undefined }).toEqual({ ...LIMITI_FREE, comande: undefined })
+    expect(LIMITI_FREE_APP.stampa).toBe(false)
   })
 })
 
@@ -262,5 +270,61 @@ describe('il ritorno al Free di un locale che pagava', () => {
     expect(staffConsentito(FREE)).toBe(false)
     expect(sumupDisponibile(FREE)).toBe(false)
     expect(fotoConsentite(FREE)).toBe(false)
+  })
+})
+
+// REQ-LIC-016 (Daniele, 12/11/2026): il Free è senza stampa. Come per gli
+// sconti, la spegne solo un `false` scritto: la Tana, i piani a pagamento e
+// un Free di prima, che la voce non l'ha, stampano come sempre.
+describe('la stampa nel piano', () => {
+  it('solo `stampa: false` la spegne', () => {
+    expect(stampaConsentita({ licenza: { ...FREE.licenza, limiti: { ...LIMITI_FREE, stampa: false } } })).toBe(false)
+    expect(stampaConsentita({ licenza: { ...FREE.licenza, limiti: { ...LIMITI_FREE, stampa: true } } })).toBe(true)
+  })
+
+  it('senza la voce non cambia niente: la Tana, un piano a pagamento, un Free di prima', () => {
+    expect(stampaConsentita({})).toBe(true)
+    expect(stampaConsentita({ licenza: LICENZA_TANA })).toBe(true)
+    expect(stampaConsentita({ licenza: { piano: 'base', limiti: null } })).toBe(true)
+    expect(stampaConsentita(FREE)).toBe(true)
+  })
+
+  it('nel riepilogo della licenza si legge, e c’è la frase del piano', () => {
+    const senza = { licenza: { ...FREE.licenza, limiti: { ...LIMITI_FREE, stampa: false } } }
+    expect(limitiInChiaro(senza)).toContain('Stampa di comande e scontrini non compresa')
+    expect(limitiInChiaro(FREE)).not.toContain('Stampa di comande e scontrini non compresa')
+    expect(MESSAGGI_PIANO.stampa).toBe('La stampa di comande e scontrini è dei piani a pagamento.')
+  })
+})
+
+// REQ-LIC-005 (l'utente, 31/10/2026): il Free è una cassa semplice, senza
+// comande. Il servizio è una domanda sola: l'interruttore del locale, a
+// meno che il piano non escluda le comande. Senza la voce, come sempre.
+describe('le comande e il servizio nel piano', () => {
+  const senzaComande = { licenza: { ...FREE.licenza, limiti: { ...LIMITI_FREE, comande: false } } }
+
+  it('solo `comande: false` le toglie', () => {
+    expect(comandeConsentite(senzaComande)).toBe(false)
+    expect(comandeConsentite(FREE)).toBe(true)
+    expect(comandeConsentite({ licenza: LICENZA_TANA })).toBe(true)
+    expect(comandeConsentite({})).toBe(true)
+  })
+
+  it('il servizio è spento dal piano anche con l’interruttore acceso', () => {
+    expect(servizioAttivo({ ...senzaComande, workflow_enabled: true })).toBe(false)
+    expect(servizioAttivo({ ...senzaComande })).toBe(false)
+  })
+
+  it('senza la voce decide l’interruttore, come prima', () => {
+    expect(servizioAttivo({ licenza: LICENZA_TANA, workflow_enabled: true })).toBe(true)
+    expect(servizioAttivo({ licenza: LICENZA_TANA })).toBe(true)
+    expect(servizioAttivo({ licenza: LICENZA_TANA, workflow_enabled: false })).toBe(false)
+    expect(servizioAttivo(undefined)).toBe(true)
+  })
+
+  it('nel riepilogo della licenza si legge, e c’è la frase del piano', () => {
+    expect(limitiInChiaro(senzaComande)).toContain('Comande e stati del servizio non compresi: cassa semplice')
+    expect(limitiInChiaro(FREE)).not.toContain('Comande e stati del servizio non compresi: cassa semplice')
+    expect(MESSAGGI_PIANO.comande).toMatch(/^Nel piano Free la cassa è semplice/)
   })
 })

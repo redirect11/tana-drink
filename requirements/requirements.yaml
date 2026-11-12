@@ -6135,11 +6135,37 @@ requirements:
       chiave `comande: false` nei limiti del Free. Lo storico resta di 7
       giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di
       toglierlo e ha deciso di tenerlo.
-    status: todo
+      FATTO (12/11/2026, richiesto di nuovo da Daniele lo stesso giorno: il
+      Free è senza stati di servizio). Una domanda sola, `servizioAttivo`
+      in lib/limiti.js — l'interruttore «Segui la preparazione», a meno che
+      il piano non escluda le comande — al posto di ogni lettura di
+      `workflow_enabled`: il Free passa dalla strada del servizio spento,
+      che esisteva già (niente stati, avanzamenti, tempi, stima ai clienti,
+      vista del banco; coda come elenco dei conti da incassare; le comande
+      risultano servite all'incasso, e lì si scala il magazzino). La comanda
+      non si stampa (`stampaComandeNelPiano`, cancello in printComanda e in
+      comandeDaStampare), lo scontrino segue `stampa` (REQ-LIC-016); in
+      Impostazioni la preparazione lascia il posto alla frase del piano e
+      spariscono tempi di servizio, campi e stampa automatica della comanda;
+      le righe aggiunte vanno nella comanda aperta, senza la domanda «dove
+      vanno?».
+      CAMBIATO RISPETTO ALLA PRIMA STESURA: le comande NON nascono già
+      servite. Una comanda servita blocca le sue quantità (lockedQtyByItem):
+      in una cassa semplice una riga battuta per sbaglio non si potrebbe più
+      togliere. Restano «ricevute», cioè modificabili, fino all'incasso, come
+      col servizio spento a mano. Il prezzo: un locale che passa a un piano a
+      pagamento con dei conti aperti li ritrova in coda «da fare», e lo sono.
+      Al passaggio inverso (da un piano a pagamento al Free) le comande già
+      avanti negli stati restano lì finché il conto non si incassa.
+    status: implemented
     generate_issue: true
     labels: [licenza, prodotto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/limiti.test.js
+      - tests/unit/stampaFuoriPiano.test.js
+      - tests/component/PaymentScreen.test.jsx
+      - tests/component/SettingsTab.test.jsx
 
   - id: REQ-LIC-006
     title: "Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento"
@@ -6913,6 +6939,61 @@ requirements:
       - tests/component/SettingsTab.test.jsx
       - tests/unit/regoleLicenza.test.js
       - tests/regole/licenza.test.js
+  - id: REQ-LIC-016
+    title: "Nel Free non si stampa niente: né comande, né scontrini, né il resto"
+    area: "src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)"
+    description: >
+      Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di
+      drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La
+      regia scrive nei `limiti` del Free la voce `stampa: false`. Come per
+      le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la
+      voce (la Tana, i piani a pagamento) non cambia niente.
+      CON `stampa: false` non esce niente dalla stampante: né la comanda
+      (a mano o automatica, dal banco, dalla sala o dal telefono del
+      cliente), né lo scontrino di cortesia o dell'acconto, né la fattura,
+      la chiusura della cassa, l'ordine al fornitore, l'anteprima o la
+      prova di stampa. L'app non cerca la stampante e non ne controlla lo
+      stato (niente pallino della stampante, niente certificato). Spariscono
+      i tasti di stampa e le impostazioni della stampante e della stampa;
+      dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano).
+      Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti:
+      una stampa che partisse da un tasto dimenticato non esce lo stesso.
+      Incassare, chiudere la cassa e tutto il resto funzionano come sempre:
+      si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005,
+      ancora da fare), che toglie gli stati di servizio e la stampa della
+      sola comanda.
+      FATTO (12/11/2026): `stampaConsentita` e `stampaNelPiano` in
+      lib/limiti.js (la seconda legge la licenza ricordata, che
+      subscribeSettings riscrive prima di avvisare le schermate: tasti e
+      cancello rispondono uguale); il cancello in `lavoroDiStampa`, che
+      rifiuta con la frase del piano senza aprire un lavoro nel registro;
+      `scontrinoAutomatico`, `comandeDaStampare`, lo scontrino dell'impagato
+      e dell'acconto, la sala che stampa da sé, la chiusura della cassa e
+      l'invio dal telefono rispondono «no» prima; `preparaStampante` e il
+      pallino non cercano la stampante. Spariti i tasti di stampa (coda,
+      conto, cassa, storico, chiusure, fatture, ordini ai fornitori,
+      comanda) e, in Impostazioni, stampante, campi, logo, stampa
+      automatica e «Riscuoti (senza stampa)»: al posto della stampante la
+      frase del piano. `stampa: false` anche nella copia dei limiti del Free
+      dell'app (licenzaInVigore.js).
+      DOPO IL /simplify (12/11/2026): le schermate che hanno le impostazioni
+      chiedono a `stampaConsentita(settings)`; `stampaNelPiano` resta per
+      printer.js e per chi non le ascolta, e legge solo la licenza ricordata
+      (non tutto il blocco, che porta anche il logo delle stampe). La
+      licenza si ricorda anche quando settings/bar non c'è. La voce
+      «Stampante» (e «Da servire» senza comande) segue il piano anche nel
+      menu della sala e negli indirizzi battuti a mano (lib/sezioni.js).
+    status: implemented
+    generate_issue: true
+    labels: [licenza, prodotto]
+    priority: P2
+    test_cases:
+      - tests/unit/limiti.test.js
+      - tests/unit/stampaFuoriPiano.test.js
+      - tests/unit/sezioni.test.js
+      - tests/unit/impostazioniLocali.test.js
+      - tests/component/SettingsTab.test.jsx
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"

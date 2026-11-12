@@ -17,7 +17,7 @@ import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaNelPiano } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import Icona, { ConIcona } from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
@@ -97,6 +97,10 @@ export default function OrdersHistory() {
   // Le impostazioni servono anche al limite dello storico del piano Free
   // (REQ-LIC-003): senza limiti nella licenza non cambia niente.
   const [impostazioni, setImpostazioni] = useState(null)
+  // Una volta per render, non per riga: la ristampa c'è solo se il piano
+  // comprende la stampa (REQ-LIC-016). Dalla licenza ricordata, che c'è
+  // subito: le impostazioni qui arrivano dopo, e il tasto lampeggerebbe.
+  const stampaOn = stampaNelPiano()
   useEffect(
     () =>
       subscribeSettings((s) => {
@@ -274,7 +278,7 @@ export default function OrdersHistory() {
               {/* Ristampa dello scontrino (anche di conti vecchi): riporta
                   articoli, sconto, totale reale e come è stato incassato.
                   Non per i conti di Tiller: lo scontrino l'ha fatto Tiller. */}
-              {!tiller && <span
+              {!tiller && stampaOn && <span
                 role="button"
                 tabIndex={0}
                 className="ordhist-print"

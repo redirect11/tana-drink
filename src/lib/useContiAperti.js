@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { subscribeActiveOrders } from './api.js'
 import { contoChiuso } from './comande.js'
-import { maxContiAperti } from './limiti.js'
+import { maxContiAperti, servizioAttivo } from './limiti.js'
 
 // QUANTI CONTI SONO APERTI ADESSO, per il limite del piano Free
 // (REQ-LIC-003, `conti_aperti_max`). Ascolta la stessa coda della cassa —
@@ -14,7 +14,7 @@ import { maxContiAperti } from './limiti.js'
 // regola che non la riguarda.
 export function useContiAperti(impostazioni) {
   const conLimite = maxContiAperti(impostazioni) != null
-  const workflowOn = impostazioni?.workflow_enabled !== false
+  const workflowOn = servizioAttivo(impostazioni)
   const cutoffHour = impostazioni?.business_day_cutoff_hour
   const [aperti, setAperti] = useState(null)
   useEffect(() => {

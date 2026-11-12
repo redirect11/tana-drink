@@ -26,6 +26,7 @@ import { righeModelloDaOrdine } from '../lib/modelliOrdine.js'
 import { magazzinoBloccato } from '../lib/inventory.js'
 import { purchaseOrderText } from '../lib/warehouse.js'
 import { printOrdineFornitore } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import NuovoOrdinePanel from './NuovoOrdinePanel.jsx'
@@ -384,8 +385,10 @@ export default function PurchaseOrdersPanel({ vista = 'nuovo' }) {
           onEmail={inviaEmail}
           onCopia={copia}
           onSalvaModello={salvaModelloDaOrdine}
-          onStampa={(fetta) =>
-            printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))
+          onStampa={
+            stampaNelPiano()
+              ? (fetta) => printOrdineFornitore(fetta).catch((e) => toastError(`Stampa: ${e.message}`))
+              : undefined
           }
         />
       ) : (

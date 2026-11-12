@@ -32,7 +32,7 @@ import {
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
-import { MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
+import { MESSAGGI_PIANO, profiloLeggero, stampaConsentita, servizioAttivo, comandeConsentite } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
@@ -54,6 +54,11 @@ import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
+// Le sezioni che hanno senso solo se il piano comprende la stampa
+// (REQ-LIC-016) o le comande (REQ-LIC-005).
+const SOLO_CON_STAMPA = new Set(['stampa-automatica', 'campi-scontrino', 'campi-comanda', 'campi-acconto', 'logo-stampe'])
+const SOLO_CON_COMANDE = new Set(['tempi', 'campi-comanda'])
+
 export default function SettingsTab({ role = null }) {
   // La schermata sta tutta nella finestra: scorre la sezione aperta, non la
   // pagina con dentro la testata.
@@ -110,7 +115,14 @@ export default function SettingsTab({ role = null }) {
   // oltre pagamenti, gruppi, sconti e coperto, e quello che si cercava lo
   // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
-  const sezioni = [
+  // Il piano (REQ-LIC-016, REQ-LIC-005): senza stampa le sezioni della
+  // carta non ci sono e al posto della stampante c'è la frase del piano;
+  // senza comande lo stesso per la preparazione, e se ne vanno tempi di
+  // servizio e campi della comanda.
+  const stampaOn = stampaConsentita(settings)
+  const comandeOn = comandeConsentite(settings)
+  const servizioOn = servizioAttivo(settings)
+  const tutteLeSezioni = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
     // laterale: qui, accanto ai colori, solo la strada per arrivarci.
@@ -348,12 +360,14 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.resto_contanti === true}
                 onChange={(v) => save({ resto_contanti: v })}
               />
-              <ToggleRow
-                label="Un tasto per incassare senza stampare"
-                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
-                checked={settings.riscuoti_senza_stampa === true}
-                onChange={(v) => save({ riscuoti_senza_stampa: v })}
-              />
+              {stampaOn && (
+                <ToggleRow
+                  label="Un tasto per incassare senza stampare"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                  checked={settings.riscuoti_senza_stampa === true}
+                  onChange={(v) => save({ riscuoti_senza_stampa: v })}
+                />
+              )}
               {/* E ADESSO ANCHE IL SUO GEMELLO, PER LO STESSO IDENTICO
                   MOTIVO. Stava in «Gestione preparazione» e l'utente non
                   l'ha trovato (21/08/2026) — già successo il 20/08 con
@@ -364,7 +378,7 @@ export default function SettingsTab({ role = null }) {
                   se si seguono i passi del servizio. Col servizio spento
                   il tasto non comparirebbe comunque, e un interruttore che
                   non fa niente è peggio di uno assente. */}
-              {settings.workflow_enabled !== false && (
+              {servizioOn && (
                 <ToggleRow
                   label="Un tasto per incassare e servire insieme"
                   desc="Nella schermata di pagamento compare anche «Riscuoti e servi»: chiude il conto in un colpo, per quando si consegna e si incassa nello stesso gesto."
@@ -501,7 +515,9 @@ export default function SettingsTab({ role = null }) {
       id: 'preparazione',
       icona: 'menu',
       label: 'Gestione preparazione',
-      nodo: (
+      nodo: !comandeOn ? (
+        <AvvisoPiano messaggio={MESSAGGI_PIANO.comande} impostazioni={settings} />
+      ) : (
             <div className="card settings-section">
               <h3>Gestione preparazione</h3>
               <p className="muted small" style={{ margin: '0 0 8px' }}>
@@ -519,7 +535,7 @@ export default function SettingsTab({ role = null }) {
                   conto nuovo e le aggiunte a metà serata — perché il passo in
                   cui nasce una comanda si decide in un posto solo
                   (statoComandaNuova in lib/comande.js). */}
-              {settings.workflow_enabled !== false && (
+              {servizioOn && (
                 <ToggleRow
                   label="Le comande nascono già in preparazione"
                   desc="Spenta: una comanda nuova sta in «Da fare» finché qualcuno non tocca «Lo preparo io» — che dice anche chi. Accesa: nasce già al banco, per chi versa nell'istante in cui batte e non vuole un tocco in più a ogni comanda."
@@ -934,7 +950,7 @@ export default function SettingsTab({ role = null }) {
               <p className="muted" style={{ margin: '0 0 10px', fontSize: '0.85rem' }}>
                 Chi sta al banco non guarda i conti, guarda il lavoro: le{' '}
                 <strong>comande</strong>, una card per ticket, nel passo in cui stanno.
-                {settings.workflow_enabled !== false ? (
+                {servizioOn ? (
                   <> Si apre da sé a chi ha il ruolo bartender.</>
                 ) : (
                   <>
@@ -948,7 +964,7 @@ export default function SettingsTab({ role = null }) {
               <SceltaModo
                 valore={settings.bartender_view || 'corsie'}
                 opzioni={[
-                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, settings.workflow_enabled === false],
+                  ['corsie', conEmoji('corsie', 'Corsie di stato'), undefined, !servizioOn],
                 ]}
                 onScegli={(v) => save({ bartender_view: v })}
               />
@@ -1123,7 +1139,12 @@ export default function SettingsTab({ role = null }) {
         </div>
       ),
     },
-    { id: 'stampante', icona: 'stampante', label: 'Stampante', nodo: <PrinterSetup /> },
+    {
+      id: 'stampante',
+      icona: 'stampante',
+      label: 'Stampante',
+      nodo: stampaOn ? <PrinterSetup /> : <AvvisoPiano messaggio={MESSAGGI_PIANO.stampa} impostazioni={settings} />,
+    },
     // I CAMPI DELLA CARTA STANNO COL RESTO DELLA STAMPANTE. Sono
     // impostazioni del LOCALE (settings/bar) e non del terminale, ma chi
     // le cerca le cerca dove sta la stampante: nella barra sono un gruppo
@@ -1218,6 +1239,9 @@ export default function SettingsTab({ role = null }) {
       ),
     },
   ]
+  const sezioni = tutteLeSezioni.filter(
+    (s) => (stampaOn || !SOLO_CON_STAMPA.has(s.id)) && (comandeOn || !SOLO_CON_COMANDE.has(s.id))
+  )
 
   // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
   // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»

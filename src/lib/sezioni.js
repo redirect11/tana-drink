@@ -6,6 +6,13 @@
 
 import { isAdmin, isGestore } from './ruoli.js'
 import { voceVisibile } from './licenza.js'
+import { stampaConsentita, comandeConsentite } from './limiti.js'
+
+// Le voci che il piano può togliere (REQ-LIC-016, REQ-LIC-005): la
+// stampante senza la stampa, «Da servire» senza le comande. Senza
+// impostazioni, o senza la voce nella licenza, ci sono come sempre.
+const PIANO_DELLA_VOCE = { stampante: stampaConsentita, servizio: comandeConsentite }
+const nelPiano = (impostazioni, id) => PIANO_DELLA_VOCE[id]?.(impostazioni) ?? true
 
 // Il QUARTO elemento di una voce dice CHI LA VEDE, ed è una funzione di
 // `ruoli.js`: dove manca, la voce è di tutto il gestionale. Un flag di
@@ -119,9 +126,9 @@ export function titoloPagina(pathname = '', search = '') {
 // È il pezzo che la Fase 3 del piano di sbrandizzazione chiede a questo
 // file: le voci del gestionale compaiono solo se il modulo è attivo.
 export function vociPerRuolo(role, impostazioni = null) {
-  if (!isGestore(role)) return NAV_SALA
+  if (!isGestore(role)) return NAV_SALA.filter(([id]) => nelPiano(impostazioni, id))
   return NAV_GESTIONALE.filter(
-    ([id, , , vede]) => (!vede || vede(role)) && voceVisibile(impostazioni, id)
+    ([id, , , vede]) => (!vede || vede(role)) && voceVisibile(impostazioni, id) && nelPiano(impostazioni, id)
   )
 }
 
@@ -138,5 +145,5 @@ export function sezioneConsentita(id, role, impostazioni = null) {
   if (voce?.[3] && !voce[3](role)) return false
   // E una funzione che il locale non ha non si apre nemmeno a chi avrebbe
   // il ruolo giusto: la voce non c'è per nessuno.
-  return voceVisibile(impostazioni, id)
+  return voceVisibile(impostazioni, id) && nelPiano(impostazioni, id)
 }

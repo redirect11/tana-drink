@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 285 | fatto e coperto dai test |
+| ✅ | 287 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**344 voci** in tutto. **306** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**345 voci** in tutto. **308** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 11 | 4 |  |
+| [LIC](#lic) | 13 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 170 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 171 |
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
-**14** bisogni del locale, **0** con un test di accettazione.
-**95** requisiti su 336 sono collegati a un bisogno;
+**15** bisogni del locale, **0** con un test di accettazione.
+**97** requisiti su 337 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -200,6 +200,14 @@ La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non d
 **Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
 
 **Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-015 — Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge
+
+Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a pagamento, e la Tana, lavorano come sempre. Quello che il piano non comprende non si vede, e dove lo si incontra si dice in una frase piana con la strada per i piani (decisioni di Daniele del 31/10/2026 sul Free, e del 12/11/2026: senza stati di servizio e senza stampa).
+
+**Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3879,6 +3887,20 @@ LE FUNCTIONS CHE L'APP NON CHIAMA: notifyNewOrder, notifyOrderUpdate e notifySta
 
 **Dove**: `src/lib/limiti.js (profiloLeggero, senzaFunctions), src/lib/staffApi.js, src/lib/paymentsApi.js, src/lib/storage.js, src/lib/licenza.js (sumupDisponibile), src/components/PaymentScreen.jsx, src/pages/BartenderPage.jsx, src/components/SettingsTab.jsx, src/components/DrinkForm.jsx, src/lib/saveDrink.js` · **Lo dimostrano**: `tests/unit/profiloLeggero.test.js`, `tests/unit/limiti.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/component/MenuManager.test.jsx`
 
+#### REQ-LIC-005 — Il Free è una cassa semplice: si battono le righe e si incassa, senza comande
+
+«Io nella free non metterei le comande [...] Deve essere proprio base, solo per provare» (l'utente, 31/10/2026). Deciso lo stesso giorno:
+
+CASSA SEMPLICE. La regia scrive nei `limiti` del Free la chiave nuova `comande: false`; come per gli sconti, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `comande: false`: si battono le righe e si incassa. Niente coda di preparazione con le colonne e gli stati (in preparazione, pronto, servito), niente stampa della comanda al banco, niente impostazioni della preparazione e della stampa delle comande; lo scontrino resta. I conti aperti si vedono come elenco da incassare. Il modello dati non cambia: un conto resta fatto di comande, che nascono già SERVITE (né «da fare» né «in preparazione»), così il giorno che il locale passa a un piano a pagamento non trova comande appese in coda. Ogni punto dove si incontra il limite lo dice con la frase del piano e porta a `licenza.regia_url` (AvvisoPiano).
+
+DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico resta di 7 giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di toglierlo e ha deciso di tenerlo.
+
+FATTO (12/11/2026, richiesto di nuovo da Daniele lo stesso giorno: il Free è senza stati di servizio). Una domanda sola, `servizioAttivo` in lib/limiti.js — l'interruttore «Segui la preparazione», a meno che il piano non escluda le comande — al posto di ogni lettura di `workflow_enabled`: il Free passa dalla strada del servizio spento, che esisteva già (niente stati, avanzamenti, tempi, stima ai clienti, vista del banco; coda come elenco dei conti da incassare; le comande risultano servite all'incasso, e lì si scala il magazzino). La comanda non si stampa (`stampaComandeNelPiano`, cancello in printComanda e in comandeDaStampare), lo scontrino segue `stampa` (REQ-LIC-016); in Impostazioni la preparazione lascia il posto alla frase del piano e spariscono tempi di servizio, campi e stampa automatica della comanda; le righe aggiunte vanno nella comanda aperta, senza la domanda «dove vanno?».
+
+CAMBIATO RISPETTO ALLA PRIMA STESURA: le comande NON nascono già servite. Una comanda servita blocca le sue quantità (lockedQtyByItem): in una cassa semplice una riga battuta per sbaglio non si potrebbe più togliere. Restano «ricevute», cioè modificabili, fino all'incasso, come col servizio spento a mano. Il prezzo: un locale che passa a un piano a pagamento con dei conti aperti li ritrova in coda «da fare», e lo sono. Al passaggio inverso (da un piano a pagamento al Free) le comande già avanti negli stati restano lì finché il conto non si incassa.
+
+**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/stampaFuoriPiano.test.js`, `tests/component/PaymentScreen.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
 #### REQ-LIC-007 — La licenza in Impostazioni: piano, validità e moduli in lettura, la gestione sta nella regia
 
 «Dovrebbe esserci una parte dove si vede la licenza attuale e la sua validità, ma la gestione rimanda sempre a regia» (l'utente, 31/10/2026). Una sottosezione «Licenza» in Impostazioni, al titolare, in sola lettura: il piano; lo stato (attiva, sospesa); la VALIDITÀ, da una voce nuova della licenza `valida_fino` (data ISO, o null per un piano senza scadenza: «Valida fino al 30 novembre 2026» o «Senza scadenza»); i moduli inclusi e quelli in prova con la loro scadenza (`licenza.prove`); i limiti del piano in chiaro, se ci sono. Un solo tasto, «Gestisci la licenza», verso `licenza.regia_url`: dall'app non si cambia niente.
@@ -3946,6 +3968,16 @@ DECISIONE DELL'UTENTE (07/11/2026), la via di mezzo fra le tre proposte: le fatt
 LE FATTURE AI FORNITORI DA SOLE. La sezione Fornitori si apre con il magazzino O con lo scadenzario (una sezione può essere di più moduli, `sezioni` di ognuno): con il solo scadenzario dentro ci sono l'anagrafica dei fornitori e lo scadenzario, e le regole lasciano scrivere i fornitori anche a lui. Ordini, altre spese e listini restano del magazzino. La sezione resta dov'è, sotto Fornitori, come deciso dall'utente il 26/08/2026: con il magazzino non cambia niente.
 
 **Dove**: `src/lib/licenza.js (richiede, moduliDiSezione), src/lib/marketplaceModuli.js, src/components/MarketplaceTab.jsx, src/components/SettingsTab.jsx, src/components/FornitoriTab.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/dipendenzeModuli.test.js`, `tests/component/FornitoriTab.test.jsx`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/regoleLicenza.test.js`, `tests/regole/licenza.test.js`
+
+#### REQ-LIC-016 — Nel Free non si stampa niente: né comande, né scontrini, né il resto
+
+Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La regia scrive nei `limiti` del Free la voce `stampa: false`. Come per le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `stampa: false` non esce niente dalla stampante: né la comanda (a mano o automatica, dal banco, dalla sala o dal telefono del cliente), né lo scontrino di cortesia o dell'acconto, né la fattura, la chiusura della cassa, l'ordine al fornitore, l'anteprima o la prova di stampa. L'app non cerca la stampante e non ne controlla lo stato (niente pallino della stampante, niente certificato). Spariscono i tasti di stampa e le impostazioni della stampante e della stampa; dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano). Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti: una stampa che partisse da un tasto dimenticato non esce lo stesso. Incassare, chiudere la cassa e tutto il resto funzionano come sempre: si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005, ancora da fare), che toglie gli stati di servizio e la stampa della sola comanda.
+
+FATTO (12/11/2026): `stampaConsentita` e `stampaNelPiano` in lib/limiti.js (la seconda legge la licenza ricordata, che subscribeSettings riscrive prima di avvisare le schermate: tasti e cancello rispondono uguale); il cancello in `lavoroDiStampa`, che rifiuta con la frase del piano senza aprire un lavoro nel registro; `scontrinoAutomatico`, `comandeDaStampare`, lo scontrino dell'impagato e dell'acconto, la sala che stampa da sé, la chiusura della cassa e l'invio dal telefono rispondono «no» prima; `preparaStampante` e il pallino non cercano la stampante. Spariti i tasti di stampa (coda, conto, cassa, storico, chiusure, fatture, ordini ai fornitori, comanda) e, in Impostazioni, stampante, campi, logo, stampa automatica e «Riscuoti (senza stampa)»: al posto della stampante la frase del piano. `stampa: false` anche nella copia dei limiti del Free dell'app (licenzaInVigore.js).
+
+DOPO IL /simplify (12/11/2026): le schermate che hanno le impostazioni chiedono a `stampaConsentita(settings)`; `stampaNelPiano` resta per printer.js e per chi non le ascolta, e legge solo la licenza ricordata (non tutto il blocco, che porta anche il logo delle stampe). La licenza si ricorda anche quando settings/bar non c'è. La voce «Stampante» (e «Da servire» senza comande) segue il piano anche nel menu della sala e negli indirizzi battuti a mano (lib/sezioni.js).
+
+**Dove**: `src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/stampaFuoriPiano.test.js`, `tests/unit/sezioni.test.js`, `tests/unit/impostazioniLocali.test.js`, `tests/component/SettingsTab.test.jsx`
 
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
@@ -4488,16 +4520,6 @@ Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tara
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
-
-#### REQ-LIC-005 — Il Free è una cassa semplice: si battono le righe e si incassa, senza comande
-
-«Io nella free non metterei le comande [...] Deve essere proprio base, solo per provare» (l'utente, 31/10/2026). Deciso lo stesso giorno:
-
-CASSA SEMPLICE. La regia scrive nei `limiti` del Free la chiave nuova `comande: false`; come per gli sconti, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `comande: false`: si battono le righe e si incassa. Niente coda di preparazione con le colonne e gli stati (in preparazione, pronto, servito), niente stampa della comanda al banco, niente impostazioni della preparazione e della stampa delle comande; lo scontrino resta. I conti aperti si vedono come elenco da incassare. Il modello dati non cambia: un conto resta fatto di comande, che nascono già SERVITE (né «da fare» né «in preparazione»), così il giorno che il locale passa a un piano a pagamento non trova comande appese in coda. Ogni punto dove si incontra il limite lo dice con la frase del piano e porta a `licenza.regia_url` (AvvisoPiano).
-
-DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico resta di 7 giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di toglierlo e ha deciso di tenerlo.
-
-**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx`
 
 #### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
 

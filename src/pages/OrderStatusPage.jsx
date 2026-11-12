@@ -38,6 +38,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx'
 import PaymentPanel from '../components/PaymentPanel.jsx'
 import OrderPosDetail from '../components/OrderPosDetail.jsx'
 import QRCode from 'qrcode'
+import { servizioAttivo } from '../lib/limiti.js'
 
 export default function OrderStatusPage() {
   const { id } = useParams()
@@ -229,10 +230,11 @@ export default function OrderStatusPage() {
   // Coda attiva: serve per la posizione in coda.
   const orderActive =
     order && (order.workflow_status === ORDER_STATUSES.RICEVUTO || order.workflow_status === ORDER_STATUSES.IN_PREPARAZIONE)
+  const workflowOn = servizioAttivo(settings)
   useEffect(() => {
-    if (!settings.eta_enabled || settings.workflow_enabled === false || !orderActive) return
+    if (!settings.eta_enabled || !workflowOn || !orderActive) return
     return subscribeQueue(setQueue)
-  }, [settings.eta_enabled, settings.workflow_enabled, orderActive])
+  }, [settings.eta_enabled, workflowOn, orderActive])
 
   async function enableNotifications() {
     const ok = await ensureNotificationPermission()
@@ -348,7 +350,6 @@ export default function OrderStatusPage() {
 
   // Tempo stimato personalizzato: tiene conto degli ordini attivi davanti a
   // questo (la coda non viene mostrata, conta solo la posizione).
-  const workflowOn = settings.workflow_enabled !== false
   // CHI DEVE ALZARSI. Il ritiro al banco è l'unico caso in cui, quando il
   // drink è pronto, la palla passa al cliente: da qui in poi cambia cosa
   // gli si promette e cosa gli si dice.
@@ -691,7 +692,7 @@ export default function OrderStatusPage() {
               succede. */}
           {viewerIsStaff && (
             <>
-              {settings.workflow_enabled === false ? null : !showQr ? (
+              {!workflowOn ? null : !showQr ? (
                 <button className="btn secondary block" onClick={() => setShowQr(true)}>
                   📲 Mostra QR al cliente
                 </button>

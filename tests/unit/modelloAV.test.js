@@ -36,7 +36,7 @@ const servePer = bisogniPerRequisito(bisogni)
 // bisogno che li citi. Si abbassa ogni volta che se ne collega uno, e non si
 // alza mai: una voce NUOVA senza bisogno la boccia la regola qui sotto, non
 // questo numero.
-const MASSIMO_SENZA_BISOGNO = 242
+const MASSIMO_SENZA_BISOGNO = 241
 
 describe('il livello di un test', () => {
   it('di regola lo dice la cartella', () => {

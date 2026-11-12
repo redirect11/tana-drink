@@ -1,6 +1,20 @@
 # Cosa è cambiato
 
-## 1.10.39-beta — in lavorazione
+## 1.10.40-beta — in lavorazione
+
+### Licenza
+
+- Piano Free: la stampa non è compresa. Non escono comande, scontrini,
+  chiusure di cassa, fatture né ordini ai fornitori; i tasti di stampa e le
+  impostazioni della stampante non compaiono, e al loro posto si legge la
+  frase del piano. Incassi e chiusura della cassa funzionano come sempre.
+  Nei piani a pagamento non cambia niente.
+- Piano Free: la cassa è semplice. Non ci sono gli stati del servizio né la
+  coda di preparazione: si battono le righe e si incassa, e i conti aperti
+  si vedono come elenco da incassare. In Impostazioni, al posto della
+  gestione della preparazione, si legge la frase del piano.
+
+## 1.10.39-beta — 12/11/2026 (test)
 
 ### Gestionale
 

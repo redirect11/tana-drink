@@ -8,6 +8,7 @@ import {
 } from '../lib/api.js'
 import { cashRecap } from '../lib/cassa.js'
 import { printChiusuraCassa } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { toastError, toastSuccess } from '../lib/toast.js'
 import Icona from './Icona.jsx'
@@ -65,9 +66,12 @@ export default function ChiudiCassaBox({ by, onClose }) {
       snapshot: recap,
       countedCash: counted === '' ? null : counted,
     })
-    printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
-      toastError(`Chiusura non stampata: ${e.message}`)
-    )
+    // Nel piano senza stampa la cassa si chiude e basta (REQ-LIC-016).
+    if (stampaNelPiano()) {
+      printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
+        toastError(`Chiusura non stampata: ${e.message}`)
+      )
+    }
     toastSuccess('Cassa chiusa.')
     onClose()
   }

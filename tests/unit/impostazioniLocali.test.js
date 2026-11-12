@@ -10,6 +10,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   ricordaImpostazioni,
+  ricordaLicenza,
+  licenzaRicordata,
   impostazioniRicordate,
   corsieNascoste,
   ricordaCorsieNascoste,
@@ -114,5 +116,22 @@ describe('le preferenze di questo terminale', () => {
     localStorage.setItem('drink:corsie:vista', 'boh')
     expect(corsieNascoste()).toBe(null)
     expect(vistaCorsie()).toBe(null)
+  })
+})
+
+// LA LICENZA DA SOLA (REQ-LIC-016). Su un locale appena installato
+// settings/bar non c'è, ma la licenza vale: si ricorda lo stesso, perché la
+// stampa la legge da qui e deve dire quello che dicono le schermate.
+describe('la licenza ricordata da sola', () => {
+  it('si ricorda senza toccare le altre impostazioni', () => {
+    ricordaImpostazioni({ queue_view: 'corsie' })
+    ricordaLicenza({ piano: 'free' })
+    expect(impostazioniRicordate(DEFAULTS)).toEqual({ ...DEFAULTS, queue_view: 'corsie', licenza: { piano: 'free' } })
+  })
+
+  it('una licenza non detta non cancella quella ricordata', () => {
+    ricordaLicenza({ piano: 'free' })
+    ricordaLicenza(undefined)
+    expect(licenzaRicordata()).toEqual({ piano: 'free' })
   })
 })

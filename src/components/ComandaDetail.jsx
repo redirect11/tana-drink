@@ -248,9 +248,11 @@ export default function ComandaDetail({
             />
           </div>
         )}
-        <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
-          <Icona nome="stampa" gruppo="tasti" /> Ristampa la comanda
-        </button>
+        {onStampa && (
+          <button className="btn ghost small block comanda-det-stampa" onClick={onStampa}>
+            <Icona nome="stampa" gruppo="tasti" /> Ristampa la comanda
+          </button>
+        )}
       </div>
       </div>
     </div>

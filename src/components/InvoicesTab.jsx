@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { subscribeInvoices, markInvoiceSent } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printFattura, loadPrinterSettings, datiFiscaliDelLocale } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import { mailFattura } from '../lib/mailFattura.js'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
@@ -13,6 +14,8 @@ import { useTestoConIcona } from '../lib/temaIcone.js'
 // e si ristampano.
 
 export default function InvoicesTab() {
+  // Nel piano senza stampa (REQ-LIC-016) la fattura si manda, non si stampa.
+  const stampaOn = stampaNelPiano()
   const testoConIcona = useTestoConIcona()
   const [invoices, setInvoices] = useState([])
   const [error, setError] = useState(null)
@@ -86,12 +89,14 @@ export default function InvoicesTab() {
             <button className="btn ghost small" onClick={() => invia(f)}>
               <Icona nome="email" gruppo="tasti" /> Invia via email
             </button>
-            <button
-              className="btn ghost small"
-              onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
-            >
-              <Icona nome="stampa" gruppo="tasti" /> Stampa
-            </button>
+            {stampaOn && (
+              <button
+                className="btn ghost small"
+                onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <Icona nome="stampa" gruppo="tasti" /> Stampa
+              </button>
+            )}
           </div>
         </div>
       ))}

@@ -11,6 +11,7 @@ import { auth } from '../lib/firebaseClient.js'
 import { cashRecap } from '../lib/cassa.js'
 import { formatPrice, cashMethodKeys } from '../lib/orderStatus.js'
 import { printChiusuraCassa } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import { toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
@@ -261,9 +262,12 @@ function ChiudiCassa({ session, recap, by }) {
       await closeCashSession(session.id, { by, snapshot: recap, countedCash: counted === '' ? null : counted })
       // Scontrino di chiusura: contante, carte, sconti e totale, da allegare
       // al fondo. Se la stampante non risponde la cassa resta comunque chiusa.
-      printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
-        toastError(`Chiusura non stampata: ${e.message}`)
-      )
+      // Nel piano senza stampa la cassa si chiude e basta (REQ-LIC-016).
+      if (stampaNelPiano()) {
+        printChiusuraCassa(recap, session, { by: by?.email, countedCash: counted }).catch((e) =>
+          toastError(`Chiusura non stampata: ${e.message}`)
+        )
+      }
     } finally {
       setBusy(false)
     }

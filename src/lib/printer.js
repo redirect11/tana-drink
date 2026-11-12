@@ -32,7 +32,7 @@ import { battutoDaQui } from './dispositivo.js'
 import { isGestore } from './ruoli.js'
 import { impostazioniRicordate } from './impostazioniLocali.js'
 import { intestazioneScontrino, venueDi, venuePredefinito, righeFiscali, partitaIva } from './venue.js'
-import { rigaMarchio } from './limiti.js'
+import { rigaMarchio, stampaNelPiano, comandeNelPiano, stampaComandeNelPiano, MESSAGGI_PIANO } from './limiti.js'
 import {
   configStampa,
   immagineCaricata,
@@ -77,6 +77,15 @@ function stampaMarchio(prn, impostazioni) {
 // di partenza, che è il comportamento di sempre. Niente da migrare,
 // niente da aspettare.
 const impostazioniDelLocale = () => impostazioniRicordate({})
+
+// ── IL PIANO SENZA STAMPA (REQ-LIC-016) ─────────────────────────────
+// Con `stampa: false` nei limiti della licenza non esce niente. Il cancello
+// vero è in `lavoroDiStampa`, da cui passa ogni foglio: un tasto
+// dimenticato in una schermata, o un chiamante scritto domani, non stampa
+// lo stesso. Le schermate usano la stessa domanda per nascondere i tasti,
+// e gli automatismi (scontrino dopo l'incasso, comande al banco) la fanno
+// prima di decidere, così non nasce un errore a ogni conto.
+// La domanda sta in lib/limiti.js, con le altre del piano.
 
 // I DATI FISCALI SI LEGGONO DAL LOCALE AL MOMENTO DELLA STAMPA, non dalle
 // impostazioni della stampante: quelle, una volta salvate su un
@@ -405,11 +414,11 @@ export function ruoloDellaComanda(order, comanda) {
 }
 // Lo scontrino automatico di una riscossione fatta da `role`.
 export function scontrinoAutomatico(role, impostazioni = loadPrinterSettings()) {
-  return impostazioni?.autoPrintScontrino === true && stampaDa(impostazioni.autoPrintScontrinoDa, role)
+  return stampaNelPiano() && impostazioni?.autoPrintScontrino === true && stampaDa(impostazioni.autoPrintScontrinoDa, role)
 }
 
 export function comandeDaStampare(order, opzioni = {}) {
-  if (!order || lavoroAnnullato(order)) return []
+  if (!order || lavoroAnnullato(order) || !stampaComandeNelPiano()) return []
   if (!stampaQuestoTerminale(order, opzioni)) return []
   const da = (opzioni.impostazioni || loadPrinterSettings()).autoPrintComandaDa
   // IL CONTO SI STA ANCORA COMPONENDO: niente carta. È il facsimile col
@@ -1041,6 +1050,8 @@ function avviaBattito() {
 // Se il certificato non è più accettato, l'errore esce ADESSO — quando c'è
 // tempo per sistemarlo — invece che al primo scontrino della serata.
 export async function preparaStampante() {
+  // Senza stampa nel piano non si cerca nessuna stampante.
+  if (!stampaNelPiano()) return { ok: false, motivo: MESSAGGI_PIANO.stampa }
   // Con la stampante finta non c'è niente da scaldare: risponde sempre.
   if (stampanteFintaAttiva()) return { ok: true }
   const s = loadPrinterSettings()
@@ -1352,6 +1363,9 @@ const etichettaConto = (che, order) =>
 // un gesto. La risposta, se e quando arriva, aggiorna la voce nel registro
 // per conto suo (vedi «la risposta della stampante è diagnostica»).
 function lavoroDiStampa(componi, che = 'Stampa') {
+  // Fuori dal piano non si apre nemmeno un lavoro nel registro: non è una
+  // stampa non riuscita, è una stampa che non c'è.
+  if (!stampaNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.stampa))
   const idLavoro = lavoroInCoda(che)
   let scaduto = false
   const mio = _codaStampa.then(async () => {
@@ -1505,6 +1519,9 @@ export function printComanda(order, comanda = null) {
   // (BUG-052). Un conto annullato non ha carta da far uscire, nemmeno dal
   // tasto a mano, nemmeno da un chiamante scritto domani.
   if (lavoroAnnullato(order, comandaDelTicket(order, comanda))) return Promise.resolve()
+  // Nel piano senza comande (REQ-LIC-005) la comanda non si stampa, anche
+  // se lo scontrino sì. La stampa in sé la controlla lavoroDiStampa.
+  if (!comandeNelPiano()) return Promise.reject(new Error(MESSAGGI_PIANO.comande))
   return lavoroDiStampa(async (prn) => {
     const cfg = configStampa(impostazioniDelLocale(), 'comanda')
     const now = new Date()

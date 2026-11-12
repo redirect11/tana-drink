@@ -254,3 +254,23 @@ describe('la sala e la stampante', () => {
     expect(NAV_SALA.map(([id]) => id)).toContain('stampante')
   })
 })
+
+// REQ-LIC-016, REQ-LIC-005: la stampante senza la stampa, «Da servire»
+// senza le comande. Togliere la voce dal menu non basta: anche
+// `/bar?tab=stampante` battuto a mano non deve aprire la pagina.
+describe('le voci che il piano toglie', () => {
+  const free = { licenza: { piano: 'free', moduli: {}, limiti: { stampa: false, comande: false } } }
+
+  it('senza stampa la stampante non si apre, nemmeno a mano', () => {
+    expect(sezioneConsentita('stampante', 'admin', free)).toBe(false)
+    expect(sezioneConsentita('stampante', 'admin', TANA)).toBe(true)
+  })
+
+  it('alla sala spariscono stampante e «Da servire»; alla Tana ci sono', () => {
+    const voci = (imp) => vociPerRuolo('staff', imp).map(([id]) => id)
+    expect(voci(free)).toEqual(['coda'])
+    expect(voci(TANA)).toEqual(['coda', 'servizio', 'stampante'])
+    // Prima che le impostazioni arrivino, come sempre.
+    expect(voci(null)).toEqual(['coda', 'servizio', 'stampante'])
+  })
+})

@@ -21,7 +21,7 @@ import { strutturaDi } from '../components/stiliStrutturati.js'
 import { sezioniPerLoStile } from '../lib/contrattoStile.js'
 import { venueDi, pressoIlLocale } from '../lib/venue.js'
 import { ordinazioneClientiAttiva } from '../lib/licenza.js'
-import { rigaMarchio } from '../lib/limiti.js'
+import { rigaMarchio, stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import {
   subscribeServiceStats,
   subscribeSettings,
@@ -355,7 +355,7 @@ export default function MenuPage({ speciali = false }) {
       // e l'ordine è comunque salvato.
       // E solo se il locale vuole in automatico le comande della sala: con
       // «Solo dal banco» non le stampa nessuno da sé (REQ-STAMPA-021).
-      if (staff && salaStampaDaSe() && stampaDa(loadPrinterSettings().autoPrintComandaDa, staff.role)) {
+      if (staff && stampaComandeConsentita(settings) && salaStampaDaSe() && stampaDa(loadPrinterSettings().autoPrintComandaDa, staff.role)) {
         printComanda(order, order.comande?.at(-1) ?? null).catch((e) =>
           console.warn('[printer] comanda sala:', e.message)
         )
@@ -445,7 +445,7 @@ export default function MenuPage({ speciali = false }) {
   // scelta del cliente.
   // La stima nasce dai tempi di lavorazione: senza gestione preparazione
   // non ci sono tempi da misurare, quindi non si mostra nulla.
-  const etaMinutes = settings.eta_enabled && settings.workflow_enabled !== false
+  const etaMinutes = settings.eta_enabled && servizioAttivo(settings)
     ? etaForMode(settings.service_mode === 'tavolo' ? 'tavolo' : 'banco', {
         etaStats: serviceStats.eta_stats,
         prepStats: serviceStats.prep_stats,
