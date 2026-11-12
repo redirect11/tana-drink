@@ -3179,9 +3179,13 @@ SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077 della regia
 
 QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, scritto dalla regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale`: nei progetti che non nascono dalla regia (tana-drink, tana-drink-test, drinkpos-prova-e2e) l'account non c'è, e chiederlo fermerebbe il deploy di tutte le Functions.
 
-DA PROVARE SUL TEST, chiesto dalla regia: che `serviceAccount: 'ai-locale@'` sia completato col progetto al deploy, e che Google dia un gettone a un destinatario che non è un indirizzo web.
+PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce.
 
-RESTA: l'AI per la Tana (l'account `ai-locale` nei suoi due progetti e `REGIA_PROGETTO`, oppure la chiave che la regia prevede per lei), la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+DA PROVARE: che Google dia il gettone al destinatario `regia-ai:drink-regia-test`, che non è un indirizzo web (una richiesta vera da prova-bar).
+
+LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO` a functions/.env.tana-drink-test, e poi a quello della produzione.
+
+RESTA: l'AI per la Tana (sopra), la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
 **Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
 
