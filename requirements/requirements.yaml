@@ -6994,6 +6994,29 @@ requirements:
       - tests/unit/impostazioniLocali.test.js
       - tests/component/SettingsTab.test.jsx
 
+  - id: REQ-LIC-017
+    title: "Nel Free non c'è l'AI: niente tasti AI, chat né credito"
+    area: "src/lib/limiti.js, src/lib/aiApi.js (aiRaggiungibile, codice «piano»), functions/lib/ai-service.js, src/lib/licenzaInVigore.js"
+    description: >
+      Decisione di Daniele del 13/11/2026, portata dalla regia: il Free non
+      ha l'AI. La regia scrive `ai: false` nei limiti del Free, come
+      `comande: false` (REQ-LIC-005) e `stampa: false` (REQ-LIC-016); come
+      per le altre voci, solo un `false` scritto spegne, e senza la voce (la
+      Tana, i piani a pagamento) non cambia niente.
+      CON `ai: false`: nessun tasto AI («Proponi una descrizione», «Leggi
+      con l'AI»), niente chat, niente credito in Impostazioni. Il blocco
+      vero resta nella regia, che a un locale Free risponde 402
+      `{ codice: "piano" }`: l'app lo traduce in una frase piana, se mai ci
+      si arriva. `ai: false` anche nella copia dei limiti del Free dell'app.
+      Per conoscenza (Daniele, 13/11/2026): il credito non scade, nessun
+      piano a pagamento include credito, il costo si calcola col cambio BCE
+      del giorno.
+    status: todo
+    generate_issue: true
+    labels: [licenza, ai, prodotto]
+    priority: P2
+    test_cases: []
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
@@ -8434,6 +8457,16 @@ requirements:
       prima risponderebbe sempre 401.
       RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la
       fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+      IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia,
+      13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone →
+      200 `{ ok, tipo: 'credito', credito_eur, tetto_mensile_eur (sempre un
+      numero), speso_mese_eur, attivo, motivo }`, gratis e senza riga di
+      consumo. `attivo` vuol dire «una richiesta AI può partire adesso»
+      (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo`
+      è null, «credito» o «tetto». Senza cassetto o col cassetto spento il
+      402 di sempre. Si chiede all'apertura delle Impostazioni (e della
+      chat, REQ-AI-006): DA FARE in Impostazioni → Licenza, un riquadro
+      «Credito AI».
     status: partial
     generate_issue: true
     labels: [ai, licenza, prodotto]

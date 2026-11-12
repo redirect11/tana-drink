@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 12 novembre 2026.
+> Generato il 13 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 288 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**345 voci** in tutto. **309** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**346 voci** in tutto. **309** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 13 | 3 |  |
+| [LIC](#lic) | 13 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 178 |
 
 **15** bisogni del locale, **0** con un test di accettazione.
-**97** requisiti su 337 sono collegati a un bisogno;
+**98** requisiti su 338 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -207,7 +207,7 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3205,6 +3205,10 @@ LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo accou
 
 RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
+IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia, 13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone → 200 `{ ok, tipo: 'credito', credito_eur, tetto_mensile_eur (sempre un numero), speso_mese_eur, attivo, motivo }`, gratis e senza riga di consumo. `attivo` vuol dire «una richiesta AI può partire adesso» (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo` è null, «credito» o «tetto». Senza cassetto o col cassetto spento il 402 di sempre. Si chiede all'apertura delle Impostazioni (e della chat, REQ-AI-006):
+
+DA FARE in Impostazioni → Licenza, un riquadro «Credito AI».
+
 **Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
 
 ### Interfaccia
@@ -4554,6 +4558,12 @@ COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti sopra lo stess
 DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i gestori sulla propria istanza, chiunque dal marketplace); cosa può toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel browser, nelle Functions, tutti e due); chi lo rivede prima che vada in un locale; se i moduli a pagamento restano in licenza come oggi anche quando diventano plugin.
 
 **Dove**: `da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js`
+
+#### REQ-LIC-017 — Nel Free non c'è l'AI: niente tasti AI, chat né credito
+
+Decisione di Daniele del 13/11/2026, portata dalla regia: il Free non ha l'AI. La regia scrive `ai: false` nei limiti del Free, come `comande: false` (REQ-LIC-005) e `stampa: false` (REQ-LIC-016); come per le altre voci, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `ai: false`: nessun tasto AI («Proponi una descrizione», «Leggi con l'AI»), niente chat, niente credito in Impostazioni. Il blocco vero resta nella regia, che a un locale Free risponde 402 `{ codice: "piano" }`: l'app lo traduce in una frase piana, se mai ci si arriva. `ai: false` anche nella copia dei limiti del Free dell'app. Per conoscenza (Daniele, 13/11/2026): il credito non scade, nessun piano a pagamento include credito, il costo si calcola col cambio BCE del giorno.
+
+**Dove**: `src/lib/limiti.js, src/lib/aiApi.js (aiRaggiungibile, codice «piano»), functions/lib/ai-service.js, src/lib/licenzaInVigore.js` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 #### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
 
