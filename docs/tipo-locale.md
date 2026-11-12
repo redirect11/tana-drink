@@ -32,8 +32,11 @@ node scripts/genera-cliente.mjs --sa tipo-locale
 ```
 
 - esce con **0**, senza scrivere niente su disco;
-- stampa su stdout una riga JSON coi valori che accetta, oggi
-  `{"tipo-locale":["bar"]}`.
+- stampa su stdout **soltanto** una riga JSON coi valori che accetta, oggi
+  `{"tipo-locale":["bar"]}`. Niente altro su stdout, nemmeno una riga di
+  log: la regia legge tutto lo stdout come JSON. Gli avvisi, se servono,
+  vanno su stderr, che la regia ignora;
+- i valori stanno in un **elenco**, anche quando è uno solo.
 
 La regia fa questa domanda prima di costruire l'app. Le versioni di oggi,
 che non conoscono `--sa`, escono con 1 (manca `--slug`): la regia lo prende
@@ -75,12 +78,20 @@ Nei workflow che costruiscono l'app di un locale (`provisiona-istanza.yml`
 e `aggiorna-istanza.yml`):
 
 ```sh
-if node scripts/genera-cliente.mjs --sa tipo-locale; then
+SA=$(node scripts/genera-cliente.mjs --sa tipo-locale 2>/dev/null) || SA=''
+if [ -n "$SA" ] && node -e '…elenco["tipo-locale"] contiene "bar"…' -- "$SA" bar; then
   node scripts/genera-cliente.mjs --slug "$SLUG" --nome "$NOME" --tipo-locale bar
 else
+  # se $SA non è vuoto, la regia lo segnala come avviso: formato sbagliato
   node scripts/genera-cliente.mjs --slug "$SLUG" --nome "$NOME"
 fi
 ```
+
+Cioè: la regia manda `--tipo-locale bar` solo se l'uscita è 0, lo stdout è
+un JSON valido, e il suo `"tipo-locale"` è un elenco che contiene `bar`.
+In ogni altro caso fa la chiamata di oggi. Se la risposta c'era ma non era
+nel formato atteso, nel registro del workflow compare un avviso: così un
+errore di formato da questa parte si vede.
 
 Per ora manda sempre `bar`, a tutti: è la decisione di Daniele del
 12/11/2026 («tutti i tipi vanno a bar finché non decido altrimenti»). Il
@@ -89,8 +100,8 @@ giorno che servirà è già lì.
 
 ## Criteri di accettazione
 
-1. `--sa tipo-locale` esce con 0, non scrive niente, e stampa
-   `{"tipo-locale":["bar"]}`.
+1. `--sa tipo-locale` esce con 0, non scrive niente, e su stdout c'è
+   soltanto `{"tipo-locale":["bar"]}`.
 2. `--sa` con un'altra capacità esce con 1 e non scrive niente.
 3. `--tipo-locale bar` scrive il valore in `venue.json`.
 4. `--tipo-locale` con un valore sconosciuto esce con 1 e non crea la
