@@ -16118,3 +16118,35 @@ requirements:
     priority: P1
     test_cases:
       - tests/unit/squadraStonebit.test.js
+
+  - id: REQ-DEV-023
+    title: "Il merge in develop aspetta anche le regole Firestore e i test di sistema; il revisore si chiama quando serve"
+    area: "GitHub, ruleset del ramo develop (impostazione del repository); docs/gitflow.md, CLAUDE.md, tests/unit/ciComeScritta.test.js, tests/unit/squadraStonebit.test.js"
+    description: >
+      Due decisioni di Daniele del 12/11/2026, in chat, sulle domande della
+      PR #340.
+      1. IL CANCELLO DEL MERGE. Fino ad oggi per mergiare in `develop` era
+         obbligatorio un solo check, «Lint, test e build»: «Regole Firestore
+         (emulatore)» e «Sistema (Playwright)» giravano sulla pull request,
+         ma rossi non bloccavano niente. Daniele: «rendere obbligatori per
+         il merge anche le regole Firestore e i test di sistema… procedi».
+         SOLO SU `develop`, per ora: su `main` la CI è ancora quella della
+         1.9.3, che quei due job non li ha. Un ramo hotfix nasce da `main` e
+         porta quella CI: con i due check obbligatori su `main` la sua pull
+         request aspetterebbe per sempre due risultati che non arrivano.
+         Su `main` si aggiungono quando la 1.10 ci arriva.
+      2. IL REVISORE. L'11/11 Daniele aveva deciso «revisore sempre, prima
+         di ogni PR»; il CEO-agente di Stonebit scriveva «quando la sessione
+         lo ritiene utile». Daniele, 12/11: «quando serve». La sezione
+         Stonebit di CLAUDE.md lo dice così.
+      CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop`
+      non si può mergiare finché «Lint, test e build», «Regole Firestore
+      (emulatore)» e «Sistema (Playwright)» non sono verdi; su `main` resta
+      obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md
+      lo dicono; la sezione Stonebit dice «revisore quando serve» e non più
+      «sempre».
+    status: todo
+    generate_issue: true
+    labels: [dev, metodo, ci]
+    priority: P1
+    test_cases: []
