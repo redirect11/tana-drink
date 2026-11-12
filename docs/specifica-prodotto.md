@@ -1862,11 +1862,12 @@ l'occasione; il gestore lo valida poi sul sito di test.
 **Varianti**
 
 - *Sul conto c'era già uno sconto prima del passaggio a Free* — Il tasto dello sconto resta visibile, per poterlo togliere.
+- *La licenza del Free scrive anche `stampa: false` (dal 12/11/2026)* — Dalla stampante non esce niente e non c'è nessun tasto di stampa; in «Impostazioni» → «Stampante» si legge «La stampa di comande e scontrini è dei piani a pagamento.» con «Vedi i piani». Il conto si incassa e la cassa si chiude come sempre.
 - *Si crea un prodotto con la foto* — La scheda dice «Le foto dei prodotti sono dei piani a pagamento.» e non offre il caricamento.
 - *La licenza non scrive limiti (un piano a pagamento, la Tana)* — Nessuno dei limiti vale: menù, conti, sconti, storico e utenti come sempre.
 - *La rete è staccata* — I limiti valgono lo stesso: si leggono dalla licenza già in memoria.
 
-- Requisiti: REQ-LIC-003, REQ-LIC-004, REQ-LIC-007
+- Requisiti: REQ-LIC-003, REQ-LIC-004, REQ-LIC-007, REQ-LIC-016
 - Previsti, non ancora fatti: REQ-LIC-005, REQ-LIC-006
 - Test e2e: da scrivere
 

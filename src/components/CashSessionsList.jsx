@@ -26,7 +26,7 @@ import RendicontoSerata from './RendicontoSerata.jsx'
 import CalendarioServizio from './CalendarioServizio.jsx'
 import { giornateConServizio } from '../lib/giorniDiServizio.js'
 import { impostazioniRicordate } from '../lib/impostazioniLocali.js'
-import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaNelPiano } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
@@ -355,7 +355,7 @@ export default function CashSessionsList() {
               </div>
             )}
 
-            {!aperta && (
+            {!aperta && stampaNelPiano() && (
               <button
                 className="btn ghost small block"
                 style={{ marginTop: 10 }}

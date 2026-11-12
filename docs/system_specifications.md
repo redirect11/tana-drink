@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 285 | fatto e coperto dai test |
+| ✅ | 286 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 31 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**345 voci** in tutto. **306** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**345 voci** in tutto. **307** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 11 | 5 |  |
+| [LIC](#lic) | 12 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 170 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 171 |
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **15** bisogni del locale, **0** con un test di accettazione.
@@ -3955,6 +3955,14 @@ LE FATTURE AI FORNITORI DA SOLE. La sezione Fornitori si apre con il magazzino O
 
 **Dove**: `src/lib/licenza.js (richiede, moduliDiSezione), src/lib/marketplaceModuli.js, src/components/MarketplaceTab.jsx, src/components/SettingsTab.jsx, src/components/FornitoriTab.jsx, firestore.rules` · **Lo dimostrano**: `tests/unit/dipendenzeModuli.test.js`, `tests/component/FornitoriTab.test.jsx`, `tests/component/MarketplaceTab.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/regoleLicenza.test.js`, `tests/regole/licenza.test.js`
 
+#### REQ-LIC-016 — Nel Free non si stampa niente: né comande, né scontrini, né il resto
+
+Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La regia scrive nei `limiti` del Free la voce `stampa: false`. Come per le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `stampa: false` non esce niente dalla stampante: né la comanda (a mano o automatica, dal banco, dalla sala o dal telefono del cliente), né lo scontrino di cortesia o dell'acconto, né la fattura, la chiusura della cassa, l'ordine al fornitore, l'anteprima o la prova di stampa. L'app non cerca la stampante e non ne controlla lo stato (niente pallino della stampante, niente certificato). Spariscono i tasti di stampa e le impostazioni della stampante e della stampa; dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano). Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti: una stampa che partisse da un tasto dimenticato non esce lo stesso. Incassare, chiudere la cassa e tutto il resto funzionano come sempre: si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005, ancora da fare), che toglie gli stati di servizio e la stampa della sola comanda.
+
+FATTO (12/11/2026): `stampaConsentita` e `stampaNelPiano` in lib/limiti.js (la seconda legge la licenza ricordata, che subscribeSettings riscrive prima di avvisare le schermate: tasti e cancello rispondono uguale); il cancello in `lavoroDiStampa`, che rifiuta con la frase del piano senza aprire un lavoro nel registro; `scontrinoAutomatico`, `comandeDaStampare`, lo scontrino dell'impagato e dell'acconto, la sala che stampa da sé, la chiusura della cassa e l'invio dal telefono rispondono «no» prima; `preparaStampante` e il pallino non cercano la stampante. Spariti i tasti di stampa (coda, conto, cassa, storico, chiusure, fatture, ordini ai fornitori, comanda) e, in Impostazioni, stampante, campi, logo, stampa automatica e «Riscuoti (senza stampa)»: al posto della stampante la frase del piano. `stampa: false` anche nella copia dei limiti del Free dell'app (licenzaInVigore.js).
+
+**Dove**: `src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/stampaFuoriPiano.test.js`, `tests/component/SettingsTab.test.jsx`
+
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
 L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
@@ -4528,12 +4536,6 @@ COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti sopra lo stess
 DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i gestori sulla propria istanza, chiunque dal marketplace); cosa può toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel browser, nelle Functions, tutti e due); chi lo rivede prima che vada in un locale; se i moduli a pagamento restano in licenza come oggi anche quando diventano plugin.
 
 **Dove**: `da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js`
-
-#### REQ-LIC-016 — Nel Free non si stampa niente: né comande, né scontrini, né il resto
-
-Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La regia scrive nei `limiti` del Free la voce `stampa: false`. Come per le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `stampa: false` non esce niente dalla stampante: né la comanda (a mano o automatica, dal banco, dalla sala o dal telefono del cliente), né lo scontrino di cortesia o dell'acconto, né la fattura, la chiusura della cassa, l'ordine al fornitore, l'anteprima o la prova di stampa. L'app non cerca la stampante e non ne controlla lo stato (niente pallino della stampante, niente certificato). Spariscono i tasti di stampa e le impostazioni della stampante e della stampa; dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano). Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti: una stampa che partisse da un tasto dimenticato non esce lo stesso. Incassare, chiudere la cassa e tutto il resto funzionano come sempre: si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005, ancora da fare), che toglie gli stati di servizio e la stampa della sola comanda.
-
-**Dove**: `src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 #### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
 

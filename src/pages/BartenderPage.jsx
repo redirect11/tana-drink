@@ -143,6 +143,7 @@ import { showToast } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { printComanda, printScontrino, loadPrinterSettings, scontrinoAutomatico, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import MenuManager from '../components/MenuManager.jsx'
 import PrinterSetup from '../components/PrinterSetup.jsx'
 import InventoryManager from '../components/InventoryManager.jsx'
@@ -548,6 +549,9 @@ function PortaInVista({ id }) {
 
 function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   const testoConIcona = useTestoConIcona()
+  // Nel piano senza stampa (REQ-LIC-016) spariscono i tasti di stampa e il
+  // pallino della stampante: non c'è niente da stampare né da controllare.
+  const stampaOn = stampaNelPiano()
   const [ordersReady, setOrdersReady] = useState(false) // primo snapshot arrivato
   const [ordersRaw, setOrders] = useState([])
   // CONTI APPENA CHIUSI QUI: fuori dalla lista all'istante. La scrittura
@@ -2104,13 +2108,15 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     // o riaprire il conto quando ci si accorge di un errore.
     if (isChiuso(o) || annullato(o)) {
       return (
-        <div className="grid-2" style={{ marginTop: 8 }}>
-          <button
-            className="btn ghost small"
-            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
-          >
-            <Icona nome="coda" gruppo="tasti" /> Scontrino
-          </button>
+        <div className={stampaOn ? 'grid-2' : undefined} style={{ marginTop: 8 }}>
+          {stampaOn && (
+            <button
+              className="btn ghost small"
+              onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+            >
+              <Icona nome="coda" gruppo="tasti" /> Scontrino
+            </button>
+          )}
           <button
             className="btn ghost small"
             onClick={() => setRipristinoTarget(o)}
@@ -2271,20 +2277,22 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             ))}
           </div>
         )}
-        <div className="grid-2" style={{ marginTop: 8 }}>
-          <button
-            className="btn ghost small"
-            onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
-          >
-            <Icona nome="stampa" gruppo="tasti" /> Comanda
-          </button>
-          <button
-            className="btn ghost small"
-            onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
-          >
-            <Icona nome="coda" gruppo="tasti" /> Scontrino
-          </button>
-        </div>
+        {stampaOn && (
+          <div className="grid-2" style={{ marginTop: 8 }}>
+            <button
+              className="btn ghost small"
+              onClick={() => printComanda(o, o.comande?.find((cc) => cc.id === o.active_comanda_id) ?? null).catch((e) => setError(`Stampa: ${e.message}`))}
+            >
+              <Icona nome="stampa" gruppo="tasti" /> Comanda
+            </button>
+            <button
+              className="btn ghost small"
+              onClick={() => printScontrino(o).catch((e) => setError(`Stampa: ${e.message}`))}
+            >
+              <Icona nome="coda" gruppo="tasti" /> Scontrino
+            </button>
+          </div>
+        )}
         {/* Annullare è di chi versa: è il suo lavoro che si butta. */}
         {comandaIlLavoro && o.workflow_status === ORDER_STATUSES.RICEVUTO && (
           <button
@@ -2682,7 +2690,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             {/* SI STAMPERÀ? La domanda viene in mente mentre si prende
                 l'ordine, non nelle impostazioni — e in sala le
                 impostazioni non ci sono affatto. */}
-            <PallinoStampante gestore={gestore} />
+            {stampaOn && <PallinoStampante gestore={gestore} />}
             {/* SUL TELEFONO IL ⋯, SUGLI SCHERMI LARGHI LE ICONE. In una
                 barra stretta le azioni che si fanno OGNI TANTO stanno
                 dietro un tasto solo; su tablet e computer lo spazio accanto
@@ -3056,7 +3064,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
                     hint: 'Ne preparo una parte adesso, il resto dopo',
                     onClick: () => navigate(`/ordine/${o.id}/comanda/${c.id}?dividi=1`),
                   },
-                  {
+                  stampaOn && {
                     id: 'ristampa',
                     icon: 'stampa',
                     label: 'Ristampa la comanda',

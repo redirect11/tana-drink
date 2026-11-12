@@ -23,6 +23,7 @@ import { isGestore } from '../lib/ruoli.js'
 import { gestoreRicordato, ricordaRuolo } from '../lib/ruoloLocale.js'
 import { showToast } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import Caricamento from '../components/Caricamento.jsx'
 import ComandaDetail from '../components/ComandaDetail.jsx'
 
@@ -213,10 +214,14 @@ export default function ComandaPage() {
       onApriConto={() => navigate(`/ordine/${order.id}`)}
       onIndietro={() => navigate('/bar')}
       dividiSubito={cerca.get('dividi') === '1'}
-      onStampa={() =>
-        printComanda(order, comanda).catch((e) =>
-          showToast(`Stampa non riuscita: ${e.message}`, { kind: 'error' })
-        )
+      // Nel piano senza stampa il tasto non c'è (REQ-LIC-016).
+      onStampa={
+        stampaNelPiano()
+          ? () =>
+              printComanda(order, comanda).catch((e) =>
+                showToast(`Stampa non riuscita: ${e.message}`, { kind: 'error' })
+              )
+          : undefined
       }
     />
   )

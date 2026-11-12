@@ -24,7 +24,7 @@ import { printScontrino, printScontrinoAcconto, printFattura, loadPrinterSetting
 import { mailFattura } from '../lib/mailFattura.js'
 import { accontoDaStampare, tastoAcconto } from '../lib/scontrinoAcconto.js'
 import { moduloAttivo, sumupAttivo } from '../lib/licenza.js'
-import { scontiConsentiti } from '../lib/limiti.js'
+import { scontiConsentiti, stampaNelPiano } from '../lib/limiti.js'
 import { showToast, toastError } from '../lib/toast.js'
 import Icona from './Icona.jsx'
 import MetodoPagamento from './MetodoPagamento.jsx'
@@ -141,6 +141,9 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
       // d'ufficio) vale la pretesa normale: una copia e basta.
       if (
         order.daily_number != null &&
+        // Nel piano senza stampa non esce niente, nemmeno per l'impagato
+        // (REQ-LIC-016).
+        stampaNelPiano() &&
         // «Riscuoti (senza stampa)»: il gesto dice esplicitamente che la
         // carta non serve — cliente che rifiuta lo scontrino di cortesia,
         // conto interno. Non si prende nemmeno la pretesa: se il conto
@@ -350,7 +353,10 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
   // «Riscuoti (senza stampa)»: acceso dalle impostazioni del locale. Serve
   // dove capita spesso che lo scontrino di cortesia non lo voglia nessuno:
   // un tasto in più qui vale solo se quel caso è la normalità del locale.
-  const riscuotiSenzaStampa = settings?.riscuoti_senza_stampa === true
+  // Nel piano senza stampa (REQ-LIC-016) non c'è carta da tacere, né
+  // preconto o fattura da stampare.
+  const stampaOn = stampaNelPiano()
+  const riscuotiSenzaStampa = stampaOn && settings?.riscuoti_senza_stampa === true
   // IL RESTO IN CONTANTI (REQ-PAG-015): un'impostazione del locale.
   const restoAttivo = settings?.resto_contanti === true
   // La fattura di cortesia al cliente: funzione premium (lib/licenza.js).
@@ -687,6 +693,7 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
     // la carta non esce lo si dice, e basta — l'incasso è registrato lo
     // stesso, e ristampare un acconto è un gesto, non un guaio.
     else if (
+      stampaNelPiano() &&
       accontoDaStampare({
         settings,
         chiude: willClose,
@@ -1277,12 +1284,14 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
             <button className="btn ghost small grow" onClick={() => setShowLottery(true)}>
               <Icona nome="buono" gruppo="tasti" />{' '}Codice Lotteria{order.lottery_code ? ' ✓' : ''}
             </button>
-            <button
-              className="btn ghost small grow"
-              onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
-            >
-              <Icona nome="stampa" gruppo="tasti" /> Preconto
-            </button>
+            {stampaOn && (
+              <button
+                className="btn ghost small grow"
+                onClick={() => printScontrino(order).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <Icona nome="stampa" gruppo="tasti" /> Preconto
+              </button>
+            )}
             {fattureOn && (
               <button className="btn ghost small grow" onClick={() => setShowInvoice(true)}>
                 <Icona nome="email" gruppo="tasti" />{' '}Invia fattura{order.invoice_number ? ' ✓' : ''}
@@ -1580,13 +1589,15 @@ export default function PaymentScreen({ order: orderProp, settings, onClose, onP
                 <button className="btn block" onClick={() => sendInvoiceEmail(invoice)}>
                   <Icona nome="email" gruppo="tasti" />{' '}Invia via email{invoice.customer?.email ? ` a ${invoice.customer.email}` : ''}
                 </button>
-                <button
-                  className="btn secondary block"
-                  style={{ marginTop: 6 }}
-                  onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
-                >
-                  <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
-                </button>
+                {stampaOn && (
+                  <button
+                    className="btn secondary block"
+                    style={{ marginTop: 6 }}
+                    onClick={() => printFattura(invoice).catch((e) => setError(`Stampa: ${e.message}`))}
+                  >
+                    <Icona nome="stampa" gruppo="tasti" /> Stampa fattura
+                  </button>
+                )}
               </>
             ) : (
               <>

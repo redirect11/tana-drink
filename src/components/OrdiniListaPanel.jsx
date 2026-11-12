@@ -342,14 +342,16 @@ function RigaOrdine({
           >
             <Icona nome="elenco" gruppo="tasti" />
           </button>
-          <button
-            className="btn ghost small"
-            aria-label={`Stampa l’ordine di ${nome}`}
-            title="Stampa"
-            onClick={() => onStampa?.(capo)}
-          >
-            <Icona nome="stampa" gruppo="tasti" />
-          </button>
+          {onStampa && (
+            <button
+              className="btn ghost small"
+              aria-label={`Stampa l’ordine di ${nome}`}
+              title="Stampa"
+              onClick={() => onStampa(capo)}
+            >
+              <Icona nome="stampa" gruppo="tasti" />
+            </button>
+          )}
           <button className="btn ghost small" title="Elimina l’ordine" onClick={onElimina}>
             <Icona nome="elimina" gruppo="tasti" />
           </button>

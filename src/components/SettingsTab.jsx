@@ -32,7 +32,7 @@ import {
   scadenzaProva,
   sumupDisponibile,
 } from '../lib/licenza.js'
-import { MESSAGGI_PIANO, profiloLeggero } from '../lib/limiti.js'
+import { MESSAGGI_PIANO, profiloLeggero, stampaNelPiano } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import CampiStampa, { LogoStampe } from './CampiStampa.jsx'
 
@@ -110,7 +110,10 @@ export default function SettingsTab({ role = null }) {
   // oltre pagamenti, gruppi, sconti e coperto, e quello che si cercava lo
   // si trovava a occhio. Con la barra a sinistra (la stessa di Inventario
   // e Menù) si va dritti dove serve, e la scelta resta per la volta dopo.
-  const sezioni = [
+  // Nel piano senza stampa (REQ-LIC-016) le sezioni della stampa non ci
+  // sono: al posto della stampante, la frase del piano.
+  const stampaOn = stampaNelPiano()
+  const tutteLeSezioni = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto', nodo: <ThemeSettings settings={settings} onSave={save} /> },
     // IL MARKETPLACE DEI TEMI (REQ-MENU-023) è una pagina sua, nel menu
     // laterale: qui, accanto ai colori, solo la strada per arrivarci.
@@ -348,12 +351,14 @@ export default function SettingsTab({ role = null }) {
                 checked={settings.resto_contanti === true}
                 onChange={(v) => save({ resto_contanti: v })}
               />
-              <ToggleRow
-                label="Un tasto per incassare senza stampare"
-                desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
-                checked={settings.riscuoti_senza_stampa === true}
-                onChange={(v) => save({ riscuoti_senza_stampa: v })}
-              />
+              {stampaOn && (
+                <ToggleRow
+                  label="Un tasto per incassare senza stampare"
+                  desc="Nella schermata di pagamento compare anche «Riscuoti (senza stampa)»: incassa e chiude senza far uscire lo scontrino, per chi non lo vuole."
+                  checked={settings.riscuoti_senza_stampa === true}
+                  onChange={(v) => save({ riscuoti_senza_stampa: v })}
+                />
+              )}
               {/* E ADESSO ANCHE IL SUO GEMELLO, PER LO STESSO IDENTICO
                   MOTIVO. Stava in «Gestione preparazione» e l'utente non
                   l'ha trovato (21/08/2026) — già successo il 20/08 con
@@ -1218,6 +1223,16 @@ export default function SettingsTab({ role = null }) {
       ),
     },
   ]
+  const SOLO_CON_STAMPA = new Set(['stampa-automatica', 'campi-scontrino', 'campi-comanda', 'campi-acconto', 'logo-stampe'])
+  const sezioni = stampaOn
+    ? tutteLeSezioni
+    : tutteLeSezioni
+        .filter((s) => !SOLO_CON_STAMPA.has(s.id))
+        .map((s) =>
+          s.id === 'stampante'
+            ? { ...s, nodo: <AvvisoPiano messaggio={MESSAGGI_PIANO.stampa} impostazioni={settings} /> }
+            : s
+        )
 
   // LE VOCI DEL SOTTOMENU SONO DIECI, NON VENTITRÉ. Ogni riquadro resta
   // com'è, ma appartiene a un GRUPPO — accorpati per «a cosa afferisce»

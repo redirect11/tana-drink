@@ -17,7 +17,7 @@ import { formatPrice, ORDER_STATUSES } from '../lib/orderStatus.js'
 import { paidAmount, orderTotal, scontoTotale } from '../lib/pagamento.js'
 import { printScontrino } from '../lib/printer.js'
 import { toastSuccess, toastError } from '../lib/toast.js'
-import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO } from '../lib/limiti.js'
+import { visibiliNelloStorico, giorniDiStorico, MESSAGGI_PIANO, stampaNelPiano } from '../lib/limiti.js'
 import AvvisoPiano from './AvvisoPiano.jsx'
 import Icona, { ConIcona } from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
@@ -274,7 +274,7 @@ export default function OrdersHistory() {
               {/* Ristampa dello scontrino (anche di conti vecchi): riporta
                   articoli, sconto, totale reale e come è stato incassato.
                   Non per i conti di Tiller: lo scontrino l'ha fatto Tiller. */}
-              {!tiller && <span
+              {!tiller && stampaNelPiano() && <span
                 role="button"
                 tabIndex={0}
                 className="ordhist-print"

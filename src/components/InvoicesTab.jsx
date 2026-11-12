@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { subscribeInvoices, markInvoiceSent } from '../lib/api.js'
 import { formatPrice } from '../lib/orderStatus.js'
 import { printFattura, loadPrinterSettings, datiFiscaliDelLocale } from '../lib/printer.js'
+import { stampaNelPiano } from '../lib/limiti.js'
 import { mailFattura } from '../lib/mailFattura.js'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
@@ -82,16 +83,18 @@ export default function InvoicesTab() {
               <Icona nome="email" gruppo="tasti" />{' '}Inviata{f.sent_to ? ` a ${f.sent_to}` : ''} il {String(f.sent_at).slice(0, 10)}
             </div>
           )}
-          <div className="grid-2" style={{ marginTop: 8, gap: 6 }}>
+          <div className={stampaNelPiano() ? 'grid-2' : undefined} style={{ marginTop: 8, gap: 6 }}>
             <button className="btn ghost small" onClick={() => invia(f)}>
               <Icona nome="email" gruppo="tasti" /> Invia via email
             </button>
-            <button
-              className="btn ghost small"
-              onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
-            >
-              <Icona nome="stampa" gruppo="tasti" /> Stampa
-            </button>
+            {stampaNelPiano() && (
+              <button
+                className="btn ghost small"
+                onClick={() => printFattura(f).catch((e) => setError(`Stampa: ${e.message}`))}
+              >
+                <Icona nome="stampa" gruppo="tasti" /> Stampa
+              </button>
+            )}
           </div>
         </div>
       ))}

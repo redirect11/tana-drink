@@ -6936,11 +6936,28 @@ requirements:
       si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005,
       ancora da fare), che toglie gli stati di servizio e la stampa della
       sola comanda.
-    status: todo
+      FATTO (12/11/2026): `stampaConsentita` e `stampaNelPiano` in
+      lib/limiti.js (la seconda legge la licenza ricordata, che
+      subscribeSettings riscrive prima di avvisare le schermate: tasti e
+      cancello rispondono uguale); il cancello in `lavoroDiStampa`, che
+      rifiuta con la frase del piano senza aprire un lavoro nel registro;
+      `scontrinoAutomatico`, `comandeDaStampare`, lo scontrino dell'impagato
+      e dell'acconto, la sala che stampa da sé, la chiusura della cassa e
+      l'invio dal telefono rispondono «no» prima; `preparaStampante` e il
+      pallino non cercano la stampante. Spariti i tasti di stampa (coda,
+      conto, cassa, storico, chiusure, fatture, ordini ai fornitori,
+      comanda) e, in Impostazioni, stampante, campi, logo, stampa
+      automatica e «Riscuoti (senza stampa)»: al posto della stampante la
+      frase del piano. `stampa: false` anche nella copia dei limiti del Free
+      dell'app (licenzaInVigore.js).
+    status: implemented
     generate_issue: true
     labels: [licenza, prodotto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/limiti.test.js
+      - tests/unit/stampaFuoriPiano.test.js
+      - tests/component/SettingsTab.test.jsx
 
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"

@@ -5,7 +5,7 @@
 // accanto a `piano` e `moduli`, la voce `limiti`:
 //
 //   { prodotti_max: 10, conti_aperti_max: 5, sconti: false,
-//     storico_giorni: 7, utenti_max: 1, marchio: true }
+//     storico_giorni: 7, utenti_max: 1, marchio: true, stampa: false }
 //
 // per il piano Free, e `null` per i piani a pagamento.
 //
@@ -95,6 +95,17 @@ export function puoAprireConto(stato, aperti) {
 // spegne.
 export const scontiConsentiti = (stato) => limitiDi(stato)?.sconti !== false
 
+// La stampa, tutta: comande, scontrini, chiusure, fatture (REQ-LIC-016,
+// Daniele 12/11/2026: «il Free è senza stampa»). Solo un `false` scritto la
+// spegne: la Tana e i piani a pagamento non hanno la voce.
+export const stampaConsentita = (stato) => limitiDi(stato)?.stampa !== false
+
+// La stessa domanda per chi non ha le impostazioni in mano: la stampa, che
+// non aspetta la rete, e le schermate che ne mostrano i tasti. Si legge la
+// licenza ricordata, che subscribeSettings riscrive PRIMA di avvisare le
+// schermate: tasti e cancello rispondono sempre allo stesso modo.
+export const stampaNelPiano = () => stampaConsentita(impostazioniRicordate({}))
+
 // Da quando si vede lo storico (vendite, conti chiusi), o null se si vede
 // tutto. Si parte dalla MEZZANOTTE di N giorni fa, non da adesso meno N×24
 // ore: un locale lavora oltre la mezzanotte, e tagliare una serata a metà
@@ -159,6 +170,7 @@ export function limitiInChiaro(stato) {
   if (giorni !== null) righe.push(`Storico consultabile: ${giorni === 1 ? 'l’ultimo giorno' : `gli ultimi ${giorni} giorni`}`)
   if (utenti !== null) righe.push(`Utenti: al massimo ${utenti}`)
   if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
+  if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
   if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
   return righe
 }
@@ -175,6 +187,7 @@ export const MESSAGGI_PIANO = {
   storico: (n) => `Nel piano Free lo storico mostra ${n === 1 ? 'l’ultimo giorno' : `gli ultimi ${n} giorni`}.`,
   staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
+  stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
   allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
   sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',
   // Un piano a pagamento senza il modulo: non è «il piano Free».
