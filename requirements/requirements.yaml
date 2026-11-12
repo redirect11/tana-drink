@@ -6475,6 +6475,44 @@ requirements:
     test_cases:
       - tests/unit/salvataggioConId.test.js
 
+  - id: REQ-MENU-039
+    title: "La foto di un prodotto si ritaglia nella sua scheda prima di caricarla: tutte nella stessa cornice quadrata"
+    area: "src/components/RitaglioFoto.jsx, src/lib/ritaglioFoto.js, src/components/DrinkForm.jsx (Foto)"
+    description: >
+      Flavio, due vocali del 12/11/2026 con le foto del menù a carte del
+      test: tre drink con foto trovate su siti diversi uscivano di misure e
+      inquadrature diverse (una stretta e alta, una quadrata, una piccola).
+      «Serve un qualche cosa che mi permette di ritagliarle»; «quando si
+      carica la foto dovrebbe apparire il selezionatore della foto, in modo
+      tale se la voglio ridimensionare, cioè tagliare, ingrandire,
+      rimpicciolire, e poi salvare le modifiche e poi dopo salvare proprio
+      il prodotto… se lo posso fare stesso all'interno della scheda del
+      prodotto è ancora meglio». Prima l'app riduceva soltanto la foto a
+      1200 px sul lato lungo, senza tagliarla: ogni posto del menù la
+      sistemava a modo suo.
+      CRITERI DI ACCETTAZIONE:
+      1. Nella scheda del prodotto, scelta una foto, si apre il ritaglio:
+         una cornice QUADRATA con la foto dentro, che si sposta trascinando
+         (dito o mouse) e si ingrandisce o rimpicciolisce (cursore, rotella,
+         due dita).
+      2. Rimpicciolendo si può vedere la foto intera: la parte della
+         cornice che resta vuota diventa bianca.
+      3. «Usa questa foto» prepara la foto ritagliata, 1000 × 1000, che si
+         vede subito come anteprima nella scheda; si carica solo salvando il
+         prodotto, come prima. «Annulla» lascia la foto di prima.
+      4. Finché il prodotto non è salvato, «Ritaglia di nuovo» riapre il
+         ritaglio sulla foto scelta, non su quella già ritagliata.
+      5. Se il browser non sa preparare la foto ritagliata, si carica quella
+         scelta, intera, come prima: il ritaglio non blocca mai il
+         salvataggio.
+      La forma quadrata la sceglie chi sviluppa (Daniele non l'ha fissata):
+      va bene in tutti i posti del menù, ed è un numero solo da cambiare.
+    status: todo
+    generate_issue: true
+    labels: [menu, gestionale, foto]
+    priority: P2
+    test_cases: []
+
   - id: REQ-MENU-038
     title: "Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili"
     area: "src/lib/prezzoMenu.js, src/pages/MenuPage.jsx, src/components/SettingsTab.jsx (Menù clienti), src/components/MenuCarte.jsx, src/components/CaroselloSpeciali.jsx, src/components/DettaglioDrink.jsx, src/components/SpecialScorrevoli.jsx, src/components/MenuGiornale.jsx, src/lib/api.js (formato_prezzi_menu)"
