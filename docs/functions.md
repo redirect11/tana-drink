@@ -56,9 +56,12 @@ l'account `ai-locale@<progetto>` e si fa riconoscere dalla regia col suo
 gettone d'identità di Google. L'account lo crea il Terraform della regia nei
 locali della flotta, dove la regia scrive anche `REGIA_PROGETTO`. Nei
 progetti che non nascono dalla regia (`tana-drink`, `tana-drink-test`,
-`drinkpos-prova-e2e`) l'AI resta spenta finché non si crea l'account e non si
-aggiunge `REGIA_PROGETTO` al loro `functions/.env.<progetto>`: aggiungere la
-riga senza l'account fermerebbe il deploy di tutte le Functions.
+`drinkpos-prova-e2e`) l'AI resta spenta finché il workflow della regia
+«Prepara l'AI di un locale esistente» non crea l'account e non dà all'account
+di deploy `roles/iam.serviceAccountUser` su di esso; solo dopo si aggiunge
+`REGIA_PROGETTO` al loro `functions/.env.<progetto>`. Aggiungere la riga prima
+fermerebbe il deploy di tutte le Functions. Al 12/11/2026 il passo è fatto su
+`tana-drink-test` (la riga c'è), non su `tana-drink`.
 
 I pagamenti sono **no-op** finché `SUMUP_API_KEY` e `SUMUP_MERCHANT_CODE` non
 ci sono entrambi: `isConfigured()` risponde `false` e non parte nessuna

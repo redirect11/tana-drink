@@ -8295,9 +8295,11 @@ requirements:
       (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza,
       il deploy di tutte le Functions si ferma su actAs. Account, ruoli e
       permesso li prepara il workflow della regia «Prepara l'AI di un locale
-      esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`
-      a functions/.env.tana-drink-test, e poi a quello della produzione.
-      RESTA: l'AI per la Tana (sopra), la
+      esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`.
+      Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato
+      con gcloud): la riga c'è. La produzione aspetta lo stesso passo, col
+      via libera di Daniele.
+      RESTA: l'AI sulla produzione della Tana, la
       fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
     status: partial
     generate_issue: true

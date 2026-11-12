@@ -3183,9 +3183,9 @@ PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, 
 
 DA PROVARE: che Google dia il gettone al destinatario `regia-ai:drink-regia-test`, che non è un indirizzo web (una richiesta vera da prova-bar).
 
-LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO` a functions/.env.tana-drink-test, e poi a quello della produzione.
+LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. La produzione aspetta lo stesso passo, col via libera di Daniele.
 
-RESTA: l'AI per la Tana (sopra), la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+RESTA: l'AI sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
 **Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
 
