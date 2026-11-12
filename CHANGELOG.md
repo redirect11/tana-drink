@@ -2,6 +2,20 @@
 
 ## 1.10.39-beta — in lavorazione
 
+### Gestionale
+
+- Scheda del prodotto: «Proponi una descrizione con l'AI» scrive una proposta
+  di descrizione, da usare, scartare o richiedere di nuovo. Usa il credito AI
+  del locale, gestito dalla regia; senza credito il resto della scheda
+  funziona come sempre.
+- Scheda del prodotto: scelta una foto, si ritaglia prima di caricarla, in una
+  cornice quadrata. Si sposta trascinandola e si ingrandisce o rimpicciolisce
+  col cursore, con la rotella o con due dita, così tutte le foto del menù
+  hanno la stessa misura e la stessa inquadratura.
+- Impostazioni: sulla scelta attiva (lo stile del menù, il formato dei prezzi)
+  il testo secondario si legge anche coi temi dove il colore dei tasti è
+  chiaro.
+
 ## 1.10.38-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

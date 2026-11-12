@@ -44,7 +44,7 @@ o il **lancio a mano** del workflow.
 |---|---|
 | push su un ramo che non è di rilascio | lint + test + build. Nessun deploy. |
 | push su `release/**` | né test né deploy. Se cambia il registro (`requirements/`) nascono le issue. |
-| pull request verso `develop` o `main` | lint + test + build con la coverage, **regole Firestore** e **test di sistema**. Per il merge è obbligatorio solo «Lint, test e build»: gli altri due girano, ma rossi non lo bloccano. |
+| pull request verso `develop` o `main` | lint + test + build con la coverage, **regole Firestore** e **test di sistema**. Per il merge in `develop` devono essere verdi tutti e tre; in `main`, per ora, solo «Lint, test e build» (vedi sotto). |
 | pull request verso `release/**` | solo quello che ha fatto girare il push sul ramo di partenza: regole e test di sistema **non** partono, vanno lanciati a mano (in locale, o da *Actions → Tests → Run workflow* sul ramo). |
 | lancio a mano «Deploy to Firebase» su un ramo | va **online sul test** (è così che si prova un ramo: niente tag) |
 | tag su un commit **non** in `main` | va **online sul test**, subito |
@@ -140,7 +140,15 @@ sono rami protetti — niente push diretti, niente merge fatti in locale e
 spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
 (il check «Lint, test e build», con la coverage e le sue soglie, è
 obbligatorio per il merge; regole Firestore e test di sistema girano solo
-sulle pull request verso `develop` e `main`). I rami `release/**` restano scrivibili
+sulle pull request verso `develop` e `main`).
+
+**Su `develop` sono obbligatori anche «Regole Firestore (emulatore)» e
+«Sistema (Playwright)»** (Daniele, 12/11/2026; ruleset `cancello-develop`
+su GitHub). Prima giravano ma rossi non bloccavano il merge. Su `main` non
+ancora: la CI di `main` è quella della 1.9.3, che quei due job non li ha, e
+un ramo hotfix, che nasce da `main` e porta la sua CI, aspetterebbe per
+sempre due risultati che non arrivano. Si aggiungono anche lì quando la
+1.10 arriva in `main`. I rami `release/**` restano scrivibili
 direttamente — sono il posto di lavoro quotidiano — e protetti dalla sola
 cancellazione: **si devono poter ribasare**. Un ramo di lavoro che nasce
 da `develop` va tenuto allineato riscrivendogli sotto la base

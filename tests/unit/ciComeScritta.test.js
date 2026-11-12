@@ -76,7 +76,11 @@ describe('i documenti la raccontano com’è', () => {
     const righe = leggi('docs', 'gitflow.md').split('\n')
     const riga = (inizio) => righe.find((r) => r.startsWith(inizio)) || ''
     expect(riga('| push su `release/**` |')).toContain('né test né deploy')
-    expect(riga('| pull request verso `develop` o `main` |')).toContain('obbligatorio solo «Lint, test e build»')
+    // Il cancello (REQ-DEV-023): su develop tutti e tre i check, su main per
+    // ora solo il primo. È un'impostazione di GitHub, non del file: qui si
+    // controlla che il documento la dica.
+    expect(riga('| pull request verso `develop` o `main` |')).toContain('in `develop` devono essere verdi tutti e tre')
+    expect(piatto(leggi('docs', 'gitflow.md'))).toContain('ruleset `cancello-develop`')
     expect(riga('| pull request verso `release/**` |')).toContain('**non** partono')
   })
 

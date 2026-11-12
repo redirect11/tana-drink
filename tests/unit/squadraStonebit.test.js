@@ -84,10 +84,12 @@ describe('CLAUDE.md', () => {
   })
 
   // Il processo deciso da Daniele l'11/11/2026.
-  it('il processo: storia sempre, revisore sempre, developer per i lavori grossi', () => {
+  it('il processo: storia sempre, revisore quando serve, developer per i lavori grossi', () => {
     expect(sezione).toContain('product owner')
     expect(sezione).toContain('**Storia sempre**')
-    expect(sezione).toContain('**Revisore sempre**')
+    // Daniele, 12/11/2026: «quando serve» (REQ-DEV-023).
+    expect(sezione).toContain('**Revisore quando serve**')
+    expect(sezione).not.toContain('**Revisore sempre**')
     expect(sezione).toContain('per i lavori grossi o in parallelo')
     expect(sezione).not.toContain('Proponi a Daniele il piano della sessione prima di modificare codice')
   })

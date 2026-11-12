@@ -281,6 +281,7 @@ bisogni:
       - REQ-DEV-020
       - REQ-DEV-021
       - REQ-DEV-022
+      - REQ-DEV-023
     test_cases: []
 
   - id: UR-012
@@ -338,6 +339,9 @@ bisogni:
       - REQ-MENU-036
       - REQ-MENU-037
       - REQ-MENU-038
+      - REQ-MENU-039
+      - REQ-AI-005
+      - REQ-AI-006
     test_cases: []
 
   - id: UR-014

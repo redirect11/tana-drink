@@ -5412,6 +5412,15 @@ button.cat-chip {
   border-color: transparent;
   color: var(--btn-ink);
 }
+/* Il testo secondario dentro una scelta attiva (la descrizione di uno
+   stile, l'esempio di un formato) prende l'inchiostro del tasto, appena più
+   leggero: il grigio `--muted` è pensato per il fondo della pagina, e sul
+   colore del tasto non si leggeva (BUG-146: grigio su pesca, col tema
+   «catppuccin»). Vale per ogni tema. */
+.mode-option.active :is(.muted, .formato-prezzi-esempio) {
+  color: var(--btn-ink);
+  opacity: 0.85;
+}
 
 .persons-counter {
   display: inline-flex;
@@ -11568,6 +11577,51 @@ body.pagina-piena .inv-scheda {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+}
+/* LA DESCRIZIONE PROPOSTA DALL'AI (REQ-AI-003, DescrizioneAI.jsx): la proposta
+   sta in un riquadro a sé sotto il campo, perché si legga come una proposta
+   da accettare e non come il testo già scritto. */
+.descrizione-ai {
+  margin: 6px 0 12px;
+}
+.descrizione-ai-proposta {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--tile-bg);
+}
+/* IL RITAGLIO DELLA FOTO DI UN PRODOTTO (REQ-MENU-039, RitaglioFoto.jsx): la
+   cornice quadrata a scacchi chiari, dove la foto si trascina e si
+   ingrandisce. `touch-action: none` perché il dito che trascina la foto non
+   faccia scorrere la pagina o ingrandire lo schermo. */
+.ritaglio-foto {
+  max-width: 380px;
+}
+.ritaglio-spazio {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.ritaglio-cornice {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--line);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.ritaglio-cornice:active {
+  cursor: grabbing;
+}
+.ritaglio-cornice img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+.ritaglio-foto input[type='range'] {
+  width: 100%;
 }
 /* LA SCELTA DEL FORMATO DEI PREZZI DEL MENÙ (REQ-MENU-038, Impostazioni →
    Menù clienti): tre tasti, ognuno col suo esempio sotto il nome. */

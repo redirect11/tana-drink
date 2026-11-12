@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 283 | fatto e coperto dai test |
+| ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 4 | fatto a metà |
+| 🟡 | 6 | fatto a metà |
 | ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**340 voci** in tutto. **302** descrivono il sistema com'è oggi e
+**344 voci** in tutto. **306** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 33 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 34 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -58,9 +58,9 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 21 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 167 |
-| Unità | il progetto di dettaglio: un modulo da solo | 176 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 170 |
+| Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**91** requisiti su 332 sono collegati a un bisogno;
+**95** requisiti su 336 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -1102,6 +1102,14 @@ Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei
 L'utente, 10/11/2026: «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se non esiste un item cassa, si può creare anche da lì». Prima una voce si faceva solo scegliendo un prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in Modifica menù, tornare al menù dei clienti e ripescarlo fra i prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto della cassa»: apre la scheda del prodotto, la stessa del catalogo, con la categoria che porta il nome della sezione se ce n'è una (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in cassa ed entra come voce in fondo a quella sezione; annullando non nasce niente. Tornando dalla scheda, nuova o aperta da una voce, l'editor riapre la sezione da cui si era partiti, invece di ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti, come per ogni prodotto nuovo.
 
 **Dove**: `src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/salvataggioConId.test.js`
+
+#### REQ-MENU-039 — La foto di un prodotto si ritaglia nella sua scheda prima di caricarla: tutte nella stessa cornice quadrata
+
+Flavio, due vocali del 12/11/2026 con le foto del menù a carte del test: tre drink con foto trovate su siti diversi uscivano di misure e inquadrature diverse (una stretta e alta, una quadrata, una piccola). «Serve un qualche cosa che mi permette di ritagliarle»; «quando si carica la foto dovrebbe apparire il selezionatore della foto, in modo tale se la voglio ridimensionare, cioè tagliare, ingrandire, rimpicciolire, e poi salvare le modifiche e poi dopo salvare proprio il prodotto… se lo posso fare stesso all'interno della scheda del prodotto è ancora meglio». Prima l'app riduceva soltanto la foto a 1200 px sul lato lungo, senza tagliarla: ogni posto del menù la sistemava a modo suo.
+
+CRITERI DI ACCETTAZIONE: 1. Nella scheda del prodotto, scelta una foto, si apre il ritaglio: una cornice QUADRATA con la foto dentro, che si sposta trascinando (dito o mouse) e si ingrandisce o rimpicciolisce (cursore, rotella, due dita). 2. Rimpicciolendo si può vedere la foto intera: la parte della cornice che resta vuota diventa bianca. 3. «Usa questa foto» prepara la foto ritagliata, 1000 × 1000, che si vede subito come anteprima nella scheda; si carica solo salvando il prodotto, come prima. «Annulla» lascia la foto di prima. 4. Finché il prodotto non è salvato, «Ritaglia di nuovo» riapre il ritaglio sulla foto scelta, non su quella già ritagliata. 5. Se il browser non sa preparare la foto ritagliata, si carica quella scelta, intera, come prima: il ritaglio non blocca mai il salvataggio. La forma quadrata la sceglie chi sviluppa (Daniele non l'ha fissata): va bene in tutti i posti del menù, ed è un numero solo da cambiare.
+
+**Dove**: `src/components/RitaglioFoto.jsx, src/lib/ritaglioFoto.js, src/components/DrinkForm.jsx (Foto)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/ritaglioFoto.test.js`, `tests/component/ritaglioFoto.test.jsx`
 
 #### REQ-MENU-038 — Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili
 
@@ -3131,6 +3139,56 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 **Dove**: `scripts/specchia-db.js, scripts/ripristina-db.js, scripts/migra-in-produzione.js` · ⚠️ **Nessun test lo verifica.**
 
+### Intelligenza artificiale
+
+Dove l’intelligenza artificiale entra nel lavoro del locale.
+
+#### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
+
+DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
+
+FATTO IN PARTE (12/11/2026, col collegamento alla regia di REQ-AI-003): nella scheda del prodotto «Proponi una descrizione con l'AI» chiede alla regia una descrizione dal nome e dalla categoria, e la mostra come proposta da usare, scartare o richiedere; quello che il modello non sa torna «da verificare»; il costo si mostra coi millesimi.
+
+RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte.
+
+**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/descrizioneAI.test.jsx`
+
+#### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, quindi qua iniziamo a valutare anche un'opzione di creare un cassetto economico dove noi ogni tanto andiamo a caricare oppure un prelievo diretto dal nostro conto di SumUp».
+
+COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
+
+PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
+
+DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
+
+DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
+
+LA PARTE DELLA REGIA È FATTA E PUBBLICATA SUL TEST (messaggio della sessione della regia consegnato da Daniele il 12/11/2026; contratto in drink-regia, docs/handover.md §7, «Cassetto AI»): la Function `richiestaAI` della regia accetta due richieste, `descrizione` (per REQ-AI-002/004) e `fattura` (per REQ-AI-001), con l'intestazione `Authorization: Bearer <slug>.<segreto>`, e risponde 200 con la proposta, il costo e il credito; 402 (credito, tetto, spento, senza-cassetto: si ferma solo l'AI); 422 (risultato non usabile, il costo resta); 401; 400; 503.
+
+LA PARTE DELL'APP (12/11/2026): la Function `richiestaAI` del locale (functions/lib/ai-service.js) la chiama per lo staff di gestione e solo lei, mai il browser; controlla la richiesta (solo i due tipi e i loro campi, le misure dei file) prima di spenderci un viaggio, e traduce le risposte in un `codice`. Primo uso, per provare il collegamento: «Proponi una descrizione con l'AI» nella scheda del prodotto (REQ-AI-004).
+
+SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077 della regia): la Function gira con l'account dedicato `ai-locale@<progetto>`, creato dal Terraform della regia, e si fa riconoscere col gettone d'identità di Google che quell'account ottiene, col destinatario `regia-ai:<REGIA_PROGETTO>`. Nessun segreto nel locale. La prima stesura con la «Chiave AI» non è mai uscita, e non c'è un passaggio da fare.
+
+QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, scritto dalla regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale`: nei progetti che non nascono dalla regia (tana-drink, tana-drink-test, drinkpos-prova-e2e) l'account non c'è, e chiederlo fermerebbe il deploy di tutte le Functions.
+
+PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce.
+
+DA PROVARE: che Google dia il gettone al destinatario `regia-ai:drink-regia-test`, che non è un indirizzo web (una richiesta vera da prova-bar).
+
+LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436, col via libera di Daniele, verificato con gcloud), ma lì `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di produzione riconosce il gettone (dal suo prossimo rilascio su main): prima risponderebbe sempre 401.
+
+RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
+
+**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
+
 ### Interfaccia
 
 Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie.
@@ -3632,6 +3690,20 @@ REVISORE SEMPRE, prima di ogni pull request. Su questo secondo punto la risposta
 CRITERIO DI ACCETTAZIONE: «Ruolo di default» dice che la sessione è il tech lead e non il PM; la sezione non contiene più la catena; il file tech-lead.md non esiste; pm.md descrive un ruolo di controllo e non nomina scadenze da fissare né lavoro da assegnare; nessun developer dice di ricevere il lavoro dal Tech Lead; la regola della voce `todo` è nella sezione; il resto di CLAUDE.md e i quattro agenti di prima sono identici.
 
 **Dove**: `CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui», «Ruolo di default»), .claude/agents/ (pm, tech-lead tolto, frontend-developer, backend-developer, stampa-developer, revisore)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/squadraStonebit.test.js`
+
+#### REQ-DEV-023 — Il merge in develop aspetta anche le regole Firestore e i test di sistema; il revisore si chiama quando serve
+
+Due decisioni di Daniele del 12/11/2026, in chat, sulle domande della PR #340. 1.
+
+IL CANCELLO DEL MERGE. Fino ad oggi per mergiare in `develop` era obbligatorio un solo check, «Lint, test e build»: «Regole Firestore (emulatore)» e «Sistema (Playwright)» giravano sulla pull request, ma rossi non bloccavano niente. Daniele: «rendere obbligatori per il merge anche le regole Firestore e i test di sistema… procedi».
+
+SOLO SU `develop`, per ora: su `main` la CI è ancora quella della 1.9.3, che quei due job non li ha. Un ramo hotfix nasce da `main` e porta quella CI: con i due check obbligatori su `main` la sua pull request aspetterebbe per sempre due risultati che non arrivano. Su `main` si aggiungono quando la 1.10 ci arriva. 2.
+
+IL REVISORE. L'11/11 Daniele aveva deciso «revisore sempre, prima di ogni PR»; il CEO-agente di Stonebit scriveva «quando la sessione lo ritiene utile». Daniele, 12/11: «quando serve». La sezione Stonebit di CLAUDE.md lo dice così.
+
+CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop` non si può mergiare finché «Lint, test e build», «Regole Firestore (emulatore)» e «Sistema (Playwright)» non sono verdi; su `main` resta obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md lo dicono; la sezione Stonebit dice «revisore quando serve» e non più «sempre».
+
+**Dove**: `GitHub, ruleset del ramo develop (impostazione del repository); docs/gitflow.md, CLAUDE.md, tests/unit/ciComeScritta.test.js, tests/unit/squadraStonebit.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/ciComeScritta.test.js`, `tests/unit/squadraStonebit.test.js`
 
 ### STAT
 
@@ -4355,27 +4427,25 @@ LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e 
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
 
-#### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
+#### REQ-AI-005 — Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere
 
-Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
+Daniele, 12/11/2026: «il caricamento delle immagini deve avere sempre la possibilità di chiedere all'AI di modificare l'immagine. La risposta dell'AI dell'immagine modificata va accanto a quella originale e si chiede di accettare o meno la modifica o fare un altro prompt. Questo solo se si hanno crediti AI». COME: in ogni caricamento di una foto (oggi la scheda del prodotto, col ritaglio di REQ-MENU-039) un campo «Chiedi all'AI», dove si scrive cosa cambiare («togli lo sfondo», «metti il bicchiere su un bancone di legno»). La proposta compare accanto alla foto di partenza; tre tasti: «Usa questa», «Tieni l'originale», «Chiedi un'altra modifica» (con un'altra frase, partendo dall'originale o dalla proposta). Si vede solo con crediti AI disponibili; senza, il campo non c'è e il caricamento resta quello di sempre.
 
-DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
+LA CHIAMATA NON PARTE DALL'APP: la fa la Function della regia, che controlla il credito, chiama il modello con la chiave di Stonebit e scala il costo (REQ-AI-003). La chiave non sta mai in un locale.
 
-**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx`
+DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento): quale modello di immagini usare (i modelli di Claude non generano né modificano immagini: serve un altro fornitore), quanto costa una modifica in crediti, e cosa si fa delle foto con persone o marchi.
 
-#### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
+**Dove**: `src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
-Flavio, vocale del 22/10/2026: «forse questa e' una delle cose a pagamento, quindi qua iniziamo a valutare anche un'opzione di creare un cassetto economico dove noi ogni tanto andiamo a caricare oppure un prelievo diretto dal nostro conto di SumUp».
+#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
 
-COME STANNO LE COSE: ogni chiamata al modello costa poco (una descrizione, frazioni di centesimo; la lettura di una fattura, qualche centesimo) e la paga chi possiede la chiave del servizio. Per la Tana la chiave e' nostra e il costo e' nostro. SumUp non si presta: e' il conto su cui il locale INCASSA, e non ha un modo per farsi addebitare un servizio di terzi.
+Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
 
-PROPOSTA: un credito AI per installazione, in euro, con un tetto mensile e lo storico dei consumi in Impostazioni; finito il credito, le funzioni AI si fermano e il resto dell'app no. Per i locali della flotta il credito si ricarica dalla regia, con Stripe che gia' gestisce gli abbonamenti (a consumo o a pacchetti); per la Tana lo ricarichiamo noi. In alternativa, come gia' previsto in REQ-AI-001, il locale mette la sua chiave e paga direttamente il fornitore.
+LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
 
-DECISIONE DELL'UTENTE (24/10/2026): «dovremo fare in modo che anche il sito della Tana passi per il cassetto del nostro sito prima o poi, senza rompere niente ovviamente». Il cassetto e' UNO, quello della regia, per tutti i locali compresa la Tana. Quindi: - le chiamate all'AI non partono dall'app con una chiave dentro: le fa una Function della regia, che controlla il credito dell'installazione, chiama il modello con la nostra chiave e scala il costo. La chiave non sta mai in un'installazione; - la Tana entra nella regia come cliente gia' esistente, senza provisioning: il suo progetto (`tana-drink`) resta quello di oggi, con piano completo e licenza scritta solo quando si collega; - SENZA ROMPERE NIENTE: finche' la Tana non e' collegata, le funzioni AI li' sono spente e tutto il resto lavora come oggi. Una volta collegata, la Tana e' segnata come installazione interna: la sospensione automatica dei morosi la salta, e un credito finito ferma solo l'AI, mai la cassa; - fino ad allora, per la Tana vale la sua chiave con un tetto mensile presso il fornitore, se serve prima.
+DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
 
-DA DECIDERE con l'utente: pacchetti o consumo, e il prezzo.
-
-**Dove**: `functions/, settings, regia (abbonamenti della flotta)`
+**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Interfaccia
 

@@ -6075,3 +6075,28 @@ bugs:
     requisiti: [REQ-DEV-018]
     test_cases:
       - tests/unit/ciComeScritta.test.js
+
+  - id: BUG-146
+    title: "Nelle Impostazioni, sulla scelta attiva il testo secondario è grigio sul colore del tasto e non si legge"
+    area: "src/index.css (.mode-option.active), src/components/ThemeSettings.jsx (Stile del menù), src/components/FormatoPrezziMenu.jsx"
+    severity: media
+    priority: P2
+    description: >
+      Daniele, 12/11/2026, con una foto di Impostazioni → Menù clienti sul
+      test, tema del gestionale «catppuccin»: «il testo grigio su sfondo
+      arancione non si legge. Bisogna cambiare quel colore». Sulla scelta
+      attiva il tasto prende il colore dei tasti (`--btn-bg`) e il testo
+      principale il suo inchiostro (`--btn-ink`); il testo secondario dentro
+      (l'esempio sotto «Numero», la descrizione dello stile «Carte») restava
+      invece `--muted`, un grigio pensato per il fondo della pagina e non
+      per quello del tasto.
+      ORA il testo secondario di una scelta attiva prende l'inchiostro del
+      tasto, appena più leggero: vale per ogni tema del gestionale e per
+      ogni gruppo di scelte, non solo per quei due.
+    status: fixed
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, impostazioni, ui]
+    requisiti: [REQ-UI-005]
+    test_cases:
+      - tests/unit/css.test.js

@@ -28,6 +28,7 @@ const {
   terminaliDi,
 } = require('./lib/push-core')
 const { staffAdmin } = require('./lib/staff-service')
+const { richiestaAI: richiestaAIsvc } = require('./lib/ai-service')
 const {
   createCheckout,
   verifyCheckoutStatus,
@@ -63,6 +64,75 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
     throw new HttpsError('internal', e?.message || 'Errore interno.')
   }
 })
+
+// ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────
+// Il locale si fa riconoscere dalla regia col gettone d'identità di Google
+// del suo account dedicato `ai-locale@<progetto>` (Daniele, 12/11/2026:
+// «niente chiave»; contratto in drink-regia, docs/handover.md §7). Niente
+// segreti: la Function gira con quell'account e chiede il gettone al server
+// dei metadati di Google. La logica è in lib/ai-service.js.
+//
+// QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, che la regia
+// scrive nei suoi locali (drink-regia, o drink-regia-test per i locali di
+// prova). SENZA, L'AI È SPENTA e la Function gira con l'account di sempre:
+// `serviceAccount` si chiede solo dove c'è REGIA_PROGETTO, perché nei
+// progetti senza l'account `ai-locale` (oggi tana-drink, tana-drink-test e
+// drinkpos-prova-e2e, che non nascono dal Terraform della regia) un account
+// che non esiste fermerebbe il deploy di tutte le Functions.
+// `'ai-locale@'`: firebase-functions lo completa col dominio del progetto.
+const REGIA_PROGETTO = process.env.REGIA_PROGETTO || ''
+// Quanto si aspetta la regia: per una fattura lunga ha fino a 300 secondi.
+// Oltre, la regia finisce comunque e il costo si paga: meglio aspettarla.
+const ATTESA_REGIA_MS = 290 * 1000
+
+// Il gettone d'identità dell'account con cui gira la Function, per quel
+// destinatario. Torna null se il server dei metadati non lo dà.
+async function gettoneDiGoogle(destinatario) {
+  const url =
+    'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
+    encodeURIComponent(destinatario)
+  const res = await fetch(url, { headers: { 'Metadata-Flavor': 'Google' }, signal: AbortSignal.timeout(10 * 1000) })
+  if (!res.ok) return null
+  const gettone = (await res.text()).trim()
+  return gettone || null
+}
+
+exports.richiestaAI = onCall(
+  {
+    ...OPTS,
+    ...(REGIA_PROGETTO ? { serviceAccount: 'ai-locale@' } : {}),
+    // Una fattura in PDF arriva a 20 MB e la regia ha fino a 300 secondi per
+    // leggerla: tempo e memoria in più rispetto alle altre.
+    timeoutSeconds: 310,
+    memory: '512MiB',
+  },
+  async (request) => {
+    try {
+      return await richiestaAIsvc(
+        {
+          progettoRegia: () => REGIA_PROGETTO,
+          gettone: gettoneDiGoogle,
+          invia: async (url, opzioni) => {
+            const res = await fetch(url, { ...opzioni, signal: AbortSignal.timeout(ATTESA_REGIA_MS) })
+            const testo = await res.text()
+            let corpo = null
+            try {
+              corpo = testo ? JSON.parse(testo) : null
+            } catch {
+              corpo = null
+            }
+            return { status: res.status, corpo }
+          },
+        },
+        request.auth,
+        request.data
+      )
+    } catch (e) {
+      if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
+      throw new HttpsError('internal', e?.message || 'Errore interno.')
+    }
+  }
+)
 
 // ── Notifiche push al cliente (FCM) ───────────────────────────────────────────
 // Quando un ordine passa a "pronto" (drink pronto) o ad "annullato" da parte
