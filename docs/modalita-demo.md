@@ -104,7 +104,7 @@ smettere di esserlo. L'utente l'ha approvata così («sì va bene»).
 - Se c'è un test di integrazione nel browser, nessuna richiesta deve
   andare a `firestore.googleapis.com`, `identitytoolkit` o
   `cloudfunctions`.
-- La CI compila già `CLIENTE=demo` a ogni push.
+- La CI compila già `CLIENTE=demo` ogni volta che fa girare i test (non sui push ai rami di rilascio).
 
 ## Com'è fatta (30/10/2026)
 

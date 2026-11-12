@@ -150,7 +150,7 @@ si installa e come si configura lo decide la regia. La specifica è in
   l'app con la cartella `clienti/demo/` (nome neutro, logo neutro). Se il
   risultato mostra ancora la Tana da qualche parte, è un difetto, e il
   test-guardia lo trova prima.
-- **La CI compila anche `CLIENTE=demo`** a ogni push: una modifica
+- **La CI compila anche `CLIENTE=demo`** quando fa girare i test (non sui push ai rami di rilascio): una modifica
   pensata per la Tana che rompe gli altri si vede prima del rilascio.
 - **Online**, l'istanza dimostrativa `drinkpos-demo` è un'istanza come le
   altre: la aggiorna la regia, non i workflow di qui. È pubblica (la apre

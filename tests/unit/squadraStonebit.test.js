@@ -1,6 +1,7 @@
 // LA SQUADRA DI STONEBIT (REQ-DEV-020). Richiesta del CEO-agente di Stonebit
-// per conto di Daniele, 11/11/2026: una sessione aperta qui lavora come PM di
-// Lime (app del locale), con un Tech Lead e una squadra di sub-agenti. Le
+// per conto di Daniele, 11/11/2026. La sessione aperta qui è il tech lead e
+// lavora come ha sempre fatto (REQ-DEV-022, Daniele il 12/11: «il tech lead
+// sei tu»), con dei sub-agenti a disposizione e un PM di solo controllo. Le
 // istruzioni di un agente sono testo, e il testo si perde senza rumore: una
 // sezione spostata in fondo a CLAUDE.md, un agente col nome sbagliato che
 // nessuno riesce più a chiamare, un agente vecchio ritoccato per sbaglio.
@@ -19,9 +20,11 @@ import { join } from 'node:path'
 const radice = join(__dirname, '..', '..')
 const leggi = (...p) => readFileSync(join(radice, ...p), 'utf8').replace(/\r\n/g, '\n')
 const claude = leggi('CLAUDE.md')
+// La sezione di Stonebit, da sola: dal suo titolo a «La lingua».
+const sezione = claude.slice(claude.indexOf('## Stonebit — chi sei e come lavori qui'), claude.indexOf('\n## La lingua\n'))
 
 const DEVELOPER = ['frontend-developer', 'backend-developer', 'stampa-developer']
-const NUOVI = ['pm', 'tech-lead', ...DEVELOPER, 'revisore']
+const NUOVI = ['pm', ...DEVELOPER, 'revisore']
 const DI_PRIMA = ['requisiti-dal-banco', 'rilascio-hotfix', 'allinea-registro', 'classifica-registro']
 
 // Il blocco fra i due `---` in testa a un agente: `chiave: valore` per riga.
@@ -32,7 +35,6 @@ function testata(testo) {
 }
 
 describe('CLAUDE.md', () => {
-  const sezione = claude.slice(claude.indexOf('## Stonebit — chi sei e come lavori qui'), claude.indexOf('\n## La lingua\n'))
 
   // La presentazione del repo resta il primo testo del file: messa la
   // sezione subito dopo il titolo, «App di cassa e gestione…» finiva sotto
@@ -82,11 +84,11 @@ describe('CLAUDE.md', () => {
   })
 
   // Il processo deciso da Daniele l'11/11/2026.
-  it('il processo: storia sempre, revisore sempre, squadra solo per i lavori grossi', () => {
+  it('il processo: storia sempre, revisore sempre, developer per i lavori grossi', () => {
     expect(sezione).toContain('product owner')
     expect(sezione).toContain('**Storia sempre**')
     expect(sezione).toContain('**Revisore sempre**')
-    expect(sezione).toContain('solo per i lavori grossi o divisibili')
+    expect(sezione).toContain('per i lavori grossi o in parallelo')
     expect(sezione).not.toContain('Proponi a Daniele il piano della sessione prima di modificare codice')
   })
 
@@ -145,29 +147,58 @@ describe('la squadra in .claude/agents', () => {
     }
   })
 
-  it('PM e tech lead ricordano la voce da fare prima del codice', () => {
-    for (const nome of ['pm', 'tech-lead']) {
-      expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('spinta come `todo`')
-    }
-  })
-
-  // Le frasi di prima del tech lead e del revisore, che il primo giro di
-  // controlli avrebbe lasciato tornare (le ha trovate il revisore).
-  it('tech lead e revisore non ripetono le frasi di prima', () => {
-    const tl = leggi('.claude', 'agents', 'tech-lead.md')
-    expect(tl).not.toContain('ognuno su un ramo `feature/…` nel suo worktree, con obiettivo')
-    expect(tl).not.toContain('la release la sceglie Daniele')
+  it('il revisore non ripete la frase di prima sulle versioni', () => {
     expect(leggi('.claude', 'agents', 'revisore.md')).not.toContain('versione e changelog aggiornati')
   })
 
-  // Il PM che scrive codice è la sessione principale; il sub-agente `pm` no.
-  // Detto in tutti e due i posti, se no le due frasi si contraddicono.
-  it('chi implementa le correzioni piccole è la sessione principale, e lo dicono tutti', () => {
-    expect(claude).toContain('Il codice\ndelle correzioni piccole lo scrivi tu, la sessione principale.')
-    expect(leggi('.claude', 'agents', 'pm.md')).toContain('come sub-agente')
+  // I RUOLI (REQ-DEV-022). Daniele, 12/11/2026: «il tech lead sei tu». La
+  // sessione sul repo non è il PM: implementa come ha sempre fatto. Il PM è
+  // un controllo sui requisiti. La catena «PM → Tech Lead → developer →
+  // revisore» non descriveva come si lavora qui.
+  it('la sessione sul repo è il tech lead, non il PM, e la catena non c’è più', () => {
+    const ruolo = sezione.slice(sezione.indexOf('### Ruolo di default'), sezione.indexOf('Sopra di te'))
+    expect(ruolo).toContain('sei il **Tech Lead di Lime (app del locale)**')
+    expect(ruolo).toContain('Non sei il PM')
+    expect(ruolo).not.toContain('sei il **PM di Lime')
+    // La catena, comunque fosse scritta: una freccia verso un altro ruolo.
+    expect(sezione).not.toMatch(/→\s*(Tech Lead|developer|revisore|Daniele)/i)
+    expect(sezione).not.toContain('`tech-lead`')
+  })
+
+  it('l’agente tech-lead non c’è più: quel ruolo lo svolge la sessione', () => {
+    expect(existsSync(join(radice, '.claude', 'agents', 'tech-lead.md'))).toBe(false)
+    for (const nome of NUOVI) {
+      const t = leggi('.claude', 'agents', `${nome}.md`)
+      expect(t, nome).not.toMatch(/\b(dal|al|il|del) (tech lead|`tech-lead`)/i)
+    }
+  })
+
+  it('i developer ricevono il lavoro dalla sessione principale', () => {
+    for (const nome of DEVELOPER) {
+      expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('Ricevi il lavoro dalla sessione principale')
+    }
+  })
+
+  it('il PM è un ruolo di controllo: non dirige, non assegna, non fissa scadenze', () => {
+    const pm = leggi('.claude', 'agents', 'pm.md')
+    expect(pm).toContain('Ruolo di controllo')
+    expect(pm).toContain('soddisfatto / in parte / no / lavoro senza requisito')
+    expect(pm).toContain('Niente scadenze')
+    // Non dirige e non assegna: le frasi di chi lo fa non ci devono essere.
+    expect(pm).not.toMatch(/passi il lavoro|trasformi ogni richiesta|assegni i compiti|fissi le scadenze|proponi a Daniele il piano/i)
+    // La regola della voce da fare sta nella sezione, non qui.
+    expect(pm).not.toContain('`todo`')
+  })
+
+  // La regola della voce da fare sta nella sezione, non più negli agenti.
+  it('la voce da fare prima del codice è scritta nella sezione', () => {
+    expect(sezione).toContain('spinta come `todo` prima dell\'implementazione')
+  })
+
+  it('il revisore legge anche il lavoro della sessione principale, e a lei lo rimanda', () => {
     const rev = leggi('.claude', 'agents', 'revisore.md')
     expect(rev).toContain('quello che la sessione principale ha implementato da sé')
-    expect(rev).toContain('direttamente alla sessione principale')
+    expect(rev).toContain('rimandi alla sessione principale')
   })
 
   it('nel codice i nomi restano in inglese dove lo è il codice, anche per i developer', () => {
@@ -186,7 +217,6 @@ describe('la squadra in .claude/agents', () => {
 
   it('nessuno della squadra fa merge, tag o deploy; PM e revisore non scrivono codice', () => {
     for (const nome of DEVELOPER) expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('Non fai merge, tag, deploy')
-    expect(leggi('.claude', 'agents', 'tech-lead.md')).toContain('Mai merge, tag o deploy')
     expect(leggi('.claude', 'agents', 'pm.md')).toContain('non scrivi codice')
     expect(leggi('.claude', 'agents', 'revisore.md')).toContain('Non scrivi codice')
   })
@@ -201,7 +231,7 @@ describe('la squadra in .claude/agents', () => {
     }
   })
 
-  it('gli agenti di prima ci sono ancora, e non ce ne sono altri oltre a questi dieci', () => {
+  it('gli agenti di prima ci sono ancora, e non ce ne sono altri oltre a questi nove', () => {
     for (const nome of DI_PRIMA) expect(existsSync(join(radice, '.claude', 'agents', `${nome}.md`)), nome).toBe(true)
     const file = readdirSync(join(radice, '.claude', 'agents')).filter((f) => f.endsWith('.md')).map((f) => f.replace('.md', ''))
     expect(file.sort()).toEqual([...NUOVI, ...DI_PRIMA].sort())

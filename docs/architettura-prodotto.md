@@ -135,7 +135,8 @@ verificato) diventa tutta automatica senza cambiare codice.
   **privato**: su un account GitHub Free i repository privati hanno 2.000
   minuti di Actions al mese, gratis; la CI del sito gira in un minuto, quindi
   bastano per centinaia di esecuzioni. Funziona come per la Tana: lint,
-  test e build a ogni push, deploy solo da un tag su `main` o a mano.
+  test e build a ogni push tranne sui rami di rilascio, deploy solo da un
+  tag (sul test, o in produzione se il commit è in `main`) o a mano.
 - Stesso GitFlow nei due repository: lavoro su `release/x.y.z`, pull
   request verso `develop` e `main`, tag per pubblicare.
 - **Una versione sola, quella di tana-drink** (`package.json`, tag su

@@ -118,7 +118,7 @@ https://<il-tuo-progetto>.web.app/?tavolo=12
 
 Il workflow
 [`.github/workflows/firebase-hosting.yml`](.github/workflows/firebase-hosting.yml)
-builda e pubblica su Firebase Hosting a ogni push su `main`.
+builda e pubblica su Firebase Hosting quando si mette un tag (sul test se il commit non è in `main`, in produzione, dopo un'approvazione, se lo è) o lanciandolo a mano. Un push non pubblica niente: vedi [docs/gitflow.md](docs/gitflow.md).
 
 ### Configurazione una tantum
 
