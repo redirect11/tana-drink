@@ -8174,6 +8174,17 @@ requirements:
       scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro
       backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte
       da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
+      LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che
+      il cassetto della regia sa già fare, la lettura delle fatture
+      (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col
+      credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che
+      le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora
+      no.
+      TUTTO DALLA REGIA (Daniele, 24/10 e 12/11/2026): niente scelta del
+      servizio né chiave propria nelle impostazioni del locale. La fattura
+      va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che
+      la legge col modello di Stonebit e scala il credito; le righe tornano
+      come PROPOSTA da rivedere prima di registrare.
     status: todo
     generate_issue: true
     labels: [ai, fatture, magazzino]
@@ -8202,6 +8213,15 @@ requirements:
       al banco col telefono, ripulita dal modello (sfondo tolto, luce
       uniformata). Da decidere con l'utente.
       Costi e accesso in REQ-AI-003.
+      LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che
+      il cassetto della regia sa già fare, la lettura delle fatture
+      (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col
+      credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che
+      le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora
+      no.
+      La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`,
+      già provato con REQ-AI-004). La foto resta quella caricata a mano,
+      col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora.
     status: todo
     generate_issue: true
     labels: [ai, menu, vista-cliente]
@@ -8264,6 +8284,8 @@ requirements:
       quale modello di immagini usare (i modelli di Claude non generano né
       modificano immagini: serve un altro fornitore), quanto costa una
       modifica in crediti, e cosa si fa delle foto con persone o marchi.
+      RINVIATA (Daniele, 12/11/2026: «niente modifica immagini per ora»).
+      Resta il ritaglio a mano (REQ-MENU-039).
     status: todo
     generate_issue: true
     labels: [ai, gestionale, foto]
@@ -8292,6 +8314,14 @@ requirements:
       (una pagina, un pannello sempre a portata), quanto costa una
       conversazione in crediti, cosa si ricorda fra una conversazione e
       l'altra.
+      DECISO (Daniele, 12/11/2026): la chat sta in un PANNELLO A PORTATA,
+      aperto da un tasto nella barra in alto del gestionale, sopra la
+      pagina in cui si è; NIENTE MEMORIA fra una conversazione e l'altra
+      (vive finché il pannello è aperto: costa meno, e non si salvano dati
+      in più). Viene dopo fatture e voce del menù, che diventano i suoi
+      primi strumenti. Serve alla regia una richiesta nuova per la
+      conversazione con gli strumenti (oggi il cassetto accetta solo
+      `descrizione` e `fattura`).
     status: todo
     generate_issue: true
     labels: [ai, gestionale]
@@ -8368,9 +8398,11 @@ requirements:
       chiederlo fermerebbe il deploy di tutte le Functions.
       PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con
       questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è
-      completato col progetto al deploy, e la Function nasce. DA PROVARE:
-      che Google dia il gettone al destinatario `regia-ai:drink-regia-test`,
-      che non è un indirizzo web (una richiesta vera da prova-bar).
+      completato col progetto al deploy, e la Function nasce. E IL GETTONE
+      FUNZIONA (12/11/2026, Daniele sulla Tana di test con la 1.10.40-beta):
+      «Proponi una descrizione con l'AI» ha risposto, quindi Google dà il
+      gettone al destinatario `regia-ai:drink-regia-test` anche se non è un
+      indirizzo web, e la regia lo riconosce.
       LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col
       suo account di deploy, che deve poter agire come `ai-locale`
       (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza,

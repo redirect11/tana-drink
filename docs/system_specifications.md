@@ -3187,9 +3187,7 @@ SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077 della regia
 
 QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, scritto dalla regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale`: nei progetti che non nascono dalla regia (tana-drink, tana-drink-test, drinkpos-prova-e2e) l'account non c'è, e chiederlo fermerebbe il deploy di tutte le Functions.
 
-PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce.
-
-DA PROVARE: che Google dia il gettone al destinatario `regia-ai:drink-regia-test`, che non è un indirizzo web (una richiesta vera da prova-bar).
+PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce. E IL GETTONE FUNZIONA (12/11/2026, Daniele sulla Tana di test con la 1.10.40-beta): «Proponi una descrizione con l'AI» ha risposto, quindi Google dà il gettone al destinatario `regia-ai:drink-regia-test` anche se non è un indirizzo web, e la regia lo riconosce.
 
 LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436, col via libera di Daniele, verificato con gcloud), ma lì `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di produzione riconosce il gettone (dal suo prossimo rilascio su main): prima risponderebbe sempre 401.
 
@@ -4447,6 +4445,10 @@ Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «inca
 
 Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
 
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no.
+
+TUTTO DALLA REGIA (Daniele, 24/10 e 12/11/2026): niente scelta del servizio né chiave propria nelle impostazioni del locale. La fattura va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che la legge col modello di Stonebit e scala il credito; le righe tornano come PROPOSTA da rivedere prima di registrare.
+
 **Dove**: `functions/, src/components/InvoicesTab.jsx`
 
 #### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
@@ -4456,6 +4458,8 @@ Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel f
 PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
 
 LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
+
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora.
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
 
@@ -4467,6 +4471,8 @@ LA CHIAMATA NON PARTE DALL'APP: la fa la Function della regia, che controlla il 
 
 DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento): quale modello di immagini usare (i modelli di Claude non generano né modificano immagini: serve un altro fornitore), quanto costa una modifica in crediti, e cosa si fa delle foto con persone o marchi.
 
+RINVIATA (Daniele, 12/11/2026: «niente modifica immagini per ora»). Resta il ritaglio a mano (REQ-MENU-039).
+
 **Dove**: `src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
@@ -4476,6 +4482,10 @@ Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel 
 LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
 
 DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
+
+DECISO (Daniele, 12/11/2026): la chat sta in un PANNELLO A PORTATA, aperto da un tasto nella barra in alto del gestionale, sopra la pagina in cui si è;
+
+NIENTE MEMORIA fra una conversazione e l'altra (vive finché il pannello è aperto: costa meno, e non si salvano dati in più). Viene dopo fatture e voce del menù, che diventano i suoi primi strumenti. Serve alla regia una richiesta nuova per la conversazione con gli strumenti (oggi il cassetto accetta solo `descrizione` e `fattura`).
 
 **Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
