@@ -8297,9 +8297,12 @@ requirements:
       permesso li prepara il workflow della regia «Prepara l'AI di un locale
       esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`.
       Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato
-      con gcloud): la riga c'è. La produzione aspetta lo stesso passo, col
-      via libera di Daniele.
-      RESTA: l'AI sulla produzione della Tana, la
+      con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436,
+      col via libera di Daniele, verificato con gcloud), ma lì
+      `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di
+      produzione riconosce il gettone (dal suo prossimo rilascio su main):
+      prima risponderebbe sempre 401.
+      RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la
       fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
     status: partial
     generate_issue: true

@@ -61,7 +61,9 @@ progetti che non nascono dalla regia (`tana-drink`, `tana-drink-test`,
 di deploy `roles/iam.serviceAccountUser` su di esso; solo dopo si aggiunge
 `REGIA_PROGETTO` al loro `functions/.env.<progetto>`. Aggiungere la riga prima
 fermerebbe il deploy di tutte le Functions. Al 12/11/2026 il passo è fatto su
-`tana-drink-test` (la riga c'è), non su `tana-drink`.
+`tana-drink-test` (la riga c'è) e su `tana-drink`, dove però la riga manca
+apposta: la regia di produzione riconosce il gettone solo dal suo prossimo
+rilascio su `main`.
 
 I pagamenti sono **no-op** finché `SUMUP_API_KEY` e `SUMUP_MERCHANT_CODE` non
 ci sono entrambi: `isConfigured()` risponde `false` e non parte nessuna
