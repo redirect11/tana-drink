@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**344 voci** in tutto. **306** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**345 voci** in tutto. **306** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 11 | 4 |  |
+| [LIC](#lic) | 11 | 5 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -78,8 +78,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 170 |
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
-**14** bisogni del locale, **0** con un test di accettazione.
-**95** requisiti su 336 sono collegati a un bisogno;
+**15** bisogni del locale, **0** con un test di accettazione.
+**97** requisiti su 337 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -200,6 +200,14 @@ La demo pubblica si fa provare a chi ancora non è cliente, senza account. Non d
 **Come si accetta**: Aperta la demo da un browser qualunque, nella pagina non c'è niente della Tana (nomi, foto, fornitori, informativa privacy) e nessuna richiesta parte verso la regia o verso Firebase; un link social scritto con «javascript:» non diventa un link.
 
 **Chi**: Gestore · **Lo realizzano**: [REQ-SIC-005](#req-sic-005--la-demo-pubblica-in-sicurezza-lo-script-dei-clienti-niente-regia-configurazione-finta-informativa-per-cliente) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-015 — Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge
+
+Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a pagamento, e la Tana, lavorano come sempre. Quello che il piano non comprende non si vede, e dove lo si incontra si dice in una frase piana con la strada per i piani (decisioni di Daniele del 31/10/2026 sul Free, e del 12/11/2026: senza stati di servizio e senza stampa).
+
+**Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
+
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4497,7 +4505,7 @@ CASSA SEMPLICE. La regia scrive nei `limiti` del Free la chiave nuova `comande: 
 
 DA DIRE ALLA REGIA: la chiave `comande: false` nei limiti del Free. Lo storico resta di 7 giorni (`storico_giorni`, REQ-LIC-003): l'utente ha valutato di toglierlo e ha deciso di tenerlo.
 
-**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx`
+**Dove**: `src/lib/limiti.js, src/lib/comande.js, src/lib/api.js, src/pages/BartenderPage.jsx, src/components/OrderPosDetail.jsx, src/pages/PosPage.jsx, src/lib/printer.js, src/components/SettingsTab.jsx` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 #### REQ-LIC-006 — Nel Free, una volta al giorno, l'invito a passare a un piano a pagamento
 
@@ -4520,6 +4528,12 @@ COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti sopra lo stess
 DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i gestori sulla propria istanza, chiunque dal marketplace); cosa può toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel browser, nelle Functions, tutti e due); chi lo rivede prima che vada in un locale; se i moduli a pagamento restano in licenza come oggi anche quando diventano plugin.
 
 **Dove**: `da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js`
+
+#### REQ-LIC-016 — Nel Free non si stampa niente: né comande, né scontrini, né il resto
+
+Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La regia scrive nei `limiti` del Free la voce `stampa: false`. Come per le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `stampa: false` non esce niente dalla stampante: né la comanda (a mano o automatica, dal banco, dalla sala o dal telefono del cliente), né lo scontrino di cortesia o dell'acconto, né la fattura, la chiusura della cassa, l'ordine al fornitore, l'anteprima o la prova di stampa. L'app non cerca la stampante e non ne controlla lo stato (niente pallino della stampante, niente certificato). Spariscono i tasti di stampa e le impostazioni della stampante e della stampa; dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano). Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti: una stampa che partisse da un tasto dimenticato non esce lo stesso. Incassare, chiudere la cassa e tutto il resto funzionano come sempre: si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005, ancora da fare), che toglie gli stati di servizio e la stampa della sola comanda.
+
+**Dove**: `src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 #### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
 

@@ -361,3 +361,24 @@ bisogni:
     requisiti:
       - REQ-SIC-005
     test_cases: []
+
+  - id: UR-015
+    title: "Il piano del locale decide cosa si usa, e chi ha tutto non se ne accorge"
+    area: "Gestore"
+    description: >
+      Un locale col piano Free prova l'app con una cassa semplice; uno con
+      un piano a pagamento, e la Tana, lavorano come sempre. Quello che il
+      piano non comprende non si vede, e dove lo si incontra si dice in una
+      frase piana con la strada per i piani (decisioni di Daniele del
+      31/10/2026 sul Free, e del 12/11/2026: senza stati di servizio e
+      senza stampa).
+    accettazione: >
+      Su un locale Free con `stampa: false` nei limiti si batte un conto,
+      lo si incassa e si chiude la cassa senza che esca niente dalla
+      stampante, senza tasti «Stampa» e senza le impostazioni della
+      stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana,
+      con la stessa versione, comanda e scontrino escono come sempre.
+    requisiti:
+      - REQ-LIC-005
+      - REQ-LIC-016
+    test_cases: []

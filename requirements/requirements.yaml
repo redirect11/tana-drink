@@ -6913,6 +6913,35 @@ requirements:
       - tests/component/SettingsTab.test.jsx
       - tests/unit/regoleLicenza.test.js
       - tests/regole/licenza.test.js
+  - id: REQ-LIC-016
+    title: "Nel Free non si stampa niente: né comande, né scontrini, né il resto"
+    area: "src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)"
+    description: >
+      Decisione di Daniele del 12/11/2026, portata dalla regia (PR #206 di
+      drink-regia): il Free è senza stati di servizio e SENZA STAMPA. La
+      regia scrive nei `limiti` del Free la voce `stampa: false`. Come per
+      le altre voci (REQ-LIC-003), solo un `false` scritto spegne: senza la
+      voce (la Tana, i piani a pagamento) non cambia niente.
+      CON `stampa: false` non esce niente dalla stampante: né la comanda
+      (a mano o automatica, dal banco, dalla sala o dal telefono del
+      cliente), né lo scontrino di cortesia o dell'acconto, né la fattura,
+      la chiusura della cassa, l'ordine al fornitore, l'anteprima o la
+      prova di stampa. L'app non cerca la stampante e non ne controlla lo
+      stato (niente pallino della stampante, niente certificato). Spariscono
+      i tasti di stampa e le impostazioni della stampante e della stampa;
+      dove serve, la frase del piano con «Vedi i piani» (AvvisoPiano).
+      Il blocco sta in UN punto, in printer.js, oltre ai tasti nascosti:
+      una stampa che partisse da un tasto dimenticato non esce lo stesso.
+      Incassare, chiudere la cassa e tutto il resto funzionano come sempre:
+      si toglie solo la carta. Distinto da `comande: false` (REQ-LIC-005,
+      ancora da fare), che toglie gli stati di servizio e la stampa della
+      sola comanda.
+    status: todo
+    generate_issue: true
+    labels: [licenza, prodotto]
+    priority: P2
+    test_cases: []
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
