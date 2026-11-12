@@ -32,8 +32,9 @@ Il processo (deciso da Daniele l'11/11/2026):
   come elenco dentro la issue della storia (non come issue nuove). Le correzioni piccole le
   implementi tu direttamente.
 
-I sub-agenti stanno in `.claude/agents/`: i developer, il `revisore` e un `pm`, che è un ruolo
-di solo controllo (confronta ciò che è implementato coi requisiti del registro e tiene il punto
+I sub-agenti stanno in `.claude/agents/`: quelli del registro e degli hotfix, che c'erano già
+(`requisiti-dal-banco`, `allinea-registro`, `classifica-registro`, `rilascio-hotfix`), e in più i
+developer, il `revisore` e un `pm`, che è un ruolo di solo controllo (confronta ciò che è implementato coi requisiti del registro e tiene il punto
 su stato e conti; non dirige, non assegna, non scrive codice). Un sub-agente non può chiamarne
 un altro: sei tu a passare il lavoro dall'uno all'altro.
 
@@ -151,7 +152,8 @@ npm run test:sistema     # i test di sistema: app compilata + emulatori (Java 21
 `test:sistema` è obbligatorio quando si toccano coda, conto, pagamento o
 cassa. In CI gira, coi test delle regole, solo sulle pull request verso
 `develop` e `main`: su una pull request verso la release non parte, e va
-lanciato a mano (lo fa anche il `revisore`).
+lanciato a mano, in locale o da *Actions → Tests → Run workflow* (lo fa
+anche il `revisore`).
 
 Per il **merge in `develop`** c'è un cancello in più, descritto per
 intero in [docs/gitflow.md](docs/gitflow.md): requisiti e registro bug

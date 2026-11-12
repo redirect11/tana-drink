@@ -15974,7 +15974,7 @@ requirements:
       - tests/unit/ambienteE2e.test.js
 
   - id: REQ-DEV-020
-    title: "La squadra di Stonebit: il ruolo di PM in cima a CLAUDE.md, AGENTS.md e sei sub-agenti"
+    title: "La squadra di Stonebit: una sezione in CLAUDE.md, AGENTS.md e i sub-agenti (ruoli SUPERATI da REQ-DEV-022)"
     area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), AGENTS.md, .claude/agents/ (pm, tech-lead, frontend-developer, backend-developer, stampa-developer, revisore)"
     description: >
       Richiesta del CEO-agente di Stonebit per conto di Daniele, consegnata
@@ -16002,6 +16002,12 @@ requirements:
       quelli della linea di rilascio.
       LE CONTRADDIZIONI fra la sezione nuova e le regole del repo non si
       risolvono qui: si elencano nella pull request, e le decide Daniele.
+      SUPERATO IN PARTE: le contraddizioni le ha risolte REQ-DEV-021 (dove
+      contraddicono il repo valgono le regole del repo) e i ruoli li ha
+      cambiati REQ-DEV-022 (la sessione è il tech lead, non il PM; l'agente
+      `tech-lead` è stato tolto: gli agenti nuovi sono cinque, non sei).
+      Quello che questa voce dice di ruoli e posizione della sezione è la
+      storia, non lo stato di oggi.
     status: implemented
     generate_issue: true
     labels: [dev, metodo]
@@ -16058,6 +16064,9 @@ requirements:
       FISCALE»; `pm` e `tech-lead` dicono della voce `todo`; il `revisore`
       nomina `test:regole` e `test:sistema`; le altre sezioni di CLAUDE.md
       e i quattro agenti di prima sono identici.
+      SUPERATO IN PARTE da REQ-DEV-022: la sessione non è il PM ma il tech
+      lead, l'agente `tech-lead` non c'è più, e la regola della voce `todo`
+      sta solo nella sezione di CLAUDE.md, non nei file degli agenti.
     status: implemented
     generate_issue: true
     labels: [dev, metodo]
@@ -16067,7 +16076,7 @@ requirements:
 
   - id: REQ-DEV-022
     title: "I ruoli: la sessione sul repo è il tech lead e lavora come sempre, il PM è un controllo sui requisiti, e l'agente tech-lead si toglie"
-    area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui», «Ruolo di default»), .claude/agents/ (pm, tech-lead da togliere, frontend-developer, backend-developer, stampa-developer, revisore)"
+    area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui», «Ruolo di default»), .claude/agents/ (pm, tech-lead tolto, frontend-developer, backend-developer, stampa-developer, revisore)"
     description: >
       Punto 9 della risposta del CEO-agente di Stonebit alla correzione sulla
       PR #329 (file «squadra-tana-drink_4.md», consegnato da Daniele il

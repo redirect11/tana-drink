@@ -35,25 +35,27 @@ Su `develop` e `main` non si committa mai direttamente.
 **Un push non pubblica niente.** Fa girare **lint, test e build**
 ([test.yml](../.github/workflows/test.yml)) e finisce lì, tranne sui rami
 `release/**`: sono il posto di lavoro di ogni giorno, ci si spinge dieci
-volte al giorno, e lì un push non fa girare niente (i test si fanno girare
-in locale). A pubblicare ci vuole un gesto esplicito, e sono due: il **tag**
+volte al giorno, e lì un push non fa girare né test né build (si fanno
+girare in locale). Parte solo la creazione delle issue, quando il push
+tocca il registro dei requisiti o dei bug. A pubblicare ci vuole un gesto esplicito, e sono due: il **tag**
 o il **lancio a mano** del workflow.
 
 | Cosa fai | Cosa succede |
 |---|---|
 | push su un ramo che non è di rilascio | lint + test + build. Nessun deploy. |
-| push su `release/**` | niente: né test né deploy. |
-| pull request verso `develop` o `main` | lint + test + build con la coverage, **regole Firestore** e **test di sistema**: è il cancello del merge. |
-| pull request verso `release/**` | solo quello che ha fatto girare il push sul ramo di partenza: regole e test di sistema **non** partono, vanno lanciati a mano. |
+| push su `release/**` | né test né deploy. Se cambia il registro (`requirements/`) nascono le issue. |
+| pull request verso `develop` o `main` | lint + test + build con la coverage, **regole Firestore** e **test di sistema**. Per il merge è obbligatorio solo «Lint, test e build»: gli altri due girano, ma rossi non lo bloccano. |
+| pull request verso `release/**` | solo quello che ha fatto girare il push sul ramo di partenza: regole e test di sistema **non** partono, vanno lanciati a mano (in locale, o da *Actions → Tests → Run workflow* sul ramo). |
 | lancio a mano «Deploy to Firebase» su un ramo | va **online sul test** (è così che si prova un ramo: niente tag) |
 | tag su un commit **non** in `main` | va **online sul test**, subito |
 | tag su un commit **di `main`** | parte la pipeline, e il deploy in **produzione aspetta un'approvazione** |
 
 Il lancio a mano si fa da GitHub, *Actions → Deploy to Firebase → Run
 workflow*, scegliendo il ramo. Non serve nessun tag, e non lascia tracce
-nella storia: è la strada normale per provare un ramo di lavoro. **Il tag
-resta per i rilasci** — quello su `main` è l'unica cosa che manda in
-produzione.
+nella storia: è la strada per provare un ramo di lavoro da solo. **Il tag
+è per le versioni**: `vX.Y.Z-beta` su `develop` per quelle di prova, che
+vanno sul test (vedi sotto), e quello su `main`, che è l'unica cosa che
+manda in produzione.
 
 Il ramo non c'entra più: conta **dove sta il commit taggato**. Un `v1.5.0`
 messo su `develop` mentre matura pubblica sul test; lo stesso numero, dopo

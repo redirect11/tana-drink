@@ -24,7 +24,9 @@ const piatto = (t) => t.replace(/\s+/g, ' ')
 const ci = yaml.load(leggi('.github', 'workflows', 'test.yml'))
 // `on:` in YAML 1.1 si legge come `true`.
 const quando = ci.on ?? ci[true]
-const DOCUMENTI = ['CLAUDE.md', 'docs/gitflow.md', 'docs/modello-a-v.md']
+const DOCUMENTI = ['CLAUDE.md', 'docs/gitflow.md', 'docs/modello-a-v.md', 'README.md', 'docs/functions.md']
+const pubblica = yaml.load(leggi('.github', 'workflows', 'firebase-hosting.yml'))
+const quandoPubblica = pubblica.on ?? pubblica[true]
 
 describe('la CI com’è oggi (test.yml)', () => {
   it('i push fanno girare i test su ogni ramo tranne quelli di rilascio', () => {
@@ -46,8 +48,11 @@ describe('la CI com’è oggi (test.yml)', () => {
 describe('i documenti la raccontano com’è', () => {
   it.each(DOCUMENTI)('%s non promette test di sistema su ogni pull request', (doc) => {
     const t = piatto(leggi(...doc.split('/')))
-    expect(t).not.toMatch(/su ogni pull request/i)
+    // Comunque la si scriva: «su ogni», «a ogni», «su tutte le».
+    expect(t).not.toMatch(/(su|a) (ogni|tutte le) pull request/i)
     expect(t).not.toMatch(/su ogni PR\b/)
+    expect(t).not.toMatch(/su push e PR\b/)
+    expect(t).not.toMatch(/anche sulle pull request verso la release/i)
   })
 
   it.each(DOCUMENTI)('%s non promette test a ogni push su qualunque ramo', (doc) => {
@@ -55,6 +60,28 @@ describe('i documenti la raccontano com’è', () => {
     expect(t).not.toContain('Su qualunque ramo, `main` compreso')
     expect(t).not.toContain('ogni push lo pubblica su test')
     expect(t).not.toMatch(/Un push fa girare lint, test e build e finisce lì/)
+    expect(t).not.toMatch(/anche sui rami `release/)
+    expect(t).not.toMatch(/pubblica su Firebase Hosting a ogni push/)
+  })
+
+  // A pubblicare è il tag, o il lancio a mano: mai un push su un ramo.
+  it('il deploy parte da un tag o a mano (firebase-hosting.yml)', () => {
+    expect(quandoPubblica.push.tags).toEqual(['**'])
+    expect(quandoPubblica.push.branches).toBeUndefined()
+    expect(quandoPubblica).toHaveProperty('workflow_dispatch')
+  })
+
+  // La tabella di gitflow.md, riga per riga: è lì che si va a guardare.
+  it('la tabella di docs/gitflow.md dice cosa succede sulla release e sulle pull request', () => {
+    const righe = leggi('docs', 'gitflow.md').split('\n')
+    const riga = (inizio) => righe.find((r) => r.startsWith(inizio)) || ''
+    expect(riga('| push su `release/**` |')).toContain('né test né deploy')
+    expect(riga('| pull request verso `develop` o `main` |')).toContain('obbligatorio solo «Lint, test e build»')
+    expect(riga('| pull request verso `release/**` |')).toContain('**non** partono')
+  })
+
+  it('docs/modello-a-v.md dice dove girano i test di sistema', () => {
+    expect(piatto(leggi('docs', 'modello-a-v.md'))).toContain('solo sulle pull request verso `develop` e `main`')
   })
 
   it('CLAUDE.md dice dove i test di sistema girano da soli e dove vanno lanciati a mano', () => {
@@ -72,6 +99,6 @@ describe('i documenti la raccontano com’è', () => {
 
   // Le descrizioni dei requisiti finiscono nella specifica generata.
   it('nemmeno il registro dei requisiti lo promette', () => {
-    expect(piatto(leggi('requirements', 'requirements.yaml'))).not.toMatch(/girano su ogni pull request|e su ogni pull request con/)
+    expect(piatto(leggi('requirements', 'requirements.yaml'))).not.toMatch(/girano (su|a) ogni pull request|e (su|a) ogni pull request con/)
   })
 })

@@ -140,7 +140,7 @@ come per gli emulatori ([ambiente-locale.md](ambiente-locale.md)).
   comunque un conto sbagliato.
 - In CI girano solo sulle pull request verso `develop` e `main` (job
   «Sistema (Playwright)»): su quelle verso la release vanno lanciati a
-  mano. Se uno fallisce, la traccia passo per passo si scarica dall'artefatto
+  mano, in locale o da *Actions → Tests → Run workflow*. Se uno fallisce, la traccia passo per passo si scarica dall'artefatto
   `rapporto-sistema`.
 
 ## A che punto siamo

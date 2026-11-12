@@ -160,7 +160,8 @@ describe('la squadra in .claude/agents', () => {
     expect(ruolo).toContain('sei il **Tech Lead di Lime (app del locale)**')
     expect(ruolo).toContain('Non sei il PM')
     expect(ruolo).not.toContain('sei il **PM di Lime')
-    expect(sezione).not.toContain('PM → Tech Lead')
+    // La catena, comunque fosse scritta: una freccia verso un altro ruolo.
+    expect(sezione).not.toMatch(/→\s*(Tech Lead|developer|revisore|Daniele)/i)
     expect(sezione).not.toContain('`tech-lead`')
   })
 
@@ -168,7 +169,7 @@ describe('la squadra in .claude/agents', () => {
     expect(existsSync(join(radice, '.claude', 'agents', 'tech-lead.md'))).toBe(false)
     for (const nome of NUOVI) {
       const t = leggi('.claude', 'agents', `${nome}.md`)
-      expect(t, nome).not.toMatch(/dal Tech Lead|al Tech Lead|il Tech Lead/)
+      expect(t, nome).not.toMatch(/\b(dal|al|il|del) (tech lead|`tech-lead`)/i)
     }
   })
 
@@ -183,8 +184,10 @@ describe('la squadra in .claude/agents', () => {
     expect(pm).toContain('Ruolo di controllo')
     expect(pm).toContain('soddisfatto / in parte / no / lavoro senza requisito')
     expect(pm).toContain('Niente scadenze')
-    expect(pm).not.toContain('Passi il lavoro')
-    expect(pm).not.toContain('Trasformi ogni richiesta')
+    // Non dirige e non assegna: le frasi di chi lo fa non ci devono essere.
+    expect(pm).not.toMatch(/passi il lavoro|trasformi ogni richiesta|assegni i compiti|fissi le scadenze|proponi a Daniele il piano/i)
+    // La regola della voce da fare sta nella sezione, non qui.
+    expect(pm).not.toContain('`todo`')
   })
 
   // La regola della voce da fare sta nella sezione, non più negli agenti.

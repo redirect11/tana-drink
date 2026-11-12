@@ -150,4 +150,4 @@ npm run test:coverage # con coverage su functions/lib
   con Firestore in-memory ([tests/helpers/fakeFirestore.js](../tests/helpers/fakeFirestore.js))
   e `fetch` SumUp mockato. Ogni test è tracciato da un ID `TC-*` referenziato nei requisiti.
 
-I test girano in CI tramite [test.yml](../.github/workflows/test.yml) su push e PR.
+I test girano in CI tramite [test.yml](../.github/workflows/test.yml): a ogni push tranne sui rami `release/**`, e sulle pull request verso `develop` e `main`.
