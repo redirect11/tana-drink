@@ -6,6 +6,7 @@ import { BICCHIERI, COLORI, DECORAZIONI, urlDrink, sceltaIllustrazione } from '.
 import { useFondoChiaro } from '../lib/useFondoChiaro.js'
 import { MESSAGGI_PIANO } from '../lib/limiti.js'
 import AiutoCampo from './AiutoCampo.jsx'
+import RitaglioFoto from './RitaglioFoto.jsx'
 
 // Scheda prodotto del MENÙ: nome, foto, categoria, prezzo, descrizione,
 // ricetta/ingredienti e disponibilità. Estratta da MenuManager perché la usa
@@ -74,9 +75,25 @@ export default function DrinkForm({
       [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
+  // IL RITAGLIO (REQ-MENU-039): scelta una foto, prima si ritaglia, poi
+  // diventa la foto della scheda. Si carica solo salvando il prodotto, come
+  // prima. La foto scelta resta da parte (`originale`), perché «Ritaglia di
+  // nuovo» riparta da lei e non da quella già tagliata.
+  const [daRitagliare, setDaRitagliare] = useState(null)
+  const [originale, setOriginale] = useState(null)
+
   function onPickFile(e) {
     const file = e.target.files && e.target.files[0]
+    // Si svuota il campo: scegliendo di nuovo la stessa foto, il ritaglio
+    // si deve riaprire.
+    if (e.target) e.target.value = ''
     if (!file) return
+    setDaRitagliare(file)
+  }
+
+  function usaFoto(file) {
+    setOriginale((o) => (daRitagliare && daRitagliare !== o ? daRitagliare : o))
+    setDaRitagliare(null)
     setForm((f) => ({ ...f, _file: file }))
     setPreview(URL.createObjectURL(file))
   }
@@ -84,6 +101,7 @@ export default function DrinkForm({
   function removePhoto() {
     setForm((f) => ({ ...f, _file: null, image_url: null }))
     setPreview(null)
+    setOriginale(null)
   }
 
   // --- categoria ---
@@ -161,8 +179,14 @@ export default function DrinkForm({
           <button type="button" className="btn ghost small" onClick={removePhoto}>
             Rimuovi foto
           </button>
+          {originale && form._file && (
+            <button type="button" className="btn ghost small" onClick={() => setDaRitagliare(originale)}>
+              Ritaglia di nuovo
+            </button>
+          )}
         </div>
       )}
+      {daRitagliare && <RitaglioFoto file={daRitagliare} onConferma={usaFoto} onAnnulla={() => setDaRitagliare(null)} />}
       {fotoConsentite ? (
         <input id="photo" type="file" accept="image/*" onChange={onPickFile} />
       ) : (

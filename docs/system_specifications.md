@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 284 | fatto e coperto dai test |
+| ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 31 | da fare |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**342 voci** in tutto. **303** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**342 voci** in tutto. **304** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 33 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 34 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 167 |
-| Unità | il progetto di dettaglio: un modulo da solo | 176 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 168 |
+| Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
 **93** requisiti su 334 sono collegati a un bisogno;
@@ -1102,6 +1102,14 @@ Flavio, vocale del 09/11/2026: «io non penso a quanto moltiplicare il costo dei
 L'utente, 10/11/2026: «dobbiamo agevolare questo workflow direttamente dal menu clienti. Se non esiste un item cassa, si può creare anche da lì». Prima una voce si faceva solo scegliendo un prodotto che in cassa c'era già; per uno nuovo bisognava crearlo in Modifica menù, tornare al menù dei clienti e ripescarlo fra i prodotti non presenti. Ora ogni sezione aperta ha «+ Nuovo prodotto della cassa»: apre la scheda del prodotto, la stessa del catalogo, con la categoria che porta il nome della sezione se ce n'è una (senza badare a maiuscole e accenti). Salvato, il prodotto nasce in cassa ed entra come voce in fondo a quella sezione; annullando non nasce niente. Tornando dalla scheda, nuova o aperta da una voce, l'editor riapre la sezione da cui si era partiti, invece di ripresentarle tutte chiuse. Valgono i limiti del piano sui prodotti, come per ogni prodotto nuovo.
 
 **Dove**: `src/components/StrutturaMenu.jsx («+ Nuovo prodotto della cassa»), src/components/MenuManager.jsx (nuovoProdottoIn), src/lib/strutturaMenu.js (categoriaDellaSezione), src/lib/saveDrink.js (id nel ritorno)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/salvataggioConId.test.js`
+
+#### REQ-MENU-039 — La foto di un prodotto si ritaglia nella sua scheda prima di caricarla: tutte nella stessa cornice quadrata
+
+Flavio, due vocali del 12/11/2026 con le foto del menù a carte del test: tre drink con foto trovate su siti diversi uscivano di misure e inquadrature diverse (una stretta e alta, una quadrata, una piccola). «Serve un qualche cosa che mi permette di ritagliarle»; «quando si carica la foto dovrebbe apparire il selezionatore della foto, in modo tale se la voglio ridimensionare, cioè tagliare, ingrandire, rimpicciolire, e poi salvare le modifiche e poi dopo salvare proprio il prodotto… se lo posso fare stesso all'interno della scheda del prodotto è ancora meglio». Prima l'app riduceva soltanto la foto a 1200 px sul lato lungo, senza tagliarla: ogni posto del menù la sistemava a modo suo.
+
+CRITERI DI ACCETTAZIONE: 1. Nella scheda del prodotto, scelta una foto, si apre il ritaglio: una cornice QUADRATA con la foto dentro, che si sposta trascinando (dito o mouse) e si ingrandisce o rimpicciolisce (cursore, rotella, due dita). 2. Rimpicciolendo si può vedere la foto intera: la parte della cornice che resta vuota diventa bianca. 3. «Usa questa foto» prepara la foto ritagliata, 1000 × 1000, che si vede subito come anteprima nella scheda; si carica solo salvando il prodotto, come prima. «Annulla» lascia la foto di prima. 4. Finché il prodotto non è salvato, «Ritaglia di nuovo» riapre il ritaglio sulla foto scelta, non su quella già ritagliata. 5. Se il browser non sa preparare la foto ritagliata, si carica quella scelta, intera, come prima: il ritaglio non blocca mai il salvataggio. La forma quadrata la sceglie chi sviluppa (Daniele non l'ha fissata): va bene in tutti i posti del menù, ed è un numero solo da cambiare.
+
+**Dove**: `src/components/RitaglioFoto.jsx, src/lib/ritaglioFoto.js, src/components/DrinkForm.jsx (Foto)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/ritaglioFoto.test.js`, `tests/component/ritaglioFoto.test.jsx`
 
 #### REQ-MENU-038 — Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili
 
@@ -4128,14 +4136,6 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-039 — La foto di un prodotto si ritaglia nella sua scheda prima di caricarla: tutte nella stessa cornice quadrata
-
-Flavio, due vocali del 12/11/2026 con le foto del menù a carte del test: tre drink con foto trovate su siti diversi uscivano di misure e inquadrature diverse (una stretta e alta, una quadrata, una piccola). «Serve un qualche cosa che mi permette di ritagliarle»; «quando si carica la foto dovrebbe apparire il selezionatore della foto, in modo tale se la voglio ridimensionare, cioè tagliare, ingrandire, rimpicciolire, e poi salvare le modifiche e poi dopo salvare proprio il prodotto… se lo posso fare stesso all'interno della scheda del prodotto è ancora meglio». Prima l'app riduceva soltanto la foto a 1200 px sul lato lungo, senza tagliarla: ogni posto del menù la sistemava a modo suo.
-
-CRITERI DI ACCETTAZIONE: 1. Nella scheda del prodotto, scelta una foto, si apre il ritaglio: una cornice QUADRATA con la foto dentro, che si sposta trascinando (dito o mouse) e si ingrandisce o rimpicciolisce (cursore, rotella, due dita). 2. Rimpicciolendo si può vedere la foto intera: la parte della cornice che resta vuota diventa bianca. 3. «Usa questa foto» prepara la foto ritagliata, 1000 × 1000, che si vede subito come anteprima nella scheda; si carica solo salvando il prodotto, come prima. «Annulla» lascia la foto di prima. 4. Finché il prodotto non è salvato, «Ritaglia di nuovo» riapre il ritaglio sulla foto scelta, non su quella già ritagliata. 5. Se il browser non sa preparare la foto ritagliata, si carica quella scelta, intera, come prima: il ritaglio non blocca mai il salvataggio. La forma quadrata la sceglie chi sviluppa (Daniele non l'ha fissata): va bene in tutti i posti del menù, ed è un numero solo da cambiare.
-
-**Dove**: `src/components/RitaglioFoto.jsx, src/lib/ritaglioFoto.js, src/components/DrinkForm.jsx (Foto)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Magazzino
 

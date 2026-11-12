@@ -4,6 +4,10 @@
 
 ### Gestionale
 
+- Scheda del prodotto: scelta una foto, si ritaglia prima di caricarla, in una
+  cornice quadrata. Si sposta trascinandola e si ingrandisce o rimpicciolisce
+  col cursore, con la rotella o con due dita, così tutte le foto del menù
+  hanno la stessa misura e la stessa inquadratura.
 - Impostazioni: sulla scelta attiva (lo stile del menù, il formato dei prezzi)
   il testo secondario si legge anche coi temi dove il colore dei tasti è
   chiaro.

@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-52 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+53 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2084,6 +2084,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-SIC-004 — Caratteri e script dallo stesso indirizzo dell'app: niente richieste a terzi senza consenso
 - REQ-MENU-033 — Il ricarico del prezzo consigliato si imposta anche come drink cost
 - REQ-MENU-036 — Dal menù dei clienti si crea un prodotto della cassa che non c'è, e diventa subito una voce della sezione
+- REQ-MENU-039 — La foto di un prodotto si ritaglia nella sua scheda prima di caricarla: tutte nella stessa cornice quadrata
 - REQ-MENU-038 — Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili
 - REQ-MENU-037 — Le sezioni di soli Special stanno fuori dal menù, e si aprono dal carosello e dal QR: è la stessa carta
 - REQ-MENU-035 — L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme

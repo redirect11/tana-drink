@@ -6507,11 +6507,13 @@ requirements:
          salvataggio.
       La forma quadrata la sceglie chi sviluppa (Daniele non l'ha fissata):
       va bene in tutti i posti del menù, ed è un numero solo da cambiare.
-    status: todo
+    status: implemented
     generate_issue: true
     labels: [menu, gestionale, foto]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/ritaglioFoto.test.js
+      - tests/component/ritaglioFoto.test.jsx
 
   - id: REQ-MENU-038
     title: "Il formato dei prezzi nel menù dei clienti si sceglie: di partenza il numero, senza simbolo dell'euro e senza decimali inutili"
