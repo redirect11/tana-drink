@@ -44,7 +44,7 @@ iniettate in `index.js` e sostituite da mock nei test.
 | `SUMUP_AFFILIATE_KEY` | env | `''` | Chiave affiliazione per il lettore Solo |
 | `SUMUP_AFFILIATE_APP_ID` | env | `it.latanadelconiglio.drink` | Id applicativo per l'affiliazione |
 | `REGIA_AI_KEY` | **secret** | — | La «Chiave AI» del locale verso la regia (`<slug>.<segreto>`, si crea nel backoffice della regia). Col segnaposto `non-configurato` l'AI è spenta (REQ-AI-003) |
-| `REGIA_PROGETTO` | env | `drink-regia` | Il progetto della regia a cui l'AI chiede: `drink-regia-test` sul test (`functions/.env.tana-drink-test`) |
+| `REGIA_PROGETTO` | env | — | Il progetto della regia a cui l'AI chiede: `drink-regia` in produzione, `drink-regia-test` sul test. Senza, l'AI è spenta |
 
 Il segreto si imposta così, e **non** finisce nel repo:
 
@@ -61,9 +61,15 @@ segnaposto: Firebase non pubblica nessuna Function se ne manca uno. Per
 echo -n "non-configurato" | firebase functions:secrets:set REGIA_AI_KEY --data-file=- --project <progetto>
 ```
 
+(in PowerShell il valore va scritto senza ritorno a capo, oppure con
+`firebase functions:secrets:set REGIA_AI_KEY` e incollandolo quando lo chiede)
 e poi, quando la regia ha creato la Chiave AI del locale, lo stesso comando
-col valore vero. Nei locali della regia il segnaposto lo crea la regia
-(`SEGRETI_APP` dei suoi workflow).
+col valore vero. Nei locali della flotta il segnaposto **dovrà** crearlo la
+regia: va aggiunto `REGIA_AI_KEY` a `SEGRETI_APP` dei suoi due workflow
+(`provisiona-istanza.yml`, `aggiorna-istanza.yml`), che al 12/11/2026
+contengono solo `SUMUP_API_KEY`, e la regia deve scrivere anche
+`REGIA_PROGETTO` nel `functions/.env.<progetto>` del locale. Senza
+`REGIA_PROGETTO` l'AI resta spenta.
 
 I pagamenti sono **no-op** finché `SUMUP_API_KEY` e `SUMUP_MERCHANT_CODE` non
 ci sono entrambi: `isConfigured()` risponde `false` e non parte nessuna

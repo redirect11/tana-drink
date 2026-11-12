@@ -46,6 +46,37 @@ describe('la proposta', () => {
     expect(screen.getByText(/credito rimasto/)).toBeInTheDocument()
   })
 
+  // Una descrizione costa qualche millesimo: «0,00 €» sarebbe falso.
+  it('il costo si legge coi millesimi', async () => {
+    chiamata.mockResolvedValue({ ok: true, tipo: 'descrizione', risultato: { descrizione: 'Gin, limone e soda.', da_verificare: [] }, costo_eur: 0.003, credito_eur: 4.997 })
+    mostra()
+    await chiedi()
+    expect(await screen.findByText(/Costo 0,003 € · credito rimasto 4,997 €/)).toBeInTheDocument()
+  })
+
+  // Una proposta vuota svuoterebbe il campo con «Usa questa».
+  it('una proposta vuota non si propone', async () => {
+    chiamata.mockResolvedValue({ ok: true, tipo: 'descrizione', risultato: { descrizione: '  ', da_verificare: 'non è un elenco' } })
+    const onUsa = mostra()
+    await chiedi()
+    expect(await screen.findByRole('status')).toHaveTextContent('non ha dato una risposta utilizzabile')
+    expect(screen.queryByRole('button', { name: 'Usa questa' })).toBeNull()
+    expect(onUsa).not.toHaveBeenCalled()
+  })
+
+  // Il risultato non usabile si paga lo stesso: lo si dice.
+  it('quando il risultato non serve, il costo pagato si vede', async () => {
+    chiamata.mockResolvedValue({ ok: false, codice: 'non-usabile', costo_eur: 0.02, credito_eur: 3 })
+    mostra()
+    await chiedi()
+    expect(await screen.findByRole('status')).toHaveTextContent('Costo 0,02 €')
+  })
+
+  it('con un nome di una lettera non si può chiedere', () => {
+    mostra({ nome: 'G' })
+    expect(screen.getByRole('button', { name: 'Proponi una descrizione con l’AI' })).toBeDisabled()
+  })
+
   it('«Usa questa» la mette nel campo; niente si salva da solo', async () => {
     chiamata.mockResolvedValue({ ok: true, risultato: { descrizione: 'Gin, limone e soda.', da_verificare: [] } })
     const onUsa = mostra()
@@ -102,12 +133,26 @@ describe('quando l’AI si ferma', () => {
     expect(screen.queryByRole('button', { name: 'Proponi una descrizione con l’AI' })).toBeNull()
   })
 
-  it('il permesso negato diventa «non attiva», senza chiamare a vuoto sul leggero', async () => {
+  // A chi non ha il ruolo non si dice che l'AI è spenta: si dice chi la usa.
+  it('il permesso negato dice chi usa l’AI, e sul leggero non si chiama a vuoto', async () => {
     chiamata.mockRejectedValue({ code: 'functions/permission-denied' })
-    expect(await chiediAI({ tipo: 'descrizione', nome: 'X' })).toEqual({ ok: false, codice: 'spento' })
+    expect(await chiediAI({ tipo: 'descrizione', nome: 'X' })).toEqual({ ok: false, codice: 'permesso' })
     leggero = true
     chiamata.mockClear()
     expect(await chiediAI({ tipo: 'descrizione', nome: 'X' })).toEqual({ ok: false, codice: 'spento' })
     expect(chiamata).not.toHaveBeenCalled()
+  })
+})
+
+describe('senza rete', () => {
+  it('non si chiama la Function: si dice che serve la rete', async () => {
+    const vero = navigator.onLine
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+    try {
+      expect(await chiediAI({ tipo: 'descrizione', nome: 'Negroni' })).toEqual({ ok: false, codice: 'senza-rete' })
+      expect(chiamata).not.toHaveBeenCalled()
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: vero, configurable: true })
+    }
   })
 })

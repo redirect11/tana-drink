@@ -8145,11 +8145,19 @@ requirements:
         dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare
         provenienza o botaniche, e al cliente arriva come informazione del
         locale. Costi e credito in REQ-AI-003.
-    status: todo
+      FATTO IN PARTE (12/11/2026, col collegamento alla regia di REQ-AI-003):
+      nella scheda del prodotto «Proponi una descrizione con l'AI» chiede
+      alla regia una descrizione dal nome e dalla categoria, e la mostra
+      come proposta da usare, scartare o richiedere; quello che il modello
+      non sa torna «da verificare»; il costo si mostra coi millesimi.
+      RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del
+      gestionale, e la prima stesura scritta una volta per tutte.
+    status: partial
     generate_issue: true
     labels: [ai, menu, vista-cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/descrizioneAI.test.jsx
 
   - id: REQ-AI-005
     title: "Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere"
@@ -8273,15 +8281,16 @@ requirements:
       PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni
       progetto in cui si pubblicano le Functions (tana-drink-test,
       tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza,
-      Firebase non pubblica nessuna Function. Nei locali della regia lo
-      crea la regia (SEGRETI_APP), che deve anche scrivere `REGIA_PROGETTO`.
+      Firebase non pubblica nessuna Function. Nei locali della flotta DEVE
+      crearlo la regia, aggiungendolo a SEGRETI_APP dei suoi workflow (al
+      12/11/2026 c'è solo SUMUP_API_KEY), e scrivere `REGIA_PROGETTO`; senza
+      `REGIA_PROGETTO` l'AI resta spenta.
     status: partial
     generate_issue: true
     labels: [ai, licenza, prodotto]
     priority: P3
     test_cases:
       - tests/bdd/richiesta-ai.test.js
-      - tests/component/descrizioneAI.test.jsx
 
   - id: REQ-MAG-009
     title: "Macro-categorie: il magazzino letto per famiglie"

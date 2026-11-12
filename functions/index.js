@@ -71,18 +71,26 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
 // creata dall'admin nel backoffice della regia), un segreto come quello di
 // SumUp:
 //   firebase functions:secrets:set REGIA_AI_KEY
-// Il segreto deve ESISTERE prima del deploy, anche col segnaposto
+// IL SEGRETO DEVE ESISTERE PRIMA DEL DEPLOY, anche col segnaposto
 // `non-configurato` (che tiene l'AI spenta): senza, Firebase non pubblica
-// nessuna Function. La regia lo crea così nei suoi locali (SEGRETI_APP).
+// NESSUNA Function, nemmeno quelle dei pagamenti. Va creato a mano nei
+// progetti di tana-drink (docs/functions.md); nei locali della flotta deve
+// crearlo la regia, aggiungendolo a SEGRETI_APP dei suoi workflow (al
+// 12/11/2026 lì c'è ancora solo SUMUP_API_KEY).
 // Quale regia: `REGIA_PROGETTO` in functions/.env.<progetto> (drink-regia in
-// produzione, drink-regia-test sul test). La logica è in lib/ai-service.js.
+// produzione, drink-regia-test sul test). Senza, l'AI è spenta: niente
+// valore di partenza, perché un locale di prova non chieda alla regia vera.
+// La logica è in lib/ai-service.js.
 const REGIA_AI_KEY = defineSecret('REGIA_AI_KEY')
-const REGIA_PROGETTO = process.env.REGIA_PROGETTO || 'drink-regia'
+const REGIA_PROGETTO = process.env.REGIA_PROGETTO || ''
+// Quanto si aspetta la regia: per una fattura lunga ha fino a 300 secondi.
+// Oltre, la regia finisce comunque e il costo si paga: meglio aspettarla.
+const ATTESA_REGIA_MS = 290 * 1000
 
 exports.richiestaAI = onCall(
-  // Una fattura in PDF arriva a 20 MB e la regia può metterci un po' a
+  // Una fattura in PDF arriva a 20 MB e la regia ha fino a 300 secondi per
   // leggerla: tempo e memoria in più rispetto alle altre.
-  { ...OPTS, secrets: [REGIA_AI_KEY], timeoutSeconds: 120, memory: '512MiB' },
+  { ...OPTS, secrets: [REGIA_AI_KEY], timeoutSeconds: 310, memory: '512MiB' },
   async (request) => {
     try {
       return await richiestaAIsvc(
@@ -90,7 +98,7 @@ exports.richiestaAI = onCall(
           chiave: () => REGIA_AI_KEY.value() || '',
           progettoRegia: () => REGIA_PROGETTO,
           invia: async (url, opzioni) => {
-            const res = await fetch(url, opzioni)
+            const res = await fetch(url, { ...opzioni, signal: AbortSignal.timeout(ATTESA_REGIA_MS) })
             const testo = await res.text()
             let corpo = null
             try {

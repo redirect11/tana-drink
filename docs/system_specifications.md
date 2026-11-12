@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 5 | fatto a metà |
-| ⬜ | 31 | da fare |
+| 🟡 | 6 | fatto a metà |
+| ⬜ | 30 | da fare |
 | 🗑 | 8 | non più valido |
 
-**344 voci** in tutto. **305** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
+**344 voci** in tutto. **306** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 1 | 5 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -3143,6 +3143,20 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 Dove l’intelligenza artificiale entra nel lavoro del locale.
 
+#### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
+
+DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
+
+FATTO IN PARTE (12/11/2026, col collegamento alla regia di REQ-AI-003): nella scheda del prodotto «Proponi una descrizione con l'AI» chiede alla regia una descrizione dal nome e dalla categoria, e la mostra come proposta da usare, scartare o richiedere; quello che il modello non sa torna «da verificare»; il costo si mostra coi millesimi.
+
+RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte.
+
+**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/descrizioneAI.test.jsx`
+
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -3163,9 +3177,9 @@ LA PARTE DELL'APP (12/11/2026): la Function `richiestaAI` del locale (functions/
 
 RESTA: l'uso della fattura (REQ-AI-001), il credito mostrato in Impostazioni, e i pacchetti e il prezzo.
 
-PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni progetto in cui si pubblicano le Functions (tana-drink-test, tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza, Firebase non pubblica nessuna Function. Nei locali della regia lo crea la regia (SEGRETI_APP), che deve anche scrivere `REGIA_PROGETTO`.
+PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni progetto in cui si pubblicano le Functions (tana-drink-test, tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza, Firebase non pubblica nessuna Function. Nei locali della flotta DEVE crearlo la regia, aggiungendolo a SEGRETI_APP dei suoi workflow (al 12/11/2026 c'è solo SUMUP_API_KEY), e scrivere `REGIA_PROGETTO`; senza `REGIA_PROGETTO` l'AI resta spenta.
 
-**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`, `tests/component/descrizioneAI.test.jsx`
+**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
 
 ### Interfaccia
 
@@ -4404,14 +4418,6 @@ PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente�
 LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
-
-#### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
-
-Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo generare all'intelligenza artificiale, poi alcune verranno eliminate»; una descrizione per i gin (provenienza, carattere), per le birre più particolari, per i cocktail IBA; niente per le bibite.
-
-DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
-
-**Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx`
 
 #### REQ-AI-005 — Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere
 

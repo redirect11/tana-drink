@@ -54,17 +54,21 @@ const testo = (v) => typeof v === 'string' && v.trim().length > 0
 
 // Null se la richiesta va bene, altrimenti la frase che dice cosa non va.
 function validaRichiesta(r) {
-  if (!r || typeof r !== 'object' || !CAMPI[r.tipo]) return 'Il tipo di richiesta non è fra quelli che la regia accetta.'
+  // `Object.hasOwn`: un `tipo` come «toString» o «__proto__» non è un tipo.
+  if (!r || typeof r !== 'object' || !Object.hasOwn(CAMPI, r.tipo)) return 'Il tipo di richiesta non è fra quelli che la regia accetta.'
   const estranei = Object.keys(r).filter((k) => !CAMPI[r.tipo].includes(k))
   if (estranei.length) return `Campi non previsti: ${estranei.join(', ')}.`
   if (r.tipo === 'descrizione') {
-    if (!testo(r.nome)) return 'Per una descrizione serve il nome del prodotto.'
+    // Almeno due caratteri, come chiede la regia: con uno solo risponderebbe 400.
+    if (!testo(r.nome) || r.nome.trim().length < 2) return 'Per una descrizione serve il nome del prodotto.'
     for (const k of ['produttore', 'categoria', 'note']) {
       if (r[k] != null && typeof r[k] !== 'string') return `Il campo ${k} dev'essere un testo.`
     }
     return null
   }
   if (!testo(r.file)) return 'Per una fattura serve il file.'
+  // Il file in base64 puro: un «data:…;base64,» davanti la regia lo rifiuta.
+  if (/^data:/i.test(r.file.trim())) return 'Il file va mandato in base64, senza «data:» davanti.'
   const massimo = FORMATI_FATTURA[r.media_type]
   if (!massimo) return 'Il formato del file non è fra quelli accettati (PDF, JPEG, PNG, WebP, GIF).'
   if (pesoDelBase64(r.file) > massimo * MB) return `Il file è troppo grande: al massimo ${massimo} MB.`
@@ -81,15 +85,17 @@ const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 //   chiave       (401: la Chiave AI non è valida, o non c'è ancora)
 //   richiesta    (400: un errore nostro)
 //   riprova      (503, rete, o una risposta che non si capisce)
-function interpreta({ status, corpo }) {
+function interpreta({ status, corpo }, tipoChiesto) {
   const c = corpo && typeof corpo === 'object' ? corpo : {}
   if (status === 200) {
     if (c.ok !== true || !c.risultato || typeof c.risultato !== 'object') return { ok: false, codice: 'riprova' }
+    // La risposta dev'essere per quello che si è chiesto.
+    if (tipoChiesto && c.tipo !== tipoChiesto) return { ok: false, codice: 'riprova' }
     return { ok: true, tipo: c.tipo, risultato: c.risultato, costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
   }
   if (status === 402) {
     const noti = ['credito', 'tetto', 'spento', 'senza-cassetto']
-    return { ok: false, codice: noti.includes(c.codice) ? c.codice : 'credito' }
+    return { ok: false, codice: noti.includes(c.codice) ? c.codice : 'credito', credito_eur: numero(c.credito_eur) }
   }
   if (status === 422) return { ok: false, codice: 'non-usabile', costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
   if (status === 401) return { ok: false, codice: 'chiave' }
@@ -101,8 +107,12 @@ async function richiestaAI(deps, auth, richiesta) {
   if (!isGestore(auth)) throw { code: 'permission-denied', message: "L'AI la usa lo staff di gestione del locale." }
   const errore = validaRichiesta(richiesta)
   if (errore) throw { code: 'invalid-argument', message: errore }
-  const chiave = deps.chiave()
-  if (!chiave || chiave === SEGNAPOSTO) return { ok: false, codice: 'spento' }
+  // Ripulita: un a capo rimasto nel segreto renderebbe l'intestazione non
+  // valida, e si leggerebbe sempre «riprova».
+  const chiave = String(deps.chiave() || '').trim()
+  // Senza la chiave, o senza sapere QUALE regia (REGIA_PROGETTO), l'AI è
+  // spenta: un locale di test non deve finire a chiedere alla regia vera.
+  if (!chiave || chiave === SEGNAPOSTO || !deps.progettoRegia()) return { ok: false, codice: 'spento' }
   const corpo = Object.fromEntries(CAMPI[richiesta.tipo].filter((k) => richiesta[k] != null).map((k) => [k, richiesta[k]]))
   let risposta
   try {
@@ -114,7 +124,7 @@ async function richiestaAI(deps, auth, richiesta) {
   } catch {
     return { ok: false, codice: 'riprova' }
   }
-  return interpreta(risposta)
+  return interpreta(risposta, richiesta.tipo)
 }
 
 module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, interpreta, SEGNAPOSTO }

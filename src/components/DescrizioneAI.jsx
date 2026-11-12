@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { chiediAI, messaggioAI, aiRaggiungibile } from '../lib/aiApi.js'
-import { formatPrice } from '../lib/orderStatus.js'
+
+// Il costo di una descrizione è di qualche millesimo: coi centesimi si
+// leggerebbe «0,00 €», che non è vero. Fino a quattro decimali.
+const costoInEuro = (v) =>
+  `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // LA DESCRIZIONE PROPOSTA DALL'AI, NELLA SCHEDA DEL PRODOTTO (REQ-AI-003, il
 // primo uso del cassetto AI della regia). Si chiede, si legge la proposta
@@ -15,11 +19,21 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa }) {
   async function chiedi() {
     setStato({ fase: 'attesa' })
     const r = await chiediAI({ tipo: 'descrizione', nome: nome.trim(), ...(categoria ? { categoria } : {}) })
-    if (r.ok) setStato({ fase: 'proposta', descrizione: r.risultato?.descrizione || '', daVerificare: r.risultato?.da_verificare || [], costo: r.costo_eur, credito: r.credito_eur })
-    else setStato({ fase: 'errore', messaggio: messaggioAI(r.codice) })
+    const descrizione = typeof r.risultato?.descrizione === 'string' ? r.risultato.descrizione.trim() : ''
+    // Una proposta vuota non è una proposta: «Usa questa» svuoterebbe il campo.
+    if (r.ok && descrizione) {
+      const daVerificare = Array.isArray(r.risultato.da_verificare) ? r.risultato.da_verificare.filter((x) => typeof x === 'string') : []
+      setStato({ fase: 'proposta', descrizione, daVerificare, costo: r.costo_eur, credito: r.credito_eur })
+    } else {
+      const codice = r.ok ? 'non-usabile' : r.codice
+      // Anche quando il risultato non serve il costo resta: si dice.
+      const costo = r.costo_eur != null ? ` Costo ${costoInEuro(r.costo_eur)}.` : ''
+      setStato({ fase: 'errore', messaggio: messaggioAI(codice) + costo })
+    }
   }
 
-  const senzaNome = !nome || !nome.trim()
+  // Almeno due caratteri, come chiede la regia.
+  const senzaNome = !nome || nome.trim().length < 2
   return (
     <div className="descrizione-ai">
       {stato.fase !== 'proposta' && (
@@ -64,8 +78,8 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa }) {
           </div>
           {stato.costo != null && (
             <p className="small muted" style={{ margin: '6px 0 0' }}>
-              Costo {formatPrice(stato.costo)}
-              {stato.credito != null ? ` · credito rimasto ${formatPrice(stato.credito)}` : ''}
+              Costo {costoInEuro(stato.costo)}
+              {stato.credito != null ? ` · credito rimasto ${costoInEuro(stato.credito)}` : ''}
             </p>
           )}
         </div>
