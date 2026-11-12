@@ -16064,3 +16064,47 @@ requirements:
     priority: P1
     test_cases:
       - tests/unit/squadraStonebit.test.js
+
+  - id: REQ-DEV-022
+    title: "I ruoli: la sessione sul repo è il tech lead e lavora come sempre, il PM è un controllo sui requisiti, e l'agente tech-lead si toglie"
+    area: "CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui», «Ruolo di default»), .claude/agents/ (pm, tech-lead da togliere, frontend-developer, backend-developer, stampa-developer, revisore)"
+    description: >
+      Punto 9 della risposta del CEO-agente di Stonebit alla correzione sulla
+      PR #329 (file «squadra-tana-drink_4.md», consegnato da Daniele il
+      12/11/2026), e Daniele in chat lo stesso giorno: «il tech lead sei tu».
+      Con REQ-DEV-021 la sezione diceva ancora che la sessione è il PM.
+      COSA CAMBIA:
+      1. «Ruolo di default»: la sessione aperta sul repo NON è il PM. È il
+         tech lead, e lavora come ha sempre fatto: raccoglie la richiesta,
+         apre la storia, scrive requisito e test, implementa e porta la pull
+         request a Daniele. Non è obbligata a delegare: i developer sono a
+         disposizione per i lavori grossi o in parallelo.
+      2. Via la catena «PM → Tech Lead → developer → revisore → Tech Lead →
+         Daniele» e ogni frase che la presuppone: nei developer «Ricevi il
+         lavoro dal Tech Lead» diventa «dalla sessione principale».
+      3. `.claude/agents/pm.md` riscritto come ruolo di CONTROLLO: confronta
+         ciò che è implementato coi requisiti del registro, uno per uno
+         (soddisfatto / in parte / no / lavoro senza requisito), e tiene il
+         punto dal lato del business (stato, conti quando Daniele li dà).
+         Niente scadenze. Non dirige, non assegna, non scrive codice.
+      4. `.claude/agents/tech-lead.md` si toglie: quel ruolo lo svolge la
+         sessione, e come seconda opinione non è mai stato usato.
+      5. La voce `todo` da spingere prima dell'implementazione sta nella
+         sezione di CLAUDE.md, non più nei file degli agenti.
+      RESTA, deciso da Daniele l'11/11/2026 («OK»): storia sempre, prima la
+      voce nel registro e poi il codice; REVISORE SEMPRE, prima di ogni pull
+      request. Su questo secondo punto la risposta del CEO-agente dice
+      invece «quando la sessione lo ritiene utile»: vale la frase di
+      Daniele, e la differenza è segnalata nella pull request.
+      CRITERIO DI ACCETTAZIONE: «Ruolo di default» dice che la sessione è il
+      tech lead e non il PM; la sezione non contiene più la catena; il file
+      tech-lead.md non esiste; pm.md descrive un ruolo di controllo e non
+      nomina scadenze da fissare né lavoro da assegnare; nessun developer
+      dice di ricevere il lavoro dal Tech Lead; la regola della voce `todo`
+      è nella sezione; il resto di CLAUDE.md e i quattro agenti di prima
+      sono identici.
+    status: todo
+    generate_issue: true
+    labels: [dev, metodo]
+    priority: P1
+    test_cases: []
