@@ -6063,9 +6063,15 @@ bugs:
       Daniele, 12/11/2026, alla domanda se correggere i documenti o la CI:
       «no correggi, deve continuare a funzionare come è ora… cioè correggi i
       documenti». LA CI NON SI TOCCA: si scrive com'è.
-    status: todo
+      ORA CLAUDE.md, docs/gitflow.md e docs/modello-a-v.md dicono dove i
+      test girano da soli (push fuori dalla release; pull request verso
+      develop e main) e dove vanno lanciati a mano; gitflow.md descrive i
+      tag `vX.Y.Z-beta` su develop. Un test legge test.yml e controlla che
+      i documenti lo raccontino: se la CI cambia, dice di riscriverli.
+    status: fixed
     in_produzione: false
     generate_issue: true
     labels: [bug, dev, documentazione]
     requisiti: [REQ-DEV-018]
-    test_cases: []
+    test_cases:
+      - tests/unit/ciComeScritta.test.js

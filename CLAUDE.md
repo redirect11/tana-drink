@@ -120,7 +120,8 @@ Regole non negoziabili, per intero in [docs/gitflow.md](docs/gitflow.md).
   c'è l'agente
   [`rilascio-hotfix`](.claude/agents/rilascio-hotfix.md).
 - **A pubblicare è il tag, non il push.** Un push fa girare lint, test e
-  build e finisce lì. Un **tag su un commit non in `main`** va sul **test**;
+  build, tranne sui rami `release/**`: lì si spinge dieci volte al giorno, e
+  i test si fanno girare in locale. Un **tag su un commit non in `main`** va sul **test**;
   un **tag su un commit di `main`** manda in **produzione**, e quel deploy
   aspetta un'approvazione a mano su GitHub.
 - La versione `x.y.z` si tagga su `develop` subito prima del merge su
@@ -147,7 +148,9 @@ npm run test:sistema     # i test di sistema: app compilata + emulatori (Java 21
 ```
 
 `test:sistema` è obbligatorio quando si toccano coda, conto, pagamento o
-cassa; in CI gira comunque su ogni pull request.
+cassa. In CI gira, coi test delle regole, solo sulle pull request verso
+`develop` e `main`: su una pull request verso la release non parte, e va
+lanciato a mano (lo fa anche il `revisore`).
 
 Per il **merge in `develop`** c'è un cancello in più, descritto per
 intero in [docs/gitflow.md](docs/gitflow.md): requisiti e registro bug

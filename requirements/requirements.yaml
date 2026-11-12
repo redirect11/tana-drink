@@ -15902,8 +15902,8 @@ requirements:
       con .env.sistema, Auth e Firestore emulati con le regole vere
       (`npm run test:sistema`, playwright.config.mjs), il database seminato
       da zero prima di ogni test (tests/sistema/semina.mjs) e i gesti del
-      banco in tests/sistema/banco.mjs. In CI girano su ogni pull request,
-      nel job «Sistema (Playwright)». Il primo è il giro della serata senza
+      banco in tests/sistema/banco.mjs. In CI girano solo sulle pull
+      request verso develop e main, nel job «Sistema (Playwright)». Il primo è il giro della serata senza
       rete (REQ-OFFLINE-006), che ha trovato BUG-137. Poi la cassa che
       torna al centesimo (REQ-CASSA-002: contanti, carta e un impagato, la
       chiusura col contato, i numeri nel database), la comanda della sala
@@ -15917,6 +15917,7 @@ requirements:
     labels: [dev, metodo]
     priority: P1
     test_cases:
+      - tests/unit/ciComeScritta.test.js
       - tests/unit/modelloAV.test.js
 
   - id: REQ-DEV-019
@@ -15942,8 +15943,8 @@ requirements:
       todo fra i previsti, i test citati esistenti.
       I TEST END-TO-END, uno per caso d'uso (tests/e2e/), nel browser coi
       soli gesti di chi lavora, più browser insieme quando il caso d'uso lo
-      chiede, con le Functions sotto: in locale e su ogni pull request con
-      gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO
+      chiede, con le Functions sotto: in locale e sulle pull request verso
+      develop e main con gli emulatori completi; per i rilasci su un AMBIENTE DI PROVA GENERATO
       per il giro e poi ELIMINATO (l'utente: «generiamo ambiente di test,
       testiamo, eliminiamo»), con il Terraform dell'istanza della regia.
       `tana-drink-test` resta al cliente, per la validazione.

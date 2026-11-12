@@ -32,14 +32,19 @@ Su `develop` e `main` non si committa mai direttamente.
 
 ## Il deploy
 
-**Un push non pubblica niente.** Su qualunque ramo, `main` compreso, fa
-girare **lint, test e build** ([test.yml](../.github/workflows/test.yml)) e
-finisce lì. A pubblicare ci vuole un gesto esplicito, e sono due: il **tag**
+**Un push non pubblica niente.** Fa girare **lint, test e build**
+([test.yml](../.github/workflows/test.yml)) e finisce lì, tranne sui rami
+`release/**`: sono il posto di lavoro di ogni giorno, ci si spinge dieci
+volte al giorno, e lì un push non fa girare niente (i test si fanno girare
+in locale). A pubblicare ci vuole un gesto esplicito, e sono due: il **tag**
 o il **lancio a mano** del workflow.
 
 | Cosa fai | Cosa succede |
 |---|---|
-| push su un ramo qualsiasi | lint + test + build. Nessun deploy. |
+| push su un ramo che non è di rilascio | lint + test + build. Nessun deploy. |
+| push su `release/**` | niente: né test né deploy. |
+| pull request verso `develop` o `main` | lint + test + build con la coverage, **regole Firestore** e **test di sistema**: è il cancello del merge. |
+| pull request verso `release/**` | solo quello che ha fatto girare il push sul ramo di partenza: regole e test di sistema **non** partono, vanno lanciati a mano. |
 | lancio a mano «Deploy to Firebase» su un ramo | va **online sul test** (è così che si prova un ramo: niente tag) |
 | tag su un commit **non** in `main` | va **online sul test**, subito |
 | tag su un commit **di `main`** | parte la pipeline, e il deploy in **produzione aspetta un'approvazione** |
@@ -76,6 +81,14 @@ git tag -a v1.4.2 -m "Versione 1.4.2" && git push origin v1.4.2
 Per i rilasci il tag resta `vX.Y.Z`, che è quello che l'app mostra come
 numero di versione.
 
+**Le versioni di prova hanno il loro tag: `vX.Y.Z-beta` su `develop`.** È
+il modo in cui ogni versione arriva sul test: mergiata in `develop` la pull
+request dalla release, si tagga quel merge col numero che `package.json`
+porta in quel momento (`v1.10.38-beta`), e il tag pubblica sul test. Subito
+dopo, sulla release, `package.json` passa alla beta successiva
+(`1.10.39-beta`). Il tag lo mette chi lavora quando Daniele lo chiede dopo
+il suo merge.
+
 **L'approvazione della produzione non sta nel codice**: è una regola del
 repository, in *Settings → Environments → `production` → Required
 reviewers*. Va messa una volta; senza quella spunta un tag su `main`
@@ -111,9 +124,11 @@ git checkout develop && git pull
 git checkout -b release/1.3.0
 ```
 
-Ci finisce dentro tutto quello che si fa; ogni push lo pubblica su test,
-quindi si prova sempre l'insieme e non il pezzo singolo. Quando la
-versione è pronta si mergia su `develop`, si tagga e si va in `main`.
+Ci finisce dentro tutto quello che si fa. Un push qui non pubblica e non
+fa girare i test: sul test si arriva mergiando la release in `develop` e
+taggando quel merge (`vX.Y.Z-beta`), così si prova sempre l'insieme e non
+il pezzo singolo. Quando la versione è pronta si tagga `develop` col
+numero pieno e si va in `main`.
 
 ## Il cancello di qualità: prima di ogni merge in `develop`
 
@@ -122,7 +137,8 @@ lavoro è finito. **E si chiede con una pull request**: `develop` e `main`
 sono rami protetti — niente push diretti, niente merge fatti in locale e
 spinti su. La PR è il posto dove la CI fa rispettare il cancello da sola
 (il check «Lint, test e build», con la coverage e le sue soglie, è
-obbligatorio per il merge). I rami `release/**` restano scrivibili
+obbligatorio per il merge; regole Firestore e test di sistema girano solo
+sulle pull request verso `develop` e `main`). I rami `release/**` restano scrivibili
 direttamente — sono il posto di lavoro quotidiano — e protetti dalla sola
 cancellazione: **si devono poter ribasare**. Un ramo di lavoro che nasce
 da `develop` va tenuto allineato riscrivendogli sotto la base

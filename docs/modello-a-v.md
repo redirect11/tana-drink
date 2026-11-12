@@ -138,8 +138,9 @@ come per gli emulatori ([ambiente-locale.md](ambiente-locale.md)).
 - **Il risultato si controlla anche nel database**, con l'SDK di
   amministrazione sull'emulatore: a schermo giusto e al server sbagliato è
   comunque un conto sbagliato.
-- In CI girano su ogni pull request (job «Sistema (Playwright)»); se uno
-  fallisce, la traccia passo per passo si scarica dall'artefatto
+- In CI girano solo sulle pull request verso `develop` e `main` (job
+  «Sistema (Playwright)»): su quelle verso la release vanno lanciati a
+  mano. Se uno fallisce, la traccia passo per passo si scarica dall'artefatto
   `rapporto-sistema`.
 
 ## A che punto siamo
@@ -176,7 +177,7 @@ node scripts/requisiti.mjs --documento  # la specifica, coi capitoli dei bisogni
      cosa sbagliata);
    - **i test e2e** in `tests/e2e/`, uno per caso d'uso, sugli emulatori
      completi (Auth, Firestore, Storage, **Functions**, Hosting), in
-     locale e su ogni pull request;
+     locale e sulle pull request verso `develop` e `main`;
    - **l'ambiente generato**: un progetto di prova fisso,
      `drinkpos-prova-e2e`, generato una volta dal Terraform dell'istanza
      (drink-regia, `infra/istanza`) e sempre vuoto; a ogni tag ci si
