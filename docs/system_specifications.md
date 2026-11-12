@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 285 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 32 | da fare |
 | 🗑 | 8 | non più valido |
 
-**342 voci** in tutto. **304** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**344 voci** in tutto. **304** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | — | 6 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**93** requisiti su 334 sono collegati a un bisogno;
+**95** requisiti su 336 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -4384,6 +4384,26 @@ Flavio, 04/11/2026: le voci della carta dei clienti (REQ-MENU-025) «le faremo g
 DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integreremo i servizi AI». Quindi due tempi: - PRIMA: la prima stesura la scrive Claude, una volta, con uno script come quello delle Signature (scripts/special-signature.mjs), sul test e poi in produzione col via libera; Flavio la rivede; - POI: sulla scheda prodotto e sulle voci scelte a mano del menù dei clienti, «Proponi descrizione» chiede al modello una descrizione dal nome per il cliente e da quello del gestionale. È una PROPOSTA da confermare: un modello può sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale. Costi e credito in REQ-AI-003.
 
 **Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx`
+
+#### REQ-AI-005 — Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere
+
+Daniele, 12/11/2026: «il caricamento delle immagini deve avere sempre la possibilità di chiedere all'AI di modificare l'immagine. La risposta dell'AI dell'immagine modificata va accanto a quella originale e si chiede di accettare o meno la modifica o fare un altro prompt. Questo solo se si hanno crediti AI». COME: in ogni caricamento di una foto (oggi la scheda del prodotto, col ritaglio di REQ-MENU-039) un campo «Chiedi all'AI», dove si scrive cosa cambiare («togli lo sfondo», «metti il bicchiere su un bancone di legno»). La proposta compare accanto alla foto di partenza; tre tasti: «Usa questa», «Tieni l'originale», «Chiedi un'altra modifica» (con un'altra frase, partendo dall'originale o dalla proposta). Si vede solo con crediti AI disponibili; senza, il campo non c'è e il caricamento resta quello di sempre.
+
+LA CHIAMATA NON PARTE DALL'APP: la fa la Function della regia, che controlla il credito, chiama il modello con la chiave di Stonebit e scala il costo (REQ-AI-003). La chiave non sta mai in un locale.
+
+DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento): quale modello di immagini usare (i modelli di Claude non generano né modificano immagini: serve un altro fornitore), quanto costa una modifica in crediti, e cosa si fa delle foto con persone o marchi.
+
+**Dove**: `src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
+
+#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
+
+Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
+
+LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
+
+DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
+
+**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 

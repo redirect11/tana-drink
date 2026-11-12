@@ -340,6 +340,8 @@ bisogni:
       - REQ-MENU-037
       - REQ-MENU-038
       - REQ-MENU-039
+      - REQ-AI-005
+      - REQ-AI-006
     test_cases: []
 
   - id: UR-014

@@ -8151,6 +8151,64 @@ requirements:
     priority: P2
     test_cases: []
 
+  - id: REQ-AI-005
+    title: "Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere"
+    area: "src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)"
+    description: >
+      Daniele, 12/11/2026: «il caricamento delle immagini deve avere sempre
+      la possibilità di chiedere all'AI di modificare l'immagine. La
+      risposta dell'AI dell'immagine modificata va accanto a quella
+      originale e si chiede di accettare o meno la modifica o fare un altro
+      prompt. Questo solo se si hanno crediti AI».
+      COME: in ogni caricamento di una foto (oggi la scheda del prodotto,
+      col ritaglio di REQ-MENU-039) un campo «Chiedi all'AI», dove si
+      scrive cosa cambiare («togli lo sfondo», «metti il bicchiere su un
+      bancone di legno»). La proposta compare accanto alla foto di
+      partenza; tre tasti: «Usa questa», «Tieni l'originale», «Chiedi
+      un'altra modifica» (con un'altra frase, partendo dall'originale o
+      dalla proposta). Si vede solo con crediti AI disponibili; senza, il
+      campo non c'è e il caricamento resta quello di sempre.
+      LA CHIAMATA NON PARTE DALL'APP: la fa la Function della regia, che
+      controlla il credito, chiama il modello con la chiave di Stonebit e
+      scala il costo (REQ-AI-003). La chiave non sta mai in un locale.
+      DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento):
+      quale modello di immagini usare (i modelli di Claude non generano né
+      modificano immagini: serve un altro fornitore), quanto costa una
+      modifica in crediti, e cosa si fa delle foto con persone o marchi.
+    status: todo
+    generate_issue: true
+    labels: [ai, gestionale, foto]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-AI-006
+    title: "Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare"
+    area: "gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005"
+    description: >
+      Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può
+      fare nel gestionale e aggiungere una chat».
+      COME: una chat nel gestionale, per chi lo usa, che risponde e, dove
+      serve, propone azioni sull'app con gli stessi strumenti delle
+      funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la
+      voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le
+      descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005);
+      e in più rispondere su quello che c'è nell'app (giacenze, vendite,
+      menù). Ogni azione che cambia qualcosa si propone e la conferma chi
+      lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js):
+      vede e propone solo quello che può fare chi chiede.
+      LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione
+      (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il
+      lavoro senza rete: è un attrezzo del gestionale, non del banco.
+      DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat
+      (una pagina, un pannello sempre a portata), quanto costa una
+      conversazione in crediti, cosa si ricorda fra una conversazione e
+      l'altra.
+    status: todo
+    generate_issue: true
+    labels: [ai, gestionale]
+    priority: P2
+    test_cases: []
+
   - id: REQ-AI-003
     title: "L'AI a consumo: chi paga, con quale credito e con quale tetto"
     area: "functions/, settings, regia (abbonamenti della flotta)"
