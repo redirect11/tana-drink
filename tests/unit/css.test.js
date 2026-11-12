@@ -208,6 +208,21 @@ ${nome} {`)
     expect(r).toMatch(/var\(--line\)/)
     expect(r).toMatch(/var\(--tile-bg\)/)
   })
+
+  // IL TESTO SECONDARIO DI UNA SCELTA ATTIVA SI LEGGE (BUG-146). La scelta
+  // attiva prende il colore dei tasti, e dentro ci sono testi «muted» (la
+  // descrizione di uno stile, l'esempio di un formato): col grigio pensato
+  // per il fondo della pagina, sul pesca di «catppuccin» non si leggevano
+  // (Daniele, 12/11/2026: «il testo grigio su sfondo arancione non si
+  // legge»). Prendono l'inchiostro del tasto, in ogni tema.
+  it('sulla scelta attiva il testo secondario prende l’inchiostro del tasto', () => {
+    const i = css.indexOf('\n.mode-option.active :is(')
+    expect(i, 'manca la regola per il testo secondario della scelta attiva').toBeGreaterThan(-1)
+    const r = css.slice(i, css.indexOf('}', i))
+    expect(r).toMatch(/\.muted/)
+    expect(r).toMatch(/\.formato-prezzi-esempio/)
+    expect(r).toMatch(/color:\s*var\(--btn-ink\)/)
+  })
 })
 
 // ── LA COLONNA DEL «CHIUDI CASSA» NON STIRA IL SUO TASTO (BUG-062) ───

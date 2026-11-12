@@ -2,6 +2,12 @@
 
 ## 1.10.39-beta — in lavorazione
 
+### Gestionale
+
+- Impostazioni: sulla scelta attiva (lo stile del menù, il formato dei prezzi)
+  il testo secondario si legge anche coi temi dove il colore dei tasti è
+  chiaro.
+
 ## 1.10.38-beta — 11/11/2026 (test)
 
 ### Menù dei clienti

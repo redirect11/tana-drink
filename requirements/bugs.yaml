@@ -6093,9 +6093,10 @@ bugs:
       ORA il testo secondario di una scelta attiva prende l'inchiostro del
       tasto, appena più leggero: vale per ogni tema del gestionale e per
       ogni gruppo di scelte, non solo per quei due.
-    status: todo
+    status: fixed
     in_produzione: false
     generate_issue: true
     labels: [bug, impostazioni, ui]
     requisiti: [REQ-UI-005]
-    test_cases: []
+    test_cases:
+      - tests/unit/css.test.js

@@ -5412,6 +5412,15 @@ button.cat-chip {
   border-color: transparent;
   color: var(--btn-ink);
 }
+/* Il testo secondario dentro una scelta attiva (la descrizione di uno
+   stile, l'esempio di un formato) prende l'inchiostro del tasto, appena più
+   leggero: il grigio `--muted` è pensato per il fondo della pagina, e sul
+   colore del tasto non si leggeva (BUG-146: grigio su pesca, col tema
+   «catppuccin»). Vale per ogni tema. */
+.mode-option.active :is(.muted, .formato-prezzi-esempio) {
+  color: var(--btn-ink);
+  opacity: 0.85;
+}
 
 .persons-counter {
   display: inline-flex;
