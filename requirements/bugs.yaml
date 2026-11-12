@@ -6035,3 +6035,37 @@ bugs:
     requisiti: [REQ-MENU-029]
     test_cases:
       - tests/component/MenuCarte.test.jsx
+
+  - id: BUG-145
+    title: "I documenti promettono una CI che non c'è: test a ogni push e test di sistema su ogni pull request"
+    area: "CLAUDE.md, docs/gitflow.md, docs/modello-a-v.md, requirements/requirements.yaml (REQ-DEV-018, REQ-DEV-019), .github/workflows/test.yml (solo letto)"
+    severity: media
+    priority: P2
+    description: >
+      Trovato dal revisore il 12/11/2026, rileggendo REQ-DEV-021, e prima
+      ancora sulle PR #330 e #332 dell'11/11, dove i test di sistema
+      risultavano «saltati». I documenti dicono tre cose che la CI non fa:
+      1. CLAUDE.md, «Prima di una PR»: `test:sistema` «in CI gira comunque
+         su ogni pull request»; lo stesso in docs/modello-a-v.md e nelle
+         descrizioni di REQ-DEV-018 e REQ-DEV-019. In test.yml il lavoro
+         parte solo sulle pull request verso `develop` e `main`: su quelle
+         verso la release i test di sistema e delle regole non girano.
+      2. CLAUDE.md, «Come si lavora: GitFlow», e docs/gitflow.md, «Il
+         deploy»: «un push fa girare lint, test e build», «su qualunque
+         ramo». test.yml esclude i push sui rami `release/**`, che sono il
+         posto di lavoro di ogni giorno: lì un push non fa girare niente.
+      3. docs/gitflow.md non descrive i tag `-beta` su `develop`, che sono
+         il modo in cui ogni versione arriva sul test; e in «Il ramo di
+         rilascio» dice ancora che «ogni push lo pubblica su test».
+      Chi si fida dei documenti crede coperto dalla CI un lavoro che non lo
+      è: sulla #332 un test di sistema rotto è arrivato fino alla pull
+      request, e l'ha fermato solo un giro fatto a mano.
+      Daniele, 12/11/2026, alla domanda se correggere i documenti o la CI:
+      «no correggi, deve continuare a funzionare come è ora… cioè correggi i
+      documenti». LA CI NON SI TOCCA: si scrive com'è.
+    status: todo
+    in_produzione: false
+    generate_issue: true
+    labels: [bug, dev, documentazione]
+    requisiti: [REQ-DEV-018]
+    test_cases: []
