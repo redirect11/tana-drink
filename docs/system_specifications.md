@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 11 novembre 2026.
+> Generato il 12 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 281 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 4 | fatto a metà |
-| ⬜ | 30 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**338 voci** in tutto. **300** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **30** sono lavori
+**339 voci** in tutto. **300** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | — | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 19 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 19 | 2 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 11 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 175 |
 
 **14** bisogni del locale, **0** con un test di accettazione.
-**89** requisiti su 330 sono collegati a un bisogno;
+**90** requisiti su 331 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-il-ruolo-di-pm-in-cima-a-claudemd-agentsmd-e-sei-sub-agenti) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-il-ruolo-di-pm-in-cima-a-claudemd-agentsmd-e-sei-sub-agenti), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -4388,6 +4388,16 @@ DA FARE: passare le altre schermate con elenchi una per una (statistiche, magazz
 Il cancello ora misura TUTTO il codice di prodotto, con una soglia per area tarata sul misurato del 16/08: functions/lib 92/76/88, src/lib 64/74/62, componenti 40/72/43, pagine 17/52/16 (src/dev è fuori: attrezzi, non prodotto). Le soglie basse — pagine su tutte — non certificano qualità: impediscono di peggiorare. Questo requisito è il lavoro di ALZARLE: coprire la logica delle pagine (BartenderPage e MenuPage in testa) e portare il cricchetto su. Insieme, gli standard di complessità nel lint (complexity, max-depth, dimensione delle funzioni): prima come avvisi per vedere dove siamo, poi come errori — i numeri esatti si decidono guardando il misurato, non a tavolino. Il 09/11/2026, col passaggio a vitest 4, il metro della coverage è cambiato (conta sull'AST, numeri più bassi sullo stesso codice): le soglie che cadevano sono state ritarate una volta sola, un punto sotto la misura nuova — functions/lib 84/74/88/90 (istruzioni, rami, funzioni, righe), rami dei componenti 68. Da lì il cricchetto riparte. Il 10/11/2026 i rami di functions/lib salgono a 79 (misurati 80,25%): prima erano misurati male e oscillavano sullo stesso codice (BUG-140).
 
 **Dove**: `vitest.config.mjs, eslint.config.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
+
+#### REQ-DEV-021 — La sezione Stonebit e gli agenti corretti: dove contraddicono il repo valgono le regole del repo, e il processo è storia, revisore, squadra solo per i lavori grossi
+
+La sezione e gli agenti di REQ-DEV-020 erano scritti da fuori, e in otto punti contraddicevano le regole che il repo aveva già (elencati nella PR #329). Daniele, 11/11/2026: «rispetto a quelle continua come hai sempre fatto, anzi dammi tu una correzione per chi ha scritto quelle istruzioni». Il CEO-agente di Stonebit ha risposto confermando gli otto punti (file «squadra-tana-drink_2.md», consegnato da Daniele il 12/11/2026): «dove la sezione Stonebit e le regole del repo si contraddicono, valgono le regole del repo».
+
+COSA SI CORREGGE (i punti della correzione, confermati): 1. dove si lavora: lavoro normale su `release/x.y.z`, `feature/…` solo per una funzione grossa o su richiesta; 2. chi mette i tag: i `-beta` su develop l'agente, quando Daniele lo chiede dopo il suo merge; su main solo col suo via libera; 3. le versioni: il numero cambia sulla release subito dopo l'uscita; 4. la lingua del codice: nomi in inglese dove lo è il codice attorno; 5. e 6. via dagli agenti due righe che non descrivono il repo di oggi (il dizionario dei testi, «NON FISCALE» su preconti e comande); 7. è il requisito a citare i suoi test; 8. la sezione «Stonebit — regole comuni» non si aggiunge. E IN PIÙ, dalla risposta: in cima alla sezione la riga che dice che sui rami, i tag, le versioni, i test e il rilascio vincono le regole del repo; la sezione va DOPO la presentazione del repo, che resta il primo testo del file; negli agenti `pm` e `tech-lead` il passo che si salta facilmente (la voce va spinta `todo` prima dell'implementazione, o la issue non nasce più); il `revisore` lancia a mano i test delle regole e di sistema, perché sulle PR verso la release la CI non li fa girare. I RUOLI E IL PROCESSO, decisi da Daniele l'11/11/2026 in chat e non ancora visti dal CEO-agente (punti 9 e 10 della correzione): Daniele è il product owner («se questa sessione fosse il PM io sarei il product owner che ti dice che cosa va implementato. Tu apri le storie, il tech lead le passa in rassegna e crea i task per i developer»); storia sempre, prima la voce nel registro e poi il codice; revisore sempre, prima di ogni PR; tech lead e developer solo per i lavori grossi o divisibili, le correzioni piccole le implementa la sessione («OK»). Il PM verifica che si implementino i requisiti e segue conti e tempi, «ma non abbiamo tempi da rispettare». Quando la richiesta è chiara la sessione apre la storia e parte, senza proporre prima un piano.
+
+CRITERIO DI ACCETTAZIONE: la presentazione del repo è il primo testo di CLAUDE.md e la sezione Stonebit viene subito dopo, prima di «La lingua»; la sezione si apre con la riga sulle regole del repo; non dice più che ogni lavoro va su `feature/…` né che i tag li mette solo Daniele; gli agenti non nominano il dizionario dei testi né «NON FISCALE»; `pm` e `tech-lead` dicono della voce `todo`; il `revisore` nomina `test:regole` e `test:sistema`; le altre sezioni di CLAUDE.md e i quattro agenti di prima sono identici.
+
+**Dove**: `CLAUDE.md (sezione «Stonebit — chi sei e come lavori qui»), .claude/agents/ (pm, tech-lead, frontend-developer, backend-developer, stampa-developer, revisore)` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera)
 
 ### LIC
 
