@@ -61,20 +61,23 @@ describe('CLAUDE.md', () => {
 
   // I punti dove la prima stesura contraddiceva il repo.
   it('non dice più che ogni lavoro va su un ramo feature, né che i tag li mette solo Daniele', () => {
-    expect(sezione).not.toContain('Ogni lavoro su un ramo `feature/…`')
+    expect(sezione.replace(/\s+/g, ' ')).not.toMatch(/Ogni lavoro (va )?su un ramo `feature\/…`/)
     expect(sezione).toContain('Il lavoro normale va su `release/x.y.z`')
     expect(sezione).not.toContain('Merge, tag e deploy li fa Daniele')
     expect(sezione).toMatch(/tag `-beta`[^.]*quando Daniele lo chiede/)
   })
 
   it('il numero di versione cambia sulla release, e nel codice i nomi restano in inglese dove lo è il codice', () => {
-    expect(sezione).toContain('subito dopo l’uscita')
+    expect(sezione).toContain("subito dopo l'uscita")
+    // I tag -beta sono di questo repo: docs/gitflow.md non li descrive.
+    expect(sezione).not.toContain('i tag `-beta` di `docs/gitflow.md`')
     expect(sezione).not.toContain('Tutto in italiano: codice')
     expect(sezione).toContain('in inglese dove lo è il codice attorno')
   })
 
   it('è il requisito a citare i suoi test', () => {
-    expect(sezione).not.toContain('ogni test cita il\nsuo requisito')
+    // Su una riga sola, comunque sia andata a capo.
+    expect(sezione.replace(/\s+/g, ' ')).not.toContain('ogni test cita il suo requisito')
     expect(sezione).toContain('`test_cases`')
   })
 
@@ -90,7 +93,7 @@ describe('CLAUDE.md', () => {
   // Il passo che si salta facilmente: lo script crea le issue solo per le
   // voci ancora da fare.
   it('la voce va spinta da fare prima dell’implementazione', () => {
-    expect(sezione).toMatch(/`todo`[^.]*prima dell’implementazione/)
+    expect(sezione).toMatch(/`todo`[^.]*prima dell'implementazione/)
   })
 
   // «Non togliere niente di quello che c'è già»: le regole del repo restano
@@ -143,7 +146,34 @@ describe('la squadra in .claude/agents', () => {
   })
 
   it('PM e tech lead ricordano la voce da fare prima del codice', () => {
-    for (const nome of ['pm', 'tech-lead']) expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('`todo`')
+    for (const nome of ['pm', 'tech-lead']) {
+      expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('spinta come `todo`')
+    }
+  })
+
+  // Le frasi di prima del tech lead e del revisore, che il primo giro di
+  // controlli avrebbe lasciato tornare (le ha trovate il revisore).
+  it('tech lead e revisore non ripetono le frasi di prima', () => {
+    const tl = leggi('.claude', 'agents', 'tech-lead.md')
+    expect(tl).not.toContain('ognuno su un ramo `feature/…` nel suo worktree, con obiettivo')
+    expect(tl).not.toContain('la release la sceglie Daniele')
+    expect(leggi('.claude', 'agents', 'revisore.md')).not.toContain('versione e changelog aggiornati')
+  })
+
+  // Il PM che scrive codice è la sessione principale; il sub-agente `pm` no.
+  // Detto in tutti e due i posti, se no le due frasi si contraddicono.
+  it('chi implementa le correzioni piccole è la sessione principale, e lo dicono tutti', () => {
+    expect(claude).toContain('Il codice\ndelle correzioni piccole lo scrivi tu, la sessione principale.')
+    expect(leggi('.claude', 'agents', 'pm.md')).toContain('come sub-agente')
+    const rev = leggi('.claude', 'agents', 'revisore.md')
+    expect(rev).toContain('quello che la sessione principale ha implementato da sé')
+    expect(rev).toContain('direttamente alla sessione principale')
+  })
+
+  it('nel codice i nomi restano in inglese dove lo è il codice, anche per i developer', () => {
+    for (const nome of DEVELOPER) {
+      expect(leggi('.claude', 'agents', `${nome}.md`), nome).toContain('nomi in inglese dove lo è il codice attorno')
+    }
   })
 
   // Sulle PR verso la release la CI non fa girare i test delle regole né

@@ -32,7 +32,9 @@ Il processo (deciso da Daniele l'11/11/2026):
   issue della storia (non come issue nuove). Le correzioni piccole le implementi tu direttamente.
 
 I sub-agenti stanno in `.claude/agents/`. Un sub-agente non può chiamarne un altro: sei tu a
-passare il lavoro dall'uno all'altro.
+passare il lavoro dall'uno all'altro. Fra loro c'è anche un `pm`: è un aiuto per il registro, lo
+stato del lavoro e il rapporto, e come ogni sub-agente di controllo non scrive codice. Il codice
+delle correzioni piccole lo scrivi tu, la sessione principale.
 
 Sopra di te, in Stonebit:
 - **Daniele** — fondatore, decide tutto ciò che conta (regola zero, sotto).
@@ -65,10 +67,10 @@ verso clienti o esterni; scelte fiscali, legali, privacy; cancellazione di rami,
   inventare, e alla fine la commenta (commit, criteri soddisfatti, cosa manca, test). Ramo e PR
   citano l'issue (`Closes #N`) e lo stato dell'issue si aggiorna man mano.
   Le issue nascono dal registro (`requirements/`) con `generate-issues.yml`, **mai a mano**: un requisito nuovo si scrive prima nel registro (anche con l'agente `requisiti-dal-banco`). Severità e priorità sulla bacheca le tiene `classifica-registro`.
-  **La voce va committata e spinta come `todo` prima dell’implementazione**: lo script crea le
+  **La voce va committata e spinta come `todo` prima dell'implementazione**: lo script crea le
   issue solo per le voci ancora da fare, e una voce che arriva già `implemented` o `fixed` non
   ne ha più una.
-- **Versioni**: ogni versione che Daniele o un locale deve provare ha un numero nuovo (i tag `-beta` di `docs/gitflow.md`). Il numero in `package.json` cambia sulla release subito dopo l’uscita di una versione (1.10.38 uscita → `1.10.39-beta`), come primo commit della linea nuova; le voci del `CHANGELOG.md` vanno nella sezione «in lavorazione» della versione aperta.
+- **Versioni**: ogni versione che Daniele o un locale deve provare ha un numero nuovo, col suo tag `-beta` su `develop`. Il numero in `package.json` cambia sulla release subito dopo l'uscita di una versione (1.10.38 uscita → `1.10.39-beta`), come primo commit della linea nuova; le voci del `CHANGELOG.md` vanno nella sezione «in lavorazione» della versione aperta.
 - Al massimo **3 PR in attesa** di Daniele.
 - Codice **proprietario**, tutti i diritti riservati: mai licenze open source.
 - Mai segreti nel repo (chiavi, token, service account, keystore) e mai dati reali di persone nei test.
