@@ -5,10 +5,16 @@
 // Il «cassetto AI» è uno, quello della regia, per tutti i locali compresa la
 // Tana (Daniele, 24/10/2026). La regia controlla il credito del locale,
 // chiama il modello con la chiave di Stonebit e scala il costo; il locale
-// non ha MAI la chiave del modello. Ha solo la sua «Chiave AI» verso la
-// regia (`<slug>.<segreto>`, creata dall'admin nel backoffice della regia),
-// che è un segreto di queste Functions: la richiesta parte da qui, mai dal
-// browser, dove il segreto si leggerebbe.
+// non ha MAI la chiave del modello.
+//
+// SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077 della
+// regia): il locale si fa riconoscere dalla regia col GETTONE D'IDENTITÀ di
+// Google del suo account dedicato, `ai-locale@<progetto>`, che la Function
+// usa per girare. Il gettone ha come destinatario `regia-ai:<regia>`; la
+// regia ne fa controllare a Google firma, scadenza e destinatario, e legge il
+// locale dal nome del progetto nell'account. Niente segreti da tenere: la
+// richiesta parte da qui perché il gettone lo dà solo l'account della
+// Function, mai il browser.
 //
 // Il contratto è quello della regia (drink-regia, docs/handover.md §7,
 // «Cassetto AI»; gli schemi in functions/lib/ai.js): due tipi di richiesta
@@ -46,10 +52,6 @@ const CAMPI = {
   fattura: ['tipo', 'file', 'media_type'],
 }
 
-// Il segnaposto che la regia scrive nei segreti di un locale che non ha
-// ancora la sua Chiave AI (scripts/segreti-istanza.mjs della regia).
-const SEGNAPOSTO = 'non-configurato'
-
 const testo = (v) => typeof v === 'string' && v.trim().length > 0
 
 // Null se la richiesta va bene, altrimenti la frase che dice cosa non va.
@@ -77,12 +79,16 @@ function validaRichiesta(r) {
 
 const urlRichiestaAI = (progetto) => `https://europe-west1-${progetto}.cloudfunctions.net/richiestaAI`
 
+// Il destinatario del gettone: NON l'indirizzo della Function, proprio la
+// stringa `regia-ai:<progetto della regia>` (contratto della regia).
+const destinatarioGettone = (progetto) => `regia-ai:${progetto}`
+
 const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
 // La risposta della regia, tradotta. `codice`:
 //   credito | tetto | spento | senza-cassetto  (402: si ferma solo l'AI)
 //   non-usabile  (422: il modello non ha dato niente, e il costo resta)
-//   chiave       (401: la Chiave AI non è valida, o non c'è ancora)
+//   non-riconosciuto  (401: la regia non riconosce questo locale)
 //   richiesta    (400: un errore nostro)
 //   riprova      (503, rete, o una risposta che non si capisce)
 function interpreta({ status, corpo }, tipoChiesto) {
@@ -98,7 +104,7 @@ function interpreta({ status, corpo }, tipoChiesto) {
     return { ok: false, codice: noti.includes(c.codice) ? c.codice : 'credito', credito_eur: numero(c.credito_eur) }
   }
   if (status === 422) return { ok: false, codice: 'non-usabile', costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
-  if (status === 401) return { ok: false, codice: 'chiave' }
+  if (status === 401) return { ok: false, codice: 'non-riconosciuto' }
   if (status === 400) return { ok: false, codice: 'richiesta' }
   return { ok: false, codice: 'riprova' }
 }
@@ -107,18 +113,26 @@ async function richiestaAI(deps, auth, richiesta) {
   if (!isGestore(auth)) throw { code: 'permission-denied', message: "L'AI la usa lo staff di gestione del locale." }
   const errore = validaRichiesta(richiesta)
   if (errore) throw { code: 'invalid-argument', message: errore }
-  // Ripulita: un a capo rimasto nel segreto renderebbe l'intestazione non
-  // valida, e si leggerebbe sempre «riprova».
-  const chiave = String(deps.chiave() || '').trim()
-  // Senza la chiave, o senza sapere QUALE regia (REGIA_PROGETTO), l'AI è
-  // spenta: un locale di test non deve finire a chiedere alla regia vera.
-  if (!chiave || chiave === SEGNAPOSTO || !deps.progettoRegia()) return { ok: false, codice: 'spento' }
+  // Senza sapere QUALE regia (REGIA_PROGETTO) l'AI è spenta: un locale di
+  // prova non deve finire a chiedere alla regia vera, e un locale senza
+  // l'account `ai-locale` non avrebbe niente con cui farsi riconoscere.
+  const progetto = deps.progettoRegia()
+  if (!progetto) return { ok: false, codice: 'spento' }
+  // Il gettone si chiede a Google a ogni richiesta: dura un'ora, e la
+  // richiesta all'AI è rara. Se Google non lo dà, la regia non si chiama.
+  let gettone
+  try {
+    gettone = await deps.gettone(destinatarioGettone(progetto))
+  } catch {
+    gettone = null
+  }
+  if (!gettone) return { ok: false, codice: 'riprova' }
   const corpo = Object.fromEntries(CAMPI[richiesta.tipo].filter((k) => richiesta[k] != null).map((k) => [k, richiesta[k]]))
   let risposta
   try {
-    risposta = await deps.invia(urlRichiestaAI(deps.progettoRegia()), {
+    risposta = await deps.invia(urlRichiestaAI(progetto), {
       method: 'POST',
-      headers: { Authorization: `Bearer ${chiave}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${gettone}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(corpo),
     })
   } catch {
@@ -127,4 +141,4 @@ async function richiestaAI(deps, auth, richiesta) {
   return interpreta(risposta, richiesta.tipo)
 }
 
-module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, interpreta, SEGNAPOSTO }
+module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, destinatarioGettone, interpreta }

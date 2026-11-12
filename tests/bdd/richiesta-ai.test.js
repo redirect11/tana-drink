@@ -5,20 +5,23 @@
 // La regia ha il «cassetto AI»: controlla il credito del locale, chiama il
 // modello con la chiave di Stonebit e scala il costo (Daniele, 24/10/2026:
 // «il cassetto è uno, quello della regia, per tutti i locali compresa la
-// Tana»). L'app non ha mai la chiave del modello: ha solo la sua «Chiave AI»
-// verso la regia, un segreto delle sue Functions, e la richiesta parte da
-// lì, mai dal browser. Il contratto è quello della regia (docs/handover.md
-// §7, «Cassetto AI»): due tipi di richiesta, sei esiti.
+// Tana»). L'app non ha mai la chiave del modello, e dal 12/11/2026 nemmeno
+// una sua chiave verso la regia (Daniele: «niente chiave»): si fa
+// riconoscere col gettone d'identità di Google del suo account dedicato
+// `ai-locale@<progetto>`, e la richiesta parte dalla Function, mai dal
+// browser. Il contratto è quello della regia (docs/handover.md §7, «Cassetto
+// AI»): due tipi di richiesta, sei esiti.
 
 import { describe, it, expect, vi } from 'vitest'
-import { richiestaAI, urlRichiestaAI, validaRichiesta } from '../../functions/lib/ai-service.js'
+import { richiestaAI, urlRichiestaAI, destinatarioGettone, validaRichiesta } from '../../functions/lib/ai-service.js'
 
 const GESTORE = { uid: 'u1', token: { role: 'admin' } }
 const BARTENDER = { uid: 'u2', token: { role: 'bartender' } }
 
-function deps({ chiave = 'tana-prova.segreto', progetto = 'drink-regia-test', risposta = { status: 200, corpo: {} } } = {}) {
+function deps({ gettone = 'gettone-di-google', progetto = 'drink-regia-test', risposta = { status: 200, corpo: {} } } = {}) {
   const invia = vi.fn(async () => risposta)
-  return { deps: { chiave: () => chiave, progettoRegia: () => progetto, invia }, invia }
+  const chiediGettone = vi.fn(async () => (gettone instanceof Error ? Promise.reject(gettone) : gettone))
+  return { deps: { gettone: chiediGettone, progettoRegia: () => progetto, invia }, invia, chiediGettone }
 }
 
 describe('Feature: a chi parla la Function', () => {
@@ -27,12 +30,18 @@ describe('Feature: a chi parla la Function', () => {
     expect(urlRichiestaAI('drink-regia')).toBe('https://europe-west1-drink-regia.cloudfunctions.net/richiestaAI')
   })
 
-  it('con la Chiave AI del locale, e la richiesta così com’è', async () => {
-    const { deps: d, invia } = deps({ risposta: { status: 200, corpo: { ok: true, tipo: 'descrizione', risultato: { descrizione: 'Gin, lime e soda.', da_verificare: [] }, costo_eur: 0.01, credito_eur: 4.99 } } })
+  // Il destinatario non è un indirizzo web: è il nome che la regia aspetta.
+  it('il gettone è per la regia di quell’ambiente', () => {
+    expect(destinatarioGettone('drink-regia-test')).toBe('regia-ai:drink-regia-test')
+  })
+
+  it('col gettone di Google del locale, e la richiesta così com’è', async () => {
+    const { deps: d, invia, chiediGettone } = deps({ risposta: { status: 200, corpo: { ok: true, tipo: 'descrizione', risultato: { descrizione: 'Gin, lime e soda.', da_verificare: [] }, costo_eur: 0.01, credito_eur: 4.99 } } })
     await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Gin Fizz', categoria: 'Cocktail' })
     const [url, { headers, body }] = invia.mock.calls[0]
     expect(url).toBe('https://europe-west1-drink-regia-test.cloudfunctions.net/richiestaAI')
-    expect(headers.Authorization).toBe('Bearer tana-prova.segreto')
+    expect(chiediGettone).toHaveBeenCalledWith('regia-ai:drink-regia-test')
+    expect(headers.Authorization).toBe('Bearer gettone-di-google')
     expect(JSON.parse(body)).toEqual({ tipo: 'descrizione', nome: 'Gin Fizz', categoria: 'Cocktail' })
   })
 })
@@ -124,8 +133,10 @@ describe('Feature: le risposte della regia', () => {
     })
   })
 
-  it('401: la Chiave AI del locale non è valida, o non c’è ancora', async () => {
-    expect(await chiedi({ status: 401, corpo: {} })).toEqual({ ok: false, codice: 'chiave' })
+  // Il gettone non è valido, o l'account non è quello del locale: non si
+  // risolve riprovando, lo deve sistemare chi ha impiantato il locale.
+  it('401: la regia non riconosce il locale', async () => {
+    expect(await chiedi({ status: 401, corpo: {} })).toEqual({ ok: false, codice: 'non-riconosciuto' })
   })
 
   it('503 o la regia che non risponde: si può riprovare', async () => {
@@ -141,32 +152,26 @@ describe('Feature: le risposte della regia', () => {
     expect(await chiedi({ status: 400, corpo: {} })).toEqual({ ok: false, codice: 'richiesta' })
     expect(await chiedi({ status: 200, corpo: { ok: true } })).toEqual({ ok: false, codice: 'riprova' })
   })
-
-  // Il segreto deve esistere perché il deploy delle Functions non si fermi:
-  // finché il locale non ha la sua Chiave AI, c'è il segnaposto. (Nei locali
-  // della flotta deve crearlo la regia: al 12/11/2026 non lo fa ancora,
-  // docs/functions.md.)
-  it('senza la Chiave AI, o col segnaposto, non si chiama nessuno: l’AI è spenta', async () => {
-    for (const chiave of ['', 'non-configurato', ' non-configurato\n']) {
-      const { deps: d, invia } = deps({ chiave })
-      expect(await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Negroni' })).toEqual({ ok: false, codice: 'spento' })
-      expect(invia).not.toHaveBeenCalled()
-    }
-  })
 })
 
-describe('Feature: senza la regia giusta, e la chiave pulita', () => {
-  // Un locale di prova senza REGIA_PROGETTO non deve chiedere alla regia vera.
+describe('Feature: senza la regia giusta, o senza il gettone', () => {
+  // Un locale di prova senza REGIA_PROGETTO non deve chiedere alla regia vera,
+  // e un locale che non nasce dalla regia non ha l'account per farsi
+  // riconoscere: non si chiede nemmeno il gettone.
   it('senza sapere quale regia, l’AI è spenta', async () => {
-    const { deps: d, invia } = deps({ progetto: '' })
+    const { deps: d, invia, chiediGettone } = deps({ progetto: '' })
     expect(await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Negroni' })).toEqual({ ok: false, codice: 'spento' })
+    expect(chiediGettone).not.toHaveBeenCalled()
     expect(invia).not.toHaveBeenCalled()
   })
 
-  // Un a capo rimasto nel segreto renderebbe l'intestazione non valida.
-  it('la chiave si manda ripulita dagli spazi', async () => {
-    const { deps: d, invia } = deps({ chiave: '  tana-prova.segreto\r\n', risposta: { status: 401, corpo: {} } })
-    await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Negroni' })
-    expect(invia.mock.calls[0][1].headers.Authorization).toBe('Bearer tana-prova.segreto')
+  // Il server dei metadati di Google che non risponde è un guaio passeggero:
+  // la regia non si chiama senza un gettone, e si può riprovare.
+  it('se Google non dà il gettone, la regia non si chiama e si può riprovare', async () => {
+    for (const gettone of [null, '', new Error('metadati')]) {
+      const { deps: d, invia } = deps({ gettone })
+      expect(await richiestaAI(d, GESTORE, { tipo: 'descrizione', nome: 'Negroni' })).toEqual({ ok: false, codice: 'riprova' })
+      expect(invia).not.toHaveBeenCalled()
+    }
   })
 })

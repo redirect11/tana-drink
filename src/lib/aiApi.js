@@ -2,8 +2,9 @@
 // ── L'AI DAL GESTIONALE (REQ-AI-003) ──────────────────────────────────────
 //
 // Le richieste all'AI passano dalla Function `richiestaAI` del locale, che
-// le gira alla regia con la Chiave AI del locale (functions/lib/ai-service.js).
-// Il browser non vede mai né quella chiave né quella del modello.
+// le gira alla regia facendosi riconoscere col gettone di Google del suo
+// account dedicato (functions/lib/ai-service.js). Il browser non ha niente
+// da custodire: né gettoni, né la chiave del modello.
 //
 // Quello che torna è una PROPOSTA: la schermata la mostra e la fa accettare
 // o scartare a chi lavora, mai la salva da sola. Senza credito, o con l'AI
@@ -23,7 +24,7 @@ export const MESSAGGI_AI = {
   tetto: 'È stato raggiunto il tetto di spesa AI del mese.',
   spento: "L'AI non è attiva per questo locale.",
   'senza-cassetto': "L'AI non è attiva per questo locale.",
-  chiave: "La chiave AI del locale non è valida: va creata di nuovo dal sito, nell’area del locale.",
+  'non-riconosciuto': "Il servizio AI non riconosce questo locale. Va segnalato all'assistenza.",
   permesso: "L'AI la usa lo staff di gestione.",
   'senza-rete': "Per l'AI serve la rete.",
   'non-usabile': "L'AI non ha dato una risposta utilizzabile. Si può riprovare.",

@@ -43,8 +43,7 @@ iniettate in `index.js` e sostituite da mock nei test.
 | `SUMUP_PAYMENTS_BASE` | env | `https://api.sumup.com` | URL base dell'API pagamenti |
 | `SUMUP_AFFILIATE_KEY` | env | `''` | Chiave affiliazione per il lettore Solo |
 | `SUMUP_AFFILIATE_APP_ID` | env | `it.latanadelconiglio.drink` | Id applicativo per l'affiliazione |
-| `REGIA_AI_KEY` | **secret** | — | La «Chiave AI» del locale verso la regia (`<slug>.<segreto>`, si crea nel backoffice della regia). Col segnaposto `non-configurato` l'AI è spenta (REQ-AI-003) |
-| `REGIA_PROGETTO` | env | — | Il progetto della regia a cui l'AI chiede: `drink-regia` in produzione, `drink-regia-test` sul test. Senza, l'AI è spenta |
+| `REGIA_PROGETTO` | env | — | Il progetto della regia a cui l'AI chiede (`drink-regia`, o `drink-regia-test` per i locali di prova). Lo scrive la regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale` (REQ-AI-003) |
 
 Il segreto si imposta così, e **non** finisce nel repo:
 
@@ -52,24 +51,14 @@ Il segreto si imposta così, e **non** finisce nel repo:
 firebase functions:secrets:set SUMUP_API_KEY
 ```
 
-**Ogni segreto dichiarato deve esistere prima del deploy**, anche solo col
-segnaposto: Firebase non pubblica nessuna Function se ne manca uno. Per
-`REGIA_AI_KEY`, in ogni progetto dove si pubblicano le Functions
-(`tana-drink-test`, `tana-drink`, `drinkpos-prova-e2e`):
-
-```bash
-echo -n "non-configurato" | firebase functions:secrets:set REGIA_AI_KEY --data-file=- --project <progetto>
-```
-
-(in PowerShell il valore va scritto senza ritorno a capo, oppure con
-`firebase functions:secrets:set REGIA_AI_KEY` e incollandolo quando lo chiede)
-e poi, quando la regia ha creato la Chiave AI del locale, lo stesso comando
-col valore vero. Nei locali della flotta il segnaposto **dovrà** crearlo la
-regia: va aggiunto `REGIA_AI_KEY` a `SEGRETI_APP` dei suoi due workflow
-(`provisiona-istanza.yml`, `aggiorna-istanza.yml`), che al 12/11/2026
-contengono solo `SUMUP_API_KEY`, e la regia deve scrivere anche
-`REGIA_PROGETTO` nel `functions/.env.<progetto>` del locale. Senza
-`REGIA_PROGETTO` l'AI resta spenta.
+**L'AI senza chiave** (REQ-AI-003): la Function `richiestaAI` gira con
+l'account `ai-locale@<progetto>` e si fa riconoscere dalla regia col suo
+gettone d'identità di Google. L'account lo crea il Terraform della regia nei
+locali della flotta, dove la regia scrive anche `REGIA_PROGETTO`. Nei
+progetti che non nascono dalla regia (`tana-drink`, `tana-drink-test`,
+`drinkpos-prova-e2e`) l'AI resta spenta finché non si crea l'account e non si
+aggiunge `REGIA_PROGETTO` al loro `functions/.env.<progetto>`: aggiungere la
+riga senza l'account fermerebbe il deploy di tutte le Functions.
 
 I pagamenti sono **no-op** finché `SUMUP_API_KEY` e `SUMUP_MERCHANT_CODE` non
 ci sono entrambi: `isConfigured()` risponde `false` e non parte nessuna

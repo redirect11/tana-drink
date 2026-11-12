@@ -8270,21 +8270,27 @@ requirements:
       (functions/lib/ai-service.js) la chiama per lo staff di gestione e
       solo lei, mai il browser; controlla la richiesta (solo i due tipi e i
       loro campi, le misure dei file) prima di spenderci un viaggio, e
-      traduce le risposte in un `codice`. La Chiave AI del locale è il
-      segreto `REGIA_AI_KEY`; col segnaposto `non-configurato` l'AI resta
-      spenta. Quale regia lo dice `REGIA_PROGETTO` in
-      functions/.env.<progetto>. Primo uso, per provare il collegamento:
-      «Proponi una descrizione con l'AI» nella scheda del prodotto, con la
-      proposta da usare, scartare o richiedere (DescrizioneAI.jsx).
-      RESTA: l'uso della fattura (REQ-AI-001), il credito mostrato in
-      Impostazioni, e i pacchetti e il prezzo.
-      PRIMA DI PUBBLICARE: il segreto `REGIA_AI_KEY` deve esistere in ogni
-      progetto in cui si pubblicano le Functions (tana-drink-test,
-      tana-drink, drinkpos-prova-e2e), anche solo col segnaposto: senza,
-      Firebase non pubblica nessuna Function. Nei locali della flotta DEVE
-      crearlo la regia, aggiungendolo a SEGRETI_APP dei suoi workflow (al
-      12/11/2026 c'è solo SUMUP_API_KEY), e scrivere `REGIA_PROGETTO`; senza
-      `REGIA_PROGETTO` l'AI resta spenta.
+      traduce le risposte in un `codice`. Primo uso, per provare il
+      collegamento: «Proponi una descrizione con l'AI» nella scheda del
+      prodotto (REQ-AI-004).
+      SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077
+      della regia): la Function gira con l'account dedicato
+      `ai-locale@<progetto>`, creato dal Terraform della regia, e si fa
+      riconoscere col gettone d'identità di Google che quell'account
+      ottiene, col destinatario `regia-ai:<REGIA_PROGETTO>`. Nessun segreto
+      nel locale. La prima stesura con la «Chiave AI» non è mai uscita, e
+      non c'è un passaggio da fare.
+      QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, scritto
+      dalla regia nei suoi locali. Senza, l'AI è spenta e la Function non
+      chiede l'account `ai-locale`: nei progetti che non nascono dalla regia
+      (tana-drink, tana-drink-test, drinkpos-prova-e2e) l'account non c'è, e
+      chiederlo fermerebbe il deploy di tutte le Functions.
+      DA PROVARE SUL TEST, chiesto dalla regia: che `serviceAccount:
+      'ai-locale@'` sia completato col progetto al deploy, e che Google dia
+      un gettone a un destinatario che non è un indirizzo web.
+      RESTA: l'AI per la Tana (l'account `ai-locale` nei suoi due progetti
+      e `REGIA_PROGETTO`, oppure la chiave che la regia prevede per lei), la
+      fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
     status: partial
     generate_issue: true
     labels: [ai, licenza, prodotto]
