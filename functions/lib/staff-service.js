@@ -147,4 +147,4 @@ async function staffAdmin(adminAuth, auth, data) {
   invalido(`Azione sconosciuta: ${action}`)
 }
 
-module.exports = { staffAdmin, ROLES: RUOLI, RUOLI, ASSEGNABILI, isGestore }
+module.exports = { staffAdmin, ROLES: RUOLI, RUOLI, ASSEGNABILI, isGestore, isAdmin }
