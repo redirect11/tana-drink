@@ -272,12 +272,25 @@ describe('Feature: la chat', () => {
     await expect(richiestaAI(d, ADMIN, { tipo: 'chat', messaggi: CONVERSAZIONE, strumenti: ['leggi_fattura'] })).resolves.toMatchObject({ ok: true })
   })
 
-  it('409: la conversazione è nata su una versione che non c’è più; 429: occupato', async () => {
-    const chiedi = (status) => {
-      const { deps: d } = deps({ risposta: { status, corpo: {} } })
+  // LA REGIA, 13/11/2026 (REQ-AI-008): cinque casi di 409, tutti «apri una
+  // conversazione nuova». Il comportamento lo decide `codice` (versione o
+  // troppo-lunga); `errore` è la frase da mostrare così com'è.
+  it('409: la conversazione non può continuare, col codice e la frase della regia; 429: occupato', async () => {
+    const chiedi = (status, corpo = {}) => {
+      const { deps: d } = deps({ risposta: { status, corpo } })
       return richiestaAI(d, GESTORE, { tipo: 'chat', messaggi: CONVERSAZIONE, strumenti: [] })
     }
-    expect(await chiedi(409)).toEqual({ ok: false, codice: 'versione' })
+    expect(await chiedi(409)).toEqual({ ok: false, codice: 'versione', errore: null })
+    expect(await chiedi(409, { codice: 'versione', errore: 'La chat è stata aggiornata: apri una conversazione nuova.' })).toEqual({
+      ok: false,
+      codice: 'versione',
+      errore: 'La chat è stata aggiornata: apri una conversazione nuova.',
+    })
+    expect(await chiedi(409, { codice: 'troppo-lunga', errore: 'La conversazione è troppo lunga: apri una conversazione nuova.' })).toMatchObject({
+      codice: 'troppo-lunga',
+    })
+    // Un codice che non si conosce è comunque una conversazione da rifare.
+    expect(await chiedi(409, { codice: 'altro' })).toMatchObject({ codice: 'versione' })
     expect(await chiedi(429)).toEqual({ ok: false, codice: 'occupato' })
   })
 })

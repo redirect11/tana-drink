@@ -7,9 +7,23 @@
 // contratto con la regia:
 //   · i turni di chi scrive sono un testo, o i blocchi `tool_result` con
 //     l'esito degli strumenti che il modello ha chiesto;
-//   · i turni del modello si rimettono ESATTAMENTE come sono tornati: la
-//     regia li firma, e un turno ritoccato lo rifiuta (400). Per
-//     accorciare una conversazione se ne apre una nuova.
+//   · NIENTE SI RITOCCA, nemmeno i turni di chi scrive: la conversazione
+//     cresce solo in fondo. La firma di ogni turno del modello copre tutto
+//     quello che viene prima, e un messaggio vecchio cambiato fa rifiutare
+//     la richiesta dopo (400). I turni del modello tornano con blocchi che
+//     a schermo non servono (thinking, spesso vuoti; fallback dopo un
+//     ripiego su un altro modello; la firma): si conservano tutti.
+//   · ESITI E DOMANDA NON SI UNISCONO: se un giro di strumenti è rimasto a
+//     metà, la domanda nuova va in un turno suo dopo quello degli esiti (la
+//     regia accetta due turni di chi scrive di fila). E ogni strumento che
+//     il modello ha chiesto ha il suo esito.
+//   · L'ELENCO DEGLI STRUMENTI resta quello di partenza per tutta la
+//     conversazione, anche se nel frattempo cambia il ruolo di chi scrive:
+//     cambiato a metà, la regia risponde 409.
+//   · LA VERSIONE: al primo messaggio non si manda; dopo, quella della
+//     prima risposta. Non si scrive mai nel codice.
+// Il contratto per intero sta in drink-regia, docs/handover.md §7
+// (REQ-AI-008, la regia 13/11/2026).
 //
 // Logica pura: chi chiama manda, esegue gli strumenti, mostra.
 
@@ -47,20 +61,38 @@ export const conTesto = (messaggi, testo) => [...messaggi, { role: 'user', conte
 // Il turno del modello, così com'è tornato.
 export const conTurno = (messaggi, turno) => [...messaggi, turno]
 
-// Gli esiti degli strumenti, in un turno solo di chi scrive, nello stesso
-// ordine delle richieste. L'esito è un oggetto: viaggia come testo JSON.
-export const conEsiti = (messaggi, esiti) => [
-  ...messaggi,
-  {
-    role: 'user',
-    content: esiti.map((e) => ({
-      type: 'tool_result',
-      tool_use_id: e.id,
-      content: JSON.stringify(e.esito ?? null),
-      ...(e.errore ? { is_error: true } : {}),
-    })),
-  },
-]
+// I 409 della regia: la conversazione non può continuare, se ne apre una
+// nuova (versione, strumenti cambiati, rifiutata, troppo lunga).
+export const chiedeConversazioneNuova = (codice) => codice === 'versione' || codice === 'troppo-lunga'
+
+// Gli strumenti che il turno del modello chiede, dai blocchi `tool_use`.
+const richiesteDelTurno = (turno) =>
+  (Array.isArray(turno?.content) ? turno.content : []).filter((b) => b?.type === 'tool_use' && typeof b.id === 'string')
+
+// Gli esiti degli strumenti, in un turno solo di chi scrive, nell'ordine
+// delle richieste. OGNI richiesta del turno ha il suo esito: uno strumento
+// che l'app non conosce, o che la Function ha scartato, ne riceve uno di
+// errore — senza, la richiesta dopo verrebbe rifiutata. L'esito è un
+// oggetto: viaggia come testo JSON.
+export function conEsiti(messaggi, esiti, turno = null) {
+  const perId = new Map(esiti.map((e) => [e.id, e]))
+  const richieste = richiesteDelTurno(turno)
+  const ordinati = richieste.length
+    ? richieste.map((b) => perId.get(b.id) ?? { id: b.id, esito: { errore: 'Strumento non disponibile.' }, errore: true })
+    : esiti
+  return [
+    ...messaggi,
+    {
+      role: 'user',
+      content: ordinati.map((e) => ({
+        type: 'tool_result',
+        tool_use_id: e.id,
+        content: JSON.stringify(e.esito ?? null),
+        ...(e.errore ? { is_error: true } : {}),
+      })),
+    },
+  ]
+}
 
 // Quante volte di fila il modello può chiedere strumenti prima di dare una
 // risposta: oltre, ci si ferma e lo si dice, invece di spendere credito in

@@ -127,7 +127,8 @@ const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 //     l'AI; «piano» è il Free, che l'AI non ce l'ha, REQ-LIC-017)
 //   non-usabile  (422: il modello non ha dato niente, e il costo resta)
 //   non-riconosciuto  (401: la regia non riconosce questo locale)
-//   versione     (409: la chat è nata su istruzioni che non ci sono più)
+//   versione | troppo-lunga  (409: la conversazione non può continuare, se
+//     ne apre una nuova; `errore` è la frase della regia, da mostrare com'è)
 //   occupato     (429: troppe richieste insieme, si riprova fra poco)
 //   richiesta    (400: un errore nostro)
 //   riprova      (503, rete, o una risposta che non si capisce)
@@ -177,9 +178,15 @@ function interpreta({ status, corpo }, tipoChiesto) {
   }
   if (status === 422) return { ok: false, codice: 'non-usabile', costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
   if (status === 401) return { ok: false, codice: 'non-riconosciuto' }
-  // La versione di istruzioni e strumenti con cui la conversazione è nata
-  // non c'è più: se ne apre una nuova.
-  if (status === 409) return { ok: false, codice: 'versione' }
+  // LA CONVERSAZIONE NON PUÒ CONTINUARE (REQ-AI-008, la regia 13/11/2026):
+  // istruzioni aggiornate, strumenti cambiati a metà, conversazione
+  // rifiutata da Anthropic (`versione`), o troppo lunga (`troppo-lunga`).
+  // In tutti i casi se ne apre una nuova; cosa dire lo scrive la regia in
+  // `errore`, e l'app lo mostra così com'è.
+  if (status === 409) {
+    const errore = typeof c.errore === 'string' && c.errore.trim() ? c.errore.trim().slice(0, 300) : null
+    return { ok: false, codice: c.codice === 'troppo-lunga' ? 'troppo-lunga' : 'versione', errore }
+  }
   // Troppe richieste insieme: si riprova fra poco.
   if (status === 429) return { ok: false, codice: 'occupato' }
   if (status === 400) return { ok: false, codice: 'richiesta' }
