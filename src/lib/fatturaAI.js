@@ -12,18 +12,10 @@
 // Logica pura: archivio, magazzino e listini li passa chi chiama.
 
 import { rigaDaProdotto } from './fatture.js'
+import { tokens as parole } from './nameMatch.js'
 
-// Minuscole, senza accenti né punteggiatura: «S.R.L.» e «srl» sono la
-// stessa cosa, e così «Caffè» e «CAFFE».
-const parole = (s) =>
-  String(s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(Boolean)
+// Minuscole, senza accenti né punteggiatura (nameMatch.js): «S.R.L.» e
+// «srl» sono la stessa cosa, e così «Caffè» e «CAFFE».
 
 // LE FORME SOCIALI NON DICONO CHI È: «Rossi Bevande S.r.l.» in archivio è
 // «Rossi Bevande». Spezzate dalla punteggiatura, restano lettere sole.
@@ -108,8 +100,9 @@ export function costoDellaRiga(riga) {
   return importo != null && qta ? arrotonda(importo / qta) : null
 }
 
-// Una data AAAA-MM-GG vera, o null: «2026-13-45» non è una data.
-function dataValida(s) {
+// Una data AAAA-MM-GG vera, o null: «2026-13-45» non è una data. La usano
+// anche gli strumenti della chat (strumentiChat.js).
+export function dataValida(s) {
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
   const d = new Date(`${s}T00:00:00Z`)
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s

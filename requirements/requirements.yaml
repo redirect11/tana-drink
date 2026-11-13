@@ -7239,6 +7239,7 @@ requirements:
       - tests/bdd/disponibilita.test.js
       - tests/component/MenuPage.test.jsx
       - tests/unit/sceltaCliente.test.js
+      - tests/unit/paritaFunctions.test.js
 
   - id: REQ-CLI-008
     title: "La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino"

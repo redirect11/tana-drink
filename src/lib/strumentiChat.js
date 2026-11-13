@@ -12,19 +12,13 @@
 import { aggregateItems } from './comande.js'
 import { scontoTotale } from './pagamento.js'
 import { ORDER_STATUSES } from './orderStatus.js'
+import { tokens as parole } from './nameMatch.js'
+import { dataValida } from './fatturaAI.js'
 
 export const LIMITI_RIGHE = { giacenza: 5, vendite: 20, cerca_prodotti: 15 }
 
-// Minuscole, senza accenti né punteggiatura: «Caffè» e «CAFFE».
-const parole = (s) =>
-  String(s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(Boolean)
+// Minuscole, senza accenti né punteggiatura (nameMatch.js): «Caffè» e
+// «CAFFE».
 
 // Un nome corrisponde se contiene tutte le parole cercate.
 const corrisponde = (nome, cercate) => {
@@ -116,8 +110,4 @@ export function vendite(input, { ordini = [] } = {}) {
 }
 
 // Una data AAAA-MM-GG vera, o null.
-export function giornata(s) {
-  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
-  const d = new Date(`${s}T00:00:00Z`)
-  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s
-}
+export const giornata = dataValida

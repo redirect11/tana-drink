@@ -40,6 +40,9 @@ export const MESSAGGI_AI = {
 
 export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprova
 
+// I costi dell'AI sono di frazioni di centesimo: fino a quattro decimali.
+export const costoAI = (v) => `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
+
 // La richiesta alla Function. Torna sempre un oggetto: { ok: true, … } con la
 // proposta, o { ok: false, codice }. Un errore della chiamata (rete assente,
 // permesso negato) diventa un codice, perché lo schermo non debba

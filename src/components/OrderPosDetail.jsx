@@ -112,7 +112,7 @@ import OrderBy from './OrderBy.jsx'
 import { emojiDi } from '../lib/icone.js'
 import MetodoPagamento from './MetodoPagamento.jsx'
 import AttesaCliente from './AttesaCliente.jsx'
-import { inAttesa } from '../lib/attesaCliente.js'
+import { inAttesa, fermoPerIlCliente } from '../lib/attesaCliente.js'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -850,10 +850,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const advance = (comandaId, ns) => {
     // Il cliente non ha ancora accettato le modifiche (REQ-CLI-009): il
     // drink si prepara dopo.
-    if (inAttesa(order)) {
-      toastError('Il cliente deve ancora accettare le modifiche.')
-      return
-    }
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     comandeLocali.applica(contoPerLocali, (arr) =>
       arr.map((c) =>
@@ -895,10 +892,7 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     setParziale(null)
     // Dividere fa avanzare la parte scelta: col cliente che deve ancora
     // accettare le modifiche (REQ-CLI-009), no.
-    if (inAttesa(order)) {
-      toastError('Il cliente deve ancora accettare le modifiche.')
-      return
-    }
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     // In che passo nascono le due parti lo dice quella di partenza
     // (statiDopoLaDivisione): da «da fare» la parte scelta è quella che si

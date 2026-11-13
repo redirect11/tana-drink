@@ -242,3 +242,37 @@ describe('le regole dell’attesa', () => {
     expect(attesa.cambiaPerIlCliente([a], [{ ...a, note: 'per Anna' }])).toBe(false)
   })
 })
+
+// IL BLOCCO STA NEL MECCANISMO COMUNE (dal giro di /simplify, 13/11/2026):
+// prima era ripetuto nelle schermate, e il tasto dello staff nella pagina
+// dell'ordine e la coda di sala ne erano rimasti fuori. Annullare resta
+// possibile.
+describe('il conto che aspetta il cliente non avanza da nessuna strada', () => {
+  const inAttesa = () =>
+    dalTelefono({
+      total: 10,
+      attesa_cliente: { dal: new Date().toISOString(), scade: new Date(Date.now() + 600000).toISOString(), totale_prima: 8 },
+    })
+
+  it('né la comanda, né il conto, né la divisione', async () => {
+    stato.ordine = inAttesa()
+    await expect(subito(api.advanceComanda('ord-1', 'c1', 'in_preparazione'))).rejects.toThrow(attesa.MESSAGGIO_ATTESA)
+    await expect(subito(api.updateOrderStatus('ord-1', 'in_preparazione'))).rejects.toThrow(attesa.MESSAGGIO_ATTESA)
+    await expect(subito(api.preparazioneParziale('ord-1', 'c1', []))).rejects.toThrow(attesa.MESSAGGIO_ATTESA)
+    expect(stato.scritture).toHaveLength(0)
+  })
+
+  it('annullare la comanda sì', async () => {
+    stato.ordine = inAttesa()
+    await subito(api.advanceComanda('ord-1', 'c1', 'annullato'))
+    expect(stato.scritture.length).toBeGreaterThan(0)
+  })
+
+  it('e le schermate avvisano con la stessa frase', () => {
+    const avvisa = vi.fn()
+    expect(attesa.fermoPerIlCliente(inAttesa(), avvisa)).toBe(true)
+    expect(avvisa).toHaveBeenCalledWith('Il cliente deve ancora accettare le modifiche.')
+    expect(attesa.fermoPerIlCliente(dalTelefono(), avvisa)).toBe(false)
+  })
+})
+

@@ -19,7 +19,9 @@
 //
 // Logica pura: l'ora la passa chi chiama.
 
-export const MINUTI_ATTESA_PREDEFINITI = 10
+import { lineSignature } from './orderLines.js'
+
+const MINUTI_ATTESA_PREDEFINITI = 10
 const MINUTI_ATTESA_MASSIMI = 120
 
 // Le comande che il banco può ancora rimettere in discussione: non pronte.
@@ -32,19 +34,13 @@ export function minutiAttesa(impostazioni) {
 }
 
 // Un ordine dal telefono: nessuno del personale l'ha battuto.
-export const ordineDalTelefono = (ordine) => Boolean(ordine) && !ordine.placed_by
+const ordineDalTelefono = (ordine) => Boolean(ordine) && !ordine.placed_by
 
 // Quello che il cliente PAGA e RICEVE di una riga: prodotto, nome, prezzo,
 // ricetta. La nota no: una nota del banco non cambia il drink né il conto.
-function firma(riga) {
-  const ricetta = Array.isArray(riga.recipe_items)
-    ? riga.recipe_items
-        .map((r) => `${r.inventory_item_id || r.name}:${r.qty}`)
-        .sort()
-        .join(',')
-    : ''
-  return [riga.drink_id ?? '', (riga.name ?? '').trim().toLowerCase(), Number(riga.unit_price ?? riga.price ?? 0), ricetta].join('|')
-}
+// È la firma delle righe del conto (orderLines.js), senza nota e senza il
+// segno `custom`: quelli non cambiano il drink né il conto.
+const firma = (riga) => lineSignature({ ...riga, note: '', custom: false })
 
 function quantitaPerFirma(righe) {
   const m = new Map()
@@ -65,7 +61,7 @@ export function cambiaPerIlCliente(prima, dopo) {
 
 // Le righe come le ha ordinate il cliente, in una stringa: serve a
 // riconoscere il banco che le rimette com'erano.
-export const firmaRighe = (righe) =>
+const firmaRighe = (righe) =>
   [...quantitaPerFirma(righe)]
     .map(([k, q]) => `${k}=${q}`)
     .sort()
@@ -76,7 +72,7 @@ export const firmaRighe = (righe) =>
 // drink non sono serviti: un rifiuto o una scadenza lo annullerebbero già
 // incassato, e un sì a un prezzo più alto lo lascerebbe «pagato» per meno
 // del totale. Lì le modifiche si concordano al banco, come prima.
-export const pagamentoAvviato = (ordine) =>
+const pagamentoAvviato = (ordine) =>
   ['pagato', 'parziale'].includes(ordine?.payment_status) ||
   (ordine?.payment_method === 'online' && ordine?.payment_status === 'in_attesa') ||
   (ordine?.payments || []).length > 0
@@ -93,12 +89,11 @@ export function attesaDopoLaModifica(ordine, comandaId, righePrima, righeDopo, i
   if (!ordineDalTelefono(ordine) || ordine.status !== 'aperto' || pagamentoAvviato(ordine)) return undefined
   const comande = ordine.comande || []
   if (comande[0]?.id !== comandaId || !PASSI_MODIFICABILI.includes(comande[0].status)) return undefined
-  if (inAttesa(ordine)) {
+  const giaInAttesa = inAttesa(ordine)
+  if (giaInAttesa) {
     const originale = ordine.attesa_cliente.firma_prima
     if (originale != null && firmaRighe(righeDopo) === originale) return null
-    return cambiaPerIlCliente(righePrima, righeDopo) ? attesaNuova(ordine, impostazioni, adesso, righePrima) : undefined
-  }
-  if (comande.length !== 1) return undefined
+  } else if (comande.length !== 1) return undefined
   return cambiaPerIlCliente(righePrima, righeDopo) ? attesaNuova(ordine, impostazioni, adesso, righePrima) : undefined
 }
 
@@ -138,6 +133,17 @@ export const rispostaAccettata = ({ adesso = new Date(), alBanco = false } = {})
   attesa_cliente: null,
   risposta_cliente: { esito: 'accettato', at: new Date(adesso).toISOString(), ...(alBanco ? { al_banco: true } : {}) },
 })
+
+// LA FRASE DI CHI PROVA A FAR AVANZARE UN CONTO CHE ASPETTA IL CLIENTE, e
+// il controllo delle schermate: una volta sola. Il blocco vero sta in
+// api.js (advanceComandaOra, preparazioneParziale); qui si avvisa prima
+// che il gesto si veda a schermo. `avvisa` è il toast di chi chiama.
+export const MESSAGGIO_ATTESA = 'Il cliente deve ancora accettare le modifiche.'
+export function fermoPerIlCliente(ordine, avvisa) {
+  if (!inAttesa(ordine)) return false
+  avvisa(MESSAGGIO_ATTESA)
+  return true
+}
 
 // I due modi in cui un'attesa finisce in un annullo (cancel_kind).
 export const ANNULLO_RIFIUTO = 'modifica_rifiutata'

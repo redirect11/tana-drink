@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { chiediAI, messaggioAI, aiRaggiungibile } from '../lib/aiApi.js'
+import { chiediAI, messaggioAI, aiRaggiungibile, costoAI as costoInEuro } from '../lib/aiApi.js'
 import TastoAI from './TastoAI.jsx'
 import { useStatoAI, STATI_AI } from '../lib/statoAI.js'
 
 // Il costo di una descrizione è di qualche millesimo: coi centesimi si
 // leggerebbe «0,00 €», che non è vero. Fino a quattro decimali.
-const costoInEuro = (v) =>
-  `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // LA DESCRIZIONE PROPOSTA DALL'AI, NELLA SCHEDA DEL PRODOTTO (REQ-AI-003, il
 // primo uso del cassetto AI della regia). Si chiede, si legge la proposta

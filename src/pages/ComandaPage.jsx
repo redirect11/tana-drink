@@ -21,12 +21,12 @@ import { ORDER_STATUSES } from '../lib/orderStatus.js'
 import { mondoConsegna } from '../lib/consegna.js'
 import { isGestore } from '../lib/ruoli.js'
 import { gestoreRicordato, ricordaRuolo } from '../lib/ruoloLocale.js'
-import { showToast } from '../lib/toast.js'
+import { showToast, toastError } from '../lib/toast.js'
 import { printComanda } from '../lib/printer.js'
 import { stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import Caricamento from '../components/Caricamento.jsx'
 import ComandaDetail from '../components/ComandaDetail.jsx'
-import { inAttesa } from '../lib/attesaCliente.js'
+import { fermoPerIlCliente } from '../lib/attesaCliente.js'
 
 // ── LA SCHERMATA DI UNA COMANDA ──────────────────────────────────────
 //
@@ -168,10 +168,7 @@ export default function ComandaPage() {
 
   const porta = (stato) => {
     // Il cliente non ha ancora accettato le modifiche (REQ-CLI-009).
-    if (inAttesa(order)) {
-      showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
-      return
-    }
+    if (fermoPerIlCliente(order, toastError)) return
     segna(stato)
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
       comandeLocali.scarta(order.id)
@@ -188,10 +185,7 @@ export default function ComandaPage() {
     if (!esito) return
     // Dividere fa avanzare la parte scelta (REQ-CLI-009): non col cliente
     // che deve ancora accettare le modifiche.
-    if (inAttesa(order)) {
-      showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
-      return
-    }
+    if (fermoPerIlCliente(order, toastError)) return
     // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
     // basta, e resta questa. La scrittura la fa preparazioneParziale qui
     // sotto — qui si segna solo quello che si deve già vedere. E dove

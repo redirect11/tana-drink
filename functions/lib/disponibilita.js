@@ -89,6 +89,15 @@ function soloGiacenza(prima, dopo) {
   return true
 }
 
+// UN CAMBIO DI MAGAZZINO CHE AL MENÙ NON DICE NIENTE: né prima né dopo il
+// cliente può sceglierlo, e con nessuna delle due soglie attraversa. Così
+// la Function esce prima di leggere le impostazioni: ogni drink venduto
+// scala due-quattro prodotti, e quasi sempre non cambia niente.
+function contaPerIlMenu(prima, dopo) {
+  if (prima?.scelta_cliente === true || dopo?.scelta_cliente === true) return true
+  return SOGLIE.some((s) => manca(prima, s) !== manca(dopo, s))
+}
+
 function alternativaDopo(prima, dopo, impostazioni) {
   const soglia = sogliaDi(impostazioni)
   const era = prima?.scelta_cliente === true
@@ -137,6 +146,7 @@ module.exports = {
   sogliaDi,
   rigaDiServizio,
   alternativaDopo,
+  contaPerIlMenu,
   righeDellEtichetta,
   scelteRiallineate,
 }

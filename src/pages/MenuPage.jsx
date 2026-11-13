@@ -174,6 +174,9 @@ export default function MenuPage({ speciali = false }) {
   // Il cliente aspetta anche la struttura (menuCache.js); chi lavora no.
   const loading = menuInArrivo || (!staff && !strutturaPronta)
   const cart = useCart()
+  // Le ricette dei prodotti per id: la scelta del cliente le legge per ogni
+  // voce che fa scegliere, a ogni disegno (REQ-MENU-042).
+  const ricettaDi = useMemo(() => new Map(drinksDelMenu.map((x) => [x.id, x.recipe_items || []])), [drinksDelMenu])
 
   // Il QR può contenere ?tavolo=12 per identificare il tavolo.
   const tableLabel = params.get('tavolo') || params.get('table') || ''
@@ -438,11 +441,8 @@ export default function MenuPage({ speciali = false }) {
     // UNA VOCE CHE FA SCEGLIERE (REQ-MENU-042): «Aggiungi» chiede la scelta,
     // ogni volta, e ogni scelta diversa è una riga sua. Accanto, quanti ce
     // ne sono già nel carrello, comunque scelti.
-    const scelte = scelteDellaVoce(
-      d.etichette_scelta,
-      disponibili,
-      d.etichette_scelta?.length ? drinksDelMenu.find((x) => x.id === d.drink_id)?.recipe_items : []
-    )
+    const ricetta = d.etichette_scelta?.length ? ricettaDi.get(d.drink_id) || [] : []
+    const scelte = scelteDellaVoce(d.etichette_scelta, disponibili, ricetta)
     if (scelte.length > 0) {
       const base = rigaDelCarrello(d)
       const giaPresi = cart.items
@@ -451,7 +451,7 @@ export default function MenuPage({ speciali = false }) {
       return (
         <span className="row" style={{ gap: 8, alignItems: 'center' }}>
           {giaPresi > 0 && <span className="muted small">{giaPresi} nel carrello</span>}
-          <button className="btn small" onClick={() => setScegliendo({ voce: d, scelte })}>
+          <button className="btn small" onClick={() => setScegliendo({ voce: d, scelte, ricetta })}>
             Aggiungi
           </button>
         </span>
@@ -1050,8 +1050,7 @@ export default function MenuPage({ speciali = false }) {
           onAggiungi={(fatte) => {
             // La ricetta è quella del prodotto della cassa: la voce non la
             // porta (strutturaMenu.js, voceInSezione).
-            const ricetta = drinksDelMenu.find((x) => x.id === scegliendo.voce.drink_id)?.recipe_items || []
-            cart.aggiungiRiga(rigaConScelte(scegliendo.voce, ricetta, fatte))
+            cart.aggiungiRiga(rigaConScelte(scegliendo.voce, scegliendo.ricetta, fatte))
             setScegliendo(null)
           }}
         />

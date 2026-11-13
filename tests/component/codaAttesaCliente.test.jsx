@@ -127,7 +127,7 @@ vi.mock('../../src/components/StatusBell.jsx', () => ({ default: () => <div>camp
 
 import BartenderPage from '../../src/pages/BartenderPage.jsx'
 import { cancelOrder, updateOrderStatus } from '../../src/lib/api.js'
-import { showToast } from '../../src/lib/toast.js'
+import { toastError } from '../../src/lib/toast.js'
 
 const fra = (min) => new Date(Date.now() + min * 60000).toISOString()
 
@@ -181,7 +181,8 @@ describe('il conto che aspetta il cliente, in coda', () => {
     await screen.findByText(/In attesa del cliente/)
     await user.click(screen.getByRole('button', { name: /Segna come/ }))
     expect(updateOrderStatus).not.toHaveBeenCalled()
-    expect(showToast).toHaveBeenCalledWith('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
+    // Lo stesso avviso, e della stessa durata, in ogni schermata (attesaCliente.js).
+    expect(toastError).toHaveBeenCalledWith('Il cliente deve ancora accettare le modifiche.')
   })
 
   it('a tempo scaduto la coda lo annulla, a nome del cliente e senza firma', async () => {

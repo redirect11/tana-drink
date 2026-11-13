@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { leggiCreditoAI, messaggioAI } from '../lib/aiApi.js'
+import { leggiCreditoAI, messaggioAI, costoAI } from '../lib/aiApi.js'
 
-const euro = (v) =>
-  v == null ? '—' : `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
+const euro = (v) => (v == null ? '—' : costoAI(v))
 
 // Perché le funzioni AI sono ferme, quando la regia dice `attivo: false`.
 const FERMO = {

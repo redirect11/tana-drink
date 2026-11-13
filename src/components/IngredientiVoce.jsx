@@ -10,10 +10,10 @@ import {
   GRUPPI_SUGGERIMENTO,
   alternativeDi,
   righeSostituite,
+  chiaveEtichetta as chiave,
 } from '../lib/etichetteIngredienti.js'
 
 const testo = (v) => (typeof v === 'string' ? v.trim() : '')
-const chiave = (e) => `${e.tipo}:${e.id ?? e.nome.toLowerCase()}`
 const NOME_GRUPPO = Object.fromEntries(GRUPPI_SUGGERIMENTO.map((g) => [g.id, g.nome]))
 
 // ── GLI INGREDIENTI DI UNA VOCE, A ETICHETTE (REQ-MENU-040) ───────────

@@ -78,20 +78,31 @@ async function impostazioniDelBar() {
   return s.exists ? s.data() : {}
 }
 
+// I prodotti di magazzino per id, letti a gruppi di cento (il tetto di
+// getAll che si tiene qui).
+async function leggiArticoli(ids) {
+  const perId = new Map()
+  for (let i = 0; i < ids.length; i += 100) {
+    const lette = await db.getAll(...ids.slice(i, i + 100).map((id) => db.doc(`inventory_items/${id}`)))
+    for (const s of lette) if (s.exists) perId.set(s.id, s.data())
+  }
+  return perId
+}
+
+// Scritture a lotti di quattrocento (il tetto di un batch è cinquecento).
+async function scriviALotti(elenco, scrivi) {
+  for (let i = 0; i < elenco.length; i += 400) {
+    const lotto = db.batch()
+    for (const x of elenco.slice(i, i + 400)) scrivi(lotto, x)
+    await lotto.commit()
+  }
+}
+
 async function ricalcolaDisponibilita(drinks, impostazioni) {
   if (!drinks.length) return
   const ids = [...new Set(drinks.flatMap((d) => (d.recipe_items || []).map((r) => r.inventory_item_id).filter(Boolean)))]
-  const itemsById = new Map()
-  for (let i = 0; i < ids.length; i += 100) {
-    const lette = await db.getAll(...ids.slice(i, i + 100).map((id) => db.doc(`inventory_items/${id}`)))
-    for (const s of lette) if (s.exists) itemsById.set(s.id, s.data())
-  }
-  const cambi = disponibilita.cambiDiDisponibilita(drinks, itemsById, impostazioni)
-  for (let i = 0; i < cambi.length; i += 400) {
-    const lotto = db.batch()
-    for (const c of cambi.slice(i, i + 400)) lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore })
-    await lotto.commit()
-  }
+  const cambi = disponibilita.cambiDiDisponibilita(drinks, await leggiArticoli(ids), impostazioni)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore }))
 }
 
 const drinksCheSeguono = async () =>
@@ -100,6 +111,7 @@ const drinksCheSeguono = async () =>
 exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
   const prima = event.data?.before?.exists ? event.data.before.data() : null
   const dopo = event.data?.after?.exists ? event.data.after.data() : null
+  if (!disponibilita.contaPerIlMenu(prima, dopo)) return
   const impostazioni = await impostazioniDelBar()
   const itemId = event.params.itemId
   // L'alternativa pubblica del cliente (REQ-MENU-042), se serve.
@@ -116,12 +128,12 @@ async function riallineaScelteDelProdotto(drinkId, ricetta) {
   const conScelta = voci.docs.filter((v) => (v.data().etichette || []).some((e) => e?.scelta))
   if (!conScelta.length) return
   const ids = [...new Set(ricetta.map((r) => r?.inventory_item_id).filter(Boolean))]
-  const articoli = ids.length ? await db.getAll(...ids.map((id) => db.doc(`inventory_items/${id}`))) : []
-  const categoriaDi = new Map(articoli.filter((a) => a.exists).map((a) => [a.id, a.data().category_id ?? null]))
-  for (const v of conScelta) {
-    const nuove = disponibilita.scelteRiallineate(v.data().etichette, ricetta, categoriaDi)
-    if (nuove) await v.ref.update({ etichette: nuove })
-  }
+  const articoli = await leggiArticoli(ids)
+  const categoriaDi = new Map([...articoli].map(([id, a]) => [id, a.category_id ?? null]))
+  const cambi = conScelta
+    .map((v) => ({ ref: v.ref, etichette: disponibilita.scelteRiallineate(v.data().etichette, ricetta, categoriaDi) }))
+    .filter((c) => c.etichette)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(c.ref, { etichette: c.etichette }))
 }
 
 exports.disponibilitaDalProdotto = onDocumentWritten({ ...OPTS, document: 'drinks/{drinkId}' }, async (event) => {
@@ -146,14 +158,13 @@ exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 
   if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
   await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
   // E le alternative del cliente, con la soglia nuova.
+  // TUTTE, anche quelle che non cambiano: è anche la strada che rimette il
+  // documento ai prodotti spuntati prima che la Function ci fosse.
   const scelte = await db.collection('inventory_items').where('scelta_cliente', '==', true).get()
-  for (let i = 0; i < scelte.docs.length; i += 400) {
-    const lotto = db.batch()
-    for (const d of scelte.docs.slice(i, i + 400)) {
-      lotto.set(db.doc(`alternative_cliente/${d.id}`), { disponibile: !disponibilita.manca(d.data(), disponibilita.sogliaDi(dopo)) })
-    }
-    await lotto.commit()
-  }
+  const soglia = disponibilita.sogliaDi(dopo)
+  await scriviALotti(scelte.docs, (lotto, d) =>
+    lotto.set(db.doc(`alternative_cliente/${d.id}`), { disponibile: !disponibilita.manca(d.data(), soglia) })
+  )
 })
 
 // ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────

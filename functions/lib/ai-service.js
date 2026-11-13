@@ -231,4 +231,4 @@ async function richiestaAI(deps, auth, richiesta) {
   return interpreta(risposta, richiesta.tipo)
 }
 
-module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, destinatarioGettone, interpreta, STRUMENTI_CHAT }
+module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, destinatarioGettone, interpreta }

@@ -19,8 +19,9 @@
 // Logica pura: magazzino e categorie li passa chi chiama.
 
 import { nomeInCarta, rigaDiServizio, ingredientiDalCampo } from './ingredientiCarta.js'
+import { normName as normale } from './nameMatch.js'
 
-export const TIPI_ETICHETTA = ['prodotto', 'categoria', 'categoria_cassa', 'testo']
+const TIPI_ETICHETTA = ['prodotto', 'categoria', 'categoria_cassa', 'testo']
 
 // L'ordine e il nome dei gruppi di suggerimenti: prima quello che viene
 // dalla ricetta del prodotto collegato, poi il resto del magazzino, poi la
@@ -35,15 +36,9 @@ export const GRUPPI_SUGGERIMENTO = [
 
 const MAX_SUGGERIMENTI = 8
 
-const normale = (s) =>
-  String(s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-
-const chiave = (e) => `${e.tipo}:${e.id ?? normale(e.nome)}`
+// La chiave di un'etichetta: una sola, per la logica e per l'editor.
+export const chiaveEtichetta = (e) => `${e.tipo}:${e.id ?? normale(e.nome)}`
+const chiave = chiaveEtichetta
 
 // Un'etichetta scritta bene, o null.
 export function etichettaPulita(e) {
@@ -73,7 +68,7 @@ const euro = (v) => {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0
 }
 
-export function sceltaPulita(e) {
+function sceltaPulita(e) {
   if (!TIPI_CON_SCELTA.includes(e?.tipo) || !e?.scelta || typeof e.scelta !== 'object') return null
   const visti = new Set()
   const offerti = (Array.isArray(e.scelta.offerti) ? e.scelta.offerti : [])
@@ -95,7 +90,7 @@ export function righeSostituite(e, drink, items = []) {
 }
 
 // La categoria di magazzino di un'etichetta: la sua, o quella del prodotto.
-export function categoriaDellEtichetta(e, items = []) {
+function categoriaDellEtichetta(e, items = []) {
   if (e?.tipo === 'categoria') return e.id ?? null
   if (e?.tipo === 'prodotto') return items.find((i) => i.id === e.id)?.category_id ?? null
   return null

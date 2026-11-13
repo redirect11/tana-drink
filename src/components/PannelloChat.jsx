@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { prodottoDaMagazzino, mettiProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
-import { chiediChat, chiediAI, leggiCreditoAI, messaggioAI } from '../lib/aiApi.js'
+import { chiediChat, chiediAI, leggiCreditoAI, messaggioAI, costoAI as euro } from '../lib/aiApi.js'
 import {
   strumentiPerRuolo,
   conTesto,
@@ -24,7 +24,6 @@ import {
 } from '../lib/api.js'
 import FatturaDaAI from './FatturaDaAI.jsx'
 
-const euro = (v) => `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // Cosa si legge mentre uno strumento lavora: chi aspetta deve sapere cosa
 // sta succedendo, in parole del gestionale.
@@ -64,6 +63,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
   // messaggio, perché cambiato a metà la regia la rifiuta (409).
   const strumentiConv = useRef(null)
   const dati = useRef(null)
+  const ordiniPer = useRef(new Map())
   const fineRef = useRef(null)
   const strumenti = strumentiPerRuolo(ruolo)
   const navigate = useNavigate()
@@ -118,7 +118,11 @@ export default function PannelloChat({ ruolo, onChiudi }) {
       const dal = giornata(input?.dal)
       const al = giornata(input?.al) || dal
       if (!dal) return { errore: 'Il periodo va dato in date AAAA-MM-GG.' }
-      return vendite({ ...input, dal, al }, { ordini: await fetchOrdersRange(dal, al) })
+      // Lo stesso periodo si legge una volta: il modello lo richiama spesso
+      // cambiando solo il prodotto.
+      const k = `${dal}|${al}`
+      if (!ordiniPer.current.has(k)) ordiniPer.current.set(k, fetchOrdersRange(dal, al))
+      return vendite({ ...input, dal, al }, { ordini: await ordiniPer.current.get(k) })
     }
     if (nome === 'proponi_descrizione') {
       const trovato = cercaProdotti({ testo: input?.prodotto }, d).prodotti.find((p) => p.dove !== 'magazzino')

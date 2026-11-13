@@ -14,13 +14,8 @@
 // Menù la prende all'apertura (prendiProdottoInArrivo) e la apre come una
 // scheda nuova, come il «duplica».
 
-const normale = (s) =>
-  String(s ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+
+import { normName as normale } from './nameMatch.js'
 
 export function prodottoDaMagazzino(item, { categorieMagazzino = [], categorieCassa = [], prezzo = null } = {}) {
   const nomeCategoria = categorieMagazzino.find((c) => c.id === item?.category_id)?.name

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { chiediAI, messaggioAI, problemaFileFattura, fileInBase64 } from '../lib/aiApi.js'
+import { chiediAI, messaggioAI, problemaFileFattura, fileInBase64, costoAI as euro } from '../lib/aiApi.js'
 import { fotoDiFatturaLeggibile } from '../lib/storage.js'
 import { createSupplierInvoice, aggiungiProdottiAFattura, allegaDocumentoAFattura } from '../lib/api.js'
 import {
@@ -11,7 +11,6 @@ import {
 
 // Il costo di una lettura è di qualche centesimo: fino a quattro decimali,
 // come nella descrizione proposta (DescrizioneAI).
-const euro = (v) => `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // ── IL DOCUMENTO LETTO DALL'AI (REQ-AI-001) ───────────────────────────
 //
@@ -35,6 +34,17 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
   const prodotti = useMemo(
     () => [...(items || [])].sort((a, b) => String(a.name).localeCompare(String(b.name), 'it')),
     [items]
+  )
+  // Le opzioni dei prodotti, costruite una volta: ogni tasto battuto in una
+  // riga ridisegna tutte le righe, e ognuna porta l'intero magazzino.
+  const opzioniProdotti = useMemo(
+    () =>
+      prodotti.map((i) => (
+        <option key={i.id} value={i.id}>
+          {i.name}
+        </option>
+      )),
+    [prodotti]
   )
 
   async function leggi(e) {
@@ -201,11 +211,7 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
                 onChange={(e) => cambiaRiga(r.chiave, { item_id: e.target.value, includi: Boolean(e.target.value) })}
               >
                 <option value="">— Prodotto da abbinare —</option>
-                {prodotti.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.name}
-                  </option>
-                ))}
+                {opzioniProdotti}
               </select>
               <div className="fattura-ai-numeri">
                 <label>

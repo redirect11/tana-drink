@@ -1,5 +1,4 @@
-import { useStatoAI, STATI_AI, messaggioSenzaCredito } from '../lib/statoAI.js'
-import { showToast } from '../lib/toast.js'
+import { useTastoAI } from '../lib/statoAI.js'
 import Icona from './Icona.jsx'
 
 // ── IL TASTO DELL'ASSISTENTE AI NELLA BARRA (REQ-AI-006, REQ-AI-007) ───
@@ -9,17 +8,16 @@ import Icona from './Icona.jsx'
 // 13/11/2026); attiva apre e chiude il pannello. Chi lo monta lo monta solo
 // per lo staff di gestione.
 export default function TastoAssistente({ aperto, onAlterna }) {
-  const { stato, motivo } = useStatoAI(true)
-  if (stato === STATI_AI.ASSENTE) return null
-  const senzaCredito = stato === STATI_AI.SENZA_CREDITO
+  const { assente, senzaCredito, avviso, avvisa } = useTastoAI()
+  if (assente) return null
   return (
     <button
       type="button"
       className={`btn ghost small topbar-chat${senzaCredito ? ' senza-credito' : ''}`}
-      onClick={() => (senzaCredito ? showToast(messaggioSenzaCredito(motivo), { kind: 'error' }) : onAlterna())}
+      onClick={() => (senzaCredito ? avvisa() : onAlterna())}
       aria-label={senzaCredito ? 'Assistente AI: credito da ricaricare' : 'Assistente AI'}
       aria-pressed={senzaCredito ? undefined : aperto}
-      title={senzaCredito ? messaggioSenzaCredito(motivo) : 'Assistente AI'}
+      title={avviso ?? 'Assistente AI'}
     >
       <Icona nome="fumetto" gruppo="tasti" />
       {senzaCredito && (

@@ -1,5 +1,4 @@
-import { useStatoAI, STATI_AI, messaggioSenzaCredito } from '../lib/statoAI.js'
-import { showToast } from '../lib/toast.js'
+import { useTastoAI } from '../lib/statoAI.js'
 import Icona from './Icona.jsx'
 
 // ── UN TASTO DELL'AI, CON LA REGOLA DEI TRE STATI (REQ-AI-007) ─────────
@@ -9,16 +8,15 @@ import Icona from './Icona.jsx'
 // il tasto non c'è; senza credito è grigio con l'avviso, e toccandolo
 // ricorda di ricaricare; attiva fa quello che deve.
 export default function TastoAI({ className = 'btn ghost small', onClick, disabled = false, children }) {
-  const { stato, motivo } = useStatoAI(true)
-  if (stato === STATI_AI.ASSENTE) return null
-  const senzaCredito = stato === STATI_AI.SENZA_CREDITO
+  const { assente, senzaCredito, avviso, avvisa } = useTastoAI()
+  if (assente) return null
   return (
     <button
       type="button"
       className={`${className} tasto-ai${senzaCredito ? ' senza-credito' : ''}`}
-      onClick={senzaCredito ? () => showToast(messaggioSenzaCredito(motivo), { kind: 'error' }) : onClick}
+      onClick={senzaCredito ? avvisa : onClick}
       disabled={!senzaCredito && disabled}
-      title={senzaCredito ? messaggioSenzaCredito(motivo) : undefined}
+      title={avviso ?? undefined}
     >
       {senzaCredito && <Icona nome="avviso" gruppo="segnali" />} {children}
     </button>

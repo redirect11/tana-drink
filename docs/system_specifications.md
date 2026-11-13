@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 181 |
-| Unità | il progetto di dettaglio: un modulo da solo | 181 |
+| Unità | il progetto di dettaglio: un modulo da solo | 182 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
 **106** requisiti su 346 sono collegati a un bisogno;
@@ -1233,7 +1233,7 @@ QUANDO LA RICETTA DEL PRODOTTO CAMBIA le righe sostituite delle voci collegate s
 
 FATTO AL TELEFONO (13/11/2026): sulle voci che fanno scegliere «Aggiungi» apre la scelta (SceltaIngredienti): una domanda per etichetta, già risposta con la ricetta; le alternative sono solo quelle disponibili, senza il prodotto della ricetta, ciascuna col supplemento. Un'etichetta senza alternative disponibili non chiede niente. Nel carrello ogni scelta diversa è una riga sua (cart.js, chiaveRiga), letta «Gin Tonic (Mare)»; accanto ad «Aggiungi» quanti ce ne sono già.
 
-**Dove**: `src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`, `tests/unit/sceltaCliente.test.js`
+**Dove**: `src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`, `tests/unit/sceltaCliente.test.js`, `tests/unit/paritaFunctions.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 

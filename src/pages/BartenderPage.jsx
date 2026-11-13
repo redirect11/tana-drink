@@ -139,7 +139,7 @@ import { isAwaitingPayment } from '../lib/payments.js'
 import { readerCheckout, readerTerminate } from '../lib/paymentsApi.js'
 import { sumupAttivo } from '../lib/licenza.js'
 import { ensureNotificationPermission, notify } from '../lib/notify.js'
-import { showToast } from '../lib/toast.js'
+import { showToast, toastError } from '../lib/toast.js'
 import { beep, installAudioUnlock } from '../lib/beep.js'
 import { subscribePending, dismissPending, dismissBanner } from '../lib/pendingOrders.js'
 import { printComanda, printScontrino, loadPrinterSettings, scontrinoAutomatico, reclaimReceiptPrint, releaseReceiptPrint, scontrinoGiaUscito, comandeDaStampare, claimComandaPrint, releaseComandaPrint } from '../lib/printer.js'
@@ -185,7 +185,7 @@ import Icona, { ConIcona } from '../components/Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
 import AttesaCliente from '../components/AttesaCliente.jsx'
-import { inAttesa, scaduta, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
+import { fermoPerIlCliente as fermo, scaduta, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -603,30 +603,33 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   // per terminale. Solo chi può annullare (la sala non può: le regole). Non
   // lo firma nessuno: nella storia del conto non deve comparire chi aveva
   // la coda aperta.
+  // Si guarda a ogni snapshot della coda e ogni 20 secondi; il timer è uno
+  // solo e legge gli ordini da un ref (a ogni snapshot si rimontava).
   const scaduteQui = useRef(new Set())
-  useEffect(() => {
+  const ordiniPerScadenza = useRef(ordersRaw)
+  ordiniPerScadenza.current = ordersRaw
+  const controllaScadute = useRef(null)
+  controllaScadute.current = () => {
     if (!isGestore(ruolo)) return
-    const controlla = () => {
-      for (const o of ordersRaw) {
-        if (!scaduta(o) || scaduteQui.current.has(o.id)) continue
-        scaduteQui.current.add(o.id)
-        cancelOrder(o.id, { by: 'cliente', kind: ANNULLO_SCADUTO, persona: null }).catch(() =>
-          scaduteQui.current.delete(o.id)
-        )
-      }
+    for (const o of ordiniPerScadenza.current) {
+      if (!scaduta(o) || scaduteQui.current.has(o.id)) continue
+      scaduteQui.current.add(o.id)
+      cancelOrder(o.id, { by: 'cliente', kind: ANNULLO_SCADUTO, persona: null }).catch(() =>
+        scaduteQui.current.delete(o.id)
+      )
     }
-    controlla()
-    const t = setInterval(controlla, 20000)
-    return () => clearInterval(t)
+  }
+  useEffect(() => {
+    controllaScadute.current()
   }, [ordersRaw, ruolo])
+  useEffect(() => {
+    const t = setInterval(() => controllaScadute.current(), 20000)
+    return () => clearInterval(t)
+  }, [])
 
   // Un conto che aspetta il cliente non va avanti: il drink si prepara
-  // quando lui ha accettato le modifiche.
-  const fermoPerIlCliente = (order) => {
-    if (!inAttesa(order)) return false
-    showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
-    return true
-  }
+  // quando lui ha accettato le modifiche (lo blocca anche api.js).
+  const fermoPerIlCliente = (order) => fermo(order, toastError)
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   // La scheda attiva quando gli stati di servizio sono SPENTI: in corso,
   // chiusi o annullati — le stesse voci della griglia.

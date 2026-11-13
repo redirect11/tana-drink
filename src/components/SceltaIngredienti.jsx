@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatPrice } from '../lib/orderStatus.js'
+import { chiaveEtichetta as chiave } from '../lib/etichetteIngredienti.js'
 
 // IL CLIENTE SCEGLIE L'INGREDIENTE (REQ-MENU-042): si apre toccando
 // «Aggiungi» su una voce che fa scegliere. Una domanda per etichetta, già
@@ -56,4 +57,3 @@ export default function SceltaIngredienti({ voce, scelte, onAggiungi, onClose })
   )
 }
 
-const chiave = (e) => `${e.tipo}:${e.id}`

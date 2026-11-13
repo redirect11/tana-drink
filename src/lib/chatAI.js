@@ -33,22 +33,16 @@ import { isAdmin, isGestore } from './ruoli.js'
 // regia. Quelli di LETTURA rispondono subito; quelli che PROPONGONO
 // mostrano una proposta a schermo, da confermare: il modello non scrive
 // mai da solo.
-export const STRUMENTI_LETTURA = ['giacenza', 'vendite', 'cerca_prodotti']
-export const STRUMENTI_PROPOSTA = ['proponi_descrizione', 'proponi_voce_menu', 'leggi_fattura']
+const STRUMENTI_LETTURA = ['giacenza', 'vendite', 'cerca_prodotti']
+const STRUMENTI_PROPOSTA = ['proponi_descrizione', 'proponi_voce_menu', 'leggi_fattura']
 // Solo dell'admin: la sezione Fornitori è sua (sezioni.js).
 const SOLO_ADMIN = ['leggi_fattura']
-
-// Quelli che l'app sa già eseguire: tutti. `proponi_voce_menu` apre la
-// scheda di «Crea il prodotto della cassa» (REQ-AI-002).
-const PRONTI = new Set(['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'proponi_voce_menu', 'leggi_fattura'])
 
 // Quelli che chi scrive può usare, col suo ruolo: la chat è dello staff di
 // gestione. La Function controlla di nuovo i solo-admin.
 export function strumentiPerRuolo(ruolo) {
   if (!isGestore(ruolo)) return []
-  return [...STRUMENTI_LETTURA, ...STRUMENTI_PROPOSTA].filter(
-    (s) => PRONTI.has(s) && (!SOLO_ADMIN.includes(s) || isAdmin(ruolo))
-  )
+  return [...STRUMENTI_LETTURA, ...STRUMENTI_PROPOSTA].filter((s) => !SOLO_ADMIN.includes(s) || isAdmin(ruolo))
 }
 
 // Oltre questo la conversazione costerebbe troppo a ogni turno, e la

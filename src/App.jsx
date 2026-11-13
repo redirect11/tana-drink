@@ -38,8 +38,7 @@ import StatusBell from './components/StatusBell.jsx'
 import PannelloChat from './components/PannelloChat.jsx'
 import TastoAssistente from './components/TastoAssistente.jsx'
 import { aiRaggiungibile } from './lib/aiApi.js'
-import { useStatoAI, STATI_AI, messaggioSenzaCredito } from './lib/statoAI.js'
-import { showToast } from './lib/toast.js'
+import { useTastoAI } from './lib/statoAI.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
@@ -282,7 +281,7 @@ export default function App() {
   const [staffRole, setStaffRole] = useState(null)
   // Assente, senza credito o attiva (REQ-AI-007): decide il tasto e la voce
   // del ⋮. Il credito si chiede solo per lo staff di gestione.
-  const statoAssistente = useStatoAI(isGestore(staffRole))
+  const assistente = useTastoAI(isGestore(staffRole))
   // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
   // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
   // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
@@ -757,15 +756,12 @@ export default function App() {
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
-          isGestore(staffRole) && aiRaggiungibile() && statoAssistente.stato !== STATI_AI.ASSENTE && {
+          isGestore(staffRole) && aiRaggiungibile() && !assistente.assente && {
             id: 'assistente',
             icon: 'fumetto',
             label: 'Assistente AI',
-            ...(statoAssistente.stato === STATI_AI.SENZA_CREDITO
-              ? {
-                  hint: messaggioSenzaCredito(statoAssistente.motivo),
-                  onClick: () => showToast(messaggioSenzaCredito(statoAssistente.motivo), { kind: 'error' }),
-                }
+            ...(assistente.senzaCredito
+              ? { hint: assistente.avviso, onClick: assistente.avvisa }
               : { hint: 'Giacenze, vendite, descrizioni del menù', onClick: () => setChatAperta(true) }),
           },
           !isSala(staffRole) && {
@@ -802,7 +798,7 @@ export default function App() {
         ]}
       />
 
-      {chatAperta && isGestore(staffRole) && statoAssistente.stato !== STATI_AI.ASSENTE && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
+      {chatAperta && isGestore(staffRole) && !assistente.assente && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 

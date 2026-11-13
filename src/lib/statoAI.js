@@ -18,6 +18,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react'
 import { aiRaggiungibile, leggiCreditoAI, ascoltaRisposteAI, MESSAGGI_AI } from './aiApi.js'
+import { showToast } from './toast.js'
 
 export const STATI_AI = Object.freeze({ ASSENTE: 'assente', SENZA_CREDITO: 'senza-credito', ATTIVA: 'attiva', IGNOTO: 'ignoto' })
 
@@ -64,7 +65,7 @@ export const statoAI = () => _stato
 
 // Chiede il credito, se lo stato non è fresco. Senza l'AI nella licenza non
 // si chiede niente: è assente.
-export function aggiornaStatoAI({ forza = false } = {}) {
+function aggiornaStatoAI({ forza = false } = {}) {
   if (!aiRaggiungibile()) {
     if (_stato.stato !== STATI_AI.ASSENTE) annuncia({ stato: STATI_AI.ASSENTE })
     return Promise.resolve(_stato)
@@ -96,6 +97,21 @@ export function useStatoAI(chiedi = true) {
 
 // Il promemoria di chi tocca l'AI senza credito.
 export const messaggioSenzaCredito = (motivo) => (motivo === 'tetto' ? MESSAGGI_AI.tetto : MESSAGGI_AI.credito)
+
+// LA REGOLA DEI TRE STATI PER UN TASTO (REQ-AI-007), una sola per i tasti
+// AI, quello dell'assistente e la voce del ⋮: assente non si disegna;
+// senza credito è grigio con l'avviso, e toccandolo lo ricorda.
+export function useTastoAI(chiedi = true) {
+  const { stato, motivo } = useStatoAI(chiedi)
+  const senzaCredito = stato === STATI_AI.SENZA_CREDITO
+  const avviso = senzaCredito ? messaggioSenzaCredito(motivo) : null
+  return {
+    assente: stato === STATI_AI.ASSENTE,
+    senzaCredito,
+    avviso,
+    avvisa: () => showToast(avviso, { kind: 'error' }),
+  }
+}
 
 // Solo per i test: si riparte da capo.
 export function _azzeraStatoAI() {
