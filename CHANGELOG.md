@@ -23,6 +23,11 @@
 - Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
   menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
   lo permettono (per esempio il gin del gin tonic). Spenta di partenza.
+- L’assistente AI: dalla barra in alto (sul telefono dal ⋮) si apre un
+  pannello dove si chiede di giacenze, vendite e prodotti, si fanno
+  proporre le descrizioni del menù e (all’admin) leggere i documenti dei
+  fornitori. Le modifiche si confermano a schermo; la conversazione non si
+  conserva alla chiusura. Usa il credito AI del locale.
 - Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
   fattura e propone fornitore, numero, data, importo e righe abbinate ai
   prodotti del magazzino, da rivedere prima di registrare. Il documento

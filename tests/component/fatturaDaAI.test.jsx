@@ -121,7 +121,12 @@ describe('la registrazione', () => {
       carica: false,
     })
     expect(allegaDocumentoAFattura).toHaveBeenCalledWith('f1', file)
-    expect(onRegistrata).toHaveBeenCalledWith({ id: 'f1', avviso: null })
+    // Il riassunto è quello che la chat rimanda al modello (REQ-AI-006).
+    expect(onRegistrata).toHaveBeenCalledWith({
+      id: 'f1',
+      avviso: null,
+      riassunto: { fornitore: 'Rossi Bevande', numero: '123', data: '2026-11-10', totale: 137.86, righe_trovate: 1, righe_da_abbinare: 1 },
+    })
   })
 
   it('il carico a magazzino si accende a mano', async () => {
@@ -151,6 +156,8 @@ describe('la registrazione', () => {
     await scegli(user, pdf())
     await user.click(await screen.findByRole('button', { name: 'Registra il documento' }))
     expect(createSupplierInvoice).toHaveBeenCalled()
-    expect(onRegistrata).toHaveBeenCalledWith({ id: 'f1', avviso: expect.stringMatching(/allegato non è stato caricato: rete assente/) })
+    expect(onRegistrata).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'f1', avviso: expect.stringMatching(/allegato non è stato caricato: rete assente/) })
+    )
   })
 })

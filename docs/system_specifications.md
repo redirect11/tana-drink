@@ -24,12 +24,12 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 |---|---|---|
 | ✅ | 296 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 7 | fatto a metà |
-| ⬜ | 28 | da fare |
+| 🟡 | 8 | fatto a metà |
+| ⬜ | 27 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **318** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**354 voci** in tutto. **319** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **27** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 3 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 4 | 3 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 178 |
-| Unità | il progetto di dettaglio: un modulo da solo | 180 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 179 |
+| Unità | il progetto di dettaglio: un modulo da solo | 181 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
 **106** requisiti su 346 sono collegati a un bisogno;
@@ -3279,6 +3279,32 @@ RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale
 
 **Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/descrizioneAI.test.jsx`
 
+#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
+
+LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
+
+DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
+
+DECISO (Daniele, 12/11/2026): la chat sta in un PANNELLO A PORTATA, aperto da un tasto nella barra in alto del gestionale, sopra la pagina in cui si è;
+
+NIENTE MEMORIA fra una conversazione e l'altra (vive finché il pannello è aperto: costa meno, e non si salvano dati in più). Viene dopo fatture e voce del menù, che diventano i suoi primi strumenti. Serve alla regia una richiesta nuova per la conversazione con gli strumenti (oggi il cassetto accetta solo `descrizione` e `fattura`).
+
+IL CONTRATTO CON LA REGIA (13/11/2026, forma concordata; modello, limiti e schemi d'ingresso degli strumenti li manda la regia): la Function `richiestaAI` gira `{ tipo: 'chat', messaggi, strumenti }`. `messaggi` è nel formato dei messaggi di Anthropic: i turni dell'utente sono un testo o i blocchi `tool_result`; i turni del modello si rimettono ESATTAMENTE come sono tornati (`turno`), senza toccarli: un turno ritoccato la regia lo rifiuta (400), e per accorciare si apre una conversazione nuova. `strumenti` sono solo identificativi, quelli del ruolo di chi scrive. Risposta: `{ ok, tipo: 'chat', turno, testo, strumenti_richiesti: [{ id, nome, input }], costo_eur, credito_eur }`. Istruzioni e strumenti sono della regia e hanno una versione: col 409 `{ codice: 'versione' }` si apre una conversazione nuova. Codici: 400, 401, 402, 409, 422, 429 (occupato), 503.
+
+GLI STRUMENTI (proposta di tana-drink del 13/11/2026): di lettura `giacenza` (al massimo 5 risultati), `vendite` (20 righe), `cerca_prodotti` (15); che propongono, da confermare a schermo, `proponi_descrizione`, `proponi_voce_menu`, `leggi_fattura` (il file non entra nella conversazione: passa dalla richiesta `fattura`, e torna un riassunto).
+
+RUOLI: la chat è dello staff di gestione (admin e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo). La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è `attivo` (REQ-AI-003).
+
+FATTO DALLA PARTE DELL'APP (13/11/2026, ramo feature/chat-ai), sul contratto concordato, in attesa degli schemi definitivi della regia: la Function gira `tipo: 'chat'` (conversazione controllata prima del viaggio, `leggi_fattura` solo all'admin, 409 e 429); la logica in lib/chatAI.js (conversazione, strumenti per ruolo) e lib/strumentiChat.js (giacenza, vendite, cerca_prodotti, coi limiti di righe); il pannello PannelloChat.jsx, aperto dalla barra in alto (sul telefono dal ⋮), che chiede il credito all'apertura, esegue gli strumenti, mostra le proposte da confermare (descrizione, documento del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta il tasto di REQ-AI-002.
+
+RESTA la prova con la regia vera.
+
+**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/chatAI.test.js`, `tests/component/pannelloChat.test.jsx`
+
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -4604,26 +4630,6 @@ DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento): quale modello
 RINVIATA (Daniele, 12/11/2026: «niente modifica immagini per ora»). Resta il ritaglio a mano (REQ-MENU-039).
 
 **Dove**: `src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
-
-#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
-
-Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
-
-LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
-
-DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
-
-DECISO (Daniele, 12/11/2026): la chat sta in un PANNELLO A PORTATA, aperto da un tasto nella barra in alto del gestionale, sopra la pagina in cui si è;
-
-NIENTE MEMORIA fra una conversazione e l'altra (vive finché il pannello è aperto: costa meno, e non si salvano dati in più). Viene dopo fatture e voce del menù, che diventano i suoi primi strumenti. Serve alla regia una richiesta nuova per la conversazione con gli strumenti (oggi il cassetto accetta solo `descrizione` e `fattura`).
-
-IL CONTRATTO CON LA REGIA (13/11/2026, forma concordata; modello, limiti e schemi d'ingresso degli strumenti li manda la regia): la Function `richiestaAI` gira `{ tipo: 'chat', messaggi, strumenti }`. `messaggi` è nel formato dei messaggi di Anthropic: i turni dell'utente sono un testo o i blocchi `tool_result`; i turni del modello si rimettono ESATTAMENTE come sono tornati (`turno`), senza toccarli: un turno ritoccato la regia lo rifiuta (400), e per accorciare si apre una conversazione nuova. `strumenti` sono solo identificativi, quelli del ruolo di chi scrive. Risposta: `{ ok, tipo: 'chat', turno, testo, strumenti_richiesti: [{ id, nome, input }], costo_eur, credito_eur }`. Istruzioni e strumenti sono della regia e hanno una versione: col 409 `{ codice: 'versione' }` si apre una conversazione nuova. Codici: 400, 401, 402, 409, 422, 429 (occupato), 503.
-
-GLI STRUMENTI (proposta di tana-drink del 13/11/2026): di lettura `giacenza` (al massimo 5 risultati), `vendite` (20 righe), `cerca_prodotti` (15); che propongono, da confermare a schermo, `proponi_descrizione`, `proponi_voce_menu`, `leggi_fattura` (il file non entra nella conversazione: passa dalla richiesta `fattura`, e torna un riassunto).
-
-RUOLI: la chat è dello staff di gestione (admin e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo). La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è `attivo` (REQ-AI-003).
-
-**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Interfaccia
 

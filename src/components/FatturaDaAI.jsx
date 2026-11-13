@@ -87,7 +87,18 @@ export default function FatturaDaAI({ suppliers, items, listini, onAnnulla, onRe
       } catch (err) {
         avviso = `Documento registrato, ma l’allegato non è stato caricato: ${err.message}`
       }
-      onRegistrata?.({ id: doc.id, avviso })
+      // Il riassunto serve alla chat (REQ-AI-006), che lo rimanda al modello
+      // al posto del documento: nomi e numeri, niente file.
+      const sup = suppliers.find((x) => x.id === proposta.supplier_id)
+      const riassunto = {
+        fornitore: sup?.name ?? null,
+        numero: proposta.number || null,
+        data: proposta.date,
+        totale: Number(proposta.amount) || 0,
+        righe_trovate: righe.length,
+        righe_da_abbinare: proposta.righe.length - righe.length,
+      }
+      onRegistrata?.({ id: doc.id, avviso, riassunto })
     } catch (err) {
       setErrore(err.message)
     } finally {
