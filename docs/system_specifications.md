@@ -4287,9 +4287,7 @@ LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la v
 
 #### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
 
-Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette dove si applicano. Si decide se raggruppare tutto automaticamente nelle sezioni. Lo stesso per i GRUPPI del menù dei clienti: possono corrispondere alle macro categorie (della cassa o del magazzino), a gruppi propri del menù dei clienti, o a raggruppamenti del tema (i semi delle carte nel tema Carte).
-
-DA CHIARIRE: oggi le macro categorie non raggruppano categorie, ma singoli prodotti e voci con una percentuale (src/lib/macros.js, Flavio 09/09/2026): un gruppo «dalla macro categoria» va definito.
+Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette (REQ-MENU-040); senza, vale quella del prodotto della cassa collegato. Si decide se raggruppare: «Raggruppa per categoria» crea le sezioni che mancano, col nome della categoria, e ci sposta le voci; una voce aggiunta dopo va nella sezione della sua categoria, se c'è. I GRUPPI (CORRETTO lo stesso giorno, Daniele: «lascia perdere la cosa dei gruppi e delle macro categorie»): sono liberi, un concetto del solo menù dei clienti (`gruppo` della sezione, come oggi); non nascono dalle macro categorie.
 
 **Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
