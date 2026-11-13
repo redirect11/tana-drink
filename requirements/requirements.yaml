@@ -8445,8 +8445,16 @@ requirements:
       13/11/2026: la voce del menù dei clienti si fa solo dall'editor del
       menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la
       propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che
-      creava il prodotto della cassa dalla bottiglia è PROPOSTO DA LASCIARE
-      CADERE, in attesa della conferma di Daniele.
+      creava il prodotto della cassa dalla bottiglia RESTA (Daniele,
+      13/11/2026: «sull'item lascialo»): nella scheda del prodotto di
+      magazzino, «Crea il prodotto della cassa» apre la scheda di un
+      prodotto della cassa nuovo collegato a quella bottiglia (nome,
+      categoria, ricetta con la riga di quel prodotto). La QUANTITÀ della
+      riga resta vuota e la scrive chi crea, perché la dose dipende dal
+      prodotto (Daniele: «non c'è una dose fissa»): 4 cl fa il bicchiere,
+      70 cl la bottiglia intera, 1 pezzo la birra. Il prodotto si crea anche
+      dall'editor della cassa, come oggi. La descrizione AI parte da sola
+      all'apertura, se l'AI c'è e il credito pure.
     status: todo
     generate_issue: true
     labels: [ai, menu, vista-cliente]
@@ -8551,6 +8559,29 @@ requirements:
       primi strumenti. Serve alla regia una richiesta nuova per la
       conversazione con gli strumenti (oggi il cassetto accetta solo
       `descrizione` e `fattura`).
+      IL CONTRATTO CON LA REGIA (13/11/2026, forma concordata; modello,
+      limiti e schemi d'ingresso degli strumenti li manda la regia): la
+      Function `richiestaAI` gira `{ tipo: 'chat', messaggi, strumenti }`.
+      `messaggi` è nel formato dei messaggi di Anthropic: i turni
+      dell'utente sono un testo o i blocchi `tool_result`; i turni del
+      modello si rimettono ESATTAMENTE come sono tornati (`turno`), senza
+      toccarli: un turno ritoccato la regia lo rifiuta (400), e per
+      accorciare si apre una conversazione nuova. `strumenti` sono solo
+      identificativi, quelli del ruolo di chi scrive. Risposta: `{ ok,
+      tipo: 'chat', turno, testo, strumenti_richiesti: [{ id, nome, input
+      }], costo_eur, credito_eur }`. Istruzioni e strumenti sono della
+      regia e hanno una versione: col 409 `{ codice: 'versione' }` si apre
+      una conversazione nuova. Codici: 400, 401, 402, 409, 422, 429
+      (occupato), 503.
+      GLI STRUMENTI (proposta di tana-drink del 13/11/2026): di lettura
+      `giacenza` (al massimo 5 risultati), `vendite` (20 righe),
+      `cerca_prodotti` (15); che propongono, da confermare a schermo,
+      `proponi_descrizione`, `proponi_voce_menu`, `leggi_fattura` (il file
+      non entra nella conversazione: passa dalla richiesta `fattura`, e
+      torna un riassunto). RUOLI: la chat è dello staff di gestione (admin
+      e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo).
+      La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è
+      `attivo` (REQ-AI-003).
     status: todo
     generate_issue: true
     labels: [ai, gestionale]
