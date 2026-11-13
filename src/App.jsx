@@ -36,7 +36,10 @@ import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
 import PannelloChat from './components/PannelloChat.jsx'
+import TastoAssistente from './components/TastoAssistente.jsx'
 import { aiRaggiungibile } from './lib/aiApi.js'
+import { useStatoAI, STATI_AI, messaggioSenzaCredito } from './lib/statoAI.js'
+import { showToast } from './lib/toast.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
@@ -277,6 +280,9 @@ export default function App() {
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  // Assente, senza credito o attiva (REQ-AI-007): decide il tasto e la voce
+  // del ⋮. Il credito si chiede solo per lo staff di gestione.
+  const statoAssistente = useStatoAI(isGestore(staffRole))
   // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
   // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
   // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
@@ -657,16 +663,7 @@ export default function App() {
               prima della campanella. Sul telefono è una voce del ⋮: lì la
               zona destra tiene solo campanella e ⋮ (docs/navigazione.md). */}
           {isGestore(staffRole) && !telefono && aiRaggiungibile() && (
-            <button
-              type="button"
-              className="btn ghost small topbar-chat"
-              onClick={() => setChatAperta((v) => !v)}
-              aria-label="Assistente AI"
-              aria-pressed={chatAperta}
-              title="Assistente AI"
-            >
-              <Icona nome="fumetto" gruppo="tasti" />
-            </button>
+            <TastoAssistente aperto={chatAperta} onAlterna={() => setChatAperta((v) => !v)} />
           )}
           {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
@@ -760,12 +757,16 @@ export default function App() {
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
-          isGestore(staffRole) && aiRaggiungibile() && {
+          isGestore(staffRole) && aiRaggiungibile() && statoAssistente.stato !== STATI_AI.ASSENTE && {
             id: 'assistente',
             icon: 'fumetto',
             label: 'Assistente AI',
-            hint: 'Giacenze, vendite, descrizioni del menù',
-            onClick: () => setChatAperta(true),
+            ...(statoAssistente.stato === STATI_AI.SENZA_CREDITO
+              ? {
+                  hint: messaggioSenzaCredito(statoAssistente.motivo),
+                  onClick: () => showToast(messaggioSenzaCredito(statoAssistente.motivo), { kind: 'error' }),
+                }
+              : { hint: 'Giacenze, vendite, descrizioni del menù', onClick: () => setChatAperta(true) }),
           },
           !isSala(staffRole) && {
             id: 'pos',
@@ -801,7 +802,7 @@ export default function App() {
         ]}
       />
 
-      {chatAperta && isGestore(staffRole) && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
+      {chatAperta && isGestore(staffRole) && statoAssistente.stato !== STATI_AI.ASSENTE && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 

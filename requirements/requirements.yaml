@@ -7226,11 +7226,17 @@ requirements:
       promemoria dice «si ricarica dal sito» solo dove si può.
       DA CONFERMARE CON DANIELE: la stessa resa (grigio con avviso) anche
       per gli altri tasti AI, al posto di farli sparire.
-    status: todo
+      FATTO PER L'ASSISTENTE (13/11/2026, ramo feature/chat-ai): lib/statoAI.js
+      (lo stato dal credito, ricordato cinque minuti e aggiornato da ogni
+      risposta dell'AI, aiApi.js ascoltaRisposteAI); TastoAssistente.jsx
+      nella barra e la voce del ⋮ seguono i tre stati; il pannello non si
+      apre con l'AI assente.
+    status: partial
     generate_issue: true
     labels: [ai, gestionale]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/tastoAssistente.test.jsx
 
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
