@@ -29,7 +29,7 @@
 // stessa regola degli account (staff-service.js, uno dei due posti lato
 // Functions dove i ruoli si confrontano). Il credito è del locale, non di
 // chi passa.
-const { isGestore: ruoloDiGestione } = require('./staff-service')
+const { isGestore: ruoloDiGestione, isAdmin: ruoloAdmin } = require('./staff-service')
 const isGestore = (auth) => ruoloDiGestione(auth?.token?.role)
 
 // I formati di una fattura e quanto possono pesare (contratto della regia):
@@ -52,6 +52,39 @@ const CAMPI = {
   fattura: ['tipo', 'file', 'media_type'],
   // Il credito senza chiamare il modello (drink-regia #217): gratis.
   credito: ['tipo'],
+  // La chat (REQ-AI-006): la conversazione intera a ogni turno, perché la
+  // regia non ricorda niente (Daniele: niente memoria). `versione` è quella
+  // con cui la conversazione è nata, se la regia la dà.
+  chat: ['tipo', 'messaggi', 'strumenti', 'versione'],
+}
+
+// ── LA CHAT (REQ-AI-006) ──────────────────────────────────────────────
+// Gli strumenti che la regia conosce, per identificativo: istruzioni e
+// definizioni stanno nella regia, dall'app arriva solo quali usare.
+const STRUMENTI_CHAT = ['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'proponi_voce_menu', 'leggi_fattura']
+// Solo dell'admin: Fornitori è la sua sezione.
+const STRUMENTI_ADMIN = ['leggi_fattura']
+// Una conversazione si accorcia aprendone un'altra: oltre questi limiti
+// costerebbe a ogni turno più di quanto serve, e la regia la rifiuterebbe.
+const MAX_MESSAGGI = 80
+const MAX_BYTE_CHAT = 400 * 1024
+
+function chatNonValida(r) {
+  const m = r.messaggi
+  if (!Array.isArray(m) || m.length === 0) return 'La conversazione è vuota.'
+  if (m.length > MAX_MESSAGGI) return 'La conversazione è troppo lunga: se ne apre una nuova.'
+  for (const x of m) {
+    if (!x || typeof x !== 'object' || !['user', 'assistant'].includes(x.role)) return 'Un messaggio della conversazione non è valido.'
+    const vuoto = typeof x.content === 'string' ? x.content.trim() === '' : !Array.isArray(x.content) || x.content.length === 0
+    if (vuoto) return 'Un messaggio della conversazione è vuoto.'
+  }
+  // Il turno da mandare è di chi scrive: un testo o gli esiti degli strumenti.
+  if (m[m.length - 1].role !== 'user') return 'La conversazione deve finire con un messaggio di chi scrive.'
+  if (JSON.stringify(m).length > MAX_BYTE_CHAT) return 'La conversazione è troppo lunga: se ne apre una nuova.'
+  const s = r.strumenti ?? []
+  if (!Array.isArray(s) || s.some((x) => !STRUMENTI_CHAT.includes(x))) return 'Uno strumento della chat non è fra quelli che la regia conosce.'
+  if (r.versione != null && (typeof r.versione !== 'string' || r.versione.length > 64)) return 'La versione della conversazione non è valida.'
+  return null
 }
 
 const testo = (v) => typeof v === 'string' && v.trim().length > 0
@@ -63,6 +96,7 @@ function validaRichiesta(r) {
   const estranei = Object.keys(r).filter((k) => !CAMPI[r.tipo].includes(k))
   if (estranei.length) return `Campi non previsti: ${estranei.join(', ')}.`
   if (r.tipo === 'credito') return null
+  if (r.tipo === 'chat') return chatNonValida(r)
   if (r.tipo === 'descrizione') {
     // Almeno due caratteri, come chiede la regia: con uno solo risponderebbe 400.
     if (!testo(r.nome) || r.nome.trim().length < 2) return 'Per una descrizione serve il nome del prodotto.'
@@ -93,6 +127,8 @@ const numero = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 //     l'AI; «piano» è il Free, che l'AI non ce l'ha, REQ-LIC-017)
 //   non-usabile  (422: il modello non ha dato niente, e il costo resta)
 //   non-riconosciuto  (401: la regia non riconosce questo locale)
+//   versione     (409: la chat è nata su istruzioni che non ci sono più)
+//   occupato     (429: troppe richieste insieme, si riprova fra poco)
 //   richiesta    (400: un errore nostro)
 //   riprova      (503, rete, o una risposta che non si capisce)
 function interpreta({ status, corpo }, tipoChiesto) {
@@ -111,6 +147,24 @@ function interpreta({ status, corpo }, tipoChiesto) {
       motivo: ['credito', 'tetto'].includes(c.motivo) ? c.motivo : null,
     }
   }
+  if (status === 200 && tipoChiesto === 'chat') {
+    // Il turno si rimette INTATTO nella conversazione: la regia lo firma, e
+    // un turno ritoccato lo rifiuta. Qui si controlla solo che ci sia.
+    if (c.ok !== true || c.tipo !== 'chat' || !c.turno || typeof c.turno !== 'object') return { ok: false, codice: 'riprova' }
+    const richiesti = (Array.isArray(c.strumenti_richiesti) ? c.strumenti_richiesti : []).filter(
+      (x) => x && typeof x.id === 'string' && STRUMENTI_CHAT.includes(x.nome) && x.input && typeof x.input === 'object'
+    )
+    return {
+      ok: true,
+      tipo: 'chat',
+      turno: c.turno,
+      testo: typeof c.testo === 'string' && c.testo.trim() ? c.testo : null,
+      strumenti_richiesti: richiesti.map(({ id, nome, input }) => ({ id, nome, input })),
+      versione: typeof c.versione === 'string' ? c.versione : null,
+      costo_eur: numero(c.costo_eur),
+      credito_eur: numero(c.credito_eur),
+    }
+  }
   if (status === 200) {
     if (c.ok !== true || !c.risultato || typeof c.risultato !== 'object') return { ok: false, codice: 'riprova' }
     // La risposta dev'essere per quello che si è chiesto.
@@ -123,6 +177,11 @@ function interpreta({ status, corpo }, tipoChiesto) {
   }
   if (status === 422) return { ok: false, codice: 'non-usabile', costo_eur: numero(c.costo_eur), credito_eur: numero(c.credito_eur) }
   if (status === 401) return { ok: false, codice: 'non-riconosciuto' }
+  // La versione di istruzioni e strumenti con cui la conversazione è nata
+  // non c'è più: se ne apre una nuova.
+  if (status === 409) return { ok: false, codice: 'versione' }
+  // Troppe richieste insieme: si riprova fra poco.
+  if (status === 429) return { ok: false, codice: 'occupato' }
   if (status === 400) return { ok: false, codice: 'richiesta' }
   return { ok: false, codice: 'riprova' }
 }
@@ -131,6 +190,12 @@ async function richiestaAI(deps, auth, richiesta) {
   if (!isGestore(auth)) throw { code: 'permission-denied', message: "L'AI la usa lo staff di gestione del locale." }
   const errore = validaRichiesta(richiesta)
   if (errore) throw { code: 'invalid-argument', message: errore }
+  // Gli strumenti dell'admin solo all'admin: la lista la fa l'app, ma qui
+  // si controlla di nuovo, perché la Function la può chiamare chiunque
+  // abbia un ruolo di gestione.
+  if (richiesta.tipo === 'chat' && (richiesta.strumenti || []).some((x) => STRUMENTI_ADMIN.includes(x)) && !ruoloAdmin(auth?.token?.role)) {
+    throw { code: 'permission-denied', message: "Questo strumento della chat è riservato all'admin." }
+  }
   // Senza sapere QUALE regia (REGIA_PROGETTO) l'AI è spenta: un locale di
   // prova non deve finire a chiedere alla regia vera, e un locale senza
   // l'account `ai-locale` non avrebbe niente con cui farsi riconoscere.
@@ -159,4 +224,4 @@ async function richiestaAI(deps, auth, richiesta) {
   return interpreta(risposta, richiesta.tipo)
 }
 
-module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, destinatarioGettone, interpreta }
+module.exports = { richiestaAI, validaRichiesta, urlRichiestaAI, destinatarioGettone, interpreta, STRUMENTI_CHAT }
