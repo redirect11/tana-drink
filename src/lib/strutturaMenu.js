@@ -47,7 +47,7 @@
 
 import { perNome } from './macros.js'
 import { normName } from './nameMatch.js'
-import { ingredientiDellaVoce } from './etichetteIngredienti.js'
+import { ingredientiDellaVoce, etichettaPulita } from './etichetteIngredienti.js'
 
 export const VISTE_SEZIONE = [
   { id: 'dettagliata', label: 'Dettagliata' },
@@ -323,4 +323,70 @@ export function pagineDelMenu(sezioni, impaginazione) {
     pagine.push(pagina)
   }
   return pagine.length > 1 ? pagine : null
+}
+
+// ── LA CATEGORIA DI UNA VOCE, E LE SEZIONI CHE NE NASCONO (REQ-MENU-041) ──
+//
+// Daniele, 13/11/2026: la categoria di una voce si sceglie (una di
+// magazzino, una della cassa) o si scrive libera; senza, vale quella del
+// prodotto della cassa collegato. Da lì «Raggruppa per categoria» crea le
+// sezioni che mancano e ci sposta le voci. I gruppi restano liberi, del
+// solo menù dei clienti.
+
+const TIPI_CATEGORIA = ['categoria', 'categoria_cassa', 'testo']
+
+// La categoria scritta sulla voce, pulita, o null.
+export function categoriaScritta(c) {
+  const e = etichettaPulita(c)
+  return e && TIPI_CATEGORIA.includes(e.tipo) ? e : null
+}
+
+// Il nome della categoria di una voce: la sua, o quella del prodotto.
+export function categoriaDellaVoce(voce, drink, categorieCassa = []) {
+  const propria = categoriaScritta(voce?.categoria)
+  if (propria) return propria.nome
+  const cat = categorieCassa.find((c) => c.id === drink?.category_id)
+  return testo(cat?.name) || testo(drink?.category) || null
+}
+
+// La sezione che porta il nome di una categoria, se c'è.
+export function sezioneDellaCategoria(sezioni, nome) {
+  const cercato = normName(nome)
+  return cercato ? (sezioni || []).find((s) => normName(nomeSezione(s)) === cercato) || null : null
+}
+
+// IL RAGGRUPPAMENTO: le sezioni da creare (in fondo, col nome della
+// categoria) e le voci da spostare, ognuna in fondo alla sua sezione
+// nuova, nell'ordine in cui stava nel menù. Le voci senza categoria, e
+// quelle già nella sezione giusta, non si toccano.
+export function raggruppamentoPerCategoria(carta, drinks, categorieCassa = []) {
+  const perId = new Map((drinks || []).map((d) => [d.id, d]))
+  const sezioni = ordina(carta?.sezioni)
+  const nuove = []
+  const daCreare = new Map()
+  const fondo = new Map()
+  const spostamenti = []
+  const per = vociPerSezione(vociValide(carta))
+  for (const s of sezioni) {
+    for (const v of per.get(s.id) || []) {
+      const nome = categoriaDellaVoce(v, perId.get(v.drink_id), categorieCassa)
+      if (!nome) continue
+      let dest = sezioneDellaCategoria(sezioni, nome)?.id
+      if (!dest) {
+        const k = normName(nome)
+        if (!daCreare.has(k)) {
+          const chiave = `categoria:${nome}`
+          daCreare.set(k, chiave)
+          nuove.push({ chiave, nome, ordine: sezioni.length + nuove.length })
+          fondo.set(chiave, 0)
+        }
+        dest = daCreare.get(k)
+      }
+      if (dest === v.sezione_id) continue
+      if (!fondo.has(dest)) fondo.set(dest, inFondo(carta, dest))
+      spostamenti.push({ id: v.id, sezione: dest, ordine: fondo.get(dest) })
+      fondo.set(dest, fondo.get(dest) + 1)
+    }
+  }
+  return { nuove, spostamenti }
 }

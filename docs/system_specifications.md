@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 291 | fatto e coperto dai test |
+| ✅ | 292 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 33 | da fare |
+| ⬜ | 32 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **313** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **33** sono lavori
+**354 voci** in tutto. **314** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 35 | 3 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 36 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -76,7 +76,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 174 |
-| Unità | il progetto di dettaglio: un modulo da solo | 179 |
+| Unità | il progetto di dettaglio: un modulo da solo | 180 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
 **106** requisiti su 346 sono collegati a un bisogno;
@@ -1190,6 +1190,14 @@ NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta della rice
 FATTO (13/11/2026): lib/etichetteIngredienti.js (etichette pulite, proposta dalla ricetta coi filtri degli ingredienti in carta, suggerimenti per gruppo, quello che legge il cliente) e IngredientiVoce.jsx nell'editor. Sulla voce `etichette` (null finché non ce ne sono: vale il testo di sempre) e `ingredienti_nascosti`. Le proposte della ricetta si aggiungono a mano, tratteggiate; i tipi si distinguono col tratto e coi ruoli del tema, e a parole.
 
 **Dove**: `src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/etichetteIngredienti.test.js`, `tests/component/ingredientiVoce.test.jsx`
+
+#### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
+
+Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette (REQ-MENU-040); senza, vale quella del prodotto della cassa collegato. Si decide se raggruppare: «Raggruppa per categoria» crea le sezioni che mancano, col nome della categoria, e ci sposta le voci; una voce aggiunta dopo va nella sezione della sua categoria, se c'è. I GRUPPI (CORRETTO lo stesso giorno, Daniele: «lascia perdere la cosa dei gruppi e delle macro categorie»): sono liberi, un concetto del solo menù dei clienti (`gruppo` della sezione, come oggi); non nascono dalle macro categorie.
+
+FATTO (13/11/2026): sulla voce `categoria` (un'etichetta di tipo categoria, categoria_cassa o testo; null vale quella del prodotto), scelta nell'editor (CategoriaVoce); «Raggruppa per categoria» dice prima cosa cambia (sezioni nuove, voci spostate) e poi lo fa in un pacchetto (raggruppamentoPerCategoria in lib/strutturaMenu.js); fra i prodotti fuori dal menù, «In ‹sezione›» li mette nella sezione della loro categoria.
+
+**Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/raggruppaCategoria.test.js`, `tests/component/MenuManager.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -4284,12 +4292,6 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
-
-Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette (REQ-MENU-040); senza, vale quella del prodotto della cassa collegato. Si decide se raggruppare: «Raggruppa per categoria» crea le sezioni che mancano, col nome della categoria, e ci sposta le voci; una voce aggiunta dopo va nella sezione della sua categoria, se c'è. I GRUPPI (CORRETTO lo stesso giorno, Daniele: «lascia perdere la cosa dei gruppi e delle macro categorie»): sono liberi, un concetto del solo menù dei clienti (`gruppo` della sezione, come oggi); non nascono dalle macro categorie.
-
-**Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
 

@@ -7119,11 +7119,20 @@ requirements:
       dei gruppi e delle macro categorie»): sono liberi, un concetto del
       solo menù dei clienti (`gruppo` della sezione, come oggi); non
       nascono dalle macro categorie.
-    status: todo
+      FATTO (13/11/2026): sulla voce `categoria` (un'etichetta di tipo
+      categoria, categoria_cassa o testo; null vale quella del prodotto),
+      scelta nell'editor (CategoriaVoce); «Raggruppa per categoria» dice
+      prima cosa cambia (sezioni nuove, voci spostate) e poi lo fa in un
+      pacchetto (raggruppamentoPerCategoria in lib/strutturaMenu.js); fra i
+      prodotti fuori dal menù, «In ‹sezione›» li mette nella sezione della
+      loro categoria.
+    status: implemented
     generate_issue: true
     labels: [menu, vista-cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/raggruppaCategoria.test.js
+      - tests/component/MenuManager.test.jsx
 
   - id: REQ-MAG-055
     title: "Un prodotto di magazzino si può far scegliere al cliente dal menù"

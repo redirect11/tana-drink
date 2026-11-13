@@ -4,6 +4,11 @@
 
 ### Gestionale
 
+- Menù dei clienti: ogni voce ha una categoria, scelta fra quelle della
+  cassa e del magazzino o scritta a mano (senza, vale quella del prodotto).
+  «Raggruppa per categoria» crea le sezioni che mancano e ci sposta le
+  voci, dopo aver detto cosa cambia. Un prodotto rimasto fuori dal menù si
+  mette nella sezione della sua categoria con un tocco.
 - Menù dei clienti: gli ingredienti di una voce sono etichette. Mentre si
   scrive compaiono i suggerimenti (prima i prodotti della ricetta del
   prodotto collegato e le loro categorie, poi il resto del magazzino e le

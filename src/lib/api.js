@@ -116,7 +116,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS, postaAllaRegia } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
-import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
+import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza, categoriaScritta } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -552,6 +552,8 @@ function mapVoceCarta(snap) {
     // le ha, e allora vale il testo di sempre.
     etichette: etichetteDellaVoce(v.etichette),
     ingredienti_nascosti: v.ingredienti_nascosti === true,
+    // La categoria della voce (REQ-MENU-041): null vale quella del prodotto.
+    categoria: categoriaScritta(v.categoria),
     ordine: v.ordine ?? 0,
   }
 }
