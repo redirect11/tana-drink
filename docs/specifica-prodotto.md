@@ -1472,8 +1472,8 @@ l'occasione; il gestore lo valida poi sul sito di test.
 - *Il locale non ha la licenza dei disegni* — Al posto del disegno si vede la foto della voce, o un bicchiere neutro.
 
 - Bisogni: UR-008 (Il cliente ordina dal telefono e sa quando il drink è pronto)
-- Requisiti: REQ-MENU-005, REQ-MENU-018, REQ-MENU-019, REQ-MENU-020, REQ-MENU-025, REQ-MENU-026, REQ-LIC-013
-- Previsti, non ancora fatti: REQ-MENU-017, REQ-AI-002, REQ-AI-004
+- Requisiti: REQ-MENU-005, REQ-MENU-018, REQ-MENU-019, REQ-MENU-020, REQ-MENU-025, REQ-MENU-026, REQ-LIC-013, REQ-AI-002
+- Previsti, non ancora fatti: REQ-MENU-017, REQ-AI-004
 - Test e2e: da scrivere
 
 <a id="uc-menu-004"></a>

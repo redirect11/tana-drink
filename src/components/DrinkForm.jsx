@@ -153,6 +153,16 @@ export default function DrinkForm({
   async function submit(e) {
     e.preventDefault()
     if (!(form.name || '').trim()) return
+    // UNA RIGA DELLA RICETTA SENZA QUANTITÀ NON SI BUTTA IN SILENZIO: è la
+    // dose che si scala a ogni vendita. Con la scheda nata dal magazzino
+    // (REQ-AI-002) la quantità parte vuota apposta, e salvarla vuota
+    // vorrebbe dire un prodotto senza ricetta.
+    const senzaDose = form.recipe_rows.find((r) => r.inventory_item_id && !(Number(String(r.qty ?? '').replace(',', '.')) > 0))
+    if (senzaDose) {
+      const nome = itemsById[senzaDose.inventory_item_id]?.name || senzaDose.name || 'un ingrediente'
+      setSaveError(`Manca la quantità di «${nome}» nella ricetta: è la dose che si scala a ogni vendita.`)
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -283,6 +293,7 @@ export default function DrinkForm({
       <input id="description" value={form.description} onChange={set('description')} />
       <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
       <DescrizioneAI
+        subito={Boolean(initial.da_magazzino)}
         nome={form.name || ''}
         categoria={categories.find((c) => c.id === form.category_id)?.name}
         attuale={form.description}

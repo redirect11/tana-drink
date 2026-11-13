@@ -2803,7 +2803,8 @@ casi_uso:
       - REQ-MENU-025
       - REQ-MENU-026
       - REQ-LIC-013
-    previsti: [REQ-MENU-017, REQ-AI-002, REQ-AI-004]
+      - REQ-AI-002
+    previsti: [REQ-MENU-017, REQ-AI-004]
     test_cases: []
 
   - id: UC-MENU-004

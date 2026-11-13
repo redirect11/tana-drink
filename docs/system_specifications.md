@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 289 | fatto e coperto dai test |
+| ✅ | 290 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
-| ⬜ | 33 | da fare |
+| ⬜ | 32 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **313** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **33** sono lavori
+**354 voci** in tutto. **314** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,7 +58,7 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 5 | 2 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 175 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 176 |
 | Unità | il progetto di dettaglio: un modulo da solo | 179 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
@@ -3189,6 +3189,20 @@ FATTO (12/11/2026): in Fornitori → documenti, accanto a «Nuovo documento», �
 
 **Dove**: `functions/, src/components/InvoicesTab.jsx` · **Lo dimostrano**: `tests/unit/fatturaAI.test.js`, `tests/component/fatturaDaAI.test.jsx`
 
+#### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
+
+Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel flag la casella disponibile nel menu e lui in automatico mi dovrebbe creare all'interno del menu gia' tutto con la descrizione» («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della bottiglia».
+
+PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
+
+LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
+
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora. 13/11/2026: la voce del menù dei clienti si fa solo dall'editor del menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che creava il prodotto della cassa dalla bottiglia RESTA (Daniele, 13/11/2026: «sull'item lascialo»): nella scheda del prodotto di magazzino, «Crea il prodotto della cassa» apre la scheda di un prodotto della cassa nuovo collegato a quella bottiglia (nome, categoria, ricetta con la riga di quel prodotto). La QUANTITÀ della riga resta vuota e la scrive chi crea, perché la dose dipende dal prodotto (Daniele: «non c'è una dose fissa»): 4 cl fa il bicchiere, 70 cl la bottiglia intera, 1 pezzo la birra. Il prodotto si crea anche dall'editor della cassa, come oggi. La descrizione AI parte da sola all'apertura, se l'AI c'è e il credito pure.
+
+FATTO (13/11/2026, ramo feature/chat-ai): lib/prodottoDaMagazzino.js prepara la scheda (categoria della cassa col nome di quella di magazzino, riga della ricetta con la quantità vuota) e la passa al Menù, che la apre come un duplicato (anche se è già aperto); DrinkForm non salva una riga della ricetta senza quantità, e lo dice; DescrizioneAI parte da sola sulla scheda nata dal magazzino, con l'AI attiva. La chat lo usa per `proponi_voce_menu` (REQ-AI-006).
+
+**Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/prodottoDaMagazzino.test.jsx`
+
 #### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -3223,7 +3237,7 @@ GLI STRUMENTI (proposta di tana-drink del 13/11/2026): di lettura `giacenza` (al
 
 RUOLI: la chat è dello staff di gestione (admin e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo). La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è `attivo` (REQ-AI-003).
 
-FATTO DALLA PARTE DELL'APP (13/11/2026, ramo feature/chat-ai), sul contratto concordato, in attesa degli schemi definitivi della regia: la Function gira `tipo: 'chat'` (conversazione controllata prima del viaggio, `leggi_fattura` solo all'admin, 409 e 429); la logica in lib/chatAI.js (conversazione, strumenti per ruolo) e lib/strumentiChat.js (giacenza, vendite, cerca_prodotti, coi limiti di righe); il pannello PannelloChat.jsx, aperto dalla barra in alto (sul telefono dal ⋮), che chiede il credito all'apertura, esegue gli strumenti, mostra le proposte da confermare (descrizione, documento del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta il tasto di REQ-AI-002.
+FATTO DALLA PARTE DELL'APP (13/11/2026, ramo feature/chat-ai), sul contratto concordato, in attesa degli schemi definitivi della regia: la Function gira `tipo: 'chat'` (conversazione controllata prima del viaggio, `leggi_fattura` solo all'admin, 409 e 429); la logica in lib/chatAI.js (conversazione, strumenti per ruolo) e lib/strumentiChat.js (giacenza, vendite, cerca_prodotti, coi limiti di righe); il pannello PannelloChat.jsx, aperto dalla barra in alto (sul telefono dal ⋮), che chiede il credito all'apertura, esegue gli strumenti, mostra le proposte da confermare (descrizione, documento del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta il tasto di REQ-AI-002, ora acceso: apre la scheda nel Menù.
 
 RESTA la prova con la regia vera.
 
@@ -4580,18 +4594,6 @@ Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «inca
 **Dove**: `scripts/genera-cliente.mjs, src/lib/funzioniRegia.js, src/lib/presentazione.js, src/App.jsx, src/porte/configurazione.js, src/lib/firebaseClient.js, public/privacy-policy.html, public/cookie-policy.html, clienti/pluginCliente.js, src/demo/, src/lib/venue.js, src/lib/stampanteFinta.js, docs/sicurezza-demo.md` · **Serve**: [UR-014](#ur-014--la-demo-che-si-mostra-a-un-locale-nuovo-non-espone-niente-di-un-locale-vero)
 
 ### Intelligenza artificiale
-
-#### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
-
-Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel flag la casella disponibile nel menu e lui in automatico mi dovrebbe creare all'interno del menu gia' tutto con la descrizione» («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della bottiglia».
-
-PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
-
-LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
-
-LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora. 13/11/2026: la voce del menù dei clienti si fa solo dall'editor del menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che creava il prodotto della cassa dalla bottiglia RESTA (Daniele, 13/11/2026: «sull'item lascialo»): nella scheda del prodotto di magazzino, «Crea il prodotto della cassa» apre la scheda di un prodotto della cassa nuovo collegato a quella bottiglia (nome, categoria, ricetta con la riga di quel prodotto). La QUANTITÀ della riga resta vuota e la scrive chi crea, perché la dose dipende dal prodotto (Daniele: «non c'è una dose fissa»): 4 cl fa il bicchiere, 70 cl la bottiglia intera, 1 pezzo la birra. Il prodotto si crea anche dall'editor della cassa, come oggi. La descrizione AI parte da sola all'apertura, se l'AI c'è e il credito pure.
-
-**Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
 
 #### REQ-AI-005 — Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere
 

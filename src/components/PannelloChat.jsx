@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { prodottoDaMagazzino, mettiProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import { chiediChat, chiediAI, leggiCreditoAI, messaggioAI } from '../lib/aiApi.js'
 import { strumentiPerRuolo, conTesto, conTurno, conEsiti, quasiPiena, MAX_GIRI_STRUMENTI } from '../lib/chatAI.js'
 import { giacenza, cercaProdotti, vendite, giornata } from '../lib/strumentiChat.js'
@@ -6,6 +8,7 @@ import {
   fetchInventoryItems,
   fetchDrinks,
   fetchCategories,
+  fetchInventoryCategories,
   fetchOrdersRange,
   fetchSuppliers,
   fetchSupplierPrices,
@@ -22,6 +25,7 @@ const ATTIVITA = {
   vendite: 'Lettura delle vendite',
   cerca_prodotti: 'Ricerca fra magazzino e menù',
   proponi_descrizione: 'Proposta di una descrizione',
+  proponi_voce_menu: 'Proposta di un prodotto della cassa',
   leggi_fattura: 'Lettura di un documento del fornitore',
 }
 
@@ -51,6 +55,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
   const dati = useRef(null)
   const fineRef = useRef(null)
   const strumenti = strumentiPerRuolo(ruolo)
+  const navigate = useNavigate()
 
   useEffect(() => {
     let vivo = true
@@ -114,6 +119,13 @@ export default function PannelloChat({ ruolo, onChiudi }) {
       const descrizione = String(r.risultato?.descrizione || '').trim()
       const daVerificare = Array.isArray(r.risultato?.da_verificare) ? r.risultato.da_verificare : []
       return attendi({ tipo: 'descrizione', drink, descrizione, daVerificare })
+    }
+    if (nome === 'proponi_voce_menu') {
+      // La bottiglia del magazzino da cui nasce: la prima che si chiama così.
+      const trovata = giacenza({ prodotto: input?.prodotto }, d).trovati[0]
+      const item = trovata && d.items.find((x) => x.id === trovata.id)
+      if (!item) return { non_trovato: true, prodotto: input?.prodotto ?? null }
+      return attendi({ tipo: 'voce', item, prezzo: input?.prezzo_eur ?? null })
     }
     if (nome === 'leggi_fattura') {
       const [suppliers, listini] = await Promise.all([fetchSuppliers(), fetchSupplierPrices()])
@@ -240,6 +252,35 @@ export default function PannelloChat({ ruolo, onChiudi }) {
                 className="btn ghost small"
                 onClick={() => chiudiProposta({ prodotto: proposta.drink.name, descrizione: proposta.descrizione, stato: 'scartata' })}
               >
+                Scarta
+              </button>
+            </div>
+          </div>
+        )}
+        {proposta?.tipo === 'voce' && (
+          <div className="descrizione-ai-proposta" role="group" aria-label="Prodotto della cassa proposto">
+            <p style={{ margin: '0 0 6px' }}>
+              Un prodotto della cassa da <strong>{proposta.item.name}</strong>
+              {proposta.prezzo != null ? `, a ${euro(proposta.prezzo)}` : ''}. La scheda si apre nel Menù, collegata a
+              questa bottiglia: si completano la quantità della ricetta e il prezzo, poi si salva.
+            </p>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                type="button"
+                className="btn small"
+                onClick={async () => {
+                  const [categorieMagazzino, categorieCassa] = await Promise.all([
+                    fetchInventoryCategories().catch(() => []),
+                    fetchCategories().catch(() => []),
+                  ])
+                  mettiProdottoInArrivo(prodottoDaMagazzino(proposta.item, { categorieMagazzino, categorieCassa, prezzo: proposta.prezzo }))
+                  navigate('/bar?tab=menu')
+                  chiudiProposta({ voce: { nome: proposta.item.name, prezzo_eur: proposta.prezzo }, stato: 'scheda aperta, da completare e salvare' })
+                }}
+              >
+                Apri la scheda
+              </button>
+              <button type="button" className="btn ghost small" onClick={() => chiudiProposta({ voce: { nome: proposta.item.name }, stato: 'scartata' })}>
                 Scarta
               </button>
             </div>
