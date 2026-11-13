@@ -3263,9 +3263,11 @@ TRE STATI, una regola sola per tutta l'app: - ASSENTE: la licenza ha `ai: false`
 
 DA CHIEDERE ALLA REGIA: se il locale può comprare credito (Daniele: «anche il fatto di poter acquistare o meno crediti AI»), e dove: il promemoria dice «si ricarica dal sito» solo dove si può.
 
-DA CONFERMARE CON DANIELE: la stessa resa (grigio con avviso) anche per gli altri tasti AI, al posto di farli sparire.
+ANCHE GLI ALTRI TASTI AI (Daniele, 13/11/2026: «ok come dici tu»): «Proponi una descrizione» e «Leggi con l'AI» seguono la stessa regola (TastoAI.jsx), al posto di sparire senza credito.
 
-FATTO PER L'ASSISTENTE (13/11/2026, ramo feature/chat-ai): lib/statoAI.js (lo stato dal credito, ricordato cinque minuti e aggiornato da ogni risposta dell'AI, aiApi.js ascoltaRisposteAI); TastoAssistente.jsx nella barra e la voce del ⋮ seguono i tre stati; il pannello non si apre con l'AI assente.
+FATTO PER L'ASSISTENTE (13/11/2026, ramo feature/chat-ai): lib/statoAI.js (lo stato dal credito, ricordato cinque minuti e aggiornato da ogni risposta dell'AI, aiApi.js ascoltaRisposteAI); TastoAssistente.jsx nella barra e la voce del ⋮ seguono i tre stati; il pannello non si apre con l'AI assente; i tasti AI passano da TastoAI.jsx.
+
+RESTA il promemoria di ricarica secondo quello che la regia dirà del credito (se il locale può comprarlo, e dove).
 
 **Dove**: `src/lib/statoAI.js (nuovo), src/App.jsx (il tasto dell'assistente), src/components/PannelloChat.jsx, i tasti AI (DescrizioneAI, FatturaDaAI), src/lib/aiApi.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/tastoAssistente.test.jsx`
 
