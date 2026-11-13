@@ -16918,3 +16918,32 @@ requirements:
     test_cases:
       - tests/unit/ciComeScritta.test.js
       - tests/unit/squadraStonebit.test.js
+
+  - id: REQ-DEV-024
+    title: "Le dipendenze con un avviso di sicurezza si aggiornano nella release, provate, non dritte su main"
+    area: "functions/package.json, functions/package-lock.json, package.json; tests/unit/dipendenzeFunctions.test.js"
+    description: >
+      13/11/2026, a 1.10.42 appena su main. Dependabot apre le sue pull
+      request verso `main` (nel repository non c'è una configurazione che
+      gli dica altro): una per `firebase-admin` 14 nelle Functions, che
+      chiude un avviso di sicurezza moderato su `uuid`, già in conflitto e
+      con un salto di versione maggiore nel codice che gira sul server.
+      Daniele: si riporta tutto nella release, si prova, si fa una versione
+      nuova e si rilascia quella. Lo stesso era successo con happy-dom 21 e
+      fast-xml-parser 5.12, uniti su main prima del rilascio della 1.10.42 e
+      riportati nella release con la suite intera verde.
+      FATTO (1.10.43-beta): `firebase-admin` ^14.5.1 nelle Functions; `uuid`
+      non c'è più. La 14 vuole Node 22, che è il runtime delle Functions; e
+      si porta dietro `jose`, solo modulo ES, che `require` carica da Node
+      22.12 in su: in locale le Functions (e l'emulatore) vogliono almeno
+      quel Node, mentre CI e Google usano l'ultima 22. La prova del
+      caricamento vero è il deploy sul test. Quando `main` ha la 14,
+      Dependabot chiude da sé la sua pull request.
+      CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid`
+      non torna fra le loro dipendenze (tests/unit/dipendenzeFunctions.test.js).
+    status: implemented
+    generate_issue: false
+    labels: [dev, sicurezza, functions]
+    priority: P2
+    test_cases:
+      - tests/unit/dipendenzeFunctions.test.js
