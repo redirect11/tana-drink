@@ -7026,6 +7026,39 @@ requirements:
       - tests/component/descrizioneAI.test.jsx
       - tests/component/SettingsTab.test.jsx
 
+  - id: REQ-LIC-018
+    title: "Il locale fermo si mostra secondo chi apre: pagina neutra al pubblico, il titolare al rinnovo e ai suoi dati"
+    area: "src/components/InstallazioneSospesa.jsx, src/App.jsx, src/components/BackupPanel.jsx"
+    description: >
+      Decisioni di Daniele del 13/11/2026, portate dalla regia: il servizio
+      si sospende subito, anche a metà serata; chi entra nel locale non deve
+      leggere che il titolare non ha pagato; il titolare deve arrivare al
+      rinnovo; può consultare e scaricare i suoi dati in sola lettura; una
+      sospensione decisa dall'admin della regia funziona come quella per
+      mancato pagamento. PRIMA (REQ-FLOTTA-008) la stessa schermata, col
+      motivo e la frase sull'abbonamento, la vedevano tutti: anche chi
+      apriva il menù col QR.
+      ORA, con la licenza sospesa, chiusa, scaduta o non attivata:
+      - PUBBLICO (menù, pagina del locale, ordini dal telefono, area dei
+        clienti): una pagina neutra, «Il menù di ‹nome› non è disponibile
+        in questo momento». Niente motivo, stato o pagamenti.
+      - PERSONALE (ruoli diversi dall'admin): «Il locale è momentaneamente
+        fermo: per informazioni rivolgersi al titolare». Niente motivo.
+      - TITOLARE (admin): la schermata di prima, col motivo; il tasto
+        «Riattiva il locale» verso `licenza.rinnovo_url` (campo nuovo della
+        regia), o `regia_url` se manca. Sul locale CHIUSO il tasto non c'è:
+        un locale chiuso non si riapre da solo. Sotto, «Esporta tutto»
+        (il backup in un file, che fa solo letture: le regole le lasciano
+        passare anche sul locale fermo); il ripristino no, perché scrive.
+      DOPO, a sezioni (pezzo 3 approvato da Daniele): la sola lettura dentro
+      l'app per il titolare, col blocco centrale delle scritture; prima
+      Statistiche, Cassa e Fornitori, poi Clienti e Magazzino.
+    status: todo
+    generate_issue: true
+    labels: [licenza, prodotto]
+    priority: P1
+    test_cases: []
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"

@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 289 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 29 | da fare |
 | 🗑 | 8 | non più valido |
 
-**346 voci** in tutto. **310** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**347 voci** in tutto. **310** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -62,7 +62,7 @@ come «vero oggi», non come «garantito».
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 14 | 3 |  |
+| [LIC](#lic) | 14 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 178 |
 
 **15** bisogni del locale, **0** con un test di accettazione.
-**98** requisiti su 338 sono collegati a un bisogno;
+**99** requisiti su 339 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -207,7 +207,7 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -4566,6 +4566,14 @@ COME SI FAREBBE, A GRANDI LINEE: prima i moduli di oggi riscritti sopra lo stess
 DA DECIDERE con l'utente: chi può caricare un plugin (solo noi, i gestori sulla propria istanza, chiunque dal marketplace); cosa può toccare (gestionale sì, cassa e pagamenti no?); dove gira (nel browser, nelle Functions, tutti e due); chi lo rivede prima che vada in un locale; se i moduli a pagamento restano in licenza come oggi anche quando diventano plugin.
 
 **Dove**: `da fare: un registro dei punti d'aggancio (hook), un SDK, un caricatore a runtime, la regia per pubblicarli; parte da src/lib/licenza.js (MODULI_PREMIUM), src/porte/ (REQ-FLOTTA-021), src/components/stiliStrutturati.js`
+
+#### REQ-LIC-018 — Il locale fermo si mostra secondo chi apre: pagina neutra al pubblico, il titolare al rinnovo e ai suoi dati
+
+Decisioni di Daniele del 13/11/2026, portate dalla regia: il servizio si sospende subito, anche a metà serata; chi entra nel locale non deve leggere che il titolare non ha pagato; il titolare deve arrivare al rinnovo; può consultare e scaricare i suoi dati in sola lettura; una sospensione decisa dall'admin della regia funziona come quella per mancato pagamento.
+
+PRIMA (REQ-FLOTTA-008) la stessa schermata, col motivo e la frase sull'abbonamento, la vedevano tutti: anche chi apriva il menù col QR. ORA, con la licenza sospesa, chiusa, scaduta o non attivata: - PUBBLICO (menù, pagina del locale, ordini dal telefono, area dei clienti): una pagina neutra, «Il menù di ‹nome› non è disponibile in questo momento». Niente motivo, stato o pagamenti. - PERSONALE (ruoli diversi dall'admin): «Il locale è momentaneamente fermo: per informazioni rivolgersi al titolare». Niente motivo. - TITOLARE (admin): la schermata di prima, col motivo; il tasto «Riattiva il locale» verso `licenza.rinnovo_url` (campo nuovo della regia), o `regia_url` se manca. Sul locale CHIUSO il tasto non c'è: un locale chiuso non si riapre da solo. Sotto, «Esporta tutto» (il backup in un file, che fa solo letture: le regole le lasciano passare anche sul locale fermo); il ripristino no, perché scrive. DOPO, a sezioni (pezzo 3 approvato da Daniele): la sola lettura dentro l'app per il titolare, col blocco centrale delle scritture; prima Statistiche, Cassa e Fornitori, poi Clienti e Magazzino.
+
+**Dove**: `src/components/InstallazioneSospesa.jsx, src/App.jsx, src/components/BackupPanel.jsx` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge)
 
 #### REQ-LIC-011 — Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento
 

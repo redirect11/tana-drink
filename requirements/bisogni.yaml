@@ -382,4 +382,5 @@ bisogni:
       - REQ-LIC-005
       - REQ-LIC-016
       - REQ-LIC-017
+      - REQ-LIC-018
     test_cases: []
