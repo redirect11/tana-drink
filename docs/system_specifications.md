@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 12 novembre 2026.
+> Generato il 13 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 287 | fatto e coperto dai test |
+| ✅ | 297 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
-| 🟡 | 6 | fatto a metà |
-| ⬜ | 29 | da fare |
+| 🟡 | 9 | fatto a metà |
+| ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**345 voci** in tutto. **308** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**354 voci** in tutto. **321** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,22 +47,22 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 34 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 38 | — | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 7 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 13 | 3 |  |
+| [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -75,11 +75,11 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 171 |
-| Unità | il progetto di dettaglio: un modulo da solo | 177 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 181 |
+| Unità | il progetto di dettaglio: un modulo da solo | 182 |
 
-**15** bisogni del locale, **0** con un test di accettazione.
-**97** requisiti su 337 sono collegati a un bisogno;
+**16** bisogni del locale, **0** con un test di accettazione.
+**106** requisiti su 346 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-AI-007](#req-ai-007--lai-nellapp-ha-tre-stati-assente-senza-credito-attiva), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -207,7 +207,15 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-016 — Il cliente ordina il drink come lo vuole, e paga quello che ha accettato
+
+Dove il titolare lo permette, il cliente sceglie dal menù del telefono un ingrediente (il suo gin, la sua tonica), col supplemento che il titolare ha deciso; e il banco, che conferma ogni ordine dal telefono, può cambiarlo, con il cliente che accetta o rifiuta prima che si prepari. Decisioni di Daniele del 13/11/2026.
+
+**Come si accetta**: Sul menù del telefono, nel Gin Lemon con la scelta del gin accesa, il cliente sceglie Hendrick's (+1 €); al banco la comanda dice «gin: Hendrick's», il conto porta il supplemento e il magazzino scala Hendrick's. Un altro cliente scrive nella nota «col Tanqueray»: il barman cambia il gin e il prezzo, il cliente vede l'ordine modificato e lo accetta; se lo rifiuta, l'ordine risulta annullato dal cliente, e se non risponde entro dieci minuti si annulla da sé.
+
+**Chi**: Cliente, Banco · **Lo realizzano**: [REQ-MAG-055](#req-mag-055--un-prodotto-di-magazzino-si-può-far-scegliere-al-cliente-dal-menù), [REQ-MENU-042](#req-menu-042--su-una-voce-del-menù-il-cliente-può-scegliere-un-ingrediente-col-supplemento-deciso-dal-titolare), [REQ-CLI-008](#req-cli-008--la-scelta-del-cliente-arriva-nellordine-sulla-comanda-e-nel-magazzino), [REQ-CLI-009](#req-cli-009--un-ordine-dal-telefono-modificato-dal-banco-torna-al-cliente-che-lo-accetta-o-lo-rifiuta) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -923,6 +931,24 @@ Il colore di una categoria è stabile (dipende dall'id, non dal nome) e lo stess
 
 **Dove**: `src/lib/categoryColors.js` · **Lo dimostrano**: `tests/unit/categoryColors.test.js`
 
+#### REQ-MENU-017 — Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico
+
+Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo prendo … se io sto a zero, scompare direttamente dal menu». Oggi il menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e quel flag non sa niente delle giacenze: si spegne a mano.
+
+PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta di partenza. Con l'opzione accesa, quando la giacenza di un ingrediente della ricetta scende a zero o sotto, la voce sparisce dal menu' del cliente; quando un carico la riporta sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce resta, perche' la giacenza dell'app puo' sbagliare e il bartender vede la bottiglia. COME: il cliente non legge il magazzino (le regole lo vietano), quindi il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul cambio di giacenza di un prodotto, solo quando attraversa lo zero (non a ogni vendita): poche scritture, e il banco non aspetta niente. L'opzione per voce serve perche' molti ingredienti non hanno una giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per tutti sparirebbero cocktail interi per un numero sbagliato.
+
+DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
+
+LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
+
+LE REGOLE (Daniele, 13/11/2026): - AL CLIENTE NON SI DICE MAI COSA MANCA: la voce non disponibile o sparisce dal menù, o resta con la scritta «Non disponibile»; mai l'ingrediente, mai il motivo. Lo stesso per le alternative di una scelta (REQ-MENU-042): quella che manca non compare. - LO SCEGLIE IL TITOLARE, in Impostazioni → Menù clienti: «nascondi» oppure «mostra con la scritta Non disponibile» (di partenza: con la scritta). E la soglia: ingrediente ESAURITO, oppure già IN ESAURIMENTO (sotto la scorta minima). - Il segno lo scrive una Cloud Function, solo quando la giacenza attraversa la soglia, sul prodotto della cassa (e, per le alternative, in un elenco pubblico senza quantità): al telefono arriva un sì o un no, niente del magazzino. - Vale per i prodotti che SEGUONO LE GIACENZE (opzione sul prodotto della cassa, spenta di partenza: lime, sciroppi e ghiaccio spesso non hanno una giacenza tenuta bene). Al banco la voce resta sempre.
+
+FATTO PER LE VOCI (13/11/2026): functions/lib/disponibilita.js e tre trigger (docs/functions.md); sul prodotto `segue_giacenze` (opzione nella scheda) e `non_disponibile_cliente`; in Impostazioni → Menù clienti «Voci non disponibili» (`menu_non_disponibili`, `menu_soglia_disponibilita`); nel menù dei clienti la voce resta con «Non disponibile» al posto del tasto, o sparisce; il personale la vede sempre.
+
+RESTA, con REQ-MENU-042, l'elenco pubblico delle alternative.
+
+**Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`
+
 #### REQ-MENU-018 — Gli special della casa: un menù loro col suo QR, e un carosello in cima al menù
 
 L'utente, 29/10/2026, per Flavio: «i drink della casa vengano messi in una categoria special. L'idea e' che si porta un menu a tavola con un qr code specifico che apre la pagina menu dove ci sono solo gli special drink. Il qr code ai tavoli invece apre il menu normale dove in alto a tutto ci deve essere un carousel degli special drink che se cliccato ti porta al menu dei drink speciali. I drink speciali devono poter essere indicati nel backoffice del menu». I primi sono a tema Alice nel Paese delle Meraviglie, con «immagini stilizzate» nello stile di due acquerelli mandati come esempio.
@@ -1172,6 +1198,42 @@ L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e immagini
 DA FARE, con lo stesso schema: «Lavagna» (gessetto, una lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di cartoline da scorrere).
 
 **Dove**: `src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MarketplaceTab.test.jsx`
+
+#### REQ-MENU-040 — Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato
+
+Daniele, 13/11/2026: gli ingredienti di una voce si scrivono a mano libera, e ognuno diventa un'ETICHETTA; mentre si scrive, sotto compaiono i suggerimenti. Menù dei clienti e cassa lavorano sugli stessi prodotti di magazzino: quando una voce si collega a un prodotto della cassa, le etichette si riempiono dalla sua ricetta (che resta una proposta: Flavio, 04/11/2026, «non li devi prendere dalla ricetta, vanno messi a mano» — si correggono). UN'ETICHETTA È: un prodotto di magazzino (Tanqueray), una categoria di magazzino (Gin), una categoria della cassa, o testo libero. I SUGGERIMENTI hanno colori diversi: i prodotti della ricetta collegata, le loro categorie, gli altri prodotti, le altre categorie.
+
+NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi delle etichette scelte. Il campo «Ingredienti in carta» della scheda della cassa resta per il menù che segue le categorie.
+
+FATTO (13/11/2026): lib/etichetteIngredienti.js (etichette pulite, proposta dalla ricetta coi filtri degli ingredienti in carta, suggerimenti per gruppo, quello che legge il cliente) e IngredientiVoce.jsx nell'editor. Sulla voce `etichette` (null finché non ce ne sono: vale il testo di sempre) e `ingredienti_nascosti`. Le proposte della ricetta si aggiungono a mano, tratteggiate; i tipi si distinguono col tratto e coi ruoli del tema, e a parole.
+
+**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/etichetteIngredienti.test.js`, `tests/component/ingredientiVoce.test.jsx`
+
+#### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
+
+Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette (REQ-MENU-040); senza, vale quella del prodotto della cassa collegato. Si decide se raggruppare: «Raggruppa per categoria» crea le sezioni che mancano, col nome della categoria, e ci sposta le voci; una voce aggiunta dopo va nella sezione della sua categoria, se c'è. I GRUPPI (CORRETTO lo stesso giorno, Daniele: «lascia perdere la cosa dei gruppi e delle macro categorie»): sono liberi, un concetto del solo menù dei clienti (`gruppo` della sezione, come oggi); non nascono dalle macro categorie.
+
+FATTO (13/11/2026): sulla voce `categoria` (un'etichetta di tipo categoria, categoria_cassa o testo; null vale quella del prodotto), scelta nell'editor (CategoriaVoce); «Raggruppa per categoria» dice prima cosa cambia (sezioni nuove, voci spostate) e poi lo fa in un pacchetto (raggruppamentoPerCategoria in lib/strutturaMenu.js); fra i prodotti fuori dal menù, «In ‹sezione›» li mette nella sezione della loro categoria.
+
+**Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/raggruppaCategoria.test.js`, `tests/component/MenuManager.test.jsx`
+
+#### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
+
+Daniele, 13/11/2026.
+
+SPENTA DI PARTENZA, si accende voce per voce nell'editor. Su un'etichetta di tipo prodotto o categoria di magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare indica quali prodotti offrire, fra quelli di quella categoria spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno (anche zero). Il supplemento predefinito di una voce è 0, e il predefinito si cambia in Impostazioni. Una voce può avere più etichette con la scelta (gin e tonica).
+
+AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il prodotto della ricetta («se pure c'è scritto gin, il barman lo sa quale gin usare»). La nota dell'ordine resta sempre (per esempio «nel gin lemon vorrei il Tanqueray»). Un'etichetta che è una CATEGORIA DELLA CASSA farebbe scegliere fra i prodotti della cassa di quella categoria: Daniele, «forse non ha molto senso», non nella prima tornata. L'ordine, la comanda e il magazzino in REQ-CLI-008; la conferma del banco in REQ-CLI-009.
+
+FATTO NELL'EDITOR (13/11/2026, ramo feature/scelta-cliente): sulla etichetta `scelta: { offerti: [{ id, nome, supplemento }] }` (lib/etichetteIngredienti.js, sceltaPulita, alternativeDi); in IngredientiVoce il tasto ⇄ «Il cliente sceglie», le alternative della categoria con la casella «offerto» e il supplemento; in Impostazioni → Menù clienti «Scelta degli ingredienti» col supplemento predefinito.
+
+LE ALTERNATIVE DISPONIBILI arrivano al telefono da `alternative_cliente/{id}` (solo `disponibile`), scritto dalle Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle voci; le regole lo lasciano leggere a tutti e scrivere a nessuno. Il documento si riscrive anche salvando la scheda del prodotto (i prodotti spuntati prima della Function non lo avevano), non a ogni vendita.
+
+QUANDO LA RICETTA DEL PRODOTTO CAMBIA le righe sostituite delle voci collegate si riallineano (disponibilitaDalProdotto, scelteRiallineate); al telefono un prodotto della ricetta attuale non è mai un'alternativa a pagamento. La scelta ricorda anche le righe della ricetta che sostituisce (`sostituisce`, righeSostituite): le calcola l'editor, perché al telefono il magazzino non arriva e per un'etichetta di categoria il cliente non saprebbe quale riga è «il gin».
+
+FATTO AL TELEFONO (13/11/2026): sulle voci che fanno scegliere «Aggiungi» apre la scelta (SceltaIngredienti): una domanda per etichetta, già risposta con la ricetta; le alternative sono solo quelle disponibili, senza il prodotto della ricetta, ciascuna col supplemento. Un'etichetta senza alternative disponibili non chiede niente. Nel carrello ogni scelta diversa è una riga sua (cart.js, chiaveRiga), letta «Gin Tonic (Mare)»; accanto ad «Aggiungi» quanti ce ne sono già.
+
+**Dove**: `src/components/IngredientiVoce.jsx (la voce), src/pages/MenuPage.jsx e src/components/SceltaIngredienti.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/ingredientiVoce.test.jsx`, `tests/unit/etichetteIngredienti.test.js`, `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`, `tests/unit/sceltaCliente.test.js`, `tests/unit/paritaFunctions.test.js`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -1534,6 +1596,16 @@ LE UNITÀ RESTANO COERENTI: il pezzo è la bottiglia, il contenuto si misura sem
 CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala cartone → pezzi → contenuto valesse anche per il PREZZO): c'è già, dentro il form del prodotto (`InventoryManager.jsx`), dove il «cartone» si chiama COLLO. Si scrive «Totale collo (€, netto)» e il costo unitario si ricava dividendo per i pezzi del collo (`colloTot / p`); si legge anche il totale +IVA, per confrontarlo con quello del fornitore. Dal costo al pezzo discende il costo al cl (`costPerCl`, mostrato da `UnitPrice`) come per ogni altro prodotto. Nessun lavoro da fare qui: annotato perché la parola detta a voce («cartone») non è quella del codice («collo»), e cercandola con quella non si trova.
 
 **Dove**: `src/lib/inventory.js, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/component/InventoryManager.test.jsx`
+
+#### REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
+
+Daniele, 13/11/2026: sui prodotti di magazzino una spunta «Il cliente può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
+
+FATTO (13/11/2026): il campo `scelta_cliente` sul prodotto (letto in mapItem, scritto dalla scheda), con la casella «Il cliente può sceglierlo dal menù» sotto la soglia di avviso.
+
+DA SAPERE PER REQ-MENU-042: i prodotti di magazzino li leggono solo banco e gestori (firestore.rules); le alternative e la loro disponibilità dovranno arrivare al cliente per un'altra strada.
+
+**Dove**: `la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
 
 #### REQ-MAG-009 — Macro-categorie: il magazzino letto per famiglie
 
@@ -2819,6 +2891,36 @@ Il menù occupa tutta la larghezza del dispositivo; nella vetrina marchio e nome
 
 **Dove**: `src/pages/LandingPage.jsx, src/index.css` · ⚠️ **Nessun test lo verifica.**
 
+#### REQ-CLI-008 — La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino
+
+Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento. Diventa un prodotto modificato al volo, come quelli battuti al POS con gli ingredienti cambiati (già possibile): la ricetta della riga ha il prodotto scelto al posto di quello della ricetta, e il magazzino scala quello (fotografato al momento dell'ordine, come sempre). La scelta si legge sulla comanda e nel conto. Due righe con scelte diverse sono righe diverse: non si accorpano. Tocca coda, conto e modello dati: si fa in un ramo suo, coi test che girano senza rete (CLAUDE.md, il local-first).
+
+FATTO (13/11/2026, lib/sceltaCliente.js, rigaConScelte): la riga è quella del ritocco dal conto — `custom: true`, il drink che resta, `recipe_items` con il prodotto scelto al posto di quello della ricetta (la dose e l'unità restano), il prezzo col supplemento, la scelta nella NOTA («Gin: Mare»), che il conto mostra e la comanda stampa (campo «Note dei singoli prodotti», acceso di partenza). createOrder la porta intera nella comanda, senza nessun caso nuovo; lo scarico legge la ricetta della riga (computeConsumption), e lineSignature, che confronta ricetta e nota, tiene separate le scelte diverse anche sul ticket accorpato. Sull'ordine non si scrive un campo `scelte` a parte: un ritocco del banco cambia ricetta e nota, e un campo in più resterebbe a dire la cosa vecchia.
+
+**Dove**: `src/lib/sceltaCliente.js, src/lib/cart.js, src/lib/api.js (createOrder), src/lib/inventory.js (scarico), docs/architettura.md` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/unit/sceltaCliente.test.js`
+
+#### REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
+
+Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo conferma chi lo riceve al banco, che può modificarlo prima (cambiare un ingrediente o il prezzo, per una scelta o per la nota del cliente). Se il banco modifica prezzo o ingredienti l'ordine entra in uno STATO NUOVO, «in attesa di conferma del cliente»: il cliente lo vede modificato, col prezzo nuovo, e lo accetta o lo rifiuta. Accettato prosegue;
+
+RIFIUTATO è annullato, annullato dal cliente. Il tempo per rispondere lo decide il titolare in Impostazioni (10 minuti di partenza); scaduto, l'ordine si annulla. Tocca coda e stati del conto: ramo suo, coi test senza rete.
+
+FATTO (13/11/2026, lib/attesaCliente.js).
+
+LO STATO È UN CAMPO DEL CONTO, `attesa_cliente: { dal, scade, totale_prima }`, e non un passo delle comande: coda, stampa, statistiche, regole e tabellone leggono i passi, e uno in più andava insegnato a tutti. Scatta in bartenderUpdateComanda, nella STESSA scrittura delle righe, quando il banco cambia prezzo, prodotto, ricetta o quantità (la nota no) di un ordine dal telefono (`placed_by` vuoto) con la sola prima comanda, non ancora pronta. Una seconda modifica fa ripartire il tempo e tiene il totale che il cliente aveva ordinato.
+
+FINCHÉ SI ASPETTA: in coda e nel conto «In attesa del cliente» coi minuti (AttesaCliente), il conto non avanza (coda, conto, comanda), la comanda non si stampa (comandeDaStampare), il cliente riceve la push (push-core) e l'avviso sulla pagina. Nel conto «Confermato dal cliente» segna il sì arrivato a voce (`risposta_cliente.al_banco`).
+
+LA RISPOSTA (rispondiAllaModifica): accettato chiude l'attesa e scrive `risposta_cliente`; rifiutato è cancelOrder con `cancelled_by: 'cliente'`, `cancel_kind: 'modifica_rifiutata'`.
+
+SCADUTO, lo annulla la coda di chi può annullare (`cancel_kind: 'attesa_scaduta'`, `cancelled_persona: null`: nella storia non compare chi aveva la coda aperta). La pagina del cliente dice perché.
+
+LE REGOLE lasciano rispondere il cliente anche con la comanda già in preparazione o con più comande, solo finché c'è l'attesa, e solo rispondendo: chiudere l'attesa con `risposta_cliente`, o annullare chiudendola. L'attesa la mette SOLO il banco: né la creazione né le scritture del cliente possono metterla (dal revisore, 13/11/2026: un campo scritto dal cliente stesso gli teneva aperto il conto per tutta la serata, con righe e totale riscrivibili prima di pagare).
+
+NON SCATTA con un pagamento già avviato (pagato, parziale, online in corso, incassi sul conto): il pagamento online senza POS lascia il conto aperto, e un rifiuto lo annullerebbe incassato. Il banco che rimette le righe com'erano (`firma_prima`) chiude l'attesa. Durante l'attesa anche la preparazione parziale è ferma. Impostazioni → Menù clienti → «Modifiche da confermare»: `attesa_cliente_minuti`, fra 1 e 120.
+
+**Dove**: `src/lib/attesaCliente.js, src/lib/api.js (bartenderUpdateComanda, rispondiAllaModifica), src/pages/OrderStatusPage.jsx, src/components/ModificaDaConfermare.jsx, la coda (BartenderPage, AttesaCliente), src/lib/printer.js, functions/lib/push-core.js, firestore.rules, Impostazioni` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/unit/attesaCliente.test.js`, `tests/component/codaAttesaCliente.test.jsx`, `tests/component/OrderStatusPage.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/stampaComande.test.js`, `tests/bdd/notify-order.test.js`, `tests/regole/orders.test.js`
+
 #### REQ-CLI-006 — Il cliente sa che il suo drink è pronto da ritirare
 
 Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a «pronto» il cliente va avvisato: da lì in poi la palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo non serve: ci pensa chi porta il vassoio.
@@ -3151,6 +3253,50 @@ Gli script sanno rispecchiare un ambiente su un altro, migrare il solo catalogo 
 
 Dove l’intelligenza artificiale entra nel lavoro del locale.
 
+#### REQ-AI-007 — L'AI nell'app ha tre stati: assente, senza credito, attiva
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Daniele, 13/11/2026: «se l'istanza supporta l'AI (va attivata o disattivata dalla regia, anche il fatto di poter acquistare o meno crediti AI), se il cassetto crediti è vuoto bisogna segnalare all'utente che deve ricaricare il cassetto per usare l'AI. Se l'admin disattiva l'AI per un locale è come se non ci fosse. Se è attiva senza credito, il testo della chat è grigio con un'icona di avviso; se ci clicchi ti ricorda di caricare i crediti».
+
+TRE STATI, una regola sola per tutta l'app: - ASSENTE: la licenza ha `ai: false` (REQ-LIC-017), o la regia risponde al credito «senza-cassetto» o «spento» (l'admin della regia l'ha disattivata): niente chat, niente tasti AI, niente credito, come se non ci fosse; - SENZA CREDITO: il credito risponde `attivo: false` (credito finito o tetto del mese raggiunto): il tasto dell'assistente resta, grigio e con l'icona di avviso; toccandolo si legge che va ricaricato il credito (o che il tetto del mese è raggiunto); - ATTIVA: tutto come sempre. Lo stato viene dalla richiesta del credito (gratis, REQ-AI-003), fatta all'avvio del gestionale per lo staff di gestione e ricordata per qualche minuto; ogni risposta dell'AI aggiorna il credito.
+
+DA CHIEDERE ALLA REGIA: se il locale può comprare credito (Daniele: «anche il fatto di poter acquistare o meno crediti AI»), e dove: il promemoria dice «si ricarica dal sito» solo dove si può.
+
+ANCHE GLI ALTRI TASTI AI (Daniele, 13/11/2026: «ok come dici tu»): «Proponi una descrizione» e «Leggi con l'AI» seguono la stessa regola (TastoAI.jsx), al posto di sparire senza credito.
+
+FATTO PER L'ASSISTENTE (13/11/2026, ramo feature/chat-ai): lib/statoAI.js (lo stato dal credito, ricordato cinque minuti e aggiornato da ogni risposta dell'AI, aiApi.js ascoltaRisposteAI); TastoAssistente.jsx nella barra e la voce del ⋮ seguono i tre stati; il pannello non si apre con l'AI assente; i tasti AI passano da TastoAI.jsx.
+
+RESTA il promemoria di ricarica secondo quello che la regia dirà del credito (se il locale può comprarlo, e dove).
+
+**Dove**: `src/lib/statoAI.js (nuovo), src/App.jsx (il tasto dell'assistente), src/components/PannelloChat.jsx, i tasti AI (DescrizioneAI, FatturaDaAI), src/lib/aiApi.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/component/tastoAssistente.test.jsx`
+
+#### REQ-AI-001 — Scansione delle fatture d'acquisto con l'AI
+
+Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
+
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no.
+
+TUTTO DALLA REGIA (Daniele, 24/10 e 12/11/2026): niente scelta del servizio né chiave propria nelle impostazioni del locale. La fattura va al cassetto AI della regia (`tipo: 'fattura'`, REQ-AI-003), che la legge col modello di Stonebit e scala il credito; le righe tornano come PROPOSTA da rivedere prima di registrare.
+
+FATTO (12/11/2026): in Fornitori → documenti, accanto a «Nuovo documento», «Leggi con l'AI» (solo dove l'AI arriva: non nel Free né nella demo). La foto si riduce come un allegato (sotto i 5 MB), il PDF si manda com'è (fino a 20 MB). La proposta (lib/fatturaAI.js) ha il fornitore dell'archivio riconosciuto per nome (forme sociali e punteggiatura non contano; se due vanno bene non sceglie), numero, data, importo e le righe abbinate ai prodotti del magazzino: prima per CODICE sul listino di quel fornitore, poi per NOME (tutte le parole del prodotto nella riga, vince il più preciso, a pari merito niente); costo dopo lo sconto di riga. Le righe riconosciute partono spuntate, le altre da abbinare. «Registra il documento» lo crea come Fattura, aggiunge le righe spuntate (carico a magazzino SPENTO di partenza: le quantità di una fattura sono spesso in cartoni) e allega il file letto; un allegato non riuscito non annulla la registrazione. Costo della lettura e credito rimasto in vista.
+
+**Dove**: `functions/, src/components/InvoicesTab.jsx` · **Lo dimostrano**: `tests/unit/fatturaAI.test.js`, `tests/component/fatturaDaAI.test.jsx`
+
+#### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
+
+Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel flag la casella disponibile nel menu e lui in automatico mi dovrebbe creare all'interno del menu gia' tutto con la descrizione» («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della bottiglia».
+
+PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
+
+LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
+
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora. 13/11/2026: la voce del menù dei clienti si fa solo dall'editor del menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che creava il prodotto della cassa dalla bottiglia RESTA (Daniele, 13/11/2026: «sull'item lascialo»): nella scheda del prodotto di magazzino, «Crea il prodotto della cassa» apre la scheda di un prodotto della cassa nuovo collegato a quella bottiglia (nome, categoria, ricetta con la riga di quel prodotto). La QUANTITÀ della riga resta vuota e la scrive chi crea, perché la dose dipende dal prodotto (Daniele: «non c'è una dose fissa»): 4 cl fa il bicchiere, 70 cl la bottiglia intera, 1 pezzo la birra. Il prodotto si crea anche dall'editor della cassa, come oggi. La descrizione AI parte da sola all'apertura, se l'AI c'è e il credito pure.
+
+FATTO (13/11/2026, ramo feature/chat-ai): lib/prodottoDaMagazzino.js prepara la scheda (categoria della cassa col nome di quella di magazzino, riga della ricetta con la quantità vuota) e la passa al Menù, che la apre come un duplicato (anche se è già aperto); DrinkForm non salva una riga della ricetta senza quantità, e lo dice; DescrizioneAI parte da sola sulla scheda nata dal magazzino, con l'AI attiva. La chat lo usa per `proponi_voce_menu` (REQ-AI-006).
+
+**Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/prodottoDaMagazzino.test.jsx`
+
 #### REQ-AI-004 — Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare
 
 🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
@@ -3161,9 +3307,39 @@ DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integrerem
 
 FATTO IN PARTE (12/11/2026, col collegamento alla regia di REQ-AI-003): nella scheda del prodotto «Proponi una descrizione con l'AI» chiede alla regia una descrizione dal nome e dalla categoria, e la mostra come proposta da usare, scartare o richiedere; quello che il modello non sa torna «da verificare»; il costo si mostra coi millesimi.
 
-RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte.
+RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte. DOVE (Daniele, 13/11/2026): il tasto della descrizione AI sta in TUTTE E DUE LE PARTI, la scheda del prodotto della cassa e l'editor del menù dei clienti, voce per voce; nell'editor la proposta parte dalla voce (nome, sezione, etichette degli ingredienti, REQ-MENU-040).
 
 **Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/descrizioneAI.test.jsx`
+
+#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
+
+LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
+
+DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
+
+DECISO (Daniele, 12/11/2026): la chat sta in un PANNELLO A PORTATA, aperto da un tasto nella barra in alto del gestionale, sopra la pagina in cui si è;
+
+NIENTE MEMORIA fra una conversazione e l'altra (vive finché il pannello è aperto: costa meno, e non si salvano dati in più). Viene dopo fatture e voce del menù, che diventano i suoi primi strumenti. Serve alla regia una richiesta nuova per la conversazione con gli strumenti (oggi il cassetto accetta solo `descrizione` e `fattura`).
+
+IL CONTRATTO CON LA REGIA (13/11/2026, forma concordata; modello, limiti e schemi d'ingresso degli strumenti li manda la regia): la Function `richiestaAI` gira `{ tipo: 'chat', messaggi, strumenti }`. `messaggi` è nel formato dei messaggi di Anthropic: i turni dell'utente sono un testo o i blocchi `tool_result`; i turni del modello si rimettono ESATTAMENTE come sono tornati (`turno`), senza toccarli: un turno ritoccato la regia lo rifiuta (400), e per accorciare si apre una conversazione nuova. `strumenti` sono solo identificativi, quelli del ruolo di chi scrive. Risposta: `{ ok, tipo: 'chat', turno, testo, strumenti_richiesti: [{ id, nome, input }], costo_eur, credito_eur }`. Istruzioni e strumenti sono della regia e hanno una versione: col 409 `{ codice: 'versione' }` si apre una conversazione nuova. Codici: 400, 401, 402, 409, 422, 429 (occupato), 503.
+
+GLI STRUMENTI (proposta di tana-drink del 13/11/2026): di lettura `giacenza` (al massimo 5 risultati), `vendite` (20 righe), `cerca_prodotti` (15); che propongono, da confermare a schermo, `proponi_descrizione`, `proponi_voce_menu`, `leggi_fattura` (il file non entra nella conversazione: passa dalla richiesta `fattura`, e torna un riassunto).
+
+RUOLI: la chat è dello staff di gestione (admin e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo). La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è `attivo` (REQ-AI-003).
+
+FATTO DALLA PARTE DELL'APP (13/11/2026, ramo feature/chat-ai), sul contratto concordato, in attesa degli schemi definitivi della regia: la Function gira `tipo: 'chat'` (conversazione controllata prima del viaggio, `leggi_fattura` solo all'admin, 409 e 429); la logica in lib/chatAI.js (conversazione, strumenti per ruolo) e lib/strumentiChat.js (giacenza, vendite, cerca_prodotti, coi limiti di righe); il pannello PannelloChat.jsx, aperto dalla barra in alto (sul telefono dal ⋮), che chiede il credito all'apertura, esegue gli strumenti, mostra le proposte da confermare (descrizione, documento del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta il tasto di REQ-AI-002, ora acceso: apre la scheda nel Menù.
+
+RESTA la prova con la regia vera.
+
+IL CONTRATTO DEFINITIVO DELLA REGIA (13/11/2026, drink-regia #239 e #240, v0.3.0-beta.30 sul test; docs/handover.md §7 della regia; la richiesta è REQ-AI-008), fatto nell'app lo stesso giorno: · 409, cinque casi, tutti «conversazione nuova»: `codice` decide (`versione`: istruzioni aggiornate, strumenti cambiati a metà dall'admin o dall'app, conversazione rifiutata da Anthropic; `troppo-lunga`), e al titolare si mostra `errore` così com'è (functions/lib/ai-service.js, interpreta; chiedeConversazioneNuova). · La versione: al primo messaggio non si manda; dopo, sempre quella della PRIMA risposta; mai scritta nel codice. · L'elenco degli strumenti si fissa al primo messaggio e resta quello anche se cambia il ruolo di chi scrive. · Niente si ritocca, nemmeno i turni di chi scrive: la conversazione cresce solo in fondo. Dopo un giro di strumenti rimasto a metà la domanda va in un turno suo, dopo quello degli esiti. Ogni `tool_use` del turno del modello ha il suo esito, nell'ordine: quello che l'app non sa eseguire ne riceve uno di errore (conEsiti). · I blocchi thinking (anche vuoti), fallback e la firma si conservano come sono; a schermo bastano testo e strumenti richiesti.
+
+DA VERIFICARE SUL TEST con la regia: due turni di chi scrive di fila (la regia li manda ad Anthropic così, che li unisce), e un turno dopo il ripiego su un altro modello.
+
+**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/chatAI.test.js`, `tests/component/pannelloChat.test.jsx`
 
 #### REQ-AI-003 — L'AI a consumo: chi paga, con quale credito e con quale tetto
 
@@ -3187,15 +3363,17 @@ SENZA CHIAVE (Daniele, 12/11/2026: «niente chiave»; REQ-FLOTTA-077 della regia
 
 QUALE REGIA: `REGIA_PROGETTO` in functions/.env.<progetto>, scritto dalla regia nei suoi locali. Senza, l'AI è spenta e la Function non chiede l'account `ai-locale`: nei progetti che non nascono dalla regia (tana-drink, tana-drink-test, drinkpos-prova-e2e) l'account non c'è, e chiederlo fermerebbe il deploy di tutte le Functions.
 
-PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce.
-
-DA PROVARE: che Google dia il gettone al destinatario `regia-ai:drink-regia-test`, che non è un indirizzo web (una richiesta vera da prova-bar).
+PROVATO SUL TEST (12/11/2026, prova-bar aggiornato dalla regia con questo ramo, run 43286842706): `serviceAccount: 'ai-locale@'` è completato col progetto al deploy, e la Function nasce. E IL GETTONE FUNZIONA (12/11/2026, Daniele sulla Tana di test con la 1.10.40-beta): «Proponi una descrizione con l'AI» ha risposto, quindi Google dà il gettone al destinatario `regia-ai:drink-regia-test` anche se non è un indirizzo web, e la regia lo riconosce.
 
 LA TANA: le sue Functions le pubblica il deploy.yml di tana-drink, col suo account di deploy, che deve poter agire come `ai-locale` (roles/iam.serviceAccountUser SULL'ACCOUNT, non sul progetto): senza, il deploy di tutte le Functions si ferma su actAs. Account, ruoli e permesso li prepara il workflow della regia «Prepara l'AI di un locale esistente» (drink-regia #202); solo DOPO si aggiunge `REGIA_PROGETTO`. Fatto su tana-drink-test il 12/11/2026 (run 43292808376, verificato con gcloud): la riga c'è. Fatto anche su tana-drink (run 43295988436, col via libera di Daniele, verificato con gcloud), ma lì `REGIA_PROGETTO=drink-regia` si aggiunge solo quando la regia di produzione riconosce il gettone (dal suo prossimo rilascio su main): prima risponderebbe sempre 401.
 
 RESTA: `REGIA_PROGETTO` sulla produzione della Tana, la fattura (REQ-AI-001), il credito in Impostazioni, pacchetti e prezzo.
 
-**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/bdd/richiesta-ai.test.js`
+IL CREDITO SENZA CHIAMARE IL MODELLO (contratto della regia, 13/11/2026, drink-regia #217): `{ tipo: 'credito' }` col gettone → 200 `{ ok, tipo: 'credito', credito_eur, tetto_mensile_eur (sempre un numero), speso_mese_eur, attivo, motivo }`, gratis e senza riga di consumo. `attivo` vuol dire «una richiesta AI può partire adesso» (cassetto acceso, credito sopra zero, mese sotto il tetto); `motivo` è null, «credito» o «tetto». Senza cassetto o col cassetto spento il 402 di sempre. Si chiede all'apertura delle Impostazioni (e della chat, REQ-AI-006).
+
+FATTO (13/11/2026): la Function accetta `{ tipo: 'credito' }` e ne traduce la risposta; in Impostazioni → Licenza il riquadro «Credito AI» (CreditoAI.jsx) mostra disponibile, speso nel mese e tetto, e perché l'AI è ferma.
+
+**Dove**: `functions/, settings, regia (abbonamenti della flotta)` · **Lo dimostrano**: `tests/component/creditoAI.test.jsx`, `tests/bdd/richiesta-ai.test.js`
 
 ### Interfaccia
 
@@ -3979,6 +4157,28 @@ DOPO IL /simplify (12/11/2026): le schermate che hanno le impostazioni chiedono 
 
 **Dove**: `src/lib/limiti.js, src/lib/printer.js, le schermate con i tasti e le impostazioni di stampa (PaymentScreen, OrderPosDetail, BartenderPage, MenuPage, ComandaPage, OrdersHistory, chiusura cassa, fatture, ordini ai fornitori, PrinterSetup, StampaAutomatica, CampiStampa, PallinoStampante)` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/unit/stampaFuoriPiano.test.js`, `tests/unit/sezioni.test.js`, `tests/unit/impostazioniLocali.test.js`, `tests/component/SettingsTab.test.jsx`
 
+#### REQ-LIC-017 — Nel Free non c'è l'AI: niente tasti AI, chat né credito
+
+Decisione di Daniele del 13/11/2026, portata dalla regia: il Free non ha l'AI. La regia scrive `ai: false` nei limiti del Free, come `comande: false` (REQ-LIC-005) e `stampa: false` (REQ-LIC-016); come per le altre voci, solo un `false` scritto spegne, e senza la voce (la Tana, i piani a pagamento) non cambia niente. CON `ai: false`: nessun tasto AI («Proponi una descrizione», «Leggi con l'AI»), niente chat, niente credito in Impostazioni. Il blocco vero resta nella regia, che a un locale Free risponde 402 `{ codice: "piano" }`: l'app lo traduce in una frase piana, se mai ci si arriva. `ai: false` anche nella copia dei limiti del Free dell'app. Per conoscenza (Daniele, 13/11/2026): il credito non scade, nessun piano a pagamento include credito, il costo si calcola col cambio BCE del giorno.
+
+FATTO (13/11/2026): `aiConsentita`/`aiNelPiano` in lib/limiti.js; `aiRaggiungibile` (aiApi.js) la chiede, quindi spariscono «Proponi una descrizione», «Leggi con l'AI» e il riquadro del credito; il codice «piano» della regia ha la sua frase; `ai: false` nella copia dei limiti del Free.
+
+**Dove**: `src/lib/limiti.js, src/lib/aiApi.js (aiRaggiungibile, codice «piano»), functions/lib/ai-service.js, src/lib/licenzaInVigore.js` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/unit/limiti.test.js`, `tests/bdd/richiesta-ai.test.js`, `tests/component/descrizioneAI.test.jsx`, `tests/component/SettingsTab.test.jsx`
+
+#### REQ-LIC-018 — Il locale fermo si mostra secondo chi apre: pagina neutra al pubblico, il titolare al rinnovo e ai suoi dati
+
+🟡 **Fatto a metà**: la descrizione dice anche cosa manca.
+
+Decisioni di Daniele del 13/11/2026, portate dalla regia: il servizio si sospende subito, anche a metà serata; chi entra nel locale non deve leggere che il titolare non ha pagato; il titolare deve arrivare al rinnovo; può consultare e scaricare i suoi dati in sola lettura; una sospensione decisa dall'admin della regia funziona come quella per mancato pagamento.
+
+PRIMA (REQ-FLOTTA-008) la stessa schermata, col motivo e la frase sull'abbonamento, la vedevano tutti: anche chi apriva il menù col QR. ORA, con la licenza sospesa, chiusa, scaduta o non attivata: - PUBBLICO (menù, pagina del locale, ordini dal telefono, area dei clienti): una pagina neutra, «Il menù di ‹nome› non è disponibile in questo momento». Niente motivo, stato o pagamenti. - PERSONALE (ruoli diversi dall'admin): «Il locale è momentaneamente fermo: per informazioni rivolgersi al titolare». Niente motivo. - TITOLARE (admin): la schermata di prima, col motivo; il tasto «Riattiva il locale» verso `licenza.rinnovo_url` (campo nuovo della regia), o `regia_url` se manca. Sul locale CHIUSO il tasto non c'è: un locale chiuso non si riapre da solo. Sotto, «Esporta tutto» (il backup in un file, che fa solo letture: le regole le lasciano passare anche sul locale fermo); il ripristino no, perché scrive. DOPO, a sezioni (pezzo 3 approvato da Daniele): la sola lettura dentro l'app per il titolare, col blocco centrale delle scritture; prima Statistiche, Cassa e Fornitori, poi Clienti e Magazzino.
+
+FATTI I PEZZI 1 E 2 (13/11/2026): InstallazioneSospesa sceglie la schermata dal ruolo (App.jsx le passa `staffRole`); il titolare ha «Riattiva il locale» (non sul chiuso; «Vai alla pagina del prodotto» per l'attivazione) e BackupPanel in `soloEsporta`. Il testo al personale è impersonale («per informazioni rivolgersi al titolare»), come chiede il tono dell'app.
+
+RESTA il pezzo 3, la sola lettura.
+
+**Dove**: `src/components/InstallazioneSospesa.jsx, src/App.jsx, src/components/BackupPanel.jsx` · **Serve**: [UR-015](#ur-015--il-piano-del-locale-decide-cosa-si-usa-e-chi-ha-tutto-non-se-ne-accorge) · **Lo dimostrano**: `tests/component/InstallazioneSospesa.test.jsx`
+
 #### REQ-LIC-009 — Senza licenza valida l'app non parte, nemmeno nelle regole; l'avviso della cancellazione dei dati
 
 L'utente, 02/11/2026: «Se non c'è nessuna licenza non dovrebbe partire proprio il prodotto, o licenza scaduta, e dovrebbe essere già così. Anzi, al massimo, se dalla regia è attiva l'opzione, dovrebbe diventare versione free ma senza far perdere i dati al cliente, ma dovremmo avvisare il cliente che [...] dobbiamo cancellare i suoi dati entro un tot e avvisarlo quando stiamo per cancellarli». Rovescia «senza documento non si limita niente» di REQ-LIC-008, per tutti i locali: senza licenza/attuale, con stato sospesa o chiusa, o con valida_fino passata e alla_scadenza 'ferma', le regole negano le scritture (le letture restano, fino alla cancellazione); con alla_scadenza 'free' valgono i limiti del Free. L'app fa lo stesso, anche senza rete. La licenza porta cancellazione { il, richiedente }: l'app la mostra sopra a tutto, anche da ferma. La Tana riceve licenza/attuale una volta, col via libera dell'utente, prima delle regole nuove; il file di licenza nella build si toglie. Per intero in docs/licenza-valida.md. La regia è pronta (drink-regia REQ-FLOTTA-025, PR #38).
@@ -4207,18 +4407,6 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
-### Menù e catalogo
-
-#### REQ-MENU-017 — Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico
-
-Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo prendo … se io sto a zero, scompare direttamente dal menu». Oggi il menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e quel flag non sa niente delle giacenze: si spegne a mano.
-
-PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta di partenza. Con l'opzione accesa, quando la giacenza di un ingrediente della ricetta scende a zero o sotto, la voce sparisce dal menu' del cliente; quando un carico la riporta sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce resta, perche' la giacenza dell'app puo' sbagliare e il bartender vede la bottiglia. COME: il cliente non legge il magazzino (le regole lo vietano), quindi il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul cambio di giacenza di un prodotto, solo quando attraversa lo zero (non a ogni vendita): poche scritture, e il banco non aspetta niente. L'opzione per voce serve perche' molti ingredienti non hanno una giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per tutti sparirebbero cocktail interi per un numero sbagliato.
-
-DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
-
-**Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
 ### Magazzino
 
 #### REQ-MAG-008 — Ricette da riagganciare agli articoli nuovi
@@ -4443,22 +4631,6 @@ Richiesta della regia (drink-regia REQ-FLOTTA-019), 02/11/2026. L'utente: «inca
 
 ### Intelligenza artificiale
 
-#### REQ-AI-001 — Scansione delle fatture d'acquisto con l'AI
-
-Da una foto o un PDF della fattura fornitore ricavare righe, quantità, costi e IVA, da rivedere prima di registrare. Nelle impostazioni si abilita la scansione e si sceglie il servizio (Claude, ChatGPT, Gemini): o il nostro backend, o la propria API key, con le barre dei limiti di utilizzo. Si parte da Claude e ChatGPT. Il carico automatico in magazzino si valuta dopo.
-
-**Dove**: `functions/, src/components/InvoicesTab.jsx`
-
-#### REQ-AI-002 — Un prodotto nuovo diventa una voce del menù del cliente, con descrizione e foto proposte dall'AI
-
-Flavio, vocale del 22/10/2026: quando si compra «un gin tedesco, lo metto nel flag la casella disponibile nel menu e lui in automatico mi dovrebbe creare all'interno del menu gia' tutto con la descrizione» («gin, spagnolo, botaniche mediterranee»), «oppure … con la foto della bottiglia».
-
-PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente» crea la voce di menu' collegata (ricetta: una dose del prodotto, prezzo da listino col ricarico) e chiede al modello una descrizione breve dal nome e dal produttore. La descrizione e' una PROPOSTA da confermare, non si pubblica da sola: un modello puo' sbagliare provenienza o botaniche, e al cliente arriva come informazione del locale.
-
-LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
-
-**Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
-
 #### REQ-AI-005 — Ogni foto caricata si può far modificare all'AI: la proposta accanto all'originale, da accettare, scartare o richiedere
 
 Daniele, 12/11/2026: «il caricamento delle immagini deve avere sempre la possibilità di chiedere all'AI di modificare l'immagine. La risposta dell'AI dell'immagine modificata va accanto a quella originale e si chiede di accettare o meno la modifica o fare un altro prompt. Questo solo se si hanno crediti AI». COME: in ogni caricamento di una foto (oggi la scheda del prodotto, col ritaglio di REQ-MENU-039) un campo «Chiedi all'AI», dove si scrive cosa cambiare («togli lo sfondo», «metti il bicchiere su un bancone di legno»). La proposta compare accanto alla foto di partenza; tre tasti: «Usa questa», «Tieni l'originale», «Chiedi un'altra modifica» (con un'altra frase, partendo dall'originale o dalla proposta). Si vede solo con crediti AI disponibili; senza, il campo non c'è e il caricamento resta quello di sempre.
@@ -4467,17 +4639,9 @@ LA CHIAMATA NON PARTE DALL'APP: la fa la Function della regia, che controlla il 
 
 DA DECIDERE CON DANIELE (regola zero: è un servizio a pagamento): quale modello di immagini usare (i modelli di Claude non generano né modificano immagini: serve un altro fornitore), quanto costa una modifica in crediti, e cosa si fa delle foto con persone o marchi.
 
+RINVIATA (Daniele, 12/11/2026: «niente modifica immagini per ora»). Resta il ritaglio a mano (REQ-MENU-039).
+
 **Dove**: `src/components/RitaglioFoto.jsx e i caricamenti di foto del gestionale; una Function della regia (REQ-AI-003)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
-
-#### REQ-AI-006 — Un assistente AI nel gestionale: una chat che sa fare le cose dell'app che l'AI può fare
-
-Daniele, 12/11/2026: «dobbiamo agganciare tutte le cose che l'AI può fare nel gestionale e aggiungere una chat». COME: una chat nel gestionale, per chi lo usa, che risponde e, dove serve, propone azioni sull'app con gli stessi strumenti delle funzioni AI singole: leggere una fattura (REQ-AI-001), proporre la voce del menù di un prodotto nuovo (REQ-AI-002), scrivere le descrizioni del menù (REQ-AI-004), modificare una foto (REQ-AI-005); e in più rispondere su quello che c'è nell'app (giacenze, vendite, menù). Ogni azione che cambia qualcosa si propone e la conferma chi lavora: l'AI non scrive da sola. Rispetta i ruoli (src/lib/ruoli.js): vede e propone solo quello che può fare chi chiede.
-
-LA CHIAMATA PASSA DALLA REGIA, col credito dell'installazione (REQ-AI-003). Senza crediti la chat non c'è. Non tocca la cassa né il lavoro senza rete: è un attrezzo del gestionale, non del banco.
-
-DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina, un pannello sempre a portata), quanto costa una conversazione in crediti, cosa si ricorda fra una conversazione e l'altra.
-
-**Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 ### Interfaccia
 

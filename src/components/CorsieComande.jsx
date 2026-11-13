@@ -25,6 +25,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import AttesaCliente from './AttesaCliente.jsx'
 
 // ── LE CORSIE DEL BANCO: UNA CARD PER COMANDA ────────────────────────
 //
@@ -272,6 +273,7 @@ export default function CorsieComande({
                     >
                       <div className="row between">
                         <NomeComanda scheda={s} />
+                        <AttesaCliente order={o} />
                         <BolloAcconto order={o} />
                         {/* PERCHÉ È QUI. Nella colonna delle annullate la
                             domanda non è «da quanto sta lì» ma «che fine ha

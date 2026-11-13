@@ -65,7 +65,7 @@ vi.mock('../../src/lib/api.js', () => ({
   setOrderServiceMode: vi.fn(() => Promise.resolve({})),
 }))
 vi.mock('../../src/lib/printer.js', () => ({ printComanda: vi.fn(async () => {}) }))
-vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn() }))
+vi.mock('../../src/lib/toast.js', () => ({ showToast: vi.fn(), toastError: vi.fn() }))
 
 import ComandaPage from '../../src/pages/ComandaPage.jsx'
 import {

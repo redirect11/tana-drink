@@ -118,6 +118,14 @@ Regole di sopravvivenza del modello:
   uno solo e sta in `comandaDaScaricare`: a «pronto» il drink è fatto, e a
   segnarlo è chi l'ha fatto — mentre «servito» lo segna la sala, che sul
   magazzino non scrive.
+- **Una riga può avere la ricetta sua** (`custom: true` + `recipe_items`):
+  il drink ritoccato dal conto e la riga con la scelta del cliente
+  (REQ-CLI-008, `lib/sceltaCliente.js`) restano il drink — `drink_id`,
+  nome, statistiche — ma lo scarico legge la ricetta della riga. Due righe
+  con ricette diverse non si accorpano (`lineSignature`). Il telefono la
+  compone senza leggere il magazzino, che per il cliente è chiuso: le
+  righe da sostituire le scrive l'editor sulla scelta (`sostituisce`), e
+  la disponibilità arriva da `alternative_cliente`.
 - **Lo sconto appartiene alla riscossione, non al conto.** Cade sulle
   righe che si stanno incassando, e all'incasso viene consumato dentro quel
   pagamento (`payments[].sconto`): due riscossioni scontate sono due sconti,
@@ -164,6 +172,12 @@ pagamento (contanti/carta a mano, SumUp via Functions,
 acconti, gruppi anche alla romana) → chiusura, e il conto sparisce
 subito dalla coda. Aumenti su un conto in corso confluiscono nella
 comanda giusta senza riaprire quelle servite.
+
+Un ordine dal telefono che il banco cambia (prezzo o ingredienti) aspetta
+il cliente: non è un passo nuovo delle comande ma un campo del conto,
+`attesa_cliente`, scritto insieme alle righe. Finché c'è il conto non
+avanza e non stampa; il cliente accetta o rifiuta, e allo scadere lo
+annulla la coda (REQ-CLI-009, `lib/attesaCliente.js`).
 
 ## Cosa non fare (il riassunto dei divieti architetturali)
 

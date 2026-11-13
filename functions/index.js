@@ -10,7 +10,8 @@
 //   firebase functions:secrets:set SUMUP_API_KEY
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
-const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore')
+const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore')
+const disponibilita = require('./lib/disponibilita')
 const { defineSecret } = require('firebase-functions/params')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
@@ -63,6 +64,107 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
     if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
     throw new HttpsError('internal', e?.message || 'Errore interno.')
   }
+})
+
+// ── LA VOCE NON DISPONIBILE NEL MENÙ DEI CLIENTI (REQ-MENU-017) ───────────────
+// Il segno `non_disponibile_cliente` sul prodotto della cassa: il cliente
+// non legge il magazzino, e gli arriva solo un sì o un no (Daniele,
+// 13/11/2026: al cliente non si dice mai cosa manca). Si scrive solo dove
+// cambia, e si ricalcola solo quando serve: un prodotto di magazzino che
+// attraversa la soglia, un prodotto della cassa che cambia ricetta o
+// opzione, la soglia che cambia. La logica è in lib/disponibilita.js.
+async function impostazioniDelBar() {
+  const s = await db.doc('settings/bar').get()
+  return s.exists ? s.data() : {}
+}
+
+// I prodotti di magazzino per id, letti a gruppi di cento (il tetto di
+// getAll che si tiene qui).
+async function leggiArticoli(ids) {
+  const perId = new Map()
+  for (let i = 0; i < ids.length; i += 100) {
+    const lette = await db.getAll(...ids.slice(i, i + 100).map((id) => db.doc(`inventory_items/${id}`)))
+    for (const s of lette) if (s.exists) perId.set(s.id, s.data())
+  }
+  return perId
+}
+
+// Scritture a lotti di quattrocento (il tetto di un batch è cinquecento).
+async function scriviALotti(elenco, scrivi) {
+  for (let i = 0; i < elenco.length; i += 400) {
+    const lotto = db.batch()
+    for (const x of elenco.slice(i, i + 400)) scrivi(lotto, x)
+    await lotto.commit()
+  }
+}
+
+async function ricalcolaDisponibilita(drinks, impostazioni) {
+  if (!drinks.length) return
+  const ids = [...new Set(drinks.flatMap((d) => (d.recipe_items || []).map((r) => r.inventory_item_id).filter(Boolean)))]
+  const cambi = disponibilita.cambiDiDisponibilita(drinks, await leggiArticoli(ids), impostazioni)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore }))
+}
+
+const drinksCheSeguono = async () =>
+  (await db.collection('drinks').where('segue_giacenze', '==', true).get()).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
+  const prima = event.data?.before?.exists ? event.data.before.data() : null
+  const dopo = event.data?.after?.exists ? event.data.after.data() : null
+  if (!disponibilita.contaPerIlMenu(prima, dopo)) return
+  const impostazioni = await impostazioniDelBar()
+  const itemId = event.params.itemId
+  // L'alternativa pubblica del cliente (REQ-MENU-042), se serve.
+  const alternativa = disponibilita.alternativaDopo(prima, dopo, impostazioni)
+  if (alternativa?.cancella) await db.doc(`alternative_cliente/${itemId}`).delete()
+  if (alternativa?.scrivi) await db.doc(`alternative_cliente/${itemId}`).set(alternativa.scrivi)
+  // Non a ogni vendita: solo quando la soglia si attraversa.
+  if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
+  await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
+})
+
+async function riallineaScelteDelProdotto(drinkId, ricetta) {
+  const voci = await db.collection('carta_voci').where('drink_id', '==', drinkId).get()
+  const conScelta = voci.docs.filter((v) => (v.data().etichette || []).some((e) => e?.scelta))
+  if (!conScelta.length) return
+  const ids = [...new Set(ricetta.map((r) => r?.inventory_item_id).filter(Boolean))]
+  const articoli = await leggiArticoli(ids)
+  const categoriaDi = new Map([...articoli].map(([id, a]) => [id, a.category_id ?? null]))
+  const cambi = conScelta
+    .map((v) => ({ ref: v.ref, etichette: disponibilita.scelteRiallineate(v.data().etichette, ricetta, categoriaDi) }))
+    .filter((c) => c.etichette)
+  await scriviALotti(cambi, (lotto, c) => lotto.update(c.ref, { etichette: c.etichette }))
+}
+
+exports.disponibilitaDalProdotto = onDocumentWritten({ ...OPTS, document: 'drinks/{drinkId}' }, async (event) => {
+  if (!event.data?.after?.exists) return
+  const prima = event.data.before?.exists ? event.data.before.data() : {}
+  const dopo = event.data.after.data()
+  // La ricetta è cambiata: le scelte del cliente sulle voci collegate
+  // seguono (REQ-MENU-042, disponibilita.scelteRiallineate).
+  if (JSON.stringify(prima?.recipe_items || []) !== JSON.stringify(dopo?.recipe_items || [])) {
+    await riallineaScelteDelProdotto(event.params.drinkId, dopo.recipe_items || [])
+  }
+  // Solo se cambiano l'opzione o la ricetta: la scrittura del segno, fatta
+  // qui, non deve rimettere in moto il calcolo.
+  const pesa = (d) => JSON.stringify([d?.segue_giacenze === true, d?.recipe_items || []])
+  if (pesa(prima) === pesa(dopo)) return
+  await ricalcolaDisponibilita([{ id: event.params.drinkId, ...dopo }], await impostazioniDelBar())
+})
+
+exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 'settings/bar' }, async (event) => {
+  const prima = event.data?.before?.data() || {}
+  const dopo = event.data?.after?.data() || {}
+  if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
+  await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
+  // E le alternative del cliente, con la soglia nuova.
+  // TUTTE, anche quelle che non cambiano: è anche la strada che rimette il
+  // documento ai prodotti spuntati prima che la Function ci fosse.
+  const scelte = await db.collection('inventory_items').where('scelta_cliente', '==', true).get()
+  const soglia = disponibilita.sogliaDi(dopo)
+  await scriviALotti(scelte.docs, (lotto, d) =>
+    lotto.set(db.doc(`alternative_cliente/${d.id}`), { disponibile: !disponibilita.manca(d.data(), soglia) })
+  )
 })
 
 // ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────

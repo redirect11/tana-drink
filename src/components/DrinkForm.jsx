@@ -153,6 +153,16 @@ export default function DrinkForm({
   async function submit(e) {
     e.preventDefault()
     if (!(form.name || '').trim()) return
+    // UNA RIGA DELLA RICETTA SENZA QUANTITÀ NON SI BUTTA IN SILENZIO: è la
+    // dose che si scala a ogni vendita. Con la scheda nata dal magazzino
+    // (REQ-AI-002) la quantità parte vuota apposta, e salvarla vuota
+    // vorrebbe dire un prodotto senza ricetta.
+    const senzaDose = form.recipe_rows.find((r) => r.inventory_item_id && !(Number(String(r.qty ?? '').replace(',', '.')) > 0))
+    if (senzaDose) {
+      const nome = itemsById[senzaDose.inventory_item_id]?.name || senzaDose.name || 'un ingrediente'
+      setSaveError(`Manca la quantità di «${nome}» nella ricetta: è la dose che si scala a ogni vendita.`)
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
@@ -283,6 +293,7 @@ export default function DrinkForm({
       <input id="description" value={form.description} onChange={set('description')} />
       <AiutoCampo>Testo mostrato al cliente nel menù.</AiutoCampo>
       <DescrizioneAI
+        subito={Boolean(initial.da_magazzino)}
         nome={form.name || ''}
         categoria={categories.find((c) => c.id === form.category_id)?.name}
         attuale={form.description}
@@ -292,6 +303,22 @@ export default function DrinkForm({
       {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
           magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»
           — e i Signature non ne hanno: per il cliente si scrivono qui. */}
+      {/* REQ-MENU-017: spenta di partenza, perché lime, sciroppi e ghiaccio
+          spesso non hanno una giacenza tenuta bene. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', margin: '8px 0 0' }}>
+        <input
+          type="checkbox"
+          checked={form.segue_giacenze === true}
+          onChange={(e) => setForm((f) => ({ ...f, segue_giacenze: e.target.checked }))}
+        />
+        <span>Il menù dei clienti segue le giacenze</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Quando un ingrediente della ricetta è esaurito (o in esaurimento, secondo
+        Impostazioni → Menù clienti) la voce non è disponibile per il cliente.
+        Al banco resta sempre.
+      </AiutoCampo>
+
       <label htmlFor="ingredienti">Ingredienti in carta</label>
       <input
         id="ingredienti"

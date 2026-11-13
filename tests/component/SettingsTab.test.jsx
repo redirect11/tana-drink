@@ -73,6 +73,9 @@ vi.mock('../../src/lib/paymentsApi.js', () => ({
 vi.mock('../../src/components/PrinterSetup.jsx', () => ({
   default: () => <div>PANNELLO STAMPANTE</div>,
 }))
+vi.mock('../../src/components/CreditoAI.jsx', () => ({
+  default: () => <div>PANNELLO CREDITO AI</div>,
+}))
 vi.mock('../../src/components/BackupPanel.jsx', () => ({
   default: () => <div>PANNELLO BACKUP</div>,
 }))
@@ -568,6 +571,26 @@ describe('giornata di lavoro', () => {
   })
 })
 
+// IL TEMPO PER RISPONDERE ALLE MODIFICHE DEL BANCO (REQ-CLI-009): lo
+// decide il titolare, 10 minuti di partenza, fra 1 e 120.
+describe('modifiche da confermare', () => {
+  it('10 minuti di partenza; il titolare li cambia, entro i limiti', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Menù clienti/ }))
+    const campo = screen.getByLabelText('Tempo per rispondere (minuti)')
+    expect(campo).toHaveValue(10)
+    fireEvent.change(campo, { target: { value: '5' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenCalledWith({ attesa_cliente_minuti: 5 })
+    fireEvent.change(campo, { target: { value: '500' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenLastCalledWith({ attesa_cliente_minuti: 120 })
+  })
+})
+
 // IL RICARICO ANCHE COME DRINK COST (REQ-MENU-033). I due campi scrivono
 // lo stesso valore, il ricarico: scritto il 20% di drink cost, si salva ×5.
 describe('prezzo consigliato: ricarico e drink cost', () => {
@@ -652,6 +675,20 @@ describe('il piano Free nelle impostazioni', () => {
     await user.click(screen.getByRole('button', { name: /Cassa e giornata/ }))
     expect(screen.queryByText('Stampa la comanda all’arrivo dell’ordine')).toBeNull()
     expect(screen.getByText('Stampa lo scontrino alla riscossione del conto')).toBeInTheDocument()
+  })
+
+  // REQ-AI-003 e REQ-LIC-017: il credito AI sta con la licenza, e nel Free
+  // senza AI non c'è.
+  it('il credito AI sta nel gruppo Licenza, e senza AI nel piano no', async () => {
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.getByText('PANNELLO CREDITO AI')).toBeInTheDocument()
+    cleanup()
+    localStorage.setItem('drink:licenza', JSON.stringify({ piano: 'free', moduli: {}, limiti: { ai: false } }))
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Licenza/ }))
+    expect(screen.queryByText('PANNELLO CREDITO AI')).toBeNull()
   })
 
   it('un modulo in prova dice fino a quando', async () => {

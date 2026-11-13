@@ -11,7 +11,7 @@
 // contratto con la regia la prova tests/bdd/richiesta-ai.test.js.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import '@testing-library/jest-dom/vitest'
 
@@ -19,14 +19,23 @@ const chiamata = vi.fn()
 // La porta delle funzioni del locale (src/porte/funzioni.js), finta.
 vi.mock('../../src/porte/funzioni.js', () => ({ chiamaFunzione: (_nome, dati) => chiamata(dati) }))
 let leggero = false
-vi.mock('../../src/lib/limiti.js', () => ({ senzaFunctions: () => leggero }))
+let conAI = true
+vi.mock('../../src/lib/limiti.js', async (originale) => ({
+  ...(await originale()),
+  senzaFunctions: () => leggero,
+  aiNelPiano: () => conAI,
+}))
 
 import DescrizioneAI from '../../src/components/DescrizioneAI.jsx'
 import { chiediAI } from '../../src/lib/aiApi.js'
+import { _azzeraStatoAI } from '../../src/lib/statoAI.js'
 
 beforeEach(() => {
   chiamata.mockReset()
   leggero = false
+  conAI = true
+  // Lo stato dell'AI (REQ-AI-007) vive nel modulo: ogni prova riparte da capo.
+  _azzeraStatoAI()
 })
 
 const mostra = (props = {}) => {
@@ -110,12 +119,28 @@ describe('la proposta', () => {
 })
 
 describe('quando l’AI si ferma', () => {
+  // Il credito che finisce PROPRIO con questa richiesta: lo si dice lì.
   it('senza credito lo dice, e la scheda resta com’è', async () => {
-    chiamata.mockResolvedValue({ ok: false, codice: 'credito' })
+    chiamata.mockImplementation(async (dati) =>
+      dati.tipo === 'credito'
+        ? { ok: true, tipo: 'credito', credito_eur: 0.001, tetto_mensile_eur: 20, speso_mese_eur: 0, attivo: true, motivo: null }
+        : { ok: false, codice: 'credito' }
+    )
     const onUsa = mostra()
     await chiedi()
     expect(await screen.findByRole('status')).toHaveTextContent('Il credito AI del locale è finito')
     expect(onUsa).not.toHaveBeenCalled()
+  })
+
+  // REQ-AI-007: già finito all'apertura, il tasto è grigio con l'avviso e
+  // non parte nessuna richiesta (ricorda di ricaricare).
+  it('col credito già finito il tasto è grigio, e non chiede niente', async () => {
+    chiamata.mockResolvedValue({ ok: true, tipo: 'credito', credito_eur: 0, tetto_mensile_eur: 20, speso_mese_eur: 20, attivo: false, motivo: 'credito' })
+    mostra()
+    const tasto = await screen.findByRole('button', { name: /Proponi una descrizione con l’AI/ })
+    await waitFor(() => expect(tasto).toHaveClass('senza-credito'))
+    await userEvent.setup().click(tasto)
+    expect(chiamata.mock.calls.map((c) => c[0].tipo)).toEqual(['credito'])
   })
 
   it('la rete che non risponde diventa «si può riprovare»', async () => {
@@ -123,6 +148,14 @@ describe('quando l’AI si ferma', () => {
     mostra()
     await chiedi()
     expect(await screen.findByRole('status')).toHaveTextContent('Si può riprovare')
+  })
+
+  // REQ-LIC-017: il Free non ha l'AI (`ai: false` nella licenza). Il blocco
+  // vero è nella regia; qui il tasto non c'è.
+  it('nel piano senza AI il tasto non c’è', () => {
+    conAI = false
+    mostra()
+    expect(screen.queryByRole('button', { name: 'Proponi una descrizione con l’AI' })).toBeNull()
   })
 
   // Sul piano Free le Functions non ci sono: il tasto non compare, invece di

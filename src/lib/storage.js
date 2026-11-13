@@ -65,6 +65,12 @@ async function downscaleImage(file, { lato = MAX_DIM, qualita = QUALITY } = {}) 
   }
 }
 
+// La foto di una fattura da far leggere all'AI (REQ-AI-001): la stessa
+// riduzione dell'allegato, leggibile e sotto i 5 MB che il cassetto
+// accetta. Il PDF resta com'è.
+export const fotoDiFatturaLeggibile = (file) =>
+  tipoAllegato(file?.type) === 'immagine' ? downscaleImage(file, { lato: LATO_MASSIMO, qualita: QUALITA }) : Promise.resolve(file)
+
 // Carica la foto di un drink su Firebase Storage e restituisce l'URL pubblico.
 // Le immagini sono salvate sotto `drinks/` (lette pubblicamente, scritte solo
 // da utenti autenticati — vedi storage.rules).

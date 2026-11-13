@@ -5,6 +5,7 @@ import {
   addComanda,
   chiudiCreazione,
   bartenderUpdateComanda,
+  rispondiAllaModifica,
   updateOrderInfo,
   setOrderGroup,
   cancelOrder,
@@ -110,6 +111,8 @@ import Icona, { ConIcona } from './Icona.jsx'
 import OrderBy from './OrderBy.jsx'
 import { emojiDi } from '../lib/icone.js'
 import MetodoPagamento from './MetodoPagamento.jsx'
+import AttesaCliente from './AttesaCliente.jsx'
+import { inAttesa, fermoPerIlCliente } from '../lib/attesaCliente.js'
 
 // ── Schermata UNICA POS creazione/modifica ordine (stile SumUp) ───────────
 // UN SOLO componente: con `order` è la MODIFICA di un ordine esistente,
@@ -845,6 +848,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
   const comandeLocali = useComandeLocali([contoPerLocali])
 
   const advance = (comandaId, ns) => {
+    // Il cliente non ha ancora accettato le modifiche (REQ-CLI-009): il
+    // drink si prepara dopo.
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     comandeLocali.applica(contoPerLocali, (arr) =>
       arr.map((c) =>
@@ -884,6 +890,9 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const divisa = dividiComanda(c, scelte)
     if (!divisa) return
     setParziale(null)
+    // Dividere fa avanzare la parte scelta: col cliente che deve ancora
+    // accettare le modifiche (REQ-CLI-009), no.
+    if (fermoPerIlCliente(order, toastError)) return
     const adesso = new Date().toISOString()
     // In che passo nascono le due parti lo dice quella di partenza
     // (statiDopoLaDivisione): da «da fare» la parte scelta è quella che si
@@ -2333,6 +2342,25 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
           </div>
         )
       })()}
+
+      {/* L'ORDINE ASPETTA IL CLIENTE (REQ-CLI-009): il banco ha cambiato
+          prezzo o ingredienti, e il cliente lo vede sul telefono. Se il sì
+          arriva a voce, lo si segna da qui. */}
+      {!isNew && inAttesa(order) && (
+        <div className="riaperto-nota" role="status" style={{ margin: '8px 8px 0', flexShrink: 0 }}>
+          <AttesaCliente order={order} /> Il cliente deve accettare le modifiche: finché non risponde, l’ordine resta
+          fermo.{' '}
+          <button
+            type="button"
+            className="btn small"
+            onClick={() =>
+              rispondiAllaModifica(order.id, 'accettato', { alBanco: true }).catch((e) => setError(e.message))
+            }
+          >
+            Confermato dal cliente
+          </button>
+        </div>
+      )}
 
       {error && <div className="banner" style={{ margin: '8px 8px 0', flexShrink: 0 }}>{error}</div>}
 

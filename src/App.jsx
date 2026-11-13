@@ -11,7 +11,7 @@ import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { isPersonale, isSala } from './lib/ruoli.js'
+import { isPersonale, isSala, isGestore } from './lib/ruoli.js'
 import { colorePersona } from './lib/colorePersona.js'
 import { ricordaRuolo } from './lib/ruoloLocale.js'
 import { onAuthStateChanged, signInWithCustomToken } from 'firebase/auth'
@@ -35,6 +35,10 @@ import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
+import PannelloChat from './components/PannelloChat.jsx'
+import TastoAssistente from './components/TastoAssistente.jsx'
+import { aiRaggiungibile } from './lib/aiApi.js'
+import { useTastoAI } from './lib/statoAI.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
@@ -238,6 +242,9 @@ export default function App() {
     }
   }, [])
   const [menuTopbar, setMenuTopbar] = useState(false)
+  // L'ASSISTENTE AI (REQ-AI-006): un pannello sopra la pagina, per lo staff
+  // di gestione, solo dove l'AI arriva (non nel Free, non nella demo).
+  const [chatAperta, setChatAperta] = useState(false)
   // "Schermo intero" ha senso solo da browser: con l'app installata le
   // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
   // voce del menu sa anche USCIRE e non solo entrare.
@@ -272,6 +279,9 @@ export default function App() {
   // Staff loggato (bartender o collaboratore): nel topbar lato cliente
   // mostra il ruolo ed «Esci» al posto di «Accedi».
   const [staffRole, setStaffRole] = useState(null)
+  // Assente, senza credito o attiva (REQ-AI-007): decide il tasto e la voce
+  // del ⋮. Il credito si chiede solo per lo staff di gestione.
+  const assistente = useTastoAI(isGestore(staffRole))
   // IL CATALOGO SI PRECARICA ALL'INGRESSO DEL PERSONALE (BUG-137): il conto
   // deve trovarlo in memoria anche se la rete cade prima di aprirlo, da
   // qualunque sezione ci si arrivi. Un effetto a parte e non dentro
@@ -648,6 +658,12 @@ export default function App() {
               terminale» è una domanda del gestionale — a un cliente non
               vuol dire niente e non deve nemmeno comparire. Chi ordina o
               scansiona il QR li riavrà, e saranno i suoi. */}
+          {/* L'ASSISTENTE AI sta con le azioni («cosa posso fare adesso?»),
+              prima della campanella. Sul telefono è una voce del ⋮: lì la
+              zona destra tiene solo campanella e ⋮ (docs/navigazione.md). */}
+          {isGestore(staffRole) && !telefono && aiRaggiungibile() && (
+            <TastoAssistente aperto={chatAperta} onAlterna={() => setChatAperta((v) => !v)} />
+          )}
           {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
@@ -740,6 +756,14 @@ export default function App() {
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
+          isGestore(staffRole) && aiRaggiungibile() && !assistente.assente && {
+            id: 'assistente',
+            icon: 'fumetto',
+            label: 'Assistente AI',
+            ...(assistente.senzaCredito
+              ? { hint: assistente.avviso, onClick: assistente.avvisa }
+              : { hint: 'Giacenze, vendite, descrizioni del menù', onClick: () => setChatAperta(true) }),
+          },
           !isSala(staffRole) && {
             id: 'pos',
             icon: 'nuovo-ordine',
@@ -774,6 +798,8 @@ export default function App() {
         ]}
       />
 
+      {chatAperta && isGestore(staffRole) && !assistente.assente && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
+
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 
       {!isFirebaseConfigured && (
@@ -799,7 +825,7 @@ export default function App() {
       {/* LA CANCELLAZIONE DEI DATI (REQ-LIC-009): sopra a tutto, anche
           sul locale fermo. */}
       <AvvisoCancellazione settings={settings} ruolo={staffRole} />
-      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} />}
+      {bloccata && <InstallazioneSospesa licenza={licenzaDi(settings)} venue={venue} ruolo={staffRole} />}
       <main hidden={bloccata}>
         <StileCliente.Provider value={stilePagine}>
         <ConDemo>

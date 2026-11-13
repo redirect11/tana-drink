@@ -345,6 +345,21 @@ describe('la scheda prodotto: l’unità è sempre il pezzo', () => {
     })
   })
 
+  // REQ-MAG-055: il gin che il cliente si sceglie dal menù. Spento di
+  // partenza; acceso, si salva sul prodotto.
+  it('«Il cliente può sceglierlo dal menù» parte spento e si salva acceso', async () => {
+    const user = userEvent.setup()
+    createInventoryItem.mockClear()
+    await apriForm(user)
+    await user.type(screen.getByLabelText('Nome *'), 'Gin Mare')
+    const scelta = screen.getByRole('checkbox', { name: 'Il cliente può sceglierlo dal menù' })
+    expect(scelta).not.toBeChecked()
+    await user.click(scelta)
+    await user.click(screen.getByRole('button', { name: 'Salva' }))
+    await waitFor(() => expect(createInventoryItem).toHaveBeenCalled())
+    expect(createInventoryItem.mock.calls[0][0]).toMatchObject({ name: 'Gin Mare', scelta_cliente: true })
+  })
+
   it('il contenuto è facoltativo: senza, in ricetta si dosa solo a pezzi', async () => {
     const user = userEvent.setup()
     createInventoryItem.mockClear()

@@ -160,6 +160,8 @@ service cloud.firestore {
           // Un conto nasce aperto, con una comanda sola e un totale che è
           // un numero non negativo.
           && d.get('status', '') == 'aperto'
+          // Non nasce in attesa del cliente: l'attesa la mette il banco.
+          && d.get('attesa_cliente', null) == null
           && d.get('comande', []).size() == 1
           && d.get('total', 0) is number
           && d.get('total', 0) >= 0;
@@ -240,6 +242,23 @@ service cloud.firestore {
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
       // conto ha la sola prima comanda ancora "ricevuta", senza toccare i
       // campi di pagamento, e può al più annullare.
+      // ...O FINCHÉ IL CONTO ASPETTA LA SUA RISPOSTA (REQ-CLI-009): il banco
+      // ha cambiato l'ordine, magari con la comanda già in preparazione o
+      // con una comanda in più, e il cliente deve poter accettare o
+      // rifiutare (lib/attesaCliente.js). E SOLO QUELLO: chiudere l'attesa
+      // con la sua risposta, o annullare. Righe e totale li ha cambiati il
+      // banco, e non tornano in mano al cliente.
+      // L'ATTESA LA METTE SOLO IL BANCO. Se il cliente potesse scriverla da
+      // sé, un campo che l'app nemmeno mostra gli terrebbe aperto il conto
+      // per tutta la serata: drink fatti e serviti, e poi righe e totale
+      // riscritti prima di pagare. Per questo né la creazione
+      // (conteNuovoDaCliente) né le sue modifiche possono metterla.
+      function rispostaDelCliente() {
+        return request.resource.data.get('attesa_cliente', null) == null
+          && (request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['attesa_cliente', 'risposta_cliente'])
+              || request.resource.data.status == 'annullato');
+      }
       // LA SALA SERVE, NON PREPARA (REQ-STAFF-014). Lavora sugli ORDINI —
       // aggiunge righe a un conto, incassa al tavolo, segna «servito» —
       // ma non butta il lavoro del banco. Due cose il server le sa vedere
@@ -263,9 +282,12 @@ service cloud.firestore {
             && request.resource.data.get('comande', []).size()
                >= resource.data.get('comande', []).size())
         || (resource.data.status in ['aperto', 'ricevuto']
-            && (!('comande' in resource.data)
-                || (resource.data.comande.size() == 1
-                    && resource.data.comande[0].status == 'ricevuto'))
+            && (resource.data.get('attesa_cliente', null) != null
+                ? rispostaDelCliente()
+                : (request.resource.data.get('attesa_cliente', null) == null
+                   && (!('comande' in resource.data)
+                       || (resource.data.comande.size() == 1
+                           && resource.data.comande[0].status == 'ricevuto'))))
             && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
                  .affectedKeys().hasAny(paymentKeys().toSet()))));
@@ -339,6 +361,14 @@ service cloud.firestore {
     match /carta_voci/{voceId} {
       allow read: if true;
       allow write: if licenzaValida() && isBartender();
+    }
+
+    // LE ALTERNATIVE CHE IL CLIENTE PUÒ SCEGLIERE (REQ-MENU-042): solo un sì o
+    // un no per prodotto, scritto dalle Functions (lib/disponibilita.js).
+    // Il magazzino resta chiuso: al telefono non arriva altro.
+    match /alternative_cliente/{itemId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // SETTINGS — lettura pubblica (i clienti vedono la modalità menù, coperto…), scrittura bartender.

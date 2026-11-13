@@ -1,6 +1,86 @@
 # Cosa è cambiato
 
-## 1.10.40-beta — in lavorazione
+## 1.10.41-beta — in lavorazione
+
+### Gestionale
+
+- Menù dei clienti: un prodotto con «Il menù dei clienti segue le giacenze»
+  non è disponibile per il cliente quando un ingrediente della ricetta è
+  esaurito (o in esaurimento, a scelta). Al cliente non si dice cosa manca:
+  la voce resta con «Non disponibile» o sparisce, secondo Impostazioni →
+  Menù clienti → Voci non disponibili. Al banco resta sempre.
+- Menù dei clienti: ogni voce ha una categoria, scelta fra quelle della
+  cassa e del magazzino o scritta a mano (senza, vale quella del prodotto).
+  «Raggruppa per categoria» crea le sezioni che mancano e ci sposta le
+  voci, dopo aver detto cosa cambia. Un prodotto rimasto fuori dal menù si
+  mette nella sezione della sua categoria con un tocco.
+- Menù dei clienti: gli ingredienti di una voce sono etichette. Mentre si
+  scrive compaiono i suggerimenti (prima i prodotti della ricetta del
+  prodotto collegato e le loro categorie, poi il resto del magazzino e le
+  categorie della cassa); quello che non c’è si scrive libero. Le etichette
+  della ricetta che mancano si aggiungono con un tocco, e «come la ricetta»
+  le mette tutte. Gli ingredienti si possono nascondere al cliente.
+- Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
+  menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
+  lo permettono (per esempio il gin del gin tonic). Spenta di partenza.
+- Magazzino: nella scheda di un prodotto, «Crea il prodotto della cassa»
+  apre nel Menù la scheda di un prodotto nuovo già collegato a quella
+  bottiglia (nome, categoria, ricetta); si scrivono la quantità della
+  ricetta e il prezzo. La descrizione la propone l’AI, dove c’è. Una riga
+  della ricetta senza quantità ora non si salva, e la scheda lo dice.
+- L’assistente AI: quando una conversazione non può continuare (chat
+  aggiornata, impostazioni cambiate, conversazione troppo lunga) si apre
+  una conversazione nuova e si legge il motivo.
+- L’assistente AI: dalla barra in alto (sul telefono dal ⋮) si apre un
+  pannello dove si chiede di giacenze, vendite e prodotti, si fanno
+  proporre le descrizioni del menù e (all’admin) leggere i documenti dei
+  fornitori. Le modifiche si confermano a schermo; la conversazione non si
+  conserva alla chiusura. Usa il credito AI del locale. Senza credito il
+  tasto resta, grigio con l’avviso, e ricorda di ricaricare; con l’AI
+  disattivata per il locale non compare. La stessa regola vale per
+  «Proponi una descrizione» e «Leggi con l’AI».
+- Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
+  fattura e propone fornitore, numero, data, importo e righe abbinate ai
+  prodotti del magazzino, da rivedere prima di registrare. Il documento
+  letto si allega da sé; il carico a magazzino si accende a mano. Usa il
+  credito AI del locale.
+- Impostazioni → Licenza: il riquadro «Credito AI» mostra il credito
+  disponibile, quanto si è speso nel mese e il tetto, e perché le funzioni AI
+  sono ferme quando lo sono.
+- Menù dei clienti: su un ingrediente di una voce (un prodotto o una
+  categoria di magazzino) il tasto ⇄ «Il cliente sceglie» offre al cliente
+  i prodotti di quella categoria con «Il cliente può sceglierlo dal menù»;
+  per ciascuno si decide se offrirlo e il supplemento. Il supplemento di
+  partenza si imposta in Impostazioni → Menù clienti → Scelta degli
+  ingredienti.
+
+### Menù dei clienti
+
+- Sulle voci che lo prevedono, «Aggiungi» chiede la scelta dell'ingrediente:
+  la ricetta, oppure una delle alternative disponibili col suo supplemento.
+  Quelle esaurite non compaiono. Ogni scelta diversa è una riga a sé nel
+  carrello.
+- Al banco la scelta si legge nella nota della riga, sul conto e sulla
+  comanda, e il magazzino scala il prodotto scelto con la dose della ricetta.
+- Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal
+  telefono, il cliente lo vede modificato, col totale di prima e quello
+  nuovo, e lo accetta o lo rifiuta; il rifiuto annulla l'ordine. Nel
+  frattempo in coda il conto è «In attesa del cliente», non avanza e la
+  comanda non si stampa. Allo scadere del tempo (Impostazioni → Menù
+  clienti → Modifiche da confermare, 10 minuti di partenza) l'ordine si
+  annulla. Se il cliente conferma a voce, nel conto c'è «Confermato dal
+  cliente».
+
+### Licenza
+
+- Piano Free: le funzioni AI non sono comprese. I tasti AI e il credito non
+  compaiono.
+- Locale sospeso, scaduto o chiuso: chi apre il menù legge solo che il menù
+  non è disponibile, e il personale che il locale è fermo. Il titolare
+  legge il motivo, trova «Riattiva il locale» (non sul locale chiuso) e
+  scarica i dati del locale con «Esporta tutto».
+
+## 1.10.40-beta — 12/11/2026 (test)
 
 ### Licenza
 

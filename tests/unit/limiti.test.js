@@ -20,6 +20,7 @@ import {
   stampaConsentita,
   comandeConsentite,
   servizioAttivo,
+  aiConsentita,
   limitiInChiaro,
   inizioStorico,
   dentroStorico,
@@ -99,8 +100,9 @@ describe('senza limiti nella licenza non cambia niente', () => {
   // un Free di prima, senza le due voci, per dimostrare che senza voce non
   // cambia niente. Che il Free di oggi non stampi lo si dice qui.
   it('la copia dei limiti del Free nell’app è quella della regia', () => {
-    expect({ ...LIMITI_FREE_APP, comande: undefined, stampa: undefined }).toEqual({ ...LIMITI_FREE, comande: undefined })
+    expect({ ...LIMITI_FREE_APP, comande: undefined, stampa: undefined, ai: undefined }).toEqual({ ...LIMITI_FREE, comande: undefined })
     expect(LIMITI_FREE_APP.stampa).toBe(false)
+    expect(LIMITI_FREE_APP.ai).toBe(false)
   })
 })
 
@@ -326,5 +328,18 @@ describe('le comande e il servizio nel piano', () => {
     expect(limitiInChiaro(senzaComande)).toContain('Comande e stati del servizio non compresi: cassa semplice')
     expect(limitiInChiaro(FREE)).not.toContain('Comande e stati del servizio non compresi: cassa semplice')
     expect(MESSAGGI_PIANO.comande).toMatch(/^Nel piano Free la cassa è semplice/)
+  })
+})
+
+// REQ-LIC-017 (Daniele, 13/11/2026): il Free non ha l'AI. Solo un `false`
+// scritto la toglie.
+describe('l’AI nel piano', () => {
+  it('solo `ai: false` la toglie, e si legge nel riepilogo', () => {
+    const senzaAI = { licenza: { ...FREE.licenza, limiti: { ...LIMITI_FREE, ai: false } } }
+    expect(aiConsentita(senzaAI)).toBe(false)
+    expect(aiConsentita(FREE)).toBe(true)
+    expect(aiConsentita({ licenza: LICENZA_TANA })).toBe(true)
+    expect(limitiInChiaro(senzaAI)).toContain('Funzioni AI non comprese')
+    expect(MESSAGGI_PIANO.ai).toBe('Le funzioni AI sono dei piani a pagamento.')
   })
 })

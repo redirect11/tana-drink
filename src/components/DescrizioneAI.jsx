@@ -1,10 +1,10 @@
-import { useState } from 'react'
-import { chiediAI, messaggioAI, aiRaggiungibile } from '../lib/aiApi.js'
+import { useEffect, useRef, useState } from 'react'
+import { chiediAI, messaggioAI, aiRaggiungibile, costoAI as costoInEuro } from '../lib/aiApi.js'
+import TastoAI from './TastoAI.jsx'
+import { useStatoAI, STATI_AI } from '../lib/statoAI.js'
 
 // Il costo di una descrizione è di qualche millesimo: coi centesimi si
 // leggerebbe «0,00 €», che non è vero. Fino a quattro decimali.
-const costoInEuro = (v) =>
-  `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // LA DESCRIZIONE PROPOSTA DALL'AI, NELLA SCHEDA DEL PRODOTTO (REQ-AI-003, il
 // primo uso del cassetto AI della regia). Si chiede, si legge la proposta
@@ -12,8 +12,19 @@ const costoInEuro = (v) =>
 // solo. Quello che il modello non ha potuto sapere (un ingrediente, un'
 // annata) torna in `da_verificare`, e si mostra: in carta un dato sbagliato
 // è un allergene sbagliato.
-export default function DescrizioneAI({ nome, categoria, attuale, onUsa }) {
+export default function DescrizioneAI({ nome, categoria, attuale, onUsa, subito = false }) {
   const [stato, setStato] = useState({ fase: 'ferma' })
+  const statoAI = useStatoAI(true)
+  // SUBITO: la scheda nata da una bottiglia del magazzino (REQ-AI-002) la
+  // vuole pronta (Daniele, 13/11/2026: «parte da sola»), una volta, e solo
+  // con l'AI attiva: senza credito il tasto è grigio, e non parte niente.
+  const partita = useRef(false)
+  useEffect(() => {
+    if (!subito || partita.current || statoAI.stato !== STATI_AI.ATTIVA || !nome || nome.trim().length < 2) return
+    partita.current = true
+    chiedi()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subito, statoAI.stato])
   if (!aiRaggiungibile()) return null
 
   async function chiedi() {
@@ -37,9 +48,9 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa }) {
   return (
     <div className="descrizione-ai">
       {stato.fase !== 'proposta' && (
-        <button type="button" className="btn ghost small" onClick={chiedi} disabled={senzaNome || stato.fase === 'attesa'}>
+        <TastoAI onClick={chiedi} disabled={senzaNome || stato.fase === 'attesa'}>
           {stato.fase === 'attesa' ? 'Scrivo la proposta…' : 'Proponi una descrizione con l’AI'}
-        </button>
+        </TastoAI>
       )}
       {stato.fase === 'errore' && (
         <p className="muted small" role="status" style={{ margin: '6px 0 0' }}>

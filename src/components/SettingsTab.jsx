@@ -51,6 +51,9 @@ import { drinkCostDi, ricaricoDaDrinkCost } from '../lib/pricing.js'
 import Icona, { ConIcona } from './Icona.jsx'
 import { conEmoji } from '../lib/icone.js'
 import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
+import CreditoAI from './CreditoAI.jsx'
+import { aiRaggiungibile } from '../lib/aiApi.js'
+import { minutiAttesa } from '../lib/attesaCliente.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -879,6 +882,91 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
+      id: 'scelta-ingredienti',
+      icona: 'ordina-dal-menu',
+      label: 'Scelta degli ingredienti',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Scelta degli ingredienti</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Sulle voci del menù dei clienti dove il cliente sceglie un ingrediente (per esempio il gin), il supplemento
+            con cui parte ogni alternativa offerta. Sulla voce si cambia alternativa per alternativa.
+          </p>
+          <label htmlFor="supplemento-scelta">Supplemento predefinito (€)</label>
+          <input
+            id="supplemento-scelta"
+            type="number"
+            step="0.5"
+            min="0"
+            defaultValue={settings.supplemento_scelta_predefinito || ''}
+            placeholder="0"
+            onBlur={(e) => {
+              const v = Number(String(e.target.value).replace(',', '.'))
+              save({ supplemento_scelta_predefinito: Number.isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0 })
+            }}
+          />
+        </div>
+      ),
+    },
+    {
+      // REQ-CLI-009: lib/attesaCliente.js.
+      id: 'conferma-cliente',
+      icona: 'ordina-dal-menu',
+      label: 'Modifiche da confermare',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Modifiche da confermare</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal telefono, il cliente riceve le
+            modifiche e le accetta o le rifiuta. Il rifiuto annulla l’ordine; allo scadere del tempo l’ordine si
+            annulla. Finché il cliente non risponde, l’ordine non avanza e la comanda non si stampa.
+          </p>
+          <label htmlFor="attesa-cliente-minuti">Tempo per rispondere (minuti)</label>
+          <input
+            id="attesa-cliente-minuti"
+            type="number"
+            step="1"
+            min="1"
+            max="120"
+            defaultValue={minutiAttesa(settings)}
+            onBlur={(e) => save({ attesa_cliente_minuti: minutiAttesa({ attesa_cliente_minuti: e.target.value }) })}
+          />
+        </div>
+      ),
+    },
+    {
+      id: 'non-disponibili',
+      icona: 'ordina-dal-menu',
+      label: 'Voci non disponibili',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Voci non disponibili</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Per i prodotti che seguono le giacenze (opzione nella scheda del prodotto). Al cliente non si dice quale
+            ingrediente manca; al banco la voce resta sempre.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>Nel menù dei clienti</h4>
+          <SceltaModo
+            valore={settings.menu_non_disponibili === 'nascondi' ? 'nascondi' : 'mostra'}
+            opzioni={[
+              ['mostra', 'Con la scritta «Non disponibile»', 'La voce resta al suo posto e non si può ordinare.'],
+              ['nascondi', 'Nascoste', 'La voce sparisce finché non torna disponibile.'],
+            ]}
+            onScegli={(v) => save({ menu_non_disponibili: v })}
+          />
+          <h4 style={{ margin: '12px 0 4px' }}>Quando</h4>
+          <SceltaModo
+            valore={settings.menu_soglia_disponibilita === 'esaurimento' ? 'esaurimento' : 'esaurito'}
+            opzioni={[
+              ['esaurito', 'Ingrediente esaurito', 'Giacenza a zero.'],
+              ['esaurimento', 'Ingrediente in esaurimento', 'Sotto la soglia di avviso del prodotto di magazzino.'],
+            ]}
+            onScegli={(v) => save({ menu_soglia_disponibilita: v })}
+          />
+        </div>
+      ),
+    },
+    {
       // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
       // impostazioni non c'entrano niente con quello che vede il cliente.
       id: 'gestione-menu',
@@ -1191,6 +1279,9 @@ export default function SettingsTab({ role = null }) {
       label: 'Funzioni premium',
       nodo: <FunzioniPremium settings={settings} onSave={save} />,
     },
+    // IL CREDITO AI (REQ-AI-003) sta con la licenza: è quello che il locale
+    // ha comprato. Solo dove l'AI arriva (non nel Free, REQ-LIC-017).
+    ...(aiRaggiungibile() ? [{ id: 'credito-ai', icona: 'licenza', label: 'Credito AI', nodo: <CreditoAI /> }] : []),
     {
       id: 'annullamenti',
       icona: 'chiudi',
@@ -1260,6 +1351,9 @@ export default function SettingsTab({ role = null }) {
     // catalogo. Messe insieme, davanti a un interruttore non si capiva a
     // quale delle tre appartenesse.
     'menu-clienti': 'menu-clienti',
+    'non-disponibili': 'menu-clienti',
+    'scelta-ingredienti': 'menu-clienti',
+    'conferma-cliente': 'menu-clienti',
     'gestione-menu': 'gestione-menu',
     catalogo: 'catalogo',
     coda: 'banco',
@@ -1290,6 +1384,7 @@ export default function SettingsTab({ role = null }) {
     informazioni: 'sistema',
     licenza: 'premium',
     'funzioni-premium': 'premium',
+    'credito-ai': 'premium',
   }
   const GRUPPI = [
     { id: 'aspetto', icona: 'temi', label: 'Aspetto' },

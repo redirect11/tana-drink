@@ -11,11 +11,11 @@
 // spenta, si ferma solo l'AI: il resto della scheda lavora come sempre.
 // Serve la rete: è un attrezzo del gestionale, non del banco.
 import { chiamaFunzione } from '../porte/funzioni.js'
-import { senzaFunctions } from './limiti.js'
+import { senzaFunctions, aiNelPiano, MESSAGGI_PIANO } from './limiti.js'
 
 // C'è una strada per l'AI? Sul profilo leggero le Functions non ci sono, e
 // nella demo non si parla con nessun server.
-export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions()
+export const aiRaggiungibile = () => !__DEMO__ && !senzaFunctions() && aiNelPiano()
 
 // Cosa dire per ogni `codice` della Function. Registro del gestionale:
 // piano, senza dare la colpa a chi legge.
@@ -30,9 +30,18 @@ export const MESSAGGI_AI = {
   'non-usabile': "L'AI non ha dato una risposta utilizzabile. Si può riprovare.",
   richiesta: "La richiesta all'AI non è andata a buon fine.",
   riprova: "L'AI non risponde in questo momento. Si può riprovare.",
+  // Il Free, se mai ci si arriva: i tasti lì non ci sono (REQ-LIC-017).
+  piano: MESSAGGI_PIANO.ai,
+  // La chat (REQ-AI-006).
+  versione: 'Questa conversazione non si può continuare: apri una conversazione nuova.',
+  'troppo-lunga': 'La conversazione è troppo lunga: apri una conversazione nuova.',
+  occupato: 'Il servizio AI è occupato in questo momento. Si può riprovare fra poco.',
 }
 
 export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprova
+
+// I costi dell'AI sono di frazioni di centesimo: fino a quattro decimali.
+export const costoAI = (v) => `${Number(v).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} €`
 
 // La richiesta alla Function. Torna sempre un oggetto: { ok: true, … } con la
 // proposta, o { ok: false, codice }. Un errore della chiamata (rete assente,
@@ -43,12 +52,31 @@ export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprov
 // sprecato.
 const ATTESA_MS = 320 * 1000
 
+// CHI ASCOLTA LE RISPOSTE: lo stato dell'AI (statoAI.js, REQ-AI-007) si
+// aggiorna da ogni risposta, così un credito finito con l'ultima richiesta
+// spegne subito il tasto dell'assistente.
+const _ascoltatori = new Set()
+export function ascoltaRisposteAI(f) {
+  _ascoltatori.add(f)
+  return () => _ascoltatori.delete(f)
+}
+const annuncia = (r) => {
+  for (const f of _ascoltatori) {
+    try {
+      f(r)
+    } catch {
+      /* un ascoltatore rotto non ferma la risposta */
+    }
+  }
+  return r
+}
+
 export async function chiediAI(richiesta, chiama = (dati) => chiamaFunzione('richiestaAI', dati, { attesaMs: ATTESA_MS })) {
   if (!aiRaggiungibile()) return { ok: false, codice: 'spento' }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, codice: 'senza-rete' }
   try {
     const data = await chiama(richiesta)
-    return data && typeof data === 'object' ? data : { ok: false, codice: 'riprova' }
+    return annuncia(data && typeof data === 'object' ? data : { ok: false, codice: 'riprova' })
   } catch (e) {
     const codice = String(e?.code || '')
     if (codice.endsWith('permission-denied')) return { ok: false, codice: 'permesso' }
@@ -56,3 +84,38 @@ export async function chiediAI(richiesta, chiama = (dati) => chiamaFunzione('ric
     return { ok: false, codice: 'riprova' }
   }
 }
+
+// ── IL FILE DI UNA FATTURA (REQ-AI-001) ───────────────────────────────
+// I formati e i pesi che il cassetto accetta, in MB del file vero: gli
+// stessi della Function (functions/lib/ai-service.js) e della regia. Si
+// controllano qui, prima di spedire: un file rifiutato dopo il viaggio è
+// un'attesa per niente.
+export const FORMATI_FATTURA = { 'application/pdf': 20, 'image/jpeg': 5, 'image/png': 5, 'image/webp': 5, 'image/gif': 5 }
+
+export function problemaFileFattura(file) {
+  const mb = FORMATI_FATTURA[file?.type]
+  if (!mb) return 'Il documento deve essere una foto (JPEG, PNG, WEBP o GIF) o un PDF.'
+  if (file.size > mb * 1024 * 1024) return `Il documento supera i ${mb} MB accettati per la lettura.`
+  return null
+}
+
+// Il contenuto in base64, senza il prefisso «data:…;base64,» che la
+// Function rifiuta.
+export function fileInBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const lettore = new FileReader()
+    lettore.onload = () => resolve(String(lettore.result).replace(/^data:[^,]*,/, ''))
+    lettore.onerror = () => reject(lettore.error || new Error('Il documento non si legge.'))
+    lettore.readAsDataURL(blob)
+  })
+}
+
+// Il credito del locale, senza chiamare il modello (REQ-AI-003): gratis.
+// Torna { ok: true, credito_eur, tetto_mensile_eur, speso_mese_eur,
+// attivo, motivo } o { ok: false, codice } come ogni altra richiesta.
+export const leggiCreditoAI = () => chiediAI({ tipo: 'credito' })
+
+// Un turno della chat (REQ-AI-006): la conversazione intera, gli strumenti
+// del ruolo di chi scrive, e la versione con cui la conversazione è nata.
+export const chiediChat = ({ messaggi, strumenti, versione = null }) =>
+  chiediAI({ tipo: 'chat', messaggi, strumenti, ...(versione ? { versione } : {}) })

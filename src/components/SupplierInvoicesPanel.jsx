@@ -46,6 +46,9 @@ import {
   pesoLeggibile,
 } from '../lib/allegati.js'
 import AiutoCampo from './AiutoCampo.jsx'
+import FatturaDaAI from './FatturaDaAI.jsx'
+import TastoAI from './TastoAI.jsx'
+import { aiRaggiungibile } from '../lib/aiApi.js'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
 // Poche righe per volta e non sessanta come nella schermata degli ordini,
@@ -69,6 +72,9 @@ export default function SupplierInvoicesPanel() {
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [adding, setAdding] = useState(false)
+  // LA LETTURA CON L'AI (REQ-AI-001): un'alternativa a «Nuovo documento»,
+  // una per volta, che finisce nello stesso elenco.
+  const [leggendo, setLeggendo] = useState(false)
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [onlyUnpaid, setOnlyUnpaid] = useState(false)
   // Il secondo dei due buchi (REQ-MAG-031): i documenti che non stanno su
@@ -334,12 +340,33 @@ export default function SupplierInvoicesPanel() {
         </div>
       )}
 
-      {!adding ? (
-        <button className="btn block" onClick={() => setAdding(true)}>
-          + Nuovo documento
-        </button>
-      ) : (
+      {adding ? (
         <InvoiceForm suppliers={suppliers} busy={busy} onCancel={() => setAdding(false)} onSave={handleCreate} />
+      ) : leggendo ? (
+        <FatturaDaAI
+          suppliers={suppliers}
+          items={items}
+          listini={listini}
+          onAnnulla={() => setLeggendo(false)}
+          onRegistrata={({ avviso }) => {
+            setLeggendo(false)
+            if (avviso) setError(avviso)
+            load()
+          }}
+        />
+      ) : (
+        <div className="grid-2">
+          <button className="btn block" onClick={() => setAdding(true)}>
+            + Nuovo documento
+          </button>
+          {/* Dove l'AI non arriva (piano Free, demo) il tasto non c'è, e
+              «Nuovo documento» prende tutta la riga. */}
+          {aiRaggiungibile() && (
+            <TastoAI className="btn ghost block" onClick={() => setLeggendo(true)}>
+              Leggi con l’AI
+            </TastoAI>
+          )}
+        </div>
       )}
 
       <div className="inv-list" style={{ marginTop: 8 }}>

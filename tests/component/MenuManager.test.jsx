@@ -69,6 +69,7 @@ vi.mock('../../src/lib/api.js', () => ({
   updateCategory: vi.fn(() => Promise.resolve()),
   deleteCategory: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve(MAGAZZINO)),
+  fetchInventoryCategories: vi.fn(() => Promise.resolve([])),
   subscribePosPrefs: vi.fn(() => () => {}),
   savePosColors: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn(() => () => {}),
@@ -533,6 +534,22 @@ describe('la struttura del menù dei clienti nel gestionale (REQ-MENU-025)', () 
     // Una voce sola aperta alla volta: richiusa, i testi se ne vanno.
     await user.click(within(cocktail).getByRole('button', { name: 'Chiudi Mojito cubano' }))
     expect(within(cocktail).getAllByRole('textbox', { name: 'Nome nella sezione' })).toHaveLength(1)
+  })
+
+  // REQ-MENU-041 (Daniele, 13/11/2026): le sezioni nascono dalla categoria
+  // delle voci. Prima si dice cosa cambia, poi si fa; la voce senza
+  // categoria resta dov'è.
+  it('«Raggruppa per categoria» crea la sezione che manca e ci sposta la voce', async () => {
+    const user = userEvent.setup()
+    filo.carta = STRUTTURA
+    creaSezioneCarta.mockClear()
+    spostaVociCarta.mockClear()
+    await apriStruttura()
+    await user.click(screen.getByRole('button', { name: 'Raggruppa per categoria' }))
+    expect(screen.getByText(/Nuove sezioni: Cocktail\. Voci spostate nella sezione della loro categoria: 1\./)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Raggruppa' }))
+    expect(creaSezioneCarta).toHaveBeenCalledWith({ nome: 'Cocktail', ordine: 2 })
+    expect(spostaVociCarta).toHaveBeenCalledWith([{ id: 'v-mojito', sezione_id: 'nuova', ordine: 0 }])
   })
 
   it('una sezione nuova va in cima; una voce nasce col suo prodotto, cambia prodotto e cambia sezione', async () => {

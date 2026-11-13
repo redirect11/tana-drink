@@ -27,6 +27,10 @@ import {
   vociPerSezione,
   inFondo,
   spostamentoInBlocco,
+  categoriaScritta,
+  categoriaDellaVoce,
+  sezioneDellaCategoria,
+  raggruppamentoPerCategoria,
   voceTrovata,
   NON_CATEGORIZZATI,
   fuoriDalMenu,
@@ -38,6 +42,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
 import AiutoCampo from './AiutoCampo.jsx'
+import IngredientiVoce from './IngredientiVoce.jsx'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -211,6 +216,70 @@ export function InStruttura({ drink, carta }) {
   )
 }
 
+// LA CATEGORIA DI UNA VOCE (REQ-MENU-041): una della cassa, una di
+// magazzino, o scritta a mano; vuota, vale quella del prodotto collegato.
+// Serve a «Raggruppa per categoria».
+function CategoriaVoce({ voce, drink, categorieCassa = [], categorieMagazzino = [] }) {
+  const id = useId()
+  const scritta = categoriaScritta(voce.categoria)
+  const [libera, setLibera] = useState(scritta?.tipo === 'testo')
+  const dalProdotto = categoriaDellaVoce(null, drink, categorieCassa)
+  const valore = libera ? 'testo' : scritta ? `${scritta.tipo}:${scritta.id}` : ''
+  const salva = (categoria) => aggiornaVoceCarta(voce.id, { categoria })
+  return (
+    <div className="wys-campo">
+      <div className="wys-etichetta">
+        <label htmlFor={id}>Categoria</label>
+        <span className={`wys-origine${scritta ? ' proprio' : ''}`}>{scritta ? 'solo in questa voce' : 'dal prodotto della cassa'}</span>
+      </div>
+      <select
+        id={id}
+        value={valore}
+        onChange={(e) => {
+          const v = e.target.value
+          if (v === 'testo') return setLibera(true)
+          setLibera(false)
+          if (!v) return salva(null)
+          const [tipo, cid] = v.split(':')
+          const lista = tipo === 'categoria_cassa' ? categorieCassa : categorieMagazzino
+          const c = lista.find((x) => x.id === cid)
+          if (c) salva({ tipo, id: c.id, nome: c.name })
+        }}
+      >
+        <option value="">{dalProdotto ? `Dal prodotto: ${dalProdotto}` : 'Nessuna'}</option>
+        <optgroup label="Categorie della cassa">
+          {categorieCassa.map((c) => (
+            <option key={c.id} value={`categoria_cassa:${c.id}`}>
+              {c.name}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Categorie di magazzino">
+          {categorieMagazzino.map((c) => (
+            <option key={c.id} value={`categoria:${c.id}`}>
+              {c.name}
+            </option>
+          ))}
+        </optgroup>
+        <option value="testo">Scritta a mano…</option>
+      </select>
+      {libera && (
+        <input
+          className="wys"
+          defaultValue={scritta?.tipo === 'testo' ? scritta.nome : ''}
+          placeholder="Nome della categoria"
+          aria-label="Categoria scritta a mano"
+          onBlur={(e) => {
+            const nome = e.target.value.trim()
+            salva(nome ? { tipo: 'testo', id: null, nome } : null)
+          }}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+      )}
+    </div>
+  )
+}
+
 // UNA VOCE, IN UNA RIGA (REQ-MENU-035). L'utente, 10/11/2026, davanti a
 // una copia del listino fatta di centinaia di card con immagine e tre
 // caselle ciascuna: «deve essere una vista più compatta e maneggevole, così
@@ -226,7 +295,7 @@ export function InStruttura({ drink, carta }) {
 // listino si apre solo su «Cambia». Una voce senza prodotto ha il
 // dettaglio sempre aperto, con la tendina: al tavolo non compare, ed è la
 // prima cosa da sistemare.
-function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta, onScegli, primo, ultimo, sposta, spostaIn, onApriScheda }) {
+function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta, onScegli, primo, ultimo, sposta, spostaIn, onApriScheda, magazzino = {} }) {
   const [cambia, setCambia] = useState(false)
   const cliente = drink ? perIlCliente(drink) : null
   const nome = nomeVoce(voce, cliente)
@@ -300,11 +369,11 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
                 area: true,
                 placeholder: 'Provenienza, carattere, servizio',
               })}
-              {/* Dalla ricetta mai (strutturaMenu.js, voceInSezione): solo il
-                  ritocco o quelli scritti sulla scheda. */}
-              {campo('ingredienti', 'Ingredienti', 'gli ingredienti', drink?.ingredienti, { placeholder: 'Separati da virgola' })}
+              {/* A etichette (REQ-MENU-040): la ricetta propone, non decide. */}
+              <IngredientiVoce voce={voce} drink={drink} {...magazzino} />
             </>
           )}
+          <CategoriaVoce voce={voce} drink={drink} categorieCassa={magazzino.categorieCassa} categorieMagazzino={magazzino.categorieMagazzino} />
           <div className="struttura-collegamento">
             <span className="wys-etichetta"><Icona nome="unisci" gruppo="tasti" /> Prodotto della cassa</span>
             {drink && !cambia ? (
@@ -342,7 +411,7 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
 // I PRODOTTI DELLA CASSA RIMASTI FUORI (fuoriDalMenu): quelli nuovi, o tolti
 // da ogni sezione. Il prezzo della libertà è che un prodotto nuovo non entra
 // da solo; qui si vede, e si aggiunge con un tocco.
-function FuoriDalMenu({ prodotti, carta, sezioni }) {
+function FuoriDalMenu({ prodotti, carta, sezioni, categorieCassa = [] }) {
   if (!prodotti.length) return null
   return (
     <details className="card struttura-fuori" open={prodotti.length <= 8}>
@@ -361,6 +430,19 @@ function FuoriDalMenu({ prodotti, carta, sezioni }) {
               {d.available ? '' : ' · fuori menù'}
             </span>
           </span>
+          {/* LA SEZIONE DELLA SUA CATEGORIA, se c'è (REQ-MENU-041): un tocco. */}
+          {(() => {
+            const sua = sezioneDellaCategoria(sezioni, categoriaDellaVoce(null, d, categorieCassa))
+            return sua ? (
+              <button
+                type="button"
+                className="btn ghost small"
+                onClick={() => creaVoceCarta({ sezione_id: sua.id, drink_id: d.id, ordine: inFondo(carta, sua.id) })}
+              >
+                In «{nomeSezione(sua)}»
+              </button>
+            ) : null
+          })()}
           <AggiungiA drink={d} carta={carta} sezioni={sezioni} />
         </div>
       ))}
@@ -445,7 +527,18 @@ function alterna(set, id) {
 // prodotti: una sottoscrizione sola. `onApriScheda` apre la scheda intera
 // di un prodotto e `onNuovoProdotto` quella di un prodotto nuovo per una
 // sezione; chiusa la scheda si torna qui, con `riapri` già aperta.
-export default function StrutturaMenu({ carta, drinks, categories, onApriScheda, onNuovoProdotto, riapri = null }) {
+export default function StrutturaMenu({ carta, drinks, categories, inventory = [], categorieMagazzino = [], supplementoPredefinito = 0, onApriScheda, onNuovoProdotto, riapri = null }) {
+  // «Raggruppa per categoria» (REQ-MENU-041): prima si dice cosa cambia,
+  // poi si fa, in un pacchetto solo.
+  const [raggruppa, setRaggruppa] = useState(null)
+  function eseguiRaggruppamento() {
+    const { nuove, spostamenti } = raggruppa
+    const idDi = new Map(nuove.map((n) => [n.chiave, creaSezioneCarta({ nome: n.nome, ordine: n.ordine }).id]))
+    if (spostamenti.length) {
+      spostaVociCarta(spostamenti.map((x) => ({ id: x.id, sezione_id: idDi.get(x.sezione) ?? x.sezione, ordine: x.ordine })))
+    }
+    setRaggruppa(null)
+  }
   // Le cancellazioni grosse si confermano col dialogo dell'app: il
   // `confirm` del browser, nella PWA installata, può essere bloccato senza
   // dire niente (ConfirmDialog.jsx).
@@ -580,15 +673,36 @@ export default function StrutturaMenu({ carta, drinks, categories, onApriScheda,
           <button className={`btn small${personalizzata ? ' secondary' : ''}`} onClick={prepopola}>
             {personalizzata ? 'Riparti dalle voci della cassa' : 'Prepopola con le voci della cassa'}
           </button>
+          {personalizzata && (
+            <button className="btn ghost small" onClick={() => setRaggruppa(raggruppamentoPerCategoria(carta, drinks, categories))}>
+              Raggruppa per categoria
+            </button>
+          )}
           <a className="btn ghost small" href={PERCORSO_ANTEPRIMA} target="_blank" rel="noreferrer">
             <Icona nome="mostra" gruppo="tasti" /> Anteprima del menù dei clienti
           </a>
         </div>
       </div>
 
+      {raggruppa && (
+        <ConfirmDialog
+          title="Raggruppare per categoria?"
+          message={
+            raggruppa.spostamenti.length === 0
+              ? 'Ogni voce è già nella sezione della sua categoria: non c’è niente da spostare.'
+              : `${raggruppa.nuove.length ? `Nuove sezioni: ${raggruppa.nuove.map((n) => n.nome).join(', ')}. ` : ''}` +
+                `Voci spostate nella sezione della loro categoria: ${raggruppa.spostamenti.length}. ` +
+                'Le voci senza categoria restano dove sono; testi e ritocchi non cambiano.'
+          }
+          confirmLabel="Raggruppa"
+          cancelLabel="Annulla"
+          onCancel={() => setRaggruppa(null)}
+          onConfirm={raggruppa.spostamenti.length ? eseguiRaggruppamento : () => setRaggruppa(null)}
+        />
+      )}
       {personalizzata && (
         <>
-          <FuoriDalMenu prodotti={fuori} carta={carta} sezioni={sezioni} />
+          <FuoriDalMenu prodotti={fuori} carta={carta} sezioni={sezioni} categorieCassa={categories} />
           <NuovaSezione carta={carta} />
           <datalist id={ELENCO_GRUPPI}>
             {gruppiProposti.map((g) => (
@@ -757,6 +871,7 @@ export default function StrutturaMenu({ carta, drinks, categories, onApriScheda,
                             sposta={(dir) => riordinaVociCarta(riordino(voci, j, dir))}
                             spostaIn={(sezione_id) => aggiornaVoceCarta(v.id, { sezione_id, ordine: inFondo(carta, sezione_id) })}
                             onApriScheda={onApriScheda}
+                            magazzino={{ items: inventory, categorieMagazzino, categorieCassa: categories, supplementoPredefinito }}
                           />
                         ))}
                       </div>

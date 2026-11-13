@@ -132,6 +132,12 @@ export const stampaComandeConsentita = (stato) => stampaConsentita(stato) && com
 export const comandeNelPiano = () => comandeConsentite(licenzaInMemoria())
 export const stampaComandeNelPiano = () => stampaComandeConsentita(licenzaInMemoria())
 
+// L'AI (REQ-LIC-017, Daniele 13/11/2026: il Free non ha l'AI). Solo un
+// `false` scritto la toglie. Il blocco vero sta nella regia, che a un
+// locale Free risponde «piano»: qui si nascondono tasti, chat e credito.
+export const aiConsentita = (stato) => limitiDi(stato)?.ai !== false
+export const aiNelPiano = () => aiConsentita(licenzaInMemoria())
+
 // Da quando si vede lo storico (vendite, conti chiusi), o null se si vede
 // tutto. Si parte dalla MEZZANOTTE di N giorni fa, non da adesso meno N×24
 // ore: un locale lavora oltre la mezzanotte, e tagliare una serata a metà
@@ -198,6 +204,7 @@ export function limitiInChiaro(stato) {
   if (!scontiConsentiti(stato)) righe.push('Sconti sul conto non consentiti')
   if (!stampaConsentita(stato)) righe.push('Stampa di comande e scontrini non compresa')
   if (!comandeConsentite(stato)) righe.push('Comande e stati del servizio non compresi: cassa semplice')
+  if (!aiConsentita(stato)) righe.push('Funzioni AI non comprese')
   if (rigaMarchio(stato)) righe.push('Firma del prodotto in calce allo scontrino')
   return righe
 }
@@ -215,6 +222,7 @@ export const MESSAGGI_PIANO = {
   staff: 'Nel piano Free l’app la usa solo il titolare. Per aggiungere lo staff passa a un piano a pagamento.',
   foto: 'Le foto dei prodotti sono dei piani a pagamento.',
   stampa: 'La stampa di comande e scontrini è dei piani a pagamento.',
+  ai: 'Le funzioni AI sono dei piani a pagamento.',
   comande: 'Nel piano Free la cassa è semplice: si battono le righe e si incassa. Comande, stati del servizio e preparazione sono dei piani a pagamento.',
   allegati: 'Gli allegati delle fatture sono dei piani a pagamento.',
   sumup: 'I pagamenti con SumUp sono dei piani a pagamento. Nel piano Free il conto si chiude in contanti o con la carta su un POS esterno.',

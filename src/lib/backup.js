@@ -90,6 +90,9 @@ export const FUORI_DAL_BACKUP = Object.freeze([
   // Il registro tecnico della stampante, per capire un guasto: non sono
   // dati del locale.
   'diagnostica_stampante',
+  // Le alternative che il cliente vede disponibili (REQ-MENU-042): le
+  // ricalcolano le Functions dal magazzino, e il client non le può scrivere.
+  'alternative_cliente',
 ])
 
 export const FORMATO = 1

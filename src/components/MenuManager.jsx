@@ -9,6 +9,7 @@ import {
   updateCategory,
   deleteCategory,
   fetchInventoryItems,
+  fetchInventoryCategories,
   subscribePosPrefs,
   savePosColors,
   subscribeSettings,
@@ -35,6 +36,7 @@ import { puoCreareProdotto, maxProdotti, MESSAGGI_PIANO, fotoConsentite } from '
 import { disegniDelLocale } from '../lib/stileMenu.js'
 import Icona from './Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
+import { prendiProdottoInArrivo, ascoltaProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import {
   CATEGORY_ICONS,
   catColor,
@@ -72,10 +74,24 @@ export default function MenuManager() {
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
+  const [categorieMagazzino, setCategorieMagazzino] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
   const [copiaDa, setCopiaDa] = useState(null) // il drink duplicato, prima di salvarlo
+  // LA SCHEDA NATA DA UNA BOTTIGLIA DEL MAGAZZINO (REQ-AI-002): si apre come
+  // il duplicato, una volta sola.
+  useEffect(() => {
+    const apri = () => {
+      const inArrivo = prendiProdottoInArrivo()
+      if (inArrivo) {
+        setCopiaDa(inArrivo)
+        setEditing('new')
+      }
+    }
+    apri()
+    return ascoltaProdottoInArrivo(apri)
+  }, [])
   // UN PRODOTTO NUOVO DAL MENÙ DEI CLIENTI (REQ-MENU-036): la sezione in cui
   // entrerà come voce appena salvato. E la sezione da riaprire tornando
   // all'editor, che chiudendosi per la scheda le dimenticava tutte.
@@ -115,12 +131,16 @@ export default function MenuManager() {
   async function load() {
     setLoading(true)
     try {
-      const [d, inv] = await Promise.all([
+      const [d, inv, catMag] = await Promise.all([
         fetchDrinks(),
         fetchInventoryItems().catch(() => []), // l'inventario richiede auth: in caso fallisca, lista vuota
+        // Le categorie di magazzino servono alle etichette degli ingredienti
+        // nel menù dei clienti (REQ-MENU-040).
+        fetchInventoryCategories().catch(() => []),
       ])
       setDrinks(d)
       setInventory(inv)
+      setCategorieMagazzino(catMag)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -381,6 +401,9 @@ export default function MenuManager() {
           carta={carta}
           drinks={drinks}
           categories={categories}
+          inventory={inventory}
+          categorieMagazzino={categorieMagazzino}
+          supplementoPredefinito={Number(settings?.supplemento_scelta_predefinito) || 0}
           riapri={riapri}
           onApriScheda={(drink, sezioneId) => {
             setRiapri(sezioneId)

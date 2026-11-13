@@ -96,6 +96,7 @@ import {
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
+import { attesaDopoLaModifica, rispostaAccettata, inAttesa, ANNULLO_RIFIUTO, MESSAGGIO_ATTESA } from './attesaCliente.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -116,7 +117,7 @@ import { esitoPresentazione } from './presentazione.js'
 import { esitoAzione } from './marketplaceModuli.js'
 import { ATTESA_REGIA_MS, postaAllaRegia } from './funzioniRegia.js'
 import { licenzaEffettiva, scritturaConsentita } from './licenza.js'
-import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza } from './strutturaMenu.js'
+import { ordina, vistaSezione, nomeGruppo, sezioneDaScrivere, voceDaScrivere, materializza, categoriaScritta } from './strutturaMenu.js'
 import { DEFAULT_MARKUP, DEFAULT_ROUND_STEP } from './pricing.js'
 import { notify } from './notify.js'
 import { bgWrite } from './sync.js'
@@ -130,6 +131,7 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
+import { etichetteDellaVoce } from './etichetteIngredienti.js'
 import { ricordaImpostazioni, ricordaLicenza, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { conEmoji } from './icone.js'
 import {
@@ -202,6 +204,11 @@ function mapDrink(snap) {
     // esente — quindi i due casi non si possono confondere in un falsy.
     sale_vat: d.sale_vat ?? null,
     available: d.available ?? true,
+    // LA VOCE NON DISPONIBILE AL CLIENTE (REQ-MENU-017): l'opzione del
+    // prodotto, e il segno che scrive la Function quando un ingrediente
+    // attraversa la soglia. Al cliente arriva solo il sì o il no.
+    segue_giacenze: d.segue_giacenze === true,
+    non_disponibile_cliente: d.non_disponibile_cliente === true,
     image_url: d.image_url ?? null,
     // GLI SPECIAL DELLA CASA (REQ-MENU-018): il segno, e l'illustrazione
     // pronta da usare quando la foto manca.
@@ -261,6 +268,9 @@ function mapItem(snap) {
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
     supplier_id: i.supplier_id ?? null,
+    // IL CLIENTE PUÒ SCEGLIERLO DAL MENÙ (REQ-MAG-055): è fra le alternative
+    // delle voci che offrono la scelta (REQ-MENU-042). Spento se non scritto.
+    scelta_cliente: i.scelta_cliente === true,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una
@@ -355,6 +365,10 @@ function mapOrder(snap) {
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
     cancel_notify: o.cancel_notify ?? false,
+    // L'ORDINE MODIFICATO DAL BANCO CHE ASPETTA IL CLIENTE (REQ-CLI-009), e
+    // com'è finita: lib/attesaCliente.js.
+    attesa_cliente: o.attesa_cliente ?? null,
+    risposta_cliente: o.risposta_cliente ?? null,
     serial: o.serial ?? null,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
@@ -544,6 +558,12 @@ function mapVoceCarta(snap) {
     nome: v.nome ?? '',
     descrizione: v.descrizione ?? '',
     ingredienti: v.ingredienti ?? '',
+    // Le etichette degli ingredienti (REQ-MENU-040): null finché la voce non
+    // le ha, e allora vale il testo di sempre.
+    etichette: etichetteDellaVoce(v.etichette),
+    ingredienti_nascosti: v.ingredienti_nascosti === true,
+    // La categoria della voce (REQ-MENU-041): null vale quella del prodotto.
+    categoria: categoriaScritta(v.categoria),
     ordine: v.ordine ?? 0,
   }
 }
@@ -574,6 +594,17 @@ export function subscribeCarta(onChange, onError) {
     via1()
     via2()
   }
+}
+
+// LE ALTERNATIVE CHE IL CLIENTE PUÒ SCEGLIERE ADESSO (REQ-MENU-042): un sì o
+// un no per prodotto di magazzino, scritti dalle Functions
+// (functions/lib/disponibilita.js). Torna una Map id → disponibile.
+export function subscribeAlternativeCliente(onChange, onError) {
+  return onSnapshot(
+    collection(db, 'alternative_cliente'),
+    (snap) => onChange(new Map(snap.docs.map((d) => [d.id, d.data()?.disponibile === true]))),
+    onError ?? (() => {})
+  )
 }
 
 export function creaSezioneCarta(dati) {
@@ -4946,6 +4977,11 @@ async function advanceComandaOra(orderId, comandaId, newStatus) {
     ? comande.find((c) => c.id === comandaId)
     : activeComanda({ comande })
   if (!comanda) throw new Error('Comanda non trovata')
+  // IL CONTO CHE ASPETTA IL CLIENTE NON AVANZA (REQ-CLI-009), da nessuna
+  // strada: coda, conto, comanda, trascinamento, tasto dello staff. Qui e
+  // non in ogni schermata, che così non se ne dimentica nessuna. Annullare
+  // resta possibile.
+  if (newStatus !== ORDER_STATUSES.ANNULLATO && inAttesa({ ...raw, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
 
   // IL MAGAZZINO SI SCALA A «PRONTO»: lì il drink è fatto, e a segnarlo è
   // chi l'ha fatto. Prima e dopo gli ingredienti sono IMPEGNATI, e si
@@ -5083,7 +5119,9 @@ export async function updateOrderPushToken(id, token) {
 // comanda riga per riga, e `aggregateItems` invece fonde due righe dello
 // stesso drink — due Mojito battuti separati diventerebbero uno da due, e
 // una nota o un prezzo cambiato a mano su una delle due sparirebbe.
-function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
+// `extra`: altri campi del conto che cambiano INSIEME alle righe, nella
+// stessa scrittura (l'attesa del cliente, REQ-CLI-009).
+function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null, extra = null) {
   const items = righe || aggregateItems(comande)
   const extras =
     Number(cur.coperto_amount || 0) +
@@ -5103,6 +5141,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
         items,
         total,
         ...(sconto != null ? { discount_amount: sconto } : {}),
+        ...extra,
       }),
     etichetta
   )
@@ -5116,6 +5155,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
     items,
     total,
     ...(sconto != null ? { discount_amount: sconto } : {}),
+    ...extra,
   }
   // Ricordato qui e non solo in `ordineDopo`: c'è chi scrive senza dover
   // restituire niente (la preparazione parziale), e anche il suo array deve
@@ -5349,6 +5389,9 @@ export const preparazioneParziale = perConto(async function preparazioneParziale
   const cur = snap.data()
   const norm = normalizeOrderDoc(cur)
   if (norm.status !== ORDER_OPEN) throw new Error('Conto chiuso: non più modificabile')
+  // Dividere fa avanzare la parte scelta: non col cliente che deve ancora
+  // accettare le modifiche (REQ-CLI-009).
+  if (inAttesa({ ...cur, status: norm.status })) throw new Error(MESSAGGIO_ATTESA)
   const comande = norm.comande.map((c) => ({ ...c }))
   const comanda = comande.find((c) => c.id === comandaId)
   if (!comanda) throw new Error('Comanda non trovata')
@@ -5474,6 +5517,21 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // non veniva scritta e gli item andavano persi.
   const daRiallineare = comanda.inventory_applied === true
 
+  // L'ORDINE DAL TELEFONO CAMBIATO DAL BANCO TORNA AL CLIENTE (REQ-CLI-009):
+  // prezzo o ingredienti diversi da quelli che ha ordinato, e lui deve
+  // poterli accettare o rifiutare. L'attesa parte nella STESSA scrittura
+  // delle righe: non c'è un istante in cui il conto è cambiato e la coda
+  // lo crede confermato. Se il banco rimette l'ordine com'era, l'attesa
+  // finisce da sé.
+  const attesaDopo = attesaDopoLaModifica(
+    { ...cur, status: norm.status, comande: norm.comande },
+    comandaId,
+    comanda.items,
+    newItems,
+    impostazioni()
+  )
+  const attesa = attesaDopo === undefined ? null : { attesa_cliente: attesaDopo }
+
   comanda.items = newItems
   // IL TICKET CHE ERA USCITO ADESSO È VECCHIO. Una comanda non ancora presa
   // in carico può accogliere righe nuove (comandaPerLeAggiunte): se era già
@@ -5482,16 +5540,40 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // Su una comanda presa in carico non si tocca niente: quella carta è in
   // mano a qualcuno che ci sta lavorando.
   if (comanda.auto_print_at && !presaInCarico(comanda)) comanda.auto_print_at = null
-  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda', null, attesa)
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return ordineDopo(orderId, cur, patch)
 })
 
+// LA RISPOSTA DEL CLIENTE A UN ORDINE MODIFICATO DAL BANCO (REQ-CLI-009).
+// Accettato, l'attesa si chiude e il conto prosegue; rifiutato, è annullato
+// dal cliente. `alBanco`: il sì è arrivato a voce, lo segna chi lavora.
+// Si scrive in sottofondo e si torna il conto già composto.
+// Il rifiuto passa da cancelOrder FUORI dal turno del conto: cancelOrder ha
+// il suo, e chiamarlo da dentro questo lo farebbe aspettare se stesso.
+export function rispondiAllaModifica(id, esito, opzioni = {}) {
+  if (esito === 'rifiutato') return cancelOrder(id, { by: 'cliente', kind: ANNULLO_RIFIUTO })
+  return accettaLaModifica(id, opzioni)
+}
+
+const accettaLaModifica = perConto(async function accettaLaModifica(id, { alBanco = false } = {}) {
+  const ref = doc(db, 'orders', id)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const patch = rispostaAccettata({ alBanco })
+  bgWrite(() => updateDoc(ref, patch), 'risposta del cliente')
+  return ordineDopo(id, cur, patch)
+})
+
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
 // snapshot del consumo — TRANNE per kind 'non_ritirato': il drink è stato
 // preparato (e sprecato), quindi le scorte restano consumate.
-// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify }
+// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify, persona }
+// `persona: null` per un annullo che non ha fatto nessuno di persona (il
+// tempo del cliente scaduto, REQ-CLI-009): la storia del conto non deve
+// dire che l'ha annullato chi aveva la coda aperta.
 export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
   const {
     by = 'cliente',
@@ -5500,6 +5582,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     message = null,
     notify: notifyClient = false,
   } = opts
+  const persona = 'persona' in opts ? opts.persona : chiIncassa()
   const orderRef = doc(db, 'orders', id)
   const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
@@ -5562,7 +5645,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     // E CHI, di persona: `cancelled_by` dice solo se è stato il cliente o il
     // banco, e nella storia del conto compariva «bartender» mentre le altre
     // righe dicevano il nome. Tre etichette diverse per la stessa persona.
-    cancelled_persona: chiIncassa(),
+    cancelled_persona: persona,
     // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
     // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
     cancelled_device: idDispositivo(),
@@ -5570,6 +5653,10 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     cancel_phrase: phrase,
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
+    // Un conto annullato non aspetta più nessuno (REQ-CLI-009). E le regole
+    // lo pretendono: il rifiuto del cliente passa di qui, e il cliente può
+    // annullare un conto in attesa solo chiudendo l'attesa.
+    attesa_cliente: null,
   }
   bgWrite(() => updateDoc(orderRef, patchAnnullo), 'annullo ordine')
 

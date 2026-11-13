@@ -11,7 +11,7 @@ una riga, e il nome del locale ridotto a «La …».
 |---|---|---|
 | Sinistra | ☰ oppure ← | «Come esco da qui?» |
 | Centro | marchio · titolo della pagina e della sezione | «Dove sono?» |
-| Destra | campanella, ⋮ / chi sono | «Cosa posso fare adesso?» |
+| Destra | assistente AI (gestionale), campanella, ⋮ / chi sono | «Cosa posso fare adesso?» |
 
 L'ordine non cambia mai. Chi cerca il menu guarda a sinistra anche in una
 schermata che non ha mai visto.
@@ -51,6 +51,11 @@ sotto i 44px si sbaglia. Si **toglie**, in quest'ordine:
 4. il **titolo della sezione** si accorcia con i puntini, ma non sparisce mai:
    è l'unica cosa che dice dove sei;
 5. non cadono mai: **☰, campanella, ⋮**.
+
+L'**assistente AI** (REQ-AI-006) sta nella zona destra, prima della
+campanella, solo per lo staff di gestione e solo dove l'AI arriva. Sul
+telefono non ha un tasto suo: è una voce del ⋮, come le altre azioni che in
+fila non ci stanno. Si apre come pannello sopra la pagina, che resta dov'è.
 
 ## Le gerarchie: una per volta, e ognuna al suo posto
 
