@@ -69,6 +69,7 @@ vi.mock('../../src/lib/api.js', () => ({
   updateCategory: vi.fn(() => Promise.resolve()),
   deleteCategory: vi.fn(() => Promise.resolve()),
   fetchInventoryItems: vi.fn(() => Promise.resolve(MAGAZZINO)),
+  fetchInventoryCategories: vi.fn(() => Promise.resolve([])),
   subscribePosPrefs: vi.fn(() => () => {}),
   savePosColors: vi.fn(() => Promise.resolve()),
   subscribeSettings: vi.fn(() => () => {}),

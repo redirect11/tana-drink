@@ -9,6 +9,7 @@ import {
   updateCategory,
   deleteCategory,
   fetchInventoryItems,
+  fetchInventoryCategories,
   subscribePosPrefs,
   savePosColors,
   subscribeSettings,
@@ -72,6 +73,7 @@ export default function MenuManager() {
   const [drinks, setDrinks] = useState([])
   const [categories, setCategories] = useState([])
   const [inventory, setInventory] = useState([])
+  const [categorieMagazzino, setCategorieMagazzino] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(null) // null | 'new' | drink object
@@ -115,12 +117,16 @@ export default function MenuManager() {
   async function load() {
     setLoading(true)
     try {
-      const [d, inv] = await Promise.all([
+      const [d, inv, catMag] = await Promise.all([
         fetchDrinks(),
         fetchInventoryItems().catch(() => []), // l'inventario richiede auth: in caso fallisca, lista vuota
+        // Le categorie di magazzino servono alle etichette degli ingredienti
+        // nel menù dei clienti (REQ-MENU-040).
+        fetchInventoryCategories().catch(() => []),
       ])
       setDrinks(d)
       setInventory(inv)
+      setCategorieMagazzino(catMag)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -381,6 +387,8 @@ export default function MenuManager() {
           carta={carta}
           drinks={drinks}
           categories={categories}
+          inventory={inventory}
+          categorieMagazzino={categorieMagazzino}
           riapri={riapri}
           onApriScheda={(drink, sezioneId) => {
             setRiapri(sezioneId)

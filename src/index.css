@@ -11592,6 +11592,96 @@ body.pagina-piena .inv-scheda {
 .descrizione-ai {
   margin: 6px 0 12px;
 }
+/* GLI INGREDIENTI A ETICHETTE (REQ-MENU-040, IngredientiVoce.jsx). I tipi
+   si distinguono coi ruoli del tema e col tratto, non con colori nuovi
+   (DESIGN.md): il prodotto ha il bordo pieno, la categoria tratteggiato;
+   quello che viene dalla ricetta ha l'accento. Accanto a ogni
+   suggerimento c'è anche il suo gruppo a parole. */
+.etichette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.etichette.nascoste .etichetta {
+  opacity: 0.5;
+}
+.etichetta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--muted);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+.etichetta button {
+  border: 0;
+  background: none;
+  color: inherit;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.etichetta.tipo-categoria,
+.etichetta.tipo-categoria_cassa {
+  border-style: dashed;
+}
+.etichetta.tipo-testo {
+  border-color: transparent;
+  background: var(--card);
+}
+.etichetta.proposta {
+  border: 1px dashed var(--accent);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+.etichette-campo {
+  flex: 1;
+  min-width: 140px;
+}
+.etichette-suggerimenti {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  background: var(--card);
+  display: grid;
+  gap: 2px;
+}
+.suggerimento {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-left: 3px solid var(--muted);
+  background: none;
+  color: var(--text);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.suggerimento.gruppo-ricetta {
+  border-left-color: var(--accent);
+}
+.suggerimento.gruppo-ricetta-categoria {
+  border-left: 3px dashed var(--accent);
+}
+.suggerimento.gruppo-categoria {
+  border-left-style: dashed;
+}
+.suggerimento.gruppo-cassa {
+  border-left-color: var(--accent-2);
+}
+.suggerimento.gruppo-testo {
+  border-left-color: transparent;
+}
+.etichette-proposte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
 .descrizione-ai-proposta {
   padding: 10px 12px;
   border: 1px dashed var(--line);

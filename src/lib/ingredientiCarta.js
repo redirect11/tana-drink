@@ -39,6 +39,11 @@ export function ingredientiDalCampo(testo) {
     .filter(Boolean)
 }
 
+// Una riga della ricetta che in carta non si legge: le unità generiche, la
+// manodopera, il ghiaccio. Serve anche alla proposta delle etichette
+// (etichetteIngredienti.js, REQ-MENU-040).
+export const rigaDiServizio = (r) => unitaGenerica(r?.unit) || MANODOPERA.test(r?.name || '') || GHIACCIO.test(r?.name || '')
+
 // L'elenco da mostrare (stringhe), o null se non c'è niente da dire.
 export function ingredientiInCarta(drink, { quantita = false } = {}) {
   const scritti = ingredientiDalCampo(drink?.ingredienti)
@@ -46,7 +51,7 @@ export function ingredientiInCarta(drink, { quantita = false } = {}) {
   const visti = new Set()
   const righe = []
   for (const r of drink?.recipe_items || []) {
-    if (unitaGenerica(r.unit) || MANODOPERA.test(r.name || '') || GHIACCIO.test(r.name || '')) continue
+    if (rigaDiServizio(r)) continue
     const nome = nomeInCarta(r.name)
     if (!nome || visti.has(nome.toLowerCase())) continue
     visti.add(nome.toLowerCase())

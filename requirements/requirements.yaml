@@ -7088,11 +7088,20 @@ requirements:
       della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi
       delle etichette scelte. Il campo «Ingredienti in carta» della scheda
       della cassa resta per il menù che segue le categorie.
-    status: todo
+      FATTO (13/11/2026): lib/etichetteIngredienti.js (etichette pulite,
+      proposta dalla ricetta coi filtri degli ingredienti in carta,
+      suggerimenti per gruppo, quello che legge il cliente) e
+      IngredientiVoce.jsx nell'editor. Sulla voce `etichette` (null finché
+      non ce ne sono: vale il testo di sempre) e `ingredienti_nascosti`.
+      Le proposte della ricetta si aggiungono a mano, tratteggiate; i tipi si
+      distinguono col tratto e coi ruoli del tema, e a parole.
+    status: implemented
     generate_issue: true
     labels: [menu, vista-cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/etichetteIngredienti.test.js
+      - tests/component/ingredientiVoce.test.jsx
 
   - id: REQ-MENU-041
     title: "La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie"

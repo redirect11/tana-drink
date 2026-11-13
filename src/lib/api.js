@@ -130,6 +130,7 @@ import {
   ordineRicordato,
   VITA_MEMORIA,
 } from './mutazioniOrdine.js'
+import { etichetteDellaVoce } from './etichetteIngredienti.js'
 import { ricordaImpostazioni, ricordaLicenza, impostazioniRicordate, licenzaRicordata } from './impostazioniLocali.js'
 import { conEmoji } from './icone.js'
 import {
@@ -547,6 +548,10 @@ function mapVoceCarta(snap) {
     nome: v.nome ?? '',
     descrizione: v.descrizione ?? '',
     ingredienti: v.ingredienti ?? '',
+    // Le etichette degli ingredienti (REQ-MENU-040): null finché la voce non
+    // le ha, e allora vale il testo di sempre.
+    etichette: etichetteDellaVoce(v.etichette),
+    ingredienti_nascosti: v.ingredienti_nascosti === true,
     ordine: v.ordine ?? 0,
   }
 }

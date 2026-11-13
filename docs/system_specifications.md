@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 290 | fatto e coperto dai test |
+| ✅ | 291 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 34 | da fare |
+| ⬜ | 33 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **312** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **34** sono lavori
+**354 voci** in tutto. **313** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **33** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 34 | 4 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 35 | 3 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -75,8 +75,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 173 |
-| Unità | il progetto di dettaglio: un modulo da solo | 178 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 174 |
+| Unità | il progetto di dettaglio: un modulo da solo | 179 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
 **106** requisiti su 346 sono collegati a un bisogno;
@@ -1180,6 +1180,16 @@ L'utente, 02/11/2026: «gli stili però devono avere anche UX diverse e immagini
 DA FARE, con lo stesso schema: «Lavagna» (gessetto, una lavagna lunga, «Oggi alla lavagna»), «Déco» (geometrico, un indice come un libro, frontespizio a pagine), «Riviera» (serigrafia, file di cartoline da scorrere).
 
 **Dove**: `src/components/MenuGiornale.jsx, src/pages/MenuPage.jsx (il ramo giornale), src/lib/illustrazioneDrink.js (segno «incisione»), src/components/DettaglioDrink.jsx (segno), src/components/MarketplaceTab.jsx (la vetrina), src/index.css (.g-*)` · **Lo dimostrano**: `tests/unit/illustrazioneDrink.test.js`, `tests/component/MenuPage.test.jsx`, `tests/component/MarketplaceTab.test.jsx`
+
+#### REQ-MENU-040 — Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato
+
+Daniele, 13/11/2026: gli ingredienti di una voce si scrivono a mano libera, e ognuno diventa un'ETICHETTA; mentre si scrive, sotto compaiono i suggerimenti. Menù dei clienti e cassa lavorano sugli stessi prodotti di magazzino: quando una voce si collega a un prodotto della cassa, le etichette si riempiono dalla sua ricetta (che resta una proposta: Flavio, 04/11/2026, «non li devi prendere dalla ricetta, vanno messi a mano» — si correggono). UN'ETICHETTA È: un prodotto di magazzino (Tanqueray), una categoria di magazzino (Gin), una categoria della cassa, o testo libero. I SUGGERIMENTI hanno colori diversi: i prodotti della ricetta collegata, le loro categorie, gli altri prodotti, le altre categorie.
+
+NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi delle etichette scelte. Il campo «Ingredienti in carta» della scheda della cassa resta per il menù che segue le categorie.
+
+FATTO (13/11/2026): lib/etichetteIngredienti.js (etichette pulite, proposta dalla ricetta coi filtri degli ingredienti in carta, suggerimenti per gruppo, quello che legge il cliente) e IngredientiVoce.jsx nell'editor. Sulla voce `etichette` (null finché non ce ne sono: vale il testo di sempre) e `ingredienti_nascosti`. Le proposte della ricetta si aggiungono a mano, tratteggiate; i tipi si distinguono col tratto e coi ruoli del tema, e a parole.
+
+**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica) · **Lo dimostrano**: `tests/unit/etichetteIngredienti.test.js`, `tests/component/ingredientiVoce.test.jsx`
 
 #### REQ-MENU-013 — L'IVA di vendita si cambia sulla singola voce di menù
 
@@ -4274,14 +4284,6 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
 
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
-
-#### REQ-MENU-040 — Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato
-
-Daniele, 13/11/2026: gli ingredienti di una voce si scrivono a mano libera, e ognuno diventa un'ETICHETTA; mentre si scrive, sotto compaiono i suggerimenti. Menù dei clienti e cassa lavorano sugli stessi prodotti di magazzino: quando una voce si collega a un prodotto della cassa, le etichette si riempiono dalla sua ricetta (che resta una proposta: Flavio, 04/11/2026, «non li devi prendere dalla ricetta, vanno messi a mano» — si correggono). UN'ETICHETTA È: un prodotto di magazzino (Tanqueray), una categoria di magazzino (Gin), una categoria della cassa, o testo libero. I SUGGERIMENTI hanno colori diversi: i prodotti della ricetta collegata, le loro categorie, gli altri prodotti, le altre categorie.
-
-NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi delle etichette scelte. Il campo «Ingredienti in carta» della scheda della cassa resta per il menù che segue le categorie.
-
-**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
 #### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
 

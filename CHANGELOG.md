@@ -4,6 +4,12 @@
 
 ### Gestionale
 
+- Menù dei clienti: gli ingredienti di una voce sono etichette. Mentre si
+  scrive compaiono i suggerimenti (prima i prodotti della ricetta del
+  prodotto collegato e le loro categorie, poi il resto del magazzino e le
+  categorie della cassa); quello che non c’è si scrive libero. Le etichette
+  della ricetta che mancano si aggiungono con un tocco, e «come la ricetta»
+  le mette tutte. Gli ingredienti si possono nascondere al cliente.
 - Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
   menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
   lo permettono (per esempio il gin del gin tonic). Spenta di partenza.

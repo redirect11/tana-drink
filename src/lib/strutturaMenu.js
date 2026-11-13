@@ -47,6 +47,7 @@
 
 import { perNome } from './macros.js'
 import { normName } from './nameMatch.js'
+import { ingredientiDellaVoce } from './etichetteIngredienti.js'
 
 export const VISTE_SEZIONE = [
   { id: 'dettagliata', label: 'Dettagliata' },
@@ -134,8 +135,9 @@ export function gruppiScritti(sezioni) {
 // dice di suo, già pronta da mostrare. Prende l'`id` della VOCE, perché due
 // voci sullo stesso prodotto sono due card diverse (chiave, dettaglio); il
 // prodotto resta in `drink_id`, ed è quello che finisce nell'ordine.
-// Gli ingredienti sono il ritocco o quelli scritti sulla scheda, mai la
-// ricetta (Flavio, 04/11/2026: «non li devi prendere dalla ricetta, vanno
+// Gli ingredienti sono le etichette della voce (REQ-MENU-040), se le ha,
+// altrimenti il ritocco o quelli scritti sulla scheda; mai la ricetta da
+// sola (Flavio, 04/11/2026: «non li devi prendere dalla ricetta, vanno
 // messi a mano» — quella del gin tonic porta la tonica, quella di «SOUR 7»
 // non è il drink in carta): senza `recipe_items`, ingredientiCarta.js non
 // ha una ricetta su cui ripiegare. In una sezione snella non si racconta
@@ -149,7 +151,7 @@ export function voceInSezione(voce, drink, vista = 'dettagliata') {
     name: nomeVoce(voce, drink),
     nome_gestionale: drink.nome_gestionale ?? drink.name,
     description: snella ? null : testo(voce.descrizione) || drink.description || null,
-    ingredienti: snella ? '' : testo(voce.ingredienti) || testo(drink.ingredienti),
+    ingredienti: snella ? '' : ingredientiDellaVoce(voce, drink),
     recipe_items: [],
   }
 }

@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-55 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+56 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2093,6 +2093,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-MENU-035 — L'editor del menù dei clienti è compatto: sezioni che si aprono, una riga per voce, voci spostate insieme
 - REQ-MENU-034 — Ogni riga della ricetta mostra quanto costa
 - REQ-LIC-017 — Nel Free non c'è l'AI: niente tasti AI, chat né credito
+- REQ-MENU-040 — Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato
 - REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
 - REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
 - REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente

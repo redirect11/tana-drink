@@ -38,6 +38,7 @@ import { formatPrice } from '../lib/orderStatus.js'
 import ConfirmDialog from './ConfirmDialog.jsx'
 import Icona from './Icona.jsx'
 import AiutoCampo from './AiutoCampo.jsx'
+import IngredientiVoce from './IngredientiVoce.jsx'
 
 // LA STRUTTURA DEL MENÙ DEI CLIENTI, DAL GESTIONALE (REQ-MENU-025): il
 // menù del tavolo com'è, sezione per sezione, coi testi modificabili dove
@@ -226,7 +227,7 @@ export function InStruttura({ drink, carta }) {
 // listino si apre solo su «Cambia». Una voce senza prodotto ha il
 // dettaglio sempre aperto, con la tendina: al tavolo non compare, ed è la
 // prima cosa da sistemare.
-function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta, onScegli, primo, ultimo, sposta, spostaIn, onApriScheda }) {
+function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta, onScegli, primo, ultimo, sposta, spostaIn, onApriScheda, magazzino = {} }) {
   const [cambia, setCambia] = useState(false)
   const cliente = drink ? perIlCliente(drink) : null
   const nome = nomeVoce(voce, cliente)
@@ -300,9 +301,8 @@ function RigaVoce({ voce, drink, snella, gruppi, sezioni, aperta, onApri, scelta
                 area: true,
                 placeholder: 'Provenienza, carattere, servizio',
               })}
-              {/* Dalla ricetta mai (strutturaMenu.js, voceInSezione): solo il
-                  ritocco o quelli scritti sulla scheda. */}
-              {campo('ingredienti', 'Ingredienti', 'gli ingredienti', drink?.ingredienti, { placeholder: 'Separati da virgola' })}
+              {/* A etichette (REQ-MENU-040): la ricetta propone, non decide. */}
+              <IngredientiVoce voce={voce} drink={drink} {...magazzino} />
             </>
           )}
           <div className="struttura-collegamento">
@@ -445,7 +445,7 @@ function alterna(set, id) {
 // prodotti: una sottoscrizione sola. `onApriScheda` apre la scheda intera
 // di un prodotto e `onNuovoProdotto` quella di un prodotto nuovo per una
 // sezione; chiusa la scheda si torna qui, con `riapri` già aperta.
-export default function StrutturaMenu({ carta, drinks, categories, onApriScheda, onNuovoProdotto, riapri = null }) {
+export default function StrutturaMenu({ carta, drinks, categories, inventory = [], categorieMagazzino = [], onApriScheda, onNuovoProdotto, riapri = null }) {
   // Le cancellazioni grosse si confermano col dialogo dell'app: il
   // `confirm` del browser, nella PWA installata, può essere bloccato senza
   // dire niente (ConfirmDialog.jsx).
@@ -757,6 +757,7 @@ export default function StrutturaMenu({ carta, drinks, categories, onApriScheda,
                             sposta={(dir) => riordinaVociCarta(riordino(voci, j, dir))}
                             spostaIn={(sezione_id) => aggiornaVoceCarta(v.id, { sezione_id, ordine: inFondo(carta, sezione_id) })}
                             onApriScheda={onApriScheda}
+                            magazzino={{ items: inventory, categorieMagazzino, categorieCassa: categories }}
                           />
                         ))}
                       </div>
