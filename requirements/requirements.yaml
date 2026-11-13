@@ -7124,11 +7124,18 @@ requirements:
       può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella
       categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù
       dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
-    status: todo
+      FATTO (13/11/2026): il campo `scelta_cliente` sul prodotto (letto in
+      mapItem, scritto dalla scheda), con la casella «Il cliente può
+      sceglierlo dal menù» sotto la soglia di avviso.
+      DA SAPERE PER REQ-MENU-042: i prodotti di magazzino li leggono solo
+      banco e gestori (firestore.rules); le alternative e la loro
+      disponibilità dovranno arrivare al cliente per un'altra strada.
+    status: implemented
     generate_issue: true
     labels: [magazzino, menu, vista-cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/component/InventoryManagerCard.test.jsx
 
   - id: REQ-MENU-042
     title: "Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare"

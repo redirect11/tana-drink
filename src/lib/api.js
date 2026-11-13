@@ -261,6 +261,9 @@ function mapItem(snap) {
     low_threshold: Number(i.low_threshold) || 0,
     category_id: i.category_id ?? null,
     supplier_id: i.supplier_id ?? null,
+    // IL CLIENTE PUÒ SCEGLIERLO DAL MENÙ (REQ-MAG-055): è fra le alternative
+    // delle voci che offrono la scelta (REQ-MENU-042). Spento se non scritto.
+    scelta_cliente: i.scelta_cliente === true,
     cost: i.cost != null ? Number(i.cost) : null,
     vat: i.vat != null ? Number(i.vat) : 22,
     // Chi non lo dichiara è semplicemente in assortimento: "in linea" è una

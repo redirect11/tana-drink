@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 289 | fatto e coperto dai test |
+| ✅ | 290 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 35 | da fare |
+| ⬜ | 34 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **311** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **35** sono lavori
+**354 voci** in tutto. **312** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **34** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -48,7 +48,7 @@ come «vero oggi», non come «garantito».
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
 | [Menù e catalogo](#menù-e-catalogo) | 34 | 4 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 49 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
 | [Vista cliente](#vista-cliente) | 7 | 2 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
@@ -1542,6 +1542,16 @@ LE UNITÀ RESTANO COERENTI: il pezzo è la bottiglia, il contenuto si misura sem
 CONFERMATO (18/08, ore 15:17 — Flavio chiedeva a voce che la scala cartone → pezzi → contenuto valesse anche per il PREZZO): c'è già, dentro il form del prodotto (`InventoryManager.jsx`), dove il «cartone» si chiama COLLO. Si scrive «Totale collo (€, netto)» e il costo unitario si ricava dividendo per i pezzi del collo (`colloTot / p`); si legge anche il totale +IVA, per confrontarlo con quello del fornitore. Dal costo al pezzo discende il costo al cl (`costPerCl`, mostrato da `UnitPrice`) come per ogni altro prodotto. Nessun lavoro da fare qui: annotato perché la parola detta a voce («cartone») non è quella del codice («collo»), e cercandola con quella non si trova.
 
 **Dove**: `src/lib/inventory.js, src/components/InventoryManager.jsx` · **Lo dimostrano**: `tests/unit/inventory.test.js`, `tests/component/InventoryManager.test.jsx`
+
+#### REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
+
+Daniele, 13/11/2026: sui prodotti di magazzino una spunta «Il cliente può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
+
+FATTO (13/11/2026): il campo `scelta_cliente` sul prodotto (letto in mapItem, scritto dalla scheda), con la casella «Il cliente può sceglierlo dal menù» sotto la soglia di avviso.
+
+DA SAPERE PER REQ-MENU-042: i prodotti di magazzino li leggono solo banco e gestori (firestore.rules); le alternative e la loro disponibilità dovranno arrivare al cliente per un'altra strada.
+
+**Dove**: `la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/component/InventoryManagerCard.test.jsx`
 
 #### REQ-MAG-009 — Macro-categorie: il magazzino letto per famiglie
 
@@ -4298,12 +4308,6 @@ AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il pr
 Dopo l'import dei costi restano ingredienti che puntano a id di magazzino non più esistenti: quei drink mostrano un costo parziale. Vanno riagganciati agli articoli corretti (alcuni sono accoppiamenti evidenti, altri vanno decisi a mano) e va impedito che una ricetta punti nel vuoto senza accorgersene.
 
 **Dove**: `src/lib/saveDrink.js, requirements`
-
-#### REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
-
-Daniele, 13/11/2026: sui prodotti di magazzino una spunta «Il cliente può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
-
-**Dove**: `la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 #### REQ-MAG-020 — La resa di un prodotto sta dietro un interruttore
 

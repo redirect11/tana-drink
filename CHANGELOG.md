@@ -4,6 +4,9 @@
 
 ### Gestionale
 
+- Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
+  menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
+  lo permettono (per esempio il gin del gin tonic). Spenta di partenza.
 - Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
   fattura e propone fornitore, numero, data, importo e righe abbinate ai
   prodotti del magazzino, da rivedere prima di registrare. Il documento

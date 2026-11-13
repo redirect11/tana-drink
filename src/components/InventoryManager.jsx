@@ -2328,6 +2328,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
     cost: initial?.cost ?? '',
     vat: initial?.vat ?? defaultVat,
     status: initial?.status ?? 'assortimento',
+    scelta_cliente: initial?.scelta_cliente === true,
     content_size: packIniziale > 0 ? String(fromBaseQty(packIniziale, contUnita)) : '',
     content_unit: contUnita,
     // La soglia si è sempre scritta in quello che si compra: adesso quello
@@ -2411,6 +2412,7 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         resa_unit: null,
         // La soglia si scrive in pezzi, come la giacenza.
         low_threshold: num(form.low_threshold),
+        scelta_cliente: Boolean(form.scelta_cliente),
       }
       // Il fornitore viaggia a parte perché non è più un campo del
       // prodotto: chi salva ne fa una riga di listino (REQ-MAG-029).
@@ -2679,6 +2681,21 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
       <AiutoCampo style={{ margin: '2px 0 8px' }}>
         Sotto questa soglia il prodotto risulta in esaurimento e rientra nel
         riordino suggerito.
+      </AiutoCampo>
+
+      {/* REQ-MAG-055 (Daniele, 13/11/2026): il gin o la vodka che il
+          cliente si sceglie da solo, dove la voce del menù lo permette. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', marginTop: 8 }}>
+        <input
+          type="checkbox"
+          checked={form.scelta_cliente}
+          onChange={(e) => setForm((f) => ({ ...f, scelta_cliente: e.target.checked }))}
+        />
+        <span>Il cliente può sceglierlo dal menù</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Compare fra le alternative delle voci del menù dei clienti che offrono
+        la scelta della sua categoria, finché c’è giacenza.
       </AiutoCampo>
 
       {avviso && (
