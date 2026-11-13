@@ -131,14 +131,23 @@ describe('l’assistente', () => {
     expect(esito).toEqual({ prodotto: 'Negroni', descrizione: 'Amaro e rosso.', stato: 'usata' })
   })
 
-  // Istruzioni e strumenti della regia hanno una versione: se quella della
-  // conversazione non c'è più, si riparte da capo e lo si dice.
-  it('409 «versione»: si riparte da capo, e lo dice', async () => {
+  // I 409 della regia (REQ-AI-008): la conversazione non può continuare, si
+  // riparte da capo, e si mostra la frase della regia così com'è.
+  it('409: si riparte da capo, con la frase della regia', async () => {
     const user = userEvent.setup()
-    regia([{ ok: false, codice: 'versione' }])
+    regia([{ ok: false, codice: 'versione', errore: 'Le impostazioni della chat sono cambiate: apri una conversazione nuova.' }])
     mostra('admin')
     await scrivi(user, 'Ciao')
-    expect(await screen.findByText(/conversazione riparte da capo/)).toBeInTheDocument()
+    expect(await screen.findByText('Le impostazioni della chat sono cambiate: apri una conversazione nuova.')).toBeInTheDocument()
+    expect(screen.queryByText('Ciao')).toBeNull()
+  })
+
+  it('409 «troppo-lunga»: lo stesso, e senza la frase della regia una frase nostra', async () => {
+    const user = userEvent.setup()
+    regia([{ ok: false, codice: 'troppo-lunga', errore: null }])
+    mostra('admin')
+    await scrivi(user, 'Ciao')
+    expect(await screen.findByText('La conversazione è troppo lunga: apri una conversazione nuova.')).toBeInTheDocument()
     expect(screen.queryByText('Ciao')).toBeNull()
   })
 
@@ -154,5 +163,81 @@ describe('l’assistente', () => {
     expect(await screen.findByText('Scheda pronta.')).toBeInTheDocument()
     const esito = JSON.parse(chiamateChat()[1].messaggi[2].content[0].content)
     expect(esito).toEqual({ voce: { nome: 'Gin Tanqueray', prezzo_eur: 7 }, stato: 'scheda aperta, da completare e salvare' })
+  })
+})
+
+// IL CONTRATTO DELLA REGIA, 13/11/2026 (REQ-AI-008; drink-regia
+// docs/handover.md §7).
+describe('la conversazione come la vuole la regia', () => {
+  const conVersione = (r, versione) => ({ ...r, versione })
+
+  it('la versione: al primo messaggio no, poi sempre quella della prima risposta', async () => {
+    const user = userEvent.setup()
+    regia([conVersione(turnoTesto('Uno.'), 'chat-v1'), conVersione(turnoTesto('Due.'), 'chat-v2'), turnoTesto('Tre.')])
+    mostra('admin')
+    await scrivi(user, 'Primo')
+    await screen.findByText('Uno.')
+    await scrivi(user, 'Secondo')
+    await screen.findByText('Due.')
+    await scrivi(user, 'Terzo')
+    await screen.findByText('Tre.')
+    const [a, b, c] = chiamateChat()
+    expect(a).not.toHaveProperty('versione')
+    expect(b.versione).toBe('chat-v1')
+    expect(c.versione).toBe('chat-v1')
+  })
+
+  it('gli strumenti restano quelli di partenza anche se cambia il ruolo', async () => {
+    const user = userEvent.setup()
+    regia([turnoTesto('Uno.'), turnoTesto('Due.')])
+    const { rerender } = mostra('admin')
+    await scrivi(user, 'Primo')
+    await screen.findByText('Uno.')
+    rerender(
+      <MemoryRouter>
+        <PannelloChat ruolo="bartender" onChiudi={vi.fn()} />
+      </MemoryRouter>
+    )
+    await scrivi(user, 'Secondo')
+    await screen.findByText('Due.')
+    const [a, b] = chiamateChat()
+    expect(a.strumenti).toContain('leggi_fattura')
+    expect(b.strumenti).toEqual(a.strumenti)
+  })
+
+  // Un giro di strumenti rimasto a metà: la domanda nuova va in un turno
+  // suo dopo quello degli esiti, e niente di quello che c'era si ritocca.
+  it('dopo un giro rimasto a metà la domanda va in un turno suo, e il resto resta com’era', async () => {
+    const user = userEvent.setup()
+    regia([turnoStrumento('t1', 'giacenza', { prodotto: 'gin' }), { ok: false, codice: 'occupato' }, turnoTesto('Ecco.')])
+    mostra('admin')
+    await scrivi(user, 'Quanto gin?')
+    await waitFor(() => expect(chiamateChat()).toHaveLength(2))
+    await scrivi(user, 'E il rum?')
+    await screen.findByText('Ecco.')
+    const [, seconda, terza] = chiamateChat()
+    expect(terza.messaggi.slice(0, seconda.messaggi.length)).toEqual(seconda.messaggi)
+    expect(terza.messaggi.at(-2).content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 't1' })
+    expect(terza.messaggi.at(-1)).toEqual({ role: 'user', content: 'E il rum?' })
+  })
+
+  it('i blocchi che a schermo non servono restano nel turno, intatti', async () => {
+    const user = userEvent.setup()
+    const turno = {
+      role: 'assistant',
+      content: [
+        { type: 'thinking', thinking: '', signature: 'abc.def' },
+        { type: 'fallback', modello: 'riserva' },
+        { type: 'text', text: 'Ciao.' },
+      ],
+      firma: 'f.1',
+    }
+    regia([{ ...turnoTesto('Ciao.'), turno }, turnoTesto('Ancora.')])
+    mostra('admin')
+    await scrivi(user, 'Uno')
+    await screen.findByText('Ciao.')
+    await scrivi(user, 'Due')
+    await screen.findByText('Ancora.')
+    expect(chiamateChat()[1].messaggi[1]).toEqual(turno)
   })
 })

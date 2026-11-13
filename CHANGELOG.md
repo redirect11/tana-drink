@@ -9,6 +9,9 @@
   bottiglia (nome, categoria, ricetta); si scrivono la quantità della
   ricetta e il prezzo. La descrizione la propone l’AI, dove c’è. Una riga
   della ricetta senza quantità ora non si salva, e la scheda lo dice.
+- L’assistente AI: quando una conversazione non può continuare (chat
+  aggiornata, impostazioni cambiate, conversazione troppo lunga) si apre
+  una conversazione nuova e si legge il motivo.
 - L’assistente AI: dalla barra in alto (sul telefono dal ⋮) si apre un
   pannello dove si chiede di giacenze, vendite e prodotti, si fanno
   proporre le descrizioni del menù e (all’admin) leggere i documenti dei

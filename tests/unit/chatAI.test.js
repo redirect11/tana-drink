@@ -104,3 +104,31 @@ describe('le vendite', () => {
     expect(giornata('ieri')).toBeNull()
   })
 })
+
+// LA REGIA, 13/11/2026 (REQ-AI-008): ogni strumento chiesto nel turno ha il
+// suo esito, nell'ordine delle richieste; senza, la richiesta dopo viene
+// rifiutata. E i 409 aprono una conversazione nuova.
+describe('il contratto della conversazione', () => {
+  it('ogni richiesta del turno ha il suo esito, anche quella che l’app non sa eseguire', async () => {
+    const { conEsiti } = await import('../../src/lib/chatAI.js')
+    const turno = {
+      role: 'assistant',
+      content: [
+        { type: 'thinking', thinking: '' },
+        { type: 'tool_use', id: 't1', name: 'giacenza', input: {} },
+        { type: 'tool_use', id: 't2', name: 'sconosciuto', input: {} },
+      ],
+    }
+    const [esiti] = conEsiti([], [{ id: 't1', esito: { trovati: [] } }], turno)
+    expect(esiti.content.map((b) => b.tool_use_id)).toEqual(['t1', 't2'])
+    expect(esiti.content[1]).toMatchObject({ is_error: true, content: JSON.stringify({ errore: 'Strumento non disponibile.' }) })
+  })
+
+  it('versione e troppo-lunga aprono una conversazione nuova; il resto no', async () => {
+    const { chiedeConversazioneNuova } = await import('../../src/lib/chatAI.js')
+    expect(chiedeConversazioneNuova('versione')).toBe(true)
+    expect(chiedeConversazioneNuova('troppo-lunga')).toBe(true)
+    expect(chiedeConversazioneNuova('occupato')).toBe(false)
+    expect(chiedeConversazioneNuova('credito')).toBe(false)
+  })
+})

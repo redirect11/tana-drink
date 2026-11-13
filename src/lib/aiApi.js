@@ -33,7 +33,8 @@ export const MESSAGGI_AI = {
   // Il Free, se mai ci si arriva: i tasti lì non ci sono (REQ-LIC-017).
   piano: MESSAGGI_PIANO.ai,
   // La chat (REQ-AI-006).
-  versione: 'Le istruzioni dell’assistente sono state aggiornate: la conversazione riparte da capo.',
+  versione: 'Questa conversazione non si può continuare: apri una conversazione nuova.',
+  'troppo-lunga': 'La conversazione è troppo lunga: apri una conversazione nuova.',
   occupato: 'Il servizio AI è occupato in questo momento. Si può riprovare fra poco.',
 }
 

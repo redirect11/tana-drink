@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { prodottoDaMagazzino, mettiProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import { chiediChat, chiediAI, leggiCreditoAI, messaggioAI } from '../lib/aiApi.js'
-import { strumentiPerRuolo, conTesto, conTurno, conEsiti, quasiPiena, MAX_GIRI_STRUMENTI } from '../lib/chatAI.js'
+import {
+  strumentiPerRuolo,
+  conTesto,
+  conTurno,
+  conEsiti,
+  quasiPiena,
+  chiedeConversazioneNuova,
+  MAX_GIRI_STRUMENTI,
+} from '../lib/chatAI.js'
 import { giacenza, cercaProdotti, vendite, giornata } from '../lib/strumentiChat.js'
 import {
   fetchInventoryItems,
@@ -52,6 +60,9 @@ export default function PannelloChat({ ruolo, onChiudi }) {
   const [costo, setCosto] = useState(0)
   const [proposta, setProposta] = useState(null)
   const versione = useRef(null)
+  // L'elenco degli strumenti di QUESTA conversazione: fissato al primo
+  // messaggio, perché cambiato a metà la regia la rifiuta (409).
+  const strumentiConv = useRef(null)
   const dati = useRef(null)
   const fineRef = useRef(null)
   const strumenti = strumentiPerRuolo(ruolo)
@@ -137,15 +148,17 @@ export default function PannelloChat({ ruolo, onChiudi }) {
   async function giro(partenza) {
     let conv = partenza
     for (let i = 0; i < MAX_GIRI_STRUMENTI; i++) {
-      const r = await chiediChat({ messaggi: conv, strumenti, versione: versione.current })
+      if (!strumentiConv.current) strumentiConv.current = strumenti
+      const r = await chiediChat({ messaggi: conv, strumenti: strumentiConv.current, versione: versione.current })
       if (!r.ok) {
-        // La conversazione era nata su istruzioni che non ci sono più: si
-        // riparte da capo, come dice il messaggio (che resta in vista).
-        if (r.codice === 'versione') nuova()
-        aggiungi({ tipo: 'errore', testo: messaggioAI(r.codice) })
+        // La conversazione non può continuare: si riparte da capo, e la
+        // frase della regia (com'è) resta in vista.
+        if (chiedeConversazioneNuova(r.codice)) nuova()
+        aggiungi({ tipo: 'errore', testo: r.errore || messaggioAI(r.codice) })
         return
       }
-      if (r.versione) versione.current = r.versione
+      // La versione è quella della PRIMA risposta, per tutta la conversazione.
+      if (r.versione && !versione.current) versione.current = r.versione
       if (r.costo_eur != null) setCosto((c) => c + r.costo_eur)
       conv = conTurno(conv, r.turno)
       setMessaggi(conv)
@@ -160,7 +173,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
           esiti.push({ id: s.id, esito: { errore: e?.message || 'Lettura non riuscita.' }, errore: true })
         }
       }
-      conv = conEsiti(conv, esiti)
+      conv = conEsiti(conv, esiti, r.turno)
       setMessaggi(conv)
     }
     aggiungi({ tipo: 'errore', testo: 'L’assistente non è arrivato a una risposta: si può riformulare la domanda.' })
@@ -185,6 +198,7 @@ export default function PannelloChat({ ruolo, onChiudi }) {
     setVista([])
     setCosto(0)
     versione.current = null
+    strumentiConv.current = null
   }
 
   return (

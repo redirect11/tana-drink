@@ -8646,6 +8646,28 @@ requirements:
       del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta
       il tasto di REQ-AI-002, ora acceso: apre la scheda nel Menù. RESTA la
       prova con la regia vera.
+      IL CONTRATTO DEFINITIVO DELLA REGIA (13/11/2026, drink-regia #239 e
+      #240, v0.3.0-beta.30 sul test; docs/handover.md §7 della regia; la
+      richiesta è REQ-AI-008), fatto nell'app lo stesso giorno:
+      · 409, cinque casi, tutti «conversazione nuova»: `codice` decide
+        (`versione`: istruzioni aggiornate, strumenti cambiati a metà
+        dall'admin o dall'app, conversazione rifiutata da Anthropic;
+        `troppo-lunga`), e al titolare si mostra `errore` così com'è
+        (functions/lib/ai-service.js, interpreta; chiedeConversazioneNuova).
+      · La versione: al primo messaggio non si manda; dopo, sempre quella
+        della PRIMA risposta; mai scritta nel codice.
+      · L'elenco degli strumenti si fissa al primo messaggio e resta quello
+        anche se cambia il ruolo di chi scrive.
+      · Niente si ritocca, nemmeno i turni di chi scrive: la conversazione
+        cresce solo in fondo. Dopo un giro di strumenti rimasto a metà la
+        domanda va in un turno suo, dopo quello degli esiti. Ogni
+        `tool_use` del turno del modello ha il suo esito, nell'ordine:
+        quello che l'app non sa eseguire ne riceve uno di errore (conEsiti).
+      · I blocchi thinking (anche vuoti), fallback e la firma si conservano
+        come sono; a schermo bastano testo e strumenti richiesti.
+      DA VERIFICARE SUL TEST con la regia: due turni di chi scrive di fila
+      (la regia li manda ad Anthropic così, che li unisce), e un turno dopo
+      il ripiego su un altro modello.
     status: partial
     generate_issue: true
     labels: [ai, gestionale]
