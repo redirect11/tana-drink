@@ -11668,7 +11668,8 @@ body.pagina-piena .inv-scheda {
 .topbar-chat {
   position: relative;
 }
-.topbar-chat.senza-credito {
+.topbar-chat.senza-credito,
+.tasto-ai.senza-credito {
   opacity: 0.55;
 }
 .topbar-chat-avviso {

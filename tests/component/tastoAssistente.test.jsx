@@ -25,6 +25,7 @@ const showToast = vi.fn()
 vi.mock('../../src/lib/toast.js', () => ({ showToast: (...a) => showToast(...a), toastError: vi.fn(), toastSuccess: vi.fn() }))
 
 import TastoAssistente from '../../src/components/TastoAssistente.jsx'
+import TastoAI from '../../src/components/TastoAI.jsx'
 import { statoDaCredito, statoDaRisposta, statoAI, STATI_AI, _azzeraStatoAI } from '../../src/lib/statoAI.js'
 import { chiediAI } from '../../src/lib/aiApi.js'
 
@@ -95,6 +96,38 @@ describe('il tasto dell’assistente', () => {
     render(<TastoAssistente aperto={false} onAlterna={vi.fn()} />)
     await act(async () => {})
     expect(chiamata).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+})
+
+// La stessa regola per ogni tasto dell'AI (Daniele, 13/11/2026: «come dici
+// tu»): «Proponi una descrizione», «Leggi con l'AI».
+describe('un tasto dell’AI', () => {
+  it('senza credito: grigio con l’avviso, ricorda di ricaricare invece di partire', async () => {
+    const user = userEvent.setup()
+    chiamata.mockResolvedValue({ ...CREDITO, attivo: false, motivo: 'tetto', credito_eur: 2 })
+    const onClick = vi.fn()
+    render(<TastoAI onClick={onClick}>Leggi con l’AI</TastoAI>)
+    await act(async () => {})
+    const tasto = screen.getByRole('button', { name: /Leggi con l’AI/ })
+    expect(tasto).toHaveClass('senza-credito')
+    await user.click(tasto)
+    expect(onClick).not.toHaveBeenCalled()
+    expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/tetto di spesa AI del mese/), { kind: 'error' })
+  })
+
+  it('attiva: parte; con l’AI disattivata non c’è', async () => {
+    const user = userEvent.setup()
+    chiamata.mockResolvedValue(CREDITO)
+    const onClick = vi.fn()
+    const { unmount } = render(<TastoAI onClick={onClick}>Leggi con l’AI</TastoAI>)
+    await user.click(await screen.findByRole('button', { name: /Leggi con l’AI/ }))
+    expect(onClick).toHaveBeenCalled()
+    unmount()
+    _azzeraStatoAI()
+    chiamata.mockResolvedValue({ ok: false, codice: 'senza-cassetto' })
+    render(<TastoAI onClick={onClick}>Leggi con l’AI</TastoAI>)
+    await act(async () => {})
     expect(screen.queryByRole('button')).toBeNull()
   })
 })

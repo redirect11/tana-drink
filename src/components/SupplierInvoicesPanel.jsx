@@ -47,6 +47,7 @@ import {
 } from '../lib/allegati.js'
 import AiutoCampo from './AiutoCampo.jsx'
 import FatturaDaAI from './FatturaDaAI.jsx'
+import TastoAI from './TastoAI.jsx'
 import { aiRaggiungibile } from '../lib/aiApi.js'
 
 // Il magazzino è quasi quattrocento prodotti: nessuno li scorre, si cercano.
@@ -361,9 +362,9 @@ export default function SupplierInvoicesPanel() {
           {/* Dove l'AI non arriva (piano Free, demo) il tasto non c'è, e
               «Nuovo documento» prende tutta la riga. */}
           {aiRaggiungibile() && (
-            <button className="btn ghost block" onClick={() => setLeggendo(true)}>
+            <TastoAI className="btn ghost block" onClick={() => setLeggendo(true)}>
               Leggi con l’AI
-            </button>
+            </TastoAI>
           )}
         </div>
       )}

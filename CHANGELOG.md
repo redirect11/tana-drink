@@ -10,7 +10,8 @@
   fornitori. Le modifiche si confermano a schermo; la conversazione non si
   conserva alla chiusura. Usa il credito AI del locale. Senza credito il
   tasto resta, grigio con l’avviso, e ricorda di ricaricare; con l’AI
-  disattivata per il locale non compare.
+  disattivata per il locale non compare. La stessa regola vale per
+  «Proponi una descrizione» e «Leggi con l’AI».
 - Fornitori, documenti: «Leggi con l’AI» legge la foto o il PDF di una
   fattura e propone fornitore, numero, data, importo e righe abbinate ai
   prodotti del magazzino, da rivedere prima di registrare. Il documento

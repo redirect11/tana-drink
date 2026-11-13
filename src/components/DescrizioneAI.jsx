@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { chiediAI, messaggioAI, aiRaggiungibile } from '../lib/aiApi.js'
+import TastoAI from './TastoAI.jsx'
 
 // Il costo di una descrizione è di qualche millesimo: coi centesimi si
 // leggerebbe «0,00 €», che non è vero. Fino a quattro decimali.
@@ -37,9 +38,9 @@ export default function DescrizioneAI({ nome, categoria, attuale, onUsa }) {
   return (
     <div className="descrizione-ai">
       {stato.fase !== 'proposta' && (
-        <button type="button" className="btn ghost small" onClick={chiedi} disabled={senzaNome || stato.fase === 'attesa'}>
+        <TastoAI onClick={chiedi} disabled={senzaNome || stato.fase === 'attesa'}>
           {stato.fase === 'attesa' ? 'Scrivo la proposta…' : 'Proponi una descrizione con l’AI'}
-        </button>
+        </TastoAI>
       )}
       {stato.fase === 'errore' && (
         <p className="muted small" role="status" style={{ margin: '6px 0 0' }}>
