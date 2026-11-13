@@ -8582,11 +8582,24 @@ requirements:
       e bartender); `leggi_fattura` solo dell'admin (Fornitori è suo).
       La chat si vede solo se l'AI arriva (REQ-LIC-017) e il credito è
       `attivo` (REQ-AI-003).
-    status: todo
+      FATTO DALLA PARTE DELL'APP (13/11/2026, ramo feature/chat-ai), sul
+      contratto concordato, in attesa degli schemi definitivi della regia:
+      la Function gira `tipo: 'chat'` (conversazione controllata prima del
+      viaggio, `leggi_fattura` solo all'admin, 409 e 429); la logica in
+      lib/chatAI.js (conversazione, strumenti per ruolo) e
+      lib/strumentiChat.js (giacenza, vendite, cerca_prodotti, coi limiti di
+      righe); il pannello PannelloChat.jsx, aperto dalla barra in alto (sul
+      telefono dal ⋮), che chiede il credito all'apertura, esegue gli
+      strumenti, mostra le proposte da confermare (descrizione, documento
+      del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta
+      il tasto di REQ-AI-002. RESTA la prova con la regia vera.
+    status: partial
     generate_issue: true
     labels: [ai, gestionale]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/chatAI.test.js
+      - tests/component/pannelloChat.test.jsx
 
   - id: REQ-AI-003
     title: "L'AI a consumo: chi paga, con quale credito e con quale tetto"

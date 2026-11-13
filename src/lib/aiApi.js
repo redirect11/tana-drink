@@ -32,6 +32,9 @@ export const MESSAGGI_AI = {
   riprova: "L'AI non risponde in questo momento. Si può riprovare.",
   // Il Free, se mai ci si arriva: i tasti lì non ci sono (REQ-LIC-017).
   piano: MESSAGGI_PIANO.ai,
+  // La chat (REQ-AI-006).
+  versione: 'Le istruzioni dell’assistente sono state aggiornate: la conversazione riparte da capo.',
+  occupato: 'Il servizio AI è occupato in questo momento. Si può riprovare fra poco.',
 }
 
 export const messaggioAI = (codice) => MESSAGGI_AI[codice] || MESSAGGI_AI.riprova
@@ -88,3 +91,8 @@ export function fileInBase64(blob) {
 // Torna { ok: true, credito_eur, tetto_mensile_eur, speso_mese_eur,
 // attivo, motivo } o { ok: false, codice } come ogni altra richiesta.
 export const leggiCreditoAI = () => chiediAI({ tipo: 'credito' })
+
+// Un turno della chat (REQ-AI-006): la conversazione intera, gli strumenti
+// del ruolo di chi scrive, e la versione con cui la conversazione è nata.
+export const chiediChat = ({ messaggi, strumenti, versione = null }) =>
+  chiediAI({ tipo: 'chat', messaggi, strumenti, ...(versione ? { versione } : {}) })

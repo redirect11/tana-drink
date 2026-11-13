@@ -11598,6 +11598,71 @@ body.pagina-piena .inv-scheda {
   border-radius: 10px;
   background: var(--tile-bg);
 }
+/* L'ASSISTENTE AI (REQ-AI-006, PannelloChat.jsx): un pannello sopra la
+   pagina, sul lato destro, alto quanto la finestra. Sul telefono prende
+   tutta la larghezza. La conversazione scorre, il campo per scrivere resta
+   in fondo. */
+.pannello-chat {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
+}
+.pannello-chat-testa,
+.pannello-chat-piede {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.pannello-chat-piede {
+  border-bottom: 0;
+  border-top: 1px solid var(--line);
+  align-items: stretch;
+}
+.pannello-chat-piede textarea {
+  flex: 1;
+  resize: none;
+}
+.pannello-chat-corpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+.pannello-chat-riga {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  white-space: pre-wrap;
+}
+.pannello-chat-riga.tu {
+  justify-self: end;
+  background: var(--tile-bg);
+}
+.pannello-chat-riga.ai {
+  border: 1px solid var(--line);
+}
+.pannello-chat-riga.attivita,
+.pannello-chat-costo {
+  padding: 0 12px 8px;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.pannello-chat-riga.attivita {
+  padding: 0;
+}
 /* IL DOCUMENTO LETTO DALL'AI (REQ-AI-001, FatturaDaAI.jsx): una riga letta
    per riquadro, con la descrizione del documento sopra il prodotto
    abbinato e i tre numeri sotto, che su un telefono non ci stanno in fila

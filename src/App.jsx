@@ -11,7 +11,7 @@ import StaffProfilePage from './pages/StaffProfilePage.jsx'
 import PosPage from './pages/PosPage.jsx'
 import { useCustomer, useHasOrders } from './lib/customerAuth.js'
 import { isFirebaseConfigured, auth } from './lib/firebaseClient.js'
-import { isPersonale, isSala } from './lib/ruoli.js'
+import { isPersonale, isSala, isGestore } from './lib/ruoli.js'
 import { colorePersona } from './lib/colorePersona.js'
 import { ricordaRuolo } from './lib/ruoloLocale.js'
 import { onAuthStateChanged, signInWithCustomToken } from 'firebase/auth'
@@ -35,6 +35,8 @@ import AvvisiSpenti from './components/AvvisiSpenti.jsx'
 import ChiamataInArrivo from './components/ChiamataInArrivo.jsx'
 import { dismissKeyboard } from './lib/keyboard.js'
 import StatusBell from './components/StatusBell.jsx'
+import PannelloChat from './components/PannelloChat.jsx'
+import { aiRaggiungibile } from './lib/aiApi.js'
 import ActionSheet from './components/ActionSheet.jsx'
 import StaffDrawer from './components/StaffDrawer.jsx'
 import ClientDrawer from './components/ClientDrawer.jsx'
@@ -238,6 +240,9 @@ export default function App() {
     }
   }, [])
   const [menuTopbar, setMenuTopbar] = useState(false)
+  // L'ASSISTENTE AI (REQ-AI-006): un pannello sopra la pagina, per lo staff
+  // di gestione, solo dove l'AI arriva (non nel Free, non nella demo).
+  const [chatAperta, setChatAperta] = useState(false)
   // "Schermo intero" ha senso solo da browser: con l'app installata le
   // barre non ci sono già. Lo stesso stato del tasto nella barra, così la
   // voce del menu sa anche USCIRE e non solo entrare.
@@ -648,6 +653,21 @@ export default function App() {
               terminale» è una domanda del gestionale — a un cliente non
               vuol dire niente e non deve nemmeno comparire. Chi ordina o
               scansiona il QR li riavrà, e saranno i suoi. */}
+          {/* L'ASSISTENTE AI sta con le azioni («cosa posso fare adesso?»),
+              prima della campanella. Sul telefono è una voce del ⋮: lì la
+              zona destra tiene solo campanella e ⋮ (docs/navigazione.md). */}
+          {isGestore(staffRole) && !telefono && aiRaggiungibile() && (
+            <button
+              type="button"
+              className="btn ghost small topbar-chat"
+              onClick={() => setChatAperta((v) => !v)}
+              aria-label="Assistente AI"
+              aria-pressed={chatAperta}
+              title="Assistente AI"
+            >
+              <Icona nome="fumetto" gruppo="tasti" />
+            </button>
+          )}
           {collegato && <StatusBell />}
           {/* A tutto schermo ci va chi LAVORA sull'app per ore (banco, sala):
               al cliente che apre il menù dal telefono non serve, e in mezzo
@@ -740,6 +760,13 @@ export default function App() {
             hint: 'Nome e password',
             onClick: () => navigate('/profilo-staff'),
           },
+          isGestore(staffRole) && aiRaggiungibile() && {
+            id: 'assistente',
+            icon: 'fumetto',
+            label: 'Assistente AI',
+            hint: 'Giacenze, vendite, descrizioni del menù',
+            onClick: () => setChatAperta(true),
+          },
           !isSala(staffRole) && {
             id: 'pos',
             icon: 'nuovo-ordine',
@@ -773,6 +800,8 @@ export default function App() {
           { id: 'esci', icon: 'esci', label: 'Esci', danger: true, onClick: () => logoutStaff() },
         ]}
       />
+
+      {chatAperta && isGestore(staffRole) && <PannelloChat ruolo={staffRole} onChiudi={() => setChatAperta(false)} />}
 
       {(onBackoffice || !!staffRole) && <AddToHomeHint />}
 
