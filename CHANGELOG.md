@@ -1,5 +1,7 @@
 # Cosa è cambiato
 
+## 1.10.43-beta — in lavorazione
+
 ## 1.10.42 — 13 novembre 2026 (produzione)
 
 In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle
