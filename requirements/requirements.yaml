@@ -3846,6 +3846,9 @@ requirements:
       DA DECIDERE con l'utente: se l'opzione vale per la voce o per il
       prodotto di magazzino, e se il cliente vede la voce barrata
       («esaurita») invece che sparita.
+      LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in
+      Impostazioni, se la voce esce dal menù quando un ingrediente della
+      ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
     status: todo
     generate_issue: true
     labels: [menu, magazzino, vista-cliente]
@@ -7066,6 +7069,134 @@ requirements:
     test_cases:
       - tests/component/InstallazioneSospesa.test.jsx
 
+  - id: REQ-MENU-040
+    title: "Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato"
+    area: "src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js"
+    description: >
+      Daniele, 13/11/2026: gli ingredienti di una voce si scrivono a mano
+      libera, e ognuno diventa un'ETICHETTA; mentre si scrive, sotto
+      compaiono i suggerimenti. Menù dei clienti e cassa lavorano sugli
+      stessi prodotti di magazzino: quando una voce si collega a un
+      prodotto della cassa, le etichette si riempiono dalla sua ricetta
+      (che resta una proposta: Flavio, 04/11/2026, «non li devi prendere
+      dalla ricetta, vanno messi a mano» — si correggono).
+      UN'ETICHETTA È: un prodotto di magazzino (Tanqueray), una categoria
+      di magazzino (Gin), una categoria della cassa, o testo libero.
+      I SUGGERIMENTI hanno colori diversi: i prodotti della ricetta
+      collegata, le loro categorie, gli altri prodotti, le altre categorie.
+      NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta
+      della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi
+      delle etichette scelte. Il campo «Ingredienti in carta» della scheda
+      della cassa resta per il menù che segue le categorie.
+    status: todo
+    generate_issue: true
+    labels: [menu, vista-cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MENU-041
+    title: "La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie"
+    area: "src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)"
+    description: >
+      Daniele, 13/11/2026: nell'editor del menù le sezioni si possono
+      CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una
+      voce si sceglie (una categoria di magazzino, una della cassa) o si
+      scrive libera, con le stesse regole delle etichette dove si
+      applicano. Si decide se raggruppare tutto automaticamente nelle
+      sezioni. Lo stesso per i GRUPPI del menù dei clienti: possono
+      corrispondere alle macro categorie (della cassa o del magazzino), a
+      gruppi propri del menù dei clienti, o a raggruppamenti del tema (i
+      semi delle carte nel tema Carte).
+      DA CHIARIRE: oggi le macro categorie non raggruppano categorie, ma
+      singoli prodotti e voci con una percentuale (src/lib/macros.js,
+      Flavio 09/09/2026): un gruppo «dalla macro categoria» va definito.
+    status: todo
+    generate_issue: true
+    labels: [menu, vista-cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MAG-055
+    title: "Un prodotto di magazzino si può far scegliere al cliente dal menù"
+    area: "la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js"
+    description: >
+      Daniele, 13/11/2026: sui prodotti di magazzino una spunta «Il cliente
+      può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella
+      categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù
+      dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
+    status: todo
+    generate_issue: true
+    labels: [magazzino, menu, vista-cliente]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-MENU-042
+    title: "Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare"
+    area: "src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js"
+    description: >
+      Daniele, 13/11/2026. SPENTA DI PARTENZA, si accende voce per voce
+      nell'editor. Su un'etichetta di tipo prodotto o categoria di
+      magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare
+      indica quali prodotti offrire, fra quelli di quella categoria
+      spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno
+      (anche zero). Il supplemento predefinito di una voce è 0, e il
+      predefinito si cambia in Impostazioni. Una voce può avere più
+      etichette con la scelta (gin e tonica).
+      AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non
+      sceglie ha il prodotto della ricetta («se pure c'è scritto gin, il
+      barman lo sa quale gin usare»). La nota dell'ordine resta sempre
+      (per esempio «nel gin lemon vorrei il Tanqueray»).
+      Un'etichetta che è una CATEGORIA DELLA CASSA farebbe scegliere fra i
+      prodotti della cassa di quella categoria: Daniele, «forse non ha
+      molto senso», non nella prima tornata.
+      L'ordine, la comanda e il magazzino in REQ-CLI-008; la conferma del
+      banco in REQ-CLI-009.
+    status: todo
+    generate_issue: true
+    labels: [menu, vista-cliente, cassa]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-CLI-008
+    title: "La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino"
+    area: "src/lib/cart.js, src/lib/comande.js (righeDellaComanda), src/lib/printer.js, src/lib/inventory.js (scarico), docs/architettura.md"
+    description: >
+      Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente
+      (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento.
+      Diventa un prodotto modificato al volo, come quelli battuti al POS
+      con gli ingredienti cambiati (già possibile): la ricetta della riga
+      ha il prodotto scelto al posto di quello della ricetta, e il
+      magazzino scala quello (fotografato al momento dell'ordine, come
+      sempre). La scelta si legge sulla comanda e nel conto. Due righe con
+      scelte diverse sono righe diverse: non si accorpano. Tocca coda,
+      conto e modello dati: si fa in un ramo suo, coi test che girano
+      senza rete (CLAUDE.md, il local-first).
+    status: todo
+    generate_issue: true
+    labels: [clienti, cassa, magazzino]
+    priority: P2
+    test_cases: []
+
+  - id: REQ-CLI-009
+    title: "Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta"
+    area: "src/lib/orderStatus.js (stato nuovo), src/lib/api.js, src/pages/OrderStatusPage.jsx, la coda (BartenderPage), Impostazioni"
+    description: >
+      Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo
+      conferma chi lo riceve al banco, che può modificarlo prima (cambiare
+      un ingrediente o il prezzo, per una scelta o per la nota del
+      cliente). Se il banco modifica prezzo o ingredienti l'ordine entra in
+      uno STATO NUOVO, «in attesa di conferma del cliente»: il cliente lo
+      vede modificato, col prezzo nuovo, e lo accetta o lo rifiuta.
+      Accettato prosegue; RIFIUTATO è annullato, annullato dal cliente.
+      Il tempo per rispondere lo decide il titolare in Impostazioni (10
+      minuti di partenza); scaduto, l'ordine si annulla.
+      Tocca coda e stati del conto: ramo suo, coi test senza rete.
+    status: todo
+    generate_issue: true
+    labels: [clienti, cassa]
+    priority: P2
+    test_cases: []
+
   - id: REQ-LIC-011
     title: "Il catalogo dei temi: i gestori li aggiungono alla loro installazione, gratis o a pagamento"
     area: "drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md"
@@ -8311,6 +8442,11 @@ requirements:
       La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`,
       già provato con REQ-AI-004). La foto resta quella caricata a mano,
       col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora.
+      13/11/2026: la voce del menù dei clienti si fa solo dall'editor del
+      menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la
+      propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che
+      creava il prodotto della cassa dalla bottiglia è PROPOSTO DA LASCIARE
+      CADERE, in attesa della conferma di Daniele.
     status: todo
     generate_issue: true
     labels: [ai, menu, vista-cliente]
@@ -8342,6 +8478,10 @@ requirements:
       non sa torna «da verificare»; il costo si mostra coi millesimi.
       RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del
       gestionale, e la prima stesura scritta una volta per tutte.
+      DOVE (Daniele, 13/11/2026): il tasto della descrizione AI sta in
+      TUTTE E DUE LE PARTI, la scheda del prodotto della cassa e l'editor
+      del menù dei clienti, voce per voce; nell'editor la proposta parte
+      dalla voce (nome, sezione, etichette degli ingredienti, REQ-MENU-040).
     status: partial
     generate_issue: true
     labels: [ai, menu, vista-cliente]

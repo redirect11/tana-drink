@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 289 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 28 | da fare |
+| ⬜ | 34 | da fare |
 | 🗑 | 8 | non più valido |
 
-**347 voci** in tutto. **311** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
+**353 voci** in tutto. **311** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **34** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,11 +47,11 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 34 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
-| [Magazzino](#magazzino) | 49 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
+| [Menù e catalogo](#menù-e-catalogo) | 34 | 4 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Magazzino](#magazzino) | 49 | 6 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 7 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 7 | 2 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -78,8 +78,8 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 173 |
 | Unità | il progetto di dettaglio: un modulo da solo | 178 |
 
-**15** bisogni del locale, **0** con un test di accettazione.
-**99** requisiti su 339 sono collegati a un bisogno;
+**16** bisogni del locale, **0** con un test di accettazione.
+**105** requisiti su 345 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -191,7 +191,7 @@ Listino, schede, magazzino e impostazioni si usano tutti i giorni da chi li cono
 
 **Come si accetta**: Dal PC, in Menù → Marginalità listino, ogni numero sta sotto la sua intestazione; toccando «Birre» a sinistra restano solo le birre, con i filtri che contano lì dentro. Aprendo la scheda di un drink non ci sono righe d'aiuto fra un campo e l'altro; accendendo «Aiuti sotto i campi» in Aspetto tornano, scritti in frasi piane. Aggiungendo un gin alla ricetta del Negroni la riga parte in ml, come le altre; in Impostazioni → Prezzo consigliato, scritto un drink cost del 20%, il ricarico diventa ×5 (vocali del 09/11/2026). Nella ricetta del Gold Rush, accanto a 60 ml di Jim Beam si legge 1,14 € (10/11/2026). Nel menù dei clienti copiato dalla cassa le sezioni sono le categorie, chiuse in un indice; i gin selezionati in «Distillati» passano insieme in «Gin», e i prodotti senza categoria stanno in «Non categorizzati». Un drink che in cassa non c'è si crea dalla sua sezione, e appena salvato è lì.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-MENU-002](#req-menu-002--marginalità-del-listino-in-tabella-e-divisa-per-categorie), [REQ-MENU-032](#req-menu-032--marginalità-del-listino-le-categorie-a-sinistra-per-vederne-una-sola), [REQ-UI-032](#req-ui-032--gli-aiuti-sotto-i-campi-delle-schede-si-nascondono-e-i-testi-sono-riscritti), [REQ-MAG-054](#req-mag-054--un-ingrediente-nuovo-in-ricetta-parte-in-millilitri), [REQ-MENU-033](#req-menu-033--il-ricarico-del-prezzo-consigliato-si-imposta-anche-come-drink-cost), [REQ-MENU-034](#req-menu-034--ogni-riga-della-ricetta-mostra-quanto-costa), [REQ-MENU-035](#req-menu-035--leditor-del-menù-dei-clienti-è-compatto-sezioni-che-si-aprono-una-riga-per-voce-voci-spostate-insieme), [REQ-MENU-036](#req-menu-036--dal-menù-dei-clienti-si-crea-un-prodotto-della-cassa-che-non-cè-e-diventa-subito-una-voce-della-sezione), [REQ-MENU-037](#req-menu-037--le-sezioni-di-soli-special-stanno-fuori-dal-menù-e-si-aprono-dal-carosello-e-dal-qr-è-la-stessa-carta), [REQ-MENU-038](#req-menu-038--il-formato-dei-prezzi-nel-menù-dei-clienti-si-sceglie-di-partenza-il-numero-senza-simbolo-delleuro-e-senza-decimali-inutili), [REQ-MENU-039](#req-menu-039--la-foto-di-un-prodotto-si-ritaglia-nella-sua-scheda-prima-di-caricarla-tutte-nella-stessa-cornice-quadrata), [REQ-AI-005](#req-ai-005--ogni-foto-caricata-si-può-far-modificare-allai-la-proposta-accanto-alloriginale-da-accettare-scartare-o-richiedere), [REQ-AI-006](#req-ai-006--un-assistente-ai-nel-gestionale-una-chat-che-sa-fare-le-cose-dellapp-che-lai-può-fare), [REQ-MENU-040](#req-menu-040--gli-ingredienti-di-una-voce-del-menù-dei-clienti-sono-etichette-proposte-dalla-ricetta-del-prodotto-collegato), [REQ-MENU-041](#req-menu-041--la-voce-del-menù-dei-clienti-ha-una-categoria-e-le-sezioni-e-i-gruppi-possono-nascere-da-sole-dalle-categorie) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-014 — La demo che si mostra a un locale nuovo non espone niente di un locale vero
 
@@ -208,6 +208,14 @@ Un locale col piano Free prova l'app con una cassa semplice; uno con un piano a 
 **Come si accetta**: Su un locale Free con `stampa: false` nei limiti si batte un conto, lo si incassa e si chiude la cassa senza che esca niente dalla stampante, senza tasti «Stampa» e senza le impostazioni della stampante; dove si cercherebbero c'è la frase del piano. Sulla Tana, con la stessa versione, comanda e scontrino escono come sempre.
 
 **Chi**: Gestore · **Lo realizzano**: [REQ-LIC-005](#req-lic-005--il-free-è-una-cassa-semplice-si-battono-le-righe-e-si-incassa-senza-comande), [REQ-LIC-016](#req-lic-016--nel-free-non-si-stampa-niente-né-comande-né-scontrini-né-il-resto), [REQ-LIC-017](#req-lic-017--nel-free-non-cè-lai-niente-tasti-ai-chat-né-credito), [REQ-LIC-018](#req-lic-018--il-locale-fermo-si-mostra-secondo-chi-apre-pagina-neutra-al-pubblico-il-titolare-al-rinnovo-e-ai-suoi-dati) · ⚠️ **Nessun test di accettazione, ancora.**
+
+#### UR-016 — Il cliente ordina il drink come lo vuole, e paga quello che ha accettato
+
+Dove il titolare lo permette, il cliente sceglie dal menù del telefono un ingrediente (il suo gin, la sua tonica), col supplemento che il titolare ha deciso; e il banco, che conferma ogni ordine dal telefono, può cambiarlo, con il cliente che accetta o rifiuta prima che si prepari. Decisioni di Daniele del 13/11/2026.
+
+**Come si accetta**: Sul menù del telefono, nel Gin Lemon con la scelta del gin accesa, il cliente sceglie Hendrick's (+1 €); al banco la comanda dice «gin: Hendrick's», il conto porta il supplemento e il magazzino scala Hendrick's. Un altro cliente scrive nella nota «col Tanqueray»: il barman cambia il gin e il prezzo, il cliente vede l'ordine modificato e lo accetta; se lo rifiuta, l'ordine risulta annullato dal cliente, e se non risponde entro dieci minuti si annulla da sé.
+
+**Chi**: Cliente, Banco · **Lo realizzano**: [REQ-MAG-055](#req-mag-055--un-prodotto-di-magazzino-si-può-far-scegliere-al-cliente-dal-menù), [REQ-MENU-042](#req-menu-042--su-una-voce-del-menù-il-cliente-può-scegliere-un-ingrediente-col-supplemento-deciso-dal-titolare), [REQ-CLI-008](#req-cli-008--la-scelta-del-cliente-arriva-nellordine-sulla-comanda-e-nel-magazzino), [REQ-CLI-009](#req-cli-009--un-ordine-dal-telefono-modificato-dal-banco-torna-al-cliente-che-lo-accetta-o-lo-rifiuta) · ⚠️ **Nessun test di accettazione, ancora.**
 
 ## Cosa fa il sistema
 
@@ -3173,7 +3181,7 @@ DECISIONE DELL'UTENTE, lo stesso giorno: «prima tu, poi l'app quando integrerem
 
 FATTO IN PARTE (12/11/2026, col collegamento alla regia di REQ-AI-003): nella scheda del prodotto «Proponi una descrizione con l'AI» chiede alla regia una descrizione dal nome e dalla categoria, e la mostra come proposta da usare, scartare o richiedere; quello che il modello non sa torna «da verificare»; il costo si mostra coi millesimi.
 
-RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte.
+RESTA: le voci del menù dei clienti (StrutturaMenu.jsx), il nome del gestionale, e la prima stesura scritta una volta per tutte. DOVE (Daniele, 13/11/2026): il tasto della descrizione AI sta in TUTTE E DUE LE PARTI, la scheda del prodotto della cassa e l'editor del menù dei clienti, voce per voce; nell'editor la proposta parte dalla voce (nome, sezione, etichette degli ingredienti, REQ-MENU-040).
 
 **Dove**: `functions/ (chiamata al modello, dalla regia), src/components/StrutturaMenu.jsx, src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/component/descrizioneAI.test.jsx`
 
@@ -4253,7 +4261,35 @@ PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta
 
 DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
 
+LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
+
 **Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
+
+#### REQ-MENU-040 — Gli ingredienti di una voce del menù dei clienti sono etichette, proposte dalla ricetta del prodotto collegato
+
+Daniele, 13/11/2026: gli ingredienti di una voce si scrivono a mano libera, e ognuno diventa un'ETICHETTA; mentre si scrive, sotto compaiono i suggerimenti. Menù dei clienti e cassa lavorano sugli stessi prodotti di magazzino: quando una voce si collega a un prodotto della cassa, le etichette si riempiono dalla sua ricetta (che resta una proposta: Flavio, 04/11/2026, «non li devi prendere dalla ricetta, vanno messi a mano» — si correggono). UN'ETICHETTA È: un prodotto di magazzino (Tanqueray), una categoria di magazzino (Gin), una categoria della cassa, o testo libero. I SUGGERIMENTI hanno colori diversi: i prodotti della ricetta collegata, le loro categorie, gli altri prodotti, le altre categorie.
+
+NELLA VOCE: gli ingredienti si modificano, si riportano alla proposta della ricetta, o si nascondono del tutto. Al cliente arrivano i nomi delle etichette scelte. Il campo «Ingredienti in carta» della scheda della cassa resta per il menù che segue le categorie.
+
+**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/lib/strutturaMenu.js, src/lib/ingredientiCarta.js` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
+
+#### REQ-MENU-041 — La voce del menù dei clienti ha una categoria, e le sezioni e i gruppi possono nascere da sole dalle categorie
+
+Daniele, 13/11/2026: nell'editor del menù le sezioni si possono CREARE AUTOMATICAMENTE dalla categoria delle voci. La categoria di una voce si sceglie (una categoria di magazzino, una della cassa) o si scrive libera, con le stesse regole delle etichette dove si applicano. Si decide se raggruppare tutto automaticamente nelle sezioni. Lo stesso per i GRUPPI del menù dei clienti: possono corrispondere alle macro categorie (della cassa o del magazzino), a gruppi propri del menù dei clienti, o a raggruppamenti del tema (i semi delle carte nel tema Carte).
+
+DA CHIARIRE: oggi le macro categorie non raggruppano categorie, ma singoli prodotti e voci con una percentuale (src/lib/macros.js, Flavio 09/09/2026): un gruppo «dalla macro categoria» va definito.
+
+**Dove**: `src/components/StrutturaMenu.jsx, src/lib/strutturaMenu.js, i temi (gruppi: i semi del tema Carte)` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
+
+#### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
+
+Daniele, 13/11/2026.
+
+SPENTA DI PARTENZA, si accende voce per voce nell'editor. Su un'etichetta di tipo prodotto o categoria di magazzino (REQ-MENU-040) la spunta «Il cliente sceglie»: il titolare indica quali prodotti offrire, fra quelli di quella categoria spuntati in magazzino (REQ-MAG-055), e il supplemento di ciascuno (anche zero). Il supplemento predefinito di una voce è 0, e il predefinito si cambia in Impostazioni. Una voce può avere più etichette con la scelta (gin e tonica).
+
+AL CLIENTE: fra le scelte solo i prodotti con giacenza; chi non sceglie ha il prodotto della ricetta («se pure c'è scritto gin, il barman lo sa quale gin usare»). La nota dell'ordine resta sempre (per esempio «nel gin lemon vorrei il Tanqueray»). Un'etichetta che è una CATEGORIA DELLA CASSA farebbe scegliere fra i prodotti della cassa di quella categoria: Daniele, «forse non ha molto senso», non nella prima tornata. L'ordine, la comanda e il magazzino in REQ-CLI-008; la conferma del banco in REQ-CLI-009.
+
+**Dove**: `src/components/StrutturaMenu.jsx (la voce), src/pages/MenuPage.jsx (la scelta del cliente), src/lib/cart.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 ### Magazzino
 
@@ -4262,6 +4298,12 @@ DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di mag
 Dopo l'import dei costi restano ingredienti che puntano a id di magazzino non più esistenti: quei drink mostrano un costo parziale. Vanno riagganciati agli articoli corretti (alcuni sono accoppiamenti evidenti, altri vanno decisi a mano) e va impedito che una ricetta punti nel vuoto senza accorgersene.
 
 **Dove**: `src/lib/saveDrink.js, requirements`
+
+#### REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
+
+Daniele, 13/11/2026: sui prodotti di magazzino una spunta «Il cliente può sceglierlo dal menù» (Tanqueray, Hendrick's, Bombay nella categoria Gin). Sono quelli fra cui si sceglie nelle voci del menù dei clienti che lo permettono (REQ-MENU-042). Spenta di partenza.
+
+**Dove**: `la scheda del prodotto di magazzino (InventoryManager), src/lib/inventory.js` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 #### REQ-MAG-020 — La resa di un prodotto sta dietro un interruttore
 
@@ -4431,6 +4473,22 @@ RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portat
 
 **Dove**: `scripts/certificato-stampante.js`
 
+### Vista cliente
+
+#### REQ-CLI-008 — La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino
+
+Daniele, 13/11/2026. La riga dell'ordine porta le scelte del cliente (REQ-MENU-042): «Gin Lemon · gin: Hendrick's», col supplemento. Diventa un prodotto modificato al volo, come quelli battuti al POS con gli ingredienti cambiati (già possibile): la ricetta della riga ha il prodotto scelto al posto di quello della ricetta, e il magazzino scala quello (fotografato al momento dell'ordine, come sempre). La scelta si legge sulla comanda e nel conto. Due righe con scelte diverse sono righe diverse: non si accorpano. Tocca coda, conto e modello dati: si fa in un ramo suo, coi test che girano senza rete (CLAUDE.md, il local-first).
+
+**Dove**: `src/lib/cart.js, src/lib/comande.js (righeDellaComanda), src/lib/printer.js, src/lib/inventory.js (scarico), docs/architettura.md` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
+
+#### REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
+
+Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo conferma chi lo riceve al banco, che può modificarlo prima (cambiare un ingrediente o il prezzo, per una scelta o per la nota del cliente). Se il banco modifica prezzo o ingredienti l'ordine entra in uno STATO NUOVO, «in attesa di conferma del cliente»: il cliente lo vede modificato, col prezzo nuovo, e lo accetta o lo rifiuta. Accettato prosegue;
+
+RIFIUTATO è annullato, annullato dal cliente. Il tempo per rispondere lo decide il titolare in Impostazioni (10 minuti di partenza); scaduto, l'ordine si annulla. Tocca coda e stati del conto: ramo suo, coi test senza rete.
+
+**Dove**: `src/lib/orderStatus.js (stato nuovo), src/lib/api.js, src/pages/OrderStatusPage.jsx, la coda (BartenderPage), Impostazioni` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
+
 ### Persone: ruoli, utenze, ore
 
 #### REQ-STAFF-017 — L'aspetto e' della persona, non del locale
@@ -4487,7 +4545,7 @@ PROPOSTA: nella scheda del prodotto di magazzino, «Metti nel menu' del cliente�
 
 LA FOTO: prenderla da internet non si fa. Le foto dei prodotti sono di marchi e rivenditori, e metterle in un menu' commerciale senza diritti e' un rischio; un modello non le «prende», le cercherebbe con un motore di ricerca. La strada pulita e' la foto della bottiglia fatta al banco col telefono, ripulita dal modello (sfondo tolto, luce uniformata). Da decidere con l'utente. Costi e accesso in REQ-AI-003.
 
-LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora.
+LA TORNATA DELL'AI (Daniele, 12/11/2026): prima le due funzioni che il cassetto della regia sa già fare, la lettura delle fatture (REQ-AI-001) e la voce del menù dal prodotto (REQ-AI-002), col credito in Impostazioni (REQ-AI-003); poi la chat (REQ-AI-006), che le usa come strumenti; la modifica delle foto (REQ-AI-005) per ora no. La descrizione passa dal cassetto della regia (`tipo: 'descrizione'`, già provato con REQ-AI-004). La foto resta quella caricata a mano, col ritaglio (REQ-MENU-039): niente foto proposte dall'AI per ora. 13/11/2026: la voce del menù dei clienti si fa solo dall'editor del menù («+ Nuovo prodotto della cassa», REQ-MENU-036), e più avanti la propone la chat (REQ-AI-006). Il tasto nella scheda di magazzino che creava il prodotto della cassa dalla bottiglia è PROPOSTO DA LASCIARE CADERE, in attesa della conferma di Daniele.
 
 **Dove**: `functions/ (chiamata al modello), src/components/ItemForm.jsx, src/components/DrinkForm.jsx`
 

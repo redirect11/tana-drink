@@ -342,6 +342,8 @@ bisogni:
       - REQ-MENU-039
       - REQ-AI-005
       - REQ-AI-006
+      - REQ-MENU-040
+      - REQ-MENU-041
     test_cases: []
 
   - id: UR-014
@@ -383,4 +385,28 @@ bisogni:
       - REQ-LIC-016
       - REQ-LIC-017
       - REQ-LIC-018
+    test_cases: []
+
+  - id: UR-016
+    title: "Il cliente ordina il drink come lo vuole, e paga quello che ha accettato"
+    area: "Cliente, Banco"
+    description: >
+      Dove il titolare lo permette, il cliente sceglie dal menù del
+      telefono un ingrediente (il suo gin, la sua tonica), col supplemento
+      che il titolare ha deciso; e il banco, che conferma ogni ordine dal
+      telefono, può cambiarlo, con il cliente che accetta o rifiuta prima
+      che si prepari. Decisioni di Daniele del 13/11/2026.
+    accettazione: >
+      Sul menù del telefono, nel Gin Lemon con la scelta del gin accesa, il
+      cliente sceglie Hendrick's (+1 €); al banco la comanda dice «gin:
+      Hendrick's», il conto porta il supplemento e il magazzino scala
+      Hendrick's. Un altro cliente scrive nella nota «col Tanqueray»: il
+      barman cambia il gin e il prezzo, il cliente vede l'ordine
+      modificato e lo accetta; se lo rifiuta, l'ordine risulta annullato
+      dal cliente, e se non risponde entro dieci minuti si annulla da sé.
+    requisiti:
+      - REQ-MAG-055
+      - REQ-MENU-042
+      - REQ-CLI-008
+      - REQ-CLI-009
     test_cases: []
