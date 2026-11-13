@@ -23,6 +23,11 @@
 - Magazzino: nella scheda di un prodotto, «Il cliente può sceglierlo dal
   menù». Segna i prodotti fra cui il cliente potrà scegliere nelle voci che
   lo permettono (per esempio il gin del gin tonic). Spenta di partenza.
+- Magazzino: nella scheda di un prodotto, «Crea il prodotto della cassa»
+  apre nel Menù la scheda di un prodotto nuovo già collegato a quella
+  bottiglia (nome, categoria, ricetta); si scrivono la quantità della
+  ricetta e il prezzo. La descrizione la propone l’AI, dove c’è. Una riga
+  della ricetta senza quantità ora non si salva, e la scheda lo dice.
 - L’assistente AI: dalla barra in alto (sul telefono dal ⋮) si apre un
   pannello dove si chiede di giacenze, vendite e prodotti, si fanno
   proporre le descrizioni del menù e (all’admin) leggere i documenti dei

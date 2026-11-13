@@ -14,9 +14,7 @@ import { giacenza, cercaProdotti, vendite, giornata, LIMITI_RIGHE } from '../../
 describe('chi usa quali strumenti', () => {
   it('la chat è dello staff di gestione; la fattura solo dell’admin', () => {
     expect(strumentiPerRuolo('admin')).toContain('leggi_fattura')
-    expect(strumentiPerRuolo('bartender')).toEqual(['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione'])
-    // La voce del menù dal prodotto aspetta il suo tasto (REQ-AI-002).
-    expect(strumentiPerRuolo('admin')).not.toContain('proponi_voce_menu')
+    expect(strumentiPerRuolo('bartender')).toEqual(['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'proponi_voce_menu'])
     expect(strumentiPerRuolo('staff')).toEqual([])
     expect(strumentiPerRuolo(null)).toEqual([])
   })

@@ -15,6 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from '../helpers/router.jsx'
 import '@testing-library/jest-dom/vitest'
 
 const chiamata = vi.fn()
@@ -26,6 +27,7 @@ vi.mock('../../src/lib/api.js', () => ({
   fetchInventoryItems: async () => [{ id: 'i1', name: 'Gin Tanqueray', stock: 1400, unit: 'ml', low_threshold: 700 }],
   fetchDrinks: async () => [{ id: 'd1', name: 'Negroni', category_id: 'c1', price: 8 }],
   fetchCategories: async () => [{ id: 'c1', name: 'Cocktail' }],
+  fetchInventoryCategories: async () => [],
   fetchOrdersRange: async () => [],
   fetchSuppliers: async () => [],
   fetchSupplierPrices: async () => [],
@@ -36,6 +38,16 @@ vi.mock('../../src/lib/api.js', () => ({
 }))
 
 import PannelloChat from '../../src/components/PannelloChat.jsx'
+import { prendiProdottoInArrivo } from '../../src/lib/prodottoDaMagazzino.js'
+import { _azzeraStatoAI } from '../../src/lib/statoAI.js'
+
+// Il pannello apre schede nel Menù: vive dentro il router.
+const mostra = (ruolo) =>
+  render(
+    <MemoryRouter>
+      <PannelloChat ruolo={ruolo} onChiudi={vi.fn()} />
+    </MemoryRouter>
+  )
 
 const CREDITO = { ok: true, tipo: 'credito', credito_eur: 5, tetto_mensile_eur: 20, speso_mese_eur: 0, attivo: true, motivo: null }
 const turnoStrumento = (id, nome, input) => ({
@@ -71,6 +83,7 @@ const chiamateChat = () => chiamata.mock.calls.map((c) => c[0]).filter((d) => d.
 beforeEach(() => {
   chiamata.mockReset()
   updateDrink.mockClear()
+  _azzeraStatoAI()
 })
 
 const scrivi = async (user, testo) => {
@@ -83,7 +96,7 @@ const scrivi = async (user, testo) => {
 describe('l’assistente', () => {
   it('con l’AI ferma lo dice, e non si scrive', async () => {
     regia([], { credito: { ...CREDITO, attivo: false, motivo: 'credito', credito_eur: 0 } })
-    render(<PannelloChat ruolo="admin" onChiudi={vi.fn()} />)
+    mostra('admin')
     expect(await screen.findByRole('status')).toHaveTextContent(/credito AI del locale è finito/)
     expect(screen.getByLabelText('Messaggio per l’assistente')).toBeDisabled()
   })
@@ -91,12 +104,12 @@ describe('l’assistente', () => {
   it('uno strumento di lettura: l’app lo esegue, rimanda l’esito e mostra la risposta', async () => {
     const user = userEvent.setup()
     regia([turnoStrumento('t1', 'giacenza', { prodotto: 'gin' }), turnoTesto('Restano 1400 ml di Gin Tanqueray.')])
-    render(<PannelloChat ruolo="bartender" onChiudi={vi.fn()} />)
+    mostra('bartender')
     await scrivi(user, 'Quanto gin mi resta?')
     expect(await screen.findByText('Restano 1400 ml di Gin Tanqueray.')).toBeInTheDocument()
     const [primo, secondo] = chiamateChat()
     // Il bartender non ha la lettura delle fatture, che è dell'admin.
-    expect(primo).toEqual({ tipo: 'chat', messaggi: [{ role: 'user', content: 'Quanto gin mi resta?' }], strumenti: ['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione'] })
+    expect(primo).toEqual({ tipo: 'chat', messaggi: [{ role: 'user', content: 'Quanto gin mi resta?' }], strumenti: ['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'proponi_voce_menu'] })
     // Il turno del modello rientra intatto; l'esito in un turno di chi scrive.
     expect(secondo.messaggi[1]).toEqual(turnoStrumento('t1', 'giacenza', { prodotto: 'gin' }).turno)
     expect(secondo.messaggi[2].content[0]).toMatchObject({ type: 'tool_result', tool_use_id: 't1' })
@@ -109,7 +122,7 @@ describe('l’assistente', () => {
     regia([turnoStrumento('t1', 'proponi_descrizione', { prodotto: 'negroni' }), turnoTesto('Fatto.')], {
       descrizione: { ok: true, tipo: 'descrizione', risultato: { descrizione: 'Amaro e rosso.', da_verificare: [] }, costo_eur: 0.002 },
     })
-    render(<PannelloChat ruolo="admin" onChiudi={vi.fn()} />)
+    mostra('admin')
     await scrivi(user, 'Scrivi la descrizione del Negroni')
     await user.click(await screen.findByRole('button', { name: 'Usa questa' }))
     expect(updateDrink).toHaveBeenCalledWith('d1', { description: 'Amaro e rosso.' })
@@ -123,9 +136,23 @@ describe('l’assistente', () => {
   it('409 «versione»: si riparte da capo, e lo dice', async () => {
     const user = userEvent.setup()
     regia([{ ok: false, codice: 'versione' }])
-    render(<PannelloChat ruolo="admin" onChiudi={vi.fn()} />)
+    mostra('admin')
     await scrivi(user, 'Ciao')
     expect(await screen.findByText(/conversazione riparte da capo/)).toBeInTheDocument()
     expect(screen.queryByText('Ciao')).toBeNull()
+  })
+
+  // REQ-AI-002 nella chat: la proposta apre nel Menù la scheda della
+  // bottiglia, da completare; il modello non crea niente da solo.
+  it('un prodotto della cassa proposto apre la scheda nel Menù', async () => {
+    const user = userEvent.setup()
+    regia([turnoStrumento('t1', 'proponi_voce_menu', { prodotto: 'tanqueray', prezzo_eur: 7 }), turnoTesto('Scheda pronta.')])
+    mostra('admin')
+    await scrivi(user, 'Metti in vendita il Tanqueray a 7 euro')
+    await user.click(await screen.findByRole('button', { name: 'Apri la scheda' }))
+    expect(prendiProdottoInArrivo()).toMatchObject({ name: 'Gin Tanqueray', price: 7, recipe_items: [{ inventory_item_id: 'i1', qty: '' }] })
+    expect(await screen.findByText('Scheda pronta.')).toBeInTheDocument()
+    const esito = JSON.parse(chiamateChat()[1].messaggi[2].content[0].content)
+    expect(esito).toEqual({ voce: { nome: 'Gin Tanqueray', prezzo_eur: 7 }, stato: 'scheda aperta, da completare e salvare' })
   })
 })

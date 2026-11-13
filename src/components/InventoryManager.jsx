@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { prodottoDaMagazzino, mettiProdottoInArrivo } from '../lib/prodottoDaMagazzino.js'
 import {
   fetchInventoryItems,
   fetchDrinks,
+  fetchCategories,
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
@@ -214,7 +216,9 @@ const INV_VIEWS = [
 // delle categorie), in orizzontale una riga. Sono una scelta che si fa ogni
 // tanto e non merita spazio fisso: ora è il TITOLO della pagina a diventare
 // il comando, e sul telefono si apre il foglio dal basso.
-export default function InventoryManager() {
+// `onApriMenu`: come si va al Menù, lo decide la pagina (REQ-AI-002, «Crea
+// il prodotto della cassa»). Senza, il tasto non c'è.
+export default function InventoryManager({ onApriMenu = null }) {
   const [sezione, setSezione] = useState('prodotti')
   usePaginaPiena()
   // ALCUNE SEZIONI SONO FUNZIONI PREMIUM (lib/licenza.js): l'inventario e il
@@ -244,7 +248,7 @@ export default function InventoryManager() {
   )
   return (
     <div className="pagina-inventario">
-      {view === 'prodotti' && <ProductsPanel />}
+      {view === 'prodotti' && <ProductsPanel onApriMenu={onApriMenu} />}
       {view === 'conta' && <StockCountPanel />}
       {view === 'storico' && <StoricoInventari />}
       {view === 'categorie' && <CategoriePanel />}
@@ -397,7 +401,7 @@ function PrevisioneCard({ item, impegnato }) {
   )
 }
 
-function ProductsPanel() {
+function ProductsPanel({ onApriMenu = null }) {
   const testoConIcona = useTestoConIcona()
   const [items, setItems] = useState([])
   const [categories, setCategories] = useState([])
@@ -409,6 +413,14 @@ function ProductsPanel() {
   const [error, setError] = useState(null)
 
   const [editing, setEditing] = useState(null) // null | 'new' | item
+  // REQ-AI-002: la scheda del prodotto della cassa, già collegata a questa
+  // bottiglia, si apre nel Menù. Le categorie della cassa si leggono qui:
+  // è un gesto del gestionale, non del banco.
+  async function creaProdottoCassa(item) {
+    const categorieCassa = await fetchCategories().catch(() => [])
+    mettiProdottoInArrivo(prodottoDaMagazzino(item, { categorieMagazzino: categories, categorieCassa }))
+    onApriMenu()
+  }
   // Lo stato cambiato a mano su un prodotto che sta in un ordine aperto:
   // { payload, scelte, ordini } finché non si risponde alla domanda.
   const [avvisaOrdine, setAvvisaOrdine] = useState(null)
@@ -980,6 +992,7 @@ function ProductsPanel() {
           onCancel={() => setEditing(null)}
           onSave={handleSave}
           onCreateSupplier={creaFornitoreAlVolo}
+          onCreaProdottoCassa={onApriMenu ? creaProdottoCassa : null}
         />
       </>
     )
@@ -2275,7 +2288,7 @@ function AiutoPezzo({ onClose }) {
   )
 }
 
-function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier }) {
+function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 22, onCancel, onSave, onCreateSupplier, onCreaProdottoCassa = null }) {
   const testoConIcona = useTestoConIcona()
   const isEdit = !!initial
   // L'articolo arriva SEMPRE nella forma nuova, anche quando sul database è
@@ -2708,6 +2721,13 @@ function ItemForm({ initial, categories, suppliers, listini = [], defaultVat = 2
         <button type="button" className="btn ghost" onClick={onCancel} disabled={saving}>Annulla</button>
         <button type="submit" className="btn" disabled={saving}>{saving ? 'Salvataggio…' : 'Salva'}</button>
       </div>
+      {/* IL PRODOTTO DELLA CASSA DA QUESTA BOTTIGLIA (REQ-AI-002): solo per
+          un prodotto già salvato, perché la ricetta lo collega per id. */}
+      {initial?.id && onCreaProdottoCassa && (
+        <button type="button" className="btn ghost block" style={{ marginTop: 8 }} onClick={() => onCreaProdottoCassa(initial)} disabled={saving}>
+          Crea il prodotto della cassa
+        </button>
+      )}
     </form>
   )
 }

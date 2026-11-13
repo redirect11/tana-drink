@@ -24,10 +24,9 @@ export const STRUMENTI_PROPOSTA = ['proponi_descrizione', 'proponi_voce_menu', '
 // Solo dell'admin: la sezione Fornitori è sua (sezioni.js).
 const SOLO_ADMIN = ['leggi_fattura']
 
-// Quelli che l'app sa già eseguire. `proponi_voce_menu` aspetta il tasto
-// «Crea il prodotto della cassa» (REQ-AI-002), da cui prende la scheda:
-// finché non c'è, la regia non lo propone al modello.
-const PRONTI = new Set(['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'leggi_fattura'])
+// Quelli che l'app sa già eseguire: tutti. `proponi_voce_menu` apre la
+// scheda di «Crea il prodotto della cassa» (REQ-AI-002).
+const PRONTI = new Set(['giacenza', 'vendite', 'cerca_prodotti', 'proponi_descrizione', 'proponi_voce_menu', 'leggi_fattura'])
 
 // Quelli che chi scrive può usare, col suo ruolo: la chat è dello staff di
 // gestione. La Function controlla di nuovo i solo-admin.

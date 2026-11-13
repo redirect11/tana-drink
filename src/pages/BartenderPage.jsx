@@ -390,7 +390,7 @@ export default function BartenderPage() {
         {tabEffettivo === 'stats' && <StatsTab />}
         {tabEffettivo === 'bilancio' && <BilancioTab />}
         {tabEffettivo === 'menu' && <MenuTab />}
-        {tabEffettivo === 'inventario' && <InventoryManager />}
+        {tabEffettivo === 'inventario' && <InventoryManager onApriMenu={() => navigate('/bar?tab=menu')} />}
         {tabEffettivo === 'fornitori' && <FornitoriTab />}
         {(tabEffettivo === 'staff' || tabEffettivo === 'ore') && <StaffHoursTab />}
         {tabEffettivo === 'utenti' && <UtentiTab role={role} />}

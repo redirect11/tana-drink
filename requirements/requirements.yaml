@@ -8636,11 +8636,19 @@ requirements:
       70 cl la bottiglia intera, 1 pezzo la birra. Il prodotto si crea anche
       dall'editor della cassa, come oggi. La descrizione AI parte da sola
       all'apertura, se l'AI c'è e il credito pure.
-    status: todo
+      FATTO (13/11/2026, ramo feature/chat-ai): lib/prodottoDaMagazzino.js
+      prepara la scheda (categoria della cassa col nome di quella di
+      magazzino, riga della ricetta con la quantità vuota) e la passa al
+      Menù, che la apre come un duplicato (anche se è già aperto); DrinkForm
+      non salva una riga della ricetta senza quantità, e lo dice;
+      DescrizioneAI parte da sola sulla scheda nata dal magazzino, con l'AI
+      attiva. La chat lo usa per `proponi_voce_menu` (REQ-AI-006).
+    status: implemented
     generate_issue: true
     labels: [ai, menu, vista-cliente]
     priority: P3
-    test_cases: []
+    test_cases:
+      - tests/component/prodottoDaMagazzino.test.jsx
 
   - id: REQ-AI-004
     title: "Le descrizioni del menù dei clienti proposte dall'AI, e rivedute dal titolare"
@@ -8773,7 +8781,8 @@ requirements:
       telefono dal ⋮), che chiede il credito all'apertura, esegue gli
       strumenti, mostra le proposte da confermare (descrizione, documento
       del fornitore) e riparte da capo sul 409. `proponi_voce_menu` aspetta
-      il tasto di REQ-AI-002. RESTA la prova con la regia vera.
+      il tasto di REQ-AI-002, ora acceso: apre la scheda nel Menù. RESTA la
+      prova con la regia vera.
     status: partial
     generate_issue: true
     labels: [ai, gestionale]
