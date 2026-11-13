@@ -240,6 +240,9 @@ service cloud.firestore {
       // Il banco aggiorna qualunque cosa; il cliente anonimo solo finché il
       // conto ha la sola prima comanda ancora "ricevuta", senza toccare i
       // campi di pagamento, e può al più annullare.
+      // ...O FINCHÉ IL CONTO ASPETTA LA SUA RISPOSTA (REQ-CLI-009): il banco
+      // ha cambiato l'ordine, magari con la comanda già in preparazione, e
+      // il cliente deve poter accettare o rifiutare (lib/attesaCliente.js).
       // LA SALA SERVE, NON PREPARA (REQ-STAFF-014). Lavora sugli ORDINI —
       // aggiunge righe a un conto, incassa al tavolo, segna «servito» —
       // ma non butta il lavoro del banco. Due cose il server le sa vedere
@@ -265,7 +268,8 @@ service cloud.firestore {
         || (resource.data.status in ['aperto', 'ricevuto']
             && (!('comande' in resource.data)
                 || (resource.data.comande.size() == 1
-                    && resource.data.comande[0].status == 'ricevuto'))
+                    && (resource.data.comande[0].status == 'ricevuto'
+                        || resource.data.get('attesa_cliente', null) != null)))
             && request.resource.data.status in ['aperto', 'ricevuto', 'annullato']
             && !request.resource.data.diff(resource.data)
                  .affectedKeys().hasAny(paymentKeys().toSet()))));

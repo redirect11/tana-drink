@@ -53,6 +53,7 @@ import { conEmoji } from '../lib/icone.js'
 import FormatoPrezziMenu from './FormatoPrezziMenu.jsx'
 import CreditoAI from './CreditoAI.jsx'
 import { aiRaggiungibile } from '../lib/aiApi.js'
+import { minutiAttesa } from '../lib/attesaCliente.js'
 
 // Impostazioni del bar (documento settings/bar). Ogni modifica viene salvata
 // subito; le pagine cliente le ricevono in tempo reale via subscribeSettings.
@@ -908,6 +909,32 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
+      // REQ-CLI-009: lib/attesaCliente.js.
+      id: 'conferma-cliente',
+      icona: 'ordina-dal-menu',
+      label: 'Modifiche da confermare',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Modifiche da confermare</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal telefono, il cliente riceve le
+            modifiche e le accetta o le rifiuta. Il rifiuto annulla l’ordine; allo scadere del tempo l’ordine si
+            annulla. Finché il cliente non risponde, l’ordine non avanza e la comanda non si stampa.
+          </p>
+          <label htmlFor="attesa-cliente-minuti">Tempo per rispondere (minuti)</label>
+          <input
+            id="attesa-cliente-minuti"
+            type="number"
+            step="1"
+            min="1"
+            max="120"
+            defaultValue={minutiAttesa(settings)}
+            onBlur={(e) => save({ attesa_cliente_minuti: minutiAttesa({ attesa_cliente_minuti: e.target.value }) })}
+          />
+        </div>
+      ),
+    },
+    {
       id: 'non-disponibili',
       icona: 'ordina-dal-menu',
       label: 'Voci non disponibili',
@@ -1326,6 +1353,7 @@ export default function SettingsTab({ role = null }) {
     'menu-clienti': 'menu-clienti',
     'non-disponibili': 'menu-clienti',
     'scelta-ingredienti': 'menu-clienti',
+    'conferma-cliente': 'menu-clienti',
     'gestione-menu': 'gestione-menu',
     catalogo: 'catalogo',
     coda: 'banco',

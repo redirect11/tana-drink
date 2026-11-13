@@ -84,6 +84,7 @@ vi.mock('../../src/lib/api.js', async () => {
     updateOrderStatus: vi.fn(),
     markOrderPaid: vi.fn(),
     cancelOrder: vi.fn(),
+    rispondiAllaModifica: vi.fn(() => Promise.resolve()),
   }
 })
 vi.mock('../../src/lib/push.js', () => ({ getPushToken: vi.fn(() => Promise.resolve(null)) }))
@@ -105,7 +106,7 @@ vi.mock('../../src/components/OrderPosDetail.jsx', () => ({
 
 import OrderStatusPage from '../../src/pages/OrderStatusPage.jsx'
 import { StileCliente } from '../../src/lib/testiStile.js'
-import { updateOrderItems } from '../../src/lib/api.js'
+import { updateOrderItems, rispondiAllaModifica } from '../../src/lib/api.js'
 import { toastSuccess, toastError } from '../../src/lib/toast.js'
 import { notify } from '../../src/lib/notify.js'
 import { recordNotif } from '../../src/lib/notifyStore.js'
@@ -388,5 +389,91 @@ describe('lo stato dell’ordine con lo stile «Meraviglie»', () => {
     apri()
     expect(await screen.findByText('Il tuo numero')).toBeInTheDocument()
     expect(document.querySelector('.frase-stile')).toBeNull()
+  })
+})
+
+// L'ORDINE MODIFICATO DAL BANCO (REQ-CLI-009, Daniele 13/11/2026): il
+// cliente lo vede col prezzo nuovo e lo accetta o lo rifiuta, entro il
+// tempo deciso dal titolare. Rifiutare annulla, e lo si chiede prima.
+describe('le modifiche del banco da accettare', () => {
+  const fra = (min) => new Date(Date.now() + min * 60000).toISOString()
+  const modificato = (scade = fra(7)) => ({
+    ...ORDINE,
+    placed_by: null,
+    total: 10,
+    order_items: [{ id: 'o1-0', drink_id: 'd1', name: 'Gin Tonic', qty: 1, unit_price: 10, note: 'Gin: Mare' }],
+    attesa_cliente: { dal: fra(-3), scade, totale_prima: 8 },
+  })
+  // Il filo di QUESTE prove: la pagina apre con l'ordine com'era, poi il
+  // server manda quello modificato.
+  let manda = null
+  const apriConFilo = async () => {
+    manda = null
+    const { subscribeOrder, fetchOrder } = await import('../../src/lib/api.js')
+    fetchOrder.mockImplementation(() => Promise.resolve({ ...ORDINE, placed_by: null }))
+    subscribeOrder.mockImplementation((id, cb) => {
+      manda = cb
+      return () => {}
+    })
+    apri()
+    await waitFor(() => expect(manda).toBeTruthy())
+  }
+  const apriCliente = async (ordine) => {
+    ruoloCorrente = null
+    await apriConFilo()
+    await screen.findByText('Il tuo numero')
+    act(() => manda(ordine))
+  }
+
+  it('il cliente vede il totale nuovo, il tempo, e accetta', async () => {
+    const user = userEvent.setup()
+    await apriCliente(modificato())
+    const riquadro = await screen.findByRole('region', { name: 'Modifiche da confermare' })
+    expect(riquadro).toHaveTextContent(/Il totale passa da 8,00\s€ a 10,00\s€/)
+    expect(riquadro).toHaveTextContent('Restano 7 minuti per rispondere')
+    // La scelta dell'ingrediente si legge nella riga.
+    expect(screen.getByText(/Gin: Mare/)).toBeInTheDocument()
+    // Mentre si aspetta la risposta, niente modifiche e niente annullo a parte.
+    expect(screen.queryByRole('button', { name: /Salva modifiche/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Annulla ordine/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Accetta' }))
+    expect(rispondiAllaModifica).toHaveBeenCalledWith('o1', 'accettato')
+  })
+
+  it('rifiutare annulla l’ordine, e prima lo chiede', async () => {
+    const user = userEvent.setup()
+    await apriCliente(modificato())
+    await user.click(await screen.findByRole('button', { name: 'Rifiuta' }))
+    expect(rispondiAllaModifica).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Rifiuta e annulla' }))
+    expect(rispondiAllaModifica).toHaveBeenCalledWith('o1', 'rifiutato')
+  })
+
+  it('al cliente arriva l’avviso quando il banco modifica', async () => {
+    await apriCliente(modificato())
+    expect(notify).toHaveBeenCalledWith('Il tuo ordine è stato modificato', expect.stringContaining('#7'))
+  })
+
+  it('a tempo scaduto non si risponde più', async () => {
+    await apriCliente(modificato(fra(-1)))
+    const riquadro = await screen.findByRole('region', { name: 'Modifiche da confermare' })
+    expect(riquadro).toHaveTextContent('Il tempo per rispondere è scaduto')
+    expect(screen.queryByRole('button', { name: 'Accetta' })).toBeNull()
+  })
+
+  it('annullato, dice perché: rifiutato o scaduto', async () => {
+    await apriCliente({ ...modificato(), status: 'annullato', workflow_status: 'annullato', cancelled_by: 'cliente', cancel_kind: 'attesa_scaduta' })
+    expect(await screen.findByText(/Il tempo per accettare le modifiche è scaduto/)).toBeInTheDocument()
+    act(() => manda({ ...modificato(), status: 'annullato', workflow_status: 'annullato', cancelled_by: 'cliente', cancel_kind: 'modifica_rifiutata' }))
+    expect(await screen.findByText(/Hai rifiutato le modifiche/)).toBeInTheDocument()
+  })
+
+  it('chi lavora non vede i tasti del cliente: è nel conto', async () => {
+    ruoloCorrente = 'bartender'
+    await apriConFilo()
+    await waitFor(() => expect(screen.getByTestId('pos')).toBeInTheDocument())
+    act(() => manda(modificato()))
+    expect(screen.queryByRole('region', { name: 'Modifiche da confermare' })).toBeNull()
+    expect(notify).not.toHaveBeenCalled()
   })
 })

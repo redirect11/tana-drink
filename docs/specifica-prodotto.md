@@ -10,7 +10,7 @@ come lo farebbe chi sta al banco, su un ambiente di prova generato per
 l'occasione; il gestore lo valida poi sul sito di test.
 
 **63 casi d'uso** in 15 gruppi, 2 con il test end-to-end.
-59 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
+60 requisiti fatti non compaiono in nessun caso d'uso (elenco in fondo).
 
 ## Indice
 
@@ -2098,6 +2098,7 @@ Meccanismi interni o comportamenti che aspettano il loro caso d'uso.
 - REQ-MAG-055 — Un prodotto di magazzino si può far scegliere al cliente dal menù
 - REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
 - REQ-CLI-008 — La scelta del cliente arriva nell'ordine, sulla comanda e nel magazzino
+- REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
 - REQ-VENUE-004 — Test-guardia anti-marchio: le parole della Tana in src/ e functions/ stanno in una whitelist che puo' solo accorciarsi
 - REQ-VENUE-005 — Spazi tecnici neutri: chiavi locali, cache del service worker, nome del pacchetto e descrizioni dei pagamenti senza «tana», e nessuno perde niente
 - REQ-FLOTTA-001 — La CI di tana-drink pubblica solo i progetti della Tana, compilati per la Tana; e compila anche il cliente demo

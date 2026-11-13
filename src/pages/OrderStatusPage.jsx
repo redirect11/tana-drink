@@ -12,8 +12,11 @@ import {
   updateOrderStatus,
   markOrderPaid,
   cancelOrder,
+  rispondiAllaModifica,
   DEFAULT_SETTINGS,
 } from '../lib/api.js'
+import ModificaDaConfermare from '../components/ModificaDaConfermare.jsx'
+import { inAttesa, ANNULLO_RIFIUTO, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
 import { getPushToken } from '../lib/push.js'
 import {
   ORDER_STATUSES,
@@ -69,6 +72,10 @@ export default function OrderStatusPage() {
   const [serviceStats, setServiceStats] = useState({})
   const [queue, setQueue] = useState([])
   const prevStatus = useRef(null)
+  // L'attesa del cliente che si conosceva (REQ-CLI-009): `undefined` finché
+  // l'ordine non è arrivato, così un'attesa già in corso all'apertura non
+  // suona come una novità.
+  const prevAttesa = useRef(undefined)
   // Chi sta guardando la pagina è staff? Il QR per agganciare l'ordine
   // va mostrato solo allo staff, non al cliente che lo ha già scansionato.
   const [viewerIsStaff, setViewerIsStaff] = useState(false)
@@ -119,6 +126,7 @@ export default function OrderStatusPage() {
         if (!active) return
         setOrder(o)
         prevStatus.current = o.workflow_status
+        prevAttesa.current = o.attesa_cliente?.dal ?? null
       })
       .catch((e) => active && setError(e.message))
 
@@ -181,6 +189,13 @@ export default function OrderStatusPage() {
             )
           }
         }
+        // IL BANCO HA MODIFICATO L'ORDINE (REQ-CLI-009): al cliente, che deve
+        // rispondere entro un tempo. A chi lavora no: è lui che l'ha fatto.
+        const attesaOra = updated.attesa_cliente?.dal ?? null
+        if (!viewerRoleRef.current && attesaOra && prevAttesa.current !== undefined && attesaOra !== prevAttesa.current) {
+          notify('Il tuo ordine è stato modificato', `Ordine #${updated.daily_number ?? '—'}: controlla le modifiche e rispondi.`)
+        }
+        prevAttesa.current = attesaOra
         prevStatus.current = updated.workflow_status
       },
       (e) => active && setError(e.message)
@@ -302,6 +317,20 @@ export default function OrderStatusPage() {
     }
   }
 
+  // LA RISPOSTA ALLE MODIFICHE DEL BANCO (REQ-CLI-009). Il cliente è in
+  // rete (sta guardando questa pagina): si aspetta l'esito per dirlo.
+  async function rispondi(esito) {
+    setSaving(true)
+    setError(null)
+    try {
+      await rispondiAllaModifica(order.id, esito)
+    } catch (e) {
+      toastError(`Risposta non inviata: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function cancelMyOrder() {
     setConfirmCancel(false)
     setSaving(true)
@@ -339,9 +368,12 @@ export default function OrderStatusPage() {
   // ancora "ricevuta" (dopo le aggiunte del bartender non si tocca più).
   const singleReceived =
     (order.comande?.length ?? 1) === 1 && order.workflow_status === ORDER_STATUSES.RICEVUTO
-  const editable = singleReceived && !paymentLocked
+  // Con le modifiche del banco da accettare (REQ-CLI-009) si risponde e
+  // basta: «Rifiuta» è già l'annullo.
+  const attesa = inAttesa(order)
+  const editable = singleReceived && !paymentLocked && !attesa
   // Annullabile dal cliente finché ricevuto e non pagato.
-  const cancellable = singleReceived && order.payment_status !== 'pagato'
+  const cancellable = singleReceived && order.payment_status !== 'pagato' && !attesa
   // Pannello di pagamento online: in attesa o fallito, mai sugli annullati.
   const showPayment =
     order.payment_method === 'online' &&
@@ -392,6 +424,12 @@ export default function OrderStatusPage() {
                   <em>Motivazione: {order.cancel_message}</em>
                 </div>
               )}
+            </div>
+          ) : order.cancel_kind === ANNULLO_RIFIUTO ? (
+            <div className="banner" style={{ marginTop: 12 }}>✖️ Hai rifiutato le modifiche: l’ordine è annullato.</div>
+          ) : order.cancel_kind === ANNULLO_SCADUTO ? (
+            <div className="banner" style={{ marginTop: 12 }}>
+              ✖️ Il tempo per accettare le modifiche è scaduto: l’ordine è annullato.
             </div>
           ) : (
             <div className="banner" style={{ marginTop: 12 }}>✖️ Ordine annullato</div>
@@ -445,6 +483,8 @@ export default function OrderStatusPage() {
           )}
         </div>
       )}
+
+      {attesa && !viewerIsStaff && <ModificaDaConfermare order={order} onRispondi={rispondi} inCorso={saving} />}
 
       {/* Avanzamento della lavorazione: senza gestione della preparazione
           non c'è nessun percorso da mostrare al cliente. */}
@@ -547,6 +587,9 @@ export default function OrderStatusPage() {
               <div className="row between" key={i.id}>
                 <span>
                   {i.qty}× {i.name}
+                  {/* La nota della riga: la scelta dell'ingrediente
+                      (REQ-CLI-008), o quella del banco. */}
+                  {i.note && <span className="muted small"> · {i.note}</span>}
                 </span>
                 <span className="price">{formatPrice(i.qty * i.unit_price)}</span>
               </div>

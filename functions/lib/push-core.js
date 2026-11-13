@@ -78,6 +78,17 @@ function decideOrderPush(before, after) {
     }
   }
 
+  // IL BANCO HA MODIFICATO L'ORDINE (REQ-CLI-009): prezzo o ingredienti
+  // cambiati, e il cliente ha un tempo per accettare. Una volta per ogni
+  // modifica (`attesa_cliente.dal` cambia a ogni giro del banco).
+  const attesaDopo = after.attesa_cliente?.dal ?? null
+  if (attesaDopo && attesaDopo !== (before?.attesa_cliente?.dal ?? null) && (after.status ?? 'aperto') === 'aperto') {
+    return {
+      title: 'Il tuo ordine è stato modificato',
+      body: `Ordine #${after.daily_number ?? '—'}: controlla le modifiche e rispondi.`,
+    }
+  }
+
   if (!before || before.status === after.status) return null
   if (
     after.status === 'annullato' &&

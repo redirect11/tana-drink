@@ -96,6 +96,7 @@ import {
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
+import { serveConferma, attesaNuova, rispostaAccettata, ANNULLO_RIFIUTO } from './attesaCliente.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -364,6 +365,10 @@ function mapOrder(snap) {
     cancel_phrase: o.cancel_phrase ?? null,
     cancel_message: o.cancel_message ?? null,
     cancel_notify: o.cancel_notify ?? false,
+    // L'ORDINE MODIFICATO DAL BANCO CHE ASPETTA IL CLIENTE (REQ-CLI-009), e
+    // com'è finita: lib/attesaCliente.js.
+    attesa_cliente: o.attesa_cliente ?? null,
+    risposta_cliente: o.risposta_cliente ?? null,
     serial: o.serial ?? null,
     created_at: toIso(o.created_at),
     sumup_sale_id: o.sumup_sale_id ?? null,
@@ -5109,7 +5114,9 @@ export async function updateOrderPushToken(id, token) {
 // comanda riga per riga, e `aggregateItems` invece fonde due righe dello
 // stesso drink — due Mojito battuti separati diventerebbero uno da due, e
 // una nota o un prezzo cambiato a mano su una delle due sparirebbe.
-function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
+// `extra`: altri campi del conto che cambiano INSIEME alle righe, nella
+// stessa scrittura (l'attesa del cliente, REQ-CLI-009).
+function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null, extra = null) {
   const items = righe || aggregateItems(comande)
   const extras =
     Number(cur.coperto_amount || 0) +
@@ -5129,6 +5136,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
         items,
         total,
         ...(sconto != null ? { discount_amount: sconto } : {}),
+        ...extra,
       }),
     etichetta
   )
@@ -5142,6 +5150,7 @@ function salvaComandeERifaiTotale(ref, cur, comande, etichetta, righe = null) {
     items,
     total,
     ...(sconto != null ? { discount_amount: sconto } : {}),
+    ...extra,
   }
   // Ricordato qui e non solo in `ordineDopo`: c'è chi scrive senza dover
   // restituire niente (la preparazione parziale), e anche il suo array deve
@@ -5500,6 +5509,15 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // non veniva scritta e gli item andavano persi.
   const daRiallineare = comanda.inventory_applied === true
 
+  // L'ORDINE DAL TELEFONO CAMBIATO DAL BANCO TORNA AL CLIENTE (REQ-CLI-009):
+  // prezzo o ingredienti diversi da quelli che ha ordinato, e lui deve
+  // poterli accettare o rifiutare. L'attesa parte nella STESSA scrittura
+  // delle righe: non c'è un istante in cui il conto è cambiato e la coda
+  // lo crede confermato.
+  const attesa = serveConferma({ ...cur, status: norm.status, comande: norm.comande }, comandaId, comanda.items, newItems)
+    ? { attesa_cliente: attesaNuova(cur, impostazioni()) }
+    : null
+
   comanda.items = newItems
   // IL TICKET CHE ERA USCITO ADESSO È VECCHIO. Una comanda non ancora presa
   // in carico può accogliere righe nuove (comandaPerLeAggiunte): se era già
@@ -5508,16 +5526,40 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // Su una comanda presa in carico non si tocca niente: quella carta è in
   // mano a qualcuno che ci sta lavorando.
   if (comanda.auto_print_at && !presaInCarico(comanda)) comanda.auto_print_at = null
-  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda')
+  const patch = salvaComandeERifaiTotale(ref, cur, comande, 'modifica comanda', null, attesa)
   // Scorte dopo: se erano già state scalate si applica solo la differenza.
   if (daRiallineare) riallineaInSottofondo(orderId, comandaId)
   return ordineDopo(orderId, cur, patch)
 })
 
+// LA RISPOSTA DEL CLIENTE A UN ORDINE MODIFICATO DAL BANCO (REQ-CLI-009).
+// Accettato, l'attesa si chiude e il conto prosegue; rifiutato, è annullato
+// dal cliente. `alBanco`: il sì è arrivato a voce, lo segna chi lavora.
+// Si scrive in sottofondo e si torna il conto già composto.
+// Il rifiuto passa da cancelOrder FUORI dal turno del conto: cancelOrder ha
+// il suo, e chiamarlo da dentro questo lo farebbe aspettare se stesso.
+export function rispondiAllaModifica(id, esito, opzioni = {}) {
+  if (esito === 'rifiutato') return cancelOrder(id, { by: 'cliente', kind: ANNULLO_RIFIUTO })
+  return accettaLaModifica(id, opzioni)
+}
+
+const accettaLaModifica = perConto(async function accettaLaModifica(id, { alBanco = false } = {}) {
+  const ref = doc(db, 'orders', id)
+  const snap = await leggiOrdine(ref)
+  if (!snap.exists()) throw new Error('Ordine non trovato')
+  const cur = snap.data()
+  const patch = rispostaAccettata({ alBanco })
+  bgWrite(() => updateDoc(ref, patch), 'risposta del cliente')
+  return ordineDopo(id, cur, patch)
+})
+
 // Annulla un ordine. Se lo stock era già stato scalato lo ripristina dallo
 // snapshot del consumo — TRANNE per kind 'non_ritirato': il drink è stato
 // preparato (e sprecato), quindi le scorte restano consumate.
-// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify }
+// opts: { by: 'cliente'|'bartender', kind, phrase, message, notify, persona }
+// `persona: null` per un annullo che non ha fatto nessuno di persona (il
+// tempo del cliente scaduto, REQ-CLI-009): la storia del conto non deve
+// dire che l'ha annullato chi aveva la coda aperta.
 export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
   const {
     by = 'cliente',
@@ -5526,6 +5568,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     message = null,
     notify: notifyClient = false,
   } = opts
+  const persona = 'persona' in opts ? opts.persona : chiIncassa()
   const orderRef = doc(db, 'orders', id)
   const snap = await leggiOrdine(orderRef)
   if (!snap.exists()) throw new Error('Ordine non trovato')
@@ -5588,7 +5631,7 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     // E CHI, di persona: `cancelled_by` dice solo se è stato il cliente o il
     // banco, e nella storia del conto compariva «bartender» mentre le altre
     // righe dicevano il nome. Tre etichette diverse per la stessa persona.
-    cancelled_persona: chiIncassa(),
+    cancelled_persona: persona,
     // DA QUALE TERMINALE. Serve a non ripetere l'avviso a chi ha appena
     // annullato: lo sa già. Stesso metro degli ordini (placed_by.device).
     cancelled_device: idDispositivo(),

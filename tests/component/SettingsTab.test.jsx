@@ -571,6 +571,26 @@ describe('giornata di lavoro', () => {
   })
 })
 
+// IL TEMPO PER RISPONDERE ALLE MODIFICHE DEL BANCO (REQ-CLI-009): lo
+// decide il titolare, 10 minuti di partenza, fra 1 e 120.
+describe('modifiche da confermare', () => {
+  it('10 minuti di partenza; il titolare li cambia, entro i limiti', async () => {
+    const { updateSettings } = await import('../../src/lib/api.js')
+    updateSettings.mockClear()
+    const user = userEvent.setup()
+    mostra()
+    await user.click(screen.getByRole('button', { name: /Menù clienti/ }))
+    const campo = screen.getByLabelText('Tempo per rispondere (minuti)')
+    expect(campo).toHaveValue(10)
+    fireEvent.change(campo, { target: { value: '5' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenCalledWith({ attesa_cliente_minuti: 5 })
+    fireEvent.change(campo, { target: { value: '500' } })
+    fireEvent.blur(campo)
+    expect(updateSettings).toHaveBeenLastCalledWith({ attesa_cliente_minuti: 120 })
+  })
+})
+
 // IL RICARICO ANCHE COME DRINK COST (REQ-MENU-033). I due campi scrivono
 // lo stesso valore, il ricarico: scritto il 20% di drink cost, si salva ×5.
 describe('prezzo consigliato: ricarico e drink cost', () => {

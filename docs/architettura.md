@@ -173,6 +173,12 @@ acconti, gruppi anche alla romana) → chiusura, e il conto sparisce
 subito dalla coda. Aumenti su un conto in corso confluiscono nella
 comanda giusta senza riaprire quelle servite.
 
+Un ordine dal telefono che il banco cambia (prezzo o ingredienti) aspetta
+il cliente: non è un passo nuovo delle comande ma un campo del conto,
+`attesa_cliente`, scritto insieme alle righe. Finché c'è il conto non
+avanza e non stampa; il cliente accetta o rifiuta, e allo scadere lo
+annulla la coda (REQ-CLI-009, `lib/attesaCliente.js`).
+
 ## Cosa non fare (il riassunto dei divieti architetturali)
 
 1. `await` su una scrittura Firestore prima di mostrare l'esito.

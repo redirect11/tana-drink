@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 295 | fatto e coperto dai test |
+| ✅ | 296 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 28 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **317** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**354 voci** in tutto. **318** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **28** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -51,7 +51,7 @@ come «vero oggi», non come «garantito».
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
-| [Vista cliente](#vista-cliente) | 8 | 1 | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
+| [Vista cliente](#vista-cliente) | 9 | — | Quello che vede il cliente: vetrina, menù, stato del suo ordine. |
 | [Notifiche](#notifiche) | 4 | — | Le notifiche push: a chi arrivano, quando, e quando invece non devono arrivare. |
 | [Avvisi a schermo](#avvisi-a-schermo) | 2 | — | I messaggi a schermo dentro l’app — quelli che si leggono col vassoio in mano. |
 | [Persone: ruoli, utenze, ore](#persone-ruoli-utenze-ore) | 14 | 2 | Chi può fare cosa, chi è al banco, quante ore ha fatto e quanto prende. |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 176 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 178 |
 | Unità | il progetto di dettaglio: un modulo da solo | 180 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
@@ -2897,6 +2897,26 @@ FATTO (13/11/2026, lib/sceltaCliente.js, rigaConScelte): la riga è quella del r
 
 **Dove**: `src/lib/sceltaCliente.js, src/lib/cart.js, src/lib/api.js (createOrder), src/lib/inventory.js (scarico), docs/architettura.md` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/unit/sceltaCliente.test.js`
 
+#### REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
+
+Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo conferma chi lo riceve al banco, che può modificarlo prima (cambiare un ingrediente o il prezzo, per una scelta o per la nota del cliente). Se il banco modifica prezzo o ingredienti l'ordine entra in uno STATO NUOVO, «in attesa di conferma del cliente»: il cliente lo vede modificato, col prezzo nuovo, e lo accetta o lo rifiuta. Accettato prosegue;
+
+RIFIUTATO è annullato, annullato dal cliente. Il tempo per rispondere lo decide il titolare in Impostazioni (10 minuti di partenza); scaduto, l'ordine si annulla. Tocca coda e stati del conto: ramo suo, coi test senza rete.
+
+FATTO (13/11/2026, lib/attesaCliente.js).
+
+LO STATO È UN CAMPO DEL CONTO, `attesa_cliente: { dal, scade, totale_prima }`, e non un passo delle comande: coda, stampa, statistiche, regole e tabellone leggono i passi, e uno in più andava insegnato a tutti. Scatta in bartenderUpdateComanda, nella STESSA scrittura delle righe, quando il banco cambia prezzo, prodotto, ricetta o quantità (la nota no) di un ordine dal telefono (`placed_by` vuoto) con la sola prima comanda, non ancora pronta. Una seconda modifica fa ripartire il tempo e tiene il totale che il cliente aveva ordinato.
+
+FINCHÉ SI ASPETTA: in coda e nel conto «In attesa del cliente» coi minuti (AttesaCliente), il conto non avanza (coda, conto, comanda), la comanda non si stampa (comandeDaStampare), il cliente riceve la push (push-core) e l'avviso sulla pagina. Nel conto «Confermato dal cliente» segna il sì arrivato a voce (`risposta_cliente.al_banco`).
+
+LA RISPOSTA (rispondiAllaModifica): accettato chiude l'attesa e scrive `risposta_cliente`; rifiutato è cancelOrder con `cancelled_by: 'cliente'`, `cancel_kind: 'modifica_rifiutata'`.
+
+SCADUTO, lo annulla la coda di chi può annullare (`cancel_kind: 'attesa_scaduta'`, `cancelled_persona: null`: nella storia non compare chi aveva la coda aperta). La pagina del cliente dice perché.
+
+LE REGOLE lasciano rispondere il cliente anche con la comanda già in preparazione, solo finché c'è l'attesa. Impostazioni → Menù clienti → «Modifiche da confermare»: `attesa_cliente_minuti`, fra 1 e 120.
+
+**Dove**: `src/lib/attesaCliente.js, src/lib/api.js (bartenderUpdateComanda, rispondiAllaModifica), src/pages/OrderStatusPage.jsx, src/components/ModificaDaConfermare.jsx, la coda (BartenderPage, AttesaCliente), src/lib/printer.js, functions/lib/push-core.js, firestore.rules, Impostazioni` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato) · **Lo dimostrano**: `tests/unit/attesaCliente.test.js`, `tests/component/codaAttesaCliente.test.jsx`, `tests/component/OrderStatusPage.test.jsx`, `tests/component/SettingsTab.test.jsx`, `tests/unit/stampaComande.test.js`, `tests/bdd/notify-order.test.js`, `tests/regole/orders.test.js`
+
 #### REQ-CLI-006 — Il cliente sa che il suo drink è pronto da ritirare
 
 Chiesto dall'utente il 18/08. Su un conto da RITIRO, quando la comanda passa a «pronto» il cliente va avvisato: da lì in poi la palla è sua — deve alzarsi e venire al banco. Sul servizio al tavolo non serve: ci pensa chi porta il vassoio.
@@ -4496,16 +4516,6 @@ LA PROCEDURA E' SCRITTA, passo per passo, in [docs/certificato-stampante.md](../
 RESTA DA FARE: la procedura va eseguita dal locale, sul wifi del bar, col portatile. Finche' non e' fatta questa voce resta aperta.
 
 **Dove**: `scripts/certificato-stampante.js`
-
-### Vista cliente
-
-#### REQ-CLI-009 — Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta
-
-Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo conferma chi lo riceve al banco, che può modificarlo prima (cambiare un ingrediente o il prezzo, per una scelta o per la nota del cliente). Se il banco modifica prezzo o ingredienti l'ordine entra in uno STATO NUOVO, «in attesa di conferma del cliente»: il cliente lo vede modificato, col prezzo nuovo, e lo accetta o lo rifiuta. Accettato prosegue;
-
-RIFIUTATO è annullato, annullato dal cliente. Il tempo per rispondere lo decide il titolare in Impostazioni (10 minuti di partenza); scaduto, l'ordine si annulla. Tocca coda e stati del conto: ramo suo, coi test senza rete.
-
-**Dove**: `src/lib/orderStatus.js (stato nuovo), src/lib/api.js, src/pages/OrderStatusPage.jsx, la coda (BartenderPage), Impostazioni` · **Serve**: [UR-016](#ur-016--il-cliente-ordina-il-drink-come-lo-vuole-e-paga-quello-che-ha-accettato)
 
 ### Persone: ruoli, utenze, ore
 

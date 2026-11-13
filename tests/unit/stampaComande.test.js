@@ -74,6 +74,14 @@ describe('quali comande si stampano', () => {
     expect(comandeDaStampare(conto([comanda()], { status: 'annullato' }))).toHaveLength(0)
   })
 
+  // REQ-CLI-009: il banco ha cambiato l'ordine del cliente, e finché lui
+  // non accetta il drink non si prepara. Accettato, la comanda esce.
+  it('il conto che aspetta il cliente non stampa finché non accetta', () => {
+    const attesa = { dal: '2026-11-13T20:00:00.000Z', scade: '2026-11-13T20:10:00.000Z', totale_prima: 8 }
+    expect(comandeDaStampare(conto([comanda()], { attesa_cliente: attesa }))).toHaveLength(0)
+    expect(comandeDaStampare(conto([comanda()], { attesa_cliente: null }))).toHaveLength(1)
+  })
+
   // IL SEGNO STA SUL DATO: un browser con la memoria vuota vede
   // `auto_print_at` e non ristampa la serata; il secondo tablet con
   // l'auto-stampa accesa vede il segno del primo e non fa la seconda copia.

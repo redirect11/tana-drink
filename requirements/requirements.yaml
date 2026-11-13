@@ -7269,7 +7269,7 @@ requirements:
 
   - id: REQ-CLI-009
     title: "Un ordine dal telefono modificato dal banco torna al cliente, che lo accetta o lo rifiuta"
-    area: "src/lib/orderStatus.js (stato nuovo), src/lib/api.js, src/pages/OrderStatusPage.jsx, la coda (BartenderPage), Impostazioni"
+    area: "src/lib/attesaCliente.js, src/lib/api.js (bartenderUpdateComanda, rispondiAllaModifica), src/pages/OrderStatusPage.jsx, src/components/ModificaDaConfermare.jsx, la coda (BartenderPage, AttesaCliente), src/lib/printer.js, functions/lib/push-core.js, firestore.rules, Impostazioni"
     description: >
       Daniele, 13/11/2026: un ordine dal telefono non si paga da solo; lo
       conferma chi lo riceve al banco, che può modificarlo prima (cambiare
@@ -7281,11 +7281,42 @@ requirements:
       Il tempo per rispondere lo decide il titolare in Impostazioni (10
       minuti di partenza); scaduto, l'ordine si annulla.
       Tocca coda e stati del conto: ramo suo, coi test senza rete.
-    status: todo
+      FATTO (13/11/2026, lib/attesaCliente.js). LO STATO È UN CAMPO DEL
+      CONTO, `attesa_cliente: { dal, scade, totale_prima }`, e non un passo
+      delle comande: coda, stampa, statistiche, regole e tabellone leggono
+      i passi, e uno in più andava insegnato a tutti. Scatta in
+      bartenderUpdateComanda, nella STESSA scrittura delle righe, quando il
+      banco cambia prezzo, prodotto, ricetta o quantità (la nota no) di un
+      ordine dal telefono (`placed_by` vuoto) con la sola prima comanda, non
+      ancora pronta. Una seconda modifica fa ripartire il tempo e tiene il
+      totale che il cliente aveva ordinato.
+      FINCHÉ SI ASPETTA: in coda e nel conto «In attesa del cliente» coi
+      minuti (AttesaCliente), il conto non avanza (coda, conto, comanda), la
+      comanda non si stampa (comandeDaStampare), il cliente riceve la push
+      (push-core) e l'avviso sulla pagina. Nel conto «Confermato dal
+      cliente» segna il sì arrivato a voce (`risposta_cliente.al_banco`).
+      LA RISPOSTA (rispondiAllaModifica): accettato chiude l'attesa e
+      scrive `risposta_cliente`; rifiutato è cancelOrder con
+      `cancelled_by: 'cliente'`, `cancel_kind: 'modifica_rifiutata'`.
+      SCADUTO, lo annulla la coda di chi può annullare (`cancel_kind:
+      'attesa_scaduta'`, `cancelled_persona: null`: nella storia non
+      compare chi aveva la coda aperta). La pagina del cliente dice perché.
+      LE REGOLE lasciano rispondere il cliente anche con la comanda già in
+      preparazione, solo finché c'è l'attesa.
+      Impostazioni → Menù clienti → «Modifiche da confermare»:
+      `attesa_cliente_minuti`, fra 1 e 120.
+    status: implemented
     generate_issue: true
     labels: [clienti, cassa]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/unit/attesaCliente.test.js
+      - tests/component/codaAttesaCliente.test.jsx
+      - tests/component/OrderStatusPage.test.jsx
+      - tests/component/SettingsTab.test.jsx
+      - tests/unit/stampaComande.test.js
+      - tests/bdd/notify-order.test.js
+      - tests/regole/orders.test.js
 
   - id: REQ-AI-007
     title: "L'AI nell'app ha tre stati: assente, senza credito, attiva"

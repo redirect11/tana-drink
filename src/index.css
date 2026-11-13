@@ -670,6 +670,12 @@ a.btn.block {
   background: rgba(243, 156, 18, 0.2);
   color: #ffd591;
 }
+/* Il conto aspetta che il cliente accetti le modifiche (REQ-CLI-009). */
+.pill.attesa-cliente {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--warn);
+  border: 1px dashed var(--warn);
+}
 .pill.in_preparazione {
   background: rgba(52, 152, 219, 0.2);
   color: #9ad0ff;

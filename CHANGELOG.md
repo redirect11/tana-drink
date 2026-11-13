@@ -46,6 +46,14 @@
   carrello.
 - Al banco la scelta si legge nella nota della riga, sul conto e sulla
   comanda, e il magazzino scala il prodotto scelto con la dose della ricetta.
+- Quando il banco cambia prezzo o ingredienti di un ordine arrivato dal
+  telefono, il cliente lo vede modificato, col totale di prima e quello
+  nuovo, e lo accetta o lo rifiuta; il rifiuto annulla l'ordine. Nel
+  frattempo in coda il conto è «In attesa del cliente», non avanza e la
+  comanda non si stampa. Allo scadere del tempo (Impostazioni → Menù
+  clienti → Modifiche da confermare, 10 minuti di partenza) l'ordine si
+  annulla. Se il cliente conferma a voce, nel conto c'è «Confermato dal
+  cliente».
 
 ### Licenza
 

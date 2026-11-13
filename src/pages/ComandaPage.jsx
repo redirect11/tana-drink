@@ -26,6 +26,7 @@ import { printComanda } from '../lib/printer.js'
 import { stampaComandeConsentita, servizioAttivo } from '../lib/limiti.js'
 import Caricamento from '../components/Caricamento.jsx'
 import ComandaDetail from '../components/ComandaDetail.jsx'
+import { inAttesa } from '../lib/attesaCliente.js'
 
 // ── LA SCHERMATA DI UNA COMANDA ──────────────────────────────────────
 //
@@ -166,6 +167,11 @@ export default function ComandaPage() {
   }
 
   const porta = (stato) => {
+    // Il cliente non ha ancora accettato le modifiche (REQ-CLI-009).
+    if (inAttesa(order)) {
+      showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
+      return
+    }
     segna(stato)
     advanceComanda(order.id, comanda.id, stato).catch((e) => {
       comandeLocali.scarta(order.id)

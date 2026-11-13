@@ -184,6 +184,8 @@ import { useCashSession } from '../lib/cashSession.js'
 import Icona, { ConIcona } from '../components/Icona.jsx'
 import { useTestoConIcona } from '../lib/temaIcone.js'
 import { conEmoji } from '../lib/icone.js'
+import AttesaCliente from '../components/AttesaCliente.jsx'
+import { inAttesa, scaduta, ANNULLO_SCADUTO } from '../lib/attesaCliente.js'
 
 // Badge accanto al numero d'ordine: la LETTERA del dipendente che l'ha aperto,
 // oppure il segno del CLIENTE se l'ha aperto lui dall'app.
@@ -594,6 +596,37 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     [ordersRaw, chiusiQui, soloAperti]
   )
   const [error, setError] = useState(null)
+
+  // IL TEMPO DEL CLIENTE È SCADUTO (REQ-CLI-009): il banco aveva cambiato
+  // l'ordine, il cliente non ha risposto, e l'ordine si annulla. Lo fa la
+  // coda, che al banco è sempre aperta: un conto per volta e una volta sola
+  // per terminale. Solo chi può annullare (la sala non può: le regole). Non
+  // lo firma nessuno: nella storia del conto non deve comparire chi aveva
+  // la coda aperta.
+  const scaduteQui = useRef(new Set())
+  useEffect(() => {
+    if (!isGestore(ruolo)) return
+    const controlla = () => {
+      for (const o of ordersRaw) {
+        if (!scaduta(o) || scaduteQui.current.has(o.id)) continue
+        scaduteQui.current.add(o.id)
+        cancelOrder(o.id, { by: 'cliente', kind: ANNULLO_SCADUTO, persona: null }).catch(() =>
+          scaduteQui.current.delete(o.id)
+        )
+      }
+    }
+    controlla()
+    const t = setInterval(controlla, 20000)
+    return () => clearInterval(t)
+  }, [ordersRaw, ruolo])
+
+  // Un conto che aspetta il cliente non va avanti: il drink si prepara
+  // quando lui ha accettato le modifiche.
+  const fermoPerIlCliente = (order) => {
+    if (!inAttesa(order)) return false
+    showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
+    return true
+  }
   const [statusTab, setStatusTab] = useState(ORDER_STATUSES.RICEVUTO)
   // La scheda attiva quando gli stati di servizio sono SPENTI: in corso,
   // chiusi o annullati — le stesse voci della griglia.
@@ -1022,6 +1055,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
   function advance(order, stato = null) {
     const ns = stato || nextStatus(order.workflow_status)
     if (!ns || ns === order.workflow_status) return
+    if (fermoPerIlCliente(order)) return
     avanzatiDaMe.current.add(`${order.id}:${ns}`)
     // LA MEMORIA DI «L'HO APPENA FATTO IO» STA SULLE COMANDE, una sola per
     // tutta la schermata. Prima qui c'era `queueOverrides`, che teneva lo
@@ -1067,6 +1101,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
     if (!comanda) return
     const ns = stato || nextComandaStatus(comanda.status)
     if (!ns) return
+    if (fermoPerIlCliente(order)) return
     const adesso = new Date().toISOString()
     comandeLocali.applica(order, (comande) =>
       comande.map((c) =>
@@ -2369,7 +2404,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
         >
           <div className="row between">
             <span className="bignum">
-              #{o.daily_number ?? '—'} <OrderBy order={o} />
+              #{o.daily_number ?? '—'} <OrderBy order={o} /> <AttesaCliente order={o} />
             </span>
             {/* Il badge di preparazione compare solo se si tracciano gli stati:
                 a gestione preparazione spenta l'ordine è solo ricevuto→pagato. */}
@@ -2510,7 +2545,7 @@ function OrderQueue({ mieiIniziale = false, gestore = false, ruolo = null }) {
             <div className="row between">
               <div>
                 <span className="bignum" style={{ fontSize: '1.4rem', fontWeight: 600 }}>
-                  #{o.daily_number ?? '—'} <OrderBy order={o} />
+                  #{o.daily_number ?? '—'} <OrderBy order={o} /> <AttesaCliente order={o} />
                 </span>{' '}
                 {o.customer_name && <strong>{o.customer_name}</strong>}{' '}
                 {o.table_label && (

@@ -52,6 +52,7 @@ import {
   scontiDelConto,
   scontoTotale,
 } from './pagamento.js'
+import { inAttesa } from './attesaCliente.js'
 
 // LA FIRMA DEL PRODOTTO IN FONDO ALLO SCONTRINO (REQ-LIC-003,
 // `limiti.marchio`): solo se la licenza la chiede, cioè il piano Free. Non
@@ -426,6 +427,10 @@ export function comandeDaStampare(order, opzioni = {}) {
   // stava al POS aveva ancora il vassoio da riempire. Il ticket esce quando
   // chi lo sta battendo esce dalla creazione (`in_creazione` si azzera lì).
   if (order.in_creazione) return []
+  // IL CLIENTE NON HA ANCORA DETTO SÌ (REQ-CLI-009): il banco ha cambiato
+  // prezzo o ingredienti, e finché lui non accetta il drink non si prepara.
+  // La comanda (già azzerata dalla modifica) esce alla risposta.
+  if (inAttesa(order)) return []
   return (order.comande || []).filter((c) => {
     if (!c || lavoroAnnullato(order, c)) return false
     // Da stampare è la comanda ancora al banco: già pronta o uscita vuol
