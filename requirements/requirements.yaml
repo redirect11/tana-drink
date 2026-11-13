@@ -7111,6 +7111,33 @@ requirements:
       - tests/unit/regoleLicenza.test.js
       - tests/unit/clienteBuild.test.js
       - tests/unit/licenzaIniziale.test.js
+  - id: REQ-LIC-019
+    title: "Dalla regia, 13/11/2026: la sospensione per pagamento arriva fuori servizio, e si ferma tutto così com'è"
+    area: "src/App.jsx, la licenza in tempo reale (src/lib/api.js), le regole, InstallazioneSospesa (REQ-LIC-018)"
+    description: >
+      Richiesta della regia (drink-regia REQ-FLOTTA-095), con le decisioni
+      di Daniele del 13/11/2026; il dettaglio in
+      docs/richieste-regia-2026-11-13.md. Cambia una premessa di
+      REQ-LIC-018: la sospensione PER PAGAMENTO non arriva più «subito,
+      anche a metà serata», ma fuori dagli orari di servizio che il
+      titolare ha indicato alla regia (alla chiusura se l'ora cade in
+      servizio), con `valida_fino` sullo stesso momento; quelle dell'admin
+      restano immediate. Daniele: «L'app che si carica ed è sospesa si
+      sospende subito» e «Si ferma tutto così com'è. Alla riattivazione
+      del servizio non si è mosso nulla e così deve essere».
+      CRITERI. (1) Lo stato sospesa si applica appena si legge, all'avvio
+      e in servizio. (2) Niente si chiude, si annulla o si sposta: alla
+      riattivazione tutto è dove era. (3) Le scritture fatte prima della
+      sospensione e ancora in coda su un terminale senza rete non si
+      perdono (oggi le regole le rifiuterebbero all'arrivo e Firestore le
+      scarterebbe): va scelto come tenerle. (4) Il taglio della giornata
+      resta l'ora delle sole riduzioni della licenza.
+    status: todo
+    generate_issue: true
+    labels: [licenza, regia]
+    priority: P1
+    test_cases: []
+
   # ══════════════════════════════════════════════════════════════════════
   #  IL PRODOTTO: l'app che sa essere qualsiasi locale, il marchio come
   #  configurazione (docs/flotta.md). La flotta — sito del prodotto,
@@ -8391,6 +8418,31 @@ requirements:
     priority: P3
     test_cases:
       - tests/bdd/richiesta-ai.test.js
+
+  - id: REQ-AI-008
+    title: "Dalla regia, 13/11/2026: il credito dice se si ricarica e dove, non va mai sotto zero, e la chat ha i suoi limiti e i suoi codici"
+    area: "functions/lib/ai-service.js (interpreta), src/components/CreditoAI.jsx, la chat (REQ-AI-006)"
+    description: >
+      Richiesta della regia (drink-regia REQ-FLOTTA-091, 093, 094), con le
+      decisioni di Daniele del 13/11/2026; il dettaglio in
+      docs/richieste-regia-2026-11-13.md, il contratto in drink-regia
+      docs/handover.md §7.
+      CRITERI. (1) La risposta del credito porta `ricaricabile` e
+      `ricarica_url` (già sul test della regia, v0.3.0-beta.25): con
+      `true` il promemoria di ricarica apre `ricarica_url`, con `false`
+      dice di rivolgersi all'assistenza. (2) `credito_eur` non è mai
+      negativo; una fattura o un tema di cui la regia non misura il costo
+      riceve 503 «riprova». (3) Chat: `limiti_strumenti` nella risposta
+      200 decide quante righe restituiscono giacenza, vendite e
+      cerca_prodotti; `409 { codice: 'troppo-lunga' }` si distingue da
+      `409 { codice: 'versione' }` nel messaggio a schermo (tutti e due
+      aprono una conversazione nuova). I punti 2 e 3 dipendono dalla
+      regia, ancora in lavorazione.
+    status: todo
+    generate_issue: true
+    labels: [ai, regia]
+    priority: P2
+    test_cases: []
 
   - id: REQ-MAG-009
     title: "Macro-categorie: il magazzino letto per famiglie"

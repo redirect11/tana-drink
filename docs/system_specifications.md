@@ -5,7 +5,7 @@
 > `requirements/bugs.yaml` (i difetti), poi si rigenera con
 > `node scripts/requisiti.mjs --documento`.
 >
-> Generato il 12 novembre 2026.
+> Generato il 13 novembre 2026.
 
 Qui c'è scritto **cosa fa Tana Drink**, area per area: la cassa di «La Tana
 del Coniglio», quella che si usa al banco mentre il locale è pieno. Non è un
@@ -25,11 +25,11 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 | ✅ | 287 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 6 | fatto a metà |
-| ⬜ | 29 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**345 voci** in tutto. **308** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **29** sono lavori
+**347 voci** in tutto. **308** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -58,11 +58,11 @@ come «vero oggi», non come «garantito».
 | [Sicurezza](#sicurezza) | 3 | 2 | Regole di accesso, App Check, e cosa protegge cosa. |
 | [Si lavora anche senza rete](#si-lavora-anche-senza-rete) | 6 | — | Cosa continua a funzionare quando la rete non c’è, e come lo si vede. |
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
-| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 4 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
+| [Intelligenza artificiale](#intelligenza-artificiale) | 2 | 5 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
 | [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
-| [LIC](#lic) | 13 | 3 |  |
+| [LIC](#lic) | 13 | 4 |  |
 | [VENUE](#venue) | 6 | — |  |
 | [FLOTTA](#flotta) | 8 | — |  |
 
@@ -79,7 +79,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Unità | il progetto di dettaglio: un modulo da solo | 177 |
 
 **15** bisogni del locale, **0** con un test di accettazione.
-**97** requisiti su 337 sono collegati a un bisogno;
+**97** requisiti su 339 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -4479,6 +4479,12 @@ DA DECIDERE CON DANIELE: quali strumenti per primi, dove sta la chat (una pagina
 
 **Dove**: `gestionale (una chat), una Function della regia (REQ-AI-003), REQ-AI-001/002/004/005` · **Serve**: [UR-013](#ur-013--il-gestionale-si-legge-e-si-compila-senza-fatica)
 
+#### REQ-AI-008 — Dalla regia, 13/11/2026: il credito dice se si ricarica e dove, non va mai sotto zero, e la chat ha i suoi limiti e i suoi codici
+
+Richiesta della regia (drink-regia REQ-FLOTTA-091, 093, 094), con le decisioni di Daniele del 13/11/2026; il dettaglio in docs/richieste-regia-2026-11-13.md, il contratto in drink-regia docs/handover.md §7. CRITERI. (1) La risposta del credito porta `ricaricabile` e `ricarica_url` (già sul test della regia, v0.3.0-beta.25): con `true` il promemoria di ricarica apre `ricarica_url`, con `false` dice di rivolgersi all'assistenza. (2) `credito_eur` non è mai negativo; una fattura o un tema di cui la regia non misura il costo riceve 503 «riprova». (3) Chat: `limiti_strumenti` nella risposta 200 decide quante righe restituiscono giacenza, vendite e cerca_prodotti; `409 { codice: 'troppo-lunga' }` si distingue da `409 { codice: 'versione' }` nel messaggio a schermo (tutti e due aprono una conversazione nuova). I punti 2 e 3 dipendono dalla regia, ancora in lavorazione.
+
+**Dove**: `functions/lib/ai-service.js (interpreta), src/components/CreditoAI.jsx, la chat (REQ-AI-006)`
+
 ### Interfaccia
 
 #### REQ-UI-024 — Le impostazioni che cambiano l'aspetto stanno tutte sotto «Aspetto»
@@ -4554,6 +4560,12 @@ DECISO IL 02/11/2026: niente abbonamento sui temi («i temi in abbonamento non s
 RESTA DA FARE il primo stile a pagamento: «Compra» nell'app, pagamento una tantum, e la regia che scrive lo stile in `licenza.temi` dopo il pagamento.
 
 **Dove**: `drink-regia (catalogo, acquisto, licenza.temi), Impostazioni → Menù clienti («Altri stili»), docs/catalogo-temi.md`
+
+#### REQ-LIC-019 — Dalla regia, 13/11/2026: la sospensione per pagamento arriva fuori servizio, e si ferma tutto così com'è
+
+Richiesta della regia (drink-regia REQ-FLOTTA-095), con le decisioni di Daniele del 13/11/2026; il dettaglio in docs/richieste-regia-2026-11-13.md. Cambia una premessa di REQ-LIC-018: la sospensione PER PAGAMENTO non arriva più «subito, anche a metà serata», ma fuori dagli orari di servizio che il titolare ha indicato alla regia (alla chiusura se l'ora cade in servizio), con `valida_fino` sullo stesso momento; quelle dell'admin restano immediate. Daniele: «L'app che si carica ed è sospesa si sospende subito» e «Si ferma tutto così com'è. Alla riattivazione del servizio non si è mosso nulla e così deve essere». CRITERI. (1) Lo stato sospesa si applica appena si legge, all'avvio e in servizio. (2) Niente si chiude, si annulla o si sposta: alla riattivazione tutto è dove era. (3) Le scritture fatte prima della sospensione e ancora in coda su un terminale senza rete non si perdono (oggi le regole le rifiuterebbero all'arrivo e Firestore le scarterebbe): va scelto come tenerle. (4) Il taglio della giornata resta l'ora delle sole riduzioni della licenza.
+
+**Dove**: `src/App.jsx, la licenza in tempo reale (src/lib/api.js), le regole, InstallazioneSospesa (REQ-LIC-018)`
 
 ## L'architettura e le sue prove
 
