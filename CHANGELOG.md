@@ -1,6 +1,26 @@
 # Cosa è cambiato
 
-## 1.10.41-beta — in lavorazione
+## 1.10.43-beta — in lavorazione
+
+### Sicurezza
+
+- Le Functions passano a `firebase-admin` 14, che chiude un avviso di
+  sicurezza su una sua dipendenza (`uuid`). Nessun cambiamento visibile.
+
+## 1.10.42 — 13 novembre 2026 (produzione)
+
+In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle
+versioni 1.10 qui sotto, fino alla 1.10.41-beta provata sul test.
+
+### Cosa cambia per la Tana
+
+- **La licenza della Tana sta in un documento suo** nel database, che il
+  rilascio crea con tutti i moduli e i temi del locale: nessuna funzione si
+  spegne.
+- **L'AI resta spenta** finché la regia di produzione non è pronta: i tasti
+  dell'AI e l'assistente non compaiono.
+
+## 1.10.41-beta — 13/11/2026 (test)
 
 ### Gestionale
 

@@ -22,13 +22,13 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 297 | fatto e coperto dai test |
+| ✅ | 298 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 9 | fatto a metà |
 | ⬜ | 25 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **321** descrivono il sistema com'è oggi e
+**355 voci** in tutto. **322** descrivono il sistema com'è oggi e
 stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **25** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
@@ -60,7 +60,7 @@ come «vero oggi», non come «garantito».
 | [Dati e ambienti](#dati-e-ambienti) | 2 | — | Il modello dei dati, gli ambienti (test e produzione) e il modo di travasarli. |
 | [Intelligenza artificiale](#intelligenza-artificiale) | 6 | 1 | Dove l’intelligenza artificiale entra nel lavoro del locale. |
 | [Interfaccia](#interfaccia) | 28 | 3 | Le regole dell’interfaccia: tema, navigazione, spazi, cosa si vede e cosa si toglie. |
-| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 22 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
+| [Come si lavora al progetto](#come-si-lavora-al-progetto) | 23 | 1 | Non è comportamento dell’app: è il metodo con cui la si costruisce. |
 | [STAT](#stat) | 7 | — |  |
 | [LIC](#lic) | 15 | 3 |  |
 | [VENUE](#venue) | 6 | — |  |
@@ -76,10 +76,10 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
 | Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 181 |
-| Unità | il progetto di dettaglio: un modulo da solo | 182 |
+| Unità | il progetto di dettaglio: un modulo da solo | 183 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
-**106** requisiti su 346 sono collegati a un bisogno;
+**107** requisiti su 347 sono collegati a un bisogno;
 **10** componenti dell'architettura hanno le loro prove di integrazione.
 
 ## I bisogni del locale
@@ -175,7 +175,7 @@ Ogni versione nuova va sul tablet del banco la sera stessa. Una correzione non d
 
 **Come si accetta**: Prima di ogni merge in develop la richiesta ha la sua V completa: il bisogno, il requisito, e i test di ogni livello che la riguardano, verdi in CI. Una richiesta senza bisogno o senza prove non passa il cancello.
 
-**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve) · ⚠️ **Nessun test di accettazione, ancora.**
+**Chi**: Gestore · **Lo realizzano**: [REQ-DEV-001](#req-dev-001--i-requisiti-restano-attaccati-ai-test), [REQ-DEV-002](#req-dev-002--si-sa-sempre-quale-versione-si-sta-guardando), [REQ-DEV-004](#req-dev-004--il-cancello-di-qualità-prima-del-merge-in-develop), [REQ-DEV-005](#req-dev-005--alzare-il-cricchetto-della-coverage-e-standard-di-complessità-nel-lint), [REQ-DEV-012](#req-dev-012--docssystemspecificationsmd-e-la-specifica-di-sistema-e-si-genera), [REQ-DEV-017](#req-dev-017--la-matrice-dei-moduli-ogni-modulo-premium-provato-da-solo-in-coppia-con-ogni-altro-tutti-e-nessuno), [REQ-DEV-018](#req-dev-018--il-modello-a-v-ogni-richiesta-scende-dal-bisogno-del-locale-al-codice-e-risale-coi-test-di-ogni-livello), [REQ-DEV-019](#req-dev-019--la-specifica-del-prodotto-per-casi-duso-e-ogni-caso-duso-provato-end-to-end-come-lo-farebbe-il-cliente), [REQ-DEV-020](#req-dev-020--la-squadra-di-stonebit-una-sezione-in-claudemd-agentsmd-e-i-sub-agenti-ruoli-superati-da-req-dev-022), [REQ-DEV-021](#req-dev-021--la-sezione-stonebit-e-gli-agenti-corretti-dove-contraddicono-il-repo-valgono-le-regole-del-repo-e-il-processo-è-storia-revisore-squadra-solo-per-i-lavori-grossi), [REQ-DEV-022](#req-dev-022--i-ruoli-la-sessione-sul-repo-è-il-tech-lead-e-lavora-come-sempre-il-pm-è-un-controllo-sui-requisiti-e-lagente-tech-lead-si-toglie), [REQ-DEV-023](#req-dev-023--il-merge-in-develop-aspetta-anche-le-regole-firestore-e-i-test-di-sistema-il-revisore-si-chiama-quando-serve), [REQ-DEV-024](#req-dev-024--le-dipendenze-con-un-avviso-di-sicurezza-si-aggiornano-nella-release-provate-non-dritte-su-main) · ⚠️ **Nessun test di accettazione, ancora.**
 
 #### UR-012 — Su un conto si vede chi ha battuto cosa
 
@@ -3890,6 +3890,16 @@ IL REVISORE. L'11/11 Daniele aveva deciso «revisore sempre, prima di ogni PR»;
 CRITERIO DI ACCETTAZIONE: su GitHub una pull request verso `develop` non si può mergiare finché «Lint, test e build», «Regole Firestore (emulatore)» e «Sistema (Playwright)» non sono verdi; su `main` resta obbligatorio il solo «Lint, test e build»; docs/gitflow.md e CLAUDE.md lo dicono; la sezione Stonebit dice «revisore quando serve» e non più «sempre».
 
 **Dove**: `GitHub, ruleset del ramo develop (impostazione del repository); docs/gitflow.md, CLAUDE.md, tests/unit/ciComeScritta.test.js, tests/unit/squadraStonebit.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/ciComeScritta.test.js`, `tests/unit/squadraStonebit.test.js`
+
+#### REQ-DEV-024 — Le dipendenze con un avviso di sicurezza si aggiornano nella release, provate, non dritte su main
+
+13/11/2026, a 1.10.42 appena su main. Dependabot apre le sue pull request verso `main` (nel repository non c'è una configurazione che gli dica altro): una per `firebase-admin` 14 nelle Functions, che chiude un avviso di sicurezza moderato su `uuid`, già in conflitto e con un salto di versione maggiore nel codice che gira sul server. Daniele: si riporta tutto nella release, si prova, si fa una versione nuova e si rilascia quella. Lo stesso era successo con happy-dom 21 e fast-xml-parser 5.12, uniti su main prima del rilascio della 1.10.42 e riportati nella release con la suite intera verde.
+
+FATTO (1.10.43-beta): `firebase-admin` ^14.5.1 nelle Functions; `uuid` non c'è più. La 14 vuole Node 22, che è il runtime delle Functions; e si porta dietro `jose`, solo modulo ES, che `require` carica da Node 22.12 in su: in locale le Functions (e l'emulatore) vogliono almeno quel Node, mentre CI e Google usano l'ultima 22. La prova del caricamento vero è il deploy sul test. Quando `main` ha la 14, Dependabot chiude da sé la sua pull request.
+
+CRITERIO: il Node delle Functions basta a `firebase-admin`, e `uuid` non torna fra le loro dipendenze (tests/unit/dipendenzeFunctions.test.js).
+
+**Dove**: `functions/package.json, functions/package-lock.json, package.json; tests/unit/dipendenzeFunctions.test.js` · **Serve**: [UR-011](#ur-011--quello-che-funzionava-ieri-funziona-anche-stasera) · **Lo dimostrano**: `tests/unit/dipendenzeFunctions.test.js`
 
 ### STAT
 
