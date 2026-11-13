@@ -1,16 +1,10 @@
 # Cosa è cambiato
 
-## 1.10.43-beta — in lavorazione
-
-### Sicurezza
-
-- Le Functions passano a `firebase-admin` 14, che chiude un avviso di
-  sicurezza su una sua dipendenza (`uuid`). Nessun cambiamento visibile.
-
-## 1.10.42 — 13 novembre 2026 (produzione)
+## 1.10.43 — 13 novembre 2026 (produzione)
 
 In produzione la linea 1.10, dopo la 1.9.3: tutto quello che c'è nelle
-versioni 1.10 qui sotto, fino alla 1.10.41-beta provata sul test.
+versioni 1.10 qui sotto, fino alla 1.10.41-beta, più l'aggiornamento di
+sicurezza della 1.10.43-beta. Provata sul test come 1.10.43-beta.
 
 ### Cosa cambia per la Tana
 
@@ -19,6 +13,16 @@ versioni 1.10 qui sotto, fino alla 1.10.41-beta provata sul test.
   spegne.
 - **L'AI resta spenta** finché la regia di produzione non è pronta: i tasti
   dell'AI e l'assistente non compaiono.
+
+### Sicurezza
+
+- Le Functions passano a `firebase-admin` 14, che chiude un avviso di
+  sicurezza su una sua dipendenza (`uuid`). Nessun cambiamento visibile.
+
+## 1.10.42 — 13 novembre 2026 (su main, non pubblicata)
+
+Preparata per la produzione e sostituita dalla 1.10.43 prima del deploy,
+per portare con sé l'aggiornamento di sicurezza delle Functions.
 
 ## 1.10.41-beta — 13/11/2026 (test)
 
