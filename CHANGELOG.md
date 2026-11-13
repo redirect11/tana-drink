@@ -4,6 +4,11 @@
 
 ### Gestionale
 
+- Menù dei clienti: un prodotto con «Il menù dei clienti segue le giacenze»
+  non è disponibile per il cliente quando un ingrediente della ricetta è
+  esaurito (o in esaurimento, a scelta). Al cliente non si dice cosa manca:
+  la voce resta con «Non disponibile» o sparisce, secondo Impostazioni →
+  Menù clienti → Voci non disponibili. Al banco resta sempre.
 - Menù dei clienti: ogni voce ha una categoria, scelta fra quelle della
   cassa e del magazzino o scritta a mano (senza, vale quella del prodotto).
   «Raggruppa per categoria» crea le sezioni che mancano e ci sposta le

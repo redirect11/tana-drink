@@ -1257,6 +1257,42 @@ describe('gli Special fuori dalle sezioni del menù', () => {
 // 8». Daniele: è un'impostazione, quella di Flavio di partenza; e alla
 // domanda sul carrello e sull'ordine, dove il cliente sta per pagare: lì
 // l'importo resta in euro («sì ok»).
+// LA VOCE NON DISPONIBILE (REQ-MENU-017, Daniele 13/11/2026): al cliente
+// non si dice mai cosa manca; il titolare sceglie se la voce resta con la
+// scritta o sparisce. Il personale la vede sempre.
+describe('la voce non disponibile', () => {
+  const conNegroniFinito = () => {
+    mockDrinks = DRINKS.map((d) => (d.id === 'd2' ? { ...d, non_disponibile_cliente: true } : d))
+  }
+
+  it('di partenza resta, con «Non disponibile» al posto di «Aggiungi»', async () => {
+    ruoloClaim = null
+    conNegroniFinito()
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Negroni', 'Ichnusa']))
+    expect(screen.getAllByText('Non disponibile')).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Aggiungi' })).toHaveLength(2)
+  })
+
+  it('il titolare può farla sparire', async () => {
+    ruoloClaim = null
+    conNegroniFinito()
+    mockSettings = { menu_non_disponibili: 'nascondi' }
+    mostra()
+    await waitFor(() => expect(voci()).toEqual(['Mojito', 'Ichnusa']))
+    expect(screen.queryByText('Non disponibile')).toBeNull()
+  })
+
+  it('il personale la vede e la ordina come sempre', async () => {
+    conNegroniFinito()
+    mockSettings = { menu_non_disponibili: 'nascondi' }
+    mostra()
+    await screen.findByText(/Inserimento ordine da/)
+    expect(screen.queryByText('Non disponibile')).toBeNull()
+    expect(screen.getAllByRole('button', { name: /Aggiungi/ })).toHaveLength(3)
+  })
+})
+
 describe('i prezzi nel menù dei clienti', () => {
   const prezzi = () => [...document.querySelectorAll('.menu-item .price')].map((e) => e.textContent.replace(/ /g, ' '))
 

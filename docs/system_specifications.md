@@ -22,14 +22,14 @@ fallire la suite, e un requisito che cita un test inesistente pure.
 
 | | Quante | Cosa vuol dire |
 |---|---|---|
-| ✅ | 292 | fatto e coperto dai test |
+| ✅ | 293 | fatto e coperto dai test |
 | ⚠️  | 15 | fatto ma nessun test lo verifica |
 | 🟡 | 7 | fatto a metà |
-| ⬜ | 32 | da fare |
+| ⬜ | 31 | da fare |
 | 🗑 | 8 | non più valido |
 
-**354 voci** in tutto. **314** descrivono il sistema com'è oggi e
-stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **32** sono lavori
+**354 voci** in tutto. **315** descrivono il sistema com'è oggi e
+stanno in «[Cosa fa il sistema](#cosa-fa-il-sistema)»; **31** sono lavori
 previsti e stanno in un capitolo a parte, perché un impegno preso non è una
 cosa che l'app fa; **11** difetti noti sono ancora aperti.
 
@@ -47,7 +47,7 @@ come «vero oggi», non come «garantito».
 | [La coda del banco](#la-coda-del-banco) | 9 | — | Quello che il banco vede mentre lavora: cosa c’è da fare adesso, e in che ordine. |
 | [Gruppi di conti](#gruppi-di-conti) | 4 | — | Più conti che vanno insieme — un tavolo, una comitiva — senza fonderli in uno. |
 | [Tavoli](#tavoli) | — | 2 | L’anagrafica dei tavoli e il modo in cui un ordine ci si aggancia. |
-| [Menù e catalogo](#menù-e-catalogo) | 36 | 2 | Il listino: drink, categorie, disponibilità, prezzi. |
+| [Menù e catalogo](#menù-e-catalogo) | 37 | 1 | Il listino: drink, categorie, disponibilità, prezzi. |
 | [Magazzino](#magazzino) | 50 | 5 | Prodotti, ricette, scorte e consumi. Le quantità sono sempre in unità base. |
 | [Cassa di serata e statistiche](#cassa-di-serata-e-statistiche) | 16 | 1 | La serata vista dai numeri: incassi, chiusura, statistiche, conti del locale. |
 | [Stampa](#stampa) | 20 | 1 | La stampante termica al banco: comande, scontrini, chiusure di cassa. |
@@ -75,7 +75,7 @@ gradino che descrive il sistema ha un livello di test che lo mette alla prova.
 |---|---|---|
 | Accettazione | i bisogni del locale (UR-*), coi casi d'uso (UC-*) end-to-end | 0 |
 | Sistema | la specifica (REQ-*), sull'app intera | 11 |
-| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 174 |
+| Integrazione | l'architettura (ARC-*): i pezzi messi insieme | 175 |
 | Unità | il progetto di dettaglio: un modulo da solo | 180 |
 
 **16** bisogni del locale, **0** con un test di accettazione.
@@ -930,6 +930,24 @@ Si importa il listino da un CSV di SumUp: prodotti, categorie in ordine di appar
 Il colore di una categoria è stabile (dipende dall'id, non dal nome) e lo stesso nel POS, nel menù e nelle statistiche: una categoria si riconosce a colpo d'occhio ovunque la si incontri.
 
 **Dove**: `src/lib/categoryColors.js` · **Lo dimostrano**: `tests/unit/categoryColors.test.js`
+
+#### REQ-MENU-017 — Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico
+
+Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo prendo … se io sto a zero, scompare direttamente dal menu». Oggi il menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e quel flag non sa niente delle giacenze: si spegne a mano.
+
+PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta di partenza. Con l'opzione accesa, quando la giacenza di un ingrediente della ricetta scende a zero o sotto, la voce sparisce dal menu' del cliente; quando un carico la riporta sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce resta, perche' la giacenza dell'app puo' sbagliare e il bartender vede la bottiglia. COME: il cliente non legge il magazzino (le regole lo vietano), quindi il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul cambio di giacenza di un prodotto, solo quando attraversa lo zero (non a ogni vendita): poche scritture, e il banco non aspetta niente. L'opzione per voce serve perche' molti ingredienti non hanno una giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per tutti sparirebbero cocktail interi per un numero sbagliato.
+
+DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
+
+LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
+
+LE REGOLE (Daniele, 13/11/2026): - AL CLIENTE NON SI DICE MAI COSA MANCA: la voce non disponibile o sparisce dal menù, o resta con la scritta «Non disponibile»; mai l'ingrediente, mai il motivo. Lo stesso per le alternative di una scelta (REQ-MENU-042): quella che manca non compare. - LO SCEGLIE IL TITOLARE, in Impostazioni → Menù clienti: «nascondi» oppure «mostra con la scritta Non disponibile» (di partenza: con la scritta). E la soglia: ingrediente ESAURITO, oppure già IN ESAURIMENTO (sotto la scorta minima). - Il segno lo scrive una Cloud Function, solo quando la giacenza attraversa la soglia, sul prodotto della cassa (e, per le alternative, in un elenco pubblico senza quantità): al telefono arriva un sì o un no, niente del magazzino. - Vale per i prodotti che SEGUONO LE GIACENZE (opzione sul prodotto della cassa, spenta di partenza: lime, sciroppi e ghiaccio spesso non hanno una giacenza tenuta bene). Al banco la voce resta sempre.
+
+FATTO PER LE VOCI (13/11/2026): functions/lib/disponibilita.js e tre trigger (docs/functions.md); sul prodotto `segue_giacenze` (opzione nella scheda) e `non_disponibile_cliente`; in Impostazioni → Menù clienti «Voci non disponibili» (`menu_non_disponibili`, `menu_soglia_disponibilita`); nel menù dei clienti la voce resta con «Non disponibile» al posto del tasto, o sparisce; il personale la vede sempre.
+
+RESTA, con REQ-MENU-042, l'elenco pubblico delle alternative.
+
+**Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx` · **Lo dimostrano**: `tests/bdd/disponibilita.test.js`, `tests/component/MenuPage.test.jsx`
 
 #### REQ-MENU-018 — Gli special della casa: un menù loro col suo QR, e un carosello in cima al menù
 
@@ -4280,20 +4298,6 @@ Nella vista «Ordina dal menù» dello staff si possono inserire NOME e numero d
 **Dove**: `src/pages/MenuPage.jsx, src/components/OrderSummary.jsx`
 
 ### Menù e catalogo
-
-#### REQ-MENU-017 — Una voce esaurita sparisce da sola dal menù del cliente, e torna col carico
-
-Flavio, vocale del 22/10/2026: «se io finisco il gin mare e non lo prendo … se io sto a zero, scompare direttamente dal menu». Oggi il menu' del cliente mostra le voci con «Disponibile nel menu'» acceso, e quel flag non sa niente delle giacenze: si spegne a mano.
-
-PROPOSTA: un'opzione per voce, «Nascondi dal menu' quando e' esaurita», spenta di partenza. Con l'opzione accesa, quando la giacenza di un ingrediente della ricetta scende a zero o sotto, la voce sparisce dal menu' del cliente; quando un carico la riporta sopra zero, ricompare. Solo dal menu' del cliente: al banco la voce resta, perche' la giacenza dell'app puo' sbagliare e il bartender vede la bottiglia. COME: il cliente non legge il magazzino (le regole lo vietano), quindi il segno «esaurita» sta sulla voce. Lo scrive una Cloud Function sul cambio di giacenza di un prodotto, solo quando attraversa lo zero (non a ogni vendita): poche scritture, e il banco non aspetta niente. L'opzione per voce serve perche' molti ingredienti non hanno una giacenza tenuta bene (lime, ghiaccio, sciroppi): con una regola per tutti sparirebbero cocktail interi per un numero sbagliato.
-
-DA DECIDERE con l'utente: se l'opzione vale per la voce o per il prodotto di magazzino, e se il cliente vede la voce barrata («esaurita») invece che sparita.
-
-LA SOGLIA LA SCEGLIE IL TITOLARE (Daniele, 13/11/2026): in Impostazioni, se la voce esce dal menù quando un ingrediente della ricetta collegata è ESAURITO oppure già IN ESAURIMENTO.
-
-LE REGOLE (Daniele, 13/11/2026): - AL CLIENTE NON SI DICE MAI COSA MANCA: la voce non disponibile o sparisce dal menù, o resta con la scritta «Non disponibile»; mai l'ingrediente, mai il motivo. Lo stesso per le alternative di una scelta (REQ-MENU-042): quella che manca non compare. - LO SCEGLIE IL TITOLARE, in Impostazioni → Menù clienti: «nascondi» oppure «mostra con la scritta Non disponibile» (di partenza: con la scritta). E la soglia: ingrediente ESAURITO, oppure già IN ESAURIMENTO (sotto la scorta minima). - Il segno lo scrive una Cloud Function, solo quando la giacenza attraversa la soglia, sul prodotto della cassa (e, per le alternative, in un elenco pubblico senza quantità): al telefono arriva un sì o un no, niente del magazzino. - Vale per i prodotti che SEGUONO LE GIACENZE (opzione sul prodotto della cassa, spenta di partenza: lime, sciroppi e ghiaccio spesso non hanno una giacenza tenuta bene). Al banco la voce resta sempre.
-
-**Dove**: `functions/ (trigger su inventory_items), src/lib/api.js (fetchDrinks del menù), src/components/DrinkForm.jsx`
 
 #### REQ-MENU-042 — Su una voce del menù il cliente può scegliere un ingrediente, col supplemento deciso dal titolare
 

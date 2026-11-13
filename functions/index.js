@@ -10,7 +10,8 @@
 //   firebase functions:secrets:set SUMUP_API_KEY
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
-const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore')
+const { onDocumentUpdated, onDocumentCreated, onDocumentWritten } = require('firebase-functions/v2/firestore')
+const disponibilita = require('./lib/disponibilita')
 const { defineSecret } = require('firebase-functions/params')
 const { initializeApp } = require('firebase-admin/app')
 const { getFirestore, FieldValue } = require('firebase-admin/firestore')
@@ -63,6 +64,65 @@ exports.staffAdmin = onCall(OPTS, async (request) => {
     if (e?.code && e?.message) throw new HttpsError(e.code, e.message)
     throw new HttpsError('internal', e?.message || 'Errore interno.')
   }
+})
+
+// ── LA VOCE NON DISPONIBILE NEL MENÙ DEI CLIENTI (REQ-MENU-017) ───────────────
+// Il segno `non_disponibile_cliente` sul prodotto della cassa: il cliente
+// non legge il magazzino, e gli arriva solo un sì o un no (Daniele,
+// 13/11/2026: al cliente non si dice mai cosa manca). Si scrive solo dove
+// cambia, e si ricalcola solo quando serve: un prodotto di magazzino che
+// attraversa la soglia, un prodotto della cassa che cambia ricetta o
+// opzione, la soglia che cambia. La logica è in lib/disponibilita.js.
+async function impostazioniDelBar() {
+  const s = await db.doc('settings/bar').get()
+  return s.exists ? s.data() : {}
+}
+
+async function ricalcolaDisponibilita(drinks, impostazioni) {
+  if (!drinks.length) return
+  const ids = [...new Set(drinks.flatMap((d) => (d.recipe_items || []).map((r) => r.inventory_item_id).filter(Boolean)))]
+  const itemsById = new Map()
+  for (let i = 0; i < ids.length; i += 100) {
+    const lette = await db.getAll(...ids.slice(i, i + 100).map((id) => db.doc(`inventory_items/${id}`)))
+    for (const s of lette) if (s.exists) itemsById.set(s.id, s.data())
+  }
+  const cambi = disponibilita.cambiDiDisponibilita(drinks, itemsById, impostazioni)
+  for (let i = 0; i < cambi.length; i += 400) {
+    const lotto = db.batch()
+    for (const c of cambi.slice(i, i + 400)) lotto.update(db.doc(`drinks/${c.id}`), { non_disponibile_cliente: c.valore })
+    await lotto.commit()
+  }
+}
+
+const drinksCheSeguono = async () =>
+  (await db.collection('drinks').where('segue_giacenze', '==', true).get()).docs.map((d) => ({ id: d.id, ...d.data() }))
+
+exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inventory_items/{itemId}' }, async (event) => {
+  const prima = event.data?.before?.exists ? event.data.before.data() : null
+  const dopo = event.data?.after?.exists ? event.data.after.data() : null
+  const impostazioni = await impostazioniDelBar()
+  // Non a ogni vendita: solo quando la soglia si attraversa.
+  if (!disponibilita.haAttraversato(prima, dopo, impostazioni)) return
+  const itemId = event.params.itemId
+  await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
+})
+
+exports.disponibilitaDalProdotto = onDocumentWritten({ ...OPTS, document: 'drinks/{drinkId}' }, async (event) => {
+  if (!event.data?.after?.exists) return
+  const prima = event.data.before?.exists ? event.data.before.data() : {}
+  const dopo = event.data.after.data()
+  // Solo se cambiano l'opzione o la ricetta: la scrittura del segno, fatta
+  // qui, non deve rimettere in moto il calcolo.
+  const pesa = (d) => JSON.stringify([d?.segue_giacenze === true, d?.recipe_items || []])
+  if (pesa(prima) === pesa(dopo)) return
+  await ricalcolaDisponibilita([{ id: event.params.drinkId, ...dopo }], await impostazioniDelBar())
+})
+
+exports.disponibilitaDalleImpostazioni = onDocumentUpdated({ ...OPTS, document: 'settings/bar' }, async (event) => {
+  const prima = event.data?.before?.data() || {}
+  const dopo = event.data?.after?.data() || {}
+  if (disponibilita.sogliaDi(prima) === disponibilita.sogliaDi(dopo)) return
+  await ricalcolaDisponibilita(await drinksCheSeguono(), dopo)
 })
 
 // ── L'AI, attraverso la regia (REQ-AI-003) ───────────────────────────────────

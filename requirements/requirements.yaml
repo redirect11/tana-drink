@@ -3865,11 +3865,20 @@ requirements:
       - Vale per i prodotti che SEGUONO LE GIACENZE (opzione sul prodotto
         della cassa, spenta di partenza: lime, sciroppi e ghiaccio spesso non
         hanno una giacenza tenuta bene). Al banco la voce resta sempre.
-    status: todo
+      FATTO PER LE VOCI (13/11/2026): functions/lib/disponibilita.js e tre
+      trigger (docs/functions.md); sul prodotto `segue_giacenze` (opzione
+      nella scheda) e `non_disponibile_cliente`; in Impostazioni → Menù
+      clienti «Voci non disponibili» (`menu_non_disponibili`,
+      `menu_soglia_disponibilita`); nel menù dei clienti la voce resta con
+      «Non disponibile» al posto del tasto, o sparisce; il personale la vede
+      sempre. RESTA, con REQ-MENU-042, l'elenco pubblico delle alternative.
+    status: implemented
     generate_issue: true
     labels: [menu, magazzino, vista-cliente]
     priority: P2
-    test_cases: []
+    test_cases:
+      - tests/bdd/disponibilita.test.js
+      - tests/component/MenuPage.test.jsx
 
   - id: REQ-MENU-018
     title: "Gli special della casa: un menù loro col suo QR, e un carosello in cima al menù"

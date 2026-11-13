@@ -135,7 +135,19 @@ export default function MenuPage({ speciali = false }) {
   // IL MENÙ DEI CLIENTI (REQ-MENU-025) ha i nomi per il cliente e la sua
   // struttura, se il locale l'ha personalizzata. Chi lavora ordina dal menù
   // del gestionale, coi nomi del banco e per categorie: è quello che conosce.
-  const drinks = useMemo(() => (staff ? drinksDelMenu : drinksDelMenu.map(perIlCliente)), [staff, drinksDelMenu])
+  // LA VOCE NON DISPONIBILE (REQ-MENU-017): al cliente non si dice mai cosa
+  // manca. Il titolare sceglie se sparisce o resta con «Non disponibile»
+  // (tastiOrdine); il personale la vede sempre.
+  const nascondiNonDisponibili = settings.menu_non_disponibili === 'nascondi'
+  const drinks = useMemo(
+    () =>
+      staff
+        ? drinksDelMenu
+        : drinksDelMenu
+            .filter((d) => !(nascondiNonDisponibili && d.non_disponibile_cliente))
+            .map((d) => perIlCliente(d.non_disponibile_cliente ? { ...d, non_disponibile: true } : d)),
+    [staff, drinksDelMenu, nascondiNonDisponibili]
+  )
   const elencoSpeciali = useMemo(() => drinkSpeciali(drinks), [drinks])
   // IL MENÙ SPECIAL SI ACCENDE E SI SPEGNE (REQ-MENU-018). Acceso, il
   // carosello in cima e la pagina sua; spento, i drink speciali restano
@@ -406,6 +418,8 @@ export default function MenuPage({ speciali = false }) {
   // I tasti per ordinare un drink: gli stessi nella card e nel dettaglio.
   const tastiOrdine = (d) => {
     if (!canOrder) return null
+    // Niente motivo, niente ingrediente: solo che oggi no (REQ-MENU-017).
+    if (d.non_disponibile) return <span className="muted small non-disponibile">Non disponibile</span>
     // La riga del carrello si riconosce da quello che arriva al banco (il
     // drink, e il nome letto dal cliente): cart.js, chiaveRiga.
     const chiave = chiaveRiga(rigaDelCarrello(d))

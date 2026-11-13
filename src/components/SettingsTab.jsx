@@ -881,6 +881,38 @@ export default function SettingsTab({ role = null }) {
       ),
     },
     {
+      id: 'non-disponibili',
+      icona: 'ordina-dal-menu',
+      label: 'Voci non disponibili',
+      nodo: (
+        <div className="card settings-section">
+          <h3>Voci non disponibili</h3>
+          <p className="muted small" style={{ margin: '0 0 10px' }}>
+            Per i prodotti che seguono le giacenze (opzione nella scheda del prodotto). Al cliente non si dice quale
+            ingrediente manca; al banco la voce resta sempre.
+          </p>
+          <h4 style={{ margin: '4px 0' }}>Nel menù dei clienti</h4>
+          <SceltaModo
+            valore={settings.menu_non_disponibili === 'nascondi' ? 'nascondi' : 'mostra'}
+            opzioni={[
+              ['mostra', 'Con la scritta «Non disponibile»', 'La voce resta al suo posto e non si può ordinare.'],
+              ['nascondi', 'Nascoste', 'La voce sparisce finché non torna disponibile.'],
+            ]}
+            onScegli={(v) => save({ menu_non_disponibili: v })}
+          />
+          <h4 style={{ margin: '12px 0 4px' }}>Quando</h4>
+          <SceltaModo
+            valore={settings.menu_soglia_disponibilita === 'esaurimento' ? 'esaurimento' : 'esaurito'}
+            opzioni={[
+              ['esaurito', 'Ingrediente esaurito', 'Giacenza a zero.'],
+              ['esaurimento', 'Ingrediente in esaurimento', 'Sotto la soglia di avviso del prodotto di magazzino.'],
+            ]}
+            onScegli={(v) => save({ menu_soglia_disponibilita: v })}
+          />
+        </div>
+      ),
+    },
+    {
       // GESTIONE MENÙ: la schermata con cui si lavora il listino. Le sue
       // impostazioni non c'entrano niente con quello che vede il cliente.
       id: 'gestione-menu',
@@ -1265,6 +1297,7 @@ export default function SettingsTab({ role = null }) {
     // catalogo. Messe insieme, davanti a un interruttore non si capiva a
     // quale delle tre appartenesse.
     'menu-clienti': 'menu-clienti',
+    'non-disponibili': 'menu-clienti',
     'gestione-menu': 'gestione-menu',
     catalogo: 'catalogo',
     coda: 'banco',

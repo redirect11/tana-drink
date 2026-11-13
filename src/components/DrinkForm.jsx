@@ -292,6 +292,22 @@ export default function DrinkForm({
       {/* GLI INGREDIENTI IN CARTA (REQ-MENU-019). La ricetta qui sotto è di
           magazzino — «Ghiaccio Hoshizaki», «Lime Succo Homemade 1kg - 50cl»
           — e i Signature non ne hanno: per il cliente si scrivono qui. */}
+      {/* REQ-MENU-017: spenta di partenza, perché lime, sciroppi e ghiaccio
+          spesso non hanno una giacenza tenuta bene. */}
+      <label className="row" style={{ gap: 8, alignItems: 'center', margin: '8px 0 0' }}>
+        <input
+          type="checkbox"
+          checked={form.segue_giacenze === true}
+          onChange={(e) => setForm((f) => ({ ...f, segue_giacenze: e.target.checked }))}
+        />
+        <span>Il menù dei clienti segue le giacenze</span>
+      </label>
+      <AiutoCampo style={{ margin: '2px 0 8px' }}>
+        Quando un ingrediente della ricetta è esaurito (o in esaurimento, secondo
+        Impostazioni → Menù clienti) la voce non è disponibile per il cliente.
+        Al banco resta sempre.
+      </AiutoCampo>
+
       <label htmlFor="ingredienti">Ingredienti in carta</label>
       <input
         id="ingredienti"

@@ -203,6 +203,11 @@ function mapDrink(snap) {
     // esente — quindi i due casi non si possono confondere in un falsy.
     sale_vat: d.sale_vat ?? null,
     available: d.available ?? true,
+    // LA VOCE NON DISPONIBILE AL CLIENTE (REQ-MENU-017): l'opzione del
+    // prodotto, e il segno che scrive la Function quando un ingrediente
+    // attraversa la soglia. Al cliente arriva solo il sì o il no.
+    segue_giacenze: d.segue_giacenze === true,
+    non_disponibile_cliente: d.non_disponibile_cliente === true,
     image_url: d.image_url ?? null,
     // GLI SPECIAL DELLA CASA (REQ-MENU-018): il segno, e l'illustrazione
     // pronta da usare quando la foto manca.

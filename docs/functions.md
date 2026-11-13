@@ -125,6 +125,20 @@ stessi tre gesti quando a pagare è un gruppo di conti insieme.
   un ordine appena arrivato.
 - `notifyStaffCall` — trigger su `staff_calls/{callId}`: la chiamata al tavolo.
 
+## Il menù dei clienti — voci non disponibili (REQ-MENU-017)
+
+Il cliente non legge il magazzino: il segno `non_disponibile_cliente` sul
+prodotto della cassa lo scrivono tre trigger, con la logica in
+`lib/disponibilita.js`, solo per i prodotti con «Il menù dei clienti segue
+le giacenze» e solo dove il segno cambia:
+
+- `disponibilitaDalMagazzino` — `inventory_items/{itemId}`: quando la
+  giacenza attraversa la soglia (non a ogni vendita);
+- `disponibilitaDalProdotto` — `drinks/{drinkId}`: quando cambiano opzione o
+  ricetta (la sua stessa scrittura non lo rimette in moto);
+- `disponibilitaDalleImpostazioni` — `settings/bar`: quando cambia la soglia
+  (`menu_soglia_disponibilita`: esaurito / in esaurimento).
+
 ## Amministrazione
 
 - `staffAdmin` — callable (solo bartender): crea, elenca, modifica ed elimina
