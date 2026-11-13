@@ -96,7 +96,7 @@ import {
   ANNULLATA_PER_DIVISIONE,
   itemsTotal as sumItems,
 } from './comande.js'
-import { serveConferma, attesaNuova, rispostaAccettata, ANNULLO_RIFIUTO } from './attesaCliente.js'
+import { attesaDopoLaModifica, rispostaAccettata, ANNULLO_RIFIUTO } from './attesaCliente.js'
 import {
   discountAmount,
   discountAfterChange,
@@ -5513,10 +5513,16 @@ export const bartenderUpdateComanda = perConto(async function bartenderUpdateCom
   // prezzo o ingredienti diversi da quelli che ha ordinato, e lui deve
   // poterli accettare o rifiutare. L'attesa parte nella STESSA scrittura
   // delle righe: non c'è un istante in cui il conto è cambiato e la coda
-  // lo crede confermato.
-  const attesa = serveConferma({ ...cur, status: norm.status, comande: norm.comande }, comandaId, comanda.items, newItems)
-    ? { attesa_cliente: attesaNuova(cur, impostazioni()) }
-    : null
+  // lo crede confermato. Se il banco rimette l'ordine com'era, l'attesa
+  // finisce da sé.
+  const attesaDopo = attesaDopoLaModifica(
+    { ...cur, status: norm.status, comande: norm.comande },
+    comandaId,
+    comanda.items,
+    newItems,
+    impostazioni()
+  )
+  const attesa = attesaDopo === undefined ? null : { attesa_cliente: attesaDopo }
 
   comanda.items = newItems
   // IL TICKET CHE ERA USCITO ADESSO È VECCHIO. Una comanda non ancora presa
@@ -5639,6 +5645,10 @@ export const cancelOrder = perConto(async function cancelOrder(id, opts = {}) {
     cancel_phrase: phrase,
     cancel_message: message || null,
     cancel_notify: !!notifyClient,
+    // Un conto annullato non aspetta più nessuno (REQ-CLI-009). E le regole
+    // lo pretendono: il rifiuto del cliente passa di qui, e il cliente può
+    // annullare un conto in attesa solo chiudendo l'attesa.
+    attesa_cliente: null,
   }
   bgWrite(() => updateDoc(orderRef, patchAnnullo), 'annullo ordine')
 

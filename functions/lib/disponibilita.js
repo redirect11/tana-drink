@@ -73,13 +73,70 @@ const usaIlProdotto = (drink, itemId) => (drink?.recipe_items || []).some((r) =>
 // chi ha giacenza (la stessa soglia delle voci), e del magazzino al
 // telefono non arriva altro. Senza la spunta, il documento non c'è.
 // Torna { scrivi: { disponibile } } | { cancella: true } | null (niente).
+//
+// Si riscrive anche quando si salva la scheda del prodotto, non solo quando
+// la spunta cambia: i prodotti spuntati PRIMA di questa Function non hanno
+// il documento, e senza al telefono non compaiono mai. Non a ogni vendita,
+// però: un cambio della sola giacenza che non attraversa la soglia non
+// scrive niente.
+const CAMPI_DELLA_GIACENZA = new Set(['stock', 'updated_at'])
+function soloGiacenza(prima, dopo) {
+  const campi = new Set([...Object.keys(prima || {}), ...Object.keys(dopo || {})])
+  for (const c of campi) {
+    if (CAMPI_DELLA_GIACENZA.has(c)) continue
+    if (JSON.stringify(prima?.[c]) !== JSON.stringify(dopo?.[c])) return false
+  }
+  return true
+}
+
 function alternativaDopo(prima, dopo, impostazioni) {
   const soglia = sogliaDi(impostazioni)
   const era = prima?.scelta_cliente === true
   const e = dopo?.scelta_cliente === true
   if (!e) return era ? { cancella: true } : null
-  if (era && manca(prima, soglia) === manca(dopo, soglia)) return null
+  if (era && soloGiacenza(prima, dopo) && manca(prima, soglia) === manca(dopo, soglia)) return null
   return { scrivi: { disponibile: !manca(dopo, soglia) } }
 }
 
-module.exports = { manca, nonDisponibile, haAttraversato, cambiDiDisponibilita, usaIlProdotto, sogliaDi, rigaDiServizio, alternativaDopo }
+// ── LE RIGHE CHE LA SCELTA SOSTITUISCE SEGUONO LA RICETTA (REQ-MENU-042) ─
+//
+// La scelta del cliente ricorda quali righe della ricetta prende il posto
+// (`scelta.sostituisce`): le scrive l'editor, che legge il magazzino. Se
+// poi la ricetta cambia — il Bombay diventa Tanqueray — la scelta restava
+// sul Bombay: il cliente pagava il supplemento del Mare, e il magazzino
+// scalava il Tanqueray. Quando la ricetta di un prodotto cambia, le voci
+// del menù collegate si riallineano qui. Stessa regola dell'editor
+// (src/lib/etichetteIngredienti.js, righeSostituite).
+// `categoriaDi`: Map id del prodotto di magazzino → categoria.
+function righeDellEtichetta(e, ricetta, categoriaDi) {
+  const ids = (ricetta || []).map((r) => r?.inventory_item_id).filter(Boolean)
+  if (e?.tipo === 'prodotto') return ids.includes(e.id) ? [e.id] : []
+  if (e?.tipo !== 'categoria') return []
+  return [...new Set(ids.filter((id) => categoriaDi.get(id) === e.id))]
+}
+
+// Le etichette con le righe riallineate, o null se non cambia niente.
+function scelteRiallineate(etichette, ricetta, categoriaDi) {
+  let cambiato = false
+  const nuove = (etichette || []).map((e) => {
+    if (!e?.scelta) return e
+    const s = righeDellEtichetta(e, ricetta, categoriaDi)
+    if (JSON.stringify(s) === JSON.stringify(e.scelta.sostituisce || [])) return e
+    cambiato = true
+    return { ...e, scelta: { ...e.scelta, sostituisce: s } }
+  })
+  return cambiato ? nuove : null
+}
+
+module.exports = {
+  manca,
+  nonDisponibile,
+  haAttraversato,
+  cambiDiDisponibilita,
+  usaIlProdotto,
+  sogliaDi,
+  rigaDiServizio,
+  alternativaDopo,
+  righeDellEtichetta,
+  scelteRiallineate,
+}

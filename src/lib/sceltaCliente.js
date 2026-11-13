@@ -28,10 +28,14 @@ const centesimi = (n) => Math.round(Number(n || 0) * 100) / 100
 // Le scelte che una voce offre ADESSO: per etichetta, le alternative
 // disponibili, senza il prodotto della ricetta (quello è «come da ricetta»).
 // Un'etichetta senza alternative disponibili sparisce: niente da scegliere.
-export function scelteDellaVoce(etichette, disponibili) {
+// `ricetta` è quella ATTUALE del prodotto della cassa: se è cambiata e le
+// righe della scelta non si sono ancora riallineate (lo fa una Function),
+// il prodotto che adesso sta nella ricetta non si vende come supplemento.
+export function scelteDellaVoce(etichette, disponibili, ricettaAttuale = []) {
+  const nellaRicetta = (ricettaAttuale || []).map((r) => r?.inventory_item_id).filter(Boolean)
   return etichetteConScelta(etichette)
     .map((e) => {
-      const ricetta = new Set(e.scelta.sostituisce || [])
+      const ricetta = new Set([...(e.scelta.sostituisce || []), ...nellaRicetta])
       const opzioni = e.scelta.offerti.filter((o) => disponibili?.get(o.id) === true && !ricetta.has(o.id))
       return { etichetta: e, opzioni }
     })

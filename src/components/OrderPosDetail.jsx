@@ -893,6 +893,12 @@ export default function OrderPosDetail({ order: orderProp = null, apriPagamento 
     const divisa = dividiComanda(c, scelte)
     if (!divisa) return
     setParziale(null)
+    // Dividere fa avanzare la parte scelta: col cliente che deve ancora
+    // accettare le modifiche (REQ-CLI-009), no.
+    if (inAttesa(order)) {
+      toastError('Il cliente deve ancora accettare le modifiche.')
+      return
+    }
     const adesso = new Date().toISOString()
     // In che passo nascono le due parti lo dice quella di partenza
     // (statiDopoLaDivisione): da «da fare» la parte scelta è quella che si

@@ -99,4 +99,46 @@ describe('Feature: le alternative che il cliente vede', () => {
     expect(alternativaDopo({ stock: 1, scelta_cliente: true }, { stock: 0, scelta_cliente: true }, {})).toEqual({ scrivi: { disponibile: false } })
     expect(alternativaDopo(null, { stock: 3 }, {})).toBeNull()
   })
+
+  // Il revisore, 13/11/2026: i prodotti spuntati prima di questa Function
+  // non avevano il documento, e al telefono non comparivano mai. Salvare la
+  // scheda lo scrive; una vendita che non attraversa la soglia no.
+  it('salvando la scheda di un prodotto già spuntato il documento si riscrive', async () => {
+    const { alternativaDopo } = await import('../../functions/lib/disponibilita.js')
+    const gin = { stock: 5, scelta_cliente: true, name: 'Mare', updated_at: 1 }
+    expect(alternativaDopo(gin, { ...gin, name: 'Gin Mare', updated_at: 2 }, {})).toEqual({ scrivi: { disponibile: true } })
+    expect(alternativaDopo(gin, { ...gin, stock: 4, updated_at: 2 }, {})).toBeNull()
+  })
+})
+
+// LE RIGHE CHE LA SCELTA SOSTITUISCE SEGUONO LA RICETTA (REQ-MENU-042): il
+// revisore, 13/11/2026 — la ricetta passava dal Bombay al Tanqueray, la
+// scelta restava sul Bombay, e il magazzino scalava il gin sbagliato.
+describe('Feature: la ricetta cambia, la scelta del cliente segue', () => {
+  const categoriaDi = new Map([
+    ['bombay', 'gin'],
+    ['tanq', 'gin'],
+    ['tonica', 'bibite'],
+  ])
+  const GIN = { tipo: 'categoria', id: 'gin', nome: 'Gin', scelta: { offerti: [{ id: 'mare', nome: 'Mare', supplemento: 2 }], sostituisce: ['bombay'] } }
+
+  it('le righe si ricalcolano sulla ricetta nuova', async () => {
+    const { scelteRiallineate } = await import('../../functions/lib/disponibilita.js')
+    const ricetta = [{ inventory_item_id: 'tanq', qty: 40 }, { inventory_item_id: 'tonica', qty: 1 }]
+    const [e, testo] = scelteRiallineate([GIN, { tipo: 'testo', nome: 'lime' }], ricetta, categoriaDi)
+    expect(e.scelta).toEqual({ offerti: GIN.scelta.offerti, sostituisce: ['tanq'] })
+    expect(testo).toEqual({ tipo: 'testo', nome: 'lime' })
+  })
+
+  it('se non cambia niente non si scrive', async () => {
+    const { scelteRiallineate } = await import('../../functions/lib/disponibilita.js')
+    expect(scelteRiallineate([GIN], [{ inventory_item_id: 'bombay', qty: 40 }], categoriaDi)).toBeNull()
+    expect(scelteRiallineate([{ tipo: 'testo', nome: 'lime' }], [], categoriaDi)).toBeNull()
+  })
+
+  it('un’etichetta di prodotto resta sul suo prodotto, se c’è ancora', async () => {
+    const { righeDellEtichetta } = await import('../../functions/lib/disponibilita.js')
+    expect(righeDellEtichetta({ tipo: 'prodotto', id: 'tanq' }, [{ inventory_item_id: 'tanq' }], categoriaDi)).toEqual(['tanq'])
+    expect(righeDellEtichetta({ tipo: 'prodotto', id: 'bombay' }, [{ inventory_item_id: 'tanq' }], categoriaDi)).toEqual([])
+  })
 })

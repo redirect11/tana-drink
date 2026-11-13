@@ -7210,7 +7210,13 @@ requirements:
       LE ALTERNATIVE DISPONIBILI arrivano al telefono da
       `alternative_cliente/{id}` (solo `disponibile`), scritto dalle
       Functions (lib/disponibilita.js, alternativaDopo) con la soglia delle
-      voci; le regole lo lasciano leggere a tutti e scrivere a nessuno.
+      voci; le regole lo lasciano leggere a tutti e scrivere a nessuno. Il
+      documento si riscrive anche salvando la scheda del prodotto (i
+      prodotti spuntati prima della Function non lo avevano), non a ogni
+      vendita. QUANDO LA RICETTA DEL PRODOTTO CAMBIA le righe sostituite
+      delle voci collegate si riallineano (disponibilitaDalProdotto,
+      scelteRiallineate); al telefono un prodotto della ricetta attuale non
+      è mai un'alternativa a pagamento.
       La scelta ricorda anche le righe della ricetta che sostituisce
       (`sostituisce`, righeSostituite): le calcola l'editor, perché al
       telefono il magazzino non arriva e per un'etichetta di categoria il
@@ -7302,7 +7308,17 @@ requirements:
       'attesa_scaduta'`, `cancelled_persona: null`: nella storia non
       compare chi aveva la coda aperta). La pagina del cliente dice perché.
       LE REGOLE lasciano rispondere il cliente anche con la comanda già in
-      preparazione, solo finché c'è l'attesa.
+      preparazione o con più comande, solo finché c'è l'attesa, e solo
+      rispondendo: chiudere l'attesa con `risposta_cliente`, o annullare
+      chiudendola. L'attesa la mette SOLO il banco: né la creazione né le
+      scritture del cliente possono metterla (dal revisore, 13/11/2026: un
+      campo scritto dal cliente stesso gli teneva aperto il conto per tutta
+      la serata, con righe e totale riscrivibili prima di pagare).
+      NON SCATTA con un pagamento già avviato (pagato, parziale, online in
+      corso, incassi sul conto): il pagamento online senza POS lascia il
+      conto aperto, e un rifiuto lo annullerebbe incassato. Il banco che
+      rimette le righe com'erano (`firma_prima`) chiude l'attesa. Durante
+      l'attesa anche la preparazione parziale è ferma.
       Impostazioni → Menù clienti → «Modifiche da confermare»:
       `attesa_cliente_minuti`, fra 1 e 120.
     status: implemented

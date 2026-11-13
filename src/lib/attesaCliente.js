@@ -63,27 +63,56 @@ export function cambiaPerIlCliente(prima, dopo) {
   return false
 }
 
-// La modifica di questa comanda va confermata dal cliente? Solo per un
-// ordine dal telefono ancora aperto, con la sola prima comanda, non pronta.
-// Le aggiunte del banco a un conto avviato sono un'altra cosa (comande
-// nuove), e qui non passano.
-export function serveConferma(ordine, comandaId, righePrima, righeDopo) {
-  if (!ordineDalTelefono(ordine) || ordine.status !== 'aperto') return false
+// Le righe come le ha ordinate il cliente, in una stringa: serve a
+// riconoscere il banco che le rimette com'erano.
+export const firmaRighe = (righe) =>
+  [...quantitaPerFirma(righe)]
+    .map(([k, q]) => `${k}=${q}`)
+    .sort()
+    .join(';')
+
+// UN PAGAMENTO GIÀ PARTITO NON SI RIMETTE IN DISCUSSIONE. Il pagamento
+// online senza POS segna il conto «pagato» e lo lascia aperto finché i
+// drink non sono serviti: un rifiuto o una scadenza lo annullerebbero già
+// incassato, e un sì a un prezzo più alto lo lascerebbe «pagato» per meno
+// del totale. Lì le modifiche si concordano al banco, come prima.
+export const pagamentoAvviato = (ordine) =>
+  ['pagato', 'parziale'].includes(ordine?.payment_status) ||
+  (ordine?.payment_method === 'online' && ordine?.payment_status === 'in_attesa') ||
+  (ordine?.payments || []).length > 0
+
+// L'ATTESA DOPO UNA MODIFICA DEL BANCO a questa comanda. Torna:
+//   undefined  niente da cambiare
+//   { ... }    l'attesa che comincia (o riparte) adesso
+//   null       finita: il banco ha rimesso l'ordine com'era
+// Comincia solo per un ordine dal telefono ancora aperto, con la sola
+// prima comanda, non pronta, e nessun pagamento avviato. Le aggiunte del
+// banco a un conto avviato sono un'altra cosa (comande nuove), e qui non
+// passano.
+export function attesaDopoLaModifica(ordine, comandaId, righePrima, righeDopo, impostazioni, adesso = new Date()) {
+  if (!ordineDalTelefono(ordine) || ordine.status !== 'aperto' || pagamentoAvviato(ordine)) return undefined
   const comande = ordine.comande || []
-  if (comande.length !== 1 || comande[0].id !== comandaId) return false
-  if (!PASSI_MODIFICABILI.includes(comande[0].status)) return false
-  return cambiaPerIlCliente(righePrima, righeDopo)
+  if (comande[0]?.id !== comandaId || !PASSI_MODIFICABILI.includes(comande[0].status)) return undefined
+  if (inAttesa(ordine)) {
+    const originale = ordine.attesa_cliente.firma_prima
+    if (originale != null && firmaRighe(righeDopo) === originale) return null
+    return cambiaPerIlCliente(righePrima, righeDopo) ? attesaNuova(ordine, impostazioni, adesso, righePrima) : undefined
+  }
+  if (comande.length !== 1) return undefined
+  return cambiaPerIlCliente(righePrima, righeDopo) ? attesaNuova(ordine, impostazioni, adesso, righePrima) : undefined
 }
 
 // L'attesa che comincia adesso. Una seconda modifica mentre si aspetta fa
 // ripartire il tempo — il cliente deve poter leggere quella nuova — ma il
-// totale «di prima» resta quello che lui aveva ordinato.
-export function attesaNuova(ordine, impostazioni, adesso = new Date()) {
+// totale e le righe «di prima» restano quelli che lui aveva ordinato.
+export function attesaNuova(ordine, impostazioni, adesso = new Date(), righePrima = null) {
   const dal = new Date(adesso)
+  const firma = ordine?.attesa_cliente?.firma_prima ?? (righePrima ? firmaRighe(righePrima) : null)
   return {
     dal: dal.toISOString(),
     scade: new Date(dal.getTime() + minutiAttesa(impostazioni) * 60000).toISOString(),
     totale_prima: Number(ordine?.attesa_cliente?.totale_prima ?? ordine?.total ?? 0),
+    ...(firma != null ? { firma_prima: firma } : {}),
   }
 }
 

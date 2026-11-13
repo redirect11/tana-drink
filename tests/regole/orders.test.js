@@ -379,7 +379,56 @@ describe('LA RISPOSTA DEL CLIENTE alle modifiche del banco', () => {
         status: 'annullato',
         cancelled_by: 'cliente',
         cancel_kind: 'modifica_rifiutata',
+        attesa_cliente: null,
       })
+    )
+  })
+
+  // Il banco ha aggiunto una comanda mentre si aspettava: il cliente
+  // risponde lo stesso.
+  it('anche con più di una comanda', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(
+        doc(ctx.firestore(), 'orders/in-attesa-due'),
+        inPreparazione({
+          attesa_cliente: attesa,
+          comande: [
+            { id: 'c1', seq: 1, items: [], status: 'in_preparazione' },
+            { id: 'c2', seq: 2, items: [], status: 'ricevuto' },
+          ],
+        })
+      )
+    })
+    await assertSucceeds(
+      updateDoc(doc(CHI.anonimo(env), 'orders/in-attesa-due'), {
+        attesa_cliente: null,
+        risposta_cliente: { esito: 'accettato', at: '2026-11-13T20:03:00.000Z' },
+      })
+    )
+  })
+
+  // Il revisore, 13/11/2026: un'attesa scritta dal cliente stesso gli
+  // teneva aperto il conto per tutta la serata, drink serviti compresi.
+  it('l’attesa non la mette il cliente: né aprendo il conto, né dopo', async () => {
+    await assertFails(setDoc(doc(CHI.anonimo(env), 'orders/nuovo-attesa'), contoDalMenu({ attesa_cliente: { x: 1 } })))
+    await assertFails(updateDoc(doc(CHI.anonimo(env), 'orders/conto-in-coda'), { attesa_cliente: { x: 1 } }))
+    // Togliersela e basta resta la sua risposta: quella sì.
+  })
+
+  it('rispondendo non si riscrivono righe e totale', async () => {
+    await assertFails(
+      updateDoc(doc(CHI.anonimo(env), 'orders/in-attesa'), {
+        attesa_cliente: null,
+        items: [{ drink_id: 'd1', name: 'Negroni', unit_price: 1, qty: 2 }],
+        total: 2,
+      })
+    )
+    await assertFails(updateDoc(doc(CHI.anonimo(env), 'orders/in-attesa'), { total: 2 }))
+  })
+
+  it('e annullando non si tiene l’attesa', async () => {
+    await assertFails(
+      updateDoc(doc(CHI.anonimo(env), 'orders/in-attesa'), { status: 'annullato', cancelled_by: 'cliente' })
     )
   })
 

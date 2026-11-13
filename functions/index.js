@@ -111,10 +111,28 @@ exports.disponibilitaDalMagazzino = onDocumentWritten({ ...OPTS, document: 'inve
   await ricalcolaDisponibilita((await drinksCheSeguono()).filter((d) => disponibilita.usaIlProdotto(d, itemId)), impostazioni)
 })
 
+async function riallineaScelteDelProdotto(drinkId, ricetta) {
+  const voci = await db.collection('carta_voci').where('drink_id', '==', drinkId).get()
+  const conScelta = voci.docs.filter((v) => (v.data().etichette || []).some((e) => e?.scelta))
+  if (!conScelta.length) return
+  const ids = [...new Set(ricetta.map((r) => r?.inventory_item_id).filter(Boolean))]
+  const articoli = ids.length ? await db.getAll(...ids.map((id) => db.doc(`inventory_items/${id}`))) : []
+  const categoriaDi = new Map(articoli.filter((a) => a.exists).map((a) => [a.id, a.data().category_id ?? null]))
+  for (const v of conScelta) {
+    const nuove = disponibilita.scelteRiallineate(v.data().etichette, ricetta, categoriaDi)
+    if (nuove) await v.ref.update({ etichette: nuove })
+  }
+}
+
 exports.disponibilitaDalProdotto = onDocumentWritten({ ...OPTS, document: 'drinks/{drinkId}' }, async (event) => {
   if (!event.data?.after?.exists) return
   const prima = event.data.before?.exists ? event.data.before.data() : {}
   const dopo = event.data.after.data()
+  // La ricetta è cambiata: le scelte del cliente sulle voci collegate
+  // seguono (REQ-MENU-042, disponibilita.scelteRiallineate).
+  if (JSON.stringify(prima?.recipe_items || []) !== JSON.stringify(dopo?.recipe_items || [])) {
+    await riallineaScelteDelProdotto(event.params.drinkId, dopo.recipe_items || [])
+  }
   // Solo se cambiano l'opzione o la ricetta: la scrittura del segno, fatta
   // qui, non deve rimettere in moto il calcolo.
   const pesa = (d) => JSON.stringify([d?.segue_giacenze === true, d?.recipe_items || []])

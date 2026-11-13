@@ -134,6 +134,32 @@ describe('quando il banco cambia l’ordine del cliente', () => {
     expect(dopo.attesa_cliente).toBeNull()
   })
 
+  // Il revisore, 13/11/2026: il pagamento online senza POS segna «pagato»
+  // e lascia il conto aperto. Un rifiuto o una scadenza lo annullerebbero
+  // già incassato: lì le modifiche si concordano al banco.
+  it('con un pagamento già partito non si aspetta nessuno', async () => {
+    for (const pagamento of [
+      { payment_status: 'pagato', payment_method: 'online' },
+      { payment_status: 'in_attesa', payment_method: 'online' },
+      { payment_status: 'parziale' },
+      { payments: [{ id: 'p1', amount: 4 }] },
+    ]) {
+      _azzeraMutazioni()
+      stato.ordine = dalTelefono(pagamento)
+      const dopo = await subito(api.bartenderUpdateComanda('ord-1', 'c1', { items: [gin(10, 'mare')] }))
+      expect(dopo.attesa_cliente).toBeNull()
+    }
+  })
+
+  it('il banco che rimette l’ordine com’era chiude l’attesa', async () => {
+    const prima = await subito(api.bartenderUpdateComanda('ord-1', 'c1', { items: [gin(10, 'mare')] }))
+    _azzeraMutazioni()
+    stato.ordine = { ...dalTelefono(), total: 10, attesa_cliente: prima.attesa_cliente, comande: [{ id: 'c1', seq: 1, status: 'ricevuto', items: [gin(10, 'mare')] }] }
+    const dopo = await subito(api.bartenderUpdateComanda('ord-1', 'c1', { items: [gin()] }))
+    expect(dopo.attesa_cliente).toBeNull()
+    expect(stato.scritture.at(-1)).toMatchObject({ attesa_cliente: null, total: 8 })
+  })
+
   it('una seconda modifica fa ripartire il tempo, col totale che il cliente aveva ordinato', async () => {
     stato.ordine = dalTelefono({
       total: 10,
@@ -174,6 +200,8 @@ describe('la risposta', () => {
       status: 'annullato',
       cancelled_by: 'cliente',
       cancel_kind: attesa.ANNULLO_RIFIUTO,
+      // Le regole lo pretendono: annullando, l'attesa si chiude.
+      attesa_cliente: null,
     })
   })
 

@@ -186,6 +186,12 @@ export default function ComandaPage() {
   const dividi = (scelte) => {
     const esito = dividiComanda(comanda, scelte)
     if (!esito) return
+    // Dividere fa avanzare la parte scelta (REQ-CLI-009): non col cliente
+    // che deve ancora accettare le modifiche.
+    if (inAttesa(order)) {
+      showToast('Il cliente deve ancora accettare le modifiche.', { kind: 'error' })
+      return
+    }
     // Prese TUTTE le unità non c'è niente da dividere: la comanda avanza e
     // basta, e resta questa. La scrittura la fa preparazioneParziale qui
     // sotto — qui si segna solo quello che si deve già vedere. E dove

@@ -104,6 +104,14 @@ describe('cosa si può scegliere adesso', () => {
     expect(s.opzioni.map((o) => o.id)).toEqual(['mare'])
   })
 
+  // La ricetta è cambiata e la scelta non si è ancora riallineata: il
+  // prodotto che adesso sta nella ricetta non si vende come supplemento.
+  it('il prodotto della ricetta attuale non è un’alternativa', () => {
+    const disponibili = new Map([['mare', true], ['hend', true]])
+    const [s] = scelteDellaVoce([GIN], disponibili, [{ inventory_item_id: 'mare', qty: 40 }])
+    expect(s.opzioni.map((o) => o.id)).toEqual(['hend'])
+  })
+
   it('un’etichetta senza alternative disponibili non chiede niente', () => {
     expect(scelteDellaVoce([GIN], new Map([['mare', false]]))).toEqual([])
     // Un prodotto che non ha più il permesso non ha il documento pubblico.

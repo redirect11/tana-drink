@@ -438,7 +438,11 @@ export default function MenuPage({ speciali = false }) {
     // UNA VOCE CHE FA SCEGLIERE (REQ-MENU-042): «Aggiungi» chiede la scelta,
     // ogni volta, e ogni scelta diversa è una riga sua. Accanto, quanti ce
     // ne sono già nel carrello, comunque scelti.
-    const scelte = scelteDellaVoce(d.etichette_scelta, disponibili)
+    const scelte = scelteDellaVoce(
+      d.etichette_scelta,
+      disponibili,
+      d.etichette_scelta?.length ? drinksDelMenu.find((x) => x.id === d.drink_id)?.recipe_items : []
+    )
     if (scelte.length > 0) {
       const base = rigaDelCarrello(d)
       const giaPresi = cart.items
